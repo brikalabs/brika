@@ -1,0 +1,25 @@
+# Simple Hello World Workflow
+# Triggered by any event, logs a message
+
+id: hello-world
+name: Hello World
+trigger:
+  event: "*"
+
+blocks:
+  - id: log-start
+    type: log
+    level: info
+    message: "Hello from workflow! Triggered by {{ trigger.type }}"
+    next: set-var
+
+  - id: set-var
+    type: set
+    var: greeting
+    value: "Hello, {{ trigger.source }}!"
+    next: log-end
+
+  - id: log-end
+    type: log
+    level: info
+    message: "{{ vars.greeting }}"

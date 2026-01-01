@@ -1,0 +1,77 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# ELIA Configuration
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Hub settings
+hub:
+  port: 3001
+  host: "0.0.0.0"
+
+# Plugin manager settings  
+plugins:
+  # Directory for installed plugins from registry
+  installDir: "./plugins/.installed"
+  
+  # Heartbeat settings (ms)
+  heartbeatInterval: 5000
+  heartbeatTimeout: 15000
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Installed Plugins
+# ─────────────────────────────────────────────────────────────────────────────
+# 
+# Plugins are auto-loaded on startup. Supports:
+#   - workspace: Local monorepo plugins (./plugins/*)
+#   - npm: Registry packages (@elia/plugin-*)
+#   - git: Git repositories
+#
+# Format:
+#   - ref: "workspace:timer"           # Local plugin from ./plugins/timer
+#   - ref: "workspace:example-echo"    # Local plugin from ./plugins/example-echo
+#   - ref: "npm:@elia/plugin-hue"      # From npm registry
+#   - ref: "npm:@elia/plugin-hue@1.0"  # Specific version
+#   - ref: "git:github.com/user/repo"  # From git
+#
+install:
+  # Core blocks plugin (required for workflows)
+  - ref: "workspace:blocks-builtin"
+    enabled: true
+  
+  # Example workspace plugins
+  - ref: "workspace:timer"
+    enabled: true
+    
+  - ref: "workspace:example-echo"
+    enabled: true
+
+  # Example npm plugin (uncomment when available)
+  # - ref: "npm:@elia/plugin-hue"
+  #   version: "^1.0.0"
+  #   enabled: true
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Rules (automation)
+# ─────────────────────────────────────────────────────────────────────────────
+rules: []
+  # - name: "Motion Alert"
+  #   event: "motion.detected"
+  #   condition: "event.payload.zone === 'front'"
+  #   action:
+  #     tool: "notify.send"
+  #     args:
+  #       message: "Motion detected at front door"
+  #   enabled: true
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Schedules
+# ─────────────────────────────────────────────────────────────────────────────
+schedules: []
+  # - name: "Morning Check"
+  #   trigger:
+  #     type: cron
+  #     expr: "0 7 * * *"
+  #   action:
+  #     tool: "weather.get"
+  #     args: {}
+  #   enabled: true
+

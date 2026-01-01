@@ -1,0 +1,139 @@
+# ELIA Project Rules for Cursor AI
+
+## Project Overview
+
+ELIA (Event-driven Logical Intelligence Architecture) is a Bun-first home automation runtime with:
+- Isolated plugin processes communicating via binary IPC
+- Block-based visual workflow engine
+- React UI with TanStack Router/Query and React Flow
+
+## Architecture Boundaries
+
+NEVER cross these boundaries:
+- Hub NEVER imports plugin code directly (uses IPC)
+- Plugins ONLY depend on @elia/sdk and @elia/shared
+- UI ONLY imports from @elia/shared (no SDK)
+
+## ID Naming Convention
+
+Always use this format:
+- Plugin ID: Full package.json name (e.g., `@elia/plugin-timer`)
+- Tool ID: `pluginId:toolId` (e.g., `@elia/plugin-timer:set`)
+- Block ID: `pluginId:blockId` (e.g., `@elia/blocks-builtin:condition`)
+
+## Key Files
+
+When working on:
+- **Plugin loading**: `apps/hub/src/runtime/plugins/plugin-manager.ts`
+- **Tool definitions**: `packages/sdk/src/tool.ts`
+- **Block definitions**: `packages/sdk/src/blocks/define.ts`
+- **Workflow execution**: `apps/hub/src/runtime/automations/workflow-executor.ts`
+- **API endpoints**: `apps/hub/src/runtime/http/api-server.ts`
+- **UI features**: `apps/ui/src/features/<feature>/`
+
+## Coding Style
+
+### TypeScript
+- Use `@singleton()` decorator for DI services
+- Use `inject(ServiceClass)` for property injection
+- Use `#` for private class members
+- Return structured results, never throw across IPC:
+  ```typescript
+  return { ok: true, content: "..." };
+  return { ok: false, content: "Error..." };
+  ```
+
+### Plugin Development
+```typescript
+// Always match package.json name
+const { api, start, use } = createPluginRuntime({
+  id: "@elia/plugin-name",  // From package.json
+  version: "0.1.0",
+});
+
+// Define tools with Zod schemas
+export const myTool = defineTool({
+  id: "action",  // Local ID only
+  description: "...",
+  schema: z.object({ ... }),
+}, async (args) => {
+  return { ok: true, content: "..." };
+});
+
+use(myTool);  // Register tool
+await start();  // Start plugin loop
+```
+
+### Block Development
+```typescript
+export const myBlock = defineBlock({
+  id: "my-block",  // Local ID only
+  name: "Display Name",
+  description: "...",
+  category: "flow",
+  icon: "lucide-icon-name",
+  color: "#hexcolor",
+  inputs: [{ id: "in", name: "Input" }],
+  outputs: [{ id: "out", name: "Output" }],
+  schema: z.object({ ... }),
+}, async (config, ctx, runtime) => {
+  return { output: "out", data: result };
+});
+```
+
+### UI Components
+- Use shadcn/ui components from `@/components/ui`
+- Follow feature module pattern: `api.ts`, `hooks.ts`, `Page.tsx`
+- Use TanStack Query for server state
+- Use Zustand for client state (SSE streams)
+
+## Common Patterns
+
+### Adding Hub Service
+```typescript
+import { singleton, inject } from "@elia/shared";
+
+@singleton()
+export class MyService {
+  private readonly logs = inject(LogRouter);
+  private readonly events = inject(EventBus);
+}
+```
+
+### Adding API Endpoint
+In `api-server.ts`:
+```typescript
+if (p === "/api/myendpoint" && m === "GET") {
+  return json(this.myService.list());
+}
+```
+
+### Adding UI Feature
+```
+features/myfeature/
+├── index.ts           # export { MyPage } from "./MyPage"
+├── MyPage.tsx         # React component
+├── api.ts             # API functions
+└── hooks.ts           # React Query hooks
+```
+
+## Don't
+
+- Don't use `console.log` in plugins (breaks IPC)
+- Don't use `any` type without `biome-ignore` comment
+- Don't create abstractions for one-time operations
+- Don't add features beyond what's requested
+- Don't import Hub code in plugins or vice versa
+
+## Testing
+
+- Hub tests: `apps/hub/src/__tests__/`
+- SDK tests: `packages/sdk/src/__tests__/`
+- Run with: `bun test`
+
+## Configuration
+
+- Main config: `elia.yml`
+- Workflows: `automations/*.yml`
+- Plugin schema: `packages/sdk/elia-plugin.schema.json`
+

@@ -1,0 +1,2 @@
+This repo uses Bun + Vite.
+`@vitejs/plugin-react` is required by vite.config.ts and is resolved by bun.

@@ -1,0 +1,31 @@
+# Timer Workflow Example
+# Listens to timer.completed events and takes action
+
+id: timer-workflow
+name: Timer Actions
+trigger:
+  event: timer.completed
+
+blocks:
+  - id: check-type
+    type: condition
+    if: "{{ trigger.payload.name == 'important' }}"
+    then: notify
+    else: log-only
+
+  - id: notify
+    type: emit
+    event: notification.send
+    payload:
+      title: Timer Completed
+      body: "{{ trigger.payload.name }} finished!"
+    next: done
+
+  - id: log-only
+    type: log
+    level: info
+    message: "Timer {{ trigger.payload.name }} completed"
+    next: done
+
+  - id: done
+    type: end

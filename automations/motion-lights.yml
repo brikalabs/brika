@@ -1,0 +1,31 @@
+# Motion-Activated Lights Workflow
+# Shows branching, delays, and tool calls
+
+id: motion-lights
+name: Motion Lights
+enabled: false  # Example - enable when you have the lights tool
+trigger:
+  event: sensor.motion
+  filter:
+    room: living
+
+blocks:
+  - id: lights-on
+    type: action
+    tool: lights.on
+    args:
+      room: "{{ trigger.payload.room }}"
+      brightness: 100
+    next: wait
+
+  - id: wait
+    type: delay
+    duration: 5m
+    next: lights-off
+
+  - id: lights-off
+    type: action
+    tool: lights.off
+    args:
+      room: "{{ trigger.payload.room }}"
+

@@ -1,0 +1,17 @@
+{
+  "$schema": "../../packages/sdk/elia-plugin.schema.json",
+  "name": "@elia/blocks-builtin",
+  "version": "0.1.0",
+  "description": "Core workflow blocks for ELIA automations",
+  "author": "ELIA Team",
+  "keywords": ["blocks", "workflow", "automation", "condition", "delay", "action"],
+  "type": "module",
+  "main": "src/main.ts",
+  "exports": {
+    ".": "./src/main.ts"
+  },
+  "dependencies": {
+    "@elia/sdk": "workspace:*",
+    "zod": "^4.0.0"
+  }
+}

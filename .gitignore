@@ -1,0 +1,11 @@
+node_modules
+**/node_modules
+**/dist
+**/.cache
+**/.DS_Store
+.env
+.elia
+*.log
+apps/hub/.elia
+apps/hub/.elia-plugins
+apps/hub/.elia-state

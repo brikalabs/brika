@@ -1,0 +1,18 @@
+{
+  "$schema": "../../packages/sdk/elia-plugin.schema.json",
+  "name": "@elia/plugin-timer",
+  "version": "0.1.0",
+  "description": "Timer and reminder functionality for ELIA",
+  "author": "ELIA Team",
+  "keywords": ["timer", "reminder", "delay", "countdown"],
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@elia/sdk": "workspace:*"
+  },
+  "devDependencies": {
+    "bun-types": "^1.3.5"
+  }
+}

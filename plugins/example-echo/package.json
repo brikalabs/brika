@@ -1,0 +1,15 @@
+{
+  "$schema": "../../packages/sdk/elia-plugin.schema.json",
+  "name": "@elia/plugin-example-echo",
+  "version": "0.1.0",
+  "description": "Example echo plugin for testing",
+  "author": "ELIA Team",
+  "keywords": ["example", "echo", "test"],
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@elia/sdk": "workspace:*"
+  }
+}

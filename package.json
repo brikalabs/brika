@@ -1,0 +1,15 @@
+{
+  "name": "elia",
+  "private": true,
+  "type": "module",
+  "workspaces": ["apps/*", "packages/*", "plugins/*"],
+  "scripts": {
+    "dev": "bun run dev:hub & bun run dev:ui",
+    "dev:hub": "cd apps/hub && bun --hot run src/main.ts",
+    "dev:ui": "cd apps/ui && bunx --bun vite",
+    "build": "cd apps/ui && bunx --bun vite build",
+    "test": "bun test",
+    "lint": "bunx biome check .",
+    "lint:fix": "bunx biome check --write ."
+  }
+}
