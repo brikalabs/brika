@@ -1,4 +1,13 @@
-import type { AnyObj, EventHandler, Json, PluginApi, PluginInfo, ToolCallContext, ToolResult, ToolSpec } from "./types";
+import type {
+  AnyObj,
+  EventHandler,
+  Json,
+  PluginApi,
+  PluginInfo,
+  ToolCallContext,
+  ToolResult,
+  ToolSpec,
+} from "./types";
 import { FrameReader, FrameWriter, type Wire } from "./ipc";
 import type { CompiledTool } from "./tool";
 import type { CompiledBlock, BlockContext, BlockResult, BlockRuntime, BlockHandler } from "./blocks/types";
@@ -32,7 +41,13 @@ export function createPluginRuntime(plugin: PluginInfo) {
       callTool: async (name, args) => {
         // Request tool call from hub via IPC
         const id = Date.now();
-        await writer.send({ t: "callTool", id, tool: name, args, ctx: { traceId: crypto.randomUUID(), source: "automation" } });
+        await writer.send({
+          t: "callTool",
+          id,
+          tool: name,
+          args,
+          ctx: { traceId: crypto.randomUUID(), source: "automation" },
+        });
         // Note: In real implementation, we'd wait for toolResult - for now return null
         // The hub will handle tool calls directly
         return null;
@@ -72,7 +87,12 @@ export function createPluginRuntime(plugin: PluginInfo) {
       if (!spec?.id) throw new Error("Tool id required");
       if (tools.has(spec.id)) throw new Error(`Tool already registered: ${spec.id}`);
       tools.set(spec.id, handler);
-      writer.send({ t: "registerTool", tool: { id: spec.id, description: spec.description, inputSchema: spec.inputSchema } }).catch(() => {});
+      writer
+        .send({
+          t: "registerTool",
+          tool: { id: spec.id, description: spec.description, inputSchema: spec.inputSchema },
+        })
+        .catch(() => {});
     },
 
     onStop(fn) {
@@ -124,14 +144,22 @@ export function createPluginRuntime(plugin: PluginInfo) {
     if (msg.t === "callTool") {
       const h = tools.get(msg.tool);
       if (!h) {
-        await writer.send({ t: "toolResult", id: msg.id, result: { ok: false, content: `Unknown tool: ${msg.tool}` } });
+        await writer.send({
+          t: "toolResult",
+          id: msg.id,
+          result: { ok: false, content: `Unknown tool: ${msg.tool}` },
+        });
         return;
       }
       try {
         const res = await h(msg.args, msg.ctx);
         await writer.send({ t: "toolResult", id: msg.id, result: res ?? { ok: true } });
       } catch (e) {
-        await writer.send({ t: "toolResult", id: msg.id, result: { ok: false, content: "Tool error", data: String(e) } });
+        await writer.send({
+          t: "toolResult",
+          id: msg.id,
+          result: { ok: false, content: "Tool error", data: String(e) },
+        });
       }
       return;
     }
@@ -139,7 +167,11 @@ export function createPluginRuntime(plugin: PluginInfo) {
     if (msg.t === "executeBlock") {
       const block = blocks.get(msg.blockType);
       if (!block) {
-        await writer.send({ t: "blockResult", id: msg.id, result: { error: `Unknown block type: ${msg.blockType}`, stop: true } });
+        await writer.send({
+          t: "blockResult",
+          id: msg.id,
+          result: { error: `Unknown block type: ${msg.blockType}`, stop: true },
+        });
         return;
       }
       try {
@@ -167,7 +199,10 @@ export function createPluginRuntime(plugin: PluginInfo) {
   }
 
   async function start(): Promise<void> {
-    await writer.send({ t: "hello", plugin: { id: plugin.id, version: plugin.version, requires: plugin.requires } });
+    await writer.send({
+      t: "hello",
+      plugin: { id: plugin.id, version: plugin.version, requires: plugin.requires },
+    });
     await writer.send({ t: "ready" });
 
     for (;;) {
@@ -185,7 +220,12 @@ export function createPluginRuntime(plugin: PluginInfo) {
     if (!tool?.id) throw new Error("Tool id required");
     if (tools.has(tool.id)) throw new Error(`Tool already registered: ${tool.id}`);
     tools.set(tool.id, tool.handler);
-    writer.send({ t: "registerTool", tool: { id: tool.id, description: tool.description, inputSchema: tool.inputSchema } }).catch(() => {});
+    writer
+      .send({
+        t: "registerTool",
+        tool: { id: tool.id, description: tool.description, inputSchema: tool.inputSchema },
+      })
+      .catch(() => {});
   }
 
   /**

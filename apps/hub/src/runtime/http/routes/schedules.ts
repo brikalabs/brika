@@ -12,9 +12,9 @@ const createScheduleSchema = z.object({
   trigger: scheduleTriggerSchema,
   action: z.object({
     tool: z.string(),
-    args: z.record(z.unknown()),
+    args: z.record(z.string(), z.unknown()),
   }),
-  enabled: z.boolean().optional(),
+  enabled: z.boolean().default(true),
 });
 
 export const schedulesRoutes = group("/api/schedules", [
@@ -23,31 +23,25 @@ export const schedulesRoutes = group("/api/schedules", [
   }),
 
   route.post("/", { body: createScheduleSchema }, async ({ body, inject }) => {
-    return inject(SchedulerService).create(body);
+    return inject(SchedulerService).create({
+      ...body,
+      action: {
+        tool: body.action.tool,
+        args: body.action.args as Record<string, import("@elia/shared").Json>,
+      },
+    });
   }),
 
-  route.post(
-    "/enable",
-    { body: z.object({ id: z.string() }) },
-    async ({ body, inject }) => {
-      return { ok: await inject(SchedulerService).enable(body.id) };
-    },
-  ),
+  route.post("/enable", { body: z.object({ id: z.string() }) }, async ({ body, inject }) => {
+    return { ok: await inject(SchedulerService).enable(body.id) };
+  }),
 
-  route.post(
-    "/disable",
-    { body: z.object({ id: z.string() }) },
-    async ({ body, inject }) => {
-      return { ok: await inject(SchedulerService).disable(body.id) };
-    },
-  ),
+  route.post("/disable", { body: z.object({ id: z.string() }) }, async ({ body, inject }) => {
+    return { ok: await inject(SchedulerService).disable(body.id) };
+  }),
 
-  route.delete(
-    "/:id",
-    { params: z.object({ id: z.string() }) },
-    async ({ params, inject }) => {
-      return { ok: await inject(SchedulerService).delete(params.id) };
-    },
-  ),
+  route.delete("/:id", { params: z.object({ id: z.string() }) }, async ({ params, inject }) => {
+    return { ok: await inject(SchedulerService).delete(params.id) };
+  }),
 ]);
 

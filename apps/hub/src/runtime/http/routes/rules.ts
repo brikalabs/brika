@@ -9,7 +9,7 @@ const ruleTriggerSchema = z.union([
 
 const ruleActionSchema = z.object({
   tool: z.string(),
-  args: z.record(z.unknown()),
+  args: z.record(z.string(), z.unknown()),
 });
 
 const createRuleSchema = z.object({
@@ -17,7 +17,7 @@ const createRuleSchema = z.object({
   trigger: ruleTriggerSchema,
   condition: z.string().optional(),
   actions: z.array(ruleActionSchema),
-  enabled: z.boolean().optional(),
+  enabled: z.boolean().default(true),
 });
 
 export const rulesRoutes = group("/api/rules", [
@@ -26,31 +26,25 @@ export const rulesRoutes = group("/api/rules", [
   }),
 
   route.post("/", { body: createRuleSchema }, async ({ body, inject }) => {
-    return inject(RulesEngine).create(body);
+    return inject(RulesEngine).create({
+      ...body,
+      actions: body.actions.map((a) => ({
+        tool: a.tool,
+        args: a.args as Record<string, import("@elia/shared").Json>,
+      })),
+    });
   }),
 
-  route.post(
-    "/enable",
-    { body: z.object({ id: z.string() }) },
-    async ({ body, inject }) => {
-      return { ok: await inject(RulesEngine).enable(body.id) };
-    },
-  ),
+  route.post("/enable", { body: z.object({ id: z.string() }) }, async ({ body, inject }) => {
+    return { ok: await inject(RulesEngine).enable(body.id) };
+  }),
 
-  route.post(
-    "/disable",
-    { body: z.object({ id: z.string() }) },
-    async ({ body, inject }) => {
-      return { ok: await inject(RulesEngine).disable(body.id) };
-    },
-  ),
+  route.post("/disable", { body: z.object({ id: z.string() }) }, async ({ body, inject }) => {
+    return { ok: await inject(RulesEngine).disable(body.id) };
+  }),
 
-  route.delete(
-    "/:id",
-    { params: z.object({ id: z.string() }) },
-    async ({ params, inject }) => {
-      return { ok: await inject(RulesEngine).delete(params.id) };
-    },
-  ),
+  route.delete("/:id", { params: z.object({ id: z.string() }) }, async ({ params, inject }) => {
+    return { ok: await inject(RulesEngine).delete(params.id) };
+  }),
 ]);
 

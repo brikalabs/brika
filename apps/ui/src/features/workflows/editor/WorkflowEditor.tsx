@@ -42,15 +42,15 @@ interface WorkflowEditorInnerProps {
   onTest?: (workflow: Workflow, payload: Record<string, unknown>) => void;
 }
 
-function WorkflowEditorInner({ 
-  workflow: initialWorkflow, 
+function WorkflowEditorInner({
+  workflow: initialWorkflow,
   readonly = false,
   onSave,
   onTest,
 }: WorkflowEditorInnerProps) {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const editor = useWorkflowEditor(initialWorkflow);
-  
+
   // Fetch block definitions for schemas
   const { data: blockDefinitions = [] } = useQuery({
     queryKey: ["blocks"],
@@ -69,7 +69,7 @@ function WorkflowEditorInner({
     }
     return map;
   }, [blockDefinitions]);
-  
+
   const {
     nodes,
     edges,
@@ -130,7 +130,7 @@ function WorkflowEditorInner({
 
       addBlock(blockType, position);
     },
-    [addBlock]
+    [addBlock],
   );
 
   // Handle save
@@ -147,9 +147,7 @@ function WorkflowEditorInner({
   };
 
   // Get available variables for selected block
-  const availableVariables = selectedNode 
-    ? getAvailableVariables(selectedNode.id)
-    : [];
+  const availableVariables = selectedNode ? getAvailableVariables(selectedNode.id) : [];
 
   // Get block schema for selected node
   const selectedBlockSchema = useMemo(() => {
@@ -162,9 +160,7 @@ function WorkflowEditorInner({
   return (
     <div className="flex h-full">
       {/* Block Toolbar */}
-      {!readonly && (
-        <BlockToolbar className="w-56 shrink-0" />
-      )}
+      {!readonly && <BlockToolbar className="w-56 shrink-0" />}
 
       {/* Canvas */}
       <div className="flex-1 flex flex-col" ref={reactFlowWrapper}>
@@ -192,7 +188,7 @@ function WorkflowEditorInner({
         >
           <Background />
           <Controls showInteractive={!readonly} />
-          <MiniMap 
+          <MiniMap
             nodeColor={(node) => {
               if (node.type === "trigger") return "#22c55e";
               const blockData = node.data as BlockNodeData;
@@ -210,7 +206,7 @@ function WorkflowEditorInner({
             }}
             className="!bg-muted"
           />
-          
+
           {/* Top toolbar */}
           {!readonly && (
             <Panel position="top-right" className="flex items-center gap-2">
@@ -228,12 +224,7 @@ function WorkflowEditorInner({
                 <RotateCcw className="size-4 mr-1" />
                 Reset
               </Button>
-              <Button
-                size="sm"
-                variant="default"
-                onClick={handleSave}
-                disabled={!isDirty}
-              >
+              <Button size="sm" variant="default" onClick={handleSave} disabled={!isDirty}>
                 <Save className="size-4 mr-1" />
                 Save
               </Button>

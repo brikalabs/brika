@@ -1,6 +1,6 @@
 /**
  * Config Panel
- * 
+ *
  * Smart schema-driven configuration panel for blocks.
  * Generates appropriate UI controls based on field types.
  */
@@ -8,14 +8,34 @@
 import React, { useState } from "react";
 import type { Node } from "@xyflow/react";
 import {
-  Card, CardContent, CardHeader, CardTitle,
-  Input, Label, Textarea,
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-  ScrollArea, Separator, Badge, Button, Switch,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Input,
+  Label,
+  Textarea,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  ScrollArea,
+  Separator,
+  Badge,
+  Button,
+  Switch,
 } from "@/components/ui";
-import { 
-  Info, HelpCircle, Plus, Trash2, ChevronDown, ChevronRight,
-  Sparkles, Copy, Check,
+import {
+  Info,
+  HelpCircle,
+  Plus,
+  Trash2,
+  ChevronDown,
+  ChevronRight,
+  Sparkles,
+  Copy,
+  Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { BlockNodeData } from "./BlockNode";
@@ -90,10 +110,7 @@ function ExpressionField({ value, onChange, variables, placeholder, multiline }:
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className={cn(
-            "pr-10 font-mono text-sm",
-            multiline && "min-h-[80px]"
-          )}
+          className={cn("pr-10 font-mono text-sm", multiline && "min-h-[80px]")}
         />
         <Button
           type="button"
@@ -124,9 +141,7 @@ function ExpressionField({ value, onChange, variables, placeholder, multiline }:
                   className="flex-1 text-left flex items-center gap-2"
                   onClick={() => insertVariable(v.name)}
                 >
-                  <code className="text-xs text-primary font-mono">
-                    {`{{ ${v.name} }}`}
-                  </code>
+                  <code className="text-xs text-primary font-mono">{`{{ ${v.name} }}`}</code>
                   <span className="text-xs text-muted-foreground">{v.type}</span>
                 </button>
                 <button
@@ -165,20 +180,26 @@ interface KeyValueEditorProps {
   valuePlaceholder?: string;
 }
 
-function KeyValueEditor({ value, onChange, variables, keyPlaceholder = "key", valuePlaceholder = "value" }: KeyValueEditorProps) {
+function KeyValueEditor({
+  value,
+  onChange,
+  variables,
+  keyPlaceholder = "key",
+  valuePlaceholder = "value",
+}: KeyValueEditorProps) {
   const entries = Object.entries(value || {});
-  
+
   const addEntry = () => {
     const newKey = `key${entries.length + 1}`;
     onChange({ ...value, [newKey]: "" });
   };
-  
+
   const removeEntry = (key: string) => {
     const newValue = { ...value };
     delete newValue[key];
     onChange(newValue);
   };
-  
+
   const updateKey = (oldKey: string, newKey: string) => {
     if (oldKey === newKey) return;
     const newValue: Record<string, unknown> = {};
@@ -187,7 +208,7 @@ function KeyValueEditor({ value, onChange, variables, keyPlaceholder = "key", va
     }
     onChange(newValue);
   };
-  
+
   const updateValue = (key: string, newVal: unknown) => {
     onChange({ ...value, [key]: newVal });
   };
@@ -221,14 +242,8 @@ function KeyValueEditor({ value, onChange, variables, keyPlaceholder = "key", va
           </Button>
         </div>
       ))}
-      
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        className="w-full"
-        onClick={addEntry}
-      >
+
+      <Button type="button" variant="outline" size="sm" className="w-full" onClick={addEntry}>
         <Plus className="size-4 mr-1" />
         Add {keyPlaceholder}
       </Button>
@@ -254,7 +269,7 @@ function SchemaField({ name, schema, value, onChange, variables, required }: Fie
   const description = schema.description;
   const enumValues = schema.enum;
   const defaultValue = schema.default;
-  
+
   // Pretty label from camelCase
   const label = name
     .replace(/([A-Z])/g, " $1")
@@ -269,14 +284,9 @@ function SchemaField({ name, schema, value, onChange, variables, required }: Fie
         <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
           <div>
             <span className="text-sm font-medium">{label}</span>
-            {description && (
-              <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
-            )}
+            {description && <p className="text-xs text-muted-foreground mt-0.5">{description}</p>}
           </div>
-          <Switch
-            checked={Boolean(value ?? defaultValue)}
-            onCheckedChange={(checked) => onChange(checked)}
-          />
+          <Switch checked={Boolean(value ?? defaultValue)} onCheckedChange={(checked) => onChange(checked)} />
         </div>
       );
     }
@@ -284,10 +294,7 @@ function SchemaField({ name, schema, value, onChange, variables, required }: Fie
     // Enum - Select dropdown
     if (enumValues && enumValues.length > 0) {
       return (
-        <Select 
-          value={String(value ?? defaultValue ?? "")} 
-          onValueChange={(v) => onChange(v)}
-        >
+        <Select value={String(value ?? defaultValue ?? "")} onValueChange={(v) => onChange(v)}>
           <SelectTrigger className="bg-background">
             <SelectValue placeholder={`Select ${label.toLowerCase()}`} />
           </SelectTrigger>
@@ -304,9 +311,7 @@ function SchemaField({ name, schema, value, onChange, variables, required }: Fie
 
     // Object - Key-Value Editor
     if (type === "object") {
-      const objValue = typeof value === "object" && value !== null 
-        ? value as Record<string, unknown> 
-        : {};
+      const objValue = typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {};
       return (
         <KeyValueEditor
           value={objValue}
@@ -333,9 +338,9 @@ function SchemaField({ name, schema, value, onChange, variables, required }: Fie
 
     // String - Expression input with variable support
     // Determine if multiline based on field name or description
-    const isMultiline = 
-      name === "message" || 
-      name === "if" || 
+    const isMultiline =
+      name === "message" ||
+      name === "if" ||
       name === "value" ||
       description?.toLowerCase().includes("expression") ||
       description?.toLowerCase().includes("condition");
@@ -361,14 +366,10 @@ function SchemaField({ name, schema, value, onChange, variables, required }: Fie
       <div className="flex items-center gap-1.5">
         <Label className="text-sm font-medium">{label}</Label>
         {required && <span className="text-red-500 text-xs">*</span>}
-        {description && (
-          <HelpCircle className="size-3.5 text-muted-foreground" title={description} />
-        )}
+        {description && <HelpCircle className="size-3.5 text-muted-foreground" title={description} />}
       </div>
       {renderField()}
-      {description && type !== "boolean" && (
-        <p className="text-xs text-muted-foreground">{description}</p>
-      )}
+      {description && type !== "boolean" && <p className="text-xs text-muted-foreground">{description}</p>}
     </div>
   );
 }
@@ -377,12 +378,15 @@ function SchemaField({ name, schema, value, onChange, variables, required }: Fie
 // Trigger Config
 // ─────────────────────────────────────────────────────────────────────────────
 
-function TriggerConfig({ data, onUpdate }: { 
-  data: TriggerNodeData; 
+function TriggerConfig({
+  data,
+  onUpdate,
+}: {
+  data: TriggerNodeData;
   onUpdate: (config: { event?: string; filter?: Record<string, unknown> }) => void;
 }) {
   const [showFilter, setShowFilter] = useState(!!data.filter && Object.keys(data.filter).length > 0);
-  
+
   return (
     <div className="space-y-4">
       <div className="space-y-2">
@@ -397,7 +401,7 @@ function TriggerConfig({ data, onUpdate }: {
           Use <code className="bg-muted px-1 rounded">*</code> as wildcard
         </p>
       </div>
-      
+
       <div className="space-y-2">
         <button
           type="button"
@@ -407,7 +411,7 @@ function TriggerConfig({ data, onUpdate }: {
           {showFilter ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
           Filter (optional)
         </button>
-        
+
         {showFilter && (
           <div className="pl-4 border-l-2 border-muted space-y-2">
             <p className="text-xs text-muted-foreground">
@@ -431,12 +435,12 @@ function TriggerConfig({ data, onUpdate }: {
 // Block Config (Schema-Driven)
 // ─────────────────────────────────────────────────────────────────────────────
 
-function BlockConfig({ 
-  data, 
+function BlockConfig({
+  data,
   schema,
   onUpdate,
   availableVariables,
-}: { 
+}: {
   data: BlockNodeData;
   schema?: BlockSchema;
   onUpdate: (config: Record<string, unknown>) => void;
@@ -479,16 +483,16 @@ function BlockConfig({
 // Config Panel
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function ConfigPanel({ 
-  node, 
-  onUpdateBlock, 
+export function ConfigPanel({
+  node,
+  onUpdateBlock,
   onUpdateTrigger,
   availableVariables,
   blockSchema,
   className,
 }: ConfigPanelProps) {
   const isTrigger = node.type === "trigger";
-  const data = node.data as (BlockNodeData | TriggerNodeData);
+  const data = node.data as BlockNodeData | TriggerNodeData;
   const blockData = data as BlockNodeData;
 
   return (
@@ -497,22 +501,19 @@ export function ConfigPanel({
       <div className="p-4 border-b bg-background/80">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="font-semibold text-sm">
-              {isTrigger ? "Trigger Configuration" : blockData.label}
-            </h3>
+            <h3 className="font-semibold text-sm">{isTrigger ? "Trigger Configuration" : blockData.label}</h3>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {isTrigger ? "When this event occurs" : `Configure ${(blockData.type || "").split(":").pop()} block`}
+              {isTrigger
+                ? "When this event occurs"
+                : `Configure ${(blockData.type || "").split(":").pop()} block`}
             </p>
           </div>
           {!isTrigger && blockData.color && (
-            <div 
+            <div
               className="size-8 rounded-lg flex items-center justify-center"
               style={{ backgroundColor: blockData.color + "20" }}
             >
-              <div 
-                className="size-3 rounded-full"
-                style={{ backgroundColor: blockData.color }}
-              />
+              <div className="size-3 rounded-full" style={{ backgroundColor: blockData.color }} />
             </div>
           )}
         </div>
@@ -522,12 +523,9 @@ export function ConfigPanel({
       <ScrollArea className="flex-1">
         <div className="p-4">
           {isTrigger ? (
-            <TriggerConfig 
-              data={data as TriggerNodeData} 
-              onUpdate={onUpdateTrigger}
-            />
+            <TriggerConfig data={data as TriggerNodeData} onUpdate={onUpdateTrigger} />
           ) : (
-            <BlockConfig 
+            <BlockConfig
               data={data as BlockNodeData}
               schema={blockSchema}
               onUpdate={(config) => onUpdateBlock(node.id, config)}
@@ -547,8 +545,8 @@ export function ConfigPanel({
               </div>
               <div className="grid gap-1.5">
                 {availableVariables.map((v) => (
-                  <div 
-                    key={v.name} 
+                  <div
+                    key={v.name}
                     className="flex items-center justify-between text-xs p-2 rounded-md bg-muted/50 hover:bg-muted cursor-pointer transition-colors"
                     onClick={() => navigator.clipboard.writeText(`{{ ${v.name} }}`)}
                     title="Click to copy"

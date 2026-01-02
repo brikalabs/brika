@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { route, group } from "@elia/router";
+import { route, group, BadRequest } from "@elia/router";
 import type { Json } from "@elia/shared";
 import { ToolRegistry } from "../../tools/tool-registry";
 
@@ -13,16 +13,19 @@ export const toolsRoutes = group("/api/tools", [
     {
       body: z.object({
         name: z.string(),
-        args: z.record(z.unknown()).optional(),
+        args: z.record(z.string(), z.unknown()).optional(),
       }),
     },
     async ({ body, inject }) => {
       const tools = inject(ToolRegistry);
-      return tools.call(body.name, (body.args ?? {}) as Record<string, Json>, {
+      const result = await tools.call(body.name, (body.args ?? {}) as Record<string, Json>, {
         traceId: crypto.randomUUID(),
         source: "api",
       });
+      if (!result.ok) {
+        throw new BadRequest(result.content);
+      }
+      return result;
     },
   ),
 ]);
-

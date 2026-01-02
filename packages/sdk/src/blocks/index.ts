@@ -1,6 +1,6 @@
 /**
  * Block System Exports
- * 
+ *
  * Everything needed to define and work with blocks.
  */
 
@@ -22,4 +22,3 @@ export type {
 // Definition API
 export { defineBlock, expr, parseDuration, z, isCompiledBlock } from "./define";
 export type { BlockSpec } from "./define";
-

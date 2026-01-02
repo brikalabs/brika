@@ -1,6 +1,6 @@
 /**
  * Type-safe Tool Definition with Zod 4
- * 
+ *
  * Uses Zod 4's native JSON Schema conversion for fully typed tool handlers
  * @see https://zod.dev/json-schema
  */
@@ -29,13 +29,13 @@ export interface CompiledTool {
 
 /**
  * Create a type-safe tool definition using Zod 4
- * 
+ *
  * The tool will be registered with a plugin prefix: `pluginId:toolId`
- * 
+ *
  * @example
  * ```ts
  * import { defineTool, z } from "@elia/sdk";
- * 
+ *
  * // In plugin "timer", this becomes "timer:set"
  * const setTimer = defineTool({
  *   id: "set",
@@ -56,7 +56,7 @@ export function defineTool<TSchema extends z.ZodObject<z.ZodRawShape>>(
     description?: string;
     schema: TSchema;
   },
-  handler: (args: z.infer<TSchema>, ctx: ToolCallContext) => Promise<ToolResult> | ToolResult
+  handler: (args: z.infer<TSchema>, ctx: ToolCallContext) => Promise<ToolResult> | ToolResult,
 ): CompiledTool {
   // Use Zod 4's native JSON Schema conversion
   const jsonSchema = z.toJSONSchema(spec.schema, {
@@ -72,7 +72,7 @@ export function defineTool<TSchema extends z.ZodObject<z.ZodRawShape>>(
 
   if (jsonSchema && typeof jsonSchema === "object" && "properties" in jsonSchema) {
     const props = jsonSchema.properties as Record<string, Record<string, unknown>>;
-    
+
     for (const [key, prop] of Object.entries(props)) {
       inputSchema.properties![key] = {
         type: (prop.type as "string" | "number" | "boolean") ?? "string",

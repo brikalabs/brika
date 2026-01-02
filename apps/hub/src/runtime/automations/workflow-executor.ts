@@ -1,23 +1,16 @@
 /**
  * Workflow Executor
- * 
+ *
  * Executes workflows with port-based routing and IPC block execution.
  */
 
-import type { 
-  Workflow, 
-  WorkflowBlock, 
-  BlockConnection, 
-  BlockContext,
-  BlockResult,
-  Json,
-} from "@elia/sdk";
+import type { Workflow, WorkflowBlock, BlockConnection, BlockContext, Json } from "@elia/sdk";
 
 import type { PluginManager } from "../plugins/plugin-manager";
 import type { ToolRegistry } from "../tools/tool-registry";
 import type { EventBus } from "../events/event-bus";
 import type { LogRouter } from "../logs/log-router";
-import type { BlockRegistry } from "../blocks/block-registry";
+import type { BlockRegistry } from "../blocks";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -52,9 +45,9 @@ export type ExecutionListener = (event: ExecutionEvent) => void;
 // ─────────────────────────────────────────────────────────────────────────────
 
 export class WorkflowExecutor {
-  #deps: ExecutorDeps;
-  #vars = new Map<string, Json>();
-  #blockOutputs = new Map<string, Record<string, Json>>();
+  readonly #deps: ExecutorDeps;
+  readonly #vars = new Map<string, Json>();
+  readonly #blockOutputs = new Map<string, Record<string, Json>>();
   #listener?: ExecutionListener;
 
   constructor(deps: ExecutorDeps) {
@@ -88,7 +81,7 @@ export class WorkflowExecutor {
 
     // Execute starting blocks in parallel
     await Promise.all(
-      startBlocks.map(block => this.#executeBlock(block, workflow, trigger, connections, null))
+      startBlocks.map((block) => this.#executeBlock(block, workflow, trigger, connections, null)),
     );
 
     this.#emit({ type: "workflow.complete" });
@@ -100,14 +93,14 @@ export class WorkflowExecutor {
 
   #buildConnectionMap(workflow: Workflow): Map<string, BlockConnection[]> {
     const map = new Map<string, BlockConnection[]>();
-    
+
     for (const conn of workflow.connections) {
       const key = `${conn.from}.${conn.fromPort || "out"}`;
       const existing = map.get(key) || [];
       existing.push(conn);
       map.set(key, existing);
     }
-    
+
     return map;
   }
 
@@ -117,8 +110,8 @@ export class WorkflowExecutor {
     for (const conn of workflow.connections) {
       hasIncoming.add(conn.to);
     }
-    
-    return workflow.blocks.filter(b => !hasIncoming.has(b.id));
+
+    return workflow.blocks.filter((b) => !hasIncoming.has(b.id));
   }
 
   async #executeBlock(
@@ -126,7 +119,7 @@ export class WorkflowExecutor {
     workflow: Workflow,
     trigger: TriggerData,
     connections: Map<string, BlockConnection[]>,
-    inputData: Json
+    inputData: Json,
   ): Promise<void> {
     this.#emit({ type: "block.start", blockId: block.id });
 
@@ -146,13 +139,9 @@ export class WorkflowExecutor {
     try {
       // Resolve block type (supports short names like "log" -> "blocks-builtin:log")
       const resolvedType = this.#resolveBlockType(block.type);
-      
+
       // Execute block via plugin IPC
-      const result = await this.#deps.plugins.executeBlock(
-        resolvedType,
-        block.config as Record<string, Json>,
-        ctx
-      );
+      const result = await this.#deps.plugins.executeBlock(resolvedType, block.config, ctx);
 
       if (result.error) {
         this.#emit({ type: "block.error", blockId: block.id, error: result.error });
@@ -168,9 +157,9 @@ export class WorkflowExecutor {
       const outputPort = result.output || "out";
       this.#blockOutputs.set(block.id, { [outputPort]: result.data ?? null });
 
-      this.#emit({ 
-        type: "block.complete", 
-        blockId: block.id, 
+      this.#emit({
+        type: "block.complete",
+        blockId: block.id,
         output: outputPort,
         data: result.data,
       });
@@ -181,13 +170,13 @@ export class WorkflowExecutor {
 
       // Execute downstream blocks
       await Promise.all(
-        downstream.map(conn => {
-          const nextBlock = workflow.blocks.find(b => b.id === conn.to);
+        downstream.map((conn) => {
+          const nextBlock = workflow.blocks.find((b) => b.id === conn.to);
           if (nextBlock) {
             return this.#executeBlock(nextBlock, workflow, trigger, connections, result.data ?? null);
           }
           return Promise.resolve();
-        })
+        }),
       );
     } catch (error) {
       this.#emit({ type: "block.error", blockId: block.id, error: String(error) });
@@ -200,7 +189,7 @@ export class WorkflowExecutor {
 
   /**
    * Resolve a block type - supports short names and full qualified names
-   * 
+   *
    * Examples:
    * - "log" -> "blocks-builtin:log" (if blocks-builtin:log exists)
    * - "blocks-builtin:log" -> "blocks-builtin:log" (already full qualified)
@@ -214,9 +203,9 @@ export class WorkflowExecutor {
 
     // Try to find by short name - search all registered blocks
     const allBlocks = this.#deps.blocks.list();
-    
+
     // Look for exact match on the block ID part (after :)
-    const match = allBlocks.find(b => b.type?.endsWith(`:${type}`));
+    const match = allBlocks.find((b) => b.type?.endsWith(`:${type}`));
     if (match?.type) {
       return match.type;
     }
@@ -225,4 +214,3 @@ export class WorkflowExecutor {
     return type;
   }
 }
-

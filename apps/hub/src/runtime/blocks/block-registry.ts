@@ -1,12 +1,12 @@
 /**
  * Block Registry
- * 
+ *
  * Central registry for block definitions received from plugins.
  * Provides block metadata to UI and validates block configs.
  */
 
 import { singleton, inject } from "@elia/shared";
-import type { BlockDefinition, BlockSchema } from "@elia/sdk";
+import type { BlockDefinition } from "@elia/sdk";
 import { LogRouter } from "../logs/log-router";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -25,9 +25,9 @@ interface RegisteredBlock extends BlockDefinition {
 @singleton()
 export class BlockRegistry {
   private readonly logs = inject(LogRouter);
-  
+
   /** Block definitions by type */
-  #blocks = new Map<string, RegisteredBlock>();
+  readonly #blocks = new Map<string, RegisteredBlock>();
 
   /**
    * Register a block definition from a plugin
@@ -36,20 +36,20 @@ export class BlockRegistry {
   register(block: BlockDefinition, pluginId: string): void {
     // Create full qualified type: pluginId:blockId
     const fullType = `${pluginId}:${block.id}`;
-    
+
     if (this.#blocks.has(fullType)) {
-      this.logs.warn("block.duplicate", { 
-        type: fullType, 
-        existing: this.#blocks.get(fullType)?.pluginId,
+      this.logs.warn("block.duplicate", {
+        type: fullType,
+        existing: this.#blocks.get(fullType)?.pluginId ?? null,
         new: pluginId,
       });
     }
-    
+
     // Set the full type on the definition
     this.#blocks.set(fullType, { ...block, type: fullType, pluginId });
-    this.logs.info("block.registered", { 
-      type: fullType, 
-      name: block.name, 
+    this.logs.info("block.registered", {
+      type: fullType,
+      name: block.name,
       plugin: pluginId,
       inputs: block.inputs.length,
       outputs: block.outputs.length,
@@ -178,4 +178,3 @@ function validateType(value: unknown, expectedType: string): boolean {
       return true;
   }
 }
-

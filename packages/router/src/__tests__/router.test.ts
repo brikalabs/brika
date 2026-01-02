@@ -13,11 +13,9 @@ describe("@elia/router", () => {
     });
 
     it("should create a GET route with schema", () => {
-      const r = route.get(
-        "/test/:id",
-        { params: z.object({ id: z.string() }) },
-        async ({ params }) => ({ id: params.id }),
-      );
+      const r = route.get("/test/:id", { params: z.object({ id: z.string() }) }, async ({ params }) => ({
+        id: params.id,
+      }));
 
       expect(r.method).toBe("GET");
       expect(r.path).toBe("/test/:id");
@@ -26,11 +24,9 @@ describe("@elia/router", () => {
     });
 
     it("should create POST route with body schema", () => {
-      const r = route.post(
-        "/test",
-        { body: z.object({ name: z.string() }) },
-        async ({ body }) => ({ name: body.name }),
-      );
+      const r = route.post("/test", { body: z.object({ name: z.string() }) }, async ({ body }) => ({
+        name: body.name,
+      }));
 
       expect(r.method).toBe("POST");
       expect(r.schema?.body).toBeDefined();
@@ -85,11 +81,7 @@ describe("@elia/router", () => {
       const usersRoutes = [route.get("/users", async () => [])];
       const postsRoutes = [route.get("/posts", async () => [])];
 
-      const combined = combineRoutes(
-        { prefix: "/api/v1" },
-        usersRoutes,
-        postsRoutes,
-      );
+      const combined = combineRoutes({ prefix: "/api/v1" }, usersRoutes, postsRoutes);
 
       expect(combined).toHaveLength(2);
       expect(combined[0].path).toBe("/api/v1/users");
@@ -135,9 +127,7 @@ describe("@elia/router", () => {
     });
 
     it("should handle GET requests", async () => {
-      const app = createApp([
-        route.get("/api/health", async () => ({ status: "ok" })),
-      ]);
+      const app = createApp([route.get("/api/health", async () => ({ status: "ok" }))]);
 
       const res = await app.fetch(new Request("http://localhost/api/health"));
       const body = await res.json();
@@ -192,31 +182,23 @@ describe("@elia/router", () => {
       ]);
 
       // Valid request
-      const validRes = await app.fetch(
-        new Request("http://localhost/api/search?q=test"),
-      );
+      const validRes = await app.fetch(new Request("http://localhost/api/search?q=test"));
       expect(validRes.status).toBe(200);
       expect(await validRes.json()).toEqual({ query: "test" });
 
       // Invalid request - missing required query param
-      const invalidRes = await app.fetch(
-        new Request("http://localhost/api/search"),
-      );
+      const invalidRes = await app.fetch(new Request("http://localhost/api/search"));
       expect(invalidRes.status).toBe(400);
     });
 
     it("should handle path params", async () => {
       const app = createApp([
-        route.get(
-          "/api/users/:id",
-          { params: z.object({ id: z.string() }) },
-          async ({ params }) => ({ userId: params.id }),
-        ),
+        route.get("/api/users/:id", { params: z.object({ id: z.string() }) }, async ({ params }) => ({
+          userId: params.id,
+        })),
       ]);
 
-      const res = await app.fetch(
-        new Request("http://localhost/api/users/123"),
-      );
+      const res = await app.fetch(new Request("http://localhost/api/users/123"));
       expect(res.status).toBe(200);
       expect(await res.json()).toEqual({ userId: "123" });
     });
@@ -231,15 +213,11 @@ describe("@elia/router", () => {
         }),
       ]);
 
-      const notFoundRes = await app.fetch(
-        new Request("http://localhost/api/user/404"),
-      );
+      const notFoundRes = await app.fetch(new Request("http://localhost/api/user/404"));
       expect(notFoundRes.status).toBe(404);
       expect(await notFoundRes.json()).toEqual({ error: "User not found" });
 
-      const okRes = await app.fetch(
-        new Request("http://localhost/api/user/123"),
-      );
+      const okRes = await app.fetch(new Request("http://localhost/api/user/123"));
       expect(okRes.status).toBe(200);
     });
 
@@ -283,4 +261,3 @@ describe("@elia/router", () => {
     });
   });
 });
-

@@ -32,25 +32,21 @@ describe("ToolRegistry", () => {
   it("should register a tool", () => {
     const registry = TestBed.get(ToolRegistry);
 
-    registry.register({
-      name: "test.tool",
+    registry.register("tool", "test", {
       description: "A test tool",
-      owner: "test",
       call: async () => ({ ok: true, content: "done" }),
     });
 
     const tools = registry.list();
     expect(tools).toHaveLength(1);
-    expect(tools[0].name).toBe("test.tool");
+    expect(tools[0].name).toBe("test:tool");
     expect(tools[0].owner).toBe("test");
   });
 
   it("should log on register", () => {
     const registry = TestBed.get(ToolRegistry);
 
-    registry.register({
-      name: "my.tool",
-      owner: "plugin",
+    registry.register("tool", "plugin", {
       call: async () => ({ ok: true }),
     });
 
@@ -61,48 +57,42 @@ describe("ToolRegistry", () => {
   it("should prevent duplicate registration", () => {
     const registry = TestBed.get(ToolRegistry);
 
-    registry.register({
-      name: "dup.tool",
-      owner: "a",
+    registry.register("tool", "owner", {
       call: async () => ({ ok: true }),
     });
 
     expect(() => {
-      registry.register({
-        name: "dup.tool",
-        owner: "b",
+      registry.register("tool", "owner", {
         call: async () => ({ ok: true }),
       });
-    }).toThrow("Tool already registered: dup.tool");
+    }).toThrow("Tool already registered: owner:tool");
   });
 
   it("should unregister a tool", () => {
     const registry = TestBed.get(ToolRegistry);
 
-    registry.register({
-      name: "remove.me",
-      owner: "test",
+    registry.register("tool", "test", {
       call: async () => ({ ok: true }),
     });
 
     expect(registry.list()).toHaveLength(1);
-    registry.unregister("remove.me");
+    registry.unregister("test:tool");
     expect(registry.list()).toHaveLength(0);
   });
 
   it("should unregister by owner", () => {
     const registry = TestBed.get(ToolRegistry);
 
-    registry.register({ name: "a.tool", owner: "plugin1", call: async () => ({ ok: true }) });
-    registry.register({ name: "b.tool", owner: "plugin1", call: async () => ({ ok: true }) });
-    registry.register({ name: "c.tool", owner: "plugin2", call: async () => ({ ok: true }) });
+    registry.register("a", "plugin1", { call: async () => ({ ok: true }) });
+    registry.register("b", "plugin1", { call: async () => ({ ok: true }) });
+    registry.register("c", "plugin2", { call: async () => ({ ok: true }) });
 
     expect(registry.list()).toHaveLength(3);
     registry.unregisterByOwner("plugin1");
 
     const remaining = registry.list();
     expect(remaining).toHaveLength(1);
-    expect(remaining[0].name).toBe("c.tool");
+    expect(remaining[0].name).toBe("plugin2:c");
   });
 
   it("should call a tool", async () => {
@@ -110,13 +100,11 @@ describe("ToolRegistry", () => {
     const handler = spy<[Record<string, unknown>, unknown], Promise<{ ok: boolean; content: string }>>();
     handler.mockResolvedValue({ ok: true, content: "success" });
 
-    registry.register({
-      name: "call.me",
-      owner: "test",
+    registry.register("tool", "test", {
       call: handler,
     });
 
-    const result = await registry.call("call.me", { arg: "value" }, { traceId: "123", source: "api" });
+    const result = await registry.call("test:tool", { arg: "value" }, { traceId: "123", source: "api" });
 
     expect(result.ok).toBe(true);
     expect(result.content).toBe("success");

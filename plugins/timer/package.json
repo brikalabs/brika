@@ -4,7 +4,13 @@
   "version": "0.1.0",
   "description": "Timer and reminder functionality for ELIA",
   "author": "ELIA Team",
-  "keywords": ["timer", "reminder", "delay", "countdown"],
+  "icon": "./icon.svg",
+  "keywords": [
+    "timer",
+    "reminder",
+    "delay",
+    "countdown"
+  ],
   "type": "module",
   "exports": {
     ".": "./src/index.ts"

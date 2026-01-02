@@ -6,4 +6,9 @@ export { ConfigPanel } from "./ConfigPanel";
 export { ExpressionInput } from "./ExpressionInput";
 export { VariablePicker } from "./VariablePicker";
 export { DebugPanel } from "./DebugPanel";
-export { useWorkflowEditor, type BlockStatus, type ExecutionLog, type EditorState } from "./useWorkflowEditor";
+export {
+  useWorkflowEditor,
+  type BlockStatus,
+  type ExecutionLog,
+  type EditorState,
+} from "./useWorkflowEditor";

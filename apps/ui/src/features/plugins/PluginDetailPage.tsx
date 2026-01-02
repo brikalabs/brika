@@ -1,13 +1,40 @@
 import React from "react";
 import { usePlugin, usePluginMutations } from "./hooks";
+import { pluginsApi } from "./api";
 import {
-  Button, Card, CardContent, CardHeader, CardTitle, Badge, Skeleton,
-  Tooltip, TooltipTrigger, TooltipContent,
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+  Avatar,
+  AvatarImage,
+  AvatarFallback,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Badge,
+  Skeleton,
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/ui";
-import { 
-  ArrowLeft, RefreshCw, Power, RotateCcw, Skull, Plug, Wrench, 
-  Boxes, ExternalLink, Tag, User, Github,
+import {
+  ArrowLeft,
+  RefreshCw,
+  Power,
+  RotateCcw,
+  Skull,
+  Plug,
+  Wrench,
+  Boxes,
+  ExternalLink,
+  Tag,
+  User,
+  Github,
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 
@@ -56,7 +83,10 @@ export function PluginDetailPage({ pluginId }: PluginDetailPageProps) {
   if (error || !plugin) {
     return (
       <div className="space-y-6">
-        <Link to="/plugins" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground">
+        <Link
+          to="/plugins"
+          className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground"
+        >
           <ArrowLeft className="size-4" />
           Back to Plugins
         </Link>
@@ -64,7 +94,9 @@ export function PluginDetailPage({ pluginId }: PluginDetailPageProps) {
           <CardContent className="py-12 text-center">
             <Plug className="size-12 mx-auto text-muted-foreground mb-4" />
             <h3 className="font-semibold text-lg">Plugin not found</h3>
-            <p className="text-muted-foreground mt-1">The plugin "{pluginId}" is not loaded or doesn't exist</p>
+            <p className="text-muted-foreground mt-1">
+              The plugin "{pluginId}" is not loaded or doesn't exist
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -77,7 +109,10 @@ export function PluginDetailPage({ pluginId }: PluginDetailPageProps) {
   return (
     <div className="space-y-6">
       {/* Back link */}
-      <Link to="/plugins" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
+      <Link
+        to="/plugins"
+        className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+      >
         <ArrowLeft className="size-4" />
         Back to Plugins
       </Link>
@@ -86,19 +121,13 @@ export function PluginDetailPage({ pluginId }: PluginDetailPageProps) {
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-4">
           {/* Plugin Icon */}
-          <div className="flex size-16 items-center justify-center rounded-xl bg-primary/10 shrink-0">
-            <img 
-              src={`/api/plugins/${encodeURIComponent(pluginId)}/icon`}
-              alt=""
-              className="size-10"
-              onError={(e) => {
-                e.currentTarget.style.display = 'none';
-                e.currentTarget.nextElementSibling?.classList.remove('hidden');
-              }}
-            />
-            <Plug className="size-8 text-primary hidden" />
-          </div>
-          
+          <Avatar className="size-16 rounded-xl">
+            {plugin.uid && <AvatarImage src={pluginsApi.getIconUrl(plugin.uid)} />}
+            <AvatarFallback className="rounded-xl bg-primary/10">
+              <Plug className="size-8 text-primary" />
+            </AvatarFallback>
+          </Avatar>
+
           <div>
             <h1 className="text-2xl font-bold tracking-tight">{plugin.id}</h1>
             {plugin.metadata?.description && (
@@ -115,9 +144,9 @@ export function PluginDetailPage({ pluginId }: PluginDetailPageProps) {
                 </span>
               )}
               {repoUrl && (
-                <a 
-                  href={repoUrl} 
-                  target="_blank" 
+                <a
+                  href={repoUrl}
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 hover:text-foreground transition-colors"
                 >
@@ -131,36 +160,69 @@ export function PluginDetailPage({ pluginId }: PluginDetailPageProps) {
         </div>
 
         <div className="flex items-center gap-2">
-          <Badge 
-            variant={plugin.health === "running" ? "default" : plugin.health === "crashed" ? "destructive" : "secondary"}
+          <Badge
+            variant={
+              plugin.health === "running"
+                ? "default"
+                : plugin.health === "crashed"
+                  ? "destructive"
+                  : "secondary"
+            }
             className="px-3 py-1"
           >
             {plugin.health}
           </Badge>
-          
-          <Tooltip><TooltipTrigger asChild>
-            <Button size="icon" variant="outline" onClick={() => refetch()}>
-              <RefreshCw className="size-4" />
-            </Button>
-          </TooltipTrigger><TooltipContent>Refresh</TooltipContent></Tooltip>
 
-          <Tooltip><TooltipTrigger asChild>
-            <Button size="icon" variant="outline" onClick={() => reload.mutate(plugin.ref)} disabled={isBusy}>
-              <RotateCcw className="size-4" />
-            </Button>
-          </TooltipTrigger><TooltipContent>Reload</TooltipContent></Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button size="icon" variant="outline" onClick={() => refetch()}>
+                <RefreshCw className="size-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Refresh</TooltipContent>
+          </Tooltip>
 
-          <Tooltip><TooltipTrigger asChild>
-            <Button size="icon" variant="outline" onClick={() => disable.mutate(plugin.ref)} disabled={isBusy}>
-              <Power className="size-4" />
-            </Button>
-          </TooltipTrigger><TooltipContent>Disable</TooltipContent></Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="icon"
+                variant="outline"
+                onClick={() => reload.mutate(plugin.ref)}
+                disabled={isBusy}
+              >
+                <RotateCcw className="size-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Reload</TooltipContent>
+          </Tooltip>
 
-          <Tooltip><TooltipTrigger asChild>
-            <Button size="icon" variant="destructive" onClick={() => kill.mutate(plugin.ref)} disabled={isBusy}>
-              <Skull className="size-4" />
-            </Button>
-          </TooltipTrigger><TooltipContent>Kill</TooltipContent></Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="icon"
+                variant="outline"
+                onClick={() => disable.mutate(plugin.ref)}
+                disabled={isBusy}
+              >
+                <Power className="size-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Disable</TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="icon"
+                variant="destructive"
+                onClick={() => kill.mutate(plugin.ref)}
+                disabled={isBusy}
+              >
+                <Skull className="size-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Kill</TooltipContent>
+          </Tooltip>
         </div>
       </div>
 
@@ -196,7 +258,7 @@ export function PluginDetailPage({ pluginId }: PluginDetailPageProps) {
             <div className="text-2xl font-bold">{plugin.tools?.length || 0}</div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -208,7 +270,7 @@ export function PluginDetailPage({ pluginId }: PluginDetailPageProps) {
             <div className="text-2xl font-bold">{plugin.blocks?.length || 0}</div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">Process ID</CardTitle>

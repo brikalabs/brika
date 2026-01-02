@@ -1,29 +1,26 @@
-import 'reflect-metadata'
-import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
-import type { PluginHealth, Rule, Schedule } from '@elia/shared'
-import { createSpyFn, mock, TestBed } from '@elia/shared'
-import { StateStore } from '../runtime/state/state-store'
-import { LogRouter } from '../runtime/logs/log-router'
-import { HubConfig } from '../runtime/config'
+import "reflect-metadata";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import type { Rule, Schedule } from "@elia/shared";
+import { spy, mock, TestBed } from "@elia/shared";
+import { StateStore } from "../runtime/state/state-store";
+import { LogRouter } from "../runtime/logs/log-router";
+import { HubConfig } from "../runtime/config";
 
 describe("StateStore", () => {
   let mockLogs: LogRouter;
 
   beforeEach(() => {
     mockLogs = mock<LogRouter>({
-      info: createSpyFn(),
-      error: createSpyFn(),
-      debug: createSpyFn(),
+      info: spy(),
+      error: spy(),
+      debug: spy(),
     });
 
-    TestBed
-      .configureTestingModule()
-      .provide(HubConfig, new HubConfig())
-      .provide(LogRouter, mockLogs);
+    TestBed.create().provide(HubConfig, new HubConfig()).provide(LogRouter, mockLogs).compile();
   });
 
   afterEach(() => {
-    TestBed.resetTestingModule();
+    TestBed.reset();
   });
 
   describe("Plugin State", () => {
@@ -33,7 +30,7 @@ describe("StateStore", () => {
       await store.upsert({
         ref: "test-plugin",
         enabled: true,
-        health: { status: "running", lastHeartbeat: Date.now() },
+        health: "running",
         updatedAt: Date.now(),
       });
 
@@ -55,13 +52,13 @@ describe("StateStore", () => {
       await store.upsert({
         ref: "plugin1",
         enabled: true,
-        health: { status: "running", lastHeartbeat: Date.now() },
+        health: "running",
         updatedAt: Date.now(),
       });
       await store.upsert({
         ref: "plugin2",
         enabled: false,
-        health: { status: "stopped" },
+        health: "stopped",
         updatedAt: Date.now(),
       });
 
@@ -81,22 +78,20 @@ describe("StateStore", () => {
 
     it("should set plugin health", async () => {
       const store = TestBed.inject(StateStore);
-      const health: PluginHealth = { status: "running", lastHeartbeat: Date.now() };
 
-      await store.setHealth("test-plugin", health);
+      await store.setHealth("test-plugin", "running");
 
       const state = store.get("test-plugin");
-      expect(state?.health).toEqual(health);
+      expect(state?.health).toBe("running");
     });
 
     it("should set plugin health with error", async () => {
       const store = TestBed.inject(StateStore);
-      const health: PluginHealth = { status: "crashed" };
 
-      await store.setHealth("test-plugin", health, "Something went wrong");
+      await store.setHealth("test-plugin", "crashed", "Something went wrong");
 
       const state = store.get("test-plugin");
-      expect(state?.health.status).toBe("crashed");
+      expect(state?.health).toBe("crashed");
       expect(state?.lastError).toBe("Something went wrong");
     });
 
@@ -106,7 +101,7 @@ describe("StateStore", () => {
       await store.upsert({
         ref: "my-plugin",
         enabled: true,
-        health: { status: "running", lastHeartbeat: Date.now() },
+        health: "running",
         lastError: "previous error",
         updatedAt: Date.now(),
       });
@@ -114,7 +109,7 @@ describe("StateStore", () => {
       const summary = store.summarize("my-plugin");
 
       expect(summary.ref).toBe("my-plugin");
-      expect(summary.health.status).toBe("running");
+      expect(summary.health).toBe("running");
       expect(summary.lastError).toBe("previous error");
     });
   });

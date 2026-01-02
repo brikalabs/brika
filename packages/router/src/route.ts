@@ -41,34 +41,19 @@ function createRoute<S extends Schema>(
  * ```
  */
 export const route = {
-  get: <S extends Schema>(
-    path: string,
-    schemaOrHandler: S | Handler<S>,
-    maybeHandler?: Handler<S>,
-  ) => createRoute("GET", path, schemaOrHandler, maybeHandler),
+  get: <S extends Schema>(path: string, schemaOrHandler: S | Handler<S>, maybeHandler?: Handler<S>) =>
+    createRoute("GET", path, schemaOrHandler, maybeHandler),
 
-  post: <S extends Schema>(
-    path: string,
-    schemaOrHandler: S | Handler<S>,
-    maybeHandler?: Handler<S>,
-  ) => createRoute("POST", path, schemaOrHandler, maybeHandler),
+  post: <S extends Schema>(path: string, schemaOrHandler: S | Handler<S>, maybeHandler?: Handler<S>) =>
+    createRoute("POST", path, schemaOrHandler, maybeHandler),
 
-  put: <S extends Schema>(
-    path: string,
-    schemaOrHandler: S | Handler<S>,
-    maybeHandler?: Handler<S>,
-  ) => createRoute("PUT", path, schemaOrHandler, maybeHandler),
+  put: <S extends Schema>(path: string, schemaOrHandler: S | Handler<S>, maybeHandler?: Handler<S>) =>
+    createRoute("PUT", path, schemaOrHandler, maybeHandler),
 
-  patch: <S extends Schema>(
-    path: string,
-    schemaOrHandler: S | Handler<S>,
-    maybeHandler?: Handler<S>,
-  ) => createRoute("PATCH", path, schemaOrHandler, maybeHandler),
+  patch: <S extends Schema>(path: string, schemaOrHandler: S | Handler<S>, maybeHandler?: Handler<S>) =>
+    createRoute("PATCH", path, schemaOrHandler, maybeHandler),
 
-  delete: <S extends Schema>(
-    path: string,
-    schemaOrHandler: S | Handler<S>,
-    maybeHandler?: Handler<S>,
-  ) => createRoute("DELETE", path, schemaOrHandler, maybeHandler),
+  delete: <S extends Schema>(path: string, schemaOrHandler: S | Handler<S>, maybeHandler?: Handler<S>) =>
+    createRoute("DELETE", path, schemaOrHandler, maybeHandler),
 };
 

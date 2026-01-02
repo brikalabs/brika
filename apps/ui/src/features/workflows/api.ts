@@ -113,10 +113,7 @@ export async function disableWorkflow(id: string): Promise<{ ok: boolean }> {
 }
 
 // Create test workflow event source
-export function createTestEventSource(
-  workflowId: string, 
-  payload: Record<string, unknown>
-): EventSource {
+export function createTestEventSource(workflowId: string, payload: Record<string, unknown>): EventSource {
   const params = new URLSearchParams({
     id: workflowId,
     payload: JSON.stringify(payload),

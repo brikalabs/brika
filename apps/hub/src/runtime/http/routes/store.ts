@@ -17,13 +17,9 @@ export const storeRoutes = group("/api/store", [
     },
   ),
 
-  route.post(
-    "/uninstall",
-    { body: z.object({ ref: z.string() }) },
-    async ({ body, inject }) => {
-      await inject(StoreService).uninstall(body.ref);
-      return { ok: true };
-    },
-  ),
+  route.post("/uninstall", { body: z.object({ ref: z.string() }) }, async ({ body, inject }) => {
+    await inject(StoreService).uninstall(body.ref);
+    return { ok: true };
+  }),
 ]);
 

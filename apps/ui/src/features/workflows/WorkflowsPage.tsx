@@ -1,18 +1,53 @@
 import React, { useState } from "react";
 import { ReactFlowProvider } from "@xyflow/react";
 import {
-  Card, CardContent, CardDescription, CardHeader, CardTitle,
-  Badge, Button, Switch, Tabs, TabsList, TabsTrigger, TabsContent,
-  ScrollArea, Dialog, DialogContent, DialogHeader, DialogTitle,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Badge,
+  Button,
+  Switch,
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+  ScrollArea,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui";
-import { 
-  Play, Clock, CheckCircle, XCircle, AlertCircle, Zap, Eye, Plus,
-  GitBranch, Square, Timer, Send, Edit, FileText, Shuffle, Pencil, Trash2,
+import {
+  Play,
+  Clock,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  Zap,
+  Eye,
+  Plus,
+  GitBranch,
+  Square,
+  Timer,
+  Send,
+  Edit,
+  FileText,
+  Shuffle,
+  Pencil,
+  Trash2,
 } from "lucide-react";
-import { 
-  useWorkflows, useWorkflow, useWorkflowRuns, useBlockTypes, 
-  useTriggerWorkflow, useEnableWorkflow, useDisableWorkflow,
-  useSaveWorkflow, useDeleteWorkflow,
+import {
+  useWorkflows,
+  useWorkflow,
+  useWorkflowRuns,
+  useBlockTypes,
+  useTriggerWorkflow,
+  useEnableWorkflow,
+  useDisableWorkflow,
+  useSaveWorkflow,
+  useDeleteWorkflow,
 } from "./hooks";
 import { WorkflowEditor } from "./editor";
 import { saveWorkflow } from "./api";
@@ -44,7 +79,10 @@ function formatTime(ts: number) {
 }
 
 function StatusBadge({ status }: { status: WorkflowRun["status"] }) {
-  const variants: Record<string, { variant: "default" | "secondary" | "destructive" | "outline"; icon: React.ElementType }> = {
+  const variants: Record<
+    string,
+    { variant: "default" | "secondary" | "destructive" | "outline"; icon: React.ElementType }
+  > = {
     running: { variant: "default", icon: Clock },
     completed: { variant: "secondary", icon: CheckCircle },
     error: { variant: "destructive", icon: XCircle },
@@ -58,15 +96,15 @@ function StatusBadge({ status }: { status: WorkflowRun["status"] }) {
   );
 }
 
-function WorkflowCard({ 
-  workflow, 
-  onTrigger, 
-  onToggle, 
+function WorkflowCard({
+  workflow,
+  onTrigger,
+  onToggle,
   onView,
   onEdit,
   onDelete,
-}: { 
-  workflow: Workflow; 
+}: {
+  workflow: Workflow;
   onTrigger: () => void;
   onToggle: (enabled: boolean) => void;
   onView: () => void;
@@ -80,7 +118,8 @@ function WorkflowCard({
           <div>
             <CardTitle className="text-lg">{workflow.name || workflow.id}</CardTitle>
             <CardDescription className="mt-1">
-              Triggers on: <code className="text-xs bg-muted px-1 py-0.5 rounded">{workflow.trigger.event}</code>
+              Triggers on:{" "}
+              <code className="text-xs bg-muted px-1 py-0.5 rounded">{workflow.trigger.event}</code>
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
@@ -99,10 +138,7 @@ function WorkflowCard({
             <Button size="sm" variant="ghost" onClick={onDelete}>
               <Trash2 className="size-3 text-destructive" />
             </Button>
-            <Switch 
-              checked={workflow.enabled} 
-              onCheckedChange={onToggle}
-            />
+            <Switch checked={workflow.enabled} onCheckedChange={onToggle} />
           </div>
         </div>
       </CardHeader>
@@ -143,9 +179,7 @@ function RunsTable({ runs }: { runs: WorkflowRun[] }) {
             <span className="font-medium text-sm">{run.workflowId}</span>
           </div>
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            {run.finishedAt && run.startedAt && (
-              <span>{formatDuration(run.finishedAt - run.startedAt)}</span>
-            )}
+            {run.finishedAt && run.startedAt && <span>{formatDuration(run.finishedAt - run.startedAt)}</span>}
             <span>{formatTime(run.startedAt)}</span>
           </div>
         </div>
@@ -164,7 +198,7 @@ function BlockTypesGrid({ types }: { types: BlockType[] }) {
         return (
           <Card key={block.type || block.id} className="p-4">
             <div className="flex items-center gap-3">
-              <div 
+              <div
                 className="size-10 rounded-lg flex items-center justify-center"
                 style={{ backgroundColor: block.color + "20", color: block.color }}
               >
@@ -197,14 +231,14 @@ function createNewWorkflow(): Workflow {
   };
 }
 
-function WorkflowEditorDialog({ 
+function WorkflowEditorDialog({
   workflow,
-  open, 
+  open,
   onClose,
   onSave,
-}: { 
+}: {
   workflow: Workflow | null;
-  open: boolean; 
+  open: boolean;
   onClose: () => void;
   onSave: (workflow: Workflow) => Promise<void>;
 }) {
@@ -224,14 +258,10 @@ function WorkflowEditorDialog({
             {workflow.name || workflow.id}
           </DialogTitle>
         </DialogHeader>
-        
+
         <div className="flex-1 min-h-0">
           <ReactFlowProvider>
-            <WorkflowEditor 
-              workflow={workflow} 
-              readonly={false}
-              onSave={handleSave}
-            />
+            <WorkflowEditor workflow={workflow} readonly={false} onSave={handleSave} />
           </ReactFlowProvider>
         </div>
       </DialogContent>
@@ -239,13 +269,13 @@ function WorkflowEditorDialog({
   );
 }
 
-function WorkflowViewerDialog({ 
-  workflowId, 
-  open, 
-  onClose 
-}: { 
-  workflowId: string | null; 
-  open: boolean; 
+function WorkflowViewerDialog({
+  workflowId,
+  open,
+  onClose,
+}: {
+  workflowId: string | null;
+  open: boolean;
   onClose: () => void;
 }) {
   const { data: workflow, isLoading } = useWorkflow(workflowId || "");
@@ -260,7 +290,7 @@ function WorkflowViewerDialog({
             <span>{workflow?.name || workflowId}</span>
           </DialogTitle>
         </DialogHeader>
-        
+
         {isLoading ? (
           <div className="h-[500px] flex items-center justify-center text-muted-foreground">
             Loading workflow...
@@ -283,11 +313,11 @@ export function WorkflowsPage() {
   const [tab, setTab] = useState("workflows");
   const [viewingWorkflow, setViewingWorkflow] = useState<string | null>(null);
   const [editingWorkflow, setEditingWorkflow] = useState<Workflow | null>(null);
-  
+
   const { data: workflows = [], isLoading: loadingWorkflows, refetch: refetchWorkflows } = useWorkflows();
   const { data: runs = [], isLoading: loadingRuns } = useWorkflowRuns();
   const { data: blockTypes = [] } = useBlockTypes();
-  
+
   const triggerMutation = useTriggerWorkflow();
   const enableMutation = useEnableWorkflow();
   const disableMutation = useDisableWorkflow();
@@ -329,9 +359,7 @@ export function WorkflowsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Workflows</h1>
-          <p className="text-muted-foreground mt-1">
-            Block-based automations triggered by events
-          </p>
+          <p className="text-muted-foreground mt-1">Block-based automations triggered by events</p>
         </div>
         <Button onClick={handleCreateNew}>
           <Plus className="size-4 mr-2" />
@@ -352,7 +380,8 @@ export function WorkflowsPage() {
           ) : workflows.length === 0 ? (
             <Card className="p-12 text-center">
               <p className="text-muted-foreground mb-4">
-                No workflows yet. Create one using the button above or add a YAML file in the <code className="bg-muted px-1 py-0.5 rounded">automations/</code> folder.
+                No workflows yet. Create one using the button above or add a YAML file in the{" "}
+                <code className="bg-muted px-1 py-0.5 rounded">automations/</code> folder.
               </p>
               <Button onClick={handleCreateNew}>
                 <Plus className="size-4 mr-2" />
@@ -362,9 +391,9 @@ export function WorkflowsPage() {
           ) : (
             <div className="grid gap-4">
               {workflows.map((w) => (
-                <WorkflowCard 
-                  key={w.id} 
-                  workflow={w} 
+                <WorkflowCard
+                  key={w.id}
+                  workflow={w}
                   onTrigger={() => handleTrigger(w.id)}
                   onToggle={(enabled) => handleToggle(w.id, enabled)}
                   onView={() => setViewingWorkflow(w.id)}
@@ -388,15 +417,13 @@ export function WorkflowsPage() {
 
         <TabsContent value="blocks" className="mt-6">
           <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Available block types for building workflows
-            </p>
+            <p className="text-sm text-muted-foreground">Available block types for building workflows</p>
             <BlockTypesGrid types={blockTypes} />
           </div>
         </TabsContent>
       </Tabs>
 
-      <WorkflowViewerDialog 
+      <WorkflowViewerDialog
         workflowId={viewingWorkflow}
         open={!!viewingWorkflow}
         onClose={() => setViewingWorkflow(null)}

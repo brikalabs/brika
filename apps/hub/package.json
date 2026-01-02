@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "bun run src/main.ts",
+    "dev": "bun --inspect run src/main.ts",
     "lint": "bun x biome check ."
   },
   "dependencies": {

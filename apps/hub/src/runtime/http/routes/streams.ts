@@ -1,12 +1,5 @@
 import { z } from "zod";
-import {
-  route,
-  group,
-  createSSEStream,
-  createAsyncSSEStream,
-  NotFound,
-  BadRequest,
-} from "@elia/router";
+import { route, createSSEStream, createAsyncSSEStream, NotFound, BadRequest } from "@elia/router";
 import { LogRouter } from "../../logs/log-router";
 import { EventBus } from "../../events/event-bus";
 import { AutomationEngine } from "../../automations";
@@ -80,12 +73,7 @@ export const streamsRoutes = [
         }
 
         // Actually run the workflow
-        const run = await automations.trigger(
-          query.id,
-          "test.trigger",
-          "test",
-          payload,
-        );
+        const run = await automations.trigger(query.id, "test.trigger", "test", payload);
 
         if (run.status === "error") {
           send({ type: "workflow.error", error: run.error });
@@ -106,17 +94,16 @@ export const streamsRoutes = [
 
   // Plugin icon endpoint (returns raw file, not JSON)
   route.get(
-    "/api/plugins/:id/icon",
-    { params: z.object({ id: z.string() }) },
+    "/api/plugins/:uid/icon",
+    { params: z.object({ uid: z.string() }) },
     async ({ params, inject }) => {
       const plugins = inject(PluginManager);
-      const pluginId = decodeURIComponent(params.id);
-      const pluginDir = plugins.getPluginDir(pluginId);
+      const pluginDir = plugins.getPluginDir(params.uid);
 
       if (!pluginDir) throw new NotFound("Plugin not found");
 
       // Try to find icon file
-      const details = plugins.getDetails(pluginId);
+      const details = plugins.getDetailsByUid(params.uid) ?? plugins.getDetails(params.uid);
       const iconPath = details?.metadata?.icon;
 
       if (iconPath) {
@@ -126,8 +113,27 @@ export const streamsRoutes = [
 
         const file = Bun.file(fullPath);
         if (await file.exists()) {
-          return new Response(file, {
-            headers: { "Content-Type": "image/png", ...CORS },
+          // Detect content type from extension
+          const ext = iconPath.split(".").pop()?.toLowerCase();
+          const contentType =
+            ext === "svg"
+              ? "image/svg+xml"
+              : ext === "png"
+                ? "image/png"
+                : ext === "jpg" || ext === "jpeg"
+                  ? "image/jpeg"
+                  : ext === "webp"
+                    ? "image/webp"
+                    : "image/png";
+
+          // Read file into memory to avoid file descriptor streaming issues
+          const content = await file.arrayBuffer();
+          return new Response(content, {
+            headers: {
+              "Content-Type": contentType,
+              "Cache-Control": "public, max-age=86400, immutable",
+              ...CORS,
+            },
           });
         }
       }

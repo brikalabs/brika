@@ -1,24 +1,21 @@
-export type Json =
-  | null
-  | boolean
-  | number
-  | string
-  | Json[]
-  | { [k: string]: Json };
+export type Json = null | boolean | number | string | Json[] | { [k: string]: Json };
 
 export type AnyObj = Record<string, Json>;
 
 /** JSON Schema for tool input validation and UI generation */
 export interface ToolInputSchema {
   type: "object";
-  properties?: Record<string, {
-    type: "string" | "number" | "boolean" | "array" | "object";
-    description?: string;
-    default?: Json;
-    enum?: Json[];
-    items?: { type: string };
-    required?: boolean;
-  }>;
+  properties?: Record<
+    string,
+    {
+      type: "string" | "number" | "boolean" | "array" | "object";
+      description?: string;
+      default?: Json;
+      enum?: Json[];
+      items?: { type: string };
+      required?: boolean;
+    }
+  >;
   required?: string[];
 }
 
@@ -50,12 +47,18 @@ export interface PluginInfo {
   };
 }
 
-export type EventHandler = (event: { id: string; type: string; source: string; payload: Json; ts: number }) => void | Promise<void>;
+export type EventHandler = (event: {
+  id: string;
+  type: string;
+  source: string;
+  payload: Json;
+  ts: number;
+}) => void | Promise<void>;
 
 export interface PluginApi {
   registerTool(
     tool: ToolSpec,
-    handler: (args: AnyObj, ctx: ToolCallContext) => Promise<ToolResult> | ToolResult
+    handler: (args: AnyObj, ctx: ToolCallContext) => Promise<ToolResult> | ToolResult,
   ): void;
 
   onStop(fn: () => void | Promise<void>): void;

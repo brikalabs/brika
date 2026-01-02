@@ -4,7 +4,6 @@
  * Loads and validates elia.yml configuration
  */
 
-import { parse } from "yaml";
 import { singleton } from "tsyringe";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -93,7 +92,7 @@ export class ConfigLoader {
       }
 
       const content = await file.text();
-      const parsed = parse(content) as Partial<EliaConfig>;
+      const parsed = Bun.YAML.parse(content) as Partial<EliaConfig>;
 
       this.config = this.merge(DEFAULT_CONFIG, parsed);
       console.log(`[config] Loaded from ${this.configPath}`);
@@ -120,7 +119,7 @@ export class ConfigLoader {
    * Resolve a plugin reference to a file path
    * Reads package.json to determine the correct entry point
    */
-  resolvePluginRef(ref: string): string {
+  async resolvePluginRef(ref: string): Promise<string> {
     // workspace:name → Read package.json for entry point
     if (ref.startsWith("workspace:")) {
       const name = ref.slice("workspace:".length);
@@ -130,9 +129,7 @@ export class ConfigLoader {
       try {
         const pkgPath = `${pluginDir}/package.json`;
         const pkgFile = Bun.file(pkgPath);
-        // Use synchronous file reading via require since we're in a sync method
-        // Note: This works in Bun
-        const pkgContent = require(pkgPath);
+        const pkgContent = await pkgFile.json();
 
         // Check exports["."] first, then main, then default to src/index.ts
         let entryPoint = "src/index.ts";

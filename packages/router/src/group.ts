@@ -6,18 +6,13 @@ import type { RouteDefinition } from "./types";
 function normalizePrefix(prefix: string): string {
   if (!prefix) return "";
   const withLeadingSlash = prefix.startsWith("/") ? prefix : `/${prefix}`;
-  return withLeadingSlash.endsWith("/")
-    ? withLeadingSlash.slice(0, -1)
-    : withLeadingSlash;
+  return withLeadingSlash.endsWith("/") ? withLeadingSlash.slice(0, -1) : withLeadingSlash;
 }
 
 /**
  * Apply a prefix to routes.
  */
-function applyPrefix(
-  routes: RouteDefinition[],
-  prefix: string,
-): RouteDefinition[] {
+function applyPrefix(routes: RouteDefinition[], prefix: string): RouteDefinition[] {
   if (!prefix) return routes;
   const cleanPrefix = normalizePrefix(prefix);
 
@@ -39,10 +34,7 @@ function applyPrefix(
  * ]);
  * ```
  */
-export function group(
-  prefix: string,
-  routes: RouteDefinition[],
-): RouteDefinition[] {
+export function group(prefix: string, routes: RouteDefinition[]): RouteDefinition[] {
   return applyPrefix(routes, prefix);
 }
 
@@ -76,23 +68,14 @@ export interface CombineOptions {
  * );
  * ```
  */
-export function combineRoutes(
-  ...args: (RouteDefinition[] | CombineOptions)[]
-): RouteDefinition[] {
+export function combineRoutes(...args: (RouteDefinition[] | CombineOptions)[]): RouteDefinition[] {
   // Check if first arg is options
   const firstArg = args[0];
   const hasOptions =
-    firstArg &&
-    !Array.isArray(firstArg) &&
-    typeof firstArg === "object" &&
-    "prefix" in firstArg;
+    firstArg && !Array.isArray(firstArg) && typeof firstArg === "object" && "prefix" in firstArg;
 
-  const options: CombineOptions = hasOptions
-    ? (firstArg as CombineOptions)
-    : {};
-  const routeArrays = hasOptions
-    ? (args.slice(1) as RouteDefinition[][])
-    : (args as RouteDefinition[][]);
+  const options: CombineOptions = hasOptions ? (firstArg as CombineOptions) : {};
+  const routeArrays = hasOptions ? (args.slice(1) as RouteDefinition[][]) : (args as RouteDefinition[][]);
 
   // Flatten all route arrays
   const allRoutes = routeArrays.flat();
@@ -100,4 +83,3 @@ export function combineRoutes(
   // Apply prefix if provided
   return options.prefix ? applyPrefix(allRoutes, options.prefix) : allRoutes;
 }
-

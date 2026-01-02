@@ -1,6 +1,6 @@
 /**
  * Modern Testing API Showcase
- * 
+ *
  * Demonstrates the improved DX with:
  * - spy() with Vitest/Jest-like API
  * - mock() for type-safe partial mocks
@@ -31,9 +31,7 @@ describe("Modern spy() API", () => {
 
   it("should support mockReturnValueOnce", () => {
     const fn = spy<[], number>();
-    fn.mockReturnValueOnce(1)
-      .mockReturnValueOnce(2)
-      .mockReturnValue(999);
+    fn.mockReturnValueOnce(1).mockReturnValueOnce(2).mockReturnValue(999);
 
     expect(fn()).toBe(1);
     expect(fn()).toBe(2);
@@ -77,7 +75,7 @@ describe("Modern spy() API", () => {
 
   it("should support calledWith", () => {
     const fn = spy<[string, number]>();
-    
+
     fn("a", 1);
     fn("b", 2);
     fn("c", 3);
@@ -89,7 +87,7 @@ describe("Modern spy() API", () => {
 
   it("should support nthCall", () => {
     const fn = spy<[string]>();
-    
+
     fn("first");
     fn("second");
     fn("third");
@@ -137,7 +135,7 @@ describe("Modern mock() API", () => {
     }
 
     const service = autoMock<Service>(["method1", "method2"]);
-    
+
     service.method1();
     service.method2(42);
 
@@ -152,7 +150,7 @@ describe("Fluent TestBed API", () => {
 
   it("should use fluent builder pattern", () => {
     const infoSpy = spy<[string, object?]>();
-    
+
     TestBed.create()
       .provide(HubConfig, new HubConfig())
       .mock(LogRouter, {
@@ -164,9 +162,7 @@ describe("Fluent TestBed API", () => {
       .compile();
 
     const registry = TestBed.get(ToolRegistry);
-    registry.register({
-      name: "test.tool",
-      owner: "test",
+    registry.register("tool", "test", {
       call: async () => ({ ok: true }),
     });
 
@@ -174,24 +170,25 @@ describe("Fluent TestBed API", () => {
     expect(infoSpy.lastCall?.[0]).toBe("tool.register");
   });
 
-  it("should support legacy API for backwards compatibility", () => {
+  it("should handle errors in event handlers", () => {
     const errorSpy = spy();
 
-    TestBed.configureTestingModule()
+    TestBed.create()
       .provide(HubConfig, new HubConfig())
       .mock(LogRouter, {
         info: spy(),
         error: errorSpy,
         warn: spy(),
         debug: spy(),
-      });
+      })
+      .compile();
 
     const bus = TestBed.inject(EventBus);
-    
+
     bus.subscribe("test", () => {
       throw new Error("boom");
     });
-    
+
     bus.emit("test", "src", null);
 
     expect(errorSpy.called).toBe(true);
@@ -238,20 +235,18 @@ describe("Real-world testing patterns", () => {
       .compile();
 
     const registry = TestBed.get(ToolRegistry);
-    
+
     const toolHandler = spy<[Record<string, unknown>, unknown], Promise<{ ok: boolean; content: string }>>();
     toolHandler.mockResolvedValue({ ok: true, content: "done" });
 
-    registry.register({
-      name: "light.on",
-      owner: "hue",
+    registry.register("on", "light", {
       call: toolHandler,
     });
 
     const result = await registry.call(
-      "light.on",
+      "light:on",
       { room: "bedroom", brightness: 80 },
-      { traceId: "123", source: "rule" }
+      { traceId: "123", source: "rule" },
     );
 
     expect(result.ok).toBe(true);

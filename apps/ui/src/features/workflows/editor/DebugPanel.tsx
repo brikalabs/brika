@@ -16,10 +16,18 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui";
-import { 
-  Play, Square, ChevronDown, ChevronRight, 
-  Loader2, CheckCircle, XCircle, AlertCircle,
-  Trash2, Clock, Zap,
+import {
+  Play,
+  Square,
+  ChevronDown,
+  ChevronRight,
+  Loader2,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  Trash2,
+  Clock,
+  Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Workflow } from "../api";
@@ -43,7 +51,7 @@ interface DebugPanelProps {
 
 function LogEntry({ log }: { log: ExecutionLog }) {
   const [expanded, setExpanded] = useState(false);
-  
+
   const getIcon = () => {
     switch (log.type) {
       case "start":
@@ -75,7 +83,11 @@ function LogEntry({ log }: { log: ExecutionLog }) {
         className="w-full p-2 flex items-start gap-2 text-left hover:bg-accent/50 transition-colors"
       >
         {log.data ? (
-          expanded ? <ChevronDown className="size-3 mt-0.5" /> : <ChevronRight className="size-3 mt-0.5" />
+          expanded ? (
+            <ChevronDown className="size-3 mt-0.5" />
+          ) : (
+            <ChevronRight className="size-3 mt-0.5" />
+          )
         ) : (
           <span className="w-3" />
         )}
@@ -90,7 +102,7 @@ function LogEntry({ log }: { log: ExecutionLog }) {
           {log.blockId}
         </Badge>
       </button>
-      
+
       {expanded && log.data && (
         <div className="px-8 pb-2">
           <pre className="text-[10px] bg-muted p-2 rounded overflow-auto max-h-24">
@@ -207,12 +219,12 @@ export function DebugPanel({
             </Badge>
           )}
         </div>
-        
+
         {/* Progress indicator */}
         {(completedCount > 0 || errorCount > 0) && (
           <div className="flex items-center gap-2 text-xs mb-2">
             <div className="flex-1 bg-muted rounded-full h-1.5 overflow-hidden">
-              <div 
+              <div
                 className="h-full bg-green-500 transition-all"
                 style={{ width: `${(completedCount / totalBlocks) * 100}%` }}
               />
@@ -231,7 +243,9 @@ export function DebugPanel({
 
       <Tabs defaultValue="payload" className="flex-1 flex flex-col">
         <TabsList className="mx-3 mt-2">
-          <TabsTrigger value="payload" className="text-xs">Payload</TabsTrigger>
+          <TabsTrigger value="payload" className="text-xs">
+            Payload
+          </TabsTrigger>
           <TabsTrigger value="logs" className="text-xs">
             Logs
             {executionLogs.length > 0 && (
@@ -245,9 +259,7 @@ export function DebugPanel({
         <TabsContent value="payload" className="flex-1 p-3 pt-2">
           <div className="space-y-3">
             <div>
-              <label className="text-xs text-muted-foreground block mb-1">
-                Test Payload (JSON)
-              </label>
+              <label className="text-xs text-muted-foreground block mb-1">Test Payload (JSON)</label>
               <Textarea
                 value={payload}
                 onChange={(e) => setPayload(e.target.value)}
@@ -257,29 +269,16 @@ export function DebugPanel({
               />
             </div>
 
-            {error && (
-              <div className="text-xs text-red-500 bg-red-500/10 p-2 rounded">
-                {error}
-              </div>
-            )}
+            {error && <div className="text-xs text-red-500 bg-red-500/10 p-2 rounded">{error}</div>}
 
             <div className="flex gap-2">
               {isRunning ? (
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  onClick={handleStop}
-                  className="flex-1"
-                >
+                <Button size="sm" variant="destructive" onClick={handleStop} className="flex-1">
                   <Square className="size-4 mr-1" />
                   Stop
                 </Button>
               ) : (
-                <Button
-                  size="sm"
-                  onClick={handleTest}
-                  className="flex-1"
-                >
+                <Button size="sm" onClick={handleTest} className="flex-1">
                   <Play className="size-4 mr-1" />
                   Run Test
                 </Button>
@@ -288,7 +287,9 @@ export function DebugPanel({
 
             <div className="text-xs text-muted-foreground">
               <p>The workflow will be executed with this payload as the trigger data.</p>
-              <p className="mt-1">Access via: <code className="bg-muted px-1 rounded">trigger.payload</code></p>
+              <p className="mt-1">
+                Access via: <code className="bg-muted px-1 rounded">trigger.payload</code>
+              </p>
             </div>
           </div>
         </TabsContent>
@@ -311,7 +312,7 @@ export function DebugPanel({
               )}
             </ScrollArea>
           </div>
-          
+
           {executionLogs.length > 0 && (
             <div className="p-2 border-t">
               <Button

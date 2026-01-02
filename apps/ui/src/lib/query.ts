@@ -29,7 +29,10 @@ export const queryClient = new QueryClient({
  * Base fetcher with error handling
  */
 export class ApiError extends Error {
-  constructor(public status: number, message: string) {
+  constructor(
+    public status: number,
+    message: string,
+  ) {
     super(message);
     this.name = "ApiError";
   }
@@ -41,8 +44,7 @@ export async function fetcher<T>(url: string, options?: RequestInit): Promise<T>
     headers: { "Content-Type": "application/json", ...options?.headers },
   });
   if (!res.ok) {
-    throw new ApiError(res.status, await res.text() || res.statusText);
+    throw new ApiError(res.status, (await res.text()) || res.statusText);
   }
   return res.json();
 }
-

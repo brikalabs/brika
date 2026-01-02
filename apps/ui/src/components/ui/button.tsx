@@ -9,9 +9,12 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default: "bg-primary text-primary-foreground shadow-sm hover:bg-primary/90 active:scale-[0.98]",
-        destructive: "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90 active:scale-[0.98]",
-        outline: "border border-border bg-transparent hover:bg-secondary hover:text-secondary-foreground active:scale-[0.98]",
-        secondary: "bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80 active:scale-[0.98]",
+        destructive:
+          "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90 active:scale-[0.98]",
+        outline:
+          "border border-border bg-transparent hover:bg-secondary hover:text-secondary-foreground active:scale-[0.98]",
+        secondary:
+          "bg-secondary text-secondary-foreground shadow-sm hover:bg-secondary/80 active:scale-[0.98]",
         ghost: "hover:bg-secondary hover:text-secondary-foreground",
         link: "text-primary underline-offset-4 hover:underline",
         success: "bg-success text-background shadow-sm hover:bg-success/90 active:scale-[0.98]",
@@ -27,7 +30,7 @@ const buttonVariants = cva(
       variant: "default",
       size: "default",
     },
-  }
+  },
 );
 
 function Button({
@@ -42,13 +45,7 @@ function Button({
   }) {
   const Comp = asChild ? Slot : "button";
 
-  return (
-    <Comp
-      data-slot="button"
-      className={cn(buttonVariants({ variant, size, className }))}
-      {...props}
-    />
-  );
+  return <Comp data-slot="button" className={cn(buttonVariants({ variant, size, className }))} {...props} />;
 }
 
 export { Button, buttonVariants };

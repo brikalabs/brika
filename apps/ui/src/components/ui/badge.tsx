@@ -19,7 +19,7 @@ const badgeVariants = cva(
     defaultVariants: {
       variant: "default",
     },
-  }
+  },
 );
 
 function Badge({
@@ -27,9 +27,7 @@ function Badge({
   variant,
   ...props
 }: React.ComponentProps<"div"> & VariantProps<typeof badgeVariants>) {
-  return (
-    <div className={cn(badgeVariants({ variant }), className)} {...props} />
-  );
+  return <div className={cn(badgeVariants({ variant }), className)} {...props} />;
 }
 
 export { Badge, badgeVariants };

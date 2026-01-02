@@ -1,12 +1,18 @@
 import type { Json, ToolInputSchema } from "./types";
-import type { BlockDefinition, BlockResult, BlockContext } from './blocks';
+import type { BlockDefinition, BlockResult, BlockContext } from "./blocks";
 
 export type Wire =
   | { t: "hello"; plugin: { id: string; version: string; requires?: { hub?: string; sdk?: string } } }
   | { t: "ready" }
   | { t: "log"; level: "debug" | "info" | "warn" | "error"; message: string; meta?: Record<string, Json> }
   | { t: "registerTool"; tool: { id: string; description?: string; inputSchema?: ToolInputSchema } }
-  | { t: "callTool"; id: number; tool: string; args: Record<string, Json>; ctx: { traceId: string; source: "api" | "ui" | "voice" | "rule" | "automation" } }
+  | {
+      t: "callTool";
+      id: number;
+      tool: string;
+      args: Record<string, Json>;
+      ctx: { traceId: string; source: "api" | "ui" | "voice" | "rule" | "automation" };
+    }
   | { t: "toolResult"; id: number; result: { ok: boolean; content?: string; data?: Json } }
   | { t: "ping"; ts: number }
   | { t: "pong"; ts: number }
@@ -39,8 +45,10 @@ function readU32be(b: Uint8Array, off: number): number {
 
 // Use Bun.serialize if available, otherwise JSON
 function serialize(msg: Wire): Uint8Array {
-  if (typeof Bun !== "undefined" && typeof Bun.serialize === "function") {
-    return new Uint8Array(Bun.serialize(msg));
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const BunAny = typeof Bun !== "undefined" ? (Bun as any) : undefined;
+  if (BunAny && typeof BunAny.serialize === "function") {
+    return new Uint8Array(BunAny.serialize(msg));
   }
   // Fallback to JSON
   const encoder = new TextEncoder();
@@ -48,8 +56,10 @@ function serialize(msg: Wire): Uint8Array {
 }
 
 function deserialize(data: Uint8Array): Wire {
-  if (typeof Bun !== "undefined" && typeof Bun.deserialize === "function") {
-    return Bun.deserialize(data) as Wire;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const BunAny = typeof Bun !== "undefined" ? (Bun as any) : undefined;
+  if (BunAny && typeof BunAny.deserialize === "function") {
+    return BunAny.deserialize(data) as Wire;
   }
   // Fallback to JSON
   const decoder = new TextDecoder();

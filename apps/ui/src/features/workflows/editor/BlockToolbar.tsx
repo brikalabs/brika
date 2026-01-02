@@ -1,9 +1,20 @@
 import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Input, ScrollArea, Badge, Skeleton } from "@/components/ui";
-import { 
-  Zap, GitBranch, Shuffle, Timer, Send, Edit, FileText, Square,
-  Search, GripVertical, GitMerge, GitFork, Box,
+import {
+  Zap,
+  GitBranch,
+  Shuffle,
+  Timer,
+  Send,
+  Edit,
+  FileText,
+  Square,
+  Search,
+  GripVertical,
+  GitMerge,
+  GitFork,
+  Box,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -68,7 +79,7 @@ interface DraggableBlockProps {
 
 function DraggableBlock({ block, onDragStart }: DraggableBlockProps) {
   const Icon = getIcon(block.icon);
-  
+
   return (
     <div
       draggable
@@ -77,11 +88,11 @@ function DraggableBlock({ block, onDragStart }: DraggableBlockProps) {
         "flex items-center gap-2 p-2.5 rounded-lg border bg-card cursor-grab",
         "hover:bg-accent hover:border-accent-foreground/20 transition-all",
         "active:cursor-grabbing active:scale-[0.98]",
-        "shadow-sm hover:shadow"
+        "shadow-sm hover:shadow",
       )}
     >
       <GripVertical className="size-3 text-muted-foreground/50" />
-      <div 
+      <div
         className="size-8 rounded-md flex items-center justify-center shrink-0 shadow-sm"
         style={{ backgroundColor: block.color + "20", color: block.color }}
       >
@@ -119,36 +130,40 @@ interface BlockToolbarProps {
 
 export function BlockToolbar({ onDragStart, className }: BlockToolbarProps) {
   const [search, setSearch] = useState("");
-  
-  const { data: blocks = [], isLoading, error } = useQuery({
+
+  const {
+    data: blocks = [],
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["blocks"],
     queryFn: fetchBlocks,
     staleTime: 30000,
   });
-  
+
   const handleDragStart = (e: React.DragEvent, block: BlockDefinition) => {
     e.dataTransfer.setData("application/reactflow", JSON.stringify(block));
     e.dataTransfer.effectAllowed = "move";
     onDragStart?.(e, block);
   };
-  
+
   const filteredBlocks = search
     ? blocks.filter(
         (b) =>
           b.name.toLowerCase().includes(search.toLowerCase()) ||
           (b.type || b.id).toLowerCase().includes(search.toLowerCase()) ||
-          b.description.toLowerCase().includes(search.toLowerCase())
+          b.description.toLowerCase().includes(search.toLowerCase()),
       )
     : blocks;
-  
+
   // Group by category
-  const categories = [...new Set(filteredBlocks.map(b => b.category))].sort();
-  const groupedBlocks = categories.map(cat => ({
+  const categories = [...new Set(filteredBlocks.map((b) => b.category))].sort();
+  const groupedBlocks = categories.map((cat) => ({
     id: cat,
     label: cat.charAt(0).toUpperCase() + cat.slice(1),
-    blocks: filteredBlocks.filter(b => b.category === cat),
+    blocks: filteredBlocks.filter((b) => b.category === cat),
   }));
-  
+
   return (
     <div className={cn("flex flex-col h-full bg-card/50 backdrop-blur-sm border-r", className)}>
       <div className="p-3 border-b bg-background/80">
@@ -163,7 +178,7 @@ export function BlockToolbar({ onDragStart, className }: BlockToolbarProps) {
           />
         </div>
       </div>
-      
+
       <ScrollArea className="flex-1">
         <div className="p-3 space-y-4">
           {isLoading ? (
@@ -207,7 +222,7 @@ export function BlockToolbar({ onDragStart, className }: BlockToolbarProps) {
           )}
         </div>
       </ScrollArea>
-      
+
       <div className="p-3 border-t bg-background/80">
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <span>Drag to add</span>

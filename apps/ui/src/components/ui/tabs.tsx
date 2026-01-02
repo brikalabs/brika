@@ -31,10 +31,7 @@ function TabsList({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="tabs-list"
-      className={cn(
-        "inline-flex h-10 items-center gap-1 rounded-lg bg-muted p-1",
-        className
-      )}
+      className={cn("inline-flex h-10 items-center gap-1 rounded-lg bg-muted p-1", className)}
       {...props}
     />
   );
@@ -57,10 +54,8 @@ function TabsTrigger({ value, className, ...props }: TabsTriggerProps) {
         "inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-all",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
         "disabled:pointer-events-none disabled:opacity-50",
-        isActive
-          ? "bg-background text-foreground shadow-sm"
-          : "text-muted-foreground hover:text-foreground",
-        className
+        isActive ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+        className,
       )}
       {...props}
     />

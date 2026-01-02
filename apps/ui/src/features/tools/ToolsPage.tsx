@@ -1,10 +1,29 @@
 import React from "react";
 import { useTools, useToolCall } from "./hooks";
 import {
-  Button, Card, CardContent, Badge, Input, Label, Separator, Switch,
-  Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
-  Tooltip, TooltipTrigger, TooltipContent,
+  Button,
+  Card,
+  CardContent,
+  Badge,
+  Input,
+  Label,
+  Separator,
+  Switch,
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
 } from "@/components/ui";
 import { RefreshCw, Play, Wrench, Terminal, Loader2, Info, Check, X } from "lucide-react";
 import type { ToolSummary, ToolInputSchema } from "@elia/shared";
@@ -23,7 +42,7 @@ interface FieldProps {
 
 function SchemaField({ name, schema, value, onChange, required }: FieldProps) {
   const id = `field-${name}`;
-  
+
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
@@ -39,16 +58,14 @@ function SchemaField({ name, schema, value, onChange, required }: FieldProps) {
             <TooltipContent className="max-w-[250px]">{schema.description}</TooltipContent>
           </Tooltip>
         )}
-        <Badge variant="secondary" className="text-[10px] ml-auto">{schema.type}</Badge>
+        <Badge variant="secondary" className="text-[10px] ml-auto">
+          {schema.type}
+        </Badge>
       </div>
-      
+
       {schema.type === "boolean" ? (
         <div className="flex items-center gap-2">
-          <Switch
-            id={id}
-            checked={value === true}
-            onCheckedChange={(checked) => onChange(checked)}
-          />
+          <Switch id={id} checked={value === true} onCheckedChange={(checked) => onChange(checked)} />
           <span className="text-sm text-muted-foreground">{value ? "true" : "false"}</span>
         </div>
       ) : schema.type === "number" ? (
@@ -69,7 +86,9 @@ function SchemaField({ name, schema, value, onChange, required }: FieldProps) {
         >
           <option value="">Select...</option>
           {schema.enum.map((opt) => (
-            <option key={String(opt)} value={String(opt)}>{String(opt)}</option>
+            <option key={String(opt)} value={String(opt)}>
+              {String(opt)}
+            </option>
           ))}
         </select>
       ) : (
@@ -148,9 +167,7 @@ function ToolCallDialog({ tool, onClose }: CallDialogProps) {
             <Terminal className="size-5" />
             <code className="font-mono">{tool?.name}</code>
           </DialogTitle>
-          {tool?.description && (
-            <DialogDescription>{tool.description}</DialogDescription>
-          )}
+          {tool?.description && <DialogDescription>{tool.description}</DialogDescription>}
         </DialogHeader>
 
         <div className="space-y-4">
@@ -186,14 +203,18 @@ function ToolCallDialog({ tool, onClose }: CallDialogProps) {
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm">
                   {result.ok ? (
-                    <Badge variant="success" className="gap-1"><Check className="size-3" />Success</Badge>
+                    <Badge variant="success" className="gap-1">
+                      <Check className="size-3" />
+                      Success
+                    </Badge>
                   ) : (
-                    <Badge variant="destructive" className="gap-1"><X className="size-3" />Failed</Badge>
+                    <Badge variant="destructive" className="gap-1">
+                      <X className="size-3" />
+                      Failed
+                    </Badge>
                   )}
                 </div>
-                {result.content && (
-                  <div className="p-3 rounded-lg bg-muted text-sm">{result.content}</div>
-                )}
+                {result.content && <div className="p-3 rounded-lg bg-muted text-sm">{result.content}</div>}
                 {result.data && (
                   <pre className="p-3 rounded-lg bg-muted text-xs font-mono overflow-auto max-h-[150px]">
                     {JSON.stringify(result.data, null, 2)}
@@ -205,7 +226,9 @@ function ToolCallDialog({ tool, onClose }: CallDialogProps) {
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Close</Button>
+          <Button variant="outline" onClick={onClose}>
+            Close
+          </Button>
           <Button onClick={handleCall} disabled={callTool.isPending} className="gap-2">
             {callTool.isPending ? <Loader2 className="size-4 animate-spin" /> : <Play className="size-4" />}
             Call
@@ -238,7 +261,8 @@ export function ToolsPage() {
           <p className="text-muted-foreground">Registered tools from plugins</p>
         </div>
         <Button variant="outline" onClick={() => refetch()} disabled={isLoading} className="gap-2">
-          <RefreshCw className={`size-4 ${isLoading ? "animate-spin" : ""}`} />Refresh
+          <RefreshCw className={`size-4 ${isLoading ? "animate-spin" : ""}`} />
+          Refresh
         </Button>
       </div>
 
@@ -256,42 +280,57 @@ export function ToolsPage() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={5} className="h-24 text-center">
-                  <Loader2 className="size-6 animate-spin mx-auto" />
-                </TableCell></TableRow>
-              ) : tools.length === 0 ? (
-                <TableRow><TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
-                  <Wrench className="size-8 mx-auto mb-2 opacity-50" />
-                  No tools registered...
-                </TableCell></TableRow>
-              ) : tools.map((t) => (
-                <TableRow key={t.name} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelected(t)}>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <div className="flex size-8 items-center justify-center rounded bg-primary/10">
-                        <Wrench className="size-4 text-primary" />
-                      </div>
-                      <code className="font-mono text-sm font-medium">{t.name}</code>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-sm">{t.description || "—"}</TableCell>
-                  <TableCell>
-                    <Badge variant={getArgCount(t) > 0 ? "secondary" : "outline"}>
-                      {getArgCount(t)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="font-mono text-xs truncate max-w-[120px]">
-                      {t.owner?.split("/").pop()?.replace(/\.ts$/, "") || "hub"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); setSelected(t); }}>
-                      <Play className="size-4" />
-                    </Button>
+                <TableRow>
+                  <TableCell colSpan={5} className="h-24 text-center">
+                    <Loader2 className="size-6 animate-spin mx-auto" />
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : tools.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                    <Wrench className="size-8 mx-auto mb-2 opacity-50" />
+                    No tools registered...
+                  </TableCell>
+                </TableRow>
+              ) : (
+                tools.map((t) => (
+                  <TableRow
+                    key={t.name}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => setSelected(t)}
+                  >
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <div className="flex size-8 items-center justify-center rounded bg-primary/10">
+                          <Wrench className="size-4 text-primary" />
+                        </div>
+                        <code className="font-mono text-sm font-medium">{t.name}</code>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm">{t.description || "—"}</TableCell>
+                    <TableCell>
+                      <Badge variant={getArgCount(t) > 0 ? "secondary" : "outline"}>{getArgCount(t)}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="font-mono text-xs truncate max-w-[120px]">
+                        {t.owner?.split("/").pop()?.replace(/\.ts$/, "") || "hub"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelected(t);
+                        }}
+                      >
+                        <Play className="size-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </CardContent>

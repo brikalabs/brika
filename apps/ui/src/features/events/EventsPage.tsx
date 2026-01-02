@@ -1,8 +1,21 @@
 import React from "react";
 import { useEventStream, useEmitEvent } from "./hooks";
 import {
-  Button, Card, CardContent, Badge, ScrollArea, Input, Textarea, Label,
-  Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+  Button,
+  Card,
+  CardContent,
+  Badge,
+  ScrollArea,
+  Input,
+  Textarea,
+  Label,
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from "@/components/ui";
 import { Send, Pause, Play, Trash2, Zap, Loader2 } from "lucide-react";
 
@@ -32,10 +45,16 @@ export function EventsPage() {
             {paused ? <Play className="size-4" /> : <Pause className="size-4" />}
             {paused ? "Resume" : "Pause"}
           </Button>
-          <Button variant="outline" onClick={clear} className="gap-2"><Trash2 className="size-4" />Clear</Button>
+          <Button variant="outline" onClick={clear} className="gap-2">
+            <Trash2 className="size-4" />
+            Clear
+          </Button>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="gap-2"><Send className="size-4" />Emit</Button>
+              <Button className="gap-2">
+                <Send className="size-4" />
+                Emit
+              </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
@@ -45,15 +64,25 @@ export function EventsPage() {
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label>Event Type</Label>
-                  <Input value={type} onChange={(e) => setType(e.target.value)} placeholder="motion.detected" />
+                  <Input
+                    value={type}
+                    onChange={(e) => setType(e.target.value)}
+                    placeholder="motion.detected"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label>Payload (JSON)</Label>
-                  <Textarea value={payload} onChange={(e) => setPayload(e.target.value)} className="font-mono text-sm min-h-[100px]" />
+                  <Textarea
+                    value={payload}
+                    onChange={(e) => setPayload(e.target.value)}
+                    className="font-mono text-sm min-h-[100px]"
+                  />
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
+                <Button variant="outline" onClick={() => setDialogOpen(false)}>
+                  Cancel
+                </Button>
                 <Button onClick={handleEmit} disabled={emitEvent.isPending} className="gap-2">
                   {emitEvent.isPending && <Loader2 className="size-4 animate-spin" />}Emit
                 </Button>

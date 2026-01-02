@@ -1,3 +1,4 @@
+export { Avatar, AvatarImage, AvatarFallback } from "./avatar";
 export { Badge } from "./badge";
 export { Button } from "./button";
 export { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "./card";
@@ -30,7 +31,16 @@ export {
 export { Separator } from "./separator";
 export { Switch } from "./switch";
 export { Tabs, TabsList, TabsTrigger, TabsContent } from "./tabs";
-export { Table, TableHeader, TableBody, TableFooter, TableHead, TableRow, TableCell, TableCaption } from "./table";
+export {
+  Table,
+  TableHeader,
+  TableBody,
+  TableFooter,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableCaption,
+} from "./table";
 export { Textarea } from "./textarea";
 export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "./tooltip";
 export { Skeleton } from "./skeleton";

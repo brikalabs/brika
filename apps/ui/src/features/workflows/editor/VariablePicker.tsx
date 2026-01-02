@@ -1,9 +1,6 @@
 import React, { useState } from "react";
 import { Button, Input, ScrollArea, Badge } from "@/components/ui";
-import { 
-  ChevronRight, ChevronDown, Variable, Braces, 
-  Clock, Zap, Database, Copy, Check,
-} from "lucide-react";
+import { ChevronRight, ChevronDown, Variable, Braces, Clock, Zap, Database, Copy, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface VariableInfo {
@@ -28,7 +25,7 @@ interface TreeNode {
 
 function buildTree(variables: VariableInfo[]): TreeNode[] {
   const root: TreeNode[] = [];
-  
+
   // Add trigger group
   const triggerNode: TreeNode = {
     name: "trigger",
@@ -80,12 +77,12 @@ function buildTree(variables: VariableInfo[]): TreeNode[] {
   return root;
 }
 
-function TreeNodeItem({ 
-  node, 
+function TreeNodeItem({
+  node,
   depth = 0,
   onInsert,
-}: { 
-  node: TreeNode; 
+}: {
+  node: TreeNode;
   depth?: number;
   onInsert: (expression: string) => void;
 }) {
@@ -116,60 +113,41 @@ function TreeNodeItem({
       <div
         className={cn(
           "flex items-center gap-1 py-1 px-2 rounded hover:bg-accent cursor-pointer group",
-          "transition-colors"
+          "transition-colors",
         )}
         style={{ paddingLeft: `${depth * 16 + 8}px` }}
       >
         {hasChildren ? (
-          <button
-            onClick={() => setExpanded(!expanded)}
-            className="p-0.5 hover:bg-muted rounded"
-          >
-            {expanded ? (
-              <ChevronDown className="size-3" />
-            ) : (
-              <ChevronRight className="size-3" />
-            )}
+          <button onClick={() => setExpanded(!expanded)} className="p-0.5 hover:bg-muted rounded">
+            {expanded ? <ChevronDown className="size-3" /> : <ChevronRight className="size-3" />}
           </button>
         ) : (
           <span className="w-4" />
         )}
-        
+
         {getIcon()}
-        
-        <span 
-          className="flex-1 text-sm font-mono truncate"
-          onClick={handleInsert}
-        >
+
+        <span className="flex-1 text-sm font-mono truncate" onClick={handleInsert}>
           {node.name}
         </span>
-        
+
         <Badge variant="outline" className="text-[10px] px-1 py-0">
           {node.type}
         </Badge>
-        
+
         <button
           onClick={handleCopy}
           className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-muted rounded transition-opacity"
           title="Copy expression"
         >
-          {copied ? (
-            <Check className="size-3 text-green-500" />
-          ) : (
-            <Copy className="size-3" />
-          )}
+          {copied ? <Check className="size-3 text-green-500" /> : <Copy className="size-3" />}
         </button>
       </div>
-      
+
       {expanded && hasChildren && (
         <div>
           {node.children.map((child) => (
-            <TreeNodeItem
-              key={child.fullPath}
-              node={child}
-              depth={depth + 1}
-              onInsert={onInsert}
-            />
+            <TreeNodeItem key={child.fullPath} node={child} depth={depth + 1} onInsert={onInsert} />
           ))}
         </div>
       )}
@@ -185,7 +163,7 @@ export function VariablePicker({ variables, onInsert, className }: VariablePicke
     ? tree.filter((node) => {
         const matchesNode = node.name.toLowerCase().includes(search.toLowerCase());
         const matchesChildren = node.children.some((c) =>
-          c.name.toLowerCase().includes(search.toLowerCase())
+          c.name.toLowerCase().includes(search.toLowerCase()),
         );
         return matchesNode || matchesChildren;
       })
@@ -201,25 +179,19 @@ export function VariablePicker({ variables, onInsert, className }: VariablePicke
           className="h-8 text-sm"
         />
       </div>
-      
+
       <ScrollArea className="flex-1">
         <div className="py-1">
           {filteredTree.map((node) => (
-            <TreeNodeItem
-              key={node.fullPath}
-              node={node}
-              onInsert={onInsert}
-            />
+            <TreeNodeItem key={node.fullPath} node={node} onInsert={onInsert} />
           ))}
-          
+
           {filteredTree.length === 0 && (
-            <div className="text-center text-sm text-muted-foreground py-4">
-              No variables found
-            </div>
+            <div className="text-center text-sm text-muted-foreground py-4">No variables found</div>
           )}
         </div>
       </ScrollArea>
-      
+
       <div className="p-2 border-t text-xs text-muted-foreground">
         Click to insert • <Braces className="size-3 inline" /> for expressions
       </div>

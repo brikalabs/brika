@@ -38,7 +38,11 @@ function PluginDetailWrapper() {
 const routes = [
   createRoute({ getParentRoute: () => rootRoute, path: "/", component: DashboardPage }),
   createRoute({ getParentRoute: () => rootRoute, path: "/plugins", component: PluginsPage }),
-  createRoute({ getParentRoute: () => rootRoute, path: "/plugins/$pluginId", component: PluginDetailWrapper }),
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/plugins/$pluginId",
+    component: PluginDetailWrapper,
+  }),
   createRoute({ getParentRoute: () => rootRoute, path: "/tools", component: ToolsPage }),
   createRoute({ getParentRoute: () => rootRoute, path: "/events", component: EventsPage }),
   createRoute({ getParentRoute: () => rootRoute, path: "/workflows", component: WorkflowsPage }),
@@ -51,7 +55,9 @@ const routes = [
 const router = createRouter({ routeTree: rootRoute.addChildren(routes) });
 
 declare module "@tanstack/react-router" {
-  interface Register { router: typeof router; }
+  interface Register {
+    router: typeof router;
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -65,5 +71,5 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
         <RouterProvider router={router} />
       </TooltipProvider>
     </QueryClientProvider>
-  </React.StrictMode>
+  </React.StrictMode>,
 );

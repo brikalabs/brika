@@ -33,6 +33,14 @@ export class PluginManagerConfig {
   readonly heartbeatTimeoutMs: number;
   readonly killTimeoutMs = 3000;
 
+  // Auto-restart configuration
+  readonly autoRestartEnabled = true;
+  readonly restartBaseDelayMs = 1000;
+  readonly restartMaxDelayMs = 60000;
+  readonly restartMaxCrashes = 5;
+  readonly restartCrashWindowMs = 60000;
+  readonly restartStabilityMs = 30000;
+
   constructor() {
     try {
       const loader = inject(ConfigLoader);

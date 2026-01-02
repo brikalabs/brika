@@ -1,6 +1,6 @@
 /**
  * Block Definition API
- * 
+ *
  * DX-focused API for defining blocks with Zod schemas.
  * Mirrors the defineTool() pattern for consistency.
  */
@@ -49,9 +49,9 @@ export interface BlockSpec<T extends z.ZodObject<z.ZodRawShape>> {
 
 /**
  * Define a block type with full type safety
- * 
+ *
  * The block will be registered with a plugin prefix: `pluginId:blockId`
- * 
+ *
  * @example
  * ```ts
  * // In plugin "blocks-builtin", this becomes "blocks-builtin:condition"
@@ -78,7 +78,11 @@ export interface BlockSpec<T extends z.ZodObject<z.ZodRawShape>> {
  */
 export function defineBlock<T extends z.ZodObject<z.ZodRawShape>>(
   spec: BlockSpec<T>,
-  handler: (config: z.infer<T>, ctx: BlockContext, runtime: BlockRuntime) => Promise<BlockResult> | BlockResult
+  handler: (
+    config: z.infer<T>,
+    ctx: BlockContext,
+    runtime: BlockRuntime,
+  ) => Promise<BlockResult> | BlockResult,
 ): CompiledBlock {
   // Convert Zod schema to JSON Schema
   const jsonSchema = zodToJsonSchema(spec.schema);
@@ -113,7 +117,7 @@ export function defineBlock<T extends z.ZodObject<z.ZodRawShape>>(
 function zodToJsonSchema(schema: z.ZodObject<z.ZodRawShape>): BlockSchema {
   // Use Zod's native JSON Schema conversion
   const raw = z.toJSONSchema(schema, { unrepresentable: "any" });
-  
+
   const result: BlockSchema = {
     type: "object",
     properties: {},
@@ -123,7 +127,7 @@ function zodToJsonSchema(schema: z.ZodObject<z.ZodRawShape>): BlockSchema {
   if (raw && typeof raw === "object" && "properties" in raw) {
     const props = raw.properties as Record<string, Record<string, unknown>>;
     const properties: BlockSchema["properties"] = {};
-    
+
     for (const [key, prop] of Object.entries(props)) {
       properties[key] = {
         type: (prop.type as "string" | "number" | "boolean" | "array" | "object") ?? "string",
@@ -132,7 +136,7 @@ function zodToJsonSchema(schema: z.ZodObject<z.ZodRawShape>): BlockSchema {
         enum: prop.enum as Json[] | undefined,
       };
     }
-    
+
     result.properties = properties;
 
     if (Array.isArray(raw.required)) {
@@ -149,20 +153,20 @@ function zodToJsonSchema(schema: z.ZodObject<z.ZodRawShape>): BlockSchema {
 
 /**
  * Evaluate expressions in a value
- * 
+ *
  * Supports:
  * - Full expression: "{{ trigger.payload.room }}"
  * - Template: "Room is {{ trigger.payload.room }}"
  * - Comparisons: "{{ trigger.payload.value > 10 }}"
  * - Nested objects: { room: "{{ trigger.payload.room }}" }
- * 
+ *
  * @example
  * expr("{{ trigger.payload.room }}", ctx) // => "living"
  * expr({ room: "{{ trigger.payload.room }}" }, ctx) // => { room: "living" }
  */
 export function expr<T>(value: T, ctx: BlockContext): T {
   if (value === null || value === undefined) return value;
-  
+
   if (typeof value === "string") {
     // Full expression: {{ ... }}
     const match = value.match(/^\{\{\s*(.+?)\s*\}\}$/);
@@ -178,11 +182,11 @@ export function expr<T>(value: T, ctx: BlockContext): T {
     }
     return value;
   }
-  
+
   if (Array.isArray(value)) {
-    return value.map(v => expr(v, ctx)) as T;
+    return value.map((v) => expr(v, ctx)) as T;
   }
-  
+
   if (typeof value === "object") {
     const result: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(value)) {
@@ -190,7 +194,7 @@ export function expr<T>(value: T, ctx: BlockContext): T {
     }
     return result as T;
   }
-  
+
   return value;
 }
 
@@ -202,16 +206,26 @@ function evalPath(path: string, ctx: BlockContext): Json {
       const left = evalPath(path.slice(0, idx).trim(), ctx);
       const right = parseValue(path.slice(idx + op.length + 2).trim(), ctx);
       switch (op) {
-        case "===": return left === right;
-        case "!==": return left !== right;
-        case "==": return left == right;
-        case "!=": return left != right;
-        case ">=": return Number(left) >= Number(right);
-        case "<=": return Number(left) <= Number(right);
-        case ">": return Number(left) > Number(right);
-        case "<": return Number(left) < Number(right);
-        case "&&": return Boolean(left) && Boolean(right);
-        case "||": return Boolean(left) || Boolean(right);
+        case "===":
+          return left === right;
+        case "!==":
+          return left !== right;
+        case "==":
+          return left == right;
+        case "!=":
+          return left != right;
+        case ">=":
+          return Number(left) >= Number(right);
+        case "<=":
+          return Number(left) <= Number(right);
+        case ">":
+          return Number(left) > Number(right);
+        case "<":
+          return Number(left) < Number(right);
+        case "&&":
+          return Boolean(left) && Boolean(right);
+        case "||":
+          return Boolean(left) || Boolean(right);
       }
     }
   }
@@ -262,11 +276,16 @@ export function parseDuration(dur: string | number): number {
   const [, num, unit = "ms"] = match;
   const n = parseFloat(num);
   switch (unit.toLowerCase()) {
-    case "s": return n * 1000;
-    case "m": return n * 60 * 1000;
-    case "h": return n * 60 * 60 * 1000;
-    case "d": return n * 24 * 60 * 60 * 1000;
-    default: return n;
+    case "s":
+      return n * 1000;
+    case "m":
+      return n * 60 * 1000;
+    case "h":
+      return n * 60 * 60 * 1000;
+    case "d":
+      return n * 24 * 60 * 60 * 1000;
+    default:
+      return n;
   }
 }
 
@@ -296,4 +315,3 @@ export function isCompiledBlock(value: unknown): value is CompiledBlock {
 
 // Re-export Zod for convenience
 export { z } from "zod";
-

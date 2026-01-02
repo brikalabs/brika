@@ -11,7 +11,10 @@ export function useRuleMutations() {
   const invalidate = () => qc.invalidateQueries({ queryKey: rulesKeys.all });
 
   return {
-    create: useMutation({ mutationFn: (data: Omit<Rule, "id">) => rulesApi.create(data), onSuccess: invalidate }),
+    create: useMutation({
+      mutationFn: (data: Omit<Rule, "id">) => rulesApi.create(data),
+      onSuccess: invalidate,
+    }),
     remove: useMutation({ mutationFn: rulesApi.delete, onSuccess: invalidate }),
     enable: useMutation({ mutationFn: rulesApi.enable, onSuccess: invalidate }),
     disable: useMutation({ mutationFn: rulesApi.disable, onSuccess: invalidate }),

@@ -1,16 +1,6 @@
-import 'reflect-metadata'
-import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
-import {
-  container,
-  createMock,
-  createSpyFn,
-  inject,
-  injectable,
-  mock as mock1,
-  mock,
-  singleton,
-  TestBed
-} from '@elia/shared'
+import "reflect-metadata";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { container, spy, inject, injectable, mock as mock1, mock, singleton, TestBed } from "@elia/shared";
 
 describe("DI Container", () => {
   beforeEach(() => {
@@ -25,7 +15,9 @@ describe("DI Container", () => {
     @singleton()
     class Counter {
       count = 0;
-      increment() { this.count++; }
+      increment() {
+        this.count++;
+      }
     }
 
     const c1 = container.resolve(Counter);
@@ -51,13 +43,17 @@ describe("DI Container", () => {
   it("should inject dependencies via inject()", () => {
     @singleton()
     class Logger {
-      log(msg: string) { return `LOG: ${msg}`; }
+      log(msg: string) {
+        return `LOG: ${msg}`;
+      }
     }
 
     @singleton()
     class Service {
       private readonly logger = inject(Logger);
-      doWork() { return this.logger.log("working"); }
+      doWork() {
+        return this.logger.log("working");
+      }
     }
 
     const service = container.resolve(Service);
@@ -77,13 +73,17 @@ describe("inject() function", () => {
   it("should work as property initializer", () => {
     @singleton()
     class Logger {
-      log(msg: string) { return `LOG: ${msg}`; }
+      log(msg: string) {
+        return `LOG: ${msg}`;
+      }
     }
 
     @singleton()
     class Service {
       readonly logger = inject(Logger);
-      doWork() { return this.logger.log("working"); }
+      doWork() {
+        return this.logger.log("working");
+      }
     }
 
     const service = container.resolve(Service);
@@ -115,28 +115,30 @@ describe("inject() function", () => {
 
 describe("TestBed", () => {
   afterEach(() => {
-    TestBed.resetTestingModule();
+    TestBed.reset();
   });
 
   it("should allow mocking services", () => {
     @singleton()
     class RealLogger {
-      log(msg: string) { return `REAL: ${msg}`; }
+      log(msg: string) {
+        return `REAL: ${msg}`;
+      }
     }
 
     @singleton()
     class Service {
       readonly logger = inject(RealLogger);
-      doWork() { return this.logger.log("test"); }
+      doWork() {
+        return this.logger.log("test");
+      }
     }
 
     const mockLogger = mock<RealLogger>({
       log: () => "MOCKED",
     });
 
-    TestBed
-      .configureTestingModule()
-      .provide(RealLogger, mockLogger);
+    TestBed.create().provide(RealLogger, mockLogger).compile();
 
     const service = TestBed.inject(Service);
     expect(service.doWork()).toBe("MOCKED");
@@ -146,29 +148,31 @@ describe("TestBed", () => {
     @singleton()
     class Counter {
       count = 0;
-      increment() { this.count++; }
+      increment() {
+        this.count++;
+      }
     }
 
     // Test 1
-    TestBed.configureTestingModule();
+    TestBed.create().compile();
     const c1 = TestBed.inject(Counter);
     c1.increment();
     c1.increment();
     expect(c1.count).toBe(2);
 
     // Reset between tests
-    TestBed.resetTestingModule();
+    TestBed.reset();
 
     // Test 2 - fresh counter
-    TestBed.configureTestingModule();
+    TestBed.create().compile();
     const c2 = TestBed.inject(Counter);
     expect(c2.count).toBe(0);
   });
 });
 
-describe("createSpyFn", () => {
+describe("spy", () => {
   it("should track calls", () => {
-    const fn = createSpyFn<[number, string]>();
+    const fn = spy<[number, string]>();
 
     fn(1, "a");
     fn(2, "b");
@@ -181,33 +185,34 @@ describe("createSpyFn", () => {
   });
 
   it("should return configured value", () => {
-    const spy = createSpyFn<[], string>("hello");
-    expect(spy()).toBe("hello");
+    const spyFn = spy<[], string>();
+    spyFn.mockReturnValue("hello");
+    expect(spyFn()).toBe("hello");
   });
 
   it("should reset calls", () => {
-    const spy = createSpyFn();
-    spy();
-    spy();
-    expect(spy.callCount).toBe(2);
+    const spyFn = spy();
+    spyFn();
+    spyFn();
+    expect(spyFn.callCount).toBe(2);
 
-    spy.reset();
-    expect(spy.callCount).toBe(0);
+    spyFn.reset();
+    expect(spyFn.callCount).toBe(0);
   });
 });
 
-describe("createMock", () => {
+describe("mock", () => {
   it("should create partial mock", () => {
     interface Service {
       methodA(): string;
       methodB(): number;
     }
 
-    const mock = mock1<Service>({
+    const mockService = mock1<Service>({
       methodA: () => "mocked",
     });
 
-    expect(mock.methodA()).toBe("mocked");
-    expect(mock.methodB).toBeUndefined();
+    expect(mockService.methodA()).toBe("mocked");
+    expect(mockService.methodB).toBeUndefined();
   });
 });

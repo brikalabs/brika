@@ -4,7 +4,15 @@
   "version": "0.1.0",
   "description": "Core workflow blocks for ELIA automations",
   "author": "ELIA Team",
-  "keywords": ["blocks", "workflow", "automation", "condition", "delay", "action"],
+  "icon": "./icon.svg",
+  "keywords": [
+    "blocks",
+    "workflow",
+    "automation",
+    "condition",
+    "delay",
+    "action"
+  ],
   "type": "module",
   "main": "src/main.ts",
   "exports": {

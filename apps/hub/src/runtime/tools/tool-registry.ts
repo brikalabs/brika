@@ -16,7 +16,7 @@ export interface Tool {
 @singleton()
 export class ToolRegistry {
   private readonly logs = inject(LogRouter);
-  #tools = new Map<string, Tool>();
+  readonly #tools = new Map<string, Tool>();
 
   /**
    * Register a tool from a plugin
@@ -25,11 +25,11 @@ export class ToolRegistry {
   register(id: string, owner: string, tool: Omit<Tool, "id" | "name" | "owner">): void {
     // Create full qualified name: pluginId:toolId
     const name = `${owner}:${id}`;
-    
+
     if (this.#tools.has(name)) {
       throw new Error(`Tool already registered: ${name}`);
     }
-    
+
     this.#tools.set(name, { ...tool, id, name, owner });
     this.logs.info("tool.register", { name, id, owner });
   }
@@ -46,11 +46,11 @@ export class ToolRegistry {
   }
 
   list(): ToolSummary[] {
-    return [...this.#tools.values()].map(t => ({ 
-      name: t.name, 
-      description: t.description, 
-      owner: t.owner, 
-      inputSchema: t.inputSchema 
+    return [...this.#tools.values()].map((t) => ({
+      name: t.name,
+      description: t.description,
+      owner: t.owner,
+      inputSchema: t.inputSchema,
     }));
   }
 
@@ -61,7 +61,7 @@ export class ToolRegistry {
   }
 
   unregisterByOwner(owner: string): void {
-    for (const t of [...this.#tools.values()]) {
+    for (const t of this.#tools.values()) {
       if (t.owner === owner) this.unregister(t.name);
     }
   }

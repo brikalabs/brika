@@ -1,6 +1,6 @@
 /**
  * Block Definition System
- * 
+ *
  * Simple, powerful block-based workflow blocks.
  * Same DX as defineTool() - Zod schema + handler.
  */
@@ -70,12 +70,16 @@ export interface Block {
   icon: string;
   color: string;
   schema: z.ZodTypeAny;
-  execute: (config: Record<string, unknown>, ctx: BlockContext, runtime: BlockRuntime) => Promise<BlockResult>;
+  execute: (
+    config: Record<string, unknown>,
+    ctx: BlockContext,
+    runtime: BlockRuntime,
+  ) => Promise<BlockResult>;
 }
 
 /**
  * Define a block type
- * 
+ *
  * @example
  * ```ts
  * export const actionBlock = defineBlock({
@@ -102,7 +106,7 @@ export function defineBlock<T extends z.ZodTypeAny>(
     color: string;
     schema: T;
   },
-  execute: (config: z.infer<T>, ctx: BlockContext, runtime: BlockRuntime) => Promise<BlockResult>
+  execute: (config: z.infer<T>, ctx: BlockContext, runtime: BlockRuntime) => Promise<BlockResult>,
 ): Block {
   return { ...spec, execute: execute as Block["execute"] };
 }
@@ -113,14 +117,14 @@ export function defineBlock<T extends z.ZodTypeAny>(
 
 /**
  * Evaluate expressions in a value
- * 
+ *
  * @example
  * expr("{{ trigger.payload.room }}", ctx) // => "living"
  * expr({ room: "{{ trigger.payload.room }}" }, ctx) // => { room: "living" }
  */
 export function expr<T>(value: T, ctx: BlockContext): T {
   if (value === null || value === undefined) return value;
-  
+
   if (typeof value === "string") {
     // Full expression: {{ ... }}
     const match = value.match(/^\{\{\s*(.+?)\s*\}\}$/);
@@ -136,11 +140,11 @@ export function expr<T>(value: T, ctx: BlockContext): T {
     }
     return value;
   }
-  
+
   if (Array.isArray(value)) {
-    return value.map(v => expr(v, ctx)) as T;
+    return value.map((v) => expr(v, ctx)) as T;
   }
-  
+
   if (typeof value === "object") {
     const result: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(value)) {
@@ -148,7 +152,7 @@ export function expr<T>(value: T, ctx: BlockContext): T {
     }
     return result as T;
   }
-  
+
   return value;
 }
 
@@ -160,14 +164,22 @@ function evalPath(path: string, ctx: BlockContext): Json {
       const left = evalPath(path.slice(0, idx).trim(), ctx);
       const right = parseValue(path.slice(idx + op.length).trim(), ctx);
       switch (op) {
-        case "===": return left === right;
-        case "!==": return left !== right;
-        case "==": return left == right;
-        case "!=": return left != right;
-        case ">=": return Number(left) >= Number(right);
-        case "<=": return Number(left) <= Number(right);
-        case ">": return Number(left) > Number(right);
-        case "<": return Number(left) < Number(right);
+        case "===":
+          return left === right;
+        case "!==":
+          return left !== right;
+        case "==":
+          return left == right;
+        case "!=":
+          return left != right;
+        case ">=":
+          return Number(left) >= Number(right);
+        case "<=":
+          return Number(left) <= Number(right);
+        case ">":
+          return Number(left) > Number(right);
+        case "<":
+          return Number(left) < Number(right);
       }
     }
   }
@@ -213,14 +225,18 @@ export function parseDuration(dur: string | number): number {
   const [, num, unit = "ms"] = match;
   const n = parseFloat(num);
   switch (unit.toLowerCase()) {
-    case "s": return n * 1000;
-    case "m": return n * 60 * 1000;
-    case "h": return n * 60 * 60 * 1000;
-    case "d": return n * 24 * 60 * 60 * 1000;
-    default: return n;
+    case "s":
+      return n * 1000;
+    case "m":
+      return n * 60 * 1000;
+    case "h":
+      return n * 60 * 60 * 1000;
+    case "d":
+      return n * 24 * 60 * 60 * 1000;
+    default:
+      return n;
   }
 }
 
 // Re-export Zod
 export { z } from "zod";
-

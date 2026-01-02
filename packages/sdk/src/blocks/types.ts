@@ -1,6 +1,6 @@
 /**
  * Block System Types
- * 
+ *
  * Generic block definitions with multi-input/multi-output support.
  * All blocks are loaded from plugins via IPC.
  */
@@ -28,13 +28,16 @@ export interface BlockPort {
 /** JSON Schema subset for block configuration */
 export interface BlockSchema {
   type: "object";
-  properties?: Record<string, {
-    type: "string" | "number" | "boolean" | "array" | "object";
-    description?: string;
-    default?: Json;
-    enum?: Json[];
-    items?: { type: string };
-  }>;
+  properties?: Record<
+    string,
+    {
+      type: "string" | "number" | "boolean" | "array" | "object";
+      description?: string;
+      default?: Json;
+      enum?: Json[];
+      items?: { type: string };
+    }
+  >;
   required?: string[];
 }
 
@@ -135,7 +138,7 @@ export interface BlockResult {
 export type BlockHandler<TConfig = Record<string, unknown>> = (
   config: TConfig,
   ctx: BlockContext,
-  runtime: BlockRuntime
+  runtime: BlockRuntime,
 ) => Promise<BlockResult> | BlockResult;
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -198,4 +201,3 @@ export interface Workflow {
   /** Connections between blocks */
   connections: BlockConnection[];
 }
-

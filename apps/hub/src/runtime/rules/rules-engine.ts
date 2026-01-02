@@ -8,7 +8,7 @@ import { SchedulerService } from "../scheduler/scheduler-service";
 import { evaluateCondition } from "./condition-eval";
 
 function matchGlob(pattern: string, text: string): boolean {
-  return new RegExp("^" + pattern.replace(/\./g, "\\.").replace(/\*/g, ".*") + "$").test(text);
+  return new RegExp(`^${pattern.replaceAll(/\./g, "\\.").replaceAll("*", ".*")}$`).test(text);
 }
 
 @singleton()
@@ -27,9 +27,17 @@ export class RulesEngine {
     this.logs.info("rules.engine.started");
   }
 
-  async stop(): Promise<void> { this.#eventUnsub?.(); this.#scheduleUnsub?.(); this.logs.info("rules.engine.stopped"); }
-  list(): Rule[] { return this.state.listRules(); }
-  get(id: string): Rule | undefined { return this.state.getRule(id); }
+  async stop(): Promise<void> {
+    this.#eventUnsub?.();
+    this.#scheduleUnsub?.();
+    this.logs.info("rules.engine.stopped");
+  }
+  list(): Rule[] {
+    return this.state.listRules();
+  }
+  get(id: string): Rule | undefined {
+    return this.state.getRule(id);
+  }
 
   async create(rule: Omit<Rule, "id">): Promise<Rule> {
     const r: Rule = { ...rule, id: crypto.randomUUID() };
@@ -46,13 +54,30 @@ export class RulesEngine {
     return r;
   }
 
-  async delete(id: string): Promise<boolean> { if (!this.state.getRule(id)) return false; await this.state.deleteRule(id); return true; }
-  async enable(id: string): Promise<boolean> { const r = this.state.getRule(id); if (!r) return false; r.enabled = true; await this.state.upsertRule(r); return true; }
-  async disable(id: string): Promise<boolean> { const r = this.state.getRule(id); if (!r) return false; r.enabled = false; await this.state.upsertRule(r); return true; }
+  async delete(id: string): Promise<boolean> {
+    if (!this.state.getRule(id)) return false;
+    await this.state.deleteRule(id);
+    return true;
+  }
+  async enable(id: string): Promise<boolean> {
+    const r = this.state.getRule(id);
+    if (!r) return false;
+    r.enabled = true;
+    await this.state.upsertRule(r);
+    return true;
+  }
+  async disable(id: string): Promise<boolean> {
+    const r = this.state.getRule(id);
+    if (!r) return false;
+    r.enabled = false;
+    await this.state.upsertRule(r);
+    return true;
+  }
 
   #onEvent(event: EliaEvent): void {
     for (const rule of this.state.listRules()) {
-      if (!rule.enabled || rule.trigger.type !== "event" || !matchGlob(rule.trigger.match, event.type)) continue;
+      if (!rule.enabled || rule.trigger.type !== "event" || !matchGlob(rule.trigger.match, event.type))
+        continue;
       if (rule.condition && !evaluateCondition(rule.condition, { event })) continue;
       this.logs.info("rule.triggered", { id: rule.id, eventType: event.type });
       this.#executeActions(rule, event);
@@ -61,7 +86,8 @@ export class RulesEngine {
 
   #onSchedule(schedule: Schedule): void {
     for (const rule of this.state.listRules()) {
-      if (!rule.enabled || rule.trigger.type !== "schedule" || rule.trigger.scheduleId !== schedule.id) continue;
+      if (!rule.enabled || rule.trigger.type !== "schedule" || rule.trigger.scheduleId !== schedule.id)
+        continue;
       this.logs.info("rule.triggered.schedule", { id: rule.id, scheduleId: schedule.id });
       this.#executeActions(rule, null);
     }
@@ -73,7 +99,9 @@ export class RulesEngine {
       try {
         const args = this.#interpolateArgs(action.args, event);
         await this.tools.call(action.tool, args, ctx);
-      } catch (e) { this.logs.error("rule.action.error", { ruleId: rule.id, error: String(e) }); }
+      } catch (e) {
+        this.logs.error("rule.action.error", { ruleId: rule.id, error: String(e) });
+      }
     }
   }
 
@@ -82,7 +110,10 @@ export class RulesEngine {
     const result: Record<string, Json> = {};
     for (const [key, value] of Object.entries(args)) {
       if (typeof value === "string") {
-        result[key] = value.replace(/\$\{event\.type\}/g, event.type).replace(/\$\{event\.source\}/g, event.source).replace(/\$\{event\.id\}/g, event.id);
+        result[key] = value
+          .replaceAll("${event.type}", event.type)
+          .replaceAll("${event.source}", event.source)
+          .replaceAll("${event.id}", event.id);
       } else result[key] = value;
     }
     return result;

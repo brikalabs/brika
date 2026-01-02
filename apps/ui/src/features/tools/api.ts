@@ -5,7 +5,8 @@ export const toolsApi = {
   list: () => fetcher<ToolSummary[]>("/api/tools"),
   call: (name: string, args: Record<string, unknown>) =>
     fetcher<{ ok: boolean; content?: string }>("/api/tools/call", {
-      method: "POST", body: JSON.stringify({ name, args }),
+      method: "POST",
+      body: JSON.stringify({ name, args }),
     }),
 };
 

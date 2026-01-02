@@ -4,10 +4,10 @@
  * Provides all core workflow blocks.
  */
 
-import { createPluginRuntime } from '@elia/sdk'
+import { createPluginRuntime } from "@elia/sdk";
 
 // Re-export all blocks - auto-discovered by Hub
-export * from './blocks'
+export * from "./blocks";
 
 // Import for registration
 import {
@@ -20,8 +20,8 @@ import {
   mergeBlock,
   parallelBlock,
   setBlock,
-  switchBlock
-} from './blocks'
+  switchBlock,
+} from "./blocks";
 
 const plugin = createPluginRuntime({
   id: "@elia/blocks-builtin", // Match package.json name

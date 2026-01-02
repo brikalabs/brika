@@ -465,3 +465,4 @@ schedules: []
 | `git:` | `git:github.com/user/repo` | Git repository |
 | `file:` | `file:./path/to/plugin.ts` | Direct file path |
 
+

@@ -27,4 +27,3 @@ export function usePluginMutations() {
     kill: useMutation({ mutationFn: pluginsApi.kill, onSuccess: invalidate }),
   };
 }
-

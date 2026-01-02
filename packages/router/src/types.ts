@@ -59,4 +59,3 @@ export interface RouteDefinition<S extends Schema = Schema> {
   schema?: S;
   handler: Handler<S>;
 }
-

@@ -4,9 +4,7 @@
   "title": "ELIA Plugin package.json",
   "description": "Schema for ELIA plugin package.json files",
   "type": "object",
-  "allOf": [
-    { "$ref": "https://json.schemastore.org/package.json" }
-  ],
+  "allOf": [{ "$ref": "https://json.schemastore.org/package.json" }],
   "properties": {
     "name": {
       "type": "string",

@@ -1,11 +1,11 @@
-import 'reflect-metadata'
-import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
-import type { Schedule } from '@elia/shared'
-import { createSpyFn, mock, TestBed } from '@elia/shared'
-import { SchedulerService } from '../runtime/scheduler/scheduler-service'
-import { LogRouter } from '../runtime/logs/log-router'
-import { StateStore } from '../runtime/state/state-store'
-import { HubConfig } from '../runtime/config'
+import "reflect-metadata";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import type { Schedule } from "@elia/shared";
+import { spy, mock, TestBed } from "@elia/shared";
+import { SchedulerService } from "../runtime/scheduler/scheduler-service";
+import { LogRouter } from "../runtime/logs/log-router";
+import { StateStore } from "../runtime/state/state-store";
+import { HubConfig } from "../runtime/config";
 
 describe("SchedulerService", () => {
   let mockLogs: LogRouter;
@@ -16,34 +16,34 @@ describe("SchedulerService", () => {
     schedules = [];
 
     mockLogs = mock<LogRouter>({
-      info: createSpyFn(),
-      error: createSpyFn(),
-      debug: createSpyFn(),
+      info: spy(),
+      error: spy(),
+      debug: spy(),
     });
 
     mockState = mock<StateStore>({
       listSchedules: () => schedules,
-      getSchedule: (id: string) => schedules.find(s => s.id === id),
+      getSchedule: (id: string) => schedules.find((s) => s.id === id),
       upsertSchedule: async (s: Schedule) => {
-        const idx = schedules.findIndex(x => x.id === s.id);
+        const idx = schedules.findIndex((x) => x.id === s.id);
         if (idx >= 0) schedules[idx] = s;
         else schedules.push(s);
       },
       deleteSchedule: async (id: string) => {
-        const idx = schedules.findIndex(s => s.id === id);
+        const idx = schedules.findIndex((s) => s.id === id);
         if (idx >= 0) schedules.splice(idx, 1);
       },
     });
 
-    TestBed
-      .configureTestingModule()
+    TestBed.create()
       .provide(HubConfig, new HubConfig())
       .provide(LogRouter, mockLogs)
-      .provide(StateStore, mockState);
+      .provide(StateStore, mockState)
+      .compile();
   });
 
   afterEach(() => {
-    TestBed.resetTestingModule();
+    TestBed.reset();
   });
 
   it("should create a schedule with cron trigger", async () => {
@@ -164,7 +164,7 @@ describe("SchedulerService", () => {
   });
 
   it("should register trigger callbacks", async () => {
-    const triggerSpy = createSpyFn();
+    const triggerSpy = spy();
 
     const scheduler = TestBed.inject(SchedulerService);
     await scheduler.init();

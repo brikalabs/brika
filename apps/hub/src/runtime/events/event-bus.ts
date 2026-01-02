@@ -5,15 +5,18 @@ import { LogRouter } from "../logs/log-router";
 export type EventListener = (event: EliaEvent) => void | Promise<void>;
 
 function matchGlob(pattern: string, text: string): boolean {
-  return new RegExp("^" + pattern.replace(/\./g, "\\.").replace(/\*/g, ".*") + "$").test(text);
+  return new RegExp(`^${pattern.replaceAll(".", "\\.").replaceAll("*", ".*")}$`).test(text);
 }
 
 class RingBuffer<T> {
-  #buf: Array<T | undefined>;
-  #cap: number;
+  readonly #buf: Array<T | undefined>;
+  readonly #cap: number;
   #head = 0;
   #len = 0;
-  constructor(cap: number) { this.#cap = cap; this.#buf = new Array(cap); }
+  constructor(cap: number) {
+    this.#cap = cap;
+    this.#buf = new Array(cap);
+  }
   push(v: T): void {
     this.#buf[this.#head] = v;
     this.#head = (this.#head + 1) % this.#cap;
@@ -33,9 +36,9 @@ class RingBuffer<T> {
 @singleton()
 export class EventBus {
   private readonly logs = inject(LogRouter);
-  #ring = new RingBuffer<EliaEvent>(1000);
-  #subs = new Map<string, Set<EventListener>>();
-  #globalSubs = new Set<EventListener>();
+  readonly #ring = new RingBuffer<EliaEvent>(1000);
+  readonly #subs = new Map<string, Set<EventListener>>();
+  readonly #globalSubs = new Set<EventListener>();
 
   emit(type: string, source: string, payload: Json): EliaEvent {
     const event: EliaEvent = { id: crypto.randomUUID(), type, source, payload, ts: Date.now() };
@@ -43,12 +46,20 @@ export class EventBus {
     this.logs.debug("event.emit", { type, source, id: event.id });
 
     for (const fn of this.#globalSubs) {
-      try { fn(event); } catch (e) { this.logs.error("event.listener.error", { error: String(e) }); }
+      try {
+        fn(event);
+      } catch (e) {
+        this.logs.error("event.listener.error", { error: String(e) });
+      }
     }
     for (const [pattern, listeners] of this.#subs) {
       if (matchGlob(pattern, type)) {
         for (const fn of listeners) {
-          try { fn(event); } catch (e) { this.logs.error("event.listener.error", { error: String(e) }); }
+          try {
+            fn(event);
+          } catch (e) {
+            this.logs.error("event.listener.error", { error: String(e) });
+          }
         }
       }
     }
@@ -57,7 +68,7 @@ export class EventBus {
 
   subscribe(pattern: string, listener: EventListener): () => void {
     if (!this.#subs.has(pattern)) this.#subs.set(pattern, new Set());
-    this.#subs.get(pattern)!.add(listener);
+    this.#subs.get(pattern)?.add(listener);
     return () => this.unsubscribe(pattern, listener);
   }
 
@@ -71,5 +82,7 @@ export class EventBus {
     return () => this.#globalSubs.delete(listener);
   }
 
-  query(): EliaEvent[] { return this.#ring.snapshot(); }
+  query(): EliaEvent[] {
+    return this.#ring.snapshot();
+  }
 }

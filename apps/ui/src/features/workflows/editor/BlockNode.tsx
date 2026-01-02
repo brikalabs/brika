@@ -1,6 +1,6 @@
 /**
  * Block Node Component
- * 
+ *
  * Dynamic block node with clear multi-input/multi-output visualization.
  */
 
@@ -8,9 +8,21 @@ import React from "react";
 import { Position, type NodeProps, Handle } from "@xyflow/react";
 import { BaseNode, BaseNodeHeader, BaseNodeHeaderTitle, BaseNodeContent } from "@/components/base-node";
 import { Badge, Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui";
-import { 
-  Zap, GitBranch, Shuffle, Timer, Send, Edit, FileText, Square,
-  CheckCircle, XCircle, Loader2, GitMerge, GitFork, Box,
+import {
+  Zap,
+  GitBranch,
+  Shuffle,
+  Timer,
+  Send,
+  Edit,
+  FileText,
+  Square,
+  CheckCircle,
+  XCircle,
+  Loader2,
+  GitMerge,
+  GitFork,
+  Box,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -89,7 +101,7 @@ export interface BlockNodeData {
 
 function StatusIndicator({ status }: { status?: BlockStatus }) {
   if (!status || status === "idle") return null;
-  
+
   if (status === "running") {
     return <Loader2 className="size-4 text-blue-500 animate-spin" />;
   }
@@ -115,30 +127,28 @@ interface OutputPortProps {
 
 function OutputPort({ port, index, total, blockColor }: OutputPortProps) {
   const portColor = getOutputColor(port.id, blockColor);
-  
+
   // Calculate horizontal position
-  const offset = total > 1 
-    ? ((index + 1) / (total + 1)) * 100 
-    : 50;
+  const offset = total > 1 ? ((index + 1) / (total + 1)) * 100 : 50;
 
   return (
     <TooltipProvider delayDuration={200}>
       <Tooltip>
         <TooltipTrigger asChild>
-          <div 
+          <div
             className="absolute -bottom-1 flex flex-col items-center cursor-pointer group"
             style={{ left: `${offset}%`, transform: "translateX(-50%)" }}
           >
             {/* Port label - shows on hover or always for multi-output */}
             {total > 1 && (
-              <span 
+              <span
                 className="text-[10px] font-semibold mb-0.5 opacity-90 uppercase tracking-wide"
                 style={{ color: portColor }}
               >
                 {port.name}
               </span>
             )}
-            
+
             {/* Handle - larger and colored */}
             <Handle
               type="source"
@@ -176,18 +186,13 @@ interface InputPortProps {
 }
 
 function InputPort({ port, index, total }: InputPortProps) {
-  const offset = total > 1 
-    ? ((index + 1) / (total + 1)) * 100 
-    : 50;
+  const offset = total > 1 ? ((index + 1) / (total + 1)) * 100 : 50;
 
   return (
     <TooltipProvider delayDuration={200}>
       <Tooltip>
         <TooltipTrigger asChild>
-          <div 
-            className="absolute -top-1"
-            style={{ left: `${offset}%`, transform: "translateX(-50%)" }}
-          >
+          <div className="absolute -top-1" style={{ left: `${offset}%`, transform: "translateX(-50%)" }}>
             <Handle
               type="target"
               position={Position.Top}
@@ -217,7 +222,6 @@ function InputPort({ port, index, total }: InputPortProps) {
 // Config Summary
 // ─────────────────────────────────────────────────────────────────────────────
 
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Block Node
 // ─────────────────────────────────────────────────────────────────────────────
@@ -225,13 +229,13 @@ function InputPort({ port, index, total }: InputPortProps) {
 export function BlockNode(props: NodeProps) {
   const data = props.data as unknown as BlockNodeData;
   const selected = props.selected;
-  
+
   const Icon = getIcon(data.icon || "box");
   const color = data.color || "#6b7280";
   const status = data.status || "idle";
   const config = data.config || {};
   const blockType = data.type || "";
-  
+
   // Default ports if not specified
   const inputs: BlockPort[] = data.inputs ?? [{ id: "in", name: "Input" }];
   const outputs: BlockPort[] = data.outputs ?? [{ id: "out", name: "Output" }];
@@ -282,7 +286,7 @@ export function BlockNode(props: NodeProps) {
     }
     return null;
   };
-  
+
   const hasMultipleOutputs = outputs.length > 1;
 
   const statusStyles: Record<string, string> = {
@@ -293,31 +297,26 @@ export function BlockNode(props: NodeProps) {
   };
 
   return (
-    <BaseNode 
+    <BaseNode
       className={cn(
         "min-w-[200px] relative transition-all duration-200",
         hasMultipleOutputs && "pb-5", // Extra padding for output labels
         statusStyles[status] || "",
-        selected && "ring-2 ring-primary ring-offset-2"
+        selected && "ring-2 ring-primary ring-offset-2",
       )}
-      style={{ 
-        borderLeftColor: color, 
+      style={{
+        borderLeftColor: color,
         borderLeftWidth: 4,
         borderRadius: 12,
       }}
     >
       {/* Input Handles */}
       {inputs.map((port: BlockPort, i: number) => (
-        <InputPort
-          key={port.id}
-          port={port}
-          index={i}
-          total={inputs.length}
-        />
+        <InputPort key={port.id} port={port} index={i} total={inputs.length} />
       ))}
 
       <BaseNodeHeader className="pb-1">
-        <div 
+        <div
           className="size-8 rounded-lg flex items-center justify-center shrink-0 shadow-sm"
           style={{ backgroundColor: color + "20", color }}
         >
@@ -332,32 +331,30 @@ export function BlockNode(props: NodeProps) {
       <BaseNodeContent className="pt-1 pb-2 space-y-2">
         {/* Block type badge */}
         <div className="flex items-center gap-2">
-          <Badge 
-            variant="secondary" 
+          <Badge
+            variant="secondary"
             className="text-[10px] font-medium px-1.5 py-0"
             style={{ backgroundColor: color + "15", color }}
           >
             {(blockType || "block").split(":").pop()}
           </Badge>
-          
+
           {/* Output count indicator for multi-output blocks */}
           {hasMultipleOutputs && (
-            <span className="text-[10px] text-muted-foreground">
-              {outputs.length} outputs
-            </span>
+            <span className="text-[10px] text-muted-foreground">{outputs.length} outputs</span>
           )}
         </div>
-        
+
         {/* Config summary */}
         {renderConfigSummary()}
-        
+
         {/* Execution output */}
         {status === "completed" && data.output !== undefined ? (
           <div className="p-2 bg-green-500/10 rounded-lg text-xs text-green-600 dark:text-green-400 truncate border border-green-500/20">
             ✓ {JSON.stringify(data.output).slice(0, 40)}
           </div>
         ) : null}
-        
+
         {/* Error display */}
         {status === "error" && data.output ? (
           <div className="p-2 bg-red-500/10 rounded-lg text-xs text-red-600 dark:text-red-400 truncate border border-red-500/20">
@@ -368,13 +365,7 @@ export function BlockNode(props: NodeProps) {
 
       {/* Output Handles with Labels */}
       {outputs.map((port: BlockPort, i: number) => (
-        <OutputPort
-          key={port.id}
-          port={port}
-          index={i}
-          total={outputs.length}
-          blockColor={color}
-        />
+        <OutputPort key={port.id} port={port} index={i} total={outputs.length} blockColor={color} />
       ))}
     </BaseNode>
   );

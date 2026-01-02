@@ -11,7 +11,10 @@ export function useScheduleMutations() {
   const invalidate = () => qc.invalidateQueries({ queryKey: schedulesKeys.all });
 
   return {
-    create: useMutation({ mutationFn: (data: Omit<Schedule, "id">) => schedulesApi.create(data), onSuccess: invalidate }),
+    create: useMutation({
+      mutationFn: (data: Omit<Schedule, "id">) => schedulesApi.create(data),
+      onSuccess: invalidate,
+    }),
     remove: useMutation({ mutationFn: schedulesApi.delete, onSuccess: invalidate }),
     enable: useMutation({ mutationFn: schedulesApi.enable, onSuccess: invalidate }),
     disable: useMutation({ mutationFn: schedulesApi.disable, onSuccess: invalidate }),

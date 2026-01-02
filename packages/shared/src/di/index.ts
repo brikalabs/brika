@@ -11,14 +11,10 @@ export {
   type InjectionToken,
 } from "./container";
 
-export { 
-  TestBed, 
-  spy, 
-  mock, 
+export {
+  TestBed,
+  spy,
+  mock,
   autoMock,
-  // Legacy exports
-  createMock, 
-  createSpyFn, 
-  createAsyncSpyFn,
   type SpyFn,
 } from "./testing";

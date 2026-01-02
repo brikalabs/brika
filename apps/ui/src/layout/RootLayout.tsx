@@ -2,7 +2,15 @@ import React from "react";
 import { Outlet, Link, useMatchRoute } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
 import {
-  LayoutDashboard, Plug, Wrench, Zap, Calendar, GitBranch, FileText, Package, Workflow,
+  LayoutDashboard,
+  Plug,
+  Wrench,
+  Zap,
+  Calendar,
+  GitBranch,
+  FileText,
+  Package,
+  Workflow,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -28,7 +36,7 @@ function NavLink({ to, label, icon: Icon }: (typeof NAV_ITEMS)[number]) {
         "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
         isActive
           ? "bg-primary text-primary-foreground"
-          : "text-muted-foreground hover:text-foreground hover:bg-muted"
+          : "text-muted-foreground hover:text-foreground hover:bg-muted",
       )}
     >
       <Icon className="size-4" />
@@ -53,9 +61,7 @@ export function RootLayout() {
             <NavLink key={item.to} {...item} />
           ))}
         </nav>
-        <div className="p-4 border-t text-xs text-muted-foreground">
-          v0.1.0 · Bun Runtime
-        </div>
+        <div className="p-4 border-t text-xs text-muted-foreground">v0.1.0 · Bun Runtime</div>
       </aside>
 
       {/* Main */}
@@ -67,4 +73,3 @@ export function RootLayout() {
     </div>
   );
 }
-

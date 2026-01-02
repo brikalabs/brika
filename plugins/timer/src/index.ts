@@ -1,6 +1,6 @@
 /**
  * Timer Plugin for ELIA
- * 
+ *
  * Provides timer/reminder functionality with fully typed tools using Zod
  */
 
@@ -25,7 +25,11 @@ use(clear);
 // ─────────────────────────────────────────────────────────────────────────────
 
 api.on("timer.*", (event) => {
-  api.log("debug", `Timer event: ${event.type}`, event.payload as Record<string, string | number | boolean | null>);
+  api.log(
+    "debug",
+    `Timer event: ${event.type}`,
+    event.payload as Record<string, string | number | boolean | null>,
+  );
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

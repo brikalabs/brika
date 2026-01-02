@@ -1,6 +1,7 @@
 import { inject } from "@elia/shared";
 import { ApiServer } from "./http/api-server";
 import { LogRouter } from "./logs/log-router";
+import { LogStore } from "./logs/log-store";
 import { PluginManager } from "./plugins/plugin-manager";
 import { RulesEngine } from "./rules/rules-engine";
 import { SchedulerService } from "./scheduler/scheduler-service";
@@ -9,14 +10,35 @@ import { StateStore } from "./state/state-store";
 import { ConfigLoader } from "./config/config-loader";
 import { AutomationEngine, YamlWorkflowLoader } from "./automations";
 
+// Hot reload detection
+const HOT_STARTED_KEY = Symbol.for("elia.hub.started");
+function isHotReload(): boolean {
+  return (globalThis as Record<symbol, boolean>)[HOT_STARTED_KEY];
+}
+function markStarted(): void {
+  (globalThis as Record<symbol, boolean>)[HOT_STARTED_KEY] = true;
+}
+
 export class HubApp {
   async start(): Promise<void> {
     const logs = inject(LogRouter);
-    
+
+    // Check if this is a hot reload
+    if (isHotReload()) {
+      logs.info("hub.hot-reload", { message: "Module reloaded, services preserved" });
+      return;
+    }
+
     // Load configuration
     const configLoader = inject(ConfigLoader);
     const config = await configLoader.load();
     logs.info("config.loaded", { port: config.hub.port });
+
+    // Initialize log persistence (before other services start logging)
+    const logStore = inject(LogStore);
+    await logStore.init();
+    logs.setStore(logStore);
+    logs.info("logs.store.ready");
 
     // Initialize core services
     await inject(StateStore).init();
@@ -35,10 +57,10 @@ export class HubApp {
     const pm = inject(PluginManager);
     for (const entry of config.install) {
       if (!entry.enabled) continue;
-      
-      const resolvedRef = configLoader.resolvePluginRef(entry.ref);
+
+      const resolvedRef = await configLoader.resolvePluginRef(entry.ref);
       logs.info("plugin.autoload", { ref: entry.ref, resolved: resolvedRef });
-      
+
       try {
         await pm.load(resolvedRef);
       } catch (error) {
@@ -47,7 +69,10 @@ export class HubApp {
     }
 
     // Legacy: load from ELIA_PLUGINS env var
-    const preload = (process.env.ELIA_PLUGINS ?? "").split(",").map(s => s.trim()).filter(Boolean);
+    const preload = (process.env.ELIA_PLUGINS ?? "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
     for (const ref of preload) {
       try {
         await pm.load(ref);
@@ -63,9 +88,11 @@ export class HubApp {
       try {
         await rulesEngine.create({
           name: rule.name,
-          event: rule.event,
+          trigger: { type: "event", match: rule.event },
           condition: rule.condition,
-          action: rule.action,
+          actions: [
+            { tool: rule.action.tool, args: rule.action.args as Record<string, import("@elia/shared").Json> },
+          ],
           enabled: true,
         });
         logs.info("rule.loaded", { name: rule.name });
@@ -82,7 +109,10 @@ export class HubApp {
         await scheduler.create({
           name: schedule.name,
           trigger: schedule.trigger,
-          action: schedule.action,
+          action: {
+            tool: schedule.action.tool,
+            args: schedule.action.args as Record<string, import("@elia/shared").Json>,
+          },
           enabled: true,
         });
         logs.info("schedule.loaded", { name: schedule.name });
@@ -99,6 +129,9 @@ export class HubApp {
     // Start API server
     await inject(ApiServer).start();
     logs.info("hub.started", { port: config.hub.port });
+
+    // Mark as started for hot reload detection
+    markStarted();
   }
 
   async stop(): Promise<void> {
@@ -109,5 +142,6 @@ export class HubApp {
     await inject(SchedulerService).stop();
     await inject(PluginManager).stopAll();
     inject(LogRouter).info("hub.stopped");
+    inject(LogStore).close();
   }
 }

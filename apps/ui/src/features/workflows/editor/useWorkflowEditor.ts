@@ -57,7 +57,8 @@ function workflowToFlow(workflow: Workflow): { nodes: Node[]; edges: Edge[] } {
 
   blocks.forEach((block, index) => {
     const isFirst = index === 0;
-    const isLast = block.type === "end" || (!block.next && block.type !== "condition" && block.type !== "switch");
+    const isLast =
+      block.type === "end" || (!block.next && block.type !== "condition" && block.type !== "switch");
 
     nodes.push({
       id: block.id,
@@ -154,11 +155,7 @@ function workflowToFlow(workflow: Workflow): { nodes: Node[]; edges: Edge[] } {
 }
 
 // Convert React Flow nodes/edges back to workflow
-function flowToWorkflow(
-  nodes: Node[],
-  edges: Edge[],
-  originalWorkflow: Workflow
-): Workflow {
+function flowToWorkflow(nodes: Node[], edges: Edge[], originalWorkflow: Workflow): Workflow {
   const triggerNode = nodes.find((n) => n.type === "trigger");
   const blockNodes = nodes.filter((n) => n.type === "block");
 
@@ -173,7 +170,7 @@ function flowToWorkflow(
 
     // Find outgoing edges and set next/then/else
     const outEdges = edges.filter((e) => e.source === node.id);
-    
+
     if (data.type === "condition") {
       const thenEdge = outEdges.find((e) => e.label === "then");
       const elseEdge = outEdges.find((e) => e.label === "else");
@@ -223,7 +220,7 @@ function generateNodeId(type: string): string {
 export function useWorkflowEditor(initialWorkflow: Workflow) {
   const { nodes: initialNodes, edges: initialEdges } = useMemo(
     () => workflowToFlow(initialWorkflow),
-    [initialWorkflow]
+    [initialWorkflow],
   );
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
@@ -237,13 +234,13 @@ export function useWorkflowEditor(initialWorkflow: Workflow) {
   // Get current workflow from nodes/edges
   const workflow = useMemo(
     () => flowToWorkflow(nodes, edges, initialWorkflow),
-    [nodes, edges, initialWorkflow]
+    [nodes, edges, initialWorkflow],
   );
 
   // Get selected node
   const selectedNode = useMemo(
     () => nodes.find((n) => n.id === selectedNodeId) || null,
-    [nodes, selectedNodeId]
+    [nodes, selectedNodeId],
   );
 
   // Handle new connections
@@ -258,7 +255,7 @@ export function useWorkflowEditor(initialWorkflow: Workflow) {
       setEdges((eds) => addEdge(newEdge, eds));
       setIsDirty(true);
     },
-    [setEdges]
+    [setEdges],
   );
 
   // Handle node selection
@@ -278,7 +275,7 @@ export function useWorkflowEditor(initialWorkflow: Workflow) {
       }
       setIsDirty(true);
     },
-    [selectedNodeId]
+    [selectedNodeId],
   );
 
   // Handle edge deletion
@@ -314,7 +311,7 @@ export function useWorkflowEditor(initialWorkflow: Workflow) {
       setIsDirty(true);
       return nodeId;
     },
-    [setNodes]
+    [setNodes],
   );
 
   // Update block config
@@ -333,11 +330,11 @@ export function useWorkflowEditor(initialWorkflow: Workflow) {
             };
           }
           return node;
-        })
+        }),
       );
       setIsDirty(true);
     },
-    [setNodes]
+    [setNodes],
   );
 
   // Update trigger config
@@ -353,11 +350,11 @@ export function useWorkflowEditor(initialWorkflow: Workflow) {
             };
           }
           return node;
-        })
+        }),
       );
       setIsDirty(true);
     },
-    [setNodes]
+    [setNodes],
   );
 
   // Set block status (for debugging)
@@ -377,18 +374,15 @@ export function useWorkflowEditor(initialWorkflow: Workflow) {
             };
           }
           return node;
-        })
+        }),
       );
     },
-    [setNodes]
+    [setNodes],
   );
 
   // Add execution log
   const addExecutionLog = useCallback((log: Omit<ExecutionLog, "id" | "timestamp">) => {
-    setExecutionLogs((prev) => [
-      ...prev,
-      { ...log, id: crypto.randomUUID(), timestamp: Date.now() },
-    ]);
+    setExecutionLogs((prev) => [...prev, { ...log, id: crypto.randomUUID(), timestamp: Date.now() }]);
   }, []);
 
   // Clear execution state
@@ -402,7 +396,7 @@ export function useWorkflowEditor(initialWorkflow: Workflow) {
           return { ...node, data: { ...node.data, status: "idle" } };
         }
         return node;
-      })
+      }),
     );
   }, [setNodes]);
 
@@ -420,7 +414,7 @@ export function useWorkflowEditor(initialWorkflow: Workflow) {
       // Find set blocks that come before this block
       const blockNodes = nodes.filter((n) => n.type === "block");
       const blockIndex = blockNodes.findIndex((n) => n.id === blockId);
-      
+
       blockNodes.slice(0, blockIndex).forEach((node) => {
         const data = node.data as BlockNodeData;
         if (data.type === "set" && data.config.var) {
@@ -434,7 +428,7 @@ export function useWorkflowEditor(initialWorkflow: Workflow) {
 
       return variables;
     },
-    [nodes]
+    [nodes],
   );
 
   return {
@@ -448,19 +442,19 @@ export function useWorkflowEditor(initialWorkflow: Workflow) {
     onPaneClick,
     onNodesDelete,
     onEdgesDelete,
-    
+
     // Editor state
     workflow,
     selectedNodeId,
     selectedNode,
     isDirty,
-    
+
     // Actions
     addBlock,
     updateBlockConfig,
     updateTriggerConfig,
     setSelectedNodeId,
-    
+
     // Execution state
     blockStatuses,
     blockOutputs,
@@ -468,9 +462,8 @@ export function useWorkflowEditor(initialWorkflow: Workflow) {
     setBlockStatus,
     addExecutionLog,
     clearExecutionState,
-    
+
     // Helpers
     getAvailableVariables,
   };
 }
-

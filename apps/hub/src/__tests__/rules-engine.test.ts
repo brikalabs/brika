@@ -1,14 +1,14 @@
-import 'reflect-metadata'
-import { afterEach, beforeEach, describe, expect, it } from 'bun:test'
-import type { Rule } from '@elia/shared'
-import { createAsyncSpyFn, createSpyFn, mock, TestBed } from '@elia/shared'
-import { RulesEngine } from '../runtime/rules/rules-engine'
-import { LogRouter } from '../runtime/logs/log-router'
-import { StateStore } from '../runtime/state/state-store'
-import { ToolRegistry } from '../runtime/tools/tool-registry'
-import { EventBus } from '../runtime/events/event-bus'
-import { SchedulerService } from '../runtime/scheduler/scheduler-service'
-import { HubConfig } from '../runtime/config'
+import "reflect-metadata";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import type { Rule } from "@elia/shared";
+import { spy, mock, TestBed } from "@elia/shared";
+import { RulesEngine } from "../runtime/rules/rules-engine";
+import { LogRouter } from "../runtime/logs/log-router";
+import { StateStore } from "../runtime/state/state-store";
+import { ToolRegistry } from "../runtime/tools/tool-registry";
+import { EventBus, type EventListener } from "../runtime/events/event-bus";
+import { SchedulerService, type ScheduleCallback } from "../runtime/scheduler/scheduler-service";
+import { HubConfig } from "../runtime/config";
 
 describe("RulesEngine", () => {
   let mockLogs: LogRouter;
@@ -22,60 +22,55 @@ describe("RulesEngine", () => {
     rules = [];
 
     mockLogs = mock<LogRouter>({
-      info: createSpyFn(),
-      error: createSpyFn(),
-      debug: createSpyFn(),
+      info: spy(),
+      error: spy(),
+      debug: spy(),
     });
 
     mockState = mock<StateStore>({
       listRules: () => rules,
-      getRule: (id: string) => rules.find(r => r.id === id),
+      getRule: (id: string) => rules.find((r) => r.id === id),
       upsertRule: async (r: Rule) => {
-        const idx = rules.findIndex(x => x.id === r.id);
+        const idx = rules.findIndex((x) => x.id === r.id);
         if (idx >= 0) rules[idx] = r;
         else rules.push(r);
       },
       deleteRule: async (id: string) => {
-        const idx = rules.findIndex(r => r.id === id);
+        const idx = rules.findIndex((r) => r.id === id);
         if (idx >= 0) rules.splice(idx, 1);
       },
     });
 
+    const toolCallSpy = spy<[string, Record<string, unknown>, unknown], Promise<{ ok: boolean }>>();
+    toolCallSpy.mockResolvedValue({ ok: true });
+
     mockTools = mock<ToolRegistry>({
-      call: createAsyncSpyFn<[string, Record<string, unknown>, unknown], { ok: boolean }>({ ok: true }),
+      call: toolCallSpy,
     });
 
     // Create a real-ish event bus mock that captures subscriptions
-    const eventSubscribers: Array<(e: unknown) => void> = [];
     mockEvents = mock<EventBus>({
-      subscribeAll: (fn: (e: unknown) => void) => {
-        eventSubscribers.push(fn);
-        return () => {};
-      },
-      emit: createSpyFn(),
+      subscribeAll: spy<[EventListener], () => void>().mockReturnValue(() => {}),
+      emit: spy(),
     });
 
     // Create scheduler mock
-    const schedulerCallbacks: Array<(id: string) => void> = [];
     mockScheduler = mock<SchedulerService>({
-      onTrigger: (fn: (id: string) => void) => {
-        schedulerCallbacks.push(fn);
-        return () => {};
-      },
+      onTrigger: spy<[ScheduleCallback], () => void>().mockReturnValue(() => {}),
     });
 
-    TestBed
-      .configureTestingModule()
+    TestBed.create()
       .provide(HubConfig, new HubConfig())
       .provide(LogRouter, mockLogs)
       .provide(StateStore, mockState)
       .provide(ToolRegistry, mockTools)
       .provide(EventBus, mockEvents)
-      .provide(SchedulerService, mockScheduler);
+      .provide(SchedulerService, mockScheduler)
+      .compile();
   });
 
   afterEach(() => {
-    TestBed.resetTestingModule();
+    TestBed.reset();
   });
 
   it("should create a rule", async () => {

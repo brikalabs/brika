@@ -56,12 +56,14 @@ export class WorkflowExecutor {
       emit: opts.emit,
       log: opts.log,
       subscribe: opts.subscribe,
-      runBlock: async () => { /* set per-workflow */ },
+      runBlock: async () => {
+        /* set per-workflow */
+      },
     };
   }
 
   async run(workflow: Workflow, event: { type: string; payload: Json; source: string }): Promise<void> {
-    const blockMap = new Map(workflow.blocks.map(b => [b.id, b]));
+    const blockMap = new Map(workflow.blocks.map((b) => [b.id, b]));
 
     const ctx: BlockContext = {
       trigger: { type: event.type, payload: event.payload, source: event.source, ts: Date.now() },
@@ -88,7 +90,7 @@ export class WorkflowExecutor {
     id: string,
     blockMap: Map<string, WorkflowBlock>,
     ctx: BlockContext,
-    runtime: BlockRuntime
+    runtime: BlockRuntime,
   ): Promise<void> {
     const config = blockMap.get(id);
     if (!config) {

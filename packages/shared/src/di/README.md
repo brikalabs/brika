@@ -251,19 +251,4 @@ it("should handle retry logic", async () => {
 });
 ```
 
-## Migration from Legacy API
-
-The legacy API is still supported but deprecated:
-
-```typescript
-// Old
-import { createSpyFn, createMock, createAsyncSpyFn } from "@elia/shared";
-const fn = createSpyFn();
-fn.lastCall(); // function call
-
-// New
-import { spy, mock } from "@elia/shared";
-const fn = spy();
-fn.lastCall; // property access
-```
 

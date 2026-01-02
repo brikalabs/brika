@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { route, group } from "@elia/router";
+import type { Json } from "@elia/shared";
 import { EventBus } from "../../events/event-bus";
 
 export const eventsRoutes = group("/api/events", [
@@ -16,7 +17,7 @@ export const eventsRoutes = group("/api/events", [
       }),
     },
     async ({ body, inject }) => {
-      return inject(EventBus).emit(body.type, "api", body.payload ?? null);
+      return inject(EventBus).emit(body.type, "api", (body.payload ?? null) as Json);
     },
   ),
 ]);

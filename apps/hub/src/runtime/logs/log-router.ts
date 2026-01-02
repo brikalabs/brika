@@ -1,5 +1,6 @@
 import { singleton } from "@elia/shared";
 import type { Json, LogEvent, LogLevel } from "@elia/shared";
+import type { LogStore } from "./log-store";
 
 export interface LogRouterOptions {
   level: LogLevel;
@@ -21,22 +22,25 @@ function formatLine(e: LogEvent, color: boolean): string {
   const src = (e.pluginRef ? `${e.source}:${e.pluginRef}` : e.source).padEnd(22, " ").slice(0, 22);
   const lvl = e.level.toUpperCase().padEnd(5, " ");
   const msg = e.message;
-  const meta = e.meta ? " " + JSON.stringify(e.meta) : "";
+  const meta = e.meta ? ` ${JSON.stringify(e.meta)}` : "";
   if (!color) return `${ts} ${lvl} ${src} ${msg}${meta}`;
 
   const c =
-    e.level === "error" ? "\x1b[31m" :
-    e.level === "warn" ? "\x1b[33m" :
-    e.level === "info" ? "\x1b[32m" :
-    "\x1b[90m";
+    e.level === "error"
+      ? "\x1b[31m"
+      : e.level === "warn"
+        ? "\x1b[33m"
+        : e.level === "info"
+          ? "\x1b[32m"
+          : "\x1b[90m";
 
   const reset = "\x1b[0m";
   return `${ts} ${c}${lvl}${reset} ${src} ${msg}${meta}`;
 }
 
 class RingBuffer<T> {
-  #buf: Array<T | undefined>;
-  #cap: number;
+  readonly #buf: Array<T | undefined>;
+  readonly #cap: number;
   #head = 0;
   #len = 0;
 
@@ -65,16 +69,22 @@ class RingBuffer<T> {
 
 @singleton()
 export class LogRouter {
-  #min: LogLevel;
-  #color: boolean;
-  #subs = new Set<Subscriber>();
-  #ring: RingBuffer<LogEvent>;
+  readonly #min: LogLevel;
+  readonly #color: boolean;
+  readonly #subs = new Set<Subscriber>();
+  readonly #ring: RingBuffer<LogEvent>;
+  #store: LogStore | null = null;
 
   constructor() {
     // Read from env - tsyringe auto-instantiates
     this.#min = (process.env.ELIA_LOG_LEVEL ?? "info") as LogLevel;
     this.#color = process.env.ELIA_LOG_COLOR === "1";
     this.#ring = new RingBuffer<LogEvent>(5000);
+  }
+
+  /** Connect to LogStore for persistence (called after store is initialized) */
+  setStore(store: LogStore): void {
+    this.#store = store;
   }
 
   subscribe(fn: Subscriber): () => void {
@@ -85,6 +95,7 @@ export class LogRouter {
   emit(e: LogEvent): void {
     if (!shouldLog(this.#min, e.level)) return;
     this.#ring.push(e);
+    this.#store?.insert(e);
     console.log(formatLine(e, this.#color));
     for (const fn of this.#subs) fn(e);
   }

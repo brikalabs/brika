@@ -1,10 +1,4 @@
-export type Json =
-  | null
-  | boolean
-  | number
-  | string
-  | Json[]
-  | { [k: string]: Json };
+export type Json = null | boolean | number | string | Json[] | { [k: string]: Json };
 
 export type LogLevel = "debug" | "info" | "warn" | "error";
 export type LogSource = "hub" | "plugin" | "installer" | "registry" | "stderr" | "automation";
@@ -18,7 +12,15 @@ export interface LogEvent {
   meta?: Record<string, Json>;
 }
 
-export type PluginHealth = "running" | "stopped" | "crashed" | "degraded" | "installing" | "updating";
+export type PluginHealth =
+  | "running"
+  | "stopped"
+  | "crashed"
+  | "degraded"
+  | "installing"
+  | "updating"
+  | "restarting"
+  | "crash-loop";
 
 /** Plugin metadata from package.json */
 export interface PluginMetadata {
@@ -36,8 +38,10 @@ export interface PluginMetadata {
 export interface PluginSummary {
   /** Installation reference (e.g., file:path or npm:package) */
   ref: string;
-  /** Plugin ID from package.json name field */
+  /** Plugin ID from package.json name field (human-readable, used in YAML configs) */
   id?: string;
+  /** Short unique ID for URLs (no encoding needed) */
+  uid?: string;
   version?: string;
   pid?: number;
   health: PluginHealth;
@@ -51,14 +55,17 @@ export interface PluginSummary {
 /** JSON Schema for tool input - enables smart UI forms */
 export interface ToolInputSchema {
   type: "object";
-  properties?: Record<string, {
-    type: "string" | "number" | "boolean" | "array" | "object";
-    description?: string;
-    default?: Json;
-    enum?: Json[];
-    items?: { type: string };
-    required?: boolean;
-  }>;
+  properties?: Record<
+    string,
+    {
+      type: "string" | "number" | "boolean" | "array" | "object";
+      description?: string;
+      default?: Json;
+      enum?: Json[];
+      items?: { type: string };
+      required?: boolean;
+    }
+  >;
   required?: string[];
 }
 
@@ -106,9 +113,7 @@ export interface EliaEvent {
 // Schedules
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type ScheduleTrigger =
-  | { type: "cron"; expr: string }
-  | { type: "interval"; ms: number };
+export type ScheduleTrigger = { type: "cron"; expr: string } | { type: "interval"; ms: number };
 
 export interface Schedule {
   id: string;

@@ -23,4 +23,3 @@ export function useEmitEvent() {
       fetcher<EliaEvent>("/api/events", { method: "POST", body: JSON.stringify({ type, payload }) }),
   });
 }
-

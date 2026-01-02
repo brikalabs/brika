@@ -28,10 +28,7 @@ const SSE_HEADERS = {
  * ```
  */
 export function createSSEStream(
-  setup: (
-    send: (data: unknown, event?: string) => void,
-    close: () => void,
-  ) => (() => void) | void,
+  setup: (send: (data: unknown, event?: string) => void, close: () => void) => (() => void) | void,
 ): Response {
   const encoder = new TextEncoder();
   let cleanup: (() => void) | void;

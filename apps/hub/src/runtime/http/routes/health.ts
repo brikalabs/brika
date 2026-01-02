@@ -1,7 +1,7 @@
 import { route } from "@elia/router";
 import { PluginManager } from "../../plugins/plugin-manager";
 import { ToolRegistry } from "../../tools/tool-registry";
-import { BlockRegistry } from "../../blocks/block-registry";
+import { BlockRegistry } from "../../blocks";
 import { AutomationEngine } from "../../automations";
 import { SchedulerService } from "../../scheduler/scheduler-service";
 import { RulesEngine } from "../../rules/rules-engine";

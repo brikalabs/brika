@@ -41,63 +41,69 @@ export function ExpressionInput({
   const autocompleteRef = useRef<HTMLDivElement>(null);
 
   // Build autocomplete items from variables
-  const buildAutocompleteItems = useCallback((search: string): AutocompleteItem[] => {
-    const items: AutocompleteItem[] = [];
-    
-    // Add all variables
-    variables.forEach((v) => {
-      if (!search || v.name.toLowerCase().includes(search.toLowerCase())) {
-        items.push({
-          label: v.name,
-          insert: `{{ ${v.name} }}`,
-          description: `${v.type} from ${v.source}`,
-          type: "variable",
-        });
-      }
-    });
+  const buildAutocompleteItems = useCallback(
+    (search: string): AutocompleteItem[] => {
+      const items: AutocompleteItem[] = [];
 
-    // Add common properties/paths
-    const commonProps = [
-      { name: "trigger.type", desc: "Event type" },
-      { name: "trigger.payload", desc: "Event payload object" },
-      { name: "trigger.source", desc: "Event source" },
-      { name: "trigger.ts", desc: "Event timestamp" },
-      { name: "prev", desc: "Previous block output" },
-      { name: "vars", desc: "Workflow variables" },
-    ];
-
-    commonProps.forEach((p) => {
-      if (!search || p.name.toLowerCase().includes(search.toLowerCase())) {
-        if (!items.find((i) => i.label === p.name)) {
+      // Add all variables
+      variables.forEach((v) => {
+        if (!search || v.name.toLowerCase().includes(search.toLowerCase())) {
           items.push({
-            label: p.name,
-            insert: `{{ ${p.name} }}`,
-            description: p.desc,
-            type: "property",
+            label: v.name,
+            insert: `{{ ${v.name} }}`,
+            description: `${v.type} from ${v.source}`,
+            type: "variable",
           });
         }
-      }
-    });
+      });
 
-    return items.slice(0, 10);
-  }, [variables]);
+      // Add common properties/paths
+      const commonProps = [
+        { name: "trigger.type", desc: "Event type" },
+        { name: "trigger.payload", desc: "Event payload object" },
+        { name: "trigger.source", desc: "Event source" },
+        { name: "trigger.ts", desc: "Event timestamp" },
+        { name: "prev", desc: "Previous block output" },
+        { name: "vars", desc: "Workflow variables" },
+      ];
+
+      commonProps.forEach((p) => {
+        if (!search || p.name.toLowerCase().includes(search.toLowerCase())) {
+          if (!items.find((i) => i.label === p.name)) {
+            items.push({
+              label: p.name,
+              insert: `{{ ${p.name} }}`,
+              description: p.desc,
+              type: "property",
+            });
+          }
+        }
+      });
+
+      return items.slice(0, 10);
+    },
+    [variables],
+  );
 
   // Check for {{ trigger and show autocomplete
-  const checkForAutocomplete = useCallback((text: string, cursor: number) => {
-    // Look for {{ before cursor
-    const beforeCursor = text.slice(0, cursor);
-    const match = beforeCursor.match(/\{\{\s*(\w*)$/);
-    
-    if (match) {
-      const search = match[1] || "";
-      const items = buildAutocompleteItems(search);
-      setAutocompleteItems(items);
-      setShowAutocomplete(items.length > 0);
-      setSelectedIndex(0);
-    } else {
-      setShowAutocomplete(false);
-    }
-  }, [buildAutocompleteItems]);
+  const checkForAutocomplete = useCallback(
+    (text: string, cursor: number) => {
+      // Look for {{ before cursor
+      const beforeCursor = text.slice(0, cursor);
+      const match = beforeCursor.match(/\{\{\s*(\w*)$/);
+
+      if (match) {
+        const search = match[1] || "";
+        const items = buildAutocompleteItems(search);
+        setAutocompleteItems(items);
+        setShowAutocomplete(items.length > 0);
+        setSelectedIndex(0);
+      } else {
+        setShowAutocomplete(false);
+      }
+    },
+    [buildAutocompleteItems],
+  );
 
   // Handle input change
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
@@ -138,14 +144,14 @@ export function ExpressionInput({
   const insertAutocomplete = (item: AutocompleteItem) => {
     const beforeCursor = value.slice(0, cursorPosition);
     const afterCursor = value.slice(cursorPosition);
-    
+
     // Find the {{ and replace from there
     const match = beforeCursor.match(/\{\{\s*\w*$/);
     if (match) {
       const insertPoint = beforeCursor.length - match[0].length;
       const newValue = value.slice(0, insertPoint) + item.insert + afterCursor;
       onChange(newValue);
-      
+
       // Move cursor after insertion
       const newCursor = insertPoint + item.insert.length;
       setTimeout(() => {
@@ -153,7 +159,7 @@ export function ExpressionInput({
         inputRef.current?.focus();
       }, 0);
     }
-    
+
     setShowAutocomplete(false);
   };
 
@@ -185,16 +191,9 @@ export function ExpressionInput({
   return (
     <div className="relative">
       {multiline ? (
-        <Textarea
-          ref={inputRef as React.RefObject<HTMLTextAreaElement>}
-          {...commonProps}
-          rows={4}
-        />
+        <Textarea ref={inputRef as React.RefObject<HTMLTextAreaElement>} {...commonProps} rows={4} />
       ) : (
-        <Input
-          ref={inputRef as React.RefObject<HTMLInputElement>}
-          {...commonProps}
-        />
+        <Input ref={inputRef as React.RefObject<HTMLInputElement>} {...commonProps} />
       )}
 
       {/* Variable hint button */}
@@ -226,7 +225,7 @@ export function ExpressionInput({
                 type="button"
                 className={cn(
                   "w-full px-3 py-2 text-left text-sm flex items-center gap-2 hover:bg-accent",
-                  index === selectedIndex && "bg-accent"
+                  index === selectedIndex && "bg-accent",
                 )}
                 onClick={() => insertAutocomplete(item)}
                 onMouseEnter={() => setSelectedIndex(index)}
@@ -234,9 +233,7 @@ export function ExpressionInput({
                 <Variable className="size-4 text-primary shrink-0" />
                 <div className="flex-1 min-w-0">
                   <div className="font-mono text-xs truncate">{item.label}</div>
-                  <div className="text-xs text-muted-foreground truncate">
-                    {item.description}
-                  </div>
+                  <div className="text-xs text-muted-foreground truncate">{item.description}</div>
                 </div>
               </button>
             ))}

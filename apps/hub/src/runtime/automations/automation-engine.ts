@@ -10,7 +10,7 @@ import type { Workflow, BlockDefinition } from "@elia/sdk";
 import { LogRouter } from "../logs/log-router";
 import { EventBus } from "../events/event-bus";
 import { ToolRegistry } from "../tools/tool-registry";
-import { BlockRegistry } from '../blocks';
+import { BlockRegistry } from "../blocks";
 import { PluginManager } from "../plugins/plugin-manager";
 import { WorkflowExecutor, type ExecutionListener } from "./workflow-executor";
 
@@ -90,7 +90,7 @@ export class AutomationEngine {
     }
 
     this.#workflows.set(workflow.id, workflow);
-    this.logs.info("workflow.registered", { id: workflow.id, name: workflow.name });
+    this.logs.info("workflow.registered", { id: workflow.id, name: workflow.name ?? null });
 
     // Skip if disabled
     if (workflow.enabled === false) return;
@@ -127,7 +127,7 @@ export class AutomationEngine {
     eventType: string,
     source: string,
     payload: Json,
-    listener?: ExecutionListener
+    listener?: ExecutionListener,
   ): Promise<WorkflowRun> {
     const workflow = this.#workflows.get(id);
     if (!workflow) throw new Error(`Workflow not found: ${id}`);

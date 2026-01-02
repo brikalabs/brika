@@ -113,21 +113,12 @@ export function createApp(routes: RouteDefinition[]): Hono {
 
   // Register each route
   for (const routeDef of routes) {
-    const method = routeDef.method.toLowerCase() as
-      | "get"
-      | "post"
-      | "put"
-      | "patch"
-      | "delete";
+    const method = routeDef.method.toLowerCase() as "get" | "post" | "put" | "patch" | "delete";
 
     app[method](routeDef.path, async (c) => {
       try {
         // Parse and validate request
-        const { params, query, body } = await parseRequest(
-          c.req.raw,
-          c.req.param(),
-          routeDef.schema,
-        );
+        const { params, query, body } = await parseRequest(c.req.raw, c.req.param(), routeDef.schema);
 
         // Build context with DI inject function
         const ctx: RouteContext = {
@@ -181,4 +172,3 @@ export function createApp(routes: RouteDefinition[]): Hono {
 
   return app;
 }
-

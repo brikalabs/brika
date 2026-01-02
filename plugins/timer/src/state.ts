@@ -1,6 +1,6 @@
 /**
  * Timer Plugin State & Runtime
- * 
+ *
  * Shared state and API accessible by all tools
  */
 

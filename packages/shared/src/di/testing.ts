@@ -108,7 +108,7 @@ export interface SpyFn<TArgs extends any[] = any[], TReturn = any> {
  * ```
  */
 export function spy<TArgs extends any[] = any[], TReturn = void>(
-  initialImpl?: (...args: TArgs) => TReturn
+  initialImpl?: (...args: TArgs) => TReturn,
 ): SpyFn<TArgs, TReturn> {
   const calls: TArgs[] = [];
   const returnValueQueue: TReturn[] = [];
@@ -195,10 +195,7 @@ export function spy<TArgs extends any[] = any[], TReturn = void>(
   };
 
   fn.calledWith = (...args: TArgs) => {
-    return calls.some(call =>
-      call.length === args.length &&
-      call.every((arg, i) => arg === args[i])
-    );
+    return calls.some((call) => call.length === args.length && call.every((arg, i) => arg === args[i]));
   };
 
   fn.nthCall = (n: number) => calls[n];
@@ -236,7 +233,7 @@ export function mock<T extends object>(overrides: Partial<T> = {}): T {
  * ```
  */
 export function autoMock<T extends object>(
-  methodNames: Array<keyof T & string>
+  methodNames: Array<keyof T & string>,
 ): T & { [K in keyof T]: T[K] extends AnyFunction ? SpyFn : T[K] } {
   const obj: any = {};
   for (const name of methodNames) {
@@ -347,23 +344,11 @@ class TestBedStatic {
    * });
    * ```
    */
-  setup(config: {
-    mocks?: Record<string, Partial<object>>;
-    providers?: Record<string, any>;
-  } = {}): void {
+  setup(config: { mocks?: Record<string, Partial<object>>; providers?: Record<string, any> } = {}): void {
     container.reset();
 
     // Note: This simplified API requires tokens to be passed differently
     // For now, use the fluent API for full type safety
-  }
-
-  /**
-   * Legacy API - configure testing module
-   * @deprecated Use TestBed.create().mock(...).compile() instead
-   */
-  configureTestingModule(): FluentTestBed {
-    container.reset();
-    return new FluentTestBed();
   }
 
   /**
@@ -387,58 +372,6 @@ class TestBedStatic {
     container.reset();
     this.#builder = null;
   }
-
-  /**
-   * @deprecated Use reset() instead
-   */
-  resetTestingModule(): void {
-    this.reset();
-  }
-}
-
-/**
- * Fluent API for backwards compatibility
- */
-class FluentTestBed {
-  provide<T>(token: Constructor<T>, value: T): this {
-    container.registerInstance(token, value);
-    return this;
-  }
-
-  mock<T extends object>(token: Constructor<T>, value: Partial<T>): this {
-    container.registerInstance(token, value as T);
-    return this;
-  }
-
-  inject<T>(token: Constructor<T>): T {
-    return container.resolve(token);
-  }
 }
 
 export const TestBed = new TestBedStatic();
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Legacy exports for backwards compatibility
-// ─────────────────────────────────────────────────────────────────────────────
-
-/** @deprecated Use spy() instead */
-export function createSpyFn<TArgs extends any[] = any[], TReturn = void>(
-  returnValue?: TReturn
-): SpyFn<TArgs, TReturn> {
-  const s = spy<TArgs, TReturn>();
-  if (returnValue !== undefined) {
-    s.mockReturnValue(returnValue);
-  }
-  return s;
-}
-
-/** @deprecated Use spy().mockResolvedValue() instead */
-export function createAsyncSpyFn<TArgs extends any[] = any[], TReturn = void>(
-  returnValue?: TReturn
-): SpyFn<TArgs, Promise<TReturn>> {
-  const s = spy<TArgs, Promise<TReturn>>();
-  if (returnValue !== undefined) {
-    s.mockResolvedValue(returnValue);
-  }
-  return s;
-}

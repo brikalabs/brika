@@ -1,5 +1,5 @@
 /* Font imports - must be first */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap");
 
 @import "tailwindcss";
 
@@ -20,7 +20,7 @@
   --color-secondary-foreground: oklch(0.93 0.02 260);
   --color-muted: oklch(0.28 0.02 260);
   --color-muted-foreground: oklch(0.65 0.02 260);
-  --color-accent: oklch(0.70 0.12 160);
+  --color-accent: oklch(0.7 0.12 160);
   --color-accent-foreground: oklch(0.21 0.02 260);
   --color-destructive: oklch(0.65 0.2 25);
   --color-destructive-foreground: oklch(0.93 0.02 260);
@@ -30,7 +30,7 @@
 
   /* Additional semantic colors */
   --color-success: oklch(0.72 0.15 145);
-  --color-warning: oklch(0.80 0.15 85);
+  --color-warning: oklch(0.8 0.15 85);
   --color-info: oklch(0.72 0.12 230);
 
   /* Radius */
@@ -44,10 +44,12 @@
   * {
     @apply border-border;
   }
-  
+
   body {
     @apply bg-background text-foreground antialiased;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    font-feature-settings:
+      "rlig" 1,
+      "calt" 1;
   }
 
   /* Custom scrollbar */

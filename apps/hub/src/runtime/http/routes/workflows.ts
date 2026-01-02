@@ -1,11 +1,11 @@
 import { z } from "zod";
-import { route, group, NotFound, BadRequest } from "@elia/router";
+import { route, group, NotFound } from "@elia/router";
 import { AutomationEngine, YamlWorkflowLoader } from "../../automations";
 
 const blockSchema = z.object({
   id: z.string(),
   type: z.string(),
-  config: z.record(z.unknown()).optional(),
+  config: z.record(z.string(), z.unknown()).optional(),
   position: z
     .object({
       x: z.number(),
@@ -15,15 +15,22 @@ const blockSchema = z.object({
 });
 
 const connectionSchema = z.object({
-  from: z.object({ block: z.string(), output: z.string().optional() }),
-  to: z.object({ block: z.string(), input: z.string().optional() }),
+  from: z.string(),
+  fromPort: z.string().optional(),
+  to: z.string(),
+  toPort: z.string().optional(),
+});
+
+const triggerSchema = z.object({
+  event: z.string(),
+  filter: z.record(z.string(), z.unknown()).optional(),
 });
 
 const workflowSchema = z.object({
   id: z.string(),
   name: z.string(),
   description: z.string().optional(),
-  trigger: z.record(z.unknown()).optional(),
+  trigger: triggerSchema,
   blocks: z.array(blockSchema),
   connections: z.array(connectionSchema).optional(),
   enabled: z.boolean().optional(),
@@ -35,7 +42,19 @@ export const workflowsRoutes = group("/api/workflows", [
   }),
 
   route.post("/", { body: workflowSchema }, async ({ body, inject }) => {
-    await inject(YamlWorkflowLoader).saveWorkflow(body);
+    const workflow = {
+      ...body,
+      trigger: {
+        event: body.trigger.event,
+        filter: body.trigger.filter as Record<string, import("@elia/shared").Json> | undefined,
+      },
+      blocks: body.blocks.map((b) => ({
+        ...b,
+        config: (b.config ?? {}) as Record<string, import("@elia/shared").Json>,
+      })),
+      connections: body.connections ?? [],
+    };
+    await inject(YamlWorkflowLoader).saveWorkflow(workflow);
     return { ok: true, id: body.id };
   }),
 
@@ -52,7 +71,7 @@ export const workflowsRoutes = group("/api/workflows", [
     {
       body: z.object({
         id: z.string(),
-        payload: z.record(z.unknown()).optional(),
+        payload: z.record(z.string(), z.unknown()).optional(),
       }),
     },
     async ({ body, inject }) => {
@@ -60,44 +79,28 @@ export const workflowsRoutes = group("/api/workflows", [
         body.id,
         "api.trigger",
         "api",
-        body.payload ?? {},
+        (body.payload ?? {}) as import("@elia/shared").Json,
       );
     },
   ),
 
-  route.post(
-    "/enable",
-    { body: z.object({ id: z.string() }) },
-    async ({ body, inject }) => {
-      return { ok: inject(AutomationEngine).setEnabled(body.id, true) };
-    },
-  ),
+  route.post("/enable", { body: z.object({ id: z.string() }) }, async ({ body, inject }) => {
+    return { ok: inject(AutomationEngine).setEnabled(body.id, true) };
+  }),
 
-  route.post(
-    "/disable",
-    { body: z.object({ id: z.string() }) },
-    async ({ body, inject }) => {
-      return { ok: inject(AutomationEngine).setEnabled(body.id, false) };
-    },
-  ),
+  route.post("/disable", { body: z.object({ id: z.string() }) }, async ({ body, inject }) => {
+    return { ok: inject(AutomationEngine).setEnabled(body.id, false) };
+  }),
 
-  route.get(
-    "/:id",
-    { params: z.object({ id: z.string() }) },
-    async ({ params, inject }) => {
-      const workflow = inject(AutomationEngine).get(params.id);
-      if (!workflow) throw new NotFound("Workflow not found");
-      return workflow;
-    },
-  ),
+  route.get("/:id", { params: z.object({ id: z.string() }) }, async ({ params, inject }) => {
+    const workflow = inject(AutomationEngine).get(params.id);
+    if (!workflow) throw new NotFound("Workflow not found");
+    return workflow;
+  }),
 
-  route.delete(
-    "/:id",
-    { params: z.object({ id: z.string() }) },
-    async ({ params, inject }) => {
-      const ok = await inject(YamlWorkflowLoader).deleteWorkflow(params.id);
-      return { ok };
-    },
-  ),
+  route.delete("/:id", { params: z.object({ id: z.string() }) }, async ({ params, inject }) => {
+    const ok = await inject(YamlWorkflowLoader).deleteWorkflow(params.id);
+    return { ok };
+  }),
 ]);
 

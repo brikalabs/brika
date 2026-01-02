@@ -1,5 +1,3 @@
-import { mkdir } from "node:fs/promises";
-import path from "node:path";
 import { singleton, inject } from "@elia/shared";
 import { HubConfig } from "../config";
 import { LogRouter } from "../logs/log-router";
@@ -16,19 +14,29 @@ export class StoreService {
 
   async init(): Promise<void> {
     const dir = this.#pluginsDir();
-    await mkdir(dir, { recursive: true });
-    const pkg = path.join(dir, "package.json");
+    await Bun.write(Bun.file(`${dir}/.keep`), "");
+    const pkg = `${dir}/package.json`;
     if (!(await Bun.file(pkg).exists())) {
-      await Bun.write(pkg, JSON.stringify({ name: "elia-plugins", private: true, dependencies: {} }, null, 2));
+      await Bun.write(
+        pkg,
+        JSON.stringify({ name: "elia-plugins", private: true, dependencies: {} }, null, 2),
+      );
     }
   }
 
-  #pluginsDir(): string { return path.join(this.#homeDir, "plugins-node"); }
+  #pluginsDir(): string {
+    return `${this.#homeDir}/plugins-node`;
+  }
 
   async install(ref: string, wanted?: string): Promise<void> {
     const spec = wanted ? `${ref}@${wanted}` : ref;
     this.logs.info("install.start", { spec });
-    const proc = Bun.spawn({ cmd: ["bun", "add", spec], cwd: this.#pluginsDir(), stdout: "pipe", stderr: "pipe" });
+    const proc = Bun.spawn({
+      cmd: ["bun", "add", spec],
+      cwd: this.#pluginsDir(),
+      stdout: "pipe",
+      stderr: "pipe",
+    });
     await this.#pipeProc(proc, "install");
     if ((await proc.exited) !== 0) throw new Error(`Install failed`);
     this.logs.info("install.done", { spec });
@@ -36,15 +44,24 @@ export class StoreService {
 
   async uninstall(ref: string): Promise<void> {
     this.logs.info("uninstall.start", { ref });
-    const proc = Bun.spawn({ cmd: ["bun", "remove", ref], cwd: this.#pluginsDir(), stdout: "pipe", stderr: "pipe" });
+    const proc = Bun.spawn({
+      cmd: ["bun", "remove", ref],
+      cwd: this.#pluginsDir(),
+      stdout: "pipe",
+      stderr: "pipe",
+    });
     await this.#pipeProc(proc, "uninstall");
     if ((await proc.exited) !== 0) throw new Error(`Uninstall failed`);
     this.logs.info("uninstall.done", { ref });
   }
 
   resolveEntry(ref: string): string | null {
-    try { return require.resolve(ref, { paths: [this.#pluginsDir()] }); }
-    catch { return null; }
+    try {
+      // Use Bun.resolveSync to resolve module paths
+      return Bun.resolveSync(ref, this.#pluginsDir());
+    } catch {
+      return null;
+    }
   }
 
   async #pipeProc(proc: ReturnType<typeof Bun.spawn>, tag: string): Promise<void> {
@@ -56,7 +73,8 @@ export class StoreService {
         const { value, done } = await reader.read();
         if (done) break;
         const line = decoder.decode(value).trim();
-        if (line) this.logs.emit({ ts: Date.now(), level, source: "installer", message: tag, meta: { line } });
+        if (line)
+          this.logs.emit({ ts: Date.now(), level, source: "installer", message: tag, meta: { line } });
       }
     };
     const stdout = proc.stdout as ReadableStream<Uint8Array> | null;
