@@ -10,4 +10,3 @@ export const blocksRoutes = group("/api/blocks", [
     return inject(BlockRegistry).listByCategory();
   }),
 ]);
-

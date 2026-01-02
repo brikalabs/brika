@@ -8,6 +8,10 @@ export interface Tool {
   /** Full qualified name with plugin prefix (pluginId:toolId) */
   name: string;
   description?: string;
+  /** Lucide icon name (e.g., "timer", "wrench") */
+  icon?: string;
+  /** Color for UI display (e.g., "#d97706") */
+  color?: string;
   owner: string;
   inputSchema?: ToolInputSchema;
   call(args: Record<string, Json>, ctx: ToolCallContext): Promise<ToolResult>;
@@ -47,11 +51,24 @@ export class ToolRegistry {
 
   list(): ToolSummary[] {
     return [...this.#tools.values()].map((t) => ({
-      name: t.name,
+      id: t.name,
       description: t.description,
-      owner: t.owner,
+      icon: t.icon,
+      color: t.color,
       inputSchema: t.inputSchema,
     }));
+  }
+
+  listByOwner(owner: string): ToolSummary[] {
+    return [...this.#tools.values()]
+      .filter((t) => t.owner === owner)
+      .map((t) => ({
+        id: t.name,
+        description: t.description,
+        icon: t.icon,
+        color: t.color,
+        inputSchema: t.inputSchema,
+      }));
   }
 
   async call(name: string, args: Record<string, Json>, ctx: ToolCallContext): Promise<ToolResult> {

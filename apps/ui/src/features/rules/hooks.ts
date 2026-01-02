@@ -20,4 +20,3 @@ export function useRuleMutations() {
     disable: useMutation({ mutationFn: rulesApi.disable, onSuccess: invalidate }),
   };
 }
-

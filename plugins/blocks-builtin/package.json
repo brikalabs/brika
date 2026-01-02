@@ -1,9 +1,14 @@
 {
-  "$schema": "../../packages/sdk/elia-plugin.schema.json",
+  "$schema": "https://raw.githubusercontent.com/maxscharwath/elia/master/packages/sdk/elia-plugin.schema.json",
   "name": "@elia/blocks-builtin",
   "version": "0.1.0",
   "description": "Core workflow blocks for ELIA automations",
   "author": "ELIA Team",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/maxscharwath/elia.git",
+    "directory": "plugins/blocks-builtin"
+  },
   "icon": "./icon.svg",
   "keywords": [
     "blocks",
@@ -18,8 +23,90 @@
   "exports": {
     ".": "./src/main.ts"
   },
+  "blocks": [
+    {
+      "id": "action",
+      "name": "Action",
+      "description": "Call a tool with arguments",
+      "category": "action",
+      "icon": "zap",
+      "color": "#3b82f6"
+    },
+    {
+      "id": "condition",
+      "name": "Condition",
+      "description": "Branch based on a condition",
+      "category": "flow",
+      "icon": "git-branch",
+      "color": "#f59e0b"
+    },
+    {
+      "id": "switch",
+      "name": "Switch",
+      "description": "Multi-way branch based on a value",
+      "category": "flow",
+      "icon": "shuffle",
+      "color": "#8b5cf6"
+    },
+    {
+      "id": "delay",
+      "name": "Delay",
+      "description": "Wait for a duration before continuing",
+      "category": "flow",
+      "icon": "timer",
+      "color": "#6b7280"
+    },
+    {
+      "id": "emit",
+      "name": "Emit Event",
+      "description": "Emit an event to the event bus",
+      "category": "action",
+      "icon": "send",
+      "color": "#10b981"
+    },
+    {
+      "id": "set",
+      "name": "Set Variable",
+      "description": "Set a workflow variable",
+      "category": "transform",
+      "icon": "edit",
+      "color": "#ec4899"
+    },
+    {
+      "id": "log",
+      "name": "Log",
+      "description": "Log a message",
+      "category": "action",
+      "icon": "file-text",
+      "color": "#78716c"
+    },
+    {
+      "id": "merge",
+      "name": "Merge",
+      "description": "Wait for multiple inputs before continuing",
+      "category": "flow",
+      "icon": "git-merge",
+      "color": "#06b6d4"
+    },
+    {
+      "id": "parallel",
+      "name": "Parallel",
+      "description": "Run multiple branches in parallel",
+      "category": "flow",
+      "icon": "git-fork",
+      "color": "#a855f7"
+    },
+    {
+      "id": "end",
+      "name": "End",
+      "description": "End the workflow branch",
+      "category": "flow",
+      "icon": "square",
+      "color": "#dc2626"
+    }
+  ],
   "dependencies": {
     "@elia/sdk": "workspace:*",
-    "zod": "^4.0.0"
+    "zod": "^4.3.4"
   }
 }

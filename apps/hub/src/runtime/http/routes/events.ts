@@ -21,4 +21,3 @@ export const eventsRoutes = group("/api/events", [
     },
   ),
 ]);
-

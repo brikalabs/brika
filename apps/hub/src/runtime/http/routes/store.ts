@@ -22,4 +22,3 @@ export const storeRoutes = group("/api/store", [
     return { ok: true };
   }),
 ]);
-

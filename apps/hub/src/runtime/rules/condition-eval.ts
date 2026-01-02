@@ -160,4 +160,3 @@ function compare(left: Json, op: string, right: Json): boolean {
       return false;
   }
 }
-

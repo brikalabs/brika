@@ -1,6 +1,7 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
+    "lib": ["DOM", "ES2024", "ESNext"],
     "jsx": "react-jsx",
     "types": ["vite/client"],
     "baseUrl": ".",

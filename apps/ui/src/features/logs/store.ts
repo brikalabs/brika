@@ -76,4 +76,3 @@ export const useLogsStore = create<LogsStore>((set) => ({
     })),
   resetFilters: () => set({ filters: defaultFilters }),
 }));
-

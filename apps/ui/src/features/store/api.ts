@@ -6,4 +6,3 @@ export const storeApi = {
   uninstall: (ref: string) =>
     fetcher<{ ok: boolean }>("/api/store/uninstall", { method: "POST", body: JSON.stringify({ ref }) }),
 };
-

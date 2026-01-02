@@ -11,4 +11,3 @@ export function useToolCall() {
       toolsApi.call(name, args),
   });
 }
-

@@ -254,4 +254,3 @@ describe("Real-world testing patterns", () => {
     expect(toolHandler.lastCall?.[0]).toEqual({ room: "bedroom", brightness: 80 });
   });
 });
-

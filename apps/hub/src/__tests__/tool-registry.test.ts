@@ -39,8 +39,7 @@ describe("ToolRegistry", () => {
 
     const tools = registry.list();
     expect(tools).toHaveLength(1);
-    expect(tools[0].name).toBe("test:tool");
-    expect(tools[0].owner).toBe("test");
+    expect(tools[0].id).toBe("test:tool");
   });
 
   it("should log on register", () => {
@@ -92,7 +91,7 @@ describe("ToolRegistry", () => {
 
     const remaining = registry.list();
     expect(remaining).toHaveLength(1);
-    expect(remaining[0].name).toBe("plugin2:c");
+    expect(remaining[0].id).toBe("plugin2:c");
   });
 
   it("should call a tool", async () => {

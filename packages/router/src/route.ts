@@ -56,4 +56,3 @@ export const route = {
   delete: <S extends Schema>(path: string, schemaOrHandler: S | Handler<S>, maybeHandler?: Handler<S>) =>
     createRoute("DELETE", path, schemaOrHandler, maybeHandler),
 };
-

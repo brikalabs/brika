@@ -23,6 +23,10 @@ export interface ToolSpec {
   /** Local tool ID (without plugin prefix, e.g., "set", "list") */
   id: string;
   description?: string;
+  /** Lucide icon name (e.g., "timer", "wrench") */
+  icon?: string;
+  /** Color for UI display (e.g., "#d97706") */
+  color?: string;
   /** JSON Schema for input arguments - enables smart UI forms */
   inputSchema?: ToolInputSchema;
 }

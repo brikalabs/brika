@@ -198,4 +198,3 @@ export function VariablePicker({ variables, onInsert, className }: VariablePicke
     </div>
   );
 }
-

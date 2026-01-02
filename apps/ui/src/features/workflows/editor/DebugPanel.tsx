@@ -334,4 +334,3 @@ export function DebugPanel({
     </div>
   );
 }
-

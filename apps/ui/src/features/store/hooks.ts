@@ -9,4 +9,3 @@ export function useStoreMutations() {
     uninstall: useMutation({ mutationFn: storeApi.uninstall }),
   };
 }
-

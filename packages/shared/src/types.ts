@@ -22,35 +22,71 @@ export type PluginHealth =
   | "restarting"
   | "crash-loop";
 
-/** Plugin metadata from package.json */
-export interface PluginMetadata {
-  name: string;
-  version: string;
+/** Tool manifest from package.json */
+export interface ToolManifest {
+  id: string;
   description?: string;
-  author?: string | { name: string; email?: string; url?: string };
-  repository?: string | { type?: string; url: string };
   icon?: string;
-  keywords?: string[];
-  license?: string;
-  dependencies?: Record<string, string>;
+  color?: string;
 }
 
-export interface PluginSummary {
-  /** Installation reference (e.g., file:path or npm:package) */
-  ref: string;
-  /** Plugin ID from package.json name field (human-readable, used in YAML configs) */
-  id?: string;
-  /** Short unique ID for URLs (no encoding needed) */
-  uid?: string;
-  version?: string;
-  pid?: number;
-  health: PluginHealth;
-  tools: string[];
-  blocks?: string[];
-  lastError?: string | null;
-  /** Full metadata from package.json */
-  metadata?: PluginMetadata;
+/** Block manifest from package.json */
+export interface BlockManifest {
+  id: string;
+  name?: string;
+  description?: string;
+  category?: "trigger" | "flow" | "action" | "transform";
+  icon?: string;
+  color?: string;
 }
+
+/** Plugin representation - flattened for easy consumption */
+export interface Plugin {
+  // ─── Identity ──────────────────────────────────────────────────────────────
+  /** Short unique ID - primary identifier */
+  uid: string;
+  /** Plugin name from package.json (e.g. "@elia/blocks-builtin") */
+  name: string;
+  /** Plugin version */
+  version: string;
+
+  // ─── Metadata (inlined from package.json) ──────────────────────────────────
+  /** Human-readable description */
+  description: string | null;
+  /** Author name or object */
+  author: string | { name: string; email?: string; url?: string } | null;
+  /** Repository URL or object */
+  repository: string | { type?: string; url: string; directory?: string } | null;
+  /** Path to icon file */
+  icon: string | null;
+  /** Keywords for search/categorization */
+  keywords: string[];
+  /** License identifier */
+  license: string | null;
+
+  // ─── Installation ──────────────────────────────────────────────────────────
+  /** Installation reference (e.g., "file:/path/to/plugin/src/main.ts") */
+  ref: string;
+  /** Installation directory (e.g., "/path/to/plugin") */
+  dir: string;
+
+  // ─── Runtime ───────────────────────────────────────────────────────────────
+  /** Current status */
+  status: "running" | "stopped" | "crashed" | "restarting";
+  /** Process ID (null when stopped) */
+  pid: number | null;
+  /** Timestamp when plugin was started (null when stopped) */
+  startedAt: number | null;
+  /** Last error message if crashed */
+  lastError: string | null;
+
+  // ─── Capabilities ──────────────────────────────────────────────────────────
+  /** Available tools */
+  tools: ToolManifest[];
+  /** Available blocks */
+  blocks: BlockManifest[];
+}
+
 
 /** JSON Schema for tool input - enables smart UI forms */
 export interface ToolInputSchema {
@@ -69,11 +105,38 @@ export interface ToolInputSchema {
   required?: string[];
 }
 
+/** Runtime tool info (includes schema from running plugin) */
 export interface ToolSummary {
-  name: string;
+  /** Full tool ID (e.g., "@elia/plugin-timer:set") */
+  id: string;
+  /** Tool description */
   description?: string;
-  owner?: string; // plugin ref or "hub"
+  /** Lucide icon name */
+  icon?: string;
+  /** Hex color */
+  color?: string;
+  /** Input schema for validation/UI */
   inputSchema?: ToolInputSchema;
+}
+
+/** Runtime block info (includes ports from running plugin) */
+export interface BlockSummary {
+  /** Full block ID (e.g., "@elia/blocks-builtin:condition") */
+  id: string;
+  /** Display name */
+  name?: string;
+  /** Block description */
+  description?: string;
+  /** Block category */
+  category?: "trigger" | "flow" | "action" | "transform";
+  /** Lucide icon name */
+  icon?: string;
+  /** Hex color */
+  color?: string;
+  /** Input ports */
+  inputs?: Array<{ id: string; name: string }>;
+  /** Output ports */
+  outputs?: Array<{ id: string; name: string }>;
 }
 
 export interface ToolCallContext {
@@ -143,4 +206,23 @@ export interface Rule {
   condition?: string; // e.g. "event.payload.brightness < 50"
   actions: RuleAction[];
   enabled: boolean;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Plugin Manifest (from package.json)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Full plugin manifest from package.json */
+export interface PluginManifest {
+  name: string;
+  version: string;
+  description?: string;
+  author?: string | { name: string; email?: string; url?: string };
+  repository?: string | { type?: string; url: string; directory?: string };
+  icon?: string;
+  keywords?: string[];
+  license?: string;
+  dependencies?: Record<string, string>;
+  tools?: ToolManifest[];
+  blocks?: BlockManifest[];
 }

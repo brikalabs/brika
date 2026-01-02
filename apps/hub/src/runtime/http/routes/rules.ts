@@ -47,4 +47,3 @@ export const rulesRoutes = group("/api/rules", [
     return { ok: await inject(RulesEngine).delete(params.id) };
   }),
 ]);
-

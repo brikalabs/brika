@@ -1,33 +1,44 @@
-import type { PluginSummary } from "@elia/shared";
+import type { Plugin } from "@elia/shared";
 import { fetcher } from "@/lib/query";
 
 export const pluginsApi = {
-  list: () => fetcher<PluginSummary[]>("/api/plugins"),
-  getById: (id: string) => fetcher<PluginSummary>(`/api/plugins/${encodeURIComponent(id)}`),
+  list: () => fetcher<Plugin[]>("/api/plugins"),
+  getByUid: (uid: string) => fetcher<Plugin>(`/api/plugins/${uid}`),
   getIconUrl: (uid: string) => `/api/plugins/${uid}/icon`,
-  enable: (ref: string) =>
-    fetcher<{ ok: boolean }>("/api/plugins/enable", {
+
+  /** Load a new plugin by ref */
+  load: (ref: string) =>
+    fetcher<{ ok: boolean }>("/api/plugins/load", {
       method: "POST",
       body: JSON.stringify({ ref }),
     }),
-  disable: (ref: string) =>
-    fetcher<{ ok: boolean }>("/api/plugins/disable", {
+
+  /** Enable a stopped plugin by uid */
+  enable: (uid: string) =>
+    fetcher<{ ok: boolean }>(`/api/plugins/${uid}/enable`, {
       method: "POST",
-      body: JSON.stringify({ ref }),
     }),
-  reload: (ref: string) =>
-    fetcher<{ ok: boolean }>("/api/plugins/reload", {
+
+  /** Disable a running plugin by uid */
+  disable: (uid: string) =>
+    fetcher<{ ok: boolean }>(`/api/plugins/${uid}/disable`, {
       method: "POST",
-      body: JSON.stringify({ ref }),
     }),
-  kill: (ref: string) =>
-    fetcher<{ ok: boolean }>("/api/plugins/kill", {
+
+  /** Reload a plugin by uid */
+  reload: (uid: string) =>
+    fetcher<{ ok: boolean }>(`/api/plugins/${uid}/reload`, {
       method: "POST",
-      body: JSON.stringify({ ref }),
+    }),
+
+  /** Kill a plugin by uid */
+  kill: (uid: string) =>
+    fetcher<{ ok: boolean }>(`/api/plugins/${uid}/kill`, {
+      method: "POST",
     }),
 };
 
 export const pluginsKeys = {
   all: ["plugins"] as const,
-  detail: (id: string) => ["plugins", id] as const,
+  detail: (uid: string) => ["plugins", uid] as const,
 };

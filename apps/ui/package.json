@@ -2,6 +2,11 @@
   "name": "@elia/ui",
   "private": true,
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/maxscharwath/elia.git",
+    "directory": "apps/ui"
+  },
   "scripts": {
     "dev": "bunx --bun vite",
     "build": "bunx --bun vite build",
@@ -25,18 +30,18 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.562.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
     "tailwind-merge": "^3.4.0",
     "tailwindcss": "^4.1.18",
     "zustand": "^5.0.9"
   },
   "devDependencies": {
-    "@biomejs/biome": "^1.8.3",
-    "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0",
-    "typescript": "^5.6.3",
-    "vite": "^6.0.0",
-    "@vitejs/plugin-react": "^4.3.4"
+    "@biomejs/biome": "^2.3.10",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.0",
+    "@vitejs/plugin-react": "^5.1.2"
   }
 }

@@ -13,4 +13,3 @@ export const schedulesApi = {
 };
 
 export const schedulesKeys = { all: ["schedules"] as const };
-

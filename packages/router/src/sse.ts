@@ -112,4 +112,3 @@ export function createAsyncSSEStream(
 
   return new Response(stream, { headers: SSE_HEADERS });
 }
-

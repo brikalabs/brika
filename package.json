@@ -2,6 +2,14 @@
   "name": "elia",
   "private": true,
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/maxscharwath/elia.git"
+  },
+  "homepage": "https://github.com/maxscharwath/elia",
+  "bugs": {
+    "url": "https://github.com/maxscharwath/elia/issues"
+  },
   "workspaces": [
     "apps/*",
     "packages/*",

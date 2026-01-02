@@ -1,14 +1,24 @@
 import { singleton, inject } from "@elia/shared";
-import type { PluginHealth, PluginSummary, Rule, Schedule } from "@elia/shared";
+import type { PluginHealth, PluginManifest, Rule, Schedule } from "@elia/shared";
 import { HubConfig } from "../config";
 
 export interface InstalledPluginState {
   ref: string;
+  /** Installation directory */
+  dir: string;
+  /** Plugin name from package.json */
+  name: string;
+  /** Short unique ID */
+  uid: string;
+  /** Plugin version */
+  version: string;
+  /** Full metadata */
+  metadata: PluginManifest;
   wanted?: string;
   resolved?: string;
   enabled: boolean;
   health: PluginHealth;
-  lastError?: string | null;
+  lastError: string | null;
   updatedAt: number;
 }
 
@@ -52,6 +62,11 @@ export class StateStore {
     return this.#state.plugins[ref];
   }
 
+  /** Get plugin by UID */
+  getByUid(uid: string): InstalledPluginState | undefined {
+    return Object.values(this.#state.plugins).find((p) => p.uid === uid);
+  }
+
   /** Remove a plugin entry from state (used to clean up stale entries) */
   async remove(ref: string): Promise<void> {
     delete this.#state.plugins[ref];
@@ -64,12 +79,8 @@ export class StateStore {
   }
 
   async setEnabled(ref: string, enabled: boolean): Promise<void> {
-    const cur = this.#state.plugins[ref] ?? {
-      ref,
-      enabled: false,
-      health: "stopped" as const,
-      updatedAt: Date.now(),
-    };
+    const cur = this.#state.plugins[ref];
+    if (!cur) return; // Plugin must be registered first
     cur.enabled = enabled;
     cur.updatedAt = Date.now();
     this.#state.plugins[ref] = cur;
@@ -77,12 +88,8 @@ export class StateStore {
   }
 
   async setHealth(ref: string, health: PluginHealth, lastError?: string | null): Promise<void> {
-    const cur = this.#state.plugins[ref] ?? {
-      ref,
-      enabled: false,
-      health: "stopped" as const,
-      updatedAt: Date.now(),
-    };
+    const cur = this.#state.plugins[ref];
+    if (!cur) return; // Plugin must be registered first
     cur.health = health;
     cur.lastError = lastError ?? cur.lastError ?? null;
     cur.updatedAt = Date.now();
@@ -90,9 +97,30 @@ export class StateStore {
     await this.#flush();
   }
 
-  summarize(ref: string): PluginSummary {
-    const s = this.#state.plugins[ref];
-    return { ref, health: s?.health ?? "stopped", tools: [], lastError: s?.lastError ?? null };
+  /** Register or update a plugin with full info */
+  async registerPlugin(info: {
+    ref: string;
+    dir: string;
+    name: string;
+    uid: string;
+    version: string;
+    metadata: PluginManifest;
+    enabled?: boolean;
+  }): Promise<void> {
+    const cur = this.#state.plugins[info.ref];
+    this.#state.plugins[info.ref] = {
+      ref: info.ref,
+      dir: info.dir,
+      name: info.name,
+      uid: info.uid,
+      version: info.version,
+      metadata: info.metadata,
+      enabled: info.enabled ?? cur?.enabled ?? true,
+      health: "running",
+      lastError: null,
+      updatedAt: Date.now(),
+    };
+    await this.#flush();
   }
 
   async #flush(): Promise<void> {

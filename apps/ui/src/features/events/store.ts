@@ -21,4 +21,3 @@ export const useEventsStore = create<EventsStore>((set) => ({
   clear: () => set({ events: [] }),
   togglePaused: () => set((s) => ({ paused: !s.paused })),
 }));
-

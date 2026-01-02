@@ -33,4 +33,3 @@ export function TriggerNode({ data }: NodeProps<TriggerNodeData>) {
     </BaseNode>
   );
 }
-

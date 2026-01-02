@@ -11,4 +11,3 @@ export const toolsApi = {
 };
 
 export const toolsKeys = { all: ["tools"] as const };
-

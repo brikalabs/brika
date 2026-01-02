@@ -69,4 +69,3 @@ export class InternalServerError extends HttpException {
     this.name = "InternalServerError";
   }
 }
-

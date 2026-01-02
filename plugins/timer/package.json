@@ -1,9 +1,14 @@
 {
-  "$schema": "../../packages/sdk/elia-plugin.schema.json",
+  "$schema": "https://raw.githubusercontent.com/maxscharwath/elia/master/packages/sdk/elia-plugin.schema.json",
   "name": "@elia/plugin-timer",
   "version": "0.1.0",
   "description": "Timer and reminder functionality for ELIA",
   "author": "ELIA Team",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/maxscharwath/elia.git",
+    "directory": "plugins/timer"
+  },
   "icon": "./icon.svg",
   "keywords": [
     "timer",
@@ -15,6 +20,32 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "tools": [
+    {
+      "id": "set",
+      "description": "Set a timer that fires after the specified duration",
+      "icon": "timer",
+      "color": "#22c55e"
+    },
+    {
+      "id": "list",
+      "description": "List all active timers with remaining time",
+      "icon": "list",
+      "color": "#3b82f6"
+    },
+    {
+      "id": "cancel",
+      "description": "Cancel an active timer by ID or name",
+      "icon": "x-circle",
+      "color": "#ef4444"
+    },
+    {
+      "id": "clear",
+      "description": "Clear all active timers at once",
+      "icon": "trash-2",
+      "color": "#f97316"
+    }
+  ],
   "dependencies": {
     "@elia/sdk": "workspace:*"
   },

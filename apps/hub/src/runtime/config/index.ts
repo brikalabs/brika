@@ -5,4 +5,3 @@ export {
   type RuleEntry,
   type ScheduleEntry,
 } from "./config-loader";
-

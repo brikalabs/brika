@@ -8,23 +8,8 @@ import React from "react";
 import { Position, type NodeProps, Handle } from "@xyflow/react";
 import { BaseNode, BaseNodeHeader, BaseNodeHeaderTitle, BaseNodeContent } from "@/components/base-node";
 import { Badge, Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui";
-import {
-  Zap,
-  GitBranch,
-  Shuffle,
-  Timer,
-  Send,
-  Edit,
-  FileText,
-  Square,
-  CheckCircle,
-  XCircle,
-  Loader2,
-  GitMerge,
-  GitFork,
-  Box,
-  type LucideIcon,
-} from "lucide-react";
+import { CheckCircle, XCircle, Loader2 } from "lucide-react";
+import { DynamicIcon, type IconName } from "lucide-react/dynamic";
 import { cn } from "@/lib/utils";
 import type { BlockStatus } from "./useWorkflowEditor";
 
@@ -36,28 +21,6 @@ interface BlockPort {
   id: string;
   name: string;
   type?: string;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Icon Registry
-// ─────────────────────────────────────────────────────────────────────────────
-
-const LUCIDE_ICONS: Record<string, LucideIcon> = {
-  zap: Zap,
-  "git-branch": GitBranch,
-  "git-merge": GitMerge,
-  "git-fork": GitFork,
-  shuffle: Shuffle,
-  timer: Timer,
-  send: Send,
-  edit: Edit,
-  "file-text": FileText,
-  square: Square,
-  box: Box,
-};
-
-function getIcon(iconName: string): LucideIcon {
-  return LUCIDE_ICONS[iconName] || Box;
 }
 
 // Output port colors for semantic meaning
@@ -230,7 +193,7 @@ export function BlockNode(props: NodeProps) {
   const data = props.data as unknown as BlockNodeData;
   const selected = props.selected;
 
-  const Icon = getIcon(data.icon || "box");
+  const iconName = (data.icon || "box") as IconName;
   const color = data.color || "#6b7280";
   const status = data.status || "idle";
   const config = data.config || {};
@@ -320,7 +283,7 @@ export function BlockNode(props: NodeProps) {
           className="size-8 rounded-lg flex items-center justify-center shrink-0 shadow-sm"
           style={{ backgroundColor: color + "20", color }}
         >
-          <Icon className="size-4" />
+          <DynamicIcon name={iconName} className="size-4" />
         </div>
         <BaseNodeHeaderTitle className="text-sm flex-1 truncate font-semibold">
           {data.label}

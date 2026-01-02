@@ -1,7 +1,13 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { RouterProvider, createRouter, createRootRoute, createRoute } from "@tanstack/react-router";
+import {
+  RouterProvider,
+  createRouter,
+  createRootRoute,
+  createRoute,
+  getRouteApi,
+} from "@tanstack/react-router";
 import { TooltipProvider } from "@/components/ui";
 import { queryClient } from "@/lib/query";
 
@@ -27,22 +33,25 @@ import "./index.css";
 
 const rootRoute = createRootRoute({ component: RootLayout });
 
-// Wrapper component for plugin detail with route params
+// Plugin detail route with typed params
+const pluginDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/plugins/$uid",
+  component: PluginDetailWrapper,
+});
+
+// Use getRouteApi to access typed params in the component
+const pluginDetailApi = getRouteApi("/plugins/$uid");
+
 function PluginDetailWrapper() {
-  const { pluginId } = (window as unknown as { __routeParams?: { pluginId: string } }).__routeParams || {};
-  // Get pluginId from URL manually since we're not using file-based routing
-  const id = decodeURIComponent(window.location.pathname.split("/plugins/")[1] || "");
-  return <PluginDetailPage pluginId={id} />;
+  const { uid } = pluginDetailApi.useParams();
+  return <PluginDetailPage pluginUid={uid} />;
 }
 
 const routes = [
   createRoute({ getParentRoute: () => rootRoute, path: "/", component: DashboardPage }),
   createRoute({ getParentRoute: () => rootRoute, path: "/plugins", component: PluginsPage }),
-  createRoute({
-    getParentRoute: () => rootRoute,
-    path: "/plugins/$pluginId",
-    component: PluginDetailWrapper,
-  }),
+  pluginDetailRoute,
   createRoute({ getParentRoute: () => rootRoute, path: "/tools", component: ToolsPage }),
   createRoute({ getParentRoute: () => rootRoute, path: "/events", component: EventsPage }),
   createRoute({ getParentRoute: () => rootRoute, path: "/workflows", component: WorkflowsPage }),

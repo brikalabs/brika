@@ -20,4 +20,3 @@ export function useScheduleMutations() {
     disable: useMutation({ mutationFn: schedulesApi.disable, onSuccess: invalidate }),
   };
 }
-

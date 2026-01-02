@@ -1,10 +1,9 @@
-import React from "react";
 import { usePlugin, usePluginMutations } from "./hooks";
 import { pluginsApi } from "./api";
 import {
   Avatar,
-  AvatarImage,
   AvatarFallback,
+  AvatarImage,
   Button,
   Card,
   CardContent,
@@ -15,12 +14,6 @@ import {
   Tooltip,
   TooltipTrigger,
   TooltipContent,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
 } from "@/components/ui";
 import {
   ArrowLeft,
@@ -35,31 +28,48 @@ import {
   Tag,
   User,
   Github,
+  Clock,
 } from "lucide-react";
+import { DynamicIcon, type IconName } from "lucide-react/dynamic";
 import { Link } from "@tanstack/react-router";
+import { Uptime } from "@/components/Uptime";
 
 interface PluginDetailPageProps {
-  pluginId: string;
+  pluginUid: string;
 }
 
-export function PluginDetailPage({ pluginId }: PluginDetailPageProps) {
-  const { data: plugin, isLoading, error, refetch } = usePlugin(pluginId);
+export function PluginDetailPage({ pluginUid }: PluginDetailPageProps) {
+  const { data: plugin, isLoading, error, refetch } = usePlugin(pluginUid);
   const { reload, disable, kill } = usePluginMutations();
 
   const isBusy = reload.isPending || disable.isPending || kill.isPending;
 
   // Extract author name
   const getAuthorName = () => {
-    if (!plugin?.metadata?.author) return null;
-    if (typeof plugin.metadata.author === "string") return plugin.metadata.author;
-    return plugin.metadata.author.name;
+    if (!plugin?.author) return null;
+    if (typeof plugin.author === "string") return plugin.author;
+    return plugin.author.name;
   };
 
-  // Extract repository URL
+  // Extract repository URL with directory path for direct linking
   const getRepoUrl = () => {
-    if (!plugin?.metadata?.repository) return null;
-    if (typeof plugin.metadata.repository === "string") return plugin.metadata.repository;
-    return plugin.metadata.repository.url;
+    if (!plugin?.repository) return null;
+
+    if (typeof plugin.repository === "string") {
+      return plugin.repository;
+    }
+
+    let url = plugin.repository.url;
+    if (!url) return null;
+
+    url = url.replace(/\.git$/, "");
+
+    const directory = plugin.repository.directory;
+    if (directory) {
+      url = `${url}/tree/HEAD/${directory}`;
+    }
+
+    return url;
   };
 
   if (isLoading) {
@@ -95,7 +105,7 @@ export function PluginDetailPage({ pluginId }: PluginDetailPageProps) {
             <Plug className="size-12 mx-auto text-muted-foreground mb-4" />
             <h3 className="font-semibold text-lg">Plugin not found</h3>
             <p className="text-muted-foreground mt-1">
-              The plugin "{pluginId}" is not loaded or doesn't exist
+              The plugin "{pluginUid}" is not loaded or doesn't exist
             </p>
           </CardContent>
         </Card>
@@ -105,6 +115,8 @@ export function PluginDetailPage({ pluginId }: PluginDetailPageProps) {
 
   const authorName = getAuthorName();
   const repoUrl = getRepoUrl();
+  const tools = plugin.tools ?? [];
+  const blocks = plugin.blocks ?? [];
 
   return (
     <div className="space-y-6">
@@ -122,20 +134,20 @@ export function PluginDetailPage({ pluginId }: PluginDetailPageProps) {
         <div className="flex items-start gap-4">
           {/* Plugin Icon */}
           <Avatar className="size-16 rounded-xl">
-            {plugin.uid && <AvatarImage src={pluginsApi.getIconUrl(plugin.uid)} />}
+            <AvatarImage src={pluginsApi.getIconUrl(plugin.uid)} />
             <AvatarFallback className="rounded-xl bg-primary/10">
               <Plug className="size-8 text-primary" />
             </AvatarFallback>
           </Avatar>
 
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">{plugin.id}</h1>
-            {plugin.metadata?.description && (
-              <p className="text-muted-foreground mt-1">{plugin.metadata.description}</p>
+            <h1 className="text-2xl font-bold tracking-tight">{plugin.name}</h1>
+            {plugin.description && (
+              <p className="text-muted-foreground mt-1">{plugin.description}</p>
             )}
             <div className="flex flex-wrap gap-3 mt-3 text-sm text-muted-foreground">
               <Badge variant="outline" className="gap-1">
-                v{plugin.version || "0.0.0"}
+                v{plugin.version}
               </Badge>
               {authorName && (
                 <span className="flex items-center gap-1">
@@ -162,15 +174,15 @@ export function PluginDetailPage({ pluginId }: PluginDetailPageProps) {
         <div className="flex items-center gap-2">
           <Badge
             variant={
-              plugin.health === "running"
+              plugin.status === "running"
                 ? "default"
-                : plugin.health === "crashed"
+                : plugin.status === "crashed"
                   ? "destructive"
                   : "secondary"
             }
             className="px-3 py-1"
           >
-            {plugin.health}
+            {plugin.status}
           </Badge>
 
           <Tooltip>
@@ -187,7 +199,7 @@ export function PluginDetailPage({ pluginId }: PluginDetailPageProps) {
               <Button
                 size="icon"
                 variant="outline"
-                onClick={() => reload.mutate(plugin.ref)}
+                onClick={() => reload.mutate(plugin.uid)}
                 disabled={isBusy}
               >
                 <RotateCcw className="size-4" />
@@ -201,7 +213,7 @@ export function PluginDetailPage({ pluginId }: PluginDetailPageProps) {
               <Button
                 size="icon"
                 variant="outline"
-                onClick={() => disable.mutate(plugin.ref)}
+                onClick={() => disable.mutate(plugin.uid)}
                 disabled={isBusy}
               >
                 <Power className="size-4" />
@@ -215,7 +227,7 @@ export function PluginDetailPage({ pluginId }: PluginDetailPageProps) {
               <Button
                 size="icon"
                 variant="destructive"
-                onClick={() => kill.mutate(plugin.ref)}
+                onClick={() => kill.mutate(plugin.uid)}
                 disabled={isBusy}
               >
                 <Skull className="size-4" />
@@ -227,9 +239,9 @@ export function PluginDetailPage({ pluginId }: PluginDetailPageProps) {
       </div>
 
       {/* Keywords */}
-      {plugin.metadata?.keywords && plugin.metadata.keywords.length > 0 && (
+      {plugin.keywords.length > 0 && (
         <div className="flex flex-wrap gap-2">
-          {plugin.metadata.keywords.map((kw) => (
+          {plugin.keywords.map((kw) => (
             <Badge key={kw} variant="secondary" className="gap-1">
               <Tag className="size-3" />
               {kw}
@@ -246,7 +258,7 @@ export function PluginDetailPage({ pluginId }: PluginDetailPageProps) {
       )}
 
       {/* Stats grid */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -255,7 +267,7 @@ export function PluginDetailPage({ pluginId }: PluginDetailPageProps) {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{plugin.tools?.length || 0}</div>
+            <div className="text-2xl font-bold">{tools.length}</div>
           </CardContent>
         </Card>
 
@@ -267,7 +279,7 @@ export function PluginDetailPage({ pluginId }: PluginDetailPageProps) {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{plugin.blocks?.length || 0}</div>
+            <div className="text-2xl font-bold">{blocks.length}</div>
           </CardContent>
         </Card>
 
@@ -276,63 +288,110 @@ export function PluginDetailPage({ pluginId }: PluginDetailPageProps) {
             <CardTitle className="text-sm font-medium">Process ID</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold font-mono">{plugin.pid || "-"}</div>
+            <div className="text-2xl font-bold font-mono">{plugin.pid ?? "-"}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Clock className="size-4" />
+              Uptime
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Uptime
+              startedAt={plugin.startedAt}
+              className="text-2xl font-bold"
+            />
+            {plugin.startedAt && (
+              <div className="text-xs text-muted-foreground mt-1">
+                Started {new Date(plugin.startedAt).toLocaleTimeString()}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Tools Table */}
-      {plugin.tools && plugin.tools.length > 0 && (
+      {/* Tools Grid */}
+      {tools.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Wrench className="size-5" />
-              Registered Tools
+              Available Tools
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Tool ID</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {plugin.tools.map((tool) => (
-                  <TableRow key={tool}>
-                    <TableCell className="font-mono text-sm">{tool}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {tools.map((tool) => {
+                const iconName = (tool.icon || "wrench") as IconName;
+                const color = tool.color || "#d97706";
+
+                return (
+                  <div
+                    key={tool.id}
+                    className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+                  >
+                    <Avatar className="size-10 rounded-lg">
+                      <AvatarFallback className="rounded-lg" style={{ backgroundColor: `${color}20`, color }}>
+                        <DynamicIcon name={iconName} className="size-5" />
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm truncate">{tool.id}</div>
+                      {tool.description && (
+                        <div className="text-xs text-muted-foreground truncate">{tool.description}</div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Blocks Table */}
-      {plugin.blocks && plugin.blocks.length > 0 && (
+      {/* Blocks Grid */}
+      {blocks.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Boxes className="size-5" />
-              Registered Blocks
+              Available Blocks
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Block ID</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {plugin.blocks.map((block) => (
-                  <TableRow key={block}>
-                    <TableCell className="font-mono text-sm">{block}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {blocks.map((block) => {
+                const iconName = (block.icon || "box") as IconName;
+                const color = block.color || "#6366f1";
+
+                return (
+                  <div
+                    key={block.id}
+                    className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+                  >
+                    <Avatar className="size-10 rounded-lg">
+                      <AvatarFallback className="rounded-lg" style={{ backgroundColor: `${color}20`, color }}>
+                        <DynamicIcon name={iconName} className="size-5" />
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm truncate">{block.name || block.id}</div>
+                      {block.description && (
+                        <div className="text-xs text-muted-foreground truncate">{block.description}</div>
+                      )}
+                    </div>
+                    {block.category && (
+                      <Badge variant="outline" className="text-xs shrink-0">
+                        {block.category}
+                      </Badge>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </CardContent>
         </Card>
       )}
@@ -342,15 +401,23 @@ export function PluginDetailPage({ pluginId }: PluginDetailPageProps) {
         <CardHeader>
           <CardTitle>Installation</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2">
-          <div className="flex items-center gap-2 text-sm">
-            <span className="text-muted-foreground w-24">Reference:</span>
-            <code className="font-mono bg-muted px-2 py-1 rounded text-xs">{plugin.ref}</code>
+        <CardContent className="space-y-3">
+          <div className="flex items-start gap-2 text-sm">
+            <span className="text-muted-foreground w-24 shrink-0">UID:</span>
+            <code className="font-mono bg-muted px-2 py-1 rounded text-xs">{plugin.uid}</code>
           </div>
-          {plugin.metadata?.license && (
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-muted-foreground w-24">License:</span>
-              <span>{plugin.metadata.license}</span>
+          <div className="flex items-start gap-2 text-sm">
+            <span className="text-muted-foreground w-24 shrink-0">Directory:</span>
+            <code className="font-mono bg-muted px-2 py-1 rounded text-xs break-all">{plugin.dir}</code>
+          </div>
+          <div className="flex items-start gap-2 text-sm">
+            <span className="text-muted-foreground w-24 shrink-0">Reference:</span>
+            <code className="font-mono bg-muted px-2 py-1 rounded text-xs break-all">{plugin.ref}</code>
+          </div>
+          {plugin.license && (
+            <div className="flex items-start gap-2 text-sm">
+              <span className="text-muted-foreground w-24 shrink-0">License:</span>
+              <span>{plugin.license}</span>
             </div>
           )}
         </CardContent>
@@ -358,4 +425,3 @@ export function PluginDetailPage({ pluginId }: PluginDetailPageProps) {
     </div>
   );
 }
-

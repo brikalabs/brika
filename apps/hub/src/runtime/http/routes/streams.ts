@@ -3,7 +3,6 @@ import { route, createSSEStream, createAsyncSSEStream, NotFound, BadRequest } fr
 import { LogRouter } from "../../logs/log-router";
 import { EventBus } from "../../events/event-bus";
 import { AutomationEngine } from "../../automations";
-import { PluginManager } from "../../plugins/plugin-manager";
 import type { Json } from "@elia/shared";
 
 const CORS = { "Access-Control-Allow-Origin": "*" };
@@ -91,56 +90,4 @@ export const streamsRoutes = [
       });
     },
   ),
-
-  // Plugin icon endpoint (returns raw file, not JSON)
-  route.get(
-    "/api/plugins/:uid/icon",
-    { params: z.object({ uid: z.string() }) },
-    async ({ params, inject }) => {
-      const plugins = inject(PluginManager);
-      const pluginDir = plugins.getPluginDir(params.uid);
-
-      if (!pluginDir) throw new NotFound("Plugin not found");
-
-      // Try to find icon file
-      const details = plugins.getDetailsByUid(params.uid) ?? plugins.getDetails(params.uid);
-      const iconPath = details?.metadata?.icon;
-
-      if (iconPath) {
-        const fullPath = iconPath.startsWith("./")
-          ? `${pluginDir}/${iconPath.slice(2)}`
-          : `${pluginDir}/${iconPath}`;
-
-        const file = Bun.file(fullPath);
-        if (await file.exists()) {
-          // Detect content type from extension
-          const ext = iconPath.split(".").pop()?.toLowerCase();
-          const contentType =
-            ext === "svg"
-              ? "image/svg+xml"
-              : ext === "png"
-                ? "image/png"
-                : ext === "jpg" || ext === "jpeg"
-                  ? "image/jpeg"
-                  : ext === "webp"
-                    ? "image/webp"
-                    : "image/png";
-
-          // Read file into memory to avoid file descriptor streaming issues
-          const content = await file.arrayBuffer();
-          return new Response(content, {
-            headers: {
-              "Content-Type": contentType,
-              "Cache-Control": "public, max-age=86400, immutable",
-              ...CORS,
-            },
-          });
-        }
-      }
-
-      // Return 204 No Content for missing icons
-      return new Response(null, { status: 204, headers: CORS });
-    },
-  ),
 ];
-

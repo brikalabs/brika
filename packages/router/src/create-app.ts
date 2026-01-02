@@ -1,8 +1,8 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { inject as diInject } from "@elia/shared";
+import { inject } from "@elia/shared";
 import { z, ZodError } from "zod";
-import type { RouteDefinition, RouteContext, Schema } from "./types";
+import type { RouteContext, RouteDefinition, Schema } from "./types";
 import { HttpException } from "./exceptions";
 
 /**
@@ -17,11 +17,7 @@ const corsConfig = {
 /**
  * Parse and validate request data against Zod schemas.
  */
-async function parseRequest<S extends Schema>(
-  req: Request,
-  params: Record<string, string>,
-  schema?: S,
-): Promise<{ params: unknown; query: unknown; body: unknown }> {
+async function parseRequest<S extends Schema>(req: Request, params: Record<string, string>, schema?: S) {
   const url = new URL(req.url);
 
   // Parse query string into object
@@ -40,19 +36,10 @@ async function parseRequest<S extends Schema>(
     }
   }
 
-  if (!schema) {
-    return { params, query: queryObj, body: bodyData };
-  }
-
-  // Validate with Zod schemas
-  const validatedParams = schema.params ? schema.params.parse(params) : params;
-  const validatedQuery = schema.query ? schema.query.parse(queryObj) : queryObj;
-  const validatedBody = schema.body ? schema.body.parse(bodyData) : bodyData;
-
   return {
-    params: validatedParams,
-    query: validatedQuery,
-    body: validatedBody,
+    params: schema?.params?.parse(params) ?? params,
+    query: schema?.query?.parse(queryObj) ?? queryObj,
+    body: schema?.body?.parse(bodyData) ?? bodyData,
   };
 }
 
@@ -96,19 +83,14 @@ export function createApp(routes: RouteDefinition[]): Hono {
       return c.json({ error: error.message }, error.status);
     }
 
-    // Handle Zod validation errors (check both instanceof and name for cross-package compatibility)
-    if (error instanceof ZodError || (error as Error).name === "ZodError") {
-      const formatted =
-        error instanceof ZodError
-          ? formatZodError(error)
-          : { formErrors: [(error as Error).message], fieldErrors: {} };
+    // Handle Zod validation errors
+    if (error instanceof ZodError) {
+      const formatted = formatZodError(error);
       return c.json({ error: "Validation failed", ...formatted }, 400);
     }
 
-    // Handle unexpected errors
-    const errMsg = error instanceof Error ? error.message : String(error);
     console.error("[router] Unhandled error:", error);
-    return c.json({ error: errMsg }, 500);
+    return c.json({ error: error.message }, 500);
   });
 
   // Register each route
@@ -116,57 +98,28 @@ export function createApp(routes: RouteDefinition[]): Hono {
     const method = routeDef.method.toLowerCase() as "get" | "post" | "put" | "patch" | "delete";
 
     app[method](routeDef.path, async (c) => {
-      try {
-        // Parse and validate request
-        const { params, query, body } = await parseRequest(c.req.raw, c.req.param(), routeDef.schema);
+      // Parse and validate request
+      const { params, query, body } = await parseRequest(c.req.raw, c.req.param(), routeDef.schema);
 
-        // Build context with DI inject function
-        const ctx: RouteContext = {
-          params: params as Record<string, string>,
-          query: query as Record<string, string>,
-          body,
-          inject: diInject,
-          req: c.req.raw,
-        };
+      // Build context with DI inject function
+      const ctx: RouteContext = {
+        params,
+        query,
+        body,
+        inject,
+        req: c.req.raw,
+      };
 
-        // Call handler
-        const result = await routeDef.handler(ctx);
+      // Call handler
+      const result = await routeDef.handler(ctx);
 
-        // If handler returns a Response, use it directly (for SSE, file downloads, etc.)
-        if (result instanceof Response) {
-          return result;
-        }
-
-        // Return JSON response
-        return c.json(result);
-      } catch (error) {
-        // Handle HTTP exceptions
-        if (error instanceof HttpException) {
-          return c.json({ error: error.message }, error.status);
-        }
-
-        // Handle Zod validation errors
-        // Check both instanceof and error name/structure for cross-package compatibility
-        const isZodError =
-          error instanceof ZodError ||
-          (error as Error).name === "ZodError" ||
-          ((error as Record<string, unknown>).issues !== undefined &&
-            Array.isArray((error as Record<string, unknown>).issues));
-
-        if (isZodError) {
-          // Use Zod 4's flattenError for structured field errors
-          const formatted =
-            error instanceof ZodError
-              ? formatZodError(error)
-              : { formErrors: [(error as Error).message], fieldErrors: {} };
-          return c.json({ error: "Validation failed", ...formatted }, 400);
-        }
-
-        // Handle unexpected errors
-        const errMsg = error instanceof Error ? error.message : String(error);
-        console.error("[router] Unhandled error:", error);
-        return c.json({ error: errMsg }, 500);
+      // If handler returns a Response, use it directly (for SSE, file downloads, etc.)
+      if (result instanceof Response) {
+        return result;
       }
+
+      // Return JSON response
+      return c.json(result);
     });
   }
 

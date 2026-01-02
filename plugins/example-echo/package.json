@@ -1,9 +1,14 @@
 {
-  "$schema": "../../packages/sdk/elia-plugin.schema.json",
+  "$schema": "https://raw.githubusercontent.com/maxscharwath/elia/master/packages/sdk/elia-plugin.schema.json",
   "name": "@elia/plugin-example-echo",
   "version": "0.1.0",
   "description": "Example echo plugin for testing",
   "author": "ELIA Team",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/maxscharwath/elia.git",
+    "directory": "plugins/example-echo"
+  },
   "keywords": [
     "example",
     "echo",
@@ -13,6 +18,9 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "tools": [
+    { "id": "echo", "description": "Echo back the provided message", "icon": "message-circle", "color": "#3b82f6" }
+  ],
   "dependencies": {
     "@elia/sdk": "workspace:*"
   }

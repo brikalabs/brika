@@ -29,7 +29,7 @@ export const healthRoutes = [
     return {
       plugins: {
         total: pluginList.length,
-        running: pluginList.filter((p) => p.health === "running").length,
+        running: pluginList.filter((p) => p.status === "running").length,
       },
       tools: { total: toolList.length },
       blocks: { total: blockList.length, byCategory: blocks.listByCategory() },

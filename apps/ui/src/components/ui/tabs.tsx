@@ -80,4 +80,3 @@ function TabsContent({ value, className, ...props }: TabsContentProps) {
 }
 
 export { Tabs, TabsList, TabsTrigger, TabsContent };
-

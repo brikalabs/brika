@@ -8,11 +8,11 @@ export function usePlugins() {
   });
 }
 
-export function usePlugin(id: string) {
+export function usePlugin(uid: string) {
   return useQuery({
-    queryKey: pluginsKeys.detail(id),
-    queryFn: () => pluginsApi.getById(id),
-    enabled: !!id,
+    queryKey: pluginsKeys.detail(uid),
+    queryFn: () => pluginsApi.getByUid(uid),
+    enabled: !!uid,
   });
 }
 
@@ -21,6 +21,7 @@ export function usePluginMutations() {
   const invalidate = () => qc.invalidateQueries({ queryKey: pluginsKeys.all });
 
   return {
+    load: useMutation({ mutationFn: pluginsApi.load, onSuccess: invalidate }),
     enable: useMutation({ mutationFn: pluginsApi.enable, onSuccess: invalidate }),
     disable: useMutation({ mutationFn: pluginsApi.disable, onSuccess: invalidate }),
     reload: useMutation({ mutationFn: pluginsApi.reload, onSuccess: invalidate }),

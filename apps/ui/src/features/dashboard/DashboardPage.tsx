@@ -143,7 +143,7 @@ export function DashboardPage() {
     refetchInterval: 10000,
   });
 
-  const runningPlugins = plugins.filter((p) => p.health === "running").length;
+  const runningPlugins = plugins.filter((p) => p.status === "running").length;
 
   return (
     <div className="space-y-8">

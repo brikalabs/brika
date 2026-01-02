@@ -1,22 +1,8 @@
-import React, { useState } from "react";
+import { useState, type DragEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Input, ScrollArea, Badge, Skeleton } from "@/components/ui";
-import {
-  Zap,
-  GitBranch,
-  Shuffle,
-  Timer,
-  Send,
-  Edit,
-  FileText,
-  Square,
-  Search,
-  GripVertical,
-  GitMerge,
-  GitFork,
-  Box,
-  type LucideIcon,
-} from "lucide-react";
+import { Search, GripVertical } from "lucide-react";
+import { DynamicIcon, type IconName } from "lucide-react/dynamic";
 import { cn } from "@/lib/utils";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -40,24 +26,6 @@ export interface BlockDefinition {
   };
 }
 
-// Icon mapping from Lucide names
-const ICON_MAP: Record<string, LucideIcon> = {
-  zap: Zap,
-  "git-branch": GitBranch,
-  shuffle: Shuffle,
-  timer: Timer,
-  send: Send,
-  edit: Edit,
-  "file-text": FileText,
-  square: Square,
-  "git-merge": GitMerge,
-  "git-fork": GitFork,
-};
-
-const getIcon = (iconName: string): LucideIcon => {
-  return ICON_MAP[iconName] || Box;
-};
-
 // ─────────────────────────────────────────────────────────────────────────────
 // API
 // ─────────────────────────────────────────────────────────────────────────────
@@ -74,14 +42,17 @@ async function fetchBlocks(): Promise<BlockDefinition[]> {
 
 interface DraggableBlockProps {
   block: BlockDefinition;
-  onDragStart: (e: React.DragEvent, block: BlockDefinition) => void;
+  onDragStart: (e: DragEvent<HTMLDivElement>, block: BlockDefinition) => void;
 }
 
 function DraggableBlock({ block, onDragStart }: DraggableBlockProps) {
-  const Icon = getIcon(block.icon);
+  const iconName = (block.icon || "box") as IconName;
 
   return (
+    // biome-ignore lint/a11y/useSemanticElements: draggable element requires div for drag-and-drop
     <div
+      role="button"
+      tabIndex={0}
       draggable
       onDragStart={(e) => onDragStart(e, block)}
       className={cn(
@@ -96,7 +67,7 @@ function DraggableBlock({ block, onDragStart }: DraggableBlockProps) {
         className="size-8 rounded-md flex items-center justify-center shrink-0 shadow-sm"
         style={{ backgroundColor: block.color + "20", color: block.color }}
       >
-        <Icon className="size-4" />
+        <DynamicIcon name={iconName} className="size-4" />
       </div>
       <div className="flex-1 min-w-0">
         <div className="text-sm font-medium truncate">{block.name}</div>

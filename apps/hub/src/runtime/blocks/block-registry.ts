@@ -7,6 +7,7 @@
 
 import { singleton, inject } from "@elia/shared";
 import type { BlockDefinition } from "@elia/sdk";
+import type { BlockSummary } from "@elia/shared";
 import { LogRouter } from "../logs/log-router";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -92,6 +93,31 @@ export class BlockRegistry {
    */
   list(): BlockDefinition[] {
     return [...this.#blocks.values()];
+  }
+
+  /**
+   * Get blocks registered by a specific plugin
+   */
+  listByPlugin(pluginId: string): BlockDefinition[] {
+    return [...this.#blocks.values()].filter((b) => b.pluginId === pluginId);
+  }
+
+  /**
+   * Get blocks by owner (alias for listByPlugin) returning BlockSummary
+   */
+  listByOwner(pluginId: string): BlockSummary[] {
+    return [...this.#blocks.values()]
+      .filter((b) => b.pluginId === pluginId)
+      .map((b) => ({
+        id: b.type ?? `${b.pluginId}:${b.id}`,
+        name: b.name,
+        description: b.description,
+        category: b.category as BlockSummary["category"],
+        icon: b.icon,
+        color: b.color,
+        inputs: b.inputs.map((p) => ({ id: p.id, name: p.name })),
+        outputs: b.outputs.map((p) => ({ id: p.id, name: p.name })),
+      }));
   }
 
   /**

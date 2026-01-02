@@ -1,4 +1,3 @@
-import React from "react";
 import { useTools, useToolCall } from "./hooks";
 import {
   Button,
@@ -26,7 +25,9 @@ import {
   TooltipContent,
 } from "@/components/ui";
 import { RefreshCw, Play, Wrench, Terminal, Loader2, Info, Check, X } from "lucide-react";
+import { DynamicIcon, type IconName } from "lucide-react/dynamic";
 import type { ToolSummary, ToolInputSchema } from "@elia/shared";
+import { useState, useEffect } from "react";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Schema-driven Form Field
@@ -116,15 +117,15 @@ interface CallDialogProps {
 
 function ToolCallDialog({ tool, onClose }: CallDialogProps) {
   const callTool = useToolCall();
-  const [formData, setFormData] = React.useState<Record<string, unknown>>({});
-  const [result, setResult] = React.useState<{ ok: boolean; content?: string; data?: unknown } | null>(null);
+  const [formData, setFormData] = useState<Record<string, unknown>>({});
+  const [result, setResult] = useState<{ ok: boolean; content?: string; data?: unknown } | null>(null);
 
   const schema = tool?.inputSchema;
   const properties = schema?.properties ?? {};
   const requiredFields = schema?.required ?? [];
   const hasSchema = Object.keys(properties).length > 0;
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (tool) {
       // Reset form with defaults when tool changes
       const defaults: Record<string, unknown> = {};
@@ -134,7 +135,7 @@ function ToolCallDialog({ tool, onClose }: CallDialogProps) {
       setFormData(defaults);
       setResult(null);
     }
-  }, [tool?.name]);
+  }, [tool?.id]);
 
   const updateField = (name: string, value: unknown) => {
     setFormData((prev) => {
@@ -152,7 +153,7 @@ function ToolCallDialog({ tool, onClose }: CallDialogProps) {
     if (!tool) return;
     setResult(null);
     try {
-      const res = await callTool.mutateAsync({ name: tool.name, args: formData });
+      const res = await callTool.mutateAsync({ name: tool.id, args: formData });
       setResult(res);
     } catch (e) {
       setResult({ ok: false, content: `Error: ${e}` });
@@ -165,7 +166,7 @@ function ToolCallDialog({ tool, onClose }: CallDialogProps) {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Terminal className="size-5" />
-            <code className="font-mono">{tool?.name}</code>
+            <code className="font-mono">{tool?.id}</code>
           </DialogTitle>
           {tool?.description && <DialogDescription>{tool.description}</DialogDescription>}
         </DialogHeader>
@@ -245,7 +246,7 @@ function ToolCallDialog({ tool, onClose }: CallDialogProps) {
 
 export function ToolsPage() {
   const { data: tools = [], isLoading, refetch } = useTools();
-  const [selected, setSelected] = React.useState<ToolSummary | null>(null);
+  const [selected, setSelected] = useState<ToolSummary | null>(null);
 
   const getArgCount = (t: ToolSummary) => {
     const props = t.inputSchema?.properties;
@@ -293,43 +294,51 @@ export function ToolsPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                tools.map((t) => (
-                  <TableRow
-                    key={t.name}
-                    className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => setSelected(t)}
-                  >
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <div className="flex size-8 items-center justify-center rounded bg-primary/10">
-                          <Wrench className="size-4 text-primary" />
+                tools.map((t) => {
+                  const iconName = (t.icon || "wrench") as IconName;
+                  const color = t.color || "#d97706";
+                  const owner = t.id.split(":")[0] || "hub";
+                  return (
+                    <TableRow
+                      key={t.id}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => setSelected(t)}
+                    >
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="flex size-8 items-center justify-center rounded"
+                            style={{ backgroundColor: `${color}20`, color }}
+                          >
+                            <DynamicIcon name={iconName} className="size-4" />
+                          </div>
+                          <code className="font-mono text-sm font-medium">{t.id}</code>
                         </div>
-                        <code className="font-mono text-sm font-medium">{t.name}</code>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">{t.description || "—"}</TableCell>
-                    <TableCell>
-                      <Badge variant={getArgCount(t) > 0 ? "secondary" : "outline"}>{getArgCount(t)}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="font-mono text-xs truncate max-w-[120px]">
-                        {t.owner?.split("/").pop()?.replace(/\.ts$/, "") || "hub"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelected(t);
-                        }}
-                      >
-                        <Play className="size-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm">{t.description || "—"}</TableCell>
+                      <TableCell>
+                        <Badge variant={getArgCount(t) > 0 ? "secondary" : "outline"}>{getArgCount(t)}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="font-mono text-xs truncate max-w-[120px]">
+                          {owner}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelected(t);
+                          }}
+                        >
+                          <Play className="size-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>

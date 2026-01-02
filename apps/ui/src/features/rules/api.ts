@@ -13,4 +13,3 @@ export const rulesApi = {
 };
 
 export const rulesKeys = { all: ["rules"] as const };
-

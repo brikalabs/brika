@@ -8,4 +8,3 @@ export function useHealth() {
     refetchInterval: 5000,
   });
 }
-

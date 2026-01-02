@@ -2,11 +2,17 @@
   "name": "@elia/hub",
   "private": true,
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/maxscharwath/elia.git",
+    "directory": "apps/hub"
+  },
   "scripts": {
     "dev": "bun --inspect run src/main.ts",
     "lint": "bun x biome check ."
   },
   "dependencies": {
+    "@elia/ipc": "workspace:*",
     "@elia/router": "workspace:*",
     "@elia/sdk": "workspace:*",
     "@elia/shared": "workspace:*",
@@ -14,7 +20,7 @@
     "zod": "^4.3.4"
   },
   "devDependencies": {
-    "@biomejs/biome": "^1.8.3",
+    "@biomejs/biome": "^2.3.10",
     "@types/bun": "^1.3.5"
   }
 }

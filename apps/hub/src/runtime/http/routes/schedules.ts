@@ -44,4 +44,3 @@ export const schedulesRoutes = group("/api/schedules", [
     return { ok: await inject(SchedulerService).delete(params.id) };
   }),
 ]);
-

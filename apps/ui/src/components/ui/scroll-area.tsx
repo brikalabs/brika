@@ -10,4 +10,3 @@ function ScrollArea({ className, children, ...props }: React.ComponentProps<"div
 }
 
 export { ScrollArea };
-

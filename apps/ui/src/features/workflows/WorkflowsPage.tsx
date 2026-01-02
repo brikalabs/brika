@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { ReactFlowProvider } from "@xyflow/react";
 import {
   Card,
@@ -19,25 +19,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui";
-import {
-  Play,
-  Clock,
-  CheckCircle,
-  XCircle,
-  AlertCircle,
-  Zap,
-  Eye,
-  Plus,
-  GitBranch,
-  Square,
-  Timer,
-  Send,
-  Edit,
-  FileText,
-  Shuffle,
-  Pencil,
-  Trash2,
-} from "lucide-react";
+import { Play, Clock, CheckCircle, XCircle, AlertCircle, Eye, Plus, Pencil, Trash2 } from "lucide-react";
+import { DynamicIcon, type IconName } from "lucide-react/dynamic";
 import {
   useWorkflows,
   useWorkflow,
@@ -52,21 +35,6 @@ import {
 import { WorkflowEditor } from "./editor";
 import { saveWorkflow } from "./api";
 import type { Workflow, WorkflowRun, BlockType } from "./api";
-
-const BLOCK_ICONS: Record<string, React.ElementType> = {
-  action: Zap,
-  condition: GitBranch,
-  switch: Shuffle,
-  delay: Timer,
-  emit: Send,
-  set: Edit,
-  log: FileText,
-  end: Square,
-};
-
-function getBlockIcon(type: string) {
-  return BLOCK_ICONS[type] || Square;
-}
 
 function formatDuration(ms: number) {
   if (ms < 1000) return `${ms}ms`;
@@ -146,10 +114,10 @@ function WorkflowCard({
         <CardContent className="pt-0">
           <div className="flex flex-wrap gap-1.5">
             {workflow.blocks.map((block) => {
-              const Icon = getBlockIcon(block.type);
+              const iconName = (block.icon || block.type || "box") as IconName;
               return (
                 <Badge key={block.id} variant="outline" className="gap-1 text-xs">
-                  <Icon className="size-3" />
+                  <DynamicIcon name={iconName} className="size-3" />
                   {block.id}
                 </Badge>
               );
@@ -192,9 +160,7 @@ function BlockTypesGrid({ types }: { types: BlockType[] }) {
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
       {types.map((block) => {
-        // Use icon from block definition, fallback to id-based lookup
-        const blockId = block.id.split(":").pop() || block.id;
-        const Icon = getBlockIcon(blockId);
+        const iconName = (block.icon || "box") as IconName;
         return (
           <Card key={block.type || block.id} className="p-4">
             <div className="flex items-center gap-3">
@@ -202,7 +168,7 @@ function BlockTypesGrid({ types }: { types: BlockType[] }) {
                 className="size-10 rounded-lg flex items-center justify-center"
                 style={{ backgroundColor: block.color + "20", color: block.color }}
               >
-                <Icon className="size-5" />
+                <DynamicIcon name={iconName} className="size-5" />
               </div>
               <div>
                 <div className="font-medium text-sm">{block.name}</div>
