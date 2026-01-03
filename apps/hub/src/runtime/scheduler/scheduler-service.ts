@@ -90,7 +90,7 @@ export class SchedulerService {
     this.#running.clear();
   }
   list(): Schedule[] {
-    return this.state.listSchedules();
+    return this.state.listSchedules().sort((a, b) => a.name.localeCompare(b.name));
   }
   get(id: string): Schedule | undefined {
     return this.state.getSchedule(id);

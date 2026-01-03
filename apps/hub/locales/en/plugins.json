@@ -20,8 +20,11 @@
     "uptime": "Uptime",
     "startedAt": "Started",
     "availableTools": "Available Tools",
+    "availableToolsDesc": "Tools provided by this plugin",
     "availableBlocks": "Available Blocks",
+    "availableBlocksDesc": "Workflow blocks provided by this plugin",
     "installation": "Installation",
+    "installationDesc": "Technical details and paths",
     "directory": "Directory"
   },
   "actions": {

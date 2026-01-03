@@ -1,15 +1,10 @@
 import "reflect-metadata";
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
-import type { Rule, Schedule, PluginManifest } from "@elia/shared";
+import type { Rule, Schedule } from "@elia/shared";
 import { spy, mock, TestBed } from "@elia/shared";
 import { StateStore } from "../runtime/state/state-store";
 import { LogRouter } from "../runtime/logs/log-router";
 import { HubConfig } from "../runtime/config";
-
-const testManifest: PluginManifest = {
-  name: "test-plugin",
-  version: "1.0.0",
-};
 
 describe("StateStore", () => {
   let mockLogs: LogRouter;
@@ -35,19 +30,16 @@ describe("StateStore", () => {
       await store.registerPlugin({
         ref: "test-plugin",
         dir: "/path/to/plugin",
-        name: "@test/plugin",
         uid: "abc123",
-        version: "1.0.0",
-        metadata: testManifest,
       });
 
       const retrieved = store.get("test-plugin");
 
       expect(retrieved).toBeDefined();
-      expect(retrieved?.name).toBe("@test/plugin");
       expect(retrieved?.uid).toBe("abc123");
       expect(retrieved?.dir).toBe("/path/to/plugin");
       expect(retrieved?.enabled).toBe(true);
+      expect(retrieved?.health).toBe("running");
     });
 
     it("should return undefined for unknown plugin", () => {
@@ -62,18 +54,12 @@ describe("StateStore", () => {
       await store.registerPlugin({
         ref: "plugin1",
         dir: "/path/to/plugin1",
-        name: "@test/plugin1",
         uid: "uid1",
-        version: "1.0.0",
-        metadata: testManifest,
       });
       await store.registerPlugin({
         ref: "plugin2",
         dir: "/path/to/plugin2",
-        name: "@test/plugin2",
         uid: "uid2",
-        version: "2.0.0",
-        metadata: testManifest,
         enabled: false,
       });
 
@@ -84,14 +70,10 @@ describe("StateStore", () => {
     it("should set plugin enabled state", async () => {
       const store = TestBed.inject(StateStore);
 
-      // First register the plugin
       await store.registerPlugin({
         ref: "test-plugin",
         dir: "/path/to/plugin",
-        name: "@test/plugin",
         uid: "abc123",
-        version: "1.0.0",
-        metadata: testManifest,
       });
 
       expect(store.get("test-plugin")?.enabled).toBe(true);
@@ -106,14 +88,10 @@ describe("StateStore", () => {
     it("should set plugin health", async () => {
       const store = TestBed.inject(StateStore);
 
-      // First register the plugin
       await store.registerPlugin({
         ref: "test-plugin",
         dir: "/path/to/plugin",
-        name: "@test/plugin",
         uid: "abc123",
-        version: "1.0.0",
-        metadata: testManifest,
       });
 
       await store.setHealth("test-plugin", "crashed");
@@ -125,14 +103,10 @@ describe("StateStore", () => {
     it("should set plugin health with error", async () => {
       const store = TestBed.inject(StateStore);
 
-      // First register the plugin
       await store.registerPlugin({
         ref: "test-plugin",
         dir: "/path/to/plugin",
-        name: "@test/plugin",
         uid: "abc123",
-        version: "1.0.0",
-        metadata: testManifest,
       });
 
       await store.setHealth("test-plugin", "crashed", "Something went wrong");
@@ -148,20 +122,80 @@ describe("StateStore", () => {
       await store.registerPlugin({
         ref: "my-plugin",
         dir: "/path/to/myplugin",
-        name: "@test/myplugin",
         uid: "xyz789",
-        version: "1.0.0",
-        metadata: testManifest,
       });
 
       await store.setHealth("my-plugin", "crashed", "Error occurred");
 
       const state = store.get("my-plugin");
-      expect(state?.name).toBe("@test/myplugin");
       expect(state?.uid).toBe("xyz789");
       expect(state?.dir).toBe("/path/to/myplugin");
       expect(state?.health).toBe("crashed");
       expect(state?.lastError).toBe("Error occurred");
+    });
+
+    it("should get plugin by UID", async () => {
+      const store = TestBed.inject(StateStore);
+
+      await store.registerPlugin({
+        ref: "test-ref",
+        dir: "/path/to/plugin",
+        uid: "unique-id",
+      });
+
+      const byUid = store.getByUid("unique-id");
+      expect(byUid).toBeDefined();
+      expect(byUid?.ref).toBe("test-ref");
+    });
+
+    it("should remove plugin from state", async () => {
+      const store = TestBed.inject(StateStore);
+
+      await store.registerPlugin({
+        ref: "to-remove",
+        dir: "/path/to/plugin",
+        uid: "remove-me",
+      });
+
+      expect(store.listInstalled()).toHaveLength(1);
+
+      await store.remove("to-remove");
+
+      expect(store.listInstalled()).toHaveLength(0);
+    });
+  });
+
+  describe("Metadata Cache", () => {
+    it("should store and retrieve metadata", async () => {
+      const store = TestBed.inject(StateStore);
+
+      const metadata = await store.refreshMetadata("test-ref", "/path/to/plugin");
+
+      expect(metadata).toBeDefined();
+      expect(metadata.name).toBeDefined();
+
+      const cached = store.getMetadata("test-ref");
+      expect(cached).toEqual(metadata);
+    });
+
+    it("should provide plugin state with metadata", async () => {
+      const store = TestBed.inject(StateStore);
+
+      await store.registerPlugin({
+        ref: "test-plugin",
+        dir: "/path/to/plugin",
+        uid: "abc123",
+      });
+
+      // Manually set metadata since we can't read real package.json in tests
+      await store.refreshMetadata("test-plugin", "/path/to/plugin");
+
+      const withMeta = store.getWithMetadata("test-plugin");
+      expect(withMeta).toBeDefined();
+      expect(withMeta?.uid).toBe("abc123");
+      expect(withMeta?.metadata).toBeDefined();
+      expect(withMeta?.name).toBeDefined();
+      expect(withMeta?.version).toBeDefined();
     });
   });
 

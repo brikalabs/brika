@@ -177,10 +177,12 @@ export class AutomationEngine {
   }
 
   list(): Workflow[] {
-    return [...this.#workflows.values()].map((w) => ({
-      ...w,
-      enabled: w.enabled ?? true,
-    }));
+    return [...this.#workflows.values()]
+      .map((w) => ({
+        ...w,
+        enabled: w.enabled ?? true,
+      }))
+      .sort((a, b) => (a.name ?? a.id).localeCompare(b.name ?? b.id));
   }
 
   listRuns(limit = 100): WorkflowRun[] {

@@ -8,7 +8,9 @@ import {
   Button,
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
+  CardIconSmall,
   CardTitle,
   Badge,
   Skeleton,
@@ -31,9 +33,11 @@ import {
   Github,
   Clock,
   Globe,
+  Hash,
+  Info,
 } from "lucide-react";
 import { DynamicIcon, type IconName } from "lucide-react/dynamic";
-import { Link, Route, useParams } from "@tanstack/react-router";
+import { Link, useParams } from "@tanstack/react-router";
 import { Uptime } from "@/components/Uptime";
 
 export function PluginDetailPage() {
@@ -278,65 +282,69 @@ export function PluginDetailPage() {
 
       {/* Stats grid */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
+        <Card accent="emerald" className="p-5">
+          <div className="relative h-full flex flex-col justify-center">
+            <CardIconSmall className="absolute top-0 right-0">
               <Wrench className="size-4" />
-              {t("tools:title")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{tools.length}</div>
-          </CardContent>
+            </CardIconSmall>
+            <div className="text-3xl font-bold tracking-tight">{tools.length}</div>
+            <div className="text-sm text-muted-foreground mt-1">{t("tools:title")}</div>
+          </div>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
+        <Card accent="violet" className="p-5">
+          <div className="relative h-full flex flex-col justify-center">
+            <CardIconSmall className="absolute top-0 right-0">
               <Boxes className="size-4" />
-              {t("workflows:blocks")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{blocks.length}</div>
-          </CardContent>
+            </CardIconSmall>
+            <div className="text-3xl font-bold tracking-tight">{blocks.length}</div>
+            <div className="text-sm text-muted-foreground mt-1">{t("workflows:blocks")}</div>
+          </div>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">{t("plugins:details.pid")}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold font-mono">{plugin.pid ?? "-"}</div>
-          </CardContent>
+        <Card accent="blue" className="p-5">
+          <div className="relative h-full flex flex-col justify-center">
+            <CardIconSmall className="absolute top-0 right-0">
+              <Hash className="size-4" />
+            </CardIconSmall>
+            <div className="text-3xl font-bold tracking-tight font-mono">{plugin.pid ?? "-"}</div>
+            <div className="text-sm text-muted-foreground mt-1">{t("plugins:details.pid")}</div>
+          </div>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
+        <Card accent="orange" className="p-5">
+          <div className="relative h-full flex flex-col justify-center">
+            <CardIconSmall className="absolute top-0 right-0">
               <Clock className="size-4" />
-              {t("plugins:details.uptime")}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Uptime startedAt={plugin.startedAt} className="text-2xl font-bold" />
-            {plugin.startedAt && (
-              <div className="text-xs text-muted-foreground mt-1">
-                {t("plugins:details.startedAt")} {formatTime(plugin.startedAt)}
-              </div>
-            )}
-          </CardContent>
+            </CardIconSmall>
+            <Uptime startedAt={plugin.startedAt} className="text-3xl font-bold tracking-tight" />
+            <div className="text-sm text-muted-foreground mt-1">
+              {plugin.startedAt ? (
+                <>
+                  {t("plugins:details.startedAt")} {formatTime(plugin.startedAt)}
+                </>
+              ) : (
+                t("plugins:details.uptime")
+              )}
+            </div>
+          </div>
         </Card>
       </div>
 
       {/* Tools Grid */}
       {tools.length > 0 && (
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Wrench className="size-5" />
-              {t("plugins:details.availableTools")}
-            </CardTitle>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Wrench className="size-5 text-primary" />
+                  {t("plugins:details.availableTools")}
+                </CardTitle>
+                <CardDescription>{t("plugins:details.availableToolsDesc")}</CardDescription>
+              </div>
+              <Badge variant="secondary">{tools.length}</Badge>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -350,13 +358,14 @@ export function PluginDetailPage() {
                 return (
                   <div
                     key={tool.id}
-                    className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+                    className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
                   >
-                    <Avatar className="size-10 rounded-lg">
-                      <AvatarFallback className="rounded-lg" style={{ backgroundColor: `${color}20`, color }}>
-                        <DynamicIcon name={iconName} className="size-5" />
-                      </AvatarFallback>
-                    </Avatar>
+                    <div
+                      className="flex size-10 items-center justify-center rounded-lg shrink-0"
+                      style={{ backgroundColor: `${color}20`, color }}
+                    >
+                      <DynamicIcon name={iconName} className="size-5" />
+                    </div>
                     <div className="flex-1 min-w-0">
                       <div className="font-medium text-sm truncate">{toolName}</div>
                       {toolDesc && <div className="text-xs text-muted-foreground truncate">{toolDesc}</div>}
@@ -372,11 +381,17 @@ export function PluginDetailPage() {
       {/* Blocks Grid */}
       {blocks.length > 0 && (
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Boxes className="size-5" />
-              {t("plugins:details.availableBlocks")}
-            </CardTitle>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Boxes className="size-5 text-primary" />
+                  {t("plugins:details.availableBlocks")}
+                </CardTitle>
+                <CardDescription>{t("plugins:details.availableBlocksDesc")}</CardDescription>
+              </div>
+              <Badge variant="secondary">{blocks.length}</Badge>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -390,13 +405,14 @@ export function PluginDetailPage() {
                 return (
                   <div
                     key={block.id}
-                    className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+                    className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
                   >
-                    <Avatar className="size-10 rounded-lg">
-                      <AvatarFallback className="rounded-lg" style={{ backgroundColor: `${color}20`, color }}>
-                        <DynamicIcon name={iconName} className="size-5" />
-                      </AvatarFallback>
-                    </Avatar>
+                    <div
+                      className="flex size-10 items-center justify-center rounded-lg shrink-0"
+                      style={{ backgroundColor: `${color}20`, color }}
+                    >
+                      <DynamicIcon name={iconName} className="size-5" />
+                    </div>
                     <div className="flex-1 min-w-0">
                       <div className="font-medium text-sm truncate">{blockName}</div>
                       {blockDesc && <div className="text-xs text-muted-foreground truncate">{blockDesc}</div>}
@@ -416,26 +432,34 @@ export function PluginDetailPage() {
 
       {/* Reference & Installation Info */}
       <Card>
-        <CardHeader>
-          <CardTitle>{t("plugins:details.installation")}</CardTitle>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2">
+            <Info className="size-5 text-primary" />
+            {t("plugins:details.installation")}
+          </CardTitle>
+          <CardDescription>{t("plugins:details.installationDesc")}</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="flex items-start gap-2 text-sm">
-            <span className="text-muted-foreground w-24 shrink-0">UID:</span>
-            <code className="font-mono bg-muted px-2 py-1 rounded text-xs">{plugin.uid}</code>
+        <CardContent className="flex flex-col gap-2">
+          <div className="flex items-center justify-between p-2.5 rounded-lg bg-muted/30">
+            <span className="text-sm">UID</span>
+            <code className="font-mono text-xs">{plugin.uid}</code>
           </div>
-          <div className="flex items-start gap-2 text-sm">
-            <span className="text-muted-foreground w-24 shrink-0">{t("plugins:details.directory")}:</span>
-            <code className="font-mono bg-muted px-2 py-1 rounded text-xs break-all">{plugin.dir}</code>
+          <div className="flex items-center justify-between p-2.5 rounded-lg bg-muted/30">
+            <span className="text-sm">{t("plugins:details.directory")}</span>
+            <code className="font-mono text-xs truncate max-w-[60%]" title={plugin.dir}>
+              {plugin.dir}
+            </code>
           </div>
-          <div className="flex items-start gap-2 text-sm">
-            <span className="text-muted-foreground w-24 shrink-0">{t("plugins:labels.reference")}:</span>
-            <code className="font-mono bg-muted px-2 py-1 rounded text-xs break-all">{plugin.ref}</code>
+          <div className="flex items-center justify-between p-2.5 rounded-lg bg-muted/30">
+            <span className="text-sm">{t("plugins:labels.reference")}</span>
+            <code className="font-mono text-xs truncate max-w-[60%]" title={plugin.ref}>
+              {plugin.ref}
+            </code>
           </div>
           {plugin.license && (
-            <div className="flex items-start gap-2 text-sm">
-              <span className="text-muted-foreground w-24 shrink-0">{t("plugins:details.license")}:</span>
-              <span>{plugin.license}</span>
+            <div className="flex items-center justify-between p-2.5 rounded-lg bg-muted/30">
+              <span className="text-sm">{t("plugins:details.license")}</span>
+              <Badge variant="secondary">{plugin.license}</Badge>
             </div>
           )}
         </CardContent>

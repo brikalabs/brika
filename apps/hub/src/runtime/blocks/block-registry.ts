@@ -92,7 +92,7 @@ export class BlockRegistry {
    * Get all registered block definitions
    */
   list(): BlockDefinition[] {
-    return [...this.#blocks.values()];
+    return [...this.#blocks.values()].sort((a, b) => a.id.localeCompare(b.id));
   }
 
   /**

@@ -12,9 +12,12 @@ import {
   CardContent,
   CardDescription,
   CardHeader,
+  CardIconSmall,
+  cardVariants,
   CardTitle,
   ScrollArea,
 } from "@/components/ui";
+import type { VariantProps } from "class-variance-authority";
 import {
   Activity,
   ArrowRight,
@@ -54,41 +57,34 @@ async function fetchStats(): Promise<Stats> {
 // Components
 // ─────────────────────────────────────────────────────────────────────────────
 
+type Accent = VariantProps<typeof cardVariants>["accent"];
+
 interface StatCardProps {
   icon: React.ElementType;
   label: string;
   value: number | string;
   subValue?: string;
   href: string;
-  color: string;
-  trend?: "up" | "down" | "neutral";
+  accent: Accent;
 }
 
-function StatCard({ icon: Icon, label, value, subValue, href, color }: Readonly<StatCardProps>) {
+function StatCard({ icon: Icon, label, value, subValue, href, accent }: Readonly<StatCardProps>) {
   return (
     <Link to={href}>
-      <Card className="hover:border-primary/50 hover:shadow-lg transition-all duration-200 cursor-pointer group overflow-hidden relative">
-        <div className={cn("absolute inset-0 opacity-5", color.replace("text-", "bg-"))} />
-        <CardContent className="pt-6 relative">
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="text-3xl font-bold tracking-tight">{value}</div>
-              {subValue && <div className="text-sm text-muted-foreground mt-0.5">{subValue}</div>}
-              <div className="text-sm text-muted-foreground mt-1 group-hover:text-foreground transition-colors flex items-center gap-1">
-                {label}
-                <ArrowRight className="size-3 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
-              </div>
-            </div>
-            <div
-              className={cn(
-                "flex size-12 items-center justify-center rounded-xl",
-                `${color.replace("text-", "bg-")}/10`,
-              )}
-            >
-              <Icon className={cn("size-6", color)} />
-            </div>
+      <Card accent={accent} interactive className="h-full p-5">
+        <div className="relative h-full flex flex-col justify-center">
+          <CardIconSmall className="absolute top-0 right-0">
+            <Icon className="size-4" />
+          </CardIconSmall>
+          <div className="text-3xl font-bold tracking-tight pr-10">{value}</div>
+          <div className="text-sm text-muted-foreground mt-1 group-hover:text-foreground transition-colors flex items-center gap-1 min-w-0">
+            <span className="truncate">
+              {subValue && <span className="font-medium">{subValue} </span>}
+              {label}
+            </span>
+            <ArrowRight className="size-3 shrink-0 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
           </div>
-        </CardContent>
+        </div>
       </Card>
     </Link>
   );
@@ -98,32 +94,24 @@ function QuickAction({
   icon: Icon,
   label,
   href,
-  color,
+  accent,
 }: Readonly<{
   icon: React.ElementType;
   label: string;
   href: string;
-  color: string;
+  accent: Accent;
 }>) {
   return (
     <Link to={href}>
-      <div
-        className={cn(
-          "flex items-center gap-3 p-3 rounded-lg border bg-card",
-          "hover:bg-accent hover:border-accent-foreground/20 transition-all cursor-pointer group",
-        )}
-      >
-        <div
-          className={cn(
-            "flex size-9 items-center justify-center rounded-lg",
-            `${color.replace("text-", "bg-")}/10`,
-          )}
-        >
-          <Icon className={cn("size-4", color)} />
+      <Card accent={accent} interactive className="p-3">
+        <div className="relative flex items-center gap-3">
+          <CardIconSmall>
+            <Icon className="size-4" />
+          </CardIconSmall>
+          <span className="text-sm font-medium group-hover:text-foreground transition-colors">{label}</span>
+          <ArrowRight className="size-4 ml-auto opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-muted-foreground" />
         </div>
-        <span className="text-sm font-medium group-hover:text-primary transition-colors">{label}</span>
-        <ArrowRight className="size-4 ml-auto opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-muted-foreground" />
-      </div>
+      </Card>
     </Link>
   );
 }
@@ -180,21 +168,21 @@ export function DashboardPage() {
           value={stats?.plugins.running ?? runningPlugins}
           subValue={t("dashboard:stats.running")}
           href="/plugins"
-          color="text-blue-500"
+          accent="blue"
         />
         <StatCard
           icon={Wrench}
           label={t("dashboard:stats.tools")}
           value={stats?.tools.total ?? tools.length}
           href="/tools"
-          color="text-emerald-500"
+          accent="emerald"
         />
         <StatCard
           icon={Box}
           label={t("dashboard:stats.blocks")}
           value={stats?.blocks.total ?? 0}
           href="/workflows"
-          color="text-violet-500"
+          accent="violet"
         />
         <StatCard
           icon={Workflow}
@@ -202,7 +190,7 @@ export function DashboardPage() {
           value={stats?.workflows.enabled ?? 0}
           subValue={t("dashboard:stats.enabled")}
           href="/workflows"
-          color="text-orange-500"
+          accent="orange"
         />
         <StatCard
           icon={Calendar}
@@ -210,7 +198,7 @@ export function DashboardPage() {
           value={stats?.schedules.enabled ?? 0}
           subValue={t("dashboard:stats.enabled")}
           href="/schedules"
-          color="text-purple-500"
+          accent="purple"
         />
         <StatCard
           icon={GitBranch}
@@ -218,7 +206,7 @@ export function DashboardPage() {
           value={stats?.rules.enabled ?? 0}
           subValue={t("dashboard:stats.enabled")}
           href="/rules"
-          color="text-amber-500"
+          accent="amber"
         />
       </div>
 
@@ -240,7 +228,7 @@ export function DashboardPage() {
           </CardHeader>
           <CardContent>
             <ScrollArea className="h-70 -mx-2 px-2">
-              <div className="space-y-2">
+              <div className="flex flex-col gap-2">
                 {events
                   .slice(-8)
                   .reverse()
@@ -283,47 +271,47 @@ export function DashboardPage() {
         </Card>
 
         {/* Quick Actions & System Status */}
-        <div className="space-y-6">
+        <div className="flex flex-col gap-6">
           {/* Quick Actions */}
-          <Card>
+          <Card className="flex-1">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
                 <Play className="size-4 text-primary" />
                 {t("common:actions.create")}
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
+            <CardContent className="flex flex-col gap-2">
               <QuickAction
                 icon={Workflow}
                 label={t("workflows:actions.create")}
                 href="/workflows"
-                color="text-orange-500"
+                accent="orange"
               />
               <QuickAction
                 icon={Calendar}
                 label={t("schedules:actions.create")}
                 href="/schedules"
-                color="text-purple-500"
+                accent="purple"
               />
               <QuickAction
                 icon={GitBranch}
                 label={t("rules:actions.create")}
                 href="/rules"
-                color="text-amber-500"
+                accent="amber"
               />
-              <QuickAction icon={Plug} label={t("nav:plugins")} href="/plugins" color="text-blue-500" />
+              <QuickAction icon={Plug} label={t("nav:plugins")} href="/plugins" accent="blue" />
             </CardContent>
           </Card>
 
           {/* System Status */}
-          <Card>
+          <Card className="flex-1">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
                 <Server className="size-4 text-primary" />
                 {t("common:labels.status")}
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
+            <CardContent className="flex flex-col gap-2">
               <div className="flex items-center justify-between p-2.5 rounded-lg bg-muted/30">
                 <span className="text-sm">{t("dashboard:stats.plugins")}</span>
                 <Badge

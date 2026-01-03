@@ -33,9 +33,10 @@ import {
   Plus,
   Wrench,
   Loader2,
-  ChevronRight,
+  ArrowRight,
   Boxes,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export function PluginsPage() {
   const { t, tp } = useLocale();
@@ -54,15 +55,21 @@ export function PluginsPage() {
   const isBusy = load.isPending || disable.isPending || reload.isPending || kill.isPending;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">{t("plugins:title")}</h2>
-          <p className="text-muted-foreground">{t("plugins:subtitle")}</p>
+          <h1 className="text-3xl font-bold tracking-tight bg-linear-to-r from-foreground to-foreground/70 bg-clip-text">
+            {t("plugins:title")}
+          </h1>
+          <p className="text-muted-foreground mt-1 flex items-center gap-2">
+            <Plug className="size-4" />
+            {t("plugins:subtitle")}
+          </p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => refetch()} disabled={isLoading} className="gap-2">
-            <RefreshCw className={`size-4 ${isLoading ? "animate-spin" : ""}`} />
+            <RefreshCw className={cn("size-4", isLoading && "animate-spin")} />
             {t("common:actions.refresh")}
           </Button>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -116,125 +123,134 @@ export function PluginsPage() {
         <div className="grid gap-4">
           {plugins.map((p) => {
             const health = p.status;
+            const accent = health === "running" ? "blue" : health === "crashed" ? "orange" : undefined;
             return (
-              <Card key={p.uid} className="group hover:border-primary/50 transition-colors">
-                <CardContent className="pt-6">
-                  <div className="flex items-start justify-between gap-4">
-                    <Link
-                      to="/plugins/$uid"
-                      params={{ uid: p.uid }}
-                      className="flex items-start gap-4 flex-1 group-hover:opacity-80 transition-opacity"
-                    >
-                      <Avatar className="size-10 rounded-lg">
-                        <AvatarImage src={pluginsApi.getIconUrl(p.uid)} />
-                        <AvatarFallback className="rounded-lg bg-primary/10">
-                          <Plug className="size-5 text-primary" />
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-semibold truncate">{tp(p.name, "name")}</div>
-                        {p.description && (
-                          <div className="text-sm text-muted-foreground line-clamp-1 mt-0.5">
-                            {tp(p.name, "description")}
-                          </div>
-                        )}
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-xs text-muted-foreground">v{p.version}</span>
-                          {p.pid && <span className="text-xs text-muted-foreground">PID: {p.pid}</span>}
-                        </div>
+              <Link key={p.uid} to="/plugins/$uid" params={{ uid: p.uid }}>
+                <Card accent={accent} interactive className="p-5">
+                  <div className="flex items-start gap-4">
+                    {/* Plugin Icon */}
+                    <Avatar className="size-12 rounded-xl shrink-0">
+                      <AvatarImage src={pluginsApi.getIconUrl(p.uid)} />
+                      <AvatarFallback className="rounded-xl bg-primary/10">
+                        <Plug className="size-6 text-primary" />
+                      </AvatarFallback>
+                    </Avatar>
+
+                    {/* Plugin Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold truncate group-hover:text-foreground transition-colors">
+                          {tp(p.name, "name")}
+                        </span>
+                        <Badge variant="outline" className="text-xs shrink-0">
+                          v{p.version}
+                        </Badge>
                       </div>
-                      <ChevronRight className="size-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
-                    </Link>
-                    <Badge
-                      variant={
-                        health === "running" ? "default" : health === "crashed" ? "destructive" : "secondary"
-                      }
-                    >
-                      {t(`common:status.${health}`)}
-                    </Badge>
-                  </div>
-
-                  {(p.tools.length > 0 || p.blocks.length > 0) && (
-                    <div className="mt-4 pt-4 border-t flex gap-6">
-                      {p.tools.length > 0 && (
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Wrench className="size-4" />
-                          <span>
-                            {p.tools.length} {t("tools:title").toLowerCase()}
-                          </span>
+                      {p.description && (
+                        <div className="text-sm text-muted-foreground line-clamp-1 mt-0.5">
+                          {tp(p.name, "description")}
                         </div>
                       )}
-                      {p.blocks.length > 0 && (
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Boxes className="size-4" />
-                          <span>
-                            {p.blocks.length} {t("workflows:blocks").toLowerCase()}
-                          </span>
+
+                      {/* Stats Row */}
+                      {(p.tools.length > 0 || p.blocks.length > 0) && (
+                        <div className="flex gap-4 mt-2">
+                          {p.tools.length > 0 && (
+                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                              <Wrench className="size-3.5" />
+                              <span>{p.tools.length} {t("tools:title").toLowerCase()}</span>
+                            </div>
+                          )}
+                          {p.blocks.length > 0 && (
+                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                              <Boxes className="size-3.5" />
+                              <span>{p.blocks.length} {t("workflows:blocks").toLowerCase()}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Error Display */}
+                      {p.lastError && (
+                        <div className="mt-2 p-2 rounded-lg bg-destructive/10 text-destructive text-xs">
+                          {p.lastError}
                         </div>
                       )}
                     </div>
-                  )}
 
-                  {p.lastError && (
-                    <div className="mt-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
-                      {p.lastError}
+                    {/* Right Side: Status + Actions */}
+                    <div className="flex flex-col items-end gap-3 shrink-0">
+                      <Badge
+                        variant={health === "running" ? "default" : health === "crashed" ? "destructive" : "secondary"}
+                        className={cn(
+                          health === "running" && "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
+                        )}
+                      >
+                        {t(`common:status.${health}`)}
+                      </Badge>
+
+                      <div className="flex gap-1.5">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="size-8"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                reload.mutate(p.uid);
+                              }}
+                              disabled={isBusy}
+                            >
+                              <RotateCcw className="size-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>{t("plugins:actions.reload")}</TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="size-8"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                disable.mutate(p.uid);
+                              }}
+                              disabled={isBusy}
+                            >
+                              <Power className="size-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>{t("plugins:actions.disable")}</TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="size-8 text-destructive hover:text-destructive"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                kill.mutate(p.uid);
+                              }}
+                              disabled={isBusy}
+                            >
+                              <Skull className="size-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>{t("plugins:actions.kill")}</TooltipContent>
+                        </Tooltip>
+                      </div>
                     </div>
-                  )}
 
-                  <div className="mt-4 pt-4 border-t flex gap-2">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            reload.mutate(p.uid);
-                          }}
-                          disabled={isBusy}
-                        >
-                          <RotateCcw className="size-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>{t("plugins:actions.reload")}</TooltipContent>
-                    </Tooltip>
-
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            disable.mutate(p.uid);
-                          }}
-                          disabled={isBusy}
-                        >
-                          <Power className="size-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>{t("plugins:actions.disable")}</TooltipContent>
-                    </Tooltip>
-
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            kill.mutate(p.uid);
-                          }}
-                          disabled={isBusy}
-                        >
-                          <Skull className="size-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>{t("plugins:actions.kill")}</TooltipContent>
-                    </Tooltip>
+                    {/* Arrow indicator */}
+                    <ArrowRight className="size-5 text-muted-foreground opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all self-center" />
                   </div>
-                </CardContent>
-              </Card>
+                </Card>
+              </Link>
             );
           })}
         </div>

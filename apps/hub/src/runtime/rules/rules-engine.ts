@@ -33,7 +33,7 @@ export class RulesEngine {
     this.logs.info("rules.engine.stopped");
   }
   list(): Rule[] {
-    return this.state.listRules();
+    return this.state.listRules().sort((a, b) => a.name.localeCompare(b.name));
   }
   get(id: string): Rule | undefined {
     return this.state.getRule(id);

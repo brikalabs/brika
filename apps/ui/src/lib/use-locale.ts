@@ -29,10 +29,17 @@ declare global {
 export function useLocale() {
   const { t: baseT, i18n } = useTranslation(undefined, { useSuspense: true });
   const locale = i18n.language;
+  // For Intl formatters, use "en" as fallback when locale is "cimode"
+  const intlLocale = locale === "cimode" ? "en" : locale;
   const nsSeparator = i18next.options.nsSeparator || ":";
 
   const t = useCallback(
     ((rawKey: string, options?: TOptions) => {
+      // CI-Mode: return keys directly without loading namespaces
+      if (locale === "cimode") {
+        return rawKey;
+      }
+
       const ns = options?.ns as string | undefined;
       const effectiveNs = ns ?? extractNamespace(rawKey, nsSeparator);
 
@@ -52,17 +59,17 @@ export function useLocale() {
 
   const formatters = useMemo(
     () => ({
-      date: new Intl.DateTimeFormat(locale, { dateStyle: "medium" }),
-      time: new Intl.DateTimeFormat(locale, { timeStyle: "short" }),
-      dateTime: new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }),
-      relativeTime: new Intl.RelativeTimeFormat(locale, { numeric: "auto" }),
-      number: new Intl.NumberFormat(locale),
-      list: new Intl.ListFormat(locale, { style: "long", type: "conjunction" }),
-      duration: new Intl.DurationFormat(locale, { style: "long" }),
-      languageNames: new Intl.DisplayNames([locale], { type: "language" }),
-      regionNames: new Intl.DisplayNames([locale], { type: "region" }),
+      date: new Intl.DateTimeFormat(intlLocale, { dateStyle: "medium" }),
+      time: new Intl.DateTimeFormat(intlLocale, { timeStyle: "short" }),
+      dateTime: new Intl.DateTimeFormat(intlLocale, { dateStyle: "medium", timeStyle: "short" }),
+      relativeTime: new Intl.RelativeTimeFormat(intlLocale, { numeric: "auto" }),
+      number: new Intl.NumberFormat(intlLocale),
+      list: new Intl.ListFormat(intlLocale, { style: "long", type: "conjunction" }),
+      duration: new Intl.DurationFormat(intlLocale, { style: "long" }),
+      languageNames: new Intl.DisplayNames([intlLocale], { type: "language" }),
+      regionNames: new Intl.DisplayNames([intlLocale], { type: "region" }),
     }),
-    [locale],
+    [intlLocale],
   );
 
   return useMemo(
@@ -76,27 +83,27 @@ export function useLocale() {
       changeLocale: (loc: string) => i18n.changeLanguage(loc),
 
       formatDate: (date: Date | number, opts?: Intl.DateTimeFormatOptions) =>
-        opts ? new Intl.DateTimeFormat(locale, { dateStyle: "medium", ...opts }).format(date) : formatters.date.format(date),
+        opts ? new Intl.DateTimeFormat(intlLocale, { dateStyle: "medium", ...opts }).format(date) : formatters.date.format(date),
 
       formatTime: (date: Date | number, opts?: Intl.DateTimeFormatOptions) =>
-        opts ? new Intl.DateTimeFormat(locale, { timeStyle: "short", ...opts }).format(date) : formatters.time.format(date),
+        opts ? new Intl.DateTimeFormat(intlLocale, { timeStyle: "short", ...opts }).format(date) : formatters.time.format(date),
 
       formatDateTime: (date: Date | number, opts?: Intl.DateTimeFormatOptions) =>
-        opts ? new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short", ...opts }).format(date) : formatters.dateTime.format(date),
+        opts ? new Intl.DateTimeFormat(intlLocale, { dateStyle: "medium", timeStyle: "short", ...opts }).format(date) : formatters.dateTime.format(date),
 
       formatRelativeTime: (value: number, unit: Intl.RelativeTimeFormatUnit) =>
         formatters.relativeTime.format(value, unit),
 
       formatNumber: (value: number, opts?: Intl.NumberFormatOptions) =>
-        opts ? new Intl.NumberFormat(locale, opts).format(value) : formatters.number.format(value),
+        opts ? new Intl.NumberFormat(intlLocale, opts).format(value) : formatters.number.format(value),
 
       formatCurrency: (value: number, currency: string) =>
-        new Intl.NumberFormat(locale, { style: "currency", currency }).format(value),
+        new Intl.NumberFormat(intlLocale, { style: "currency", currency }).format(value),
 
       formatDuration: (duration: DurationInput) => formatters.duration.format(duration),
 
       formatList: (items: string[], opts?: Intl.ListFormatOptions) =>
-        opts ? new Intl.ListFormat(locale, { style: "long", type: "conjunction", ...opts }).format(items) : formatters.list.format(items),
+        opts ? new Intl.ListFormat(intlLocale, { style: "long", type: "conjunction", ...opts }).format(items) : formatters.list.format(items),
 
       getLanguageName: (code: string) => {
         if (code === "cimode") return "🔑 CI Mode (Keys)";
@@ -115,7 +122,7 @@ export function useLocale() {
         }
       },
     }),
-    [t, locale, i18n, formatters],
+    [t, locale, intlLocale, i18n, formatters],
   );
 }
 

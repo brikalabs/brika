@@ -20,7 +20,7 @@ import type { Plugin, PluginManifest } from "@elia/shared";
 import { ToolRegistry } from "../tools/tool-registry";
 import { LogRouter } from "../logs/log-router";
 import { StoreService } from "../store/store-service";
-import { StateStore } from "../state/state-store";
+import { StateStore, type PluginStateWithMetadata } from "../state/state-store";
 import { EventBus } from "../events/event-bus";
 import { PluginManagerConfig } from "../config";
 import { BlockRegistry } from "../blocks";
@@ -110,7 +110,7 @@ export class PluginManager {
     }
 
     // Fallback to state store for stopped/crashed plugins
-    const stored = this.#state.getByUid(uid);
+    const stored = this.#state.getByUidWithMetadata(uid);
     if (stored) {
       const restartState = this.#restartPolicy.getState(stored.ref);
       const status = restartState?.pendingTimer ? "restarting" : this.#healthToStatus(stored.health);
@@ -133,8 +133,8 @@ export class PluginManager {
       out.push(this.#toPlugin(p, "running"));
     }
 
-    // Add non-running plugins from state
-    for (const s of this.#state.listInstalled()) {
+    // Add non-running plugins from state (with cached metadata)
+    for (const s of this.#state.listInstalledWithMetadata()) {
       if (!seenRefs.has(s.ref)) {
         const restartState = this.#restartPolicy.getState(s.ref);
         const status = restartState?.pendingTimer ? "restarting" : this.#healthToStatus(s.health);
@@ -142,7 +142,7 @@ export class PluginManager {
       }
     }
 
-    return out;
+    return out.sort((a, b) => a.name.localeCompare(b.name));
   }
 
   /**
@@ -196,7 +196,13 @@ export class PluginManager {
   // ─────────────────────────────────────────────────────────────────────────
 
   async restoreEnabledFromState(): Promise<void> {
-    for (const p of this.#state.listInstalled()) {
+    // Load metadata cache for all installed plugins
+    await this.#state.loadMetadataCache();
+
+    for (const p of this.#state.listInstalledWithMetadata()) {
+      // Always load translations (needed even for disabled plugins)
+      await this.#i18n.registerPluginTranslations(p.name, p.dir);
+
       if (p.enabled) {
         try {
           await this.load(p.ref);
@@ -213,7 +219,9 @@ export class PluginManager {
     if (!entry) throw new Error(`Cannot resolve plugin: ${ref}`);
 
     const pluginDir = entry.substring(0, entry.lastIndexOf("/")).replace(/\/src$/, "");
-    const metadata = await this.#readPackageJson(pluginDir);
+
+    // Load/refresh metadata from package.json into cache
+    const metadata = await this.#state.refreshMetadata(ref, pluginDir);
     const pluginName = metadata.name;
 
     // Spawn plugin with native IPC
@@ -256,13 +264,11 @@ export class PluginManager {
     this.#startStabilityCheck(plugin);
     this.#restartPolicy.onStart(ref);
 
+    // Register only runtime state (metadata is cached separately)
     await this.#state.registerPlugin({
       ref,
       dir: pluginDir,
-      name: pluginName,
       uid,
-      version: metadata.version,
-      metadata,
     });
 
     this.#logs.info("plugin.loaded", {
@@ -293,7 +299,7 @@ export class PluginManager {
 
     this.#tools.unregisterByOwner(p.name);
     this.#blocks.unregisterPlugin(p.name);
-    this.#i18n.unregisterPluginTranslations(p.name);
+    // Keep translations cached - they're needed even when plugin is disabled
     this.#plugins.delete(ref);
 
     if (!skipRestartReset) {
@@ -409,19 +415,7 @@ export class PluginManager {
     };
   }
 
-  #fromStored(
-    s: {
-      uid: string;
-      ref: string;
-      dir: string;
-      name: string;
-      version: string;
-      metadata: PluginManifest;
-      lastError: string | null;
-      locales?: string[];
-    },
-    status: Plugin["status"],
-  ): Plugin {
+  #fromStored(s: PluginStateWithMetadata, status: Plugin["status"]): Plugin {
     const m = s.metadata;
     return {
       uid: s.uid,
@@ -441,7 +435,7 @@ export class PluginManager {
       lastError: s.lastError,
       tools: m.tools ?? [],
       blocks: m.blocks ?? [],
-      locales: s.locales ?? [],
+      locales: [],
     };
   }
 
@@ -536,32 +530,6 @@ export class PluginManager {
     this.#state.setHealth(p.ref, "crashed", reason);
     this.unload(p.ref, true);
     this.#attemptAutoRestart(p.ref, reason);
-  }
-
-  async #readPackageJson(pluginDir: string): Promise<PluginManifest> {
-    const pkgPath = `${pluginDir}/package.json`;
-    try {
-      const file = Bun.file(pkgPath);
-      const pkg = await file.json();
-      const basename = pluginDir.substring(pluginDir.lastIndexOf("/") + 1);
-      return {
-        name: pkg.name || basename,
-        version: pkg.version || "0.0.0",
-        description: pkg.description,
-        author: pkg.author,
-        repository: pkg.repository,
-        icon: pkg.icon,
-        keywords: pkg.keywords,
-        license: pkg.license,
-        dependencies: pkg.dependencies,
-        tools: pkg.tools,
-        blocks: pkg.blocks,
-      };
-    } catch (e) {
-      this.#logs.warn("plugin.package.error", { dir: pluginDir, error: String(e) });
-      const basename = pluginDir.substring(pluginDir.lastIndexOf("/") + 1);
-      return { name: basename, version: "0.0.0" };
-    }
   }
 
   #fileRefToPath(ref: string): string {

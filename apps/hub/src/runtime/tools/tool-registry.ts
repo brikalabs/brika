@@ -50,13 +50,15 @@ export class ToolRegistry {
   }
 
   list(): ToolSummary[] {
-    return [...this.#tools.values()].map((t) => ({
-      id: t.name,
-      description: t.description,
-      icon: t.icon,
-      color: t.color,
-      inputSchema: t.inputSchema,
-    }));
+    return [...this.#tools.values()]
+      .map((t) => ({
+        id: t.name,
+        description: t.description,
+        icon: t.icon,
+        color: t.color,
+        inputSchema: t.inputSchema,
+      }))
+      .sort((a, b) => a.id.localeCompare(b.id));
   }
 
   listByOwner(owner: string): ToolSummary[] {
