@@ -74,7 +74,8 @@ function loadManifest(): Manifest {
 
 function zodToSchema(schema: z.ZodObject<z.ZodRawShape>): BlockSchema {
   const json = z.toJSONSchema(schema, { unrepresentable: "any" });
-  const props = (json as { properties?: Record<string, { type?: string; description?: string }> }).properties ?? {};
+  const props =
+    (json as { properties?: Record<string, { type?: string; description?: string }> }).properties ?? {};
   type PropType = "string" | "number" | "boolean" | "object" | "array";
   const validTypes = new Set<PropType>(["string", "number", "boolean", "object", "array"]);
   return {
@@ -82,7 +83,10 @@ function zodToSchema(schema: z.ZodObject<z.ZodRawShape>): BlockSchema {
     properties: Object.fromEntries(
       Object.entries(props).map(([k, v]) => [
         k,
-        { type: (validTypes.has(v.type as PropType) ? v.type : "string") as PropType, description: v.description },
+        {
+          type: (validTypes.has(v.type as PropType) ? v.type : "string") as PropType,
+          description: v.description,
+        },
       ]),
     ),
     required: (json as { required?: string[] }).required ?? [],
@@ -250,7 +254,11 @@ class Context {
       outputs?: { id: string; name: string }[];
       schema: T;
     },
-    execute: (cfg: z.infer<T>, ctx: BlockContext, rt: BlockRuntime) => Promise<{ output: string; data?: Json }>,
+    execute: (
+      cfg: z.infer<T>,
+      ctx: BlockContext,
+      rt: BlockRuntime,
+    ) => Promise<{ output: string; data?: Json }>,
   ): { id: string } {
     const { id, name, description, inputs = [], outputs = [], schema } = spec;
     if (!this.#declaredBlocks.has(id)) {

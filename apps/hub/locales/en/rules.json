@@ -1,0 +1,28 @@
+{
+  "title": "Rules",
+  "subtitle": "Event-driven automation rules",
+  "empty": "No rules...",
+  "labels": {
+    "event": "Trigger Event",
+    "condition": "Condition",
+    "action": "Action",
+    "tool": "Tool name"
+  },
+  "table": {
+    "name": "Name",
+    "trigger": "Trigger",
+    "condition": "Condition",
+    "action": "Action",
+    "status": "Status"
+  },
+  "actions": {
+    "create": "Create Rule",
+    "edit": "Edit",
+    "delete": "Delete",
+    "enable": "Enable",
+    "disable": "Disable"
+  },
+  "dialog": {
+    "description": "Define an event-action automation"
+  }
+}

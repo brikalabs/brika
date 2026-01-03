@@ -1,0 +1,19 @@
+{
+  "title": "Dashboard",
+  "subtitle": "Home Automation Hub",
+  "welcome": "Welcome to ELIA",
+  "stats": {
+    "plugins": "Plugins",
+    "tools": "Tools",
+    "blocks": "Blocks",
+    "workflows": "Workflows",
+    "schedules": "Schedules",
+    "rules": "Rules",
+    "running": "Running",
+    "enabled": "Enabled"
+  },
+  "uptime": {
+    "title": "System Uptime",
+    "runtime": "Bun Runtime"
+  }
+}

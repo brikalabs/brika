@@ -1,0 +1,31 @@
+{
+  "name": "Plugin Minuterie",
+  "description": "Fonctionnalité de minuterie et rappel pour ELIA",
+  "tools": {
+    "set": {
+      "name": "Définir une minuterie",
+      "description": "Définir une minuterie qui se déclenche après la durée spécifiée"
+    },
+    "list": {
+      "name": "Lister les minuteries",
+      "description": "Lister toutes les minuteries actives avec le temps restant"
+    },
+    "cancel": {
+      "name": "Annuler la minuterie",
+      "description": "Annuler une minuterie active par ID ou nom"
+    },
+    "clear": {
+      "name": "Tout effacer",
+      "description": "Effacer toutes les minuteries actives en une fois"
+    }
+  },
+  "events": {
+    "completed": "Minuterie terminée",
+    "cancelled": "Minuterie annulée"
+  },
+  "fields": {
+    "name": "Nom de la minuterie",
+    "seconds": "Durée en secondes",
+    "target": "ID ou nom de la minuterie à annuler"
+  }
+}

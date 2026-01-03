@@ -1,5 +1,6 @@
 import React from "react";
 import { useSchedules, useScheduleMutations } from "./hooks";
+import { useLocale } from "@/lib/use-locale";
 import {
   Button,
   Card,
@@ -31,6 +32,7 @@ import { Plus, RefreshCw, Trash2, Calendar, Clock, Loader2 } from "lucide-react"
 import type { Schedule } from "@elia/shared";
 
 export function SchedulesPage() {
+  const { t } = useLocale();
   const { data: schedules = [], isLoading, refetch } = useSchedules();
   const { create, remove, enable, disable } = useScheduleMutations();
   const [dialogOpen, setDialogOpen] = React.useState(false);
@@ -61,7 +63,7 @@ export function SchedulesPage() {
   const toggle = (s: Schedule) => (s.enabled ? disable : enable).mutate(s.id);
   const fmt = (s: Schedule) => {
     if (!s.trigger) return "—";
-    return s.trigger.type === "cron" ? s.trigger.expr : `Every ${s.trigger.ms / 1000}s`;
+    return s.trigger.type === "cron" ? s.trigger.expr : `${t("schedules:every")} ${s.trigger.ms / 1000}s`;
   };
   const isBusy = create.isPending || remove.isPending || enable.isPending || disable.isPending;
 
@@ -69,29 +71,29 @@ export function SchedulesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Schedules</h2>
-          <p className="text-muted-foreground">Scheduled tasks</p>
+          <h2 className="text-2xl font-bold tracking-tight">{t("schedules:title")}</h2>
+          <p className="text-muted-foreground">{t("schedules:subtitle")}</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => refetch()} disabled={isLoading} className="gap-2">
             <RefreshCw className={`size-4 ${isLoading ? "animate-spin" : ""}`} />
-            Refresh
+            {t("common:actions.refresh")}
           </Button>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
               <Button className="gap-2">
                 <Plus className="size-4" />
-                Create
+                {t("schedules:actions.create")}
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[500px]">
               <DialogHeader>
-                <DialogTitle>Create Schedule</DialogTitle>
-                <DialogDescription>Set up a scheduled task</DialogDescription>
+                <DialogTitle>{t("schedules:actions.create")}</DialogTitle>
+                <DialogDescription>{t("schedules:dialog.description")}</DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Name</Label>
+                  <Label>{t("common:labels.name")}</Label>
                   <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
                 </div>
                 <Separator />
@@ -101,8 +103,8 @@ export function SchedulesPage() {
                     onChange={(e) => setForm({ ...form, triggerType: e.target.value as "cron" | "interval" })}
                     className="w-32"
                   >
-                    <option value="cron">Cron</option>
-                    <option value="interval">Interval</option>
+                    <option value="cron">{t("schedules:cron")}</option>
+                    <option value="interval">{t("schedules:interval")}</option>
                   </Select>
                   {form.triggerType === "cron" ? (
                     <Input
@@ -125,7 +127,7 @@ export function SchedulesPage() {
                   <Input
                     value={form.tool}
                     onChange={(e) => setForm({ ...form, tool: e.target.value })}
-                    placeholder="Tool name"
+                    placeholder={t("schedules:labels.tool")}
                     className="flex-1"
                   />
                   <Input
@@ -138,14 +140,15 @@ export function SchedulesPage() {
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setDialogOpen(false)}>
-                  Cancel
+                  {t("common:actions.cancel")}
                 </Button>
                 <Button
                   onClick={handleCreate}
                   disabled={isBusy || !form.name || !form.tool}
                   className="gap-2"
                 >
-                  {create.isPending && <Loader2 className="size-4 animate-spin" />}Create
+                  {create.isPending && <Loader2 className="size-4 animate-spin" />}
+                  {t("schedules:actions.create")}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -158,10 +161,10 @@ export function SchedulesPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[250px]">Name</TableHead>
-                <TableHead>Trigger</TableHead>
-                <TableHead>Action</TableHead>
-                <TableHead className="w-[100px]">Status</TableHead>
+                <TableHead className="w-[250px]">{t("common:labels.name")}</TableHead>
+                <TableHead>{t("schedules:labels.trigger")}</TableHead>
+                <TableHead>{t("schedules:labels.action")}</TableHead>
+                <TableHead className="w-[100px]">{t("common:labels.status")}</TableHead>
                 <TableHead className="w-[80px]" />
               </TableRow>
             </TableHeader>
@@ -176,7 +179,7 @@ export function SchedulesPage() {
                 <TableRow>
                   <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
                     <Calendar className="size-8 mx-auto mb-2 opacity-50" />
-                    No schedules...
+                    {t("schedules:empty")}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -215,7 +218,7 @@ export function SchedulesPage() {
                             <Trash2 className="size-4" />
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent>Delete</TooltipContent>
+                        <TooltipContent>{t("common:actions.delete")}</TooltipContent>
                       </Tooltip>
                     </TableCell>
                   </TableRow>

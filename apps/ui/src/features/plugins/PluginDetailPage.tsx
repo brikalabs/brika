@@ -1,5 +1,6 @@
 import { usePlugin, usePluginMutations } from "./hooks";
 import { pluginsApi } from "./api";
+import { useLocale } from "@/lib/use-locale";
 import {
   Avatar,
   AvatarFallback,
@@ -29,19 +30,17 @@ import {
   User,
   Github,
   Clock,
+  Globe,
 } from "lucide-react";
 import { DynamicIcon, type IconName } from "lucide-react/dynamic";
-import { Link } from "@tanstack/react-router";
+import { Link, Route, useParams } from "@tanstack/react-router";
 import { Uptime } from "@/components/Uptime";
 
-interface PluginDetailPageProps {
-  pluginUid: string;
-}
-
-export function PluginDetailPage({ pluginUid }: PluginDetailPageProps) {
-  const { data: plugin, isLoading, error, refetch } = usePlugin(pluginUid);
+export function PluginDetailPage() {
+  const { uid: pluginUid } = useParams({ strict: false });
+  const { data: plugin, isLoading, error, refetch } = usePlugin(pluginUid!);
   const { reload, disable, kill } = usePluginMutations();
-
+  const { t, tp, getLanguageName, formatTime } = useLocale();
   const isBusy = reload.isPending || disable.isPending || kill.isPending;
 
   // Extract author name
@@ -98,15 +97,13 @@ export function PluginDetailPage({ pluginUid }: PluginDetailPageProps) {
           className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="size-4" />
-          Back to Plugins
+          {t("plugins:backToList")}
         </Link>
         <Card>
           <CardContent className="py-12 text-center">
             <Plug className="size-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="font-semibold text-lg">Plugin not found</h3>
-            <p className="text-muted-foreground mt-1">
-              The plugin "{pluginUid}" is not loaded or doesn't exist
-            </p>
+            <h3 className="font-semibold text-lg">{t("plugins:notFound")}</h3>
+            <p className="text-muted-foreground mt-1">{t("plugins:notFoundDetail", { uid: pluginUid })}</p>
           </CardContent>
         </Card>
       </div>
@@ -117,6 +114,7 @@ export function PluginDetailPage({ pluginUid }: PluginDetailPageProps) {
   const repoUrl = getRepoUrl();
   const tools = plugin.tools ?? [];
   const blocks = plugin.blocks ?? [];
+  const locales = plugin.locales ?? [];
 
   return (
     <div className="space-y-6">
@@ -126,7 +124,7 @@ export function PluginDetailPage({ pluginUid }: PluginDetailPageProps) {
         className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
       >
         <ArrowLeft className="size-4" />
-        Back to Plugins
+        {t("plugins:backToList")}
       </Link>
 
       {/* Header */}
@@ -141,9 +139,10 @@ export function PluginDetailPage({ pluginUid }: PluginDetailPageProps) {
           </Avatar>
 
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">{plugin.name}</h1>
+            <h1 className="text-2xl font-bold tracking-tight">{tp(plugin.name, "name")}</h1>
+            <code className="text-xs text-muted-foreground font-mono">{plugin.name}</code>
             {plugin.description && (
-              <p className="text-muted-foreground mt-1">{plugin.description}</p>
+              <p className="text-muted-foreground mt-1">{tp(plugin.name, "description")}</p>
             )}
             <div className="flex flex-wrap gap-3 mt-3 text-sm text-muted-foreground">
               <Badge variant="outline" className="gap-1">
@@ -163,7 +162,7 @@ export function PluginDetailPage({ pluginUid }: PluginDetailPageProps) {
                   className="flex items-center gap-1 hover:text-foreground transition-colors"
                 >
                   <Github className="size-3" />
-                  Repository
+                  {t("plugins:details.repository")}
                   <ExternalLink className="size-3" />
                 </a>
               )}
@@ -182,7 +181,7 @@ export function PluginDetailPage({ pluginUid }: PluginDetailPageProps) {
             }
             className="px-3 py-1"
           >
-            {plugin.status}
+            {t(`common:status.${plugin.status}`)}
           </Badge>
 
           <Tooltip>
@@ -191,7 +190,7 @@ export function PluginDetailPage({ pluginUid }: PluginDetailPageProps) {
                 <RefreshCw className="size-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Refresh</TooltipContent>
+            <TooltipContent>{t("common:actions.refresh")}</TooltipContent>
           </Tooltip>
 
           <Tooltip>
@@ -205,7 +204,7 @@ export function PluginDetailPage({ pluginUid }: PluginDetailPageProps) {
                 <RotateCcw className="size-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Reload</TooltipContent>
+            <TooltipContent>{t("plugins:actions.reload")}</TooltipContent>
           </Tooltip>
 
           <Tooltip>
@@ -219,7 +218,7 @@ export function PluginDetailPage({ pluginUid }: PluginDetailPageProps) {
                 <Power className="size-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Disable</TooltipContent>
+            <TooltipContent>{t("plugins:actions.disable")}</TooltipContent>
           </Tooltip>
 
           <Tooltip>
@@ -233,7 +232,7 @@ export function PluginDetailPage({ pluginUid }: PluginDetailPageProps) {
                 <Skull className="size-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Kill</TooltipContent>
+            <TooltipContent>{t("plugins:actions.kill")}</TooltipContent>
           </Tooltip>
         </div>
       </div>
@@ -250,10 +249,30 @@ export function PluginDetailPage({ pluginUid }: PluginDetailPageProps) {
         </div>
       )}
 
+      {/* Languages */}
+      {locales.length > 0 && (
+        <div className="flex items-center gap-2">
+          <Globe className="size-4 text-muted-foreground" />
+          <span className="text-sm text-muted-foreground">{t("plugins:details.languages")}:</span>
+          <div className="flex flex-wrap gap-1.5">
+            {locales.map((loc) => (
+              <Tooltip key={loc}>
+                <TooltipTrigger asChild>
+                  <Badge variant="outline" className="uppercase text-xs font-mono">
+                    {loc}
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent>{getLanguageName(loc)}</TooltipContent>
+              </Tooltip>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Error display */}
       {plugin.lastError && (
         <div className="p-4 rounded-lg bg-destructive/10 text-destructive border border-destructive/20">
-          <strong>Error:</strong> {plugin.lastError}
+          <strong>{t("common:labels.error")}:</strong> {plugin.lastError}
         </div>
       )}
 
@@ -263,7 +282,7 @@ export function PluginDetailPage({ pluginUid }: PluginDetailPageProps) {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <Wrench className="size-4" />
-              Tools
+              {t("tools:title")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -275,7 +294,7 @@ export function PluginDetailPage({ pluginUid }: PluginDetailPageProps) {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <Boxes className="size-4" />
-              Blocks
+              {t("workflows:blocks")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -285,7 +304,7 @@ export function PluginDetailPage({ pluginUid }: PluginDetailPageProps) {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Process ID</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("plugins:details.pid")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold font-mono">{plugin.pid ?? "-"}</div>
@@ -296,17 +315,14 @@ export function PluginDetailPage({ pluginUid }: PluginDetailPageProps) {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <Clock className="size-4" />
-              Uptime
+              {t("plugins:details.uptime")}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <Uptime
-              startedAt={plugin.startedAt}
-              className="text-2xl font-bold"
-            />
+            <Uptime startedAt={plugin.startedAt} className="text-2xl font-bold" />
             {plugin.startedAt && (
               <div className="text-xs text-muted-foreground mt-1">
-                Started {new Date(plugin.startedAt).toLocaleTimeString()}
+                {t("plugins:details.startedAt")} {formatTime(plugin.startedAt)}
               </div>
             )}
           </CardContent>
@@ -319,7 +335,7 @@ export function PluginDetailPage({ pluginUid }: PluginDetailPageProps) {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Wrench className="size-5" />
-              Available Tools
+              {t("plugins:details.availableTools")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -327,6 +343,9 @@ export function PluginDetailPage({ pluginUid }: PluginDetailPageProps) {
               {tools.map((tool) => {
                 const iconName = (tool.icon || "wrench") as IconName;
                 const color = tool.color || "#d97706";
+                const toolKey = tool.id.split(":").pop() || tool.id;
+                const toolName = tp(plugin.name, `tools.${toolKey}.name`, toolKey);
+                const toolDesc = tp(plugin.name, `tools.${toolKey}.description`, tool.description);
 
                 return (
                   <div
@@ -339,10 +358,8 @@ export function PluginDetailPage({ pluginUid }: PluginDetailPageProps) {
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                      <div className="font-medium text-sm truncate">{tool.id}</div>
-                      {tool.description && (
-                        <div className="text-xs text-muted-foreground truncate">{tool.description}</div>
-                      )}
+                      <div className="font-medium text-sm truncate">{toolName}</div>
+                      {toolDesc && <div className="text-xs text-muted-foreground truncate">{toolDesc}</div>}
                     </div>
                   </div>
                 );
@@ -358,7 +375,7 @@ export function PluginDetailPage({ pluginUid }: PluginDetailPageProps) {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Boxes className="size-5" />
-              Available Blocks
+              {t("plugins:details.availableBlocks")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -366,6 +383,9 @@ export function PluginDetailPage({ pluginUid }: PluginDetailPageProps) {
               {blocks.map((block) => {
                 const iconName = (block.icon || "box") as IconName;
                 const color = block.color || "#6366f1";
+                const blockKey = block.id.split(":").pop() || block.id;
+                const blockName = tp(plugin.name, `blocks.${blockKey}.name`, block.name || blockKey);
+                const blockDesc = tp(plugin.name, `blocks.${blockKey}.description`, block.description);
 
                 return (
                   <div
@@ -378,10 +398,8 @@ export function PluginDetailPage({ pluginUid }: PluginDetailPageProps) {
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                      <div className="font-medium text-sm truncate">{block.name || block.id}</div>
-                      {block.description && (
-                        <div className="text-xs text-muted-foreground truncate">{block.description}</div>
-                      )}
+                      <div className="font-medium text-sm truncate">{blockName}</div>
+                      {blockDesc && <div className="text-xs text-muted-foreground truncate">{blockDesc}</div>}
                     </div>
                     {block.category && (
                       <Badge variant="outline" className="text-xs shrink-0">
@@ -399,7 +417,7 @@ export function PluginDetailPage({ pluginUid }: PluginDetailPageProps) {
       {/* Reference & Installation Info */}
       <Card>
         <CardHeader>
-          <CardTitle>Installation</CardTitle>
+          <CardTitle>{t("plugins:details.installation")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex items-start gap-2 text-sm">
@@ -407,16 +425,16 @@ export function PluginDetailPage({ pluginUid }: PluginDetailPageProps) {
             <code className="font-mono bg-muted px-2 py-1 rounded text-xs">{plugin.uid}</code>
           </div>
           <div className="flex items-start gap-2 text-sm">
-            <span className="text-muted-foreground w-24 shrink-0">Directory:</span>
+            <span className="text-muted-foreground w-24 shrink-0">{t("plugins:details.directory")}:</span>
             <code className="font-mono bg-muted px-2 py-1 rounded text-xs break-all">{plugin.dir}</code>
           </div>
           <div className="flex items-start gap-2 text-sm">
-            <span className="text-muted-foreground w-24 shrink-0">Reference:</span>
+            <span className="text-muted-foreground w-24 shrink-0">{t("plugins:labels.reference")}:</span>
             <code className="font-mono bg-muted px-2 py-1 rounded text-xs break-all">{plugin.ref}</code>
           </div>
           {plugin.license && (
             <div className="flex items-start gap-2 text-sm">
-              <span className="text-muted-foreground w-24 shrink-0">License:</span>
+              <span className="text-muted-foreground w-24 shrink-0">{t("plugins:details.license")}:</span>
               <span>{plugin.license}</span>
             </div>
           )}

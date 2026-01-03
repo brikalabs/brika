@@ -1,0 +1,14 @@
+{
+  "title": "Settings",
+  "subtitle": "Application preferences",
+  "sections": {
+    "general": "General",
+    "appearance": "Appearance",
+    "language": "Language"
+  },
+  "language": {
+    "title": "Language",
+    "description": "Select your preferred language",
+    "current": "Current language"
+  }
+}

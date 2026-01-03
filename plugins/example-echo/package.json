@@ -19,7 +19,12 @@
     ".": "./src/index.ts"
   },
   "tools": [
-    { "id": "echo", "description": "Echo back the provided message", "icon": "message-circle", "color": "#3b82f6" }
+    {
+      "id": "echo",
+      "description": "Echo back the provided message",
+      "icon": "message-circle",
+      "color": "#3b82f6"
+    }
   ],
   "dependencies": {
     "@elia/sdk": "workspace:*"

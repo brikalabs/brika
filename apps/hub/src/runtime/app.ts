@@ -9,6 +9,7 @@ import { StoreService } from "./store/store-service";
 import { StateStore } from "./state/state-store";
 import { ConfigLoader } from "./config/config-loader";
 import { AutomationEngine, YamlWorkflowLoader } from "./automations";
+import { I18nService } from "./i18n";
 
 // Hot reload detection
 const HOT_STARTED_KEY = Symbol.for("elia.hub.started");
@@ -46,6 +47,7 @@ export class HubApp {
     await inject(SchedulerService).init();
     await inject(RulesEngine).init();
     await inject(AutomationEngine).init();
+    await inject(I18nService).init();
 
     // Clean up stale plugin state entries (files that no longer exist)
     await inject(PluginManager).cleanupStaleState();

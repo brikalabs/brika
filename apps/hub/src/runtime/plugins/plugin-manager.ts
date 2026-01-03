@@ -25,6 +25,7 @@ import { EventBus } from "../events/event-bus";
 import { PluginManagerConfig } from "../config";
 import { BlockRegistry } from "../blocks";
 import { RestartPolicy } from "./restart-policy";
+import { I18nService } from "../i18n";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Internal Types
@@ -46,6 +47,8 @@ interface RunningPlugin {
   version: string;
   metadata: PluginManifest;
   startedAt: number;
+  /** Available translation locales */
+  locales: string[];
 }
 
 function now(): number {
@@ -74,6 +77,7 @@ export class PluginManager {
   readonly #store = inject(StoreService);
   readonly #state = inject(StateStore);
   readonly #events = inject(EventBus);
+  readonly #i18n = inject(I18nService);
 
   /** Running plugins keyed by ref */
   readonly #plugins = new Map<string, RunningPlugin>();
@@ -225,6 +229,9 @@ export class PluginManager {
     const existingState = this.#state.get(ref);
     const uid = existingState?.uid ?? generateUid(pluginName);
 
+    // Register plugin translations and detect available locales
+    const locales = await this.#i18n.registerPluginTranslations(pluginName, pluginDir);
+
     const plugin: RunningPlugin = {
       ref,
       dir: pluginDir,
@@ -240,6 +247,7 @@ export class PluginManager {
       version: metadata.version,
       metadata,
       startedAt: now(),
+      locales,
     };
 
     this.#setupHandlers(plugin);
@@ -285,6 +293,7 @@ export class PluginManager {
 
     this.#tools.unregisterByOwner(p.name);
     this.#blocks.unregisterPlugin(p.name);
+    this.#i18n.unregisterPluginTranslations(p.name);
     this.#plugins.delete(ref);
 
     if (!skipRestartReset) {
@@ -350,7 +359,6 @@ export class PluginManager {
     }
   }
 
-
   // ─────────────────────────────────────────────────────────────────────────
   // Private Helpers
   // ─────────────────────────────────────────────────────────────────────────
@@ -397,10 +405,23 @@ export class PluginManager {
       lastError: null,
       tools: m.tools ?? [],
       blocks: m.blocks ?? [],
+      locales: p.locales,
     };
   }
 
-  #fromStored(s: { uid: string; ref: string; dir: string; name: string; version: string; metadata: PluginManifest; lastError: string | null }, status: Plugin["status"]): Plugin {
+  #fromStored(
+    s: {
+      uid: string;
+      ref: string;
+      dir: string;
+      name: string;
+      version: string;
+      metadata: PluginManifest;
+      lastError: string | null;
+      locales?: string[];
+    },
+    status: Plugin["status"],
+  ): Plugin {
     const m = s.metadata;
     return {
       uid: s.uid,
@@ -420,6 +441,7 @@ export class PluginManager {
       lastError: s.lastError,
       tools: m.tools ?? [],
       blocks: m.blocks ?? [],
+      locales: s.locales ?? [],
     };
   }
 

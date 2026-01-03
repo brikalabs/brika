@@ -1,5 +1,6 @@
 import React, { useCallback, useRef, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useLocale } from "@/lib/use-locale";
 import {
   ReactFlow,
   Background,
@@ -48,6 +49,7 @@ function WorkflowEditorInner({
   onSave,
   onTest,
 }: WorkflowEditorInnerProps) {
+  const { t } = useLocale();
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const editor = useWorkflowEditor(initialWorkflow);
 
@@ -212,7 +214,7 @@ function WorkflowEditorInner({
             <Panel position="top-right" className="flex items-center gap-2">
               {isDirty && (
                 <Badge variant="secondary" className="text-xs">
-                  Unsaved changes
+                  {t("workflows:editor.unsavedChanges")}
                 </Badge>
               )}
               <Button
@@ -222,11 +224,11 @@ function WorkflowEditorInner({
                 disabled={executionLogs.length === 0}
               >
                 <RotateCcw className="size-4 mr-1" />
-                Reset
+                {t("common:actions.reset")}
               </Button>
               <Button size="sm" variant="default" onClick={handleSave} disabled={!isDirty}>
                 <Save className="size-4 mr-1" />
-                Save
+                {t("common:actions.save")}
               </Button>
             </Panel>
           )}

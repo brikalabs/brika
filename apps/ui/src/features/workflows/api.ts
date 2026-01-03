@@ -30,7 +30,7 @@ export interface WorkflowRun {
 
 export interface BlockDefinition {
   id: string;
-  type?: string;
+  type: string;
   name: string;
   description: string;
   icon: string;
@@ -43,6 +43,7 @@ export interface BlockDefinition {
     properties?: Record<string, unknown>;
     required?: string[];
   };
+  pluginId: string;
 }
 
 // Legacy alias

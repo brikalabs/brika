@@ -1,0 +1,28 @@
+{
+  "title": "Événements",
+  "subtitle": "Flux d'événements en temps réel",
+  "empty": "Aucun événement pour le moment",
+  "emptyHint": "Les événements apparaîtront ici au fur et à mesure",
+  "from": "de",
+  "paused": "En pause",
+  "labels": {
+    "type": "Type d'événement",
+    "payload": "Charge utile (JSON)"
+  },
+  "table": {
+    "time": "Heure",
+    "type": "Type",
+    "source": "Source",
+    "payload": "Charge utile"
+  },
+  "actions": {
+    "clear": "Effacer",
+    "pause": "Pause",
+    "resume": "Reprendre",
+    "emit": "Émettre"
+  },
+  "dialog": {
+    "title": "Émettre un événement",
+    "description": "Envoyer un événement personnalisé"
+  }
+}

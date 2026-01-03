@@ -1,0 +1,61 @@
+{
+  "name": "Built-in Blocks",
+  "description": "Core workflow blocks for ELIA automations",
+  "blocks": {
+    "action": {
+      "name": "Action",
+      "description": "Call a tool with arguments"
+    },
+    "condition": {
+      "name": "Condition",
+      "description": "Branch based on a condition"
+    },
+    "switch": {
+      "name": "Switch",
+      "description": "Multi-way branch based on value"
+    },
+    "delay": {
+      "name": "Delay",
+      "description": "Wait for a specified duration"
+    },
+    "emit": {
+      "name": "Emit Event",
+      "description": "Emit a custom event"
+    },
+    "set": {
+      "name": "Set Variable",
+      "description": "Set a workflow variable"
+    },
+    "log": {
+      "name": "Log",
+      "description": "Log a message"
+    },
+    "merge": {
+      "name": "Merge",
+      "description": "Wait for and merge multiple inputs"
+    },
+    "parallel": {
+      "name": "Parallel",
+      "description": "Split execution to parallel branches"
+    },
+    "end": {
+      "name": "End",
+      "description": "Terminate the workflow"
+    }
+  },
+  "fields": {
+    "tool": "Tool name to call",
+    "args": "Arguments to pass",
+    "if": "Condition expression",
+    "value": "Expression to evaluate",
+    "cases": "Map of value to output port",
+    "duration": "Duration to wait",
+    "event": "Event type to emit",
+    "payload": "Event payload",
+    "var": "Variable name",
+    "message": "Message to log",
+    "level": "Log level",
+    "mode": "Wait mode (all/any)",
+    "status": "End status"
+  }
+}

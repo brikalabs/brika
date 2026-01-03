@@ -1,4 +1,5 @@
 import { useTools, useToolCall } from "./hooks";
+import { useLocale } from "@/lib/use-locale";
 import {
   Button,
   Card,
@@ -42,6 +43,7 @@ interface FieldProps {
 }
 
 function SchemaField({ name, schema, value, onChange, required }: FieldProps) {
+  const { t } = useLocale();
   const id = `field-${name}`;
 
   return (
@@ -75,7 +77,9 @@ function SchemaField({ name, schema, value, onChange, required }: FieldProps) {
           type="number"
           value={value === undefined ? (schema.default ?? "") : String(value)}
           onChange={(e) => onChange(e.target.value ? Number(e.target.value) : undefined)}
-          placeholder={schema.default !== undefined ? `Default: ${schema.default}` : undefined}
+          placeholder={
+            schema.default !== undefined ? `${t("common:labels.default")}: ${schema.default}` : undefined
+          }
           className="font-mono"
         />
       ) : schema.enum ? (
@@ -85,7 +89,7 @@ function SchemaField({ name, schema, value, onChange, required }: FieldProps) {
           onChange={(e) => onChange(e.target.value || undefined)}
           className="flex h-9 w-full rounded-lg border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
         >
-          <option value="">Select...</option>
+          <option value="">{t("common:actions.select")}...</option>
           {schema.enum.map((opt) => (
             <option key={String(opt)} value={String(opt)}>
               {String(opt)}
@@ -98,7 +102,11 @@ function SchemaField({ name, schema, value, onChange, required }: FieldProps) {
           type="text"
           value={value === undefined ? "" : String(value)}
           onChange={(e) => onChange(e.target.value || undefined)}
-          placeholder={schema.default !== undefined ? `Default: ${schema.default}` : `Enter ${name}...`}
+          placeholder={
+            schema.default !== undefined
+              ? `${t("common:labels.default")}: ${schema.default}`
+              : `${t("common:labels.enter")} ${name}...`
+          }
           className={schema.type === "string" ? "" : "font-mono"}
         />
       )}
@@ -116,6 +124,7 @@ interface CallDialogProps {
 }
 
 function ToolCallDialog({ tool, onClose }: CallDialogProps) {
+  const { t } = useLocale();
   const callTool = useToolCall();
   const [formData, setFormData] = useState<Record<string, unknown>>({});
   const [result, setResult] = useState<{ ok: boolean; content?: string; data?: unknown } | null>(null);
@@ -156,7 +165,7 @@ function ToolCallDialog({ tool, onClose }: CallDialogProps) {
       const res = await callTool.mutateAsync({ name: tool.id, args: formData });
       setResult(res);
     } catch (e) {
-      setResult({ ok: false, content: `Error: ${e}` });
+      setResult({ ok: false, content: `${t("common:labels.error")}: ${e}` });
     }
   };
 
@@ -176,7 +185,7 @@ function ToolCallDialog({ tool, onClose }: CallDialogProps) {
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Wrench className="size-4" />
-                <span>Arguments</span>
+                <span>{t("tools:labels.arguments")}</span>
               </div>
               <div className="grid gap-4 p-4 rounded-lg border bg-muted/20">
                 {Object.entries(properties).map(([name, prop]) => (
@@ -194,7 +203,7 @@ function ToolCallDialog({ tool, onClose }: CallDialogProps) {
           ) : (
             <div className="p-4 rounded-lg border bg-muted/20 text-center text-sm text-muted-foreground">
               <Wrench className="size-6 mx-auto mb-2 opacity-50" />
-              This tool has no input arguments
+              {t("tools:noArguments")}
             </div>
           )}
 
@@ -206,12 +215,12 @@ function ToolCallDialog({ tool, onClose }: CallDialogProps) {
                   {result.ok ? (
                     <Badge variant="success" className="gap-1">
                       <Check className="size-3" />
-                      Success
+                      {t("common:status.success")}
                     </Badge>
                   ) : (
                     <Badge variant="destructive" className="gap-1">
                       <X className="size-3" />
-                      Failed
+                      {t("common:status.failed")}
                     </Badge>
                   )}
                 </div>
@@ -228,11 +237,11 @@ function ToolCallDialog({ tool, onClose }: CallDialogProps) {
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            Close
+            {t("common:actions.close")}
           </Button>
           <Button onClick={handleCall} disabled={callTool.isPending} className="gap-2">
             {callTool.isPending ? <Loader2 className="size-4 animate-spin" /> : <Play className="size-4" />}
-            Call
+            {t("tools:actions.call")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -245,11 +254,12 @@ function ToolCallDialog({ tool, onClose }: CallDialogProps) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function ToolsPage() {
+  const { t, tp } = useLocale();
   const { data: tools = [], isLoading, refetch } = useTools();
   const [selected, setSelected] = useState<ToolSummary | null>(null);
 
-  const getArgCount = (t: ToolSummary) => {
-    const props = t.inputSchema?.properties;
+  const getArgCount = (tool: ToolSummary) => {
+    const props = tool.inputSchema?.properties;
     if (!props) return 0;
     return Object.keys(props).length;
   };
@@ -258,12 +268,12 @@ export function ToolsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Tools</h2>
-          <p className="text-muted-foreground">Registered tools from plugins</p>
+          <h2 className="text-2xl font-bold tracking-tight">{t("tools:title")}</h2>
+          <p className="text-muted-foreground">{t("tools:subtitle")}</p>
         </div>
         <Button variant="outline" onClick={() => refetch()} disabled={isLoading} className="gap-2">
           <RefreshCw className={`size-4 ${isLoading ? "animate-spin" : ""}`} />
-          Refresh
+          {t("common:actions.refresh")}
         </Button>
       </div>
 
@@ -272,10 +282,10 @@ export function ToolsPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[280px]">Tool</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead className="w-[80px]">Args</TableHead>
-                <TableHead className="w-[140px]">Owner</TableHead>
+                <TableHead className="w-[280px]">{t("tools:labels.tool")}</TableHead>
+                <TableHead>{t("common:labels.description")}</TableHead>
+                <TableHead className="w-[80px]">{t("tools:labels.args")}</TableHead>
+                <TableHead className="w-[140px]">{t("tools:labels.owner")}</TableHead>
                 <TableHead className="w-[70px]" />
               </TableRow>
             </TableHeader>
@@ -290,19 +300,19 @@ export function ToolsPage() {
                 <TableRow>
                   <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
                     <Wrench className="size-8 mx-auto mb-2 opacity-50" />
-                    No tools registered...
+                    {t("tools:empty")}
                   </TableCell>
                 </TableRow>
               ) : (
-                tools.map((t) => {
-                  const iconName = (t.icon || "wrench") as IconName;
-                  const color = t.color || "#d97706";
-                  const owner = t.id.split(":")[0] || "hub";
+                tools.map((tool) => {
+                  const iconName = (tool.icon || "wrench") as IconName;
+                  const color = tool.color || "#d97706";
+                  const [pluginId, toolKey] = tool.id.split(":");
                   return (
                     <TableRow
-                      key={t.id}
+                      key={tool.id}
                       className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => setSelected(t)}
+                      onClick={() => setSelected(tool)}
                     >
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -312,16 +322,23 @@ export function ToolsPage() {
                           >
                             <DynamicIcon name={iconName} className="size-4" />
                           </div>
-                          <code className="font-mono text-sm font-medium">{t.id}</code>
+                          <div className="flex flex-col">
+                            <code className="font-mono text-sm font-medium">{tool.id}</code>
+                            <span className="text-xs text-muted-foreground">{toolKey}</span>
+                          </div>
                         </div>
                       </TableCell>
-                      <TableCell className="text-muted-foreground text-sm">{t.description || "—"}</TableCell>
+                      <TableCell className="text-muted-foreground text-sm">
+                        {t(`plugin:${pluginId}:tools.${toolKey}.description`)}
+                      </TableCell>
                       <TableCell>
-                        <Badge variant={getArgCount(t) > 0 ? "secondary" : "outline"}>{getArgCount(t)}</Badge>
+                        <Badge variant={getArgCount(tool) > 0 ? "secondary" : "outline"}>
+                          {getArgCount(tool)}
+                        </Badge>
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline" className="font-mono text-xs truncate max-w-[120px]">
-                          {owner}
+                          {pluginId}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -330,7 +347,7 @@ export function ToolsPage() {
                           variant="ghost"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setSelected(t);
+                            setSelected(tool);
                           }}
                         >
                           <Play className="size-4" />

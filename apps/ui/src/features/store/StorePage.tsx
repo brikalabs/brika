@@ -1,9 +1,11 @@
 import React from "react";
 import { useStoreMutations } from "./hooks";
+import { useLocale } from "@/lib/use-locale";
 import { Button, Card, CardContent, Input, Label } from "@/components/ui";
 import { Package, Download, Trash2, Loader2 } from "lucide-react";
 
 export function StorePage() {
+  const { t } = useLocale();
   const { install, uninstall } = useStoreMutations();
   const [ref, setRef] = React.useState("");
   const [wanted, setWanted] = React.useState("");
@@ -24,8 +26,8 @@ export function StorePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight">Store</h2>
-        <p className="text-muted-foreground">Install plugins from npm or git</p>
+        <h2 className="text-2xl font-bold tracking-tight">{t("store:title")}</h2>
+        <p className="text-muted-foreground">{t("store:subtitle")}</p>
       </div>
 
       <Card>
@@ -35,14 +37,14 @@ export function StorePage() {
               <Package className="size-6 text-primary" />
             </div>
             <div>
-              <h3 className="font-semibold">Install Plugin</h3>
-              <p className="text-sm text-muted-foreground">Install from npm or git URL</p>
+              <h3 className="font-semibold">{t("store:installPlugin")}</h3>
+              <p className="text-sm text-muted-foreground">{t("store:installHint")}</p>
             </div>
           </div>
 
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Package Reference</Label>
+              <Label>{t("store:labels.reference")}</Label>
               <Input
                 value={ref}
                 onChange={(e) => setRef(e.target.value)}
@@ -51,7 +53,7 @@ export function StorePage() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Version (optional)</Label>
+              <Label>{t("store:labels.version")}</Label>
               <Input
                 value={wanted}
                 onChange={(e) => setWanted(e.target.value)}
@@ -66,7 +68,7 @@ export function StorePage() {
                 ) : (
                   <Download className="size-4" />
                 )}
-                Install
+                {t("store:actions.install")}
               </Button>
               <Button
                 variant="destructive"
@@ -79,7 +81,7 @@ export function StorePage() {
                 ) : (
                   <Trash2 className="size-4" />
                 )}
-                Uninstall
+                {t("store:actions.uninstall")}
               </Button>
             </div>
           </div>
@@ -89,7 +91,7 @@ export function StorePage() {
       <Card>
         <CardContent className="py-12 text-center">
           <Package className="size-12 mx-auto text-muted-foreground mb-4 opacity-50" />
-          <p className="text-muted-foreground">Plugin registry coming soon...</p>
+          <p className="text-muted-foreground">{t("store:registryComingSoon")}</p>
         </CardContent>
       </Card>
     </div>

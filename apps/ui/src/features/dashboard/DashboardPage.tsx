@@ -5,6 +5,7 @@ import { useHealth } from "./hooks";
 import { usePlugins } from "@/features/plugins";
 import { useTools } from "@/features/tools";
 import { useEventStream } from "@/features/events";
+import { useLocale } from "@/lib/use-locale";
 import {
   Badge,
   Card,
@@ -132,6 +133,7 @@ function QuickAction({
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function DashboardPage() {
+  const { t, formatTime } = useLocale();
   const { data: health } = useHealth();
   const { data: plugins = [] } = usePlugins();
   const { data: tools = [] } = useTools();
@@ -151,11 +153,11 @@ export function DashboardPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight bg-linear-to-r from-foreground to-foreground/70 bg-clip-text">
-            Dashboard
+            {t("dashboard:title")}
           </h1>
           <p className="text-muted-foreground mt-1 flex items-center gap-2">
             <Sparkles className="size-4" />
-            ELIA Home Automation Hub
+            {t("dashboard:subtitle")}
           </p>
         </div>
         <Badge
@@ -166,7 +168,7 @@ export function DashboardPage() {
           )}
         >
           <Activity className={cn("size-4", health?.ok && "animate-pulse")} />
-          {health?.ok ? "Connected" : "Disconnected"}
+          {health?.ok ? t("common:status.running") : t("common:status.stopped")}
         </Badge>
       </div>
 
@@ -174,49 +176,47 @@ export function DashboardPage() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <StatCard
           icon={Plug}
-          label="Plugins"
+          label={t("dashboard:stats.plugins")}
           value={stats?.plugins.running ?? runningPlugins}
-          subValue={`of ${stats?.plugins.total ?? plugins.length} active`}
+          subValue={t("dashboard:stats.running")}
           href="/plugins"
           color="text-blue-500"
         />
         <StatCard
           icon={Wrench}
-          label="Tools"
+          label={t("dashboard:stats.tools")}
           value={stats?.tools.total ?? tools.length}
-          subValue="registered"
           href="/tools"
           color="text-emerald-500"
         />
         <StatCard
           icon={Box}
-          label="Blocks"
+          label={t("dashboard:stats.blocks")}
           value={stats?.blocks.total ?? 0}
-          subValue={`${Object.keys(stats?.blocks.byCategory ?? {}).length} categories`}
           href="/workflows"
           color="text-violet-500"
         />
         <StatCard
           icon={Workflow}
-          label="Workflows"
+          label={t("dashboard:stats.workflows")}
           value={stats?.workflows.enabled ?? 0}
-          subValue={`of ${stats?.workflows.total ?? 0} enabled`}
+          subValue={t("dashboard:stats.enabled")}
           href="/workflows"
           color="text-orange-500"
         />
         <StatCard
           icon={Calendar}
-          label="Schedules"
+          label={t("dashboard:stats.schedules")}
           value={stats?.schedules.enabled ?? 0}
-          subValue={`of ${stats?.schedules.total ?? 0} active`}
+          subValue={t("dashboard:stats.enabled")}
           href="/schedules"
           color="text-purple-500"
         />
         <StatCard
           icon={GitBranch}
-          label="Rules"
+          label={t("dashboard:stats.rules")}
           value={stats?.rules.enabled ?? 0}
-          subValue={`of ${stats?.rules.total ?? 0} active`}
+          subValue={t("dashboard:stats.enabled")}
           href="/rules"
           color="text-amber-500"
         />
@@ -231,11 +231,11 @@ export function DashboardPage() {
               <div>
                 <CardTitle className="flex items-center gap-2">
                   <Zap className="size-5 text-primary" />
-                  Recent Events
+                  {t("events:title")}
                 </CardTitle>
-                <CardDescription>Live event stream from all sources</CardDescription>
+                <CardDescription>{t("events:subtitle")}</CardDescription>
               </div>
-              <Badge variant="secondary">{events.length} events</Badge>
+              <Badge variant="secondary">{events.length}</Badge>
             </div>
           </CardHeader>
           <CardContent>
@@ -267,17 +267,14 @@ export function DashboardPage() {
                         </div>
                       </div>
                       <span className="text-xs text-muted-foreground tabular-nums shrink-0">
-                        {new Date(e.ts).toLocaleTimeString()}
+                        {formatTime(e.ts)}
                       </span>
                     </div>
                   ))}
                 {events.length === 0 && (
                   <div className="flex flex-col items-center justify-center py-12 text-center">
                     <Zap className="size-10 text-muted-foreground/30 mb-3" />
-                    <p className="text-sm text-muted-foreground">No events yet</p>
-                    <p className="text-xs text-muted-foreground/70 mt-1">
-                      Events will appear here in real-time
-                    </p>
+                    <p className="text-sm text-muted-foreground">{t("events:empty")}</p>
                   </div>
                 )}
               </div>
@@ -292,19 +289,29 @@ export function DashboardPage() {
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
                 <Play className="size-4 text-primary" />
-                Quick Actions
+                {t("common:actions.create")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               <QuickAction
                 icon={Workflow}
-                label="Create Workflow"
+                label={t("workflows:actions.create")}
                 href="/workflows"
                 color="text-orange-500"
               />
-              <QuickAction icon={Calendar} label="Add Schedule" href="/schedules" color="text-purple-500" />
-              <QuickAction icon={GitBranch} label="Create Rule" href="/rules" color="text-amber-500" />
-              <QuickAction icon={Plug} label="Manage Plugins" href="/plugins" color="text-blue-500" />
+              <QuickAction
+                icon={Calendar}
+                label={t("schedules:actions.create")}
+                href="/schedules"
+                color="text-purple-500"
+              />
+              <QuickAction
+                icon={GitBranch}
+                label={t("rules:actions.create")}
+                href="/rules"
+                color="text-amber-500"
+              />
+              <QuickAction icon={Plug} label={t("nav:plugins")} href="/plugins" color="text-blue-500" />
             </CardContent>
           </Card>
 
@@ -313,31 +320,31 @@ export function DashboardPage() {
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
                 <Server className="size-4 text-primary" />
-                System Status
+                {t("common:labels.status")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               <div className="flex items-center justify-between p-2.5 rounded-lg bg-muted/30">
-                <span className="text-sm">Hub Status</span>
+                <span className="text-sm">{t("dashboard:stats.plugins")}</span>
                 <Badge
                   variant={health?.ok ? "default" : "destructive"}
                   className={cn(health?.ok && "bg-emerald-500/10 text-emerald-500 border-emerald-500/20")}
                 >
-                  {health?.ok ? "Online" : "Offline"}
+                  {health?.ok ? t("common:status.running") : t("common:status.stopped")}
                 </Badge>
               </div>
               <div className="flex items-center justify-between p-2.5 rounded-lg bg-muted/30">
-                <span className="text-sm">Active Plugins</span>
+                <span className="text-sm">{t("dashboard:stats.plugins")}</span>
                 <Badge variant="secondary">
                   {runningPlugins} / {plugins.length}
                 </Badge>
               </div>
               <div className="flex items-center justify-between p-2.5 rounded-lg bg-muted/30">
-                <span className="text-sm">Registered Tools</span>
+                <span className="text-sm">{t("dashboard:stats.tools")}</span>
                 <Badge variant="secondary">{tools.length}</Badge>
               </div>
               <div className="flex items-center justify-between p-2.5 rounded-lg bg-muted/30">
-                <span className="text-sm">Available Blocks</span>
+                <span className="text-sm">{t("dashboard:stats.blocks")}</span>
                 <Badge variant="secondary">{stats?.blocks.total ?? 0}</Badge>
               </div>
             </CardContent>

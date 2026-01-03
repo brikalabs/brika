@@ -85,8 +85,11 @@ export interface Plugin {
   tools: ToolManifest[];
   /** Available blocks */
   blocks: BlockManifest[];
-}
 
+  // ─── i18n ───────────────────────────────────────────────────────────────────
+  /** Available translation locales (e.g., ["en", "fr", "fr-CH"]) */
+  locales: string[];
+}
 
 /** JSON Schema for tool input - enables smart UI forms */
 export interface ToolInputSchema {

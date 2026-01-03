@@ -1,0 +1,28 @@
+{
+  "title": "Events",
+  "subtitle": "Real-time event stream",
+  "empty": "No events yet",
+  "emptyHint": "Events will appear here as they occur",
+  "from": "from",
+  "paused": "Paused",
+  "labels": {
+    "type": "Event Type",
+    "payload": "Payload (JSON)"
+  },
+  "table": {
+    "time": "Time",
+    "type": "Type",
+    "source": "Source",
+    "payload": "Payload"
+  },
+  "actions": {
+    "clear": "Clear",
+    "pause": "Pause",
+    "resume": "Resume",
+    "emit": "Emit"
+  },
+  "dialog": {
+    "title": "Emit Event",
+    "description": "Send a custom event"
+  }
+}

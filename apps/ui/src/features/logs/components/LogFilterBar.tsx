@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useLocale } from "@/lib/use-locale";
 import {
   Button,
   Input,
@@ -45,6 +46,7 @@ export function LogFilterBar({
   onDateRangeChange,
   onReset,
 }: LogFilterBarProps) {
+  const { t } = useLocale();
   const [searchInput, setSearchInput] = useState(filters.search);
 
   const hasActiveFilters =
@@ -92,12 +94,12 @@ export function LogFilterBar({
             <Input
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              placeholder="Search log messages..."
+              placeholder={t("logs:searchPlaceholder")}
               className="pl-9"
             />
           </div>
           <Button type="submit" variant="secondary">
-            Search
+            {t("common:actions.search")}
           </Button>
         </form>
 
@@ -107,10 +109,10 @@ export function LogFilterBar({
             onValueChange={(v) => onPluginChange(v === "all" ? null : v)}
           >
             <SelectTrigger className="w-56">
-              <SelectValue placeholder="All plugins" />
+              <SelectValue placeholder={t("logs:allPlugins")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All plugins</SelectItem>
+              <SelectItem value="all">{t("logs:allPlugins")}</SelectItem>
               {pluginOptions.map((plugin) => (
                 <SelectItem key={plugin.ref} value={plugin.ref}>
                   {plugin.name}
@@ -124,14 +126,14 @@ export function LogFilterBar({
         {hasActiveFilters && (
           <Button variant="ghost" onClick={onReset} className="gap-2">
             <X className="size-4" />
-            Clear filters
+            {t("logs:clearFilters")}
           </Button>
         )}
       </div>
 
       {/* Level Filter Pills */}
       <div className="flex gap-2 items-center">
-        <span className="text-sm text-muted-foreground w-14">Level:</span>
+        <span className="text-sm text-muted-foreground w-14">{t("logs:filters.level")}:</span>
         {LOG_LEVELS.map((level) => (
           <Badge
             key={level}
@@ -146,7 +148,7 @@ export function LogFilterBar({
 
       {/* Source Filter Pills */}
       <div className="flex gap-2 items-center flex-wrap">
-        <span className="text-sm text-muted-foreground w-14">Source:</span>
+        <span className="text-sm text-muted-foreground w-14">{t("logs:filters.source")}:</span>
         {LOG_SOURCES.map((source) => (
           <Badge
             key={source}
@@ -170,7 +172,7 @@ export function LogFilterBar({
           }
           className="w-auto"
         />
-        <span className="text-muted-foreground">to</span>
+        <span className="text-muted-foreground">{t("logs:filters.to")}</span>
         <Input
           type="datetime-local"
           value={formatDateForInput(filters.endDate)}

@@ -1,0 +1,34 @@
+{
+  "title": "Schedules",
+  "subtitle": "Scheduled tasks",
+  "empty": "No schedules...",
+  "every": "Every",
+  "cron": "Cron",
+  "interval": "Interval",
+  "labels": {
+    "trigger": "Trigger",
+    "action": "Action",
+    "tool": "Tool name"
+  },
+  "table": {
+    "name": "Name",
+    "trigger": "Trigger",
+    "action": "Action",
+    "status": "Status",
+    "nextRun": "Next Run"
+  },
+  "actions": {
+    "create": "Create Schedule",
+    "edit": "Edit",
+    "delete": "Delete",
+    "enable": "Enable",
+    "disable": "Disable"
+  },
+  "dialog": {
+    "description": "Set up a scheduled task"
+  },
+  "types": {
+    "cron": "Cron",
+    "interval": "Interval"
+  }
+}

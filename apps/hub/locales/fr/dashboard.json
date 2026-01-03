@@ -1,0 +1,19 @@
+{
+  "title": "Tableau de bord",
+  "subtitle": "Hub domotique",
+  "welcome": "Bienvenue sur ELIA",
+  "stats": {
+    "plugins": "Plugins",
+    "tools": "Outils",
+    "blocks": "Blocs",
+    "workflows": "Workflows",
+    "schedules": "Planifications",
+    "rules": "Règles",
+    "running": "En cours",
+    "enabled": "Activé"
+  },
+  "uptime": {
+    "title": "Temps de fonctionnement",
+    "runtime": "Runtime Bun"
+  }
+}

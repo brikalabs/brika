@@ -1,0 +1,36 @@
+{
+  "title": "Workflows",
+  "subtitle": "Automatisations par blocs déclenchées par événements",
+  "empty": "Aucun workflow pour le moment. Créez-en un avec le bouton ci-dessus ou ajoutez un fichier YAML dans le dossier automations/.",
+  "notFound": "Workflow introuvable",
+  "triggersOn": "Déclenché par",
+  "blocks": "Blocs",
+  "blocksDescription": "Types de blocs disponibles pour construire des workflows",
+  "confirmDelete": "Supprimer le workflow « {{id}} » ?",
+  "runs": {
+    "title": "Exécutions",
+    "empty": "Aucune exécution pour le moment. Déclenchez un workflow pour voir l'historique."
+  },
+  "table": {
+    "name": "Nom",
+    "trigger": "Déclencheur",
+    "status": "Statut",
+    "actions": "Actions"
+  },
+  "actions": {
+    "create": "Nouveau Workflow",
+    "edit": "Modifier",
+    "delete": "Supprimer",
+    "enable": "Activer",
+    "disable": "Désactiver",
+    "run": "Exécuter"
+  },
+  "editor": {
+    "title": "Éditeur de Workflow",
+    "blocks": "Blocs",
+    "properties": "Propriétés",
+    "save": "Enregistrer le Workflow",
+    "discard": "Annuler les modifications",
+    "unsavedChanges": "Modifications non enregistrées"
+  }
+}

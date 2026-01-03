@@ -1,0 +1,13 @@
+{
+  "name": "Plugin Écho",
+  "description": "Plugin d'exemple simple qui renvoie des messages en écho",
+  "tools": {
+    "echo": {
+      "name": "Écho",
+      "description": "Renvoyer le message fourni en écho"
+    }
+  },
+  "fields": {
+    "message": "Le message à renvoyer"
+  }
+}

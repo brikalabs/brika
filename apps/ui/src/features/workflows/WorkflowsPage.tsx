@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ReactFlowProvider } from "@xyflow/react";
+import { useLocale } from "@/lib/use-locale";
 import {
   Card,
   CardContent,
@@ -18,6 +19,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  Avatar,
+  AvatarFallback,
 } from "@/components/ui";
 import { Play, Clock, CheckCircle, XCircle, AlertCircle, Eye, Plus, Pencil, Trash2 } from "lucide-react";
 import { DynamicIcon, type IconName } from "lucide-react/dynamic";
@@ -35,6 +38,7 @@ import {
 import { WorkflowEditor } from "./editor";
 import { saveWorkflow } from "./api";
 import type { Workflow, WorkflowRun, BlockType } from "./api";
+import { useTranslation } from "react-i18next";
 
 function formatDuration(ms: number) {
   if (ms < 1000) return `${ms}ms`;
@@ -42,11 +46,8 @@ function formatDuration(ms: number) {
   return `${(ms / 60000).toFixed(1)}m`;
 }
 
-function formatTime(ts: number) {
-  return new Date(ts).toLocaleTimeString();
-}
-
 function StatusBadge({ status }: { status: WorkflowRun["status"] }) {
+  const { t } = useLocale();
   const variants: Record<
     string,
     { variant: "default" | "secondary" | "destructive" | "outline"; icon: React.ElementType }
@@ -59,7 +60,7 @@ function StatusBadge({ status }: { status: WorkflowRun["status"] }) {
   return (
     <Badge variant={variant} className="gap-1">
       <Icon className="size-3" />
-      {status}
+      {t(`common:status.${status}`)}
     </Badge>
   );
 }
@@ -79,6 +80,7 @@ function WorkflowCard({
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  const { t } = useLocale();
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -86,22 +88,22 @@ function WorkflowCard({
           <div>
             <CardTitle className="text-lg">{workflow.name || workflow.id}</CardTitle>
             <CardDescription className="mt-1">
-              Triggers on:{" "}
+              {t("workflows:triggersOn")}:{" "}
               <code className="text-xs bg-muted px-1 py-0.5 rounded">{workflow.trigger.event}</code>
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
             <Button size="sm" variant="outline" onClick={onView}>
               <Eye className="size-3 mr-1" />
-              View
+              {t("common:actions.view")}
             </Button>
             <Button size="sm" variant="outline" onClick={onEdit}>
               <Pencil className="size-3 mr-1" />
-              Edit
+              {t("common:actions.edit")}
             </Button>
             <Button size="sm" variant="outline" onClick={onTrigger}>
               <Play className="size-3 mr-1" />
-              Run
+              {t("workflows:actions.run")}
             </Button>
             <Button size="sm" variant="ghost" onClick={onDelete}>
               <Trash2 className="size-3 text-destructive" />
@@ -114,7 +116,7 @@ function WorkflowCard({
         <CardContent className="pt-0">
           <div className="flex flex-wrap gap-1.5">
             {workflow.blocks.map((block) => {
-              const iconName = (block.icon || block.type || "box") as IconName;
+              const iconName = (block.icon || "box") as IconName;
               return (
                 <Badge key={block.id} variant="outline" className="gap-1 text-xs">
                   <DynamicIcon name={iconName} className="size-3" />
@@ -130,12 +132,10 @@ function WorkflowCard({
 }
 
 function RunsTable({ runs }: { runs: WorkflowRun[] }) {
+  const { t, formatTime } = useLocale();
+
   if (runs.length === 0) {
-    return (
-      <div className="text-center text-muted-foreground py-12">
-        No runs yet. Trigger a workflow to see execution history.
-      </div>
-    );
+    return <div className="text-center text-muted-foreground py-12">{t("workflows:runs.empty")}</div>;
   }
 
   return (
@@ -157,25 +157,36 @@ function RunsTable({ runs }: { runs: WorkflowRun[] }) {
 }
 
 function BlockTypesGrid({ types }: { types: BlockType[] }) {
+  const { tp } = useLocale();
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
       {types.map((block) => {
         const iconName = (block.icon || "box") as IconName;
+        const color = block.color || "#6366f1";
+        const blockKey = block.id.split(":").pop() || block.id;
+        const blockName = tp(block.pluginId, `blocks.${blockKey}.name`, block.name || blockKey);
+        const blockDesc = tp(block.pluginId, `blocks.${blockKey}.description`, block.description);
+
         return (
-          <Card key={block.type || block.id} className="p-4">
-            <div className="flex items-center gap-3">
-              <div
-                className="size-10 rounded-lg flex items-center justify-center"
-                style={{ backgroundColor: block.color + "20", color: block.color }}
-              >
+          <div
+            key={block.id}
+            className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
+          >
+            <Avatar className="size-10 rounded-lg">
+              <AvatarFallback className="rounded-lg" style={{ backgroundColor: `${color}20`, color }}>
                 <DynamicIcon name={iconName} className="size-5" />
-              </div>
-              <div>
-                <div className="font-medium text-sm">{block.name}</div>
-                <div className="text-xs text-muted-foreground font-mono">{block.type || block.id}</div>
-              </div>
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <div className="font-medium text-sm truncate">{blockName}</div>
+              {blockDesc && <div className="text-xs text-muted-foreground truncate">{blockDesc}</div>}
             </div>
-          </Card>
+            {block.category && (
+              <Badge variant="outline" className="text-xs shrink-0">
+                {block.category}
+              </Badge>
+            )}
+          </div>
         );
       })}
     </div>
@@ -244,6 +255,7 @@ function WorkflowViewerDialog({
   open: boolean;
   onClose: () => void;
 }) {
+  const { t } = useLocale();
   const { data: workflow, isLoading } = useWorkflow(workflowId || "");
 
   if (!open) return null;
@@ -259,7 +271,7 @@ function WorkflowViewerDialog({
 
         {isLoading ? (
           <div className="h-[500px] flex items-center justify-center text-muted-foreground">
-            Loading workflow...
+            {t("common:loading")}
           </div>
         ) : workflow ? (
           <ReactFlowProvider>
@@ -267,7 +279,7 @@ function WorkflowViewerDialog({
           </ReactFlowProvider>
         ) : (
           <div className="h-[500px] flex items-center justify-center text-muted-foreground">
-            Workflow not found
+            {t("workflows:notFound")}
           </div>
         )}
       </DialogContent>
@@ -276,6 +288,7 @@ function WorkflowViewerDialog({
 }
 
 export function WorkflowsPage() {
+  const { t } = useLocale();
   const [tab, setTab] = useState("workflows");
   const [viewingWorkflow, setViewingWorkflow] = useState<string | null>(null);
   const [editingWorkflow, setEditingWorkflow] = useState<Workflow | null>(null);
@@ -302,7 +315,7 @@ export function WorkflowsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm(`Delete workflow "${id}"?`)) {
+    if (confirm(t("workflows:confirmDelete", { id }))) {
       deleteMutation.mutate(id);
     }
   };
@@ -324,34 +337,31 @@ export function WorkflowsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Workflows</h1>
-          <p className="text-muted-foreground mt-1">Block-based automations triggered by events</p>
+          <h1 className="text-3xl font-bold tracking-tight">{t("workflows:title")}</h1>
+          <p className="text-muted-foreground mt-1">{t("workflows:subtitle")}</p>
         </div>
         <Button onClick={handleCreateNew}>
           <Plus className="size-4 mr-2" />
-          New Workflow
+          {t("workflows:actions.create")}
         </Button>
       </div>
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
-          <TabsTrigger value="workflows">Workflows</TabsTrigger>
-          <TabsTrigger value="runs">Runs</TabsTrigger>
-          <TabsTrigger value="blocks">Block Types</TabsTrigger>
+          <TabsTrigger value="workflows">{t("workflows:title")}</TabsTrigger>
+          <TabsTrigger value="runs">{t("workflows:runs.title")}</TabsTrigger>
+          <TabsTrigger value="blocks">{t("workflows:blocks")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="workflows" className="mt-6">
           {loadingWorkflows ? (
-            <div className="text-muted-foreground">Loading...</div>
+            <div className="text-muted-foreground">{t("common:loading")}</div>
           ) : workflows.length === 0 ? (
             <Card className="p-12 text-center">
-              <p className="text-muted-foreground mb-4">
-                No workflows yet. Create one using the button above or add a YAML file in the{" "}
-                <code className="bg-muted px-1 py-0.5 rounded">automations/</code> folder.
-              </p>
+              <p className="text-muted-foreground mb-4">{t("workflows:empty")}</p>
               <Button onClick={handleCreateNew}>
                 <Plus className="size-4 mr-2" />
-                Create Workflow
+                {t("workflows:actions.create")}
               </Button>
             </Card>
           ) : (
@@ -374,7 +384,7 @@ export function WorkflowsPage() {
         <TabsContent value="runs" className="mt-6">
           <ScrollArea className="h-[500px]">
             {loadingRuns ? (
-              <div className="text-muted-foreground">Loading...</div>
+              <div className="text-muted-foreground">{t("common:loading")}</div>
             ) : (
               <RunsTable runs={runs} />
             )}
@@ -383,7 +393,7 @@ export function WorkflowsPage() {
 
         <TabsContent value="blocks" className="mt-6">
           <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">Available block types for building workflows</p>
+            <p className="text-sm text-muted-foreground">{t("workflows:blocksDescription")}</p>
             <BlockTypesGrid types={blockTypes} />
           </div>
         </TabsContent>

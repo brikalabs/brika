@@ -1,0 +1,21 @@
+{
+  "title": "Store",
+  "subtitle": "Install plugins from npm or git",
+  "empty": "No plugins available",
+  "installPlugin": "Install Plugin",
+  "installHint": "Install from npm or git URL",
+  "registryComingSoon": "Plugin registry coming soon...",
+  "labels": {
+    "reference": "Package Reference",
+    "version": "Version (optional)"
+  },
+  "search": {
+    "placeholder": "Search plugins..."
+  },
+  "actions": {
+    "install": "Install",
+    "installed": "Installed",
+    "update": "Update",
+    "uninstall": "Uninstall"
+  }
+}

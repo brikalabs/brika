@@ -1,5 +1,6 @@
 import React from "react";
 import { useRules, useRuleMutations } from "./hooks";
+import { useLocale } from "@/lib/use-locale";
 import {
   Button,
   Card,
@@ -31,6 +32,7 @@ import { Plus, RefreshCw, Trash2, GitBranch, Zap, Loader2 } from "lucide-react";
 import type { Rule } from "@elia/shared";
 
 export function RulesPage() {
+  const { t } = useLocale();
   const { data: rules = [], isLoading, refetch } = useRules();
   const { create, remove, enable, disable } = useRuleMutations();
   const [dialogOpen, setDialogOpen] = React.useState(false);
@@ -55,34 +57,34 @@ export function RulesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Rules</h2>
-          <p className="text-muted-foreground">Event-driven automation rules</p>
+          <h2 className="text-2xl font-bold tracking-tight">{t("rules:title")}</h2>
+          <p className="text-muted-foreground">{t("rules:subtitle")}</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => refetch()} disabled={isLoading} className="gap-2">
             <RefreshCw className={`size-4 ${isLoading ? "animate-spin" : ""}`} />
-            Refresh
+            {t("common:actions.refresh")}
           </Button>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
               <Button className="gap-2">
                 <Plus className="size-4" />
-                Create
+                {t("rules:actions.create")}
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[500px]">
               <DialogHeader>
-                <DialogTitle>Create Rule</DialogTitle>
-                <DialogDescription>Define an event-action automation</DialogDescription>
+                <DialogTitle>{t("rules:actions.create")}</DialogTitle>
+                <DialogDescription>{t("rules:dialog.description")}</DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Name</Label>
+                  <Label>{t("common:labels.name")}</Label>
                   <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
                 </div>
                 <Separator />
                 <div className="space-y-2">
-                  <Label>Trigger Event</Label>
+                  <Label>{t("rules:labels.event")}</Label>
                   <Input
                     value={form.event}
                     onChange={(e) => setForm({ ...form, event: e.target.value })}
@@ -91,7 +93,7 @@ export function RulesPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Condition</Label>
+                  <Label>{t("rules:labels.condition")}</Label>
                   <Textarea
                     value={form.condition}
                     onChange={(e) => setForm({ ...form, condition: e.target.value })}
@@ -104,7 +106,7 @@ export function RulesPage() {
                   <Input
                     value={form.tool}
                     onChange={(e) => setForm({ ...form, tool: e.target.value })}
-                    placeholder="Tool name"
+                    placeholder={t("rules:labels.tool")}
                     className="flex-1"
                   />
                   <Input
@@ -117,14 +119,15 @@ export function RulesPage() {
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setDialogOpen(false)}>
-                  Cancel
+                  {t("common:actions.cancel")}
                 </Button>
                 <Button
                   onClick={handleCreate}
                   disabled={isBusy || !form.name || !form.event || !form.tool}
                   className="gap-2"
                 >
-                  {create.isPending && <Loader2 className="size-4 animate-spin" />}Create
+                  {create.isPending && <Loader2 className="size-4 animate-spin" />}
+                  {t("rules:actions.create")}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -137,11 +140,11 @@ export function RulesPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[200px]">Name</TableHead>
-                <TableHead>Event</TableHead>
-                <TableHead>Condition</TableHead>
-                <TableHead>Action</TableHead>
-                <TableHead className="w-[80px]">Status</TableHead>
+                <TableHead className="w-[200px]">{t("common:labels.name")}</TableHead>
+                <TableHead>{t("rules:labels.event")}</TableHead>
+                <TableHead>{t("rules:labels.condition")}</TableHead>
+                <TableHead>{t("rules:labels.action")}</TableHead>
+                <TableHead className="w-[80px]">{t("common:labels.status")}</TableHead>
                 <TableHead className="w-[60px]" />
               </TableRow>
             </TableHeader>
@@ -156,7 +159,7 @@ export function RulesPage() {
                 <TableRow>
                   <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
                     <GitBranch className="size-8 mx-auto mb-2 opacity-50" />
-                    No rules...
+                    {t("rules:empty")}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -196,7 +199,7 @@ export function RulesPage() {
                             <Trash2 className="size-4" />
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent>Delete</TooltipContent>
+                        <TooltipContent>{t("common:actions.delete")}</TooltipContent>
                       </Tooltip>
                     </TableCell>
                   </TableRow>

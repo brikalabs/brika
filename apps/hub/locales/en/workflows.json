@@ -1,0 +1,36 @@
+{
+  "title": "Workflows",
+  "subtitle": "Block-based automations triggered by events",
+  "empty": "No workflows yet. Create one using the button above or add a YAML file in the automations/ folder.",
+  "notFound": "Workflow not found",
+  "triggersOn": "Triggers on",
+  "blocks": "Blocks",
+  "blocksDescription": "Available block types for building workflows",
+  "confirmDelete": "Delete workflow \"{{id}}\"?",
+  "runs": {
+    "title": "Runs",
+    "empty": "No runs yet. Trigger a workflow to see execution history."
+  },
+  "table": {
+    "name": "Name",
+    "trigger": "Trigger",
+    "status": "Status",
+    "actions": "Actions"
+  },
+  "actions": {
+    "create": "New Workflow",
+    "edit": "Edit",
+    "delete": "Delete",
+    "enable": "Enable",
+    "disable": "Disable",
+    "run": "Run"
+  },
+  "editor": {
+    "title": "Workflow Editor",
+    "blocks": "Blocks",
+    "properties": "Properties",
+    "save": "Save Workflow",
+    "discard": "Discard Changes",
+    "unsavedChanges": "Unsaved changes"
+  }
+}

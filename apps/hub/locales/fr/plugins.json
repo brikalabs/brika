@@ -1,0 +1,55 @@
+{
+  "title": "Plugins",
+  "subtitle": "Gérer les plugins installés",
+  "empty": "Aucun plugin installé",
+  "emptyHint": "Cliquez sur « Charger un plugin » pour charger votre premier plugin",
+  "backToList": "Retour aux Plugins",
+  "notFound": "Plugin introuvable",
+  "notFoundDetail": "Le plugin « {{uid}} » n'est pas chargé ou n'existe pas",
+  "details": {
+    "title": "Détails du plugin",
+    "info": "Informations",
+    "tools": "Outils",
+    "blocks": "Blocs",
+    "languages": "Langues",
+    "dependencies": "Dépendances",
+    "repository": "Dépôt",
+    "license": "Licence",
+    "keywords": "Mots-clés",
+    "pid": "ID du processus",
+    "uptime": "Temps de fonctionnement",
+    "startedAt": "Démarré",
+    "availableTools": "Outils disponibles",
+    "availableBlocks": "Blocs disponibles",
+    "installation": "Installation",
+    "directory": "Répertoire"
+  },
+  "actions": {
+    "load": "Charger un plugin",
+    "enable": "Activer",
+    "disable": "Désactiver",
+    "reload": "Recharger",
+    "kill": "Terminer",
+    "viewDetails": "Voir les détails"
+  },
+  "labels": {
+    "reference": "Référence du plugin"
+  },
+  "dialog": {
+    "loadDescription": "Entrez la référence du plugin à charger"
+  },
+  "status": {
+    "running": "En cours",
+    "stopped": "Arrêté",
+    "crashed": "Planté",
+    "restarting": "Redémarrage..."
+  },
+  "table": {
+    "name": "Nom",
+    "version": "Version",
+    "status": "Statut",
+    "tools": "Outils",
+    "blocks": "Blocs",
+    "actions": "Actions"
+  }
+}

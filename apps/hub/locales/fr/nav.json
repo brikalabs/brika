@@ -1,0 +1,12 @@
+{
+  "dashboard": "Tableau de bord",
+  "plugins": "Plugins",
+  "tools": "Outils",
+  "events": "Événements",
+  "workflows": "Workflows",
+  "schedules": "Planifications",
+  "rules": "Règles",
+  "logs": "Journaux",
+  "store": "Boutique",
+  "settings": "Paramètres"
+}

@@ -1,0 +1,31 @@
+{
+  "title": "Outils",
+  "subtitle": "Outils enregistrés depuis les plugins",
+  "empty": "Aucun outil enregistré...",
+  "noArguments": "Cet outil n'a pas d'arguments d'entrée",
+  "labels": {
+    "tool": "Outil",
+    "arguments": "Arguments",
+    "args": "Args",
+    "owner": "Propriétaire"
+  },
+  "table": {
+    "tool": "Outil",
+    "description": "Description",
+    "args": "Args",
+    "owner": "Propriétaire"
+  },
+  "actions": {
+    "call": "Appeler"
+  },
+  "dialog": {
+    "title": "Appeler un outil",
+    "arguments": "Arguments",
+    "noArgs": "Cet outil n'a pas d'arguments d'entrée",
+    "call": "Appeler",
+    "result": {
+      "success": "Succès",
+      "failed": "Échoué"
+    }
+  }
+}

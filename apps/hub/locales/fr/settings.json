@@ -1,0 +1,14 @@
+{
+  "title": "Paramètres",
+  "subtitle": "Préférences de l'application",
+  "sections": {
+    "general": "Général",
+    "appearance": "Apparence",
+    "language": "Langue"
+  },
+  "language": {
+    "title": "Langue",
+    "description": "Sélectionnez votre langue préférée",
+    "current": "Langue actuelle"
+  }
+}

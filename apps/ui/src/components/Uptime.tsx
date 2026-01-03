@@ -73,4 +73,3 @@ export function Uptime({ startedAt, className }: UptimeProps) {
 
   return <span className={className}>{uptime}</span>;
 }
-

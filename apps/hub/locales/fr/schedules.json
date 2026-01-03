@@ -1,0 +1,34 @@
+{
+  "title": "Planifications",
+  "subtitle": "Tâches planifiées",
+  "empty": "Aucune planification...",
+  "every": "Toutes les",
+  "cron": "Cron",
+  "interval": "Intervalle",
+  "labels": {
+    "trigger": "Déclencheur",
+    "action": "Action",
+    "tool": "Nom de l'outil"
+  },
+  "table": {
+    "name": "Nom",
+    "trigger": "Déclencheur",
+    "action": "Action",
+    "status": "Statut",
+    "nextRun": "Prochaine exécution"
+  },
+  "actions": {
+    "create": "Créer une planification",
+    "edit": "Modifier",
+    "delete": "Supprimer",
+    "enable": "Activer",
+    "disable": "Désactiver"
+  },
+  "dialog": {
+    "description": "Configurer une tâche planifiée"
+  },
+  "types": {
+    "cron": "Cron",
+    "interval": "Intervalle"
+  }
+}

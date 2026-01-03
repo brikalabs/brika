@@ -1,0 +1,43 @@
+{
+  "title": "Journaux",
+  "subtitle": "Journaux système et plugins",
+  "empty": "Aucun journal à afficher",
+  "totalStored": "{{count}} journaux stockés au total",
+  "displayed": "{{count}} journaux affichés",
+  "new": "{{count}} nouveau(x)",
+  "paused": "En pause",
+  "streaming": "En direct",
+  "confirmClear": "Êtes-vous sûr de vouloir effacer tous les journaux ? Cette action est irréversible.",
+  "searchPlaceholder": "Rechercher dans les messages...",
+  "allPlugins": "Tous les plugins",
+  "clearFilters": "Effacer les filtres",
+  "filters": {
+    "level": "Niveau",
+    "source": "Source",
+    "to": "à"
+  },
+  "table": {
+    "time": "Heure",
+    "level": "Niveau",
+    "source": "Source",
+    "message": "Message"
+  },
+  "levels": {
+    "debug": "Débogage",
+    "info": "Info",
+    "warn": "Avertissement",
+    "error": "Erreur"
+  },
+  "filter": {
+    "level": "Filtrer par niveau",
+    "source": "Filtrer par source",
+    "search": "Rechercher dans les journaux..."
+  },
+  "actions": {
+    "clear": "Effacer",
+    "export": "Exporter",
+    "refresh": "Actualiser",
+    "pause": "Pause",
+    "resume": "Reprendre"
+  }
+}

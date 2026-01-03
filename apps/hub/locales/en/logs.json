@@ -1,0 +1,43 @@
+{
+  "title": "Logs",
+  "subtitle": "System and plugin logs",
+  "empty": "No logs to display",
+  "totalStored": "{{count}} total logs stored",
+  "displayed": "{{count}} logs displayed",
+  "new": "{{count}} new",
+  "paused": "Paused",
+  "streaming": "Streaming",
+  "confirmClear": "Are you sure you want to clear all logs? This cannot be undone.",
+  "searchPlaceholder": "Search log messages...",
+  "allPlugins": "All plugins",
+  "clearFilters": "Clear filters",
+  "filters": {
+    "level": "Level",
+    "source": "Source",
+    "to": "to"
+  },
+  "table": {
+    "time": "Time",
+    "level": "Level",
+    "source": "Source",
+    "message": "Message"
+  },
+  "levels": {
+    "debug": "Debug",
+    "info": "Info",
+    "warn": "Warning",
+    "error": "Error"
+  },
+  "filter": {
+    "level": "Filter by level",
+    "source": "Filter by source",
+    "search": "Search logs..."
+  },
+  "actions": {
+    "clear": "Clear",
+    "export": "Export",
+    "refresh": "Refresh",
+    "pause": "Pause",
+    "resume": "Resume"
+  }
+}

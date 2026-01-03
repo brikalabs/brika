@@ -1,0 +1,28 @@
+{
+  "title": "Règles",
+  "subtitle": "Règles d'automatisation basées sur événements",
+  "empty": "Aucune règle...",
+  "labels": {
+    "event": "Événement déclencheur",
+    "condition": "Condition",
+    "action": "Action",
+    "tool": "Nom de l'outil"
+  },
+  "table": {
+    "name": "Nom",
+    "trigger": "Déclencheur",
+    "condition": "Condition",
+    "action": "Action",
+    "status": "Statut"
+  },
+  "actions": {
+    "create": "Créer une règle",
+    "edit": "Modifier",
+    "delete": "Supprimer",
+    "enable": "Activer",
+    "disable": "Désactiver"
+  },
+  "dialog": {
+    "description": "Définir une automatisation événement-action"
+  }
+}

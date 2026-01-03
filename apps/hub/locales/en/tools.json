@@ -1,0 +1,31 @@
+{
+  "title": "Tools",
+  "subtitle": "Registered tools from plugins",
+  "empty": "No tools registered...",
+  "noArguments": "This tool has no input arguments",
+  "labels": {
+    "tool": "Tool",
+    "arguments": "Arguments",
+    "args": "Args",
+    "owner": "Owner"
+  },
+  "table": {
+    "tool": "Tool",
+    "description": "Description",
+    "args": "Args",
+    "owner": "Owner"
+  },
+  "actions": {
+    "call": "Call"
+  },
+  "dialog": {
+    "title": "Call Tool",
+    "arguments": "Arguments",
+    "noArgs": "This tool has no input arguments",
+    "call": "Call",
+    "result": {
+      "success": "Success",
+      "failed": "Failed"
+    }
+  }
+}

@@ -1,4 +1,5 @@
 import React, { useRef, useEffect } from "react";
+import { useLocale } from "@/lib/use-locale";
 import { ScrollArea, Skeleton } from "@/components/ui";
 import type { StoredLogEvent } from "../api";
 
@@ -18,6 +19,7 @@ interface LogListProps {
 }
 
 export function LogList({ logs, isLoading, isFetchingMore, hasMore, onLoadMore }: LogListProps) {
+  const { t, formatTime } = useLocale();
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
   // Intersection observer for infinite scroll
@@ -48,7 +50,7 @@ export function LogList({ logs, isLoading, isFetchingMore, hasMore, onLoadMore }
   }
 
   if (logs.length === 0) {
-    return <div className="p-8 text-muted-foreground text-center">No logs found matching your filters</div>;
+    return <div className="p-8 text-muted-foreground text-center">{t("logs:empty")}</div>;
   }
 
   return (
@@ -64,7 +66,7 @@ export function LogList({ logs, isLoading, isFetchingMore, hasMore, onLoadMore }
             {isFetchingMore ? (
               <Skeleton className="h-8 w-32 mx-auto" />
             ) : (
-              <span className="text-muted-foreground">Scroll for more...</span>
+              <span className="text-muted-foreground">{t("common:loading")}</span>
             )}
           </div>
         )}

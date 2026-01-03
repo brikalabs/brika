@@ -1,0 +1,21 @@
+{
+  "title": "Boutique",
+  "subtitle": "Installer des plugins depuis npm ou git",
+  "empty": "Aucun plugin disponible",
+  "installPlugin": "Installer un plugin",
+  "installHint": "Installer depuis npm ou une URL git",
+  "registryComingSoon": "Registre de plugins bientôt disponible...",
+  "labels": {
+    "reference": "Référence du paquet",
+    "version": "Version (optionnel)"
+  },
+  "search": {
+    "placeholder": "Rechercher des plugins..."
+  },
+  "actions": {
+    "install": "Installer",
+    "installed": "Installé",
+    "update": "Mettre à jour",
+    "uninstall": "Désinstaller"
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "title": "Plugins",
+  "subtitle": "Manage installed plugins",
+  "empty": "No plugins installed",
+  "emptyHint": "Click \"Load Plugin\" to load your first plugin",
+  "backToList": "Back to Plugins",
+  "notFound": "Plugin not found",
+  "notFoundDetail": "The plugin \"{{uid}}\" is not loaded or doesn't exist",
+  "details": {
+    "title": "Plugin Details",
+    "info": "Information",
+    "tools": "Tools",
+    "blocks": "Blocks",
+    "languages": "Languages",
+    "dependencies": "Dependencies",
+    "repository": "Repository",
+    "license": "License",
+    "keywords": "Keywords",
+    "pid": "Process ID",
+    "uptime": "Uptime",
+    "startedAt": "Started",
+    "availableTools": "Available Tools",
+    "availableBlocks": "Available Blocks",
+    "installation": "Installation",
+    "directory": "Directory"
+  },
+  "actions": {
+    "load": "Load Plugin",
+    "enable": "Enable",
+    "disable": "Disable",
+    "reload": "Reload",
+    "kill": "Kill",
+    "viewDetails": "View Details"
+  },
+  "labels": {
+    "reference": "Plugin Reference"
+  },
+  "dialog": {
+    "loadDescription": "Enter the plugin reference to load"
+  },
+  "status": {
+    "running": "Running",
+    "stopped": "Stopped",
+    "crashed": "Crashed",
+    "restarting": "Restarting..."
+  },
+  "table": {
+    "name": "Name",
+    "version": "Version",
+    "status": "Status",
+    "tools": "Tools",
+    "blocks": "Blocks",
+    "actions": "Actions"
+  }
+}

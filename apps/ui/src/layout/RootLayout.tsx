@@ -1,6 +1,6 @@
-import React from "react";
 import { Outlet, Link, useMatchRoute } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
+import { useLocale } from "@/lib/use-locale";
 import {
   LayoutDashboard,
   Plug,
@@ -11,22 +11,32 @@ import {
   FileText,
   Package,
   Workflow,
+  Settings,
+  type LucideIcon,
 } from "lucide-react";
 
-const NAV_ITEMS = [
-  { to: "/", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/plugins", label: "Plugins", icon: Plug },
-  { to: "/tools", label: "Tools", icon: Wrench },
-  { to: "/events", label: "Events", icon: Zap },
-  { to: "/workflows", label: "Workflows", icon: Workflow },
-  { to: "/schedules", label: "Schedules", icon: Calendar },
-  { to: "/rules", label: "Rules", icon: GitBranch },
-  { to: "/logs", label: "Logs", icon: FileText },
-  { to: "/store", label: "Store", icon: Package },
-] as const;
+interface NavItem {
+  to: string;
+  labelKey: string;
+  icon: LucideIcon;
+}
 
-function NavLink({ to, label, icon: Icon }: (typeof NAV_ITEMS)[number]) {
+const NAV_ITEMS: NavItem[] = [
+  { to: "/", labelKey: "nav:dashboard", icon: LayoutDashboard },
+  { to: "/plugins", labelKey: "nav:plugins", icon: Plug },
+  { to: "/tools", labelKey: "nav:tools", icon: Wrench },
+  { to: "/events", labelKey: "nav:events", icon: Zap },
+  { to: "/workflows", labelKey: "nav:workflows", icon: Workflow },
+  { to: "/schedules", labelKey: "nav:schedules", icon: Calendar },
+  { to: "/rules", labelKey: "nav:rules", icon: GitBranch },
+  { to: "/logs", labelKey: "nav:logs", icon: FileText },
+  { to: "/store", labelKey: "nav:store", icon: Package },
+  { to: "/settings", labelKey: "nav:settings", icon: Settings },
+];
+
+function NavLink({ to, labelKey, icon: Icon }: NavItem) {
   const match = useMatchRoute();
+  const { t } = useLocale();
   const isActive = to === "/" ? match({ to: "/" }) : match({ to, fuzzy: true });
 
   return (
@@ -40,12 +50,14 @@ function NavLink({ to, label, icon: Icon }: (typeof NAV_ITEMS)[number]) {
       )}
     >
       <Icon className="size-4" />
-      {label}
+      {t(labelKey)}
     </Link>
   );
 }
 
 export function RootLayout() {
+  const { t } = useLocale();
+
   return (
     <div className="flex min-h-screen bg-background">
       {/* Sidebar */}
@@ -54,7 +66,7 @@ export function RootLayout() {
           <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
             ELIA
           </h1>
-          <p className="text-xs text-muted-foreground mt-0.5">Home Automation Hub</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{t("dashboard:subtitle")}</p>
         </div>
         <nav className="flex-1 p-4 space-y-1">
           {NAV_ITEMS.map((item) => (

@@ -1,11 +1,13 @@
 import React from "react";
 import { useLogs } from "./hooks";
+import { useLocale } from "@/lib/use-locale";
 import { LogFilterBar } from "./components/LogFilterBar";
 import { LogList } from "./components/LogList";
 import { Button, Card, CardContent, Badge } from "@/components/ui";
 import { Pause, Play, Trash2, Download, RefreshCw, Radio } from "lucide-react";
 
 export function LogsPage() {
+  const { t } = useLocale();
   const {
     logs,
     newLogsCount,
@@ -44,7 +46,7 @@ export function LogsPage() {
   };
 
   const handleClear = async () => {
-    if (confirm("Are you sure you want to clear all logs? This cannot be undone.")) {
+    if (confirm(t("logs:confirmClear"))) {
       await clear({});
     }
   };
@@ -54,44 +56,44 @@ export function LogsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Logs</h2>
+          <h2 className="text-2xl font-bold tracking-tight">{t("logs:title")}</h2>
           <p className="text-muted-foreground">
-            {stats ? `${stats.total.toLocaleString()} total logs stored` : "Loading..."}
+            {stats ? t("logs:totalStored", { count: stats.total.toLocaleString() }) : t("common:loading")}
           </p>
         </div>
 
         <div className="flex gap-2">
           <Button variant={paused ? "default" : "secondary"} onClick={togglePaused} className="gap-2">
             {paused ? <Play className="size-4" /> : <Pause className="size-4" />}
-            {paused ? "Resume" : "Pause"}
+            {paused ? t("logs:actions.resume") : t("logs:actions.pause")}
           </Button>
 
           <Button variant="secondary" onClick={() => refetch()} className="gap-2">
             <RefreshCw className="size-4" />
-            Refresh
+            {t("common:actions.refresh")}
           </Button>
 
           <Button variant="outline" onClick={handleClear} disabled={isClearing} className="gap-2">
             <Trash2 className="size-4" />
-            Clear
+            {t("logs:actions.clear")}
           </Button>
 
           <Button variant="outline" onClick={handleExport} className="gap-2">
             <Download className="size-4" />
-            Export
+            {t("logs:actions.export")}
           </Button>
         </div>
       </div>
 
       {/* Status badges */}
       <div className="flex gap-2">
-        <Badge variant="secondary">{logs.length} logs displayed</Badge>
-        {newLogsCount > 0 && <Badge variant="default">{newLogsCount} new</Badge>}
-        {paused && <Badge variant="outline">Paused</Badge>}
+        <Badge variant="secondary">{t("logs:displayed", { count: logs.length })}</Badge>
+        {newLogsCount > 0 && <Badge variant="default">{t("logs:new", { count: newLogsCount })}</Badge>}
+        {paused && <Badge variant="outline">{t("logs:paused")}</Badge>}
         {!paused && (
           <Badge variant="outline" className="animate-pulse">
             <Radio className="size-3 mr-1" />
-            Streaming
+            {t("logs:streaming")}
           </Badge>
         )}
       </div>

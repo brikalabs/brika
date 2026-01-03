@@ -1,4 +1,4 @@
-import React from "react";
+import React, { Suspense } from "react";
 import ReactDOM from "react-dom/client";
 import { QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -10,6 +10,9 @@ import {
 } from "@tanstack/react-router";
 import { TooltipProvider } from "@/components/ui";
 import { queryClient } from "@/lib/query";
+
+// Initialize i18n (side-effect import)
+import "@/lib/i18n";
 
 // Layout
 import { RootLayout } from "@/layout/RootLayout";
@@ -24,6 +27,7 @@ import { RulesPage } from "@/features/rules";
 import { LogsPage } from "@/features/logs";
 import { StorePage } from "@/features/store";
 import { WorkflowsPage } from "@/features/workflows";
+import { SettingsPage } from "@/features/settings";
 
 import "./index.css";
 
@@ -37,16 +41,8 @@ const rootRoute = createRootRoute({ component: RootLayout });
 const pluginDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/plugins/$uid",
-  component: PluginDetailWrapper,
+  component: PluginDetailPage,
 });
-
-// Use getRouteApi to access typed params in the component
-const pluginDetailApi = getRouteApi("/plugins/$uid");
-
-function PluginDetailWrapper() {
-  const { uid } = pluginDetailApi.useParams();
-  return <PluginDetailPage pluginUid={uid} />;
-}
 
 const routes = [
   createRoute({ getParentRoute: () => rootRoute, path: "/", component: DashboardPage }),
@@ -59,6 +55,7 @@ const routes = [
   createRoute({ getParentRoute: () => rootRoute, path: "/rules", component: RulesPage }),
   createRoute({ getParentRoute: () => rootRoute, path: "/logs", component: LogsPage }),
   createRoute({ getParentRoute: () => rootRoute, path: "/store", component: StorePage }),
+  createRoute({ getParentRoute: () => rootRoute, path: "/settings", component: SettingsPage }),
 ];
 
 const router = createRouter({ routeTree: rootRoute.addChildren(routes) });
@@ -75,10 +72,12 @@ declare module "@tanstack/react-router" {
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <RouterProvider router={router} />
-      </TooltipProvider>
-    </QueryClientProvider>
+    <Suspense fallback={<div className="flex h-screen items-center justify-center">Loading...</div>}>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <RouterProvider router={router} />
+        </TooltipProvider>
+      </QueryClientProvider>
+    </Suspense>
   </React.StrictMode>,
 );

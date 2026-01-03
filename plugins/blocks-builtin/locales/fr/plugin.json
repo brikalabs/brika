@@ -1,0 +1,61 @@
+{
+  "name": "Blocs intégrés",
+  "description": "Blocs de workflow de base pour les automatisations ELIA",
+  "blocks": {
+    "action": {
+      "name": "Action",
+      "description": "Appeler un outil avec des arguments"
+    },
+    "condition": {
+      "name": "Condition",
+      "description": "Brancher selon une condition"
+    },
+    "switch": {
+      "name": "Aiguillage",
+      "description": "Branchement multiple selon une valeur"
+    },
+    "delay": {
+      "name": "Délai",
+      "description": "Attendre une durée spécifiée"
+    },
+    "emit": {
+      "name": "Émettre un événement",
+      "description": "Émettre un événement personnalisé"
+    },
+    "set": {
+      "name": "Définir une variable",
+      "description": "Définir une variable de workflow"
+    },
+    "log": {
+      "name": "Journal",
+      "description": "Enregistrer un message"
+    },
+    "merge": {
+      "name": "Fusionner",
+      "description": "Attendre et fusionner plusieurs entrées"
+    },
+    "parallel": {
+      "name": "Parallèle",
+      "description": "Diviser l'exécution en branches parallèles"
+    },
+    "end": {
+      "name": "Fin",
+      "description": "Terminer le workflow"
+    }
+  },
+  "fields": {
+    "tool": "Nom de l'outil à appeler",
+    "args": "Arguments à passer",
+    "if": "Expression de condition",
+    "value": "Expression à évaluer",
+    "cases": "Correspondance valeur vers port de sortie",
+    "duration": "Durée d'attente",
+    "event": "Type d'événement à émettre",
+    "payload": "Charge utile de l'événement",
+    "var": "Nom de la variable",
+    "message": "Message à enregistrer",
+    "level": "Niveau de journal",
+    "mode": "Mode d'attente (tous/n'importe)",
+    "status": "Statut de fin"
+  }
+}

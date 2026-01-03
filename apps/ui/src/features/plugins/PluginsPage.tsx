@@ -2,6 +2,7 @@ import React from "react";
 import { Link } from "@tanstack/react-router";
 import { usePlugins, usePluginMutations } from "./hooks";
 import { pluginsApi } from "./api";
+import { useLocale } from "@/lib/use-locale";
 import {
   Avatar,
   AvatarImage,
@@ -37,6 +38,7 @@ import {
 } from "lucide-react";
 
 export function PluginsPage() {
+  const { t, tp } = useLocale();
   const { data: plugins = [], isLoading, refetch } = usePlugins();
   const { load, disable, reload, kill } = usePluginMutations();
   const [ref, setRef] = React.useState("");
@@ -55,28 +57,28 @@ export function PluginsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Plugins</h2>
-          <p className="text-muted-foreground">Manage your installed plugins</p>
+          <h2 className="text-2xl font-bold tracking-tight">{t("plugins:title")}</h2>
+          <p className="text-muted-foreground">{t("plugins:subtitle")}</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => refetch()} disabled={isLoading} className="gap-2">
             <RefreshCw className={`size-4 ${isLoading ? "animate-spin" : ""}`} />
-            Refresh
+            {t("common:actions.refresh")}
           </Button>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
               <Button className="gap-2">
                 <Plus className="size-4" />
-                Load Plugin
+                {t("plugins:actions.load")}
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Load Plugin</DialogTitle>
-                <DialogDescription>Enter the plugin reference to load</DialogDescription>
+                <DialogTitle>{t("plugins:actions.load")}</DialogTitle>
+                <DialogDescription>{t("plugins:dialog.loadDescription")}</DialogDescription>
               </DialogHeader>
               <div className="space-y-2">
-                <Label>Plugin Reference</Label>
+                <Label>{t("plugins:labels.reference")}</Label>
                 <Input
                   value={ref}
                   onChange={(e) => setRef(e.target.value)}
@@ -86,11 +88,11 @@ export function PluginsPage() {
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setDialogOpen(false)}>
-                  Cancel
+                  {t("common:actions.cancel")}
                 </Button>
                 <Button onClick={handleLoad} disabled={isBusy || !ref} className="gap-2">
                   {load.isPending && <Loader2 className="size-4 animate-spin" />}
-                  Load
+                  {t("plugins:actions.load")}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -106,21 +108,21 @@ export function PluginsPage() {
         <Card>
           <CardContent className="py-12 text-center">
             <Plug className="size-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="font-semibold text-lg">No plugins loaded</h3>
-            <p className="text-muted-foreground mt-1">Click "Load Plugin" to load your first plugin</p>
+            <h3 className="font-semibold text-lg">{t("plugins:empty")}</h3>
+            <p className="text-muted-foreground mt-1">{t("plugins:emptyHint")}</p>
           </CardContent>
         </Card>
       ) : (
         <div className="grid gap-4">
           {plugins.map((p) => {
             const health = p.status;
-
             return (
               <Card key={p.uid} className="group hover:border-primary/50 transition-colors">
                 <CardContent className="pt-6">
                   <div className="flex items-start justify-between gap-4">
                     <Link
-                      to={`/plugins/${p.uid}`}
+                      to="/plugins/$uid"
+                      params={{ uid: p.uid }}
                       className="flex items-start gap-4 flex-1 group-hover:opacity-80 transition-opacity"
                     >
                       <Avatar className="size-10 rounded-lg">
@@ -130,10 +132,10 @@ export function PluginsPage() {
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
-                        <div className="font-semibold truncate">{p.name}</div>
+                        <div className="font-semibold truncate">{tp(p.name, "name")}</div>
                         {p.description && (
-                          <div className="text-sm text-muted-foreground line-clamp-1">
-                            {p.description}
+                          <div className="text-sm text-muted-foreground line-clamp-1 mt-0.5">
+                            {tp(p.name, "description")}
                           </div>
                         )}
                         <div className="flex items-center gap-2 mt-1">
@@ -148,7 +150,7 @@ export function PluginsPage() {
                         health === "running" ? "default" : health === "crashed" ? "destructive" : "secondary"
                       }
                     >
-                      {health}
+                      {t(`common:status.${health}`)}
                     </Badge>
                   </div>
 
@@ -157,13 +159,17 @@ export function PluginsPage() {
                       {p.tools.length > 0 && (
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <Wrench className="size-4" />
-                          <span>{p.tools.length} tools</span>
+                          <span>
+                            {p.tools.length} {t("tools:title").toLowerCase()}
+                          </span>
                         </div>
                       )}
                       {p.blocks.length > 0 && (
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <Boxes className="size-4" />
-                          <span>{p.blocks.length} blocks</span>
+                          <span>
+                            {p.blocks.length} {t("workflows:blocks").toLowerCase()}
+                          </span>
                         </div>
                       )}
                     </div>
@@ -190,7 +196,7 @@ export function PluginsPage() {
                           <RotateCcw className="size-4" />
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent>Reload</TooltipContent>
+                      <TooltipContent>{t("plugins:actions.reload")}</TooltipContent>
                     </Tooltip>
 
                     <Tooltip>
@@ -207,7 +213,7 @@ export function PluginsPage() {
                           <Power className="size-4" />
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent>Disable</TooltipContent>
+                      <TooltipContent>{t("plugins:actions.disable")}</TooltipContent>
                     </Tooltip>
 
                     <Tooltip>
@@ -224,7 +230,7 @@ export function PluginsPage() {
                           <Skull className="size-4" />
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent>Kill</TooltipContent>
+                      <TooltipContent>{t("plugins:actions.kill")}</TooltipContent>
                     </Tooltip>
                   </div>
                 </CardContent>

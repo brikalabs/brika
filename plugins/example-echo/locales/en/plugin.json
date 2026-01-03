@@ -1,0 +1,13 @@
+{
+  "name": "Echo Plugin",
+  "description": "Simple example plugin that echoes messages",
+  "tools": {
+    "echo": {
+      "name": "Echo",
+      "description": "Echo back the provided message"
+    }
+  },
+  "fields": {
+    "message": "The message to echo back"
+  }
+}

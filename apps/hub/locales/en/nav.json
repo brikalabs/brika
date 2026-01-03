@@ -1,0 +1,12 @@
+{
+  "dashboard": "Dashboard",
+  "plugins": "Plugins",
+  "tools": "Tools",
+  "events": "Events",
+  "workflows": "Workflows",
+  "schedules": "Schedules",
+  "rules": "Rules",
+  "logs": "Logs",
+  "store": "Store",
+  "settings": "Settings"
+}

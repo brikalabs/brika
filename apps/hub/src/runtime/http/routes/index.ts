@@ -11,6 +11,7 @@ import { rulesRoutes } from "./rules";
 import { workflowsRoutes } from "./workflows";
 import { logsRoutes } from "./logs";
 import { streamsRoutes } from "./streams";
+import { i18nRoutes } from "./i18n";
 
 /**
  * All API routes combined.
@@ -38,4 +39,5 @@ export const allRoutes = combineRoutes(
   workflowsRoutes,
   logsRoutes,
   streamsRoutes,
+  i18nRoutes,
 );

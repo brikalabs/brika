@@ -1,0 +1,31 @@
+{
+  "name": "Timer Plugin",
+  "description": "Timer and reminder functionality for ELIA",
+  "tools": {
+    "set": {
+      "name": "Set Timer",
+      "description": "Set a timer that fires after the specified duration"
+    },
+    "list": {
+      "name": "List Timers",
+      "description": "List all active timers with remaining time"
+    },
+    "cancel": {
+      "name": "Cancel Timer",
+      "description": "Cancel an active timer by ID or name"
+    },
+    "clear": {
+      "name": "Clear All",
+      "description": "Clear all active timers at once"
+    }
+  },
+  "events": {
+    "completed": "Timer completed",
+    "cancelled": "Timer cancelled"
+  },
+  "fields": {
+    "name": "Timer name",
+    "seconds": "Duration in seconds",
+    "target": "Timer ID or name to cancel"
+  }
+}
