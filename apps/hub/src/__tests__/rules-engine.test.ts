@@ -1,9 +1,9 @@
 import 'reflect-metadata';
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
-import type { Rule } from '@elia/shared';
-import { mock, spy, TestBed } from '@elia/shared';
+import type { Rule } from '@brika/shared';
+import { mock, spy, TestBed } from '@brika/shared';
 import { HubConfig } from '@/runtime/config';
-import { EventBus, type EventListener } from '@/runtime/events/event-bus';
+import { EventBus, type EventListener } from '@brika/events';
 import { LogRouter } from '@/runtime/logs/log-router';
 import { RulesEngine } from '@/runtime/rules/rules-engine';
 import { type ScheduleCallback, SchedulerService } from '@/runtime/scheduler/scheduler-service';

@@ -1,5 +1,5 @@
-import type { PluginHealth, PluginManifest, Rule, Schedule } from '@elia/shared';
-import { inject, PluginManifestSchema, singleton } from '@elia/shared';
+import type { PluginHealth, PluginManifest, Rule, Schedule } from '@brika/shared';
+import { inject, PluginManifestSchema, singleton } from '@brika/shared';
 import { HubConfig } from '@/runtime/config';
 import { LogRouter } from '@/runtime/logs/log-router';
 

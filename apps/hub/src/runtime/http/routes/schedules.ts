@@ -1,5 +1,5 @@
-import { group, route } from '@elia/router';
-import { Json } from '@elia/shared';
+import { group, route } from '@brika/router';
+import { Json } from '@brika/shared';
 import { z } from 'zod';
 import { SchedulerService } from '@/runtime/scheduler/scheduler-service';
 

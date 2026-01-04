@@ -6,7 +6,7 @@
  *
  * @example
  * ```typescript
- * import { defineTool, log, emit, onStop, z } from "@elia/sdk";
+ * import { defineTool, log, emit, onStop, z } from "@brika/sdk";
  *
  * export const myTool = defineTool({
  *   id: "my-tool",
@@ -22,7 +22,7 @@
  * ```
  */
 
-import type { Json } from '@elia/ipc';
+import type { Json } from '@brika/ipc';
 import { z } from 'zod';
 import type { BlockContext, BlockRuntime } from './blocks';
 import { type EventHandler as CtxEventHandler, getContext, type LogLevel } from './context';
@@ -237,7 +237,7 @@ export function onStop(fn: StopHandler): () => void {
  *
  * @example
  * ```typescript
- * import { start, on, log } from "@elia/sdk";
+ * import { start, on, log } from "@brika/sdk";
  *
  * on("motion.*", (event) => {
  *   log("info", `Motion detected: ${event.type}`);

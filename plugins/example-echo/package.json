@@ -1,12 +1,12 @@
 {
-  "$schema": "https://raw.githubusercontent.com/maxscharwath/elia/master/packages/sdk/elia-plugin.schema.json",
-  "name": "@elia/plugin-example-echo",
+  "$schema": "https://raw.githubusercontent.com/maxscharwath/brika/master/packages/sdk/brika-plugin.schema.json",
+  "name": "@brika/plugin-example-echo",
   "version": "0.1.0",
   "description": "Example echo plugin for testing",
-  "author": "ELIA Team",
+  "author": "BRIKA Team",
   "repository": {
     "type": "git",
-    "url": "https://github.com/maxscharwath/elia.git",
+    "url": "https://github.com/maxscharwath/brika.git",
     "directory": "plugins/example-echo"
   },
   "keywords": [
@@ -15,7 +15,7 @@
     "test"
   ],
   "engines": {
-    "elia": "^0.1.0"
+    "brika": "^0.1.0"
   },
   "type": "module",
   "exports": {
@@ -33,6 +33,6 @@
     }
   ],
   "dependencies": {
-    "@elia/sdk": "workspace:*"
+    "@brika/sdk": "workspace:*"
   }
 }

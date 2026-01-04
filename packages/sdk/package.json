@@ -1,17 +1,17 @@
 {
-  "name": "@elia/sdk",
+  "name": "@brika/sdk",
   "version": "0.1.0",
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "https://github.com/maxscharwath/elia.git",
+    "url": "https://github.com/maxscharwath/brika.git",
     "directory": "packages/sdk"
   },
   "exports": {
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@elia/ipc": "workspace:*",
+    "@brika/ipc": "workspace:*",
     "zod": "^4.3.4"
   },
   "devDependencies": {

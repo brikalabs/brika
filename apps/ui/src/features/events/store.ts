@@ -1,4 +1,4 @@
-import type { EliaEvent } from '@elia/shared';
+import type { EliaEvent } from '@brika/shared';
 import { create } from 'zustand';
 
 interface EventsStore {

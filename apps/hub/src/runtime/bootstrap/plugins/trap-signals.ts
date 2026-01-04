@@ -1,4 +1,4 @@
-import { inject } from '@elia/shared';
+import { inject } from '@brika/shared';
 import { LogRouter } from '@/runtime/logs/log-router';
 import type { BootstrapPlugin } from '../plugin';
 

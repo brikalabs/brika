@@ -1,5 +1,5 @@
-import type { Schedule } from '@elia/shared';
-import { inject, singleton } from '@elia/shared';
+import type { Schedule } from '@brika/shared';
+import { inject, singleton } from '@brika/shared';
 import { LogRouter } from '@/runtime/logs/log-router';
 import { StateStore } from '@/runtime/state/state-store';
 

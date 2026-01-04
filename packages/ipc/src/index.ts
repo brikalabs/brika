@@ -1,12 +1,12 @@
 /**
- * @elia/ipc - Smart Typed IPC
+ * @brika/ipc - Smart Typed IPC
  *
  * Type-safe inter-process communication for ELIA plugins.
  *
  * @example Plugin side:
  * ```ts
- * import { createClient } from "@elia/ipc";
- * import { callTool, registerTool } from "@elia/ipc/contract";
+ * import { createClient } from "@brika/ipc";
+ * import { callTool, registerTool } from "@brika/ipc/contract";
  *
  * const client = createClient();
  *
@@ -15,13 +15,13 @@
  * });
  *
  * client.send(registerTool, { tool: { id: "set" } });
- * client.start({ id: "@elia/plugin-timer", version: "0.1.0" });
+ * client.start({ id: "@brika/plugin-timer", version: "0.1.0" });
  * ```
  *
  * @example Hub side:
  * ```ts
- * import { spawnPlugin } from "@elia/ipc";
- * import { callTool, hello } from "@elia/ipc/contract";
+ * import { spawnPlugin } from "@brika/ipc";
+ * import { callTool, hello } from "@brika/ipc/contract";
  *
  * const plugin = spawnPlugin("bun", ["./plugin.ts"]);
  *

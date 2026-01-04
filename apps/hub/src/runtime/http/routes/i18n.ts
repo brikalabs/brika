@@ -1,4 +1,4 @@
-import { route } from '@elia/router';
+import { route } from '@brika/router';
 import { z } from 'zod';
 import { I18nService } from '@/runtime/i18n';
 
@@ -28,7 +28,7 @@ export const i18nRoutes = [
    *
    * Examples:
    * - /api/i18n/en/common → core "common" namespace
-   * - /api/i18n/fr/plugin:@elia/plugin-timer → plugin namespace (slash in @elia/plugin-timer is part of namespace)
+   * - /api/i18n/fr/plugin:@brika/plugin-timer → plugin namespace (slash in @brika/plugin-timer is part of namespace)
    */
   route.get(
     '/api/i18n/:locale/:namespace{.+}',

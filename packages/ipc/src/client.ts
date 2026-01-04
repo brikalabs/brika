@@ -19,8 +19,8 @@ export interface ClientOptions {
  *
  * @example
  * ```ts
- * import { createClient } from "@elia/ipc";
- * import { callTool, registerTool } from "@elia/ipc/contract";
+ * import { createClient } from "@brika/ipc";
+ * import { callTool, registerTool } from "@brika/ipc/contract";
  *
  * const client = createClient();
  *
@@ -33,7 +33,7 @@ export interface ClientOptions {
  * client.send(registerTool, { tool: { id: "set", description: "Set timer" } });
  *
  * // Start
- * client.start({ id: "@elia/plugin-timer", version: "0.1.0" });
+ * client.start({ id: "@brika/plugin-timer", version: "0.1.0" });
  * ```
  */
 export class Client {

@@ -1,4 +1,4 @@
-import type { Json } from '@elia/shared';
+import type { Json } from '@brika/shared';
 
 /**
  * Safe condition evaluator for rules.

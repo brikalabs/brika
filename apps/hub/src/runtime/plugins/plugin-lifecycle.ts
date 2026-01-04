@@ -1,7 +1,7 @@
-import type { Json } from '@elia/ipc';
-import { spawnPlugin } from '@elia/ipc';
-import type { EliaEvent, LogLevel, Plugin, PluginHealth, PluginManifest } from '@elia/shared';
-import { inject, singleton } from '@elia/shared';
+import type { Json } from '@brika/ipc';
+import { spawnPlugin } from '@brika/ipc';
+import type { EliaEvent, LogLevel, Plugin, PluginHealth, PluginManifest } from '@brika/shared';
+import { inject, singleton } from '@brika/shared';
 import { BlockRegistry } from '@/runtime/blocks';
 import { PluginManagerConfig } from '@/runtime/config';
 import { GenericEventActions, PluginActions } from '@/runtime/events/actions';

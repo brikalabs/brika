@@ -9,7 +9,7 @@ import {
   singleton,
   spy,
   TestBed,
-} from '@elia/shared';
+} from '@brika/shared';
 
 describe('DI Container', () => {
   beforeEach(() => {

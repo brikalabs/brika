@@ -4,8 +4,8 @@
  * Loads workflows from YAML files with hot-reload support.
  */
 
-import type { Workflow } from '@elia/sdk';
-import { inject, type Json, singleton } from '@elia/shared';
+import type { Workflow } from '@brika/sdk';
+import { inject, type Json, singleton } from '@brika/shared';
 import { LogRouter } from '@/runtime/logs/log-router';
 import { AutomationEngine } from './automation-engine';
 

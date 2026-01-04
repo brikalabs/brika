@@ -6,7 +6,7 @@
  *
  * @example
  * ```ts
- * import { TestBed, mock, spy } from "@elia/shared";
+ * import { TestBed, mock, spy } from "@brika/shared";
  *
  * describe("MyService", () => {
  *   beforeEach(() => {

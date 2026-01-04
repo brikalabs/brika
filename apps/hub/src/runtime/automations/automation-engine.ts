@@ -4,9 +4,9 @@
  * Manages workflows and executes them via plugin-based blocks.
  */
 
-import type { BlockDefinition, Workflow } from '@elia/sdk';
-import type { Json } from '@elia/shared';
-import { inject, singleton } from '@elia/shared';
+import type { BlockDefinition, Workflow } from '@brika/sdk';
+import type { Json } from '@brika/shared';
+import { inject, singleton } from '@brika/shared';
 import { BlockRegistry } from '@/runtime/blocks';
 import { EventSystem } from '@/runtime/events/event-system';
 import { LogRouter } from '@/runtime/logs/log-router';

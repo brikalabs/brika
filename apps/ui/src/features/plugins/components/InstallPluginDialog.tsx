@@ -153,7 +153,7 @@ export function InstallPluginDialog({ open, onOpenChange }: InstallPluginDialogP
                   id="package"
                   value={packageName}
                   onChange={(e) => setPackageName(e.target.value)}
-                  placeholder="@elia/plugin-timer or workspace:/path/to/plugin"
+                  placeholder="@brika/plugin-timer or workspace:/path/to/plugin"
                   className="font-mono text-sm"
                   disabled={isInstalling}
                 />

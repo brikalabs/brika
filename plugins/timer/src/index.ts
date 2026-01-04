@@ -4,7 +4,7 @@
  * Provides timer/reminder functionality with fully typed tools.
  */
 
-import { defineTool, emit, log, on, onStop, z } from "@elia/sdk";
+import { defineTool, emit, log, on, onStop, z } from "@brika/sdk";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Timer State

@@ -1,4 +1,4 @@
-import type { LogLevel, LogSource } from "@elia/shared";
+import type { LogLevel, LogSource } from "@brika/shared";
 import { create } from "zustand";
 import type { StoredLogEvent } from "./api";
 

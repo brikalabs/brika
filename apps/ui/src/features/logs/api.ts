@@ -1,4 +1,4 @@
-import type { LogEvent, LogLevel, LogSource } from "@elia/shared";
+import type { LogEvent, LogLevel, LogSource } from "@brika/shared";
 import { API_BASE, fetcher } from "@/lib/query";
 
 // ─────────────────────────────────────────────────────────────────────────────

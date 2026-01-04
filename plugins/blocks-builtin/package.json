@@ -1,12 +1,12 @@
 {
-  "$schema": "https://raw.githubusercontent.com/maxscharwath/elia/master/packages/sdk/elia-plugin.schema.json",
-  "name": "@elia/blocks-builtin",
+  "$schema": "https://raw.githubusercontent.com/maxscharwath/brika/master/packages/sdk/brika-plugin.schema.json",
+  "name": "@brika/blocks-builtin",
   "version": "0.1.0",
-  "description": "Core workflow blocks for ELIA automations",
-  "author": "ELIA Team",
+  "description": "Core workflow blocks for BRIKA automations",
+  "author": "BRIKA Team",
   "repository": {
     "type": "git",
-    "url": "https://github.com/maxscharwath/elia.git",
+    "url": "https://github.com/maxscharwath/brika.git",
     "directory": "plugins/blocks-builtin"
   },
   "icon": "./icon.svg",
@@ -19,7 +19,7 @@
     "action"
   ],
   "engines": {
-    "elia": "^0.1.0"
+    "brika": "^0.1.0"
   },
   "type": "module",
   "main": "src/main.ts",
@@ -112,7 +112,7 @@
     }
   ],
   "dependencies": {
-    "@elia/sdk": "workspace:*",
+    "@brika/sdk": "workspace:*",
     "zod": "^4.3.4"
   }
 }

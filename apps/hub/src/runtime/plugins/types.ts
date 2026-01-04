@@ -1,5 +1,5 @@
-import type { PluginChannel } from '@elia/ipc';
-import type { PluginManifest } from '@elia/shared';
+import type { PluginChannel } from '@brika/ipc';
+import type { PluginManifest } from '@brika/shared';
 
 /**
  * Internal representation of a running plugin process.

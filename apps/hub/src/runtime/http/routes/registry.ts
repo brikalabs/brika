@@ -1,4 +1,4 @@
-import { createAsyncSSEStream, group, route } from '@elia/router';
+import { createAsyncSSEStream, group, route } from '@brika/router';
 import { z } from 'zod';
 import { PluginRegistry } from '@/runtime/registry';
 

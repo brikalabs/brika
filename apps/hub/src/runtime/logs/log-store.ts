@@ -5,8 +5,8 @@
  */
 
 import { Database } from "bun:sqlite";
-import type { Json, LogEvent, LogLevel, LogSource } from "@elia/shared";
-import { inject, singleton } from "@elia/shared";
+import type { Json, LogEvent, LogLevel, LogSource } from "@brika/shared";
+import { inject, singleton } from "@brika/shared";
 import { ConfigLoader } from "@/runtime/config/config-loader";
 
 // ─────────────────────────────────────────────────────────────────────────────

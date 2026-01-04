@@ -2,7 +2,7 @@
  * Echo Plugin - Simple example with type-safe Zod tools
  */
 
-import { defineTool, log, onStop, z } from "@elia/sdk";
+import { defineTool, log, onStop, z } from "@brika/sdk";
 
 export const echo = defineTool(
   {

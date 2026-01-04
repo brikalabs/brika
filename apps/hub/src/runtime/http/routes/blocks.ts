@@ -1,4 +1,4 @@
-import { group, route } from '@elia/router';
+import { group, route } from '@brika/router';
 import { BlockRegistry } from '@/runtime/blocks';
 
 export const blocksRoutes = group('/api/blocks', [

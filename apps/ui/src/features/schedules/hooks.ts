@@ -1,4 +1,4 @@
-import type { Schedule } from '@elia/shared';
+import type { Schedule } from '@brika/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { schedulesApi, schedulesKeys } from './api';
 

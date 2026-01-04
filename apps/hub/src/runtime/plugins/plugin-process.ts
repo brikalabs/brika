@@ -1,4 +1,4 @@
-import type { Json, PluginChannel } from '@elia/ipc';
+import type { Json, PluginChannel } from '@brika/ipc';
 import {
   type BlockContext,
   type BlockResult,
@@ -14,8 +14,8 @@ import {
   subscribe,
   type ToolCallContext,
   type ToolResult,
-} from '@elia/ipc/contract';
-import type { EliaEvent, Plugin, PluginHealth, PluginManifest } from '@elia/shared';
+} from '@brika/ipc/contract';
+import type { EliaEvent, Plugin, PluginHealth, PluginManifest } from '@brika/shared';
 import { now } from './utils';
 
 // ─────────────────────────────────────────────────────────────────────────────

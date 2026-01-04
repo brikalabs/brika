@@ -1,5 +1,5 @@
-import type { Json, ToolCallContext, ToolInputSchema, ToolResult, ToolSummary } from '@elia/shared';
-import { inject, singleton } from '@elia/shared';
+import type { Json, ToolCallContext, ToolInputSchema, ToolResult, ToolSummary } from '@brika/shared';
+import { inject, singleton } from '@brika/shared';
 import { LogRouter } from '@/runtime/logs/log-router';
 
 export interface Tool {

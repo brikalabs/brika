@@ -1,4 +1,4 @@
-import { inject, singleton } from '@elia/shared';
+import { inject, singleton } from '@brika/shared';
 import type { EliaConfig } from '@/runtime/config';
 import { ConfigLoader } from '@/runtime/config';
 import { LogRouter } from '@/runtime/logs/log-router';

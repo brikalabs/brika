@@ -1,4 +1,4 @@
-import { type ActionsUnion, defineActions } from '@elia/events';
+import { type ActionsUnion, defineActions } from '@brika/events';
 import { z } from 'zod';
 
 // Plugin actions

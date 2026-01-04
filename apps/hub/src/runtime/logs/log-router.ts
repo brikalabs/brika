@@ -1,5 +1,5 @@
-import type { Json, LogEvent, LogLevel } from "@elia/shared";
-import { singleton } from "@elia/shared";
+import type { Json, LogEvent, LogLevel } from "@brika/shared";
+import { singleton } from "@brika/shared";
 import type { LogStore } from "./log-store";
 
 export interface LogRouterOptions {

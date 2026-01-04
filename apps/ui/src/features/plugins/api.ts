@@ -1,4 +1,4 @@
-import type { Plugin } from '@elia/shared';
+import type { Plugin } from '@brika/shared';
 import { fetcher } from '@/lib/query';
 
 export const pluginsApi = {

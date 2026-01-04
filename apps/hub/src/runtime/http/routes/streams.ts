@@ -1,5 +1,5 @@
-import { BadRequest, createAsyncSSEStream, createSSEStream, NotFound, route } from '@elia/router';
-import type { EliaEvent, Json } from '@elia/shared';
+import { BadRequest, createAsyncSSEStream, createSSEStream, NotFound, route } from '@brika/router';
+import type { EliaEvent, Json } from '@brika/shared';
 import { z } from 'zod';
 import { AutomationEngine } from '@/runtime/automations';
 import { EventSystem } from '@/runtime/events/event-system';

@@ -4,7 +4,7 @@
  * Executes workflows with port-based routing and IPC block execution.
  */
 
-import type { BlockConnection, BlockContext, Json, Workflow, WorkflowBlock } from '@elia/sdk';
+import type { BlockConnection, BlockContext, Json, Workflow, WorkflowBlock } from '@brika/sdk';
 import type { BlockRegistry } from '@/runtime/blocks';
 import type { EventSystem } from '@/runtime/events/event-system';
 import type { LogRouter } from '@/runtime/logs/log-router';

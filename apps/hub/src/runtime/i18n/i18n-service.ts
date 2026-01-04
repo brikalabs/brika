@@ -6,10 +6,10 @@
  *
  * Namespaces:
  * - Core: "common", "nav", "plugins", etc. (from apps/hub/locales/)
- * - Plugins: "plugin:@elia/plugin-timer", "plugin:@elia/blocks-builtin", etc.
+ * - Plugins: "plugin:@brika/plugin-timer", "plugin:@brika/blocks-builtin", etc.
  */
 
-import { inject, singleton } from '@elia/shared';
+import { inject, singleton } from '@brika/shared';
 import { ConfigLoader } from '@/runtime/config/config-loader';
 import { LogRouter } from '@/runtime/logs/log-router';
 
@@ -107,7 +107,7 @@ export class I18nService {
    * This is the main API for fetching translations.
    *
    * @param locale - The requested locale (e.g., "fr-CH", "en")
-   * @param namespace - Core namespace ("common") or plugin namespace ("plugin:@elia/plugin-timer")
+   * @param namespace - Core namespace ("common") or plugin namespace ("plugin:@brika/plugin-timer")
    */
   getNamespaceTranslations(locale: string, namespace: string): TranslationData | null {
     const chain = this.#buildFallbackChain(locale);

@@ -1,4 +1,4 @@
-import { group, route } from '@elia/router';
+import { group, route } from '@brika/router';
 import { z } from 'zod';
 import { RulesEngine } from '@/runtime/rules/rules-engine';
 
@@ -30,7 +30,7 @@ export const rulesRoutes = group('/api/rules', [
       ...body,
       actions: body.actions.map((a) => ({
         tool: a.tool,
-        args: a.args as Record<string, import('@elia/shared').Json>,
+        args: a.args as Record<string, import('@brika/shared').Json>,
       })),
     });
   }),

@@ -1,4 +1,4 @@
-import type { Rule } from '@elia/shared';
+import type { Rule } from '@brika/shared';
 import { GitBranch, Loader2, Plus, RefreshCw, Trash2, Zap } from 'lucide-react';
 import React from 'react';
 import {

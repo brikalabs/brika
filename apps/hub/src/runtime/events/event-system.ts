@@ -1,6 +1,6 @@
-import { Action, EventSystem as BaseEventSystem, type Unsubscribe } from '@elia/events';
-import type { EliaEvent, Json } from '@elia/shared';
-import { inject, singleton } from '@elia/shared';
+import { Action, EventSystem as BaseEventSystem, type Unsubscribe } from '@brika/events';
+import type { EliaEvent, Json } from '@brika/shared';
+import { inject, singleton } from '@brika/shared';
 import { LogRouter } from '@/runtime/logs/log-router';
 
 class RingBuffer<T> {

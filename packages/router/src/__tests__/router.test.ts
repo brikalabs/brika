@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import { z } from 'zod';
 import { BadRequest, combineRoutes, createApp, group, NotFound, route } from '../index';
 
-describe('@elia/router', () => {
+describe('@brika/router', () => {
   describe('route', () => {
     it('should create a GET route without schema', () => {
       const r = route.get('/test', async () => ({ ok: true }));

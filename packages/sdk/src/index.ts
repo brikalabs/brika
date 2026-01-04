@@ -5,7 +5,7 @@
  *
  * @example
  * ```typescript
- * import { defineTool, log, emit, onStop, z } from "@elia/sdk";
+ * import { defineTool, log, emit, onStop, z } from "@brika/sdk";
  *
  * export const myTool = defineTool({
  *   id: "my-tool",
@@ -58,14 +58,14 @@ export * from './types';
 // ─────────────────────────────────────────────────────────────────────────────
 
 // Re-export commonly used IPC types for convenience
-export { Json, JsonRecord } from '@elia/ipc';
+export { Json, JsonRecord } from '@brika/ipc';
 export type {
   BlockContext as IpcBlockContext,
   BlockResult as IpcBlockResult,
   PluginInfo,
   ToolCallContext,
   ToolResult,
-} from '@elia/ipc/contract';
+} from '@brika/ipc/contract';
 // Re-export Zod for convenience
 export { z } from 'zod';
 // Re-export block utilities

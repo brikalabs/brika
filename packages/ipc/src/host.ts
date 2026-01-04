@@ -26,8 +26,8 @@ export interface PluginChannelOptions {
  *
  * @example
  * ```ts
- * import { spawnPlugin } from "@elia/ipc";
- * import { callTool, hello, registerTool } from "@elia/ipc/contract";
+ * import { spawnPlugin } from "@brika/ipc";
+ * import { callTool, hello, registerTool } from "@brika/ipc/contract";
  *
  * const plugin = spawnPlugin("bun", ["./plugin.ts"]);
  *

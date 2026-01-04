@@ -55,7 +55,7 @@ export interface ChannelOptions {
  *
  * @example
  * ```ts
- * import { hello, callTool } from "@elia/ipc/contract";
+ * import { hello, callTool } from "@brika/ipc/contract";
  *
  * const channel = new Channel({ send: (msg) => process.send(msg) });
  *

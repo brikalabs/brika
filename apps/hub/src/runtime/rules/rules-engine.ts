@@ -1,5 +1,5 @@
-import type { EliaEvent, Json, Rule, Schedule, ToolCallContext } from '@elia/shared';
-import { inject, singleton } from '@elia/shared';
+import type { EliaEvent, Json, Rule, Schedule, ToolCallContext } from '@brika/shared';
+import { inject, singleton } from '@brika/shared';
 import { EventSystem } from '@/runtime/events/event-system';
 import { LogRouter } from '@/runtime/logs/log-router';
 import { SchedulerService } from '@/runtime/scheduler/scheduler-service';

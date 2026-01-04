@@ -1,5 +1,5 @@
-import { BadRequest, group, route } from '@elia/router';
-import type { Json } from '@elia/shared';
+import { BadRequest, group, route } from '@brika/router';
+import type { Json } from '@brika/shared';
 import { z } from 'zod';
 import { ToolRegistry } from '@/runtime/tools/tool-registry';
 

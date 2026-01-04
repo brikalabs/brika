@@ -1,5 +1,5 @@
-import { createApp, type RouteDefinition } from '@elia/router';
-import { inject, singleton } from '@elia/shared';
+import { createApp, type RouteDefinition } from '@brika/router';
+import { inject, singleton } from '@brika/shared';
 import { HubConfig } from '@/runtime/config';
 import { LogRouter } from '@/runtime/logs/log-router';
 

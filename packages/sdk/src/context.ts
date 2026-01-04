@@ -2,7 +2,7 @@
  * Global Plugin Context - Simplified
  */
 
-import { type Client, createClient, type Json } from '@elia/ipc';
+import { type Client, createClient, type Json } from '@brika/ipc';
 import {
   callTool,
   emit as emitMsg,
@@ -14,7 +14,7 @@ import {
   registerTool,
   subscribe as subscribeMsg,
   unsubscribe as unsubscribeMsg,
-} from '@elia/ipc/contract';
+} from '@brika/ipc/contract';
 import { z } from 'zod';
 import type { BlockContext, BlockRuntime, BlockSchema, CompiledBlock } from './blocks';
 import { expr } from './blocks';

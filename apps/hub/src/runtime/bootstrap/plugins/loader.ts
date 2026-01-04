@@ -1,4 +1,4 @@
-import { type InjectionToken, inject } from '@elia/shared';
+import { type InjectionToken, inject } from '@brika/shared';
 import type { Loader } from '../loader';
 import type { BootstrapPlugin } from '../plugin';
 

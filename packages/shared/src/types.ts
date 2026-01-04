@@ -45,7 +45,7 @@ export interface Plugin {
   // ─── Identity ──────────────────────────────────────────────────────────────
   /** Short unique ID - primary identifier */
   uid: string;
-  /** Plugin name from package.json (e.g. "@elia/blocks-builtin") */
+  /** Plugin name from package.json (e.g. "@brika/blocks-builtin") */
   name: string;
   /** Plugin version */
   version: string;
@@ -114,7 +114,7 @@ export interface ToolInputSchema {
 
 /** Runtime tool info (includes schema from running plugin) */
 export interface ToolSummary {
-  /** Full tool ID (e.g., "@elia/plugin-timer:set") */
+  /** Full tool ID (e.g., "@brika/plugin-timer:set") */
   id: string;
   /** Tool description */
   description?: string;
@@ -128,7 +128,7 @@ export interface ToolSummary {
 
 /** Runtime block info (includes ports from running plugin) */
 export interface BlockSummary {
-  /** Full block ID (e.g., "@elia/blocks-builtin:condition") */
+  /** Full block ID (e.g., "@brika/blocks-builtin:condition") */
   id: string;
   /** Display name */
   name?: string;

@@ -1,5 +1,5 @@
-import type { RouteDefinition } from '@elia/router';
-import { inject } from '@elia/shared';
+import type { RouteDefinition } from '@brika/router';
+import { inject } from '@brika/shared';
 import { ApiServer } from '@/runtime/http/api-server';
 import type { BootstrapPlugin } from '../plugin';
 

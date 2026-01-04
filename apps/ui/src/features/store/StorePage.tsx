@@ -48,7 +48,7 @@ export function StorePage() {
               <Input
                 value={ref}
                 onChange={(e) => setRef(e.target.value)}
-                placeholder="@elia/plugin-hue or git+https://..."
+                placeholder="@brika/plugin-hue or git+https://..."
                 className="font-mono"
               />
             </div>

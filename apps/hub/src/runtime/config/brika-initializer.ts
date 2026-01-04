@@ -1,22 +1,22 @@
 /**
- * ELIA Directory Initializer
+ * BRIKA Directory Initializer
  *
- * Ensures the .elia directory structure exists with default files.
- * Template files are copied from apps/hub/src/templates/.elia/
+ * Ensures the .brika directory structure exists with default files.
+ * Template files are copied from apps/hub/src/templates/.brika/
  */
 
 import { dirname, join } from 'node:path';
-import { singleton } from '@elia/shared';
+import { singleton } from '@brika/shared';
 
 @singleton()
-export class EliaInitializer {
-  readonly #eliaDir: string;
+export class BrikaInitializer {
+  readonly #brikaDir: string;
   readonly #rootDir: string;
   readonly #templateDir: string;
 
   constructor() {
     // Derive paths from Bun.main or process.cwd()
-    // Bun.main = /path/to/elia/apps/hub/src/main.ts
+    // Bun.main = /path/to/brika/apps/hub/src/main.ts
     // If Bun.main is available, use it to find project root
     if (Bun.main && typeof Bun.main === 'string' && Bun.main.includes('/apps/hub/src/')) {
       const parts = Bun.main.split('/');
@@ -38,15 +38,15 @@ export class EliaInitializer {
         this.#rootDir = cwd;
       }
     }
-    this.#eliaDir = `${this.#rootDir}/.elia`;
-    this.#templateDir = `${this.#rootDir}/apps/hub/src/templates/.elia`;
+    this.#brikaDir = `${this.#rootDir}/.brika`;
+    this.#templateDir = `${this.#rootDir}/apps/hub/src/templates/.brika`;
   }
 
   /**
-   * Get the .elia directory path.
+   * Get the .brika directory path.
    */
-  get eliaDir(): string {
-    return this.#eliaDir;
+  get brikaDir(): string {
+    return this.#brikaDir;
   }
 
   /**
@@ -57,23 +57,23 @@ export class EliaInitializer {
   }
 
   /**
-   * Initialize the .elia directory structure.
-   * Copies template files from apps/hub/templates/.elia/ that don't exist.
+   * Initialize the .brika directory structure.
+   * Copies template files from apps/hub/templates/.brika/ that don't exist.
    * Never overwrites existing files.
    */
   async init(): Promise<void> {
-    console.log(`[init] Initializing ${this.#eliaDir}`);
+    console.log(`[init] Initializing ${this.#brikaDir}`);
 
-    // Ensure .elia directory exists
-    await this.#ensureDir(this.#eliaDir);
+    // Ensure .brika directory exists
+    await this.#ensureDir(this.#brikaDir);
 
     // Copy template files (only if they don't exist)
-    await this.#copyTemplateDir(this.#templateDir, this.#eliaDir);
+    await this.#copyTemplateDir(this.#templateDir, this.#brikaDir);
 
     // Cleanup deprecated directories
     await this.#cleanupDeprecated();
 
-    console.log(`[init] .elia directory ready`);
+    console.log(`[init] .brika directory ready`);
   }
 
   /**
@@ -134,7 +134,7 @@ export class EliaInitializer {
     const deprecated = ['plugins-node'];
 
     for (const name of deprecated) {
-      const path = join(this.#eliaDir, name);
+      const path = join(this.#brikaDir, name);
       try {
         const stat = await Bun.file(path).exists();
         if (stat) {

@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
-import { spy, TestBed } from '@elia/shared';
+import { spy, TestBed } from '@brika/shared';
 import { HubConfig } from '@/runtime/config';
 import { LogRouter } from '@/runtime/logs/log-router';
 import { ToolRegistry } from '@/runtime/tools/tool-registry';

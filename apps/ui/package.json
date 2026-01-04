@@ -1,11 +1,11 @@
 {
-  "name": "@elia/ui",
+  "name": "@brika/ui",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "https://github.com/maxscharwath/elia.git",
+    "url": "https://github.com/maxscharwath/brika.git",
     "directory": "apps/ui"
   },
   "scripts": {
@@ -14,7 +14,7 @@
     "lint": "bunx --bun biome check ."
   },
   "dependencies": {
-    "@elia/shared": "workspace:*",
+    "@brika/shared": "workspace:*",
     "@radix-ui/react-alert-dialog": "^1.1.15",
     "@radix-ui/react-avatar": "^1.1.11",
     "@radix-ui/react-collapsible": "^1.1.12",
@@ -47,7 +47,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.10",
-    "@elia/banner": "workspace:*",
+    "@brika/banner": "workspace:*",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "typescript": "^5.9.3",

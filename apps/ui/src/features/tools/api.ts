@@ -1,4 +1,4 @@
-import type { ToolSummary } from '@elia/shared';
+import type { ToolSummary } from '@brika/shared';
 import { fetcher } from '@/lib/query';
 
 export const toolsApi = {

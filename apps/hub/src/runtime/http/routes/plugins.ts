@@ -1,4 +1,4 @@
-import { group, NotFound, route } from '@elia/router';
+import { group, NotFound, route } from '@brika/router';
 import { z } from 'zod';
 import { PluginManager } from '@/runtime/plugins/plugin-manager';
 import { PluginRegistry } from '@/runtime/registry';

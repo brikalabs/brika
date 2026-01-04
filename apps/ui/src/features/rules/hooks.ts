@@ -1,4 +1,4 @@
-import type { Rule } from '@elia/shared';
+import type { Rule } from '@brika/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { rulesApi, rulesKeys } from './api';
 

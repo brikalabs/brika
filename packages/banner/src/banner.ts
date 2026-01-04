@@ -27,11 +27,11 @@ export interface BannerOptions {
  * @example
  * ```ts
  * const banner = createBanner({
- *   title: 'EliaHub',
- *   subtitle: 'Event-driven Logical Intelligence Architecture',
+ *   title: 'BRIKA',
+ *   subtitle: 'Build. Run. Integrate. Keep Automating.',
  *   metadata: {
  *     Version: '0.1.0',
- *     Package: '@elia/hub',
+ *     Package: '@brika/hub',
  *   },
  * });
  * console.log(banner);

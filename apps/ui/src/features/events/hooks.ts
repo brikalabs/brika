@@ -1,4 +1,4 @@
-import type { EliaEvent } from '@elia/shared';
+import type { EliaEvent } from '@brika/shared';
 import { useMutation } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { fetcher, getStreamUrl } from '@/lib/query';

@@ -504,7 +504,7 @@ async function migratePluginsDir() {
 // dir is now derived: ~/.elia/plugins/node_modules/@elia/plugin-timer
 ```
 
-**Step 5.3: Update elia.yml config format**
+**Step 5.3: Update brika.yml config format**
 
 ```yaml
 # Old format (legacy - still supported)

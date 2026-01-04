@@ -11,7 +11,7 @@
  *
  * Namespaces:
  * - Core: "common", "nav", "plugins", "dashboard", etc.
- * - Plugins: "plugin:@elia/plugin-timer", "plugin:@elia/blocks-builtin", etc.
+ * - Plugins: "plugin:@brika/plugin-timer", "plugin:@brika/blocks-builtin", etc.
  */
 
 import i18n from 'i18next';
@@ -48,7 +48,7 @@ i18n
     // HTTP Backend configuration
     backend: {
       // Load translations per namespace from Hub API
-      // e.g., /api/i18n/en/common or /api/i18n/fr/plugin:@elia/plugin-timer
+      // e.g., /api/i18n/en/common or /api/i18n/fr/plugin:@brika/plugin-timer
       loadPath: '/api/i18n/{{lng}}/{{ns}}',
 
       // Don't load translations for CI-Mode - i18next handles it internally

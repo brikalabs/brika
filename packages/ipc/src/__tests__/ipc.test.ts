@@ -72,13 +72,13 @@ describe('Channel', () => {
   describe('send', () => {
     it('should send messages with correct wire format', () => {
       channel.send(hello, {
-        plugin: { id: '@elia/test', version: '1.0.0' },
+        plugin: { id: '@brika/test', version: '1.0.0' },
       });
 
       expect(sent).toHaveLength(1);
       expect(sent[0]).toEqual({
         t: 'hello',
-        plugin: { id: '@elia/test', version: '1.0.0' },
+        plugin: { id: '@brika/test', version: '1.0.0' },
       });
     });
 
@@ -231,7 +231,7 @@ describe('Schema validation', () => {
 
   it('should validate PluginInfo', () => {
     const valid = PluginInfo.safeParse({
-      id: '@elia/test',
+      id: '@brika/test',
       version: '1.0.0',
       requires: { hub: '>=1.0.0' },
     });

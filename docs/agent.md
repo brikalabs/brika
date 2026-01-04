@@ -17,13 +17,13 @@
 | Tool definition   | `packages/sdk/src/tool.ts`                              |
 | Block definition  | `packages/sdk/src/blocks/define.ts`                     |
 | Shared types      | `packages/shared/src/types.ts`                          |
-| Config            | `elia.yml`                                              |
+| Config            | `brika.yml`                                              |
 
 ---
 
 ## 1. What is ELIA?
 
-**ELIA** = Event-driven Logical Intelligence Architecture
+**ELIA** = 
 
 A Bun-first home automation runtime with:
 
@@ -391,7 +391,7 @@ bun run --cwd apps/ui build   # Build UI for production
 
 1. Verify `useBlock()` is called in plugin entry
 2. Check Hub logs for `block.registered`
-3. Ensure plugin is listed in `elia.yml` install section
+3. Ensure plugin is listed in `brika.yml` install section
 
 ### IPC issues?
 

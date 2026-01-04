@@ -1,5 +1,5 @@
-import type { Json } from '@elia/shared';
-import { inject, singleton } from '@elia/shared';
+import type { Json } from '@brika/shared';
+import { inject, singleton } from '@brika/shared';
 import type { EliaConfig } from '@/runtime/config';
 import { LogRouter } from '@/runtime/logs/log-router';
 import { RulesEngine } from '@/runtime/rules/rules-engine';

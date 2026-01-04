@@ -1,4 +1,4 @@
-import type { ToolInputSchema, ToolSummary } from '@elia/shared';
+import type { ToolInputSchema, ToolSummary } from '@brika/shared';
 import { Check, Info, Loader2, Play, RefreshCw, Terminal, Wrench, X } from 'lucide-react';
 import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
 import { useEffect, useState } from 'react';

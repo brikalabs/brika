@@ -108,7 +108,7 @@ elia/
 ├── automations/                # YAML workflow files
 │   └── *.yml
 │
-└── elia.yml                    # Hub configuration
+└── brika.yml                    # Hub configuration
 ```
 
 ---
@@ -433,7 +433,7 @@ Event matches trigger
 
 ## Configuration
 
-### elia.yml
+### brika.yml
 
 ```yaml
 hub:

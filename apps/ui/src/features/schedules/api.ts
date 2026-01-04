@@ -1,4 +1,4 @@
-import type { Schedule } from '@elia/shared';
+import type { Schedule } from '@brika/shared';
 import { fetcher } from '@/lib/query';
 
 export const schedulesApi = {

@@ -1,4 +1,4 @@
-import { route } from '@elia/router';
+import { route } from '@brika/router';
 import { AutomationEngine } from '@/runtime/automations';
 import { BlockRegistry } from '@/runtime/blocks';
 import { PluginManager } from '@/runtime/plugins/plugin-manager';

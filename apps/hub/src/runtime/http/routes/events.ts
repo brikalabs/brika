@@ -1,5 +1,5 @@
-import { group, route } from '@elia/router';
-import type { Json } from '@elia/shared';
+import { group, route } from '@brika/router';
+import type { Json } from '@brika/shared';
 import { z } from 'zod';
 import { GenericEventActions } from '@/runtime/events/actions';
 import { EventSystem } from '@/runtime/events/event-system';

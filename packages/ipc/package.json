@@ -1,10 +1,10 @@
 {
-  "name": "@elia/ipc",
+  "name": "@brika/ipc",
   "version": "0.1.0",
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "https://github.com/maxscharwath/elia.git",
+    "url": "https://github.com/maxscharwath/brika.git",
     "directory": "packages/ipc"
   },
   "exports": {

@@ -1,4 +1,4 @@
-import type { LogLevel, LogSource } from "@elia/shared";
+import type { LogLevel, LogSource } from "@brika/shared";
 import { Calendar, Search, X } from "lucide-react";
 import React, { useState } from "react";
 import {

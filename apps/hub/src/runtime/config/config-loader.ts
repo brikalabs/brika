@@ -1,11 +1,11 @@
 /**
- * ELIA Configuration Loader
+ * BRIKA Configuration Loader
  *
- * Loads and validates elia.yml configuration
+ * Loads and validates brika.yml configuration
  */
 
-import { inject, singleton } from '@elia/shared';
-import { EliaInitializer } from './elia-initializer';
+import { inject, singleton } from '@brika/shared';
+import { BrikaInitializer } from './brika-initializer';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -16,7 +16,7 @@ import { EliaInitializer } from './elia-initializer';
  * Key is package name, value is version specifier.
  */
 export interface PluginEntry {
-  /** Package name (e.g., "@elia/plugin-timer", "timer") */
+  /** Package name (e.g., "@brika/plugin-timer", "timer") */
   name: string;
   /** Version specifier (e.g., "^1.0.0", "workspace:./plugins/timer") */
   specifier: string;
@@ -37,7 +37,7 @@ export interface ScheduleEntry {
   enabled: boolean;
 }
 
-export interface EliaConfig {
+export interface BrikaConfig {
   hub: {
     port: number;
     host: string;
@@ -52,7 +52,7 @@ export interface EliaConfig {
   schedules: ScheduleEntry[];
 }
 
-const DEFAULT_CONFIG: EliaConfig = {
+const DEFAULT_CONFIG: BrikaConfig = {
   hub: { port: 3001, host: '0.0.0.0' },
   plugins: {
     installDir: './plugins/.installed',
@@ -70,23 +70,23 @@ const DEFAULT_CONFIG: EliaConfig = {
 
 @singleton()
 export class ConfigLoader {
-  readonly #init = inject(EliaInitializer);
+  readonly #init = inject(BrikaInitializer);
 
-  private config: EliaConfig | null = null;
+  private config: BrikaConfig | null = null;
 
   private get configPath(): string {
-    return `${this.#init.eliaDir}/elia.yml`;
+    return `${this.#init.brikaDir}/brika.yml`;
   }
 
   private get rootDir(): string {
     return this.#init.rootDir;
   }
 
-  private get eliaDir(): string {
-    return this.#init.eliaDir;
+  private get brikaDir(): string {
+    return this.#init.brikaDir;
   }
 
-  async load(): Promise<EliaConfig> {
+  async load(): Promise<BrikaConfig> {
     if (this.config) return this.config;
 
     try {
@@ -94,7 +94,7 @@ export class ConfigLoader {
       const fileExists = await file.exists();
 
       if (!fileExists) {
-        console.log(`[config] No elia.yml found at ${this.configPath}, using defaults`);
+        console.log(`[config] No brika.yml found at ${this.configPath}, using defaults`);
         this.config = DEFAULT_CONFIG;
         return this.config;
       }
@@ -106,7 +106,7 @@ export class ConfigLoader {
       const installEntries = this.#parseInstallSection(parsed.install);
 
       this.config = {
-        ...this.merge(DEFAULT_CONFIG, parsed as Partial<EliaConfig>),
+        ...this.merge(DEFAULT_CONFIG, parsed as Partial<BrikaConfig>),
         install: installEntries,
       };
 
@@ -119,7 +119,7 @@ export class ConfigLoader {
     }
   }
 
-  get(): EliaConfig {
+  get(): BrikaConfig {
     if (!this.config) {
       throw new Error('Config not loaded. Call load() first.');
     }
@@ -130,8 +130,8 @@ export class ConfigLoader {
     return this.rootDir;
   }
 
-  getEliaDir(): string {
-    return this.eliaDir;
+  getBrikaDir(): string {
+    return this.brikaDir;
   }
 
   /**
@@ -179,7 +179,7 @@ export class ConfigLoader {
     if (!install) return [];
 
     // New format: Record<string, string> like package.json
-    // { "timer": "workspace:./plugins/timer", "@elia/plugin-hue": "^1.0.0" }
+    // { "timer": "workspace:./plugins/timer", "@brika/plugin-hue": "^1.0.0" }
     if (typeof install === 'object' && !Array.isArray(install)) {
       return Object.entries(install as Record<string, string>).map(([name, specifier]) => ({
         name,
@@ -229,7 +229,7 @@ export class ConfigLoader {
 
   /**
    * Find a workspace package by name, scanning ./plugins/ directory.
-   * Handles scoped packages like @elia/plugin-timer.
+   * Handles scoped packages like @brika/plugin-timer.
    */
   async #findWorkspacePackage(packageName: string): Promise<{ name: string; ref: string } | null> {
     const pluginsDir = `${this.rootDir}/plugins`;

@@ -1,11 +1,11 @@
 {
-  "name": "@elia/hub",
+  "name": "@brika/hub",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "https://github.com/maxscharwath/elia.git",
+    "url": "https://github.com/maxscharwath/brika.git",
     "directory": "apps/hub"
   },
   "scripts": {
@@ -14,12 +14,12 @@
     "lint:fix": "bun x biome check . --write"
   },
   "dependencies": {
-    "@elia/banner": "workspace:*",
-    "@elia/events": "workspace:*",
-    "@elia/ipc": "workspace:*",
-    "@elia/router": "workspace:*",
-    "@elia/sdk": "workspace:*",
-    "@elia/shared": "workspace:*",
+    "@brika/banner": "workspace:*",
+    "@brika/events": "workspace:*",
+    "@brika/ipc": "workspace:*",
+    "@brika/router": "workspace:*",
+    "@brika/sdk": "workspace:*",
+    "@brika/shared": "workspace:*",
     "zod": "^4.3.4"
   },
   "devDependencies": {

@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import { inject, singleton } from '@elia/shared';
+import { inject, singleton } from '@brika/shared';
 import { ConfigLoader, HubConfig } from '@/runtime/config';
 import { LogRouter } from '@/runtime/logs/log-router';
 
@@ -81,7 +81,7 @@ export class PluginRegistry {
 
   /**
    * Install a package from registry.
-   * install("@elia/plugin-timer", "^1.0.0") - uses bun add
+   * install("@brika/plugin-timer", "^1.0.0") - uses bun add
    *
    * For local development, use `bun link` manually.
    */

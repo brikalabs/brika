@@ -255,7 +255,7 @@ blocks:
 
 ## Installation
 
-Add to your `elia.yml`:
+Add to your `brika.yml`:
 
 ```yaml
 plugins:

@@ -1,15 +1,15 @@
-import { createBanner } from '@elia/banner';
-import { inject } from '@elia/shared';
+import { createBanner } from '@brika/banner';
+import { inject } from '@brika/shared';
 import { hub } from '@/hub';
-import { ConfigLoader, EliaInitializer } from '@/runtime/config';
+import { ConfigLoader, BrikaInitializer } from '@/runtime/config';
 import { LogRouter } from '@/runtime/logs/log-router';
 import { LogStore } from '@/runtime/logs/log-store';
 import type { BootstrapPlugin } from './plugin';
 
-const HOT_STARTED = Symbol.for('elia.hub.started');
+const HOT_STARTED = Symbol.for('brika.hub.started');
 
 /**
- * Declarative bootstrap builder for the ELIA hub.
+ * Declarative bootstrap builder for the BRIKA hub.
  *
  * @example
  * ```ts
@@ -23,7 +23,7 @@ const HOT_STARTED = Symbol.for('elia.hub.started');
 export class Bootstrap {
   private readonly logs = inject(LogRouter);
   private readonly logStore = inject(LogStore);
-  private readonly initializer = inject(EliaInitializer);
+  private readonly initializer = inject(BrikaInitializer);
   private readonly configLoader = inject(ConfigLoader);
   private readonly plugins: BootstrapPlugin[] = [];
 
@@ -43,7 +43,7 @@ export class Bootstrap {
     await this.logStore.init();
     this.logs.setStore(this.logStore);
 
-    // 2. Initialize .elia directory
+    // 2. Initialize .brika directory
     await this.initializer.init();
 
     // 3. Load config
@@ -52,8 +52,8 @@ export class Bootstrap {
     // 4. Display startup message
     console.log(
       createBanner({
-        title: 'EliaHub',
-        subtitle: 'Event-driven Logical Intelligence Architecture',
+        title: 'BRIKA',
+        subtitle: 'Build. Run. Integrate. Keep Automating.',
         metadata: {
           Version: hub.version,
           Package: hub.name,

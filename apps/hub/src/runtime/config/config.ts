@@ -1,4 +1,4 @@
-import { inject, singleton } from '@elia/shared';
+import { inject, singleton } from '@brika/shared';
 import { ConfigLoader } from './config-loader';
 
 @singleton()

@@ -1,20 +1,20 @@
 {
-  "name": "elia",
+  "name": "brika",
   "private": true,
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "https://github.com/maxscharwath/elia.git"
+    "url": "https://github.com/maxscharwath/brika.git"
   },
-  "homepage": "https://github.com/maxscharwath/elia",
+  "homepage": "https://github.com/maxscharwath/brika",
   "bugs": {
-    "url": "https://github.com/maxscharwath/elia/issues"
+    "url": "https://github.com/maxscharwath/brika/issues"
   },
   "workspaces": ["apps/*", "packages/*", "plugins/*"],
   "scripts": {
     "dev": "bun --filter '*' dev",
-    "dev:hub": "bun --filter @elia/hub dev",
-    "dev:ui": "bun --filter @elia/ui dev",
+    "dev:hub": "bun --filter @brika/hub dev",
+    "dev:ui": "bun --filter @brika/ui dev",
     "test": "bun test",
     "typecheck": "bun --filter '*' typecheck",
     "lint": "bunx biome check .",

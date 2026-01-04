@@ -1,4 +1,4 @@
-import { createBanner } from '@elia/banner';
+import { createBanner } from '@brika/banner';
 import type { Plugin } from 'vite';
 import pkg from './package.json';
 
@@ -15,8 +15,8 @@ export function bannerPlugin(): Plugin {
 
     console.log(
       createBanner({
-        title: 'EliaUI',
-        subtitle: 'Event-driven Logical Intelligence Architecture',
+        title: 'BRIKA',
+        subtitle: 'Build. Run. Integrate. Keep Automating.',
         metadata: {
           Version: pkg.version,
           Package: pkg.name,
@@ -26,7 +26,7 @@ export function bannerPlugin(): Plugin {
   };
 
   return {
-    name: 'elia-banner',
+    name: 'brika-banner',
     enforce: 'pre',
     buildStart() {
       // Show banner at build start (for both dev and build)

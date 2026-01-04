@@ -1,4 +1,4 @@
-import type { Schedule } from '@elia/shared';
+import type { Schedule } from '@brika/shared';
 import { Calendar, Clock, Loader2, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import React from 'react';
 import {

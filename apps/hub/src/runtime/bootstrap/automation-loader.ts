@@ -1,4 +1,4 @@
-import { inject, singleton } from '@elia/shared';
+import { inject, singleton } from '@brika/shared';
 import { AutomationEngine, YamlWorkflowLoader } from '@/runtime/automations';
 import type { EliaConfig } from '@/runtime/config';
 import { ConfigLoader } from '@/runtime/config';

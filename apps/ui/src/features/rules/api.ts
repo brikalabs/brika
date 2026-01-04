@@ -1,4 +1,4 @@
-import type { Rule } from '@elia/shared';
+import type { Rule } from '@brika/shared';
 import { fetcher } from '@/lib/query';
 
 export const rulesApi = {

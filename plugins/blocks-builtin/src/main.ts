@@ -4,8 +4,8 @@
  * Provides all core workflow blocks for ELIA automations.
  */
 
-import type { Json } from "@elia/sdk";
-import { defineBlock, expr, log, parseDuration, z } from "@elia/sdk";
+import type { Json } from "@brika/sdk";
+import { defineBlock, expr, log, parseDuration, z } from "@brika/sdk";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Blocks

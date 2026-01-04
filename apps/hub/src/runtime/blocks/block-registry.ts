@@ -5,9 +5,9 @@
  * Provides block metadata to UI and validates block configs.
  */
 
-import type { BlockDefinition } from '@elia/sdk';
-import type { BlockSummary } from '@elia/shared';
-import { inject, singleton } from '@elia/shared';
+import type { BlockDefinition } from '@brika/sdk';
+import type { BlockSummary } from '@brika/shared';
+import { inject, singleton } from '@brika/shared';
 import { LogRouter } from '@/runtime/logs/log-router';
 
 // ─────────────────────────────────────────────────────────────────────────────

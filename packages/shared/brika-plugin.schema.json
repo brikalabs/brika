@@ -1,8 +1,8 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://elia.dev/schemas/plugin.json",
-  "title": "ELIA Plugin package.json",
-  "description": "Schema for ELIA plugin package.json files",
+  "$id": "https://schema.brika.dev/0.1.0/package.json",
+  "title": "BRIKA Plugin package.json",
+  "description": "Schema for BRIKA plugin package.json files",
   "type": "object",
   "allOf": [
     {
@@ -86,11 +86,11 @@
     "engines": {
       "type": "object",
       "description": "Engine compatibility requirements",
-      "required": ["elia"],
+      "required": ["brika"],
       "properties": {
-        "elia": {
+        "brika": {
           "type": "string",
-          "description": "Required ELIA hub version (semver range, e.g., ^0.1.0)",
+          "description": "Required BRIKA hub version (semver range, e.g., ^0.1.0)",
           "examples": ["^0.1.0", "~0.1.0", ">=0.1.0"]
         }
       }

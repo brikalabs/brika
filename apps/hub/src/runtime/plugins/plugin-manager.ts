@@ -1,7 +1,7 @@
-import type { Json } from '@elia/ipc';
-import type { BlockContext, BlockResult, ToolCallContext, ToolResult } from '@elia/ipc/contract';
-import type { Plugin } from '@elia/shared';
-import { inject, singleton } from '@elia/shared';
+import type { Json } from '@brika/ipc';
+import type { BlockContext, BlockResult, ToolCallContext, ToolResult } from '@brika/ipc/contract';
+import type { Plugin } from '@brika/shared';
+import { inject, singleton } from '@brika/shared';
 import { BlockRegistry } from '@/runtime/blocks';
 import { PluginActions } from '@/runtime/events/actions';
 import { EventSystem } from '@/runtime/events/event-system';

@@ -1,4 +1,4 @@
-import { group, NotFound, route } from '@elia/router';
+import { group, NotFound, route } from '@brika/router';
 import { z } from 'zod';
 import { AutomationEngine, YamlWorkflowLoader } from '@/runtime/automations';
 
@@ -46,11 +46,11 @@ export const workflowsRoutes = group('/api/workflows', [
       ...body,
       trigger: {
         event: body.trigger.event,
-        filter: body.trigger.filter as Record<string, import('@elia/shared').Json> | undefined,
+        filter: body.trigger.filter as Record<string, import('@brika/shared').Json> | undefined,
       },
       blocks: body.blocks.map((b) => ({
         ...b,
-        config: (b.config ?? {}) as Record<string, import('@elia/shared').Json>,
+        config: (b.config ?? {}) as Record<string, import('@brika/shared').Json>,
       })),
       connections: body.connections ?? [],
     };
@@ -79,7 +79,7 @@ export const workflowsRoutes = group('/api/workflows', [
         body.id,
         'api.trigger',
         'api',
-        (body.payload ?? {}) as import('@elia/shared').Json
+        (body.payload ?? {}) as import('@brika/shared').Json
       );
     }
   ),

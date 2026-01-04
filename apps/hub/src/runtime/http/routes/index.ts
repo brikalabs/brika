@@ -1,4 +1,4 @@
-import { combineRoutes } from '@elia/router';
+import { combineRoutes } from '@brika/router';
 import { blocksRoutes } from './blocks';
 import { eventsRoutes } from './events';
 import { healthRoutes } from './health';

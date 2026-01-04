@@ -1,6 +1,4 @@
-# ELIA
-
-> **E**vent-driven **L**ogical **I**ntelligence **A**rchitecture
+# BRIKA
 
 A Bun-first, plugin-first home automation runtime with block-based visual workflows.
 
@@ -34,19 +32,19 @@ Open:
 ## Project Structure
 
 ```
-elia/
+brika/
 ├── apps/
 │   ├── hub/          # Bun runtime (API, plugins, automations)
 │   └── ui/           # React frontend
 ├── packages/
-│   ├── sdk/          # Plugin SDK (@elia/sdk)
-│   └── shared/       # Shared types (@elia/shared)
+│   ├── sdk/          # Plugin SDK (@brika/sdk)
+│   └── shared/       # Shared types (@brika/shared)
 ├── plugins/          # Local plugins
 │   ├── blocks-builtin/   # Core workflow blocks
 │   ├── timer/            # Timer functionality
 │   └── example-echo/     # Example plugin
 ├── automations/      # YAML workflow files
-├── elia.yml          # Hub configuration
+├── brika.yml         # Hub configuration
 └── docs/             # Documentation
 ```
 
@@ -54,10 +52,10 @@ elia/
 
 ```typescript
 // plugins/my-plugin/src/index.ts
-import { createPluginRuntime, defineTool, z } from "@elia/sdk";
+import { createPluginRuntime, defineTool, z } from "@brika/sdk";
 
 const { api, start, use } = createPluginRuntime({
-  id: "@elia/plugin-my-plugin",
+  id: "@brika/plugin-my-plugin",
   version: "0.1.0",
 });
 
@@ -75,7 +73,7 @@ use(greet);
 await start();
 ```
 
-Add to `elia.yml`:
+Add to `brika.yml`:
 
 ```yaml
 install:
@@ -95,7 +93,7 @@ trigger:
 
 blocks:
   - id: log-it
-    type: "@elia/blocks-builtin:log"
+    type: "@brika/blocks-builtin:log"
     config:
       message: "Button was pressed!"
       level: info

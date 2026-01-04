@@ -1,5 +1,5 @@
 /**
- * ELIA Plugin Schema
+ * BRIKA Plugin Schema
  *
  * Zod schema for validating plugin package.json files.
  * Used by the plugin manager to validate plugins at load time.
@@ -60,7 +60,7 @@ export const PluginManifestSchema = z.looseObject({
 
   // Compatibility (required)
   engines: z.object({
-    elia: z.string(),
+    brika: z.string(),
   }),
 
   // Plugin-specific

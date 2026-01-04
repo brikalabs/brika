@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
-import type { Schedule } from '@elia/shared';
-import { mock, spy, TestBed } from '@elia/shared';
+import type { Schedule } from '@brika/shared';
+import { mock, spy, TestBed } from '@brika/shared';
 import { HubConfig } from '@/runtime/config';
 import { LogRouter } from '@/runtime/logs/log-router';
 import { SchedulerService } from '@/runtime/scheduler/scheduler-service';
