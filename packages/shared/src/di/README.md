@@ -1,4 +1,4 @@
-# ELIA Testing Utilities
+# BRIKA Testing Utilities
 
 Modern, ergonomic testing utilities for dependency injection. Inspired by Vitest, Jest, Angular TestBed, and NestJS.
 
@@ -6,7 +6,7 @@ Modern, ergonomic testing utilities for dependency injection. Inspired by Vitest
 
 ```typescript
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
-import { TestBed, spy, mock } from "@elia/shared";
+import { TestBed, spy, mock } from "@brika/shared";
 import { MyService } from "./my-service";
 import { LogRouter } from "./log-router";
 
@@ -182,7 +182,7 @@ TestBed.reset();
 
 ```typescript
 it("should handle events", () => {
-  const handler = spy<[EliaEvent]>();
+  const handler = spy<[BrikaEvent]>();
   
   const bus = TestBed.get(EventBus);
   bus.subscribe("motion.*", handler);

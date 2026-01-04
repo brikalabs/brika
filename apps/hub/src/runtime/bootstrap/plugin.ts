@@ -1,4 +1,4 @@
-import type { EliaConfig } from '@/runtime/config';
+import type { BrikaConfig } from '@/runtime/config';
 import type { Bootstrap } from './bootstrap';
 
 /**
@@ -38,7 +38,7 @@ export interface BootstrapPlugin {
   /**
    * Load hook - called with config to load/configure the subsystem.
    */
-  onLoad?(config: EliaConfig): Promise<void> | void;
+  onLoad?(config: BrikaConfig): Promise<void> | void;
 
   /**
    * Called after the hub has fully started.

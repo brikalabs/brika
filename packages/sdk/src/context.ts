@@ -314,7 +314,7 @@ let ctx: Context | null = null;
 export function getContext(): Context {
   if (!ctx) {
     if (typeof process.send !== 'function') {
-      throw new TypeError('SDK only works in plugin processes spawned by ELIA hub');
+      throw new TypeError('SDK only works in plugin processes spawned by BRIKA hub');
     }
     ctx = new Context();
   }

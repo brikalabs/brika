@@ -1,5 +1,5 @@
 {
-  "$schema": "https://raw.githubusercontent.com/maxscharwath/brika/master/packages/sdk/brika-plugin.schema.json",
+  "$schema": "https://schema.brika.dev/plugin.schema.json",
   "name": "@brika/plugin-example-echo",
   "version": "0.1.0",
   "description": "Example echo plugin for testing",

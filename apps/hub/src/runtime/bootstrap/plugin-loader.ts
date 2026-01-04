@@ -1,5 +1,5 @@
 import { inject, singleton } from '@brika/shared';
-import type { EliaConfig } from '@/runtime/config';
+import type { BrikaConfig } from '@/runtime/config';
 import { ConfigLoader } from '@/runtime/config';
 import { LogRouter } from '@/runtime/logs/log-router';
 import { PluginManager } from '@/runtime/plugins/plugin-manager';
@@ -22,7 +22,7 @@ export class PluginLoader implements Loader {
     await this.registry.init();
   }
 
-  async load(config: EliaConfig): Promise<void> {
+  async load(config: BrikaConfig): Promise<void> {
     this.logs.info('plugins.sync.start');
 
     // Sync registry and state
@@ -42,7 +42,7 @@ export class PluginLoader implements Loader {
       }
     }
 
-    // Legacy: load from ELIA_PLUGINS env var
+    // Legacy: load from BRIKA_PLUGINS env var
     await this.loadFromEnv();
   }
 
@@ -51,7 +51,7 @@ export class PluginLoader implements Loader {
   }
 
   private async loadFromEnv(): Promise<void> {
-    const preload = (process.env.ELIA_PLUGINS ?? '')
+    const preload = (process.env.BRIKA_PLUGINS ?? '')
       .split(',')
       .map((s) => s.trim())
       .filter(Boolean);

@@ -1,21 +1,21 @@
-# @elia/sdk
+# @brika/sdk
 
-Plugin SDK for ELIA home automation runtime.
+Plugin SDK for BRIKA home automation runtime.
 
 ## Installation
 
 ```bash
-bun add @elia/sdk
+bun add @brika/sdk
 ```
 
 ## Quick Start
 
 ```typescript
-import { createPluginRuntime, defineTool, z } from "@elia/sdk";
+import { createPluginRuntime, defineTool, z } from "@brika/sdk";
 
 // Create plugin runtime
 const { api, start, use } = createPluginRuntime({
-  id: "@elia/plugin-my-plugin",  // Must match package.json name
+  id: "@brika/plugin-my-plugin",  // Must match package.json name
   version: "0.1.0",
 });
 
@@ -43,7 +43,7 @@ await start();
 Tools are callable functions that plugins expose to the Hub.
 
 ```typescript
-import { defineTool, z } from "@elia/sdk";
+import { defineTool, z } from "@brika/sdk";
 
 export const setTimer = defineTool({
   id: "set",                          // Local ID (becomes "pluginId:set")
@@ -73,7 +73,7 @@ export const setTimer = defineTool({
 Blocks are workflow components with inputs/outputs for visual automation.
 
 ```typescript
-import { defineBlock, z, expr } from "@elia/sdk";
+import { defineBlock, z, expr } from "@brika/sdk";
 
 export const conditionBlock = defineBlock({
   id: "condition",
@@ -179,7 +179,7 @@ api.onStop(() => {
 ## Type Guards
 
 ```typescript
-import { isCompiledTool, isCompiledBlock } from "@elia/sdk";
+import { isCompiledTool, isCompiledBlock } from "@brika/sdk";
 
 // Check if a value is a tool
 if (isCompiledTool(value)) {
@@ -198,8 +198,8 @@ Use the schema for IDE autocomplete:
 
 ```json
 {
-  "$schema": "../../packages/sdk/elia-plugin.schema.json",
-  "name": "@elia/plugin-my-plugin",
+  "$schema": "../../packages/sdk/brika-plugin.schema.json",
+  "name": "@brika/plugin-my-plugin",
   "version": "0.1.0",
   "description": "My plugin description",
   "author": "Your Name",
@@ -208,7 +208,7 @@ Use the schema for IDE autocomplete:
   "type": "module",
   "exports": { ".": "./src/index.ts" },
   "dependencies": {
-    "@elia/sdk": "workspace:*"
+    "@brika/sdk": "workspace:*"
   }
 }
 ```
@@ -217,19 +217,19 @@ Use the schema for IDE autocomplete:
 
 ```typescript
 // Tool definition
-export { defineTool, isCompiledTool, z } from "@elia/sdk";
-export type { CompiledTool, ToolResult, ToolCallContext } from "@elia/sdk";
+export { defineTool, isCompiledTool, z } from "@brika/sdk";
+export type { CompiledTool, ToolResult, ToolCallContext } from "@brika/sdk";
 
 // Block definition
-export { defineBlock, isCompiledBlock, expr, parseDuration } from "@elia/sdk";
-export type { CompiledBlock, BlockResult, BlockContext, BlockRuntime } from "@elia/sdk";
+export { defineBlock, isCompiledBlock, expr, parseDuration } from "@brika/sdk";
+export type { CompiledBlock, BlockResult, BlockContext, BlockRuntime } from "@brika/sdk";
 
 // Plugin runtime
-export { createPluginRuntime } from "@elia/sdk";
+export { createPluginRuntime } from "@brika/sdk";
 
 // IPC (advanced)
-export { FrameReader, FrameWriter } from "@elia/sdk";
-export type { Wire } from "@elia/sdk";
+export { FrameReader, FrameWriter } from "@brika/sdk";
+export type { Wire } from "@brika/sdk";
 ```
 
 

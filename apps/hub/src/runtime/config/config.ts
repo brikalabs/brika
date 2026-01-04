@@ -12,16 +12,16 @@ export class HubConfig {
     try {
       const loader = inject(ConfigLoader);
       const config = loader.get();
-      this.host = process.env.ELIA_HOST ?? config.hub.host;
-      this.port = Number(process.env.ELIA_PORT ?? config.hub.port);
-      // Use .elia directory from config loader
-      this.homeDir = process.env.ELIA_HOME ?? loader.getEliaDir();
+      this.host = process.env.BRIKA_HOST ?? config.hub.host;
+      this.port = Number(process.env.BRIKA_PORT ?? config.hub.port);
+      // Use .brika directory from config loader
+      this.homeDir = process.env.BRIKA_HOME ?? loader.getBrikaDir();
     } catch {
       // Config not loaded yet, use env/defaults
-      this.host = process.env.ELIA_HOST ?? '127.0.0.1';
-      this.port = Number(process.env.ELIA_PORT ?? '3001');
+      this.host = process.env.BRIKA_HOST ?? '127.0.0.1';
+      this.port = Number(process.env.BRIKA_PORT ?? '3001');
       // Fallback to relative path
-      this.homeDir = process.env.ELIA_HOME ?? '.elia';
+      this.homeDir = process.env.BRIKA_HOME ?? '.brika';
     }
   }
 }

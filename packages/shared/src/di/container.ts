@@ -5,7 +5,7 @@ import { injectable, singleton, container as tsyringeContainer } from 'tsyringe'
 // ─────────────────────────────────────────────────────────────────────────────
 // Hot Reload Support: Persist DI container across module reloads
 // ─────────────────────────────────────────────────────────────────────────────
-const HOT_CONTAINER_KEY = Symbol.for('elia.di.container');
+const HOT_CONTAINER_KEY = Symbol.for('brika.di.container');
 
 function getOrCreateContainer(): DependencyContainer {
   const existing = (globalThis as Record<symbol, DependencyContainer>)[HOT_CONTAINER_KEY];

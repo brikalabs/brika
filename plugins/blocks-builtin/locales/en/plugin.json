@@ -1,6 +1,6 @@
 {
   "name": "Built-in Blocks",
-  "description": "Core workflow blocks for ELIA automations",
+  "description": "Core workflow blocks for BRIKA automations",
   "blocks": {
     "action": {
       "name": "Action",

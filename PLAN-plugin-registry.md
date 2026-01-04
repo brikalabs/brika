@@ -4,7 +4,7 @@ sav# Plugin Registry & Storage Improvement Plan
 
 Improve how plugins are downloaded, stored, and loaded by:
 
-1. Using a dedicated `.elia` directory for plugin storage
+1. Using a dedicated `.brika` directory for plugin storage
 2. Leveraging `bun install` for registry downloads with progress UI
 3. Simplifying the `plugin.ref` system
 4. Maintaining development workflow via workspace loading
@@ -39,10 +39,10 @@ Improve how plugins are downloaded, stored, and loaded by:
 ### 1. New Directory Structure
 
 ```
-~/.elia/                          # User's Elia home directory
+~/.brika/                          # User's Brika home directory
 ├── plugins/                      # Plugin installation directory
 │   ├── node_modules/            # All packages (registry + workspace)
-│   │   ├── @elia/
+│   │   ├── @brika/
 │   │   │   └── plugin-timer/    # Registry package
 │   │   └── my-dev-plugin/       # Symlinked workspace package
 │   ├── package.json             # Single source of truth
@@ -56,18 +56,18 @@ Improve how plugins are downloaded, stored, and loaded by:
 
 **Key Insight**: Bun's `workspace:` protocol in `package.json` handles EVERYTHING:
 
-- Registry packages: `"@elia/plugin-timer": "^1.0.0"`
+- Registry packages: `"@brika/plugin-timer": "^1.0.0"`
 - Local development: `"my-plugin": "workspace:/path/to/my-plugin"`
 
 **Single package.json manages all plugins:**
 
 ```json
 {
-  "name": "elia-plugins",
+  "name": "brika-plugins",
   "private": true,
   "dependencies": {
-    "@elia/plugin-timer": "^1.0.0",
-    "@elia/plugin-openai": "^2.1.0",
+    "@brika/plugin-timer": "^1.0.0",
+    "@brika/plugin-openai": "^2.1.0",
     "my-dev-plugin": "workspace:/Users/me/projects/my-plugin"
   }
 }
@@ -87,13 +87,13 @@ Improve how plugins are downloaded, stored, and loaded by:
 ┌─────────────────────────────────────────────────────────────┐
 │  UI (PluginsPage)                                           │
 │  ┌─────────────────────────────────────────────────────┐    │
-│  │  Installing @elia/plugin-timer...                    │    │
+│  │  Installing @brika/plugin-timer...                    │    │
 │  │  ████████████░░░░░░░░  45% - Downloading...          │    │
 │  │                                                       │    │
 │  │  Recent Activity:                                     │    │
 │  │  • Resolving dependencies...                          │    │
-│  │  • Downloading @elia/plugin-timer@1.2.3              │    │
-│  │  • Downloading @elia/sdk@0.3.0 (dependency)          │    │
+│  │  • Downloading @brika/plugin-timer@1.2.3              │    │
+│  │  • Downloading @brika/sdk@0.3.0 (dependency)          │    │
 │  └─────────────────────────────────────────────────────┘    │
 └─────────────────────────────────────────────────────────────┘
           │
@@ -112,8 +112,8 @@ Improve how plugins are downloaded, stored, and loaded by:
 │           │ Bun subprocess with stdout/stderr streaming     │
 │           ▼                                                  │
 │  ┌─────────────────────────────────────────────────────┐    │
-│  │  bun install @elia/plugin-timer                      │    │
-│  │  (in ~/.elia/plugins/ directory)                     │    │
+│  │  bun install @brika/plugin-timer                      │    │
+│  │  (in ~/.brika/plugins/ directory)                     │    │
 │  └─────────────────────────────────────────────────────┘    │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -179,7 +179,7 @@ Key features:
 - Uses `Bun.spawn()` with streaming stdout/stderr
 - Parses bun's output for progress indicators
 - Emits events for UI consumption
-- Manages `~/.elia/plugins/package.json`
+- Manages `~/.brika/plugins/package.json`
 
 **Step 1.2: Initialize plugins directory**
 
@@ -190,7 +190,7 @@ async function initPluginsDir(): Promise<string> {
   if (!existsSync(join(dir, 'package.json'))) {
     await mkdir(dir, { recursive: true });
     await writeFile(join(dir, 'package.json'), JSON.stringify({
-      name: 'elia-plugins',
+      name: 'brika-plugins',
       private: true,
       dependencies: {}
     }, null, 2));
@@ -225,7 +225,7 @@ Bun outputs progress like:
 ```
 bun add v1.x.x
 
-installed @elia/plugin-timer@1.2.3
+installed @brika/plugin-timer@1.2.3
 
 3 packages installed [0.45s]
 ```
@@ -268,7 +268,7 @@ function InstallPluginDialog() {
   return (
     <Dialog>
       <DialogContent>
-        <Input placeholder="@elia/plugin-timer" />
+        <Input placeholder="@brika/plugin-timer" />
 
         {progress && (
           <div>
@@ -318,22 +318,22 @@ Bun resolves from `node_modules/` whether it's a registry package or a workspace
 
 ```bash
 # Registry plugin
-bun add @elia/plugin-timer
+bun add @brika/plugin-timer
 
 # Local development plugin (creates symlink)
 bun add my-plugin@workspace:/path/to/my-plugin
 
 # With version
-bun add @elia/plugin-timer@^1.0.0
+bun add @brika/plugin-timer@^1.0.0
 ```
 
 **Step 3.3: Plugin identification**
 
 Plugins are now identified by their **package name** (from package.json `name` field):
 
-- `@elia/plugin-timer`
+- `@brika/plugin-timer`
 - `my-dev-plugin`
-- `elia-plugin-openai`
+- `brika-plugin-openai`
 
 No more refs! Just package names.
 
@@ -497,11 +497,11 @@ async function migratePluginsDir() {
 
 ```typescript
 // Old state
-{ ref: "npm:@elia/plugin-timer", dir: "...", ... }
+{ ref: "npm:@brika/plugin-timer", dir: "...", ... }
 
 // New state
-{ name: "@elia/plugin-timer", ... }
-// dir is now derived: ~/.elia/plugins/node_modules/@elia/plugin-timer
+{ name: "@brika/plugin-timer", ... }
+// dir is now derived: ~/.brika/plugins/node_modules/@brika/plugin-timer
 ```
 
 **Step 5.3: Update brika.yml config format**
@@ -509,7 +509,7 @@ async function migratePluginsDir() {
 ```yaml
 # Old format (legacy - still supported)
 install:
-  - ref: "npm:@elia/plugin-timer"
+  - ref: "npm:@brika/plugin-timer"
     enabled: true
   - ref: "workspace:timer"
     enabled: true
@@ -517,8 +517,8 @@ install:
 # New format (package.json-like)
 install:
   # Key is package name, value is version specifier
-  "@elia/plugin-timer": "^1.0.0"           # Registry package
-  "@elia/plugin-hue": "latest"             # Latest from registry
+  "@brika/plugin-timer": "^1.0.0"           # Registry package
+  "@brika/plugin-hue": "latest"             # Latest from registry
   "timer": "workspace:./plugins/timer"     # Local workspace plugin
   "example-echo": "workspace:./plugins/example-echo"
 ```
@@ -650,12 +650,12 @@ resolveEntry(ref: string) {
 }
 
 // State stores refs
-{ ref: "npm:@elia/plugin-timer", dir: "/path/to/...", ... }
+{ ref: "npm:@brika/plugin-timer", dir: "/path/to/...", ... }
 
 // Config uses refs
 plugins:
   - ref: "workspace:timer"
-  - ref: "npm:@elia/plugin-timer"
+  - ref: "npm:@brika/plugin-timer"
 ```
 
 ### After (New System)
@@ -672,7 +672,7 @@ string
 
 // State uses package names
 {
-  name: "@elia/plugin-timer",
+  name: "@brika/plugin-timer",
 ...
 }
 
@@ -680,7 +680,7 @@ string
 plugins:
   -name
 :
-"@elia/plugin-timer"
+"@brika/plugin-timer"
 - name
 :
 "timer"
@@ -695,10 +695,10 @@ dev
 
 ```bash
 # Registry plugin
-bun add @elia/plugin-timer --cwd ~/.elia/plugins
+bun add @brika/plugin-timer --cwd ~/.brika/plugins
 
 # Local development plugin (symlinked)
-bun add timer@workspace:./plugins/timer --cwd ~/.elia/plugins
+bun add timer@workspace:./plugins/timer --cwd ~/.brika/plugins
 
 # Both go into the SAME package.json, SAME node_modules
 # Bun handles resolution automatically
@@ -708,7 +708,7 @@ bun add timer@workspace:./plugins/timer --cwd ~/.elia/plugins
 
 ## Implementation Order (Recommended)
 
-1. **Create `~/.elia/plugins/` structure** with package.json initialization
+1. **Create `~/.brika/plugins/` structure** with package.json initialization
 2. **Build PluginRegistry service** with `install()`, `update()`, `uninstall()`, `list()`, `checkUpdates()`
 3. **Add progress streaming** to install and update methods
 4. **Build SSE API endpoints** for install/update operations

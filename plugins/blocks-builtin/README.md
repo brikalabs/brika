@@ -1,10 +1,10 @@
-# @elia/blocks-builtin
+# @brika/blocks-builtin
 
-Core workflow blocks for ELIA automations. This plugin provides essential building blocks for creating visual workflows in the ELIA automation engine.
+Core workflow blocks for BRIKA automations. This plugin provides essential building blocks for creating visual workflows in the BRIKA automation engine.
 
 ## Overview
 
-The built-in blocks plugin is automatically loaded by the ELIA hub and provides fundamental workflow control and data manipulation blocks. These blocks form the foundation of all ELIA automations.
+The built-in blocks plugin is automatically loaded by the BRIKA hub and provides fundamental workflow control and data manipulation blocks. These blocks form the foundation of all BRIKA automations.
 
 ## Available Blocks
 
@@ -67,7 +67,7 @@ Call a tool with arguments.
 - **Inputs**: `in`
 - **Outputs**: `out`
 - **Config**:
-  - `tool`: Tool name to call (e.g., `@elia/plugin-timer:set`)
+  - `tool`: Tool name to call (e.g., `@brika/plugin-timer:set`)
   - `args`: Arguments to pass (optional, supports expressions)
 
 #### Emit Event
@@ -113,14 +113,14 @@ blocks:
       event: motion.detected
   
   - id: check
-    type: @elia/blocks-builtin:condition
+    type: @brika/blocks-builtin:condition
     config:
       if: trigger.payload.value > 50
   
   - id: action
-    type: @elia/blocks-builtin:action
+    type: @brika/blocks-builtin:action
     config:
-      tool: "@elia/plugin-lights:turnOn"
+      tool: "@brika/plugin-lights:turnOn"
       args:
         brightness: 100
 ```
@@ -132,19 +132,19 @@ Set a timer and send a notification halfway through:
 ```yaml
 blocks:
   - id: start
-    type: @elia/blocks-builtin:action
+    type: @brika/blocks-builtin:action
     config:
-      tool: "@elia/plugin-timer:set"
+      tool: "@brika/plugin-timer:set"
       args:
         seconds: 60
   
   - id: wait
-    type: @elia/blocks-builtin:delay
+    type: @brika/blocks-builtin:delay
     config:
       duration: "30s"
   
   - id: notify
-    type: @elia/blocks-builtin:emit
+    type: @brika/blocks-builtin:emit
     config:
       event: timer.halfway
       payload:
@@ -163,21 +163,21 @@ blocks:
       event: button.pressed
   
   - id: split
-    type: @elia/blocks-builtin:parallel
+    type: @brika/blocks-builtin:parallel
     config: {}
   
   - id: lights
-    type: @elia/blocks-builtin:action
+    type: @brika/blocks-builtin:action
     config:
-      tool: "@elia/plugin-lights:toggle"
+      tool: "@brika/plugin-lights:toggle"
   
   - id: music
-    type: @elia/blocks-builtin:action
+    type: @brika/blocks-builtin:action
     config:
-      tool: "@elia/plugin-music:play"
+      tool: "@brika/plugin-music:play"
   
   - id: merge
-    type: @elia/blocks-builtin:merge
+    type: @brika/blocks-builtin:merge
     config: {}
 ```
 
@@ -193,18 +193,18 @@ blocks:
       event: sensor.reading
   
   - id: store_temp
-    type: @elia/blocks-builtin:set
+    type: @brika/blocks-builtin:set
     config:
       var: temperature
       value: trigger.payload.temp
   
   - id: check
-    type: @elia/blocks-builtin:condition
+    type: @brika/blocks-builtin:condition
     config:
       if: vars.temperature > 25
   
   - id: log_high
-    type: @elia/blocks-builtin:log
+    type: @brika/blocks-builtin:log
     config:
       message: "Temperature is {{ vars.temperature }}°C"
       level: warn
@@ -215,14 +215,14 @@ blocks:
 You can specify filenames in code blocks to make examples clearer:
 
 ```js filename="example.js"
-const result = await runtime.callTool("@elia/plugin-timer:set", {
+const result = await runtime.callTool("@brika/plugin-timer:set", {
   name: "Coffee Reminder",
   seconds: 300,
 });
 ```
 
 ```typescript filename="plugin.ts"
-import { defineTool, z } from "@elia/sdk";
+import { defineTool, z } from "@brika/sdk";
 
 export const myTool = defineTool({
   id: "action",
@@ -249,4 +249,4 @@ Example expressions:
 
 ## Installation
 
-This plugin is included by default with ELIA and does not need to be installed separately.
+This plugin is included by default with BRIKA and does not need to be installed separately.

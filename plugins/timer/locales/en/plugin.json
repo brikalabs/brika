@@ -1,6 +1,6 @@
 {
   "name": "Timer Plugin",
-  "description": "Timer and reminder functionality for ELIA",
+  "description": "Timer and reminder functionality for BRIKA",
   "tools": {
     "set": {
       "name": "Set Timer",

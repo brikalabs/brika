@@ -64,7 +64,7 @@ export function RootLayout() {
       <aside className="flex w-64 flex-col border-r bg-card">
         <div className="border-b p-6">
           <h1 className="bg-gradient-to-r from-primary to-primary/60 bg-clip-text font-bold text-2xl text-transparent tracking-tight">
-            ELIA
+            BRIKA
           </h1>
           <p className="mt-0.5 text-muted-foreground text-xs">{t('dashboard:subtitle')}</p>
         </div>

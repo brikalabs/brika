@@ -1,8 +1,8 @@
-# ELIA Project Rules for Cursor AI
+# BRIKA Project Rules for Cursor AI
 
 ## Project Overview
 
-ELIA (Event-driven Logical Intelligence Architecture) is a Bun-first home automation runtime with:
+BRIKA (Event-driven Logical Intelligence Architecture) is a Bun-first home automation runtime with:
 - Isolated plugin processes communicating via binary IPC
 - Block-based visual workflow engine
 - React UI with TanStack Router/Query and React Flow
@@ -11,15 +11,15 @@ ELIA (Event-driven Logical Intelligence Architecture) is a Bun-first home automa
 
 NEVER cross these boundaries:
 - Hub NEVER imports plugin code directly (uses IPC)
-- Plugins ONLY depend on @elia/sdk and @elia/shared
-- UI ONLY imports from @elia/shared (no SDK)
+- Plugins ONLY depend on @brika/sdk and @brika/shared
+- UI ONLY imports from @brika/shared (no SDK)
 
 ## ID Naming Convention
 
 Always use this format:
-- Plugin ID: Full package.json name (e.g., `@elia/plugin-timer`)
-- Tool ID: `pluginId:toolId` (e.g., `@elia/plugin-timer:set`)
-- Block ID: `pluginId:blockId` (e.g., `@elia/blocks-builtin:condition`)
+- Plugin ID: Full package.json name (e.g., `@brika/plugin-timer`)
+- Tool ID: `pluginId:toolId` (e.g., `@brika/plugin-timer:set`)
+- Block ID: `pluginId:blockId` (e.g., `@brika/blocks-builtin:condition`)
 
 ## Key Files
 
@@ -47,7 +47,7 @@ When working on:
 ```typescript
 // Always match package.json name
 const { api, start, use } = createPluginRuntime({
-  id: "@elia/plugin-name",  // From package.json
+  id: "@brika/plugin-name",  // From package.json
   version: "0.1.0",
 });
 
@@ -91,7 +91,7 @@ export const myBlock = defineBlock({
 
 ### Adding Hub Service
 ```typescript
-import { singleton, inject } from "@elia/shared";
+import { singleton, inject } from "@brika/shared";
 
 @singleton()
 export class MyService {
@@ -133,9 +133,9 @@ features/myfeature/
 
 ## Configuration
 
-- Main config: `elia.yml`
+- Main config: `brika.yml`
 - Workflows: `automations/*.yml`
-- Plugin schema: `packages/sdk/elia-plugin.schema.json`
+- Plugin schema: `packages/sdk/brika-plugin.schema.json`
 
 
 

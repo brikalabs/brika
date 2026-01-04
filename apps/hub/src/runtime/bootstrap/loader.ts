@@ -1,4 +1,4 @@
-import type { EliaConfig } from '@/runtime/config';
+import type { BrikaConfig } from '@/runtime/config';
 
 /**
  * Loader interface for bootstrapping system components.
@@ -14,7 +14,7 @@ export interface Loader {
   /**
    * Load/configure the subsystem from config.
    */
-  load(config: EliaConfig): Promise<void>;
+  load(config: BrikaConfig): Promise<void>;
 
   /**
    * Optional cleanup step.

@@ -1,5 +1,5 @@
 import { Action, EventSystem as BaseEventSystem, type Unsubscribe } from '@brika/events';
-import type { EliaEvent, Json } from '@brika/shared';
+import type { BrikaEvent, Json } from '@brika/shared';
 import { inject, singleton } from '@brika/shared';
 import { LogRouter } from '@/runtime/logs/log-router';
 
@@ -38,13 +38,13 @@ class RingBuffer<T> {
 @singleton()
 export class EventSystem extends BaseEventSystem {
   private readonly logs = inject(LogRouter);
-  readonly #history = new RingBuffer<EliaEvent>(1000);
+  readonly #history = new RingBuffer<BrikaEvent>(1000);
 
   constructor() {
     super();
     // Subscribe to all events and store them in history
     super.subscribeAll((action) => {
-      const event: EliaEvent = {
+      const event: BrikaEvent = {
         id: action.id,
         type: action.type,
         source: action.source ?? 'unknown',
@@ -68,7 +68,7 @@ export class EventSystem extends BaseEventSystem {
   /**
    * Query event history
    */
-  query(): EliaEvent[] {
+  query(): BrikaEvent[] {
     return this.#history.snapshot();
   }
 }

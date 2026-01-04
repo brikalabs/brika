@@ -1,7 +1,7 @@
 /**
  * @brika/ipc - Smart Typed IPC
  *
- * Type-safe inter-process communication for ELIA plugins.
+ * Type-safe inter-process communication for BRIKA plugins.
  *
  * @example Plugin side:
  * ```ts

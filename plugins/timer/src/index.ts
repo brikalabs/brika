@@ -1,5 +1,5 @@
 /**
- * Timer Plugin for ELIA
+ * Timer Plugin for BRIKA
  *
  * Provides timer/reminder functionality with fully typed tools.
  */

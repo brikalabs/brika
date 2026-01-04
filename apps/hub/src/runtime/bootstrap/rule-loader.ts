@@ -1,6 +1,6 @@
 import type { Json } from '@brika/shared';
 import { inject, singleton } from '@brika/shared';
-import type { EliaConfig } from '@/runtime/config';
+import type { BrikaConfig } from '@/runtime/config';
 import { LogRouter } from '@/runtime/logs/log-router';
 import { RulesEngine } from '@/runtime/rules/rules-engine';
 import type { Loader } from './loader';
@@ -16,7 +16,7 @@ export class RuleLoader implements Loader {
     await this.rulesEngine.init();
   }
 
-  async load(config: EliaConfig): Promise<void> {
+  async load(config: BrikaConfig): Promise<void> {
     for (const rule of config.rules.filter((r) => r.enabled)) {
       try {
         await this.rulesEngine.create({

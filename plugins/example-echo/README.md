@@ -1,10 +1,10 @@
-# @elia/plugin-example-echo
+# @brika/plugin-example-echo
 
 A simple example plugin that provides an echo tool for testing and demonstration purposes.
 
 ## Overview
 
-This plugin provides a basic `echo` tool that returns any message you send to it. It's useful for testing workflows, debugging, and learning how ELIA plugins work.
+This plugin provides a basic `echo` tool that returns any message you send to it. It's useful for testing workflows, debugging, and learning how BRIKA plugins work.
 
 ## Available Tools
 
@@ -33,14 +33,14 @@ blocks:
       event: test.trigger
   
   - id: echo_block
-    type: @elia/blocks-builtin:action
+    type: @brika/blocks-builtin:action
     config:
-      tool: "@elia/plugin-example-echo:echo"
+      tool: "@brika/plugin-example-echo:echo"
       args:
-        message: "Hello, ELIA!"
+        message: "Hello, BRIKA!"
   
   - id: log_result
-    type: @elia/blocks-builtin:log
+    type: @brika/blocks-builtin:log
     config:
       message: "Echo returned: {{ echo_block.data.content }}"
 ```
@@ -50,7 +50,7 @@ blocks:
 Here's how you might use the echo tool in a plugin:
 
 ```typescript filename="src/index.ts"
-import { defineTool, z } from "@elia/sdk";
+import { defineTool, z } from "@brika/sdk";
 
 export const echo = defineTool(
   {
@@ -73,23 +73,23 @@ You can use the echo tool to verify that your workflow is executing correctly:
 ```yaml
 blocks:
   - id: start
-    type: @elia/blocks-builtin:action
+    type: @brika/blocks-builtin:action
     config:
-      tool: "@elia/plugin-example-echo:echo"
+      tool: "@brika/plugin-example-echo:echo"
       args:
         message: "Workflow started"
   
   - id: middle
-    type: @elia/blocks-builtin:action
+    type: @brika/blocks-builtin:action
     config:
-      tool: "@elia/plugin-example-echo:echo"
+      tool: "@brika/plugin-example-echo:echo"
       args:
         message: "Workflow in progress"
   
   - id: end
-    type: @elia/blocks-builtin:action
+    type: @brika/blocks-builtin:action
     config:
-      tool: "@elia/plugin-example-echo:echo"
+      tool: "@brika/plugin-example-echo:echo"
       args:
         message: "Workflow completed"
 ```
@@ -100,5 +100,5 @@ Add to your `brika.yml`:
 
 ```yaml
 plugins:
-  - "@elia/plugin-example-echo"
+  - "@brika/plugin-example-echo"
 ```

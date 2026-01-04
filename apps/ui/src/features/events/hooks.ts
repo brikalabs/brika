@@ -1,4 +1,4 @@
-import type { EliaEvent } from '@brika/shared';
+import type { BrikaEvent } from '@brika/shared';
 import { useMutation } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { fetcher, getStreamUrl } from '@/lib/query';
@@ -20,7 +20,7 @@ export function useEventStream() {
 export function useEmitEvent() {
   return useMutation({
     mutationFn: ({ type, payload }: { type: string; payload: unknown }) =>
-      fetcher<EliaEvent>('/api/events', {
+      fetcher<BrikaEvent>('/api/events', {
         method: 'POST',
         body: JSON.stringify({ type, payload }),
       }),

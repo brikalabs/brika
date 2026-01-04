@@ -1,6 +1,6 @@
-# @elia/plugin-timer
+# @brika/plugin-timer
 
-Timer and reminder functionality for ELIA automations. Set timers that fire events when they complete, enabling time-based workflows and reminders.
+Timer and reminder functionality for BRIKA automations. Set timers that fire events when they complete, enabling time-based workflows and reminders.
 
 ## Overview
 
@@ -83,9 +83,9 @@ Set a timer and react when it completes:
 ```yaml filename="break-reminder.yml"
 blocks:
   - id: set_timer
-    type: @elia/blocks-builtin:action
+    type: @brika/blocks-builtin:action
     config:
-      tool: "@elia/plugin-timer:set"
+      tool: "@brika/plugin-timer:set"
       args:
         name: "Break Reminder"
         seconds: 1800  # 30 minutes
@@ -96,9 +96,9 @@ blocks:
       event: timer.completed
   
   - id: notify
-    type: @elia/blocks-builtin:action
+    type: @brika/blocks-builtin:action
     config:
-      tool: "@elia/plugin-notifications:send"
+      tool: "@brika/plugin-notifications:send"
       args:
         message: "Time for a break!"
 ```
@@ -108,7 +108,7 @@ blocks:
 Example of how the timer plugin is implemented:
 
 ```typescript filename="src/index.ts"
-import { defineTool, emit, z } from "@elia/sdk";
+import { defineTool, emit, z } from "@brika/sdk";
 
 export const set = defineTool(
   {
@@ -135,25 +135,25 @@ Set multiple timers and cancel one:
 ```yaml
 blocks:
   - id: timer1
-    type: @elia/blocks-builtin:action
+    type: @brika/blocks-builtin:action
     config:
-      tool: "@elia/plugin-timer:set"
+      tool: "@brika/plugin-timer:set"
       args:
         name: "Short Timer"
         seconds: 60
   
   - id: timer2
-    type: @elia/blocks-builtin:action
+    type: @brika/blocks-builtin:action
     config:
-      tool: "@elia/plugin-timer:set"
+      tool: "@brika/plugin-timer:set"
       args:
         name: "Long Timer"
         seconds: 300
   
   - id: cancel_short
-    type: @elia/blocks-builtin:action
+    type: @brika/blocks-builtin:action
     config:
-      tool: "@elia/plugin-timer:cancel"
+      tool: "@brika/plugin-timer:cancel"
       args:
         target: "Short Timer"
 ```
@@ -165,20 +165,20 @@ Combine timer events with delay blocks for complex timing:
 ```yaml
 blocks:
   - id: start
-    type: @elia/blocks-builtin:action
+    type: @brika/blocks-builtin:action
     config:
-      tool: "@elia/plugin-timer:set"
+      tool: "@brika/plugin-timer:set"
       args:
         name: "Main Timer"
         seconds: 600  # 10 minutes
   
   - id: warning
-    type: @elia/blocks-builtin:delay
+    type: @brika/blocks-builtin:delay
     config:
       duration: "540s"  # 9 minutes (1 minute before timer)
   
   - id: warn
-    type: @elia/blocks-builtin:emit
+    type: @brika/blocks-builtin:emit
     config:
       event: timer.warning
       payload:
@@ -197,12 +197,12 @@ Check what timers are currently running:
 ```yaml
 blocks:
   - id: list_timers
-    type: @elia/blocks-builtin:action
+    type: @brika/blocks-builtin:action
     config:
-      tool: "@elia/plugin-timer:list"
+      tool: "@brika/plugin-timer:list"
   
   - id: log_result
-    type: @elia/blocks-builtin:log
+    type: @brika/blocks-builtin:log
     config:
       message: "Active timers: {{ list_timers.data | length }}"
 ```
@@ -219,9 +219,9 @@ blocks:
       event: reminder.requested
   
   - id: set_reminder
-    type: @elia/blocks-builtin:action
+    type: @brika/blocks-builtin:action
     config:
-      tool: "@elia/plugin-timer:set"
+      tool: "@brika/plugin-timer:set"
       args:
         name: "{{ trigger.payload.name }}"
         seconds: "{{ trigger.payload.seconds }}"
@@ -232,9 +232,9 @@ blocks:
       event: timer.completed
   
   - id: send_reminder
-    type: @elia/blocks-builtin:action
+    type: @brika/blocks-builtin:action
     config:
-      tool: "@elia/plugin-notifications:send"
+      tool: "@brika/plugin-notifications:send"
       args:
         message: "Reminder: {{ reminder_done.payload.name }}"
 ```
@@ -259,5 +259,5 @@ Add to your `brika.yml`:
 
 ```yaml
 plugins:
-  - "@elia/plugin-timer"
+  - "@brika/plugin-timer"
 ```

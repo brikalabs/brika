@@ -66,7 +66,7 @@ export interface Plugin {
   /** License identifier */
   license: string | null;
   /** Engine compatibility requirements */
-  engines: { elia: string };
+  engines: { brika: string };
 
   // ─── Installation ──────────────────────────────────────────────────────────
   /** Installation reference (e.g., "file:/path/to/plugin/src/main.ts") */
@@ -171,7 +171,7 @@ export interface StoreSearchResult {
 // Events
 // ─────────────────────────────────────────────────────────────────────────────
 
-export interface EliaEvent {
+export interface BrikaEvent {
   id: string;
   type: string; // e.g. "light.changed", "motion.detected"
   source: string; // plugin ref or "hub"
@@ -230,7 +230,7 @@ export interface PluginManifest {
   icon?: string;
   keywords?: string[];
   license?: string;
-  engines: { elia: string };
+  engines: { brika: string };
   dependencies?: Record<string, string>;
   tools?: ToolManifest[];
   blocks?: BlockManifest[];

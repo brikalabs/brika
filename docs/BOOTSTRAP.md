@@ -11,9 +11,9 @@ We now support **auto-discovery** of loaders using decorators! This dramatically
 ### How to Create a New Loader
 
 ```typescript
-import { inject, singleton } from '@elia/shared';
+import { inject, singleton } from '@brika/shared';
 import { loader, type Loader } from '@/runtime/bootstrap';
-import type { EliaConfig } from '@/runtime/config';
+import type { BrikaConfig } from '@/runtime/config';
 
 @loader({ priority: 20 }) // Lower = loads first
 @singleton()
@@ -24,7 +24,7 @@ export class MyLoader implements Loader {
     // Initialize resources
   }
 
-  async load(config: EliaConfig): Promise<void> {
+  async load(config: BrikaConfig): Promise<void> {
     // Load from config
   }
 

@@ -1,6 +1,6 @@
-# ELIA — Agent Guide
+# BRIKA — Agent Guide
 
-> This document is optimized for AI coding assistants working on the ELIA codebase.
+> This document is optimized for AI coding assistants working on the BRIKA codebase.
 
 ## Quick Reference
 
@@ -21,9 +21,9 @@
 
 ---
 
-## 1. What is ELIA?
+## 1. What is BRIKA?
 
-**ELIA** = 
+**BRIKA** = 
 
 A Bun-first home automation runtime with:
 
@@ -42,9 +42,9 @@ A Bun-first home automation runtime with:
 ┌─────────────────────────────────────────────────────────┐
 │                        IMPORTS                           │
 ├─────────────────────────────────────────────────────────┤
-│ Hub can import: @elia/shared, @elia/sdk (types only)    │
-│ Plugins can import: @elia/sdk, @elia/shared             │
-│ UI can import: @elia/shared                             │
+│ Hub can import: @brika/shared, @brika/sdk (types only)    │
+│ Plugins can import: @brika/sdk, @brika/shared             │
+│ UI can import: @brika/shared                             │
 │                                                          │
 │ Hub NEVER imports plugin code in-process                │
 │ Plugins NEVER import Hub code                           │
@@ -54,9 +54,9 @@ A Bun-first home automation runtime with:
 ### ID Naming Convention
 
 ```
-Plugin ID:  @elia/plugin-timer       (from package.json name)
-Tool ID:    @elia/plugin-timer:set   (pluginId:localId)
-Block ID:   @elia/blocks-builtin:condition
+Plugin ID:  @brika/plugin-timer       (from package.json name)
+Tool ID:    @brika/plugin-timer:set   (pluginId:localId)
+Block ID:   @brika/blocks-builtin:condition
 ```
 
 ---
@@ -109,7 +109,7 @@ try {
 ### Dependency Injection
 
 ```typescript
-import { singleton, inject } from "@elia/shared";
+import { singleton, inject } from "@brika/shared";
 
 @singleton()
 export class MyService {
@@ -164,10 +164,10 @@ class Service {
 
 ```typescript
 // plugins/my-plugin/src/index.ts
-import { createPluginRuntime, defineTool, z } from "@elia/sdk";
+import { createPluginRuntime, defineTool, z } from "@brika/sdk";
 
 const { api, start, use } = createPluginRuntime({
-  id: "@elia/plugin-my-plugin",  // Must match package.json name
+  id: "@brika/plugin-my-plugin",  // Must match package.json name
   version: "0.1.0",
 });
 
@@ -190,8 +190,8 @@ await start();
 
 ```json
 {
-  "$schema": "../../packages/sdk/elia-plugin.schema.json",
-  "name": "@elia/plugin-my-plugin",
+  "$schema": "../../packages/sdk/brika-plugin.schema.json",
+  "name": "@brika/plugin-my-plugin",
   "version": "0.1.0",
   "description": "My plugin description",
   "author": "Your Name",
@@ -199,7 +199,7 @@ await start();
   "type": "module",
   "exports": { ".": "./src/index.ts" },
   "dependencies": {
-    "@elia/sdk": "workspace:*"
+    "@brika/sdk": "workspace:*"
   }
 }
 ```
@@ -207,7 +207,7 @@ await start();
 ### Defining Blocks
 
 ```typescript
-import { defineBlock, z, expr } from "@elia/sdk";
+import { defineBlock, z, expr } from "@brika/sdk";
 
 export const myBlock = defineBlock({
   id: "my-block",

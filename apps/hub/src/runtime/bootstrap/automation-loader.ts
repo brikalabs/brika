@@ -1,6 +1,6 @@
 import { inject, singleton } from '@brika/shared';
 import { AutomationEngine, YamlWorkflowLoader } from '@/runtime/automations';
-import type { EliaConfig } from '@/runtime/config';
+import type { BrikaConfig } from '@/runtime/config';
 import { ConfigLoader } from '@/runtime/config';
 import type { Loader } from './loader';
 
@@ -16,9 +16,9 @@ export class AutomationLoader implements Loader {
     await this.engine.init();
   }
 
-  async load(_config: EliaConfig): Promise<void> {
+  async load(_config: BrikaConfig): Promise<void> {
     // Load YAML workflows with hot-reload
-    await this.yamlLoader.loadDir(`${this.configLoader.getEliaDir()}/automations`);
+    await this.yamlLoader.loadDir(`${this.configLoader.getBrikaDir()}/automations`);
     this.yamlLoader.watch();
   }
 

@@ -1,5 +1,5 @@
 import { BadRequest, createAsyncSSEStream, createSSEStream, NotFound, route } from '@brika/router';
-import type { EliaEvent, Json } from '@brika/shared';
+import type { BrikaEvent, Json } from '@brika/shared';
 import { z } from 'zod';
 import { AutomationEngine } from '@/runtime/automations';
 import { EventSystem } from '@/runtime/events/event-system';
@@ -24,7 +24,7 @@ export const streamsRoutes = [
 
     return createSSEStream((send) => {
       const unsub = events.subscribeAll((action) => {
-        // Convert Action to EliaEvent format for SSE
+        // Convert Action to BrikaEvent format for SSE
         const event = {
           id: action.id,
           type: action.type,

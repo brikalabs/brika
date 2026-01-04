@@ -6,10 +6,10 @@ node_modules
 .env
 *.log
 
-# ELIA runtime data (ignore generated files, keep config and automations)
-.elia/state.json
-.elia/plugins/
-.elia/logs.db
-.elia/logs.db-shm
-.elia/logs.db-wal
-# Keep tracked: .elia/elia.yml, .elia/automations/, .elia/.gitignore
+# BRIKA runtime data (ignore generated files, keep config and automations)
+.brika/state.json
+.brika/plugins/
+.brika/logs.db
+.brika/logs.db-shm
+.brika/logs.db-wal
+# Keep tracked: .brika/elia.yml, .brika/automations/, .brika/.gitignore

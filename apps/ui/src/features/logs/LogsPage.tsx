@@ -41,7 +41,7 @@ export function LogsPage() {
 
     const a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob([content], { type: "text/plain" }));
-    a.download = `elia-logs-${Date.now()}.txt`;
+    a.download = `brika-logs-${Date.now()}.txt`;
     a.click();
   };
 

@@ -1,11 +1,11 @@
-# Contributing to ELIA
+# Contributing to BRIKA
 
 ## Development Setup
 
 ```bash
 # Clone and install
 git clone <repo>
-cd elia
+cd brika
 bun install
 
 # Start development
@@ -15,7 +15,7 @@ bun run dev
 ## Project Structure
 
 ```
-elia/
+brika/
 ├── apps/hub/         # Bun runtime
 ├── apps/ui/          # React frontend
 ├── packages/sdk/     # Plugin SDK
@@ -51,7 +51,7 @@ elia/
 ```typescript
 // 1. Imports (external, then internal)
 import { z } from "zod";
-import { inject } from "@elia/shared";
+import { inject } from "@brika/shared";
 
 // 2. Types/Interfaces
 interface MyInterface { }
@@ -166,8 +166,8 @@ test: add event bus tests
 ### Hard Boundaries
 
 - Hub NEVER imports plugin code directly
-- Plugins ONLY depend on @elia/sdk, @elia/shared
-- UI ONLY imports from @elia/shared
+- Plugins ONLY depend on @brika/sdk, @brika/shared
+- UI ONLY imports from @brika/shared
 
 ### IPC Protocol
 

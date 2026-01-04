@@ -15,7 +15,7 @@ import {
 import { allRoutes } from '@/runtime/http/routes';
 
 /**
- * ELIA Hub Entry Point
+ * BRIKA Hub Entry Point
  *
  * Declarative bootstrap with modular plugins.
  */

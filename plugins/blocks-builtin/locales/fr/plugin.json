@@ -1,6 +1,6 @@
 {
   "name": "Blocs intégrés",
-  "description": "Blocs de workflow de base pour les automatisations ELIA",
+  "description": "Blocs de workflow de base pour les automatisations BRIKA",
   "blocks": {
     "action": {
       "name": "Action",

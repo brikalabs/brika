@@ -1,5 +1,5 @@
 import { inject, singleton } from '@brika/shared';
-import type { EliaConfig } from '@/runtime/config';
+import type { BrikaConfig } from '@/runtime/config';
 import { I18nService } from '@/runtime/i18n';
 import type { Loader } from './loader';
 
@@ -13,7 +13,7 @@ export class I18nLoader implements Loader {
     await this.i18n.init();
   }
 
-  async load(_config: EliaConfig): Promise<void> {
+  async load(_config: BrikaConfig): Promise<void> {
     // I18n is initialized in init(), nothing to load from config
   }
 }

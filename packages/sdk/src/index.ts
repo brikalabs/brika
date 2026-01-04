@@ -1,5 +1,5 @@
 /**
- * ELIA SDK
+ * BRIKA SDK
  *
  * Functional API for building home automation plugins.
  *

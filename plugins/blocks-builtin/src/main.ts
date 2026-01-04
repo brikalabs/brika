@@ -1,7 +1,7 @@
 /**
  * Built-in Blocks Plugin
  *
- * Provides all core workflow blocks for ELIA automations.
+ * Provides all core workflow blocks for BRIKA automations.
  */
 
 import type { Json } from "@brika/sdk";

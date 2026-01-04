@@ -1,10 +1,10 @@
-import type { EliaEvent } from '@brika/shared';
+import type { BrikaEvent } from '@brika/shared';
 import { create } from 'zustand';
 
 interface EventsStore {
-  events: EliaEvent[];
+  events: BrikaEvent[];
   paused: boolean;
-  add: (e: EliaEvent) => void;
+  add: (e: BrikaEvent) => void;
   clear: () => void;
   togglePaused: () => void;
 }

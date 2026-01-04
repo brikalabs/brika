@@ -1,6 +1,6 @@
 import type { Json } from '@brika/ipc';
 import { spawnPlugin } from '@brika/ipc';
-import type { EliaEvent, LogLevel, Plugin, PluginHealth, PluginManifest } from '@brika/shared';
+import type { BrikaEvent, LogLevel, Plugin, PluginHealth, PluginManifest } from '@brika/shared';
 import { inject, singleton } from '@brika/shared';
 import { BlockRegistry } from '@/runtime/blocks';
 import { PluginManagerConfig } from '@/runtime/config';
@@ -129,7 +129,7 @@ export class PluginLifecycle {
 
     const channel = spawnPlugin('bun', [entry], {
       cwd: globalThis.process.cwd(),
-      env: { ...globalThis.process.env, ELIA_PLUGIN_REF: ref, ELIA_PLUGIN_NAME: metadata.name },
+      env: { ...globalThis.process.env, BRIKA_PLUGIN_REF: ref, BRIKA_PLUGIN_NAME: metadata.name },
       defaultTimeoutMs: this.#config.callTimeoutMs,
       onDisconnect: (error) => this.#handleDisconnect(ref, error),
       onStderr: (line) => this.#logs.error('plugin.stderr', { name: metadata.name, message: line }),
@@ -330,7 +330,7 @@ export class PluginLifecycle {
     );
   }
 
-  #subscribeToEvents(patterns: string[], handler: (event: EliaEvent) => void): () => void {
+  #subscribeToEvents(patterns: string[], handler: (event: BrikaEvent) => void): () => void {
     const regexes = patterns.map((p) => new RegExp(`^${p.replaceAll('.', '\\.').replaceAll('*', '.*')}$`));
 
     return this.#events.subscribeAll((action) => {
@@ -442,11 +442,11 @@ export class PluginLifecycle {
   }
 
   #checkCompatibility(metadata: PluginManifest): boolean {
-    const required = metadata.engines?.elia;
+    const required = metadata.engines?.brika;
     if (!required) {
       this.#logs.error('plugin.compatibility.missing', {
         name: metadata.name,
-        message: 'Plugin must declare engines.elia in package.json',
+        message: 'Plugin must declare engines.brika in package.json',
       });
       return false;
     }

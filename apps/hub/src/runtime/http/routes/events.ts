@@ -28,7 +28,7 @@ export const eventsRoutes = group('/api/events', [
         'api'
       );
       events.dispatch(action);
-      // Return EliaEvent format for API compatibility
+      // Return BrikaEvent format for API compatibility
       return {
         id: action.id,
         type: action.type,

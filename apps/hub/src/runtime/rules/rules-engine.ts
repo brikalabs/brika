@@ -1,4 +1,4 @@
-import type { EliaEvent, Json, Rule, Schedule, ToolCallContext } from '@brika/shared';
+import type { BrikaEvent, Json, Rule, Schedule, ToolCallContext } from '@brika/shared';
 import { inject, singleton } from '@brika/shared';
 import { EventSystem } from '@/runtime/events/event-system';
 import { LogRouter } from '@/runtime/logs/log-router';
@@ -23,8 +23,8 @@ export class RulesEngine {
 
   async init(): Promise<void> {
     this.#eventUnsub = this.events.subscribeAll((action) => {
-      // Convert Action to EliaEvent format
-      const e: EliaEvent = {
+      // Convert Action to BrikaEvent format
+      const e: BrikaEvent = {
         id: action.id,
         type: action.type,
         source: action.source ?? 'unknown',
@@ -88,7 +88,7 @@ export class RulesEngine {
     return true;
   }
 
-  #onEvent(event: EliaEvent): void {
+  #onEvent(event: BrikaEvent): void {
     for (const rule of this.state.listRules()) {
       if (
         !rule.enabled ||
@@ -115,7 +115,7 @@ export class RulesEngine {
     }
   }
 
-  async #executeActions(rule: Rule, event: EliaEvent | null): Promise<void> {
+  async #executeActions(rule: Rule, event: BrikaEvent | null): Promise<void> {
     const ctx: ToolCallContext = { traceId: crypto.randomUUID(), source: 'rule' };
     for (const action of rule.actions) {
       try {
@@ -127,7 +127,7 @@ export class RulesEngine {
     }
   }
 
-  #interpolateArgs(args: Record<string, Json>, event: EliaEvent | null): Record<string, Json> {
+  #interpolateArgs(args: Record<string, Json>, event: BrikaEvent | null): Record<string, Json> {
     if (!event) return args;
     const result: Record<string, Json> = {};
     for (const [key, value] of Object.entries(args)) {

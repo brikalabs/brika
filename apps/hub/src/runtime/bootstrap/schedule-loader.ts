@@ -1,6 +1,6 @@
 import type { Json } from '@brika/shared';
 import { inject, singleton } from '@brika/shared';
-import type { EliaConfig } from '@/runtime/config';
+import type { BrikaConfig } from '@/runtime/config';
 import { LogRouter } from '@/runtime/logs/log-router';
 import { SchedulerService } from '@/runtime/scheduler/scheduler-service';
 import type { Loader } from './loader';
@@ -16,7 +16,7 @@ export class ScheduleLoader implements Loader {
     await this.scheduler.init();
   }
 
-  async load(config: EliaConfig): Promise<void> {
+  async load(config: BrikaConfig): Promise<void> {
     for (const schedule of config.schedules.filter((s) => s.enabled)) {
       try {
         await this.scheduler.create({

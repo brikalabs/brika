@@ -1,6 +1,6 @@
-# ELIA Architecture
+# BRIKA Architecture
 
-> **ELIA** = **E**vent-driven **L**ogical **I**ntelligence **A**rchitecture
+> **BRIKA** = **E**vent-driven **L**ogical **I**ntelligence **A**rchitecture
 
 A Bun-first, plugin-first home automation runtime designed for stability and extensibility.
 
@@ -21,7 +21,7 @@ A Bun-first, plugin-first home automation runtime designed for stability and ext
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                              ELIA Hub                                │
+│                              BRIKA Hub                                │
 │  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐   │
 │  │ API Server  │ │ EventBus    │ │ BlockReg    │ │ ToolReg     │   │
 │  │ (HTTP/SSE)  │ │ (pub/sub)   │ │ (blocks)    │ │ (tools)     │   │
@@ -56,7 +56,7 @@ A Bun-first, plugin-first home automation runtime designed for stability and ext
 ## Monorepo Structure
 
 ```
-elia/
+brika/
 ├── apps/
 │   ├── hub/                    # Bun Hub runtime
 │   │   └── src/
@@ -137,7 +137,7 @@ elia/
 Uses `tsyringe` with Angular-style `inject()`:
 
 ```typescript
-import { singleton, inject } from "@elia/shared";
+import { singleton, inject } from "@brika/shared";
 
 @singleton()
 export class MyService {
@@ -155,9 +155,9 @@ export class MyService {
 Plugin IDs use the full package name from `package.json`:
 
 ```
-@elia/plugin-timer          # Plugin ID
-@elia/plugin-timer:set      # Tool ID (pluginId:toolId)
-@elia/blocks-builtin:condition  # Block ID (pluginId:blockId)
+@brika/plugin-timer          # Plugin ID
+@brika/plugin-timer:set      # Tool ID (pluginId:toolId)
+@brika/blocks-builtin:condition  # Block ID (pluginId:blockId)
 ```
 
 ### Plugin Structure
@@ -180,16 +180,16 @@ plugins/timer/
 
 ```json
 {
-  "$schema": "../../packages/sdk/elia-plugin.schema.json",
-  "name": "@elia/plugin-timer",
+  "$schema": "../../packages/sdk/brika-plugin.schema.json",
+  "name": "@brika/plugin-timer",
   "version": "0.1.0",
   "description": "Timer functionality",
-  "author": "ELIA Team",
+  "author": "BRIKA Team",
   "keywords": ["timer", "reminder"],
   "icon": "./icon.png",
   "exports": { ".": "./src/index.ts" },
   "dependencies": {
-    "@elia/sdk": "workspace:*"
+    "@brika/sdk": "workspace:*"
   }
 }
 ```
@@ -197,7 +197,7 @@ plugins/timer/
 ### Defining Tools
 
 ```typescript
-import { defineTool, z } from "@elia/sdk";
+import { defineTool, z } from "@brika/sdk";
 
 export const set = defineTool({
   id: "set",
@@ -215,7 +215,7 @@ export const set = defineTool({
 ### Defining Blocks
 
 ```typescript
-import { defineBlock, z, expr } from "@elia/sdk";
+import { defineBlock, z, expr } from "@brika/sdk";
 
 export const conditionBlock = defineBlock({
   id: "condition",
@@ -263,13 +263,13 @@ trigger:
 
 blocks:
   - id: check-time
-    type: "@elia/blocks-builtin:condition"
+    type: "@brika/blocks-builtin:condition"
     config:
       expression: "{{ new Date().getHours() >= 18 }}"
     position: { x: 100, y: 100 }
 
   - id: turn-on
-    type: "@elia/blocks-builtin:action"
+    type: "@brika/blocks-builtin:action"
     config:
       tool: "hue:light.on"
       args: { brightness: 100 }
@@ -449,7 +449,7 @@ install:
     enabled: true
   - ref: "workspace:timer"
     enabled: true
-  - ref: "npm:@elia/plugin-hue"
+  - ref: "npm:@brika/plugin-hue"
     version: "^1.0.0"
     enabled: false
 
@@ -462,7 +462,7 @@ schedules: []
 | Format       | Example                    | Description                  |
 |--------------|----------------------------|------------------------------|
 | `workspace:` | `workspace:timer`          | Local plugin in `./plugins/` |
-| `npm:`       | `npm:@elia/plugin-hue`     | npm registry package         |
+| `npm:`       | `npm:@brika/plugin-hue`     | npm registry package         |
 | `git:`       | `git:github.com/user/repo` | Git repository               |
 | `file:`      | `file:./path/to/plugin.ts` | Direct file path             |
 

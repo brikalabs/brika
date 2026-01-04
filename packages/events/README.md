@@ -1,4 +1,4 @@
-# @elia/events
+# @brika/events
 
 A fully typed event system with Zod schemas and declarative actions.
 
@@ -14,7 +14,7 @@ A fully typed event system with Zod schemas and declarative actions.
 ## Installation
 
 ```bash
-bun add @elia/events
+bun add @brika/events
 ```
 
 ## Usage
@@ -23,7 +23,7 @@ bun add @elia/events
 
 ```typescript
 import { z } from 'zod';
-import { defineActions, type ActionsUnion } from '@elia/events';
+import { defineActions, type ActionsUnion } from '@brika/events';
 
 // Define actions with Zod schemas
 export const PluginActions = defineActions('plugin', {
@@ -50,7 +50,7 @@ export type PluginAction = ActionsUnion<typeof PluginActions>;
 ### Create EventSystem
 
 ```typescript
-import { EventSystem } from '@elia/events';
+import { EventSystem } from '@brika/events';
 
 const events = new EventSystem();
 ```
@@ -61,7 +61,7 @@ const events = new EventSystem();
 // Dispatch with automatic validation
 events.dispatch(PluginActions.loaded.create({
   uid: 'abc123',
-  name: '@elia/plugin-timer',
+  name: '@brika/plugin-timer',
   version: '1.0.0',
   pid: 12345,
 }, 'hub'));

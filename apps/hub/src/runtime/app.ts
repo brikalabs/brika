@@ -10,10 +10,10 @@ import {
 import { LogRouter } from '@/runtime/logs/log-router';
 
 // Hot reload detection
-const HOT_STARTED_KEY = Symbol.for('elia.hub.started');
+const HOT_STARTED_KEY = Symbol.for('brika.hub.started');
 
 /**
- * ELIA Hub Application
+ * BRIKA Hub Application
  * 
  * Declarative bootstrap configuration using builder pattern.
  */

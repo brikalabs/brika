@@ -4,7 +4,7 @@ import type { Action } from './types';
 /**
  * Symbol used to identify action creators for fast matching
  */
-export const ACTION_ID = Symbol.for('elia.action.id');
+export const ACTION_ID = Symbol.for('brika.action.id');
 
 /**
  * Action creator type returned by defineAction/defineActions

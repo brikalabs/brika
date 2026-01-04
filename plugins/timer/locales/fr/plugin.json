@@ -1,6 +1,6 @@
 {
   "name": "Plugin Minuterie",
-  "description": "Fonctionnalité de minuterie et rappel pour ELIA",
+  "description": "Fonctionnalité de minuterie et rappel pour BRIKA",
   "tools": {
     "set": {
       "name": "Définir une minuterie",

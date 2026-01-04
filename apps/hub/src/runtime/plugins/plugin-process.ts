@@ -15,7 +15,7 @@ import {
   type ToolCallContext,
   type ToolResult,
 } from '@brika/ipc/contract';
-import type { EliaEvent, Plugin, PluginHealth, PluginManifest } from '@brika/shared';
+import type { BrikaEvent, Plugin, PluginHealth, PluginManifest } from '@brika/shared';
 import { now } from './utils';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -33,7 +33,7 @@ export interface PluginProcessCallbacks {
   onTool: (tool: ToolRegistration) => void;
   onBlock: (block: BlockRegistration) => void;
   onEvent: (eventType: string, payload: Json) => void;
-  onSubscribe: (patterns: string[], handler: (event: EliaEvent) => void) => () => void;
+  onSubscribe: (patterns: string[], handler: (event: BrikaEvent) => void) => () => void;
   onHeartbeatFailed: (process: PluginProcess, silentMs: number) => void;
   onDisconnect: (process: PluginProcess, error?: Error) => void;
 }
@@ -246,9 +246,9 @@ export class PluginProcess {
         if (this.#subscriptions.has(pattern)) continue;
         this.#subscriptions.add(pattern);
 
-        const unsub = this.callbacks.onSubscribe(patterns, (eliaEvent) => {
+        const unsub = this.callbacks.onSubscribe(patterns, (brikaEvent) => {
           if (!this.#stopped) {
-            this.#channel.send(event, { event: eliaEvent });
+            this.#channel.send(event, { event: brikaEvent });
           }
         });
         this.#eventUnsubs.push(unsub);

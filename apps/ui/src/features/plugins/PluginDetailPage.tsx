@@ -556,7 +556,7 @@ export function PluginDetailPage() {
           </div>
           <div className="flex items-center justify-between rounded-lg bg-muted/30 p-2.5">
             <span className="text-sm">{t('plugins:details.compatibleVersion')}</span>
-            <code className="font-mono text-xs">{plugin.engines.elia}</code>
+            <code className="font-mono text-xs">{plugin.engines.brika}</code>
           </div>
           {locales.length > 0 && (
             <div className="flex items-center justify-between rounded-lg bg-muted/30 p-2.5">

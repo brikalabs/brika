@@ -67,7 +67,7 @@ export class PluginRegistry {
         pkgPath,
         JSON.stringify(
           {
-            name: 'elia-plugins',
+            name: 'brika-plugins',
             private: true,
             dependencies: {},
           },

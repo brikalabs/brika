@@ -77,8 +77,8 @@ export class LogRouter {
 
   constructor() {
     // Read from env - tsyringe auto-instantiates
-    this.#min = (process.env.ELIA_LOG_LEVEL ?? "info") as LogLevel;
-    this.#color = process.env.ELIA_LOG_COLOR === "1";
+    this.#min = (process.env.BRIKA_LOG_LEVEL ?? "info") as LogLevel;
+    this.#color = process.env.BRIKA_LOG_COLOR === "1";
     this.#ring = new RingBuffer<LogEvent>(5000);
   }
 

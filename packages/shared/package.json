@@ -8,8 +8,7 @@
     "directory": "packages/shared"
   },
   "exports": {
-    ".": "./src/index.ts",
-    "./plugin-schema.json": "./brika-plugin.schema.json"
+    ".": "./src/index.ts"
   },
   "dependencies": {
     "reflect-metadata": "^0.2.2",

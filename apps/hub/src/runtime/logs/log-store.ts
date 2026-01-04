@@ -56,15 +56,15 @@ export class LogStore {
   async init(): Promise<void> {
     const configLoader = inject(ConfigLoader);
     const rootDir = configLoader.getRootDir();
-    const dbPath = `${rootDir}/.elia/logs.db`;
+    const dbPath = `${rootDir}/.brika/logs.db`;
 
-    // Ensure .elia directory exists
-    const eliaDir = `${rootDir}/.elia`;
-    const dirExists = await Bun.file(eliaDir)
+    // Ensure .brika directory exists
+    const brikaDir = `${rootDir}/.brika`;
+    const dirExists = await Bun.file(brikaDir)
       .exists()
       .catch(() => false);
     if (!dirExists) {
-      await Bun.$`mkdir -p ${eliaDir}`.quiet();
+      await Bun.$`mkdir -p ${brikaDir}`.quiet();
     }
 
     this.#db = new Database(dbPath);
