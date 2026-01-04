@@ -115,10 +115,12 @@ if (isForce) {
   publishArgs.push("--force");
 }
 
+// Spawn with stdin:"inherit" so npm can interactively prompt for OTP
 const publishProcess = Bun.spawn(publishArgs, {
   cwd: rootDir,
   stdout: "inherit",
   stderr: "inherit",
+  stdin: "inherit", // Allow interactive prompts (like OTP)
 });
 
 const publishExit = await publishProcess.exited;
