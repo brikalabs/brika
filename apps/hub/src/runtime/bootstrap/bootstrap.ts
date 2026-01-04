@@ -1,7 +1,7 @@
 import { createBanner } from '@brika/banner';
 import { inject } from '@brika/shared';
 import { hub } from '@/hub';
-import { ConfigLoader, BrikaInitializer } from '@/runtime/config';
+import { BrikaInitializer, ConfigLoader } from '@/runtime/config';
 import { LogRouter } from '@/runtime/logs/log-router';
 import { LogStore } from '@/runtime/logs/log-store';
 import type { BootstrapPlugin } from './plugin';

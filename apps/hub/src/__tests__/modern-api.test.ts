@@ -9,9 +9,9 @@
 
 import 'reflect-metadata';
 import { afterEach, describe, expect, it } from 'bun:test';
+import { EventBus } from '@brika/events';
 import { autoMock, mock, spy, TestBed } from '@brika/shared';
 import { HubConfig } from '@/runtime/config';
-import { EventBus } from '@brika/events';
 import { LogRouter } from '@/runtime/logs/log-router';
 import { ToolRegistry } from '@/runtime/tools/tool-registry';
 

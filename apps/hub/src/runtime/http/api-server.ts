@@ -27,7 +27,7 @@ export class ApiServer {
       port: this.#config.port,
       fetch: async (req) => {
         if (!this.#app) {
-          throw new Error("Failed to start");
+          throw new Error('Failed to start');
         }
         const start = Date.now();
         const url = new URL(req.url);
@@ -39,13 +39,13 @@ export class ApiServer {
           const res = await this.#app.fetch(req);
           const duration = Date.now() - start;
 
-            this.#logs.info('api.request.end', {
-              method: req.method,
-              path: url.pathname,
-              status: res.status,
-              body: await res.clone().text(),
-              duration,
-            });
+          this.#logs.info('api.request.end', {
+            method: req.method,
+            path: url.pathname,
+            status: res.status,
+            body: await res.clone().text(),
+            duration,
+          });
 
           return res;
         } catch (e) {

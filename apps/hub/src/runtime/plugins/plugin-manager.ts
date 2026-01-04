@@ -92,7 +92,7 @@ export class PluginManager {
 
     // Unload the plugin first
     await this.#lifecycle.unload(ref);
-    
+
     // Verify process is actually gone
     if (this.#lifecycle.hasProcess(ref)) {
       throw new Error(`Plugin ${uid} is still running after unload`);
@@ -109,7 +109,9 @@ export class PluginManager {
     try {
       await this.#lifecycle.load(ref);
     } catch (error) {
-      throw new Error(`Failed to load plugin ${uid}: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Failed to load plugin ${uid}: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
 
     // Verify process was actually created
@@ -124,7 +126,9 @@ export class PluginManager {
     } catch (error) {
       // If timeout, unload the plugin that failed to start
       await this.#lifecycle.unload(ref);
-      throw new Error(`Plugin ${uid} failed to become ready within timeout: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Plugin ${uid} failed to become ready within timeout: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
 
     await this.#events.dispatch(
@@ -171,13 +175,22 @@ export class PluginManager {
   // Tool & Block Execution
   // ─────────────────────────────────────────────────────────────────────────
 
-  async callTool(ref: string, toolName: string, args: Record<string, Json>, ctx: ToolCallContext): Promise<ToolResult> {
+  async callTool(
+    ref: string,
+    toolName: string,
+    args: Record<string, Json>,
+    ctx: ToolCallContext
+  ): Promise<ToolResult> {
     const process = this.#lifecycle.getProcess(ref);
     if (!process) return { ok: false, content: `Plugin not loaded: ${ref}` };
     return process.callTool(toolName, args, ctx);
   }
 
-  async executeBlock(blockType: string, config: Record<string, Json>, context: BlockContext): Promise<BlockResult> {
+  async executeBlock(
+    blockType: string,
+    config: Record<string, Json>,
+    context: BlockContext
+  ): Promise<BlockResult> {
     const pluginName = this.#blocks.getProvider(blockType);
     if (!pluginName) return { error: `Unknown block type: ${blockType}`, stop: true };
 

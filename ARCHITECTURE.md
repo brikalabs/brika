@@ -201,7 +201,7 @@ Returns dist/plugin.schema.json from that version
 
 **Output:** Published npm package
 
-### Cloudflare Worker (`.cloudflare/worker.js`)
+### Cloudflare Worker (`apps/schema-cdn/worker.ts`)
 
 **Purpose:** Custom domain proxy
 
@@ -400,5 +400,5 @@ View in: Workers → Logs (Real-time tail)
 - [INFRASTRUCTURE_SETUP.md](./INFRASTRUCTURE_SETUP.md) - Setup guide
 - [QUICK_SETUP.md](./QUICK_SETUP.md) - Fast setup
 - [packages/schema/README.md](./packages/schema/README.md) - Package docs
-- [.cloudflare/README.md](./.cloudflare/README.md) - Worker details
+- [apps/schema-cdn/README.md](./apps/schema-cdn/README.md) - Worker details
 

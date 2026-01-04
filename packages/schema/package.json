@@ -1,6 +1,6 @@
 {
   "name": "@brika/schema",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Unified schemas for BRIKA plugins and configuration",
   "type": "module",
   "repository": {

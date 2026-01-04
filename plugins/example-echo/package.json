@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.brika.dev/plugin.schema.json",
   "name": "@brika/plugin-example-echo",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Example echo plugin for testing",
   "author": "BRIKA Team",
   "repository": {
@@ -15,7 +15,7 @@
     "test"
   ],
   "engines": {
-    "brika": "^0.1.0"
+    "brika": "^0.1.1"
   },
   "type": "module",
   "exports": {

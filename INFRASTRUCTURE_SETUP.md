@@ -110,7 +110,7 @@ If you can't change nameservers, you'll manually add DNS records later.
 
 ### 3.3 Add Worker Code
 
-Copy the code from `.cloudflare/worker.js`:
+Copy the code from `apps/schema-cdn/worker.ts` and related files:
 
 ```javascript
 const NPM_PACKAGE = '@brika/schema';
@@ -557,7 +557,7 @@ After setup is complete:
 If you encounter issues:
 
 1. Check this guide's Troubleshooting section
-2. Review `.cloudflare/README.md` for worker details
+2. Review `apps/schema-cdn/README.md` for worker details
 3. Check `packages/schema/PUBLISHING.md` for npm details
 4. Test with `curl -v` for detailed error info
 

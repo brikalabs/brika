@@ -124,7 +124,11 @@ export class PluginProcess {
   // IPC Operations
   // ─────────────────────────────────────────────────────────────────────────
 
-  async callTool(toolName: string, args: Record<string, Json>, ctx: ToolCallContext): Promise<ToolResult> {
+  async callTool(
+    toolName: string,
+    args: Record<string, Json>,
+    ctx: ToolCallContext
+  ): Promise<ToolResult> {
     if (this.#stopped) return { ok: false, content: 'Plugin stopped' };
     try {
       return await this.#channel.call(callTool, { tool: toolName, args, ctx });
@@ -133,7 +137,11 @@ export class PluginProcess {
     }
   }
 
-  async executeBlock(blockType: string, config: Record<string, Json>, context: BlockContext): Promise<BlockResult> {
+  async executeBlock(
+    blockType: string,
+    config: Record<string, Json>,
+    context: BlockContext
+  ): Promise<BlockResult> {
     if (this.#stopped) return { error: 'Plugin stopped', stop: true };
     try {
       return await this.#channel.call(executeBlock, { blockType, config, context });

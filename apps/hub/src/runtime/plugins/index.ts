@@ -1,5 +1,5 @@
-export { PluginManager } from './plugin-manager';
 export { PluginLifecycle } from './plugin-lifecycle';
+export { PluginManager } from './plugin-manager';
 export { PluginProcess } from './plugin-process';
 export { RestartPolicy, type RestartPolicyConfig } from './restart-policy';
 export type { RunningPlugin } from './types';

@@ -5,24 +5,24 @@
     "lib": ["ESNext", "DOM"],
     "moduleResolution": "bundler",
     "types": ["bun-types"],
-    
+
     // Strict mode
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
-    
+
     // Emit
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
     "removeComments": false,
-    
+
     // Interop
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
-    
+
     // Paths
     "baseUrl": ".",
     "skipLibCheck": true,
@@ -30,4 +30,3 @@
   },
   "exclude": ["node_modules", "dist", "build"]
 }
-

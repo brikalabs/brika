@@ -16,7 +16,7 @@ npm login
 2. **Workers & Pages** → **Create Application** → **Create Worker**
 3. Name: `brika-schemas`
 4. **Deploy** → **Edit Code**
-5. Copy code from `.cloudflare/worker.js`
+5. Copy code from `apps/schema-cdn/worker.ts` and related files
 6. **Save and Deploy**
 
 ### 3. Add Custom Domain (1 min)
@@ -125,7 +125,7 @@ curl https://brika-schemas.YOUR_ACCOUNT.workers.dev/plugin.schema.json
 - **[INFRASTRUCTURE_SETUP.md](./INFRASTRUCTURE_SETUP.md)** - Complete setup guide
 - **[packages/schema/README.md](./packages/schema/README.md)** - Package usage
 - **[packages/schema/PUBLISHING.md](./packages/schema/PUBLISHING.md)** - Publishing workflow
-- **[.cloudflare/README.md](./.cloudflare/README.md)** - Worker deployment
+- **[apps/schema-cdn/README.md](./apps/schema-cdn/README.md)** - Worker deployment
 
 ---
 

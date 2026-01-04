@@ -137,8 +137,19 @@ export class PluginLifecycle {
 
     const pluginProcess = new PluginProcess(
       channel,
-      { ref, dir: pluginDir, uid, name: metadata.name, version: metadata.version, metadata, locales },
-      { heartbeatIntervalMs: this.#config.heartbeatEveryMs, heartbeatTimeoutMs: this.#config.heartbeatTimeoutMs },
+      {
+        ref,
+        dir: pluginDir,
+        uid,
+        name: metadata.name,
+        version: metadata.version,
+        metadata,
+        locales,
+      },
+      {
+        heartbeatIntervalMs: this.#config.heartbeatEveryMs,
+        heartbeatTimeoutMs: this.#config.heartbeatTimeoutMs,
+      },
       {
         onReady: (p) => this.#onPluginReady(p),
         onLog: (level, message, meta) => this.#onPluginLog(ref, level, message, meta),
@@ -194,7 +205,10 @@ export class PluginLifecycle {
 
     this.#logs.info('plugin.unloaded', { ref, name: pluginProcess.name });
     this.#events.dispatch(
-      PluginActions.unloaded.create({ uid: pluginProcess.uid, name: pluginProcess.name, ref }, 'hub')
+      PluginActions.unloaded.create(
+        { uid: pluginProcess.uid, name: pluginProcess.name, ref },
+        'hub'
+      )
     );
   }
 
@@ -303,7 +317,11 @@ export class PluginLifecycle {
     });
   }
 
-  #registerTool(ref: string, pluginName: string, tool: { id: string; description?: string; icon?: string; color?: string; inputSchema?: unknown }): void {
+  #registerTool(
+    ref: string,
+    pluginName: string,
+    tool: { id: string; description?: string; icon?: string; color?: string; inputSchema?: unknown }
+  ): void {
     const pluginProcess = this.#processes.get(ref);
     if (!pluginProcess) return;
 
@@ -315,13 +333,19 @@ export class PluginLifecycle {
       inputSchema: tool.inputSchema as any,
       call: (args, ctx) => pluginProcess.callTool(tool.id, args, ctx),
     });
-    this.#logs.debug('plugin.tool.registered', { tool: `${pluginName}:${tool.id}`, plugin: pluginName });
+    this.#logs.debug('plugin.tool.registered', {
+      tool: `${pluginName}:${tool.id}`,
+      plugin: pluginName,
+    });
   }
 
   #registerBlock(pluginName: string, block: { id: string; [key: string]: unknown }): void {
     // biome-ignore lint/suspicious/noExplicitAny: IPC and SDK types are structurally compatible
     this.#blocks.register(block as any, pluginName);
-    this.#logs.debug('plugin.block.registered', { block: `${pluginName}:${block.id}`, plugin: pluginName });
+    this.#logs.debug('plugin.block.registered', {
+      block: `${pluginName}:${block.id}`,
+      plugin: pluginName,
+    });
   }
 
   #emitPluginEvent(ref: string, eventType: string, payload: Json): void {
@@ -331,7 +355,9 @@ export class PluginLifecycle {
   }
 
   #subscribeToEvents(patterns: string[], handler: (event: BrikaEvent) => void): () => void {
-    const regexes = patterns.map((p) => new RegExp(`^${p.replaceAll('.', '\\.').replaceAll('*', '.*')}$`));
+    const regexes = patterns.map(
+      (p) => new RegExp(`^${p.replaceAll('.', '\\.').replaceAll('*', '.*')}$`)
+    );
 
     return this.#events.subscribeAll((action) => {
       const matches = regexes.some((r) => r.test(action.type));
@@ -400,8 +426,16 @@ export class PluginLifecycle {
       return;
     }
 
-    this.#logs.info('plugin.restart.scheduled', { ref, delayMs: decision.delayMs, crashReason: reason });
-    this.#state.setHealth(ref, 'restarting', `Restarting in ${Math.round(decision.delayMs / 1000)}s`);
+    this.#logs.info('plugin.restart.scheduled', {
+      ref,
+      delayMs: decision.delayMs,
+      crashReason: reason,
+    });
+    this.#state.setHealth(
+      ref,
+      'restarting',
+      `Restarting in ${Math.round(decision.delayMs / 1000)}s`
+    );
 
     this.#restartPolicy.scheduleRestart(ref, decision.delayMs, async () => {
       try {

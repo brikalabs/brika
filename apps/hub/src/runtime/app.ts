@@ -1,11 +1,11 @@
 import { inject } from '@brika/shared';
 import {
+  AutomationLoader,
   bootstrap,
   I18nLoader,
   PluginLoader,
   RuleLoader,
   ScheduleLoader,
-  AutomationLoader,
 } from '@/runtime/bootstrap';
 import { LogRouter } from '@/runtime/logs/log-router';
 
@@ -14,7 +14,7 @@ const HOT_STARTED_KEY = Symbol.for('brika.hub.started');
 
 /**
  * BRIKA Hub Application
- * 
+ *
  * Declarative bootstrap configuration using builder pattern.
  */
 export class HubApp {
