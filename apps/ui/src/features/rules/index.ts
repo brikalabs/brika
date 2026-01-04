@@ -1,2 +1,2 @@
-export { RulesPage } from "./RulesPage";
-export { useRules, useRuleMutations } from "./hooks";
+export { useRuleMutations, useRules } from './hooks';
+export { RulesPage } from './RulesPage';

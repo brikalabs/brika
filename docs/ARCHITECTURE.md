@@ -117,20 +117,20 @@ elia/
 
 ### Hub Services
 
-| Service | File | Purpose |
-|---------|------|---------|
-| `PluginManager` | `plugins/plugin-manager.ts` | Plugin lifecycle, IPC, process supervision |
-| `ToolRegistry` | `tools/tool-registry.ts` | Register and call tools from plugins |
-| `BlockRegistry` | `blocks/block-registry.ts` | Register blocks for workflows |
-| `EventBus` | `events/event-bus.ts` | Pub/sub event system with glob patterns |
-| `AutomationEngine` | `automations/automation-engine.ts` | Workflow management and execution |
-| `WorkflowExecutor` | `automations/workflow-executor.ts` | Execute workflow blocks |
-| `SchedulerService` | `scheduler/scheduler-service.ts` | Cron and interval scheduling |
-| `RulesEngine` | `rules/rules-engine.ts` | Event-triggered rule evaluation |
-| `StateStore` | `state/state-store.ts` | Persistent JSON state |
-| `LogRouter` | `logs/log-router.ts` | Centralized logging with SSE |
-| `ApiServer` | `http/api-server.ts` | HTTP REST API |
-| `ConfigLoader` | `config/config-loader.ts` | YAML configuration |
+| Service            | File                               | Purpose                                    |
+|--------------------|------------------------------------|--------------------------------------------|
+| `PluginManager`    | `plugins/plugin-manager.ts`        | Plugin lifecycle, IPC, process supervision |
+| `ToolRegistry`     | `tools/tool-registry.ts`           | Register and call tools from plugins       |
+| `BlockRegistry`    | `blocks/block-registry.ts`         | Register blocks for workflows              |
+| `EventBus`         | `events/event-bus.ts`              | Pub/sub event system with glob patterns    |
+| `AutomationEngine` | `automations/automation-engine.ts` | Workflow management and execution          |
+| `WorkflowExecutor` | `automations/workflow-executor.ts` | Execute workflow blocks                    |
+| `SchedulerService` | `scheduler/scheduler-service.ts`   | Cron and interval scheduling               |
+| `RulesEngine`      | `rules/rules-engine.ts`            | Event-triggered rule evaluation            |
+| `StateStore`       | `state/state-store.ts`             | Persistent JSON state                      |
+| `LogRouter`        | `logs/log-router.ts`               | Centralized logging with SSE               |
+| `ApiServer`        | `http/api-server.ts`               | HTTP REST API                              |
+| `ConfigLoader`     | `config/config-loader.ts`          | YAML configuration                         |
 
 ### Dependency Injection
 
@@ -284,18 +284,18 @@ connections:
 
 ### Block Types
 
-| Block | ID | Purpose |
-|-------|-----|---------|
-| Action | `action` | Call a tool |
-| Condition | `condition` | If/else branching |
-| Switch | `switch` | Multi-way branching |
-| Delay | `delay` | Wait duration |
-| Set | `set` | Set workflow variable |
-| Log | `log` | Log message |
-| Emit | `emit` | Emit event |
-| Merge | `merge` | Combine paths |
-| Parallel | `parallel` | Split into parallel paths |
-| End | `end` | Terminate workflow |
+| Block     | ID          | Purpose                   |
+|-----------|-------------|---------------------------|
+| Action    | `action`    | Call a tool               |
+| Condition | `condition` | If/else branching         |
+| Switch    | `switch`    | Multi-way branching       |
+| Delay     | `delay`     | Wait duration             |
+| Set       | `set`       | Set workflow variable     |
+| Log       | `log`       | Log message               |
+| Emit      | `emit`      | Emit event                |
+| Merge     | `merge`     | Combine paths             |
+| Parallel  | `parallel`  | Split into parallel paths |
+| End       | `end`       | Terminate workflow        |
 
 ### Expression Syntax
 
@@ -309,6 +309,7 @@ args:
 ```
 
 Available context:
+
 - `trigger.type`, `trigger.payload`, `trigger.source`, `trigger.ts`
 - `vars.*` - Workflow variables set by Set block
 - `input` - Data from previous block
@@ -329,23 +330,23 @@ Binary framed protocol over stdin/stdout:
 
 ### Message Types
 
-| Type | Direction | Purpose |
-|------|-----------|---------|
-| `hello` | Plugin → Hub | Plugin identification |
-| `ready` | Plugin → Hub | Plugin ready |
-| `registerTool` | Plugin → Hub | Register a tool |
-| `registerBlock` | Plugin → Hub | Register a block |
-| `callTool` | Hub → Plugin | Execute tool |
-| `toolResult` | Plugin → Hub | Tool result |
-| `executeBlock` | Hub → Plugin | Execute block |
-| `blockResult` | Plugin → Hub | Block result |
-| `log` | Plugin → Hub | Log message |
-| `emit` | Plugin → Hub | Emit event |
-| `subscribe` | Plugin → Hub | Subscribe to events |
-| `event` | Hub → Plugin | Event notification |
-| `ping` | Hub → Plugin | Heartbeat |
-| `pong` | Plugin → Hub | Heartbeat response |
-| `stop` | Hub → Plugin | Shutdown request |
+| Type            | Direction    | Purpose               |
+|-----------------|--------------|-----------------------|
+| `hello`         | Plugin → Hub | Plugin identification |
+| `ready`         | Plugin → Hub | Plugin ready          |
+| `registerTool`  | Plugin → Hub | Register a tool       |
+| `registerBlock` | Plugin → Hub | Register a block      |
+| `callTool`      | Hub → Plugin | Execute tool          |
+| `toolResult`    | Plugin → Hub | Tool result           |
+| `executeBlock`  | Hub → Plugin | Execute block         |
+| `blockResult`   | Plugin → Hub | Block result          |
+| `log`           | Plugin → Hub | Log message           |
+| `emit`          | Plugin → Hub | Emit event            |
+| `subscribe`     | Plugin → Hub | Subscribe to events   |
+| `event`         | Hub → Plugin | Event notification    |
+| `ping`          | Hub → Plugin | Heartbeat             |
+| `pong`          | Plugin → Hub | Heartbeat response    |
+| `stop`          | Hub → Plugin | Shutdown request      |
 
 ---
 
@@ -353,29 +354,29 @@ Binary framed protocol over stdin/stdout:
 
 ### Endpoints
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/health` | Health check |
-| GET | `/api/stats` | Dashboard statistics |
-| GET | `/api/plugins` | List plugins |
-| GET | `/api/plugins/:id` | Plugin details |
-| GET | `/api/plugins/:id/icon` | Plugin icon |
-| POST | `/api/plugins/enable` | Enable plugin |
-| POST | `/api/plugins/disable` | Disable plugin |
-| POST | `/api/plugins/reload` | Reload plugin |
-| GET | `/api/tools` | List tools |
-| POST | `/api/tools/call` | Call a tool |
-| GET | `/api/blocks` | List blocks |
-| GET | `/api/blocks/categories` | Blocks by category |
-| GET | `/api/workflows` | List workflows |
-| POST | `/api/workflows` | Save workflow |
-| POST | `/api/workflows/:id/trigger` | Trigger workflow |
-| GET | `/api/events` | Query events |
-| POST | `/api/events` | Emit event |
-| GET | `/api/schedules` | List schedules |
-| GET | `/api/rules` | List rules |
-| GET | `/api/stream/logs` | SSE log stream |
-| GET | `/api/stream/events` | SSE event stream |
+| Method | Endpoint                     | Description          |
+|--------|------------------------------|----------------------|
+| GET    | `/api/health`                | Health check         |
+| GET    | `/api/stats`                 | Dashboard statistics |
+| GET    | `/api/plugins`               | List plugins         |
+| GET    | `/api/plugins/:id`           | Plugin details       |
+| GET    | `/api/plugins/:id/icon`      | Plugin icon          |
+| POST   | `/api/plugins/enable`        | Enable plugin        |
+| POST   | `/api/plugins/disable`       | Disable plugin       |
+| POST   | `/api/plugins/reload`        | Reload plugin        |
+| GET    | `/api/tools`                 | List tools           |
+| POST   | `/api/tools/call`            | Call a tool          |
+| GET    | `/api/blocks`                | List blocks          |
+| GET    | `/api/blocks/categories`     | Blocks by category   |
+| GET    | `/api/workflows`             | List workflows       |
+| POST   | `/api/workflows`             | Save workflow        |
+| POST   | `/api/workflows/:id/trigger` | Trigger workflow     |
+| GET    | `/api/events`                | Query events         |
+| POST   | `/api/events`                | Emit event           |
+| GET    | `/api/schedules`             | List schedules       |
+| GET    | `/api/rules`                 | List rules           |
+| GET    | `/api/stream/logs`           | SSE log stream       |
+| GET    | `/api/stream/events`         | SSE event stream     |
 
 ---
 
@@ -458,11 +459,12 @@ schedules: []
 
 ### Plugin References
 
-| Format | Example | Description |
-|--------|---------|-------------|
-| `workspace:` | `workspace:timer` | Local plugin in `./plugins/` |
-| `npm:` | `npm:@elia/plugin-hue` | npm registry package |
-| `git:` | `git:github.com/user/repo` | Git repository |
-| `file:` | `file:./path/to/plugin.ts` | Direct file path |
+| Format       | Example                    | Description                  |
+|--------------|----------------------------|------------------------------|
+| `workspace:` | `workspace:timer`          | Local plugin in `./plugins/` |
+| `npm:`       | `npm:@elia/plugin-hue`     | npm registry package         |
+| `git:`       | `git:github.com/user/repo` | Git repository               |
+| `file:`      | `file:./path/to/plugin.ts` | Direct file path             |
+
 
 

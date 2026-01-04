@@ -9,16 +9,16 @@
  * - Plugins: "plugin:@elia/plugin-timer", "plugin:@elia/blocks-builtin", etc.
  */
 
-import { singleton, inject } from "@elia/shared";
-import { ConfigLoader } from "../config/config-loader";
-import { LogRouter } from "../logs/log-router";
+import { inject, singleton } from '@elia/shared';
+import { ConfigLoader } from '@/runtime/config/config-loader';
+import { LogRouter } from '@/runtime/logs/log-router';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** Prefix for plugin namespaces to avoid collisions with core namespaces */
-const PLUGIN_NS_PREFIX = "plugin:";
+const PLUGIN_NS_PREFIX = 'plugin:';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -47,10 +47,10 @@ function deepMerge(target: TranslationData, source: TranslationData): Translatio
 
     if (
       sourceVal !== null &&
-      typeof sourceVal === "object" &&
+      typeof sourceVal === 'object' &&
       !Array.isArray(sourceVal) &&
       targetVal !== null &&
-      typeof targetVal === "object" &&
+      typeof targetVal === 'object' &&
       !Array.isArray(targetVal)
     ) {
       result[key] = deepMerge(targetVal as TranslationData, sourceVal as TranslationData);
@@ -81,7 +81,7 @@ export class I18nService {
   readonly #availableLocales = new Set<string>();
 
   /** Root directory for hub locales */
-  #localesDir = "";
+  #localesDir = '';
 
   // ─────────────────────────────────────────────────────────────────────────
   // Initialization
@@ -92,7 +92,7 @@ export class I18nService {
     this.#localesDir = `${rootDir}/apps/hub/locales`;
 
     await this.#loadCoreTranslations();
-    this.#logs.info("i18n.initialized", {
+    this.#logs.info('i18n.initialized', {
       locales: [...this.#availableLocales],
       namespaces: this.listNamespaces(),
     });
@@ -171,7 +171,7 @@ export class I18nService {
   listLocales(): string[] {
     const locales = [...this.#availableLocales].sort();
     // Add cimode at the end - handled client-side by i18next
-    locales.push("cimode");
+    locales.push('cimode');
     return locales;
   }
 
@@ -184,11 +184,11 @@ export class I18nService {
     const detectedLocales: string[] = [];
 
     try {
-      const glob = new Bun.Glob("*/");
+      const glob = new Bun.Glob('*/');
       const entries = await Array.fromAsync(glob.scan({ cwd: localesDir, onlyFiles: false }));
 
       for (const entry of entries) {
-        const locale = entry.replace("/", "");
+        const locale = entry.replace('/', '');
         if (!locale) continue;
 
         detectedLocales.push(locale);
@@ -208,7 +208,7 @@ export class I18nService {
       }
 
       if (detectedLocales.length > 0) {
-        this.#logs.debug("i18n.plugin.registered", {
+        this.#logs.debug('i18n.plugin.registered', {
           plugin: pluginId,
           locales: detectedLocales,
         });
@@ -226,7 +226,7 @@ export class I18nService {
    */
   unregisterPluginTranslations(pluginId: string): void {
     if (this.#pluginTranslations.delete(pluginId)) {
-      this.#logs.debug("i18n.plugin.unregistered", { plugin: pluginId });
+      this.#logs.debug('i18n.plugin.unregistered', { plugin: pluginId });
     }
   }
 
@@ -239,11 +239,11 @@ export class I18nService {
    */
   async #loadCoreTranslations(): Promise<void> {
     try {
-      const glob = new Bun.Glob("*/");
+      const glob = new Bun.Glob('*/');
       const entries = await Array.fromAsync(glob.scan({ cwd: this.#localesDir, onlyFiles: false }));
 
       for (const entry of entries) {
-        const locale = entry.replace("/", "");
+        const locale = entry.replace('/', '');
         if (!locale) continue;
 
         this.#availableLocales.add(locale);
@@ -254,7 +254,7 @@ export class I18nService {
         }
       }
     } catch (e) {
-      this.#logs.warn("i18n.core.load.error", { error: String(e) });
+      this.#logs.warn('i18n.core.load.error', { error: String(e) });
     }
   }
 
@@ -266,16 +266,16 @@ export class I18nService {
     const result: TranslationData = {};
 
     try {
-      const glob = new Bun.Glob("*.json");
+      const glob = new Bun.Glob('*.json');
       const files = await Array.fromAsync(glob.scan({ cwd: folderPath }));
 
       for (const file of files) {
-        const namespace = file.replace(".json", "");
+        const namespace = file.replace('.json', '');
         try {
           const content = await Bun.file(`${folderPath}/${file}`).json();
           result[namespace] = content;
         } catch (e) {
-          this.#logs.warn("i18n.file.load.error", {
+          this.#logs.warn('i18n.file.load.error', {
             file: `${folderPath}/${file}`,
             error: String(e),
           });
@@ -298,7 +298,7 @@ export class I18nService {
     let result: TranslationData = {};
 
     try {
-      const glob = new Bun.Glob("*.json");
+      const glob = new Bun.Glob('*.json');
       const files = await Array.fromAsync(glob.scan({ cwd: folderPath }));
 
       for (const file of files) {
@@ -307,7 +307,7 @@ export class I18nService {
           // Merge directly without namespace
           result = deepMerge(result, content as TranslationData);
         } catch (e) {
-          this.#logs.warn("i18n.file.load.error", {
+          this.#logs.warn('i18n.file.load.error', {
             file: `${folderPath}/${file}`,
             error: String(e),
           });
@@ -328,16 +328,16 @@ export class I18nService {
     const chain: string[] = [locale];
 
     // Add base language if regional variant
-    if (locale.includes("-")) {
-      const base = locale.split("-")[0];
+    if (locale.includes('-')) {
+      const base = locale.split('-')[0];
       if (!chain.includes(base)) {
         chain.push(base);
       }
     }
 
     // Always fallback to English
-    if (!chain.includes("en")) {
-      chain.push("en");
+    if (!chain.includes('en')) {
+      chain.push('en');
     }
 
     return chain;

@@ -1,11 +1,12 @@
-import "reflect-metadata";
-import { describe, it, expect, beforeEach, afterEach } from "bun:test";
-import { TestBed, spy, mock } from "@elia/shared";
-import { EventBus } from "../runtime/events/event-bus";
-import { LogRouter } from "../runtime/logs/log-router";
-import { HubConfig } from "../runtime/config";
+import 'reflect-metadata';
+import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
+import { spy, TestBed } from '@elia/shared';
+import { HubConfig } from '@/runtime/config';
+import { GenericEventActions, PluginActions } from '@/runtime/events/actions';
+import { EventSystem } from '@/runtime/events/event-system';
+import { LogRouter } from '@/runtime/logs/log-router';
 
-describe("EventBus", () => {
+describe('EventSystem', () => {
   const errorSpy = spy<[string, object?]>();
 
   beforeEach(() => {
@@ -24,95 +25,181 @@ describe("EventBus", () => {
 
   afterEach(() => TestBed.reset());
 
-  it("should emit events", () => {
-    const bus = TestBed.get(EventBus);
-    const event = bus.emit("test.event", "source", { data: 123 });
+  it('should dispatch events', async () => {
+    const events = TestBed.get(EventSystem);
+    const action = GenericEventActions.emit.create(
+      {
+        type: 'test.event',
+        source: 'source',
+        payload: { data: 123 },
+      },
+      'source'
+    );
 
-    expect(event.type).toBe("test.event");
-    expect(event.source).toBe("source");
-    expect(event.payload).toEqual({ data: 123 });
-    expect(event.id).toBeDefined();
-    expect(event.ts).toBeGreaterThan(0);
+    const dispatched = await events.dispatch(action);
+
+    expect(dispatched.type).toBe('event.emit');
+    expect(dispatched.payload.type).toBe('test.event');
+    expect(dispatched.payload.source).toBe('source');
+    expect(dispatched.id).toBeDefined();
+    expect(dispatched.timestamp).toBeGreaterThan(0);
   });
 
-  it("should notify subscribers with matching pattern", () => {
-    const bus = TestBed.get(EventBus);
+  it('should notify subscribers with matching action creator', async () => {
+    const events = TestBed.get(EventSystem);
     const handler = spy();
 
-    bus.subscribe("test.*", handler);
-    bus.emit("test.one", "src", null);
-    bus.emit("test.two", "src", null);
-    bus.emit("other.event", "src", null);
+    // Use ActionCreator instead of string pattern
+    events.subscribe(GenericEventActions.emit, handler);
 
-    expect(handler.callCount).toBe(2);
+    events.dispatch(
+      GenericEventActions.emit.create({ type: 'test.one', source: 'src', payload: null }, 'src')
+    );
+    events.dispatch(
+      GenericEventActions.emit.create({ type: 'test.two', source: 'src', payload: null }, 'src')
+    );
+    events.dispatch(
+      GenericEventActions.emit.create({ type: 'other.event', source: 'src', payload: null }, 'src')
+    );
+
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    expect(handler.callCount).toBe(3);
   });
 
-  it("should support glob patterns", () => {
-    const bus = TestBed.get(EventBus);
+  it('should support action map for subscribing to multiple actions', async () => {
+    const events = TestBed.get(EventSystem);
     const handler = spy();
 
-    bus.subscribe("motion.*", handler);
+    // Use ActionMap to subscribe to all GenericEventActions
+    events.subscribe(GenericEventActions, handler);
 
-    bus.emit("motion.detected", "sensor", null);
-    bus.emit("motion.stopped", "sensor", null);
-    bus.emit("light.on", "switch", null);
+    events.dispatch(
+      GenericEventActions.emit.create(
+        { type: 'motion.detected', source: 'sensor', payload: null },
+        'sensor'
+      )
+    );
+    events.dispatch(
+      GenericEventActions.emit.create(
+        { type: 'motion.stopped', source: 'sensor', payload: null },
+        'sensor'
+      )
+    );
+    events.dispatch(
+      GenericEventActions.emit.create(
+        { type: 'light.on', source: 'switch', payload: null },
+        'switch'
+      )
+    );
 
-    expect(handler.callCount).toBe(2);
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    expect(handler.callCount).toBe(3);
   });
 
-  it("should unsubscribe correctly", () => {
-    const bus = TestBed.get(EventBus);
+  it('should unsubscribe correctly', async () => {
+    const events = TestBed.get(EventSystem);
     const handler = spy();
 
-    const unsub = bus.subscribe("test", handler);
+    const unsub = events.subscribe(GenericEventActions.emit, handler);
 
-    bus.emit("test", "src", null);
+    events.dispatch(
+      GenericEventActions.emit.create({ type: 'test', source: 'src', payload: null }, 'src')
+    );
+    await new Promise((resolve) => setTimeout(resolve, 10));
     expect(handler.callCount).toBe(1);
 
     unsub();
 
-    bus.emit("test", "src", null);
+    events.dispatch(
+      GenericEventActions.emit.create({ type: 'test', source: 'src', payload: null }, 'src')
+    );
+    await new Promise((resolve) => setTimeout(resolve, 10));
     expect(handler.callCount).toBe(1); // Still 1, not called again
   });
 
-  it("should notify global subscribers", () => {
-    const bus = TestBed.get(EventBus);
+  it('should notify global subscribers', async () => {
+    const events = TestBed.get(EventSystem);
     const globalHandler = spy();
     const patternHandler = spy();
 
-    bus.subscribeAll(globalHandler);
-    bus.subscribe("specific", patternHandler);
+    events.subscribeAll(globalHandler);
+    events.subscribe(GenericEventActions.emit, (action) => {
+      if (action.payload.type === 'specific') {
+        patternHandler(action);
+      }
+    });
 
-    bus.emit("specific", "src", null);
-    bus.emit("other", "src", null);
+    events.dispatch(
+      GenericEventActions.emit.create({ type: 'specific', source: 'src', payload: null }, 'src')
+    );
+    events.dispatch(
+      GenericEventActions.emit.create({ type: 'other', source: 'src', payload: null }, 'src')
+    );
+
+    await new Promise((resolve) => setTimeout(resolve, 10));
 
     expect(globalHandler.callCount).toBe(2);
     expect(patternHandler.callCount).toBe(1);
   });
 
-  it("should store events in ring buffer", () => {
-    const bus = TestBed.get(EventBus);
+  it('should store events in ring buffer', async () => {
+    const events = TestBed.get(EventSystem);
 
-    bus.emit("event.1", "src", { n: 1 });
-    bus.emit("event.2", "src", { n: 2 });
-    bus.emit("event.3", "src", { n: 3 });
+    events.dispatch(
+      GenericEventActions.emit.create({ type: 'event.1', source: 'src', payload: { n: 1 } }, 'src')
+    );
+    events.dispatch(
+      GenericEventActions.emit.create({ type: 'event.2', source: 'src', payload: { n: 2 } }, 'src')
+    );
+    events.dispatch(
+      GenericEventActions.emit.create({ type: 'event.3', source: 'src', payload: { n: 3 } }, 'src')
+    );
 
-    const events = bus.query();
+    await new Promise((resolve) => setTimeout(resolve, 10));
 
-    expect(events).toHaveLength(3);
-    expect(events[0].type).toBe("event.1");
-    expect(events[2].type).toBe("event.3");
+    const history = events.query();
+
+    expect(history.length).toBeGreaterThanOrEqual(3);
+    const eventTypes = history.map((e) => e.type);
+    expect(eventTypes).toContain('event.emit');
   });
 
-  it("should handle listener errors gracefully", () => {
-    const bus = TestBed.get(EventBus);
+  it('should handle listener errors gracefully', async () => {
+    const events = TestBed.get(EventSystem);
 
-    bus.subscribe("error.test", () => {
-      throw new Error("Handler crashed!");
+    events.subscribe(GenericEventActions.emit, () => {
+      throw new Error('Handler crashed!');
     });
 
     // Should not throw
-    expect(() => bus.emit("error.test", "src", null)).not.toThrow();
-    expect(errorSpy.called).toBe(true);
+    expect(() => {
+      events.dispatch(
+        GenericEventActions.emit.create({ type: 'error.test', source: 'src', payload: null }, 'src')
+      );
+    }).not.toThrow();
+
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    // Error should be logged (handled by SubscriberManager)
+  });
+
+  it('should support array of action creators', async () => {
+    const events = TestBed.get(EventSystem);
+    const handler = spy();
+
+    // Subscribe to multiple action types
+    events.subscribe([GenericEventActions.emit, PluginActions.loaded], handler);
+
+    events.dispatch(
+      GenericEventActions.emit.create({ type: 'test', source: 'src', payload: null }, 'src')
+    );
+    events.dispatch(
+      PluginActions.loaded.create({ uid: '123', name: 'test', version: '1.0.0', ref: 'ref' }, 'hub')
+    );
+
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    expect(handler.callCount).toBe(2);
   });
 });

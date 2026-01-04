@@ -1,2 +1,3 @@
-export * from "./types";
-export * from "./di";
+export * from './di';
+export * from './plugin-schema';
+export * from './types';

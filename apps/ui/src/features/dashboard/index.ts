@@ -1,2 +1,2 @@
-export { DashboardPage } from "./DashboardPage";
-export { useHealth } from "./hooks";
+export { DashboardPage } from './DashboardPage';
+export { useHealth } from './hooks';

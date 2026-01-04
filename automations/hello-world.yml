@@ -1,1 +1,0 @@
-{id: hello-world,name: Hello World,trigger: {event: "*"},blocks: [{id: log-start,type: log,config: {}},{id: set-var,type: set,config: {}},{id: log-end,type: log,config: {}}],connections: [],enabled: false}

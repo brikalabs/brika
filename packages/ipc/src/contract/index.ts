@@ -10,7 +10,7 @@ export type {
   BlockDefinition as BlockDefinitionType,
   BlockPort as BlockPortType,
   BlockResult as BlockResultType,
-} from "./blocks";
+} from './blocks';
 // ─── Blocks ───
 export {
   BlockCategory,
@@ -20,11 +20,11 @@ export {
   BlockResult,
   executeBlock,
   registerBlock,
-} from "./blocks";
+} from './blocks';
 export type {
   EventPayload as EventPayloadType,
   LogLevel as LogLevelType,
-} from "./events";
+} from './events';
 // ─── Events ───
 export {
   EventPayload,
@@ -35,11 +35,11 @@ export {
   ping,
   subscribe,
   unsubscribe,
-} from "./events";
+} from './events';
 export type {
   PluginInfo as PluginInfoType,
   PluginRequirements as PluginRequirementsType,
-} from "./lifecycle";
+} from './lifecycle';
 // ─── Lifecycle ───
 export {
   fatal,
@@ -48,7 +48,7 @@ export {
   PluginRequirements,
   ready,
   stop,
-} from "./lifecycle";
+} from './lifecycle';
 export type {
   ToolCallContext as ToolCallContextType,
   ToolCallSource as ToolCallSourceType,
@@ -56,7 +56,7 @@ export type {
   ToolInputSchema as ToolInputSchemaType,
   ToolInputSchemaProperty as ToolInputSchemaPropertyType,
   ToolResult as ToolResultType,
-} from "./tools";
+} from './tools';
 // ─── Tools ───
 export {
   callTool,
@@ -67,4 +67,4 @@ export {
   ToolInputSchema,
   ToolInputSchemaProperty,
   ToolResult,
-} from "./tools";
+} from './tools';

@@ -4,21 +4,21 @@
  * Everything needed to define and work with blocks.
  */
 
-// Types
-export type {
-  BlockPort,
-  BlockSchema,
-  BlockDefinition,
-  BlockContext,
-  BlockRuntime,
-  BlockResult,
-  BlockHandler,
-  CompiledBlock,
-  BlockConnection,
-  WorkflowBlock,
-  Workflow,
-} from "./types";
+export type { BlockSpec } from './define';
 
 // Definition API
-export { defineBlock, expr, parseDuration, z, isCompiledBlock } from "./define";
-export type { BlockSpec } from "./define";
+export { defineBlock, expr, isCompiledBlock, parseDuration, z } from './define';
+// Types
+export type {
+  BlockConnection,
+  BlockContext,
+  BlockDefinition,
+  BlockHandler,
+  BlockPort,
+  BlockResult,
+  BlockRuntime,
+  BlockSchema,
+  CompiledBlock,
+  Workflow,
+  WorkflowBlock,
+} from './types';

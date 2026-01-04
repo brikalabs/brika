@@ -1,8 +1,8 @@
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef } from "react";
-import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useLogsStore, type LogFilters } from "./store";
-import { logsApi, logsKeys, type LogQueryParams, type StoredLogEvent, type PluginInfo } from "./api";
 import { getStreamUrl } from "@/lib/query";
+import { type LogQueryParams, logsApi, logsKeys, type PluginInfo, type StoredLogEvent } from "./api";
+import { type LogFilters, useLogsStore } from "./store";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers

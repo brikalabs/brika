@@ -7,29 +7,29 @@
  * - Fluent TestBed API
  */
 
-import "reflect-metadata";
-import { describe, it, expect, beforeEach, afterEach } from "bun:test";
-import { TestBed, spy, mock, autoMock } from "@elia/shared";
-import { ToolRegistry } from "../runtime/tools/tool-registry";
-import { EventBus } from "../runtime/events/event-bus";
-import { LogRouter } from "../runtime/logs/log-router";
-import { HubConfig } from "../runtime/config";
+import 'reflect-metadata';
+import { afterEach, describe, expect, it } from 'bun:test';
+import { autoMock, mock, spy, TestBed } from '@elia/shared';
+import { HubConfig } from '@/runtime/config';
+import { EventBus } from '@/runtime/events/event-bus';
+import { LogRouter } from '@/runtime/logs/log-router';
+import { ToolRegistry } from '@/runtime/tools/tool-registry';
 
-describe("Modern spy() API", () => {
-  it("should track calls", () => {
+describe('Modern spy() API', () => {
+  it('should track calls', () => {
     const fn = spy<[string, number], string>();
-    fn.mockReturnValue("result");
+    fn.mockReturnValue('result');
 
-    const result = fn("hello", 42);
+    const result = fn('hello', 42);
 
-    expect(result).toBe("result");
+    expect(result).toBe('result');
     expect(fn.called).toBe(true);
     expect(fn.callCount).toBe(1);
-    expect(fn.lastCall).toEqual(["hello", 42]);
-    expect(fn.firstCall).toEqual(["hello", 42]);
+    expect(fn.lastCall).toEqual(['hello', 42]);
+    expect(fn.firstCall).toEqual(['hello', 42]);
   });
 
-  it("should support mockReturnValueOnce", () => {
+  it('should support mockReturnValueOnce', () => {
     const fn = spy<[], number>();
     fn.mockReturnValueOnce(1).mockReturnValueOnce(2).mockReturnValue(999);
 
@@ -39,7 +39,7 @@ describe("Modern spy() API", () => {
     expect(fn()).toBe(999);
   });
 
-  it("should support mockImplementation", () => {
+  it('should support mockImplementation', () => {
     const fn = spy<[number], number>();
     fn.mockImplementation((n) => n * 2);
 
@@ -47,7 +47,7 @@ describe("Modern spy() API", () => {
     expect(fn(10)).toBe(20);
   });
 
-  it("should support mockImplementationOnce", () => {
+  it('should support mockImplementationOnce', () => {
     const fn = spy<[number], number>();
     fn.mockImplementationOnce((n) => n * 2)
       .mockImplementationOnce((n) => n * 3)
@@ -58,46 +58,46 @@ describe("Modern spy() API", () => {
     expect(fn(5)).toBe(0);
   });
 
-  it("should support async mockResolvedValue", async () => {
+  it('should support async mockResolvedValue', async () => {
     const fn = spy<[string], Promise<string>>();
-    fn.mockResolvedValue("async result");
+    fn.mockResolvedValue('async result');
 
-    const result = await fn("test");
-    expect(result).toBe("async result");
+    const result = await fn('test');
+    expect(result).toBe('async result');
   });
 
-  it("should support async mockRejectedValue", async () => {
+  it('should support async mockRejectedValue', async () => {
     const fn = spy<[], Promise<void>>();
-    fn.mockRejectedValue(new Error("oops"));
+    fn.mockRejectedValue(new Error('oops'));
 
-    await expect(fn()).rejects.toThrow("oops");
+    await expect(fn()).rejects.toThrow('oops');
   });
 
-  it("should support calledWith", () => {
+  it('should support calledWith', () => {
     const fn = spy<[string, number]>();
 
-    fn("a", 1);
-    fn("b", 2);
-    fn("c", 3);
+    fn('a', 1);
+    fn('b', 2);
+    fn('c', 3);
 
-    expect(fn.calledWith("a", 1)).toBe(true);
-    expect(fn.calledWith("b", 2)).toBe(true);
-    expect(fn.calledWith("x", 99)).toBe(false);
+    expect(fn.calledWith('a', 1)).toBe(true);
+    expect(fn.calledWith('b', 2)).toBe(true);
+    expect(fn.calledWith('x', 99)).toBe(false);
   });
 
-  it("should support nthCall", () => {
+  it('should support nthCall', () => {
     const fn = spy<[string]>();
 
-    fn("first");
-    fn("second");
-    fn("third");
+    fn('first');
+    fn('second');
+    fn('third');
 
-    expect(fn.nthCall(0)).toEqual(["first"]);
-    expect(fn.nthCall(1)).toEqual(["second"]);
-    expect(fn.nthCall(2)).toEqual(["third"]);
+    expect(fn.nthCall(0)).toEqual(['first']);
+    expect(fn.nthCall(1)).toEqual(['second']);
+    expect(fn.nthCall(2)).toEqual(['third']);
   });
 
-  it("should reset properly", () => {
+  it('should reset properly', () => {
     const fn = spy<[], number>();
     fn.mockReturnValue(42);
 
@@ -111,11 +111,13 @@ describe("Modern spy() API", () => {
   });
 });
 
-describe("Modern mock() API", () => {
-  it("should create type-safe partial mocks", () => {
+describe('Modern mock() API', () => {
+  it('should create type-safe partial mocks', () => {
     interface Logger {
       info(msg: string): void;
+
       error(msg: string): void;
+
       debug(msg: string): void;
     }
 
@@ -124,17 +126,18 @@ describe("Modern mock() API", () => {
       error: spy(),
     });
 
-    logger.info("test");
+    logger.info('test');
     expect((logger.info as ReturnType<typeof spy>).called).toBe(true);
   });
 
-  it("should work with autoMock", () => {
+  it('should work with autoMock', () => {
     interface Service {
       method1(): string;
+
       method2(n: number): number;
     }
 
-    const service = autoMock<Service>(["method1", "method2"]);
+    const service = autoMock<Service>(['method1', 'method2']);
 
     service.method1();
     service.method2(42);
@@ -145,10 +148,10 @@ describe("Modern mock() API", () => {
   });
 });
 
-describe("Fluent TestBed API", () => {
+describe('Fluent TestBed API', () => {
   afterEach(() => TestBed.reset());
 
-  it("should use fluent builder pattern", () => {
+  it('should use fluent builder pattern', () => {
     const infoSpy = spy<[string, object?]>();
 
     TestBed.create()
@@ -162,15 +165,15 @@ describe("Fluent TestBed API", () => {
       .compile();
 
     const registry = TestBed.get(ToolRegistry);
-    registry.register("tool", "test", {
+    registry.register('tool', 'test', {
       call: async () => ({ ok: true }),
     });
 
     expect(infoSpy.called).toBe(true);
-    expect(infoSpy.lastCall?.[0]).toBe("tool.register");
+    expect(infoSpy.lastCall?.[0]).toBe('tool.register');
   });
 
-  it("should handle errors in event handlers", () => {
+  it('should handle errors in event handlers', () => {
     const errorSpy = spy();
 
     TestBed.create()
@@ -185,20 +188,20 @@ describe("Fluent TestBed API", () => {
 
     const bus = TestBed.inject(EventBus);
 
-    bus.subscribe("test", () => {
-      throw new Error("boom");
+    bus.subscribe('test', () => {
+      throw new Error('boom');
     });
 
-    bus.emit("test", "src", null);
+    bus.emit('test', 'src', null);
 
     expect(errorSpy.called).toBe(true);
   });
 });
 
-describe("Real-world testing patterns", () => {
+describe('Real-world testing patterns', () => {
   afterEach(() => TestBed.reset());
 
-  it("should test event-driven behavior", () => {
+  it('should test event-driven behavior', () => {
     const handler = spy<[{ type: string }]>();
 
     TestBed.create()
@@ -212,18 +215,18 @@ describe("Real-world testing patterns", () => {
       .compile();
 
     const bus = TestBed.get(EventBus);
-    bus.subscribe("motion.*", handler);
+    bus.subscribe('motion.*', handler);
 
-    bus.emit("motion.detected", "sensor", { room: "living" });
-    bus.emit("motion.stopped", "sensor", { room: "living" });
-    bus.emit("light.on", "switch", null);
+    bus.emit('motion.detected', 'sensor', { room: 'living' });
+    bus.emit('motion.stopped', 'sensor', { room: 'living' });
+    bus.emit('light.on', 'switch', null);
 
     expect(handler.callCount).toBe(2);
-    expect(handler.nthCall(0)?.[0].type).toBe("motion.detected");
-    expect(handler.nthCall(1)?.[0].type).toBe("motion.stopped");
+    expect(handler.nthCall(0)?.[0].type).toBe('motion.detected');
+    expect(handler.nthCall(1)?.[0].type).toBe('motion.stopped');
   });
 
-  it("should test tool calls with assertions", async () => {
+  it('should test tool calls with assertions', async () => {
     TestBed.create()
       .provide(HubConfig, new HubConfig())
       .mock(LogRouter, {
@@ -236,21 +239,24 @@ describe("Real-world testing patterns", () => {
 
     const registry = TestBed.get(ToolRegistry);
 
-    const toolHandler = spy<[Record<string, unknown>, unknown], Promise<{ ok: boolean; content: string }>>();
-    toolHandler.mockResolvedValue({ ok: true, content: "done" });
+    const toolHandler = spy<
+      [Record<string, unknown>, unknown],
+      Promise<{ ok: boolean; content: string }>
+    >();
+    toolHandler.mockResolvedValue({ ok: true, content: 'done' });
 
-    registry.register("on", "light", {
+    registry.register('on', 'light', {
       call: toolHandler,
     });
 
     const result = await registry.call(
-      "light:on",
-      { room: "bedroom", brightness: 80 },
-      { traceId: "123", source: "rule" },
+      'light:on',
+      { room: 'bedroom', brightness: 80 },
+      { traceId: '123', source: 'rule' }
     );
 
     expect(result.ok).toBe(true);
     expect(toolHandler.called).toBe(true);
-    expect(toolHandler.lastCall?.[0]).toEqual({ room: "bedroom", brightness: 80 });
+    expect(toolHandler.lastCall?.[0]).toEqual({ room: 'bedroom', brightness: 80 });
   });
 });

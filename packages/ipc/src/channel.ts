@@ -4,7 +4,7 @@
  * Core channel abstraction with full type inference from contracts.
  */
 
-import type { InputOf, MessageDef, OutputOf, PayloadOf, RpcDef } from "./define";
+import type { InputOf, MessageDef, OutputOf, PayloadOf, RpcDef } from './define';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -14,6 +14,7 @@ import type { InputOf, MessageDef, OutputOf, PayloadOf, RpcDef } from "./define"
 export interface WireMessage {
   t: string;
   _id?: number;
+
   [key: string]: unknown;
 }
 
@@ -24,7 +25,9 @@ export type SendFn = (msg: WireMessage) => void;
 export type MessageHandler<T extends MessageDef> = (payload: PayloadOf<T>) => void | Promise<void>;
 
 /** RPC handler */
-export type RpcHandler<T extends RpcDef> = (input: InputOf<T>) => OutputOf<T> | Promise<OutputOf<T>>;
+export type RpcHandler<T extends RpcDef> = (
+  input: InputOf<T>
+) => OutputOf<T> | Promise<OutputOf<T>>;
 
 /** Pending RPC request */
 interface PendingRequest<T> {
@@ -91,6 +94,22 @@ export class Channel {
 
   // ─────────────────────────────────────────────────────────────────────────
   // Send (Fire-and-Forget)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  get isClosed(): boolean {
+    return this.#closed;
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // On (Message Handler)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  get pendingCount(): number {
+    return this.#pending.size;
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Implement (RPC Handler)
   // ─────────────────────────────────────────────────────────────────────────
 
   /**
@@ -169,10 +188,6 @@ export class Channel {
     });
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Handle (Incoming Message Dispatch)
-  // ─────────────────────────────────────────────────────────────────────────
-
   /**
    * Handle an incoming wire message
    */
@@ -182,13 +197,13 @@ export class Channel {
     const { t: type, _id: id, ...payload } = raw;
 
     // Check if it's a response to a pending RPC
-    if (type.endsWith("Result") && id !== undefined) {
+    if (type.endsWith('Result') && id !== undefined) {
       const pending = this.#pending.get(id);
       if (pending) {
         clearTimeout(pending.timer);
         this.#pending.delete(id);
         // Extract result from payload if present
-        pending.resolve("result" in payload ? payload.result : payload);
+        pending.resolve('result' in payload ? payload.result : payload);
         return;
       }
     }
@@ -222,10 +237,6 @@ export class Channel {
     }
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Lifecycle
-  // ─────────────────────────────────────────────────────────────────────────
-
   /**
    * Close the channel
    */
@@ -233,7 +244,7 @@ export class Channel {
     if (this.#closed) return;
     this.#closed = true;
 
-    const err = error ?? new Error("Channel closed");
+    const err = error ?? new Error('Channel closed');
     for (const [_, pending] of this.#pending) {
       clearTimeout(pending.timer);
       pending.reject(err);
@@ -242,13 +253,5 @@ export class Channel {
     this.#messageHandlers.clear();
     this.#rpcHandlers.clear();
     this.#onClose?.();
-  }
-
-  get isClosed(): boolean {
-    return this.#closed;
-  }
-
-  get pendingCount(): number {
-    return this.#pending.size;
   }
 }

@@ -1,109 +1,72 @@
-import React from "react";
-import { Link } from "@tanstack/react-router";
-import { usePlugins, usePluginMutations } from "./hooks";
-import { pluginsApi } from "./api";
-import { useLocale } from "@/lib/use-locale";
+import { Link } from '@tanstack/react-router';
+import {
+  ArrowRight,
+  Boxes,
+  Loader2,
+  Plug,
+  Plus,
+  Power,
+  RefreshCw,
+  RotateCcw,
+  Skull,
+  Wrench,
+} from 'lucide-react';
+import React from 'react';
 import {
   Avatar,
-  AvatarImage,
   AvatarFallback,
+  AvatarImage,
+  Badge,
   Button,
   Card,
   CardContent,
-  Input,
-  Badge,
-  Label,
-  Dialog,
-  DialogTrigger,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
   Tooltip,
-  TooltipTrigger,
   TooltipContent,
-} from "@/components/ui";
-import {
-  RefreshCw,
-  Power,
-  RotateCcw,
-  Skull,
-  Plug,
-  Plus,
-  Wrench,
-  Loader2,
-  ArrowRight,
-  Boxes,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
+  TooltipTrigger,
+} from '@/components/ui';
+import { useLocale } from '@/lib/use-locale';
+import { cn } from '@/lib/utils';
+import { pluginsApi } from './api';
+import { InstallPluginDialog, UpdateAllButton } from './components';
+import { usePluginMutations, usePlugins } from './hooks';
 
 export function PluginsPage() {
   const { t, tp } = useLocale();
   const { data: plugins = [], isLoading, refetch } = usePlugins();
-  const { load, disable, reload, kill } = usePluginMutations();
-  const [ref, setRef] = React.useState("");
-  const [dialogOpen, setDialogOpen] = React.useState(false);
+  const { disable, reload, kill } = usePluginMutations();
+  const [installDialogOpen, setInstallDialogOpen] = React.useState(false);
 
-  const handleLoad = async () => {
-    if (!ref) return;
-    await load.mutateAsync(ref);
-    setRef("");
-    setDialogOpen(false);
-  };
-
-  const isBusy = load.isPending || disable.isPending || reload.isPending || kill.isPending;
+  const isBusy = disable.isPending || reload.isPending || kill.isPending;
 
   return (
     <div className="space-y-8">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight bg-linear-to-r from-foreground to-foreground/70 bg-clip-text">
-            {t("plugins:title")}
+          <h1 className="bg-linear-to-r from-foreground to-foreground/70 bg-clip-text font-bold text-3xl tracking-tight">
+            {t('plugins:title')}
           </h1>
-          <p className="text-muted-foreground mt-1 flex items-center gap-2">
+          <p className="mt-1 flex items-center gap-2 text-muted-foreground">
             <Plug className="size-4" />
-            {t("plugins:subtitle")}
+            {t('plugins:subtitle')}
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => refetch()} disabled={isLoading} className="gap-2">
-            <RefreshCw className={cn("size-4", isLoading && "animate-spin")} />
-            {t("common:actions.refresh")}
+          <Button
+            variant="outline"
+            onClick={() => refetch()}
+            disabled={isLoading}
+            className="gap-2"
+          >
+            <RefreshCw className={cn('size-4', isLoading && 'animate-spin')} />
+            {t('common:actions.refresh')}
           </Button>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="gap-2">
-                <Plus className="size-4" />
-                {t("plugins:actions.load")}
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>{t("plugins:actions.load")}</DialogTitle>
-                <DialogDescription>{t("plugins:dialog.loadDescription")}</DialogDescription>
-              </DialogHeader>
-              <div className="space-y-2">
-                <Label>{t("plugins:labels.reference")}</Label>
-                <Input
-                  value={ref}
-                  onChange={(e) => setRef(e.target.value)}
-                  placeholder="file:./plugins/example-echo/src/index.ts"
-                  className="font-mono text-sm"
-                />
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setDialogOpen(false)}>
-                  {t("common:actions.cancel")}
-                </Button>
-                <Button onClick={handleLoad} disabled={isBusy || !ref} className="gap-2">
-                  {load.isPending && <Loader2 className="size-4 animate-spin" />}
-                  {t("plugins:actions.load")}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <UpdateAllButton />
+          <Button className="gap-2" onClick={() => setInstallDialogOpen(true)}>
+            <Plus className="size-4" />
+            {t('plugins:actions.load')}
+          </Button>
+          <InstallPluginDialog open={installDialogOpen} onOpenChange={setInstallDialogOpen} />
         </div>
       </div>
 
@@ -114,22 +77,23 @@ export function PluginsPage() {
       ) : plugins.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
-            <Plug className="size-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="font-semibold text-lg">{t("plugins:empty")}</h3>
-            <p className="text-muted-foreground mt-1">{t("plugins:emptyHint")}</p>
+            <Plug className="mx-auto mb-4 size-12 text-muted-foreground" />
+            <h3 className="font-semibold text-lg">{t('plugins:empty')}</h3>
+            <p className="mt-1 text-muted-foreground">{t('plugins:emptyHint')}</p>
           </CardContent>
         </Card>
       ) : (
         <div className="grid gap-4">
           {plugins.map((p) => {
             const health = p.status;
-            const accent = health === "running" ? "blue" : health === "crashed" ? "orange" : undefined;
+            const accent =
+              health === 'running' ? 'blue' : health === 'crashed' ? 'orange' : undefined;
             return (
               <Link key={p.uid} to="/plugins/$uid" params={{ uid: p.uid }}>
                 <Card accent={accent} interactive className="p-5">
                   <div className="flex items-start gap-4">
                     {/* Plugin Icon */}
-                    <Avatar className="size-12 rounded-xl shrink-0">
+                    <Avatar className="size-12 shrink-0 rounded-xl">
                       <AvatarImage src={pluginsApi.getIconUrl(p.uid)} />
                       <AvatarFallback className="rounded-xl bg-primary/10">
                         <Plug className="size-6 text-primary" />
@@ -137,34 +101,38 @@ export function PluginsPage() {
                     </Avatar>
 
                     {/* Plugin Info */}
-                    <div className="flex-1 min-w-0">
+                    <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-semibold truncate group-hover:text-foreground transition-colors">
-                          {tp(p.name, "name")}
+                        <span className="truncate font-semibold transition-colors group-hover:text-foreground">
+                          {tp(p.name, 'name')}
                         </span>
-                        <Badge variant="outline" className="text-xs shrink-0">
+                        <Badge variant="outline" className="shrink-0 text-xs">
                           v{p.version}
                         </Badge>
                       </div>
                       {p.description && (
-                        <div className="text-sm text-muted-foreground line-clamp-1 mt-0.5">
-                          {tp(p.name, "description")}
+                        <div className="mt-0.5 line-clamp-1 text-muted-foreground text-sm">
+                          {tp(p.name, 'description')}
                         </div>
                       )}
 
                       {/* Stats Row */}
                       {(p.tools.length > 0 || p.blocks.length > 0) && (
-                        <div className="flex gap-4 mt-2">
+                        <div className="mt-2 flex gap-4">
                           {p.tools.length > 0 && (
-                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
                               <Wrench className="size-3.5" />
-                              <span>{p.tools.length} {t("tools:title").toLowerCase()}</span>
+                              <span>
+                                {p.tools.length} {t('tools:title').toLowerCase()}
+                              </span>
                             </div>
                           )}
                           {p.blocks.length > 0 && (
-                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
                               <Boxes className="size-3.5" />
-                              <span>{p.blocks.length} {t("workflows:blocks").toLowerCase()}</span>
+                              <span>
+                                {p.blocks.length} {t('workflows:blocks').toLowerCase()}
+                              </span>
                             </div>
                           )}
                         </div>
@@ -172,18 +140,25 @@ export function PluginsPage() {
 
                       {/* Error Display */}
                       {p.lastError && (
-                        <div className="mt-2 p-2 rounded-lg bg-destructive/10 text-destructive text-xs">
+                        <div className="mt-2 rounded-lg bg-destructive/10 p-2 text-destructive text-xs">
                           {p.lastError}
                         </div>
                       )}
                     </div>
 
                     {/* Right Side: Status + Actions */}
-                    <div className="flex flex-col items-end gap-3 shrink-0">
+                    <div className="flex shrink-0 flex-col items-end gap-3">
                       <Badge
-                        variant={health === "running" ? "default" : health === "crashed" ? "destructive" : "secondary"}
+                        variant={
+                          health === 'running'
+                            ? 'default'
+                            : health === 'crashed'
+                              ? 'destructive'
+                              : 'secondary'
+                        }
                         className={cn(
-                          health === "running" && "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
+                          health === 'running' &&
+                            'border-emerald-500/20 bg-emerald-500/10 text-emerald-500'
                         )}
                       >
                         {t(`common:status.${health}`)}
@@ -205,7 +180,7 @@ export function PluginsPage() {
                               <RotateCcw className="size-4" />
                             </Button>
                           </TooltipTrigger>
-                          <TooltipContent>{t("plugins:actions.reload")}</TooltipContent>
+                          <TooltipContent>{t('plugins:actions.reload')}</TooltipContent>
                         </Tooltip>
 
                         <Tooltip>
@@ -223,7 +198,7 @@ export function PluginsPage() {
                               <Power className="size-4" />
                             </Button>
                           </TooltipTrigger>
-                          <TooltipContent>{t("plugins:actions.disable")}</TooltipContent>
+                          <TooltipContent>{t('plugins:actions.disable')}</TooltipContent>
                         </Tooltip>
 
                         <Tooltip>
@@ -241,13 +216,13 @@ export function PluginsPage() {
                               <Skull className="size-4" />
                             </Button>
                           </TooltipTrigger>
-                          <TooltipContent>{t("plugins:actions.kill")}</TooltipContent>
+                          <TooltipContent>{t('plugins:actions.kill')}</TooltipContent>
                         </Tooltip>
                       </div>
                     </div>
 
                     {/* Arrow indicator */}
-                    <ArrowRight className="size-5 text-muted-foreground opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all self-center" />
+                    <ArrowRight className="size-5 -translate-x-2 self-center text-muted-foreground opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100" />
                   </div>
                 </Card>
               </Link>

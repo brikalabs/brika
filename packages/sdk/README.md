@@ -147,6 +147,7 @@ const value = expr("{{ vars.counter + 1 }}", ctx);
 ```
 
 Available variables:
+
 - `trigger.*` - Event data
 - `vars.*` - Workflow variables
 - `input` - Previous block output
@@ -230,5 +231,6 @@ export { createPluginRuntime } from "@elia/sdk";
 export { FrameReader, FrameWriter } from "@elia/sdk";
 export type { Wire } from "@elia/sdk";
 ```
+
 
 

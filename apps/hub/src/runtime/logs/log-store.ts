@@ -5,9 +5,9 @@
  */
 
 import { Database } from "bun:sqlite";
-import { singleton, inject } from "@elia/shared";
-import type { LogEvent, LogLevel, LogSource, Json } from "@elia/shared";
-import { ConfigLoader } from "../config/config-loader";
+import type { Json, LogEvent, LogLevel, LogSource } from "@elia/shared";
+import { inject, singleton } from "@elia/shared";
+import { ConfigLoader } from "@/runtime/config/config-loader";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -71,15 +71,16 @@ export class LogStore {
 
     // Create table
     this.#db.run(`
-      CREATE TABLE IF NOT EXISTS logs (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        ts INTEGER NOT NULL,
-        level TEXT NOT NULL,
-        source TEXT NOT NULL,
-        plugin_ref TEXT,
-        message TEXT NOT NULL,
-        meta TEXT
-      )
+        CREATE TABLE IF NOT EXISTS logs
+        (
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            ts         INTEGER NOT NULL,
+            level      TEXT    NOT NULL,
+            source     TEXT    NOT NULL,
+            plugin_ref TEXT,
+            message    TEXT    NOT NULL,
+            meta       TEXT
+        )
     `);
 
     // Create indexes for efficient queries
@@ -89,7 +90,7 @@ export class LogStore {
     this.#db.run("CREATE INDEX IF NOT EXISTS idx_logs_plugin ON logs(plugin_ref)");
     this.#db.run("CREATE INDEX IF NOT EXISTS idx_logs_ts_level ON logs(ts DESC, level)");
     // biome-ignore lint/style/noUnusedTemplateLiteral: <explanation>
-    this.#db.run(`CREATE INDEX IF NOT EXISTS idx_logs_ts_source ON logs(ts DESC, source)`);
+    this.#db.run(`CREATE INDEX IF NOT EXISTS idx_logs_ts_source ON logs (ts DESC, source)`);
 
     // Prepare insert statement for performance
     this.#insertStmt = this.#db.prepare(
@@ -165,11 +166,10 @@ export class LogStore {
 
     // Query one extra to determine if there's a next page
     const sql = `
-      SELECT id, ts, level, source, plugin_ref, message, meta
-      FROM logs
-      ${whereClause}
-      ORDER BY id ${order === "desc" ? "DESC" : "ASC"}
-      LIMIT ?
+        SELECT id, ts, level, source, plugin_ref, message, meta
+        FROM logs ${whereClause}
+        ORDER BY id ${order === "desc" ? "DESC" : "ASC"}
+        LIMIT ?
     `;
 
     const rows = this.#db.query(sql).all(...values, limit + 1) as LogRow[];
@@ -227,7 +227,11 @@ export class LogStore {
     }
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
-    const result = this.#db.run(`DELETE FROM logs ${whereClause}`, values);
+    const result = this.#db.run(
+      `DELETE
+                                 FROM logs ${whereClause}`,
+      values,
+    );
 
     return result.changes;
   }

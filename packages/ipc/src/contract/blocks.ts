@@ -4,9 +4,9 @@
  * Block registration and execution
  */
 
-import { z } from "zod";
-import { message, rpc } from "../define";
-import { Json, JsonRecord } from "../types";
+import { z } from 'zod';
+import { message, rpc } from '../define';
+import { Json, JsonRecord } from '../types';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Schemas
@@ -59,19 +59,19 @@ export type BlockResult = z.infer<typeof BlockResult>;
 
 /** Plugin registers a block with the hub */
 export const registerBlock = message(
-  "registerBlock",
+  'registerBlock',
   z.object({
     block: BlockDefinition,
-  }),
+  })
 );
 
 /** Hub executes a block on a plugin */
 export const executeBlock = rpc(
-  "executeBlock",
+  'executeBlock',
   z.object({
     blockType: z.string(),
     config: JsonRecord,
     context: BlockContext,
   }),
-  BlockResult,
+  BlockResult
 );

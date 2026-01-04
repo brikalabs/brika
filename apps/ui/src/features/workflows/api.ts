@@ -1,4 +1,4 @@
-const API_BASE = "/api";
+const API_BASE = '/api';
 
 export interface WorkflowTrigger {
   event: string;
@@ -8,6 +8,7 @@ export interface WorkflowTrigger {
 export interface WorkflowBlock {
   id: string;
   type: string;
+
   [key: string]: unknown;
 }
 
@@ -22,7 +23,7 @@ export interface Workflow {
 export interface WorkflowRun {
   id: string;
   workflowId: string;
-  status: "running" | "completed" | "error";
+  status: 'running' | 'completed' | 'error';
   startedAt: number;
   finishedAt?: number;
   error?: string;
@@ -39,7 +40,7 @@ export interface BlockDefinition {
   inputs: Array<{ id: string; name: string; type?: string }>;
   outputs: Array<{ id: string; name: string; type?: string }>;
   schema: {
-    type: "object";
+    type: 'object';
     properties?: Record<string, unknown>;
     required?: string[];
   };
@@ -61,7 +62,7 @@ export async function fetchWorkflow(id: string): Promise<Workflow> {
 
 export async function fetchBlockTypes(): Promise<BlockDefinition[]> {
   const res = await fetch(`${API_BASE}/blocks`);
-  if (!res.ok) throw new Error("Failed to fetch blocks");
+  if (!res.ok) throw new Error('Failed to fetch blocks');
   return res.json();
 }
 
@@ -72,8 +73,8 @@ export async function fetchWorkflowRuns(): Promise<WorkflowRun[]> {
 
 export async function saveWorkflow(workflow: Workflow): Promise<{ ok: boolean; id: string }> {
   const res = await fetch(`${API_BASE}/workflows`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(workflow),
   });
   return res.json();
@@ -81,15 +82,18 @@ export async function saveWorkflow(workflow: Workflow): Promise<{ ok: boolean; i
 
 export async function deleteWorkflow(id: string): Promise<{ ok: boolean }> {
   const res = await fetch(`${API_BASE}/workflows/${id}`, {
-    method: "DELETE",
+    method: 'DELETE',
   });
   return res.json();
 }
 
-export async function triggerWorkflow(id: string, payload?: Record<string, unknown>): Promise<WorkflowRun> {
+export async function triggerWorkflow(
+  id: string,
+  payload?: Record<string, unknown>
+): Promise<WorkflowRun> {
   const res = await fetch(`${API_BASE}/workflows/trigger`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ id, payload }),
   });
   return res.json();
@@ -97,8 +101,8 @@ export async function triggerWorkflow(id: string, payload?: Record<string, unkno
 
 export async function enableWorkflow(id: string): Promise<{ ok: boolean }> {
   const res = await fetch(`${API_BASE}/workflows/enable`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ id }),
   });
   return res.json();
@@ -106,15 +110,18 @@ export async function enableWorkflow(id: string): Promise<{ ok: boolean }> {
 
 export async function disableWorkflow(id: string): Promise<{ ok: boolean }> {
   const res = await fetch(`${API_BASE}/workflows/disable`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ id }),
   });
   return res.json();
 }
 
 // Create test workflow event source
-export function createTestEventSource(workflowId: string, payload: Record<string, unknown>): EventSource {
+export function createTestEventSource(
+  workflowId: string,
+  payload: Record<string, unknown>
+): EventSource {
   const params = new URLSearchParams({
     id: workflowId,
     payload: JSON.stringify(payload),

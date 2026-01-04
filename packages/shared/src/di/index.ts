@@ -1,20 +1,20 @@
-import "reflect-metadata";
+import 'reflect-metadata';
 
 export {
   container,
-  singleton,
-  injectable,
-  inject,
-  Injectable,
-  Singleton,
   type DependencyContainer,
+  Injectable,
   type InjectionToken,
-} from "./container";
+  inject,
+  injectable,
+  Singleton,
+  singleton,
+} from './container';
 
 export {
-  TestBed,
-  spy,
-  mock,
   autoMock,
+  mock,
   type SpyFn,
-} from "./testing";
+  spy,
+  TestBed,
+} from './testing';

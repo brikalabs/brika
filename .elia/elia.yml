@@ -1,0 +1,27 @@
+# ELIA Configuration
+# https://elia.dev/docs/configuration
+
+hub:
+  port: 3001
+  host: 0.0.0.0
+
+plugins:
+  heartbeatInterval: 5000
+  heartbeatTimeout: 15000
+
+# Installed plugins
+# Format: "package-name": "version-specifier"
+# Examples:
+#   "@elia/plugin-timer": "^1.0.0"              # npm registry
+#   "@elia/blocks-builtin": "workspace:*"       # local workspace (resolved by name)
+#   "my-plugin": "workspace:./plugins/my-plugin" # local workspace (explicit path)
+install:
+  "@elia/blocks-builtin": "workspace:*"
+  "@elia/plugin-example-echo": "workspace:*"
+
+# Event-based rules
+rules: []
+
+# Scheduled tasks
+schedules: []
+

@@ -1,6 +1,7 @@
-import { singleton, inject } from "@elia/shared";
-import type { PluginHealth, PluginManifest, Rule, Schedule } from "@elia/shared";
-import { HubConfig } from "../config";
+import type { PluginHealth, PluginManifest, Rule, Schedule } from '@elia/shared';
+import { inject, PluginManifestSchema, singleton } from '@elia/shared';
+import { HubConfig } from '@/runtime/config';
+import { LogRouter } from '@/runtime/logs/log-router';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -40,6 +41,7 @@ type StateFile = {
 @singleton()
 export class StateStore {
   private readonly config = inject(HubConfig);
+  private readonly logs = inject(LogRouter);
   readonly #homeDir: string;
   readonly #file: string;
   #state: StateFile = { plugins: {}, schedules: {}, rules: {} };
@@ -53,18 +55,25 @@ export class StateStore {
   }
 
   async init(): Promise<void> {
-    await Bun.write(Bun.file(`${this.#homeDir}/.keep`), "");
+    await Bun.write(Bun.file(`${this.#homeDir}/.keep`), '');
     const file = Bun.file(this.#file);
     if (!(await file.exists())) {
       await this.#flush();
       return;
     }
     const parsed = JSON.parse(await file.text()) as Partial<StateFile>;
-    // Handle migration from old format (with name, version, metadata)
+
+    // Handle migration from old format
     const plugins: Record<string, InstalledPluginState> = {};
-    for (const [ref, p] of Object.entries(parsed.plugins ?? {})) {
-      plugins[ref] = {
-        ref: p.ref,
+    let needsMigration = false;
+
+    for (const [oldRef, p] of Object.entries(parsed.plugins ?? {})) {
+      // Migrate old ref formats to new format (package names or file: paths)
+      const newRef = this.#migrateRef(oldRef);
+      if (newRef !== oldRef) needsMigration = true;
+
+      plugins[newRef] = {
+        ref: newRef,
         dir: p.dir,
         uid: p.uid,
         enabled: p.enabled,
@@ -73,11 +82,17 @@ export class StateStore {
         updatedAt: p.updatedAt,
       };
     }
+
     this.#state = {
       plugins,
       schedules: parsed.schedules ?? {},
       rules: parsed.rules ?? {},
     };
+
+    // Persist migrated state if changes were made
+    if (needsMigration) {
+      await this.#flush();
+    }
   }
 
   /**
@@ -144,16 +159,6 @@ export class StateStore {
     return this.#withMetadata(p);
   }
 
-  #withMetadata(p: InstalledPluginState): PluginStateWithMetadata {
-    const metadata = this.#metadataCache.get(p.ref) ?? { name: "unknown", version: "0.0.0" };
-    return {
-      ...p,
-      name: metadata.name,
-      version: metadata.version,
-      metadata,
-    };
-  }
-
   /** Remove a plugin entry from state (used to clean up stale entries) */
   async remove(ref: string): Promise<void> {
     delete this.#state.plugins[ref];
@@ -200,56 +205,27 @@ export class StateStore {
       dir: info.dir,
       uid: info.uid,
       enabled: info.enabled ?? cur?.enabled ?? true,
-      health: "running",
+      health: 'restarting', // Will be set to 'running' when plugin sends hello
       lastError: null,
       updatedAt: Date.now(),
     };
     await this.#flush();
   }
 
-  async #flush(): Promise<void> {
-    await Bun.write(this.#file, JSON.stringify(this.#state, null, 2));
-  }
-
-  /**
-   * Read plugin metadata from package.json.
-   */
-  async #readPackageJson(pluginDir: string): Promise<PluginManifest> {
-    const pkgPath = `${pluginDir}/package.json`;
-    try {
-      const file = Bun.file(pkgPath);
-      const pkg = await file.json();
-      const basename = pluginDir.substring(pluginDir.lastIndexOf("/") + 1);
-      return {
-        name: pkg.name || basename,
-        version: pkg.version || "0.0.0",
-        description: pkg.description,
-        author: pkg.author,
-        repository: pkg.repository,
-        icon: pkg.icon,
-        keywords: pkg.keywords,
-        license: pkg.license,
-        dependencies: pkg.dependencies,
-        tools: pkg.tools,
-        blocks: pkg.blocks,
-      };
-    } catch {
-      const basename = pluginDir.substring(pluginDir.lastIndexOf("/") + 1);
-      return { name: basename, version: "0.0.0" };
-    }
-  }
-
   // Schedules
   listSchedules(): Schedule[] {
     return Object.values(this.#state.schedules);
   }
+
   getSchedule(id: string): Schedule | undefined {
     return this.#state.schedules[id];
   }
+
   async upsertSchedule(s: Schedule): Promise<void> {
     this.#state.schedules[s.id] = s;
     await this.#flush();
   }
+
   async deleteSchedule(id: string): Promise<void> {
     delete this.#state.schedules[id];
     await this.#flush();
@@ -259,15 +235,113 @@ export class StateStore {
   listRules(): Rule[] {
     return Object.values(this.#state.rules);
   }
+
   getRule(id: string): Rule | undefined {
     return this.#state.rules[id];
   }
+
   async upsertRule(r: Rule): Promise<void> {
     this.#state.rules[r.id] = r;
     await this.#flush();
   }
+
   async deleteRule(id: string): Promise<void> {
     delete this.#state.rules[id];
     await this.#flush();
+  }
+
+  /**
+   * Sync state to match config entries.
+   * Removes state entries for plugins not in config.
+   */
+  async syncToConfig(validNames: Set<string>): Promise<void> {
+    const toRemove: string[] = [];
+
+    for (const plugin of this.listInstalled()) {
+      const metadata = this.getMetadata(plugin.ref);
+      const name = metadata?.name ?? plugin.ref;
+
+      if (!validNames.has(name)) {
+        this.logs.info('state.sync.remove', { ref: plugin.ref, name });
+        toRemove.push(plugin.ref);
+      }
+    }
+
+    for (const ref of toRemove) {
+      await this.remove(ref);
+    }
+  }
+
+  /**
+   * Migrate old ref formats to new format.
+   * - npm:package → package
+   * - workspace:name → file:./plugins/name/src/index.ts (or keep as-is if it resolves)
+   * - git:... → removed (unsupported)
+   * - file:path → file:path (unchanged)
+   * - package-name → package-name (unchanged)
+   */
+  #migrateRef(ref: string): string {
+    // Remove npm: prefix - just use package name
+    if (ref.startsWith('npm:')) {
+      return ref.slice(4);
+    }
+
+    // workspace: refs should be converted to file: refs for local dev
+    // or removed if they were pointing to packages that should now be installed via registry
+    if (ref.startsWith('workspace:')) {
+      const name = ref.slice('workspace:'.length);
+      // Convert to file ref pointing to local plugins directory
+      return `file:./plugins/${name}/src/index.ts`;
+    }
+
+    // git: refs are no longer supported - they should be installed via registry
+    if (ref.startsWith('git:')) {
+      // Return empty to signal removal, or keep for manual cleanup
+      return ref; // Keep for now, will fail to load and user can fix
+    }
+
+    // file: and bare package names stay as-is
+    return ref;
+  }
+
+  #withMetadata(p: InstalledPluginState): PluginStateWithMetadata {
+    const metadata = this.#metadataCache.get(p.ref) ?? { name: 'unknown', version: '0.0.0' };
+    return {
+      ...p,
+      name: metadata.name,
+      version: metadata.version,
+      metadata,
+    };
+  }
+
+  async #flush(): Promise<void> {
+    await Bun.write(this.#file, JSON.stringify(this.#state, null, 2));
+  }
+
+  /**
+   * Read and validate plugin metadata from package.json.
+   */
+  async #readPackageJson(pluginDir: string): Promise<PluginManifest> {
+    const pkgPath = `${pluginDir}/package.json`;
+    const basename = pluginDir.substring(pluginDir.lastIndexOf('/') + 1);
+
+    try {
+      const pkg = await import(pkgPath, { with: { type: 'json' } });
+      const data = pkg.default ?? pkg;
+      const result = PluginManifestSchema.safeParse(data);
+
+      if (!result.success) {
+        this.logs.warn('plugin.manifest.invalid', {
+          dir: pluginDir,
+          errors: result.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`),
+        });
+        return { name: data.name || basename, version: data.version || '0.0.0' };
+      }
+
+      return result.data;
+    } catch (error) {
+      this.logs.warn('plugin.manifest.readError', { dir: pluginDir, error: String(error) });
+      return { name: basename, version: '0.0.0' };
+    }
   }
 }

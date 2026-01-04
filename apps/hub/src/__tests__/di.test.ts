@@ -1,8 +1,17 @@
-import "reflect-metadata";
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
-import { container, spy, inject, injectable, mock as mock1, mock, singleton, TestBed } from "@elia/shared";
+import 'reflect-metadata';
+import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
+import {
+  container,
+  inject,
+  injectable,
+  mock,
+  mock as mock1,
+  singleton,
+  spy,
+  TestBed,
+} from '@elia/shared';
 
-describe("DI Container", () => {
+describe('DI Container', () => {
   beforeEach(() => {
     container.reset();
   });
@@ -11,10 +20,11 @@ describe("DI Container", () => {
     container.reset();
   });
 
-  it("should resolve singleton services", () => {
+  it('should resolve singleton services', () => {
     @singleton()
     class Counter {
       count = 0;
+
       increment() {
         this.count++;
       }
@@ -28,7 +38,7 @@ describe("DI Container", () => {
     expect(c1).toBe(c2);
   });
 
-  it("should resolve injectable services (non-singleton)", () => {
+  it('should resolve injectable services (non-singleton)', () => {
     @injectable()
     class Counter {
       count = 0;
@@ -40,7 +50,7 @@ describe("DI Container", () => {
     expect(c1).not.toBe(c2);
   });
 
-  it("should inject dependencies via inject()", () => {
+  it('should inject dependencies via inject()', () => {
     @singleton()
     class Logger {
       log(msg: string) {
@@ -51,17 +61,18 @@ describe("DI Container", () => {
     @singleton()
     class Service {
       private readonly logger = inject(Logger);
+
       doWork() {
-        return this.logger.log("working");
+        return this.logger.log('working');
       }
     }
 
     const service = container.resolve(Service);
-    expect(service.doWork()).toBe("LOG: working");
+    expect(service.doWork()).toBe('LOG: working');
   });
 });
 
-describe("inject() function", () => {
+describe('inject() function', () => {
   beforeEach(() => {
     container.reset();
   });
@@ -70,7 +81,7 @@ describe("inject() function", () => {
     container.reset();
   });
 
-  it("should work as property initializer", () => {
+  it('should work as property initializer', () => {
     @singleton()
     class Logger {
       log(msg: string) {
@@ -81,16 +92,17 @@ describe("inject() function", () => {
     @singleton()
     class Service {
       readonly logger = inject(Logger);
+
       doWork() {
-        return this.logger.log("working");
+        return this.logger.log('working');
       }
     }
 
     const service = container.resolve(Service);
-    expect(service.doWork()).toBe("LOG: working");
+    expect(service.doWork()).toBe('LOG: working');
   });
 
-  it("should return same singleton via inject()", () => {
+  it('should return same singleton via inject()', () => {
     @singleton()
     class Config {
       value = 42;
@@ -113,12 +125,12 @@ describe("inject() function", () => {
   });
 });
 
-describe("TestBed", () => {
+describe('TestBed', () => {
   afterEach(() => {
     TestBed.reset();
   });
 
-  it("should allow mocking services", () => {
+  it('should allow mocking services', () => {
     @singleton()
     class RealLogger {
       log(msg: string) {
@@ -129,25 +141,27 @@ describe("TestBed", () => {
     @singleton()
     class Service {
       readonly logger = inject(RealLogger);
+
       doWork() {
-        return this.logger.log("test");
+        return this.logger.log('test');
       }
     }
 
     const mockLogger = mock<RealLogger>({
-      log: () => "MOCKED",
+      log: () => 'MOCKED',
     });
 
     TestBed.create().provide(RealLogger, mockLogger).compile();
 
     const service = TestBed.inject(Service);
-    expect(service.doWork()).toBe("MOCKED");
+    expect(service.doWork()).toBe('MOCKED');
   });
 
-  it("should isolate tests", () => {
+  it('should isolate tests', () => {
     @singleton()
     class Counter {
       count = 0;
+
       increment() {
         this.count++;
       }
@@ -170,27 +184,27 @@ describe("TestBed", () => {
   });
 });
 
-describe("spy", () => {
-  it("should track calls", () => {
+describe('spy', () => {
+  it('should track calls', () => {
     const fn = spy<[number, string]>();
 
-    fn(1, "a");
-    fn(2, "b");
-    fn(3, "c");
+    fn(1, 'a');
+    fn(2, 'b');
+    fn(3, 'c');
 
     expect(fn.callCount).toBe(3);
-    expect(fn.calls[0]).toEqual([1, "a"]);
-    expect(fn.calls[1]).toEqual([2, "b"]);
-    expect(fn.lastCall).toEqual([3, "c"]); // lastCall is now a property, not a function
+    expect(fn.calls[0]).toEqual([1, 'a']);
+    expect(fn.calls[1]).toEqual([2, 'b']);
+    expect(fn.lastCall).toEqual([3, 'c']); // lastCall is now a property, not a function
   });
 
-  it("should return configured value", () => {
+  it('should return configured value', () => {
     const spyFn = spy<[], string>();
-    spyFn.mockReturnValue("hello");
-    expect(spyFn()).toBe("hello");
+    spyFn.mockReturnValue('hello');
+    expect(spyFn()).toBe('hello');
   });
 
-  it("should reset calls", () => {
+  it('should reset calls', () => {
     const spyFn = spy();
     spyFn();
     spyFn();
@@ -201,18 +215,19 @@ describe("spy", () => {
   });
 });
 
-describe("mock", () => {
-  it("should create partial mock", () => {
+describe('mock', () => {
+  it('should create partial mock', () => {
     interface Service {
       methodA(): string;
+
       methodB(): number;
     }
 
     const mockService = mock1<Service>({
-      methodA: () => "mocked",
+      methodA: () => 'mocked',
     });
 
-    expect(mockService.methodA()).toBe("mocked");
+    expect(mockService.methodA()).toBe('mocked');
     expect(mockService.methodB).toBeUndefined();
   });
 });

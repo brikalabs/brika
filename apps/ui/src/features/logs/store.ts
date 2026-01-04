@@ -1,5 +1,5 @@
-import { create } from "zustand";
 import type { LogLevel, LogSource } from "@elia/shared";
+import { create } from "zustand";
 import type { StoredLogEvent } from "./api";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -76,3 +76,4 @@ export const useLogsStore = create<LogsStore>((set) => ({
     })),
   resetFilters: () => set({ filters: defaultFilters }),
 }));
+

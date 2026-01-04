@@ -1,0 +1,24 @@
+{
+  "plugins": {
+    "file:/Users/maxsch/projects/elia/plugins/blocks-builtin/src/main.ts": {
+      "ref": "file:/Users/maxsch/projects/elia/plugins/blocks-builtin/src/main.ts",
+      "dir": "/Users/maxsch/projects/elia/plugins/blocks-builtin",
+      "uid": "2b9zurtzbigu5",
+      "enabled": true,
+      "health": "running",
+      "lastError": null,
+      "updatedAt": 1767531387947
+    },
+    "file:/Users/maxsch/projects/elia/plugins/example-echo/src/index.ts": {
+      "ref": "file:/Users/maxsch/projects/elia/plugins/example-echo/src/index.ts",
+      "dir": "/Users/maxsch/projects/elia/plugins/example-echo",
+      "uid": "1w2vb6a3ry9bm",
+      "enabled": true,
+      "health": "running",
+      "lastError": null,
+      "updatedAt": 1767531373198
+    }
+  },
+  "schedules": {},
+  "rules": {}
+}

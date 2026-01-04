@@ -1,6 +1,6 @@
-import { singleton, inject } from "@elia/shared";
-import type { Json, ToolCallContext, ToolResult, ToolSummary, ToolInputSchema } from "@elia/shared";
-import { LogRouter } from "../logs/log-router";
+import type { Json, ToolCallContext, ToolInputSchema, ToolResult, ToolSummary } from '@elia/shared';
+import { inject, singleton } from '@elia/shared';
+import { LogRouter } from '@/runtime/logs/log-router';
 
 export interface Tool {
   /** Local ID (without plugin prefix) */
@@ -14,6 +14,7 @@ export interface Tool {
   color?: string;
   owner: string;
   inputSchema?: ToolInputSchema;
+
   call(args: Record<string, Json>, ctx: ToolCallContext): Promise<ToolResult>;
 }
 
@@ -26,7 +27,7 @@ export class ToolRegistry {
    * Register a tool from a plugin
    * The full name will be `pluginId:toolId` (e.g., "timer:set")
    */
-  register(id: string, owner: string, tool: Omit<Tool, "id" | "name" | "owner">): void {
+  register(id: string, owner: string, tool: Omit<Tool, 'id' | 'name' | 'owner'>): void {
     // Create full qualified name: pluginId:toolId
     const name = `${owner}:${id}`;
 
@@ -35,14 +36,14 @@ export class ToolRegistry {
     }
 
     this.#tools.set(name, { ...tool, id, name, owner });
-    this.logs.info("tool.register", { name, id, owner });
+    this.logs.info('tool.register', { name, id, owner });
   }
 
   unregister(name: string): void {
     const t = this.#tools.get(name);
     if (!t) return;
     this.#tools.delete(name);
-    this.logs.info("tool.unregister", { name, owner: t.owner });
+    this.logs.info('tool.unregister', { name, owner: t.owner });
   }
 
   get(name: string): Tool | undefined {

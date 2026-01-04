@@ -4,14 +4,21 @@
  * Minimal shared types used across contracts.
  */
 
-import { z } from "zod";
+import { z } from 'zod';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // JSON Type
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** JSON-serializable value */
-export type Json = null | boolean | number | string | Json[] | { [k: string]: Json };
+export type Json =
+  | null
+  | boolean
+  | number
+  | string
+  | Json[]
+  | { [k: string]: Json | undefined }
+  | undefined;
 
 /**
  * Zod schema for JSON values.

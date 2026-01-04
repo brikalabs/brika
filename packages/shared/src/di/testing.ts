@@ -30,7 +30,7 @@
  * ```
  */
 
-import { container } from "tsyringe";
+import { container } from 'tsyringe';
 
 // biome-ignore lint/suspicious/noExplicitAny: DI requires flexible types
 type Constructor<T = any> = new (...args: any[]) => T;
@@ -41,22 +41,18 @@ type AnyFunction = (...args: any[]) => any;
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface SpyFn<TArgs extends any[] = any[], TReturn = any> {
-  (...args: TArgs): TReturn;
-
   /** All recorded calls */
   readonly calls: TArgs[];
-
   /** Number of times called */
   readonly callCount: number;
-
   /** Whether the spy was called at least once */
   readonly called: boolean;
-
   /** Get the last call arguments */
   readonly lastCall: TArgs | undefined;
-
   /** Get the first call arguments */
   readonly firstCall: TArgs | undefined;
+
+  (...args: TArgs): TReturn;
 
   /** Reset all call history */
   reset(): this;
@@ -108,14 +104,13 @@ export interface SpyFn<TArgs extends any[] = any[], TReturn = any> {
  * ```
  */
 export function spy<TArgs extends any[] = any[], TReturn = void>(
-  initialImpl?: (...args: TArgs) => TReturn,
+  impl = null
 ): SpyFn<TArgs, TReturn> {
   const calls: TArgs[] = [];
   const returnValueQueue: TReturn[] = [];
   const implQueue: Array<(...args: TArgs) => TReturn> = [];
 
   let returnValue: TReturn = undefined as TReturn;
-  let impl: ((...args: TArgs) => TReturn) | null = initialImpl ?? null;
 
   const fn = ((...args: TArgs): TReturn => {
     calls.push(args);
@@ -142,7 +137,7 @@ export function spy<TArgs extends any[] = any[], TReturn = void>(
     calls: { get: () => calls },
     callCount: { get: () => calls.length },
     called: { get: () => calls.length > 0 },
-    lastCall: { get: () => calls[calls.length - 1] },
+    lastCall: { get: () => calls.at(-1) },
     firstCall: { get: () => calls[0] },
   });
 
@@ -190,12 +185,14 @@ export function spy<TArgs extends any[] = any[], TReturn = void>(
   };
 
   fn.mockRejectedValueOnce = (error: any) => {
-    implQueue.push((() => Promise.reject(error)) as any);
+    implQueue.push(() => Promise.reject(error));
     return fn;
   };
 
   fn.calledWith = (...args: TArgs) => {
-    return calls.some((call) => call.length === args.length && call.every((arg, i) => arg === args[i]));
+    return calls.some(
+      (call) => call.length === args.length && call.every((arg, i) => arg === args[i])
+    );
   };
 
   fn.nthCall = (n: number) => calls[n];
@@ -233,7 +230,7 @@ export function mock<T extends object>(overrides: Partial<T> = {}): T {
  * ```
  */
 export function autoMock<T extends object>(
-  methodNames: Array<keyof T & string>,
+  methodNames: Array<keyof T & string>
 ): T & { [K in keyof T]: T[K] extends AnyFunction ? SpyFn : T[K] } {
   const obj: any = {};
   for (const name of methodNames) {
@@ -247,7 +244,7 @@ export function autoMock<T extends object>(
 // ─────────────────────────────────────────────────────────────────────────────
 
 class TestBedBuilder {
-  #providers = new Map<Constructor, any>();
+  readonly #providers = new Map<Constructor, any>();
   #compiled = false;
 
   /**
@@ -344,7 +341,9 @@ class TestBedStatic {
    * });
    * ```
    */
-  setup(config: { mocks?: Record<string, Partial<object>>; providers?: Record<string, any> } = {}): void {
+  setup(
+    config: { mocks?: Record<string, Partial<object>>; providers?: Record<string, any> } = {}
+  ): void {
     container.reset();
 
     // Note: This simplified API requires tokens to be passed differently

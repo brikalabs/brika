@@ -1,5 +1,5 @@
-import { create } from "zustand";
-import type { EliaEvent } from "@elia/shared";
+import type { EliaEvent } from '@elia/shared';
+import { create } from 'zustand';
 
 interface EventsStore {
   events: EliaEvent[];

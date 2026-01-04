@@ -1,22 +1,22 @@
-import { useState, useCallback, useMemo } from "react";
 import {
-  useNodesState,
-  useEdgesState,
   addEdge,
-  type Node,
-  type Edge,
   type Connection,
-  type OnConnect,
-  type OnNodesDelete,
-  type OnEdgesDelete,
+  type Edge,
   MarkerType,
-} from "@xyflow/react";
-import type { Workflow, WorkflowBlock } from "../api";
-import type { BlockNodeData } from "./BlockNode";
-import type { TriggerNodeData } from "./TriggerNode";
-import type { BlockTypeInfo } from "./BlockToolbar";
+  type Node,
+  type OnConnect,
+  type OnEdgesDelete,
+  type OnNodesDelete,
+  useEdgesState,
+  useNodesState,
+} from '@xyflow/react';
+import { useCallback, useMemo, useState } from 'react';
+import type { Workflow, WorkflowBlock } from '../api';
+import type { BlockNodeData } from './BlockNode';
+import type { BlockTypeInfo } from './BlockToolbar';
+import type { TriggerNodeData } from './TriggerNode';
 
-export type BlockStatus = "idle" | "running" | "completed" | "error";
+export type BlockStatus = 'idle' | 'running' | 'completed' | 'error';
 
 export interface EditorState {
   workflow: Workflow;
@@ -31,7 +31,7 @@ export interface ExecutionLog {
   id: string;
   timestamp: number;
   blockId: string;
-  type: "start" | "complete" | "error" | "log";
+  type: 'start' | 'complete' | 'error' | 'log';
   message: string;
   data?: unknown;
 }
@@ -43,8 +43,8 @@ function workflowToFlow(workflow: Workflow): { nodes: Node[]; edges: Edge[] } {
 
   // Add trigger node
   nodes.push({
-    id: "trigger",
-    type: "trigger",
+    id: 'trigger',
+    type: 'trigger',
     position: { x: 300, y: 50 },
     data: {
       event: workflow.trigger.event,
@@ -58,11 +58,12 @@ function workflowToFlow(workflow: Workflow): { nodes: Node[]; edges: Edge[] } {
   blocks.forEach((block, index) => {
     const isFirst = index === 0;
     const isLast =
-      block.type === "end" || (!block.next && block.type !== "condition" && block.type !== "switch");
+      block.type === 'end' ||
+      (!block.next && block.type !== 'condition' && block.type !== 'switch');
 
     nodes.push({
       id: block.id,
-      type: "block",
+      type: 'block',
       position: { x: 300, y: 180 + index * 140 },
       data: {
         id: block.id,
@@ -71,7 +72,7 @@ function workflowToFlow(workflow: Workflow): { nodes: Node[]; edges: Edge[] } {
         config: block,
         isFirst,
         isLast,
-        status: "idle",
+        status: 'idle',
       } as BlockNodeData,
     });
   });
@@ -79,10 +80,10 @@ function workflowToFlow(workflow: Workflow): { nodes: Node[]; edges: Edge[] } {
   // Connect trigger to first block
   if (blocks.length > 0) {
     edges.push({
-      id: "trigger-to-first",
-      source: "trigger",
+      id: 'trigger-to-first',
+      source: 'trigger',
       target: blocks[0].id,
-      type: "smoothstep",
+      type: 'smoothstep',
       markerEnd: { type: MarkerType.ArrowClosed },
       animated: true,
     });
@@ -95,21 +96,21 @@ function workflowToFlow(workflow: Workflow): { nodes: Node[]; edges: Edge[] } {
         id: `${block.id}-to-${block.next}`,
         source: block.id,
         target: block.next as string,
-        type: "smoothstep",
+        type: 'smoothstep',
         markerEnd: { type: MarkerType.ArrowClosed },
       });
     }
 
-    if (block.type === "condition") {
+    if (block.type === 'condition') {
       if (block.then) {
         edges.push({
           id: `${block.id}-then-${block.then}`,
           source: block.id,
           target: block.then as string,
-          type: "smoothstep",
+          type: 'smoothstep',
           markerEnd: { type: MarkerType.ArrowClosed },
-          label: "then",
-          style: { stroke: "#22c55e" },
+          label: 'then',
+          style: { stroke: '#22c55e' },
         });
       }
       if (block.else) {
@@ -117,22 +118,22 @@ function workflowToFlow(workflow: Workflow): { nodes: Node[]; edges: Edge[] } {
           id: `${block.id}-else-${block.else}`,
           source: block.id,
           target: block.else as string,
-          type: "smoothstep",
+          type: 'smoothstep',
           markerEnd: { type: MarkerType.ArrowClosed },
-          label: "else",
-          style: { stroke: "#ef4444" },
+          label: 'else',
+          style: { stroke: '#ef4444' },
         });
       }
     }
 
-    if (block.type === "switch" && block.cases) {
+    if (block.type === 'switch' && block.cases) {
       const cases = block.cases as Record<string, string>;
       Object.entries(cases).forEach(([value, target]) => {
         edges.push({
           id: `${block.id}-case-${value}`,
           source: block.id,
           target,
-          type: "smoothstep",
+          type: 'smoothstep',
           markerEnd: { type: MarkerType.ArrowClosed },
           label: value,
         });
@@ -142,10 +143,10 @@ function workflowToFlow(workflow: Workflow): { nodes: Node[]; edges: Edge[] } {
           id: `${block.id}-default`,
           source: block.id,
           target: block.default as string,
-          type: "smoothstep",
+          type: 'smoothstep',
           markerEnd: { type: MarkerType.ArrowClosed },
-          label: "default",
-          style: { stroke: "#6b7280" },
+          label: 'default',
+          style: { stroke: '#6b7280' },
         });
       }
     }
@@ -156,8 +157,8 @@ function workflowToFlow(workflow: Workflow): { nodes: Node[]; edges: Edge[] } {
 
 // Convert React Flow nodes/edges back to workflow
 function flowToWorkflow(nodes: Node[], edges: Edge[], originalWorkflow: Workflow): Workflow {
-  const triggerNode = nodes.find((n) => n.type === "trigger");
-  const blockNodes = nodes.filter((n) => n.type === "block");
+  const triggerNode = nodes.find((n) => n.type === 'trigger');
+  const blockNodes = nodes.filter((n) => n.type === 'block');
 
   // Build blocks from nodes
   const blocks: WorkflowBlock[] = blockNodes.map((node) => {
@@ -171,15 +172,15 @@ function flowToWorkflow(nodes: Node[], edges: Edge[], originalWorkflow: Workflow
     // Find outgoing edges and set next/then/else
     const outEdges = edges.filter((e) => e.source === node.id);
 
-    if (data.type === "condition") {
-      const thenEdge = outEdges.find((e) => e.label === "then");
-      const elseEdge = outEdges.find((e) => e.label === "else");
+    if (data.type === 'condition') {
+      const thenEdge = outEdges.find((e) => e.label === 'then');
+      const elseEdge = outEdges.find((e) => e.label === 'else');
       if (thenEdge) block.then = thenEdge.target;
       if (elseEdge) block.else = elseEdge.target;
-    } else if (data.type === "switch") {
+    } else if (data.type === 'switch') {
       const cases: Record<string, string> = {};
       outEdges.forEach((e) => {
-        if (e.label === "default") {
+        if (e.label === 'default') {
           block.default = e.target;
         } else if (e.label) {
           cases[e.label as string] = e.target;
@@ -204,7 +205,7 @@ function flowToWorkflow(nodes: Node[], edges: Edge[], originalWorkflow: Workflow
   return {
     ...originalWorkflow,
     trigger: {
-      event: (triggerNode?.data as TriggerNodeData)?.event || "*",
+      event: (triggerNode?.data as TriggerNodeData)?.event || '*',
       filter: (triggerNode?.data as TriggerNodeData)?.filter,
     },
     blocks,
@@ -212,6 +213,7 @@ function flowToWorkflow(nodes: Node[], edges: Edge[], originalWorkflow: Workflow
 }
 
 let nodeIdCounter = 0;
+
 function generateNodeId(type: string): string {
   nodeIdCounter++;
   return `${type}-${Date.now().toString(36)}-${nodeIdCounter}`;
@@ -220,7 +222,7 @@ function generateNodeId(type: string): string {
 export function useWorkflowEditor(initialWorkflow: Workflow) {
   const { nodes: initialNodes, edges: initialEdges } = useMemo(
     () => workflowToFlow(initialWorkflow),
-    [initialWorkflow],
+    [initialWorkflow]
   );
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
@@ -234,13 +236,13 @@ export function useWorkflowEditor(initialWorkflow: Workflow) {
   // Get current workflow from nodes/edges
   const workflow = useMemo(
     () => flowToWorkflow(nodes, edges, initialWorkflow),
-    [nodes, edges, initialWorkflow],
+    [nodes, edges, initialWorkflow]
   );
 
   // Get selected node
   const selectedNode = useMemo(
     () => nodes.find((n) => n.id === selectedNodeId) || null,
-    [nodes, selectedNodeId],
+    [nodes, selectedNodeId]
   );
 
   // Handle new connections
@@ -249,13 +251,13 @@ export function useWorkflowEditor(initialWorkflow: Workflow) {
       const newEdge: Edge = {
         ...connection,
         id: `${connection.source}-to-${connection.target}`,
-        type: "smoothstep",
+        type: 'smoothstep',
         markerEnd: { type: MarkerType.ArrowClosed },
       } as Edge;
       setEdges((eds) => addEdge(newEdge, eds));
       setIsDirty(true);
     },
-    [setEdges],
+    [setEdges]
   );
 
   // Handle node selection
@@ -275,7 +277,7 @@ export function useWorkflowEditor(initialWorkflow: Workflow) {
       }
       setIsDirty(true);
     },
-    [selectedNodeId],
+    [selectedNodeId]
   );
 
   // Handle edge deletion
@@ -287,10 +289,10 @@ export function useWorkflowEditor(initialWorkflow: Workflow) {
   const addBlock = useCallback(
     (blockType: BlockTypeInfo, position: { x: number; y: number }) => {
       const blockTypeId = blockType.type || blockType.name;
-      const nodeId = generateNodeId(blockTypeId.split(":").pop() || "block");
+      const nodeId = generateNodeId(blockTypeId.split(':').pop() || 'block');
       const newNode: Node = {
         id: nodeId,
-        type: "block",
+        type: 'block',
         position,
         data: {
           id: nodeId,
@@ -302,8 +304,8 @@ export function useWorkflowEditor(initialWorkflow: Workflow) {
           inputs: blockType.inputs,
           outputs: blockType.outputs,
           isFirst: false,
-          isLast: blockTypeId.includes("end"),
-          status: "idle",
+          isLast: blockTypeId.includes('end'),
+          status: 'idle',
         } as BlockNodeData,
       };
       setNodes((nds) => [...nds, newNode]);
@@ -311,7 +313,7 @@ export function useWorkflowEditor(initialWorkflow: Workflow) {
       setIsDirty(true);
       return nodeId;
     },
-    [setNodes],
+    [setNodes]
   );
 
   // Update block config
@@ -319,7 +321,7 @@ export function useWorkflowEditor(initialWorkflow: Workflow) {
     (nodeId: string, config: Partial<WorkflowBlock>) => {
       setNodes((nds) =>
         nds.map((node) => {
-          if (node.id === nodeId && node.type === "block") {
+          if (node.id === nodeId && node.type === 'block') {
             const data = node.data as BlockNodeData;
             return {
               ...node,
@@ -330,11 +332,11 @@ export function useWorkflowEditor(initialWorkflow: Workflow) {
             };
           }
           return node;
-        }),
+        })
       );
       setIsDirty(true);
     },
-    [setNodes],
+    [setNodes]
   );
 
   // Update trigger config
@@ -342,7 +344,7 @@ export function useWorkflowEditor(initialWorkflow: Workflow) {
     (config: { event?: string; filter?: Record<string, unknown> }) => {
       setNodes((nds) =>
         nds.map((node) => {
-          if (node.id === "trigger") {
+          if (node.id === 'trigger') {
             const data = node.data as TriggerNodeData;
             return {
               ...node,
@@ -350,11 +352,11 @@ export function useWorkflowEditor(initialWorkflow: Workflow) {
             };
           }
           return node;
-        }),
+        })
       );
       setIsDirty(true);
     },
-    [setNodes],
+    [setNodes]
   );
 
   // Set block status (for debugging)
@@ -367,22 +369,25 @@ export function useWorkflowEditor(initialWorkflow: Workflow) {
       // Update node data
       setNodes((nds) =>
         nds.map((node) => {
-          if (node.id === blockId && node.type === "block") {
+          if (node.id === blockId && node.type === 'block') {
             return {
               ...node,
               data: { ...node.data, status },
             };
           }
           return node;
-        }),
+        })
       );
     },
-    [setNodes],
+    [setNodes]
   );
 
   // Add execution log
-  const addExecutionLog = useCallback((log: Omit<ExecutionLog, "id" | "timestamp">) => {
-    setExecutionLogs((prev) => [...prev, { ...log, id: crypto.randomUUID(), timestamp: Date.now() }]);
+  const addExecutionLog = useCallback((log: Omit<ExecutionLog, 'id' | 'timestamp'>) => {
+    setExecutionLogs((prev) => [
+      ...prev,
+      { ...log, id: crypto.randomUUID(), timestamp: Date.now() },
+    ]);
   }, []);
 
   // Clear execution state
@@ -392,11 +397,11 @@ export function useWorkflowEditor(initialWorkflow: Workflow) {
     setExecutionLogs([]);
     setNodes((nds) =>
       nds.map((node) => {
-        if (node.type === "block") {
-          return { ...node, data: { ...node.data, status: "idle" } };
+        if (node.type === 'block') {
+          return { ...node, data: { ...node.data, status: 'idle' } };
         }
         return node;
-      }),
+      })
     );
   }, [setNodes]);
 
@@ -404,31 +409,31 @@ export function useWorkflowEditor(initialWorkflow: Workflow) {
   const getAvailableVariables = useCallback(
     (blockId: string) => {
       const variables: { name: string; source: string; type: string }[] = [
-        { name: "trigger.type", source: "trigger", type: "string" },
-        { name: "trigger.payload", source: "trigger", type: "object" },
-        { name: "trigger.source", source: "trigger", type: "string" },
-        { name: "trigger.ts", source: "trigger", type: "number" },
-        { name: "prev", source: "previous block", type: "any" },
+        { name: 'trigger.type', source: 'trigger', type: 'string' },
+        { name: 'trigger.payload', source: 'trigger', type: 'object' },
+        { name: 'trigger.source', source: 'trigger', type: 'string' },
+        { name: 'trigger.ts', source: 'trigger', type: 'number' },
+        { name: 'prev', source: 'previous block', type: 'any' },
       ];
 
       // Find set blocks that come before this block
-      const blockNodes = nodes.filter((n) => n.type === "block");
+      const blockNodes = nodes.filter((n) => n.type === 'block');
       const blockIndex = blockNodes.findIndex((n) => n.id === blockId);
 
       blockNodes.slice(0, blockIndex).forEach((node) => {
         const data = node.data as BlockNodeData;
-        if (data.type === "set" && data.config.var) {
+        if (data.type === 'set' && data.config.var) {
           variables.push({
             name: `vars.${data.config.var}`,
             source: `set block "${node.id}"`,
-            type: "any",
+            type: 'any',
           });
         }
       });
 
       return variables;
     },
-    [nodes],
+    [nodes]
   );
 
   return {

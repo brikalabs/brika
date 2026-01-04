@@ -1,1 +1,1 @@
-export { BlockRegistry } from "./block-registry";
+export { BlockRegistry } from './block-registry';

@@ -1,5 +1,5 @@
-import { fetcher, API_BASE } from "@/lib/query";
 import type { LogEvent, LogLevel, LogSource } from "@elia/shared";
+import { API_BASE, fetcher } from "@/lib/query";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types

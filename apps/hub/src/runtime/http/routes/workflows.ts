@@ -1,6 +1,6 @@
-import { z } from "zod";
-import { route, group, NotFound } from "@elia/router";
-import { AutomationEngine, YamlWorkflowLoader } from "../../automations";
+import { group, NotFound, route } from '@elia/router';
+import { z } from 'zod';
+import { AutomationEngine, YamlWorkflowLoader } from '@/runtime/automations';
 
 const blockSchema = z.object({
   id: z.string(),
@@ -36,21 +36,21 @@ const workflowSchema = z.object({
   enabled: z.boolean().optional(),
 });
 
-export const workflowsRoutes = group("/api/workflows", [
-  route.get("/", async ({ inject }) => {
+export const workflowsRoutes = group('/api/workflows', [
+  route.get('/', ({ inject }) => {
     return inject(AutomationEngine).list();
   }),
 
-  route.post("/", { body: workflowSchema }, async ({ body, inject }) => {
+  route.post('/', { body: workflowSchema }, async ({ body, inject }) => {
     const workflow = {
       ...body,
       trigger: {
         event: body.trigger.event,
-        filter: body.trigger.filter as Record<string, import("@elia/shared").Json> | undefined,
+        filter: body.trigger.filter as Record<string, import('@elia/shared').Json> | undefined,
       },
       blocks: body.blocks.map((b) => ({
         ...b,
-        config: (b.config ?? {}) as Record<string, import("@elia/shared").Json>,
+        config: (b.config ?? {}) as Record<string, import('@elia/shared').Json>,
       })),
       connections: body.connections ?? [],
     };
@@ -58,47 +58,47 @@ export const workflowsRoutes = group("/api/workflows", [
     return { ok: true, id: body.id };
   }),
 
-  route.get("/blocks", async ({ inject }) => {
+  route.get('/blocks', ({ inject }) => {
     return inject(AutomationEngine).getBlockTypes();
   }),
 
-  route.get("/runs", async ({ inject }) => {
+  route.get('/runs', ({ inject }) => {
     return inject(AutomationEngine).listRuns();
   }),
 
   route.post(
-    "/trigger",
+    '/trigger',
     {
       body: z.object({
         id: z.string(),
         payload: z.record(z.string(), z.unknown()).optional(),
       }),
     },
-    async ({ body, inject }) => {
+    ({ body, inject }) => {
       return inject(AutomationEngine).trigger(
         body.id,
-        "api.trigger",
-        "api",
-        (body.payload ?? {}) as import("@elia/shared").Json,
+        'api.trigger',
+        'api',
+        (body.payload ?? {}) as import('@elia/shared').Json
       );
-    },
+    }
   ),
 
-  route.post("/enable", { body: z.object({ id: z.string() }) }, async ({ body, inject }) => {
+  route.post('/enable', { body: z.object({ id: z.string() }) }, ({ body, inject }) => {
     return { ok: inject(AutomationEngine).setEnabled(body.id, true) };
   }),
 
-  route.post("/disable", { body: z.object({ id: z.string() }) }, async ({ body, inject }) => {
+  route.post('/disable', { body: z.object({ id: z.string() }) }, ({ body, inject }) => {
     return { ok: inject(AutomationEngine).setEnabled(body.id, false) };
   }),
 
-  route.get("/:id", { params: z.object({ id: z.string() }) }, async ({ params, inject }) => {
+  route.get('/:id', { params: z.object({ id: z.string() }) }, ({ params, inject }) => {
     const workflow = inject(AutomationEngine).get(params.id);
-    if (!workflow) throw new NotFound("Workflow not found");
+    if (!workflow) throw new NotFound('Workflow not found');
     return workflow;
   }),
 
-  route.delete("/:id", { params: z.object({ id: z.string() }) }, async ({ params, inject }) => {
+  route.delete('/:id', { params: z.object({ id: z.string() }) }, async ({ params, inject }) => {
     const ok = await inject(YamlWorkflowLoader).deleteWorkflow(params.id);
     return { ok };
   }),

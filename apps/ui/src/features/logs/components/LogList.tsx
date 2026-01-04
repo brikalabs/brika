@@ -1,6 +1,6 @@
-import React, { useRef, useEffect } from "react";
-import { useLocale } from "@/lib/use-locale";
+import React, { useEffect, useRef } from "react";
 import { ScrollArea, Skeleton } from "@/components/ui";
+import { useLocale } from "@/lib/use-locale";
 import type { StoredLogEvent } from "../api";
 
 const LEVEL_COLORS: Record<string, string> = {
@@ -50,7 +50,7 @@ export function LogList({ logs, isLoading, isFetchingMore, hasMore, onLoadMore }
   }
 
   if (logs.length === 0) {
-    return <div className="p-8 text-muted-foreground text-center">{t("logs:empty")}</div>;
+    return <div className="p-8 text-center text-muted-foreground">{t("logs:empty")}</div>;
   }
 
   return (
@@ -64,7 +64,7 @@ export function LogList({ logs, isLoading, isFetchingMore, hasMore, onLoadMore }
         {hasMore && (
           <div ref={loadMoreRef} className="p-4 text-center">
             {isFetchingMore ? (
-              <Skeleton className="h-8 w-32 mx-auto" />
+              <Skeleton className="mx-auto h-8 w-32" />
             ) : (
               <span className="text-muted-foreground">{t("common:loading")}</span>
             )}
@@ -82,20 +82,20 @@ function LogRow({ log }: { log: StoredLogEvent }) {
 
   return (
     <div
-      className={`flex gap-3 px-4 py-1.5 border-b border-border/30 hover:bg-muted/30 items-start ${isNew ? "bg-primary/5" : ""}`}
+      className={`flex items-start gap-3 border-border/30 border-b px-4 py-1.5 hover:bg-muted/30 ${isNew ? "bg-primary/5" : ""}`}
     >
-      <span className="text-muted-foreground shrink-0 tabular-nums">{timestamp}</span>
+      <span className="shrink-0 text-muted-foreground tabular-nums">{timestamp}</span>
       <span
-        className={`shrink-0 px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase ${LEVEL_COLORS[log.level] || ""}`}
+        className={`shrink-0 rounded px-1.5 py-0.5 font-semibold text-[10px] uppercase ${LEVEL_COLORS[log.level] || ""}`}
       >
         {log.level}
       </span>
-      <span className="text-muted-foreground shrink-0 w-32 truncate" title={source}>
+      <span className="w-32 shrink-0 truncate text-muted-foreground" title={source}>
         {source}
       </span>
-      <span className="text-foreground flex-1">{log.message}</span>
+      <span className="flex-1 text-foreground">{log.message}</span>
       {log.meta && (
-        <span className="text-muted-foreground/70 truncate max-w-xs" title={JSON.stringify(log.meta)}>
+        <span className="max-w-xs truncate text-muted-foreground/70" title={JSON.stringify(log.meta)}>
           {JSON.stringify(log.meta)}
         </span>
       )}

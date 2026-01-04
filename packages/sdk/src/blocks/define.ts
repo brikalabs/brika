@@ -5,17 +5,16 @@
  * Mirrors the defineTool() pattern for consistency.
  */
 
-import { z } from "zod";
-import type { Json } from "../types";
+import { z } from 'zod';
+import type { Json } from '../types';
 import type {
-  BlockPort,
-  BlockSchema,
   BlockContext,
-  BlockRuntime,
+  BlockPort,
   BlockResult,
-  BlockHandler,
+  BlockRuntime,
+  BlockSchema,
   CompiledBlock,
-} from "./types";
+} from './types';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Block Builder Types
@@ -81,8 +80,8 @@ export function defineBlock<T extends z.ZodObject<z.ZodRawShape>>(
   handler: (
     config: z.infer<T>,
     ctx: BlockContext,
-    runtime: BlockRuntime,
-  ) => Promise<BlockResult> | BlockResult,
+    runtime: BlockRuntime
+  ) => Promise<BlockResult> | BlockResult
 ): CompiledBlock {
   // Convert Zod schema to JSON Schema
   const jsonSchema = zodToJsonSchema(spec.schema);
@@ -94,15 +93,17 @@ export function defineBlock<T extends z.ZodObject<z.ZodRawShape>>(
     category: spec.category,
     icon: spec.icon,
     color: spec.color,
-    inputs: spec.inputs ?? [{ id: "in", name: "Input" }],
-    outputs: spec.outputs ?? [{ id: "out", name: "Output" }],
+    inputs: spec.inputs ?? [{ id: 'in', name: 'Input' }],
+    outputs: spec.outputs ?? [{ id: 'out', name: 'Output' }],
     schema: jsonSchema,
     execute: async (config, ctx, runtime) => {
       // Validate config with Zod
       const parsed = spec.schema.safeParse(config);
       if (!parsed.success) {
         const issues = parsed.error.issues || [];
-        const errors = issues.map((e) => `${String(e.path?.join?.(".") ?? "")}: ${e.message}`).join(", ");
+        const errors = issues
+          .map((e) => `${String(e.path?.join?.('.') ?? '')}: ${e.message}`)
+          .join(', ');
         return { error: `Config validation failed: ${errors}`, stop: true };
       }
       return handler(parsed.data as z.infer<T>, ctx, runtime);
@@ -116,21 +117,21 @@ export function defineBlock<T extends z.ZodObject<z.ZodRawShape>>(
 
 function zodToJsonSchema(schema: z.ZodObject<z.ZodRawShape>): BlockSchema {
   // Use Zod's native JSON Schema conversion
-  const raw = z.toJSONSchema(schema, { unrepresentable: "any" });
+  const raw = z.toJSONSchema(schema, { unrepresentable: 'any' });
 
   const result: BlockSchema = {
-    type: "object",
+    type: 'object',
     properties: {},
     required: [],
   };
 
-  if (raw && typeof raw === "object" && "properties" in raw) {
+  if (raw && typeof raw === 'object' && 'properties' in raw) {
     const props = raw.properties as Record<string, Record<string, unknown>>;
-    const properties: BlockSchema["properties"] = {};
+    const properties: BlockSchema['properties'] = {};
 
     for (const [key, prop] of Object.entries(props)) {
       properties[key] = {
-        type: (prop.type as "string" | "number" | "boolean" | "array" | "object") ?? "string",
+        type: (prop.type as 'string' | 'number' | 'boolean' | 'array' | 'object') ?? 'string',
         description: prop.description as string | undefined,
         default: prop.default as Json | undefined,
         enum: prop.enum as Json[] | undefined,
@@ -167,17 +168,17 @@ function zodToJsonSchema(schema: z.ZodObject<z.ZodRawShape>): BlockSchema {
 export function expr<T>(value: T, ctx: BlockContext): T {
   if (value === null || value === undefined) return value;
 
-  if (typeof value === "string") {
+  if (typeof value === 'string') {
     // Full expression: {{ ... }}
     const match = value.match(/^\{\{\s*(.+?)\s*\}\}$/);
     if (match) {
       return evalPath(match[1], ctx) as T;
     }
     // Template with embedded expressions
-    if (value.includes("{{")) {
+    if (value.includes('{{')) {
       return value.replace(/\{\{\s*(.+?)\s*\}\}/g, (_, e) => {
         const result = evalPath(e.trim(), ctx);
-        return result === null || result === undefined ? "" : String(result);
+        return result === null || result === undefined ? '' : String(result);
       }) as T;
     }
     return value;
@@ -187,7 +188,7 @@ export function expr<T>(value: T, ctx: BlockContext): T {
     return value.map((v) => expr(v, ctx)) as T;
   }
 
-  if (typeof value === "object") {
+  if (typeof value === 'object') {
     const result: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(value)) {
       result[k] = expr(v, ctx);
@@ -200,47 +201,47 @@ export function expr<T>(value: T, ctx: BlockContext): T {
 
 function evalPath(path: string, ctx: BlockContext): Json {
   // Handle comparisons
-  for (const op of ["===", "!==", "==", "!=", ">=", "<=", ">", "<", "&&", "||"]) {
+  for (const op of ['===', '!==', '==', '!=', '>=', '<=', '>', '<', '&&', '||']) {
     const idx = path.indexOf(` ${op} `);
     if (idx !== -1) {
       const left = evalPath(path.slice(0, idx).trim(), ctx);
       const right = parseValue(path.slice(idx + op.length + 2).trim(), ctx);
       switch (op) {
-        case "===":
+        case '===':
           return left === right;
-        case "!==":
+        case '!==':
           return left !== right;
-        case "==":
+        case '==':
           return left == right;
-        case "!=":
+        case '!=':
           return left != right;
-        case ">=":
+        case '>=':
           return Number(left) >= Number(right);
-        case "<=":
+        case '<=':
           return Number(left) <= Number(right);
-        case ">":
+        case '>':
           return Number(left) > Number(right);
-        case "<":
+        case '<':
           return Number(left) < Number(right);
-        case "&&":
+        case '&&':
           return Boolean(left) && Boolean(right);
-        case "||":
+        case '||':
           return Boolean(left) || Boolean(right);
       }
     }
   }
 
   // Handle negation
-  if (path.startsWith("!")) {
+  if (path.startsWith('!')) {
     return !evalPath(path.slice(1).trim(), ctx);
   }
 
   // Simple path: trigger.payload.room
-  const parts = path.split(".");
+  const parts = path.split('.');
   let current: Json = ctx as unknown as Json;
   for (const part of parts) {
     if (current === null || current === undefined) return null;
-    if (typeof current !== "object") return null;
+    if (typeof current !== 'object') return null;
     current = (current as Record<string, Json>)[part];
   }
   return current;
@@ -256,10 +257,10 @@ function parseValue(str: string, ctx: BlockContext): Json {
     return Number(str);
   }
   // Boolean
-  if (str === "true") return true;
-  if (str === "false") return false;
+  if (str === 'true') return true;
+  if (str === 'false') return false;
   // null
-  if (str === "null") return null;
+  if (str === 'null') return null;
   // Path
   return evalPath(str, ctx);
 }
@@ -270,19 +271,19 @@ function parseValue(str: string, ctx: BlockContext): Json {
 
 /** Parse duration string to milliseconds */
 export function parseDuration(dur: string | number): number {
-  if (typeof dur === "number") return dur;
+  if (typeof dur === 'number') return dur;
   const match = dur.match(/^(\d+(?:\.\d+)?)\s*(ms|s|m|h|d)?$/i);
   if (!match) return 0;
-  const [, num, unit = "ms"] = match;
+  const [, num, unit = 'ms'] = match;
   const n = parseFloat(num);
   switch (unit.toLowerCase()) {
-    case "s":
+    case 's':
       return n * 1000;
-    case "m":
+    case 'm':
       return n * 60 * 1000;
-    case "h":
+    case 'h':
       return n * 60 * 60 * 1000;
-    case "d":
+    case 'd':
       return n * 24 * 60 * 60 * 1000;
     default:
       return n;
@@ -298,20 +299,20 @@ export function parseDuration(dur: string | number): number {
  * Used by plugin loader for auto-registration
  */
 export function isCompiledBlock(value: unknown): value is CompiledBlock {
-  if (typeof value !== "object" || value === null) return false;
+  if (typeof value !== 'object' || value === null) return false;
   const obj = value as Record<string, unknown>;
   return (
-    typeof obj.id === "string" &&
-    typeof obj.name === "string" &&
-    typeof obj.description === "string" &&
-    typeof obj.category === "string" &&
-    typeof obj.icon === "string" &&
-    typeof obj.color === "string" &&
-    typeof obj.execute === "function" &&
+    typeof obj.id === 'string' &&
+    typeof obj.name === 'string' &&
+    typeof obj.description === 'string' &&
+    typeof obj.category === 'string' &&
+    typeof obj.icon === 'string' &&
+    typeof obj.color === 'string' &&
+    typeof obj.execute === 'function' &&
     Array.isArray(obj.inputs) &&
     Array.isArray(obj.outputs)
   );
 }
 
 // Re-export Zod for convenience
-export { z } from "zod";
+export { z } from 'zod';

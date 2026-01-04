@@ -25,7 +25,11 @@
     "availableBlocksDesc": "Workflow blocks provided by this plugin",
     "installation": "Installation",
     "installationDesc": "Technical details and paths",
-    "directory": "Directory"
+    "directory": "Directory",
+    "compatibleVersion": "Compatible Version",
+    "readme": "README",
+    "clickToExpand": "Click to expand",
+    "clickToCollapse": "Click to collapse"
   },
   "actions": {
     "load": "Load Plugin",
@@ -33,7 +37,14 @@
     "disable": "Disable",
     "reload": "Reload",
     "kill": "Kill",
-    "viewDetails": "View Details"
+    "viewDetails": "View Details",
+    "update": "Update",
+    "reinstall": "Reinstall",
+    "uninstall": "Uninstall"
+  },
+  "uninstall": {
+    "title": "Uninstall Plugin",
+    "description": "Are you sure you want to uninstall \"{{name}}\"? This will remove the plugin from your system completely. This action cannot be undone."
   },
   "labels": {
     "reference": "Plugin Reference"

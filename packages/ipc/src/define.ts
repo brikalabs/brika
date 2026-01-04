@@ -5,7 +5,7 @@
  * Each definition carries its type information for full inference.
  */
 
-import type { z } from "zod";
+import type { z } from 'zod';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Type Helpers
@@ -20,7 +20,7 @@ export type Infer<T> = T extends z.ZodType<infer U> ? U : never;
 
 /** A message definition with its schema */
 export interface MessageDef<N extends string = string, S extends z.ZodType = z.ZodType> {
-  readonly _tag: "message";
+  readonly _tag: 'message';
   readonly name: N;
   readonly schema: S;
 }
@@ -38,9 +38,12 @@ export interface MessageDef<N extends string = string, S extends z.ZodType = z.Z
  * client.send(hello, { plugin: { id: "...", version: "..." } });
  * ```
  */
-export function message<N extends string, S extends z.ZodType>(name: N, schema: S): MessageDef<N, S> {
+export function message<N extends string, S extends z.ZodType>(
+  name: N,
+  schema: S
+): MessageDef<N, S> {
   return {
-    _tag: "message",
+    _tag: 'message',
     name,
     schema,
   };
@@ -56,7 +59,7 @@ export interface RpcDef<
   I extends z.ZodType = z.ZodType,
   O extends z.ZodType = z.ZodType,
 > {
-  readonly _tag: "rpc";
+  readonly _tag: 'rpc';
   readonly name: N;
   readonly input: I;
   readonly output: O;
@@ -84,10 +87,10 @@ export interface RpcDef<
 export function rpc<N extends string, I extends z.ZodType, O extends z.ZodType>(
   name: N,
   input: I,
-  output: O,
+  output: O
 ): RpcDef<N, I, O> {
   return {
-    _tag: "rpc",
+    _tag: 'rpc',
     name,
     input,
     output,
@@ -100,7 +103,11 @@ export function rpc<N extends string, I extends z.ZodType, O extends z.ZodType>(
 
 /** Extract the name from a definition */
 export type NameOf<T> =
-  T extends MessageDef<infer N, unknown> ? N : T extends RpcDef<infer N, unknown, unknown> ? N : never;
+  T extends MessageDef<infer N, unknown>
+    ? N
+    : T extends RpcDef<infer N, unknown, unknown>
+      ? N
+      : never;
 
 /** Extract the payload type from a message */
 export type PayloadOf<T> = T extends MessageDef<string, infer S> ? Infer<S> : never;
@@ -116,10 +123,10 @@ export type AnyDef = MessageDef | RpcDef;
 
 /** Check if definition is a message */
 export function isMessage(def: AnyDef): def is MessageDef {
-  return def._tag === "message";
+  return def._tag === 'message';
 }
 
 /** Check if definition is an RPC */
 export function isRpc(def: AnyDef): def is RpcDef {
-  return def._tag === "rpc";
+  return def._tag === 'rpc';
 }

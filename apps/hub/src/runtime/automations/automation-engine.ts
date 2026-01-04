@@ -4,15 +4,15 @@
  * Manages workflows and executes them via plugin-based blocks.
  */
 
-import { singleton, inject } from "@elia/shared";
-import type { Json } from "@elia/shared";
-import type { Workflow, BlockDefinition } from "@elia/sdk";
-import { LogRouter } from "../logs/log-router";
-import { EventBus } from "../events/event-bus";
-import { ToolRegistry } from "../tools/tool-registry";
-import { BlockRegistry } from "../blocks";
-import { PluginManager } from "../plugins/plugin-manager";
-import { WorkflowExecutor, type ExecutionListener } from "./workflow-executor";
+import type { BlockDefinition, Workflow } from '@elia/sdk';
+import type { Json } from '@elia/shared';
+import { inject, singleton } from '@elia/shared';
+import { BlockRegistry } from '@/runtime/blocks';
+import { EventSystem } from '@/runtime/events/event-system';
+import { LogRouter } from '@/runtime/logs/log-router';
+import { PluginManager } from '@/runtime/plugins/plugin-manager';
+import { ToolRegistry } from '@/runtime/tools/tool-registry';
+import { type ExecutionListener, WorkflowExecutor } from './workflow-executor';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -21,7 +21,7 @@ import { WorkflowExecutor, type ExecutionListener } from "./workflow-executor";
 interface WorkflowRun {
   id: string;
   workflowId: string;
-  status: "running" | "completed" | "error";
+  status: 'running' | 'completed' | 'error';
   startedAt: number;
   finishedAt?: number;
   error?: string;
@@ -34,7 +34,7 @@ interface WorkflowRun {
 @singleton()
 export class AutomationEngine {
   private readonly logs = inject(LogRouter);
-  private readonly events = inject(EventBus);
+  private readonly events = inject(EventSystem);
   private readonly tools = inject(ToolRegistry);
   private readonly blocks = inject(BlockRegistry);
   private readonly plugins = inject(PluginManager);
@@ -61,7 +61,7 @@ export class AutomationEngine {
       blocks: this.blocks,
     });
 
-    this.logs.info("automation.engine.started");
+    this.logs.info('automation.engine.started');
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -90,7 +90,7 @@ export class AutomationEngine {
     }
 
     this.#workflows.set(workflow.id, workflow);
-    this.logs.info("workflow.registered", { id: workflow.id, name: workflow.name ?? null });
+    this.logs.info('workflow.registered', { id: workflow.id, name: workflow.name ?? null });
 
     // Skip if disabled
     if (workflow.enabled === false) return;
@@ -98,15 +98,20 @@ export class AutomationEngine {
     // Set up event trigger
     if (workflow.trigger.event) {
       const pattern = workflow.trigger.event;
-      const unsub = this.events.subscribe(pattern, async (event) => {
+      const unsub = this.events.subscribe(pattern, async (action) => {
         // Check filter if present
         if (workflow.trigger.filter) {
           for (const [k, v] of Object.entries(workflow.trigger.filter)) {
-            const payload = event.payload as Record<string, Json>;
+            const payload = action.payload as Record<string, Json>;
             if (payload[k] !== v) return;
           }
         }
-        await this.trigger(workflow.id, event.type, event.source, event.payload);
+        await this.trigger(
+          workflow.id,
+          action.type,
+          action.source ?? 'unknown',
+          action.payload as Json
+        );
       });
       this.#eventUnsubs.push(unsub);
     }
@@ -117,7 +122,7 @@ export class AutomationEngine {
     const workflow = this.#workflows.get(id);
     if (!workflow) return false;
     this.#workflows.delete(id);
-    this.logs.info("workflow.unregistered", { id });
+    this.logs.info('workflow.unregistered', { id });
     return true;
   }
 
@@ -127,16 +132,16 @@ export class AutomationEngine {
     eventType: string,
     source: string,
     payload: Json,
-    listener?: ExecutionListener,
+    listener?: ExecutionListener
   ): Promise<WorkflowRun> {
     const workflow = this.#workflows.get(id);
     if (!workflow) throw new Error(`Workflow not found: ${id}`);
-    if (!this.#executor) throw new Error("Engine not initialized");
+    if (!this.#executor) throw new Error('Engine not initialized');
 
     const run: WorkflowRun = {
       id: crypto.randomUUID(),
       workflowId: id,
-      status: "running",
+      status: 'running',
       startedAt: Date.now(),
     };
 
@@ -149,20 +154,20 @@ export class AutomationEngine {
     }
 
     try {
-      this.logs.info("workflow.started", { id, runId: run.id, trigger: eventType });
+      this.logs.info('workflow.started', { id, runId: run.id, trigger: eventType });
       await this.#executor.run(workflow, { type: eventType, payload, source });
-      run.status = "completed";
+      run.status = 'completed';
       run.finishedAt = Date.now();
-      this.logs.info("workflow.finished", {
+      this.logs.info('workflow.finished', {
         id,
         runId: run.id,
         duration: run.finishedAt - run.startedAt,
       });
     } catch (error) {
-      run.status = "error";
+      run.status = 'error';
       run.error = String(error);
       run.finishedAt = Date.now();
-      this.logs.error("workflow.error", { id, runId: run.id, error: run.error });
+      this.logs.error('workflow.error', { id, runId: run.id, error: run.error });
     }
 
     return run;
@@ -206,6 +211,6 @@ export class AutomationEngine {
   async stop(): Promise<void> {
     for (const unsub of this.#eventUnsubs) unsub();
     this.#eventUnsubs = [];
-    this.logs.info("automation.engine.stopped");
+    this.logs.info('automation.engine.stopped');
   }
 }

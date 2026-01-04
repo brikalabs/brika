@@ -1,23 +1,27 @@
-import { Hono } from "hono";
-import { cors } from "hono/cors";
-import { inject } from "@elia/shared";
-import { z, ZodError } from "zod";
-import type { RouteContext, RouteDefinition, Schema } from "./types";
-import { HttpException } from "./exceptions";
+import { inject } from '@elia/shared';
+import { Hono } from 'hono';
+import { cors } from 'hono/cors';
+import { ZodError, z } from 'zod';
+import { HttpException } from './exceptions';
+import type { RouteContext, RouteDefinition, Schema } from './types';
 
 /**
  * CORS configuration for the API.
  */
 const corsConfig = {
-  origin: "*",
-  allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowHeaders: ["Content-Type", "Authorization"],
+  origin: '*',
+  allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowHeaders: ['Content-Type', 'Authorization'],
 };
 
 /**
  * Parse and validate request data against Zod schemas.
  */
-async function parseRequest<S extends Schema>(req: Request, params: Record<string, string>, schema?: S) {
+async function parseRequest<S extends Schema>(
+  req: Request,
+  params: Record<string, string>,
+  schema?: S
+) {
   const url = new URL(req.url);
 
   // Parse query string into object
@@ -28,9 +32,9 @@ async function parseRequest<S extends Schema>(req: Request, params: Record<strin
 
   // Parse body if present
   let bodyData: unknown = undefined;
-  if (req.method !== "GET" && req.method !== "DELETE") {
-    const contentType = req.headers.get("content-type") || "";
-    if (contentType.includes("application/json")) {
+  if (req.method !== 'GET' && req.method !== 'DELETE') {
+    const contentType = req.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
       const text = await req.text();
       bodyData = text ? JSON.parse(text) : {};
     }
@@ -74,7 +78,7 @@ export function createApp(routes: RouteDefinition[]): Hono {
   const app = new Hono();
 
   // Add CORS middleware
-  app.use("*", cors(corsConfig));
+  app.use('*', cors(corsConfig));
 
   // Global error handler for uncaught errors
   app.onError((error, c) => {
@@ -86,16 +90,16 @@ export function createApp(routes: RouteDefinition[]): Hono {
     // Handle Zod validation errors
     if (error instanceof ZodError) {
       const formatted = formatZodError(error);
-      return c.json({ error: "Validation failed", ...formatted }, 400);
+      return c.json({ error: 'Validation failed', ...formatted }, 400);
     }
 
-    console.error("[router] Unhandled error:", error);
+    console.error('[router] Unhandled error:', error);
     return c.json({ error: error.message }, 500);
   });
 
   // Register each route
   for (const routeDef of routes) {
-    const method = routeDef.method.toLowerCase() as "get" | "post" | "put" | "patch" | "delete";
+    const method = routeDef.method.toLowerCase() as 'get' | 'post' | 'put' | 'patch' | 'delete';
 
     app[method](routeDef.path, async (c) => {
       // Parse and validate request

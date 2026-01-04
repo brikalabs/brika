@@ -1,50 +1,50 @@
-import React from "react";
-import { useStoreMutations } from "./hooks";
-import { useLocale } from "@/lib/use-locale";
-import { Button, Card, CardContent, Input, Label } from "@/components/ui";
-import { Package, Download, Trash2, Loader2 } from "lucide-react";
+import { Download, Loader2, Package, Trash2 } from 'lucide-react';
+import React from 'react';
+import { Button, Card, CardContent, Input, Label } from '@/components/ui';
+import { useLocale } from '@/lib/use-locale';
+import { useStoreMutations } from './hooks';
 
 export function StorePage() {
   const { t } = useLocale();
   const { install, uninstall } = useStoreMutations();
-  const [ref, setRef] = React.useState("");
-  const [wanted, setWanted] = React.useState("");
+  const [ref, setRef] = React.useState('');
+  const [wanted, setWanted] = React.useState('');
 
   const handleInstall = async () => {
     if (!ref) return;
     await install.mutateAsync({ ref, wanted: wanted || undefined });
-    setRef("");
-    setWanted("");
+    setRef('');
+    setWanted('');
   };
 
   const handleUninstall = async () => {
     if (!ref) return;
     await uninstall.mutateAsync(ref);
-    setRef("");
+    setRef('');
   };
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight">{t("store:title")}</h2>
-        <p className="text-muted-foreground">{t("store:subtitle")}</p>
+        <h2 className="font-bold text-2xl tracking-tight">{t('store:title')}</h2>
+        <p className="text-muted-foreground">{t('store:subtitle')}</p>
       </div>
 
       <Card>
         <CardContent className="pt-6">
-          <div className="flex items-center gap-4 mb-6">
+          <div className="mb-6 flex items-center gap-4">
             <div className="flex size-12 items-center justify-center rounded-lg bg-primary/10">
               <Package className="size-6 text-primary" />
             </div>
             <div>
-              <h3 className="font-semibold">{t("store:installPlugin")}</h3>
-              <p className="text-sm text-muted-foreground">{t("store:installHint")}</p>
+              <h3 className="font-semibold">{t('store:installPlugin')}</h3>
+              <p className="text-muted-foreground text-sm">{t('store:installHint')}</p>
             </div>
           </div>
 
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>{t("store:labels.reference")}</Label>
+              <Label>{t('store:labels.reference')}</Label>
               <Input
                 value={ref}
                 onChange={(e) => setRef(e.target.value)}
@@ -53,7 +53,7 @@ export function StorePage() {
               />
             </div>
             <div className="space-y-2">
-              <Label>{t("store:labels.version")}</Label>
+              <Label>{t('store:labels.version')}</Label>
               <Input
                 value={wanted}
                 onChange={(e) => setWanted(e.target.value)}
@@ -62,13 +62,17 @@ export function StorePage() {
               />
             </div>
             <div className="flex gap-2 pt-2">
-              <Button onClick={handleInstall} disabled={install.isPending || !ref} className="gap-2">
+              <Button
+                onClick={handleInstall}
+                disabled={install.isPending || !ref}
+                className="gap-2"
+              >
                 {install.isPending ? (
                   <Loader2 className="size-4 animate-spin" />
                 ) : (
                   <Download className="size-4" />
                 )}
-                {t("store:actions.install")}
+                {t('store:actions.install')}
               </Button>
               <Button
                 variant="destructive"
@@ -81,7 +85,7 @@ export function StorePage() {
                 ) : (
                   <Trash2 className="size-4" />
                 )}
-                {t("store:actions.uninstall")}
+                {t('store:actions.uninstall')}
               </Button>
             </div>
           </div>
@@ -90,8 +94,8 @@ export function StorePage() {
 
       <Card>
         <CardContent className="py-12 text-center">
-          <Package className="size-12 mx-auto text-muted-foreground mb-4 opacity-50" />
-          <p className="text-muted-foreground">{t("store:registryComingSoon")}</p>
+          <Package className="mx-auto mb-4 size-12 text-muted-foreground opacity-50" />
+          <p className="text-muted-foreground">{t('store:registryComingSoon')}</p>
         </CardContent>
       </Card>
     </div>

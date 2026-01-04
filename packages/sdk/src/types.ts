@@ -1,14 +1,21 @@
-export type Json = null | boolean | number | string | Json[] | { [k: string]: Json };
+export type Json =
+  | null
+  | boolean
+  | number
+  | string
+  | Json[]
+  | { [k: string]: Json | undefined }
+  | undefined;
 
 export type AnyObj = Record<string, Json>;
 
 /** JSON Schema for tool input validation and UI generation */
 export interface ToolInputSchema {
-  type: "object";
+  type: 'object';
   properties?: Record<
     string,
     {
-      type: "string" | "number" | "boolean" | "array" | "object";
+      type: 'string' | 'number' | 'boolean' | 'array' | 'object';
       description?: string;
       default?: Json;
       enum?: Json[];
@@ -33,7 +40,7 @@ export interface ToolSpec {
 
 export interface ToolCallContext {
   traceId: string;
-  source: "api" | "ui" | "voice" | "rule" | "automation";
+  source: 'api' | 'ui' | 'voice' | 'rule' | 'automation';
 }
 
 export interface ToolResult {
@@ -62,12 +69,12 @@ export type EventHandler = (event: {
 export interface PluginApi {
   registerTool(
     tool: ToolSpec,
-    handler: (args: AnyObj, ctx: ToolCallContext) => Promise<ToolResult> | ToolResult,
+    handler: (args: AnyObj, ctx: ToolCallContext) => Promise<ToolResult> | ToolResult
   ): void;
 
   onStop(fn: () => void | Promise<void>): void;
 
-  log(level: "debug" | "info" | "warn" | "error", message: string, meta?: AnyObj): void;
+  log(level: 'debug' | 'info' | 'warn' | 'error', message: string, meta?: AnyObj): void;
 
   /** Emit an event to the Hub event bus */
   emit(eventType: string, payload?: Json): void;

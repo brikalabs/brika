@@ -1,4 +1,4 @@
-import type { Json } from "@elia/shared";
+import type { Json } from '@elia/shared';
 
 /**
  * Safe condition evaluator for rules.
@@ -24,8 +24,8 @@ type Context = {
 };
 
 export function evaluateCondition(expr: string, ctx: Context): boolean {
-  if (!expr || expr.trim() === "" || expr.trim() === "true") return true;
-  if (expr.trim() === "false") return false;
+  if (!expr || expr.trim() === '' || expr.trim() === 'true') return true;
+  if (expr.trim() === 'false') return false;
 
   try {
     // Create a safe evaluation context
@@ -52,29 +52,29 @@ function evaluate(expr: string, ctx: EvalContext): boolean {
   expr = expr.trim();
 
   // Handle && (AND)
-  const andParts = splitLogical(expr, "&&");
+  const andParts = splitLogical(expr, '&&');
   if (andParts.length > 1) {
     return andParts.every((p) => evaluate(p, ctx));
   }
 
   // Handle || (OR)
-  const orParts = splitLogical(expr, "||");
+  const orParts = splitLogical(expr, '||');
   if (orParts.length > 1) {
     return orParts.some((p) => evaluate(p, ctx));
   }
 
   // Handle parentheses
-  if (expr.startsWith("(") && expr.endsWith(")")) {
+  if (expr.startsWith('(') && expr.endsWith(')')) {
     return evaluate(expr.slice(1, -1), ctx);
   }
 
   // Handle negation
-  if (expr.startsWith("!")) {
+  if (expr.startsWith('!')) {
     return !evaluate(expr.slice(1), ctx);
   }
 
   // Handle comparison operators
-  const compOps = ["===", "!==", "==", "!=", "<=", ">=", "<", ">"];
+  const compOps = ['===', '!==', '==', '!=', '<=', '>=', '<', '>'];
   for (const op of compOps) {
     const idx = expr.indexOf(op);
     if (idx > 0) {
@@ -96,8 +96,8 @@ function splitLogical(expr: string, op: string): string[] {
 
   for (let i = 0; i < expr.length; i++) {
     const c = expr[i];
-    if (c === "(") depth++;
-    else if (c === ")") depth--;
+    if (c === '(') depth++;
+    else if (c === ')') depth--;
     else if (depth === 0 && expr.slice(i, i + op.length) === op) {
       parts.push(expr.slice(start, i));
       start = i + op.length;
@@ -112,7 +112,10 @@ function resolveValue(expr: string, ctx: EvalContext): Json {
   expr = expr.trim();
 
   // String literal
-  if ((expr.startsWith('"') && expr.endsWith('"')) || (expr.startsWith("'") && expr.endsWith("'"))) {
+  if (
+    (expr.startsWith('"') && expr.endsWith('"')) ||
+    (expr.startsWith("'") && expr.endsWith("'"))
+  ) {
     return expr.slice(1, -1);
   }
 
@@ -122,16 +125,16 @@ function resolveValue(expr: string, ctx: EvalContext): Json {
   }
 
   // Boolean
-  if (expr === "true") return true;
-  if (expr === "false") return false;
-  if (expr === "null") return null;
+  if (expr === 'true') return true;
+  if (expr === 'false') return false;
+  if (expr === 'null') return null;
 
   // Property path (e.g., event.payload.brightness)
-  const parts = expr.split(".");
+  const parts = expr.split('.');
   let current: Json = ctx as unknown as Json;
 
   for (const part of parts) {
-    if (current === null || typeof current !== "object" || Array.isArray(current)) {
+    if (current === null || typeof current !== 'object' || Array.isArray(current)) {
       return null;
     }
     current = (current as Record<string, Json>)[part] ?? null;
@@ -142,20 +145,20 @@ function resolveValue(expr: string, ctx: EvalContext): Json {
 
 function compare(left: Json, op: string, right: Json): boolean {
   switch (op) {
-    case "===":
-    case "==":
+    case '===':
+    case '==':
       return left === right;
-    case "!==":
-    case "!=":
+    case '!==':
+    case '!=':
       return left !== right;
-    case "<":
-      return typeof left === "number" && typeof right === "number" && left < right;
-    case ">":
-      return typeof left === "number" && typeof right === "number" && left > right;
-    case "<=":
-      return typeof left === "number" && typeof right === "number" && left <= right;
-    case ">=":
-      return typeof left === "number" && typeof right === "number" && left >= right;
+    case '<':
+      return typeof left === 'number' && typeof right === 'number' && left < right;
+    case '>':
+      return typeof left === 'number' && typeof right === 'number' && left > right;
+    case '<=':
+      return typeof left === 'number' && typeof right === 'number' && left <= right;
+    case '>=':
+      return typeof left === 'number' && typeof right === 'number' && left >= right;
     default:
       return false;
   }

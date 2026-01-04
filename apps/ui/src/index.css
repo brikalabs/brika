@@ -24,8 +24,8 @@
   --color-accent-foreground: oklch(0.21 0.02 260);
   --color-destructive: oklch(0.65 0.2 25);
   --color-destructive-foreground: oklch(0.93 0.02 260);
-  --color-border: oklch(0.30 0.02 260);
-  --color-input: oklch(0.30 0.02 260);
+  --color-border: oklch(0.3 0.02 260);
+  --color-input: oklch(0.3 0.02 260);
   --color-ring: oklch(0.75 0.15 200);
 
   /* Additional semantic colors */

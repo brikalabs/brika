@@ -4,8 +4,8 @@
  * Plugin lifecycle: hello, ready, stop, fatal
  */
 
-import { z } from "zod";
-import { message } from "../define";
+import { z } from 'zod';
+import { message } from '../define';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Schemas
@@ -30,22 +30,22 @@ export type PluginInfo = z.infer<typeof PluginInfo>;
 
 /** Plugin announces itself to hub */
 export const hello = message(
-  "hello",
+  'hello',
   z.object({
     plugin: PluginInfo,
-  }),
+  })
 );
 
 /** Plugin is ready to receive messages */
-export const ready = message("ready", z.object({}));
+export const ready = message('ready', z.object({}));
 
 /** Hub tells plugin to shut down */
-export const stop = message("stop", z.object({}));
+export const stop = message('stop', z.object({}));
 
 /** Fatal error occurred */
 export const fatal = message(
-  "fatal",
+  'fatal',
   z.object({
     error: z.string(),
-  }),
+  })
 );

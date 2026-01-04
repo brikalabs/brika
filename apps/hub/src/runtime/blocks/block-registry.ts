@@ -5,10 +5,10 @@
  * Provides block metadata to UI and validates block configs.
  */
 
-import { singleton, inject } from "@elia/shared";
-import type { BlockDefinition } from "@elia/sdk";
-import type { BlockSummary } from "@elia/shared";
-import { LogRouter } from "../logs/log-router";
+import type { BlockDefinition } from '@elia/sdk';
+import type { BlockSummary } from '@elia/shared';
+import { inject, singleton } from '@elia/shared';
+import { LogRouter } from '@/runtime/logs/log-router';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -31,6 +31,13 @@ export class BlockRegistry {
   readonly #blocks = new Map<string, RegisteredBlock>();
 
   /**
+   * Get number of registered blocks
+   */
+  get size(): number {
+    return this.#blocks.size;
+  }
+
+  /**
    * Register a block definition from a plugin
    * The full type will be `pluginId:blockId` (e.g., "blocks-builtin:condition")
    */
@@ -39,7 +46,7 @@ export class BlockRegistry {
     const fullType = `${pluginId}:${block.id}`;
 
     if (this.#blocks.has(fullType)) {
-      this.logs.warn("block.duplicate", {
+      this.logs.warn('block.duplicate', {
         type: fullType,
         existing: this.#blocks.get(fullType)?.pluginId ?? null,
         new: pluginId,
@@ -48,7 +55,7 @@ export class BlockRegistry {
 
     // Set the full type on the definition
     this.#blocks.set(fullType, { ...block, type: fullType, pluginId });
-    this.logs.info("block.registered", {
+    this.logs.info('block.registered', {
       type: fullType,
       name: block.name,
       plugin: pluginId,
@@ -69,7 +76,7 @@ export class BlockRegistry {
       }
     }
     if (count > 0) {
-      this.logs.info("blocks.unregistered", { plugin: pluginId, count });
+      this.logs.info('blocks.unregistered', { plugin: pluginId, count });
     }
     return count;
   }
@@ -112,7 +119,7 @@ export class BlockRegistry {
         id: b.type ?? `${b.pluginId}:${b.id}`,
         name: b.name,
         description: b.description,
-        category: b.category as BlockSummary["category"],
+        category: b.category as BlockSummary['category'],
         icon: b.icon,
         color: b.color,
         inputs: b.inputs.map((p) => ({ id: p.id, name: p.name })),
@@ -126,7 +133,7 @@ export class BlockRegistry {
   listByCategory(): Record<string, BlockDefinition[]> {
     const result: Record<string, BlockDefinition[]> = {};
     for (const block of this.#blocks.values()) {
-      const category = block.category || "other";
+      const category = block.category || 'other';
       if (!result[category]) result[category] = [];
       result[category].push(block);
     }
@@ -143,7 +150,10 @@ export class BlockRegistry {
   /**
    * Validate block config against its schema
    */
-  validateConfig(type: string, config: Record<string, unknown>): { valid: boolean; errors?: string[] } {
+  validateConfig(
+    type: string,
+    config: Record<string, unknown>
+  ): { valid: boolean; errors?: string[] } {
     const block = this.#blocks.get(type);
     if (!block) {
       return { valid: false, errors: [`Unknown block type: ${type}`] };
@@ -175,13 +185,6 @@ export class BlockRegistry {
 
     return { valid: errors.length === 0, errors: errors.length > 0 ? errors : undefined };
   }
-
-  /**
-   * Get number of registered blocks
-   */
-  get size(): number {
-    return this.#blocks.size;
-  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -190,16 +193,16 @@ export class BlockRegistry {
 
 function validateType(value: unknown, expectedType: string): boolean {
   switch (expectedType) {
-    case "string":
-      return typeof value === "string";
-    case "number":
-      return typeof value === "number";
-    case "boolean":
-      return typeof value === "boolean";
-    case "array":
+    case 'string':
+      return typeof value === 'string';
+    case 'number':
+      return typeof value === 'number';
+    case 'boolean':
+      return typeof value === 'boolean';
+    case 'array':
       return Array.isArray(value);
-    case "object":
-      return typeof value === "object" && value !== null && !Array.isArray(value);
+    case 'object':
+      return typeof value === 'object' && value !== null && !Array.isArray(value);
     default:
       return true;
   }

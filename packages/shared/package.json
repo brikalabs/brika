@@ -8,10 +8,12 @@
     "directory": "packages/shared"
   },
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./plugin-schema.json": "./elia-plugin.schema.json"
   },
   "dependencies": {
     "reflect-metadata": "^0.2.2",
-    "tsyringe": "^4.10.0"
+    "tsyringe": "^4.10.0",
+    "zod": "^4.3.4"
   }
 }

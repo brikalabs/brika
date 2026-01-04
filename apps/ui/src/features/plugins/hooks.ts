@@ -1,5 +1,5 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { pluginsApi, pluginsKeys } from "./api";
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { pluginsApi, pluginsKeys } from './api';
 
 export function usePlugins() {
   return useQuery({
@@ -16,6 +16,14 @@ export function usePlugin(uid: string) {
   });
 }
 
+export function usePluginReadme(uid: string) {
+  return useQuery({
+    queryKey: pluginsKeys.readme(uid),
+    queryFn: () => pluginsApi.getReadme(uid),
+    enabled: !!uid,
+  });
+}
+
 export function usePluginMutations() {
   const qc = useQueryClient();
   const invalidate = () => qc.invalidateQueries({ queryKey: pluginsKeys.all });
@@ -26,5 +34,6 @@ export function usePluginMutations() {
     disable: useMutation({ mutationFn: pluginsApi.disable, onSuccess: invalidate }),
     reload: useMutation({ mutationFn: pluginsApi.reload, onSuccess: invalidate }),
     kill: useMutation({ mutationFn: pluginsApi.kill, onSuccess: invalidate }),
+    uninstall: useMutation({ mutationFn: pluginsApi.uninstall, onSuccess: invalidate }),
   };
 }

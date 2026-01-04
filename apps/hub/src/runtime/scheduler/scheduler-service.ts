@@ -1,7 +1,7 @@
-import { singleton, inject } from "@elia/shared";
-import type { Schedule } from "@elia/shared";
-import { LogRouter } from "../logs/log-router";
-import { StateStore } from "../state/state-store";
+import type { Schedule } from '@elia/shared';
+import { inject, singleton } from '@elia/shared';
+import { LogRouter } from '@/runtime/logs/log-router';
+import { StateStore } from '@/runtime/state/state-store';
 
 export type ScheduleCallback = (schedule: Schedule) => void | Promise<void>;
 
@@ -12,26 +12,26 @@ interface RunningSchedule {
 
 function parseCron(expr: string): { nextRun: (now: Date) => Date } | null {
   const specials: Record<string, string> = {
-    "@hourly": "0 * * * *",
-    "@daily": "0 0 * * *",
-    "@weekly": "0 0 * * 0",
-    "@monthly": "0 0 1 * *",
+    '@hourly': '0 * * * *',
+    '@daily': '0 0 * * *',
+    '@weekly': '0 0 * * 0',
+    '@monthly': '0 0 1 * *',
   };
   const normalized = specials[expr.toLowerCase()] ?? expr;
   const parts = normalized.trim().split(/\s+/);
   if (parts.length !== 5) return null;
 
   const parseField = (field: string, min: number, max: number): number[] | null => {
-    if (field === "*") return null;
+    if (field === '*') return null;
     const vals: number[] = [];
-    for (const part of field.split(",")) {
-      if (part.includes("-")) {
-        const [a, b] = part.split("-").map(Number);
+    for (const part of field.split(',')) {
+      if (part.includes('-')) {
+        const [a, b] = part.split('-').map(Number);
         for (let i = a; i <= b; i++) vals.push(i);
-      } else if (part.includes("/")) {
-        const [r, s] = part.split("/");
+      } else if (part.includes('/')) {
+        const [r, s] = part.split('/');
         const step = Number(s);
-        const start = r === "*" ? min : Number(r);
+        const start = r === '*' ? min : Number(r);
         for (let i = start; i <= max; i += step) vals.push(i);
       } else vals.push(Number(part));
     }
@@ -89,22 +89,24 @@ export class SchedulerService {
     if (this.#ticker) clearInterval(this.#ticker);
     this.#running.clear();
   }
+
   list(): Schedule[] {
     return this.state.listSchedules().sort((a, b) => a.name.localeCompare(b.name));
   }
+
   get(id: string): Schedule | undefined {
     return this.state.getSchedule(id);
   }
 
-  async create(schedule: Omit<Schedule, "id">): Promise<Schedule> {
+  async create(schedule: Omit<Schedule, 'id'>): Promise<Schedule> {
     const s: Schedule = { ...schedule, id: crypto.randomUUID() };
     await this.state.upsertSchedule(s);
     if (s.enabled) this.#activate(s);
-    this.logs.info("schedule.created", { id: s.id });
+    this.logs.info('schedule.created', { id: s.id });
     return s;
   }
 
-  async update(id: string, updates: Partial<Omit<Schedule, "id">>): Promise<Schedule | null> {
+  async update(id: string, updates: Partial<Omit<Schedule, 'id'>>): Promise<Schedule | null> {
     const existing = this.state.getSchedule(id);
     if (!existing) return null;
     const s: Schedule = { ...existing, ...updates };
@@ -129,6 +131,7 @@ export class SchedulerService {
     this.#activate(s);
     return true;
   }
+
   async disable(id: string): Promise<boolean> {
     const s = this.state.getSchedule(id);
     if (!s) return false;
@@ -141,8 +144,8 @@ export class SchedulerService {
   #activate(schedule: Schedule): void {
     if (this.#running.has(schedule.id)) return;
     const rs: RunningSchedule = { schedule };
-    if (schedule.trigger.type === "interval") rs.nextRun = Date.now() + schedule.trigger.ms;
-    else if (schedule.trigger.type === "cron") {
+    if (schedule.trigger.type === 'interval') rs.nextRun = Date.now() + schedule.trigger.ms;
+    else if (schedule.trigger.type === 'cron') {
       const c = parseCron(schedule.trigger.expr);
       if (c) rs.nextRun = c.nextRun(new Date()).getTime();
     }
@@ -158,8 +161,8 @@ export class SchedulerService {
     for (const rs of this.#running.values()) {
       if (rs.nextRun && now >= rs.nextRun) {
         this.#fire(rs);
-        if (rs.schedule.trigger.type === "interval") rs.nextRun = now + rs.schedule.trigger.ms;
-        else if (rs.schedule.trigger.type === "cron") {
+        if (rs.schedule.trigger.type === 'interval') rs.nextRun = now + rs.schedule.trigger.ms;
+        else if (rs.schedule.trigger.type === 'cron') {
           const c = parseCron(rs.schedule.trigger.expr);
           if (c) rs.nextRun = c.nextRun(new Date()).getTime();
         }
@@ -168,7 +171,7 @@ export class SchedulerService {
   }
 
   #fire(rs: RunningSchedule): void {
-    this.logs.info("schedule.fired", { id: rs.schedule.id });
+    this.logs.info('schedule.fired', { id: rs.schedule.id });
     for (const cb of this.#callbacks) {
       try {
         cb(rs.schedule);

@@ -1,13 +1,13 @@
-import "reflect-metadata";
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
-import type { Schedule } from "@elia/shared";
-import { spy, mock, TestBed } from "@elia/shared";
-import { SchedulerService } from "../runtime/scheduler/scheduler-service";
-import { LogRouter } from "../runtime/logs/log-router";
-import { StateStore } from "../runtime/state/state-store";
-import { HubConfig } from "../runtime/config";
+import 'reflect-metadata';
+import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
+import type { Schedule } from '@elia/shared';
+import { mock, spy, TestBed } from '@elia/shared';
+import { HubConfig } from '@/runtime/config';
+import { LogRouter } from '@/runtime/logs/log-router';
+import { SchedulerService } from '@/runtime/scheduler/scheduler-service';
+import { StateStore } from '@/runtime/state/state-store';
 
-describe("SchedulerService", () => {
+describe('SchedulerService', () => {
   let mockLogs: LogRouter;
   let mockState: StateStore;
   let schedules: Schedule[];
@@ -46,52 +46,52 @@ describe("SchedulerService", () => {
     TestBed.reset();
   });
 
-  it("should create a schedule with cron trigger", async () => {
+  it('should create a schedule with cron trigger', async () => {
     const scheduler = TestBed.inject(SchedulerService);
     await scheduler.init();
 
     const schedule = await scheduler.create({
-      name: "Test Schedule",
-      trigger: { type: "cron", expr: "0 * * * *" },
-      action: { tool: "test.tool", args: {} },
+      name: 'Test Schedule',
+      trigger: { type: 'cron', expr: '0 * * * *' },
+      action: { tool: 'test.tool', args: {} },
       enabled: true,
     });
 
     expect(schedule.id).toBeDefined();
-    expect(schedule.name).toBe("Test Schedule");
-    expect(schedule.trigger.type).toBe("cron");
+    expect(schedule.name).toBe('Test Schedule');
+    expect(schedule.trigger.type).toBe('cron');
     expect(schedules).toHaveLength(1);
   });
 
-  it("should create a schedule with interval trigger", async () => {
+  it('should create a schedule with interval trigger', async () => {
     const scheduler = TestBed.inject(SchedulerService);
     await scheduler.init();
 
     const schedule = await scheduler.create({
-      name: "Interval Schedule",
-      trigger: { type: "interval", ms: 60000 },
-      action: { tool: "test.tool", args: {} },
+      name: 'Interval Schedule',
+      trigger: { type: 'interval', ms: 60000 },
+      action: { tool: 'test.tool', args: {} },
       enabled: true,
     });
 
     expect(schedule.id).toBeDefined();
-    expect(schedule.trigger.type).toBe("interval");
+    expect(schedule.trigger.type).toBe('interval');
     expect(schedules).toHaveLength(1);
   });
 
-  it("should list schedules", async () => {
+  it('should list schedules', async () => {
     schedules.push({
-      id: "1",
-      name: "Schedule 1",
-      trigger: { type: "cron", expr: "0 * * * *" },
-      action: { tool: "test.tool", args: {} },
+      id: '1',
+      name: 'Schedule 1',
+      trigger: { type: 'cron', expr: '0 * * * *' },
+      action: { tool: 'test.tool', args: {} },
       enabled: true,
     });
     schedules.push({
-      id: "2",
-      name: "Schedule 2",
-      trigger: { type: "interval", ms: 30000 },
-      action: { tool: "other.tool", args: {} },
+      id: '2',
+      name: 'Schedule 2',
+      trigger: { type: 'interval', ms: 30000 },
+      action: { tool: 'other.tool', args: {} },
       enabled: false,
     });
 
@@ -101,69 +101,69 @@ describe("SchedulerService", () => {
     expect(listed).toHaveLength(2);
   });
 
-  it("should delete a schedule", async () => {
+  it('should delete a schedule', async () => {
     schedules.push({
-      id: "delete-me",
-      name: "To Delete",
-      trigger: { type: "cron", expr: "0 * * * *" },
-      action: { tool: "test.tool", args: {} },
+      id: 'delete-me',
+      name: 'To Delete',
+      trigger: { type: 'cron', expr: '0 * * * *' },
+      action: { tool: 'test.tool', args: {} },
       enabled: true,
     });
 
     const scheduler = TestBed.inject(SchedulerService);
     await scheduler.init();
 
-    const result = await scheduler.delete("delete-me");
+    const result = await scheduler.delete('delete-me');
 
     expect(result).toBe(true);
     expect(schedules).toHaveLength(0);
   });
 
-  it("should return false when deleting non-existent schedule", async () => {
+  it('should return false when deleting non-existent schedule', async () => {
     const scheduler = TestBed.inject(SchedulerService);
     await scheduler.init();
 
-    const result = await scheduler.delete("not-found");
+    const result = await scheduler.delete('not-found');
     expect(result).toBe(false);
   });
 
-  it("should enable a schedule", async () => {
+  it('should enable a schedule', async () => {
     schedules.push({
-      id: "to-enable",
-      name: "Disabled Schedule",
-      trigger: { type: "interval", ms: 5000 },
-      action: { tool: "test.tool", args: {} },
+      id: 'to-enable',
+      name: 'Disabled Schedule',
+      trigger: { type: 'interval', ms: 5000 },
+      action: { tool: 'test.tool', args: {} },
       enabled: false,
     });
 
     const scheduler = TestBed.inject(SchedulerService);
     await scheduler.init();
 
-    const result = await scheduler.enable("to-enable");
+    const result = await scheduler.enable('to-enable');
 
     expect(result).toBe(true);
     expect(schedules[0].enabled).toBe(true);
   });
 
-  it("should disable a schedule", async () => {
+  it('should disable a schedule', async () => {
     schedules.push({
-      id: "to-disable",
-      name: "Enabled Schedule",
-      trigger: { type: "cron", expr: "*/5 * * * *" },
-      action: { tool: "test.tool", args: {} },
+      id: 'to-disable',
+      name: 'Enabled Schedule',
+      trigger: { type: 'cron', expr: '*/5 * * * *' },
+      action: { tool: 'test.tool', args: {} },
       enabled: true,
     });
 
     const scheduler = TestBed.inject(SchedulerService);
     await scheduler.init();
 
-    const result = await scheduler.disable("to-disable");
+    const result = await scheduler.disable('to-disable');
 
     expect(result).toBe(true);
     expect(schedules[0].enabled).toBe(false);
   });
 
-  it("should register trigger callbacks", async () => {
+  it('should register trigger callbacks', async () => {
     const triggerSpy = spy();
 
     const scheduler = TestBed.inject(SchedulerService);
@@ -171,28 +171,28 @@ describe("SchedulerService", () => {
 
     const unsub = scheduler.onTrigger(triggerSpy);
 
-    expect(typeof unsub).toBe("function");
+    expect(typeof unsub).toBe('function');
   });
 
-  it("should get a schedule by id", () => {
+  it('should get a schedule by id', () => {
     schedules.push({
-      id: "my-schedule",
-      name: "My Schedule",
-      trigger: { type: "cron", expr: "0 0 * * *" },
-      action: { tool: "daily.task", args: {} },
+      id: 'my-schedule',
+      name: 'My Schedule',
+      trigger: { type: 'cron', expr: '0 0 * * *' },
+      action: { tool: 'daily.task', args: {} },
       enabled: true,
     });
 
     const scheduler = TestBed.inject(SchedulerService);
-    const schedule = scheduler.get("my-schedule");
+    const schedule = scheduler.get('my-schedule');
 
     expect(schedule).toBeDefined();
-    expect(schedule?.name).toBe("My Schedule");
+    expect(schedule?.name).toBe('My Schedule');
   });
 
-  it("should return undefined for non-existent schedule", () => {
+  it('should return undefined for non-existent schedule', () => {
     const scheduler = TestBed.inject(SchedulerService);
-    const schedule = scheduler.get("does-not-exist");
+    const schedule = scheduler.get('does-not-exist');
     expect(schedule).toBeUndefined();
   });
 });

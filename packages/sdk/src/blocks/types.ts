@@ -5,7 +5,7 @@
  * All blocks are loaded from plugins via IPC.
  */
 
-import type { Json } from "../types";
+import type { Json } from '../types';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Ports - Input/Output connection points
@@ -27,11 +27,11 @@ export interface BlockPort {
 
 /** JSON Schema subset for block configuration */
 export interface BlockSchema {
-  type: "object";
+  type: 'object';
   properties?: Record<
     string,
     {
-      type: "string" | "number" | "boolean" | "array" | "object";
+      type: 'string' | 'number' | 'boolean' | 'array' | 'object';
       description?: string;
       default?: Json;
       enum?: Json[];
@@ -100,16 +100,22 @@ export interface BlockContext {
 export interface BlockRuntime {
   /** Call a registered tool */
   callTool(name: string, args: Record<string, Json>): Promise<Json>;
+
   /** Emit an event */
   emit(type: string, payload: Json): void;
+
   /** Log a message */
-  log(level: "debug" | "info" | "warn" | "error", message: string): void;
+  log(level: 'debug' | 'info' | 'warn' | 'error', message: string): void;
+
   /** Evaluate an expression (e.g., "{{ trigger.payload.value }}") */
   evaluate<T = Json>(expression: string, ctx: BlockContext): T;
+
   /** Subscribe to events (for wait/listen blocks) */
   subscribe(pattern: string, handler: (e: { type: string; payload: Json }) => void): () => void;
+
   /** Set a workflow variable */
   setVar(name: string, value: Json): void;
+
   /** Get a workflow variable */
   getVar(name: string): Json | undefined;
 }
@@ -138,7 +144,7 @@ export interface BlockResult {
 export type BlockHandler<TConfig = Record<string, unknown>> = (
   config: TConfig,
   ctx: BlockContext,
-  runtime: BlockRuntime,
+  runtime: BlockRuntime
 ) => Promise<BlockResult> | BlockResult;
 
 // ─────────────────────────────────────────────────────────────────────────────

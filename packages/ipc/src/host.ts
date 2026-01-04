@@ -4,9 +4,9 @@
  * Manages plugin connections with full type safety.
  */
 
-import { Channel, type WireMessage } from "./channel";
-import { ping, stop } from "./contract";
-import type { InputOf, MessageDef, OutputOf, PayloadOf, RpcDef } from "./define";
+import { Channel, type WireMessage } from './channel';
+import { ping, stop } from './contract';
+import type { InputOf, MessageDef, OutputOf, PayloadOf, RpcDef } from './define';
 
 /** Subprocess from Bun.spawn */
 type Subprocess = ReturnType<typeof Bun.spawn>;
@@ -76,13 +76,112 @@ export class PluginChannel {
     proc.exited.then((code) => {
       if (!this.#disconnected) {
         // Include recent stderr in error for better debugging
-        const stderr = this.#stderrBuffer.join("\n").trim();
+        const stderr = this.#stderrBuffer.join('\n').trim();
         const message = stderr
           ? `Process exited with code ${code}\n${stderr}`
           : `Process exited with code ${code}`;
         this.#handleDisconnect(new Error(message));
       }
     });
+  }
+
+  get isDisconnected(): boolean {
+    return this.#disconnected;
+  }
+
+  get pid(): number {
+    return this.#proc.pid;
+  }
+
+  get pendingCount(): number {
+    return this.#channel.pendingCount;
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Core API
+  // ─────────────────────────────────────────────────────────────────────────
+
+  get channel(): Channel {
+    return this.#channel;
+  }
+
+  get proc(): Subprocess {
+    return this.#proc;
+  }
+
+  /**
+   * Handle incoming message from plugin
+   */
+  handle(msg: WireMessage): void {
+    this.#channel.handle(msg);
+  }
+
+  /**
+   * Send a message to plugin
+   */
+  send<T extends MessageDef>(def: T, payload: PayloadOf<T>): void {
+    this.#channel.send(def, payload);
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Control
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Handle messages from plugin
+   */
+  on<T extends MessageDef>(
+    def: T,
+    handler: (payload: PayloadOf<T>) => void | Promise<void>
+  ): () => void {
+    return this.#channel.on(def, handler);
+  }
+
+  /**
+   * Implement an RPC (hub responds to plugin requests)
+   */
+  implement<T extends RpcDef>(
+    def: T,
+    handler: (input: InputOf<T>) => OutputOf<T> | Promise<OutputOf<T>>
+  ): void {
+    this.#channel.implement(def, handler);
+  }
+
+  /**
+   * Call an RPC on the plugin
+   */
+  call<T extends RpcDef>(def: T, input: InputOf<T>, timeoutMs?: number): Promise<OutputOf<T>> {
+    return this.#channel.call(def, input, timeoutMs);
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // State
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Send stop signal
+   */
+  stop(): void {
+    this.#channel.send(stop, {});
+  }
+
+  /**
+   * Ping the plugin
+   */
+  async ping(timeoutMs?: number): Promise<number> {
+    const ts = Date.now();
+    await this.#channel.call(ping, { ts }, timeoutMs);
+    return Date.now() - ts;
+  }
+
+  /**
+   * Kill the plugin process
+   */
+  kill(signal?: number): void {
+    try {
+      this.#proc.kill(signal);
+    } catch {}
+    this.#handleDisconnect(new Error('Killed'));
   }
 
   #pipeStderr(): void {
@@ -92,14 +191,14 @@ export class PluginChannel {
     (async () => {
       const decoder = new TextDecoder();
       const reader = (stderr as ReadableStream<Uint8Array>).getReader();
-      let buffer = "";
+      let buffer = '';
       try {
         for (;;) {
           const { value, done } = await reader.read();
           if (done) break;
           buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split("\n");
-          buffer = lines.pop() || "";
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
           for (const line of lines) {
             const trimmed = line.trim();
             if (trimmed) {
@@ -126,102 +225,6 @@ export class PluginChannel {
     this.#channel.close(error);
     this.#onDisconnect?.(error);
   }
-
-  /**
-   * Handle incoming message from plugin
-   */
-  handle(msg: WireMessage): void {
-    this.#channel.handle(msg);
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Core API
-  // ─────────────────────────────────────────────────────────────────────────
-
-  /**
-   * Send a message to plugin
-   */
-  send<T extends MessageDef>(def: T, payload: PayloadOf<T>): void {
-    this.#channel.send(def, payload);
-  }
-
-  /**
-   * Handle messages from plugin
-   */
-  on<T extends MessageDef>(def: T, handler: (payload: PayloadOf<T>) => void | Promise<void>): () => void {
-    return this.#channel.on(def, handler);
-  }
-
-  /**
-   * Implement an RPC (hub responds to plugin requests)
-   */
-  implement<T extends RpcDef>(
-    def: T,
-    handler: (input: InputOf<T>) => OutputOf<T> | Promise<OutputOf<T>>,
-  ): void {
-    this.#channel.implement(def, handler);
-  }
-
-  /**
-   * Call an RPC on the plugin
-   */
-  call<T extends RpcDef>(def: T, input: InputOf<T>, timeoutMs?: number): Promise<OutputOf<T>> {
-    return this.#channel.call(def, input, timeoutMs);
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Control
-  // ─────────────────────────────────────────────────────────────────────────
-
-  /**
-   * Send stop signal
-   */
-  stop(): void {
-    this.#channel.send(stop, {});
-  }
-
-  /**
-   * Ping the plugin
-   */
-  async ping(timeoutMs?: number): Promise<number> {
-    const ts = Date.now();
-    await this.#channel.call(ping, { ts }, timeoutMs);
-    return Date.now() - ts;
-  }
-
-  /**
-   * Kill the plugin process
-   */
-  kill(signal?: number): void {
-    try {
-      this.#proc.kill(signal);
-    } catch {}
-    this.#handleDisconnect(new Error("Killed"));
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // State
-  // ─────────────────────────────────────────────────────────────────────────
-
-  get isDisconnected(): boolean {
-    return this.#disconnected;
-  }
-
-  get pid(): number {
-    return this.#proc.pid;
-  }
-
-  get pendingCount(): number {
-    return this.#channel.pendingCount;
-  }
-
-  get channel(): Channel {
-    return this.#channel;
-  }
-
-  get proc(): Subprocess {
-    return this.#proc;
-  }
 }
 
 /** Options for spawning a plugin */
@@ -236,15 +239,19 @@ export interface SpawnPluginOptions {
 /**
  * Spawn a plugin with IPC
  */
-export function spawnPlugin(cmd: string, args: string[], options: SpawnPluginOptions = {}): PluginChannel {
+export function spawnPlugin(
+  cmd: string,
+  args: string[],
+  options: SpawnPluginOptions = {}
+): PluginChannel {
   let channel: PluginChannel;
 
   const proc = Bun.spawn([cmd, ...args], {
     cwd: options.cwd,
     env: options.env,
-    stdin: "pipe",
-    stdout: "pipe",
-    stderr: "pipe",
+    stdin: 'pipe',
+    stdout: 'pipe',
+    stderr: 'pipe',
     ipc: (msg) => {
       channel.handle(msg as WireMessage);
     },

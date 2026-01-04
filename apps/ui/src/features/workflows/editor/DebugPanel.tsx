@@ -1,40 +1,33 @@
-import React, { useState, useEffect, useRef } from "react";
 import {
-  Button,
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  Textarea,
+  AlertCircle,
+  CheckCircle,
+  ChevronDown,
+  ChevronRight,
+  Clock,
+  Loader2,
+  Play,
+  Square,
+  Trash2,
+  XCircle,
+  Zap,
+} from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import {
   Badge,
+  Button,
   ScrollArea,
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
-} from "@/components/ui";
-import {
-  Play,
-  Square,
-  ChevronDown,
-  ChevronRight,
-  Loader2,
-  CheckCircle,
-  XCircle,
-  AlertCircle,
-  Trash2,
-  Clock,
-  Zap,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
-import type { Workflow } from "../api";
-import type { BlockStatus, ExecutionLog } from "./useWorkflowEditor";
+  Textarea,
+} from '@/components/ui';
+import { cn } from '@/lib/utils';
+import type { Workflow } from '../api';
+import type { BlockStatus, ExecutionLog } from './useWorkflowEditor';
 
 interface BlockEvent {
-  type: "block.start" | "block.complete" | "block.error";
+  type: 'block.start' | 'block.complete' | 'block.error';
   blockId: string;
   output?: unknown;
   error?: string;
@@ -49,16 +42,16 @@ interface DebugPanelProps {
   className?: string;
 }
 
-function LogEntry({ log }: { log: ExecutionLog }) {
+function LogEntry({ log }: Readonly<{ log: ExecutionLog }>) {
   const [expanded, setExpanded] = useState(false);
 
   const getIcon = () => {
     switch (log.type) {
-      case "start":
-        return <Loader2 className="size-3 text-blue-500 animate-spin" />;
-      case "complete":
+      case 'start':
+        return <Loader2 className="size-3 animate-spin text-blue-500" />;
+      case 'complete':
         return <CheckCircle className="size-3 text-green-500" />;
-      case "error":
+      case 'error':
         return <XCircle className="size-3 text-red-500" />;
       default:
         return <AlertCircle className="size-3 text-muted-foreground" />;
@@ -67,45 +60,45 @@ function LogEntry({ log }: { log: ExecutionLog }) {
 
   const getBgColor = () => {
     switch (log.type) {
-      case "error":
-        return "bg-red-500/10";
-      case "complete":
-        return "bg-green-500/5";
+      case 'error':
+        return 'bg-red-500/10';
+      case 'complete':
+        return 'bg-green-500/5';
       default:
-        return "";
+        return '';
     }
   };
 
   return (
-    <div className={cn("border-b last:border-b-0", getBgColor())}>
+    <div className={cn('border-b last:border-b-0', getBgColor())}>
       <button
         onClick={() => log.data && setExpanded(!expanded)}
-        className="w-full p-2 flex items-start gap-2 text-left hover:bg-accent/50 transition-colors"
+        className="flex w-full items-start gap-2 p-2 text-left transition-colors hover:bg-accent/50"
       >
         {log.data ? (
           expanded ? (
-            <ChevronDown className="size-3 mt-0.5" />
+            <ChevronDown className="mt-0.5 size-3" />
           ) : (
-            <ChevronRight className="size-3 mt-0.5" />
+            <ChevronRight className="mt-0.5 size-3" />
           )
         ) : (
           <span className="w-3" />
         )}
         {getIcon()}
-        <div className="flex-1 min-w-0">
-          <div className="text-xs truncate">{log.message}</div>
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-xs">{log.message}</div>
           <div className="text-[10px] text-muted-foreground">
             {new Date(log.timestamp).toLocaleTimeString()}
           </div>
         </div>
-        <Badge variant="outline" className="text-[10px] shrink-0">
+        <Badge variant="outline" className="shrink-0 text-[10px]">
           {log.blockId}
         </Badge>
       </button>
 
       {expanded && log.data && (
         <div className="px-8 pb-2">
-          <pre className="text-[10px] bg-muted p-2 rounded overflow-auto max-h-24">
+          <pre className="max-h-24 overflow-auto rounded bg-muted p-2 text-[10px]">
             {JSON.stringify(log.data, null, 2)}
           </pre>
         </div>
@@ -121,8 +114,8 @@ export function DebugPanel({
   blockStatuses,
   onBlockEvent,
   className,
-}: DebugPanelProps) {
-  const [payload, setPayload] = useState("{}");
+}: Readonly<DebugPanelProps>) {
+  const [payload, setPayload] = useState('{}');
   const [isRunning, setIsRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
@@ -130,14 +123,11 @@ export function DebugPanel({
 
   // Auto-scroll to bottom of logs
   useEffect(() => {
-    logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [executionLogs]);
 
-  // Check if any block is running
-  const hasRunningBlocks = Object.values(blockStatuses).some((s) => s === "running");
-
   // Start test execution
-  const handleTest = async () => {
+  const handleTest = () => {
     setError(null);
     setIsRunning(true);
 
@@ -145,7 +135,7 @@ export function DebugPanel({
     try {
       payloadObj = JSON.parse(payload);
     } catch {
-      setError("Invalid JSON payload");
+      setError('Invalid JSON payload');
       setIsRunning(false);
       return;
     }
@@ -165,20 +155,24 @@ export function DebugPanel({
     eventSource.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        if (data.type === "block.start" || data.type === "block.complete" || data.type === "block.error") {
+        if (
+          data.type === 'block.start' ||
+          data.type === 'block.complete' ||
+          data.type === 'block.error'
+        ) {
           onBlockEvent(data as BlockEvent);
         }
-        if (data.type === "workflow.complete" || data.type === "workflow.error") {
+        if (data.type === 'workflow.complete' || data.type === 'workflow.error') {
           setIsRunning(false);
           eventSource.close();
         }
       } catch {
-        console.error("Failed to parse SSE event:", event.data);
+        console.error('Failed to parse SSE event:', event.data);
       }
     };
 
     eventSource.onerror = () => {
-      setError("Connection lost");
+      setError('Connection lost');
       setIsRunning(false);
       eventSource.close();
     };
@@ -200,21 +194,21 @@ export function DebugPanel({
     };
   }, []);
 
-  const completedCount = Object.values(blockStatuses).filter((s) => s === "completed").length;
-  const errorCount = Object.values(blockStatuses).filter((s) => s === "error").length;
+  const completedCount = Object.values(blockStatuses).filter((s) => s === 'completed').length;
+  const errorCount = Object.values(blockStatuses).filter((s) => s === 'error').length;
   const totalBlocks = workflow.blocks?.length || 0;
 
   return (
-    <div className={cn("flex flex-col h-full bg-card border-l", className)}>
-      <div className="p-3 border-b">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="font-medium text-sm flex items-center gap-2">
+    <div className={cn('flex h-full flex-col border-l bg-card', className)}>
+      <div className="border-b p-3">
+        <div className="mb-2 flex items-center justify-between">
+          <h3 className="flex items-center gap-2 font-medium text-sm">
             <Zap className="size-4" />
             Test Workflow
           </h3>
           {isRunning && (
             <Badge variant="secondary" className="animate-pulse">
-              <Loader2 className="size-3 mr-1 animate-spin" />
+              <Loader2 className="mr-1 size-3 animate-spin" />
               Running
             </Badge>
           )}
@@ -222,8 +216,8 @@ export function DebugPanel({
 
         {/* Progress indicator */}
         {(completedCount > 0 || errorCount > 0) && (
-          <div className="flex items-center gap-2 text-xs mb-2">
-            <div className="flex-1 bg-muted rounded-full h-1.5 overflow-hidden">
+          <div className="mb-2 flex items-center gap-2 text-xs">
+            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
               <div
                 className="h-full bg-green-500 transition-all"
                 style={{ width: `${(completedCount / totalBlocks) * 100}%` }}
@@ -241,7 +235,7 @@ export function DebugPanel({
         )}
       </div>
 
-      <Tabs defaultValue="payload" className="flex-1 flex flex-col">
+      <Tabs defaultValue="payload" className="flex flex-1 flex-col">
         <TabsList className="mx-3 mt-2">
           <TabsTrigger value="payload" className="text-xs">
             Payload
@@ -249,7 +243,7 @@ export function DebugPanel({
           <TabsTrigger value="logs" className="text-xs">
             Logs
             {executionLogs.length > 0 && (
-              <Badge variant="secondary" className="ml-1 text-[10px] px-1">
+              <Badge variant="secondary" className="ml-1 px-1 text-[10px]">
                 {executionLogs.length}
               </Badge>
             )}
@@ -259,7 +253,9 @@ export function DebugPanel({
         <TabsContent value="payload" className="flex-1 p-3 pt-2">
           <div className="space-y-3">
             <div>
-              <label className="text-xs text-muted-foreground block mb-1">Test Payload (JSON)</label>
+              <label className="mb-1 block text-muted-foreground text-xs">
+                Test Payload (JSON)
+              </label>
               <Textarea
                 value={payload}
                 onChange={(e) => setPayload(e.target.value)}
@@ -269,37 +265,37 @@ export function DebugPanel({
               />
             </div>
 
-            {error && <div className="text-xs text-red-500 bg-red-500/10 p-2 rounded">{error}</div>}
+            {error && <div className="rounded bg-red-500/10 p-2 text-red-500 text-xs">{error}</div>}
 
             <div className="flex gap-2">
               {isRunning ? (
                 <Button size="sm" variant="destructive" onClick={handleStop} className="flex-1">
-                  <Square className="size-4 mr-1" />
+                  <Square className="mr-1 size-4" />
                   Stop
                 </Button>
               ) : (
                 <Button size="sm" onClick={handleTest} className="flex-1">
-                  <Play className="size-4 mr-1" />
+                  <Play className="mr-1 size-4" />
                   Run Test
                 </Button>
               )}
             </div>
 
-            <div className="text-xs text-muted-foreground">
+            <div className="text-muted-foreground text-xs">
               <p>The workflow will be executed with this payload as the trigger data.</p>
               <p className="mt-1">
-                Access via: <code className="bg-muted px-1 rounded">trigger.payload</code>
+                Access via: <code className="rounded bg-muted px-1">trigger.payload</code>
               </p>
             </div>
           </div>
         </TabsContent>
 
-        <TabsContent value="logs" className="flex-1 flex flex-col min-h-0">
-          <div className="flex-1 min-h-0">
+        <TabsContent value="logs" className="flex min-h-0 flex-1 flex-col">
+          <div className="min-h-0 flex-1">
             <ScrollArea className="h-full">
               {executionLogs.length === 0 ? (
-                <div className="text-center text-sm text-muted-foreground py-8">
-                  <Clock className="size-8 mx-auto mb-2 opacity-50" />
+                <div className="py-8 text-center text-muted-foreground text-sm">
+                  <Clock className="mx-auto mb-2 size-8 opacity-50" />
                   Run a test to see logs
                 </div>
               ) : (
@@ -314,7 +310,7 @@ export function DebugPanel({
           </div>
 
           {executionLogs.length > 0 && (
-            <div className="p-2 border-t">
+            <div className="border-t p-2">
               <Button
                 size="sm"
                 variant="ghost"
@@ -324,7 +320,7 @@ export function DebugPanel({
                   // For now, just a placeholder
                 }}
               >
-                <Trash2 className="size-3 mr-1" />
+                <Trash2 className="mr-1 size-3" />
                 Clear Logs
               </Button>
             </div>

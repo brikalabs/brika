@@ -4,9 +4,9 @@
  * Clean typed API for plugins to communicate with the Hub.
  */
 
-import { Channel, type WireMessage } from "./channel";
-import { hello, type PluginInfo, ready, stop } from "./contract";
-import type { InputOf, MessageDef, OutputOf, PayloadOf, RpcDef } from "./define";
+import { Channel, type WireMessage } from './channel';
+import { hello, type PluginInfo, ready, stop } from './contract';
+import type { InputOf, MessageDef, OutputOf, PayloadOf, RpcDef } from './define';
 
 /** Client options */
 export interface ClientOptions {
@@ -41,8 +41,8 @@ export class Client {
   readonly #stopHandlers: Array<() => void | Promise<void>> = [];
 
   constructor(options: ClientOptions = {}) {
-    if (typeof process.send !== "function") {
-      throw new Error("IPC Client requires process.send - spawn with IPC enabled");
+    if (typeof process.send !== 'function') {
+      throw new Error('IPC Client requires process.send - spawn with IPC enabled');
     }
 
     this.#channel = new Channel({
@@ -52,7 +52,7 @@ export class Client {
     });
 
     // Listen for IPC messages
-    process.on("message", (msg: WireMessage) => {
+    process.on('message', (msg: WireMessage) => {
       this.#channel.handle(msg);
     });
 
@@ -67,6 +67,10 @@ export class Client {
   // Core API
   // ─────────────────────────────────────────────────────────────────────────
 
+  get channel(): Channel {
+    return this.#channel;
+  }
+
   /**
    * Send a message
    */
@@ -77,7 +81,10 @@ export class Client {
   /**
    * Handle incoming messages
    */
-  on<T extends MessageDef>(def: T, handler: (payload: PayloadOf<T>) => void | Promise<void>): () => void {
+  on<T extends MessageDef>(
+    def: T,
+    handler: (payload: PayloadOf<T>) => void | Promise<void>
+  ): () => void {
     return this.#channel.on(def, handler);
   }
 
@@ -86,10 +93,14 @@ export class Client {
    */
   implement<T extends RpcDef>(
     def: T,
-    handler: (input: InputOf<T>) => OutputOf<T> | Promise<OutputOf<T>>,
+    handler: (input: InputOf<T>) => OutputOf<T> | Promise<OutputOf<T>>
   ): void {
     this.#channel.implement(def, handler);
   }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Lifecycle
+  // ─────────────────────────────────────────────────────────────────────────
 
   /**
    * Call an RPC (to hub or other services)
@@ -97,10 +108,6 @@ export class Client {
   call<T extends RpcDef>(def: T, input: InputOf<T>, timeoutMs?: number): Promise<OutputOf<T>> {
     return this.#channel.call(def, input, timeoutMs);
   }
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Lifecycle
-  // ─────────────────────────────────────────────────────────────────────────
 
   /**
    * Start the client
@@ -125,16 +132,12 @@ export class Client {
     }
   }
 
-  #cleanup(): void {
-    process.removeAllListeners("message");
-  }
-
   // ─────────────────────────────────────────────────────────────────────────
   // Low-level
   // ─────────────────────────────────────────────────────────────────────────
 
-  get channel(): Channel {
-    return this.#channel;
+  #cleanup(): void {
+    process.removeAllListeners('message');
   }
 }
 

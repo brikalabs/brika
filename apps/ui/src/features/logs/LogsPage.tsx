@@ -1,10 +1,10 @@
+import { Download, Pause, Play, Radio, RefreshCw, Trash2 } from "lucide-react";
 import React from "react";
-import { useLogs } from "./hooks";
+import { Badge, Button, Card, CardContent } from "@/components/ui";
 import { useLocale } from "@/lib/use-locale";
 import { LogFilterBar } from "./components/LogFilterBar";
 import { LogList } from "./components/LogList";
-import { Button, Card, CardContent, Badge } from "@/components/ui";
-import { Pause, Play, Trash2, Download, RefreshCw, Radio } from "lucide-react";
+import { useLogs } from "./hooks";
 
 export function LogsPage() {
   const { t } = useLocale();
@@ -56,7 +56,7 @@ export function LogsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">{t("logs:title")}</h2>
+          <h2 className="font-bold text-2xl tracking-tight">{t("logs:title")}</h2>
           <p className="text-muted-foreground">
             {stats ? t("logs:totalStored", { count: stats.total.toLocaleString() }) : t("common:loading")}
           </p>
@@ -92,7 +92,7 @@ export function LogsPage() {
         {paused && <Badge variant="outline">{t("logs:paused")}</Badge>}
         {!paused && (
           <Badge variant="outline" className="animate-pulse">
-            <Radio className="size-3 mr-1" />
+            <Radio className="mr-1 size-3" />
             {t("logs:streaming")}
           </Badge>
         )}

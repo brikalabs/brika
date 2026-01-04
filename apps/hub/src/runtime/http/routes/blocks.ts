@@ -1,12 +1,12 @@
-import { route, group } from "@elia/router";
-import { BlockRegistry } from "../../blocks";
+import { group, route } from '@elia/router';
+import { BlockRegistry } from '@/runtime/blocks';
 
-export const blocksRoutes = group("/api/blocks", [
-  route.get("/", async ({ inject }) => {
+export const blocksRoutes = group('/api/blocks', [
+  route.get('/', ({ inject }) => {
     return inject(BlockRegistry).list();
   }),
 
-  route.get("/categories", async ({ inject }) => {
+  route.get('/categories', ({ inject }) => {
     return inject(BlockRegistry).listByCategory();
   }),
 ]);

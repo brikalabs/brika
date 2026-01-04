@@ -4,10 +4,10 @@
  * Loads workflows from YAML files with hot-reload support.
  */
 
-import { singleton, inject, type Json } from "@elia/shared";
-import type { Workflow } from "@elia/sdk";
-import { LogRouter } from "../logs/log-router";
-import { AutomationEngine } from "./automation-engine";
+import type { Workflow } from '@elia/sdk';
+import { inject, type Json, singleton } from '@elia/shared';
+import { LogRouter } from '@/runtime/logs/log-router';
+import { AutomationEngine } from './automation-engine';
 
 @singleton()
 export class YamlWorkflowLoader {
@@ -34,23 +34,23 @@ export class YamlWorkflowLoader {
     // Ensure directory exists using Bun
     try {
       // Try to list directory to check if it exists
-      const glob = new Bun.Glob("*");
+      const glob = new Bun.Glob('*');
       await Array.fromAsync(glob.scan({ cwd: this.#dir }));
     } catch {
       // Create directory by writing a .keep file
-      await Bun.write(`${this.#dir}/.keep`, "");
-      this.logs.info("automations.dir.created", { dir: this.#dir });
+      await Bun.write(`${this.#dir}/.keep`, '');
+      this.logs.info('automations.dir.created', { dir: this.#dir });
     }
 
     // Load all .yml/.yaml files using Bun.Glob
-    const glob = new Bun.Glob("*.{yml,yaml}");
+    const glob = new Bun.Glob('*.{yml,yaml}');
     const yamlFiles = await Array.fromAsync(glob.scan({ cwd: this.#dir }));
 
     for (const file of yamlFiles) {
       await this.#loadFile(`${this.#dir}/${file}`);
     }
 
-    this.logs.info("automations.loaded", {
+    this.logs.info('automations.loaded', {
       dir: this.#dir,
       count: this.#loaded.size,
     });
@@ -61,7 +61,7 @@ export class YamlWorkflowLoader {
    */
   watch(): void {
     if (!this.#dir) {
-      throw new Error("Call loadDir() before watch()");
+      throw new Error('Call loadDir() before watch()');
     }
 
     // Use polling-based watching with Bun.Glob
@@ -69,7 +69,7 @@ export class YamlWorkflowLoader {
       if (!this.#dir) return;
 
       try {
-        const glob = new Bun.Glob("*.{yml,yaml}");
+        const glob = new Bun.Glob('*.{yml,yaml}');
         const currentFiles = new Set<string>();
 
         for await (const file of glob.scan({ cwd: this.#dir })) {
@@ -92,7 +92,7 @@ export class YamlWorkflowLoader {
               setTimeout(async () => {
                 this.#debounce.delete(filePath);
                 await this.#loadFile(filePath);
-              }, 100),
+              }, 100)
             );
           }
         }
@@ -105,11 +105,11 @@ export class YamlWorkflowLoader {
           }
         }
       } catch (e) {
-        this.logs.error("automations.watch.error", { error: String(e) } as Record<string, Json>);
+        this.logs.error('automations.watch.error', { error: String(e) } as Record<string, Json>);
       }
     }, 1000); // Poll every second
 
-    this.logs.info("automations.watching", { dir: this.#dir });
+    this.logs.info('automations.watching', { dir: this.#dir });
   }
 
   /**
@@ -127,7 +127,7 @@ export class YamlWorkflowLoader {
    */
   async saveWorkflow(workflow: Workflow): Promise<string> {
     if (!this.#dir) {
-      throw new Error("Call loadDir() before saveWorkflow()");
+      throw new Error('Call loadDir() before saveWorkflow()');
     }
 
     // Generate filename from workflow ID
@@ -144,7 +144,7 @@ export class YamlWorkflowLoader {
     // Register/update workflow
     this.engine.register(workflow);
 
-    this.logs.info("automations.file.saved", {
+    this.logs.info('automations.file.saved', {
       file: fileName,
       id: workflow.id,
     } as Record<string, Json>);
@@ -163,10 +163,10 @@ export class YamlWorkflowLoader {
         const conventionalPath = `${this.#dir}/${id}.yml`;
         const file = Bun.file(conventionalPath);
         if (await file.exists()) {
-          const proc = Bun.spawn(["rm", conventionalPath]);
+          const proc = Bun.spawn(['rm', conventionalPath]);
           await proc.exited;
           this.engine.unregister(id);
-          this.logs.info("automations.file.deleted", { id } as Record<string, Json>);
+          this.logs.info('automations.file.deleted', { id } as Record<string, Json>);
           return true;
         }
       }
@@ -174,10 +174,10 @@ export class YamlWorkflowLoader {
     }
 
     // Delete file using Bun
-    const proc = Bun.spawn(["rm", filePath]);
+    const proc = Bun.spawn(['rm', filePath]);
     await proc.exited;
     if (proc.exitCode !== 0) {
-      this.logs.error("automations.file.delete.error", {
+      this.logs.error('automations.file.delete.error', {
         file: filePath,
         error: `Failed to delete file: exit code ${proc.exitCode}`,
       } as Record<string, Json>);
@@ -191,8 +191,8 @@ export class YamlWorkflowLoader {
     // Unregister workflow
     this.engine.unregister(id);
 
-    const fileName = filePath.split("/").pop() ?? filePath;
-    this.logs.info("automations.file.deleted", {
+    const fileName = filePath.split('/').pop() ?? filePath;
+    this.logs.info('automations.file.deleted', {
       file: fileName,
       id,
     } as Record<string, Json>);
@@ -208,13 +208,11 @@ export class YamlWorkflowLoader {
     this.#unloadFile(filePath);
 
     try {
-      const file = Bun.file(filePath);
-      // Use Bun's built-in YAML support
-      const content = await file.text();
-      const workflow = Bun.YAML.parse(content) as Workflow;
-
+      const workflow = (await import(filePath, {
+        with: { type: 'yaml' },
+      })) as Workflow;
       if (!workflow?.id) {
-        this.logs.warn("automations.file.invalid", { file: filePath, reason: "missing id" });
+        this.logs.warn('automations.file.invalid', { file: filePath, reason: 'missing id' });
         return;
       }
 
@@ -222,14 +220,14 @@ export class YamlWorkflowLoader {
       this.#loaded.set(filePath, workflow.id);
       this.#idToFile.set(workflow.id, filePath);
 
-      const fileName = filePath.split("/").pop() ?? filePath;
-      this.logs.info("automations.file.loaded", {
+      const fileName = filePath.split('/').pop() ?? filePath;
+      this.logs.info('automations.file.loaded', {
         file: fileName,
         id: workflow.id,
       } as Record<string, Json>);
     } catch (error) {
-      const fileName = filePath.split("/").pop() ?? filePath;
-      this.logs.error("automations.file.error", {
+      const fileName = filePath.split('/').pop() ?? filePath;
+      this.logs.error('automations.file.error', {
         file: fileName,
         error: String(error),
       } as Record<string, Json>);
@@ -247,8 +245,8 @@ export class YamlWorkflowLoader {
     this.#loaded.delete(filePath);
     this.#idToFile.delete(workflowId);
 
-    const fileName = filePath.split("/").pop() ?? filePath;
-    this.logs.info("automations.file.unloaded", {
+    const fileName = filePath.split('/').pop() ?? filePath;
+    this.logs.info('automations.file.unloaded', {
       file: fileName,
       id: workflowId,
     } as Record<string, Json>);

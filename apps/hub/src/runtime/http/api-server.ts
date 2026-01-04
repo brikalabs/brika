@@ -1,46 +1,56 @@
-import { singleton, inject } from "@elia/shared";
-import { createApp } from "@elia/router";
-import { allRoutes } from "./routes";
-import { HubConfig } from "../config";
-import { LogRouter } from "../logs/log-router";
+import { createApp, type RouteDefinition } from '@elia/router';
+import { inject, singleton } from '@elia/shared';
+import { HubConfig } from '@/runtime/config';
+import { LogRouter } from '@/runtime/logs/log-router';
 
 @singleton()
 export class ApiServer {
   readonly #config = inject(HubConfig);
   readonly #logs = inject(LogRouter);
-  readonly #app = createApp(allRoutes);
+  readonly #routes: RouteDefinition[] = [];
+  #app?: ReturnType<typeof createApp>;
   #server?: ReturnType<typeof Bun.serve>;
 
   get port(): number {
     return this.#server?.port ?? this.#config.port;
   }
 
+  addRoutes(routes: RouteDefinition[]): void {
+    this.#routes.push(...routes);
+  }
+
   async start(): Promise<void> {
+    this.#app = createApp(this.#routes);
+
     this.#server = Bun.serve({
       hostname: this.#config.host,
       port: this.#config.port,
       fetch: async (req) => {
+        if (!this.#app) {
+          throw new Error("Failed to start");
+        }
         const start = Date.now();
         const url = new URL(req.url);
-
+        this.#logs.info('api.request.end', {
+          method: req.method,
+          path: url.pathname,
+        });
         try {
           const res = await this.#app.fetch(req);
           const duration = Date.now() - start;
 
-          // Log API requests (skip SSE streams and static assets)
-          if (!url.pathname.startsWith("/api/stream") && url.pathname.startsWith("/api")) {
-            this.#logs.info("api.request", {
+            this.#logs.info('api.request.end', {
               method: req.method,
               path: url.pathname,
               status: res.status,
+              body: await res.clone().text(),
               duration,
             });
-          }
 
           return res;
         } catch (e) {
           const duration = Date.now() - start;
-          this.#logs.error("api.error", {
+          this.#logs.error('api.error', {
             method: req.method,
             path: url.pathname,
             error: String(e),

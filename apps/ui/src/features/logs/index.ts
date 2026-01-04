@@ -1,2 +1,3 @@
-export { LogsPage } from "./LogsPage";
 export { useLogStream } from "./hooks";
+export { LogsPage } from "./LogsPage";
+

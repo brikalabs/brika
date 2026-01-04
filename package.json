@@ -10,17 +10,13 @@
   "bugs": {
     "url": "https://github.com/maxscharwath/elia/issues"
   },
-  "workspaces": [
-    "apps/*",
-    "packages/*",
-    "plugins/*"
-  ],
+  "workspaces": ["apps/*", "packages/*", "plugins/*"],
   "scripts": {
-    "dev": "bun run dev:hub & bun run dev:ui",
-    "dev:hub": "cd apps/hub && bun run src/main.ts",
-    "dev:ui": "cd apps/ui && bunx --bun vite",
-    "build": "cd apps/ui && bunx --bun vite build",
+    "dev": "bun --filter '*' dev",
+    "dev:hub": "bun --filter @elia/hub dev",
+    "dev:ui": "bun --filter @elia/ui dev",
     "test": "bun test",
+    "typecheck": "bun --filter '*' typecheck",
     "lint": "bunx biome check .",
     "lint:fix": "bunx biome check --write ."
   },

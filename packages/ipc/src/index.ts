@@ -33,12 +33,12 @@
  * ```
  */
 
-export type { ChannelOptions, MessageHandler, RpcHandler, WireMessage } from "./channel";
+export type { ChannelOptions, MessageHandler, RpcHandler, WireMessage } from './channel';
 // ─── Channel ───
-export { Channel } from "./channel";
-export type { ClientOptions } from "./client";
+export { Channel } from './channel';
+export type { ClientOptions } from './client';
 // ─── Client ───
-export { Client, createClient } from "./client";
+export { Client, createClient } from './client';
 export type {
   AnyDef,
   Infer,
@@ -48,11 +48,11 @@ export type {
   OutputOf,
   PayloadOf,
   RpcDef,
-} from "./define";
+} from './define';
 // ─── Definition Helpers ───
-export { isMessage, isRpc, message, rpc } from "./define";
-export type { PluginChannelOptions } from "./host";
+export { isMessage, isRpc, message, rpc } from './define';
+export type { PluginChannelOptions } from './host';
 // ─── Host ───
-export { PluginChannel, spawnPlugin } from "./host";
+export { PluginChannel, spawnPlugin } from './host';
 // ─── Core Types ───
-export { Json, JsonRecord } from "./types";
+export { Json, JsonRecord } from './types';

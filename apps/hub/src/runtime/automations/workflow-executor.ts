@@ -4,13 +4,12 @@
  * Executes workflows with port-based routing and IPC block execution.
  */
 
-import type { Workflow, WorkflowBlock, BlockConnection, BlockContext, Json } from "@elia/sdk";
-
-import type { PluginManager } from "../plugins/plugin-manager";
-import type { ToolRegistry } from "../tools/tool-registry";
-import type { EventBus } from "../events/event-bus";
-import type { LogRouter } from "../logs/log-router";
-import type { BlockRegistry } from "../blocks";
+import type { BlockConnection, BlockContext, Json, Workflow, WorkflowBlock } from '@elia/sdk';
+import type { BlockRegistry } from '@/runtime/blocks';
+import type { EventSystem } from '@/runtime/events/event-system';
+import type { LogRouter } from '@/runtime/logs/log-router';
+import type { PluginManager } from '@/runtime/plugins/plugin-manager';
+import type { ToolRegistry } from '@/runtime/tools/tool-registry';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -19,7 +18,7 @@ import type { BlockRegistry } from "../blocks";
 export interface ExecutorDeps {
   plugins: PluginManager;
   tools: ToolRegistry;
-  events: EventBus;
+  events: EventSystem;
   logs: LogRouter;
   blocks: BlockRegistry;
 }
@@ -31,7 +30,7 @@ export interface TriggerData {
 }
 
 export interface ExecutionEvent {
-  type: "block.start" | "block.complete" | "block.error" | "workflow.complete" | "workflow.error";
+  type: 'block.start' | 'block.complete' | 'block.error' | 'workflow.complete' | 'workflow.error';
   blockId?: string;
   output?: string;
   data?: Json;
@@ -75,16 +74,16 @@ export class WorkflowExecutor {
     const startBlocks = this.#findStartBlocks(workflow);
 
     if (startBlocks.length === 0) {
-      this.#emit({ type: "workflow.error", error: "No start blocks found" });
+      this.#emit({ type: 'workflow.error', error: 'No start blocks found' });
       return;
     }
 
     // Execute starting blocks in parallel
     await Promise.all(
-      startBlocks.map((block) => this.#executeBlock(block, workflow, trigger, connections, null)),
+      startBlocks.map((block) => this.#executeBlock(block, workflow, trigger, connections, null))
     );
 
-    this.#emit({ type: "workflow.complete" });
+    this.#emit({ type: 'workflow.complete' });
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -95,7 +94,7 @@ export class WorkflowExecutor {
     const map = new Map<string, BlockConnection[]>();
 
     for (const conn of workflow.connections) {
-      const key = `${conn.from}.${conn.fromPort || "out"}`;
+      const key = `${conn.from}.${conn.fromPort || 'out'}`;
       const existing = map.get(key) || [];
       existing.push(conn);
       map.set(key, existing);
@@ -119,9 +118,9 @@ export class WorkflowExecutor {
     workflow: Workflow,
     trigger: TriggerData,
     connections: Map<string, BlockConnection[]>,
-    inputData: Json,
+    inputData: Json
   ): Promise<void> {
-    this.#emit({ type: "block.start", blockId: block.id });
+    this.#emit({ type: 'block.start', blockId: block.id });
 
     // Build context
     const ctx: BlockContext = {
@@ -144,21 +143,21 @@ export class WorkflowExecutor {
       const result = await this.#deps.plugins.executeBlock(resolvedType, block.config, ctx);
 
       if (result.error) {
-        this.#emit({ type: "block.error", blockId: block.id, error: result.error });
+        this.#emit({ type: 'block.error', blockId: block.id, error: result.error });
         return;
       }
 
       if (result.stop) {
-        this.#emit({ type: "block.complete", blockId: block.id, data: result.data });
+        this.#emit({ type: 'block.complete', blockId: block.id, data: result.data });
         return;
       }
 
       // Store output
-      const outputPort = result.output || "out";
+      const outputPort = result.output || 'out';
       this.#blockOutputs.set(block.id, { [outputPort]: result.data ?? null });
 
       this.#emit({
-        type: "block.complete",
+        type: 'block.complete',
         blockId: block.id,
         output: outputPort,
         data: result.data,
@@ -173,13 +172,19 @@ export class WorkflowExecutor {
         downstream.map((conn) => {
           const nextBlock = workflow.blocks.find((b) => b.id === conn.to);
           if (nextBlock) {
-            return this.#executeBlock(nextBlock, workflow, trigger, connections, result.data ?? null);
+            return this.#executeBlock(
+              nextBlock,
+              workflow,
+              trigger,
+              connections,
+              result.data ?? null
+            );
           }
           return Promise.resolve();
-        }),
+        })
       );
     } catch (error) {
-      this.#emit({ type: "block.error", blockId: block.id, error: String(error) });
+      this.#emit({ type: 'block.error', blockId: block.id, error: String(error) });
     }
   }
 
@@ -197,7 +202,7 @@ export class WorkflowExecutor {
    */
   #resolveBlockType(type: string): string {
     // Already full qualified (contains :)
-    if (type.includes(":")) {
+    if (type.includes(':')) {
       return type;
     }
 

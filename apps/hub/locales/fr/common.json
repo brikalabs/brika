@@ -22,7 +22,8 @@
     "restart": "Redémarrer",
     "reload": "Recharger",
     "view": "Voir",
-    "select": "Sélectionner"
+    "select": "Sélectionner",
+    "copy": "Copier"
   },
   "status": {
     "running": "En cours",
@@ -68,6 +69,7 @@
     "loading": "Chargement...",
     "saving": "Enregistrement...",
     "saved": "Enregistré avec succès",
+    "copied": "Copié",
     "deleted": "Supprimé avec succès",
     "error": "Une erreur s'est produite",
     "confirmDelete": "Êtes-vous sûr de vouloir supprimer ceci ?"
@@ -79,6 +81,10 @@
     "hours": "heures",
     "days": "jours",
     "ago": "il y a"
+  },
+  "code": {
+    "lines_one": "{{count}} ligne",
+    "lines_other": "{{count}} lignes"
   },
   "loading": "Chargement..."
 }

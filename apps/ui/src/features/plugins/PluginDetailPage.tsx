@@ -1,10 +1,42 @@
-import { usePlugin, usePluginMutations } from "./hooks";
-import { pluginsApi } from "./api";
-import { useLocale } from "@/lib/use-locale";
+import { useQuery } from '@tanstack/react-query';
+import { Link, useNavigate, useParams } from '@tanstack/react-router';
 import {
+  ArrowLeft,
+  ArrowUp,
+  Boxes,
+  Clock,
+  ExternalLink,
+  FileText,
+  Github,
+  Hash,
+  Info,
+  Plug,
+  Power,
+  RefreshCw,
+  RotateCcw,
+  Skull,
+  Tag,
+  Trash2,
+  User,
+  Wrench,
+} from 'lucide-react';
+import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
+import { useState } from 'react';
+import { Uptime } from '@/components/Uptime';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
   Avatar,
   AvatarFallback,
   AvatarImage,
+  Badge,
   Button,
   Card,
   CardContent,
@@ -12,45 +44,56 @@ import {
   CardHeader,
   CardIconSmall,
   CardTitle,
-  Badge,
   Skeleton,
   Tooltip,
-  TooltipTrigger,
   TooltipContent,
-} from "@/components/ui";
-import {
-  ArrowLeft,
-  RefreshCw,
-  Power,
-  RotateCcw,
-  Skull,
-  Plug,
-  Wrench,
-  Boxes,
-  ExternalLink,
-  Tag,
-  User,
-  Github,
-  Clock,
-  Globe,
-  Hash,
-  Info,
-} from "lucide-react";
-import { DynamicIcon, type IconName } from "lucide-react/dynamic";
-import { Link, useParams } from "@tanstack/react-router";
-import { Uptime } from "@/components/Uptime";
+  TooltipTrigger,
+} from '@/components/ui';
+import { useLocale } from '@/lib/use-locale';
+import { pluginsApi } from './api';
+import { Markdown } from './components/Markdown';
+import { UpdatePluginDialog } from './components/UpdatePluginDialog';
+import { usePlugin, usePluginMutations, usePluginReadme } from './hooks';
+import { registryApi, registryKeys } from './registry-api';
 
 export function PluginDetailPage() {
   const { uid: pluginUid } = useParams({ strict: false });
+  const navigate = useNavigate();
   const { data: plugin, isLoading, error, refetch } = usePlugin(pluginUid!);
-  const { reload, disable, kill } = usePluginMutations();
+  const { data: readmeData } = usePluginReadme(pluginUid!);
+
+  // Update dialog state
+  const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
+
+  // Check for updates
+  const { data: updatesData } = useQuery({
+    queryKey: registryKeys.updates,
+    queryFn: () => registryApi.checkUpdates(),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  const updateInfo = updatesData?.updates.find((u) => u.name === plugin?.name);
+
+  const { reload, disable, enable, kill, uninstall } = usePluginMutations();
   const { t, tp, getLanguageName, formatTime } = useLocale();
-  const isBusy = reload.isPending || disable.isPending || kill.isPending;
+  const isBusy =
+    reload.isPending ||
+    disable.isPending ||
+    enable.isPending ||
+    kill.isPending ||
+    uninstall.isPending;
+
+  // Handle uninstall
+  const handleUninstall = async () => {
+    if (!plugin) return;
+    await uninstall.mutateAsync(plugin.uid);
+    navigate({ to: '/plugins' });
+  };
 
   // Extract author name
   const getAuthorName = () => {
     if (!plugin?.author) return null;
-    if (typeof plugin.author === "string") return plugin.author;
+    if (typeof plugin.author === 'string') return plugin.author;
     return plugin.author.name;
   };
 
@@ -58,21 +101,20 @@ export function PluginDetailPage() {
   const getRepoUrl = () => {
     if (!plugin?.repository) return null;
 
-    if (typeof plugin.repository === "string") {
+    if (typeof plugin.repository === 'string') {
       return plugin.repository;
     }
 
-    let url = plugin.repository.url;
-    if (!url) return null;
+    return plugin.repository.url;
+  };
 
-    url = url.replace(/\.git$/, "");
-
-    const directory = plugin.repository.directory;
-    if (directory) {
-      url = `${url}/tree/HEAD/${directory}`;
+  // Handle update dialog close with refresh
+  const handleUpdateDialogClose = (open: boolean) => {
+    setUpdateDialogOpen(open);
+    if (!open) {
+      // Refresh plugin data after update
+      refetch();
     }
-
-    return url;
   };
 
   if (isLoading) {
@@ -101,13 +143,15 @@ export function PluginDetailPage() {
           className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="size-4" />
-          {t("plugins:backToList")}
+          {t('plugins:backToList')}
         </Link>
         <Card>
           <CardContent className="py-12 text-center">
-            <Plug className="size-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="font-semibold text-lg">{t("plugins:notFound")}</h3>
-            <p className="text-muted-foreground mt-1">{t("plugins:notFoundDetail", { uid: pluginUid })}</p>
+            <Plug className="mx-auto mb-4 size-12 text-muted-foreground" />
+            <h3 className="font-semibold text-lg">{t('plugins:notFound')}</h3>
+            <p className="mt-1 text-muted-foreground">
+              {t('plugins:notFoundDetail', { uid: pluginUid })}
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -125,10 +169,10 @@ export function PluginDetailPage() {
       {/* Back link */}
       <Link
         to="/plugins"
-        className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+        className="inline-flex items-center gap-2 text-muted-foreground transition-colors hover:text-foreground"
       >
         <ArrowLeft className="size-4" />
-        {t("plugins:backToList")}
+        {t('plugins:backToList')}
       </Link>
 
       {/* Header */}
@@ -143,12 +187,12 @@ export function PluginDetailPage() {
           </Avatar>
 
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">{tp(plugin.name, "name")}</h1>
-            <code className="text-xs text-muted-foreground font-mono">{plugin.name}</code>
+            <h1 className="font-bold text-2xl tracking-tight">{tp(plugin.name, 'name')}</h1>
+            <code className="font-mono text-muted-foreground text-xs">{plugin.name}</code>
             {plugin.description && (
-              <p className="text-muted-foreground mt-1">{tp(plugin.name, "description")}</p>
+              <p className="mt-1 text-muted-foreground">{tp(plugin.name, 'description')}</p>
             )}
-            <div className="flex flex-wrap gap-3 mt-3 text-sm text-muted-foreground">
+            <div className="mt-3 flex flex-wrap gap-3 text-muted-foreground text-sm">
               <Badge variant="outline" className="gap-1">
                 v{plugin.version}
               </Badge>
@@ -163,10 +207,10 @@ export function PluginDetailPage() {
                   href={repoUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-1 hover:text-foreground transition-colors"
+                  className="flex items-center gap-1 transition-colors hover:text-foreground"
                 >
                   <Github className="size-3" />
-                  {t("plugins:details.repository")}
+                  {t('plugins:details.repository')}
                   <ExternalLink className="size-3" />
                 </a>
               )}
@@ -177,11 +221,11 @@ export function PluginDetailPage() {
         <div className="flex items-center gap-2">
           <Badge
             variant={
-              plugin.status === "running"
-                ? "default"
-                : plugin.status === "crashed"
-                  ? "destructive"
-                  : "secondary"
+              plugin.status === 'running'
+                ? 'default'
+                : plugin.status === 'crashed'
+                  ? 'destructive'
+                  : 'secondary'
             }
             className="px-3 py-1"
           >
@@ -194,7 +238,21 @@ export function PluginDetailPage() {
                 <RefreshCw className="size-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>{t("common:actions.refresh")}</TooltipContent>
+            <TooltipContent>{t('common:actions.refresh')}</TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="icon"
+                variant="outline"
+                onClick={() => setUpdateDialogOpen(true)}
+                disabled={isBusy}
+              >
+                <ArrowUp className="size-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{t('plugins:actions.update')}</TooltipContent>
           </Tooltip>
 
           <Tooltip>
@@ -208,22 +266,40 @@ export function PluginDetailPage() {
                 <RotateCcw className="size-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>{t("plugins:actions.reload")}</TooltipContent>
+            <TooltipContent>{t('plugins:actions.reload')}</TooltipContent>
           </Tooltip>
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                size="icon"
-                variant="outline"
-                onClick={() => disable.mutate(plugin.uid)}
-                disabled={isBusy}
-              >
-                <Power className="size-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>{t("plugins:actions.disable")}</TooltipContent>
-          </Tooltip>
+          {plugin.status === 'running' ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  onClick={() => disable.mutate(plugin.uid)}
+                  disabled={isBusy}
+                  className="gap-2"
+                >
+                  <Power className="size-4" />
+                  {t('plugins:actions.disable')}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t('plugins:actions.disable')}</TooltipContent>
+            </Tooltip>
+          ) : (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  onClick={() => enable.mutate(plugin.uid)}
+                  disabled={isBusy}
+                  className="gap-2"
+                >
+                  <Power className="size-4" />
+                  {t('plugins:actions.enable')}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t('plugins:actions.enable')}</TooltipContent>
+            </Tooltip>
+          )}
 
           <Tooltip>
             <TooltipTrigger asChild>
@@ -231,13 +307,43 @@ export function PluginDetailPage() {
                 size="icon"
                 variant="destructive"
                 onClick={() => kill.mutate(plugin.uid)}
-                disabled={isBusy}
+                disabled={isBusy || plugin.status !== 'running'}
               >
                 <Skull className="size-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>{t("plugins:actions.kill")}</TooltipContent>
+            <TooltipContent>{t('plugins:actions.kill')}</TooltipContent>
           </Tooltip>
+
+          <AlertDialog>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <AlertDialogTrigger asChild>
+                  <Button size="icon" variant="destructive" disabled={isBusy}>
+                    <Trash2 className="size-4" />
+                  </Button>
+                </AlertDialogTrigger>
+              </TooltipTrigger>
+              <TooltipContent>{t('plugins:actions.uninstall')}</TooltipContent>
+            </Tooltip>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>{t('plugins:uninstall.title')}</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {t('plugins:uninstall.description', { name: plugin.name })}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>{t('common:actions.cancel')}</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleUninstall}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  {t('plugins:actions.uninstall')}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </div>
 
@@ -253,78 +359,58 @@ export function PluginDetailPage() {
         </div>
       )}
 
-      {/* Languages */}
-      {locales.length > 0 && (
-        <div className="flex items-center gap-2">
-          <Globe className="size-4 text-muted-foreground" />
-          <span className="text-sm text-muted-foreground">{t("plugins:details.languages")}:</span>
-          <div className="flex flex-wrap gap-1.5">
-            {locales.map((loc) => (
-              <Tooltip key={loc}>
-                <TooltipTrigger asChild>
-                  <Badge variant="outline" className="uppercase text-xs font-mono">
-                    {loc}
-                  </Badge>
-                </TooltipTrigger>
-                <TooltipContent>{getLanguageName(loc)}</TooltipContent>
-              </Tooltip>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Error display */}
       {plugin.lastError && (
-        <div className="p-4 rounded-lg bg-destructive/10 text-destructive border border-destructive/20">
-          <strong>{t("common:labels.error")}:</strong> {plugin.lastError}
+        <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-4 text-destructive">
+          <strong>{t('common:labels.error')}:</strong> {plugin.lastError}
         </div>
       )}
 
       {/* Stats grid */}
       <div className="grid gap-4 md:grid-cols-4">
         <Card accent="emerald" className="p-5">
-          <div className="relative h-full flex flex-col justify-center">
+          <div className="relative flex h-full flex-col justify-center">
             <CardIconSmall className="absolute top-0 right-0">
               <Wrench className="size-4" />
             </CardIconSmall>
-            <div className="text-3xl font-bold tracking-tight">{tools.length}</div>
-            <div className="text-sm text-muted-foreground mt-1">{t("tools:title")}</div>
+            <div className="font-bold text-3xl tracking-tight">{tools.length}</div>
+            <div className="mt-1 text-muted-foreground text-sm">{t('tools:title')}</div>
           </div>
         </Card>
 
         <Card accent="violet" className="p-5">
-          <div className="relative h-full flex flex-col justify-center">
+          <div className="relative flex h-full flex-col justify-center">
             <CardIconSmall className="absolute top-0 right-0">
               <Boxes className="size-4" />
             </CardIconSmall>
-            <div className="text-3xl font-bold tracking-tight">{blocks.length}</div>
-            <div className="text-sm text-muted-foreground mt-1">{t("workflows:blocks")}</div>
+            <div className="font-bold text-3xl tracking-tight">{blocks.length}</div>
+            <div className="mt-1 text-muted-foreground text-sm">{t('workflows:blocks')}</div>
           </div>
         </Card>
 
         <Card accent="blue" className="p-5">
-          <div className="relative h-full flex flex-col justify-center">
+          <div className="relative flex h-full flex-col justify-center">
             <CardIconSmall className="absolute top-0 right-0">
               <Hash className="size-4" />
             </CardIconSmall>
-            <div className="text-3xl font-bold tracking-tight font-mono">{plugin.pid ?? "-"}</div>
-            <div className="text-sm text-muted-foreground mt-1">{t("plugins:details.pid")}</div>
+            <div className="font-bold font-mono text-3xl tracking-tight">{plugin.pid ?? '-'}</div>
+            <div className="mt-1 text-muted-foreground text-sm">{t('plugins:details.pid')}</div>
           </div>
         </Card>
 
         <Card accent="orange" className="p-5">
-          <div className="relative h-full flex flex-col justify-center">
+          <div className="relative flex h-full flex-col justify-center">
             <CardIconSmall className="absolute top-0 right-0">
               <Clock className="size-4" />
             </CardIconSmall>
-            <Uptime startedAt={plugin.startedAt} className="text-3xl font-bold tracking-tight" />
-            <div className="text-sm text-muted-foreground mt-1">
+            <Uptime startedAt={plugin.startedAt} className="font-bold text-3xl tracking-tight" />
+            <div className="mt-1 text-muted-foreground text-sm">
               {plugin.startedAt ? (
                 <>
-                  {t("plugins:details.startedAt")} {formatTime(plugin.startedAt)}
+                  {t('plugins:details.startedAt')} {formatTime(plugin.startedAt)}
                 </>
               ) : (
-                t("plugins:details.uptime")
+                t('plugins:details.uptime')
               )}
             </div>
           </div>
@@ -339,9 +425,9 @@ export function PluginDetailPage() {
               <div>
                 <CardTitle className="flex items-center gap-2">
                   <Wrench className="size-5 text-primary" />
-                  {t("plugins:details.availableTools")}
+                  {t('plugins:details.availableTools')}
                 </CardTitle>
-                <CardDescription>{t("plugins:details.availableToolsDesc")}</CardDescription>
+                <CardDescription>{t('plugins:details.availableToolsDesc')}</CardDescription>
               </div>
               <Badge variant="secondary">{tools.length}</Badge>
             </div>
@@ -349,26 +435,28 @@ export function PluginDetailPage() {
           <CardContent>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {tools.map((tool) => {
-                const iconName = (tool.icon || "wrench") as IconName;
-                const color = tool.color || "#d97706";
-                const toolKey = tool.id.split(":").pop() || tool.id;
+                const iconName = (tool.icon || 'wrench') as IconName;
+                const color = tool.color || '#d97706';
+                const toolKey = tool.id.split(':').pop() || tool.id;
                 const toolName = tp(plugin.name, `tools.${toolKey}.name`, toolKey);
                 const toolDesc = tp(plugin.name, `tools.${toolKey}.description`, tool.description);
 
                 return (
                   <div
                     key={tool.id}
-                    className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
+                    className="flex items-center gap-3 rounded-lg bg-muted/30 p-3 transition-colors hover:bg-muted/50"
                   >
                     <div
-                      className="flex size-10 items-center justify-center rounded-lg shrink-0"
+                      className="flex size-10 shrink-0 items-center justify-center rounded-lg"
                       style={{ backgroundColor: `${color}20`, color }}
                     >
                       <DynamicIcon name={iconName} className="size-5" />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-sm truncate">{toolName}</div>
-                      {toolDesc && <div className="text-xs text-muted-foreground truncate">{toolDesc}</div>}
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate font-medium text-sm">{toolName}</div>
+                      {toolDesc && (
+                        <div className="truncate text-muted-foreground text-xs">{toolDesc}</div>
+                      )}
                     </div>
                   </div>
                 );
@@ -386,9 +474,9 @@ export function PluginDetailPage() {
               <div>
                 <CardTitle className="flex items-center gap-2">
                   <Boxes className="size-5 text-primary" />
-                  {t("plugins:details.availableBlocks")}
+                  {t('plugins:details.availableBlocks')}
                 </CardTitle>
-                <CardDescription>{t("plugins:details.availableBlocksDesc")}</CardDescription>
+                <CardDescription>{t('plugins:details.availableBlocksDesc')}</CardDescription>
               </div>
               <Badge variant="secondary">{blocks.length}</Badge>
             </div>
@@ -396,29 +484,39 @@ export function PluginDetailPage() {
           <CardContent>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {blocks.map((block) => {
-                const iconName = (block.icon || "box") as IconName;
-                const color = block.color || "#6366f1";
-                const blockKey = block.id.split(":").pop() || block.id;
-                const blockName = tp(plugin.name, `blocks.${blockKey}.name`, block.name || blockKey);
-                const blockDesc = tp(plugin.name, `blocks.${blockKey}.description`, block.description);
+                const iconName = (block.icon || 'box') as IconName;
+                const color = block.color || '#6366f1';
+                const blockKey = block.id.split(':').pop() || block.id;
+                const blockName = tp(
+                  plugin.name,
+                  `blocks.${blockKey}.name`,
+                  block.name || blockKey
+                );
+                const blockDesc = tp(
+                  plugin.name,
+                  `blocks.${blockKey}.description`,
+                  block.description
+                );
 
                 return (
                   <div
                     key={block.id}
-                    className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
+                    className="flex items-center gap-3 rounded-lg bg-muted/30 p-3 transition-colors hover:bg-muted/50"
                   >
                     <div
-                      className="flex size-10 items-center justify-center rounded-lg shrink-0"
+                      className="flex size-10 shrink-0 items-center justify-center rounded-lg"
                       style={{ backgroundColor: `${color}20`, color }}
                     >
                       <DynamicIcon name={iconName} className="size-5" />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-sm truncate">{blockName}</div>
-                      {blockDesc && <div className="text-xs text-muted-foreground truncate">{blockDesc}</div>}
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate font-medium text-sm">{blockName}</div>
+                      {blockDesc && (
+                        <div className="truncate text-muted-foreground text-xs">{blockDesc}</div>
+                      )}
                     </div>
                     {block.category && (
-                      <Badge variant="outline" className="text-xs shrink-0">
+                      <Badge variant="outline" className="shrink-0 text-xs">
                         {block.category}
                       </Badge>
                     )}
@@ -435,35 +533,86 @@ export function PluginDetailPage() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2">
             <Info className="size-5 text-primary" />
-            {t("plugins:details.installation")}
+            {t('plugins:details.installation')}
           </CardTitle>
-          <CardDescription>{t("plugins:details.installationDesc")}</CardDescription>
+          <CardDescription>{t('plugins:details.installationDesc')}</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-2">
-          <div className="flex items-center justify-between p-2.5 rounded-lg bg-muted/30">
+          <div className="flex items-center justify-between rounded-lg bg-muted/30 p-2.5">
             <span className="text-sm">UID</span>
             <code className="font-mono text-xs">{plugin.uid}</code>
           </div>
-          <div className="flex items-center justify-between p-2.5 rounded-lg bg-muted/30">
-            <span className="text-sm">{t("plugins:details.directory")}</span>
-            <code className="font-mono text-xs truncate max-w-[60%]" title={plugin.dir}>
+          <div className="flex items-center justify-between rounded-lg bg-muted/30 p-2.5">
+            <span className="text-sm">{t('plugins:details.directory')}</span>
+            <code className="max-w-[60%] truncate font-mono text-xs" title={plugin.dir}>
               {plugin.dir}
             </code>
           </div>
-          <div className="flex items-center justify-between p-2.5 rounded-lg bg-muted/30">
-            <span className="text-sm">{t("plugins:labels.reference")}</span>
-            <code className="font-mono text-xs truncate max-w-[60%]" title={plugin.ref}>
+          <div className="flex items-center justify-between rounded-lg bg-muted/30 p-2.5">
+            <span className="text-sm">{t('plugins:labels.reference')}</span>
+            <code className="max-w-[60%] truncate font-mono text-xs" title={plugin.ref}>
               {plugin.ref}
             </code>
           </div>
+          <div className="flex items-center justify-between rounded-lg bg-muted/30 p-2.5">
+            <span className="text-sm">{t('plugins:details.compatibleVersion')}</span>
+            <code className="font-mono text-xs">{plugin.engines.elia}</code>
+          </div>
+          {locales.length > 0 && (
+            <div className="flex items-center justify-between rounded-lg bg-muted/30 p-2.5">
+              <span className="text-sm">{t('plugins:details.languages')}</span>
+              <div className="flex flex-wrap justify-end gap-1.5">
+                {locales.map((loc) => (
+                  <Tooltip key={loc}>
+                    <TooltipTrigger asChild>
+                      <Badge variant="outline" className="font-mono text-xs uppercase">
+                        {loc}
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent>{getLanguageName(loc)}</TooltipContent>
+                  </Tooltip>
+                ))}
+              </div>
+            </div>
+          )}
           {plugin.license && (
-            <div className="flex items-center justify-between p-2.5 rounded-lg bg-muted/30">
-              <span className="text-sm">{t("plugins:details.license")}</span>
+            <div className="flex items-center justify-between rounded-lg bg-muted/30 p-2.5">
+              <span className="text-sm">{t('plugins:details.license')}</span>
               <Badge variant="secondary">{plugin.license}</Badge>
             </div>
           )}
         </CardContent>
       </Card>
+
+      {/* README */}
+      {readmeData?.readme && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="size-5 text-primary" />
+              {t('plugins:details.readme')}
+              <Badge variant="outline" className="ml-auto font-mono text-xs">
+                {readmeData.filename}
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Markdown>{readmeData.readme}</Markdown>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Update Dialog */}
+      {plugin && (
+        <UpdatePluginDialog
+          open={updateDialogOpen}
+          onOpenChange={handleUpdateDialogClose}
+          packageName={plugin.name}
+          currentVersion={updateInfo?.currentVersion || plugin.version}
+          latestVersion={updateInfo?.latestVersion}
+          mode="update"
+        />
+      )}
     </div>
   );
 }

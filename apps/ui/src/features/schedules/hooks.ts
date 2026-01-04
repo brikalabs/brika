@@ -1,6 +1,6 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { schedulesApi, schedulesKeys } from "./api";
-import type { Schedule } from "@elia/shared";
+import type { Schedule } from '@elia/shared';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { schedulesApi, schedulesKeys } from './api';
 
 export function useSchedules() {
   return useQuery({ queryKey: schedulesKeys.all, queryFn: schedulesApi.list });
@@ -12,7 +12,7 @@ export function useScheduleMutations() {
 
   return {
     create: useMutation({
-      mutationFn: (data: Omit<Schedule, "id">) => schedulesApi.create(data),
+      mutationFn: (data: Omit<Schedule, 'id'>) => schedulesApi.create(data),
       onSuccess: invalidate,
     }),
     remove: useMutation({ mutationFn: schedulesApi.delete, onSuccess: invalidate }),

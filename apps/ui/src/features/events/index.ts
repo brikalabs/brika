@@ -1,2 +1,2 @@
-export { EventsPage } from "./EventsPage";
-export { useEventStream, useEmitEvent } from "./hooks";
+export { EventsPage } from './EventsPage';
+export { useEmitEvent, useEventStream } from './hooks';

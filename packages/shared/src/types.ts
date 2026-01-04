@@ -1,7 +1,7 @@
-export type Json = null | boolean | number | string | Json[] | { [k: string]: Json };
+export type Json = null | boolean | number | string | undefined | Json[] | { [k: string]: Json };
 
-export type LogLevel = "debug" | "info" | "warn" | "error";
-export type LogSource = "hub" | "plugin" | "installer" | "registry" | "stderr" | "automation";
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+export type LogSource = 'hub' | 'plugin' | 'installer' | 'registry' | 'stderr' | 'automation';
 
 export interface LogEvent {
   ts: number;
@@ -13,14 +13,14 @@ export interface LogEvent {
 }
 
 export type PluginHealth =
-  | "running"
-  | "stopped"
-  | "crashed"
-  | "degraded"
-  | "installing"
-  | "updating"
-  | "restarting"
-  | "crash-loop";
+  | 'running'
+  | 'stopped'
+  | 'crashed'
+  | 'degraded'
+  | 'installing'
+  | 'updating'
+  | 'restarting'
+  | 'crash-loop';
 
 /** Tool manifest from package.json */
 export interface ToolManifest {
@@ -35,7 +35,7 @@ export interface BlockManifest {
   id: string;
   name?: string;
   description?: string;
-  category?: "trigger" | "flow" | "action" | "transform";
+  category?: 'trigger' | 'flow' | 'action' | 'transform';
   icon?: string;
   color?: string;
 }
@@ -55,6 +55,8 @@ export interface Plugin {
   description: string | null;
   /** Author name or object */
   author: string | { name: string; email?: string; url?: string } | null;
+  /** Homepage URL */
+  homepage: string | null;
   /** Repository URL or object */
   repository: string | { type?: string; url: string; directory?: string } | null;
   /** Path to icon file */
@@ -63,6 +65,8 @@ export interface Plugin {
   keywords: string[];
   /** License identifier */
   license: string | null;
+  /** Engine compatibility requirements */
+  engines: { elia: string };
 
   // ─── Installation ──────────────────────────────────────────────────────────
   /** Installation reference (e.g., "file:/path/to/plugin/src/main.ts") */
@@ -72,7 +76,7 @@ export interface Plugin {
 
   // ─── Runtime ───────────────────────────────────────────────────────────────
   /** Current status */
-  status: "running" | "stopped" | "crashed" | "restarting";
+  status: PluginHealth;
   /** Process ID (null when stopped) */
   pid: number | null;
   /** Timestamp when plugin was started (null when stopped) */
@@ -93,11 +97,11 @@ export interface Plugin {
 
 /** JSON Schema for tool input - enables smart UI forms */
 export interface ToolInputSchema {
-  type: "object";
+  type: 'object';
   properties?: Record<
     string,
     {
-      type: "string" | "number" | "boolean" | "array" | "object";
+      type: 'string' | 'number' | 'boolean' | 'array' | 'object';
       description?: string;
       default?: Json;
       enum?: Json[];
@@ -131,7 +135,7 @@ export interface BlockSummary {
   /** Block description */
   description?: string;
   /** Block category */
-  category?: "trigger" | "flow" | "action" | "transform";
+  category?: 'trigger' | 'flow' | 'action' | 'transform';
   /** Lucide icon name */
   icon?: string;
   /** Hex color */
@@ -144,7 +148,7 @@ export interface BlockSummary {
 
 export interface ToolCallContext {
   traceId: string;
-  source: "api" | "ui" | "voice" | "rule" | "automation";
+  source: 'api' | 'ui' | 'voice' | 'rule' | 'automation';
 }
 
 export interface ToolResult {
@@ -179,7 +183,7 @@ export interface EliaEvent {
 // Schedules
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type ScheduleTrigger = { type: "cron"; expr: string } | { type: "interval"; ms: number };
+export type ScheduleTrigger = { type: 'cron'; expr: string } | { type: 'interval'; ms: number };
 
 export interface Schedule {
   id: string;
@@ -194,8 +198,8 @@ export interface Schedule {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type RuleTrigger =
-  | { type: "event"; match: string } // glob pattern e.g. "motion.*"
-  | { type: "schedule"; scheduleId: string };
+  | { type: 'event'; match: string } // glob pattern e.g. "motion.*"
+  | { type: 'schedule'; scheduleId: string };
 
 export interface RuleAction {
   tool: string;
@@ -221,10 +225,12 @@ export interface PluginManifest {
   version: string;
   description?: string;
   author?: string | { name: string; email?: string; url?: string };
+  homepage?: string | null;
   repository?: string | { type?: string; url: string; directory?: string };
   icon?: string;
   keywords?: string[];
   license?: string;
+  engines: { elia: string };
   dependencies?: Record<string, string>;
   tools?: ToolManifest[];
   blocks?: BlockManifest[];

@@ -1,9 +1,9 @@
-import { useState, type DragEvent } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Input, ScrollArea, Badge, Skeleton } from "@/components/ui";
-import { Search, GripVertical } from "lucide-react";
-import { DynamicIcon, type IconName } from "lucide-react/dynamic";
-import { cn } from "@/lib/utils";
+import { useQuery } from '@tanstack/react-query';
+import { GripVertical, Search } from 'lucide-react';
+import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
+import { type DragEvent, useState } from 'react';
+import { Badge, Input, ScrollArea, Skeleton } from '@/components/ui';
+import { cn } from '@/lib/utils';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -20,7 +20,7 @@ export interface BlockDefinition {
   inputs: Array<{ id: string; name: string; type?: string }>;
   outputs: Array<{ id: string; name: string; type?: string }>;
   schema: {
-    type: "object";
+    type: 'object';
     properties?: Record<string, unknown>;
     required?: string[];
   };
@@ -31,8 +31,8 @@ export interface BlockDefinition {
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function fetchBlocks(): Promise<BlockDefinition[]> {
-  const res = await fetch("/api/blocks");
-  if (!res.ok) throw new Error("Failed to fetch blocks");
+  const res = await fetch('/api/blocks');
+  if (!res.ok) throw new Error('Failed to fetch blocks');
   return res.json();
 }
 
@@ -46,7 +46,7 @@ interface DraggableBlockProps {
 }
 
 function DraggableBlock({ block, onDragStart }: DraggableBlockProps) {
-  const iconName = (block.icon || "box") as IconName;
+  const iconName = (block.icon || 'box') as IconName;
 
   return (
     // biome-ignore lint/a11y/useSemanticElements: draggable element requires div for drag-and-drop
@@ -56,22 +56,22 @@ function DraggableBlock({ block, onDragStart }: DraggableBlockProps) {
       draggable
       onDragStart={(e) => onDragStart(e, block)}
       className={cn(
-        "flex items-center gap-2 p-2.5 rounded-lg border bg-card cursor-grab",
-        "hover:bg-accent hover:border-accent-foreground/20 transition-all",
-        "active:cursor-grabbing active:scale-[0.98]",
-        "shadow-sm hover:shadow",
+        'flex cursor-grab items-center gap-2 rounded-lg border bg-card p-2.5',
+        'transition-all hover:border-accent-foreground/20 hover:bg-accent',
+        'active:scale-[0.98] active:cursor-grabbing',
+        'shadow-sm hover:shadow'
       )}
     >
       <GripVertical className="size-3 text-muted-foreground/50" />
       <div
-        className="size-8 rounded-md flex items-center justify-center shrink-0 shadow-sm"
-        style={{ backgroundColor: block.color + "20", color: block.color }}
+        className="flex size-8 shrink-0 items-center justify-center rounded-md shadow-sm"
+        style={{ backgroundColor: block.color + '20', color: block.color }}
       >
         <DynamicIcon name={iconName} className="size-4" />
       </div>
-      <div className="flex-1 min-w-0">
-        <div className="text-sm font-medium truncate">{block.name}</div>
-        <div className="text-xs text-muted-foreground truncate">{block.description}</div>
+      <div className="min-w-0 flex-1">
+        <div className="truncate font-medium text-sm">{block.name}</div>
+        <div className="truncate text-muted-foreground text-xs">{block.description}</div>
       </div>
     </div>
   );
@@ -79,7 +79,7 @@ function DraggableBlock({ block, onDragStart }: DraggableBlockProps) {
 
 function BlockSkeleton() {
   return (
-    <div className="flex items-center gap-2 p-2.5 rounded-lg border bg-card">
+    <div className="flex items-center gap-2 rounded-lg border bg-card p-2.5">
       <Skeleton className="size-3" />
       <Skeleton className="size-8 rounded-md" />
       <div className="flex-1 space-y-1.5">
@@ -100,21 +100,21 @@ interface BlockToolbarProps {
 }
 
 export function BlockToolbar({ onDragStart, className }: BlockToolbarProps) {
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState('');
 
   const {
     data: blocks = [],
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["blocks"],
+    queryKey: ['blocks'],
     queryFn: fetchBlocks,
     staleTime: 30000,
   });
 
   const handleDragStart = (e: React.DragEvent, block: BlockDefinition) => {
-    e.dataTransfer.setData("application/reactflow", JSON.stringify(block));
-    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData('application/reactflow', JSON.stringify(block));
+    e.dataTransfer.effectAllowed = 'move';
     onDragStart?.(e, block);
   };
 
@@ -123,7 +123,7 @@ export function BlockToolbar({ onDragStart, className }: BlockToolbarProps) {
         (b) =>
           b.name.toLowerCase().includes(search.toLowerCase()) ||
           (b.type || b.id).toLowerCase().includes(search.toLowerCase()) ||
-          b.description.toLowerCase().includes(search.toLowerCase()),
+          b.description.toLowerCase().includes(search.toLowerCase())
       )
     : blocks;
 
@@ -136,22 +136,22 @@ export function BlockToolbar({ onDragStart, className }: BlockToolbarProps) {
   }));
 
   return (
-    <div className={cn("flex flex-col h-full bg-card/50 backdrop-blur-sm border-r", className)}>
-      <div className="p-3 border-b bg-background/80">
-        <h3 className="text-sm font-semibold mb-2 text-foreground">Blocks</h3>
+    <div className={cn('flex h-full flex-col border-r bg-card/50 backdrop-blur-sm', className)}>
+      <div className="border-b bg-background/80 p-3">
+        <h3 className="mb-2 font-semibold text-foreground text-sm">Blocks</h3>
         <div className="relative">
-          <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
+          <Search className="absolute top-2.5 left-2.5 size-4 text-muted-foreground" />
           <Input
             placeholder="Search blocks..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-8 h-9 bg-background"
+            className="h-9 bg-background pl-8"
           />
         </div>
       </div>
 
       <ScrollArea className="flex-1">
-        <div className="p-3 space-y-4">
+        <div className="space-y-4 p-3">
           {isLoading ? (
             <div className="space-y-2">
               <BlockSkeleton />
@@ -160,22 +160,22 @@ export function BlockToolbar({ onDragStart, className }: BlockToolbarProps) {
               <BlockSkeleton />
             </div>
           ) : error ? (
-            <div className="text-center py-8">
-              <p className="text-sm text-destructive">Failed to load blocks</p>
-              <p className="text-xs text-muted-foreground mt-1">Check if the hub is running</p>
+            <div className="py-8 text-center">
+              <p className="text-destructive text-sm">Failed to load blocks</p>
+              <p className="mt-1 text-muted-foreground text-xs">Check if the hub is running</p>
             </div>
           ) : groupedBlocks.length === 0 ? (
-            <div className="text-center text-sm text-muted-foreground py-8">
-              {search ? "No blocks found" : "No blocks available"}
+            <div className="py-8 text-center text-muted-foreground text-sm">
+              {search ? 'No blocks found' : 'No blocks available'}
             </div>
           ) : (
             groupedBlocks.map((category) => (
               <div key={category.id}>
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                <div className="mb-2 flex items-center gap-2">
+                  <span className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
                     {category.label}
                   </span>
-                  <Badge variant="secondary" className="text-[10px] h-4 px-1.5">
+                  <Badge variant="secondary" className="h-4 px-1.5 text-[10px]">
                     {category.blocks.length}
                   </Badge>
                 </div>
@@ -194,8 +194,8 @@ export function BlockToolbar({ onDragStart, className }: BlockToolbarProps) {
         </div>
       </ScrollArea>
 
-      <div className="p-3 border-t bg-background/80">
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
+      <div className="border-t bg-background/80 p-3">
+        <div className="flex items-center justify-between text-muted-foreground text-xs">
           <span>Drag to add</span>
           <Badge variant="outline" className="text-[10px]">
             {blocks.length} blocks

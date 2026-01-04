@@ -25,7 +25,11 @@
     "availableBlocksDesc": "Blocs de workflow fournis par ce plugin",
     "installation": "Installation",
     "installationDesc": "Détails techniques et chemins",
-    "directory": "Répertoire"
+    "directory": "Répertoire",
+    "compatibleVersion": "Version compatible",
+    "readme": "LISEZ-MOI",
+    "clickToExpand": "Cliquez pour développer",
+    "clickToCollapse": "Cliquez pour réduire"
   },
   "actions": {
     "load": "Charger un plugin",
@@ -33,7 +37,14 @@
     "disable": "Désactiver",
     "reload": "Recharger",
     "kill": "Terminer",
-    "viewDetails": "Voir les détails"
+    "viewDetails": "Voir les détails",
+    "update": "Mettre à jour",
+    "reinstall": "Réinstaller",
+    "uninstall": "Désinstaller"
+  },
+  "uninstall": {
+    "title": "Désinstaller le plugin",
+    "description": "Êtes-vous sûr de vouloir désinstaller « {{name}} » ? Cela supprimera complètement le plugin de votre système. Cette action est irréversible."
   },
   "labels": {
     "reference": "Référence du plugin"

@@ -1,7 +1,17 @@
-import React, { useState } from "react";
-import { Button, Input, ScrollArea, Badge } from "@/components/ui";
-import { ChevronRight, ChevronDown, Variable, Braces, Clock, Zap, Database, Copy, Check } from "lucide-react";
-import { cn } from "@/lib/utils";
+import {
+  Braces,
+  Check,
+  ChevronDown,
+  ChevronRight,
+  Clock,
+  Copy,
+  Database,
+  Variable,
+  Zap,
+} from 'lucide-react';
+import React, { useState } from 'react';
+import { Badge, Input, ScrollArea } from '@/components/ui';
+import { cn } from '@/lib/utils';
 
 interface VariableInfo {
   name: string;
@@ -28,35 +38,47 @@ function buildTree(variables: VariableInfo[]): TreeNode[] {
 
   // Add trigger group
   const triggerNode: TreeNode = {
-    name: "trigger",
-    fullPath: "trigger",
-    type: "object",
-    source: "Event data",
+    name: 'trigger',
+    fullPath: 'trigger',
+    type: 'object',
+    source: 'Event data',
     children: [
-      { name: "type", fullPath: "trigger.type", type: "string", source: "trigger", children: [] },
-      { name: "payload", fullPath: "trigger.payload", type: "object", source: "trigger", children: [] },
-      { name: "source", fullPath: "trigger.source", type: "string", source: "trigger", children: [] },
-      { name: "ts", fullPath: "trigger.ts", type: "number", source: "trigger", children: [] },
+      { name: 'type', fullPath: 'trigger.type', type: 'string', source: 'trigger', children: [] },
+      {
+        name: 'payload',
+        fullPath: 'trigger.payload',
+        type: 'object',
+        source: 'trigger',
+        children: [],
+      },
+      {
+        name: 'source',
+        fullPath: 'trigger.source',
+        type: 'string',
+        source: 'trigger',
+        children: [],
+      },
+      { name: 'ts', fullPath: 'trigger.ts', type: 'number', source: 'trigger', children: [] },
     ],
   };
   root.push(triggerNode);
 
   // Add prev
   root.push({
-    name: "prev",
-    fullPath: "prev",
-    type: "any",
-    source: "Previous block output",
+    name: 'prev',
+    fullPath: 'prev',
+    type: 'any',
+    source: 'Previous block output',
     children: [],
   });
 
   // Add vars group
   const varsChildren: TreeNode[] = [];
   variables
-    .filter((v) => v.name.startsWith("vars."))
+    .filter((v) => v.name.startsWith('vars.'))
     .forEach((v) => {
       varsChildren.push({
-        name: v.name.replace("vars.", ""),
+        name: v.name.replace('vars.', ''),
         fullPath: v.name,
         type: v.type,
         source: v.source,
@@ -66,10 +88,10 @@ function buildTree(variables: VariableInfo[]): TreeNode[] {
 
   if (varsChildren.length > 0) {
     root.push({
-      name: "vars",
-      fullPath: "vars",
-      type: "object",
-      source: "Workflow variables",
+      name: 'vars',
+      fullPath: 'vars',
+      type: 'object',
+      source: 'Workflow variables',
       children: varsChildren,
     });
   }
@@ -102,9 +124,9 @@ function TreeNodeItem({
   };
 
   const getIcon = () => {
-    if (node.name === "trigger") return <Zap className="size-3.5 text-green-500" />;
-    if (node.name === "prev") return <Clock className="size-3.5 text-blue-500" />;
-    if (node.name === "vars") return <Database className="size-3.5 text-purple-500" />;
+    if (node.name === 'trigger') return <Zap className="size-3.5 text-green-500" />;
+    if (node.name === 'prev') return <Clock className="size-3.5 text-blue-500" />;
+    if (node.name === 'vars') return <Database className="size-3.5 text-purple-500" />;
     return <Variable className="size-3.5 text-primary" />;
   };
 
@@ -112,13 +134,13 @@ function TreeNodeItem({
     <div>
       <div
         className={cn(
-          "flex items-center gap-1 py-1 px-2 rounded hover:bg-accent cursor-pointer group",
-          "transition-colors",
+          'group flex cursor-pointer items-center gap-1 rounded px-2 py-1 hover:bg-accent',
+          'transition-colors'
         )}
         style={{ paddingLeft: `${depth * 16 + 8}px` }}
       >
         {hasChildren ? (
-          <button onClick={() => setExpanded(!expanded)} className="p-0.5 hover:bg-muted rounded">
+          <button onClick={() => setExpanded(!expanded)} className="rounded p-0.5 hover:bg-muted">
             {expanded ? <ChevronDown className="size-3" /> : <ChevronRight className="size-3" />}
           </button>
         ) : (
@@ -127,17 +149,17 @@ function TreeNodeItem({
 
         {getIcon()}
 
-        <span className="flex-1 text-sm font-mono truncate" onClick={handleInsert}>
+        <span className="flex-1 truncate font-mono text-sm" onClick={handleInsert}>
           {node.name}
         </span>
 
-        <Badge variant="outline" className="text-[10px] px-1 py-0">
+        <Badge variant="outline" className="px-1 py-0 text-[10px]">
           {node.type}
         </Badge>
 
         <button
           onClick={handleCopy}
-          className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-muted rounded transition-opacity"
+          className="rounded p-0.5 opacity-0 transition-opacity hover:bg-muted group-hover:opacity-100"
           title="Copy expression"
         >
           {copied ? <Check className="size-3 text-green-500" /> : <Copy className="size-3" />}
@@ -156,22 +178,22 @@ function TreeNodeItem({
 }
 
 export function VariablePicker({ variables, onInsert, className }: VariablePickerProps) {
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState('');
   const tree = buildTree(variables);
 
   const filteredTree = search
     ? tree.filter((node) => {
         const matchesNode = node.name.toLowerCase().includes(search.toLowerCase());
         const matchesChildren = node.children.some((c) =>
-          c.name.toLowerCase().includes(search.toLowerCase()),
+          c.name.toLowerCase().includes(search.toLowerCase())
         );
         return matchesNode || matchesChildren;
       })
     : tree;
 
   return (
-    <div className={cn("flex flex-col", className)}>
-      <div className="p-2 border-b">
+    <div className={cn('flex flex-col', className)}>
+      <div className="border-b p-2">
         <Input
           placeholder="Search variables..."
           value={search}
@@ -187,13 +209,13 @@ export function VariablePicker({ variables, onInsert, className }: VariablePicke
           ))}
 
           {filteredTree.length === 0 && (
-            <div className="text-center text-sm text-muted-foreground py-4">No variables found</div>
+            <div className="py-4 text-center text-muted-foreground text-sm">No variables found</div>
           )}
         </div>
       </ScrollArea>
 
-      <div className="p-2 border-t text-xs text-muted-foreground">
-        Click to insert • <Braces className="size-3 inline" /> for expressions
+      <div className="border-t p-2 text-muted-foreground text-xs">
+        Click to insert • <Braces className="inline size-3" /> for expressions
       </div>
     </div>
   );

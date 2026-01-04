@@ -1,7 +1,7 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
-import { Textarea, Input, ScrollArea } from "@/components/ui";
-import { cn } from "@/lib/utils";
-import { Variable, Braces } from "lucide-react";
+import { Braces, Variable } from 'lucide-react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Input, ScrollArea, Textarea } from '@/components/ui';
+import { cn } from '@/lib/utils';
 
 interface VariableInfo {
   name: string;
@@ -22,7 +22,7 @@ interface AutocompleteItem {
   label: string;
   insert: string;
   description: string;
-  type: "variable" | "property";
+  type: 'variable' | 'property';
 }
 
 export function ExpressionInput({
@@ -52,19 +52,19 @@ export function ExpressionInput({
             label: v.name,
             insert: `{{ ${v.name} }}`,
             description: `${v.type} from ${v.source}`,
-            type: "variable",
+            type: 'variable',
           });
         }
       });
 
       // Add common properties/paths
       const commonProps = [
-        { name: "trigger.type", desc: "Event type" },
-        { name: "trigger.payload", desc: "Event payload object" },
-        { name: "trigger.source", desc: "Event source" },
-        { name: "trigger.ts", desc: "Event timestamp" },
-        { name: "prev", desc: "Previous block output" },
-        { name: "vars", desc: "Workflow variables" },
+        { name: 'trigger.type', desc: 'Event type' },
+        { name: 'trigger.payload', desc: 'Event payload object' },
+        { name: 'trigger.source', desc: 'Event source' },
+        { name: 'trigger.ts', desc: 'Event timestamp' },
+        { name: 'prev', desc: 'Previous block output' },
+        { name: 'vars', desc: 'Workflow variables' },
       ];
 
       commonProps.forEach((p) => {
@@ -74,7 +74,7 @@ export function ExpressionInput({
               label: p.name,
               insert: `{{ ${p.name} }}`,
               description: p.desc,
-              type: "property",
+              type: 'property',
             });
           }
         }
@@ -82,7 +82,7 @@ export function ExpressionInput({
 
       return items.slice(0, 10);
     },
-    [variables],
+    [variables]
   );
 
   // Check for {{ trigger and show autocomplete
@@ -93,7 +93,7 @@ export function ExpressionInput({
       const match = beforeCursor.match(/\{\{\s*(\w*)$/);
 
       if (match) {
-        const search = match[1] || "";
+        const search = match[1] || '';
         const items = buildAutocompleteItems(search);
         setAutocompleteItems(items);
         setShowAutocomplete(items.length > 0);
@@ -102,7 +102,7 @@ export function ExpressionInput({
         setShowAutocomplete(false);
       }
     },
-    [buildAutocompleteItems],
+    [buildAutocompleteItems]
   );
 
   // Handle input change
@@ -119,22 +119,22 @@ export function ExpressionInput({
     if (!showAutocomplete) return;
 
     switch (e.key) {
-      case "ArrowDown":
+      case 'ArrowDown':
         e.preventDefault();
         setSelectedIndex((i) => Math.min(i + 1, autocompleteItems.length - 1));
         break;
-      case "ArrowUp":
+      case 'ArrowUp':
         e.preventDefault();
         setSelectedIndex((i) => Math.max(i - 1, 0));
         break;
-      case "Enter":
-      case "Tab":
+      case 'Enter':
+      case 'Tab':
         if (autocompleteItems[selectedIndex]) {
           e.preventDefault();
           insertAutocomplete(autocompleteItems[selectedIndex]);
         }
         break;
-      case "Escape":
+      case 'Escape':
         setShowAutocomplete(false);
         break;
     }
@@ -176,22 +176,26 @@ export function ExpressionInput({
       }
     };
 
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const commonProps = {
     value,
     onChange: handleChange,
     onKeyDown: handleKeyDown,
-    placeholder: placeholder || "Type {{ for variables",
-    className: cn("font-mono text-sm", className),
+    placeholder: placeholder || 'Type {{ for variables',
+    className: cn('font-mono text-sm', className),
   };
 
   return (
     <div className="relative">
       {multiline ? (
-        <Textarea ref={inputRef as React.RefObject<HTMLTextAreaElement>} {...commonProps} rows={4} />
+        <Textarea
+          ref={inputRef as React.RefObject<HTMLTextAreaElement>}
+          {...commonProps}
+          rows={4}
+        />
       ) : (
         <Input ref={inputRef as React.RefObject<HTMLInputElement>} {...commonProps} />
       )}
@@ -199,9 +203,9 @@ export function ExpressionInput({
       {/* Variable hint button */}
       <button
         type="button"
-        className="absolute right-2 top-2 text-muted-foreground hover:text-foreground transition-colors"
+        className="absolute top-2 right-2 text-muted-foreground transition-colors hover:text-foreground"
         onClick={() => {
-          const items = buildAutocompleteItems("");
+          const items = buildAutocompleteItems('');
           setAutocompleteItems(items);
           setShowAutocomplete(true);
           setSelectedIndex(0);
@@ -216,7 +220,7 @@ export function ExpressionInput({
       {showAutocomplete && autocompleteItems.length > 0 && (
         <div
           ref={autocompleteRef}
-          className="absolute z-50 top-full left-0 right-0 mt-1 bg-popover border rounded-md shadow-lg overflow-hidden"
+          className="absolute top-full right-0 left-0 z-50 mt-1 overflow-hidden rounded-md border bg-popover shadow-lg"
         >
           <ScrollArea className="max-h-48">
             {autocompleteItems.map((item, index) => (
@@ -224,16 +228,16 @@ export function ExpressionInput({
                 key={item.label}
                 type="button"
                 className={cn(
-                  "w-full px-3 py-2 text-left text-sm flex items-center gap-2 hover:bg-accent",
-                  index === selectedIndex && "bg-accent",
+                  'flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-accent',
+                  index === selectedIndex && 'bg-accent'
                 )}
                 onClick={() => insertAutocomplete(item)}
                 onMouseEnter={() => setSelectedIndex(index)}
               >
-                <Variable className="size-4 text-primary shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <div className="font-mono text-xs truncate">{item.label}</div>
-                  <div className="text-xs text-muted-foreground truncate">{item.description}</div>
+                <Variable className="size-4 shrink-0 text-primary" />
+                <div className="min-w-0 flex-1">
+                  <div className="truncate font-mono text-xs">{item.label}</div>
+                  <div className="truncate text-muted-foreground text-xs">{item.description}</div>
                 </div>
               </button>
             ))}

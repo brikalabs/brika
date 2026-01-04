@@ -1,10 +1,11 @@
-import { z } from "zod";
-import { route, group } from "@elia/router";
-import { SchedulerService } from "../../scheduler/scheduler-service";
+import { group, route } from '@elia/router';
+import { Json } from '@elia/shared';
+import { z } from 'zod';
+import { SchedulerService } from '@/runtime/scheduler/scheduler-service';
 
 const scheduleTriggerSchema = z.union([
-  z.object({ type: z.literal("cron"), expr: z.string() }),
-  z.object({ type: z.literal("interval"), ms: z.number() }),
+  z.object({ type: z.literal('cron'), expr: z.string() }),
+  z.object({ type: z.literal('interval'), ms: z.number() }),
 ]);
 
 const createScheduleSchema = z.object({
@@ -17,30 +18,30 @@ const createScheduleSchema = z.object({
   enabled: z.boolean().default(true),
 });
 
-export const schedulesRoutes = group("/api/schedules", [
-  route.get("/", async ({ inject }) => {
+export const schedulesRoutes = group('/api/schedules', [
+  route.get('/', ({ inject }) => {
     return inject(SchedulerService).list();
   }),
 
-  route.post("/", { body: createScheduleSchema }, async ({ body, inject }) => {
+  route.post('/', { body: createScheduleSchema }, ({ body, inject }) => {
     return inject(SchedulerService).create({
       ...body,
       action: {
         tool: body.action.tool,
-        args: body.action.args as Record<string, import("@elia/shared").Json>,
+        args: body.action.args as Record<string, Json>,
       },
     });
   }),
 
-  route.post("/enable", { body: z.object({ id: z.string() }) }, async ({ body, inject }) => {
+  route.post('/enable', { body: z.object({ id: z.string() }) }, async ({ body, inject }) => {
     return { ok: await inject(SchedulerService).enable(body.id) };
   }),
 
-  route.post("/disable", { body: z.object({ id: z.string() }) }, async ({ body, inject }) => {
+  route.post('/disable', { body: z.object({ id: z.string() }) }, async ({ body, inject }) => {
     return { ok: await inject(SchedulerService).disable(body.id) };
   }),
 
-  route.delete("/:id", { params: z.object({ id: z.string() }) }, async ({ params, inject }) => {
+  route.delete('/:id', { params: z.object({ id: z.string() }) }, async ({ params, inject }) => {
     return { ok: await inject(SchedulerService).delete(params.id) };
   }),
 ]);

@@ -34,8 +34,8 @@ export interface RestartState {
 }
 
 export type RestartDecision =
-  | { action: "restart"; delayMs: number }
-  | { action: "crash-loop"; reason: string };
+  | { action: 'restart'; delayMs: number }
+  | { action: 'crash-loop'; reason: string };
 
 const DEFAULT_CONFIG: RestartPolicyConfig = {
   baseDelayMs: 1000,
@@ -68,23 +68,28 @@ export class RestartPolicy {
 
     // Add this crash and prune old ones outside the window
     state.crashTimestamps.push(now);
-    state.crashTimestamps = state.crashTimestamps.filter((ts) => now - ts < this.config.crashWindowMs);
+    state.crashTimestamps = state.crashTimestamps.filter(
+      (ts) => now - ts < this.config.crashWindowMs
+    );
 
     // Check for crash loop
     if (state.crashTimestamps.length >= this.config.maxCrashes) {
       return {
-        action: "crash-loop",
+        action: 'crash-loop',
         reason: `${state.crashTimestamps.length} crashes in ${Math.round(this.config.crashWindowMs / 1000)}s`,
       };
     }
 
     // Calculate backoff delay
-    const delayMs = Math.min(this.config.baseDelayMs * 2 ** state.backoffLevel, this.config.maxDelayMs);
+    const delayMs = Math.min(
+      this.config.baseDelayMs * 2 ** state.backoffLevel,
+      this.config.maxDelayMs
+    );
 
     // Increase backoff for next time
     state.backoffLevel++;
 
-    return { action: "restart", delayMs };
+    return { action: 'restart', delayMs };
   }
 
   /**

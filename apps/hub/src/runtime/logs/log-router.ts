@@ -1,5 +1,5 @@
-import { singleton } from "@elia/shared";
 import type { Json, LogEvent, LogLevel } from "@elia/shared";
+import { singleton } from "@elia/shared";
 import type { LogStore } from "./log-store";
 
 export interface LogRouterOptions {
@@ -107,12 +107,15 @@ export class LogRouter {
   debug(message: string, meta?: Record<string, Json>): void {
     this.emit({ ts: Date.now(), level: "debug", source: "hub", message, meta });
   }
+
   info(message: string, meta?: Record<string, Json>): void {
     this.emit({ ts: Date.now(), level: "info", source: "hub", message, meta });
   }
+
   warn(message: string, meta?: Record<string, Json>): void {
     this.emit({ ts: Date.now(), level: "warn", source: "hub", message, meta });
   }
+
   error(message: string, meta?: Record<string, Json>): void {
     this.emit({ ts: Date.now(), level: "error", source: "hub", message, meta });
   }

@@ -50,29 +50,29 @@ const fn = spy((a, b) => a + b);
 
 #### Methods
 
-| Method | Description |
-|--------|-------------|
-| `mockReturnValue(value)` | Set return value for all calls |
-| `mockReturnValueOnce(value)` | Set return value once (queued) |
-| `mockImplementation(fn)` | Set implementation function |
-| `mockImplementationOnce(fn)` | Set implementation once |
-| `mockResolvedValue(value)` | For async: resolve with value |
-| `mockResolvedValueOnce(value)` | For async: resolve once |
-| `mockRejectedValue(error)` | For async: reject with error |
-| `mockRejectedValueOnce(error)` | For async: reject once |
-| `reset()` | Clear all call history |
-| `calledWith(...args)` | Check if called with args |
-| `nthCall(n)` | Get call at index n |
+| Method                         | Description                    |
+|--------------------------------|--------------------------------|
+| `mockReturnValue(value)`       | Set return value for all calls |
+| `mockReturnValueOnce(value)`   | Set return value once (queued) |
+| `mockImplementation(fn)`       | Set implementation function    |
+| `mockImplementationOnce(fn)`   | Set implementation once        |
+| `mockResolvedValue(value)`     | For async: resolve with value  |
+| `mockResolvedValueOnce(value)` | For async: resolve once        |
+| `mockRejectedValue(error)`     | For async: reject with error   |
+| `mockRejectedValueOnce(error)` | For async: reject once         |
+| `reset()`                      | Clear all call history         |
+| `calledWith(...args)`          | Check if called with args      |
+| `nthCall(n)`                   | Get call at index n            |
 
 #### Properties
 
-| Property | Description |
-|----------|-------------|
-| `calls` | Array of all call arguments |
-| `callCount` | Number of times called |
-| `called` | Whether called at least once |
-| `lastCall` | Last call arguments |
-| `firstCall` | First call arguments |
+| Property    | Description                  |
+|-------------|------------------------------|
+| `calls`     | Array of all call arguments  |
+| `callCount` | Number of times called       |
+| `called`    | Whether called at least once |
+| `lastCall`  | Last call arguments          |
+| `firstCall` | First call arguments         |
 
 #### Examples
 
@@ -164,17 +164,17 @@ TestBed.reset();
 
 #### Methods
 
-| Method | Description |
-|--------|-------------|
-| `create()` | Start building a test module |
-| `mock(token, value)` | Provide a partial mock |
-| `provide(token, value)` | Provide a complete value |
-| `useClass(token, impl)` | Use different implementation |
-| `useFactory(token, factory)` | Use factory function |
-| `compile()` | Finalize and register |
-| `get(token)` | Get service from container |
-| `inject(token)` | Alias for get() |
-| `reset()` | Reset container |
+| Method                       | Description                  |
+|------------------------------|------------------------------|
+| `create()`                   | Start building a test module |
+| `mock(token, value)`         | Provide a partial mock       |
+| `provide(token, value)`      | Provide a complete value     |
+| `useClass(token, impl)`      | Use different implementation |
+| `useFactory(token, factory)` | Use factory function         |
+| `compile()`                  | Finalize and register        |
+| `get(token)`                 | Get service from container   |
+| `inject(token)`              | Alias for get()              |
+| `reset()`                    | Reset container              |
 
 ## Testing Patterns
 
@@ -250,5 +250,6 @@ it("should handle retry logic", async () => {
   expect(fetch.callCount).toBe(3);
 });
 ```
+
 
 

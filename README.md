@@ -27,6 +27,7 @@ bun run --cwd apps/ui dev     # UI on :5173
 ```
 
 Open:
+
 - **Hub API**: http://localhost:3001/api/health
 - **UI**: http://localhost:5173
 

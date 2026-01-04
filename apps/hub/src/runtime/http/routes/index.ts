@@ -1,17 +1,16 @@
-import { combineRoutes } from "@elia/router";
-
-import { healthRoutes } from "./health";
-import { toolsRoutes } from "./tools";
-import { blocksRoutes } from "./blocks";
-import { pluginsRoutes } from "./plugins";
-import { storeRoutes } from "./store";
-import { eventsRoutes } from "./events";
-import { schedulesRoutes } from "./schedules";
-import { rulesRoutes } from "./rules";
-import { workflowsRoutes } from "./workflows";
-import { logsRoutes } from "./logs";
-import { streamsRoutes } from "./streams";
-import { i18nRoutes } from "./i18n";
+import { combineRoutes } from '@elia/router';
+import { blocksRoutes } from './blocks';
+import { eventsRoutes } from './events';
+import { healthRoutes } from './health';
+import { i18nRoutes } from './i18n';
+import { logsRoutes } from './logs';
+import { pluginsRoutes } from './plugins';
+import { registryRoutes } from './registry';
+import { rulesRoutes } from './rules';
+import { schedulesRoutes } from './schedules';
+import { streamsRoutes } from './streams';
+import { toolsRoutes } from './tools';
+import { workflowsRoutes } from './workflows';
 
 /**
  * All API routes combined.
@@ -32,7 +31,6 @@ export const allRoutes = combineRoutes(
   toolsRoutes,
   blocksRoutes,
   pluginsRoutes,
-  storeRoutes,
   eventsRoutes,
   schedulesRoutes,
   rulesRoutes,
@@ -40,4 +38,5 @@ export const allRoutes = combineRoutes(
   logsRoutes,
   streamsRoutes,
   i18nRoutes,
+  registryRoutes
 );

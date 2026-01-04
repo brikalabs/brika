@@ -37,14 +37,14 @@ elia/
 
 ### Naming Conventions
 
-| Type | Convention | Example |
-|------|------------|---------|
-| Classes | PascalCase | `PluginManager` |
-| Interfaces | PascalCase | `BlockDefinition` |
-| Functions | camelCase | `registerTool` |
-| Constants | SCREAMING_SNAKE | `DEFAULT_TIMEOUT` |
-| Private members | # prefix | `#privateField` |
-| Files | kebab-case | `plugin-manager.ts` |
+| Type            | Convention      | Example             |
+|-----------------|-----------------|---------------------|
+| Classes         | PascalCase      | `PluginManager`     |
+| Interfaces      | PascalCase      | `BlockDefinition`   |
+| Functions       | camelCase       | `registerTool`      |
+| Constants       | SCREAMING_SNAKE | `DEFAULT_TIMEOUT`   |
+| Private members | # prefix        | `#privateField`     |
+| Files           | kebab-case      | `plugin-manager.ts` |
 
 ### Code Organization
 
@@ -180,5 +180,6 @@ test: add event bus tests
 - Each plugin runs in separate Bun process
 - Plugins don't share memory
 - Hub supervises all plugins
+
 
 

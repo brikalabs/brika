@@ -1,5 +1,6 @@
 {
   "name": "@elia/hub",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "repository": {
@@ -8,15 +9,17 @@
     "directory": "apps/hub"
   },
   "scripts": {
-    "dev": "bun --inspect run src/main.ts",
-    "lint": "bun x biome check ."
+    "dev": "bun run src/main.ts",
+    "lint": "bun x biome check .",
+    "lint:fix": "bun x biome check . --write"
   },
   "dependencies": {
+    "@elia/banner": "workspace:*",
+    "@elia/events": "workspace:*",
     "@elia/ipc": "workspace:*",
     "@elia/router": "workspace:*",
     "@elia/sdk": "workspace:*",
     "@elia/shared": "workspace:*",
-    "yaml": "^2.8.2",
     "zod": "^4.3.4"
   },
   "devDependencies": {

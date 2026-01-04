@@ -18,10 +18,16 @@
     "delay",
     "action"
   ],
+  "engines": {
+    "elia": "^0.1.0"
+  },
   "type": "module",
   "main": "src/main.ts",
   "exports": {
     ".": "./src/main.ts"
+  },
+  "scripts": {
+    "link": "bun link"
   },
   "blocks": [
     {

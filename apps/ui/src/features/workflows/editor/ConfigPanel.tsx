@@ -5,41 +5,36 @@
  * Generates appropriate UI controls based on field types.
  */
 
-import React, { useState } from "react";
-import type { Node } from "@xyflow/react";
+import type { Node } from '@xyflow/react';
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
+  Check,
+  ChevronDown,
+  ChevronRight,
+  Copy,
+  HelpCircle,
+  Plus,
+  Sparkles,
+  Trash2,
+} from 'lucide-react';
+import React, { useState } from 'react';
+import {
+  Badge,
+  Button,
   Input,
   Label,
-  Textarea,
+  ScrollArea,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-  ScrollArea,
   Separator,
-  Badge,
-  Button,
   Switch,
-} from "@/components/ui";
-import {
-  Info,
-  HelpCircle,
-  Plus,
-  Trash2,
-  ChevronDown,
-  ChevronRight,
-  Sparkles,
-  Copy,
-  Check,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
-import type { BlockNodeData } from "./BlockNode";
-import type { TriggerNodeData } from "./TriggerNode";
+  Textarea,
+} from '@/components/ui';
+import { cn } from '@/lib/utils';
+import type { BlockNodeData } from './BlockNode';
+import type { TriggerNodeData } from './TriggerNode';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -52,14 +47,14 @@ interface Variable {
 }
 
 interface SchemaProperty {
-  type: "string" | "number" | "boolean" | "array" | "object";
+  type: 'string' | 'number' | 'boolean' | 'array' | 'object';
   description?: string;
   default?: unknown;
   enum?: unknown[];
 }
 
 interface BlockSchema {
-  type: "object";
+  type: 'object';
   properties?: Record<string, SchemaProperty>;
   required?: string[];
 }
@@ -85,7 +80,13 @@ interface ExpressionFieldProps {
   multiline?: boolean;
 }
 
-function ExpressionField({ value, onChange, variables, placeholder, multiline }: ExpressionFieldProps) {
+function ExpressionField({
+  value,
+  onChange,
+  variables,
+  placeholder,
+  multiline,
+}: ExpressionFieldProps) {
   const [showVars, setShowVars] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
 
@@ -110,13 +111,13 @@ function ExpressionField({ value, onChange, variables, placeholder, multiline }:
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className={cn("pr-10 font-mono text-sm", multiline && "min-h-[80px]")}
+          className={cn('pr-10 font-mono text-sm', multiline && 'min-h-[80px]')}
         />
         <Button
           type="button"
           variant="ghost"
           size="sm"
-          className="absolute right-1 top-1 h-7 w-7 p-0"
+          className="absolute top-1 right-1 h-7 w-7 p-0"
           onClick={() => setShowVars(!showVars)}
           title="Insert variable"
         >
@@ -126,27 +127,27 @@ function ExpressionField({ value, onChange, variables, placeholder, multiline }:
 
       {/* Variable suggestions dropdown */}
       {showVars && variables.length > 0 && (
-        <div className="border rounded-lg bg-popover shadow-lg overflow-hidden">
-          <div className="p-2 border-b bg-muted/50 text-xs font-medium text-muted-foreground">
+        <div className="overflow-hidden rounded-lg border bg-popover shadow-lg">
+          <div className="border-b bg-muted/50 p-2 font-medium text-muted-foreground text-xs">
             Click to insert variable
           </div>
           <div className="max-h-[150px] overflow-y-auto">
             {variables.map((v) => (
               <div
                 key={v.name}
-                className="flex items-center justify-between px-3 py-2 hover:bg-accent cursor-pointer group"
+                className="group flex cursor-pointer items-center justify-between px-3 py-2 hover:bg-accent"
               >
                 <button
                   type="button"
-                  className="flex-1 text-left flex items-center gap-2"
+                  className="flex flex-1 items-center gap-2 text-left"
                   onClick={() => insertVariable(v.name)}
                 >
-                  <code className="text-xs text-primary font-mono">{`{{ ${v.name} }}`}</code>
-                  <span className="text-xs text-muted-foreground">{v.type}</span>
+                  <code className="font-mono text-primary text-xs">{`{{ ${v.name} }}`}</code>
+                  <span className="text-muted-foreground text-xs">{v.type}</span>
                 </button>
                 <button
                   type="button"
-                  className="opacity-0 group-hover:opacity-100 p-1 hover:bg-muted rounded"
+                  className="rounded p-1 opacity-0 hover:bg-muted group-hover:opacity-100"
                   onClick={(e) => {
                     e.stopPropagation();
                     copyVariable(v.name);
@@ -184,14 +185,14 @@ function KeyValueEditor({
   value,
   onChange,
   variables,
-  keyPlaceholder = "key",
-  valuePlaceholder = "value",
+  keyPlaceholder = 'key',
+  valuePlaceholder = 'value',
 }: KeyValueEditorProps) {
   const entries = Object.entries(value || {});
 
   const addEntry = () => {
     const newKey = `key${entries.length + 1}`;
-    onChange({ ...value, [newKey]: "" });
+    onChange({ ...value, [newKey]: '' });
   };
 
   const removeEntry = (key: string) => {
@@ -216,16 +217,16 @@ function KeyValueEditor({
   return (
     <div className="space-y-2">
       {entries.map(([k, v], i) => (
-        <div key={i} className="flex gap-2 items-start">
+        <div key={i} className="flex items-start gap-2">
           <Input
             value={k}
             onChange={(e) => updateKey(k, e.target.value)}
             placeholder={keyPlaceholder}
-            className="flex-1 text-xs font-mono"
+            className="flex-1 font-mono text-xs"
           />
           <div className="flex-[2]">
             <ExpressionField
-              value={String(v ?? "")}
+              value={String(v ?? '')}
               onChange={(newVal) => updateValue(k, newVal)}
               variables={variables}
               placeholder={valuePlaceholder}
@@ -244,7 +245,7 @@ function KeyValueEditor({
       ))}
 
       <Button type="button" variant="outline" size="sm" className="w-full" onClick={addEntry}>
-        <Plus className="size-4 mr-1" />
+        <Plus className="mr-1 size-4" />
         Add {keyPlaceholder}
       </Button>
     </div>
@@ -272,21 +273,24 @@ function SchemaField({ name, schema, value, onChange, variables, required }: Fie
 
   // Pretty label from camelCase
   const label = name
-    .replace(/([A-Z])/g, " $1")
+    .replace(/([A-Z])/g, ' $1')
     .replace(/^./, (s) => s.toUpperCase())
     .trim();
 
   // Determine field type and render appropriate control
   const renderField = () => {
     // Boolean - Switch
-    if (type === "boolean") {
+    if (type === 'boolean') {
       return (
-        <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+        <div className="flex items-center justify-between rounded-lg bg-muted/30 p-3">
           <div>
-            <span className="text-sm font-medium">{label}</span>
-            {description && <p className="text-xs text-muted-foreground mt-0.5">{description}</p>}
+            <span className="font-medium text-sm">{label}</span>
+            {description && <p className="mt-0.5 text-muted-foreground text-xs">{description}</p>}
           </div>
-          <Switch checked={Boolean(value ?? defaultValue)} onCheckedChange={(checked) => onChange(checked)} />
+          <Switch
+            checked={Boolean(value ?? defaultValue)}
+            onCheckedChange={(checked) => onChange(checked)}
+          />
         </div>
       );
     }
@@ -294,7 +298,7 @@ function SchemaField({ name, schema, value, onChange, variables, required }: Fie
     // Enum - Select dropdown
     if (enumValues && enumValues.length > 0) {
       return (
-        <Select value={String(value ?? defaultValue ?? "")} onValueChange={(v) => onChange(v)}>
+        <Select value={String(value ?? defaultValue ?? '')} onValueChange={(v) => onChange(v)}>
           <SelectTrigger className="bg-background">
             <SelectValue placeholder={`Select ${label.toLowerCase()}`} />
           </SelectTrigger>
@@ -310,8 +314,9 @@ function SchemaField({ name, schema, value, onChange, variables, required }: Fie
     }
 
     // Object - Key-Value Editor
-    if (type === "object") {
-      const objValue = typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {};
+    if (type === 'object') {
+      const objValue =
+        typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {};
       return (
         <KeyValueEditor
           value={objValue}
@@ -324,11 +329,11 @@ function SchemaField({ name, schema, value, onChange, variables, required }: Fie
     }
 
     // Number
-    if (type === "number") {
+    if (type === 'number') {
       return (
         <Input
           type="number"
-          value={String(value ?? defaultValue ?? "")}
+          value={String(value ?? defaultValue ?? '')}
           onChange={(e) => onChange(e.target.value ? Number(e.target.value) : undefined)}
           placeholder={description || `Enter ${label.toLowerCase()}`}
           className="bg-background"
@@ -339,15 +344,15 @@ function SchemaField({ name, schema, value, onChange, variables, required }: Fie
     // String - Expression input with variable support
     // Determine if multiline based on field name or description
     const isMultiline =
-      name === "message" ||
-      name === "if" ||
-      name === "value" ||
-      description?.toLowerCase().includes("expression") ||
-      description?.toLowerCase().includes("condition");
+      name === 'message' ||
+      name === 'if' ||
+      name === 'value' ||
+      description?.toLowerCase().includes('expression') ||
+      description?.toLowerCase().includes('condition');
 
     return (
       <ExpressionField
-        value={String(value ?? "")}
+        value={String(value ?? '')}
         onChange={(v) => onChange(v)}
         variables={variables}
         placeholder={description || `Enter ${label.toLowerCase()}`}
@@ -357,19 +362,23 @@ function SchemaField({ name, schema, value, onChange, variables, required }: Fie
   };
 
   // Boolean fields render their own container
-  if (type === "boolean") {
+  if (type === 'boolean') {
     return renderField();
   }
 
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-1.5">
-        <Label className="text-sm font-medium">{label}</Label>
+        <Label className="font-medium text-sm">{label}</Label>
         {required && <span className="text-red-500 text-xs">*</span>}
-        {description && <HelpCircle className="size-3.5 text-muted-foreground" title={description} />}
+        {description && (
+          <HelpCircle className="size-3.5 text-muted-foreground" title={description} />
+        )}
       </div>
       {renderField()}
-      {description && type !== "boolean" && <p className="text-xs text-muted-foreground">{description}</p>}
+      {description && type !== 'boolean' && (
+        <p className="text-muted-foreground text-xs">{description}</p>
+      )}
     </div>
   );
 }
@@ -385,27 +394,29 @@ function TriggerConfig({
   data: TriggerNodeData;
   onUpdate: (config: { event?: string; filter?: Record<string, unknown> }) => void;
 }) {
-  const [showFilter, setShowFilter] = useState(!!data.filter && Object.keys(data.filter).length > 0);
+  const [showFilter, setShowFilter] = useState(
+    !!data.filter && Object.keys(data.filter).length > 0
+  );
 
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label className="text-sm font-medium">Event Pattern</Label>
+        <Label className="font-medium text-sm">Event Pattern</Label>
         <Input
           value={data.event}
           onChange={(e) => onUpdate({ event: e.target.value })}
           placeholder="sensor.*, timer.completed"
-          className="font-mono bg-background"
+          className="bg-background font-mono"
         />
-        <p className="text-xs text-muted-foreground">
-          Use <code className="bg-muted px-1 rounded">*</code> as wildcard
+        <p className="text-muted-foreground text-xs">
+          Use <code className="rounded bg-muted px-1">*</code> as wildcard
         </p>
       </div>
 
       <div className="space-y-2">
         <button
           type="button"
-          className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground"
+          className="flex items-center gap-2 font-medium text-muted-foreground text-sm hover:text-foreground"
           onClick={() => setShowFilter(!showFilter)}
         >
           {showFilter ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
@@ -413,8 +424,8 @@ function TriggerConfig({
         </button>
 
         {showFilter && (
-          <div className="pl-4 border-l-2 border-muted space-y-2">
-            <p className="text-xs text-muted-foreground">
+          <div className="space-y-2 border-muted border-l-2 pl-4">
+            <p className="text-muted-foreground text-xs">
               Only trigger when payload matches these conditions
             </p>
             <KeyValueEditor
@@ -451,9 +462,9 @@ function BlockConfig({
   // If no schema properties, show empty state
   if (!schema?.properties || Object.keys(schema.properties).length === 0) {
     return (
-      <div className="text-center py-8 text-muted-foreground">
+      <div className="py-8 text-center text-muted-foreground">
         <p className="text-sm">No configuration needed</p>
-        <p className="text-xs mt-1">This block works with default settings</p>
+        <p className="mt-1 text-xs">This block works with default settings</p>
       </div>
     );
   }
@@ -491,27 +502,29 @@ export function ConfigPanel({
   blockSchema,
   className,
 }: ConfigPanelProps) {
-  const isTrigger = node.type === "trigger";
+  const isTrigger = node.type === 'trigger';
   const data = node.data as BlockNodeData | TriggerNodeData;
   const blockData = data as BlockNodeData;
 
   return (
-    <div className={cn("flex flex-col h-full bg-card/50 backdrop-blur-sm border-l", className)}>
+    <div className={cn('flex h-full flex-col border-l bg-card/50 backdrop-blur-sm', className)}>
       {/* Header */}
-      <div className="p-4 border-b bg-background/80">
+      <div className="border-b bg-background/80 p-4">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="font-semibold text-sm">{isTrigger ? "Trigger Configuration" : blockData.label}</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">
+            <h3 className="font-semibold text-sm">
+              {isTrigger ? 'Trigger Configuration' : blockData.label}
+            </h3>
+            <p className="mt-0.5 text-muted-foreground text-xs">
               {isTrigger
-                ? "When this event occurs"
-                : `Configure ${(blockData.type || "").split(":").pop()} block`}
+                ? 'When this event occurs'
+                : `Configure ${(blockData.type || '').split(':').pop()} block`}
             </p>
           </div>
           {!isTrigger && blockData.color && (
             <div
-              className="size-8 rounded-lg flex items-center justify-center"
-              style={{ backgroundColor: blockData.color + "20" }}
+              className="flex size-8 items-center justify-center rounded-lg"
+              style={{ backgroundColor: blockData.color + '20' }}
             >
               <div className="size-3 rounded-full" style={{ backgroundColor: blockData.color }} />
             </div>
@@ -539,7 +552,7 @@ export function ConfigPanel({
           <>
             <Separator />
             <div className="p-4">
-              <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground mb-3">
+              <div className="mb-3 flex items-center gap-2 font-medium text-muted-foreground text-xs">
                 <Sparkles className="size-4" />
                 Available Variables
               </div>
@@ -547,18 +560,18 @@ export function ConfigPanel({
                 {availableVariables.map((v) => (
                   <div
                     key={v.name}
-                    className="flex items-center justify-between text-xs p-2 rounded-md bg-muted/50 hover:bg-muted cursor-pointer transition-colors"
+                    className="flex cursor-pointer items-center justify-between rounded-md bg-muted/50 p-2 text-xs transition-colors hover:bg-muted"
                     onClick={() => navigator.clipboard.writeText(`{{ ${v.name} }}`)}
                     title="Click to copy"
                   >
-                    <code className="text-primary font-mono">{`{{ ${v.name} }}`}</code>
-                    <Badge variant="outline" className="text-[10px] h-5">
+                    <code className="font-mono text-primary">{`{{ ${v.name} }}`}</code>
+                    <Badge variant="outline" className="h-5 text-[10px]">
                       {v.type}
                     </Badge>
                   </div>
                 ))}
               </div>
-              <p className="text-[10px] text-muted-foreground mt-2 text-center">
+              <p className="mt-2 text-center text-[10px] text-muted-foreground">
                 Click to copy · Use in any text field
               </p>
             </div>
@@ -567,7 +580,7 @@ export function ConfigPanel({
       </ScrollArea>
 
       {/* Footer */}
-      <div className="p-3 border-t bg-background/80 text-xs text-muted-foreground text-center">
+      <div className="border-t bg-background/80 p-3 text-center text-muted-foreground text-xs">
         Node ID: <code className="font-mono">{node.id}</code>
       </div>
     </div>

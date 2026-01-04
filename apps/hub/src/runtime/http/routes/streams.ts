@@ -1,32 +1,38 @@
-import { z } from "zod";
-import { route, createSSEStream, createAsyncSSEStream, NotFound, BadRequest } from "@elia/router";
-import { LogRouter } from "../../logs/log-router";
-import { EventBus } from "../../events/event-bus";
-import { AutomationEngine } from "../../automations";
-import type { Json } from "@elia/shared";
-
-const CORS = { "Access-Control-Allow-Origin": "*" };
+import { BadRequest, createAsyncSSEStream, createSSEStream, NotFound, route } from '@elia/router';
+import type { EliaEvent, Json } from '@elia/shared';
+import { z } from 'zod';
+import { AutomationEngine } from '@/runtime/automations';
+import { EventSystem } from '@/runtime/events/event-system';
+import { LogRouter } from '@/runtime/logs/log-router';
 
 export const streamsRoutes = [
   // SSE: Stream logs
-  route.get("/api/stream/logs", async ({ inject }) => {
+  route.get('/api/stream/logs', ({ inject }) => {
     const logs = inject(LogRouter);
 
     return createSSEStream((send) => {
       const unsub = logs.subscribe((event) => {
-        send(event, "log");
+        send(event, 'log');
       });
       return () => unsub();
     });
   }),
 
   // SSE: Stream events
-  route.get("/api/stream/events", async ({ inject }) => {
-    const events = inject(EventBus);
+  route.get('/api/stream/events', ({ inject }) => {
+    const events = inject(EventSystem);
 
     return createSSEStream((send) => {
-      const unsub = events.subscribeAll((event) => {
-        send(event, "event");
+      const unsub = events.subscribeAll((action) => {
+        // Convert Action to EliaEvent format for SSE
+        const event = {
+          id: action.id,
+          type: action.type,
+          source: action.source ?? 'unknown',
+          payload: action.payload as Json,
+          ts: action.timestamp,
+        };
+        send(event, 'event');
       });
       return () => unsub();
     });
@@ -34,60 +40,60 @@ export const streamsRoutes = [
 
   // SSE: Test workflow execution with streaming events
   route.get(
-    "/api/workflows/test",
+    '/api/workflows/test',
     {
       query: z.object({
         id: z.string(),
         payload: z.string().optional(),
       }),
     },
-    async ({ query, inject }) => {
+    ({ query, inject }) => {
       const automations = inject(AutomationEngine);
 
       const workflow = automations.get(query.id);
-      if (!workflow) throw new NotFound("Workflow not found");
+      if (!workflow) throw new NotFound('Workflow not found');
 
       let payload: Json = {};
       if (query.payload) {
         try {
           payload = JSON.parse(query.payload);
         } catch {
-          throw new BadRequest("Invalid payload JSON");
+          throw new BadRequest('Invalid payload JSON');
         }
       }
 
       return createAsyncSSEStream(async (send) => {
         // Emit start
-        send({ type: "workflow.start", workflowId: query.id });
+        send({ type: 'workflow.start', workflowId: query.id });
 
         // Get blocks and emit events as they would run
         const blocks = workflow.blocks || [];
 
         for (let i = 0; i < blocks.length; i++) {
           const block = blocks[i];
-          send({ type: "block.start", blockId: block.id, index: i });
+          send({ type: 'block.start', blockId: block.id, index: i });
 
           // Simulate execution delay for visualization
           await new Promise((r) => setTimeout(r, 100));
         }
 
         // Actually run the workflow
-        const run = await automations.trigger(query.id, "test.trigger", "test", payload);
+        const run = await automations.trigger(query.id, 'test.trigger', 'test', payload);
 
-        if (run.status === "error") {
-          send({ type: "workflow.error", error: run.error });
+        if (run.status === 'error') {
+          send({ type: 'workflow.error', error: run.error });
         } else {
           // Emit completion for each block
           for (const block of blocks) {
-            send({ type: "block.complete", blockId: block.id, output: null });
+            send({ type: 'block.complete', blockId: block.id, output: null });
           }
           send({
-            type: "workflow.complete",
+            type: 'workflow.complete',
             runId: run.id,
             duration: (run.finishedAt || Date.now()) - run.startedAt,
           });
         }
       });
-    },
+    }
   ),
 ];

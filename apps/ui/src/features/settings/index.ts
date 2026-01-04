@@ -1,2 +1,2 @@
-export { SettingsPage } from "./SettingsPage";
-export { useAvailableLocales } from "./hooks";
+export { useAvailableLocales } from './hooks';
+export { SettingsPage } from './SettingsPage';

@@ -24,51 +24,49 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 export {
+  type BlockSpec,
+  type CompiledBlockRef,
+  type CompiledTool,
+  defineBlock,
   // Tool & Block definitions
   defineTool,
-  defineBlock,
-  // Logging
-  log,
+  type EventHandler,
+  type EventPayload,
   // Events
   emit,
+  // Logging
+  log,
   on,
   onEvent,
   // Lifecycle
   onStop,
+  type StopHandler,
   start,
   // Types
   type ToolSpec,
-  type CompiledTool,
-  type BlockSpec,
-  type CompiledBlockRef,
-  type EventPayload,
-  type EventHandler,
-  type StopHandler,
-} from "./api";
+} from './api';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
 
-export * from "./types";
-export * from "./blocks";
+export * from './blocks';
+export * from './types';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Utilities
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Re-export Zod for convenience
-export { z } from "zod";
-
-// Re-export block utilities
-export { expr, parseDuration } from "./blocks/define";
-
 // Re-export commonly used IPC types for convenience
-export { Json, JsonRecord } from "@elia/ipc";
+export { Json, JsonRecord } from '@elia/ipc';
 export type {
-  ToolResult,
-  ToolCallContext,
   BlockContext as IpcBlockContext,
   BlockResult as IpcBlockResult,
   PluginInfo,
-} from "@elia/ipc/contract";
+  ToolCallContext,
+  ToolResult,
+} from '@elia/ipc/contract';
+// Re-export Zod for convenience
+export { z } from 'zod';
+// Re-export block utilities
+export { expr, parseDuration } from './blocks/define';

@@ -14,10 +14,10 @@
  * - Plugins: "plugin:@elia/plugin-timer", "plugin:@elia/blocks-builtin", etc.
  */
 
-import i18n from "i18next";
-import { initReactI18next } from "react-i18next";
-import HttpBackend, { type HttpBackendOptions } from "i18next-http-backend";
-import LanguageDetector from "i18next-browser-languagedetector";
+import i18n from 'i18next';
+import LanguageDetector from 'i18next-browser-languagedetector';
+import HttpBackend, { type HttpBackendOptions } from 'i18next-http-backend';
+import { initReactI18next } from 'react-i18next';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Initialize i18next
@@ -28,28 +28,28 @@ i18n
   .use(LanguageDetector)
   .use(initReactI18next)
   .init({
-    ns: "common",
+    ns: 'common',
 
     // Disable client-side fallback loading
     // The server already merges fallback translations in I18nService
-    fallbackLng: "en",
-    load: "currentOnly",
+    fallbackLng: 'en',
+    load: 'currentOnly',
 
     // Language detection configuration
     detection: {
       // Order of detection: localStorage first, then browser language
-      order: ["localStorage", "navigator"],
+      order: ['localStorage', 'navigator'],
       // Cache the detected language in localStorage
-      caches: ["localStorage"],
+      caches: ['localStorage'],
       // localStorage key
-      lookupLocalStorage: "i18nextLng",
+      lookupLocalStorage: 'i18nextLng',
     },
 
     // HTTP Backend configuration
     backend: {
       // Load translations per namespace from Hub API
       // e.g., /api/i18n/en/common or /api/i18n/fr/plugin:@elia/plugin-timer
-      loadPath: "/api/i18n/{{lng}}/{{ns}}",
+      loadPath: '/api/i18n/{{lng}}/{{ns}}',
 
       // Don't load translations for CI-Mode - i18next handles it internally
       // by showing keys instead of values
@@ -58,7 +58,7 @@ i18n
         const match = url.match(/\/api\/i18n\/([^/]+)\//);
         const lng = match?.[1];
 
-        if (lng === "cimode") {
+        if (lng === 'cimode') {
           // Return empty translations for CI-Mode
           // i18next will display the keys as-is
           callback(null, { status: 200, data: {} });

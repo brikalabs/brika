@@ -1,6 +1,6 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { rulesApi, rulesKeys } from "./api";
-import type { Rule } from "@elia/shared";
+import type { Rule } from '@elia/shared';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { rulesApi, rulesKeys } from './api';
 
 export function useRules() {
   return useQuery({ queryKey: rulesKeys.all, queryFn: rulesApi.list });
@@ -12,7 +12,7 @@ export function useRuleMutations() {
 
   return {
     create: useMutation({
-      mutationFn: (data: Omit<Rule, "id">) => rulesApi.create(data),
+      mutationFn: (data: Omit<Rule, 'id'>) => rulesApi.create(data),
       onSuccess: invalidate,
     }),
     remove: useMutation({ mutationFn: rulesApi.delete, onSuccess: invalidate }),

@@ -4,15 +4,15 @@
  * Tool registration and invocation
  */
 
-import { z } from "zod";
-import { message, rpc } from "../define";
-import { Json, JsonRecord } from "../types";
+import { z } from 'zod';
+import { message, rpc } from '../define';
+import { Json, JsonRecord } from '../types';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Schemas
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const ToolCallSource = z.enum(["api", "ui", "voice", "rule", "automation"]);
+export const ToolCallSource = z.enum(['api', 'ui', 'voice', 'rule', 'automation']);
 export type ToolCallSource = z.infer<typeof ToolCallSource>;
 
 export const ToolCallContext = z.object({
@@ -29,7 +29,7 @@ export const ToolResult = z.object({
 export type ToolResult = z.infer<typeof ToolResult>;
 
 export const ToolInputSchemaProperty = z.object({
-  type: z.enum(["string", "number", "boolean", "array", "object"]),
+  type: z.enum(['string', 'number', 'boolean', 'array', 'object']),
   description: z.string().optional(),
   default: Json.optional(),
   enum: z.array(Json).optional(),
@@ -39,7 +39,7 @@ export const ToolInputSchemaProperty = z.object({
 export type ToolInputSchemaProperty = z.infer<typeof ToolInputSchemaProperty>;
 
 export const ToolInputSchema = z.object({
-  type: z.literal("object"),
+  type: z.literal('object'),
   properties: z.record(z.string(), ToolInputSchemaProperty).optional(),
   required: z.array(z.string()).optional(),
 });
@@ -60,19 +60,19 @@ export type ToolDefinition = z.infer<typeof ToolDefinition>;
 
 /** Plugin registers a tool with the hub */
 export const registerTool = message(
-  "registerTool",
+  'registerTool',
   z.object({
     tool: ToolDefinition,
-  }),
+  })
 );
 
 /** Hub calls a tool on a plugin */
 export const callTool = rpc(
-  "callTool",
+  'callTool',
   z.object({
     tool: z.string(),
     args: JsonRecord,
     ctx: ToolCallContext,
   }),
-  ToolResult,
+  ToolResult
 );

@@ -1,5 +1,5 @@
-import type { z, ZodObject, ZodRawShape } from "zod";
-import type { InjectionToken } from "@elia/shared";
+import type { InjectionToken } from '@elia/shared';
+import type { output, ZodType } from 'zod';
 
 /**
  * Schema definition for route validation.
@@ -7,17 +7,17 @@ import type { InjectionToken } from "@elia/shared";
  */
 export interface Schema {
   /** Path parameters (e.g., /:id) */
-  params?: ZodObject<ZodRawShape>;
+  params?: ZodType;
   /** Query string parameters (e.g., ?foo=bar) */
-  query?: ZodObject<ZodRawShape>;
+  query?: ZodType;
   /** Request body (POST/PUT/PATCH) */
-  body?: ZodObject<ZodRawShape>;
+  body?: ZodType;
 }
 
 /**
  * Infer the type from a Zod schema, or fallback to a default type.
  */
-type InferOrDefault<T, D> = T extends z.ZodType ? z.infer<T> : D;
+type InferOrDefault<T, D> = T extends ZodType ? output<T> : D;
 
 /**
  * Context passed to route handlers.
@@ -25,11 +25,11 @@ type InferOrDefault<T, D> = T extends z.ZodType ? z.infer<T> : D;
  */
 export interface RouteContext<S extends Schema = Schema> {
   /** Validated path parameters */
-  params: InferOrDefault<S["params"], Record<string, string>>;
+  params: InferOrDefault<S['params'], Record<string, string>>;
   /** Validated query parameters */
-  query: InferOrDefault<S["query"], Record<string, string>>;
+  query: InferOrDefault<S['query'], Record<string, string>>;
   /** Validated request body */
-  body: InferOrDefault<S["body"], unknown>;
+  body: InferOrDefault<S['body'], unknown>;
   /** Dependency injection function */
   inject: <T>(token: InjectionToken<T>) => T;
   /** Raw request object */
@@ -42,13 +42,13 @@ export interface RouteContext<S extends Schema = Schema> {
  * Return a Response object to bypass JSON serialization (useful for SSE, file downloads).
  */
 export type Handler<S extends Schema = Schema> = (
-  ctx: RouteContext<S>,
+  ctx: RouteContext<S>
 ) => Promise<unknown | Response> | unknown | Response;
 
 /**
  * Supported HTTP methods.
  */
-export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 /**
  * Internal route definition.

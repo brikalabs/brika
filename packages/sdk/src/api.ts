@@ -22,11 +22,11 @@
  * ```
  */
 
-import { z } from "zod";
-import type { Json } from "@elia/ipc";
-import { getContext, type LogLevel, type EventHandler as CtxEventHandler } from "./context";
-import type { ToolCallContext, ToolResult, AnyObj } from "./types";
-import type { BlockContext, BlockRuntime } from "./blocks/types";
+import type { Json } from '@elia/ipc';
+import { z } from 'zod';
+import type { BlockContext, BlockRuntime } from './blocks';
+import { type EventHandler as CtxEventHandler, getContext, type LogLevel } from './context';
+import type { AnyObj, ToolCallContext, ToolResult } from './types';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Tool Definition
@@ -35,8 +35,6 @@ import type { BlockContext, BlockRuntime } from "./blocks/types";
 export interface ToolSpec<TSchema extends z.ZodObject<z.ZodRawShape>> {
   /** Unique tool ID (must match package.json declaration) */
   id: string;
-  /** Human-readable description */
-  description?: string;
   /** Zod schema for input validation */
   schema: TSchema;
 }
@@ -67,7 +65,7 @@ export interface CompiledTool {
  */
 export function defineTool<TSchema extends z.ZodObject<z.ZodRawShape>>(
   spec: ToolSpec<TSchema>,
-  handler: (args: z.infer<TSchema>, ctx: ToolCallContext) => Promise<ToolResult> | ToolResult,
+  handler: (args: z.infer<TSchema>, ctx: ToolCallContext) => Promise<ToolResult> | ToolResult
 ): CompiledTool {
   return getContext().registerTool(spec, handler);
 }
@@ -79,10 +77,6 @@ export function defineTool<TSchema extends z.ZodObject<z.ZodRawShape>>(
 export interface BlockSpec<TSchema extends z.ZodObject<z.ZodRawShape>> {
   /** Unique block ID (must match package.json declaration) */
   id: string;
-  /** Display name */
-  name?: string;
-  /** Human-readable description */
-  description?: string;
   /** Input ports */
   inputs?: Array<{ id: string; name: string }>;
   /** Output ports */
@@ -109,7 +103,6 @@ export interface CompiledBlockRef {
  * ```typescript
  * export const delay = defineBlock({
  *   id: "delay",
- *   name: "Delay",
  *   inputs: [{ id: "in", name: "Input" }],
  *   outputs: [{ id: "out", name: "Output" }],
  *   schema: z.object({ duration: z.string() }),
@@ -124,8 +117,8 @@ export function defineBlock<TSchema extends z.ZodObject<z.ZodRawShape>>(
   execute: (
     config: z.infer<TSchema>,
     ctx: BlockContext,
-    runtime: BlockRuntime,
-  ) => Promise<{ output: string; data?: Json }> | { output: string; data?: Json },
+    runtime: BlockRuntime
+  ) => Promise<{ output: string; data?: Json }> | { output: string; data?: Json }
 ): CompiledBlockRef {
   return getContext().registerBlock(spec, execute);
 }

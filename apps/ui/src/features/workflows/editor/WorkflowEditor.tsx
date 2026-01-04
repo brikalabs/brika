@@ -1,31 +1,31 @@
-import React, { useCallback, useRef, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { useLocale } from "@/lib/use-locale";
+import { useQuery } from '@tanstack/react-query';
 import {
-  ReactFlow,
   Background,
+  ConnectionLineType,
   Controls,
   MiniMap,
-  Panel,
   type NodeTypes,
-  ConnectionLineType,
+  Panel,
+  ReactFlow,
   ReactFlowProvider,
-} from "@xyflow/react";
-import "@xyflow/react/dist/style.css";
+} from '@xyflow/react';
+import React, { useCallback, useMemo, useRef } from 'react';
+import { useLocale } from '@/lib/use-locale';
+import '@xyflow/react/dist/style.css';
 
-import { BlockNode, type BlockNodeData } from "./BlockNode";
-import { TriggerNode } from "./TriggerNode";
-import { BlockToolbar, type BlockTypeInfo, type BlockDefinition } from "./BlockToolbar";
-import { ConfigPanel } from "./ConfigPanel";
-import { DebugPanel } from "./DebugPanel";
-import { useWorkflowEditor } from "./useWorkflowEditor";
-import type { Workflow } from "../api";
-import { Button, Badge } from "@/components/ui";
-import { Save, RotateCcw, Play } from "lucide-react";
+import { RotateCcw, Save } from 'lucide-react';
+import { Badge, Button } from '@/components/ui';
+import type { Workflow } from '../api';
+import { BlockNode, type BlockNodeData } from './BlockNode';
+import { type BlockDefinition, BlockToolbar, type BlockTypeInfo } from './BlockToolbar';
+import { ConfigPanel } from './ConfigPanel';
+import { DebugPanel } from './DebugPanel';
+import { TriggerNode } from './TriggerNode';
+import { useWorkflowEditor } from './useWorkflowEditor';
 
 // Fetch all block definitions with schemas
 async function fetchBlockDefinitions(): Promise<BlockDefinition[]> {
-  const res = await fetch("/api/blocks");
+  const res = await fetch('/api/blocks');
   if (!res.ok) return [];
   return res.json();
 }
@@ -55,7 +55,7 @@ function WorkflowEditorInner({
 
   // Fetch block definitions for schemas
   const { data: blockDefinitions = [] } = useQuery({
-    queryKey: ["blocks"],
+    queryKey: ['blocks'],
     queryFn: fetchBlockDefinitions,
     staleTime: 60000,
   });
@@ -66,7 +66,7 @@ function WorkflowEditorInner({
     for (const def of blockDefinitions) {
       map[def.type || def.id] = def;
       // Also map by just the ID part for legacy blocks
-      const idPart = (def.type || def.id).split(":").pop();
+      const idPart = (def.type || def.id).split(':').pop();
       if (idPart) map[idPart] = def;
     }
     return map;
@@ -99,7 +99,7 @@ function WorkflowEditorInner({
   // Handle drop from toolbar
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
-    event.dataTransfer.dropEffect = "move";
+    event.dataTransfer.dropEffect = 'move';
   }, []);
 
   const onDrop = useCallback(
@@ -107,7 +107,7 @@ function WorkflowEditorInner({
       event.preventDefault();
 
       const reactFlowBounds = reactFlowWrapper.current?.getBoundingClientRect();
-      const data = event.dataTransfer.getData("application/reactflow");
+      const data = event.dataTransfer.getData('application/reactflow');
 
       if (!data || !reactFlowBounds) return;
 
@@ -124,7 +124,7 @@ function WorkflowEditorInner({
         description: blockDef.description,
         icon: blockDef.icon,
         color: blockDef.color,
-        category: blockDef.category as "flow" | "action" | "data" | "debug",
+        category: blockDef.category as 'flow' | 'action' | 'data' | 'debug',
         inputs: blockDef.inputs,
         outputs: blockDef.outputs,
         defaultConfig: {},
@@ -132,7 +132,7 @@ function WorkflowEditorInner({
 
       addBlock(blockType, position);
     },
-    [addBlock],
+    [addBlock]
   );
 
   // Handle save
@@ -153,9 +153,9 @@ function WorkflowEditorInner({
 
   // Get block schema for selected node
   const selectedBlockSchema = useMemo(() => {
-    if (!selectedNode || selectedNode.type !== "block") return undefined;
+    if (!selectedNode || selectedNode.type !== 'block') return undefined;
     const blockData = selectedNode.data as unknown as BlockNodeData;
-    const blockType = blockData.type || "";
+    const blockType = blockData.type || '';
     return blockSchemaMap[blockType]?.schema;
   }, [selectedNode, blockSchemaMap]);
 
@@ -165,7 +165,7 @@ function WorkflowEditorInner({
       {!readonly && <BlockToolbar className="w-56 shrink-0" />}
 
       {/* Canvas */}
-      <div className="flex-1 flex flex-col" ref={reactFlowWrapper}>
+      <div className="flex flex-1 flex-col" ref={reactFlowWrapper}>
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -185,26 +185,26 @@ function WorkflowEditorInner({
           nodesDraggable={!readonly}
           nodesConnectable={!readonly}
           elementsSelectable={true}
-          deleteKeyCode={readonly ? null : "Backspace"}
+          deleteKeyCode={readonly ? null : 'Backspace'}
           proOptions={{ hideAttribution: true }}
         >
           <Background />
           <Controls showInteractive={!readonly} />
           <MiniMap
             nodeColor={(node) => {
-              if (node.type === "trigger") return "#22c55e";
+              if (node.type === 'trigger') return '#22c55e';
               const blockData = node.data as BlockNodeData;
               const colors: Record<string, string> = {
-                action: "#3b82f6",
-                condition: "#f59e0b",
-                switch: "#8b5cf6",
-                delay: "#6b7280",
-                emit: "#10b981",
-                set: "#ec4899",
-                log: "#78716c",
-                end: "#dc2626",
+                action: '#3b82f6',
+                condition: '#f59e0b',
+                switch: '#8b5cf6',
+                delay: '#6b7280',
+                emit: '#10b981',
+                set: '#ec4899',
+                log: '#78716c',
+                end: '#dc2626',
               };
-              return colors[blockData?.type] || "#6b7280";
+              return colors[blockData?.type] || '#6b7280';
             }}
             className="!bg-muted"
           />
@@ -214,7 +214,7 @@ function WorkflowEditorInner({
             <Panel position="top-right" className="flex items-center gap-2">
               {isDirty && (
                 <Badge variant="secondary" className="text-xs">
-                  {t("workflows:editor.unsavedChanges")}
+                  {t('workflows:editor.unsavedChanges')}
                 </Badge>
               )}
               <Button
@@ -223,12 +223,12 @@ function WorkflowEditorInner({
                 onClick={() => clearExecutionState()}
                 disabled={executionLogs.length === 0}
               >
-                <RotateCcw className="size-4 mr-1" />
-                {t("common:actions.reset")}
+                <RotateCcw className="mr-1 size-4" />
+                {t('common:actions.reset')}
               </Button>
               <Button size="sm" variant="default" onClick={handleSave} disabled={!isDirty}>
-                <Save className="size-4 mr-1" />
-                {t("common:actions.save")}
+                <Save className="mr-1 size-4" />
+                {t('common:actions.save')}
               </Button>
             </Panel>
           )}
@@ -255,26 +255,26 @@ function WorkflowEditorInner({
           executionLogs={executionLogs}
           blockStatuses={blockStatuses}
           onBlockEvent={(event) => {
-            if (event.type === "block.start") {
-              setBlockStatus(event.blockId, "running");
+            if (event.type === 'block.start') {
+              setBlockStatus(event.blockId, 'running');
               addExecutionLog({
                 blockId: event.blockId,
-                type: "start",
+                type: 'start',
                 message: `Starting block: ${event.blockId}`,
               });
-            } else if (event.type === "block.complete") {
-              setBlockStatus(event.blockId, "completed", event.output);
+            } else if (event.type === 'block.complete') {
+              setBlockStatus(event.blockId, 'completed', event.output);
               addExecutionLog({
                 blockId: event.blockId,
-                type: "complete",
+                type: 'complete',
                 message: `Completed: ${event.blockId}`,
                 data: event.output,
               });
-            } else if (event.type === "block.error") {
-              setBlockStatus(event.blockId, "error", event.error);
+            } else if (event.type === 'block.error') {
+              setBlockStatus(event.blockId, 'error', event.error);
               addExecutionLog({
                 blockId: event.blockId,
-                type: "error",
+                type: 'error',
                 message: `Error in ${event.blockId}: ${event.error}`,
               });
             }

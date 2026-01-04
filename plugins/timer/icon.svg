@@ -1,1 +1,26 @@
-<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" class=""><rect id="_r_9_" width="512" height="512" x="0" y="0" rx="0" fill="url(#_r_a_)" stroke="#FFFFFF" stroke-width="0" stroke-opacity="100%" paint-order="stroke"></rect><rect width="512" height="512" x="0" y="0" fill="url(#_r_b_)" rx="0" style="mix-blend-mode: overlay;"></rect><clipPath id="clip"><use xlink:href="#_r_9_"></use></clipPath><defs><linearGradient id="_r_a_" gradientUnits="userSpaceOnUse" gradientTransform="rotate(45)" style="transform-origin: center center;"><stop stop-color="#8E2DE2"></stop><stop offset="1" stop-color="#4A00E0"></stop></linearGradient><radialGradient id="_r_b_" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(256) rotate(90) scale(512)"><stop stop-color="white"></stop><stop offset="1" stop-color="white" stop-opacity="0"></stop></radialGradient></defs><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 16 16" width="352" height="352" x="80" y="80" alignment-baseline="middle" style="color: rgb(255, 255, 255); width: 352px; height: 352px;"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 4.75v2.836a1 1 0 0 0 .293.707l1.957 1.957m4-2.25a6.25 6.25 0 1 1-12.5 0 6.25 6.25 0 0 1 12.5 0Z"></path></svg></svg>
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="512" height="512" viewBox="0 0 512 512" fill="none"
+     xmlns="http://www.w3.org/2000/svg" class="">
+    <rect id="_r_9_" width="512" height="512" x="0" y="0" rx="0" fill="url(#_r_a_)" stroke="#FFFFFF" stroke-width="0"
+          stroke-opacity="100%" paint-order="stroke"></rect>
+    <rect width="512" height="512" x="0" y="0" fill="url(#_r_b_)" rx="0" style="mix-blend-mode: overlay;"></rect>
+    <clipPath id="clip">
+        <use xlink:href="#_r_9_"></use>
+    </clipPath>
+    <defs>
+        <linearGradient id="_r_a_" gradientUnits="userSpaceOnUse" gradientTransform="rotate(45)"
+                        style="transform-origin: center center;">
+            <stop stop-color="#8E2DE2"></stop>
+            <stop offset="1" stop-color="#4A00E0"></stop>
+        </linearGradient>
+        <radialGradient id="_r_b_" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse"
+                        gradientTransform="translate(256) rotate(90) scale(512)">
+            <stop stop-color="white"></stop>
+            <stop offset="1" stop-color="white" stop-opacity="0"></stop>
+        </radialGradient>
+    </defs>
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 16 16" width="352" height="352" x="80" y="80"
+         alignment-baseline="middle" style="color: rgb(255, 255, 255); width: 352px; height: 352px;">
+        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+              d="M8 4.75v2.836a1 1 0 0 0 .293.707l1.957 1.957m4-2.25a6.25 6.25 0 1 1-12.5 0 6.25 6.25 0 0 1 12.5 0Z"></path>
+    </svg>
+</svg>

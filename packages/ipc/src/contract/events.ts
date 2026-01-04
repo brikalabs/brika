@@ -4,15 +4,15 @@
  * Event emission, subscription, logging, heartbeat
  */
 
-import { z } from "zod";
-import { message, rpc } from "../define";
-import { Json, JsonRecord } from "../types";
+import { z } from 'zod';
+import { message, rpc } from '../define';
+import { Json, JsonRecord } from '../types';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Schemas
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const LogLevel = z.enum(["debug", "info", "warn", "error"]);
+export const LogLevel = z.enum(['debug', 'info', 'warn', 'error']);
 export type LogLevel = z.infer<typeof LogLevel>;
 
 export const EventPayload = z.object({
@@ -30,54 +30,54 @@ export type EventPayload = z.infer<typeof EventPayload>;
 
 /** Send a log message */
 export const log = message(
-  "log",
+  'log',
   z.object({
     level: LogLevel,
     message: z.string(),
     meta: JsonRecord.optional(),
-  }),
+  })
 );
 
 /** Emit an event */
 export const emit = message(
-  "emit",
+  'emit',
   z.object({
     eventType: z.string(),
     payload: Json,
-  }),
+  })
 );
 
 /** Subscribe to event patterns */
 export const subscribe = message(
-  "subscribe",
+  'subscribe',
   z.object({
     patterns: z.array(z.string()),
-  }),
+  })
 );
 
 /** Unsubscribe from event patterns */
 export const unsubscribe = message(
-  "unsubscribe",
+  'unsubscribe',
   z.object({
     patterns: z.array(z.string()),
-  }),
+  })
 );
 
 /** Event delivered to subscriber */
 export const event = message(
-  "event",
+  'event',
   z.object({
     event: EventPayload,
-  }),
+  })
 );
 
 /** Ping for heartbeat */
 export const ping = rpc(
-  "ping",
+  'ping',
   z.object({
     ts: z.number(),
   }),
   z.object({
     ts: z.number(),
-  }),
+  })
 );

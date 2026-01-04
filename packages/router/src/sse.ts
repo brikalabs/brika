@@ -3,10 +3,10 @@
  */
 
 const SSE_HEADERS = {
-  "Content-Type": "text/event-stream",
-  "Cache-Control": "no-cache",
-  Connection: "keep-alive",
-  "Access-Control-Allow-Origin": "*",
+  'Content-Type': 'text/event-stream',
+  'Cache-Control': 'no-cache',
+  Connection: 'keep-alive',
+  'Access-Control-Allow-Origin': '*',
 };
 
 /**
@@ -28,7 +28,7 @@ const SSE_HEADERS = {
  * ```
  */
 export function createSSEStream(
-  setup: (send: (data: unknown, event?: string) => void, close: () => void) => (() => void) | void,
+  setup: (send: (data: unknown, event?: string) => void, close: () => void) => (() => void) | void
 ): Response {
   const encoder = new TextEncoder();
   let cleanup: (() => void) | void;
@@ -37,7 +37,7 @@ export function createSSEStream(
     start(controller) {
       const send = (data: unknown, event?: string) => {
         try {
-          let message = "";
+          let message = '';
           if (event) {
             message += `event: ${event}\n`;
           }
@@ -81,7 +81,7 @@ export function createSSEStream(
  * ```
  */
 export function createAsyncSSEStream(
-  handler: (send: (data: unknown, event?: string) => void) => Promise<void>,
+  handler: (send: (data: unknown, event?: string) => void) => Promise<void>
 ): Response {
   const encoder = new TextEncoder();
 
@@ -89,7 +89,7 @@ export function createAsyncSSEStream(
     async start(controller) {
       const send = (data: unknown, event?: string) => {
         try {
-          let message = "";
+          let message = '';
           if (event) {
             message += `event: ${event}\n`;
           }
@@ -103,7 +103,7 @@ export function createAsyncSSEStream(
       try {
         await handler(send);
       } catch (error) {
-        send({ type: "error", error: String(error) });
+        send({ type: 'error', error: String(error) });
       } finally {
         controller.close();
       }

@@ -1,12 +1,12 @@
-import type { RouteDefinition } from "./types";
+import type { RouteDefinition } from './types';
 
 /**
  * Normalize a path prefix.
  */
 function normalizePrefix(prefix: string): string {
-  if (!prefix) return "";
-  const withLeadingSlash = prefix.startsWith("/") ? prefix : `/${prefix}`;
-  return withLeadingSlash.endsWith("/") ? withLeadingSlash.slice(0, -1) : withLeadingSlash;
+  if (!prefix) return '';
+  const withLeadingSlash = prefix.startsWith('/') ? prefix : `/${prefix}`;
+  return withLeadingSlash.endsWith('/') ? withLeadingSlash.slice(0, -1) : withLeadingSlash;
 }
 
 /**
@@ -18,7 +18,7 @@ function applyPrefix(routes: RouteDefinition[], prefix: string): RouteDefinition
 
   return routes.map((route) => ({
     ...route,
-    path: route.path === "/" ? cleanPrefix : `${cleanPrefix}${route.path}`,
+    path: route.path === '/' ? cleanPrefix : `${cleanPrefix}${route.path}`,
   }));
 }
 
@@ -72,10 +72,12 @@ export function combineRoutes(...args: (RouteDefinition[] | CombineOptions)[]): 
   // Check if first arg is options
   const firstArg = args[0];
   const hasOptions =
-    firstArg && !Array.isArray(firstArg) && typeof firstArg === "object" && "prefix" in firstArg;
+    firstArg && !Array.isArray(firstArg) && typeof firstArg === 'object' && 'prefix' in firstArg;
 
   const options: CombineOptions = hasOptions ? (firstArg as CombineOptions) : {};
-  const routeArrays = hasOptions ? (args.slice(1) as RouteDefinition[][]) : (args as RouteDefinition[][]);
+  const routeArrays = hasOptions
+    ? (args.slice(1) as RouteDefinition[][])
+    : (args as RouteDefinition[][]);
 
   // Flatten all route arrays
   const allRoutes = routeArrays.flat();

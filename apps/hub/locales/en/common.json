@@ -22,7 +22,8 @@
     "restart": "Restart",
     "reload": "Reload",
     "view": "View",
-    "select": "Select"
+    "select": "Select",
+    "copy": "Copy"
   },
   "status": {
     "running": "Running",
@@ -68,6 +69,7 @@
     "loading": "Loading...",
     "saving": "Saving...",
     "saved": "Saved successfully",
+    "copied": "Copied",
     "deleted": "Deleted successfully",
     "error": "An error occurred",
     "confirmDelete": "Are you sure you want to delete this?"
@@ -79,6 +81,10 @@
     "hours": "hours",
     "days": "days",
     "ago": "ago"
+  },
+  "code": {
+    "lines_one": "{{count}} line",
+    "lines_other": "{{count}} lines"
   },
   "loading": "Loading..."
 }

@@ -1,2 +1,2 @@
-export { StorePage } from "./StorePage";
-export { useStoreMutations } from "./hooks";
+export { useStoreMutations } from './hooks';
+export { StorePage } from './StorePage';

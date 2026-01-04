@@ -1,17 +1,17 @@
-import { route } from "@elia/router";
-import { PluginManager } from "../../plugins/plugin-manager";
-import { ToolRegistry } from "../../tools/tool-registry";
-import { BlockRegistry } from "../../blocks";
-import { AutomationEngine } from "../../automations";
-import { SchedulerService } from "../../scheduler/scheduler-service";
-import { RulesEngine } from "../../rules/rules-engine";
+import { route } from '@elia/router';
+import { AutomationEngine } from '@/runtime/automations';
+import { BlockRegistry } from '@/runtime/blocks';
+import { PluginManager } from '@/runtime/plugins/plugin-manager';
+import { RulesEngine } from '@/runtime/rules/rules-engine';
+import { SchedulerService } from '@/runtime/scheduler/scheduler-service';
+import { ToolRegistry } from '@/runtime/tools/tool-registry';
 
 export const healthRoutes = [
-  route.get("/api/health", async () => {
+  route.get('/api/health', () => {
     return { ok: true };
   }),
 
-  route.get("/api/stats", async ({ inject }) => {
+  route.get('/api/stats', ({ inject }) => {
     const plugins = inject(PluginManager);
     const tools = inject(ToolRegistry);
     const blocks = inject(BlockRegistry);
@@ -29,7 +29,7 @@ export const healthRoutes = [
     return {
       plugins: {
         total: pluginList.length,
-        running: pluginList.filter((p) => p.status === "running").length,
+        running: pluginList.filter((p) => p.status === 'running').length,
       },
       tools: { total: toolList.length },
       blocks: { total: blockList.length, byCategory: blocks.listByCategory() },

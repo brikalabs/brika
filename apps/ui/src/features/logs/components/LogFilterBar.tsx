@@ -1,19 +1,19 @@
+import type { LogLevel, LogSource } from "@elia/shared";
+import { Calendar, Search, X } from "lucide-react";
 import React, { useState } from "react";
-import { useLocale } from "@/lib/use-locale";
 import {
+  Badge,
   Button,
   Input,
-  Badge,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui";
-import { X, Search, Calendar } from "lucide-react";
-import type { LogLevel, LogSource } from "@elia/shared";
-import type { LogFilters } from "../store";
+import { useLocale } from "@/lib/use-locale";
 import type { PluginInfo } from "../api";
+import type { LogFilters } from "../store";
 
 const LOG_LEVELS: LogLevel[] = ["debug", "info", "warn", "error"];
 const LOG_SOURCES: LogSource[] = ["hub", "plugin", "installer", "registry", "stderr", "automation"];
@@ -88,9 +88,9 @@ export function LogFilterBar({
     <div className="space-y-3">
       {/* Search and Plugin Filter Row */}
       <div className="flex gap-3">
-        <form onSubmit={handleSearchSubmit} className="flex-1 flex gap-2">
+        <form onSubmit={handleSearchSubmit} className="flex flex-1 gap-2">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+            <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
@@ -132,8 +132,8 @@ export function LogFilterBar({
       </div>
 
       {/* Level Filter Pills */}
-      <div className="flex gap-2 items-center">
-        <span className="text-sm text-muted-foreground w-14">{t("logs:filters.level")}:</span>
+      <div className="flex items-center gap-2">
+        <span className="w-14 text-muted-foreground text-sm">{t("logs:filters.level")}:</span>
         {LOG_LEVELS.map((level) => (
           <Badge
             key={level}
@@ -147,8 +147,8 @@ export function LogFilterBar({
       </div>
 
       {/* Source Filter Pills */}
-      <div className="flex gap-2 items-center flex-wrap">
-        <span className="text-sm text-muted-foreground w-14">{t("logs:filters.source")}:</span>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="w-14 text-muted-foreground text-sm">{t("logs:filters.source")}:</span>
         {LOG_SOURCES.map((source) => (
           <Badge
             key={source}
@@ -162,7 +162,7 @@ export function LogFilterBar({
       </div>
 
       {/* Date Range */}
-      <div className="flex gap-3 items-center">
+      <div className="flex items-center gap-3">
         <Calendar className="size-4 text-muted-foreground" />
         <Input
           type="datetime-local"

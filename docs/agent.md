@@ -4,20 +4,20 @@
 
 ## Quick Reference
 
-| What | Where |
-|------|-------|
-| Hub entry | `apps/hub/src/main.ts` |
-| API server | `apps/hub/src/runtime/http/api-server.ts` |
-| Plugin manager | `apps/hub/src/runtime/plugins/plugin-manager.ts` |
-| Tool registry | `apps/hub/src/runtime/tools/tool-registry.ts` |
-| Block registry | `apps/hub/src/runtime/blocks/block-registry.ts` |
+| What              | Where                                                   |
+|-------------------|---------------------------------------------------------|
+| Hub entry         | `apps/hub/src/main.ts`                                  |
+| API server        | `apps/hub/src/runtime/http/api-server.ts`               |
+| Plugin manager    | `apps/hub/src/runtime/plugins/plugin-manager.ts`        |
+| Tool registry     | `apps/hub/src/runtime/tools/tool-registry.ts`           |
+| Block registry    | `apps/hub/src/runtime/blocks/block-registry.ts`         |
 | Workflow executor | `apps/hub/src/runtime/automations/workflow-executor.ts` |
-| SDK exports | `packages/sdk/src/index.ts` |
-| Plugin runtime | `packages/sdk/src/runtime.ts` |
-| Tool definition | `packages/sdk/src/tool.ts` |
-| Block definition | `packages/sdk/src/blocks/define.ts` |
-| Shared types | `packages/shared/src/types.ts` |
-| Config | `elia.yml` |
+| SDK exports       | `packages/sdk/src/index.ts`                             |
+| Plugin runtime    | `packages/sdk/src/runtime.ts`                           |
+| Tool definition   | `packages/sdk/src/tool.ts`                              |
+| Block definition  | `packages/sdk/src/blocks/define.ts`                     |
+| Shared types      | `packages/shared/src/types.ts`                          |
+| Config            | `elia.yml`                                              |
 
 ---
 
@@ -26,6 +26,7 @@
 **ELIA** = Event-driven Logical Intelligence Architecture
 
 A Bun-first home automation runtime with:
+
 - **Isolated plugins** - Each plugin runs as a separate Bun process
 - **Binary IPC** - JSON-framed communication between Hub and plugins
 - **Block-based workflows** - Visual automation builder with React Flow

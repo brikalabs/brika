@@ -1,5 +1,5 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { toolsApi, toolsKeys } from "./api";
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { toolsApi, toolsKeys } from './api';
 
 export function useTools() {
   return useQuery({ queryKey: toolsKeys.all, queryFn: toolsApi.list });

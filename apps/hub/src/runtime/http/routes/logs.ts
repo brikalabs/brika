@@ -1,17 +1,17 @@
-import { z } from "zod";
-import { route, group } from "@elia/router";
-import { LogRouter } from "../../logs/log-router";
-import { LogStore } from "../../logs/log-store";
-import { PluginManager } from "../../plugins/plugin-manager";
+import { group, route } from '@elia/router';
+import { z } from 'zod';
+import { LogRouter } from '@/runtime/logs/log-router';
+import { LogStore } from '@/runtime/logs/log-store';
+import { PluginManager } from '@/runtime/plugins/plugin-manager';
 
-const LogLevelSchema = z.enum(["debug", "info", "warn", "error"]);
-const LogSourceSchema = z.enum(["hub", "plugin", "installer", "registry", "stderr", "automation"]);
+const LogLevelSchema = z.enum(['debug', 'info', 'warn', 'error']);
+const LogSourceSchema = z.enum(['hub', 'plugin', 'installer', 'registry', 'stderr', 'automation']);
 
 const LogQuerySchema = z.object({
   level: z
     .union([
       LogLevelSchema,
-      z.string().transform((s) => s.split(",") as ("debug" | "info" | "warn" | "error")[]),
+      z.string().transform((s) => s.split(',') as ('debug' | 'info' | 'warn' | 'error')[]),
     ])
     .optional(),
   source: z
@@ -20,7 +20,15 @@ const LogQuerySchema = z.object({
       z
         .string()
         .transform(
-          (s) => s.split(",") as ("hub" | "plugin" | "installer" | "registry" | "stderr" | "automation")[],
+          (s) =>
+            s.split(',') as (
+              | 'hub'
+              | 'plugin'
+              | 'installer'
+              | 'registry'
+              | 'stderr'
+              | 'automation'
+            )[]
         ),
     ])
     .optional(),
@@ -30,7 +38,7 @@ const LogQuerySchema = z.object({
   endTs: z.coerce.number().optional(),
   cursor: z.coerce.number().optional(),
   limit: z.coerce.number().min(1).max(1000).default(100),
-  order: z.enum(["asc", "desc"]).default("desc"),
+  order: z.enum(['asc', 'desc']).default('desc'),
 });
 
 const LogClearSchema = z.object({
@@ -41,20 +49,20 @@ const LogClearSchema = z.object({
   endTs: z.coerce.number().optional(),
 });
 
-export const logsRoutes = group("/api/logs", [
+export const logsRoutes = group('/api/logs', [
   // GET /api/logs - Query historical logs with filters
-  route.get("/", { query: LogQuerySchema }, async ({ query, inject }) => {
+  route.get('/', { query: LogQuerySchema }, ({ query, inject }) => {
     const store = inject(LogStore);
     return store.query(query);
   }),
 
   // GET /api/logs/recent - Get ring buffer (in-memory recent logs)
-  route.get("/recent", async ({ inject }) => {
+  route.get('/recent', ({ inject }) => {
     return inject(LogRouter).query();
   }),
 
   // GET /api/logs/plugins - Get distinct plugin refs with metadata for filter dropdown
-  route.get("/plugins", async ({ inject }) => {
+  route.get('/plugins', ({ inject }) => {
     const store = inject(LogStore);
     const pm = inject(PluginManager);
     const refs = store.getPluginRefs();
@@ -68,8 +76,8 @@ export const logsRoutes = group("/api/logs", [
       const plugin = refToPlugin.get(ref);
       return {
         ref,
-        id: plugin?.id ?? ref,
-        name: plugin?.metadata?.name ?? ref.split("/").pop()?.replace(/\.ts$/, "") ?? ref,
+        id: plugin?.uid,
+        name: plugin?.name,
         version: plugin?.version,
       };
     });
@@ -78,7 +86,7 @@ export const logsRoutes = group("/api/logs", [
   }),
 
   // GET /api/logs/stats - Get log statistics
-  route.get("/stats", async ({ inject }) => {
+  route.get('/stats', ({ inject }) => {
     const store = inject(LogStore);
     return {
       total: store.count(),
@@ -87,7 +95,7 @@ export const logsRoutes = group("/api/logs", [
   }),
 
   // DELETE /api/logs - Clear logs with optional filters
-  route.delete("/", { body: LogClearSchema.optional() }, async ({ body, inject }) => {
+  route.delete('/', { body: LogClearSchema.optional() }, ({ body, inject }) => {
     const store = inject(LogStore);
     const deleted = store.clear(body ?? {});
     return { ok: true, deleted };

@@ -4,8 +4,12 @@ node_modules
 **/.cache
 **/.DS_Store
 .env
-.elia
 *.log
-apps/hub/.elia
-apps/hub/.elia-plugins
-apps/hub/.elia-state
+
+# ELIA runtime data (ignore generated files, keep config and automations)
+.elia/state.json
+.elia/plugins/
+.elia/logs.db
+.elia/logs.db-shm
+.elia/logs.db-wal
+# Keep tracked: .elia/elia.yml, .elia/automations/, .elia/.gitignore

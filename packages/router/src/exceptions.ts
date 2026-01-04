@@ -1,4 +1,4 @@
-import { ContentfulStatusCode } from "hono/utils/http-status";
+import { ContentfulStatusCode } from 'hono/utils/http-status';
 
 /**
  * Base HTTP exception class.
@@ -7,65 +7,65 @@ import { ContentfulStatusCode } from "hono/utils/http-status";
 export class HttpException extends Error {
   constructor(
     public readonly status: ContentfulStatusCode,
-    message: string,
+    message: string
   ) {
     super(message);
-    this.name = "HttpException";
+    this.name = 'HttpException';
   }
 }
 
 /** 400 Bad Request */
 export class BadRequest extends HttpException {
-  constructor(message = "Bad request") {
+  constructor(message = 'Bad request') {
     super(400, message);
-    this.name = "BadRequest";
+    this.name = 'BadRequest';
   }
 }
 
 /** 401 Unauthorized */
 export class Unauthorized extends HttpException {
-  constructor(message = "Unauthorized") {
+  constructor(message = 'Unauthorized') {
     super(401, message);
-    this.name = "Unauthorized";
+    this.name = 'Unauthorized';
   }
 }
 
 /** 403 Forbidden */
 export class Forbidden extends HttpException {
-  constructor(message = "Forbidden") {
+  constructor(message = 'Forbidden') {
     super(403, message);
-    this.name = "Forbidden";
+    this.name = 'Forbidden';
   }
 }
 
 /** 404 Not Found */
 export class NotFound extends HttpException {
-  constructor(message = "Not found") {
+  constructor(message = 'Not found') {
     super(404, message);
-    this.name = "NotFound";
+    this.name = 'NotFound';
   }
 }
 
 /** 409 Conflict */
 export class Conflict extends HttpException {
-  constructor(message = "Conflict") {
+  constructor(message = 'Conflict') {
     super(409, message);
-    this.name = "Conflict";
+    this.name = 'Conflict';
   }
 }
 
 /** 422 Unprocessable Entity */
 export class UnprocessableEntity extends HttpException {
-  constructor(message = "Unprocessable entity") {
+  constructor(message = 'Unprocessable entity') {
     super(422, message);
-    this.name = "UnprocessableEntity";
+    this.name = 'UnprocessableEntity';
   }
 }
 
 /** 500 Internal Server Error */
 export class InternalServerError extends HttpException {
-  constructor(message = "Internal server error") {
+  constructor(message = 'Internal server error') {
     super(500, message);
-    this.name = "InternalServerError";
+    this.name = 'InternalServerError';
   }
 }
