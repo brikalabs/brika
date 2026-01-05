@@ -42,15 +42,15 @@ export class PluginManager {
 
   list(): Plugin[] {
     const out: Plugin[] = [];
-    const seenRefs = new Set<string>();
+    const seenNames = new Set<string>();
 
     for (const process of this.#lifecycle.listProcesses()) {
-      seenRefs.add(process.ref);
+      seenNames.add(process.name);
       out.push(this.#lifecycle.toPlugin(process));
     }
 
     for (const stored of this.#state.listInstalledWithMetadata()) {
-      if (!seenRefs.has(stored.ref)) {
+      if (!seenNames.has(stored.name)) {
         out.push(this.#lifecycle.fromStored(stored));
       }
     }
@@ -58,11 +58,11 @@ export class PluginManager {
     return out.sort((a, b) => a.name.localeCompare(b.name));
   }
 
-  resolve(ref: string): string | null {
-    const process = this.#lifecycle.getProcess(ref);
+  resolve(name: string): string | null {
+    const process = this.#lifecycle.getProcessByName(name);
     if (process) return process.uid;
 
-    const stored = this.#state.get(ref);
+    const stored = this.#state.get(name);
     return stored?.uid ?? null;
   }
 
@@ -71,30 +71,33 @@ export class PluginManager {
   // ─────────────────────────────────────────────────────────────────────────
 
   async enable(uid: string): Promise<void> {
-    const ref = this.#getRef(uid);
-    if (!ref) throw new Error(`Plugin not found: ${uid}`);
+    const name = this.#getName(uid);
+    if (!name) throw new Error(`Plugin not found: ${uid}`);
 
-    await this.#state.setEnabled(ref, true);
-    await this.#lifecycle.load(ref);
+    await this.#state.setEnabled(name, true);
+    const stored = this.#state.get(name);
+    if (!stored) throw new Error(`Plugin state not found: ${name}`);
+
+    await this.#lifecycle.load(stored.rootDirectory);
   }
 
   async disable(uid: string): Promise<void> {
-    const ref = this.#getRef(uid);
-    if (!ref) throw new Error(`Plugin not found: ${uid}`);
+    const name = this.#getName(uid);
+    if (!name) throw new Error(`Plugin not found: ${uid}`);
 
-    await this.#state.setEnabled(ref, false);
-    await this.#lifecycle.unload(ref);
+    await this.#state.setEnabled(name, false);
+    await this.#lifecycle.unload(name);
   }
 
   async reload(uid: string): Promise<void> {
-    const ref = this.#getRef(uid);
-    if (!ref) throw new Error(`Plugin not found: ${uid}`);
+    const name = this.#getName(uid);
+    if (!name) throw new Error(`Plugin not found: ${uid}`);
 
     // Unload the plugin first
-    await this.#lifecycle.unload(ref);
+    await this.#lifecycle.unload(name);
 
     // Verify process is actually gone
-    if (this.#lifecycle.hasProcess(ref)) {
+    if (this.#lifecycle.hasProcessByName(name)) {
       throw new Error(`Plugin ${uid} is still running after unload`);
     }
 
@@ -105,9 +108,13 @@ export class PluginManager {
       { timeout: 30000 }
     );
 
+    // Get stored state to know the root directory
+    const stored = this.#state.get(name);
+    if (!stored) throw new Error(`Plugin state not found: ${name}`);
+
     // Load the plugin (no need for force since we already unloaded)
     try {
-      await this.#lifecycle.load(ref);
+      await this.#lifecycle.load(stored.rootDirectory);
     } catch (error) {
       throw new Error(
         `Failed to load plugin ${uid}: ${error instanceof Error ? error.message : String(error)}`
@@ -115,7 +122,7 @@ export class PluginManager {
     }
 
     // Verify process was actually created
-    if (!this.#lifecycle.hasProcess(ref)) {
+    if (!this.#lifecycle.hasProcessByName(name)) {
       throw new Error(`Plugin ${uid} failed to start after load`);
     }
 
@@ -125,38 +132,35 @@ export class PluginManager {
       action = await loadedPromise;
     } catch (error) {
       // If timeout, unload the plugin that failed to start
-      await this.#lifecycle.unload(ref);
+      await this.#lifecycle.unload(name);
       throw new Error(
         `Plugin ${uid} failed to become ready within timeout: ${error instanceof Error ? error.message : String(error)}`
       );
     }
 
     await this.#events.dispatch(
-      PluginActions.reloaded.create(
-        { uid: action.payload.uid, name: action.payload.name, ref: action.payload.ref },
-        'hub'
-      )
+      PluginActions.reloaded.create({ uid: action.payload.uid, name: action.payload.name }, 'hub')
     );
   }
 
   async kill(uid: string): Promise<void> {
-    const ref = this.#getRef(uid);
-    if (!ref) throw new Error(`Plugin not found: ${uid}`);
+    const name = this.#getName(uid);
+    if (!name) throw new Error(`Plugin not found: ${uid}`);
 
-    const process = this.#lifecycle.getProcess(ref);
+    const process = this.#lifecycle.getProcessByName(name);
     if (!process) return;
 
     process.kill(9);
-    await this.#state.setHealth(ref, 'crashed', 'killed');
-    await this.#lifecycle.unload(ref);
+    await this.#state.setHealth(name, 'crashed', 'killed');
+    await this.#lifecycle.unload(name);
   }
 
-  async load(ref: string): Promise<void> {
-    return this.#lifecycle.load(ref);
+  async load(nameOrPath: string): Promise<void> {
+    return this.#lifecycle.load(nameOrPath);
   }
 
-  async unload(ref: string, skipRestartReset = false): Promise<void> {
-    return this.#lifecycle.unload(ref, skipRestartReset);
+  async unload(name: string, skipRestartReset = false): Promise<void> {
+    return this.#lifecycle.unload(name, skipRestartReset);
   }
 
   async stopAll(): Promise<void> {
@@ -176,13 +180,13 @@ export class PluginManager {
   // ─────────────────────────────────────────────────────────────────────────
 
   async callTool(
-    ref: string,
+    name: string,
     toolName: string,
     args: Record<string, Json>,
     ctx: ToolCallContext
   ): Promise<ToolResult> {
-    const process = this.#lifecycle.getProcess(ref);
-    if (!process) return { ok: false, content: `Plugin not loaded: ${ref}` };
+    const process = this.#lifecycle.getProcessByName(name);
+    if (!process) return { ok: false, content: `Plugin not loaded: ${name}` };
     return process.callTool(toolName, args, ctx);
   }
 
@@ -205,11 +209,11 @@ export class PluginManager {
   // Private
   // ─────────────────────────────────────────────────────────────────────────
 
-  #getRef(uid: string): string | null {
+  #getName(uid: string): string | null {
     const process = this.#lifecycle.getProcessByUid(uid);
-    if (process) return process.ref;
+    if (process) return process.name;
 
     const stored = this.#state.getByUid(uid);
-    return stored?.ref ?? null;
+    return stored?.name ?? null;
   }
 }

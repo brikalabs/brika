@@ -32,7 +32,7 @@ export const pluginsRoutes = group('/api/plugins', [
       return new Response(null, { status: 204 });
     }
 
-    const file = Bun.file(Bun.resolveSync(plugin.icon, plugin.dir));
+    const file = Bun.file(Bun.resolveSync(plugin.icon, plugin.rootDirectory));
     if (await file.exists()) {
       const content = await file.arrayBuffer();
       return new Response(content, {
@@ -58,7 +58,7 @@ export const pluginsRoutes = group('/api/plugins', [
       const readmeNames = ['README.md', 'readme.md', 'Readme.md', 'README', 'readme'];
 
       for (const name of readmeNames) {
-        const readmePath = `${plugin.dir}/${name}`;
+        const readmePath = `${plugin.rootDirectory}/${name}`;
         const file = Bun.file(readmePath);
 
         if (await file.exists()) {
@@ -126,18 +126,17 @@ export const pluginsRoutes = group('/api/plugins', [
     } catch {
       // Plugin might already be stopped
     }
-    await manager.unload(plugin.ref);
+    await manager.unload(plugin.name);
 
     // Remove from state store
-    await state.remove(plugin.ref);
+    await state.remove(plugin.name);
 
-    // Only remove npm package if it's a registry package (not file: refs)
-    if (!plugin.ref.startsWith('file:')) {
-      try {
-        await registry.uninstall(plugin.name);
-      } catch {
-        // Package might not exist in registry (e.g., workspace plugin)
-      }
+    // Only remove npm package if it's a registry package (not local)
+    // Workspace packages and local file references are not removed from npm
+    try {
+      await registry.uninstall(plugin.name);
+    } catch {
+      // Package might not exist in registry (e.g., workspace plugin)
     }
 
     return { ok: true };

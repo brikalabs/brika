@@ -41,8 +41,7 @@ export function satisfiesVersion(version: string, range: string): boolean {
     const [rMajor, rMinor, rPatch] = parseVersion(rangeClean.slice(1));
     if (major !== rMajor) return false;
     if (minor > rMinor) return true;
-    if (minor === rMinor && patch >= rPatch) return true;
-    return false;
+    return minor === rMinor && patch >= rPatch;
   }
 
   if (rangeClean.startsWith('~')) {
@@ -56,8 +55,7 @@ export function satisfiesVersion(version: string, range: string): boolean {
     const [rMajor, rMinor, rPatch] = parseVersion(rangeClean.slice(2));
     if (major > rMajor) return true;
     if (major === rMajor && minor > rMinor) return true;
-    if (major === rMajor && minor === rMinor && patch >= rPatch) return true;
-    return false;
+    return major === rMajor && minor === rMinor && patch >= rPatch;
   }
 
   // Exact version match

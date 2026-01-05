@@ -8,17 +8,14 @@ export const PluginActions = defineActions('plugin', {
     name: z.string(),
     version: z.string(),
     pid: z.number().optional(),
-    ref: z.string(),
   }),
   unloaded: z.object({
     uid: z.string(),
     name: z.string(),
-    ref: z.string(),
   }),
   reloaded: z.object({
     uid: z.string(),
     name: z.string(),
-    ref: z.string(),
   }),
   error: z.object({
     uid: z.string(),

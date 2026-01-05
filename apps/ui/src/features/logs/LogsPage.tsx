@@ -21,7 +21,7 @@ export function LogsPage() {
     filters,
     setLevels,
     setSources,
-    setPluginRef,
+    setPluginName,
     setSearch,
     setDateRange,
     resetFilters,
@@ -35,7 +35,7 @@ export function LogsPage() {
     const content = logs
       .map(
         (l) =>
-          `${new Date(l.ts).toISOString()} [${l.level.toUpperCase()}] ${l.source}${l.pluginRef ? `:${l.pluginRef}` : ""}: ${l.message} ${l.meta ? JSON.stringify(l.meta) : ""}`,
+          `${new Date(l.ts).toISOString()} [${l.level.toUpperCase()}] ${l.source}${l.pluginName ? `:${l.pluginName}` : ""}: ${l.message} ${l.meta ? JSON.stringify(l.meta) : ""}`,
       )
       .join("\n");
 
@@ -106,7 +106,7 @@ export function LogsPage() {
             pluginOptions={pluginOptions}
             onLevelsChange={setLevels}
             onSourcesChange={setSources}
-            onPluginChange={setPluginRef}
+            onPluginChange={setPluginName}
             onSearchChange={setSearch}
             onDateRangeChange={setDateRange}
             onReset={resetFilters}

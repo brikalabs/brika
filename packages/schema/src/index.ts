@@ -7,9 +7,5 @@
  * - Single source of truth
  */
 
-export {
-  assertPluginPackage,
-  type PluginPackage,
-  PluginPackageSchema,
-  validatePluginPackage,
-} from './plugin.ts';
+export type { PluginPackageSchema as PluginPackageSchemaType } from './plugin';
+export { PluginPackageSchema } from './plugin';

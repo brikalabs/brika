@@ -77,7 +77,7 @@ export function LogList({ logs, isLoading, isFetchingMore, hasMore, onLoadMore }
 
 function LogRow({ log }: { log: StoredLogEvent }) {
   const timestamp = new Date(log.ts).toISOString().slice(11, 23);
-  const source = log.pluginRef ? `${log.source}:${log.pluginRef}` : log.source;
+  const source = log.pluginName ? `${log.source}:${log.pluginName}` : log.source;
   const isNew = log.id < 0; // Negative IDs are live logs
 
   return (

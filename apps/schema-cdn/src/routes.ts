@@ -55,4 +55,3 @@ export function createRoutes() {
 
   return app;
 }
-

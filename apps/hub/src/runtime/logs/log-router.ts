@@ -19,7 +19,7 @@ function shouldLog(min: LogLevel, level: LogLevel): boolean {
 function formatLine(e: LogEvent, color: boolean): string {
   const d = new Date(e.ts);
   const ts = `${d.toISOString().slice(11, 23)}`;
-  const src = (e.pluginRef ? `${e.source}:${e.pluginRef}` : e.source).padEnd(22, " ").slice(0, 22);
+  const src = (e.pluginName ? `${e.source}:${e.pluginName}` : e.source).padEnd(22, " ").slice(0, 22);
   const lvl = e.level.toUpperCase().padEnd(5, " ");
   const msg = e.message;
   const meta = e.meta ? ` ${JSON.stringify(e.meta)}` : "";

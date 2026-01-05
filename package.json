@@ -12,7 +12,7 @@
   },
   "workspaces": ["apps/*", "packages/*", "plugins/*"],
   "scripts": {
-    "dev": "bun --filter '*' dev",
+    "dev": "bun --filter @brika/hub --filter @brika/ui dev",
     "dev:hub": "bun --filter @brika/hub dev",
     "dev:ui": "bun --filter @brika/ui dev",
     "test": "bun test",

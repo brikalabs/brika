@@ -15,7 +15,8 @@ import {
   type ToolCallContext,
   type ToolResult,
 } from '@brika/ipc/contract';
-import type { BrikaEvent, Plugin, PluginHealth, PluginManifest } from '@brika/shared';
+import type { PluginPackageSchema } from '@brika/schema';
+import type { BrikaEvent, Plugin, PluginHealth } from '@brika/shared';
 import { now } from './utils';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -56,12 +57,12 @@ export interface BlockRegistration {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export class PluginProcess {
-  readonly ref: string;
-  readonly dir: string;
-  readonly uid: string;
   readonly name: string;
+  readonly rootDirectory: string;
+  readonly entryPoint: string;
+  readonly uid: string;
   readonly version: string;
-  readonly metadata: PluginManifest;
+  readonly metadata: PluginPackageSchema;
   readonly locales: string[];
   readonly startedAt: number;
 
@@ -77,12 +78,12 @@ export class PluginProcess {
   constructor(
     channel: PluginChannel,
     info: {
-      ref: string;
-      dir: string;
-      uid: string;
       name: string;
+      rootDirectory: string;
+      entryPoint: string;
+      uid: string;
       version: string;
-      metadata: PluginManifest;
+      metadata: PluginPackageSchema;
       locales: string[];
     },
     private readonly config: PluginProcessConfig,
@@ -92,10 +93,10 @@ export class PluginProcess {
     this.#lastPong = now();
     this.startedAt = now();
 
-    this.ref = info.ref;
-    this.dir = info.dir;
-    this.uid = info.uid;
     this.name = info.name;
+    this.rootDirectory = info.rootDirectory;
+    this.entryPoint = info.entryPoint;
+    this.uid = info.uid;
     this.version = info.version;
     this.metadata = info.metadata;
     this.locales = info.locales;
@@ -194,8 +195,8 @@ export class PluginProcess {
       keywords: m.keywords ?? [],
       license: m.license ?? null,
       engines: m.engines,
-      ref: this.ref,
-      dir: this.dir,
+      rootDirectory: this.rootDirectory,
+      entryPoint: this.entryPoint,
       status,
       pid: this.pid,
       startedAt: this.startedAt,

@@ -36,7 +36,7 @@ export class PluginLoader implements Loader {
     for (const entry of config.install) {
       try {
         const resolved = await this.configLoader.resolvePluginEntry(entry);
-        await this.pm.load(resolved.ref);
+        await this.pm.load(resolved.rootDirectory);
       } catch (error) {
         this.logs.error('plugin.load.failed', { name: entry.name, error: String(error) });
       }

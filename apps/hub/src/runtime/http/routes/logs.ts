@@ -32,7 +32,7 @@ const LogQuerySchema = z.object({
         ),
     ])
     .optional(),
-  pluginRef: z.string().optional(),
+  pluginName: z.string().optional(),
   search: z.string().optional(),
   startTs: z.coerce.number().optional(),
   endTs: z.coerce.number().optional(),
@@ -44,7 +44,7 @@ const LogQuerySchema = z.object({
 const LogClearSchema = z.object({
   level: z.union([LogLevelSchema, z.array(LogLevelSchema)]).optional(),
   source: z.union([LogSourceSchema, z.array(LogSourceSchema)]).optional(),
-  pluginRef: z.string().optional(),
+  pluginName: z.string().optional(),
   startTs: z.coerce.number().optional(),
   endTs: z.coerce.number().optional(),
 });
@@ -61,23 +61,22 @@ export const logsRoutes = group('/api/logs', [
     return inject(LogRouter).query();
   }),
 
-  // GET /api/logs/plugins - Get distinct plugin refs with metadata for filter dropdown
+  // GET /api/logs/plugins - Get distinct plugin names with metadata for filter dropdown
   route.get('/plugins', ({ inject }) => {
     const store = inject(LogStore);
     const pm = inject(PluginManager);
-    const refs = store.getPluginRefs();
+    const names = store.getPluginNames();
 
-    // Build a map of ref -> plugin info from running/known plugins
+    // Build a map of name -> plugin info from running/known plugins
     const pluginList = pm.list();
-    const refToPlugin = new Map(pluginList.map((p) => [p.ref, p]));
+    const nameToPlugin = new Map(pluginList.map((p) => [p.name, p]));
 
     // Enrich with plugin metadata
-    const pluginInfos = refs.map((ref) => {
-      const plugin = refToPlugin.get(ref);
+    const pluginInfos = names.map((name) => {
+      const plugin = nameToPlugin.get(name);
       return {
-        ref,
-        id: plugin?.uid,
-        name: plugin?.name,
+        name,
+        uid: plugin?.uid,
         version: plugin?.version,
       };
     });

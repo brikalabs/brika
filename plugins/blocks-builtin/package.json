@@ -22,7 +22,7 @@
     "brika": "^0.1.1"
   },
   "type": "module",
-  "main": "src/main.ts",
+  "main": "./src/main.ts",
   "exports": {
     ".": "./src/main.ts"
   },

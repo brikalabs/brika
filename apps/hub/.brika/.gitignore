@@ -1,0 +1,16 @@
+#BRIKA Runtime Files
+# These files are generated at runtime and should not be committed
+
+# State and database
+state.json
+logs.db
+logs.db-shm
+logs.db-wal
+
+# Installed plugins (managed by registry)
+plugins/
+
+# OS files
+.DS_Store
+Thumbs.db
+

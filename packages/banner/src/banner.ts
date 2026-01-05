@@ -1,6 +1,6 @@
-import boxen from 'boxen';
+import boxen, { Options as BoxenOptions } from 'boxen';
 import chalk from 'chalk';
-import figlet from 'figlet';
+import figlet, { FontName } from 'figlet';
 
 export interface BannerOptions {
   /** Main title displayed as ASCII art */
@@ -10,11 +10,11 @@ export interface BannerOptions {
   /** Additional metadata to display (e.g., version, package name) */
   metadata: Record<string, string>;
   /** Font style for ASCII art (default: 'Slant') */
-  font?: string;
+  font?: FontName;
   /** Border style (default: 'double') */
-  borderStyle?: boxen.BorderStyle;
+  borderStyle?: BoxenOptions['borderStyle'];
   /** Border color (default: 'cyan') */
-  borderColor?: string;
+  borderColor?: BoxenOptions['borderColor'];
   /** Padding inside the box (default: 1) */
   padding?: number;
   /** Margin around the box (default: 1) */
@@ -68,6 +68,6 @@ export function createBanner(options: BannerOptions): string {
     padding,
     margin,
     borderStyle,
-    borderColor: borderColor as boxen.Color,
+    borderColor,
   });
 }

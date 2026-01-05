@@ -8,7 +8,7 @@ import { API_BASE, fetcher } from "@/lib/query";
 export interface LogQueryParams {
   level?: LogLevel | LogLevel[];
   source?: LogSource | LogSource[];
-  pluginRef?: string;
+  pluginName?: string;
   search?: string;
   startTs?: number;
   endTs?: number;
@@ -53,7 +53,7 @@ function buildQueryString(params: LogQueryParams): string {
     const sources = Array.isArray(params.source) ? params.source : [params.source];
     searchParams.set("source", sources.join(","));
   }
-  if (params.pluginRef) searchParams.set("pluginRef", params.pluginRef);
+  if (params.pluginName) searchParams.set("pluginName", params.pluginName);
   if (params.search) searchParams.set("search", params.search);
   if (params.startTs) searchParams.set("startTs", String(params.startTs));
   if (params.endTs) searchParams.set("endTs", String(params.endTs));

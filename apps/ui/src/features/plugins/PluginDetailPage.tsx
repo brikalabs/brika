@@ -544,14 +544,14 @@ export function PluginDetailPage() {
           </div>
           <div className="flex items-center justify-between rounded-lg bg-muted/30 p-2.5">
             <span className="text-sm">{t('plugins:details.directory')}</span>
-            <code className="max-w-[60%] truncate font-mono text-xs" title={plugin.dir}>
-              {plugin.dir}
+            <code className="max-w-[60%] truncate font-mono text-xs" title={plugin.rootDirectory}>
+              {plugin.rootDirectory}
             </code>
           </div>
           <div className="flex items-center justify-between rounded-lg bg-muted/30 p-2.5">
-            <span className="text-sm">{t('plugins:labels.reference')}</span>
-            <code className="max-w-[60%] truncate font-mono text-xs" title={plugin.ref}>
-              {plugin.ref}
+            <span className="text-sm">Entry Point</span>
+            <code className="max-w-[60%] truncate font-mono text-xs" title={plugin.entryPoint}>
+              {plugin.entryPoint}
             </code>
           </div>
           <div className="flex items-center justify-between rounded-lg bg-muted/30 p-2.5">

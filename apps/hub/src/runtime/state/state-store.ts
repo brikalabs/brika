@@ -1,5 +1,6 @@
-import type { PluginHealth, PluginManifest, Rule, Schedule } from '@brika/shared';
-import { inject, PluginManifestSchema, singleton } from '@brika/shared';
+import { PluginPackageSchema } from '@brika/schema';
+import type { PluginHealth, Rule, Schedule } from '@brika/shared';
+import { inject, singleton } from '@brika/shared';
 import { HubConfig } from '@/runtime/config';
 import { LogRouter } from '@/runtime/logs/log-router';
 
@@ -12,9 +13,12 @@ import { LogRouter } from '@/runtime/logs/log-router';
  * Metadata is loaded from package.json and cached in memory.
  */
 export interface InstalledPluginState {
-  ref: string;
-  /** Installation directory */
-  dir: string;
+  /** Plugin name from package.json (primary identifier) */
+  name: string;
+  /** Plugin root directory */
+  rootDirectory: string;
+  /** Entry point file path */
+  entryPoint: string;
   /** Short unique ID (stable across restarts) */
   uid: string;
   enabled: boolean;
@@ -27,9 +31,8 @@ export interface InstalledPluginState {
  * Plugin state combined with cached metadata for API responses.
  */
 export interface PluginStateWithMetadata extends InstalledPluginState {
-  name: string;
   version: string;
-  metadata: PluginManifest;
+  metadata: PluginPackageSchema;
 }
 
 type StateFile = {
@@ -47,7 +50,7 @@ export class StateStore {
   #state: StateFile = { plugins: {}, schedules: {}, rules: {} };
 
   /** In-memory cache of plugin metadata loaded from package.json files */
-  readonly #metadataCache = new Map<string, PluginManifest>();
+  readonly #metadataCache = new Map<string, PluginPackageSchema>();
 
   constructor() {
     this.#homeDir = this.config.homeDir;
@@ -63,24 +66,59 @@ export class StateStore {
     }
     const parsed = JSON.parse(await file.text()) as Partial<StateFile>;
 
-    // Handle migration from old format
+    // Handle migration from old format (ref+dir to name+rootDirectory+entryPoint)
     const plugins: Record<string, InstalledPluginState> = {};
     let needsMigration = false;
 
-    for (const [oldRef, p] of Object.entries(parsed.plugins ?? {})) {
-      // Migrate old ref formats to new format (package names or file: paths)
-      const newRef = this.#migrateRef(oldRef);
-      if (newRef !== oldRef) needsMigration = true;
+    for (const [key, p] of Object.entries(parsed.plugins ?? {})) {
+      // Check if this is old format (has ref/dir) or new format (has name/rootDirectory)
+      const oldFormat = p as any;
 
-      plugins[newRef] = {
-        ref: newRef,
-        dir: p.dir,
-        uid: p.uid,
-        enabled: p.enabled,
-        health: p.health,
-        lastError: p.lastError,
-        updatedAt: p.updatedAt,
-      };
+      if (oldFormat.ref && oldFormat.dir && !oldFormat.name) {
+        // Old format - migrate it
+        needsMigration = true;
+
+        // Try to read package.json to get the actual plugin name
+        try {
+          const pkgPath = `${oldFormat.dir}/package.json`;
+          const pkg = await Bun.file(pkgPath).json();
+          const pluginName = pkg.name;
+
+          // Extract entry point
+          let entryPointRelative = 'src/index.ts';
+          if (pkg.exports?.['.']?.import) {
+            entryPointRelative = pkg.exports['.'].import;
+          } else if (pkg.exports?.['.']) {
+            entryPointRelative =
+              typeof pkg.exports['.'] === 'string' ? pkg.exports['.'] : 'src/index.ts';
+          } else if (pkg.main) {
+            entryPointRelative = pkg.main;
+          }
+
+          if (entryPointRelative.startsWith('./')) {
+            entryPointRelative = entryPointRelative.slice(2);
+          }
+
+          const entryPoint = `${oldFormat.dir}/${entryPointRelative}`;
+
+          plugins[pluginName] = {
+            name: pluginName,
+            rootDirectory: oldFormat.dir,
+            entryPoint,
+            uid: oldFormat.uid,
+            enabled: oldFormat.enabled,
+            health: oldFormat.health,
+            lastError: oldFormat.lastError,
+            updatedAt: oldFormat.updatedAt,
+          };
+        } catch (error) {
+          // If we can't read package.json, skip this plugin
+          this.logs.warn('state.migration.skip', { ref: oldFormat.ref, error: String(error) });
+        }
+      } else if (oldFormat.name && oldFormat.rootDirectory && oldFormat.entryPoint) {
+        // Already new format
+        plugins[oldFormat.name] = oldFormat as InstalledPluginState;
+      }
     }
 
     this.#state = {
@@ -92,6 +130,7 @@ export class StateStore {
     // Persist migrated state if changes were made
     if (needsMigration) {
       await this.#flush();
+      this.logs.info('state.migrated', { count: Object.keys(plugins).length });
     }
   }
 
@@ -101,24 +140,24 @@ export class StateStore {
    */
   async loadMetadataCache(): Promise<void> {
     for (const p of Object.values(this.#state.plugins)) {
-      await this.refreshMetadata(p.ref, p.dir);
+      await this.refreshMetadata(p.name, p.rootDirectory);
     }
   }
 
   /**
    * Refresh metadata for a specific plugin from its package.json.
    */
-  async refreshMetadata(ref: string, dir: string): Promise<PluginManifest> {
-    const metadata = await this.#readPackageJson(dir);
-    this.#metadataCache.set(ref, metadata);
+  async refreshMetadata(name: string, rootDirectory: string): Promise<PluginPackageSchema> {
+    const metadata = await this.#readPackageJson(rootDirectory);
+    this.#metadataCache.set(name, metadata);
     return metadata;
   }
 
   /**
    * Get cached metadata for a plugin.
    */
-  getMetadata(ref: string): PluginManifest | undefined {
-    return this.#metadataCache.get(ref);
+  getMetadata(name: string): PluginPackageSchema | undefined {
+    return this.#metadataCache.get(name);
   }
 
   listInstalled(): InstalledPluginState[] {
@@ -129,20 +168,22 @@ export class StateStore {
    * List all installed plugins with their cached metadata.
    */
   listInstalledWithMetadata(): PluginStateWithMetadata[] {
-    return Object.values(this.#state.plugins).map((p) => this.#withMetadata(p));
+    return Object.values(this.#state.plugins)
+      .map((p) => this.#withMetadata(p))
+      .filter((p): p is PluginStateWithMetadata => p !== null);
   }
 
-  get(ref: string): InstalledPluginState | undefined {
-    return this.#state.plugins[ref];
+  get(name: string): InstalledPluginState | undefined {
+    return this.#state.plugins[name];
   }
 
   /**
    * Get plugin state with cached metadata.
    */
-  getWithMetadata(ref: string): PluginStateWithMetadata | undefined {
-    const p = this.#state.plugins[ref];
+  getWithMetadata(name: string): PluginStateWithMetadata | undefined {
+    const p = this.#state.plugins[name];
     if (!p) return undefined;
-    return this.#withMetadata(p);
+    return this.#withMetadata(p) ?? undefined;
   }
 
   /** Get plugin by UID */
@@ -156,36 +197,36 @@ export class StateStore {
   getByUidWithMetadata(uid: string): PluginStateWithMetadata | undefined {
     const p = Object.values(this.#state.plugins).find((p) => p.uid === uid);
     if (!p) return undefined;
-    return this.#withMetadata(p);
+    return this.#withMetadata(p) ?? undefined;
   }
 
   /** Remove a plugin entry from state (used to clean up stale entries) */
-  async remove(ref: string): Promise<void> {
-    delete this.#state.plugins[ref];
+  async remove(name: string): Promise<void> {
+    delete this.#state.plugins[name];
     await this.#flush();
   }
 
   async upsert(p: InstalledPluginState): Promise<void> {
-    this.#state.plugins[p.ref] = p;
+    this.#state.plugins[p.name] = p;
     await this.#flush();
   }
 
-  async setEnabled(ref: string, enabled: boolean): Promise<void> {
-    const cur = this.#state.plugins[ref];
+  async setEnabled(name: string, enabled: boolean): Promise<void> {
+    const cur = this.#state.plugins[name];
     if (!cur) return; // Plugin must be registered first
     cur.enabled = enabled;
     cur.updatedAt = Date.now();
-    this.#state.plugins[ref] = cur;
+    this.#state.plugins[name] = cur;
     await this.#flush();
   }
 
-  async setHealth(ref: string, health: PluginHealth, lastError?: string | null): Promise<void> {
-    const cur = this.#state.plugins[ref];
+  async setHealth(name: string, health: PluginHealth, lastError?: string | null): Promise<void> {
+    const cur = this.#state.plugins[name];
     if (!cur) return; // Plugin must be registered first
     cur.health = health;
     cur.lastError = lastError ?? cur.lastError ?? null;
     cur.updatedAt = Date.now();
-    this.#state.plugins[ref] = cur;
+    this.#state.plugins[name] = cur;
     await this.#flush();
   }
 
@@ -194,15 +235,17 @@ export class StateStore {
    * Only stores runtime state - metadata is cached separately.
    */
   async registerPlugin(info: {
-    ref: string;
-    dir: string;
+    name: string;
+    rootDirectory: string;
+    entryPoint: string;
     uid: string;
     enabled?: boolean;
   }): Promise<void> {
-    const cur = this.#state.plugins[info.ref];
-    this.#state.plugins[info.ref] = {
-      ref: info.ref,
-      dir: info.dir,
+    const cur = this.#state.plugins[info.name];
+    this.#state.plugins[info.name] = {
+      name: info.name,
+      rootDirectory: info.rootDirectory,
+      entryPoint: info.entryPoint,
       uid: info.uid,
       enabled: info.enabled ?? cur?.enabled ?? true,
       health: 'restarting', // Will be set to 'running' when plugin sends hello
@@ -210,6 +253,9 @@ export class StateStore {
       updatedAt: Date.now(),
     };
     await this.#flush();
+
+    // Load metadata into cache
+    await this.refreshMetadata(info.name, info.rootDirectory);
   }
 
   // Schedules
@@ -258,57 +304,25 @@ export class StateStore {
     const toRemove: string[] = [];
 
     for (const plugin of this.listInstalled()) {
-      const metadata = this.getMetadata(plugin.ref);
-      const name = metadata?.name ?? plugin.ref;
-
-      if (!validNames.has(name)) {
-        this.logs.info('state.sync.remove', { ref: plugin.ref, name });
-        toRemove.push(plugin.ref);
+      if (!validNames.has(plugin.name)) {
+        this.logs.info('state.sync.remove', { name: plugin.name });
+        toRemove.push(plugin.name);
       }
     }
 
-    for (const ref of toRemove) {
-      await this.remove(ref);
+    for (const name of toRemove) {
+      await this.remove(name);
     }
   }
 
-  /**
-   * Migrate old ref formats to new format.
-   * - npm:package → package
-   * - workspace:name → file:./plugins/name/src/index.ts (or keep as-is if it resolves)
-   * - git:... → removed (unsupported)
-   * - file:path → file:path (unchanged)
-   * - package-name → package-name (unchanged)
-   */
-  #migrateRef(ref: string): string {
-    // Remove npm: prefix - just use package name
-    if (ref.startsWith('npm:')) {
-      return ref.slice(4);
+  #withMetadata(p: InstalledPluginState): PluginStateWithMetadata | null {
+    const metadata = this.#metadataCache.get(p.name);
+    if (!metadata) {
+      this.logs.warn('state.metadata.missing', { name: p.name });
+      return null;
     }
-
-    // workspace: refs should be converted to file: refs for local dev
-    // or removed if they were pointing to packages that should now be installed via registry
-    if (ref.startsWith('workspace:')) {
-      const name = ref.slice('workspace:'.length);
-      // Convert to file ref pointing to local plugins directory
-      return `file:./plugins/${name}/src/index.ts`;
-    }
-
-    // git: refs are no longer supported - they should be installed via registry
-    if (ref.startsWith('git:')) {
-      // Return empty to signal removal, or keep for manual cleanup
-      return ref; // Keep for now, will fail to load and user can fix
-    }
-
-    // file: and bare package names stay as-is
-    return ref;
-  }
-
-  #withMetadata(p: InstalledPluginState): PluginStateWithMetadata {
-    const metadata = this.#metadataCache.get(p.ref) ?? { name: 'unknown', version: '0.0.0' };
     return {
       ...p,
-      name: metadata.name,
       version: metadata.version,
       metadata,
     };
@@ -321,27 +335,9 @@ export class StateStore {
   /**
    * Read and validate plugin metadata from package.json.
    */
-  async #readPackageJson(pluginDir: string): Promise<PluginManifest> {
-    const pkgPath = `${pluginDir}/package.json`;
-    const basename = pluginDir.substring(pluginDir.lastIndexOf('/') + 1);
-
-    try {
-      const pkg = await import(pkgPath, { with: { type: 'json' } });
-      const data = pkg.default ?? pkg;
-      const result = PluginManifestSchema.safeParse(data);
-
-      if (!result.success) {
-        this.logs.warn('plugin.manifest.invalid', {
-          dir: pluginDir,
-          errors: result.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`),
-        });
-        return { name: data.name || basename, version: data.version || '0.0.0' };
-      }
-
-      return result.data;
-    } catch (error) {
-      this.logs.warn('plugin.manifest.readError', { dir: pluginDir, error: String(error) });
-      return { name: basename, version: '0.0.0' };
-    }
+  async #readPackageJson(pluginDir: string): Promise<PluginPackageSchema> {
+    return PluginPackageSchema.parse(
+      await import(`${pluginDir}/package.json`, { with: { type: 'json' } })
+    );
   }
 }

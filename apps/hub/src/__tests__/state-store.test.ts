@@ -28,8 +28,9 @@ describe('StateStore', () => {
       const store = TestBed.inject(StateStore);
 
       await store.registerPlugin({
-        ref: 'test-plugin',
-        dir: '/path/to/plugin',
+        name: 'test-plugin',
+        rootDirectory: '/path/to/plugin',
+        entryPoint: '/path/to/plugin/index.ts',
         uid: 'abc123',
       });
 
@@ -37,7 +38,8 @@ describe('StateStore', () => {
 
       expect(retrieved).toBeDefined();
       expect(retrieved?.uid).toBe('abc123');
-      expect(retrieved?.dir).toBe('/path/to/plugin');
+      expect(retrieved?.rootDirectory).toBe('/path/to/plugin');
+      expect(retrieved?.entryPoint).toBe('/path/to/plugin/index.ts');
       expect(retrieved?.enabled).toBe(true);
       expect(retrieved?.health).toBe('restarting'); // Initial state until hello message
     });
@@ -52,13 +54,15 @@ describe('StateStore', () => {
       const store = TestBed.inject(StateStore);
 
       await store.registerPlugin({
-        ref: 'plugin1',
-        dir: '/path/to/plugin1',
+        name: 'plugin1',
+        rootDirectory: '/path/to/plugin1',
+        entryPoint: '/path/to/plugin1/index.ts',
         uid: 'uid1',
       });
       await store.registerPlugin({
-        ref: 'plugin2',
-        dir: '/path/to/plugin2',
+        name: 'plugin2',
+        rootDirectory: '/path/to/plugin2',
+        entryPoint: '/path/to/plugin2/index.ts',
         uid: 'uid2',
         enabled: false,
       });
@@ -71,8 +75,9 @@ describe('StateStore', () => {
       const store = TestBed.inject(StateStore);
 
       await store.registerPlugin({
-        ref: 'test-plugin',
-        dir: '/path/to/plugin',
+        name: 'test-plugin',
+        rootDirectory: '/path/to/plugin',
+        entryPoint: '/path/to/plugin/index.ts',
         uid: 'abc123',
       });
 
@@ -89,8 +94,9 @@ describe('StateStore', () => {
       const store = TestBed.inject(StateStore);
 
       await store.registerPlugin({
-        ref: 'test-plugin',
-        dir: '/path/to/plugin',
+        name: 'test-plugin',
+        rootDirectory: '/path/to/plugin',
+        entryPoint: '/path/to/plugin/index.ts',
         uid: 'abc123',
       });
 
@@ -104,8 +110,9 @@ describe('StateStore', () => {
       const store = TestBed.inject(StateStore);
 
       await store.registerPlugin({
-        ref: 'test-plugin',
-        dir: '/path/to/plugin',
+        name: 'test-plugin',
+        rootDirectory: '/path/to/plugin',
+        entryPoint: '/path/to/plugin/index.ts',
         uid: 'abc123',
       });
 
@@ -120,8 +127,9 @@ describe('StateStore', () => {
       const store = TestBed.inject(StateStore);
 
       await store.registerPlugin({
-        ref: 'my-plugin',
-        dir: '/path/to/myplugin',
+        name: 'my-plugin',
+        rootDirectory: '/path/to/myplugin',
+        entryPoint: '/path/to/myplugin/index.ts',
         uid: 'xyz789',
       });
 
@@ -129,7 +137,7 @@ describe('StateStore', () => {
 
       const state = store.get('my-plugin');
       expect(state?.uid).toBe('xyz789');
-      expect(state?.dir).toBe('/path/to/myplugin');
+      expect(state?.rootDirectory).toBe('/path/to/myplugin');
       expect(state?.health).toBe('crashed');
       expect(state?.lastError).toBe('Error occurred');
     });
@@ -138,22 +146,24 @@ describe('StateStore', () => {
       const store = TestBed.inject(StateStore);
 
       await store.registerPlugin({
-        ref: 'test-ref',
-        dir: '/path/to/plugin',
+        name: 'test-ref',
+        rootDirectory: '/path/to/plugin',
+        entryPoint: '/path/to/plugin/index.ts',
         uid: 'unique-id',
       });
 
       const byUid = store.getByUid('unique-id');
       expect(byUid).toBeDefined();
-      expect(byUid?.ref).toBe('test-ref');
+      expect(byUid?.name).toBe('test-ref');
     });
 
     it('should remove plugin from state', async () => {
       const store = TestBed.inject(StateStore);
 
       await store.registerPlugin({
-        ref: 'to-remove',
-        dir: '/path/to/plugin',
+        name: 'to-remove',
+        rootDirectory: '/path/to/plugin',
+        entryPoint: '/path/to/plugin/index.ts',
         uid: 'remove-me',
       });
 
@@ -182,8 +192,9 @@ describe('StateStore', () => {
       const store = TestBed.inject(StateStore);
 
       await store.registerPlugin({
-        ref: 'test-plugin',
-        dir: '/path/to/plugin',
+        name: 'test-plugin',
+        rootDirectory: '/path/to/plugin',
+        entryPoint: '/path/to/plugin/index.ts',
         uid: 'abc123',
       });
 

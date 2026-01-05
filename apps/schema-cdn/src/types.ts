@@ -10,4 +10,3 @@ export interface PackageMetadata {
   versions: Record<string, { dist?: unknown }>;
   'dist-tags': { latest: string };
 }
-

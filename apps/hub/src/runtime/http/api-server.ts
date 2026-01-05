@@ -19,42 +19,40 @@ export class ApiServer {
     this.#routes.push(...routes);
   }
 
-  async start(): Promise<void> {
+  start(): void {
     this.#app = createApp(this.#routes);
 
     this.#server = Bun.serve({
       hostname: this.#config.host,
       port: this.#config.port,
       fetch: async (req) => {
-        if (!this.#app) {
-          throw new Error('Failed to start');
-        }
+        if (!this.#app) throw new Error('Failed to start');
+
         const start = Date.now();
         const url = new URL(req.url);
-        this.#logs.info('api.request.end', {
-          method: req.method,
-          path: url.pathname,
-        });
+
         try {
           const res = await this.#app.fetch(req);
           const duration = Date.now() - start;
+
+          // Skip body logging for streaming responses to avoid buffering
+          const isStreaming = res.headers.get('content-type')?.includes('text/event-stream');
 
           this.#logs.info('api.request.end', {
             method: req.method,
             path: url.pathname,
             status: res.status,
-            body: await res.clone().text(),
             duration,
+            ...(isStreaming ? { streaming: true } : { body: await res.clone().text() }),
           });
 
           return res;
         } catch (e) {
-          const duration = Date.now() - start;
           this.#logs.error('api.error', {
             method: req.method,
             path: url.pathname,
             error: String(e),
-            duration,
+            duration: Date.now() - start,
           });
           throw e;
         }
@@ -62,7 +60,7 @@ export class ApiServer {
     });
   }
 
-  async stop(): Promise<void> {
+  stop(): void {
     this.#server?.stop();
   }
 }

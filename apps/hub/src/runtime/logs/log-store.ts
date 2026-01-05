@@ -4,7 +4,7 @@
  * Persists logs to disk for historical queries with filtering and pagination.
  */
 
-import { Database } from "bun:sqlite";
+import { Database, SQLQueryBindings } from 'bun:sqlite'
 import type { Json, LogEvent, LogLevel, LogSource } from "@brika/shared";
 import { inject, singleton } from "@brika/shared";
 import { ConfigLoader } from "@/runtime/config/config-loader";
@@ -16,7 +16,7 @@ import { ConfigLoader } from "@/runtime/config/config-loader";
 export interface LogQueryParams {
   level?: LogLevel | LogLevel[];
   source?: LogSource | LogSource[];
-  pluginRef?: string;
+  pluginName?: string;
   search?: string;
   startTs?: number;
   endTs?: number;
@@ -39,7 +39,7 @@ interface LogRow {
   ts: number;
   level: string;
   source: string;
-  plugin_ref: string | null;
+  plugin_name: string | null;
   message: string;
   meta: string | null;
 }
@@ -73,28 +73,47 @@ export class LogStore {
     this.#db.run(`
         CREATE TABLE IF NOT EXISTS logs
         (
-            id         INTEGER PRIMARY KEY AUTOINCREMENT,
-            ts         INTEGER NOT NULL,
-            level      TEXT    NOT NULL,
-            source     TEXT    NOT NULL,
-            plugin_ref TEXT,
-            message    TEXT    NOT NULL,
-            meta       TEXT
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            ts          INTEGER NOT NULL,
+            level       TEXT    NOT NULL,
+            source      TEXT    NOT NULL,
+            plugin_name TEXT,
+            message     TEXT    NOT NULL,
+            meta        TEXT
         )
     `);
+
+    // Migrate old plugin_ref column to plugin_name if needed
+    try {
+      // Check if the old column exists by trying to query it
+      const testQuery = this.#db.query("SELECT plugin_ref FROM logs LIMIT 1");
+      try {
+        testQuery.all();
+        // Old column exists, need to migrate
+        console.log('[log-store] Migrating plugin_ref → plugin_name');
+
+        // SQLite doesn't support column rename directly in old versions, so we do it via ALTER TABLE
+        this.#db.run("ALTER TABLE logs RENAME COLUMN plugin_ref TO plugin_name");
+        console.log('[log-store] Migration complete');
+      } catch {
+        // Column doesn't exist or query failed, nothing to migrate
+      }
+    } catch {
+      // Table doesn't exist yet or other error, ignore
+    }
 
     // Create indexes for efficient queries
     this.#db.run("CREATE INDEX IF NOT EXISTS idx_logs_ts ON logs(ts DESC)");
     this.#db.run("CREATE INDEX IF NOT EXISTS idx_logs_level ON logs(level)");
     this.#db.run("CREATE INDEX IF NOT EXISTS idx_logs_source ON logs(source)");
-    this.#db.run("CREATE INDEX IF NOT EXISTS idx_logs_plugin ON logs(plugin_ref)");
+    this.#db.run("CREATE INDEX IF NOT EXISTS idx_logs_plugin ON logs(plugin_name)");
     this.#db.run("CREATE INDEX IF NOT EXISTS idx_logs_ts_level ON logs(ts DESC, level)");
     // biome-ignore lint/style/noUnusedTemplateLiteral: <explanation>
     this.#db.run(`CREATE INDEX IF NOT EXISTS idx_logs_ts_source ON logs (ts DESC, source)`);
 
     // Prepare insert statement for performance
     this.#insertStmt = this.#db.prepare(
-      "INSERT INTO logs (ts, level, source, plugin_ref, message, meta) VALUES (?, ?, ?, ?, ?, ?)",
+      "INSERT INTO logs (ts, level, source, plugin_name, message, meta) VALUES (?, ?, ?, ?, ?, ?)",
     );
   }
 
@@ -105,7 +124,7 @@ export class LogStore {
       event.ts,
       event.level,
       event.source,
-      event.pluginRef ?? null,
+      event.pluginName ?? null,
       event.message,
       event.meta ? JSON.stringify(event.meta) : null,
     );
@@ -115,7 +134,7 @@ export class LogStore {
     if (!this.#db) return { logs: [], nextCursor: null };
 
     const conditions: string[] = [];
-    const values: unknown[] = [];
+    const values: SQLQueryBindings[] = [];
 
     // Build WHERE clauses
     if (params.level) {
@@ -130,9 +149,9 @@ export class LogStore {
       values.push(...sources);
     }
 
-    if (params.pluginRef) {
-      conditions.push("plugin_ref = ?");
-      values.push(params.pluginRef);
+    if (params.pluginName) {
+      conditions.push("plugin_name = ?");
+      values.push(params.pluginName);
     }
 
     if (params.search) {
@@ -166,7 +185,7 @@ export class LogStore {
 
     // Query one extra to determine if there's a next page
     const sql = `
-        SELECT id, ts, level, source, plugin_ref, message, meta
+        SELECT id, ts, level, source, plugin_name, message, meta
         FROM logs ${whereClause}
         ORDER BY id ${order === "desc" ? "DESC" : "ASC"}
         LIMIT ?
@@ -182,7 +201,7 @@ export class LogStore {
       ts: row.ts,
       level: row.level as LogLevel,
       source: row.source as LogSource,
-      pluginRef: row.plugin_ref ?? undefined,
+      pluginName: row.plugin_name ?? undefined,
       message: row.message,
       meta: row.meta ? (JSON.parse(row.meta) as Record<string, Json>) : undefined,
     }));
@@ -197,7 +216,7 @@ export class LogStore {
     if (!this.#db) return 0;
 
     const conditions: string[] = [];
-    const values: unknown[] = [];
+    const values: SQLQueryBindings[] = [];
 
     if (params.level) {
       const levels = Array.isArray(params.level) ? params.level : [params.level];
@@ -211,9 +230,9 @@ export class LogStore {
       values.push(...sources);
     }
 
-    if (params.pluginRef) {
-      conditions.push("plugin_ref = ?");
-      values.push(params.pluginRef);
+    if (params.pluginName) {
+      conditions.push("plugin_name = ?");
+      values.push(params.pluginName);
     }
 
     if (params.startTs) {
@@ -228,35 +247,24 @@ export class LogStore {
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
     const result = this.#db.run(
-      `DELETE
-                                 FROM logs ${whereClause}`,
+      `DELETE FROM logs ${whereClause}`,
       values,
     );
 
     return result.changes;
   }
 
-  getPluginRefs(): string[] {
+  getPluginNames(): string[] {
     if (!this.#db) return [];
 
     const rows = this.#db
-      .query("SELECT DISTINCT plugin_ref FROM logs WHERE plugin_ref IS NOT NULL ORDER BY plugin_ref")
-      .all() as { plugin_ref: string }[];
+      .query("SELECT DISTINCT plugin_name FROM logs WHERE plugin_name IS NOT NULL ORDER BY plugin_name")
+      .all() as { plugin_name: string }[];
 
-    return rows.map((r) => r.plugin_ref);
+    return rows.map((r) => r.plugin_name);
   }
 
-  count(): number {
-    if (!this.#db) return 0;
-
-    const row = this.#db.query("SELECT COUNT(*) as count FROM logs").get() as { count: number };
-    return row.count;
-  }
-
-  close(): void {
-    this.#insertStmt?.finalize();
+  close () {
     this.#db?.close();
-    this.#db = null;
-    this.#insertStmt = null;
   }
 }

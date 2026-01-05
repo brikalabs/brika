@@ -104,7 +104,7 @@ if (!isDryRun) {
 
         console.log('✅ Unpublished successfully\n');
         console.log('⏳ Waiting 15 seconds for npm registry to propagate...\n');
-        await new Promise(resolve => setTimeout(resolve, 15000));
+        await new Promise((resolve) => setTimeout(resolve, 15000));
       } else {
         console.error(`\n❌ Version ${version} already exists on npm!`);
         console.error('\nOptions:');

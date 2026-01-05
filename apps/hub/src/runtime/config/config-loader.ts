@@ -5,6 +5,7 @@
  */
 
 import { inject, singleton } from '@brika/shared';
+import YAML from 'yaml';
 import { BrikaInitializer } from './brika-initializer';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -100,7 +101,7 @@ export class ConfigLoader {
       }
 
       const content = await file.text();
-      const parsed = Bun.YAML.parse(content) as Record<string, unknown>;
+      const parsed = YAML.parse(content) as Record<string, unknown>;
 
       // Parse install section - can be new format (Record) or legacy format (Array)
       const installEntries = this.#parseInstallSection(parsed.install);
@@ -135,9 +136,118 @@ export class ConfigLoader {
   }
 
   /**
-   * Resolved plugin info with actual package name and entry path.
+   * Save the current config to brika.yml
+   * Preserves comments and formatting by parsing existing YAML as Document
    */
-  async resolvePluginEntry(entry: PluginEntry): Promise<{ name: string; ref: string }> {
+  async save(config?: BrikaConfig): Promise<void> {
+    const configToSave = config ?? this.config;
+    if (!configToSave) {
+      throw new Error('No config to save. Call load() first or provide a config.');
+    }
+
+    // Convert install entries back to object format for YAML
+    const installObj: Record<string, string> = {};
+    for (const entry of configToSave.install) {
+      installObj[entry.name] = entry.specifier;
+    }
+
+    // Read existing file to preserve comments
+    const file = Bun.file(this.configPath);
+    let doc: YAML.Document;
+
+    if (await file.exists()) {
+      const content = await file.text();
+      // Try to parse as YAML document (preserves comments)
+      try {
+        doc = YAML.parseDocument(content);
+        // If the document is malformed or in JSON format, create a new one
+        if (!doc.toString().includes('\n')) {
+          throw new Error('File is in JSON format, recreating as YAML');
+        }
+      } catch {
+        // Create new document if parsing fails or file is malformed
+        doc = new YAML.Document({
+          hub: configToSave.hub,
+          plugins: configToSave.plugins,
+          install: installObj,
+          rules: configToSave.rules,
+          schedules: configToSave.schedules,
+        });
+      }
+    } else {
+      // Create new document with default structure
+      doc = new YAML.Document({
+        hub: configToSave.hub,
+        plugins: configToSave.plugins,
+        install: installObj,
+        rules: configToSave.rules,
+        schedules: configToSave.schedules,
+      });
+    }
+
+    // Only update if doc was successfully parsed
+    if (doc.toString().includes('\n')) {
+      doc.set('hub', configToSave.hub);
+      doc.set('plugins', configToSave.plugins);
+      doc.set('install', installObj);
+      doc.set('rules', configToSave.rules);
+      doc.set('schedules', configToSave.schedules);
+    }
+
+    // Stringify with proper formatting
+    const yamlContent = doc.toString();
+
+    await Bun.write(this.configPath, yamlContent);
+
+    // Update cached config
+    if (config) {
+      this.config = config;
+    }
+
+    console.log(`[config] Saved to ${this.configPath}`);
+  }
+
+  /**
+   * Add a plugin to the install list and save config
+   */
+  async addPlugin(name: string, specifier: string): Promise<void> {
+    const config = this.get();
+
+    // Check if plugin already exists
+    const existing = config.install.find((p) => p.name === name);
+    if (existing) {
+      // Update specifier if different
+      if (existing.specifier !== specifier) {
+        existing.specifier = specifier;
+        await this.save(config);
+      }
+      return;
+    }
+
+    // Add new plugin
+    config.install.push({ name, specifier });
+    await this.save(config);
+  }
+
+  /**
+   * Remove a plugin from the install list and save config
+   */
+  async removePlugin(name: string): Promise<void> {
+    const config = this.get();
+    const initialLength = config.install.length;
+
+    config.install = config.install.filter((p) => p.name !== name);
+
+    // Only save if something was removed
+    if (config.install.length !== initialLength) {
+      await this.save(config);
+    }
+  }
+
+  /**
+   * Resolved plugin info with actual package name and root directory.
+   */
+  async resolvePluginEntry(entry: PluginEntry): Promise<{ name: string; rootDirectory: string }> {
     const { name, specifier } = entry;
 
     // workspace:* → find package by name in ./plugins/
@@ -161,14 +271,17 @@ export class ConfigLoader {
       throw new Error(`Workspace package not found at: ${pluginDir}`);
     }
 
-    // file: specifier → direct file path
+    // file: specifier → direct file path (remove file: prefix, it's now the root directory)
     if (specifier.startsWith('file:')) {
-      return { name, ref: specifier };
+      const path = specifier.slice('file:'.length);
+      return { name, rootDirectory: path };
     }
 
-    // Registry/remote package → return name as ref (resolved by PluginRegistry)
-    // Handles: ^1.0.0, latest, github:user/repo, git+https://..., etc.
-    return { name, ref: name };
+    // Registry/remote package → we don't know the rootDirectory yet, return name and let PluginManager resolve it
+    // This will be resolved later by the PluginRegistry
+    throw new Error(
+      `Cannot resolve rootDirectory for npm package: ${name}. Install via registry first.`
+    );
   }
 
   /**
@@ -231,7 +344,9 @@ export class ConfigLoader {
    * Find a workspace package by name, scanning ./plugins/ directory.
    * Handles scoped packages like @brika/plugin-timer.
    */
-  async #findWorkspacePackage(packageName: string): Promise<{ name: string; ref: string } | null> {
+  async #findWorkspacePackage(
+    packageName: string
+  ): Promise<{ name: string; rootDirectory: string } | null> {
     const pluginsDir = `${this.rootDir}/plugins`;
 
     // Get all subdirectories in plugins/
@@ -242,8 +357,7 @@ export class ConfigLoader {
         const pkg = await Bun.file(pkgPath).json();
         if (pkg.name === packageName) {
           const pluginDir = pkgPath.replace('/package.json', '');
-          const ref = await this.#resolvePluginDir(pluginDir);
-          return { name: pkg.name, ref };
+          return { name: pkg.name, rootDirectory: pluginDir };
         }
       } catch {
         // Skip invalid package.json files
@@ -259,7 +373,7 @@ export class ConfigLoader {
   async #resolveWorkspacePackage(
     pluginDir: string,
     fallbackName: string
-  ): Promise<{ name: string; ref: string } | null> {
+  ): Promise<{ name: string; rootDirectory: string } | null> {
     const pkgPath = `${pluginDir}/package.json`;
 
     if (!(await Bun.file(pkgPath).exists())) {
@@ -270,41 +384,7 @@ export class ConfigLoader {
     const pkg = await Bun.file(pkgPath).json();
     const actualName = pkg.name || fallbackName;
 
-    // Resolve entry point
-    const ref = await this.#resolvePluginDir(pluginDir);
-
-    return { name: actualName, ref };
-  }
-
-  /**
-   * Resolve a plugin directory to a file: ref with correct entry point.
-   */
-  async #resolvePluginDir(pluginDir: string): Promise<string> {
-    try {
-      const pkgPath = `${pluginDir}/package.json`;
-      const pkgFile = Bun.file(pkgPath);
-      const pkgContent = await pkgFile.json();
-
-      // Check exports["."] first, then main, then default to src/index.ts
-      let entryPoint = 'src/index.ts';
-      if (pkgContent.exports?.['.']?.import) {
-        entryPoint = pkgContent.exports['.'].import;
-      } else if (pkgContent.exports?.['.']) {
-        entryPoint = pkgContent.exports['.'];
-      } else if (pkgContent.main) {
-        entryPoint = pkgContent.main;
-      }
-
-      // Remove leading ./ if present
-      if (entryPoint.startsWith('./')) {
-        entryPoint = entryPoint.slice(2);
-      }
-
-      return `file:${pluginDir}/${entryPoint}`;
-    } catch {
-      // Fall back to default
-      return `file:${pluginDir}/src/index.ts`;
-    }
+    return { name: actualName, rootDirectory: pluginDir };
   }
 
   private merge<T extends object>(defaults: T, overrides: Partial<T>): T {

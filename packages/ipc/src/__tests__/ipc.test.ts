@@ -193,7 +193,7 @@ describe('Channel', () => {
         10 // 10ms timeout
       );
 
-      await expect(promise).rejects.toThrow(/timeout/i);
+      expect(promise).rejects.toThrow(/timeout/i);
     });
   });
 
@@ -207,7 +207,7 @@ describe('Channel', () => {
 
       channel.close(new Error('Test close'));
 
-      await expect(promise).rejects.toThrow('Test close');
+      expect(promise).rejects.toThrow('Test close');
       expect(channel.isClosed).toBe(true);
     });
 

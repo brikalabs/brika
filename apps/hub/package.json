@@ -10,6 +10,8 @@
   },
   "scripts": {
     "dev": "bun run src/main.ts",
+    "build": "bun run scripts/build.ts",
+    "typecheck": "bun x --bun tsc --noEmit",
     "lint": "bun x biome check .",
     "lint:fix": "bun x biome check . --write"
   },
@@ -18,8 +20,11 @@
     "@brika/events": "workspace:*",
     "@brika/ipc": "workspace:*",
     "@brika/router": "workspace:*",
+    "@brika/schema": "workspace:*",
     "@brika/sdk": "workspace:*",
     "@brika/shared": "workspace:*",
+    "modern-tar": "^0.7.3",
+    "yaml": "^2.8.2",
     "zod": "^4.3.4"
   },
   "devDependencies": {

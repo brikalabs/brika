@@ -1,9 +1,33 @@
-import { createAsyncSSEStream, group, route } from '@brika/router';
+import { createSSEStream, group, route } from '@brika/router';
 import { z } from 'zod';
 import { PluginRegistry } from '@/runtime/registry';
 
+/**
+ * Helper to stream async generator progress via SSE
+ */
+function streamProgress(
+  generator: AsyncGenerator<unknown>,
+  send: (data: unknown, event?: string) => void,
+  close: () => void
+): void {
+  (async () => {
+    try {
+      for await (const progress of generator) {
+        send(progress, 'progress');
+        // biome-ignore lint: progress type is dynamic
+        if ((progress as any).phase === 'error' || (progress as any).phase === 'complete') {
+          close();
+          break;
+        }
+      }
+    } catch (error) {
+      send({ phase: 'error', message: String(error) }, 'progress');
+      close();
+    }
+  })();
+}
+
 export const registryRoutes = group('/api/registry', [
-  // SSE: Install a package with progress streaming
   route.post(
     '/install',
     {
@@ -12,21 +36,16 @@ export const registryRoutes = group('/api/registry', [
         version: z.string().optional(),
       }),
     },
-    ({ body, inject }) => {
+    async ({ body, inject }) => {
       const registry = inject(PluginRegistry);
+      await registry.init();
 
-      return createAsyncSSEStream(async (send) => {
-        for await (const progress of registry.install(body.package, body.version)) {
-          send(progress, 'progress');
-
-          // If error, stop streaming
-          if (progress.phase === 'error') break;
-        }
-      });
+      const generator = registry.install(body.package, body.version);
+      return createSSEStream((send, close) => streamProgress(generator, send, close));
     }
   ),
 
-  // SSE: Update package(s) with progress streaming
+  // Update package(s) with progress streaming
   route.post(
     '/update',
     {
@@ -34,16 +53,12 @@ export const registryRoutes = group('/api/registry', [
         package: z.string().optional(),
       }),
     },
-    ({ body, inject }) => {
+    async ({ body, inject }) => {
       const registry = inject(PluginRegistry);
+      await registry.init();
 
-      return createAsyncSSEStream(async (send) => {
-        for await (const progress of registry.update(body.package)) {
-          send(progress, 'progress');
-
-          if (progress.phase === 'error') break;
-        }
-      });
+      const generator = registry.update(body.package);
+      return createSSEStream((send, close) => streamProgress(generator, send, close));
     }
   ),
 

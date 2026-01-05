@@ -88,4 +88,3 @@ export const buildFullPath = (base: string, file: string): string => {
   const cleanFile = file.startsWith('/') ? file : `/${file}`;
   return `${cleanBase}${cleanFile}`;
 };
-

@@ -52,7 +52,7 @@ export function LogFilterBar({
   const hasActiveFilters =
     filters.levels.length > 0 ||
     filters.sources.length > 0 ||
-    filters.pluginRef !== null ||
+    filters.pluginName !== null ||
     filters.search !== "" ||
     filters.startDate !== null ||
     filters.endDate !== null;
@@ -105,7 +105,7 @@ export function LogFilterBar({
 
         {pluginOptions.length > 0 && (
           <Select
-            value={filters.pluginRef ?? "all"}
+            value={filters.pluginName ?? "all"}
             onValueChange={(v) => onPluginChange(v === "all" ? null : v)}
           >
             <SelectTrigger className="w-56">
@@ -114,7 +114,7 @@ export function LogFilterBar({
             <SelectContent>
               <SelectItem value="all">{t("logs:allPlugins")}</SelectItem>
               {pluginOptions.map((plugin) => (
-                <SelectItem key={plugin.ref} value={plugin.ref}>
+                <SelectItem key={plugin.name} value={plugin.name}>
                   {plugin.name}
                   {plugin.version && <span className="ml-1 text-muted-foreground">v{plugin.version}</span>}
                 </SelectItem>

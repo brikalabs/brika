@@ -7,7 +7,7 @@ export interface LogEvent {
   ts: number;
   level: LogLevel;
   source: LogSource;
-  pluginRef?: string;
+  pluginName?: string;
   message: string;
   meta?: Record<string, Json>;
 }
@@ -69,10 +69,10 @@ export interface Plugin {
   engines: { brika: string };
 
   // ─── Installation ──────────────────────────────────────────────────────────
-  /** Installation reference (e.g., "file:/path/to/plugin/src/main.ts") */
-  ref: string;
-  /** Installation directory (e.g., "/path/to/plugin") */
-  dir: string;
+  /** Plugin root directory where package.json lives */
+  rootDirectory: string;
+  /** Entry point file path (absolute) */
+  entryPoint: string;
 
   // ─── Runtime ───────────────────────────────────────────────────────────────
   /** Current status */
@@ -213,25 +213,4 @@ export interface Rule {
   condition?: string; // e.g. "event.payload.brightness < 50"
   actions: RuleAction[];
   enabled: boolean;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Plugin Manifest (from package.json)
-// ─────────────────────────────────────────────────────────────────────────────
-
-/** Full plugin manifest from package.json */
-export interface PluginManifest {
-  name: string;
-  version: string;
-  description?: string;
-  author?: string | { name: string; email?: string; url?: string };
-  homepage?: string | null;
-  repository?: string | { type?: string; url: string; directory?: string };
-  icon?: string;
-  keywords?: string[];
-  license?: string;
-  engines: { brika: string };
-  dependencies?: Record<string, string>;
-  tools?: ToolManifest[];
-  blocks?: BlockManifest[];
 }

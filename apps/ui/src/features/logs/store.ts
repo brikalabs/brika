@@ -9,7 +9,7 @@ import type { StoredLogEvent } from "./api";
 export interface LogFilters {
   levels: LogLevel[];
   sources: LogSource[];
-  pluginRef: string | null;
+  pluginName: string | null;
   search: string;
   startDate: Date | null;
   endDate: Date | null;
@@ -31,7 +31,7 @@ interface LogsStore {
   // Filter actions
   setLevels: (levels: LogLevel[]) => void;
   setSources: (sources: LogSource[]) => void;
-  setPluginRef: (ref: string | null) => void;
+  setPluginName: (name: string | null) => void;
   setSearch: (search: string) => void;
   setDateRange: (start: Date | null, end: Date | null) => void;
   resetFilters: () => void;
@@ -44,7 +44,7 @@ interface LogsStore {
 const defaultFilters: LogFilters = {
   levels: [],
   sources: [],
-  pluginRef: null,
+  pluginName: null,
   search: "",
   startDate: null,
   endDate: null,
@@ -68,7 +68,7 @@ export const useLogsStore = create<LogsStore>((set) => ({
 
   setLevels: (levels) => set((s) => ({ filters: { ...s.filters, levels } })),
   setSources: (sources) => set((s) => ({ filters: { ...s.filters, sources } })),
-  setPluginRef: (ref) => set((s) => ({ filters: { ...s.filters, pluginRef: ref } })),
+  setPluginName: (name) => set((s) => ({ filters: { ...s.filters, pluginName: name } })),
   setSearch: (search) => set((s) => ({ filters: { ...s.filters, search } })),
   setDateRange: (startDate, endDate) =>
     set((s) => ({

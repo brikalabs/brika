@@ -13,7 +13,7 @@ function filtersToParams(filters: LogFilters): LogQueryParams {
   return {
     level: filters.levels.length > 0 ? filters.levels : undefined,
     source: filters.sources.length > 0 ? filters.sources : undefined,
-    pluginRef: filters.pluginRef ?? undefined,
+    pluginName: filters.pluginName ?? undefined,
     search: filters.search || undefined,
     startTs: filters.startDate?.getTime(),
     endTs: filters.endDate?.getTime(),
@@ -26,7 +26,7 @@ function filtersToParams(filters: LogFilters): LogQueryParams {
 function matchesFilters(log: StoredLogEvent, filters: LogFilters): boolean {
   if (filters.levels.length > 0 && !filters.levels.includes(log.level)) return false;
   if (filters.sources.length > 0 && !filters.sources.includes(log.source)) return false;
-  if (filters.pluginRef && log.pluginRef !== filters.pluginRef) return false;
+  if (filters.pluginName && log.pluginName !== filters.pluginName) return false;
   if (filters.search && !log.message.toLowerCase().includes(filters.search.toLowerCase())) return false;
   // Date filters apply to historical, live logs are always recent
   return true;
@@ -150,7 +150,7 @@ export function useLogs() {
     filters: store.filters,
     setLevels: store.setLevels,
     setSources: store.setSources,
-    setPluginRef: store.setPluginRef,
+    setPluginName: store.setPluginName,
     setSearch: store.setSearch,
     setDateRange: store.setDateRange,
     resetFilters: store.resetFilters,
