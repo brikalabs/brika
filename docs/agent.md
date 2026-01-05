@@ -370,7 +370,7 @@ bun run --cwd apps/ui dev     # UI only
 
 # Testing
 bun test                      # Run all tests
-bun run typecheck             # Type checking
+bun run tsc                   # Type checking
 
 # Build
 bun run --cwd apps/ui build   # Build UI for production

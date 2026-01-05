@@ -11,6 +11,9 @@
     ".": "./src/index.ts",
     "./contract": "./src/contract/index.ts"
   },
+  "scripts": {
+    "tsc": "bunx --biome tsc --noEmit"
+  },
   "dependencies": {
     "zod": "^4.3.4"
   },

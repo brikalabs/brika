@@ -11,7 +11,7 @@
   "scripts": {
     "dev": "bun run src/main.ts",
     "build": "bun run scripts/build.ts",
-    "typecheck": "bun x --bun tsc --noEmit",
+    "tsc": "bun x --bun tsc --noEmit",
     "lint": "bun x biome check .",
     "lint:fix": "bun x biome check . --write"
   },

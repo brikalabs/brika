@@ -27,7 +27,8 @@
     ".": "./src/main.ts"
   },
   "scripts": {
-    "link": "bun link"
+    "link": "bun link",
+    "tsc": "bunx --biome tsc --noEmit"
   },
   "blocks": [
     {

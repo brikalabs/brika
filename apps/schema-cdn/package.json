@@ -10,7 +10,8 @@
   },
   "scripts": {
     "dev": "bunx wrangler dev",
-    "deploy": "bunx wrangler deploy"
+    "deploy": "bunx wrangler deploy",
+    "tsc": "bunx --biome tsc --noEmit"
   },
   "dependencies": {
     "hono": "^4.11.3"

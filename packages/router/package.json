@@ -10,6 +10,9 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "scripts": {
+    "tsc": "bunx --biome tsc --noEmit"
+  },
   "dependencies": {
     "@brika/shared": "workspace:*",
     "hono": "^4.11.3",

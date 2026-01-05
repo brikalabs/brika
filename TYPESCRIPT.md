@@ -80,11 +80,10 @@ This allows TypeScript checking for both source and build scripts.
 
 ```bash
 # Check all packages
-bun run typecheck
+bun run tsc
 
 # Check specific package
-cd packages/schema
-tsc --noEmit
+bun --filter @brika/schema run tsc
 ```
 
 ### IDE Integration
@@ -167,12 +166,12 @@ Remove `rootDir` from package tsconfig if including multiple directories (like `
 
 ## Scripts in package.json
 
-Add typecheck script to packages that need it:
+Add tsc script to packages that need it:
 
 ```json
 {
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "tsc": "bunx --biome tsc --noEmit"
   },
   "devDependencies": {
     "typescript": "^5.0.0"
@@ -190,4 +189,3 @@ Add typecheck script to packages that need it:
 
 **Status:** ✅ Configured for all packages  
 **No errors:** All TypeScript errors resolved
-
