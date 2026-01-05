@@ -81,7 +81,7 @@ function MarkdownCodeBlock({
   const { t } = useLocale();
 
   return (
-    <CodeBlock>
+    <CodeBlock className="mb-4">
       <CodeBlockHeader>
         <CodeBlockInfo>
           {({ language, filename, lineCount }) => {

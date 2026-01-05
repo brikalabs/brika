@@ -195,7 +195,7 @@ describe('EventSystem', () => {
       GenericEventActions.emit.create({ type: 'test', source: 'src', payload: null }, 'src')
     );
     events.dispatch(
-      PluginActions.loaded.create({ uid: '123', name: 'test', version: '1.0.0', ref: 'ref' }, 'hub')
+      PluginActions.loaded.create({ uid: '123', name: 'test', version: '1.0.0', pid: 1234 }, 'hub')
     );
 
     await new Promise((resolve) => setTimeout(resolve, 10));

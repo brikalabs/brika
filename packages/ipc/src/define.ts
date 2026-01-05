@@ -103,9 +103,9 @@ export function rpc<N extends string, I extends z.ZodType, O extends z.ZodType>(
 
 /** Extract the name from a definition */
 export type NameOf<T> =
-  T extends MessageDef<infer N, unknown>
+  T extends MessageDef<infer N, z.ZodType>
     ? N
-    : T extends RpcDef<infer N, unknown, unknown>
+    : T extends RpcDef<infer N, z.ZodType, z.ZodType>
       ? N
       : never;
 
@@ -113,10 +113,10 @@ export type NameOf<T> =
 export type PayloadOf<T> = T extends MessageDef<string, infer S> ? Infer<S> : never;
 
 /** Extract the input type from an RPC */
-export type InputOf<T> = T extends RpcDef<string, infer I, unknown> ? Infer<I> : never;
+export type InputOf<T> = T extends RpcDef<string, infer I, z.ZodType> ? Infer<I> : never;
 
 /** Extract the output type from an RPC */
-export type OutputOf<T> = T extends RpcDef<string, unknown, infer O> ? Infer<O> : never;
+export type OutputOf<T> = T extends RpcDef<string, z.ZodType, infer O> ? Infer<O> : never;
 
 /** Any definition (message or RPC) */
 export type AnyDef = MessageDef | RpcDef;

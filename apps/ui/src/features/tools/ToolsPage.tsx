@@ -79,7 +79,7 @@ function SchemaField({ name, schema, value, onChange, required }: Readonly<Field
         <Input
           id={id}
           type="number"
-          value={value === undefined ? (schema.default ?? '') : String(value)}
+          value={value === undefined ? String(schema.default ?? '') : String(value)}
           onChange={(e) => onChange(e.target.value ? Number(e.target.value) : undefined)}
           placeholder={
             schema.default !== undefined
@@ -235,7 +235,7 @@ function ToolCallDialog({ tool, onClose }: Readonly<CallDialogProps>) {
                 {result.content && (
                   <div className="rounded-lg bg-muted p-3 text-sm">{result.content}</div>
                 )}
-                {result.data && (
+                {result.data !== undefined && (
                   <pre className="max-h-37.5 overflow-auto rounded-lg bg-muted p-3 font-mono text-xs">
                     {JSON.stringify(result.data, null, 2)}
                   </pre>

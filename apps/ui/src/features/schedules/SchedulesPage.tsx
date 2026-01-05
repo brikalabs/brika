@@ -16,6 +16,10 @@ import {
   Input,
   Label,
   Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   Separator,
   Switch,
   Table,
@@ -117,13 +121,17 @@ export function SchedulesPage() {
                 <div className="flex gap-3">
                   <Select
                     value={form.triggerType}
-                    onChange={(e) =>
-                      setForm({ ...form, triggerType: e.target.value as 'cron' | 'interval' })
+                    onValueChange={(value) =>
+                      setForm({ ...form, triggerType: value as 'cron' | 'interval' })
                     }
-                    className="w-32"
                   >
-                    <option value="cron">{t('schedules:cron')}</option>
-                    <option value="interval">{t('schedules:interval')}</option>
+                    <SelectTrigger className="w-32">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cron">{t('schedules:cron')}</SelectItem>
+                      <SelectItem value="interval">{t('schedules:interval')}</SelectItem>
+                    </SelectContent>
                   </Select>
                   {form.triggerType === 'cron' ? (
                     <Input

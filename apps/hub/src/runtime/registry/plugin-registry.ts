@@ -121,12 +121,14 @@ export class PluginRegistry {
   // Update
   // ─────────────────────────────────────────────────────────────────────────────
 
-  // biome-ignore lint: async generator uses yield*
   async *update(name?: string): AsyncGenerator<OperationProgress> {
     try {
       yield this.#msg('resolving', 'update', name ?? 'all');
       const args = name ? ['update', name] : ['update'];
-      yield* this.#runBunWithProgress('update', name ?? 'all', args);
+      // Run bun update and stream progress
+      for await (const progress of this.#runBunWithProgress('update', name ?? 'all', args)) {
+        yield progress;
+      }
       yield this.#msg('complete', 'update', name ?? 'all', undefined, 'Updated successfully');
     } catch (error) {
       yield this.#msg('error', 'update', name ?? 'all', undefined, String(error), String(error));
@@ -390,7 +392,7 @@ export class PluginRegistry {
       operation,
       package: packageName,
       targetVersion: version,
-      message: message ?? `${phase} ${packageName}`,
+      message: message ?? `${phase} ${packageName}@${version}`,
       error,
     };
   }

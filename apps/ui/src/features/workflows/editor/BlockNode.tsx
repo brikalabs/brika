@@ -61,6 +61,8 @@ export interface BlockNodeData {
   // Execution state
   status?: BlockStatus;
   output?: unknown;
+  // Index signature for React Flow compatibility
+  [key: string]: unknown;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

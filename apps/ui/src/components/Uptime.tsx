@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 
-// @ts-expect-error Intl.DurationFormat not yet in TypeScript lib
 const durationFormat = new Intl.DurationFormat(undefined, {
   style: 'narrow',
 });

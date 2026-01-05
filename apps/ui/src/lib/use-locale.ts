@@ -18,6 +18,7 @@ export interface DurationInput {
 }
 
 declare global {
+  // biome-ignore lint/style/noNamespace: Required for Intl.DurationFormat polyfill type
   namespace Intl {
     class DurationFormat {
       constructor(locale?: string | string[], options?: DurationFormatOptions);

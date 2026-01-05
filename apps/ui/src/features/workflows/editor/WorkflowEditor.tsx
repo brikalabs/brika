@@ -119,14 +119,9 @@ function WorkflowEditorInner({
 
       // Convert BlockDefinition to BlockTypeInfo for addBlock
       const blockType: BlockTypeInfo = {
+        ...blockDef,
         type: blockDef.type || blockDef.id,
-        name: blockDef.name,
-        description: blockDef.description,
-        icon: blockDef.icon,
-        color: blockDef.color,
         category: blockDef.category as 'flow' | 'action' | 'data' | 'debug',
-        inputs: blockDef.inputs,
-        outputs: blockDef.outputs,
         defaultConfig: {},
       };
 

@@ -4,7 +4,8 @@
  * Executes workflows with port-based routing and IPC block execution.
  */
 
-import type { BlockConnection, BlockContext, Json, Workflow, WorkflowBlock } from '@brika/sdk';
+import type { BlockContext } from '@brika/ipc/contract';
+import type { BlockConnection, Json, Workflow, WorkflowBlock } from '@brika/sdk';
 import type { BlockRegistry } from '@/runtime/blocks';
 import type { EventSystem } from '@/runtime/events/event-system';
 import type { LogRouter } from '@/runtime/logs/log-router';
@@ -48,6 +49,7 @@ export class WorkflowExecutor {
   readonly #vars = new Map<string, Json>();
   readonly #blockOutputs = new Map<string, Record<string, Json>>();
   #listener?: ExecutionListener;
+  #executionId = '';
 
   constructor(deps: ExecutorDeps) {
     this.#deps = deps;
@@ -66,6 +68,7 @@ export class WorkflowExecutor {
   async run(workflow: Workflow, trigger: TriggerData): Promise<void> {
     this.#vars.clear();
     this.#blockOutputs.clear();
+    this.#executionId = crypto.randomUUID();
 
     // Build connection map: blockId.portId -> target connections
     const connections = this.#buildConnectionMap(workflow);
@@ -122,17 +125,19 @@ export class WorkflowExecutor {
   ): Promise<void> {
     this.#emit({ type: 'block.start', blockId: block.id });
 
-    // Build context
+    // Build context for IPC
     const ctx: BlockContext = {
+      workflowId: workflow.id,
+      executionId: this.#executionId,
+      nodeId: block.id,
       trigger: {
         type: trigger.type,
         payload: trigger.payload,
         source: trigger.source,
         ts: Date.now(),
+        input: inputData,
       },
       vars: Object.fromEntries(this.#vars),
-      input: inputData,
-      inputs: {}, // TODO: Support multi-input blocks
     };
 
     try {

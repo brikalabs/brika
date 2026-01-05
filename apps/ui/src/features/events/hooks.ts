@@ -10,7 +10,9 @@ export function useEventStream() {
   useEffect(() => {
     const es = new EventSource(getStreamUrl('/api/stream/events'));
     es.addEventListener('event', (ev: MessageEvent) => add(JSON.parse(ev.data)));
-    es.onerror = () => {};
+    es.onerror = () => {
+      /* Connection error - auto-retry handled by EventSource */
+    };
     return () => es.close();
   }, [add]);
 

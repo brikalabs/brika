@@ -16,7 +16,7 @@
     "dev:hub": "bun --filter @brika/hub dev",
     "dev:ui": "bun --filter @brika/ui dev",
     "test": "bun test",
-    "tsc": "bun x --bun tsc --noEmit",
+    "tsc": "bun --filter '*' tsc",
     "lint": "bunx biome check .",
     "lint:fix": "bunx biome check --write ."
   },

@@ -25,7 +25,10 @@ import type { AnyObj, ToolInputSchema, ToolResult } from './types';
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
-export type ToolCallContext = { traceId: string; source: string };
+export type ToolCallContext = {
+  traceId: string;
+  source: 'api' | 'ui' | 'voice' | 'rule' | 'automation';
+};
 type ToolHandler = (args: AnyObj, ctx: ToolCallContext) => Promise<ToolResult> | ToolResult;
 type EventHandler = (event: { type: string; payload: Json }) => void;
 type StopHandler = () => void | Promise<void>;
@@ -200,7 +203,7 @@ class Context {
       cfg: z.infer<T>,
       ctx: BlockContext,
       rt: BlockRuntime
-    ) => Promise<{ output: string; data?: Json }>
+    ) => Promise<{ output: string; data?: Json }> | { output: string; data?: Json }
   ): { id: string } {
     const { id, name, description, inputs = [], outputs = [], schema } = spec;
     if (!this.#declaredBlocks.has(id)) {

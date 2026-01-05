@@ -278,6 +278,42 @@ export class EventSystem {
   }
 
   /**
+   * Subscribe to actions matching a glob pattern string
+   * Useful for dynamic runtime subscriptions (e.g., from plugins)
+   *
+   * @example
+   * // Subscribe to all motion events
+   * events.subscribeGlob("motion.*", (action) => {
+   *   console.log("Motion event:", action.type);
+   * });
+   *
+   * // Subscribe to multiple patterns
+   * events.subscribeGlob(["light.*", "switch.*"], (action) => {
+   *   console.log("Light or switch event:", action.type);
+   * });
+   */
+  subscribeGlob(
+    patterns: string | string[],
+    handler: (action: Action) => void | Promise<void>
+  ): Unsubscribe {
+    const patternList = Array.isArray(patterns) ? patterns : [patterns];
+    const regexes = patternList.map(
+      (p) => new RegExp(`^${p.replace(/\./g, '\\.').replace(/\*/g, '.*')}$`)
+    );
+
+    const wrappedHandler: GlobalHandler = (action) => {
+      if (regexes.some((r) => r.test(action.type))) {
+        return handler(action);
+      }
+    };
+
+    this.globalSubscribers.add(wrappedHandler);
+    return () => {
+      this.globalSubscribers.delete(wrappedHandler);
+    };
+  }
+
+  /**
    * Clear all subscriptions and pending promises
    */
   clear(): void {

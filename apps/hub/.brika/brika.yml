@@ -6,6 +6,7 @@ hub:
   host: 0.0.0.0
 
 plugins:
+  installDir: ./plugins/.installed
   heartbeatInterval: 5000
   heartbeatTimeout: 15000
 
@@ -15,11 +16,11 @@ plugins:
 #   "@elia/plugin-timer": "^1.0.0"      # npm registry
 #   "my-plugin": "workspace:*"           # local workspace
 #   "my-plugin": "file:./plugins/local"  # file path
-install: {}
+install:
+  "@brika/blocks-builtin": workspace:*
 
 # Event-based rules
 rules: []
 
 # Scheduled tasks
 schedules: []
-

@@ -13,9 +13,11 @@ import { Badge } from '@/components/ui';
 export interface TriggerNodeData {
   event: string;
   filter?: Record<string, unknown>;
+  [key: string]: unknown;
 }
 
-export function TriggerNode({ data }: NodeProps<TriggerNodeData>) {
+export function TriggerNode({ data }: NodeProps) {
+  const nodeData = data as TriggerNodeData;
   return (
     <BaseNode className="min-w-[180px] border-green-500 border-l-4">
       <BaseNodeHeader>
@@ -27,10 +29,12 @@ export function TriggerNode({ data }: NodeProps<TriggerNodeData>) {
 
       <BaseNodeContent className="pt-0 pb-2">
         <Badge variant="outline" className="font-normal text-xs">
-          on: {data.event}
+          on: {nodeData.event}
         </Badge>
-        {data.filter && Object.keys(data.filter).length > 0 && (
-          <div className="text-muted-foreground text-xs">filter: {JSON.stringify(data.filter)}</div>
+        {nodeData.filter && Object.keys(nodeData.filter).length > 0 && (
+          <div className="text-muted-foreground text-xs">
+            filter: {JSON.stringify(nodeData.filter)}
+          </div>
         )}
       </BaseNodeContent>
 

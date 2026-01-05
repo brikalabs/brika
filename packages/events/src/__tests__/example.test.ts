@@ -55,9 +55,9 @@ describe('EventSystem', () => {
     await events.dispatch(TestActions.count.create({ value: 42 }));
 
     expect(received.length).toBe(3);
-    expect(received[0].type).toBe('test.hello');
-    expect(received[1].type).toBe('test.goodbye');
-    expect(received[2].type).toBe('test.count');
+    expect(received[0]?.type).toBe('test.hello');
+    expect(received[1]?.type).toBe('test.goodbye');
+    expect(received[2]?.type).toBe('test.count');
   });
 
   it('should support array of action creators', async () => {
@@ -76,8 +76,8 @@ describe('EventSystem', () => {
     await events.dispatch(TestActions.count.create({ value: 42 })); // This won't be received
 
     expect(received.length).toBe(2);
-    expect(received[0].type).toBe('test.hello');
-    expect(received[1].type).toBe('test.goodbye');
+    expect(received[0]?.type).toBe('test.hello');
+    expect(received[1]?.type).toBe('test.goodbye');
   });
 
   it('should support once with Promise', async () => {
@@ -92,7 +92,7 @@ describe('EventSystem', () => {
     expect(action.payload.message).toBe('Hello');
   });
 
-  it('should timeout if action not received', async () => {
+  it('should timeout if action not received', () => {
     const events = new EventSystem();
 
     expect(events.once(TestActions.hello, { timeout: 100 })).rejects.toThrow('Timeout');
@@ -132,8 +132,8 @@ describe('EventSystem', () => {
 
   it('should validate payload with Zod', () => {
     expect(() => {
-      // biome-ignore lint/suspicious/noExplicitAny: testing invalid input
-      TestActions.hello.create({ message: 123 } as any);
+      // Testing invalid input - message should be string, not number
+      TestActions.hello.create({ message: 123 } as unknown as { message: string });
     }).toThrow();
   });
 
@@ -254,7 +254,7 @@ describe('EventSystem', () => {
     expect(order).toContain(3);
   });
 
-  it('should handle waitFor timeout', async () => {
+  it('should handle waitFor timeout', () => {
     const events = new EventSystem();
 
     expect(events.waitFor(TestActions.hello, () => true, { timeout: 100 })).rejects.toThrow(
@@ -262,7 +262,7 @@ describe('EventSystem', () => {
     );
   });
 
-  it('should handle race timeout', async () => {
+  it('should handle race timeout', () => {
     const events = new EventSystem();
 
     expect(events.race([TestActions.hello, TestActions.goodbye], { timeout: 100 })).rejects.toThrow(
@@ -378,18 +378,18 @@ describe('EventSystem', () => {
     });
 
     expect(() => {
-      // biome-ignore lint/suspicious/noExplicitAny: testing invalid input
-      MixedActions.string.create(123 as any);
+      // Testing invalid input - should be string
+      MixedActions.string.create(123 as unknown as string);
     }).toThrow();
 
     expect(() => {
-      // biome-ignore lint/suspicious/noExplicitAny: testing invalid input
-      MixedActions.number.create('not a number' as any);
+      // Testing invalid input - should be number
+      MixedActions.number.create('not a number' as unknown as number);
     }).toThrow();
 
     expect(() => {
-      // biome-ignore lint/suspicious/noExplicitAny: testing invalid input
-      MixedActions.array.create('not an array' as any);
+      // Testing invalid input - should be string array
+      MixedActions.array.create('not an array' as unknown as string[]);
     }).toThrow();
   });
 
@@ -437,9 +437,9 @@ describe('EventSystem', () => {
     await events.dispatch(TestActions.count.create({ value: 42 }));
 
     expect(received.length).toBe(3);
-    expect(received[0].type).toBe('test.hello');
-    expect(received[1].type).toBe('test.goodbye');
-    expect(received[2].type).toBe('test.count');
+    expect(received[0]?.type).toBe('test.hello');
+    expect(received[1]?.type).toBe('test.goodbye');
+    expect(received[2]?.type).toBe('test.count');
   });
 
   it('should unsubscribe from subscribeAll', async () => {
@@ -495,8 +495,11 @@ describe('defineAction (single action without namespace)', () => {
 
   it('should validate payload with Zod', () => {
     expect(() => {
-      // biome-ignore lint/suspicious/noExplicitAny: testing invalid input
-      UserLoggedIn.create({ userId: 123 } as any);
+      // Testing invalid input - userId should be string, not number
+      UserLoggedIn.create({ userId: 123, email: 'test@example.com' } as unknown as {
+        userId: string;
+        email: string;
+      });
     }).toThrow();
   });
 

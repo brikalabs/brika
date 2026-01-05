@@ -155,23 +155,23 @@ export class PluginManager {
     await this.#lifecycle.unload(name);
   }
 
-  async load(nameOrPath: string): Promise<void> {
+  load(nameOrPath: string): Promise<void> {
     return this.#lifecycle.load(nameOrPath);
   }
 
-  async unload(name: string, skipRestartReset = false): Promise<void> {
+  unload(name: string, skipRestartReset = false): Promise<void> {
     return this.#lifecycle.unload(name, skipRestartReset);
   }
 
-  async stopAll(): Promise<void> {
+  stopAll(): Promise<void> {
     return this.#lifecycle.stopAll();
   }
 
-  async restoreEnabledFromState(): Promise<void> {
+  restoreEnabledFromState(): Promise<void> {
     return this.#lifecycle.restoreEnabled();
   }
 
-  async cleanupStaleState(): Promise<void> {
+  cleanupStaleState(): Promise<void> {
     return this.#lifecycle.cleanupStale();
   }
 
@@ -179,27 +179,28 @@ export class PluginManager {
   // Tool & Block Execution
   // ─────────────────────────────────────────────────────────────────────────
 
-  async callTool(
+  callTool(
     name: string,
     toolName: string,
     args: Record<string, Json>,
     ctx: ToolCallContext
   ): Promise<ToolResult> {
     const process = this.#lifecycle.getProcessByName(name);
-    if (!process) return { ok: false, content: `Plugin not loaded: ${name}` };
+    if (!process) return Promise.resolve({ ok: false, content: `Plugin not loaded: ${name}` });
     return process.callTool(toolName, args, ctx);
   }
 
-  async executeBlock(
+  executeBlock(
     blockType: string,
     config: Record<string, Json>,
     context: BlockContext
   ): Promise<BlockResult> {
     const pluginName = this.#blocks.getProvider(blockType);
-    if (!pluginName) return { error: `Unknown block type: ${blockType}`, stop: true };
+    if (!pluginName)
+      return Promise.resolve({ error: `Unknown block type: ${blockType}`, stop: true });
 
     const process = this.#lifecycle.getProcessByName(pluginName);
-    if (!process) return { error: `Plugin not loaded: ${pluginName}`, stop: true };
+    if (!process) return Promise.resolve({ error: `Plugin not loaded: ${pluginName}`, stop: true });
 
     const localBlockId = blockType.includes(':') ? blockType.split(':')[1] : blockType;
     return process.executeBlock(localBlockId, config, context);

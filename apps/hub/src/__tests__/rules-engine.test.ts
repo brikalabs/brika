@@ -1,9 +1,9 @@
 import 'reflect-metadata';
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
-import { EventBus, type EventListener } from '@brika/events';
 import type { Rule } from '@brika/shared';
 import { mock, spy, TestBed } from '@brika/shared';
 import { HubConfig } from '@/runtime/config';
+import { EventSystem } from '@/runtime/events/event-system';
 import { LogRouter } from '@/runtime/logs/log-router';
 import { RulesEngine } from '@/runtime/rules/rules-engine';
 import { type ScheduleCallback, SchedulerService } from '@/runtime/scheduler/scheduler-service';
@@ -14,7 +14,7 @@ describe('RulesEngine', () => {
   let mockLogs: LogRouter;
   let mockState: StateStore;
   let mockTools: ToolRegistry;
-  let mockEvents: EventBus;
+  let mockEvents: EventSystem;
   let mockScheduler: SchedulerService;
   let rules: Rule[];
 
@@ -30,14 +30,16 @@ describe('RulesEngine', () => {
     mockState = mock<StateStore>({
       listRules: () => rules,
       getRule: (id: string) => rules.find((r) => r.id === id),
-      upsertRule: async (r: Rule) => {
+      upsertRule: (r: Rule) => {
         const idx = rules.findIndex((x) => x.id === r.id);
         if (idx >= 0) rules[idx] = r;
         else rules.push(r);
+        return Promise.resolve();
       },
-      deleteRule: async (id: string) => {
+      deleteRule: (id: string) => {
         const idx = rules.findIndex((r) => r.id === id);
         if (idx >= 0) rules.splice(idx, 1);
+        return Promise.resolve();
       },
     });
 
@@ -48,15 +50,19 @@ describe('RulesEngine', () => {
       call: toolCallSpy,
     });
 
-    // Create a real-ish event bus mock that captures subscriptions
-    mockEvents = mock<EventBus>({
-      subscribeAll: spy<[EventListener], () => void>().mockReturnValue(() => {}),
-      emit: spy(),
+    // Create a real-ish event system mock that captures subscriptions
+    const noop = () => {
+      /* unsubscribe */
+    };
+    mockEvents = mock<EventSystem>({
+      subscribeAll: (() => noop) as EventSystem['subscribeAll'],
+      subscribeGlob: (() => noop) as EventSystem['subscribeGlob'],
+      dispatch: (() => Promise.resolve({})) as unknown as EventSystem['dispatch'],
     });
 
     // Create scheduler mock
     mockScheduler = mock<SchedulerService>({
-      onTrigger: spy<[ScheduleCallback], () => void>().mockReturnValue(() => {}),
+      onTrigger: spy<[ScheduleCallback], () => void>().mockReturnValue(noop),
     });
 
     TestBed.create()
@@ -64,7 +70,7 @@ describe('RulesEngine', () => {
       .provide(LogRouter, mockLogs)
       .provide(StateStore, mockState)
       .provide(ToolRegistry, mockTools)
-      .provide(EventBus, mockEvents)
+      .provide(EventSystem, mockEvents)
       .provide(SchedulerService, mockScheduler)
       .compile();
   });
@@ -89,7 +95,7 @@ describe('RulesEngine', () => {
     expect(rules).toHaveLength(1);
   });
 
-  it('should list rules from state', async () => {
+  it('should list rules from state', () => {
     // Pre-populate rules
     rules.push({
       id: '1',
@@ -174,7 +180,7 @@ describe('RulesEngine', () => {
     expect(rules[0].enabled).toBe(false);
   });
 
-  it('should get a rule by id', async () => {
+  it('should get a rule by id', () => {
     rules.push({
       id: 'my-rule',
       name: 'My Rule',

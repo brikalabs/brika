@@ -125,10 +125,12 @@ export class Client {
   }
 
   async #runStopHandlers(): Promise<void> {
-    for (let i = this.#stopHandlers.length - 1; i >= 0; i--) {
+    for (let i = this.#stopHandlers.length; i-- > 0; ) {
       try {
-        await this.#stopHandlers[i]();
-      } catch {}
+        await this.#stopHandlers[i]?.();
+      } catch {
+        // Ignore cleanup errors
+      }
     }
   }
 

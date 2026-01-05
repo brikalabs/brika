@@ -96,7 +96,7 @@ function LogEntry({ log }: Readonly<{ log: ExecutionLog }>) {
         </Badge>
       </button>
 
-      {expanded && log.data && (
+      {expanded && log.data !== undefined && (
         <div className="px-8 pb-2">
           <pre className="max-h-24 overflow-auto rounded bg-muted p-2 text-[10px]">
             {JSON.stringify(log.data, null, 2)}
@@ -118,6 +118,7 @@ export function DebugPanel({
   const [payload, setPayload] = useState('{}');
   const [isRunning, setIsRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('payload');
   const eventSourceRef = useRef<EventSource | null>(null);
   const logsEndRef = useRef<HTMLDivElement>(null);
 
@@ -235,7 +236,7 @@ export function DebugPanel({
         )}
       </div>
 
-      <Tabs defaultValue="payload" className="flex flex-1 flex-col">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-1 flex-col">
         <TabsList className="mx-3 mt-2">
           <TabsTrigger value="payload" className="text-xs">
             Payload

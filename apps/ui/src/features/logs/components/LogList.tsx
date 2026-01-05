@@ -19,7 +19,7 @@ interface LogListProps {
 }
 
 export function LogList({ logs, isLoading, isFetchingMore, hasMore, onLoadMore }: LogListProps) {
-  const { t, formatTime } = useLocale();
+  const { t } = useLocale();
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
   // Intersection observer for infinite scroll

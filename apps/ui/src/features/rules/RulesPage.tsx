@@ -47,9 +47,9 @@ export function RulesPage() {
   const handleCreate = async () => {
     await create.mutateAsync({
       name: form.name,
-      event: form.event,
+      trigger: { type: 'event', match: form.event },
       condition: form.condition,
-      action: { tool: form.tool, args: JSON.parse(form.args) },
+      actions: [{ tool: form.tool, args: JSON.parse(form.args) }],
       enabled: true,
     });
     setDialogOpen(false);
@@ -185,7 +185,7 @@ export function RulesPage() {
                     <TableCell>
                       <Badge variant="outline" className="gap-1 font-mono">
                         <Zap className="size-3" />
-                        {r.event}
+                        {r.trigger.type === 'event' ? r.trigger.match : r.trigger.scheduleId}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -195,7 +195,7 @@ export function RulesPage() {
                     </TableCell>
                     <TableCell>
                       <Badge variant="secondary" className="font-mono">
-                        {r.action?.tool ?? '—'}
+                        {r.actions[0]?.tool ?? '—'}
                       </Badge>
                     </TableCell>
                     <TableCell>

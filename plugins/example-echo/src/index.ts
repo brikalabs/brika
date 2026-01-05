@@ -7,7 +7,6 @@ import { defineTool, log, onStop, z } from "@brika/sdk";
 export const echo = defineTool(
   {
     id: "echo",
-    description: "Echo back the provided message",
     schema: z.object({
       message: z.string().describe("The message to echo back"),
     }),

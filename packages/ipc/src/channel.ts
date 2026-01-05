@@ -117,7 +117,7 @@ export class Channel {
    */
   send<T extends MessageDef>(def: T, payload: PayloadOf<T>): void {
     if (this.#closed) return;
-    this.#send({ t: def.name, ...payload });
+    this.#send({ t: def.name, ...(payload as object) });
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -184,7 +184,7 @@ export class Channel {
         timer,
       });
 
-      this.#send({ t: def.name, _id: id, ...input });
+      this.#send({ t: def.name, _id: id, ...(input as object) });
     });
   }
 

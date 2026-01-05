@@ -65,7 +65,7 @@ function useLiveStream() {
       idCounter.current -= 1;
       addNew({ ...log, id: idCounter.current });
     });
-    es.onerror = () => {};
+    es.onerror = () => { /* Connection error - auto-retry handled by EventSource */ };
     return () => es.close();
   }, [addNew]);
 }

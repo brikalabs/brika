@@ -20,20 +20,37 @@ export interface Tool {
   color?: string;
   owner: string;
   inputSchema?: ToolInputSchema;
-
-  call(args: Record<string, Json>, ctx: ToolCallContext): Promise<ToolResult>;
 }
+
+export type ToolCaller = (
+  owner: string,
+  toolId: string,
+  args: Record<string, Json>,
+  ctx: ToolCallContext
+) => Promise<ToolResult>;
 
 @singleton()
 export class ToolRegistry {
   private readonly logs = inject(LogRouter);
   readonly #tools = new Map<string, Tool>();
+  #caller: ToolCaller | null = null;
+
+  /**
+   * Set the tool caller function
+   */
+  setToolCaller(caller: ToolCaller): void {
+    this.#caller = caller;
+  }
 
   /**
    * Register a tool from a plugin
    * The full name will be `pluginId:toolId` (e.g., "timer:set")
    */
-  register(id: string, owner: string, tool: Omit<Tool, 'id' | 'name' | 'owner'>): void {
+  register(
+    id: string,
+    owner: string,
+    tool: { description?: string; icon?: string; color?: string; inputSchema?: ToolInputSchema }
+  ): void {
     // Create full qualified name: pluginId:toolId
     const name = `${owner}:${id}`;
 
@@ -80,10 +97,11 @@ export class ToolRegistry {
       }));
   }
 
-  async call(name: string, args: Record<string, Json>, ctx: ToolCallContext): Promise<ToolResult> {
+  call(name: string, args: Record<string, Json>, ctx: ToolCallContext): Promise<ToolResult> {
     const t = this.#tools.get(name);
-    if (!t) return { ok: false, content: `Unknown tool: ${name}` };
-    return t.call(args, ctx);
+    if (!t) return Promise.resolve({ ok: false, content: `Unknown tool: ${name}` });
+    if (!this.#caller) return Promise.resolve({ ok: false, content: 'Tool caller not configured' });
+    return this.#caller(t.owner, t.id, args, ctx);
   }
 
   unregisterByOwner(owner: string): void {

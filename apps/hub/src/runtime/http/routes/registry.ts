@@ -1,12 +1,13 @@
 import { createSSEStream, group, route } from '@brika/router';
 import { z } from 'zod';
 import { PluginRegistry } from '@/runtime/registry';
+import type { OperationProgress } from '@/runtime/registry/types';
 
 /**
  * Helper to stream async generator progress via SSE
  */
 function streamProgress(
-  generator: AsyncGenerator<unknown>,
+  generator: AsyncGenerator<OperationProgress>,
   send: (data: unknown, event?: string) => void,
   close: () => void
 ): void {
@@ -14,8 +15,7 @@ function streamProgress(
     try {
       for await (const progress of generator) {
         send(progress, 'progress');
-        // biome-ignore lint: progress type is dynamic
-        if ((progress as any).phase === 'error' || (progress as any).phase === 'complete') {
+        if (progress.phase === 'error' || progress.phase === 'complete') {
           close();
           break;
         }

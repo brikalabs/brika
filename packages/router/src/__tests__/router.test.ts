@@ -51,21 +51,21 @@ describe('@brika/router', () => {
         route.post('/', async () => ({})),
       ]);
 
-      expect(routes[0].path).toBe('/api/users');
-      expect(routes[1].path).toBe('/api/users/:id');
-      expect(routes[2].path).toBe('/api/users');
+      expect(routes[0]?.path).toBe('/api/users');
+      expect(routes[1]?.path).toBe('/api/users/:id');
+      expect(routes[2]?.path).toBe('/api/users');
     });
 
     it('should handle prefix without leading slash', () => {
       const routes = group('api', [route.get('/test', async () => ({}))]);
 
-      expect(routes[0].path).toBe('/api/test');
+      expect(routes[0]?.path).toBe('/api/test');
     });
 
     it('should handle prefix with trailing slash', () => {
       const routes = group('/api/', [route.get('/test', async () => ({}))]);
 
-      expect(routes[0].path).toBe('/api/test');
+      expect(routes[0]?.path).toBe('/api/test');
     });
   });
 
@@ -77,8 +77,8 @@ describe('@brika/router', () => {
       const combined = combineRoutes(usersRoutes, postsRoutes);
 
       expect(combined).toHaveLength(2);
-      expect(combined[0].path).toBe('/users');
-      expect(combined[1].path).toBe('/posts');
+      expect(combined[0]?.path).toBe('/users');
+      expect(combined[1]?.path).toBe('/posts');
     });
 
     it('should apply prefix when provided', () => {
@@ -88,8 +88,8 @@ describe('@brika/router', () => {
       const combined = combineRoutes({ prefix: '/api/v1' }, usersRoutes, postsRoutes);
 
       expect(combined).toHaveLength(2);
-      expect(combined[0].path).toBe('/api/v1/users');
-      expect(combined[1].path).toBe('/api/v1/posts');
+      expect(combined[0]?.path).toBe('/api/v1/users');
+      expect(combined[1]?.path).toBe('/api/v1/posts');
     });
 
     it('should work with grouped routes', () => {
@@ -102,9 +102,9 @@ describe('@brika/router', () => {
       const combined = combineRoutes({ prefix: '/api' }, usersRoutes, postsRoutes);
 
       expect(combined).toHaveLength(3);
-      expect(combined[0].path).toBe('/api/users');
-      expect(combined[1].path).toBe('/api/users/:id');
-      expect(combined[2].path).toBe('/api/posts');
+      expect(combined[0]?.path).toBe('/api/users');
+      expect(combined[1]?.path).toBe('/api/users/:id');
+      expect(combined[2]?.path).toBe('/api/posts');
     });
 
     it('should handle empty arrays', () => {
@@ -120,8 +120,8 @@ describe('@brika/router', () => {
       );
 
       expect(routes).toHaveLength(2);
-      expect(routes[0].path).toBe('/a');
-      expect(routes[1].path).toBe('/b');
+      expect(routes[0]?.path).toBe('/a');
+      expect(routes[1]?.path).toBe('/b');
     });
   });
 
@@ -216,11 +216,12 @@ describe('@brika/router', () => {
 
     it('should handle HttpException', async () => {
       const app = createApp([
-        route.get('/api/user/:id', async ({ params }) => {
-          if (params.id === '404') {
+        route.get('/api/user/:id', ({ params }) => {
+          const p = params as { id: string };
+          if (p.id === '404') {
             throw new NotFound('User not found');
           }
-          return { id: params.id };
+          return { id: p.id };
         }),
       ]);
 
@@ -234,7 +235,7 @@ describe('@brika/router', () => {
 
     it('should handle BadRequest exception', async () => {
       const app = createApp([
-        route.post('/api/validate', async () => {
+        route.post('/api/validate', () => {
           throw new BadRequest('Invalid data');
         }),
       ]);
@@ -252,7 +253,7 @@ describe('@brika/router', () => {
 
     it('should return raw Response when handler returns Response', async () => {
       const app = createApp([
-        route.get('/api/stream', async () => {
+        route.get('/api/stream', () => {
           return new Response('raw data', {
             headers: { 'Content-Type': 'text/plain' },
           });

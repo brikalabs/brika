@@ -1,5 +1,6 @@
 import 'reflect-metadata';
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
+import type { Json, ToolCallContext, ToolResult } from '@brika/shared';
 import { spy, TestBed } from '@brika/shared';
 import { HubConfig } from '@/runtime/config';
 import { LogRouter } from '@/runtime/logs/log-router';
@@ -34,7 +35,6 @@ describe('ToolRegistry', () => {
 
     registry.register('tool', 'test', {
       description: 'A test tool',
-      call: async () => ({ ok: true, content: 'done' }),
     });
 
     const tools = registry.list();
@@ -45,9 +45,7 @@ describe('ToolRegistry', () => {
   it('should log on register', () => {
     const registry = TestBed.get(ToolRegistry);
 
-    registry.register('tool', 'plugin', {
-      call: async () => ({ ok: true }),
-    });
+    registry.register('tool', 'plugin', {});
 
     expect(infoSpy.called).toBe(true);
     expect(infoSpy.lastCall?.[0]).toBe('tool.register');
@@ -56,23 +54,17 @@ describe('ToolRegistry', () => {
   it('should prevent duplicate registration', () => {
     const registry = TestBed.get(ToolRegistry);
 
-    registry.register('tool', 'owner', {
-      call: async () => ({ ok: true }),
-    });
+    registry.register('tool', 'owner', {});
 
     expect(() => {
-      registry.register('tool', 'owner', {
-        call: async () => ({ ok: true }),
-      });
+      registry.register('tool', 'owner', {});
     }).toThrow('Tool already registered: owner:tool');
   });
 
   it('should unregister a tool', () => {
     const registry = TestBed.get(ToolRegistry);
 
-    registry.register('tool', 'test', {
-      call: async () => ({ ok: true }),
-    });
+    registry.register('tool', 'test', {});
 
     expect(registry.list()).toHaveLength(1);
     registry.unregister('test:tool');
@@ -82,9 +74,9 @@ describe('ToolRegistry', () => {
   it('should unregister by owner', () => {
     const registry = TestBed.get(ToolRegistry);
 
-    registry.register('a', 'plugin1', { call: async () => ({ ok: true }) });
-    registry.register('b', 'plugin1', { call: async () => ({ ok: true }) });
-    registry.register('c', 'plugin2', { call: async () => ({ ok: true }) });
+    registry.register('a', 'plugin1', {});
+    registry.register('b', 'plugin1', {});
+    registry.register('c', 'plugin2', {});
 
     expect(registry.list()).toHaveLength(3);
     registry.unregisterByOwner('plugin1');
@@ -94,17 +86,18 @@ describe('ToolRegistry', () => {
     expect(remaining[0].id).toBe('plugin2:c');
   });
 
-  it('should call a tool', async () => {
+  it('should call a tool via the tool caller', async () => {
     const registry = TestBed.get(ToolRegistry);
     const handler = spy<
-      [Record<string, unknown>, unknown],
-      Promise<{ ok: boolean; content: string }>
+      [string, string, Record<string, Json>, ToolCallContext],
+      Promise<ToolResult>
     >();
     handler.mockResolvedValue({ ok: true, content: 'success' });
 
-    registry.register('tool', 'test', {
-      call: handler,
-    });
+    // Set up tool caller
+    registry.setToolCaller(handler);
+
+    registry.register('tool', 'test', {});
 
     const result = await registry.call(
       'test:tool',
@@ -115,7 +108,10 @@ describe('ToolRegistry', () => {
     expect(result.ok).toBe(true);
     expect(result.content).toBe('success');
     expect(handler.called).toBe(true);
-    expect(handler.lastCall?.[0]).toEqual({ arg: 'value' });
+    // Handler receives: owner, toolId, args, ctx
+    expect(handler.lastCall?.[0]).toBe('test');
+    expect(handler.lastCall?.[1]).toBe('tool');
+    expect(handler.lastCall?.[2]).toEqual({ arg: 'value' });
   });
 
   it('should return error for unknown tool', async () => {
@@ -124,5 +120,15 @@ describe('ToolRegistry', () => {
 
     expect(result.ok).toBe(false);
     expect(result.content).toContain('Unknown tool');
+  });
+
+  it('should return error if tool caller not configured', async () => {
+    const registry = TestBed.get(ToolRegistry);
+    registry.register('tool', 'test', {});
+
+    const result = await registry.call('test:tool', {}, { traceId: '123', source: 'api' });
+
+    expect(result.ok).toBe(false);
+    expect(result.content).toContain('Tool caller not configured');
   });
 });

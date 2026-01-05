@@ -32,15 +32,14 @@
 
 import { container } from 'tsyringe';
 
-// biome-ignore lint/suspicious/noExplicitAny: DI requires flexible types
-type Constructor<T = any> = new (...args: any[]) => T;
-type AnyFunction = (...args: any[]) => any;
+type Constructor<T = unknown> = new (...args: unknown[]) => T;
+type AnyFunction = (...args: unknown[]) => unknown;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Spy Function - Vitest/Jest-like API
 // ─────────────────────────────────────────────────────────────────────────────
 
-export interface SpyFn<TArgs extends any[] = any[], TReturn = any> {
+export interface SpyFn<TArgs extends unknown[] = unknown[], TReturn = unknown> {
   /** All recorded calls */
   readonly calls: TArgs[];
   /** Number of times called */
@@ -76,10 +75,10 @@ export interface SpyFn<TArgs extends any[] = any[], TReturn = any> {
   mockResolvedValueOnce(value: Awaited<TReturn>): this;
 
   /** For async: set rejected value */
-  mockRejectedValue(error: any): this;
+  mockRejectedValue(error: unknown): this;
 
   /** For async: set rejected value once */
-  mockRejectedValueOnce(error: any): this;
+  mockRejectedValueOnce(error: unknown): this;
 
   /** Assert spy was called with specific arguments */
   calledWith(...args: TArgs): boolean;
@@ -103,26 +102,29 @@ export interface SpyFn<TArgs extends any[] = any[], TReturn = any> {
  * expect(fn.lastCall).toEqual(["hello"]);
  * ```
  */
-export function spy<TArgs extends any[] = any[], TReturn = void>(
-  impl = null
+export function spy<TArgs extends unknown[] = unknown[], TReturn = void>(
+  initialImpl: ((...args: TArgs) => TReturn) | null = null
 ): SpyFn<TArgs, TReturn> {
   const calls: TArgs[] = [];
   const returnValueQueue: TReturn[] = [];
   const implQueue: Array<(...args: TArgs) => TReturn> = [];
 
   let returnValue: TReturn = undefined as TReturn;
+  let impl: ((...args: TArgs) => TReturn) | null = initialImpl;
 
   const fn = ((...args: TArgs): TReturn => {
     calls.push(args);
 
     // Check queued implementations first
-    if (implQueue.length > 0) {
-      return implQueue.shift()!(...args);
+    const queuedImpl = implQueue.shift();
+    if (queuedImpl) {
+      return queuedImpl(...args);
     }
 
     // Check queued return values
-    if (returnValueQueue.length > 0) {
-      return returnValueQueue.shift()!;
+    const queuedReturn = returnValueQueue.shift();
+    if (queuedReturn !== undefined) {
+      return queuedReturn;
     }
 
     // Use implementation if set
@@ -170,22 +172,22 @@ export function spy<TArgs extends any[] = any[], TReturn = void>(
   };
 
   fn.mockResolvedValue = (value: Awaited<TReturn>) => {
-    impl = (() => Promise.resolve(value)) as any;
+    impl = (() => Promise.resolve(value)) as (...args: TArgs) => TReturn;
     return fn;
   };
 
   fn.mockResolvedValueOnce = (value: Awaited<TReturn>) => {
-    implQueue.push((() => Promise.resolve(value)) as any);
+    implQueue.push((() => Promise.resolve(value)) as (...args: TArgs) => TReturn);
     return fn;
   };
 
-  fn.mockRejectedValue = (error: any) => {
-    impl = (() => Promise.reject(error)) as any;
+  fn.mockRejectedValue = (error: unknown) => {
+    impl = (() => Promise.reject(error)) as (...args: TArgs) => TReturn;
     return fn;
   };
 
-  fn.mockRejectedValueOnce = (error: any) => {
-    implQueue.push(() => Promise.reject(error));
+  fn.mockRejectedValueOnce = (error: unknown) => {
+    implQueue.push((() => Promise.reject(error)) as (...args: TArgs) => TReturn);
     return fn;
   };
 
@@ -232,19 +234,24 @@ export function mock<T extends object>(overrides: Partial<T> = {}): T {
 export function autoMock<T extends object>(
   methodNames: Array<keyof T & string>
 ): T & { [K in keyof T]: T[K] extends AnyFunction ? SpyFn : T[K] } {
-  const obj: any = {};
+  const obj = {} as Record<string, SpyFn>;
   for (const name of methodNames) {
     obj[name] = spy();
   }
-  return obj;
+  return obj as T & { [K in keyof T]: T[K] extends AnyFunction ? SpyFn : T[K] };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TestBed - Fluent DI Testing Container
 // ─────────────────────────────────────────────────────────────────────────────
 
+interface ProviderValue {
+  __useClass?: Constructor;
+  __useFactory?: () => unknown;
+}
+
 class TestBedBuilder {
-  readonly #providers = new Map<Constructor, any>();
+  readonly #providers = new Map<Constructor, unknown>();
   #compiled = false;
 
   /**
@@ -275,7 +282,7 @@ class TestBedBuilder {
    */
   useClass<T>(token: Constructor<T>, impl: Constructor<T>): this {
     // Resolve the impl and register
-    this.#providers.set(token, { __useClass: impl });
+    this.#providers.set(token, { __useClass: impl } satisfies ProviderValue);
     return this;
   }
 
@@ -283,7 +290,7 @@ class TestBedBuilder {
    * Use a factory function
    */
   useFactory<T>(token: Constructor<T>, factory: () => T): this {
-    this.#providers.set(token, { __useFactory: factory });
+    this.#providers.set(token, { __useFactory: factory } satisfies ProviderValue);
     return this;
   }
 
@@ -294,10 +301,11 @@ class TestBedBuilder {
     container.reset();
 
     for (const [token, value] of this.#providers) {
-      if (value?.__useClass) {
-        container.register(token, { useClass: value.__useClass });
-      } else if (value?.__useFactory) {
-        container.register(token, { useFactory: value.__useFactory });
+      const providerValue = value as ProviderValue | undefined;
+      if (providerValue?.__useClass) {
+        container.register(token, { useClass: providerValue.__useClass });
+      } else if (providerValue?.__useFactory) {
+        container.register(token, { useFactory: providerValue.__useFactory });
       } else {
         container.registerInstance(token, value);
       }
@@ -342,7 +350,7 @@ class TestBedStatic {
    * ```
    */
   setup(
-    config: { mocks?: Record<string, Partial<object>>; providers?: Record<string, any> } = {}
+    _config: { mocks?: Record<string, Partial<object>>; providers?: Record<string, unknown> } = {}
   ): void {
     container.reset();
 

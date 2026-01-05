@@ -24,14 +24,16 @@ describe('SchedulerService', () => {
     mockState = mock<StateStore>({
       listSchedules: () => schedules,
       getSchedule: (id: string) => schedules.find((s) => s.id === id),
-      upsertSchedule: async (s: Schedule) => {
+      upsertSchedule: (s: Schedule) => {
         const idx = schedules.findIndex((x) => x.id === s.id);
         if (idx >= 0) schedules[idx] = s;
         else schedules.push(s);
+        return Promise.resolve();
       },
-      deleteSchedule: async (id: string) => {
+      deleteSchedule: (id: string) => {
         const idx = schedules.findIndex((s) => s.id === id);
         if (idx >= 0) schedules.splice(idx, 1);
+        return Promise.resolve();
       },
     });
 
@@ -79,7 +81,7 @@ describe('SchedulerService', () => {
     expect(schedules).toHaveLength(1);
   });
 
-  it('should list schedules', async () => {
+  it('should list schedules', () => {
     schedules.push({
       id: '1',
       name: 'Schedule 1',

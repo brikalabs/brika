@@ -180,7 +180,9 @@ export class PluginChannel {
   kill(signal?: number): void {
     try {
       this.#proc.kill(signal);
-    } catch {}
+    } catch {
+      // Process may already be dead
+    }
     this.#handleDisconnect(new Error('Killed'));
   }
 
@@ -215,7 +217,9 @@ export class PluginChannel {
           this.#stderrBuffer.push(buffer.trim());
           this.#onStderr?.(buffer.trim());
         }
-      } catch {}
+      } catch {
+        // Stream closed or errored - ignore
+      }
     })();
   }
 

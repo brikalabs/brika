@@ -7,6 +7,7 @@ import { EventSystem } from '@/runtime/events/event-system';
 import { I18nService } from '@/runtime/i18n';
 import { LogRouter } from '@/runtime/logs/log-router';
 import { type PluginStateWithMetadata, StateStore } from '@/runtime/state/state-store';
+import { ToolRegistry } from '@/runtime/tools/tool-registry';
 import { PluginEventHandler } from './plugin-events';
 import { PluginProcess } from './plugin-process';
 import { PluginResolver } from './plugin-resolver';
@@ -25,6 +26,7 @@ export class PluginLifecycle {
   readonly #events = inject(EventSystem);
   readonly #i18n = inject(I18nService);
   readonly #eventHandler = inject(PluginEventHandler);
+  readonly #tools = inject(ToolRegistry);
   readonly #resolver = new PluginResolver();
 
   readonly #processes = new Map<string, PluginProcess>();
@@ -38,6 +40,15 @@ export class PluginLifecycle {
       maxCrashes: this.#config.restartMaxCrashes,
       crashWindowMs: this.#config.restartCrashWindowMs,
       stabilityThresholdMs: this.#config.restartStabilityMs,
+    });
+
+    // Set up tool caller to delegate to plugin processes
+    this.#tools.setToolCaller((owner, toolId, args, ctx) => {
+      const process = this.#processes.get(owner);
+      if (!process) {
+        return Promise.resolve({ ok: false, content: `Plugin not running: ${owner}` });
+      }
+      return process.callTool(toolId, args, ctx);
     });
   }
 

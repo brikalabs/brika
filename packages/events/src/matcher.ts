@@ -39,7 +39,8 @@ export function matchesPattern(pattern: ActionPattern, action: Action): boolean 
   // ActionMap (object with ActionCreators) - O(n) but typically small
   for (const key in pattern) {
     if (Object.hasOwn(pattern, key)) {
-      if (actionId === pattern[key][ACTION_ID]) {
+      const creator = pattern[key];
+      if (creator && actionId === creator[ACTION_ID]) {
         return true;
       }
     }
@@ -64,7 +65,10 @@ export function createPatternSet(pattern: ActionPattern): Set<symbol> {
   } else {
     for (const key in pattern) {
       if (Object.hasOwn(pattern, key)) {
-        ids.add(pattern[key][ACTION_ID]);
+        const creator = pattern[key];
+        if (creator) {
+          ids.add(creator[ACTION_ID]);
+        }
       }
     }
   }

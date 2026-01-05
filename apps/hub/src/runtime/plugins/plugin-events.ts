@@ -1,4 +1,5 @@
 import type { Json } from '@brika/ipc';
+import type { BlockDefinition } from '@brika/sdk';
 import type { BrikaEvent, LogLevel, ToolInputSchema } from '@brika/shared';
 import { inject, singleton } from '@brika/shared';
 import { BlockRegistry } from '@/runtime/blocks';
@@ -68,7 +69,7 @@ export class PluginEventHandler {
   }
 
   registerBlock(pluginName: string, block: { id: string; [key: string]: unknown }): void {
-    this.#blocks.register(block as any, pluginName);
+    this.#blocks.register(block as unknown as BlockDefinition, pluginName);
     this.#logs.debug('plugin.block.registered', { plugin: pluginName, block: block.id });
   }
 
@@ -87,7 +88,7 @@ export class PluginEventHandler {
   }
 
   subscribeToEvents(patterns: string[], handler: (event: BrikaEvent) => void): () => void {
-    return this.#events.subscribe(patterns, (action) => {
+    return this.#events.subscribeGlob(patterns, (action) => {
       handler({
         id: action.id,
         type: action.type,

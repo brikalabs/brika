@@ -214,3 +214,23 @@ export interface Rule {
   actions: RuleAction[];
   enabled: boolean;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Plugin Manifest (from package.json)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface PluginManifest {
+  name: string;
+  version: string;
+  description?: string;
+  author?: string | { name: string; email?: string; url?: string };
+  homepage?: string;
+  repository?: string | { type?: string; url: string; directory?: string };
+  icon?: string;
+  keywords?: string[];
+  license?: string;
+  engines?: { brika?: string };
+  main?: string;
+  tools?: ToolManifest[];
+  blocks?: BlockManifest[];
+}

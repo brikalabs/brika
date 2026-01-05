@@ -58,14 +58,9 @@ export class LogStore {
     const rootDir = configLoader.getRootDir();
     const dbPath = `${rootDir}/.brika/logs.db`;
 
-    // Ensure .brika directory exists
+    // Ensure .brika directory exists (mkdir -p is idempotent)
     const brikaDir = `${rootDir}/.brika`;
-    const dirExists = await Bun.file(brikaDir)
-      .exists()
-      .catch(() => false);
-    if (!dirExists) {
-      await Bun.$`mkdir -p ${brikaDir}`.quiet();
-    }
+    await Bun.$`mkdir -p ${brikaDir}`.quiet();
 
     this.#db = new Database(dbPath);
 
@@ -83,33 +78,13 @@ export class LogStore {
         )
     `);
 
-    // Migrate old plugin_ref column to plugin_name if needed
-    try {
-      // Check if the old column exists by trying to query it
-      const testQuery = this.#db.query("SELECT plugin_ref FROM logs LIMIT 1");
-      try {
-        testQuery.all();
-        // Old column exists, need to migrate
-        console.log('[log-store] Migrating plugin_ref → plugin_name');
-
-        // SQLite doesn't support column rename directly in old versions, so we do it via ALTER TABLE
-        this.#db.run("ALTER TABLE logs RENAME COLUMN plugin_ref TO plugin_name");
-        console.log('[log-store] Migration complete');
-      } catch {
-        // Column doesn't exist or query failed, nothing to migrate
-      }
-    } catch {
-      // Table doesn't exist yet or other error, ignore
-    }
-
     // Create indexes for efficient queries
     this.#db.run("CREATE INDEX IF NOT EXISTS idx_logs_ts ON logs(ts DESC)");
     this.#db.run("CREATE INDEX IF NOT EXISTS idx_logs_level ON logs(level)");
     this.#db.run("CREATE INDEX IF NOT EXISTS idx_logs_source ON logs(source)");
     this.#db.run("CREATE INDEX IF NOT EXISTS idx_logs_plugin ON logs(plugin_name)");
     this.#db.run("CREATE INDEX IF NOT EXISTS idx_logs_ts_level ON logs(ts DESC, level)");
-    // biome-ignore lint/style/noUnusedTemplateLiteral: <explanation>
-    this.#db.run(`CREATE INDEX IF NOT EXISTS idx_logs_ts_source ON logs (ts DESC, source)`);
+    this.#db.run("CREATE INDEX IF NOT EXISTS idx_logs_ts_source ON logs (ts DESC, source)");
 
     // Prepare insert statement for performance
     this.#insertStmt = this.#db.prepare(
@@ -262,6 +237,16 @@ export class LogStore {
       .all() as { plugin_name: string }[];
 
     return rows.map((r) => r.plugin_name);
+  }
+
+  count(): number {
+    if (!this.#db) return 0;
+
+    const row = this.#db
+      .query("SELECT COUNT(*) as count FROM logs")
+      .get() as { count: number } | null;
+
+    return row?.count ?? 0;
   }
 
   close () {

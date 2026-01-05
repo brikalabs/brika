@@ -32,7 +32,9 @@ export function EventsPage() {
     try {
       await emitEvent.mutateAsync({ type, payload: JSON.parse(payload) });
       setDialogOpen(false);
-    } catch {}
+    } catch {
+      // Invalid JSON or emit error - ignore
+    }
   };
 
   return (

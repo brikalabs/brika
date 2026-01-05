@@ -47,7 +47,7 @@ interface Variable {
 }
 
 interface SchemaProperty {
-  type: 'string' | 'number' | 'boolean' | 'array' | 'object';
+  type: string;
   description?: string;
   default?: unknown;
   enum?: unknown[];
@@ -55,7 +55,7 @@ interface SchemaProperty {
 
 interface BlockSchema {
   type: 'object';
-  properties?: Record<string, SchemaProperty>;
+  properties?: Record<string, unknown>;
   required?: string[];
 }
 
@@ -372,13 +372,11 @@ function SchemaField({ name, schema, value, onChange, variables, required }: Fie
         <Label className="font-medium text-sm">{label}</Label>
         {required && <span className="text-red-500 text-xs">*</span>}
         {description && (
-          <HelpCircle className="size-3.5 text-muted-foreground" title={description} />
+          <HelpCircle className="size-3.5 text-muted-foreground" aria-label={description} />
         )}
       </div>
       {renderField()}
-      {description && type !== 'boolean' && (
-        <p className="text-muted-foreground text-xs">{description}</p>
-      )}
+      {description && <p className="text-muted-foreground text-xs">{description}</p>}
     </div>
   );
 }
@@ -479,7 +477,7 @@ function BlockConfig({
         <SchemaField
           key={name}
           name={name}
-          schema={fieldSchema}
+          schema={fieldSchema as SchemaProperty}
           value={config[name]}
           onChange={(value) => onUpdate({ ...config, [name]: value })}
           variables={availableVariables}
@@ -503,7 +501,7 @@ export function ConfigPanel({
   className,
 }: ConfigPanelProps) {
   const isTrigger = node.type === 'trigger';
-  const data = node.data as BlockNodeData | TriggerNodeData;
+  const data = node.data as unknown as BlockNodeData | TriggerNodeData;
   const blockData = data as BlockNodeData;
 
   return (

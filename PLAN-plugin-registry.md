@@ -1,4 +1,4 @@
-sav# Plugin Registry & Storage Improvement Plan
+# Plugin Registry & Storage Improvement Plan
 
 ## Overview
 

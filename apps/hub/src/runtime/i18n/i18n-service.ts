@@ -89,7 +89,8 @@ export class I18nService {
 
   async init(): Promise<void> {
     const rootDir = this.#config.getRootDir();
-    this.#localesDir = `${rootDir}/apps/hub/locales`;
+    // Locales are in the hub's locales/ directory (relative to where hub runs)
+    this.#localesDir = `${rootDir}/locales`;
 
     await this.#loadCoreTranslations();
     this.#logs.info('i18n.initialized', {

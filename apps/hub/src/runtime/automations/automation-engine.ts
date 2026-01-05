@@ -51,7 +51,7 @@ export class AutomationEngine {
   /** Executor instance */
   #executor: WorkflowExecutor | null = null;
 
-  async init(): Promise<void> {
+  init(): void {
     // Create executor
     this.#executor = new WorkflowExecutor({
       plugins: this.plugins,
@@ -98,7 +98,7 @@ export class AutomationEngine {
     // Set up event trigger
     if (workflow.trigger.event) {
       const pattern = workflow.trigger.event;
-      const unsub = this.events.subscribe(pattern, async (action) => {
+      const unsub = this.events.subscribeGlob(pattern, async (action) => {
         // Check filter if present
         if (workflow.trigger.filter) {
           for (const [k, v] of Object.entries(workflow.trigger.filter)) {
@@ -208,7 +208,7 @@ export class AutomationEngine {
   // Lifecycle
   // ─────────────────────────────────────────────────────────────────────────────
 
-  async stop(): Promise<void> {
+  stop(): void {
     for (const unsub of this.#eventUnsubs) unsub();
     this.#eventUnsubs = [];
     this.logs.info('automation.engine.stopped');

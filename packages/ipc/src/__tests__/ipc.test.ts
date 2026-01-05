@@ -87,14 +87,16 @@ describe('Channel', () => {
       channel.send(ready, {});
 
       expect(sent).toHaveLength(2);
-      expect(sent[0].t).toBe('hello');
-      expect(sent[1].t).toBe('ready');
+      expect(sent[0]?.t).toBe('hello');
+      expect(sent[1]?.t).toBe('ready');
     });
   });
 
   describe('on', () => {
     it('should dispatch to message handlers', async () => {
-      const handler = mock(() => {});
+      const handler = mock(() => {
+        /* handler */
+      });
       channel.on(hello, handler);
 
       await channel.handle({
@@ -109,7 +111,9 @@ describe('Channel', () => {
     });
 
     it('should allow unsubscribe', async () => {
-      const handler = mock(() => {});
+      const handler = mock(() => {
+        /* handler */
+      });
       const unsub = channel.on(hello, handler);
 
       await channel.handle({ t: 'hello', plugin: { id: 'a', version: '1' } });
@@ -143,7 +147,7 @@ describe('Channel', () => {
     });
 
     it('should handle errors in RPC handlers', async () => {
-      channel.implement(callTool, async () => {
+      channel.implement(callTool, () => {
         throw new Error('Test error');
       });
 
@@ -156,9 +160,8 @@ describe('Channel', () => {
       });
 
       expect(sent).toHaveLength(1);
-      expect(sent[0].t).toBe('callToolResult');
-      // biome-ignore lint/suspicious/noExplicitAny: test assertion
-      expect((sent[0] as any).result.ok).toBe(false);
+      expect(sent[0]?.t).toBe('callToolResult');
+      expect(((sent[0] as Record<string, unknown>)?.result as { ok: boolean })?.ok).toBe(false);
     });
   });
 
@@ -172,8 +175,8 @@ describe('Channel', () => {
 
       // Verify request was sent
       expect(sent).toHaveLength(1);
-      expect(sent[0].t).toBe('callTool');
-      expect(sent[0]._id).toBe(1);
+      expect(sent[0]?.t).toBe('callTool');
+      expect((sent[0] as { _id?: number })?._id).toBe(1);
 
       // Simulate response
       await channel.handle({
@@ -186,7 +189,7 @@ describe('Channel', () => {
       expect(result).toEqual({ ok: true, content: 'success' });
     });
 
-    it('should timeout if no response', async () => {
+    it('should timeout if no response', () => {
       const promise = channel.call(
         ping,
         { ts: Date.now() },
@@ -198,7 +201,7 @@ describe('Channel', () => {
   });
 
   describe('close', () => {
-    it('should reject pending requests on close', async () => {
+    it('should reject pending requests on close', () => {
       const promise = channel.call(callTool, {
         tool: 'test',
         args: {},

@@ -87,19 +87,4 @@ describe('BrikaInitializer', () => {
     const files = await readdir(automationsDir);
     expect(Array.isArray(files)).toBe(true);
   });
-
-  test('removes deprecated directories', async () => {
-    const initializer = new BrikaInitializer();
-
-    // Create deprecated directory
-    const deprecatedDir = join(TEST_DIR, '.brika', 'plugins-node');
-    await mkdir(deprecatedDir, { recursive: true });
-    await Bun.write(join(deprecatedDir, 'test.txt'), 'test');
-
-    await initializer.init();
-
-    // Deprecated directory should be removed
-    const exists = await Bun.file(deprecatedDir).exists();
-    expect(exists).toBe(false);
-  });
 });

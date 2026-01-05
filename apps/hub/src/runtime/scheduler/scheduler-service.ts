@@ -80,12 +80,12 @@ export class SchedulerService {
     return () => this.#callbacks.delete(cb);
   }
 
-  async init(): Promise<void> {
+  init(): void {
     for (const s of this.state.listSchedules()) if (s.enabled) this.#activate(s);
     this.#ticker = setInterval(() => this.#tick(), 1000);
   }
 
-  async stop(): Promise<void> {
+  stop(): void {
     if (this.#ticker) clearInterval(this.#ticker);
     this.#running.clear();
   }
@@ -175,7 +175,9 @@ export class SchedulerService {
     for (const cb of this.#callbacks) {
       try {
         cb(rs.schedule);
-      } catch {}
+      } catch {
+        // Ignore callback errors
+      }
     }
   }
 }

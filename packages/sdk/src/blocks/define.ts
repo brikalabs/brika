@@ -96,7 +96,7 @@ export function defineBlock<T extends z.ZodObject<z.ZodRawShape>>(
     inputs: spec.inputs ?? [{ id: 'in', name: 'Input' }],
     outputs: spec.outputs ?? [{ id: 'out', name: 'Output' }],
     schema: jsonSchema,
-    execute: async (config, ctx, runtime) => {
+    execute: (config, ctx, runtime) => {
       // Validate config with Zod
       const parsed = spec.schema.safeParse(config);
       if (!parsed.success) {
@@ -171,7 +171,7 @@ export function expr<T>(value: T, ctx: BlockContext): T {
   if (typeof value === 'string') {
     // Full expression: {{ ... }}
     const match = value.match(/^\{\{\s*(.+?)\s*\}\}$/);
-    if (match) {
+    if (match && match[1]) {
       return evalPath(match[1], ctx) as T;
     }
     // Template with embedded expressions
@@ -273,7 +273,7 @@ function parseValue(str: string, ctx: BlockContext): Json {
 export function parseDuration(dur: string | number): number {
   if (typeof dur === 'number') return dur;
   const match = dur.match(/^(\d+(?:\.\d+)?)\s*(ms|s|m|h|d)?$/i);
-  if (!match) return 0;
+  if (!match || !match[1]) return 0;
   const [, num, unit = 'ms'] = match;
   const n = parseFloat(num);
   switch (unit.toLowerCase()) {

@@ -49,7 +49,6 @@ function DraggableBlock({ block, onDragStart }: DraggableBlockProps) {
   const iconName = (block.icon || 'box') as IconName;
 
   return (
-    // biome-ignore lint/a11y/useSemanticElements: draggable element requires div for drag-and-drop
     <div
       role="button"
       tabIndex={0}

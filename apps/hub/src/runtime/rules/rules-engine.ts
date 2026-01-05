@@ -21,7 +21,7 @@ export class RulesEngine {
   #eventUnsub?: () => void;
   #scheduleUnsub?: () => void;
 
-  async init(): Promise<void> {
+  init(): void {
     this.#eventUnsub = this.events.subscribeAll((action) => {
       // Convert Action to BrikaEvent format
       const e: BrikaEvent = {
@@ -37,7 +37,7 @@ export class RulesEngine {
     this.logs.info('rules.engine.started');
   }
 
-  async stop(): Promise<void> {
+  stop(): void {
     this.#eventUnsub?.();
     this.#scheduleUnsub?.();
     this.logs.info('rules.engine.stopped');

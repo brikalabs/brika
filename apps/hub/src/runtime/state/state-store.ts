@@ -66,72 +66,11 @@ export class StateStore {
     }
     const parsed = JSON.parse(await file.text()) as Partial<StateFile>;
 
-    // Handle migration from old format (ref+dir to name+rootDirectory+entryPoint)
-    const plugins: Record<string, InstalledPluginState> = {};
-    let needsMigration = false;
-
-    for (const [key, p] of Object.entries(parsed.plugins ?? {})) {
-      // Check if this is old format (has ref/dir) or new format (has name/rootDirectory)
-      const oldFormat = p as any;
-
-      if (oldFormat.ref && oldFormat.dir && !oldFormat.name) {
-        // Old format - migrate it
-        needsMigration = true;
-
-        // Try to read package.json to get the actual plugin name
-        try {
-          const pkgPath = `${oldFormat.dir}/package.json`;
-          const pkg = await Bun.file(pkgPath).json();
-          const pluginName = pkg.name;
-
-          // Extract entry point
-          let entryPointRelative = 'src/index.ts';
-          if (pkg.exports?.['.']?.import) {
-            entryPointRelative = pkg.exports['.'].import;
-          } else if (pkg.exports?.['.']) {
-            entryPointRelative =
-              typeof pkg.exports['.'] === 'string' ? pkg.exports['.'] : 'src/index.ts';
-          } else if (pkg.main) {
-            entryPointRelative = pkg.main;
-          }
-
-          if (entryPointRelative.startsWith('./')) {
-            entryPointRelative = entryPointRelative.slice(2);
-          }
-
-          const entryPoint = `${oldFormat.dir}/${entryPointRelative}`;
-
-          plugins[pluginName] = {
-            name: pluginName,
-            rootDirectory: oldFormat.dir,
-            entryPoint,
-            uid: oldFormat.uid,
-            enabled: oldFormat.enabled,
-            health: oldFormat.health,
-            lastError: oldFormat.lastError,
-            updatedAt: oldFormat.updatedAt,
-          };
-        } catch (error) {
-          // If we can't read package.json, skip this plugin
-          this.logs.warn('state.migration.skip', { ref: oldFormat.ref, error: String(error) });
-        }
-      } else if (oldFormat.name && oldFormat.rootDirectory && oldFormat.entryPoint) {
-        // Already new format
-        plugins[oldFormat.name] = oldFormat as InstalledPluginState;
-      }
-    }
-
     this.#state = {
-      plugins,
+      plugins: parsed.plugins ?? {},
       schedules: parsed.schedules ?? {},
       rules: parsed.rules ?? {},
     };
-
-    // Persist migrated state if changes were made
-    if (needsMigration) {
-      await this.#flush();
-      this.logs.info('state.migrated', { count: Object.keys(plugins).length });
-    }
   }
 
   /**

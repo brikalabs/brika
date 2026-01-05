@@ -258,12 +258,13 @@ export class ConfigLoader {
       throw new Error(`Workspace package not found: ${name}`);
     }
 
-    // workspace:./path → explicit local path
+    // workspace:./path → explicit local path (relative to workspace root)
     if (specifier.startsWith('workspace:')) {
+      const workspaceRoot = await this.#findWorkspaceRoot();
       const relativePath = specifier.slice('workspace:'.length);
       const pluginDir = relativePath.startsWith('./')
-        ? `${this.rootDir}/${relativePath.slice(2)}`
-        : `${this.rootDir}/${relativePath}`;
+        ? `${workspaceRoot}/${relativePath.slice(2)}`
+        : `${workspaceRoot}/${relativePath}`;
 
       const result = await this.#resolveWorkspacePackage(pluginDir, name);
       if (result) return result;
@@ -347,24 +348,66 @@ export class ConfigLoader {
   async #findWorkspacePackage(
     packageName: string
   ): Promise<{ name: string; rootDirectory: string } | null> {
-    const pluginsDir = `${this.rootDir}/plugins`;
+    const workspaceRoot = await this.#findWorkspaceRoot();
+    const pluginsDir = `${workspaceRoot}/plugins`;
 
     // Get all subdirectories in plugins/
-    const glob = new Bun.Glob('*/package.json');
-    for await (const path of glob.scan({ cwd: pluginsDir, absolute: false })) {
-      const pkgPath = `${pluginsDir}/${path}`;
-      try {
-        const pkg = await Bun.file(pkgPath).json();
-        if (pkg.name === packageName) {
-          const pluginDir = pkgPath.replace('/package.json', '');
-          return { name: pkg.name, rootDirectory: pluginDir };
+    try {
+      const glob = new Bun.Glob('*/package.json');
+      for await (const path of glob.scan({ cwd: pluginsDir, absolute: false })) {
+        const pkgPath = `${pluginsDir}/${path}`;
+        try {
+          const pkg = await Bun.file(pkgPath).json();
+          if (pkg.name === packageName) {
+            const pluginDir = pkgPath.replace('/package.json', '');
+            return { name: pkg.name, rootDirectory: pluginDir };
+          }
+        } catch {
+          // Skip invalid package.json files
         }
-      } catch {
-        // Skip invalid package.json files
       }
+    } catch {
+      // Directory doesn't exist or can't be read
     }
 
     return null;
+  }
+
+  /**
+   * Find the workspace root by walking up the directory tree.
+   * Looks for a package.json with "workspaces" field or a bun.lock file.
+   * Falls back to rootDir if no workspace root is found.
+   */
+  async #findWorkspaceRoot(): Promise<string> {
+    let dir = this.rootDir;
+    const { dirname } = await import('node:path');
+
+    // Walk up the directory tree (max 5 levels to prevent infinite loop)
+    for (let i = 0; i < 5; i++) {
+      const pkgPath = `${dir}/package.json`;
+      const bunLockPath = `${dir}/bun.lock`;
+
+      // Check for bun.lock (indicates monorepo root)
+      if (await Bun.file(bunLockPath).exists()) {
+        try {
+          const pkg = await Bun.file(pkgPath).json();
+          // Confirm it has workspaces field
+          if (pkg.workspaces) {
+            return dir;
+          }
+        } catch {
+          // Continue searching
+        }
+      }
+
+      // Move to parent directory
+      const parent = dirname(dir);
+      if (parent === dir) break; // Reached filesystem root
+      dir = parent;
+    }
+
+    // Fallback to rootDir
+    return this.rootDir;
   }
 
   /**
