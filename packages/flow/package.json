@@ -1,0 +1,14 @@
+{
+  "name": "@brika/flow",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "tsc": "bunx --bun tsc --noEmit"
+  },
+  "dependencies": {
+    "@brika/serializable": "workspace:*"
+  }
+}

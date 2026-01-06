@@ -1,0 +1,14 @@
+{
+  "name": "@brika/serializable",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "tsc": "bunx --bun tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^4.3.4"
+  }
+}

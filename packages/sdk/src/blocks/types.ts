@@ -1,24 +1,62 @@
 /**
  * Block System Types
  *
- * Generic block definitions with multi-input/multi-output support.
+ * Event-driven block definitions with multi-input/multi-output support.
  * All blocks are loaded from plugins via IPC.
  */
 
+import type { Serializable } from '@brika/serializable';
+import type { z } from 'zod';
 import type { Json } from '../types';
+
+// Re-export Serializable for convenience
+export type { Serializable } from '@brika/serializable';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Ports - Input/Output connection points
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** A connection point on a block */
+/** Port direction */
+export type PortDirection = 'input' | 'output';
+
+/**
+ * A typed connection point on a block.
+ * Ports have a direction and an optional Zod schema for type validation.
+ */
 export interface BlockPort {
   /** Unique port ID (e.g., "in", "then", "else", "default") */
   id: string;
-  /** Display name shown in UI */
+  /** Port direction - connections only valid from output to input */
+  direction: PortDirection;
+  /** i18n key for display name (e.g., "blocks.condition.ports.then") */
+  nameKey: string;
+  /** i18n key for description tooltip */
+  descriptionKey?: string;
+  /**
+   * Zod schema for port data validation.
+   * - Output schemas define what data the port produces
+   * - Input schemas define what data the port accepts
+   * - z.unknown() accepts any type
+   */
+  schema?: z.ZodType;
+  /**
+   * JSON Schema for API serialization.
+   * Generated from Zod schema for UI rendering.
+   */
+  jsonSchema?: Record<string, unknown>;
+}
+
+/**
+ * Simplified port definition for defineBlock().
+ * Direction and schema are inferred from context.
+ */
+export interface SimplePort {
+  /** Unique port ID */
+  id: string;
+  /** Display name (or i18n key) */
   name: string;
-  /** Optional type hint for autocomplete and validation */
-  type?: string;
+  /** Optional Zod schema for type validation */
+  schema?: z.ZodType;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -51,7 +89,7 @@ export interface BlockDefinition {
   name: string;
   /** Help text describing what the block does */
   description: string;
-  /** Category for grouping in UI (e.g., "flow", "logic", "actions", "data") */
+  /** Category for grouping in UI (free-form string, e.g., "flow", "logic", "actions") */
   category: string;
   /** Lucide icon name (e.g., "git-branch", "zap") */
   icon: string;
@@ -68,84 +106,99 @@ export interface BlockDefinition {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Block Context - Data available during execution
+// State Store - Per-block persistent state
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Context passed to block execution */
-export interface BlockContext {
-  /** The triggering event */
-  trigger: {
-    type: string;
-    payload: Json;
-    source: string;
-    ts: number;
-  };
-  /** Variables set during workflow execution */
-  vars: Record<string, Json>;
-  /** Data from the input port that triggered this block */
-  input: Json;
-  /** All input port values (for blocks with multiple inputs) */
-  inputs: Record<string, Json>;
-  /** Loop item (when inside a loop) */
-  item?: Json;
-  /** Loop index (when inside a loop) */
-  index?: number;
+/**
+ * Per-block state storage.
+ * State is persisted and survives restarts.
+ */
+export interface StateStore {
+  /** Get a value from state */
+  get<T extends Serializable = Serializable>(key: string): T | undefined;
+  /** Set a value in state */
+  set(key: string, value: Serializable): void;
+  /** Check if a key exists */
+  has(key: string): boolean;
+  /** Delete a key from state */
+  delete(key: string): boolean;
+  /** Clear all state */
+  clear(): void;
+  /** Get all keys */
+  keys(): string[];
+  /** Get entire state as record */
+  getAll(): Record<string, Serializable>;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Block Runtime - Services available to blocks
+// Block Context - Data available during execution (Low-level)
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Runtime services provided to block handlers */
-export interface BlockRuntime {
-  /** Call a registered tool */
-  callTool(name: string, args: Record<string, Json>): Promise<Json>;
+/**
+ * Low-level context provided to block handlers.
+ * For typed reactive context, see BlockContext in reactive.ts.
+ */
+export interface LowLevelBlockContext {
+  /** Block instance ID */
+  blockId: string;
+  /** Workflow ID this block belongs to */
+  workflowId: string;
+  /** Block configuration (parsed from configSchema) */
+  config: Record<string, unknown>;
+  /** Per-block state storage (persisted) */
+  state: StateStore;
 
-  /** Emit an event */
-  emit(type: string, payload: Json): void;
+  /**
+   * Emit data to an output port.
+   * This sends the data to all connected blocks.
+   */
+  emit(portId: string, data: Serializable): void;
 
   /** Log a message */
   log(level: 'debug' | 'info' | 'warn' | 'error', message: string): void;
 
-  /** Evaluate an expression (e.g., "{{ trigger.payload.value }}") */
-  evaluate<T = Json>(expression: string, ctx: BlockContext): T;
+  /** Call a registered tool */
+  callTool(toolId: string, args: Record<string, Serializable>): Promise<Serializable>;
 
-  /** Subscribe to events (for wait/listen blocks) */
-  subscribe(pattern: string, handler: (e: { type: string; payload: Json }) => void): () => void;
+  /** Schedule a callback after delay (for timers, debounce, etc.) */
+  setTimeout(callback: () => void, ms: number): () => void;
 
-  /** Set a workflow variable */
-  setVar(name: string, value: Json): void;
-
-  /** Get a workflow variable */
-  getVar(name: string): Json | undefined;
+  /** Schedule a repeating callback (for timers) */
+  setInterval(callback: () => void, ms: number): () => void;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Block Result - Output from block execution
+// Block Handlers - Event-driven execution
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Result returned from block execution */
-export interface BlockResult {
-  /** Which output port to activate (port ID) */
-  output?: string;
-  /** Data to pass to the connected block */
-  data?: Json;
-  /** Stop the entire workflow */
-  stop?: boolean;
-  /** Error message if block failed */
-  error?: string;
+/**
+ * Event-driven block handlers.
+ * Blocks react to events rather than returning results.
+ */
+export interface BlockHandlers {
+  /**
+   * Called when the workflow starts.
+   * Use for initialization, starting timers, etc.
+   * Source blocks (0 inputs) typically emit their first event here.
+   */
+  onStart?(ctx: LowLevelBlockContext): void | Promise<void>;
+
+  /**
+   * Called when data arrives at an input port.
+   * This is the main handler for processing events.
+   *
+   * @param portId - Which input port received the data
+   * @param data - The data received
+   * @param ctx - Block context with state and emit
+   */
+  onInput(portId: string, data: Serializable, ctx: LowLevelBlockContext): void | Promise<void>;
+
+  /**
+   * Called when the workflow stops.
+   * Use for cleanup (clearing timers, closing connections, etc.)
+   */
+  onStop?(ctx: LowLevelBlockContext): void | Promise<void>;
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Block Handler - The execution function
-// ─────────────────────────────────────────────────────────────────────────────
-
-/** Block execution handler function */
-export type BlockHandler<TConfig = Record<string, unknown>> = (
-  config: TConfig,
-  ctx: BlockContext,
-  runtime: BlockRuntime
-) => Promise<BlockResult> | BlockResult;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Compiled Block - Ready for registration
@@ -153,57 +206,6 @@ export type BlockHandler<TConfig = Record<string, unknown>> = (
 
 /** A fully compiled block ready for registration */
 export interface CompiledBlock extends BlockDefinition {
-  /** The execution handler */
-  execute: BlockHandler;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Workflow Types
-// ─────────────────────────────────────────────────────────────────────────────
-
-/** A connection between blocks */
-export interface BlockConnection {
-  /** Source block ID */
-  from: string;
-  /** Source output port ID (default: first output) */
-  fromPort?: string;
-  /** Target block ID */
-  to: string;
-  /** Target input port ID (default: first input) */
-  toPort?: string;
-}
-
-/** A block instance in a workflow */
-export interface WorkflowBlock {
-  /** Unique block instance ID */
-  id: string;
-  /** Block type (references BlockDefinition.type) */
-  type: string;
-  /** Block configuration */
-  config: Record<string, Json>;
-  /** Position in the visual editor */
-  position?: { x: number; y: number };
-}
-
-/** Workflow definition */
-export interface Workflow {
-  /** Unique workflow ID */
-  id: string;
-  /** Display name */
-  name?: string;
-  /** Description */
-  description?: string;
-  /** Whether the workflow is enabled */
-  enabled?: boolean;
-  /** Trigger configuration */
-  trigger: {
-    /** Event type to listen for */
-    event: string;
-    /** Optional filter on event payload */
-    filter?: Record<string, Json>;
-  };
-  /** Blocks in this workflow */
-  blocks: WorkflowBlock[];
-  /** Connections between blocks */
-  connections: BlockConnection[];
+  /** Event handlers for this block type */
+  handlers: BlockHandlers;
 }

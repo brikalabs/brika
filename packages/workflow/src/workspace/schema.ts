@@ -1,106 +1,70 @@
 /**
- * BRIKA SDK
+ * Workspace Schema
  *
- * Reactive, type-safe API for building home automation blocks.
+ * Zod schema for validating TOML workspace files.
  */
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Reactive Flow API (from @brika/flow)
-// ─────────────────────────────────────────────────────────────────────────────
-
-export * from '@brika/flow';
+import { z } from 'zod';
+import type { PortRef } from '../types';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Serializable (from @brika/serializable)
+// Port Reference Schema
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type { Serializable } from '@brika/serializable';
+const PortRefSchema = z.string().refine((s) => s.includes(':'), {
+  message: 'Port reference must be "blockId:portId"',
+}) as z.ZodType<PortRef>;
+
+const PortRefsSchema = z.array(PortRefSchema);
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Reactive Block API (SDK-specific)
+// Position Schema
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type {
-  BlockContext,
-  BlockSetup,
-  InputDef,
-  InputFlows,
-  OutputDef,
-  OutputEmitters,
-  PortMeta,
-  ReactiveBlockSpec,
-} from './blocks';
-
-export {
-  createEmitter,
-  createFlowFromInput,
-  defineReactiveBlock,
-  input,
-  output,
-  zodToJsonSchema,
-} from './blocks';
+const PositionSchema = z.object({
+  x: z.number(),
+  y: z.number(),
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Functional API (Tools, Events, Lifecycle)
+// Block Instance Schema
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type {
-  BlockSpec,
-  CompiledBlockRef,
-  CompiledTool,
-  EventHandler,
-  EventPayload,
-  StopHandler,
-  ToolSpec,
-} from './api';
-
-export {
-  defineBlock,
-  defineTool,
-  emit,
-  log,
-  on,
-  onEvent,
-  onStop,
-  start,
-  useBlock,
-} from './api';
+const BlockInstanceSchema = z.object({
+  id: z.string().min(1, 'Block ID is required'),
+  type: z.string().min(1, 'Block type is required'),
+  position: PositionSchema.optional(),
+  config: z.record(z.string(), z.unknown()).default({}),
+  inputs: z.record(z.string(), PortRefsSchema).default({}),
+  outputs: z.record(z.string(), PortRefsSchema).default({}),
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Block Types
+// Workspace Meta Schema
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type {
-  BlockDefinition,
-  BlockHandlers,
-  BlockPort,
-  BlockSchema,
-  CompiledBlock,
-  LowLevelBlockContext,
-  PortDirection,
-  SimplePort,
-  StateStore,
-} from './blocks';
-
-export { expr, isCompiledBlock, parseDuration } from './blocks';
+const WorkspaceMetaSchema = z.object({
+  id: z.string().min(1, 'Workspace ID is required'),
+  name: z.string().min(1, 'Workspace name is required'),
+  description: z.string().optional(),
+  enabled: z.boolean().default(true),
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Common Types
+// Full Workspace Schema
 // ─────────────────────────────────────────────────────────────────────────────
 
-export * from './types';
+/**
+ * Complete workspace schema for TOML validation.
+ */
+export const WorkspaceSchema = z.object({
+  version: z.string().default('1'),
+  workspace: WorkspaceMetaSchema,
+  plugins: z.record(z.string(), z.string()).default({}),
+  blocks: z.array(BlockInstanceSchema).default([]),
+});
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Utilities
-// ─────────────────────────────────────────────────────────────────────────────
-
-export { Json, JsonRecord } from '@brika/ipc';
-export type {
-  BlockContext as IpcBlockContext,
-  BlockResult as IpcBlockResult,
-  PluginInfo,
-  ToolCallContext,
-  ToolResult,
-} from '@brika/ipc/contract';
-
-export { z } from 'zod';
+/**
+ * Raw workspace type before transformation.
+ */
+export type RawWorkspace = z.input<typeof WorkspaceSchema>;

@@ -1,19 +1,19 @@
 /**
  * Block Definition API
  *
- * DX-focused API for defining blocks with Zod schemas.
- * Mirrors the defineTool() pattern for consistency.
+ * DX-focused API for defining event-driven blocks with Zod schemas.
  */
 
 import { z } from 'zod';
 import type { Json } from '../types';
 import type {
-  BlockContext,
+  BlockHandlers,
   BlockPort,
-  BlockResult,
-  BlockRuntime,
   BlockSchema,
   CompiledBlock,
+  LowLevelBlockContext,
+  Serializable,
+  SimplePort,
 } from './types';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -24,20 +24,20 @@ import type {
 export interface BlockSpec<T extends z.ZodObject<z.ZodRawShape>> {
   /** Local block ID (without plugin prefix, e.g., "condition") */
   id: string;
-  /** Display name */
+  /** Display name (or i18n key) */
   name: string;
-  /** Help text */
+  /** Help text (or i18n key) */
   description: string;
-  /** Category for grouping (e.g., "flow", "logic", "actions") */
+  /** Category for grouping (e.g., "flow", "logic", "actions", "operators") */
   category: string;
   /** Lucide icon name */
   icon: string;
   /** Hex color */
   color: string;
-  /** Input ports (omit for trigger/start blocks) */
-  inputs?: BlockPort[];
-  /** Output ports (omit for terminal blocks) */
-  outputs?: BlockPort[];
+  /** Input ports (omit for source blocks) */
+  inputs?: SimplePort[];
+  /** Output ports (omit for sink blocks) */
+  outputs?: SimplePort[];
   /** Zod schema for configuration */
   schema: T;
 }
@@ -47,44 +47,90 @@ export interface BlockSpec<T extends z.ZodObject<z.ZodRawShape>> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Define a block type with full type safety
- *
- * The block will be registered with a plugin prefix: `pluginId:blockId`
+ * Define an event-driven block type with full type safety.
  *
  * @example
  * ```ts
- * // In plugin "blocks-builtin", this becomes "blocks-builtin:condition"
- * export const conditionBlock = defineBlock({
- *   id: "condition",
- *   name: "Condition",
- *   description: "Branch based on a condition",
- *   category: "flow",
- *   icon: "git-branch",
- *   color: "#f59e0b",
- *   inputs: [{ id: "in", name: "Input" }],
- *   outputs: [
- *     { id: "then", name: "Then" },
- *     { id: "else", name: "Else" },
- *   ],
+ * // Timer block - source block with no inputs
+ * export const timerBlock = defineBlock({
+ *   id: "timer",
+ *   name: "Timer",
+ *   description: "Emit events at regular intervals",
+ *   category: "sources",
+ *   icon: "clock",
+ *   color: "#3b82f6",
+ *   inputs: [],  // No inputs - this is a source block
+ *   outputs: [{ id: "tick", name: "Tick" }],
  *   schema: z.object({
- *     if: z.string().describe("Condition expression"),
+ *     interval: z.number().describe("Interval in milliseconds"),
  *   }),
- * }, async (config, ctx, runtime) => {
- *   const result = runtime.evaluate(config.if, ctx);
- *   return { output: result ? "then" : "else", data: result };
+ * }, {
+ *   onStart(ctx) {
+ *     const interval = ctx.config.interval as number;
+ *     ctx.setInterval(() => {
+ *       ctx.emit("tick", { ts: Date.now() });
+ *     }, interval);
+ *   },
+ *   onInput() {
+ *     // No inputs - not called
+ *   },
+ * });
+ *
+ * // Debounce block - operator block
+ * export const debounceBlock = defineBlock({
+ *   id: "debounce",
+ *   name: "Debounce",
+ *   description: "Wait for silence before emitting",
+ *   category: "operators",
+ *   icon: "timer",
+ *   color: "#8b5cf6",
+ *   inputs: [{ id: "in", name: "Input" }],
+ *   outputs: [{ id: "out", name: "Output" }],
+ *   schema: z.object({
+ *     delay: z.number().describe("Delay in milliseconds"),
+ *   }),
+ * }, {
+ *   onInput(portId, data, ctx) {
+ *     // Store latest value
+ *     ctx.state.set("latest", data);
+ *
+ *     // Cancel previous timer
+ *     const cancel = ctx.state.get<() => void>("cancel");
+ *     cancel?.();
+ *
+ *     // Set new timer
+ *     const delay = ctx.config.delay as number;
+ *     ctx.state.set("cancel", ctx.setTimeout(() => {
+ *       const latest = ctx.state.get("latest");
+ *       if (latest !== undefined) {
+ *         ctx.emit("out", latest);
+ *       }
+ *     }, delay));
+ *   },
  * });
  * ```
  */
 export function defineBlock<T extends z.ZodObject<z.ZodRawShape>>(
   spec: BlockSpec<T>,
-  handler: (
-    config: z.infer<T>,
-    ctx: BlockContext,
-    runtime: BlockRuntime
-  ) => Promise<BlockResult> | BlockResult
+  handlers: BlockHandlers
 ): CompiledBlock {
   // Convert Zod schema to JSON Schema
   const jsonSchema = zodToJsonSchema(spec.schema);
+
+  // Convert simple ports to full BlockPort with direction
+  const inputs: BlockPort[] = (spec.inputs ?? []).map((p) => ({
+    id: p.id,
+    direction: 'input',
+    nameKey: p.name,
+    schema: p.schema,
+  }));
+
+  const outputs: BlockPort[] = (spec.outputs ?? []).map((p) => ({
+    id: p.id,
+    direction: 'output',
+    nameKey: p.name,
+    schema: p.schema,
+  }));
 
   return {
     id: spec.id,
@@ -93,20 +139,31 @@ export function defineBlock<T extends z.ZodObject<z.ZodRawShape>>(
     category: spec.category,
     icon: spec.icon,
     color: spec.color,
-    inputs: spec.inputs ?? [{ id: 'in', name: 'Input' }],
-    outputs: spec.outputs ?? [{ id: 'out', name: 'Output' }],
+    inputs,
+    outputs,
     schema: jsonSchema,
-    execute: (config, ctx, runtime) => {
-      // Validate config with Zod
-      const parsed = spec.schema.safeParse(config);
-      if (!parsed.success) {
-        const issues = parsed.error.issues || [];
-        const errors = issues
-          .map((e) => `${String(e.path?.join?.('.') ?? '')}: ${e.message}`)
-          .join(', ');
-        return { error: `Config validation failed: ${errors}`, stop: true };
-      }
-      return handler(parsed.data as z.infer<T>, ctx, runtime);
+    handlers: {
+      onStart: handlers.onStart
+        ? async (ctx) => {
+            // Validate config before calling handler
+            const parsed = spec.schema.safeParse(ctx.config);
+            if (!parsed.success) {
+              ctx.log('error', `Config validation failed: ${parsed.error.message}`);
+              return;
+            }
+            await handlers.onStart?.(ctx);
+          }
+        : undefined,
+      onInput: async (portId, data, ctx) => {
+        // Validate config before calling handler
+        const parsed = spec.schema.safeParse(ctx.config);
+        if (!parsed.success) {
+          ctx.log('error', `Config validation failed: ${parsed.error.message}`);
+          return;
+        }
+        await handlers.onInput(portId, data, ctx);
+      },
+      onStop: handlers.onStop,
     },
   };
 }
@@ -156,16 +213,16 @@ function zodToJsonSchema(schema: z.ZodObject<z.ZodRawShape>): BlockSchema {
  * Evaluate expressions in a value
  *
  * Supports:
- * - Full expression: "{{ trigger.payload.room }}"
- * - Template: "Room is {{ trigger.payload.room }}"
- * - Comparisons: "{{ trigger.payload.value > 10 }}"
- * - Nested objects: { room: "{{ trigger.payload.room }}" }
+ * - Full expression: "{{ state.count }}"
+ * - Template: "Count is {{ state.count }}"
+ * - Comparisons: "{{ state.count > 10 }}"
+ * - Nested objects: { count: "{{ state.count }}" }
  *
  * @example
- * expr("{{ trigger.payload.room }}", ctx) // => "living"
- * expr({ room: "{{ trigger.payload.room }}" }, ctx) // => { room: "living" }
+ * expr("{{ state.count }}", ctx) // => 42
+ * expr({ value: "{{ state.count }}" }, ctx) // => { value: 42 }
  */
-export function expr<T>(value: T, ctx: BlockContext): T {
+export function expr<T>(value: T, ctx: { config: Record<string, unknown> }): T {
   if (value === null || value === undefined) return value;
 
   if (typeof value === 'string') {
@@ -199,7 +256,10 @@ export function expr<T>(value: T, ctx: BlockContext): T {
   return value;
 }
 
-function evalPath(path: string, ctx: BlockContext): Json {
+function evalPath(
+  path: string,
+  ctx: { config: Record<string, unknown> }
+): Serializable | undefined {
   // Handle comparisons
   for (const op of ['===', '!==', '==', '!=', '>=', '<=', '>', '<', '&&', '||']) {
     const idx = path.indexOf(` ${op} `);
@@ -236,18 +296,21 @@ function evalPath(path: string, ctx: BlockContext): Json {
     return !evalPath(path.slice(1).trim(), ctx);
   }
 
-  // Simple path: trigger.payload.room
+  // Simple path: config.interval
   const parts = path.split('.');
-  let current: Json = ctx as unknown as Json;
+  let current: Serializable | undefined = ctx as unknown as Serializable;
   for (const part of parts) {
     if (current === null || current === undefined) return null;
     if (typeof current !== 'object') return null;
-    current = (current as Record<string, Json>)[part];
+    current = (current as { readonly [key: string]: Serializable | undefined })[part];
   }
   return current;
 }
 
-function parseValue(str: string, ctx: BlockContext): Json {
+function parseValue(
+  str: string,
+  ctx: { config: Record<string, unknown> }
+): Serializable | undefined {
   // String literal
   if ((str.startsWith('"') && str.endsWith('"')) || (str.startsWith("'") && str.endsWith("'"))) {
     return str.slice(1, -1);
@@ -308,7 +371,9 @@ export function isCompiledBlock(value: unknown): value is CompiledBlock {
     typeof obj.category === 'string' &&
     typeof obj.icon === 'string' &&
     typeof obj.color === 'string' &&
-    typeof obj.execute === 'function' &&
+    typeof obj.handlers === 'object' &&
+    obj.handlers !== null &&
+    typeof (obj.handlers as Record<string, unknown>).onInput === 'function' &&
     Array.isArray(obj.inputs) &&
     Array.isArray(obj.outputs)
   );

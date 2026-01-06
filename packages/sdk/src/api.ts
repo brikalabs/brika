@@ -24,7 +24,7 @@
 
 import type { Json } from '@brika/ipc';
 import { z } from 'zod';
-import type { BlockContext, BlockRuntime } from './blocks';
+import type { BlockHandlers, CompiledBlock } from './blocks';
 import { type EventHandler as CtxEventHandler, getContext, type LogLevel } from './context';
 import type { AnyObj, ToolCallContext, ToolResult } from './types';
 
@@ -71,12 +71,22 @@ export function defineTool<TSchema extends z.ZodObject<z.ZodRawShape>>(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Block Definition
+// Block Definition (Event-Driven)
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface BlockSpec<TSchema extends z.ZodObject<z.ZodRawShape>> {
   /** Unique block ID (must match package.json declaration) */
   id: string;
+  /** Display name */
+  name?: string;
+  /** Description */
+  description?: string;
+  /** Category for grouping */
+  category?: string;
+  /** Lucide icon name */
+  icon?: string;
+  /** Hex color */
+  color?: string;
   /** Input ports */
   inputs?: Array<{ id: string; name: string }>;
   /** Output ports */
@@ -90,7 +100,7 @@ export interface CompiledBlockRef {
 }
 
 /**
- * Define and register a block.
+ * Define and register an event-driven block.
  *
  * The block ID must be declared in your plugin's `package.json`:
  * ```json
@@ -101,26 +111,92 @@ export interface CompiledBlockRef {
  *
  * @example
  * ```typescript
- * export const delay = defineBlock({
- *   id: "delay",
- *   inputs: [{ id: "in", name: "Input" }],
- *   outputs: [{ id: "out", name: "Output" }],
- *   schema: z.object({ duration: z.string() }),
- * }, async (config, ctx, runtime) => {
- *   await new Promise(r => setTimeout(r, parseDuration(config.duration)));
- *   return { output: "out" };
+ * export const timer = defineBlock({
+ *   id: "timer",
+ *   inputs: [],  // No inputs - source block
+ *   outputs: [{ id: "tick", name: "Tick" }],
+ *   schema: z.object({ interval: z.number() }),
+ * }, {
+ *   onStart(ctx) {
+ *     const interval = ctx.config.interval as number;
+ *     ctx.setInterval(() => {
+ *       ctx.emit("tick", { ts: Date.now() });
+ *     }, interval);
+ *   },
+ *   onInput() {
+ *     // Not called - no inputs
+ *   },
  * });
  * ```
  */
 export function defineBlock<TSchema extends z.ZodObject<z.ZodRawShape>>(
   spec: BlockSpec<TSchema>,
-  execute: (
-    config: z.infer<TSchema>,
-    ctx: BlockContext,
-    runtime: BlockRuntime
-  ) => Promise<{ output: string; data?: Json }> | { output: string; data?: Json }
+  handlers: BlockHandlers
 ): CompiledBlockRef {
-  return getContext().registerBlock(spec, execute);
+  // Convert to CompiledBlock format
+  const block: CompiledBlock = {
+    id: spec.id,
+    name: spec.name ?? spec.id,
+    description: spec.description ?? '',
+    category: spec.category ?? 'action',
+    icon: spec.icon ?? 'box',
+    color: spec.color ?? '#6b7280',
+    inputs: (spec.inputs ?? []).map((p) => ({
+      id: p.id,
+      direction: 'input' as const,
+      nameKey: p.name,
+    })),
+    outputs: (spec.outputs ?? []).map((p) => ({
+      id: p.id,
+      direction: 'output' as const,
+      nameKey: p.name,
+    })),
+    schema: zodToBlockSchema(spec.schema),
+    handlers,
+  };
+
+  return getContext().useBlock(block);
+}
+
+function zodToBlockSchema(schema: z.ZodObject<z.ZodRawShape>) {
+  const json = z.toJSONSchema(schema, { unrepresentable: 'any' });
+  const props =
+    (json as { properties?: Record<string, { type?: string; description?: string }> }).properties ??
+    {};
+  type PropType = 'string' | 'number' | 'boolean' | 'object' | 'array';
+  const validTypes = new Set<PropType>(['string', 'number', 'boolean', 'object', 'array']);
+  return {
+    type: 'object' as const,
+    properties: Object.fromEntries(
+      Object.entries(props).map(([k, v]) => [
+        k,
+        {
+          type: (validTypes.has(v.type as PropType) ? v.type : 'string') as PropType,
+          description: v.description,
+        },
+      ])
+    ),
+    required: (json as { required?: string[] }).required ?? [],
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Use Block (Alternative API)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Register a pre-compiled block (created with defineBlock from @brika/sdk/blocks).
+ *
+ * @example
+ * ```typescript
+ * import { useBlock } from "@brika/sdk";
+ * import { timerBlock } from "./blocks/timer";
+ *
+ * useBlock(timerBlock);
+ * ```
+ */
+export function useBlock(block: CompiledBlock): CompiledBlockRef {
+  return getContext().useBlock(block);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

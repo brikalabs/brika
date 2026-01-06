@@ -1,5 +1,7 @@
 /**
- * Global Plugin Context - Simplified
+ * Global Plugin Context
+ *
+ * Manages plugin lifecycle and block registration for event-driven blocks.
  */
 
 import { type Client, createClient, type Json } from '@brika/ipc';
@@ -7,7 +9,6 @@ import {
   callTool,
   emit as emitMsg,
   event as eventMsg,
-  executeBlock,
   log as logMsg,
   ping,
   registerBlock,
@@ -16,8 +17,14 @@ import {
   unsubscribe as unsubscribeMsg,
 } from '@brika/ipc/contract';
 import { z } from 'zod';
-import type { BlockContext, BlockRuntime, BlockSchema, CompiledBlock } from './blocks';
-import { expr } from './blocks';
+import type {
+  BlockHandlers,
+  BlockSchema,
+  CompiledBlock,
+  LowLevelBlockContext,
+  Serializable,
+  StateStore,
+} from './blocks';
 import type { AnyObj, ToolInputSchema, ToolResult } from './types';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -54,6 +61,42 @@ interface Manifest {
   version: string;
   tools?: ToolDecl[];
   blocks?: BlockDecl[];
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// In-Memory State Store
+// ─────────────────────────────────────────────────────────────────────────────
+
+class MemoryStateStore implements StateStore {
+  readonly #data = new Map<string, Serializable>();
+
+  get<T extends Serializable = Serializable>(key: string): T | undefined {
+    return this.#data.get(key) as T | undefined;
+  }
+
+  set(key: string, value: Serializable): void {
+    this.#data.set(key, value);
+  }
+
+  has(key: string): boolean {
+    return this.#data.has(key);
+  }
+
+  delete(key: string): boolean {
+    return this.#data.delete(key);
+  }
+
+  clear(): void {
+    this.#data.clear();
+  }
+
+  keys(): string[] {
+    return Array.from(this.#data.keys());
+  }
+
+  getAll(): Record<string, Serializable> {
+    return Object.fromEntries(this.#data);
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -98,6 +141,16 @@ function zodToSchema(schema: z.ZodObject<z.ZodRawShape>): BlockSchema {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Block Instance for IPC
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface BlockInstance {
+  block: CompiledBlock;
+  state: StateStore;
+  timers: Set<ReturnType<typeof setTimeout>>;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Context
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -110,6 +163,7 @@ class Context {
   readonly #blockMeta: Map<string, BlockDecl>;
   readonly #tools = new Map<string, ToolHandler>();
   readonly #blocks = new Map<string, CompiledBlock>();
+  readonly #blockInstances = new Map<string, BlockInstance>(); // workflowId:blockId -> instance
   readonly #eventSubs = new Map<string, Set<EventHandler>>();
   readonly #stopHandlers = new Set<StopHandler>();
   #started = false;
@@ -190,61 +244,54 @@ class Context {
     return { id };
   }
 
-  registerBlock<T extends z.ZodObject<z.ZodRawShape>>(
-    spec: {
-      id: string;
-      name?: string;
-      description?: string;
-      inputs?: { id: string; name: string }[];
-      outputs?: { id: string; name: string }[];
-      schema: T;
-    },
-    execute: (
-      cfg: z.infer<T>,
-      ctx: BlockContext,
-      rt: BlockRuntime
-    ) => Promise<{ output: string; data?: Json }> | { output: string; data?: Json }
-  ): { id: string } {
-    const { id, name, description, inputs = [], outputs = [], schema } = spec;
+  /**
+   * Register an event-driven block.
+   */
+  useBlock(block: CompiledBlock): { id: string } {
+    const { id } = block;
     if (!this.#declaredBlocks.has(id)) {
       throw new Error(`Block "${id}" not in package.json. Add: "blocks": [{"id": "${id}"}]`);
     }
     if (this.#blocks.has(id)) throw new Error(`Block "${id}" already registered`);
 
     const meta = this.#blockMeta.get(id);
-    const blockSchema = zodToSchema(schema);
 
-    const block: CompiledBlock = {
-      id,
-      name: name ?? meta?.name ?? id,
-      description: description ?? meta?.description ?? '',
-      category: (meta?.category as CompiledBlock['category']) ?? 'action',
-      icon: meta?.icon ?? 'box',
-      color: meta?.color ?? '#6b7280',
-      inputs,
-      outputs,
-      schema: blockSchema,
-      execute: (cfg, ctx, rt) => {
-        const r = schema.safeParse(cfg);
-        if (!r.success) return { error: r.error.message, stop: true };
-        return execute(r.data, ctx, rt);
-      },
+    // Merge metadata from package.json
+    const finalBlock: CompiledBlock = {
+      ...block,
+      name: block.name || meta?.name || id,
+      description: block.description || meta?.description || '',
+      category: block.category || meta?.category || 'action',
+      icon: block.icon || meta?.icon || 'box',
+      color: block.color || meta?.color || '#6b7280',
     };
 
-    this.#blocks.set(id, block);
+    this.#blocks.set(id, finalBlock);
+
+    // Convert BlockPort[] to simpler format for IPC
+    const inputs = finalBlock.inputs.map((p) => ({
+      id: p.id,
+      name: p.nameKey,
+    }));
+    const outputs = finalBlock.outputs.map((p) => ({
+      id: p.id,
+      name: p.nameKey,
+    }));
+
     this.#client.send(registerBlock, {
       block: {
         id,
-        name: block.name,
-        description: block.description,
-        category: block.category,
-        icon: block.icon,
-        color: block.color,
+        name: finalBlock.name,
+        description: finalBlock.description,
+        category: finalBlock.category,
+        icon: finalBlock.icon,
+        color: finalBlock.color,
         inputs,
         outputs,
-        schema: blockSchema as unknown as Record<string, Json>,
+        schema: finalBlock.schema as unknown as Record<string, Json>,
       },
     });
+
     return { id };
   }
 
@@ -261,50 +308,178 @@ class Context {
       }
     });
 
-    this.#client.implement(executeBlock, async ({ blockType, config, context }) => {
-      const block = this.#blocks.get(blockType);
-      if (!block) return { error: `Unknown block: ${blockType}`, stop: true };
-      try {
-        const ctx: BlockContext = {
-          trigger: context.trigger as BlockContext['trigger'],
-          vars: context.vars,
-          input: null,
-          inputs: {},
-        };
-        return await block.execute(config as AnyObj, ctx, this.#createRuntime(ctx));
-      } catch (e) {
-        return { error: String(e), stop: true };
-      }
-    });
-
+    // Handle block lifecycle events from hub
     this.#client.on(eventMsg, ({ event }) => {
+      const { type, payload } = event;
+
+      // Handle block lifecycle events
+      if (type === 'block.start') {
+        this.#handleBlockStart(
+          payload as {
+            workflowId: string;
+            blockId: string;
+            blockType: string;
+            config: Record<string, unknown>;
+          }
+        );
+      } else if (type === 'block.input') {
+        this.#handleBlockInput(
+          payload as { workflowId: string; blockId: string; portId: string; data: Serializable }
+        );
+      } else if (type === 'block.stop') {
+        this.#handleBlockStop(payload as { workflowId: string; blockId: string });
+      }
+
+      // Regular event subscriptions
       for (const [pattern, handlers] of this.#eventSubs) {
-        if (this.#matchPattern(pattern, event.type)) {
-          for (const h of handlers) h({ type: event.type, payload: event.payload });
+        if (this.#matchPattern(pattern, type)) {
+          for (const h of handlers) h({ type, payload });
         }
       }
     });
 
     this.#client.onStop(async () => {
+      // Stop all block instances
+      for (const instance of this.#blockInstances.values()) {
+        for (const timer of instance.timers) {
+          clearTimeout(timer);
+          clearInterval(timer);
+        }
+      }
+      this.#blockInstances.clear();
+
       for (const h of this.#stopHandlers) await h();
     });
   }
 
-  #matchPattern(pattern: string, text: string): boolean {
-    return new RegExp(`^${pattern.replaceAll('.', '\\.').replaceAll('*', '.*')}$`).test(text);
+  #handleBlockStart(payload: {
+    workflowId: string;
+    blockId: string;
+    blockType: string;
+    config: Record<string, unknown>;
+  }) {
+    const block = this.#blocks.get(payload.blockType);
+    if (!block) {
+      this.log('error', `Unknown block type: ${payload.blockType}`);
+      return;
+    }
+
+    const instanceKey = `${payload.workflowId}:${payload.blockId}`;
+
+    // Create instance
+    const instance: BlockInstance = {
+      block,
+      state: new MemoryStateStore(),
+      timers: new Set(),
+    };
+    this.#blockInstances.set(instanceKey, instance);
+
+    // Create context and call onStart
+    const ctx = this.#createBlockContext(
+      payload.workflowId,
+      payload.blockId,
+      payload.config,
+      instance
+    );
+    block.handlers.onStart?.(ctx);
   }
 
-  #createRuntime(_ctx: BlockContext): BlockRuntime {
-    const vars = new Map<string, Json>();
+  #handleBlockInput(payload: {
+    workflowId: string;
+    blockId: string;
+    portId: string;
+    data: Serializable;
+  }) {
+    const instanceKey = `${payload.workflowId}:${payload.blockId}`;
+    const instance = this.#blockInstances.get(instanceKey);
+    if (!instance) {
+      this.log('warn', `Block input for unknown instance: ${instanceKey}`);
+      return;
+    }
+
+    // Get config from state (stored during start)
+    const config = (instance.state.get('__config') as Record<string, Serializable>) ?? {};
+    const ctx = this.#createBlockContext(payload.workflowId, payload.blockId, config, instance);
+    instance.block.handlers.onInput(payload.portId, payload.data, ctx);
+  }
+
+  #handleBlockStop(payload: { workflowId: string; blockId: string }) {
+    const instanceKey = `${payload.workflowId}:${payload.blockId}`;
+    const instance = this.#blockInstances.get(instanceKey);
+    if (!instance) return;
+
+    // Clear timers
+    for (const timer of instance.timers) {
+      clearTimeout(timer);
+      clearInterval(timer);
+    }
+
+    // Get config and call onStop
+    const config = (instance.state.get('__config') as Record<string, Serializable>) ?? {};
+    const ctx = this.#createBlockContext(payload.workflowId, payload.blockId, config, instance);
+    instance.block.handlers.onStop?.(ctx);
+
+    this.#blockInstances.delete(instanceKey);
+  }
+
+  #createBlockContext(
+    workflowId: string,
+    blockId: string,
+    config: Record<string, unknown>,
+    instance: BlockInstance
+  ): LowLevelBlockContext {
+    // Store config for later use
+    instance.state.set('__config', config as Serializable);
+
     return {
-      callTool: async () => null,
-      emit: (type, payload) => this.emit(type, payload),
-      log: (level, msg) => this.log(level, msg),
-      evaluate: <T = Json>(expression: string, c: BlockContext) => expr(expression, c) as T,
-      subscribe: (pattern, handler) => this.onEvent(pattern, handler),
-      setVar: (name, value) => vars.set(name, value),
-      getVar: (name) => vars.get(name),
+      blockId,
+      workflowId,
+      config,
+      state: instance.state,
+
+      emit: (portId: string, data: Serializable) => {
+        // Send emit event to hub
+        this.#client.send(emitMsg, {
+          eventType: 'block.emit',
+          payload: { workflowId, blockId, portId, data } as unknown as Json,
+        });
+      },
+
+      log: (level: 'debug' | 'info' | 'warn' | 'error', message: string) => {
+        this.log(level, `[${blockId}] ${message}`);
+      },
+
+      callTool: (toolId: string, _args: Record<string, Serializable>) => {
+        // TODO: Implement tool calling via IPC
+        this.log('warn', `callTool not implemented: ${toolId}`);
+        return Promise.resolve(null);
+      },
+
+      setTimeout: (callback: () => void, ms: number) => {
+        const timer = setTimeout(() => {
+          instance.timers.delete(timer);
+          callback();
+        }, ms);
+        instance.timers.add(timer);
+        return () => {
+          clearTimeout(timer);
+          instance.timers.delete(timer);
+        };
+      },
+
+      setInterval: (callback: () => void, ms: number) => {
+        const timer = setInterval(callback, ms);
+        instance.timers.add(timer);
+        return () => {
+          clearInterval(timer);
+          instance.timers.delete(timer);
+        };
+      },
     };
+  }
+
+  #matchPattern(pattern: string, text: string): boolean {
+    return new RegExp(`^${pattern.replaceAll('.', '\\.').replaceAll('*', '.*')}$`).test(text);
   }
 }
 

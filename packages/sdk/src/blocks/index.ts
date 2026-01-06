@@ -1,24 +1,34 @@
 /**
  * Block System Exports
- *
- * Everything needed to define and work with blocks.
  */
 
+// Reactive API - re-export from @brika/flow
+export * from '@brika/flow';
+// Low-Level API (imperative handlers)
 export type { BlockSpec } from './define';
-
-// Definition API
 export { defineBlock, expr, isCompiledBlock, parseDuration, z } from './define';
-// Types
+// Reactive API - SDK-specific
 export type {
-  BlockConnection,
   BlockContext,
+  BlockSetup,
+  InputDef,
+  InputFlows,
+  OutputDef,
+  OutputEmitters,
+  PortMeta,
+  ReactiveBlockSpec,
+} from './reactive';
+export { createEmitter, createFlowFromInput, input, output, zodToJsonSchema } from './reactive';
+export { defineReactiveBlock } from './reactive-define';
+export type {
   BlockDefinition,
-  BlockHandler,
+  BlockHandlers,
   BlockPort,
-  BlockResult,
-  BlockRuntime,
   BlockSchema,
   CompiledBlock,
-  Workflow,
-  WorkflowBlock,
+  LowLevelBlockContext,
+  PortDirection,
+  Serializable,
+  SimplePort,
+  StateStore,
 } from './types';
