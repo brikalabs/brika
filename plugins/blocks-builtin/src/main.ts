@@ -1,207 +1,431 @@
 /**
  * Built-in Blocks Plugin
  *
- * Provides all core workflow blocks for BRIKA automations.
+ * Provides core workflow blocks for BRIKA automations.
+ * All blocks use the reactive defineReactiveBlock API.
  */
 
-import type { Json } from "@brika/sdk";
-import { defineBlock, expr, log, parseDuration, z } from "@brika/sdk";
+import {
+  combine,
+  defineReactiveBlock,
+  delay as delayOp,
+  input,
+  log,
+  map,
+  output,
+  type Serializable,
+  z,
+} from '@brika/sdk';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Blocks
-// ─────────────────────────────────────────────────────────────────────────────
-
 // Action Block - Call a tool with arguments
-export const action = defineBlock(
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const action = defineReactiveBlock(
   {
-    id: "action",
-    inputs: [{ id: "in", name: "Input" }],
-    outputs: [{ id: "out", name: "Output" }],
-    schema: z.object({
-      tool: z.string().describe("Tool name to call"),
-      args: z.record(z.string(), z.unknown()).optional().describe("Arguments to pass"),
+    id: 'action',
+    name: 'Action',
+    description: 'Call a tool with arguments',
+    category: 'action',
+    icon: 'zap',
+    color: '#3b82f6',
+    inputs: {
+      in: input(z.unknown(), { name: 'Input' }),
+    },
+    outputs: {
+      out: output(z.unknown(), { name: 'Output' }),
+    },
+    config: z.object({
+      tool: z.string().describe('Tool ID to call'),
+      args: z.record(z.string(), z.unknown()).optional().describe('Arguments to pass'),
     }),
   },
-  async (config, ctx, runtime) => {
-    const args = expr(config.args ?? {}, ctx);
-    runtime.log("debug", `Calling tool: ${config.tool}`);
-    const result = await runtime.callTool(config.tool, args as Record<string, never>);
-    return { output: "out", data: result };
-  },
+  ({ inputs, outputs, config, callTool, log }) => {
+    inputs.in.on(async (data) => {
+      log('debug', `Calling tool: ${config.tool}`);
+      try {
+        const args = { ...config.args, input: data } as Record<string, Serializable>;
+        const result = await callTool(config.tool, args);
+        outputs.out.emit(result);
+      } catch (err) {
+        log('error', `Tool call failed: ${err}`);
+      }
+    });
+  }
 );
 
+// ─────────────────────────────────────────────────────────────────────────────
 // Condition Block - Branch based on a condition
-export const condition = defineBlock(
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const condition = defineReactiveBlock(
   {
-    id: "condition",
-    inputs: [{ id: "in", name: "Input" }],
-    outputs: [
-      { id: "then", name: "Then" },
-      { id: "else", name: "Else" },
-    ],
-    schema: z.object({
-      if: z.string().describe("Condition expression (e.g., trigger.payload.value > 10)"),
+    id: 'condition',
+    name: 'Condition',
+    description: 'Branch based on a condition',
+    category: 'flow',
+    icon: 'git-branch',
+    color: '#f59e0b',
+    inputs: {
+      in: input(z.unknown(), { name: 'Input' }),
+    },
+    outputs: {
+      then: output(z.unknown(), { name: 'Then' }),
+      else: output(z.unknown(), { name: 'Else' }),
+    },
+    config: z.object({
+      field: z.string().describe('Field path to check (e.g., "value", "data.status")'),
+      operator: z
+        .enum(['eq', 'neq', 'gt', 'gte', 'lt', 'lte', 'contains', 'exists'])
+        .describe('Comparison operator'),
+      value: z.unknown().optional().describe('Value to compare against'),
     }),
   },
-  async (config, ctx, runtime) => {
-    const result = Boolean(runtime.evaluate(config.if, ctx));
-    runtime.log("debug", `Condition "${config.if}" evaluated to: ${result}`);
-    return { output: result ? "then" : "else", data: result };
-  },
+  ({ inputs, outputs, config, log }) => {
+    inputs.in.on((data) => {
+      const fieldValue = getFieldValue(data, config.field);
+      const result = evaluate(fieldValue, config.operator, config.value);
+      log('debug', `Condition: ${config.field} ${config.operator} ${config.value} = ${result}`);
+
+      if (result) {
+        outputs.then.emit(data);
+      } else {
+        outputs.else.emit(data);
+      }
+    });
+  }
 );
 
+function getFieldValue(data: unknown, path: string): unknown {
+  if (data === null || data === undefined) return undefined;
+  const parts = path.split('.');
+  let current: unknown = data;
+  for (const part of parts) {
+    if (current === null || current === undefined) return undefined;
+    if (typeof current !== 'object') return undefined;
+    current = (current as Record<string, unknown>)[part];
+  }
+  return current;
+}
+
+function evaluate(fieldValue: unknown, operator: string, compareValue: unknown): boolean {
+  switch (operator) {
+    case 'eq':
+      return fieldValue === compareValue;
+    case 'neq':
+      return fieldValue !== compareValue;
+    case 'gt':
+      return Number(fieldValue) > Number(compareValue);
+    case 'gte':
+      return Number(fieldValue) >= Number(compareValue);
+    case 'lt':
+      return Number(fieldValue) < Number(compareValue);
+    case 'lte':
+      return Number(fieldValue) <= Number(compareValue);
+    case 'contains':
+      return String(fieldValue).includes(String(compareValue));
+    case 'exists':
+      return fieldValue !== undefined && fieldValue !== null;
+    default:
+      return false;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Switch Block - Multi-way branch
-export const switchBlock = defineBlock(
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const switchBlock = defineReactiveBlock(
   {
-    id: "switch",
-    inputs: [{ id: "in", name: "Input" }],
-    outputs: [{ id: "default", name: "Default" }],
-    schema: z.object({
-      value: z.string().describe("Expression to evaluate (e.g., trigger.payload.status)"),
-      cases: z.record(z.string(), z.string()).describe("Map of value -> output port ID"),
+    id: 'switch',
+    name: 'Switch',
+    description: 'Multi-way branch based on a value',
+    category: 'flow',
+    icon: 'shuffle',
+    color: '#8b5cf6',
+    inputs: {
+      in: input(z.unknown(), { name: 'Input' }),
+    },
+    outputs: {
+      case1: output(z.unknown(), { name: 'Case 1' }),
+      case2: output(z.unknown(), { name: 'Case 2' }),
+      case3: output(z.unknown(), { name: 'Case 3' }),
+      default: output(z.unknown(), { name: 'Default' }),
+    },
+    config: z.object({
+      field: z.string().describe('Field path to check'),
+      case1: z.unknown().optional().describe('Value for case 1'),
+      case2: z.unknown().optional().describe('Value for case 2'),
+      case3: z.unknown().optional().describe('Value for case 3'),
     }),
   },
-  async (config, ctx, runtime) => {
-    const value = String(runtime.evaluate(config.value, ctx));
-    runtime.log("debug", `Switch value: ${value}`);
-    const outputPort = config.cases[value] ?? "default";
-    return { output: outputPort, data: value };
-  },
+  ({ inputs, outputs, config, log }) => {
+    inputs.in.on((data) => {
+      const value = getFieldValue(data, config.field);
+      log('debug', `Switch value: ${JSON.stringify(value)}`);
+
+      if (value === config.case1) {
+        outputs.case1.emit(data);
+      } else if (value === config.case2) {
+        outputs.case2.emit(data);
+      } else if (value === config.case3) {
+        outputs.case3.emit(data);
+      } else {
+        outputs.default.emit(data);
+      }
+    });
+  }
 );
 
+// ─────────────────────────────────────────────────────────────────────────────
 // Delay Block - Wait for a duration
-export const delay = defineBlock(
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const delay = defineReactiveBlock(
   {
-    id: "delay",
-    inputs: [{ id: "in", name: "Input" }],
-    outputs: [{ id: "out", name: "Output" }],
-    schema: z.object({
-      duration: z.union([z.string(), z.number()]).describe("Duration to wait (e.g., '5s', '1m', 5000)"),
+    id: 'delay',
+    name: 'Delay',
+    description: 'Wait for a duration before continuing',
+    category: 'flow',
+    icon: 'timer',
+    color: '#6b7280',
+    inputs: {
+      in: input(z.unknown(), { name: 'Input' }),
+    },
+    outputs: {
+      out: output(z.unknown(), { name: 'Output' }),
+    },
+    config: z.object({
+      duration: z.number().describe('Duration in milliseconds'),
     }),
   },
-  async (config, ctx, runtime) => {
-    const ms = parseDuration(config.duration);
-    runtime.log("debug", `Waiting for ${ms}ms`);
-    await new Promise((resolve) => setTimeout(resolve, ms));
-    return { output: "out", data: ctx.input };
-  },
+  ({ inputs, outputs, config, log }) => {
+    log('debug', `Delay configured: ${config.duration}ms`);
+
+    // Use delay operator to wait before emitting
+    inputs.in.pipe(delayOp(config.duration)).to(outputs.out);
+  }
 );
 
+// ─────────────────────────────────────────────────────────────────────────────
 // Emit Block - Emit an event
-export const emitEvent = defineBlock(
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const emitEvent = defineReactiveBlock(
   {
-    id: "emit",
-    inputs: [{ id: "in", name: "Input" }],
-    outputs: [{ id: "out", name: "Output" }],
-    schema: z.object({
-      event: z.string().describe("Event type to emit"),
-      payload: z.record(z.string(), z.unknown()).optional().describe("Event payload"),
+    id: 'emit',
+    name: 'Emit Event',
+    description: 'Emit an event to the event bus',
+    category: 'action',
+    icon: 'send',
+    color: '#10b981',
+    inputs: {
+      in: input(z.unknown(), { name: 'Input' }),
+    },
+    outputs: {
+      out: output(
+        z.object({
+          event: z.string(),
+          payload: z.unknown(),
+        }),
+        { name: 'Output' }
+      ),
+    },
+    config: z.object({
+      event: z.string().describe('Event type to emit'),
     }),
   },
-  async (config, ctx, runtime) => {
-    const payload = expr(config.payload ?? {}, ctx) as Json;
-    runtime.log("debug", `Emitting event: ${config.event}`);
-    runtime.emit(config.event, payload);
-    return { output: "out", data: { event: config.event, payload } };
-  },
+  ({ inputs, outputs, config, log }) => {
+    inputs.in.on((data) => {
+      log('debug', `Emitting event: ${config.event}`);
+      // Note: actual event emission to bus would be handled by hub
+      outputs.out.emit({ event: config.event, payload: data });
+    });
+  }
 );
 
-// Set Block - Set a workflow variable
-export const set = defineBlock(
+// ─────────────────────────────────────────────────────────────────────────────
+// Transform Block - Transform data
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const transform = defineReactiveBlock(
   {
-    id: "set",
-    inputs: [{ id: "in", name: "Input" }],
-    outputs: [{ id: "out", name: "Output" }],
-    schema: z.object({
-      var: z.string().describe("Variable name to set"),
-      value: z.unknown().describe("Value to assign (can use expressions)"),
+    id: 'set',
+    name: 'Transform',
+    description: 'Transform or extract data',
+    category: 'transform',
+    icon: 'edit',
+    color: '#ec4899',
+    inputs: {
+      in: input(z.unknown(), { name: 'Input' }),
+    },
+    outputs: {
+      out: output(z.unknown(), { name: 'Output' }),
+    },
+    config: z.object({
+      field: z.string().optional().describe('Field to extract (empty for passthrough)'),
+      template: z.record(z.string(), z.string()).optional().describe('Template to build output'),
     }),
   },
-  async (config, ctx, runtime) => {
-    const value = expr(config.value, ctx) as Json;
-    runtime.log("debug", `Setting variable: ${config.var} = ${JSON.stringify(value)}`);
-    runtime.setVar(config.var, value);
-    return { output: "out", data: value };
-  },
+  ({ inputs, outputs, config, log }) => {
+    inputs.in
+      .pipe(
+        map((data) => {
+          // If template is provided, build object
+          if (config.template) {
+            const result: Record<string, unknown> = {};
+            for (const [key, path] of Object.entries(config.template)) {
+              result[key] = getFieldValue(data, path);
+            }
+            log('debug', `Transformed with template: ${JSON.stringify(result)}`);
+            return result;
+          }
+
+          // If field is provided, extract it
+          if (config.field) {
+            const value = getFieldValue(data, config.field);
+            log('debug', `Extracted field ${config.field}: ${JSON.stringify(value)}`);
+            return value;
+          }
+
+          // Passthrough
+          return data;
+        })
+      )
+      .to(outputs.out);
+  }
 );
 
+// ─────────────────────────────────────────────────────────────────────────────
 // Log Block - Log a message
-export const logBlock = defineBlock(
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const logBlock = defineReactiveBlock(
   {
-    id: "log",
-    inputs: [{ id: "in", name: "Input" }],
-    outputs: [{ id: "out", name: "Output" }],
-    schema: z.object({
-      message: z.string().describe("Message to log (supports expressions)"),
-      level: z.enum(["debug", "info", "warn", "error"]).optional().describe("Log level"),
+    id: 'log',
+    name: 'Log',
+    description: 'Log a message',
+    category: 'action',
+    icon: 'file-text',
+    color: '#78716c',
+    inputs: {
+      in: input(z.unknown(), { name: 'Input' }),
+    },
+    outputs: {
+      out: output(z.unknown(), { name: 'Output' }),
+    },
+    config: z.object({
+      message: z.string().optional().describe('Custom message (uses data if empty)'),
+      level: z.enum(['debug', 'info', 'warn', 'error']).default('info').describe('Log level'),
     }),
   },
-  async (config, ctx, runtime) => {
-    const message = String(expr(config.message, ctx));
-    const level = config.level ?? "info";
-    runtime.log(level, message);
-    return { output: "out", data: message };
-  },
+  ({ inputs, outputs, config, log }) => {
+    inputs.in.on((data) => {
+      const message = config.message ?? JSON.stringify(data);
+      log(config.level, message);
+      outputs.out.emit(data);
+    });
+  }
 );
 
-// Merge Block - Wait for multiple inputs
-export const merge = defineBlock(
+// ─────────────────────────────────────────────────────────────────────────────
+// Merge Block - Wait for multiple inputs (combine)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const merge = defineReactiveBlock(
   {
-    id: "merge",
-    inputs: [
-      { id: "a", name: "Input A" },
-      { id: "b", name: "Input B" },
-    ],
-    outputs: [{ id: "out", name: "Output" }],
-    schema: z.object({
-      mode: z.enum(["all", "any"]).optional().describe("Wait for all inputs or any"),
+    id: 'merge',
+    name: 'Merge',
+    description: 'Wait for both inputs before continuing',
+    category: 'flow',
+    icon: 'git-merge',
+    color: '#06b6d4',
+    inputs: {
+      a: input(z.unknown(), { name: 'Input A' }),
+      b: input(z.unknown(), { name: 'Input B' }),
+    },
+    outputs: {
+      out: output(
+        z.object({
+          a: z.unknown(),
+          b: z.unknown(),
+        }),
+        { name: 'Output' }
+      ),
+    },
+    config: z.object({}),
+  },
+  ({ inputs, outputs, log }) => {
+    // Combine waits for both inputs to have values
+    combine(inputs.a, inputs.b)
+      .pipe(
+        map(([a, b]) => {
+          log('debug', 'Merged inputs');
+          return { a, b };
+        })
+      )
+      .to(outputs.out);
+  }
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Split Block - Send to multiple outputs
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const split = defineReactiveBlock(
+  {
+    id: 'parallel',
+    name: 'Split',
+    description: 'Send data to multiple branches',
+    category: 'flow',
+    icon: 'git-fork',
+    color: '#a855f7',
+    inputs: {
+      in: input(z.unknown(), { name: 'Input' }),
+    },
+    outputs: {
+      a: output(z.unknown(), { name: 'Branch A' }),
+      b: output(z.unknown(), { name: 'Branch B' }),
+    },
+    config: z.object({}),
+  },
+  ({ inputs, outputs, log }) => {
+    inputs.in.on((data) => {
+      log('debug', 'Splitting to parallel branches');
+      outputs.a.emit(data);
+      outputs.b.emit(data);
+    });
+  }
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// End Block - Terminal block
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const end = defineReactiveBlock(
+  {
+    id: 'end',
+    name: 'End',
+    description: 'End the workflow branch',
+    category: 'flow',
+    icon: 'square',
+    color: '#dc2626',
+    inputs: {
+      in: input(z.unknown(), { name: 'Input' }),
+    },
+    outputs: {},
+    config: z.object({
+      status: z.enum(['success', 'failure']).default('success').describe('End status'),
     }),
   },
-  async (_config, ctx, runtime) => {
-    const merged: Record<string, Json> = { ...ctx.inputs };
-    runtime.log("debug", `Merged inputs: ${JSON.stringify(merged)}`);
-    return { output: "out", data: merged };
-  },
-);
-
-// Parallel Block - Split to parallel branches
-export const parallel = defineBlock(
-  {
-    id: "parallel",
-    inputs: [{ id: "in", name: "Input" }],
-    outputs: [
-      { id: "a", name: "Branch A" },
-      { id: "b", name: "Branch B" },
-    ],
-    schema: z.object({}),
-  },
-  async (_config, ctx, runtime) => {
-    runtime.log("debug", "Splitting to parallel branches");
-    return { output: "a", data: ctx.input };
-  },
-);
-
-// End Block - Terminate workflow
-export const end = defineBlock(
-  {
-    id: "end",
-    inputs: [{ id: "in", name: "Input" }],
-    outputs: [],
-    schema: z.object({
-      status: z.enum(["success", "failure"]).optional().describe("End status"),
-      message: z.string().optional().describe("Optional message"),
-    }),
-  },
-  async (config, ctx, runtime) => {
-    const status = config.status ?? "success";
-    runtime.log("debug", `Workflow ended with status: ${status}`);
-    return {
-      output: "", // No output for terminal block
-      data: { status, message: config.message ?? null, finalInput: ctx.input },
-    };
-  },
+  ({ inputs, config, log }) => {
+    inputs.in.on((data) => {
+      log('info', `Workflow ended with status: ${config.status}`);
+      log('debug', `Final data: ${JSON.stringify(data)}`);
+    });
+  }
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-log("info", "Built-in blocks plugin loaded");
+log('info', 'Built-in blocks plugin loaded');

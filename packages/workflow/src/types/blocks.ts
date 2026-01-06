@@ -1,8 +1,7 @@
 /**
  * Block Types
  *
- * Event-driven block type definitions.
- * Blocks are flow handlers that subscribe to inputs and emit to outputs.
+ * Event-driven block type definitions for the workflow engine.
  */
 
 import type { z } from 'zod';
@@ -16,18 +15,15 @@ import type { PortDefinition } from './ports';
 /**
  * Block category for UI grouping.
  * Free-form string - plugins can define any category.
- *
- * @example "logic", "integrations", "smart-home", "utilities", "operators"
  */
 export type BlockCategory = string;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Block State (Simple)
+// Block State
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
  * Block runtime state.
- * Much simpler than the old execution status model.
  *
  * - `running`: Block is active and processing events
  * - `paused`: Block is suspended (events are buffered)
@@ -36,75 +32,11 @@ export type BlockCategory = string;
 export type BlockState = 'running' | 'paused' | 'stopped';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Block Context (Event-Driven)
+// Block Type Definition (Metadata)
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Context provided to block handlers.
- * No persistent state - blocks are stateless flow handlers.
- */
-export interface BlockContext {
-  /** Block instance ID */
-  blockId: string;
-
-  /** Workflow ID this block belongs to */
-  workflowId: string;
-
-  /** Block configuration */
-  config: Record<string, unknown>;
-
-  /**
-   * Emit data to an output port.
-   * This sends the data to all connected blocks.
-   */
-  emit(portId: string, data: Serializable): void;
-
-  /** Log a message */
-  log(level: 'debug' | 'info' | 'warn' | 'error', message: string): void;
-
-  /** Call a registered tool */
-  callTool(toolId: string, args: Record<string, Serializable>): Promise<Serializable>;
-
-  /** Schedule a callback after delay */
-  setTimeout(callback: () => void, ms: number): () => void;
-
-  /** Schedule a repeating callback */
-  setInterval(callback: () => void, ms: number): () => void;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Block Handlers (Event-Driven)
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * Event-driven block handlers.
- * Blocks are flow handlers - they set up subscriptions and emit data.
- */
-export interface BlockHandlers {
-  /**
-   * Called when the workflow starts.
-   * Set up subscriptions, start timers, etc.
-   */
-  onStart?(ctx: BlockContext): void | Promise<void>;
-
-  /**
-   * Called when data arrives at an input port.
-   */
-  onInput(portId: string, data: Serializable, ctx: BlockContext): void | Promise<void>;
-
-  /**
-   * Called when the workflow stops.
-   * Clean up timers, subscriptions, etc.
-   */
-  onStop?(ctx: BlockContext): void | Promise<void>;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Block Type Definition
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * Block type definition provided by plugins.
+ * Block type definition - metadata only.
  */
 export interface BlockTypeDefinition {
   /** Local block ID (without plugin prefix) */
@@ -142,24 +74,45 @@ export interface BlockTypeDefinition {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Compiled Block
+// Compiled Block (with start function)
 // ─────────────────────────────────────────────────────────────────────────────
 
+/** Runtime context for starting a block */
+export interface BlockRuntimeContext {
+  blockId: string;
+  workflowId: string;
+  config: Record<string, unknown>;
+  emit(portId: string, data: Serializable): void;
+  log(level: 'debug' | 'info' | 'warn' | 'error', message: string): void;
+  callTool(toolId: string, args: Record<string, Serializable>): Promise<Serializable>;
+}
+
+/** Running block instance */
+export interface BlockInstance {
+  /** Push data to an input port */
+  pushInput(portId: string, data: Serializable): void;
+  /** Stop the block and clean up */
+  stop(): void;
+}
+
 /**
- * A fully compiled block ready for registration.
+ * A compiled block ready for use in workflows.
+ * Created by defineReactiveBlock in the SDK.
  */
 export interface CompiledBlock extends BlockTypeDefinition {
-  handlers: BlockHandlers;
+  /** Start the block - creates reactive context and runs setup */
+  start(ctx: BlockRuntimeContext): BlockInstance;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Block Runtime Instance
+// Block Runtime Instance (Workflow Engine)
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
  * Runtime instance of a block in a workflow.
+ * Managed by WorkflowRuntime.
  */
-export interface BlockRuntimeInstance {
+export interface BlockRuntimeState {
   /** Unique instance ID */
   id: string;
 
@@ -172,8 +125,8 @@ export interface BlockRuntimeInstance {
   /** Current state */
   state: BlockState;
 
-  /** Active timers (for cleanup) */
-  timers: Set<ReturnType<typeof setTimeout>>;
+  /** The running block instance (null when stopped) */
+  instance: BlockInstance | null;
 
   /** Buffered events (when paused) */
   buffer: Array<{ portId: string; data: Serializable }>;

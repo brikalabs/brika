@@ -5,6 +5,7 @@
  * All subscriptions via .to() and .on() are automatically cleaned up when the block stops.
  */
 
+import type { Serializable } from '@brika/serializable';
 import { z } from 'zod';
 import {
   type BlockContext,
@@ -19,28 +20,41 @@ import {
   type Flow,
   FlowImpl,
   type InputDef,
-  isSource,
   type OutputDef,
   type ReactiveBlockSpec,
-  type Serializable,
   type Source,
   zodToJsonSchema,
 } from './reactive';
-import type { BlockHandlers, BlockPort, BlockSchema, CompiledBlock } from './types';
+import type { BlockDefinition, BlockPort, BlockSchema } from './types';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Block Instance Storage
+// Compiled Reactive Block
 // ─────────────────────────────────────────────────────────────────────────────
 
-interface BlockInstanceData {
-  flows: Map<string, FlowImpl<unknown>>;
-  cleanup: CleanupRegistry;
+/**
+ * A compiled reactive block with metadata and runtime functions.
+ */
+export interface CompiledReactiveBlock extends BlockDefinition {
+  /** Start the block - creates reactive context and runs setup */
+  start(ctx: BlockRuntimeContext): BlockInstance;
 }
 
-const blockInstances = new Map<string, BlockInstanceData>();
+/** Runtime context provided by the workflow engine */
+export interface BlockRuntimeContext {
+  blockId: string;
+  workflowId: string;
+  config: Record<string, unknown>;
+  emit(portId: string, data: Serializable): void;
+  log(level: 'debug' | 'info' | 'warn' | 'error', message: string): void;
+  callTool(toolId: string, args: Record<string, Serializable>): Promise<Serializable>;
+}
 
-function getInstanceKey(workflowId: string, blockId: string): string {
-  return `${workflowId}:${blockId}`;
+/** Running block instance */
+export interface BlockInstance {
+  /** Push data to an input port */
+  pushInput(portId: string, data: Serializable): void;
+  /** Stop the block and clean up */
+  stop(): void;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -73,7 +87,6 @@ function getInstanceKey(workflowId: string, blockId: string): string {
  *       label: z.string(),
  *     }), { name: "Comfort" }),
  *     alert: output(z.string(), { name: "Alert" }),
- *     tick: output(z.number(), { name: "Tick" }),
  *   },
  *
  *   config: z.object({
@@ -82,12 +95,7 @@ function getInstanceKey(workflowId: string, blockId: string): string {
  *   }),
  *
  * }, ({ inputs, outputs, config, start, log }) => {
- *   // All subscriptions are automatically cleaned up!
- *
- *   // Route input to output
- *   inputs.temperature.to(outputs.display);
- *
- *   // Transform and route
+ *   // Combine and transform
  *   combine(inputs.temperature, inputs.humidity)
  *     .pipe(map(([temp, hum]) => ({
  *       score: Math.round(100 - Math.abs(temp - 22) * 5),
@@ -95,7 +103,7 @@ function getInstanceKey(workflowId: string, blockId: string): string {
  *     })))
  *     .to(outputs.comfort);
  *
- *   // Conditional routing
+ *   // Conditional alerts
  *   inputs.temperature.on(temp => {
  *     if (temp > config.maxTemp) {
  *       outputs.alert.emit(`Too hot: ${temp}°C`);
@@ -104,8 +112,6 @@ function getInstanceKey(workflowId: string, blockId: string): string {
  *
  *   // Start from source
  *   start(interval(1000)).to(outputs.tick);
- *
- *   log("info", "Block initialized");
  * });
  * ```
  */
@@ -116,7 +122,7 @@ export function defineReactiveBlock<
 >(
   spec: ReactiveBlockSpec<TInputs, TOutputs, TConfig>,
   setup: BlockSetup<TInputs, TOutputs, TConfig>
-): CompiledBlock {
+): CompiledReactiveBlock {
   // Convert config to JSON Schema
   const configJsonSchema = zodToBlockSchema(spec.config);
 
@@ -138,15 +144,24 @@ export function defineReactiveBlock<
     jsonSchema: zodToJsonSchema(def.schema),
   }));
 
-  // Create block handlers that bridge to reactive API
-  const handlers: BlockHandlers = {
-    onStart(ctx) {
-      const instanceKey = getInstanceKey(ctx.workflowId, ctx.blockId);
+  return {
+    // Metadata
+    id: spec.id,
+    name: spec.name ?? spec.id,
+    description: spec.description ?? '',
+    category: spec.category ?? 'logic',
+    icon: spec.icon ?? 'box',
+    color: spec.color ?? '#6b7280',
+    inputs,
+    outputs,
+    schema: configJsonSchema,
 
-      // Create cleanup registry for this block instance
+    // Start function - creates reactive context and runs setup
+    start(ctx: BlockRuntimeContext): BlockInstance {
+      // Create cleanup registry
       const cleanup = new CleanupRegistry();
 
-      // setTimeout wrapper that registers cleanup
+      // setTimeout wrapper with auto-cleanup
       const setTimeoutWrapper = (fn: () => void, ms: number): Cleanup => {
         const id = setTimeout(fn, ms);
         const cancel = () => clearTimeout(id);
@@ -154,7 +169,7 @@ export function defineReactiveBlock<
         return cancel;
       };
 
-      // Create flows for each input with auto-cleanup
+      // Create flows for each input
       const flows = new Map<string, FlowImpl<unknown>>();
       for (const id of Object.keys(spec.inputs)) {
         flows.set(id, createFlow<unknown>(setTimeoutWrapper, cleanup));
@@ -163,17 +178,15 @@ export function defineReactiveBlock<
       // Create emitters for each output
       const outputEmitters = {} as Record<string, Emitter<unknown>>;
       for (const [id, def] of Object.entries(spec.outputs)) {
-        outputEmitters[id] = createEmitter<unknown>(id, def.schema, (portId, value) => {
-          ctx.emit(portId, value);
-        });
+        outputEmitters[id] = createEmitter<unknown>(id, def.schema, ctx.emit);
       }
 
-      // Parse config
+      // Parse and validate config
       const configResult = spec.config.safeParse(ctx.config);
       if (!configResult.success) {
         ctx.log('error', `Config validation failed: ${configResult.error.message}`);
-        return;
       }
+      const config = configResult.success ? configResult.data : ({} as z.infer<TConfig>);
 
       // Build input flows object
       const inputFlows = Object.fromEntries([...flows.entries()].map(([id, flow]) => [id, flow]));
@@ -189,7 +202,7 @@ export function defineReactiveBlock<
         workflowId: ctx.workflowId,
         inputs: inputFlows,
         outputs: outputEmitters,
-        config: configResult.data,
+        config,
         start,
         log: ctx.log,
         callTool: ctx.callTool,
@@ -198,63 +211,58 @@ export function defineReactiveBlock<
       // Call setup function
       setup(reactiveCtx);
 
-      // Store instance data for onInput/onStop
-      blockInstances.set(instanceKey, { flows, cleanup });
-    },
-
-    onInput(portId, data, ctx) {
-      const instanceKey = getInstanceKey(ctx.workflowId, ctx.blockId);
-      const instance = blockInstances.get(instanceKey);
-      if (!instance) return;
-
-      // Validate input data against schema (dev mode)
-      if (process.env.NODE_ENV !== 'production') {
-        const inputDef = spec.inputs[portId];
-        if (inputDef) {
-          const result = inputDef.schema.safeParse(data);
-          if (!result.success) {
-            ctx.log('warn', `Input validation failed for "${portId}": ${result.error.message}`);
+      // Return instance handle
+      return {
+        pushInput(portId: string, data: Serializable): void {
+          // Validate in dev mode
+          if (process.env.NODE_ENV !== 'production') {
+            const inputDef = spec.inputs[portId];
+            if (inputDef) {
+              const result = inputDef.schema.safeParse(data);
+              if (!result.success) {
+                ctx.log('warn', `Input validation failed for "${portId}": ${result.error.message}`);
+              }
+            }
           }
-        }
-      }
 
-      // Push data to the appropriate flow
-      const flow = instance.flows.get(portId);
-      if (flow) {
-        flow._push(data);
-      }
-    },
+          // Push to flow
+          const flow = flows.get(portId);
+          if (flow) {
+            flow._push(data);
+          }
+        },
 
-    onStop(ctx) {
-      const instanceKey = getInstanceKey(ctx.workflowId, ctx.blockId);
-      const instance = blockInstances.get(instanceKey);
-      if (!instance) return;
+        stop(): void {
+          // Clean up all subscriptions
+          cleanup.cleanup();
 
-      // Clean up all subscriptions automatically
-      instance.cleanup.cleanup();
-
-      // Clear all flows
-      for (const flow of instance.flows.values()) {
-        flow._clear();
-      }
-
-      // Remove instance
-      blockInstances.delete(instanceKey);
+          // Clear all flows
+          for (const flow of flows.values()) {
+            flow._clear();
+          }
+        },
+      };
     },
   };
+}
 
-  return {
-    id: spec.id,
-    name: spec.name ?? spec.id,
-    description: spec.description ?? '',
-    category: spec.category ?? 'logic',
-    icon: spec.icon ?? 'box',
-    color: spec.color ?? '#6b7280',
-    inputs,
-    outputs,
-    schema: configJsonSchema,
-    handlers,
-  };
+// ─────────────────────────────────────────────────────────────────────────────
+// Type Guard
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Check if a value is a CompiledReactiveBlock
+ */
+export function isCompiledReactiveBlock(value: unknown): value is CompiledReactiveBlock {
+  if (typeof value !== 'object' || value === null) return false;
+  const obj = value as Record<string, unknown>;
+  return (
+    typeof obj.id === 'string' &&
+    typeof obj.name === 'string' &&
+    typeof obj.start === 'function' &&
+    Array.isArray(obj.inputs) &&
+    Array.isArray(obj.outputs)
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

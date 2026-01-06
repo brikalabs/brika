@@ -1,7 +1,7 @@
 /**
  * Workflow Types
  *
- * Core workflow and block instance definitions.
+ * Core workflow and block configuration definitions.
  */
 
 import type { PortRef } from './ports';
@@ -28,7 +28,7 @@ export interface WorkspaceMeta {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Block Instance
+// Block Configuration
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
@@ -40,10 +40,9 @@ export interface Position {
 }
 
 /**
- * A block instance in a workflow.
- * Each block has a unique user-friendly ID and references to connected ports.
+ * A block configuration in a workflow (from TOML).
  */
-export interface BlockInstance {
+export interface BlockConfig {
   /** Unique instance ID (user-friendly slug, e.g., "check-time") */
   id: string;
 
@@ -59,18 +58,12 @@ export interface BlockInstance {
   /**
    * Input port connections.
    * Maps port ID to array of source port refs.
-   * Empty object for source blocks (0 inputs).
-   *
-   * @example { "in": ["event-source:out"] }
    */
   inputs: Record<string, PortRef[]>;
 
   /**
    * Output port connections.
    * Maps port ID to array of target port refs.
-   * Empty object for sink blocks (0 outputs).
-   *
-   * @example { "then": ["lights-on:in"], "else": ["log:in"] }
    */
   outputs: Record<string, PortRef[]>;
 }
@@ -93,12 +86,9 @@ export interface Workflow {
   /**
    * Plugin dependencies.
    * Maps plugin name to version range.
-   * Loader will validate/install missing plugins.
-   *
-   * @example { "@brika/blocks-builtin": "^0.1.0", "@brika/plugin-hue": "^1.0.0" }
    */
   plugins: Record<string, string>;
 
-  /** Block instances in this workflow */
-  blocks: BlockInstance[];
+  /** Block configurations in this workflow */
+  blocks: BlockConfig[];
 }

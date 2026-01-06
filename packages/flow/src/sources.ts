@@ -34,7 +34,7 @@ export function isSource<T>(value: unknown): value is Source<T> {
     typeof value === 'object' &&
     value !== null &&
     SOURCE_MARKER in value &&
-    (value as Source<T>).__source === true
+    (value as Source<T>).__source
   );
 }
 

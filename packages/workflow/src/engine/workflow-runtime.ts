@@ -3,15 +3,13 @@
  *
  * Manages the lifecycle of an event-driven workflow.
  * Creates block instances, wires up the event bus, and handles start/stop.
- * Supports pause/resume for individual blocks (useful for debugging).
  */
 
 import type { Serializable } from '../serialization';
 import type {
-  BlockContext,
-  BlockHandlers,
+  BlockConfig,
   BlockInstance,
-  BlockRuntimeInstance,
+  BlockRuntimeState,
   BlockState,
   CompiledBlock,
   Workflow,
@@ -23,7 +21,7 @@ import { EventBus, type EventObserver, type PortBuffer } from './event-bus';
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Registry of block types.
+ * Registry of compiled block types.
  */
 export interface BlockRegistry {
   get(type: string): CompiledBlock | undefined;
@@ -73,11 +71,11 @@ export class WorkflowRuntime {
   readonly #onLog?: (blockId: string, level: string, message: string) => void;
   readonly #onBlockStateChange?: (blockId: string, state: BlockState) => void;
 
-  /** Block instances by ID */
-  readonly #instances = new Map<string, BlockRuntimeInstance>();
+  /** Block runtime states by ID */
+  readonly #blocks = new Map<string, BlockRuntimeState>();
 
-  /** Block handlers by type */
-  readonly #handlers = new Map<string, BlockHandlers>();
+  /** Compiled block types by block ID */
+  readonly #blockTypes = new Map<string, CompiledBlock>();
 
   /** Running state */
   #running = false;
@@ -94,112 +92,64 @@ export class WorkflowRuntime {
       this.#handleEvent(blockId, portId, data)
     );
 
-    // Create block instances
+    // Prepare blocks
     for (const block of workflow.blocks) {
-      this.#createInstance(block);
+      this.#prepareBlock(block);
     }
   }
 
-  #createInstance(block: BlockInstance): void {
+  #prepareBlock(block: BlockConfig): void {
     const blockType = this.#blockRegistry.get(block.type);
     if (!blockType) {
       throw new Error(`Unknown block type: ${block.type}`);
     }
 
-    this.#handlers.set(block.id, blockType.handlers);
-
+    // Validate config
     const configResult = blockType.configSchema.safeParse(block.config);
     if (!configResult.success) {
       throw new Error(`Invalid config for block ${block.id}: ${configResult.error.message}`);
     }
 
-    const instance: BlockRuntimeInstance = {
+    this.#blockTypes.set(block.id, blockType);
+
+    const state: BlockRuntimeState = {
       id: block.id,
       type: block.type,
       config: configResult.data as Record<string, unknown>,
       state: 'stopped',
-      timers: new Set(),
+      instance: null,
       buffer: [],
     };
 
-    this.#instances.set(block.id, instance);
+    this.#blocks.set(block.id, state);
   }
 
-  #buildContext(instance: BlockRuntimeInstance): BlockContext {
-    return {
-      blockId: instance.id,
-      workflowId: this.#workflow.workspace.id,
-      config: instance.config,
-
-      emit: (portId: string, data: Serializable) => {
-        if (!this.#running || instance.state !== 'running') return;
-        this.#eventBus.emit(instance.id, portId, data);
-      },
-
-      log: (level, message) => {
-        this.#onLog?.(instance.id, level, message);
-      },
-
-      callTool: (toolId, args) => {
-        if (!this.#tools) {
-          return Promise.reject(new Error('No tool executor configured'));
-        }
-        return this.#tools.call(toolId, args);
-      },
-
-      setTimeout: (callback, ms) => {
-        const timer = setTimeout(() => {
-          instance.timers.delete(timer);
-          if (this.#running && instance.state === 'running') callback();
-        }, ms);
-        instance.timers.add(timer);
-        return () => {
-          clearTimeout(timer);
-          instance.timers.delete(timer);
-        };
-      },
-
-      setInterval: (callback, ms) => {
-        const timer = setInterval(() => {
-          if (this.#running && instance.state === 'running') callback();
-        }, ms);
-        instance.timers.add(timer);
-        return () => {
-          clearInterval(timer);
-          instance.timers.delete(timer);
-        };
-      },
-    };
-  }
-
-  async #handleEvent(blockId: string, portId: string, data: Serializable): Promise<void> {
-    const instance = this.#instances.get(blockId);
-    const handlers = this.#handlers.get(blockId);
-
-    if (!instance || !handlers) {
+  #handleEvent(blockId: string, portId: string, data: Serializable): void {
+    const state = this.#blocks.get(blockId);
+    if (!state) {
       console.warn(`Event to unknown block: ${blockId}`);
       return;
     }
 
     // If paused, buffer the event
-    if (instance.state === 'paused') {
-      instance.buffer.push({ portId, data });
+    if (state.state === 'paused') {
+      state.buffer.push({ portId, data });
       return;
     }
 
-    // If stopped, ignore
-    if (instance.state === 'stopped') {
+    // If stopped or no instance, ignore
+    if (state.state === 'stopped' || !state.instance) {
       return;
     }
 
-    const ctx = this.#buildContext(instance);
-    await handlers.onInput(portId, data, ctx);
+    // Push to the block instance
+    state.instance.pushInput(portId, data);
   }
 
   #setBlockState(blockId: string, state: BlockState): void {
-    const instance = this.#instances.get(blockId);
-    if (instance) {
-      instance.state = state;
+    const block = this.#blocks.get(blockId);
+    if (block) {
+      block.state = state;
       this.#onBlockStateChange?.(blockId, state);
     }
   }
@@ -211,46 +161,55 @@ export class WorkflowRuntime {
   /**
    * Start the workflow.
    */
-  async start(): Promise<void> {
+  start(): void {
     if (this.#running) return;
     this.#running = true;
 
     // Start all blocks
-    for (const [blockId, handlers] of this.#handlers) {
-      const instance = this.#instances.get(blockId);
-      if (instance) {
-        this.#setBlockState(blockId, 'running');
-        if (handlers.onStart) {
-          const ctx = this.#buildContext(instance);
-          await handlers.onStart(ctx);
-        }
-      }
+    for (const [blockId, state] of this.#blocks) {
+      const blockType = this.#blockTypes.get(blockId);
+      if (!blockType) continue;
+
+      // Create runtime context
+      const ctx = {
+        blockId,
+        workflowId: this.#workflow.workspace.id,
+        config: state.config,
+        emit: (portId: string, data: Serializable) => {
+          if (!this.#running || state.state !== 'running') return;
+          this.#eventBus.emit(blockId, portId, data);
+        },
+        log: (level: 'debug' | 'info' | 'warn' | 'error', message: string) => {
+          this.#onLog?.(blockId, level, message);
+        },
+        callTool: (toolId: string, args: Record<string, Serializable>) => {
+          if (!this.#tools) {
+            return Promise.reject(new Error('No tool executor configured'));
+          }
+          return this.#tools.call(toolId, args);
+        },
+      };
+
+      // Start the block
+      this.#setBlockState(blockId, 'running');
+      state.instance = blockType.start(ctx);
     }
   }
 
   /**
    * Stop the workflow.
    */
-  async stop(): Promise<void> {
+  stop(): void {
     if (!this.#running) return;
     this.#running = false;
 
-    for (const [blockId, handlers] of this.#handlers) {
-      const instance = this.#instances.get(blockId);
-      if (instance) {
-        this.#setBlockState(blockId, 'stopped');
-        if (handlers.onStop) {
-          const ctx = this.#buildContext(instance);
-          await handlers.onStop(ctx);
-        }
-        // Clear timers
-        for (const timer of instance.timers) {
-          clearTimeout(timer);
-          clearInterval(timer);
-        }
-        instance.timers.clear();
-        instance.buffer = [];
+    for (const state of this.#blocks.values()) {
+      this.#setBlockState(state.id, 'stopped');
+      if (state.instance) {
+        state.instance.stop();
+        state.instance = null;
       }
+      state.buffer = [];
     }
   }
 
@@ -259,8 +218,8 @@ export class WorkflowRuntime {
    * Events will be buffered until resume.
    */
   pauseBlock(blockId: string): void {
-    const instance = this.#instances.get(blockId);
-    if (instance && instance.state === 'running') {
+    const state = this.#blocks.get(blockId);
+    if (state && state.state === 'running') {
       this.#setBlockState(blockId, 'paused');
     }
   }
@@ -269,51 +228,42 @@ export class WorkflowRuntime {
    * Resume a paused block.
    * Flushes buffered events.
    */
-  async resumeBlock(blockId: string): Promise<void> {
-    const instance = this.#instances.get(blockId);
-    const handlers = this.#handlers.get(blockId);
-    if (!instance || !handlers || instance.state !== 'paused') return;
+  resumeBlock(blockId: string): void {
+    const state = this.#blocks.get(blockId);
+    if (!state || state.state !== 'paused' || !state.instance) return;
 
     this.#setBlockState(blockId, 'running');
 
     // Flush buffered events
-    const buffered = instance.buffer;
-    instance.buffer = [];
+    const buffered = state.buffer;
+    state.buffer = [];
 
-    const ctx = this.#buildContext(instance);
     for (const { portId, data } of buffered) {
-      await handlers.onInput(portId, data, ctx);
+      state.instance.pushInput(portId, data);
     }
   }
 
   /**
    * Stop a specific block.
    */
-  async stopBlock(blockId: string): Promise<void> {
-    const instance = this.#instances.get(blockId);
-    const handlers = this.#handlers.get(blockId);
-    if (!instance) return;
+  stopBlock(blockId: string): void {
+    const state = this.#blocks.get(blockId);
+    if (!state) return;
 
     this.#setBlockState(blockId, 'stopped');
 
-    if (handlers?.onStop) {
-      const ctx = this.#buildContext(instance);
-      await handlers.onStop(ctx);
+    if (state.instance) {
+      state.instance.stop();
+      state.instance = null;
     }
-
-    for (const timer of instance.timers) {
-      clearTimeout(timer);
-      clearInterval(timer);
-    }
-    instance.timers.clear();
-    instance.buffer = [];
+    state.buffer = [];
   }
 
   /**
    * Get block state.
    */
   getBlockState(blockId: string): BlockState | undefined {
-    return this.#instances.get(blockId)?.state;
+    return this.#blocks.get(blockId)?.state;
   }
 
   /**
@@ -321,8 +271,8 @@ export class WorkflowRuntime {
    */
   getBlockStates(): Map<string, BlockState> {
     const states = new Map<string, BlockState>();
-    for (const [id, instance] of this.#instances) {
-      states.set(id, instance.state);
+    for (const [id, block] of this.#blocks) {
+      states.set(id, block.state);
     }
     return states;
   }

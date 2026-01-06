@@ -12,11 +12,10 @@
 export type {
   // Block types
   BlockCategory,
-  BlockContext,
-  BlockHandlers,
-  // Workflow types (TOML structure)
+  BlockConfig,
   BlockInstance,
-  BlockRuntimeInstance,
+  BlockRuntimeContext,
+  BlockRuntimeState,
   BlockState,
   BlockTypeDefinition,
   CompiledBlock,
@@ -25,6 +24,7 @@ export type {
   PortDirection,
   PortRef,
   Position,
+  // Workflow types
   Workflow,
   WorkspaceMeta,
 } from './types';
@@ -51,7 +51,6 @@ export {
   serializeSync,
   ToolRefSchema,
   ToolRefTransformer,
-  TransformerRegistry,
   toolRef,
   Uint8ArrayTransformer,
 } from './serialization';
@@ -86,9 +85,7 @@ export { parseWorkspace, WorkspaceLoader, WorkspaceSchema } from './workspace';
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type {
-  // Workflow Runtime
   BlockRegistry,
-  // Event Bus
   DispatchedEvent,
   EventHandler,
   EventObserver,
@@ -98,10 +95,4 @@ export type {
   WorkflowRuntimeOptions,
 } from './engine';
 
-export {
-  // Event Bus
-  createEventStream,
-  EventBus,
-  // Workflow Runtime
-  WorkflowRuntime,
-} from './engine';
+export { createEventStream, EventBus, WorkflowRuntime } from './engine';

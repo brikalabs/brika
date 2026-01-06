@@ -1,13 +1,15 @@
 /**
  * Block System Exports
+ *
+ * Reactive event-driven block API.
  */
 
-// Reactive API - re-export from @brika/flow
+// Re-export from @brika/flow
 export * from '@brika/flow';
-// Low-Level API (imperative handlers)
-export type { BlockSpec } from './define';
-export { defineBlock, expr, isCompiledBlock, parseDuration, z } from './define';
-// Reactive API - SDK-specific
+// Re-export Zod
+export { z } from 'zod';
+
+// Reactive block API
 export type {
   BlockContext,
   BlockSetup,
@@ -18,17 +20,11 @@ export type {
   PortMeta,
   ReactiveBlockSpec,
 } from './reactive';
+
 export { createEmitter, createFlowFromInput, input, output, zodToJsonSchema } from './reactive';
-export { defineReactiveBlock } from './reactive-define';
-export type {
-  BlockDefinition,
-  BlockHandlers,
-  BlockPort,
-  BlockSchema,
-  CompiledBlock,
-  LowLevelBlockContext,
-  PortDirection,
-  Serializable,
-  SimplePort,
-  StateStore,
-} from './types';
+
+// Compiled reactive block
+export type { BlockInstance, BlockRuntimeContext, CompiledReactiveBlock } from './reactive-define';
+export { defineReactiveBlock, isCompiledReactiveBlock } from './reactive-define';
+// Block metadata types
+export type { BlockDefinition, BlockPort, BlockSchema, PortDirection, Serializable } from './types';

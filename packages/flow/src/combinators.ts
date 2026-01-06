@@ -103,7 +103,7 @@ function createCombineFlow(
     });
   });
 
-  return combined as unknown as Flow<unknown[]>;
+  return combined;
 }
 
 function createMergeFlow<T>(flows: Flow<T>[]): Flow<T> {
@@ -117,7 +117,7 @@ function createMergeFlow<T>(flows: Flow<T>[]): Flow<T> {
     flow.on((v) => merged._push(v));
   }
 
-  return merged as unknown as Flow<T>;
+  return merged;
 }
 
 function createRaceFlow<T>(flows: Flow<T>[]): Flow<T> {
@@ -137,5 +137,5 @@ function createRaceFlow<T>(flows: Flow<T>[]): Flow<T> {
     });
   }
 
-  return raced as unknown as Flow<T>;
+  return raced;
 }

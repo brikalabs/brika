@@ -7,7 +7,7 @@
 
 import type { Serializable } from '../serialization';
 import { serialize } from '../serialization';
-import type { BlockInstance, PortRef, Workflow } from '../types';
+import type { BlockConfig, PortRef, Workflow } from '../types';
 import { parsePortRef } from '../types';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -111,7 +111,7 @@ export class EventBus {
     this.#connections = this.#buildConnectionMap(workflow.blocks);
   }
 
-  #buildConnectionMap(blocks: BlockInstance[]): Map<string, PortRef[]> {
+  #buildConnectionMap(blocks: BlockConfig[]): Map<string, PortRef[]> {
     const map = new Map<string, PortRef[]>();
     for (const block of blocks) {
       for (const [portId, targets] of Object.entries(block.outputs)) {

@@ -4,12 +4,12 @@
  * Core type definitions for the event-driven workflow system.
  */
 
-// Block types (event-driven)
+// Block types
 export type {
   BlockCategory,
-  BlockContext,
-  BlockHandlers,
-  BlockRuntimeInstance,
+  BlockInstance,
+  BlockRuntimeContext,
+  BlockRuntimeState,
   BlockState,
   BlockTypeDefinition,
   CompiledBlock,
@@ -20,4 +20,9 @@ export type { PortDefinition, PortDirection, PortRef } from './ports';
 export { createPortRef, parsePortRef } from './ports';
 
 // Workflow types (TOML structure)
-export type { BlockInstance, Position, Workflow, WorkspaceMeta } from './workflow';
+export type {
+  BlockConfig,
+  Position,
+  Workflow,
+  WorkspaceMeta,
+} from './workflow';
