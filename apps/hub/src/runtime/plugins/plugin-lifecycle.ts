@@ -112,8 +112,8 @@ export class PluginLifecycle {
   // Load/Unload
   // ───────────────────────────────────────────────────────────────────────
 
-  async load(nameOrPath: string, force = false): Promise<void> {
-    const { rootDirectory, entryPoint, metadata } = await this.#resolver.resolve(nameOrPath);
+  async load(moduleId: string, force = false, parent?: string): Promise<void> {
+    const { rootDirectory, entryPoint, metadata } = await this.#resolver.resolve(moduleId, parent);
     const pluginName = metadata.name;
 
     if (this.#processes.has(pluginName) && !force) return;

@@ -15,22 +15,24 @@ export async function loadPluginPackageJson(packageJsonPath: string) {
 export class PluginResolver {
   /**
    * Resolve plugin: find package.json, validate it, and extract entry point.
+   * @param moduleId - Package name or absolute path to plugin directory
+   * @param parent - Parent directory for Bun.resolveSync
    */
   async resolve(
-    nameOrPath: string,
-    fromDir?: string
+    moduleId: string,
+    parent?: string
   ): Promise<{
     rootDirectory: string;
     entryPoint: string;
     metadata: PluginPackageSchema;
   }> {
-    if (!nameOrPath) {
-      throw new Error('Plugin name/path is required');
+    if (!moduleId) {
+      throw new Error('Plugin moduleId is required');
     }
 
     try {
       // Use Bun's module resolution to find package.json
-      const { rootPath, packageJsonPath } = this.#resolvePackageJson(nameOrPath, fromDir);
+      const { rootPath, packageJsonPath } = this.#resolvePackageJson(moduleId, parent);
 
       // Read and validate package.json
       const metadata = await loadPluginPackageJson(packageJsonPath);
@@ -40,7 +42,7 @@ export class PluginResolver {
 
       return { rootDirectory: rootPath, entryPoint, metadata };
     } catch (error) {
-      throw new Error(`Failed to resolve plugin "${nameOrPath}": ${error}`);
+      throw new Error(`Failed to resolve plugin "${moduleId}": ${error}`);
     }
   }
 
@@ -55,7 +57,7 @@ export class PluginResolver {
 
   #resolvePackageJson(
     target: string,
-    fromDir?: string
+    parent?: string
   ): { rootPath: string; packageJsonPath: string } {
     // If target is already an absolute path to a directory, use it directly
     if (target.startsWith('/')) {
@@ -65,7 +67,7 @@ export class PluginResolver {
 
     // Otherwise use Bun's module resolution
     const base = extname(target) ? dirname(target) : target;
-    const packageJsonPath = Bun.resolveSync(join(base, 'package.json'), fromDir || import.meta.dir);
+    const packageJsonPath = Bun.resolveSync(join(base, 'package.json'), parent || import.meta.dir);
     return { rootPath: dirname(packageJsonPath), packageJsonPath };
   }
 }

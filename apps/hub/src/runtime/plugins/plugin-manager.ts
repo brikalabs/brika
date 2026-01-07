@@ -170,8 +170,8 @@ export class PluginManager {
     await this.#lifecycle.unload(name);
   }
 
-  load(nameOrPath: string): Promise<void> {
-    return this.#lifecycle.load(nameOrPath);
+  load(moduleId: string, parent?: string): Promise<void> {
+    return this.#lifecycle.load(moduleId, false, parent);
   }
 
   unload(name: string, skipRestartReset = false): Promise<void> {

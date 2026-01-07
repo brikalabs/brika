@@ -6,6 +6,9 @@ node_modules
 .env
 *.log
 
+# Docker volume mount folder
+config/
+
 # BRIKA runtime data (ignore generated files, keep config and automations)
 .brika/state.json
 .brika/plugins/

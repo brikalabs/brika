@@ -287,8 +287,14 @@ export class ConfigLoader {
       return { name, rootDirectory: version.slice('file:'.length) };
     }
 
-    // npm package - let registry resolve
-    throw new Error(`Cannot resolve rootDirectory for npm package: ${name}. Install via registry.`);
+    // npm package - check in registry's plugins directory
+    const registryPluginPath = `${this.brikaDir}/plugins/node_modules/${name}`;
+    const pkgJsonPath = `${registryPluginPath}/package.json`;
+    if (await Bun.file(pkgJsonPath).exists()) {
+      return { name, rootDirectory: registryPluginPath };
+    }
+
+    throw new Error(`Cannot resolve npm package: ${name}. Install via registry first.`);
   }
 
   // ─────────────────────────────────────────────────────────────────────────────

@@ -1,0 +1,13 @@
+# BRIKA Docker Compose
+# Run: docker compose up -d
+
+services:
+  brika:
+    build: .
+    container_name: brika
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    # Uncomment to persist config/data between restarts:
+    # volumes:
+    #   - ./config:/app/.brika

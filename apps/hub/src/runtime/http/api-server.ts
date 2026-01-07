@@ -1,5 +1,6 @@
 import { createApp, type RouteDefinition } from '@brika/router';
 import { inject, singleton } from '@brika/shared';
+import { serveStatic } from 'hono/bun';
 import { HubConfig } from '@/runtime/config';
 import { LogRouter } from '@/runtime/logs/log-router';
 
@@ -21,6 +22,19 @@ export class ApiServer {
 
   start(): void {
     this.#app = createApp(this.#routes);
+
+    // Add static file serving if configured (for production Docker)
+    if (this.#config.staticDir) {
+      const staticDir = this.#config.staticDir;
+
+      // Serve static files from the configured directory
+      this.#app.use('/*', serveStatic({ root: staticDir }));
+
+      // SPA fallback: serve index.html for non-API routes that don't match static files
+      this.#app.get('*', serveStatic({ root: staticDir, path: 'index.html' }));
+
+      this.#logs.info('api.static', { dir: staticDir });
+    }
 
     this.#server = Bun.serve({
       hostname: this.#config.host,

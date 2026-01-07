@@ -15,7 +15,9 @@ hub:
 #     version: "version-specifier"
 #     config:
 #       key: value
-plugins: {}
+plugins:
+  "@brika/blocks-builtin":
+    version: "latest"
 
 # Event-based rules
 rules: []

@@ -1,6 +1,6 @@
 {
   "name": "@brika/hub",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": true,
   "type": "module",
   "repository": {
@@ -23,6 +23,8 @@
     "@brika/schema": "workspace:*",
     "@brika/sdk": "workspace:*",
     "@brika/shared": "workspace:*",
+    "hono": "^4.11.3",
+    "reflect-metadata": "^0.2.2",
     "modern-tar": "^0.7.3",
     "smol-toml": "^1.6.0",
     "yaml": "^2.8.2",

@@ -1,12 +1,35 @@
 {
   "name": "@brika/flow",
-  "version": "0.2.0",
+  "version": "0.2.1",
+  "description": "Reactive stream library for BRIKA workflows",
   "type": "module",
+  "license": "MIT",
+  "author": "BRIKA Team",
+  "homepage": "https://github.com/maxscharwath/brika/tree/main/packages/flow#readme",
+  "bugs": {
+    "url": "https://github.com/maxscharwath/brika/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/maxscharwath/brika.git",
+    "directory": "packages/flow"
+  },
+  "keywords": [
+    "brika",
+    "reactive",
+    "streams",
+    "flow"
+  ],
   "exports": {
     ".": "./src/index.ts"
   },
+  "files": [
+    "src",
+    "README.md"
+  ],
   "scripts": {
-    "tsc": "bunx --bun tsc --noEmit"
+    "tsc": "bunx --bun tsc --noEmit",
+    "prepublishOnly": "bun run tsc"
   },
   "dependencies": {
     "@brika/serializable": "workspace:*"

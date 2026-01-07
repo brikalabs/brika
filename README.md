@@ -1,5 +1,7 @@
 # BRIKA
 
+[![Docker](https://img.shields.io/badge/Docker-maxscharwath%2Fbrika-blue?logo=docker)](https://hub.docker.com/r/maxscharwath/brika)
+
 A Bun-first home automation runtime with reactive block-based visual workflows.
 
 ## Features
@@ -18,6 +20,38 @@ bun run dev
 
 - **UI**: http://localhost:5173
 - **API**: http://localhost:3001/api/health
+
+## Docker
+
+Run BRIKA with Docker:
+
+```bash
+docker run -d \
+  --name brika \
+  -p 3001:3001 \
+  -v ./config:/app/.brika \
+  maxscharwath/brika:latest
+```
+
+The UI and API are available at http://localhost:3001
+
+### Docker Compose
+
+```yaml
+services:
+  brika:
+    image: maxscharwath/brika:latest
+    container_name: brika
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./config:/app/.brika
+```
+
+```bash
+docker compose up -d
+```
 
 ## Project Structure
 

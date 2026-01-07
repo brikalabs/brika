@@ -1,4 +1,4 @@
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { inject, singleton } from '@brika/shared';
 import { ConfigLoader, HubConfig } from '@/runtime/config';
 import { LogRouter } from '@/runtime/logs/log-router';
@@ -12,7 +12,8 @@ export class PluginRegistry {
   private readonly pluginsDir: string;
 
   constructor() {
-    this.pluginsDir = join(this.hubConfig.homeDir, 'plugins');
+    // Use absolute path for Bun.resolveSync compatibility
+    this.pluginsDir = resolve(this.hubConfig.homeDir, 'plugins');
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -319,7 +320,8 @@ export class PluginRegistry {
       const resolved = await this.configLoader.resolvePluginEntry(entry);
       await pm.load(resolved.rootDirectory);
     } else {
-      await pm.load(name);
+      // For npm packages, pass pluginsDir so Bun.resolveSync looks in the right node_modules
+      await pm.load(name, this.pluginsDir);
     }
   }
 

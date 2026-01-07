@@ -1,21 +1,29 @@
 {
   "$schema": "https://schema.brika.dev/plugin.schema.json",
   "name": "@brika/blocks-builtin",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Core workflow blocks for BRIKA automations",
   "author": "BRIKA Team",
+  "license": "MIT",
+  "homepage": "https://github.com/maxscharwath/brika/tree/main/plugins/blocks-builtin#readme",
+  "bugs": {
+    "url": "https://github.com/maxscharwath/brika/issues"
+  },
   "repository": {
     "type": "git",
-    "url": "https://github.com/maxscharwath/brika.git",
+    "url": "git+https://github.com/maxscharwath/brika.git",
     "directory": "plugins/blocks-builtin"
   },
   "icon": "./icon.svg",
   "keywords": [
+    "brika",
     "blocks",
     "workflow",
     "automation",
     "condition",
-    "delay"
+    "delay",
+    "home-automation",
+    "visual-programming"
   ],
   "engines": {
     "brika": "^0.2.0"
@@ -25,9 +33,16 @@
   "exports": {
     ".": "./src/main.ts"
   },
+  "files": [
+    "src",
+    "locales",
+    "icon.svg",
+    "README.md"
+  ],
   "scripts": {
     "link": "bun link",
-    "tsc": "bunx --biome tsc --noEmit"
+    "tsc": "bunx --biome tsc --noEmit",
+    "prepublishOnly": "bun run tsc"
   },
   "blocks": [
     {

@@ -6,6 +6,8 @@ export class HubConfig {
   readonly host: string;
   readonly port: number;
   readonly homeDir: string;
+  /** Directory for static UI files (empty = disabled) */
+  readonly staticDir: string;
 
   constructor() {
     // Try to get values from ConfigLoader if already loaded, else use env/defaults
@@ -23,6 +25,8 @@ export class HubConfig {
       // Fallback to relative path
       this.homeDir = process.env.BRIKA_HOME ?? '.brika';
     }
+    // Static file serving directory (empty = disabled, used in production Docker)
+    this.staticDir = process.env.BRIKA_STATIC_DIR ?? '';
   }
 }
 

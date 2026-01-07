@@ -1,5 +1,6 @@
 {
   "name": "brika",
+  "version": "0.2.1",
   "private": true,
   "type": "module",
   "repository": {
