@@ -36,14 +36,13 @@ export class ApiServer {
           const duration = Date.now() - start;
 
           // Skip body logging for streaming responses to avoid buffering
-          const isStreaming = res.headers.get('content-type')?.includes('text/event-stream');
+          // const isStreaming = res.headers.get('content-type')?.includes('text/event-stream');
 
           this.#logs.info('api.request.end', {
             method: req.method,
             path: url.pathname,
             status: res.status,
             duration,
-            ...(isStreaming ? { streaming: true } : { body: await res.clone().text() }),
           });
 
           return res;

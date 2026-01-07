@@ -5,14 +5,11 @@ import {
   Activity,
   ArrowRight,
   Box,
-  Calendar,
-  GitBranch,
   Play,
   Plug,
   Server,
   Sparkles,
   Workflow,
-  Wrench,
   Zap,
 } from 'lucide-react';
 import type React from 'react';
@@ -29,7 +26,6 @@ import {
 } from '@/components/ui';
 import { useEventStream } from '@/features/events';
 import { usePlugins } from '@/features/plugins';
-import { useTools } from '@/features/tools';
 import { useLocale } from '@/lib/use-locale';
 import { cn } from '@/lib/utils';
 import { useHealth } from './hooks';
@@ -40,11 +36,8 @@ import { useHealth } from './hooks';
 
 interface Stats {
   plugins: { total: number; running: number };
-  tools: { total: number };
   blocks: { total: number; byCategory: Record<string, unknown[]> };
   workflows: { total: number; enabled: number };
-  schedules: { total: number; enabled: number };
-  rules: { total: number; enabled: number };
 }
 
 async function fetchStats(): Promise<Stats> {
@@ -126,7 +119,6 @@ export function DashboardPage() {
   const { t, formatTime } = useLocale();
   const { data: health } = useHealth();
   const { data: plugins = [] } = usePlugins();
-  const { data: tools = [] } = useTools();
   const { events } = useEventStream();
 
   const { data: stats } = useQuery({
@@ -163,7 +155,7 @@ export function DashboardPage() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           icon={Plug}
           label={t('dashboard:stats.plugins')}
@@ -171,13 +163,6 @@ export function DashboardPage() {
           subValue={t('dashboard:stats.running')}
           href="/plugins"
           accent="blue"
-        />
-        <StatCard
-          icon={Wrench}
-          label={t('dashboard:stats.tools')}
-          value={stats?.tools.total ?? tools.length}
-          href="/tools"
-          accent="emerald"
         />
         <StatCard
           icon={Box}
@@ -195,20 +180,11 @@ export function DashboardPage() {
           accent="orange"
         />
         <StatCard
-          icon={Calendar}
-          label={t('dashboard:stats.schedules')}
-          value={stats?.schedules.enabled ?? 0}
-          subValue={t('dashboard:stats.enabled')}
-          href="/schedules"
-          accent="purple"
-        />
-        <StatCard
-          icon={GitBranch}
-          label={t('dashboard:stats.rules')}
-          value={stats?.rules.enabled ?? 0}
-          subValue={t('dashboard:stats.enabled')}
-          href="/rules"
-          accent="amber"
+          icon={Zap}
+          label={t('events:title')}
+          value={events.length}
+          href="/events"
+          accent="emerald"
         />
       </div>
 
@@ -289,19 +265,8 @@ export function DashboardPage() {
                 href="/workflows"
                 accent="orange"
               />
-              <QuickAction
-                icon={Calendar}
-                label={t('schedules:actions.create')}
-                href="/schedules"
-                accent="purple"
-              />
-              <QuickAction
-                icon={GitBranch}
-                label={t('rules:actions.create')}
-                href="/rules"
-                accent="amber"
-              />
               <QuickAction icon={Plug} label={t('nav:plugins')} href="/plugins" accent="blue" />
+              <QuickAction icon={Zap} label={t('events:title')} href="/events" accent="emerald" />
             </CardContent>
           </Card>
 
@@ -332,8 +297,8 @@ export function DashboardPage() {
                 </Badge>
               </div>
               <div className="flex items-center justify-between rounded-lg bg-muted/30 p-2.5">
-                <span className="text-sm">{t('dashboard:stats.tools')}</span>
-                <Badge variant="secondary">{tools.length}</Badge>
+                <span className="text-sm">{t('events:title')}</span>
+                <Badge variant="secondary">{events.length}</Badge>
               </div>
               <div className="flex items-center justify-between rounded-lg bg-muted/30 p-2.5">
                 <span className="text-sm">{t('dashboard:stats.blocks')}</span>

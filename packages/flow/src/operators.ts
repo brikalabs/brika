@@ -5,7 +5,7 @@
  * Use with pipe(): flow.pipe(map(...), filter(...), throttle(...))
  */
 
-import type { FlowImpl } from './flow';
+import { operatorFlow, subscribeRaw } from './internal';
 import type { Cleanup, Flow, Operator } from './types';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -14,51 +14,43 @@ import type { Cleanup, Flow, Operator } from './types';
 
 /** Map operator - transform each value */
 export function map<T, R>(fn: (value: T) => R): Operator<T, R> {
-  return (source) => {
-    const impl = source as FlowImpl<T>;
-    const mapped = impl._derive<R>();
-    impl._subscribe((v) => mapped._push(fn(v)));
-    return mapped;
-  };
+  return (source) =>
+    operatorFlow(source, ({ subscribe, push }) => {
+      subscribe((v) => push(fn(v)));
+    });
 }
 
 /** Filter operator - only emit values that pass predicate */
 export function filter<T>(fn: (value: T) => boolean): Operator<T, T> {
-  return (source) => {
-    const impl = source as FlowImpl<T>;
-    const filtered = impl._derive<T>();
-    impl._subscribe((v) => {
-      if (fn(v)) filtered._push(v);
+  return (source) =>
+    operatorFlow(source, ({ subscribe, push }) => {
+      subscribe((v) => {
+        if (fn(v)) push(v);
+      });
     });
-    return filtered;
-  };
 }
 
 /** Tap operator - side effect without transforming */
 export function tap<T>(fn: (value: T) => void): Operator<T, T> {
-  return (source) => {
-    const impl = source as FlowImpl<T>;
-    const tapped = impl._derive<T>();
-    impl._subscribe((v) => {
-      fn(v);
-      tapped._push(v);
+  return (source) =>
+    operatorFlow(source, ({ subscribe, push }) => {
+      subscribe((v) => {
+        fn(v);
+        push(v);
+      });
     });
-    return tapped;
-  };
 }
 
 /** Scan operator - accumulate values */
 export function scan<T, R>(fn: (acc: R, value: T) => R, seed: R): Operator<T, R> {
-  return (source) => {
-    const impl = source as FlowImpl<T>;
-    const scanned = impl._derive<R>();
-    let acc = seed;
-    impl._subscribe((v) => {
-      acc = fn(acc, v);
-      scanned._push(acc);
+  return (source) =>
+    operatorFlow(source, ({ subscribe, push }) => {
+      let acc = seed;
+      subscribe((v) => {
+        acc = fn(acc, v);
+        push(acc);
+      });
     });
-    return scanned;
-  };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -67,45 +59,39 @@ export function scan<T, R>(fn: (acc: R, value: T) => R, seed: R): Operator<T, R>
 
 /** Debounce operator - wait for silence before emitting */
 export function debounce<T>(ms: number): Operator<T, T> {
-  return (source) => {
-    const impl = source as FlowImpl<T>;
-    const debounced = impl._derive<T>();
-    let cancel: Cleanup | null = null;
-    impl._subscribe((v) => {
-      cancel?.();
-      cancel = impl._setTimeout(() => debounced._push(v), ms);
+  return (source) =>
+    operatorFlow(source, ({ subscribe, push, setTimeout }) => {
+      let cancel: Cleanup | null = null;
+      subscribe((v) => {
+        cancel?.();
+        cancel = setTimeout(() => push(v), ms);
+      });
     });
-    return debounced;
-  };
 }
 
 /** Throttle operator - rate limit emissions */
 export function throttle<T>(ms: number): Operator<T, T> {
-  return (source) => {
-    const impl = source as FlowImpl<T>;
-    const throttled = impl._derive<T>();
-    let lastEmit = 0;
-    impl._subscribe((v) => {
-      const now = Date.now();
-      if (now - lastEmit >= ms) {
-        lastEmit = now;
-        throttled._push(v);
-      }
+  return (source) =>
+    operatorFlow(source, ({ subscribe, push }) => {
+      let lastEmit = 0;
+      subscribe((v) => {
+        const now = Date.now();
+        if (now - lastEmit >= ms) {
+          lastEmit = now;
+          push(v);
+        }
+      });
     });
-    return throttled;
-  };
 }
 
 /** Delay operator - delay each value by ms */
 export function delay<T>(ms: number): Operator<T, T> {
-  return (source) => {
-    const impl = source as FlowImpl<T>;
-    const delayed = impl._derive<T>();
-    impl._subscribe((v) => {
-      impl._setTimeout(() => delayed._push(v), ms);
+  return (source) =>
+    operatorFlow(source, ({ subscribe, push, setTimeout }) => {
+      subscribe((v) => {
+        setTimeout(() => push(v), ms);
+      });
     });
-    return delayed;
-  };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -114,52 +100,46 @@ export function delay<T>(ms: number): Operator<T, T> {
 
 /** Take operator - take first N values */
 export function take<T>(n: number): Operator<T, T> {
-  return (source) => {
-    const impl = source as FlowImpl<T>;
-    const taken = impl._derive<T>();
-    let count = 0;
-    impl._subscribe((v) => {
-      if (count < n) {
-        count++;
-        taken._push(v);
-      }
+  return (source) =>
+    operatorFlow(source, ({ subscribe, push }) => {
+      let count = 0;
+      subscribe((v) => {
+        if (count < n) {
+          count++;
+          push(v);
+        }
+      });
     });
-    return taken;
-  };
 }
 
 /** Skip operator - skip first N values */
 export function skip<T>(n: number): Operator<T, T> {
-  return (source) => {
-    const impl = source as FlowImpl<T>;
-    const skipped = impl._derive<T>();
-    let count = 0;
-    impl._subscribe((v) => {
-      if (count >= n) {
-        skipped._push(v);
-      }
-      count++;
+  return (source) =>
+    operatorFlow(source, ({ subscribe, push }) => {
+      let count = 0;
+      subscribe((v) => {
+        if (count >= n) {
+          push(v);
+        }
+        count++;
+      });
     });
-    return skipped;
-  };
 }
 
 /** Distinct operator - only emit when value changes */
 export function distinct<T>(): Operator<T, T> {
-  return (source) => {
-    const impl = source as FlowImpl<T>;
-    const distinctFlow = impl._derive<T>();
-    let last: T | undefined;
-    let hasLast = false;
-    impl._subscribe((v) => {
-      if (!hasLast || v !== last) {
-        hasLast = true;
-        last = v;
-        distinctFlow._push(v);
-      }
+  return (source) =>
+    operatorFlow(source, ({ subscribe, push }) => {
+      let last: T | undefined;
+      let hasLast = false;
+      subscribe((v) => {
+        if (!hasLast || v !== last) {
+          hasLast = true;
+          last = v;
+          push(v);
+        }
+      });
     });
-    return distinctFlow;
-  };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -168,60 +148,52 @@ export function distinct<T>(): Operator<T, T> {
 
 /** Buffer operator - collect values until trigger emits */
 export function buffer<T>(trigger: Flow<unknown>): Operator<T, T[]> {
-  return (source) => {
-    const impl = source as FlowImpl<T>;
-    const buffered = impl._derive<T[]>();
-    let buf: T[] = [];
-    impl._subscribe((v) => buf.push(v));
-    trigger.on(() => {
-      if (buf.length > 0) {
-        buffered._push(buf);
-        buf = [];
-      }
+  return (source) =>
+    operatorFlow(source, ({ subscribe, push }) => {
+      let buf: T[] = [];
+      subscribe((v) => buf.push(v));
+      trigger.on(() => {
+        if (buf.length > 0) {
+          push(buf);
+          buf = [];
+        }
+      });
     });
-    return buffered;
-  };
 }
 
 /** Sample operator - emit latest value when trigger fires */
 export function sample<T>(trigger: Flow<unknown>): Operator<T, T> {
-  return (source) => {
-    const impl = source as FlowImpl<T>;
-    const sampled = impl._derive<T>();
-    trigger.on(() => {
-      const v = impl.latest();
-      if (v !== undefined) {
-        sampled._push(v);
-      }
+  return (source) =>
+    operatorFlow(source, ({ push, latest }) => {
+      trigger.on(() => {
+        const v = latest();
+        if (v !== undefined) {
+          push(v);
+        }
+      });
     });
-    return sampled;
-  };
 }
 
 /** SwitchMap operator - switch to new flow on each value */
 export function switchMap<T, R>(fn: (value: T) => Flow<R>): Operator<T, R> {
-  return (source) => {
-    const impl = source as FlowImpl<T>;
-    const switched = impl._derive<R>();
-    let currentUnsub: Cleanup | null = null;
-    impl._subscribe((v) => {
-      currentUnsub?.();
-      const inner = fn(v) as FlowImpl<R>;
-      currentUnsub = inner._subscribeRaw((r) => switched._push(r));
+  return (source) =>
+    operatorFlow(source, ({ subscribe, push }) => {
+      let currentUnsub: Cleanup | null = null;
+      subscribe((v) => {
+        currentUnsub?.();
+        const inner = fn(v);
+        currentUnsub = subscribeRaw(inner, (r) => push(r));
+      });
     });
-    return switched;
-  };
 }
 
 /** FlatMap operator - flatten nested flows */
 export function flatMap<T, R>(fn: (value: T) => Flow<R>): Operator<T, R> {
-  return (source) => {
-    const impl = source as FlowImpl<T>;
-    const flat = impl._derive<R>();
-    impl._subscribe((v) => {
-      const inner = fn(v);
-      inner.on((r) => flat._push(r));
+  return (source) =>
+    operatorFlow(source, ({ subscribe, push }) => {
+      subscribe((v) => {
+        const inner = fn(v);
+        inner.on((r) => push(r));
+      });
     });
-    return flat;
-  };
 }

@@ -6,12 +6,16 @@
  */
 
 import { z } from 'zod';
+import type { GenericRef, PassthroughRef } from './schema-types';
 
 // Re-export everything from @brika/flow
 export * from '@brika/flow';
 
 // Re-export Serializable from @brika/serializable
 export type { Serializable } from '@brika/serializable';
+
+// Re-export type markers for convenience
+export type { GenericRef, PassthroughRef } from './schema-types';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Port Definitions with Zod Schemas
@@ -26,34 +30,40 @@ export interface PortMeta {
 }
 
 /**
- * Input port definition with Zod schema for type inference.
+ * Input port definition - can hold a Zod schema or GenericRef.
  */
-export interface InputDef<T extends z.ZodType> {
+export interface InputDef<T extends z.ZodType | GenericRef<string>> {
   readonly __type: 'input';
   readonly schema: T;
   readonly meta: PortMeta;
 }
 
 /**
- * Output port definition with Zod schema for type inference.
+ * Output port definition - can hold a Zod schema, PassthroughRef, or GenericRef.
  */
-export interface OutputDef<T extends z.ZodType> {
+export interface OutputDef<T extends z.ZodType | PassthroughRef<string> | GenericRef<string>> {
   readonly __type: 'output';
   readonly schema: T;
   readonly meta: PortMeta;
 }
 
 /**
- * Create a typed input port with Zod schema.
+ * Create a typed input port with Zod schema or generic.
  */
-export function input<T extends z.ZodType>(schema: T, meta: PortMeta): InputDef<T> {
+export function input<T extends z.ZodType | GenericRef<string>>(
+  schema: T,
+  meta: PortMeta
+): InputDef<T> {
   return { __type: 'input', schema, meta };
 }
 
 /**
- * Create a typed output port with Zod schema.
+ * Create a typed output port with Zod schema, passthrough, or generic.
  */
-export function output<T extends z.ZodType>(schema: T, meta: PortMeta): OutputDef<T> {
+export function output<T extends z.ZodType | PassthroughRef<string> | GenericRef<string>>(
+  schema: T,
+  meta: PortMeta
+): OutputDef<T> {
   return { __type: 'output', schema, meta };
 }
 
@@ -63,22 +73,31 @@ export function output<T extends z.ZodType>(schema: T, meta: PortMeta): OutputDe
 
 import type { Emitter, Factory, Flow, Serializable, Source } from '@brika/flow';
 
-/** Extract inferred type from Zod schema */
-type ZodInfer<T> = T extends z.ZodType<infer U> ? U : never;
+/** Extract inferred type from Zod schema, GenericRef, or PassthroughRef */
+type SchemaInfer<T> =
+  T extends z.ZodType<infer U>
+    ? U
+    : T extends GenericRef
+      ? unknown
+      : T extends PassthroughRef
+        ? unknown
+        : never;
 
 /** Extract inferred type from InputDef */
-type InputType<D> = D extends InputDef<infer T> ? ZodInfer<T> : never;
+type InputType<D> = D extends InputDef<infer T> ? SchemaInfer<T> : never;
 
 /** Extract inferred type from OutputDef */
-type OutputType<D> = D extends OutputDef<infer T> ? ZodInfer<T> : never;
+type OutputType<D> = D extends OutputDef<infer T> ? SchemaInfer<T> : never;
 
 /** Convert input definitions to typed flows */
-export type InputFlows<I extends Record<string, InputDef<z.ZodType>>> = {
+export type InputFlows<I extends Record<string, InputDef<z.ZodType | GenericRef<string>>>> = {
   readonly [K in keyof I]: Flow<InputType<I[K]>>;
 };
 
 /** Convert output definitions to typed emitters */
-export type OutputEmitters<O extends Record<string, OutputDef<z.ZodType>>> = {
+export type OutputEmitters<
+  O extends Record<string, OutputDef<z.ZodType | PassthroughRef<string> | GenericRef<string>>>,
+> = {
   readonly [K in keyof O]: Emitter<OutputType<O[K]>>;
 };
 
@@ -86,8 +105,11 @@ export type OutputEmitters<O extends Record<string, OutputDef<z.ZodType>>> = {
  * Typed block context with reactive inputs/outputs.
  */
 export interface BlockContext<
-  TInputs extends Record<string, InputDef<z.ZodType>>,
-  TOutputs extends Record<string, OutputDef<z.ZodType>>,
+  TInputs extends Record<string, InputDef<z.ZodType | GenericRef<string>>>,
+  TOutputs extends Record<
+    string,
+    OutputDef<z.ZodType | PassthroughRef<string> | GenericRef<string>>
+  >,
   TConfig extends z.ZodObject<z.ZodRawShape>,
 > {
   /** Block instance ID */
@@ -112,9 +134,6 @@ export interface BlockContext<
 
   /** Log a message */
   log(level: 'debug' | 'info' | 'warn' | 'error', message: string): void;
-
-  /** Call a tool */
-  callTool<R = Serializable>(toolId: string, args: Record<string, Serializable>): Promise<R>;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -125,8 +144,11 @@ export interface BlockContext<
  * Block specification with typed ports.
  */
 export interface ReactiveBlockSpec<
-  TInputs extends Record<string, InputDef<z.ZodType>>,
-  TOutputs extends Record<string, OutputDef<z.ZodType>>,
+  TInputs extends Record<string, InputDef<z.ZodType | GenericRef<string>>>,
+  TOutputs extends Record<
+    string,
+    OutputDef<z.ZodType | PassthroughRef<string> | GenericRef<string>>
+  >,
   TConfig extends z.ZodObject<z.ZodRawShape>,
 > {
   /** Unique block ID */
@@ -153,8 +175,11 @@ export interface ReactiveBlockSpec<
  * Block setup function - called when workflow starts.
  */
 export type BlockSetup<
-  TInputs extends Record<string, InputDef<z.ZodType>>,
-  TOutputs extends Record<string, OutputDef<z.ZodType>>,
+  TInputs extends Record<string, InputDef<z.ZodType | GenericRef<string>>>,
+  TOutputs extends Record<
+    string,
+    OutputDef<z.ZodType | PassthroughRef<string> | GenericRef<string>>
+  >,
   TConfig extends z.ZodObject<z.ZodRawShape>,
 > = (ctx: BlockContext<TInputs, TOutputs, TConfig>) => void;
 
@@ -223,13 +248,13 @@ export function createFlowFromInput<T>(
 
   if (typeof inputVal === 'function') {
     const factory = inputVal as Factory<T>;
-    const sourceCleanup = factory((value) => flow._push(value));
+    const sourceCleanup = factory((value) => flow.push(value));
     cleanup.register(sourceCleanup);
   } else if (isSource(inputVal)) {
-    const sourceCleanup = inputVal.start((value) => flow._push(value));
+    const sourceCleanup = inputVal.start((value) => flow.push(value));
     cleanup.register(sourceCleanup);
   } else {
-    const cancelCleanup = setTimeoutFn(() => flow._push(inputVal as T), 0);
+    const cancelCleanup = setTimeoutFn(() => flow.push(inputVal as T), 0);
     cleanup.register(cancelCleanup);
   }
 
@@ -245,6 +270,34 @@ export function createFlowFromInput<T>(
  */
 export function zodToJsonSchema(schema: z.ZodType): Record<string, unknown> {
   return z.toJSONSchema(schema, { unrepresentable: 'any' }) as Record<string, unknown>;
+}
+
+/** Convert Zod schema to TypeScript-like type string */
+export function zodToTypeName(schema: z.ZodType): string {
+  try {
+    return toTS(z.toJSONSchema(schema, { unrepresentable: 'any' }) as Record<string, unknown>);
+  } catch {
+    return 'unknown';
+  }
+}
+
+function toTS(s: Record<string, unknown>): string {
+  const t = s.type as string;
+  if (t === 'integer') return 'number';
+  if (['string', 'number', 'boolean', 'null'].includes(t)) return t;
+  if (t === 'array') return `${toTS(s.items as Record<string, unknown>)}[]`;
+  if (t === 'object') {
+    const p = s.properties as Record<string, Record<string, unknown>>;
+    return p
+      ? `{${Object.entries(p)
+          .map(([k, v]) => `${k}: ${toTS(v)}`)
+          .join(', ')}}`
+      : '{}';
+  }
+  if (s.anyOf) return (s.anyOf as Record<string, unknown>[]).map(toTS).join(' | ');
+  if (s.enum)
+    return (s.enum as unknown[]).map((v) => (typeof v === 'string' ? `"${v}"` : v)).join(' | ');
+  return 'unknown';
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

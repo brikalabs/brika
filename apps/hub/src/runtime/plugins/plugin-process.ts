@@ -2,18 +2,20 @@ import type { Json, PluginChannel } from '@brika/ipc';
 import {
   type BlockContext,
   type BlockResult,
-  callTool,
+  blockEmit,
+  blockLog,
   emit,
   event,
   executeBlock,
   hello,
   log,
+  preferences,
+  pushInput,
   ready,
   registerBlock,
-  registerTool,
+  startBlock,
+  stopBlock,
   subscribe,
-  type ToolCallContext,
-  type ToolResult,
 } from '@brika/ipc/contract';
 import type { PluginPackageSchema } from '@brika/schema';
 import type { BrikaEvent, Plugin, PluginHealth } from '@brika/shared';
@@ -31,20 +33,13 @@ export interface PluginProcessConfig {
 export interface PluginProcessCallbacks {
   onReady: (process: PluginProcess) => void;
   onLog: (level: string, message: string, meta?: Record<string, unknown>) => void;
-  onTool: (tool: ToolRegistration) => void;
   onBlock: (block: BlockRegistration) => void;
+  onBlockEmit: (instanceId: string, port: string, data: Json) => void;
+  onBlockLog: (instanceId: string, workflowId: string, level: string, message: string) => void;
   onEvent: (eventType: string, payload: Json) => void;
   onSubscribe: (patterns: string[], handler: (event: BrikaEvent) => void) => () => void;
   onHeartbeatFailed: (process: PluginProcess, silentMs: number) => void;
   onDisconnect: (process: PluginProcess, error?: Error) => void;
-}
-
-export interface ToolRegistration {
-  id: string;
-  description?: string;
-  icon?: string;
-  color?: string;
-  inputSchema?: unknown;
 }
 
 export interface BlockRegistration {
@@ -69,7 +64,6 @@ export class PluginProcess {
   readonly #channel: PluginChannel;
   #lastPong: number;
   #heartbeat?: Timer;
-  readonly #tools = new Set<string>();
   readonly #blocks = new Set<string>();
   readonly #subscriptions = new Set<string>();
   #eventUnsubs: Array<() => void> = [];
@@ -113,10 +107,6 @@ export class PluginProcess {
     return this.#lastPong;
   }
 
-  get tools(): ReadonlySet<string> {
-    return this.#tools;
-  }
-
   get blocks(): ReadonlySet<string> {
     return this.#blocks;
   }
@@ -124,19 +114,6 @@ export class PluginProcess {
   // ─────────────────────────────────────────────────────────────────────────
   // IPC Operations
   // ─────────────────────────────────────────────────────────────────────────
-
-  async callTool(
-    toolName: string,
-    args: Record<string, Json>,
-    ctx: ToolCallContext
-  ): Promise<ToolResult> {
-    if (this.#stopped) return { ok: false, content: 'Plugin stopped' };
-    try {
-      return await this.#channel.call(callTool, { tool: toolName, args, ctx });
-    } catch (e) {
-      return { ok: false, content: String(e) };
-    }
-  }
 
   async executeBlock(
     blockType: string,
@@ -149,6 +126,42 @@ export class PluginProcess {
     } catch (e) {
       return { error: String(e), stop: true };
     }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Reactive Block Operations
+  // ─────────────────────────────────────────────────────────────────────────
+
+  async startBlock(
+    blockType: string,
+    instanceId: string,
+    workflowId: string,
+    config: Record<string, Json>
+  ): Promise<{ ok: boolean; error?: string }> {
+    if (this.#stopped) return { ok: false, error: 'Plugin stopped' };
+    try {
+      return await this.#channel.call(startBlock, { blockType, instanceId, workflowId, config });
+    } catch (e) {
+      return { ok: false, error: String(e) };
+    }
+  }
+
+  pushInput(instanceId: string, port: string, data: Json): void {
+    if (this.#stopped) return;
+    this.#channel.send(pushInput, { instanceId, port, data });
+  }
+
+  stopBlockInstance(instanceId: string): void {
+    if (this.#stopped) return;
+    this.#channel.send(stopBlock, { instanceId });
+  }
+
+  /**
+   * Send preferences to the plugin
+   */
+  sendPreferences(values: Record<string, unknown>): void {
+    if (this.#stopped) return;
+    this.#channel.send(preferences, { values });
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -201,7 +214,6 @@ export class PluginProcess {
       pid: this.pid,
       startedAt: this.startedAt,
       lastError: null,
-      tools: m.tools ?? [],
       blocks: m.blocks ?? [],
       locales: this.locales,
     };
@@ -224,20 +236,6 @@ export class PluginProcess {
       this.callbacks.onLog(level, message, meta);
     });
 
-    this.#channel.on(registerTool, ({ tool }) => {
-      const declared = this.metadata.tools?.find((t) => t.id === tool.id);
-      if (!declared) return; // Undeclared tools ignored
-
-      this.#tools.add(`${this.name}:${tool.id}`);
-      this.callbacks.onTool({
-        id: tool.id,
-        description: tool.description ?? declared.description,
-        icon: declared.icon ?? tool.icon,
-        color: declared.color ?? tool.color,
-        inputSchema: tool.inputSchema,
-      });
-    });
-
     this.#channel.on(registerBlock, ({ block }) => {
       const declared = this.metadata.blocks?.find((b) => b.id === block.id);
       if (!declared) return; // Undeclared blocks ignored
@@ -248,6 +246,14 @@ export class PluginProcess {
 
     this.#channel.on(emit, ({ eventType, payload }) => {
       this.callbacks.onEvent(eventType, payload);
+    });
+
+    this.#channel.on(blockEmit, ({ instanceId, port, data }) => {
+      this.callbacks.onBlockEmit(instanceId, port, data);
+    });
+
+    this.#channel.on(blockLog, ({ instanceId, workflowId, level, message }) => {
+      this.callbacks.onBlockLog(instanceId, workflowId, level, message);
     });
 
     this.#channel.on(subscribe, ({ patterns }) => {

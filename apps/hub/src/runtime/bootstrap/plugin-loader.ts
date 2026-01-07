@@ -26,14 +26,14 @@ export class PluginLoader implements Loader {
     this.logs.info('plugins.sync.start');
 
     // Sync registry and state
-    await this.registry.syncToConfig(config.install);
-    const validNames = new Set(config.install.map((e) => e.name));
+    await this.registry.syncToConfig(config.plugins);
+    const validNames = new Set(config.plugins.map((e) => e.name));
     await this.state.syncToConfig(validNames);
 
     this.logs.info('plugins.sync.done');
 
     // Load configured plugins
-    for (const entry of config.install) {
+    for (const entry of config.plugins) {
       try {
         const resolved = await this.configLoader.resolvePluginEntry(entry);
         await this.pm.load(resolved.rootDirectory);

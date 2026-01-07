@@ -1,40 +1,47 @@
 /**
  * Global Plugin Context
  *
- * Manages plugin lifecycle, tools, and events via IPC.
+ * Manages plugin lifecycle, blocks, and events via IPC.
  */
 
 import { type Client, createClient, type Json } from '@brika/ipc';
 import {
-  callTool,
+  blockEmit,
+  blockLog,
   emit as emitMsg,
   event as eventMsg,
   log as logMsg,
   ping,
-  registerTool,
+  preferences as preferencesMsg,
+  pushInput,
+  registerBlock,
+  startBlock,
+  stopBlock,
   subscribe as subscribeMsg,
+  uninstall as uninstallMsg,
   unsubscribe as unsubscribeMsg,
 } from '@brika/ipc/contract';
-import { z } from 'zod';
-import type { BlockSchema } from './blocks';
-import type { AnyObj, ToolInputSchema, ToolResult } from './types';
+import type { Serializable } from '@brika/serializable';
+import type { BlockDefinition } from './blocks';
+import type { BlockInstance, CompiledReactiveBlock } from './blocks/reactive-define';
+import type { AnyObj } from './types';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
-export type ToolCallContext = {
-  traceId: string;
-  source: 'api' | 'ui' | 'voice' | 'rule' | 'automation';
-};
-type ToolHandler = (args: AnyObj, ctx: ToolCallContext) => Promise<ToolResult> | ToolResult;
 export type EventHandler = (event: { type: string; payload: Json }) => void;
+type InitHandler = () => void | Promise<void>;
 type StopHandler = () => void | Promise<void>;
+type UninstallHandler = () => void | Promise<void>;
+type PreferencesChangeHandler = (preferences: Record<string, unknown>) => void;
 
-interface ToolDecl {
+interface BlockDecl {
   id: string;
+  name: string;
   description?: string;
+  category: string;
   icon?: string;
   color?: string;
 }
@@ -42,7 +49,7 @@ interface ToolDecl {
 interface Manifest {
   name: string;
   version: string;
-  tools?: ToolDecl[];
+  blocks?: BlockDecl[];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -63,28 +70,6 @@ function loadManifest(): Manifest {
   throw new Error(`No package.json found for ${Bun.main}`);
 }
 
-function zodToSchema(schema: z.ZodObject<z.ZodRawShape>): BlockSchema {
-  const json = z.toJSONSchema(schema, { unrepresentable: 'any' });
-  const props =
-    (json as { properties?: Record<string, { type?: string; description?: string }> }).properties ??
-    {};
-  type PropType = 'string' | 'number' | 'boolean' | 'object' | 'array';
-  const validTypes = new Set<PropType>(['string', 'number', 'boolean', 'object', 'array']);
-  return {
-    type: 'object',
-    properties: Object.fromEntries(
-      Object.entries(props).map(([k, v]) => [
-        k,
-        {
-          type: (validTypes.has(v.type as PropType) ? v.type : 'string') as PropType,
-          description: v.description,
-        },
-      ])
-    ),
-    required: (json as { required?: string[] }).required ?? [],
-  };
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Context
 // ─────────────────────────────────────────────────────────────────────────────
@@ -92,18 +77,25 @@ function zodToSchema(schema: z.ZodObject<z.ZodRawShape>): BlockSchema {
 class Context {
   readonly #manifest: Manifest;
   readonly #client: Client;
-  readonly #declaredTools: Set<string>;
-  readonly #toolMeta: Map<string, ToolDecl>;
-  readonly #tools = new Map<string, ToolHandler>();
+  readonly #declaredBlocks: Set<string>;
+  readonly #blockMeta: Map<string, BlockDecl>;
+  readonly #blocks = new Set<string>();
+  readonly #reactiveBlocks = new Map<string, CompiledReactiveBlock>();
+  readonly #blockInstances = new Map<string, BlockInstance>();
   readonly #eventSubs = new Map<string, Set<EventHandler>>();
+  readonly #initHandlers = new Set<InitHandler>();
   readonly #stopHandlers = new Set<StopHandler>();
+  readonly #uninstallHandlers = new Set<UninstallHandler>();
+  readonly #preferencesChangeHandlers = new Set<PreferencesChangeHandler>();
+  #preferences: Record<string, unknown> = {};
   #started = false;
+  #initialized = false;
 
   constructor() {
     this.#manifest = loadManifest();
     this.#client = createClient();
-    this.#declaredTools = new Set(this.#manifest.tools?.map((t) => t.id) ?? []);
-    this.#toolMeta = new Map(this.#manifest.tools?.map((t) => [t.id, t]));
+    this.#declaredBlocks = new Set(this.#manifest.blocks?.map((b) => b.id) ?? []);
+    this.#blockMeta = new Map(this.#manifest.blocks?.map((b) => [b.id, b]));
 
     this.#setupIpc();
     process.nextTick(() => !this.#started && this.start());
@@ -113,6 +105,19 @@ class Context {
     if (this.#started) return;
     this.#started = true;
     this.#client.start({ id: this.#manifest.name, version: this.#manifest.version });
+    // Init handlers run after receiving config from hub
+  }
+
+  async #runInitHandlers() {
+    if (this.#initialized) return;
+    this.#initialized = true;
+    for (const h of this.#initHandlers) {
+      try {
+        await h();
+      } catch (e) {
+        this.log('error', `Init handler error: ${e}`);
+      }
+    }
   }
 
   log(level: LogLevel, message: string, meta?: AnyObj) {
@@ -125,9 +130,35 @@ class Context {
 
   // ─── Public API ────────────────────────────────────────────────────────────
 
+  onInit(fn: InitHandler): () => void {
+    // If already initialized, run immediately
+    if (this.#initialized) {
+      Promise.resolve(fn()).catch((e) => this.log('error', `Init handler error: ${e}`));
+      return () => {
+        /* no-op */
+      };
+    }
+    this.#initHandlers.add(fn);
+    return () => this.#initHandlers.delete(fn);
+  }
+
   onStop(fn: StopHandler): () => void {
     this.#stopHandlers.add(fn);
     return () => this.#stopHandlers.delete(fn);
+  }
+
+  onUninstall(fn: UninstallHandler): () => void {
+    this.#uninstallHandlers.add(fn);
+    return () => this.#uninstallHandlers.delete(fn);
+  }
+
+  getPreferences<T extends Record<string, unknown> = Record<string, unknown>>(): T {
+    return this.#preferences as T;
+  }
+
+  onPreferencesChange(handler: PreferencesChangeHandler): () => void {
+    this.#preferencesChangeHandlers.add(handler);
+    return () => this.#preferencesChangeHandlers.delete(handler);
   }
 
   onEvent(pattern: string, handler: EventHandler): () => void {
@@ -144,30 +175,41 @@ class Context {
     };
   }
 
-  registerTool<T extends z.ZodObject<z.ZodRawShape>>(
-    spec: { id: string; description?: string; schema: T },
-    handler: (args: z.infer<T>, ctx: ToolCallContext) => Promise<ToolResult> | ToolResult
-  ): { id: string } {
-    const { id, description, schema } = spec;
-    if (!this.#declaredTools.has(id)) {
-      throw new Error(`Tool "${id}" not in package.json. Add: "tools": [{"id": "${id}"}]`);
+  registerBlock(block: BlockDefinition & { start?: CompiledReactiveBlock['start'] }): {
+    id: string;
+  } {
+    const { id } = block;
+    if (!this.#declaredBlocks.has(id)) {
+      throw new Error(
+        `Block "${id}" not in package.json. Add: "blocks": [{"id": "${id}", "name": "...", "category": "..."}]`
+      );
     }
-    if (this.#tools.has(id)) throw new Error(`Tool "${id}" already registered`);
+    if (this.#blocks.has(id)) throw new Error(`Block "${id}" already registered`);
 
-    const meta = this.#toolMeta.get(id);
-    this.#tools.set(id, (args, ctx) => {
-      const r = schema.safeParse(args);
-      if (!r.success) return { ok: false, content: r.error.message };
-      return handler(r.data, ctx);
-    });
+    const meta = this.#blockMeta.get(id);
+    if (!meta) {
+      throw new Error(`Block "${id}" metadata not found in package.json`);
+    }
 
-    this.#client.send(registerTool, {
-      tool: {
+    this.#blocks.add(id);
+
+    // Store the compiled reactive block if it has a start function
+    if (block.start) {
+      this.#reactiveBlocks.set(id, block as CompiledReactiveBlock);
+    }
+
+    // Merge runtime definition with package.json metadata
+    this.#client.send(registerBlock, {
+      block: {
         id,
-        description: description ?? meta?.description,
-        icon: meta?.icon,
-        color: meta?.color,
-        inputSchema: zodToSchema(schema) as ToolInputSchema,
+        name: meta.name,
+        description: meta.description,
+        category: meta.category,
+        icon: meta.icon,
+        color: meta.color,
+        inputs: block.inputs.map((p) => ({ id: p.id, name: p.id, typeName: p.typeName })),
+        outputs: block.outputs.map((p) => ({ id: p.id, name: p.id, typeName: p.typeName })),
+        schema: block.schema as unknown as Record<string, Json>,
       },
     });
     return { id };
@@ -176,13 +218,71 @@ class Context {
   #setupIpc() {
     this.#client.implement(ping, ({ ts }) => ({ ts }));
 
-    this.#client.implement(callTool, async ({ tool, args, ctx }) => {
-      const handler = this.#tools.get(tool);
-      if (!handler) return { ok: false, content: `Unknown tool: ${tool}` };
+    this.#client.on(preferencesMsg, ({ values }) => {
+      const isFirstTime = Object.keys(this.#preferences).length === 0;
+      this.#preferences = values;
+
+      if (isFirstTime) {
+        // Run init handlers after receiving first preferences
+        this.#runInitHandlers();
+      } else {
+        // Notify change handlers on subsequent updates
+        for (const handler of this.#preferencesChangeHandlers) {
+          handler(this.#preferences);
+        }
+      }
+    });
+
+    // ─── Reactive Block Lifecycle ───
+    this.#client.implement(startBlock, ({ blockType, instanceId, workflowId, config }) => {
+      // Extract local block ID from full type (pluginId:blockId)
+      const colonIndex = blockType.indexOf(':');
+      const localBlockId = colonIndex >= 0 ? blockType.slice(colonIndex + 1) : blockType;
+      const block = this.#reactiveBlocks.get(localBlockId);
+
+      if (!block) {
+        return { ok: false, error: `Block not found: ${localBlockId}` };
+      }
+
+      if (this.#blockInstances.has(instanceId)) {
+        return { ok: false, error: `Block instance already exists: ${instanceId}` };
+      }
+
       try {
-        return (await handler(args as AnyObj, ctx)) ?? { ok: true };
+        const instance = block.start({
+          blockId: instanceId,
+          workflowId,
+          config,
+          emit: (port, data) => {
+            this.#client.send(blockEmit, { instanceId, port, data: data as Json });
+          },
+          log: (level, message) => {
+            // Send dedicated block log message for debug stream filtering
+            this.#client.send(blockLog, { instanceId, workflowId, level, message });
+            // Also log to regular plugin log for consistency
+            this.#client.send(logMsg, { level, message, meta: { blockId: instanceId } });
+          },
+        });
+
+        this.#blockInstances.set(instanceId, instance);
+        return { ok: true };
       } catch (e) {
-        return { ok: false, content: String(e) };
+        return { ok: false, error: String(e) };
+      }
+    });
+
+    this.#client.on(pushInput, ({ instanceId, port, data }) => {
+      const instance = this.#blockInstances.get(instanceId);
+      if (instance) {
+        instance.pushInput(port, data as Serializable);
+      }
+    });
+
+    this.#client.on(stopBlock, ({ instanceId }) => {
+      const instance = this.#blockInstances.get(instanceId);
+      if (instance) {
+        instance.stop();
+        this.#blockInstances.delete(instanceId);
       }
     });
 
@@ -195,7 +295,24 @@ class Context {
       }
     });
 
+    // Handle uninstall - runs before stop for cleanup specific to uninstall
+    this.#client.on(uninstallMsg, async () => {
+      for (const h of this.#uninstallHandlers) {
+        try {
+          await h();
+        } catch (e) {
+          this.log('error', `Uninstall handler error: ${e}`);
+        }
+      }
+    });
+
     this.#client.onStop(async () => {
+      // Stop all running block instances
+      for (const instance of this.#blockInstances.values()) {
+        instance.stop();
+      }
+      this.#blockInstances.clear();
+
       for (const h of this.#stopHandlers) await h();
     });
   }
@@ -221,4 +338,4 @@ export function getContext(): Context {
   return ctx;
 }
 
-export type { ToolHandler, StopHandler };
+export type { StopHandler };

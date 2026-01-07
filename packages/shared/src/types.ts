@@ -22,14 +22,6 @@ export type PluginHealth =
   | 'restarting'
   | 'crash-loop';
 
-/** Tool manifest from package.json */
-export interface ToolManifest {
-  id: string;
-  description?: string;
-  icon?: string;
-  color?: string;
-}
-
 /** Block manifest from package.json */
 export interface BlockManifest {
   id: string;
@@ -85,45 +77,12 @@ export interface Plugin {
   lastError: string | null;
 
   // ─── Capabilities ──────────────────────────────────────────────────────────
-  /** Available tools */
-  tools: ToolManifest[];
   /** Available blocks */
   blocks: BlockManifest[];
 
   // ─── i18n ───────────────────────────────────────────────────────────────────
   /** Available translation locales (e.g., ["en", "fr", "fr-CH"]) */
   locales: string[];
-}
-
-/** JSON Schema for tool input - enables smart UI forms */
-export interface ToolInputSchema {
-  type: 'object';
-  properties?: Record<
-    string,
-    {
-      type: 'string' | 'number' | 'boolean' | 'array' | 'object';
-      description?: string;
-      default?: Json;
-      enum?: Json[];
-      items?: { type: string };
-      required?: boolean;
-    }
-  >;
-  required?: string[];
-}
-
-/** Runtime tool info (includes schema from running plugin) */
-export interface ToolSummary {
-  /** Full tool ID (e.g., "@brika/plugin-timer:set") */
-  id: string;
-  /** Tool description */
-  description?: string;
-  /** Lucide icon name */
-  icon?: string;
-  /** Hex color */
-  color?: string;
-  /** Input schema for validation/UI */
-  inputSchema?: ToolInputSchema;
 }
 
 /** Runtime block info (includes ports from running plugin) */
@@ -141,20 +100,9 @@ export interface BlockSummary {
   /** Hex color */
   color?: string;
   /** Input ports */
-  inputs?: Array<{ id: string; name: string }>;
+  inputs?: Array<{ id: string; typeName: string }>;
   /** Output ports */
-  outputs?: Array<{ id: string; name: string }>;
-}
-
-export interface ToolCallContext {
-  traceId: string;
-  source: 'api' | 'ui' | 'voice' | 'rule' | 'automation';
-}
-
-export interface ToolResult {
-  ok: boolean;
-  content?: string;
-  data?: Json;
+  outputs?: Array<{ id: string; typeName: string }>;
 }
 
 export interface StoreSearchResult {
@@ -180,42 +128,6 @@ export interface BrikaEvent {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Schedules
-// ─────────────────────────────────────────────────────────────────────────────
-
-export type ScheduleTrigger = { type: 'cron'; expr: string } | { type: 'interval'; ms: number };
-
-export interface Schedule {
-  id: string;
-  name: string;
-  trigger: ScheduleTrigger;
-  action: { tool: string; args: Record<string, Json> };
-  enabled: boolean;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Rules
-// ─────────────────────────────────────────────────────────────────────────────
-
-export type RuleTrigger =
-  | { type: 'event'; match: string } // glob pattern e.g. "motion.*"
-  | { type: 'schedule'; scheduleId: string };
-
-export interface RuleAction {
-  tool: string;
-  args: Record<string, Json>;
-}
-
-export interface Rule {
-  id: string;
-  name: string;
-  trigger: RuleTrigger;
-  condition?: string; // e.g. "event.payload.brightness < 50"
-  actions: RuleAction[];
-  enabled: boolean;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 // Plugin Manifest (from package.json)
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -231,6 +143,60 @@ export interface PluginManifest {
   license?: string;
   engines?: { brika?: string };
   main?: string;
-  tools?: ToolManifest[];
   blocks?: BlockManifest[];
+  preferences?: PreferenceDefinition[];
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Plugin Preferences (Raycast-style configuration)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type PreferenceType = 'text' | 'password' | 'checkbox' | 'dropdown' | 'number';
+
+export interface BasePreference {
+  name: string;
+  type: PreferenceType;
+  required?: boolean;
+}
+
+export interface TextPreference extends BasePreference {
+  type: 'text';
+  default?: string;
+}
+
+export interface PasswordPreference extends BasePreference {
+  type: 'password';
+  default?: string;
+}
+
+export interface NumberPreference extends BasePreference {
+  type: 'number';
+  default?: number;
+  min?: number;
+  max?: number;
+  step?: number;
+}
+
+export interface CheckboxPreference extends BasePreference {
+  type: 'checkbox';
+  default?: boolean;
+}
+
+export interface DropdownPreference extends BasePreference {
+  type: 'dropdown';
+  default?: string;
+  options: Array<{ value: string }>;
+}
+
+export type PreferenceDefinition =
+  | TextPreference
+  | PasswordPreference
+  | NumberPreference
+  | CheckboxPreference
+  | DropdownPreference;
+
+/** Plugin preferences with schema and current values */
+export interface PluginPreferences {
+  schema: PreferenceDefinition[];
+  values: Record<string, unknown>;
 }

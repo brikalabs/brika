@@ -1,4 +1,11 @@
 export { AutomationEngine } from './automation-engine';
-export type { ExecutionEvent, ExecutionListener } from './workflow-executor';
+export type { BlockConnection, Workflow, WorkflowBlock } from './types';
+export type {
+  ExecutionEvent,
+  ExecutionListener,
+  ExecutorDeps,
+  PortBuffer,
+} from './workflow-executor';
 export { WorkflowExecutor } from './workflow-executor';
-export { YamlWorkflowLoader } from './yaml-loader';
+// Legacy alias
+export { WorkflowLoader, WorkflowLoader as YamlWorkflowLoader } from './workflow-loader';

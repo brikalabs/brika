@@ -7,7 +7,7 @@ import { EventSystem } from '@/runtime/events/event-system';
 import { I18nService } from '@/runtime/i18n';
 import { LogRouter } from '@/runtime/logs/log-router';
 import { type PluginStateWithMetadata, StateStore } from '@/runtime/state/state-store';
-import { ToolRegistry } from '@/runtime/tools/tool-registry';
+import { PluginConfigService } from './plugin-config';
 import { PluginEventHandler } from './plugin-events';
 import { PluginProcess } from './plugin-process';
 import { PluginResolver } from './plugin-resolver';
@@ -26,7 +26,7 @@ export class PluginLifecycle {
   readonly #events = inject(EventSystem);
   readonly #i18n = inject(I18nService);
   readonly #eventHandler = inject(PluginEventHandler);
-  readonly #tools = inject(ToolRegistry);
+  readonly #pluginConfig = inject(PluginConfigService);
   readonly #resolver = new PluginResolver();
 
   readonly #processes = new Map<string, PluginProcess>();
@@ -40,15 +40,6 @@ export class PluginLifecycle {
       maxCrashes: this.#config.restartMaxCrashes,
       crashWindowMs: this.#config.restartCrashWindowMs,
       stabilityThresholdMs: this.#config.restartStabilityMs,
-    });
-
-    // Set up tool caller to delegate to plugin processes
-    this.#tools.setToolCaller((owner, toolId, args, ctx) => {
-      const process = this.#processes.get(owner);
-      if (!process) {
-        return Promise.resolve({ ok: false, content: `Plugin not running: ${owner}` });
-      }
-      return process.callTool(toolId, args, ctx);
     });
   }
 
@@ -112,7 +103,6 @@ export class PluginLifecycle {
       pid: null,
       startedAt: null,
       lastError: stored.lastError,
-      tools: m.tools ?? [],
       blocks: m.blocks ?? [],
       locales: [],
     };
@@ -169,10 +159,30 @@ export class PluginLifecycle {
         heartbeatTimeoutMs: this.#config.heartbeatTimeoutMs,
       },
       {
-        onReady: (p) => this.#eventHandler.onPluginReady(p),
+        onReady: (p) => {
+          // Validate preferences before sending
+          const prefs = this.#pluginConfig.getConfig(p.name);
+          const validation = this.#pluginConfig.validate(p.name, prefs);
+          if (!validation.success) {
+            const errors = validation.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`);
+            this.#logs.error('plugin.preferences.invalid', { name: p.name, errors });
+            // Dispatch event so reload/enable can handle it
+            this.#events.dispatch(
+              PluginActions.configInvalid.create({ uid: p.uid, name: p.name, errors }, 'hub')
+            );
+            // Gracefully stop (not crash) - won't trigger auto-restart
+            this.unload(p.name);
+            return;
+          }
+          p.sendPreferences(prefs);
+          this.#eventHandler.onPluginReady(p);
+        },
         onLog: (level, msg, meta) => this.#eventHandler.onPluginLog(pluginName, level, msg, meta),
-        onTool: (tool) => this.#eventHandler.registerTool(pluginName, metadata.name, tool),
-        onBlock: (block) => this.#eventHandler.registerBlock(metadata.name, block),
+        onBlock: (block) => this.#eventHandler.registerBlock(metadata.name, block, metadata),
+        onBlockEmit: (instanceId, port, data) =>
+          this.#eventHandler.onBlockEmit(instanceId, port, data),
+        onBlockLog: (instanceId, workflowId, level, message) =>
+          this.#eventHandler.onBlockLog(instanceId, workflowId, level, message),
         onEvent: (type, payload) => this.#eventHandler.emitPluginEvent(pluginName, type, payload),
         onSubscribe: (patterns, handler) => this.#eventHandler.subscribeToEvents(patterns, handler),
         onHeartbeatFailed: (p, silentMs) => this.#handleHeartbeatFailed(p, silentMs),

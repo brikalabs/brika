@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'bun:test';
 import { z } from 'zod';
-import { ACTION_ID, type ActionsUnion, defineAction, defineActions, EventSystem } from '../index';
+import {
+  ACTION_ID,
+  type ActionsUnion,
+  defineAction,
+  defineActions,
+  EventSystem,
+  withPredicate,
+} from '../index';
 
 // Test actions
 const TestActions = defineActions('test', {
@@ -98,7 +105,7 @@ describe('EventSystem', () => {
     expect(events.once(TestActions.hello, { timeout: 100 })).rejects.toThrow('Timeout');
   });
 
-  it('should support waitFor with action creator and predicate', async () => {
+  it('should support waitFor with withPredicate', async () => {
     const events = new EventSystem();
 
     setTimeout(() => {
@@ -107,8 +114,7 @@ describe('EventSystem', () => {
     }, 50);
 
     const action = await events.waitFor(
-      TestActions.count,
-      (action) => action.payload.value === 20,
+      withPredicate(TestActions.count, (a) => a.payload.value === 20),
       { timeout: 1000 }
     );
 
@@ -257,9 +263,12 @@ describe('EventSystem', () => {
   it('should handle waitFor timeout', () => {
     const events = new EventSystem();
 
-    expect(events.waitFor(TestActions.hello, () => true, { timeout: 100 })).rejects.toThrow(
-      'Timeout'
-    );
+    expect(
+      events.waitFor(
+        withPredicate(TestActions.hello, () => true),
+        { timeout: 100 }
+      )
+    ).rejects.toThrow('Timeout');
   });
 
   it('should handle race timeout', () => {
@@ -314,8 +323,7 @@ describe('EventSystem', () => {
     }, 50);
 
     const action = await events.waitFor(
-      TestActions.count,
-      (action) => action.payload.value === 20,
+      withPredicate(TestActions.count, (a) => a.payload.value === 20),
       { timeout: 1000 }
     );
 
@@ -548,9 +556,10 @@ describe('defineAction (single action without namespace)', () => {
       events.dispatch(UserLoggedIn.create({ userId: 'admin', email: 'admin@example.com' }));
     }, 50);
 
-    const action = await events.waitFor(UserLoggedIn, (a) => a.payload.userId === 'admin', {
-      timeout: 1000,
-    });
+    const action = await events.waitFor(
+      withPredicate(UserLoggedIn, (a) => a.payload.userId === 'admin'),
+      { timeout: 1000 }
+    );
 
     expect(action.payload.userId).toBe('admin');
     expect(action.payload.email).toBe('admin@example.com');
@@ -566,5 +575,114 @@ describe('defineAction (single action without namespace)', () => {
     const action = await events.race([UserLoggedIn, SystemStarted], { timeout: 1000 });
 
     expect(action.type).toBe('system.started');
+  });
+});
+
+describe('withPredicate', () => {
+  it('should filter events in race by predicate', async () => {
+    const events = new EventSystem();
+
+    setTimeout(() => {
+      // Dispatch with value 5 - should NOT match
+      events.dispatch(TestActions.count.create({ value: 5 }));
+      // Dispatch with value 15 - should match (> 10)
+      events.dispatch(TestActions.count.create({ value: 15 }));
+    }, 50);
+
+    const action = await events.race(
+      [withPredicate(TestActions.count, (a) => a.payload.value > 10)],
+      { timeout: 1000 }
+    );
+
+    expect(action.type).toBe('test.count');
+    expect(action.payload.value).toBe(15);
+  });
+
+  it('should filter different events with different predicates in race', async () => {
+    const events = new EventSystem();
+
+    setTimeout(() => {
+      // Dispatch hello with wrong message - should NOT match
+      events.dispatch(TestActions.hello.create({ message: 'wrong' }));
+      // Dispatch goodbye with correct message - should match
+      events.dispatch(TestActions.goodbye.create({ message: 'correct' }));
+    }, 50);
+
+    const action = await events.race(
+      [
+        withPredicate(TestActions.hello, (a) => a.payload.message === 'target'),
+        withPredicate(TestActions.goodbye, (a) => a.payload.message === 'correct'),
+      ],
+      { timeout: 1000 }
+    );
+
+    expect(action.type).toBe('test.goodbye');
+    expect(action.payload.message).toBe('correct');
+  });
+
+  it('should work with mixed filtered and unfiltered patterns', async () => {
+    const events = new EventSystem();
+
+    setTimeout(() => {
+      // Dispatch count with low value - filtered out
+      events.dispatch(TestActions.count.create({ value: 5 }));
+      // Dispatch goodbye - should match (no filter)
+      events.dispatch(TestActions.goodbye.create({ message: 'bye' }));
+    }, 50);
+
+    const action = await events.race(
+      [
+        withPredicate(TestActions.count, (a) => a.payload.value > 10),
+        TestActions.goodbye, // No filter
+      ],
+      { timeout: 1000 }
+    );
+
+    expect(action.type).toBe('test.goodbye');
+  });
+
+  it('should filter by uid in realistic plugin scenario', async () => {
+    const PluginActions = defineActions('plugin', {
+      loaded: z.object({ uid: z.string(), name: z.string() }),
+      error: z.object({ uid: z.string(), message: z.string() }),
+    });
+
+    const events = new EventSystem();
+    const targetUid = 'plugin-123';
+
+    setTimeout(() => {
+      // Other plugin loads - should NOT match
+      events.dispatch(PluginActions.loaded.create({ uid: 'other-plugin', name: 'Other' }));
+      // Target plugin loads - should match
+      events.dispatch(PluginActions.loaded.create({ uid: targetUid, name: 'Target' }));
+    }, 50);
+
+    const action = await events.race(
+      [
+        withPredicate(PluginActions.loaded, (a) => a.payload.uid === targetUid),
+        withPredicate(PluginActions.error, (a) => a.payload.uid === targetUid),
+      ],
+      { timeout: 1000 }
+    );
+
+    expect(action.type).toBe('plugin.loaded');
+    expect(action.payload.uid).toBe(targetUid);
+    if (action.type === 'plugin.loaded') {
+      expect(action.payload.name).toBe('Target');
+    }
+  });
+
+  it('should timeout when predicate never matches', () => {
+    const events = new EventSystem();
+
+    setTimeout(() => {
+      events.dispatch(TestActions.count.create({ value: 5 }));
+    }, 50);
+
+    expect(
+      events.race([withPredicate(TestActions.count, (a) => a.payload.value > 100)], {
+        timeout: 200,
+      })
+    ).rejects.toThrow('Timeout');
   });
 });

@@ -2,61 +2,182 @@
   "name": "Blocs intégrés",
   "description": "Blocs de workflow de base pour les automatisations BRIKA",
   "blocks": {
-    "action": {
-      "name": "Action",
-      "description": "Appeler un outil avec des arguments"
+    "clock": {
+      "name": "Horloge",
+      "description": "Émettre des ticks périodiques à un intervalle configurable",
+      "ports": {
+        "tick": {
+          "name": "Tick",
+          "description": "Émis à chaque intervalle avec compteur et horodatage"
+        }
+      }
+    },
+    "http-request": {
+      "name": "Requête HTTP",
+      "description": "Effectuer des requêtes HTTP vers des APIs externes",
+      "ports": {
+        "trigger": {
+          "name": "Déclencheur",
+          "description": "Déclencher la requête HTTP"
+        },
+        "response": {
+          "name": "Réponse",
+          "description": "Réponse HTTP avec statut, en-têtes et corps"
+        },
+        "error": {
+          "name": "Erreur",
+          "description": "Détails de l'erreur si la requête échoue"
+        }
+      }
     },
     "condition": {
       "name": "Condition",
-      "description": "Brancher selon une condition"
+      "description": "Brancher selon une condition",
+      "ports": {
+        "in": {
+          "name": "Entrée",
+          "description": "Valeur à vérifier"
+        },
+        "then": {
+          "name": "Alors",
+          "description": "Sortie si la condition est vraie"
+        },
+        "else": {
+          "name": "Sinon",
+          "description": "Sortie si la condition est fausse"
+        }
+      }
     },
     "switch": {
       "name": "Aiguillage",
-      "description": "Branchement multiple selon une valeur"
+      "description": "Branchement multiple selon une valeur",
+      "ports": {
+        "in": {
+          "name": "Entrée",
+          "description": "Valeur à vérifier"
+        },
+        "case1": {
+          "name": "Cas 1",
+          "description": "Première sortie"
+        },
+        "case2": {
+          "name": "Cas 2",
+          "description": "Deuxième sortie"
+        },
+        "case3": {
+          "name": "Cas 3",
+          "description": "Troisième sortie"
+        },
+        "default": {
+          "name": "Défaut",
+          "description": "Sortie si aucun cas ne correspond"
+        }
+      }
     },
     "delay": {
       "name": "Délai",
-      "description": "Attendre une durée spécifiée"
+      "description": "Attendre une durée spécifiée",
+      "ports": {
+        "in": {
+          "name": "Entrée",
+          "description": "Données à retarder"
+        },
+        "out": {
+          "name": "Sortie",
+          "description": "Données retardées"
+        }
+      }
     },
-    "emit": {
-      "name": "Émettre un événement",
-      "description": "Émettre un événement personnalisé"
-    },
-    "set": {
-      "name": "Définir une variable",
-      "description": "Définir une variable de workflow"
+    "transform": {
+      "name": "Transformer",
+      "description": "Transformer ou extraire des données",
+      "ports": {
+        "in": {
+          "name": "Entrée",
+          "description": "Données à transformer"
+        },
+        "out": {
+          "name": "Sortie",
+          "description": "Données transformées"
+        }
+      }
     },
     "log": {
       "name": "Journal",
-      "description": "Enregistrer un message"
+      "description": "Enregistrer un message",
+      "ports": {
+        "in": {
+          "name": "Entrée",
+          "description": "Données à enregistrer"
+        },
+        "out": {
+          "name": "Sortie",
+          "description": "Données passantes"
+        }
+      }
     },
     "merge": {
       "name": "Fusionner",
-      "description": "Attendre et fusionner plusieurs entrées"
+      "description": "Attendre et fusionner plusieurs entrées",
+      "ports": {
+        "a": {
+          "name": "Entrée A",
+          "description": "Première entrée"
+        },
+        "b": {
+          "name": "Entrée B",
+          "description": "Deuxième entrée"
+        },
+        "out": {
+          "name": "Sortie",
+          "description": "Entrées combinées"
+        }
+      }
     },
-    "parallel": {
-      "name": "Parallèle",
-      "description": "Diviser l'exécution en branches parallèles"
+    "split": {
+      "name": "Diviser",
+      "description": "Diviser l'exécution en branches parallèles",
+      "ports": {
+        "in": {
+          "name": "Entrée",
+          "description": "Données à diviser"
+        },
+        "a": {
+          "name": "Branche A",
+          "description": "Première branche"
+        },
+        "b": {
+          "name": "Branche B",
+          "description": "Deuxième branche"
+        }
+      }
     },
     "end": {
       "name": "Fin",
-      "description": "Terminer le workflow"
+      "description": "Terminer le workflow",
+      "ports": {
+        "in": {
+          "name": "Entrée",
+          "description": "Données finales"
+        }
+      }
     }
   },
   "fields": {
-    "tool": "Nom de l'outil à appeler",
-    "args": "Arguments à passer",
-    "if": "Expression de condition",
-    "value": "Expression à évaluer",
-    "cases": "Correspondance valeur vers port de sortie",
+    "field": "Chemin du champ à vérifier",
+    "operator": "Opérateur de comparaison",
+    "value": "Valeur à comparer",
     "duration": "Durée d'attente",
-    "event": "Type d'événement à émettre",
-    "payload": "Charge utile de l'événement",
-    "var": "Nom de la variable",
     "message": "Message à enregistrer",
     "level": "Niveau de journal",
-    "mode": "Mode d'attente (tous/n'importe)",
-    "status": "Statut de fin"
+    "status": "Statut de fin",
+    "template": "Modèle de sortie",
+    "interval": "Intervalle en millisecondes",
+    "emitOnStart": "Émettre un tick initial immédiatement",
+    "url": "URL de la requête",
+    "method": "Méthode HTTP",
+    "headers": "En-têtes de la requête",
+    "body": "Corps de la requête",
+    "timeout": "Délai d'expiration en millisecondes"
   }
 }
-

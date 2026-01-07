@@ -2,61 +2,182 @@
   "name": "Built-in Blocks",
   "description": "Core workflow blocks for BRIKA automations",
   "blocks": {
-    "action": {
-      "name": "Action",
-      "description": "Call a tool with arguments"
+    "clock": {
+      "name": "Clock",
+      "description": "Emit periodic ticks at a configurable interval",
+      "ports": {
+        "tick": {
+          "name": "Tick",
+          "description": "Emitted on each interval with count and timestamp"
+        }
+      }
+    },
+    "http-request": {
+      "name": "HTTP Request",
+      "description": "Make HTTP requests to external APIs",
+      "ports": {
+        "trigger": {
+          "name": "Trigger",
+          "description": "Trigger the HTTP request"
+        },
+        "response": {
+          "name": "Response",
+          "description": "HTTP response with status, headers, and body"
+        },
+        "error": {
+          "name": "Error",
+          "description": "Error details if request fails"
+        }
+      }
     },
     "condition": {
       "name": "Condition",
-      "description": "Branch based on a condition"
+      "description": "Branch based on a condition",
+      "ports": {
+        "in": {
+          "name": "Input",
+          "description": "Value to check"
+        },
+        "then": {
+          "name": "Then",
+          "description": "Output when condition is true"
+        },
+        "else": {
+          "name": "Else",
+          "description": "Output when condition is false"
+        }
+      }
     },
     "switch": {
       "name": "Switch",
-      "description": "Multi-way branch based on value"
+      "description": "Multi-way branch based on value",
+      "ports": {
+        "in": {
+          "name": "Input",
+          "description": "Value to check"
+        },
+        "case1": {
+          "name": "Case 1",
+          "description": "First case output"
+        },
+        "case2": {
+          "name": "Case 2",
+          "description": "Second case output"
+        },
+        "case3": {
+          "name": "Case 3",
+          "description": "Third case output"
+        },
+        "default": {
+          "name": "Default",
+          "description": "Output when no case matches"
+        }
+      }
     },
     "delay": {
       "name": "Delay",
-      "description": "Wait for a specified duration"
+      "description": "Wait for a specified duration",
+      "ports": {
+        "in": {
+          "name": "Input",
+          "description": "Data to delay"
+        },
+        "out": {
+          "name": "Output",
+          "description": "Delayed data"
+        }
+      }
     },
-    "emit": {
-      "name": "Emit Event",
-      "description": "Emit a custom event"
-    },
-    "set": {
-      "name": "Set Variable",
-      "description": "Set a workflow variable"
+    "transform": {
+      "name": "Transform",
+      "description": "Transform or extract data",
+      "ports": {
+        "in": {
+          "name": "Input",
+          "description": "Data to transform"
+        },
+        "out": {
+          "name": "Output",
+          "description": "Transformed data"
+        }
+      }
     },
     "log": {
       "name": "Log",
-      "description": "Log a message"
+      "description": "Log a message",
+      "ports": {
+        "in": {
+          "name": "Input",
+          "description": "Data to log"
+        },
+        "out": {
+          "name": "Output",
+          "description": "Passthrough data"
+        }
+      }
     },
     "merge": {
       "name": "Merge",
-      "description": "Wait for and merge multiple inputs"
+      "description": "Wait for and merge multiple inputs",
+      "ports": {
+        "a": {
+          "name": "Input A",
+          "description": "First input"
+        },
+        "b": {
+          "name": "Input B",
+          "description": "Second input"
+        },
+        "out": {
+          "name": "Output",
+          "description": "Combined inputs"
+        }
+      }
     },
-    "parallel": {
-      "name": "Parallel",
-      "description": "Split execution to parallel branches"
+    "split": {
+      "name": "Split",
+      "description": "Split execution to parallel branches",
+      "ports": {
+        "in": {
+          "name": "Input",
+          "description": "Data to split"
+        },
+        "a": {
+          "name": "Branch A",
+          "description": "First branch"
+        },
+        "b": {
+          "name": "Branch B",
+          "description": "Second branch"
+        }
+      }
     },
     "end": {
       "name": "End",
-      "description": "Terminate the workflow"
+      "description": "Terminate the workflow",
+      "ports": {
+        "in": {
+          "name": "Input",
+          "description": "Final data"
+        }
+      }
     }
   },
   "fields": {
-    "tool": "Tool name to call",
-    "args": "Arguments to pass",
-    "if": "Condition expression",
-    "value": "Expression to evaluate",
-    "cases": "Map of value to output port",
-    "duration": "Duration to wait",
-    "event": "Event type to emit",
-    "payload": "Event payload",
-    "var": "Variable name",
+    "field": "Field path to check",
+    "operator": "Comparison operator",
+    "value": "Value to compare against",
+    "duration": "Wait duration",
     "message": "Message to log",
     "level": "Log level",
-    "mode": "Wait mode (all/any)",
-    "status": "End status"
+    "status": "End status",
+    "template": "Output template",
+    "interval": "Tick interval in milliseconds",
+    "emitOnStart": "Emit an initial tick immediately",
+    "url": "Request URL",
+    "method": "HTTP method",
+    "headers": "Request headers",
+    "body": "Request body",
+    "timeout": "Request timeout in milliseconds"
   }
 }
-

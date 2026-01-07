@@ -1,14 +1,17 @@
 {
   "name": "@brika/schema",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Unified schemas for BRIKA plugins and configuration",
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "https://github.com/maxscharwath/brika.git",
+    "url": "git+https://github.com/maxscharwath/brika.git",
     "directory": "packages/schema"
   },
-  "files": ["dist", "src"],
+  "files": [
+    "dist",
+    "src"
+  ],
   "exports": {
     ".": "./src/index.ts",
     "./plugin": "./src/plugin.ts",

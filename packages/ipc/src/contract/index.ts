@@ -18,8 +18,13 @@ export {
   BlockDefinition,
   BlockPort,
   BlockResult,
+  blockEmit,
+  blockLog,
   executeBlock,
+  pushInput,
   registerBlock,
+  startBlock,
+  stopBlock,
 } from './blocks';
 export type {
   EventPayload as EventPayloadType,
@@ -46,8 +51,10 @@ export {
   hello,
   PluginInfo,
   PluginRequirements,
+  preferences,
   ready,
   stop,
+  uninstall,
 } from './lifecycle';
 export type {
   ToolCallContext as ToolCallContextType,

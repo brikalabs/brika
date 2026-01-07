@@ -9,7 +9,6 @@ import {
   RefreshCw,
   RotateCcw,
   Skull,
-  Wrench,
 } from 'lucide-react';
 import React from 'react';
 import {
@@ -117,16 +116,8 @@ export function PluginsPage() {
                       )}
 
                       {/* Stats Row */}
-                      {(p.tools.length > 0 || p.blocks.length > 0) && (
+                      {p.blocks.length > 0 && (
                         <div className="mt-2 flex gap-4">
-                          {p.tools.length > 0 && (
-                            <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
-                              <Wrench className="size-3.5" />
-                              <span>
-                                {p.tools.length} {t('tools:title').toLowerCase()}
-                              </span>
-                            </div>
-                          )}
                           {p.blocks.length > 0 && (
                             <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
                               <Boxes className="size-3.5" />

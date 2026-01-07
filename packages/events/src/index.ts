@@ -6,10 +6,11 @@ export {
   defineActions,
 } from './action';
 export { EventSystem } from './event-system';
-export { createPatternSet, matchesPattern, matchesPatternSet } from './matcher';
+export { createPatternSet, matchesPattern, matchesPatternSet, withPredicate } from './matcher';
 export type {
   Action,
   ActionPattern,
+  FilteredAction,
   InferAction,
   InferActions,
   InferActionsFromMap,

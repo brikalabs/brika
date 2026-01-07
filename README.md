@@ -1,118 +1,99 @@
 # BRIKA
 
-A Bun-first, plugin-first home automation runtime with block-based visual workflows.
+A Bun-first home automation runtime with reactive block-based visual workflows.
 
 ## Features
 
-- **Isolated Plugins** - Each plugin runs as a separate Bun process with binary IPC
-- **Block-based Workflows** - Visual automation builder using React Flow
-- **Event-driven** - Pub/sub event bus with glob pattern matching
-- **Type-safe Tools** - Zod-validated tool definitions with full TypeScript support
-- **Modern UI** - React + TanStack Router/Query + shadcn/ui
+- **Reactive Blocks** — Type-safe workflow blocks with Zod schemas and reactive streams
+- **Isolated Plugins** — Each plugin runs in a separate process with binary IPC
+- **Visual Editor** — Block-based automation builder with React Flow
+- **Event-driven** — Pub/sub event bus with glob pattern matching
 
 ## Quick Start
 
 ```bash
-# Install dependencies
 bun install
-
-# Start Hub + UI
 bun run dev
-
-# Or run separately:
-bun run --cwd apps/hub dev    # Hub on :3001
-bun run --cwd apps/ui dev     # UI on :5173
 ```
 
-Open:
-
-- **Hub API**: http://localhost:3001/api/health
 - **UI**: http://localhost:5173
+- **API**: http://localhost:3001/api/health
 
 ## Project Structure
 
 ```
 brika/
 ├── apps/
-│   ├── hub/          # Bun runtime (API, plugins, automations)
-│   └── ui/           # React frontend
+│   ├── hub/          # Bun runtime (API, plugins, workflows)
+│   └── ui/           # React frontend (TanStack, React Flow)
 ├── packages/
-│   ├── sdk/          # Plugin SDK (@brika/sdk)
-│   └── shared/       # Shared types (@brika/shared)
-├── plugins/          # Local plugins
-│   ├── blocks-builtin/   # Core workflow blocks
-│   ├── timer/            # Timer functionality
+│   ├── sdk/          # Plugin SDK
+│   ├── flow/         # Reactive streams
+│   ├── events/       # Event system
+│   ├── ipc/          # Binary IPC protocol
+│   └── shared/       # Shared types & DI
+├── plugins/
+│   ├── blocks-builtin/   # Core blocks (condition, delay, log, etc.)
+│   ├── timer/            # Timer & countdown blocks
 │   └── example-echo/     # Example plugin
-├── automations/      # YAML workflow files
-├── brika.yml         # Hub configuration
-└── docs/             # Documentation
+└── docs/
 ```
 
 ## Creating a Plugin
 
 ```typescript
-// plugins/my-plugin/src/index.ts
-import { createPluginRuntime, defineTool, z } from "@brika/sdk";
+// plugins/my-plugin/src/main.ts
+import { defineReactiveBlock, input, output, log, onStop, z } from "@brika/sdk";
 
-const { api, start, use } = createPluginRuntime({
-  id: "@brika/plugin-my-plugin",
-  version: "0.1.0",
-});
+export const greet = defineReactiveBlock(
+  {
+    id: "greet",
+    inputs: {
+      trigger: input(z.generic(), { name: "Trigger" }),
+    },
+    outputs: {
+      message: output(z.string(), { name: "Message" }),
+    },
+    config: z.object({
+      name: z.string().default("World"),
+    }),
+  },
+  ({ inputs, outputs, config, log }) => {
+    inputs.trigger.on(() => {
+      log("info", `Greeting ${config.name}`);
+      outputs.message.emit(`Hello, ${config.name}!`);
+    });
+  }
+);
 
-export const greet = defineTool({
-  id: "greet",
-  description: "Greet someone",
-  schema: z.object({
-    name: z.string().describe("Name to greet"),
-  }),
-}, async (args) => {
-  return { ok: true, content: `Hello, ${args.name}!` };
-});
-
-use(greet);
-await start();
+onStop(() => log("info", "Stopping"));
+log("info", "Plugin loaded");
 ```
 
-Add to `brika.yml`:
-
-```yaml
-install:
-  - ref: "workspace:my-plugin"
-    enabled: true
-```
-
-## Creating a Workflow
-
-```yaml
-# automations/hello.yml
-id: hello-workflow
-name: Hello World
-enabled: true
-trigger:
-  event: button.pressed
-
-blocks:
-  - id: log-it
-    type: "@brika/blocks-builtin:log"
-    config:
-      message: "Button was pressed!"
-      level: info
+```json
+{
+  "name": "@brika/plugin-my-plugin",
+  "version": "0.1.0",
+  "main": "./src/main.ts",
+  "blocks": [
+    { "id": "greet", "name": "Greet", "category": "action", "icon": "hand", "color": "#3b82f6" }
+  ],
+  "dependencies": { "@brika/sdk": "workspace:*" }
+}
 ```
 
 ## Documentation
 
-- [Architecture](docs/ARCHITECTURE.md) - Detailed system design
-- [Agent Guide](docs/agent.md) - AI assistant reference
+- [Architecture](docs/ARCHITECTURE.md)
+- [SDK Reference](packages/sdk/README.md)
 
 ## Tech Stack
 
-| Layer         | Technology                        |
-|---------------|-----------------------------------|
-| Runtime       | Bun                               |
-| Backend       | TypeScript, Zod                   |
-| Frontend      | React, Vite, TanStack, React Flow |
-| UI Components | shadcn/ui, Tailwind CSS v4        |
-| DI            | tsyringe                          |
+| Layer    | Stack                              |
+|----------|------------------------------------|
+| Runtime  | Bun, TypeScript, Zod               |
+| Frontend | React, Vite, TanStack, React Flow  |
+| UI       | shadcn/ui, Tailwind CSS v4         |
 
 ## License
 

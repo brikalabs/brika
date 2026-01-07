@@ -29,36 +29,52 @@ export type Subscriber<T extends Action = Action> = (action: T) => void | Promis
  */
 export type Unsubscribe = () => void;
 
+/** Symbol to identify filtered action patterns */
+export const FILTERED_ACTION = Symbol('FilteredAction');
+
+/** A filtered action pattern with a predicate */
+export interface FilteredAction<T extends ActionCreator = ActionCreator> {
+  [FILTERED_ACTION]: true;
+  creator: T;
+  predicate: (action: InferAction<T>) => boolean;
+}
+
+/** Pattern item that can be ActionCreator or FilteredAction */
+export type PatternItem = ActionCreator | FilteredAction;
+
 /**
  * Valid pattern types for matching actions
  */
 export type ActionPattern =
   | ActionCreator
-  | readonly ActionCreator[]
-  | Record<string, ActionCreator>;
+  | FilteredAction
+  | readonly PatternItem[]
+  | Record<string, PatternItem>;
 
 /**
- * Extract action type from ActionCreator
+ * Extract action type from ActionCreator or FilteredAction
  */
 export type InferAction<T> =
-  T extends ActionCreator<infer TType, infer TPayload> ? Action<TType, TPayload> : Action;
+  T extends FilteredAction<infer C>
+    ? C extends ActionCreator<infer TType, infer TPayload>
+      ? Action<TType, TPayload>
+      : Action
+    : T extends ActionCreator<infer TType, infer TPayload>
+      ? Action<TType, TPayload>
+      : Action;
 
 /**
- * Extract union of action types from array of ActionCreators
+ * Extract union of action types from array of PatternItems (ActionCreator or FilteredAction)
  */
-export type InferActions<T extends readonly ActionCreator[]> = {
-  [K in keyof T]: T[K] extends ActionCreator<infer TType, infer TPayload>
-    ? Action<TType, TPayload>
-    : never;
+export type InferActions<T extends readonly PatternItem[]> = {
+  [K in keyof T]: InferAction<T[K]>;
 }[number];
 
 /**
  * Extract union of action types from ActionMap (result of defineActions)
  */
-export type InferActionsFromMap<T extends Record<string, ActionCreator>> = {
-  [K in keyof T]: T[K] extends ActionCreator<infer TType, infer TPayload>
-    ? Action<TType, TPayload>
-    : never;
+export type InferActionsFromMap<T extends Record<string, PatternItem>> = {
+  [K in keyof T]: InferAction<T[K]>;
 }[keyof T];
 
 // Re-export ActionCreator from action.ts

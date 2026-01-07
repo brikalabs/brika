@@ -1,13 +1,12 @@
 import type { Json } from '@brika/ipc';
 import type { BlockDefinition } from '@brika/sdk';
-import type { BrikaEvent, LogLevel, ToolInputSchema } from '@brika/shared';
+import type { BrikaEvent, LogLevel } from '@brika/shared';
 import { inject, singleton } from '@brika/shared';
 import { BlockRegistry } from '@/runtime/blocks';
 import { GenericEventActions, PluginActions } from '@/runtime/events/actions';
 import { EventSystem } from '@/runtime/events/event-system';
 import { LogRouter } from '@/runtime/logs/log-router';
 import { StateStore } from '@/runtime/state/state-store';
-import { ToolRegistry } from '@/runtime/tools/tool-registry';
 import type { PluginProcess } from './plugin-process';
 import { now } from './utils';
 
@@ -19,8 +18,40 @@ export class PluginEventHandler {
   readonly #logs = inject(LogRouter);
   readonly #events = inject(EventSystem);
   readonly #state = inject(StateStore);
-  readonly #tools = inject(ToolRegistry);
   readonly #blocks = inject(BlockRegistry);
+
+  /** Block emit callback - set by PluginManager */
+  #onBlockEmit: ((instanceId: string, port: string, data: Json) => void) | null = null;
+  /** Block log callback - set by PluginManager */
+  #onBlockLog:
+    | ((instanceId: string, workflowId: string, level: string, message: string) => void)
+    | null = null;
+
+  setBlockEmitHandler(handler: (instanceId: string, port: string, data: Json) => void): void {
+    this.#onBlockEmit = handler;
+  }
+
+  clearBlockEmitHandler(): void {
+    this.#onBlockEmit = null;
+  }
+
+  setBlockLogHandler(
+    handler: (instanceId: string, workflowId: string, level: string, message: string) => void
+  ): void {
+    this.#onBlockLog = handler;
+  }
+
+  clearBlockLogHandler(): void {
+    this.#onBlockLog = null;
+  }
+
+  onBlockEmit(instanceId: string, port: string, data: Json): void {
+    this.#onBlockEmit?.(instanceId, port, data);
+  }
+
+  onBlockLog(instanceId: string, workflowId: string, level: string, message: string): void {
+    this.#onBlockLog?.(instanceId, workflowId, level, message);
+  }
 
   onPluginReady(process: PluginProcess): void {
     this.#state.setHealth(process.name, 'running');
@@ -54,22 +85,16 @@ export class PluginEventHandler {
     });
   }
 
-  registerTool(
-    name: string,
+  registerBlock(
     pluginName: string,
-    tool: { id: string; description?: string; icon?: string; color?: string; inputSchema?: unknown }
+    block: { id: string; [key: string]: unknown },
+    packageMetadata?: { blocks?: Array<{ id: string; [key: string]: unknown }> }
   ): void {
-    this.#tools.register(tool.id, pluginName, {
-      description: tool.description,
-      icon: tool.icon,
-      color: tool.color,
-      inputSchema: tool.inputSchema as ToolInputSchema | undefined,
-    });
-    this.#logs.debug('plugin.tool.registered', { plugin: name, tool: tool.id });
-  }
+    // Merge runtime block definition with package.json metadata
+    const pkgBlock = packageMetadata?.blocks?.find((b) => b.id === block.id);
+    const merged = pkgBlock ? { ...pkgBlock, ...block } : block;
 
-  registerBlock(pluginName: string, block: { id: string; [key: string]: unknown }): void {
-    this.#blocks.register(block as unknown as BlockDefinition, pluginName);
+    this.#blocks.register(merged as unknown as BlockDefinition, pluginName);
     this.#logs.debug('plugin.block.registered', { plugin: pluginName, block: block.id });
   }
 

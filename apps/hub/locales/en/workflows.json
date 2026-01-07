@@ -7,6 +7,8 @@
   "blocks": "Blocks",
   "blocksDescription": "Available block types for building workflows",
   "confirmDelete": "Delete workflow \"{{id}}\"?",
+  "search": "Search workflows...",
+  "noResults": "No workflows match your search",
   "runs": {
     "title": "Runs",
     "empty": "No runs yet. Trigger a workflow to see execution history."
@@ -15,7 +17,16 @@
     "name": "Name",
     "trigger": "Trigger",
     "status": "Status",
-    "actions": "Actions"
+    "actions": "Actions",
+    "blocks": "Blocks",
+    "startedAt": "Started At",
+    "lastRun": "Last Run",
+    "noBlocks": "No blocks",
+    "neverRun": "Never run"
+  },
+  "deleteDialog": {
+    "title": "Delete Workflow",
+    "description": "Are you sure you want to delete the workflow \"{{id}}\"? This action cannot be undone."
   },
   "actions": {
     "create": "New Workflow",
@@ -23,7 +34,20 @@
     "delete": "Delete",
     "enable": "Enable",
     "disable": "Disable",
-    "run": "Run"
+    "run": "Run",
+    "debug": "Debug"
+  },
+  "debug": {
+    "title": "Live Debug",
+    "description": "Real-time workflow execution events",
+    "connected": "Connected",
+    "disconnected": "Disconnected",
+    "waiting": "Waiting for events...",
+    "events": "events",
+    "clear": "Clear",
+    "all": "All",
+    "logsOnly": "Logs",
+    "emitsOnly": "Emits"
   },
   "editor": {
     "title": "Workflow Editor",

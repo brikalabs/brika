@@ -1,334 +1,382 @@
-import { ReactFlowProvider } from '@xyflow/react';
-import {
-  AlertCircle,
-  CheckCircle,
-  Clock,
-  Eye,
-  Pencil,
-  Play,
-  Plus,
-  Trash2,
-  XCircle,
-} from 'lucide-react';
+/**
+ * Workflows Page
+ *
+ * Table view of all workflows with status, actions, and navigation to editor.
+ */
+
+import { Link, useNavigate } from '@tanstack/react-router';
+import { AlertCircle, Bug, Pencil, Play, Plus, Search, Square, Trash2 } from 'lucide-react';
 import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
-  Avatar,
-  AvatarFallback,
   Badge,
   Button,
   Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
+  Input,
   ScrollArea,
   Switch,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
 } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
-import type { BlockType, Workflow, WorkflowRun } from './api';
-import { saveWorkflow } from './api';
-import { WorkflowEditor } from './editor';
+import type { Workflow, WorkflowStatus } from './api';
 import {
-  useBlockTypes,
-  useDeleteWorkflow,
-  useDisableWorkflow,
-  useEnableWorkflow,
-  useTriggerWorkflow,
-  useWorkflow,
-  useWorkflowRuns,
-  useWorkflows,
-} from './hooks';
+  type DebugEvent,
+  DebugEventEntry,
+  type DebugFilter,
+  EventFilterButtons,
+  filterEvents,
+  useDebugStream,
+} from './debug';
+import { useDeleteWorkflow, useDisableWorkflow, useEnableWorkflow, useWorkflows } from './hooks';
 
-function formatDuration(ms: number) {
-  if (ms < 1000) return `${ms}ms`;
-  if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
-  return `${(ms / 60000).toFixed(1)}m`;
-}
+// ─────────────────────────────────────────────────────────────────────────────
+// Status Badge
+// ─────────────────────────────────────────────────────────────────────────────
 
-function StatusBadge({ status }: { status: WorkflowRun['status'] }) {
+function StatusBadge({ status, error }: { status?: WorkflowStatus; error?: string }) {
   const { t } = useLocale();
-  const variants: Record<
-    string,
-    { variant: 'default' | 'secondary' | 'destructive' | 'outline'; icon: React.ElementType }
-  > = {
-    running: { variant: 'default', icon: Clock },
-    completed: { variant: 'secondary', icon: CheckCircle },
-    error: { variant: 'destructive', icon: XCircle },
-  };
-  const { variant, icon: Icon } = variants[status] ?? { variant: 'outline', icon: AlertCircle };
-  return (
-    <Badge variant={variant} className="gap-1">
-      <Icon className="size-3" />
-      {t(`common:status.${status}`)}
-    </Badge>
-  );
-}
 
-function WorkflowCard({
-  workflow,
-  onTrigger,
-  onToggle,
-  onView,
-  onEdit,
-  onDelete,
-}: {
-  workflow: Workflow;
-  onTrigger: () => void;
-  onToggle: (enabled: boolean) => void;
-  onView: () => void;
-  onEdit: () => void;
-  onDelete: () => void;
-}) {
-  const { t } = useLocale();
-  return (
-    <Card>
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div>
-            <CardTitle className="text-lg">{workflow.name || workflow.id}</CardTitle>
-            <CardDescription className="mt-1">
-              {t('workflows:triggersOn')}:{' '}
-              <code className="rounded bg-muted px-1 py-0.5 text-xs">{workflow.trigger.event}</code>
-            </CardDescription>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button size="sm" variant="outline" onClick={onView}>
-              <Eye className="mr-1 size-3" />
-              {t('common:actions.view')}
-            </Button>
-            <Button size="sm" variant="outline" onClick={onEdit}>
-              <Pencil className="mr-1 size-3" />
-              {t('common:actions.edit')}
-            </Button>
-            <Button size="sm" variant="outline" onClick={onTrigger}>
-              <Play className="mr-1 size-3" />
-              {t('workflows:actions.run')}
-            </Button>
-            <Button size="sm" variant="ghost" onClick={onDelete}>
-              <Trash2 className="size-3 text-destructive" />
-            </Button>
-            <Switch checked={workflow.enabled} onCheckedChange={onToggle} />
-          </div>
-        </div>
-      </CardHeader>
-      {workflow.blocks && workflow.blocks.length > 0 && (
-        <CardContent className="pt-0">
-          <div className="flex flex-wrap gap-1.5">
-            {workflow.blocks.map((block) => {
-              const iconName = (block.icon || 'box') as IconName;
-              return (
-                <Badge key={block.id} variant="outline" className="gap-1 text-xs">
-                  <DynamicIcon name={iconName} className="size-3" />
-                  {block.id}
-                </Badge>
-              );
-            })}
-          </div>
-        </CardContent>
-      )}
-    </Card>
-  );
-}
-
-function RunsTable({ runs }: { runs: WorkflowRun[] }) {
-  const { t, formatTime } = useLocale();
-
-  if (runs.length === 0) {
+  if (status === 'running') {
     return (
-      <div className="py-12 text-center text-muted-foreground">{t('workflows:runs.empty')}</div>
+      <Badge variant="default" className="gap-1 bg-green-600">
+        <Play className="size-3" />
+        {t('common:status.running')}
+      </Badge>
+    );
+  }
+
+  if (status === 'error') {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Badge variant="destructive" className="cursor-help gap-1">
+            <AlertCircle className="size-3" />
+            {t('common:status.error')}
+          </Badge>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-xs">
+          <p className="text-xs">{error || 'Unknown error'}</p>
+        </TooltipContent>
+      </Tooltip>
     );
   }
 
   return (
-    <div className="space-y-2">
-      {runs.map((run) => (
-        <div
-          key={run.id}
-          className="flex items-center justify-between rounded-lg border bg-card p-3"
-        >
-          <div className="flex items-center gap-3">
-            <StatusBadge status={run.status} />
-            <span className="font-medium text-sm">{run.workflowId}</span>
-          </div>
-          <div className="flex items-center gap-4 text-muted-foreground text-sm">
-            {run.finishedAt && run.startedAt && (
-              <span>{formatDuration(run.finishedAt - run.startedAt)}</span>
-            )}
-            <span>{formatTime(run.startedAt)}</span>
-          </div>
-        </div>
-      ))}
-    </div>
+    <Badge variant="secondary" className="gap-1">
+      <Square className="size-3" />
+      {t('common:status.stopped')}
+    </Badge>
   );
 }
 
-function BlockTypesGrid({ types }: { types: BlockType[] }) {
-  const { tp } = useLocale();
-  return (
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-      {types.map((block) => {
-        const iconName = (block.icon || 'box') as IconName;
-        const color = block.color || '#6366f1';
-        const blockKey = block.id.split(':').pop() || block.id;
-        const blockName = tp(block.pluginId, `blocks.${blockKey}.name`, block.name || blockKey);
-        const blockDesc = tp(block.pluginId, `blocks.${blockKey}.description`, block.description);
+// ─────────────────────────────────────────────────────────────────────────────
+// Workflows Table
+// ─────────────────────────────────────────────────────────────────────────────
 
-        return (
-          <div
-            key={block.id}
-            className="flex items-center gap-3 rounded-lg border bg-card p-3 transition-colors hover:bg-accent/50"
-          >
-            <Avatar className="size-10 rounded-lg">
-              <AvatarFallback
-                className="rounded-lg"
-                style={{ backgroundColor: `${color}20`, color }}
-              >
-                <DynamicIcon name={iconName} className="size-5" />
-              </AvatarFallback>
-            </Avatar>
-            <div className="min-w-0 flex-1">
-              <div className="truncate font-medium text-sm">{blockName}</div>
-              {blockDesc && (
-                <div className="truncate text-muted-foreground text-xs">{blockDesc}</div>
-              )}
-            </div>
-            {block.category && (
-              <Badge variant="outline" className="shrink-0 text-xs">
-                {block.category}
-              </Badge>
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-// Create a new empty workflow
-function createNewWorkflow(): Workflow {
-  const id = `workflow-${Date.now().toString(36)}`;
-  return {
-    id,
-    name: 'New Workflow',
-    enabled: false,
-    trigger: { event: '*' },
-    blocks: [
-      { id: 'start', type: 'log', level: 'info', message: 'Workflow started', next: 'end' },
-      { id: 'end', type: 'end' },
-    ],
-  };
-}
-
-function WorkflowEditorDialog({
-  workflow,
-  open,
-  onClose,
-  onSave,
+function WorkflowsTable({
+  workflows,
+  onToggle,
+  onDelete,
+  onDebug,
 }: {
-  workflow: Workflow | null;
-  open: boolean;
-  onClose: () => void;
-  onSave: (workflow: Workflow) => Promise<void>;
+  workflows: Workflow[];
+  onToggle: (id: string, enabled: boolean) => void;
+  onDelete: (id: string) => void;
+  onDebug: (workflow: Workflow) => void;
 }) {
-  if (!open || !workflow) return null;
-
-  const handleSave = async (updated: Workflow) => {
-    await onSave(updated);
-    onClose();
-  };
+  const { t, formatTime } = useLocale();
+  const navigate = useNavigate();
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="flex h-[90vh] w-[95vw] max-w-[95vw] flex-col overflow-hidden p-0">
-        <DialogHeader className="shrink-0 border-b px-6 py-4">
-          <DialogTitle className="flex items-center gap-2">
-            <Pencil className="size-4" />
-            {workflow.name || workflow.id}
-          </DialogTitle>
-        </DialogHeader>
+    <div className="rounded-lg border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-[300px]">{t('workflows:table.name')}</TableHead>
+            <TableHead>{t('workflows:table.status')}</TableHead>
+            <TableHead>{t('workflows:table.blocks')}</TableHead>
+            <TableHead>{t('workflows:table.startedAt')}</TableHead>
+            <TableHead className="w-[180px] text-right">{t('workflows:table.actions')}</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {workflows.map((workflow) => {
+            const blockCount = workflow.blocks?.length || 0;
+            const isError = workflow.status === 'error';
+            const isRunning = workflow.status === 'running';
 
-        <div className="min-h-0 flex-1">
-          <ReactFlowProvider>
-            <WorkflowEditor workflow={workflow} readonly={false} onSave={handleSave} />
-          </ReactFlowProvider>
-        </div>
-      </DialogContent>
-    </Dialog>
+            return (
+              <TableRow key={workflow.id} className="group">
+                <TableCell>
+                  <div className="flex flex-col">
+                    <Link
+                      to="/workflows/$id/edit"
+                      params={{ id: workflow.id }}
+                      className="font-medium hover:underline"
+                    >
+                      {workflow.name || workflow.id}
+                    </Link>
+                    <span className="text-muted-foreground text-xs">{workflow.id}</span>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <StatusBadge status={workflow.status} error={workflow.error} />
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-1">
+                    {workflow.blocks?.slice(0, 3).map((block) => {
+                      const iconName = (block.icon || 'box') as IconName;
+                      return (
+                        <div
+                          key={block.id}
+                          className="flex size-6 items-center justify-center rounded bg-muted"
+                          title={block.id}
+                        >
+                          <DynamicIcon name={iconName} className="size-3.5" />
+                        </div>
+                      );
+                    })}
+                    {blockCount > 3 && (
+                      <span className="text-muted-foreground text-xs">+{blockCount - 3}</span>
+                    )}
+                    {blockCount === 0 && (
+                      <span className="text-muted-foreground text-xs">
+                        {t('workflows:table.noBlocks')}
+                      </span>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  {workflow.status === 'running' && workflow.startedAt ? (
+                    <span className="text-muted-foreground text-xs">
+                      {formatTime(workflow.startedAt)}
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground text-xs">—</span>
+                  )}
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center justify-end gap-2">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => onDebug(workflow)}
+                      title={t('workflows:actions.debug')}
+                      disabled={!isRunning}
+                    >
+                      <Bug className="size-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() =>
+                        navigate({ to: '/workflows/$id/edit', params: { id: workflow.id } })
+                      }
+                      title={t('common:actions.edit')}
+                    >
+                      <Pencil className="size-4" />
+                    </Button>
+                    <Switch
+                      checked={workflow.enabled}
+                      onCheckedChange={(checked) => onToggle(workflow.id, checked)}
+                      disabled={isError}
+                    />
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-destructive hover:text-destructive"
+                      onClick={() => onDelete(workflow.id)}
+                      title={t('common:actions.delete')}
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </div>
   );
 }
 
-function WorkflowViewerDialog({
+// ─────────────────────────────────────────────────────────────────────────────
+// Debug Dialog
+// ─────────────────────────────────────────────────────────────────────────────
+
+function DebugDialog({
   workflowId,
+  workflowName,
   open,
   onClose,
 }: {
   workflowId: string | null;
+  workflowName?: string;
   open: boolean;
   onClose: () => void;
 }) {
   const { t } = useLocale();
-  const { data: workflow, isLoading } = useWorkflow(workflowId || '');
+  const [filter, setFilter] = useState<DebugFilter>('all');
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-  if (!open) return null;
+  // Use shared debug stream hook
+  const { events, connected, clear } = useDebugStream({
+    workflowId,
+    enabled: open && !!workflowId,
+    maxEvents: 500,
+  });
+
+  // Filter events
+  const filteredEvents = filterEvents(events, filter);
+
+  // Auto-scroll to bottom
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [filteredEvents]);
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-h-[90vh] max-w-4xl overflow-hidden">
+      <DialogContent className="max-w-3xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center justify-between">
-            <span>{workflow?.name || workflowId}</span>
-          </DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle className="flex items-center gap-2">
+              <Bug className="size-5" />
+              {t('workflows:debug.title')}
+              {connected ? (
+                <Badge variant="default" className="bg-green-600 text-[10px]">
+                  {t('workflows:debug.connected')}
+                </Badge>
+              ) : (
+                <Badge variant="secondary" className="text-[10px]">
+                  {t('workflows:debug.disconnected')}
+                </Badge>
+              )}
+            </DialogTitle>
+          </div>
+          <DialogDescription className="flex items-center justify-between">
+            <span>{workflowName || workflowId}</span>
+            <EventFilterButtons
+              filter={filter}
+              onChange={setFilter}
+              labels={{
+                all: t('workflows:debug.all'),
+                logs: t('workflows:debug.logsOnly'),
+                emits: t('workflows:debug.emitsOnly'),
+              }}
+            />
+          </DialogDescription>
         </DialogHeader>
 
-        {isLoading ? (
-          <div className="flex h-[500px] items-center justify-center text-muted-foreground">
-            {t('common:loading')}
+        <div className="rounded-lg border bg-zinc-950 p-2">
+          <ScrollArea className="h-[400px]" ref={scrollRef}>
+            {filteredEvents.length === 0 ? (
+              <div className="flex h-full items-center justify-center text-muted-foreground text-sm">
+                {t('workflows:debug.waiting')}
+              </div>
+            ) : (
+              <div className="space-y-0">
+                {filteredEvents.map((event, i) => (
+                  <DebugEventEntry key={`${event.timestamp}-${i}`} event={event} />
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+        </div>
+
+        <DialogFooter>
+          <div className="flex w-full items-center justify-between">
+            <span className="text-muted-foreground text-xs">
+              {filter !== 'all'
+                ? `${filteredEvents.length} / ${events.length} ${t('workflows:debug.events')}`
+                : `${events.length} ${t('workflows:debug.events')}`}
+            </span>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={clear}>
+                {t('workflows:debug.clear')}
+              </Button>
+              <Button variant="outline" size="sm" onClick={onClose}>
+                {t('common:actions.close')}
+              </Button>
+            </div>
           </div>
-        ) : workflow ? (
-          <ReactFlowProvider>
-            <WorkflowEditor workflow={workflow} readonly />
-          </ReactFlowProvider>
-        ) : (
-          <div className="flex h-[500px] items-center justify-center text-muted-foreground">
-            {t('workflows:notFound')}
-          </div>
-        )}
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Delete Confirmation Dialog
+// ─────────────────────────────────────────────────────────────────────────────
+
+function DeleteDialog({
+  workflowId,
+  open,
+  onClose,
+  onConfirm,
+}: {
+  workflowId: string | null;
+  open: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  const { t } = useLocale();
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{t('workflows:deleteDialog.title')}</DialogTitle>
+          <DialogDescription>
+            {t('workflows:deleteDialog.description', { id: workflowId })}
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            {t('common:actions.cancel')}
+          </Button>
+          <Button variant="destructive" onClick={onConfirm}>
+            {t('common:actions.delete')}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Main Page
+// ─────────────────────────────────────────────────────────────────────────────
+
 export function WorkflowsPage() {
   const { t } = useLocale();
-  const [tab, setTab] = useState('workflows');
-  const [viewingWorkflow, setViewingWorkflow] = useState<string | null>(null);
-  const [editingWorkflow, setEditingWorkflow] = useState<Workflow | null>(null);
+  const navigate = useNavigate();
+  const [search, setSearch] = useState('');
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [debugWorkflow, setDebugWorkflow] = useState<Workflow | null>(null);
 
-  const {
-    data: workflows = [],
-    isLoading: loadingWorkflows,
-    refetch: refetchWorkflows,
-  } = useWorkflows();
-  const { data: runs = [], isLoading: loadingRuns } = useWorkflowRuns();
-  const { data: blockTypes = [] } = useBlockTypes();
+  const { data: workflows = [], isLoading: loadingWorkflows } = useWorkflows();
 
-  const triggerMutation = useTriggerWorkflow();
   const enableMutation = useEnableWorkflow();
   const disableMutation = useDisableWorkflow();
   const deleteMutation = useDeleteWorkflow();
-
-  const handleTrigger = (id: string) => {
-    triggerMutation.mutate({ id });
-  };
 
   const handleToggle = (id: string, enabled: boolean) => {
     if (enabled) {
@@ -339,101 +387,91 @@ export function WorkflowsPage() {
   };
 
   const handleDelete = (id: string) => {
-    if (confirm(t('workflows:confirmDelete', { id }))) {
-      deleteMutation.mutate(id);
+    setDeleteId(id);
+  };
+
+  const confirmDelete = () => {
+    if (deleteId) {
+      deleteMutation.mutate(deleteId);
+      setDeleteId(null);
     }
   };
 
-  const handleEdit = (workflow: Workflow) => {
-    setEditingWorkflow(workflow);
+  const handleDebug = (workflow: Workflow) => {
+    setDebugWorkflow(workflow);
   };
 
-  const handleCreateNew = () => {
-    setEditingWorkflow(createNewWorkflow());
-  };
-
-  const handleSave = async (workflow: Workflow) => {
-    await saveWorkflow(workflow);
-    refetchWorkflows();
-  };
+  // Filter workflows by search
+  const filteredWorkflows = workflows.filter(
+    (w) =>
+      !search ||
+      w.id.toLowerCase().includes(search.toLowerCase()) ||
+      w.name?.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-bold text-3xl tracking-tight">{t('workflows:title')}</h1>
           <p className="mt-1 text-muted-foreground">{t('workflows:subtitle')}</p>
         </div>
-        <Button onClick={handleCreateNew}>
-          <Plus className="mr-2 size-4" />
-          {t('workflows:actions.create')}
-        </Button>
+        <div className="flex gap-2">
+          <div className="relative">
+            <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder={t('workflows:search')}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-64 pl-9"
+            />
+          </div>
+          <Button onClick={() => navigate({ to: '/workflows/new' })}>
+            <Plus className="mr-2 size-4" />
+            {t('workflows:actions.create')}
+          </Button>
+        </div>
       </div>
 
-      <Tabs value={tab} onValueChange={setTab}>
-        <TabsList>
-          <TabsTrigger value="workflows">{t('workflows:title')}</TabsTrigger>
-          <TabsTrigger value="runs">{t('workflows:runs.title')}</TabsTrigger>
-          <TabsTrigger value="blocks">{t('workflows:blocks')}</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="workflows" className="mt-6">
-          {loadingWorkflows ? (
-            <div className="text-muted-foreground">{t('common:loading')}</div>
-          ) : workflows.length === 0 ? (
-            <Card className="p-12 text-center">
-              <p className="mb-4 text-muted-foreground">{t('workflows:empty')}</p>
-              <Button onClick={handleCreateNew}>
-                <Plus className="mr-2 size-4" />
-                {t('workflows:actions.create')}
-              </Button>
-            </Card>
-          ) : (
-            <div className="grid gap-4">
-              {workflows.map((w) => (
-                <WorkflowCard
-                  key={w.id}
-                  workflow={w}
-                  onTrigger={() => handleTrigger(w.id)}
-                  onToggle={(enabled) => handleToggle(w.id, enabled)}
-                  onView={() => setViewingWorkflow(w.id)}
-                  onEdit={() => handleEdit(w)}
-                  onDelete={() => handleDelete(w.id)}
-                />
-              ))}
-            </div>
+      {/* Content */}
+      {loadingWorkflows ? (
+        <div className="py-12 text-center text-muted-foreground">{t('common:loading')}</div>
+      ) : filteredWorkflows.length === 0 ? (
+        <Card className="p-12 text-center">
+          <p className="mb-4 text-muted-foreground">
+            {search ? t('workflows:noResults') : t('workflows:empty')}
+          </p>
+          {!search && (
+            <Button onClick={() => navigate({ to: '/workflows/new' })}>
+              <Plus className="mr-2 size-4" />
+              {t('workflows:actions.create')}
+            </Button>
           )}
-        </TabsContent>
+        </Card>
+      ) : (
+        <WorkflowsTable
+          workflows={filteredWorkflows}
+          onToggle={handleToggle}
+          onDelete={handleDelete}
+          onDebug={handleDebug}
+        />
+      )}
 
-        <TabsContent value="runs" className="mt-6">
-          <ScrollArea className="h-[500px]">
-            {loadingRuns ? (
-              <div className="text-muted-foreground">{t('common:loading')}</div>
-            ) : (
-              <RunsTable runs={runs} />
-            )}
-          </ScrollArea>
-        </TabsContent>
-
-        <TabsContent value="blocks" className="mt-6">
-          <div className="space-y-4">
-            <p className="text-muted-foreground text-sm">{t('workflows:blocksDescription')}</p>
-            <BlockTypesGrid types={blockTypes} />
-          </div>
-        </TabsContent>
-      </Tabs>
-
-      <WorkflowViewerDialog
-        workflowId={viewingWorkflow}
-        open={!!viewingWorkflow}
-        onClose={() => setViewingWorkflow(null)}
+      {/* Delete Confirmation */}
+      <DeleteDialog
+        workflowId={deleteId}
+        open={!!deleteId}
+        onClose={() => setDeleteId(null)}
+        onConfirm={confirmDelete}
       />
 
-      <WorkflowEditorDialog
-        workflow={editingWorkflow}
-        open={!!editingWorkflow}
-        onClose={() => setEditingWorkflow(null)}
-        onSave={handleSave}
+      {/* Debug Dialog */}
+      <DebugDialog
+        workflowId={debugWorkflow?.id ?? null}
+        workflowName={debugWorkflow?.name}
+        open={!!debugWorkflow}
+        onClose={() => setDebugWorkflow(null)}
       />
     </div>
   );

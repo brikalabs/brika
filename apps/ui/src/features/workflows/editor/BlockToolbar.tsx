@@ -17,8 +17,8 @@ export interface BlockDefinition {
   icon: string;
   color: string;
   category: string;
-  inputs: Array<{ id: string; name: string; type?: string }>;
-  outputs: Array<{ id: string; name: string; type?: string }>;
+  inputs: Array<{ id: string; name: string; typeName?: string }>;
+  outputs: Array<{ id: string; name: string; typeName?: string }>;
   schema: {
     type: 'object';
     properties?: Record<string, unknown>;

@@ -4,7 +4,7 @@
  * Functions for combining multiple flows.
  */
 
-import { CleanupRegistry, FlowImpl } from './flow';
+import { combinatorFlow } from './internal';
 import type { Flow } from './types';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -40,14 +40,28 @@ export function zip(...flows: Flow<unknown>[]): Flow<unknown[]> {
  * Merge multiple flows into one.
  */
 export function merge<T>(...flows: Flow<T>[]): Flow<T> {
-  return createMergeFlow(flows);
+  return combinatorFlow(({ push }) => {
+    for (const flow of flows) {
+      flow.on((v) => push(v));
+    }
+  });
 }
 
 /**
  * Race: emit from whichever flow emits first.
  */
 export function race<T>(...flows: Flow<T>[]): Flow<T> {
-  return createRaceFlow(flows);
+  return combinatorFlow(({ push }) => {
+    let won = false;
+    for (const flow of flows) {
+      flow.on((v) => {
+        if (!won) {
+          won = true;
+          push(v);
+        }
+      });
+    }
+  });
 }
 
 /**
@@ -67,75 +81,35 @@ function createCombineFlow(
   flows: Flow<unknown>[],
   mode: 'combineLatest' | 'zip' | 'all'
 ): Flow<unknown[]> {
-  const cleanup = new CleanupRegistry();
-  const combined = new FlowImpl<unknown[]>((fn, ms) => {
-    const timerId = setTimeout(fn, ms);
-    return () => clearTimeout(timerId);
-  }, cleanup);
+  return combinatorFlow(({ push }) => {
+    const values: (unknown | undefined)[] = new Array(flows.length).fill(undefined);
+    const hasValue: boolean[] = new Array(flows.length).fill(false);
+    const pendingZip: unknown[][] = flows.map(() => []);
+    let allEmitted = false;
 
-  const values: (unknown | undefined)[] = new Array(flows.length).fill(undefined);
-  const hasValue: boolean[] = new Array(flows.length).fill(false);
-  const pendingZip: unknown[][] = flows.map(() => []);
-  let allEmitted = false;
-
-  flows.forEach((flow, i) => {
-    flow.on((v) => {
-      if (mode === 'zip') {
-        pendingZip[i]?.push(v);
-        if (pendingZip.every((arr) => arr.length > 0)) {
-          const tuple = pendingZip.map((arr) => arr.shift());
-          combined._push(tuple);
+    flows.forEach((flow, i) => {
+      flow.on((v) => {
+        if (mode === 'zip') {
+          pendingZip[i]?.push(v);
+          if (pendingZip.every((arr) => arr.length > 0)) {
+            const tuple = pendingZip.map((arr) => arr.shift());
+            push(tuple);
+          }
+        } else if (mode === 'all') {
+          values[i] = v;
+          hasValue[i] = true;
+          if (!allEmitted && hasValue.every(Boolean)) {
+            allEmitted = true;
+            push([...values]);
+          }
+        } else {
+          values[i] = v;
+          hasValue[i] = true;
+          if (hasValue.every(Boolean)) {
+            push([...values]);
+          }
         }
-      } else if (mode === 'all') {
-        values[i] = v;
-        hasValue[i] = true;
-        if (!allEmitted && hasValue.every(Boolean)) {
-          allEmitted = true;
-          combined._push([...values]);
-        }
-      } else {
-        values[i] = v;
-        hasValue[i] = true;
-        if (hasValue.every(Boolean)) {
-          combined._push([...values]);
-        }
-      }
+      });
     });
   });
-
-  return combined;
-}
-
-function createMergeFlow<T>(flows: Flow<T>[]): Flow<T> {
-  const cleanup = new CleanupRegistry();
-  const merged = new FlowImpl<T>((fn, ms) => {
-    const timerId = setTimeout(fn, ms);
-    return () => clearTimeout(timerId);
-  }, cleanup);
-
-  for (const flow of flows) {
-    flow.on((v) => merged._push(v));
-  }
-
-  return merged;
-}
-
-function createRaceFlow<T>(flows: Flow<T>[]): Flow<T> {
-  const cleanup = new CleanupRegistry();
-  const raced = new FlowImpl<T>((fn, ms) => {
-    const timerId = setTimeout(fn, ms);
-    return () => clearTimeout(timerId);
-  }, cleanup);
-
-  let won = false;
-  for (const flow of flows) {
-    flow.on((v) => {
-      if (!won) {
-        won = true;
-        raced._push(v);
-      }
-    });
-  }
-
-  return raced;
 }

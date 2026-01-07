@@ -7,5 +7,8 @@
  * - Single source of truth
  */
 
-export type { PluginPackageSchema as PluginPackageSchemaType } from './plugin';
+export type {
+  PluginPackageSchema as PluginPackageSchemaType,
+  PreferenceSchema as PreferenceSchemaType,
+} from './plugin';
 export { PluginPackageSchema } from './plugin';

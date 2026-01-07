@@ -1,6 +1,6 @@
 # @brika/sdk
 
-Plugin SDK for BRIKA home automation runtime.
+Plugin SDK for BRIKA home automation runtime. Build reactive blocks for visual workflow automation.
 
 ## Installation
 
@@ -11,185 +11,285 @@ bun add @brika/sdk
 ## Quick Start
 
 ```typescript
-import { createPluginRuntime, defineTool, z } from "@brika/sdk";
+// plugins/my-plugin/src/main.ts
+import { defineReactiveBlock, input, output, log, onStop, z } from "@brika/sdk";
 
-// Create plugin runtime
-const { api, start, use } = createPluginRuntime({
-  id: "@brika/plugin-my-plugin",  // Must match package.json name
-  version: "0.1.0",
-});
-
-// Define a tool
-export const myTool = defineTool({
-  id: "action",
-  description: "Do something",
-  schema: z.object({
-    input: z.string().describe("The input value"),
-    count: z.number().optional().describe("Optional count"),
-  }),
-}, async (args, ctx) => {
-  // args is fully typed: { input: string; count?: number }
-  api.log("info", `Processing: ${args.input}`);
-  return { ok: true, content: `Done: ${args.input}` };
-});
-
-// Register and start
-use(myTool);
-await start();
-```
-
-## Defining Tools
-
-Tools are callable functions that plugins expose to the Hub.
-
-```typescript
-import { defineTool, z } from "@brika/sdk";
-
-export const setTimer = defineTool({
-  id: "set",                          // Local ID (becomes "pluginId:set")
-  description: "Set a timer",
-  schema: z.object({
-    seconds: z.number().min(1).max(86400).describe("Duration in seconds"),
-    name: z.string().optional().describe("Timer name"),
-  }),
-}, async (args, ctx) => {
-  // args: { seconds: number; name?: string }
-  // ctx: { traceId: string; source: "api" | "ui" | ... }
-  
-  if (args.seconds > 3600) {
-    return { ok: false, content: "Duration too long" };
+// Define a reactive block with typed inputs/outputs
+export const greet = defineReactiveBlock(
+  {
+    id: "greet",
+    inputs: {
+      trigger: input(z.generic(), { name: "Trigger" }),
+    },
+    outputs: {
+      message: output(z.object({ text: z.string() }), { name: "Message" }),
+    },
+    config: z.object({
+      name: z.string().describe("Name to greet"),
+    }),
+  },
+  ({ inputs, outputs, config, log }) => {
+    inputs.trigger.on(() => {
+      log("info", `Greeting ${config.name}`);
+      outputs.message.emit({ text: `Hello, ${config.name}!` });
+    });
   }
-  
-  return {
-    ok: true,
-    content: `Timer set for ${args.seconds}s`,
-    data: { id: "timer-1", seconds: args.seconds },
-  };
-});
+);
+
+// Lifecycle hooks
+onStop(() => log("info", "Plugin stopping"));
+
+log("info", "Plugin loaded");
 ```
 
-## Defining Blocks
+## Defining Reactive Blocks
 
-Blocks are workflow components with inputs/outputs for visual automation.
+Blocks are the building blocks of workflows. Each block has typed inputs, outputs, and configuration.
 
 ```typescript
-import { defineBlock, z, expr } from "@brika/sdk";
+import {
+  defineReactiveBlock,
+  input,
+  output,
+  combine,
+  map,
+  z,
+} from "@brika/sdk";
 
-export const conditionBlock = defineBlock({
-  id: "condition",
-  name: "Condition",
-  description: "Branch based on condition",
-  category: "flow",
-  icon: "git-branch",          // Lucide icon name
-  color: "#f59e0b",            // Hex color
-  inputs: [
-    { id: "in", name: "Input" }
-  ],
-  outputs: [
-    { id: "then", name: "Then", type: "success" },
-    { id: "else", name: "Else", type: "error" },
-  ],
-  schema: z.object({
-    expression: z.string().describe("Condition expression"),
-  }),
-}, async (config, ctx, runtime) => {
-  // Evaluate expression with context
-  const result = expr(config.expression, ctx);
-  
-  runtime.log("info", `Condition: ${result}`);
-  
-  return {
-    output: result ? "then" : "else",
-    data: result,
-  };
-});
+export const temperatureAlert = defineReactiveBlock(
+  {
+    id: "temperature-alert",
+    inputs: {
+      temperature: input(z.number(), { name: "Temperature °C" }),
+      humidity: input(z.number(), { name: "Humidity %" }),
+    },
+    outputs: {
+      alert: output(z.object({ type: z.string(), message: z.string() }), {
+        name: "Alert",
+      }),
+      normal: output(z.object({ temp: z.number(), hum: z.number() }), {
+        name: "Normal",
+      }),
+    },
+    config: z.object({
+      maxTemp: z.number().default(30).describe("Max temperature threshold"),
+      maxHumidity: z.number().default(80).describe("Max humidity threshold"),
+    }),
+  },
+  ({ inputs, outputs, config, log }) => {
+    // Combine multiple inputs
+    combine(inputs.temperature, inputs.humidity)
+      .pipe(
+        map(([temp, hum]) => {
+          if (temp > config.maxTemp) {
+            return { type: "hot", temp, hum };
+          }
+          if (hum > config.maxHumidity) {
+            return { type: "humid", temp, hum };
+          }
+          return { type: "normal", temp, hum };
+        })
+      )
+      .on((data) => {
+        if (data.type === "normal") {
+          outputs.normal.emit({ temp: data.temp, hum: data.hum });
+        } else {
+          log("warn", `Alert: ${data.type}`);
+          outputs.alert.emit({
+            type: data.type,
+            message: `${data.type}: temp=${data.temp}, humidity=${data.hum}`,
+          });
+        }
+      });
+  }
+);
 ```
 
-### Block Context
+## Port Types
+
+### Generic Ports
+
+Accept any type, inferred at connection time:
 
 ```typescript
-interface BlockContext {
-  trigger: {
-    type: string;         // Event type
-    payload: Json;        // Event payload
-    source: string;       // Event source
-    ts: number;           // Timestamp
-  };
-  vars: Record<string, Json>;  // Workflow variables
-  input: Json;                 // Data from previous block
-  inputs: Record<string, Json>; // All input port values
-  item?: Json;                  // Loop item
-  index?: number;               // Loop index
+inputs: {
+  in: input(z.generic(), { name: "Input" }),
 }
 ```
 
-### Block Runtime
+### Passthrough Ports
+
+Output inherits type from an input:
 
 ```typescript
-interface BlockRuntime {
-  callTool(name: string, args: Record<string, Json>): Promise<Json>;
-  emit(type: string, payload: Json): void;
-  log(level: "debug" | "info" | "warn" | "error", message: string): void;
-  evaluate<T>(expression: string, ctx: BlockContext): T;
-  setVar(name: string, value: Json): void;
-  getVar(name: string): Json | undefined;
+inputs: {
+  in: input(z.number(), { name: "Input" }),
+},
+outputs: {
+  out: output(z.passthrough("in"), { name: "Output" }),
 }
 ```
 
-## Expression Syntax
+### Typed Ports
 
-Use `{{ }}` for dynamic values:
+Explicit Zod schema:
 
 ```typescript
-// In block config
-const message = expr("Hello {{ trigger.payload.name }}!", ctx);
-const value = expr("{{ vars.counter + 1 }}", ctx);
+inputs: {
+  data: input(z.object({ value: z.number() }), { name: "Data" }),
+},
+outputs: {
+  result: output(z.string(), { name: "Result" }),
+}
 ```
 
-Available variables:
+## Custom Schema Types
 
-- `trigger.*` - Event data
-- `vars.*` - Workflow variables
-- `input` - Previous block output
-- `item`, `index` - Loop context
-
-## Plugin API
+The SDK provides special schema types for UI rendering:
 
 ```typescript
-const { api, start, use, useBlock } = createPluginRuntime({ ... });
+import { z } from "@brika/sdk";
+
+config: z.object({
+  // Duration picker (ms, s, m, h)
+  delay: z.duration(undefined, "Wait duration"),
+
+  // Color picker
+  color: z.color("LED color"),
+
+  // Code editor
+  script: z.code("javascript", "Script to run"),
+
+  // Password/secret input
+  apiKey: z.secret("API key"),
+
+  // Expression with variable autocomplete
+  expr: z.expression("Dynamic value"),
+});
+```
+
+## Reactive Operators
+
+Import operators from `@brika/sdk`:
+
+```typescript
+import {
+  map,
+  filter,
+  delay,
+  debounce,
+  throttle,
+  combine,
+  merge,
+  interval,
+} from "@brika/sdk";
+
+// Transform data
+inputs.temperature.pipe(map((t) => t * 1.8 + 32)).to(outputs.fahrenheit);
+
+// Filter values
+inputs.motion.pipe(filter((m) => m.confidence > 0.8)).to(outputs.detected);
+
+// Delay output
+inputs.trigger.pipe(delay(1000)).to(outputs.delayed);
+
+// Debounce rapid inputs
+inputs.search.pipe(debounce(300)).to(outputs.query);
+
+// Throttle high-frequency data
+inputs.sensor.pipe(throttle(100)).to(outputs.sampled);
+
+// Combine multiple inputs (waits for all)
+combine(inputs.a, inputs.b)
+  .pipe(map(([a, b]) => a + b))
+  .to(outputs.sum);
+
+// Merge multiple inputs (emits on any)
+merge(inputs.button1, inputs.button2).to(outputs.anyButton);
+```
+
+## Starting Sources
+
+Use `start()` for source blocks that generate data:
+
+```typescript
+import { interval } from "@brika/sdk";
+
+export const clock = defineReactiveBlock(
+  {
+    id: "clock",
+    inputs: {},
+    outputs: {
+      tick: output(z.object({ count: z.number(), ts: z.number() }), {
+        name: "Tick",
+      }),
+    },
+    config: z.object({
+      interval: z.duration(undefined, "Tick interval"),
+    }),
+  },
+  ({ outputs, config, start }) => {
+    start(interval(config.interval))
+      .pipe(map((count) => ({ count: count + 1, ts: Date.now() })))
+      .to(outputs.tick);
+  }
+);
+```
+
+## Lifecycle & Events
+
+```typescript
+import { log, emit, on, onInit, onStop, onUninstall } from "@brika/sdk";
 
 // Logging
-api.log("info", "Message", { meta: "data" });
-api.log("warn", "Warning");
-api.log("error", "Error");
+log("info", "Message", { extra: "data" });
+log("warn", "Warning");
+log("error", "Error");
 
-// Events
-api.emit("my.event", { data: "value" });
-api.on("other.*", (event) => {
-  console.log(event.type, event.payload);
+// Emit events
+emit("device.updated", { id: "light-1", state: "on" });
+
+// Subscribe to events
+const unsub = on("motion.*", (event) => {
+  log("debug", `Motion: ${event.type}`, event.payload);
 });
-api.off("other.*");
 
-// Lifecycle
-api.onStop(() => {
-  // Cleanup before shutdown
+// Lifecycle hooks
+onInit(() => {
+  log("info", "Plugin initialized");
+});
+
+onStop(() => {
+  log("info", "Plugin stopping");
+  // Cleanup resources
+});
+
+onUninstall(() => {
+  log("info", "Plugin being uninstalled");
+  // Permanent cleanup (delete files, revoke tokens, etc.)
 });
 ```
 
-## Type Guards
+## Plugin Configuration (Preferences)
+
+Access plugin configuration from `brika.yml`:
 
 ```typescript
-import { isCompiledTool, isCompiledBlock } from "@brika/sdk";
+import { getPreferences, onPreferencesChange } from "@brika/sdk";
 
-// Check if a value is a tool
-if (isCompiledTool(value)) {
-  console.log(value.id, value.description);
+interface MyPrefs {
+  apiKey: string;
+  debug: boolean;
 }
 
-// Check if a value is a block
-if (isCompiledBlock(value)) {
-  console.log(value.id, value.category);
-}
+// Get current preferences
+const prefs = getPreferences<MyPrefs>();
+log("info", `Debug mode: ${prefs.debug}`);
+
+// React to changes
+onPreferencesChange<MyPrefs>((newPrefs) => {
+  log("info", "Preferences updated");
+});
 ```
 
 ## Package.json Schema
@@ -198,15 +298,27 @@ Use the schema for IDE autocomplete:
 
 ```json
 {
-  "$schema": "../../packages/sdk/brika-plugin.schema.json",
+  "$schema": "https://schema.brika.dev/plugin.schema.json",
   "name": "@brika/plugin-my-plugin",
   "version": "0.1.0",
   "description": "My plugin description",
   "author": "Your Name",
-  "keywords": ["keyword1", "keyword2"],
-  "icon": "./icon.png",
+  "keywords": ["automation", "iot"],
   "type": "module",
-  "exports": { ".": "./src/index.ts" },
+  "main": "./src/main.ts",
+  "exports": {
+    ".": "./src/main.ts"
+  },
+  "blocks": [
+    {
+      "id": "my-block",
+      "name": "My Block",
+      "description": "Does something",
+      "category": "action",
+      "icon": "zap",
+      "color": "#3b82f6"
+    }
+  ],
   "dependencies": {
     "@brika/sdk": "workspace:*"
   }
@@ -216,21 +328,49 @@ Use the schema for IDE autocomplete:
 ## Exports
 
 ```typescript
-// Tool definition
-export { defineTool, isCompiledTool, z } from "@brika/sdk";
-export type { CompiledTool, ToolResult, ToolCallContext } from "@brika/sdk";
-
 // Block definition
-export { defineBlock, isCompiledBlock, expr, parseDuration } from "@brika/sdk";
-export type { CompiledBlock, BlockResult, BlockContext, BlockRuntime } from "@brika/sdk";
+export {
+  defineReactiveBlock,
+  input,
+  output,
+  isCompiledReactiveBlock,
+} from "@brika/sdk";
 
-// Plugin runtime
-export { createPluginRuntime } from "@brika/sdk";
+// Schema
+export { z } from "@brika/sdk";
 
-// IPC (advanced)
-export { FrameReader, FrameWriter } from "@brika/sdk";
-export type { Wire } from "@brika/sdk";
+// Reactive operators
+export {
+  map,
+  filter,
+  delay,
+  debounce,
+  throttle,
+  combine,
+  merge,
+  interval,
+} from "@brika/sdk";
+
+// Lifecycle & Events
+export {
+  log,
+  emit,
+  on,
+  onEvent,
+  onInit,
+  onStop,
+  onUninstall,
+  getPreferences,
+  onPreferencesChange,
+} from "@brika/sdk";
+
+// Types
+export type {
+  BlockContext,
+  BlockInstance,
+  CompiledReactiveBlock,
+  InputDef,
+  OutputDef,
+  ReactiveBlockSpec,
+} from "@brika/sdk";
 ```
-
-
-

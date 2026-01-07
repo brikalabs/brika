@@ -1,13 +1,19 @@
 const API_BASE = '/api';
 
-export interface WorkflowTrigger {
-  event: string;
-  filter?: Record<string, unknown>;
+export type WorkflowStatus = 'running' | 'stopped' | 'error';
+
+export interface WorkflowConnection {
+  from: string;
+  fromPort?: string;
+  to: string;
+  toPort?: string;
 }
 
 export interface WorkflowBlock {
   id: string;
   type: string;
+  position?: { x: number; y: number };
+  config?: Record<string, unknown>;
 
   [key: string]: unknown;
 }
@@ -16,8 +22,11 @@ export interface Workflow {
   id: string;
   name?: string;
   enabled: boolean;
-  trigger: WorkflowTrigger;
+  status?: WorkflowStatus;
+  error?: string;
+  startedAt?: number;
   blocks?: WorkflowBlock[];
+  connections?: WorkflowConnection[];
 }
 
 export interface WorkflowRun {
@@ -68,6 +77,7 @@ export async function fetchBlockTypes(): Promise<BlockDefinition[]> {
 
 export async function fetchWorkflowRuns(): Promise<WorkflowRun[]> {
   const res = await fetch(`${API_BASE}/workflows/runs`);
+  if (!res.ok) return [];
   return res.json();
 }
 
@@ -83,18 +93,6 @@ export async function saveWorkflow(workflow: Workflow): Promise<{ ok: boolean; i
 export async function deleteWorkflow(id: string): Promise<{ ok: boolean }> {
   const res = await fetch(`${API_BASE}/workflows/${id}`, {
     method: 'DELETE',
-  });
-  return res.json();
-}
-
-export async function triggerWorkflow(
-  id: string,
-  payload?: Record<string, unknown>
-): Promise<WorkflowRun> {
-  const res = await fetch(`${API_BASE}/workflows/trigger`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id, payload }),
   });
   return res.json();
 }
@@ -127,4 +125,43 @@ export function createTestEventSource(
     payload: JSON.stringify(payload),
   });
   return new EventSource(`${API_BASE}/workflows/test?${params}`);
+}
+
+// Create live workflow events SSE connection
+export function createWorkflowEventsSource(workflowId: string): EventSource {
+  return new EventSource(`${API_BASE}/workflows/${workflowId}/events`);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Tools API
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface ToolSummary {
+  id: string;
+  name?: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+  inputSchema?: Record<string, unknown>;
+}
+
+export interface ToolSchema {
+  id: string;
+  name: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+  inputSchema: Record<string, unknown>;
+}
+
+export async function fetchTools(): Promise<ToolSummary[]> {
+  const res = await fetch(`${API_BASE}/tools`);
+  if (!res.ok) throw new Error('Failed to fetch tools');
+  return res.json();
+}
+
+export async function fetchToolSchema(toolId: string): Promise<ToolSchema> {
+  const res = await fetch(`${API_BASE}/tools/${encodeURIComponent(toolId)}/schema`);
+  if (!res.ok) throw new Error(`Failed to fetch tool schema: ${toolId}`);
+  return res.json();
 }

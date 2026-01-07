@@ -21,17 +21,11 @@ export type PortDirection = 'input' | 'output';
  * A typed connection point on a block.
  */
 export interface BlockPort {
-  /** Unique port ID */
   id: string;
-  /** Port direction */
   direction: PortDirection;
-  /** Display name (or i18n key) */
-  nameKey: string;
-  /** Description tooltip (or i18n key) */
-  descriptionKey?: string;
-  /** Zod schema for validation */
-  schema?: z.ZodType;
-  /** JSON Schema for API/UI */
+  /** TypeScript-like type string: "string", "{count: number, ts: number}", "generic<T>" */
+  typeName: string;
+  /** JSON Schema for this port (undefined for generic/passthrough) */
   jsonSchema?: Record<string, unknown>;
 }
 
@@ -59,22 +53,17 @@ export interface BlockSchema {
 // Block Definition - Metadata for registration
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Block definition - metadata describing a block type */
+/**
+ * Block definition - runtime metadata for a block type.
+ *
+ * Visual metadata (name, description, icon, color, category) comes from package.json.
+ * i18n keys: `blocks.{id}.*`
+ */
 export interface BlockDefinition {
   /** Local block ID */
   id: string;
-  /** Full qualified type (set on registration) */
+  /** Full qualified type: pluginId:blockId (set on registration) */
   type?: string;
-  /** Display name */
-  name: string;
-  /** Description */
-  description: string;
-  /** Category for grouping */
-  category: string;
-  /** Lucide icon name */
-  icon: string;
-  /** Hex color */
-  color: string;
   /** Input ports */
   inputs: BlockPort[];
   /** Output ports */

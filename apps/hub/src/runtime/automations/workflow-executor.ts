@@ -1,16 +1,16 @@
 /**
  * Workflow Executor
  *
- * Executes workflows with port-based routing and IPC block execution.
+ * Reactive, event-driven workflow runtime.
+ * Starts a workflow and runs it indefinitely until stopped.
+ * Data flows through blocks via port connections.
  */
 
-import type { BlockContext } from '@brika/ipc/contract';
-import type { BlockConnection, Json, Workflow, WorkflowBlock } from '@brika/sdk';
+import type { Json } from '@brika/shared';
 import type { BlockRegistry } from '@/runtime/blocks';
-import type { EventSystem } from '@/runtime/events/event-system';
 import type { LogRouter } from '@/runtime/logs/log-router';
 import type { PluginManager } from '@/runtime/plugins/plugin-manager';
-import type { ToolRegistry } from '@/runtime/tools/tool-registry';
+import type { BlockConnection, Workflow, WorkflowBlock } from './types';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -18,27 +18,32 @@ import type { ToolRegistry } from '@/runtime/tools/tool-registry';
 
 export interface ExecutorDeps {
   plugins: PluginManager;
-  tools: ToolRegistry;
-  events: EventSystem;
   logs: LogRouter;
   blocks: BlockRegistry;
 }
 
-export interface TriggerData {
-  type: string;
-  payload: Json;
-  source: string;
-}
-
+/** Events emitted during workflow execution */
 export interface ExecutionEvent {
-  type: 'block.start' | 'block.complete' | 'block.error' | 'workflow.complete' | 'workflow.error';
+  type: 'workflow.started' | 'workflow.stopped' | 'block.emit' | 'block.log' | 'block.error';
+  workflowId: string;
   blockId?: string;
-  output?: string;
+  port?: string;
   data?: Json;
   error?: string;
+  level?: string;
+  message?: string;
 }
 
 export type ExecutionListener = (event: ExecutionEvent) => void;
+
+/** Port buffer - stores last value for inspection/debugging */
+export interface PortBuffer {
+  blockId: string;
+  port: string;
+  value: Json;
+  ts: number;
+  count: number;
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Executor
@@ -46,59 +51,176 @@ export type ExecutionListener = (event: ExecutionEvent) => void;
 
 export class WorkflowExecutor {
   readonly #deps: ExecutorDeps;
-  readonly #vars = new Map<string, Json>();
-  readonly #blockOutputs = new Map<string, Record<string, Json>>();
-  #listener?: ExecutionListener;
-  #executionId = '';
+  readonly #listeners = new Set<ExecutionListener>();
+
+  // Active workflow state
+  #workflow: Workflow | null = null;
+  #instanceIds = new Set<string>(); // Block instance IDs
+  #connections = new Map<string, BlockConnection[]>(); // "blockId.port" -> targets
+  #buffers = new Map<string, PortBuffer>(); // "blockId:port" -> last value
 
   constructor(deps: ExecutorDeps) {
     this.#deps = deps;
   }
 
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Lifecycle
+  // ─────────────────────────────────────────────────────────────────────────────
+
   /**
-   * Set a listener for execution events
+   * Start a workflow - instantiates all blocks and sets up routing.
+   * The workflow runs indefinitely until stop() is called.
    */
-  onEvent(listener: ExecutionListener): void {
-    this.#listener = listener;
+  async start(workflow: Workflow): Promise<void> {
+    // Stop any existing workflow
+    if (this.#workflow) {
+      this.stop();
+    }
+
+    this.#workflow = workflow;
+    this.#connections = this.#buildConnectionMap(workflow);
+    this.#buffers.clear();
+
+    // Set up the block emit handler
+    this.#deps.plugins.setBlockEmitHandler((instanceId, port, data) => {
+      this.#onBlockEmit(instanceId, port, data);
+    });
+
+    // Set up the block log handler
+    this.#deps.plugins.setBlockLogHandler((instanceId, workflowId, level, message) => {
+      this.#onBlockLog(instanceId, workflowId, level, message);
+    });
+
+    // Start all blocks
+    for (const block of workflow.blocks) {
+      await this.#startBlock(block, workflow);
+    }
+
+    this.#emit({
+      type: 'workflow.started',
+      workflowId: workflow.id,
+    });
+
+    this.#deps.logs.info('workflow.started', {
+      id: workflow.id,
+      blocks: workflow.blocks.length,
+    });
   }
 
   /**
-   * Execute a workflow
+   * Stop the running workflow - cleans up all blocks.
    */
-  async run(workflow: Workflow, trigger: TriggerData): Promise<void> {
-    this.#vars.clear();
-    this.#blockOutputs.clear();
-    this.#executionId = crypto.randomUUID();
+  stop(): void {
+    if (!this.#workflow) return;
 
-    // Build connection map: blockId.portId -> target connections
-    const connections = this.#buildConnectionMap(workflow);
+    const workflowId = this.#workflow.id;
 
-    // Find starting blocks (no incoming connections)
-    const startBlocks = this.#findStartBlocks(workflow);
-
-    if (startBlocks.length === 0) {
-      this.#emit({ type: 'workflow.error', error: 'No start blocks found' });
-      return;
+    // Stop all block instances via IPC
+    for (const instanceId of this.#instanceIds) {
+      this.#deps.plugins.stopBlockInstance(instanceId);
     }
 
-    // Execute starting blocks in parallel
-    await Promise.all(
-      startBlocks.map((block) => this.#executeBlock(block, workflow, trigger, connections, null))
-    );
+    this.#instanceIds.clear();
+    this.#connections.clear();
+    this.#workflow = null;
 
-    this.#emit({ type: 'workflow.complete' });
+    // Clear the block emit handler
+    this.#deps.plugins.clearBlockEmitHandler();
+    this.#deps.plugins.clearBlockLogHandler();
+
+    this.#emit({
+      type: 'workflow.stopped',
+      workflowId,
+    });
+
+    this.#deps.logs.info('workflow.stopped', { id: workflowId });
+  }
+
+  /**
+   * Check if a workflow is running
+   */
+  get isRunning(): boolean {
+    return this.#workflow !== null;
+  }
+
+  /**
+   * Get the running workflow ID
+   */
+  get workflowId(): string | null {
+    return this.#workflow?.id ?? null;
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // Private Methods
+  // Data Injection
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Inject data into a block's input port.
+   * Use this to trigger the workflow from external events.
+   */
+  inject(blockId: string, port: string, data: Json): boolean {
+    if (!this.#instanceIds.has(blockId)) {
+      this.#deps.logs.warn('workflow.inject.unknown', { blockId, port });
+      return false;
+    }
+
+    this.#deps.plugins.pushBlockInput(blockId, port, data);
+    return true;
+  }
+
+  /**
+   * Retrigger the last value from a port (for debugging).
+   */
+  retrigger(blockId: string, port: string): boolean {
+    const key = `${blockId}:${port}`;
+    const buffer = this.#buffers.get(key);
+    if (!buffer) return false;
+
+    // Re-dispatch to downstream blocks
+    this.#dispatch(blockId, port, buffer.value);
+    return true;
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Queries
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Get the last value from a port.
+   */
+  getPortValue(blockId: string, port: string): PortBuffer | undefined {
+    return this.#buffers.get(`${blockId}:${port}`);
+  }
+
+  /**
+   * Get all port buffers (for UI state display).
+   */
+  getAllBuffers(): PortBuffer[] {
+    return [...this.#buffers.values()];
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Event Listeners
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Add a listener for execution events.
+   */
+  addListener(listener: ExecutionListener): () => void {
+    this.#listeners.add(listener);
+    return () => this.#listeners.delete(listener);
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Private
   // ─────────────────────────────────────────────────────────────────────────────
 
   #buildConnectionMap(workflow: Workflow): Map<string, BlockConnection[]> {
     const map = new Map<string, BlockConnection[]>();
 
     for (const conn of workflow.connections) {
-      const key = `${conn.from}.${conn.fromPort || 'out'}`;
-      const existing = map.get(key) || [];
+      const key = `${conn.from}.${conn.fromPort ?? 'out'}`;
+      const existing = map.get(key) ?? [];
       existing.push(conn);
       map.set(key, existing);
     }
@@ -106,121 +228,116 @@ export class WorkflowExecutor {
     return map;
   }
 
-  #findStartBlocks(workflow: Workflow): WorkflowBlock[] {
-    // Blocks with no incoming connections
-    const hasIncoming = new Set<string>();
-    for (const conn of workflow.connections) {
-      hasIncoming.add(conn.to);
-    }
-
-    return workflow.blocks.filter((b) => !hasIncoming.has(b.id));
-  }
-
-  async #executeBlock(
-    block: WorkflowBlock,
-    workflow: Workflow,
-    trigger: TriggerData,
-    connections: Map<string, BlockConnection[]>,
-    inputData: Json
-  ): Promise<void> {
-    this.#emit({ type: 'block.start', blockId: block.id });
-
-    // Build context for IPC
-    const ctx: BlockContext = {
-      workflowId: workflow.id,
-      executionId: this.#executionId,
-      nodeId: block.id,
-      trigger: {
-        type: trigger.type,
-        payload: trigger.payload,
-        source: trigger.source,
-        ts: Date.now(),
-        input: inputData,
-      },
-      vars: Object.fromEntries(this.#vars),
-    };
+  async #startBlock(block: WorkflowBlock, workflow: Workflow): Promise<void> {
+    const resolvedType = this.#resolveBlockType(block.type);
 
     try {
-      // Resolve block type (supports short names like "log" -> "blocks-builtin:log")
-      const resolvedType = this.#resolveBlockType(block.type);
-
-      // Execute block via plugin IPC
-      const result = await this.#deps.plugins.executeBlock(resolvedType, block.config, ctx);
-
-      if (result.error) {
-        this.#emit({ type: 'block.error', blockId: block.id, error: result.error });
-        return;
-      }
-
-      if (result.stop) {
-        this.#emit({ type: 'block.complete', blockId: block.id, data: result.data });
-        return;
-      }
-
-      // Store output
-      const outputPort = result.output || 'out';
-      this.#blockOutputs.set(block.id, { [outputPort]: result.data ?? null });
-
-      this.#emit({
-        type: 'block.complete',
-        blockId: block.id,
-        output: outputPort,
-        data: result.data,
-      });
-
-      // Find downstream connections
-      const key = `${block.id}.${outputPort}`;
-      const downstream = connections.get(key) || [];
-
-      // Execute downstream blocks
-      await Promise.all(
-        downstream.map((conn) => {
-          const nextBlock = workflow.blocks.find((b) => b.id === conn.to);
-          if (nextBlock) {
-            return this.#executeBlock(
-              nextBlock,
-              workflow,
-              trigger,
-              connections,
-              result.data ?? null
-            );
-          }
-          return Promise.resolve();
-        })
+      // Start the block via plugin IPC
+      const result = await this.#deps.plugins.startBlock(
+        resolvedType,
+        block.id,
+        workflow.id,
+        block.config ?? {}
       );
-    } catch (error) {
-      this.#emit({ type: 'block.error', blockId: block.id, error: String(error) });
+
+      if (result.ok) {
+        this.#instanceIds.add(block.id);
+      } else {
+        this.#emit({
+          type: 'block.error',
+          workflowId: workflow.id,
+          blockId: block.id,
+          error: result.error,
+        });
+        this.#deps.logs.error('block.start.error', { blockId: block.id, error: result.error });
+      }
+    } catch (e) {
+      this.#emit({
+        type: 'block.error',
+        workflowId: workflow.id,
+        blockId: block.id,
+        error: String(e),
+      });
+      this.#deps.logs.error('block.start.error', { blockId: block.id, error: String(e) });
+    }
+  }
+
+  /**
+   * Called when a block emits data on an output port.
+   */
+  #onBlockEmit(blockId: string, port: string, data: Json): void {
+    if (!this.#workflow) return;
+
+    // Update buffer
+    const key = `${blockId}:${port}`;
+    const existing = this.#buffers.get(key);
+    this.#buffers.set(key, {
+      blockId,
+      port,
+      value: data,
+      ts: Date.now(),
+      count: (existing?.count ?? 0) + 1,
+    });
+
+    // Emit event
+    this.#emit({
+      type: 'block.emit',
+      workflowId: this.#workflow.id,
+      blockId,
+      port,
+      data,
+    });
+
+    // Dispatch to downstream blocks
+    this.#dispatch(blockId, port, data);
+  }
+
+  /**
+   * Called when a block emits a log message.
+   */
+  #onBlockLog(blockId: string, workflowId: string, level: string, message: string): void {
+    // Only emit if this is from the current workflow
+    if (this.#workflow?.id !== workflowId) return;
+
+    this.#emit({
+      type: 'block.log',
+      workflowId,
+      blockId,
+      level,
+      message,
+    });
+  }
+
+  /**
+   * Dispatch data to downstream blocks based on connections.
+   */
+  #dispatch(blockId: string, port: string, data: Json): void {
+    const key = `${blockId}.${port}`;
+    const targets = this.#connections.get(key) ?? [];
+
+    for (const conn of targets) {
+      if (this.#instanceIds.has(conn.to)) {
+        const targetPort = conn.toPort ?? 'in';
+        this.#deps.plugins.pushBlockInput(conn.to, targetPort, data);
+      }
     }
   }
 
   #emit(event: ExecutionEvent): void {
-    this.#listener?.(event);
+    for (const listener of this.#listeners) {
+      listener(event);
+    }
   }
 
   /**
-   * Resolve a block type - supports short names and full qualified names
-   *
-   * Examples:
-   * - "log" -> "blocks-builtin:log" (if blocks-builtin:log exists)
-   * - "blocks-builtin:log" -> "blocks-builtin:log" (already full qualified)
-   * - "timer:custom" -> "timer:custom" (third-party block)
+   * Resolve a block type - supports short names and full qualified names.
    */
   #resolveBlockType(type: string): string {
-    // Already full qualified (contains :)
-    if (type.includes(':')) {
-      return type;
-    }
+    if (type.includes(':')) return type;
 
-    // Try to find by short name - search all registered blocks
+    // Search for matching block by short name
     const allBlocks = this.#deps.blocks.list();
-
-    // Look for exact match on the block ID part (after :)
     const match = allBlocks.find((b) => b.type?.endsWith(`:${type}`));
-    if (match?.type) {
-      return match.type;
-    }
-
-    // No match found - return as-is (will fail at execution with clear error)
-    return type;
+    return match?.type ?? type;
   }
 }

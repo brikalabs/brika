@@ -1,9 +1,9 @@
-import { createPatternSet, matchesPatternSet } from './matcher';
+import { createPatternSet, matchesPatternSet, type PatternSetResult } from './matcher';
 import type { Action, ActionPattern, Subscriber, Unsubscribe } from './types';
 
 export interface Subscription {
-  /** Pre-computed Set of action IDs for O(1) matching */
-  patternSet: Set<symbol>;
+  /** Pre-computed pattern matching data for O(1) matching */
+  patternSet: PatternSetResult;
   handler: Subscriber;
   unsubscribe: Unsubscribe;
 }

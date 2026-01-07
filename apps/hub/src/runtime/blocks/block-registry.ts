@@ -14,9 +14,15 @@ import { LogRouter } from '@/runtime/logs/log-router';
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Block with provider info */
+/** Block with provider info and package.json metadata */
 interface RegisteredBlock extends BlockDefinition {
   pluginId: string;
+  // From package.json
+  name?: string;
+  description?: string;
+  category?: string;
+  icon?: string;
+  color?: string;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -30,11 +36,22 @@ export class BlockRegistry {
   /** Block definitions by type */
   readonly #blocks = new Map<string, RegisteredBlock>();
 
+  /** Listeners called when a block is registered */
+  readonly #onRegisterListeners = new Set<(type: string) => void>();
+
   /**
    * Get number of registered blocks
    */
   get size(): number {
     return this.#blocks.size;
+  }
+
+  /**
+   * Subscribe to block registration events
+   */
+  onBlockRegistered(listener: (type: string) => void): () => void {
+    this.#onRegisterListeners.add(listener);
+    return () => this.#onRegisterListeners.delete(listener);
   }
 
   /**
@@ -57,11 +74,19 @@ export class BlockRegistry {
     this.#blocks.set(fullType, { ...block, type: fullType, pluginId });
     this.logs.info('block.registered', {
       type: fullType,
-      name: block.name,
       plugin: pluginId,
-      inputs: block.inputs.length,
-      outputs: block.outputs.length,
+      inputs: block.inputs?.length ?? 0,
+      outputs: block.outputs?.length ?? 0,
     });
+
+    // Notify listeners
+    for (const listener of this.#onRegisterListeners) {
+      try {
+        listener(fullType);
+      } catch (e) {
+        this.logs.error('block.register.listener.error', { type: fullType, error: String(e) });
+      }
+    }
   }
 
   /**
@@ -122,8 +147,8 @@ export class BlockRegistry {
         category: b.category as BlockSummary['category'],
         icon: b.icon,
         color: b.color,
-        inputs: b.inputs.map((p) => ({ id: p.id, name: p.name })),
-        outputs: b.outputs.map((p) => ({ id: p.id, name: p.name })),
+        inputs: b.inputs.map((p) => ({ id: p.id, typeName: p.typeName })),
+        outputs: b.outputs.map((p) => ({ id: p.id, typeName: p.typeName })),
       }));
   }
 

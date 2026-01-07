@@ -1,11 +1,13 @@
+import { withPredicate } from '@brika/events';
 import type { Json } from '@brika/ipc';
-import type { BlockContext, BlockResult, ToolCallContext, ToolResult } from '@brika/ipc/contract';
+import type { BlockContext, BlockResult } from '@brika/ipc/contract';
 import type { Plugin } from '@brika/shared';
 import { inject, singleton } from '@brika/shared';
 import { BlockRegistry } from '@/runtime/blocks';
 import { PluginActions } from '@/runtime/events/actions';
 import { EventSystem } from '@/runtime/events/event-system';
 import { StateStore } from '@/runtime/state/state-store';
+import { PluginEventHandler } from './plugin-events';
 import { PluginLifecycle } from './plugin-lifecycle';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -18,6 +20,7 @@ export class PluginManager {
   readonly #state = inject(StateStore);
   readonly #events = inject(EventSystem);
   readonly #blocks = inject(BlockRegistry);
+  readonly #eventHandler = inject(PluginEventHandler);
 
   // ─────────────────────────────────────────────────────────────────────────
   // Query API
@@ -78,7 +81,22 @@ export class PluginManager {
     const stored = this.#state.get(name);
     if (!stored) throw new Error(`Plugin state not found: ${name}`);
 
+    const racePromise = this.#events.race(
+      [
+        withPredicate(PluginActions.loaded, (a) => a.payload.uid === uid),
+        withPredicate(PluginActions.configInvalid, (a) => a.payload.uid === uid),
+      ],
+      { timeout: 30000 }
+    );
+
     await this.#lifecycle.load(stored.rootDirectory);
+
+    const result = await racePromise;
+    if (result.type === 'plugin.configInvalid') {
+      throw new Error(
+        `Plugin ${uid} has invalid configuration: ${result.payload.errors.join(', ')}`
+      );
+    }
   }
 
   async disable(uid: string): Promise<void> {
@@ -101,16 +119,18 @@ export class PluginManager {
       throw new Error(`Plugin ${uid} is still running after unload`);
     }
 
-    // Set up event listener AFTER unloading to catch the new loaded event
-    const loadedPromise = this.#events.waitFor(
-      PluginActions.loaded,
-      (action) => action.payload.uid === uid,
-      { timeout: 30000 }
-    );
-
     // Get stored state to know the root directory
     const stored = this.#state.get(name);
     if (!stored) throw new Error(`Plugin state not found: ${name}`);
+
+    // Set up race AFTER unloading to catch events from new load
+    const racePromise = this.#events.race(
+      [
+        withPredicate(PluginActions.loaded, (a) => a.payload.uid === uid),
+        withPredicate(PluginActions.configInvalid, (a) => a.payload.uid === uid),
+      ],
+      { timeout: 30000 }
+    );
 
     // Load the plugin (no need for force since we already unloaded)
     try {
@@ -126,20 +146,15 @@ export class PluginManager {
       throw new Error(`Plugin ${uid} failed to start after load`);
     }
 
-    // Wait for the plugin to be ready
-    let action;
-    try {
-      action = await loadedPromise;
-    } catch (error) {
-      // If timeout, unload the plugin that failed to start
-      await this.#lifecycle.unload(name);
+    const result = await racePromise;
+    if (result.type === 'plugin.configInvalid') {
       throw new Error(
-        `Plugin ${uid} failed to become ready within timeout: ${error instanceof Error ? error.message : String(error)}`
+        `Plugin ${uid} has invalid configuration: ${result.payload.errors.join(', ')}`
       );
     }
 
     await this.#events.dispatch(
-      PluginActions.reloaded.create({ uid: action.payload.uid, name: action.payload.name }, 'hub')
+      PluginActions.reloaded.create({ uid: result.payload.uid, name: result.payload.name }, 'hub')
     );
   }
 
@@ -176,19 +191,8 @@ export class PluginManager {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Tool & Block Execution
+  // Block Execution (Legacy)
   // ─────────────────────────────────────────────────────────────────────────
-
-  callTool(
-    name: string,
-    toolName: string,
-    args: Record<string, Json>,
-    ctx: ToolCallContext
-  ): Promise<ToolResult> {
-    const process = this.#lifecycle.getProcessByName(name);
-    if (!process) return Promise.resolve({ ok: false, content: `Plugin not loaded: ${name}` });
-    return process.callTool(toolName, args, ctx);
-  }
 
   executeBlock(
     blockType: string,
@@ -204,6 +208,58 @@ export class PluginManager {
 
     const localBlockId = blockType.includes(':') ? blockType.split(':')[1] : blockType;
     return process.executeBlock(localBlockId, config, context);
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Reactive Block Operations
+  // ─────────────────────────────────────────────────────────────────────────
+
+  setBlockEmitHandler(handler: (instanceId: string, port: string, data: Json) => void): void {
+    this.#eventHandler.setBlockEmitHandler(handler);
+  }
+
+  clearBlockEmitHandler(): void {
+    this.#eventHandler.clearBlockEmitHandler();
+  }
+
+  setBlockLogHandler(
+    handler: (instanceId: string, workflowId: string, level: string, message: string) => void
+  ): void {
+    this.#eventHandler.setBlockLogHandler(handler);
+  }
+
+  clearBlockLogHandler(): void {
+    this.#eventHandler.clearBlockLogHandler();
+  }
+
+  startBlock(
+    blockType: string,
+    instanceId: string,
+    workflowId: string,
+    config: Record<string, Json>
+  ): Promise<{ ok: boolean; error?: string }> {
+    const pluginName = this.#blocks.getProvider(blockType);
+    if (!pluginName)
+      return Promise.resolve({ ok: false, error: `Unknown block type: ${blockType}` });
+
+    const process = this.#lifecycle.getProcessByName(pluginName);
+    if (!process) return Promise.resolve({ ok: false, error: `Plugin not loaded: ${pluginName}` });
+
+    return process.startBlock(blockType, instanceId, workflowId, config);
+  }
+
+  pushBlockInput(instanceId: string, port: string, data: Json): void {
+    // Find the process that owns this block instance
+    // For now, broadcast to all processes (they'll ignore if instance not found)
+    for (const process of this.#lifecycle.listProcesses()) {
+      process.pushInput(instanceId, port, data);
+    }
+  }
+
+  stopBlockInstance(instanceId: string): void {
+    for (const process of this.#lifecycle.listProcesses()) {
+      process.stopBlockInstance(instanceId);
+    }
   }
 
   // ─────────────────────────────────────────────────────────────────────────

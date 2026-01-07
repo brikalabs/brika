@@ -88,12 +88,12 @@ export class PluginRegistry {
 
     // Config packages (workspace/file)
     const config = this.configLoader.get();
-    for (const entry of config.install) {
+    for (const entry of config.plugins) {
       if (!packages.some((p) => p.name === entry.name)) {
         packages.push({
           name: entry.name,
-          version: entry.specifier,
-          path: entry.specifier.startsWith('workspace:') ? 'workspace' : entry.specifier,
+          version: entry.version,
+          path: entry.version.startsWith('workspace:') ? 'workspace' : entry.version,
         });
       }
     }
@@ -163,7 +163,7 @@ export class PluginRegistry {
   // Sync
   // ─────────────────────────────────────────────────────────────────────────────
 
-  async syncToConfig(entries: Array<{ name: string; specifier: string }>): Promise<void> {
+  async syncToConfig(entries: Array<{ name: string; version: string }>): Promise<void> {
     const configNames = new Set(entries.map((e) => e.name));
     const installed = await this.list();
 
@@ -185,7 +185,7 @@ export class PluginRegistry {
     for (const entry of entries) {
       if (!(await this.has(entry.name))) {
         try {
-          for await (const _ of this.install(entry.name, entry.specifier)) {
+          for await (const _ of this.install(entry.name, entry.version)) {
             // Consume progress
           }
         } catch (error) {
@@ -313,7 +313,7 @@ export class PluginRegistry {
 
     if (isWorkspace) {
       const config = await this.configLoader.load();
-      const entry = config.install.find((e) => e.name === name);
+      const entry = config.plugins.find((e) => e.name === name);
       if (!entry) throw new Error('Plugin not found in config');
 
       const resolved = await this.configLoader.resolvePluginEntry(entry);

@@ -1,6 +1,6 @@
 {
   "name": "@brika/hub",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "repository": {
@@ -9,7 +9,7 @@
     "directory": "apps/hub"
   },
   "scripts": {
-    "dev": "bun run src/main.ts",
+    "dev": "bun run src/main.ts --watch",
     "build": "bun run scripts/build.ts",
     "tsc": "bun x --bun tsc --noEmit",
     "lint": "bun x biome check .",
@@ -24,6 +24,7 @@
     "@brika/sdk": "workspace:*",
     "@brika/shared": "workspace:*",
     "modern-tar": "^0.7.3",
+    "smol-toml": "^1.6.0",
     "yaml": "^2.8.2",
     "zod": "^4.3.4"
   },

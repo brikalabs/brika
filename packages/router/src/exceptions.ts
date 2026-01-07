@@ -7,7 +7,8 @@ import { ContentfulStatusCode } from 'hono/utils/http-status';
 export class HttpException extends Error {
   constructor(
     public readonly status: ContentfulStatusCode,
-    message: string
+    message: string,
+    public readonly data?: Record<string, unknown>
   ) {
     super(message);
     this.name = 'HttpException';
@@ -56,8 +57,8 @@ export class Conflict extends HttpException {
 
 /** 422 Unprocessable Entity */
 export class UnprocessableEntity extends HttpException {
-  constructor(message = 'Unprocessable entity') {
-    super(422, message);
+  constructor(message = 'Unprocessable entity', data?: Record<string, unknown>) {
+    super(422, message, data);
     this.name = 'UnprocessableEntity';
   }
 }

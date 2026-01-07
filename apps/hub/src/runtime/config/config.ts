@@ -45,8 +45,8 @@ export class PluginManagerConfig {
     try {
       const loader = inject(ConfigLoader);
       const config = loader.get();
-      this.heartbeatEveryMs = config.plugins.heartbeatInterval;
-      this.heartbeatTimeoutMs = config.plugins.heartbeatTimeout;
+      this.heartbeatEveryMs = config.hub.plugins.heartbeatInterval;
+      this.heartbeatTimeoutMs = config.hub.plugins.heartbeatTimeout;
     } catch {
       this.heartbeatEveryMs = 5000;
       this.heartbeatTimeoutMs = 15000;

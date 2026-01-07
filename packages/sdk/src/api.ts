@@ -2,63 +2,48 @@
  * Functional SDK API
  *
  * Clean, simple exports for plugin development.
- *
- * @example
- * ```typescript
- * import { defineTool, log, emit, onStop, z } from "@brika/sdk";
- *
- * export const myTool = defineTool({
- *   id: "my-tool",
- *   schema: z.object({ name: z.string() }),
- * }, async (args) => {
- *   log("info", `Hello ${args.name}`);
- *   return { ok: true };
- * });
- *
- * onStop(() => {
- *   log("info", "Cleaning up...");
- * });
- * ```
  */
 
 import type { Json } from '@brika/ipc';
-import { z } from 'zod';
 import { type EventHandler as CtxEventHandler, getContext, type LogLevel } from './context';
-import type { AnyObj, ToolCallContext, ToolResult } from './types';
+import type { AnyObj } from './types';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Tool Definition
+// Preferences
 // ─────────────────────────────────────────────────────────────────────────────
-
-export interface ToolSpec<TSchema extends z.ZodObject<z.ZodRawShape>> {
-  /** Unique tool ID (must match package.json declaration) */
-  id: string;
-  /** Zod schema for input validation */
-  schema: TSchema;
-}
-
-export interface CompiledTool {
-  id: string;
-}
 
 /**
- * Define and register a tool.
+ * Get plugin preferences (configuration) sent by the hub.
  *
  * @example
  * ```typescript
- * export const greet = defineTool({
- *   id: "greet",
- *   schema: z.object({ name: z.string() }),
- * }, async ({ name }) => {
- *   return { ok: true, content: `Hello ${name}!` };
+ * interface MyPrefs { apiKey: string; debug: boolean; }
+ * const prefs = getPreferences<MyPrefs>();
+ * log("info", `API Key: ${prefs.apiKey}`);
+ * ```
+ */
+export function getPreferences<T extends Record<string, unknown> = Record<string, unknown>>(): T {
+  return getContext().getPreferences<T>();
+}
+
+export type PreferencesChangeHandler<T = Record<string, unknown>> = (preferences: T) => void;
+
+/**
+ * Register a handler that runs when preferences are updated.
+ *
+ * @example
+ * ```typescript
+ * onPreferencesChange<MyPrefs>((prefs) => {
+ *   log("info", "Preferences updated!", { debugMode: prefs.debugMode });
  * });
  * ```
  */
-export function defineTool<TSchema extends z.ZodObject<z.ZodRawShape>>(
-  spec: ToolSpec<TSchema>,
-  handler: (args: z.infer<TSchema>, ctx: ToolCallContext) => Promise<ToolResult> | ToolResult
-): CompiledTool {
-  return getContext().registerTool(spec, handler);
+export function onPreferencesChange<T extends Record<string, unknown> = Record<string, unknown>>(
+  handler: PreferencesChangeHandler<T>
+): () => void {
+  return getContext().onPreferencesChange(
+    handler as PreferencesChangeHandler<Record<string, unknown>>
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -121,7 +106,25 @@ export const onEvent = on;
 // Lifecycle
 // ─────────────────────────────────────────────────────────────────────────────
 
+export type InitHandler = () => void | Promise<void>;
 export type StopHandler = () => void | Promise<void>;
+export type UninstallHandler = () => void | Promise<void>;
+
+/**
+ * Register a handler that runs when the plugin initializes.
+ * If the plugin is already initialized, the handler runs immediately.
+ *
+ * @example
+ * ```typescript
+ * onInit(() => {
+ *   log("info", "Plugin initialized!");
+ *   setupConnections();
+ * });
+ * ```
+ */
+export function onInit(fn: InitHandler): () => void {
+  return getContext().onInit(fn);
+}
 
 /**
  * Register a cleanup handler that runs when the plugin stops.
@@ -137,27 +140,19 @@ export function onStop(fn: StopHandler): () => void {
   return getContext().onStop(fn);
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Manual Start
-// ─────────────────────────────────────────────────────────────────────────────
-
 /**
- * Explicitly start the plugin.
- *
- * Usually not needed - the plugin auto-starts when the first tool
- * is defined. Use this for plugins that only listen to events.
+ * Register a handler that runs when the plugin is being uninstalled.
+ * Use this for permanent cleanup (delete files, revoke tokens, etc.).
+ * This runs BEFORE onStop handlers.
  *
  * @example
  * ```typescript
- * import { start, on, log } from "@brika/sdk";
- *
- * on("motion.*", (event) => {
- *   log("info", `Motion detected: ${event.type}`);
+ * onUninstall(() => {
+ *   log("info", "Cleaning up plugin data...");
+ *   deleteStoredCredentials();
  * });
- *
- * start();
  * ```
  */
-export function start(): void {
-  getContext().start();
+export function onUninstall(fn: UninstallHandler): () => void {
+  return getContext().onUninstall(fn);
 }

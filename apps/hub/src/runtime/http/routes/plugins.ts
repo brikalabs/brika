@@ -1,5 +1,7 @@
-import { group, NotFound, route } from '@brika/router';
+import { group, NotFound, route, UnprocessableEntity } from '@brika/router';
 import { z } from 'zod';
+import { PluginConfigService } from '@/runtime/plugins/plugin-config';
+import { PluginLifecycle } from '@/runtime/plugins/plugin-lifecycle';
 import { PluginManager } from '@/runtime/plugins/plugin-manager';
 import { PluginRegistry } from '@/runtime/registry';
 import { StateStore } from '@/runtime/state/state-store';
@@ -108,6 +110,44 @@ export const pluginsRoutes = group('/api/plugins', [
     async ({ params, inject }) => {
       await inject(PluginManager).kill(params.uid);
       return { ok: true };
+    }
+  ),
+
+  // Get plugin config (schema + values)
+  route.get('/:uid/config', { params: z.object({ uid: z.string() }) }, ({ params, inject }) => {
+    const plugin = inject(PluginManager).get(params.uid);
+    if (!plugin) throw new NotFound('Plugin not found');
+
+    const configService = inject(PluginConfigService);
+    return {
+      schema: configService.getSchema(plugin.name),
+      values: configService.getConfig(plugin.name),
+    };
+  }),
+
+  // Update plugin config
+  route.put(
+    '/:uid/config',
+    { params: z.object({ uid: z.string() }), body: z.record(z.string(), z.unknown()) },
+    async ({ params, body, inject }) => {
+      const plugin = inject(PluginManager).get(params.uid);
+      if (!plugin) throw new NotFound('Plugin not found');
+
+      const configService = inject(PluginConfigService);
+      const result = await configService.setConfig(plugin.name, body);
+      if (!result.success) {
+        throw new UnprocessableEntity('Invalid configuration', {
+          errors: result.error.issues,
+        });
+      }
+
+      // Send updated preferences to running plugin
+      const process = inject(PluginLifecycle).getProcess(plugin.name);
+      if (process) {
+        process.sendPreferences(configService.getConfig(plugin.name));
+      }
+
+      return { values: configService.getConfig(plugin.name) };
     }
   ),
 

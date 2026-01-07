@@ -1,97 +1,96 @@
 # @brika/plugin-example-echo
 
-A simple example plugin that provides an echo tool for testing and demonstration purposes.
+A simple example plugin demonstrating how to create reactive blocks for BRIKA.
 
 ## Overview
 
-This plugin provides a basic `echo` tool that returns any message you send to it. It's useful for testing workflows, debugging, and learning how BRIKA plugins work.
+This plugin provides a basic echo block that passes input data to output, optionally with prefix/suffix transformation. It's useful for learning how BRIKA plugins work and for testing workflows.
 
-## Available Tools
+## Available Blocks
 
-### echo
+### Echo
 
-Echoes back the provided message. This is useful for testing workflows and verifying that tool calls are working correctly.
+Echoes input data to output with optional prefix/suffix for string messages.
 
-**Parameters:**
-- `message` (string, required): The message to echo back
+**Inputs:**
+- `in` (generic) — Any data to echo
 
-**Returns:**
-- `ok`: `true` if successful
-- `content`: The echoed message
+**Outputs:**
+- `out` (generic) — The echoed data
+
+**Config:**
+- `prefix` (string, optional) — Prefix to add to string messages
+- `suffix` (string, optional) — Suffix to add to string messages
 
 ## Usage
 
 ### In Workflows
 
-Use the echo tool in your workflows to test or debug:
-
-```yaml filename="test-workflow.yml"
-blocks:
-  - id: trigger
-    type: event
-    config:
-      event: test.trigger
-  
-  - id: echo_block
-    type: @brika/blocks-builtin:action
-    config:
-      tool: "@brika/plugin-example-echo:echo"
-      args:
-        message: "Hello, BRIKA!"
-  
-  - id: log_result
-    type: @brika/blocks-builtin:log
-    config:
-      message: "Echo returned: {{ echo_block.data.content }}"
-```
-
-### Example Code
-
-Here's how you might use the echo tool in a plugin:
-
-```typescript filename="src/index.ts"
-import { defineTool, z } from "@brika/sdk";
-
-export const echo = defineTool(
-  {
-    id: "echo",
-    description: "Echo back the provided message",
-    schema: z.object({
-      message: z.string().describe("The message to echo back"),
-    }),
-  },
-  async (args) => {
-    return { ok: true, content: args.message };
-  },
-);
-```
-
-### Testing Workflows
-
-You can use the echo tool to verify that your workflow is executing correctly:
-
 ```yaml
 blocks:
-  - id: start
-    type: @brika/blocks-builtin:action
+  - id: clock
+    type: "@brika/blocks-builtin:clock"
     config:
-      tool: "@brika/plugin-example-echo:echo"
-      args:
-        message: "Workflow started"
-  
-  - id: middle
-    type: @brika/blocks-builtin:action
+      interval: 5000
+
+  - id: echo
+    type: "@brika/plugin-example-echo:echo"
     config:
-      tool: "@brika/plugin-example-echo:echo"
-      args:
-        message: "Workflow in progress"
-  
-  - id: end
-    type: @brika/blocks-builtin:action
+      prefix: "[Echo] "
+
+  - id: log
+    type: "@brika/blocks-builtin:log"
     config:
-      tool: "@brika/plugin-example-echo:echo"
-      args:
-        message: "Workflow completed"
+      message: "Received: {{ JSON.stringify(inputs.in) }}"
+
+connections:
+  - from: clock
+    fromPort: tick
+    to: echo
+    toPort: in
+  - from: echo
+    fromPort: out
+    to: log
+    toPort: in
+```
+
+## Implementation
+
+```typescript
+import { defineReactiveBlock, input, output, log, onStop, z } from "@brika/sdk";
+
+export const echo = defineReactiveBlock(
+  {
+    id: "echo",
+    inputs: {
+      in: input(z.generic(), { name: "Input" }),
+    },
+    outputs: {
+      out: output(z.passthrough("in"), { name: "Output" }),
+    },
+    config: z.object({
+      prefix: z.string().optional().describe("Optional prefix for string messages"),
+      suffix: z.string().optional().describe("Optional suffix for string messages"),
+    }),
+  },
+  ({ inputs, outputs, config, log }) => {
+    inputs.in.on((data) => {
+      if (typeof data === "string" && (config.prefix || config.suffix)) {
+        const prefix = config.prefix ?? "";
+        const suffix = config.suffix ?? "";
+        const result = `${prefix}${data}${suffix}`;
+        log("info", `Echo: ${result}`);
+        outputs.out.emit(result);
+      } else {
+        log("info", `Echo: ${JSON.stringify(data)}`);
+        outputs.out.emit(data);
+      }
+    });
+  }
+);
+
+onStop(() => log("info", "Echo plugin stopping"));
+log("info", "Echo plugin loaded");
 ```
 
 ## Installation
@@ -99,6 +98,7 @@ blocks:
 Add to your `brika.yml`:
 
 ```yaml
-plugins:
-  - "@brika/plugin-example-echo"
+install:
+  - ref: "workspace:example-echo"
+    enabled: true
 ```

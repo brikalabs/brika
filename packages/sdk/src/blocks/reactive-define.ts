@@ -7,6 +7,7 @@
 
 import type { Serializable } from '@brika/serializable';
 import { z } from 'zod';
+import { getContext } from '../context';
 import {
   type BlockContext,
   type BlockSetup,
@@ -19,11 +20,14 @@ import {
   type Factory,
   type Flow,
   FlowImpl,
+  type GenericRef,
   type InputDef,
   type OutputDef,
+  type PassthroughRef,
   type ReactiveBlockSpec,
   type Source,
   zodToJsonSchema,
+  zodToTypeName,
 } from './reactive';
 import type { BlockDefinition, BlockPort, BlockSchema } from './types';
 
@@ -46,7 +50,6 @@ export interface BlockRuntimeContext {
   config: Record<string, unknown>;
   emit(portId: string, data: Serializable): void;
   log(level: 'debug' | 'info' | 'warn' | 'error', message: string): void;
-  callTool(toolId: string, args: Record<string, Serializable>): Promise<Serializable>;
 }
 
 /** Running block instance */
@@ -116,42 +119,101 @@ export interface BlockInstance {
  * ```
  */
 export function defineReactiveBlock<
-  TInputs extends Record<string, InputDef<z.ZodType>>,
-  TOutputs extends Record<string, OutputDef<z.ZodType>>,
+  TInputs extends Record<string, InputDef<z.ZodType | GenericRef<string>>>,
+  TOutputs extends Record<
+    string,
+    OutputDef<z.ZodType | PassthroughRef<string> | GenericRef<string>>
+  >,
   TConfig extends z.ZodObject<z.ZodRawShape>,
 >(
   spec: ReactiveBlockSpec<TInputs, TOutputs, TConfig>,
   setup: BlockSetup<TInputs, TOutputs, TConfig>
 ): CompiledReactiveBlock {
-  // Convert config to JSON Schema
   const configJsonSchema = zodToBlockSchema(spec.config);
 
-  // Convert input definitions to BlockPort[] with JSON Schema
+  // Get TypeScript-like type name from schema (not resolving passthrough)
+  const getBaseTypeName = (
+    schema: z.ZodType | GenericRef<string> | PassthroughRef<string>
+  ): string => {
+    if (schema && typeof schema === 'object' && '__type' in schema) {
+      if (schema.__type === 'generic') return `generic<${(schema as GenericRef).__generic}>`;
+      // Don't resolve passthrough here - it will be resolved later
+      if (schema.__type === 'passthrough')
+        return `__passthrough:${(schema as PassthroughRef).__passthrough}`;
+    }
+    return zodToTypeName(schema as z.ZodType);
+  };
+
+  // Get JSON Schema from Zod schema (returns undefined for generic/passthrough)
+  const getJsonSchema = (
+    schema: z.ZodType | GenericRef<string> | PassthroughRef<string>
+  ): Record<string, unknown> | undefined => {
+    if (schema && typeof schema === 'object' && '__type' in schema) {
+      return undefined;
+    }
+    try {
+      return zodToJsonSchema(schema as z.ZodType);
+    } catch {
+      return undefined;
+    }
+  };
+
+  // Get runtime schema - returns the internal _schema for GenericRef/PassthroughRef
+  const getRuntimeSchema = (
+    schema: z.ZodType | GenericRef<string> | PassthroughRef<string>
+  ): z.ZodType => {
+    if (schema && typeof schema === 'object' && '_schema' in schema) {
+      return (schema as GenericRef | PassthroughRef)._schema;
+    }
+    return schema as z.ZodType;
+  };
+
+  // Build input map for passthrough resolution
+  const inputMap = new Map<string, { typeName: string; jsonSchema?: Record<string, unknown> }>();
+  for (const [id, def] of Object.entries(spec.inputs)) {
+    inputMap.set(id, {
+      typeName: getBaseTypeName(def.schema),
+      jsonSchema: getJsonSchema(def.schema),
+    });
+  }
+
+  // Convert input definitions to BlockPort[]
   const inputs: BlockPort[] = Object.entries(spec.inputs).map(([id, def]) => ({
     id,
     direction: 'input' as const,
-    nameKey: def.meta.name,
-    descriptionKey: def.meta.description,
-    jsonSchema: zodToJsonSchema(def.schema),
+    typeName: getBaseTypeName(def.schema),
+    jsonSchema: getJsonSchema(def.schema),
   }));
 
-  // Convert output definitions to BlockPort[] with JSON Schema
-  const outputs: BlockPort[] = Object.entries(spec.outputs).map(([id, def]) => ({
-    id,
-    direction: 'output' as const,
-    nameKey: def.meta.name,
-    descriptionKey: def.meta.description,
-    jsonSchema: zodToJsonSchema(def.schema),
-  }));
+  // Convert output definitions to BlockPort[] - resolve passthrough to input type
+  const outputs: BlockPort[] = Object.entries(spec.outputs).map(([id, def]) => {
+    const baseTypeName = getBaseTypeName(def.schema);
 
-  return {
-    // Metadata
+    // If it's a passthrough, resolve to the linked input's type
+    if (baseTypeName.startsWith('__passthrough:')) {
+      const inputId = baseTypeName.replace('__passthrough:', '');
+      const linkedInput = inputMap.get(inputId);
+      if (linkedInput) {
+        return {
+          id,
+          direction: 'output' as const,
+          typeName: linkedInput.typeName,
+          jsonSchema: linkedInput.jsonSchema,
+        };
+      }
+    }
+
+    return {
+      id,
+      direction: 'output' as const,
+      typeName: baseTypeName,
+      jsonSchema: getJsonSchema(def.schema),
+    };
+  });
+
+  // Create the block definition
+  const blockDef: CompiledReactiveBlock = {
     id: spec.id,
-    name: spec.name ?? spec.id,
-    description: spec.description ?? '',
-    category: spec.category ?? 'logic',
-    icon: spec.icon ?? 'box',
-    color: spec.color ?? '#6b7280',
     inputs,
     outputs,
     schema: configJsonSchema,
@@ -178,7 +240,7 @@ export function defineReactiveBlock<
       // Create emitters for each output
       const outputEmitters = {} as Record<string, Emitter<unknown>>;
       for (const [id, def] of Object.entries(spec.outputs)) {
-        outputEmitters[id] = createEmitter<unknown>(id, def.schema, ctx.emit);
+        outputEmitters[id] = createEmitter<unknown>(id, getRuntimeSchema(def.schema), ctx.emit);
       }
 
       // Parse and validate config
@@ -205,7 +267,6 @@ export function defineReactiveBlock<
         config,
         start,
         log: ctx.log,
-        callTool: ctx.callTool,
       } as unknown as BlockContext<TInputs, TOutputs, TConfig>;
 
       // Call setup function
@@ -218,7 +279,8 @@ export function defineReactiveBlock<
           if (process.env.NODE_ENV !== 'production') {
             const inputDef = spec.inputs[portId];
             if (inputDef) {
-              const result = inputDef.schema.safeParse(data);
+              const runtimeSchema = getRuntimeSchema(inputDef.schema);
+              const result = runtimeSchema.safeParse(data);
               if (!result.success) {
                 ctx.log('warn', `Input validation failed for "${portId}": ${result.error.message}`);
               }
@@ -228,7 +290,7 @@ export function defineReactiveBlock<
           // Push to flow
           const flow = flows.get(portId);
           if (flow) {
-            flow._push(data);
+            flow.push(data);
           }
         },
 
@@ -238,12 +300,21 @@ export function defineReactiveBlock<
 
           // Clear all flows
           for (const flow of flows.values()) {
-            flow._clear();
+            flow.clear();
           }
         },
       };
     },
   };
+
+  // Register the block with the hub
+  try {
+    getContext().registerBlock(blockDef);
+  } catch {
+    // Context may not be available during testing or when imported outside plugin runtime
+  }
+
+  return blockDef;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -258,7 +329,6 @@ export function isCompiledReactiveBlock(value: unknown): value is CompiledReacti
   const obj = value as Record<string, unknown>;
   return (
     typeof obj.id === 'string' &&
-    typeof obj.name === 'string' &&
     typeof obj.start === 'function' &&
     Array.isArray(obj.inputs) &&
     Array.isArray(obj.outputs)

@@ -1,23 +1,35 @@
-#BRIKA Configuration
-# https://elia.dev/docs/configuration
+# BRIKA Configuration
+# https://brika.dev/docs/configuration
 
 hub:
   port: 3001
   host: 0.0.0.0
-
-plugins:
-  installDir: ./plugins/.installed
-  heartbeatInterval: 5000
-  heartbeatTimeout: 15000
+  plugins:
+    installDir: ./plugins/.installed
+    heartbeatInterval: 5000
+    heartbeatTimeout: 15000
 
 # Installed plugins
-# Format: "package-name": "version-specifier"
-# Examples:
-#   "@elia/plugin-timer": "^1.0.0"      # npm registry
-#   "my-plugin": "workspace:*"           # local workspace
-#   "my-plugin": "file:./plugins/local"  # file path
-install:
-  "@brika/blocks-builtin": workspace:*
+# Format:
+#   "package-name":
+#     version: "version-specifier"
+#     config:
+#       key: value
+plugins:
+  "@brika/blocks-builtin":
+    version: workspace:*
+  "@brika/plugin-example-echo":
+    version: workspace:*
+  "@brika/plugin-timer":
+    version: workspace:*
+  "@brika/plugin-demo-config":
+    version: workspace:*
+    config:
+      apiKey: h
+      serverUrl: https://google.comjjj
+      maxRetries: 3
+      debugMode: true
+      logLevel: warn
 
 # Event-based rules
 rules: []

@@ -10,6 +10,7 @@ import {
   defineReactiveBlock,
   delay as delayOp,
   input,
+  interval,
   log,
   map,
   output,
@@ -21,34 +22,55 @@ import {
 // Action Block - Call a tool with arguments
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const action = defineReactiveBlock(
+// HTTP Response schema
+const HttpResponseSchema = z.object({
+  status: z.number(),
+  statusText: z.string(),
+  headers: z.record(z.string(), z.string()),
+  body: z.any(),
+});
+
+export const httpRequest = defineReactiveBlock(
   {
-    id: 'action',
-    name: 'Action',
-    description: 'Call a tool with arguments',
+    id: 'http-request',
+    name: 'HTTP Request',
+    description: 'Make HTTP requests to external APIs',
     category: 'action',
-    icon: 'zap',
+    icon: 'globe',
     color: '#3b82f6',
     inputs: {
-      in: input(z.unknown(), { name: 'Input' }),
+      trigger: input(z.generic(), { name: 'Trigger' }),
     },
     outputs: {
-      out: output(z.unknown(), { name: 'Output' }),
+      response: output(HttpResponseSchema, { name: 'Response' }),
+      error: output(z.object({ message: z.string() }), { name: 'Error' }),
     },
     config: z.object({
-      tool: z.string().describe('Tool ID to call'),
-      args: z.record(z.string(), z.unknown()).optional().describe('Arguments to pass'),
+      url: z.string().describe('Request URL'),
+      method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']).optional().describe('HTTP method'),
+      headers: z.record(z.string(), z.string()).optional().describe('Request headers'),
+      body: z.string().optional().describe('Request body (for POST/PUT/PATCH)'),
     }),
   },
-  ({ inputs, outputs, config, callTool, log }) => {
-    inputs.in.on(async (data) => {
-      log('debug', `Calling tool: ${config.tool}`);
+  ({ inputs, outputs, config, log }) => {
+    inputs.trigger.on(async () => {
+      log('debug', `HTTP ${config.method ?? 'GET'} ${config.url}`);
       try {
-        const args = { ...config.args, input: data } as Record<string, Serializable>;
-        const result = await callTool(config.tool, args);
-        outputs.out.emit(result);
+        const res = await fetch(config.url, {
+          method: config.method ?? 'GET',
+          headers: config.headers,
+          body: config.body,
+        });
+        const body = await res.json().catch(() => res.text());
+        outputs.response.emit({
+          status: res.status,
+          statusText: res.statusText,
+          headers: Object.fromEntries(res.headers.entries()),
+          body,
+        });
       } catch (err) {
-        log('error', `Tool call failed: ${err}`);
+        log('error', `HTTP request failed: ${err}`);
+        outputs.error.emit({ message: String(err) });
       }
     });
   }
@@ -67,18 +89,18 @@ export const condition = defineReactiveBlock(
     icon: 'git-branch',
     color: '#f59e0b',
     inputs: {
-      in: input(z.unknown(), { name: 'Input' }),
+      in: input(z.generic(), { name: 'Input' }),
     },
     outputs: {
-      then: output(z.unknown(), { name: 'Then' }),
-      else: output(z.unknown(), { name: 'Else' }),
+      then: output(z.passthrough('in'), { name: 'Then' }),
+      else: output(z.passthrough('in'), { name: 'Else' }),
     },
     config: z.object({
       field: z.string().describe('Field path to check (e.g., "value", "data.status")'),
       operator: z
         .enum(['eq', 'neq', 'gt', 'gte', 'lt', 'lte', 'contains', 'exists'])
         .describe('Comparison operator'),
-      value: z.unknown().optional().describe('Value to compare against'),
+      value: z.any().optional().describe('Value to compare against'),
     }),
   },
   ({ inputs, outputs, config, log }) => {
@@ -144,19 +166,19 @@ export const switchBlock = defineReactiveBlock(
     icon: 'shuffle',
     color: '#8b5cf6',
     inputs: {
-      in: input(z.unknown(), { name: 'Input' }),
+      in: input(z.generic(), { name: 'Input' }),
     },
     outputs: {
-      case1: output(z.unknown(), { name: 'Case 1' }),
-      case2: output(z.unknown(), { name: 'Case 2' }),
-      case3: output(z.unknown(), { name: 'Case 3' }),
-      default: output(z.unknown(), { name: 'Default' }),
+      case1: output(z.passthrough('in'), { name: 'Case 1' }),
+      case2: output(z.passthrough('in'), { name: 'Case 2' }),
+      case3: output(z.passthrough('in'), { name: 'Case 3' }),
+      default: output(z.passthrough('in'), { name: 'Default' }),
     },
     config: z.object({
       field: z.string().describe('Field path to check'),
-      case1: z.unknown().optional().describe('Value for case 1'),
-      case2: z.unknown().optional().describe('Value for case 2'),
-      case3: z.unknown().optional().describe('Value for case 3'),
+      case1: z.any().optional().describe('Value for case 1'),
+      case2: z.any().optional().describe('Value for case 2'),
+      case3: z.any().optional().describe('Value for case 3'),
     }),
   },
   ({ inputs, outputs, config, log }) => {
@@ -190,13 +212,13 @@ export const delay = defineReactiveBlock(
     icon: 'timer',
     color: '#6b7280',
     inputs: {
-      in: input(z.unknown(), { name: 'Input' }),
+      in: input(z.generic(), { name: 'Input' }),
     },
     outputs: {
-      out: output(z.unknown(), { name: 'Output' }),
+      out: output(z.passthrough('in'), { name: 'Output' }),
     },
     config: z.object({
-      duration: z.number().describe('Duration in milliseconds'),
+      duration: z.duration(undefined, 'Duration to wait'),
     }),
   },
   ({ inputs, outputs, config, log }) => {
@@ -211,36 +233,31 @@ export const delay = defineReactiveBlock(
 // Emit Block - Emit an event
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const emitEvent = defineReactiveBlock(
+export const clock = defineReactiveBlock(
   {
-    id: 'emit',
-    name: 'Emit Event',
-    description: 'Emit an event to the event bus',
-    category: 'action',
-    icon: 'send',
-    color: '#10b981',
-    inputs: {
-      in: input(z.unknown(), { name: 'Input' }),
-    },
+    id: 'clock',
+    name: 'Clock',
+    description: 'Emit periodic ticks on an interval',
+    category: 'trigger',
+    icon: 'clock',
+    color: '#22c55e',
+    inputs: {},
     outputs: {
-      out: output(
-        z.object({
-          event: z.string(),
-          payload: z.unknown(),
-        }),
-        { name: 'Output' }
-      ),
+      tick: output(z.object({ count: z.number(), ts: z.number() }), { name: 'Tick' }),
     },
     config: z.object({
-      event: z.string().describe('Event type to emit'),
+      interval: z.duration(undefined, 'Interval between ticks'),
     }),
   },
-  ({ inputs, outputs, config, log }) => {
-    inputs.in.on((data) => {
-      log('debug', `Emitting event: ${config.event}`);
-      // Note: actual event emission to bus would be handled by hub
-      outputs.out.emit({ event: config.event, payload: data });
-    });
+  ({ outputs, config, log, start }) => {
+    start(interval(config.interval))
+      .pipe(
+        map((count) => {
+          return { count: count + 1, ts: Date.now() };
+        })
+      )
+      .to(outputs.tick);
+    log('info', `Clock started with interval: ${config.interval}ms`);
   }
 );
 
@@ -250,17 +267,17 @@ export const emitEvent = defineReactiveBlock(
 
 export const transform = defineReactiveBlock(
   {
-    id: 'set',
+    id: 'transform',
     name: 'Transform',
     description: 'Transform or extract data',
     category: 'transform',
     icon: 'edit',
     color: '#ec4899',
     inputs: {
-      in: input(z.unknown(), { name: 'Input' }),
+      in: input(z.generic(), { name: 'Input' }),
     },
     outputs: {
-      out: output(z.unknown(), { name: 'Output' }),
+      out: output(z.any(), { name: 'Output' }),
     },
     config: z.object({
       field: z.string().optional().describe('Field to extract (empty for passthrough)'),
@@ -297,6 +314,36 @@ export const transform = defineReactiveBlock(
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Expression Interpolation
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Interpolate {{inputs.portId.field}} expressions in a template string.
+ *
+ * @param template Template string with {{...}} placeholders
+ * @param context Object containing available data: { inputs: { portId: data }, config: {...} }
+ */
+function interpolate(
+  template: string,
+  context: { inputs: Record<string, unknown>; config: Record<string, unknown> }
+): string {
+  return template.replace(/\{\{([^}]+)\}\}/g, (_, expr: string) => {
+    const path = expr.trim().split('.');
+    let value: unknown = context;
+
+    for (const key of path) {
+      if (value === null || value === undefined) return '';
+      if (typeof value !== 'object') return '';
+      value = (value as Record<string, unknown>)[key];
+    }
+
+    if (value === undefined || value === null) return '';
+    if (typeof value === 'object') return JSON.stringify(value);
+    return String(value);
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Log Block - Log a message
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -304,24 +351,32 @@ export const logBlock = defineReactiveBlock(
   {
     id: 'log',
     name: 'Log',
-    description: 'Log a message',
+    description: 'Log a message with variable interpolation',
     category: 'action',
     icon: 'file-text',
     color: '#78716c',
     inputs: {
-      in: input(z.unknown(), { name: 'Input' }),
+      in: input(z.generic(), { name: 'Input' }),
     },
     outputs: {
-      out: output(z.unknown(), { name: 'Output' }),
+      out: output(z.passthrough('in'), { name: 'Output' }),
     },
     config: z.object({
-      message: z.string().optional().describe('Custom message (uses data if empty)'),
+      message: z.string().optional().describe('Message template with {{inputs.in.field}} expressions'),
       level: z.enum(['debug', 'info', 'warn', 'error']).default('info').describe('Log level'),
     }),
   },
   ({ inputs, outputs, config, log }) => {
     inputs.in.on((data) => {
-      const message = config.message ?? JSON.stringify(data);
+      const context = {
+        inputs: { in: data },
+        config: config as Record<string, unknown>,
+      };
+
+      const message = config.message
+        ? interpolate(config.message, context)
+        : JSON.stringify(data);
+
       log(config.level, message);
       outputs.out.emit(data);
     });
@@ -341,14 +396,14 @@ export const merge = defineReactiveBlock(
     icon: 'git-merge',
     color: '#06b6d4',
     inputs: {
-      a: input(z.unknown(), { name: 'Input A' }),
-      b: input(z.unknown(), { name: 'Input B' }),
+      a: input(z.generic(), { name: 'Input A' }),
+      b: input(z.generic(), { name: 'Input B' }),
     },
     outputs: {
       out: output(
         z.object({
-          a: z.unknown(),
-          b: z.unknown(),
+          a: z.generic(),
+          b: z.generic(),
         }),
         { name: 'Output' }
       ),
@@ -374,18 +429,18 @@ export const merge = defineReactiveBlock(
 
 export const split = defineReactiveBlock(
   {
-    id: 'parallel',
+    id: 'split',
     name: 'Split',
     description: 'Send data to multiple branches',
     category: 'flow',
     icon: 'git-fork',
     color: '#a855f7',
     inputs: {
-      in: input(z.unknown(), { name: 'Input' }),
+      in: input(z.generic(), { name: 'Input' }),
     },
     outputs: {
-      a: output(z.unknown(), { name: 'Branch A' }),
-      b: output(z.unknown(), { name: 'Branch B' }),
+      a: output(z.passthrough('in'), { name: 'Branch A' }),
+      b: output(z.passthrough('in'), { name: 'Branch B' }),
     },
     config: z.object({}),
   },
@@ -411,7 +466,7 @@ export const end = defineReactiveBlock(
     icon: 'square',
     color: '#dc2626',
     inputs: {
-      in: input(z.unknown(), { name: 'Input' }),
+      in: input(z.generic(), { name: 'Input' }),
     },
     outputs: {},
     config: z.object({

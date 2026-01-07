@@ -1,5 +1,5 @@
 import { inject, singleton } from '@brika/shared';
-import { AutomationEngine, YamlWorkflowLoader } from '@/runtime/automations';
+import { AutomationEngine, WorkflowLoader } from '@/runtime/automations';
 import type { BrikaConfig } from '@/runtime/config';
 import { ConfigLoader } from '@/runtime/config';
 import type { Loader } from './loader';
@@ -9,7 +9,7 @@ export class AutomationLoader implements Loader {
   readonly name = 'automations';
 
   private readonly engine = inject(AutomationEngine);
-  private readonly yamlLoader = inject(YamlWorkflowLoader);
+  private readonly workflowLoader = inject(WorkflowLoader);
   private readonly configLoader = inject(ConfigLoader);
 
   async init(): Promise<void> {
@@ -17,13 +17,13 @@ export class AutomationLoader implements Loader {
   }
 
   async load(_config: BrikaConfig): Promise<void> {
-    // Load YAML workflows with hot-reload
-    await this.yamlLoader.loadDir(`${this.configLoader.getBrikaDir()}/automations`);
-    this.yamlLoader.watch();
+    // Load TOML workflows with hot-reload
+    await this.workflowLoader.loadDir(`${this.configLoader.getBrikaDir()}/automations`);
+    this.workflowLoader.watch();
   }
 
   async stop(): Promise<void> {
-    this.yamlLoader.stopWatching();
+    this.workflowLoader.stopWatching();
     await this.engine.stop();
   }
 }

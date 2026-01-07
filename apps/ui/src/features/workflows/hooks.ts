@@ -1,6 +1,31 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as api from './api';
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Tools Hooks
+// ─────────────────────────────────────────────────────────────────────────────
+
+export function useTools() {
+  return useQuery({
+    queryKey: ['tools'],
+    queryFn: api.fetchTools,
+    staleTime: 30000,
+  });
+}
+
+export function useToolSchema(toolId: string | null) {
+  return useQuery({
+    queryKey: ['tools', toolId, 'schema'],
+    queryFn: () => api.fetchToolSchema(toolId!),
+    enabled: !!toolId,
+    staleTime: 60000,
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Workflow Hooks
+// ─────────────────────────────────────────────────────────────────────────────
+
 export function useWorkflows() {
   return useQuery({
     queryKey: ['workflows'],
@@ -9,11 +34,11 @@ export function useWorkflows() {
   });
 }
 
-export function useWorkflow(id: string) {
+export function useWorkflow(id: string, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ['workflows', id],
     queryFn: () => api.fetchWorkflow(id),
-    enabled: !!id,
+    enabled: options?.enabled ?? !!id,
   });
 }
 
@@ -30,15 +55,6 @@ export function useWorkflowRuns() {
     queryKey: ['workflows', 'runs'],
     queryFn: api.fetchWorkflowRuns,
     refetchInterval: 2000,
-  });
-}
-
-export function useTriggerWorkflow() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, payload }: { id: string; payload?: Record<string, unknown> }) =>
-      api.triggerWorkflow(id, payload),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['workflows', 'runs'] }),
   });
 }
 

@@ -1,4 +1,4 @@
-import type { Plugin } from '@brika/shared';
+import type { Plugin, PluginPreferences } from '@brika/shared';
 import { fetcher } from '@/lib/query';
 
 export const pluginsApi = {
@@ -46,10 +46,21 @@ export const pluginsApi = {
     fetcher<{ ok: boolean }>(`/api/plugins/${uid}`, {
       method: 'DELETE',
     }),
+
+  /** Get plugin config (schema + values) */
+  getConfig: (uid: string) => fetcher<PluginPreferences>(`/api/plugins/${uid}/config`),
+
+  /** Update plugin config */
+  setConfig: (uid: string, config: Record<string, unknown>) =>
+    fetcher<{ ok: boolean }>(`/api/plugins/${uid}/config`, {
+      method: 'PUT',
+      body: JSON.stringify(config),
+    }),
 };
 
 export const pluginsKeys = {
   all: ['plugins'] as const,
   detail: (uid: string) => ['plugins', uid] as const,
   readme: (uid: string) => ['plugins', uid, 'readme'] as const,
+  config: (uid: string) => ['plugins', uid, 'config'] as const,
 };

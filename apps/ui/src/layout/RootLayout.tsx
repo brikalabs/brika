@@ -1,17 +1,16 @@
 import { Link, Outlet, useMatchRoute } from '@tanstack/react-router';
 import {
-  Calendar,
+  Blocks,
   FileText,
-  GitBranch,
   LayoutDashboard,
   type LucideIcon,
   Package,
   Plug,
   Settings,
   Workflow,
-  Wrench,
   Zap,
 } from 'lucide-react';
+import { useHealth } from '@/features/dashboard/hooks';
 import { useLocale } from '@/lib/use-locale';
 import { cn } from '@/lib/utils';
 
@@ -24,11 +23,9 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { to: '/', labelKey: 'nav:dashboard', icon: LayoutDashboard },
   { to: '/plugins', labelKey: 'nav:plugins', icon: Plug },
-  { to: '/tools', labelKey: 'nav:tools', icon: Wrench },
   { to: '/events', labelKey: 'nav:events', icon: Zap },
   { to: '/workflows', labelKey: 'nav:workflows', icon: Workflow },
-  { to: '/schedules', labelKey: 'nav:schedules', icon: Calendar },
-  { to: '/rules', labelKey: 'nav:rules', icon: GitBranch },
+  { to: '/blocks', labelKey: 'nav:blocks', icon: Blocks },
   { to: '/logs', labelKey: 'nav:logs', icon: FileText },
   { to: '/store', labelKey: 'nav:store', icon: Package },
   { to: '/settings', labelKey: 'nav:settings', icon: Settings },
@@ -57,6 +54,7 @@ function NavLink({ to, labelKey, icon: Icon }: NavItem) {
 
 export function RootLayout() {
   const { t } = useLocale();
+  const { data: health } = useHealth();
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -73,7 +71,9 @@ export function RootLayout() {
             <NavLink key={item.to} {...item} />
           ))}
         </nav>
-        <div className="border-t p-4 text-muted-foreground text-xs">v0.1.0 · Bun Runtime</div>
+        <div className="border-t p-4 text-muted-foreground text-xs">
+          {health ? `v${health.version} · ${health.runtime}` : '...'}
+        </div>
       </aside>
 
       {/* Main */}

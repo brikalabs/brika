@@ -1,150 +1,155 @@
 /**
  * Timer Plugin for BRIKA
  *
- * Provides timer/reminder functionality with fully typed tools.
+ * Provides timer functionality as reactive blocks.
  */
 
-import { defineTool, emit, log, on, onStop, z } from "@brika/sdk";
+import { defineReactiveBlock, input, log, onStop, output, z } from '@brika/sdk';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Timer State
+// Timer Block - Set a one-shot timer
 // ─────────────────────────────────────────────────────────────────────────────
 
-interface Timer {
-  id: string;
-  name: string;
-  duration: number;
-  startedAt: number;
-  timeout: ReturnType<typeof setTimeout>;
-}
-
-const timers = new Map<string, Timer>();
-let counter = 0;
-
-function nextId(): number {
-  return ++counter;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Tools
-// ─────────────────────────────────────────────────────────────────────────────
-
-export const set = defineTool(
+export const timer = defineReactiveBlock(
   {
-    id: "set",
-    schema: z.object({
-      name: z.string().optional().describe("Timer name (auto-generated if not provided)"),
-      seconds: z.number().min(1).max(86400).describe("Duration in seconds (1-86400)"),
+    id: 'timer',
+    inputs: {
+      trigger: input(z.generic(), { name: 'Trigger' }),
+    },
+    outputs: {
+      completed: output(
+        z.object({
+          name: z.string(),
+          duration: z.number(),
+          triggeredAt: z.number(),
+          completedAt: z.number(),
+        }),
+        { name: 'Completed' }
+      ),
+    },
+    config: z.object({
+      name: z.string().optional().describe('Timer name'),
+      duration: z.duration(undefined, 'Duration to wait'),
     }),
   },
-  async (args) => {
-    const name = args.name ?? `timer-${nextId()}`;
-    const { seconds } = args;
+  ({ inputs, outputs, config, log }) => {
+    let activeTimer: ReturnType<typeof setTimeout> | null = null;
 
-    const id = `${Date.now()}-${nextId()}`;
-    const duration = seconds * 1000;
-
-    const timeout = setTimeout(() => {
-      const timer = timers.get(id);
-      if (timer) {
-        timers.delete(id);
-        log("info", `Timer "${timer.name}" completed`);
-        emit("timer.completed", { id, name: timer.name, duration: timer.duration });
+    inputs.trigger.on(() => {
+      // Cancel any existing timer
+      if (activeTimer) {
+        clearTimeout(activeTimer);
       }
-    }, duration);
 
-    timers.set(id, { id, name, duration, startedAt: Date.now(), timeout });
-    log("info", `Timer "${name}" set for ${seconds}s`, { id });
+      const triggeredAt = Date.now();
+      const name = config.name ?? 'timer';
 
-    return { ok: true, content: `Timer "${name}" set for ${seconds} seconds`, data: { id, name, seconds } };
-  },
+      log('info', `Timer "${name}" started for ${config.duration}ms`);
+
+      activeTimer = setTimeout(() => {
+        const completedAt = Date.now();
+        log('info', `Timer "${name}" completed`);
+        outputs.completed.emit({
+          name,
+          duration: config.duration,
+          triggeredAt,
+          completedAt,
+        });
+        activeTimer = null;
+      }, config.duration);
+    });
+
+    // Cleanup on block stop
+    return () => {
+      if (activeTimer) {
+        clearTimeout(activeTimer);
+        activeTimer = null;
+      }
+    };
+  }
 );
 
-export const list = defineTool(
-  {
-    id: "list",
-    schema: z.object({}),
-  },
-  async () => {
-    const now = Date.now();
-    const items = [...timers.values()].map((t) => ({
-      id: t.id,
-      name: t.name,
-      remaining: Math.max(0, t.duration - (now - t.startedAt)),
-      duration: t.duration,
-    }));
-    return { ok: true, content: `${items.length} active timer(s)`, data: items };
-  },
-);
+// ─────────────────────────────────────────────────────────────────────────────
+// Countdown Block - Emit progress during countdown
+// ─────────────────────────────────────────────────────────────────────────────
 
-export const cancel = defineTool(
+export const countdown = defineReactiveBlock(
   {
-    id: "cancel",
-    schema: z.object({
-      target: z.string().describe("Timer ID or name to cancel"),
+    id: 'countdown',
+    inputs: {
+      start: input(z.generic(), { name: 'Start' }),
+      cancel: input(z.generic(), { name: 'Cancel' }),
+    },
+    outputs: {
+      tick: output(
+        z.object({
+          remaining: z.number(),
+          total: z.number(),
+          progress: z.number(),
+        }),
+        { name: 'Tick' }
+      ),
+      completed: output(z.object({ total: z.number() }), { name: 'Completed' }),
+      cancelled: output(z.object({ remaining: z.number() }), { name: 'Cancelled' }),
+    },
+    config: z.object({
+      duration: z.duration(undefined, 'Total countdown duration'),
+      tickInterval: z.duration(undefined, 'Interval between ticks').default(1000),
     }),
   },
-  async (args) => {
-    // Find by ID first, then by name
-    let timer = timers.get(args.target);
-    if (!timer) {
-      for (const t of timers.values()) {
-        if (t.name === args.target) {
-          timer = t;
-          break;
+  ({ inputs, outputs, config, log }) => {
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+    let endTime = 0;
+
+    const stop = () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+        intervalId = null;
+      }
+    };
+
+    inputs.start.on(() => {
+      stop();
+      endTime = Date.now() + config.duration;
+      log('info', `Countdown started: ${config.duration}ms`);
+
+      intervalId = setInterval(() => {
+        const remaining = Math.max(0, endTime - Date.now());
+        const progress = 1 - remaining / config.duration;
+
+        outputs.tick.emit({
+          remaining,
+          total: config.duration,
+          progress,
+        });
+
+        if (remaining <= 0) {
+          stop();
+          log('info', 'Countdown completed');
+          outputs.completed.emit({ total: config.duration });
         }
+      }, config.tickInterval);
+    });
+
+    inputs.cancel.on(() => {
+      if (intervalId) {
+        const remaining = Math.max(0, endTime - Date.now());
+        stop();
+        log('info', `Countdown cancelled with ${remaining}ms remaining`);
+        outputs.cancelled.emit({ remaining });
       }
-    }
+    });
 
-    if (!timer) {
-      return { ok: false, content: `Timer not found: ${args.target}` };
-    }
-
-    clearTimeout(timer.timeout);
-    timers.delete(timer.id);
-    log("info", `Timer "${timer.name}" cancelled`);
-    emit("timer.cancelled", { id: timer.id, name: timer.name });
-
-    return { ok: true, content: `Timer "${timer.name}" cancelled` };
-  },
+    return stop;
+  }
 );
-
-export const clear = defineTool(
-  {
-    id: "clear",
-    schema: z.object({}),
-  },
-  async () => {
-    const count = timers.size;
-    for (const t of timers.values()) {
-      clearTimeout(t.timeout);
-    }
-    timers.clear();
-    log("info", `Cleared ${count} timer(s)`);
-    return { ok: true, content: `Cleared ${count} timer(s)` };
-  },
-);
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Event Subscriptions
-// ─────────────────────────────────────────────────────────────────────────────
-
-on("timer.*", (event) => {
-  log(
-    "debug",
-    `Timer event: ${event.type}`,
-    event.payload as Record<string, string | number | boolean | null>,
-  );
-});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Lifecycle
 // ─────────────────────────────────────────────────────────────────────────────
 
 onStop(() => {
-  log("info", "Timer plugin stopping, clearing all timers");
-  for (const t of timers.values()) clearTimeout(t.timeout);
-  timers.clear();
+  log('info', 'Timer plugin stopping');
 });
 
-log("info", "Timer plugin starting");
+log('info', 'Timer plugin loaded');

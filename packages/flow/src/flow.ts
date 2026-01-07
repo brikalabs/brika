@@ -40,6 +40,12 @@ export class CleanupRegistry {
 // Flow Implementation
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * FlowImpl - the concrete implementation of Flow.
+ *
+ * Internal methods (_push, _derive, etc.) are prefixed with underscore.
+ * These are used by operators but hidden from users who work with Flow<T>.
+ */
 export class FlowImpl<T> implements Flow<T> {
   readonly #subscribers = new Set<Subscriber<T>>();
   readonly #setTimeoutFn: (fn: () => void, ms: number) => Cleanup;
@@ -51,50 +57,48 @@ export class FlowImpl<T> implements Flow<T> {
     this.#cleanup = cleanup;
   }
 
-  /** Called by runtime to push a value */
-  _push(value: T): void {
+  /** Push a value to subscribers */
+  push(value: T): void {
     this.#latest = value;
     for (const sub of this.#subscribers) {
       sub(value);
     }
   }
 
-  /** Clear all subscribers (called on cleanup) */
-  _clear(): void {
+  /** Clear all subscribers */
+  clear(): void {
     this.#subscribers.clear();
   }
 
-  /** Internal: subscribe without auto-cleanup registration (returns unsubscribe) */
-  _subscribeRaw(fn: Subscriber<T>): Cleanup {
+  /** Subscribe without auto-cleanup (returns unsubscribe) */
+  subscribeRaw(fn: Subscriber<T>): Cleanup {
     this.#subscribers.add(fn);
     return () => this.#subscribers.delete(fn);
   }
 
-  /** Internal: subscribe with auto-cleanup */
-  _subscribe(fn: Subscriber<T>): void {
+  /** Subscribe with auto-cleanup */
+  subscribe(fn: Subscriber<T>): void {
     this.#subscribers.add(fn);
     const cleanup = () => this.#subscribers.delete(fn);
     this.#cleanup.register(cleanup);
   }
 
-  /** Internal: create a derived flow with same cleanup/setTimeout context */
-  _derive<R>(): FlowImpl<R> {
+  /** Create a derived flow with same context */
+  derive<R>(): FlowImpl<R> {
     return new FlowImpl<R>(this.#setTimeoutFn, this.#cleanup);
   }
 
-  /** Internal: setTimeout with auto-cleanup */
-  _setTimeout(fn: () => void, ms: number): Cleanup {
+  /** setTimeout with auto-cleanup */
+  setTimeout(fn: () => void, ms: number): Cleanup {
     return this.#setTimeoutFn(fn, ms);
   }
 
-  // ─── Public API ────────────────────────────────────────────────────────────
-
   on(fn: Subscriber<T>): void {
-    this._subscribe(fn);
+    this.subscribe(fn);
   }
 
   to(...emitters: Emitter<T>[]): void {
-    this._subscribe((v) => {
+    this.subscribe((v) => {
       for (const emitter of emitters) {
         emitter.emit(v);
       }

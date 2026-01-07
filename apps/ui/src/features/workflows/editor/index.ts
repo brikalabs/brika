@@ -1,4 +1,4 @@
-export { BlockNode, type BlockNodeData } from './BlockNode';
+export { BlockNode, type BlockNodeData, type BlockPort } from './BlockNode';
 export {
   BLOCK_TYPES,
   type BlockDefinition,
@@ -8,7 +8,6 @@ export {
 export { ConfigPanel } from './ConfigPanel';
 export { DebugPanel } from './DebugPanel';
 export { ExpressionInput } from './ExpressionInput';
-export { TriggerNode, type TriggerNodeData } from './TriggerNode';
 export {
   type BlockStatus,
   type EditorState,

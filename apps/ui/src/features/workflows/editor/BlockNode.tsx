@@ -22,27 +22,16 @@ import type { BlockStatus } from './useWorkflowEditor';
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
 
-interface BlockPort {
+export interface BlockPort {
   id: string;
   name: string;
-  type?: string;
+  /** Type name: "string", "number", "object", "generic", etc. */
+  typeName?: string;
 }
 
-// Output port colors for semantic meaning
-const OUTPUT_COLORS: Record<string, string> = {
-  then: '#22c55e', // green
-  else: '#ef4444', // red
-  true: '#22c55e',
-  false: '#ef4444',
-  success: '#22c55e',
-  error: '#ef4444',
-  default: '#6b7280', // gray
-  out: '#3b82f6', // blue
-};
-
-function getOutputColor(portId: string, fallback: string): string {
-  return OUTPUT_COLORS[portId.toLowerCase()] || fallback;
-}
+// Simple colors: inputs = blue, outputs = orange
+const INPUT_COLOR = '#3b82f6';
+const OUTPUT_COLOR = '#f97316';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -85,21 +74,18 @@ function StatusIndicator({ status }: Readonly<{ status?: BlockStatus }>) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Output Port Component - Visual representation of output
+// Output Port Component
 // ─────────────────────────────────────────────────────────────────────────────
 
 interface OutputPortProps {
   port: BlockPort;
   index: number;
   total: number;
-  blockColor: string;
 }
 
-function OutputPort({ port, index, total, blockColor }: OutputPortProps) {
-  const portColor = getOutputColor(port.id, blockColor);
-
-  // Calculate horizontal position
+function OutputPort({ port, index, total }: OutputPortProps) {
   const offset = total > 1 ? ((index + 1) / (total + 1)) * 100 : 50;
+  const typeName = port.typeName ?? 'generic';
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -109,17 +95,14 @@ function OutputPort({ port, index, total, blockColor }: OutputPortProps) {
             className="group absolute -bottom-1 flex cursor-pointer flex-col items-center"
             style={{ left: `${offset}%`, transform: 'translateX(-50%)' }}
           >
-            {/* Port label - shows on hover or always for multi-output */}
             {total > 1 && (
               <span
-                className="mb-0.5 font-semibold text-[10px] uppercase tracking-wide opacity-90"
-                style={{ color: portColor }}
+                className="mb-0.5 font-semibold text-[10px] uppercase tracking-wide"
+                style={{ color: OUTPUT_COLOR }}
               >
                 {port.name}
               </span>
             )}
-
-            {/* Handle - larger and colored */}
             <Handle
               type="source"
               position={Position.Bottom}
@@ -128,9 +111,9 @@ function OutputPort({ port, index, total, blockColor }: OutputPortProps) {
               style={{
                 width: total > 1 ? 14 : 12,
                 height: total > 1 ? 14 : 12,
-                background: portColor,
+                background: OUTPUT_COLOR,
                 border: '3px solid var(--background)',
-                boxShadow: `0 2px 4px ${portColor}40`,
+                boxShadow: `0 2px 4px ${OUTPUT_COLOR}40`,
                 borderRadius: '50%',
               }}
             />
@@ -138,7 +121,7 @@ function OutputPort({ port, index, total, blockColor }: OutputPortProps) {
         </TooltipTrigger>
         <TooltipContent side="bottom" className="text-xs">
           <span className="font-semibold">{port.name}</span>
-          {port.type && <span className="ml-1 text-muted-foreground">({port.type})</span>}
+          <span className="text-muted-foreground"> : {typeName}</span>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
@@ -157,13 +140,14 @@ interface InputPortProps {
 
 function InputPort({ port, index, total }: InputPortProps) {
   const offset = total > 1 ? ((index + 1) / (total + 1)) * 100 : 50;
+  const typeName = port.typeName ?? 'generic';
 
   return (
     <TooltipProvider delayDuration={200}>
       <Tooltip>
         <TooltipTrigger asChild>
           <div
-            className="absolute -top-1"
+            className="absolute -top-1 flex flex-col items-center"
             style={{ left: `${offset}%`, transform: 'translateX(-50%)' }}
           >
             <Handle
@@ -174,17 +158,25 @@ function InputPort({ port, index, total }: InputPortProps) {
               style={{
                 width: 12,
                 height: 12,
-                background: '#64748b',
+                background: INPUT_COLOR,
                 border: '3px solid var(--background)',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                boxShadow: `0 2px 4px ${INPUT_COLOR}30`,
                 borderRadius: '50%',
               }}
             />
+            {total > 1 && (
+              <span
+                className="mt-0.5 font-medium text-[9px] uppercase tracking-tight"
+                style={{ color: INPUT_COLOR }}
+              >
+                {port.name}
+              </span>
+            )}
           </div>
         </TooltipTrigger>
         <TooltipContent side="top" className="text-xs">
           <span className="font-semibold">{port.name}</span>
-          {port.type && <span className="ml-1 text-muted-foreground">({port.type})</span>}
+          <span className="text-muted-foreground"> : {typeName}</span>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
@@ -336,9 +328,9 @@ export function BlockNode(props: NodeProps) {
         ) : null}
       </BaseNodeContent>
 
-      {/* Output Handles with Labels */}
+      {/* Output Handles */}
       {outputs.map((port: BlockPort, i: number) => (
-        <OutputPort key={port.id} port={port} index={i} total={outputs.length} blockColor={color} />
+        <OutputPort key={port.id} port={port} index={i} total={outputs.length} />
       ))}
     </BaseNode>
   );

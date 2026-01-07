@@ -84,7 +84,7 @@ export function createApp(routes: RouteDefinition[]): Hono {
   app.onError((error, c) => {
     // Handle HTTP exceptions
     if (error instanceof HttpException) {
-      return c.json({ error: error.message }, error.status);
+      return c.json({ error: error.message, ...error.data }, error.status);
     }
 
     // Handle Zod validation errors

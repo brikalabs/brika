@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.brika.dev/plugin.schema.json",
   "name": "@brika/plugin-timer",
-  "version": "0.1.1",
-  "description": "Timer and reminder functionality for BRIKA",
+  "version": "0.2.0",
+  "description": "Timer and countdown blocks for BRIKA workflows",
   "author": "BRIKA Team",
   "repository": {
     "type": "git",
@@ -12,45 +12,37 @@
   "icon": "./icon.svg",
   "keywords": [
     "timer",
-    "reminder",
-    "delay",
-    "countdown"
+    "countdown",
+    "delay"
   ],
   "engines": {
-    "brika": "^0.1.1"
+    "brika": "^0.2.0"
   },
   "type": "module",
+  "main": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts"
   },
   "scripts": {
     "link": "bun link",
-    "tsc": "bunx --biome tsc --noEmit"
+    "tsc": "bunx --bun tsc --noEmit"
   },
-  "tools": [
+  "blocks": [
     {
-      "id": "set",
-      "description": "Set a timer that fires after the specified duration",
+      "id": "timer",
+      "name": "Timer",
+      "description": "Set a one-shot timer that fires after a duration",
+      "category": "trigger",
       "icon": "timer",
       "color": "#22c55e"
     },
     {
-      "id": "list",
-      "description": "List all active timers with remaining time",
-      "icon": "list",
+      "id": "countdown",
+      "name": "Countdown",
+      "description": "Countdown with progress ticks",
+      "category": "trigger",
+      "icon": "clock",
       "color": "#3b82f6"
-    },
-    {
-      "id": "cancel",
-      "description": "Cancel an active timer by ID or name",
-      "icon": "x-circle",
-      "color": "#ef4444"
-    },
-    {
-      "id": "clear",
-      "description": "Clear all active timers at once",
-      "icon": "trash-2",
-      "color": "#f97316"
     }
   ],
   "dependencies": {
@@ -58,6 +50,5 @@
   },
   "devDependencies": {
     "bun-types": "^1.3.5"
-  },
-  "main": "./src/index.ts"
+  }
 }

@@ -9,16 +9,14 @@ import { queryClient } from '@/lib/query';
 import '@/lib/i18n';
 
 // Feature Pages
+import { BlocksPage } from '@/features/blocks';
 import { DashboardPage } from '@/features/dashboard';
 import { EventsPage } from '@/features/events';
 import { LogsPage } from '@/features/logs';
 import { PluginDetailPage, PluginsPage } from '@/features/plugins';
-import { RulesPage } from '@/features/rules';
-import { SchedulesPage } from '@/features/schedules';
 import { SettingsPage } from '@/features/settings';
 import { StorePage } from '@/features/store';
-import { ToolsPage } from '@/features/tools';
-import { WorkflowsPage } from '@/features/workflows';
+import { WorkflowEditorPage, WorkflowsPage } from '@/features/workflows';
 // Layout
 import { RootLayout } from '@/layout/RootLayout';
 
@@ -37,15 +35,28 @@ const pluginDetailRoute = createRoute({
   component: PluginDetailPage,
 });
 
+// Workflow routes
+const workflowEditorRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/workflows/$id/edit',
+  component: WorkflowEditorPage,
+});
+
+const workflowNewRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/workflows/new',
+  component: WorkflowEditorPage,
+});
+
 const routes = [
   createRoute({ getParentRoute: () => rootRoute, path: '/', component: DashboardPage }),
   createRoute({ getParentRoute: () => rootRoute, path: '/plugins', component: PluginsPage }),
   pluginDetailRoute,
-  createRoute({ getParentRoute: () => rootRoute, path: '/tools', component: ToolsPage }),
   createRoute({ getParentRoute: () => rootRoute, path: '/events', component: EventsPage }),
   createRoute({ getParentRoute: () => rootRoute, path: '/workflows', component: WorkflowsPage }),
-  createRoute({ getParentRoute: () => rootRoute, path: '/schedules', component: SchedulesPage }),
-  createRoute({ getParentRoute: () => rootRoute, path: '/rules', component: RulesPage }),
+  workflowNewRoute,
+  workflowEditorRoute,
+  createRoute({ getParentRoute: () => rootRoute, path: '/blocks', component: BlocksPage }),
   createRoute({ getParentRoute: () => rootRoute, path: '/logs', component: LogsPage }),
   createRoute({ getParentRoute: () => rootRoute, path: '/store', component: StorePage }),
   createRoute({ getParentRoute: () => rootRoute, path: '/settings', component: SettingsPage }),

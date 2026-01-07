@@ -1,0 +1,33 @@
+{
+  "name": "Demo Config",
+  "description": "Demo plugin showcasing the preferences system",
+  "preferences": {
+    "apiKey": {
+      "title": "API Key",
+      "description": "Your secret API key for authentication"
+    },
+    "serverUrl": {
+      "title": "Server URL",
+      "description": "The base URL of the API server"
+    },
+    "maxRetries": {
+      "title": "Max Retries",
+      "description": "Maximum number of retry attempts (1-10)"
+    },
+    "debugMode": {
+      "title": "Debug Mode",
+      "description": "Enable verbose logging for troubleshooting"
+    },
+    "logLevel": {
+      "title": "Log Level",
+      "description": "Minimum log level to display",
+      "options": {
+        "debug": "Debug",
+        "info": "Info",
+        "warn": "Warning",
+        "error": "Error"
+      }
+    }
+  }
+}
+

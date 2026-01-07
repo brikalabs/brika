@@ -1,9 +1,29 @@
-import { BadRequest, createAsyncSSEStream, createSSEStream, NotFound, route } from '@brika/router';
-import type { BrikaEvent, Json } from '@brika/shared';
+import { createSSEStream, NotFound, route } from '@brika/router';
+import type { Json } from '@brika/shared';
 import { z } from 'zod';
 import { AutomationEngine } from '@/runtime/automations';
 import { EventSystem } from '@/runtime/events/event-system';
 import { LogRouter } from '@/runtime/logs/log-router';
+
+/**
+ * Workflow event types for live debugging
+ */
+type WorkflowEventType =
+  | 'block.input'
+  | 'block.output'
+  | 'block.state'
+  | 'block.error'
+  | 'workflow.start'
+  | 'workflow.stop';
+
+interface WorkflowEvent {
+  type: WorkflowEventType;
+  workflowId: string;
+  blockId?: string;
+  portId?: string;
+  data?: Json;
+  timestamp: number;
+}
 
 export const streamsRoutes = [
   // SSE: Stream logs
@@ -38,13 +58,55 @@ export const streamsRoutes = [
     });
   }),
 
-  // SSE: Test workflow execution with streaming events
+  // SSE: Live workflow events for debugging
   route.get(
-    '/api/workflows/test',
+    '/api/workflows/:id/events',
+    {
+      params: z.object({ id: z.string() }),
+    },
+    ({ params, inject }) => {
+      const automations = inject(AutomationEngine);
+      const events = inject(EventSystem);
+
+      const workflow = automations.get(params.id);
+      if (!workflow) throw new NotFound('Workflow not found');
+
+      return createSSEStream((send) => {
+        // Send initial state
+        send({
+          type: 'workflow.start',
+          workflowId: params.id,
+          blocks: workflow.blocks?.map((b) => b.id) ?? [],
+          timestamp: Date.now(),
+        } as WorkflowEvent);
+
+        // Subscribe to events related to this workflow
+        const unsub = events.subscribeGlob(
+          [`workflow.${params.id}.*`, `block.${params.id}.*`],
+          (action) => {
+            const event: WorkflowEvent = {
+              type: action.type.split('.').slice(-1)[0] as WorkflowEventType,
+              workflowId: params.id,
+              blockId: (action.payload as { blockId?: string })?.blockId,
+              portId: (action.payload as { portId?: string })?.portId,
+              data: action.payload as Json,
+              timestamp: action.timestamp,
+            };
+            send(event, 'workflow-event');
+          }
+        );
+
+        return () => unsub();
+      });
+    }
+  ),
+
+  // SSE: Stream workflow execution events
+  route.get(
+    '/api/workflows/stream',
     {
       query: z.object({
         id: z.string(),
-        payload: z.string().optional(),
       }),
     },
     ({ query, inject }) => {
@@ -53,46 +115,31 @@ export const streamsRoutes = [
       const workflow = automations.get(query.id);
       if (!workflow) throw new NotFound('Workflow not found');
 
-      let payload: Json = {};
-      if (query.payload) {
-        try {
-          payload = JSON.parse(query.payload);
-        } catch {
-          throw new BadRequest('Invalid payload JSON');
-        }
-      }
+      return createSSEStream((send, close) => {
+        // Subscribe to execution events
+        const removeListener = automations.addListener((event) => {
+          send(event);
 
-      return createAsyncSSEStream(async (send) => {
-        // Emit start
-        send({ type: 'workflow.start', workflowId: query.id });
-
-        // Get blocks and emit events as they would run
-        const blocks = workflow.blocks || [];
-
-        for (let i = 0; i < blocks.length; i++) {
-          const block = blocks[i];
-          send({ type: 'block.start', blockId: block.id, index: i });
-
-          // Simulate execution delay for visualization
-          await new Promise((r) => setTimeout(r, 100));
-        }
-
-        // Actually run the workflow
-        const run = await automations.trigger(query.id, 'test.trigger', 'test', payload);
-
-        if (run.status === 'error') {
-          send({ type: 'workflow.error', error: run.error });
-        } else {
-          // Emit completion for each block
-          for (const block of blocks) {
-            send({ type: 'block.complete', blockId: block.id, output: null });
+          // Close stream if workflow stopped
+          if (event.type === 'workflow.stopped') {
+            close();
           }
-          send({
-            type: 'workflow.complete',
-            runId: run.id,
-            duration: (run.finishedAt || Date.now()) - run.startedAt,
-          });
-        }
+        });
+
+        // Start the workflow
+        automations.startWorkflow(query.id).catch((err) => {
+          send({ type: 'workflow.error', workflowId: query.id, error: String(err) });
+          close();
+        });
+
+        // Return cleanup function
+        return () => {
+          removeListener();
+          // Stop workflow when client disconnects
+          if (automations.runningWorkflowId === query.id) {
+            automations.stopWorkflow();
+          }
+        };
       });
     }
   ),

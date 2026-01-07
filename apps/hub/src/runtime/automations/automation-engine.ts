@@ -1,31 +1,19 @@
 /**
  * Automation Engine
  *
- * Manages workflows and executes them via plugin-based blocks.
+ * Manages workflows with reactive, event-driven execution.
+ * Workflows run indefinitely until stopped.
  */
 
-import type { BlockDefinition, Workflow } from '@brika/sdk';
+import type { BlockDefinition } from '@brika/sdk';
 import type { Json } from '@brika/shared';
 import { inject, singleton } from '@brika/shared';
 import { BlockRegistry } from '@/runtime/blocks';
 import { EventSystem } from '@/runtime/events/event-system';
 import { LogRouter } from '@/runtime/logs/log-router';
 import { PluginManager } from '@/runtime/plugins/plugin-manager';
-import { ToolRegistry } from '@/runtime/tools/tool-registry';
-import { type ExecutionListener, WorkflowExecutor } from './workflow-executor';
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Types
-// ─────────────────────────────────────────────────────────────────────────────
-
-interface WorkflowRun {
-  id: string;
-  workflowId: string;
-  status: 'running' | 'completed' | 'error';
-  startedAt: number;
-  finishedAt?: number;
-  error?: string;
-}
+import type { Workflow } from './types';
+import { type ExecutionEvent, type ExecutionListener, WorkflowExecutor } from './workflow-executor';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Engine
@@ -35,33 +23,44 @@ interface WorkflowRun {
 export class AutomationEngine {
   private readonly logs = inject(LogRouter);
   private readonly events = inject(EventSystem);
-  private readonly tools = inject(ToolRegistry);
   private readonly blocks = inject(BlockRegistry);
   private readonly plugins = inject(PluginManager);
 
   /** Registered workflows */
   readonly #workflows = new Map<string, Workflow>();
 
+  /** Running workflow executors by ID */
+  readonly #executors = new Map<string, WorkflowExecutor>();
+
+  /** Global listeners for all workflow events (for SSE debug streaming) */
+  readonly #globalListeners = new Set<ExecutionListener>();
+
   /** Event subscriptions for cleanup */
   #eventUnsubs: Array<() => void> = [];
 
-  /** Recent runs */
-  readonly #runs: WorkflowRun[] = [];
-
-  /** Executor instance */
+  /** Legacy: single executor for backward compatibility */
   #executor: WorkflowExecutor | null = null;
 
   init(): void {
-    // Create executor
+    // Create default executor for backward compat
     this.#executor = new WorkflowExecutor({
       plugins: this.plugins,
-      tools: this.tools,
-      events: this.events,
       logs: this.logs,
       blocks: this.blocks,
     });
 
     this.logs.info('automation.engine.started');
+  }
+
+  /**
+   * Create a new executor instance for a workflow
+   */
+  #createExecutor(): WorkflowExecutor {
+    return new WorkflowExecutor({
+      plugins: this.plugins,
+      logs: this.logs,
+      blocks: this.blocks,
+    });
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -82,38 +81,53 @@ export class AutomationEngine {
   // Workflow Management
   // ─────────────────────────────────────────────────────────────────────────────
 
-  /** Register a workflow */
+  /**
+   * Check if all block types needed by a workflow are available
+   */
+  #checkBlocks(workflow: Workflow): { ok: boolean; missing: string[] } {
+    const missing: string[] = [];
+    for (const block of workflow.blocks) {
+      if (!this.blocks.has(block.type)) {
+        missing.push(block.type);
+      }
+    }
+    return { ok: missing.length === 0, missing };
+  }
+
+  /**
+   * Register a workflow - sets status based on block availability
+   * Auto-starts if enabled and all blocks are available
+   */
   register(workflow: Workflow): void {
     // Clean up existing
     if (this.#workflows.has(workflow.id)) {
       this.unregister(workflow.id);
     }
 
+    // Check if all blocks are available
+    const { ok, missing } = this.#checkBlocks(workflow);
+
+    if (!ok) {
+      // Missing blocks - set error status
+      workflow.status = 'error';
+      workflow.error = `Missing blocks: ${missing.join(', ')}`;
+      this.#workflows.set(workflow.id, workflow);
+      this.logs.warn('workflow.missing_blocks', { id: workflow.id, missing });
+      return;
+    }
+
+    // Clear any previous error
+    workflow.error = undefined;
+    workflow.status = 'stopped';
+
     this.#workflows.set(workflow.id, workflow);
     this.logs.info('workflow.registered', { id: workflow.id, name: workflow.name ?? null });
 
-    // Skip if disabled
-    if (workflow.enabled === false) return;
-
-    // Set up event trigger
-    if (workflow.trigger.event) {
-      const pattern = workflow.trigger.event;
-      const unsub = this.events.subscribeGlob(pattern, async (action) => {
-        // Check filter if present
-        if (workflow.trigger.filter) {
-          for (const [k, v] of Object.entries(workflow.trigger.filter)) {
-            const payload = action.payload as Record<string, Json>;
-            if (payload[k] !== v) return;
-          }
-        }
-        await this.trigger(
-          workflow.id,
-          action.type,
-          action.source ?? 'unknown',
-          action.payload as Json
-        );
+    // Auto-start if enabled
+    if (workflow.enabled) {
+      this.#startWorkflowInternal(workflow.id).catch((err) => {
+        this.logs.error('workflow.autostart.error', { id: workflow.id, error: String(err) });
       });
-      this.#eventUnsubs.push(unsub);
     }
   }
 
@@ -121,56 +135,177 @@ export class AutomationEngine {
   unregister(id: string): boolean {
     const workflow = this.#workflows.get(id);
     if (!workflow) return false;
+
+    // Stop if this workflow is running
+    this.#stopWorkflowInternal(id);
+
+    // Also check legacy executor
+    if (this.#executor?.workflowId === id) {
+      this.#executor.stop();
+    }
+
     this.#workflows.delete(id);
     this.logs.info('workflow.unregistered', { id });
     return true;
   }
 
-  /** Trigger a workflow */
-  async trigger(
-    id: string,
-    eventType: string,
-    source: string,
-    payload: Json,
-    listener?: ExecutionListener
-  ): Promise<WorkflowRun> {
+  /**
+   * Internal: Start a workflow
+   */
+  async #startWorkflowInternal(id: string): Promise<void> {
+    const workflow = this.#workflows.get(id);
+    if (!workflow) return;
+
+    // Don't start if already running
+    if (this.#executors.has(id)) return;
+
+    // Don't start if in error state
+    if (workflow.status === 'error') {
+      this.logs.warn('workflow.start.blocked', { id, error: workflow.error });
+      return;
+    }
+
+    try {
+      const executor = this.#createExecutor();
+      this.#executors.set(id, executor);
+
+      // Add listener that broadcasts to global listeners
+      executor.addListener((event) => {
+        for (const listener of this.#globalListeners) {
+          listener(event);
+        }
+      });
+
+      // Update status and startedAt
+      workflow.status = 'running';
+      workflow.startedAt = Date.now();
+      workflow.error = undefined;
+
+      await executor.start(workflow);
+      this.logs.info('workflow.started', { id, startedAt: workflow.startedAt });
+    } catch (err) {
+      // Set error status
+      workflow.status = 'error';
+      workflow.error = String(err);
+      workflow.startedAt = undefined;
+      this.#executors.delete(id);
+      this.logs.error('workflow.start.error', { id, error: String(err) });
+    }
+  }
+
+  /**
+   * Internal: Stop a workflow
+   */
+  #stopWorkflowInternal(id: string): void {
+    const executor = this.#executors.get(id);
+    if (executor) {
+      executor.stop();
+      this.#executors.delete(id);
+    }
+
+    // Update workflow state
+    const workflow = this.#workflows.get(id);
+    if (workflow && workflow.status === 'running') {
+      workflow.status = 'stopped';
+      workflow.startedAt = undefined;
+    }
+
+    this.logs.info('workflow.stopped', { id });
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Workflow Execution
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Start a workflow - runs indefinitely until stopped.
+   * Only one workflow can run at a time.
+   */
+  async startWorkflow(id: string, listener?: ExecutionListener): Promise<void> {
     const workflow = this.#workflows.get(id);
     if (!workflow) throw new Error(`Workflow not found: ${id}`);
     if (!this.#executor) throw new Error('Engine not initialized');
 
-    const run: WorkflowRun = {
-      id: crypto.randomUUID(),
-      workflowId: id,
-      status: 'running',
-      startedAt: Date.now(),
-    };
-
-    this.#runs.push(run);
-    if (this.#runs.length > 1000) this.#runs.shift();
-
-    // Set up listener if provided
+    // Add listener if provided
     if (listener) {
-      this.#executor.onEvent(listener);
+      this.#executor.addListener(listener);
     }
 
-    try {
-      this.logs.info('workflow.started', { id, runId: run.id, trigger: eventType });
-      await this.#executor.run(workflow, { type: eventType, payload, source });
-      run.status = 'completed';
-      run.finishedAt = Date.now();
-      this.logs.info('workflow.finished', {
-        id,
-        runId: run.id,
-        duration: run.finishedAt - run.startedAt,
-      });
-    } catch (error) {
-      run.status = 'error';
-      run.error = String(error);
-      run.finishedAt = Date.now();
-      this.logs.error('workflow.error', { id, runId: run.id, error: run.error });
-    }
+    await this.#executor.start(workflow);
+  }
 
-    return run;
+  /**
+   * Stop the running workflow.
+   */
+  stopWorkflow(): void {
+    this.#executor?.stop();
+  }
+
+  /**
+   * Inject data into a block's input port.
+   */
+  inject(blockId: string, port: string, data: Json): boolean {
+    if (!this.#executor) return false;
+    return this.#executor.inject(blockId, port, data);
+  }
+
+  /**
+   * Get the running workflow ID.
+   */
+  get runningWorkflowId(): string | null {
+    return this.#executor?.workflowId ?? null;
+  }
+
+  /**
+   * Check if a workflow is running.
+   */
+  get isRunning(): boolean {
+    return this.#executor?.isRunning ?? false;
+  }
+
+  /**
+   * Add a listener for execution events (legacy - single workflow).
+   */
+  addListener(listener: ExecutionListener): () => void {
+    if (!this.#executor)
+      return () => {
+        /* no-op */
+      };
+    return this.#executor.addListener(listener);
+  }
+
+  /**
+   * Add a global listener for ALL workflow execution events.
+   * Useful for SSE streaming and debugging.
+   */
+  addGlobalListener(listener: ExecutionListener): () => void {
+    this.#globalListeners.add(listener);
+    return () => this.#globalListeners.delete(listener);
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Port Inspection
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Get the last value from a port.
+   */
+  getPortValue(blockId: string, port: string) {
+    return this.#executor?.getPortValue(blockId, port);
+  }
+
+  /**
+   * Get all port buffers.
+   */
+  getAllBuffers() {
+    return this.#executor?.getAllBuffers() ?? [];
+  }
+
+  /**
+   * Retrigger the last value from a port.
+   */
+  retrigger(blockId: string, port: string): boolean {
+    return this.#executor?.retrigger(blockId, port) ?? false;
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -181,26 +316,45 @@ export class AutomationEngine {
     return this.#workflows.get(id);
   }
 
+  /**
+   * Check if a specific workflow is running
+   */
+  isWorkflowRunning(id: string): boolean {
+    return this.#executors.has(id);
+  }
+
   list(): Workflow[] {
     return [...this.#workflows.values()]
       .map((w) => ({
         ...w,
-        enabled: w.enabled ?? true,
+        enabled: w.enabled ?? false,
       }))
       .sort((a, b) => (a.name ?? a.id).localeCompare(b.name ?? b.id));
   }
 
-  listRuns(limit = 100): WorkflowRun[] {
-    return this.#runs.slice(-limit).reverse();
-  }
-
-  setEnabled(id: string, enabled: boolean): boolean {
+  async setEnabled(id: string, enabled: boolean): Promise<boolean> {
     const workflow = this.#workflows.get(id);
     if (!workflow) return false;
 
-    const updated = { ...workflow, enabled };
-    this.unregister(id);
-    this.register(updated);
+    workflow.enabled = enabled;
+
+    if (enabled) {
+      // Re-check blocks before starting (in case they're now available)
+      const { ok, missing } = this.#checkBlocks(workflow);
+      if (!ok) {
+        workflow.status = 'error';
+        workflow.error = `Missing blocks: ${missing.join(', ')}`;
+        return true;
+      }
+
+      // Clear error and start
+      workflow.error = undefined;
+      await this.#startWorkflowInternal(id);
+    } else {
+      // Stop the workflow
+      this.#stopWorkflowInternal(id);
+    }
+
     return true;
   }
 
@@ -209,8 +363,20 @@ export class AutomationEngine {
   // ─────────────────────────────────────────────────────────────────────────────
 
   stop(): void {
+    // Stop all running workflows
+    for (const [id, executor] of this.#executors) {
+      executor.stop();
+      this.logs.info('workflow.stopped', { id });
+    }
+    this.#executors.clear();
+
+    // Stop legacy executor
+    this.#executor?.stop();
+
+    // Clean up event subscriptions
     for (const unsub of this.#eventUnsubs) unsub();
     this.#eventUnsubs = [];
+
     this.logs.info('automation.engine.stopped');
   }
 }

@@ -10,11 +10,146 @@ import {
   useEdgesState,
   useNodesState,
 } from '@xyflow/react';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Workflow, WorkflowBlock } from '../api';
-import type { BlockNodeData } from './BlockNode';
-import type { BlockTypeInfo } from './BlockToolbar';
-import type { TriggerNodeData } from './TriggerNode';
+import type { BlockNodeData, BlockPort } from './BlockNode';
+import type { BlockDefinition, BlockTypeInfo } from './BlockToolbar';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Type Inference
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Extended port with original type tracking */
+interface PortWithOriginal extends BlockPort {
+  _originalType?: string;
+}
+
+/** Check if type is concrete (not generic/passthrough) */
+const isConcrete = (t?: string) => t && !t.startsWith('generic') && !t.startsWith('passthrough');
+
+/** Get original type (stored or current) */
+const getOriginal = (p: PortWithOriginal) => p._originalType ?? p.typeName;
+
+/**
+ * Infer types for generic ports based on graph connections.
+ * Stores original types in _originalType and computes display types.
+ */
+function inferPortTypes(nodes: Node[], edges: Edge[]): Node[] {
+  // Build edge lookup: target -> { portId -> { sourceNodeId, sourcePortId } }
+  const incoming = new Map<string, Map<string, { node: string; port: string }>>();
+  for (const e of edges) {
+    if (!incoming.has(e.target)) incoming.set(e.target, new Map());
+    incoming.get(e.target)!.set(e.targetHandle || 'in', {
+      node: e.source,
+      port: e.sourceHandle || 'out',
+    });
+  }
+
+  // First pass: ensure all ports have _originalType set
+  const withOriginals = nodes.map((n) => {
+    if (n.type !== 'block') return n;
+    const d = n.data as BlockNodeData;
+    return {
+      ...n,
+      data: {
+        ...d,
+        inputs: d.inputs?.map((p) => ({
+          ...p,
+          _originalType: (p as PortWithOriginal)._originalType ?? p.typeName,
+        })),
+        outputs: d.outputs?.map((p) => ({
+          ...p,
+          _originalType: (p as PortWithOriginal)._originalType ?? p.typeName,
+        })),
+      },
+    };
+  });
+
+  // Build node lookup
+  const nodeMap = new Map(
+    withOriginals.filter((n) => n.type === 'block').map((n) => [n.id, n.data as BlockNodeData])
+  );
+
+  // Compute inferred types for each node
+  const inferred = new Map<string, Map<string, string>>(); // nodeId -> portId -> inferredType
+
+  // Run iterations to propagate through chains
+  for (let iter = 0; iter < 10; iter++) {
+    let changed = false;
+
+    for (const [nodeId, data] of nodeMap) {
+      const nodeIncoming = incoming.get(nodeId);
+      if (!inferred.has(nodeId)) inferred.set(nodeId, new Map());
+      const nodeInferred = inferred.get(nodeId)!;
+
+      // Infer input types from connected outputs
+      for (const input of data.inputs || []) {
+        const conn = nodeIncoming?.get(input.id);
+        if (!conn) continue;
+
+        const sourceData = nodeMap.get(conn.node);
+        const sourcePort = sourceData?.outputs?.find((p) => p.id === conn.port);
+        if (!sourcePort) continue;
+
+        // Get source type (inferred or original)
+        const sourceInferred = inferred.get(conn.node)?.get(conn.port);
+        const sourceType = sourceInferred ?? getOriginal(sourcePort as PortWithOriginal);
+
+        // If source has concrete type and this input is generic, infer it
+        const origType = getOriginal(input as PortWithOriginal);
+        if (isConcrete(sourceType) && origType?.startsWith('generic')) {
+          if (nodeInferred.get(input.id) !== sourceType) {
+            nodeInferred.set(input.id, sourceType!);
+            changed = true;
+          }
+        }
+      }
+
+      // Infer output types from inputs (generic outputs get type from first input)
+      for (const output of data.outputs || []) {
+        const origType = getOriginal(output as PortWithOriginal);
+        if (!origType?.startsWith('generic')) continue;
+
+        // Find first input with inferred or concrete type
+        const firstInput = data.inputs?.[0];
+        if (!firstInput) continue;
+
+        const inputInferred = nodeInferred.get(firstInput.id);
+        const inputOrig = getOriginal(firstInput as PortWithOriginal);
+        const inputType = inputInferred ?? (isConcrete(inputOrig) ? inputOrig : undefined);
+
+        if (inputType && nodeInferred.get(output.id) !== inputType) {
+          nodeInferred.set(output.id, inputType);
+          changed = true;
+        }
+      }
+    }
+
+    if (!changed) break;
+  }
+
+  // Apply inferred types to nodes
+  return withOriginals.map((node) => {
+    if (node.type !== 'block') return node;
+    const data = node.data as BlockNodeData;
+    const nodeInferred = inferred.get(node.id);
+
+    return {
+      ...node,
+      data: {
+        ...data,
+        inputs: data.inputs?.map((p) => ({
+          ...p,
+          typeName: nodeInferred?.get(p.id) ?? getOriginal(p as PortWithOriginal),
+        })),
+        outputs: data.outputs?.map((p) => ({
+          ...p,
+          typeName: nodeInferred?.get(p.id) ?? getOriginal(p as PortWithOriginal),
+        })),
+      },
+    };
+  });
+}
 
 export type BlockStatus = 'idle' | 'running' | 'completed' | 'error';
 
@@ -37,178 +172,99 @@ export interface ExecutionLog {
 }
 
 // Convert workflow to React Flow nodes and edges
-function workflowToFlow(workflow: Workflow): { nodes: Node[]; edges: Edge[] } {
+function workflowToFlow(
+  workflow: Workflow,
+  blockDefs: BlockDefinition[]
+): { nodes: Node[]; edges: Edge[] } {
   const nodes: Node[] = [];
   const edges: Edge[] = [];
 
-  // Add trigger node
-  nodes.push({
-    id: 'trigger',
-    type: 'trigger',
-    position: { x: 300, y: 50 },
-    data: {
-      event: workflow.trigger.event,
-      filter: workflow.trigger.filter,
-    } as TriggerNodeData,
-  });
+  // Build block definition lookup by both full ID and short ID
+  const defMap = new Map<string, BlockDefinition>();
+  for (const d of blockDefs) {
+    defMap.set(d.id, d);
+    if (d.type) defMap.set(d.type, d);
+  }
 
   // Add block nodes
   const blocks = workflow.blocks || [];
 
   blocks.forEach((block, index) => {
-    const isFirst = index === 0;
-    const isLast =
-      block.type === 'end' ||
-      (!block.next && block.type !== 'condition' && block.type !== 'switch');
+    // Look up block definition to get inputs/outputs
+    const def = defMap.get(block.type);
 
     nodes.push({
       id: block.id,
       type: 'block',
-      position: { x: 300, y: 180 + index * 140 },
+      position: block.position ?? { x: 300, y: 50 + index * 140 },
       data: {
         id: block.id,
         type: block.type,
-        label: block.id,
-        config: block,
-        isFirst,
-        isLast,
+        label: def?.name || block.id,
+        config: block.config || {},
+        icon: def?.icon,
+        color: def?.color,
+        inputs: def?.inputs?.map((p) => ({
+          id: p.id,
+          direction: 'input' as const,
+          typeName: p.typeName || 'generic<T>',
+        })),
+        outputs: def?.outputs?.map((p) => ({
+          id: p.id,
+          direction: 'output' as const,
+          typeName: p.typeName || 'generic<T>',
+        })),
         status: 'idle',
       } as BlockNodeData,
     });
   });
 
-  // Connect trigger to first block
-  if (blocks.length > 0) {
+  // Create edges from workflow-level connections
+  for (const conn of workflow.connections || []) {
     edges.push({
-      id: 'trigger-to-first',
-      source: 'trigger',
-      target: blocks[0].id,
+      id: `${conn.from}:${conn.fromPort || 'out'}->${conn.to}:${conn.toPort || 'in'}`,
+      source: conn.from,
+      sourceHandle: conn.fromPort || 'out',
+      target: conn.to,
+      targetHandle: conn.toPort || 'in',
       type: 'smoothstep',
       markerEnd: { type: MarkerType.ArrowClosed },
-      animated: true,
     });
   }
-
-  // Create edges based on block connections
-  blocks.forEach((block) => {
-    if (block.next) {
-      edges.push({
-        id: `${block.id}-to-${block.next}`,
-        source: block.id,
-        target: block.next as string,
-        type: 'smoothstep',
-        markerEnd: { type: MarkerType.ArrowClosed },
-      });
-    }
-
-    if (block.type === 'condition') {
-      if (block.then) {
-        edges.push({
-          id: `${block.id}-then-${block.then}`,
-          source: block.id,
-          target: block.then as string,
-          type: 'smoothstep',
-          markerEnd: { type: MarkerType.ArrowClosed },
-          label: 'then',
-          style: { stroke: '#22c55e' },
-        });
-      }
-      if (block.else) {
-        edges.push({
-          id: `${block.id}-else-${block.else}`,
-          source: block.id,
-          target: block.else as string,
-          type: 'smoothstep',
-          markerEnd: { type: MarkerType.ArrowClosed },
-          label: 'else',
-          style: { stroke: '#ef4444' },
-        });
-      }
-    }
-
-    if (block.type === 'switch' && block.cases) {
-      const cases = block.cases as Record<string, string>;
-      Object.entries(cases).forEach(([value, target]) => {
-        edges.push({
-          id: `${block.id}-case-${value}`,
-          source: block.id,
-          target,
-          type: 'smoothstep',
-          markerEnd: { type: MarkerType.ArrowClosed },
-          label: value,
-        });
-      });
-      if (block.default) {
-        edges.push({
-          id: `${block.id}-default`,
-          source: block.id,
-          target: block.default as string,
-          type: 'smoothstep',
-          markerEnd: { type: MarkerType.ArrowClosed },
-          label: 'default',
-          style: { stroke: '#6b7280' },
-        });
-      }
-    }
-  });
 
   return { nodes, edges };
 }
 
 // Convert React Flow nodes/edges back to workflow
 function flowToWorkflow(nodes: Node[], edges: Edge[], originalWorkflow: Workflow): Workflow {
-  const triggerNode = nodes.find((n) => n.type === 'trigger');
   const blockNodes = nodes.filter((n) => n.type === 'block');
 
   // Build blocks from nodes
   const blocks: WorkflowBlock[] = blockNodes.map((node) => {
     const data = node.data as BlockNodeData;
-    const block: WorkflowBlock = {
-      ...data.config,
+    return {
       id: node.id,
       type: data.type,
+      position: node.position,
+      config: data.config,
     };
-
-    // Find outgoing edges and set next/then/else
-    const outEdges = edges.filter((e) => e.source === node.id);
-
-    if (data.type === 'condition') {
-      const thenEdge = outEdges.find((e) => e.label === 'then');
-      const elseEdge = outEdges.find((e) => e.label === 'else');
-      if (thenEdge) block.then = thenEdge.target;
-      if (elseEdge) block.else = elseEdge.target;
-    } else if (data.type === 'switch') {
-      const cases: Record<string, string> = {};
-      outEdges.forEach((e) => {
-        if (e.label === 'default') {
-          block.default = e.target;
-        } else if (e.label) {
-          cases[e.label as string] = e.target;
-        }
-      });
-      block.cases = cases;
-    } else {
-      const nextEdge = outEdges[0];
-      if (nextEdge) block.next = nextEdge.target;
-    }
-
-    return block;
   });
 
-  // Sort blocks by Y position for consistent ordering
-  blocks.sort((a, b) => {
-    const nodeA = blockNodes.find((n) => n.id === a.id);
-    const nodeB = blockNodes.find((n) => n.id === b.id);
-    return (nodeA?.position.y || 0) - (nodeB?.position.y || 0);
-  });
+  // Build connections from edges
+  const connections = edges.map((e) => ({
+    from: e.source,
+    fromPort: e.sourceHandle || undefined,
+    to: e.target,
+    toPort: e.targetHandle || undefined,
+  }));
 
+  // Only include known workflow properties (avoid spreading unknown props)
   return {
-    ...originalWorkflow,
-    trigger: {
-      event: (triggerNode?.data as TriggerNodeData)?.event || '*',
-      filter: (triggerNode?.data as TriggerNodeData)?.filter,
-    },
+    id: originalWorkflow.id,
+    name: originalWorkflow.name,
+    enabled: originalWorkflow.enabled,
     blocks,
+    connections,
   };
 }
 
@@ -219,10 +275,10 @@ function generateNodeId(type: string): string {
   return `${type}-${Date.now().toString(36)}-${nodeIdCounter}`;
 }
 
-export function useWorkflowEditor(initialWorkflow: Workflow) {
+export function useWorkflowEditor(initialWorkflow: Workflow, blockDefs: BlockDefinition[]) {
   const { nodes: initialNodes, edges: initialEdges } = useMemo(
-    () => workflowToFlow(initialWorkflow),
-    [initialWorkflow]
+    () => workflowToFlow(initialWorkflow, blockDefs),
+    [initialWorkflow, blockDefs]
   );
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
@@ -232,6 +288,26 @@ export function useWorkflowEditor(initialWorkflow: Workflow) {
   const [blockStatuses, setBlockStatuses] = useState<Record<string, BlockStatus>>({});
   const [blockOutputs, setBlockOutputs] = useState<Record<string, unknown>>({});
   const [executionLogs, setExecutionLogs] = useState<ExecutionLog[]>([]);
+
+  // Run type inference when graph changes (nodes or edges)
+  useEffect(() => {
+    const inferred = inferPortTypes(nodes, edges);
+    // Only update if types actually changed
+    const hasChanges = inferred.some((node, i) => {
+      if (node.type !== 'block') return false;
+      const oldData = nodes[i]?.data as BlockNodeData | undefined;
+      const newData = node.data as BlockNodeData;
+      return (
+        JSON.stringify(oldData?.inputs?.map((p) => p.typeName)) !==
+          JSON.stringify(newData?.inputs?.map((p) => p.typeName)) ||
+        JSON.stringify(oldData?.outputs?.map((p) => p.typeName)) !==
+          JSON.stringify(newData?.outputs?.map((p) => p.typeName))
+      );
+    });
+    if (hasChanges) {
+      setNodes(inferred);
+    }
+  }, [nodes, edges, setNodes]);
 
   // Get current workflow from nodes/edges
   const workflow = useMemo(
@@ -339,26 +415,6 @@ export function useWorkflowEditor(initialWorkflow: Workflow) {
     [setNodes]
   );
 
-  // Update trigger config
-  const updateTriggerConfig = useCallback(
-    (config: { event?: string; filter?: Record<string, unknown> }) => {
-      setNodes((nds) =>
-        nds.map((node) => {
-          if (node.id === 'trigger') {
-            const data = node.data as TriggerNodeData;
-            return {
-              ...node,
-              data: { ...data, ...config },
-            };
-          }
-          return node;
-        })
-      );
-      setIsDirty(true);
-    },
-    [setNodes]
-  );
-
   // Set block status (for debugging)
   const setBlockStatus = useCallback(
     (blockId: string, status: BlockStatus, output?: unknown) => {
@@ -406,38 +462,53 @@ export function useWorkflowEditor(initialWorkflow: Workflow) {
   }, [setNodes]);
 
   // Get available variables at a given block position
+  // Variables use the pattern: inputs.{portId} for incoming data
   const getAvailableVariables = useCallback(
     (blockId: string) => {
-      const variables: { name: string; source: string; type: string }[] = [
-        { name: 'trigger.type', source: 'trigger', type: 'string' },
-        { name: 'trigger.payload', source: 'trigger', type: 'object' },
-        { name: 'trigger.source', source: 'trigger', type: 'string' },
-        { name: 'trigger.ts', source: 'trigger', type: 'number' },
-        { name: 'prev', source: 'previous block', type: 'any' },
-      ];
+      const variables: { name: string; source: string; type: string }[] = [];
 
-      // Find set blocks that come before this block
       const blockNodes = nodes.filter((n) => n.type === 'block');
-      const blockIndex = blockNodes.findIndex((n) => n.id === blockId);
+      const targetNode = blockNodes.find((n) => n.id === blockId);
+      const incomingEdges = edges.filter((e) => e.target === blockId);
 
-      blockNodes.slice(0, blockIndex).forEach((node) => {
-        const data = node.data as BlockNodeData;
-        if (data.type === 'set' && data.config.var) {
+      // Add input variables for each connected input port
+      incomingEdges.forEach((edge) => {
+        const sourceNode = blockNodes.find((n) => n.id === edge.source);
+        if (sourceNode) {
+          const sourceData = sourceNode.data as BlockNodeData;
+          const sourcePortId = edge.sourceHandle || 'out';
+          const targetPortId = edge.targetHandle || 'in';
+          const outputPort = sourceData.outputs?.find((p) => p.id === sourcePortId);
+
+          // Use inputs.{targetPortId} pattern (e.g., inputs.in, inputs.a)
           variables.push({
-            name: `vars.${data.config.var}`,
-            source: `set block "${node.id}"`,
-            type: 'any',
+            name: `inputs.${targetPortId}`,
+            source: `from ${sourceNode.id}`,
+            type: outputPort?.typeName ?? 'generic',
           });
         }
       });
 
+      // Add config variables if the block has config schema
+      if (targetNode) {
+        const targetData = targetNode.data as BlockNodeData;
+        if (targetData.config && Object.keys(targetData.config).length > 0) {
+          for (const key of Object.keys(targetData.config)) {
+            variables.push({
+              name: `config.${key}`,
+              source: 'block config',
+              type: typeof targetData.config[key],
+            });
+          }
+        }
+      }
+
       return variables;
     },
-    [nodes]
+    [nodes, edges]
   );
 
   return {
-    // React Flow state
     nodes,
     edges,
     onNodesChange,
@@ -447,28 +518,19 @@ export function useWorkflowEditor(initialWorkflow: Workflow) {
     onPaneClick,
     onNodesDelete,
     onEdgesDelete,
-
-    // Editor state
     workflow,
     selectedNodeId,
     selectedNode,
     isDirty,
-
-    // Actions
     addBlock,
     updateBlockConfig,
-    updateTriggerConfig,
     setSelectedNodeId,
-
-    // Execution state
     blockStatuses,
     blockOutputs,
     executionLogs,
     setBlockStatus,
     addExecutionLog,
     clearExecutionState,
-
-    // Helpers
     getAvailableVariables,
   };
 }

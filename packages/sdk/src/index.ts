@@ -66,18 +66,49 @@ export {
 } from './blocks';
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Custom Schema Module (z with safe types + BRIKA custom types)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type { ZodInfer, ZodObject, ZodRawShape, ZodType } from './blocks/schema';
+// Use this instead of importing 'zod' directly!
+// Includes: z.generic(), z.passthrough(), z.expression(), z.color(), etc.
+// Does NOT include: z.unknown(), z.any() - use z.generic() instead
+export { z } from './blocks/schema';
+
+// Type markers and utilities (for internal use)
+export type { TypeMarkerValue } from './blocks/schema-types';
+export { getTypeMarker, isPassthrough, TypeMarker } from './blocks/schema-types';
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Block Metadata Types
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type { BlockDefinition, BlockPort, BlockSchema, PortDirection } from './blocks';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Tools & Events
+// Events & Lifecycle
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type { CompiledTool, EventHandler, EventPayload, StopHandler, ToolSpec } from './api';
+export type {
+  EventHandler,
+  EventPayload,
+  InitHandler,
+  PreferencesChangeHandler,
+  StopHandler,
+  UninstallHandler,
+} from './api';
 
-export { defineTool, emit, log, on, onEvent, onStop, start } from './api';
+export {
+  emit,
+  getPreferences,
+  log,
+  on,
+  onEvent,
+  onInit,
+  onPreferencesChange,
+  onStop,
+  onUninstall,
+} from './api';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Common Types
@@ -91,5 +122,3 @@ export * from './types';
 
 export { Json, JsonRecord } from '@brika/ipc';
 export type { PluginInfo, ToolCallContext, ToolResult } from '@brika/ipc/contract';
-
-export { z } from 'zod';

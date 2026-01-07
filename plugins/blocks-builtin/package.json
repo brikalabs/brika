@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.brika.dev/plugin.schema.json",
   "name": "@brika/blocks-builtin",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Core workflow blocks for BRIKA automations",
   "author": "BRIKA Team",
   "repository": {
@@ -15,11 +15,10 @@
     "workflow",
     "automation",
     "condition",
-    "delay",
-    "action"
+    "delay"
   ],
   "engines": {
-    "brika": "^0.1.1"
+    "brika": "^0.2.0"
   },
   "type": "module",
   "main": "./src/main.ts",
@@ -32,11 +31,19 @@
   },
   "blocks": [
     {
-      "id": "action",
-      "name": "Action",
-      "description": "Call a tool with arguments",
+      "id": "clock",
+      "name": "Clock",
+      "description": "Emit periodic ticks on an interval",
+      "category": "trigger",
+      "icon": "clock",
+      "color": "#22c55e"
+    },
+    {
+      "id": "http-request",
+      "name": "HTTP Request",
+      "description": "Make HTTP requests to external APIs",
       "category": "action",
-      "icon": "zap",
+      "icon": "globe",
       "color": "#3b82f6"
     },
     {
@@ -64,17 +71,9 @@
       "color": "#6b7280"
     },
     {
-      "id": "emit",
-      "name": "Emit Event",
-      "description": "Emit an event to the event bus",
-      "category": "action",
-      "icon": "send",
-      "color": "#10b981"
-    },
-    {
-      "id": "set",
-      "name": "Set Variable",
-      "description": "Set a workflow variable",
+      "id": "transform",
+      "name": "Transform",
+      "description": "Transform or extract data fields",
       "category": "transform",
       "icon": "edit",
       "color": "#ec4899"
@@ -82,7 +81,7 @@
     {
       "id": "log",
       "name": "Log",
-      "description": "Log a message",
+      "description": "Log a message to the console",
       "category": "action",
       "icon": "file-text",
       "color": "#78716c"
@@ -96,9 +95,9 @@
       "color": "#06b6d4"
     },
     {
-      "id": "parallel",
-      "name": "Parallel",
-      "description": "Run multiple branches in parallel",
+      "id": "split",
+      "name": "Split",
+      "description": "Split into parallel branches",
       "category": "flow",
       "icon": "git-fork",
       "color": "#a855f7"
@@ -107,7 +106,7 @@
       "id": "end",
       "name": "End",
       "description": "End the workflow branch",
-      "category": "flow",
+      "category": "action",
       "icon": "square",
       "color": "#dc2626"
     }

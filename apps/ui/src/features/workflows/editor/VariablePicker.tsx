@@ -67,7 +67,7 @@ function buildTree(variables: VariableInfo[]): TreeNode[] {
   root.push({
     name: 'prev',
     fullPath: 'prev',
-    type: 'any',
+    type: 'generic',
     source: 'Previous block output',
     children: [],
   });

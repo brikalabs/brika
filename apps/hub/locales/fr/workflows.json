@@ -7,6 +7,8 @@
   "blocks": "Blocs",
   "blocksDescription": "Types de blocs disponibles pour construire des workflows",
   "confirmDelete": "Supprimer le workflow « {{id}} » ?",
+  "search": "Rechercher des workflows...",
+  "noResults": "Aucun workflow ne correspond à votre recherche",
   "runs": {
     "title": "Exécutions",
     "empty": "Aucune exécution pour le moment. Déclenchez un workflow pour voir l'historique."
@@ -15,7 +17,14 @@
     "name": "Nom",
     "trigger": "Déclencheur",
     "status": "Statut",
-    "actions": "Actions"
+    "actions": "Actions",
+    "blocks": "Blocs",
+    "startedAt": "Démarré à",
+    "noBlocks": "Aucun bloc"
+  },
+  "deleteDialog": {
+    "title": "Supprimer le workflow",
+    "description": "Êtes-vous sûr de vouloir supprimer le workflow « {{id}} » ? Cette action est irréversible."
   },
   "actions": {
     "create": "Nouveau Workflow",
@@ -23,7 +32,20 @@
     "delete": "Supprimer",
     "enable": "Activer",
     "disable": "Désactiver",
-    "run": "Exécuter"
+    "run": "Exécuter",
+    "debug": "Déboguer"
+  },
+  "debug": {
+    "title": "Débogage en direct",
+    "description": "Événements d'exécution du workflow en temps réel",
+    "connected": "Connecté",
+    "disconnected": "Déconnecté",
+    "waiting": "En attente d'événements...",
+    "events": "événements",
+    "clear": "Effacer",
+    "all": "Tout",
+    "logsOnly": "Logs",
+    "emitsOnly": "Émissions"
   },
   "editor": {
     "title": "Éditeur de Workflow",

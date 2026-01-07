@@ -1,251 +1,350 @@
 # @brika/blocks-builtin
 
-Core workflow blocks for BRIKA automations. This plugin provides essential building blocks for creating visual workflows in the BRIKA automation engine.
+Core reactive blocks for BRIKA workflow automations. This plugin provides essential building blocks for creating visual workflows.
 
 ## Overview
 
-The built-in blocks plugin is automatically loaded by the BRIKA hub and provides fundamental workflow control and data manipulation blocks. These blocks form the foundation of all BRIKA automations.
+The built-in blocks plugin is automatically loaded by the BRIKA hub and provides fundamental workflow control and data manipulation blocks using the reactive stream architecture.
 
 ## Available Blocks
+
+### Triggers
+
+#### Clock
+Emit periodic ticks on an interval.
+
+- **Inputs**: None (source block)
+- **Outputs**: `tick` — `{ count: number, ts: number }`
+- **Config**:
+  - `interval` (duration) — Interval between ticks
+
+```yaml
+- id: clock
+  type: "@brika/blocks-builtin:clock"
+  config:
+    interval: 5000  # 5 seconds
+```
 
 ### Flow Control
 
 #### Condition
-Branch workflow execution based on a boolean expression.
+Branch based on a boolean condition.
 
-- **Inputs**: `in`
-- **Outputs**: `then`, `else`
+- **Inputs**: `in` (generic)
+- **Outputs**: `then`, `else` (passthrough)
 - **Config**:
-  - `if`: Condition expression (e.g., `trigger.payload.value > 10`)
+  - `field` — Field path to check (e.g., `"value"`, `"data.status"`)
+  - `operator` — `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `contains`, `exists`
+  - `value` — Value to compare against
+
+```yaml
+- id: check
+  type: "@brika/blocks-builtin:condition"
+  config:
+    field: "temperature"
+    operator: "gt"
+    value: 25
+```
 
 #### Switch
 Multi-way branch based on a value.
 
-- **Inputs**: `in`
-- **Outputs**: `default` + custom outputs defined in `cases`
+- **Inputs**: `in` (generic)
+- **Outputs**: `case1`, `case2`, `case3`, `default` (passthrough)
 - **Config**:
-  - `value`: Expression to evaluate (e.g., `trigger.payload.status`)
-  - `cases`: Map of value → output port ID
+  - `field` — Field path to check
+  - `case1`, `case2`, `case3` — Values to match
+
+```yaml
+- id: switch
+  type: "@brika/blocks-builtin:switch"
+  config:
+    field: "status"
+    case1: "active"
+    case2: "pending"
+    case3: "error"
+```
 
 #### Delay
-Wait for a specified duration before continuing.
+Wait for a duration before continuing.
 
-- **Inputs**: `in`
-- **Outputs**: `out`
+- **Inputs**: `in` (generic)
+- **Outputs**: `out` (passthrough)
 - **Config**:
-  - `duration`: Duration to wait (e.g., `"5s"`, `"1m"`, `5000`)
+  - `duration` (duration) — Duration to wait
+
+```yaml
+- id: wait
+  type: "@brika/blocks-builtin:delay"
+  config:
+    duration: 5000  # 5 seconds
+```
 
 #### Merge
 Wait for multiple inputs before continuing.
 
-- **Inputs**: `a`, `b`
-- **Outputs**: `out`
-- **Config**:
-  - `mode`: `"all"` or `"any"` (optional, defaults to `"all"`)
-
-#### Parallel
-Split workflow execution into parallel branches.
-
-- **Inputs**: `in`
-- **Outputs**: `a`, `b`
+- **Inputs**: `a`, `b` (generic)
+- **Outputs**: `out` — `{ a: any, b: any }`
 - **Config**: None
+
+```yaml
+- id: merge
+  type: "@brika/blocks-builtin:merge"
+  config: {}
+```
+
+#### Split
+Send data to multiple branches.
+
+- **Inputs**: `in` (generic)
+- **Outputs**: `a`, `b` (passthrough)
+- **Config**: None
+
+```yaml
+- id: split
+  type: "@brika/blocks-builtin:split"
+  config: {}
+```
 
 #### End
 Terminate a workflow branch.
 
-- **Inputs**: `in`
+- **Inputs**: `in` (generic)
 - **Outputs**: None
 - **Config**:
-  - `status`: `"success"` or `"failure"` (optional)
-  - `message`: Optional message (optional)
+  - `status` — `"success"` or `"failure"`
+
+```yaml
+- id: end
+  type: "@brika/blocks-builtin:end"
+  config:
+    status: success
+```
 
 ### Actions
 
-#### Action
-Call a tool with arguments.
+#### HTTP Request
+Make HTTP requests to external APIs.
 
-- **Inputs**: `in`
-- **Outputs**: `out`
+- **Inputs**: `trigger` (generic)
+- **Outputs**: `response`, `error`
 - **Config**:
-  - `tool`: Tool name to call (e.g., `@brika/plugin-timer:set`)
-  - `args`: Arguments to pass (optional, supports expressions)
+  - `url` — Request URL
+  - `method` — `GET`, `POST`, `PUT`, `PATCH`, `DELETE`
+  - `headers` — Request headers object
+  - `body` — Request body (for POST/PUT/PATCH)
 
-#### Emit Event
-Emit an event to the event bus.
-
-- **Inputs**: `in`
-- **Outputs**: `out`
-- **Config**:
-  - `event`: Event type to emit
-  - `payload`: Event payload (optional, supports expressions)
+```yaml
+- id: api-call
+  type: "@brika/blocks-builtin:http-request"
+  config:
+    url: "https://api.example.com/data"
+    method: GET
+    headers:
+      Authorization: "Bearer token"
+```
 
 #### Log
-Log a message to the workflow logs.
+Log a message with variable interpolation.
 
-- **Inputs**: `in`
-- **Outputs**: `out`
+- **Inputs**: `in` (generic)
+- **Outputs**: `out` (passthrough)
 - **Config**:
-  - `message`: Message to log (supports expressions)
-  - `level`: Log level - `"debug"`, `"info"`, `"warn"`, or `"error"` (optional, defaults to `"info"`)
+  - `message` — Message template with `{{inputs.in.field}}` expressions
+  - `level` — `debug`, `info`, `warn`, `error`
+
+```yaml
+- id: log
+  type: "@brika/blocks-builtin:log"
+  config:
+    message: "Received: {{inputs.in.value}}"
+    level: info
+```
 
 ### Data Manipulation
 
-#### Set Variable
-Set a workflow variable for use in subsequent blocks.
+#### Transform
+Transform or extract data.
 
-- **Inputs**: `in`
-- **Outputs**: `out`
+- **Inputs**: `in` (generic)
+- **Outputs**: `out` (any)
 - **Config**:
-  - `var`: Variable name to set
-  - `value`: Value to assign (supports expressions)
+  - `field` — Field to extract (empty for passthrough)
+  - `template` — Template to build output object
+
+```yaml
+# Extract a field
+- id: extract
+  type: "@brika/blocks-builtin:transform"
+  config:
+    field: "data.temperature"
+
+# Build new object
+- id: reshape
+  type: "@brika/blocks-builtin:transform"
+  config:
+    template:
+      temp: "data.temperature"
+      hum: "data.humidity"
+```
 
 ## Usage Examples
 
-### Simple Conditional Flow
-
-Create a workflow that checks a sensor value and turns on lights if it's above a threshold:
-
-```yaml filename="motion-lights.yml"
-blocks:
-  - id: trigger
-    type: event
-    config:
-      event: motion.detected
-  
-  - id: check
-    type: @brika/blocks-builtin:condition
-    config:
-      if: trigger.payload.value > 50
-  
-  - id: action
-    type: @brika/blocks-builtin:action
-    config:
-      tool: "@brika/plugin-lights:turnOn"
-      args:
-        brightness: 100
-```
-
-### Timer with Delay
-
-Set a timer and send a notification halfway through:
+### Simple Clock + Log
 
 ```yaml
+id: clock-demo
+name: Clock Demo
+enabled: true
+
 blocks:
-  - id: start
-    type: @brika/blocks-builtin:action
+  - id: clock
+    type: "@brika/blocks-builtin:clock"
     config:
-      tool: "@brika/plugin-timer:set"
-      args:
-        seconds: 60
-  
-  - id: wait
-    type: @brika/blocks-builtin:delay
+      interval: 5000
+    position: { x: 100, y: 100 }
+
+  - id: log
+    type: "@brika/blocks-builtin:log"
     config:
-      duration: "30s"
-  
-  - id: notify
-    type: @brika/blocks-builtin:emit
-    config:
-      event: timer.halfway
-      payload:
-        message: "30 seconds remaining"
+      message: "Tick #{{inputs.in.count}}"
+      level: info
+    position: { x: 300, y: 100 }
+
+connections:
+  - from: clock
+    fromPort: tick
+    to: log
+    toPort: in
 ```
 
-### Parallel Execution
-
-Run multiple actions simultaneously when a button is pressed:
+### Conditional Flow
 
 ```yaml
+id: condition-demo
+name: Condition Demo
+enabled: true
+
 blocks:
-  - id: trigger
-    type: event
+  - id: clock
+    type: "@brika/blocks-builtin:clock"
     config:
-      event: button.pressed
-  
-  - id: split
-    type: @brika/blocks-builtin:parallel
-    config: {}
-  
-  - id: lights
-    type: @brika/blocks-builtin:action
-    config:
-      tool: "@brika/plugin-lights:toggle"
-  
-  - id: music
-    type: @brika/blocks-builtin:action
-    config:
-      tool: "@brika/plugin-music:play"
-  
-  - id: merge
-    type: @brika/blocks-builtin:merge
-    config: {}
-```
+      interval: 10000
 
-### Using Variables
+  - id: condition
+    type: "@brika/blocks-builtin:condition"
+    config:
+      field: "count"
+      operator: "gt"
+      value: 5
 
-Store and use data throughout your workflow:
-
-```yaml filename="temperature-monitor.yml"
-blocks:
-  - id: trigger
-    type: event
+  - id: high
+    type: "@brika/blocks-builtin:log"
     config:
-      event: sensor.reading
-  
-  - id: store_temp
-    type: @brika/blocks-builtin:set
-    config:
-      var: temperature
-      value: trigger.payload.temp
-  
-  - id: check
-    type: @brika/blocks-builtin:condition
-    config:
-      if: vars.temperature > 25
-  
-  - id: log_high
-    type: @brika/blocks-builtin:log
-    config:
-      message: "Temperature is {{ vars.temperature }}°C"
+      message: "Count is high: {{inputs.in.count}}"
       level: warn
+
+  - id: low
+    type: "@brika/blocks-builtin:log"
+    config:
+      message: "Count is low: {{inputs.in.count}}"
+      level: debug
+
+connections:
+  - from: clock
+    fromPort: tick
+    to: condition
+    toPort: in
+  - from: condition
+    fromPort: then
+    to: high
+    toPort: in
+  - from: condition
+    fromPort: else
+    to: low
+    toPort: in
 ```
 
-### Code Block Examples
+### Parallel Branches
 
-You can specify filenames in code blocks to make examples clearer:
+```yaml
+id: parallel-demo
+name: Parallel Demo
+enabled: true
 
-```js filename="example.js"
-const result = await runtime.callTool("@brika/plugin-timer:set", {
-  name: "Coffee Reminder",
-  seconds: 300,
-});
-```
+blocks:
+  - id: clock
+    type: "@brika/blocks-builtin:clock"
+    config:
+      interval: 5000
 
-```typescript filename="plugin.ts"
-import { defineTool, z } from "@brika/sdk";
+  - id: split
+    type: "@brika/blocks-builtin:split"
+    config: {}
 
-export const myTool = defineTool({
-  id: "action",
-  schema: z.object({
-    message: z.string(),
-  }),
-}, async (args) => {
-  return { ok: true, content: args.message };
-});
+  - id: fast
+    type: "@brika/blocks-builtin:log"
+    config:
+      message: "Fast path"
+
+  - id: slow
+    type: "@brika/blocks-builtin:delay"
+    config:
+      duration: 2000
+
+  - id: slow-log
+    type: "@brika/blocks-builtin:log"
+    config:
+      message: "Slow path (after 2s)"
+
+  - id: merge
+    type: "@brika/blocks-builtin:merge"
+    config: {}
+
+  - id: done
+    type: "@brika/blocks-builtin:log"
+    config:
+      message: "Both paths completed"
+
+connections:
+  - from: clock
+    fromPort: tick
+    to: split
+    toPort: in
+  - from: split
+    fromPort: a
+    to: fast
+    toPort: in
+  - from: split
+    fromPort: b
+    to: slow
+    toPort: in
+  - from: slow
+    fromPort: out
+    to: slow-log
+    toPort: in
+  - from: fast
+    fromPort: out
+    to: merge
+    toPort: a
+  - from: slow-log
+    fromPort: out
+    to: merge
+    toPort: b
+  - from: merge
+    fromPort: out
+    to: done
+    toPort: in
 ```
 
 ## Expression Syntax
 
-Many blocks support expressions in their configuration. Expressions can reference:
+Log blocks support `{{...}}` expressions for variable interpolation:
 
-- `trigger.payload.*` - Data from the workflow trigger
-- `vars.*` - Workflow variables set by the `set` block
-- `inputs.*` - Data from input ports
-
-Example expressions:
-- `trigger.payload.temperature > 25`
-- `vars.count + 1`
-- `inputs.a.value + inputs.b.value`
+- `{{inputs.in}}` — Raw input data
+- `{{inputs.in.field}}` — Access nested fields
+- `{{config.value}}` — Access config values
+- `{{JSON.stringify(inputs.in)}}` — Serialize to JSON
 
 ## Installation
 

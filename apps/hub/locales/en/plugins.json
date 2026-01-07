@@ -65,5 +65,9 @@
     "tools": "Tools",
     "blocks": "Blocks",
     "actions": "Actions"
+  },
+  "config": {
+    "title": "Configuration",
+    "description": "Plugin preferences and settings"
   }
 }

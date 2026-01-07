@@ -17,6 +17,11 @@ export const PluginActions = defineActions('plugin', {
     uid: z.string(),
     name: z.string(),
   }),
+  configInvalid: z.object({
+    uid: z.string(),
+    name: z.string(),
+    errors: z.array(z.string()),
+  }),
   error: z.object({
     uid: z.string(),
     name: z.string(),

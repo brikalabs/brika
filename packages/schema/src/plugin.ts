@@ -140,6 +140,66 @@ const BlockSchema = z.object({
 });
 
 // ============================================================================
+// Preference Schema (Raycast-style plugin configuration)
+// ============================================================================
+
+/** Base fields for all preference types. Name doubles as i18n key: preferences.{name}.title */
+const BasePreference = z.object({
+  name: z.string().describe('Preference key (also used as i18n key base)'),
+  required: z.optional(z.boolean().default(false).describe('Whether this preference must be set')),
+});
+
+/** Text input preference */
+const TextPreference = BasePreference.extend({
+  type: z.literal('text'),
+  default: z.optional(z.string().describe('Default value')),
+});
+
+/** Password preference (masked input) */
+const PasswordPreference = BasePreference.extend({
+  type: z.literal('password'),
+  default: z.optional(z.string().describe('Default value')),
+});
+
+/** Number preference with optional constraints */
+const NumberPreference = BasePreference.extend({
+  type: z.literal('number'),
+  default: z.optional(z.number().describe('Default value')),
+  min: z.optional(z.number().describe('Minimum allowed value')),
+  max: z.optional(z.number().describe('Maximum allowed value')),
+  step: z.optional(z.number().describe('Step increment')),
+});
+
+/** Checkbox preference (boolean) */
+const CheckboxPreference = BasePreference.extend({
+  type: z.literal('checkbox'),
+  default: z.optional(z.boolean().default(false).describe('Default value')),
+});
+
+/** Dropdown option - value is the key, label comes from i18n */
+const DropdownOption = z.object({
+  value: z.string().describe('Option value (also i18n key: preferences.{name}.options.{value})'),
+});
+
+/** Dropdown preference - requires options array */
+const DropdownPreference = BasePreference.extend({
+  type: z.literal('dropdown'),
+  default: z.optional(z.string().describe('Default selected value')),
+  options: z.array(DropdownOption).describe('Available options'),
+});
+
+/** Discriminated union of all preference types */
+const PreferenceSchema = z.discriminatedUnion('type', [
+  TextPreference,
+  PasswordPreference,
+  NumberPreference,
+  CheckboxPreference,
+  DropdownPreference,
+]);
+
+export type PreferenceSchema = z.infer<typeof PreferenceSchema>;
+
+// ============================================================================
 // Final Plugin Package Schema
 // ============================================================================
 
@@ -169,6 +229,9 @@ export const PluginPackageSchema = BasePackageJson.extend({
   tools: z.optional(z.array(ToolSchema).describe('Tools provided by this plugin')),
   blocks: z.optional(z.array(BlockSchema).describe('Workflow blocks provided by this plugin')),
   icon: z.optional(z.string().describe('Path to plugin icon (PNG/SVG, relative to package root)')),
+  preferences: z.optional(
+    z.array(PreferenceSchema).describe('Plugin preferences/configuration schema')
+  ),
 });
 
 /**

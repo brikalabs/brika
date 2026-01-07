@@ -18,7 +18,6 @@ import {
   Tag,
   Trash2,
   User,
-  Wrench,
 } from 'lucide-react';
 import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
 import { useState } from 'react';
@@ -52,6 +51,7 @@ import {
 import { useLocale } from '@/lib/use-locale';
 import { pluginsApi } from './api';
 import { Markdown } from './components/Markdown';
+import { PluginConfigForm } from './components/PluginConfigForm';
 import { UpdatePluginDialog } from './components/UpdatePluginDialog';
 import { usePlugin, usePluginMutations, usePluginReadme } from './hooks';
 import { registryApi, registryKeys } from './registry-api';
@@ -160,7 +160,6 @@ export function PluginDetailPage() {
 
   const authorName = getAuthorName();
   const repoUrl = getRepoUrl();
-  const tools = plugin.tools ?? [];
   const blocks = plugin.blocks ?? [];
   const locales = plugin.locales ?? [];
 
@@ -367,17 +366,7 @@ export function PluginDetailPage() {
       )}
 
       {/* Stats grid */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card accent="emerald" className="p-5">
-          <div className="relative flex h-full flex-col justify-center">
-            <CardIconSmall className="absolute top-0 right-0">
-              <Wrench className="size-4" />
-            </CardIconSmall>
-            <div className="font-bold text-3xl tracking-tight">{tools.length}</div>
-            <div className="mt-1 text-muted-foreground text-sm">{t('tools:title')}</div>
-          </div>
-        </Card>
-
+      <div className="grid gap-4 md:grid-cols-3">
         <Card accent="violet" className="p-5">
           <div className="relative flex h-full flex-col justify-center">
             <CardIconSmall className="absolute top-0 right-0">
@@ -416,55 +405,6 @@ export function PluginDetailPage() {
           </div>
         </Card>
       </div>
-
-      {/* Tools Grid */}
-      {tools.length > 0 && (
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <Wrench className="size-5 text-primary" />
-                  {t('plugins:details.availableTools')}
-                </CardTitle>
-                <CardDescription>{t('plugins:details.availableToolsDesc')}</CardDescription>
-              </div>
-              <Badge variant="secondary">{tools.length}</Badge>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {tools.map((tool) => {
-                const iconName = (tool.icon || 'wrench') as IconName;
-                const color = tool.color || '#d97706';
-                const toolKey = tool.id.split(':').pop() || tool.id;
-                const toolName = tp(plugin.name, `tools.${toolKey}.name`, toolKey);
-                const toolDesc = tp(plugin.name, `tools.${toolKey}.description`, tool.description);
-
-                return (
-                  <div
-                    key={tool.id}
-                    className="flex items-center gap-3 rounded-lg bg-muted/30 p-3 transition-colors hover:bg-muted/50"
-                  >
-                    <div
-                      className="flex size-10 shrink-0 items-center justify-center rounded-lg"
-                      style={{ backgroundColor: `${color}20`, color }}
-                    >
-                      <DynamicIcon name={iconName} className="size-5" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate font-medium text-sm">{toolName}</div>
-                      {toolDesc && (
-                        <div className="truncate text-muted-foreground text-xs">{toolDesc}</div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Blocks Grid */}
       {blocks.length > 0 && (
@@ -527,6 +467,9 @@ export function PluginDetailPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Plugin Configuration */}
+      <PluginConfigForm pluginUid={plugin.uid} pluginName={plugin.name} />
 
       {/* Reference & Installation Info */}
       <Card>

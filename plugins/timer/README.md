@@ -1,263 +1,240 @@
 # @brika/plugin-timer
 
-Timer and reminder functionality for BRIKA automations. Set timers that fire events when they complete, enabling time-based workflows and reminders.
+Timer and countdown blocks for BRIKA workflows. Create delayed triggers, countdowns with progress, and time-based automation logic.
 
-## Overview
+## Available Blocks
 
-The timer plugin provides tools for managing timers and countdowns. Timers can be set with a duration, and when they complete, they emit events that can trigger other workflows. This enables delayed actions, reminders, and time-based automation logic.
+### Timer
 
-## Available Tools
+A one-shot timer that fires after a configured duration.
 
-### set
+**Inputs:**
+- `trigger` (generic) — Starts the timer when data is received
 
-Set a timer that fires after the specified duration.
+**Outputs:**
+- `completed` — Emits when timer finishes with `{ name, duration, triggeredAt, completedAt }`
 
-**Parameters:**
-- `name` (string, optional): Timer name (auto-generated if not provided)
-- `seconds` (number, required): Duration in seconds (1-86400, i.e., 1 second to 24 hours)
+**Config:**
+- `name` (string, optional) — Timer name
+- `duration` (duration) — How long to wait
 
-**Returns:**
-- `ok`: `true` if successful
-- `content`: Success message
-- `data`: Object containing `id`, `name`, and `seconds`
+**Usage:**
 
-### list
-
-List all active timers with their remaining time.
-
-**Parameters:** None
-
-**Returns:**
-- `ok`: `true` if successful
-- `content`: Message with timer count
-- `data`: Array of timer objects with `id`, `name`, `remaining` (ms), and `duration` (ms)
-
-### cancel
-
-Cancel an active timer by ID or name.
-
-**Parameters:**
-- `target` (string, required): Timer ID or name to cancel
-
-**Returns:**
-- `ok`: `true` if successful, `false` if timer not found
-- `content`: Success or error message
-
-### clear
-
-Clear all active timers at once.
-
-**Parameters:** None
-
-**Returns:**
-- `ok`: `true` if successful
-- `content`: Message with count of cleared timers
-
-## Events
-
-The timer plugin emits the following events that you can listen to in your workflows:
-
-### timer.completed
-
-Emitted when a timer completes. Use this to trigger actions when a timer finishes.
-
-**Payload:**
-- `id`: Timer ID
-- `name`: Timer name
-- `duration`: Original duration in milliseconds
-
-### timer.cancelled
-
-Emitted when a timer is cancelled.
-
-**Payload:**
-- `id`: Timer ID
-- `name`: Timer name
-
-## Usage Examples
-
-### Simple Timer Workflow
-
-Set a timer and react when it completes:
-
-```yaml filename="break-reminder.yml"
+```yaml
 blocks:
-  - id: set_timer
-    type: @brika/blocks-builtin:action
+  - id: start-timer
+    type: "@brika/plugin-timer:timer"
     config:
-      tool: "@brika/plugin-timer:set"
-      args:
-        name: "Break Reminder"
-        seconds: 1800  # 30 minutes
-  
-  - id: timer_done
-    type: event
-    config:
-      event: timer.completed
-  
+      name: "Break Reminder"
+      duration: 1800000  # 30 minutes in ms
+
   - id: notify
-    type: @brika/blocks-builtin:action
+    type: "@brika/blocks-builtin:log"
     config:
-      tool: "@brika/plugin-notifications:send"
-      args:
-        message: "Time for a break!"
+      message: "Timer completed!"
+
+connections:
+  - from: start-timer
+    fromPort: completed
+    to: notify
+    toPort: in
 ```
 
-### Timer Plugin Implementation
+### Countdown
 
-Example of how the timer plugin is implemented:
+A countdown that emits progress ticks and completion/cancellation events.
 
-```typescript filename="src/index.ts"
-import { defineTool, emit, z } from "@brika/sdk";
+**Inputs:**
+- `start` (generic) — Starts the countdown
+- `cancel` (generic) — Cancels the countdown
 
-export const set = defineTool(
-  {
-    id: "set",
-    schema: z.object({
-      name: z.string().optional(),
-      seconds: z.number().min(1).max(86400),
-    }),
-  },
-  async (args) => {
-    const timeout = setTimeout(() => {
-      emit("timer.completed", { name: args.name });
-    }, args.seconds * 1000);
-    
-    return { ok: true, content: `Timer "${args.name}" set` };
-  },
-);
-```
+**Outputs:**
+- `tick` — Periodic progress: `{ remaining, total, progress }`
+- `completed` — When countdown finishes: `{ total }`
+- `cancelled` — When cancelled: `{ remaining }`
 
-### Multiple Timers with Cancellation
+**Config:**
+- `duration` (duration) — Total countdown time
+- `tickInterval` (duration, default: 1000) — Interval between ticks
 
-Set multiple timers and cancel one:
+**Usage:**
 
 ```yaml
 blocks:
-  - id: timer1
-    type: @brika/blocks-builtin:action
+  - id: countdown
+    type: "@brika/plugin-timer:countdown"
     config:
-      tool: "@brika/plugin-timer:set"
-      args:
-        name: "Short Timer"
-        seconds: 60
-  
-  - id: timer2
-    type: @brika/blocks-builtin:action
+      duration: 60000      # 1 minute
+      tickInterval: 1000   # Update every second
+
+  - id: progress-log
+    type: "@brika/blocks-builtin:log"
     config:
-      tool: "@brika/plugin-timer:set"
-      args:
-        name: "Long Timer"
-        seconds: 300
-  
-  - id: cancel_short
-    type: @brika/blocks-builtin:action
-    config:
-      tool: "@brika/plugin-timer:cancel"
-      args:
-        target: "Short Timer"
+      message: "{{ Math.round(inputs.in.progress * 100) }}% complete"
+
+connections:
+  - from: countdown
+    fromPort: tick
+    to: progress-log
+    toPort: in
 ```
 
-### Timer with Delay Block
+## Examples
 
-Combine timer events with delay blocks for complex timing:
+### Simple Delayed Action
 
 ```yaml
+id: delayed-action
+name: Delayed Action
+enabled: true
+
+blocks:
+  - id: clock
+    type: "@brika/blocks-builtin:clock"
+    config:
+      interval: 60000  # Check every minute
+
+  - id: timer
+    type: "@brika/plugin-timer:timer"
+    config:
+      name: "action-delay"
+      duration: 5000  # 5 second delay
+
+  - id: action
+    type: "@brika/blocks-builtin:log"
+    config:
+      message: "Delayed action executed!"
+
+connections:
+  - from: clock
+    fromPort: tick
+    to: timer
+    toPort: trigger
+  - from: timer
+    fromPort: completed
+    to: action
+    toPort: in
+```
+
+### Countdown with Progress
+
+```yaml
+id: countdown-demo
+name: Countdown Demo
+enabled: true
+
 blocks:
   - id: start
-    type: @brika/blocks-builtin:action
+    type: "@brika/blocks-builtin:clock"
     config:
-      tool: "@brika/plugin-timer:set"
-      args:
-        name: "Main Timer"
-        seconds: 600  # 10 minutes
-  
-  - id: warning
-    type: @brika/blocks-builtin:delay
+      interval: 30000
+
+  - id: countdown
+    type: "@brika/plugin-timer:countdown"
     config:
-      duration: "540s"  # 9 minutes (1 minute before timer)
-  
-  - id: warn
-    type: @brika/blocks-builtin:emit
+      duration: 10000
+      tickInterval: 1000
+
+  - id: progress
+    type: "@brika/blocks-builtin:log"
     config:
-      event: timer.warning
-      payload:
-        message: "1 minute remaining"
-  
-  - id: complete
-    type: event
+      message: "Countdown: {{ inputs.in.remaining }}ms remaining"
+      level: debug
+
+  - id: done
+    type: "@brika/blocks-builtin:log"
     config:
-      event: timer.completed
+      message: "Countdown complete!"
+      level: info
+
+connections:
+  - from: start
+    fromPort: tick
+    to: countdown
+    toPort: start
+  - from: countdown
+    fromPort: tick
+    to: progress
+    toPort: in
+  - from: countdown
+    fromPort: completed
+    to: done
+    toPort: in
 ```
 
-### List Active Timers
+## Implementation
 
-Check what timers are currently running:
+```typescript
+import { defineReactiveBlock, input, output, log, onStop, z } from "@brika/sdk";
 
-```yaml
-blocks:
-  - id: list_timers
-    type: @brika/blocks-builtin:action
-    config:
-      tool: "@brika/plugin-timer:list"
-  
-  - id: log_result
-    type: @brika/blocks-builtin:log
-    config:
-      message: "Active timers: {{ list_timers.data | length }}"
+export const timer = defineReactiveBlock(
+  {
+    id: "timer",
+    inputs: {
+      trigger: input(z.generic(), { name: "Trigger" }),
+    },
+    outputs: {
+      completed: output(
+        z.object({
+          name: z.string(),
+          duration: z.number(),
+          triggeredAt: z.number(),
+          completedAt: z.number(),
+        }),
+        { name: "Completed" }
+      ),
+    },
+    config: z.object({
+      name: z.string().optional().describe("Timer name"),
+      duration: z.duration(undefined, "Duration to wait"),
+    }),
+  },
+  ({ inputs, outputs, config, log }) => {
+    let activeTimer: ReturnType<typeof setTimeout> | null = null;
+
+    inputs.trigger.on(() => {
+      if (activeTimer) clearTimeout(activeTimer);
+
+      const triggeredAt = Date.now();
+      const name = config.name ?? "timer";
+
+      log("info", `Timer "${name}" started for ${config.duration}ms`);
+
+      activeTimer = setTimeout(() => {
+        outputs.completed.emit({
+          name,
+          duration: config.duration,
+          triggeredAt,
+          completedAt: Date.now(),
+        });
+        activeTimer = null;
+      }, config.duration);
+    });
+
+    return () => {
+      if (activeTimer) clearTimeout(activeTimer);
+    };
+  }
+);
+
+onStop(() => log("info", "Timer plugin stopping"));
+log("info", "Timer plugin loaded");
 ```
-
-### Reminder System
-
-Create a reminder that triggers after a delay:
-
-```yaml
-blocks:
-  - id: trigger
-    type: event
-    config:
-      event: reminder.requested
-  
-  - id: set_reminder
-    type: @brika/blocks-builtin:action
-    config:
-      tool: "@brika/plugin-timer:set"
-      args:
-        name: "{{ trigger.payload.name }}"
-        seconds: "{{ trigger.payload.seconds }}"
-  
-  - id: reminder_done
-    type: event
-    config:
-      event: timer.completed
-  
-  - id: send_reminder
-    type: @brika/blocks-builtin:action
-    config:
-      tool: "@brika/plugin-notifications:send"
-      args:
-        message: "Reminder: {{ reminder_done.payload.name }}"
-```
-
-## Timer Lifecycle
-
-1. **Creation**: Timer is created with `set` tool and starts counting down
-2. **Active**: Timer is running and can be queried with `list`
-3. **Completion**: Timer fires `timer.completed` event and is removed
-4. **Cancellation**: Timer can be cancelled with `cancel` or `clear`, firing `timer.cancelled` event
-
-## Best Practices
-
-1. **Name Your Timers**: Use descriptive names to make them easier to manage
-2. **Handle Events**: Always set up event listeners for `timer.completed` if you need to react to timer completion
-3. **Clean Up**: Use `clear` when shutting down or resetting state
-4. **Duration Limits**: Timers are limited to 1-86400 seconds (24 hours max)
 
 ## Installation
 
 Add to your `brika.yml`:
 
 ```yaml
-plugins:
-  - "@brika/plugin-timer"
+install:
+  - ref: "workspace:timer"
+    enabled: true
+```
+
+Or install from npm:
+
+```yaml
+install:
+  - ref: "npm:@brika/plugin-timer"
+    enabled: true
 ```

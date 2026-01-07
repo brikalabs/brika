@@ -13,14 +13,13 @@ import React, { useCallback, useMemo, useRef } from 'react';
 import { useLocale } from '@/lib/use-locale';
 import '@xyflow/react/dist/style.css';
 
-import { RotateCcw, Save } from 'lucide-react';
+import { Loader2, Save } from 'lucide-react';
 import { Badge, Button } from '@/components/ui';
 import type { Workflow } from '../api';
 import { BlockNode, type BlockNodeData } from './BlockNode';
 import { type BlockDefinition, BlockToolbar, type BlockTypeInfo } from './BlockToolbar';
 import { ConfigPanel } from './ConfigPanel';
 import { DebugPanel } from './DebugPanel';
-import { TriggerNode } from './TriggerNode';
 import { useWorkflowEditor } from './useWorkflowEditor';
 
 // Fetch all block definitions with schemas
@@ -32,7 +31,6 @@ async function fetchBlockDefinitions(): Promise<BlockDefinition[]> {
 
 // Node types for React Flow
 const nodeTypes: NodeTypes = {
-  trigger: TriggerNode,
   block: BlockNode,
 };
 
@@ -40,25 +38,60 @@ interface WorkflowEditorInnerProps {
   workflow: Workflow;
   readonly?: boolean;
   onSave?: (workflow: Workflow) => Promise<void>;
-  onTest?: (workflow: Workflow, payload: Record<string, unknown>) => void;
 }
 
 function WorkflowEditorInner({
   workflow: initialWorkflow,
   readonly = false,
   onSave,
-  onTest,
 }: WorkflowEditorInnerProps) {
   const { t } = useLocale();
-  const reactFlowWrapper = useRef<HTMLDivElement>(null);
-  const editor = useWorkflowEditor(initialWorkflow);
 
-  // Fetch block definitions for schemas
-  const { data: blockDefinitions = [] } = useQuery({
+  // Fetch block definitions for schemas - must load before editor initializes
+  const { data: blockDefinitions, isLoading: isLoadingBlocks } = useQuery({
     queryKey: ['blocks'],
     queryFn: fetchBlockDefinitions,
     staleTime: 60000,
   });
+
+  // Show loading state while block definitions are being fetched
+  if (isLoadingBlocks || !blockDefinitions) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <div className="flex flex-col items-center gap-3 text-muted-foreground">
+          <Loader2 className="size-8 animate-spin" />
+          <p className="text-sm">{t('common:loading')}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Now we can safely initialize the editor with block definitions
+  return (
+    <WorkflowEditorWithBlocks
+      workflow={initialWorkflow}
+      blockDefinitions={blockDefinitions}
+      readonly={readonly}
+      onSave={onSave}
+    />
+  );
+}
+
+interface WorkflowEditorWithBlocksProps extends WorkflowEditorInnerProps {
+  blockDefinitions: BlockDefinition[];
+}
+
+function WorkflowEditorWithBlocks({
+  workflow: initialWorkflow,
+  blockDefinitions,
+  readonly = false,
+  onSave,
+}: WorkflowEditorWithBlocksProps) {
+  const { t } = useLocale();
+  const reactFlowWrapper = useRef<HTMLDivElement>(null);
+
+  // Pass block definitions to editor for proper type restoration
+  const editor = useWorkflowEditor(initialWorkflow, blockDefinitions);
 
   // Create a map of block type -> definition for quick lookup
   const blockSchemaMap = useMemo(() => {
@@ -87,12 +120,6 @@ function WorkflowEditorInner({
     isDirty,
     addBlock,
     updateBlockConfig,
-    updateTriggerConfig,
-    blockStatuses,
-    executionLogs,
-    setBlockStatus,
-    addExecutionLog,
-    clearExecutionState,
     getAvailableVariables,
   } = editor;
 
@@ -135,12 +162,6 @@ function WorkflowEditorInner({
     if (onSave) {
       await onSave(workflow);
     }
-  };
-
-  // Handle test
-  const handleTest = (payload: Record<string, unknown>) => {
-    clearExecutionState();
-    onTest?.(workflow, payload);
   };
 
   // Get available variables for selected block
@@ -187,19 +208,8 @@ function WorkflowEditorInner({
           <Controls showInteractive={!readonly} />
           <MiniMap
             nodeColor={(node) => {
-              if (node.type === 'trigger') return '#22c55e';
               const blockData = node.data as BlockNodeData;
-              const colors: Record<string, string> = {
-                action: '#3b82f6',
-                condition: '#f59e0b',
-                switch: '#8b5cf6',
-                delay: '#6b7280',
-                emit: '#10b981',
-                set: '#ec4899',
-                log: '#78716c',
-                end: '#dc2626',
-              };
-              return colors[blockData?.type] || '#6b7280';
+              return blockData?.color || '#6b7280';
             }}
             className="!bg-muted"
           />
@@ -212,15 +222,6 @@ function WorkflowEditorInner({
                   {t('workflows:editor.unsavedChanges')}
                 </Badge>
               )}
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => clearExecutionState()}
-                disabled={executionLogs.length === 0}
-              >
-                <RotateCcw className="mr-1 size-4" />
-                {t('common:actions.reset')}
-              </Button>
               <Button size="sm" variant="default" onClick={handleSave} disabled={!isDirty}>
                 <Save className="mr-1 size-4" />
                 {t('common:actions.save')}
@@ -235,7 +236,6 @@ function WorkflowEditorInner({
         <ConfigPanel
           node={selectedNode}
           onUpdateBlock={updateBlockConfig}
-          onUpdateTrigger={updateTriggerConfig}
           availableVariables={availableVariables}
           blockSchema={selectedBlockSchema}
           className="w-80 shrink-0"
@@ -243,40 +243,7 @@ function WorkflowEditorInner({
       )}
 
       {/* Debug Panel */}
-      {!readonly && (
-        <DebugPanel
-          workflow={workflow}
-          onTest={handleTest}
-          executionLogs={executionLogs}
-          blockStatuses={blockStatuses}
-          onBlockEvent={(event) => {
-            if (event.type === 'block.start') {
-              setBlockStatus(event.blockId, 'running');
-              addExecutionLog({
-                blockId: event.blockId,
-                type: 'start',
-                message: `Starting block: ${event.blockId}`,
-              });
-            } else if (event.type === 'block.complete') {
-              setBlockStatus(event.blockId, 'completed', event.output);
-              addExecutionLog({
-                blockId: event.blockId,
-                type: 'complete',
-                message: `Completed: ${event.blockId}`,
-                data: event.output,
-              });
-            } else if (event.type === 'block.error') {
-              setBlockStatus(event.blockId, 'error', event.error);
-              addExecutionLog({
-                blockId: event.blockId,
-                type: 'error',
-                message: `Error in ${event.blockId}: ${event.error}`,
-              });
-            }
-          }}
-          className="w-72 shrink-0"
-        />
-      )}
+      {!readonly && <DebugPanel workflow={workflow} className="w-72 shrink-0" />}
     </div>
   );
 }
@@ -286,7 +253,6 @@ export interface WorkflowEditorProps {
   workflow: Workflow;
   readonly?: boolean;
   onSave?: (workflow: Workflow) => Promise<void>;
-  onTest?: (workflow: Workflow, payload: Record<string, unknown>) => void;
 }
 
 export function WorkflowEditor(props: WorkflowEditorProps) {

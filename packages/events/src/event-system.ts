@@ -1,5 +1,10 @@
 import type { ActionCreator } from './action';
-import { createPatternSet, matchesPatternSet } from './matcher';
+import {
+  createPatternSet,
+  matchesPatternSet,
+  type PatternSetResult,
+  withPredicate,
+} from './matcher';
 import { SubscriberManager } from './subscriber';
 import type {
   Action,
@@ -7,12 +12,12 @@ import type {
   InferAction,
   InferActions,
   InferActionsFromMap,
+  PatternItem,
   Unsubscribe,
 } from './types';
 
 interface PendingPromise {
-  patternSet: Set<symbol>;
-  predicate?: (action: Action) => boolean;
+  patternSet: PatternSetResult;
   resolve: (action: Action) => void;
   reject: (error: Error) => void;
   timeout?: ReturnType<typeof setTimeout>;
@@ -66,7 +71,6 @@ export class EventSystem {
   #resolvePendingPromises(action: Action): void {
     for (const pending of this.pendingPromises) {
       if (!matchesPatternSet(pending.patternSet, action)) continue;
-      if (pending.predicate && !pending.predicate(action)) continue;
 
       if (pending.timeout) clearTimeout(pending.timeout);
       this.pendingPromises.delete(pending);
@@ -161,12 +165,17 @@ export class EventSystem {
    *
    * @example
    * const action = await events.race([TestActions.hello, TestActions.goodbye], { timeout: 1000 });
+   * // With predicate filtering
+   * const action = await events.race([
+   *   withPredicate(TestActions.hello, (a) => a.payload.uid === uid),
+   *   withPredicate(TestActions.goodbye, (a) => a.payload.uid === uid),
+   * ], { timeout: 1000 });
    */
-  race<T extends readonly ActionCreator[]>(
+  race<T extends readonly PatternItem[]>(
     patterns: T,
     options?: { timeout?: number }
   ): Promise<InferActions<T>>;
-  race<T extends Record<string, ActionCreator>>(
+  race<T extends Record<string, PatternItem>>(
     patterns: T,
     options?: { timeout?: number }
   ): Promise<InferActionsFromMap<T>>;
@@ -211,42 +220,28 @@ export class EventSystem {
   }
 
   /**
-   * Wait for an action matching the pattern and predicate
+   * Wait for an action matching the pattern (use withPredicate for filtering)
    *
    * @example
+   * // Simple wait
+   * const action = await events.waitFor(TestActions.count, { timeout: 1000 });
+   *
+   * // With predicate filtering
    * const action = await events.waitFor(
-   *   TestActions.count,
-   *   (action) => action.payload.value > 10,
+   *   withPredicate(TestActions.count, (a) => a.payload.value > 10),
    *   { timeout: 1000 }
    * );
    */
-  waitFor<T extends ActionCreator>(
+  waitFor<T extends PatternItem>(
     pattern: T,
-    predicate: (action: InferAction<T>) => boolean,
     options?: { timeout?: number }
-  ): Promise<InferAction<T>>;
-  waitFor<T extends readonly ActionCreator[]>(
-    pattern: T,
-    predicate: (action: InferActions<T>) => boolean,
-    options?: { timeout?: number }
-  ): Promise<InferActions<T>>;
-  waitFor<T extends Record<string, ActionCreator>>(
-    pattern: T,
-    predicate: (action: InferActionsFromMap<T>) => boolean,
-    options?: { timeout?: number }
-  ): Promise<InferActionsFromMap<T>>;
-  waitFor(
-    pattern: ActionPattern,
-    predicate: (action: Action) => boolean,
-    options?: { timeout?: number }
-  ): Promise<Action> {
-    return new Promise<Action>((resolve, reject) => {
+  ): Promise<InferAction<T>> {
+    return new Promise<InferAction<T>>((resolve, reject) => {
       const patternSet = createPatternSet(pattern);
 
       const pending: PendingPromise = {
         patternSet,
-        predicate,
-        resolve,
+        resolve: resolve as (action: Action) => void,
         reject,
       };
 

@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.brika.dev/plugin.schema.json",
   "name": "@brika/plugin-example-echo",
-  "version": "0.1.1",
-  "description": "Example echo plugin for testing",
+  "version": "0.2.0",
+  "description": "Example echo plugin demonstrating reactive blocks",
   "author": "BRIKA Team",
   "repository": {
     "type": "git",
@@ -12,23 +12,26 @@
   "keywords": [
     "example",
     "echo",
-    "test"
+    "demo"
   ],
   "engines": {
-    "brika": "^0.1.1"
+    "brika": "^0.2.0"
   },
   "type": "module",
+  "main": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts"
   },
   "scripts": {
     "link": "bun link",
-    "tsc": "bunx --biome tsc --noEmit"
+    "tsc": "bunx --bun tsc --noEmit"
   },
-  "tools": [
+  "blocks": [
     {
       "id": "echo",
-      "description": "Echo back the provided message",
+      "name": "Echo",
+      "description": "Echoes input to output with optional prefix/suffix",
+      "category": "transform",
       "icon": "message-circle",
       "color": "#3b82f6"
     }

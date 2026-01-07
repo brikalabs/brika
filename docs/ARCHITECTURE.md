@@ -1,6 +1,6 @@
 # BRIKA Architecture
 
-> **BRIKA** = **E**vent-driven **L**ogical **I**ntelligence **A**rchitecture
+> **BRIKA** = **B**lock-based **R**eactive **I**ntelligent **K**nowledge **A**utomation
 
 A Bun-first, plugin-first home automation runtime designed for stability and extensibility.
 
@@ -10,7 +10,7 @@ A Bun-first, plugin-first home automation runtime designed for stability and ext
 2. [Monorepo Structure](#monorepo-structure)
 3. [Core Components](#core-components)
 4. [Plugin System](#plugin-system)
-5. [Block-based Workflow Engine](#block-based-workflow-engine)
+5. [Reactive Block Engine](#reactive-block-engine)
 6. [IPC Protocol](#ipc-protocol)
 7. [API Reference](#api-reference)
 8. [Data Flow](#data-flow)
@@ -21,14 +21,14 @@ A Bun-first, plugin-first home automation runtime designed for stability and ext
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                              BRIKA Hub                                │
+│                              BRIKA Hub                               │
 │  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐   │
-│  │ API Server  │ │ EventBus    │ │ BlockReg    │ │ ToolReg     │   │
-│  │ (HTTP/SSE)  │ │ (pub/sub)   │ │ (blocks)    │ │ (tools)     │   │
+│  │ API Server  │ │ EventBus    │ │ BlockReg    │ │ StateStore  │   │
+│  │ (HTTP/SSE)  │ │ (pub/sub)   │ │ (blocks)    │ │ (persist)   │   │
 │  └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘   │
 │  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐   │
-│  │ Scheduler   │ │ RulesEngine │ │ Automations │ │ StateStore  │   │
-│  │ (cron/int)  │ │ (triggers)  │ │ (workflows) │ │ (persist)   │   │
+│  │ Scheduler   │ │ RulesEngine │ │ Automations │ │ LogRouter   │   │
+│  │ (cron/int)  │ │ (triggers)  │ │ (workflows) │ │ (logging)   │   │
 │  └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘   │
 │                                                                      │
 │  ┌──────────────────────────────────────────────────────────────┐   │
@@ -67,14 +67,12 @@ brika/
 │   │           ├── blocks/               # Block registry
 │   │           ├── config/               # YAML config loader
 │   │           ├── events/               # Event bus (pub/sub)
-│   │           ├── http/                 # API server
+│   │           ├── http/                 # API server + routes
 │   │           ├── logs/                 # Centralized logging
 │   │           ├── plugins/              # Plugin lifecycle manager
 │   │           ├── rules/                # Rules engine
 │   │           ├── scheduler/            # Cron/interval scheduler
-│   │           ├── state/                # Persistent state
-│   │           ├── store/                # Plugin store (npm)
-│   │           └── tools/                # Tool registry
+│   │           └── state/                # Persistent state
 │   │
 │   └── ui/                     # React frontend
 │       └── src/
@@ -82,7 +80,6 @@ brika/
 │           ├── features/       # Feature modules
 │           │   ├── dashboard/
 │           │   ├── plugins/
-│           │   ├── tools/
 │           │   ├── workflows/  # React Flow editor
 │           │   └── ...
 │           └── lib/            # Utilities
@@ -90,25 +87,30 @@ brika/
 ├── packages/
 │   ├── sdk/                    # Plugin SDK
 │   │   └── src/
-│   │       ├── blocks/         # Block definition API
-│   │       ├── ipc.ts          # Binary IPC framing
-│   │       ├── runtime.ts      # Plugin runtime
-│   │       └── tool.ts         # Tool definition API
+│   │       ├── blocks/         # Reactive block API
+│   │       ├── api.ts          # Lifecycle & events
+│   │       └── context.ts      # Plugin context
 │   │
-│   └── shared/                 # Shared types
-│       └── src/
-│           ├── di/             # Dependency injection
-│           └── types.ts        # Wire-safe DTOs
+│   ├── flow/                   # Reactive flow library
+│   │   └── src/
+│   │       ├── flow.ts         # Flow implementation
+│   │       ├── operators.ts    # map, filter, delay, etc.
+│   │       └── sources.ts      # interval, fromEvent, etc.
+│   │
+│   ├── events/                 # Event system
+│   ├── ipc/                    # Binary IPC protocol
+│   └── shared/                 # Shared types & DI
 │
 ├── plugins/                    # Local plugins
 │   ├── blocks-builtin/         # Core workflow blocks
-│   ├── timer/                  # Timer functionality
+│   ├── timer/                  # Timer blocks
+│   ├── mock-devices/           # Mock IoT devices
 │   └── example-echo/           # Example plugin
 │
 ├── automations/                # YAML workflow files
 │   └── *.yml
 │
-└── brika.yml                    # Hub configuration
+└── brika.yml                   # Hub configuration
 ```
 
 ---
@@ -120,11 +122,10 @@ brika/
 | Service            | File                               | Purpose                                    |
 |--------------------|------------------------------------|--------------------------------------------|
 | `PluginManager`    | `plugins/plugin-manager.ts`        | Plugin lifecycle, IPC, process supervision |
-| `ToolRegistry`     | `tools/tool-registry.ts`           | Register and call tools from plugins       |
-| `BlockRegistry`    | `blocks/block-registry.ts`         | Register blocks for workflows              |
+| `BlockRegistry`    | `blocks/block-registry.ts`         | Register blocks from plugins               |
 | `EventBus`         | `events/event-bus.ts`              | Pub/sub event system with glob patterns    |
 | `AutomationEngine` | `automations/automation-engine.ts` | Workflow management and execution          |
-| `WorkflowExecutor` | `automations/workflow-executor.ts` | Execute workflow blocks                    |
+| `WorkflowExecutor` | `automations/workflow-executor.ts` | Execute reactive workflow blocks           |
 | `SchedulerService` | `scheduler/scheduler-service.ts`   | Cron and interval scheduling               |
 | `RulesEngine`      | `rules/rules-engine.ts`            | Event-triggered rule evaluation            |
 | `StateStore`       | `state/state-store.ts`             | Persistent JSON state                      |
@@ -142,7 +143,7 @@ import { singleton, inject } from "@brika/shared";
 @singleton()
 export class MyService {
   private readonly events = inject(EventBus);
-  private readonly tools = inject(ToolRegistry);
+  private readonly blocks = inject(BlockRegistry);
 }
 ```
 
@@ -155,165 +156,168 @@ export class MyService {
 Plugin IDs use the full package name from `package.json`:
 
 ```
-@brika/plugin-timer          # Plugin ID
-@brika/plugin-timer:set      # Tool ID (pluginId:toolId)
-@brika/blocks-builtin:condition  # Block ID (pluginId:blockId)
+@brika/plugin-timer              # Plugin ID
+@brika/plugin-timer:timer        # Block ID (pluginId:blockId)
+@brika/blocks-builtin:condition  # Block ID
 ```
 
 ### Plugin Structure
 
 ```
 plugins/timer/
-├── package.json              # With $schema for autocomplete
-├── icon.png                  # Optional plugin icon
+├── package.json              # With blocks array
+├── icon.svg                  # Optional plugin icon
+├── locales/                  # i18n translations
+│   └── en/plugin.json
 └── src/
-    ├── index.ts              # Entry: exports tools
-    ├── state.ts              # Shared runtime & state
-    └── tools/
-        ├── index.ts          # Barrel export
-        ├── set.ts            # export const set = defineTool(...)
-        ├── list.ts
-        └── cancel.ts
+    └── main.ts               # Entry: exports blocks
 ```
 
 ### package.json Schema
 
 ```json
 {
-  "$schema": "../../packages/sdk/brika-plugin.schema.json",
+  "$schema": "https://schema.brika.dev/plugin.schema.json",
   "name": "@brika/plugin-timer",
-  "version": "0.1.0",
-  "description": "Timer functionality",
+  "version": "0.2.0",
+  "description": "Timer and countdown blocks",
   "author": "BRIKA Team",
-  "keywords": ["timer", "reminder"],
-  "icon": "./icon.png",
-  "exports": { ".": "./src/index.ts" },
+  "keywords": ["timer", "countdown"],
+  "type": "module",
+  "main": "./src/main.ts",
+  "exports": { ".": "./src/main.ts" },
+  "blocks": [
+    {
+      "id": "timer",
+      "name": "Timer",
+      "description": "One-shot timer",
+      "category": "trigger",
+      "icon": "timer",
+      "color": "#22c55e"
+    }
+  ],
   "dependencies": {
     "@brika/sdk": "workspace:*"
   }
 }
 ```
 
-### Defining Tools
+### Defining Reactive Blocks
 
 ```typescript
-import { defineTool, z } from "@brika/sdk";
+import { defineReactiveBlock, input, output, log, onStop, z } from "@brika/sdk";
 
-export const set = defineTool({
-  id: "set",
-  description: "Set a timer",
-  schema: z.object({
-    name: z.string().optional().describe("Timer name"),
-    seconds: z.number().min(1).max(86400).describe("Duration"),
-  }),
-}, async (args, ctx) => {
-  // args is fully typed: { name?: string; seconds: number }
-  return { ok: true, content: `Timer set for ${args.seconds}s` };
-});
-```
+export const timer = defineReactiveBlock(
+  {
+    id: "timer",
+    inputs: {
+      trigger: input(z.generic(), { name: "Trigger" }),
+    },
+    outputs: {
+      completed: output(
+        z.object({ name: z.string(), duration: z.number() }),
+        { name: "Completed" }
+      ),
+    },
+    config: z.object({
+      name: z.string().optional().describe("Timer name"),
+      duration: z.duration(undefined, "Duration to wait"),
+    }),
+  },
+  ({ inputs, outputs, config, log }) => {
+    let timeout: ReturnType<typeof setTimeout> | null = null;
 
-### Defining Blocks
+    inputs.trigger.on(() => {
+      if (timeout) clearTimeout(timeout);
 
-```typescript
-import { defineBlock, z, expr } from "@brika/sdk";
+      log("info", `Timer started: ${config.duration}ms`);
 
-export const conditionBlock = defineBlock({
-  id: "condition",
-  name: "Condition",
-  description: "Branch based on condition",
-  category: "flow",
-  icon: "git-branch",
-  color: "#f59e0b",
-  inputs: [{ id: "in", name: "Input" }],
-  outputs: [
-    { id: "then", name: "Then", type: "success" },
-    { id: "else", name: "Else", type: "error" },
-  ],
-  schema: z.object({
-    expression: z.string().describe("Expression to evaluate"),
-  }),
-}, async (config, ctx, runtime) => {
-  const result = expr(config.expression, ctx);
-  return { output: result ? "then" : "else", data: result };
-});
+      timeout = setTimeout(() => {
+        outputs.completed.emit({
+          name: config.name ?? "timer",
+          duration: config.duration,
+        });
+        timeout = null;
+      }, config.duration);
+    });
+
+    // Return cleanup function
+    return () => {
+      if (timeout) clearTimeout(timeout);
+    };
+  }
+);
+
+onStop(() => log("info", "Timer plugin stopping"));
+log("info", "Timer plugin loaded");
 ```
 
 ### Plugin Lifecycle
 
-1. Hub reads `package.json` to get plugin ID and metadata
+1. Hub reads `package.json` to get plugin ID and block metadata
 2. Plugin process spawned via `bun <entry>`
 3. Plugin sends `hello` message with capabilities
-4. Plugin registers tools/blocks via IPC
-5. Hub proxies tool calls and block executions
+4. Plugin registers blocks via IPC (runtime + package.json metadata merged)
+5. Hub starts block instances when workflows run
 6. Heartbeat ping/pong maintains health
 7. On stop: graceful shutdown via IPC, then SIGTERM/SIGKILL
 
 ---
 
-## Block-based Workflow Engine
+## Reactive Block Engine
 
-### Workflow YAML Format
+### Block Types
+
+| Block     | Category    | Purpose                        |
+|-----------|-------------|--------------------------------|
+| Clock     | `trigger`   | Periodic tick source           |
+| Timer     | `trigger`   | One-shot delayed trigger       |
+| Countdown | `trigger`   | Progress countdown             |
+| Condition | `flow`      | If/else branching              |
+| Switch    | `flow`      | Multi-way branching            |
+| Delay     | `flow`      | Wait duration                  |
+| Merge     | `flow`      | Combine inputs (wait for all)  |
+| Split     | `flow`      | Send to multiple outputs       |
+| Transform | `transform` | Extract/reshape data           |
+| Log       | `action`    | Log message                    |
+| HTTP      | `action`    | HTTP requests                  |
+| End       | `action`    | Terminate workflow             |
+
+### Workflow Format
 
 ```yaml
 id: motion-lights
 name: Motion Lights
 enabled: true
-trigger:
-  event: motion.detected
 
 blocks:
-  - id: check-time
-    type: "@brika/blocks-builtin:condition"
+  - id: clock
+    type: "@brika/blocks-builtin:clock"
     config:
-      expression: "{{ new Date().getHours() >= 18 }}"
+      interval: 5000
     position: { x: 100, y: 100 }
 
-  - id: turn-on
-    type: "@brika/blocks-builtin:action"
+  - id: log
+    type: "@brika/blocks-builtin:log"
     config:
-      tool: "hue:light.on"
-      args: { brightness: 100 }
-    position: { x: 300, y: 50 }
+      message: "Tick received"
+      level: info
+    position: { x: 300, y: 100 }
 
 connections:
-  - from: check-time
-    fromPort: then
-    to: turn-on
+  - from: clock
+    fromPort: tick
+    to: log
     toPort: in
 ```
 
-### Block Types
+### Port Types
 
-| Block     | ID          | Purpose                   |
-|-----------|-------------|---------------------------|
-| Action    | `action`    | Call a tool               |
-| Condition | `condition` | If/else branching         |
-| Switch    | `switch`    | Multi-way branching       |
-| Delay     | `delay`     | Wait duration             |
-| Set       | `set`       | Set workflow variable     |
-| Log       | `log`       | Log message               |
-| Emit      | `emit`      | Emit event                |
-| Merge     | `merge`     | Combine paths             |
-| Parallel  | `parallel`  | Split into parallel paths |
-| End       | `end`       | Terminate workflow        |
-
-### Expression Syntax
-
-Use `{{ }}` for dynamic values:
-
-```yaml
-expression: "{{ trigger.payload.brightness > 50 }}"
-message: "Motion in {{ trigger.payload.zone }}"
-args:
-  level: "{{ vars.brightness }}"
-```
-
-Available context:
-
-- `trigger.type`, `trigger.payload`, `trigger.source`, `trigger.ts`
-- `vars.*` - Workflow variables set by Set block
-- `input` - Data from previous block
-- `item`, `index` - Loop context
+| Type        | Description                           |
+|-------------|---------------------------------------|
+| `generic`   | Accepts any type, inferred at runtime |
+| `passthrough` | Inherits type from specified input  |
+| Zod schema  | Explicit type (number, object, etc.)  |
 
 ---
 
@@ -330,23 +334,25 @@ Binary framed protocol over stdin/stdout:
 
 ### Message Types
 
-| Type            | Direction    | Purpose               |
-|-----------------|--------------|-----------------------|
-| `hello`         | Plugin → Hub | Plugin identification |
-| `ready`         | Plugin → Hub | Plugin ready          |
-| `registerTool`  | Plugin → Hub | Register a tool       |
-| `registerBlock` | Plugin → Hub | Register a block      |
-| `callTool`      | Hub → Plugin | Execute tool          |
-| `toolResult`    | Plugin → Hub | Tool result           |
-| `executeBlock`  | Hub → Plugin | Execute block         |
-| `blockResult`   | Plugin → Hub | Block result          |
-| `log`           | Plugin → Hub | Log message           |
-| `emit`          | Plugin → Hub | Emit event            |
-| `subscribe`     | Plugin → Hub | Subscribe to events   |
-| `event`         | Hub → Plugin | Event notification    |
-| `ping`          | Hub → Plugin | Heartbeat             |
-| `pong`          | Plugin → Hub | Heartbeat response    |
-| `stop`          | Hub → Plugin | Shutdown request      |
+| Type            | Direction    | Purpose                 |
+|-----------------|--------------|-------------------------|
+| `hello`         | Plugin → Hub | Plugin identification   |
+| `ready`         | Plugin → Hub | Plugin ready            |
+| `registerBlock` | Plugin → Hub | Register a block        |
+| `startBlock`    | Hub → Plugin | Start block instance    |
+| `stopBlock`     | Hub → Plugin | Stop block instance     |
+| `pushInput`     | Hub → Plugin | Push data to input port |
+| `blockEmit`     | Plugin → Hub | Block output emission   |
+| `blockLog`      | Plugin → Hub | Block log message       |
+| `log`           | Plugin → Hub | Plugin log message      |
+| `emit`          | Plugin → Hub | Emit event              |
+| `subscribe`     | Plugin → Hub | Subscribe to events     |
+| `event`         | Hub → Plugin | Event notification      |
+| `preferences`   | Hub → Plugin | Plugin configuration    |
+| `ping`          | Hub → Plugin | Heartbeat               |
+| `pong`          | Plugin → Hub | Heartbeat response      |
+| `stop`          | Hub → Plugin | Shutdown request        |
+| `uninstall`     | Hub → Plugin | Uninstall notification  |
 
 ---
 
@@ -354,46 +360,49 @@ Binary framed protocol over stdin/stdout:
 
 ### Endpoints
 
-| Method | Endpoint                     | Description          |
-|--------|------------------------------|----------------------|
-| GET    | `/api/health`                | Health check         |
-| GET    | `/api/stats`                 | Dashboard statistics |
-| GET    | `/api/plugins`               | List plugins         |
-| GET    | `/api/plugins/:id`           | Plugin details       |
-| GET    | `/api/plugins/:id/icon`      | Plugin icon          |
-| POST   | `/api/plugins/enable`        | Enable plugin        |
-| POST   | `/api/plugins/disable`       | Disable plugin       |
-| POST   | `/api/plugins/reload`        | Reload plugin        |
-| GET    | `/api/tools`                 | List tools           |
-| POST   | `/api/tools/call`            | Call a tool          |
-| GET    | `/api/blocks`                | List blocks          |
-| GET    | `/api/blocks/categories`     | Blocks by category   |
-| GET    | `/api/workflows`             | List workflows       |
-| POST   | `/api/workflows`             | Save workflow        |
-| POST   | `/api/workflows/:id/trigger` | Trigger workflow     |
-| GET    | `/api/events`                | Query events         |
-| POST   | `/api/events`                | Emit event           |
-| GET    | `/api/schedules`             | List schedules       |
-| GET    | `/api/rules`                 | List rules           |
-| GET    | `/api/stream/logs`           | SSE log stream       |
-| GET    | `/api/stream/events`         | SSE event stream     |
+| Method | Endpoint                      | Description          |
+|--------|-------------------------------|----------------------|
+| GET    | `/api/health`                 | Health check         |
+| GET    | `/api/stats`                  | Dashboard statistics |
+| GET    | `/api/plugins`                | List plugins         |
+| GET    | `/api/plugins/:id`            | Plugin details       |
+| GET    | `/api/plugins/:id/icon`       | Plugin icon          |
+| POST   | `/api/plugins/enable`         | Enable plugin        |
+| POST   | `/api/plugins/disable`        | Disable plugin       |
+| POST   | `/api/plugins/reload`         | Reload plugin        |
+| GET    | `/api/blocks`                 | List all blocks      |
+| GET    | `/api/blocks/categories`      | Blocks by category   |
+| GET    | `/api/workflows`              | List workflows       |
+| GET    | `/api/workflows/:id`          | Get workflow         |
+| POST   | `/api/workflows`              | Save workflow        |
+| DELETE | `/api/workflows/:id`          | Delete workflow      |
+| POST   | `/api/workflows/enable`       | Enable workflow      |
+| POST   | `/api/workflows/disable`      | Disable workflow     |
+| GET    | `/api/workflows/:id/events`   | SSE workflow events  |
+| GET    | `/api/events`                 | Query events         |
+| POST   | `/api/events`                 | Emit event           |
+| GET    | `/api/stream/logs`            | SSE log stream       |
+| GET    | `/api/stream/events`          | SSE event stream     |
 
 ---
 
 ## Data Flow
 
-### Tool Call Flow
+### Block Execution Flow
 
 ```
-UI/API → Hub.ApiServer → ToolRegistry.call()
-                              ↓
-                         PluginManager.callTool()
-                              ↓ (IPC: callTool)
-                         Plugin Process
-                              ↓
-                         Tool Handler
-                              ↓ (IPC: toolResult)
-                         Hub ← Result
+Workflow Started
+         ↓
+    WorkflowExecutor.run()
+         ↓
+    For each block:
+      1. PluginManager.startBlock()
+      2. Plugin creates BlockInstance
+      3. Hub pushes inputs via pushInput
+      4. Block processes, emits via blockEmit
+      5. Hub routes to connected blocks
+         ↓
+    Workflow running (reactive)
 ```
 
 ### Event Flow
@@ -407,26 +416,6 @@ Plugin.emit("motion.detected", payload)
     ├─→ AutomationEngine (trigger matching workflows)
     ├─→ Subscribed Plugins (forward via IPC)
     └─→ SSE Clients (real-time updates)
-```
-
-### Workflow Execution Flow
-
-```
-Event matches trigger
-         ↓
-    AutomationEngine.trigger()
-         ↓
-    WorkflowExecutor.run()
-         ↓
-    ┌─────────────────────────┐
-    │ For each block:         │
-    │   1. Resolve block type │
-    │   2. Send to plugin     │
-    │   3. Get result         │
-    │   4. Follow output port │
-    └─────────────────────────┘
-         ↓
-    Workflow complete
 ```
 
 ---
@@ -462,9 +451,6 @@ schedules: []
 | Format       | Example                    | Description                  |
 |--------------|----------------------------|------------------------------|
 | `workspace:` | `workspace:timer`          | Local plugin in `./plugins/` |
-| `npm:`       | `npm:@brika/plugin-hue`     | npm registry package         |
+| `npm:`       | `npm:@brika/plugin-hue`    | npm registry package         |
 | `git:`       | `git:github.com/user/repo` | Git repository               |
-| `file:`      | `file:./path/to/plugin.ts` | Direct file path             |
-
-
-
+| `file:`      | `file:./path/to/plugin`    | Direct file path             |

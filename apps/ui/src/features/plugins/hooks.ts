@@ -37,3 +37,19 @@ export function usePluginMutations() {
     uninstall: useMutation({ mutationFn: pluginsApi.uninstall, onSuccess: invalidate }),
   };
 }
+
+export function usePluginConfig(uid: string) {
+  return useQuery({
+    queryKey: pluginsKeys.config(uid),
+    queryFn: () => pluginsApi.getConfig(uid),
+    enabled: !!uid,
+  });
+}
+
+export function usePluginConfigMutation(uid: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (config: Record<string, unknown>) => pluginsApi.setConfig(uid, config),
+    onSuccess: () => qc.invalidateQueries({ queryKey: pluginsKeys.config(uid) }),
+  });
+}

@@ -13,8 +13,6 @@ export interface RunningPlugin {
   pid: number;
   /** IPC channel for communication */
   channel: PluginChannel;
-  /** Registered tool IDs */
-  tools: Set<string>;
   /** Registered block IDs */
   blocks: Set<string>;
   /** Event subscription patterns */

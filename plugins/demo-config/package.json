@@ -1,0 +1,53 @@
+{
+  "name": "@brika/plugin-demo-config",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "description": "Demo plugin showcasing the preferences system",
+  "author": "BRIKA",
+  "license": "MIT",
+  "engines": {
+    "brika": "^0.2.0"
+  },
+  "keywords": ["demo", "config", "preferences"],
+  "preferences": [
+    {
+      "name": "apiKey",
+      "type": "password",
+      "required": true
+    },
+    {
+      "name": "serverUrl",
+      "type": "text",
+      "default": "https://api.example.com"
+    },
+    {
+      "name": "maxRetries",
+      "type": "number",
+      "default": 3,
+      "min": 1,
+      "max": 10
+    },
+    {
+      "name": "debugMode",
+      "type": "checkbox",
+      "default": false
+    },
+    {
+      "name": "logLevel",
+      "type": "dropdown",
+      "default": "info",
+      "options": [
+        { "value": "debug" },
+        { "value": "info" },
+        { "value": "warn" },
+        { "value": "error" }
+      ]
+    }
+  ],
+  "dependencies": {
+    "@brika/sdk": "workspace:*"
+  }
+}
+

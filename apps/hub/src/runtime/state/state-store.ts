@@ -1,5 +1,5 @@
 import { PluginPackageSchema } from '@brika/schema';
-import type { PluginHealth, Rule, Schedule } from '@brika/shared';
+import type { PluginHealth } from '@brika/shared';
 import { inject, singleton } from '@brika/shared';
 import { HubConfig } from '@/runtime/config';
 import { LogRouter } from '@/runtime/logs/log-router';
@@ -37,8 +37,6 @@ export interface PluginStateWithMetadata extends InstalledPluginState {
 
 type StateFile = {
   plugins: Record<string, InstalledPluginState>;
-  schedules: Record<string, Schedule>;
-  rules: Record<string, Rule>;
 };
 
 @singleton()
@@ -47,7 +45,7 @@ export class StateStore {
   private readonly logs = inject(LogRouter);
   readonly #homeDir: string;
   readonly #file: string;
-  #state: StateFile = { plugins: {}, schedules: {}, rules: {} };
+  #state: StateFile = { plugins: {} };
 
   /** In-memory cache of plugin metadata loaded from package.json files */
   readonly #metadataCache = new Map<string, PluginPackageSchema>();
@@ -68,8 +66,6 @@ export class StateStore {
 
     this.#state = {
       plugins: parsed.plugins ?? {},
-      schedules: parsed.schedules ?? {},
-      rules: parsed.rules ?? {},
     };
   }
 
@@ -195,44 +191,6 @@ export class StateStore {
 
     // Load metadata into cache
     await this.refreshMetadata(info.name, info.rootDirectory);
-  }
-
-  // Schedules
-  listSchedules(): Schedule[] {
-    return Object.values(this.#state.schedules);
-  }
-
-  getSchedule(id: string): Schedule | undefined {
-    return this.#state.schedules[id];
-  }
-
-  async upsertSchedule(s: Schedule): Promise<void> {
-    this.#state.schedules[s.id] = s;
-    await this.#flush();
-  }
-
-  async deleteSchedule(id: string): Promise<void> {
-    delete this.#state.schedules[id];
-    await this.#flush();
-  }
-
-  // Rules
-  listRules(): Rule[] {
-    return Object.values(this.#state.rules);
-  }
-
-  getRule(id: string): Rule | undefined {
-    return this.#state.rules[id];
-  }
-
-  async upsertRule(r: Rule): Promise<void> {
-    this.#state.rules[r.id] = r;
-    await this.#flush();
-  }
-
-  async deleteRule(id: string): Promise<void> {
-    delete this.#state.rules[id];
-    await this.#flush();
   }
 
   /**

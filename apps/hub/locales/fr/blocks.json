@@ -1,0 +1,7 @@
+{
+  "title": "Blocs",
+  "subtitle": "Types de blocs disponibles pour construire des workflows",
+  "search": "Rechercher des blocs...",
+  "noResults": "Aucun bloc ne correspond à votre recherche",
+  "empty": "Aucun bloc disponible. Installez un plugin pour ajouter des blocs."
+}
