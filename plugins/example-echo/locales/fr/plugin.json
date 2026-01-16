@@ -8,7 +8,10 @@
     }
   },
   "fields": {
-    "message": "Le message à renvoyer"
+    "message": {
+      "label": "Message",
+      "description": "Le message à renvoyer"
+    }
   }
 }
 

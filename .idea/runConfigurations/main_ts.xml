@@ -1,7 +1,0 @@
-<component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="main.ts" type="BunRunConfiguration" nameIsGenerated="true">
-    <option name="program" value="main.ts" />
-    <option name="workingDirectory" value="$PROJECT_DIR$/apps/hub/src" />
-    <method v="2" />
-  </configuration>
-</component>

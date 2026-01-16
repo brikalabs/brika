@@ -1,0 +1,34 @@
+id = "workflow-mkd9hayo"
+name = "New Workflow"
+enabled = true
+
+[[blocks]]
+id = "clock-mkd9klss-3"
+type = "@brika/blocks-builtin:clock"
+
+[blocks.config]
+id = "clock-mkd9klss-3"
+type = "@brika/blocks-builtin:clock"
+interval = 1000
+
+[blocks.position]
+x = -61.5
+y = -100.75
+
+[[blocks]]
+id = "log-mkd9pstt-4"
+type = "@brika/blocks-builtin:log"
+
+[blocks.config]
+id = "log-mkd9pstt-4"
+type = "@brika/blocks-builtin:log"
+
+[blocks.position]
+x = -10.25
+y = 40.375
+
+[[connections]]
+from = "clock-mkd9klss-3"
+fromPort = "tick"
+to = "log-mkd9pstt-4"
+toPort = "in"

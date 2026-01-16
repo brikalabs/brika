@@ -1,5 +1,5 @@
 id = "workflow-mk4avg3n"
-name = "New Workflow"
+name = "New Workflow lol"
 enabled = true
 
 [[blocks]]
@@ -7,23 +7,11 @@ id = "clock-mk4aw72g-3"
 type = "@brika/blocks-builtin:clock"
 
 [blocks.config]
-interval = 10000
+interval = 5000
 
 [blocks.position]
-x = 51.5
-y = -166.31690238573444
-
-[[blocks]]
-id = "log-mk4awiqh-4"
-type = "@brika/blocks-builtin:log"
-
-[blocks.config]
-message = "Count: {{inputs.in.count}} at {{inputs.in.ts}}"
-level = "info"
-
-[blocks.position]
-x = -75.45595333405417
-y = 99.86778454243219
+x = -43.89848171284386
+y = -255.75773882010998
 
 [[blocks]]
 id = "split-mk4duszi-1"
@@ -34,8 +22,8 @@ id = "split-mk4duszi-1"
 type = "@brika/blocks-builtin:split"
 
 [blocks.position]
-x = 38.87306881357807
-y = -43.16850795692403
+x = -88.22992883964521
+y = -151.4745834219946
 
 [[blocks]]
 id = "delay-mk4dv520-2"
@@ -60,19 +48,42 @@ type = "@brika/blocks-builtin:log"
 message = "Delayed: {{inputs.in.count}} at {{inputs.in.ts}}"
 
 [blocks.position]
-x = 199
-y = 237
+x = 128.08349831505188
+y = 290.3562250772467
+
+[[blocks]]
+id = "log-mkd8p5p4-1"
+type = "@brika/blocks-builtin:log"
+
+[blocks.config]
+id = "log-mkd8p5p4-1"
+type = "@brika/blocks-builtin:log"
+message = "{{config.level}}"
+level = "error"
+
+[blocks.position]
+x = -160.20020267230242
+y = 88.6681581777447
+
+[[blocks]]
+id = "http-request-mkg0oj9x-1"
+type = "@brika/blocks-builtin:http-request"
+
+[blocks.config]
+id = "http-request-mkg0oj9x-1"
+type = "@brika/blocks-builtin:http-request"
+url = "http://google.com"
+method = "GET"
+
+[blocks.config.headers]
+[blocks.position]
+x = -485.1509238247687
+y = 24.2037746212836
 
 [[connections]]
 from = "clock-mk4aw72g-3"
 fromPort = "tick"
 to = "split-mk4duszi-1"
-toPort = "in"
-
-[[connections]]
-from = "split-mk4duszi-1"
-fromPort = "a"
-to = "log-mk4awiqh-4"
 toPort = "in"
 
 [[connections]]
@@ -86,3 +97,21 @@ from = "delay-mk4dv520-2"
 fromPort = "out"
 to = "log-mk4dvc04-3"
 toPort = "in"
+
+[[connections]]
+from = "split-mk4duszi-1"
+fromPort = "a"
+to = "log-mkd8p5p4-1"
+toPort = "in"
+
+[[connections]]
+from = "log-mkd8p5p4-1"
+fromPort = "out"
+to = "log-mk4dvc04-3"
+toPort = "in"
+
+[[connections]]
+from = "split-mk4duszi-1"
+fromPort = "a"
+to = "http-request-mkg0oj9x-1"
+toPort = "trigger"

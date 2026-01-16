@@ -3,22 +3,23 @@ import * as React from 'react';
 import { cn } from '@/lib/utils';
 
 const cardVariants = cva(
-  'relative rounded-xl border bg-card text-card-foreground shadow-sm transition-all duration-200',
+  'relative rounded-xl border bg-card text-card-foreground shadow-sm transition-color duration-200',
   {
     variants: {
       accent: {
         none: 'border-border',
-        blue: 'border-transparent [--accent-bg-hover:theme(colors.blue.500/0.1)] [--accent-bg:theme(colors.blue.500/0.05)] [--accent-border:theme(colors.blue.500/0.3)] [--accent:theme(colors.blue.500)]',
+        // Using theme data-* colors for consistent theming
+        blue: 'border-transparent [--accent-bg-hover:color-mix(in_oklch,var(--data-1),transparent_90%)] [--accent-bg:color-mix(in_oklch,var(--data-1),transparent_95%)] [--accent-border:color-mix(in_oklch,var(--data-1),transparent_70%)] [--accent:var(--data-1)]',
         emerald:
-          'border-transparent [--accent-bg-hover:theme(colors.emerald.500/0.1)] [--accent-bg:theme(colors.emerald.500/0.05)] [--accent-border:theme(colors.emerald.500/0.3)] [--accent:theme(colors.emerald.500)]',
+          'border-transparent [--accent-bg-hover:color-mix(in_oklch,var(--data-3),transparent_90%)] [--accent-bg:color-mix(in_oklch,var(--data-3),transparent_95%)] [--accent-border:color-mix(in_oklch,var(--data-3),transparent_70%)] [--accent:var(--data-3)]',
         violet:
-          'border-transparent [--accent-bg-hover:theme(colors.violet.500/0.1)] [--accent-bg:theme(colors.violet.500/0.05)] [--accent-border:theme(colors.violet.500/0.3)] [--accent:theme(colors.violet.500)]',
+          'border-transparent [--accent-bg-hover:color-mix(in_oklch,var(--data-5),transparent_90%)] [--accent-bg:color-mix(in_oklch,var(--data-5),transparent_95%)] [--accent-border:color-mix(in_oklch,var(--data-5),transparent_70%)] [--accent:var(--data-5)]',
         orange:
-          'border-transparent [--accent-bg-hover:theme(colors.orange.500/0.1)] [--accent-bg:theme(colors.orange.500/0.05)] [--accent-border:theme(colors.orange.500/0.3)] [--accent:theme(colors.orange.500)]',
+          'border-transparent [--accent-bg-hover:color-mix(in_oklch,var(--data-2),transparent_90%)] [--accent-bg:color-mix(in_oklch,var(--data-2),transparent_95%)] [--accent-border:color-mix(in_oklch,var(--data-2),transparent_70%)] [--accent:var(--data-2)]',
         purple:
-          'border-transparent [--accent-bg-hover:theme(colors.purple.500/0.1)] [--accent-bg:theme(colors.purple.500/0.05)] [--accent-border:theme(colors.purple.500/0.3)] [--accent:theme(colors.purple.500)]',
+          'border-transparent [--accent-bg-hover:color-mix(in_oklch,var(--data-5),transparent_90%)] [--accent-bg:color-mix(in_oklch,var(--data-5),transparent_95%)] [--accent-border:color-mix(in_oklch,var(--data-5),transparent_70%)] [--accent:var(--data-5)]',
         amber:
-          'border-transparent [--accent-bg-hover:theme(colors.amber.500/0.1)] [--accent-bg:theme(colors.amber.500/0.05)] [--accent-border:theme(colors.amber.500/0.3)] [--accent:theme(colors.amber.500)]',
+          'border-transparent [--accent-bg-hover:color-mix(in_oklch,var(--data-6),transparent_90%)] [--accent-bg:color-mix(in_oklch,var(--data-6),transparent_95%)] [--accent-border:color-mix(in_oklch,var(--data-6),transparent_70%)] [--accent:var(--data-6)]',
       },
       interactive: {
         true: 'group cursor-pointer',
@@ -33,12 +34,12 @@ const cardVariants = cva(
       },
       {
         accent: ['blue', 'emerald', 'violet', 'orange', 'purple', 'amber'],
-        className: 'border-[var(--accent-border)]/50',
+        className: 'border-[var(--accent-border)]',
       },
       {
         accent: ['blue', 'emerald', 'violet', 'orange', 'purple', 'amber'],
         interactive: true,
-        className: 'hover:border-[var(--accent-border)] hover:shadow-md',
+        className: 'hover:border-[var(--accent-border)] hover:shadow-lg',
       },
     ],
     defaultVariants: {
@@ -62,8 +63,8 @@ function Card({ className, accent, interactive, children, ...props }: CardProps)
       {hasAccent && (
         <div
           className={cn(
-            'pointer-events-none absolute inset-0 rounded-xl bg-[var(--accent-bg)] transition-colors',
-            interactive && 'group-hover:bg-[var(--accent-bg-hover)]'
+            'pointer-events-none absolute inset-0 rounded-xl bg-(--accent-bg) transition-colors',
+            interactive && 'group-hover:bg-(--accent-bg-hover)'
           )}
         />
       )}
@@ -121,7 +122,7 @@ function CardIcon({ className, children, ...props }: React.ComponentProps<'div'>
     <div
       data-slot="card-icon"
       className={cn(
-        'flex size-12 shrink-0 items-center justify-center rounded-xl bg-[var(--accent)]/10 text-[var(--accent)]',
+        'flex size-12 shrink-0 items-center justify-center rounded-xl bg-(--accent)/10 text-accent',
         className
       )}
       {...props}
@@ -136,7 +137,7 @@ function CardIconSmall({ className, children, ...props }: React.ComponentProps<'
     <div
       data-slot="card-icon-small"
       className={cn(
-        'flex size-9 shrink-0 items-center justify-center rounded-lg bg-[var(--accent)]/10 text-[var(--accent)]',
+        'flex size-9 shrink-0 items-center justify-center rounded-lg bg-(--accent)/10 text-accent',
         className
       )}
       {...props}

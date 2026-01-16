@@ -1,8 +1,8 @@
 import { route } from '@brika/router';
+import { HUB_VERSION } from '@/hub';
 import { AutomationEngine } from '@/runtime/automations';
 import { BlockRegistry } from '@/runtime/blocks';
 import { PluginManager } from '@/runtime/plugins/plugin-manager';
-import { HUB_VERSION } from '@/hub';
 
 export const healthRoutes = [
   route.get('/api/health', () => {

@@ -3,6 +3,7 @@ import { GripVertical, Search } from 'lucide-react';
 import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
 import { type DragEvent, useState } from 'react';
 import { Badge, Input, ScrollArea, Skeleton } from '@/components/ui';
+import { useLocale } from '@/lib/use-locale';
 import { cn } from '@/lib/utils';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -17,6 +18,7 @@ export interface BlockDefinition {
   icon: string;
   color: string;
   category: string;
+  pluginId: string;
   inputs: Array<{ id: string; name: string; typeName?: string }>;
   outputs: Array<{ id: string; name: string; typeName?: string }>;
   schema: {
@@ -42,18 +44,28 @@ async function fetchBlocks(): Promise<BlockDefinition[]> {
 
 interface DraggableBlockProps {
   block: BlockDefinition;
-  onDragStart: (e: DragEvent<HTMLDivElement>, block: BlockDefinition) => void;
+  onDragStart: (
+    e: DragEvent<HTMLDivElement>,
+    block: BlockDefinition,
+    translatedLabel: string
+  ) => void;
 }
 
 function DraggableBlock({ block, onDragStart }: DraggableBlockProps) {
+  const { tp } = useLocale();
   const iconName = (block.icon || 'box') as IconName;
+
+  // Translate block name and description
+  const blockKey = block.id.split(':').pop() || block.id;
+  const blockName = tp(block.pluginId, `blocks.${blockKey}.name`, block.name || blockKey);
+  const blockDesc = tp(block.pluginId, `blocks.${blockKey}.description`, block.description);
 
   return (
     <div
       role="button"
       tabIndex={0}
       draggable
-      onDragStart={(e) => onDragStart(e, block)}
+      onDragStart={(e) => onDragStart(e, block, blockName)}
       className={cn(
         'flex cursor-grab items-center gap-2 rounded-lg border bg-card p-2.5',
         'transition-all hover:border-accent-foreground/20 hover:bg-accent',
@@ -69,8 +81,8 @@ function DraggableBlock({ block, onDragStart }: DraggableBlockProps) {
         <DynamicIcon name={iconName} className="size-4" />
       </div>
       <div className="min-w-0 flex-1">
-        <div className="truncate font-medium text-sm">{block.name}</div>
-        <div className="truncate text-muted-foreground text-xs">{block.description}</div>
+        <div className="truncate font-medium text-sm">{blockName}</div>
+        <div className="truncate text-muted-foreground text-xs">{blockDesc}</div>
       </div>
     </div>
   );
@@ -111,8 +123,10 @@ export function BlockToolbar({ onDragStart, className }: BlockToolbarProps) {
     staleTime: 30000,
   });
 
-  const handleDragStart = (e: React.DragEvent, block: BlockDefinition) => {
-    e.dataTransfer.setData('application/reactflow', JSON.stringify(block));
+  const handleDragStart = (e: React.DragEvent, block: BlockDefinition, translatedLabel: string) => {
+    // Include the translated label in the drag data
+    const dragData = { ...block, translatedLabel };
+    e.dataTransfer.setData('application/reactflow', JSON.stringify(dragData));
     e.dataTransfer.effectAllowed = 'move';
     onDragStart?.(e, block);
   };

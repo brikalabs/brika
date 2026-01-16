@@ -14,7 +14,6 @@ import {
   log,
   map,
   output,
-  type Serializable,
   z,
 } from '@brika/sdk';
 
@@ -61,7 +60,16 @@ export const httpRequest = defineReactiveBlock(
           headers: config.headers,
           body: config.body,
         });
-        const body = await res.json().catch(() => res.text());
+
+        // Read body as text first, then try to parse as JSON
+        const text = await res.text();
+        let body: unknown;
+        try {
+          body = JSON.parse(text);
+        } catch {
+          body = text;
+        }
+
         outputs.response.emit({
           status: res.status,
           statusText: res.statusText,
@@ -327,7 +335,7 @@ function interpolate(
   template: string,
   context: { inputs: Record<string, unknown>; config: Record<string, unknown> }
 ): string {
-  return template.replace(/\{\{([^}]+)\}\}/g, (_, expr: string) => {
+  return template.replaceAll(/\{\{([^}]+)}}/g, (_, expr: string) => {
     const path = expr.trim().split('.');
     let value: unknown = context;
 
@@ -368,13 +376,13 @@ export const logBlock = defineReactiveBlock(
   },
   ({ inputs, outputs, config, log }) => {
     inputs.in.on((data) => {
-      const context = {
+      const c = {
         inputs: { in: data },
-        config: config as Record<string, unknown>,
+        config,
       };
 
       const message = config.message
-        ? interpolate(config.message, context)
+        ? interpolate(config.message, c)
         : JSON.stringify(data);
 
       log(config.level, message);

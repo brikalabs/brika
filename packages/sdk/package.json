@@ -14,19 +14,11 @@
     "url": "git+https://github.com/maxscharwath/brika.git",
     "directory": "packages/sdk"
   },
-  "keywords": [
-    "brika",
-    "sdk",
-    "plugins",
-    "workflow",
-    "home-automation"
-  ],
+  "keywords": ["brika", "sdk", "plugins", "workflow", "home-automation"],
   "exports": {
     ".": "./src/index.ts"
   },
-  "files": [
-    "src"
-  ],
+  "files": ["src"],
   "scripts": {
     "tsc": "bunx --biome tsc --noEmit",
     "prepublishOnly": "bun run tsc"

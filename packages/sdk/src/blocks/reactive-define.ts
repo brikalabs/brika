@@ -8,6 +8,7 @@
 import type { Serializable } from '@brika/serializable';
 import { z } from 'zod';
 import { getContext } from '../context';
+import type { Json } from '../types';
 import {
   type BlockContext,
   type BlockSetup,
@@ -120,10 +121,7 @@ export interface BlockInstance {
  */
 export function defineReactiveBlock<
   TInputs extends Record<string, InputDef<z.ZodType | GenericRef<string>>>,
-  TOutputs extends Record<
-    string,
-    OutputDef<z.ZodType | PassthroughRef<string> | GenericRef<string>>
-  >,
+  TOutputs extends Record<string, OutputDef<z.ZodType | PassthroughRef | GenericRef<string>>>,
   TConfig extends z.ZodObject<z.ZodRawShape>,
 >(
   spec: ReactiveBlockSpec<TInputs, TOutputs, TConfig>,
@@ -132,40 +130,35 @@ export function defineReactiveBlock<
   const configJsonSchema = zodToBlockSchema(spec.config);
 
   // Get TypeScript-like type name from schema (not resolving passthrough)
-  const getBaseTypeName = (
-    schema: z.ZodType | GenericRef<string> | PassthroughRef<string>
-  ): string => {
+  const getBaseTypeName = (schema: z.ZodType | GenericRef<string> | PassthroughRef): string => {
     if (schema && typeof schema === 'object' && '__type' in schema) {
       if (schema.__type === 'generic') return `generic<${(schema as GenericRef).__generic}>`;
       // Don't resolve passthrough here - it will be resolved later
-      if (schema.__type === 'passthrough')
-        return `__passthrough:${(schema as PassthroughRef).__passthrough}`;
+      if (schema.__type === 'passthrough') return `__passthrough:${schema.__passthrough}`;
     }
-    return zodToTypeName(schema as z.ZodType);
+    return zodToTypeName(schema);
   };
 
   // Get JSON Schema from Zod schema (returns undefined for generic/passthrough)
   const getJsonSchema = (
-    schema: z.ZodType | GenericRef<string> | PassthroughRef<string>
+    schema: z.ZodType | GenericRef<string> | PassthroughRef
   ): Record<string, unknown> | undefined => {
     if (schema && typeof schema === 'object' && '__type' in schema) {
       return undefined;
     }
     try {
-      return zodToJsonSchema(schema as z.ZodType);
+      return zodToJsonSchema(schema);
     } catch {
       return undefined;
     }
   };
 
   // Get runtime schema - returns the internal _schema for GenericRef/PassthroughRef
-  const getRuntimeSchema = (
-    schema: z.ZodType | GenericRef<string> | PassthroughRef<string>
-  ): z.ZodType => {
+  const getRuntimeSchema = (schema: z.ZodType | GenericRef<string> | PassthroughRef): z.ZodType => {
     if (schema && typeof schema === 'object' && '_schema' in schema) {
       return (schema as GenericRef | PassthroughRef)._schema;
     }
-    return schema as z.ZodType;
+    return schema;
   };
 
   // Build input map for passthrough resolution
@@ -258,7 +251,6 @@ export function defineReactiveBlock<
         return createFlowFromInput(input, setTimeoutWrapper, cleanup) as unknown as Flow<T>;
       };
 
-      // Build reactive context
       const reactiveCtx = {
         blockId: ctx.blockId,
         workflowId: ctx.workflowId,
@@ -267,6 +259,9 @@ export function defineReactiveBlock<
         config,
         start,
         log: ctx.log,
+        get context() {
+          return this;
+        },
       } as unknown as BlockContext<TInputs, TOutputs, TConfig>;
 
       // Call setup function
@@ -341,9 +336,11 @@ export function isCompiledReactiveBlock(value: unknown): value is CompiledReacti
 
 function zodToBlockSchema(schema: z.ZodObject<z.ZodRawShape>): BlockSchema {
   const json = z.toJSONSchema(schema, { unrepresentable: 'any' });
-  const props =
-    (json as { properties?: Record<string, { type?: string; description?: string }> }).properties ??
-    {};
+  type JsonSchemaProps = Record<
+    string,
+    { type?: string; description?: string; enum?: Json[]; default?: Json }
+  >;
+  const props = (json as { properties?: JsonSchemaProps }).properties ?? {};
   type PropType = 'string' | 'number' | 'boolean' | 'object' | 'array';
   const validTypes = new Set<PropType>(['string', 'number', 'boolean', 'object', 'array']);
   return {
@@ -354,6 +351,8 @@ function zodToBlockSchema(schema: z.ZodObject<z.ZodRawShape>): BlockSchema {
         {
           type: (validTypes.has(v.type as PropType) ? v.type : 'string') as PropType,
           description: v.description,
+          ...(v.enum ? { enum: v.enum } : {}),
+          ...(v.default === undefined ? {} : { default: v.default }),
         },
       ])
     ),

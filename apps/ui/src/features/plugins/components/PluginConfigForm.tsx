@@ -1,6 +1,6 @@
 import type { PreferenceDefinition } from '@brika/shared';
 import { Settings } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Button,
   Card,
@@ -32,10 +32,19 @@ export function PluginConfigForm({ pluginUid, pluginName }: Props) {
   const [values, setValues] = useState<Record<string, unknown>>({});
   const [isDirty, setIsDirty] = useState(false);
 
+  // Reset form state when plugin data changes (e.g., after update)
+  useEffect(() => {
+    if (data) {
+      setValues({});
+      setIsDirty(false);
+    }
+  }, [data]);
+
   if (isLoading || !data) return null;
   if (data.schema.length === 0) return null;
 
-  const currentValues = isDirty ? values : data.values;
+  // Always merge server values with local changes
+  const currentValues = { ...data.values, ...values };
 
   const handleChange = (name: string, value: unknown) => {
     setValues((prev) => ({ ...prev, [name]: value }));

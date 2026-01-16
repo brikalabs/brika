@@ -164,20 +164,77 @@
     }
   },
   "fields": {
-    "field": "Chemin du champ à vérifier",
-    "operator": "Opérateur de comparaison",
-    "value": "Valeur à comparer",
-    "duration": "Durée d'attente",
-    "message": "Message à enregistrer",
-    "level": "Niveau de journal",
-    "status": "Statut de fin",
-    "template": "Modèle de sortie",
-    "interval": "Intervalle en millisecondes",
-    "emitOnStart": "Émettre un tick initial immédiatement",
-    "url": "URL de la requête",
-    "method": "Méthode HTTP",
-    "headers": "En-têtes de la requête",
-    "body": "Corps de la requête",
-    "timeout": "Délai d'expiration en millisecondes"
+    "field": {
+      "label": "Champ",
+      "description": "Chemin du champ à vérifier (ex: \"value\", \"data.status\")"
+    },
+    "operator": {
+      "label": "Opérateur",
+      "description": "Opérateur de comparaison"
+    },
+    "value": {
+      "label": "Valeur",
+      "description": "Valeur à comparer"
+    },
+    "case1": {
+      "label": "Cas 1",
+      "description": "Valeur pour le cas 1"
+    },
+    "case2": {
+      "label": "Cas 2",
+      "description": "Valeur pour le cas 2"
+    },
+    "case3": {
+      "label": "Cas 3",
+      "description": "Valeur pour le cas 3"
+    },
+    "duration": {
+      "label": "Durée",
+      "description": "Temps d'attente"
+    },
+    "message": {
+      "label": "Message",
+      "description": "Modèle de message avec expressions {{inputs.in.field}}"
+    },
+    "level": {
+      "label": "Niveau",
+      "description": "Niveau de sévérité du journal"
+    },
+    "status": {
+      "label": "Statut",
+      "description": "Statut de fin du workflow"
+    },
+    "template": {
+      "label": "Modèle",
+      "description": "Modèle pour construire l'objet de sortie"
+    },
+    "interval": {
+      "label": "Intervalle",
+      "description": "Temps entre les ticks"
+    },
+    "emitOnStart": {
+      "label": "Émettre au démarrage",
+      "description": "Émettre un tick initial immédiatement au démarrage"
+    },
+    "url": {
+      "label": "URL",
+      "description": "URL de la requête"
+    },
+    "method": {
+      "label": "Méthode",
+      "description": "Méthode HTTP (GET, POST, etc.)"
+    },
+    "headers": {
+      "label": "En-têtes",
+      "description": "En-têtes de la requête HTTP"
+    },
+    "body": {
+      "label": "Corps",
+      "description": "Corps de la requête (pour POST/PUT/PATCH)"
+    },
+    "timeout": {
+      "label": "Délai",
+      "description": "Délai d'expiration de la requête"
+    }
   }
 }

@@ -14,19 +14,11 @@
     "url": "git+https://github.com/maxscharwath/brika.git",
     "directory": "packages/serializable"
   },
-  "keywords": [
-    "brika",
-    "serialization",
-    "zod",
-    "schema"
-  ],
+  "keywords": ["brika", "serialization", "zod", "schema"],
   "exports": {
     ".": "./src/index.ts"
   },
-  "files": [
-    "src",
-    "README.md"
-  ],
+  "files": ["src", "README.md"],
   "scripts": {
     "tsc": "bunx --bun tsc --noEmit",
     "prepublishOnly": "bun run tsc"

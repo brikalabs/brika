@@ -1,17 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import type { VariantProps } from 'class-variance-authority';
-import {
-  Activity,
-  ArrowRight,
-  Box,
-  Play,
-  Plug,
-  Server,
-  Sparkles,
-  Workflow,
-  Zap,
-} from 'lucide-react';
+import { Activity, ArrowRight, Box, Play, Plug, Server, Workflow, Zap } from 'lucide-react';
 import type React from 'react';
 import {
   Badge,
@@ -130,23 +120,18 @@ export function DashboardPage() {
   const runningPlugins = plugins.filter((p) => p.status === 'running').length;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="bg-linear-to-r from-foreground to-foreground/70 bg-clip-text font-bold text-3xl tracking-tight">
-            {t('dashboard:title')}
-          </h1>
-          <p className="mt-1 flex items-center gap-2 text-muted-foreground">
-            <Sparkles className="size-4" />
-            {t('dashboard:subtitle')}
-          </p>
+          <h1 className="font-semibold text-2xl tracking-tight">{t('dashboard:title')}</h1>
+          <p className="mt-1 text-muted-foreground">{t('dashboard:subtitle')}</p>
         </div>
         <Badge
           variant={health?.ok ? 'default' : 'destructive'}
           className={cn(
             'gap-2 px-3 py-1.5 text-sm',
-            health?.ok && 'border-emerald-500/20 bg-emerald-500/10 text-emerald-500'
+            health?.ok && 'border-success/20 bg-success/10 text-success'
           )}
         >
           <Activity className={cn('size-4', health?.ok && 'animate-pulse')} />
@@ -278,31 +263,33 @@ export function DashboardPage() {
                 {t('common:labels.status')}
               </CardTitle>
             </CardHeader>
-            <CardContent className="flex flex-col gap-2">
-              <div className="flex items-center justify-between rounded-lg bg-muted/30 p-2.5">
-                <span className="text-sm">{t('dashboard:stats.plugins')}</span>
+            <CardContent className="flex flex-col gap-2.5">
+              <div className="flex items-center justify-between rounded-lg border bg-card p-3">
+                <span className="font-medium text-sm">{t('common:labels.status')}</span>
                 <Badge
                   variant={health?.ok ? 'default' : 'destructive'}
-                  className={cn(
-                    health?.ok && 'border-emerald-500/20 bg-emerald-500/10 text-emerald-500'
-                  )}
+                  className={cn(health?.ok && 'border-success/20 bg-success/10 text-success')}
                 >
                   {health?.ok ? t('common:status.running') : t('common:status.stopped')}
                 </Badge>
               </div>
-              <div className="flex items-center justify-between rounded-lg bg-muted/30 p-2.5">
-                <span className="text-sm">{t('dashboard:stats.plugins')}</span>
-                <Badge variant="secondary">
+              <div className="flex items-center justify-between rounded-lg border bg-card p-3">
+                <span className="font-medium text-sm">{t('dashboard:stats.plugins')}</span>
+                <Badge variant="secondary" className="font-semibold">
                   {runningPlugins} / {plugins.length}
                 </Badge>
               </div>
-              <div className="flex items-center justify-between rounded-lg bg-muted/30 p-2.5">
-                <span className="text-sm">{t('events:title')}</span>
-                <Badge variant="secondary">{events.length}</Badge>
+              <div className="flex items-center justify-between rounded-lg border bg-card p-3">
+                <span className="font-medium text-sm">{t('events:title')}</span>
+                <Badge variant="secondary" className="font-semibold">
+                  {events.length}
+                </Badge>
               </div>
-              <div className="flex items-center justify-between rounded-lg bg-muted/30 p-2.5">
-                <span className="text-sm">{t('dashboard:stats.blocks')}</span>
-                <Badge variant="secondary">{stats?.blocks.total ?? 0}</Badge>
+              <div className="flex items-center justify-between rounded-lg border bg-card p-3">
+                <span className="font-medium text-sm">{t('dashboard:stats.blocks')}</span>
+                <Badge variant="secondary" className="font-semibold">
+                  {stats?.blocks.total ?? 0}
+                </Badge>
               </div>
             </CardContent>
           </Card>

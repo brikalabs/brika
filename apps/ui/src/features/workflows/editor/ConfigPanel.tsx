@@ -38,6 +38,7 @@ import {
   Switch,
   Textarea,
 } from '@/components/ui';
+import { useLocale } from '@/lib/use-locale';
 import { cn } from '@/lib/utils';
 import type { BlockNodeData } from './BlockNode';
 
@@ -187,7 +188,7 @@ function ExpressionField({
                   title="Copy to clipboard"
                 >
                   {copied === v.name ? (
-                    <Check className="size-3 text-green-500" />
+                    <Check className="size-3 text-success" />
                   ) : (
                     <Copy className="size-3 text-muted-foreground" />
                   )}
@@ -295,9 +296,11 @@ interface FieldProps {
   onChange: (value: unknown) => void;
   variables: Variable[];
   required?: boolean;
+  pluginId?: string;
 }
 
-function SchemaField({ name, schema, value, onChange, variables, required }: FieldProps) {
+function SchemaField({ name, schema, value, onChange, variables, required, pluginId }: FieldProps) {
+  const { tp } = useLocale();
   const type = schema.type;
   const description = schema.description;
   const enumValues = schema.enum;
@@ -306,14 +309,20 @@ function SchemaField({ name, schema, value, onChange, variables, required }: Fie
   // Check for special type markers
   const { marker: typeMarker } = getTypeMarker(description);
 
-  // Clean description (remove type marker)
-  const cleanDescription = description?.replace(/\$type:\w+(:\w+)?/g, '').trim();
+  // Clean description (remove type marker) - used as fallback
+  const fallbackDescription = description?.replace(/\$type:\w+(:\w+)?/g, '').trim();
 
-  // Pretty label from camelCase
-  const label = name
+  // Pretty label from camelCase (fallback)
+  const fallbackLabel = name
     .replace(/([A-Z])/g, ' $1')
     .replace(/^./, (s) => s.toUpperCase())
     .trim();
+
+  // Translate field label and description using plugin's fields translations
+  const label = pluginId ? tp(pluginId, `fields.${name}.label`, fallbackLabel) : fallbackLabel;
+  const cleanDescription = pluginId
+    ? tp(pluginId, `fields.${name}.description`, fallbackDescription ?? '')
+    : fallbackDescription;
 
   // Determine field type and render appropriate control
   const renderField = () => {
@@ -467,7 +476,7 @@ function SchemaField({ name, schema, value, onChange, variables, required }: Fie
     <div className="space-y-2">
       <div className="flex items-center gap-1.5">
         <Label className="font-medium text-sm">{label}</Label>
-        {required && <span className="text-red-500 text-xs">*</span>}
+        {required && <span className="text-destructive text-xs">*</span>}
         {cleanDescription && (
           <HelpCircle className="size-3.5 text-muted-foreground" aria-label={cleanDescription} />
         )}
@@ -555,11 +564,13 @@ function BlockConfig({
   schema,
   onUpdate,
   availableVariables,
+  pluginId,
 }: {
   data: BlockNodeData;
   schema?: BlockSchema;
   onUpdate: (config: Record<string, unknown>) => void;
   availableVariables: Variable[];
+  pluginId?: string;
 }) {
   const config = data.config;
 
@@ -588,6 +599,7 @@ function BlockConfig({
           onChange={(value) => onUpdate({ ...config, [name]: value })}
           variables={availableVariables}
           required={requiredFields.has(name)}
+          pluginId={pluginId}
         />
       ))}
     </div>
@@ -605,7 +617,15 @@ export function ConfigPanel({
   blockSchema,
   className,
 }: ConfigPanelProps) {
+  const { tp } = useLocale();
   const blockData = node.data as unknown as BlockNodeData;
+
+  // Translate block label if pluginId is available
+  const blockType = blockData.type || '';
+  const blockKey = blockType.split(':').pop() || blockType;
+  const displayLabel = blockData.pluginId
+    ? tp(blockData.pluginId, `blocks.${blockKey}.name`, blockData.label || blockData.id)
+    : blockData.label || blockData.id;
 
   return (
     <div className={cn('flex h-full flex-col border-l bg-card/50 backdrop-blur-sm', className)}>
@@ -613,7 +633,7 @@ export function ConfigPanel({
       <div className="border-b bg-background/80 p-4">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="font-semibold text-sm">{blockData.label || blockData.id}</h3>
+            <h3 className="font-semibold text-sm">{displayLabel}</h3>
             <p className="mt-0.5 text-muted-foreground text-xs">
               Configure {(blockData.type || '').split(':').pop()} block
             </p>
@@ -640,7 +660,7 @@ export function ConfigPanel({
                   {blockData.inputs?.map((p) => (
                     <code
                       key={p.id}
-                      className="rounded bg-blue-500/10 px-1.5 py-0.5 font-mono text-[10px] text-blue-600 dark:text-blue-400"
+                      className="rounded bg-data-1/10 px-1.5 py-0.5 font-mono text-[10px] text-data-1"
                     >
                       {p.name}: {p.typeName ?? 'generic'}
                     </code>
@@ -677,6 +697,7 @@ export function ConfigPanel({
             schema={blockSchema}
             onUpdate={(config) => onUpdateBlock(node.id, config)}
             availableVariables={availableVariables}
+            pluginId={blockData.pluginId}
           />
         </div>
 

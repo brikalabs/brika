@@ -14,20 +14,12 @@
     "url": "git+https://github.com/maxscharwath/brika.git",
     "directory": "packages/ipc"
   },
-  "keywords": [
-    "brika",
-    "ipc",
-    "binary",
-    "communication"
-  ],
+  "keywords": ["brika", "ipc", "binary", "communication"],
   "exports": {
     ".": "./src/index.ts",
     "./contract": "./src/contract/index.ts"
   },
-  "files": [
-    "src",
-    "README.md"
-  ],
+  "files": ["src", "README.md"],
   "scripts": {
     "tsc": "bunx --biome tsc --noEmit",
     "prepublishOnly": "bun run tsc"

@@ -8,7 +8,10 @@
     }
   },
   "fields": {
-    "message": "The message to echo back"
+    "message": {
+      "label": "Message",
+      "description": "The message to echo back"
+    }
   }
 }
 

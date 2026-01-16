@@ -52,8 +52,8 @@ function StatusBadge({ status, error }: { status?: WorkflowStatus; error?: strin
 
   if (status === 'running') {
     return (
-      <Badge variant="default" className="gap-1 bg-green-600">
-        <Play className="size-3" />
+      <Badge variant="default" className="gap-1.5 border-success/20 bg-success/10 text-success">
+        <Play className="size-3 fill-current" />
         {t('common:status.running')}
       </Badge>
     );
@@ -63,7 +63,7 @@ function StatusBadge({ status, error }: { status?: WorkflowStatus; error?: strin
     return (
       <Tooltip>
         <TooltipTrigger asChild>
-          <Badge variant="destructive" className="cursor-help gap-1">
+          <Badge variant="destructive" className="cursor-help gap-1.5">
             <AlertCircle className="size-3" />
             {t('common:status.error')}
           </Badge>
@@ -76,8 +76,8 @@ function StatusBadge({ status, error }: { status?: WorkflowStatus; error?: strin
   }
 
   return (
-    <Badge variant="secondary" className="gap-1">
-      <Square className="size-3" />
+    <Badge variant="secondary" className="gap-1.5">
+      <Square className="size-3 fill-current" />
       {t('common:status.stopped')}
     </Badge>
   );
@@ -122,28 +122,30 @@ function WorkflowsTable({
             return (
               <TableRow key={workflow.id} className="group">
                 <TableCell>
-                  <div className="flex flex-col">
+                  <div className="flex flex-col gap-0.5">
                     <Link
                       to="/workflows/$id/edit"
                       params={{ id: workflow.id }}
-                      className="font-medium hover:underline"
+                      className="font-semibold text-sm leading-tight hover:underline"
                     >
                       {workflow.name || workflow.id}
                     </Link>
-                    <span className="text-muted-foreground text-xs">{workflow.id}</span>
+                    <span className="font-mono text-muted-foreground text-xs">{workflow.id}</span>
                   </div>
                 </TableCell>
                 <TableCell>
                   <StatusBadge status={workflow.status} error={workflow.error} />
                 </TableCell>
                 <TableCell>
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1.5">
                     {workflow.blocks?.slice(0, 3).map((block) => {
                       const iconName = (block.icon || 'box') as IconName;
+                      const color = block.color || '#6b7280';
                       return (
                         <div
                           key={block.id}
-                          className="flex size-6 items-center justify-center rounded bg-muted"
+                          className="flex size-7 items-center justify-center rounded-lg shadow-sm"
+                          style={{ backgroundColor: `${color}15`, color }}
                           title={block.id}
                         >
                           <DynamicIcon name={iconName} className="size-3.5" />
@@ -151,7 +153,9 @@ function WorkflowsTable({
                       );
                     })}
                     {blockCount > 3 && (
-                      <span className="text-muted-foreground text-xs">+{blockCount - 3}</span>
+                      <span className="font-medium text-muted-foreground text-xs">
+                        +{blockCount - 3}
+                      </span>
                     )}
                     {blockCount === 0 && (
                       <span className="text-muted-foreground text-xs">
@@ -260,7 +264,7 @@ function DebugDialog({
               <Bug className="size-5" />
               {t('workflows:debug.title')}
               {connected ? (
-                <Badge variant="default" className="bg-green-600 text-[10px]">
+                <Badge variant="default" className="bg-success text-[10px]">
                   {t('workflows:debug.connected')}
                 </Badge>
               ) : (
@@ -284,7 +288,7 @@ function DebugDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="rounded-lg border bg-zinc-950 p-2">
+        <div className="rounded-lg border bg-muted/50 p-2">
           <ScrollArea className="h-[400px]" ref={scrollRef}>
             {filteredEvents.length === 0 ? (
               <div className="flex h-full items-center justify-center text-muted-foreground text-sm">
@@ -414,7 +418,7 @@ export function WorkflowsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="font-bold text-3xl tracking-tight">{t('workflows:title')}</h1>
+          <h1 className="font-semibold text-2xl tracking-tight">{t('workflows:title')}</h1>
           <p className="mt-1 text-muted-foreground">{t('workflows:subtitle')}</p>
         </div>
         <div className="flex gap-2">

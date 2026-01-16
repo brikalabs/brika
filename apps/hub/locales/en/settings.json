@@ -6,6 +6,10 @@
     "appearance": "Appearance",
     "language": "Language"
   },
+  "appearance": {
+    "title": "Appearance",
+    "description": "Choose your preferred color theme and mode"
+  },
   "language": {
     "title": "Language",
     "description": "Select your preferred language",

@@ -29,7 +29,7 @@ plugins:
       serverUrl: https://google.comjjj
       maxRetries: 3
       debugMode: true
-      logLevel: warn
+      logLevel: debug
 
 # Event-based rules
 rules: []

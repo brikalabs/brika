@@ -1,0 +1,32 @@
+{
+  "name": "Démo Configuration",
+  "description": "Plugin de démonstration présentant le système de préférences",
+  "preferences": {
+    "apiKey": {
+      "title": "Clé API",
+      "description": "Votre clé API secrète pour l'authentification"
+    },
+    "serverUrl": {
+      "title": "URL du serveur",
+      "description": "L'URL de base du serveur API"
+    },
+    "maxRetries": {
+      "title": "Tentatives max",
+      "description": "Nombre maximum de tentatives de réessai (1-10)"
+    },
+    "debugMode": {
+      "title": "Mode débogage",
+      "description": "Activer la journalisation détaillée pour le dépannage"
+    },
+    "logLevel": {
+      "title": "Niveau de journalisation",
+      "description": "Niveau minimum de journalisation à afficher",
+      "options": {
+        "debug": "Débogage",
+        "info": "Info",
+        "warn": "Avertissement",
+        "error": "Erreur"
+      }
+    }
+  }
+}

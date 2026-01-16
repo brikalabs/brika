@@ -14,7 +14,8 @@ import {
   BaseNodeHeader,
   BaseNodeHeaderTitle,
 } from '@/components/base-node';
-import { Badge, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui';
+import { Badge } from '@/components/ui';
+import { useLocale } from '@/lib/use-locale';
 import { cn } from '@/lib/utils';
 import type { BlockStatus } from './useWorkflowEditor';
 
@@ -29,9 +30,8 @@ export interface BlockPort {
   typeName?: string;
 }
 
-// Simple colors: inputs = blue, outputs = orange
-const INPUT_COLOR = '#3b82f6';
-const OUTPUT_COLOR = '#f97316';
+// Note: Colors now use CSS variables from theme system
+// Input ports use --data-1 (blue), output ports use --data-2 (orange)
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -45,6 +45,7 @@ export interface BlockNodeData {
   // Block definition info
   icon?: string;
   color?: string;
+  pluginId?: string;
   inputs?: BlockPort[];
   outputs?: BlockPort[];
   // Execution state
@@ -62,13 +63,13 @@ function StatusIndicator({ status }: Readonly<{ status?: BlockStatus }>) {
   if (!status || status === 'idle') return null;
 
   if (status === 'running') {
-    return <Loader2 className="size-4 animate-spin text-blue-500" />;
+    return <Loader2 className="size-4 animate-spin text-status-running" />;
   }
   if (status === 'completed') {
-    return <CheckCircle className="size-4 text-green-500" />;
+    return <CheckCircle className="size-4 text-status-completed" />;
   }
   if (status === 'error') {
-    return <XCircle className="size-4 text-red-500" />;
+    return <XCircle className="size-4 text-status-error" />;
   }
   return null;
 }
@@ -85,46 +86,15 @@ interface OutputPortProps {
 
 function OutputPort({ port, index, total }: OutputPortProps) {
   const offset = total > 1 ? ((index + 1) / (total + 1)) * 100 : 50;
-  const typeName = port.typeName ?? 'generic';
 
   return (
-    <TooltipProvider delayDuration={200}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <div
-            className="group absolute -bottom-1 flex cursor-pointer flex-col items-center"
-            style={{ left: `${offset}%`, transform: 'translateX(-50%)' }}
-          >
-            {total > 1 && (
-              <span
-                className="mb-0.5 font-semibold text-[10px] uppercase tracking-wide"
-                style={{ color: OUTPUT_COLOR }}
-              >
-                {port.name}
-              </span>
-            )}
-            <Handle
-              type="source"
-              position={Position.Bottom}
-              id={port.id}
-              className="relative! transform-none!"
-              style={{
-                width: total > 1 ? 14 : 12,
-                height: total > 1 ? 14 : 12,
-                background: OUTPUT_COLOR,
-                border: '3px solid var(--background)',
-                boxShadow: `0 2px 4px ${OUTPUT_COLOR}40`,
-                borderRadius: '50%',
-              }}
-            />
-          </div>
-        </TooltipTrigger>
-        <TooltipContent side="bottom" className="text-xs">
-          <span className="font-semibold">{port.name}</span>
-          <span className="text-muted-foreground"> : {typeName}</span>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <Handle
+      type="source"
+      position={Position.Bottom}
+      id={port.id}
+      className="!absolute !-bottom-1 !h-3 !w-3 !rounded-full !border-2 !border-background !bg-orange-500"
+      style={{ left: `${offset}%`, transform: 'translateX(-50%)' }}
+    />
   );
 }
 
@@ -140,46 +110,15 @@ interface InputPortProps {
 
 function InputPort({ port, index, total }: InputPortProps) {
   const offset = total > 1 ? ((index + 1) / (total + 1)) * 100 : 50;
-  const typeName = port.typeName ?? 'generic';
 
   return (
-    <TooltipProvider delayDuration={200}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <div
-            className="absolute -top-1 flex flex-col items-center"
-            style={{ left: `${offset}%`, transform: 'translateX(-50%)' }}
-          >
-            <Handle
-              type="target"
-              position={Position.Top}
-              id={port.id}
-              className="relative! transform-none!"
-              style={{
-                width: 12,
-                height: 12,
-                background: INPUT_COLOR,
-                border: '3px solid var(--background)',
-                boxShadow: `0 2px 4px ${INPUT_COLOR}30`,
-                borderRadius: '50%',
-              }}
-            />
-            {total > 1 && (
-              <span
-                className="mt-0.5 font-medium text-[9px] uppercase tracking-tight"
-                style={{ color: INPUT_COLOR }}
-              >
-                {port.name}
-              </span>
-            )}
-          </div>
-        </TooltipTrigger>
-        <TooltipContent side="top" className="text-xs">
-          <span className="font-semibold">{port.name}</span>
-          <span className="text-muted-foreground"> : {typeName}</span>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <Handle
+      type="target"
+      position={Position.Top}
+      id={port.id}
+      className="!absolute !-top-1 !h-3 !w-3 !rounded-full !border-2 !border-background !bg-blue-500"
+      style={{ left: `${offset}%`, transform: 'translateX(-50%)' }}
+    />
   );
 }
 
@@ -192,6 +131,7 @@ function InputPort({ port, index, total }: InputPortProps) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function BlockNode(props: NodeProps) {
+  const { tp } = useLocale();
   const data = props.data as unknown as BlockNodeData;
   const selected = props.selected;
 
@@ -200,6 +140,12 @@ export function BlockNode(props: NodeProps) {
   const status = data.status || 'idle';
   const config = data.config || {};
   const blockType = data.type || '';
+
+  // Translate block label if pluginId is available
+  const blockKey = blockType.split(':').pop() || blockType;
+  const displayLabel = data.pluginId
+    ? tp(data.pluginId, `blocks.${blockKey}.name`, data.label)
+    : data.label;
 
   // Default ports if not specified
   const inputs: BlockPort[] = data.inputs ?? [{ id: 'in', name: 'Input' }];
@@ -216,7 +162,7 @@ export function BlockNode(props: NodeProps) {
     }
     if (config.if) {
       return (
-        <code className="block truncate rounded-md bg-amber-500/10 px-2 py-1 font-mono text-amber-600 text-xs dark:text-amber-400">
+        <code className="block truncate rounded-md bg-warning/10 px-2 py-1 font-mono text-warning text-xs">
           ❓ {String(config.if).slice(0, 35)}
         </code>
       );
@@ -230,7 +176,7 @@ export function BlockNode(props: NodeProps) {
     }
     if (config.event) {
       return (
-        <code className="block truncate rounded-md bg-emerald-500/10 px-2 py-1 font-mono text-emerald-600 text-xs dark:text-emerald-400">
+        <code className="block truncate rounded-md bg-success/10 px-2 py-1 font-mono text-success text-xs">
           📤 {String(config.event)}
         </code>
       );
@@ -244,7 +190,7 @@ export function BlockNode(props: NodeProps) {
     }
     if (config.var) {
       return (
-        <code className="block truncate rounded-md bg-pink-500/10 px-2 py-1 font-mono text-pink-600 text-xs dark:text-pink-400">
+        <code className="block truncate rounded-md bg-data-8/10 px-2 py-1 font-mono text-data-8 text-xs">
           📝 {String(config.var)} = ...
         </code>
       );
@@ -252,28 +198,20 @@ export function BlockNode(props: NodeProps) {
     return null;
   };
 
-  const hasMultipleOutputs = outputs.length > 1;
-
   const statusStyles: Record<string, string> = {
     idle: '',
-    running: 'ring-2 ring-blue-500 ring-offset-2 ring-offset-background animate-pulse',
-    completed: 'ring-2 ring-green-500 ring-offset-1 ring-offset-background',
-    error: 'ring-2 ring-red-500 ring-offset-1 ring-offset-background',
+    running: 'ring-2 ring-status-running ring-offset-2 ring-offset-background animate-pulse',
+    completed: 'ring-2 ring-status-completed ring-offset-1 ring-offset-background',
+    error: 'ring-2 ring-status-error ring-offset-1 ring-offset-background',
   };
 
   return (
     <BaseNode
       className={cn(
         'relative min-w-[200px] transition-all duration-200',
-        hasMultipleOutputs && 'pb-5', // Extra padding for output labels
         statusStyles[status] || '',
         selected && 'ring-2 ring-primary ring-offset-2'
       )}
-      style={{
-        borderLeftColor: color,
-        borderLeftWidth: 4,
-        borderRadius: 12,
-      }}
     >
       {/* Input Handles */}
       {inputs.map((port: BlockPort, i: number) => (
@@ -288,7 +226,7 @@ export function BlockNode(props: NodeProps) {
           <DynamicIcon name={iconName} className="size-4" />
         </div>
         <BaseNodeHeaderTitle className="flex-1 truncate font-semibold text-sm">
-          {data.label}
+          {displayLabel}
         </BaseNodeHeaderTitle>
         <StatusIndicator status={status} />
       </BaseNodeHeader>
@@ -303,11 +241,6 @@ export function BlockNode(props: NodeProps) {
           >
             {(blockType || 'block').split(':').pop()}
           </Badge>
-
-          {/* Output count indicator for multi-output blocks */}
-          {hasMultipleOutputs && (
-            <span className="text-[10px] text-muted-foreground">{outputs.length} outputs</span>
-          )}
         </div>
 
         {/* Config summary */}
@@ -315,14 +248,14 @@ export function BlockNode(props: NodeProps) {
 
         {/* Execution output */}
         {status === 'completed' && data.output !== undefined ? (
-          <div className="truncate rounded-lg border border-green-500/20 bg-green-500/10 p-2 text-green-600 text-xs dark:text-green-400">
+          <div className="truncate rounded-lg border border-success/20 bg-success/10 p-2 text-success text-xs">
             ✓ {JSON.stringify(data.output).slice(0, 40)}
           </div>
         ) : null}
 
         {/* Error display */}
         {status === 'error' && data.output ? (
-          <div className="truncate rounded-lg border border-red-500/20 bg-red-500/10 p-2 text-red-600 text-xs dark:text-red-400">
+          <div className="truncate rounded-lg border border-destructive/20 bg-destructive/10 p-2 text-destructive text-xs">
             ✗ {String(data.output).slice(0, 40)}
           </div>
         ) : null}

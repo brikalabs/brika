@@ -24,8 +24,17 @@
     "cancelled": "Minuterie annulée"
   },
   "fields": {
-    "name": "Nom de la minuterie",
-    "seconds": "Durée en secondes",
-    "target": "ID ou nom de la minuterie à annuler"
+    "name": {
+      "label": "Nom",
+      "description": "Nom de la minuterie"
+    },
+    "seconds": {
+      "label": "Secondes",
+      "description": "Durée en secondes"
+    },
+    "target": {
+      "label": "Cible",
+      "description": "ID ou nom de la minuterie à annuler"
+    }
   }
 }

@@ -8,12 +8,12 @@
 import { useNavigate, useParams } from '@tanstack/react-router';
 import { ReactFlowProvider } from '@xyflow/react';
 import { ArrowLeft, Loader2, Save } from 'lucide-react';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Button, Input } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
-import { saveWorkflow, type Workflow } from './api';
+import type { Workflow } from './api';
 import { WorkflowEditor } from './editor';
-import { useWorkflow } from './hooks';
+import { useSaveWorkflow, useWorkflow } from './hooks';
 
 // Create a new empty workflow
 function createNewWorkflow(): Workflow {
@@ -39,22 +39,33 @@ export function WorkflowEditorPage() {
     enabled: !!workflowId,
   });
 
-  // Local state for workflow
-  const [workflow, setWorkflow] = useState<Workflow | null>(() =>
+  // Save workflow mutation with cache invalidation
+  const saveWorkflowMutation = useSaveWorkflow();
+
+  // Local state for workflow - tracks the latest state from the editor
+  const [initialWorkflow, setInitialWorkflow] = useState<Workflow | null>(() =>
     isNew ? createNewWorkflow() : null
   );
   const [workflowName, setWorkflowName] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
 
+  // Track current workflow from editor in a ref to avoid re-renders
+  const currentWorkflowRef = useRef<Workflow | null>(null);
+
   // Update local state when existing workflow loads
-  if (existingWorkflow && !workflow) {
-    setWorkflow(existingWorkflow);
+  if (existingWorkflow && !initialWorkflow) {
+    setInitialWorkflow(existingWorkflow);
     setWorkflowName(existingWorkflow.name || existingWorkflow.id);
   }
 
-  // Current workflow to display
-  const currentWorkflow = workflow || existingWorkflow;
+  // Current workflow to display (initial only, editor maintains its own state)
+  const currentWorkflow = initialWorkflow || existingWorkflow;
+
+  // Handle workflow changes from editor
+  const handleWorkflowChange = useCallback((workflow: Workflow, editorIsDirty: boolean) => {
+    currentWorkflowRef.current = workflow;
+    setIsDirty(editorIsDirty);
+  }, []);
 
   // Handle name change
   const handleNameChange = useCallback((name: string) => {
@@ -62,28 +73,27 @@ export function WorkflowEditorPage() {
     setIsDirty(true);
   }, []);
 
-  // Handle save
+  // Handle save - uses the current workflow from the editor
   const handleSave = useCallback(
-    async (updated: Workflow) => {
-      setIsSaving(true);
-      try {
-        const toSave = {
-          ...updated,
-          name: workflowName || updated.name,
-        };
-        await saveWorkflow(toSave);
-        setWorkflow(toSave);
-        setIsDirty(false);
+    async (workflow: Workflow) => {
+      // Use the latest workflow from the ref if available
+      const workflowToSave = currentWorkflowRef.current || workflow;
 
-        // If new workflow, navigate to edit URL
-        if (isNew) {
-          navigate({ to: '/workflows/$id/edit', params: { id: toSave.id } });
-        }
-      } finally {
-        setIsSaving(false);
+      const toSave = {
+        ...workflowToSave,
+        name: workflowName || workflowToSave.name,
+      };
+
+      await saveWorkflowMutation.mutateAsync(toSave);
+      setInitialWorkflow(toSave);
+      setIsDirty(false);
+
+      // If new workflow, navigate to edit URL
+      if (isNew) {
+        navigate({ to: '/workflows/$id/edit', params: { id: toSave.id } });
       }
     },
-    [workflowName, isNew, navigate]
+    [workflowName, isNew, navigate, saveWorkflowMutation]
   );
 
   // Handle back navigation
@@ -100,7 +110,7 @@ export function WorkflowEditorPage() {
   // Loading state
   if (!isNew && isLoading) {
     return (
-      <div className="flex h-[calc(100vh-4rem)] items-center justify-center">
+      <div className="flex h-screen items-center justify-center">
         <Loader2 className="size-8 animate-spin text-muted-foreground" />
       </div>
     );
@@ -109,7 +119,7 @@ export function WorkflowEditorPage() {
   // Not found state
   if (!isNew && !isLoading && !currentWorkflow) {
     return (
-      <div className="flex h-[calc(100vh-4rem)] flex-col items-center justify-center gap-4">
+      <div className="flex h-screen flex-col items-center justify-center gap-4">
         <p className="text-muted-foreground">{t('workflows:notFound')}</p>
         <Button variant="outline" onClick={() => navigate({ to: '/workflows' })}>
           <ArrowLeft className="mr-2 size-4" />
@@ -120,38 +130,42 @@ export function WorkflowEditorPage() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] flex-col">
+    <div className="flex h-screen flex-col">
       {/* Header */}
-      <div className="flex shrink-0 items-center justify-between border-b bg-background px-4 py-3">
+      <div className="flex shrink-0 items-center justify-between border-b bg-background px-6 py-3.5 shadow-sm">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" onClick={handleBack}>
-            <ArrowLeft className="mr-2 size-4" />
+          <Button variant="ghost" size="sm" onClick={handleBack} className="gap-2">
+            <ArrowLeft className="size-4" />
             {t('common:actions.back')}
           </Button>
 
-          <div className="h-6 w-px bg-border" />
+          <div className="h-6 w-px bg-border/50" />
 
           <Input
             value={workflowName || currentWorkflow?.name || ''}
             onChange={(e) => handleNameChange(e.target.value)}
             placeholder={t('workflows:editor.workflowName')}
-            className="h-8 w-64 border-none bg-transparent font-semibold text-lg shadow-none focus-visible:ring-0"
+            className="h-8 w-80 border-none bg-transparent font-semibold text-lg shadow-none focus-visible:ring-0"
           />
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           {isDirty && (
-            <span className="text-muted-foreground text-sm">{t('workflows:editor.unsaved')}</span>
+            <span className="text-muted-foreground text-xs">{t('workflows:editor.unsaved')}</span>
           )}
           <Button
             size="sm"
-            disabled={isSaving}
-            onClick={() => currentWorkflow && handleSave(currentWorkflow)}
+            disabled={saveWorkflowMutation.isPending}
+            onClick={() => {
+              const wf = currentWorkflowRef.current || currentWorkflow;
+              if (wf) handleSave(wf);
+            }}
+            className="gap-2"
           >
-            {isSaving ? (
-              <Loader2 className="mr-2 size-4 animate-spin" />
+            {saveWorkflowMutation.isPending ? (
+              <Loader2 className="size-4 animate-spin" />
             ) : (
-              <Save className="mr-2 size-4" />
+              <Save className="size-4" />
             )}
             {t('common:actions.save')}
           </Button>
@@ -162,7 +176,12 @@ export function WorkflowEditorPage() {
       {currentWorkflow && (
         <div className="min-h-0 flex-1">
           <ReactFlowProvider>
-            <WorkflowEditor workflow={currentWorkflow} readonly={false} onSave={handleSave} />
+            <WorkflowEditor
+              workflow={currentWorkflow}
+              readonly={false}
+              onSave={handleSave}
+              onChange={handleWorkflowChange}
+            />
           </ReactFlowProvider>
         </div>
       )}

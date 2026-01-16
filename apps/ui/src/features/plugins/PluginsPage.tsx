@@ -38,17 +38,12 @@ export function PluginsPage() {
   const isBusy = disable.isPending || reload.isPending || kill.isPending;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="bg-linear-to-r from-foreground to-foreground/70 bg-clip-text font-bold text-3xl tracking-tight">
-            {t('plugins:title')}
-          </h1>
-          <p className="mt-1 flex items-center gap-2 text-muted-foreground">
-            <Plug className="size-4" />
-            {t('plugins:subtitle')}
-          </p>
+          <h1 className="font-semibold text-2xl tracking-tight">{t('plugins:title')}</h1>
+          <p className="mt-1 text-muted-foreground">{t('plugins:subtitle')}</p>
         </div>
         <div className="flex gap-2">
           <Button
@@ -89,7 +84,11 @@ export function PluginsPage() {
               health === 'running' ? 'blue' : health === 'crashed' ? 'orange' : undefined;
             return (
               <Link key={p.uid} to="/plugins/$uid" params={{ uid: p.uid }}>
-                <Card accent={accent} interactive className="p-5">
+                <Card
+                  accent={accent}
+                  interactive
+                  className="p-5"
+                >
                   <div className="flex items-start gap-4">
                     {/* Plugin Icon */}
                     <Avatar className="size-12 shrink-0 rounded-xl">
@@ -102,36 +101,32 @@ export function PluginsPage() {
                     {/* Plugin Info */}
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="truncate font-semibold transition-colors group-hover:text-foreground">
+                        <span className="truncate font-semibold text-sm leading-tight transition-colors group-hover:text-foreground">
                           {tp(p.name, 'name')}
                         </span>
-                        <Badge variant="outline" className="shrink-0 text-xs">
+                        <Badge variant="outline" className="shrink-0 text-[10px]">
                           v{p.version}
                         </Badge>
                       </div>
                       {p.description && (
-                        <div className="mt-0.5 line-clamp-1 text-muted-foreground text-sm">
+                        <div className="mt-1 line-clamp-2 text-muted-foreground text-xs leading-relaxed">
                           {tp(p.name, 'description')}
                         </div>
                       )}
 
                       {/* Stats Row */}
                       {p.blocks.length > 0 && (
-                        <div className="mt-2 flex gap-4">
-                          {p.blocks.length > 0 && (
-                            <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
-                              <Boxes className="size-3.5" />
-                              <span>
-                                {p.blocks.length} {t('workflows:blocks').toLowerCase()}
-                              </span>
-                            </div>
-                          )}
+                        <div className="mt-2.5 flex items-center gap-1.5 rounded-md bg-muted/50 px-2 py-1 text-muted-foreground text-xs">
+                          <Boxes className="size-3.5" />
+                          <span>
+                            {p.blocks.length} {t('workflows:blocks').toLowerCase()}
+                          </span>
                         </div>
                       )}
 
                       {/* Error Display */}
                       {p.lastError && (
-                        <div className="mt-2 rounded-lg bg-destructive/10 p-2 text-destructive text-xs">
+                        <div className="mt-2.5 line-clamp-2 rounded-lg border border-destructive/20 bg-destructive/10 p-2.5 text-destructive text-xs leading-relaxed">
                           {p.lastError}
                         </div>
                       )}
@@ -148,20 +143,20 @@ export function PluginsPage() {
                               : 'secondary'
                         }
                         className={cn(
-                          health === 'running' &&
-                            'border-emerald-500/20 bg-emerald-500/10 text-emerald-500'
+                          'text-xs',
+                          health === 'running' && 'border-emerald-500/20 bg-success/10 text-success'
                         )}
                       >
                         {t(`common:status.${health}`)}
                       </Badge>
 
-                      <div className="flex gap-1.5">
+                      <div className="flex gap-1">
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button
                               size="icon"
                               variant="ghost"
-                              className="size-8"
+                              className="size-8 hover:bg-muted/80"
                               onClick={(e) => {
                                 e.preventDefault();
                                 reload.mutate(p.uid);
@@ -179,7 +174,7 @@ export function PluginsPage() {
                             <Button
                               size="icon"
                               variant="ghost"
-                              className="size-8"
+                              className="size-8 hover:bg-muted/80"
                               onClick={(e) => {
                                 e.preventDefault();
                                 disable.mutate(p.uid);
@@ -197,7 +192,7 @@ export function PluginsPage() {
                             <Button
                               size="icon"
                               variant="ghost"
-                              className="size-8 text-destructive hover:text-destructive"
+                              className="size-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
                               onClick={(e) => {
                                 e.preventDefault();
                                 kill.mutate(p.uid);
@@ -213,7 +208,7 @@ export function PluginsPage() {
                     </div>
 
                     {/* Arrow indicator */}
-                    <ArrowRight className="size-5 -translate-x-2 self-center text-muted-foreground opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100" />
+                    <ArrowRight className="size-4 -translate-x-2 self-center text-muted-foreground opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100" />
                   </div>
                 </Card>
               </Link>

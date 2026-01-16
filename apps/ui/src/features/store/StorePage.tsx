@@ -26,19 +26,21 @@ export function StorePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="font-bold text-2xl tracking-tight">{t('store:title')}</h2>
-        <p className="text-muted-foreground">{t('store:subtitle')}</p>
+        <h1 className="font-semibold text-2xl tracking-tight">{t('store:title')}</h1>
+        <p className="mt-1 text-muted-foreground">{t('store:subtitle')}</p>
       </div>
 
       <Card>
         <CardContent className="pt-6">
           <div className="mb-6 flex items-center gap-4">
-            <div className="flex size-12 items-center justify-center rounded-lg bg-primary/10">
-              <Package className="size-6 text-primary" />
+            <div className="flex size-14 shrink-0 items-center justify-center rounded-xl bg-primary/10 shadow-sm">
+              <Package className="size-7 text-primary" />
             </div>
             <div>
-              <h3 className="font-semibold">{t('store:installPlugin')}</h3>
-              <p className="text-muted-foreground text-sm">{t('store:installHint')}</p>
+              <h3 className="font-semibold text-base leading-tight">{t('store:installPlugin')}</h3>
+              <p className="mt-1 text-muted-foreground text-sm leading-relaxed">
+                {t('store:installHint')}
+              </p>
             </div>
           </div>
 
@@ -93,9 +95,11 @@ export function StorePage() {
       </Card>
 
       <Card>
-        <CardContent className="py-12 text-center">
-          <Package className="mx-auto mb-4 size-12 text-muted-foreground opacity-50" />
-          <p className="text-muted-foreground">{t('store:registryComingSoon')}</p>
+        <CardContent className="py-16 text-center">
+          <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-2xl bg-muted/50">
+            <Package className="size-8 text-muted-foreground opacity-50" />
+          </div>
+          <p className="text-muted-foreground text-sm">{t('store:registryComingSoon')}</p>
         </CardContent>
       </Card>
     </div>

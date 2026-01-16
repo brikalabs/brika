@@ -41,8 +41,8 @@ export function EventsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="font-bold text-2xl tracking-tight">{t('events:title')}</h2>
-          <p className="text-muted-foreground">{t('events:subtitle')}</p>
+          <h1 className="font-semibold text-2xl tracking-tight">{t('events:title')}</h1>
+          <p className="mt-1 text-muted-foreground">{t('events:subtitle')}</p>
         </div>
         <div className="flex gap-2">
           <Button
@@ -118,25 +118,30 @@ export function EventsPage() {
             ) : (
               <div className="divide-y divide-border/50">
                 {events.map((e) => (
-                  <div key={e.id} className="px-4 py-3 hover:bg-muted/30">
+                  <div
+                    key={e.id}
+                    className="px-4 py-3.5 transition-colors hover:bg-muted/30"
+                  >
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex items-center gap-3">
-                        <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10">
+                        <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 shadow-sm">
                           <Zap className="size-4 text-primary" />
                         </div>
-                        <div>
-                          <div className="font-mono font-semibold text-sm">{e.type}</div>
-                          <div className="text-muted-foreground text-xs">
-                            {t('events:from')} {e.source}
+                        <div className="min-w-0">
+                          <div className="truncate font-mono font-semibold text-sm leading-tight">
+                            {e.type}
+                          </div>
+                          <div className="mt-0.5 text-muted-foreground text-xs">
+                            {t('events:from')} <span className="font-medium">{e.source}</span>
                           </div>
                         </div>
                       </div>
-                      <span className="text-muted-foreground text-xs tabular-nums">
+                      <span className="shrink-0 text-muted-foreground text-xs tabular-nums">
                         {formatTime(e.ts)}
                       </span>
                     </div>
                     {e.payload && (
-                      <pre className="mt-2 ml-11 max-h-20 overflow-auto rounded bg-muted/50 p-2 text-muted-foreground text-xs">
+                      <pre className="mt-2.5 ml-12 max-h-24 overflow-auto rounded-md border border-border/50 bg-muted/50 p-2.5 font-mono text-muted-foreground text-xs leading-relaxed">
                         {JSON.stringify(e.payload, null, 2)}
                       </pre>
                     )}

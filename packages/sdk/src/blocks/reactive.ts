@@ -127,6 +127,9 @@ export interface BlockContext<
   /** Typed configuration */
   readonly config: z.infer<TConfig>;
 
+  /** Self-returning context */
+  readonly context: this;
+
   /**
    * Start a flow from a value, source, or factory.
    */

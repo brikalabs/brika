@@ -4,13 +4,14 @@ import {
   type Edge,
   MarkerType,
   type Node,
+  type NodeChange,
   type OnConnect,
   type OnEdgesDelete,
   type OnNodesDelete,
   useEdgesState,
   useNodesState,
 } from '@xyflow/react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Workflow, WorkflowBlock } from '../api';
 import type { BlockNodeData, BlockPort } from './BlockNode';
 import type { BlockDefinition, BlockTypeInfo } from './BlockToolbar';
@@ -204,6 +205,7 @@ function workflowToFlow(
         config: block.config || {},
         icon: def?.icon,
         color: def?.color,
+        pluginId: def?.pluginId,
         inputs: def?.inputs?.map((p) => ({
           id: p.id,
           direction: 'input' as const,
@@ -275,19 +277,62 @@ function generateNodeId(type: string): string {
   return `${type}-${Date.now().toString(36)}-${nodeIdCounter}`;
 }
 
-export function useWorkflowEditor(initialWorkflow: Workflow, blockDefs: BlockDefinition[]) {
+export function useWorkflowEditor(
+  initialWorkflow: Workflow,
+  blockDefs: BlockDefinition[],
+  onChange?: (workflow: Workflow, isDirty: boolean) => void
+) {
   const { nodes: initialNodes, edges: initialEdges } = useMemo(
     () => workflowToFlow(initialWorkflow, blockDefs),
     [initialWorkflow, blockDefs]
   );
 
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const [nodes, setNodes, onNodesChangeBase] = useNodesState(initialNodes);
+  const [edges, setEdges, onEdgesChangeBase] = useEdgesState(initialEdges);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
   const [blockStatuses, setBlockStatuses] = useState<Record<string, BlockStatus>>({});
   const [blockOutputs, setBlockOutputs] = useState<Record<string, unknown>>({});
   const [executionLogs, setExecutionLogs] = useState<ExecutionLog[]>([]);
+
+  // Track onChange callback in ref to avoid stale closures
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
+
+  // Reset dirty state when initialWorkflow changes (after save)
+  // This happens when parent calls setInitialWorkflow with the saved workflow
+  useEffect(() => {
+    setIsDirty(false);
+  }, [initialWorkflow]);
+
+  // Wrap onNodesChange to detect position changes and mark dirty
+  const onNodesChange = useCallback(
+    (changes: NodeChange[]) => {
+      onNodesChangeBase(changes);
+
+      // Check if any change affects position (drag end)
+      const hasPositionChange = changes.some(
+        (change) => change.type === 'position' && change.dragging === false
+      );
+
+      if (hasPositionChange) {
+        setIsDirty(true);
+      }
+    },
+    [onNodesChangeBase]
+  );
+
+  // Wrap onEdgesChange to mark dirty
+  const onEdgesChange = useCallback(
+    (changes: Parameters<typeof onEdgesChangeBase>[0]) => {
+      onEdgesChangeBase(changes);
+      // Any edge change is considered a change
+      if (changes.length > 0) {
+        setIsDirty(true);
+      }
+    },
+    [onEdgesChangeBase]
+  );
 
   // Run type inference when graph changes (nodes or edges)
   useEffect(() => {
@@ -314,6 +359,11 @@ export function useWorkflowEditor(initialWorkflow: Workflow, blockDefs: BlockDef
     () => flowToWorkflow(nodes, edges, initialWorkflow),
     [nodes, edges, initialWorkflow]
   );
+
+  // Notify parent of workflow changes
+  useEffect(() => {
+    onChangeRef.current?.(workflow, isDirty);
+  }, [workflow, isDirty]);
 
   // Get selected node
   const selectedNode = useMemo(
@@ -366,6 +416,11 @@ export function useWorkflowEditor(initialWorkflow: Workflow, blockDefs: BlockDef
     (blockType: BlockTypeInfo, position: { x: number; y: number }) => {
       const blockTypeId = blockType.type || blockType.name;
       const nodeId = generateNodeId(blockTypeId.split(':').pop() || 'block');
+      // Use translated label if available (from drag data), otherwise fall back to name
+      const label =
+        (blockType as BlockTypeInfo & { translatedLabel?: string }).translatedLabel ||
+        blockType.name ||
+        nodeId;
       const newNode: Node = {
         id: nodeId,
         type: 'block',
@@ -373,10 +428,11 @@ export function useWorkflowEditor(initialWorkflow: Workflow, blockDefs: BlockDef
         data: {
           id: nodeId,
           type: blockTypeId,
-          label: blockType.name || nodeId,
+          label,
           config: { id: nodeId, type: blockTypeId, ...blockType.defaultConfig },
           icon: blockType.icon,
           color: blockType.color,
+          pluginId: blockType.pluginId,
           inputs: blockType.inputs,
           outputs: blockType.outputs,
           isFirst: false,
@@ -461,6 +517,11 @@ export function useWorkflowEditor(initialWorkflow: Workflow, blockDefs: BlockDef
     );
   }, [setNodes]);
 
+  // Mark workflow as clean (after successful save)
+  const markClean = useCallback(() => {
+    setIsDirty(false);
+  }, []);
+
   // Get available variables at a given block position
   // Variables use the pattern: inputs.{portId} for incoming data
   const getAvailableVariables = useCallback(
@@ -532,5 +593,6 @@ export function useWorkflowEditor(initialWorkflow: Workflow, blockDefs: BlockDef
     addExecutionLog,
     clearExecutionState,
     getAvailableVariables,
+    markClean,
   };
 }

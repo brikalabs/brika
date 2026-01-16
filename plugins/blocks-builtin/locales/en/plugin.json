@@ -164,20 +164,77 @@
     }
   },
   "fields": {
-    "field": "Field path to check",
-    "operator": "Comparison operator",
-    "value": "Value to compare against",
-    "duration": "Wait duration",
-    "message": "Message to log",
-    "level": "Log level",
-    "status": "End status",
-    "template": "Output template",
-    "interval": "Tick interval in milliseconds",
-    "emitOnStart": "Emit an initial tick immediately",
-    "url": "Request URL",
-    "method": "HTTP method",
-    "headers": "Request headers",
-    "body": "Request body",
-    "timeout": "Request timeout in milliseconds"
+    "field": {
+      "label": "Field",
+      "description": "Field path to check (e.g., \"value\", \"data.status\")"
+    },
+    "operator": {
+      "label": "Operator",
+      "description": "Comparison operator"
+    },
+    "value": {
+      "label": "Value",
+      "description": "Value to compare against"
+    },
+    "case1": {
+      "label": "Case 1",
+      "description": "Value for case 1"
+    },
+    "case2": {
+      "label": "Case 2",
+      "description": "Value for case 2"
+    },
+    "case3": {
+      "label": "Case 3",
+      "description": "Value for case 3"
+    },
+    "duration": {
+      "label": "Duration",
+      "description": "How long to wait"
+    },
+    "message": {
+      "label": "Message",
+      "description": "Message template with {{inputs.in.field}} expressions"
+    },
+    "level": {
+      "label": "Log Level",
+      "description": "Severity level for the log entry"
+    },
+    "status": {
+      "label": "Status",
+      "description": "End status of the workflow"
+    },
+    "template": {
+      "label": "Template",
+      "description": "Template to build output object"
+    },
+    "interval": {
+      "label": "Interval",
+      "description": "Time between ticks"
+    },
+    "emitOnStart": {
+      "label": "Emit on Start",
+      "description": "Emit an initial tick immediately when started"
+    },
+    "url": {
+      "label": "URL",
+      "description": "Request URL"
+    },
+    "method": {
+      "label": "Method",
+      "description": "HTTP method (GET, POST, etc.)"
+    },
+    "headers": {
+      "label": "Headers",
+      "description": "HTTP request headers"
+    },
+    "body": {
+      "label": "Body",
+      "description": "Request body (for POST/PUT/PATCH)"
+    },
+    "timeout": {
+      "label": "Timeout",
+      "description": "Request timeout"
+    }
   }
 }

@@ -5,22 +5,37 @@ import {
   Controls,
   MiniMap,
   type NodeTypes,
-  Panel,
   ReactFlow,
   ReactFlowProvider,
+  useReactFlow,
 } from '@xyflow/react';
-import React, { useCallback, useMemo, useRef } from 'react';
+import { Loader2 } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useLocale } from '@/lib/use-locale';
 import '@xyflow/react/dist/style.css';
-
-import { Loader2, Save } from 'lucide-react';
-import { Badge, Button } from '@/components/ui';
 import type { Workflow } from '../api';
+import { useDebugStream } from '../debug';
 import { BlockNode, type BlockNodeData } from './BlockNode';
 import { type BlockDefinition, BlockToolbar, type BlockTypeInfo } from './BlockToolbar';
 import { ConfigPanel } from './ConfigPanel';
 import { DebugPanel } from './DebugPanel';
 import { useWorkflowEditor } from './useWorkflowEditor';
+
+// Simple ping animation using DOM manipulation
+function pingHandle(blockId: string, portId: string) {
+  const selector = `.react-flow__node[data-id="${blockId}"] .react-flow__handle[data-handleid="${portId}"]`;
+  const handle = document.querySelector(selector) as HTMLElement | null;
+
+  if (handle) {
+    // Remove class first to allow re-triggering
+    handle.classList.remove('handle-ping');
+    // Force reflow to restart animation
+    void handle.offsetWidth;
+    handle.classList.add('handle-ping');
+    // Remove after animation completes (1s)
+    setTimeout(() => handle.classList.remove('handle-ping'), 1000);
+  }
+}
 
 // Fetch all block definitions with schemas
 async function fetchBlockDefinitions(): Promise<BlockDefinition[]> {
@@ -38,12 +53,14 @@ interface WorkflowEditorInnerProps {
   workflow: Workflow;
   readonly?: boolean;
   onSave?: (workflow: Workflow) => Promise<void>;
+  onChange?: (workflow: Workflow, isDirty: boolean) => void;
 }
 
 function WorkflowEditorInner({
   workflow: initialWorkflow,
   readonly = false,
   onSave,
+  onChange,
 }: WorkflowEditorInnerProps) {
   const { t } = useLocale();
 
@@ -73,6 +90,7 @@ function WorkflowEditorInner({
       blockDefinitions={blockDefinitions}
       readonly={readonly}
       onSave={onSave}
+      onChange={onChange}
     />
   );
 }
@@ -85,13 +103,12 @@ function WorkflowEditorWithBlocks({
   workflow: initialWorkflow,
   blockDefinitions,
   readonly = false,
-  onSave,
+  onChange,
 }: WorkflowEditorWithBlocksProps) {
-  const { t } = useLocale();
-  const reactFlowWrapper = useRef<HTMLDivElement>(null);
+  const { screenToFlowPosition } = useReactFlow();
 
   // Pass block definitions to editor for proper type restoration
-  const editor = useWorkflowEditor(initialWorkflow, blockDefinitions);
+  const editor = useWorkflowEditor(initialWorkflow, blockDefinitions, onChange);
 
   // Create a map of block type -> definition for quick lookup
   const blockSchemaMap = useMemo(() => {
@@ -117,11 +134,44 @@ function WorkflowEditorWithBlocks({
     onEdgesDelete,
     workflow,
     selectedNode,
-    isDirty,
     addBlock,
     updateBlockConfig,
     getAvailableVariables,
   } = editor;
+
+  // Connect to debug stream for port ping animations
+  const { events } = useDebugStream({
+    workflowId: workflow.id,
+    maxEvents: 50,
+  });
+
+  // Track last processed event timestamp to handle array truncation
+  const lastProcessedTimestamp = useRef(0);
+
+  // Trigger port pings when emit events come in
+  useEffect(() => {
+    // Find events newer than the last processed timestamp
+    const newEvents = events.filter((e) => e.timestamp > lastProcessedTimestamp.current);
+
+    if (newEvents.length > 0) {
+      // Update to the latest timestamp
+      lastProcessedTimestamp.current = Math.max(...newEvents.map((e) => e.timestamp));
+    }
+
+    for (const event of newEvents) {
+      if (event.type === 'block.emit' && event.blockId && event.port) {
+        // Ping output port
+        pingHandle(event.blockId, event.port);
+
+        // Ping connected input ports
+        for (const edge of edges) {
+          if (edge.source === event.blockId && edge.sourceHandle === event.port) {
+            pingHandle(edge.target, edge.targetHandle || 'in');
+          }
+        }
+      }
+    }
+  }, [events, edges]);
 
   // Handle drop from toolbar
   const onDragOver = useCallback((event: React.DragEvent) => {
@@ -133,16 +183,20 @@ function WorkflowEditorWithBlocks({
     (event: React.DragEvent) => {
       event.preventDefault();
 
-      const reactFlowBounds = reactFlowWrapper.current?.getBoundingClientRect();
       const data = event.dataTransfer.getData('application/reactflow');
-
-      if (!data || !reactFlowBounds) return;
+      if (!data) return;
 
       const blockDef: BlockDefinition = JSON.parse(data);
-      const position = {
-        x: event.clientX - reactFlowBounds.left - 100,
-        y: event.clientY - reactFlowBounds.top - 50,
-      };
+
+      // Use screenToFlowPosition to correctly handle zoom and pan
+      const position = screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
+      });
+
+      // Offset to center the block on the cursor
+      position.x -= 100;
+      position.y -= 30;
 
       // Convert BlockDefinition to BlockTypeInfo for addBlock
       const blockType: BlockTypeInfo = {
@@ -154,15 +208,8 @@ function WorkflowEditorWithBlocks({
 
       addBlock(blockType, position);
     },
-    [addBlock]
+    [addBlock, screenToFlowPosition]
   );
-
-  // Handle save
-  const handleSave = async () => {
-    if (onSave) {
-      await onSave(workflow);
-    }
-  };
 
   // Get available variables for selected block
   const availableVariables = selectedNode ? getAvailableVariables(selectedNode.id) : [];
@@ -181,7 +228,7 @@ function WorkflowEditorWithBlocks({
       {!readonly && <BlockToolbar className="w-56 shrink-0" />}
 
       {/* Canvas */}
-      <div className="flex flex-1 flex-col" ref={reactFlowWrapper}>
+      <div className="flex flex-1 flex-col">
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -213,21 +260,6 @@ function WorkflowEditorWithBlocks({
             }}
             className="!bg-muted"
           />
-
-          {/* Top toolbar */}
-          {!readonly && (
-            <Panel position="top-right" className="flex items-center gap-2">
-              {isDirty && (
-                <Badge variant="secondary" className="text-xs">
-                  {t('workflows:editor.unsavedChanges')}
-                </Badge>
-              )}
-              <Button size="sm" variant="default" onClick={handleSave} disabled={!isDirty}>
-                <Save className="mr-1 size-4" />
-                {t('common:actions.save')}
-              </Button>
-            </Panel>
-          )}
         </ReactFlow>
       </div>
 
@@ -253,6 +285,7 @@ export interface WorkflowEditorProps {
   workflow: Workflow;
   readonly?: boolean;
   onSave?: (workflow: Workflow) => Promise<void>;
+  onChange?: (workflow: Workflow, isDirty: boolean) => void;
 }
 
 export function WorkflowEditor(props: WorkflowEditorProps) {

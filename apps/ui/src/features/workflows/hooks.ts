@@ -78,7 +78,12 @@ export function useSaveWorkflow() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: api.saveWorkflow,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['workflows'] }),
+    onSuccess: (_data, workflow) => {
+      // Invalidate all workflow queries to ensure fresh data
+      qc.invalidateQueries({ queryKey: ['workflows'] });
+      // Also invalidate the specific workflow query
+      qc.invalidateQueries({ queryKey: ['workflows', workflow.id] });
+    },
   });
 }
 

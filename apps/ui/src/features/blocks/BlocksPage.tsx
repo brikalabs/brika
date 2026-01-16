@@ -19,35 +19,35 @@ import { useBlockTypes } from '../workflows/hooks';
 function BlockCard({ block }: { block: BlockType }) {
   const { tp } = useLocale();
   const iconName = (block.icon || 'box') as IconName;
-  const color = block.color || '#6366f1';
+  const color = block.color || 'var(--primary)';
   const blockKey = block.id.split(':').pop() || block.id;
   const blockName = tp(block.pluginId, `blocks.${blockKey}.name`, block.name || blockKey);
   const blockDesc = tp(block.pluginId, `blocks.${blockKey}.description`, block.description);
 
   return (
-    <Card className="p-4 transition-colors hover:bg-accent/50">
-      <div className="flex items-start gap-3">
-        <div
-          className="flex size-10 shrink-0 items-center justify-center rounded-lg"
-          style={{ backgroundColor: `${color}20`, color }}
-        >
-          <DynamicIcon name={iconName} className="size-5" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="truncate font-medium text-sm">{blockName}</div>
-          {blockDesc && (
-            <div className="mt-1 line-clamp-2 text-muted-foreground text-xs">{blockDesc}</div>
-          )}
-          <div className="mt-2 flex flex-wrap gap-1">
-            {block.category && (
-              <Badge variant="outline" className="text-xs">
-                {block.category}
-              </Badge>
-            )}
-            <Badge variant="secondary" className="text-[10px]">
-              {block.pluginId}
-            </Badge>
+    <Card interactive className="h-full p-5">
+      <div className="flex h-full flex-col gap-4">
+        <div className="flex items-center justify-between">
+          <div
+            className="flex size-10 shrink-0 items-center justify-center rounded-lg transition-all group-hover:scale-105"
+            style={{ backgroundColor: `${color}20`, color }}
+          >
+            <DynamicIcon name={iconName} className="size-5" />
           </div>
+          {block.category && (
+            <Badge variant="secondary" className="text-[10px] uppercase">
+              {block.category}
+            </Badge>
+          )}
+        </div>
+
+        <div className="flex flex-1 flex-col gap-2">
+          <h3 className="font-semibold text-sm leading-tight">{blockName}</h3>
+          {blockDesc && (
+            <p className="line-clamp-2 text-muted-foreground text-xs leading-relaxed">
+              {blockDesc}
+            </p>
+          )}
         </div>
       </div>
     </Card>
@@ -59,7 +59,7 @@ function BlockCard({ block }: { block: BlockType }) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function BlocksPage() {
-  const { t } = useLocale();
+  const { t, tp } = useLocale();
   const { data: blockTypes = [], isLoading } = useBlockTypes();
   const [search, setSearch] = useState('');
 
@@ -74,16 +74,24 @@ export function BlocksPage() {
     {} as Record<string, BlockType[]>
   );
 
-  // Filter blocks by search
+  // Filter blocks by search - using translated values
   const filteredCategories = Object.entries(categories).reduce(
     (acc, [cat, blocks]) => {
-      const filtered = blocks.filter(
-        (b) =>
-          !search ||
-          b.name?.toLowerCase().includes(search.toLowerCase()) ||
-          b.id.toLowerCase().includes(search.toLowerCase()) ||
-          b.description?.toLowerCase().includes(search.toLowerCase())
-      );
+      const filtered = blocks.filter((b) => {
+        if (!search) return true;
+
+        const searchLower = search.toLowerCase();
+        const blockKey = b.id.split(':').pop() || b.id;
+        const blockName = tp(b.pluginId, `blocks.${blockKey}.name`, b.name || blockKey);
+        const blockDesc = tp(b.pluginId, `blocks.${blockKey}.description`, b.description);
+
+        return (
+          blockName.toLowerCase().includes(searchLower) ||
+          blockDesc?.toLowerCase().includes(searchLower) ||
+          b.id.toLowerCase().includes(searchLower) ||
+          b.category?.toLowerCase().includes(searchLower)
+        );
+      });
       if (filtered.length > 0) acc[cat] = filtered;
       return acc;
     },
@@ -95,42 +103,57 @@ export function BlocksPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="font-bold text-3xl tracking-tight">{t('blocks:title')}</h1>
-          <p className="mt-1 text-muted-foreground">{t('blocks:subtitle')}</p>
+          <h1 className="font-semibold text-2xl tracking-tight">{t('blocks:title')}</h1>
+          <p className="mt-1 text-muted-foreground text-sm">
+            {t('blocks:subtitle')}
+            {!isLoading && (
+              <span className="ml-2 font-medium">
+                · {totalFiltered} {totalFiltered === 1 ? 'block' : 'blocks'}
+              </span>
+            )}
+          </p>
         </div>
-        <div className="relative">
+        <div className="relative w-full sm:w-80">
           <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder={t('blocks:search')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-64 pl-9"
+            className="w-full pl-9 shadow-sm"
           />
         </div>
       </div>
 
       {/* Content */}
       {isLoading ? (
-        <div className="py-12 text-center text-muted-foreground">{t('common:loading')}</div>
+        <div className="py-16 text-center text-muted-foreground">{t('common:loading')}</div>
       ) : totalFiltered === 0 ? (
-        <Card className="p-12 text-center">
-          <p className="text-muted-foreground">
+        <Card className="border-dashed p-16 text-center">
+          <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-2xl bg-muted/50">
+            <Search className="size-8 text-muted-foreground opacity-50" />
+          </div>
+          <h3 className="font-semibold text-base">
             {search ? t('blocks:noResults') : t('blocks:empty')}
-          </p>
+          </h3>
+          {search && (
+            <p className="mt-2 text-muted-foreground text-sm">
+              Try searching with different keywords
+            </p>
+          )}
         </Card>
       ) : (
-        <div className="space-y-8">
+        <div className="space-y-10">
           {Object.entries(filteredCategories).map(([category, blocks]) => (
             <div key={category}>
-              <h2 className="mb-4 flex items-center gap-2 font-semibold text-lg capitalize">
-                {category}
-                <Badge variant="secondary" className="text-xs">
+              <div className="mb-4 flex items-center gap-3">
+                <h2 className="font-semibold text-xl capitalize tracking-tight">{category}</h2>
+                <Badge variant="secondary" className="px-2 py-0.5 text-xs">
                   {blocks.length}
                 </Badge>
-              </h2>
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              </div>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
                 {blocks.map((block) => (
                   <BlockCard key={block.id} block={block} />
                 ))}

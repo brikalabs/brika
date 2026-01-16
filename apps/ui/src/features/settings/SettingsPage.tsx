@@ -4,7 +4,8 @@
  * Application preferences including language selection.
  */
 
-import { Globe, Loader2, Settings } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
+import { ThemeSelector } from '@/components/theme-selector';
 import {
   Card,
   CardContent,
@@ -14,7 +15,6 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-  Separator,
 } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
 import { useAvailableLocales } from './hooks';
@@ -75,21 +75,28 @@ export function SettingsPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h2 className="flex items-center gap-2 font-bold text-2xl tracking-tight">
-          <Settings className="size-6" />
-          {t('settings:title')}
-        </h2>
-        <p className="text-muted-foreground">{t('settings:subtitle')}</p>
+        <h1 className="font-semibold text-2xl tracking-tight">{t('settings:title')}</h1>
+        <p className="mt-1 text-muted-foreground">{t('settings:subtitle')}</p>
       </div>
 
-      {/* Language Section */}
+      {/* Appearance */}
       <Card>
         <CardContent className="p-6">
-          <div className="mb-4 flex items-center gap-2">
-            <Globe className="size-5 text-muted-foreground" />
-            <h3 className="font-semibold text-lg">{t('settings:sections.language')}</h3>
+          <div className="space-y-6">
+            <div>
+              <h3 className="mb-2 font-semibold text-base">{t('settings:appearance.title')}</h3>
+              <p className="mb-4 text-muted-foreground text-sm">
+                {t('settings:appearance.description')}
+              </p>
+              <ThemeSelector />
+            </div>
           </div>
-          <Separator className="mb-6" />
+        </CardContent>
+      </Card>
+
+      {/* Language */}
+      <Card>
+        <CardContent className="p-6">
           <LanguageSelector />
         </CardContent>
       </Card>

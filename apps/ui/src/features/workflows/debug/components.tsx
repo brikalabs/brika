@@ -32,25 +32,25 @@ export function formatTimestamp(ts: number): string {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const LEVEL_COLORS: Record<string, string> = {
-  debug: 'text-gray-400',
-  info: 'text-blue-400',
-  warn: 'text-yellow-400',
-  error: 'text-red-400',
+  debug: 'text-muted-foreground',
+  info: 'text-info',
+  warn: 'text-warning',
+  error: 'text-destructive',
 };
 
 const LEVEL_BADGE_COLORS: Record<string, string> = {
-  debug: 'bg-gray-600',
-  info: 'bg-blue-600',
-  warn: 'bg-yellow-600',
-  error: 'bg-red-600',
+  debug: 'bg-muted',
+  info: 'bg-info',
+  warn: 'bg-warning',
+  error: 'bg-destructive',
 };
 
 function getEventBadgeColor(event: DebugEvent): string {
-  if (event.type === 'block.emit') return 'bg-blue-600';
-  if (event.type === 'block.log') return LEVEL_BADGE_COLORS[event.level ?? 'info'] ?? 'bg-gray-600';
-  if (event.type.includes('error')) return 'bg-red-600';
-  if (event.type === 'init') return 'bg-zinc-600';
-  return 'bg-zinc-600';
+  if (event.type === 'block.emit') return 'bg-data-1';
+  if (event.type === 'block.log') return LEVEL_BADGE_COLORS[event.level ?? 'info'] ?? 'bg-muted';
+  if (event.type.includes('error')) return 'bg-destructive';
+  if (event.type === 'init') return 'bg-muted';
+  return 'bg-muted';
 }
 
 function getEventBadgeLabel(event: DebugEvent): string {
@@ -106,9 +106,9 @@ export function DebugEventEntry({ event, showWorkflowId }: DebugEventEntryProps)
           LOG
         </Badge>
         {showWorkflowId && event.workflowId && (
-          <span className="text-purple-400">{event.workflowId}</span>
+          <span className="text-data-5">{event.workflowId}</span>
         )}
-        <span className="text-purple-400">{event.blockId}</span>
+        <span className="text-data-5">{event.blockId}</span>
         <span className={LEVEL_COLORS[event.level ?? 'info'] ?? 'text-gray-400'}>
           [{event.level?.toUpperCase()}]
         </span>
@@ -121,16 +121,16 @@ export function DebugEventEntry({ event, showWorkflowId }: DebugEventEntryProps)
     return (
       <div className="flex gap-2 py-1 font-mono text-xs">
         <span className="text-muted-foreground">{formatTimestamp(event.timestamp)}</span>
-        <Badge variant="default" className="bg-blue-600 px-1 text-[10px]">
+        <Badge variant="default" className="bg-data-1 px-1 text-[10px]">
           EMIT
         </Badge>
         {showWorkflowId && event.workflowId && (
-          <span className="text-purple-400">{event.workflowId}</span>
+          <span className="text-data-5">{event.workflowId}</span>
         )}
-        <span className="text-cyan-400">{event.blockId}</span>
+        <span className="text-data-7">{event.blockId}</span>
         <span className="text-muted-foreground">→</span>
-        <span className="text-yellow-400">{event.port}</span>
-        <span className="max-w-[300px] truncate text-green-400">{JSON.stringify(event.data)}</span>
+        <span className="text-data-6">{event.port}</span>
+        <span className="max-w-[300px] truncate text-success">{JSON.stringify(event.data)}</span>
       </div>
     );
   }
@@ -196,14 +196,14 @@ export function ExpandableEventEntry({ event }: ExpandableEventEntryProps) {
         <div className="min-w-0 flex-1 font-mono text-xs">
           {isEmit && (
             <>
-              <span className="text-cyan-400">{event.blockId}</span>
+              <span className="text-data-7">{event.blockId}</span>
               <span className="text-zinc-500"> → </span>
-              <span className="text-yellow-400">{event.port}</span>
+              <span className="text-data-6">{event.port}</span>
             </>
           )}
           {isLog && (
             <>
-              <span className="text-cyan-400">{event.blockId}</span>
+              <span className="text-data-7">{event.blockId}</span>
               <span className="text-zinc-500">: </span>
               <span className="text-zinc-300">{event.message}</span>
             </>

@@ -8,10 +8,7 @@
     "url": "git+https://github.com/maxscharwath/brika.git",
     "directory": "packages/schema"
   },
-  "files": [
-    "dist",
-    "src"
-  ],
+  "files": ["dist", "src"],
   "exports": {
     ".": "./src/index.ts",
     "./plugin": "./src/plugin.ts",

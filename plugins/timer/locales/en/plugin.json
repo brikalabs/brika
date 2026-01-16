@@ -24,8 +24,17 @@
     "cancelled": "Timer cancelled"
   },
   "fields": {
-    "name": "Timer name",
-    "seconds": "Duration in seconds",
-    "target": "Timer ID or name to cancel"
+    "name": {
+      "label": "Name",
+      "description": "Timer name"
+    },
+    "seconds": {
+      "label": "Seconds",
+      "description": "Duration in seconds"
+    },
+    "target": {
+      "label": "Target",
+      "description": "Timer ID or name to cancel"
+    }
   }
 }
