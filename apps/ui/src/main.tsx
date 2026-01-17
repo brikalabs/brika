@@ -15,7 +15,7 @@ import { EventsPage } from '@/features/events';
 import { LogsPage } from '@/features/logs';
 import { PluginDetailPage, PluginsPage } from '@/features/plugins';
 import { SettingsPage } from '@/features/settings';
-import { StorePage } from '@/features/store';
+import { StorePage, StorePluginDetailPage } from '@/features/store';
 import { WorkflowEditorPage, WorkflowsPage } from '@/features/workflows';
 // Layout
 import { RootLayout } from '@/layout/RootLayout';
@@ -48,6 +48,13 @@ const workflowNewRoute = createRoute({
   component: WorkflowEditorPage,
 });
 
+// Store plugin detail route
+const storePluginDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/store/$name',
+  component: StorePluginDetailPage,
+});
+
 const routes = [
   createRoute({ getParentRoute: () => rootRoute, path: '/', component: DashboardPage }),
   createRoute({ getParentRoute: () => rootRoute, path: '/plugins', component: PluginsPage }),
@@ -59,6 +66,7 @@ const routes = [
   createRoute({ getParentRoute: () => rootRoute, path: '/blocks', component: BlocksPage }),
   createRoute({ getParentRoute: () => rootRoute, path: '/logs', component: LogsPage }),
   createRoute({ getParentRoute: () => rootRoute, path: '/store', component: StorePage }),
+  storePluginDetailRoute,
   createRoute({ getParentRoute: () => rootRoute, path: '/settings', component: SettingsPage }),
 ];
 

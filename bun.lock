@@ -33,6 +33,13 @@
         "@types/bun": "^1.3.5",
       },
     },
+    "apps/registry-cdn": {
+      "name": "@brika/registry-cdn",
+      "version": "0.2.1",
+      "dependencies": {
+        "hono": "^4.11.3",
+      },
+    },
     "apps/schema-cdn": {
       "name": "@brika/schema-cdn",
       "version": "0.2.1",
@@ -297,6 +304,8 @@
     "@brika/plugin-example-echo": ["@brika/plugin-example-echo@workspace:plugins/example-echo"],
 
     "@brika/plugin-timer": ["@brika/plugin-timer@workspace:plugins/timer"],
+
+    "@brika/registry-cdn": ["@brika/registry-cdn@workspace:apps/registry-cdn"],
 
     "@brika/router": ["@brika/router@workspace:packages/router"],
 

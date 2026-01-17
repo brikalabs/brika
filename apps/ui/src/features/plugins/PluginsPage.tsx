@@ -80,15 +80,9 @@ export function PluginsPage() {
         <div className="grid gap-4">
           {plugins.map((p) => {
             const health = p.status;
-            const accent =
-              health === 'running' ? 'blue' : health === 'crashed' ? 'orange' : undefined;
             return (
               <Link key={p.uid} to="/plugins/$uid" params={{ uid: p.uid }}>
-                <Card
-                  accent={accent}
-                  interactive
-                  className="p-5"
-                >
+                <Card interactive className="p-5">
                   <div className="flex items-start gap-4">
                     {/* Plugin Icon */}
                     <Avatar className="size-12 shrink-0 rounded-xl">

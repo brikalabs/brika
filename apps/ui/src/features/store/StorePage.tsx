@@ -1,107 +1,151 @@
-import { Download, Loader2, Package, Trash2 } from 'lucide-react';
+import type { StorePlugin } from '@brika/shared';
+import { Loader2, Package } from 'lucide-react';
 import React from 'react';
-import { Button, Card, CardContent, Input, Label } from '@/components/ui';
+import { Card, CardContent } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
-import { useStoreMutations } from './hooks';
+import type { FilterValue, SortValue } from './components';
+import { PluginStoreCard, PluginStoreFilters } from './components';
+import { useStorePlugins, useVerifiedPlugins } from './hooks';
 
 export function StorePage() {
   const { t } = useLocale();
-  const { install, uninstall } = useStoreMutations();
-  const [ref, setRef] = React.useState('');
-  const [wanted, setWanted] = React.useState('');
+  const [search, setSearch] = React.useState('');
+  const [filter, setFilter] = React.useState<FilterValue>('all');
+  const [sort, setSort] = React.useState<SortValue>('downloads');
 
-  const handleInstall = async () => {
-    if (!ref) return;
-    await install.mutateAsync({ ref, wanted: wanted || undefined });
-    setRef('');
-    setWanted('');
-  };
+  // Fetch plugins
+  const { data: searchData, isLoading } = useStorePlugins({
+    q: search,
+    limit: 50,
+  });
 
-  const handleUninstall = async () => {
-    if (!ref) return;
-    await uninstall.mutateAsync(ref);
-    setRef('');
-  };
+  const { data: verifiedData } = useVerifiedPlugins();
+
+  // Merge npm results with verified status and compatibility
+  const allPlugins = React.useMemo(() => {
+    if (!searchData?.plugins) return [];
+
+    const verifiedSet = new Set(verifiedData?.plugins.map((p) => p.name) || []);
+
+    return searchData.plugins.map((npmPlugin) => {
+      const verified = verifiedSet.has(npmPlugin.package.name);
+      const verifiedPlugin = verifiedData?.plugins.find((p) => p.name === npmPlugin.package.name);
+
+      // Compatibility check (assuming compatible by default if no engines specified)
+      const compatible = true; // TODO: Add proper compatibility check based on engines.brika
+
+      return {
+        name: npmPlugin.package.name,
+        version: npmPlugin.package.version,
+        description: npmPlugin.package.description || '',
+        author: npmPlugin.package.author || '',
+        keywords: npmPlugin.package.keywords || [],
+        repository: npmPlugin.package.repository,
+        homepage: npmPlugin.package.homepage,
+        license: npmPlugin.package.license,
+        engines: npmPlugin.package.engines,
+        verified,
+        verifiedAt: verifiedPlugin?.verifiedAt,
+        featured: verifiedPlugin?.featured || false,
+        compatible,
+        installed: npmPlugin.installed || false,
+        installedVersion: npmPlugin.installedVersion,
+        npm: {
+          downloads: npmPlugin.downloadCount || 0,
+          publishedAt: npmPlugin.package.date || '',
+        },
+      } as StorePlugin;
+    });
+  }, [searchData, verifiedData]);
+
+  // Apply filters
+  const filteredPlugins = React.useMemo(() => {
+    let filtered = allPlugins;
+
+    // Apply filter
+    switch (filter) {
+      case 'verified':
+        filtered = filtered.filter((p) => p.verified);
+        break;
+      case 'compatible':
+        filtered = filtered.filter((p) => p.compatible);
+        break;
+      case 'installed':
+        filtered = filtered.filter((p) => p.installed);
+        break;
+    }
+
+    // Apply sort
+    switch (sort) {
+      case 'downloads':
+        filtered = [...filtered].sort((a, b) => b.npm.downloads - a.npm.downloads);
+        break;
+      case 'recent':
+        filtered = [...filtered].sort(
+          (a, b) => new Date(b.npm.publishedAt).getTime() - new Date(a.npm.publishedAt).getTime()
+        );
+        break;
+      case 'name':
+        filtered = [...filtered].sort((a, b) => a.name.localeCompare(b.name));
+        break;
+    }
+
+    return filtered;
+  }, [allPlugins, filter, sort]);
+
+  // Sort plugins to show featured first
+  const sortedPlugins = React.useMemo(
+    () =>
+      [...filteredPlugins].sort((a, b) => {
+        // Featured plugins come first
+        if (a.featured && !b.featured) return -1;
+        if (!a.featured && b.featured) return 1;
+        return 0;
+      }),
+    [filteredPlugins]
+  );
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div>
         <h1 className="font-semibold text-2xl tracking-tight">{t('store:title')}</h1>
-        <p className="mt-1 text-muted-foreground">{t('store:subtitle')}</p>
+        <p className="mt-1 text-muted-foreground">{t('store:description')}</p>
       </div>
 
-      <Card>
-        <CardContent className="pt-6">
-          <div className="mb-6 flex items-center gap-4">
-            <div className="flex size-14 shrink-0 items-center justify-center rounded-xl bg-primary/10 shadow-sm">
-              <Package className="size-7 text-primary" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-base leading-tight">{t('store:installPlugin')}</h3>
-              <p className="mt-1 text-muted-foreground text-sm leading-relaxed">
-                {t('store:installHint')}
-              </p>
-            </div>
-          </div>
+      {/* Search and Filters */}
+      <PluginStoreFilters
+        search={search}
+        onSearchChange={setSearch}
+        filter={filter}
+        onFilterChange={setFilter}
+        sort={sort}
+        onSortChange={setSort}
+      />
 
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>{t('store:labels.reference')}</Label>
-              <Input
-                value={ref}
-                onChange={(e) => setRef(e.target.value)}
-                placeholder="@brika/plugin-hue or git+https://..."
-                className="font-mono"
-              />
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="size-8 animate-spin text-muted-foreground" />
+        </div>
+      ) : filteredPlugins.length === 0 ? (
+        <Card>
+          <CardContent className="py-16 text-center">
+            <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-2xl bg-muted/50">
+              <Package className="size-8 text-muted-foreground opacity-50" />
             </div>
-            <div className="space-y-2">
-              <Label>{t('store:labels.version')}</Label>
-              <Input
-                value={wanted}
-                onChange={(e) => setWanted(e.target.value)}
-                placeholder="^1.0.0"
-                className="font-mono"
-              />
-            </div>
-            <div className="flex gap-2 pt-2">
-              <Button
-                onClick={handleInstall}
-                disabled={install.isPending || !ref}
-                className="gap-2"
-              >
-                {install.isPending ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Download className="size-4" />
-                )}
-                {t('store:actions.install')}
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={handleUninstall}
-                disabled={uninstall.isPending || !ref}
-                className="gap-2"
-              >
-                {uninstall.isPending ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Trash2 className="size-4" />
-                )}
-                {t('store:actions.uninstall')}
-              </Button>
-            </div>
+            <h3 className="font-semibold text-lg">{t('store:noResults')}</h3>
+            <p className="mt-1 text-muted-foreground text-sm">{t('store:noResultsDescription')}</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <section>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {sortedPlugins.map((plugin) => (
+              <PluginStoreCard key={plugin.name} plugin={plugin} />
+            ))}
           </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardContent className="py-16 text-center">
-          <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-2xl bg-muted/50">
-            <Package className="size-8 text-muted-foreground opacity-50" />
-          </div>
-          <p className="text-muted-foreground text-sm">{t('store:registryComingSoon')}</p>
-        </CardContent>
-      </Card>
+        </section>
+      )}
     </div>
   );
 }

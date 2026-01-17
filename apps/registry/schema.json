@@ -1,0 +1,54 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Brika Verified Plugins Registry",
+  "description": "Schema for the verified plugins registry",
+  "type": "object",
+  "required": ["version", "lastUpdated", "plugins"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "Version of the registry format"
+    },
+    "lastUpdated": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp of last update"
+    },
+    "plugins": {
+      "type": "array",
+      "description": "List of verified plugins",
+      "items": {
+        "type": "object",
+        "required": ["name", "verifiedAt", "verifiedBy"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "npm package name"
+          },
+          "verifiedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO 8601 timestamp of verification"
+          },
+          "verifiedBy": {
+            "type": "string",
+            "description": "Who verified this plugin (e.g., maintainer, community)"
+          },
+          "minVersion": {
+            "type": "string",
+            "description": "Minimum Brika version required"
+          },
+          "featured": {
+            "type": "boolean",
+            "description": "Whether this plugin is featured",
+            "default": false
+          },
+          "category": {
+            "type": "string",
+            "description": "Plugin category (e.g., official, community, utility)"
+          }
+        }
+      }
+    }
+  }
+}

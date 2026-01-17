@@ -118,10 +118,7 @@ export function EventsPage() {
             ) : (
               <div className="divide-y divide-border/50">
                 {events.map((e) => (
-                  <div
-                    key={e.id}
-                    className="px-4 py-3.5 transition-colors hover:bg-muted/30"
-                  >
+                  <div key={e.id} className="px-4 py-3.5 transition-colors hover:bg-muted/30">
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex items-center gap-3">
                         <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 shadow-sm">

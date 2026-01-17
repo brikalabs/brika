@@ -140,7 +140,7 @@ function WorkflowsTable({
                   <div className="flex items-center gap-1.5">
                     {workflow.blocks?.slice(0, 3).map((block) => {
                       const iconName = (block.icon || 'box') as IconName;
-                      const color = block.color || '#6b7280';
+                      const color = (block.color || '#6b7280') as string;
                       return (
                         <div
                           key={block.id}

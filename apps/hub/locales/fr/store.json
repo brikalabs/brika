@@ -1,21 +1,85 @@
 {
-  "title": "Boutique",
-  "subtitle": "Installer des plugins depuis npm ou git",
+  "title": "Boutique de Plugins",
+  "subtitle": "Découvrez et installez des plugins pour étendre Brika",
+  "description": "Découvrez et installez des plugins pour étendre Brika",
   "empty": "Aucun plugin disponible",
+  "noResults": "Aucun plugin trouvé",
+  "noResultsDescription": "Essayez d'ajuster votre recherche ou vos filtres",
   "installPlugin": "Installer un plugin",
   "installHint": "Installer depuis npm ou une URL git",
-  "registryComingSoon": "Registre de plugins bientôt disponible...",
+  "backToStore": "Retour à la boutique",
   "labels": {
     "reference": "Référence du paquet",
-    "version": "Version (optionnel)"
+    "version": "Version (optionnel)",
+    "packageName": "Nom du paquet",
+    "latestVersion": "Dernière version",
+    "brikaCompatibility": "Compatibilité Brika",
+    "license": "Licence",
+    "installedVersion": "Version installée",
+    "author": "Auteur",
+    "downloads": "Téléchargements",
+    "repository": "Dépôt",
+    "homepage": "Page d'accueil"
   },
   "search": {
-    "placeholder": "Rechercher des plugins..."
+    "placeholder": "Rechercher des plugins...",
+    "searchBy": "Rechercher par nom ou description"
+  },
+  "filter": {
+    "all": "Tous les plugins",
+    "verified": "Vérifiés uniquement",
+    "compatible": "Compatibles uniquement",
+    "installed": "Installés"
+  },
+  "sort": {
+    "downloads": "Plus téléchargés",
+    "recent": "Récemment mis à jour",
+    "name": "Nom (A-Z)"
+  },
+  "badges": {
+    "verified": "Vérifié",
+    "verifiedTooltip": "Vérifié par les mainteneurs de Brika",
+    "compatible": "Compatible",
+    "compatibleTooltip": "Compatible avec votre version de Brika",
+    "incompatible": "Incompatible",
+    "incompatibleTooltip": "Incompatible avec votre version de Brika",
+    "featured": "En vedette"
   },
   "actions": {
     "install": "Installer",
+    "installing": "Installation...",
     "installed": "Installé",
     "update": "Mettre à jour",
-    "uninstall": "Désinstaller"
+    "uninstall": "Désinstaller",
+    "clickToInstall": "Cliquer pour installer",
+    "clickToUninstall": "Cliquer pour désinstaller",
+    "viewOnNpm": "Voir sur npm",
+    "cancel": "Annuler",
+    "done": "Terminé",
+    "close": "Fermer"
+  },
+  "install": {
+    "title": "Installation du plugin",
+    "starting": "Démarrage de l'installation...",
+    "initializing": "Initialisation...",
+    "resolving": "Résolution des dépendances...",
+    "downloading": "Téléchargement des paquets...",
+    "linking": "Liaison des paquets...",
+    "complete": "Installation terminée !",
+    "success": "Plugin installé avec succès !",
+    "failed": "L'installation a échoué",
+    "error": "Une erreur s'est produite pendant l'installation"
+  },
+  "sections": {
+    "featured": "Plugins en vedette",
+    "all": "Tous les plugins",
+    "details": "Détails de l'installation",
+    "detailsDescription": "Compatibilité de version et exigences",
+    "readme": "LISEZ-MOI"
+  },
+  "plugin": {
+    "notFound": "Plugin non trouvé",
+    "notFoundDetail": "Le plugin \"{{name}}\" n'a pas pu être trouvé dans le registre npm.",
+    "downloadsPerWeek": "téléchargements/semaine"
   }
 }

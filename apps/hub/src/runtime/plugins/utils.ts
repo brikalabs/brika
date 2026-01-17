@@ -1,3 +1,5 @@
+import { semver } from '@/runtime/utils';
+
 // Re-export hub version from centralized module
 export { HUB_VERSION } from '../../hub';
 
@@ -18,47 +20,24 @@ export function generateUid(pluginName: string): string {
 }
 
 /**
- * Parse a semver version string into components.
- */
-function parseVersion(v: string): [number, number, number] {
-  const parts = v
-    .replace(/^[^\d]*/, '')
-    .split('.')
-    .map(Number);
-  return [parts[0] ?? 0, parts[1] ?? 0, parts[2] ?? 0];
-}
-
-/**
- * Simple semver range check.
- * Supports: ^x.y.z, ~x.y.z, >=x.y.z, x.y.z
+ * Check if a version satisfies a semver range.
+ *
+ * This is a wrapper around the centralized semver.satisfies utility.
+ * Uses the robust semver implementation from @/runtime/utils.
+ *
+ * Supports: ^x.y.z, ~x.y.z, >=x.y.z, >x.y.z, <=x.y.z, <x.y.z, x.y.z, and ranges
+ *
+ * @param version - Version to check
+ * @param range - Semver range expression
+ * @returns true if version satisfies range
+ *
+ * @example
+ * ```ts
+ * satisfiesVersion('1.2.3', '^1.0.0') // true
+ * satisfiesVersion('0.2.5', '^0.2.0') // true
+ * satisfiesVersion('2.0.0', '^1.0.0') // false
+ * ```
  */
 export function satisfiesVersion(version: string, range: string): boolean {
-  const [major, minor, patch] = parseVersion(version);
-  const rangeClean = range.trim();
-
-  if (rangeClean.startsWith('^')) {
-    // ^x.y.z - compatible with version (same major, >= minor.patch)
-    const [rMajor, rMinor, rPatch] = parseVersion(rangeClean.slice(1));
-    if (major !== rMajor) return false;
-    if (minor > rMinor) return true;
-    return minor === rMinor && patch >= rPatch;
-  }
-
-  if (rangeClean.startsWith('~')) {
-    // ~x.y.z - approximately equivalent (same major.minor, >= patch)
-    const [rMajor, rMinor, rPatch] = parseVersion(rangeClean.slice(1));
-    if (major !== rMajor || minor !== rMinor) return false;
-    return patch >= rPatch;
-  }
-
-  if (rangeClean.startsWith('>=')) {
-    const [rMajor, rMinor, rPatch] = parseVersion(rangeClean.slice(2));
-    if (major > rMajor) return true;
-    if (major === rMajor && minor > rMinor) return true;
-    return major === rMajor && minor === rMinor && patch >= rPatch;
-  }
-
-  // Exact version match
-  const [rMajor, rMinor, rPatch] = parseVersion(rangeClean);
-  return major === rMajor && minor === rMinor && patch === rPatch;
+  return semver.satisfies(version, range);
 }

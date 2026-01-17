@@ -200,3 +200,90 @@ export interface PluginPreferences {
   schema: PreferenceDefinition[];
   values: Record<string, unknown>;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Plugin Store
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Plugin data from the store (combines npm + verified status + compatibility) */
+export interface StorePlugin {
+  name: string;
+  version: string;
+  description: string;
+  author: string | { name: string; email?: string };
+  keywords: string[];
+  repository?: string | { url: string };
+  homepage?: string;
+  license?: string;
+  engines?: { brika?: string };
+  verified: boolean;
+  verifiedAt?: string;
+  featured?: boolean;
+  compatible: boolean;
+  compatibilityReason?: string;
+  installed: boolean;
+  installedVersion?: string;
+  npm: {
+    downloads: number;
+    publishedAt: string;
+  };
+}
+
+/** Verified plugin entry from GitHub registry */
+export interface VerifiedPlugin {
+  name: string;
+  verifiedAt: string;
+  verifiedBy: string;
+  minVersion?: string;
+  featured?: boolean;
+  category?: string;
+}
+
+/** Verified plugins list from GitHub registry */
+export interface VerifiedPluginsList {
+  plugins: VerifiedPlugin[];
+  version: string;
+  lastUpdated: string;
+}
+
+/** npm package data from registry API */
+export interface NpmPackageData {
+  name: string;
+  version: string;
+  description?: string;
+  author?: string | { name: string; email?: string };
+  keywords?: string[];
+  repository?: string | { type?: string; url: string; directory?: string };
+  homepage?: string;
+  license?: string;
+  engines?: { brika?: string };
+  date?: string;
+  links?: {
+    npm?: string;
+    homepage?: string;
+    repository?: string;
+    bugs?: string;
+  };
+  score?: {
+    final: number;
+    detail: {
+      quality: number;
+      popularity: number;
+      maintenance: number;
+    };
+  };
+}
+
+/** npm search result from registry API */
+export interface NpmSearchResult {
+  package: NpmPackageData;
+  downloadCount?: number;
+  installed?: boolean;
+  installedVersion?: string;
+}
+
+/** Compatibility check result */
+export interface CompatibilityResult {
+  compatible: boolean;
+  reason?: string;
+}

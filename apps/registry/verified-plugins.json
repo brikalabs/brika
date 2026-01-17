@@ -1,0 +1,14 @@
+{
+  "$schema": "./schema.json",
+  "version": "1.0.0",
+  "lastUpdated": "2026-01-17T00:00:00Z",
+  "plugins": [
+    {
+      "name": "@brika/blocks-builtin",
+      "verifiedAt": "2026-01-17T00:00:00Z",
+      "verifiedBy": "maintainer",
+      "featured": true,
+      "category": "official"
+    }
+  ]
+}

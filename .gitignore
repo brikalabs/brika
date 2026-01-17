@@ -5,6 +5,7 @@ node_modules
 **/.DS_Store
 .env
 *.log
+*.tsbuildinfo
 
 # Docker volume mount folder
 config/

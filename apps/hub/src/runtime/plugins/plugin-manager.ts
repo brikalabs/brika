@@ -43,6 +43,23 @@ export class PluginManager {
     return this.#lifecycle.fromStored(stored);
   }
 
+  getByName(name: string): Plugin | null {
+    // Try to find by name in running processes
+    const process = this.#lifecycle.getProcessByName(name);
+    if (process) {
+      return this.#lifecycle.toPlugin(process);
+    }
+
+    // Not found in running processes, get stored state
+    const stored = this.#state.getWithMetadata(name);
+    if (!stored) {
+      return null;
+    }
+
+    // fromStored will check for process by ref and return stored data if not found
+    return this.#lifecycle.fromStored(stored);
+  }
+
   list(): Plugin[] {
     const out: Plugin[] = [];
     const seenNames = new Set<string>();

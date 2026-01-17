@@ -16,8 +16,6 @@ hub:
 #     config:
 #       key: value
 plugins:
-  "@brika/blocks-builtin":
-    version: workspace:*
   "@brika/plugin-example-echo":
     version: workspace:*
   "@brika/plugin-timer":
@@ -30,6 +28,8 @@ plugins:
       maxRetries: 3
       debugMode: true
       logLevel: debug
+  "@brika/blocks-builtin":
+    version: 0.2.1
 
 # Event-based rules
 rules: []

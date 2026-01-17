@@ -5,62 +5,48 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="9256e343-5ce4-434e-89a9-e237f41a912d" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/.gitignore" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/biome.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/data_source_mapping.xml" beforeDir="false" />
+      <change afterPath="$PROJECT_DIR$/.github/workflows/verify-plugins.yml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/PLUGIN_DISCOVERY.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/VERIFIED_PLUGINS_CONTRIBUTING.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/apps/hub/src/runtime/services/npm-search.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/apps/hub/src/runtime/services/verified-plugins.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/apps/hub/src/runtime/utils/README.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/apps/hub/src/runtime/utils/compatibility.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/apps/hub/src/runtime/utils/index.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/apps/hub/src/runtime/utils/semver.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/apps/ui/src/features/store/StorePluginDetailPage.tsx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/apps/ui/src/features/store/components/CompatibilityBadge.tsx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/apps/ui/src/features/store/components/InstallButton.tsx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/apps/ui/src/features/store/components/InstallProgressDialog.tsx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/apps/ui/src/features/store/components/PluginStoreCard.tsx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/apps/ui/src/features/store/components/PluginStoreFilters.tsx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/apps/ui/src/features/store/components/VerifiedBadge.tsx" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/apps/ui/src/features/store/components/index.ts" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/verified-plugins-schema.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/verified-plugins.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/dbnavigator.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dbnavigator.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/git_toolbox_prj.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/runConfigurations/main_ts.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/sqldialects.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/hub/.brika/automations/workflow-mk4avg3n.toml" beforeDir="false" afterPath="$PROJECT_DIR$/apps/hub/.brika/automations/workflow-mk4avg3n.toml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/hub/locales/en/settings.json" beforeDir="false" afterPath="$PROJECT_DIR$/apps/hub/locales/en/settings.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/hub/locales/fr/settings.json" beforeDir="false" afterPath="$PROJECT_DIR$/apps/hub/locales/fr/settings.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/hub/src/runtime/http/routes/health.ts" beforeDir="false" afterPath="$PROJECT_DIR$/apps/hub/src/runtime/http/routes/health.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/ui/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/apps/ui/package.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/ui/src/components/ui/button.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/ui/src/components/ui/button.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/ui/src/components/ui/card.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/ui/src/components/ui/card.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/ui/src/components/ui/input.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/ui/src/components/ui/input.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/ui/src/components/ui/select.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/ui/src/components/ui/select.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/ui/src/components/ui/separator.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/ui/src/components/ui/separator.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/ui/src/components/ui/skeleton.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/ui/src/components/ui/skeleton.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/ui/src/components/ui/tooltip.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/ui/src/components/ui/tooltip.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/ui/src/features/blocks/BlocksPage.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/ui/src/features/blocks/BlocksPage.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/ui/src/features/dashboard/DashboardPage.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/ui/src/features/dashboard/DashboardPage.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/hub/.brika/brika.yml" beforeDir="false" afterPath="$PROJECT_DIR$/apps/hub/.brika/brika.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/hub/locales/en/store.json" beforeDir="false" afterPath="$PROJECT_DIR$/apps/hub/locales/en/store.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/hub/locales/fr/store.json" beforeDir="false" afterPath="$PROJECT_DIR$/apps/hub/locales/fr/store.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/hub/src/runtime/http/routes/registry.ts" beforeDir="false" afterPath="$PROJECT_DIR$/apps/hub/src/runtime/http/routes/registry.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/hub/src/runtime/plugins/plugin-manager.ts" beforeDir="false" afterPath="$PROJECT_DIR$/apps/hub/src/runtime/plugins/plugin-manager.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/hub/src/runtime/plugins/utils.ts" beforeDir="false" afterPath="$PROJECT_DIR$/apps/hub/src/runtime/plugins/utils.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/ui/src/components/ui/dialog.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/ui/src/components/ui/dialog.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/apps/ui/src/features/events/EventsPage.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/ui/src/features/events/EventsPage.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/ui/src/features/logs/LogsPage.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/ui/src/features/logs/LogsPage.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/apps/ui/src/features/plugins/PluginsPage.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/ui/src/features/plugins/PluginsPage.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/ui/src/features/plugins/components/PluginConfigForm.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/ui/src/features/plugins/components/PluginConfigForm.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/ui/src/features/settings/SettingsPage.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/ui/src/features/settings/SettingsPage.tsx" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/apps/ui/src/features/store/StorePage.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/ui/src/features/store/StorePage.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/ui/src/features/workflows/WorkflowEditorPage.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/ui/src/features/workflows/WorkflowEditorPage.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/ui/src/features/store/api.ts" beforeDir="false" afterPath="$PROJECT_DIR$/apps/ui/src/features/store/api.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/ui/src/features/store/hooks.ts" beforeDir="false" afterPath="$PROJECT_DIR$/apps/ui/src/features/store/hooks.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/ui/src/features/store/index.ts" beforeDir="false" afterPath="$PROJECT_DIR$/apps/ui/src/features/store/index.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/apps/ui/src/features/workflows/WorkflowsPage.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/ui/src/features/workflows/WorkflowsPage.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/ui/src/features/workflows/debug/components.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/ui/src/features/workflows/debug/components.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/ui/src/features/workflows/editor/BlockNode.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/ui/src/features/workflows/editor/BlockNode.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/ui/src/features/workflows/editor/BlockToolbar.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/ui/src/features/workflows/editor/BlockToolbar.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/ui/src/features/workflows/editor/ConfigPanel.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/ui/src/features/workflows/editor/ConfigPanel.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/ui/src/features/workflows/editor/WorkflowEditor.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/ui/src/features/workflows/editor/WorkflowEditor.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/ui/src/features/workflows/editor/useWorkflowEditor.ts" beforeDir="false" afterPath="$PROJECT_DIR$/apps/ui/src/features/workflows/editor/useWorkflowEditor.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/ui/src/features/workflows/hooks.ts" beforeDir="false" afterPath="$PROJECT_DIR$/apps/ui/src/features/workflows/hooks.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/ui/src/index.css" beforeDir="false" afterPath="$PROJECT_DIR$/apps/ui/src/index.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/ui/src/layout/RootLayout.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/ui/src/layout/RootLayout.tsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/apps/ui/tsconfig.tsbuildinfo" beforeDir="false" afterPath="$PROJECT_DIR$/apps/ui/tsconfig.tsbuildinfo" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/ui/src/main.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/apps/ui/src/main.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/apps/ui/tsconfig.tsbuildinfo" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/bun.lock" beforeDir="false" afterPath="$PROJECT_DIR$/bun.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/flow/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/packages/flow/package.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/ipc/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/packages/ipc/package.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/schema/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/packages/schema/package.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/sdk/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/packages/sdk/package.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/sdk/src/blocks/reactive-define.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/sdk/src/blocks/reactive-define.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/sdk/src/blocks/reactive.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/sdk/src/blocks/reactive.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/serializable/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/packages/serializable/package.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/plugins/blocks-builtin/locales/en/plugin.json" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/blocks-builtin/locales/en/plugin.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/plugins/blocks-builtin/locales/fr/plugin.json" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/blocks-builtin/locales/fr/plugin.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/plugins/blocks-builtin/src/main.ts" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/blocks-builtin/src/main.ts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/plugins/example-echo/locales/en/plugin.json" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/example-echo/locales/en/plugin.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/plugins/example-echo/locales/fr/plugin.json" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/example-echo/locales/fr/plugin.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/plugins/timer/locales/en/plugin.json" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/timer/locales/en/plugin.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/plugins/timer/locales/fr/plugin.json" beforeDir="false" afterPath="$PROJECT_DIR$/plugins/timer/locales/fr/plugin.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/shared/src/types.ts" beforeDir="false" afterPath="$PROJECT_DIR$/packages/shared/src/types.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/example-echo/tsconfig.tsbuildinfo" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/plugins/timer/tsconfig.tsbuildinfo" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -73,7 +59,7 @@
     </persistenceIdMap>
   </component>
   <component name="EmbeddingIndexingInfo">
-    <option name="cachedIndexableFilesCount" value="1865" />
+    <option name="cachedIndexableFilesCount" value="1893" />
     <option name="fileBasedEmbeddingIndicesEnabled" value="true" />
   </component>
   <component name="Git.Settings">
@@ -82,6 +68,9 @@
   <component name="McpProjectServerCommands">
     <commands />
     <urls />
+  </component>
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="ProjectErrors" />
   </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 6
@@ -103,7 +92,6 @@
     &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
-    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
     &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1&quot;: &quot;true&quot;,
     &quot;dart.analysis.tool.window.visible&quot;: &quot;false&quot;,
     &quot;git-widget-placeholder&quot;: &quot;master&quot;,
@@ -114,6 +102,7 @@
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
     &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
     &quot;nodejs_package_manager_path&quot;: &quot;bun&quot;,
+    &quot;run.code.analysis.last.selected.profile&quot;: &quot;pProject Default&quot;,
     &quot;settings.editor.selected.configurable&quot;: &quot;settings.sync&quot;,
     &quot;to.speed.mode.migration.done&quot;: &quot;true&quot;,
     &quot;ts.external.directory.path&quot;: &quot;/Users/maxsch/projects/brika/node_modules/typescript/lib&quot;,
@@ -144,12 +133,23 @@
       <option name="presentableId" value="Default" />
       <updated>1768345860930</updated>
       <workItem from="1768345862656" duration="8025000" />
-      <workItem from="1768601690248" duration="2220000" />
+      <workItem from="1768601690248" duration="13733000" />
     </task>
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
   </component>
   <component name="github-copilot-workspace">
     <instructionFileLocations>

@@ -1,21 +1,85 @@
 {
-  "title": "Store",
-  "subtitle": "Install plugins from npm or git",
+  "title": "Plugin Store",
+  "subtitle": "Discover and install plugins to extend Brika",
+  "description": "Discover and install plugins to extend Brika",
   "empty": "No plugins available",
+  "noResults": "No plugins found",
+  "noResultsDescription": "Try adjusting your search or filters",
   "installPlugin": "Install Plugin",
   "installHint": "Install from npm or git URL",
-  "registryComingSoon": "Plugin registry coming soon...",
+  "backToStore": "Back to Store",
   "labels": {
     "reference": "Package Reference",
-    "version": "Version (optional)"
+    "version": "Version (optional)",
+    "packageName": "Package Name",
+    "latestVersion": "Latest Version",
+    "brikaCompatibility": "Brika Compatibility",
+    "license": "License",
+    "installedVersion": "Installed Version",
+    "author": "Author",
+    "downloads": "Downloads",
+    "repository": "Repository",
+    "homepage": "Homepage"
   },
   "search": {
-    "placeholder": "Search plugins..."
+    "placeholder": "Search plugins...",
+    "searchBy": "Search by name or description"
+  },
+  "filter": {
+    "all": "All Plugins",
+    "verified": "Verified Only",
+    "compatible": "Compatible Only",
+    "installed": "Installed"
+  },
+  "sort": {
+    "downloads": "Most Downloads",
+    "recent": "Recently Updated",
+    "name": "Name (A-Z)"
+  },
+  "badges": {
+    "verified": "Verified",
+    "verifiedTooltip": "Verified by Brika maintainers",
+    "compatible": "Compatible",
+    "compatibleTooltip": "Compatible with your Brika version",
+    "incompatible": "Incompatible",
+    "incompatibleTooltip": "Not compatible with your Brika version",
+    "featured": "Featured"
   },
   "actions": {
     "install": "Install",
+    "installing": "Installing...",
     "installed": "Installed",
     "update": "Update",
-    "uninstall": "Uninstall"
+    "uninstall": "Uninstall",
+    "clickToInstall": "Click to install",
+    "clickToUninstall": "Click to uninstall",
+    "viewOnNpm": "View on npm",
+    "cancel": "Cancel",
+    "done": "Done",
+    "close": "Close"
+  },
+  "install": {
+    "title": "Installing Plugin",
+    "starting": "Starting installation...",
+    "initializing": "Initializing...",
+    "resolving": "Resolving dependencies...",
+    "downloading": "Downloading packages...",
+    "linking": "Linking packages...",
+    "complete": "Installation complete!",
+    "success": "Plugin installed successfully!",
+    "failed": "Installation failed",
+    "error": "An error occurred during installation"
+  },
+  "sections": {
+    "featured": "Featured Plugins",
+    "all": "All Plugins",
+    "details": "Installation Details",
+    "detailsDescription": "Version compatibility and requirements",
+    "readme": "README"
+  },
+  "plugin": {
+    "notFound": "Plugin not found",
+    "notFoundDetail": "The plugin \"{{name}}\" could not be found in the npm registry.",
+    "downloadsPerWeek": "downloads/week"
   }
 }
