@@ -33,7 +33,7 @@
         "@types/bun": "^1.3.5",
       },
     },
-    "apps/registry-cdn": {
+    "apps/registry": {
       "name": "@brika/registry-cdn",
       "version": "0.2.1",
       "dependencies": {
@@ -305,7 +305,7 @@
 
     "@brika/plugin-timer": ["@brika/plugin-timer@workspace:plugins/timer"],
 
-    "@brika/registry-cdn": ["@brika/registry-cdn@workspace:apps/registry-cdn"],
+    "@brika/registry-cdn": ["@brika/registry-cdn@workspace:apps/registry"],
 
     "@brika/router": ["@brika/router@workspace:packages/router"],
 
