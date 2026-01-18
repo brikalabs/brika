@@ -4,7 +4,7 @@ import { spy, TestBed } from '@brika/shared';
 import { HubConfig } from '@/runtime/config';
 import { GenericEventActions, PluginActions } from '@/runtime/events/actions';
 import { EventSystem } from '@/runtime/events/event-system';
-import { LogRouter } from '@/runtime/logs/log-router';
+import { Logger } from '@/runtime/logs/log-router';
 
 describe('EventSystem', () => {
   const errorSpy = spy<[string, object?]>();
@@ -14,7 +14,7 @@ describe('EventSystem', () => {
 
     TestBed.create()
       .provide(HubConfig, new HubConfig())
-      .mock(LogRouter, {
+      .mock(Logger, {
         info: spy(),
         error: errorSpy,
         warn: spy(),

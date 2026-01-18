@@ -27,7 +27,7 @@ export type { DependencyContainer, InjectionToken };
  *
  * @example
  * class MyService {
- *   private readonly logs = inject(LogRouter);
+ *   private readonly logs = inject(Logger);
  * }
  */
 export function inject<T>(token: InjectionToken<T>): T {

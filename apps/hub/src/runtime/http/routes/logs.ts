@@ -1,6 +1,6 @@
 import { group, route } from '@brika/router';
 import { z } from 'zod';
-import { LogRouter } from '@/runtime/logs/log-router';
+import { Logger } from '@/runtime/logs/log-router';
 import { LogStore } from '@/runtime/logs/log-store';
 import { PluginManager } from '@/runtime/plugins/plugin-manager';
 
@@ -58,7 +58,7 @@ export const logsRoutes = group('/api/logs', [
 
   // GET /api/logs/recent - Get ring buffer (in-memory recent logs)
   route.get('/recent', ({ inject }) => {
-    return inject(LogRouter).query();
+    return inject(Logger).query();
   }),
 
   // GET /api/logs/plugins - Get distinct plugin names with metadata for filter dropdown
@@ -89,7 +89,7 @@ export const logsRoutes = group('/api/logs', [
     const store = inject(LogStore);
     return {
       total: store.count(),
-      ringBufferSize: inject(LogRouter).query().length,
+      ringBufferSize: inject(Logger).query().length,
     };
   }),
 

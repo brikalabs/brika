@@ -1,7 +1,8 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { VerifiedPlugin, VerifiedPluginsList } from '@brika/shared';
-import { singleton } from '@brika/shared';
+import { inject, singleton } from '@brika/shared';
+import type { Logger } from '@/runtime/logs/log-router';
 
 // Configuration
 const REGISTRY_URL = process.env.BRIKA_REGISTRY || 'https://registry.brika.dev';
@@ -17,6 +18,7 @@ const REFRESH_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
  */
 @singleton()
 export class VerifiedPluginsService {
+  readonly #log = inject(Logger);
   #verifiedList: VerifiedPluginsList | null = null;
   #verifiedMap = new Map<string, VerifiedPlugin>();
   #lastFetch: number = 0;
@@ -102,12 +104,12 @@ export class VerifiedPluginsService {
 
       if (USE_LOCAL_FILE) {
         // Development: read from local file
-        console.log(`Loading verified plugins list from ${VERIFIED_PLUGINS_PATH}`);
+        this.#log.info('Loading verified plugins list from local file', { path: VERIFIED_PLUGINS_PATH });
         const fileContent = await readFile(VERIFIED_PLUGINS_PATH, 'utf-8');
         data = JSON.parse(fileContent) as VerifiedPluginsList;
       } else {
         // Production: fetch from CDN
-        console.log(`Fetching verified plugins list from ${REGISTRY_URL}`);
+        this.#log.info('Fetching verified plugins list from CDN', { url: REGISTRY_URL });
         const response = await fetch(`${REGISTRY_URL}/verified-plugins.json`, {
           headers: {
             Accept: 'application/json',
@@ -136,9 +138,9 @@ export class VerifiedPluginsService {
         this.#verifiedMap.set(plugin.name, plugin);
       }
 
-      console.log(`Loaded ${data.plugins.length} verified plugins`);
+      this.#log.info('Loaded verified plugins', { count: data.plugins.length });
     } catch (error) {
-      console.error('Failed to load verified plugins list:', error);
+      this.#log.error('Failed to load verified plugins list', { error });
 
       // Use empty list if file doesn't exist or is invalid
       this.#verifiedList = {

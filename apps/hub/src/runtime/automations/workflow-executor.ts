@@ -8,7 +8,7 @@
 
 import type { Json } from '@brika/shared';
 import type { BlockRegistry } from '@/runtime/blocks';
-import type { LogRouter } from '@/runtime/logs/log-router';
+import type { Logger } from '@/runtime/logs/log-router';
 import type { PluginManager } from '@/runtime/plugins/plugin-manager';
 import type { BlockConnection, Workflow, WorkflowBlock } from './types';
 
@@ -18,7 +18,7 @@ import type { BlockConnection, Workflow, WorkflowBlock } from './types';
 
 export interface ExecutorDeps {
   plugins: PluginManager;
-  logs: LogRouter;
+  logs: Logger;
   blocks: BlockRegistry;
 }
 

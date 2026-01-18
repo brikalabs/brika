@@ -1,6 +1,7 @@
 import { createSSEStream, group, route } from '@brika/router';
 import { z } from 'zod';
 import { HUB_VERSION } from '@/hub';
+import { Logger } from '@/runtime/logs/log-router';
 import { PluginManager } from '@/runtime/plugins/plugin-manager';
 import { PluginRegistry } from '@/runtime/registry';
 import type { OperationProgress } from '@/runtime/registry/types';
@@ -211,7 +212,7 @@ export const registryRoutes = group('/api/registry', [
         name: z.string(),
       }),
     },
-    async ({ params }) => {
+    async ({ params, inject }) => {
       try {
         // Fetch README from unpkg (CDN for npm packages)
         // params.name is already decoded by the router, unpkg can handle @ and /
@@ -232,7 +233,8 @@ export const registryRoutes = group('/api/registry', [
           filename: 'README.md',
         };
       } catch (error) {
-        console.error(`Failed to fetch README for ${params.name}:`, error);
+        const log = inject(Logger);
+        log.error('Failed to fetch README from CDN', { packageName: params.name, error });
         return { readme: null, filename: null };
       }
     }
@@ -246,7 +248,7 @@ export const registryRoutes = group('/api/registry', [
         name: z.string(),
       }),
     },
-    async ({ params }) => {
+    async ({ params, inject }) => {
       try {
         // Try to fetch icon from unpkg
         // params.name is already decoded by the router, unpkg can handle @ and /
@@ -274,7 +276,8 @@ export const registryRoutes = group('/api/registry', [
         // If no icon found, return 404
         return new Response(null, { status: 404 });
       } catch (error) {
-        console.error(`Failed to fetch icon for ${params.name}:`, error);
+        const log = inject(Logger);
+        log.error('Failed to fetch icon from CDN', { packageName: params.name, error });
         return new Response(null, { status: 404 });
       }
     }

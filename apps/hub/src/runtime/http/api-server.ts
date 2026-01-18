@@ -2,12 +2,12 @@ import { createApp, type RouteDefinition } from '@brika/router';
 import { inject, singleton } from '@brika/shared';
 import { serveStatic } from 'hono/bun';
 import { HubConfig } from '@/runtime/config';
-import { LogRouter } from '@/runtime/logs/log-router';
+import { Logger } from '@/runtime/logs/log-router';
 
 @singleton()
 export class ApiServer {
   readonly #config = inject(HubConfig);
-  readonly #logs = inject(LogRouter);
+  readonly #logs = inject(Logger);
   readonly #routes: RouteDefinition[] = [];
   #app?: ReturnType<typeof createApp>;
   #server?: ReturnType<typeof Bun.serve>;

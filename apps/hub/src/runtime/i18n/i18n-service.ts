@@ -11,7 +11,7 @@
 
 import { inject, singleton } from '@brika/shared';
 import { ConfigLoader } from '@/runtime/config/config-loader';
-import { LogRouter } from '@/runtime/logs/log-router';
+import { Logger } from '@/runtime/logs/log-router';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
@@ -69,7 +69,7 @@ function deepMerge(target: TranslationData, source: TranslationData): Translatio
 @singleton()
 export class I18nService {
   readonly #config = inject(ConfigLoader);
-  readonly #logs = inject(LogRouter);
+  readonly #logs = inject(Logger);
 
   /** Core translations by locale */
   readonly #coreTranslations = new Map<string, TranslationData>();

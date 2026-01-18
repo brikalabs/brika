@@ -2,7 +2,7 @@ import { createBanner } from '@brika/banner';
 import { inject } from '@brika/shared';
 import { hub } from '@/hub';
 import { BrikaInitializer, ConfigLoader } from '@/runtime/config';
-import { LogRouter } from '@/runtime/logs/log-router';
+import { Logger } from '@/runtime/logs/log-router';
 import { LogStore } from '@/runtime/logs/log-store';
 import type { BootstrapPlugin } from './plugin';
 
@@ -21,7 +21,7 @@ const HOT_STARTED = Symbol.for('brika.hub.started');
  * ```
  */
 export class Bootstrap {
-  private readonly logs = inject(LogRouter);
+  private readonly logs = inject(Logger);
   private readonly logStore = inject(LogStore);
   private readonly initializer = inject(BrikaInitializer);
   private readonly configLoader = inject(ConfigLoader);

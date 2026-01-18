@@ -3,7 +3,7 @@ import type { Json } from '@brika/shared';
 import { z } from 'zod';
 import { AutomationEngine } from '@/runtime/automations';
 import { EventSystem } from '@/runtime/events/event-system';
-import { LogRouter } from '@/runtime/logs/log-router';
+import { Logger } from '@/runtime/logs/log-router';
 
 /**
  * Workflow event types for live debugging
@@ -28,7 +28,7 @@ interface WorkflowEvent {
 export const streamsRoutes = [
   // SSE: Stream logs
   route.get('/api/stream/logs', ({ inject }) => {
-    const logs = inject(LogRouter);
+    const logs = inject(Logger);
 
     return createSSEStream((send) => {
       const unsub = logs.subscribe((event) => {

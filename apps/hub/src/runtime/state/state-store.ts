@@ -2,7 +2,7 @@ import { PluginPackageSchema } from '@brika/schema';
 import type { PluginHealth } from '@brika/shared';
 import { inject, singleton } from '@brika/shared';
 import { HubConfig } from '@/runtime/config';
-import { LogRouter } from '@/runtime/logs/log-router';
+import { Logger } from '@/runtime/logs/log-router';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -42,7 +42,7 @@ type StateFile = {
 @singleton()
 export class StateStore {
   private readonly config = inject(HubConfig);
-  private readonly logs = inject(LogRouter);
+  private readonly logs = inject(Logger);
   readonly #homeDir: string;
   readonly #file: string;
   #state: StateFile = { plugins: {} };

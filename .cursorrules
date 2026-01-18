@@ -95,7 +95,7 @@ import { singleton, inject } from "@brika/shared";
 
 @singleton()
 export class MyService {
-  private readonly logs = inject(LogRouter);
+  private readonly logs = inject(Logger);
   private readonly events = inject(EventBus);
 }
 ```

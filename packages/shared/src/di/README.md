@@ -8,12 +8,12 @@ Modern, ergonomic testing utilities for dependency injection. Inspired by Vitest
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { TestBed, spy, mock } from "@brika/shared";
 import { MyService } from "./my-service";
-import { LogRouter } from "./log-router";
+import { Logger } from "./log-router";
 
 describe("MyService", () => {
   beforeEach(() => {
     TestBed.create()
-      .mock(LogRouter, {
+      .mock(Logger, {
         info: spy(),
         error: spy(),
       })
@@ -26,7 +26,7 @@ describe("MyService", () => {
     const service = TestBed.get(MyService);
     service.doSomething();
     
-    expect(TestBed.get(LogRouter).info).toHaveBeenCalled();
+    expect(TestBed.get(Logger).info).toHaveBeenCalled();
   });
 });
 ```
@@ -151,7 +151,7 @@ Fluent DI testing container.
 ```typescript
 // Modern fluent API
 TestBed.create()
-  .mock(LogRouter, { info: spy(), error: spy() })
+  .mock(Logger, { info: spy(), error: spy() })
   .provide(HubConfig, new HubConfig())
   .compile();
 
@@ -222,7 +222,7 @@ it("should handle errors gracefully", () => {
   const errorSpy = spy<[string, object?]>();
   
   TestBed.create()
-    .mock(LogRouter, { error: errorSpy })
+    .mock(Logger, { error: errorSpy })
     .compile();
   
   const bus = TestBed.get(EventBus);

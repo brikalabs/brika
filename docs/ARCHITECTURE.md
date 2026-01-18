@@ -27,7 +27,7 @@ A Bun-first, plugin-first home automation runtime designed for stability and ext
 │  │ (HTTP/SSE)  │ │ (pub/sub)   │ │ (blocks)    │ │ (persist)   │   │
 │  └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘   │
 │  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐   │
-│  │ Scheduler   │ │ RulesEngine │ │ Automations │ │ LogRouter   │   │
+│  │ Scheduler   │ │ RulesEngine │ │ Automations │ │ Logger   │   │
 │  │ (cron/int)  │ │ (triggers)  │ │ (workflows) │ │ (logging)   │   │
 │  └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘   │
 │                                                                      │
@@ -129,7 +129,7 @@ brika/
 | `SchedulerService` | `scheduler/scheduler-service.ts`   | Cron and interval scheduling               |
 | `RulesEngine`      | `rules/rules-engine.ts`            | Event-triggered rule evaluation            |
 | `StateStore`       | `state/state-store.ts`             | Persistent JSON state                      |
-| `LogRouter`        | `logs/log-router.ts`               | Centralized logging with SSE               |
+| `Logger`        | `logs/log-router.ts`               | Centralized logging with SSE               |
 | `ApiServer`        | `http/api-server.ts`               | HTTP REST API                              |
 | `ConfigLoader`     | `config/config-loader.ts`          | YAML configuration                         |
 

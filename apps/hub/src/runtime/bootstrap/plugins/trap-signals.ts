@@ -1,5 +1,5 @@
 import { inject } from '@brika/shared';
-import { LogRouter } from '@/runtime/logs/log-router';
+import { Logger } from '@/runtime/logs/log-router';
 import type { BootstrapPlugin } from '../plugin';
 
 /** Signal names that can be trapped. */
@@ -18,7 +18,7 @@ export function trapSignals(signals: Signal[] = ['SIGINT', 'SIGTERM']): Bootstra
       stopFn = () => b.stop();
     },
     onStart() {
-      const logs = inject(LogRouter);
+      const logs = inject(Logger);
       for (const signal of signals) {
         process.on(signal, async () => {
           logs.info('hub.signal', { signal });

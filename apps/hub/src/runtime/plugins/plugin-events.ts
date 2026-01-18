@@ -5,7 +5,7 @@ import { inject, singleton } from '@brika/shared';
 import { BlockRegistry } from '@/runtime/blocks';
 import { GenericEventActions, PluginActions } from '@/runtime/events/actions';
 import { EventSystem } from '@/runtime/events/event-system';
-import { LogRouter } from '@/runtime/logs/log-router';
+import { Logger } from '@/runtime/logs/log-router';
 import { StateStore } from '@/runtime/state/state-store';
 import type { PluginProcess } from './plugin-process';
 import { now } from './utils';
@@ -15,7 +15,7 @@ import { now } from './utils';
  */
 @singleton()
 export class PluginEventHandler {
-  readonly #logs = inject(LogRouter);
+  readonly #logs = inject(Logger);
   readonly #events = inject(EventSystem);
   readonly #state = inject(StateStore);
   readonly #blocks = inject(BlockRegistry);

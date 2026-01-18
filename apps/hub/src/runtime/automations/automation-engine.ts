@@ -10,7 +10,7 @@ import type { Json } from '@brika/shared';
 import { inject, singleton } from '@brika/shared';
 import { BlockRegistry } from '@/runtime/blocks';
 import { EventSystem } from '@/runtime/events/event-system';
-import { LogRouter } from '@/runtime/logs/log-router';
+import { Logger } from '@/runtime/logs/log-router';
 import { PluginManager } from '@/runtime/plugins/plugin-manager';
 import type { Workflow } from './types';
 import { type ExecutionEvent, type ExecutionListener, WorkflowExecutor } from './workflow-executor';
@@ -21,7 +21,7 @@ import { type ExecutionEvent, type ExecutionListener, WorkflowExecutor } from '.
 
 @singleton()
 export class AutomationEngine {
-  private readonly logs = inject(LogRouter);
+  private readonly logs = inject(Logger);
   private readonly events = inject(EventSystem);
   private readonly blocks = inject(BlockRegistry);
   private readonly plugins = inject(PluginManager);

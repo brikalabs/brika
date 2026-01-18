@@ -110,7 +110,7 @@ export class MyService {
   // ✅ Property injection with inject()
   private readonly events = inject(EventBus);
   private readonly blocks = inject(BlockRegistry);
-  private readonly logs = inject(LogRouter);
+  private readonly logs = inject(Logger);
 
   // ✅ No constructor parameters for DI classes
 }

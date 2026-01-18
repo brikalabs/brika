@@ -1,7 +1,7 @@
 import { Action, EventSystem as BaseEventSystem, type Unsubscribe } from '@brika/events';
 import type { BrikaEvent, Json } from '@brika/shared';
 import { inject, singleton } from '@brika/shared';
-import { LogRouter } from '@/runtime/logs/log-router';
+import { Logger } from '@/runtime/logs/log-router';
 
 class RingBuffer<T> {
   readonly #buf: Array<T | undefined>;
@@ -37,7 +37,7 @@ class RingBuffer<T> {
  */
 @singleton()
 export class EventSystem extends BaseEventSystem {
-  private readonly logs = inject(LogRouter);
+  private readonly logs = inject(Logger);
   readonly #history = new RingBuffer<BrikaEvent>(1000);
 
   constructor() {

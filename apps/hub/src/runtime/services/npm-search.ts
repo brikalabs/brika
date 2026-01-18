@@ -1,5 +1,6 @@
 import type { NpmPackageData, NpmSearchResult } from '@brika/shared';
-import { singleton } from '@brika/shared';
+import { inject, singleton } from '@brika/shared';
+import type { Logger } from '@/runtime/logs/log-router';
 
 const NPM_REGISTRY_URL = 'https://registry.npmjs.org';
 const NPM_SEARCH_URL = 'https://registry.npmjs.org/-/v1/search';
@@ -74,6 +75,7 @@ interface NpmApiPackageResponse {
  */
 @singleton()
 export class NpmSearchService {
+  readonly #log = inject(Logger);
   readonly #cache = new Map<string, CachedResult<unknown>>();
 
   /**
@@ -120,7 +122,7 @@ export class NpmSearchService {
       const searchQuery = searchTerms.join(' ');
       const url = `${NPM_SEARCH_URL}?text=${encodeURIComponent(searchQuery)}&size=${limit * 2}&from=${offset}`;
 
-      console.log(`Searching npm: ${searchQuery}`);
+      this.#log.info('Searching npm registry', { query: searchQuery });
       const response = await fetch(url);
 
       if (!response.ok) {
@@ -169,7 +171,7 @@ export class NpmSearchService {
 
       return result;
     } catch (error) {
-      console.error('npm search error:', error);
+      this.#log.error('npm search failed', { error });
       return { plugins: [], total: 0 };
     }
   }
@@ -224,7 +226,7 @@ export class NpmSearchService {
       this.#setCache(cacheKey, packageData);
       return packageData;
     } catch (error) {
-      console.error(`npm package fetch error for ${packageName}:`, error);
+      this.#log.error('npm package fetch failed', { packageName, error });
       return null;
     }
   }
@@ -254,7 +256,7 @@ export class NpmSearchService {
       this.#setCache(cacheKey, count);
       return count;
     } catch (error) {
-      console.error(`npm downloads fetch error for ${packageName}:`, error);
+      this.#log.error('npm downloads fetch failed', { packageName, error });
       return 0;
     }
   }

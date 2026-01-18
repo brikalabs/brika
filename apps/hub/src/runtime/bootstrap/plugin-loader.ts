@@ -1,7 +1,7 @@
 import { inject, singleton } from '@brika/shared';
 import type { BrikaConfig } from '@/runtime/config';
 import { ConfigLoader } from '@/runtime/config';
-import { LogRouter } from '@/runtime/logs/log-router';
+import { Logger } from '@/runtime/logs/log-router';
 import { PluginManager } from '@/runtime/plugins/plugin-manager';
 import { PluginRegistry } from '@/runtime/registry';
 import { StateStore } from '@/runtime/state/state-store';
@@ -11,7 +11,7 @@ import type { Loader } from './loader';
 export class PluginLoader implements Loader {
   readonly name = 'plugins';
 
-  private readonly logs = inject(LogRouter);
+  private readonly logs = inject(Logger);
   private readonly configLoader = inject(ConfigLoader);
   private readonly pm = inject(PluginManager);
   private readonly registry = inject(PluginRegistry);

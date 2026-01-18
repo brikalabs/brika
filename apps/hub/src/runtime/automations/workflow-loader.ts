@@ -6,13 +6,13 @@
 
 import { inject, type Json, singleton } from '@brika/shared';
 import * as TOML from 'smol-toml';
-import { LogRouter } from '@/runtime/logs/log-router';
+import { Logger } from '@/runtime/logs/log-router';
 import { AutomationEngine } from './automation-engine';
 import type { Workflow } from './types';
 
 @singleton()
 export class WorkflowLoader {
-  private readonly logs = inject(LogRouter);
+  private readonly logs = inject(Logger);
   private readonly engine = inject(AutomationEngine);
 
   #dir: string | null = null;

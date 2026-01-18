@@ -68,7 +68,7 @@ class RingBuffer<T> {
 }
 
 @singleton()
-export class LogRouter {
+export class Logger {
   readonly #min: LogLevel;
   readonly #color: boolean;
   readonly #subs = new Set<Subscriber>();

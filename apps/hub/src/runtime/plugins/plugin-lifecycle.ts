@@ -5,7 +5,7 @@ import { PluginManagerConfig } from '@/runtime/config';
 import { PluginActions } from '@/runtime/events/actions';
 import { EventSystem } from '@/runtime/events/event-system';
 import { I18nService } from '@/runtime/i18n';
-import { LogRouter } from '@/runtime/logs/log-router';
+import { Logger } from '@/runtime/logs/log-router';
 import { type PluginStateWithMetadata, StateStore } from '@/runtime/state/state-store';
 import { PluginConfigService } from './plugin-config';
 import { PluginEventHandler } from './plugin-events';
@@ -21,7 +21,7 @@ import { generateUid, HUB_VERSION, satisfiesVersion } from './utils';
 @singleton()
 export class PluginLifecycle {
   readonly #config = inject(PluginManagerConfig);
-  readonly #logs = inject(LogRouter);
+  readonly #logs = inject(Logger);
   readonly #state = inject(StateStore);
   readonly #events = inject(EventSystem);
   readonly #i18n = inject(I18nService);

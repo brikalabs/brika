@@ -1,13 +1,13 @@
 import { join, resolve } from 'node:path';
 import { inject, singleton } from '@brika/shared';
 import { ConfigLoader, HubConfig } from '@/runtime/config';
-import { LogRouter } from '@/runtime/logs/log-router';
+import { Logger } from '@/runtime/logs/log-router';
 import type { InstalledPackage, OperationProgress, UpdateInfo } from './types';
 
 @singleton()
 export class PluginRegistry {
   private readonly hubConfig = inject(HubConfig);
-  private readonly logs = inject(LogRouter);
+  private readonly logs = inject(Logger);
   private readonly configLoader = inject(ConfigLoader);
   private readonly pluginsDir: string;
 

@@ -8,7 +8,7 @@
 import type { BlockDefinition } from '@brika/sdk';
 import type { BlockSummary } from '@brika/shared';
 import { inject, singleton } from '@brika/shared';
-import { LogRouter } from '@/runtime/logs/log-router';
+import { Logger } from '@/runtime/logs/log-router';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -31,7 +31,7 @@ interface RegisteredBlock extends BlockDefinition {
 
 @singleton()
 export class BlockRegistry {
-  private readonly logs = inject(LogRouter);
+  private readonly logs = inject(Logger);
 
   /** Block definitions by type */
   readonly #blocks = new Map<string, RegisteredBlock>();

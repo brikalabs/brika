@@ -11,7 +11,7 @@
  * describe("MyService", () => {
  *   beforeEach(() => {
  *     TestBed.create()
- *       .mock(LogRouter, {
+ *       .mock(Logger, {
  *         info: spy(),
  *         error: spy(),
  *       })
@@ -24,7 +24,7 @@
  *     const service = TestBed.get(MyService);
  *     service.doSomething();
  *
- *     expect(TestBed.get(LogRouter).info).toHaveBeenCalledWith("event");
+ *     expect(TestBed.get(Logger).info).toHaveBeenCalledWith("event");
  *   });
  * });
  * ```
@@ -211,7 +211,7 @@ export function spy<TArgs extends unknown[] = unknown[], TReturn = void>(
  *
  * @example
  * ```ts
- * const mockLogger = mock<LogRouter>({
+ * const mockLogger = mock<Logger>({
  *   info: spy(),
  *   error: spy(),
  * });
@@ -227,7 +227,7 @@ export function mock<T extends object>(overrides: Partial<T> = {}): T {
  *
  * @example
  * ```ts
- * const mockLogger = autoMock<LogRouter>(['info', 'error', 'warn', 'debug']);
+ * const mockLogger = autoMock<Logger>(['info', 'error', 'warn', 'debug']);
  * mockLogger.info("test"); // tracked by spy
  * ```
  */
@@ -260,7 +260,7 @@ class TestBedBuilder {
    * @example
    * ```ts
    * TestBed.create()
-   *   .mock(LogRouter, { info: spy(), error: spy() })
+   *   .mock(Logger, { info: spy(), error: spy() })
    *   .compile();
    * ```
    */
@@ -324,7 +324,7 @@ class TestBedStatic {
    * @example
    * ```ts
    * TestBed.create()
-   *   .mock(LogRouter, { info: spy() })
+   *   .mock(Logger, { info: spy() })
    *   .provide(HubConfig, new HubConfig())
    *   .compile();
    * ```
@@ -341,7 +341,7 @@ class TestBedStatic {
    * ```ts
    * TestBed.setup({
    *   mocks: {
-   *     [LogRouter]: { info: spy(), error: spy() },
+   *     [Logger]: { info: spy(), error: spy() },
    *   },
    *   providers: {
    *     [HubConfig]: new HubConfig(),
