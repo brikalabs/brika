@@ -1,8 +1,10 @@
 {
-  "title": "Outils",
-  "subtitle": "Outils enregistrés depuis les plugins",
-  "empty": "Aucun outil enregistré...",
-  "noArguments": "Cet outil n'a pas d'arguments d'entrée",
+  "title": "$t(common:items.tool_other)",
+  "subtitle": "Outils enregistrés depuis les $t(common:items.plugin_other)",
+  "empty": "Aucun $t(common:items.tool_one) enregistré...",
+  "noArguments": "Cet $t(common:items.tool_one) n'a pas d'arguments d'entrée",
+  "count_one": "{{count}} outil",
+  "count_other": "{{count}} outils",
   "labels": {
     "tool": "Outil",
     "arguments": "Arguments",

@@ -1,7 +1,9 @@
 {
-  "title": "Blocs",
+  "title": "$t(common:items.block_other)",
   "subtitle": "Types de blocs disponibles pour construire des workflows",
   "search": "Rechercher des blocs...",
-  "noResults": "Aucun bloc ne correspond à votre recherche",
-  "empty": "Aucun bloc disponible. Installez un plugin pour ajouter des blocs."
+  "noResults": "Aucun $t(common:items.block_one) ne correspond à votre recherche",
+  "empty": "Aucun $t(common:items.block_one) disponible. Installez un $t(common:items.plugin_one) pour ajouter des blocs.",
+  "count_one": "{{count}} bloc",
+  "count_other": "{{count}} blocs"
 }

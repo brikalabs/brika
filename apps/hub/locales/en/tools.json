@@ -1,8 +1,10 @@
 {
-  "title": "Tools",
-  "subtitle": "Registered tools from plugins",
-  "empty": "No tools registered...",
-  "noArguments": "This tool has no input arguments",
+  "title": "$t(common:items.tool_other)",
+  "subtitle": "Registered tools from $t(common:items.plugin_other)",
+  "empty": "No $t(common:items.tool_other) registered...",
+  "noArguments": "This $t(common:items.tool_one) has no input arguments",
+  "count_one": "{{count}} tool",
+  "count_other": "{{count}} tools",
   "labels": {
     "tool": "Tool",
     "arguments": "Arguments",

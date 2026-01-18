@@ -58,7 +58,7 @@ export function LogsPage() {
         <div>
           <h1 className="font-semibold text-2xl tracking-tight">{t("logs:title")}</h1>
           <p className="mt-1 text-muted-foreground">
-            {stats ? t("logs:totalStored", { total: stats.total.toLocaleString() }) : t("common:loading")}
+            {stats ? t("logs:totalStored", { count: stats.total }) : t("common:loading")}
           </p>
         </div>
 

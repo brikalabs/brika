@@ -1,14 +1,16 @@
 {
-  "title": "Workflows",
+  "title": "$t(common:items.workflow_other)",
   "subtitle": "Block-based automations triggered by events",
   "empty": "No workflows yet. Create one using the button above or add a YAML file in the automations/ folder.",
-  "notFound": "Workflow not found",
+  "notFound": "$t(common:items.workflow_one) not found",
   "triggersOn": "Triggers on",
-  "blocks": "Blocks",
+  "blocks": "$t(common:items.block_other)",
   "blocksDescription": "Available block types for building workflows",
   "confirmDelete": "Delete workflow \"{{id}}\"?",
   "search": "Search workflows...",
   "noResults": "No workflows match your search",
+  "count_one": "{{count}} workflow",
+  "count_other": "{{count}} workflows",
   "runs": {
     "title": "Runs",
     "empty": "No runs yet. Trigger a workflow to see execution history."
@@ -55,6 +57,7 @@
     "properties": "Properties",
     "save": "Save Workflow",
     "discard": "Discard Changes",
+    "unsaved": "Unsaved",
     "unsavedChanges": "Unsaved changes"
   }
 }

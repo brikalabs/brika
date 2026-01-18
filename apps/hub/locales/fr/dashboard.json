@@ -1,19 +1,32 @@
 {
   "title": "Tableau de bord",
-  "subtitle": "Hub domotique",
+  "subtitle": "Hub d'automatisation",
   "welcome": "Bienvenue sur BRIKA",
   "stats": {
-    "plugins": "Plugins",
-    "tools": "Outils",
-    "blocks": "Blocs",
-    "workflows": "Workflows",
-    "schedules": "Planifications",
-    "rules": "Règles",
-    "running": "En cours",
-    "enabled": "Activé"
+    "pluginsSuffix": "Plugins",
+    "toolsSuffix": "Outils",
+    "blocksSuffix": "Blocs",
+    "workflowsSuffix": "Workflows",
+    "schedulesSuffix": "Planifications",
+    "rulesSuffix": "Règles",
+    "activePrefix": "actifs",
+    "plugins": "$t(dashboard:stats.pluginsSuffix) $t(dashboard:stats.activePrefix)",
+    "tools": "$t(dashboard:stats.toolsSuffix)",
+    "blocks": "$t(dashboard:stats.blocksSuffix)",
+    "workflows": "$t(dashboard:stats.workflowsSuffix) $t(dashboard:stats.activePrefix)",
+    "schedules": "$t(dashboard:stats.schedulesSuffix)",
+    "rules": "$t(dashboard:stats.rulesSuffix)",
+    "running": "",
+    "enabled": "",
+    "runningPlugins_one": "{{count}} Plugin actif",
+    "runningPlugins_other": "{{count}} Plugins actifs",
+    "enabledWorkflows_one": "{{count}} Workflow actif",
+    "enabledWorkflows_other": "{{count}} Workflows actifs",
+    "totalBlocks_one": "{{count}} Bloc",
+    "totalBlocks_other": "{{count}} Blocs"
   },
   "uptime": {
-    "title": "Temps de fonctionnement",
+    "title": "Uptime",
     "runtime": "Runtime Bun"
   }
 }

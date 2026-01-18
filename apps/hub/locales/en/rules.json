@@ -1,7 +1,9 @@
 {
-  "title": "Rules",
+  "title": "$t(common:items.rule_other)",
   "subtitle": "Event-driven automation rules",
-  "empty": "No rules...",
+  "empty": "No $t(common:items.rule_other)...",
+  "count_one": "{{count}} rule",
+  "count_other": "{{count}} rules",
   "labels": {
     "event": "Trigger Event",
     "condition": "Condition",

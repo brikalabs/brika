@@ -5,10 +5,12 @@
   "every": "Every",
   "cron": "Cron",
   "interval": "Interval",
+  "count_one": "{{count}} schedule",
+  "count_other": "{{count}} schedules",
   "labels": {
     "trigger": "Trigger",
     "action": "Action",
-    "tool": "Tool name"
+    "tool": "$t(common:items.tool_one) name"
   },
   "table": {
     "name": "Name",

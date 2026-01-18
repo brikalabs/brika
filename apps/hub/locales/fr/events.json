@@ -1,19 +1,21 @@
 {
-  "title": "Événements",
+  "title": "$t(common:items.event_other)",
   "subtitle": "Flux d'événements en temps réel",
   "empty": "Aucun événement pour le moment",
   "emptyHint": "Les événements apparaîtront ici au fur et à mesure",
+  "count_one": "{{count}} événement",
+  "count_other": "{{count}} événements",
   "from": "de",
   "paused": "En pause",
   "labels": {
     "type": "Type d'événement",
-    "payload": "Charge utile (JSON)"
+    "payload": "Données (JSON)"
   },
   "table": {
     "time": "Heure",
     "type": "Type",
     "source": "Source",
-    "payload": "Charge utile"
+    "payload": "Données"
   },
   "actions": {
     "clear": "Effacer",

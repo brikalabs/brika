@@ -1,11 +1,11 @@
 {
-  "title": "Boutique de Plugins",
+  "title": "Boutique de $t(common:items.plugin_other)",
   "subtitle": "Découvrez et installez des plugins pour étendre Brika",
   "description": "Découvrez et installez des plugins pour étendre Brika",
-  "empty": "Aucun plugin disponible",
-  "noResults": "Aucun plugin trouvé",
+  "empty": "Aucun $t(common:items.plugin_one) disponible",
+  "noResults": "Aucun $t(common:items.plugin_one) trouvé",
   "noResultsDescription": "Essayez d'ajuster votre recherche ou vos filtres",
-  "installPlugin": "Installer un plugin",
+  "installPlugin": "Installer un $t(common:items.plugin_one)",
   "installHint": "Installer depuis npm ou une URL git",
   "backToStore": "Retour à la boutique",
   "labels": {
@@ -26,7 +26,7 @@
     "searchBy": "Rechercher par nom ou description"
   },
   "filter": {
-    "all": "Tous les plugins",
+    "all": "Tous les $t(common:items.plugin_other)",
     "verified": "Vérifiés uniquement",
     "compatible": "Compatibles uniquement",
     "installed": "Installés"
@@ -71,15 +71,15 @@
     "error": "Une erreur s'est produite pendant l'installation"
   },
   "sections": {
-    "featured": "Plugins en vedette",
-    "all": "Tous les plugins",
+    "featured": "$t(common:items.plugin_other) en vedette",
+    "all": "Tous les $t(common:items.plugin_other)",
     "details": "Détails de l'installation",
     "detailsDescription": "Compatibilité de version et exigences",
-    "readme": "LISEZ-MOI"
+    "readme": "README"
   },
   "plugin": {
-    "notFound": "Plugin non trouvé",
-    "notFoundDetail": "Le plugin \"{{name}}\" n'a pas pu être trouvé dans le registre npm.",
+    "notFound": "$t(common:items.plugin_one) non trouvé",
+    "notFoundDetail": "Le $t(common:items.plugin_one) \"{{name}}\" n'a pas pu être trouvé dans le registre npm.",
     "downloadsPerWeek": "téléchargements/semaine"
   }
 }

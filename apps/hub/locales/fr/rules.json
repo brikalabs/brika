@@ -1,7 +1,9 @@
 {
-  "title": "Règles",
-  "subtitle": "Règles d'automatisation basées sur événements",
-  "empty": "Aucune règle...",
+  "title": "$t(common:items.rule_other)",
+  "subtitle": "Règles d'automatisation basées sur des événements",
+  "empty": "Aucune $t(common:items.rule_one)...",
+  "count_one": "{{count}} règle",
+  "count_other": "{{count}} règles",
   "labels": {
     "event": "Événement déclencheur",
     "condition": "Condition",

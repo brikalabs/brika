@@ -1,8 +1,10 @@
 {
-  "title": "Events",
+  "title": "$t(common:items.event_other)",
   "subtitle": "Real-time event stream",
   "empty": "No events yet",
   "emptyHint": "Events will appear here as they occur",
+  "count_one": "{{count}} event",
+  "count_other": "{{count}} events",
   "from": "from",
   "paused": "Paused",
   "labels": {

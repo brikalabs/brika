@@ -1,14 +1,16 @@
 {
-  "title": "Workflows",
-  "subtitle": "Automatisations par blocs déclenchées par événements",
+  "title": "$t(common:items.workflow_other)",
+  "subtitle": "Automatisations par blocs basées sur des événements",
   "empty": "Aucun workflow pour le moment. Créez-en un avec le bouton ci-dessus ou ajoutez un fichier YAML dans le dossier automations/.",
-  "notFound": "Workflow introuvable",
-  "triggersOn": "Déclenché par",
-  "blocks": "Blocs",
+  "notFound": "$t(common:items.workflow_one) introuvable",
+  "triggersOn": "Se déclenche sur",
+  "blocks": "$t(common:items.block_other)",
   "blocksDescription": "Types de blocs disponibles pour construire des workflows",
   "confirmDelete": "Supprimer le workflow « {{id}} » ?",
   "search": "Rechercher des workflows...",
   "noResults": "Aucun workflow ne correspond à votre recherche",
+  "count_one": "{{count}} workflow",
+  "count_other": "{{count}} workflows",
   "runs": {
     "title": "Exécutions",
     "empty": "Aucune exécution pour le moment. Déclenchez un workflow pour voir l'historique."
@@ -20,7 +22,9 @@
     "actions": "Actions",
     "blocks": "Blocs",
     "startedAt": "Démarré à",
-    "noBlocks": "Aucun bloc"
+    "lastRun": "Dernière exécution",
+    "noBlocks": "Aucun bloc",
+    "neverRun": "Jamais exécuté"
   },
   "deleteDialog": {
     "title": "Supprimer le workflow",
@@ -53,6 +57,7 @@
     "properties": "Propriétés",
     "save": "Enregistrer le Workflow",
     "discard": "Annuler les modifications",
+    "unsaved": "Non enregistré",
     "unsavedChanges": "Modifications non enregistrées"
   }
 }

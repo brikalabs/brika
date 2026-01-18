@@ -1,5 +1,5 @@
 import { Link as LinkIcon } from 'lucide-react';
-import { Children, Fragment, isValidElement, type ReactNode } from 'react';
+import { Children, Fragment, isValidElement, type ReactNode, useEffect } from 'react';
 import type { Components } from 'react-markdown';
 import ReactMarkdown from 'react-markdown';
 import {
@@ -225,6 +225,17 @@ const components: Components = {
 // --- Main Component ---
 
 export function Markdown({ children }: Readonly<{ children: string }>) {
+  // Handle hash navigation after content renders
+  useEffect(() => {
+    const hash = globalThis.location.hash.slice(1);
+    if (hash) {
+      const element = document.getElementById(hash);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+  }, [children]);
+
   return (
     <div className="text-foreground [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_h1]:pl-8 [&_h2]:pl-8 [&_h3]:pl-8 [&_h4]:pl-8 [&_h5]:pl-8 [&_h6]:pl-8">
       <ReactMarkdown components={components}>{children}</ReactMarkdown>

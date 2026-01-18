@@ -42,6 +42,22 @@
     "failed": "Échoué",
     "completed": "Terminé"
   },
+  "items": {
+    "plugin_one": "Plugin",
+    "plugin_other": "Plugins",
+    "workflow_one": "Workflow",
+    "workflow_other": "Workflows",
+    "block_one": "Bloc",
+    "block_other": "Blocs",
+    "rule_one": "Règle",
+    "rule_other": "Règles",
+    "event_one": "Événement",
+    "event_other": "Événements",
+    "log_one": "Journal",
+    "log_other": "Journaux",
+    "tool_one": "Outil",
+    "tool_other": "Outils"
+  },
   "labels": {
     "name": "Nom",
     "description": "Description",

@@ -42,6 +42,22 @@
     "failed": "Failed",
     "completed": "Completed"
   },
+  "items": {
+    "plugin_one": "Plugin",
+    "plugin_other": "Plugins",
+    "workflow_one": "Workflow",
+    "workflow_other": "Workflows",
+    "block_one": "Block",
+    "block_other": "Blocks",
+    "rule_one": "Rule",
+    "rule_other": "Rules",
+    "event_one": "Event",
+    "event_other": "Events",
+    "log_one": "Log",
+    "log_other": "Logs",
+    "tool_one": "Tool",
+    "tool_other": "Tools"
+  },
   "labels": {
     "name": "Name",
     "description": "Description",

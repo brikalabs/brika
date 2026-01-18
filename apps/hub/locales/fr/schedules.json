@@ -5,10 +5,12 @@
   "every": "Toutes les",
   "cron": "Cron",
   "interval": "Intervalle",
+  "count_one": "{{count}} planification",
+  "count_other": "{{count}} planifications",
   "labels": {
     "trigger": "Déclencheur",
     "action": "Action",
-    "tool": "Nom de l'outil"
+    "tool": "Nom de l'$t(common:items.tool_one)"
   },
   "table": {
     "name": "Nom",
