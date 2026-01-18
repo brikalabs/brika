@@ -33,7 +33,8 @@
       "!**/*.log",
       "!**/.env",
       "!**/.env.*",
-      "!**/*.md"
+      "!**/*.md",
+      "!**/template/**"
     ]
   },
 
@@ -44,7 +45,8 @@
       "packages/**/src/**/*.{ts,tsx,js,jsx,mts,cts}",
       "scripts/**/*.{ts,tsx,js,jsx,mts,cts}",
       "apps/**/src/**/*.{html,vue,svelte,astro,mdx}",
-      "packages/**/src/**/*.{html,vue,svelte,astro,mdx}"
+      "packages/**/src/**/*.{html,vue,svelte,astro,mdx}",
+      "!**/template/**"
     ],
     "rules": {
       "recommended": false,

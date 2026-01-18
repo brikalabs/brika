@@ -4,17 +4,67 @@ This guide walks you through creating your first BRIKA plugin.
 
 ## Prerequisites
 
-* BRIKA development environment set up
+* [Bun](https://bun.sh/) 1.0 or later
 * Basic TypeScript knowledge
 
-## Step 1: Create Plugin Directory
+## Quick Start with CLI
+
+The fastest way to create a new plugin is using the CLI:
+
+```bash
+bun create brika my-plugin
+```
+
+This launches an interactive wizard that:
+
+1. Asks for plugin details (name, description, category, author)
+2. Creates the complete plugin structure
+3. Installs dependencies
+4. Initializes a git repository
+
+### CLI Options
+
+```bash
+# Interactive mode (prompts for all options)
+bun create brika
+
+# With plugin name
+bun create brika my-plugin
+
+# Skip git and dependency installation
+bun create brika my-plugin --no-git --no-install
+
+# Show help
+bun create brika --help
+```
+
+### What Gets Created
+
+```
+my-plugin/
+├── package.json          # Plugin manifest with blocks
+├── tsconfig.json         # TypeScript configuration
+├── README.md             # Documentation
+├── .gitignore
+├── src/
+│   └── index.ts          # Block definitions
+└── locales/
+    └── en/
+        └── plugin.json   # i18n translations
+```
+
+## Manual Setup
+
+If you prefer to create a plugin manually, follow these steps:
+
+### Step 1: Create Plugin Directory
 
 ```bash
 mkdir -p plugins/my-plugin/src
 cd plugins/my-plugin
 ```
 
-## Step 2: Create package.json
+### Step 2: Create package.json
 
 Create `package.json` with the plugin manifest:
 
@@ -42,7 +92,7 @@ Create `package.json` with the plugin manifest:
     }
   ],
   "dependencies": {
-    "@brika/sdk": "workspace:*"
+    "@brika/sdk": "^0.2.0"
   }
 }
 ```
@@ -60,7 +110,7 @@ Create `package.json` with the plugin manifest:
 
 Use any [Lucide icon](https://lucide.dev/icons) name (e.g., `hand`, `timer`, `zap`, `bell`).
 
-## Step 3: Create the Entry Point
+### Step 3: Create the Entry Point
 
 Create `src/index.ts`:
 
@@ -90,40 +140,43 @@ export const greet = defineReactiveBlock(
   },
   ({ inputs, outputs, config, log }) => {
     inputs.trigger.on(() => {
-      log.info(`Greeting ${config.name}`);
+      log("info", `Greeting ${config.name}`);
       outputs.message.emit({ text: `Hello, ${config.name}!` });
     });
   }
 );
 
 // Lifecycle hooks
-onStop(() => log.info('Plugin stopping'));
+onStop(() => log.info("Plugin stopping"));
 
-log.info('Plugin loaded');
+log.info("Plugin loaded");
 ```
 
-## Step 4: Create tsconfig.json
+### Step 4: Create tsconfig.json
 
 ```json
 {
-  "extends": "../../packages/tsconfig.json",
   "compilerOptions": {
-    "outDir": "./dist",
-    "rootDir": "./src"
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "types": ["bun-types"]
   },
-  "include": ["src/**/*"]
+  "include": ["src"]
 }
 ```
 
-## Step 5: Install Dependencies
-
-From the project root:
+### Step 5: Install Dependencies
 
 ```bash
 bun install
 ```
 
-## Step 6: Register the Plugin
+### Step 6: Register the Plugin
 
 Add your plugin to `brika.yml`:
 
@@ -132,7 +185,7 @@ plugins:
   - path: ./plugins/my-plugin
 ```
 
-## Step 7: Test Your Plugin
+## Test Your Plugin
 
 Start the development server:
 
@@ -143,7 +196,7 @@ bun run dev
 1. Open the UI at http://localhost:5173
 2. Navigate to the Plugins page
 3. Verify your plugin is loaded
-4. Create a workflow and add your "Greet" block
+4. Create a workflow and add your block
 
 ## Complete Example
 
@@ -154,10 +207,9 @@ import {
   defineReactiveBlock,
   input,
   output,
-  map,
-  filter,
   combine,
   log,
+  onStop,
   z,
 } from "@brika/sdk";
 
@@ -182,7 +234,7 @@ export const greet = defineReactiveBlock(
   }
 );
 
-// Temperature converter with validation
+// Temperature converter
 export const tempConverter = defineReactiveBlock(
   {
     id: "temp-converter",
@@ -231,7 +283,8 @@ export const alert = defineReactiveBlock(
   }
 );
 
-log.info('My plugin loaded with 3 blocks');
+onStop(() => log.info("Plugin stopping"));
+log.info("My plugin loaded with 3 blocks");
 ```
 
 ## Next Steps

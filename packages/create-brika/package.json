@@ -1,0 +1,29 @@
+{
+  "name": "create-brika",
+  "version": "0.1.0",
+  "description": "Create a new BRIKA plugin with a single command",
+  "type": "module",
+  "license": "MIT",
+  "author": "BRIKA Team",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/maxscharwath/brika.git",
+    "directory": "packages/create-brika"
+  },
+  "keywords": ["brika", "plugin", "scaffold", "cli", "create"],
+  "bin": {
+    "create-brika": "./src/index.ts"
+  },
+  "files": ["src", "template"],
+  "scripts": {
+    "dev": "bun run src/index.ts",
+    "tsc": "bunx --bun tsc --noEmit"
+  },
+  "dependencies": {
+    "@clack/prompts": "^0.11.0",
+    "picocolors": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.5"
+  }
+}

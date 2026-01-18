@@ -18,6 +18,7 @@
 
 ## API Reference
 
+* [CLI](api-reference/cli.md)
 * [SDK](api-reference/sdk.md)
 * [Reactive Operators](api-reference/operators.md)
 * [Schema Types](api-reference/schema-types.md)

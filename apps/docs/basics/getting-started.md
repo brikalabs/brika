@@ -89,6 +89,16 @@ bun test --watch
 bun test apps/hub
 ```
 
+## Create Your First Plugin
+
+The fastest way to create a new plugin:
+
+```bash
+bun create brika my-plugin
+```
+
+This interactive CLI scaffolds a complete plugin with TypeScript configuration, block definitions, and i18n support.
+
 ## Next Steps
 
 * [Quick Setup](quick-setup.md) — Fast-track checklist

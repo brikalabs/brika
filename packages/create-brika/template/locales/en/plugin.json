@@ -1,0 +1,16 @@
+{
+  "name": "{{blockNamePascal}}",
+  "description": "{{description}}",
+  "blocks": {
+    "{{blockId}}": {
+      "name": "{{blockNamePascal}}",
+      "description": "{{description}}"
+    }
+  },
+  "fields": {
+    "enabled": {
+      "label": "Enabled",
+      "description": "Enable processing"
+    }
+  }
+}

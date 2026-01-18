@@ -37,6 +37,20 @@ bun run dev
 * **UI**: http://localhost:5173
 * **API**: http://localhost:3001/api/health
 
+## Create a Plugin
+
+Scaffold a new plugin with a single command:
+
+```bash
+bun create brika my-plugin
+```
+
+This launches an interactive CLI that creates a complete plugin with:
+- TypeScript configuration
+- Block definitions
+- i18n translations
+- Git repository
+
 ## Docker
 
 Run BRIKA with Docker:
