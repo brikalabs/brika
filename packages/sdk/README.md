@@ -236,37 +236,89 @@ export const clock = defineReactiveBlock(
 );
 ```
 
-## Lifecycle & Events
+## Logging
+
+The SDK provides a comprehensive logging API with automatic error stack capture:
 
 ```typescript
-import { log, emit, on, onInit, onStop, onUninstall } from "@brika/sdk";
+import { log } from "@brika/sdk";
 
-// Logging
+// Original syntax (still supported)
 log("info", "Message", { extra: "data" });
-log("warn", "Warning");
-log("error", "Error");
+log("debug", "Debug information");
+log("warn", "Warning message");
+log("error", "Error occurred");
 
-// Emit events
+// New convenience methods (recommended)
+log.info("Connection established", { host: "localhost", port: 3000 });
+log.debug("Processing item", { itemId: 123, step: "validation" });
+log.warn("Retry attempt failed", { attempt: 2, maxRetries: 3 });
+
+// Error logging with automatic stack trace capture
+try {
+  await riskyOperation();
+} catch (err) {
+  // Automatically extracts errorName, errorMessage, and errorStack
+  log.error("Operation failed", { error: err, context: "startup" });
+}
+
+// Block-level logging (inside defineReactiveBlock)
+export const myBlock = defineReactiveBlock(
+  { /* spec */ },
+  ({ inputs, outputs, config, log }) => {
+    inputs.trigger.on(() => {
+      log.info("Block triggered", { configValue: config.value });
+    });
+  }
+);
+```
+
+**Error Stack Traces**: When you pass an `Error` object in metadata with the key `error`, the logging system automatically captures:
+- `errorName`: Error class name (e.g., "TypeError")
+- `errorMessage`: Error message
+- `errorStack`: Full stack trace
+
+These are displayed in an expandable UI in the logs viewer at `/logs`.
+
+## Events
+
+```typescript
+import { emit, on } from "@brika/sdk";
+
+// Emit events to the hub event bus
 emit("device.updated", { id: "light-1", state: "on" });
+emit("motion.detected", { zone: "living-room", confidence: 0.95 });
 
-// Subscribe to events
+// Subscribe to events with pattern matching
 const unsub = on("motion.*", (event) => {
-  log("debug", `Motion: ${event.type}`, event.payload);
+  log.debug(`Motion event: ${event.type}`, event.payload);
 });
 
-// Lifecycle hooks
+// Unsubscribe when done
+unsub();
+```
+
+## Lifecycle Hooks
+
+```typescript
+import { onInit, onStop, onUninstall } from "@brika/sdk";
+
+// Runs when plugin initializes
 onInit(() => {
-  log("info", "Plugin initialized");
+  log.info("Plugin initialized");
+  // Setup connections, load resources, etc.
 });
 
+// Runs when plugin stops (reload, update, shutdown)
 onStop(() => {
-  log("info", "Plugin stopping");
-  // Cleanup resources
+  log.info("Plugin stopping");
+  // Cleanup resources, close connections, cancel timers
 });
 
+// Runs when plugin is being permanently uninstalled
 onUninstall(() => {
-  log("info", "Plugin being uninstalled");
-  // Permanent cleanup (delete files, revoke tokens, etc.)
+  log.info("Plugin being uninstalled");
+  // Permanent cleanup: delete files, revoke tokens, etc.
 });
 ```
 

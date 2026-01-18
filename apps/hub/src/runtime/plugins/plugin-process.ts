@@ -1,12 +1,9 @@
 import type { Json, PluginChannel } from '@brika/ipc';
 import {
-  type BlockContext,
-  type BlockResult,
   blockEmit,
   blockLog,
   emit,
   event,
-  executeBlock,
   hello,
   log,
   preferences,
@@ -114,19 +111,6 @@ export class PluginProcess {
   // ─────────────────────────────────────────────────────────────────────────
   // IPC Operations
   // ─────────────────────────────────────────────────────────────────────────
-
-  async executeBlock(
-    blockType: string,
-    config: Record<string, Json>,
-    context: BlockContext
-  ): Promise<BlockResult> {
-    if (this.#stopped) return { error: 'Plugin stopped', stop: true };
-    try {
-      return await this.#channel.call(executeBlock, { blockType, config, context });
-    } catch (e) {
-      return { error: String(e), stop: true };
-    }
-  }
 
   // ─────────────────────────────────────────────────────────────────────────
   // Reactive Block Operations

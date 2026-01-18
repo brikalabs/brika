@@ -116,18 +116,21 @@ export const streamsRoutes = [
       if (!workflow) throw new NotFound('Workflow not found');
 
       return createSSEStream((send, close) => {
-        // Subscribe to execution events
-        const removeListener = automations.addListener((event) => {
-          send(event);
+        // Subscribe to execution events for this workflow
+        const removeListener = automations.addGlobalListener((event) => {
+          // Only send events for this workflow
+          if ('workflowId' in event && event.workflowId === query.id) {
+            send(event);
 
-          // Close stream if workflow stopped
-          if (event.type === 'workflow.stopped') {
-            close();
+            // Close stream if workflow stopped
+            if (event.type === 'workflow.stopped') {
+              close();
+            }
           }
         });
 
         // Start the workflow
-        automations.startWorkflow(query.id).catch((err) => {
+        automations.setEnabled(query.id, true).catch((err: Error) => {
           send({ type: 'workflow.error', workflowId: query.id, error: String(err) });
           close();
         });
@@ -136,8 +139,8 @@ export const streamsRoutes = [
         return () => {
           removeListener();
           // Stop workflow when client disconnects
-          if (automations.runningWorkflowId === query.id) {
-            automations.stopWorkflow();
+          if (automations.isWorkflowRunning(query.id)) {
+            automations.setEnabled(query.id, false);
           }
         };
       });

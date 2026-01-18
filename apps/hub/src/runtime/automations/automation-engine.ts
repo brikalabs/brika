@@ -38,17 +38,7 @@ export class AutomationEngine {
   /** Event subscriptions for cleanup */
   #eventUnsubs: Array<() => void> = [];
 
-  /** Legacy: single executor for backward compatibility */
-  #executor: WorkflowExecutor | null = null;
-
   init(): void {
-    // Create default executor for backward compat
-    this.#executor = new WorkflowExecutor({
-      plugins: this.plugins,
-      logs: this.logs,
-      blocks: this.blocks,
-    });
-
     this.logs.info('automation.engine.started');
   }
 
@@ -139,11 +129,6 @@ export class AutomationEngine {
     // Stop if this workflow is running
     this.#stopWorkflowInternal(id);
 
-    // Also check legacy executor
-    if (this.#executor?.workflowId === id) {
-      this.#executor.stop();
-    }
-
     this.#workflows.delete(id);
     this.logs.info('workflow.unregistered', { id });
     return true;
@@ -218,94 +203,12 @@ export class AutomationEngine {
   // ─────────────────────────────────────────────────────────────────────────────
 
   /**
-   * Start a workflow - runs indefinitely until stopped.
-   * Only one workflow can run at a time.
-   */
-  async startWorkflow(id: string, listener?: ExecutionListener): Promise<void> {
-    const workflow = this.#workflows.get(id);
-    if (!workflow) throw new Error(`Workflow not found: ${id}`);
-    if (!this.#executor) throw new Error('Engine not initialized');
-
-    // Add listener if provided
-    if (listener) {
-      this.#executor.addListener(listener);
-    }
-
-    await this.#executor.start(workflow);
-  }
-
-  /**
-   * Stop the running workflow.
-   */
-  stopWorkflow(): void {
-    this.#executor?.stop();
-  }
-
-  /**
-   * Inject data into a block's input port.
-   */
-  inject(blockId: string, port: string, data: Json): boolean {
-    if (!this.#executor) return false;
-    return this.#executor.inject(blockId, port, data);
-  }
-
-  /**
-   * Get the running workflow ID.
-   */
-  get runningWorkflowId(): string | null {
-    return this.#executor?.workflowId ?? null;
-  }
-
-  /**
-   * Check if a workflow is running.
-   */
-  get isRunning(): boolean {
-    return this.#executor?.isRunning ?? false;
-  }
-
-  /**
-   * Add a listener for execution events (legacy - single workflow).
-   */
-  addListener(listener: ExecutionListener): () => void {
-    if (!this.#executor)
-      return () => {
-        /* no-op */
-      };
-    return this.#executor.addListener(listener);
-  }
-
-  /**
    * Add a global listener for ALL workflow execution events.
    * Useful for SSE streaming and debugging.
    */
   addGlobalListener(listener: ExecutionListener): () => void {
     this.#globalListeners.add(listener);
     return () => this.#globalListeners.delete(listener);
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────────
-  // Port Inspection
-  // ─────────────────────────────────────────────────────────────────────────────
-
-  /**
-   * Get the last value from a port.
-   */
-  getPortValue(blockId: string, port: string) {
-    return this.#executor?.getPortValue(blockId, port);
-  }
-
-  /**
-   * Get all port buffers.
-   */
-  getAllBuffers() {
-    return this.#executor?.getAllBuffers() ?? [];
-  }
-
-  /**
-   * Retrigger the last value from a port.
-   */
-  retrigger(blockId: string, port: string): boolean {
-    return this.#executor?.retrigger(blockId, port) ?? false;
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -369,9 +272,6 @@ export class AutomationEngine {
       this.logs.info('workflow.stopped', { id });
     }
     this.#executors.clear();
-
-    // Stop legacy executor
-    this.#executor?.stop();
 
     // Clean up event subscriptions
     for (const unsub of this.#eventUnsubs) unsub();

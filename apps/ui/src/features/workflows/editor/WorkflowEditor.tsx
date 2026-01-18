@@ -115,9 +115,6 @@ function WorkflowEditorWithBlocks({
     const map: Record<string, BlockDefinition> = {};
     for (const def of blockDefinitions) {
       map[def.type || def.id] = def;
-      // Also map by just the ID part for legacy blocks
-      const idPart = (def.type || def.id).split(':').pop();
-      if (idPart) map[idPart] = def;
     }
     return map;
   }, [blockDefinitions]);

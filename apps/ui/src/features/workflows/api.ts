@@ -56,9 +56,6 @@ export interface BlockDefinition {
   pluginId: string;
 }
 
-// Legacy alias
-export type BlockType = BlockDefinition;
-
 export async function fetchWorkflows(): Promise<Workflow[]> {
   const res = await fetch(`${API_BASE}/workflows`);
   return res.json();

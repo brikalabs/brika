@@ -161,6 +161,39 @@ refactor: simplify workflow executor
 test: add event bus tests
 ```
 
+## Versioning Strategy
+
+### No Backward Compatibility Required
+
+BRIKA is in active development. We prioritize clean code over backward compatibility:
+
+- ✅ **Use semantic versioning** - Breaking changes bump major version
+- ✅ **Delete old code** - Don't deprecate, just remove and version bump
+- ✅ **Clean refactors** - Improve code without legacy cruft
+- ❌ **No compatibility layers** - No `@deprecated` functions
+- ❌ **No feature flags** - Keep code simple
+
+### Making Breaking Changes
+
+When introducing breaking changes:
+
+1. Bump the major version in `package.json`
+2. Update all examples and documentation
+3. Delete old code completely
+4. Update internal references
+5. Document changes in release notes
+
+**Example:**
+
+```typescript
+// ✅ Good - Clean break (bump v1 → v2)
+export function log(level: LogLevel, message: string, meta?: object): void;
+
+// ❌ Bad - Don't do this
+export function log(level: LogLevel, message: string, meta?: object): void;
+export function logOld(level: string, message: string): void; // @deprecated
+```
+
 ## Architecture Rules
 
 ### Hard Boundaries

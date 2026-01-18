@@ -26,10 +26,7 @@ export function createRoutes() {
 
       return c.json(data, { headers });
     } catch (err) {
-      return c.json(
-        { error: 'Failed to load registry', message: String(err) },
-        500
-      );
+      return c.json({ error: 'Failed to load registry', message: String(err) }, 500);
     }
   });
 

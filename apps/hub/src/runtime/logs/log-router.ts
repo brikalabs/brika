@@ -117,6 +117,15 @@ export class LogRouter {
   }
 
   error(message: string, meta?: Record<string, Json>): void {
-    this.emit({ ts: Date.now(), level: "error", source: "hub", message, meta });
+    const enhancedMeta = meta ? { ...meta } : {};
+
+    // Auto-capture error stack if an error object is provided
+    if (meta?.error instanceof Error) {
+      enhancedMeta.errorName = meta.error.name;
+      enhancedMeta.errorMessage = meta.error.message;
+      enhancedMeta.errorStack = meta.error.stack ?? undefined;
+    }
+
+    this.emit({ ts: Date.now(), level: "error", source: "hub", message, meta: enhancedMeta });
   }
 }

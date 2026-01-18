@@ -64,52 +64,6 @@ export const workflowsRoutes = group('/api/workflows', [
     return [];
   }),
 
-  route.get('/status', ({ inject }) => {
-    const engine = inject(AutomationEngine);
-    return {
-      running: engine.isRunning,
-      workflowId: engine.runningWorkflowId,
-      buffers: engine.getAllBuffers(),
-    };
-  }),
-
-  route.post(
-    '/start',
-    {
-      body: z.object({
-        id: z.string(),
-      }),
-    },
-    async ({ body, inject }) => {
-      await inject(AutomationEngine).startWorkflow(body.id);
-      return { ok: true, workflowId: body.id };
-    }
-  ),
-
-  route.post('/stop', ({ inject }) => {
-    inject(AutomationEngine).stopWorkflow();
-    return { ok: true };
-  }),
-
-  route.post(
-    '/inject',
-    {
-      body: z.object({
-        blockId: z.string(),
-        port: z.string(),
-        data: z.unknown(),
-      }),
-    },
-    ({ body, inject }) => {
-      const ok = inject(AutomationEngine).inject(
-        body.blockId,
-        body.port,
-        body.data as import('@brika/shared').Json
-      );
-      return { ok };
-    }
-  ),
-
   route.post('/enable', { body: z.object({ id: z.string() }) }, async ({ body, inject }) => {
     return { ok: await inject(AutomationEngine).setEnabled(body.id, true) };
   }),

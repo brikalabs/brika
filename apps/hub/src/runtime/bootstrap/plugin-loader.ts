@@ -41,27 +41,9 @@ export class PluginLoader implements Loader {
         this.logs.error('plugin.load.failed', { name: entry.name, error: String(error) });
       }
     }
-
-    // Legacy: load from BRIKA_PLUGINS env var
-    await this.loadFromEnv();
   }
 
   async stop(): Promise<void> {
     await this.pm.stopAll();
-  }
-
-  private async loadFromEnv(): Promise<void> {
-    const preload = (process.env.BRIKA_PLUGINS ?? '')
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean);
-
-    for (const ref of preload) {
-      try {
-        await this.pm.load(ref);
-      } catch (error) {
-        this.logs.error('plugin.preload.failed', { ref, error: String(error) });
-      }
-    }
   }
 }

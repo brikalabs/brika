@@ -9,14 +9,14 @@ import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
 import { useState } from 'react';
 import { Badge, Card, Input } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
-import type { BlockType } from '../workflows/api';
+import type { BlockDefinition } from '../workflows/api';
 import { useBlockTypes } from '../workflows/hooks';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Block Card
 // ─────────────────────────────────────────────────────────────────────────────
 
-function BlockCard({ block }: { block: BlockType }) {
+function BlockCard({ block }: { block: BlockDefinition }) {
   const { tp } = useLocale();
   const iconName = (block.icon || 'box') as IconName;
   const color = block.color || 'var(--primary)';
@@ -71,7 +71,7 @@ export function BlocksPage() {
       acc[cat].push(block);
       return acc;
     },
-    {} as Record<string, BlockType[]>
+    {} as Record<string, BlockDefinition[]>
   );
 
   // Filter blocks by search - using translated values
@@ -95,7 +95,7 @@ export function BlocksPage() {
       if (filtered.length > 0) acc[cat] = filtered;
       return acc;
     },
-    {} as Record<string, BlockType[]>
+    {} as Record<string, BlockDefinition[]>
   );
 
   const totalFiltered = Object.values(filteredCategories).flat().length;

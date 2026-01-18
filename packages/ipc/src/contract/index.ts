@@ -6,21 +6,16 @@
 
 export type {
   BlockCategory as BlockCategoryType,
-  BlockContext as BlockContextType,
   BlockDefinition as BlockDefinitionType,
   BlockPort as BlockPortType,
-  BlockResult as BlockResultType,
 } from './blocks';
 // ─── Blocks ───
 export {
   BlockCategory,
-  BlockContext,
   BlockDefinition,
   BlockPort,
-  BlockResult,
   blockEmit,
   blockLog,
-  executeBlock,
   pushInput,
   registerBlock,
   startBlock,

@@ -38,7 +38,6 @@ export type { GenericRef, PassthroughRef, TypeMarkerValue } from './schema-types
 export {
   getTypeMarker,
   isGenericRef,
-  isPassthrough,
   isPassthroughRef,
   TypeMarker,
 } from './schema-types';

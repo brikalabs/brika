@@ -1,6 +1,5 @@
 import { withPredicate } from '@brika/events';
 import type { Json } from '@brika/ipc';
-import type { BlockContext, BlockResult } from '@brika/ipc/contract';
 import type { Plugin } from '@brika/shared';
 import { inject, singleton } from '@brika/shared';
 import { BlockRegistry } from '@/runtime/blocks';
@@ -205,26 +204,6 @@ export class PluginManager {
 
   cleanupStaleState(): Promise<void> {
     return this.#lifecycle.cleanupStale();
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Block Execution (Legacy)
-  // ─────────────────────────────────────────────────────────────────────────
-
-  executeBlock(
-    blockType: string,
-    config: Record<string, Json>,
-    context: BlockContext
-  ): Promise<BlockResult> {
-    const pluginName = this.#blocks.getProvider(blockType);
-    if (!pluginName)
-      return Promise.resolve({ error: `Unknown block type: ${blockType}`, stop: true });
-
-    const process = this.#lifecycle.getProcessByName(pluginName);
-    if (!process) return Promise.resolve({ error: `Plugin not loaded: ${pluginName}`, stop: true });
-
-    const localBlockId = blockType.includes(':') ? blockType.split(':')[1] : blockType;
-    return process.executeBlock(localBlockId, config, context);
   }
 
   // ─────────────────────────────────────────────────────────────────────────

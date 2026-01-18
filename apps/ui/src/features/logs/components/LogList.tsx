@@ -1,13 +1,30 @@
-import React, { useEffect, useRef } from "react";
+import { AlertCircle, AlertTriangle, Bug, ChevronDown, ChevronRight, Info } from "lucide-react";
+import React, { useEffect, useRef, useState } from "react";
 import { ScrollArea, Skeleton } from "@/components/ui";
 import { useLocale } from "@/lib/use-locale";
 import type { StoredLogEvent } from "../api";
 
-const LEVEL_COLORS: Record<string, string> = {
-  error: "text-red-400 bg-red-500/10",
-  warn: "text-yellow-400 bg-yellow-500/10",
-  info: "text-emerald-400 bg-emerald-500/10",
-  debug: "text-zinc-400 bg-zinc-500/10",
+const LEVEL_CONFIG: Record<string, { color: string; icon: React.ElementType; label: string }> = {
+  error: {
+    color: "text-red-400 bg-red-500/10 border-red-500/20",
+    icon: AlertCircle,
+    label: "ERROR",
+  },
+  warn: {
+    color: "text-yellow-400 bg-yellow-500/10 border-yellow-500/20",
+    icon: AlertTriangle,
+    label: "WARN",
+  },
+  info: {
+    color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
+    icon: Info,
+    label: "INFO",
+  },
+  debug: {
+    color: "text-zinc-400 bg-zinc-500/10 border-zinc-500/20",
+    icon: Bug,
+    label: "DEBUG",
+  },
 };
 
 interface LogListProps {
@@ -76,28 +93,110 @@ export function LogList({ logs, isLoading, isFetchingMore, hasMore, onLoadMore }
 }
 
 function LogRow({ log }: { log: StoredLogEvent }) {
+  const [isExpanded, setIsExpanded] = useState(false);
   const timestamp = new Date(log.ts).toISOString().slice(11, 23);
   const source = log.pluginName ? `${log.source}:${log.pluginName}` : log.source;
   const isNew = log.id < 0; // Negative IDs are live logs
+  const config = LEVEL_CONFIG[log.level] || LEVEL_CONFIG.info;
+  const Icon = config.icon;
+
+  // Check if this log has error details
+  const hasErrorStack = log.meta?.errorStack;
+  const hasMetadata = log.meta && Object.keys(log.meta).length > 0;
+  const isExpandable = hasErrorStack || (hasMetadata && log.level === "error");
+
+  // Filter out error-specific fields from general metadata
+  const generalMeta = log.meta
+    ? Object.fromEntries(
+        Object.entries(log.meta).filter(
+          ([key]) => !["errorStack", "errorName", "errorMessage", "error"].includes(key),
+        ),
+      )
+    : null;
+
+  const hasGeneralMeta = generalMeta && Object.keys(generalMeta).length > 0;
 
   return (
     <div
-      className={`flex items-start gap-3 border-border/30 border-b px-4 py-1.5 hover:bg-muted/30 ${isNew ? "bg-primary/5" : ""}`}
+      className={`border-border/30 border-b px-4 py-2 transition-colors ${isNew ? "bg-primary/5" : ""} ${isExpanded ? "bg-muted/50" : "hover:bg-muted/30"}`}
     >
-      <span className="shrink-0 text-muted-foreground tabular-nums">{timestamp}</span>
-      <span
-        className={`shrink-0 rounded px-1.5 py-0.5 font-semibold text-[10px] uppercase ${LEVEL_COLORS[log.level] || ""}`}
+      {/* Main log row */}
+      <div
+        className={`flex items-start gap-3 ${isExpandable ? "cursor-pointer" : ""}`}
+        onClick={() => isExpandable && setIsExpanded(!isExpanded)}
       >
-        {log.level}
-      </span>
-      <span className="w-32 shrink-0 truncate text-muted-foreground" title={source}>
-        {source}
-      </span>
-      <span className="flex-1 text-foreground">{log.message}</span>
-      {log.meta && (
-        <span className="max-w-xs truncate text-muted-foreground/70" title={JSON.stringify(log.meta)}>
-          {JSON.stringify(log.meta)}
+        {/* Expand indicator */}
+        <div className="flex w-4 shrink-0 items-center justify-center">
+          {isExpandable ? (
+            isExpanded ? (
+              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+            ) : (
+              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+            )
+          ) : null}
+        </div>
+
+        {/* Timestamp */}
+        <span className="shrink-0 text-muted-foreground tabular-nums">{timestamp}</span>
+
+        {/* Level badge with icon */}
+        <span
+          className={`flex shrink-0 items-center gap-1 rounded border px-1.5 py-0.5 font-semibold text-[10px] ${config.color}`}
+        >
+          <Icon className="h-3 w-3" />
+          {config.label}
         </span>
+
+        {/* Source */}
+        <span className="w-32 shrink-0 truncate text-muted-foreground" title={source}>
+          {source}
+        </span>
+
+        {/* Message */}
+        <span className={`flex-1 ${log.level === "error" ? "font-medium text-red-400" : "text-foreground"}`}>
+          {log.message}
+        </span>
+
+        {/* Quick metadata preview (only if not expandable) */}
+        {!isExpandable && hasGeneralMeta && (
+          <span className="max-w-xs shrink-0 truncate text-[10px] text-muted-foreground/70">
+            {JSON.stringify(generalMeta)}
+          </span>
+        )}
+      </div>
+
+      {/* Expanded section */}
+      {isExpanded && (
+        <div className="mt-2 ml-8 space-y-2 border-border/20 border-l-2 pl-4">
+          {/* Error details */}
+          {log.meta?.errorName && (
+            <div className="space-y-1">
+              <div className="font-semibold text-red-400 text-xs">
+                {String(log.meta.errorName)}: {log.meta.errorMessage ? String(log.meta.errorMessage) : "Unknown error"}
+              </div>
+            </div>
+          )}
+
+          {/* Error stack trace */}
+          {hasErrorStack && log.meta?.errorStack && (
+            <div className="rounded bg-black/40 p-3">
+              <div className="mb-1 font-semibold text-muted-foreground text-xs">Stack Trace:</div>
+              <pre className="overflow-x-auto whitespace-pre-wrap break-words font-mono text-[10px] text-red-300/90 leading-relaxed">
+                {String(log.meta.errorStack)}
+              </pre>
+            </div>
+          )}
+
+          {/* General metadata */}
+          {hasGeneralMeta && (
+            <div className="rounded bg-muted/50 p-3">
+              <div className="mb-1 font-semibold text-muted-foreground text-xs">Metadata:</div>
+              <pre className="overflow-x-auto whitespace-pre-wrap break-words font-mono text-[10px] text-foreground/80 leading-relaxed">
+                {JSON.stringify(generalMeta, null, 2)}
+              </pre>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

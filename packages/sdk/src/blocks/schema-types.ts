@@ -265,15 +265,6 @@ export function isPassthroughRef(value: unknown): value is PassthroughRef {
   );
 }
 
-/**
- * Check if a schema description is a passthrough marker.
- * @deprecated Use isPassthroughRef instead for type-safe checks
- */
-export function isPassthrough(description?: string): string | null {
-  if (!description?.startsWith(PASSTHROUGH_MARKER)) return null;
-  return description.split(':')[1] || null;
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Generic Port (Dynamic Type Inference)
 // ─────────────────────────────────────────────────────────────────────────────

@@ -77,7 +77,7 @@ export { z } from './blocks/schema';
 
 // Type markers and utilities (for internal use)
 export type { TypeMarkerValue } from './blocks/schema-types';
-export { getTypeMarker, isPassthrough, TypeMarker } from './blocks/schema-types';
+export { getTypeMarker, TypeMarker } from './blocks/schema-types';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Block Metadata Types
@@ -86,29 +86,31 @@ export { getTypeMarker, isPassthrough, TypeMarker } from './blocks/schema-types'
 export type { BlockDefinition, BlockPort, BlockSchema, PortDirection } from './blocks';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Events & Lifecycle
+// Logging
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type {
-  EventHandler,
-  EventPayload,
-  InitHandler,
-  PreferencesChangeHandler,
-  StopHandler,
-  UninstallHandler,
-} from './api';
+export { log } from './api/logging';
 
-export {
-  emit,
-  getPreferences,
-  log,
-  on,
-  onEvent,
-  onInit,
-  onPreferencesChange,
-  onStop,
-  onUninstall,
-} from './api';
+// ─────────────────────────────────────────────────────────────────────────────
+// Events
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type { EventHandler, EventPayload } from './api/events';
+export { emit, on, onEvent } from './api/events';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Lifecycle
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type { InitHandler, StopHandler, UninstallHandler } from './api/lifecycle';
+export { onInit, onStop, onUninstall } from './api/lifecycle';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Preferences
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type { PreferencesChangeHandler } from './api/preferences';
+export { getPreferences, onPreferencesChange } from './api/preferences';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Common Types

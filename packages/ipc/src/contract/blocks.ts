@@ -35,23 +35,6 @@ export const BlockDefinition = z.object({
 });
 export type BlockDefinition = z.infer<typeof BlockDefinition>;
 
-export const BlockContext = z.object({
-  workflowId: z.string(),
-  nodeId: z.string(),
-  trigger: Json,
-  vars: JsonRecord,
-});
-export type BlockContext = z.infer<typeof BlockContext>;
-
-export const BlockResult = z.object({
-  output: z.string().optional(),
-  data: Json.optional(),
-  setVars: JsonRecord.optional(),
-  error: z.string().optional(),
-  stop: z.boolean().optional(),
-});
-export type BlockResult = z.infer<typeof BlockResult>;
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Messages & RPCs
 // ─────────────────────────────────────────────────────────────────────────────
@@ -62,17 +45,6 @@ export const registerBlock = message(
   z.object({
     block: BlockDefinition,
   })
-);
-
-/** Hub executes a block on a plugin (legacy one-shot) */
-export const executeBlock = rpc(
-  'executeBlock',
-  z.object({
-    blockType: z.string(),
-    config: JsonRecord,
-    context: BlockContext,
-  }),
-  BlockResult
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
