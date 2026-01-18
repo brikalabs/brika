@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { VerifiedPlugin, VerifiedPluginsList } from '@brika/shared';
 import { inject, singleton } from '@brika/shared';
-import type { Logger } from '@/runtime/logs/log-router';
+import { Logger } from '@/runtime/logs/log-router';
 
 // Configuration
 const REGISTRY_URL = process.env.BRIKA_REGISTRY || 'https://registry.brika.dev';
@@ -20,7 +20,7 @@ const REFRESH_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
 export class VerifiedPluginsService {
   readonly #log = inject(Logger);
   #verifiedList: VerifiedPluginsList | null = null;
-  #verifiedMap = new Map<string, VerifiedPlugin>();
+  readonly #verifiedMap = new Map<string, VerifiedPlugin>();
   #lastFetch: number = 0;
   #fetchPromise: Promise<void> | null = null;
 
@@ -140,7 +140,7 @@ export class VerifiedPluginsService {
 
       this.#log.info('Loaded verified plugins', { count: data.plugins.length });
     } catch (error) {
-      this.#log.error('Failed to load verified plugins list', { error });
+      this.#log.error('Failed to load verified plugins list', { error: String(error) });
 
       // Use empty list if file doesn't exist or is invalid
       this.#verifiedList = {

@@ -100,16 +100,20 @@ function LogRow({ log }: { log: StoredLogEvent }) {
   const config = LEVEL_CONFIG[log.level] || LEVEL_CONFIG.info;
   const Icon = config.icon;
 
-  // Check if this log has error details
+  // Check if this log has error details or any metadata
   const hasErrorStack = log.meta?.errorStack;
   const hasMetadata = log.meta && Object.keys(log.meta).length > 0;
-  const isExpandable = hasErrorStack || (hasMetadata && log.level === "error");
+  const isExpandable = hasMetadata; // All logs with metadata are expandable
 
-  // Filter out error-specific fields from general metadata
+  // Extract source location if available
+  const sourceFile = log.meta?.sourceFile ? String(log.meta.sourceFile) : null;
+  const sourceLine = log.meta?.sourceLine ? Number(log.meta.sourceLine) : null;
+
+  // Filter out error-specific and source location fields from general metadata
   const generalMeta = log.meta
     ? Object.fromEntries(
         Object.entries(log.meta).filter(
-          ([key]) => !["errorStack", "errorName", "errorMessage", "error"].includes(key),
+          ([key]) => !["errorStack", "errorName", "errorMessage", "error", "sourceFile", "sourceLine"].includes(key),
         ),
       )
     : null;
@@ -157,10 +161,10 @@ function LogRow({ log }: { log: StoredLogEvent }) {
           {log.message}
         </span>
 
-        {/* Quick metadata preview (only if not expandable) */}
-        {!isExpandable && hasGeneralMeta && (
-          <span className="max-w-xs shrink-0 truncate text-[10px] text-muted-foreground/70">
-            {JSON.stringify(generalMeta)}
+        {/* Metadata indicator */}
+        {hasGeneralMeta && !isExpanded && (
+          <span className="shrink-0 text-[10px] text-muted-foreground/50">
+            {Object.keys(generalMeta).length} field{Object.keys(generalMeta).length !== 1 ? "s" : ""}
           </span>
         )}
       </div>
@@ -168,6 +172,19 @@ function LogRow({ log }: { log: StoredLogEvent }) {
       {/* Expanded section */}
       {isExpanded && (
         <div className="mt-2 ml-8 space-y-2 border-border/20 border-l-2 pl-4">
+          {/* Source location */}
+          {sourceFile && (
+            <div className="rounded border border-blue-500/20 bg-blue-500/10 p-2">
+              <div className="flex items-center gap-2 font-mono text-[10px]">
+                <span className="font-semibold text-blue-400">Source:</span>
+                <span className="text-blue-300/90">
+                  {sourceFile}
+                  {sourceLine && <span className="text-blue-400">:{sourceLine}</span>}
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Error details */}
           {log.meta?.errorName && (
             <div className="space-y-1">

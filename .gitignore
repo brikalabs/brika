@@ -18,3 +18,11 @@ config/
 .brika/logs.db-shm
 .brika/logs.db-wal
 # Keep tracked: .brika/elia.yml, .brika/automations/, .brika/.gitignore
+
+# SonarQube
+.scannerwork/
+.sonar/
+coverage/
+
+# Biome reports
+biome-report.json

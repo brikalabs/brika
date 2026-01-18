@@ -1,11 +1,37 @@
 /**
  * Logging API
  *
- * Comprehensive logging with automatic error stack capture.
+ * Comprehensive logging with automatic error stack capture and source location tracking.
  */
 
 import { getContext, type LogLevel } from '../context';
 import type { AnyObj } from '../types';
+
+/**
+ * Captures the call site information from the stack trace.
+ * Returns file path and line number where the log was triggered.
+ * @param depth - Stack depth to capture (default: 3 for direct log calls)
+ */
+function captureCallSite(depth = 3): { sourceFile?: string; sourceLine?: number } {
+  const err = new Error();
+  const stack = err.stack;
+  if (!stack) return {};
+
+  const lines = stack.split('\n');
+  const callerLine = lines[depth];
+  if (!callerLine) return {};
+
+  // Parse stack line: "at functionName (file:line:column)" or "at file:line:column"
+  const match =
+    callerLine.match(/\((.+):(\d+):(\d+)\)$/) || callerLine.match(/at\s+(.+):(\d+):(\d+)$/);
+  if (!match) return {};
+
+  const [, filePath, lineNumber] = match;
+  return {
+    sourceFile: filePath,
+    sourceLine: Number.parseInt(lineNumber, 10),
+  };
+}
 
 /**
  * Log a message to the hub.
@@ -21,7 +47,9 @@ import type { AnyObj } from '../types';
  * ```
  */
 export function log(level: LogLevel, message: string, meta?: AnyObj): void {
-  getContext().log(level, message, meta);
+  const callSite = captureCallSite();
+  const enhancedMeta = { ...meta, ...callSite };
+  getContext().log(level, message, enhancedMeta);
 }
 
 /**
@@ -33,7 +61,9 @@ export function log(level: LogLevel, message: string, meta?: AnyObj): void {
  * ```
  */
 log.debug = (message: string, meta?: AnyObj): void => {
-  log('debug', message, meta);
+  const callSite = captureCallSite(4); // Extra depth for convenience method
+  const enhancedMeta = { ...meta, ...callSite };
+  getContext().log('debug', message, enhancedMeta);
 };
 
 /**
@@ -45,7 +75,9 @@ log.debug = (message: string, meta?: AnyObj): void => {
  * ```
  */
 log.info = (message: string, meta?: AnyObj): void => {
-  log('info', message, meta);
+  const callSite = captureCallSite(4); // Extra depth for convenience method
+  const enhancedMeta = { ...meta, ...callSite };
+  getContext().log('info', message, enhancedMeta);
 };
 
 /**
@@ -57,7 +89,9 @@ log.info = (message: string, meta?: AnyObj): void => {
  * ```
  */
 log.warn = (message: string, meta?: AnyObj): void => {
-  log('warn', message, meta);
+  const callSite = captureCallSite(4); // Extra depth for convenience method
+  const enhancedMeta = { ...meta, ...callSite };
+  getContext().log('warn', message, enhancedMeta);
 };
 
 /**
@@ -73,7 +107,8 @@ log.warn = (message: string, meta?: AnyObj): void => {
  * ```
  */
 log.error = (message: string, meta?: AnyObj): void => {
-  const enhancedMeta = meta ? { ...meta } : {};
+  const callSite = captureCallSite(4); // Extra depth for convenience method
+  const enhancedMeta: AnyObj = { ...meta, ...callSite };
 
   // Auto-capture error stack if an error object is provided
   if (meta?.error instanceof Error) {
@@ -82,5 +117,5 @@ log.error = (message: string, meta?: AnyObj): void => {
     enhancedMeta.errorStack = meta.error.stack;
   }
 
-  log('error', message, enhancedMeta);
+  getContext().log('error', message, enhancedMeta);
 };

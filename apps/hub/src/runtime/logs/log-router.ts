@@ -16,6 +16,32 @@ function shouldLog(min: LogLevel, level: LogLevel): boolean {
   return LEVEL_ORDER[level] >= LEVEL_ORDER[min];
 }
 
+/**
+ * Captures the call site information from the stack trace.
+ * Returns file path and line number where the log was triggered.
+ */
+function captureCallSite(): { sourceFile?: string; sourceLine?: number } {
+  const err = new Error();
+  const stack = err.stack;
+  if (!stack) return {};
+
+  const lines = stack.split('\n');
+  // Skip first 3 lines: "Error", our utility function, and the log method itself
+  // The 4th line should be the actual caller
+  const callerLine = lines[3];
+  if (!callerLine) return {};
+
+  // Parse stack line: "at functionName (file:line:column)" or "at file:line:column"
+  const match = new RegExp(/\((.+):(\d+):(\d+)\)$/).exec(callerLine) || new RegExp(/at\s+(.+):(\d+):(\d+)$/).exec(callerLine);
+  if (!match) return {};
+
+  const [, filePath, lineNumber] = match;
+  return {
+    sourceFile: filePath,
+    sourceLine: Number.parseInt(lineNumber, 10),
+  };
+}
+
 function formatLine(e: LogEvent, color: boolean): string {
   const d = new Date(e.ts);
   const ts = `${d.toISOString().slice(11, 23)}`;
@@ -105,19 +131,26 @@ export class Logger {
   }
 
   debug(message: string, meta?: Record<string, Json>): void {
-    this.emit({ ts: Date.now(), level: "debug", source: "hub", message, meta });
+    const callSite = captureCallSite();
+    const enhancedMeta = { ...meta, ...callSite };
+    this.emit({ ts: Date.now(), level: "debug", source: "hub", message, meta: enhancedMeta });
   }
 
   info(message: string, meta?: Record<string, Json>): void {
-    this.emit({ ts: Date.now(), level: "info", source: "hub", message, meta });
+    const callSite = captureCallSite();
+    const enhancedMeta = { ...meta, ...callSite };
+    this.emit({ ts: Date.now(), level: "info", source: "hub", message, meta: enhancedMeta });
   }
 
   warn(message: string, meta?: Record<string, Json>): void {
-    this.emit({ ts: Date.now(), level: "warn", source: "hub", message, meta });
+    const callSite = captureCallSite();
+    const enhancedMeta = { ...meta, ...callSite };
+    this.emit({ ts: Date.now(), level: "warn", source: "hub", message, meta: enhancedMeta });
   }
 
   error(message: string, meta?: Record<string, Json>): void {
-    const enhancedMeta = meta ? { ...meta } : {};
+    const callSite = captureCallSite();
+    const enhancedMeta: Record<string, Json> = { ...meta, ...callSite };
 
     // Auto-capture error stack if an error object is provided
     if (meta?.error instanceof Error) {
