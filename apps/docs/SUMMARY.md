@@ -22,7 +22,6 @@
 * [SDK](api-reference/sdk.md)
 * [Reactive Operators](api-reference/operators.md)
 * [Schema Types](api-reference/schema-types.md)
-* [Events](api-reference/events.md)
 * [Sparks](api-reference/sparks.md)
 * [Lifecycle](api-reference/lifecycle.md)
 * [Preferences](api-reference/preferences.md)

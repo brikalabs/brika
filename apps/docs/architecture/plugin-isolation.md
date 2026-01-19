@@ -126,16 +126,18 @@ const result = await plugin.call("executeBlock", {
 });
 ```
 
-### Event Streaming
+### Spark Streaming
 
 ```typescript
-// Plugin emits event
-emit("sensor.reading", { temperature: 23.5 });
-
-// Hub receives and routes
-eventBus.on("sensor.*", (event) => {
-  // Forward to subscribers
+// Plugin defines and emits a spark
+const sensorReading = defineSpark({
+  id: "sensor-reading",
+  schema: z.object({ temperature: z.number() }),
 });
+
+sensorReading.emit({ temperature: 23.5 });
+
+// Hub receives, persists to SQLite, and routes to subscribers
 ```
 
 ### Log Streaming

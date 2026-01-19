@@ -257,16 +257,13 @@ onStop(() => {
 ### Graceful Shutdown
 
 ```typescript
-import { onStop, emit, log } from "@brika/sdk";
+import { onStop, log } from "@brika/sdk";
 
 onStop(async () => {
-  // Notify other plugins
-  emit("myPlugin.stopping", { reason: "shutdown" });
-  
   // Wait for pending operations
   log.info("Waiting for pending operations...");
   await Promise.all(pendingOperations);
-  
+
   // Final cleanup
   log.info("Cleanup complete");
 });

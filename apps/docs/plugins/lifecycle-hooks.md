@@ -62,47 +62,46 @@ Use `onUninstall` for:
 * Revoking API tokens
 * Cleaning up external resources
 
-## Events
+## Sparks
 
-### Subscribing to Events
+Sparks are typed, persisted events for inter-plugin communication. See the [Sparks documentation](../api-reference/sparks.md) for full details.
 
-Listen to events from the hub event bus:
+### Defining Sparks
+
+Define sparks in your plugin's `package.json` and code:
 
 ```typescript
-import { on, log } from "@brika/sdk";
+import { defineSpark, z } from "@brika/sdk";
 
-// Subscribe with pattern matching
-const unsubscribe = on("device.*", (event) => {
-  log.debug(`Device event: ${event.type}`, event.payload);
+export const deviceUpdated = defineSpark({
+  id: "device-updated",
+  schema: z.object({
+    deviceId: z.string(),
+    state: z.string(),
+    ts: z.number(),
+  }),
 });
 
-// Unsubscribe when done
-onStop(() => {
-  unsubscribe();
+// Emit with full type safety
+deviceUpdated.emit({
+  deviceId: "light-1",
+  state: "on",
+  ts: Date.now(),
 });
 ```
 
-### Emitting Events
+### Subscribing to Sparks
 
-Emit events to the hub event bus:
+Subscribe to sparks in reactive blocks using `subscribeSpark`:
 
 ```typescript
-import { emit } from "@brika/sdk";
+import { subscribeSpark, map } from "@brika/sdk";
 
-emit("device.updated", { id: "light-1", state: "on" });
-emit("motion.detected", { zone: "living-room", confidence: 0.95 });
+// In a reactive block executor:
+start(subscribeSpark("other-plugin:device-updated"))
+  .pipe(map((event) => event.payload))
+  .to(outputs.data);
 ```
-
-### Event Patterns
-
-Use glob patterns for flexible matching:
-
-| Pattern | Matches |
-|---------|---------|
-| `device.updated` | Exact match |
-| `device.*` | `device.updated`, `device.deleted`, etc. |
-| `*.updated` | `device.updated`, `user.updated`, etc. |
-| `**` | All events |
 
 ## Preferences
 
@@ -194,10 +193,9 @@ try {
 ```typescript
 import {
   defineReactiveBlock,
+  defineSpark,
   input,
   output,
-  on,
-  emit,
   onInit,
   onStop,
   getPreferences,
@@ -212,18 +210,21 @@ interface PluginConfig {
 }
 
 let connection: Connection | null = null;
-let unsubscribe: (() => void) | null = null;
+
+// Define a spark for inter-plugin communication
+export const dataFetched = defineSpark({
+  id: "data-fetched",
+  schema: z.object({
+    count: z.number(),
+    ts: z.number(),
+  }),
+});
 
 // Initialize on startup
 onInit(async () => {
   const config = getPreferences<PluginConfig>();
   connection = await connect(config.apiEndpoint);
   log.info('Connected to API', { endpoint: config.apiEndpoint });
-});
-
-// Subscribe to events
-unsubscribe = on("system.reload", () => {
-  log.info('System reload requested');
 });
 
 // Watch for config changes
@@ -235,7 +236,6 @@ onPreferencesChange<PluginConfig>(async (newConfig) => {
 
 // Cleanup on stop
 onStop(() => {
-  unsubscribe?.();
   connection?.close();
   log.info('Plugin stopped');
 });
@@ -258,7 +258,8 @@ export const fetchData = defineReactiveBlock(
       try {
         const data = await connection?.fetch();
         outputs.data.emit(data);
-        emit("data.fetched", { count: data.length });
+        // Emit a spark for other plugins to react to
+        dataFetched.emit({ count: data.length, ts: Date.now() });
       } catch (err) {
         log.error('Fetch failed', { error: err });
         outputs.error.emit(String(err));
@@ -273,4 +274,4 @@ log.info('Plugin loaded');
 ## Next Steps
 
 * [SDK Reference](../api-reference/sdk.md) — Full API documentation
-* [Events](../api-reference/events.md) — Event system details
+* [Sparks](../api-reference/sparks.md) — Typed event system

@@ -4,7 +4,7 @@ Sparks are typed, persisted events that enable inter-plugin communication with f
 
 ## Overview
 
-While the [Event System](events.md) provides lightweight pub/sub communication, Sparks offer additional features:
+Sparks are the primary mechanism for inter-plugin communication in BRIKA. They provide:
 
 - **Type Safety**: Zod schemas ensure payloads are validated at compile-time and runtime
 - **Persistence**: All spark events are stored in SQLite for historical analysis
@@ -446,6 +446,6 @@ export const sensorReadingV2 = defineSpark({
 
 ## Next Steps
 
-- [Events](events.md) — Lightweight pub/sub communication
 - [Reactive Blocks](../plugins/reactive-blocks.md) — Building workflow blocks
 - [Schema Types](schema-types.md) — Custom configuration types
+- [Lifecycle Hooks](../plugins/lifecycle-hooks.md) — Plugin lifecycle management

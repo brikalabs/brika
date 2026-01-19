@@ -623,69 +623,46 @@ try {
 
 ---
 
-## Events
+## Sparks
 
-### emit
+Sparks are typed, persisted events for inter-plugin communication. See the [Sparks documentation](sparks.md) for full details.
 
-Emit an event to the hub event bus.
+### defineSpark
 
-```typescript
-import { emit } from "@brika/sdk";
-
-emit("device.updated", { id: "light-1", state: "on" });
-emit("timer.completed", { name: "morning-alarm" });
-```
-
-**Signature:**
+Define a typed spark with Zod schema validation.
 
 ```typescript
-function emit(eventType: string, payload?: Json): void
-```
+import { defineSpark, z } from "@brika/sdk";
 
-### on
-
-Subscribe to events matching a glob pattern. Returns an unsubscribe function.
-
-```typescript
-import { on } from "@brika/sdk";
-
-const unsubscribe = on("device.*", (event) => {
-  console.log(event.type, event.payload);
+export const deviceUpdated = defineSpark({
+  id: "device-updated",
+  schema: z.object({
+    deviceId: z.string(),
+    state: z.string(),
+    ts: z.number(),
+  }),
 });
 
-// Later: unsubscribe();
+// Emit with full type safety
+deviceUpdated.emit({
+  deviceId: "light-1",
+  state: "on",
+  ts: Date.now(),
+});
 ```
 
-**Signature:**
+### subscribeSpark
+
+Subscribe to spark events in reactive blocks.
 
 ```typescript
-function on(pattern: string, handler: EventHandler): () => void
+import { subscribeSpark } from "@brika/sdk";
+
+// In a reactive block executor:
+start(subscribeSpark("timer:timer-completed"))
+  .pipe(map((event) => event.payload))
+  .to(outputs.data);
 ```
-
-**EventPayload:**
-
-```typescript
-interface EventPayload {
-  id: string;       // Event ID
-  type: string;     // Event type (e.g., "device.updated")
-  source: string;   // Source plugin ID
-  payload: Json;    // Event data
-  ts: number;       // Timestamp
-}
-```
-
-**Pattern Examples:**
-
-| Pattern | Matches |
-|---------|---------|
-| `device.updated` | Exact match |
-| `device.*` | `device.updated`, `device.deleted`, etc. |
-| `*.updated` | `device.updated`, `user.updated`, etc. |
-| `**` | All events |
-
-### onEvent
-
-Alias for `on`.
 
 ---
 
