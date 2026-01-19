@@ -40,7 +40,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { to: '/', labelKey: 'nav:dashboard', icon: LayoutDashboard },
   { to: '/plugins', labelKey: 'nav:plugins', icon: Plug },
-  { to: '/events', labelKey: 'nav:events', icon: Zap },
+  { to: '/sparks', labelKey: 'nav:sparks', icon: Zap },
   { to: '/workflows', labelKey: 'nav:workflows', icon: Workflow },
   { to: '/blocks', labelKey: 'nav:blocks', icon: Blocks },
   { to: '/logs', labelKey: 'nav:logs', icon: FileText },

@@ -73,24 +73,24 @@ export const echo = defineReactiveBlock(
       suffix: z.string().optional().describe("Optional suffix for string messages"),
     }),
   },
-  ({ inputs, outputs, config, log }) => {
+  ({ inputs, outputs, config }) => {
     inputs.in.on((data) => {
       if (typeof data === "string" && (config.prefix || config.suffix)) {
         const prefix = config.prefix ?? "";
         const suffix = config.suffix ?? "";
         const result = `${prefix}${data}${suffix}`;
-        log("info", `Echo: ${result}`);
+        log.info(`Echo: ${result}`);
         outputs.out.emit(result);
       } else {
-        log("info", `Echo: ${JSON.stringify(data)}`);
+        log.info(`Echo: ${JSON.stringify(data)}`);
         outputs.out.emit(data);
       }
     });
   }
 );
 
-onStop(() => log("info", "Echo plugin stopping"));
-log("info", "Echo plugin loaded");
+onStop(() => log.info("Echo plugin stopping"));
+log.info("Echo plugin loaded");
 ```
 
 ## Installation

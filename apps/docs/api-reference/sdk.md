@@ -99,9 +99,10 @@ interface BlockContext<TInputs, TOutputs, TConfig> {
   outputs: OutputEmitters<TOutputs>; // Typed output emitters
   config: z.infer<TConfig>;      // Parsed configuration
   start<T>(source: Source<T>): Flow<T>; // Start a source flow
-  log: Logger;                   // Block-scoped logger
 }
 ```
+
+> **Note:** Use the global `log` import for logging within blocks.
 
 **Example:**
 
@@ -120,7 +121,7 @@ export const temperatureAlert = defineReactiveBlock(
       maxTemp: z.number().default(30).describe("Max temperature threshold"),
     }),
   },
-  ({ inputs, outputs, config, log }) => {
+  ({ inputs, outputs, config }) => {
     inputs.temperature.on((temp) => {
       if (temp > config.maxTemp) {
         log.warn(`High temperature: ${temp}°C`);
@@ -322,12 +323,12 @@ URL with validation. UI renders a URL input.
 z.url("Webhook URL")
 ```
 
-#### z.toolRef(description?)
+#### z.sparkType(description?)
 
-Reference to a tool. UI renders a tool picker dropdown.
+Reference to a spark type. UI renders a spark picker dropdown.
 
 ```typescript
-z.toolRef("Tool to call")
+z.sparkType("Spark type to listen for")
 ```
 
 ---

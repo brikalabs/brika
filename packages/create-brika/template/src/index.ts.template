@@ -31,14 +31,14 @@ export const {{blockNameCamel}} = defineReactiveBlock(
       enabled: z.boolean().default(true).describe("Enable processing"),
     }),
   },
-  ({ inputs, outputs, config, log }) => {
+  ({ inputs, outputs, config }) => {
     inputs.in.on((data) => {
       if (!config.enabled) {
-        log("debug", "Processing disabled, skipping");
+        log.debug("Processing disabled, skipping");
         return;
       }
 
-      log("info", "Processing data", { data });
+      log.info("Processing data", { data });
 
       // TODO: Add your block logic here
       outputs.out.emit(data);

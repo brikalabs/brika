@@ -8,6 +8,7 @@ import {
   loader,
   PluginLoader,
   routes,
+  sparks,
   trapSignals,
 } from '@/runtime/bootstrap';
 import { allRoutes } from '@/runtime/http/routes';
@@ -18,6 +19,7 @@ import { allRoutes } from '@/runtime/http/routes';
  * Declarative bootstrap with modular plugins.
  */
 await bootstrap()
+  .use(sparks())
   .use(routes(allRoutes))
   .use(loader(I18nLoader))
   .use(loader(PluginLoader))

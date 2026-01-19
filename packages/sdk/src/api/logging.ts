@@ -4,7 +4,7 @@
  * Comprehensive logging with automatic error stack capture and source location tracking.
  */
 
-import { getContext, type LogLevel } from '../context';
+import { getContext } from '../context';
 import type { AnyObj } from '../types';
 
 /**
@@ -29,93 +29,73 @@ function captureCallSite(depth = 3): { sourceFile?: string; sourceLine?: number 
   const [, filePath, lineNumber] = match;
   return {
     sourceFile: filePath,
-    sourceLine: Number.parseInt(lineNumber, 10),
+    sourceLine: lineNumber ? Number.parseInt(lineNumber, 10) : undefined,
   };
 }
 
 /**
- * Log a message to the hub.
- *
- * @example
- * ```typescript
- * log("info", "Timer started", { id: timer.id });
- * log("error", "Failed to connect");
- *
- * // Or use convenience methods:
- * log.info("Timer started", { id: timer.id });
- * log.error("Failed to connect", { error: err });
- * ```
+ * Logger interface with method-based API.
  */
-export function log(level: LogLevel, message: string, meta?: AnyObj): void {
-  const callSite = captureCallSite();
-  const enhancedMeta = { ...meta, ...callSite };
-  getContext().log(level, message, enhancedMeta);
+export interface Logger {
+  debug(message: string, meta?: AnyObj): void;
+  info(message: string, meta?: AnyObj): void;
+  warn(message: string, meta?: AnyObj): void;
+  error(message: string, meta?: AnyObj): void;
 }
 
 /**
- * Log a debug message. Only shown when debug logging is enabled.
+ * Logging API with method-based interface.
  *
  * @example
  * ```typescript
+ * log.info("Timer started", { id: timer.id });
+ * log.error("Failed to connect", { error: err });
  * log.debug("Processing item", { itemId: 123 });
+ * log.warn("Retry attempt failed", { attempt: 2 });
  * ```
  */
-log.debug = (message: string, meta?: AnyObj): void => {
-  const callSite = captureCallSite(4); // Extra depth for convenience method
-  const enhancedMeta = { ...meta, ...callSite };
-  getContext().log('debug', message, enhancedMeta);
-};
+export const log: Logger = {
+  /**
+   * Log a debug message. Only shown when debug logging is enabled.
+   */
+  debug(message: string, meta?: AnyObj): void {
+    const callSite = captureCallSite();
+    const enhancedMeta = { ...meta, ...callSite };
+    getContext().log('debug', message, enhancedMeta);
+  },
 
-/**
- * Log an info message for general informational events.
- *
- * @example
- * ```typescript
- * log.info("Connection established", { host: "localhost" });
- * ```
- */
-log.info = (message: string, meta?: AnyObj): void => {
-  const callSite = captureCallSite(4); // Extra depth for convenience method
-  const enhancedMeta = { ...meta, ...callSite };
-  getContext().log('info', message, enhancedMeta);
-};
+  /**
+   * Log an info message for general informational events.
+   */
+  info(message: string, meta?: AnyObj): void {
+    const callSite = captureCallSite();
+    const enhancedMeta = { ...meta, ...callSite };
+    getContext().log('info', message, enhancedMeta);
+  },
 
-/**
- * Log a warning message for potentially problematic situations.
- *
- * @example
- * ```typescript
- * log.warn("Retry attempt failed", { attempt: 2, maxRetries: 3 });
- * ```
- */
-log.warn = (message: string, meta?: AnyObj): void => {
-  const callSite = captureCallSite(4); // Extra depth for convenience method
-  const enhancedMeta = { ...meta, ...callSite };
-  getContext().log('warn', message, enhancedMeta);
-};
+  /**
+   * Log a warning message for potentially problematic situations.
+   */
+  warn(message: string, meta?: AnyObj): void {
+    const callSite = captureCallSite();
+    const enhancedMeta = { ...meta, ...callSite };
+    getContext().log('warn', message, enhancedMeta);
+  },
 
-/**
- * Log an error message. Automatically captures error stack traces.
- *
- * @example
- * ```typescript
- * try {
- *   await riskyOperation();
- * } catch (err) {
- *   log.error("Operation failed", { error: err });
- * }
- * ```
- */
-log.error = (message: string, meta?: AnyObj): void => {
-  const callSite = captureCallSite(4); // Extra depth for convenience method
-  const enhancedMeta: AnyObj = { ...meta, ...callSite };
+  /**
+   * Log an error message. Automatically captures error stack traces.
+   */
+  error(message: string, meta?: AnyObj): void {
+    const callSite = captureCallSite();
+    const enhancedMeta: AnyObj = { ...meta, ...callSite };
 
-  // Auto-capture error stack if an error object is provided
-  if (meta?.error instanceof Error) {
-    enhancedMeta.errorName = meta.error.name;
-    enhancedMeta.errorMessage = meta.error.message;
-    enhancedMeta.errorStack = meta.error.stack;
-  }
+    // Auto-capture error stack if an error object is provided
+    if (meta?.error instanceof Error) {
+      enhancedMeta.errorName = meta.error.name;
+      enhancedMeta.errorMessage = meta.error.message;
+      enhancedMeta.errorStack = meta.error.stack;
+    }
 
-  getContext().log('error', message, enhancedMeta);
+    getContext().log('error', message, enhancedMeta);
+  },
 };

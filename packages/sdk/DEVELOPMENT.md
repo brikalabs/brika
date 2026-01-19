@@ -72,9 +72,13 @@ When introducing a breaking change:
 // Before (v1.0.0)
 export function log(level: string, message: string): void;
 
-// After (v2.0.0) - just replace it
-export function log(level: LogLevel, message: string, meta?: object): void;
-log.info = (msg: string, meta?: object) => log('info', msg, meta);
+// After (v2.0.0) - object with methods
+export const log: Logger = {
+  debug(msg: string, meta?: object) { ... },
+  info(msg: string, meta?: object) { ... },
+  warn(msg: string, meta?: object) { ... },
+  error(msg: string, meta?: object) { ... },
+};
 ```
 
 ### ❌ Bad - Backward Compatibility
@@ -83,10 +87,10 @@ log.info = (msg: string, meta?: object) => log('info', msg, meta);
 // Don't do this!
 export function log(level: string, message: string): void;
 
-// @deprecated Use log() with LogLevel
+// @deprecated Use log.info() etc
 export function logDeprecated(level: string, message: string): void {
-  console.warn('logDeprecated is deprecated, use log()');
-  log(level as LogLevel, message);
+  console.warn('logDeprecated is deprecated, use log.info() etc');
+  log[level](message);
 }
 ```
 

@@ -11,18 +11,21 @@
  * - $type:code:language → Code editor
  */
 
+import { useQuery } from '@tanstack/react-query';
 import type { Node } from '@xyflow/react';
 import {
+  ArrowDownToLine,
+  ArrowUpFromLine,
   Check,
-  ChevronDown,
   ChevronRight,
   Copy,
   HelpCircle,
   Plus,
   Sparkles,
   Trash2,
+  Zap,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Badge,
   Button,
@@ -31,13 +34,19 @@ import {
   ScrollArea,
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
   Separator,
   Switch,
   Textarea,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
 } from '@/components/ui';
+import { fetcher } from '@/lib/query';
 import { useLocale } from '@/lib/use-locale';
 import { cn } from '@/lib/utils';
 import type { BlockNodeData } from './BlockNode';
@@ -46,7 +55,15 @@ import type { BlockNodeData } from './BlockNode';
 // Type Markers
 // ─────────────────────────────────────────────────────────────────────────────
 
-type TypeMarker = 'expression' | 'duration' | 'color' | 'code' | 'secret' | 'url' | 'json';
+type TypeMarker =
+  | 'expression'
+  | 'duration'
+  | 'color'
+  | 'code'
+  | 'secret'
+  | 'url'
+  | 'json'
+  | 'spark';
 
 function getTypeMarker(description?: string): { marker: TypeMarker | null; extra?: string } {
   if (!description) return { marker: null };
@@ -59,6 +76,7 @@ function getTypeMarker(description?: string): { marker: TypeMarker | null; extra
     'secret',
     'url',
     'json',
+    'spark',
   ];
   for (const marker of markers) {
     if (description.includes(`$type:${marker}`)) {
@@ -98,6 +116,7 @@ interface ConfigPanelProps {
   onUpdateBlock: (nodeId: string, config: Record<string, unknown>) => void;
   availableVariables: Variable[];
   blockSchema?: BlockSchema;
+  onCollapse?: () => void;
   className?: string;
 }
 
@@ -383,6 +402,17 @@ function SchemaField({ name, schema, value, onChange, variables, required, plugi
       );
     }
 
+    // Special type: Spark (autocomplete for spark types)
+    if (typeMarker === 'spark') {
+      return (
+        <SparkTypeInput
+          value={String(value ?? '')}
+          onChange={(v) => onChange(v)}
+          placeholder={cleanDescription || 'Select spark type...'}
+        />
+      );
+    }
+
     // Boolean - Switch
     if (type === 'boolean') {
       return (
@@ -552,6 +582,83 @@ function DurationInput({ value, onChange, placeholder }: DurationInputProps) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Spark Type Input with Autocomplete
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface RegisteredSpark {
+  type: string;
+  id: string;
+  pluginId: string;
+  name?: string;
+  description?: string;
+  schema?: Record<string, unknown>;
+}
+
+interface SparkTypeInputProps {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+}
+
+function SparkTypeInput({ value, onChange, placeholder }: SparkTypeInputProps) {
+  const { data: sparks = [] } = useQuery({
+    queryKey: ['sparks'],
+    queryFn: () => fetcher<RegisteredSpark[]>('/api/sparks'),
+    staleTime: 30000,
+  });
+
+  // Group sparks by plugin
+  const sparksByPlugin = useMemo(() => {
+    const grouped = new Map<string, RegisteredSpark[]>();
+    for (const spark of sparks) {
+      const existing = grouped.get(spark.pluginId) || [];
+      grouped.set(spark.pluginId, [...existing, spark]);
+    }
+    return grouped;
+  }, [sparks]);
+
+  if (sparks.length === 0) {
+    return (
+      <div className="flex items-center gap-2 rounded-md border bg-muted/50 px-3 py-2 text-muted-foreground text-sm">
+        <Zap className="size-4" />
+        <span>No sparks registered</span>
+      </div>
+    );
+  }
+
+  return (
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger className="bg-background">
+        <SelectValue placeholder={placeholder || 'Select spark type...'}>
+          {value && (
+            <span className="flex items-center gap-2">
+              <Zap className="size-4 text-amber-500" />
+              <span className="font-mono">{value}</span>
+            </span>
+          )}
+        </SelectValue>
+      </SelectTrigger>
+      <SelectContent>
+        {[...sparksByPlugin.entries()].map(([pluginId, pluginSparks]) => (
+          <SelectGroup key={pluginId}>
+            <SelectLabel className="font-mono text-xs">{pluginId}</SelectLabel>
+            {pluginSparks.map((spark) => (
+              <SelectItem key={spark.type} value={spark.type}>
+                <span className="flex items-center gap-2">
+                  <Zap className="size-3 text-amber-500" />
+                  <span>{spark.name || spark.id}</span>
+                  <span className="font-mono text-muted-foreground text-xs">({spark.type})</span>
+                </span>
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Trigger Config
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -574,12 +681,14 @@ function BlockConfig({
 }) {
   const config = data.config;
 
+  const { t } = useLocale();
+
   // If no schema properties, show empty state
   if (!schema?.properties || Object.keys(schema.properties).length === 0) {
     return (
       <div className="py-8 text-center text-muted-foreground">
-        <p className="text-sm">No configuration needed</p>
-        <p className="mt-1 text-xs">This block works with default settings</p>
+        <p className="text-sm">{t('workflows:editor.panels.noConfigNeeded')}</p>
+        <p className="mt-1 text-xs">{t('workflows:editor.panels.defaultSettings')}</p>
       </div>
     );
   }
@@ -615,9 +724,10 @@ export function ConfigPanel({
   onUpdateBlock,
   availableVariables,
   blockSchema,
+  onCollapse,
   className,
 }: ConfigPanelProps) {
-  const { tp } = useLocale();
+  const { t, tp } = useLocale();
   const blockData = node.data as unknown as BlockNodeData;
 
   // Translate block label if pluginId is available
@@ -632,55 +742,91 @@ export function ConfigPanel({
       {/* Header */}
       <div className="border-b bg-background/80 p-4">
         <div className="flex items-center justify-between">
-          <div>
-            <h3 className="font-semibold text-sm">{displayLabel}</h3>
-            <p className="mt-0.5 text-muted-foreground text-xs">
-              Configure {(blockData.type || '').split(':').pop()} block
-            </p>
-          </div>
-          {blockData.color && (
-            <div
-              className="flex size-8 items-center justify-center rounded-lg"
-              style={{ backgroundColor: blockData.color + '20' }}
-            >
-              <div className="size-3 rounded-full" style={{ backgroundColor: blockData.color }} />
+          <div className="flex items-center gap-3">
+            {blockData.color && (
+              <div
+                className="flex size-9 items-center justify-center rounded-lg"
+                style={{ backgroundColor: blockData.color + '20' }}
+              >
+                <div
+                  className="size-3.5 rounded-full"
+                  style={{ backgroundColor: blockData.color }}
+                />
+              </div>
+            )}
+            <div>
+              <h3 className="font-semibold text-sm">{displayLabel}</h3>
+              <p className="mt-0.5 text-muted-foreground text-xs">
+                {t('workflows:editor.panels.config')}
+              </p>
             </div>
+          </div>
+          {onCollapse && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                  onClick={onCollapse}
+                >
+                  <ChevronRight className="size-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="left">
+                <p>{t('workflows:editor.panels.collapse')}</p>
+              </TooltipContent>
+            </Tooltip>
           )}
         </div>
 
-        {/* I/O Types */}
+        {/* I/O Types - Improved display */}
         {((blockData.inputs?.length ?? 0) > 0 || (blockData.outputs?.length ?? 0) > 0) && (
-          <div className="mt-3 space-y-2 border-t pt-3">
+          <div className="mt-3 grid gap-2 border-t pt-3">
             {(blockData.inputs?.length ?? 0) > 0 && (
-              <div>
-                <span className="font-medium text-[10px] text-muted-foreground uppercase">
-                  Inputs
-                </span>
-                <div className="mt-1 flex flex-wrap gap-1">
+              <div className="rounded-lg bg-muted/30 p-2.5">
+                <div className="mb-2 flex items-center gap-1.5">
+                  <ArrowDownToLine className="size-3.5 text-blue-500" />
+                  <span className="font-medium text-muted-foreground text-xs">Inputs</span>
+                </div>
+                <div className="space-y-1.5">
                   {blockData.inputs?.map((p) => (
-                    <code
+                    <div
                       key={p.id}
-                      className="rounded bg-data-1/10 px-1.5 py-0.5 font-mono text-[10px] text-data-1"
+                      className="flex items-center justify-between rounded-md bg-background/60 px-2.5 py-1.5"
                     >
-                      {p.name}: {p.typeName ?? 'generic'}
-                    </code>
+                      <span className="font-medium text-foreground text-xs">{p.name}</span>
+                      <Badge
+                        variant="outline"
+                        className="h-5 border-blue-500/30 bg-blue-500/10 font-mono text-[10px] text-blue-600 dark:text-blue-400"
+                      >
+                        {p.typeName ?? 'any'}
+                      </Badge>
+                    </div>
                   ))}
                 </div>
               </div>
             )}
             {(blockData.outputs?.length ?? 0) > 0 && (
-              <div>
-                <span className="font-medium text-[10px] text-muted-foreground uppercase">
-                  Outputs
-                </span>
-                <div className="mt-1 flex flex-wrap gap-1">
+              <div className="rounded-lg bg-muted/30 p-2.5">
+                <div className="mb-2 flex items-center gap-1.5">
+                  <ArrowUpFromLine className="size-3.5 text-orange-500" />
+                  <span className="font-medium text-muted-foreground text-xs">Outputs</span>
+                </div>
+                <div className="space-y-1.5">
                   {blockData.outputs?.map((p) => (
-                    <code
+                    <div
                       key={p.id}
-                      className="rounded bg-orange-500/10 px-1.5 py-0.5 font-mono text-[10px] text-orange-600 dark:text-orange-400"
+                      className="flex items-center justify-between rounded-md bg-background/60 px-2.5 py-1.5"
                     >
-                      {p.name}: {p.typeName ?? 'generic'}
-                    </code>
+                      <span className="font-medium text-foreground text-xs">{p.name}</span>
+                      <Badge
+                        variant="outline"
+                        className="h-5 border-orange-500/30 bg-orange-500/10 font-mono text-[10px] text-orange-600 dark:text-orange-400"
+                      >
+                        {p.typeName ?? 'any'}
+                      </Badge>
+                    </div>
                   ))}
                 </div>
               </div>
@@ -708,7 +854,7 @@ export function ConfigPanel({
             <div className="p-4">
               <div className="mb-3 flex items-center gap-2 font-medium text-muted-foreground text-xs">
                 <Sparkles className="size-4" />
-                Available Variables
+                {t('workflows:editor.panels.availableVariables')}
               </div>
               <div className="grid gap-1.5">
                 {availableVariables.map((v) => (
@@ -716,7 +862,7 @@ export function ConfigPanel({
                     key={v.name}
                     className="flex cursor-pointer items-center justify-between rounded-md bg-muted/50 p-2 text-xs transition-colors hover:bg-muted"
                     onClick={() => navigator.clipboard.writeText(`{{ ${v.name} }}`)}
-                    title="Click to copy"
+                    title={t('workflows:editor.panels.clickToCopy')}
                   >
                     <code className="font-mono text-primary">{`{{ ${v.name} }}`}</code>
                     <Badge variant="outline" className="h-5 text-[10px]">
@@ -726,7 +872,7 @@ export function ConfigPanel({
                 ))}
               </div>
               <p className="mt-2 text-center text-[10px] text-muted-foreground">
-                Click to copy · Use in any text field
+                {t('workflows:editor.panels.clickToCopy')}
               </p>
             </div>
           </>
@@ -735,7 +881,7 @@ export function ConfigPanel({
 
       {/* Footer */}
       <div className="border-t bg-background/80 p-3 text-center text-muted-foreground text-xs">
-        Node ID: <code className="font-mono">{node.id}</code>
+        {t('workflows:editor.panels.nodeId')}: <code className="font-mono">{node.id}</code>
       </div>
     </div>
   );

@@ -166,26 +166,26 @@ export function ExpandableEventEntry({ event }: ExpandableEventEntryProps) {
   const isLog = event.type === 'block.log';
 
   return (
-    <div className="border-zinc-800 border-b last:border-b-0">
+    <div className="border-b last:border-b-0">
       <button
         type="button"
         onClick={() => hasData && setExpanded(!expanded)}
         className={cn(
-          'flex w-full items-start gap-2 p-2 text-left transition-colors hover:bg-zinc-800/50',
+          'flex w-full items-start gap-2 p-2 text-left transition-colors hover:bg-muted/50',
           hasData && 'cursor-pointer'
         )}
       >
         {hasData ? (
           expanded ? (
-            <ChevronDown className="mt-0.5 size-3 shrink-0 text-zinc-500" />
+            <ChevronDown className="mt-0.5 size-3 shrink-0 text-muted-foreground" />
           ) : (
-            <ChevronRight className="mt-0.5 size-3 shrink-0 text-zinc-500" />
+            <ChevronRight className="mt-0.5 size-3 shrink-0 text-muted-foreground" />
           )
         ) : (
           <span className="w-3 shrink-0" />
         )}
 
-        <span className="shrink-0 font-mono text-[10px] text-zinc-500">
+        <span className="shrink-0 font-mono text-[10px] text-muted-foreground">
           {formatTimestamp(event.timestamp)}
         </span>
 
@@ -197,26 +197,26 @@ export function ExpandableEventEntry({ event }: ExpandableEventEntryProps) {
           {isEmit && (
             <>
               <span className="text-data-7">{event.blockId}</span>
-              <span className="text-zinc-500"> → </span>
+              <span className="text-muted-foreground"> → </span>
               <span className="text-data-6">{event.port}</span>
             </>
           )}
           {isLog && (
             <>
               <span className="text-data-7">{event.blockId}</span>
-              <span className="text-zinc-500">: </span>
-              <span className="text-zinc-300">{event.message}</span>
+              <span className="text-muted-foreground">: </span>
+              <span className="text-foreground">{event.message}</span>
             </>
           )}
           {!isEmit && !isLog && (
-            <span className="text-zinc-400">{event.blockId || event.type}</span>
+            <span className="text-muted-foreground">{event.blockId || event.type}</span>
           )}
         </div>
       </button>
 
       {expanded && hasData && (
         <div className="px-8 pb-2">
-          <pre className="max-h-32 overflow-auto rounded bg-zinc-900 p-2 font-mono text-[10px] text-zinc-300">
+          <pre className="max-h-32 overflow-auto rounded bg-muted p-2 font-mono text-[10px] text-foreground">
             {JSON.stringify(event.data, null, 2)}
           </pre>
         </div>

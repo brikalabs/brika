@@ -7,6 +7,7 @@
 
 import type { Serializable } from '@brika/serializable';
 import { z } from 'zod';
+import { log } from '../api/logging';
 import { getContext } from '../context';
 import type { Json } from '../types';
 import {
@@ -26,6 +27,7 @@ import {
   type OutputDef,
   type PassthroughRef,
   type ReactiveBlockSpec,
+  type ResolvedRef,
   type Source,
   zodToJsonSchema,
   zodToTypeName,
@@ -50,7 +52,6 @@ export interface BlockRuntimeContext {
   workflowId: string;
   config: Record<string, unknown>;
   emit(portId: string, data: Serializable): void;
-  log(level: 'debug' | 'info' | 'warn' | 'error', message: string): void;
 }
 
 /** Running block instance */
@@ -121,7 +122,10 @@ export interface BlockInstance {
  */
 export function defineReactiveBlock<
   TInputs extends Record<string, InputDef<z.ZodType | GenericRef<string>>>,
-  TOutputs extends Record<string, OutputDef<z.ZodType | PassthroughRef | GenericRef<string>>>,
+  TOutputs extends Record<
+    string,
+    OutputDef<z.ZodType | PassthroughRef | GenericRef<string> | ResolvedRef>
+  >,
   TConfig extends z.ZodObject<z.ZodRawShape>,
 >(
   spec: ReactiveBlockSpec<TInputs, TOutputs, TConfig>,
@@ -129,19 +133,26 @@ export function defineReactiveBlock<
 ): CompiledReactiveBlock {
   const configJsonSchema = zodToBlockSchema(spec.config);
 
-  // Get TypeScript-like type name from schema (not resolving passthrough)
-  const getBaseTypeName = (schema: z.ZodType | GenericRef<string> | PassthroughRef): string => {
+  // Get TypeScript-like type name from schema (not resolving passthrough/resolved)
+  const getBaseTypeName = (
+    schema: z.ZodType | GenericRef<string> | PassthroughRef | ResolvedRef
+  ): string => {
     if (schema && typeof schema === 'object' && '__type' in schema) {
       if (schema.__type === 'generic') return `generic<${(schema as GenericRef).__generic}>`;
       // Don't resolve passthrough here - it will be resolved later
       if (schema.__type === 'passthrough') return `__passthrough:${schema.__passthrough}`;
+      // Resolved types use $resolve:source:configField format for UI type inference
+      if (schema.__type === 'resolved') {
+        const r = schema as ResolvedRef;
+        return `$resolve:${r.__source}:${r.__configField}`;
+      }
     }
     return zodToTypeName(schema);
   };
 
-  // Get JSON Schema from Zod schema (returns undefined for generic/passthrough)
+  // Get JSON Schema from Zod schema (returns undefined for generic/passthrough/resolved)
   const getJsonSchema = (
-    schema: z.ZodType | GenericRef<string> | PassthroughRef
+    schema: z.ZodType | GenericRef<string> | PassthroughRef | ResolvedRef
   ): Record<string, unknown> | undefined => {
     if (schema && typeof schema === 'object' && '__type' in schema) {
       return undefined;
@@ -153,10 +164,12 @@ export function defineReactiveBlock<
     }
   };
 
-  // Get runtime schema - returns the internal _schema for GenericRef/PassthroughRef
-  const getRuntimeSchema = (schema: z.ZodType | GenericRef<string> | PassthroughRef): z.ZodType => {
+  // Get runtime schema - returns the internal _schema for GenericRef/PassthroughRef/ResolvedRef
+  const getRuntimeSchema = (
+    schema: z.ZodType | GenericRef<string> | PassthroughRef | ResolvedRef
+  ): z.ZodType => {
     if (schema && typeof schema === 'object' && '_schema' in schema) {
-      return (schema as GenericRef | PassthroughRef)._schema;
+      return (schema as GenericRef | PassthroughRef | ResolvedRef)._schema;
     }
     return schema;
   };
@@ -173,6 +186,7 @@ export function defineReactiveBlock<
   // Convert input definitions to BlockPort[]
   const inputs: BlockPort[] = Object.entries(spec.inputs).map(([id, def]) => ({
     id,
+    name: def.meta.name,
     direction: 'input' as const,
     typeName: getBaseTypeName(def.schema),
     jsonSchema: getJsonSchema(def.schema),
@@ -189,6 +203,7 @@ export function defineReactiveBlock<
       if (linkedInput) {
         return {
           id,
+          name: def.meta.name,
           direction: 'output' as const,
           typeName: linkedInput.typeName,
           jsonSchema: linkedInput.jsonSchema,
@@ -198,6 +213,7 @@ export function defineReactiveBlock<
 
     return {
       id,
+      name: def.meta.name,
       direction: 'output' as const,
       typeName: baseTypeName,
       jsonSchema: getJsonSchema(def.schema),
@@ -239,7 +255,7 @@ export function defineReactiveBlock<
       // Parse and validate config
       const configResult = spec.config.safeParse(ctx.config);
       if (!configResult.success) {
-        ctx.log('error', `Config validation failed: ${configResult.error.message}`);
+        log.error(`Config validation failed: ${configResult.error.message}`);
       }
       const config = configResult.success ? configResult.data : ({} as z.infer<TConfig>);
 
@@ -258,7 +274,6 @@ export function defineReactiveBlock<
         outputs: outputEmitters,
         config,
         start,
-        log: ctx.log,
         get context() {
           return this;
         },
@@ -277,7 +292,7 @@ export function defineReactiveBlock<
               const runtimeSchema = getRuntimeSchema(inputDef.schema);
               const result = runtimeSchema.safeParse(data);
               if (!result.success) {
-                ctx.log('warn', `Input validation failed for "${portId}": ${result.error.message}`);
+                log.warn(`Input validation failed for "${portId}": ${result.error.message}`);
               }
             }
           }

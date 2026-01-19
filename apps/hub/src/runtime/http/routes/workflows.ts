@@ -1,6 +1,7 @@
-import { createSSEStream, group, NotFound, route } from '@brika/router';
+import { BadRequest, createSSEStream, group, NotFound, route } from '@brika/router';
 import { z } from 'zod';
 import { AutomationEngine, WorkflowLoader } from '@/runtime/automations';
+import { BlockRegistry } from '@/runtime/blocks';
 
 const blockSchema = z.object({
   id: z.string(),
@@ -36,6 +37,17 @@ export const workflowsRoutes = group('/api/workflows', [
   }),
 
   route.post('/', { body: workflowSchema }, async ({ body, inject }) => {
+    // Validate connections for type compatibility
+    const blockRegistry = inject(BlockRegistry);
+    const connections = body.connections ?? [];
+
+    if (connections.length > 0) {
+      const validation = blockRegistry.validateConnections(body.blocks, connections);
+      if (!validation.valid) {
+        throw new BadRequest(`Invalid connections: ${validation.errors?.join('; ')}`);
+      }
+    }
+
     // Only include known workflow properties (avoid spreading unknown keys)
     const workflow = {
       id: body.id,
@@ -48,7 +60,7 @@ export const workflowsRoutes = group('/api/workflows', [
         config: (b.config ?? {}) as Record<string, import('@brika/shared').Json>,
         position: b.position,
       })),
-      connections: body.connections ?? [],
+      connections,
     };
     await inject(WorkflowLoader).saveWorkflow(workflow);
     return { ok: true, id: body.id };

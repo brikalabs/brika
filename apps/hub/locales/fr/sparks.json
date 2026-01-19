@@ -1,0 +1,31 @@
+{
+  "title": "$t(common:items.spark_other)",
+  "subtitle": "Événements typés des plugins",
+  "tabs": {
+    "registry": "Enregistrés",
+    "stream": "Flux d'événements"
+  },
+  "emptyRegistry": "Aucun spark enregistré",
+  "emptyRegistryHint": "Les sparks apparaîtront ici lorsque les plugins les enregistrent",
+  "emptyStream": "Aucun événement",
+  "emptyStreamHint": "Les événements spark apparaîtront ici au fur et à mesure",
+  "paused": "En pause",
+  "from": "de",
+  "labels": {
+    "type": "Type de Spark",
+    "payload": "Données (JSON)"
+  },
+  "actions": {
+    "clear": "Effacer",
+    "pause": "Pause",
+    "resume": "Reprendre",
+    "emit": "Émettre",
+    "emitCustom": "Émission personnalisée",
+    "resend": "Renvoyer"
+  },
+  "dialog": {
+    "emitTitle": "Émettre un Spark",
+    "customTitle": "Émettre un Spark personnalisé",
+    "customDescription": "Envoyer un événement spark pour le débogage"
+  }
+}

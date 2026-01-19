@@ -139,6 +139,12 @@ const BlockSchema = z.object({
   ),
 });
 
+const SparkSchema = z.object({
+  id: z.string().describe('Spark identifier (local to plugin)'),
+  name: z.optional(z.string().describe('Display name')),
+  description: z.optional(z.string().describe('Human-readable description')),
+});
+
 // ============================================================================
 // Preference Schema (Raycast-style plugin configuration)
 // ============================================================================
@@ -228,6 +234,9 @@ export const PluginPackageSchema = BasePackageJson.extend({
   // BRIKA-specific fields
   tools: z.optional(z.array(ToolSchema).describe('Tools provided by this plugin')),
   blocks: z.optional(z.array(BlockSchema).describe('Workflow blocks provided by this plugin')),
+  sparks: z.optional(
+    z.array(SparkSchema).describe('Typed event (spark) definitions provided by this plugin')
+  ),
   icon: z.optional(z.string().describe('Path to plugin icon (PNG/SVG, relative to package root)')),
   preferences: z.optional(
     z.array(PreferenceSchema).describe('Plugin preferences/configuration schema')

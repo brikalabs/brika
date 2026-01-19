@@ -106,6 +106,7 @@ export class PluginLifecycle {
       startedAt: null,
       lastError: stored.lastError,
       blocks: m.blocks ?? [],
+      sparks: m.sparks ?? [],
       locales: [],
     };
   }
@@ -185,8 +186,16 @@ export class PluginLifecycle {
           this.#eventHandler.onBlockEmit(instanceId, port, data),
         onBlockLog: (instanceId, workflowId, level, message) =>
           this.#eventHandler.onBlockLog(instanceId, workflowId, level, message),
-        onEvent: (type, payload) => this.#eventHandler.emitPluginEvent(pluginName, type, payload),
-        onSubscribe: (patterns, handler) => this.#eventHandler.subscribeToEvents(patterns, handler),
+        onSpark: (spark) => this.#eventHandler.registerSpark(metadata.name, spark),
+        onSparkEmit: (sparkId, payload) =>
+          this.#eventHandler.emitSpark(pluginName, sparkId, payload),
+        onSparkSubscribe: (sparkType, subscriptionId, process) =>
+          this.#eventHandler.subscribeToSparks(sparkType, (event) => {
+            process.sendSparkEvent(subscriptionId, event);
+          }),
+        onSparkUnsubscribe: () => {
+          // Cleanup handled by the process's unsubscribe callback
+        },
         onHeartbeatFailed: (p, silentMs) => this.#handleHeartbeatFailed(p, silentMs),
         onDisconnect: (p, error) => this.#handleDisconnect(p.name, error),
         onMetrics: (p, cpu, memory) => {

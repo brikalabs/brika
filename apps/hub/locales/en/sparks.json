@@ -1,0 +1,31 @@
+{
+  "title": "$t(common:items.spark_other)",
+  "subtitle": "Typed events from plugins",
+  "tabs": {
+    "registry": "Registered",
+    "stream": "Event Stream"
+  },
+  "emptyRegistry": "No sparks registered",
+  "emptyRegistryHint": "Sparks will appear here when plugins register them",
+  "emptyStream": "No events yet",
+  "emptyStreamHint": "Spark events will appear here as they occur",
+  "paused": "Paused",
+  "from": "from",
+  "labels": {
+    "type": "Spark Type",
+    "payload": "Payload (JSON)"
+  },
+  "actions": {
+    "clear": "Clear",
+    "pause": "Pause",
+    "resume": "Resume",
+    "emit": "Emit",
+    "emitCustom": "Custom Emit",
+    "resend": "Resend"
+  },
+  "dialog": {
+    "emitTitle": "Emit Spark",
+    "customTitle": "Emit Custom Spark",
+    "customDescription": "Send a spark event for debugging"
+  }
+}

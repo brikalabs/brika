@@ -11,7 +11,7 @@ import '@/lib/i18n';
 // Feature Pages
 import { BlocksPage } from '@/features/blocks';
 import { DashboardPage } from '@/features/dashboard';
-import { EventsPage } from '@/features/events';
+import { SparksPage } from '@/features/events';
 import { LogsPage } from '@/features/logs';
 import { PluginDetailPage, PluginsPage } from '@/features/plugins';
 import { SettingsPage } from '@/features/settings';
@@ -55,11 +55,24 @@ const storePluginDetailRoute = createRoute({
   component: StorePluginDetailPage,
 });
 
+// Sparks routes with tab parameter
+const sparksRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/sparks',
+  component: SparksPage,
+});
+
+const sparksTabRoute = createRoute({
+  getParentRoute: () => sparksRoute,
+  path: '/$tab',
+  component: SparksPage,
+});
+
 const routes = [
   createRoute({ getParentRoute: () => rootRoute, path: '/', component: DashboardPage }),
   createRoute({ getParentRoute: () => rootRoute, path: '/plugins', component: PluginsPage }),
   pluginDetailRoute,
-  createRoute({ getParentRoute: () => rootRoute, path: '/events', component: EventsPage }),
+  sparksRoute.addChildren([sparksTabRoute]),
   createRoute({ getParentRoute: () => rootRoute, path: '/workflows', component: WorkflowsPage }),
   workflowNewRoute,
   workflowEditorRoute,

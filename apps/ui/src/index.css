@@ -391,3 +391,40 @@
   background: inherit;
   animation: ping 1s cubic-bezier(0, 0, 0.2, 1) forwards;
 }
+
+/* ─────────────────────────────────────────────────────────────
+   5. CORNER SHAPE UTILITIES
+   CSS corner-shape property for squircle and other corner styles
+   Requires border-radius to have effect
+   https://developer.mozilla.org/en-US/docs/Web/CSS/corner-shape
+   ───────────────────────────────────────────────────────────── */
+
+/* Static keyword utilities */
+@utility corner-round {
+  corner-shape: round;
+}
+
+@utility corner-square {
+  corner-shape: square;
+}
+
+@utility corner-bevel {
+  corner-shape: bevel;
+}
+
+@utility corner-scoop {
+  corner-shape: scoop;
+}
+
+@utility corner-notch {
+  corner-shape: notch;
+}
+
+@utility corner-squircle {
+  corner-shape: squircle;
+}
+
+/* Functional utility for superellipse with custom values */
+@utility corner-superellipse-* {
+  corner-shape: superellipse(--value(number));
+}

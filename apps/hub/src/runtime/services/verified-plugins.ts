@@ -104,7 +104,9 @@ export class VerifiedPluginsService {
 
       if (USE_LOCAL_FILE) {
         // Development: read from local file
-        this.#log.info('Loading verified plugins list from local file', { path: VERIFIED_PLUGINS_PATH });
+        this.#log.info('Loading verified plugins list from local file', {
+          path: VERIFIED_PLUGINS_PATH,
+        });
         const fileContent = await readFile(VERIFIED_PLUGINS_PATH, 'utf-8');
         data = JSON.parse(fileContent) as VerifiedPluginsList;
       } else {

@@ -117,44 +117,4 @@ function CardFooter({ className, ...props }: React.ComponentProps<'div'>) {
   );
 }
 
-function CardIcon({ className, children, ...props }: React.ComponentProps<'div'>) {
-  return (
-    <div
-      data-slot="card-icon"
-      className={cn(
-        'flex size-12 shrink-0 items-center justify-center rounded-xl bg-(--accent)/10 text-accent',
-        className
-      )}
-      {...props}
-    >
-      {children}
-    </div>
-  );
-}
-
-function CardIconSmall({ className, children, ...props }: React.ComponentProps<'div'>) {
-  return (
-    <div
-      data-slot="card-icon-small"
-      className={cn(
-        'flex size-9 shrink-0 items-center justify-center rounded-lg bg-(--accent)/10 text-accent',
-        className
-      )}
-      {...props}
-    >
-      {children}
-    </div>
-  );
-}
-
-export {
-  Card,
-  CardHeader,
-  CardFooter,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  CardIcon,
-  CardIconSmall,
-  cardVariants,
-};
+export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent, cardVariants };

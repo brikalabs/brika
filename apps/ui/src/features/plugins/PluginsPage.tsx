@@ -9,6 +9,7 @@ import {
   RefreshCw,
   RotateCcw,
   Skull,
+  Zap,
 } from 'lucide-react';
 import React from 'react';
 import {
@@ -109,12 +110,25 @@ export function PluginsPage() {
                       )}
 
                       {/* Stats Row */}
-                      {p.blocks.length > 0 && (
-                        <div className="mt-2.5 flex items-center gap-1.5 rounded-md bg-muted/50 px-2 py-1 text-muted-foreground text-xs">
-                          <Boxes className="size-3.5" />
-                          <span>
-                            {p.blocks.length} {t('workflows:blocks').toLowerCase()}
-                          </span>
+                      {(p.blocks.length > 0 || p.sparks.length > 0) && (
+                        <div className="mt-2.5 flex items-center gap-3">
+                          {p.blocks.length > 0 && (
+                            <div className="flex items-center gap-1.5 rounded-md bg-muted/50 px-2 py-1 text-muted-foreground text-xs">
+                              <Boxes className="size-3.5" />
+                              <span>
+                                {p.blocks.length} {t('workflows:blocks').toLowerCase()}
+                              </span>
+                            </div>
+                          )}
+                          {p.sparks.length > 0 && (
+                            <div className="flex items-center gap-1.5 rounded-md bg-amber-500/10 px-2 py-1 text-amber-600 text-xs dark:text-amber-400">
+                              <Zap className="size-3.5" />
+                              <span>
+                                {p.sparks.length}{' '}
+                                {t('common:items.spark', { count: p.sparks.length }).toLowerCase()}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       )}
 

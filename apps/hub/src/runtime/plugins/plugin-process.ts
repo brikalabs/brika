@@ -1,22 +1,25 @@
 import type { Json, PluginChannel } from '@brika/ipc';
-import { getProcessMetrics } from '@/runtime/metrics';
 import {
   blockEmit,
   blockLog,
-  emit,
-  event,
+  emitSpark,
   hello,
   log,
   preferences,
   pushInput,
   ready,
   registerBlock,
+  registerSpark,
+  type SparkEvent as SparkEventType,
+  sparkEvent,
   startBlock,
   stopBlock,
-  subscribe,
+  subscribeSpark,
+  unsubscribeSpark,
 } from '@brika/ipc/contract';
 import type { PluginPackageSchema } from '@brika/schema';
-import type { BrikaEvent, Plugin, PluginHealth } from '@brika/shared';
+import type { Plugin, PluginHealth } from '@brika/shared';
+import { getProcessMetrics } from '@/runtime/metrics';
 import { now } from './utils';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -28,14 +31,25 @@ export interface PluginProcessConfig {
   heartbeatTimeoutMs: number;
 }
 
+export interface SparkRegistration {
+  id: string;
+  schema?: Record<string, unknown>;
+}
+
 export interface PluginProcessCallbacks {
   onReady: (process: PluginProcess) => void;
   onLog: (level: string, message: string, meta?: Record<string, unknown>) => void;
   onBlock: (block: BlockRegistration) => void;
   onBlockEmit: (instanceId: string, port: string, data: Json) => void;
   onBlockLog: (instanceId: string, workflowId: string, level: string, message: string) => void;
-  onEvent: (eventType: string, payload: Json) => void;
-  onSubscribe: (patterns: string[], handler: (event: BrikaEvent) => void) => () => void;
+  onSpark: (spark: SparkRegistration) => void;
+  onSparkEmit: (sparkId: string, payload: Json) => void;
+  onSparkSubscribe: (
+    sparkType: string,
+    subscriptionId: string,
+    process: PluginProcess
+  ) => () => void;
+  onSparkUnsubscribe: (subscriptionId: string) => void;
   onHeartbeatFailed: (process: PluginProcess, silentMs: number) => void;
   onDisconnect: (process: PluginProcess, error?: Error) => void;
   onMetrics?: (process: PluginProcess, cpu: number, memory: number) => void;
@@ -64,8 +78,8 @@ export class PluginProcess {
   #lastPong: number;
   #heartbeat?: Timer;
   readonly #blocks = new Set<string>();
-  readonly #subscriptions = new Set<string>();
-  #eventUnsubs: Array<() => void> = [];
+  readonly #sparks = new Set<string>();
+  readonly #sparkSubscriptions = new Map<string, () => void>(); // subscriptionId -> unsubscribe
   #stopped = false;
 
   constructor(
@@ -110,6 +124,10 @@ export class PluginProcess {
     return this.#blocks;
   }
 
+  get sparks(): ReadonlySet<string> {
+    return this.#sparks;
+  }
+
   // ─────────────────────────────────────────────────────────────────────────
   // IPC Operations
   // ─────────────────────────────────────────────────────────────────────────
@@ -150,6 +168,14 @@ export class PluginProcess {
     this.#channel.send(preferences, { values });
   }
 
+  /**
+   * Send a spark event to the plugin for a specific subscription
+   */
+  sendSparkEvent(subscriptionId: string, event: SparkEventType): void {
+    if (this.#stopped) return;
+    this.#channel.send(sparkEvent, { subscriptionId, event });
+  }
+
   // ─────────────────────────────────────────────────────────────────────────
   // Lifecycle
   // ─────────────────────────────────────────────────────────────────────────
@@ -163,10 +189,11 @@ export class PluginProcess {
       this.#heartbeat = undefined;
     }
 
-    for (const unsub of this.#eventUnsubs) {
-      unsub();
+    // Clean up all spark subscriptions
+    for (const unsubscribe of this.#sparkSubscriptions.values()) {
+      unsubscribe();
     }
-    this.#eventUnsubs = [];
+    this.#sparkSubscriptions.clear();
 
     this.#channel.stop();
   }
@@ -201,6 +228,7 @@ export class PluginProcess {
       startedAt: this.startedAt,
       lastError: null,
       blocks: m.blocks ?? [],
+      sparks: m.sparks ?? [],
       locales: this.locales,
     };
   }
@@ -230,8 +258,30 @@ export class PluginProcess {
       this.callbacks.onBlock(block);
     });
 
-    this.#channel.on(emit, ({ eventType, payload }) => {
-      this.callbacks.onEvent(eventType, payload);
+    this.#channel.on(registerSpark, ({ spark }) => {
+      const declared = this.metadata.sparks?.find((s) => s.id === spark.id);
+      if (!declared) return; // Undeclared sparks ignored
+
+      this.#sparks.add(`${this.name}:${spark.id}`);
+      this.callbacks.onSpark(spark);
+    });
+
+    this.#channel.on(emitSpark, ({ sparkId, payload }) => {
+      this.callbacks.onSparkEmit(sparkId, payload);
+    });
+
+    this.#channel.on(subscribeSpark, ({ sparkType, subscriptionId }) => {
+      const unsubscribe = this.callbacks.onSparkSubscribe(sparkType, subscriptionId, this);
+      this.#sparkSubscriptions.set(subscriptionId, unsubscribe);
+    });
+
+    this.#channel.on(unsubscribeSpark, ({ subscriptionId }) => {
+      const unsubscribe = this.#sparkSubscriptions.get(subscriptionId);
+      if (unsubscribe) {
+        unsubscribe();
+        this.#sparkSubscriptions.delete(subscriptionId);
+      }
+      this.callbacks.onSparkUnsubscribe(subscriptionId);
     });
 
     this.#channel.on(blockEmit, ({ instanceId, port, data }) => {
@@ -240,20 +290,6 @@ export class PluginProcess {
 
     this.#channel.on(blockLog, ({ instanceId, workflowId, level, message }) => {
       this.callbacks.onBlockLog(instanceId, workflowId, level, message);
-    });
-
-    this.#channel.on(subscribe, ({ patterns }) => {
-      for (const pattern of patterns) {
-        if (this.#subscriptions.has(pattern)) continue;
-        this.#subscriptions.add(pattern);
-
-        const unsub = this.callbacks.onSubscribe(patterns, (brikaEvent) => {
-          if (!this.#stopped) {
-            this.#channel.send(event, { event: brikaEvent });
-          }
-        });
-        this.#eventUnsubs.push(unsub);
-      }
     });
   }
 

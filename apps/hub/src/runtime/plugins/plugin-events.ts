@@ -3,9 +3,10 @@ import type { BlockDefinition } from '@brika/sdk';
 import type { BrikaEvent, LogLevel } from '@brika/shared';
 import { inject, singleton } from '@brika/shared';
 import { BlockRegistry } from '@/runtime/blocks';
-import { GenericEventActions, PluginActions } from '@/runtime/events/actions';
+import { PluginActions, SparkActions } from '@/runtime/events/actions';
 import { EventSystem } from '@/runtime/events/event-system';
 import { Logger } from '@/runtime/logs/log-router';
+import { SparkRegistry } from '@/runtime/sparks';
 import { StateStore } from '@/runtime/state/state-store';
 import type { PluginProcess } from './plugin-process';
 import { now } from './utils';
@@ -19,6 +20,7 @@ export class PluginEventHandler {
   readonly #events = inject(EventSystem);
   readonly #state = inject(StateStore);
   readonly #blocks = inject(BlockRegistry);
+  readonly #sparks = inject(SparkRegistry);
 
   /** Block emit callback - set by PluginManager */
   #onBlockEmit: ((instanceId: string, port: string, data: Json) => void) | null = null;
@@ -98,29 +100,53 @@ export class PluginEventHandler {
     this.#logs.debug('plugin.block.registered', { plugin: pluginName, block: block.id });
   }
 
-  emitPluginEvent(name: string, eventType: string, payload: Json): void {
-    this.#logs.debug('plugin.event.emit', { plugin: name, type: eventType });
+  registerSpark(pluginName: string, spark: { id: string; schema?: Record<string, unknown> }): void {
+    this.#sparks.register(spark, pluginName);
+    this.#logs.debug('plugin.spark.registered', { plugin: pluginName, spark: spark.id });
+  }
+
+  emitSpark(pluginName: string, sparkId: string, payload: Json): void {
+    const fullType = `${pluginName}:${sparkId}`;
+
+    // Verify spark is registered
+    if (!this.#sparks.has(fullType)) {
+      this.#logs.warn('spark.emit.unknown', { type: fullType, plugin: pluginName });
+      return;
+    }
+
+    this.#logs.debug('spark.emit', { type: fullType, plugin: pluginName });
     this.#events.dispatch(
-      GenericEventActions.emit.create(
+      SparkActions.emit.create(
         {
-          type: eventType,
-          source: name,
+          type: fullType,
+          source: pluginName,
           payload,
         },
-        name
+        pluginName
       )
     );
   }
 
-  subscribeToEvents(patterns: string[], handler: (event: BrikaEvent) => void): () => void {
-    return this.#events.subscribeGlob(patterns, (action) => {
-      handler({
-        id: action.id,
-        type: action.type,
-        source: action.source ?? 'unknown',
-        payload: action.payload as Json,
-        ts: action.timestamp,
-      });
+  subscribeToSparks(
+    sparkType: string,
+    handler: (event: {
+      type: string;
+      payload: Json;
+      source: string;
+      ts: number;
+      id: string;
+    }) => void
+  ): () => void {
+    return this.#events.subscribe(SparkActions.emit, (action) => {
+      if (action.payload.type === sparkType) {
+        handler({
+          type: action.payload.type,
+          payload: action.payload.payload as Json,
+          source: action.payload.source,
+          ts: action.timestamp,
+          id: action.id,
+        });
+      }
     });
   }
 }

@@ -124,6 +124,14 @@
       "category": "action",
       "icon": "square",
       "color": "#dc2626"
+    },
+    {
+      "id": "spark-receiver",
+      "name": "Spark Receiver",
+      "description": "Receives typed spark events",
+      "category": "trigger",
+      "icon": "zap",
+      "color": "#f59e0b"
     }
   ],
   "dependencies": {

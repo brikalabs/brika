@@ -28,18 +28,18 @@ export const greet = defineReactiveBlock(
       name: z.string().describe("Name to greet"),
     }),
   },
-  ({ inputs, outputs, config, log }) => {
+  ({ inputs, outputs, config }) => {
     inputs.trigger.on(() => {
-      log("info", `Greeting ${config.name}`);
+      log.info(`Greeting ${config.name}`);
       outputs.message.emit({ text: `Hello, ${config.name}!` });
     });
   }
 );
 
 // Lifecycle hooks
-onStop(() => log("info", "Plugin stopping"));
+onStop(() => log.info("Plugin stopping"));
 
-log("info", "Plugin loaded");
+log.info("Plugin loaded");
 ```
 
 ## Defining Reactive Blocks
@@ -76,7 +76,7 @@ export const temperatureAlert = defineReactiveBlock(
       maxHumidity: z.number().default(80).describe("Max humidity threshold"),
     }),
   },
-  ({ inputs, outputs, config, log }) => {
+  ({ inputs, outputs, config }) => {
     // Combine multiple inputs
     combine(inputs.temperature, inputs.humidity)
       .pipe(
@@ -94,7 +94,7 @@ export const temperatureAlert = defineReactiveBlock(
         if (data.type === "normal") {
           outputs.normal.emit({ temp: data.temp, hum: data.hum });
         } else {
-          log("warn", `Alert: ${data.type}`);
+          log.warn(`Alert: ${data.type}`);
           outputs.alert.emit({
             type: data.type,
             message: `${data.type}: temp=${data.temp}, humidity=${data.hum}`,
@@ -238,18 +238,11 @@ export const clock = defineReactiveBlock(
 
 ## Logging
 
-The SDK provides a comprehensive logging API with automatic error stack capture:
+The SDK provides a method-based logging API with automatic error stack capture:
 
 ```typescript
 import { log } from "@brika/sdk";
 
-// Original syntax (still supported)
-log("info", "Message", { extra: "data" });
-log("debug", "Debug information");
-log("warn", "Warning message");
-log("error", "Error occurred");
-
-// New convenience methods (recommended)
 log.info("Connection established", { host: "localhost", port: 3000 });
 log.debug("Processing item", { itemId: 123, step: "validation" });
 log.warn("Retry attempt failed", { attempt: 2, maxRetries: 3 });
@@ -261,16 +254,6 @@ try {
   // Automatically extracts errorName, errorMessage, and errorStack
   log.error("Operation failed", { error: err, context: "startup" });
 }
-
-// Block-level logging (inside defineReactiveBlock)
-export const myBlock = defineReactiveBlock(
-  { /* spec */ },
-  ({ inputs, outputs, config, log }) => {
-    inputs.trigger.on(() => {
-      log.info("Block triggered", { configValue: config.value });
-    });
-  }
-);
 ```
 
 **Error Stack Traces**: When you pass an `Error` object in metadata with the key `error`, the logging system automatically captures:
@@ -336,11 +319,11 @@ interface MyPrefs {
 
 // Get current preferences
 const prefs = getPreferences<MyPrefs>();
-log("info", `Debug mode: ${prefs.debug}`);
+log.info(`Debug mode: ${prefs.debug}`);
 
 // React to changes
 onPreferencesChange<MyPrefs>((newPrefs) => {
-  log("info", "Preferences updated");
+  log.info("Preferences updated");
 });
 ```
 

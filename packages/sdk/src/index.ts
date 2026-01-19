@@ -76,8 +76,8 @@ export type { ZodInfer, ZodObject, ZodRawShape, ZodType } from './blocks/schema'
 export { z } from './blocks/schema';
 
 // Type markers and utilities (for internal use)
-export type { TypeMarkerValue } from './blocks/schema-types';
-export { getTypeMarker, TypeMarker } from './blocks/schema-types';
+export type { ResolvedRef, TypeMarkerValue } from './blocks/schema-types';
+export { getTypeMarker, parseResolvedMarker, TypeMarker } from './blocks/schema-types';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Block Metadata Types
@@ -92,11 +92,11 @@ export type { BlockDefinition, BlockPort, BlockSchema, PortDirection } from './b
 export { log } from './api/logging';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Events
+// Sparks (Typed Events)
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type { EventHandler, EventPayload } from './api/events';
-export { emit, on, onEvent } from './api/events';
+export type { CompiledSpark } from './api/sparks';
+export { defineSpark, subscribeSpark } from './api/sparks';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Lifecycle

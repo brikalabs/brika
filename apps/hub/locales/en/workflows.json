@@ -58,6 +58,27 @@
     "save": "Save Workflow",
     "discard": "Discard Changes",
     "unsaved": "Unsaved",
-    "unsavedChanges": "Unsaved changes"
+    "unsavedChanges": "Unsaved changes",
+    "panels": {
+      "blocks": "Blocks",
+      "blocksDescription": "Drag to add blocks",
+      "config": "Configuration",
+      "configDescription": "Configure selected block",
+      "debug": "Live Debug",
+      "debugDescription": "Real-time events",
+      "collapse": "Collapse",
+      "expand": "Expand",
+      "searchBlocks": "Search blocks...",
+      "noBlocks": "No blocks available",
+      "noBlocksFound": "No blocks found",
+      "dragToAdd": "Drag to add",
+      "waitingForEvents": "Waiting for events...",
+      "enableWorkflow": "Enable the workflow to see live data",
+      "nodeId": "Node ID",
+      "noConfigNeeded": "No configuration needed",
+      "defaultSettings": "This block works with default settings",
+      "availableVariables": "Available Variables",
+      "clickToCopy": "Click to copy · Use in any text field"
+    }
   }
 }

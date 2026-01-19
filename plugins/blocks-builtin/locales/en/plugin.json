@@ -161,6 +161,16 @@
           "description": "Final data"
         }
       }
+    },
+    "spark-receiver": {
+      "name": "Spark Receiver",
+      "description": "Receives typed spark events from plugins",
+      "ports": {
+        "out": {
+          "name": "Payload",
+          "description": "The spark event payload"
+        }
+      }
     }
   },
   "fields": {
@@ -235,6 +245,10 @@
     "timeout": {
       "label": "Timeout",
       "description": "Request timeout"
+    },
+    "sparkType": {
+      "label": "Spark Type",
+      "description": "The spark type to listen for (e.g., timer:tick)"
     }
   }
 }

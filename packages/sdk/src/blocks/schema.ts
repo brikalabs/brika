@@ -35,8 +35,9 @@ import {
   generic,
   jsonSchema,
   passthrough,
+  resolved,
   secret,
-  toolRef,
+  sparkType,
   urlSchema,
 } from './schema-types';
 
@@ -229,10 +230,10 @@ export const z = {
   duration,
 
   /**
-   * Tool reference.
-   * UI renders a tool picker dropdown.
+   * Spark type reference.
+   * UI renders a spark picker dropdown with available sparks.
    */
-  toolRef,
+  sparkType,
 
   /**
    * Code snippet.
@@ -265,6 +266,30 @@ export const z = {
    * For advanced use cases where Zod is not flexible enough.
    */
   jsonSchema,
+
+  /**
+   * Resolved type - type is resolved dynamically from external data.
+   *
+   * The type inference system will:
+   * 1. Read the config field value to get the lookup key
+   * 2. Look up the key in the specified data source
+   * 3. Use the matched entry's schema as this port's type
+   *
+   * @param source Data source to look up (e.g., 'spark')
+   * @param configField Config field containing the lookup key
+   *
+   * @example
+   * ```ts
+   * // Output type is resolved from the selected spark's schema
+   * outputs: {
+   *   out: output(z.resolved('spark', 'sparkType'), { name: 'Payload' }),
+   * },
+   * config: z.object({
+   *   sparkType: z.string(),  // e.g., "timer:timer-started"
+   * }),
+   * ```
+   */
+  resolved,
 
   // ═══════════════════════════════════════════════════════════════════════════
   // Type Inference Utilities

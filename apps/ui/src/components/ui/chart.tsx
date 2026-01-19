@@ -23,10 +23,7 @@ export function MetricsChart({
   if (!hasData) {
     return (
       <div className={cn('flex h-20 w-full items-center justify-center', className)}>
-        <div
-          className="h-px w-full opacity-20"
-          style={{ backgroundColor: color }}
-        />
+        <div className="h-px w-full opacity-20" style={{ backgroundColor: color }} />
       </div>
     );
   }

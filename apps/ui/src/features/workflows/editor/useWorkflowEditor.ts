@@ -1,3 +1,4 @@
+import { arePortTypesCompatible } from '@brika/shared';
 import {
   addEdge,
   type Connection,
@@ -17,7 +18,7 @@ import type { BlockNodeData, BlockPort } from './BlockNode';
 import type { BlockDefinition, BlockTypeInfo } from './BlockToolbar';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Type Inference
+// Type Inference System
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** Extended port with original type tracking */
@@ -25,25 +26,109 @@ interface PortWithOriginal extends BlockPort {
   _originalType?: string;
 }
 
-/** Check if type is concrete (not generic/passthrough) */
-const isConcrete = (t?: string) => t && !t.startsWith('generic') && !t.startsWith('passthrough');
+/** Check if type is concrete (not generic/passthrough/unknown/any/resolved) */
+const isConcrete = (t?: string) =>
+  t &&
+  !t.startsWith('generic') &&
+  !t.startsWith('passthrough') &&
+  !t.startsWith('$resolve:') &&
+  t !== 'unknown' &&
+  t !== 'any';
+
+/** Check if type is generic (accepts any) */
+const isGeneric = (t?: string) =>
+  !t || t.startsWith('generic') || t.startsWith('passthrough') || t === 'unknown' || t === 'any';
+
+/** Check if type is a resolve marker ($resolve:source:configField) */
+const isResolveMarker = (t?: string) => t?.startsWith('$resolve:');
+
+/** Parse a resolve marker into source and config field */
+function parseResolveMarker(t: string): { source: string; configField: string } | null {
+  if (!t.startsWith('$resolve:')) return null;
+  const parts = t.slice('$resolve:'.length).split(':');
+  if (parts.length < 2) return null;
+  return { source: parts[0], configField: parts[1] };
+}
 
 /** Get original type (stored or current) */
 const getOriginal = (p: PortWithOriginal) => p._originalType ?? p.typeName;
 
+export interface TypeResolverContext {
+  /** Lookup external data (e.g., spark schemas) */
+  lookup: <T>(key: string) => T | undefined;
+}
+
+/** Spark entry for type resolution */
+interface SparkEntry {
+  type: string;
+  id: string;
+  pluginId: string;
+  name?: string;
+  description?: string;
+  schema?: Record<string, unknown>;
+}
+
+/** Convert JSON schema to TypeScript-like type string */
+function jsonSchemaToTypeName(schema: Record<string, unknown> | undefined): string {
+  if (!schema) return 'unknown';
+  const type = schema.type as string | undefined;
+  if (type === 'string') return 'string';
+  if (type === 'number' || type === 'integer') return 'number';
+  if (type === 'boolean') return 'boolean';
+  if (type === 'null') return 'null';
+  if (type === 'array') {
+    const items = schema.items as Record<string, unknown> | undefined;
+    return `${jsonSchemaToTypeName(items)}[]`;
+  }
+  if (type === 'object') {
+    const props = schema.properties as Record<string, Record<string, unknown>> | undefined;
+    if (!props) return '{}';
+    const entries = Object.entries(props)
+      .map(([k, v]) => `${k}: ${jsonSchemaToTypeName(v)}`)
+      .join(', ');
+    return `{${entries}}`;
+  }
+  return 'unknown';
+}
+
 /**
- * Infer types for generic ports based on graph connections.
- * Stores original types in _originalType and computes display types.
+ * Infer types for generic ports based on:
+ * 1. Resolve markers ($resolve:source:configField) - type resolved from external data
+ * 2. Graph connections (types flow from outputs to connected inputs)
+ * 3. Passthrough blocks (generic outputs inherit from first input)
  */
-function inferPortTypes(nodes: Node[], edges: Edge[]): Node[] {
-  // Build edge lookup: target -> { portId -> { sourceNodeId, sourcePortId } }
+function inferPortTypes(
+  nodes: Node[],
+  edges: Edge[],
+  resolverContext: TypeResolverContext
+): Node[] {
+  // Build edge lookups
+  // incoming: target -> { portId -> { sourceNodeId, sourcePortId } }
+  // outgoing: source -> { portId -> [{ targetNodeId, targetPortId }] }
   const incoming = new Map<string, Map<string, { node: string; port: string }>>();
+  const outgoing = new Map<string, Map<string, Array<{ node: string; port: string }>>>();
+
   for (const e of edges) {
+    // Incoming
     if (!incoming.has(e.target)) incoming.set(e.target, new Map());
     incoming.get(e.target)!.set(e.targetHandle || 'in', {
       node: e.source,
       port: e.sourceHandle || 'out',
     });
+
+    // Outgoing
+    if (!outgoing.has(e.source)) outgoing.set(e.source, new Map());
+    const sourcePort = e.sourceHandle || 'out';
+    if (!outgoing.get(e.source)!.has(sourcePort)) {
+      outgoing.get(e.source)!.set(sourcePort, []);
+    }
+    outgoing
+      .get(e.source)!
+      .get(sourcePort)!
+      .push({
+        node: e.target,
+        port: e.targetHandle || 'in',
+      });
   }
 
   // First pass: ensure all ports have _originalType set
@@ -71,10 +156,42 @@ function inferPortTypes(nodes: Node[], edges: Edge[]): Node[] {
     withOriginals.filter((n) => n.type === 'block').map((n) => [n.id, n.data as BlockNodeData])
   );
 
-  // Compute inferred types for each node
-  const inferred = new Map<string, Map<string, string>>(); // nodeId -> portId -> inferredType
+  // Compute inferred types for each node: nodeId -> portId -> inferredType
+  const inferred = new Map<string, Map<string, string>>();
 
-  // Run iterations to propagate through chains
+  // Phase 1: Resolve $resolve: markers from external data
+  for (const [nodeId, data] of nodeMap) {
+    for (const port of data.outputs || []) {
+      const origType = getOriginal(port as PortWithOriginal);
+      if (!isResolveMarker(origType)) continue;
+
+      const marker = parseResolveMarker(origType!);
+      if (!marker) continue;
+
+      // Get config value for lookup
+      const lookupKey = data.config?.[marker.configField] as string | undefined;
+      if (!lookupKey) continue;
+
+      // Resolve type based on source
+      let resolvedType: string | null = null;
+      if (marker.source === 'spark') {
+        // Look up spark schema
+        const sparks = resolverContext.lookup<SparkEntry[]>('sparks');
+        const spark = sparks?.find((s) => s.type === lookupKey);
+        if (spark?.schema) {
+          resolvedType = jsonSchemaToTypeName(spark.schema);
+        }
+      }
+      // Add more sources here as needed (e.g., 'block', 'tool')
+
+      if (resolvedType) {
+        if (!inferred.has(nodeId)) inferred.set(nodeId, new Map());
+        inferred.get(nodeId)!.set(port.id, resolvedType);
+      }
+    }
+  }
+
+  // Phase 2: Iterative propagation through connections
   for (let iter = 0; iter < 10; iter++) {
     let changed = false;
 
@@ -83,7 +200,7 @@ function inferPortTypes(nodes: Node[], edges: Edge[]): Node[] {
       if (!inferred.has(nodeId)) inferred.set(nodeId, new Map());
       const nodeInferred = inferred.get(nodeId)!;
 
-      // Infer input types from connected outputs
+      // 2a. Infer input types from connected outputs
       for (const input of data.inputs || []) {
         const conn = nodeIncoming?.get(input.id);
         if (!conn) continue;
@@ -92,13 +209,13 @@ function inferPortTypes(nodes: Node[], edges: Edge[]): Node[] {
         const sourcePort = sourceData?.outputs?.find((p) => p.id === conn.port);
         if (!sourcePort) continue;
 
-        // Get source type (inferred or original)
+        // Get source type (inferred > original)
         const sourceInferred = inferred.get(conn.node)?.get(conn.port);
         const sourceType = sourceInferred ?? getOriginal(sourcePort as PortWithOriginal);
 
         // If source has concrete type and this input is generic, infer it
         const origType = getOriginal(input as PortWithOriginal);
-        if (isConcrete(sourceType) && origType?.startsWith('generic')) {
+        if (isConcrete(sourceType) && isGeneric(origType)) {
           if (nodeInferred.get(input.id) !== sourceType) {
             nodeInferred.set(input.id, sourceType!);
             changed = true;
@@ -106,22 +223,27 @@ function inferPortTypes(nodes: Node[], edges: Edge[]): Node[] {
         }
       }
 
-      // Infer output types from inputs (generic outputs get type from first input)
+      // 2b. Infer output types from inputs (passthrough blocks)
       for (const output of data.outputs || []) {
+        // Skip if already resolved by type resolver
+        if (nodeInferred.has(output.id) && isConcrete(nodeInferred.get(output.id))) continue;
+
         const origType = getOriginal(output as PortWithOriginal);
-        if (!origType?.startsWith('generic')) continue;
+        if (!isGeneric(origType)) continue;
 
-        // Find first input with inferred or concrete type
-        const firstInput = data.inputs?.[0];
-        if (!firstInput) continue;
+        // Find first input with concrete type
+        for (const input of data.inputs || []) {
+          const inputInferred = nodeInferred.get(input.id);
+          const inputOrig = getOriginal(input as PortWithOriginal);
+          const inputType = inputInferred ?? (isConcrete(inputOrig) ? inputOrig : undefined);
 
-        const inputInferred = nodeInferred.get(firstInput.id);
-        const inputOrig = getOriginal(firstInput as PortWithOriginal);
-        const inputType = inputInferred ?? (isConcrete(inputOrig) ? inputOrig : undefined);
-
-        if (inputType && nodeInferred.get(output.id) !== inputType) {
-          nodeInferred.set(output.id, inputType);
-          changed = true;
+          if (inputType && isConcrete(inputType)) {
+            if (nodeInferred.get(output.id) !== inputType) {
+              nodeInferred.set(output.id, inputType);
+              changed = true;
+            }
+            break;
+          }
         }
       }
     }
@@ -208,11 +330,13 @@ function workflowToFlow(
         pluginId: def?.pluginId,
         inputs: def?.inputs?.map((p) => ({
           id: p.id,
+          name: p.name || p.id,
           direction: 'input' as const,
           typeName: p.typeName || 'generic<T>',
         })),
         outputs: def?.outputs?.map((p) => ({
           id: p.id,
+          name: p.name || p.id,
           direction: 'output' as const,
           typeName: p.typeName || 'generic<T>',
         })),
@@ -277,10 +401,16 @@ function generateNodeId(type: string): string {
   return `${type}-${Date.now().toString(36)}-${nodeIdCounter}`;
 }
 
+export interface UseWorkflowEditorOptions {
+  /** Lookup function for external type data (e.g., spark schemas) */
+  typeLookup?: <T>(key: string) => T | undefined;
+}
+
 export function useWorkflowEditor(
   initialWorkflow: Workflow,
   blockDefs: BlockDefinition[],
-  onChange?: (workflow: Workflow, isDirty: boolean) => void
+  onChange?: (workflow: Workflow, isDirty: boolean) => void,
+  options?: UseWorkflowEditorOptions
 ) {
   const { nodes: initialNodes, edges: initialEdges } = useMemo(
     () => workflowToFlow(initialWorkflow, blockDefs),
@@ -298,6 +428,14 @@ export function useWorkflowEditor(
   // Track onChange callback in ref to avoid stale closures
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
+
+  // Type resolver context with lookup function
+  const resolverContext = useMemo<TypeResolverContext>(
+    () => ({
+      lookup: options?.typeLookup ?? (() => undefined),
+    }),
+    [options?.typeLookup]
+  );
 
   // Reset dirty state when initialWorkflow changes (after save)
   // This happens when parent calls setInitialWorkflow with the saved workflow
@@ -334,9 +472,9 @@ export function useWorkflowEditor(
     [onEdgesChangeBase]
   );
 
-  // Run type inference when graph changes (nodes or edges)
+  // Run type inference when graph changes (nodes, edges, or resolver context)
   useEffect(() => {
-    const inferred = inferPortTypes(nodes, edges);
+    const inferred = inferPortTypes(nodes, edges, resolverContext);
     // Only update if types actually changed
     const hasChanges = inferred.some((node, i) => {
       if (node.type !== 'block') return false;
@@ -352,7 +490,7 @@ export function useWorkflowEditor(
     if (hasChanges) {
       setNodes(inferred);
     }
-  }, [nodes, edges, setNodes]);
+  }, [nodes, edges, resolverContext, setNodes]);
 
   // Get current workflow from nodes/edges
   const workflow = useMemo(
@@ -371,16 +509,58 @@ export function useWorkflowEditor(
     [nodes, selectedNodeId]
   );
 
-  // Handle new connections
+  // Validate connection compatibility
+  const isValidConnection = useCallback(
+    (connection: Edge | Connection): boolean => {
+      // Don't allow self-connections
+      if (connection.source === connection.target) return false;
+
+      // Find source and target nodes
+      const sourceNode = nodes.find((n) => n.id === connection.source);
+      const targetNode = nodes.find((n) => n.id === connection.target);
+      if (!sourceNode || !targetNode) return false;
+
+      const sourceData = sourceNode.data as BlockNodeData;
+      const targetData = targetNode.data as BlockNodeData;
+
+      // Find the specific ports
+      const sourcePort = sourceData.outputs?.find(
+        (p) => p.id === (connection.sourceHandle || 'out')
+      );
+      const targetPort = targetData.inputs?.find((p) => p.id === (connection.targetHandle || 'in'));
+
+      if (!sourcePort || !targetPort) return false;
+
+      // Check type compatibility
+      return arePortTypesCompatible(sourcePort.typeName, targetPort.typeName);
+    },
+    [nodes]
+  );
+
+  // Handle new connections (enforces single connection per port)
   const onConnect: OnConnect = useCallback(
     (connection: Connection) => {
       const newEdge: Edge = {
         ...connection,
-        id: `${connection.source}-to-${connection.target}`,
+        id: `${connection.source}:${connection.sourceHandle || 'out'}->${connection.target}:${connection.targetHandle || 'in'}`,
         type: 'smoothstep',
         markerEnd: { type: MarkerType.ArrowClosed },
       } as Edge;
-      setEdges((eds) => addEdge(newEdge, eds));
+
+      setEdges((eds) => {
+        // Remove any existing edge connected to the same target port (input)
+        // Remove any existing edge connected to the same source port (output)
+        const filtered = eds.filter((e) => {
+          const sameTargetPort =
+            e.target === connection.target &&
+            (e.targetHandle || 'in') === (connection.targetHandle || 'in');
+          const sameSourcePort =
+            e.source === connection.source &&
+            (e.sourceHandle || 'out') === (connection.sourceHandle || 'out');
+          return !sameTargetPort && !sameSourcePort;
+        });
+        return addEdge(newEdge, filtered);
+      });
       setIsDirty(true);
     },
     [setEdges]
@@ -575,6 +755,7 @@ export function useWorkflowEditor(
     onNodesChange,
     onEdgesChange,
     onConnect,
+    isValidConnection,
     onNodeClick,
     onPaneClick,
     onNodesDelete,

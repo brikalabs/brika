@@ -58,6 +58,27 @@
     "save": "Enregistrer le Workflow",
     "discard": "Annuler les modifications",
     "unsaved": "Non enregistré",
-    "unsavedChanges": "Modifications non enregistrées"
+    "unsavedChanges": "Modifications non enregistrées",
+    "panels": {
+      "blocks": "Blocs",
+      "blocksDescription": "Glissez pour ajouter des blocs",
+      "config": "Configuration",
+      "configDescription": "Configurer le bloc sélectionné",
+      "debug": "Débogage en direct",
+      "debugDescription": "Événements en temps réel",
+      "collapse": "Réduire",
+      "expand": "Agrandir",
+      "searchBlocks": "Rechercher des blocs...",
+      "noBlocks": "Aucun bloc disponible",
+      "noBlocksFound": "Aucun bloc trouvé",
+      "dragToAdd": "Glissez pour ajouter",
+      "waitingForEvents": "En attente d'événements...",
+      "enableWorkflow": "Activez le workflow pour voir les données en direct",
+      "nodeId": "ID du nœud",
+      "noConfigNeeded": "Aucune configuration nécessaire",
+      "defaultSettings": "Ce bloc fonctionne avec les paramètres par défaut",
+      "availableVariables": "Variables disponibles",
+      "clickToCopy": "Cliquez pour copier · Utilisez dans n'importe quel champ"
+    }
   }
 }

@@ -138,10 +138,10 @@ export const myPlugin = defineReactiveBlock(
       enabled: z.boolean().default(true).describe("Enable processing"),
     }),
   },
-  ({ inputs, outputs, config, log }) => {
+  ({ inputs, outputs, config }) => {
     inputs.in.on((data) => {
       if (!config.enabled) return;
-      log("info", "Processing data", { data });
+      log.info("Processing data", { data });
       outputs.out.emit(data);
     });
   }

@@ -1,2 +1,2 @@
-export { EventsPage } from './EventsPage';
-export { useEmitEvent, useEventStream } from './hooks';
+export { SparksPage } from './SparksPage';
+export { useEmitEvent, useSparkStream } from './sparks-hooks';

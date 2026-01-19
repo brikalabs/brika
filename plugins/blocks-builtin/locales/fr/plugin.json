@@ -161,6 +161,16 @@
           "description": "Données finales"
         }
       }
+    },
+    "spark-receiver": {
+      "name": "Récepteur Spark",
+      "description": "Reçoit des événements spark typés des plugins",
+      "ports": {
+        "out": {
+          "name": "Payload",
+          "description": "Le payload de l'événement spark"
+        }
+      }
     }
   },
   "fields": {
@@ -235,6 +245,10 @@
     "timeout": {
       "label": "Timeout",
       "description": "Délai d'expiration de la requête"
+    },
+    "sparkType": {
+      "label": "Type de Spark",
+      "description": "Le type de spark à écouter (ex: timer:tick)"
     }
   }
 }

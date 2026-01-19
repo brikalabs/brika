@@ -6,7 +6,7 @@
  */
 
 import { z } from 'zod';
-import type { GenericRef, PassthroughRef } from './schema-types';
+import type { GenericRef, PassthroughRef, ResolvedRef } from './schema-types';
 
 // Re-export everything from @brika/flow
 export * from '@brika/flow';
@@ -15,7 +15,7 @@ export * from '@brika/flow';
 export type { Serializable } from '@brika/serializable';
 
 // Re-export type markers for convenience
-export type { GenericRef, PassthroughRef } from './schema-types';
+export type { GenericRef, PassthroughRef, ResolvedRef } from './schema-types';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Port Definitions with Zod Schemas
@@ -39,9 +39,11 @@ export interface InputDef<T extends z.ZodType | GenericRef<string>> {
 }
 
 /**
- * Output port definition - can hold a Zod schema, PassthroughRef, or GenericRef.
+ * Output port definition - can hold a Zod schema, PassthroughRef, GenericRef, or ResolvedRef.
  */
-export interface OutputDef<T extends z.ZodType | PassthroughRef<string> | GenericRef<string>> {
+export interface OutputDef<
+  T extends z.ZodType | PassthroughRef<string> | GenericRef<string> | ResolvedRef,
+> {
   readonly __type: 'output';
   readonly schema: T;
   readonly meta: PortMeta;
@@ -58,12 +60,11 @@ export function input<T extends z.ZodType | GenericRef<string>>(
 }
 
 /**
- * Create a typed output port with Zod schema, passthrough, or generic.
+ * Create a typed output port with Zod schema, passthrough, generic, or resolved.
  */
-export function output<T extends z.ZodType | PassthroughRef<string> | GenericRef<string>>(
-  schema: T,
-  meta: PortMeta
-): OutputDef<T> {
+export function output<
+  T extends z.ZodType | PassthroughRef<string> | GenericRef<string> | ResolvedRef,
+>(schema: T, meta: PortMeta): OutputDef<T> {
   return { __type: 'output', schema, meta };
 }
 
@@ -73,7 +74,7 @@ export function output<T extends z.ZodType | PassthroughRef<string> | GenericRef
 
 import type { Emitter, Factory, Flow, Serializable, Source } from '@brika/flow';
 
-/** Extract inferred type from Zod schema, GenericRef, or PassthroughRef */
+/** Extract inferred type from Zod schema, GenericRef, PassthroughRef, or ResolvedRef */
 type SchemaInfer<T> =
   T extends z.ZodType<infer U>
     ? U
@@ -81,7 +82,9 @@ type SchemaInfer<T> =
       ? unknown
       : T extends PassthroughRef
         ? unknown
-        : never;
+        : T extends ResolvedRef
+          ? unknown
+          : never;
 
 /** Extract inferred type from InputDef */
 type InputType<D> = D extends InputDef<infer T> ? SchemaInfer<T> : never;
@@ -96,7 +99,10 @@ export type InputFlows<I extends Record<string, InputDef<z.ZodType | GenericRef<
 
 /** Convert output definitions to typed emitters */
 export type OutputEmitters<
-  O extends Record<string, OutputDef<z.ZodType | PassthroughRef<string> | GenericRef<string>>>,
+  O extends Record<
+    string,
+    OutputDef<z.ZodType | PassthroughRef<string> | GenericRef<string> | ResolvedRef>
+  >,
 > = {
   readonly [K in keyof O]: Emitter<OutputType<O[K]>>;
 };
@@ -108,7 +114,7 @@ export interface BlockContext<
   TInputs extends Record<string, InputDef<z.ZodType | GenericRef<string>>>,
   TOutputs extends Record<
     string,
-    OutputDef<z.ZodType | PassthroughRef<string> | GenericRef<string>>
+    OutputDef<z.ZodType | PassthroughRef<string> | GenericRef<string> | ResolvedRef>
   >,
   TConfig extends z.ZodObject<z.ZodRawShape>,
 > {
@@ -134,9 +140,6 @@ export interface BlockContext<
    * Start a flow from a value, source, or factory.
    */
   start<T>(input: T | Source<T> | Factory<T>): Flow<T>;
-
-  /** Log a message */
-  log(level: 'debug' | 'info' | 'warn' | 'error', message: string): void;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -150,7 +153,7 @@ export interface ReactiveBlockSpec<
   TInputs extends Record<string, InputDef<z.ZodType | GenericRef<string>>>,
   TOutputs extends Record<
     string,
-    OutputDef<z.ZodType | PassthroughRef<string> | GenericRef<string>>
+    OutputDef<z.ZodType | PassthroughRef<string> | GenericRef<string> | ResolvedRef>
   >,
   TConfig extends z.ZodObject<z.ZodRawShape>,
 > {
@@ -181,7 +184,7 @@ export type BlockSetup<
   TInputs extends Record<string, InputDef<z.ZodType | GenericRef<string>>>,
   TOutputs extends Record<
     string,
-    OutputDef<z.ZodType | PassthroughRef<string> | GenericRef<string>>
+    OutputDef<z.ZodType | PassthroughRef<string> | GenericRef<string> | ResolvedRef>
   >,
   TConfig extends z.ZodObject<z.ZodRawShape>,
 > = (ctx: BlockContext<TInputs, TOutputs, TConfig>) => void;

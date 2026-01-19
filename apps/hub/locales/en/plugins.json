@@ -25,6 +25,8 @@
     "availableToolsDesc": "Tools provided by this plugin",
     "availableBlocks": "Available Blocks",
     "availableBlocksDesc": "Workflow blocks provided by this plugin",
+    "availableSparks": "Available Sparks",
+    "availableSparksDesc": "Typed events emitted by this plugin",
     "installation": "Installation",
     "installationDesc": "Technical details and paths",
     "directory": "Directory",

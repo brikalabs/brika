@@ -16,7 +16,6 @@ import { z } from 'zod';
 const TYPE_PREFIX = '$type:';
 
 export const TypeMarker = {
-  TOOL_REF: `${TYPE_PREFIX}toolRef`,
   COLOR: `${TYPE_PREFIX}color`,
   DURATION: `${TYPE_PREFIX}duration`,
   EXPRESSION: `${TYPE_PREFIX}expression`,
@@ -25,6 +24,7 @@ export const TypeMarker = {
   FILE_PATH: `${TYPE_PREFIX}filePath`,
   URL: `${TYPE_PREFIX}url`,
   JSON: `${TYPE_PREFIX}json`,
+  SPARK_TYPE: `${TYPE_PREFIX}spark`,
 } as const;
 
 export type TypeMarkerValue = (typeof TypeMarker)[keyof typeof TypeMarker];
@@ -40,23 +40,6 @@ export function getTypeMarker(description?: string): TypeMarkerValue | null {
     }
   }
   return null;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Tool Reference
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * Tool ID reference.
- *
- * The UI will render a tool picker that allows selecting a tool and will
- * automatically fetch the tool's schema for configuration.
- *
- * @param description Optional additional description (will be appended)
- */
-export function toolRef(description?: string) {
-  const desc = description ? `${TypeMarker.TOOL_REF} ${description}` : TypeMarker.TOOL_REF;
-  return z.string().describe(desc);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -200,6 +183,23 @@ export function jsonSchema(description?: string) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Spark Type (Event Type Picker)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Spark type reference.
+ *
+ * The UI will render a spark type picker that shows available sparks
+ * grouped by plugin.
+ *
+ * @param description Optional additional description
+ */
+export function sparkType(description?: string) {
+  const desc = description ? `${TypeMarker.SPARK_TYPE} ${description}` : TypeMarker.SPARK_TYPE;
+  return z.string().describe(desc);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Passthrough Port (Generic Type)
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -332,4 +332,93 @@ export function generic<T extends string = 'T'>(typeVar?: T): GenericRef<T> {
  */
 export function isGenericRef(value: unknown): value is GenericRef {
   return typeof value === 'object' && value !== null && (value as GenericRef).__type === 'generic';
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Resolved Port (Config-Based Type Resolution)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const RESOLVED_MARKER = '$resolve';
+
+/**
+ * Type marker for config-based type resolution.
+ *
+ * The UI type inference system will resolve this port's type by:
+ * 1. Reading the config field value
+ * 2. Looking up the external data source
+ * 3. Extracting the schema from the matched entry
+ *
+ * @template S The source data type (e.g., 'spark')
+ * @template K The config field that contains the lookup key
+ */
+export interface ResolvedRef<S extends string = string, K extends string = string> {
+  readonly __source: S;
+  readonly __configField: K;
+  readonly __type: 'resolved';
+  /** Runtime schema (z.unknown) - actual type is resolved dynamically */
+  readonly _schema: z.ZodUnknown;
+}
+
+/**
+ * Resolved port marker.
+ *
+ * Creates a port whose type is resolved dynamically based on:
+ * - A data source (e.g., 'spark' for sparks registry)
+ * - A config field that contains the lookup key (e.g., 'sparkType')
+ *
+ * The type inference system will:
+ * 1. Read `config[configField]` to get the lookup key
+ * 2. Look up the key in the data source
+ * 3. Use the matched entry's schema as this port's type
+ *
+ * @param source The data source to look up (e.g., 'spark', 'block')
+ * @param configField The config field containing the lookup key
+ *
+ * @example
+ * ```typescript
+ * // The output type is resolved from the spark's schema
+ * outputs: {
+ *   out: output(resolved('spark', 'sparkType'), { name: 'Payload' }),
+ * },
+ * config: z.object({
+ *   sparkType: z.string(),  // e.g., "timer:timer-started"
+ * }),
+ * ```
+ */
+export function resolved<S extends string, K extends string>(
+  source: S,
+  configField: K
+): ResolvedRef<S, K> {
+  return {
+    __source: source,
+    __configField: configField,
+    __type: 'resolved',
+    _schema: z.unknown().describe(`${RESOLVED_MARKER}:${source}:${configField}`),
+  } as ResolvedRef<S, K>;
+}
+
+/**
+ * Check if a value is a ResolvedRef.
+ */
+export function isResolvedRef(value: unknown): value is ResolvedRef {
+  return (
+    typeof value === 'object' && value !== null && (value as ResolvedRef).__type === 'resolved'
+  );
+}
+
+/**
+ * Parse a resolved type marker from a typeName string.
+ * Returns { source, configField } or null if not a resolved marker.
+ *
+ * @example
+ * parseResolvedMarker('$resolve:spark:sparkType') // { source: 'spark', configField: 'sparkType' }
+ * parseResolvedMarker('generic<T>') // null
+ */
+export function parseResolvedMarker(
+  typeName?: string
+): { source: string; configField: string } | null {
+  if (!typeName?.startsWith(RESOLVED_MARKER + ':')) return null;
+  const parts = typeName.slice(RESOLVED_MARKER.length + 1).split(':');
+  if (parts.length < 2 || !parts[0] || !parts[1]) return null;
+  return { source: parts[0], configField: parts[1] };
 }

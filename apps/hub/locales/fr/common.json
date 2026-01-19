@@ -56,7 +56,9 @@
     "log_one": "Journal",
     "log_other": "Journaux",
     "tool_one": "Outil",
-    "tool_other": "Outils"
+    "tool_other": "Outils",
+    "spark_one": "Spark",
+    "spark_other": "Sparks"
   },
   "labels": {
     "name": "Nom",

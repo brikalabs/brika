@@ -21,21 +21,9 @@ export {
   startBlock,
   stopBlock,
 } from './blocks';
-export type {
-  EventPayload as EventPayloadType,
-  LogLevel as LogLevelType,
-} from './events';
+export type { LogLevel as LogLevelType } from './events';
 // ─── Events ───
-export {
-  EventPayload,
-  emit,
-  event,
-  LogLevel,
-  log,
-  ping,
-  subscribe,
-  unsubscribe,
-} from './events';
+export { LogLevel, log, ping } from './events';
 export type {
   PluginInfo as PluginInfoType,
   PluginRequirements as PluginRequirementsType,
@@ -51,6 +39,20 @@ export {
   stop,
   uninstall,
 } from './lifecycle';
+export type {
+  SparkDefinition as SparkDefinitionType,
+  SparkEvent as SparkEventType,
+} from './sparks';
+// ─── Sparks ───
+export {
+  emitSpark,
+  registerSpark,
+  SparkDefinition,
+  SparkEvent,
+  sparkEvent,
+  subscribeSpark,
+  unsubscribeSpark,
+} from './sparks';
 export type {
   ToolCallContext as ToolCallContextType,
   ToolCallSource as ToolCallSourceType,

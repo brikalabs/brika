@@ -173,16 +173,16 @@ export const myBlock = defineReactiveBlock(
       value: z.string().describe("Configuration value"),
     }),
   },
-  ({ inputs, outputs, config, log }) => {
+  ({ inputs, outputs, config }) => {
     inputs.in.on((data) => {
-      log("info", `Processing: ${JSON.stringify(data)}`);
+      log.info(`Processing: ${JSON.stringify(data)}`);
       outputs.out.emit(data);
     });
   }
 );
 
-onStop(() => log("info", "Plugin stopping"));
-log("info", "My plugin loaded");
+onStop(() => log.info("Plugin stopping"));
+log.info("My plugin loaded");
 ```
 
 ### Plugin package.json
@@ -242,7 +242,7 @@ export const processBlock = defineReactiveBlock(
       threshold: z.number().default(10),
     }),
   },
-  ({ inputs, outputs, config, log }) => {
+  ({ inputs, outputs, config }) => {
     // Combine inputs and compute sum
     combine(inputs.a, inputs.b)
       .pipe(map(([a, b]) => a + b))
@@ -253,7 +253,7 @@ export const processBlock = defineReactiveBlock(
       .pipe(filter((v) => v > config.threshold))
       .to(outputs.filtered);
 
-    log("info", "Process block started");
+    log.info("Process block started");
   }
 );
 ```

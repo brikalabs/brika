@@ -1,2 +1,2 @@
+export { type MetricsSample, MetricsStore } from './metrics-store';
 export { getProcessMetrics, type ProcessMetrics } from './process-metrics';
-export { MetricsStore, type MetricsSample } from './metrics-store';

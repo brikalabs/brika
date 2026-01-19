@@ -234,7 +234,10 @@ export const registryRoutes = group('/api/registry', [
         };
       } catch (error) {
         const log = inject(Logger);
-        log.error('Failed to fetch README from CDN', { packageName: params.name, error: String(error) });
+        log.error('Failed to fetch README from CDN', {
+          packageName: params.name,
+          error: String(error),
+        });
         return { readme: null, filename: null };
       }
     }
@@ -277,7 +280,10 @@ export const registryRoutes = group('/api/registry', [
         return new Response(null, { status: 404 });
       } catch (error) {
         const log = inject(Logger);
-        log.error('Failed to fetch icon from CDN', { packageName: params.name, error: String(error) });
+        log.error('Failed to fetch icon from CDN', {
+          packageName: params.name,
+          error: String(error),
+        });
         return new Response(null, { status: 404 });
       }
     }

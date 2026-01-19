@@ -195,6 +195,13 @@ export function BlockNode(props: NodeProps) {
         </code>
       );
     }
+    if (config.sparkType) {
+      return (
+        <code className="block truncate rounded-md bg-amber-500/10 px-2 py-1 font-mono text-amber-600 text-xs">
+          ⚡ {String(config.sparkType)}
+        </code>
+      );
+    }
     return null;
   };
 

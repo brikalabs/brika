@@ -198,7 +198,7 @@ export const timer = defineReactiveBlock(
       const triggeredAt = Date.now();
       const name = config.name ?? "timer";
 
-      log("info", `Timer "${name}" started for ${config.duration}ms`);
+      log.info(`Timer "${name}" started for ${config.duration}ms`);
 
       activeTimer = setTimeout(() => {
         outputs.completed.emit({
@@ -217,8 +217,8 @@ export const timer = defineReactiveBlock(
   }
 );
 
-onStop(() => log("info", "Timer plugin stopping"));
-log("info", "Timer plugin loaded");
+onStop(() => log.info("Timer plugin stopping"));
+log.info("Timer plugin loaded");
 ```
 
 ## Installation

@@ -14,6 +14,7 @@ import {
   log,
   map,
   output,
+  subscribeSpark,
   z,
 } from '@brika/sdk';
 
@@ -51,9 +52,9 @@ export const httpRequest = defineReactiveBlock(
       body: z.string().optional().describe('Request body (for POST/PUT/PATCH)'),
     }),
   },
-  ({ inputs, outputs, config, log }) => {
+  ({ inputs, outputs, config }) => {
     inputs.trigger.on(async () => {
-      log('debug', `HTTP ${config.method ?? 'GET'} ${config.url}`);
+      log.debug(`HTTP ${config.method ?? 'GET'} ${config.url}`);
       try {
         const res = await fetch(config.url, {
           method: config.method ?? 'GET',
@@ -77,7 +78,7 @@ export const httpRequest = defineReactiveBlock(
           body,
         });
       } catch (err) {
-        log('error', `HTTP request failed: ${err}`);
+        log.error(`HTTP request failed: ${err}`);
         outputs.error.emit({ message: String(err) });
       }
     });
@@ -111,11 +112,11 @@ export const condition = defineReactiveBlock(
       value: z.any().optional().describe('Value to compare against'),
     }),
   },
-  ({ inputs, outputs, config, log }) => {
+  ({ inputs, outputs, config }) => {
     inputs.in.on((data) => {
       const fieldValue = getFieldValue(data, config.field);
       const result = evaluate(fieldValue, config.operator, config.value);
-      log('debug', `Condition: ${config.field} ${config.operator} ${config.value} = ${result}`);
+      log.debug(`Condition: ${config.field} ${config.operator} ${config.value} = ${result}`);
 
       if (result) {
         outputs.then.emit(data);
@@ -189,10 +190,10 @@ export const switchBlock = defineReactiveBlock(
       case3: z.any().optional().describe('Value for case 3'),
     }),
   },
-  ({ inputs, outputs, config, log }) => {
+  ({ inputs, outputs, config }) => {
     inputs.in.on((data) => {
       const value = getFieldValue(data, config.field);
-      log('debug', `Switch value: ${JSON.stringify(value)}`);
+      log.debug(`Switch value: ${JSON.stringify(value)}`);
 
       if (value === config.case1) {
         outputs.case1.emit(data);
@@ -229,8 +230,8 @@ export const delay = defineReactiveBlock(
       duration: z.duration(undefined, 'Duration to wait'),
     }),
   },
-  ({ inputs, outputs, config, log }) => {
-    log('debug', `Delay configured: ${config.duration}ms`);
+  ({ inputs, outputs, config }) => {
+    log.debug(`Delay configured: ${config.duration}ms`);
 
     // Use delay operator to wait before emitting
     inputs.in.pipe(delayOp(config.duration)).to(outputs.out);
@@ -257,7 +258,7 @@ export const clock = defineReactiveBlock(
       interval: z.duration(undefined, 'Interval between ticks'),
     }),
   },
-  ({ outputs, config, log, start }) => {
+  ({ outputs, config, start }) => {
     start(interval(config.interval))
       .pipe(
         map((count) => {
@@ -265,7 +266,7 @@ export const clock = defineReactiveBlock(
         })
       )
       .to(outputs.tick);
-    log('info', `Clock started with interval: ${config.interval}ms`);
+    log.info(`Clock started with interval: ${config.interval}ms`);
   }
 );
 
@@ -292,7 +293,7 @@ export const transform = defineReactiveBlock(
       template: z.record(z.string(), z.string()).optional().describe('Template to build output'),
     }),
   },
-  ({ inputs, outputs, config, log }) => {
+  ({ inputs, outputs, config }) => {
     inputs.in
       .pipe(
         map((data) => {
@@ -302,14 +303,14 @@ export const transform = defineReactiveBlock(
             for (const [key, path] of Object.entries(config.template)) {
               result[key] = getFieldValue(data, path);
             }
-            log('debug', `Transformed with template: ${JSON.stringify(result)}`);
+            log.debug(`Transformed with template: ${JSON.stringify(result)}`);
             return result;
           }
 
           // If field is provided, extract it
           if (config.field) {
             const value = getFieldValue(data, config.field);
-            log('debug', `Extracted field ${config.field}: ${JSON.stringify(value)}`);
+            log.debug(`Extracted field ${config.field}: ${JSON.stringify(value)}`);
             return value;
           }
 
@@ -374,7 +375,7 @@ export const logBlock = defineReactiveBlock(
       level: z.enum(['debug', 'info', 'warn', 'error']).default('info').describe('Log level'),
     }),
   },
-  ({ inputs, outputs, config, log }) => {
+  ({ inputs, outputs, config }) => {
     inputs.in.on((data) => {
       const c = {
         inputs: { in: data },
@@ -385,7 +386,7 @@ export const logBlock = defineReactiveBlock(
         ? interpolate(config.message, c)
         : JSON.stringify(data);
 
-      log(config.level, message);
+      log[config.level](message);
       outputs.out.emit(data);
     });
   }
@@ -418,12 +419,12 @@ export const merge = defineReactiveBlock(
     },
     config: z.object({}),
   },
-  ({ inputs, outputs, log }) => {
+  ({ inputs, outputs }) => {
     // Combine waits for both inputs to have values
     combine(inputs.a, inputs.b)
       .pipe(
         map(([a, b]) => {
-          log('debug', 'Merged inputs');
+          log.debug('Merged inputs');
           return { a, b };
         })
       )
@@ -452,9 +453,9 @@ export const split = defineReactiveBlock(
     },
     config: z.object({}),
   },
-  ({ inputs, outputs, log }) => {
+  ({ inputs, outputs }) => {
     inputs.in.on((data) => {
-      log('debug', 'Splitting to parallel branches');
+      log.debug('Splitting to parallel branches');
       outputs.a.emit(data);
       outputs.b.emit(data);
     });
@@ -481,14 +482,64 @@ export const end = defineReactiveBlock(
       status: z.enum(['success', 'failure']).default('success').describe('End status'),
     }),
   },
-  ({ inputs, config, log }) => {
+  ({ inputs, config }) => {
     inputs.in.on((data) => {
-      log('info', `Workflow ended with status: ${config.status}`);
-      log('debug', `Final data: ${JSON.stringify(data)}`);
+      log.info(`Workflow ended with status: ${config.status}`);
+      log.debug(`Final data: ${JSON.stringify(data)}`);
     });
   }
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Spark Receiver Block - Receive typed events
+// ─────────────────────────────────────────────────────────────────────────────
 
-log('info', 'Built-in blocks plugin loaded');
+/**
+ * Spark Receiver Block
+ *
+ * This is a trigger block that receives typed spark events from the hub.
+ * The hub subscribes to the configured spark type and emits data directly
+ * to the output port via blockEmit IPC.
+ *
+ * Configuration:
+ * - sparkType: Full spark type to listen for (e.g., "timer:timer-started")
+ *
+ * The output type is resolved dynamically from the selected spark's schema
+ * using the z.resolved() type marker.
+ */
+export const sparkReceiver = defineReactiveBlock(
+  {
+    id: 'spark-receiver',
+    name: 'Spark Receiver',
+    description: 'Receives typed spark events',
+    category: 'trigger',
+    icon: 'zap',
+    color: '#f59e0b',
+    inputs: {},
+    outputs: {
+      // Output type is resolved from spark's schema via config.sparkType
+      out: output(z.resolved('spark', 'sparkType'), { name: 'Payload' }),
+    },
+    config: z.object({
+      sparkType: z.sparkType('Spark type to listen for'),
+    }),
+  },
+  ({ config, outputs, start }) => {
+    if (!config.sparkType) {
+      log.warn('No spark type configured');
+      return;
+    }
+
+    log.info(`Subscribing to spark: ${config.sparkType}`);
+
+    // Subscribe to sparks and emit payload to output
+    // Cleanup is automatic when block stops (via flow system)
+    start(subscribeSpark(config.sparkType))
+      .pipe(map((event) => event.payload))
+      .to(outputs.out);
+  }
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+log.info('Built-in blocks plugin loaded');

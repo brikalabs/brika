@@ -32,6 +32,13 @@ export interface BlockManifest {
   color?: string;
 }
 
+/** Spark (typed event) manifest from package.json */
+export interface SparkManifest {
+  id: string;
+  name?: string;
+  description?: string;
+}
+
 /** Plugin representation - flattened for easy consumption */
 export interface Plugin {
   // ─── Identity ──────────────────────────────────────────────────────────────
@@ -79,6 +86,8 @@ export interface Plugin {
   // ─── Capabilities ──────────────────────────────────────────────────────────
   /** Available blocks */
   blocks: BlockManifest[];
+  /** Available sparks (typed events) */
+  sparks: SparkManifest[];
 
   // ─── i18n ───────────────────────────────────────────────────────────────────
   /** Available translation locales (e.g., ["en", "fr", "fr-CH"]) */
@@ -100,9 +109,9 @@ export interface BlockSummary {
   /** Hex color */
   color?: string;
   /** Input ports */
-  inputs?: Array<{ id: string; typeName: string }>;
+  inputs?: Array<{ id: string; name: string; typeName?: string }>;
   /** Output ports */
-  outputs?: Array<{ id: string; typeName: string }>;
+  outputs?: Array<{ id: string; name: string; typeName?: string }>;
 }
 
 export interface StoreSearchResult {
@@ -144,6 +153,7 @@ export interface PluginManifest {
   engines?: { brika?: string };
   main?: string;
   blocks?: BlockManifest[];
+  sparks?: SparkManifest[];
   preferences?: PreferenceDefinition[];
 }
 
@@ -286,4 +296,50 @@ export interface NpmSearchResult {
 export interface CompatibilityResult {
   compatible: boolean;
   reason?: string;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Port Type Compatibility
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Check if type is generic (accepts any type) */
+function isGenericType(t?: string): boolean {
+  return !t || t.startsWith('generic') || t === 'unknown' || t === 'any';
+}
+
+/**
+ * Check if two port types are compatible for connection.
+ * Returns true if source type can flow into target type.
+ */
+export function arePortTypesCompatible(sourceType?: string, targetType?: string): boolean {
+  // If either is generic/unknown, allow connection
+  if (isGenericType(sourceType) || isGenericType(targetType)) return true;
+
+  // Normalize types for comparison
+  const normalizeType = (t: string) => t.toLowerCase().trim();
+  const src = normalizeType(sourceType!);
+  const tgt = normalizeType(targetType!);
+
+  // Exact match
+  if (src === tgt) return true;
+
+  // Number compatibility (number, integer)
+  const numberTypes = ['number', 'integer', 'float', 'double'];
+  if (numberTypes.includes(src) && numberTypes.includes(tgt)) return true;
+
+  // String can accept most primitive types (implicit toString)
+  if (tgt === 'string' && ['number', 'integer', 'boolean'].includes(src)) return true;
+
+  // JSON/object types are flexible
+  const objectTypes = ['object', 'json', 'record', 'any'];
+  if (objectTypes.includes(src) && objectTypes.includes(tgt)) return true;
+
+  // Array compatibility - check if base types match
+  if (src.endsWith('[]') && tgt.endsWith('[]')) {
+    const srcBase = src.slice(0, -2);
+    const tgtBase = tgt.slice(0, -2);
+    return arePortTypesCompatible(srcBase, tgtBase);
+  }
+
+  return false;
 }

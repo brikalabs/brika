@@ -7,7 +7,7 @@
 
 import type { BlockDefinition } from '@brika/sdk';
 import type { BlockSummary } from '@brika/shared';
-import { inject, singleton } from '@brika/shared';
+import { arePortTypesCompatible, inject, singleton } from '@brika/shared';
 import { Logger } from '@/runtime/logs/log-router';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -147,8 +147,8 @@ export class BlockRegistry {
         category: b.category as BlockSummary['category'],
         icon: b.icon,
         color: b.color,
-        inputs: b.inputs.map((p) => ({ id: p.id, typeName: p.typeName })),
-        outputs: b.outputs.map((p) => ({ id: p.id, typeName: p.typeName })),
+        inputs: b.inputs.map((p) => ({ id: p.id, name: p.name, typeName: p.typeName })),
+        outputs: b.outputs.map((p) => ({ id: p.id, name: p.name, typeName: p.typeName })),
       }));
   }
 
@@ -205,6 +205,71 @@ export class BlockRegistry {
             errors.push(`Field "${key}" should be ${prop.type}`);
           }
         }
+      }
+    }
+
+    return { valid: errors.length === 0, errors: errors.length > 0 ? errors : undefined };
+  }
+
+  /**
+   * Validate workflow connections for type compatibility
+   */
+  validateConnections(
+    blocks: Array<{ id: string; type: string }>,
+    connections: Array<{ from: string; fromPort?: string; to: string; toPort?: string }>
+  ): { valid: boolean; errors?: string[] } {
+    const errors: string[] = [];
+
+    // Build block lookup
+    const blockMap = new Map(blocks.map((b) => [b.id, b]));
+
+    for (const conn of connections) {
+      const sourceBlock = blockMap.get(conn.from);
+      const targetBlock = blockMap.get(conn.to);
+
+      if (!sourceBlock) {
+        errors.push(`Connection references unknown source block: ${conn.from}`);
+        continue;
+      }
+      if (!targetBlock) {
+        errors.push(`Connection references unknown target block: ${conn.to}`);
+        continue;
+      }
+
+      const sourceDef = this.get(sourceBlock.type);
+      const targetDef = this.get(targetBlock.type);
+
+      if (!sourceDef) {
+        errors.push(`Unknown block type: ${sourceBlock.type}`);
+        continue;
+      }
+      if (!targetDef) {
+        errors.push(`Unknown block type: ${targetBlock.type}`);
+        continue;
+      }
+
+      // Find ports
+      const sourcePort = sourceDef.outputs.find((p) => p.id === (conn.fromPort || 'out'));
+      const targetPort = targetDef.inputs.find((p) => p.id === (conn.toPort || 'in'));
+
+      if (!sourcePort) {
+        errors.push(
+          `Block "${sourceBlock.id}" (${sourceBlock.type}) has no output port "${conn.fromPort || 'out'}"`
+        );
+        continue;
+      }
+      if (!targetPort) {
+        errors.push(
+          `Block "${targetBlock.id}" (${targetBlock.type}) has no input port "${conn.toPort || 'in'}"`
+        );
+        continue;
+      }
+
+      // Check type compatibility
+      if (!arePortTypesCompatible(sourcePort.typeName, targetPort.typeName)) {
+        errors.push(
+          `Type mismatch: ${sourceBlock.id}.${conn.fromPort || 'out'} (${sourcePort.typeName || 'unknown'}) → ${targetBlock.id}.${conn.toPort || 'in'} (${targetPort.typeName || 'unknown'})`
+        );
       }
     }
 

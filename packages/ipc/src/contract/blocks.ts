@@ -19,6 +19,7 @@ export const BlockPort = z.object({
   id: z.string(),
   name: z.string(),
   description: z.string().optional(),
+  typeName: z.string().optional(),
 });
 export type BlockPort = z.infer<typeof BlockPort>;
 

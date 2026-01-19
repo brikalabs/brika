@@ -6,11 +6,11 @@
  */
 
 import type { BlockDefinition } from '@brika/sdk';
-import type { Json } from '@brika/shared';
 import { inject, singleton } from '@brika/shared';
 import { BlockRegistry } from '@/runtime/blocks';
 import { EventSystem } from '@/runtime/events/event-system';
 import { Logger } from '@/runtime/logs/log-router';
+import { PluginEventHandler } from '@/runtime/plugins/plugin-events';
 import { PluginManager } from '@/runtime/plugins/plugin-manager';
 import type { Workflow } from './types';
 import { type ExecutionEvent, type ExecutionListener, WorkflowExecutor } from './workflow-executor';
@@ -25,6 +25,7 @@ export class AutomationEngine {
   private readonly events = inject(EventSystem);
   private readonly blocks = inject(BlockRegistry);
   private readonly plugins = inject(PluginManager);
+  private readonly pluginEvents = inject(PluginEventHandler);
 
   /** Registered workflows */
   readonly #workflows = new Map<string, Workflow>();
@@ -50,6 +51,7 @@ export class AutomationEngine {
       plugins: this.plugins,
       logs: this.logs,
       blocks: this.blocks,
+      events: this.pluginEvents,
     });
   }
 

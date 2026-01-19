@@ -224,13 +224,13 @@ export const timer = defineReactiveBlock(
       duration: z.duration(undefined, "Duration to wait"),
     }),
   },
-  ({ inputs, outputs, config, log }) => {
+  ({ inputs, outputs, config }) => {
     let timeout: ReturnType<typeof setTimeout> | null = null;
 
     inputs.trigger.on(() => {
       if (timeout) clearTimeout(timeout);
 
-      log("info", `Timer started: ${config.duration}ms`);
+      log.info(`Timer started: ${config.duration}ms`);
 
       timeout = setTimeout(() => {
         outputs.completed.emit({
@@ -248,8 +248,8 @@ export const timer = defineReactiveBlock(
   }
 );
 
-onStop(() => log("info", "Timer plugin stopping"));
-log("info", "Timer plugin loaded");
+onStop(() => log.info("Timer plugin stopping"));
+log.info("Timer plugin loaded");
 ```
 
 ### Plugin Lifecycle

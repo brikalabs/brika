@@ -92,16 +92,16 @@ export const greet = defineReactiveBlock(
       name: z.string().default("World"),
     }),
   },
-  ({ inputs, outputs, config, log }) => {
+  ({ inputs, outputs, config }) => {
     inputs.trigger.on(() => {
-      log("info", `Greeting ${config.name}`);
+      log.info(`Greeting ${config.name}`);
       outputs.message.emit(`Hello, ${config.name}!`);
     });
   }
 );
 
-onStop(() => log("info", "Stopping"));
-log("info", "Plugin loaded");
+onStop(() => log.info("Stopping"));
+log.info("Plugin loaded");
 ```
 
 ```json

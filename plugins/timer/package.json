@@ -45,6 +45,28 @@
       "color": "#3b82f6"
     }
   ],
+  "sparks": [
+    {
+      "id": "timer-started",
+      "name": "Timer Started",
+      "description": "Emitted when a timer begins"
+    },
+    {
+      "id": "timer-completed",
+      "name": "Timer Completed",
+      "description": "Emitted when a timer finishes"
+    },
+    {
+      "id": "countdown-tick",
+      "name": "Countdown Tick",
+      "description": "Emitted on each countdown progress tick"
+    },
+    {
+      "id": "countdown-completed",
+      "name": "Countdown Completed",
+      "description": "Emitted when a countdown finishes"
+    }
+  ],
   "dependencies": {
     "@brika/sdk": "workspace:*"
   },

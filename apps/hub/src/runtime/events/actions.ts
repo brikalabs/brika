@@ -31,13 +31,16 @@ export const PluginActions = defineActions('plugin', {
 
 export type PluginAction = ActionsUnion<typeof PluginActions>;
 
-// Generic event actions for untyped events
-export const GenericEventActions = defineActions('event', {
+// Spark actions for typed events
+export const SparkActions = defineActions('spark', {
   emit: z.object({
+    /** Full spark type (pluginId:sparkId) */
     type: z.string(),
+    /** Source plugin that emitted */
     source: z.string(),
+    /** Validated payload */
     payload: z.unknown(),
   }),
 });
 
-export type GenericEventAction = ActionsUnion<typeof GenericEventActions>;
+export type SparkAction = ActionsUnion<typeof SparkActions>;

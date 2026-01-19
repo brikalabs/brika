@@ -22,6 +22,8 @@ export type PortDirection = 'input' | 'output';
  */
 export interface BlockPort {
   id: string;
+  /** Display name for UI */
+  name: string;
   direction: PortDirection;
   /** TypeScript-like type string: "string", "{count: number, ts: number}", "generic<T>" */
   typeName: string;

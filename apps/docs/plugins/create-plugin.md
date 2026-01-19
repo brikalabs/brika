@@ -138,9 +138,9 @@ export const greet = defineReactiveBlock(
       name: z.string().default("World").describe("Name to greet"),
     }),
   },
-  ({ inputs, outputs, config, log }) => {
+  ({ inputs, outputs, config }) => {
     inputs.trigger.on(() => {
-      log("info", `Greeting ${config.name}`);
+      log.info(`Greeting ${config.name}`);
       outputs.message.emit({ text: `Hello, ${config.name}!` });
     });
   }

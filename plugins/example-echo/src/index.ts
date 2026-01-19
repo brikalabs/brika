@@ -1,8 +1,22 @@
 /**
- * Echo Plugin - Example plugin demonstrating reactive blocks
+ * Echo Plugin - Example plugin demonstrating reactive blocks and sparks
  */
 
-import { defineReactiveBlock, input, log, onStop, output, z } from '@brika/sdk';
+import { defineReactiveBlock, defineSpark, input, log, onStop, output, z } from '@brika/sdk';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Sparks - Typed Events
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Emitted when a message is echoed */
+export const echoed = defineSpark({
+  id: 'echoed',
+  schema: z.object({
+    original: z.any(),
+    result: z.any(),
+    timestamp: z.number(),
+  }),
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Echo Block - Echoes input to output with optional transformation
@@ -22,19 +36,29 @@ export const echo = defineReactiveBlock(
       suffix: z.string().optional().describe('Optional suffix to add to string messages'),
     }),
   },
-  ({ inputs, outputs, config, log }) => {
+  ({ inputs, outputs, config }) => {
     inputs.in.on((data) => {
+      let result: unknown;
+
       // If data is a string and we have prefix/suffix, apply them
       if (typeof data === 'string' && (config.prefix || config.suffix)) {
         const prefix = config.prefix ?? '';
         const suffix = config.suffix ?? '';
-        const result = `${prefix}${data}${suffix}`;
-        log('info', `Echo: ${result}`);
-        outputs.out.emit(result);
+        result = `${prefix}${data}${suffix}`;
+        log.info(`Echo: ${result}`);
       } else {
-        log('info', `Echo: ${JSON.stringify(data)}`);
-        outputs.out.emit(data);
+        result = data;
+        log.info(`Echo: ${JSON.stringify(data)}`);
       }
+
+      // Emit spark when message is echoed
+      echoed.emit({
+        original: data,
+        result,
+        timestamp: Date.now(),
+      });
+
+      outputs.out.emit(result);
     });
   }
 );
@@ -44,7 +68,7 @@ export const echo = defineReactiveBlock(
 // ─────────────────────────────────────────────────────────────────────────────
 
 onStop(() => {
-  log('info', 'Echo plugin stopping');
+  log.info('Echo plugin stopping');
 });
 
-log('info', 'Echo plugin loaded');
+log.info('Echo plugin loaded');

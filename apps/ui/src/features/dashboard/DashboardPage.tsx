@@ -4,17 +4,18 @@ import type { VariantProps } from 'class-variance-authority';
 import { Activity, ArrowRight, Box, Play, Plug, Server, Workflow, Zap } from 'lucide-react';
 import type React from 'react';
 import {
+  Avatar,
+  AvatarFallback,
   Badge,
   Card,
   CardContent,
   CardDescription,
   CardHeader,
-  CardIconSmall,
   CardTitle,
   cardVariants,
   ScrollArea,
 } from '@/components/ui';
-import { useEventStream } from '@/features/events';
+import { useSparkStream } from '@/features/events';
 import { usePlugins } from '@/features/plugins';
 import { useLocale } from '@/lib/use-locale';
 import { cn } from '@/lib/utils';
@@ -28,6 +29,7 @@ interface Stats {
   plugins: { total: number; running: number };
   blocks: { total: number; byCategory: Record<string, unknown[]> };
   workflows: { total: number; enabled: number };
+  sparks: { total: number };
 }
 
 async function fetchStats(): Promise<Stats> {
@@ -56,9 +58,11 @@ function StatCard({ icon: Icon, label, value, subValue, href, accent }: Readonly
     <Link to={href}>
       <Card accent={accent} interactive className="h-full p-5">
         <div className="relative flex h-full flex-col justify-center">
-          <CardIconSmall className="absolute top-0 right-0">
-            <Icon className="size-4" />
-          </CardIconSmall>
+          <Avatar className="absolute top-0 right-0 size-9 bg-accent/10 text-accent">
+            <AvatarFallback className="bg-accent/10 text-accent">
+              <Icon className="size-4" />
+            </AvatarFallback>
+          </Avatar>
           <div className="pr-10 font-bold text-3xl tracking-tight">{value}</div>
           <div className="mt-1 flex min-w-0 items-center gap-1 text-muted-foreground text-sm transition-colors group-hover:text-foreground">
             <span className="truncate">
@@ -88,9 +92,11 @@ function QuickAction({
     <Link to={href}>
       <Card accent={accent} interactive className="p-3">
         <div className="relative flex items-center gap-3">
-          <CardIconSmall>
-            <Icon className="size-4" />
-          </CardIconSmall>
+          <Avatar className="size-9 bg-accent/10 text-accent">
+            <AvatarFallback className="bg-accent/10 text-accent">
+              <Icon className="size-4" />
+            </AvatarFallback>
+          </Avatar>
           <span className="font-medium text-sm transition-colors group-hover:text-foreground">
             {label}
           </span>
@@ -109,7 +115,7 @@ export function DashboardPage() {
   const { t, formatTime } = useLocale();
   const { data: health } = useHealth();
   const { data: plugins = [] } = usePlugins();
-  const { events } = useEventStream();
+  const { events: sparks } = useSparkStream();
 
   const { data: stats } = useQuery({
     queryKey: ['stats'],
@@ -166,48 +172,50 @@ export function DashboardPage() {
         />
         <StatCard
           icon={Zap}
-          label={t('events:title')}
-          value={events.length}
-          href="/events"
+          label={t('dashboard:stats.sparks')}
+          value={stats?.sparks.total ?? 0}
+          subValue={t('dashboard:stats.registered')}
+          href="/sparks"
           accent="emerald"
         />
       </div>
 
       {/* Main Content */}
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Recent Events */}
+        {/* Recent Sparks */}
         <Card className="lg:col-span-2">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="flex items-center gap-2">
                   <Zap className="size-5 text-primary" />
-                  {t('events:title')}
+                  {t('sparks:title')}
                 </CardTitle>
-                <CardDescription>{t('events:subtitle')}</CardDescription>
+                <CardDescription>{t('sparks:subtitle')}</CardDescription>
               </div>
-              <Badge variant="secondary">{events.length}</Badge>
+              <Badge variant="secondary">{sparks.length}</Badge>
             </div>
           </CardHeader>
           <CardContent>
             <ScrollArea className="-mx-2 h-70 px-2">
               <div className="flex flex-col gap-2">
-                {events
-                  .slice(-8)
-                  .reverse()
-                  .map((e) => (
-                    <div
-                      key={e.id}
-                      className="flex items-center gap-3 rounded-lg bg-muted/30 p-2.5 transition-colors hover:bg-muted/50"
-                    >
-                      <div className="flex size-9 items-center justify-center rounded-lg bg-primary/10">
-                        <Zap className="size-4 text-primary" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate font-medium font-mono text-sm">{e.type}</div>
-                        <div className="flex items-center gap-2 text-muted-foreground text-xs">
-                          <span>{e.source}</span>
-                          {e.payload && Object.keys(e.payload as object).length > 0 && (
+                {sparks.slice(0, 8).map((e) => (
+                  <div
+                    key={e.id}
+                    className="flex items-center gap-3 rounded-lg bg-muted/30 p-2.5 transition-colors hover:bg-muted/50"
+                  >
+                    <Avatar className="size-9 bg-primary/10">
+                      <AvatarFallback className="bg-primary/10 text-primary">
+                        <Zap className="size-4" />
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate font-medium font-mono text-sm">{e.type}</div>
+                      <div className="flex items-center gap-2 text-muted-foreground text-xs">
+                        <span>{e.source}</span>
+                        {typeof e.payload === 'object' &&
+                          e.payload !== null &&
+                          Object.keys(e.payload).length > 0 && (
                             <>
                               <span className="text-muted-foreground/50">•</span>
                               <span className="max-w-50 truncate">
@@ -215,17 +223,17 @@ export function DashboardPage() {
                               </span>
                             </>
                           )}
-                        </div>
                       </div>
-                      <span className="shrink-0 text-muted-foreground text-xs tabular-nums">
-                        {formatTime(e.ts)}
-                      </span>
                     </div>
-                  ))}
-                {events.length === 0 && (
+                    <span className="shrink-0 text-muted-foreground text-xs tabular-nums">
+                      {formatTime(e.ts)}
+                    </span>
+                  </div>
+                ))}
+                {sparks.length === 0 && (
                   <div className="flex flex-col items-center justify-center py-12 text-center">
                     <Zap className="mb-3 size-10 text-muted-foreground/30" />
-                    <p className="text-muted-foreground text-sm">{t('events:empty')}</p>
+                    <p className="text-muted-foreground text-sm">{t('sparks:emptyStream')}</p>
                   </div>
                 )}
               </div>
@@ -251,7 +259,7 @@ export function DashboardPage() {
                 accent="orange"
               />
               <QuickAction icon={Plug} label={t('nav:plugins')} href="/plugins" accent="blue" />
-              <QuickAction icon={Zap} label={t('events:title')} href="/events" accent="emerald" />
+              <QuickAction icon={Zap} label={t('sparks:title')} href="/sparks" accent="emerald" />
             </CardContent>
           </Card>
 
@@ -280,9 +288,9 @@ export function DashboardPage() {
                 </Badge>
               </div>
               <div className="flex items-center justify-between rounded-lg border bg-card p-3">
-                <span className="font-medium text-sm">{t('events:title')}</span>
+                <span className="font-medium text-sm">{t('sparks:title')}</span>
                 <Badge variant="secondary" className="font-semibold">
-                  {events.length}
+                  {stats?.sparks.total ?? 0}
                 </Badge>
               </div>
               <div className="flex items-center justify-between rounded-lg border bg-card p-3">

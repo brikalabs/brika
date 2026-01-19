@@ -20,10 +20,10 @@ import {
   Tag,
   Trash2,
   User,
+  Zap,
 } from 'lucide-react';
 import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
 import { useState } from 'react';
-import { MetricsChart } from '@/components/ui/chart';
 import { Uptime } from '@/components/Uptime';
 import {
   AlertDialog,
@@ -44,13 +44,13 @@ import {
   CardContent,
   CardDescription,
   CardHeader,
-  CardIconSmall,
   CardTitle,
   Skeleton,
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui';
+import { MetricsChart } from '@/components/ui/chart';
 import { useLocale } from '@/lib/use-locale';
 import { pluginsApi } from './api';
 import { Markdown } from './components/Markdown';
@@ -167,6 +167,7 @@ export function PluginDetailPage() {
   const authorName = getAuthorName();
   const repoUrl = getRepoUrl();
   const blocks = plugin.blocks ?? [];
+  const sparks = plugin.sparks ?? [];
   const locales = plugin.locales ?? [];
 
   // Format bytes to human readable
@@ -383,9 +384,11 @@ export function PluginDetailPage() {
       <div className="grid gap-4 md:grid-cols-3">
         <Card accent="violet" className="p-5">
           <div className="relative flex h-full flex-col justify-center">
-            <CardIconSmall className="absolute top-0 right-0">
-              <Boxes className="size-4" />
-            </CardIconSmall>
+            <Avatar className="absolute top-0 right-0 size-9 bg-accent/10 text-accent">
+              <AvatarFallback className="bg-accent/10 text-accent">
+                <Boxes className="size-4" />
+              </AvatarFallback>
+            </Avatar>
             <div className="font-bold text-3xl tracking-tight">{blocks.length}</div>
             <div className="mt-1 text-muted-foreground text-sm">{t('workflows:blocks')}</div>
           </div>
@@ -393,9 +396,11 @@ export function PluginDetailPage() {
 
         <Card accent="blue" className="p-5">
           <div className="relative flex h-full flex-col justify-center">
-            <CardIconSmall className="absolute top-0 right-0">
-              <Hash className="size-4" />
-            </CardIconSmall>
+            <Avatar className="absolute top-0 right-0 size-9 bg-accent/10 text-accent">
+              <AvatarFallback className="bg-accent/10 text-accent">
+                <Hash className="size-4" />
+              </AvatarFallback>
+            </Avatar>
             <div className="font-bold font-mono text-3xl tracking-tight">{plugin.pid ?? '-'}</div>
             <div className="mt-1 text-muted-foreground text-sm">{t('plugins:details.pid')}</div>
           </div>
@@ -403,9 +408,11 @@ export function PluginDetailPage() {
 
         <Card accent="orange" className="p-5">
           <div className="relative flex h-full flex-col justify-center">
-            <CardIconSmall className="absolute top-0 right-0">
-              <Clock className="size-4" />
-            </CardIconSmall>
+            <Avatar className="absolute top-0 right-0 size-9 bg-accent/10 text-accent">
+              <AvatarFallback className="bg-accent/10 text-accent">
+                <Clock className="size-4" />
+              </AvatarFallback>
+            </Avatar>
             <Uptime startedAt={plugin.startedAt} className="font-bold text-3xl tracking-tight" />
             <div className="mt-1 text-muted-foreground text-sm">
               {plugin.startedAt ? (
@@ -424,9 +431,11 @@ export function PluginDetailPage() {
       <div className="grid gap-4 md:grid-cols-2">
         <Card accent="emerald" className="p-5">
           <div className="relative flex h-full flex-col">
-            <CardIconSmall className="absolute top-0 right-0">
-              <Cpu className="size-4" />
-            </CardIconSmall>
+            <Avatar className="absolute top-0 right-0 size-9 bg-accent/10 text-accent">
+              <AvatarFallback className="bg-accent/10 text-accent">
+                <Cpu className="size-4" />
+              </AvatarFallback>
+            </Avatar>
             <div className="font-bold text-2xl tracking-tight">
               {metrics?.current?.cpu.toFixed(1) ?? '-'}%
             </div>
@@ -442,9 +451,11 @@ export function PluginDetailPage() {
 
         <Card accent="purple" className="p-5">
           <div className="relative flex h-full flex-col">
-            <CardIconSmall className="absolute top-0 right-0">
-              <MemoryStick className="size-4" />
-            </CardIconSmall>
+            <Avatar className="absolute top-0 right-0 size-9 bg-accent/10 text-accent">
+              <AvatarFallback className="bg-accent/10 text-accent">
+                <MemoryStick className="size-4" />
+              </AvatarFallback>
+            </Avatar>
             <div className="font-bold text-2xl tracking-tight">
               {metrics?.current ? formatBytes(metrics.current.memory) : '-'}
             </div>
@@ -496,12 +507,14 @@ export function PluginDetailPage() {
                     key={block.id}
                     className="flex items-center gap-3 rounded-lg bg-muted/30 p-3 transition-colors hover:bg-muted/50"
                   >
-                    <div
-                      className="flex size-10 shrink-0 items-center justify-center rounded-lg"
+                    <Avatar
+                      className="size-10 shrink-0"
                       style={{ backgroundColor: `${color}20`, color }}
                     >
-                      <DynamicIcon name={iconName} className="size-5" />
-                    </div>
+                      <AvatarFallback style={{ backgroundColor: `${color}20`, color }}>
+                        <DynamicIcon name={iconName} className="size-5" />
+                      </AvatarFallback>
+                    </Avatar>
                     <div className="min-w-0 flex-1">
                       <div className="truncate font-medium text-sm">{blockName}</div>
                       {blockDesc && (
@@ -513,6 +526,60 @@ export function PluginDetailPage() {
                         {block.category}
                       </Badge>
                     )}
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Sparks Grid */}
+      {sparks.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Zap className="size-5 text-primary" />
+                  {t('plugins:details.availableSparks')}
+                </CardTitle>
+                <CardDescription>{t('plugins:details.availableSparksDesc')}</CardDescription>
+              </div>
+              <Badge variant="secondary">{sparks.length}</Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {sparks.map((spark) => {
+                const sparkKey = spark.id;
+                const sparkName = tp(
+                  plugin.name,
+                  `sparks.${sparkKey}.name`,
+                  spark.name || sparkKey
+                );
+                const sparkDesc = tp(
+                  plugin.name,
+                  `sparks.${sparkKey}.description`,
+                  spark.description
+                );
+
+                return (
+                  <div
+                    key={spark.id}
+                    className="flex items-center gap-3 rounded-lg bg-muted/30 p-3 transition-colors hover:bg-muted/50"
+                  >
+                    <Avatar className="size-10 shrink-0 bg-amber-500/20 text-amber-500">
+                      <AvatarFallback className="bg-amber-500/20 text-amber-500">
+                        <Zap className="size-5" />
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate font-medium text-sm">{sparkName}</div>
+                      {sparkDesc && (
+                        <div className="truncate text-muted-foreground text-xs">{sparkDesc}</div>
+                      )}
+                    </div>
                   </div>
                 );
               })}

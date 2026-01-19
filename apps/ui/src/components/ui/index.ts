@@ -29,8 +29,6 @@ export {
   CardDescription,
   CardFooter,
   CardHeader,
-  CardIcon,
-  CardIconSmall,
   CardTitle,
   cardVariants,
 } from './card';

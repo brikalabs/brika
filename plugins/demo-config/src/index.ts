@@ -10,7 +10,7 @@ type MyPreferences = {
 
 onInit(() => {
   const prefs = getPreferences<MyPreferences>();
-  log('info', 'Plugin initialized with preferences', {
+  log.info('Plugin initialized with preferences', {
     serverUrl: prefs.serverUrl,
     maxRetries: prefs.maxRetries,
     debugMode: prefs.debugMode,
@@ -20,7 +20,7 @@ onInit(() => {
 });
 
 onPreferencesChange<MyPreferences>((prefs) => {
-  log('info', 'Preferences updated!', {
+  log.info('Preferences updated!', {
     serverUrl: prefs.serverUrl,
     maxRetries: prefs.maxRetries,
     debugMode: prefs.debugMode,

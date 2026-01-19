@@ -56,7 +56,9 @@
     "log_one": "Log",
     "log_other": "Logs",
     "tool_one": "Tool",
-    "tool_other": "Tools"
+    "tool_other": "Tools",
+    "spark_one": "Spark",
+    "spark_other": "Sparks"
   },
   "labels": {
     "name": "Name",

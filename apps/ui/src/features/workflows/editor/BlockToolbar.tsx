@@ -1,8 +1,29 @@
 import { useQuery } from '@tanstack/react-query';
-import { GripVertical, Search } from 'lucide-react';
+import {
+  ArrowDownToLine,
+  ArrowUpFromLine,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  GripVertical,
+  Search,
+  X,
+} from 'lucide-react';
 import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
 import { type DragEvent, useState } from 'react';
-import { Badge, Input, ScrollArea, Skeleton } from '@/components/ui';
+import {
+  Avatar,
+  AvatarFallback,
+  Badge,
+  Button,
+  Input,
+  ScrollArea,
+  Skeleton,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useLocale } from '@/lib/use-locale';
 import { cn } from '@/lib/utils';
 
@@ -60,31 +81,115 @@ function DraggableBlock({ block, onDragStart }: DraggableBlockProps) {
   const blockName = tp(block.pluginId, `blocks.${blockKey}.name`, block.name || blockKey);
   const blockDesc = tp(block.pluginId, `blocks.${blockKey}.description`, block.description);
 
+  const hasInputs = block.inputs && block.inputs.length > 0;
+  const hasOutputs = block.outputs && block.outputs.length > 0;
+
   return (
-    <div
-      role="button"
-      tabIndex={0}
-      draggable
-      onDragStart={(e) => onDragStart(e, block, blockName)}
-      className={cn(
-        'flex cursor-grab items-center gap-2 rounded-lg border bg-card p-2.5',
-        'transition-all hover:border-accent-foreground/20 hover:bg-accent',
-        'active:scale-[0.98] active:cursor-grabbing',
-        'shadow-sm hover:shadow'
-      )}
-    >
-      <GripVertical className="size-3 text-muted-foreground/50" />
-      <div
-        className="flex size-8 shrink-0 items-center justify-center rounded-md shadow-sm"
-        style={{ backgroundColor: block.color + '20', color: block.color }}
-      >
-        <DynamicIcon name={iconName} className="size-4" />
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="truncate font-medium text-sm">{blockName}</div>
-        <div className="truncate text-muted-foreground text-xs">{blockDesc}</div>
-      </div>
-    </div>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div
+          role="button"
+          tabIndex={0}
+          draggable
+          onDragStart={(e) => onDragStart(e, block, blockName)}
+          className={cn(
+            'group flex cursor-grab items-center gap-2 rounded-lg border bg-card p-2.5',
+            'transition-all hover:border-accent-foreground/20 hover:bg-accent',
+            'active:scale-[0.98] active:cursor-grabbing',
+            'shadow-sm hover:shadow'
+          )}
+        >
+          <GripVertical className="size-3 text-muted-foreground/50 opacity-0 transition-opacity group-hover:opacity-100" />
+          <Avatar className="size-8" style={{ backgroundColor: block.color }}>
+            <AvatarFallback style={{ backgroundColor: block.color }}>
+              <DynamicIcon name={iconName} className="size-4 text-white" />
+            </AvatarFallback>
+          </Avatar>
+          <div className="min-w-0 flex-1">
+            <div className="truncate font-medium text-sm">{blockName}</div>
+            <div className="flex items-center gap-1 text-xs">
+              {hasInputs && (
+                <span className="inline-flex items-center gap-0.5 rounded-full bg-blue-500/15 px-1.5 py-0.5 text-[10px] text-blue-600 dark:text-blue-400">
+                  <ArrowDownToLine className="size-2.5" />
+                  {block.inputs.length}
+                </span>
+              )}
+              {hasOutputs && (
+                <span className="inline-flex items-center gap-0.5 rounded-full bg-orange-500/15 px-1.5 py-0.5 text-[10px] text-orange-600 dark:text-orange-400">
+                  <ArrowUpFromLine className="size-2.5" />
+                  {block.outputs.length}
+                </span>
+              )}
+              {!hasInputs && !hasOutputs && (
+                <span className="truncate text-muted-foreground">{blockDesc}</span>
+              )}
+            </div>
+          </div>
+        </div>
+      </TooltipTrigger>
+      <TooltipContent side="right" className="w-64 p-3">
+        {/* Header */}
+        <div className="flex items-center gap-2">
+          <Avatar className="size-8" style={{ backgroundColor: block.color }}>
+            <AvatarFallback style={{ backgroundColor: block.color }}>
+              <DynamicIcon name={iconName} className="size-4 text-white" />
+            </AvatarFallback>
+          </Avatar>
+          <div className="min-w-0">
+            <p className="truncate font-semibold">{blockName}</p>
+            <p className="text-[10px] opacity-60">{block.category}</p>
+          </div>
+        </div>
+
+        {/* Description */}
+        {blockDesc && <p className="mt-2 text-[11px] opacity-80">{blockDesc}</p>}
+
+        {/* I/O Section */}
+        {(hasInputs || hasOutputs) && (
+          <div className="mt-3 space-y-2">
+            {/* Inputs */}
+            {hasInputs && (
+              <div className="flex flex-wrap gap-1">
+                {block.inputs.slice(0, 6).map((p) => (
+                  <span
+                    key={p.id}
+                    className="inline-flex items-center gap-1 rounded-full bg-blue-500/15 px-2 py-0.5 text-[10px] text-blue-600 dark:text-blue-400"
+                  >
+                    <ArrowDownToLine className="size-2.5" />
+                    {p.name}
+                  </span>
+                ))}
+                {block.inputs.length > 6 && (
+                  <span className="inline-flex items-center rounded-full bg-blue-500/10 px-2 py-0.5 text-[10px] text-blue-500">
+                    +{block.inputs.length - 6}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Outputs */}
+            {hasOutputs && (
+              <div className="flex flex-wrap gap-1">
+                {block.outputs.slice(0, 6).map((p) => (
+                  <span
+                    key={p.id}
+                    className="inline-flex items-center gap-1 rounded-full bg-orange-500/15 px-2 py-0.5 text-[10px] text-orange-600 dark:text-orange-400"
+                  >
+                    <ArrowUpFromLine className="size-2.5" />
+                    {p.name}
+                  </span>
+                ))}
+                {block.outputs.length > 6 && (
+                  <span className="inline-flex items-center rounded-full bg-orange-500/10 px-2 py-0.5 text-[10px] text-orange-500">
+                    +{block.outputs.length - 6}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -107,11 +212,14 @@ function BlockSkeleton() {
 
 interface BlockToolbarProps {
   onDragStart?: (e: React.DragEvent, block: BlockDefinition) => void;
+  onCollapse?: () => void;
   className?: string;
 }
 
-export function BlockToolbar({ onDragStart, className }: BlockToolbarProps) {
+export function BlockToolbar({ onDragStart, onCollapse, className }: BlockToolbarProps) {
+  const { t } = useLocale();
   const [search, setSearch] = useState('');
+  const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({});
 
   const {
     data: blocks = [],
@@ -151,15 +259,46 @@ export function BlockToolbar({ onDragStart, className }: BlockToolbarProps) {
   return (
     <div className={cn('flex h-full flex-col border-r bg-card/50 backdrop-blur-sm', className)}>
       <div className="border-b bg-background/80 p-3">
-        <h3 className="mb-2 font-semibold text-foreground text-sm">Blocks</h3>
+        <div className="mb-2 flex items-center justify-between">
+          <h3 className="font-semibold text-foreground text-sm">
+            {t('workflows:editor.panels.blocks')}
+          </h3>
+          {onCollapse && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                  onClick={onCollapse}
+                >
+                  <ChevronLeft className="size-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                <p>{t('workflows:editor.panels.collapse')}</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+        </div>
         <div className="relative">
           <Search className="absolute top-2.5 left-2.5 size-4 text-muted-foreground" />
           <Input
-            placeholder="Search blocks..."
+            placeholder={t('workflows:editor.panels.searchBlocks')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="h-9 bg-background pl-8"
+            className={cn('h-9 bg-background pl-8', search && 'pr-8')}
           />
+          {search && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="absolute top-1 right-1 h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+              onClick={() => setSearch('')}
+            >
+              <X className="size-3.5" />
+            </Button>
+          )}
         </div>
       </div>
 
@@ -179,39 +318,61 @@ export function BlockToolbar({ onDragStart, className }: BlockToolbarProps) {
             </div>
           ) : groupedBlocks.length === 0 ? (
             <div className="py-8 text-center text-muted-foreground text-sm">
-              {search ? 'No blocks found' : 'No blocks available'}
+              {search
+                ? t('workflows:editor.panels.noBlocksFound')
+                : t('workflows:editor.panels.noBlocks')}
             </div>
           ) : (
-            groupedBlocks.map((category) => (
-              <div key={category.id}>
-                <div className="mb-2 flex items-center gap-2">
-                  <span className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
-                    {category.label}
-                  </span>
-                  <Badge variant="secondary" className="h-4 px-1.5 text-[10px]">
-                    {category.blocks.length}
-                  </Badge>
-                </div>
-                <div className="space-y-1.5">
-                  {category.blocks.map((block) => (
-                    <DraggableBlock
-                      key={block.type || block.id}
-                      block={block}
-                      onDragStart={handleDragStart}
-                    />
-                  ))}
-                </div>
-              </div>
-            ))
+            groupedBlocks.map((category) => {
+              const isOpen = openCategories[category.id] ?? true;
+              return (
+                <Collapsible
+                  key={category.id}
+                  open={isOpen}
+                  onOpenChange={(open) =>
+                    setOpenCategories((prev) => ({ ...prev, [category.id]: open }))
+                  }
+                >
+                  <CollapsibleTrigger asChild>
+                    <button
+                      type="button"
+                      className="mb-1.5 flex w-full items-center gap-1.5 rounded-md px-1 py-1 text-left transition-colors hover:bg-muted/50"
+                    >
+                      <ChevronRight
+                        className={cn(
+                          'size-3.5 text-muted-foreground transition-transform',
+                          isOpen && 'rotate-90'
+                        )}
+                      />
+                      <span className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
+                        {category.label}
+                      </span>
+                      <Badge variant="secondary" className="ml-auto h-4 px-1.5 text-[10px]">
+                        {category.blocks.length}
+                      </Badge>
+                    </button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="space-y-1.5">
+                    {category.blocks.map((block) => (
+                      <DraggableBlock
+                        key={block.type || block.id}
+                        block={block}
+                        onDragStart={handleDragStart}
+                      />
+                    ))}
+                  </CollapsibleContent>
+                </Collapsible>
+              );
+            })
           )}
         </div>
       </ScrollArea>
 
       <div className="border-t bg-background/80 p-3">
         <div className="flex items-center justify-between text-muted-foreground text-xs">
-          <span>Drag to add</span>
+          <span>{t('workflows:editor.panels.dragToAdd')}</span>
           <Badge variant="outline" className="text-[10px]">
-            {blocks.length} blocks
+            {blocks.length} {t('workflows:editor.panels.blocks').toLowerCase()}
           </Badge>
         </div>
       </div>

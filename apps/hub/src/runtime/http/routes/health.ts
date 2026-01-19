@@ -3,6 +3,7 @@ import { HUB_VERSION } from '@/hub';
 import { AutomationEngine } from '@/runtime/automations';
 import { BlockRegistry } from '@/runtime/blocks';
 import { PluginManager } from '@/runtime/plugins/plugin-manager';
+import { SparkRegistry } from '@/runtime/sparks/spark-registry';
 
 export const healthRoutes = [
   route.get('/api/health', () => {
@@ -17,10 +18,12 @@ export const healthRoutes = [
     const plugins = inject(PluginManager);
     const blocks = inject(BlockRegistry);
     const automations = inject(AutomationEngine);
+    const sparks = inject(SparkRegistry);
 
     const pluginList = plugins.list();
     const blockList = blocks.list();
     const workflowList = automations.list();
+    const sparkList = sparks.list();
 
     return {
       plugins: {
@@ -32,6 +35,7 @@ export const healthRoutes = [
         total: workflowList.length,
         enabled: workflowList.filter((w) => w.enabled).length,
       },
+      sparks: { total: sparkList.length },
     };
   }),
 ];
