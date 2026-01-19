@@ -53,3 +53,12 @@ export function usePluginConfigMutation(uid: string) {
     onSuccess: () => qc.invalidateQueries({ queryKey: pluginsKeys.config(uid) }),
   });
 }
+
+export function usePluginMetrics(uid: string, enabled = true) {
+  return useQuery({
+    queryKey: pluginsKeys.metrics(uid),
+    queryFn: () => pluginsApi.getMetrics(uid),
+    refetchInterval: 5000,
+    enabled: enabled && !!uid,
+  });
+}

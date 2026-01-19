@@ -5,11 +5,13 @@ import {
   ArrowUp,
   Boxes,
   Clock,
+  Cpu,
   ExternalLink,
   FileText,
   Github,
   Hash,
   Info,
+  MemoryStick,
   Plug,
   Power,
   RefreshCw,
@@ -21,6 +23,7 @@ import {
 } from 'lucide-react';
 import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
 import { useState } from 'react';
+import { MetricsChart } from '@/components/ui/chart';
 import { Uptime } from '@/components/Uptime';
 import {
   AlertDialog,
@@ -53,7 +56,7 @@ import { pluginsApi } from './api';
 import { Markdown } from './components/Markdown';
 import { PluginConfigForm } from './components/PluginConfigForm';
 import { UpdatePluginDialog } from './components/UpdatePluginDialog';
-import { usePlugin, usePluginMutations, usePluginReadme } from './hooks';
+import { usePlugin, usePluginMetrics, usePluginMutations, usePluginReadme } from './hooks';
 import { registryApi, registryKeys } from './registry-api';
 
 export function PluginDetailPage() {
@@ -73,6 +76,9 @@ export function PluginDetailPage() {
   });
 
   const updateInfo = updatesData?.updates.find((u) => u.name === plugin?.name);
+
+  // Plugin metrics (CPU, memory)
+  const { data: metrics } = usePluginMetrics(pluginUid!, plugin?.status === 'running');
 
   const { reload, disable, enable, kill, uninstall } = usePluginMutations();
   const { t, tp, getLanguageName, formatTime } = useLocale();
@@ -162,6 +168,14 @@ export function PluginDetailPage() {
   const repoUrl = getRepoUrl();
   const blocks = plugin.blocks ?? [];
   const locales = plugin.locales ?? [];
+
+  // Format bytes to human readable
+  const formatBytes = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+  };
 
   return (
     <div className="space-y-6">
@@ -402,6 +416,45 @@ export function PluginDetailPage() {
                 t('plugins:details.uptime')
               )}
             </div>
+          </div>
+        </Card>
+      </div>
+
+      {/* Resource metrics */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card accent="emerald" className="p-5">
+          <div className="relative flex h-full flex-col">
+            <CardIconSmall className="absolute top-0 right-0">
+              <Cpu className="size-4" />
+            </CardIconSmall>
+            <div className="font-bold text-2xl tracking-tight">
+              {metrics?.current?.cpu.toFixed(1) ?? '-'}%
+            </div>
+            <div className="mt-1 text-muted-foreground text-sm">CPU</div>
+            <MetricsChart
+              data={metrics?.history?.map((h) => ({ ts: h.ts, value: h.cpu })) ?? []}
+              color="oklch(0.765 0.177 163.223)"
+              formatValue={(v) => `${v.toFixed(1)}%`}
+              className="mt-auto pt-3"
+            />
+          </div>
+        </Card>
+
+        <Card accent="purple" className="p-5">
+          <div className="relative flex h-full flex-col">
+            <CardIconSmall className="absolute top-0 right-0">
+              <MemoryStick className="size-4" />
+            </CardIconSmall>
+            <div className="font-bold text-2xl tracking-tight">
+              {metrics?.current ? formatBytes(metrics.current.memory) : '-'}
+            </div>
+            <div className="mt-1 text-muted-foreground text-sm">Memory</div>
+            <MetricsChart
+              data={metrics?.history?.map((h) => ({ ts: h.ts, value: h.memory })) ?? []}
+              color="oklch(0.714 0.203 305.504)"
+              formatValue={formatBytes}
+              className="mt-auto pt-3"
+            />
           </div>
         </Card>
       </div>

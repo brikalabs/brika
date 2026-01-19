@@ -1,5 +1,6 @@
 import { group, NotFound, route, UnprocessableEntity } from '@brika/router';
 import { z } from 'zod';
+import { getProcessMetrics, MetricsStore } from '@/runtime/metrics';
 import { PluginConfigService } from '@/runtime/plugins/plugin-config';
 import { PluginLifecycle } from '@/runtime/plugins/plugin-lifecycle';
 import { PluginManager } from '@/runtime/plugins/plugin-manager';
@@ -148,6 +149,32 @@ export const pluginsRoutes = group('/api/plugins', [
       }
 
       return { values: configService.getConfig(plugin.name) };
+    }
+  ),
+
+  // Get plugin metrics (CPU, memory)
+  route.get(
+    '/:uid/metrics',
+    { params: z.object({ uid: z.string() }) },
+    async ({ params, inject }) => {
+      const plugin = inject(PluginManager).get(params.uid);
+      if (!plugin) throw new NotFound('Plugin not found');
+
+      const metricsStore = inject(MetricsStore);
+      let current = null;
+
+      if (plugin.pid) {
+        const metrics = await getProcessMetrics(plugin.pid);
+        if (metrics) {
+          current = { cpu: metrics.cpu, memory: metrics.memory };
+        }
+      }
+
+      return {
+        pid: plugin.pid,
+        current,
+        history: metricsStore.get(plugin.name),
+      };
     }
   ),
 

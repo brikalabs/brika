@@ -1,4 +1,5 @@
 import type { Json, PluginChannel } from '@brika/ipc';
+import { getProcessMetrics } from '@/runtime/metrics';
 import {
   blockEmit,
   blockLog,
@@ -37,6 +38,7 @@ export interface PluginProcessCallbacks {
   onSubscribe: (patterns: string[], handler: (event: BrikaEvent) => void) => () => void;
   onHeartbeatFailed: (process: PluginProcess, silentMs: number) => void;
   onDisconnect: (process: PluginProcess, error?: Error) => void;
+  onMetrics?: (process: PluginProcess, cpu: number, memory: number) => void;
 }
 
 export interface BlockRegistration {
@@ -265,6 +267,14 @@ export class PluginProcess {
       try {
         await this.#channel.ping(this.config.heartbeatTimeoutMs);
         this.#lastPong = now();
+
+        // Collect metrics on successful heartbeat
+        if (this.callbacks.onMetrics) {
+          const metrics = await getProcessMetrics(this.pid);
+          if (metrics) {
+            this.callbacks.onMetrics(this, metrics.cpu, metrics.memory);
+          }
+        }
       } catch {
         const silentMs = now() - this.#lastPong;
         this.callbacks.onHeartbeatFailed(this, silentMs);

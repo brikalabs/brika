@@ -6,6 +6,7 @@ import { PluginActions } from '@/runtime/events/actions';
 import { EventSystem } from '@/runtime/events/event-system';
 import { I18nService } from '@/runtime/i18n';
 import { Logger } from '@/runtime/logs/log-router';
+import { MetricsStore } from '@/runtime/metrics';
 import { type PluginStateWithMetadata, StateStore } from '@/runtime/state/state-store';
 import { PluginConfigService } from './plugin-config';
 import { PluginEventHandler } from './plugin-events';
@@ -27,6 +28,7 @@ export class PluginLifecycle {
   readonly #i18n = inject(I18nService);
   readonly #eventHandler = inject(PluginEventHandler);
   readonly #pluginConfig = inject(PluginConfigService);
+  readonly #metrics = inject(MetricsStore);
   readonly #resolver = new PluginResolver();
 
   readonly #processes = new Map<string, PluginProcess>();
@@ -187,6 +189,9 @@ export class PluginLifecycle {
         onSubscribe: (patterns, handler) => this.#eventHandler.subscribeToEvents(patterns, handler),
         onHeartbeatFailed: (p, silentMs) => this.#handleHeartbeatFailed(p, silentMs),
         onDisconnect: (p, error) => this.#handleDisconnect(p.name, error),
+        onMetrics: (p, cpu, memory) => {
+          this.#metrics.record(p.name, { ts: Date.now(), cpu, memory });
+        },
       }
     );
 
@@ -213,6 +218,9 @@ export class PluginLifecycle {
     process.stop();
     await new Promise((r) => setTimeout(r, 50));
     process.kill();
+
+    // Clear metrics history for this plugin
+    this.#metrics.clear(name);
 
     const restartState = this.#restartPolicy.getState(name);
     await this.#state.setHealth(name, restartState?.pendingTimer ? 'restarting' : 'stopped');

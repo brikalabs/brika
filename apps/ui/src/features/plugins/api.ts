@@ -1,6 +1,18 @@
 import type { Plugin, PluginPreferences } from '@brika/shared';
 import { fetcher } from '@/lib/query';
 
+export interface MetricsSample {
+  ts: number;
+  cpu: number;
+  memory: number;
+}
+
+export interface PluginMetrics {
+  pid: number | null;
+  current: { cpu: number; memory: number } | null;
+  history: MetricsSample[];
+}
+
 export const pluginsApi = {
   list: () => fetcher<Plugin[]>('/api/plugins'),
   getByUid: (uid: string) => fetcher<Plugin>(`/api/plugins/${uid}`),
@@ -56,6 +68,9 @@ export const pluginsApi = {
       method: 'PUT',
       body: JSON.stringify(config),
     }),
+
+  /** Get plugin metrics (CPU, memory) */
+  getMetrics: (uid: string) => fetcher<PluginMetrics>(`/api/plugins/${uid}/metrics`),
 };
 
 export const pluginsKeys = {
@@ -63,4 +78,5 @@ export const pluginsKeys = {
   detail: (uid: string) => ['plugins', uid] as const,
   readme: (uid: string) => ['plugins', uid, 'readme'] as const,
   config: (uid: string) => ['plugins', uid, 'config'] as const,
+  metrics: (uid: string) => ['plugins', uid, 'metrics'] as const,
 };
