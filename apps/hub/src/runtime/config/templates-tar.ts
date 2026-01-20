@@ -1,68 +1,35 @@
 /**
- * Template tar packing and unpacking utilities using modern-tar
+ * Template extraction utilities using Bun.Archive
+ *
+ * Templates are packed via the folder-tar plugin and unpacked
+ * at runtime using Bun's native Archive API.
  */
-import { join } from 'node:path';
-import { packTar, type TarEntry, unpackTar } from 'modern-tar';
 
+import { join } from 'node:path'
 /**
- * Pack all files from the templates directory into a base64-encoded tar string
- * Returns base64 string for macro compatibility (Uint8Array can't be serialized to AST)
+ * Unpack a gzipped tar archive and extract files to target directory.
+ * Files that already exist are skipped to preserve user modifications.
+ *
+ * @param compressedData - Gzipped tar archive (number[] from bundler or Uint8Array)
+ * @param targetDir - Directory to extract files to
  */
-export async function packTemplates(): Promise<string> {
-  // Resolve templates directory relative to this file
-  const templatesDir = join(import.meta.dir, '../../../templates');
+export async function unpackTemplates(
+  compressedData: Uint8Array<ArrayBuffer>,
+  targetDir: string,
+): Promise<void> {
+  const tarData = Bun.gunzipSync(compressedData);
+  const archive = new Bun.Archive(tarData);
+  const files = await archive.files();
 
-  const glob = new Bun.Glob('**/*');
-  const entries: TarEntry[] = [];
-
-  for await (const relativePath of glob.scan({ cwd: templatesDir, absolute: false, dot: true })) {
-    const fullPath = join(templatesDir, relativePath);
-    const file = Bun.file(fullPath);
-
-    // Check if it's a file (not directory)
-    if (await file.exists()) {
-      try {
-        const content = await file.arrayBuffer();
-        const data = new Uint8Array(content);
-
-        entries.push({
-          header: {
-            name: relativePath,
-            size: data.length,
-            type: 'file',
-          },
-          body: data,
-        });
-      } catch (error) {
-        console.error(`[templates] Failed to read ${relativePath}:`, error);
-      }
-    }
-  }
-
-  const tarBuffer = await packTar(entries);
-  return Bun.gzipSync(Buffer.from(tarBuffer), { level: 9 }).toBase64();
-}
-
-/**
- * Unpack a tar buffer (from base64 string) and extract files to target directory
- */
-export async function unpackTemplates(tarDataBase: string, targetDir: string): Promise<void> {
-  const tarData = Bun.gunzipSync(Buffer.from(tarDataBase, 'base64'));
-  const entries = await unpackTar(new Uint8Array(tarData));
-
-  for (const entry of entries) {
-    const filePath = join(targetDir, entry.header.name);
-
-    // Check if file already exists
+  for (const [relativePath, file] of files) {
+    const filePath = join(targetDir, relativePath);
     const targetFile = Bun.file(filePath);
     if (await targetFile.exists()) {
-      continue; // Skip existing files
+      console.log(`[init] Skipping ${relativePath} - file already exists`);
+      continue;
     }
-
-    // Write file - Bun.write creates parent directories automatically
-    if (entry.data) {
-      await Bun.write(filePath, entry.data);
-      console.log(`[init] Created ${entry.header.name}`);
-    }
+    const content = await file.arrayBuffer();
+    await Bun.write(filePath, content);
+    console.log(`[init] Created ${relativePath}`);
   }
 }

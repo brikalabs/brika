@@ -47,6 +47,14 @@ interface SparkRow {
   payload: string | null;
 }
 
+type SparkFilterParams = Pick<
+  SparkQueryParams,
+  'type' | 'source' | 'pluginId' | 'startTs' | 'endTs'
+>;
+
+const DEFAULT_LIMIT = 100;
+const MAX_LIMIT = 1000;
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Spark Store Service
 // ─────────────────────────────────────────────────────────────────────────────
@@ -55,6 +63,102 @@ interface SparkRow {
 export class SparkStore {
   #db: Database | null = null;
   #insertStmt: ReturnType<Database['prepare']> | null = null;
+
+  #appendInClause(
+    conditions: string[],
+    values: SQLQueryBindings[],
+    column: string,
+    value?: string | string[]
+  ): void {
+    if (!value) return;
+
+    const list = Array.isArray(value) ? value : [value];
+    if (list.length === 0) return;
+
+    conditions.push(`${column} IN (${list.map(() => '?').join(', ')})`);
+    values.push(...list);
+  }
+
+  #buildFilterConditions(params: SparkFilterParams): {
+    conditions: string[];
+    values: SQLQueryBindings[];
+  } {
+    const conditions: string[] = [];
+    const values: SQLQueryBindings[] = [];
+
+    this.#appendInClause(conditions, values, 'type', params.type);
+    this.#appendInClause(conditions, values, 'source', params.source);
+
+    if (params.pluginId) {
+      conditions.push('plugin_id = ?');
+      values.push(params.pluginId);
+    }
+
+    if (params.startTs != null) {
+      conditions.push('ts >= ?');
+      values.push(params.startTs);
+    }
+
+    if (params.endTs != null) {
+      conditions.push('ts <= ?');
+      values.push(params.endTs);
+    }
+
+    return { conditions, values };
+  }
+
+  #appendCursorCondition(
+    conditions: string[],
+    values: SQLQueryBindings[],
+    cursor: number | undefined,
+    order: 'asc' | 'desc'
+  ): void {
+    if (cursor == null) return;
+
+    const operator = order === 'desc' ? '<' : '>';
+    conditions.push(`id ${operator} ?`);
+    values.push(cursor);
+  }
+
+  #buildWhereClause(conditions: string[]): string {
+    return conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+  }
+
+  #normalizeLimit(limit?: number): number {
+    return Math.min(limit ?? DEFAULT_LIMIT, MAX_LIMIT);
+  }
+
+  #orderKeyword(order: 'asc' | 'desc'): 'ASC' | 'DESC' {
+    return order === 'desc' ? 'DESC' : 'ASC';
+  }
+
+  #toStoredSpark(row: SparkRow): StoredSparkEvent {
+    return {
+      id: row.id,
+      ts: row.ts,
+      type: row.type,
+      source: row.source,
+      pluginId: row.plugin_id,
+      payload: row.payload ? (JSON.parse(row.payload) as Json) : null,
+    };
+  }
+
+  #paginate(rows: SparkRow[], limit: number): {
+    rows: SparkRow[];
+    nextCursor: number | null;
+  } {
+    if (limit <= 0) {
+      return { rows: [], nextCursor: null };
+    }
+
+    const hasMore = rows.length > limit;
+    const pageRows = hasMore ? rows.slice(0, limit) : rows;
+
+    return {
+      rows: pageRows,
+      nextCursor: hasMore ? pageRows[pageRows.length - 1].id : null,
+    };
+  }
 
   async init(): Promise<void> {
     const configLoader = inject(ConfigLoader);
@@ -107,113 +211,40 @@ export class SparkStore {
   query(params: SparkQueryParams = {}): SparkQueryResult {
     if (!this.#db) return { sparks: [], nextCursor: null };
 
-    const conditions: string[] = [];
-    const values: SQLQueryBindings[] = [];
-
-    // Build WHERE clauses
-    if (params.type) {
-      const types = Array.isArray(params.type) ? params.type : [params.type];
-      conditions.push(`type IN (${types.map(() => '?').join(', ')})`);
-      values.push(...types);
-    }
-
-    if (params.source) {
-      const sources = Array.isArray(params.source) ? params.source : [params.source];
-      conditions.push(`source IN (${sources.map(() => '?').join(', ')})`);
-      values.push(...sources);
-    }
-
-    if (params.pluginId) {
-      conditions.push('plugin_id = ?');
-      values.push(params.pluginId);
-    }
-
-    if (params.startTs) {
-      conditions.push('ts >= ?');
-      values.push(params.startTs);
-    }
-
-    if (params.endTs) {
-      conditions.push('ts <= ?');
-      values.push(params.endTs);
-    }
+    const { conditions, values } = this.#buildFilterConditions(params);
 
     // Cursor-based pagination
     const order = params.order ?? 'desc';
-    if (params.cursor) {
-      if (order === 'desc') {
-        conditions.push('id < ?');
-      } else {
-        conditions.push('id > ?');
-      }
-      values.push(params.cursor);
-    }
+    this.#appendCursorCondition(conditions, values, params.cursor, order);
 
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
-    const limit = Math.min(params.limit ?? 100, 1000);
+    const whereClause = this.#buildWhereClause(conditions);
+    const limit = this.#normalizeLimit(params.limit);
 
     // Query one extra to determine if there's a next page
     const sql = `
       SELECT id, ts, type, source, plugin_id, payload
       FROM sparks ${whereClause}
-      ORDER BY id ${order === 'desc' ? 'DESC' : 'ASC'}
+      ORDER BY id ${this.#orderKeyword(order)}
       LIMIT ?
     `;
 
     const rows = this.#db.query(sql).all(...values, limit + 1) as SparkRow[];
 
-    const hasMore = rows.length > limit;
-    const resultRows = hasMore ? rows.slice(0, limit) : rows;
-
-    const sparks = resultRows.map((row) => ({
-      id: row.id,
-      ts: row.ts,
-      type: row.type,
-      source: row.source,
-      pluginId: row.plugin_id,
-      payload: row.payload ? (JSON.parse(row.payload) as Json) : null,
-    }));
+    const { rows: pageRows, nextCursor } = this.#paginate(rows, limit);
+    const sparks = pageRows.map((row) => this.#toStoredSpark(row));
 
     return {
       sparks,
-      nextCursor: hasMore ? resultRows[resultRows.length - 1].id : null,
+      nextCursor,
     };
   }
 
   clear(params: Partial<SparkQueryParams> = {}): number {
     if (!this.#db) return 0;
 
-    const conditions: string[] = [];
-    const values: SQLQueryBindings[] = [];
+    const { conditions, values } = this.#buildFilterConditions(params);
 
-    if (params.type) {
-      const types = Array.isArray(params.type) ? params.type : [params.type];
-      conditions.push(`type IN (${types.map(() => '?').join(', ')})`);
-      values.push(...types);
-    }
-
-    if (params.source) {
-      const sources = Array.isArray(params.source) ? params.source : [params.source];
-      conditions.push(`source IN (${sources.map(() => '?').join(', ')})`);
-      values.push(...sources);
-    }
-
-    if (params.pluginId) {
-      conditions.push('plugin_id = ?');
-      values.push(params.pluginId);
-    }
-
-    if (params.startTs) {
-      conditions.push('ts >= ?');
-      values.push(params.startTs);
-    }
-
-    if (params.endTs) {
-      conditions.push('ts <= ?');
-      values.push(params.endTs);
-    }
-
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const whereClause = this.#buildWhereClause(conditions);
     const result = this.#db.run(`DELETE FROM sparks ${whereClause}`, values);
 
     return result.changes;

@@ -1,0 +1,5 @@
+# Bun configuration for the hub
+# https://bun.sh/docs/runtime/bunfig
+
+# Preload the folder-tar plugin so tar: imports work at runtime
+preload = ["./src/plugins/preload.ts"]
