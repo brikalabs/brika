@@ -8,7 +8,7 @@
 
 import type { Json } from '@brika/shared';
 import type { BlockRegistry } from '@/runtime/blocks';
-import type { Logger } from '@/runtime/logs/log-router';
+import type { Logger, ScopedLogger } from '@/runtime/logs/log-router';
 import type { PluginEventHandler } from '@/runtime/plugins/plugin-events';
 import type { PluginManager } from '@/runtime/plugins/plugin-manager';
 import type { BlockConnection, Workflow, WorkflowBlock } from './types';
@@ -19,7 +19,7 @@ import type { BlockConnection, Workflow, WorkflowBlock } from './types';
 
 export interface ExecutorDeps {
   plugins: PluginManager;
-  logs: Logger;
+  logs: Logger | ScopedLogger;
   blocks: BlockRegistry;
   events: PluginEventHandler;
 }
@@ -103,9 +103,10 @@ export class WorkflowExecutor {
       workflowId: workflow.id,
     });
 
-    this.#deps.logs.info('workflow.started', {
-      id: workflow.id,
-      blocks: workflow.blocks.length,
+    this.#deps.logs.info('Workflow started successfully', {
+      workflowId: workflow.id,
+      workflowName: workflow.name,
+      blockCount: workflow.blocks.length,
     });
   }
 
@@ -135,7 +136,7 @@ export class WorkflowExecutor {
       workflowId,
     });
 
-    this.#deps.logs.info('workflow.stopped', { id: workflowId });
+    this.#deps.logs.info('Workflow stopped successfully', { workflowId });
   }
 
   /**
@@ -162,7 +163,10 @@ export class WorkflowExecutor {
    */
   inject(blockId: string, port: string, data: Json): boolean {
     if (!this.#instanceIds.has(blockId)) {
-      this.#deps.logs.warn('workflow.inject.unknown', { blockId, port });
+      this.#deps.logs.warn('Cannot inject data into unknown block instance', {
+        blockId,
+        port,
+      });
       return false;
     }
 
@@ -251,7 +255,15 @@ export class WorkflowExecutor {
           blockId: block.id,
           error: result.error,
         });
-        this.#deps.logs.error('block.start.error', { blockId: block.id, error: result.error });
+        this.#deps.logs.error(
+          'Failed to start workflow block',
+          {
+            blockId: block.id,
+            blockType: block.type,
+            workflowId: workflow.id,
+          },
+          { error: new Error(result.error || 'Unknown error') }
+        );
       }
     } catch (e) {
       this.#emit({
@@ -260,7 +272,15 @@ export class WorkflowExecutor {
         blockId: block.id,
         error: String(e),
       });
-      this.#deps.logs.error('block.start.error', { blockId: block.id, error: String(e) });
+      this.#deps.logs.error(
+        'Failed to start workflow block',
+        {
+          blockId: block.id,
+          blockType: block.type,
+          workflowId: workflow.id,
+        },
+        { error: e }
+      );
     }
   }
 

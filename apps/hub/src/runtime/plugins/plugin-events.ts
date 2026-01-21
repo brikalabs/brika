@@ -16,7 +16,7 @@ import { now } from './utils';
  */
 @singleton()
 export class PluginEventHandler {
-  readonly #logs = inject(Logger);
+  readonly #logs = inject(Logger).withSource('plugin');
   readonly #events = inject(EventSystem);
   readonly #state = inject(StateStore);
   readonly #blocks = inject(BlockRegistry);
@@ -57,8 +57,8 @@ export class PluginEventHandler {
 
   onPluginReady(process: PluginProcess): void {
     this.#state.setHealth(process.name, 'running');
-    this.#logs.info('plugin.loaded', {
-      name: process.name,
+    this.#logs.info('Plugin loaded successfully', {
+      pluginName: process.name,
       uid: process.uid,
       version: process.version,
       pid: process.pid,
@@ -97,12 +97,18 @@ export class PluginEventHandler {
     const merged = pkgBlock ? { ...pkgBlock, ...block } : block;
 
     this.#blocks.register(merged as unknown as BlockDefinition, pluginName);
-    this.#logs.debug('plugin.block.registered', { plugin: pluginName, block: block.id });
+    this.#logs.debug('Block registered from plugin', {
+      pluginName: pluginName,
+      blockId: block.id,
+    });
   }
 
   registerSpark(pluginName: string, spark: { id: string; schema?: Record<string, unknown> }): void {
     this.#sparks.register(spark, pluginName);
-    this.#logs.debug('plugin.spark.registered', { plugin: pluginName, spark: spark.id });
+    this.#logs.debug('Spark registered from plugin', {
+      pluginName: pluginName,
+      sparkId: spark.id,
+    });
   }
 
   emitSpark(pluginName: string, sparkId: string, payload: Json): void {
@@ -110,11 +116,17 @@ export class PluginEventHandler {
 
     // Verify spark is registered
     if (!this.#sparks.has(fullType)) {
-      this.#logs.warn('spark.emit.unknown', { type: fullType, plugin: pluginName });
+      this.#logs.warn('Attempted to emit unknown spark', {
+        sparkType: fullType,
+        pluginName: pluginName,
+      });
       return;
     }
 
-    this.#logs.debug('spark.emit', { type: fullType, plugin: pluginName });
+    this.#logs.debug('Spark emitted from plugin', {
+      sparkType: fullType,
+      pluginName: pluginName,
+    });
     this.#events.dispatch(
       SparkActions.emit.create(
         {

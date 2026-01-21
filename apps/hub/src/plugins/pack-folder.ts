@@ -2,10 +2,10 @@
  * Pack a folder into a gzipped tar archive using Bun.Archive
  */
 
-import { resolve } from 'node:path'
+import { resolve } from 'node:path';
 
 export async function packFolder(folderPath: string): Promise<Uint8Array> {
-  const glob = new Bun.Glob("**/*");
+  const glob = new Bun.Glob('**/*');
   const files: Record<string, Uint8Array> = {};
 
   for await (const relativePath of glob.scan({
@@ -26,6 +26,6 @@ export async function packFolder(folderPath: string): Promise<Uint8Array> {
     }
   }
 
-  const archive = new Bun.Archive(files, { compress: "gzip", level: 9 });
+  const archive = new Bun.Archive(files, { compress: 'gzip', level: 9 });
   return archive.bytes();
 }

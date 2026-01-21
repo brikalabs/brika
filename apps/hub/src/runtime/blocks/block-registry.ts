@@ -31,7 +31,7 @@ interface RegisteredBlock extends BlockDefinition {
 
 @singleton()
 export class BlockRegistry {
-  private readonly logs = inject(Logger);
+  private readonly logs = inject(Logger).withSource('registry');
 
   /** Block definitions by type */
   readonly #blocks = new Map<string, RegisteredBlock>();
@@ -63,20 +63,20 @@ export class BlockRegistry {
     const fullType = `${pluginId}:${block.id}`;
 
     if (this.#blocks.has(fullType)) {
-      this.logs.warn('block.duplicate', {
-        type: fullType,
-        existing: this.#blocks.get(fullType)?.pluginId ?? null,
-        new: pluginId,
+      this.logs.warn('Duplicate block registration detected', {
+        blockType: fullType,
+        existingPlugin: this.#blocks.get(fullType)?.pluginId ?? null,
+        newPlugin: pluginId,
       });
     }
 
     // Set the full type on the definition
     this.#blocks.set(fullType, { ...block, type: fullType, pluginId });
-    this.logs.info('block.registered', {
-      type: fullType,
-      plugin: pluginId,
-      inputs: block.inputs?.length ?? 0,
-      outputs: block.outputs?.length ?? 0,
+    this.logs.info('Block registered successfully', {
+      blockType: fullType,
+      pluginId: pluginId,
+      inputCount: block.inputs?.length ?? 0,
+      outputCount: block.outputs?.length ?? 0,
     });
 
     // Notify listeners
@@ -84,7 +84,13 @@ export class BlockRegistry {
       try {
         listener(fullType);
       } catch (e) {
-        this.logs.error('block.register.listener.error', { type: fullType, error: String(e) });
+        this.logs.error(
+          'Block registration listener failed',
+          {
+            blockType: fullType,
+          },
+          { error: e }
+        );
       }
     }
   }
@@ -101,7 +107,10 @@ export class BlockRegistry {
       }
     }
     if (count > 0) {
-      this.logs.info('blocks.unregistered', { plugin: pluginId, count });
+      this.logs.info('Blocks unregistered from plugin', {
+        pluginId: pluginId,
+        count: count,
+      });
     }
     return count;
   }

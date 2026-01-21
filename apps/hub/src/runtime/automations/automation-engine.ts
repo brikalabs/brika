@@ -9,7 +9,7 @@ import type { BlockDefinition } from '@brika/sdk';
 import { inject, singleton } from '@brika/shared';
 import { BlockRegistry } from '@/runtime/blocks';
 import { EventSystem } from '@/runtime/events/event-system';
-import { Logger } from '@/runtime/logs/log-router';
+import { Logger, ScopedLogger } from '@/runtime/logs/log-router';
 import { PluginEventHandler } from '@/runtime/plugins/plugin-events';
 import { PluginManager } from '@/runtime/plugins/plugin-manager';
 import type { Workflow } from './types';
@@ -21,7 +21,7 @@ import { type ExecutionEvent, type ExecutionListener, WorkflowExecutor } from '.
 
 @singleton()
 export class AutomationEngine {
-  private readonly logs = inject(Logger);
+  private readonly logs: ScopedLogger = inject(Logger).withSource('automation');
   private readonly events = inject(EventSystem);
   private readonly blocks = inject(BlockRegistry);
   private readonly plugins = inject(PluginManager);
@@ -40,7 +40,7 @@ export class AutomationEngine {
   #eventUnsubs: Array<() => void> = [];
 
   init(): void {
-    this.logs.info('automation.engine.started');
+    this.logs.info('Automation engine initialized successfully', {});
   }
 
   /**
@@ -104,7 +104,11 @@ export class AutomationEngine {
       workflow.status = 'error';
       workflow.error = `Missing blocks: ${missing.join(', ')}`;
       this.#workflows.set(workflow.id, workflow);
-      this.logs.warn('workflow.missing_blocks', { id: workflow.id, missing });
+      this.logs.warn('Workflow registration failed due to missing blocks', {
+        workflowId: workflow.id,
+        workflowName: workflow.name,
+        missingBlocks: missing,
+      });
       return;
     }
 
@@ -113,12 +117,23 @@ export class AutomationEngine {
     workflow.status = 'stopped';
 
     this.#workflows.set(workflow.id, workflow);
-    this.logs.info('workflow.registered', { id: workflow.id, name: workflow.name ?? null });
+    this.logs.info('Workflow registered successfully', {
+      workflowId: workflow.id,
+      workflowName: workflow.name,
+      enabled: workflow.enabled,
+    });
 
     // Auto-start if enabled
     if (workflow.enabled) {
       this.#startWorkflowInternal(workflow.id).catch((err) => {
-        this.logs.error('workflow.autostart.error', { id: workflow.id, error: String(err) });
+        this.logs.error(
+          'Failed to auto-start workflow',
+          {
+            workflowId: workflow.id,
+            workflowName: workflow.name,
+          },
+          { error: err }
+        );
       });
     }
   }
@@ -132,7 +147,7 @@ export class AutomationEngine {
     this.#stopWorkflowInternal(id);
 
     this.#workflows.delete(id);
-    this.logs.info('workflow.unregistered', { id });
+    this.logs.info('Workflow unregistered successfully', { workflowId: id });
     return true;
   }
 
@@ -148,7 +163,11 @@ export class AutomationEngine {
 
     // Don't start if in error state
     if (workflow.status === 'error') {
-      this.logs.warn('workflow.start.blocked', { id, error: workflow.error });
+      this.logs.warn('Cannot start workflow in error state', {
+        workflowId: id,
+        workflowName: workflow.name,
+        error: workflow.error,
+      });
       return;
     }
 
@@ -169,14 +188,25 @@ export class AutomationEngine {
       workflow.error = undefined;
 
       await executor.start(workflow);
-      this.logs.info('workflow.started', { id, startedAt: workflow.startedAt });
+      this.logs.info('Workflow started successfully', {
+        workflowId: id,
+        workflowName: workflow.name,
+        startedAt: workflow.startedAt,
+      });
     } catch (err) {
       // Set error status
       workflow.status = 'error';
       workflow.error = String(err);
       workflow.startedAt = undefined;
       this.#executors.delete(id);
-      this.logs.error('workflow.start.error', { id, error: String(err) });
+      this.logs.error(
+        'Failed to start workflow',
+        {
+          workflowId: id,
+          workflowName: workflow.name,
+        },
+        { error: err }
+      );
     }
   }
 
@@ -197,7 +227,10 @@ export class AutomationEngine {
       workflow.startedAt = undefined;
     }
 
-    this.logs.info('workflow.stopped', { id });
+    this.logs.info('Workflow stopped successfully', {
+      workflowId: id,
+      workflowName: workflow?.name,
+    });
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -271,7 +304,11 @@ export class AutomationEngine {
     // Stop all running workflows
     for (const [id, executor] of this.#executors) {
       executor.stop();
-      this.logs.info('workflow.stopped', { id });
+      const workflow = this.#workflows.get(id);
+      this.logs.info('Workflow stopped successfully', {
+        workflowId: id,
+        workflowName: workflow?.name,
+      });
     }
     this.#executors.clear();
 
@@ -279,6 +316,6 @@ export class AutomationEngine {
     for (const unsub of this.#eventUnsubs) unsub();
     this.#eventUnsubs = [];
 
-    this.logs.info('automation.engine.stopped');
+    this.logs.info('Automation engine stopped successfully', {});
   }
 }

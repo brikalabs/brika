@@ -23,22 +23,28 @@ export class PluginLoader implements Loader {
   }
 
   async load(config: BrikaConfig): Promise<void> {
-    this.logs.info('plugins.sync.start');
+    this.logs.info('Synchronizing plugin registry and state', {
+      pluginCount: config.plugins.length,
+    });
 
     // Sync registry and state
     await this.registry.syncToConfig(config.plugins);
     const validNames = new Set(config.plugins.map((e) => e.name));
     await this.state.syncToConfig(validNames);
 
-    this.logs.info('plugins.sync.done');
+    this.logs.info('Plugin synchronization completed successfully');
 
     // Load configured plugins
     for (const entry of config.plugins) {
       try {
         const resolved = await this.configLoader.resolvePluginEntry(entry);
         await this.pm.load(resolved.rootDirectory);
-      } catch (error) {
-        this.logs.error('plugin.load.failed', { name: entry.name, error: String(error) });
+      } catch (err) {
+        this.logs.error(
+          'Failed to load plugin',
+          { pluginName: entry.name, version: entry.version },
+          { error: err }
+        );
       }
     }
   }

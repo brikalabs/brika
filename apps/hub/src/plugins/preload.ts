@@ -3,7 +3,7 @@
  * Loaded via bunfig.toml before any other code
  */
 
-import { plugin } from "bun";
-import { folderTarPlugin } from "./folder-tar-plugin";
+import { plugin } from 'bun';
+import { folderTarPlugin } from './folder-tar-plugin';
 
 plugin(folderTarPlugin());

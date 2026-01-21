@@ -42,7 +42,7 @@ type StateFile = {
 @singleton()
 export class StateStore {
   private readonly config = inject(HubConfig);
-  private readonly logs = inject(Logger);
+  private readonly logs = inject(Logger).withSource('state');
   readonly #homeDir: string;
   readonly #file: string;
   #state: StateFile = { plugins: {} };
@@ -202,7 +202,9 @@ export class StateStore {
 
     for (const plugin of this.listInstalled()) {
       if (!validNames.has(plugin.name)) {
-        this.logs.info('state.sync.remove', { name: plugin.name });
+        this.logs.info('Removing plugin state (not in config)', {
+          pluginName: plugin.name,
+        });
         toRemove.push(plugin.name);
       }
     }
@@ -215,7 +217,9 @@ export class StateStore {
   #withMetadata(p: InstalledPluginState): PluginStateWithMetadata | null {
     const metadata = this.#metadataCache.get(p.name);
     if (!metadata) {
-      this.logs.warn('state.metadata.missing', { name: p.name });
+      this.logs.warn('Plugin metadata not found in cache', {
+        pluginName: p.name,
+      });
       return null;
     }
     return {

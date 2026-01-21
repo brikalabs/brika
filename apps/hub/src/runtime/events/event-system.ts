@@ -38,7 +38,7 @@ class RingBuffer<T> {
  */
 @singleton()
 export class EventSystem extends BaseEventSystem {
-  private readonly logs = inject(Logger);
+  private readonly logs = inject(Logger).withSource('events');
   readonly #history = new RingBuffer<BrikaEvent>(1000);
   #sparkStore: SparkStore | null = null;
 
@@ -77,10 +77,10 @@ export class EventSystem extends BaseEventSystem {
   }
 
   override dispatch<T extends Action>(action: T): Promise<T> {
-    this.logs.debug('event.dispatch', {
-      type: action.type,
+    this.logs.debug('Event dispatched', {
+      eventType: action.type,
       source: action.source,
-      id: action.id,
+      eventId: action.id,
     });
 
     return super.dispatch(action);

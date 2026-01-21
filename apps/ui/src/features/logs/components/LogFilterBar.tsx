@@ -15,9 +15,6 @@ import { useLocale } from "@/lib/use-locale";
 import type { PluginInfo } from "../api";
 import type { LogFilters } from "../store";
 
-const LOG_LEVELS: LogLevel[] = ["debug", "info", "warn", "error"];
-const LOG_SOURCES: LogSource[] = ["hub", "plugin", "installer", "registry", "stderr", "automation"];
-
 const LEVEL_COLORS: Record<LogLevel, string> = {
   error: "bg-red-500/20 text-red-400 hover:bg-red-500/30",
   warn: "bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30",
@@ -28,6 +25,8 @@ const LEVEL_COLORS: Record<LogLevel, string> = {
 interface LogFilterBarProps {
   filters: LogFilters;
   pluginOptions: PluginInfo[];
+  levelOptions: LogLevel[];
+  sourceOptions: LogSource[];
   onLevelsChange: (levels: LogLevel[]) => void;
   onSourcesChange: (sources: LogSource[]) => void;
   onPluginChange: (ref: string | null) => void;
@@ -39,6 +38,8 @@ interface LogFilterBarProps {
 export function LogFilterBar({
   filters,
   pluginOptions,
+  levelOptions,
+  sourceOptions,
   onLevelsChange,
   onSourcesChange,
   onPluginChange,
@@ -134,7 +135,7 @@ export function LogFilterBar({
       {/* Level Filter Pills */}
       <div className="flex items-center gap-2">
         <span className="w-14 text-muted-foreground text-sm">{t("logs:filters.level")}:</span>
-        {LOG_LEVELS.map((level) => (
+        {levelOptions.map((level) => (
           <Badge
             key={level}
             variant={filters.levels.includes(level) ? "default" : "outline"}
@@ -149,7 +150,7 @@ export function LogFilterBar({
       {/* Source Filter Pills */}
       <div className="flex flex-wrap items-center gap-2">
         <span className="w-14 text-muted-foreground text-sm">{t("logs:filters.source")}:</span>
-        {LOG_SOURCES.map((source) => (
+        {sourceOptions.map((source) => (
           <Badge
             key={source}
             variant={filters.sources.includes(source) ? "default" : "outline"}

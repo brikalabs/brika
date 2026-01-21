@@ -7,7 +7,7 @@ import type { InstalledPackage, OperationProgress, UpdateInfo } from './types';
 @singleton()
 export class PluginRegistry {
   private readonly hubConfig = inject(HubConfig);
-  private readonly logs = inject(Logger);
+  private readonly logs = inject(Logger).withSource('registry');
   private readonly configLoader = inject(ConfigLoader);
   private readonly pluginsDir: string;
 
@@ -27,7 +27,9 @@ export class PluginRegistry {
         pkgPath,
         JSON.stringify({ name: 'brika-plugins', private: true, dependencies: {} }, null, 2)
       );
-      this.logs.info('registry.init', { dir: this.pluginsDir });
+      this.logs.info('Plugin registry initialized', {
+        directory: this.pluginsDir,
+      });
     }
   }
 
@@ -73,7 +75,9 @@ export class PluginRegistry {
       await this.#runBun(['remove', name]);
     }
 
-    this.logs.info('registry.uninstall.done', { package: name });
+    this.logs.info('Plugin uninstalled successfully', {
+      packageName: name,
+    });
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -174,10 +178,13 @@ export class PluginRegistry {
         try {
           await this.uninstall(pkg.name);
         } catch (error) {
-          this.logs.error('registry.sync.uninstall.failed', {
-            name: pkg.name,
-            error: String(error),
-          });
+          this.logs.error(
+            'Failed to uninstall plugin during sync',
+            {
+              packageName: pkg.name,
+            },
+            { error }
+          );
         }
       }
     }
@@ -190,10 +197,13 @@ export class PluginRegistry {
             // Consume progress
           }
         } catch (error) {
-          this.logs.error('registry.sync.install.failed', {
-            name: entry.name,
-            error: String(error),
-          });
+          this.logs.error(
+            'Failed to install plugin during sync',
+            {
+              packageName: entry.name,
+            },
+            { error }
+          );
         }
       }
     }
@@ -266,7 +276,7 @@ export class PluginRegistry {
           for (const line of lines) {
             if (!line) continue;
 
-            this.logs.info('registry.bun', { line });
+            this.logs.debug('Package manager output', { line });
             phase = this.#detectPhase(line);
             yield this.#msg(phase, operation, packageName, undefined, line);
           }

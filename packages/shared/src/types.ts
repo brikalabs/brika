@@ -1,7 +1,20 @@
 export type Json = null | boolean | number | string | undefined | Json[] | { [k: string]: Json };
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
-export type LogSource = 'hub' | 'plugin' | 'installer' | 'registry' | 'stderr' | 'automation';
+export type LogSource = 'hub' | 'plugin' | 'installer' | 'registry' | 'stderr' | 'automation' | 'events' | 'http' | 'i18n' | 'state';
+
+/** Available log levels as a constant array */
+export const LOG_LEVELS: LogLevel[] = ['debug', 'info', 'warn', 'error'];
+
+/** Available log sources as a constant array */
+export const LOG_SOURCES: LogSource[] = ['hub', 'plugin', 'installer', 'registry', 'stderr', 'automation', 'events', 'http', 'i18n', 'state'];
+
+export interface LogError {
+  name: string;
+  message: string;
+  stack?: string;
+  cause?: string;
+}
 
 export interface LogEvent {
   ts: number;
@@ -10,6 +23,7 @@ export interface LogEvent {
   pluginName?: string;
   message: string;
   meta?: Record<string, Json>;
+  error?: LogError;
 }
 
 export type PluginHealth =

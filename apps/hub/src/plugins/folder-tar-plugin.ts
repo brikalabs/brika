@@ -6,18 +6,18 @@
  * Bun resolves paths (respects tsconfig), we just handle loading.
  */
 
-import type { BunPlugin } from "bun";
-import { packFolder } from "./pack-folder";
+import type { BunPlugin } from 'bun';
+import { packFolder } from './pack-folder';
 
 export function folderTarPlugin(): BunPlugin {
   return {
-    name: "folder-tar",
+    name: 'folder-tar',
     setup(build) {
       build.onLoad({ filter: /\.tar$/ }, async ({ path }) => {
-        const bytes = await packFolder(path.replace(/\.tar$/, ""));
+        const bytes = await packFolder(path.replace(/\.tar$/, ''));
         return {
           contents: `export default new Uint8Array([${[...bytes]}]);`,
-          loader: "js",
+          loader: 'js',
         };
       });
     },

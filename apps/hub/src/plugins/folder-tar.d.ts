@@ -8,7 +8,7 @@
  * const archive = (await import("@/templates.tar")).default;
  * // archive is Uint8Array containing gzipped tar data
  */
-declare module "*.tar" {
+declare module '*.tar' {
   const archive: Uint8Array<ArrayBuffer>;
   export default archive;
 }

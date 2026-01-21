@@ -2,4 +2,4 @@
  * Bun Bundler Plugins
  */
 
-export { folderTarPlugin } from "./folder-tar-plugin";
+export { folderTarPlugin } from './folder-tar-plugin';

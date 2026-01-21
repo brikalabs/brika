@@ -1,4 +1,5 @@
 import { group, route } from '@brika/router';
+import { LOG_LEVELS, LOG_SOURCES } from '@brika/shared';
 import { z } from 'zod';
 import { Logger } from '@/runtime/logs/log-router';
 import { LogStore } from '@/runtime/logs/log-store';
@@ -90,6 +91,22 @@ export const logsRoutes = group('/api/logs', [
     return {
       total: store.count(),
       ringBufferSize: inject(Logger).query().length,
+    };
+  }),
+
+  // GET /api/logs/sources - Get available log sources
+  route.get('/sources', ({ inject }) => {
+    const store = inject(LogStore);
+    return {
+      all: LOG_SOURCES,           // All defined sources from type
+      used: store.getSources(),    // Sources that have been used in logs
+    };
+  }),
+
+  // GET /api/logs/levels - Get available log levels
+  route.get('/levels', () => {
+    return {
+      all: LOG_LEVELS,
     };
   }),
 

@@ -74,6 +74,10 @@ export const logsApi = {
 
   getStats: () => fetcher<LogStats>(`${API_BASE}/api/logs/stats`),
 
+  getSources: () => fetcher<{ all: LogSource[]; used: LogSource[] }>(`${API_BASE}/api/logs/sources`),
+
+  getLevels: () => fetcher<{ all: LogLevel[] }>(`${API_BASE}/api/logs/levels`),
+
   clear: (params?: Partial<LogQueryParams>) =>
     fetcher<{ ok: boolean; deleted: number }>(`${API_BASE}/api/logs`, {
       method: "DELETE",
@@ -90,4 +94,6 @@ export const logsKeys = {
   query: (params: LogQueryParams) => ["logs", "query", params] as const,
   plugins: ["logs", "plugins"] as const,
   stats: ["logs", "stats"] as const,
+  sources: ["logs", "sources"] as const,
+  levels: ["logs", "levels"] as const,
 };

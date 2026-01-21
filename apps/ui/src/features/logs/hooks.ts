@@ -82,6 +82,22 @@ export function useLogPlugins() {
   });
 }
 
+export function useLogSources() {
+  return useQuery({
+    queryKey: logsKeys.sources,
+    queryFn: logsApi.getSources,
+    staleTime: 60000,
+  });
+}
+
+export function useLogLevels() {
+  return useQuery({
+    queryKey: logsKeys.levels,
+    queryFn: logsApi.getLevels,
+    staleTime: Number.POSITIVE_INFINITY, // Never refetch - levels don't change
+  });
+}
+
 export function useLogStats() {
   return useQuery({
     queryKey: logsKeys.stats,
@@ -111,6 +127,8 @@ export function useLogs() {
   const store = useLogsStore();
   const historical = useHistoricalLogs();
   const plugins = useLogPlugins();
+  const sources = useLogSources();
+  const levels = useLogLevels();
   const stats = useLogStats();
   const clearMutation = useClearLogs();
 
@@ -157,6 +175,13 @@ export function useLogs() {
 
     // Plugin options (enriched with metadata)
     pluginOptions: plugins.data?.plugins ?? ([] as PluginInfo[]),
+
+    // Source options (all available and used sources)
+    sourceOptions: sources.data?.all ?? [],
+    usedSources: sources.data?.used ?? [],
+
+    // Level options (all available levels)
+    levelOptions: levels.data?.all ?? [],
 
     // Stats
     stats: stats.data,

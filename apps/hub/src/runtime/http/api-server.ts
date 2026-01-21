@@ -7,7 +7,7 @@ import { Logger } from '@/runtime/logs/log-router';
 @singleton()
 export class ApiServer {
   readonly #config = inject(HubConfig);
-  readonly #logs = inject(Logger);
+  readonly #logs = inject(Logger).withSource('http');
   readonly #routes: RouteDefinition[] = [];
   #app?: ReturnType<typeof createApp>;
   #server?: ReturnType<typeof Bun.serve>;
@@ -33,7 +33,9 @@ export class ApiServer {
       // SPA fallback: serve index.html for non-API routes that don't match static files
       this.#app.get('*', serveStatic({ root: staticDir, path: 'index.html' }));
 
-      this.#logs.info('api.static', { dir: staticDir });
+      this.#logs.info('Static file serving enabled', {
+        directory: staticDir,
+      });
     }
 
     this.#server = Bun.serve({
@@ -52,21 +54,24 @@ export class ApiServer {
           // Skip body logging for streaming responses to avoid buffering
           // const isStreaming = res.headers.get('content-type')?.includes('text/event-stream');
 
-          this.#logs.info('api.request.end', {
+          this.#logs.info('HTTP request completed', {
             method: req.method,
             path: url.pathname,
             status: res.status,
-            duration,
+            durationMs: duration,
           });
 
           return res;
         } catch (e) {
-          this.#logs.error('api.error', {
-            method: req.method,
-            path: url.pathname,
-            error: String(e),
-            duration: Date.now() - start,
-          });
+          this.#logs.error(
+            'HTTP request failed',
+            {
+              method: req.method,
+              path: url.pathname,
+              durationMs: Date.now() - start,
+            },
+            { error: e }
+          );
           throw e;
         }
       },

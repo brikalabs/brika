@@ -69,7 +69,7 @@ function deepMerge(target: TranslationData, source: TranslationData): Translatio
 @singleton()
 export class I18nService {
   readonly #config = inject(ConfigLoader);
-  readonly #logs = inject(Logger);
+  readonly #logs = inject(Logger).withSource('i18n');
 
   /** Core translations by locale */
   readonly #coreTranslations = new Map<string, TranslationData>();
@@ -93,9 +93,9 @@ export class I18nService {
     this.#localesDir = `${rootDir}/locales`;
 
     await this.#loadCoreTranslations();
-    this.#logs.info('i18n.initialized', {
-      locales: [...this.#availableLocales],
-      namespaces: this.listNamespaces(),
+    this.#logs.info('I18n system initialized', {
+      availableLocales: [...this.#availableLocales],
+      namespaceCount: this.listNamespaces().length,
     });
   }
 
@@ -209,8 +209,8 @@ export class I18nService {
       }
 
       if (detectedLocales.length > 0) {
-        this.#logs.debug('i18n.plugin.registered', {
-          plugin: pluginId,
+        this.#logs.debug('Plugin translations registered', {
+          pluginId: pluginId,
           locales: detectedLocales,
         });
       }
@@ -227,7 +227,9 @@ export class I18nService {
    */
   unregisterPluginTranslations(pluginId: string): void {
     if (this.#pluginTranslations.delete(pluginId)) {
-      this.#logs.debug('i18n.plugin.unregistered', { plugin: pluginId });
+      this.#logs.debug('Plugin translations unregistered', {
+        pluginId: pluginId,
+      });
     }
   }
 
@@ -255,7 +257,7 @@ export class I18nService {
         }
       }
     } catch (e) {
-      this.#logs.warn('i18n.core.load.error', { error: String(e) });
+      this.#logs.warn('Failed to load core translations', {}, { error: e });
     }
   }
 
@@ -276,10 +278,13 @@ export class I18nService {
           const content = await Bun.file(`${folderPath}/${file}`).json();
           result[namespace] = content;
         } catch (e) {
-          this.#logs.warn('i18n.file.load.error', {
-            file: `${folderPath}/${file}`,
-            error: String(e),
-          });
+          this.#logs.warn(
+            'Failed to load translation file',
+            {
+              filePath: `${folderPath}/${file}`,
+            },
+            { error: e }
+          );
         }
       }
     } catch {
@@ -308,10 +313,13 @@ export class I18nService {
           // Merge directly without namespace
           result = deepMerge(result, content as TranslationData);
         } catch (e) {
-          this.#logs.warn('i18n.file.load.error', {
-            file: `${folderPath}/${file}`,
-            error: String(e),
-          });
+          this.#logs.warn(
+            'Failed to load translation file',
+            {
+              filePath: `${folderPath}/${file}`,
+            },
+            { error: e }
+          );
         }
       }
     } catch {

@@ -101,19 +101,19 @@ function LogRow({ log }: { log: StoredLogEvent }) {
   const Icon = config.icon;
 
   // Check if this log has error details or any metadata
-  const hasErrorStack = log.meta?.errorStack;
+  const hasError = !!log.error;
   const hasMetadata = log.meta && Object.keys(log.meta).length > 0;
-  const isExpandable = hasMetadata; // All logs with metadata are expandable
+  const isExpandable = hasError || hasMetadata; // Expandable if has error or metadata
 
   // Extract source location if available
   const sourceFile = log.meta?.sourceFile ? String(log.meta.sourceFile) : null;
   const sourceLine = log.meta?.sourceLine ? Number(log.meta.sourceLine) : null;
 
-  // Filter out error-specific and source location fields from general metadata
+  // Filter out source location fields from general metadata
   const generalMeta = log.meta
     ? Object.fromEntries(
         Object.entries(log.meta).filter(
-          ([key]) => !["errorStack", "errorName", "errorMessage", "error", "sourceFile", "sourceLine"].includes(key),
+          ([key]) => !["sourceFile", "sourceLine"].includes(key),
         ),
       )
     : null;
@@ -186,21 +186,29 @@ function LogRow({ log }: { log: StoredLogEvent }) {
           )}
 
           {/* Error details */}
-          {log.meta?.errorName && (
-            <div className="space-y-1">
-              <div className="font-semibold text-red-400 text-xs">
-                {String(log.meta.errorName)}: {log.meta.errorMessage ? String(log.meta.errorMessage) : "Unknown error"}
+          {log.error && (
+            <div className="space-y-2">
+              {/* Error name and message */}
+              <div className="rounded border border-red-500/20 bg-red-500/10 p-3">
+                <div className="font-semibold text-red-400 text-xs">
+                  {log.error.name}: {log.error.message}
+                </div>
+                {log.error.cause && (
+                  <div className="mt-2 text-[10px] text-red-300/70">
+                    <span className="font-semibold">Caused by:</span> {log.error.cause}
+                  </div>
+                )}
               </div>
-            </div>
-          )}
 
-          {/* Error stack trace */}
-          {hasErrorStack && log.meta?.errorStack && (
-            <div className="rounded bg-black/40 p-3">
-              <div className="mb-1 font-semibold text-muted-foreground text-xs">Stack Trace:</div>
-              <pre className="overflow-x-auto whitespace-pre-wrap break-words font-mono text-[10px] text-red-300/90 leading-relaxed">
-                {String(log.meta.errorStack)}
-              </pre>
+              {/* Error stack trace */}
+              {log.error.stack && (
+                <div className="rounded bg-black/40 p-3">
+                  <div className="mb-1 font-semibold text-muted-foreground text-xs">Stack Trace:</div>
+                  <pre className="overflow-x-auto whitespace-pre-wrap break-words font-mono text-[10px] text-red-300/90 leading-relaxed">
+                    {log.error.stack}
+                  </pre>
+                </div>
+              )}
             </div>
           )}
 

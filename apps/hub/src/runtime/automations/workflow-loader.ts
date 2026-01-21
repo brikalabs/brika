@@ -12,7 +12,7 @@ import type { Workflow } from './types';
 
 @singleton()
 export class WorkflowLoader {
-  private readonly logs = inject(Logger);
+  private readonly logs = inject(Logger).withSource('automation');
   private readonly engine = inject(AutomationEngine);
 
   #dir: string | null = null;
@@ -40,7 +40,7 @@ export class WorkflowLoader {
     } catch {
       // Create directory by writing a .keep file
       await Bun.write(`${this.#dir}/.keep`, '');
-      this.logs.info('automations.dir.created', { dir: this.#dir });
+      this.logs.info('Automations directory created', { directory: this.#dir });
     }
 
     // Load all .toml files using Bun.Glob
@@ -51,9 +51,9 @@ export class WorkflowLoader {
       await this.#loadFile(`${this.#dir}/${file}`);
     }
 
-    this.logs.info('automations.loaded', {
-      dir: this.#dir,
-      count: this.#loaded.size,
+    this.logs.info('Workflow files loaded successfully', {
+      directory: this.#dir,
+      workflowCount: this.#loaded.size,
     });
   }
 
@@ -106,11 +106,11 @@ export class WorkflowLoader {
           }
         }
       } catch (e) {
-        this.logs.error('automations.watch.error', { error: String(e) } as Record<string, Json>);
+        this.logs.error('Failed to watch workflow files', {}, { error: e });
       }
     }, 1000); // Poll every second
 
-    this.logs.info('automations.watching', { dir: this.#dir });
+    this.logs.info('Started watching workflow files for changes', { directory: this.#dir });
   }
 
   /**
@@ -145,10 +145,11 @@ export class WorkflowLoader {
     // Register/update workflow
     this.engine.register(workflow);
 
-    this.logs.info('automations.file.saved', {
-      file: fileName,
-      id: workflow.id,
-    } as Record<string, Json>);
+    this.logs.info('Workflow file saved successfully', {
+      fileName: fileName,
+      workflowId: workflow.id,
+      workflowName: workflow.name,
+    });
 
     return filePath;
   }
@@ -167,7 +168,7 @@ export class WorkflowLoader {
           const proc = Bun.spawn(['rm', conventionalPath]);
           await proc.exited;
           this.engine.unregister(id);
-          this.logs.info('automations.file.deleted', { id } as Record<string, Json>);
+          this.logs.info('Workflow file deleted successfully', { workflowId: id });
           return true;
         }
       }
@@ -178,10 +179,10 @@ export class WorkflowLoader {
     const proc = Bun.spawn(['rm', filePath]);
     await proc.exited;
     if (proc.exitCode !== 0) {
-      this.logs.error('automations.file.delete.error', {
-        file: filePath,
-        error: `Failed to delete file: exit code ${proc.exitCode}`,
-      } as Record<string, Json>);
+      this.logs.error('Failed to delete workflow file', {
+        filePath: filePath,
+        exitCode: proc.exitCode,
+      });
       return false;
     }
 
@@ -193,10 +194,10 @@ export class WorkflowLoader {
     this.engine.unregister(id);
 
     const fileName = filePath.split('/').pop() ?? filePath;
-    this.logs.info('automations.file.deleted', {
-      file: fileName,
-      id,
-    } as Record<string, Json>);
+    this.logs.info('Workflow file deleted successfully', {
+      fileName: fileName,
+      workflowId: id,
+    });
 
     return true;
   }
@@ -213,7 +214,8 @@ export class WorkflowLoader {
       const workflow = TOML.parse(content) as unknown as Workflow;
 
       if (!workflow?.id) {
-        this.logs.warn('automations.file.invalid', { file: filePath, reason: 'missing id' });
+        const fileName = filePath.split('/').pop() ?? filePath;
+        this.logs.warn('Workflow file is invalid', { fileName, reason: 'Missing workflow ID' });
         return;
       }
 
@@ -222,16 +224,20 @@ export class WorkflowLoader {
       this.#idToFile.set(workflow.id, filePath);
 
       const fileName = filePath.split('/').pop() ?? filePath;
-      this.logs.info('automations.file.loaded', {
-        file: fileName,
-        id: workflow.id,
-      } as Record<string, Json>);
+      this.logs.info('Workflow file loaded successfully', {
+        fileName: fileName,
+        workflowId: workflow.id,
+        workflowName: workflow.name,
+      });
     } catch (error) {
       const fileName = filePath.split('/').pop() ?? filePath;
-      this.logs.error('automations.file.error', {
-        file: fileName,
-        error: String(error),
-      } as Record<string, Json>);
+      this.logs.error(
+        'Failed to load workflow file',
+        {
+          fileName: fileName,
+        },
+        { error }
+      );
     }
   }
 
@@ -247,9 +253,9 @@ export class WorkflowLoader {
     this.#idToFile.delete(workflowId);
 
     const fileName = filePath.split('/').pop() ?? filePath;
-    this.logs.info('automations.file.unloaded', {
-      file: fileName,
-      id: workflowId,
-    } as Record<string, Json>);
+    this.logs.info('Workflow file unloaded successfully', {
+      fileName: fileName,
+      workflowId: workflowId,
+    });
   }
 }

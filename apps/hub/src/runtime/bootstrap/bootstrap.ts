@@ -35,21 +35,9 @@ export class Bootstrap {
 
   async start(): Promise<void> {
     if ((globalThis as Record<symbol, boolean>)[HOT_STARTED]) {
-      this.logs.info('hub.hot-reload');
+      this.logs.info('Hot reload detected, skipping initialization');
       return;
     }
-
-    // 1. Logging first
-    await this.logStore.init();
-    this.logs.setStore(this.logStore);
-
-    // 2. Initialize .brika directory
-    await this.initializer.init();
-
-    // 3. Load config
-    const config = await this.configLoader.load();
-
-    // 4. Display startup message
     console.log(
       createBanner({
         title: 'BRIKA',
@@ -61,30 +49,43 @@ export class Bootstrap {
       })
     );
 
-    // 5. Run plugin lifecycle
+    // 1. Logging first
+    await this.logStore.init();
+    this.logs.setStore(this.logStore);
+
+    // 2. Initialize .brika directory
+    await this.initializer.init();
+
+    // 3. Load config
+    const config = await this.configLoader.load();
+
+    // 4. Run plugin lifecycle
     for (const p of this.plugins) {
-      this.logs.info(`plugin.init`, { name: p.name });
+      this.logs.info('Initializing bootstrap plugin', { plugin: p.name });
       await p.onInit?.();
     }
     for (const p of this.plugins) {
-      this.logs.info(`plugin.load`, { name: p.name });
+      this.logs.info('Loading bootstrap plugin', { plugin: p.name });
       await p.onLoad?.(config);
     }
     for (const p of this.plugins) {
-      this.logs.info(`plugin.start`, { name: p.name });
+      this.logs.info('Starting bootstrap plugin', { plugin: p.name });
       await p.onStart?.();
     }
 
-    this.logs.info('hub.started');
+    this.logs.info('Brika Hub started successfully', {
+      version: hub.version,
+      pluginCount: this.plugins.length,
+    });
     (globalThis as Record<symbol, boolean>)[HOT_STARTED] = true;
   }
 
   async stop(): Promise<void> {
     for (const p of this.plugins.toReversed()) {
-      this.logs.info(`plugin.stop.start`, { name: p.name });
+      this.logs.info('Stopping bootstrap plugin', { plugin: p.name });
       await p.onStop?.();
     }
-    this.logs.info('hub.stopped');
+    this.logs.info('Brika Hub stopped successfully');
     this.logStore.close();
   }
 }

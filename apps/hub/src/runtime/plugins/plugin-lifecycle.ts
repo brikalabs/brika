@@ -22,7 +22,7 @@ import { generateUid, HUB_VERSION, satisfiesVersion } from './utils';
 @singleton()
 export class PluginLifecycle {
   readonly #config = inject(PluginManagerConfig);
-  readonly #logs = inject(Logger);
+  readonly #logs = inject(Logger).withSource('plugin');
   readonly #state = inject(StateStore);
   readonly #events = inject(EventSystem);
   readonly #i18n = inject(I18nService);
@@ -136,14 +136,26 @@ export class PluginLifecycle {
     const uid = existingState?.uid ?? generateUid(metadata.name);
     const locales = await this.#i18n.registerPluginTranslations(metadata.name, rootDirectory);
 
-    this.#logs.info('plugin.starting', { name: pluginName, version: metadata.version, uid });
+    this.#logs.info('Starting plugin', {
+      pluginName: pluginName,
+      version: metadata.version,
+      uid,
+    });
 
     const channel = spawnPlugin('bun', [entryPoint], {
       cwd: globalThis.process.cwd(),
       env: { ...globalThis.process.env, BRIKA_PLUGIN_NAME: metadata.name },
       defaultTimeoutMs: this.#config.callTimeoutMs,
       onDisconnect: (error) => this.#handleDisconnect(pluginName, error),
-      onStderr: (line) => this.#logs.error('plugin.stderr', { name: pluginName, message: line }),
+      onStderr: (line) =>
+        this.#logs.error(
+          'Plugin error output received',
+          {
+            pluginName: pluginName,
+            message: line,
+          },
+          { source: 'stderr' }
+        ),
     });
 
     const process = new PluginProcess(
@@ -168,7 +180,10 @@ export class PluginLifecycle {
           const validation = this.#pluginConfig.validate(p.name, prefs);
           if (!validation.success) {
             const errors = validation.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`);
-            this.#logs.error('plugin.preferences.invalid', { name: p.name, errors });
+            this.#logs.error('Plugin preferences validation failed', {
+              pluginName: p.name,
+              errors,
+            });
             // Dispatch event so reload/enable can handle it
             this.#events.dispatch(
               PluginActions.configInvalid.create({ uid: p.uid, name: p.name, errors }, 'hub')
@@ -238,7 +253,7 @@ export class PluginLifecycle {
       this.#restartPolicy.reset(name);
     }
 
-    this.#logs.info('plugin.unloaded', { name });
+    this.#logs.info('Plugin unloaded successfully', { pluginName: name });
     this.#events.dispatch(
       PluginActions.unloaded.create({ uid: process.uid, name: process.name }, 'hub')
     );
@@ -254,7 +269,9 @@ export class PluginLifecycle {
 
     for (const plugin of this.#state.listInstalledWithMetadata()) {
       if (!plugin.name || !plugin.rootDirectory || !plugin.entryPoint) {
-        this.#logs.warn('plugin.restore.skip', { reason: 'incomplete data', name: plugin.name });
+        this.#logs.warn('Skipping plugin restoration due to incomplete data', {
+          pluginName: plugin.name,
+        });
         continue;
       }
 
@@ -264,7 +281,13 @@ export class PluginLifecycle {
         try {
           await this.load(plugin.rootDirectory);
         } catch (e) {
-          this.#logs.error('plugin.restore.error', { name: plugin.name, error: String(e) });
+          this.#logs.error(
+            'Failed to restore plugin',
+            {
+              pluginName: plugin.name,
+            },
+            { error: e }
+          );
         }
       }
     }
@@ -273,8 +296,8 @@ export class PluginLifecycle {
   async cleanupStale(): Promise<void> {
     for (const state of this.#state.listInstalled()) {
       if (!(await Bun.file(`${state.rootDirectory}/package.json`).exists())) {
-        this.#logs.debug('plugin.state.cleanup', {
-          name: state.name,
+        this.#logs.debug('Cleaning up stale plugin state', {
+          pluginName: state.name,
           reason: 'package.json not found',
         });
         await this.#state.remove(state.name);
@@ -287,8 +310,8 @@ export class PluginLifecycle {
   // ───────────────────────────────────────────────────────────────────────
 
   #handleHeartbeatFailed(process: PluginProcess, silentMs: number): void {
-    this.#logs.error('plugin.heartbeat.missed', {
-      name: process.name,
+    this.#logs.error('Plugin heartbeat timeout', {
+      pluginName: process.name,
       pid: process.pid,
       silentMs,
       timeoutMs: this.#config.heartbeatTimeoutMs,
@@ -305,7 +328,15 @@ export class PluginLifecycle {
     if (!process) return;
 
     const reason = error?.message ?? 'disconnected';
-    this.#logs.error('plugin.crashed', { name, pid: process.pid, reason });
+    this.#logs.error(
+      'Plugin crashed unexpectedly',
+      {
+        pluginName: name,
+        pid: process.pid,
+        reason,
+      },
+      { error }
+    );
     this.#state.setHealth(name, 'crashed', reason);
 
     this.#events.dispatch(
@@ -321,19 +352,28 @@ export class PluginLifecycle {
 
     const pluginState = this.#state.get(name);
     if (!pluginState?.enabled) {
-      this.#logs.debug('plugin.restart.skip', { name, reason: 'plugin disabled' });
+      this.#logs.debug('Skipping plugin restart (plugin disabled)', {
+        pluginName: name,
+      });
       return;
     }
 
     const decision = this.#restartPolicy.onCrash(name);
 
     if (decision.action === 'crash-loop') {
-      this.#logs.error('plugin.crash-loop', { name, reason: decision.reason });
+      this.#logs.error('Plugin entered crash loop', {
+        pluginName: name,
+        reason: decision.reason,
+      });
       this.#state.setHealth(name, 'crash-loop', `Crash loop: ${decision.reason}`);
       return;
     }
 
-    this.#logs.info('plugin.restart.scheduled', { name, delayMs: decision.delayMs, reason });
+    this.#logs.info('Plugin restart scheduled', {
+      pluginName: name,
+      delayMs: decision.delayMs,
+      reason,
+    });
     this.#state.setHealth(
       name,
       'restarting',
@@ -342,11 +382,17 @@ export class PluginLifecycle {
 
     this.#restartPolicy.scheduleRestart(name, decision.delayMs, async () => {
       try {
-        this.#logs.info('plugin.restart.attempting', { name });
+        this.#logs.info('Attempting to restart plugin', { pluginName: name });
         await this.load(name);
-        this.#logs.info('plugin.restart.success', { name });
+        this.#logs.info('Plugin restarted successfully', { pluginName: name });
       } catch (e) {
-        this.#logs.error('plugin.restart.failed', { name, error: String(e) });
+        this.#logs.error(
+          'Failed to restart plugin',
+          {
+            pluginName: name,
+          },
+          { error: e }
+        );
       }
     });
   }
@@ -354,8 +400,8 @@ export class PluginLifecycle {
   #startStabilityCheck(process: PluginProcess): void {
     const timer = setInterval(() => {
       if (this.#restartPolicy.checkStability(process.name)) {
-        this.#logs.debug('plugin.stable', {
-          name: process.name,
+        this.#logs.debug('Plugin reached stability threshold', {
+          pluginName: process.name,
           thresholdMs: this.#config.restartStabilityMs,
         });
         clearInterval(timer);
@@ -368,17 +414,17 @@ export class PluginLifecycle {
   #checkCompatibility(metadata: { name: string; engines?: { brika?: string } }): boolean {
     const required = metadata.engines?.brika;
     if (!required) {
-      this.#logs.error('plugin.compatibility.missing', {
-        name: metadata.name,
+      this.#logs.error('Plugin missing compatibility declaration', {
+        pluginName: metadata.name,
         message: 'Plugin must declare engines.brika in package.json',
       });
       return false;
     }
 
     if (!satisfiesVersion(HUB_VERSION, required)) {
-      this.#logs.error('plugin.compatibility.failed', {
-        name: metadata.name,
-        required,
+      this.#logs.error('Plugin incompatible with current hub version', {
+        pluginName: metadata.name,
+        requiredVersion: required,
         hubVersion: HUB_VERSION,
       });
       return false;

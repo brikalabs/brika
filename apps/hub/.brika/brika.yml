@@ -16,20 +16,8 @@ hub:
 #     config:
 #       key: value
 plugins:
-  "@brika/plugin-example-echo":
-    version: workspace:*
-  "@brika/plugin-timer":
-    version: workspace:*
-  "@brika/plugin-demo-config":
-    version: workspace:*
-    config:
-      apiKey: h
-      serverUrl: https://google.comjjj
-      maxRetries: 3
-      debugMode: true
-      logLevel: debug
   "@brika/blocks-builtin":
-    version: workspace:*
+    version: "latest"
 
 # Event-based rules
 rules: []

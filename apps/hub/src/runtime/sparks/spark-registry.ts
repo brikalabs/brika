@@ -44,7 +44,7 @@ export interface SparkSummary {
 
 @singleton()
 export class SparkRegistry {
-  private readonly logs = inject(Logger);
+  private readonly logs = inject(Logger).withSource('registry');
 
   /** Spark definitions by full type */
   readonly #sparks = new Map<string, RegisteredSpark>();
@@ -75,10 +75,10 @@ export class SparkRegistry {
     const fullType = `${pluginId}:${spark.id}`;
 
     if (this.#sparks.has(fullType)) {
-      this.logs.warn('spark.duplicate', {
-        type: fullType,
-        existing: this.#sparks.get(fullType)?.pluginId ?? null,
-        new: pluginId,
+      this.logs.warn('Duplicate spark registration detected', {
+        sparkType: fullType,
+        existingPlugin: this.#sparks.get(fullType)?.pluginId ?? null,
+        newPlugin: pluginId,
       });
     }
 
@@ -89,9 +89,9 @@ export class SparkRegistry {
       schema: spark.schema,
     });
 
-    this.logs.info('spark.registered', {
-      type: fullType,
-      plugin: pluginId,
+    this.logs.info('Spark registered successfully', {
+      sparkType: fullType,
+      pluginId: pluginId,
     });
 
     // Notify listeners
@@ -99,7 +99,13 @@ export class SparkRegistry {
       try {
         listener(fullType);
       } catch (e) {
-        this.logs.error('spark.register.listener.error', { type: fullType, error: String(e) });
+        this.logs.error(
+          'Spark registration listener failed',
+          {
+            sparkType: fullType,
+          },
+          { error: e }
+        );
       }
     }
   }
@@ -116,7 +122,10 @@ export class SparkRegistry {
       }
     }
     if (count > 0) {
-      this.logs.info('sparks.unregistered', { plugin: pluginId, count });
+      this.logs.info('Sparks unregistered from plugin', {
+        pluginId: pluginId,
+        count: count,
+      });
     }
     return count;
   }

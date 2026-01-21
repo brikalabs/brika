@@ -42,6 +42,10 @@ interface LogRow {
   plugin_name: string | null;
   message: string;
   meta: string | null;
+  error_name: string | null;
+  error_message: string | null;
+  error_stack: string | null;
+  error_cause: string | null;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -68,15 +72,36 @@ export class LogStore {
     this.#db.run(`
         CREATE TABLE IF NOT EXISTS logs
         (
-            id          INTEGER PRIMARY KEY AUTOINCREMENT,
-            ts          INTEGER NOT NULL,
-            level       TEXT    NOT NULL,
-            source      TEXT    NOT NULL,
-            plugin_name TEXT,
-            message     TEXT    NOT NULL,
-            meta        TEXT
+            id           INTEGER PRIMARY KEY AUTOINCREMENT,
+            ts           INTEGER NOT NULL,
+            level        TEXT    NOT NULL,
+            source       TEXT    NOT NULL,
+            plugin_name  TEXT,
+            message      TEXT    NOT NULL,
+            meta         TEXT,
+            error_name   TEXT,
+            error_message TEXT,
+            error_stack  TEXT,
+            error_cause  TEXT
         )
     `);
+
+    // Migrate existing schema to add error columns if they don't exist
+    const columns = this.#db.query("PRAGMA table_info(logs)").all() as { name: string }[];
+    const columnNames = new Set(columns.map((c) => c.name));
+
+    if (!columnNames.has("error_name")) {
+      this.#db.run("ALTER TABLE logs ADD COLUMN error_name TEXT");
+    }
+    if (!columnNames.has("error_message")) {
+      this.#db.run("ALTER TABLE logs ADD COLUMN error_message TEXT");
+    }
+    if (!columnNames.has("error_stack")) {
+      this.#db.run("ALTER TABLE logs ADD COLUMN error_stack TEXT");
+    }
+    if (!columnNames.has("error_cause")) {
+      this.#db.run("ALTER TABLE logs ADD COLUMN error_cause TEXT");
+    }
 
     // Create indexes for efficient queries
     this.#db.run("CREATE INDEX IF NOT EXISTS idx_logs_ts ON logs(ts DESC)");
@@ -88,7 +113,7 @@ export class LogStore {
 
     // Prepare insert statement for performance
     this.#insertStmt = this.#db.prepare(
-      "INSERT INTO logs (ts, level, source, plugin_name, message, meta) VALUES (?, ?, ?, ?, ?, ?)",
+      "INSERT INTO logs (ts, level, source, plugin_name, message, meta, error_name, error_message, error_stack, error_cause) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
     );
   }
 
@@ -102,6 +127,10 @@ export class LogStore {
       event.pluginName ?? null,
       event.message,
       event.meta ? JSON.stringify(event.meta) : null,
+      event.error?.name ?? null,
+      event.error?.message ?? null,
+      event.error?.stack ?? null,
+      event.error?.cause ?? null,
     );
   }
 
@@ -160,7 +189,7 @@ export class LogStore {
 
     // Query one extra to determine if there's a next page
     const sql = `
-        SELECT id, ts, level, source, plugin_name, message, meta
+        SELECT id, ts, level, source, plugin_name, message, meta, error_name, error_message, error_stack, error_cause
         FROM logs ${whereClause}
         ORDER BY id ${order === "desc" ? "DESC" : "ASC"}
         LIMIT ?
@@ -171,15 +200,29 @@ export class LogStore {
     const hasMore = rows.length > limit;
     const resultRows = hasMore ? rows.slice(0, limit) : rows;
 
-    const logs = resultRows.map((row) => ({
-      id: row.id,
-      ts: row.ts,
-      level: row.level as LogLevel,
-      source: row.source as LogSource,
-      pluginName: row.plugin_name ?? undefined,
-      message: row.message,
-      meta: row.meta ? (JSON.parse(row.meta) as Record<string, Json>) : undefined,
-    }));
+    const logs = resultRows.map((row) => {
+      const event: StoredLogEvent = {
+        id: row.id,
+        ts: row.ts,
+        level: row.level as LogLevel,
+        source: row.source as LogSource,
+        pluginName: row.plugin_name ?? undefined,
+        message: row.message,
+        meta: row.meta ? (JSON.parse(row.meta) as Record<string, Json>) : undefined,
+      };
+
+      // Reconstruct error object if error data exists
+      if (row.error_name || row.error_message) {
+        event.error = {
+          name: row.error_name ?? "Error",
+          message: row.error_message ?? "",
+          stack: row.error_stack ?? undefined,
+          cause: row.error_cause ?? undefined,
+        };
+      }
+
+      return event;
+    });
 
     return {
       logs,
@@ -237,6 +280,16 @@ export class LogStore {
       .all() as { plugin_name: string }[];
 
     return rows.map((r) => r.plugin_name);
+  }
+
+  getSources(): LogSource[] {
+    if (!this.#db) return [];
+
+    const rows = this.#db
+      .query("SELECT DISTINCT source FROM logs ORDER BY source")
+      .all() as { source: string }[];
+
+    return rows.map((r) => r.source as LogSource);
   }
 
   count(): number {

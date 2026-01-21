@@ -6,6 +6,7 @@
 
 import { inject, singleton } from '@brika/shared';
 import YAML from 'yaml';
+import { Logger } from '../logs/log-router';
 import { BrikaInitializer } from './brika-initializer';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -76,6 +77,7 @@ const DEFAULT_CONFIG: BrikaConfig = {
 @singleton()
 export class ConfigLoader {
   readonly #init = inject(BrikaInitializer);
+  readonly #logger = inject(Logger);
 
   #config: BrikaConfig | null = null;
 
@@ -97,7 +99,9 @@ export class ConfigLoader {
     try {
       const file = Bun.file(this.configPath);
       if (!(await file.exists())) {
-        console.log(`[config] No brika.yml found at ${this.configPath}, using defaults`);
+        this.#logger.info("Configuration file not found, using default configuration", {
+          configPath: this.configPath
+        });
         this.#config = DEFAULT_CONFIG;
         return this.#config;
       }
@@ -128,10 +132,19 @@ export class ConfigLoader {
         schedules: (parsed.schedules as ScheduleEntry[]) ?? [],
       };
 
-      console.log(`[config] Loaded from ${this.configPath}`);
+      this.#logger.info("Configuration loaded successfully", {
+        configPath: this.configPath,
+        pluginCount: this.#config.plugins.length,
+        ruleCount: this.#config.rules.length,
+        scheduleCount: this.#config.schedules.length,
+      });
       return this.#config;
-    } catch (error) {
-      console.error(`[config] Failed to load: ${error}`);
+    } catch (err) {
+      this.#logger.error(
+        "Failed to load configuration file, falling back to defaults",
+        { configPath: this.configPath },
+        { error: err }
+      );
       this.#config = DEFAULT_CONFIG;
       return this.#config;
     }
@@ -201,7 +214,10 @@ export class ConfigLoader {
       this.#config = config;
     }
 
-    console.log(`[config] Saved to ${this.configPath}`);
+    this.#logger.info("Configuration saved successfully", {
+      configPath: this.configPath,
+      pluginCount: configToSave.plugins.length,
+    });
   }
 
   /**

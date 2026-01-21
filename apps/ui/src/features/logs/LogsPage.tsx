@@ -26,6 +26,8 @@ export function LogsPage() {
     setDateRange,
     resetFilters,
     pluginOptions,
+    sourceOptions,
+    levelOptions,
     stats,
     clear,
     isClearing,
@@ -104,6 +106,8 @@ export function LogsPage() {
           <LogFilterBar
             filters={filters}
             pluginOptions={pluginOptions}
+            levelOptions={levelOptions}
+            sourceOptions={sourceOptions}
             onLevelsChange={setLevels}
             onSourcesChange={setSources}
             onPluginChange={setPluginName}

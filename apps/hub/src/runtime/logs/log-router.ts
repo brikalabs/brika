@@ -1,6 +1,11 @@
-import type { Json, LogEvent, LogLevel } from "@brika/shared";
+import type { Json, LogError, LogEvent, LogLevel, LogSource } from "@brika/shared";
 import { singleton } from "@brika/shared";
+import { TerminalFormatter } from "./formatters/terminal-formatter";
 import type { LogStore } from "./log-store";
+import { ConsoleTransport } from "./transports/console-transport";
+import type { Transport } from "./transports/transport";
+import { captureCallSite } from "./utils/call-site";
+import { RingBuffer } from "./utils/ring-buffer";
 
 export interface LogRouterOptions {
   level: LogLevel;
@@ -8,157 +13,188 @@ export interface LogRouterOptions {
   ringSize?: number;
 }
 
-type Subscriber = (e: LogEvent) => void;
+export interface LogOptions {
+  meta?: Record<string, Json>;
+  error?: unknown;
+  source?: LogSource;
+}
 
-const LEVEL_ORDER: Record<LogLevel, number> = { debug: 10, info: 20, warn: 30, error: 40 };
+type Subscriber = (event: LogEvent) => void;
 
-function shouldLog(min: LogLevel, level: LogLevel): boolean {
-  return LEVEL_ORDER[level] >= LEVEL_ORDER[min];
+/**
+ * Scoped logger that wraps a Logger instance with a preset source.
+ */
+export class ScopedLogger {
+  readonly #logger: Logger;
+  readonly #source: LogSource;
+
+  constructor(logger: Logger, source: LogSource) {
+    this.#logger = logger;
+    this.#source = source;
+  }
+
+  debug(message: string, meta?: Record<string, Json>, options?: LogOptions): void {
+    this.#logger.debug(message, meta, { ...options, source: options?.source ?? this.#source });
+  }
+
+  info(message: string, meta?: Record<string, Json>, options?: LogOptions): void {
+    this.#logger.info(message, meta, { ...options, source: options?.source ?? this.#source });
+  }
+
+  warn(message: string, meta?: Record<string, Json>, options?: LogOptions): void {
+    this.#logger.warn(message, meta, { ...options, source: options?.source ?? this.#source });
+  }
+
+  error(message: string, meta?: Record<string, Json>, options?: LogOptions): void {
+    this.#logger.error(message, meta, { ...options, source: options?.source ?? this.#source });
+  }
+
+  /**
+   * Emit a log event directly (passthrough to logger)
+   */
+  emit(event: LogEvent): void {
+    this.#logger.emit(event);
+  }
+
+  /**
+   * Create another scoped logger with a different source.
+   */
+  withSource(source: LogSource): ScopedLogger {
+    return new ScopedLogger(this.#logger, source);
+  }
+}
+
+function shouldUseColor(): boolean {
+  if (process.env.NO_COLOR) return false;
+  if (process.env.FORCE_COLOR === "1" || process.env.FORCE_COLOR === "true") return true;
+  if (process.env.BRIKA_LOG_COLOR === "1") return true;
+  if (process.env.BRIKA_LOG_COLOR === "0") return false;
+  return process.stdout.isTTY ?? false;
 }
 
 /**
- * Captures the call site information from the stack trace.
- * Returns file path and line number where the log was triggered.
+ * Main logging system for Brika Hub.
  */
-function captureCallSite(): { sourceFile?: string; sourceLine?: number } {
-  const err = new Error();
-  const stack = err.stack;
-  if (!stack) return {};
-
-  const lines = stack.split('\n');
-  // Skip first 3 lines: "Error", our utility function, and the log method itself
-  // The 4th line should be the actual caller
-  const callerLine = lines[3];
-  if (!callerLine) return {};
-
-  // Parse stack line: "at functionName (file:line:column)" or "at file:line:column"
-  const match = new RegExp(/\((.+):(\d+):(\d+)\)$/).exec(callerLine) || new RegExp(/at\s+(.+):(\d+):(\d+)$/).exec(callerLine);
-  if (!match) return {};
-
-  const [, filePath, lineNumber] = match;
-  return {
-    sourceFile: filePath,
-    sourceLine: Number.parseInt(lineNumber, 10),
-  };
-}
-
-function formatLine(e: LogEvent, color: boolean): string {
-  const d = new Date(e.ts);
-  const ts = `${d.toISOString().slice(11, 23)}`;
-  const src = (e.pluginName ? `${e.source}:${e.pluginName}` : e.source).padEnd(22, " ").slice(0, 22);
-  const lvl = e.level.toUpperCase().padEnd(5, " ");
-  const msg = e.message;
-  const meta = e.meta ? ` ${JSON.stringify(e.meta)}` : "";
-  if (!color) return `${ts} ${lvl} ${src} ${msg}${meta}`;
-
-  const c =
-    e.level === "error"
-      ? "\x1b[31m"
-      : e.level === "warn"
-        ? "\x1b[33m"
-        : e.level === "info"
-          ? "\x1b[32m"
-          : "\x1b[90m";
-
-  const reset = "\x1b[0m";
-  return `${ts} ${c}${lvl}${reset} ${src} ${msg}${meta}`;
-}
-
-class RingBuffer<T> {
-  readonly #buf: Array<T | undefined>;
-  readonly #cap: number;
-  #head = 0;
-  #len = 0;
-
-  constructor(cap: number) {
-    this.#cap = cap;
-    this.#buf = new Array<T | undefined>(cap);
-  }
-
-  push(v: T): void {
-    this.#buf[this.#head] = v;
-    this.#head = (this.#head + 1) % this.#cap;
-    this.#len = Math.min(this.#len + 1, this.#cap);
-  }
-
-  snapshot(): T[] {
-    const out: T[] = [];
-    const start = (this.#head - this.#len + this.#cap) % this.#cap;
-    for (let i = 0; i < this.#len; i++) {
-      const idx = (start + i) % this.#cap;
-      const v = this.#buf[idx];
-      if (v !== undefined) out.push(v);
-    }
-    return out;
-  }
-}
-
 @singleton()
 export class Logger {
-  readonly #min: LogLevel;
-  readonly #color: boolean;
-  readonly #subs = new Set<Subscriber>();
+  readonly #transports: Transport[] = [];
+  readonly #subscribers = new Set<Subscriber>();
   readonly #ring: RingBuffer<LogEvent>;
   #store: LogStore | null = null;
+  #defaultSource: LogSource = "hub";
 
   constructor() {
-    // Read from env - tsyringe auto-instantiates
-    this.#min = (process.env.BRIKA_LOG_LEVEL ?? "info") as LogLevel;
-    this.#color = process.env.BRIKA_LOG_COLOR === "1";
+    const level = (process.env.BRIKA_LOG_LEVEL ?? "info") as LogLevel;
+    const formatter = new TerminalFormatter({ color: shouldUseColor() });
+
     this.#ring = new RingBuffer<LogEvent>(5000);
+    this.#transports.push(new ConsoleTransport({ level, formatter }));
   }
 
-  /** Connect to LogStore for persistence (called after store is initialized) */
+  /**
+   * Set default log source for this logger instance.
+   */
+  setSource(source: LogSource): void {
+    this.#defaultSource = source;
+  }
+
   setStore(store: LogStore): void {
     this.#store = store;
   }
 
   subscribe(fn: Subscriber): () => void {
-    this.#subs.add(fn);
-    return () => this.#subs.delete(fn);
+    this.#subscribers.add(fn);
+    return () => this.#subscribers.delete(fn);
   }
 
-  emit(e: LogEvent): void {
-    if (!shouldLog(this.#min, e.level)) return;
-    this.#ring.push(e);
-    this.#store?.insert(e);
-    console.log(formatLine(e, this.#color));
-    for (const fn of this.#subs) fn(e);
+  addTransport(transport: Transport): void {
+    this.#transports.push(transport);
+  }
+
+  emit(event: LogEvent): void {
+    this.#ring.push(event);
+    this.#store?.insert(event);
+
+    for (const transport of this.#transports) {
+      transport.write(event);
+    }
+
+    for (const subscriber of this.#subscribers) {
+      subscriber(event);
+    }
   }
 
   query(): LogEvent[] {
     return this.#ring.snapshot();
   }
 
-  debug(message: string, meta?: Record<string, Json>): void {
-    const callSite = captureCallSite();
-    const enhancedMeta = { ...meta, ...callSite };
-    this.emit({ ts: Date.now(), level: "debug", source: "hub", message, meta: enhancedMeta });
-  }
+  #log(
+    level: LogLevel,
+    message: string,
+    meta?: Record<string, Json>,
+    options?: LogOptions
+  ): void {
+    const logMeta: Record<string, Json> = {
+      ...meta,
+      ...options?.meta,
+      ...captureCallSite(),
+    };
 
-  info(message: string, meta?: Record<string, Json>): void {
-    const callSite = captureCallSite();
-    const enhancedMeta = { ...meta, ...callSite };
-    this.emit({ ts: Date.now(), level: "info", source: "hub", message, meta: enhancedMeta });
-  }
-
-  warn(message: string, meta?: Record<string, Json>): void {
-    const callSite = captureCallSite();
-    const enhancedMeta = { ...meta, ...callSite };
-    this.emit({ ts: Date.now(), level: "warn", source: "hub", message, meta: enhancedMeta });
-  }
-
-  error(message: string, meta?: Record<string, Json>): void {
-    const callSite = captureCallSite();
-    const enhancedMeta: Record<string, Json> = { ...meta, ...callSite };
-
-    // Auto-capture error stack if an error object is provided
-    if (meta?.error instanceof Error) {
-      enhancedMeta.errorName = meta.error.name;
-      enhancedMeta.errorMessage = meta.error.message;
-      enhancedMeta.errorStack = meta.error.stack ?? undefined;
+    // Extract error information into dedicated field
+    let logError: LogError | undefined;
+    if (options?.error) {
+      if (options.error instanceof Error) {
+        logError = {
+          name: options.error.name,
+          message: options.error.message,
+          stack: options.error.stack,
+        };
+        if (options.error.cause) {
+          logError.cause =
+            options.error.cause instanceof Error
+              ? `${options.error.cause.name}: ${options.error.cause.message}`
+              : JSON.stringify(options.error.cause);
+        }
+      } else {
+        // Handle non-Error objects
+        logError = {
+          name: "Error",
+          message: typeof options.error === "object" ? JSON.stringify(options.error) : String(options.error),
+        };
+      }
     }
 
-    this.emit({ ts: Date.now(), level: "error", source: "hub", message, meta: enhancedMeta });
+    this.emit({
+      ts: Date.now(),
+      level,
+      source: options?.source ?? this.#defaultSource,
+      message,
+      meta: logMeta,
+      error: logError,
+    });
+  }
+
+  debug(message: string, meta?: Record<string, Json>, options?: LogOptions): void {
+    this.#log("debug", message, meta, options);
+  }
+
+  info(message: string, meta?: Record<string, Json>, options?: LogOptions): void {
+    this.#log("info", message, meta, options);
+  }
+
+  warn(message: string, meta?: Record<string, Json>, options?: LogOptions): void {
+    this.#log("warn", message, meta, options);
+  }
+
+  error(message: string, meta?: Record<string, Json>, options?: LogOptions): void {
+    this.#log("error", message, meta, options);
+  }
+
+  /**
+   * Create a scoped logger with a default source.
+   * All logs from this logger will use the specified source unless overridden.
+   */
+  withSource(source: LogSource): ScopedLogger {
+    return new ScopedLogger(this, source);
   }
 }

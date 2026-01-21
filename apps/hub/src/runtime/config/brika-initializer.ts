@@ -6,13 +6,15 @@
  */
 
 import { join } from "node:path";
-import { singleton } from "@brika/shared";
+import { inject, singleton } from "@brika/shared";
+import { Logger } from "../logs/log-router";
 import { unpackTemplates } from "./templates-tar";
 
 @singleton()
 export class BrikaInitializer {
   readonly #brikaDir: string;
   readonly #rootDir: string;
+  readonly #logger = inject(Logger);
 
   constructor() {
     this.#rootDir = process.cwd();
@@ -32,9 +34,11 @@ export class BrikaInitializer {
    * Unpacks templates from the embedded archive.
    */
   async init(): Promise<void> {
-    console.log(`[init] Initializing ${this.#brikaDir}`);
+    this.#logger.info("Initializing Brika workspace directory", {
+      brikaDir: this.#brikaDir,
+    });
     const { default: archive } = await import("@/templates.tar");
-    await unpackTemplates(archive, this.#rootDir);
-    console.log("[init] .brika directory ready");
+    await unpackTemplates(archive, this.#rootDir, this.#logger);
+    this.#logger.info("Brika workspace directory initialized successfully");
   }
 }

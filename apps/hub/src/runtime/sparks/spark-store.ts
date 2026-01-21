@@ -143,7 +143,10 @@ export class SparkStore {
     };
   }
 
-  #paginate(rows: SparkRow[], limit: number): {
+  #paginate(
+    rows: SparkRow[],
+    limit: number
+  ): {
     rows: SparkRow[];
     nextCursor: number | null;
   } {
