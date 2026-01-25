@@ -1,6 +1,9 @@
 import boxen, { Options as BoxenOptions } from 'boxen';
 import chalk from 'chalk';
 import figlet, { FontName } from 'figlet';
+import SlantFont from 'figlet/fonts/Slant';
+
+figlet.parseFont('Slant', SlantFont);
 
 export interface BannerOptions {
   /** Main title displayed as ASCII art */
