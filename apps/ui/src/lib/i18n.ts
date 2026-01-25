@@ -55,7 +55,7 @@ i18n
       // by showing keys instead of values
       request: (options, url, payload, callback) => {
         // Extract language from URL
-        const match = url.match(/\/api\/i18n\/([^/]+)\//);
+        const match = new RegExp(/\/api\/i18n\/([^/]+)\//).exec(url);
         const lng = match?.[1];
 
         if (lng === 'cimode') {

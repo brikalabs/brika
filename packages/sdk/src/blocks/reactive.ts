@@ -72,7 +72,8 @@ export function output<
 // Block Context Types
 // ─────────────────────────────────────────────────────────────────────────────
 
-import type { Emitter, Factory, Flow, Serializable, Source } from '@brika/flow';
+import type { Cleanup, CleanupRegistry, Emitter, Factory, Flow, Source } from '@brika/flow';
+import { FlowImpl, isSource } from '@brika/flow';
 
 /** Extract inferred type from Zod schema, GenericRef, PassthroughRef, or ResolvedRef */
 type SchemaInfer<T> =
@@ -240,8 +241,6 @@ export function createEmitter<T>(
 // Flow from Input Helper
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { type Cleanup, CleanupRegistry, FlowImpl, isSource } from '@brika/flow';
-
 /**
  * Create a Flow from a value, source, or factory.
  */
@@ -260,7 +259,7 @@ export function createFlowFromInput<T>(
     const sourceCleanup = inputVal.start((value) => flow.push(value));
     cleanup.register(sourceCleanup);
   } else {
-    const cancelCleanup = setTimeoutFn(() => flow.push(inputVal as T), 0);
+    const cancelCleanup = setTimeoutFn(() => flow.push(inputVal), 0);
     cleanup.register(cancelCleanup);
   }
 

@@ -16,7 +16,7 @@ import { useBlockTypes } from '../workflows/hooks';
 // Block Card
 // ─────────────────────────────────────────────────────────────────────────────
 
-function BlockCard({ block }: { block: BlockDefinition }) {
+function BlockCard({ block }: Readonly<{ block: BlockDefinition }>) {
   const { tp } = useLocale();
   const iconName = (block.icon || 'box') as IconName;
   const color = block.color || 'var(--primary)';
@@ -69,7 +69,7 @@ export function BlocksPage() {
   const categories = blockTypes.reduce(
     (acc, block) => {
       const cat = block.category || 'other';
-      if (!acc[cat]) acc[cat] = [];
+      acc[cat] ??= [];
       acc[cat].push(block);
       return acc;
     },
@@ -129,9 +129,10 @@ export function BlocksPage() {
       </div>
 
       {/* Content */}
-      {isLoading ? (
+      {isLoading && (
         <div className="py-16 text-center text-muted-foreground">{t('common:loading')}</div>
-      ) : totalFiltered === 0 ? (
+      )}
+      {!isLoading && totalFiltered === 0 && (
         <Card className="border-dashed p-16 text-center">
           <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-2xl bg-muted/50">
             <Search className="size-8 text-muted-foreground opacity-50" />
@@ -145,7 +146,8 @@ export function BlocksPage() {
             </p>
           )}
         </Card>
-      ) : (
+      )}
+      {!isLoading && totalFiltered > 0 && (
         <div className="space-y-10">
           {Object.entries(filteredCategories).map(([category, blocks]) => (
             <div key={category}>

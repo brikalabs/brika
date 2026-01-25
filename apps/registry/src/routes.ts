@@ -15,9 +15,9 @@ export function createRoutes() {
   });
 
   // Serve verified plugins list
-  app.get('/verified-plugins.json', async (c) => {
+  app.get('/verified-plugins.json', (c) => {
     try {
-      const data = await getRegistryData();
+      const data = getRegistryData();
 
       const headers = new Headers();
       headers.set('Content-Type', 'application/json');

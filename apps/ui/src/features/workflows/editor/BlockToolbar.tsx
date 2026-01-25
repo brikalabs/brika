@@ -2,7 +2,6 @@ import { useQuery } from '@tanstack/react-query';
 import {
   ArrowDownToLine,
   ArrowUpFromLine,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
   GripVertical,
@@ -72,7 +71,7 @@ interface DraggableBlockProps {
   ) => void;
 }
 
-function DraggableBlock({ block, onDragStart }: DraggableBlockProps) {
+function DraggableBlock({ block, onDragStart }: Readonly<DraggableBlockProps>) {
   const { tp } = useLocale();
   const iconName = (block.icon || 'box') as IconName;
 
@@ -211,12 +210,12 @@ function BlockSkeleton() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 interface BlockToolbarProps {
-  onDragStart?: (e: React.DragEvent, block: BlockDefinition) => void;
+  onDragStart?: (e: DragEvent, block: BlockDefinition) => void;
   onCollapse?: () => void;
   className?: string;
 }
 
-export function BlockToolbar({ onDragStart, onCollapse, className }: BlockToolbarProps) {
+export function BlockToolbar({ onDragStart, onCollapse, className }: Readonly<BlockToolbarProps>) {
   const { t } = useLocale();
   const [search, setSearch] = useState('');
   const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({});
@@ -231,7 +230,7 @@ export function BlockToolbar({ onDragStart, onCollapse, className }: BlockToolba
     staleTime: 30000,
   });
 
-  const handleDragStart = (e: React.DragEvent, block: BlockDefinition, translatedLabel: string) => {
+  const handleDragStart = (e: DragEvent, block: BlockDefinition, translatedLabel: string) => {
     // Include the translated label in the drag data
     const dragData = { ...block, translatedLabel };
     e.dataTransfer.setData('application/reactflow', JSON.stringify(dragData));
@@ -249,7 +248,9 @@ export function BlockToolbar({ onDragStart, onCollapse, className }: BlockToolba
     : blocks;
 
   // Group by category
-  const categories = [...new Set(filteredBlocks.map((b) => b.category))].sort();
+  const categories = [...new Set(filteredBlocks.map((b) => b.category))].sort((a, b) =>
+    a.localeCompare(b)
+  );
   const groupedBlocks = categories.map((cat) => ({
     id: cat,
     label: cat.charAt(0).toUpperCase() + cat.slice(1),
@@ -304,66 +305,71 @@ export function BlockToolbar({ onDragStart, onCollapse, className }: BlockToolba
 
       <ScrollArea className="flex-1">
         <div className="space-y-4 p-3">
-          {isLoading ? (
+          {isLoading && (
             <div className="space-y-2">
               <BlockSkeleton />
               <BlockSkeleton />
               <BlockSkeleton />
               <BlockSkeleton />
             </div>
-          ) : error ? (
+          )}
+          {!isLoading && error && (
             <div className="py-8 text-center">
               <p className="text-destructive text-sm">Failed to load blocks</p>
               <p className="mt-1 text-muted-foreground text-xs">Check if the hub is running</p>
             </div>
-          ) : groupedBlocks.length === 0 ? (
+          )}
+          {!isLoading && !error && groupedBlocks.length === 0 && (
             <div className="py-8 text-center text-muted-foreground text-sm">
               {search
                 ? t('workflows:editor.panels.noBlocksFound')
                 : t('workflows:editor.panels.noBlocks')}
             </div>
-          ) : (
-            groupedBlocks.map((category) => {
-              const isOpen = openCategories[category.id] ?? true;
-              return (
-                <Collapsible
-                  key={category.id}
-                  open={isOpen}
-                  onOpenChange={(open) =>
-                    setOpenCategories((prev) => ({ ...prev, [category.id]: open }))
-                  }
-                >
-                  <CollapsibleTrigger asChild>
-                    <button
-                      type="button"
-                      className="mb-1.5 flex w-full items-center gap-1.5 rounded-md px-1 py-1 text-left transition-colors hover:bg-muted/50"
-                    >
-                      <ChevronRight
-                        className={cn(
-                          'size-3.5 text-muted-foreground transition-transform',
-                          isOpen && 'rotate-90'
-                        )}
-                      />
-                      <span className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
-                        {category.label}
-                      </span>
-                      <Badge variant="secondary" className="ml-auto h-4 px-1.5 text-[10px]">
-                        {category.blocks.length}
-                      </Badge>
-                    </button>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="space-y-1.5">
-                    {category.blocks.map((block) => (
-                      <DraggableBlock
-                        key={block.type || block.id}
-                        block={block}
-                        onDragStart={handleDragStart}
-                      />
-                    ))}
-                  </CollapsibleContent>
-                </Collapsible>
-              );
-            })
+          )}
+          {!isLoading && !error && groupedBlocks.length > 0 && (
+            <>
+              {groupedBlocks.map((category) => {
+                const isOpen = openCategories[category.id] ?? true;
+                return (
+                  <Collapsible
+                    key={category.id}
+                    open={isOpen}
+                    onOpenChange={(open) =>
+                      setOpenCategories((prev) => ({ ...prev, [category.id]: open }))
+                    }
+                  >
+                    <CollapsibleTrigger asChild>
+                      <button
+                        type="button"
+                        className="mb-1.5 flex w-full items-center gap-1.5 rounded-md px-1 py-1 text-left transition-colors hover:bg-muted/50"
+                      >
+                        <ChevronRight
+                          className={cn(
+                            'size-3.5 text-muted-foreground transition-transform',
+                            isOpen && 'rotate-90'
+                          )}
+                        />
+                        <span className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
+                          {category.label}
+                        </span>
+                        <Badge variant="secondary" className="ml-auto h-4 px-1.5 text-[10px]">
+                          {category.blocks.length}
+                        </Badge>
+                      </button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="space-y-1.5">
+                      {category.blocks.map((block) => (
+                        <DraggableBlock
+                          key={block.type || block.id}
+                          block={block}
+                          onDragStart={handleDragStart}
+                        />
+                      ))}
+                    </CollapsibleContent>
+                  </Collapsible>
+                );
+              })}
+            </>
           )}
         </div>
       </ScrollArea>

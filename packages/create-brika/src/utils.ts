@@ -24,7 +24,7 @@ export function toCamelCase(str: string): string {
  * Render template string with variables using {{variable}} syntax
  */
 export function renderTemplate(content: string, vars: Record<string, string>): string {
-  return content.replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key] ?? '');
+  return content.replaceAll(/\{\{(\w+)\}\}/g, (_, key) => vars[key] ?? '');
 }
 
 /**

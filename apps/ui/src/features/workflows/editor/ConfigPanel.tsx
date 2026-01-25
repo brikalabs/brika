@@ -81,7 +81,7 @@ function getTypeMarker(description?: string): { marker: TypeMarker | null; extra
   for (const marker of markers) {
     if (description.includes(`$type:${marker}`)) {
       // Extract extra info after colon (e.g., $type:code:javascript)
-      const match = description.match(new RegExp(`\\$type:${marker}:?(\\w+)?`));
+      const match = new RegExp(new RegExp(`\\$type:${marker}:?(\\w+)?`)).exec(description);
       return { marker, extra: match?.[1] };
     }
   }
@@ -138,7 +138,7 @@ function ExpressionField({
   variables,
   placeholder,
   multiline,
-}: ExpressionFieldProps) {
+}: Readonly<ExpressionFieldProps>) {
   const [showVars, setShowVars] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
 
@@ -239,7 +239,7 @@ function KeyValueEditor({
   variables,
   keyPlaceholder = 'key',
   valuePlaceholder = 'value',
-}: KeyValueEditorProps) {
+}: Readonly<KeyValueEditorProps>) {
   const entries = Object.entries(value || {});
 
   const addEntry = () => {
@@ -318,7 +318,15 @@ interface FieldProps {
   pluginId?: string;
 }
 
-function SchemaField({ name, schema, value, onChange, variables, required, pluginId }: FieldProps) {
+function SchemaField({
+  name,
+  schema,
+  value,
+  onChange,
+  variables,
+  required,
+  pluginId,
+}: Readonly<FieldProps>) {
   const { tp } = useLocale();
   const type = schema.type;
   const description = schema.description;
@@ -329,11 +337,11 @@ function SchemaField({ name, schema, value, onChange, variables, required, plugi
   const { marker: typeMarker } = getTypeMarker(description);
 
   // Clean description (remove type marker) - used as fallback
-  const fallbackDescription = description?.replace(/\$type:\w+(:\w+)?/g, '').trim();
+  const fallbackDescription = description?.replaceAll(/\$type:\w+(:\w+)?/g, '').trim();
 
   // Pretty label from camelCase (fallback)
   const fallbackLabel = name
-    .replace(/([A-Z])/g, ' $1')
+    .replaceAll(/([A-Z])/g, ' $1')
     .replace(/^./, (s) => s.toUpperCase())
     .trim();
 
@@ -527,7 +535,7 @@ interface DurationInputProps {
   placeholder?: string;
 }
 
-function DurationInput({ value, onChange, placeholder }: DurationInputProps) {
+function DurationInput({ value, onChange, placeholder }: Readonly<DurationInputProps>) {
   // Convert ms to display value based on unit
   const [unit, setUnit] = useState<'ms' | 's' | 'm' | 'h'>(() => {
     if (!value) return 'ms';
@@ -600,7 +608,7 @@ interface SparkTypeInputProps {
   placeholder?: string;
 }
 
-function SparkTypeInput({ value, onChange, placeholder }: SparkTypeInputProps) {
+function SparkTypeInput({ value, onChange, placeholder }: Readonly<SparkTypeInputProps>) {
   const { data: sparks = [] } = useQuery({
     queryKey: ['sparks'],
     queryFn: () => fetcher<RegisteredSpark[]>('/api/sparks'),
@@ -672,13 +680,13 @@ function BlockConfig({
   onUpdate,
   availableVariables,
   pluginId,
-}: {
+}: Readonly<{
   data: BlockNodeData;
   schema?: BlockSchema;
   onUpdate: (config: Record<string, unknown>) => void;
   availableVariables: Variable[];
   pluginId?: string;
-}) {
+}>) {
   const config = data.config;
 
   const { t } = useLocale();
@@ -726,7 +734,7 @@ export function ConfigPanel({
   blockSchema,
   onCollapse,
   className,
-}: ConfigPanelProps) {
+}: Readonly<ConfigPanelProps>) {
   const { t, tp } = useLocale();
   const blockData = node.data as unknown as BlockNodeData;
 

@@ -48,7 +48,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/settings', labelKey: 'nav:settings', icon: Settings },
 ];
 
-function NavLink({ to, labelKey, icon: Icon }: NavItem) {
+function NavLink({ to, labelKey, icon: Icon }: Readonly<NavItem>) {
   const match = useMatchRoute();
   const { t } = useLocale();
   const isActive = to === '/' ? match({ to: '/' }) : match({ to, fuzzy: true });
@@ -141,7 +141,7 @@ export function RootLayout() {
   const currentPath = routerState.location.pathname;
   const isFullBleed = FULL_BLEED_ROUTES.some((route) => {
     // Convert route pattern to regex (handle $param patterns)
-    const pattern = route.replace(/\$\w+/g, '[^/]+');
+    const pattern = route.replaceAll(/\$\w+/g, '[^/]+');
     return new RegExp(`^${pattern}$`).test(currentPath);
   });
 

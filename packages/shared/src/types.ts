@@ -1,13 +1,34 @@
 export type Json = null | boolean | number | string | undefined | Json[] | { [k: string]: Json };
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
-export type LogSource = 'hub' | 'plugin' | 'installer' | 'registry' | 'stderr' | 'automation' | 'events' | 'http' | 'i18n' | 'state';
+export type LogSource =
+  | 'hub'
+  | 'plugin'
+  | 'installer'
+  | 'registry'
+  | 'stderr'
+  | 'automation'
+  | 'events'
+  | 'http'
+  | 'i18n'
+  | 'state';
 
 /** Available log levels as a constant array */
 export const LOG_LEVELS: LogLevel[] = ['debug', 'info', 'warn', 'error'];
 
 /** Available log sources as a constant array */
-export const LOG_SOURCES: LogSource[] = ['hub', 'plugin', 'installer', 'registry', 'stderr', 'automation', 'events', 'http', 'i18n', 'state'];
+export const LOG_SOURCES: LogSource[] = [
+  'hub',
+  'plugin',
+  'installer',
+  'registry',
+  'stderr',
+  'automation',
+  'events',
+  'http',
+  'i18n',
+  'state',
+];
 
 export interface LogError {
   name: string;

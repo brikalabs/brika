@@ -65,11 +65,12 @@ export function PluginsPage() {
         </div>
       </div>
 
-      {isLoading ? (
+      {isLoading && (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="size-8 animate-spin text-muted-foreground" />
         </div>
-      ) : plugins.length === 0 ? (
+      )}
+      {!isLoading && plugins.length === 0 && (
         <Card>
           <CardContent className="py-12 text-center">
             <Plug className="mx-auto mb-4 size-12 text-muted-foreground" />
@@ -77,10 +78,18 @@ export function PluginsPage() {
             <p className="mt-1 text-muted-foreground">{t('plugins:emptyHint')}</p>
           </CardContent>
         </Card>
-      ) : (
+      )}
+      {!isLoading && plugins.length > 0 && (
         <div className="grid gap-4">
           {plugins.map((p) => {
             const health = p.status;
+            let badgeVariant: 'default' | 'destructive' | 'secondary' = 'secondary';
+            if (health === 'running') {
+              badgeVariant = 'default';
+            } else if (health === 'crashed') {
+              badgeVariant = 'destructive';
+            }
+
             return (
               <Link key={p.uid} to="/plugins/$uid" params={{ uid: p.uid }}>
                 <Card interactive className="p-5">
@@ -143,13 +152,7 @@ export function PluginsPage() {
                     {/* Right Side: Status + Actions */}
                     <div className="flex shrink-0 flex-col items-end gap-3">
                       <Badge
-                        variant={
-                          health === 'running'
-                            ? 'default'
-                            : health === 'crashed'
-                              ? 'destructive'
-                              : 'secondary'
-                        }
+                        variant={badgeVariant}
                         className={cn(
                           'text-xs',
                           health === 'running' && 'border-emerald-500/20 bg-success/10 text-success'

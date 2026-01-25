@@ -4,10 +4,8 @@
  * Core type definitions for the reactive flow system.
  */
 
-import type { Serializable } from '@brika/serializable';
-
 // Re-export Serializable for convenience
-export type { Serializable };
+export type { Serializable } from '@brika/serializable';
 
 /** Cleanup function */
 export type Cleanup = () => void;

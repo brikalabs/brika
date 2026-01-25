@@ -69,7 +69,7 @@ function useSparks() {
 // Components
 // ─────────────────────────────────────────────────────────────────────────────
 
-function SparkSchemaViewer({ schema }: { schema?: Record<string, unknown> }) {
+function SparkSchemaViewer({ schema }: Readonly<{ schema?: Record<string, unknown> }>) {
   const [expanded, setExpanded] = React.useState(false);
 
   if (!schema) {
@@ -90,12 +90,19 @@ function SparkSchemaViewer({ schema }: { schema?: Record<string, unknown> }) {
         <span>Schema</span>
       </button>
       {expanded && (
-        <pre
-          className="mt-2 max-h-48 overflow-auto rounded-md border bg-muted/50 p-2 font-mono text-xs"
+        <div
+          className="mt-2 max-h-48 overflow-auto rounded-md border bg-muted/50 p-2"
           onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.stopPropagation();
+            }
+          }}
+          role="button"
+          tabIndex={0}
         >
-          {JSON.stringify(schema, null, 2)}
-        </pre>
+          <pre className="font-mono text-xs">{JSON.stringify(schema, null, 2)}</pre>
+        </div>
       )}
     </div>
   );
@@ -105,11 +112,11 @@ function EmitSparkDialog({
   spark,
   open,
   onOpenChange,
-}: {
+}: Readonly<{
   spark: RegisteredSpark;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-}) {
+}>) {
   const { t } = useLocale();
   const emitSpark = useEmitEvent();
   const [payload, setPayload] = React.useState('{}');
@@ -465,7 +472,7 @@ type SparkTab = 'registry' | 'stream';
 export function SparksPage() {
   const { t } = useLocale();
   const navigate = useNavigate();
-  const params = useParams({ strict: false }) as { tab?: string };
+  const params = useParams({ strict: false });
   const activeTab: SparkTab = params.tab === 'stream' ? 'stream' : 'registry';
 
   const handleTabChange = (tab: string) => {

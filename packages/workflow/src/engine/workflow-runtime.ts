@@ -6,14 +6,7 @@
  */
 
 import type { Serializable } from '../serialization';
-import type {
-  BlockConfig,
-  BlockInstance,
-  BlockRuntimeState,
-  BlockState,
-  CompiledBlock,
-  Workflow,
-} from '../types';
+import type { BlockConfig, BlockRuntimeState, BlockState, CompiledBlock, Workflow } from '../types';
 import { EventBus, type EventObserver, type PortBuffer } from './event-bus';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -115,7 +108,7 @@ export class WorkflowRuntime {
     const state: BlockRuntimeState = {
       id: block.id,
       type: block.type,
-      config: configResult.data as Record<string, unknown>,
+      config: configResult.data,
       state: 'stopped',
       instance: null,
       buffer: [],
@@ -219,7 +212,7 @@ export class WorkflowRuntime {
    */
   pauseBlock(blockId: string): void {
     const state = this.#blocks.get(blockId);
-    if (state && state.state === 'running') {
+    if (state?.state === 'running') {
       this.#setBlockState(blockId, 'paused');
     }
   }
@@ -230,7 +223,7 @@ export class WorkflowRuntime {
    */
   resumeBlock(blockId: string): void {
     const state = this.#blocks.get(blockId);
-    if (!state || state.state !== 'paused' || !state.instance) return;
+    if (state?.state !== 'paused' || !state.instance) return;
 
     this.#setBlockState(blockId, 'running');
 

@@ -13,7 +13,7 @@ import { Logger, ScopedLogger } from '@/runtime/logs/log-router';
 import { PluginEventHandler } from '@/runtime/plugins/plugin-events';
 import { PluginManager } from '@/runtime/plugins/plugin-manager';
 import type { Workflow } from './types';
-import { type ExecutionEvent, type ExecutionListener, WorkflowExecutor } from './workflow-executor';
+import { type ExecutionListener, WorkflowExecutor } from './workflow-executor';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Engine
@@ -222,7 +222,7 @@ export class AutomationEngine {
 
     // Update workflow state
     const workflow = this.#workflows.get(id);
-    if (workflow && workflow.status === 'running') {
+    if (workflow?.status === 'running') {
       workflow.status = 'stopped';
       workflow.startedAt = undefined;
     }

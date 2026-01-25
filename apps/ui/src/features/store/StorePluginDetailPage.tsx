@@ -10,7 +10,6 @@ import {
   Tag,
   User,
 } from 'lucide-react';
-import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
 import {
   Avatar,
   AvatarFallback,

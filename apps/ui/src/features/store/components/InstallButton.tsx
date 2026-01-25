@@ -15,7 +15,11 @@ interface InstallButtonProps {
   variant?: 'default' | 'outline' | 'ghost';
 }
 
-export function InstallButton({ plugin, size = 'sm', variant = 'outline' }: InstallButtonProps) {
+export function InstallButton({
+  plugin,
+  size = 'sm',
+  variant = 'outline',
+}: Readonly<InstallButtonProps>) {
   const { t } = useLocale();
   const queryClient = useQueryClient();
   const [isWorking, setIsWorking] = React.useState(false);
@@ -58,11 +62,9 @@ export function InstallButton({ plugin, size = 'sm', variant = 'outline' }: Inst
             disabled={isWorking}
             className="gap-2"
           >
-            {isWorking ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : size === 'icon' ? (
-              <Trash2 className="size-4" />
-            ) : (
+            {isWorking && <Loader2 className="size-4 animate-spin" />}
+            {!isWorking && size === 'icon' && <Trash2 className="size-4" />}
+            {!isWorking && size !== 'icon' && (
               <>
                 <Check className="size-4" />
                 {t('store:actions.installed')}

@@ -150,7 +150,8 @@ export class TerminalFormatter implements Formatter {
         errorLines.push(`${this.#color ? pc.yellow("Caused by:") : "Caused by:"} ${error.cause}`);
       }
 
-      output += `\n${META_INDENT}${errorLines.join(`\n${META_INDENT}`)}`;
+      const separator = `\n${META_INDENT}`;
+      output += `${separator}${errorLines.join(separator)}`;
     }
 
     return output;

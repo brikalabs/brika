@@ -5,7 +5,7 @@
  */
 
 import type { BlockTypeDefinition, Workflow } from '../types';
-import { type ValidationResult, validateWorkspace } from '../validation';
+import { validateWorkspace } from '../validation';
 import { parseWorkspaceFile, serializeWorkspace } from './parser';
 
 /**

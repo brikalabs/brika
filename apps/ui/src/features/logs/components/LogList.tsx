@@ -35,7 +35,7 @@ interface LogListProps {
   onLoadMore?: () => void;
 }
 
-export function LogList({ logs, isLoading, isFetchingMore, hasMore, onLoadMore }: LogListProps) {
+export function LogList({ logs, isLoading, isFetchingMore, hasMore, onLoadMore }: Readonly<LogListProps>) {
   const { t } = useLocale();
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
@@ -92,7 +92,7 @@ export function LogList({ logs, isLoading, isFetchingMore, hasMore, onLoadMore }
   );
 }
 
-function LogRow({ log }: { log: StoredLogEvent }) {
+function LogRow({ log }: Readonly<{ log: StoredLogEvent }>) {
   const [isExpanded, setIsExpanded] = useState(false);
   const timestamp = new Date(log.ts).toISOString().slice(11, 23);
   const source = log.pluginName ? `${log.source}:${log.pluginName}` : log.source;
@@ -131,13 +131,8 @@ function LogRow({ log }: { log: StoredLogEvent }) {
       >
         {/* Expand indicator */}
         <div className="flex w-4 shrink-0 items-center justify-center">
-          {isExpandable ? (
-            isExpanded ? (
-              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-            ) : (
-              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
-            )
-          ) : null}
+          {isExpandable && isExpanded && <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />}
+          {isExpandable && !isExpanded && <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />}
         </div>
 
         {/* Timestamp */}

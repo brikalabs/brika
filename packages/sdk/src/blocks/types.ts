@@ -4,7 +4,6 @@
  * Core types for block metadata and registration.
  */
 
-import type { z } from 'zod';
 import type { Json } from '../types';
 
 // Re-export Serializable for convenience

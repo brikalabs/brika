@@ -4,7 +4,7 @@
  * Validate entire workflow workspace including all connections.
  */
 
-import type { BlockTypeDefinition, PortDefinition, Workflow } from '../types';
+import type { BlockTypeDefinition, Workflow } from '../types';
 import { parsePortRef } from '../types/ports';
 import { isValidConnection } from './connections';
 

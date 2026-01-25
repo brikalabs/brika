@@ -121,7 +121,7 @@ export class I18nService {
       if (!plugin) return null;
 
       // Apply fallback chain (reverse to start from fallback)
-      for (const loc of chain.reverse()) {
+      for (const loc of chain.toReversed()) {
         const data = plugin.locales.get(loc);
         if (data) {
           result = deepMerge(result, data);
@@ -132,7 +132,7 @@ export class I18nService {
     }
 
     // Core namespace - look up in core translations
-    for (const loc of chain.reverse()) {
+    for (const loc of chain.toReversed()) {
       const coreData = this.#coreTranslations.get(loc);
       if (coreData?.[namespace]) {
         result = deepMerge(result, coreData[namespace] as TranslationData);
@@ -162,7 +162,7 @@ export class I18nService {
       namespaces.add(`${PLUGIN_NS_PREFIX}${pluginId}`);
     }
 
-    return [...namespaces].sort();
+    return [...namespaces].sort((a, b) => a.localeCompare(b));
   }
 
   /**
@@ -170,7 +170,7 @@ export class I18nService {
    * Includes "cimode" for development (i18next shows keys instead of values).
    */
   listLocales(): string[] {
-    const locales = [...this.#availableLocales].sort();
+    const locales = [...this.#availableLocales].sort((a, b) => a.localeCompare(b));
     // Add cimode at the end - handled client-side by i18next
     locales.push('cimode');
     return locales;
@@ -218,7 +218,7 @@ export class I18nService {
       // No locales folder or error reading - that's fine
     }
 
-    return detectedLocales.sort();
+    return detectedLocales.sort((a, b) => a.localeCompare(b));
   }
 
   /**

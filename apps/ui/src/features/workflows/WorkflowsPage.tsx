@@ -34,7 +34,6 @@ import {
 import { useLocale } from '@/lib/use-locale';
 import type { Workflow, WorkflowStatus } from './api';
 import {
-  type DebugEvent,
   DebugEventEntry,
   type DebugFilter,
   EventFilterButtons,
@@ -47,7 +46,7 @@ import { useDeleteWorkflow, useDisableWorkflow, useEnableWorkflow, useWorkflows 
 // Status Badge
 // ─────────────────────────────────────────────────────────────────────────────
 
-function StatusBadge({ status, error }: { status?: WorkflowStatus; error?: string }) {
+function StatusBadge({ status, error }: Readonly<{ status?: WorkflowStatus; error?: string }>) {
   const { t } = useLocale();
 
   if (status === 'running') {
@@ -92,12 +91,12 @@ function WorkflowsTable({
   onToggle,
   onDelete,
   onDebug,
-}: {
+}: Readonly<{
   workflows: Workflow[];
   onToggle: (id: string, enabled: boolean) => void;
   onDelete: (id: string) => void;
   onDebug: (workflow: Workflow) => void;
-}) {
+}>) {
   const { t, formatTime } = useLocale();
   const navigate = useNavigate();
 
@@ -228,12 +227,12 @@ function DebugDialog({
   workflowName,
   open,
   onClose,
-}: {
+}: Readonly<{
   workflowId: string | null;
   workflowName?: string;
   open: boolean;
   onClose: () => void;
-}) {
+}>) {
   const { t } = useLocale();
   const [filter, setFilter] = useState<DebugFilter>('all');
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -335,12 +334,12 @@ function DeleteDialog({
   open,
   onClose,
   onConfirm,
-}: {
+}: Readonly<{
   workflowId: string | null;
   open: boolean;
   onClose: () => void;
   onConfirm: () => void;
-}) {
+}>) {
   const { t } = useLocale();
 
   return (
@@ -439,9 +438,10 @@ export function WorkflowsPage() {
       </div>
 
       {/* Content */}
-      {loadingWorkflows ? (
+      {loadingWorkflows && (
         <div className="py-12 text-center text-muted-foreground">{t('common:loading')}</div>
-      ) : filteredWorkflows.length === 0 ? (
+      )}
+      {!loadingWorkflows && filteredWorkflows.length === 0 && (
         <Card className="p-12 text-center">
           <p className="mb-4 text-muted-foreground">
             {search ? t('workflows:noResults') : t('workflows:empty')}
@@ -453,7 +453,8 @@ export function WorkflowsPage() {
             </Button>
           )}
         </Card>
-      ) : (
+      )}
+      {!loadingWorkflows && filteredWorkflows.length > 0 && (
         <WorkflowsTable
           workflows={filteredWorkflows}
           onToggle={handleToggle}

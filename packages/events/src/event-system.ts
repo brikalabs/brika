@@ -293,7 +293,7 @@ export class EventSystem {
   ): Unsubscribe {
     const patternList = Array.isArray(patterns) ? patterns : [patterns];
     const regexes = patternList.map(
-      (p) => new RegExp(`^${p.replace(/\./g, '\\.').replace(/\*/g, '.*')}$`)
+      (p) => new RegExp(`^${p.replaceAll('.', '\\.').replaceAll('*', '.*')}$`)
     );
 
     const wrappedHandler: GlobalHandler = (action) => {

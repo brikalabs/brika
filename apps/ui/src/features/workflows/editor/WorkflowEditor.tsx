@@ -45,7 +45,7 @@ function pingHandle(blockId: string, portId: string) {
     // Remove class first to allow re-triggering
     handle.classList.remove('handle-ping');
     // Force reflow to restart animation
-    void handle.offsetWidth;
+    handle.offsetWidth;
     handle.classList.add('handle-ping');
     // Remove after animation completes (1s)
     setTimeout(() => handle.classList.remove('handle-ping'), 1000);
@@ -76,7 +76,7 @@ function WorkflowEditorInner({
   readonly = false,
   onSave,
   onChange,
-}: WorkflowEditorInnerProps) {
+}: Readonly<WorkflowEditorInnerProps>) {
   const { t } = useLocale();
 
   // Fetch block definitions for schemas - must load before editor initializes
@@ -119,7 +119,7 @@ function WorkflowEditorWithBlocks({
   blockDefinitions,
   readonly = false,
   onChange,
-}: WorkflowEditorWithBlocksProps) {
+}: Readonly<WorkflowEditorWithBlocksProps>) {
   const { t } = useLocale();
   const { screenToFlowPosition } = useReactFlow();
 
@@ -435,7 +435,7 @@ export interface WorkflowEditorProps {
   onChange?: (workflow: Workflow, isDirty: boolean) => void;
 }
 
-export function WorkflowEditor(props: WorkflowEditorProps) {
+export function WorkflowEditor(props: Readonly<WorkflowEditorProps>) {
   return (
     <ReactFlowProvider>
       <WorkflowEditorInner {...props} />

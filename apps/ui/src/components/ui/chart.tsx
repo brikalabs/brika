@@ -15,8 +15,8 @@ export function MetricsChart({
   color = 'var(--color-primary)',
   formatValue = (v) => v.toFixed(1),
   className,
-}: MetricsChartProps) {
-  const gradientId = `gradient-${color.replace(/[^a-zA-Z0-9]/g, '')}`;
+}: Readonly<MetricsChartProps>) {
+  const gradientId = `gradient-${color.replaceAll(/[^a-zA-Z0-9]/g, '')}`;
   const hasData = data.length > 0;
 
   // Show empty placeholder when no data
@@ -29,7 +29,7 @@ export function MetricsChart({
   }
 
   return (
-    <div className={cn('h-[80px] w-full', className)}>
+    <div className={cn('h-20 w-full', className)}>
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={data} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
           <defs>

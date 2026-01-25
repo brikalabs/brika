@@ -4,7 +4,7 @@
  * Loads workflows from TOML files with hot-reload support.
  */
 
-import { inject, type Json, singleton } from '@brika/shared';
+import { inject, singleton } from '@brika/shared';
 import * as TOML from 'smol-toml';
 import { Logger } from '@/runtime/logs/log-router';
 import { AutomationEngine } from './automation-engine';

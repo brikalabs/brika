@@ -98,8 +98,8 @@ export const logsRoutes = group('/api/logs', [
   route.get('/sources', ({ inject }) => {
     const store = inject(LogStore);
     return {
-      all: LOG_SOURCES,           // All defined sources from type
-      used: store.getSources(),    // Sources that have been used in logs
+      all: LOG_SOURCES, // All defined sources from type
+      used: store.getSources(), // Sources that have been used in logs
     };
   }),
 

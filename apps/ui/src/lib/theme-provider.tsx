@@ -4,7 +4,7 @@ import { ThemeContext, type ThemeMode, type ThemeName } from './theme-context';
 const THEME_STORAGE_KEY = 'brika-theme';
 const MODE_STORAGE_KEY = 'brika-mode';
 
-export function ThemeProvider({ children }: { children: ReactNode }) {
+export function ThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [theme, setThemeState] = useState<ThemeName>(() => {
     const stored = localStorage.getItem(THEME_STORAGE_KEY);
     return (stored as ThemeName) || 'default';
@@ -13,12 +13,12 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [mode, setModeState] = useState<ThemeMode>(() => {
     const stored = localStorage.getItem(MODE_STORAGE_KEY);
     if (stored) return stored as ThemeMode;
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    return globalThis.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   });
 
   useEffect(() => {
     const html = document.documentElement;
-    html.setAttribute('data-theme', theme);
+    html.dataset.theme = theme;
     html.classList.remove('light', 'dark');
     html.classList.add(mode);
   }, [theme, mode]);

@@ -1,4 +1,4 @@
-import { Action, EventSystem as BaseEventSystem, type Unsubscribe } from '@brika/events';
+import { Action, EventSystem as BaseEventSystem } from '@brika/events';
 import type { BrikaEvent, Json } from '@brika/shared';
 import { inject, singleton } from '@brika/shared';
 import { Logger } from '@/runtime/logs/log-router';

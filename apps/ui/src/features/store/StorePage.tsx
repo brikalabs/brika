@@ -123,11 +123,12 @@ export function StorePage() {
         onSortChange={setSort}
       />
 
-      {isLoading ? (
+      {isLoading && (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="size-8 animate-spin text-muted-foreground" />
         </div>
-      ) : filteredPlugins.length === 0 ? (
+      )}
+      {!isLoading && filteredPlugins.length === 0 && (
         <Card>
           <CardContent className="py-16 text-center">
             <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-2xl bg-muted/50">
@@ -137,7 +138,8 @@ export function StorePage() {
             <p className="mt-1 text-muted-foreground text-sm">{t('store:noResultsDescription')}</p>
           </CardContent>
         </Card>
-      ) : (
+      )}
+      {!isLoading && filteredPlugins.length > 0 && (
         <section>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {sortedPlugins.map((plugin) => (

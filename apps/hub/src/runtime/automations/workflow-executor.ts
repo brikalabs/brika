@@ -57,9 +57,9 @@ export class WorkflowExecutor {
 
   // Active workflow state
   #workflow: Workflow | null = null;
-  #instanceIds = new Set<string>(); // Block instance IDs
+  readonly #instanceIds = new Set<string>(); // Block instance IDs
   #connections = new Map<string, BlockConnection[]>(); // "blockId.port" -> targets
-  #buffers = new Map<string, PortBuffer>(); // "blockId:port" -> last value
+  readonly #buffers = new Map<string, PortBuffer>(); // "blockId:port" -> last value
 
   constructor(deps: ExecutorDeps) {
     this.#deps = deps;

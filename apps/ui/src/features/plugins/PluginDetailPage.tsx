@@ -170,6 +170,14 @@ export function PluginDetailPage() {
   const sparks = plugin.sparks ?? [];
   const locales = plugin.locales ?? [];
 
+  // Determine badge variant based on plugin status
+  let statusBadgeVariant: 'default' | 'destructive' | 'secondary' = 'secondary';
+  if (plugin.status === 'running') {
+    statusBadgeVariant = 'default';
+  } else if (plugin.status === 'crashed') {
+    statusBadgeVariant = 'destructive';
+  }
+
   // Format bytes to human readable
   const formatBytes = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`;
@@ -233,16 +241,7 @@ export function PluginDetailPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Badge
-            variant={
-              plugin.status === 'running'
-                ? 'default'
-                : plugin.status === 'crashed'
-                  ? 'destructive'
-                  : 'secondary'
-            }
-            className="px-3 py-1"
-          >
+          <Badge variant={statusBadgeVariant} className="px-3 py-1">
             {t(`common:status.${plugin.status}`)}
           </Badge>
 

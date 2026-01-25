@@ -75,7 +75,7 @@ export interface DebugEventEntryProps {
  * Simple debug event entry - single line display.
  * Good for compact views like dialogs.
  */
-export function DebugEventEntry({ event, showWorkflowId }: DebugEventEntryProps) {
+export function DebugEventEntry({ event, showWorkflowId }: Readonly<DebugEventEntryProps>) {
   const isEmit = event.type === 'block.emit';
   const isLog = event.type === 'block.log';
   const isInit = event.type === 'init';
@@ -158,7 +158,7 @@ export interface ExpandableEventEntryProps {
  * Expandable debug event entry with collapsible data payload.
  * Good for detailed views like the editor panel.
  */
-export function ExpandableEventEntry({ event }: ExpandableEventEntryProps) {
+export function ExpandableEventEntry({ event }: Readonly<ExpandableEventEntryProps>) {
   const [expanded, setExpanded] = useState(false);
   const hasData = event.data !== undefined && event.data !== null;
 
@@ -175,15 +175,13 @@ export function ExpandableEventEntry({ event }: ExpandableEventEntryProps) {
           hasData && 'cursor-pointer'
         )}
       >
-        {hasData ? (
-          expanded ? (
-            <ChevronDown className="mt-0.5 size-3 shrink-0 text-muted-foreground" />
-          ) : (
-            <ChevronRight className="mt-0.5 size-3 shrink-0 text-muted-foreground" />
-          )
-        ) : (
-          <span className="w-3 shrink-0" />
+        {hasData && expanded && (
+          <ChevronDown className="mt-0.5 size-3 shrink-0 text-muted-foreground" />
         )}
+        {hasData && !expanded && (
+          <ChevronRight className="mt-0.5 size-3 shrink-0 text-muted-foreground" />
+        )}
+        {!hasData && <span className="w-3 shrink-0" />}
 
         <span className="shrink-0 font-mono text-[10px] text-muted-foreground">
           {formatTimestamp(event.timestamp)}
@@ -248,7 +246,7 @@ export function EventFilterButtons({
   onChange,
   labels,
   className,
-}: EventFilterButtonsProps) {
+}: Readonly<EventFilterButtonsProps>) {
   const ButtonClass = (active: boolean) =>
     cn(
       'h-6 rounded-md border px-2 text-xs transition-colors',
