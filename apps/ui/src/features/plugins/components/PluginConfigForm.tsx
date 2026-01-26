@@ -25,7 +25,7 @@ interface Props {
   pluginName: string;
 }
 
-export function PluginConfigForm({ pluginUid, pluginName }: Props) {
+export function PluginConfigForm({ pluginUid, pluginName }: Readonly<Props>) {
   const { data, isLoading } = usePluginConfig(pluginUid);
   const mutation = usePluginConfigMutation(pluginUid);
   const { t, tp } = useLocale();
@@ -108,7 +108,7 @@ interface FieldProps {
   tp: (ns: string, key: string, fallback?: string) => string;
 }
 
-function PreferenceField({ pref, value, onChange, pluginName, tp }: FieldProps) {
+function PreferenceField({ pref, value, onChange, pluginName, tp }: Readonly<FieldProps>) {
   const label = tp(pluginName, `preferences.${pref.name}.title`, pref.name);
   const description = tp(pluginName, `preferences.${pref.name}.description`, '');
 

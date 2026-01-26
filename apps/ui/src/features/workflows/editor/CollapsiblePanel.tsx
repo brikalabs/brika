@@ -62,7 +62,11 @@ export interface CollapsedTabsContainerProps {
  * Absolutely positioned to overlay on the canvas at the top.
  * Stacks tabs vertically and provides visual grouping.
  */
-export function CollapsedTabsContainer({ side, children, className }: CollapsedTabsContainerProps) {
+export function CollapsedTabsContainer({
+  side,
+  children,
+  className,
+}: Readonly<CollapsedTabsContainerProps>) {
   return (
     <div
       className={cn(
@@ -84,7 +88,13 @@ export function CollapsedTabsContainer({ side, children, className }: CollapsedT
  * A single collapsed tab button.
  * Can be used inside CollapsedTabsContainer for stacking.
  */
-export function CollapsedTab({ side, icon, title, onExpand, className }: CollapsedTabProps) {
+export function CollapsedTab({
+  side,
+  icon,
+  title,
+  onExpand,
+  className,
+}: Readonly<CollapsedTabProps>) {
   const ExpandIcon = side === 'left' ? ChevronRight : ChevronLeft;
 
   return (
@@ -133,7 +143,7 @@ export function CollapsiblePanel({
   width,
   children,
   className,
-}: CollapsiblePanelProps) {
+}: Readonly<CollapsiblePanelProps>) {
   // Collapsed state - return null (handled externally via CollapsedTabsContainer)
   if (!isOpen) {
     return null;

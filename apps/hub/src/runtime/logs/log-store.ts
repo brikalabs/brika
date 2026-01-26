@@ -137,10 +137,41 @@ export class LogStore {
   query(params: LogQueryParams = {}): LogQueryResult {
     if (!this.#db) return { logs: [], nextCursor: null };
 
+    const { conditions, values } = this.buildWhereConditions(params);
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+    const limit = Math.min(params.limit ?? 100, 1000);
+    const order = params.order ?? "desc";
+
+    // Query one extra to determine if there's a next page
+    const sql = `
+        SELECT id, ts, level, source, plugin_name, message, meta, error_name, error_message, error_stack, error_cause
+        FROM logs ${whereClause}
+        ORDER BY id ${order === "desc" ? "DESC" : "ASC"}
+        LIMIT ?
+    `;
+
+    const rows = this.#db.query(sql).all(...values, limit + 1) as LogRow[];
+
+    const hasMore = rows.length > limit;
+    const resultRows = hasMore ? rows.slice(0, limit) : rows;
+    const logs = resultRows.map((row) => this.mapRowToLogEvent(row));
+
+    return {
+      logs,
+      nextCursor: hasMore ? resultRows.at(-1)?.id ?? null : null,
+    };
+  }
+
+  /**
+   * Build WHERE clause conditions and values from query params
+   */
+  private buildWhereConditions(params: LogQueryParams): {
+    conditions: string[];
+    values: SQLQueryBindings[];
+  } {
     const conditions: string[] = [];
     const values: SQLQueryBindings[] = [];
 
-    // Build WHERE clauses
     if (params.level) {
       const levels = Array.isArray(params.level) ? params.level : [params.level];
       conditions.push(`level IN (${levels.map(() => "?").join(", ")})`);
@@ -176,58 +207,38 @@ export class LogStore {
     // Cursor-based pagination
     const order = params.order ?? "desc";
     if (params.cursor) {
-      if (order === "desc") {
-        conditions.push("id < ?");
-      } else {
-        conditions.push("id > ?");
-      }
+      conditions.push(order === "desc" ? "id < ?" : "id > ?");
       values.push(params.cursor);
     }
 
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
-    const limit = Math.min(params.limit ?? 100, 1000);
+    return { conditions, values };
+  }
 
-    // Query one extra to determine if there's a next page
-    const sql = `
-        SELECT id, ts, level, source, plugin_name, message, meta, error_name, error_message, error_stack, error_cause
-        FROM logs ${whereClause}
-        ORDER BY id ${order === "desc" ? "DESC" : "ASC"}
-        LIMIT ?
-    `;
-
-    const rows = this.#db.query(sql).all(...values, limit + 1) as LogRow[];
-
-    const hasMore = rows.length > limit;
-    const resultRows = hasMore ? rows.slice(0, limit) : rows;
-
-    const logs = resultRows.map((row) => {
-      const event: StoredLogEvent = {
-        id: row.id,
-        ts: row.ts,
-        level: row.level as LogLevel,
-        source: row.source as LogSource,
-        pluginName: row.plugin_name ?? undefined,
-        message: row.message,
-        meta: row.meta ? (JSON.parse(row.meta) as Record<string, Json>) : undefined,
-      };
-
-      // Reconstruct error object if error data exists
-      if (row.error_name || row.error_message) {
-        event.error = {
-          name: row.error_name ?? "Error",
-          message: row.error_message ?? "",
-          stack: row.error_stack ?? undefined,
-          cause: row.error_cause ?? undefined,
-        };
-      }
-
-      return event;
-    });
-
-    return {
-      logs,
-      nextCursor: hasMore ? resultRows[resultRows.length - 1].id : null,
+  /**
+   * Map database row to StoredLogEvent
+   */
+  private mapRowToLogEvent(row: LogRow): StoredLogEvent {
+    const event: StoredLogEvent = {
+      id: row.id,
+      ts: row.ts,
+      level: row.level as LogLevel,
+      source: row.source as LogSource,
+      pluginName: row.plugin_name ?? undefined,
+      message: row.message,
+      meta: row.meta ? (JSON.parse(row.meta) as Record<string, Json>) : undefined,
     };
+
+    // Reconstruct error object if error data exists
+    if (row.error_name || row.error_message) {
+      event.error = {
+        name: row.error_name ?? "Error",
+        message: row.error_message ?? "",
+        stack: row.error_stack ?? undefined,
+        cause: row.error_cause ?? undefined,
+      };
+    }
+
+    return event;
   }
 
   clear(params: Partial<LogQueryParams> = {}): number {

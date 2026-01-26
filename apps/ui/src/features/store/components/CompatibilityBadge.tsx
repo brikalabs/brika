@@ -8,7 +8,7 @@ interface CompatibilityBadgeProps {
   reason?: string;
 }
 
-export function CompatibilityBadge({ compatible, reason }: CompatibilityBadgeProps) {
+export function CompatibilityBadge({ compatible, reason }: Readonly<CompatibilityBadgeProps>) {
   const { t } = useLocale();
 
   if (compatible) {

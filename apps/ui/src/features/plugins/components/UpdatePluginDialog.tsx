@@ -34,7 +34,7 @@ export function UpdatePluginDialog({
   currentVersion,
   latestVersion,
   mode,
-}: UpdatePluginDialogProps) {
+}: Readonly<UpdatePluginDialogProps>) {
   const queryClient = useQueryClient();
   const [isUpdating, setIsUpdating] = React.useState(false);
   const [progress, setProgress] = React.useState<OperationProgress | null>(null);

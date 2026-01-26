@@ -196,28 +196,122 @@ export class BlockRegistry {
     const errors: string[] = [];
     const schema = block.schema;
 
-    // Check required fields
-    if (schema.required) {
-      for (const field of schema.required) {
-        if (!(field in config)) {
-          errors.push(`Missing required field: ${field}`);
-        }
-      }
-    }
-
-    // Basic type validation
-    if (schema.properties) {
-      for (const [key, prop] of Object.entries(schema.properties)) {
-        if (key in config) {
-          const value = config[key];
-          if (!validateType(value, prop.type)) {
-            errors.push(`Field "${key}" should be ${prop.type}`);
-          }
-        }
-      }
-    }
+    this.validateRequiredFields(schema, config, errors);
+    this.validatePropertyTypes(schema, config, errors);
 
     return { valid: errors.length === 0, errors: errors.length > 0 ? errors : undefined };
+  }
+
+  /**
+   * Validate required fields in config
+   */
+  private validateRequiredFields(
+    schema: { required?: string[] },
+    config: Record<string, unknown>,
+    errors: string[]
+  ): void {
+    if (!schema.required) return;
+
+    for (const field of schema.required) {
+      if (!(field in config)) {
+        errors.push(`Missing required field: ${field}`);
+      }
+    }
+  }
+
+  /**
+   * Validate property types in config
+   */
+  private validatePropertyTypes(
+    schema: { properties?: Record<string, { type: string }> },
+    config: Record<string, unknown>,
+    errors: string[]
+  ): void {
+    if (!schema.properties) return;
+
+    for (const [key, prop] of Object.entries(schema.properties)) {
+      if (key in config) {
+        const value = config[key];
+        if (!validateType(value, prop.type)) {
+          errors.push(`Field "${key}" should be ${prop.type}`);
+        }
+      }
+    }
+  }
+
+  /**
+   * Validate a single connection for block existence and type definitions
+   */
+  private validateConnectionBlocks(
+    conn: { from: string; to: string },
+    blockMap: Map<string, { id: string; type: string }>,
+    errors: string[]
+  ): {
+    sourceBlock?: { id: string; type: string };
+    targetBlock?: { id: string; type: string };
+    sourceDef?: BlockDefinition;
+    targetDef?: BlockDefinition;
+  } {
+    const sourceBlock = blockMap.get(conn.from);
+    const targetBlock = blockMap.get(conn.to);
+
+    if (!sourceBlock) {
+      errors.push(`Connection references unknown source block: ${conn.from}`);
+      return {};
+    }
+    if (!targetBlock) {
+      errors.push(`Connection references unknown target block: ${conn.to}`);
+      return {};
+    }
+
+    const sourceDef = this.get(sourceBlock.type);
+    const targetDef = this.get(targetBlock.type);
+
+    if (!sourceDef) {
+      errors.push(`Unknown block type: ${sourceBlock.type}`);
+      return { sourceBlock, targetBlock };
+    }
+    if (!targetDef) {
+      errors.push(`Unknown block type: ${targetBlock.type}`);
+      return { sourceBlock, targetBlock, sourceDef };
+    }
+
+    return { sourceBlock, targetBlock, sourceDef, targetDef };
+  }
+
+  /**
+   * Validate connection ports existence and type compatibility
+   */
+  private validateConnectionPorts(
+    conn: { from: string; fromPort?: string; to: string; toPort?: string },
+    sourceBlock: { id: string; type: string },
+    targetBlock: { id: string; type: string },
+    sourceDef: BlockDefinition,
+    targetDef: BlockDefinition,
+    errors: string[]
+  ): void {
+    const sourcePort = sourceDef.outputs.find((p) => p.id === (conn.fromPort || 'out'));
+    const targetPort = targetDef.inputs.find((p) => p.id === (conn.toPort || 'in'));
+
+    if (!sourcePort) {
+      errors.push(
+        `Block "${sourceBlock.id}" (${sourceBlock.type}) has no output port "${conn.fromPort || 'out'}"`
+      );
+      return;
+    }
+    if (!targetPort) {
+      errors.push(
+        `Block "${targetBlock.id}" (${targetBlock.type}) has no input port "${conn.toPort || 'in'}"`
+      );
+      return;
+    }
+
+    // Check type compatibility
+    if (!arePortTypesCompatible(sourcePort.typeName, targetPort.typeName)) {
+      errors.push(
+        `Type mismatch: ${sourceBlock.id}.${conn.fromPort || 'out'} (${sourcePort.typeName || 'unknown'}) → ${targetBlock.id}.${conn.toPort || 'in'} (${targetPort.typeName || 'unknown'})`
+      );
+    }
   }
 
   /**
@@ -228,58 +322,20 @@ export class BlockRegistry {
     connections: Array<{ from: string; fromPort?: string; to: string; toPort?: string }>
   ): { valid: boolean; errors?: string[] } {
     const errors: string[] = [];
-
-    // Build block lookup
     const blockMap = new Map(blocks.map((b) => [b.id, b]));
 
     for (const conn of connections) {
-      const sourceBlock = blockMap.get(conn.from);
-      const targetBlock = blockMap.get(conn.to);
+      const { sourceBlock, targetBlock, sourceDef, targetDef } = this.validateConnectionBlocks(
+        conn,
+        blockMap,
+        errors
+      );
 
-      if (!sourceBlock) {
-        errors.push(`Connection references unknown source block: ${conn.from}`);
-        continue;
-      }
-      if (!targetBlock) {
-        errors.push(`Connection references unknown target block: ${conn.to}`);
-        continue;
-      }
-
-      const sourceDef = this.get(sourceBlock.type);
-      const targetDef = this.get(targetBlock.type);
-
-      if (!sourceDef) {
-        errors.push(`Unknown block type: ${sourceBlock.type}`);
-        continue;
-      }
-      if (!targetDef) {
-        errors.push(`Unknown block type: ${targetBlock.type}`);
+      if (!sourceBlock || !targetBlock || !sourceDef || !targetDef) {
         continue;
       }
 
-      // Find ports
-      const sourcePort = sourceDef.outputs.find((p) => p.id === (conn.fromPort || 'out'));
-      const targetPort = targetDef.inputs.find((p) => p.id === (conn.toPort || 'in'));
-
-      if (!sourcePort) {
-        errors.push(
-          `Block "${sourceBlock.id}" (${sourceBlock.type}) has no output port "${conn.fromPort || 'out'}"`
-        );
-        continue;
-      }
-      if (!targetPort) {
-        errors.push(
-          `Block "${targetBlock.id}" (${targetBlock.type}) has no input port "${conn.toPort || 'in'}"`
-        );
-        continue;
-      }
-
-      // Check type compatibility
-      if (!arePortTypesCompatible(sourcePort.typeName, targetPort.typeName)) {
-        errors.push(
-          `Type mismatch: ${sourceBlock.id}.${conn.fromPort || 'out'} (${sourcePort.typeName || 'unknown'}) → ${targetBlock.id}.${conn.toPort || 'in'} (${targetPort.typeName || 'unknown'})`
-        );
-      }
+      this.validateConnectionPorts(conn, sourceBlock, targetBlock, sourceDef, targetDef, errors);
     }
 
     return { valid: errors.length === 0, errors: errors.length > 0 ? errors : undefined };

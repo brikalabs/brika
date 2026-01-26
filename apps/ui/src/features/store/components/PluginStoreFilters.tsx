@@ -28,7 +28,7 @@ export function PluginStoreFilters({
   onFilterChange,
   sort,
   onSortChange,
-}: PluginStoreFiltersProps) {
+}: Readonly<PluginStoreFiltersProps>) {
   const { t } = useLocale();
 
   return (

@@ -25,8 +25,6 @@ function getOrCreateContainer() {
 }
 
 export const container = getOrCreateContainer();
-export const Injectable = injectable;
-export const Singleton = singleton;
 
 /**
  * Angular-style inject() - use as property initializer

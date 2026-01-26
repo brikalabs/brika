@@ -75,14 +75,70 @@ function checkStructuralCompatibility(outputSchema: z.ZodType, inputSchema: z.Zo
   const outputType = outputDef.typeName;
   const inputType = inputDef.typeName;
 
-  // Handle optional/nullable wrappers
+  // Try each compatibility check in order
+  const wrapperResult = checkWrapperTypeCompatibility(
+    outputSchema,
+    inputSchema,
+    inputType,
+    inputDef
+  );
+  if (wrapperResult !== null) return wrapperResult;
+
+  const unionResult = checkUnionTypeCompatibility(
+    outputSchema,
+    inputSchema,
+    outputType,
+    outputDef,
+    inputType,
+    inputDef
+  );
+  if (unionResult !== null) return unionResult;
+
+  const primitiveResult = checkPrimitiveTypeCompatibility(outputType, inputType);
+  if (primitiveResult !== null) return primitiveResult;
+
+  const collectionResult = checkCollectionTypeCompatibility(
+    outputSchema,
+    inputSchema,
+    outputType,
+    outputDef,
+    inputType,
+    inputDef
+  );
+  if (collectionResult !== null) return collectionResult;
+
+  return false;
+}
+
+/**
+ * Check if input type is a wrapper (optional/nullable) and handle unwrapping
+ */
+function checkWrapperTypeCompatibility(
+  outputSchema: z.ZodType,
+  inputSchema: z.ZodType,
+  inputType: string | undefined,
+  inputDef: unknown
+): boolean | null {
   if (inputType === 'ZodOptional' || inputType === 'ZodNullable') {
     const innerDef = inputDef as { innerType?: z.ZodType };
     if (innerDef.innerType) {
       return isSchemaCompatible(outputSchema, innerDef.innerType);
     }
   }
+  return null;
+}
 
+/**
+ * Check union type compatibility
+ */
+function checkUnionTypeCompatibility(
+  outputSchema: z.ZodType,
+  inputSchema: z.ZodType,
+  outputType: string | undefined,
+  outputDef: unknown,
+  inputType: string | undefined,
+  inputDef: unknown
+): boolean | null {
   // Handle union inputs - output must satisfy at least one variant
   if (inputType === 'ZodUnion') {
     const unionDef = inputDef as { options?: z.ZodType[] };
@@ -99,7 +155,16 @@ function checkStructuralCompatibility(outputSchema: z.ZodType, inputSchema: z.Zo
     }
   }
 
-  // Primitive type matching
+  return null;
+}
+
+/**
+ * Check primitive type compatibility
+ */
+function checkPrimitiveTypeCompatibility(
+  outputType: string | undefined,
+  inputType: string | undefined
+): boolean | null {
   const primitiveTypes = ['ZodString', 'ZodNumber', 'ZodBoolean', 'ZodNull'];
   if (
     outputType &&
@@ -109,7 +174,20 @@ function checkStructuralCompatibility(outputSchema: z.ZodType, inputSchema: z.Zo
   ) {
     return outputType === inputType;
   }
+  return null;
+}
 
+/**
+ * Check collection type compatibility (arrays and objects)
+ */
+function checkCollectionTypeCompatibility(
+  outputSchema: z.ZodType,
+  inputSchema: z.ZodType,
+  outputType: string | undefined,
+  outputDef: unknown,
+  inputType: string | undefined,
+  inputDef: unknown
+): boolean | null {
   // Array compatibility
   if (outputType === 'ZodArray' && inputType === 'ZodArray') {
     const outputElement = (outputDef as { element?: z.ZodType }).element;
@@ -119,7 +197,7 @@ function checkStructuralCompatibility(outputSchema: z.ZodType, inputSchema: z.Zo
     }
   }
 
-  // Object compatibility - check if output has all required input fields
+  // Object compatibility
   if (outputType === 'ZodObject' && inputType === 'ZodObject') {
     return checkObjectCompatibility(
       outputSchema as z.ZodObject<z.ZodRawShape>,
@@ -127,8 +205,7 @@ function checkStructuralCompatibility(outputSchema: z.ZodType, inputSchema: z.Zo
     );
   }
 
-  // Default: not compatible
-  return false;
+  return null;
 }
 
 /**

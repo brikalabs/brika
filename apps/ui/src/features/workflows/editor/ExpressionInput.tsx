@@ -32,7 +32,7 @@ export function ExpressionInput({
   placeholder,
   multiline = false,
   className,
-}: ExpressionInputProps) {
+}: Readonly<ExpressionInputProps>) {
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [autocompleteItems, setAutocompleteItems] = useState<AutocompleteItem[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);

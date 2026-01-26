@@ -77,6 +77,39 @@ export function all(...flows: Flow<unknown>[]): Flow<unknown[]> {
 // Internal Helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
+/** Handle value emission for combine operators */
+function handleCombineValue(
+  v: unknown,
+  i: number,
+  mode: 'combineLatest' | 'zip' | 'all',
+  values: (unknown | undefined)[],
+  hasValue: boolean[],
+  pendingZip: unknown[][],
+  allEmitted: { current: boolean },
+  push: (value: unknown[]) => void
+): void {
+  if (mode === 'zip') {
+    pendingZip[i]?.push(v);
+    if (pendingZip.every((arr) => arr.length > 0)) {
+      const tuple = pendingZip.map((arr) => arr.shift());
+      push(tuple);
+    }
+  } else if (mode === 'all') {
+    values[i] = v;
+    hasValue[i] = true;
+    if (!allEmitted.current && hasValue.every(Boolean)) {
+      allEmitted.current = true;
+      push([...values]);
+    }
+  } else {
+    values[i] = v;
+    hasValue[i] = true;
+    if (hasValue.every(Boolean)) {
+      push([...values]);
+    }
+  }
+}
+
 function createCombineFlow(
   flows: Flow<unknown>[],
   mode: 'combineLatest' | 'zip' | 'all'
@@ -85,31 +118,13 @@ function createCombineFlow(
     const values: (unknown | undefined)[] = new Array(flows.length).fill(undefined);
     const hasValue: boolean[] = new Array(flows.length).fill(false);
     const pendingZip: unknown[][] = flows.map(() => []);
-    let allEmitted = false;
+    const allEmitted = { current: false };
 
     flows.forEach((flow, i) => {
-      flow.on((v) => {
-        if (mode === 'zip') {
-          pendingZip[i]?.push(v);
-          if (pendingZip.every((arr) => arr.length > 0)) {
-            const tuple = pendingZip.map((arr) => arr.shift());
-            push(tuple);
-          }
-        } else if (mode === 'all') {
-          values[i] = v;
-          hasValue[i] = true;
-          if (!allEmitted && hasValue.every(Boolean)) {
-            allEmitted = true;
-            push([...values]);
-          }
-        } else {
-          values[i] = v;
-          hasValue[i] = true;
-          if (hasValue.every(Boolean)) {
-            push([...values]);
-          }
-        }
-      });
+      const handleValue = (v: unknown) => {
+        handleCombineValue(v, i, mode, values, hasValue, pendingZip, allEmitted, push);
+      };
+      flow.on(handleValue);
     });
   });
 }

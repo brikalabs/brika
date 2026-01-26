@@ -7,7 +7,7 @@ interface PluginUpdateBadgeProps {
   packageName: string;
 }
 
-export function PluginUpdateBadge({ packageName }: PluginUpdateBadgeProps) {
+export function PluginUpdateBadge({ packageName }: Readonly<PluginUpdateBadgeProps>) {
   const { data } = useQuery({
     queryKey: registryKeys.updates,
     queryFn: () => registryApi.checkUpdates(),

@@ -45,7 +45,7 @@ function pingHandle(blockId: string, portId: string) {
     // Remove class first to allow re-triggering
     handle.classList.remove('handle-ping');
     // Force reflow to restart animation
-    handle.offsetWidth;
+    void handle.offsetWidth;
     handle.classList.add('handle-ping');
     // Remove after animation completes (1s)
     setTimeout(() => handle.classList.remove('handle-ping'), 1000);

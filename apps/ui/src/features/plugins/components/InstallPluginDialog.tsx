@@ -23,7 +23,7 @@ interface InstallPluginDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export function InstallPluginDialog({ open, onOpenChange }: InstallPluginDialogProps) {
+export function InstallPluginDialog({ open, onOpenChange }: Readonly<InstallPluginDialogProps>) {
   const queryClient = useQueryClient();
   const [packageName, setPackageName] = React.useState('');
   const [version, setVersion] = React.useState('');

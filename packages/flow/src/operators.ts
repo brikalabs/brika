@@ -62,10 +62,11 @@ export function debounce<T>(ms: number): Operator<T, T> {
   return (source) =>
     operatorFlow(source, ({ subscribe, push, setTimeout }) => {
       let cancel: Cleanup | null = null;
-      subscribe((v) => {
+      const handleValue = (v: T) => {
         cancel?.();
         cancel = setTimeout(() => push(v), ms);
-      });
+      };
+      subscribe(handleValue);
     });
 }
 
@@ -88,9 +89,10 @@ export function throttle<T>(ms: number): Operator<T, T> {
 export function delay<T>(ms: number): Operator<T, T> {
   return (source) =>
     operatorFlow(source, ({ subscribe, push, setTimeout }) => {
-      subscribe((v) => {
+      const handleValue = (v: T) => {
         setTimeout(() => push(v), ms);
-      });
+      };
+      subscribe(handleValue);
     });
 }
 
@@ -179,11 +181,12 @@ export function switchMap<T, R>(fn: (value: T) => Flow<R>): Operator<T, R> {
   return (source) =>
     operatorFlow(source, ({ subscribe, push }) => {
       let currentUnsub: Cleanup | null = null;
-      subscribe((v) => {
+      const handleValue = (v: T) => {
         currentUnsub?.();
         const inner = fn(v);
         currentUnsub = subscribeRaw(inner, (r) => push(r));
-      });
+      };
+      subscribe(handleValue);
     });
 }
 
@@ -191,9 +194,10 @@ export function switchMap<T, R>(fn: (value: T) => Flow<R>): Operator<T, R> {
 export function flatMap<T, R>(fn: (value: T) => Flow<R>): Operator<T, R> {
   return (source) =>
     operatorFlow(source, ({ subscribe, push }) => {
-      subscribe((v) => {
+      const handleValue = (v: T) => {
         const inner = fn(v);
         inner.on((r) => push(r));
-      });
+      };
+      subscribe(handleValue);
     });
 }

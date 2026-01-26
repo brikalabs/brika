@@ -159,7 +159,9 @@ export class Logger {
         // Handle non-Error objects
         logError = {
           name: "Error",
-          message: typeof options.error === "object" ? JSON.stringify(options.error) : String(options.error),
+          message: typeof options.error === "object" && options.error !== null
+            ? JSON.stringify(options.error)
+            : String(options.error),
         };
       }
     }

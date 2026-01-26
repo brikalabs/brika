@@ -347,8 +347,8 @@ function interpolate(
     }
 
     if (value === undefined || value === null) return '';
-    if (typeof value === 'object') return JSON.stringify(value);
-    return String(value);
+    // Convert objects and primitives appropriately
+    return typeof value === 'object' ? JSON.stringify(value) : String(value);
   });
 }
 

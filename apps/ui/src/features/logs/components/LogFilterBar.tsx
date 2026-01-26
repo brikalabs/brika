@@ -46,7 +46,7 @@ export function LogFilterBar({
   onSearchChange,
   onDateRangeChange,
   onReset,
-}: LogFilterBarProps) {
+}: Readonly<LogFilterBarProps>) {
   const { t } = useLocale();
   const [searchInput, setSearchInput] = useState(filters.search);
 

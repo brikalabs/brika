@@ -100,15 +100,17 @@ export const registryApi = {
 
         read();
 
+        const createCompletionPromise = () =>
+          new Promise<void>((res) => {
+            completeResolve = res;
+          });
+
         resolve({
           eventSource: null as unknown as EventSource, // Not using EventSource directly
           onProgress: (callback) => {
             progressCallback = callback;
           },
-          onComplete: () =>
-            new Promise<void>((res) => {
-              completeResolve = res;
-            }),
+          onComplete: createCompletionPromise,
           close: () => {
             closed = true;
             reader?.cancel();
@@ -172,14 +174,16 @@ export const registryApi = {
 
         read();
 
+        const createCompletionPromise = () =>
+          new Promise<void>((res) => {
+            completeResolve = res;
+          });
+
         resolve({
           onProgress: (callback) => {
             progressCallback = callback;
           },
-          onComplete: () =>
-            new Promise<void>((res) => {
-              completeResolve = res;
-            }),
+          onComplete: createCompletionPromise,
           close: () => {
             closed = true;
             reader?.cancel();

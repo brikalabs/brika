@@ -196,19 +196,48 @@ export class Channel {
 
     const { t: type, _id: id, ...payload } = raw;
 
-    // Check if it's a response to a pending RPC
+    // Try handling as RPC response
+    if (this.handleRpcResponse(type, id, payload)) {
+      return;
+    }
+
+    // Try handling as RPC request
+    if (await this.handleRpcRequest(type, id, payload)) {
+      return;
+    }
+
+    // Handle as regular message
+    this.handleRegularMessage(type, payload);
+  }
+
+  /**
+   * Handle RPC response (result of a previous call)
+   */
+  private handleRpcResponse(
+    type: string,
+    id: number | undefined,
+    payload: Record<string, unknown>
+  ): boolean {
     if (type.endsWith('Result') && id !== undefined) {
       const pending = this.#pending.get(id);
       if (pending) {
         clearTimeout(pending.timer);
         this.#pending.delete(id);
-        // Extract result from payload if present
         pending.resolve('result' in payload ? payload.result : payload);
-        return;
+        return true;
       }
     }
+    return false;
+  }
 
-    // Check if it's an RPC request (has _id and we have a handler)
+  /**
+   * Handle RPC request (incoming call)
+   */
+  private async handleRpcRequest(
+    type: string,
+    id: number | undefined,
+    payload: Record<string, unknown>
+  ): Promise<boolean> {
     const rpcHandler = this.#rpcHandlers.get(type);
     if (rpcHandler && id !== undefined) {
       try {
@@ -221,10 +250,18 @@ export class Channel {
           result: { ok: false, error: String(e) },
         });
       }
-      return;
+      return true;
     }
+    return false;
+  }
 
-    // It's a regular message
+  /**
+   * Handle regular message (not RPC)
+   */
+  private async handleRegularMessage(
+    type: string,
+    payload: Record<string, unknown>
+  ): Promise<void> {
     const handlers = this.#messageHandlers.get(type);
     if (handlers) {
       for (const handler of handlers) {

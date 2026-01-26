@@ -19,7 +19,7 @@ interface TabsProps extends React.ComponentProps<'div'> {
   onValueChange: (value: string) => void;
 }
 
-function Tabs({ value, onValueChange, className, ...props }: TabsProps) {
+function Tabs({ value, onValueChange, className, ...props }: Readonly<TabsProps>) {
   return (
     <TabsContext.Provider value={{ value, onValueChange }}>
       <div data-slot="tabs" className={cn('flex flex-col gap-4', className)} {...props} />
@@ -41,7 +41,7 @@ interface TabsTriggerProps extends React.ComponentProps<'button'> {
   value: string;
 }
 
-function TabsTrigger({ value, className, ...props }: TabsTriggerProps) {
+function TabsTrigger({ value, className, ...props }: Readonly<TabsTriggerProps>) {
   const { value: selectedValue, onValueChange } = useTabs();
   const isActive = selectedValue === value;
 
@@ -68,7 +68,7 @@ interface TabsContentProps extends React.ComponentProps<'div'> {
   value: string;
 }
 
-function TabsContent({ value, className, ...props }: TabsContentProps) {
+function TabsContent({ value, className, ...props }: Readonly<TabsContentProps>) {
   const { value: selectedValue } = useTabs();
   if (selectedValue !== value) return null;
 

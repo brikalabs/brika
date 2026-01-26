@@ -63,7 +63,7 @@ interface UptimeProps {
 /**
  * Component that displays a live uptime that updates every second
  */
-export function Uptime({ startedAt, className }: UptimeProps) {
+export function Uptime({ startedAt, className }: Readonly<UptimeProps>) {
   const uptime = useUptime(startedAt);
 
   if (!uptime) {

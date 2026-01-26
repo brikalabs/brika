@@ -164,52 +164,18 @@ export class TransformerRegistry {
    * Recursively deserialize a value and all nested custom types.
    */
   async deserialize(value: unknown): Promise<unknown> {
-    // Handle null/undefined
     if (value === null || value === undefined) {
       return value;
     }
 
-    // Check for serialized custom type
     if (isSerializedCustom(value)) {
-      const typeName = value[TYPE_MARKER];
-
-      // Built-in types
-      if (typeName === 'Date') {
-        return new Date(value.data as string);
-      }
-      if (typeName === 'Map') {
-        const entries = value.data as [unknown, unknown][];
-        const map = new Map();
-        for (const [k, v] of entries) {
-          map.set(await this.deserialize(k), await this.deserialize(v));
-        }
-        return map;
-      }
-      if (typeName === 'Set') {
-        const items = value.data as unknown[];
-        const set = new Set();
-        for (const item of items) {
-          set.add(await this.deserialize(item));
-        }
-        return set;
-      }
-
-      // Custom transformer
-      const transformer = this.findByName(typeName);
-      if (transformer) {
-        return Promise.resolve(transformer.deserialize(value.data));
-      }
-
-      // Unknown type - return as-is
-      return value;
+      return this.deserializeCustomType(value);
     }
 
-    // Handle Array
     if (Array.isArray(value)) {
       return Promise.all(value.map((item) => this.deserialize(item)));
     }
 
-    // Handle plain object
     if (typeof value === 'object') {
       const result: Record<string, unknown> = {};
       for (const [key, val] of Object.entries(value)) {
@@ -218,7 +184,44 @@ export class TransformerRegistry {
       return result;
     }
 
-    // Primitives pass through
+    return value;
+  }
+
+  /**
+   * Deserialize a custom type (built-in or registered transformer)
+   */
+  private async deserializeCustomType(value: SerializedCustom): Promise<unknown> {
+    const typeName = value[TYPE_MARKER];
+
+    if (typeName === 'Date') {
+      return new Date(value.data as string);
+    }
+
+    if (typeName === 'Map') {
+      const entries = value.data as [unknown, unknown][];
+      const map = new Map();
+      for (const [k, v] of entries) {
+        map.set(await this.deserialize(k), await this.deserialize(v));
+      }
+      return map;
+    }
+
+    if (typeName === 'Set') {
+      const items = value.data as unknown[];
+      const set = new Set();
+      for (const item of items) {
+        set.add(await this.deserialize(item));
+      }
+      return set;
+    }
+
+    // Custom transformer
+    const transformer = this.findByName(typeName);
+    if (transformer) {
+      return Promise.resolve(transformer.deserialize(value.data));
+    }
+
+    // Unknown type - return as-is
     return value;
   }
 
@@ -286,55 +289,18 @@ export class TransformerRegistry {
    * Sync deserialize.
    */
   deserializeSync(value: unknown): unknown {
-    // Handle null/undefined
     if (value === null || value === undefined) {
       return value;
     }
 
-    // Check for serialized custom type
     if (isSerializedCustom(value)) {
-      const typeName = value[TYPE_MARKER];
-
-      // Built-in types
-      if (typeName === 'Date') {
-        return new Date(value.data as string);
-      }
-      if (typeName === 'Map') {
-        const entries = value.data as [unknown, unknown][];
-        const map = new Map();
-        for (const [k, v] of entries) {
-          map.set(this.deserializeSync(k), this.deserializeSync(v));
-        }
-        return map;
-      }
-      if (typeName === 'Set') {
-        const items = value.data as unknown[];
-        const set = new Set();
-        for (const item of items) {
-          set.add(this.deserializeSync(item));
-        }
-        return set;
-      }
-
-      // Custom transformer
-      const transformer = this.findByName(typeName);
-      if (transformer) {
-        if (transformer.isAsync) {
-          throw new Error(`Cannot sync deserialize async type: ${typeName}`);
-        }
-        return transformer.deserialize(value.data);
-      }
-
-      // Unknown type - return as-is
-      return value;
+      return this.deserializeCustomTypeSync(value);
     }
 
-    // Handle Array
     if (Array.isArray(value)) {
       return value.map((item) => this.deserializeSync(item));
     }
 
-    // Handle plain object
     if (typeof value === 'object') {
       const result: Record<string, unknown> = {};
       for (const [key, val] of Object.entries(value)) {
@@ -343,7 +309,47 @@ export class TransformerRegistry {
       return result;
     }
 
-    // Primitives pass through
+    return value;
+  }
+
+  /**
+   * Deserialize a custom type synchronously (built-in or registered transformer)
+   */
+  private deserializeCustomTypeSync(value: SerializedCustom): unknown {
+    const typeName = value[TYPE_MARKER];
+
+    if (typeName === 'Date') {
+      return new Date(value.data as string);
+    }
+
+    if (typeName === 'Map') {
+      const entries = value.data as [unknown, unknown][];
+      const map = new Map();
+      for (const [k, v] of entries) {
+        map.set(this.deserializeSync(k), this.deserializeSync(v));
+      }
+      return map;
+    }
+
+    if (typeName === 'Set') {
+      const items = value.data as unknown[];
+      const set = new Set();
+      for (const item of items) {
+        set.add(this.deserializeSync(item));
+      }
+      return set;
+    }
+
+    // Custom transformer
+    const transformer = this.findByName(typeName);
+    if (transformer) {
+      if (transformer.isAsync) {
+        throw new Error(`Cannot sync deserialize async type: ${typeName}`);
+      }
+      return transformer.deserialize(value.data);
+    }
+
+    // Unknown type - return as-is
     return value;
   }
 }

@@ -159,7 +159,7 @@ export class SparkStore {
 
     return {
       rows: pageRows,
-      nextCursor: hasMore ? pageRows[pageRows.length - 1].id : null,
+      nextCursor: hasMore ? (pageRows.at(-1)?.id ?? null) : null,
     };
   }
 

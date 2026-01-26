@@ -84,7 +84,7 @@ interface OutputPortProps {
   total: number;
 }
 
-function OutputPort({ port, index, total }: OutputPortProps) {
+function OutputPort({ port, index, total }: Readonly<OutputPortProps>) {
   const offset = total > 1 ? ((index + 1) / (total + 1)) * 100 : 50;
 
   return (
@@ -108,7 +108,7 @@ interface InputPortProps {
   total: number;
 }
 
-function InputPort({ port, index, total }: InputPortProps) {
+function InputPort({ port, index, total }: Readonly<InputPortProps>) {
   const offset = total > 1 ? ((index + 1) / (total + 1)) * 100 : 50;
 
   return (
@@ -151,54 +151,62 @@ export function BlockNode(props: NodeProps) {
   const inputs: BlockPort[] = data.inputs ?? [{ id: 'in', name: 'Input' }];
   const outputs: BlockPort[] = data.outputs ?? [{ id: 'out', name: 'Output' }];
 
+  // Helper to safely convert config values to strings
+  const configToString = (value: unknown): string => {
+    if (typeof value === 'object' && value !== null) {
+      return JSON.stringify(value);
+    }
+    return String(value);
+  };
+
   // Render config summary based on config type
   const renderConfigSummary = (): React.ReactNode => {
     if (config.tool) {
       return (
         <code className="block truncate rounded-md bg-muted/50 px-2 py-1 font-mono text-muted-foreground text-xs">
-          ⚡ {String(config.tool)}
+          ⚡ {configToString(config.tool)}
         </code>
       );
     }
     if (config.if) {
       return (
         <code className="block truncate rounded-md bg-warning/10 px-2 py-1 font-mono text-warning text-xs">
-          ❓ {String(config.if).slice(0, 35)}
+          ❓ {configToString(config.if).slice(0, 35)}
         </code>
       );
     }
     if (config.duration) {
       return (
         <div className="rounded-md bg-muted/50 px-2 py-1 text-muted-foreground text-xs">
-          ⏱️ {String(config.duration)}
+          ⏱️ {configToString(config.duration)}
         </div>
       );
     }
     if (config.event) {
       return (
         <code className="block truncate rounded-md bg-success/10 px-2 py-1 font-mono text-success text-xs">
-          📤 {String(config.event)}
+          📤 {configToString(config.event)}
         </code>
       );
     }
     if (config.message) {
       return (
         <div className="truncate rounded-md bg-muted/50 px-2 py-1 text-xs">
-          💬 "{String(config.message).slice(0, 25)}..."
+          💬 "{configToString(config.message).slice(0, 25)}..."
         </div>
       );
     }
     if (config.var) {
       return (
         <code className="block truncate rounded-md bg-data-8/10 px-2 py-1 font-mono text-data-8 text-xs">
-          📝 {String(config.var)} = ...
+          📝 {configToString(config.var)} = ...
         </code>
       );
     }
     if (config.sparkType) {
       return (
         <code className="block truncate rounded-md bg-amber-500/10 px-2 py-1 font-mono text-amber-600 text-xs">
-          ⚡ {String(config.sparkType)}
+          ⚡ {configToString(config.sparkType)}
         </code>
       );
     }
@@ -263,7 +271,7 @@ export function BlockNode(props: NodeProps) {
         {/* Error display */}
         {status === 'error' && data.output ? (
           <div className="truncate rounded-lg border border-destructive/20 bg-destructive/10 p-2 text-destructive text-xs">
-            ✗ {String(data.output).slice(0, 40)}
+            ✗ {configToString(data.output).slice(0, 40)}
           </div>
         ) : null}
       </BaseNodeContent>

@@ -91,32 +91,20 @@ function jsonSchemaToTypeName(schema: Record<string, unknown> | undefined): stri
   return 'unknown';
 }
 
-/**
- * Infer types for generic ports based on:
- * 1. Resolve markers ($resolve:source:configField) - type resolved from external data
- * 2. Graph connections (types flow from outputs to connected inputs)
- * 3. Passthrough blocks (generic outputs inherit from first input)
- */
-function inferPortTypes(
-  nodes: Node[],
-  edges: Edge[],
-  resolverContext: TypeResolverContext
-): Node[] {
-  // Build edge lookups
-  // incoming: target -> { portId -> { sourceNodeId, sourcePortId } }
-  // outgoing: source -> { portId -> [{ targetNodeId, targetPortId }] }
+/** Build edge lookup maps for type inference */
+function buildEdgeLookups(edges: Edge[]) {
   const incoming = new Map<string, Map<string, { node: string; port: string }>>();
   const outgoing = new Map<string, Map<string, Array<{ node: string; port: string }>>>();
 
   for (const e of edges) {
-    // Incoming
+    // Incoming edges
     if (!incoming.has(e.target)) incoming.set(e.target, new Map());
     incoming.get(e.target)!.set(e.targetHandle || 'in', {
       node: e.source,
       port: e.sourceHandle || 'out',
     });
 
-    // Outgoing
+    // Outgoing edges
     if (!outgoing.has(e.source)) outgoing.set(e.source, new Map());
     const sourcePort = e.sourceHandle || 'out';
     if (!outgoing.get(e.source)!.has(sourcePort)) {
@@ -131,8 +119,12 @@ function inferPortTypes(
       });
   }
 
-  // First pass: ensure all ports have _originalType set
-  const withOriginals = nodes.map((n) => {
+  return { incoming, outgoing };
+}
+
+/** Add original type tracking to all ports */
+function addOriginalTypesToNodes(nodes: Node[]): Node[] {
+  return nodes.map((n) => {
     if (n.type !== 'block') return n;
     const d = n.data as BlockNodeData;
     return {
@@ -150,16 +142,15 @@ function inferPortTypes(
       },
     };
   });
+}
 
-  // Build node lookup
-  const nodeMap = new Map(
-    withOriginals.filter((n) => n.type === 'block').map((n) => [n.id, n.data as BlockNodeData])
-  );
-
-  // Compute inferred types for each node: nodeId -> portId -> inferredType
+/** Resolve types from external sources ($resolve: markers) */
+function resolveExternalTypes(
+  nodeMap: Map<string, BlockNodeData>,
+  resolverContext: TypeResolverContext
+): Map<string, Map<string, string>> {
   const inferred = new Map<string, Map<string, string>>();
 
-  // Phase 1: Resolve $resolve: markers from external data
   for (const [nodeId, data] of nodeMap) {
     for (const port of data.outputs || []) {
       const origType = getOriginal(port as PortWithOriginal);
@@ -168,21 +159,17 @@ function inferPortTypes(
       const marker = parseResolveMarker(origType!);
       if (!marker) continue;
 
-      // Get config value for lookup
       const lookupKey = data.config?.[marker.configField] as string | undefined;
       if (!lookupKey) continue;
 
-      // Resolve type based on source
       let resolvedType: string | null = null;
       if (marker.source === 'spark') {
-        // Look up spark schema
         const sparks = resolverContext.lookup<SparkEntry[]>('sparks');
         const spark = sparks?.find((s) => s.type === lookupKey);
         if (spark?.schema) {
           resolvedType = jsonSchemaToTypeName(spark.schema);
         }
       }
-      // Add more sources here as needed (e.g., 'block', 'tool')
 
       if (resolvedType) {
         if (!inferred.has(nodeId)) inferred.set(nodeId, new Map());
@@ -191,7 +178,67 @@ function inferPortTypes(
     }
   }
 
-  // Phase 2: Iterative propagation through connections
+  return inferred;
+}
+
+/** Infer input type from connected output */
+function inferInputTypeFromConnection(
+  input: BlockPort,
+  nodeId: string,
+  nodeIncoming: Map<string, { node: string; port: string }> | undefined,
+  nodeMap: Map<string, BlockNodeData>,
+  inferred: Map<string, Map<string, string>>
+): string | undefined {
+  const conn = nodeIncoming?.get(input.id);
+  if (!conn) return undefined;
+
+  const sourceData = nodeMap.get(conn.node);
+  const sourcePort = sourceData?.outputs?.find((p) => p.id === conn.port);
+  if (!sourcePort) return undefined;
+
+  const sourceInferred = inferred.get(conn.node)?.get(conn.port);
+  const sourceType = sourceInferred ?? getOriginal(sourcePort as PortWithOriginal);
+
+  const origType = getOriginal(input as PortWithOriginal);
+  if (isConcrete(sourceType) && isGeneric(origType)) {
+    return sourceType!;
+  }
+
+  return undefined;
+}
+
+/** Infer output type from inputs (passthrough) */
+function inferOutputTypeFromInputs(
+  output: BlockPort,
+  data: BlockNodeData,
+  nodeInferred: Map<string, string>
+): string | undefined {
+  if (nodeInferred.has(output.id) && isConcrete(nodeInferred.get(output.id))) {
+    return undefined;
+  }
+
+  const origType = getOriginal(output as PortWithOriginal);
+  if (!isGeneric(origType)) return undefined;
+
+  for (const input of data.inputs || []) {
+    const inputInferred = nodeInferred.get(input.id);
+    const inputOrig = getOriginal(input as PortWithOriginal);
+    const inputType = inputInferred ?? (isConcrete(inputOrig) ? inputOrig : undefined);
+
+    if (inputType && isConcrete(inputType)) {
+      return inputType;
+    }
+  }
+
+  return undefined;
+}
+
+/** Propagate types through connections iteratively */
+function propagateTypesIteratively(
+  nodeMap: Map<string, BlockNodeData>,
+  incoming: Map<string, Map<string, { node: string; port: string }>>,
+  inferred: Map<string, Map<string, string>>
+): void {
   for (let iter = 0; iter < 10; iter++) {
     let changed = false;
 
@@ -200,59 +247,38 @@ function inferPortTypes(
       if (!inferred.has(nodeId)) inferred.set(nodeId, new Map());
       const nodeInferred = inferred.get(nodeId)!;
 
-      // 2a. Infer input types from connected outputs
+      // Infer input types from connected outputs
       for (const input of data.inputs || []) {
-        const conn = nodeIncoming?.get(input.id);
-        if (!conn) continue;
-
-        const sourceData = nodeMap.get(conn.node);
-        const sourcePort = sourceData?.outputs?.find((p) => p.id === conn.port);
-        if (!sourcePort) continue;
-
-        // Get source type (inferred > original)
-        const sourceInferred = inferred.get(conn.node)?.get(conn.port);
-        const sourceType = sourceInferred ?? getOriginal(sourcePort as PortWithOriginal);
-
-        // If source has concrete type and this input is generic, infer it
-        const origType = getOriginal(input as PortWithOriginal);
-        if (isConcrete(sourceType) && isGeneric(origType)) {
-          if (nodeInferred.get(input.id) !== sourceType) {
-            nodeInferred.set(input.id, sourceType!);
-            changed = true;
-          }
+        const inferredType = inferInputTypeFromConnection(
+          input,
+          nodeId,
+          nodeIncoming,
+          nodeMap,
+          inferred
+        );
+        if (inferredType && nodeInferred.get(input.id) !== inferredType) {
+          nodeInferred.set(input.id, inferredType);
+          changed = true;
         }
       }
 
-      // 2b. Infer output types from inputs (passthrough blocks)
+      // Infer output types from inputs (passthrough)
       for (const output of data.outputs || []) {
-        // Skip if already resolved by type resolver
-        if (nodeInferred.has(output.id) && isConcrete(nodeInferred.get(output.id))) continue;
-
-        const origType = getOriginal(output as PortWithOriginal);
-        if (!isGeneric(origType)) continue;
-
-        // Find first input with concrete type
-        for (const input of data.inputs || []) {
-          const inputInferred = nodeInferred.get(input.id);
-          const inputOrig = getOriginal(input as PortWithOriginal);
-          const inputType = inputInferred ?? (isConcrete(inputOrig) ? inputOrig : undefined);
-
-          if (inputType && isConcrete(inputType)) {
-            if (nodeInferred.get(output.id) !== inputType) {
-              nodeInferred.set(output.id, inputType);
-              changed = true;
-            }
-            break;
-          }
+        const inferredType = inferOutputTypeFromInputs(output, data, nodeInferred);
+        if (inferredType && nodeInferred.get(output.id) !== inferredType) {
+          nodeInferred.set(output.id, inferredType);
+          changed = true;
         }
       }
     }
 
     if (!changed) break;
   }
+}
 
-  // Apply inferred types to nodes
-  return withOriginals.map((node) => {
+/** Apply inferred types back to nodes */
+function applyInferredTypes(nodes: Node[], inferred: Map<string, Map<string, string>>): Node[] {
+  return nodes.map((node) => {
     if (node.type !== 'block') return node;
     const data = node.data as BlockNodeData;
     const nodeInferred = inferred.get(node.id);
@@ -272,6 +298,33 @@ function inferPortTypes(
       },
     };
   });
+}
+
+/**
+ * Infer types for generic ports based on:
+ * 1. Resolve markers ($resolve:source:configField) - type resolved from external data
+ * 2. Graph connections (types flow from outputs to connected inputs)
+ * 3. Passthrough blocks (generic outputs inherit from first input)
+ */
+function inferPortTypes(
+  nodes: Node[],
+  edges: Edge[],
+  resolverContext: TypeResolverContext
+): Node[] {
+  const { incoming } = buildEdgeLookups(edges);
+  const withOriginals = addOriginalTypesToNodes(nodes);
+  const nodeMap = new Map(
+    withOriginals.filter((n) => n.type === 'block').map((n) => [n.id, n.data as BlockNodeData])
+  );
+
+  // Phase 1: Resolve external types
+  const inferred = resolveExternalTypes(nodeMap, resolverContext);
+
+  // Phase 2: Propagate types through connections
+  propagateTypesIteratively(nodeMap, incoming, inferred);
+
+  // Apply inferred types to nodes
+  return applyInferredTypes(withOriginals, inferred);
 }
 
 export type BlockStatus = 'idle' | 'running' | 'completed' | 'error';

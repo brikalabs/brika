@@ -88,6 +88,15 @@ function getTypeMarker(description?: string): { marker: TypeMarker | null; extra
   return { marker: null };
 }
 
+/**
+ * Safely convert a value to string, handling objects and nullish values
+ */
+function toDisplayString(value: unknown, fallback = ''): string {
+  if (value === undefined || value === null) return fallback;
+  if (typeof value === 'object') return JSON.stringify(value);
+  return String(value);
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
@@ -268,8 +277,8 @@ function KeyValueEditor({
 
   return (
     <div className="space-y-2">
-      {entries.map(([k, v], i) => (
-        <div key={i} className="flex items-start gap-2">
+      {entries.map(([k, v]) => (
+        <div key={k} className="flex items-start gap-2">
           <Input
             value={k}
             onChange={(e) => updateKey(k, e.target.value)}
@@ -278,7 +287,7 @@ function KeyValueEditor({
           />
           <div className="flex-[2]">
             <ExpressionField
-              value={String(v ?? '')}
+              value={toDisplayString(v)}
               onChange={(newVal) => updateValue(k, newVal)}
               variables={variables}
               placeholder={valuePlaceholder}
@@ -370,12 +379,12 @@ function SchemaField({
         <div className="flex items-center gap-2">
           <input
             type="color"
-            value={String(value ?? '#6366f1')}
+            value={toDisplayString(value, '#6366f1')}
             onChange={(e) => onChange(e.target.value)}
             className="h-9 w-12 cursor-pointer rounded border bg-transparent p-1"
           />
           <Input
-            value={String(value ?? '')}
+            value={toDisplayString(value)}
             onChange={(e) => onChange(e.target.value)}
             placeholder="#6366f1"
             className="flex-1 bg-background font-mono"
@@ -388,7 +397,7 @@ function SchemaField({
     if (typeMarker === 'expression') {
       return (
         <ExpressionField
-          value={String(value ?? '')}
+          value={toDisplayString(value)}
           onChange={(v) => onChange(v)}
           variables={variables}
           placeholder={cleanDescription || `Enter ${label.toLowerCase()}`}
@@ -402,7 +411,7 @@ function SchemaField({
       return (
         <Input
           type="password"
-          value={String(value ?? '')}
+          value={toDisplayString(value)}
           onChange={(e) => onChange(e.target.value)}
           placeholder={cleanDescription || `Enter ${label.toLowerCase()}`}
           className="bg-background"
@@ -414,7 +423,7 @@ function SchemaField({
     if (typeMarker === 'spark') {
       return (
         <SparkTypeInput
-          value={String(value ?? '')}
+          value={toDisplayString(value)}
           onChange={(v) => onChange(v)}
           placeholder={cleanDescription || 'Select spark type...'}
         />
@@ -442,7 +451,7 @@ function SchemaField({
     // Enum - Select dropdown
     if (enumValues && enumValues.length > 0) {
       return (
-        <Select value={String(value ?? defaultValue ?? '')} onValueChange={(v) => onChange(v)}>
+        <Select value={toDisplayString(value ?? defaultValue)} onValueChange={(v) => onChange(v)}>
           <SelectTrigger className="bg-background">
             <SelectValue placeholder={`Select ${label.toLowerCase()}`} />
           </SelectTrigger>
@@ -477,7 +486,7 @@ function SchemaField({
       return (
         <Input
           type="number"
-          value={String(value ?? defaultValue ?? '')}
+          value={toDisplayString(value ?? defaultValue)}
           onChange={(e) => onChange(e.target.value ? Number(e.target.value) : undefined)}
           placeholder={cleanDescription || `Enter ${label.toLowerCase()}`}
           className="bg-background"
@@ -496,7 +505,7 @@ function SchemaField({
 
     return (
       <ExpressionField
-        value={String(value ?? '')}
+        value={toDisplayString(value)}
         onChange={(v) => onChange(v)}
         variables={variables}
         placeholder={cleanDescription || `Enter ${label.toLowerCase()}`}

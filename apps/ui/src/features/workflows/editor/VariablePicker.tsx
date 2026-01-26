@@ -103,11 +103,11 @@ function TreeNodeItem({
   node,
   depth = 0,
   onInsert,
-}: {
+}: Readonly<{
   node: TreeNode;
   depth?: number;
   onInsert: (expression: string) => void;
-}) {
+}>) {
   const [expanded, setExpanded] = useState(depth < 1);
   const [copied, setCopied] = useState(false);
   const hasChildren = node.children.length > 0;
@@ -177,7 +177,7 @@ function TreeNodeItem({
   );
 }
 
-export function VariablePicker({ variables, onInsert, className }: VariablePickerProps) {
+export function VariablePicker({ variables, onInsert, className }: Readonly<VariablePickerProps>) {
   const [search, setSearch] = useState('');
   const tree = buildTree(variables);
 
