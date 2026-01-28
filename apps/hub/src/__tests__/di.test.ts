@@ -1,24 +1,16 @@
 import 'reflect-metadata';
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
-import {
-  container,
-  inject,
-  injectable,
-  mock,
-  mock as mock1,
-  singleton,
-  spy,
-  TestBed,
-} from '@brika/shared';
+import { container, inject, injectable, singleton } from '@brika/di';
+import { useTestBed } from '@brika/di/testing';
+
+const di = useTestBed();
 
 describe('DI Container', () => {
   beforeEach(() => {
     container.reset();
   });
 
-  afterEach(() => {
-    container.reset();
-  });
+  container.reset();
 
   it('should resolve singleton services', () => {
     @singleton()
@@ -77,9 +69,7 @@ describe('inject() function', () => {
     container.reset();
   });
 
-  afterEach(() => {
-    container.reset();
-  });
+  container.reset();
 
   it('should work as property initializer', () => {
     @singleton()
@@ -126,10 +116,6 @@ describe('inject() function', () => {
 });
 
 describe('TestBed', () => {
-  afterEach(() => {
-    TestBed.reset();
-  });
-
   it('should allow mocking services', () => {
     @singleton()
     class RealLogger {
@@ -147,13 +133,10 @@ describe('TestBed', () => {
       }
     }
 
-    const mockLogger = mock<RealLogger>({
-      log: () => 'MOCKED',
-    });
+    const mockLogger = { log: () => 'MOCKED' };
+    di.provide(RealLogger, mockLogger);
 
-    TestBed.create().provide(RealLogger, mockLogger).compile();
-
-    const service = TestBed.inject(Service);
+    const service = di.get(Service);
     expect(service.doWork()).toBe('MOCKED');
   });
 
@@ -168,66 +151,16 @@ describe('TestBed', () => {
     }
 
     // Test 1
-    TestBed.create().compile();
-    const c1 = TestBed.inject(Counter);
+    const c1 = di.get(Counter);
     c1.increment();
     c1.increment();
     expect(c1.count).toBe(2);
 
     // Reset between tests
-    TestBed.reset();
+    di.reset();
 
     // Test 2 - fresh counter
-    TestBed.create().compile();
-    const c2 = TestBed.inject(Counter);
+    const c2 = di.get(Counter);
     expect(c2.count).toBe(0);
-  });
-});
-
-describe('spy', () => {
-  it('should track calls', () => {
-    const fn = spy<[number, string]>();
-
-    fn(1, 'a');
-    fn(2, 'b');
-    fn(3, 'c');
-
-    expect(fn.callCount).toBe(3);
-    expect(fn.calls[0]).toEqual([1, 'a']);
-    expect(fn.calls[1]).toEqual([2, 'b']);
-    expect(fn.lastCall).toEqual([3, 'c']); // lastCall is now a property, not a function
-  });
-
-  it('should return configured value', () => {
-    const spyFn = spy<[], string>();
-    spyFn.mockReturnValue('hello');
-    expect(spyFn()).toBe('hello');
-  });
-
-  it('should reset calls', () => {
-    const spyFn = spy();
-    spyFn();
-    spyFn();
-    expect(spyFn.callCount).toBe(2);
-
-    spyFn.reset();
-    expect(spyFn.callCount).toBe(0);
-  });
-});
-
-describe('mock', () => {
-  it('should create partial mock', () => {
-    interface Service {
-      methodA(): string;
-
-      methodB(): number;
-    }
-
-    const mockService = mock1<Service>({
-      methodA: () => 'mocked',
-    });
-
-    expect(mockService.methodA()).toBe('mocked');
-    expect(mockService.methodB).toBeUndefined();
   });
 });

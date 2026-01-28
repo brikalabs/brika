@@ -4,9 +4,10 @@
  * Central registry for block definitions received from plugins.
  */
 
+import { inject, singleton } from '@brika/di';
 import type { BlockDefinition } from '@brika/sdk';
 import type { BlockSummary } from '@brika/shared';
-import { arePortTypesCompatible, inject, singleton } from '@brika/shared';
+import { arePortTypesCompatible } from '@brika/shared';
 import { Logger } from '@/runtime/logs/log-router';
 
 // ─────────────────────────────────────────────────────────────────────────────

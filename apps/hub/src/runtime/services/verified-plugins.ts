@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { inject, singleton } from '@brika/di';
 import type { VerifiedPlugin, VerifiedPluginsList } from '@brika/shared';
-import { inject, singleton } from '@brika/shared';
 import { Logger } from '@/runtime/logs/log-router';
 
 // Configuration

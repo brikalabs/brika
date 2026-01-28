@@ -1,7 +1,7 @@
+import { inject, singleton } from '@brika/di';
 import { withPredicate } from '@brika/events';
 import type { Json } from '@brika/ipc';
 import type { Plugin } from '@brika/shared';
-import { inject, singleton } from '@brika/shared';
 import { BlockRegistry } from '@/runtime/blocks';
 import { PluginActions } from '@/runtime/events/actions';
 import { EventSystem } from '@/runtime/events/event-system';

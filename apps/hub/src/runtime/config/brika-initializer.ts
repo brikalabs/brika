@@ -6,7 +6,7 @@
  */
 
 import { join } from "node:path";
-import { inject, singleton } from "@brika/shared";
+import { inject, singleton } from "@brika/di";
 import { Logger } from "../logs/log-router";
 import { unpackTemplates } from "./templates-tar";
 

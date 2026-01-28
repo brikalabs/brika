@@ -21,7 +21,7 @@
  * z.expression()     // JavaScript expression
  * z.color()          // Color picker
  * z.duration()       // Duration in ms
- * z.toolRef()        // Tool reference
+ * z.sparkType()      // Spark type reference
  * ```
  */
 

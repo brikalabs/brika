@@ -1,5 +1,5 @@
 import { createBanner } from '@brika/banner';
-import { inject } from '@brika/shared';
+import { inject } from '@brika/di';
 import { hub } from '@/hub';
 import { BrikaInitializer, ConfigLoader } from '@/runtime/config';
 import { Logger } from '@/runtime/logs/log-router';

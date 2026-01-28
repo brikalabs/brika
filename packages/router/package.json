@@ -8,12 +8,14 @@
     "directory": "packages/router"
   },
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./testing": "./src/testing/index.ts"
   },
   "scripts": {
     "tsc": "bunx --biome tsc --noEmit"
   },
   "dependencies": {
+    "@brika/di": "workspace:*",
     "@brika/shared": "workspace:*",
     "hono": "^4.11.3",
     "zod": "^4.3.4"

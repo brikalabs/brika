@@ -4,10 +4,16 @@
  */
 import 'reflect-metadata';
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { useTestBed } from '@brika/di/testing';
 import type { Json } from '@brika/shared';
-import type { ExecutionEvent, ExecutionListener, ExecutorDeps } from '@/runtime/workflows/workflow-executor';
-import { WorkflowExecutor } from '@/runtime/workflows/workflow-executor';
+import { BlockRegistry } from '@/runtime/blocks';
+import { Logger } from '@/runtime/logs/log-router';
+import { PluginManager } from '@/runtime/plugins/plugin-manager';
 import type { Workflow } from '@/runtime/workflows/types';
+import type { ExecutionEvent, ExecutionListener } from '@/runtime/workflows/workflow-executor';
+import { WorkflowExecutor } from '@/runtime/workflows/workflow-executor';
+
+const di = useTestBed();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Test Fixtures
@@ -40,9 +46,7 @@ const createConnectedWorkflow = (): Workflow => ({
     { id: 'block-a', type: 'timer' },
     { id: 'block-b', type: 'logger' },
   ],
-  connections: [
-    { from: 'block-a', fromPort: 'tick', to: 'block-b', toPort: 'input' },
-  ],
+  connections: [{ from: 'block-a', fromPort: 'tick', to: 'block-b', toPort: 'input' }],
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -51,9 +55,10 @@ const createConnectedWorkflow = (): Workflow => ({
 
 describe('WorkflowExecutor - Lifecycle', () => {
   let executor: WorkflowExecutor;
-  let mockDeps: ExecutorDeps;
   let emitHandler: ((instanceId: string, port: string, data: Json) => void) | null;
-  let logHandler: ((instanceId: string, workflowId: string, level: string, message: string) => void) | null;
+  let logHandler:
+    | ((instanceId: string, workflowId: string, level: string, message: string) => void)
+    | null;
   let startedBlocks: string[];
 
   beforeEach(() => {
@@ -61,33 +66,49 @@ describe('WorkflowExecutor - Lifecycle', () => {
     logHandler = null;
     startedBlocks = [];
 
-    mockDeps = {
-      plugins: {
-        setBlockEmitHandler: (handler) => { emitHandler = handler; },
-        setBlockLogHandler: (handler) => { logHandler = handler; },
-        clearBlockEmitHandler: () => { emitHandler = null; },
-        clearBlockLogHandler: () => { logHandler = null; },
-        startBlock: (blockType, instanceId, workflowId, config) => {
-          startedBlocks.push(instanceId);
-          return Promise.resolve({ ok: true });
-        },
-        stopBlockInstance: () => {},
-        pushBlockInput: () => {},
-      },
-      logs: {
-        info: () => {},
-        warn: () => {},
-        error: () => {},
-      },
-      blocks: {
-        has: () => true,
-        get: () => ({ id: 'test', outputs: [], inputs: [] }),
-        list: () => [],
-      },
-      events: {},
-    } as any;
+    di.provide(Logger, {
+      withSource: () => ({
+        info: () => undefined,
+        warn: () => undefined,
+        error: () => undefined,
+      }),
+    } as unknown as Logger);
 
-    executor = new WorkflowExecutor(mockDeps);
+    di.stub(PluginManager, {
+      setBlockEmitHandler: (handler: (instanceId: string, port: string, data: Json) => void) => {
+        emitHandler = handler;
+      },
+      setBlockLogHandler: (
+        handler: (instanceId: string, workflowId: string, level: string, message: string) => void
+      ) => {
+        logHandler = handler;
+      },
+      clearBlockEmitHandler: () => {
+        emitHandler = null;
+      },
+      clearBlockLogHandler: () => {
+        logHandler = null;
+      },
+      startBlock: (
+        _blockType: string,
+        instanceId: string,
+        _workflowId: string,
+        _config: unknown
+      ) => {
+        startedBlocks.push(instanceId);
+        return Promise.resolve({ ok: true });
+      },
+      stopBlockInstance: () => undefined,
+      pushBlockInput: () => undefined,
+    });
+
+    di.stub(BlockRegistry, {
+      has: () => true,
+      get: () => ({ id: 'test', outputs: [], inputs: [] }),
+      list: () => [],
+    });
+
+    executor = new WorkflowExecutor();
   });
 
   afterEach(() => {
@@ -165,33 +186,33 @@ describe('WorkflowExecutor - Lifecycle', () => {
 
 describe('WorkflowExecutor - Connection Map Building', () => {
   let executor: WorkflowExecutor;
-  let mockDeps: ExecutorDeps;
 
   beforeEach(() => {
-    mockDeps = {
-      plugins: {
-        setBlockEmitHandler: () => {},
-        setBlockLogHandler: () => {},
-        clearBlockEmitHandler: () => {},
-        clearBlockLogHandler: () => {},
-        startBlock: () => Promise.resolve({ ok: true }),
-        stopBlockInstance: () => {},
-        pushBlockInput: () => {},
-      },
-      logs: {
-        info: () => {},
-        warn: () => {},
-        error: () => {},
-      },
-      blocks: {
-        has: () => true,
-        get: () => ({ id: 'test', outputs: [], inputs: [] }),
-        list: () => [],
-      },
-      events: {},
-    } as any;
+    di.provide(Logger, {
+      withSource: () => ({
+        info: () => undefined,
+        warn: () => undefined,
+        error: () => undefined,
+      }),
+    } as unknown as Logger);
 
-    executor = new WorkflowExecutor(mockDeps);
+    di.stub(PluginManager, {
+      setBlockEmitHandler: () => undefined,
+      setBlockLogHandler: () => undefined,
+      clearBlockEmitHandler: () => undefined,
+      clearBlockLogHandler: () => undefined,
+      startBlock: () => Promise.resolve({ ok: true }),
+      stopBlockInstance: () => undefined,
+      pushBlockInput: () => undefined,
+    });
+
+    di.stub(BlockRegistry, {
+      has: () => true,
+      get: () => ({ id: 'test', outputs: [], inputs: [] }),
+      list: () => [],
+    });
+
+    executor = new WorkflowExecutor();
   });
 
   afterEach(() => {
@@ -254,38 +275,38 @@ describe('WorkflowExecutor - Connection Map Building', () => {
 
 describe('WorkflowExecutor - Data Injection', () => {
   let executor: WorkflowExecutor;
-  let mockDeps: ExecutorDeps;
   let injectedData: Array<{ blockId: string; port: string; data: Json }>;
 
   beforeEach(() => {
     injectedData = [];
 
-    mockDeps = {
-      plugins: {
-        setBlockEmitHandler: () => {},
-        setBlockLogHandler: () => {},
-        clearBlockEmitHandler: () => {},
-        clearBlockLogHandler: () => {},
-        startBlock: () => Promise.resolve({ ok: true }),
-        stopBlockInstance: () => {},
-        pushBlockInput: (blockId, port, data) => {
-          injectedData.push({ blockId, port, data });
-        },
-      },
-      logs: {
-        info: () => {},
-        warn: () => {},
-        error: () => {},
-      },
-      blocks: {
-        has: () => true,
-        get: () => ({ id: 'test', outputs: [], inputs: [] }),
-        list: () => [],
-      },
-      events: {},
-    } as any;
+    di.provide(Logger, {
+      withSource: () => ({
+        info: () => undefined,
+        warn: () => undefined,
+        error: () => undefined,
+      }),
+    } as unknown as Logger);
 
-    executor = new WorkflowExecutor(mockDeps);
+    di.stub(PluginManager, {
+      setBlockEmitHandler: () => undefined,
+      setBlockLogHandler: () => undefined,
+      clearBlockEmitHandler: () => undefined,
+      clearBlockLogHandler: () => undefined,
+      startBlock: () => Promise.resolve({ ok: true }),
+      stopBlockInstance: () => undefined,
+      pushBlockInput: (blockId: string, port: string, data: Json) => {
+        injectedData.push({ blockId, port, data });
+      },
+    });
+
+    di.stub(BlockRegistry, {
+      has: () => true,
+      get: () => ({ id: 'test', outputs: [], inputs: [] }),
+      list: () => [],
+    });
+
+    executor = new WorkflowExecutor();
   });
 
   afterEach(() => {
@@ -352,33 +373,33 @@ describe('WorkflowExecutor - Data Injection', () => {
 
 describe('WorkflowExecutor - Event Listeners', () => {
   let executor: WorkflowExecutor;
-  let mockDeps: ExecutorDeps;
 
   beforeEach(() => {
-    mockDeps = {
-      plugins: {
-        setBlockEmitHandler: () => {},
-        setBlockLogHandler: () => {},
-        clearBlockEmitHandler: () => {},
-        clearBlockLogHandler: () => {},
-        startBlock: () => Promise.resolve({ ok: true }),
-        stopBlockInstance: () => {},
-        pushBlockInput: () => {},
-      },
-      logs: {
-        info: () => {},
-        warn: () => {},
-        error: () => {},
-      },
-      blocks: {
-        has: () => true,
-        get: () => ({ id: 'test', outputs: [], inputs: [] }),
-        list: () => [],
-      },
-      events: {},
-    } as any;
+    di.provide(Logger, {
+      withSource: () => ({
+        info: () => undefined,
+        warn: () => undefined,
+        error: () => undefined,
+      }),
+    } as unknown as Logger);
 
-    executor = new WorkflowExecutor(mockDeps);
+    di.stub(PluginManager, {
+      setBlockEmitHandler: () => undefined,
+      setBlockLogHandler: () => undefined,
+      clearBlockEmitHandler: () => undefined,
+      clearBlockLogHandler: () => undefined,
+      startBlock: () => Promise.resolve({ ok: true }),
+      stopBlockInstance: () => undefined,
+      pushBlockInput: () => undefined,
+    });
+
+    di.stub(BlockRegistry, {
+      has: () => true,
+      get: () => ({ id: 'test', outputs: [], inputs: [] }),
+      list: () => [],
+    });
+
+    executor = new WorkflowExecutor();
   });
 
   afterEach(() => {
@@ -454,35 +475,398 @@ describe('WorkflowExecutor - Event Listeners', () => {
   });
 });
 
-describe('WorkflowExecutor - Complex Workflows', () => {
+describe('WorkflowExecutor - Block Emit and Data Flow', () => {
   let executor: WorkflowExecutor;
-  let mockDeps: ExecutorDeps;
+  let emitHandler: ((instanceId: string, port: string, data: Json) => void) | null;
+  let logHandler:
+    | ((instanceId: string, workflowId: string, level: string, message: string) => void)
+    | null;
+  let pushedInputs: Array<{ blockId: string; port: string; data: Json }>;
 
   beforeEach(() => {
-    mockDeps = {
-      plugins: {
-        setBlockEmitHandler: () => {},
-        setBlockLogHandler: () => {},
-        clearBlockEmitHandler: () => {},
-        clearBlockLogHandler: () => {},
-        startBlock: () => Promise.resolve({ ok: true }),
-        stopBlockInstance: () => {},
-        pushBlockInput: () => {},
-      },
-      logs: {
-        info: () => {},
-        warn: () => {},
-        error: () => {},
-      },
-      blocks: {
-        has: () => true,
-        get: () => ({ id: 'test', outputs: [], inputs: [] }),
-        list: () => [],
-      },
-      events: {},
-    } as any;
+    emitHandler = null;
+    logHandler = null;
+    pushedInputs = [];
 
-    executor = new WorkflowExecutor(mockDeps);
+    di.provide(Logger, {
+      withSource: () => ({
+        info: () => undefined,
+        warn: () => undefined,
+        error: () => undefined,
+      }),
+    } as unknown as Logger);
+
+    di.stub(PluginManager, {
+      setBlockEmitHandler: (handler: (instanceId: string, port: string, data: Json) => void) => {
+        emitHandler = handler;
+      },
+      setBlockLogHandler: (
+        handler: (instanceId: string, workflowId: string, level: string, message: string) => void
+      ) => {
+        logHandler = handler;
+      },
+      clearBlockEmitHandler: () => {
+        emitHandler = null;
+      },
+      clearBlockLogHandler: () => {
+        logHandler = null;
+      },
+      startBlock: () => Promise.resolve({ ok: true }),
+      stopBlockInstance: () => undefined,
+      pushBlockInput: (blockId: string, port: string, data: Json) => {
+        pushedInputs.push({ blockId, port, data });
+      },
+    });
+
+    di.stub(BlockRegistry, {
+      has: () => true,
+      get: () => ({ id: 'test', outputs: [], inputs: [] }),
+      list: () => [],
+    });
+
+    executor = new WorkflowExecutor();
+  });
+
+  afterEach(() => {
+    if (executor.isRunning) {
+      executor.stop();
+    }
+  });
+
+  test('should emit block.emit event when block emits data', async () => {
+    expect.hasAssertions();
+    const events: ExecutionEvent[] = [];
+    executor.addListener((e) => events.push(e));
+
+    const workflow = createConnectedWorkflow();
+    await executor.start(workflow);
+
+    // Simulate block emitting data
+    emitHandler?.('block-a', 'tick', { value: 42 });
+
+    const emitEvent = events.find((e) => e.type === 'block.emit');
+    expect(emitEvent).toBeDefined();
+    expect(emitEvent?.blockId).toBe('block-a');
+    expect(emitEvent?.port).toBe('tick');
+    expect(emitEvent?.data).toEqual({ value: 42 });
+  });
+
+  test('should dispatch data to connected blocks', async () => {
+    expect.hasAssertions();
+    const workflow = createConnectedWorkflow();
+    await executor.start(workflow);
+
+    // Simulate block-a emitting on 'tick' port
+    emitHandler?.('block-a', 'tick', { message: 'hello' });
+
+    // Should push to block-b's 'input' port
+    expect(pushedInputs).toHaveLength(1);
+    expect(pushedInputs[0]).toMatchObject({
+      blockId: 'block-b',
+      port: 'input',
+      data: { message: 'hello' },
+    });
+  });
+
+  test('should handle multiple connections from same output', async () => {
+    expect.hasAssertions();
+    const workflow: Workflow = {
+      id: 'multi-conn',
+      name: 'Multi Connection',
+      enabled: true,
+      blocks: [
+        { id: 'source', type: 'timer' },
+        { id: 'target-1', type: 'logger' },
+        { id: 'target-2', type: 'logger' },
+      ],
+      connections: [
+        { from: 'source', fromPort: 'out', to: 'target-1', toPort: 'in' },
+        { from: 'source', fromPort: 'out', to: 'target-2', toPort: 'in' },
+      ],
+    };
+
+    await executor.start(workflow);
+    emitHandler?.('source', 'out', { data: 'test' });
+
+    expect(pushedInputs).toHaveLength(2);
+    expect(pushedInputs.map((p) => p.blockId)).toContain('target-1');
+    expect(pushedInputs.map((p) => p.blockId)).toContain('target-2');
+  });
+
+  test('should emit block.log event when block logs', async () => {
+    expect.hasAssertions();
+    const events: ExecutionEvent[] = [];
+    executor.addListener((e) => events.push(e));
+
+    const workflow = createSimpleWorkflow();
+    await executor.start(workflow);
+
+    // Simulate block logging
+    logHandler?.('block-1', 'test-workflow', 'info', 'Test log message');
+
+    const logEvent = events.find((e) => e.type === 'block.log');
+    expect(logEvent).toBeDefined();
+    expect(logEvent?.blockId).toBe('block-1');
+    expect(logEvent?.level).toBe('info');
+    expect(logEvent?.message).toBe('Test log message');
+  });
+
+  test('should ignore log from different workflow', async () => {
+    expect.hasAssertions();
+    const events: ExecutionEvent[] = [];
+    executor.addListener((e) => events.push(e));
+
+    const workflow = createSimpleWorkflow();
+    await executor.start(workflow);
+
+    // Simulate log from different workflow
+    logHandler?.('block-1', 'different-workflow', 'info', 'Should be ignored');
+
+    const logEvent = events.find((e) => e.type === 'block.log');
+    expect(logEvent).toBeUndefined();
+  });
+
+  test('should not emit when workflow not running', async () => {
+    expect.hasAssertions();
+    const events: ExecutionEvent[] = [];
+    executor.addListener((e) => events.push(e));
+
+    const workflow = createSimpleWorkflow();
+    await executor.start(workflow);
+    executor.stop();
+
+    // Simulate emit after stop (should be ignored)
+    emitHandler?.('block-1', 'out', { data: 'test' });
+
+    const emitEvent = events.find((e) => e.type === 'block.emit');
+    expect(emitEvent).toBeUndefined();
+  });
+});
+
+describe('WorkflowExecutor - Block Start Error Handling', () => {
+  let executor: WorkflowExecutor;
+
+  beforeEach(() => {
+    di.provide(Logger, {
+      withSource: () => ({
+        info: () => undefined,
+        warn: () => undefined,
+        error: () => undefined,
+      }),
+    } as unknown as Logger);
+
+    di.stub(PluginManager, {
+      setBlockEmitHandler: () => undefined,
+      setBlockLogHandler: () => undefined,
+      clearBlockEmitHandler: () => undefined,
+      clearBlockLogHandler: () => undefined,
+      startBlock: () => Promise.resolve({ ok: false, error: 'Block start failed' }),
+      stopBlockInstance: () => undefined,
+      pushBlockInput: () => undefined,
+    });
+
+    di.stub(BlockRegistry, {
+      has: () => true,
+      get: () => ({ id: 'test', outputs: [], inputs: [] }),
+      list: () => [],
+    });
+
+    executor = new WorkflowExecutor();
+  });
+
+  afterEach(() => {
+    if (executor.isRunning) {
+      executor.stop();
+    }
+  });
+
+  test('should emit block.error event when block fails to start', async () => {
+    expect.hasAssertions();
+    const events: ExecutionEvent[] = [];
+    executor.addListener((e) => events.push(e));
+
+    const workflow = createSimpleWorkflow();
+    await executor.start(workflow);
+
+    const errorEvent = events.find((e) => e.type === 'block.error');
+    expect(errorEvent).toBeDefined();
+    expect(errorEvent?.error).toBe('Block start failed');
+  });
+
+  test('should emit block.error event when startBlock throws', async () => {
+    expect.hasAssertions();
+    di.reset();
+
+    di.provide(Logger, {
+      withSource: () => ({
+        info: () => undefined,
+        warn: () => undefined,
+        error: () => undefined,
+      }),
+    } as unknown as Logger);
+
+    di.stub(PluginManager, {
+      setBlockEmitHandler: () => undefined,
+      setBlockLogHandler: () => undefined,
+      clearBlockEmitHandler: () => undefined,
+      clearBlockLogHandler: () => undefined,
+      startBlock: () => Promise.reject(new Error('Exception thrown')),
+      stopBlockInstance: () => undefined,
+      pushBlockInput: () => undefined,
+    });
+
+    di.stub(BlockRegistry, {
+      has: () => true,
+      get: () => ({ id: 'test', outputs: [], inputs: [] }),
+      list: () => [],
+    });
+
+    executor = new WorkflowExecutor();
+
+    const events: ExecutionEvent[] = [];
+    executor.addListener((e) => events.push(e));
+
+    const workflow = createSimpleWorkflow();
+    await executor.start(workflow);
+
+    const errorEvent = events.find((e) => e.type === 'block.error');
+    expect(errorEvent).toBeDefined();
+  });
+});
+
+describe('WorkflowExecutor - Block Type Resolution', () => {
+  let executor: WorkflowExecutor;
+  let startedTypes: string[];
+
+  beforeEach(() => {
+    startedTypes = [];
+
+    di.provide(Logger, {
+      withSource: () => ({
+        info: () => undefined,
+        warn: () => undefined,
+        error: () => undefined,
+      }),
+    } as unknown as Logger);
+
+    di.stub(PluginManager, {
+      setBlockEmitHandler: () => undefined,
+      setBlockLogHandler: () => undefined,
+      clearBlockEmitHandler: () => undefined,
+      clearBlockLogHandler: () => undefined,
+      startBlock: (blockType: string) => {
+        startedTypes.push(blockType);
+        return Promise.resolve({ ok: true });
+      },
+      stopBlockInstance: () => undefined,
+      pushBlockInput: () => undefined,
+    });
+
+    di.stub(BlockRegistry, {
+      has: () => true,
+      get: () => ({ id: 'test', outputs: [], inputs: [] }),
+      list: () => [
+        {
+          id: 'interval',
+          type: '@brika/timer:interval',
+          inputs: [],
+          outputs: [],
+          schema: { type: 'object' },
+        },
+        {
+          id: 'request',
+          type: '@brika/http:request',
+          inputs: [],
+          outputs: [],
+          schema: { type: 'object' },
+        },
+      ],
+    });
+
+    executor = new WorkflowExecutor();
+  });
+
+  afterEach(() => {
+    if (executor.isRunning) {
+      executor.stop();
+    }
+  });
+
+  test('should use full type name if contains colon', async () => {
+    expect.hasAssertions();
+    const workflow: Workflow = {
+      id: 'test',
+      name: 'Test',
+      enabled: true,
+      blocks: [{ id: 'block-1', type: '@brika/timer:interval' }],
+      connections: [],
+    };
+
+    await executor.start(workflow);
+
+    expect(startedTypes[0]).toBe('@brika/timer:interval');
+  });
+
+  test('should resolve short type name from block list', async () => {
+    expect.hasAssertions();
+    const workflow: Workflow = {
+      id: 'test',
+      name: 'Test',
+      enabled: true,
+      blocks: [{ id: 'block-1', type: 'interval' }],
+      connections: [],
+    };
+
+    await executor.start(workflow);
+
+    expect(startedTypes[0]).toBe('@brika/timer:interval');
+  });
+
+  test('should use original type if no match found', async () => {
+    expect.hasAssertions();
+    const workflow: Workflow = {
+      id: 'test',
+      name: 'Test',
+      enabled: true,
+      blocks: [{ id: 'block-1', type: 'unknown-type' }],
+      connections: [],
+    };
+
+    await executor.start(workflow);
+
+    expect(startedTypes[0]).toBe('unknown-type');
+  });
+});
+
+describe('WorkflowExecutor - Complex Workflows', () => {
+  let executor: WorkflowExecutor;
+
+  beforeEach(() => {
+    di.provide(Logger, {
+      withSource: () => ({
+        info: () => undefined,
+        warn: () => undefined,
+        error: () => undefined,
+      }),
+    } as unknown as Logger);
+
+    di.stub(PluginManager, {
+      setBlockEmitHandler: () => undefined,
+      setBlockLogHandler: () => undefined,
+      clearBlockEmitHandler: () => undefined,
+      clearBlockLogHandler: () => undefined,
+      startBlock: () => Promise.resolve({ ok: true }),
+      stopBlockInstance: () => undefined,
+      pushBlockInput: () => undefined,
+    });
+
+    di.stub(BlockRegistry, {
+      has: () => true,
+      get: () => ({ id: 'test', outputs: [], inputs: [] }),
+      list: () => [],
+    });
+
+    executor = new WorkflowExecutor();
   });
 
   afterEach(() => {
@@ -556,9 +940,7 @@ describe('WorkflowExecutor - Complex Workflows', () => {
           config: { level: 'info', format: 'json' },
         },
       ],
-      connections: [
-        { from: 'timer-1', fromPort: 'tick', to: 'logger-1', toPort: 'input' },
-      ],
+      connections: [{ from: 'timer-1', fromPort: 'tick', to: 'logger-1', toPort: 'input' }],
     };
 
     await executor.start(workflow);

@@ -1,5 +1,5 @@
+import { singleton } from "@brika/di";
 import type { Json, LogError, LogEvent, LogLevel, LogSource } from "@brika/shared";
-import { singleton } from "@brika/shared";
 import { TerminalFormatter } from "./formatters/terminal-formatter";
 import type { LogStore } from "./log-store";
 import { ConsoleTransport } from "./transports/console-transport";

@@ -1,6 +1,6 @@
 import type { StorePlugin } from '@brika/shared';
 import { Link } from '@tanstack/react-router';
-import { Download, Package } from 'lucide-react';
+import { Download, Package, Tag, User } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage, Badge, Card } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
 import { CompatibilityBadge } from './CompatibilityBadge';
@@ -20,65 +20,87 @@ function formatDownloads(count: number): string {
 export function PluginStoreCard({ plugin }: Readonly<PluginStoreCardProps>) {
   const { t } = useLocale();
   const accent = plugin.featured ? 'blue' : 'none';
-  const authorName = typeof plugin.author === 'string' ? plugin.author : plugin.author.name;
+  const authorName = typeof plugin.author === 'string' ? plugin.author : plugin.author?.name;
 
   return (
-    <Link to="/store/$name" params={{ name: plugin.name }}>
-      <Card accent={accent} interactive className="p-5">
-        <div className="flex items-start gap-3">
-          {/* Plugin Icon */}
-          <Avatar className="size-12 shrink-0 rounded-xl">
-            <AvatarImage src={`/api/registry/plugins/${encodeURIComponent(plugin.name)}/icon`} />
-            <AvatarFallback className="rounded-xl bg-primary/10">
-              <Package className="size-6 text-primary" />
-            </AvatarFallback>
-          </Avatar>
-
-          {/* Plugin Info */}
-          <div className="min-w-0 flex-1">
-            {/* First line: Name + Verified badge */}
-            <div className="flex flex-wrap items-center gap-1">
-              <span className="truncate font-semibold text-sm leading-tight transition-colors group-hover:text-foreground">
-                {plugin.name}
-              </span>
-              {plugin.verified && <VerifiedBadge />}
-            </div>
-
-            {/* Second line: Compatibility + Installed badges */}
-            <div className="mt-1 flex flex-wrap items-center gap-1">
-              <CompatibilityBadge
-                compatible={plugin.compatible}
-                reason={plugin.compatibilityReason}
+    <Link to="/store/$name" params={{ name: plugin.name }} className="group block">
+      <Card
+        accent={accent}
+        interactive
+        className="h-full p-6 transition-all duration-200 hover:shadow-lg"
+      >
+        <div className="space-y-3">
+          {/* Header: Icon + Title/Badges + Install Button */}
+          <div className="flex items-start gap-4">
+            {/* Plugin Icon */}
+            <Avatar className="size-14 shrink-0 rounded-2xl ring-1 ring-border/50 transition-all duration-200 group-hover:shadow-md group-hover:ring-primary/40">
+              <AvatarImage
+                src={`/api/registry/plugins/${encodeURIComponent(plugin.name)}/icon`}
+                className="object-cover"
               />
-              {plugin.installed && (
-                <Badge variant="default" className="bg-emerald-500 text-xs">
-                  {t('store:actions.installed')}
-                </Badge>
-              )}
+              <AvatarFallback className="rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-background">
+                <Package className="size-7 text-primary/70" />
+              </AvatarFallback>
+            </Avatar>
+
+            {/* Title + Badges */}
+            <div className="min-w-0 flex-1 space-y-2">
+              {/* Title + Verified Badge */}
+              <div className="flex items-center gap-1.5 overflow-hidden">
+                <h3 className="truncate font-semibold text-base leading-tight transition-colors duration-200 group-hover:text-primary">
+                  {plugin.name}
+                </h3>
+                {plugin.verified && <VerifiedBadge />}
+              </div>
+
+              {/* Status Badges */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                <CompatibilityBadge
+                  compatible={plugin.compatible}
+                  reason={plugin.compatibilityReason}
+                />
+                {plugin.installed && (
+                  <Badge
+                    variant="default"
+                    className="h-5 bg-emerald-500/10 font-medium text-emerald-700 text-xs dark:bg-emerald-500/20 dark:text-emerald-400"
+                  >
+                    {t('store:actions.installed')}
+                  </Badge>
+                )}
+              </div>
             </div>
 
-            {plugin.description && (
-              <p className="mt-1.5 line-clamp-2 text-muted-foreground text-xs leading-relaxed">
-                {plugin.description}
-              </p>
-            )}
-
-            {/* Metadata Row */}
-            <div className="mt-2.5 flex flex-wrap items-center gap-3 text-muted-foreground text-xs">
-              {authorName && <span>{authorName}</span>}
-              <span>v{plugin.version}</span>
-              {plugin.npm.downloads > 0 && (
-                <span className="flex items-center gap-1">
-                  <Download className="size-3" />
-                  {formatDownloads(plugin.npm.downloads)}
-                </span>
-              )}
+            {/* Install Button */}
+            <div className="flex shrink-0" onClick={(e) => e.preventDefault()}>
+              <InstallButton plugin={plugin} size="icon" variant="ghost" />
             </div>
           </div>
 
-          {/* Top Right: Install Button */}
-          <div className="flex shrink-0" onClick={(e) => e.preventDefault()}>
-            <InstallButton plugin={plugin} size="icon" variant="ghost" />
+          {/* Description */}
+          {plugin.description && (
+            <p className="line-clamp-2 text-muted-foreground text-sm leading-relaxed">
+              {plugin.description}
+            </p>
+          )}
+
+          {/* Metadata Row */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-muted-foreground/90 text-xs">
+            {authorName && (
+              <span className="inline-flex items-center gap-1.5 font-medium">
+                <User className="size-3.5 opacity-70" />
+                <span>{authorName}</span>
+              </span>
+            )}
+            <span className="inline-flex items-center gap-1.5 font-medium">
+              <Tag className="size-3.5 opacity-70" />
+              <span>v{plugin.version}</span>
+            </span>
+            {plugin.npm.downloads > 0 && (
+              <span className="inline-flex items-center gap-1.5 font-medium">
+                <Download className="size-3.5 opacity-70" />
+                <span>{formatDownloads(plugin.npm.downloads)}</span>
+              </span>
+            )}
           </div>
         </div>
       </Card>

@@ -103,7 +103,7 @@ try {
 ### Dependency Injection
 
 ```typescript
-import { singleton, inject } from "@brika/shared";
+import { singleton, inject } from "@brika/di";
 
 @singleton()
 export class MyService {

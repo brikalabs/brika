@@ -1,32 +1,26 @@
 import 'reflect-metadata';
-import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
-import { spy, TestBed } from '@brika/shared';
+import { afterEach, beforeEach, describe, expect, it, mock } from 'bun:test';
+import { useTestBed } from '@brika/di/testing';
 import { HubConfig } from '@/runtime/config';
 import { PluginActions, SparkActions } from '@/runtime/events/actions';
 import { EventSystem } from '@/runtime/events/event-system';
 import { Logger } from '@/runtime/logs/log-router';
 
+const di = useTestBed();
+
 describe('EventSystem', () => {
-  const errorSpy = spy<[string, object?]>();
+  const errorSpy = mock();
 
   beforeEach(() => {
-    errorSpy.reset();
-
-    TestBed.create()
-      .provide(HubConfig, new HubConfig())
-      .mock(Logger, {
-        info: spy(),
-        error: errorSpy,
-        warn: spy(),
-        debug: spy(),
-      })
-      .compile();
+    errorSpy.mockReset();
+    di.provide(HubConfig, new HubConfig());
+    di.stub(Logger, {
+      withSource: () => ({ error: errorSpy }),
+    });
   });
 
-  afterEach(() => TestBed.reset());
-
   it('should dispatch events', async () => {
-    const events = TestBed.get(EventSystem);
+    const events = di.get(EventSystem);
     const action = SparkActions.emit.create(
       {
         type: 'test.event',
@@ -46,8 +40,8 @@ describe('EventSystem', () => {
   });
 
   it('should notify subscribers with matching action creator', async () => {
-    const events = TestBed.get(EventSystem);
-    const handler = spy();
+    const events = di.get(EventSystem);
+    const handler = mock();
 
     // Use ActionCreator instead of string pattern
     events.subscribe(SparkActions.emit, handler);
@@ -64,12 +58,12 @@ describe('EventSystem', () => {
 
     await new Promise((resolve) => setTimeout(resolve, 10));
 
-    expect(handler.callCount).toBe(3);
+    expect(handler.mock.calls.length).toBe(3);
   });
 
   it('should support action map for subscribing to multiple actions', async () => {
-    const events = TestBed.get(EventSystem);
-    const handler = spy();
+    const events = di.get(EventSystem);
+    const handler = mock();
 
     // Use ActionMap to subscribe to all SparkActions
     events.subscribe(SparkActions, handler);
@@ -92,12 +86,12 @@ describe('EventSystem', () => {
 
     await new Promise((resolve) => setTimeout(resolve, 10));
 
-    expect(handler.callCount).toBe(3);
+    expect(handler.mock.calls.length).toBe(3);
   });
 
   it('should unsubscribe correctly', async () => {
-    const events = TestBed.get(EventSystem);
-    const handler = spy();
+    const events = di.get(EventSystem);
+    const handler = mock();
 
     const unsub = events.subscribe(SparkActions.emit, handler);
 
@@ -105,7 +99,7 @@ describe('EventSystem', () => {
       SparkActions.emit.create({ type: 'test', source: 'src', payload: null }, 'src')
     );
     await new Promise((resolve) => setTimeout(resolve, 10));
-    expect(handler.callCount).toBe(1);
+    expect(handler.mock.calls.length).toBe(1);
 
     unsub();
 
@@ -113,13 +107,13 @@ describe('EventSystem', () => {
       SparkActions.emit.create({ type: 'test', source: 'src', payload: null }, 'src')
     );
     await new Promise((resolve) => setTimeout(resolve, 10));
-    expect(handler.callCount).toBe(1); // Still 1, not called again
+    expect(handler.mock.calls.length).toBe(1); // Still 1, not called again
   });
 
   it('should notify global subscribers', async () => {
-    const events = TestBed.get(EventSystem);
-    const globalHandler = spy();
-    const patternHandler = spy();
+    const events = di.get(EventSystem);
+    const globalHandler = mock();
+    const patternHandler = mock();
 
     events.subscribeAll(globalHandler);
     events.subscribe(SparkActions.emit, (action) => {
@@ -137,12 +131,12 @@ describe('EventSystem', () => {
 
     await new Promise((resolve) => setTimeout(resolve, 10));
 
-    expect(globalHandler.callCount).toBe(2);
-    expect(patternHandler.callCount).toBe(1);
+    expect(globalHandler.mock.calls.length).toBe(2);
+    expect(patternHandler.mock.calls.length).toBe(1);
   });
 
   it('should store events in ring buffer', async () => {
-    const events = TestBed.get(EventSystem);
+    const events = di.get(EventSystem);
 
     events.dispatch(
       SparkActions.emit.create({ type: 'event.1', source: 'src', payload: { n: 1 } }, 'src')
@@ -164,7 +158,7 @@ describe('EventSystem', () => {
   });
 
   it('should handle listener errors gracefully', async () => {
-    const events = TestBed.get(EventSystem);
+    const events = di.get(EventSystem);
 
     events.subscribe(SparkActions.emit, () => {
       throw new Error('Handler crashed!');
@@ -182,8 +176,8 @@ describe('EventSystem', () => {
   });
 
   it('should support array of action creators', async () => {
-    const events = TestBed.get(EventSystem);
-    const handler = spy();
+    const events = di.get(EventSystem);
+    const handler = mock();
 
     // Subscribe to multiple action types
     events.subscribe([SparkActions.emit, PluginActions.loaded], handler);
@@ -197,6 +191,6 @@ describe('EventSystem', () => {
 
     await new Promise((resolve) => setTimeout(resolve, 10));
 
-    expect(handler.callCount).toBe(2);
+    expect(handler.mock.calls.length).toBe(2);
   });
 });

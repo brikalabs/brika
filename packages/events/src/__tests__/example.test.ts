@@ -686,3 +686,99 @@ describe('withPredicate', () => {
     ).rejects.toThrow('Timeout');
   });
 });
+
+describe('subscribeGlob', () => {
+  it('should match actions by glob pattern', async () => {
+    const events = new EventSystem();
+    const received: string[] = [];
+
+    events.subscribeGlob('test.*', (action) => {
+      received.push(action.type);
+    });
+
+    await events.dispatch(TestActions.hello.create({ message: 'Hello' }));
+    await events.dispatch(TestActions.goodbye.create({ message: 'Goodbye' }));
+    await events.dispatch(TestActions.count.create({ value: 42 }));
+
+    expect(received).toHaveLength(3);
+    expect(received).toContain('test.hello');
+    expect(received).toContain('test.goodbye');
+    expect(received).toContain('test.count');
+  });
+
+  it('should match specific pattern', async () => {
+    const events = new EventSystem();
+    const received: string[] = [];
+
+    events.subscribeGlob('test.hello', (action) => {
+      received.push(action.type);
+    });
+
+    await events.dispatch(TestActions.hello.create({ message: 'Hello' }));
+    await events.dispatch(TestActions.goodbye.create({ message: 'Goodbye' }));
+
+    expect(received).toHaveLength(1);
+    expect(received[0]).toBe('test.hello');
+  });
+
+  it('should match array of patterns', async () => {
+    const events = new EventSystem();
+    const received: string[] = [];
+
+    events.subscribeGlob(['test.hello', 'test.count'], (action) => {
+      received.push(action.type);
+    });
+
+    await events.dispatch(TestActions.hello.create({ message: 'Hello' }));
+    await events.dispatch(TestActions.goodbye.create({ message: 'Goodbye' }));
+    await events.dispatch(TestActions.count.create({ value: 42 }));
+
+    expect(received).toHaveLength(2);
+    expect(received).toContain('test.hello');
+    expect(received).toContain('test.count');
+  });
+
+  it('should unsubscribe correctly', async () => {
+    const events = new EventSystem();
+    let callCount = 0;
+
+    const unsub = events.subscribeGlob('test.*', () => {
+      callCount++;
+    });
+
+    await events.dispatch(TestActions.hello.create({ message: 'Hello' }));
+    expect(callCount).toBe(1);
+
+    unsub();
+
+    await events.dispatch(TestActions.hello.create({ message: 'Hello again' }));
+    expect(callCount).toBe(1);
+  });
+
+  it('should not match non-matching patterns', async () => {
+    const events = new EventSystem();
+    const received: string[] = [];
+
+    events.subscribeGlob('other.*', (action) => {
+      received.push(action.type);
+    });
+
+    await events.dispatch(TestActions.hello.create({ message: 'Hello' }));
+
+    expect(received).toHaveLength(0);
+  });
+
+  it('should support async handlers', async () => {
+    const events = new EventSystem();
+    let resolved = false;
+
+    events.subscribeGlob('test.*', async () => {
+      await new Promise((r) => setTimeout(r, 10));
+      resolved = true;
+    });
+
+    await events.dispatch(TestActions.hello.create({ message: 'Hello' }));
+
+    expect(resolved).toBe(true);
+  });
+});

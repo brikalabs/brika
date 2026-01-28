@@ -1,4 +1,4 @@
-import { inject } from '@brika/shared';
+import { inject } from '@brika/di';
 import { EventSystem } from '@/runtime/events/event-system';
 import { SparkStore } from '@/runtime/sparks/spark-store';
 import type { BootstrapPlugin } from '../plugin';

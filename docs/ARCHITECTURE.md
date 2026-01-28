@@ -138,7 +138,7 @@ brika/
 Uses `tsyringe` with Angular-style `inject()`:
 
 ```typescript
-import { singleton, inject } from "@brika/shared";
+import { singleton, inject } from "@brika/di";
 
 @singleton()
 export class MyService {

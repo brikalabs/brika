@@ -1,4 +1,4 @@
-import { singleton } from '@brika/shared';
+import { singleton } from '@brika/di';
 
 export interface MetricsSample {
   ts: number;

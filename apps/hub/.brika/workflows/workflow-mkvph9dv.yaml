@@ -4,7 +4,7 @@ workspace:
   name: YOLO2
   enabled: true
 plugins:
-  "@brika/blocks-builtin": workspace:*
+  "@brika/blocks-builtin": 0.2.1
 blocks:
   - id: clock-mkvphk5f-2
     type: "@brika/blocks-builtin:clock"

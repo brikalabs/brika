@@ -350,21 +350,21 @@ z.url("API endpoint")
 
 ---
 
-### z.toolRef(description?)
+### z.sparkType(description?)
 
-Reference to a tool. UI renders a tool picker dropdown.
+Reference to a spark type. UI renders a spark picker dropdown.
 
 ```typescript
-function toolRef(description?: string): ZodString
+function sparkType(description?: string): ZodString
 ```
 
 **Example:**
 
 ```typescript
-z.toolRef("Tool to execute")
+z.sparkType("Spark to trigger")
 ```
 
-**Returns:** String (tool ID, e.g., `@brika/plugin-timer:set`)
+**Returns:** String (spark type ID, e.g., `timer:timer-started`)
 
 ---
 

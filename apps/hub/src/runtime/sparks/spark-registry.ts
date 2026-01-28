@@ -5,7 +5,7 @@
  * Sparks are qualified as `pluginId:sparkId` (e.g., "plugin-switch:pressed").
  */
 
-import { inject, singleton } from '@brika/shared';
+import { inject, singleton } from '@brika/di';
 import { Logger } from '@/runtime/logs/log-router';
 
 // ─────────────────────────────────────────────────────────────────────────────

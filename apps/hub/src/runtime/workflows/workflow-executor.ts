@@ -6,23 +6,12 @@
  * Data flows through blocks via port connections.
  */
 
+import { inject } from '@brika/di';
 import type { Json } from '@brika/shared';
-import type { BlockRegistry } from '@/runtime/blocks';
-import type { Logger, ScopedLogger } from '@/runtime/logs/log-router';
-import type { PluginEventHandler } from '@/runtime/plugins/plugin-events';
-import type { PluginManager } from '@/runtime/plugins/plugin-manager';
+import { BlockRegistry } from '@/runtime/blocks';
+import { Logger } from '@/runtime/logs/log-router';
+import { PluginManager } from '@/runtime/plugins/plugin-manager';
 import type { BlockConnection, Workflow, WorkflowBlock } from './types';
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Types
-// ─────────────────────────────────────────────────────────────────────────────
-
-export interface ExecutorDeps {
-  plugins: PluginManager;
-  logs: Logger | ScopedLogger;
-  blocks: BlockRegistry;
-  events: PluginEventHandler;
-}
 
 /** Events emitted during workflow execution */
 export interface ExecutionEvent {
@@ -52,7 +41,9 @@ export interface PortBuffer {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export class WorkflowExecutor {
-  readonly #deps: ExecutorDeps;
+  readonly #plugins = inject(PluginManager);
+  readonly #logs = inject(Logger).withSource('workflow');
+  readonly #blocks = inject(BlockRegistry);
   readonly #listeners = new Set<ExecutionListener>();
 
   // Active workflow state
@@ -60,10 +51,6 @@ export class WorkflowExecutor {
   readonly #instanceIds = new Set<string>(); // Block instance IDs
   #connections = new Map<string, BlockConnection[]>(); // "blockId.port" -> targets
   readonly #buffers = new Map<string, PortBuffer>(); // "blockId:port" -> last value
-
-  constructor(deps: ExecutorDeps) {
-    this.#deps = deps;
-  }
 
   // ─────────────────────────────────────────────────────────────────────────────
   // Lifecycle
@@ -84,14 +71,16 @@ export class WorkflowExecutor {
     this.#buffers.clear();
 
     // Set up the block emit handler
-    this.#deps.plugins.setBlockEmitHandler((instanceId, port, data) => {
+    this.#plugins.setBlockEmitHandler((instanceId: string, port: string, data: Json) => {
       this.#onBlockEmit(instanceId, port, data);
     });
 
     // Set up the block log handler
-    this.#deps.plugins.setBlockLogHandler((instanceId, workflowId, level, message) => {
-      this.#onBlockLog(instanceId, workflowId, level, message);
-    });
+    this.#plugins.setBlockLogHandler(
+      (instanceId: string, workflowId: string, level: string, message: string) => {
+        this.#onBlockLog(instanceId, workflowId, level, message);
+      }
+    );
 
     // Start all blocks
     for (const block of workflow.blocks) {
@@ -103,7 +92,7 @@ export class WorkflowExecutor {
       workflowId: workflow.id,
     });
 
-    this.#deps.logs.info('Workflow started successfully', {
+    this.#logs.info('Workflow started successfully', {
       workflowId: workflow.id,
       workflowName: workflow.name,
       blockCount: workflow.blocks.length,
@@ -120,7 +109,7 @@ export class WorkflowExecutor {
 
     // Stop all block instances via IPC
     for (const instanceId of this.#instanceIds) {
-      this.#deps.plugins.stopBlockInstance(instanceId);
+      this.#plugins.stopBlockInstance(instanceId);
     }
 
     this.#instanceIds.clear();
@@ -128,15 +117,15 @@ export class WorkflowExecutor {
     this.#workflow = null;
 
     // Clear the block emit handler
-    this.#deps.plugins.clearBlockEmitHandler();
-    this.#deps.plugins.clearBlockLogHandler();
+    this.#plugins.clearBlockEmitHandler();
+    this.#plugins.clearBlockLogHandler();
 
     this.#emit({
       type: 'workflow.stopped',
       workflowId,
     });
 
-    this.#deps.logs.info('Workflow stopped successfully', { workflowId });
+    this.#logs.info('Workflow stopped successfully', { workflowId });
   }
 
   /**
@@ -163,14 +152,14 @@ export class WorkflowExecutor {
    */
   inject(blockId: string, port: string, data: Json): boolean {
     if (!this.#instanceIds.has(blockId)) {
-      this.#deps.logs.warn('Cannot inject data into unknown block instance', {
+      this.#logs.warn('Cannot inject data into unknown block instance', {
         blockId,
         port,
       });
       return false;
     }
 
-    this.#deps.plugins.pushBlockInput(blockId, port, data);
+    this.#plugins.pushBlockInput(blockId, port, data);
     return true;
   }
 
@@ -208,7 +197,7 @@ export class WorkflowExecutor {
 
     try {
       // Start the block via plugin IPC
-      const result = await this.#deps.plugins.startBlock(
+      const result = await this.#plugins.startBlock(
         resolvedType,
         block.id,
         workflow.id,
@@ -224,7 +213,7 @@ export class WorkflowExecutor {
           blockId: block.id,
           error: result.error,
         });
-        this.#deps.logs.error(
+        this.#logs.error(
           'Failed to start workflow block',
           {
             blockId: block.id,
@@ -241,7 +230,7 @@ export class WorkflowExecutor {
         blockId: block.id,
         error: String(e),
       });
-      this.#deps.logs.error(
+      this.#logs.error(
         'Failed to start workflow block',
         {
           blockId: block.id,
@@ -309,7 +298,7 @@ export class WorkflowExecutor {
     for (const conn of targets) {
       if (this.#instanceIds.has(conn.to)) {
         const targetPort = conn.toPort ?? 'in';
-        this.#deps.plugins.pushBlockInput(conn.to, targetPort, data);
+        this.#plugins.pushBlockInput(conn.to, targetPort, data);
       }
     }
   }
@@ -327,7 +316,7 @@ export class WorkflowExecutor {
     if (type.includes(':')) return type;
 
     // Search for matching block by short name
-    const allBlocks = this.#deps.blocks.list();
+    const allBlocks = this.#blocks.list();
     const match = allBlocks.find((b) => b.type?.endsWith(`:${type}`));
     return match?.type ?? type;
   }

@@ -6,8 +6,9 @@
 
 import { watch } from 'node:fs';
 import { basename, join } from 'node:path';
+import { inject, singleton } from '@brika/di';
 import type { Json } from '@brika/shared';
-import { inject, nonEmptyRecord, PositionSchema, singleton } from '@brika/shared';
+import { nonEmptyRecord, PositionSchema } from '@brika/shared';
 import { parsePortRef } from '@brika/workflow';
 import { parse as parseYAML, stringify as stringifyYAML } from 'yaml';
 import { z } from 'zod';

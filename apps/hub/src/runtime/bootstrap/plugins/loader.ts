@@ -1,4 +1,4 @@
-import { type InjectionToken, inject } from '@brika/shared';
+import { type InjectionToken, inject } from '@brika/di';
 import type { Loader } from '../loader';
 import type { BootstrapPlugin } from '../plugin';
 

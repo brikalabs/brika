@@ -229,17 +229,17 @@ export class EventBus {
  * Create an SSE-compatible event stream from the event bus.
  */
 export function createEventStream(eventBus: EventBus): ReadableStream<string> {
+  let unsubscribe: (() => void) | undefined;
+
   return new ReadableStream({
     start(controller) {
-      const unsubscribe = eventBus.observe(async (event) => {
+      unsubscribe = eventBus.observe(async (event) => {
         const data = await serialize(event);
         controller.enqueue(`data: ${data}\n\n`);
       });
-      (controller as unknown as { unsubscribe: () => void }).unsubscribe = unsubscribe;
     },
-    cancel(controller) {
-      const ctrl = controller as unknown as { unsubscribe?: () => void };
-      ctrl.unsubscribe?.();
+    cancel() {
+      unsubscribe?.();
     },
   });
 }

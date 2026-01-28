@@ -1,4 +1,4 @@
-import type { InjectionToken } from '@brika/shared';
+import type { InjectionToken } from '@brika/di';
 import type { output, ZodType } from 'zod';
 
 /**

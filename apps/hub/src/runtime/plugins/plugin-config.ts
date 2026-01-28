@@ -2,8 +2,8 @@
  * Plugin Config Service - Manages plugin preferences with Zod validation.
  */
 
+import { inject, singleton } from '@brika/di';
 import type { PreferenceDefinition } from '@brika/shared';
-import { inject, singleton } from '@brika/shared';
 import { z } from 'zod';
 import { ConfigLoader } from '@/runtime/config';
 import { StateStore } from '@/runtime/state/state-store';

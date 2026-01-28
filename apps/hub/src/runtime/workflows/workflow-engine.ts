@@ -5,13 +5,11 @@
  * Workflows run indefinitely until stopped.
  */
 
+import { inject, singleton } from '@brika/di';
 import type { BlockDefinition } from '@brika/sdk';
-import { inject, singleton } from '@brika/shared';
 import { BlockRegistry } from '@/runtime/blocks';
 import { EventSystem } from '@/runtime/events/event-system';
-import { Logger, ScopedLogger } from '@/runtime/logs/log-router';
-import { PluginEventHandler } from '@/runtime/plugins/plugin-events';
-import { PluginManager } from '@/runtime/plugins/plugin-manager';
+import { Logger, type ScopedLogger } from '@/runtime/logs/log-router';
 import type { Workflow } from './types';
 import { type ExecutionListener, WorkflowExecutor } from './workflow-executor';
 
@@ -24,8 +22,6 @@ export class WorkflowEngine {
   private readonly logs: ScopedLogger = inject(Logger).withSource('workflow');
   private readonly events = inject(EventSystem);
   private readonly blocks = inject(BlockRegistry);
-  private readonly plugins = inject(PluginManager);
-  private readonly pluginEvents = inject(PluginEventHandler);
 
   /** Registered workflows */
   readonly #workflows = new Map<string, Workflow>();
@@ -41,18 +37,6 @@ export class WorkflowEngine {
 
   init(): void {
     this.logs.info('Workflow engine initialized successfully', {});
-  }
-
-  /**
-   * Create a new executor instance for a workflow
-   */
-  #createExecutor(): WorkflowExecutor {
-    return new WorkflowExecutor({
-      plugins: this.plugins,
-      logs: this.logs,
-      blocks: this.blocks,
-      events: this.pluginEvents,
-    });
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -185,7 +169,7 @@ export class WorkflowEngine {
     }
 
     try {
-      const executor = this.#createExecutor();
+      const executor = new WorkflowExecutor();
       this.#executors.set(id, executor);
 
       // Add listener that broadcasts to global listeners

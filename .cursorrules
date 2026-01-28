@@ -91,7 +91,7 @@ export const myBlock = defineBlock({
 
 ### Adding Hub Service
 ```typescript
-import { singleton, inject } from "@brika/shared";
+import { singleton, inject } from "@brika/di";
 
 @singleton()
 export class MyService {

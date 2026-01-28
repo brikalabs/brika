@@ -4,7 +4,7 @@
  * Loads and validates brika.yml configuration
  */
 
-import { inject, singleton } from '@brika/shared';
+import { inject, singleton } from '@brika/di';
 import YAML from 'yaml';
 import { Logger } from '../logs/log-router';
 import { BrikaInitializer } from './brika-initializer';

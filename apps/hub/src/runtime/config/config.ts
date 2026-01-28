@@ -1,4 +1,4 @@
-import { inject, singleton } from '@brika/shared';
+import { inject, singleton } from '@brika/di';
 import { ConfigLoader } from './config-loader';
 
 @singleton()

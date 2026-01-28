@@ -77,7 +77,7 @@ This starts both the Hub and UI in watch mode.
 4. Initialize in bootstrap
 
 ```typescript
-import { singleton, inject } from "@brika/shared";
+import { singleton, inject } from "@brika/di";
 import { Logger } from "../logs/logger";
 
 @singleton()

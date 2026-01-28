@@ -7,6 +7,24 @@
 import { getContext } from '../context';
 import type { AnyObj } from '../types';
 
+// Atomic grouping via lookahead prevents backtracking (ReDoS protection)
+const STACK_REGEX_WITH_PARENS = /\((?=((?:[A-Za-z]:)?[^):]+))\1:(\d+):(\d+)\)$/;
+const STACK_REGEX_WITHOUT_PARENS = /at\s+(?=((?:[A-Za-z]:)?[^:\s]+))\1:(\d+):(\d+)$/;
+
+/**
+ * Parses a single stack trace line to extract file path and line number.
+ * Exported for testing purposes.
+ */
+export function parseStackLine(line: string): { sourceFile: string; sourceLine: number } | null {
+  const match = STACK_REGEX_WITH_PARENS.exec(line) || STACK_REGEX_WITHOUT_PARENS.exec(line);
+  if (!match || !match[1] || !match[2]) return null;
+
+  return {
+    sourceFile: match[1],
+    sourceLine: Number.parseInt(match[2], 10),
+  };
+}
+
 /**
  * Captures the call site information from the stack trace.
  * Returns file path and line number where the log was triggered.
@@ -21,16 +39,10 @@ function captureCallSite(depth = 3): { sourceFile?: string; sourceLine?: number 
   const callerLine = lines[depth];
   if (!callerLine) return {};
 
-  // Parse stack line: "at functionName (file:line:column)" or "at file:line:column"
-  const match =
-    callerLine.match(/\((.+):(\d+):(\d+)\)$/) || callerLine.match(/at\s+(.+):(\d+):(\d+)$/);
-  if (!match) return {};
+  const result = parseStackLine(callerLine);
+  if (!result) return {};
 
-  const [, filePath, lineNumber] = match;
-  return {
-    sourceFile: filePath,
-    sourceLine: lineNumber ? Number.parseInt(lineNumber, 10) : undefined,
-  };
+  return result;
 }
 
 /**

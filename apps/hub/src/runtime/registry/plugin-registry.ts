@@ -1,5 +1,5 @@
 import { join, resolve } from 'node:path';
-import { inject, singleton } from '@brika/shared';
+import { inject, singleton } from '@brika/di';
 import { ConfigLoader, HubConfig } from '@/runtime/config';
 import { Logger } from '@/runtime/logs/log-router';
 import type { InstalledPackage, OperationProgress, UpdateInfo } from './types';

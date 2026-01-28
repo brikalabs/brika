@@ -6,13 +6,7 @@ import { describe, expect, it } from 'bun:test';
 
 // Since transformActionToWorkflowEvent is not exported, we'll test the transformation logic
 // by creating a similar function here for testing purposes
-type WorkflowEventType =
-  | 'block.input'
-  | 'block.output'
-  | 'block.state'
-  | 'block.error'
-  | 'workflow.start'
-  | 'workflow.stop';
+type WorkflowEventType = 'start' | 'stop' | 'input' | 'output' | 'state' | 'error';
 
 interface WorkflowEvent {
   type: WorkflowEventType;
@@ -281,7 +275,7 @@ describe('transformActionToWorkflowEvent - Edge Cases', () => {
 
     const result = transformActionToWorkflowEvent(action, 'test');
 
-    expect(result.type).toBe('');
+    expect(result.type).toBe('' as WorkflowEventType);
   });
 
   it('should handle type with no dots', () => {

@@ -139,17 +139,17 @@ export const registryRoutes = group('/api/registry', [
       const pluginManager = inject(PluginManager);
       const { plugins, total } = await npmSearch.search(query.q, query.limit, query.offset);
 
-      // Check installed status for each plugin
-      const pluginsWithInstalledStatus = plugins.map((plugin) => {
-        const installedPlugin = pluginManager.getByName(plugin.package.name);
+      // Enrich with installed status
+      const enrichedPlugins = plugins.map((plugin) => {
+        const installed = pluginManager.getByName(plugin.package.name);
         return {
           ...plugin,
-          installed: installedPlugin !== null,
-          installedVersion: installedPlugin?.version,
+          installed: installed !== null,
+          installedVersion: installed?.version,
         };
       });
 
-      return { plugins: pluginsWithInstalledStatus, total };
+      return { plugins: enrichedPlugins, total };
     }
   ),
 

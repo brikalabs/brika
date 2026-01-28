@@ -4,11 +4,22 @@
  */
 import 'reflect-metadata';
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { TestBed } from '@brika/shared';
-import { BlockRegistry } from '@/runtime/blocks/block-registry';
-import { Logger } from '@/runtime/logs/log-router';
+import { useTestBed } from '@brika/di/testing';
 import type { BlockDefinition } from '@brika/sdk';
 import type { PluginInfo } from '@/runtime/blocks/block-registry';
+import { BlockRegistry } from '@/runtime/blocks/block-registry';
+import { Logger } from '@/runtime/logs/log-router';
+
+const di = useTestBed();
+
+// Test-specific type that includes optional metadata fields
+type TestBlockDefinition = BlockDefinition & {
+  category?: string;
+  name?: string;
+  description?: string;
+  icon?: string;
+  color?: string;
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Test Fixtures
@@ -16,12 +27,9 @@ import type { PluginInfo } from '@/runtime/blocks/block-registry';
 
 const createBasicBlock = (id = 'test-block'): BlockDefinition => ({
   id,
-  category: 'utility',
-  name: `Block ${id}`,
-  description: `A ${id}`,
   inputs: [],
   outputs: [],
-  configSchema: {},
+  schema: { type: 'object', properties: {} },
 });
 
 const createPlugin = (id = 'test-plugin'): PluginInfo => ({
@@ -34,21 +42,8 @@ describe('BlockRegistry - Registration', () => {
   let registry: BlockRegistry;
 
   beforeEach(() => {
-    TestBed.create()
-      .provide(Logger, {
-        withSource: () => ({
-          info: () => {},
-          warn: () => {},
-          error: () => {},
-        }),
-      })
-      .compile();
-
-    registry = TestBed.inject(BlockRegistry);
-  });
-
-  afterEach(() => {
-    TestBed.reset();
+    di.stub(Logger);
+    registry = di.inject(BlockRegistry);
   });
 
   test('should register a block successfully', () => {
@@ -62,14 +57,14 @@ describe('BlockRegistry - Registration', () => {
   });
 
   test('should create qualified type name from plugin and block', () => {
-    const block: BlockDefinition = {
+    const block: TestBlockDefinition = {
       id: 'timer',
       category: 'input',
       name: 'Timer',
       description: 'Timer block',
       inputs: [],
       outputs: [],
-      configSchema: {},
+      schema: { type: 'object', properties: {} },
     };
 
     const plugin: PluginInfo = {
@@ -116,13 +111,13 @@ describe('BlockRegistry - Registration', () => {
       version: '1.0.0',
     };
 
-    const block: BlockDefinition = {
+    const block: TestBlockDefinition = {
       id: 'same-id',
       category: 'utility',
       name: 'Same ID Block',
       inputs: [],
       outputs: [],
-      configSchema: {},
+      schema: { type: 'object', properties: {} },
     };
 
     registry.register(block, plugin1);
@@ -138,21 +133,8 @@ describe('BlockRegistry - Unregistration', () => {
   let registry: BlockRegistry;
 
   beforeEach(() => {
-    TestBed.create()
-      .provide(Logger, {
-        withSource: () => ({
-          info: () => {},
-          warn: () => {},
-          error: () => {},
-        }),
-      })
-      .compile();
-
-    registry = TestBed.inject(BlockRegistry);
-  });
-
-  afterEach(() => {
-    TestBed.reset();
+    di.stub(Logger);
+    registry = di.inject(BlockRegistry);
   });
 
   test('should unregister all blocks from a plugin', () => {
@@ -161,22 +143,22 @@ describe('BlockRegistry - Unregistration', () => {
       version: '1.0.0',
     };
 
-    const block1: BlockDefinition = {
+    const block1: TestBlockDefinition = {
       id: 'block-1',
       category: 'utility',
       name: 'Block 1',
       inputs: [],
       outputs: [],
-      configSchema: {},
+      schema: { type: 'object', properties: {} },
     };
 
-    const block2: BlockDefinition = {
+    const block2: TestBlockDefinition = {
       id: 'block-2',
       category: 'utility',
       name: 'Block 2',
       inputs: [],
       outputs: [],
-      configSchema: {},
+      schema: { type: 'object', properties: {} },
     };
 
     registry.register(block1, plugin);
@@ -206,13 +188,13 @@ describe('BlockRegistry - Unregistration', () => {
       version: '1.0.0',
     };
 
-    const block: BlockDefinition = {
+    const block: TestBlockDefinition = {
       id: 'block',
       category: 'utility',
       name: 'Block',
       inputs: [],
       outputs: [],
-      configSchema: {},
+      schema: { type: 'object', properties: {} },
     };
 
     registry.register(block, plugin1);
@@ -232,31 +214,18 @@ describe('BlockRegistry - Queries', () => {
   let registry: BlockRegistry;
 
   beforeEach(() => {
-    TestBed.create()
-      .provide(Logger, {
-        withSource: () => ({
-          info: () => {},
-          warn: () => {},
-          error: () => {},
-        }),
-      })
-      .compile();
-
-    registry = TestBed.inject(BlockRegistry);
-  });
-
-  afterEach(() => {
-    TestBed.reset();
+    di.stub(Logger);
+    registry = di.inject(BlockRegistry);
   });
 
   test('should get registered block by type', () => {
-    const block: BlockDefinition = {
+    const block: TestBlockDefinition = {
       id: 'test-block',
       category: 'utility',
       name: 'Test Block',
       inputs: [],
       outputs: [],
-      configSchema: {},
+      schema: { type: 'object', properties: {} },
     };
 
     const plugin: PluginInfo = {
@@ -279,13 +248,13 @@ describe('BlockRegistry - Queries', () => {
   });
 
   test('should check if block exists', () => {
-    const block: BlockDefinition = {
+    const block: TestBlockDefinition = {
       id: 'exists',
       category: 'utility',
       name: 'Exists Block',
       inputs: [],
       outputs: [],
-      configSchema: {},
+      schema: { type: 'object', properties: {} },
     };
 
     const plugin: PluginInfo = {
@@ -305,22 +274,22 @@ describe('BlockRegistry - Queries', () => {
       version: '1.0.0',
     };
 
-    const block1: BlockDefinition = {
+    const block1: TestBlockDefinition = {
       id: 'block-a',
       category: 'utility',
       name: 'Block A',
       inputs: [],
       outputs: [],
-      configSchema: {},
+      schema: { type: 'object', properties: {} },
     };
 
-    const block2: BlockDefinition = {
+    const block2: TestBlockDefinition = {
       id: 'block-z',
       category: 'utility',
       name: 'Block Z',
       inputs: [],
       outputs: [],
-      configSchema: {},
+      schema: { type: 'object', properties: {} },
     };
 
     registry.register(block2, plugin);
@@ -345,13 +314,13 @@ describe('BlockRegistry - Queries', () => {
       version: '1.0.0',
     };
 
-    const block: BlockDefinition = {
+    const block: TestBlockDefinition = {
       id: 'block',
       category: 'utility',
       name: 'Block',
       inputs: [],
       outputs: [],
-      configSchema: {},
+      schema: { type: 'object', properties: {} },
     };
 
     registry.register(block, plugin1);
@@ -371,31 +340,31 @@ describe('BlockRegistry - Queries', () => {
       version: '1.0.0',
     };
 
-    const inputBlock: BlockDefinition = {
+    const inputBlock: TestBlockDefinition = {
       id: 'input',
       category: 'input',
       name: 'Input Block',
       inputs: [],
       outputs: [],
-      configSchema: {},
+      schema: { type: 'object', properties: {} },
     };
 
-    const outputBlock: BlockDefinition = {
+    const outputBlock: TestBlockDefinition = {
       id: 'output',
       category: 'output',
       name: 'Output Block',
       inputs: [],
       outputs: [],
-      configSchema: {},
+      schema: { type: 'object', properties: {} },
     };
 
-    const utilityBlock: BlockDefinition = {
+    const utilityBlock: TestBlockDefinition = {
       id: 'utility',
       category: 'utility',
       name: 'Utility Block',
       inputs: [],
       outputs: [],
-      configSchema: {},
+      schema: { type: 'object', properties: {} },
     };
 
     registry.register(inputBlock, plugin);
@@ -417,31 +386,18 @@ describe('BlockRegistry - Plugin Info', () => {
   let registry: BlockRegistry;
 
   beforeEach(() => {
-    TestBed.create()
-      .provide(Logger, {
-        withSource: () => ({
-          info: () => {},
-          warn: () => {},
-          error: () => {},
-        }),
-      })
-      .compile();
-
-    registry = TestBed.inject(BlockRegistry);
-  });
-
-  afterEach(() => {
-    TestBed.reset();
+    di.stub(Logger);
+    registry = di.inject(BlockRegistry);
   });
 
   test('should get plugin info for registered block', () => {
-    const block: BlockDefinition = {
+    const block: TestBlockDefinition = {
       id: 'test-block',
       category: 'utility',
       name: 'Test Block',
       inputs: [],
       outputs: [],
-      configSchema: {},
+      schema: { type: 'object', properties: {} },
     };
 
     const plugin: PluginInfo = {
@@ -471,21 +427,8 @@ describe('BlockRegistry - Listeners', () => {
   let registry: BlockRegistry;
 
   beforeEach(() => {
-    TestBed.create()
-      .provide(Logger, {
-        withSource: () => ({
-          info: () => {},
-          warn: () => {},
-          error: () => {},
-        }),
-      })
-      .compile();
-
-    registry = TestBed.inject(BlockRegistry);
-  });
-
-  afterEach(() => {
-    TestBed.reset();
+    di.stub(Logger);
+    registry = di.inject(BlockRegistry);
   });
 
   test('should notify listeners when block is registered', () => {
@@ -495,13 +438,13 @@ describe('BlockRegistry - Listeners', () => {
       registeredTypes.push(type);
     });
 
-    const block: BlockDefinition = {
+    const block: TestBlockDefinition = {
       id: 'test-block',
       category: 'utility',
       name: 'Test Block',
       inputs: [],
       outputs: [],
-      configSchema: {},
+      schema: { type: 'object', properties: {} },
     };
 
     const plugin: PluginInfo = {
@@ -521,13 +464,13 @@ describe('BlockRegistry - Listeners', () => {
     registry.onBlockRegistered((type) => types1.push(type));
     registry.onBlockRegistered((type) => types2.push(type));
 
-    const block: BlockDefinition = {
+    const block: TestBlockDefinition = {
       id: 'test-block',
       category: 'utility',
       name: 'Test Block',
       inputs: [],
       outputs: [],
-      configSchema: {},
+      schema: { type: 'object', properties: {} },
     };
 
     const plugin: PluginInfo = {
@@ -553,13 +496,13 @@ describe('BlockRegistry - Listeners', () => {
       version: '1.0.0',
     };
 
-    const block1: BlockDefinition = {
+    const block1: TestBlockDefinition = {
       id: 'block-1',
       category: 'utility',
       name: 'Block 1',
       inputs: [],
       outputs: [],
-      configSchema: {},
+      schema: { type: 'object', properties: {} },
     };
 
     registry.register(block1, plugin);
@@ -567,13 +510,13 @@ describe('BlockRegistry - Listeners', () => {
 
     unsubscribe();
 
-    const block2: BlockDefinition = {
+    const block2: TestBlockDefinition = {
       id: 'block-2',
       category: 'utility',
       name: 'Block 2',
       inputs: [],
       outputs: [],
-      configSchema: {},
+      schema: { type: 'object', properties: {} },
     };
 
     registry.register(block2, plugin);
@@ -587,21 +530,8 @@ describe('BlockRegistry - Size', () => {
   let registry: BlockRegistry;
 
   beforeEach(() => {
-    TestBed.create()
-      .provide(Logger, {
-        withSource: () => ({
-          info: () => {},
-          warn: () => {},
-          error: () => {},
-        }),
-      })
-      .compile();
-
-    registry = TestBed.inject(BlockRegistry);
-  });
-
-  afterEach(() => {
-    TestBed.reset();
+    di.stub(Logger);
+    registry = di.inject(BlockRegistry);
   });
 
   test('should report correct size', () => {
@@ -612,13 +542,13 @@ describe('BlockRegistry - Size', () => {
       version: '1.0.0',
     };
 
-    const block: BlockDefinition = {
+    const block: TestBlockDefinition = {
       id: 'block',
       category: 'utility',
       name: 'Block',
       inputs: [],
       outputs: [],
-      configSchema: {},
+      schema: { type: 'object', properties: {} },
     };
 
     registry.register(block, plugin);
@@ -629,5 +559,501 @@ describe('BlockRegistry - Size', () => {
 
     registry.unregisterPlugin('test-plugin');
     expect(registry.size).toBe(0);
+  });
+});
+
+describe('BlockRegistry - Validation', () => {
+  let registry: BlockRegistry;
+
+  beforeEach(() => {
+    di.stub(Logger);
+    registry = di.inject(BlockRegistry);
+  });
+
+  test('validateConfig returns error for unknown block type', () => {
+    const result = registry.validateConfig('unknown:block', {});
+
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContain('Unknown block type: unknown:block');
+  });
+
+  test('validateConfig validates required fields', () => {
+    const block: TestBlockDefinition = {
+      id: 'test-block',
+      category: 'utility',
+      name: 'Test Block',
+      inputs: [],
+      outputs: [],
+      schema: {
+        type: 'object',
+        required: ['name', 'value'],
+        properties: {
+          name: { type: 'string' },
+          value: { type: 'number' },
+        },
+      },
+    };
+
+    const plugin: PluginInfo = {
+      id: 'test-plugin',
+      version: '1.0.0',
+    };
+
+    registry.register(block, plugin);
+
+    const result = registry.validateConfig('test-plugin:test-block', {});
+
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContain('Missing required field: name');
+    expect(result.errors).toContain('Missing required field: value');
+  });
+
+  test('validateConfig validates property types', () => {
+    const block: TestBlockDefinition = {
+      id: 'test-block',
+      category: 'utility',
+      name: 'Test Block',
+      inputs: [],
+      outputs: [],
+      schema: {
+        type: 'object',
+        properties: {
+          name: { type: 'string' },
+          count: { type: 'number' },
+          enabled: { type: 'boolean' },
+          items: { type: 'array' },
+          options: { type: 'object' },
+        },
+      },
+    };
+
+    const plugin: PluginInfo = {
+      id: 'test-plugin',
+      version: '1.0.0',
+    };
+
+    registry.register(block, plugin);
+
+    const result = registry.validateConfig('test-plugin:test-block', {
+      name: 123, // should be string
+      count: 'five', // should be number
+      enabled: 'yes', // should be boolean
+      items: {}, // should be array
+      options: [], // should be object
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContain('Field "name" should be string');
+    expect(result.errors).toContain('Field "count" should be number');
+    expect(result.errors).toContain('Field "enabled" should be boolean');
+    expect(result.errors).toContain('Field "items" should be array');
+    expect(result.errors).toContain('Field "options" should be object');
+  });
+
+  test('validateConfig passes for valid config', () => {
+    const block: TestBlockDefinition = {
+      id: 'test-block',
+      category: 'utility',
+      name: 'Test Block',
+      inputs: [],
+      outputs: [],
+      schema: {
+        type: 'object',
+        required: ['name'],
+        properties: {
+          name: { type: 'string' },
+          count: { type: 'number' },
+        },
+      },
+    };
+
+    const plugin: PluginInfo = {
+      id: 'test-plugin',
+      version: '1.0.0',
+    };
+
+    registry.register(block, plugin);
+
+    const result = registry.validateConfig('test-plugin:test-block', {
+      name: 'test',
+      count: 42,
+    });
+
+    expect(result.valid).toBe(true);
+    expect(result.errors).toBeUndefined();
+  });
+
+  test('validateConfig handles unknown type as valid', () => {
+    const block: TestBlockDefinition = {
+      id: 'test-block',
+      category: 'utility',
+      name: 'Test Block',
+      inputs: [],
+      outputs: [],
+      schema: {
+        type: 'object',
+        properties: {
+          custom: { type: 'custom-type' as 'string' },
+        },
+      },
+    };
+
+    const plugin: PluginInfo = {
+      id: 'test-plugin',
+      version: '1.0.0',
+    };
+
+    registry.register(block, plugin);
+
+    const result = registry.validateConfig('test-plugin:test-block', {
+      custom: 'anything',
+    });
+
+    expect(result.valid).toBe(true);
+  });
+});
+
+describe('BlockRegistry - Connection Validation', () => {
+  let registry: BlockRegistry;
+
+  beforeEach(() => {
+    di.stub(Logger);
+    registry = di.inject(BlockRegistry);
+  });
+
+  test('validateConnections returns error for unknown source block', () => {
+    const result = registry.validateConnections(
+      [{ id: 'target', type: 'plugin:block' }],
+      [{ from: 'unknown', to: 'target' }]
+    );
+
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContain('Unknown source block: unknown');
+  });
+
+  test('validateConnections returns error for unknown target block', () => {
+    const result = registry.validateConnections(
+      [{ id: 'source', type: 'plugin:block' }],
+      [{ from: 'source', to: 'unknown' }]
+    );
+
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContain('Unknown target block: unknown');
+  });
+
+  test('validateConnections returns error for unknown block type', () => {
+    const result = registry.validateConnections(
+      [
+        { id: 'source', type: 'unknown:source' },
+        { id: 'target', type: 'unknown:target' },
+      ],
+      [{ from: 'source', to: 'target' }]
+    );
+
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContain('Unknown block type: unknown:source');
+  });
+
+  test('validateConnections returns error for missing output port', () => {
+    const sourceBlock: TestBlockDefinition = {
+      id: 'source',
+      category: 'utility',
+      name: 'Source',
+      inputs: [],
+      outputs: [],
+      schema: { type: 'object', properties: {} },
+    };
+
+    const targetBlock: TestBlockDefinition = {
+      id: 'target',
+      category: 'utility',
+      name: 'Target',
+      inputs: [{ id: 'in', name: 'Input', direction: 'input' as const, typeName: 'string' }],
+      outputs: [],
+      schema: { type: 'object', properties: {} },
+    };
+
+    const plugin: PluginInfo = { id: 'plugin', version: '1.0.0' };
+
+    registry.register(sourceBlock, plugin);
+    registry.register(targetBlock, plugin);
+
+    const result = registry.validateConnections(
+      [
+        { id: 'source', type: 'plugin:source' },
+        { id: 'target', type: 'plugin:target' },
+      ],
+      [{ from: 'source', fromPort: 'out', to: 'target', toPort: 'in' }]
+    );
+
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContain('Block "source" has no output port "out"');
+  });
+
+  test('validateConnections returns error for missing input port', () => {
+    const sourceBlock: TestBlockDefinition = {
+      id: 'source',
+      category: 'utility',
+      name: 'Source',
+      inputs: [],
+      outputs: [{ id: 'out', name: 'Output', direction: 'output' as const, typeName: 'string' }],
+      schema: { type: 'object', properties: {} },
+    };
+
+    const targetBlock: TestBlockDefinition = {
+      id: 'target',
+      category: 'utility',
+      name: 'Target',
+      inputs: [],
+      outputs: [],
+      schema: { type: 'object', properties: {} },
+    };
+
+    const plugin: PluginInfo = { id: 'plugin', version: '1.0.0' };
+
+    registry.register(sourceBlock, plugin);
+    registry.register(targetBlock, plugin);
+
+    const result = registry.validateConnections(
+      [
+        { id: 'source', type: 'plugin:source' },
+        { id: 'target', type: 'plugin:target' },
+      ],
+      [{ from: 'source', fromPort: 'out', to: 'target', toPort: 'in' }]
+    );
+
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContain('Block "target" has no input port "in"');
+  });
+
+  test('validateConnections returns error for type mismatch', () => {
+    const sourceBlock: TestBlockDefinition = {
+      id: 'source',
+      category: 'utility',
+      name: 'Source',
+      inputs: [],
+      outputs: [{ id: 'out', name: 'Output', direction: 'output' as const, typeName: 'array' }],
+      schema: { type: 'object', properties: {} },
+    };
+
+    const targetBlock: TestBlockDefinition = {
+      id: 'target',
+      category: 'utility',
+      name: 'Target',
+      inputs: [{ id: 'in', name: 'Input', direction: 'input' as const, typeName: 'boolean' }],
+      outputs: [],
+      schema: { type: 'object', properties: {} },
+    };
+
+    const plugin: PluginInfo = { id: 'plugin', version: '1.0.0' };
+
+    registry.register(sourceBlock, plugin);
+    registry.register(targetBlock, plugin);
+
+    const result = registry.validateConnections(
+      [
+        { id: 'source', type: 'plugin:source' },
+        { id: 'target', type: 'plugin:target' },
+      ],
+      [{ from: 'source', fromPort: 'out', to: 'target', toPort: 'in' }]
+    );
+
+    expect(result.valid).toBe(false);
+    expect(result.errors?.[0]).toContain('Type mismatch');
+  });
+
+  test('validateConnections passes for valid connections', () => {
+    const sourceBlock: TestBlockDefinition = {
+      id: 'source',
+      category: 'utility',
+      name: 'Source',
+      inputs: [],
+      outputs: [{ id: 'out', name: 'Output', direction: 'output' as const, typeName: 'string' }],
+      schema: { type: 'object', properties: {} },
+    };
+
+    const targetBlock: TestBlockDefinition = {
+      id: 'target',
+      category: 'utility',
+      name: 'Target',
+      inputs: [{ id: 'in', name: 'Input', direction: 'input' as const, typeName: 'string' }],
+      outputs: [],
+      schema: { type: 'object', properties: {} },
+    };
+
+    const plugin: PluginInfo = { id: 'plugin', version: '1.0.0' };
+
+    registry.register(sourceBlock, plugin);
+    registry.register(targetBlock, plugin);
+
+    const result = registry.validateConnections(
+      [
+        { id: 'source', type: 'plugin:source' },
+        { id: 'target', type: 'plugin:target' },
+      ],
+      [{ from: 'source', fromPort: 'out', to: 'target', toPort: 'in' }]
+    );
+
+    expect(result.valid).toBe(true);
+    expect(result.errors).toBeUndefined();
+  });
+
+  test('validateConnections uses default port names', () => {
+    const sourceBlock: TestBlockDefinition = {
+      id: 'source',
+      category: 'utility',
+      name: 'Source',
+      inputs: [],
+      outputs: [{ id: 'out', name: 'Output', direction: 'output' as const, typeName: 'string' }],
+      schema: { type: 'object', properties: {} },
+    };
+
+    const targetBlock: TestBlockDefinition = {
+      id: 'target',
+      category: 'utility',
+      name: 'Target',
+      inputs: [{ id: 'in', name: 'Input', direction: 'input' as const, typeName: 'string' }],
+      outputs: [],
+      schema: { type: 'object', properties: {} },
+    };
+
+    const plugin: PluginInfo = { id: 'plugin', version: '1.0.0' };
+
+    registry.register(sourceBlock, plugin);
+    registry.register(targetBlock, plugin);
+
+    const result = registry.validateConnections(
+      [
+        { id: 'source', type: 'plugin:source' },
+        { id: 'target', type: 'plugin:target' },
+      ],
+      [{ from: 'source', to: 'target' }] // No port names specified
+    );
+
+    // Should use 'out' and 'in' as defaults
+    expect(result.valid).toBe(true);
+  });
+});
+
+describe('BlockRegistry - Provider and Plugins', () => {
+  let registry: BlockRegistry;
+
+  beforeEach(() => {
+    di.stub(Logger);
+    registry = di.inject(BlockRegistry);
+  });
+
+  test('getProvider returns plugin ID for registered block', () => {
+    const block = createBasicBlock('test');
+    const plugin = createPlugin('my-plugin');
+
+    registry.register(block, plugin);
+
+    expect(registry.getProvider('my-plugin:test')).toBe('my-plugin');
+  });
+
+  test('getProvider returns undefined for unknown block', () => {
+    expect(registry.getProvider('unknown:block')).toBeUndefined();
+  });
+
+  test('getPlugins returns all registered plugins', () => {
+    const plugin1 = createPlugin('plugin-1');
+    const plugin2 = createPlugin('plugin-2');
+    const block = createBasicBlock();
+
+    registry.register(block, plugin1);
+    registry.register(block, plugin2);
+
+    const plugins = registry.getPlugins();
+
+    expect(plugins.length).toBe(2);
+    expect(plugins.map((p) => p.id)).toContain('plugin-1');
+    expect(plugins.map((p) => p.id)).toContain('plugin-2');
+  });
+
+  test('getPlugins returns empty array when no plugins registered', () => {
+    const plugins = registry.getPlugins();
+    expect(plugins).toEqual([]);
+  });
+});
+
+describe('BlockRegistry - listByOwner', () => {
+  let registry: BlockRegistry;
+
+  beforeEach(() => {
+    di.stub(Logger);
+    registry = di.inject(BlockRegistry);
+  });
+
+  test('listByOwner returns block summaries for plugin', () => {
+    const block: TestBlockDefinition = {
+      id: 'test-block',
+      category: 'utility',
+      name: 'Test Block',
+      description: 'A test block',
+      icon: 'test-icon',
+      color: '#ff0000',
+      inputs: [{ id: 'in', name: 'Input', direction: 'input' as const, typeName: 'string' }],
+      outputs: [{ id: 'out', name: 'Output', direction: 'output' as const, typeName: 'number' }],
+      schema: { type: 'object', properties: {} },
+    };
+
+    const plugin: PluginInfo = { id: 'my-plugin', version: '1.0.0' };
+
+    registry.register(block, plugin);
+
+    const summaries = registry.listByOwner('my-plugin');
+
+    expect(summaries.length).toBe(1);
+    expect(summaries[0].id).toBe('my-plugin:test-block');
+    expect(summaries[0].name).toBe('Test Block');
+    expect(summaries[0].description).toBe('A test block');
+    expect(summaries[0].category as string).toBe('utility');
+    expect(summaries[0].icon).toBe('test-icon');
+    expect(summaries[0].color).toBe('#ff0000');
+    expect(summaries[0].inputs).toHaveLength(1);
+    expect(summaries[0].outputs).toHaveLength(1);
+  });
+
+  test('listByOwner returns empty array for unknown plugin', () => {
+    const summaries = registry.listByOwner('unknown-plugin');
+    expect(summaries).toEqual([]);
+  });
+});
+
+describe('BlockRegistry - Listener Error Handling', () => {
+  let registry: BlockRegistry;
+  let errorLogs: unknown[];
+
+  beforeEach(() => {
+    errorLogs = [];
+    // Use stub with custom error override to capture error logs
+    // Other methods (info, warn, debug, etc.) are auto-stubbed
+    di.stub(Logger, {
+      withSource: () => ({ error: (...args: unknown[]) => errorLogs.push(args) }),
+    });
+    registry = di.inject(BlockRegistry);
+  });
+
+  test('continues notifying other listeners when one throws', () => {
+    const successfulCalls: string[] = [];
+
+    // First listener throws
+    registry.onBlockRegistered(() => {
+      throw new Error('Listener error');
+    });
+
+    // Second listener should still be called
+    registry.onBlockRegistered((type) => {
+      successfulCalls.push(type);
+    });
+
+    const block = createBasicBlock();
+    const plugin = createPlugin();
+
+    registry.register(block, plugin);
+
+    expect(successfulCalls).toContain('test-plugin:test-block');
+    expect(errorLogs.length).toBeGreaterThan(0);
   });
 });

@@ -1,15 +1,11 @@
+import { inject, singleton } from '@brika/di';
+import { HttpClient } from '@brika/http';
 import type { NpmPackageData, NpmSearchResult } from '@brika/shared';
-import { inject, singleton } from '@brika/shared';
 import { Logger } from '@/runtime/logs/log-router';
 
 const NPM_REGISTRY_URL = 'https://registry.npmjs.org';
 const NPM_SEARCH_URL = 'https://registry.npmjs.org/-/v1/search';
-const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
-
-interface CachedResult<T> {
-  data: T;
-  timestamp: number;
-}
+const NPM_DOWNLOADS_URL = 'https://api.npmjs.org/downloads/point';
 
 interface NpmApiSearchResult {
   objects: Array<{
@@ -71,21 +67,17 @@ interface NpmApiPackageResponse {
 
 /**
  * Service for searching npm registry for Brika plugins.
- * Implements caching to avoid rate limiting.
  */
 @singleton()
 export class NpmSearchService {
   readonly #log = inject(Logger);
-  readonly #cache = new Map<string, CachedResult<unknown>>();
+  readonly #http = inject(HttpClient);
 
   /**
    * Search npm for Brika plugins.
    *
-   * Uses a multi-strategy approach:
-   * 1. Primary: Search for packages that depend on @brika/sdk (most reliable)
-   * 2. Secondary: Also include packages with 'brika-plugin' keyword
-   *
-   * This ensures we find all plugins, even if authors forget to add the keyword.
+   * Searches for packages with 'brika' keyword, then verifies they have engines.brika
+   * to ensure they're actually Brika plugins.
    *
    * @param query - Search query string (optional, searches plugin names/descriptions)
    * @param limit - Maximum number of results (default: 20)
@@ -97,83 +89,112 @@ export class NpmSearchService {
     limit = 20,
     offset = 0
   ): Promise<{ plugins: NpmSearchResult[]; total: number }> {
-    const cacheKey = `search:${query || ''}:${limit}:${offset}`;
-    const cached = this.#getFromCache<{ plugins: NpmSearchResult[]; total: number }>(cacheKey);
-
-    if (cached) {
-      return cached;
-    }
-
     try {
-      // Build search query - Use hybrid approach for reliability
-      // 1. Search for packages in @brika scope OR with brika keyword
-      // 2. Filter by dependency on backend (npm's dependency search doesn't work well with scoped packages)
-      const searchTerms = [];
-
-      // Search broadly for brika-related packages
+      // Build search query - use scope search or keyword search
+      let searchQuery: string;
       if (query) {
-        // If user provides query, combine it with brika keyword
-        searchTerms.push(`keywords:brika ${query}`);
+        // Search within @brika scope or packages with brika keyword
+        searchQuery = `keywords:brika ${query}`;
       } else {
-        // Default: search for all packages with brika keyword
-        searchTerms.push('keywords:brika');
+        // Default: all packages with brika keyword
+        searchQuery = 'keywords:brika';
       }
 
-      const searchQuery = searchTerms.join(' ');
-      const url = `${NPM_SEARCH_URL}?text=${encodeURIComponent(searchQuery)}&size=${limit * 2}&from=${offset}`;
+      // Fetch more results to account for filtering
+      const fetchSize = Math.max(limit * 5, 50);
 
-      this.#log.info('Searching npm registry', { query: searchQuery });
-      const response = await fetch(url);
+      this.#log.info('Searching npm registry', { query: searchQuery, limit, offset });
 
-      if (!response.ok) {
-        throw new Error(`npm search failed: ${response.statusText}`);
-      }
+      const data = await this.#http
+        .get<NpmApiSearchResult>(NPM_SEARCH_URL)
+        .params({
+          text: searchQuery,
+          size: String(fetchSize),
+          from: String(offset),
+        })
+        .cache({ ttl: 300_000, tags: ['npm-search'] }) // Cache for 5 minutes
+        .data();
 
-      const data = (await response.json()) as NpmApiSearchResult;
+      // Verify and enrich packages in parallel
+      const validatedPlugins = await this.#validateAndEnrichPlugins(data.objects, limit, query);
 
-      // Filter and enrich results - only include packages that depend on @brika/sdk
-      const pluginResults = [];
-
-      for (const obj of data.objects) {
-        // Verify this package actually depends on @brika/sdk
-        const packageData = await this.getPackageDetails(obj.package.name);
-
-        if (!packageData) {
-          continue;
-        }
-
-        // Check if package depends on @brika/sdk (in dependencies or peerDependencies)
-        const hasSdkDependency = packageData.engines?.brika !== undefined; // packages with engines.brika are plugins
-
-        if (!hasSdkDependency) {
-          continue; // Skip non-plugin packages
-        }
-
-        const downloadCount = await this.#getDownloadCount(obj.package.name);
-
-        pluginResults.push({
-          package: {
-            ...packageData,
-            links: obj.package.links,
-            score: obj.score,
-          },
-          downloadCount,
-        });
-
-        // Stop if we have enough results
-        if (pluginResults.length >= limit) {
-          break;
-        }
-      }
-
-      const result = { plugins: pluginResults, total: pluginResults.length };
-      this.#setCache(cacheKey, result);
-
-      return result;
+      // Return actual count of results found
+      // If result count equals limit, there may be more results available
+      return { plugins: validatedPlugins, total: validatedPlugins.length };
     } catch (error) {
       this.#log.error('npm search failed', { error: String(error) });
       return { plugins: [], total: 0 };
     }
+  }
+
+  /**
+   * Validate packages are real Brika plugins and enrich with details.
+   * Processes packages in parallel for better performance.
+   * Also performs client-side filtering if query is provided.
+   */
+  async #validateAndEnrichPlugins(
+    objects: NpmApiSearchResult['objects'],
+    limit: number,
+    query?: string
+  ): Promise<NpmSearchResult[]> {
+    const results: NpmSearchResult[] = [];
+    const queryLower = query?.toLowerCase();
+
+    // Process in batches to avoid overwhelming npm API
+    const BATCH_SIZE = 5;
+    for (let i = 0; i < objects.length && results.length < limit; i += BATCH_SIZE) {
+      const batch = objects.slice(i, i + BATCH_SIZE);
+
+      const batchResults = await Promise.all(
+        batch.map(async (obj) => {
+          const packageData = await this.getPackageDetails(obj.package.name);
+
+          // Filter out non-plugins (packages without engines.brika)
+          if (!packageData?.engines?.brika) {
+            return null;
+          }
+
+          // Client-side filtering: if query is provided, ensure it matches
+          if (queryLower) {
+            const nameMatch = packageData.name.toLowerCase().includes(queryLower);
+            const descMatch = packageData.description?.toLowerCase().includes(queryLower);
+            const keywordsMatch = packageData.keywords?.some((k) =>
+              k.toLowerCase().includes(queryLower)
+            );
+
+            // Skip if query doesn't match name, description, or keywords
+            if (!nameMatch && !descMatch && !keywordsMatch) {
+              return null;
+            }
+          }
+
+          const downloadCount = await this.#getDownloadCount(obj.package.name);
+
+          return {
+            package: {
+              ...packageData,
+              links: obj.package.links,
+              score: obj.score,
+            },
+            downloadCount,
+          };
+        })
+      );
+
+      // Add valid results
+      for (const result of batchResults) {
+        if (result && results.length < limit) {
+          results.push(result);
+        }
+      }
+
+      // Early exit if we have enough
+      if (results.length >= limit) {
+        break;
+      }
+    }
+
+    return results;
   }
 
   /**
@@ -183,25 +204,12 @@ export class NpmSearchService {
    * @returns Package data or null if not found
    */
   async getPackageDetails(packageName: string): Promise<NpmPackageData | null> {
-    const cacheKey = `package:${packageName}`;
-    const cached = this.#getFromCache<NpmPackageData>(cacheKey);
-
-    if (cached) {
-      return cached;
-    }
-
     try {
-      const url = `${NPM_REGISTRY_URL}/${encodeURIComponent(packageName)}`;
-      const response = await fetch(url);
+      const data = await this.#http
+        .get<NpmApiPackageResponse>(`${NPM_REGISTRY_URL}/${packageName}`)
+        .cache({ ttl: 600_000, tags: ['npm-package'] }) // Cache for 10 minutes
+        .data();
 
-      if (!response.ok) {
-        if (response.status === 404) {
-          return null;
-        }
-        throw new Error(`npm package fetch failed: ${response.statusText}`);
-      }
-
-      const data = (await response.json()) as NpmApiPackageResponse;
       const latestVersion = data['dist-tags']?.latest || Object.keys(data.versions).pop();
 
       if (!latestVersion) {
@@ -210,7 +218,7 @@ export class NpmSearchService {
 
       const versionData = data.versions[latestVersion];
 
-      const packageData: NpmPackageData = {
+      return {
         name: data.name,
         version: latestVersion,
         description: versionData.description,
@@ -222,11 +230,7 @@ export class NpmSearchService {
         engines: versionData.engines,
         date: data.time?.[latestVersion],
       };
-
-      this.#setCache(cacheKey, packageData);
-      return packageData;
-    } catch (error) {
-      this.#log.error('npm package fetch failed', { packageName, error: String(error) });
+    } catch {
       return null;
     }
   }
@@ -235,59 +239,15 @@ export class NpmSearchService {
    * Get weekly download count for a package.
    */
   async #getDownloadCount(packageName: string): Promise<number> {
-    const cacheKey = `downloads:${packageName}`;
-    const cached = this.#getFromCache<number>(cacheKey);
-
-    if (cached !== null) {
-      return cached;
-    }
-
     try {
-      const url = `https://api.npmjs.org/downloads/point/last-week/${encodeURIComponent(packageName)}`;
-      const response = await fetch(url);
+      const data = await this.#http
+        .get<NpmApiDownloads>(`${NPM_DOWNLOADS_URL}/last-week/${packageName}`)
+        .cache({ ttl: 3600_000, tags: ['npm-downloads'] }) // Cache for 1 hour
+        .data();
 
-      if (!response.ok) {
-        return 0;
-      }
-
-      const data = (await response.json()) as NpmApiDownloads;
-      const count = data.downloads || 0;
-
-      this.#setCache(cacheKey, count);
-      return count;
-    } catch (error) {
-      this.#log.error('npm downloads fetch failed', { packageName, error: String(error) });
+      return data.downloads || 0;
+    } catch {
       return 0;
     }
-  }
-
-  /**
-   * Get cached value if not expired.
-   */
-  #getFromCache<T>(key: string): T | null {
-    const cached = this.#cache.get(key) as CachedResult<T> | undefined;
-
-    if (!cached) {
-      return null;
-    }
-
-    const age = Date.now() - cached.timestamp;
-
-    if (age > CACHE_TTL_MS) {
-      this.#cache.delete(key);
-      return null;
-    }
-
-    return cached.data;
-  }
-
-  /**
-   * Set value in cache with timestamp.
-   */
-  #setCache<T>(key: string, data: T): void {
-    this.#cache.set(key, {
-      data,
-      timestamp: Date.now(),
-    });
   }
 }

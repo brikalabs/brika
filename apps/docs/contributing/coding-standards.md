@@ -76,7 +76,7 @@ Order code in files consistently:
 ```typescript
 // 1. Imports (external, then internal)
 import { z } from "zod";
-import { inject, singleton } from "@brika/shared";
+import { inject, singleton } from "@brika/di";
 
 // 2. Types/Interfaces
 interface MyConfig {
@@ -149,7 +149,7 @@ import { PluginManager } from "@brika/sdk"; // Not allowed
 Use the DI system for services:
 
 ```typescript
-import { singleton, inject } from "@brika/shared";
+import { singleton, inject } from "@brika/di";
 
 @singleton()
 export class MyService {

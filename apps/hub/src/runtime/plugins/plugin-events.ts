@@ -1,7 +1,7 @@
+import { inject, singleton } from '@brika/di';
 import type { Json } from '@brika/ipc';
 import type { BlockDefinition } from '@brika/sdk';
 import type { LogLevel } from '@brika/shared';
-import { inject, singleton } from '@brika/shared';
 import { BlockRegistry } from '@/runtime/blocks';
 import { PluginActions, SparkActions } from '@/runtime/events/actions';
 import { EventSystem } from '@/runtime/events/event-system';

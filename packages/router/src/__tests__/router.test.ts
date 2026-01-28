@@ -41,6 +41,46 @@ describe('@brika/router', () => {
 
       expect(r.method).toBe('DELETE');
     });
+
+    it('should create PUT route without schema', () => {
+      const r = route.put('/test/:id', async () => ({ updated: true }));
+
+      expect(r.method).toBe('PUT');
+      expect(r.path).toBe('/test/:id');
+      expect(r.schema).toBeUndefined();
+    });
+
+    it('should create PUT route with schema', () => {
+      const r = route.put(
+        '/test/:id',
+        { params: z.object({ id: z.string() }), body: z.object({ name: z.string() }) },
+        async ({ params, body }) => ({ id: params.id, name: body.name })
+      );
+
+      expect(r.method).toBe('PUT');
+      expect(r.schema?.params).toBeDefined();
+      expect(r.schema?.body).toBeDefined();
+    });
+
+    it('should create PATCH route without schema', () => {
+      const r = route.patch('/test/:id', async () => ({ patched: true }));
+
+      expect(r.method).toBe('PATCH');
+      expect(r.path).toBe('/test/:id');
+      expect(r.schema).toBeUndefined();
+    });
+
+    it('should create PATCH route with schema', () => {
+      const r = route.patch(
+        '/test/:id',
+        { params: z.object({ id: z.string() }), body: z.object({ name: z.string().optional() }) },
+        async ({ params, body }) => ({ id: params.id, name: body.name })
+      );
+
+      expect(r.method).toBe('PATCH');
+      expect(r.schema?.params).toBeDefined();
+      expect(r.schema?.body).toBeDefined();
+    });
   });
 
   describe('group', () => {

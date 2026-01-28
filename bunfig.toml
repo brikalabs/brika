@@ -1,0 +1,19 @@
+# Root Bun configuration
+# https://bun.sh/docs/runtime/bunfig
+
+# Preload the folder-tar plugin for hub tests
+preload = ["./apps/hub/src/plugins/preload.ts"]
+
+[test]
+# Preload for tests
+preload = ["./apps/hub/src/plugins/preload.ts"]
+
+# Exclude frontend and other non-testable code from coverage
+coverageSkipSourceFiles = [
+  "apps/ui/**/*",
+  "apps/docs/**/*",
+  "apps/registry/**/*",
+  "apps/schema-cdn/**/*",
+  "**/node_modules/**/*",
+  "**/*.d.ts"
+]

@@ -1,5 +1,5 @@
+import { inject, singleton } from '@brika/di';
 import { createApp, type RouteDefinition } from '@brika/router';
-import { inject, singleton } from '@brika/shared';
 import { serveStatic } from 'hono/bun';
 import { HubConfig } from '@/runtime/config';
 import { Logger } from '@/runtime/logs/log-router';
@@ -23,6 +23,19 @@ export class ApiServer {
   start(): void {
     this.#app = createApp(this.#routes);
 
+    // Log exceptions with full stack traces
+    this.#app.onError((err, c) => {
+      this.#logs.error(
+        'Route handler error',
+        {
+          method: c.req.method,
+          path: new URL(c.req.url).pathname,
+        },
+        { error: err }
+      );
+      throw err;
+    });
+
     // Add static file serving if configured (for production Docker)
     if (this.#config.staticDir) {
       const staticDir = this.#config.staticDir;
@@ -45,35 +58,16 @@ export class ApiServer {
         if (!this.#app) throw new Error('Failed to start');
 
         const start = Date.now();
-        const url = new URL(req.url);
+        const res = await this.#app.fetch(req);
 
-        try {
-          const res = await this.#app.fetch(req);
-          const duration = Date.now() - start;
+        this.#logs.info('HTTP request', {
+          method: req.method,
+          path: new URL(req.url).pathname,
+          status: res.status,
+          durationMs: Date.now() - start,
+        });
 
-          // Skip body logging for streaming responses to avoid buffering
-          // const isStreaming = res.headers.get('content-type')?.includes('text/event-stream');
-
-          this.#logs.info('HTTP request completed', {
-            method: req.method,
-            path: url.pathname,
-            status: res.status,
-            durationMs: duration,
-          });
-
-          return res;
-        } catch (e) {
-          this.#logs.error(
-            'HTTP request failed',
-            {
-              method: req.method,
-              path: url.pathname,
-              durationMs: Date.now() - start,
-            },
-            { error: e }
-          );
-          throw e;
-        }
+        return res;
       },
     });
   }

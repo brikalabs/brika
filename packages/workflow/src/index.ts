@@ -35,7 +35,7 @@ export { createPortRef, parsePortRef } from './types/ports';
 // Serialization
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type { Serializable, ToolRef, Transformer } from './serialization';
+export type { Serializable, Transformer } from './serialization';
 export {
   assertSerializable,
   BlobTransformer,
@@ -44,14 +44,10 @@ export {
   deserialize,
   deserializeSync,
   isSerializable,
-  isToolRef,
   registerTransformer,
   SerializableSchema,
   serialize,
   serializeSync,
-  ToolRefSchema,
-  ToolRefTransformer,
-  toolRef,
   Uint8ArrayTransformer,
 } from './serialization';
 

@@ -6,43 +6,43 @@ import 'reflect-metadata';
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
-import { TestBed } from '@brika/shared';
+import { useTestBed } from '@brika/di/testing';
 import { BlockRegistry } from '@/runtime/blocks/block-registry';
 import { Logger } from '@/runtime/logs/log-router';
 import { WorkflowEngine } from '@/runtime/workflows/workflow-engine';
 import { WorkflowLoader } from '@/runtime/workflows/workflow-loader';
+
+const di = useTestBed();
 
 const TEST_DIR = join(import.meta.dir, '.test-workflow-loader');
 
 describe('WorkflowLoader - Port Parsing', () => {
   beforeEach(async () => {
     await rm(TEST_DIR, { recursive: true, force: true });
-    TestBed.create()
-      .provide(Logger, {
-        withSource: () => ({
-          info: () => {},
-          warn: () => {},
-          error: () => {},
-        }),
-      })
-      .provide(BlockRegistry, {
-        has: () => true,
-        get: () => ({ id: 'test', outputs: [], inputs: [] }),
-      })
-      .provide(WorkflowEngine, {
-        register: () => {},
-        unregister: () => {},
-      })
-      .compile();
+    di.stub(Logger);
+    di.provide(BlockRegistry, {
+      has: () => true,
+      get: () => ({
+        id: 'test',
+        outputs: [],
+        inputs: [],
+        pluginId: 'test-plugin',
+        schema: { type: 'object' as const, properties: {} },
+      }),
+    });
+    di.provide(WorkflowEngine, {
+      register: () => undefined,
+      unregister: () => true,
+    });
   });
 
   afterEach(async () => {
     await rm(TEST_DIR, { recursive: true, force: true });
-    TestBed.reset();
+    di.reset();
   });
 
   it('should parse valid port references in outputs', async () => {
-    const loader = TestBed.inject(WorkflowLoader);
+    const loader = di.inject(WorkflowLoader);
     await loader.loadDir(TEST_DIR);
 
     const yamlContent = `
@@ -71,7 +71,7 @@ blocks:
   });
 
   it('should parse valid port references in inputs', async () => {
-    const loader = TestBed.inject(WorkflowLoader);
+    const loader = di.inject(WorkflowLoader);
     await loader.loadDir(TEST_DIR);
 
     const yamlContent = `
@@ -99,7 +99,7 @@ blocks:
   });
 
   it('should handle port references with colons correctly', async () => {
-    const loader = TestBed.inject(WorkflowLoader);
+    const loader = di.inject(WorkflowLoader);
     await loader.loadDir(TEST_DIR);
 
     const yamlContent = `
@@ -126,7 +126,7 @@ blocks:
   });
 
   it('should skip invalid port references gracefully', async () => {
-    const loader = TestBed.inject(WorkflowLoader);
+    const loader = di.inject(WorkflowLoader);
     await loader.loadDir(TEST_DIR);
 
     const yamlContent = `
@@ -154,7 +154,7 @@ blocks:
   });
 
   it('should handle bidirectional connections (outputs and inputs)', async () => {
-    const loader = TestBed.inject(WorkflowLoader);
+    const loader = di.inject(WorkflowLoader);
     await loader.loadDir(TEST_DIR);
 
     const yamlContent = `
@@ -184,7 +184,7 @@ blocks:
   });
 
   it('should deduplicate connections from bidirectional refs', async () => {
-    const loader = TestBed.inject(WorkflowLoader);
+    const loader = di.inject(WorkflowLoader);
     await loader.loadDir(TEST_DIR);
 
     // Same connection defined in both output and input
@@ -219,33 +219,31 @@ blocks:
 describe('WorkflowLoader - File Operations', () => {
   beforeEach(async () => {
     await rm(TEST_DIR, { recursive: true, force: true });
-    TestBed.create()
-      .provide(Logger, {
-        withSource: () => ({
-          info: () => {},
-          warn: () => {},
-          error: () => {},
-        }),
-      })
-      .provide(BlockRegistry, {
-        has: () => true,
-        get: () => ({ id: 'test', outputs: [], inputs: [] }),
-      })
-      .provide(WorkflowEngine, {
-        register: () => {},
-        unregister: () => {},
-        get: () => null,
-      })
-      .compile();
+    di.stub(Logger);
+    di.provide(BlockRegistry, {
+      has: () => true,
+      get: () => ({
+        id: 'test',
+        outputs: [],
+        inputs: [],
+        pluginId: 'test-plugin',
+        schema: { type: 'object' as const, properties: {} },
+      }),
+    });
+    di.provide(WorkflowEngine, {
+      register: () => undefined,
+      unregister: () => true,
+      get: () => undefined,
+    });
   });
 
   afterEach(async () => {
     await rm(TEST_DIR, { recursive: true, force: true });
-    TestBed.reset();
+    di.reset();
   });
 
   it('should create directory if it does not exist', async () => {
-    const loader = TestBed.inject(WorkflowLoader);
+    const loader = di.inject(WorkflowLoader);
     await loader.loadDir(TEST_DIR);
 
     const file = Bun.file(join(TEST_DIR, '.keep'));
@@ -254,10 +252,7 @@ describe('WorkflowLoader - File Operations', () => {
 
   it('should load YAML files on initialization', async () => {
     // Create directory with a workflow file
-    await Bun.write(
-      join(TEST_DIR, '.keep'),
-      ''
-    );
+    await Bun.write(join(TEST_DIR, '.keep'), '');
     await Bun.write(
       join(TEST_DIR, 'test-workflow.yaml'),
       `
@@ -270,7 +265,7 @@ blocks: []
 `
     );
 
-    const loader = TestBed.inject(WorkflowLoader);
+    const loader = di.inject(WorkflowLoader);
     await loader.loadDir(TEST_DIR);
 
     // Should have loaded the file
@@ -279,7 +274,7 @@ blocks: []
   });
 
   it('should support both .yaml and .yml extensions', async () => {
-    const loader = TestBed.inject(WorkflowLoader);
+    const loader = di.inject(WorkflowLoader);
     await loader.loadDir(TEST_DIR);
 
     await Bun.write(

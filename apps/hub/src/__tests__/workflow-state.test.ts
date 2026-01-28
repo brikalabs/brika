@@ -4,16 +4,18 @@
  */
 import 'reflect-metadata';
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { TestBed } from '@brika/shared';
+import { useTestBed } from '@brika/di/testing';
 import type { BlockDefinition } from '@brika/sdk';
 import { BlockRegistry } from '@/runtime/blocks/block-registry';
 import { EventSystem } from '@/runtime/events/event-system';
 import { Logger } from '@/runtime/logs/log-router';
 import { PluginEventHandler } from '@/runtime/plugins/plugin-events';
 import { PluginManager } from '@/runtime/plugins/plugin-manager';
-import { WorkflowEngine } from '@/runtime/workflows/workflow-engine';
 import type { Workflow } from '@/runtime/workflows/types';
+import { WorkflowEngine } from '@/runtime/workflows/workflow-engine';
 import type { ExecutionEvent } from '@/runtime/workflows/workflow-executor';
+
+const di = useTestBed();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Test Fixtures
@@ -29,40 +31,32 @@ const createWorkflow = (id: string, enabled = false): Workflow => ({
 
 describe('WorkflowEngine - State Management', () => {
   let engine: WorkflowEngine;
-  let mockLogger: any;
 
   beforeEach(() => {
-    mockLogger = {
-      info: () => {},
-      warn: () => {},
-      error: () => {},
-    };
+    di.stub(Logger);
+    di.provide(EventSystem, {
+      dispatch: async <T>(action: T) => action,
+      subscribeAll: () => () => undefined,
+    });
+    di.provide(BlockRegistry, {
+      has: (type: string) => true,
+      get: (type: string) => ({
+        id: 'test',
+        type,
+        outputs: [],
+        inputs: [],
+        schema: { type: 'object' as const, properties: {} },
+        pluginId: 'plugin',
+      }),
+      list: () => [],
+      listByCategory: () => ({}),
+      validateConnections: () => ({ valid: true }),
+    });
+    di.provide(PluginManager, {});
+    di.provide(PluginEventHandler, {});
 
-    TestBed.create()
-      .provide(Logger, {
-        withSource: () => mockLogger,
-      })
-      .provide(EventSystem, {
-        dispatch: () => {},
-        subscribeAll: () => () => {},
-      })
-      .provide(BlockRegistry, {
-        has: (type: string) => true,
-        get: () => ({ id: 'test', outputs: [], inputs: [] }),
-        list: () => [],
-        listByCategory: () => ({}),
-        validateConnections: () => ({ valid: true }),
-      })
-      .provide(PluginManager, {})
-      .provide(PluginEventHandler, {})
-      .compile();
-
-    engine = TestBed.inject(WorkflowEngine);
+    engine = di.inject(WorkflowEngine);
     engine.init();
-  });
-
-  afterEach(() => {
-    TestBed.reset();
   });
 
   test('should register workflow with stopped status', () => {
@@ -84,27 +78,23 @@ describe('WorkflowEngine - State Management', () => {
   });
 
   test('should set error status when blocks are missing', () => {
-    TestBed.reset();
-    TestBed.create()
-      .provide(Logger, {
-        withSource: () => mockLogger,
-      })
-      .provide(EventSystem, {
-        dispatch: () => {},
-        subscribeAll: () => () => {},
-      })
-      .provide(BlockRegistry, {
-        has: (type: string) => type !== 'missing-block',
-        get: () => undefined,
-        list: () => [],
-        listByCategory: () => ({}),
-        validateConnections: () => ({ valid: true }),
-      })
-      .provide(PluginManager, {})
-      .provide(PluginEventHandler, {})
-      .compile();
+    di.reset();
+    di.stub(Logger);
+    di.provide(EventSystem, {
+      dispatch: async <T>(action: T) => action,
+      subscribeAll: () => () => undefined,
+    });
+    di.provide(BlockRegistry, {
+      has: (type: string) => type !== 'missing-block',
+      get: () => undefined,
+      list: () => [],
+      listByCategory: () => ({}),
+      validateConnections: () => ({ valid: true }),
+    });
+    di.provide(PluginManager, {});
+    di.provide(PluginEventHandler, {});
 
-    engine = TestBed.inject(WorkflowEngine);
+    engine = di.inject(WorkflowEngine);
     engine.init();
 
     const workflow: Workflow = {
@@ -127,27 +117,23 @@ describe('WorkflowEngine - State Management', () => {
 
   test('should clear error status when re-registering valid workflow', () => {
     // First register with error
-    TestBed.reset();
-    TestBed.create()
-      .provide(Logger, {
-        withSource: () => mockLogger,
-      })
-      .provide(EventSystem, {
-        dispatch: () => {},
-        subscribeAll: () => () => {},
-      })
-      .provide(BlockRegistry, {
-        has: (type: string) => false, // All blocks missing
-        get: () => undefined,
-        list: () => [],
-        listByCategory: () => ({}),
-        validateConnections: () => ({ valid: true }),
-      })
-      .provide(PluginManager, {})
-      .provide(PluginEventHandler, {})
-      .compile();
+    di.reset();
+    di.stub(Logger);
+    di.provide(EventSystem, {
+      dispatch: async <T>(action: T) => action,
+      subscribeAll: () => () => undefined,
+    });
+    di.provide(BlockRegistry, {
+      has: (type: string) => false, // All blocks missing
+      get: () => undefined,
+      list: () => [],
+      listByCategory: () => ({}),
+      validateConnections: () => ({ valid: true }),
+    });
+    di.provide(PluginManager, {});
+    di.provide(PluginEventHandler, {});
 
-    engine = TestBed.inject(WorkflowEngine);
+    engine = di.inject(WorkflowEngine);
     engine.init();
 
     const workflow: Workflow = {
@@ -162,27 +148,30 @@ describe('WorkflowEngine - State Management', () => {
     expect(engine.get('test-workflow-recovery')?.status).toBe('error');
 
     // Now re-register with blocks available
-    TestBed.reset();
-    TestBed.create()
-      .provide(Logger, {
-        withSource: () => mockLogger,
-      })
-      .provide(EventSystem, {
-        dispatch: () => {},
-        subscribeAll: () => () => {},
-      })
-      .provide(BlockRegistry, {
-        has: () => true, // All blocks available now
-        get: () => ({ id: 'test', outputs: [], inputs: [] }),
-        list: () => [],
-        listByCategory: () => ({}),
-        validateConnections: () => ({ valid: true }),
-      })
-      .provide(PluginManager, {})
-      .provide(PluginEventHandler, {})
-      .compile();
+    di.reset();
+    di.stub(Logger);
+    di.provide(EventSystem, {
+      dispatch: async <T>(action: T) => action,
+      subscribeAll: () => () => undefined,
+    });
+    di.provide(BlockRegistry, {
+      has: () => true, // All blocks available now
+      get: () => ({
+        id: 'test',
+        type: 'plugin:test',
+        outputs: [],
+        inputs: [],
+        schema: { type: 'object' as const, properties: {} },
+        pluginId: 'plugin',
+      }),
+      list: () => [],
+      listByCategory: () => ({}),
+      validateConnections: () => ({ valid: true }),
+    });
+    di.provide(PluginManager, {});
+    di.provide(PluginEventHandler, {});
 
-    engine = TestBed.inject(WorkflowEngine);
+    engine = di.inject(WorkflowEngine);
     engine.init();
     engine.register(workflow);
 
@@ -270,37 +259,37 @@ describe('WorkflowEngine - Block Registry Passthrough', () => {
 
   beforeEach(() => {
     mockBlocks = [
-      { id: 'timer', type: 'plugin:timer', category: 'input', name: 'Timer', inputs: [], outputs: [], configSchema: {} },
-      { id: 'logger', type: 'plugin:logger', category: 'output', name: 'Logger', inputs: [], outputs: [], configSchema: {} },
+      {
+        id: 'timer',
+        type: 'plugin:timer',
+        inputs: [],
+        outputs: [],
+        schema: { type: 'object' as const, properties: {} },
+      },
+      {
+        id: 'logger',
+        type: 'plugin:logger',
+        inputs: [],
+        outputs: [],
+        schema: { type: 'object' as const, properties: {} },
+      },
     ];
 
-    TestBed.create()
-      .provide(Logger, {
-        withSource: () => ({
-          info: () => {},
-          warn: () => {},
-          error: () => {},
-        }),
-      })
-      .provide(EventSystem, {
-        dispatch: () => {},
-        subscribeAll: () => () => {},
-      })
-      .provide(BlockRegistry, {
-        has: () => true,
-        list: () => mockBlocks,
-        listByCategory: () => ({ input: [mockBlocks[0]!], output: [mockBlocks[1]!] }),
-      })
-      .provide(PluginManager, {})
-      .provide(PluginEventHandler, {})
-      .compile();
+    di.stub(Logger);
+    di.provide(EventSystem, {
+      dispatch: async <T>(action: T) => action,
+      subscribeAll: () => () => undefined,
+    });
+    di.provide(BlockRegistry, {
+      has: () => true,
+      list: () => mockBlocks,
+      listByCategory: () => ({ input: [mockBlocks[0]!], output: [mockBlocks[1]!] }),
+    });
+    di.provide(PluginManager, {});
+    di.provide(PluginEventHandler, {});
 
-    engine = TestBed.inject(WorkflowEngine);
+    engine = di.inject(WorkflowEngine);
     engine.init();
-  });
-
-  afterEach(() => {
-    TestBed.reset();
   });
 
   test('should get all block types from registry', () => {
@@ -322,48 +311,46 @@ describe('WorkflowEngine - Block Registry Passthrough', () => {
 
 describe('WorkflowEngine - Execution Control', () => {
   let engine: WorkflowEngine;
-  let mockPluginManager: any;
+  let mockPluginManager: Record<string, unknown>;
 
   beforeEach(() => {
     mockPluginManager = {
-      setBlockEmitHandler: () => {},
-      setBlockLogHandler: () => {},
-      clearBlockEmitHandler: () => {},
-      clearBlockLogHandler: () => {},
+      setBlockEmitHandler: () => undefined,
+      setBlockLogHandler: () => undefined,
+      clearBlockEmitHandler: () => undefined,
+      clearBlockLogHandler: () => undefined,
       startBlock: () => Promise.resolve({ ok: true }),
-      stopBlockInstance: () => {},
-      pushBlockInput: () => {},
+      stopBlockInstance: () => undefined,
+      pushBlockInput: () => undefined,
     };
 
-    TestBed.create()
-      .provide(Logger, {
-        withSource: () => ({
-          info: () => {},
-          warn: () => {},
-          error: () => {},
-        }),
-      })
-      .provide(EventSystem, {
-        dispatch: () => {},
-        subscribeAll: () => () => {},
-      })
-      .provide(BlockRegistry, {
-        has: () => true,
-        get: () => ({ id: 'test', type: 'plugin:test', outputs: [], inputs: [] }),
-        list: () => [],
-        listByCategory: () => ({}),
-      })
-      .provide(PluginManager, mockPluginManager)
-      .provide(PluginEventHandler, {})
-      .compile();
+    di.stub(Logger);
+    di.provide(EventSystem, {
+      dispatch: async <T>(action: T) => action,
+      subscribeAll: () => () => undefined,
+    });
+    di.provide(BlockRegistry, {
+      has: () => true,
+      get: () => ({
+        id: 'test',
+        type: 'plugin:test',
+        outputs: [],
+        inputs: [],
+        schema: { type: 'object' as const, properties: {} },
+        pluginId: 'plugin',
+      }),
+      list: () => [],
+      listByCategory: () => ({}),
+    });
+    di.provide(PluginManager, mockPluginManager);
+    di.provide(PluginEventHandler, {});
 
-    engine = TestBed.inject(WorkflowEngine);
+    engine = di.inject(WorkflowEngine);
     engine.init();
   });
 
   afterEach(() => {
     engine.stop();
-    TestBed.reset();
   });
 
   test('should auto-start enabled workflow on registration', async () => {
@@ -434,29 +421,21 @@ describe('WorkflowEngine - Execution Control', () => {
   });
 
   test('should not start workflow in error state', async () => {
-    TestBed.reset();
-    TestBed.create()
-      .provide(Logger, {
-        withSource: () => ({
-          info: () => {},
-          warn: () => {},
-          error: () => {},
-        }),
-      })
-      .provide(EventSystem, {
-        dispatch: () => {},
-        subscribeAll: () => () => {},
-      })
-      .provide(BlockRegistry, {
-        has: () => false, // All blocks missing
-        list: () => [],
-        listByCategory: () => ({}),
-      })
-      .provide(PluginManager, mockPluginManager)
-      .provide(PluginEventHandler, {})
-      .compile();
+    di.reset();
+    di.stub(Logger);
+    di.provide(EventSystem, {
+      dispatch: async <T>(action: T) => action,
+      subscribeAll: () => () => undefined,
+    });
+    di.provide(BlockRegistry, {
+      has: () => false, // All blocks missing
+      list: () => [],
+      listByCategory: () => ({}),
+    });
+    di.provide(PluginManager, mockPluginManager);
+    di.provide(PluginEventHandler, {});
 
-    engine = TestBed.inject(WorkflowEngine);
+    engine = di.inject(WorkflowEngine);
     engine.init();
 
     const workflow = createWorkflow('error-workflow', true);
@@ -470,29 +449,21 @@ describe('WorkflowEngine - Execution Control', () => {
   });
 
   test('should set error status when blocks become unavailable on enable', async () => {
-    TestBed.reset();
-    TestBed.create()
-      .provide(Logger, {
-        withSource: () => ({
-          info: () => {},
-          warn: () => {},
-          error: () => {},
-        }),
-      })
-      .provide(EventSystem, {
-        dispatch: () => {},
-        subscribeAll: () => () => {},
-      })
-      .provide(BlockRegistry, {
-        has: () => false, // Blocks missing
-        list: () => [],
-        listByCategory: () => ({}),
-      })
-      .provide(PluginManager, mockPluginManager)
-      .provide(PluginEventHandler, {})
-      .compile();
+    di.reset();
+    di.stub(Logger);
+    di.provide(EventSystem, {
+      dispatch: async <T>(action: T) => action,
+      subscribeAll: () => () => undefined,
+    });
+    di.provide(BlockRegistry, {
+      has: () => false, // Blocks missing
+      list: () => [],
+      listByCategory: () => ({}),
+    });
+    di.provide(PluginManager, mockPluginManager);
+    di.provide(PluginEventHandler, {});
 
-    engine = TestBed.inject(WorkflowEngine);
+    engine = di.inject(WorkflowEngine);
     engine.init();
 
     const workflow = createWorkflow('missing-blocks-enable', false);
@@ -511,42 +482,40 @@ describe('WorkflowEngine - Global Listeners', () => {
   let engine: WorkflowEngine;
 
   beforeEach(() => {
-    TestBed.create()
-      .provide(Logger, {
-        withSource: () => ({
-          info: () => {},
-          warn: () => {},
-          error: () => {},
-        }),
-      })
-      .provide(EventSystem, {
-        dispatch: () => {},
-        subscribeAll: () => () => {},
-      })
-      .provide(BlockRegistry, {
-        has: () => true,
-        get: () => ({ id: 'test', type: 'plugin:test', outputs: [], inputs: [] }),
-        list: () => [],
-        listByCategory: () => ({}),
-      })
-      .provide(PluginManager, {
-        setBlockEmitHandler: () => {},
-        setBlockLogHandler: () => {},
-        clearBlockEmitHandler: () => {},
-        clearBlockLogHandler: () => {},
-        startBlock: () => Promise.resolve({ ok: true }),
-        stopBlockInstance: () => {},
-      })
-      .provide(PluginEventHandler, {})
-      .compile();
+    di.stub(Logger);
+    di.provide(EventSystem, {
+      dispatch: async <T>(action: T) => action,
+      subscribeAll: () => () => undefined,
+    });
+    di.provide(BlockRegistry, {
+      has: () => true,
+      get: () => ({
+        id: 'test',
+        type: 'plugin:test',
+        outputs: [],
+        inputs: [],
+        schema: { type: 'object' as const, properties: {} },
+        pluginId: 'plugin',
+      }),
+      list: () => [],
+      listByCategory: () => ({}),
+    });
+    di.provide(PluginManager, {
+      setBlockEmitHandler: () => undefined,
+      setBlockLogHandler: () => undefined,
+      clearBlockEmitHandler: () => undefined,
+      clearBlockLogHandler: () => undefined,
+      startBlock: () => Promise.resolve({ ok: true }),
+      stopBlockInstance: () => undefined,
+    });
+    di.provide(PluginEventHandler, {});
 
-    engine = TestBed.inject(WorkflowEngine);
+    engine = di.inject(WorkflowEngine);
     engine.init();
   });
 
   afterEach(() => {
     engine.stop();
-    TestBed.reset();
   });
 
   test('should notify global listeners on workflow events', async () => {
@@ -607,36 +576,35 @@ describe('WorkflowEngine - Global Listeners', () => {
 
 describe('WorkflowEngine - Lifecycle', () => {
   test('should stop all running workflows on engine stop', async () => {
-    TestBed.create()
-      .provide(Logger, {
-        withSource: () => ({
-          info: () => {},
-          warn: () => {},
-          error: () => {},
-        }),
-      })
-      .provide(EventSystem, {
-        dispatch: () => {},
-        subscribeAll: () => () => {},
-      })
-      .provide(BlockRegistry, {
-        has: () => true,
-        get: () => ({ id: 'test', type: 'plugin:test', outputs: [], inputs: [] }),
-        list: () => [],
-        listByCategory: () => ({}),
-      })
-      .provide(PluginManager, {
-        setBlockEmitHandler: () => {},
-        setBlockLogHandler: () => {},
-        clearBlockEmitHandler: () => {},
-        clearBlockLogHandler: () => {},
-        startBlock: () => Promise.resolve({ ok: true }),
-        stopBlockInstance: () => {},
-      })
-      .provide(PluginEventHandler, {})
-      .compile();
+    di.stub(Logger);
+    di.provide(EventSystem, {
+      dispatch: async <T>(action: T) => action,
+      subscribeAll: () => () => undefined,
+    });
+    di.provide(BlockRegistry, {
+      has: () => true,
+      get: () => ({
+        id: 'test',
+        type: 'plugin:test',
+        outputs: [],
+        inputs: [],
+        schema: { type: 'object' as const, properties: {} },
+        pluginId: 'plugin',
+      }),
+      list: () => [],
+      listByCategory: () => ({}),
+    });
+    di.provide(PluginManager, {
+      setBlockEmitHandler: () => undefined,
+      setBlockLogHandler: () => undefined,
+      clearBlockEmitHandler: () => undefined,
+      clearBlockLogHandler: () => undefined,
+      startBlock: () => Promise.resolve({ ok: true }),
+      stopBlockInstance: () => undefined,
+    });
+    di.provide(PluginEventHandler, {});
 
-    const engine = TestBed.inject(WorkflowEngine);
+    const engine = di.inject(WorkflowEngine);
     engine.init();
 
     // Start multiple workflows
@@ -657,6 +625,6 @@ describe('WorkflowEngine - Lifecycle', () => {
     expect(engine.isWorkflowRunning('stop-test-1')).toBeFalse();
     expect(engine.isWorkflowRunning('stop-test-2')).toBeFalse();
 
-    TestBed.reset();
+    di.reset();
   });
 });

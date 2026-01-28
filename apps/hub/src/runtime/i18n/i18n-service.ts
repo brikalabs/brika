@@ -9,7 +9,7 @@
  * - Plugins: "plugin:@brika/plugin-timer", "plugin:@brika/blocks-builtin", etc.
  */
 
-import { inject, singleton } from '@brika/shared';
+import { inject, singleton } from '@brika/di';
 import { ConfigLoader } from '@/runtime/config/config-loader';
 import { Logger } from '@/runtime/logs/log-router';
 

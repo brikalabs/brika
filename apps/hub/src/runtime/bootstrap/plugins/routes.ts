@@ -1,5 +1,5 @@
+import { inject } from '@brika/di';
 import type { RouteDefinition } from '@brika/router';
-import { inject } from '@brika/shared';
 import { ApiServer } from '@/runtime/http/api-server';
 import type { BootstrapPlugin } from '../plugin';
 

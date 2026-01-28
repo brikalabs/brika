@@ -1,4 +1,4 @@
-import { inject, singleton } from '@brika/shared';
+import { inject, singleton } from '@brika/di';
 import type { BrikaConfig } from '@/runtime/config';
 import { I18nService } from '@/runtime/i18n';
 import type { Loader } from './loader';

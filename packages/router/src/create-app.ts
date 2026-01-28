@@ -1,4 +1,4 @@
-import { inject } from '@brika/shared';
+import { inject } from '@brika/di';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { ZodError, z } from 'zod';

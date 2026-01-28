@@ -33,33 +33,49 @@ export function isSchemaCompatible(outputSchema: z.ZodType, inputSchema: z.ZodTy
   const outputType = getBaseType(outputSchema);
   const inputType = getBaseType(inputSchema);
 
-  // Same type check
+  // For structured types (objects, arrays), we need deeper checking
+  const structuredTypes = ['object', 'array'];
+  if (structuredTypes.includes(outputType) || structuredTypes.includes(inputType)) {
+    return checkStructuralCompatibility(outputSchema, inputSchema);
+  }
+
+  // Same type check for primitives
   if (outputType === inputType) {
     return true;
   }
 
-  // Try to validate a sample value from output against input
-  // This is a heuristic - for complex types we'd need more sophisticated checking
+  // Try to validate structural compatibility for other types
   return checkStructuralCompatibility(outputSchema, inputSchema);
+}
+
+/**
+ * Get the Zod type name from a schema using constructor name.
+ * Returns lowercase type names like 'string', 'object', 'array', etc.
+ */
+function getZodTypeName(schema: z.ZodType): string {
+  // Use constructor name (most reliable across Zod versions)
+  const constructorName = schema.constructor?.name;
+  if (constructorName && constructorName.startsWith('Zod')) {
+    return constructorName.slice(3).toLowerCase();
+  }
+  // Fallback to _def.type (Zod v3.23+)
+  const def = schema as z.ZodType & { _def?: { type?: string } };
+  return def._def?.type ?? 'unknown';
 }
 
 /**
  * Check if a schema accepts any type.
  */
 function isAnyType(schema: z.ZodType): boolean {
-  const def = (schema as z.ZodType & { _def?: { typeName?: string } })._def;
-  if (!def) return false;
-
-  const typeName = def.typeName;
-  return typeName === 'ZodAny' || typeName === 'ZodUnknown';
+  const typeName = getZodTypeName(schema);
+  return typeName === 'any' || typeName === 'unknown';
 }
 
 /**
  * Get the base type name from a schema.
  */
 function getBaseType(schema: z.ZodType): string {
-  const def = (schema as z.ZodType & { _def?: { typeName?: string } })._def;
-  return def?.typeName ?? 'unknown';
+  return getZodTypeName(schema);
 }
 
 /**
@@ -67,13 +83,12 @@ function getBaseType(schema: z.ZodType): string {
  * Uses a heuristic approach - checks if typical output values would pass input validation.
  */
 function checkStructuralCompatibility(outputSchema: z.ZodType, inputSchema: z.ZodType): boolean {
-  const outputDef = (outputSchema as z.ZodType & { _def?: { typeName?: string } })._def;
-  const inputDef = (inputSchema as z.ZodType & { _def?: { typeName?: string } })._def;
+  const outputType = getZodTypeName(outputSchema);
+  const inputType = getZodTypeName(inputSchema);
 
-  if (!outputDef || !inputDef) return false;
-
-  const outputType = outputDef.typeName;
-  const inputType = inputDef.typeName;
+  // Get _def for inner type access
+  const outputDef = (outputSchema as z.ZodType & { _def?: unknown })._def;
+  const inputDef = (inputSchema as z.ZodType & { _def?: unknown })._def;
 
   // Try each compatibility check in order
   const wrapperResult = checkWrapperTypeCompatibility(
@@ -116,10 +131,10 @@ function checkStructuralCompatibility(outputSchema: z.ZodType, inputSchema: z.Zo
 function checkWrapperTypeCompatibility(
   outputSchema: z.ZodType,
   inputSchema: z.ZodType,
-  inputType: string | undefined,
+  inputType: string,
   inputDef: unknown
 ): boolean | null {
-  if (inputType === 'ZodOptional' || inputType === 'ZodNullable') {
+  if (inputType === 'optional' || inputType === 'nullable') {
     const innerDef = inputDef as { innerType?: z.ZodType };
     if (innerDef.innerType) {
       return isSchemaCompatible(outputSchema, innerDef.innerType);
@@ -134,13 +149,13 @@ function checkWrapperTypeCompatibility(
 function checkUnionTypeCompatibility(
   outputSchema: z.ZodType,
   inputSchema: z.ZodType,
-  outputType: string | undefined,
+  outputType: string,
   outputDef: unknown,
-  inputType: string | undefined,
+  inputType: string,
   inputDef: unknown
 ): boolean | null {
   // Handle union inputs - output must satisfy at least one variant
-  if (inputType === 'ZodUnion') {
+  if (inputType === 'union') {
     const unionDef = inputDef as { options?: z.ZodType[] };
     if (unionDef.options) {
       return unionDef.options.some((opt) => isSchemaCompatible(outputSchema, opt));
@@ -148,7 +163,7 @@ function checkUnionTypeCompatibility(
   }
 
   // Handle union outputs - all variants must satisfy input
-  if (outputType === 'ZodUnion') {
+  if (outputType === 'union') {
     const unionDef = outputDef as { options?: z.ZodType[] };
     if (unionDef.options) {
       return unionDef.options.every((opt) => isSchemaCompatible(opt, inputSchema));
@@ -162,16 +177,11 @@ function checkUnionTypeCompatibility(
  * Check primitive type compatibility
  */
 function checkPrimitiveTypeCompatibility(
-  outputType: string | undefined,
-  inputType: string | undefined
+  outputType: string,
+  inputType: string
 ): boolean | null {
-  const primitiveTypes = ['ZodString', 'ZodNumber', 'ZodBoolean', 'ZodNull'];
-  if (
-    outputType &&
-    inputType &&
-    primitiveTypes.includes(outputType) &&
-    primitiveTypes.includes(inputType)
-  ) {
+  const primitiveTypes = ['string', 'number', 'boolean', 'null'];
+  if (primitiveTypes.includes(outputType) && primitiveTypes.includes(inputType)) {
     return outputType === inputType;
   }
   return null;
@@ -183,13 +193,13 @@ function checkPrimitiveTypeCompatibility(
 function checkCollectionTypeCompatibility(
   outputSchema: z.ZodType,
   inputSchema: z.ZodType,
-  outputType: string | undefined,
+  outputType: string,
   outputDef: unknown,
-  inputType: string | undefined,
+  inputType: string,
   inputDef: unknown
 ): boolean | null {
   // Array compatibility
-  if (outputType === 'ZodArray' && inputType === 'ZodArray') {
+  if (outputType === 'array' && inputType === 'array') {
     const outputElement = (outputDef as { element?: z.ZodType }).element;
     const inputElement = (inputDef as { element?: z.ZodType }).element;
     if (outputElement && inputElement) {
@@ -198,7 +208,7 @@ function checkCollectionTypeCompatibility(
   }
 
   // Object compatibility
-  if (outputType === 'ZodObject' && inputType === 'ZodObject') {
+  if (outputType === 'object' && inputType === 'object') {
     return checkObjectCompatibility(
       outputSchema as z.ZodObject<z.ZodRawShape>,
       inputSchema as z.ZodObject<z.ZodRawShape>
@@ -223,8 +233,7 @@ function checkObjectCompatibility(
     const outputField = outputShape[key];
 
     // Check if input field is optional
-    const isOptional =
-      (inputField as z.ZodType & { _def?: { typeName?: string } })._def?.typeName === 'ZodOptional';
+    const isOptional = getZodTypeName(inputField as z.ZodType) === 'optional';
 
     if (!outputField) {
       // Output missing this field
@@ -282,50 +291,49 @@ export function validatePortData(
  * Get a human-readable type name from a Zod schema.
  */
 export function getSchemaTypeName(schema: z.ZodType): string {
-  const def = (schema as z.ZodType & { _def?: { typeName?: string } })._def;
-  if (!def) return 'unknown';
-
-  const typeName = def.typeName;
+  const typeName = getZodTypeName(schema);
+  const def = (schema as z.ZodType & { _def?: unknown })._def;
 
   switch (typeName) {
-    case 'ZodString':
+    case 'string':
       return 'string';
-    case 'ZodNumber':
+    case 'number':
       return 'number';
-    case 'ZodBoolean':
+    case 'boolean':
       return 'boolean';
-    case 'ZodNull':
+    case 'null':
       return 'null';
-    case 'ZodUndefined':
+    case 'undefined':
       return 'undefined';
-    case 'ZodAny':
-    case 'ZodUnknown':
+    case 'any':
       return 'any';
-    case 'ZodArray': {
-      const element = (def as { element?: z.ZodType }).element;
+    case 'unknown':
+      return 'unknown';
+    case 'array': {
+      const element = (def as { element?: z.ZodType })?.element;
       return element ? `${getSchemaTypeName(element)}[]` : 'array';
     }
-    case 'ZodObject':
+    case 'object':
       return 'object';
-    case 'ZodUnion':
+    case 'union':
       return 'union';
-    case 'ZodOptional': {
-      const inner = (def as { innerType?: z.ZodType }).innerType;
+    case 'optional': {
+      const inner = (def as { innerType?: z.ZodType })?.innerType;
       return inner ? `${getSchemaTypeName(inner)}?` : 'optional';
     }
-    case 'ZodNullable': {
-      const inner = (def as { innerType?: z.ZodType }).innerType;
+    case 'nullable': {
+      const inner = (def as { innerType?: z.ZodType })?.innerType;
       return inner ? `${getSchemaTypeName(inner)} | null` : 'nullable';
     }
-    case 'ZodDate':
+    case 'date':
       return 'Date';
-    case 'ZodRecord':
+    case 'record':
       return 'Record';
-    case 'ZodMap':
+    case 'map':
       return 'Map';
-    case 'ZodSet':
+    case 'set':
       return 'Set';
     default:
-      return typeName?.replace('Zod', '').toLowerCase() ?? 'unknown';
+      return typeName;
   }
 }

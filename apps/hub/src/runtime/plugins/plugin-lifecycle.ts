@@ -1,6 +1,6 @@
+import { inject, singleton } from '@brika/di';
 import { spawnPlugin } from '@brika/ipc';
 import type { Plugin, PluginHealth } from '@brika/shared';
-import { inject, singleton } from '@brika/shared';
 import { PluginManagerConfig } from '@/runtime/config';
 import { PluginActions } from '@/runtime/events/actions';
 import { EventSystem } from '@/runtime/events/event-system';

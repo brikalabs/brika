@@ -11,7 +11,7 @@ We now support **auto-discovery** of loaders using decorators! This dramatically
 ### How to Create a New Loader
 
 ```typescript
-import { inject, singleton } from '@brika/shared';
+import { inject, singleton } from '@brika/di';
 import { loader, type Loader } from '@/runtime/bootstrap';
 import type { BrikaConfig } from '@/runtime/config';
 
