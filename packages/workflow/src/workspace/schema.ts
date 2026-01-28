@@ -1,7 +1,7 @@
 /**
  * Workspace Schema
  *
- * Zod schema for validating TOML workspace files.
+ * Zod schema for validating YAML workspace files.
  */
 
 import { z } from 'zod';
@@ -15,15 +15,16 @@ const PortRefSchema = z.string().refine((s) => s.includes(':'), {
   message: 'Port reference must be "blockId:portId"',
 }) as z.ZodType<PortRef>;
 
-const PortRefsSchema = z.array(PortRefSchema);
+// Single port reference (0 or 1 connection)
+const PortRefOrUndefinedSchema = PortRefSchema.optional();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Position Schema
 // ─────────────────────────────────────────────────────────────────────────────
 
 const PositionSchema = z.object({
-  x: z.number(),
-  y: z.number(),
+  x: z.number().transform((n) => Math.round(n)),
+  y: z.number().transform((n) => Math.round(n)),
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -35,8 +36,8 @@ const BlockInstanceSchema = z.object({
   type: z.string().min(1, 'Block type is required'),
   position: PositionSchema.optional(),
   config: z.record(z.string(), z.unknown()).default({}),
-  inputs: z.record(z.string(), PortRefsSchema).default({}),
-  outputs: z.record(z.string(), PortRefsSchema).default({}),
+  inputs: z.record(z.string(), PortRefOrUndefinedSchema).default({}),
+  outputs: z.record(z.string(), PortRefOrUndefinedSchema).default({}),
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -55,7 +56,7 @@ const WorkspaceMetaSchema = z.object({
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Complete workspace schema for TOML validation.
+ * Complete workspace schema for YAML validation.
  */
 export const WorkspaceSchema = z.object({
   version: z.string().default('1'),

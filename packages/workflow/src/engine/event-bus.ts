@@ -98,7 +98,7 @@ export type EventObserver = (event: DispatchedEvent) => void;
  */
 export class EventBus {
   readonly #workflowId: string;
-  readonly #connections: Map<string, PortRef[]>; // "blockId:portId" -> targets
+  readonly #connections: Map<string, PortRef | undefined>; // "blockId:portId" -> target
   readonly #handler: EventHandler;
   readonly #observers = new Set<EventObserver>();
 
@@ -111,12 +111,12 @@ export class EventBus {
     this.#connections = this.#buildConnectionMap(workflow.blocks);
   }
 
-  #buildConnectionMap(blocks: BlockConfig[]): Map<string, PortRef[]> {
-    const map = new Map<string, PortRef[]>();
+  #buildConnectionMap(blocks: BlockConfig[]): Map<string, PortRef | undefined> {
+    const map = new Map<string, PortRef | undefined>();
     for (const block of blocks) {
-      for (const [portId, targets] of Object.entries(block.outputs)) {
+      for (const [portId, target] of Object.entries(block.outputs)) {
         const key = `${block.id}:${portId}`;
-        map.set(key, targets);
+        map.set(key, target);
       }
     }
     return map;
@@ -145,11 +145,11 @@ export class EventBus {
       count: (existing?.count ?? 0) + 1,
     });
 
-    // Get targets for this output port
-    const targets = this.#connections.get(portKey) ?? [];
+    // Get target for this output port
+    const targetRef = this.#connections.get(portKey);
 
-    // Dispatch to each target
-    for (const targetRef of targets) {
+    // Dispatch to target if it exists
+    if (targetRef) {
       const { blockId: targetBlockId, portId: targetPort } = parsePortRef(targetRef);
 
       const dispatched: DispatchedEvent = {
@@ -214,8 +214,8 @@ export class EventBus {
    */
   get connectionCount(): number {
     let count = 0;
-    for (const targets of this.#connections.values()) {
-      count += targets.length;
+    for (const target of this.#connections.values()) {
+      if (target !== undefined) count++;
     }
     return count;
   }

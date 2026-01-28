@@ -43,6 +43,17 @@ export interface BlockTypeRegistry {
   get(type: string): BlockTypeDefinition | undefined;
 }
 
+/**
+ * Validation context passed through validation functions.
+ * Consolidates commonly-used parameters to simplify function signatures.
+ */
+interface ValidationContext {
+  blockMap: Map<string, Workflow['blocks'][0]>;
+  registry: BlockTypeRegistry;
+  errors: ValidationError[];
+  warnings: ValidationError[];
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Workspace Validation
 // ─────────────────────────────────────────────────────────────────────────────
@@ -53,12 +64,11 @@ export interface BlockTypeRegistry {
 function validateBlockTypeExists(
   block: Workflow['blocks'][0],
   blockPath: string,
-  registry: BlockTypeRegistry,
-  errors: ValidationError[]
+  ctx: ValidationContext
 ): BlockTypeDefinition | null {
-  const blockType = registry.get(block.type);
+  const blockType = ctx.registry.get(block.type);
   if (!blockType) {
-    errors.push({
+    ctx.errors.push({
       code: 'UNKNOWN_BLOCK_TYPE',
       message: `Unknown block type: "${block.type}"`,
       path: `${blockPath}.type`,
@@ -77,10 +87,7 @@ function validateOutputConnection(
   block: Workflow['blocks'][0],
   outputPortId: string,
   outputPort: BlockTypeDefinition['outputs'][0],
-  blockMap: Map<string, Workflow['blocks'][0]>,
-  registry: BlockTypeRegistry,
-  errors: ValidationError[],
-  warnings: ValidationError[]
+  ctx: ValidationContext
 ): void {
   // Parse port reference
   let targetBlockId: string;
@@ -90,7 +97,7 @@ function validateOutputConnection(
     targetBlockId = parsed.blockId;
     targetPortId = parsed.portId;
   } catch {
-    errors.push({
+    ctx.errors.push({
       code: 'INVALID_PORT_REF',
       message: `Invalid port reference: "${ref}"`,
       path: refPath,
@@ -99,9 +106,9 @@ function validateOutputConnection(
   }
 
   // Check target block exists
-  const targetBlock = blockMap.get(targetBlockId);
+  const targetBlock = ctx.blockMap.get(targetBlockId);
   if (!targetBlock) {
-    errors.push({
+    ctx.errors.push({
       code: 'TARGET_BLOCK_NOT_FOUND',
       message: `Target block "${targetBlockId}" not found`,
       path: refPath,
@@ -110,9 +117,9 @@ function validateOutputConnection(
   }
 
   // Check target block type exists
-  const targetBlockType = registry.get(targetBlock.type);
+  const targetBlockType = ctx.registry.get(targetBlock.type);
   if (!targetBlockType) {
-    errors.push({
+    ctx.errors.push({
       code: 'UNKNOWN_TARGET_BLOCK_TYPE',
       message: `Target block "${targetBlockId}" has unknown type "${targetBlock.type}"`,
       path: refPath,
@@ -123,7 +130,7 @@ function validateOutputConnection(
   // Check target port exists
   const targetPort = targetBlockType.inputs.find((p) => p.id === targetPortId);
   if (!targetPort) {
-    errors.push({
+    ctx.errors.push({
       code: 'TARGET_PORT_NOT_FOUND',
       message: `Target port "${targetPortId}" not found on block "${targetBlockId}"`,
       path: refPath,
@@ -138,7 +145,7 @@ function validateOutputConnection(
   });
 
   if (!connectionResult.valid) {
-    errors.push({
+    ctx.errors.push({
       code: 'INVALID_CONNECTION',
       message: connectionResult.reason,
       path: refPath,
@@ -153,7 +160,7 @@ function validateOutputConnection(
     targetPortId,
     targetBlockId,
     refPath,
-    warnings
+    ctx.warnings
   );
 }
 
@@ -169,9 +176,9 @@ function checkBidirectionalRef(
   refPath: string,
   warnings: ValidationError[]
 ): void {
-  const targetInputRefs = targetBlock.inputs[targetPortId] || [];
+  const targetInputRef = targetBlock.inputs[targetPortId];
   const expectedRef = `${block.id}:${outputPortId}`;
-  if (!targetInputRefs.includes(expectedRef as (typeof targetInputRefs)[0])) {
+  if (targetInputRef !== expectedRef) {
     warnings.push({
       code: 'MISSING_BIDIRECTIONAL_REF',
       message: `Target block "${targetBlockId}" input "${targetPortId}" does not reference back to "${expectedRef}"`,
@@ -187,15 +194,12 @@ function validateAllOutputsForBlock(
   block: Workflow['blocks'][0],
   blockPath: string,
   blockType: BlockTypeDefinition,
-  blockMap: Map<string, Workflow['blocks'][0]>,
-  registry: BlockTypeRegistry,
-  errors: ValidationError[],
-  warnings: ValidationError[]
+  ctx: ValidationContext
 ): void {
-  for (const [outputPortId, refs] of Object.entries(block.outputs)) {
+  for (const [outputPortId, ref] of Object.entries(block.outputs)) {
     const outputPort = blockType.outputs.find((p) => p.id === outputPortId);
     if (!outputPort) {
-      errors.push({
+      ctx.errors.push({
         code: 'UNKNOWN_OUTPUT_PORT',
         message: `Unknown output port "${outputPortId}" on block type "${block.type}"`,
         path: `${blockPath}.outputs.${outputPortId}`,
@@ -203,23 +207,10 @@ function validateAllOutputsForBlock(
       continue;
     }
 
-    // Validate each connection
-    for (let j = 0; j < refs.length; j++) {
-      const ref = refs[j];
-      if (!ref) continue;
-
-      const refPath = `${blockPath}.outputs.${outputPortId}[${j}]`;
-      validateOutputConnection(
-        ref,
-        refPath,
-        block,
-        outputPortId,
-        outputPort,
-        blockMap,
-        registry,
-        errors,
-        warnings
-      );
+    // Validate connection if it exists
+    if (ref) {
+      const refPath = `${blockPath}.outputs.${outputPortId}`;
+      validateOutputConnection(ref, refPath, block, outputPortId, outputPort, ctx);
     }
   }
 }
@@ -227,19 +218,14 @@ function validateAllOutputsForBlock(
 /**
  * Validate a single input connection.
  */
-function validateInputConnection(
-  ref: string,
-  refPath: string,
-  blockMap: Map<string, Workflow['blocks'][0]>,
-  errors: ValidationError[]
-): void {
+function validateInputConnection(ref: string, refPath: string, ctx: ValidationContext): void {
   // Parse and validate reference
   let sourceBlockId: string;
   try {
     const parsed = parsePortRef(ref as `${string}:${string}`);
     sourceBlockId = parsed.blockId;
   } catch {
-    errors.push({
+    ctx.errors.push({
       code: 'INVALID_PORT_REF',
       message: `Invalid port reference: "${ref}"`,
       path: refPath,
@@ -248,9 +234,9 @@ function validateInputConnection(
   }
 
   // Check source block exists
-  const sourceBlock = blockMap.get(sourceBlockId);
+  const sourceBlock = ctx.blockMap.get(sourceBlockId);
   if (!sourceBlock) {
-    errors.push({
+    ctx.errors.push({
       code: 'SOURCE_BLOCK_NOT_FOUND',
       message: `Source block "${sourceBlockId}" not found`,
       path: refPath,
@@ -265,13 +251,12 @@ function validateAllInputsForBlock(
   block: Workflow['blocks'][0],
   blockPath: string,
   blockType: BlockTypeDefinition,
-  blockMap: Map<string, Workflow['blocks'][0]>,
-  errors: ValidationError[]
+  ctx: ValidationContext
 ): void {
-  for (const [inputPortId, refs] of Object.entries(block.inputs)) {
+  for (const [inputPortId, ref] of Object.entries(block.inputs)) {
     const inputPort = blockType.inputs.find((p) => p.id === inputPortId);
     if (!inputPort) {
-      errors.push({
+      ctx.errors.push({
         code: 'UNKNOWN_INPUT_PORT',
         message: `Unknown input port "${inputPortId}" on block type "${block.type}"`,
         path: `${blockPath}.inputs.${inputPortId}`,
@@ -279,12 +264,10 @@ function validateAllInputsForBlock(
       continue;
     }
 
-    for (let j = 0; j < refs.length; j++) {
-      const ref = refs[j];
-      if (!ref) continue;
-
-      const refPath = `${blockPath}.inputs.${inputPortId}[${j}]`;
-      validateInputConnection(ref, refPath, blockMap, errors);
+    // Validate connection if it exists
+    if (ref) {
+      const refPath = `${blockPath}.inputs.${inputPortId}`;
+      validateInputConnection(ref, refPath, ctx);
     }
   }
 }
@@ -302,7 +285,7 @@ function checkOrphanBlocks(
     if (!blockType) continue;
 
     const hasInputPorts = blockType.inputs.length > 0;
-    const hasInputConnections = Object.values(block.inputs).some((refs) => refs.length > 0);
+    const hasInputConnections = Object.values(block.inputs).some((ref) => ref !== undefined);
 
     if (hasInputPorts && !hasInputConnections) {
       // Block has input ports but no connections - might be orphaned
@@ -335,8 +318,13 @@ export function validateWorkspace(
   const errors: ValidationError[] = [];
   const warnings: ValidationError[] = [];
 
-  // Build block lookup map
-  const blockMap = new Map(workflow.blocks.map((b) => [b.id, b]));
+  // Build validation context
+  const ctx: ValidationContext = {
+    blockMap: new Map(workflow.blocks.map((b) => [b.id, b])),
+    registry,
+    errors,
+    warnings,
+  };
 
   // Validate each block
   for (let i = 0; i < workflow.blocks.length; i++) {
@@ -346,16 +334,16 @@ export function validateWorkspace(
     const blockPath = `blocks[${i}]`;
 
     // Check block type exists
-    const blockType = validateBlockTypeExists(block, blockPath, registry, errors);
+    const blockType = validateBlockTypeExists(block, blockPath, ctx);
     if (!blockType) {
       continue; // Can't validate ports without block type
     }
 
     // Validate output connections
-    validateAllOutputsForBlock(block, blockPath, blockType, blockMap, registry, errors, warnings);
+    validateAllOutputsForBlock(block, blockPath, blockType, ctx);
 
     // Validate input connections
-    validateAllInputsForBlock(block, blockPath, blockType, blockMap, errors);
+    validateAllInputsForBlock(block, blockPath, blockType, ctx);
   }
 
   // Check for orphan blocks

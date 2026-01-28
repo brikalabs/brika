@@ -1,0 +1,43 @@
+version: "1"
+workspace:
+  id: workflow-mkx2kj7a
+  name: New Workflow
+  enabled: true
+plugins:
+  "@brika/blocks-builtin": 0.2.1
+blocks:
+  - id: merge-mkx3rc1c-1
+    type: "@brika/blocks-builtin:merge"
+    position:
+      x: 105
+      y: 244
+    inputs:
+      a: clock-mkx3rr5j-2:tick
+      b: spark-receiver-mkx3s1pv-3:out
+    outputs:
+      out: end-mkx3sfe1-4:in
+  - id: clock-mkx3rr5j-2
+    type: "@brika/blocks-builtin:clock"
+    position:
+      x: -3
+      y: 47
+    config:
+      interval: 1000
+    outputs:
+      tick: merge-mkx3rc1c-1:a
+  - id: spark-receiver-mkx3s1pv-3
+    type: "@brika/blocks-builtin:spark-receiver"
+    position:
+      x: 268
+      y: 66
+    config:
+      sparkType: "@brika/plugin-example-echo:echoed"
+    outputs:
+      out: merge-mkx3rc1c-1:b
+  - id: end-mkx3sfe1-4
+    type: "@brika/blocks-builtin:end"
+    position:
+      x: 77
+      y: 423
+    inputs:
+      in: merge-mkx3rc1c-1:out

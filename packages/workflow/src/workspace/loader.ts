@@ -1,7 +1,7 @@
 /**
  * Workspace Loader
  *
- * Load and watch TOML workspace files with hot-reload support.
+ * Load and watch YAML workspace files with hot-reload support.
  */
 
 import type { BlockTypeDefinition, Workflow } from '../types';
@@ -46,7 +46,7 @@ export interface LoaderOptions {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Loads and watches TOML workspace files.
+ * Loads and watches YAML workspace files.
  */
 export class WorkspaceLoader {
   readonly #dir: string;
@@ -95,8 +95,8 @@ export class WorkspaceLoader {
       await Bun.write(`${this.#dir}/.keep`, '');
     }
 
-    // Load all .toml files
-    const glob = new Bun.Glob('*.toml');
+    // Load all .yaml files
+    const glob = new Bun.Glob('*.{yaml,yml}');
     const files = await Array.fromAsync(glob.scan({ cwd: this.#dir }));
 
     for (const file of files) {
@@ -149,7 +149,7 @@ export class WorkspaceLoader {
     }
 
     const filePath =
-      this.#idToPath.get(workflow.workspace.id) ?? `${this.#dir}/${workflow.workspace.id}.toml`;
+      this.#idToPath.get(workflow.workspace.id) ?? `${this.#dir}/${workflow.workspace.id}.yaml`;
 
     // Validate before saving
     const validation = validateWorkspace(workflow, this.#registry);
@@ -251,7 +251,7 @@ export class WorkspaceLoader {
     if (!Bun) return;
 
     try {
-      const glob = new Bun.Glob('*.toml');
+      const glob = new Bun.Glob('*.{yaml,yml}');
       const currentFiles = new Set<string>();
 
       for await (const file of glob.scan({ cwd: this.#dir })) {

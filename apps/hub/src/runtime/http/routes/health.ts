@@ -1,9 +1,9 @@
 import { route } from '@brika/router';
 import { HUB_VERSION } from '@/hub';
-import { AutomationEngine } from '@/runtime/automations';
 import { BlockRegistry } from '@/runtime/blocks';
 import { PluginManager } from '@/runtime/plugins/plugin-manager';
 import { SparkRegistry } from '@/runtime/sparks/spark-registry';
+import { WorkflowEngine } from '@/runtime/workflows';
 
 export const healthRoutes = [
   route.get('/api/health', () => {
@@ -17,12 +17,12 @@ export const healthRoutes = [
   route.get('/api/stats', ({ inject }) => {
     const plugins = inject(PluginManager);
     const blocks = inject(BlockRegistry);
-    const automations = inject(AutomationEngine);
+    const workflows = inject(WorkflowEngine);
     const sparks = inject(SparkRegistry);
 
     const pluginList = plugins.list();
     const blockList = blocks.list();
-    const workflowList = automations.list();
+    const workflowList = workflows.list();
     const sparkList = sparks.list();
 
     return {

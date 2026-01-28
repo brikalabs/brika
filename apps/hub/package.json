@@ -27,7 +27,6 @@
     "hono": "^4.11.3",
     "picocolors": "^1.1.1",
     "reflect-metadata": "^0.2.2",
-    "smol-toml": "^1.6.0",
     "yaml": "^2.8.2",
     "zod": "^4.3.4"
   },

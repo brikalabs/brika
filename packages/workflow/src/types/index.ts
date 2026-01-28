@@ -19,7 +19,7 @@ export type {
 export type { PortDefinition, PortDirection, PortRef } from './ports';
 export { createPortRef, parsePortRef } from './ports';
 
-// Workflow types (TOML structure)
+// Workflow types (YAML structure)
 export type {
   BlockConfig,
   Position,

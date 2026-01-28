@@ -40,7 +40,7 @@ describe('BrikaInitializer', () => {
     const files = await readdir(brikaDir);
 
     expect(files).toContain('brika.yml');
-    expect(files).toContain('automations');
+    expect(files).toContain('workflows');
   });
 
   test('creates default brika.yml with correct content', async () => {
@@ -77,14 +77,14 @@ describe('BrikaInitializer', () => {
     expect(content).toBe(customContent);
   });
 
-  test('creates automations subdirectory', async () => {
+  test('creates workflows subdirectory', async () => {
     const initializer = new BrikaInitializer();
     await initializer.init();
 
-    const automationsDir = join(TEST_DIR, '.brika', 'automations');
+    const workflowsDir = join(TEST_DIR, '.brika', 'workflows');
 
     // Directory should exist (checking if we can list it)
-    const files = await readdir(automationsDir);
+    const files = await readdir(workflowsDir);
     expect(Array.isArray(files)).toBe(true);
   });
 });

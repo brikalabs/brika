@@ -7,7 +7,7 @@ export type LogSource =
   | 'installer'
   | 'registry'
   | 'stderr'
-  | 'automation'
+  | 'workflow'
   | 'events'
   | 'http'
   | 'i18n'
@@ -23,7 +23,7 @@ export const LOG_SOURCES: LogSource[] = [
   'installer',
   'registry',
   'stderr',
-  'automation',
+  'workflow',
   'events',
   'http',
   'i18n',

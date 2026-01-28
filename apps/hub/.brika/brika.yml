@@ -17,7 +17,9 @@ hub:
 #       key: value
 plugins:
   "@brika/blocks-builtin":
-    version: "latest"
+    version: workspace:*
+  "@brika/plugin-example-echo":
+    version: workspace:*
 
 # Event-based rules
 rules: []

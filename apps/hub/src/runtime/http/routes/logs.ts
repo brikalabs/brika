@@ -6,18 +6,31 @@ import { LogStore } from '@/runtime/logs/log-store';
 import { PluginManager } from '@/runtime/plugins/plugin-manager';
 
 const LogLevelSchema = z.enum(['debug', 'info', 'warn', 'error']);
-const LogSourceSchema = z.enum(['hub', 'plugin', 'installer', 'registry', 'stderr', 'automation']);
+const LogSourceSchema = z.enum([
+  'hub',
+  'plugin',
+  'installer',
+  'registry',
+  'stderr',
+  'workflow',
+  'events',
+  'http',
+  'i18n',
+  'state',
+]);
 
 const LogQuerySchema = z.object({
   level: z
     .union([
       LogLevelSchema,
+      z.array(LogLevelSchema),
       z.string().transform((s) => s.split(',') as ('debug' | 'info' | 'warn' | 'error')[]),
     ])
     .optional(),
   source: z
     .union([
       LogSourceSchema,
+      z.array(LogSourceSchema),
       z
         .string()
         .transform(
@@ -28,7 +41,11 @@ const LogQuerySchema = z.object({
               | 'installer'
               | 'registry'
               | 'stderr'
-              | 'automation'
+              | 'workflow'
+              | 'events'
+              | 'http'
+              | 'i18n'
+              | 'state'
             )[]
         ),
     ])

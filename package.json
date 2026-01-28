@@ -17,6 +17,7 @@
     "dev:hub": "bun --filter @brika/hub dev",
     "dev:ui": "bun --filter @brika/ui dev",
     "test": "bun test",
+    "test:coverage": "bun test --coverage --coverage-reporter=lcov --coverage-reporter=text",
     "tsc": "bun --filter '*' tsc",
     "lint": "bunx biome check .",
     "lint:fix": "bunx biome check --write ."

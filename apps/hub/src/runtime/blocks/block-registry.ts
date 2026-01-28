@@ -2,7 +2,6 @@
  * Block Registry
  *
  * Central registry for block definitions received from plugins.
- * Provides block metadata to UI and validates block configs.
  */
 
 import type { BlockDefinition } from '@brika/sdk';
@@ -14,16 +13,26 @@ import { Logger } from '@/runtime/logs/log-router';
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Block with provider info and package.json metadata */
+export interface PluginInfo {
+  id: string;
+  version: string;
+  name?: string;
+  description?: string;
+  author?: string;
+  icon?: string;
+  homepage?: string;
+}
+
 interface RegisteredBlock extends BlockDefinition {
   pluginId: string;
-  // From package.json
   name?: string;
   description?: string;
   category?: string;
   icon?: string;
   color?: string;
 }
+
+type ValidationResult = { valid: boolean; errors?: string[] };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Registry
@@ -32,72 +41,33 @@ interface RegisteredBlock extends BlockDefinition {
 @singleton()
 export class BlockRegistry {
   private readonly logs = inject(Logger).withSource('registry');
-
-  /** Block definitions by type */
   readonly #blocks = new Map<string, RegisteredBlock>();
+  readonly #plugins = new Map<string, PluginInfo>();
+  readonly #listeners = new Set<(type: string) => void>();
 
-  /** Listeners called when a block is registered */
-  readonly #onRegisterListeners = new Set<(type: string) => void>();
-
-  /**
-   * Get number of registered blocks
-   */
   get size(): number {
     return this.#blocks.size;
   }
 
-  /**
-   * Subscribe to block registration events
-   */
   onBlockRegistered(listener: (type: string) => void): () => void {
-    this.#onRegisterListeners.add(listener);
-    return () => this.#onRegisterListeners.delete(listener);
+    this.#listeners.add(listener);
+    return () => this.#listeners.delete(listener);
   }
 
-  /**
-   * Register a block definition from a plugin
-   * The full type will be `pluginId:blockId` (e.g., "blocks-builtin:condition")
-   */
-  register(block: BlockDefinition, pluginId: string): void {
-    // Create full qualified type: pluginId:blockId
-    const fullType = `${pluginId}:${block.id}`;
+  register(block: BlockDefinition, plugin: PluginInfo): void {
+    const type = `${plugin.id}:${block.id}`;
 
-    if (this.#blocks.has(fullType)) {
-      this.logs.warn('Duplicate block registration detected', {
-        blockType: fullType,
-        existingPlugin: this.#blocks.get(fullType)?.pluginId ?? null,
-        newPlugin: pluginId,
-      });
+    if (this.#blocks.has(type)) {
+      this.logs.warn('Duplicate block registration', { type, plugin: plugin.id });
     }
 
-    // Set the full type on the definition
-    this.#blocks.set(fullType, { ...block, type: fullType, pluginId });
-    this.logs.info('Block registered successfully', {
-      blockType: fullType,
-      pluginId: pluginId,
-      inputCount: block.inputs?.length ?? 0,
-      outputCount: block.outputs?.length ?? 0,
-    });
+    this.#plugins.set(plugin.id, plugin);
+    this.#blocks.set(type, { ...block, type, pluginId: plugin.id });
 
-    // Notify listeners
-    for (const listener of this.#onRegisterListeners) {
-      try {
-        listener(fullType);
-      } catch (e) {
-        this.logs.error(
-          'Block registration listener failed',
-          {
-            blockType: fullType,
-          },
-          { error: e }
-        );
-      }
-    }
+    this.logs.info('Block registered', { type, plugin: plugin.id, version: plugin.version });
+    this.#notifyListeners(type);
   }
 
-  /**
-   * Unregister all blocks from a plugin
-   */
   unregisterPlugin(pluginId: string): number {
     let count = 0;
     for (const [type, block] of this.#blocks) {
@@ -107,45 +77,28 @@ export class BlockRegistry {
       }
     }
     if (count > 0) {
-      this.logs.info('Blocks unregistered from plugin', {
-        pluginId: pluginId,
-        count: count,
-      });
+      this.#plugins.delete(pluginId);
+      this.logs.info('Plugin unregistered', { plugin: pluginId, blocks: count });
     }
     return count;
   }
 
-  /**
-   * Get a block definition by type
-   */
   get(type: string): RegisteredBlock | undefined {
     return this.#blocks.get(type);
   }
 
-  /**
-   * Check if a block type exists
-   */
   has(type: string): boolean {
     return this.#blocks.has(type);
   }
 
-  /**
-   * Get all registered block definitions
-   */
   list(): BlockDefinition[] {
     return [...this.#blocks.values()].sort((a, b) => a.id.localeCompare(b.id));
   }
 
-  /**
-   * Get blocks registered by a specific plugin
-   */
   listByPlugin(pluginId: string): BlockDefinition[] {
     return [...this.#blocks.values()].filter((b) => b.pluginId === pluginId);
   }
 
-  /**
-   * Get blocks by owner (alias for listByPlugin) returning BlockSummary
-   */
   listByOwner(pluginId: string): BlockSummary[] {
     return [...this.#blocks.values()]
       .filter((b) => b.pluginId === pluginId)
@@ -161,204 +114,132 @@ export class BlockRegistry {
       }));
   }
 
-  /**
-   * Get blocks grouped by category
-   */
   listByCategory(): Record<string, BlockDefinition[]> {
     const result: Record<string, BlockDefinition[]> = {};
     for (const block of this.#blocks.values()) {
-      const category = block.category || 'other';
-      if (!result[category]) result[category] = [];
+      const category = block.category ?? 'other';
+      result[category] ??= [];
       result[category].push(block);
     }
     return result;
   }
 
-  /**
-   * Get the plugin ID that provides a block
-   */
   getProvider(type: string): string | undefined {
     return this.#blocks.get(type)?.pluginId;
   }
 
-  /**
-   * Validate block config against its schema
-   */
-  validateConfig(
-    type: string,
-    config: Record<string, unknown>
-  ): { valid: boolean; errors?: string[] } {
+  getPluginInfo(type: string): PluginInfo | undefined {
+    const pluginId = this.getProvider(type);
+    return pluginId ? this.#plugins.get(pluginId) : undefined;
+  }
+
+  getPlugins(): PluginInfo[] {
+    return [...this.#plugins.values()];
+  }
+
+  validateConfig(type: string, config: Record<string, unknown>): ValidationResult {
     const block = this.#blocks.get(type);
-    if (!block) {
-      return { valid: false, errors: [`Unknown block type: ${type}`] };
-    }
+    if (!block) return { valid: false, errors: [`Unknown block type: ${type}`] };
 
     const errors: string[] = [];
-    const schema = block.schema;
+    const { schema } = block;
 
-    this.validateRequiredFields(schema, config, errors);
-    this.validatePropertyTypes(schema, config, errors);
+    // Validate required fields
+    for (const field of schema.required ?? []) {
+      if (!(field in config)) errors.push(`Missing required field: ${field}`);
+    }
+
+    // Validate property types
+    for (const [key, prop] of Object.entries(schema.properties ?? {})) {
+      if (key in config && !this.#isValidType(config[key], prop.type)) {
+        errors.push(`Field "${key}" should be ${prop.type}`);
+      }
+    }
 
     return { valid: errors.length === 0, errors: errors.length > 0 ? errors : undefined };
   }
 
-  /**
-   * Validate required fields in config
-   */
-  private validateRequiredFields(
-    schema: { required?: string[] },
-    config: Record<string, unknown>,
-    errors: string[]
-  ): void {
-    if (!schema.required) return;
-
-    for (const field of schema.required) {
-      if (!(field in config)) {
-        errors.push(`Missing required field: ${field}`);
-      }
-    }
-  }
-
-  /**
-   * Validate property types in config
-   */
-  private validatePropertyTypes(
-    schema: { properties?: Record<string, { type: string }> },
-    config: Record<string, unknown>,
-    errors: string[]
-  ): void {
-    if (!schema.properties) return;
-
-    for (const [key, prop] of Object.entries(schema.properties)) {
-      if (key in config) {
-        const value = config[key];
-        if (!validateType(value, prop.type)) {
-          errors.push(`Field "${key}" should be ${prop.type}`);
-        }
-      }
-    }
-  }
-
-  /**
-   * Validate a single connection for block existence and type definitions
-   */
-  private validateConnectionBlocks(
-    conn: { from: string; to: string },
-    blockMap: Map<string, { id: string; type: string }>,
-    errors: string[]
-  ): {
-    sourceBlock?: { id: string; type: string };
-    targetBlock?: { id: string; type: string };
-    sourceDef?: BlockDefinition;
-    targetDef?: BlockDefinition;
-  } {
-    const sourceBlock = blockMap.get(conn.from);
-    const targetBlock = blockMap.get(conn.to);
-
-    if (!sourceBlock) {
-      errors.push(`Connection references unknown source block: ${conn.from}`);
-      return {};
-    }
-    if (!targetBlock) {
-      errors.push(`Connection references unknown target block: ${conn.to}`);
-      return {};
-    }
-
-    const sourceDef = this.get(sourceBlock.type);
-    const targetDef = this.get(targetBlock.type);
-
-    if (!sourceDef) {
-      errors.push(`Unknown block type: ${sourceBlock.type}`);
-      return { sourceBlock, targetBlock };
-    }
-    if (!targetDef) {
-      errors.push(`Unknown block type: ${targetBlock.type}`);
-      return { sourceBlock, targetBlock, sourceDef };
-    }
-
-    return { sourceBlock, targetBlock, sourceDef, targetDef };
-  }
-
-  /**
-   * Validate connection ports existence and type compatibility
-   */
-  private validateConnectionPorts(
-    conn: { from: string; fromPort?: string; to: string; toPort?: string },
-    sourceBlock: { id: string; type: string },
-    targetBlock: { id: string; type: string },
-    sourceDef: BlockDefinition,
-    targetDef: BlockDefinition,
-    errors: string[]
-  ): void {
-    const sourcePort = sourceDef.outputs.find((p) => p.id === (conn.fromPort || 'out'));
-    const targetPort = targetDef.inputs.find((p) => p.id === (conn.toPort || 'in'));
-
-    if (!sourcePort) {
-      errors.push(
-        `Block "${sourceBlock.id}" (${sourceBlock.type}) has no output port "${conn.fromPort || 'out'}"`
-      );
-      return;
-    }
-    if (!targetPort) {
-      errors.push(
-        `Block "${targetBlock.id}" (${targetBlock.type}) has no input port "${conn.toPort || 'in'}"`
-      );
-      return;
-    }
-
-    // Check type compatibility
-    if (!arePortTypesCompatible(sourcePort.typeName, targetPort.typeName)) {
-      errors.push(
-        `Type mismatch: ${sourceBlock.id}.${conn.fromPort || 'out'} (${sourcePort.typeName || 'unknown'}) → ${targetBlock.id}.${conn.toPort || 'in'} (${targetPort.typeName || 'unknown'})`
-      );
-    }
-  }
-
-  /**
-   * Validate workflow connections for type compatibility
-   */
   validateConnections(
     blocks: Array<{ id: string; type: string }>,
     connections: Array<{ from: string; fromPort?: string; to: string; toPort?: string }>
-  ): { valid: boolean; errors?: string[] } {
+  ): ValidationResult {
     const errors: string[] = [];
     const blockMap = new Map(blocks.map((b) => [b.id, b]));
 
     for (const conn of connections) {
-      const { sourceBlock, targetBlock, sourceDef, targetDef } = this.validateConnectionBlocks(
-        conn,
-        blockMap,
-        errors
-      );
+      const fromBlock = blockMap.get(conn.from);
+      const toBlock = blockMap.get(conn.to);
 
-      if (!sourceBlock || !targetBlock || !sourceDef || !targetDef) {
+      if (!fromBlock) {
+        errors.push(`Unknown source block: ${conn.from}`);
+        continue;
+      }
+      if (!toBlock) {
+        errors.push(`Unknown target block: ${conn.to}`);
         continue;
       }
 
-      this.validateConnectionPorts(conn, sourceBlock, targetBlock, sourceDef, targetDef, errors);
+      const fromDef = this.get(fromBlock.type);
+      const toDef = this.get(toBlock.type);
+
+      if (!fromDef) {
+        errors.push(`Unknown block type: ${fromBlock.type}`);
+        continue;
+      }
+      if (!toDef) {
+        errors.push(`Unknown block type: ${toBlock.type}`);
+        continue;
+      }
+
+      const fromPortId = conn.fromPort ?? 'out';
+      const toPortId = conn.toPort ?? 'in';
+
+      const fromPort = fromDef.outputs.find((p) => p.id === fromPortId);
+      const toPort = toDef.inputs.find((p) => p.id === toPortId);
+
+      if (!fromPort) {
+        errors.push(`Block "${fromBlock.id}" has no output port "${fromPortId}"`);
+        continue;
+      }
+      if (!toPort) {
+        errors.push(`Block "${toBlock.id}" has no input port "${toPortId}"`);
+        continue;
+      }
+
+      if (!arePortTypesCompatible(fromPort.typeName, toPort.typeName)) {
+        errors.push(
+          `Type mismatch: ${fromBlock.id}.${fromPortId} (${fromPort.typeName}) → ${toBlock.id}.${toPortId} (${toPort.typeName})`
+        );
+      }
     }
 
     return { valid: errors.length === 0, errors: errors.length > 0 ? errors : undefined };
   }
-}
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────────────────────────────────────
+  #notifyListeners(type: string): void {
+    for (const listener of this.#listeners) {
+      try {
+        listener(type);
+      } catch (error) {
+        this.logs.error('Listener failed', { type }, { error });
+      }
+    }
+  }
 
-function validateType(value: unknown, expectedType: string): boolean {
-  switch (expectedType) {
-    case 'string':
-      return typeof value === 'string';
-    case 'number':
-      return typeof value === 'number';
-    case 'boolean':
-      return typeof value === 'boolean';
-    case 'array':
-      return Array.isArray(value);
-    case 'object':
-      return typeof value === 'object' && value !== null && !Array.isArray(value);
-    default:
-      return true;
+  #isValidType(value: unknown, expectedType: string): boolean {
+    switch (expectedType) {
+      case 'string':
+        return typeof value === 'string';
+      case 'number':
+        return typeof value === 'number';
+      case 'boolean':
+        return typeof value === 'boolean';
+      case 'array':
+        return Array.isArray(value);
+      case 'object':
+        return typeof value === 'object' && value !== null && !Array.isArray(value);
+      default:
+        return true;
+    }
   }
 }

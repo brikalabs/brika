@@ -662,7 +662,7 @@ export function useWorkflowEditor(
           id: nodeId,
           type: blockTypeId,
           label,
-          config: { id: nodeId, type: blockTypeId, ...blockType.defaultConfig },
+          config: { ...blockType.defaultConfig },
           icon: blockType.icon,
           color: blockType.color,
           pluginId: blockType.pluginId,

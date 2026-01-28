@@ -1,5 +1,5 @@
-export { AutomationEngine } from './automation-engine';
 export type { BlockConnection, Workflow, WorkflowBlock } from './types';
+export { WorkflowEngine } from './workflow-engine';
 export type {
   ExecutionEvent,
   ExecutionListener,

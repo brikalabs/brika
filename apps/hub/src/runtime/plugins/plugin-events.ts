@@ -90,13 +90,31 @@ export class PluginEventHandler {
   registerBlock(
     pluginName: string,
     block: { id: string; [key: string]: unknown },
-    packageMetadata?: { blocks?: Array<{ id: string; [key: string]: unknown }> }
+    packageMetadata?: {
+      version?: string;
+      description?: string;
+      author?: string | { name?: string };
+      icon?: string;
+      homepage?: string;
+      blocks?: Array<{ id: string; [key: string]: unknown }>;
+    }
   ): void {
     // Merge runtime block definition with package.json metadata
     const pkgBlock = packageMetadata?.blocks?.find((b) => b.id === block.id);
     const merged = pkgBlock ? { ...pkgBlock, ...block } : block;
 
-    this.#blocks.register(merged as unknown as BlockDefinition, pluginName);
+    this.#blocks.register(merged as unknown as BlockDefinition, {
+      id: pluginName,
+      version: packageMetadata?.version ?? 'unknown',
+      name: pluginName,
+      description: packageMetadata?.description,
+      author:
+        typeof packageMetadata?.author === 'string'
+          ? packageMetadata.author
+          : packageMetadata?.author?.name,
+      icon: packageMetadata?.icon,
+      homepage: packageMetadata?.homepage,
+    });
     this.#logs.debug('Block registered from plugin', {
       pluginName: pluginName,
       blockId: block.id,

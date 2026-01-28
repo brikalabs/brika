@@ -45,7 +45,7 @@ The central runtime that orchestrates everything:
 * `apps/hub/src/main.ts` — Entry point
 * `apps/hub/src/runtime/http/api-server.ts` — API endpoints
 * `apps/hub/src/runtime/plugins/plugin-manager.ts` — Plugin loading
-* `apps/hub/src/runtime/automations/workflow-executor.ts` — Workflow execution
+* `apps/hub/src/runtime/workflows/workflow-executor.ts` — Workflow execution
 
 ### UI
 
@@ -93,7 +93,7 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-    A[User creates workflow in UI] --> B[Workflow saved to automations/*.yml]
+    A[User creates workflow in UI] --> B[Workflow saved to workflows/*.yml]
     B --> C[Workflow Executor loads workflow]
     C --> D[Trigger: event, schedule, or manual]
     D --> E[Instantiate blocks]

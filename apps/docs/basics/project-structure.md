@@ -23,7 +23,7 @@ brika/
 │   ├── blocks-builtin/   # Core blocks (condition, delay, log, etc.)
 │   ├── timer/            # Timer & countdown blocks
 │   └── example-echo/     # Example plugin
-├── automations/          # Workflow YAML files
+├── workflows/            # Workflow YAML files
 └── docs/                 # Documentation
 ```
 
@@ -112,7 +112,7 @@ Example plugin demonstrating SDK usage.
 | File | Purpose |
 |------|---------|
 | `brika.yml` | Main configuration |
-| `automations/*.yml` | Workflow definitions |
+| `workflows/*.yml` | Workflow definitions |
 | `apps/hub/src/main.ts` | Hub entry point |
 | `apps/ui/src/main.tsx` | UI entry point |
 | `plugins/*/src/index.ts` | Plugin entry points |

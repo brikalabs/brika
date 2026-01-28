@@ -1,7 +1,7 @@
 /**
  * Workspace
  *
- * TOML workspace parsing and loading.
+ * YAML workspace parsing and loading.
  */
 
 export { WorkspaceLoader } from './loader';

@@ -21,8 +21,8 @@ plugins:
   # - package: "@brika/plugin-hue"
   #   version: "1.0.0"
 
-automations:
-  directory: ./automations
+workflows:
+  directory: ./workflows
 ```
 
 ## Plugin Configuration
@@ -59,10 +59,10 @@ onPreferencesChange<MyConfig>((newConfig) => {
 
 ## Workflow Files
 
-Workflows are stored as YAML files in the `automations/` directory:
+Workflows are stored as YAML files in the `workflows/` directory:
 
 ```yaml
-# automations/morning-routine.yml
+# workflows/morning-routine.yml
 name: Morning Routine
 description: Turn on lights at sunrise
 trigger:
@@ -95,7 +95,7 @@ When running in Docker, mount your configuration:
 ```bash
 docker run -d \
   -v ./brika.yml:/app/brika.yml \
-  -v ./automations:/app/automations \
+  -v ./workflows:/app/workflows \
   -v ./data:/app/.brika \
   maxscharwath/brika:latest
 ```

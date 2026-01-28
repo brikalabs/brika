@@ -2,7 +2,6 @@
 import 'reflect-metadata';
 
 import {
-  AutomationLoader,
   bootstrap,
   I18nLoader,
   loader,
@@ -10,6 +9,7 @@ import {
   routes,
   sparks,
   trapSignals,
+  WorkflowsLoader,
 } from '@/runtime/bootstrap';
 import { allRoutes } from '@/runtime/http/routes';
 
@@ -23,6 +23,6 @@ await bootstrap()
   .use(routes(allRoutes))
   .use(loader(I18nLoader))
   .use(loader(PluginLoader))
-  .use(loader(AutomationLoader))
+  .use(loader(WorkflowsLoader))
   .use(trapSignals())
   .start();

@@ -11,7 +11,7 @@ import type { PortRef } from './ports';
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Workspace metadata from the TOML header.
+ * Workspace metadata from the YAML header.
  */
 export interface WorkspaceMeta {
   /** Unique workspace ID (user-friendly slug) */
@@ -40,7 +40,7 @@ export interface Position {
 }
 
 /**
- * A block configuration in a workflow (from TOML).
+ * A block configuration in a workflow (from YAML).
  */
 export interface BlockConfig {
   /** Unique instance ID (user-friendly slug, e.g., "check-time") */
@@ -57,15 +57,15 @@ export interface BlockConfig {
 
   /**
    * Input port connections.
-   * Maps port ID to array of source port refs.
+   * Maps port ID to single source port ref (0 or 1 connection).
    */
-  inputs: Record<string, PortRef[]>;
+  inputs: Record<string, PortRef | undefined>;
 
   /**
    * Output port connections.
-   * Maps port ID to array of target port refs.
+   * Maps port ID to single target port ref (0 or 1 connection).
    */
-  outputs: Record<string, PortRef[]>;
+  outputs: Record<string, PortRef | undefined>;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -74,7 +74,7 @@ export interface BlockConfig {
 
 /**
  * Complete workflow definition.
- * Stored as TOML files with plugin dependencies.
+ * Stored as YAML files with plugin dependencies.
  */
 export interface Workflow {
   /** Schema version for forward compatibility */

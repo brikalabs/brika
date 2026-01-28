@@ -1,9 +1,10 @@
 import { createSSEStream, NotFound, route } from '@brika/router';
 import type { Json } from '@brika/shared';
 import { z } from 'zod';
-import { AutomationEngine } from '@/runtime/automations';
 import { EventSystem } from '@/runtime/events/event-system';
 import { Logger } from '@/runtime/logs/log-router';
+import { WorkflowEngine } from '@/runtime/workflows';
+import { getOrThrow } from '../utils/resource-helpers';
 
 /**
  * Workflow event types for live debugging
@@ -23,6 +24,29 @@ interface WorkflowEvent {
   portId?: string;
   data?: Json;
   timestamp: number;
+}
+
+/**
+ * Transform an EventSystem action into a WorkflowEvent.
+ * Extracts the event type from the action type string and safely extracts payload fields.
+ */
+function transformActionToWorkflowEvent(
+  action: { type: string; payload: unknown; timestamp: number },
+  workflowId: string
+): WorkflowEvent {
+  const typeParts = action.type.split('.');
+  const eventType = typeParts[typeParts.length - 1] as WorkflowEventType;
+
+  const payload = action.payload as Record<string, unknown> | null | undefined;
+
+  return {
+    type: eventType,
+    workflowId,
+    blockId: payload?.blockId as string | undefined,
+    portId: payload?.portId as string | undefined,
+    data: action.payload as Json,
+    timestamp: action.timestamp,
+  };
 }
 
 export const streamsRoutes = [
@@ -65,11 +89,10 @@ export const streamsRoutes = [
       params: z.object({ id: z.string() }),
     },
     ({ params, inject }) => {
-      const automations = inject(AutomationEngine);
+      const workflows = inject(WorkflowEngine);
       const events = inject(EventSystem);
 
-      const workflow = automations.get(params.id);
-      if (!workflow) throw new NotFound('Workflow not found');
+      const workflow = getOrThrow(workflows.get(params.id), 'Workflow not found');
 
       return createSSEStream((send) => {
         // Send initial state
@@ -84,65 +107,12 @@ export const streamsRoutes = [
         const unsub = events.subscribeGlob(
           [`workflow.${params.id}.*`, `block.${params.id}.*`],
           (action) => {
-            const event: WorkflowEvent = {
-              type: action.type.split('.').slice(-1)[0] as WorkflowEventType,
-              workflowId: params.id,
-              blockId: (action.payload as { blockId?: string })?.blockId,
-              portId: (action.payload as { portId?: string })?.portId,
-              data: action.payload as Json,
-              timestamp: action.timestamp,
-            };
+            const event = transformActionToWorkflowEvent(action, params.id);
             send(event, 'workflow-event');
           }
         );
 
         return () => unsub();
-      });
-    }
-  ),
-
-  // SSE: Stream workflow execution events
-  route.get(
-    '/api/workflows/stream',
-    {
-      query: z.object({
-        id: z.string(),
-      }),
-    },
-    ({ query, inject }) => {
-      const automations = inject(AutomationEngine);
-
-      const workflow = automations.get(query.id);
-      if (!workflow) throw new NotFound('Workflow not found');
-
-      return createSSEStream((send, close) => {
-        // Subscribe to execution events for this workflow
-        const removeListener = automations.addGlobalListener((event) => {
-          // Only send events for this workflow
-          if ('workflowId' in event && event.workflowId === query.id) {
-            send(event);
-
-            // Close stream if workflow stopped
-            if (event.type === 'workflow.stopped') {
-              close();
-            }
-          }
-        });
-
-        // Start the workflow
-        automations.setEnabled(query.id, true).catch((err: Error) => {
-          send({ type: 'workflow.error', workflowId: query.id, error: String(err) });
-          close();
-        });
-
-        // Return cleanup function
-        return () => {
-          removeListener();
-          // Stop workflow when client disconnects
-          if (automations.isWorkflowRunning(query.id)) {
-            automations.setEnabled(query.id, false);
-          }
-        };
       });
     }
   ),

@@ -1,4 +1,4 @@
-import { route } from '@brika/router';
+import { BadRequest, route } from '@brika/router';
 import { z } from 'zod';
 import { I18nService } from '@/runtime/i18n';
 
@@ -39,7 +39,7 @@ export const i18nRoutes = [
       const namespace = params.namespace;
 
       if (!namespace) {
-        return new Response('Namespace required', { status: 400 });
+        throw new BadRequest('Namespace required');
       }
 
       const translations = i18n.getNamespaceTranslations(locale, namespace);

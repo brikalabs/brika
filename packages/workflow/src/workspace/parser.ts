@@ -1,10 +1,10 @@
 /**
  * Workspace Parser
  *
- * Parse and validate TOML workspace files.
+ * Parse and validate YAML workspace files.
  */
 
-import TOML from '@iarna/toml';
+import { parse, stringify } from 'yaml';
 import type { Workflow } from '../types';
 import { WorkspaceSchema } from './schema';
 
@@ -19,15 +19,15 @@ export type ParseResult = { ok: true; workflow: Workflow } | { ok: false; error:
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Parse a TOML string into a validated Workflow.
+ * Parse a YAML string into a validated Workflow.
  *
- * @param toml - TOML content as string
+ * @param yamlContent - YAML content as string
  * @returns Parsed workflow or error
  */
-export function parseWorkspace(toml: string): ParseResult {
+export function parseWorkspace(yamlContent: string): ParseResult {
   try {
-    // Parse TOML using Bun's built-in TOML support
-    const raw = parseTOML(toml);
+    // Parse YAML
+    const raw = parseYAML(yamlContent);
 
     // Validate with Zod schema
     const result = WorkspaceSchema.safeParse(raw);
@@ -50,17 +50,17 @@ export function parseWorkspace(toml: string): ParseResult {
 }
 
 /**
- * Parse TOML string to object.
- * Uses @iarna/toml for parsing.
+ * Parse YAML string to object.
+ * Uses the yaml package for parsing.
  */
-function parseTOML(toml: string): unknown {
-  return TOML.parse(toml);
+function parseYAML(yamlContent: string): unknown {
+  return parse(yamlContent);
 }
 
 /**
- * Parse a TOML file into a validated Workflow.
+ * Parse a YAML file into a validated Workflow.
  *
- * @param filePath - Path to TOML file
+ * @param filePath - Path to YAML file
  * @returns Parsed workflow or error
  */
 export async function parseWorkspaceFile(filePath: string): Promise<ParseResult> {
@@ -79,12 +79,16 @@ export async function parseWorkspaceFile(filePath: string): Promise<ParseResult>
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Serialize a Workflow to TOML string.
+ * Serialize a Workflow to YAML string.
  *
  * @param workflow - Workflow to serialize
- * @returns TOML string
+ * @returns YAML string
  */
 export function serializeWorkspace(workflow: Workflow): string {
-  // biome-ignore lint/suspicious/noExplicitAny: TOML stringify needs any
-  return TOML.stringify(workflow as any);
+  return stringify(workflow, {
+    indent: 2,
+    lineWidth: 0,
+    defaultKeyType: 'PLAIN',
+    defaultStringType: 'PLAIN',
+  });
 }

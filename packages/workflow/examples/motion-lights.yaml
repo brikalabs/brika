@@ -1,0 +1,118 @@
+# Example Workflow: Motion-Activated Lighting
+#
+# This workflow turns on lights when motion is detected in the living room
+# during evening hours, and logs when it's skipped during daytime.
+
+version: "1"
+
+workspace:
+  id: motion-lights
+  name: Motion-Activated Lights
+  description: Turn on lights when motion detected after 6 PM
+  enabled: true
+
+plugins:
+  "@brika/blocks-builtin": "^0.1.0"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Source Block (0 inputs = entry point triggered by events)
+# ─────────────────────────────────────────────────────────────────────────────
+
+blocks:
+  - id: motion-detected
+    type: "@brika/blocks-builtin:event-listener"
+    position:
+      x: 100
+      y: 100
+    config:
+      event: motion.detected
+      filter:
+        room: living-room
+    inputs: {}
+    outputs:
+      out: check-time:in
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Condition Block (check if evening)
+  # ─────────────────────────────────────────────────────────────────────────────
+
+  - id: check-time
+    type: "@brika/blocks-builtin:condition"
+    position:
+      x: 100
+      y: 250
+    config:
+      if: "{{ trigger.payload.hour >= 18 }}"
+    inputs:
+      in: motion-detected:out
+    outputs:
+      then: set-brightness:in
+      else: log-skip:in
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Set Variable (brightness based on time)
+  # ─────────────────────────────────────────────────────────────────────────────
+
+  - id: set-brightness
+    type: "@brika/blocks-builtin:set"
+    position:
+      x: 50
+      y: 400
+    config:
+      var: brightness
+      value: "{{ trigger.payload.hour >= 22 ? 30 : 100 }}"
+    inputs:
+      in: check-time:then
+    outputs:
+      out: turn-on-light:in
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Action Block (call tool to turn on light)
+  # ─────────────────────────────────────────────────────────────────────────────
+
+  - id: turn-on-light
+    type: "@brika/blocks-builtin:action"
+    position:
+      x: 50
+      y: 550
+    config:
+      tool: "@brika/plugin-hue:set-light"
+      args:
+        light: living-room-main
+        brightness: "{{ vars.brightness }}"
+    inputs:
+      in: set-brightness:out
+    outputs:
+      out: done:in
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Log Block (skip during daytime)
+  # ─────────────────────────────────────────────────────────────────────────────
+
+  - id: log-skip
+    type: "@brika/blocks-builtin:log"
+    position:
+      x: 200
+      y: 400
+    config:
+      message: "Skipping - daytime motion in {{ trigger.payload.room }}"
+      level: debug
+    inputs:
+      in: check-time:else
+    outputs:
+      out: done:in
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # End Block
+  # ─────────────────────────────────────────────────────────────────────────────
+
+  - id: done
+    type: "@brika/blocks-builtin:end"
+    position:
+      x: 100
+      y: 700
+    config:
+      status: success
+    inputs:
+      in: turn-on-light:out
+    outputs: {}

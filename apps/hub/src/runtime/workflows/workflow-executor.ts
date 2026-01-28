@@ -174,37 +174,6 @@ export class WorkflowExecutor {
     return true;
   }
 
-  /**
-   * Retrigger the last value from a port (for debugging).
-   */
-  retrigger(blockId: string, port: string): boolean {
-    const key = `${blockId}:${port}`;
-    const buffer = this.#buffers.get(key);
-    if (!buffer) return false;
-
-    // Re-dispatch to downstream blocks
-    this.#dispatch(blockId, port, buffer.value);
-    return true;
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────────
-  // Queries
-  // ─────────────────────────────────────────────────────────────────────────────
-
-  /**
-   * Get the last value from a port.
-   */
-  getPortValue(blockId: string, port: string): PortBuffer | undefined {
-    return this.#buffers.get(`${blockId}:${port}`);
-  }
-
-  /**
-   * Get all port buffers (for UI state display).
-   */
-  getAllBuffers(): PortBuffer[] {
-    return [...this.#buffers.values()];
-  }
-
   // ─────────────────────────────────────────────────────────────────────────────
   // Event Listeners
   // ─────────────────────────────────────────────────────────────────────────────

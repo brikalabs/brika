@@ -1,18 +1,15 @@
 import { BadRequest, createSSEStream, group, NotFound, route } from '@brika/router';
+import { nonEmptyRecord, PositionSchema } from '@brika/shared';
 import { z } from 'zod';
-import { AutomationEngine, WorkflowLoader } from '@/runtime/automations';
 import { BlockRegistry } from '@/runtime/blocks';
+import { WorkflowEngine, WorkflowLoader } from '@/runtime/workflows';
+import { getOrThrow } from '../utils/resource-helpers';
 
 const blockSchema = z.object({
   id: z.string(),
   type: z.string(),
-  config: z.record(z.string(), z.unknown()).optional(),
-  position: z
-    .object({
-      x: z.number(),
-      y: z.number(),
-    })
-    .optional(),
+  config: nonEmptyRecord(z.record(z.string(), z.unknown())),
+  position: PositionSchema.optional(),
 });
 
 const connectionSchema = z.object({
@@ -33,7 +30,7 @@ const workflowSchema = z.object({
 
 export const workflowsRoutes = group('/api/workflows', [
   route.get('/', ({ inject }) => {
-    return inject(AutomationEngine).list();
+    return inject(WorkflowEngine).list();
   }),
 
   route.post('/', { body: workflowSchema }, async ({ body, inject }) => {
@@ -57,7 +54,7 @@ export const workflowsRoutes = group('/api/workflows', [
       blocks: body.blocks.map((b) => ({
         id: b.id,
         type: b.type,
-        config: (b.config ?? {}) as Record<string, import('@brika/shared').Json>,
+        config: b.config as Record<string, import('@brika/shared').Json> | undefined,
         position: b.position,
       })),
       connections,
@@ -67,30 +64,24 @@ export const workflowsRoutes = group('/api/workflows', [
   }),
 
   route.get('/blocks', ({ inject }) => {
-    return inject(AutomationEngine).getBlockTypes();
-  }),
-
-  // Workflow runs - returns execution history (stub for now)
-  route.get('/runs', () => {
-    // TODO: Implement run tracking in AutomationEngine
-    return [];
+    return inject(WorkflowEngine).getBlockTypes();
   }),
 
   route.post('/enable', { body: z.object({ id: z.string() }) }, async ({ body, inject }) => {
-    return { ok: await inject(AutomationEngine).setEnabled(body.id, true) };
+    return { ok: await inject(WorkflowEngine).setEnabled(body.id, true) };
   }),
 
   route.post('/disable', { body: z.object({ id: z.string() }) }, async ({ body, inject }) => {
-    return { ok: await inject(AutomationEngine).setEnabled(body.id, false) };
+    return { ok: await inject(WorkflowEngine).setEnabled(body.id, false) };
   }),
 
   // SSE: Stream ALL workflow runtime events (debug)
   route.get('/debug', ({ inject }) => {
-    const automations = inject(AutomationEngine);
+    const workflowEngine = inject(WorkflowEngine);
 
     return createSSEStream((send) => {
       // Send initial state - list of running workflows
-      const workflows = automations.list().filter((w) => w.enabled && w.startedAt);
+      const workflows = workflowEngine.list().filter((w) => w.enabled && w.startedAt);
       send(
         {
           type: 'init',
@@ -101,7 +92,7 @@ export const workflowsRoutes = group('/api/workflows', [
       );
 
       // Subscribe to all workflow events
-      const unsub = automations.addGlobalListener((event) => {
+      const unsub = workflowEngine.addGlobalListener((event) => {
         send(
           {
             ...event,
@@ -116,8 +107,7 @@ export const workflowsRoutes = group('/api/workflows', [
   }),
 
   route.get('/:id', { params: z.object({ id: z.string() }) }, ({ params, inject }) => {
-    const workflow = inject(AutomationEngine).get(params.id);
-    if (!workflow) throw new NotFound('Workflow not found');
+    const workflow = getOrThrow(inject(WorkflowEngine).get(params.id), 'Workflow not found');
     return workflow;
   }),
 

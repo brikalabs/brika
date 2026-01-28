@@ -1,4 +1,4 @@
-import { group, route } from '@brika/router';
+import { group, NotFound, route } from '@brika/router';
 import type { Json } from '@brika/shared';
 import { z } from 'zod';
 import { SparkActions } from '@/runtime/events/actions';
@@ -65,7 +65,7 @@ export const sparksRoutes = group('/api/sparks', [
       const registry = inject(SparkRegistry);
       const spark = registry.get(params.type);
       if (!spark) {
-        return { error: 'Spark not found', status: 404 };
+        throw new NotFound('Spark not found');
       }
       return {
         type: spark.type,

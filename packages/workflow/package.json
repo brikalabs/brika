@@ -19,7 +19,7 @@
     "@brika/flow": "workspace:*",
     "@brika/serializable": "workspace:*",
     "@brika/shared": "workspace:*",
-    "@iarna/toml": "^2.2.5",
+    "yaml": "^2.8.2",
     "zod": "^4.3.4"
   },
   "devDependencies": {

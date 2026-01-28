@@ -1,0 +1,57 @@
+version: "1"
+workspace:
+  id: workflow-mkvousak
+  name: Test
+  enabled: false
+plugins:
+  "@brika/blocks-builtin": workspace:*
+blocks:
+  - id: clock-mkvoux0w-1
+    type: "@brika/blocks-builtin:clock"
+    position:
+      x: 86.5
+      y: 97
+    config:
+      id: clock-mkvoux0w-1
+      type: "@brika/blocks-builtin:clock"
+      interval: 155
+    inputs: {}
+    outputs:
+      tick: split-mkvov37m-3:in
+  - id: split-mkvov37m-3
+    type: "@brika/blocks-builtin:split"
+    position:
+      x: 109
+      y: 246.75
+    config:
+      id: split-mkvov37m-3
+      type: "@brika/blocks-builtin:split"
+    inputs:
+      in: clock-mkvoux0w-1:tick
+    outputs:
+      a: end-mkvov75c-4:in
+      b: end-mkvovcqa-5:in
+  - id: end-mkvov75c-4
+    type: "@brika/blocks-builtin:end"
+    position:
+      x: -9.500399664249144
+      y: 380.228504143456
+    config:
+      id: end-mkvov75c-4
+      type: "@brika/blocks-builtin:end"
+      status: failure
+    inputs:
+      in: split-mkvov37m-3:a
+    outputs: {}
+  - id: end-mkvovcqa-5
+    type: "@brika/blocks-builtin:end"
+    position:
+      x: 292.110276932464
+      y: 361.79399087371087
+    config:
+      id: end-mkvovcqa-5
+      type: "@brika/blocks-builtin:end"
+      status: success
+    inputs:
+      in: split-mkvov37m-3:b
+    outputs: {}

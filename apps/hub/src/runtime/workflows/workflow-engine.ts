@@ -1,5 +1,5 @@
 /**
- * Automation Engine
+ * Workflow Engine
  *
  * Manages workflows with reactive, event-driven execution.
  * Workflows run indefinitely until stopped.
@@ -20,8 +20,8 @@ import { type ExecutionListener, WorkflowExecutor } from './workflow-executor';
 // ─────────────────────────────────────────────────────────────────────────────
 
 @singleton()
-export class AutomationEngine {
-  private readonly logs: ScopedLogger = inject(Logger).withSource('automation');
+export class WorkflowEngine {
+  private readonly logs: ScopedLogger = inject(Logger).withSource('workflow');
   private readonly events = inject(EventSystem);
   private readonly blocks = inject(BlockRegistry);
   private readonly plugins = inject(PluginManager);
@@ -40,7 +40,7 @@ export class AutomationEngine {
   #eventUnsubs: Array<() => void> = [];
 
   init(): void {
-    this.logs.info('Automation engine initialized successfully', {});
+    this.logs.info('Workflow engine initialized successfully', {});
   }
 
   /**
@@ -74,16 +74,33 @@ export class AutomationEngine {
   // ─────────────────────────────────────────────────────────────────────────────
 
   /**
-   * Check if all block types needed by a workflow are available
+   * Update workflow state in a centralized way.
    */
-  #checkBlocks(workflow: Workflow): { ok: boolean; missing: string[] } {
+  #updateWorkflowState(
+    workflow: Workflow,
+    status: 'stopped' | 'running' | 'error',
+    options?: { error?: string; startedAt?: number | undefined }
+  ): void {
+    workflow.status = status;
+    workflow.error = options?.error;
+    if (options?.startedAt !== undefined) {
+      workflow.startedAt = options.startedAt;
+    }
+    this.#workflows.set(workflow.id, workflow);
+  }
+
+  /**
+   * Check if all block types needed by a workflow are available.
+   * Returns list of missing block types.
+   */
+  #validateBlocks(workflow: Workflow): string[] {
     const missing: string[] = [];
     for (const block of workflow.blocks) {
       if (!this.blocks.has(block.type)) {
         missing.push(block.type);
       }
     }
-    return { ok: missing.length === 0, missing };
+    return missing;
   }
 
   /**
@@ -97,13 +114,12 @@ export class AutomationEngine {
     }
 
     // Check if all blocks are available
-    const { ok, missing } = this.#checkBlocks(workflow);
+    const missing = this.#validateBlocks(workflow);
 
-    if (!ok) {
+    if (missing.length > 0) {
       // Missing blocks - set error status
-      workflow.status = 'error';
-      workflow.error = `Missing blocks: ${missing.join(', ')}`;
-      this.#workflows.set(workflow.id, workflow);
+      const errorMessage = `Missing blocks: ${missing.join(', ')}`;
+      this.#updateWorkflowState(workflow, 'error', { error: errorMessage, startedAt: undefined });
       this.logs.warn('Workflow registration failed due to missing blocks', {
         workflowId: workflow.id,
         workflowName: workflow.name,
@@ -112,11 +128,8 @@ export class AutomationEngine {
       return;
     }
 
-    // Clear any previous error
-    workflow.error = undefined;
-    workflow.status = 'stopped';
-
-    this.#workflows.set(workflow.id, workflow);
+    // Clear any previous error and set to stopped
+    this.#updateWorkflowState(workflow, 'stopped', { error: undefined, startedAt: undefined });
     this.logs.info('Workflow registered successfully', {
       workflowId: workflow.id,
       workflowName: workflow.name,
@@ -183,9 +196,7 @@ export class AutomationEngine {
       });
 
       // Update status and startedAt
-      workflow.status = 'running';
-      workflow.startedAt = Date.now();
-      workflow.error = undefined;
+      this.#updateWorkflowState(workflow, 'running', { error: undefined, startedAt: Date.now() });
 
       await executor.start(workflow);
       this.logs.info('Workflow started successfully', {
@@ -195,9 +206,7 @@ export class AutomationEngine {
       });
     } catch (err) {
       // Set error status
-      workflow.status = 'error';
-      workflow.error = String(err);
-      workflow.startedAt = undefined;
+      this.#updateWorkflowState(workflow, 'error', { error: String(err), startedAt: undefined });
       this.#executors.delete(id);
       this.logs.error(
         'Failed to start workflow',
@@ -223,8 +232,7 @@ export class AutomationEngine {
     // Update workflow state
     const workflow = this.#workflows.get(id);
     if (workflow?.status === 'running') {
-      workflow.status = 'stopped';
-      workflow.startedAt = undefined;
+      this.#updateWorkflowState(workflow, 'stopped', { startedAt: undefined });
     }
 
     this.logs.info('Workflow stopped successfully', {
@@ -278,10 +286,10 @@ export class AutomationEngine {
 
     if (enabled) {
       // Re-check blocks before starting (in case they're now available)
-      const { ok, missing } = this.#checkBlocks(workflow);
-      if (!ok) {
-        workflow.status = 'error';
-        workflow.error = `Missing blocks: ${missing.join(', ')}`;
+      const missing = this.#validateBlocks(workflow);
+      if (missing.length > 0) {
+        const errorMessage = `Missing blocks: ${missing.join(', ')}`;
+        this.#updateWorkflowState(workflow, 'error', { error: errorMessage, startedAt: undefined });
         return true;
       }
 
@@ -316,6 +324,6 @@ export class AutomationEngine {
     for (const unsub of this.#eventUnsubs) unsub();
     this.#eventUnsubs = [];
 
-    this.logs.info('Automation engine stopped successfully', {});
+    this.logs.info('Workflow engine stopped successfully', {});
   }
 }

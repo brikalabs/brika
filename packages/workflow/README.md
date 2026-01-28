@@ -56,7 +56,7 @@ Each port keeps its last value for:
 ```typescript
 import { WorkflowRuntime, parseWorkspace } from "@brika/workflow";
 
-const workflow = parseWorkspace(tomlContent);
+const workflow = parseWorkspace(yamlContent);
 
 const runtime = new WorkflowRuntime(workflow, {
   blocks: blockRegistry,
@@ -120,46 +120,47 @@ await runtime.resumeBlock("processor");
 await runtime.stopBlock("processor");
 ```
 
-## Workflow Definition (TOML)
+## Workflow Definition (YAML)
 
-```toml
-version = "1"
+```yaml
+version: "1"
 
-[workspace]
-id = "motion-lights"
-name = "Motion-Activated Lights"
-enabled = true
+workspace:
+  id: motion-lights
+  name: Motion-Activated Lights
+  enabled: true
 
-[plugins]
-"@brika/blocks-builtin" = "^0.1.0"
-"@brika/plugin-hue" = "^1.0.0"
+plugins:
+  "@brika/blocks-builtin": "^0.1.0"
+  "@brika/plugin-hue": "^1.0.0"
 
-[[blocks]]
-id = "motion-sensor"
-type = "@brika/plugin-hue:motion"
-config = { device = "sensor-01" }
+blocks:
+  - id: motion-sensor
+    type: "@brika/plugin-hue:motion"
+    config:
+      device: sensor-01
+    inputs: {}
+    outputs:
+      detected: debounce:in
 
-[blocks.outputs]
-detected = ["debounce:in"]
+  - id: debounce
+    type: "@brika/blocks-builtin:debounce"
+    config:
+      delay: 500
+    inputs:
+      in: motion-sensor:detected
+    outputs:
+      out: lights:command
 
-[[blocks]]
-id = "debounce"
-type = "@brika/blocks-builtin:debounce"
-config = { delay = 500 }
-
-[blocks.inputs]
-in = ["motion-sensor:detected"]
-
-[blocks.outputs]
-out = ["lights:command"]
-
-[[blocks]]
-id = "lights"
-type = "@brika/plugin-hue:control"
-config = { devices = ["light-01", "light-02"] }
-
-[blocks.inputs]
-command = ["debounce:out"]
+  - id: lights
+    type: "@brika/plugin-hue:control"
+    config:
+      devices:
+        - light-01
+        - light-02
+    inputs:
+      command: debounce:out
+    outputs: {}
 ```
 
 ## Defining Blocks (SDK)

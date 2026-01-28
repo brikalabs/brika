@@ -1,14 +1,14 @@
 import { inject, singleton } from '@brika/shared';
-import { AutomationEngine, WorkflowLoader } from '@/runtime/automations';
 import type { BrikaConfig } from '@/runtime/config';
 import { ConfigLoader } from '@/runtime/config';
+import { WorkflowEngine, WorkflowLoader } from '@/runtime/workflows';
 import type { Loader } from './loader';
 
 @singleton()
-export class AutomationLoader implements Loader {
-  readonly name = 'automations';
+export class WorkflowsLoader implements Loader {
+  readonly name = 'workflows';
 
-  private readonly engine = inject(AutomationEngine);
+  private readonly engine = inject(WorkflowEngine);
   private readonly workflowLoader = inject(WorkflowLoader);
   private readonly configLoader = inject(ConfigLoader);
 
@@ -17,8 +17,8 @@ export class AutomationLoader implements Loader {
   }
 
   async load(_config: BrikaConfig): Promise<void> {
-    // Load TOML workflows with hot-reload
-    await this.workflowLoader.loadDir(`${this.configLoader.getBrikaDir()}/automations`);
+    // Load YAML workflows with hot-reload
+    await this.workflowLoader.loadDir(`${this.configLoader.getBrikaDir()}/workflows`);
     this.workflowLoader.watch();
   }
 
