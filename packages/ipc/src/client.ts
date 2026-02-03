@@ -2,6 +2,13 @@
  * IPC Client - Plugin-side
  *
  * Clean typed API for plugins to communicate with the Hub.
+ *
+ * Uses Bun's native IPC with advanced serialization which supports:
+ * - Uint8Array, ArrayBuffer (native binary, no base64!)
+ * - Date, Map, Set, RegExp
+ * - All structuredClone compatible types
+ *
+ * @see https://bun.sh/docs/runtime/child-process#inter-process-communication-ipc
  */
 
 import { Channel, type WireMessage } from './channel';
@@ -35,6 +42,14 @@ export interface ClientOptions {
  * // Start
  * client.start({ id: "@brika/plugin-timer", version: "0.1.0" });
  * ```
+ *
+ * @example Binary data works natively (no base64!):
+ * ```ts
+ * client.send(dataMessage, {
+ *   payload: new Uint8Array([1, 2, 3, 4]),
+ *   timestamp: new Date(),
+ * });
+ * ```
  */
 export class Client {
   readonly #channel: Channel;
@@ -51,9 +66,13 @@ export class Client {
       onClose: () => this.#cleanup(),
     });
 
-    // Listen for IPC messages
+    // Listen for messages
     process.on('message', (msg: WireMessage) => {
       this.#channel.handle(msg);
+    });
+
+    process.on('disconnect', () => {
+      this.#cleanup();
     });
 
     // Handle stop internally
@@ -134,12 +153,9 @@ export class Client {
     }
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Low-level
-  // ─────────────────────────────────────────────────────────────────────────
-
   #cleanup(): void {
     process.removeAllListeners('message');
+    process.removeAllListeners('disconnect');
   }
 }
 

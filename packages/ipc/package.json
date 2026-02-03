@@ -1,7 +1,7 @@
 {
   "name": "@brika/ipc",
   "version": "0.2.1",
-  "description": "Binary IPC communication layer for BRIKA plugins",
+  "description": "Type-safe IPC communication layer for BRIKA plugins using Bun's native IPC",
   "type": "module",
   "license": "MIT",
   "author": "BRIKA Team",
@@ -14,7 +14,7 @@
     "url": "git+https://github.com/maxscharwath/brika.git",
     "directory": "packages/ipc"
   },
-  "keywords": ["brika", "ipc", "binary", "communication"],
+  "keywords": ["brika", "ipc", "bun", "communication", "typed"],
   "exports": {
     ".": "./src/index.ts",
     "./contract": "./src/contract/index.ts"
@@ -22,12 +22,14 @@
   "files": ["src", "README.md"],
   "scripts": {
     "tsc": "bunx --biome tsc --noEmit",
+    "bench": "bun run src/__benchmarks__/ipc.bench.ts",
     "prepublishOnly": "bun run tsc"
   },
   "dependencies": {
     "zod": "^4.3.4"
   },
   "devDependencies": {
-    "@types/bun": "^1.3.5"
+    "@types/bun": "^1.3.5",
+    "mitata": "^1.0.34"
   }
 }

@@ -2,6 +2,13 @@
  * IPC Host - Hub-side
  *
  * Manages plugin connections with full type safety.
+ *
+ * Uses Bun's native IPC with advanced serialization which supports:
+ * - Uint8Array, ArrayBuffer (native binary, no base64!)
+ * - Date, Map, Set, RegExp
+ * - All structuredClone compatible types
+ *
+ * @see https://bun.sh/docs/runtime/child-process#inter-process-communication-ipc
  */
 
 import { Channel, type WireMessage } from './channel';
@@ -10,6 +17,9 @@ import type { InputOf, MessageDef, OutputOf, PayloadOf, RpcDef } from './define'
 
 /** Subprocess from Bun.spawn */
 type Subprocess = ReturnType<typeof Bun.spawn>;
+
+/** Maximum stderr lines to keep for error context */
+const MAX_STDERR_LINES = 20;
 
 /** Plugin channel options */
 export interface PluginChannelOptions {
@@ -40,6 +50,14 @@ export interface PluginChannelOptions {
  *   tool: "set",
  *   args: { duration: 5000 },
  *   ctx: { traceId: "abc", source: "api" },
+ * });
+ * ```
+ *
+ * @example Binary data works natively:
+ * ```ts
+ * plugin.send(dataMessage, {
+ *   payload: new Uint8Array([1, 2, 3, 4]),
+ *   timestamp: new Date(),
  * });
  * ```
  */
@@ -206,7 +224,7 @@ export class PluginChannel {
             if (trimmed) {
               // Keep last 20 lines for error context
               this.#stderrBuffer.push(trimmed);
-              if (this.#stderrBuffer.length > 20) {
+              if (this.#stderrBuffer.length > MAX_STDERR_LINES) {
                 this.#stderrBuffer.shift();
               }
               this.#onStderr?.(trimmed);
@@ -242,6 +260,11 @@ export interface SpawnPluginOptions {
 
 /**
  * Spawn a plugin with IPC
+ *
+ * Uses Bun's native IPC with 'advanced' serialization which supports:
+ * - Uint8Array, ArrayBuffer (native binary, no base64!)
+ * - Date, Map, Set, RegExp
+ * - All structuredClone compatible types
  */
 export function spawnPlugin(
   cmd: string,
@@ -256,6 +279,7 @@ export function spawnPlugin(
     stdin: 'pipe',
     stdout: 'pipe',
     stderr: 'pipe',
+    serialization: 'advanced',
     ipc: (msg) => {
       channel.handle(msg as WireMessage);
     },

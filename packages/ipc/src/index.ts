@@ -3,6 +3,13 @@
  *
  * Type-safe inter-process communication for BRIKA plugins.
  *
+ * Uses Bun's native IPC with advanced serialization which supports:
+ * - Uint8Array, ArrayBuffer (native binary, no base64!)
+ * - Date, Map, Set, RegExp
+ * - All structuredClone compatible types
+ *
+ * @see https://bun.sh/docs/runtime/child-process#inter-process-communication-ipc
+ *
  * @example Plugin side:
  * ```ts
  * import { createClient } from "@brika/ipc";
@@ -33,12 +40,14 @@
  * ```
  */
 
-export type { ChannelOptions, MessageHandler, RpcHandler, WireMessage } from './channel';
 // ─── Channel ───
+export type { ChannelOptions, MessageHandler, RpcHandler, WireMessage } from './channel';
 export { Channel } from './channel';
-export type { ClientOptions } from './client';
+
 // ─── Client ───
+export type { ClientOptions } from './client';
 export { Client, createClient } from './client';
+// ─── Definition Helpers ───
 export type {
   AnyDef,
   Infer,
@@ -49,10 +58,10 @@ export type {
   PayloadOf,
   RpcDef,
 } from './define';
-// ─── Definition Helpers ───
 export { isMessage, isRpc, message, rpc } from './define';
-export type { PluginChannelOptions } from './host';
 // ─── Host ───
+export type { PluginChannelOptions, SpawnPluginOptions } from './host';
 export { PluginChannel, spawnPlugin } from './host';
+
 // ─── Core Types ───
 export { Json, JsonRecord } from './types';
