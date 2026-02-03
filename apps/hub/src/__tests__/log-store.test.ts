@@ -4,13 +4,13 @@
  */
 import 'reflect-metadata';
 import { Database } from 'bun:sqlite';
-import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
-import { useTestBed } from '@brika/di/testing';
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { get, provide, reset, stub, useTestBed } from '@brika/di/testing';
 import type { LogEvent } from '@brika/shared';
 import { ConfigLoader } from '@/runtime/config';
 import { type LogQueryParams, LogStore } from '@/runtime/logs/log-store';
 
-const di = useTestBed();
+useTestBed({ autoStub: false });
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Test Fixtures
@@ -37,17 +37,17 @@ describe('LogStore', () => {
     tempDir = await Bun.$`mktemp -d`.text();
     tempDir = tempDir.trim();
 
-    di.stub(ConfigLoader, {
+    stub(ConfigLoader, {
       getRootDir: () => tempDir,
     });
 
-    store = di.inject(LogStore);
+    store = get(LogStore);
     await store.init();
   });
 
   afterEach(async () => {
     store.close();
-    di.reset();
+    reset();
     // Cleanup temp directory
     await Bun.$`rm -rf ${tempDir}`.quiet();
   });

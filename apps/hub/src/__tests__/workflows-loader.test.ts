@@ -3,14 +3,14 @@
  * Testing workflow loading and watching
  */
 import 'reflect-metadata';
-import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
-import { useTestBed } from '@brika/di/testing';
+import { beforeEach, describe, expect, mock, test } from 'bun:test';
+import { get, stub, useTestBed } from '@brika/di/testing';
 import { WorkflowsLoader } from '@/runtime/bootstrap/workflows-loader';
 import type { BrikaConfig } from '@/runtime/config';
 import { ConfigLoader } from '@/runtime/config';
 import { WorkflowEngine, WorkflowLoader } from '@/runtime/workflows';
 
-const di = useTestBed();
+useTestBed({ autoStub: false });
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Test Fixtures
@@ -48,20 +48,20 @@ describe('WorkflowsLoader', () => {
     stopWatchingMock = mock();
     getBrikaDirMock = mock().mockReturnValue('/home/user/.brika');
 
-    di.stub(WorkflowEngine, {
+    stub(WorkflowEngine, {
       init: engineInitMock,
       stop: engineStopMock,
     });
-    di.stub(WorkflowLoader, {
+    stub(WorkflowLoader, {
       loadDir: loadDirMock,
       watch: watchMock,
       stopWatching: stopWatchingMock,
     });
-    di.stub(ConfigLoader, {
+    stub(ConfigLoader, {
       getBrikaDir: getBrikaDirMock,
     });
 
-    loader = di.inject(WorkflowsLoader);
+    loader = get(WorkflowsLoader);
   });
 
   test('has correct name', () => {

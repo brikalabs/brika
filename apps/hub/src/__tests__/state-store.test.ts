@@ -6,12 +6,12 @@ import 'reflect-metadata';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
-import { useTestBed } from '@brika/di/testing';
+import { get, provide, reset, stub, useTestBed } from '@brika/di/testing';
 import { HubConfig } from '@/runtime/config';
 import { Logger } from '@/runtime/logs/log-router';
 import { StateStore } from '@/runtime/state/state-store';
 
-const di = useTestBed();
+useTestBed({ autoStub: false });
 
 const TEST_DIR = join(import.meta.dir, '.test-state-store');
 
@@ -39,13 +39,13 @@ describe('StateStore', () => {
   });
 
   beforeEach(() => {
-    di.provide(HubConfig, { homeDir: TEST_DIR });
-    di.stub(Logger);
-    store = di.get(StateStore);
+    provide(HubConfig, { homeDir: TEST_DIR });
+    stub(Logger);
+    store = get(StateStore);
   });
 
   afterEach(async () => {
-    di.reset();
+    reset();
     // Clean up state file between tests
     const stateFile = join(TEST_DIR, 'state.json');
     try {

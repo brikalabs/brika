@@ -3,8 +3,8 @@
  * Testing plugin loading and synchronization
  */
 import 'reflect-metadata';
-import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
-import { useTestBed } from '@brika/di/testing';
+import { beforeEach, describe, expect, mock, test } from 'bun:test';
+import { get, stub, useTestBed } from '@brika/di/testing';
 import { PluginLoader } from '@/runtime/bootstrap/plugin-loader';
 import type { BrikaConfig } from '@/runtime/config';
 import { ConfigLoader } from '@/runtime/config';
@@ -13,7 +13,7 @@ import { PluginManager } from '@/runtime/plugins/plugin-manager';
 import { PluginRegistry } from '@/runtime/registry';
 import { StateStore } from '@/runtime/state/state-store';
 
-const di = useTestBed();
+useTestBed({ autoStub: false });
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Test Fixtures
@@ -53,24 +53,24 @@ describe('PluginLoader', () => {
     pmLoadMock = mock().mockResolvedValue(undefined);
     pmStopAllMock = mock().mockResolvedValue(undefined);
 
-    di.stub(Logger);
-    di.stub(StateStore, {
+    stub(Logger);
+    stub(StateStore, {
       init: stateInitMock,
       syncToConfig: stateSyncMock,
     });
-    di.stub(PluginRegistry, {
+    stub(PluginRegistry, {
       init: registryInitMock,
       syncToConfig: syncToConfigMock,
     });
-    di.stub(ConfigLoader, {
+    stub(ConfigLoader, {
       resolvePluginEntry: resolvePluginMock,
     });
-    di.stub(PluginManager, {
+    stub(PluginManager, {
       load: pmLoadMock,
       stopAll: pmStopAllMock,
     });
 
-    loader = di.inject(PluginLoader);
+    loader = get(PluginLoader);
   });
 
   test('has correct name', () => {

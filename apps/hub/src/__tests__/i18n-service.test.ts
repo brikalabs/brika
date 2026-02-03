@@ -4,13 +4,13 @@
 
 import 'reflect-metadata';
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
-import { useTestBed } from '@brika/di/testing';
+import { get, provide, stub, useTestBed } from '@brika/di/testing';
 import { useBunMock } from '@brika/testing';
 import { ConfigLoader } from '@/runtime/config/config-loader';
 import { I18nService } from '@/runtime/i18n/i18n-service';
 import { Logger } from '@/runtime/logs/log-router';
 
-const di = useTestBed();
+useTestBed({ autoStub: false });
 const bun = useBunMock();
 
 describe('I18nService', () => {
@@ -20,9 +20,9 @@ describe('I18nService', () => {
   beforeEach(() => {
     mockConfigLoader = { getRootDir: mock().mockReturnValue('/test/hub') };
 
-    di.stub(Logger);
-    di.provide(ConfigLoader, mockConfigLoader);
-    service = di.get(I18nService);
+    stub(Logger);
+    provide(ConfigLoader, mockConfigLoader);
+    service = get(I18nService);
   });
 
   describe('init', () => {

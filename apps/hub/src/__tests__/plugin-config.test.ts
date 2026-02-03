@@ -3,14 +3,14 @@
  */
 
 import 'reflect-metadata';
-import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
-import { useTestBed } from '@brika/di/testing';
+import { beforeEach, describe, expect, mock, test } from 'bun:test';
+import { get, provide, useTestBed } from '@brika/di/testing';
 import type { PreferenceDefinition } from '@brika/shared';
 import { ConfigLoader } from '@/runtime/config';
 import { PluginConfigService } from '@/runtime/plugins/plugin-config';
 import { StateStore } from '@/runtime/state/state-store';
 
-const di = useTestBed();
+useTestBed({ autoStub: false });
 
 describe('PluginConfigService', () => {
   let service: PluginConfigService;
@@ -63,10 +63,10 @@ describe('PluginConfigService', () => {
       getMetadata: mock(),
     };
 
-    di.provide(ConfigLoader, mockConfigLoader);
-    di.provide(StateStore, mockStateStore);
+    provide(ConfigLoader, mockConfigLoader);
+    provide(StateStore, mockStateStore);
 
-    service = di.get(PluginConfigService);
+    service = get(PluginConfigService);
   });
 
   describe('getSchema', () => {

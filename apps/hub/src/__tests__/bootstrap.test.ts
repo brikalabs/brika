@@ -2,15 +2,16 @@
  * Tests for Bootstrap system
  */
 import 'reflect-metadata';
-import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
-import { useTestBed } from '@brika/di/testing';
+import { beforeEach, describe, expect, mock, test } from 'bun:test';
+import { get, stub, useTestBed } from '@brika/di/testing';
 import { Bootstrap, bootstrap } from '@/runtime/bootstrap/bootstrap';
 import type { BrikaConfig } from '@/runtime/config';
 import { BrikaInitializer, ConfigLoader } from '@/runtime/config';
 import { Logger } from '@/runtime/logs/log-router';
 import { LogStore } from '@/runtime/logs/log-store';
 
-const di = useTestBed();
+// autoStub: false because we want real Bootstrap with mocked dependencies
+useTestBed({ autoStub: false });
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Test Fixtures
@@ -42,10 +43,10 @@ const setHotReload = () => {
 describe('Bootstrap', () => {
   beforeEach(() => {
     clearHotReload();
-    di.stub(Logger);
-    di.stub(LogStore);
-    di.stub(BrikaInitializer);
-    di.stub(ConfigLoader, { load: () => Promise.resolve(mockConfig) });
+    stub(Logger);
+    stub(LogStore);
+    stub(BrikaInitializer);
+    stub(ConfigLoader, { load: () => Promise.resolve(mockConfig) });
   });
 
   test('bootstrap() returns Bootstrap instance', () => {
@@ -53,7 +54,7 @@ describe('Bootstrap', () => {
   });
 
   test('use() calls setup and supports chaining', () => {
-    const b = di.inject(Bootstrap);
+    const b = get(Bootstrap);
     const setup1 = mock();
     const setup2 = mock();
 
@@ -65,7 +66,7 @@ describe('Bootstrap', () => {
   });
 
   test('start() runs plugin lifecycle: init → load → start', async () => {
-    const b = di.inject(Bootstrap);
+    const b = get(Bootstrap);
     const order: string[] = [];
 
     b.use({
@@ -87,7 +88,7 @@ describe('Bootstrap', () => {
   });
 
   test('start() passes config to onLoad', async () => {
-    const b = di.inject(Bootstrap);
+    const b = get(Bootstrap);
     const onLoad = mock();
 
     b.use({ name: 'test', onLoad });
@@ -97,7 +98,7 @@ describe('Bootstrap', () => {
   });
 
   test('start() runs all plugins in phases (all inits, then all loads, then all starts)', async () => {
-    const b = di.inject(Bootstrap);
+    const b = get(Bootstrap);
     const order: string[] = [];
 
     b.use({
@@ -130,7 +131,7 @@ describe('Bootstrap', () => {
   });
 
   test('start() skips on hot reload', async () => {
-    const b = di.inject(Bootstrap);
+    const b = get(Bootstrap);
     const onInit = mock();
 
     setHotReload();
@@ -141,7 +142,7 @@ describe('Bootstrap', () => {
   });
 
   test('stop() calls plugins in reverse order', async () => {
-    const b = di.inject(Bootstrap);
+    const b = get(Bootstrap);
     const order: string[] = [];
 
     b.use({
@@ -162,7 +163,7 @@ describe('Bootstrap', () => {
   });
 
   test('handles plugins without optional hooks', async () => {
-    const b = di.inject(Bootstrap);
+    const b = get(Bootstrap);
     b.use({ name: 'minimal' });
 
     // Should not throw
@@ -171,7 +172,7 @@ describe('Bootstrap', () => {
   });
 
   test('onInit/onLoad/onStart can be sync or async', async () => {
-    const b = di.inject(Bootstrap);
+    const b = get(Bootstrap);
     let syncCalled = false;
     let asyncCalled = false;
 

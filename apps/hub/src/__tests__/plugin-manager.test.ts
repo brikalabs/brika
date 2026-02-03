@@ -4,7 +4,7 @@
 
 import 'reflect-metadata';
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
-import { useTestBed } from '@brika/di/testing';
+import { get, provide, stub, useTestBed } from '@brika/di/testing';
 import type { Plugin } from '@brika/shared';
 import { BlockRegistry } from '@/runtime/blocks';
 import { EventSystem } from '@/runtime/events/event-system';
@@ -15,7 +15,7 @@ import { PluginManager } from '@/runtime/plugins/plugin-manager';
 import type { PluginProcess } from '@/runtime/plugins/plugin-process';
 import { StateStore } from '@/runtime/state/state-store';
 
-const di = useTestBed();
+useTestBed({ autoStub: false });
 
 describe('PluginManager', () => {
   let manager: PluginManager;
@@ -116,14 +116,14 @@ describe('PluginManager', () => {
       clearBlockLogHandler: mock(),
     };
 
-    di.stub(Logger);
-    di.provide(PluginLifecycle, mockLifecycle);
-    di.provide(StateStore, mockState);
-    di.provide(EventSystem, mockEvents);
-    di.provide(BlockRegistry, mockBlocks);
-    di.provide(PluginEventHandler, mockEventHandler);
+    stub(Logger);
+    provide(PluginLifecycle, mockLifecycle);
+    provide(StateStore, mockState);
+    provide(EventSystem, mockEvents);
+    provide(BlockRegistry, mockBlocks);
+    provide(PluginEventHandler, mockEventHandler);
 
-    manager = di.get(PluginManager);
+    manager = get(PluginManager);
   });
 
   describe('Query API', () => {

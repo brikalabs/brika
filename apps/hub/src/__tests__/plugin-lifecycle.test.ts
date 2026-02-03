@@ -4,7 +4,7 @@
 
 import 'reflect-metadata';
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
-import { useTestBed } from '@brika/di/testing';
+import { get, provide, stub, useTestBed } from '@brika/di/testing';
 import type { Plugin, PluginHealth } from '@brika/shared';
 import { PluginManagerConfig } from '@/runtime/config';
 import { EventSystem } from '@/runtime/events/event-system';
@@ -17,7 +17,7 @@ import { PluginLifecycle } from '@/runtime/plugins/plugin-lifecycle';
 import type { PluginProcess } from '@/runtime/plugins/plugin-process';
 import { StateStore } from '@/runtime/state/state-store';
 
-const di = useTestBed();
+useTestBed({ autoStub: false });
 
 describe('PluginLifecycle', () => {
   let lifecycle: PluginLifecycle;
@@ -138,16 +138,16 @@ describe('PluginLifecycle', () => {
       clear: mock(),
     };
 
-    di.stub(Logger);
-    di.provide(PluginManagerConfig, mockConfig);
-    di.provide(StateStore, mockState);
-    di.provide(EventSystem, mockEvents);
-    di.provide(I18nService, mockI18n);
-    di.provide(PluginEventHandler, mockEventHandler);
-    di.provide(PluginConfigService, mockPluginConfig);
-    di.provide(MetricsStore, mockMetrics);
+    stub(Logger);
+    provide(PluginManagerConfig, mockConfig);
+    provide(StateStore, mockState);
+    provide(EventSystem, mockEvents);
+    provide(I18nService, mockI18n);
+    provide(PluginEventHandler, mockEventHandler);
+    provide(PluginConfigService, mockPluginConfig);
+    provide(MetricsStore, mockMetrics);
 
-    lifecycle = di.get(PluginLifecycle);
+    lifecycle = get(PluginLifecycle);
   });
 
   describe('Process Management', () => {

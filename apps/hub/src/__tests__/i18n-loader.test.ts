@@ -3,13 +3,13 @@
  * Testing i18n initialization
  */
 import 'reflect-metadata';
-import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
-import { useTestBed } from '@brika/di/testing';
+import { beforeEach, describe, expect, mock, test } from 'bun:test';
+import { get, stub, useTestBed } from '@brika/di/testing';
 import { I18nLoader } from '@/runtime/bootstrap/i18n-loader';
 import type { BrikaConfig } from '@/runtime/config';
 import { I18nService } from '@/runtime/i18n';
 
-const di = useTestBed();
+useTestBed({ autoStub: false });
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Test Fixtures
@@ -37,11 +37,11 @@ describe('I18nLoader', () => {
   beforeEach(() => {
     i18nInitMock = mock().mockResolvedValue(undefined);
 
-    di.stub(I18nService, {
+    stub(I18nService, {
       init: i18nInitMock,
     });
 
-    loader = di.inject(I18nLoader);
+    loader = get(I18nLoader);
   });
 
   test('has correct name', () => {

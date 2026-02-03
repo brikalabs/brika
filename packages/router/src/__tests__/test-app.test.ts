@@ -3,22 +3,36 @@ import { z } from 'zod';
 import { NotFound, route } from '../index';
 import { TestApp } from '../testing';
 
+// Individual route definitions for TestApp.call() tests
+const healthRoute = route.get('/api/health', () => ({ ok: true }));
+const userByIdRoute = route.get(
+  '/api/users/:id',
+  { params: z.object({ id: z.string() }) },
+  ({ params }) => ({ id: params.id })
+);
+const createUserRoute = route.post(
+  '/api/users',
+  { body: z.object({ name: z.string() }) },
+  ({ body }) => ({ created: true, name: body.name })
+);
+const searchRoute = route.get(
+  '/api/search',
+  { query: z.object({ q: z.string() }) },
+  ({ query }) => ({ query: query.q })
+);
+const notFoundRoute = route.get('/api/notfound', () => {
+  throw new NotFound('Resource not found');
+});
+
 describe('TestApp', () => {
   const routes = [
-    route.get('/api/health', () => ({ ok: true })),
-    route.get('/api/users/:id', { params: z.object({ id: z.string() }) }, ({ params }) => ({
-      id: params.id,
-    })),
-    route.post('/api/users', { body: z.object({ name: z.string() }) }, ({ body }) => ({
-      created: true,
-      name: body.name,
-    })),
+    healthRoute,
+    userByIdRoute,
+    createUserRoute,
     route.delete('/api/users/:id', { params: z.object({ id: z.string() }) }, () => ({
       deleted: true,
     })),
-    route.get('/api/notfound', () => {
-      throw new NotFound('Resource not found');
-    }),
+    notFoundRoute,
   ];
 
   test('GET request', async () => {
@@ -105,5 +119,53 @@ describe('TestApp', () => {
 
     expect(res.raw).toBeInstanceOf(Response);
     expect(res.headers.get('content-type')).toContain('application/json');
+  });
+});
+
+describe('TestApp.call', () => {
+  test('simple GET route with inferred types', async () => {
+    const res = await TestApp.call(healthRoute);
+
+    expect(res.status).toBe(200);
+    expect(res.ok).toBeTrue();
+    expect(res.body).toEqual({ ok: true });
+    // TypeScript would catch if res.body.ok was accessed incorrectly
+  });
+
+  test('GET route with path params', async () => {
+    const res = await TestApp.call(userByIdRoute, { params: { id: '456' } });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ id: '456' });
+  });
+
+  test('GET route with query params', async () => {
+    const res = await TestApp.call(searchRoute, { query: { q: 'test-query' } });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ query: 'test-query' });
+  });
+
+  test('POST route with body', async () => {
+    const res = await TestApp.call(createUserRoute, { body: { name: 'Alice' } });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ created: true, name: 'Alice' });
+  });
+
+  test('handles errors', async () => {
+    const res = await TestApp.call(notFoundRoute);
+
+    expect(res.status).toBe(404);
+    expect(res.ok).toBeFalse();
+    // Error responses have different shape than success responses
+    expect((res.body as { error: string }).error).toBe('Resource not found');
+  });
+
+  test('encodes path params', async () => {
+    const res = await TestApp.call(userByIdRoute, { params: { id: 'user/with/slashes' } });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ id: 'user/with/slashes' });
   });
 });

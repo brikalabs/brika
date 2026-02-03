@@ -4,7 +4,11 @@
 
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 import { InterceptorChain } from '../interceptors/chain';
-import type { ErrorInterceptor, RequestInterceptor, ResponseInterceptor } from '../interceptors/types';
+import type {
+  ErrorInterceptor,
+  RequestInterceptor,
+  ResponseInterceptor,
+} from '../interceptors/types';
 import { HttpError, type HttpResponse, type RequestConfig } from '../types';
 
 describe('InterceptorChain', () => {

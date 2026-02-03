@@ -1,26 +1,26 @@
 import 'reflect-metadata';
-import { afterEach, beforeEach, describe, expect, it, mock } from 'bun:test';
-import { useTestBed } from '@brika/di/testing';
+import { beforeEach, describe, expect, it, mock } from 'bun:test';
+import { get, provide, stub, useTestBed } from '@brika/di/testing';
 import { HubConfig } from '@/runtime/config';
 import { PluginActions, SparkActions } from '@/runtime/events/actions';
 import { EventSystem } from '@/runtime/events/event-system';
 import { Logger } from '@/runtime/logs/log-router';
 
-const di = useTestBed();
+useTestBed({ autoStub: false });
 
 describe('EventSystem', () => {
   const errorSpy = mock();
 
   beforeEach(() => {
     errorSpy.mockReset();
-    di.provide(HubConfig, new HubConfig());
-    di.stub(Logger, {
+    provide(HubConfig, new HubConfig());
+    stub(Logger, {
       withSource: () => ({ error: errorSpy }),
     });
   });
 
   it('should dispatch events', async () => {
-    const events = di.get(EventSystem);
+    const events = get(EventSystem);
     const action = SparkActions.emit.create(
       {
         type: 'test.event',
@@ -40,7 +40,7 @@ describe('EventSystem', () => {
   });
 
   it('should notify subscribers with matching action creator', async () => {
-    const events = di.get(EventSystem);
+    const events = get(EventSystem);
     const handler = mock();
 
     // Use ActionCreator instead of string pattern
@@ -62,7 +62,7 @@ describe('EventSystem', () => {
   });
 
   it('should support action map for subscribing to multiple actions', async () => {
-    const events = di.get(EventSystem);
+    const events = get(EventSystem);
     const handler = mock();
 
     // Use ActionMap to subscribe to all SparkActions
@@ -90,7 +90,7 @@ describe('EventSystem', () => {
   });
 
   it('should unsubscribe correctly', async () => {
-    const events = di.get(EventSystem);
+    const events = get(EventSystem);
     const handler = mock();
 
     const unsub = events.subscribe(SparkActions.emit, handler);
@@ -111,7 +111,7 @@ describe('EventSystem', () => {
   });
 
   it('should notify global subscribers', async () => {
-    const events = di.get(EventSystem);
+    const events = get(EventSystem);
     const globalHandler = mock();
     const patternHandler = mock();
 
@@ -136,7 +136,7 @@ describe('EventSystem', () => {
   });
 
   it('should store events in ring buffer', async () => {
-    const events = di.get(EventSystem);
+    const events = get(EventSystem);
 
     events.dispatch(
       SparkActions.emit.create({ type: 'event.1', source: 'src', payload: { n: 1 } }, 'src')
@@ -158,7 +158,7 @@ describe('EventSystem', () => {
   });
 
   it('should handle listener errors gracefully', async () => {
-    const events = di.get(EventSystem);
+    const events = get(EventSystem);
 
     events.subscribe(SparkActions.emit, () => {
       throw new Error('Handler crashed!');
@@ -176,7 +176,7 @@ describe('EventSystem', () => {
   });
 
   it('should support array of action creators', async () => {
-    const events = di.get(EventSystem);
+    const events = get(EventSystem);
     const handler = mock();
 
     // Subscribe to multiple action types

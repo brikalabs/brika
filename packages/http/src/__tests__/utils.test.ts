@@ -3,7 +3,7 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { HttpError, TimeoutError, type RequestConfig } from '../types';
+import { HttpError, type RequestConfig, TimeoutError } from '../types';
 import {
   createHttpError,
   createNetworkError,
@@ -62,10 +62,13 @@ describe('errors', () => {
     });
 
     test('handles error object in JSON response', async () => {
-      const response = new Response(JSON.stringify({ error: { code: 'INVALID', details: 'Bad input' } }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      const response = new Response(
+        JSON.stringify({ error: { code: 'INVALID', details: 'Bad input' } }),
+        {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
 
       const error = await createHttpError(response);
 

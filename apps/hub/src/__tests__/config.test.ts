@@ -3,16 +3,16 @@
  */
 
 import 'reflect-metadata';
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { useTestBed } from '@brika/di/testing';
+import { afterEach, describe, expect, test } from 'bun:test';
+import { get, provide, useTestBed } from '@brika/di/testing';
 import { HubConfig, PluginManagerConfig } from '@/runtime/config/config';
 import { ConfigLoader } from '@/runtime/config/config-loader';
 
-const di = useTestBed();
+// autoStub: false because these tests verify real config behavior
+useTestBed({ autoStub: false });
 
 describe('HubConfig', () => {
   afterEach(() => {
-    // Clean up env vars
     delete process.env.BRIKA_HOST;
     delete process.env.BRIKA_PORT;
     delete process.env.BRIKA_HOME;
@@ -20,7 +20,7 @@ describe('HubConfig', () => {
   });
 
   test('uses defaults when ConfigLoader not available', () => {
-    const config = di.inject(HubConfig);
+    const config = get(HubConfig);
 
     expect(config.host).toBe('127.0.0.1');
     expect(config.port).toBe(3001);
@@ -34,8 +34,7 @@ describe('HubConfig', () => {
     process.env.BRIKA_HOME = '/custom/home';
     process.env.BRIKA_STATIC_DIR = '/static';
 
-    di.reset();
-    const config = di.inject(HubConfig);
+    const config = get(HubConfig);
 
     expect(config.host).toBe('0.0.0.0');
     expect(config.port).toBe(8080);
@@ -55,12 +54,12 @@ describe('HubConfig', () => {
       schedules: [],
     };
 
-    di.provide(ConfigLoader, {
+    provide(ConfigLoader, {
       get: () => mockConfig,
       getBrikaDir: () => '/from/loader',
     });
 
-    const config = di.inject(HubConfig);
+    const config = get(HubConfig);
 
     expect(config.host).toBe('192.168.1.1');
     expect(config.port).toBe(4000);
@@ -70,8 +69,7 @@ describe('HubConfig', () => {
 
 describe('PluginManagerConfig', () => {
   test('has default values when ConfigLoader not available', () => {
-    di.reset();
-    const config = di.inject(PluginManagerConfig);
+    const config = get(PluginManagerConfig);
 
     expect(config.callTimeoutMs).toBe(5000);
     expect(config.heartbeatEveryMs).toBe(5000);
@@ -101,11 +99,11 @@ describe('PluginManagerConfig', () => {
       schedules: [],
     };
 
-    di.provide(ConfigLoader, {
+    provide(ConfigLoader, {
       get: () => mockConfig,
     });
 
-    const config = di.inject(PluginManagerConfig);
+    const config = get(PluginManagerConfig);
 
     expect(config.heartbeatEveryMs).toBe(10000);
     expect(config.heartbeatTimeoutMs).toBe(30000);

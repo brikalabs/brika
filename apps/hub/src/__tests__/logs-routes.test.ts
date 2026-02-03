@@ -1,27 +1,25 @@
 import 'reflect-metadata';
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { useTestBed } from '@brika/di/testing';
+import { describe, expect, test } from 'bun:test';
+import { stub, useTestBed } from '@brika/di/testing';
 import { TestApp } from '@brika/router/testing';
 import { logsRoutes } from '@/runtime/http/routes/logs';
 import { Logger } from '@/runtime/logs/log-router';
 import { LogStore } from '@/runtime/logs/log-store';
 import { PluginManager } from '@/runtime/plugins/plugin-manager';
 
-const di = useTestBed();
-
 describe('logs routes', () => {
   let app: ReturnType<typeof TestApp.create>;
 
-  beforeEach(() => {
-    di.stub(LogStore, {
+  useTestBed(() => {
+    stub(LogStore, {
       query: () => ({ logs: [], nextCursor: null }),
       clear: () => 0,
       count: () => 0,
       getPluginNames: () => [],
       getSources: () => [],
     });
-    di.stub(Logger);
-    di.stub(PluginManager, { list: () => [] });
+    stub(Logger);
+    stub(PluginManager, { list: () => [] });
     app = TestApp.create(logsRoutes);
   });
 

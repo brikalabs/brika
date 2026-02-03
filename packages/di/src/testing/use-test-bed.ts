@@ -1,34 +1,46 @@
 /**
- * Hook-style TestBed helper with auto lifecycle management
- *
- * Call at describe level - automatically handles afterEach reset.
+ * Hook-style TestBed helper with auto lifecycle management.
+ * Auto-stubbing enabled by default.
  *
  * @example
- * ```ts
- * import { useTestBed } from '@brika/di/testing';
- *
- * describe('MyService', () => {
- *   const di = useTestBed();
- *
- *   test('gets user', () => {
- *     di.stub(Logger);
- *     di.stub(UserService, { getUser: mock().mockReturnValue({ id: '1' }) });
- *
- *     const controller = di.get(UserController);
- *     expect(controller.getUser('1').id).toBe('1');
- *   });
+ * useTestBed(() => {
+ *   stub(ConfigLoader, { rootDir: '/test' });
  * });
- * ```
  */
 
+import { afterEach, beforeEach } from 'bun:test';
 import { TestBed } from './test-bed';
 
-export function useTestBed() {
-  const { afterEach } = require('bun:test');
+interface UseTestBedOptions {
+  /** Enable auto-stubbing (default: true) */
+  autoStub?: boolean;
+}
+
+export function useTestBed(): void;
+export function useTestBed(setup: () => void): void;
+export function useTestBed(options: UseTestBedOptions): void;
+export function useTestBed(options: UseTestBedOptions, setup: () => void): void;
+export function useTestBed(
+  optionsOrSetup?: UseTestBedOptions | (() => void),
+  setup?: () => void
+): void {
+  let options: UseTestBedOptions = {};
+  let setupFn = setup;
+
+  if (typeof optionsOrSetup === 'function') {
+    setupFn = optionsOrSetup;
+  } else if (optionsOrSetup) {
+    options = optionsOrSetup;
+  }
+
+  const autoStub = options.autoStub !== false;
+
+  beforeEach(() => {
+    if (autoStub) TestBed.autoStub(true);
+    setupFn?.();
+  });
 
   afterEach(() => {
     TestBed.reset();
   });
-
-  return TestBed;
 }

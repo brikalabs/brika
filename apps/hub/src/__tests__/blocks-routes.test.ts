@@ -1,17 +1,15 @@
 import 'reflect-metadata';
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { useTestBed } from '@brika/di/testing';
+import { describe, expect, test } from 'bun:test';
+import { stub, useTestBed } from '@brika/di/testing';
 import { TestApp } from '@brika/router/testing';
 import { BlockRegistry } from '@/runtime/blocks';
 import { blocksRoutes } from '@/runtime/http/routes/blocks';
 
-const di = useTestBed();
-
 describe('blocks routes', () => {
   let app: ReturnType<typeof TestApp.create>;
 
-  beforeEach(() => {
-    di.stub(BlockRegistry, { list: () => [], listByCategory: () => ({}) });
+  useTestBed(() => {
+    stub(BlockRegistry, { list: () => [], listByCategory: () => ({}) });
     app = TestApp.create(blocksRoutes);
   });
 

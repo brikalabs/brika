@@ -4,16 +4,16 @@
 
 import 'reflect-metadata';
 import { beforeEach, describe, expect, test } from 'bun:test';
-import { useTestBed } from '@brika/di/testing';
+import { get, useTestBed } from '@brika/di/testing';
 import { MetricsStore } from '@/runtime/metrics/metrics-store';
 
-const di = useTestBed();
+useTestBed({ autoStub: false });
 
 describe('MetricsStore', () => {
   let store: MetricsStore;
 
   beforeEach(() => {
-    store = di.get(MetricsStore);
+    store = get(MetricsStore);
   });
 
   test('records metrics for a plugin', () => {

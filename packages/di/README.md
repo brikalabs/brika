@@ -69,7 +69,7 @@ container.registerInstance(ConfigService, myConfig);
 ## Testing
 
 ```typescript
-import { useTestBed } from '@brika/di/testing';
+import { useTestBed, stub, get } from '@brika/di/testing';
 ```
 
 ### Quick Start with `useTestBed`
@@ -77,65 +77,64 @@ import { useTestBed } from '@brika/di/testing';
 The simplest way to mock dependencies - lifecycle is handled automatically:
 
 ```typescript
-import { useTestBed } from '@brika/di/testing';
+import { useTestBed, stub, get } from '@brika/di/testing';
 import { mock } from 'bun:test';
 
 describe('UserController', () => {
-  const di = useTestBed(); // Auto afterEach reset
+  useTestBed(); // Auto beforeEach/afterEach, autoStub enabled
 
   test('gets user', () => {
-    di.stub(Logger);
-    di.stub(UserService, {
+    stub(Logger);
+    stub(UserService, {
       getUser: mock().mockReturnValue({ id: '1', name: 'Test' })
     });
 
-    const controller = di.get(UserController);
+    const controller = get(UserController);
     expect(controller.getUser('1').name).toBe('Test');
   });
 });
 ```
 
-### Manual Lifecycle with `TestBed`
+### With Setup Function
 
-For more control over setup/teardown:
+Pass a setup function to run before each test:
 
 ```typescript
-import { TestBed } from '@brika/di/testing';
-import { mock } from 'bun:test';
-
 describe('UserController', () => {
-  beforeEach(() => {
-    // Auto-stub: creates deep mock that returns stubs for all methods
-    TestBed.stub(Logger);
-
-    // With overrides: auto-stub but override specific methods
-    TestBed.stub(UserService, {
+  useTestBed(() => {
+    stub(Logger);
+    stub(UserService, {
       getUser: mock().mockReturnValue({ id: '1', name: 'Test' })
     });
-
-    // Manual provide for full control
-    TestBed.provide(ConfigService, { port: 3001 });
   });
 
-  afterEach(() => TestBed.reset());
-
   test('gets user', () => {
-    const controller = TestBed.inject(UserController);
-    const user = controller.getUser('1');
-    expect(user.name).toBe('Test');
+    const controller = get(UserController);
+    expect(controller.getUser('1').name).toBe('Test');
   });
 });
 ```
 
-### Deep Stubs
-
-`TestBed.stub()` creates proxy-based stubs that auto-mock all properties and methods:
+### Options
 
 ```typescript
-// All methods auto-stubbed, returns nested stubs for chaining
-TestBed.stub(Logger);
+useTestBed({ autoStub: false }); // Disable auto-stubbing
+useTestBed({ autoStub: false }, () => { /* setup */ });
+```
 
-const logger = TestBed.inject(Logger);
+### Deep Stubs
+
+`stub()` creates proxy-based stubs that auto-mock all properties and methods:
+
+```typescript
+import { useTestBed, stub, get } from '@brika/di/testing';
+
+useTestBed();
+
+// All methods auto-stubbed, returns nested stubs for chaining
+stub(Logger);
+
+const logger = get(Logger);
 logger.info('test');                    // no-op
 logger.withSource('hub').info('test');  // also works
 ```
@@ -145,7 +144,7 @@ Partial overrides merge with auto-stubs:
 ```typescript
 const errors: string[] = [];
 
-TestBed.stub(Logger, {
+stub(Logger, {
   withSource: () => ({
     error: (msg: string) => errors.push(msg)
     // info, warn, debug are auto-stubbed
@@ -204,12 +203,12 @@ The container persists across module reloads (useful for development with tools 
 
 | Export | Description |
 |--------|-------------|
-| `useTestBed()` | Hook-style helper with auto lifecycle (recommended) |
-| `TestBed.stub(token, overrides?)` | Create and register a deep stub |
-| `TestBed.provide(token, value)` | Register a mock value |
-| `TestBed.inject(token)` | Resolve from test container |
-| `TestBed.get(token)` | Alias for inject |
-| `TestBed.reset()` | Reset container for next test |
+| `useTestBed()` | Hook with auto lifecycle (recommended) |
+| `stub(token, overrides?)` | Create and register a deep stub |
+| `stubAll(...tokens)` | Stub multiple services at once |
+| `provide(token, value)` | Register a mock value (strict, no proxy) |
+| `get(token)` | Resolve from test container |
+| `reset()` | Reset container for next test |
 | `createDeepStub<T>(overrides?)` | Create a standalone deep stub |
 
 ### Types

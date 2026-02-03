@@ -6,12 +6,12 @@ import 'reflect-metadata';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
-import { useTestBed } from '@brika/di/testing';
+import { get, provide, reset, stub, useTestBed } from '@brika/di/testing';
 import { BrikaInitializer } from '@/runtime/config/brika-initializer';
 import { ConfigLoader } from '@/runtime/config/config-loader';
 import { Logger } from '@/runtime/logs/log-router';
 
-const di = useTestBed();
+useTestBed({ autoStub: false });
 
 const TEST_DIR = join(import.meta.dir, '.test-config-loader');
 const BRIKA_DIR = join(TEST_DIR, '.brika');
@@ -25,16 +25,16 @@ describe('ConfigLoader', () => {
   });
 
   beforeEach(() => {
-    di.provide(BrikaInitializer, {
+    provide(BrikaInitializer, {
       brikaDir: BRIKA_DIR,
       rootDir: TEST_DIR,
     });
-    di.stub(Logger);
-    loader = di.get(ConfigLoader);
+    stub(Logger);
+    loader = get(ConfigLoader);
   });
 
   afterEach(async () => {
-    di.reset();
+    reset();
     // Clean up config file between tests
     try {
       await rm(join(BRIKA_DIR, 'brika.yml'), { force: true });

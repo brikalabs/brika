@@ -4,16 +4,15 @@
  */
 import 'reflect-metadata';
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { useTestBed } from '@brika/di/testing';
+import { reset, stub, useTestBed } from '@brika/di/testing';
 import type { Json } from '@brika/shared';
 import { BlockRegistry } from '@/runtime/blocks';
-import { Logger } from '@/runtime/logs/log-router';
 import { PluginManager } from '@/runtime/plugins/plugin-manager';
 import type { Workflow } from '@/runtime/workflows/types';
 import type { ExecutionEvent, ExecutionListener } from '@/runtime/workflows/workflow-executor';
 import { WorkflowExecutor } from '@/runtime/workflows/workflow-executor';
 
-const di = useTestBed();
+useTestBed({ autoStub: false });
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Test Fixtures
@@ -65,16 +64,7 @@ describe('WorkflowExecutor - Lifecycle', () => {
     emitHandler = null;
     logHandler = null;
     startedBlocks = [];
-
-    di.provide(Logger, {
-      withSource: () => ({
-        info: () => undefined,
-        warn: () => undefined,
-        error: () => undefined,
-      }),
-    } as unknown as Logger);
-
-    di.stub(PluginManager, {
+    stub(PluginManager, {
       setBlockEmitHandler: (handler: (instanceId: string, port: string, data: Json) => void) => {
         emitHandler = handler;
       },
@@ -102,7 +92,7 @@ describe('WorkflowExecutor - Lifecycle', () => {
       pushBlockInput: () => undefined,
     });
 
-    di.stub(BlockRegistry, {
+    stub(BlockRegistry, {
       has: () => true,
       get: () => ({ id: 'test', outputs: [], inputs: [] }),
       list: () => [],
@@ -188,15 +178,7 @@ describe('WorkflowExecutor - Connection Map Building', () => {
   let executor: WorkflowExecutor;
 
   beforeEach(() => {
-    di.provide(Logger, {
-      withSource: () => ({
-        info: () => undefined,
-        warn: () => undefined,
-        error: () => undefined,
-      }),
-    } as unknown as Logger);
-
-    di.stub(PluginManager, {
+    stub(PluginManager, {
       setBlockEmitHandler: () => undefined,
       setBlockLogHandler: () => undefined,
       clearBlockEmitHandler: () => undefined,
@@ -206,7 +188,7 @@ describe('WorkflowExecutor - Connection Map Building', () => {
       pushBlockInput: () => undefined,
     });
 
-    di.stub(BlockRegistry, {
+    stub(BlockRegistry, {
       has: () => true,
       get: () => ({ id: 'test', outputs: [], inputs: [] }),
       list: () => [],
@@ -280,15 +262,7 @@ describe('WorkflowExecutor - Data Injection', () => {
   beforeEach(() => {
     injectedData = [];
 
-    di.provide(Logger, {
-      withSource: () => ({
-        info: () => undefined,
-        warn: () => undefined,
-        error: () => undefined,
-      }),
-    } as unknown as Logger);
-
-    di.stub(PluginManager, {
+    stub(PluginManager, {
       setBlockEmitHandler: () => undefined,
       setBlockLogHandler: () => undefined,
       clearBlockEmitHandler: () => undefined,
@@ -300,7 +274,7 @@ describe('WorkflowExecutor - Data Injection', () => {
       },
     });
 
-    di.stub(BlockRegistry, {
+    stub(BlockRegistry, {
       has: () => true,
       get: () => ({ id: 'test', outputs: [], inputs: [] }),
       list: () => [],
@@ -375,25 +349,11 @@ describe('WorkflowExecutor - Event Listeners', () => {
   let executor: WorkflowExecutor;
 
   beforeEach(() => {
-    di.provide(Logger, {
-      withSource: () => ({
-        info: () => undefined,
-        warn: () => undefined,
-        error: () => undefined,
-      }),
-    } as unknown as Logger);
-
-    di.stub(PluginManager, {
-      setBlockEmitHandler: () => undefined,
-      setBlockLogHandler: () => undefined,
-      clearBlockEmitHandler: () => undefined,
-      clearBlockLogHandler: () => undefined,
+    stub(PluginManager, {
       startBlock: () => Promise.resolve({ ok: true }),
-      stopBlockInstance: () => undefined,
-      pushBlockInput: () => undefined,
     });
 
-    di.stub(BlockRegistry, {
+    stub(BlockRegistry, {
       has: () => true,
       get: () => ({ id: 'test', outputs: [], inputs: [] }),
       list: () => [],
@@ -488,15 +448,7 @@ describe('WorkflowExecutor - Block Emit and Data Flow', () => {
     logHandler = null;
     pushedInputs = [];
 
-    di.provide(Logger, {
-      withSource: () => ({
-        info: () => undefined,
-        warn: () => undefined,
-        error: () => undefined,
-      }),
-    } as unknown as Logger);
-
-    di.stub(PluginManager, {
+    stub(PluginManager, {
       setBlockEmitHandler: (handler: (instanceId: string, port: string, data: Json) => void) => {
         emitHandler = handler;
       },
@@ -518,7 +470,7 @@ describe('WorkflowExecutor - Block Emit and Data Flow', () => {
       },
     });
 
-    di.stub(BlockRegistry, {
+    stub(BlockRegistry, {
       has: () => true,
       get: () => ({ id: 'test', outputs: [], inputs: [] }),
       list: () => [],
@@ -647,15 +599,7 @@ describe('WorkflowExecutor - Block Start Error Handling', () => {
   let executor: WorkflowExecutor;
 
   beforeEach(() => {
-    di.provide(Logger, {
-      withSource: () => ({
-        info: () => undefined,
-        warn: () => undefined,
-        error: () => undefined,
-      }),
-    } as unknown as Logger);
-
-    di.stub(PluginManager, {
+    stub(PluginManager, {
       setBlockEmitHandler: () => undefined,
       setBlockLogHandler: () => undefined,
       clearBlockEmitHandler: () => undefined,
@@ -665,7 +609,7 @@ describe('WorkflowExecutor - Block Start Error Handling', () => {
       pushBlockInput: () => undefined,
     });
 
-    di.stub(BlockRegistry, {
+    stub(BlockRegistry, {
       has: () => true,
       get: () => ({ id: 'test', outputs: [], inputs: [] }),
       list: () => [],
@@ -695,17 +639,9 @@ describe('WorkflowExecutor - Block Start Error Handling', () => {
 
   test('should emit block.error event when startBlock throws', async () => {
     expect.hasAssertions();
-    di.reset();
+    reset();
 
-    di.provide(Logger, {
-      withSource: () => ({
-        info: () => undefined,
-        warn: () => undefined,
-        error: () => undefined,
-      }),
-    } as unknown as Logger);
-
-    di.stub(PluginManager, {
+    stub(PluginManager, {
       setBlockEmitHandler: () => undefined,
       setBlockLogHandler: () => undefined,
       clearBlockEmitHandler: () => undefined,
@@ -715,7 +651,7 @@ describe('WorkflowExecutor - Block Start Error Handling', () => {
       pushBlockInput: () => undefined,
     });
 
-    di.stub(BlockRegistry, {
+    stub(BlockRegistry, {
       has: () => true,
       get: () => ({ id: 'test', outputs: [], inputs: [] }),
       list: () => [],
@@ -741,15 +677,7 @@ describe('WorkflowExecutor - Block Type Resolution', () => {
   beforeEach(() => {
     startedTypes = [];
 
-    di.provide(Logger, {
-      withSource: () => ({
-        info: () => undefined,
-        warn: () => undefined,
-        error: () => undefined,
-      }),
-    } as unknown as Logger);
-
-    di.stub(PluginManager, {
+    stub(PluginManager, {
       setBlockEmitHandler: () => undefined,
       setBlockLogHandler: () => undefined,
       clearBlockEmitHandler: () => undefined,
@@ -762,7 +690,7 @@ describe('WorkflowExecutor - Block Type Resolution', () => {
       pushBlockInput: () => undefined,
     });
 
-    di.stub(BlockRegistry, {
+    stub(BlockRegistry, {
       has: () => true,
       get: () => ({ id: 'test', outputs: [], inputs: [] }),
       list: () => [
@@ -842,15 +770,7 @@ describe('WorkflowExecutor - Complex Workflows', () => {
   let executor: WorkflowExecutor;
 
   beforeEach(() => {
-    di.provide(Logger, {
-      withSource: () => ({
-        info: () => undefined,
-        warn: () => undefined,
-        error: () => undefined,
-      }),
-    } as unknown as Logger);
-
-    di.stub(PluginManager, {
+    stub(PluginManager, {
       setBlockEmitHandler: () => undefined,
       setBlockLogHandler: () => undefined,
       clearBlockEmitHandler: () => undefined,
@@ -860,7 +780,7 @@ describe('WorkflowExecutor - Complex Workflows', () => {
       pushBlockInput: () => undefined,
     });
 
-    di.stub(BlockRegistry, {
+    stub(BlockRegistry, {
       has: () => true,
       get: () => ({ id: 'test', outputs: [], inputs: [] }),
       list: () => [],

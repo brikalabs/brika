@@ -3,14 +3,12 @@
  * Testing block registration, validation, and plugin management
  */
 import 'reflect-metadata';
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { useTestBed } from '@brika/di/testing';
+import { describe, expect, test } from 'bun:test';
+import { get, stub, useTestBed } from '@brika/di/testing';
 import type { BlockDefinition } from '@brika/sdk';
 import type { PluginInfo } from '@/runtime/blocks/block-registry';
 import { BlockRegistry } from '@/runtime/blocks/block-registry';
 import { Logger } from '@/runtime/logs/log-router';
-
-const di = useTestBed();
 
 // Test-specific type that includes optional metadata fields
 type TestBlockDefinition = BlockDefinition & {
@@ -41,9 +39,9 @@ const createPlugin = (id = 'test-plugin'): PluginInfo => ({
 describe('BlockRegistry - Registration', () => {
   let registry: BlockRegistry;
 
-  beforeEach(() => {
-    di.stub(Logger);
-    registry = di.inject(BlockRegistry);
+  useTestBed({ autoStub: false }, () => {
+    stub(Logger);
+    registry = get(BlockRegistry);
   });
 
   test('should register a block successfully', () => {
@@ -132,9 +130,9 @@ describe('BlockRegistry - Registration', () => {
 describe('BlockRegistry - Unregistration', () => {
   let registry: BlockRegistry;
 
-  beforeEach(() => {
-    di.stub(Logger);
-    registry = di.inject(BlockRegistry);
+  useTestBed({ autoStub: false }, () => {
+    stub(Logger);
+    registry = get(BlockRegistry);
   });
 
   test('should unregister all blocks from a plugin', () => {
@@ -213,9 +211,9 @@ describe('BlockRegistry - Unregistration', () => {
 describe('BlockRegistry - Queries', () => {
   let registry: BlockRegistry;
 
-  beforeEach(() => {
-    di.stub(Logger);
-    registry = di.inject(BlockRegistry);
+  useTestBed({ autoStub: false }, () => {
+    stub(Logger);
+    registry = get(BlockRegistry);
   });
 
   test('should get registered block by type', () => {
@@ -385,9 +383,9 @@ describe('BlockRegistry - Queries', () => {
 describe('BlockRegistry - Plugin Info', () => {
   let registry: BlockRegistry;
 
-  beforeEach(() => {
-    di.stub(Logger);
-    registry = di.inject(BlockRegistry);
+  useTestBed({ autoStub: false }, () => {
+    stub(Logger);
+    registry = get(BlockRegistry);
   });
 
   test('should get plugin info for registered block', () => {
@@ -426,9 +424,9 @@ describe('BlockRegistry - Plugin Info', () => {
 describe('BlockRegistry - Listeners', () => {
   let registry: BlockRegistry;
 
-  beforeEach(() => {
-    di.stub(Logger);
-    registry = di.inject(BlockRegistry);
+  useTestBed({ autoStub: false }, () => {
+    stub(Logger);
+    registry = get(BlockRegistry);
   });
 
   test('should notify listeners when block is registered', () => {
@@ -529,9 +527,9 @@ describe('BlockRegistry - Listeners', () => {
 describe('BlockRegistry - Size', () => {
   let registry: BlockRegistry;
 
-  beforeEach(() => {
-    di.stub(Logger);
-    registry = di.inject(BlockRegistry);
+  useTestBed({ autoStub: false }, () => {
+    stub(Logger);
+    registry = get(BlockRegistry);
   });
 
   test('should report correct size', () => {
@@ -565,9 +563,9 @@ describe('BlockRegistry - Size', () => {
 describe('BlockRegistry - Validation', () => {
   let registry: BlockRegistry;
 
-  beforeEach(() => {
-    di.stub(Logger);
-    registry = di.inject(BlockRegistry);
+  useTestBed({ autoStub: false }, () => {
+    stub(Logger);
+    registry = get(BlockRegistry);
   });
 
   test('validateConfig returns error for unknown block type', () => {
@@ -716,9 +714,9 @@ describe('BlockRegistry - Validation', () => {
 describe('BlockRegistry - Connection Validation', () => {
   let registry: BlockRegistry;
 
-  beforeEach(() => {
-    di.stub(Logger);
-    registry = di.inject(BlockRegistry);
+  useTestBed({ autoStub: false }, () => {
+    stub(Logger);
+    registry = get(BlockRegistry);
   });
 
   test('validateConnections returns error for unknown source block', () => {
@@ -938,9 +936,9 @@ describe('BlockRegistry - Connection Validation', () => {
 describe('BlockRegistry - Provider and Plugins', () => {
   let registry: BlockRegistry;
 
-  beforeEach(() => {
-    di.stub(Logger);
-    registry = di.inject(BlockRegistry);
+  useTestBed({ autoStub: false }, () => {
+    stub(Logger);
+    registry = get(BlockRegistry);
   });
 
   test('getProvider returns plugin ID for registered block', () => {
@@ -980,9 +978,9 @@ describe('BlockRegistry - Provider and Plugins', () => {
 describe('BlockRegistry - listByOwner', () => {
   let registry: BlockRegistry;
 
-  beforeEach(() => {
-    di.stub(Logger);
-    registry = di.inject(BlockRegistry);
+  useTestBed({ autoStub: false }, () => {
+    stub(Logger);
+    registry = get(BlockRegistry);
   });
 
   test('listByOwner returns block summaries for plugin', () => {
@@ -1025,14 +1023,14 @@ describe('BlockRegistry - Listener Error Handling', () => {
   let registry: BlockRegistry;
   let errorLogs: unknown[];
 
-  beforeEach(() => {
+  useTestBed({ autoStub: false }, () => {
     errorLogs = [];
     // Use stub with custom error override to capture error logs
     // Other methods (info, warn, debug, etc.) are auto-stubbed
-    di.stub(Logger, {
+    stub(Logger, {
       withSource: () => ({ error: (...args: unknown[]) => errorLogs.push(args) }),
     });
-    registry = di.inject(BlockRegistry);
+    registry = get(BlockRegistry);
   });
 
   test('continues notifying other listeners when one throws', () => {

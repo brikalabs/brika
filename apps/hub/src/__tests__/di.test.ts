@@ -1,9 +1,9 @@
 import 'reflect-metadata';
-import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
+import { beforeEach, describe, expect, it } from 'bun:test';
 import { container, inject, injectable, singleton } from '@brika/di';
-import { useTestBed } from '@brika/di/testing';
+import { get, provide, reset, useTestBed } from '@brika/di/testing';
 
-const di = useTestBed();
+useTestBed({ autoStub: false });
 
 describe('DI Container', () => {
   beforeEach(() => {
@@ -134,9 +134,9 @@ describe('TestBed', () => {
     }
 
     const mockLogger = { log: () => 'MOCKED' };
-    di.provide(RealLogger, mockLogger);
+    provide(RealLogger, mockLogger);
 
-    const service = di.get(Service);
+    const service = get(Service);
     expect(service.doWork()).toBe('MOCKED');
   });
 
@@ -151,16 +151,16 @@ describe('TestBed', () => {
     }
 
     // Test 1
-    const c1 = di.get(Counter);
+    const c1 = get(Counter);
     c1.increment();
     c1.increment();
     expect(c1.count).toBe(2);
 
     // Reset between tests
-    di.reset();
+    reset();
 
     // Test 2 - fresh counter
-    const c2 = di.get(Counter);
+    const c2 = get(Counter);
     expect(c2.count).toBe(0);
   });
 });

@@ -1,7 +1,5 @@
 /**
- * TestBed - DI Testing Utility
- *
- * Provides mock injection for classes using tsyringe's `inject()`.
+ * TestBed - DI testing utility for mock injection.
  */
 
 import 'reflect-metadata';
@@ -11,32 +9,53 @@ import type { Constructor, DeepPartial } from './types';
 
 class TestBedImpl {
   #providers = new Map<Constructor, unknown>();
+  #autoStub = false;
+  #originalResolve: typeof container.resolve | null = null;
 
-  /**
-   * Create a deep stub for a service and register it.
-   * All methods return no-ops, property access returns nested stubs.
-   * Overrides are merged with auto-stubs - only specify what you need.
-   *
-   * @example
-   * TestBed.stub(Logger);  // All methods auto-stubbed
-   *
-   * @example With partial override
-   * TestBed.stub(Logger, {
-   *   withSource: () => ({ error: captureError })  // info, warn auto-stubbed
-   * });
-   */
+  /** Enable/disable auto-stubbing mode. */
+  autoStub(enabled = true): this {
+    if (enabled && !this.#autoStub) {
+      this.#enableAutoStub();
+    } else if (!enabled && this.#autoStub) {
+      this.#disableAutoStub();
+    }
+    return this;
+  }
+
+  #enableAutoStub(): void {
+    this.#autoStub = true;
+    this.#originalResolve = container.resolve.bind(container);
+    container.resolve = <T>(token: Constructor<T>) => {
+      if (!this.#providers.has(token)) {
+        this.stub(token);
+      }
+      return this.#originalResolve!(token);
+    };
+  }
+
+  #disableAutoStub(): void {
+    this.#autoStub = false;
+    if (this.#originalResolve) {
+      container.resolve = this.#originalResolve;
+      this.#originalResolve = null;
+    }
+  }
+
+  /** Create and register a deep stub for a service. */
   stub<T>(token: Constructor<T>, overrides: DeepPartial<T> = {} as DeepPartial<T>): T {
     const stub = createDeepStub<T>(overrides as Partial<T>);
     this.provide(token, stub);
     return stub;
   }
 
-  /**
-   * Provide a mock/value for a service.
-   * Call reset() before first provide() to clear singleton cache.
-   */
+  /** Stub multiple services at once. */
+  stubAll(...tokens: Constructor[]): this {
+    tokens.forEach((token) => this.stub(token));
+    return this;
+  }
+
+  /** Register a mock value for a service. */
   provide<T>(token: Constructor<T>, value: T | Partial<T>): this {
-    // Reset on first provide to clear any cached singletons
     if (this.#providers.size === 0) {
       container.reset();
     }
@@ -45,27 +64,18 @@ class TestBedImpl {
     return this;
   }
 
-  /**
-   * Get a service from the container.
-   */
+  /** Resolve a service from the container. */
   get<T>(token: Constructor<T>): T {
     return container.resolve(token);
   }
 
-  /**
-   * Alias for get().
-   */
-  inject<T>(token: Constructor<T>): T {
-    return this.get(token);
-  }
-
-  /**
-   * Reset the container for the next test.
-   */
+  /** Reset the container for the next test. */
   reset(): void {
+    this.#disableAutoStub();
     container.reset();
     this.#providers.clear();
   }
 }
 
+/** Global TestBed singleton used by useTestBed() and helpers. */
 export const TestBed = new TestBedImpl();

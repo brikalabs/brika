@@ -1,21 +1,19 @@
 import 'reflect-metadata';
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { useTestBed } from '@brika/di/testing';
+import { describe, expect, test } from 'bun:test';
+import { stub, useTestBed } from '@brika/di/testing';
 import { TestApp } from '@brika/router/testing';
 import { EventSystem } from '@/runtime/events/event-system';
 import { sparksRoutes } from '@/runtime/http/routes/sparks';
 import { SparkRegistry } from '@/runtime/sparks/spark-registry';
 import { SparkStore } from '@/runtime/sparks/spark-store';
 
-const di = useTestBed();
-
 describe('sparks routes', () => {
   let app: ReturnType<typeof TestApp.create>;
 
-  beforeEach(() => {
-    di.stub(SparkRegistry, { list: () => [], get: () => undefined });
-    di.stub(SparkStore, { query: () => ({ sparks: [], nextCursor: null }) });
-    di.stub(EventSystem);
+  useTestBed(() => {
+    stub(SparkRegistry, { list: () => [], get: () => undefined });
+    stub(SparkStore, { query: () => ({ sparks: [], nextCursor: null }) });
+    stub(EventSystem);
     app = TestApp.create(sparksRoutes);
   });
 

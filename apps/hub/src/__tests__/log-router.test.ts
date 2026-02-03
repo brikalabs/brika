@@ -3,19 +3,19 @@
  */
 
 import 'reflect-metadata';
-import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
-import { useTestBed } from '@brika/di/testing';
+import { beforeEach, describe, expect, mock, test } from 'bun:test';
+import { get, reset, useTestBed } from '@brika/di/testing';
 import type { LogEvent, LogSource } from '@brika/shared';
 import { Logger, ScopedLogger } from '@/runtime/logs/log-router';
 
-const di = useTestBed();
+useTestBed({ autoStub: false });
 
 describe('Logger', () => {
   let logger: Logger;
 
   beforeEach(() => {
-    di.reset();
-    logger = di.inject(Logger);
+    reset();
+    logger = get(Logger);
   });
 
   describe('setSource', () => {
@@ -229,8 +229,8 @@ describe('ScopedLogger', () => {
   let scoped: ScopedLogger;
 
   beforeEach(() => {
-    di.reset();
-    logger = di.inject(Logger);
+    reset();
+    logger = get(Logger);
     scoped = logger.withSource('hub');
   });
 

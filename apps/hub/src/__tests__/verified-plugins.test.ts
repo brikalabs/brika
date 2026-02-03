@@ -1,12 +1,11 @@
 import 'reflect-metadata';
-import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
-import { container } from '@brika/di';
-import { useTestBed } from '@brika/di/testing';
+import { beforeEach, describe, expect, mock, test } from 'bun:test';
+import { get, reset, stub, useTestBed } from '@brika/di/testing';
 import type { VerifiedPluginsList } from '@brika/shared';
 import { Logger } from '@/runtime/logs/log-router';
 import { VerifiedPluginsService } from '@/runtime/services/verified-plugins';
 
-const di = useTestBed();
+useTestBed({ autoStub: false });
 
 const createVerifiedList = (overrides: Partial<VerifiedPluginsList> = {}): VerifiedPluginsList => ({
   plugins: [
@@ -42,13 +41,13 @@ describe('VerifiedPluginsService', () => {
   let service: VerifiedPluginsService;
 
   beforeEach(() => {
-    container.reset();
-    di.stub(Logger);
+    reset();
+    stub(Logger);
     mockReadFile.mockReset();
-    service = di.inject(VerifiedPluginsService);
+    service = get(VerifiedPluginsService);
   });
 
-  container.reset();
+  reset();
 
   describe('init', () => {
     test('should not refetch if data is fresh', async () => {

@@ -1,28 +1,26 @@
 import 'reflect-metadata';
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { useTestBed } from '@brika/di/testing';
+import { describe, expect, test } from 'bun:test';
+import { stub, useTestBed } from '@brika/di/testing';
 import { TestApp } from '@brika/router/testing';
 import { BlockRegistry } from '@/runtime/blocks';
 import { workflowsRoutes } from '@/runtime/http/routes/workflows';
 import { WorkflowEngine, WorkflowLoader } from '@/runtime/workflows';
 
-const di = useTestBed();
-
 describe('workflows routes', () => {
   let app: ReturnType<typeof TestApp.create>;
 
-  beforeEach(() => {
-    di.stub(WorkflowEngine, {
+  useTestBed(() => {
+    stub(WorkflowEngine, {
       list: () => [],
       get: () => undefined,
       getBlockTypes: () => [],
       setEnabled: () => Promise.resolve(true),
     });
-    di.stub(WorkflowLoader, {
+    stub(WorkflowLoader, {
       saveWorkflow: () => Promise.resolve(),
       deleteWorkflow: () => Promise.resolve(true),
     });
-    di.stub(BlockRegistry, { validateConnections: () => ({ valid: true }) });
+    stub(BlockRegistry, { validateConnections: () => ({ valid: true }) });
     app = TestApp.create(workflowsRoutes);
   });
 

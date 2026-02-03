@@ -4,7 +4,7 @@
 
 import 'reflect-metadata';
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
-import { useTestBed } from '@brika/di/testing';
+import { get, provide, stub, useTestBed } from '@brika/di/testing';
 import { useBunMock } from '@brika/testing';
 import { ConfigLoader, HubConfig } from '@/runtime/config';
 import { Logger } from '@/runtime/logs/log-router';
@@ -12,7 +12,7 @@ import { PluginManager } from '@/runtime/plugins/plugin-manager';
 import { PluginRegistry } from '@/runtime/registry/plugin-registry';
 import type { OperationProgress } from '@/runtime/registry/types';
 
-const di = useTestBed();
+useTestBed({ autoStub: false });
 
 describe('PluginRegistry', () => {
   const bun = useBunMock();
@@ -51,12 +51,12 @@ describe('PluginRegistry', () => {
 
     bun.resolve('@test/existing', '/test/home/plugins/node_modules/@test/existing/index.js');
 
-    di.stub(Logger);
-    di.provide(HubConfig, mockHubConfig);
-    di.provide(ConfigLoader, mockConfigLoader);
-    di.provide(PluginManager, mockPluginManager);
+    stub(Logger);
+    provide(HubConfig, mockHubConfig);
+    provide(ConfigLoader, mockConfigLoader);
+    provide(PluginManager, mockPluginManager);
 
-    registry = di.get(PluginRegistry);
+    registry = get(PluginRegistry);
   });
 
   describe('init', () => {

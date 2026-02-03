@@ -1,18 +1,18 @@
 import 'reflect-metadata';
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
-import { useTestBed } from '@brika/di/testing';
+import { get, provide, stub, useTestBed } from '@brika/di/testing';
 import { HttpClient } from '@brika/http';
 import { Logger } from '@/runtime/logs/log-router';
 import { NpmSearchService } from '@/runtime/services/npm-search';
 
-const di = useTestBed();
+useTestBed({ autoStub: false });
 
 describe('NpmSearchService', () => {
   let service: NpmSearchService;
   let httpMock: { get: ReturnType<typeof mock> };
 
   beforeEach(() => {
-    di.stub(Logger);
+    stub(Logger);
 
     // Create a mock HttpClient that we can control
     httpMock = {
@@ -28,8 +28,8 @@ describe('NpmSearchService', () => {
       })),
     };
 
-    di.stub(HttpClient, httpMock);
-    service = di.inject(NpmSearchService);
+    stub(HttpClient, httpMock);
+    service = get(NpmSearchService);
   });
 
   describe('search', () => {

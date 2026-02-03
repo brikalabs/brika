@@ -3,19 +3,20 @@
  */
 
 import 'reflect-metadata';
-import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
-import { useTestBed } from '@brika/di/testing';
+import { beforeEach, describe, expect, test } from 'bun:test';
+import { get, stub, useTestBed } from '@brika/di/testing';
 import { Logger } from '@/runtime/logs/log-router';
 import { SparkRegistry } from '@/runtime/sparks/spark-registry';
 
-const di = useTestBed();
+// autoStub: false because we need real SparkRegistry with stubbed Logger
+useTestBed({ autoStub: false });
 
 describe('SparkRegistry', () => {
   let registry: SparkRegistry;
 
   beforeEach(() => {
-    di.stub(Logger);
-    registry = di.get(SparkRegistry);
+    stub(Logger);
+    registry = get(SparkRegistry);
   });
 
   describe('register', () => {

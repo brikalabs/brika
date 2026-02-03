@@ -4,7 +4,7 @@
 
 import 'reflect-metadata';
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
-import { useTestBed } from '@brika/di/testing';
+import { get, provide, stub, useTestBed } from '@brika/di/testing';
 import { BlockRegistry } from '@/runtime/blocks';
 import { EventSystem } from '@/runtime/events/event-system';
 import { Logger } from '@/runtime/logs/log-router';
@@ -13,7 +13,7 @@ import type { PluginProcess } from '@/runtime/plugins/plugin-process';
 import { SparkRegistry } from '@/runtime/sparks';
 import { StateStore } from '@/runtime/state/state-store';
 
-const di = useTestBed();
+useTestBed({ autoStub: false });
 
 describe('PluginEventHandler', () => {
   let handler: PluginEventHandler;
@@ -40,13 +40,13 @@ describe('PluginEventHandler', () => {
       subscribe: mock().mockReturnValue(() => undefined),
     };
 
-    di.stub(Logger);
-    di.provide(BlockRegistry, mockBlockRegistry);
-    di.provide(SparkRegistry, mockSparkRegistry);
-    di.provide(StateStore, mockStateStore);
-    di.provide(EventSystem, mockEventSystem);
+    stub(Logger);
+    provide(BlockRegistry, mockBlockRegistry);
+    provide(SparkRegistry, mockSparkRegistry);
+    provide(StateStore, mockStateStore);
+    provide(EventSystem, mockEventSystem);
 
-    handler = di.get(PluginEventHandler);
+    handler = get(PluginEventHandler);
   });
 
   describe('block emit handler', () => {

@@ -1,15 +1,15 @@
 import 'reflect-metadata';
-import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { rmSync } from 'node:fs';
 import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { container } from '@brika/di';
-import { useTestBed } from '@brika/di/testing';
+import { get, provide, reset, stub, useTestBed } from '@brika/di/testing';
 import { ConfigLoader } from '@/runtime/config/config-loader';
 import { SparkStore, type StoredSparkEvent } from '@/runtime/sparks/spark-store';
 
-const di = useTestBed();
+useTestBed({ autoStub: false });
 
 const createTestEvent = (
   overrides: Partial<Omit<StoredSparkEvent, 'id'>> = {}
@@ -27,21 +27,21 @@ describe('SparkStore', () => {
   let tempDir: string;
 
   beforeEach(async () => {
-    container.reset();
+    reset();
 
     tempDir = await mkdtemp(join(tmpdir(), 'spark-store-test-'));
 
-    di.stub(ConfigLoader, {
+    stub(ConfigLoader, {
       getRootDir: () => tempDir,
     });
 
-    store = di.inject(SparkStore);
+    store = get(SparkStore);
     await store.init();
   });
 
   afterEach(() => {
     store.close();
-    container.reset();
+    reset();
 
     try {
       rmSync(tempDir, { recursive: true, force: true });
@@ -379,17 +379,17 @@ describe('SparkStore', () => {
 
   describe('uninitialized store', () => {
     test('should handle insert gracefully when not initialized', () => {
-      container.reset();
-      di.stub(ConfigLoader);
-      const uninitializedStore = di.inject(SparkStore);
+      reset();
+      stub(ConfigLoader);
+      const uninitializedStore = get(SparkStore);
 
       expect(() => uninitializedStore.insert(createTestEvent())).not.toThrow();
     });
 
     test('should return empty result when not initialized', () => {
-      container.reset();
-      di.stub(ConfigLoader);
-      const uninitializedStore = di.inject(SparkStore);
+      reset();
+      stub(ConfigLoader);
+      const uninitializedStore = get(SparkStore);
 
       const result = uninitializedStore.query();
 
@@ -397,25 +397,25 @@ describe('SparkStore', () => {
     });
 
     test('should return 0 for count when not initialized', () => {
-      container.reset();
-      di.stub(ConfigLoader);
-      const uninitializedStore = di.inject(SparkStore);
+      reset();
+      stub(ConfigLoader);
+      const uninitializedStore = get(SparkStore);
 
       expect(uninitializedStore.count()).toBe(0);
     });
 
     test('should return empty array for getTypes when not initialized', () => {
-      container.reset();
-      di.stub(ConfigLoader);
-      const uninitializedStore = di.inject(SparkStore);
+      reset();
+      stub(ConfigLoader);
+      const uninitializedStore = get(SparkStore);
 
       expect(uninitializedStore.getTypes()).toEqual([]);
     });
 
     test('should return 0 for clear when not initialized', () => {
-      container.reset();
-      di.stub(ConfigLoader);
-      const uninitializedStore = di.inject(SparkStore);
+      reset();
+      stub(ConfigLoader);
+      const uninitializedStore = get(SparkStore);
 
       expect(uninitializedStore.clear()).toBe(0);
     });
