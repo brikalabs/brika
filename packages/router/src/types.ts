@@ -41,9 +41,9 @@ export interface RouteContext<S extends Schema = Schema> {
  * Return any object to send as JSON, or throw HttpException for errors.
  * Return a Response object to bypass JSON serialization (useful for SSE, file downloads).
  */
-export type Handler<S extends Schema = Schema> = (
+export type Handler<S extends Schema = Schema, R = unknown> = (
   ctx: RouteContext<S>
-) => Promise<unknown | Response> | unknown | Response;
+) => Promise<R | Response> | R | Response;
 
 /**
  * Supported HTTP methods.
@@ -52,10 +52,21 @@ export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 /**
  * Internal route definition.
+ * R is the return type of the handler (for type inference in testing).
  */
-export interface RouteDefinition<S extends Schema = Schema> {
+export interface RouteDefinition<S extends Schema = Schema, R = unknown> {
   method: HttpMethod;
   path: string;
   schema?: S;
-  handler: Handler<S>;
+  handler: Handler<S, R>;
 }
+
+/**
+ * Extract the input types required by a route's schema.
+ */
+export type RouteInput<S extends Schema> = {
+  params?: InferOrDefault<S['params'], Record<string, string>>;
+  query?: InferOrDefault<S['query'], Record<string, string>>;
+  body?: InferOrDefault<S['body'], unknown>;
+  headers?: Record<string, string>;
+};

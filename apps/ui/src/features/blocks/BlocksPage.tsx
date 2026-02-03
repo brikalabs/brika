@@ -28,10 +28,7 @@ function BlockCard({ block }: Readonly<{ block: BlockDefinition }>) {
     <Card interactive className="h-full p-5">
       <div className="flex h-full flex-col gap-4">
         <div className="flex items-center justify-between">
-          <Avatar
-            className="size-10 transition-all group-hover:scale-105"
-            style={{ backgroundColor: `${color}20`, color }}
-          >
+          <Avatar className="size-10" style={{ backgroundColor: `${color}20`, color }}>
             <AvatarFallback style={{ backgroundColor: `${color}20`, color }}>
               <DynamicIcon name={iconName} className="size-5" />
             </AvatarFallback>
@@ -44,7 +41,9 @@ function BlockCard({ block }: Readonly<{ block: BlockDefinition }>) {
         </div>
 
         <div className="flex flex-1 flex-col gap-2">
-          <h3 className="font-semibold text-sm leading-tight">{blockName}</h3>
+          <h3 className="font-semibold text-sm leading-tight transition-colors group-hover:text-foreground">
+            {blockName}
+          </h3>
           {blockDesc && (
             <p className="line-clamp-2 text-muted-foreground text-xs leading-relaxed">
               {blockDesc}

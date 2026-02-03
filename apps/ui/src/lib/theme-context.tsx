@@ -1,14 +1,14 @@
 import { createContext, useContext } from 'react';
 
 export type ThemeName = 'default' | 'ocean' | 'forest' | 'sunset' | 'lavender' | 'ruby';
-export type ThemeMode = 'light' | 'dark';
+export type ThemeMode = 'light' | 'dark' | 'system';
 
 export interface ThemeContextValue {
   theme: ThemeName;
   mode: ThemeMode;
+  resolvedMode: 'light' | 'dark';
   setTheme: (theme: ThemeName) => void;
   setMode: (mode: ThemeMode) => void;
-  toggleMode: () => void;
 }
 
 export const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);

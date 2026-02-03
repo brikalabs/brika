@@ -9,5 +9,10 @@
   "rules": "Rules",
   "logs": "Logs",
   "store": "Store",
-  "settings": "Settings"
+  "settings": "Settings",
+  "groups": {
+    "core": "Core",
+    "tools": "Tools",
+    "system": "System"
+  }
 }

@@ -9,5 +9,10 @@
   "rules": "Règles",
   "logs": "Journaux",
   "store": "Boutique",
-  "settings": "Paramètres"
+  "settings": "Paramètres",
+  "groups": {
+    "core": "Principal",
+    "tools": "Outils",
+    "system": "Système"
+  }
 }

@@ -4,7 +4,6 @@ import { fetcher } from '@/lib/query';
 interface HealthResponse {
   ok: boolean;
   version: string;
-  runtime: string;
 }
 
 export function useHealth() {

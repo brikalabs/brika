@@ -176,10 +176,7 @@ function checkUnionTypeCompatibility(
 /**
  * Check primitive type compatibility
  */
-function checkPrimitiveTypeCompatibility(
-  outputType: string,
-  inputType: string
-): boolean | null {
+function checkPrimitiveTypeCompatibility(outputType: string, inputType: string): boolean | null {
   const primitiveTypes = ['string', 'number', 'boolean', 'null'];
   if (primitiveTypes.includes(outputType) && primitiveTypes.includes(inputType)) {
     return outputType === inputType;

@@ -4,6 +4,10 @@ import { serveStatic } from 'hono/bun';
 import { HubConfig } from '@/runtime/config';
 import { Logger } from '@/runtime/logs/log-router';
 
+function formatDuration(ms: number): string {
+  return ms < 1 ? `${(ms * 1000).toFixed(0)}µs` : `${ms.toFixed(2)}ms`;
+}
+
 @singleton()
 export class ApiServer {
   readonly #config = inject(HubConfig);
@@ -22,57 +26,55 @@ export class ApiServer {
 
   start(): void {
     this.#app = createApp(this.#routes);
-
-    // Log exceptions with full stack traces
-    this.#app.onError((err, c) => {
-      this.#logs.error(
-        'Route handler error',
-        {
-          method: c.req.method,
-          path: new URL(c.req.url).pathname,
-        },
-        { error: err }
-      );
-      throw err;
-    });
-
-    // Add static file serving if configured (for production Docker)
-    if (this.#config.staticDir) {
-      const staticDir = this.#config.staticDir;
-
-      // Serve static files from the configured directory
-      this.#app.use('/*', serveStatic({ root: staticDir }));
-
-      // SPA fallback: serve index.html for non-API routes that don't match static files
-      this.#app.get('*', serveStatic({ root: staticDir, path: 'index.html' }));
-
-      this.#logs.info('Static file serving enabled', {
-        directory: staticDir,
-      });
-    }
+    this.#setupErrorHandler();
+    this.#setupStaticFiles();
 
     this.#server = Bun.serve({
       hostname: this.#config.host,
       port: this.#config.port,
-      fetch: async (req) => {
-        if (!this.#app) throw new Error('Failed to start');
-
-        const start = Date.now();
-        const res = await this.#app.fetch(req);
-
-        this.#logs.info('HTTP request', {
-          method: req.method,
-          path: new URL(req.url).pathname,
-          status: res.status,
-          durationMs: Date.now() - start,
-        });
-
-        return res;
-      },
+      fetch: (req) => this.#handleRequest(req),
     });
   }
 
   stop(): void {
     this.#server?.stop();
+  }
+
+  async #handleRequest(req: Request): Promise<Response> {
+    if (!this.#app) throw new Error('Server not initialized');
+
+    const start = performance.now();
+    const res = await this.#app.fetch(req);
+    const duration = formatDuration(performance.now() - start);
+    const path = new URL(req.url).pathname;
+
+    this.#logs.info(`${req.method} ${path} → ${res.status} (${duration})`, {
+      method: req.method,
+      path,
+      status: res.status,
+      duration,
+    });
+
+    return res;
+  }
+
+  #setupErrorHandler(): void {
+    this.#app?.onError((err, c) => {
+      this.#logs.error(
+        'Route handler error',
+        { method: c.req.method, path: new URL(c.req.url).pathname },
+        { error: err }
+      );
+      throw err;
+    });
+  }
+
+  #setupStaticFiles(): void {
+    const { staticDir } = this.#config;
+    if (!staticDir) return;
+
+    this.#app?.use('/*', serveStatic({ root: staticDir }));
+    this.#app?.get('*', serveStatic({ root: staticDir, path: 'index.html' }));
+    this.#logs.info('Static file serving enabled', { directory: staticDir });
   }
 }

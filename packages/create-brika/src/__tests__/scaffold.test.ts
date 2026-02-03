@@ -5,7 +5,7 @@
 import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from 'bun:test';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { scaffold, type ScaffoldOptions } from '../scaffold';
+import { type ScaffoldOptions, scaffold } from '../scaffold';
 
 // Mock @clack/prompts
 const mockSpinner = {
@@ -143,9 +143,7 @@ describe('scaffold', () => {
   test('fetches SDK version from npm', async () => {
     await scaffold(defaultOptions);
 
-    expect(fetchSpy).toHaveBeenCalledWith(
-      'https://registry.npmjs.org/@brika/sdk/latest'
-    );
+    expect(fetchSpy).toHaveBeenCalledWith('https://registry.npmjs.org/@brika/sdk/latest');
   });
 
   test('throws error when directory already exists', async () => {
@@ -193,11 +191,11 @@ describe('scaffold', () => {
   });
 
   test('handles npm fetch error', async () => {
-    fetchSpy.mockResolvedValueOnce(
-      new Response('Not found', { status: 404 })
-    );
+    fetchSpy.mockResolvedValueOnce(new Response('Not found', { status: 404 }));
 
-    await expect(scaffold(defaultOptions)).rejects.toThrow('Failed to fetch @brika/sdk version: 404');
+    await expect(scaffold(defaultOptions)).rejects.toThrow(
+      'Failed to fetch @brika/sdk version: 404'
+    );
   });
 
   test('uses correct template variables for plugin name with hyphens', async () => {

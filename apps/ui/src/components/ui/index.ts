@@ -59,6 +59,7 @@ export {
 export { Input } from './input';
 export { Label } from './label';
 export { Progress } from './progress';
+export { ProgressDisplay } from './progress-display';
 export { ScrollArea } from './scroll-area';
 export {
   Select,

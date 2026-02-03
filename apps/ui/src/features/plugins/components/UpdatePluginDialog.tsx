@@ -1,6 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { ArrowUpCircle, CheckCircle2, Loader2, RotateCcw, XCircle } from 'lucide-react';
-import React from 'react';
+import { ArrowUpCircle, Loader2, RotateCcw } from 'lucide-react';
 import {
   Button,
   Dialog,
@@ -9,12 +8,11 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  Progress,
-  ScrollArea,
+  ProgressDisplay,
 } from '@/components/ui';
-import { cn } from '@/lib/utils';
+import { getProgressValue, useProgressStream } from '@/hooks/use-progress-stream';
 import { pluginsKeys } from '../api';
-import { type OperationProgress, registryApi } from '../registry-api';
+import { registryApi } from '../registry-api';
 
 type OperationMode = 'update' | 'reinstall';
 
@@ -36,104 +34,43 @@ export function UpdatePluginDialog({
   mode,
 }: Readonly<UpdatePluginDialogProps>) {
   const queryClient = useQueryClient();
-  const [isUpdating, setIsUpdating] = React.useState(false);
-  const [progress, setProgress] = React.useState<OperationProgress | null>(null);
-  const [logs, setLogs] = React.useState<string[]>([]);
-  const [error, setError] = React.useState<string | null>(null);
-  const [success, setSuccess] = React.useState(false);
 
-  const scrollRef = React.useRef<HTMLDivElement>(null);
-
-  // Auto-scroll logs
-  React.useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [logs]);
-
-  const reset = () => {
-    setIsUpdating(false);
-    setProgress(null);
-    setLogs([]);
-    setError(null);
-    setSuccess(false);
-  };
+  const {
+    isProcessing,
+    progress,
+    logs,
+    error,
+    success,
+    scrollRef,
+    reset,
+    handleProgress,
+    start,
+    stop,
+  } = useProgressStream({
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: pluginsKeys.all });
+    },
+  });
 
   const handleClose = () => {
-    if (isUpdating) return; // Don't close while updating
+    if (isProcessing) return;
     reset();
     onOpenChange(false);
   };
 
   const handleUpdate = async () => {
-    setIsUpdating(true);
-    setError(null);
-    setSuccess(false);
-    setLogs([]);
+    start();
 
     try {
-      if (mode === 'reinstall') {
-        // For reinstall, we use install with the same version
-        const stream = await registryApi.installStream(packageName, currentVersion || 'latest');
+      const stream =
+        mode === 'reinstall'
+          ? await registryApi.installStream(packageName, currentVersion || 'latest')
+          : await registryApi.updateStream(packageName);
 
-        stream.onProgress((p) => {
-          setProgress(p);
-          if (p.message) {
-            setLogs((prev) => [...prev, p.message]);
-          }
-
-          if (p.phase === 'error') {
-            setError(p.error || 'Reinstall failed');
-            setIsUpdating(false);
-          } else if (p.phase === 'complete') {
-            setSuccess(true);
-            setIsUpdating(false);
-            queryClient.invalidateQueries({ queryKey: pluginsKeys.all });
-          }
-        });
-
-        await stream.onComplete();
-      } else {
-        // For update, we use the update endpoint
-        const stream = await registryApi.updateStream(packageName);
-
-        stream.onProgress((p) => {
-          setProgress(p);
-          if (p.message) {
-            setLogs((prev) => [...prev, p.message]);
-          }
-
-          if (p.phase === 'error') {
-            setError(p.error || 'Update failed');
-            setIsUpdating(false);
-          } else if (p.phase === 'complete') {
-            setSuccess(true);
-            setIsUpdating(false);
-            queryClient.invalidateQueries({ queryKey: pluginsKeys.all });
-          }
-        });
-
-        await stream.onComplete();
-      }
+      stream.onProgress(handleProgress);
+      await stream.onComplete();
     } catch (err) {
-      setError(String(err));
-      setIsUpdating(false);
-    }
-  };
-
-  const getProgressValue = () => {
-    if (!progress) return 0;
-    switch (progress.phase) {
-      case 'resolving':
-        return 20;
-      case 'downloading':
-        return 50;
-      case 'linking':
-        return 80;
-      case 'complete':
-        return 100;
-      default:
-        return 0;
+      stop(String(err));
     }
   };
 
@@ -189,7 +126,7 @@ export function UpdatePluginDialog({
 
         <div className="space-y-4">
           {/* Plugin info - hide when updating */}
-          {!isUpdating && !success && (
+          {!isProcessing && !success && (
             <div className="space-y-2 rounded-lg border bg-muted/30 p-4">
               <div className="space-y-1">
                 <div className="text-muted-foreground text-sm">Package</div>
@@ -213,43 +150,16 @@ export function UpdatePluginDialog({
           )}
 
           {/* Progress section */}
-          {(isUpdating || success || error) && (
-            <div className="space-y-3">
-              {/* Progress bar */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">{getPhaseLabel()}</span>
-                  {success && <CheckCircle2 className="size-4 text-emerald-500" />}
-                  {error && <XCircle className="size-4 text-destructive" />}
-                </div>
-                <Progress
-                  value={getProgressValue()}
-                  className={cn(
-                    'h-2',
-                    error && '[&>div]:bg-destructive',
-                    success && '[&>div]:bg-emerald-500'
-                  )}
-                />
-              </div>
-
-              {/* Log output */}
-              <ScrollArea className="h-40 rounded-md border bg-muted/30 p-3">
-                <div ref={scrollRef} className="space-y-1 font-mono text-xs">
-                  {logs.map((log, i) => (
-                    <div key={i} className="text-muted-foreground">
-                      {log}
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-
-              {/* Error display */}
-              {error && (
-                <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-destructive text-sm">
-                  {error}
-                </div>
-              )}
-            </div>
+          {(isProcessing || success || error) && (
+            <ProgressDisplay
+              progressValue={getProgressValue(progress?.phase)}
+              phaseLabel={getPhaseLabel()}
+              logs={logs}
+              scrollRef={scrollRef}
+              error={error}
+              success={success}
+              isProcessing={isProcessing}
+            />
           )}
         </div>
 
@@ -258,11 +168,11 @@ export function UpdatePluginDialog({
             <Button onClick={handleClose}>Done</Button>
           ) : (
             <>
-              <Button variant="outline" onClick={handleClose} disabled={isUpdating}>
+              <Button variant="outline" onClick={handleClose} disabled={isProcessing}>
                 Cancel
               </Button>
-              <Button onClick={handleUpdate} disabled={isUpdating} className="gap-2">
-                {isUpdating ? (
+              <Button onClick={handleUpdate} disabled={isProcessing} className="gap-2">
+                {isProcessing ? (
                   <>
                     <Loader2 className="size-4 animate-spin" />
                     {mode === 'reinstall' ? 'Reinstalling...' : 'Updating...'}

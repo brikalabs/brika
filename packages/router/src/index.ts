@@ -24,5 +24,6 @@ export type {
   HttpMethod,
   RouteContext,
   RouteDefinition,
+  RouteInput,
   Schema,
 } from './types';

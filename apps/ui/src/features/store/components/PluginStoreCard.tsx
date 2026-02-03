@@ -24,16 +24,12 @@ export function PluginStoreCard({ plugin }: Readonly<PluginStoreCardProps>) {
 
   return (
     <Link to="/store/$name" params={{ name: plugin.name }} className="group block">
-      <Card
-        accent={accent}
-        interactive
-        className="h-full p-6 transition-all duration-200 hover:shadow-lg"
-      >
+      <Card accent={accent} interactive className="h-full p-5">
         <div className="space-y-3">
           {/* Header: Icon + Title/Badges + Install Button */}
           <div className="flex items-start gap-4">
             {/* Plugin Icon */}
-            <Avatar className="size-14 shrink-0 rounded-2xl ring-1 ring-border/50 transition-all duration-200 group-hover:shadow-md group-hover:ring-primary/40">
+            <Avatar className="size-14 shrink-0 rounded-2xl ring-1 ring-border/50">
               <AvatarImage
                 src={`/api/registry/plugins/${encodeURIComponent(plugin.name)}/icon`}
                 className="object-cover"
@@ -47,7 +43,7 @@ export function PluginStoreCard({ plugin }: Readonly<PluginStoreCardProps>) {
             <div className="min-w-0 flex-1 space-y-2">
               {/* Title + Verified Badge */}
               <div className="flex items-center gap-1.5 overflow-hidden">
-                <h3 className="truncate font-semibold text-base leading-tight transition-colors duration-200 group-hover:text-primary">
+                <h3 className="truncate font-semibold text-base leading-tight transition-colors group-hover:text-foreground">
                   {plugin.name}
                 </h3>
                 {plugin.verified && <VerifiedBadge />}

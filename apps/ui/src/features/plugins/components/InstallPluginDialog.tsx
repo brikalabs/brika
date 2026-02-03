@@ -1,6 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, Download, Loader2, Package, XCircle } from 'lucide-react';
-import React from 'react';
+import { Download, Loader2, Package } from 'lucide-react';
+import { useState } from 'react';
 import {
   Button,
   Dialog,
@@ -11,12 +11,11 @@ import {
   DialogTitle,
   Input,
   Label,
-  Progress,
-  ScrollArea,
+  ProgressDisplay,
 } from '@/components/ui';
-import { cn } from '@/lib/utils';
+import { getProgressValue, useProgressStream } from '@/hooks/use-progress-stream';
 import { pluginsKeys } from '../api';
-import { type OperationProgress, registryApi } from '../registry-api';
+import { registryApi } from '../registry-api';
 
 interface InstallPluginDialogProps {
   open: boolean;
@@ -25,35 +24,34 @@ interface InstallPluginDialogProps {
 
 export function InstallPluginDialog({ open, onOpenChange }: Readonly<InstallPluginDialogProps>) {
   const queryClient = useQueryClient();
-  const [packageName, setPackageName] = React.useState('');
-  const [version, setVersion] = React.useState('');
-  const [isInstalling, setIsInstalling] = React.useState(false);
-  const [progress, setProgress] = React.useState<OperationProgress | null>(null);
-  const [logs, setLogs] = React.useState<string[]>([]);
-  const [error, setError] = React.useState<string | null>(null);
-  const [success, setSuccess] = React.useState(false);
+  const [packageName, setPackageName] = useState('');
+  const [version, setVersion] = useState('');
 
-  const scrollRef = React.useRef<HTMLDivElement>(null);
-
-  // Auto-scroll logs
-  React.useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [logs]);
+  const {
+    isProcessing,
+    progress,
+    logs,
+    error,
+    success,
+    scrollRef,
+    reset: resetProgress,
+    handleProgress,
+    start,
+    stop,
+  } = useProgressStream({
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: pluginsKeys.all });
+    },
+  });
 
   const reset = () => {
     setPackageName('');
     setVersion('');
-    setIsInstalling(false);
-    setProgress(null);
-    setLogs([]);
-    setError(null);
-    setSuccess(false);
+    resetProgress();
   };
 
   const handleClose = () => {
-    if (isInstalling) return; // Don't close while installing
+    if (isProcessing) return;
     reset();
     onOpenChange(false);
   };
@@ -61,54 +59,17 @@ export function InstallPluginDialog({ open, onOpenChange }: Readonly<InstallPlug
   const handleInstall = async () => {
     if (!packageName.trim()) return;
 
-    setIsInstalling(true);
-    setError(null);
-    setSuccess(false);
-    setLogs([]);
+    start();
 
     try {
       const stream = await registryApi.installStream(
         packageName.trim(),
         version.trim() || undefined
       );
-
-      stream.onProgress((p) => {
-        setProgress(p);
-        if (p.message) {
-          setLogs((prev) => [...prev, p.message]);
-        }
-
-        if (p.phase === 'error') {
-          setError(p.error || 'Installation failed');
-          setIsInstalling(false);
-        } else if (p.phase === 'complete') {
-          setSuccess(true);
-          setIsInstalling(false);
-          // Invalidate queries to refresh plugin list
-          queryClient.invalidateQueries({ queryKey: pluginsKeys.all });
-        }
-      });
-
+      stream.onProgress(handleProgress);
       await stream.onComplete();
     } catch (err) {
-      setError(String(err));
-      setIsInstalling(false);
-    }
-  };
-
-  const getProgressValue = () => {
-    if (!progress) return 0;
-    switch (progress.phase) {
-      case 'resolving':
-        return 20;
-      case 'downloading':
-        return 50;
-      case 'linking':
-        return 80;
-      case 'complete':
-        return 100;
-      default:
-        return 0;
+      stop(String(err));
     }
   };
 
@@ -145,7 +106,7 @@ export function InstallPluginDialog({ open, onOpenChange }: Readonly<InstallPlug
 
         <div className="space-y-4">
           {/* Input fields - hide when installing */}
-          {!isInstalling && !success && (
+          {!isProcessing && !success && (
             <>
               <div className="space-y-2">
                 <Label htmlFor="package">Package Name</Label>
@@ -155,7 +116,7 @@ export function InstallPluginDialog({ open, onOpenChange }: Readonly<InstallPlug
                   onChange={(e) => setPackageName(e.target.value)}
                   placeholder="@brika/plugin-timer or workspace:/path/to/plugin"
                   className="font-mono text-sm"
-                  disabled={isInstalling}
+                  disabled={isProcessing}
                 />
               </div>
               <div className="space-y-2">
@@ -166,50 +127,23 @@ export function InstallPluginDialog({ open, onOpenChange }: Readonly<InstallPlug
                   onChange={(e) => setVersion(e.target.value)}
                   placeholder="^1.0.0 or latest"
                   className="font-mono text-sm"
-                  disabled={isInstalling}
+                  disabled={isProcessing}
                 />
               </div>
             </>
           )}
 
           {/* Progress section */}
-          {(isInstalling || success || error) && (
-            <div className="space-y-3">
-              {/* Progress bar */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">{getPhaseLabel()}</span>
-                  {success && <CheckCircle2 className="size-4 text-emerald-500" />}
-                  {error && <XCircle className="size-4 text-destructive" />}
-                </div>
-                <Progress
-                  value={getProgressValue()}
-                  className={cn(
-                    'h-2',
-                    error && '[&>div]:bg-destructive',
-                    success && '[&>div]:bg-emerald-500'
-                  )}
-                />
-              </div>
-
-              {/* Log output */}
-              <ScrollArea className="h-40 rounded-md border bg-muted/30 p-3">
-                <div ref={scrollRef} className="space-y-1 font-mono text-xs">
-                  {logs.map((log, i) => (
-                    <div key={i} className="text-muted-foreground">
-                      {log}
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
-
-              {/* Error display */}
-              {error && (
-                <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-destructive text-sm">
-                  {error}
-                </div>
-              )}
-            </div>
+          {(isProcessing || success || error) && (
+            <ProgressDisplay
+              progressValue={getProgressValue(progress?.phase)}
+              phaseLabel={getPhaseLabel()}
+              logs={logs}
+              scrollRef={scrollRef}
+              error={error}
+              success={success}
+              isProcessing={isProcessing}
+            />
           )}
         </div>
 
@@ -218,15 +152,15 @@ export function InstallPluginDialog({ open, onOpenChange }: Readonly<InstallPlug
             <Button onClick={handleClose}>Done</Button>
           ) : (
             <>
-              <Button variant="outline" onClick={handleClose} disabled={isInstalling}>
+              <Button variant="outline" onClick={handleClose} disabled={isProcessing}>
                 Cancel
               </Button>
               <Button
                 onClick={handleInstall}
-                disabled={isInstalling || !packageName.trim()}
+                disabled={isProcessing || !packageName.trim()}
                 className="gap-2"
               >
-                {isInstalling ? (
+                {isProcessing ? (
                   <>
                     <Loader2 className="size-4 animate-spin" />
                     Installing...

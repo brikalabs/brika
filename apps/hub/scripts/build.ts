@@ -1,6 +1,8 @@
 #!/usr/bin/env bun
 /**
  * Build script for compiling the BRIKA hub into a standalone executable
+ *
+ * Build-time info (commit, branch, date) is embedded via Bun macros
  * Templates are embedded via the folder-tar bundler plugin
  */
 import { join } from 'node:path';

@@ -143,8 +143,11 @@ function createHeading(level: HeadingLevel) {
     return (
       <Tag id={id} className={headingStyles[level]}>
         <a href={`#${id}`} className="group relative block text-inherit no-underline">
-          <span className="absolute top-1/2 -left-7 -translate-y-1/2" aria-hidden>
-            <LinkIcon className="size-3.5 text-muted-foreground transition-colors group-hover:text-foreground" />
+          <span
+            className="absolute top-1/2 -left-6 -translate-y-1/2 opacity-0 transition-opacity group-hover:opacity-100"
+            aria-hidden
+          >
+            <LinkIcon className="size-4 text-muted-foreground" />
           </span>
           {children}
         </a>
@@ -237,7 +240,7 @@ export function Markdown({ children }: Readonly<{ children: string }>) {
   }, [children]);
 
   return (
-    <div className="text-foreground [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_h1]:pl-8 [&_h2]:pl-8 [&_h3]:pl-8 [&_h4]:pl-8 [&_h5]:pl-8 [&_h6]:pl-8">
+    <div className="px-6 text-foreground [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
       <ReactMarkdown components={components}>{children}</ReactMarkdown>
     </div>
   );

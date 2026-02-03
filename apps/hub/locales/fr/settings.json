@@ -4,7 +4,8 @@
   "sections": {
     "general": "Général",
     "appearance": "Apparence",
-    "language": "Langue"
+    "language": "Langue",
+    "system": "Système"
   },
   "appearance": {
     "title": "Apparence",
@@ -14,5 +15,26 @@
     "title": "Langue",
     "description": "Sélectionnez votre langue préférée",
     "current": "Langue actuelle"
+  },
+  "system": {
+    "title": "Informations système",
+    "description": "Détails de votre installation BRIKA",
+    "version": "Version",
+    "runtime": "Environnement",
+    "os": "Système d'exploitation",
+    "uptime": "Temps d'activité",
+    "repository": "Dépôt",
+    "commit": "Commit",
+    "branch": "Branche",
+    "buildDate": "Date de build",
+    "configPath": "Fichier de config",
+    "dataPath": "Répertoire de données",
+    "pluginsPath": "Répertoire des plugins",
+    "plugins": "Plugins",
+    "pluginsRunning": "{{running}} sur {{total}} en cours",
+    "blocks": "Blocs",
+    "workflows": "Workflows",
+    "workflowsEnabled": "{{enabled}} sur {{total}} activés",
+    "sparks": "Sparks"
   }
 }

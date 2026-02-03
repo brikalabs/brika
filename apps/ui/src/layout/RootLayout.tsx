@@ -16,6 +16,7 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarInset,
   SidebarMenu,
@@ -23,7 +24,6 @@ import {
   SidebarMenuItem,
   SidebarProvider,
   SidebarRail,
-  SidebarTrigger,
   useSidebar,
 } from '@/components/ui/sidebar';
 import { useHealth } from '@/features/dashboard/hooks';
@@ -37,15 +37,35 @@ interface NavItem {
   icon: LucideIcon;
 }
 
-const NAV_ITEMS: NavItem[] = [
-  { to: '/', labelKey: 'nav:dashboard', icon: LayoutDashboard },
-  { to: '/plugins', labelKey: 'nav:plugins', icon: Plug },
-  { to: '/sparks', labelKey: 'nav:sparks', icon: Zap },
-  { to: '/workflows', labelKey: 'nav:workflows', icon: Workflow },
-  { to: '/blocks', labelKey: 'nav:blocks', icon: Blocks },
-  { to: '/logs', labelKey: 'nav:logs', icon: FileText },
-  { to: '/store', labelKey: 'nav:store', icon: Package },
-  { to: '/settings', labelKey: 'nav:settings', icon: Settings },
+interface NavGroup {
+  labelKey: string;
+  items: NavItem[];
+}
+
+const NAV_GROUPS: NavGroup[] = [
+  {
+    labelKey: 'nav:groups.core',
+    items: [
+      { to: '/', labelKey: 'nav:dashboard', icon: LayoutDashboard },
+      { to: '/plugins', labelKey: 'nav:plugins', icon: Plug },
+      { to: '/workflows', labelKey: 'nav:workflows', icon: Workflow },
+    ],
+  },
+  {
+    labelKey: 'nav:groups.tools',
+    items: [
+      { to: '/sparks', labelKey: 'nav:sparks', icon: Zap },
+      { to: '/blocks', labelKey: 'nav:blocks', icon: Blocks },
+      { to: '/logs', labelKey: 'nav:logs', icon: FileText },
+    ],
+  },
+  {
+    labelKey: 'nav:groups.system',
+    items: [
+      { to: '/store', labelKey: 'nav:store', icon: Package },
+      { to: '/settings', labelKey: 'nav:settings', icon: Settings },
+    ],
+  },
 ];
 
 function NavLink({ to, labelKey, icon: Icon }: Readonly<NavItem>) {
@@ -66,64 +86,81 @@ function NavLink({ to, labelKey, icon: Icon }: Readonly<NavItem>) {
   );
 }
 
-function AppSidebarHeader() {
+function NavGroupComponent({ group }: Readonly<{ group: NavGroup }>) {
   const { t } = useLocale();
-  const { state } = useSidebar();
-  const isCollapsed = state === 'collapsed';
 
   return (
-    <SidebarHeader className="border-b p-4">
-      <div
-        className={cn(
-          'flex items-center transition-all duration-200',
-          isCollapsed ? 'justify-center' : 'justify-between'
-        )}
-      >
-        <div>
-          <h1
-            className={cn(
-              'bg-gradient-to-r from-primary to-primary/60 bg-clip-text font-bold text-transparent tracking-tight transition-all duration-200',
-              isCollapsed ? 'text-lg' : 'text-xl'
-            )}
-          >
-            {isCollapsed ? 'B' : 'BRIKA'}
-          </h1>
-          {!isCollapsed && (
-            <p className="mt-0.5 text-muted-foreground text-xs">{t('dashboard:subtitle')}</p>
-          )}
-        </div>
-        {!isCollapsed && <SidebarTrigger className="-mr-2" />}
-      </div>
+    <SidebarGroup>
+      <SidebarGroupLabel>{t(group.labelKey)}</SidebarGroupLabel>
+      <SidebarGroupContent>
+        <SidebarMenu>
+          {group.items.map((item) => (
+            <NavLink key={item.to} {...item} />
+          ))}
+        </SidebarMenu>
+      </SidebarGroupContent>
+    </SidebarGroup>
+  );
+}
+
+function AppSidebarHeader() {
+  const { toggleSidebar } = useSidebar();
+
+  return (
+    <SidebarHeader>
+      <SidebarMenu>
+        <SidebarMenuItem>
+          <SidebarMenuButton size="lg" onClick={toggleSidebar} tooltip="BRIKA">
+            <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+              <span className="font-bold text-sm">B</span>
+            </div>
+            <div className="grid flex-1 text-left text-sm leading-tight">
+              <span className="truncate font-semibold">BRIKA</span>
+            </div>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      </SidebarMenu>
     </SidebarHeader>
   );
 }
 
 function AppSidebarFooter() {
+  const { t } = useLocale();
   const { data: health } = useHealth();
 
   return (
-    <SidebarFooter className="border-t p-2 group-data-[collapsible=icon]:hidden">
-      <div className="px-2 text-muted-foreground text-xs">
-        {health ? `v${health.version} · ${health.runtime}` : '...'}
-      </div>
+    <SidebarFooter>
+      <SidebarMenu>
+        <SidebarMenuItem>
+          <SidebarMenuButton asChild tooltip={t('nav:settings')}>
+            <Link to="/settings">
+              <Settings />
+              <span>{t('nav:settings')}</span>
+              {health && (
+                <span className="ml-auto text-[10px] text-muted-foreground">v{health.version}</span>
+              )}
+            </Link>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      </SidebarMenu>
     </SidebarFooter>
   );
 }
 
 function AppSidebar() {
+  // Filter out settings from nav groups since it's now in footer
+  const filteredGroups = NAV_GROUPS.map((group) => ({
+    ...group,
+    items: group.items.filter((item) => item.to !== '/settings'),
+  })).filter((group) => group.items.length > 0);
+
   return (
     <Sidebar collapsible="icon">
       <AppSidebarHeader />
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {NAV_ITEMS.map((item) => (
-                <NavLink key={item.to} {...item} />
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {filteredGroups.map((group) => (
+          <NavGroupComponent key={group.labelKey} group={group} />
+        ))}
       </SidebarContent>
       <AppSidebarFooter />
       <SidebarRail />
