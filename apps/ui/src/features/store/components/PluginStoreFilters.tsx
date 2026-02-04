@@ -13,7 +13,6 @@ export type FilterValue = 'all' | 'verified' | 'compatible' | 'installed';
 export type SortValue = 'downloads' | 'recent' | 'name';
 
 interface PluginStoreFiltersProps {
-  search: string;
   onSearchChange: (value: string) => void;
   filter: FilterValue;
   onFilterChange: (value: FilterValue) => void;
@@ -22,7 +21,6 @@ interface PluginStoreFiltersProps {
 }
 
 export function PluginStoreFilters({
-  search,
   onSearchChange,
   filter,
   onFilterChange,
@@ -38,7 +36,6 @@ export function PluginStoreFilters({
         <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           placeholder={t('store:search.placeholder')}
-          value={search}
           onChange={(e) => onSearchChange(e.target.value)}
           className="pl-9"
         />

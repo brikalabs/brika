@@ -1,3 +1,4 @@
+export { cache } from './cache';
 export { loader } from './loader';
 export { routes } from './routes';
 export { sparks } from './sparks';

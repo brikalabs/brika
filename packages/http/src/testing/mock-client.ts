@@ -17,8 +17,9 @@ export class MockHttpClient extends HttpClient {
   #requests: RecordedRequest[] = [];
   readonly #mockResponses = new Map<string, HttpResponse>();
 
-  constructor(config?: HttpClientConfig) {
-    super(config);
+  constructor(_config?: HttpClientConfig) {
+    super();
+    // Config is applied via HttpClient.create() if needed
   }
 
   /**

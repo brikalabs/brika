@@ -5,7 +5,7 @@
 export { RequestBuilder } from './builder';
 // Cache
 export type { CacheAdapter, CacheEntry } from './cache';
-export { generateCacheKey, MemoryCache } from './cache';
+export { generateCacheKey, MemoryCache, SqliteCache, type SqliteCacheOptions } from './cache';
 export { HttpClient } from './client';
 // Interceptors
 export type { Interceptor } from './interceptors';

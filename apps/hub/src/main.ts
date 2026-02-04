@@ -3,6 +3,7 @@ import 'reflect-metadata';
 
 import {
   bootstrap,
+  cache,
   I18nLoader,
   loader,
   PluginLoader,
@@ -19,6 +20,7 @@ import { allRoutes } from '@/runtime/http/routes';
  * Declarative bootstrap with modular plugins.
  */
 await bootstrap()
+  .use(cache()) // Initialize SQLite cache early
   .use(sparks())
   .use(routes(allRoutes))
   .use(loader(I18nLoader))

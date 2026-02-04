@@ -2,6 +2,7 @@ import type { StorePlugin } from '@brika/shared';
 import { Loader2, Package } from 'lucide-react';
 import React from 'react';
 import { Card, CardContent } from '@/components/ui';
+import { useDebouncedState } from '@/hooks/use-debounce';
 import { useLocale } from '@/lib/use-locale';
 import type { FilterValue, SortValue } from './components';
 import { PluginStoreCard, PluginStoreFilters } from './components';
@@ -9,13 +10,13 @@ import { useStorePlugins, useVerifiedPlugins } from './hooks';
 
 export function StorePage() {
   const { t } = useLocale();
-  const [search, setSearch] = React.useState('');
+  const [debouncedSearch, setSearch] = useDebouncedState('', 300);
   const [filter, setFilter] = React.useState<FilterValue>('all');
   const [sort, setSort] = React.useState<SortValue>('downloads');
 
-  // Fetch plugins
+  // Fetch plugins (debounced to avoid excessive API calls)
   const { data: searchData, isLoading } = useStorePlugins({
-    q: search,
+    q: debouncedSearch,
     limit: 50,
   });
 
@@ -115,7 +116,6 @@ export function StorePage() {
 
       {/* Search and Filters */}
       <PluginStoreFilters
-        search={search}
         onSearchChange={setSearch}
         filter={filter}
         onFilterChange={setFilter}

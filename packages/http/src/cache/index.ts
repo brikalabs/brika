@@ -5,3 +5,4 @@
 export type { CacheAdapter, CacheEntry } from './cache-adapter';
 export { generateCacheKey } from './cache-key';
 export { MemoryCache } from './memory-cache';
+export { SqliteCache, type SqliteCacheOptions } from './sqlite-cache';

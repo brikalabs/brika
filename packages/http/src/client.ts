@@ -175,6 +175,21 @@ export class HttpClient {
   }
 
   /**
+   * Set a custom cache adapter.
+   * Useful for switching from MemoryCache to SqliteCache or other adapters.
+   */
+  setCache(cache: CacheAdapter | null): void {
+    this.#cache = cache ?? undefined;
+  }
+
+  /**
+   * Get the current cache adapter
+   */
+  getCache(): CacheAdapter | undefined {
+    return this.#cache;
+  }
+
+  /**
    * Clear cache
    */
   clearCache(): void {

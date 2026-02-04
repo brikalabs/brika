@@ -46,13 +46,16 @@ export class ApiServer {
     const start = performance.now();
     const res = await this.#app.fetch(req);
     const duration = formatDuration(performance.now() - start);
-    const path = new URL(req.url).pathname;
+    const url = new URL(req.url);
+    const path = url.pathname;
+    const query = Object.fromEntries(url.searchParams);
 
     this.#logs.info(`${req.method} ${path} → ${res.status} (${duration})`, {
       method: req.method,
       path,
       status: res.status,
       duration,
+      ...(Object.keys(query).length > 0 && { query }),
     });
 
     return res;
