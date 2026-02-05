@@ -24,6 +24,7 @@ const startedAt = new Date(Date.now() - process.uptime() * 1000).toISOString();
 export const healthRoute = route.get('/api/health', () => ({
   ok: true as const,
   version: HUB_VERSION,
+  build: buildInfo,
 }));
 
 /** Full system information endpoint */

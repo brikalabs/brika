@@ -25,6 +25,10 @@ describe('status routes', () => {
     expect(res.status).toBe(200);
     expect(res.body.ok).toBeTrue();
     expect(res.body.version).toBeDefined();
+    expect(res.body.build).toBeDefined();
+    expect(res.body.build.commit).toBeDefined();
+    expect(res.body.build.branch).toBeDefined();
+    expect(res.body.build.date).toBeDefined();
   });
 
   test('system route returns system info', async () => {
