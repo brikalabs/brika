@@ -5,5 +5,11 @@
   "noResults": "Aucun $t(common:items.block_one) ne correspond à votre recherche",
   "empty": "Aucun $t(common:items.block_one) disponible. Installez un $t(common:items.plugin_one) pour ajouter des blocs.",
   "count_one": "{{count}} bloc",
-  "count_other": "{{count}} blocs"
+  "count_other": "{{count}} blocs",
+  "filters": {
+    "plugin": "Plugin",
+    "category": "Catégorie",
+    "allPlugins": "Tous les plugins",
+    "allCategories": "Toutes les catégories"
+  }
 }

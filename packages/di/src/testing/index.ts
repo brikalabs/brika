@@ -37,3 +37,8 @@ export function get<T>(token: Constructor<T>): T {
 export function reset(): void {
   TestBed.reset();
 }
+
+/** Track a spy for automatic cleanup on reset. */
+export function trackSpy<T extends { mockRestore(): void }>(spy: T): T {
+  return TestBed.trackSpy(spy);
+}

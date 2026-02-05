@@ -5,5 +5,11 @@
   "noResults": "No $t(common:items.block_other) match your search",
   "empty": "No $t(common:items.block_other) available. Install a $t(common:items.plugin_one) to add blocks.",
   "count_one": "{{count}} block",
-  "count_other": "{{count}} blocks"
+  "count_other": "{{count}} blocks",
+  "filters": {
+    "plugin": "Plugin",
+    "category": "Category",
+    "allPlugins": "All plugins",
+    "allCategories": "All categories"
+  }
 }

@@ -9,13 +9,13 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  Input,
-  Label,
   ProgressDisplay,
 } from '@/components/ui';
 import { getProgressValue, useProgressStream } from '@/hooks/use-progress-stream';
 import { pluginsKeys } from '../api';
 import { registryApi } from '../registry-api';
+import { InstallPluginFormFields } from './InstallPluginFormFields';
+import { getPhaseLabel } from './install-progress-utils';
 
 interface InstallPluginDialogProps {
   open: boolean;
@@ -73,24 +73,6 @@ export function InstallPluginDialog({ open, onOpenChange }: Readonly<InstallPlug
     }
   };
 
-  const getPhaseLabel = () => {
-    if (!progress) return '';
-    switch (progress.phase) {
-      case 'resolving':
-        return 'Resolving dependencies...';
-      case 'downloading':
-        return 'Downloading packages...';
-      case 'linking':
-        return 'Linking packages...';
-      case 'complete':
-        return 'Installation complete!';
-      case 'error':
-        return 'Installation failed';
-      default:
-        return '';
-    }
-  };
-
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-lg">
@@ -105,39 +87,20 @@ export function InstallPluginDialog({ open, onOpenChange }: Readonly<InstallPlug
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Input fields - hide when installing */}
           {!isProcessing && !success && (
-            <>
-              <div className="space-y-2">
-                <Label htmlFor="package">Package Name</Label>
-                <Input
-                  id="package"
-                  value={packageName}
-                  onChange={(e) => setPackageName(e.target.value)}
-                  placeholder="@brika/plugin-timer or workspace:/path/to/plugin"
-                  className="font-mono text-sm"
-                  disabled={isProcessing}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="version">Version (optional)</Label>
-                <Input
-                  id="version"
-                  value={version}
-                  onChange={(e) => setVersion(e.target.value)}
-                  placeholder="^1.0.0 or latest"
-                  className="font-mono text-sm"
-                  disabled={isProcessing}
-                />
-              </div>
-            </>
+            <InstallPluginFormFields
+              packageName={packageName}
+              version={version}
+              onPackageNameChange={setPackageName}
+              onVersionChange={setVersion}
+              disabled={isProcessing}
+            />
           )}
 
-          {/* Progress section */}
           {(isProcessing || success || error) && (
             <ProgressDisplay
               progressValue={getProgressValue(progress?.phase)}
-              phaseLabel={getPhaseLabel()}
+              phaseLabel={getPhaseLabel(progress)}
               logs={logs}
               scrollRef={scrollRef}
               error={error}

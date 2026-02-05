@@ -436,7 +436,9 @@ describe('PluginManager', () => {
 
   describe('Reactive Block Operations', () => {
     test('setBlockEmitHandler delegates to event handler', () => {
-      const handler = () => {};
+      const handler = () => {
+        /* noop test handler */
+      };
       manager.setBlockEmitHandler(handler);
 
       expect(mockEventHandler.setBlockEmitHandler).toHaveBeenCalledWith(handler);
@@ -449,7 +451,9 @@ describe('PluginManager', () => {
     });
 
     test('setBlockLogHandler delegates to event handler', () => {
-      const handler = () => {};
+      const handler = () => {
+        /* noop test handler */
+      };
       manager.setBlockLogHandler(handler);
 
       expect(mockEventHandler.setBlockLogHandler).toHaveBeenCalledWith(handler);

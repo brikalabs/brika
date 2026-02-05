@@ -1,0 +1,106 @@
+import type { PreferenceDefinition } from '@brika/shared';
+import {
+  Input,
+  Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Switch,
+} from '@/components/ui';
+
+interface PreferenceFieldProps {
+  pref: PreferenceDefinition;
+  value: unknown;
+  onChange: (value: unknown) => void;
+  pluginName: string;
+  tp: (ns: string, key: string, fallback?: string) => string;
+}
+
+export function PreferenceField({
+  pref,
+  value,
+  onChange,
+  pluginName,
+  tp,
+}: Readonly<PreferenceFieldProps>) {
+  const label = tp(pluginName, `preferences.${pref.name}.title`, pref.name);
+  const description = tp(pluginName, `preferences.${pref.name}.description`, '');
+
+  switch (pref.type) {
+    case 'text':
+    case 'password':
+      return (
+        <div className="space-y-2">
+          <Label>
+            {label}
+            {pref.required && <span className="ml-1 text-destructive">*</span>}
+          </Label>
+          <Input
+            type={pref.type}
+            value={(value as string) ?? ''}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={pref.default}
+          />
+          {description && <p className="text-muted-foreground text-xs">{description}</p>}
+        </div>
+      );
+
+    case 'number':
+      return (
+        <div className="space-y-2">
+          <Label>
+            {label}
+            {pref.required && <span className="ml-1 text-destructive">*</span>}
+          </Label>
+          <Input
+            type="number"
+            value={(value as number) ?? pref.default ?? ''}
+            onChange={(e) => onChange(e.target.valueAsNumber)}
+            min={pref.min}
+            max={pref.max}
+            step={pref.step}
+          />
+          {description && <p className="text-muted-foreground text-xs">{description}</p>}
+        </div>
+      );
+
+    case 'checkbox':
+      return (
+        <div className="flex items-center justify-between">
+          <div>
+            <Label>{label}</Label>
+            {description && <p className="text-muted-foreground text-xs">{description}</p>}
+          </div>
+          <Switch
+            checked={(value as boolean) ?? pref.default ?? false}
+            onCheckedChange={onChange}
+          />
+        </div>
+      );
+
+    case 'dropdown':
+      return (
+        <div className="space-y-2">
+          <Label>
+            {label}
+            {pref.required && <span className="ml-1 text-destructive">*</span>}
+          </Label>
+          <Select value={(value as string) ?? pref.default ?? ''} onValueChange={onChange}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {pref.options.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {tp(pluginName, `preferences.${pref.name}.options.${opt.value}`, opt.value)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {description && <p className="text-muted-foreground text-xs">{description}</p>}
+        </div>
+      );
+  }
+}

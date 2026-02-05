@@ -35,7 +35,8 @@ mock.module('picocolors', () => ({
 }));
 
 describe('scaffold', () => {
-  const testDir = '/tmp/brika-test-scaffold';
+  // Use unique directory per run to avoid test pollution
+  const testDir = `/tmp/brika-test-scaffold-${process.pid}-${Date.now()}`;
   let originalCwd: string;
   let fetchSpy: ReturnType<typeof spyOn>;
 
@@ -220,7 +221,7 @@ describe('scaffold', () => {
 
     await scaffold(options);
 
-    const calls = mockSpinner.start.mock.calls.map((c) => c[0]);
+    const calls = (mockSpinner.start.mock.calls as unknown[][]).map((c) => c[0]);
     expect(calls).not.toContain('Initializing git repository');
   });
 
@@ -232,7 +233,7 @@ describe('scaffold', () => {
 
     await scaffold(options);
 
-    const calls = mockSpinner.start.mock.calls.map((c) => c[0]);
+    const calls = (mockSpinner.start.mock.calls as unknown[][]).map((c) => c[0]);
     expect(calls).not.toContain('Installing dependencies');
   });
 });

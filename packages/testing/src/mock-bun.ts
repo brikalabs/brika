@@ -234,15 +234,15 @@ export class BunMock {
     this.#fileSpy = spyOn(Bun, 'file').mockImplementation(((path: unknown) => {
       const p = String(path);
       return {
-        exists: async () => files.has(p),
-        json: async () => {
-          if (!files.has(p)) throw new Error(`ENOENT: ${p}`);
-          return files.get(p);
+        exists: () => Promise.resolve(files.has(p)),
+        json: () => {
+          if (!files.has(p)) return Promise.reject(new Error(`ENOENT: ${p}`));
+          return Promise.resolve(files.get(p));
         },
-        text: async () => {
-          if (!files.has(p)) throw new Error(`ENOENT: ${p}`);
+        text: () => {
+          if (!files.has(p)) return Promise.reject(new Error(`ENOENT: ${p}`));
           const content = files.get(p);
-          return typeof content === 'string' ? content : JSON.stringify(content);
+          return Promise.resolve(typeof content === 'string' ? content : JSON.stringify(content));
         },
       } as ReturnType<typeof Bun.file>;
     }) as typeof Bun.file);
@@ -251,7 +251,7 @@ export class BunMock {
   #applyWriteMock(): void {
     const files = this.#files;
 
-    this.#writeSpy = spyOn(Bun, 'write').mockImplementation(async (path, content) => {
+    this.#writeSpy = spyOn(Bun, 'write').mockImplementation((path, content) => {
       const p = String(path);
       const str = String(content);
       try {
@@ -259,7 +259,7 @@ export class BunMock {
       } catch {
         files.set(p, str);
       }
-      return str.length;
+      return Promise.resolve(str.length);
     });
   }
 
@@ -279,9 +279,15 @@ export class BunMock {
         exitCode: null,
         signalCode: null,
         killed: false,
-        kill: () => {},
-        ref: () => {},
-        unref: () => {},
+        kill: () => {
+          /* noop - mock stub */
+        },
+        ref: () => {
+          /* noop - mock stub */
+        },
+        unref: () => {
+          /* noop - mock stub */
+        },
         resourceUsage: () => null,
       } as unknown as ReturnType<typeof Bun.spawn>;
     }) as typeof Bun.spawn);
@@ -303,7 +309,7 @@ export class BunMock {
     Bun.Glob = class MockGlob {
       constructor(private pattern: string) {}
 
-      async *scan(options: { cwd: string }) {
+      *scan(options: { cwd: string }) {
         yield* this.#iter(options.cwd);
       }
 

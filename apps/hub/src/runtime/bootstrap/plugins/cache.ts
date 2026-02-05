@@ -32,6 +32,7 @@ export function cache(): BootstrapPlugin {
   return {
     name: 'cache',
 
+    // biome-ignore lint/suspicious/useAwait: bootstrap expects async lifecycle methods
     async onInit() {
       const brikaDir = join(process.cwd(), '.brika');
       const cachePath = join(brikaDir, 'cache.db');

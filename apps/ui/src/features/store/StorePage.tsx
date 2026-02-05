@@ -1,11 +1,12 @@
 import type { StorePlugin } from '@brika/shared';
-import { Loader2, Package } from 'lucide-react';
+import { Package } from 'lucide-react';
 import React from 'react';
+import { useDataView } from '@/components/DataView';
 import { Card, CardContent } from '@/components/ui';
 import { useDebouncedState } from '@/hooks/use-debounce';
 import { useLocale } from '@/lib/use-locale';
 import type { FilterValue, SortValue } from './components';
-import { PluginStoreCard, PluginStoreFilters } from './components';
+import { PluginStoreCard, PluginStoreCardSkeleton, PluginStoreFilters } from './components';
 import { useStorePlugins, useVerifiedPlugins } from './hooks';
 
 export function StorePage() {
@@ -106,6 +107,8 @@ export function StorePage() {
     [filteredPlugins]
   );
 
+  const View = useDataView({ data: sortedPlugins, isLoading });
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -123,31 +126,43 @@ export function StorePage() {
         onSortChange={setSort}
       />
 
-      {isLoading && (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="size-8 animate-spin text-muted-foreground" />
-        </div>
-      )}
-      {!isLoading && filteredPlugins.length === 0 && (
-        <Card>
-          <CardContent className="py-16 text-center">
-            <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-2xl bg-muted/50">
-              <Package className="size-8 text-muted-foreground opacity-50" />
+      <View.Root>
+        <View.Skeleton>
+          <section>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <PluginStoreCardSkeleton key={i} />
+              ))}
             </div>
-            <h3 className="font-semibold text-lg">{t('store:noResults')}</h3>
-            <p className="mt-1 text-muted-foreground text-sm">{t('store:noResultsDescription')}</p>
-          </CardContent>
-        </Card>
-      )}
-      {!isLoading && filteredPlugins.length > 0 && (
-        <section>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {sortedPlugins.map((plugin) => (
-              <PluginStoreCard key={plugin.name} plugin={plugin} />
-            ))}
-          </div>
-        </section>
-      )}
+          </section>
+        </View.Skeleton>
+
+        <View.Empty>
+          <Card>
+            <CardContent className="py-16 text-center">
+              <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-2xl bg-muted/50">
+                <Package className="size-8 text-muted-foreground opacity-50" />
+              </div>
+              <h3 className="font-semibold text-lg">{t('store:noResults')}</h3>
+              <p className="mt-1 text-muted-foreground text-sm">
+                {t('store:noResultsDescription')}
+              </p>
+            </CardContent>
+          </Card>
+        </View.Empty>
+
+        <View.Content>
+          {(plugins) => (
+            <section>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {plugins.map((plugin) => (
+                  <PluginStoreCard key={plugin.name} plugin={plugin} />
+                ))}
+              </div>
+            </section>
+          )}
+        </View.Content>
+      </View.Root>
     </div>
   );
 }

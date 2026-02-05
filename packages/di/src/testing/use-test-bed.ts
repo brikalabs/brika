@@ -24,15 +24,9 @@ export function useTestBed(
   optionsOrSetup?: UseTestBedOptions | (() => void),
   setup?: () => void
 ): void {
-  let options: UseTestBedOptions = {};
-  let setupFn = setup;
-
-  if (typeof optionsOrSetup === 'function') {
-    setupFn = optionsOrSetup;
-  } else if (optionsOrSetup) {
-    options = optionsOrSetup;
-  }
-
+  const isFunction = typeof optionsOrSetup === 'function';
+  const options = isFunction ? {} : (optionsOrSetup ?? {});
+  const setupFn = isFunction ? optionsOrSetup : setup;
   const autoStub = options.autoStub !== false;
 
   beforeEach(() => {

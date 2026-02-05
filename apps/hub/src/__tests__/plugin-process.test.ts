@@ -65,7 +65,9 @@ describe('PluginProcess', () => {
       onBlockLog: mock(),
       onSpark: mock(),
       onSparkEmit: mock(),
-      onSparkSubscribe: mock().mockReturnValue(() => {}),
+      onSparkSubscribe: mock().mockReturnValue(() => {
+        /* noop unsubscribe */
+      }),
       onSparkUnsubscribe: mock(),
       onHeartbeatFailed: mock(),
       onDisconnect: mock(),

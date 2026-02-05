@@ -1,4 +1,3 @@
-import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { inject, singleton } from '@brika/di';
 import type { VerifiedPlugin, VerifiedPluginsList } from '@brika/shared';
@@ -107,7 +106,7 @@ export class VerifiedPluginsService {
         this.#log.info('Loading verified plugins list from local file', {
           path: VERIFIED_PLUGINS_PATH,
         });
-        const fileContent = await readFile(VERIFIED_PLUGINS_PATH, 'utf-8');
+        const fileContent = await Bun.file(VERIFIED_PLUGINS_PATH).text();
         data = JSON.parse(fileContent) as VerifiedPluginsList;
       } else {
         // Production: fetch from CDN

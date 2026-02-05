@@ -204,14 +204,18 @@ export class SqliteCache implements CacheAdapter {
   } {
     const now = Date.now();
 
-    const sizeRow = this.#db.prepare<{ count: number }, []>('SELECT COUNT(*) as count FROM cache_entries').get();
+    const sizeRow = this.#db
+      .prepare<{ count: number }, []>('SELECT COUNT(*) as count FROM cache_entries')
+      .get();
 
     const tagsRow = this.#db
       .prepare<{ count: number }, []>('SELECT COUNT(DISTINCT tag) as count FROM cache_tags')
       .get();
 
     const expiredRow = this.#db
-      .prepare<{ count: number }, [number]>('SELECT COUNT(*) as count FROM cache_entries WHERE expires_at < ?')
+      .prepare<{ count: number }, [number]>(
+        'SELECT COUNT(*) as count FROM cache_entries WHERE expires_at < ?'
+      )
       .get(now);
 
     // Get database file size

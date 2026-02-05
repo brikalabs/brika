@@ -1,5 +1,5 @@
 /**
- * TestBed - DI testing utility for mock injection.
+ * TestBed - DI testing utility for mock injection and spy management.
  */
 
 import 'reflect-metadata';
@@ -7,8 +7,14 @@ import { container } from '../core/container';
 import { createDeepStub } from './deep-stub';
 import type { Constructor, DeepPartial } from './types';
 
+/** Minimal interface for restorable spies */
+interface Restorable {
+  mockRestore(): void;
+}
+
 class TestBedImpl {
   #providers = new Map<Constructor, unknown>();
+  #spies: Restorable[] = [];
   #autoStub = false;
   #originalResolve: typeof container.resolve | null = null;
 
@@ -69,8 +75,24 @@ class TestBedImpl {
     return container.resolve(token);
   }
 
-  /** Reset the container for the next test. */
+  /**
+   * Track a spy for automatic cleanup on reset.
+   * @example trackSpy(spyOn(Bun, 'file').mockImplementation(...));
+   */
+  trackSpy<T extends Restorable>(spy: T): T {
+    this.#spies.push(spy);
+    return spy;
+  }
+
+  /** Reset the container and restore all spies. */
   reset(): void {
+    // Restore all tracked spies
+    for (const spy of this.#spies) {
+      spy.mockRestore();
+    }
+    this.#spies.length = 0;
+
+    // Reset DI container
     this.#disableAutoStub();
     container.reset();
     this.#providers.clear();

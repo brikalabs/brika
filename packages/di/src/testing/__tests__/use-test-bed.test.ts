@@ -1,7 +1,7 @@
 import 'reflect-metadata';
-import { describe, expect, mock, test } from 'bun:test';
+import { describe, expect, mock, spyOn, test } from 'bun:test';
 import { injectable, singleton } from 'tsyringe';
-import { get, provide, stub, useTestBed } from '../index';
+import { get, provide, reset, stub, trackSpy, useTestBed } from '../index';
 
 @injectable()
 class Logger {
@@ -81,5 +81,56 @@ describe('useTestBed', () => {
 
     const service = get(UserService);
     expect(service.getUser('1').port).toBe(7000);
+  });
+});
+
+// Test object for spy tests
+const testObj = {
+  getValue: () => 'original',
+  multiply: (a: number, b: number) => a * b,
+};
+
+describe('trackSpy', () => {
+  useTestBed({ autoStub: false });
+
+  test('returns the spy for chaining', () => {
+    const spy = trackSpy(spyOn(testObj, 'getValue'));
+    expect(spy).toBeDefined();
+    expect(typeof spy.mockRestore).toBe('function');
+  });
+
+  test('spy is active after tracking', () => {
+    trackSpy(spyOn(testObj, 'getValue').mockReturnValue('mocked'));
+
+    expect(testObj.getValue()).toBe('mocked');
+  });
+
+  test('spy is restored after reset', () => {
+    trackSpy(spyOn(testObj, 'getValue').mockReturnValue('mocked'));
+    expect(testObj.getValue()).toBe('mocked');
+
+    reset();
+
+    expect(testObj.getValue()).toBe('original');
+  });
+
+  test('multiple spies are tracked and restored', () => {
+    trackSpy(spyOn(testObj, 'getValue').mockReturnValue('mocked'));
+    trackSpy(spyOn(testObj, 'multiply').mockReturnValue(999));
+
+    expect(testObj.getValue()).toBe('mocked');
+    expect(testObj.multiply(2, 3)).toBe(999);
+
+    reset();
+
+    expect(testObj.getValue()).toBe('original');
+    expect(testObj.multiply(2, 3)).toBe(6);
+  });
+
+  test('auto-restores spies between tests via useTestBed', () => {
+    // Previous test's spies should be restored
+    // If not, getValue would return 'mocked' from previous test
+    expect(testObj.getValue()).toBe('original');
+    expect(testObj.multiply(4, 5)).toBe(20);
   });
 });

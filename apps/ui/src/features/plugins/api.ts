@@ -1,6 +1,8 @@
 import type { Plugin, PluginPreferences } from '@brika/shared';
 import { fetcher } from '@/lib/query';
 
+export type { Plugin } from '@brika/shared';
+
 export interface MetricsSample {
   ts: number;
   cpu: number;

@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowUp, CheckCircle2, Download, Loader2, XCircle } from 'lucide-react';
+import { ArrowUp, Download, Loader2 } from 'lucide-react';
 import React from 'react';
 import {
   Button,
@@ -9,12 +9,11 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  Progress,
-  ScrollArea,
 } from '@/components/ui';
-import { cn } from '@/lib/utils';
 import { pluginsKeys } from '../api';
 import { type OperationProgress, registryApi, registryKeys } from '../registry-api';
+import { UpdateListPreview } from './UpdateListPreview';
+import { UpdateProgressSection } from './UpdateProgressSection';
 
 export function UpdateAllButton() {
   const queryClient = useQueryClient();
@@ -31,16 +30,7 @@ export function UpdateAllButton() {
   const [error, setError] = React.useState<string | null>(null);
   const [success, setSuccess] = React.useState(false);
 
-  const scrollRef = React.useRef<HTMLDivElement>(null);
-
   const availableUpdates = data?.updates.filter((u) => u.updateAvailable) ?? [];
-
-  // Auto-scroll logs
-  React.useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [logs]);
 
   const reset = () => {
     setIsUpdating(false);
@@ -77,7 +67,6 @@ export function UpdateAllButton() {
         } else if (p.phase === 'complete') {
           setSuccess(true);
           setIsUpdating(false);
-          // Invalidate queries
           queryClient.invalidateQueries({ queryKey: pluginsKeys.all });
           queryClient.invalidateQueries({ queryKey: registryKeys.updates });
         }
@@ -87,40 +76,6 @@ export function UpdateAllButton() {
     } catch (err) {
       setError(String(err));
       setIsUpdating(false);
-    }
-  };
-
-  const getProgressValue = () => {
-    if (!progress) return 0;
-    switch (progress.phase) {
-      case 'resolving':
-        return 20;
-      case 'downloading':
-        return 50;
-      case 'linking':
-        return 80;
-      case 'complete':
-        return 100;
-      default:
-        return 0;
-    }
-  };
-
-  const getPhaseLabel = () => {
-    if (!progress) return '';
-    switch (progress.phase) {
-      case 'resolving':
-        return 'Resolving dependencies...';
-      case 'downloading':
-        return 'Downloading updates...';
-      case 'linking':
-        return 'Linking packages...';
-      case 'complete':
-        return 'Update complete!';
-      case 'error':
-        return 'Update failed';
-      default:
-        return '';
     }
   };
 
@@ -148,58 +103,15 @@ export function UpdateAllButton() {
           </DialogHeader>
 
           <div className="space-y-4">
-            {/* Update list - show before updating */}
-            {!isUpdating && !success && (
-              <div className="space-y-2">
-                {availableUpdates.map((u) => (
-                  <div
-                    key={u.name}
-                    className="flex items-center justify-between rounded-md bg-muted/50 p-2"
-                  >
-                    <span className="font-mono text-sm">{u.name}</span>
-                    <span className="text-muted-foreground text-sm">
-                      {u.currentVersion} → {u.latestVersion}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
+            {!isUpdating && !success && <UpdateListPreview updates={availableUpdates} />}
 
-            {/* Progress section */}
             {(isUpdating || success || error) && (
-              <div className="space-y-3">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">{getPhaseLabel()}</span>
-                    {success && <CheckCircle2 className="size-4 text-emerald-500" />}
-                    {error && <XCircle className="size-4 text-destructive" />}
-                  </div>
-                  <Progress
-                    value={getProgressValue()}
-                    className={cn(
-                      'h-2',
-                      error && '[&>div]:bg-destructive',
-                      success && '[&>div]:bg-emerald-500'
-                    )}
-                  />
-                </div>
-
-                <ScrollArea className="h-40 rounded-md border bg-muted/30 p-3">
-                  <div ref={scrollRef} className="space-y-1 font-mono text-xs">
-                    {logs.map((log, i) => (
-                      <div key={i} className="text-muted-foreground">
-                        {log}
-                      </div>
-                    ))}
-                  </div>
-                </ScrollArea>
-
-                {error && (
-                  <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-destructive text-sm">
-                    {error}
-                  </div>
-                )}
-              </div>
+              <UpdateProgressSection
+                progress={progress}
+                logs={logs}
+                error={error}
+                success={success}
+              />
             )}
           </div>
 

@@ -29,6 +29,11 @@ export function isSchemaCompatible(outputSchema: z.ZodType, inputSchema: z.ZodTy
     return true;
   }
 
+  // Output could produce anything - allow connection (flexible typing)
+  if (isAnyType(outputSchema)) {
+    return true;
+  }
+
   // Get the underlying types
   const outputType = getBaseType(outputSchema);
   const inputType = getBaseType(inputSchema);

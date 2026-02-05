@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
-import { get, provide, stub, useTestBed } from '@brika/di/testing';
+import { get, stub, useTestBed } from '@brika/di/testing';
 import { HttpClient } from '@brika/http';
 import { Logger } from '@/runtime/logs/log-router';
 import { NpmSearchService } from '@/runtime/services/npm-search';
@@ -19,11 +19,11 @@ describe('NpmSearchService', () => {
       get: mock(() => ({
         params: () => ({
           cache: () => ({
-            data: async () => ({ objects: [], total: 0 }),
+            data: () => Promise.resolve({ objects: [], total: 0 }),
           }),
         }),
         cache: () => ({
-          data: async () => ({}),
+          data: () => Promise.resolve({}),
         }),
       })),
     };
@@ -68,14 +68,14 @@ describe('NpmSearchService', () => {
       httpMock.get.mockImplementation(() => ({
         params: () => ({
           cache: () => ({
-            data: async () => searchResponse,
+            data: () => Promise.resolve(searchResponse),
           }),
         }),
         cache: () => ({
-          data: async () => {
+          data: () => {
             callIndex++;
-            if (callIndex === 1) return packageResponse;
-            return downloadsResponse;
+            if (callIndex === 1) return Promise.resolve(packageResponse);
+            return Promise.resolve(downloadsResponse);
           },
         }),
       }));
@@ -121,15 +121,15 @@ describe('NpmSearchService', () => {
       httpMock.get.mockImplementation(() => ({
         params: () => ({
           cache: () => ({
-            data: async () => searchResponse,
+            data: () => Promise.resolve(searchResponse),
           }),
         }),
         cache: () => ({
-          data: async () => {
+          data: () => {
             callIndex++;
-            if (callIndex === 1) return nonPluginPackage;
-            if (callIndex === 2) return realPluginPackage;
-            return { downloads: 50 };
+            if (callIndex === 1) return Promise.resolve(nonPluginPackage);
+            if (callIndex === 2) return Promise.resolve(realPluginPackage);
+            return Promise.resolve({ downloads: 50 });
           },
         }),
       }));
@@ -144,9 +144,7 @@ describe('NpmSearchService', () => {
       httpMock.get.mockImplementation(() => ({
         params: () => ({
           cache: () => ({
-            data: async () => {
-              throw new Error('Network error');
-            },
+            data: () => Promise.reject(new Error('Network error')),
           }),
         }),
       }));
@@ -160,9 +158,7 @@ describe('NpmSearchService', () => {
       httpMock.get.mockImplementation(() => ({
         params: () => ({
           cache: () => ({
-            data: async () => {
-              throw new Error('HTTP 500: Server Error');
-            },
+            data: () => Promise.reject(new Error('HTTP 500: Server Error')),
           }),
         }),
       }));
@@ -177,9 +173,9 @@ describe('NpmSearchService', () => {
       httpMock.get.mockImplementation((url: string) => {
         capturedUrl = url;
         return {
-          params: (params: Record<string, string>) => ({
+          params: () => ({
             cache: () => ({
-              data: async () => ({ objects: [], total: 0 }),
+              data: () => Promise.resolve({ objects: [], total: 0 }),
             }),
           }),
         };
@@ -201,15 +197,15 @@ describe('NpmSearchService', () => {
       httpMock.get.mockImplementation(() => ({
         params: () => ({
           cache: () => ({
-            data: async () => ({ objects: plugins, total: 5 }),
+            data: () => Promise.resolve({ objects: plugins, total: 5 }),
           }),
         }),
         cache: () => ({
-          data: async () => {
+          data: () => {
             const idx = Math.floor(callIndex / 2);
             callIndex++;
             if (callIndex % 2 === 1) {
-              return {
+              return Promise.resolve({
                 name: `plugin-${idx}`,
                 'dist-tags': { latest: '1.0.0' },
                 versions: {
@@ -220,9 +216,9 @@ describe('NpmSearchService', () => {
                   },
                 },
                 time: {},
-              };
+              });
             }
-            return { downloads: 10 };
+            return Promise.resolve({ downloads: 10 });
           },
         }),
       }));
@@ -255,7 +251,7 @@ describe('NpmSearchService', () => {
 
       httpMock.get.mockImplementation(() => ({
         cache: () => ({
-          data: async () => packageResponse,
+          data: () => Promise.resolve(packageResponse),
         }),
       }));
 
@@ -276,9 +272,7 @@ describe('NpmSearchService', () => {
     test('should return null for 404 response', async () => {
       httpMock.get.mockImplementation(() => ({
         cache: () => ({
-          data: async () => {
-            throw new Error('HTTP 404: Not Found');
-          },
+          data: () => Promise.reject(new Error('HTTP 404: Not Found')),
         }),
       }));
 
@@ -290,9 +284,7 @@ describe('NpmSearchService', () => {
     test('should return null on fetch error', async () => {
       httpMock.get.mockImplementation(() => ({
         cache: () => ({
-          data: async () => {
-            throw new Error('Network error');
-          },
+          data: () => Promise.reject(new Error('Network error')),
         }),
       }));
 
@@ -304,12 +296,13 @@ describe('NpmSearchService', () => {
     test('should return null when no versions available', async () => {
       httpMock.get.mockImplementation(() => ({
         cache: () => ({
-          data: async () => ({
-            name: 'empty-package',
-            'dist-tags': {},
-            versions: {},
-            time: {},
-          }),
+          data: () =>
+            Promise.resolve({
+              name: 'empty-package',
+              'dist-tags': {},
+              versions: {},
+              time: {},
+            }),
         }),
       }));
 
@@ -330,7 +323,7 @@ describe('NpmSearchService', () => {
 
       httpMock.get.mockImplementation(() => ({
         cache: () => ({
-          data: async () => packageResponse,
+          data: () => Promise.resolve(packageResponse),
         }),
       }));
 
@@ -354,7 +347,7 @@ describe('NpmSearchService', () => {
 
       httpMock.get.mockImplementation(() => ({
         cache: () => ({
-          data: async () => packageResponse,
+          data: () => Promise.resolve(packageResponse),
         }),
       }));
 
@@ -380,7 +373,7 @@ describe('NpmSearchService', () => {
 
       httpMock.get.mockImplementation(() => ({
         cache: () => ({
-          data: async () => packageResponse,
+          data: () => Promise.resolve(packageResponse),
         }),
       }));
 
