@@ -1,11 +1,11 @@
-# @brika/arch
+# @brika/archunitunit
 
 Architecture testing for TypeScript/JavaScript projects. Enforce coding conventions, file structure, and architectural boundaries with a fluent DSL.
 
 ## Installation
 
 ```bash
-bun add -D @brika/arch
+bun add -D @brika/archunitunit
 ```
 
 ## Quick Start
@@ -13,8 +13,8 @@ bun add -D @brika/arch
 Create `arch.config.ts` in your project root:
 
 ```ts
-import { defineConfig, dirs, files } from '@brika/arch';
-import { reactFeaturePreset } from '@brika/arch/presets';
+import { defineConfig, dirs, files } from '@brika/archunit';
+import { reactFeaturePreset } from '@brika/archunit/presets';
 
 export default defineConfig([
   // Use presets for common patterns
@@ -106,7 +106,7 @@ export default defineConfig([
 ### React Feature Preset
 
 ```ts
-import { reactFeaturePreset } from '@brika/arch/presets';
+import { reactFeaturePreset } from '@brika/archunit/presets';
 
 reactFeaturePreset({
   featuresDir: 'src/features',      // default
@@ -120,7 +120,7 @@ reactFeaturePreset({
 ### Service Preset
 
 ```ts
-import { servicePreset } from '@brika/arch/presets';
+import { servicePreset } from '@brika/archunit/presets';
 
 servicePreset({
   servicesDir: 'src/services',
@@ -133,7 +133,7 @@ servicePreset({
 ### Custom Presets
 
 ```ts
-import { definePreset, files, dirs } from '@brika/arch';
+import { definePreset, files, dirs } from '@brika/archunit';
 
 export const myPreset = definePreset<{ maxLines?: number }>((options = {}) => [
   files('src/**/*.ts')
@@ -149,7 +149,7 @@ export const myPreset = definePreset<{ maxLines?: number }>((options = {}) => [
 ## Programmatic API
 
 ```ts
-import { runArch, printResult } from '@brika/arch';
+import { runArch, printResult } from '@brika/archunit';
 
 const result = await runArch({
   cwd: process.cwd(),
@@ -164,12 +164,12 @@ printResult(result);
 
 ```bash
 # Run with config file (arch.config.ts)
-bun run arch
+archunit
 
 # Add to package.json
 {
   "scripts": {
-    "arch": "bun --bun path/to/arch/cli.ts"
+    "check:arch": "archunit"
   }
 }
 ```

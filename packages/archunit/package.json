@@ -1,5 +1,5 @@
 {
-  "name": "@brika/arch",
+  "name": "@brika/archunit",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -9,7 +9,7 @@
     "./cli": "./src/cli.ts"
   },
   "bin": {
-    "brika-arch": "./src/cli.ts"
+    "archunit": "./src/cli.ts"
   },
   "scripts": {
     "test": "bun test"

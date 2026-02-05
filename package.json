@@ -20,9 +20,7 @@
     "test:coverage": "bun test --coverage --coverage-reporter=lcov --coverage-reporter=text",
     "tsc": "bun --filter '*' tsc",
     "lint": "bunx biome check .",
-    "lint:fix": "bunx biome check --write .",
-    "postinstall": "bun link:bins",
-    "link:bins": "ln -sf ../../packages/arch/src/cli.ts node_modules/.bin/brika-arch 2>/dev/null; ln -sf ../../../../packages/arch/src/cli.ts apps/ui/node_modules/.bin/brika-arch 2>/dev/null || true"
+    "lint:fix": "bunx biome check --write ."
   },
   "devDependencies": {
     "@biomejs/biome": "2.3.11",

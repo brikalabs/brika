@@ -1,5 +1,5 @@
-import { defineConfig, files } from '@brika/arch';
-import { reactFeaturePreset } from '@brika/arch/presets';
+import { defineConfig, files } from '@brika/archunit';
+import { reactFeaturePreset } from '@brika/archunit/presets';
 
 export default defineConfig([
   reactFeaturePreset({
