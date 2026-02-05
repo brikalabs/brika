@@ -5,7 +5,6 @@
  */
 
 import {
-  Blocks,
   Calendar,
   Clock,
   FileText,
@@ -14,15 +13,13 @@ import {
   GitCommit,
   Github,
   Laptop,
-  Plug,
   Server,
   Tag,
-  Workflow,
-  Zap,
 } from 'lucide-react';
 import { Uptime } from '@/components/Uptime';
 import { useLocale } from '@/lib/use-locale';
 import { InfoItem } from './InfoItem';
+import { SystemInfoStats } from './SystemInfoStats';
 
 interface SystemData {
   version: string;
@@ -142,40 +139,7 @@ export function SystemInfoContent({ system }: Readonly<SystemInfoContentProps>) 
           </>
         )}
 
-        <InfoItem
-          icon={Plug}
-          label={t('settings:system.plugins')}
-          value={system.stats.plugins.total}
-          secondary={
-            system.stats.plugins.total
-              ? t('settings:system.pluginsRunning', system.stats.plugins)
-              : undefined
-          }
-          mono={false}
-        />
-        <InfoItem
-          icon={Blocks}
-          label={t('settings:system.blocks')}
-          value={system.stats.blocks.total}
-          mono={false}
-        />
-        <InfoItem
-          icon={Workflow}
-          label={t('settings:system.workflows')}
-          value={system.stats.workflows.total}
-          secondary={
-            system.stats.workflows.total
-              ? t('settings:system.workflowsEnabled', system.stats.workflows)
-              : undefined
-          }
-          mono={false}
-        />
-        <InfoItem
-          icon={Zap}
-          label={t('settings:system.sparks')}
-          value={system.stats.sparks.total}
-          mono={false}
-        />
+        <SystemInfoStats stats={system.stats} />
       </div>
     </div>
   );

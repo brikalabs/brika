@@ -13,7 +13,7 @@
     "build": "bunx --bun vite build",
     "tsc": "bunx --bun tsc --noEmit --skipLibCheck",
     "lint": "bunx --bun biome check .",
-    "arch": "bun --bun ../../packages/arch/src/cli.ts"
+    "check:arch": "brika-arch"
   },
   "dependencies": {
     "@brika/shared": "workspace:*",

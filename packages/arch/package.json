@@ -5,10 +5,11 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./presets": "./src/presets/index.ts"
+    "./presets": "./src/presets/index.ts",
+    "./cli": "./src/cli.ts"
   },
   "bin": {
-    "barch": "./src/cli.ts"
+    "brika-arch": "./src/cli.ts"
   },
   "scripts": {
     "test": "bun test"
