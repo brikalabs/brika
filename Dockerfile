@@ -1,23 +1,29 @@
 # syntax=docker/dockerfile:1
 
-# === Build ===
-FROM oven/bun:1 AS build
+# === Build UI (platform-agnostic, runs on host) ===
+FROM --platform=$BUILDPLATFORM oven/bun:1 AS build-ui
+WORKDIR /app
+COPY . .
+RUN rm -rf node_modules && bun install --frozen-lockfile
+RUN bun run --filter @brika/ui build
+
+# === Build Hub (architecture-specific) ===
+FROM oven/bun:1 AS build-hub
 WORKDIR /app
 RUN apt-get update \
     && apt-get install -y --no-install-recommends git \
     && rm -rf /var/lib/apt/lists/*
 COPY . .
 RUN rm -rf node_modules && bun install --frozen-lockfile
-RUN bun run --filter @brika/ui build \
-    && bun run --filter @brika/hub build
+RUN bun run --filter @brika/hub build
 
 # === Runtime ===
 FROM oven/bun:1-slim
 WORKDIR /app
 
-COPY --from=build /app/apps/hub/dist ./hub
-COPY --from=build /app/apps/hub/locales ./locales
-COPY --from=build /app/apps/ui/dist ./ui
+COPY --from=build-hub /app/apps/hub/dist ./hub
+COPY --from=build-hub /app/apps/hub/locales ./locales
+COPY --from=build-ui /app/apps/ui/dist ./ui
 
 ENV NODE_ENV=production \
     BRIKA_HOST=0.0.0.0 \
