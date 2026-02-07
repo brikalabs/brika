@@ -3,6 +3,7 @@
   "subtitle": "Types de blocs disponibles pour construire des workflows",
   "search": "Rechercher des blocs...",
   "noResults": "Aucun $t(common:items.block_one) ne correspond à votre recherche",
+  "noResultsHint": "Essayez de rechercher avec d'autres mots-clés",
   "empty": "Aucun $t(common:items.block_one) disponible. Installez un $t(common:items.plugin_one) pour ajouter des blocs.",
   "count_one": "{{count}} bloc",
   "count_other": "{{count}} blocs",

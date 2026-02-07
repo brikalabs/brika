@@ -69,6 +69,8 @@ describe('PluginProcess', () => {
         /* noop unsubscribe */
       }),
       onSparkUnsubscribe: mock(),
+      onBrickType: mock(),
+      onBrickInstancePatch: mock(),
       onHeartbeatFailed: mock(),
       onDisconnect: mock(),
       onMetrics: mock(),

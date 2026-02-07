@@ -74,6 +74,21 @@ export interface SparkManifest {
   description?: string;
 }
 
+/** Brick size family */
+export type BrickFamily = 'sm' | 'md' | 'lg';
+
+/** Brick (dashboard UI) manifest from package.json */
+export interface BrickManifest {
+  id: string;
+  name?: string;
+  description?: string;
+  category?: string;
+  icon?: string;
+  color?: string;
+  families?: BrickFamily[];
+  config?: PreferenceDefinition[];
+}
+
 /** Plugin representation - flattened for easy consumption */
 export interface Plugin {
   // ─── Identity ──────────────────────────────────────────────────────────────
@@ -123,6 +138,8 @@ export interface Plugin {
   blocks: BlockManifest[];
   /** Available sparks (typed events) */
   sparks: SparkManifest[];
+  /** Available bricks (dashboard UI) */
+  bricks: BrickManifest[];
 
   // ─── i18n ───────────────────────────────────────────────────────────────────
   /** Available translation locales (e.g., ["en", "fr", "fr-CH"]) */
@@ -189,6 +206,7 @@ export interface PluginManifest {
   main?: string;
   blocks?: BlockManifest[];
   sparks?: SparkManifest[];
+  bricks?: BrickManifest[];
   preferences?: PreferenceDefinition[];
 }
 
@@ -201,6 +219,8 @@ export type PreferenceType = 'text' | 'password' | 'checkbox' | 'dropdown' | 'nu
 export interface BasePreference {
   name: string;
   type: PreferenceType;
+  label?: string;
+  description?: string;
   required?: boolean;
 }
 

@@ -27,6 +27,8 @@
     "availableBlocksDesc": "Workflow blocks provided by this plugin",
     "availableSparks": "Available Sparks",
     "availableSparksDesc": "Typed events emitted by this plugin",
+    "availableCards": "Available Bricks",
+    "availableCardsDesc": "Dashboard bricks provided by this plugin",
     "installation": "Installation",
     "installationDesc": "Technical details and paths",
     "directory": "Directory",
@@ -73,5 +75,28 @@
   "config": {
     "title": "Configuration",
     "description": "Plugin preferences and settings"
+  },
+  "install": {
+    "title": "Install Plugin",
+    "description": "Install a plugin from the npm registry or add a local workspace plugin.",
+    "installing": "Installing...",
+    "done": "Done"
+  },
+  "update": {
+    "title": "Update Plugins",
+    "updatesAvailable_one": "{{count}} plugin has updates available.",
+    "updatesAvailable_other": "{{count}} plugins have updates available.",
+    "updateCount_one": "Update {{count}} plugin",
+    "updateCount_other": "Update {{count}} plugins",
+    "updating": "Updating...",
+    "updateAll": "Update All",
+    "done": "Done"
+  },
+  "progress": {
+    "resolving": "Resolving dependencies...",
+    "downloading": "Downloading packages...",
+    "linking": "Linking packages...",
+    "complete": "{{action}} complete!",
+    "failed": "{{action}} failed"
   }
 }

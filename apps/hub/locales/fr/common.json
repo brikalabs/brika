@@ -59,7 +59,9 @@
     "tool_one": "Outil",
     "tool_other": "Outils",
     "spark_one": "Spark",
-    "spark_other": "Sparks"
+    "spark_other": "Sparks",
+    "brick_one": "Brique",
+    "brick_other": "Briques"
   },
   "labels": {
     "name": "Nom",

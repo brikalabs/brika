@@ -1,5 +1,7 @@
 import { combineRoutes } from '@brika/router';
 import { blocksRoutes } from './blocks';
+import { bricksRoutes } from './bricks';
+import { dashboardsRoutes } from './dashboards';
 import { i18nRoutes } from './i18n';
 import { logsRoutes } from './logs';
 import { pluginsRoutes } from './plugins';
@@ -15,11 +17,13 @@ import { workflowsRoutes } from './workflows';
 export const allRoutes = combineRoutes(
   statusRoutes,
   blocksRoutes,
+  bricksRoutes,
+  dashboardsRoutes,
   pluginsRoutes,
   sparksRoutes,
   workflowsRoutes,
   logsRoutes,
   streamsRoutes,
   i18nRoutes,
-  registryRoutes
+  registryRoutes,
 );

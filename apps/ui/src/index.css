@@ -377,6 +377,20 @@
   }
 }
 
+
+/* react-grid-layout overrides */
+.grid-placeholder .react-grid-item.react-grid-placeholder {
+  @apply rounded-2xl border-2 border-dashed border-border bg-muted opacity-100;
+}
+
+.grid-placeholder .react-grid-item.resizing {
+  z-index: 3;
+}
+
+.grid-placeholder .react-grid-item.react-draggable-dragging {
+  @apply scale-[1.02] shadow-lg transition-[transform,box-shadow] duration-200 ease-out;
+}
+
 /* Handle ping animation for data flow visualization */
 .react-flow__handle.handle-ping {
   position: relative;

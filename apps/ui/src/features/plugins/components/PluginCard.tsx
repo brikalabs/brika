@@ -1,6 +1,6 @@
 import type { Plugin } from '@brika/shared';
 import { Link } from '@tanstack/react-router';
-import { ArrowRight, Boxes, Plug, Zap } from 'lucide-react';
+import { ArrowRight, Boxes, LayoutDashboard, Plug, Zap } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage, Badge, Card } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
 import { cn } from '@/lib/utils';
@@ -52,7 +52,7 @@ export function PluginCard({ plugin: p, isBusy, onReload, onDisable, onKill }: P
               </div>
             )}
 
-            {(p.blocks.length > 0 || p.sparks.length > 0) && (
+            {(p.blocks.length > 0 || p.sparks.length > 0 || p.bricks.length > 0) && (
               <div className="mt-2.5 flex items-center gap-3">
                 {p.blocks.length > 0 && (
                   <div className="flex items-center gap-1.5 rounded-md bg-muted/50 px-2 py-1 text-muted-foreground text-xs">
@@ -68,6 +68,15 @@ export function PluginCard({ plugin: p, isBusy, onReload, onDisable, onKill }: P
                     <span>
                       {p.sparks.length}{' '}
                       {t('common:items.spark', { count: p.sparks.length }).toLowerCase()}
+                    </span>
+                  </div>
+                )}
+                {p.bricks.length > 0 && (
+                  <div className="flex items-center gap-1.5 rounded-md bg-blue-500/10 px-2 py-1 text-blue-600 text-xs dark:text-blue-400">
+                    <LayoutDashboard className="size-3.5" />
+                    <span>
+                      {p.bricks.length}{' '}
+                      {t('common:items.brick', { count: p.bricks.length }).toLowerCase()}
                     </span>
                   </div>
                 )}

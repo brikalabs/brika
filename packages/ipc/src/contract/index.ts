@@ -53,6 +53,18 @@ export {
   subscribeSpark,
   unsubscribeSpark,
 } from './sparks';
+export type { BrickTypeDefinition as BrickTypeDefinitionType } from './bricks';
+// ─── Bricks ───
+export {
+  BrickTypeDefinition,
+  brickInstanceAction,
+  mountBrickInstance,
+  patchBrickInstance,
+  registerBrickType,
+  resizeBrickInstance,
+  unmountBrickInstance,
+  updateBrickConfig,
+} from './bricks';
 export type {
   ToolCallContext as ToolCallContextType,
   ToolCallSource as ToolCallSourceType,

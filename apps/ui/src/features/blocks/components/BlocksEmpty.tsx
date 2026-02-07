@@ -18,7 +18,7 @@ export function BlocksEmpty({ hasSearch }: Readonly<BlocksEmptyProps>) {
         {hasSearch ? t('blocks:noResults') : t('blocks:empty')}
       </h3>
       {hasSearch && (
-        <p className="mt-2 text-muted-foreground text-sm">Try searching with different keywords</p>
+        <p className="mt-2 text-muted-foreground text-sm">{t('blocks:noResultsHint')}</p>
       )}
     </Card>
   );

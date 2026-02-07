@@ -1,6 +1,7 @@
 import { CheckCircle2, XCircle } from 'lucide-react';
 import React from 'react';
 import { Progress, ScrollArea } from '@/components/ui';
+import { useLocale } from '@/lib/use-locale';
 import { cn } from '@/lib/utils';
 import type { OperationProgress } from '../registry-api';
 
@@ -27,19 +28,19 @@ function getProgressValue(progress: OperationProgress | null) {
   }
 }
 
-function getPhaseLabel(progress: OperationProgress | null) {
+function getPhaseLabel(progress: OperationProgress | null, t: (key: string, options?: Record<string, unknown>) => string) {
   if (!progress) return '';
   switch (progress.phase) {
     case 'resolving':
-      return 'Resolving dependencies...';
+      return t('plugins:progress.resolving');
     case 'downloading':
-      return 'Downloading updates...';
+      return t('plugins:progress.downloading');
     case 'linking':
-      return 'Linking packages...';
+      return t('plugins:progress.linking');
     case 'complete':
-      return 'Update complete!';
+      return t('plugins:progress.complete', { action: t('plugins:actions.update') });
     case 'error':
-      return 'Update failed';
+      return t('plugins:progress.failed', { action: t('plugins:actions.update') });
     default:
       return '';
   }
@@ -51,6 +52,7 @@ export function UpdateProgressSection({
   error,
   success,
 }: UpdateProgressSectionProps) {
+  const { t } = useLocale();
   const scrollRef = React.useRef<HTMLDivElement>(null);
 
   // Auto-scroll logs
@@ -64,7 +66,7 @@ export function UpdateProgressSection({
     <div className="space-y-3">
       <div className="space-y-2">
         <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">{getPhaseLabel(progress)}</span>
+          <span className="text-muted-foreground">{getPhaseLabel(progress, t)}</span>
           {success && <CheckCircle2 className="size-4 text-emerald-500" />}
           {error && <XCircle className="size-4 text-destructive" />}
         </div>

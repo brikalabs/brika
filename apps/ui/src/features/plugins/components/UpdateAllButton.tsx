@@ -13,9 +13,11 @@ import {
 import { pluginsKeys } from '../api';
 import { type OperationProgress, registryApi, registryKeys } from '../registry-api';
 import { UpdateListPreview } from './UpdateListPreview';
+import { useLocale } from '@/lib/use-locale';
 import { UpdateProgressSection } from './UpdateProgressSection';
 
 export function UpdateAllButton() {
+  const { t } = useLocale();
   const queryClient = useQueryClient();
   const { data, isLoading: isChecking } = useQuery({
     queryKey: registryKeys.updates,
@@ -86,7 +88,7 @@ export function UpdateAllButton() {
     <>
       <Button variant="outline" className="gap-2" onClick={() => setDialogOpen(true)}>
         <ArrowUp className="size-4" />
-        Update {availableUpdates.length} plugin{availableUpdates.length > 1 ? 's' : ''}
+        {t('plugins:update.updateCount', { count: availableUpdates.length })}
       </Button>
 
       <Dialog open={dialogOpen} onOpenChange={handleClose}>
@@ -94,11 +96,10 @@ export function UpdateAllButton() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Download className="size-5" />
-              Update Plugins
+              {t('plugins:update.title')}
             </DialogTitle>
             <DialogDescription>
-              {availableUpdates.length} plugin{availableUpdates.length > 1 ? 's have' : ' has'}{' '}
-              updates available.
+              {t('plugins:update.updatesAvailable', { count: availableUpdates.length })}
             </DialogDescription>
           </DialogHeader>
 
@@ -117,22 +118,22 @@ export function UpdateAllButton() {
 
           <DialogFooter>
             {success ? (
-              <Button onClick={handleClose}>Done</Button>
+              <Button onClick={handleClose}>{t('plugins:update.done')}</Button>
             ) : (
               <>
                 <Button variant="outline" onClick={handleClose} disabled={isUpdating}>
-                  Cancel
+                  {t('common:actions.cancel')}
                 </Button>
                 <Button onClick={handleUpdate} disabled={isUpdating} className="gap-2">
                   {isUpdating ? (
                     <>
                       <Loader2 className="size-4 animate-spin" />
-                      Updating...
+                      {t('plugins:update.updating')}
                     </>
                   ) : (
                     <>
                       <ArrowUp className="size-4" />
-                      Update All
+                      {t('plugins:update.updateAll')}
                     </>
                   )}
                 </Button>

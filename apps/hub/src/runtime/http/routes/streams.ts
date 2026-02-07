@@ -1,6 +1,7 @@
 import { createSSEStream, NotFound, route } from '@brika/router';
 import type { Json } from '@brika/shared';
 import { z } from 'zod';
+import { BrickInstanceManager } from '@/runtime/bricks';
 import { EventSystem } from '@/runtime/events/event-system';
 import { Logger } from '@/runtime/logs/log-router';
 import { WorkflowEngine } from '@/runtime/workflows';
@@ -77,6 +78,47 @@ export const streamsRoutes = [
           ts: action.timestamp,
         };
         send(event, 'event');
+      });
+      return () => unsub();
+    });
+  }),
+
+  // SSE: Stream brick events only (dedicated channel for bricks page)
+  // Sends a full snapshot on connect, then incremental events.
+  route.get('/api/stream/bricks', ({ inject }) => {
+    const events = inject(EventSystem);
+    const instances = inject(BrickInstanceManager);
+
+    return createSSEStream((send) => {
+      // Send current state snapshot on connect
+      const snapshot = instances.list().map((i) => ({
+        instanceId: i.instanceId,
+        brickTypeId: i.brickTypeId,
+        body: i.body,
+      }));
+      send({ type: 'brick.snapshot', payload: { instances: snapshot } }, 'brick');
+
+      // Then stream incremental changes
+      const unsub = events.subscribeGlob(['brick.*'], (action) => {
+        send(
+          { type: action.type, payload: action.payload as Json, ts: action.timestamp },
+          'brick',
+        );
+      });
+      return () => unsub();
+    });
+  }),
+
+  // SSE: Stream dashboard events (layout changes, brick add/remove)
+  route.get('/api/stream/dashboards', ({ inject }) => {
+    const events = inject(EventSystem);
+
+    return createSSEStream((send) => {
+      const unsub = events.subscribeGlob(['dashboard.*'], (action) => {
+        send(
+          { type: action.type, payload: action.payload as Json, ts: action.timestamp },
+          'dashboard',
+        );
       });
       return () => unsub();
     });

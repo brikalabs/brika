@@ -2,21 +2,29 @@ import type { Json, PluginChannel } from '@brika/ipc';
 import {
   blockEmit,
   blockLog,
+  brickInstanceAction,
   emitSpark,
   hello,
   log,
+  mountBrickInstance,
+  patchBrickInstance,
   preferences,
   pushInput,
   ready,
   registerBlock,
+  registerBrickType,
   registerSpark,
+  resizeBrickInstance,
   type SparkEvent as SparkEventType,
   sparkEvent,
   startBlock,
   stopBlock,
   subscribeSpark,
+  unmountBrickInstance,
   unsubscribeSpark,
+  updateBrickConfig,
 } from '@brika/ipc/contract';
+import type { BrickFamily } from '@brika/shared';
 import type { PluginPackageSchema } from '@brika/schema';
 import type { Plugin, PluginHealth } from '@brika/shared';
 import { getProcessMetrics } from '@/runtime/metrics';
@@ -50,6 +58,8 @@ export interface PluginProcessCallbacks {
     process: PluginProcess
   ) => () => void;
   onSparkUnsubscribe: (subscriptionId: string) => void;
+  onBrickType: (brickType: BrickTypeRegistration) => void;
+  onBrickInstancePatch: (instanceId: string, mutations: unknown[]) => void;
   onHeartbeatFailed: (process: PluginProcess, silentMs: number) => void;
   onDisconnect: (process: PluginProcess, error?: Error) => void;
   onMetrics?: (process: PluginProcess, cpu: number, memory: number) => void;
@@ -58,6 +68,14 @@ export interface PluginProcessCallbacks {
 export interface BlockRegistration {
   id: string;
   [key: string]: unknown;
+}
+
+export interface BrickTypeRegistration {
+  id: string;
+  families: BrickFamily[];
+  minSize?: { w: number; h: number };
+  maxSize?: { w: number; h: number };
+  config?: unknown[];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -79,6 +97,7 @@ export class PluginProcess {
   #heartbeat?: Timer;
   readonly #blocks = new Set<string>();
   readonly #sparks = new Set<string>();
+  readonly #brickTypes = new Set<string>();
   readonly #sparkSubscriptions = new Map<string, () => void>(); // subscriptionId -> unsubscribe
   #stopped = false;
 
@@ -128,6 +147,10 @@ export class PluginProcess {
     return this.#sparks;
   }
 
+  get brickTypes(): ReadonlySet<string> {
+    return this.#brickTypes;
+  }
+
   // ─────────────────────────────────────────────────────────────────────────
   // IPC Operations
   // ─────────────────────────────────────────────────────────────────────────
@@ -174,6 +197,46 @@ export class PluginProcess {
   sendSparkEvent(subscriptionId: string, event: SparkEventType): void {
     if (this.#stopped) return;
     this.#channel.send(sparkEvent, { subscriptionId, event });
+  }
+
+  /**
+   * Tell the plugin to mount a brick instance
+   */
+  sendMountBrickInstance(instanceId: string, brickTypeId: string, w: number, h: number, config: Record<string, unknown>): void {
+    if (this.#stopped) return;
+    this.#channel.send(mountBrickInstance, { instanceId, brickTypeId, w, h, config });
+  }
+
+  /**
+   * Tell the plugin to resize a brick instance (no remount)
+   */
+  sendResizeBrickInstance(instanceId: string, w: number, h: number): void {
+    if (this.#stopped) return;
+    this.#channel.send(resizeBrickInstance, { instanceId, w, h });
+  }
+
+  /**
+   * Push updated config to a running brick instance (no remount)
+   */
+  sendUpdateBrickConfig(instanceId: string, config: Record<string, unknown>): void {
+    if (this.#stopped) return;
+    this.#channel.send(updateBrickConfig, { instanceId, config });
+  }
+
+  /**
+   * Tell the plugin to unmount a brick instance
+   */
+  sendUnmountBrickInstance(instanceId: string): void {
+    if (this.#stopped) return;
+    this.#channel.send(unmountBrickInstance, { instanceId });
+  }
+
+  /**
+   * Send a brick action to a specific instance on the plugin
+   */
+  sendBrickInstanceAction(instanceId: string, brickTypeId: string, actionId: string, payload?: Json): void {
+    if (this.#stopped) return;
+    this.#channel.send(brickInstanceAction, { instanceId, brickTypeId, actionId, payload });
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -229,6 +292,7 @@ export class PluginProcess {
       lastError: null,
       blocks: m.blocks ?? [],
       sparks: m.sparks ?? [],
+      bricks: m.bricks ?? [],
       locales: this.locales,
     };
   }
@@ -290,6 +354,18 @@ export class PluginProcess {
 
     this.#channel.on(blockLog, ({ instanceId, workflowId, level, message }) => {
       this.callbacks.onBlockLog(instanceId, workflowId, level, message);
+    });
+
+    this.#channel.on(registerBrickType, ({ brickType }) => {
+      const declared = this.metadata.bricks?.find((c) => c.id === brickType.id);
+      if (!declared) return; // Undeclared brick types ignored
+
+      this.#brickTypes.add(`${this.name}:${brickType.id}`);
+      this.callbacks.onBrickType(brickType);
+    });
+
+    this.#channel.on(patchBrickInstance, ({ instanceId, mutations }) => {
+      this.callbacks.onBrickInstancePatch(instanceId, mutations as unknown[]);
     });
   }
 

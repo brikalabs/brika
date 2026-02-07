@@ -20,6 +20,10 @@ plugins:
     version: workspace:*
   "@brika/plugin-example-echo":
     version: workspace:*
+  "@brika/plugin-time":
+    version: workspace:*
+  "@brika/plugin-timer":
+    version: workspace:*
 
 # Event-based rules
 rules: []

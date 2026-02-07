@@ -10,7 +10,7 @@
     "directory": "apps/hub"
   },
   "scripts": {
-    "dev": "bun run src/main.ts --watch",
+    "dev": "bun --watch src/main.ts",
     "build": "bun run scripts/build.ts",
     "tsc": "bun x --bun tsc --noEmit",
     "lint": "bun x biome check .",
@@ -26,6 +26,7 @@
     "@brika/schema": "workspace:*",
     "@brika/sdk": "workspace:*",
     "@brika/shared": "workspace:*",
+    "@brika/ui-kit": "workspace:*",
     "@brika/workflow": "workspace:*",
     "date-fns": "^4.1.0",
     "hono": "^4.11.3",

@@ -1,0 +1,32 @@
+{
+  "name": "@brika/ui-kit",
+  "version": "0.2.1",
+  "description": "Descriptor types and builder functions for BRIKA plugin UI bricks",
+  "type": "module",
+  "license": "MIT",
+  "author": "BRIKA Team",
+  "homepage": "https://github.com/maxscharwath/brika/tree/main/packages/ui-kit#readme",
+  "bugs": {
+    "url": "https://github.com/maxscharwath/brika/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/maxscharwath/brika.git",
+    "directory": "packages/ui-kit"
+  },
+  "keywords": ["brika", "ui", "bricks", "dashboard", "descriptors"],
+  "exports": {
+    ".": "./src/index.ts",
+    "./jsx-runtime": "./src/jsx-runtime.ts",
+    "./jsx-dev-runtime": "./src/jsx-dev-runtime.ts"
+  },
+  "files": ["src"],
+  "scripts": {
+    "tsc": "bunx --biome tsc --noEmit",
+    "prepublishOnly": "bun run tsc"
+  },
+  "dependencies": {
+    "@brika/shared": "workspace:*",
+    "zod": "^4.3.4"
+  }
+}

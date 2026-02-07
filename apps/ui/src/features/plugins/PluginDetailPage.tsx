@@ -7,6 +7,7 @@ import { Badge, Card, CardContent, CardHeader, CardTitle, Skeleton } from '@/com
 import { useLocale } from '@/lib/use-locale';
 import {
   PluginBlocksList,
+  PluginBricksList,
   PluginDetailHeader,
   PluginInstallInfo,
   PluginMetrics,
@@ -133,6 +134,7 @@ export function PluginDetailPage() {
             <PluginMetrics metrics={metrics} />
             <PluginBlocksList plugin={plugin} />
             <PluginSparksList plugin={plugin} />
+            <PluginBricksList plugin={plugin} />
             <PluginConfigForm pluginUid={plugin.uid} pluginName={plugin.name} />
             <PluginInstallInfo plugin={plugin} />
 

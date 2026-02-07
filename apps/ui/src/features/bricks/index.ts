@@ -1,0 +1,1 @@
+export { BricksPage } from './BricksPage';

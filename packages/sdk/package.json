@@ -16,7 +16,14 @@
   },
   "keywords": ["brika", "sdk", "plugins", "workflow", "home-automation"],
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./bricks": "./src/bricks/index.ts",
+    "./bricks/core": "./src/bricks/core.ts",
+    "./bricks/components": "./src/bricks/components.ts",
+    "./sparks": "./src/sparks/index.ts",
+    "./lifecycle": "./src/lifecycle/index.ts",
+    "./jsx-runtime": "./src/jsx-runtime.ts",
+    "./jsx-dev-runtime": "./src/jsx-dev-runtime.ts"
   },
   "files": ["src"],
   "scripts": {
@@ -27,6 +34,7 @@
     "@brika/flow": "workspace:*",
     "@brika/ipc": "workspace:*",
     "@brika/serializable": "workspace:*",
+    "@brika/ui-kit": "workspace:*",
     "zod": "^4.3.4"
   },
   "devDependencies": {

@@ -36,5 +36,18 @@
     "workflows": "Workflows",
     "workflowsEnabled": "{{enabled}} of {{total}} enabled",
     "sparks": "Sparks"
+  },
+  "themes": {
+    "default": "Default",
+    "ocean": "Ocean",
+    "forest": "Forest",
+    "sunset": "Sunset",
+    "lavender": "Lavender",
+    "ruby": "Ruby"
+  },
+  "modes": {
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
   }
 }

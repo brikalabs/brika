@@ -44,3 +44,64 @@ export const SparkActions = defineActions('spark', {
 });
 
 export type SparkAction = ActionsUnion<typeof SparkActions>;
+
+// Brick actions for dashboard bricks
+export const BrickActions = defineActions('brick', {
+  typeRegistered: z.object({
+    pluginName: z.string(),
+    brickTypeId: z.string(),
+    descriptor: z.unknown(),
+  }),
+  typeUnregistered: z.object({
+    brickTypeId: z.string(),
+  }),
+  instanceMounted: z.object({
+    instanceId: z.string(),
+    brickTypeId: z.string(),
+  }),
+  instancePatched: z.object({
+    instanceId: z.string(),
+    mutations: z.array(z.unknown()),
+  }),
+  instanceUnmounted: z.object({
+    instanceId: z.string(),
+  }),
+});
+
+export type BrickAction = ActionsUnion<typeof BrickActions>;
+
+// Dashboard actions for layout management
+export const DashboardActions = defineActions('dashboard', {
+  created: z.object({
+    dashboardId: z.string(),
+  }),
+  deleted: z.object({
+    dashboardId: z.string(),
+  }),
+  brickAdded: z.object({
+    dashboardId: z.string(),
+    instanceId: z.string(),
+    placement: z.unknown(),
+  }),
+  brickRemoved: z.object({
+    dashboardId: z.string(),
+    instanceId: z.string(),
+  }),
+  layoutChanged: z.object({
+    dashboardId: z.string(),
+    layouts: z.array(z.object({
+      instanceId: z.string(),
+      x: z.number(),
+      y: z.number(),
+      w: z.number(),
+      h: z.number(),
+    })),
+  }),
+  brickConfigChanged: z.object({
+    dashboardId: z.string(),
+    instanceId: z.string(),
+    config: z.record(z.string(), z.unknown()),
+  }),
+});
+
+export type DashboardAction = ActionsUnion<typeof DashboardActions>;

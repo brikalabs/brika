@@ -9,6 +9,7 @@ import {
   ProgressDisplay,
 } from '@/components/ui';
 import { getProgressValue, useProgressStream } from '@/hooks/use-progress-stream';
+import { useLocale } from '@/lib/use-locale';
 import { pluginsKeys } from '../api';
 import { registryApi } from '../registry-api';
 import { getPhaseLabel } from './install-progress-utils';
@@ -35,6 +36,7 @@ export function UpdatePluginDialog({
   mode,
 }: Readonly<UpdatePluginDialogProps>) {
   const queryClient = useQueryClient();
+  const { t } = useLocale();
 
   const {
     isProcessing,
@@ -117,7 +119,7 @@ export function UpdatePluginDialog({
           {(isProcessing || success || error) && (
             <ProgressDisplay
               progressValue={getProgressValue(progress?.phase)}
-              phaseLabel={getPhaseLabel(progress, mode)}
+              phaseLabel={getPhaseLabel(progress, t, mode)}
               logs={logs}
               scrollRef={scrollRef}
               error={error}

@@ -63,6 +63,38 @@ export const pluginsRoutes = group('/api/plugins', [
     return new Response(null, { status: 204 });
   }),
 
+  // Plugin assets endpoint — serves files from plugin's assets/ directory
+  route.get(
+    '/:uid/assets/*',
+    { params: z.object({ uid: z.string() }) },
+    async ({ params, req, inject }) => {
+      const plugin = getOrThrow(inject(PluginManager).get(params.uid), 'Plugin not found');
+
+      const url = new URL(req.url);
+      const prefix = `/api/plugins/${params.uid}/assets/`;
+      const assetPath = url.pathname.slice(prefix.length);
+
+      // Prevent path traversal
+      if (!assetPath || assetPath.includes('..')) {
+        return new Response(null, { status: 400 });
+      }
+
+      const filePath = `${plugin.rootDirectory}/assets/${assetPath}`;
+      const file = Bun.file(filePath);
+
+      if (await file.exists()) {
+        return new Response(file, {
+          headers: {
+            'Content-Type': file.type || 'application/octet-stream',
+            'Cache-Control': 'public, max-age=3600',
+          },
+        });
+      }
+
+      return new Response(null, { status: 404 });
+    }
+  ),
+
   // Plugin README endpoint - returns markdown content
   route.get(
     '/:uid/readme',

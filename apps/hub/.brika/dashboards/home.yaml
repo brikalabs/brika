@@ -1,0 +1,58 @@
+version: "1"
+dashboard:
+  id: home
+  name: Home
+  icon: layout-dashboard
+  columns: 12
+bricks:
+  - instanceId: inst-mlceac1o-1
+    type: "@brika/plugin-timer:weather"
+    config:
+      unit: fahrenheit
+      refreshInterval: 5
+    position:
+      x: 1
+      y: 2
+    size:
+      w: 1
+      h: 1
+  - instanceId: inst-mlceag6e-2
+    type: "@brika/plugin-timer:photo"
+    config:
+      interval: 10
+      autoRotate: true
+    position:
+      x: 0
+      y: 2
+    size:
+      w: 1
+      h: 1
+  - instanceId: inst-mlceut6e-1
+    type: "@brika/plugin-timer:weather"
+    config:
+      unit: celsius
+    position:
+      x: 0
+      y: 3
+    size:
+      w: 4
+      h: 1
+  - instanceId: inst-mlcfrplo-1
+    type: "@brika/plugin-timer:camera"
+    config:
+      muted: true
+      defaultStream: Elephants Dream
+    position:
+      x: 0
+      y: 0
+    size:
+      w: 7
+      h: 2
+  - instanceId: inst-mlcjxofq-1
+    type: "@brika/plugin-timer:photo"
+    position:
+      x: 7
+      y: 0
+    size:
+      w: 1
+      h: 2

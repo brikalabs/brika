@@ -15,6 +15,7 @@ import { getProgressValue, useProgressStream } from '@/hooks/use-progress-stream
 import { pluginsKeys } from '../api';
 import { registryApi } from '../registry-api';
 import { InstallPluginFormFields } from './InstallPluginFormFields';
+import { useLocale } from '@/lib/use-locale';
 import { getPhaseLabel } from './install-progress-utils';
 
 interface InstallPluginDialogProps {
@@ -24,6 +25,7 @@ interface InstallPluginDialogProps {
 
 export function InstallPluginDialog({ open, onOpenChange }: Readonly<InstallPluginDialogProps>) {
   const queryClient = useQueryClient();
+  const { t } = useLocale();
   const [packageName, setPackageName] = useState('');
   const [version, setVersion] = useState('');
 
@@ -79,10 +81,10 @@ export function InstallPluginDialog({ open, onOpenChange }: Readonly<InstallPlug
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Package className="size-5" />
-            Install Plugin
+            {t('plugins:install.title')}
           </DialogTitle>
           <DialogDescription>
-            Install a plugin from the npm registry or add a local workspace plugin.
+            {t('plugins:install.description')}
           </DialogDescription>
         </DialogHeader>
 
@@ -100,7 +102,7 @@ export function InstallPluginDialog({ open, onOpenChange }: Readonly<InstallPlug
           {(isProcessing || success || error) && (
             <ProgressDisplay
               progressValue={getProgressValue(progress?.phase)}
-              phaseLabel={getPhaseLabel(progress)}
+              phaseLabel={getPhaseLabel(progress, t)}
               logs={logs}
               scrollRef={scrollRef}
               error={error}
@@ -112,11 +114,11 @@ export function InstallPluginDialog({ open, onOpenChange }: Readonly<InstallPlug
 
         <DialogFooter>
           {success ? (
-            <Button onClick={handleClose}>Done</Button>
+            <Button onClick={handleClose}>{t('plugins:install.done')}</Button>
           ) : (
             <>
               <Button variant="outline" onClick={handleClose} disabled={isProcessing}>
-                Cancel
+                {t('common:actions.cancel')}
               </Button>
               <Button
                 onClick={handleInstall}
@@ -126,12 +128,12 @@ export function InstallPluginDialog({ open, onOpenChange }: Readonly<InstallPlug
                 {isProcessing ? (
                   <>
                     <Loader2 className="size-4 animate-spin" />
-                    Installing...
+                    {t('plugins:install.installing')}
                   </>
                 ) : (
                   <>
                     <Download className="size-4" />
-                    Install
+                    {t('store:actions.install')}
                   </>
                 )}
               </Button>

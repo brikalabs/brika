@@ -3,7 +3,8 @@ import type { Json } from '@brika/ipc';
 import type { BlockDefinition } from '@brika/sdk';
 import type { LogLevel } from '@brika/shared';
 import { BlockRegistry } from '@/runtime/blocks';
-import { PluginActions, SparkActions } from '@/runtime/events/actions';
+import { BrickInstanceManager, BrickTypeRegistry } from '@/runtime/bricks';
+import { BrickActions, PluginActions, SparkActions } from '@/runtime/events/actions';
 import { EventSystem } from '@/runtime/events/event-system';
 import { Logger } from '@/runtime/logs/log-router';
 import { SparkRegistry } from '@/runtime/sparks';
@@ -21,6 +22,8 @@ export class PluginEventHandler {
   readonly #state = inject(StateStore);
   readonly #blocks = inject(BlockRegistry);
   readonly #sparks = inject(SparkRegistry);
+  readonly #brickTypes = inject(BrickTypeRegistry);
+  readonly #brickInstances = inject(BrickInstanceManager);
 
   /** Block emit callback - set by PluginManager */
   #onBlockEmit: ((instanceId: string, port: string, data: Json) => void) | null = null;
@@ -178,5 +181,46 @@ export class PluginEventHandler {
         });
       }
     });
+  }
+
+  registerBrickType(
+    pluginName: string,
+    brickType: {
+      id: string;
+      families: Array<'sm' | 'md' | 'lg'>;
+      config?: unknown[];
+    },
+    manifest?: { name?: string; description?: string; category?: string; icon?: string; color?: string },
+  ): void {
+    const fullId = this.#brickTypes.register(brickType, pluginName, manifest);
+    this.#logs.debug('Brick type registered from plugin', {
+      pluginName,
+      brickTypeId: brickType.id,
+    });
+    this.#events.dispatch(
+      BrickActions.typeRegistered.create(
+        {
+          pluginName,
+          brickTypeId: fullId,
+          descriptor: this.#brickTypes.get(fullId),
+        },
+        pluginName,
+      ),
+    );
+  }
+
+  patchBrickInstance(instanceId: string, mutations: unknown[]): void {
+    const patched = this.#brickInstances.patchBody(instanceId, mutations);
+    if (patched) {
+      this.#events.dispatch(
+        BrickActions.instancePatched.create(
+          {
+            instanceId,
+            mutations,
+          },
+          'hub',
+        ),
+      );
+    }
   }
 }

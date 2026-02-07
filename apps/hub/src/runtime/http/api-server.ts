@@ -26,7 +26,6 @@ export class ApiServer {
 
   start(): void {
     this.#app = createApp(this.#routes);
-    this.#setupErrorHandler();
     this.#setupStaticFiles();
 
     this.#server = Bun.serve({
@@ -59,17 +58,6 @@ export class ApiServer {
     });
 
     return res;
-  }
-
-  #setupErrorHandler(): void {
-    this.#app?.onError((err, c) => {
-      this.#logs.error(
-        'Route handler error',
-        { method: c.req.method, path: new URL(c.req.url).pathname },
-        { error: err }
-      );
-      throw err;
-    });
   }
 
   #setupStaticFiles(): void {

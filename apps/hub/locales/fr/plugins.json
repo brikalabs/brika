@@ -27,6 +27,8 @@
     "availableBlocksDesc": "Blocs de workflow fournis par ce plugin",
     "availableSparks": "Sparks disponibles",
     "availableSparksDesc": "Événements typés émis par ce plugin",
+    "availableCards": "Briques disponibles",
+    "availableCardsDesc": "Briques de tableau de bord fournies par ce plugin",
     "installation": "Installation",
     "installationDesc": "Détails techniques et chemins",
     "directory": "Répertoire",
@@ -69,5 +71,32 @@
     "tools": "Outils",
     "blocks": "Blocs",
     "actions": "Actions"
+  },
+  "config": {
+    "title": "Configuration",
+    "description": "Préférences et paramètres du plugin"
+  },
+  "install": {
+    "title": "Installer un plugin",
+    "description": "Installer un plugin depuis le registre npm ou ajouter un plugin local.",
+    "installing": "Installation...",
+    "done": "Terminé"
+  },
+  "update": {
+    "title": "Mettre à jour les plugins",
+    "updatesAvailable_one": "{{count}} plugin a des mises à jour disponibles.",
+    "updatesAvailable_other": "{{count}} plugins ont des mises à jour disponibles.",
+    "updateCount_one": "Mettre à jour {{count}} plugin",
+    "updateCount_other": "Mettre à jour {{count}} plugins",
+    "updating": "Mise à jour...",
+    "updateAll": "Tout mettre à jour",
+    "done": "Terminé"
+  },
+  "progress": {
+    "resolving": "Résolution des dépendances...",
+    "downloading": "Téléchargement des paquets...",
+    "linking": "Liaison des paquets...",
+    "complete": "{{action}} terminé(e) !",
+    "failed": "{{action}} a échoué"
   }
 }

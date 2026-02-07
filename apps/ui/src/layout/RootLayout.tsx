@@ -3,6 +3,7 @@ import {
   Blocks,
   FileText,
   LayoutDashboard,
+  LayoutGrid,
   type LucideIcon,
   Package,
   Plug,
@@ -56,6 +57,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { to: '/sparks', labelKey: 'nav:sparks', icon: Zap },
       { to: '/blocks', labelKey: 'nav:blocks', icon: Blocks },
+      { to: '/bricks', labelKey: 'nav:bricks', icon: LayoutGrid },
       { to: '/logs', labelKey: 'nav:logs', icon: FileText },
     ],
   },

@@ -10,6 +10,7 @@ import '@/lib/i18n';
 
 // Feature Pages
 import { BlocksPage } from '@/features/blocks';
+import { BricksPage } from '@/features/bricks';
 import { DashboardPage } from '@/features/dashboard';
 import { SparksPage } from '@/features/events';
 import { LogsPage } from '@/features/logs';
@@ -55,6 +56,19 @@ const storePluginDetailRoute = createRoute({
   component: StorePluginDetailPage,
 });
 
+// Bricks routes with dashboard parameter
+const bricksRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/bricks',
+  component: BricksPage,
+});
+
+const bricksDashboardRoute = createRoute({
+  getParentRoute: () => bricksRoute,
+  path: '/$dashboardId',
+  component: BricksPage,
+});
+
 // Sparks routes with tab parameter
 const sparksRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -77,6 +91,7 @@ const routes = [
   workflowNewRoute,
   workflowEditorRoute,
   createRoute({ getParentRoute: () => rootRoute, path: '/blocks', component: BlocksPage }),
+  bricksRoute.addChildren([bricksDashboardRoute]),
   createRoute({ getParentRoute: () => rootRoute, path: '/logs', component: LogsPage }),
   createRoute({ getParentRoute: () => rootRoute, path: '/store', component: StorePage }),
   storePluginDetailRoute,

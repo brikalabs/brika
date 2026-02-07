@@ -107,6 +107,7 @@ export class PluginLifecycle {
       lastError: stored.lastError,
       blocks: m.blocks ?? [],
       sparks: m.sparks ?? [],
+      bricks: m.bricks ?? [],
       locales: [],
     };
   }
@@ -143,8 +144,8 @@ export class PluginLifecycle {
     });
 
     const channel = spawnPlugin('bun', [entryPoint], {
-      cwd: globalThis.process.cwd(),
-      env: { ...globalThis.process.env, BRIKA_PLUGIN_NAME: metadata.name },
+      cwd: rootDirectory,
+      env: { ...globalThis.process.env, BRIKA_PLUGIN_NAME: metadata.name, BRIKA_PLUGIN_UID: uid },
       defaultTimeoutMs: this.#config.callTimeoutMs,
       onDisconnect: (error) => this.#handleDisconnect(pluginName, error),
       onStderr: (line) =>
@@ -211,6 +212,12 @@ export class PluginLifecycle {
         onSparkUnsubscribe: () => {
           // Cleanup handled by the process's unsubscribe callback
         },
+        onBrickType: (brickType) => {
+          const manifest = metadata.bricks?.find((c) => c.id === brickType.id);
+          this.#eventHandler.registerBrickType(metadata.name, brickType, manifest);
+        },
+        onBrickInstancePatch: (instanceId, mutations) =>
+          this.#eventHandler.patchBrickInstance(instanceId, mutations),
         onHeartbeatFailed: (p, silentMs) => this.#handleHeartbeatFailed(p, silentMs),
         onDisconnect: (p, error) => this.#handleDisconnect(p.name, error),
         onMetrics: (p, cpu, memory) => {

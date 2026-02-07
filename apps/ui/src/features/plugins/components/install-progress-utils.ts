@@ -1,3 +1,4 @@
+import type { TFunction } from 'i18next';
 import type { InstallProgress } from '@brika/shared';
 
 /**
@@ -5,23 +6,24 @@ import type { InstallProgress } from '@brika/shared';
  */
 export function getPhaseLabel(
   progress: InstallProgress | null,
+  t: TFunction,
   mode?: 'update' | 'reinstall'
 ): string {
   if (!progress) return '';
 
-  const action = mode === 'reinstall' ? 'Reinstall' : mode === 'update' ? 'Update' : 'Installation';
+  const action = mode === 'reinstall' ? t('plugins:actions.reinstall') : mode === 'update' ? t('plugins:actions.update') : t('store:install.title');
 
   switch (progress.phase) {
     case 'resolving':
-      return 'Resolving dependencies...';
+      return t('plugins:progress.resolving');
     case 'downloading':
-      return 'Downloading packages...';
+      return t('plugins:progress.downloading');
     case 'linking':
-      return 'Linking packages...';
+      return t('plugins:progress.linking');
     case 'complete':
-      return `${action} complete!`;
+      return t('plugins:progress.complete', { action });
     case 'error':
-      return `${action} failed`;
+      return t('plugins:progress.failed', { action });
     default:
       return '';
   }

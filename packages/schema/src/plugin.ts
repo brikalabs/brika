@@ -206,6 +206,32 @@ const PreferenceSchema = z.discriminatedUnion('type', [
 export type PreferenceSchema = z.infer<typeof PreferenceSchema>;
 
 // ============================================================================
+// Brick Schema (depends on PreferenceSchema for per-instance config)
+// ============================================================================
+
+const BrickFamilySchema = z.literal(['sm', 'md', 'lg']);
+
+const BrickSchema = z.object({
+  id: z.string().describe('Brick identifier (local to plugin)'),
+  name: z.optional(z.string().describe('Display name')),
+  description: z.optional(z.string().describe('Human-readable description')),
+  category: z.optional(z.string().describe('Brick category for grouping')),
+  icon: z.optional(z.string().describe('Lucide icon name')),
+  color: z.optional(
+    z
+      .string()
+      .regex(/^#[0-9a-fA-F]{6}$/)
+      .describe('Hex color')
+  ),
+  families: z.optional(
+    z.array(BrickFamilySchema).describe('Supported size families (sm, md, lg)')
+  ),
+  config: z.optional(
+    z.array(PreferenceSchema).describe('Per-instance configuration schema')
+  ),
+});
+
+// ============================================================================
 // Final Plugin Package Schema
 // ============================================================================
 
@@ -236,6 +262,9 @@ export const PluginPackageSchema = BasePackageJson.extend({
   blocks: z.optional(z.array(BlockSchema).describe('Workflow blocks provided by this plugin')),
   sparks: z.optional(
     z.array(SparkSchema).describe('Typed event (spark) definitions provided by this plugin')
+  ),
+  bricks: z.optional(
+    z.array(BrickSchema).describe('Dashboard bricks provided by this plugin')
   ),
   icon: z.optional(z.string().describe('Path to plugin icon (PNG/SVG, relative to package root)')),
   preferences: z.optional(

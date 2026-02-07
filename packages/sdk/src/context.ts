@@ -7,24 +7,40 @@
 import { type Client, createClient, type Json } from '@brika/ipc';
 import {
   blockEmit,
+  brickInstanceAction as brickInstanceActionMsg,
   emitSpark as emitSparkMsg,
   log as logMsg,
+  mountBrickInstance,
   ping,
   preferences as preferencesMsg,
   pushInput,
   registerBlock,
+  registerBrickType as registerBrickTypeMsg,
   registerSpark as registerSparkMsg,
+  resizeBrickInstance,
   type SparkEvent,
   sparkEvent as sparkEventMsg,
   startBlock,
   stopBlock,
   subscribeSpark as subscribeSparkMsg,
   uninstall as uninstallMsg,
+  unmountBrickInstance,
   unsubscribeSpark as unsubscribeSparkMsg,
+  updateBrickConfig,
+  patchBrickInstance as patchBrickInstanceMsg,
 } from '@brika/ipc/contract';
 import type { Serializable } from '@brika/serializable';
+import type {
+  BrickActionHandler,
+  BrickInstanceContext,
+  CompiledBrickType,
+  ComponentNode,
+  Mutation,
+} from '@brika/ui-kit';
 import type { BlockDefinition } from './blocks';
 import type { BlockInstance, CompiledReactiveBlock } from './blocks/reactive-define';
+import { _beginRender, _cleanupEffects, _createState, _endRender, type BrickState } from './brick-hooks';
+import { reconcile } from './reconciler';
 import type { AnyObj } from './types';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -52,11 +68,31 @@ interface SparkDecl {
   description?: string;
 }
 
+interface BrickDecl {
+  id: string;
+  name?: string;
+  description?: string;
+  category?: string;
+  icon?: string;
+  color?: string;
+}
+
 interface Manifest {
   name: string;
   version: string;
   blocks?: BlockDecl[];
   sparks?: SparkDecl[];
+  bricks?: BrickDecl[];
+}
+
+interface BrickInstanceState {
+  instanceId: string;
+  brickTypeId: string;
+  w: number;
+  h: number;
+  config: Record<string, unknown>;
+  hookState: BrickState;
+  prevBody: ComponentNode[];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -93,6 +129,10 @@ class Context {
   readonly #sparks = new Set<string>();
   readonly #sparkSubscriptions = new Map<string, (event: SparkEvent) => void>();
   #sparkSubIdCounter = 0;
+  readonly #declaredBricks: Set<string>;
+  readonly #brickTypes = new Map<string, CompiledBrickType>();
+  readonly #brickInstances = new Map<string, BrickInstanceState>();
+  readonly #brickPatchTimers = new Map<string, Timer>();
   readonly #initHandlers = new Set<InitHandler>();
   readonly #stopHandlers = new Set<StopHandler>();
   readonly #uninstallHandlers = new Set<UninstallHandler>();
@@ -107,6 +147,7 @@ class Context {
     this.#declaredBlocks = new Set(this.#manifest.blocks?.map((b) => b.id) ?? []);
     this.#blockMeta = new Map(this.#manifest.blocks?.map((b) => [b.id, b]));
     this.#declaredSparks = new Set(this.#manifest.sparks?.map((s) => s.id) ?? []);
+    this.#declaredBricks = new Set(this.#manifest.bricks?.map((c) => c.id) ?? []);
 
     this.#setupIpc();
     process.nextTick(() => !this.#started && this.start());
@@ -251,6 +292,126 @@ class Context {
     return { id };
   }
 
+  // ─── Bricks ───────────────────────────────────────────────────────────────
+
+  /**
+   * Register a brick type with the hub.
+   * No rendering happens yet — the hub will send mountBrickInstance when needed.
+   */
+  registerBrickType(brick: CompiledBrickType): void {
+    const { id } = brick.spec;
+    if (!this.#declaredBricks.has(id)) {
+      throw new Error(
+        `Brick "${id}" not in package.json. Add: "bricks": [{"id": "${id}"}]`
+      );
+    }
+    if (this.#brickTypes.has(id)) throw new Error(`Brick type "${id}" already registered`);
+
+    this.#brickTypes.set(id, brick);
+    this.#client.send(registerBrickTypeMsg, {
+      brickType: {
+        id,
+        families: brick.spec.families,
+        minSize: brick.spec.minSize,
+        maxSize: brick.spec.maxSize,
+        config: brick.spec.config as unknown[] | undefined,
+      },
+    });
+  }
+
+  /**
+   * Send debounced mutations for a brick instance to the hub.
+   * @internal
+   */
+  patchBrickInstance(instanceId: string, mutations: Mutation[]): void {
+    if (!this.#brickInstances.has(instanceId)) return;
+
+    const existing = this.#brickPatchTimers.get(instanceId);
+    if (existing) clearTimeout(existing);
+
+    const timer = setTimeout(() => {
+      this.#brickPatchTimers.delete(instanceId);
+      this.#client.send(patchBrickInstanceMsg, {
+        instanceId,
+        mutations: mutations as unknown[],
+      });
+    }, 50);
+    this.#brickPatchTimers.set(instanceId, timer);
+  }
+
+  #renderInstance(state: BrickInstanceState, immediate = false): void {
+    const brickType = this.#brickTypes.get(state.brickTypeId);
+    if (!brickType) return;
+
+    state.hookState.brickSize = { width: state.w, height: state.h };
+    state.hookState.config = state.config;
+    state.hookState.configKeys ??= new Set(brickType.spec.config?.map((c) => c.name));
+    _beginRender(state.hookState);
+    try {
+      const ctx: BrickInstanceContext = {
+        instanceId: state.instanceId,
+        config: state.config,
+      };
+      const result = brickType.component(ctx);
+      const body: ComponentNode[] = Array.isArray(result) ? result : [result];
+      const mutations = reconcile(state.prevBody, body);
+      if (mutations.length > 0) {
+        state.prevBody = body;
+        if (immediate) {
+          // Send immediately — skip debounce for initial render
+          this.#brickPatchTimers.delete(state.instanceId);
+          this.#client.send(patchBrickInstanceMsg, {
+            instanceId: state.instanceId,
+            mutations: mutations as unknown[],
+          });
+        } else {
+          this.patchBrickInstance(state.instanceId, mutations);
+        }
+      }
+    } catch (err) {
+      console.error(`[brick:${state.brickTypeId}] Render error in instance ${state.instanceId}:`, err);
+    } finally {
+      _endRender();
+    }
+  }
+
+  #mountInstance(instanceId: string, brickTypeId: string, w: number, h: number, config: Record<string, unknown>): void {
+    if (this.#brickInstances.has(instanceId)) return;
+
+    const brickType = this.#brickTypes.get(brickTypeId);
+    if (!brickType) return;
+
+    const state: BrickInstanceState = {
+      instanceId,
+      brickTypeId,
+      w,
+      h,
+      config,
+      hookState: _createState(() => this.#renderInstance(state)),
+      prevBody: [],
+    };
+
+    this.#brickInstances.set(instanceId, state);
+
+    // Initial render — send immediately (no debounce) so body is available ASAP
+    this.#renderInstance(state, true);
+  }
+
+  #unmountInstance(instanceId: string): void {
+    const state = this.#brickInstances.get(instanceId);
+    if (!state) return;
+
+    _cleanupEffects(state.hookState);
+
+    const timer = this.#brickPatchTimers.get(instanceId);
+    if (timer) {
+      clearTimeout(timer);
+      this.#brickPatchTimers.delete(instanceId);
+    }
+
+    this.#brickInstances.delete(instanceId);
+  }
+
   #setupIpc() {
     this.#client.implement(ping, ({ ts }) => ({ ts }));
 
@@ -324,6 +485,45 @@ class Context {
       }
     });
 
+    // ─── Brick Instance Lifecycle ───
+    this.#client.on(mountBrickInstance, ({ instanceId, brickTypeId, w, h, config }) => {
+      // Extract local type ID from full type (pluginName:brickId)
+      const colonIndex = brickTypeId.indexOf(':');
+      const localId = colonIndex >= 0 ? brickTypeId.slice(colonIndex + 1) : brickTypeId;
+      this.#mountInstance(instanceId, localId, w, h, config as Record<string, unknown>);
+    });
+
+    this.#client.on(resizeBrickInstance, ({ instanceId, w, h }) => {
+      const state = this.#brickInstances.get(instanceId);
+      if (!state) return;
+      state.w = w;
+      state.h = h;
+      this.#renderInstance(state);
+    });
+
+    this.#client.on(updateBrickConfig, ({ instanceId, config }) => {
+      const state = this.#brickInstances.get(instanceId);
+      if (!state) return;
+      state.config = config as Record<string, unknown>;
+      state.hookState.config = state.config;
+      this.#renderInstance(state);
+    });
+
+    this.#client.on(unmountBrickInstance, ({ instanceId }) => {
+      this.#unmountInstance(instanceId);
+    });
+
+    this.#client.on(brickInstanceActionMsg, ({ instanceId, actionId, payload }) => {
+      const state = this.#brickInstances.get(instanceId);
+      if (!state) return;
+
+      const ref = state.hookState.actionRefs.get(actionId);
+      if (ref) {
+        ref.current(payload as Record<string, unknown> | undefined);
+        this.#renderInstance(state);
+      }
+    });
+
     // Handle uninstall - runs before stop for cleanup specific to uninstall
     this.#client.on(uninstallMsg, async () => {
       for (const h of this.#uninstallHandlers) {
@@ -341,6 +541,11 @@ class Context {
         instance.stop();
       }
       this.#blockInstances.clear();
+
+      // Unmount all brick instances
+      for (const instanceId of [...this.#brickInstances.keys()]) {
+        this.#unmountInstance(instanceId);
+      }
 
       for (const h of this.#stopHandlers) await h();
     });

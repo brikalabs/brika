@@ -1,0 +1,29 @@
+{
+  "title": "Dashboard",
+  "subtitle": "Your bricks at a glance",
+  "empty": "No bricks yet",
+  "emptyHint": "Add a brick to get started.",
+  "addBrick": "Add Brick",
+  "addFirstBrick": "Add your first brick",
+  "addSheet": {
+    "title": "Add Brick",
+    "description": "Choose a brick to add to your dashboard.",
+    "empty": "No brick types available. Install a plugin that provides bricks."
+  },
+  "config": {
+    "title": "Configure Brick",
+    "description": "Edit this brick instance's configuration.",
+    "noOptions": "This brick type has no configurable options."
+  },
+  "dashboard": {
+    "new": "New Dashboard",
+    "newDescription": "Create a new dashboard to organize your bricks.",
+    "edit": "Edit Dashboard",
+    "editDescription": "Customize your dashboard's name and icon.",
+    "delete": "Delete Dashboard",
+    "deleteDescription": "This will permanently delete this dashboard and remove all its bricks. This action cannot be undone.",
+    "deleteConfirm": "Delete",
+    "icon": "Icon",
+    "iconHint": "Enter a Lucide icon name (e.g. home, chart-bar, settings)."
+  }
+}

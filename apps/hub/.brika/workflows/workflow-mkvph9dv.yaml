@@ -23,7 +23,6 @@ blocks:
     inputs:
       in: clock-mkvphk5f-2:tick
     outputs:
-      b: end-mkvphr2j-5:in
       a: end-mkvphpeu-4:in
   - id: end-mkvphpeu-4
     type: "@brika/blocks-builtin:end"
@@ -34,12 +33,3 @@ blocks:
       status: failure
     inputs:
       in: split-mkvphm94-3:a
-  - id: end-mkvphr2j-5
-    type: "@brika/blocks-builtin:end"
-    position:
-      x: 169
-      y: 373
-    config:
-      status: success
-    inputs:
-      in: split-mkvphm94-3:b

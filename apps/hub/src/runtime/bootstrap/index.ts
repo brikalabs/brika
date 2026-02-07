@@ -8,4 +8,5 @@ export * from './plugin-loader';
 // Plugins
 export * from './plugins';
 // Loaders
+export * from './dashboards-loader';
 export * from './workflows-loader';

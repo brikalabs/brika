@@ -3,6 +3,7 @@ export { InstallPluginFormFields } from './InstallPluginFormFields';
 export { getPhaseLabel } from './install-progress-utils';
 export { PluginBlocksList } from './PluginBlocksList';
 export { PluginCard } from './PluginCard';
+export { PluginBricksList } from './PluginBricksList';
 export { PluginCardSkeleton } from './PluginCardSkeleton';
 export { PluginConfigForm } from './PluginConfigForm';
 export { PluginDetailHeader } from './PluginDetailHeader';
