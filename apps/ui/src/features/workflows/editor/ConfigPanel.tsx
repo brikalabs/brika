@@ -878,7 +878,10 @@ export function ConfigPanel({
                   <div
                     key={v.name}
                     className="flex cursor-pointer items-center justify-between rounded-md bg-muted/50 p-2 text-xs transition-colors hover:bg-muted"
+                    role="button"
+                    tabIndex={0}
                     onClick={() => navigator.clipboard.writeText(`{{ ${v.name} }}`)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigator.clipboard.writeText(`{{ ${v.name} }}`); } }}
                     title={t('workflows:editor.panels.clickToCopy')}
                   >
                     <code className="font-mono text-primary">{`{{ ${v.name} }}`}</code>

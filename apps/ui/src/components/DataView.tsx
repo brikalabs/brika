@@ -176,4 +176,4 @@ export function useDataView<T>({ data, isLoading, isEmpty: isEmptyFn }: UseDataV
  * For better type safety, use createDataView<T>() instead.
  */
 // biome-ignore lint/suspicious/noShadowRestrictedNames: intentional name for component pattern
-export const DataView = createDataView<unknown>();
+export const DataView = createDataView<unknown>(); // NOSONAR — intentional shadowing of global DataView

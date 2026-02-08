@@ -149,7 +149,7 @@ function TreeNodeItem({
 
         {getIcon()}
 
-        <span className="flex-1 truncate font-mono text-sm" onClick={handleInsert}>
+        <span className="flex-1 truncate font-mono text-sm" role="button" tabIndex={0} onClick={handleInsert} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleInsert(); } }}>
           {node.name}
         </span>
 

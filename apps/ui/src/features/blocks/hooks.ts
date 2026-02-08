@@ -28,7 +28,7 @@ export function useBlocksFilters(blockTypes: BlockDefinition[]) {
       pIds.add(block.pluginId);
       cats.add(block.category || 'other');
     }
-    return { pluginIds: [...pIds], categories: [...cats].sort() };
+    return { pluginIds: [...pIds], categories: [...cats].sort((a, b) => a.localeCompare(b)) };
   }, [blockTypes]);
 
   // Filter blocks

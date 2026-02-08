@@ -67,7 +67,7 @@ export function PluginStoreCard({ plugin }: Readonly<PluginStoreCardProps>) {
             </div>
 
             {/* Install Button */}
-            <div className="flex shrink-0" onClick={(e) => e.preventDefault()}>
+            <div className="flex shrink-0" onClick={(e) => e.preventDefault()} onKeyDown={(e) => e.key === 'Enter' && e.preventDefault()} role="presentation">
               <InstallButton plugin={plugin} size="icon" variant="ghost" />
             </div>
           </div>

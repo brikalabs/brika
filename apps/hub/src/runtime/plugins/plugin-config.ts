@@ -59,29 +59,28 @@ export class PluginConfigService {
       // Link preferences are UI-only (buttons/links) — no value to validate
       if (p.type === 'link') continue;
 
-      let s: z.ZodTypeAny;
-      switch (p.type) {
-        case 'text':
-        case 'password':
-          // Required strings must be non-empty
-          s = p.required ? z.string().min(1) : z.string();
-          break;
-        case 'number': {
-          let num = z.number();
-          if (p.min !== undefined) num = num.min(p.min);
-          if (p.max !== undefined) num = num.max(p.max);
-          s = num;
-          break;
-        }
-        case 'checkbox':
-          s = z.boolean();
-          break;
-        case 'dropdown':
-          s = z.enum(p.options.map((o) => o.value) as [string, ...string[]]);
-          break;
-      }
+      const s = this.#zodFieldForPref(p);
       shape[p.name] = p.required ? s : s.optional();
     }
     return z.object(shape).passthrough();
+  }
+
+  #zodFieldForPref(p: PreferenceDefinition): z.ZodTypeAny {
+    switch (p.type) {
+      case 'text':
+      case 'password':
+        // Required strings must be non-empty
+        return p.required ? z.string().min(1) : z.string();
+      case 'number': {
+        let num = z.number();
+        if (p.min !== undefined) num = num.min(p.min);
+        if (p.max !== undefined) num = num.max(p.max);
+        return num;
+      }
+      case 'checkbox':
+        return z.boolean();
+      case 'dropdown':
+        return z.enum(p.options.map((o) => o.value) as [string, ...string[]]);
+    }
   }
 }

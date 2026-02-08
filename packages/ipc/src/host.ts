@@ -91,9 +91,12 @@ export class PluginChannel {
     this.#pipeStderr();
 
     // Monitor exit
+    this.#monitorExit(proc);
+  }
+
+  #monitorExit(proc: Subprocess): void {
     proc.exited.then((code) => {
       if (!this.#disconnected) {
-        // Include recent stderr in error for better debugging
         const stderr = this.#stderrBuffer.join('\n').trim();
         const message = stderr
           ? `Process exited with code ${code}\n${stderr}`

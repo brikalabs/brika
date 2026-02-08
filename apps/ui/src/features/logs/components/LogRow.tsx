@@ -41,7 +41,10 @@ export function LogRow({ log }: Readonly<LogRowProps>) {
       {/* Main log row */}
       <div
         className={`flex items-start gap-3 ${isExpandable ? "cursor-pointer" : ""}`}
+        role={isExpandable ? 'button' : undefined}
+        tabIndex={isExpandable ? 0 : undefined}
         onClick={() => isExpandable && setIsExpanded(!isExpanded)}
+        onKeyDown={(e) => { if (isExpandable && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); setIsExpanded(!isExpanded); } }}
       >
         {/* Expand indicator */}
         <div className="flex w-4 shrink-0 items-center justify-center">

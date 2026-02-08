@@ -32,12 +32,38 @@ interface ProgressStream {
   close: () => void;
 }
 
+function parseSseLine(line: string): OperationProgress | null {
+  if (!line.startsWith('data: ')) return null;
+  try {
+    return JSON.parse(line.slice(6)) as OperationProgress;
+  } catch {
+    return null;
+  }
+}
+
+function processChunk(
+  text: string,
+  onData: (data: OperationProgress) => void
+): void {
+  for (const line of text.split('\n')) {
+    const data = parseSseLine(line);
+    if (data) onData(data);
+  }
+}
+
 function createProgressStream(response: Response): ProgressStream {
   const reader = response.body?.getReader();
   const decoder = new TextDecoder();
   let progressCallback: ((progress: OperationProgress) => void) | null = null;
   let completeResolve: (() => void) | null = null;
   let closed = false;
+
+  const handleData = (data: OperationProgress) => {
+    progressCallback?.(data);
+    if (data.phase === 'complete' || data.phase === 'error') {
+      completeResolve?.();
+    }
+  };
 
   const read = async () => {
     if (!reader || closed) return;
@@ -46,23 +72,7 @@ function createProgressStream(response: Response): ProgressStream {
       while (true) {
         const { value, done } = await reader.read();
         if (done || closed) break;
-
-        const text = decoder.decode(value);
-        const lines = text.split('\n');
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            try {
-              const data = JSON.parse(line.slice(6)) as OperationProgress;
-              progressCallback?.(data);
-
-              if (data.phase === 'complete' || data.phase === 'error') {
-                completeResolve?.();
-              }
-            } catch {
-              // Ignore parse errors
-            }
-          }
-        }
+        processChunk(decoder.decode(value), handleData);
       }
     } catch {
       // Stream closed

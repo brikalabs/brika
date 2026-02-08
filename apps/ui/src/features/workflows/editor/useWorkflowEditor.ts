@@ -144,6 +144,30 @@ function addOriginalTypesToNodes(nodes: Node[]): Node[] {
   });
 }
 
+/** Resolve a single port's type from external sources */
+function resolvePortType(
+  port: BlockPort,
+  data: BlockNodeData,
+  resolverContext: TypeResolverContext
+): string | null {
+  const origType = getOriginal(port as PortWithOriginal);
+  if (!isResolveMarker(origType)) return null;
+
+  const marker = parseResolveMarker(origType!);
+  if (!marker) return null;
+
+  const lookupKey = data.config?.[marker.configField] as string | undefined;
+  if (!lookupKey) return null;
+
+  if (marker.source === 'spark') {
+    const sparks = resolverContext.lookup<SparkEntry[]>('sparks');
+    const spark = sparks?.find((s) => s.type === lookupKey);
+    if (spark?.schema) return jsonSchemaToTypeName(spark.schema);
+  }
+
+  return null;
+}
+
 /** Resolve types from external sources ($resolve: markers) */
 function resolveExternalTypes(
   nodeMap: Map<string, BlockNodeData>,
@@ -153,24 +177,7 @@ function resolveExternalTypes(
 
   for (const [nodeId, data] of nodeMap) {
     for (const port of data.outputs || []) {
-      const origType = getOriginal(port as PortWithOriginal);
-      if (!isResolveMarker(origType)) continue;
-
-      const marker = parseResolveMarker(origType!);
-      if (!marker) continue;
-
-      const lookupKey = data.config?.[marker.configField] as string | undefined;
-      if (!lookupKey) continue;
-
-      let resolvedType: string | null = null;
-      if (marker.source === 'spark') {
-        const sparks = resolverContext.lookup<SparkEntry[]>('sparks');
-        const spark = sparks?.find((s) => s.type === lookupKey);
-        if (spark?.schema) {
-          resolvedType = jsonSchemaToTypeName(spark.schema);
-        }
-      }
-
+      const resolvedType = resolvePortType(port, data, resolverContext);
       if (resolvedType) {
         if (!inferred.has(nodeId)) inferred.set(nodeId, new Map());
         inferred.get(nodeId)!.set(port.id, resolvedType);
@@ -233,6 +240,38 @@ function inferOutputTypeFromInputs(
   return undefined;
 }
 
+/** Process a single node's type inference, returns true if any type changed */
+function inferNodeTypes(
+  nodeId: string,
+  data: BlockNodeData,
+  incoming: Map<string, Map<string, { node: string; port: string }>>,
+  nodeMap: Map<string, BlockNodeData>,
+  inferred: Map<string, Map<string, string>>
+): boolean {
+  const nodeIncoming = incoming.get(nodeId);
+  if (!inferred.has(nodeId)) inferred.set(nodeId, new Map());
+  const nodeInferred = inferred.get(nodeId)!;
+  let changed = false;
+
+  for (const input of data.inputs || []) {
+    const inferredType = inferInputTypeFromConnection(input, nodeId, nodeIncoming, nodeMap, inferred);
+    if (inferredType && nodeInferred.get(input.id) !== inferredType) {
+      nodeInferred.set(input.id, inferredType);
+      changed = true;
+    }
+  }
+
+  for (const output of data.outputs || []) {
+    const inferredType = inferOutputTypeFromInputs(output, data, nodeInferred);
+    if (inferredType && nodeInferred.get(output.id) !== inferredType) {
+      nodeInferred.set(output.id, inferredType);
+      changed = true;
+    }
+  }
+
+  return changed;
+}
+
 /** Propagate types through connections iteratively */
 function propagateTypesIteratively(
   nodeMap: Map<string, BlockNodeData>,
@@ -243,32 +282,8 @@ function propagateTypesIteratively(
     let changed = false;
 
     for (const [nodeId, data] of nodeMap) {
-      const nodeIncoming = incoming.get(nodeId);
-      if (!inferred.has(nodeId)) inferred.set(nodeId, new Map());
-      const nodeInferred = inferred.get(nodeId)!;
-
-      // Infer input types from connected outputs
-      for (const input of data.inputs || []) {
-        const inferredType = inferInputTypeFromConnection(
-          input,
-          nodeId,
-          nodeIncoming,
-          nodeMap,
-          inferred
-        );
-        if (inferredType && nodeInferred.get(input.id) !== inferredType) {
-          nodeInferred.set(input.id, inferredType);
-          changed = true;
-        }
-      }
-
-      // Infer output types from inputs (passthrough)
-      for (const output of data.outputs || []) {
-        const inferredType = inferOutputTypeFromInputs(output, data, nodeInferred);
-        if (inferredType && nodeInferred.get(output.id) !== inferredType) {
-          nodeInferred.set(output.id, inferredType);
-          changed = true;
-        }
+      if (inferNodeTypes(nodeId, data, incoming, nodeMap, inferred)) {
+        changed = true;
       }
     }
 

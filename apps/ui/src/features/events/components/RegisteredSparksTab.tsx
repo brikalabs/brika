@@ -17,8 +17,85 @@ function useSparks() {
   });
 }
 
+function SparkCard({
+  spark,
+  pluginId,
+  onClick,
+}: {
+  spark: RegisteredSpark;
+  pluginId: string;
+  onClick: () => void;
+}) {
+  const { tp } = useLocale();
+
+  return (
+    <Card
+      key={spark.type}
+      interactive
+      className="cursor-pointer p-4"
+      onClick={onClick}
+    >
+      <div className="flex items-start gap-3">
+        <Avatar className="size-10 bg-amber-500/20">
+          <AvatarFallback className="bg-amber-500/20 text-amber-500">
+            <Zap className="size-5" />
+          </AvatarFallback>
+        </Avatar>
+        <div className="min-w-0 flex-1">
+          <div className="truncate font-medium text-sm">
+            {tp(pluginId, `sparks.${spark.id}.name`, spark.name || spark.id)}
+          </div>
+          <div className="truncate font-mono text-muted-foreground text-xs">
+            {spark.type}
+          </div>
+          {spark.description && (
+            <div className="mt-1 line-clamp-2 text-muted-foreground text-xs">
+              {tp(pluginId, `sparks.${spark.id}.description`, spark.description)}
+            </div>
+          )}
+        </div>
+      </div>
+      <div className="mt-3">
+        <SparkSchemaViewer schema={spark.schema} />
+      </div>
+    </Card>
+  );
+}
+
+function SparkPluginGroup({
+  pluginId,
+  sparks,
+  onSelectSpark,
+}: {
+  pluginId: string;
+  sparks: RegisteredSpark[];
+  onSelectSpark: (spark: RegisteredSpark) => void;
+}) {
+  return (
+    <div key={pluginId}>
+      <div className="mb-3 flex items-center gap-2">
+        <Plug className="size-4 text-muted-foreground" />
+        <span className="font-mono text-muted-foreground text-sm">{pluginId}</span>
+        <Badge variant="secondary" className="text-xs">
+          {sparks.length}
+        </Badge>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {sparks.map((spark) => (
+          <SparkCard
+            key={spark.type}
+            spark={spark}
+            pluginId={pluginId}
+            onClick={() => onSelectSpark(spark)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function RegisteredSparksTab() {
-  const { t, tp } = useLocale();
+  const { t } = useLocale();
   const { data: sparks = [], isLoading } = useSparks();
   const [selectedSpark, setSelectedSpark] = useState<RegisteredSpark | null>(null);
   const [emitDialogOpen, setEmitDialogOpen] = useState(false);
@@ -31,6 +108,11 @@ export function RegisteredSparksTab() {
     }
     return grouped;
   }, [sparks]);
+
+  const handleSelectSpark = (spark: RegisteredSpark) => {
+    setSelectedSpark(spark);
+    setEmitDialogOpen(true);
+  };
 
   const View = useDataView({ data: sparks, isLoading });
 
@@ -56,52 +138,12 @@ export function RegisteredSparksTab() {
           {() => (
             <div className="space-y-6">
               {[...sparksByPlugin.entries()].map(([pluginId, pluginSparks]) => (
-                <div key={pluginId}>
-                  <div className="mb-3 flex items-center gap-2">
-                    <Plug className="size-4 text-muted-foreground" />
-                    <span className="font-mono text-muted-foreground text-sm">{pluginId}</span>
-                    <Badge variant="secondary" className="text-xs">
-                      {pluginSparks.length}
-                    </Badge>
-                  </div>
-                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                    {pluginSparks.map((spark) => (
-                      <Card
-                        key={spark.type}
-                        interactive
-                        className="cursor-pointer p-4"
-                        onClick={() => {
-                          setSelectedSpark(spark);
-                          setEmitDialogOpen(true);
-                        }}
-                      >
-                        <div className="flex items-start gap-3">
-                          <Avatar className="size-10 bg-amber-500/20">
-                            <AvatarFallback className="bg-amber-500/20 text-amber-500">
-                              <Zap className="size-5" />
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="min-w-0 flex-1">
-                            <div className="truncate font-medium text-sm">
-                              {tp(pluginId, `sparks.${spark.id}.name`, spark.name || spark.id)}
-                            </div>
-                            <div className="truncate font-mono text-muted-foreground text-xs">
-                              {spark.type}
-                            </div>
-                            {spark.description && (
-                              <div className="mt-1 line-clamp-2 text-muted-foreground text-xs">
-                                {tp(pluginId, `sparks.${spark.id}.description`, spark.description)}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        <div className="mt-3">
-                          <SparkSchemaViewer schema={spark.schema} />
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
-                </div>
+                <SparkPluginGroup
+                  key={pluginId}
+                  pluginId={pluginId}
+                  sparks={pluginSparks}
+                  onSelectSpark={handleSelectSpark}
+                />
               ))}
             </div>
           )}

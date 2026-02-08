@@ -59,15 +59,14 @@ export function scan<T, R>(fn: (acc: R, value: T) => R, seed: R): Operator<T, R>
 
 /** Debounce operator - wait for silence before emitting */
 export function debounce<T>(ms: number): Operator<T, T> {
-  return (source) =>
-    operatorFlow(source, ({ subscribe, push, setTimeout }) => {
-      let cancel: Cleanup | null = null;
-      const handleValue = (v: T) => {
-        cancel?.();
-        cancel = setTimeout(() => push(v), ms);
-      };
-      subscribe(handleValue);
+  function setup({ subscribe, push, setTimeout }: { subscribe: (fn: (v: T) => void) => void; push: (v: T) => void; setTimeout: (fn: () => void, ms: number) => Cleanup }) {
+    let cancel: Cleanup | null = null;
+    subscribe((v) => {
+      cancel?.();
+      cancel = setTimeout(() => push(v), ms);
     });
+  }
+  return (source) => operatorFlow(source, setup);
 }
 
 /** Throttle operator - rate limit emissions */
@@ -87,13 +86,12 @@ export function throttle<T>(ms: number): Operator<T, T> {
 
 /** Delay operator - delay each value by ms */
 export function delay<T>(ms: number): Operator<T, T> {
-  return (source) =>
-    operatorFlow(source, ({ subscribe, push, setTimeout }) => {
-      const handleValue = (v: T) => {
-        setTimeout(() => push(v), ms);
-      };
-      subscribe(handleValue);
+  function setup({ subscribe, push, setTimeout }: { subscribe: (fn: (v: T) => void) => void; push: (v: T) => void; setTimeout: (fn: () => void, ms: number) => Cleanup }) {
+    subscribe((v) => {
+      setTimeout(() => push(v), ms);
     });
+  }
+  return (source) => operatorFlow(source, setup);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -178,26 +176,24 @@ export function sample<T>(trigger: Flow<unknown>): Operator<T, T> {
 
 /** SwitchMap operator - switch to new flow on each value */
 export function switchMap<T, R>(fn: (value: T) => Flow<R>): Operator<T, R> {
-  return (source) =>
-    operatorFlow(source, ({ subscribe, push }) => {
-      let currentUnsub: Cleanup | null = null;
-      const handleValue = (v: T) => {
-        currentUnsub?.();
-        const inner = fn(v);
-        currentUnsub = subscribeRaw(inner, (r) => push(r));
-      };
-      subscribe(handleValue);
+  function setup({ subscribe, push }: { subscribe: (fn: (v: T) => void) => void; push: (v: R) => void }) {
+    let currentUnsub: Cleanup | null = null;
+    subscribe((v) => {
+      currentUnsub?.();
+      const inner = fn(v);
+      currentUnsub = subscribeRaw(inner, (r) => push(r));
     });
+  }
+  return (source) => operatorFlow(source, setup);
 }
 
 /** FlatMap operator - flatten nested flows */
 export function flatMap<T, R>(fn: (value: T) => Flow<R>): Operator<T, R> {
-  return (source) =>
-    operatorFlow(source, ({ subscribe, push }) => {
-      const handleValue = (v: T) => {
-        const inner = fn(v);
-        inner.on((r) => push(r));
-      };
-      subscribe(handleValue);
+  function setup({ subscribe, push }: { subscribe: (fn: (v: T) => void) => void; push: (v: R) => void }) {
+    subscribe((v) => {
+      const inner = fn(v);
+      inner.on((r) => push(r));
     });
+  }
+  return (source) => operatorFlow(source, setup);
 }

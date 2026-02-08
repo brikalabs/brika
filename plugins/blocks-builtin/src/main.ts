@@ -101,8 +101,8 @@ export const condition = defineReactiveBlock(
       in: input(z.generic(), { name: 'Input' }),
     },
     outputs: {
-      then: output(z.passthrough('in'), { name: 'Then' }),
-      else: output(z.passthrough('in'), { name: 'Else' }),
+      pass: output(z.passthrough('in'), { name: 'Then' }),
+      fail: output(z.passthrough('in'), { name: 'Else' }),
     },
     config: z.object({
       field: z.string().describe('Field path to check (e.g., "value", "data.status")'),
@@ -119,9 +119,9 @@ export const condition = defineReactiveBlock(
       log.debug(`Condition: ${config.field} ${config.operator} ${config.value} = ${result}`);
 
       if (result) {
-        outputs.then.emit(data);
+        outputs.pass.emit(data);
       } else {
-        outputs.else.emit(data);
+        outputs.fail.emit(data);
       }
     });
   }

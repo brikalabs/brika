@@ -29,10 +29,11 @@ function ChartTooltip({
 }
 
 export function BrickChart({ node }: { node: ChartNode }) {
+  const gradientId = useId();
+
   if (node.data.length === 0) return null;
 
   const color = node.color ?? 'var(--color-primary)';
-  const gradientId = useId();
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-1">

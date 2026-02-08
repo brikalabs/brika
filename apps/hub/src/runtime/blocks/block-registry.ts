@@ -168,53 +168,43 @@ export class BlockRegistry {
     const blockMap = new Map(blocks.map((b) => [b.id, b]));
 
     for (const conn of connections) {
-      const fromBlock = blockMap.get(conn.from);
-      const toBlock = blockMap.get(conn.to);
-
-      if (!fromBlock) {
-        errors.push(`Unknown source block: ${conn.from}`);
-        continue;
-      }
-      if (!toBlock) {
-        errors.push(`Unknown target block: ${conn.to}`);
-        continue;
-      }
-
-      const fromDef = this.get(fromBlock.type);
-      const toDef = this.get(toBlock.type);
-
-      if (!fromDef) {
-        errors.push(`Unknown block type: ${fromBlock.type}`);
-        continue;
-      }
-      if (!toDef) {
-        errors.push(`Unknown block type: ${toBlock.type}`);
-        continue;
-      }
-
-      const fromPortId = conn.fromPort ?? 'out';
-      const toPortId = conn.toPort ?? 'in';
-
-      const fromPort = fromDef.outputs.find((p) => p.id === fromPortId);
-      const toPort = toDef.inputs.find((p) => p.id === toPortId);
-
-      if (!fromPort) {
-        errors.push(`Block "${fromBlock.id}" has no output port "${fromPortId}"`);
-        continue;
-      }
-      if (!toPort) {
-        errors.push(`Block "${toBlock.id}" has no input port "${toPortId}"`);
-        continue;
-      }
-
-      if (!arePortTypesCompatible(fromPort.typeName, toPort.typeName)) {
-        errors.push(
-          `Type mismatch: ${fromBlock.id}.${fromPortId} (${fromPort.typeName}) → ${toBlock.id}.${toPortId} (${toPort.typeName})`
-        );
-      }
+      this.#validateSingleConnection(conn, blockMap, errors);
     }
 
     return { valid: errors.length === 0, errors: errors.length > 0 ? errors : undefined };
+  }
+
+  #validateSingleConnection(
+    conn: { from: string; fromPort?: string; to: string; toPort?: string },
+    blockMap: Map<string, { id: string; type: string }>,
+    errors: string[]
+  ): void {
+    const fromBlock = blockMap.get(conn.from);
+    const toBlock = blockMap.get(conn.to);
+
+    if (!fromBlock) { errors.push(`Unknown source block: ${conn.from}`); return; }
+    if (!toBlock) { errors.push(`Unknown target block: ${conn.to}`); return; }
+
+    const fromDef = this.get(fromBlock.type);
+    const toDef = this.get(toBlock.type);
+
+    if (!fromDef) { errors.push(`Unknown block type: ${fromBlock.type}`); return; }
+    if (!toDef) { errors.push(`Unknown block type: ${toBlock.type}`); return; }
+
+    const fromPortId = conn.fromPort ?? 'out';
+    const toPortId = conn.toPort ?? 'in';
+
+    const fromPort = fromDef.outputs.find((p) => p.id === fromPortId);
+    const toPort = toDef.inputs.find((p) => p.id === toPortId);
+
+    if (!fromPort) { errors.push(`Block "${fromBlock.id}" has no output port "${fromPortId}"`); return; }
+    if (!toPort) { errors.push(`Block "${toBlock.id}" has no input port "${toPortId}"`); return; }
+
+    if (!arePortTypesCompatible(fromPort.typeName, toPort.typeName)) {
+      errors.push(
+        `Type mismatch: ${fromBlock.id}.${fromPortId} (${fromPort.typeName}) → ${toBlock.id}.${toPortId} (${toPort.typeName})`
+      );
+    }
   }
 
   #notifyListeners(type: string): void {
