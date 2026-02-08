@@ -4,8 +4,9 @@ export interface ImageNode extends BaseNode {
   type: 'image';
   src: string;
   alt?: string;
-  width?: number;
-  height?: number;
+  /** px number or CSS string like "30%" */
+  width?: number | string;
+  height?: number | string;
   fit?: 'cover' | 'contain' | 'fill';
   rounded?: boolean;
   aspectRatio?: string;

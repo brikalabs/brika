@@ -1,8 +1,17 @@
-import type { ComponentNode, GridNode } from '@brika/ui-kit';
+import type { GridNode } from '@brika/ui-kit';
+import { cva } from 'class-variance-authority';
 import { memo } from 'react';
-import { cn } from '@/lib/utils';
 import { type ActionHandler, ComponentNodeRenderer } from './registry';
-import { gapMap } from './shared';
+import { gapVariant } from './shared';
+
+const gridVariants = cva('grid min-h-0', {
+  variants: {
+    gap: gapVariant,
+  },
+  defaultVariants: {
+    gap: 'md',
+  },
+});
 
 export const GridRenderer = memo(function GridRenderer({
   node,
@@ -11,15 +20,16 @@ export const GridRenderer = memo(function GridRenderer({
   node: GridNode;
   onAction?: ActionHandler;
 }) {
-  const children = node.children as ComponentNode[];
-  const cols = node.columns ?? 2;
+  const gridStyle: React.CSSProperties = node.autoFit
+    ? { gridTemplateColumns: `repeat(auto-fit, minmax(${node.minColumnWidth ?? 120}px, 1fr))` }
+    : { gridTemplateColumns: `repeat(${node.columns ?? 2}, minmax(0, 1fr))` };
 
   return (
     <div
-      className={cn('grid min-h-0 shrink-0', gapMap[node.gap ?? 'md'])}
-      style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
+      className={gridVariants({ gap: node.gap })}
+      style={gridStyle}
     >
-      {children.map((child, i) => (
+      {node.children.map((child, i) => (
         <ComponentNodeRenderer key={i} node={child} onAction={onAction} />
       ))}
     </div>

@@ -48,7 +48,7 @@ export type Handler<S extends Schema = Schema, R = unknown> = (
 /**
  * Supported HTTP methods.
  */
-export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'ALL';
 
 /**
  * Internal route definition.

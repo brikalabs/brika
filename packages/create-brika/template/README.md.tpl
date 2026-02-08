@@ -18,21 +18,34 @@ plugins:
     enabled: true
 ```
 
+{{#blocks}}
 ## Blocks
 
-### {{blockNamePascal}}
+### {{pascal}}
 
 {{description}}
 
-**Inputs:**
-- `in` - Input data to process
+**Inputs:** `in` — Input data to process
 
-**Outputs:**
-- `out` - Processed output
+**Outputs:** `out` — Processed output
 
-**Configuration:**
-- `enabled` (boolean) - Enable processing (default: true)
+{{/blocks}}
+{{#bricks}}
+## Bricks
 
+### {{pascal}}
+
+Dashboard brick with responsive layouts for small, medium, and large sizes.
+
+{{/bricks}}
+{{#sparks}}
+## Sparks
+
+### {{pascal}}
+
+Event emitted by this plugin.
+
+{{/sparks}}
 ## Development
 
 ```bash

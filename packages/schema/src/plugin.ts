@@ -194,6 +194,12 @@ const DropdownPreference = BasePreference.extend({
   options: z.array(DropdownOption).describe('Available options'),
 });
 
+/** Link preference — renders as a button that opens a URL */
+const LinkPreference = BasePreference.extend({
+  type: z.literal('link'),
+  url: z.string().describe('URL to open. Relative paths (starting with /) resolve to plugin routes.'),
+});
+
 /** Discriminated union of all preference types */
 const PreferenceSchema = z.discriminatedUnion('type', [
   TextPreference,
@@ -201,6 +207,7 @@ const PreferenceSchema = z.discriminatedUnion('type', [
   NumberPreference,
   CheckboxPreference,
   DropdownPreference,
+  LinkPreference,
 ]);
 
 export type PreferenceSchema = z.infer<typeof PreferenceSchema>;

@@ -1,0 +1,35 @@
+{
+  "name": "Spotify Connect",
+  "description": "Contrôlez la lecture Spotify et affichez les pochettes d'album sur votre tableau de bord",
+  "preferences": {
+    "clientId": {
+      "label": "ID Client",
+      "description": "ID client de l'application Spotify Developer (créez-en un sur developer.spotify.com)"
+    },
+    "connect": {
+      "title": "Se connecter à Spotify",
+      "description": "Autoriser BRIKA à accéder à votre compte Spotify"
+    },
+    "developer": {
+      "title": "Portail développeur Spotify",
+      "description": "Créez et gérez vos identifiants d'application Spotify"
+    }
+  },
+  "bricks": {
+    "player": {
+      "name": "Lecteur Spotify",
+      "description": "Contrôlez Spotify et affichez les pochettes d'album",
+      "config": {
+        "refreshInterval": {
+          "label": "Intervalle de rafraîchissement (ms)"
+        }
+      }
+    }
+  },
+  "sparks": {
+    "track-changed": {
+      "name": "Piste modifiée",
+      "description": "Émis lorsque la piste en cours de lecture change"
+    }
+  }
+}

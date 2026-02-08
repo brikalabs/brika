@@ -218,6 +218,12 @@ export class PluginLifecycle {
         },
         onBrickInstancePatch: (instanceId, mutations) =>
           this.#eventHandler.patchBrickInstance(instanceId, mutations),
+        onRoute: (method, path) =>
+          this.#eventHandler.registerRoute(metadata.name, method, path),
+        onUpdatePreference: (key, value) => {
+          const current = this.#pluginConfig.getConfig(metadata.name);
+          this.#pluginConfig.setConfig(metadata.name, { ...current, [key]: value });
+        },
         onHeartbeatFailed: (p, silentMs) => this.#handleHeartbeatFailed(p, silentMs),
         onDisconnect: (p, error) => this.#handleDisconnect(p.name, error),
         onMetrics: (p, cpu, memory) => {

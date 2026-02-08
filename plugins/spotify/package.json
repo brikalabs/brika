@@ -1,0 +1,68 @@
+{
+  "$schema": "https://schema.brika.dev/plugin.schema.json",
+  "name": "@brika/plugin-spotify",
+  "version": "0.1.0",
+  "description": "Spotify Connect player for BRIKA dashboards",
+  "author": "BRIKA Team",
+  "icon": "./icon.svg",
+  "type": "module",
+  "main": "./src/index.tsx",
+  "exports": {
+    ".": "./src/index.tsx"
+  },
+  "engines": {
+    "brika": "^0.2.0"
+  },
+  "scripts": {
+    "link": "bun link",
+    "tsc": "bunx --bun tsc --noEmit"
+  },
+  "preferences": [
+    {
+      "name": "clientId",
+      "type": "text",
+      "required": true
+    },
+    {
+      "name": "connect",
+      "type": "link",
+      "url": "/api/oauth/spotify/authorize"
+    },
+    {
+      "name": "developer",
+      "type": "link",
+      "url": "https://developer.spotify.com"
+    }
+  ],
+  "bricks": [
+    {
+      "id": "player",
+      "name": "Spotify Player",
+      "description": "Control Spotify playback and display album art",
+      "category": "media",
+      "icon": "music",
+      "color": "#1DB954",
+      "config": [
+        {
+          "type": "number",
+          "name": "refreshInterval",
+          "label": "Refresh interval (ms)",
+          "default": 3000,
+          "min": 1000,
+          "max": 30000,
+          "step": 1000
+        }
+      ]
+    }
+  ],
+  "sparks": [
+    {
+      "id": "track-changed",
+      "name": "Track Changed",
+      "description": "Emitted when the playing track changes"
+    }
+  ],
+  "dependencies": {
+    "@brika/sdk": "workspace:*"
+  }
+}

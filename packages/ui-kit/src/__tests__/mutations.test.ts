@@ -3,18 +3,23 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import type { ComponentNode, Mutation } from '../descriptors';
+import type { BoxNode, ButtonNode, ComponentNode, Mutation, StackNode, TextNode } from '../descriptors';
 import { applyMutations } from '../mutations';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-const text = (content: string): ComponentNode =>
-  ({ type: 'text', content } as ComponentNode);
+const text = (content: string): TextNode => ({ type: 'text', content });
 
-const stack = (children: ComponentNode[]): ComponentNode =>
-  ({ type: 'stack', direction: 'vertical', children } as ComponentNode);
+const stack = (children: ComponentNode[]): StackNode => ({ type: 'stack', direction: 'vertical', children });
+
+/** Extract children from a container node at a given index in the result array. */
+function childrenAt(nodes: ComponentNode[], index: number): ComponentNode[] {
+  const node = nodes[index];
+  if (node && 'children' in node) return node.children;
+  throw new Error(`Node at index ${index} has no children`);
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Tests
@@ -29,7 +34,7 @@ describe('applyMutations', () => {
       ]);
 
       expect(result).toHaveLength(2);
-      expect((result[1] as any).content).toBe('B');
+      expect(result[1]).toHaveProperty('content', 'B');
     });
 
     test('inserts node at index', () => {
@@ -39,9 +44,9 @@ describe('applyMutations', () => {
       ]);
 
       expect(result).toHaveLength(3);
-      expect((result[0] as any).content).toBe('A');
-      expect((result[1] as any).content).toBe('B');
-      expect((result[2] as any).content).toBe('C');
+      expect(result[0]).toHaveProperty('content', 'A');
+      expect(result[1]).toHaveProperty('content', 'B');
+      expect(result[2]).toHaveProperty('content', 'C');
     });
 
     test('inserts at beginning', () => {
@@ -51,8 +56,22 @@ describe('applyMutations', () => {
       ]);
 
       expect(result).toHaveLength(2);
-      expect((result[0] as any).content).toBe('A');
-      expect((result[1] as any).content).toBe('B');
+      expect(result[0]).toHaveProperty('content', 'A');
+      expect(result[1]).toHaveProperty('content', 'B');
+    });
+  });
+
+  describe('replace', () => {
+    test('replaces node at index in-place', () => {
+      const button: ButtonNode = { type: 'button', label: 'Click' };
+      const body = [text('A'), text('B')];
+      const result = applyMutations(body, [
+        { op: 'replace', path: '0', node: button },
+      ]);
+
+      expect(result).toHaveLength(2);
+      expect(result[0]).toBe(button);
+      expect(result[1]).toHaveProperty('content', 'B');
     });
   });
 
@@ -63,8 +82,8 @@ describe('applyMutations', () => {
         { op: 'update', path: '0', props: { content: 'Updated' } },
       ]);
 
-      expect((result[0] as any).content).toBe('Updated');
-      expect((result[0] as any).type).toBe('text');
+      expect(result[0]).toHaveProperty('content', 'Updated');
+      expect(result[0]).toHaveProperty('type', 'text');
     });
 
     test('adds new props without removing existing ones', () => {
@@ -73,8 +92,27 @@ describe('applyMutations', () => {
         { op: 'update', path: '0', props: { variant: 'heading' } },
       ]);
 
-      expect((result[0] as any).content).toBe('Hello');
-      expect((result[0] as any).variant).toBe('heading');
+      expect(result[0]).toHaveProperty('content', 'Hello');
+      expect(result[0]).toHaveProperty('variant', 'heading');
+    });
+
+    test('removes props listed in removed array', () => {
+      const box: BoxNode = { type: 'box', blur: 'sm', padding: 'lg', children: [] };
+      const result = applyMutations([box], [
+        { op: 'update', path: '0', props: {}, removed: ['blur'] },
+      ]);
+
+      expect(result[0]).not.toHaveProperty('blur');
+      expect(result[0]).toHaveProperty('padding', 'lg');
+    });
+
+    test('preserves null as a legitimate prop value', () => {
+      const body = [text('Hello')];
+      const result = applyMutations(body, [
+        { op: 'update', path: '0', props: { color: null } },
+      ]);
+
+      expect(result[0]).toHaveProperty('color', null);
     });
   });
 
@@ -86,8 +124,8 @@ describe('applyMutations', () => {
       ]);
 
       expect(result).toHaveLength(2);
-      expect((result[0] as any).content).toBe('A');
-      expect((result[1] as any).content).toBe('C');
+      expect(result[0]).toHaveProperty('content', 'A');
+      expect(result[1]).toHaveProperty('content', 'C');
     });
 
     test('removes first node', () => {
@@ -97,7 +135,7 @@ describe('applyMutations', () => {
       ]);
 
       expect(result).toHaveLength(1);
-      expect((result[0] as any).content).toBe('B');
+      expect(result[0]).toHaveProperty('content', 'B');
     });
   });
 
@@ -108,8 +146,8 @@ describe('applyMutations', () => {
         { op: 'update', path: '0.0', props: { content: 'updated-inner' } },
       ]);
 
-      const children = (result[0] as any).children;
-      expect(children[0].content).toBe('updated-inner');
+      const children = childrenAt(result, 0);
+      expect(children[0]).toHaveProperty('content', 'updated-inner');
     });
 
     test('creates a nested child', () => {
@@ -118,9 +156,9 @@ describe('applyMutations', () => {
         { op: 'create', path: '0.1', node: text('second') },
       ]);
 
-      const children = (result[0] as any).children;
+      const children = childrenAt(result, 0);
       expect(children).toHaveLength(2);
-      expect(children[1].content).toBe('second');
+      expect(children[1]).toHaveProperty('content', 'second');
     });
 
     test('removes a nested child', () => {
@@ -129,9 +167,9 @@ describe('applyMutations', () => {
         { op: 'remove', path: '0.0' },
       ]);
 
-      const children = (result[0] as any).children;
+      const children = childrenAt(result, 0);
       expect(children).toHaveLength(1);
-      expect(children[0].content).toBe('B');
+      expect(children[0]).toHaveProperty('content', 'B');
     });
   });
 
@@ -163,7 +201,7 @@ describe('applyMutations', () => {
       // Parent container is a new reference
       expect(result[0]).not.toBe(body[0]);
       // Unchanged sibling keeps reference
-      expect((result[0] as any).children[0]).toBe(child0);
+      expect(childrenAt(result, 0)[0]).toBe(child0);
     });
   });
 
@@ -179,9 +217,9 @@ describe('applyMutations', () => {
       const result = applyMutations(body, mutations);
 
       expect(result).toHaveLength(3);
-      expect((result[0] as any).content).toBe('A2');
-      expect((result[1] as any).content).toBe('B');
-      expect((result[2] as any).content).toBe('C');
+      expect(result[0]).toHaveProperty('content', 'A2');
+      expect(result[1]).toHaveProperty('content', 'B');
+      expect(result[2]).toHaveProperty('content', 'C');
     });
   });
 

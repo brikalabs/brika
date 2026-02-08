@@ -40,12 +40,13 @@ export interface BrickInstanceContext {
 }
 
 /** Action handler receives optional payload from the UI */
-export type BrickActionHandler = (payload?: Record<string, unknown>) => void;
+export type { ActionHandler as BrickActionHandler } from './nodes';
 
 /**
  * Brick component function — called on every render.
  * Receives instance context (config, instanceId).
- * Use hooks (useState, useEffect, useAction, useBrickSize, etc.) inside.
+ * Use hooks (useState, useEffect, useBrickSize, etc.) inside.
+ * Pass handler functions directly to component props (onToggle, onPress, onChange).
  * Returns JSX / ComponentNode(s) describing the brick body.
  */
 export type BrickComponent = (ctx: BrickInstanceContext) => ComponentNode | ComponentNode[];

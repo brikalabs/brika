@@ -74,6 +74,8 @@ describe('PluginProcess', () => {
       onHeartbeatFailed: mock(),
       onDisconnect: mock(),
       onMetrics: mock(),
+      onRoute: mock(),
+      onUpdatePreference: mock(),
     };
 
     config = {

@@ -2,8 +2,8 @@
  * Tests for create-brika utility functions
  */
 
-import { describe, expect, mock, test } from 'bun:test';
-import { getGitUser, renderTemplate, runCommand, toCamelCase, toPascalCase } from '../utils';
+import { describe, expect, test } from 'bun:test';
+import { getGitUser, runCommand, toCamelCase, toPascalCase } from '../utils';
 
 describe('utils', () => {
   describe('toPascalCase', () => {
@@ -39,43 +39,6 @@ describe('utils', () => {
 
     test('handles empty string', () => {
       expect(toCamelCase('')).toBe('');
-    });
-  });
-
-  describe('renderTemplate', () => {
-    test('replaces single variable', () => {
-      const template = 'Hello, {{name}}!';
-      const vars = { name: 'World' };
-
-      expect(renderTemplate(template, vars)).toBe('Hello, World!');
-    });
-
-    test('replaces multiple variables', () => {
-      const template = '{{greeting}}, {{name}}!';
-      const vars = { greeting: 'Hello', name: 'World' };
-
-      expect(renderTemplate(template, vars)).toBe('Hello, World!');
-    });
-
-    test('replaces same variable multiple times', () => {
-      const template = '{{name}} says {{name}}';
-      const vars = { name: 'Alice' };
-
-      expect(renderTemplate(template, vars)).toBe('Alice says Alice');
-    });
-
-    test('leaves unknown variables as empty', () => {
-      const template = 'Hello, {{unknown}}!';
-      const vars = { name: 'World' };
-
-      expect(renderTemplate(template, vars)).toBe('Hello, !');
-    });
-
-    test('handles template with no variables', () => {
-      const template = 'Hello, World!';
-      const vars = { name: 'Test' };
-
-      expect(renderTemplate(template, vars)).toBe('Hello, World!');
     });
   });
 

@@ -13,8 +13,11 @@ import {
   ready,
   registerBlock,
   registerBrickType,
+  registerRoute,
   registerSpark,
   resizeBrickInstance,
+  routeRequest,
+  type RouteResponseType,
   type SparkEvent as SparkEventType,
   sparkEvent,
   startBlock,
@@ -23,6 +26,7 @@ import {
   unmountBrickInstance,
   unsubscribeSpark,
   updateBrickConfig,
+  updatePreference,
 } from '@brika/ipc/contract';
 import type { BrickFamily } from '@brika/shared';
 import type { PluginPackageSchema } from '@brika/schema';
@@ -60,6 +64,8 @@ export interface PluginProcessCallbacks {
   onSparkUnsubscribe: (subscriptionId: string) => void;
   onBrickType: (brickType: BrickTypeRegistration) => void;
   onBrickInstancePatch: (instanceId: string, mutations: unknown[]) => void;
+  onRoute: (method: string, path: string) => void;
+  onUpdatePreference: (key: string, value: unknown) => void;
   onHeartbeatFailed: (process: PluginProcess, silentMs: number) => void;
   onDisconnect: (process: PluginProcess, error?: Error) => void;
   onMetrics?: (process: PluginProcess, cpu: number, memory: number) => void;
@@ -188,7 +194,7 @@ export class PluginProcess {
    */
   sendPreferences(values: Record<string, unknown>): void {
     if (this.#stopped) return;
-    this.#channel.send(preferences, { values });
+    this.#channel.send(preferences, { values: { ...values, __plugin_uid: this.uid } });
   }
 
   /**
@@ -237,6 +243,25 @@ export class PluginProcess {
   sendBrickInstanceAction(instanceId: string, brickTypeId: string, actionId: string, payload?: Json): void {
     if (this.#stopped) return;
     this.#channel.send(brickInstanceAction, { instanceId, brickTypeId, actionId, payload });
+  }
+
+  /**
+   * Forward an HTTP request to the plugin and return its response
+   */
+  async sendRouteRequest(
+    routeId: string,
+    method: string,
+    path: string,
+    query: Record<string, string>,
+    headers: Record<string, string>,
+    body?: Json,
+  ): Promise<RouteResponseType> {
+    if (this.#stopped) return { status: 503 };
+    try {
+      return await this.#channel.call(routeRequest, { routeId, method, path, query, headers, body });
+    } catch {
+      return { status: 502, body: { error: 'Plugin route handler failed' } };
+    }
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -366,6 +391,14 @@ export class PluginProcess {
 
     this.#channel.on(patchBrickInstance, ({ instanceId, mutations }) => {
       this.callbacks.onBrickInstancePatch(instanceId, mutations as unknown[]);
+    });
+
+    this.#channel.on(registerRoute, ({ method, path }) => {
+      this.callbacks.onRoute(method, path);
+    });
+
+    this.#channel.on(updatePreference, ({ key, value }) => {
+      this.callbacks.onUpdatePreference(key, value);
     });
   }
 

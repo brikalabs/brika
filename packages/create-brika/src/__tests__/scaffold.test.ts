@@ -5,7 +5,8 @@
 import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from 'bun:test';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { type ScaffoldOptions, scaffold } from '../scaffold';
+import { parseCondition, render, resolveFilename } from '../render';
+import { type ScaffoldOptions, createTemplateData, scaffold } from '../scaffold';
 
 // Mock @clack/prompts
 const mockSpinner = {
@@ -34,26 +35,94 @@ mock.module('picocolors', () => ({
   },
 }));
 
+// ─── Render engine unit tests ───────────────────────────────────────────────
+
+describe('render', () => {
+  test('interpolates variables', () => {
+    expect(render('Hello {{name}}!', { name: 'World' })).toBe('Hello World!');
+  });
+
+  test('removes false conditional blocks', () => {
+    const tpl = 'before\n{{#show}}\nvisible\n{{/show}}\nafter\n';
+    expect(render(tpl, { show: false })).toBe('before\nafter\n');
+  });
+
+  test('keeps true conditional blocks', () => {
+    const tpl = 'before\n{{#show}}\nvisible\n{{/show}}\nafter\n';
+    expect(render(tpl, { show: true })).toBe('before\nvisible\nafter\n');
+  });
+
+  test('interpolates variables inside conditional blocks', () => {
+    const tpl = '{{#show}}\nHello {{name}}\n{{/show}}\n';
+    expect(render(tpl, { name: 'World', show: true })).toBe('Hello World\n');
+  });
+
+  test('collapses triple+ blank lines', () => {
+    const tpl = 'a\n\n{{#x}}\nremoved\n{{/x}}\n\n{{#y}}\nremoved\n{{/y}}\n\nb\n';
+    expect(render(tpl, { x: false, y: false })).toBe('a\n\nb\n');
+  });
+
+  test('treats non-empty strings as truthy in conditionals', () => {
+    const tpl = '{{#name}}\nHello {{name}}\n{{/name}}\n';
+    expect(render(tpl, { name: 'World' })).toBe('Hello World\n');
+    expect(render(tpl, { name: '' })).toBe('');
+  });
+
+  test('ignores boolean values in interpolation', () => {
+    expect(render('value: {{flag}}', { flag: true })).toBe('value: ');
+  });
+});
+
+describe('resolveFilename', () => {
+  test('strips .tpl extension', () => {
+    expect(resolveFilename('index.ts.tpl', {})).toBe('index.ts');
+  });
+
+  test('strips .ts extension for generators', () => {
+    expect(resolveFilename('package.json.ts', {})).toBe('package.json');
+  });
+
+  test('interpolates variables in filename', () => {
+    expect(resolveFilename('{{name}}-config.tpl', { name: 'app' })).toBe('app-config');
+  });
+
+  test('renames _gitignore to .gitignore', () => {
+    expect(resolveFilename('_gitignore', {})).toBe('.gitignore');
+  });
+
+  test('passes through normal filenames', () => {
+    expect(resolveFilename('README.md', {})).toBe('README.md');
+  });
+});
+
+describe('parseCondition', () => {
+  test('extracts [condition] prefix', () => {
+    expect(parseCondition('[bricks]bricks')).toEqual({ name: 'bricks', condition: 'bricks' });
+  });
+
+  test('returns name unchanged when no condition', () => {
+    expect(parseCondition('src')).toEqual({ name: 'src' });
+  });
+});
+
+// ─── Scaffold integration tests ─────────────────────────────────────────────
+
 describe('scaffold', () => {
-  // Use unique directory per run to avoid test pollution
   const testDir = `/tmp/brika-test-scaffold-${process.pid}-${Date.now()}`;
   let originalCwd: string;
   let fetchSpy: ReturnType<typeof spyOn>;
 
   beforeEach(async () => {
-    // Reset mocks
     mockSpinner.start.mockClear();
     mockSpinner.stop.mockClear();
     mockCancel.mockClear();
     mockNote.mockClear();
     mockLog.warn.mockClear();
 
-    // Save original cwd and create test directory
     originalCwd = process.cwd();
     await fs.mkdir(testDir, { recursive: true });
     process.chdir(testDir);
 
-    // Mock fetch for npm registry
     fetchSpy = spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(JSON.stringify({ version: '1.0.0' }), {
         status: 200,
@@ -63,323 +132,251 @@ describe('scaffold', () => {
   });
 
   afterEach(async () => {
-    // Restore cwd
     process.chdir(originalCwd);
-
-    // Clean up test directory
     try {
       await fs.rm(testDir, { recursive: true, force: true });
     } catch {
       // Ignore cleanup errors
     }
-
-    // Restore fetch
     fetchSpy.mockRestore();
   });
 
   const defaultOptions: ScaffoldOptions = {
     name: 'test-plugin',
     description: 'A test plugin',
+    features: ['blocks'],
     category: 'action',
     author: 'Test Author',
     git: false,
     install: false,
   };
 
+  // ─── Basic structure ──────────────────────────────────────────────
+
   test('creates plugin directory with correct structure', async () => {
     await scaffold(defaultOptions);
 
-    const pluginDir = path.join(testDir, 'test-plugin');
-    const stat = await fs.stat(pluginDir);
+    const stat = await fs.stat(path.join(testDir, 'test-plugin'));
     expect(stat.isDirectory()).toBe(true);
   });
 
-  test('creates package.json from template', async () => {
+  test('creates package.json with correct name', async () => {
     await scaffold(defaultOptions);
 
-    const packageJsonPath = path.join(testDir, 'test-plugin', 'package.json');
-    const content = await fs.readFile(packageJsonPath, 'utf-8');
-    const pkg = JSON.parse(content);
-
+    const pkg = JSON.parse(await fs.readFile(path.join(testDir, 'test-plugin', 'package.json'), 'utf-8'));
     expect(pkg.name).toBe('@brika/plugin-test-plugin');
   });
 
-  test('creates .gitignore from _gitignore template', async () => {
+  test('creates .gitignore, src, and locales directories', async () => {
     await scaffold(defaultOptions);
 
-    const gitignorePath = path.join(testDir, 'test-plugin', '.gitignore');
-    const exists = await fs
-      .access(gitignorePath)
-      .then(() => true)
-      .catch(() => false);
-    expect(exists).toBe(true);
-  });
-
-  test('creates src directory', async () => {
-    await scaffold(defaultOptions);
-
-    const srcDir = path.join(testDir, 'test-plugin', 'src');
-    const stat = await fs.stat(srcDir);
-    expect(stat.isDirectory()).toBe(true);
-  });
-
-  test('creates locales directory', async () => {
-    await scaffold(defaultOptions);
-
-    const localesDir = path.join(testDir, 'test-plugin', 'locales');
-    const stat = await fs.stat(localesDir);
-    expect(stat.isDirectory()).toBe(true);
-  });
-
-  test('renders template variables in files', async () => {
-    await scaffold(defaultOptions);
-
-    const packageJsonPath = path.join(testDir, 'test-plugin', 'package.json');
-    const content = await fs.readFile(packageJsonPath, 'utf-8');
-
-    expect(content).toContain('@brika/plugin-test-plugin');
-    expect(content).toContain('A test plugin');
+    const base = path.join(testDir, 'test-plugin');
+    const [gitignore, src, locales] = await Promise.all([
+      fs.access(path.join(base, '.gitignore')).then(() => true),
+      fs.stat(path.join(base, 'src')).then((s) => s.isDirectory()),
+      fs.stat(path.join(base, 'locales')).then((s) => s.isDirectory()),
+    ]);
+    expect(gitignore).toBe(true);
+    expect(src).toBe(true);
+    expect(locales).toBe(true);
   });
 
   test('fetches SDK version from npm', async () => {
     await scaffold(defaultOptions);
-
     expect(fetchSpy).toHaveBeenCalledWith('https://registry.npmjs.org/@brika/sdk/latest');
   });
 
   test('throws error when directory already exists', async () => {
-    // Create the directory first
     await fs.mkdir(path.join(testDir, 'test-plugin'), { recursive: true });
-
     await expect(scaffold(defaultOptions)).rejects.toThrow('cancelled');
     expect(mockCancel).toHaveBeenCalled();
   });
 
+  test('handles npm fetch error', async () => {
+    fetchSpy.mockResolvedValueOnce(new Response('Not found', { status: 404 }));
+    await expect(scaffold(defaultOptions)).rejects.toThrow('Failed to fetch @brika/sdk version: 404');
+  });
+
+  // ─── Spinner / summary ────────────────────────────────────────────
+
   test('shows spinner messages during scaffold', async () => {
     await scaffold(defaultOptions);
-
     expect(mockSpinner.start).toHaveBeenCalledWith('Fetching latest SDK version');
     expect(mockSpinner.start).toHaveBeenCalledWith('Creating plugin files');
-    expect(mockSpinner.stop).toHaveBeenCalled();
   });
 
   test('shows summary note after scaffold', async () => {
     await scaffold(defaultOptions);
-
     expect(mockNote).toHaveBeenCalled();
   });
 
+  // ─── Git / install options ────────────────────────────────────────
+
   test('initializes git repository when git option is true', async () => {
-    const options: ScaffoldOptions = {
-      ...defaultOptions,
-      git: true,
-    };
-
-    await scaffold(options);
-
+    await scaffold({ ...defaultOptions, git: true });
     expect(mockSpinner.start).toHaveBeenCalledWith('Initializing git repository');
   });
 
-  test('installs dependencies when install option is true', async () => {
-    const options: ScaffoldOptions = {
-      ...defaultOptions,
-      install: true,
-    };
-
-    await scaffold(options);
-
-    expect(mockSpinner.start).toHaveBeenCalledWith('Installing dependencies');
-  });
-
-  test('handles npm fetch error', async () => {
-    fetchSpy.mockResolvedValueOnce(new Response('Not found', { status: 404 }));
-
-    await expect(scaffold(defaultOptions)).rejects.toThrow(
-      'Failed to fetch @brika/sdk version: 404'
-    );
-  });
-
-  test('uses correct template variables for plugin name with hyphens', async () => {
-    const options: ScaffoldOptions = {
-      ...defaultOptions,
-      name: 'my-awesome-plugin',
-    };
-
-    await scaffold(options);
-
-    const packageJsonPath = path.join(testDir, 'my-awesome-plugin', 'package.json');
-    const content = await fs.readFile(packageJsonPath, 'utf-8');
-
-    expect(content).toContain('@brika/plugin-my-awesome-plugin');
-  });
-
   test('skips git init when git option is false', async () => {
-    const options: ScaffoldOptions = {
-      ...defaultOptions,
-      git: false,
-    };
-
-    await scaffold(options);
-
+    await scaffold({ ...defaultOptions, git: false });
     const calls = (mockSpinner.start.mock.calls as unknown[][]).map((c) => c[0]);
     expect(calls).not.toContain('Initializing git repository');
   });
 
-  test('skips dependency install when install option is false', async () => {
-    const options: ScaffoldOptions = {
-      ...defaultOptions,
-      install: false,
-    };
+  test('uses correct template variables for plugin name with hyphens', async () => {
+    await scaffold({ ...defaultOptions, name: 'my-awesome-plugin' });
+    const content = await fs.readFile(path.join(testDir, 'my-awesome-plugin', 'package.json'), 'utf-8');
+    expect(content).toContain('@brika/plugin-my-awesome-plugin');
+  });
 
-    await scaffold(options);
+  // ─── Feature composition ──────────────────────────────────────────
 
-    const calls = (mockSpinner.start.mock.calls as unknown[][]).map((c) => c[0]);
-    expect(calls).not.toContain('Installing dependencies');
+  test('blocks-only: package.json has blocks, no bricks', async () => {
+    await scaffold(defaultOptions);
+
+    const pkg = JSON.parse(await fs.readFile(path.join(testDir, 'test-plugin', 'package.json'), 'utf-8'));
+    expect(pkg.blocks).toBeDefined();
+    expect(pkg.blocks[0].id).toBe('test-plugin');
+    expect(pkg.bricks).toBeUndefined();
+    expect(pkg.sparks).toBeUndefined();
+    expect(pkg.main).toBe('./src/index.ts');
+  });
+
+  test('bricks-only: JSX-enabled tsconfig', async () => {
+    await scaffold({ ...defaultOptions, name: 'test-brick', features: ['bricks'], category: 'general' });
+
+    const tsconfig = JSON.parse(await fs.readFile(path.join(testDir, 'test-brick', 'tsconfig.json'), 'utf-8'));
+    expect(tsconfig.compilerOptions.jsx).toBe('react-jsx');
+    expect(tsconfig.compilerOptions.jsxImportSource).toBe('@brika/ui-kit');
+
+    const pkg = JSON.parse(await fs.readFile(path.join(testDir, 'test-brick', 'package.json'), 'utf-8'));
+    expect(pkg.bricks).toBeDefined();
+    expect(pkg.bricks[0].id).toBe('test-brick');
+    expect(pkg.blocks).toBeUndefined();
+    expect(pkg.main).toBe('./src/index.ts');
+  });
+
+  test('bricks-only: creates brick component file', async () => {
+    await scaffold({ ...defaultOptions, name: 'test-brick', features: ['bricks'], category: 'general' });
+
+    const content = await fs.readFile(path.join(testDir, 'test-brick', 'src', 'bricks', 'dashboard.tsx'), 'utf-8');
+    expect(content).toContain('defineBrick');
+    expect(content).toContain('useBrickSize');
+    expect(content).toContain('testBrickBrick');
+  });
+
+  test('all features: package.json has blocks, bricks, and sparks', async () => {
+    await scaffold({ ...defaultOptions, name: 'test-all', features: ['blocks', 'bricks', 'sparks'] });
+
+    const pkg = JSON.parse(await fs.readFile(path.join(testDir, 'test-all', 'package.json'), 'utf-8'));
+    expect(pkg.blocks).toBeDefined();
+    expect(pkg.bricks).toBeDefined();
+    expect(pkg.sparks).toBeDefined();
+    expect(pkg.main).toBe('./src/index.ts');
+  });
+
+  test('sparks-only: package.json has sparks, no blocks or bricks', async () => {
+    await scaffold({ ...defaultOptions, name: 'test-spark', features: ['sparks'], category: 'general' });
+
+    const pkg = JSON.parse(await fs.readFile(path.join(testDir, 'test-spark', 'package.json'), 'utf-8'));
+    expect(pkg.sparks).toBeDefined();
+    expect(pkg.blocks).toBeUndefined();
+    expect(pkg.bricks).toBeUndefined();
+    expect(pkg.main).toBe('./src/index.ts');
+  });
+
+  test('entry file re-exports selected features', async () => {
+    await scaffold({ ...defaultOptions, name: 'test-combo', features: ['blocks', 'sparks'] });
+
+    const content = await fs.readFile(path.join(testDir, 'test-combo', 'src', 'index.ts'), 'utf-8');
+    expect(content).toContain("from './blocks/test-combo'");
+    expect(content).toContain("from './sparks/test-combo'");
+    expect(content).not.toContain('bricks/dashboard');
+  });
+
+  test('blocks-only: creates block file in blocks/ directory', async () => {
+    await scaffold(defaultOptions);
+
+    const content = await fs.readFile(path.join(testDir, 'test-plugin', 'src', 'blocks', 'test-plugin.ts'), 'utf-8');
+    expect(content).toContain('defineReactiveBlock');
+    expect(content).toContain('testPlugin');
+  });
+
+  test('sparks-only: creates spark file in sparks/ directory', async () => {
+    await scaffold({ ...defaultOptions, name: 'test-spark', features: ['sparks'], category: 'general' });
+
+    const content = await fs.readFile(path.join(testDir, 'test-spark', 'src', 'sparks', 'test-spark.ts'), 'utf-8');
+    expect(content).toContain('defineSpark');
+    expect(content).toContain('testSparkSpark');
+  });
+
+  test('blocks+bricks: no duplicate export names', async () => {
+    await scaffold({ ...defaultOptions, name: 'test-both', features: ['blocks', 'bricks'] });
+
+    const content = await fs.readFile(path.join(testDir, 'test-both', 'src', 'index.ts'), 'utf-8');
+    expect(content).toContain('testBothBrick');
+    expect(content).toContain("from './blocks/test-both'");
+  });
+
+  test('blocks-only: no jsx in tsconfig', async () => {
+    await scaffold(defaultOptions);
+
+    const tsconfig = JSON.parse(await fs.readFile(path.join(testDir, 'test-plugin', 'tsconfig.json'), 'utf-8'));
+    expect(tsconfig.compilerOptions.jsx).toBeUndefined();
+  });
+
+  test('conditional directories only created for selected features', async () => {
+    await scaffold(defaultOptions);
+
+    const base = path.join(testDir, 'test-plugin', 'src');
+    const exists = async (dir: string) => fs.access(path.join(base, dir)).then(() => true).catch(() => false);
+    expect(await exists('blocks')).toBe(true);
+    expect(await exists('bricks')).toBe(false);
+    expect(await exists('sparks')).toBe(false);
   });
 });
 
-describe('scaffold internal functions', () => {
-  describe('getOutputName', () => {
-    // Replicate the internal function logic for testing
-    const FILE_RENAMES: Record<string, string> = {
-      _gitignore: '.gitignore',
-      '_package.json': 'package.json',
-    };
+// ─── createTemplateData ─────────────────────────────────────────────────────
 
-    function getOutputName(filename: string): string {
-      if (filename.endsWith('.template')) {
-        filename = filename.slice(0, -'.template'.length);
-      }
-      return FILE_RENAMES[filename] ?? filename;
-    }
+describe('createTemplateData', () => {
+  test('creates all required template data', () => {
+    const data = createTemplateData(
+      { name: 'my-plugin', description: 'My plugin', features: ['blocks'], category: 'trigger', author: 'John' },
+      '2.0.0',
+    );
 
-    test('removes .template extension', () => {
-      expect(getOutputName('index.ts.template')).toBe('index.ts');
-    });
-
-    test('renames _gitignore to .gitignore', () => {
-      expect(getOutputName('_gitignore')).toBe('.gitignore');
-    });
-
-    test('renames _package.json to package.json', () => {
-      expect(getOutputName('_package.json')).toBe('package.json');
-    });
-
-    test('passes through normal filenames', () => {
-      expect(getOutputName('README.md')).toBe('README.md');
-      expect(getOutputName('tsconfig.json')).toBe('tsconfig.json');
-      expect(getOutputName('src')).toBe('src');
-    });
-
-    test('handles .template extension with rename mapping', () => {
-      expect(getOutputName('_gitignore.template')).toBe('.gitignore');
-      expect(getOutputName('_package.json.template')).toBe('package.json');
-    });
-
-    test('handles nested path filenames', () => {
-      expect(getOutputName('index.ts')).toBe('index.ts');
+    expect(data).toEqual({
+      name: 'my-plugin',
+      packageName: '@brika/plugin-my-plugin',
+      description: 'My plugin',
+      category: 'trigger',
+      author: 'John',
+      id: 'my-plugin',
+      pascal: 'MyPlugin',
+      camel: 'myPlugin',
+      sdkVersion: '2.0.0',
+      blocks: true,
+      bricks: false,
+      sparks: false,
     });
   });
 
-  describe('createTemplateVars', () => {
-    function toPascalCase(str: string): string {
-      return str
-        .split('-')
-        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-        .join('');
-    }
+  test('handles multi-hyphen plugin names', () => {
+    const data = createTemplateData(
+      { name: 'my-awesome-plugin', description: 'Test', features: ['blocks'], category: 'action', author: 'A' },
+      '1.0.0',
+    );
+    expect(data.pascal).toBe('MyAwesomePlugin');
+    expect(data.camel).toBe('myAwesomePlugin');
+  });
 
-    function toCamelCase(str: string): string {
-      const pascal = toPascalCase(str);
-      return pascal.charAt(0).toLowerCase() + pascal.slice(1);
-    }
-
-    interface PluginConfig {
-      name: string;
-      description: string;
-      category: string;
-      author: string;
-    }
-
-    function createTemplateVars(config: PluginConfig, sdkVersion: string) {
-      return {
-        name: config.name,
-        packageName: `@brika/plugin-${config.name}`,
-        description: config.description,
-        category: config.category,
-        author: config.author,
-        blockId: config.name,
-        blockNamePascal: toPascalCase(config.name),
-        blockNameCamel: toCamelCase(config.name),
-        sdkVersion,
-      };
-    }
-
-    test('creates all required template variables', () => {
-      const config: PluginConfig = {
-        name: 'my-plugin',
-        description: 'My plugin description',
-        category: 'trigger',
-        author: 'John Doe',
-      };
-
-      const vars = createTemplateVars(config, '2.0.0');
-
-      expect(vars).toEqual({
-        name: 'my-plugin',
-        packageName: '@brika/plugin-my-plugin',
-        description: 'My plugin description',
-        category: 'trigger',
-        author: 'John Doe',
-        blockId: 'my-plugin',
-        blockNamePascal: 'MyPlugin',
-        blockNameCamel: 'myPlugin',
-        sdkVersion: '2.0.0',
-      });
-    });
-
-    test('handles multi-hyphen plugin names', () => {
-      const config: PluginConfig = {
-        name: 'my-awesome-cool-plugin',
-        description: 'Test',
-        category: 'action',
-        author: 'Author',
-      };
-
-      const vars = createTemplateVars(config, '1.0.0');
-
-      expect(vars.blockNamePascal).toBe('MyAwesomeCoolPlugin');
-      expect(vars.blockNameCamel).toBe('myAwesomeCoolPlugin');
-    });
-
-    test('handles single word plugin names', () => {
-      const config: PluginConfig = {
-        name: 'timer',
-        description: 'Timer plugin',
-        category: 'trigger',
-        author: 'Author',
-      };
-
-      const vars = createTemplateVars(config, '1.0.0');
-
-      expect(vars.blockNamePascal).toBe('Timer');
-      expect(vars.blockNameCamel).toBe('timer');
-      expect(vars.packageName).toBe('@brika/plugin-timer');
-    });
-
-    test('preserves all config fields', () => {
-      const config: PluginConfig = {
-        name: 'test',
-        description: 'Special chars: <>&"\'',
-        category: 'transform',
-        author: 'Test <test@example.com>',
-      };
-
-      const vars = createTemplateVars(config, '1.0.0');
-
-      expect(vars.description).toBe('Special chars: <>&"\'');
-      expect(vars.author).toBe('Test <test@example.com>');
-      expect(vars.category).toBe('transform');
-    });
+  test('handles single word plugin names', () => {
+    const data = createTemplateData(
+      { name: 'timer', description: 'Timer', features: ['blocks'], category: 'trigger', author: 'A' },
+      '1.0.0',
+    );
+    expect(data.pascal).toBe('Timer');
+    expect(data.camel).toBe('timer');
+    expect(data.packageName).toBe('@brika/plugin-timer');
   });
 });

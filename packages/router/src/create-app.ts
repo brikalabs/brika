@@ -128,7 +128,7 @@ export function createApp(routes: RouteDefinition[]): Hono {
   app.onError(handleError);
 
   for (const routeDef of routes) {
-    const method = routeDef.method.toLowerCase() as 'get' | 'post' | 'put' | 'patch' | 'delete';
+    const method = routeDef.method.toLowerCase() as 'get' | 'post' | 'put' | 'patch' | 'delete' | 'all';
     app[method](routeDef.path, createHandler(routeDef));
   }
 

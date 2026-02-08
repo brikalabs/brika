@@ -21,13 +21,6 @@ export function toCamelCase(str: string): string {
 }
 
 /**
- * Render template string with variables using {{variable}} syntax
- */
-export function renderTemplate(content: string, vars: Record<string, string>): string {
-  return content.replaceAll(/\{\{(\w+)\}\}/g, (_, key) => vars[key] ?? '');
-}
-
-/**
  * Get git user name
  */
 export async function getGitUser(): Promise<string> {

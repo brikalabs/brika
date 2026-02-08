@@ -113,6 +113,20 @@ export type { PreferencesChangeHandler } from './api/preferences';
 export { getPreferences, onPreferencesChange } from './api/preferences';
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Routes
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type { RouteHandler, RouteMethod, RouteRequest, RouteResponse } from './api/routes';
+export { defineRoute } from './api/routes';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// OAuth
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type { OAuthClient, OAuthProviderConfig, OAuthToken } from './api/oauth';
+export { defineOAuth } from './api/oauth';
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Common Types
 // ─────────────────────────────────────────────────────────────────────────────
 

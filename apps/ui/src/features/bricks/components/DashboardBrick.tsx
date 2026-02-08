@@ -141,7 +141,7 @@ export const DashboardBrick = memo(function DashboardBrick({
         </div>
 
         {/* Body — fills remaining space, no scroll */}
-        <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-hidden px-2.5 pt-1.5 pb-2.5">
+        <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-hidden px-2.5 pt-1.5 pb-2.5 *:min-h-0 *:flex-1">
           <BrickErrorBoundary>
             {body && body.length > 0 ? (
               body

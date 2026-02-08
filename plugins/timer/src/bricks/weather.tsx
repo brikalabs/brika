@@ -1,4 +1,4 @@
-import { defineBrick, useAction, useBrickSize, useEffect, usePreference, useState } from '@brika/sdk/bricks/core';
+import { defineBrick, useBrickSize, useEffect, usePreference, useState } from '@brika/sdk/bricks/core';
 import { Chart, Grid, Image, Section, Slider, Stat, Status, Text } from '@brika/sdk/bricks/components';
 
 const WEATHER_CONDITIONS = ['sunny', 'cloudy', 'rainy', 'stormy', 'snowy'] as const;
@@ -15,22 +15,24 @@ function formatTemp(value: number, unit: string): string {
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
-function WeatherStatsNarrow({ temp, condition, humidity, unit, height }: {
+function WeatherStatsNarrow({ temp, condition, humidity, unit, height, onSetTemp }: {
   temp: number; condition: string; humidity: number; unit: string; height: number;
+  onSetTemp: (payload?: Record<string, unknown>) => void;
 }) {
   return (
     <>
       <Stat label={condition} value={formatTemp(temp, unit)} icon={WEATHER_ICONS[condition] ?? 'thermometer'} color="#f59e0b" />
       {height >= 2 && <Status label="Condition" status={condition === 'stormy' ? 'warning' : 'online'} icon={WEATHER_ICONS[condition] ?? 'cloud'} />}
       {height >= 3 && <Stat label="Humidity" value={`${humidity}%`} icon="droplets" color="#3b82f6" />}
-      {height >= 4 && <Slider label="Set temp" value={temp} min={-10} max={40} unit="°C" onChange="set-temp" color="#f59e0b" />}
+      {height >= 4 && <Slider label="Set temp" value={temp} min={-10} max={40} unit="°C" onChange={onSetTemp} color="#f59e0b" />}
     </>
   );
 }
 
-function WeatherStatsMedium({ temp, condition, humidity, unit, height, history }: {
+function WeatherStatsMedium({ temp, condition, humidity, unit, height, history, onSetTemp }: {
   temp: number; condition: string; humidity: number; unit: string; height: number;
   history: Array<{ ts: number; value: number }>;
+  onSetTemp: (payload?: Record<string, unknown>) => void;
 }) {
   return (
     <>
@@ -39,7 +41,7 @@ function WeatherStatsMedium({ temp, condition, humidity, unit, height, history }
         <Stat label="Humidity" value={`${humidity}%`} icon="droplets" color="#3b82f6" />
       </Grid>
       <Status label="Condition" status={condition === 'stormy' ? 'warning' : 'online'} icon={WEATHER_ICONS[condition] ?? 'cloud'} />
-      {height >= 3 && <Slider label="Set temp" value={temp} min={-10} max={40} unit="°C" onChange="set-temp" color="#f59e0b" />}
+      {height >= 3 && <Slider label="Set temp" value={temp} min={-10} max={40} unit="°C" onChange={onSetTemp} color="#f59e0b" />}
       {height >= 5 && history.length > 1 && (
         <Chart variant="line" data={history} color="#f59e0b" label="°C" />
       )}
@@ -47,9 +49,10 @@ function WeatherStatsMedium({ temp, condition, humidity, unit, height, history }
   );
 }
 
-function WeatherStatsWide({ temp, condition, humidity, unit, width, height, history }: {
+function WeatherStatsWide({ temp, condition, humidity, unit, width, height, history, onSetTemp }: {
   temp: number; condition: string; humidity: number; unit: string; width: number; height: number;
   history: Array<{ ts: number; value: number }>;
+  onSetTemp: (payload?: Record<string, unknown>) => void;
 }) {
   return (
     <>
@@ -61,7 +64,7 @@ function WeatherStatsWide({ temp, condition, humidity, unit, width, height, hist
           {width >= 6 && <Stat label="Wind" value={`${Math.floor(Math.random() * 30)} km/h`} icon="wind" />}
         </Grid>
       </Section>
-      {height >= 4 && <Slider label="Set temp" value={temp} min={-10} max={40} unit="°C" onChange="set-temp" color="#f59e0b" />}
+      {height >= 4 && <Slider label="Set temp" value={temp} min={-10} max={40} unit="°C" onChange={onSetTemp} color="#f59e0b" />}
       {height >= 5 && history.length > 1 && (
         <Section title="Temperature">
           <Chart variant="line" data={history} color="#f59e0b" label="°C" />
@@ -100,9 +103,9 @@ export const weatherBrick = defineBrick(
     const [humidity, setHumidity] = useState(45);
     const [history, setHistory] = useState<Array<{ ts: number; value: number }>>([]);
 
-    useAction('set-temp', (payload?: Record<string, unknown>) => {
-      if (payload?.value != null) setTemp(payload.value as number);
-    });
+    const handleSetTemp = (payload?: Record<string, unknown>) => {
+      if (typeof payload?.value === 'number') setTemp(payload.value);
+    };
 
     useEffect(() => {
       const id = setInterval(() => {
@@ -118,13 +121,13 @@ export const weatherBrick = defineBrick(
     }, []);
 
     if (width <= 2) {
-      return <WeatherStatsNarrow temp={temp} condition={condition} humidity={humidity} unit={unit} height={height} />;
+      return <WeatherStatsNarrow temp={temp} condition={condition} humidity={humidity} unit={unit} height={height} onSetTemp={handleSetTemp} />;
     }
 
     if (width <= 4) {
-      return <WeatherStatsMedium temp={temp} condition={condition} humidity={humidity} unit={unit} height={height} history={history} />;
+      return <WeatherStatsMedium temp={temp} condition={condition} humidity={humidity} unit={unit} height={height} history={history} onSetTemp={handleSetTemp} />;
     }
 
-    return <WeatherStatsWide temp={temp} condition={condition} humidity={humidity} unit={unit} width={width} height={height} history={history} />;
+    return <WeatherStatsWide temp={temp} condition={condition} humidity={humidity} unit={unit} width={width} height={height} history={history} onSetTemp={handleSetTemp} />;
   },
 );

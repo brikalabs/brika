@@ -66,6 +66,7 @@ export function PluginConfigForm({ pluginUid, pluginName }: Readonly<Props>) {
             pref={pref}
             value={currentValues[pref.name]}
             onChange={(v) => handleChange(pref.name, v)}
+            pluginUid={pluginUid}
             pluginName={pluginName}
             tp={tp}
           />

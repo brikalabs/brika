@@ -38,6 +38,7 @@ export {
   ready,
   stop,
   uninstall,
+  updatePreference,
 } from './lifecycle';
 export type {
   SparkDefinition as SparkDefinitionType,
@@ -84,3 +85,16 @@ export {
   ToolInputSchemaProperty,
   ToolResult,
 } from './tools';
+export type {
+  RouteMethod as RouteMethodType,
+  RouteRequest as RouteRequestType,
+  RouteResponse as RouteResponseType,
+} from './routes';
+// ─── Routes ───
+export {
+  registerRoute,
+  routeRequest,
+  RouteMethod,
+  RouteRequest,
+  RouteResponse,
+} from './routes';

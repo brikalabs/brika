@@ -24,6 +24,15 @@ plugins:
     version: workspace:*
   "@brika/plugin-timer":
     version: workspace:*
+  "@brika/plugin-spotify":
+    version: workspace:*
+    config:
+      clientId: 03c6f60116984bc3a71e045402c71ab0
+      __oauth_spotify_token:
+        access_token: BQDUMPUTk_aYlOWJ4SZTcPqszGGMJyNuSYRj4qUpMYaE0JKU33Sfs0mQmYAXCQm7bYPiWVb7_N2txWblqOrrHrhtsgoo6YZ0ZB09QINSPdXW4C9GwgmSmA0ziSUbxQZMOS6g4l4ToSX-flZ9WKpYulh0vDUDJjbF46bA-dkfPNCSGKKmD47Ll9OTXas0a0Zoit2MP5oaZuvaVIR6gIKNMbFJCj61tCVX7-niGYI
+        refresh_token: AQChdidM7654bO6LukQWrPv503HCDpBka7d0lKSriP1mOnbJZ8fehDHarEY0x4FMUouccw7EmYD9dbmngGp0rFASqmnE-mlvH7hTvi5UzBMKc327PBS6DB2xUAsV1HlXb3YsAw
+        expires_at: 1770526250967
+        token_type: Bearer
 
 # Event-based rules
 rules: []

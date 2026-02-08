@@ -7,9 +7,19 @@ export interface GridNode extends BaseNode {
   columns?: number;
   children: ComponentNode[];
   gap?: 'sm' | 'md' | 'lg';
+  /** Use auto-fit columns based on minColumnWidth */
+  autoFit?: boolean;
+  /** Minimum column width in px when autoFit is true (default: 120) */
+  minColumnWidth?: number;
 }
 
-export function Grid(props: { columns?: number; gap?: 'sm' | 'md' | 'lg'; children?: Child | Child[] }): GridNode {
+export function Grid(props: {
+  columns?: number;
+  gap?: 'sm' | 'md' | 'lg';
+  autoFit?: boolean;
+  minColumnWidth?: number;
+  children?: Child | Child[];
+}): GridNode {
   const { children, ...rest } = props;
   return { type: 'grid', ...rest, children: normalizeChildren(children) };
 }

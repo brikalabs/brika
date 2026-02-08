@@ -4,6 +4,8 @@ import { bricksRoutes } from './bricks';
 import { dashboardsRoutes } from './dashboards';
 import { i18nRoutes } from './i18n';
 import { logsRoutes } from './logs';
+import { oauthRoutes } from './oauth';
+import { pluginRoutesHandler } from './plugin-routes';
 import { pluginsRoutes } from './plugins';
 import { registryRoutes } from './registry';
 import { sparksRoutes } from './sparks';
@@ -19,6 +21,8 @@ export const allRoutes = combineRoutes(
   blocksRoutes,
   bricksRoutes,
   dashboardsRoutes,
+  oauthRoutes,
+  pluginRoutesHandler,
   pluginsRoutes,
   sparksRoutes,
   workflowsRoutes,

@@ -16,8 +16,10 @@ import {
   pushInput,
   registerBlock,
   registerBrickType as registerBrickTypeMsg,
+  registerRoute as registerRouteMsg,
   registerSpark as registerSparkMsg,
   resizeBrickInstance,
+  routeRequest as routeRequestMsg,
   type SparkEvent,
   sparkEvent as sparkEventMsg,
   startBlock,
@@ -27,6 +29,7 @@ import {
   unmountBrickInstance,
   unsubscribeSpark as unsubscribeSparkMsg,
   updateBrickConfig,
+  updatePreference as updatePreferenceMsg,
   patchBrickInstance as patchBrickInstanceMsg,
 } from '@brika/ipc/contract';
 import type { Serializable } from '@brika/serializable';
@@ -52,6 +55,19 @@ type InitHandler = () => void | Promise<void>;
 type StopHandler = () => void | Promise<void>;
 type UninstallHandler = () => void | Promise<void>;
 type PreferencesChangeHandler = (preferences: Record<string, unknown>) => void;
+interface RouteRequest {
+  method: string;
+  path: string;
+  query: Record<string, string>;
+  headers: Record<string, string>;
+  body?: unknown;
+}
+interface RouteResponse {
+  status: number;
+  headers?: Record<string, string>;
+  body?: Json;
+}
+type RouteHandler = (req: RouteRequest) => RouteResponse | Promise<RouteResponse>;
 
 interface BlockDecl {
   id: string;
@@ -92,7 +108,10 @@ interface BrickInstanceState {
   h: number;
   config: Record<string, unknown>;
   hookState: BrickState;
-  prevBody: ComponentNode[];
+  /** What the hub currently has (last successfully sent body). */
+  sentBody: ComponentNode[];
+  /** Latest render output waiting to be sent (null if nothing pending). */
+  pendingBody: ComponentNode[] | null;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -133,6 +152,7 @@ class Context {
   readonly #brickTypes = new Map<string, CompiledBrickType>();
   readonly #brickInstances = new Map<string, BrickInstanceState>();
   readonly #brickPatchTimers = new Map<string, Timer>();
+  readonly #routeHandlers = new Map<string, RouteHandler>();
   readonly #initHandlers = new Set<InitHandler>();
   readonly #stopHandlers = new Set<StopHandler>();
   readonly #uninstallHandlers = new Set<UninstallHandler>();
@@ -177,6 +197,15 @@ class Context {
   }
 
   // ─── Public API ────────────────────────────────────────────────────────────
+
+  getPluginName(): string {
+    return this.#manifest.name;
+  }
+
+  getPluginUid(): string | undefined {
+    const uid = this.#preferences.__plugin_uid;
+    return typeof uid === 'string' ? uid : undefined;
+  }
 
   onInit(fn: InitHandler): () => void {
     // If already initialized, run immediately
@@ -292,6 +321,21 @@ class Context {
     return { id };
   }
 
+  // ─── Routes ──────────────────────────────────────────────────────────────
+
+  registerRoute(method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, handler: RouteHandler): void {
+    const routeId = `${method}:${path}`;
+    this.#routeHandlers.set(routeId, handler);
+    this.#client.send(registerRouteMsg, { method, path });
+  }
+
+  // ─── Preferences (write-back) ──────────────────────────────────────────
+
+  updatePreference(key: string, value: unknown): void {
+    this.#preferences[key] = value;
+    this.#client.send(updatePreferenceMsg, { key, value });
+  }
+
   // ─── Bricks ───────────────────────────────────────────────────────────────
 
   /**
@@ -320,23 +364,28 @@ class Context {
   }
 
   /**
-   * Send debounced mutations for a brick instance to the hub.
-   * @internal
+   * Schedule a debounced patch send for a brick instance.
+   * The actual diff is computed at send time against sentBody (what the hub has).
    */
-  patchBrickInstance(instanceId: string, mutations: Mutation[]): void {
-    if (!this.#brickInstances.has(instanceId)) return;
-
-    const existing = this.#brickPatchTimers.get(instanceId);
+  #debouncePatch(state: BrickInstanceState): void {
+    const existing = this.#brickPatchTimers.get(state.instanceId);
     if (existing) clearTimeout(existing);
 
     const timer = setTimeout(() => {
-      this.#brickPatchTimers.delete(instanceId);
-      this.#client.send(patchBrickInstanceMsg, {
-        instanceId,
-        mutations: mutations as unknown[],
-      });
+      this.#brickPatchTimers.delete(state.instanceId);
+      if (!state.pendingBody) return;
+
+      const mutations = reconcile(state.sentBody, state.pendingBody);
+      if (mutations.length > 0) {
+        state.sentBody = state.pendingBody;
+        this.#client.send(patchBrickInstanceMsg, {
+          instanceId: state.instanceId,
+          mutations: mutations as unknown[],
+        });
+      }
+      state.pendingBody = null;
     }, 50);
-    this.#brickPatchTimers.set(instanceId, timer);
+    this.#brickPatchTimers.set(state.instanceId, timer);
   }
 
   #renderInstance(state: BrickInstanceState, immediate = false): void {
@@ -354,19 +403,24 @@ class Context {
       };
       const result = brickType.component(ctx);
       const body: ComponentNode[] = Array.isArray(result) ? result : [result];
-      const mutations = reconcile(state.prevBody, body);
-      if (mutations.length > 0) {
-        state.prevBody = body;
-        if (immediate) {
-          // Send immediately — skip debounce for initial render
+
+      if (immediate) {
+        // Initial render — diff and send immediately (no debounce)
+        const mutations = reconcile(state.sentBody, body);
+        if (mutations.length > 0) {
+          state.sentBody = body;
+          state.pendingBody = null;
           this.#brickPatchTimers.delete(state.instanceId);
           this.#client.send(patchBrickInstanceMsg, {
             instanceId: state.instanceId,
             mutations: mutations as unknown[],
           });
-        } else {
-          this.patchBrickInstance(state.instanceId, mutations);
         }
+      } else {
+        // Subsequent renders — store latest body and debounce the send.
+        // The diff is computed at send time against sentBody (what the hub has).
+        state.pendingBody = body;
+        this.#debouncePatch(state);
       }
     } catch (err) {
       console.error(`[brick:${state.brickTypeId}] Render error in instance ${state.instanceId}:`, err);
@@ -388,7 +442,8 @@ class Context {
       h,
       config,
       hookState: _createState(() => this.#renderInstance(state)),
-      prevBody: [],
+      sentBody: [],
+      pendingBody: null,
     };
 
     this.#brickInstances.set(instanceId, state);
@@ -521,6 +576,19 @@ class Context {
       if (ref) {
         ref.current(payload as Record<string, unknown> | undefined);
         this.#renderInstance(state);
+      }
+    });
+
+    // ─── Plugin Routes ───
+    this.#client.implement(routeRequestMsg, async ({ routeId, method, path, query, headers, body }) => {
+      const handler = this.#routeHandlers.get(routeId);
+      if (!handler) {
+        return { status: 404, body: { error: 'Route handler not found' } };
+      }
+      try {
+        return await handler({ method, path, query, headers, body });
+      } catch (e) {
+        return { status: 500, body: { error: String(e) } };
       }
     });
 

@@ -2,12 +2,12 @@
  * Internal hook state management for brick components.
  */
 
-import type { BrickActionHandler } from '@brika/ui-kit';
+import { _setActionRegistrar, type ActionHandler } from '@brika/ui-kit';
 
 export interface BrickState {
   hooks: unknown[];
   effects: Array<{ cleanup?: (() => void) | void; deps?: unknown[] }>;
-  actionRefs: Map<string, { current: BrickActionHandler }>;
+  actionRefs: Map<string, { current: ActionHandler }>;
   brickSize: { width: number; height: number };
   config: Record<string, unknown>;
   configKeys: Set<string> | null;
@@ -16,16 +16,36 @@ export interface BrickState {
 
 let current: BrickState | null = null;
 let hookIdx = 0;
+let autoActionIdx = 0;
 
 /** @internal — called by brick runtime before each render */
 export function _beginRender(state: BrickState) {
   current = state;
   hookIdx = 0;
+  autoActionIdx = 0;
+
+  // Clear auto-registered actions from previous render
+  for (const key of state.actionRefs.keys()) {
+    if (key.startsWith('__a')) state.actionRefs.delete(key);
+  }
+
+  // Install the action registrar so builder functions can auto-register handlers
+  _setActionRegistrar((handler: ActionHandler) => {
+    const id = `__a${autoActionIdx++}`;
+    const existing = state.actionRefs.get(id);
+    if (existing) {
+      existing.current = handler;
+    } else {
+      state.actionRefs.set(id, { current: handler });
+    }
+    return id;
+  });
 }
 
 /** @internal — called by brick runtime after each render */
 export function _endRender() {
   current = null;
+  _setActionRegistrar(null);
 }
 
 /** @internal — run pending effects after render */
@@ -36,7 +56,7 @@ export function _flushEffects(_state: BrickState) {
 /** @internal — cleanup all effects on unmount */
 export function _cleanupEffects(state: BrickState) {
   for (const effect of state.effects) {
-    if (typeof effect.cleanup === 'function') effect.cleanup();
+    if (effect && typeof effect.cleanup === 'function') effect.cleanup();
   }
   state.effects.length = 0;
 }

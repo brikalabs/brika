@@ -9,7 +9,7 @@
  *
  * @example
  * ```tsx
- * import { defineBrick, useState, useEffect, useAction, Stat, Toggle, Section } from '@brika/sdk/bricks';
+ * import { defineBrick, useState, Stat, Toggle } from '@brika/sdk/bricks';
  *
  * export const myBrick = defineBrick({
  *   id: 'my-brick',
@@ -17,8 +17,7 @@
  *   families: ['sm', 'md'],
  * }, ({ config }) => {
  *   const [on, setOn] = useState(false);
- *   useAction('toggle', (p) => setOn(p?.checked as boolean));
- *   return <Toggle label="Power" checked={on} onToggle="toggle" />;
+ *   return <Toggle label="Power" checked={on} onToggle={(p) => setOn(p?.checked as boolean)} />;
  * });
  * ```
  */

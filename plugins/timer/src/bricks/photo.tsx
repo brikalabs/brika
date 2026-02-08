@@ -1,4 +1,4 @@
-import { defineBrick, useAction, useBrickSize, useEffect, usePreference, useState } from '@brika/sdk/bricks/core';
+import { defineBrick, useBrickSize, useEffect, usePreference, useState } from '@brika/sdk/bricks/core';
 import { Button, Image, Stack, Text } from '@brika/sdk/bricks/components';
 
 const PHOTOS = [
@@ -10,11 +10,11 @@ const PHOTOS = [
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
-function PhotoControls() {
+function PhotoControls({ onPrev, onNext }: { onPrev: () => void; onNext: () => void }) {
   return (
     <Stack direction="horizontal" gap="sm">
-      <Button label="Previous" onPress="prev" icon="chevron-left" variant="outline" />
-      <Button label="Next" onPress="next" icon="chevron-right" variant="outline" />
+      <Button label="Previous" onPress={onPrev} icon="chevron-left" variant="outline" />
+      <Button label="Next" onPress={onNext} icon="chevron-right" variant="outline" />
     </Stack>
   );
 }
@@ -45,8 +45,8 @@ export const photoBrick = defineBrick(
     const [index, setIndex] = useState(0);
     const photo = PHOTOS[index % PHOTOS.length];
 
-    useAction('next', () => setIndex((i: number) => (i + 1) % PHOTOS.length));
-    useAction('prev', () => setIndex((i: number) => (i - 1 + PHOTOS.length) % PHOTOS.length));
+    const handleNext = () => setIndex((i: number) => (i + 1) % PHOTOS.length);
+    const handlePrev = () => setIndex((i: number) => (i - 1 + PHOTOS.length) % PHOTOS.length);
 
     useEffect(() => {
       if (!autoRotate) return;
@@ -72,7 +72,7 @@ export const photoBrick = defineBrick(
     return (
       <>
         <Image src={photo.src} rounded aspectRatio={aspectRatio} fit="cover" caption={photo.caption} />
-        {height >= 3 && <PhotoControls />}
+        {height >= 3 && <PhotoControls onPrev={handlePrev} onNext={handleNext} />}
       </>
     );
   },

@@ -23,6 +23,12 @@ export type {
   TextNode,
   ToggleNode,
   VideoNode,
+  BoxNode,
+  SpacerNode,
+  DividerNode,
+  ProgressNode,
+  BadgeNode,
+  IconNode,
 } from '../nodes';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -45,7 +51,8 @@ import type { ComponentNode } from '../nodes';
 /** Reconciler mutation — describes a single change to the component tree */
 export type Mutation =
   | { op: 'create'; path: string; node: ComponentNode }
-  | { op: 'update'; path: string; props: Record<string, unknown> }
+  | { op: 'replace'; path: string; node: ComponentNode }
+  | { op: 'update'; path: string; props: Record<string, unknown>; removed?: string[] }
   | { op: 'remove'; path: string };
 
 // ─────────────────────────────────────────────────────────────────────────────

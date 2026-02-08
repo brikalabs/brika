@@ -287,6 +287,13 @@
         "@brika/sdk": "workspace:*",
       },
     },
+    "plugins/spotify": {
+      "name": "@brika/plugin-spotify",
+      "version": "0.1.0",
+      "dependencies": {
+        "@brika/sdk": "workspace:*",
+      },
+    },
     "plugins/timer": {
       "name": "@brika/plugin-timer",
       "version": "0.2.1",
@@ -378,6 +385,8 @@
     "@brika/plugin-demo-config": ["@brika/plugin-demo-config@workspace:plugins/demo-config"],
 
     "@brika/plugin-example-echo": ["@brika/plugin-example-echo@workspace:plugins/example-echo"],
+
+    "@brika/plugin-spotify": ["@brika/plugin-spotify@workspace:plugins/spotify"],
 
     "@brika/plugin-timer": ["@brika/plugin-timer@workspace:plugins/timer"],
 

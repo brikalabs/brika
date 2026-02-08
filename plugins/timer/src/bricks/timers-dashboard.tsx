@@ -1,4 +1,4 @@
-import { defineBrick, useAction, useBrickSize, useEffect, usePreference, useState } from '@brika/sdk/bricks/core';
+import { defineBrick, useBrickSize, useEffect, usePreference, useState } from '@brika/sdk/bricks/core';
 import { Chart, Grid, Section, Stat, Status, Toggle } from '@brika/sdk/bricks/components';
 
 const startedAt = Date.now();
@@ -52,9 +52,9 @@ export const timersDashboard = defineBrick(
     const [uptime, setUptime] = useState(0);
     const [history, setHistory] = useState<Array<{ ts: number; value: number }>>([]);
 
-    useAction('toggle-monitoring', (payload?: Record<string, unknown>) => {
-      setMonitoring((payload?.checked as boolean) ?? !monitoring);
-    });
+    const handleToggleMonitoring = (payload?: Record<string, unknown>) => {
+      setMonitoring(typeof payload?.checked === 'boolean' ? payload.checked : !monitoring);
+    };
 
     useEffect(() => {
       const id = setInterval(() => {
@@ -71,7 +71,7 @@ export const timersDashboard = defineBrick(
         <>
           <Stat label="Uptime" value={`${uptime}s`} icon="clock" trend="up" color="#22c55e" />
           <Status label="Service" status={monitoring ? 'online' : 'offline'} icon="activity" />
-          {height >= 3 && <Toggle label="Monitoring" checked={monitoring} onToggle="toggle-monitoring" icon="eye" />}
+          {height >= 3 && <Toggle label="Monitoring" checked={monitoring} onToggle={handleToggleMonitoring} icon="eye" />}
           {height >= 5 && history.length > 1 && (
             <Chart variant="area" data={history} color="#22c55e" label="Uptime (seconds)" />
           )}
@@ -90,7 +90,7 @@ export const timersDashboard = defineBrick(
             {height >= 3 && <Stat label="Countdown" value="ticks" icon="clock" color="#3b82f6" />}
           </Grid>
           <Status label="Timer Service" status={monitoring ? 'online' : 'offline'} icon="activity" />
-          {height >= 4 && <Toggle label="Monitoring" checked={monitoring} onToggle="toggle-monitoring" icon="eye" />}
+          {height >= 4 && <Toggle label="Monitoring" checked={monitoring} onToggle={handleToggleMonitoring} icon="eye" />}
           {height >= 5 && history.length > 1 && (
             <Chart variant="area" data={history} color="#22c55e" label="Uptime (seconds)" />
           )}
@@ -117,7 +117,7 @@ export const timersDashboard = defineBrick(
           </Section>
         )}
 
-        <Toggle label="Monitoring" checked={monitoring} onToggle="toggle-monitoring" icon="eye" />
+        <Toggle label="Monitoring" checked={monitoring} onToggle={handleToggleMonitoring} icon="eye" />
       </>
     );
   },

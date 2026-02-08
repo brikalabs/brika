@@ -66,4 +66,5 @@ export const route = {
   put: createMethod('PUT'),
   patch: createMethod('PATCH'),
   delete: createMethod('DELETE'),
+  all: createMethod('ALL'),
 };

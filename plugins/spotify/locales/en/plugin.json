@@ -1,0 +1,35 @@
+{
+  "name": "Spotify Connect",
+  "description": "Control Spotify playback and display album art on your dashboard",
+  "preferences": {
+    "clientId": {
+      "label": "Client ID",
+      "description": "Spotify Developer App client ID (create one at developer.spotify.com)"
+    },
+    "connect": {
+      "title": "Connect to Spotify",
+      "description": "Authorize BRIKA to access your Spotify account"
+    },
+    "developer": {
+      "title": "Spotify Developer Portal",
+      "description": "Create and manage your Spotify app credentials"
+    }
+  },
+  "bricks": {
+    "player": {
+      "name": "Spotify Player",
+      "description": "Control Spotify playback and display album art",
+      "config": {
+        "refreshInterval": {
+          "label": "Refresh interval (ms)"
+        }
+      }
+    }
+  },
+  "sparks": {
+    "track-changed": {
+      "name": "Track Changed",
+      "description": "Emitted when the playing track changes"
+    }
+  }
+}

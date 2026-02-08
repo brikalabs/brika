@@ -14,7 +14,7 @@ bricks:
       x: 1
       y: 2
     size:
-      w: 1
+      w: 2
       h: 1
   - instanceId: inst-mlceag6e-2
     type: "@brika/plugin-timer:photo"
@@ -46,7 +46,7 @@ bricks:
       x: 0
       y: 0
     size:
-      w: 7
+      w: 4
       h: 2
   - instanceId: inst-mlcjxofq-1
     type: "@brika/plugin-timer:photo"

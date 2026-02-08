@@ -21,17 +21,13 @@ import { getContext } from '../context';
  *   config: [
  *     { type: 'text', name: 'room', required: true },
  *   ],
- * }, ({ family, config }) => {
+ * }, ({ config }) => {
  *   const [heating, setHeating] = useState(false);
- *
- *   useAction('toggle-heat', (p) => {
- *     setHeating(p?.checked as boolean ?? !heating);
- *   });
  *
  *   return (
  *     <>
  *       <Stat label={config.room as string} value={21.5} unit="°C" />
- *       <Toggle label="Heating" checked={heating} onToggle="toggle-heat" />
+ *       <Toggle label="Heating" checked={heating} onToggle={(p) => setHeating(p?.checked as boolean ?? !heating)} />
  *     </>
  *   );
  * });

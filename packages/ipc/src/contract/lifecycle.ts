@@ -60,3 +60,12 @@ export const preferences = message(
     values: z.record(z.string(), z.unknown()),
   })
 );
+
+/** Plugin requests a preference update (e.g. OAuth token storage) */
+export const updatePreference = message(
+  'updatePreference',
+  z.object({
+    key: z.string(),
+    value: z.unknown(),
+  })
+);

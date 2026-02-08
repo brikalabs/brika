@@ -18,25 +18,28 @@ export const SliderRenderer = memo(function SliderRenderer({
   }, [node.value]);
 
   const pct = ((local - node.min) / (node.max - node.min)) * 100;
+  const hasLabel = node.label || node.icon;
 
   return (
-    <div className="shrink-0 space-y-1.5 rounded-md bg-muted/40 px-2.5 py-2">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1.5">
-          {node.icon && (
-            <DynamicIcon
-              name={node.icon as IconName}
-              className="size-3.5 shrink-0"
-              style={{ color: node.color ?? undefined }}
-            />
-          )}
-          <span className="font-medium text-xs">{node.label}</span>
+    <div className={hasLabel ? 'shrink-0 space-y-1.5 rounded-md bg-muted/40 px-2.5 py-2' : 'shrink-0'}>
+      {hasLabel && (
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5">
+            {node.icon && (
+              <DynamicIcon
+                name={node.icon as IconName}
+                className="size-3.5 shrink-0"
+                style={{ color: node.color ?? undefined }}
+              />
+            )}
+            {node.label && <span className="font-medium text-xs">{node.label}</span>}
+          </div>
+          <span className="font-medium text-xs tabular-nums">
+            {local}
+            {node.unit && <span className="text-muted-foreground"> {node.unit}</span>}
+          </span>
         </div>
-        <span className="font-medium text-xs tabular-nums">
-          {local}
-          {node.unit && <span className="text-muted-foreground"> {node.unit}</span>}
-        </span>
-      </div>
+      )}
       <input
         type="range"
         min={node.min}

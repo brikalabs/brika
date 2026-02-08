@@ -1,16 +1,27 @@
-import type { BaseNode } from './_shared';
+import type { ActionHandler, BaseNode } from './_shared';
+import { resolveAction } from './_shared';
 
 export interface ButtonNode extends BaseNode {
   type: 'button';
-  label: string;
-  onPress: string;
+  label?: string;
+  onPress?: string;
+  /** When set, clicking opens this URL in a new tab instead of dispatching an action. */
+  url?: string;
   icon?: string;
-  variant?: 'default' | 'outline' | 'ghost' | 'destructive';
+  variant?: 'default' | 'secondary' | 'outline' | 'ghost' | 'destructive' | 'link';
   color?: string;
 }
 
-export function Button(props: Omit<ButtonNode, 'type'>): ButtonNode {
-  return { type: 'button', ...props };
+export function Button(props: {
+  label?: string;
+  onPress?: ActionHandler;
+  url?: string;
+  icon?: string;
+  variant?: 'default' | 'secondary' | 'outline' | 'ghost' | 'destructive' | 'link';
+  color?: string;
+}): ButtonNode {
+  const { onPress, ...rest } = props;
+  return { type: 'button', ...rest, onPress: onPress ? resolveAction(onPress) : undefined };
 }
 
 declare module './_shared' {

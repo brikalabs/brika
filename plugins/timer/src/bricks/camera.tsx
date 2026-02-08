@@ -1,4 +1,4 @@
-import { defineBrick, useAction, useBrickSize, usePreference, useState } from '@brika/sdk/bricks/core';
+import { defineBrick, useBrickSize, usePreference, useState } from '@brika/sdk/bricks/core';
 import { Button, Grid, Stack, Stat, Status, Video } from '@brika/sdk/bricks/components';
 
 const STREAMS = [
@@ -11,17 +11,22 @@ const STREAMS = [
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
-function CameraControls({ recording }: { recording: boolean }) {
+function CameraControls({ recording, onPrev, onNext, onToggleRec }: {
+  recording: boolean;
+  onPrev: () => void;
+  onNext: () => void;
+  onToggleRec: () => void;
+}) {
   return (
     <Stack direction="horizontal" gap="sm">
-      <Button label="Prev" onPress="prev-cam" icon="chevron-left" variant="outline" />
+      <Button label="Prev" onPress={onPrev} icon="chevron-left" variant="outline" />
       <Button
         label={recording ? 'Stop' : 'Record'}
-        onPress="toggle-recording"
+        onPress={onToggleRec}
         icon={recording ? 'square' : 'circle'}
         variant={recording ? 'destructive' : 'default'}
       />
-      <Button label="Next" onPress="next-cam" icon="chevron-right" variant="outline" />
+      <Button label="Next" onPress={onNext} icon="chevron-right" variant="outline" />
     </Stack>
   );
 }
@@ -64,9 +69,9 @@ export const cameraBrick = defineBrick(
     const [recording, setRecording] = useState(false);
     const stream = STREAMS[streamIndex % STREAMS.length];
 
-    useAction('next-cam', () => setStreamIndex((i: number) => (i + 1) % STREAMS.length));
-    useAction('prev-cam', () => setStreamIndex((i: number) => (i - 1 + STREAMS.length) % STREAMS.length));
-    useAction('toggle-recording', () => setRecording((r: boolean) => !r));
+    const handleNext = () => setStreamIndex((i: number) => (i + 1) % STREAMS.length);
+    const handlePrev = () => setStreamIndex((i: number) => (i - 1 + STREAMS.length) % STREAMS.length);
+    const handleToggleRec = () => setRecording((r: boolean) => !r);
 
     // ── Narrow (2-3 cols): video-focused ─────────────────────────────────
     if (width <= 3) {
@@ -74,7 +79,7 @@ export const cameraBrick = defineBrick(
         <>
           <Video src={stream.src} format="hls" muted={muted} />
           {height >= 3 && <Status label={stream.name} status={recording ? 'error' : 'online'} icon="video" />}
-          {height >= 4 && <CameraControls recording={recording} />}
+          {height >= 4 && <CameraControls recording={recording} onPrev={handlePrev} onNext={handleNext} onToggleRec={handleToggleRec} />}
         </>
       );
     }
@@ -84,7 +89,7 @@ export const cameraBrick = defineBrick(
       <>
         <Video src={stream.src} format="hls" muted={muted} />
         <CameraInfoGrid streamName={stream.name} recording={recording} wide={width >= 6} />
-        {height >= 4 && <CameraControls recording={recording} />}
+        {height >= 4 && <CameraControls recording={recording} onPrev={handlePrev} onNext={handleNext} onToggleRec={handleToggleRec} />}
       </>
     );
   },

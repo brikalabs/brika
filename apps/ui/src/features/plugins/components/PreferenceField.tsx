@@ -1,5 +1,7 @@
 import type { PreferenceDefinition } from '@brika/shared';
+import { ExternalLink } from 'lucide-react';
 import {
+  Button,
   Input,
   Label,
   Select,
@@ -14,6 +16,7 @@ interface PreferenceFieldProps {
   pref: PreferenceDefinition;
   value: unknown;
   onChange: (value: unknown) => void;
+  pluginUid: string;
   pluginName: string;
   tp: (ns: string, key: string, fallback?: string) => string;
 }
@@ -22,6 +25,7 @@ export function PreferenceField({
   pref,
   value,
   onChange,
+  pluginUid,
   pluginName,
   tp,
 }: Readonly<PreferenceFieldProps>) {
@@ -39,7 +43,7 @@ export function PreferenceField({
           </Label>
           <Input
             type={pref.type}
-            value={(value as string) ?? ''}
+            value={typeof value === 'string' ? value : ''}
             onChange={(e) => onChange(e.target.value)}
             placeholder={pref.default}
           />
@@ -56,7 +60,7 @@ export function PreferenceField({
           </Label>
           <Input
             type="number"
-            value={(value as number) ?? pref.default ?? ''}
+            value={typeof value === 'number' ? value : pref.default ?? ''}
             onChange={(e) => onChange(e.target.valueAsNumber)}
             min={pref.min}
             max={pref.max}
@@ -74,7 +78,7 @@ export function PreferenceField({
             {description && <p className="text-muted-foreground text-xs">{description}</p>}
           </div>
           <Switch
-            checked={(value as boolean) ?? pref.default ?? false}
+            checked={typeof value === 'boolean' ? value : pref.default ?? false}
             onCheckedChange={onChange}
           />
         </div>
@@ -87,7 +91,7 @@ export function PreferenceField({
             {label}
             {pref.required && <span className="ml-1 text-destructive">*</span>}
           </Label>
-          <Select value={(value as string) ?? pref.default ?? ''} onValueChange={onChange}>
+          <Select value={typeof value === 'string' ? value : pref.default ?? ''} onValueChange={onChange}>
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
@@ -102,5 +106,26 @@ export function PreferenceField({
           {description && <p className="text-muted-foreground text-xs">{description}</p>}
         </div>
       );
+
+    case 'link': {
+      const href = pref.url.startsWith('/api/')
+        ? pref.url // Absolute hub path — use as-is
+        : pref.url.startsWith('/')
+          ? `/api/plugins/${encodeURIComponent(pluginUid)}/routes${pref.url}` // Relative plugin route
+          : pref.url; // External URL
+      return (
+        <div className="space-y-2">
+          <Button
+            variant="outline"
+            className="w-full justify-start"
+            onClick={() => window.open(href, '_blank', 'noopener')}
+          >
+            <ExternalLink className="mr-2 size-4" />
+            {label}
+          </Button>
+          {description && <p className="text-muted-foreground text-xs">{description}</p>}
+        </div>
+      );
+    }
   }
 }

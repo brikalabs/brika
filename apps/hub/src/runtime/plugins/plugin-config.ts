@@ -15,7 +15,8 @@ export class PluginConfigService {
 
   getSchema(pluginName: string): PreferenceDefinition[] {
     const metadata = this.#state.getMetadata(pluginName);
-    return (metadata?.preferences as PreferenceDefinition[] | undefined) ?? [];
+    const prefs: PreferenceDefinition[] | undefined = metadata?.preferences;
+    return prefs ?? [];
   }
 
   getConfig(pluginName: string): Record<string, unknown> {
@@ -23,9 +24,18 @@ export class PluginConfigService {
     const userConfig = this.#configLoader.getPluginConfig(pluginName) ?? {};
 
     const merged: Record<string, unknown> = {};
+
+    // Include schema-declared preferences (with defaults)
     for (const pref of schema) {
+      if (pref.type === 'link') continue;
       merged[pref.name] = pref.name in userConfig ? userConfig[pref.name] : pref.default;
     }
+
+    // Preserve internal SDK keys (e.g. __oauth_*_token) — not in schema but persisted
+    for (const key of Object.keys(userConfig)) {
+      if (key.startsWith('__')) merged[key] = userConfig[key];
+    }
+
     return merged;
   }
 
@@ -46,6 +56,9 @@ export class PluginConfigService {
     const shape: Record<string, z.ZodTypeAny> = {};
 
     for (const p of prefs) {
+      // Link preferences are UI-only (buttons/links) — no value to validate
+      if (p.type === 'link') continue;
+
       let s: z.ZodTypeAny;
       switch (p.type) {
         case 'text':
@@ -53,11 +66,13 @@ export class PluginConfigService {
           // Required strings must be non-empty
           s = p.required ? z.string().min(1) : z.string();
           break;
-        case 'number':
-          s = z.number();
-          if (p.min !== undefined) s = (s as z.ZodNumber).min(p.min);
-          if (p.max !== undefined) s = (s as z.ZodNumber).max(p.max);
+        case 'number': {
+          let num = z.number();
+          if (p.min !== undefined) num = num.min(p.min);
+          if (p.max !== undefined) num = num.max(p.max);
+          s = num;
           break;
+        }
         case 'checkbox':
           s = z.boolean();
           break;
@@ -67,6 +82,6 @@ export class PluginConfigService {
       }
       shape[p.name] = p.required ? s : s.optional();
     }
-    return z.object(shape);
+    return z.object(shape).passthrough();
   }
 }

@@ -10,9 +10,15 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type {
+  BadgeNode,
+  BoxNode,
   ButtonNode,
   ChartDataPoint,
+  DividerNode,
+  IconNode,
   ImageNode,
+  ProgressNode,
+  SpacerNode,
   VideoNode,
 } from '@brika/ui-kit';
 
@@ -21,12 +27,18 @@ export type {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export {
+  Badge,
+  Box,
   Button,
   Chart,
+  Divider,
   Grid,
+  Icon,
   Image,
+  Progress,
   Section,
   Slider,
+  Spacer,
   Stack,
   Stat,
   Status,

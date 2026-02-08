@@ -31,4 +31,10 @@ export { defineBrick } from '../api/bricks';
 // Hooks (React-like hooks for brick components)
 // ─────────────────────────────────────────────────────────────────────────────
 
-export { useAction, useCallback, useBrickSize, useEffect, useMemo, usePluginPreference, usePreference, useRef, useState } from '../brick-hooks';
+export { useCallback, useBrickSize, useEffect, useMemo, usePluginPreference, usePreference, useRef, useState } from '../brick-hooks';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Shared Store (Zustand-style reactive store across brick instances)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export { type SharedStore, defineSharedStore } from '../brick-hooks';

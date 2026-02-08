@@ -11,22 +11,29 @@ export const ButtonRenderer = memo(function ButtonRenderer({
   node: ButtonNode;
   onAction?: ActionHandler;
 }) {
-  const variant =
-    node.variant === 'default' || !node.variant
-      ? 'default'
-      : node.variant === 'destructive'
-        ? 'destructive'
-        : (node.variant as 'outline' | 'ghost');
+  const variant = node.variant ?? 'default';
+  const iconOnly = node.icon && !node.label;
+
+  const handleClick = node.url
+    ? () => window.open(node.url, '_blank', 'noopener')
+    : () => node.onPress && onAction?.(node.onPress);
+
+  // Custom color: use as background for filled variants, text-only for ghost/link
+  const colorStyle: React.CSSProperties | undefined = node.color
+    ? variant === 'ghost' || variant === 'link'
+      ? { color: node.color }
+      : { backgroundColor: node.color, borderColor: 'transparent', color: '#fff' }
+    : undefined;
 
   return (
     <Button
       variant={variant}
-      size="sm"
-      className="shrink-0 rounded-md"
-      onClick={() => onAction?.(node.onPress)}
-      style={node.color ? { borderColor: node.color, color: node.color } : undefined}
+      size={iconOnly ? 'icon-sm' : 'sm'}
+      className={iconOnly ? 'shrink-0 rounded-full' : 'shrink-0'}
+      onClick={handleClick}
+      style={colorStyle}
     >
-      {node.icon && <DynamicIcon name={node.icon as IconName} className="mr-1.5 size-3.5" />}
+      {node.icon && <DynamicIcon name={node.icon as IconName} className={iconOnly ? 'size-4' : 'mr-1 size-3.5'} />}
       {node.label}
     </Button>
   );

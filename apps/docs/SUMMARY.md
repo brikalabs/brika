@@ -14,6 +14,7 @@
 * [Overview](plugins/overview.md)
 * [Create a Plugin](plugins/create-plugin.md)
 * [Reactive Blocks](plugins/reactive-blocks.md)
+* [Bricks](plugins/bricks.md)
 * [Lifecycle Hooks](plugins/lifecycle-hooks.md)
 
 ## API Reference

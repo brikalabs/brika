@@ -10,6 +10,29 @@
 
 import type { ComponentNode, Mutation } from './descriptors';
 
+/** Type guard for container nodes (nodes that have a `children` array). */
+function hasChildren(node: ComponentNode): node is ComponentNode & { children: ComponentNode[] } {
+  return 'children' in node;
+}
+
+/**
+ * Merge props into a node and optionally remove keys — returns a valid ComponentNode.
+ * Encapsulates the unavoidable cast needed for dynamic property manipulation
+ * on a discriminated union.
+ */
+function mergeNodeProps(
+  node: ComponentNode,
+  props: Record<string, unknown>,
+  removed?: string[],
+): ComponentNode {
+  const updated: Record<string, unknown> = Object.assign({}, node, props);
+  if (removed) {
+    for (const k of removed) delete updated[k];
+  }
+  // Safe: we're merging props onto a structurally valid node
+  return updated as unknown as ComponentNode;
+}
+
 /** Apply a batch of mutations to a component tree, returning a new tree with structural sharing. */
 export function applyMutations(body: ComponentNode[], mutations: Mutation[]): ComponentNode[] {
   let result = body;
@@ -44,9 +67,14 @@ function updateAtPath(
         }
         return result;
       }
+      case 'replace': {
+        const result = [...nodes];
+        result[idx] = mutation.node;
+        return result;
+      }
       case 'update': {
         const result = [...nodes];
-        result[idx] = { ...result[idx], ...mutation.props } as ComponentNode;
+        result[idx] = mergeNodeProps(result[idx]!, mutation.props, mutation.removed);
         return result;
       }
       case 'remove': {
@@ -56,18 +84,19 @@ function updateAtPath(
   }
 
   // Not at leaf yet — recurse into children of the node at idx
-  const node = nodes[idx] as ComponentNode | undefined;
-  if (!node || !('children' in node)) return nodes;
+  const node = nodes[idx];
+  if (!node || !hasChildren(node)) return nodes;
 
   const updatedChildren = updateAtPath(
-    (node as { children: ComponentNode[] }).children,
+    node.children,
     segments,
     depth + 1,
     mutation,
   );
 
   // Structural sharing: new array, new node at idx, siblings unchanged
+  // Object.assign avoids TS excess-property-check issues with discriminated union spreads
   const result = [...nodes];
-  result[idx] = { ...node!, children: updatedChildren } as ComponentNode;
+  result[idx] = Object.assign({}, node, { children: updatedChildren });
   return result;
 }

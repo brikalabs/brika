@@ -10,6 +10,7 @@ import { Logger } from '@/runtime/logs/log-router';
 import { SparkRegistry } from '@/runtime/sparks';
 import { StateStore } from '@/runtime/state/state-store';
 import type { PluginProcess } from './plugin-process';
+import { PluginRouteRegistry } from './plugin-route-registry';
 import { now } from './utils';
 
 /**
@@ -24,6 +25,7 @@ export class PluginEventHandler {
   readonly #sparks = inject(SparkRegistry);
   readonly #brickTypes = inject(BrickTypeRegistry);
   readonly #brickInstances = inject(BrickInstanceManager);
+  readonly #pluginRoutes = inject(PluginRouteRegistry);
 
   /** Block emit callback - set by PluginManager */
   #onBlockEmit: ((instanceId: string, port: string, data: Json) => void) | null = null;
@@ -79,14 +81,14 @@ export class PluginEventHandler {
     );
   }
 
-  onPluginLog(name: string, level: string, message: string, meta?: Record<string, unknown>): void {
+  onPluginLog(name: string, level: LogLevel, message: string, meta?: Record<string, Json>): void {
     this.#logs.emit({
       ts: now(),
-      level: level as LogLevel,
+      level,
       source: 'plugin',
       pluginName: name,
       message,
-      meta: meta as Record<string, Json> | undefined,
+      meta,
     });
   }
 
@@ -207,6 +209,15 @@ export class PluginEventHandler {
         pluginName,
       ),
     );
+  }
+
+  registerRoute(pluginName: string, method: string, path: string): void {
+    this.#pluginRoutes.register(pluginName, method, path);
+    this.#logs.debug('Route registered from plugin', {
+      pluginName,
+      method,
+      path,
+    });
   }
 
   patchBrickInstance(instanceId: string, mutations: unknown[]): void {

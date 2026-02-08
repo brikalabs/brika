@@ -214,7 +214,7 @@ export interface PluginManifest {
 // Plugin Preferences (Raycast-style configuration)
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type PreferenceType = 'text' | 'password' | 'checkbox' | 'dropdown' | 'number';
+export type PreferenceType = 'text' | 'password' | 'checkbox' | 'dropdown' | 'number' | 'link';
 
 export interface BasePreference {
   name: string;
@@ -253,12 +253,19 @@ export interface DropdownPreference extends BasePreference {
   options: Array<{ value: string }>;
 }
 
+export interface LinkPreference extends BasePreference {
+  type: 'link';
+  /** URL to open. Relative paths (starting with /) resolve to plugin routes. */
+  url: string;
+}
+
 export type PreferenceDefinition =
   | TextPreference
   | PasswordPreference
   | NumberPreference
   | CheckboxPreference
-  | DropdownPreference;
+  | DropdownPreference
+  | LinkPreference;
 
 /** Plugin preferences with schema and current values */
 export interface PluginPreferences {

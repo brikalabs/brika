@@ -29,13 +29,19 @@ export type {
   TextNode,
   ToggleNode,
   VideoNode,
+  BoxNode,
+  SpacerNode,
+  DividerNode,
+  ProgressNode,
+  BadgeNode,
+  IconNode,
 } from './descriptors';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Components (PascalCase — used with custom jsx-runtime and as builder functions)
 // ─────────────────────────────────────────────────────────────────────────────
 
-export { Button, Chart, Grid, Image, Section, Slider, Stack, Stat, Status, Text, Toggle, Video } from './components';
+export { Badge, Box, Button, Chart, Divider, Grid, Icon, Image, Progress, Section, Slider, Spacer, Stack, Stat, Status, Text, Toggle, Video } from './components';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // defineBrick
@@ -57,3 +63,10 @@ export { defineBrick } from './define-brick';
 // ─────────────────────────────────────────────────────────────────────────────
 
 export { applyMutations } from './mutations';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Auto-action registration (internal — used by SDK render pipeline)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type { ActionHandler } from './nodes';
+export { _setActionRegistrar } from './nodes';

@@ -1,8 +1,13 @@
 /**
- * Card Tree Reconciler
+ * Brick Tree Reconciler
  *
  * Diffs old/new ComponentNode trees and produces mutations.
  * Only changed props are sent over IPC — not the full tree.
+ *
+ * Mutation ordering guarantees:
+ *  1. updates / replaces / creates  — emitted in index order
+ *  2. trailing removes              — emitted highest-index-first
+ *     so sequential application never shifts indices that still need processing.
  */
 
 import type { ComponentNode, Mutation } from '@brika/ui-kit';
@@ -17,55 +22,70 @@ export function reconcile(
   basePath = '',
 ): Mutation[] {
   const mutations: Mutation[] = [];
-  const maxLen = Math.max(oldNodes.length, newNodes.length);
+  const minLen = Math.min(oldNodes.length, newNodes.length);
 
-  for (let i = 0; i < maxLen; i++) {
+  for (let i = 0; i < minLen; i++) {
+    const prev = oldNodes[i]!;
+    const next = newNodes[i]!;
+
+    // Reference equality — same object, skip entirely
+    if (prev === next) continue;
+
     const path = basePath ? `${basePath}.${i}` : `${i}`;
-    const prev = oldNodes[i];
-    const next = newNodes[i];
 
-    if (!prev && next) {
-      mutations.push({ op: 'create', path, node: next });
-    } else if (prev && !next) {
-      mutations.push({ op: 'remove', path });
-    } else if (prev && next) {
-      if (prev.type !== next.type) {
-        // Type changed — replace entirely
-        mutations.push({ op: 'remove', path });
-        mutations.push({ op: 'create', path, node: next });
-      } else {
-        // Same type — diff props
-        const changed = diffProps(prev, next);
-        if (changed) {
-          mutations.push({ op: 'update', path, props: changed });
-        }
-        // Recurse into container children
-        if ('children' in prev && 'children' in next) {
-          const childMuts = reconcile(
-            prev.children as ComponentNode[],
-            next.children as ComponentNode[],
-            path,
-          );
-          if (childMuts.length > 0) {
-            mutations.push(...childMuts);
-          }
+    if (prev.type !== next.type) {
+      // Type changed — atomic replace (no remove+create dance)
+      mutations.push({ op: 'replace', path, node: next });
+    } else {
+      // Same type — diff props
+      const diff = diffProps(prev, next);
+      if (diff) {
+        mutations.push({
+          op: 'update',
+          path,
+          props: diff.props,
+          ...(diff.removed.length > 0 ? { removed: diff.removed } : {}),
+        });
+      }
+      // Recurse into container children
+      if ('children' in prev && 'children' in next) {
+        const childMuts = reconcile(
+          prev.children as ComponentNode[],
+          next.children as ComponentNode[],
+          path,
+        );
+        if (childMuts.length > 0) {
+          mutations.push(...childMuts);
         }
       }
     }
+  }
+
+  // Appended nodes (new tree is longer)
+  for (let i = minLen; i < newNodes.length; i++) {
+    const path = basePath ? `${basePath}.${i}` : `${i}`;
+    mutations.push({ op: 'create', path, node: newNodes[i]! });
+  }
+
+  // Removed nodes (old tree is longer) — highest index first
+  for (let i = oldNodes.length - 1; i >= minLen; i--) {
+    const path = basePath ? `${basePath}.${i}` : `${i}`;
+    mutations.push({ op: 'remove', path });
   }
 
   return mutations;
 }
 
 /**
- * Compare two nodes of the same type and return only the changed props.
+ * Compare two nodes of the same type and return changed + removed props.
  * Returns null if nothing changed.
  */
 function diffProps(
   prev: ComponentNode,
   next: ComponentNode,
-): Record<string, unknown> | null {
-  let changed: Record<string, unknown> | null = null;
+): { props: Record<string, unknown>; removed: string[] } | null {
+  let props: Record<string, unknown> | null = null;
+  const removed: string[] = [];
   const prevObj = prev as unknown as Record<string, unknown>;
   const nextObj = next as unknown as Record<string, unknown>;
 
@@ -81,12 +101,17 @@ function diffProps(
     const b = nextObj[key];
 
     if (!valuesEqual(a, b)) {
-      if (!changed) changed = {};
-      changed[key] = b;
+      if (b === undefined) {
+        removed.push(key);
+      } else {
+        if (!props) props = {};
+        props[key] = b;
+      }
     }
   }
 
-  return changed;
+  if (!props && removed.length === 0) return null;
+  return { props: props ?? {}, removed };
 }
 
 /** Fast deep-ish equality for prop values (primitives, arrays, plain objects) */

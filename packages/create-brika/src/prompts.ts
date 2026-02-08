@@ -6,10 +6,13 @@ import * as p from '@clack/prompts';
 import pc from 'picocolors';
 import { getGitUser } from './utils';
 
+export type PluginFeature = 'blocks' | 'bricks' | 'sparks';
+
 export interface PluginConfig {
   name: string;
   description: string;
-  category: 'trigger' | 'action' | 'transform' | 'flow';
+  features: PluginFeature[];
+  category: 'trigger' | 'action' | 'transform' | 'flow' | 'general';
   author: string;
 }
 
@@ -86,16 +89,31 @@ export async function promptForConfig(pluginName?: string): Promise<PluginConfig
           placeholder: `A BRIKA plugin for ${results.name}`,
           defaultValue: `A BRIKA plugin for ${results.name}`,
         }),
-      category: () =>
-        p.select({
-          message: 'What type of plugin is this?',
+      features: () =>
+        p.multiselect({
+          message: 'What does your plugin provide?',
+          options: [
+            { value: 'blocks' as const, label: 'Blocks', hint: 'Workflow blocks (triggers, actions, transforms)' },
+            { value: 'bricks' as const, label: 'Bricks', hint: 'Dashboard UI components' },
+            { value: 'sparks' as const, label: 'Sparks', hint: 'Event types for inter-plugin communication' },
+          ],
+          required: true,
+        }),
+      category: ({ results }) => {
+        const features = results.features as PluginFeature[];
+        if (!features.includes('blocks')) {
+          return Promise.resolve('general' as const);
+        }
+        return p.select({
+          message: 'What type of block is this?',
           options: CATEGORIES.map((c) => ({
             value: c.value,
             label: c.label,
             hint: c.hint,
           })),
           initialValue: 'action',
-        }),
+        });
+      },
       author: () =>
         p.text({
           message: 'Author',
@@ -114,6 +132,7 @@ export async function promptForConfig(pluginName?: string): Promise<PluginConfig
   return {
     name: answers.name as string,
     description: answers.description as string,
+    features: answers.features as PluginFeature[],
     category: answers.category as PluginConfig['category'],
     author: answers.author as string,
   };
