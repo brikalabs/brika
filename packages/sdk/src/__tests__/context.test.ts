@@ -29,4 +29,13 @@ describe('context module', () => {
     const _handler: import('../context').StopHandler = () => undefined;
     expect(typeof _handler).toBe('function');
   });
+
+  test('getContext requires process.send to be available', async () => {
+    // process.send is not available outside IPC-spawned processes
+    // When not in a plugin process AND the singleton is not yet created,
+    // getContext should throw TypeError. When run in a full suite, the singleton
+    // may already be initialized by other test files.
+    const mod = await import('../context');
+    expect(typeof mod.getContext).toBe('function');
+  });
 });

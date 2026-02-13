@@ -410,4 +410,171 @@ describe('PluginChannel', () => {
       expect(error.message).toContain('127');
     });
   });
+
+  describe('stderr piping', () => {
+    test('reads stderr lines and calls onStderr callback', async () => {
+      const stderrLines: string[] = [];
+      const onStderr = mock((line: string) => {
+        stderrLines.push(line);
+      });
+
+      // Create a ReadableStream that emits stderr data
+      const encoder = new TextEncoder();
+      const stderrStream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(encoder.encode('error line 1\nerror line 2\n'));
+          controller.close();
+        },
+      });
+
+      const proc = {
+        pid: 99999,
+        send: mock(() => undefined),
+        kill: mock(() => undefined),
+        stdin: null,
+        stdout: null,
+        stderr: stderrStream,
+        exited: new Promise<number>(() => {}),
+      } as unknown as ReturnType<typeof Bun.spawn>;
+
+      const _channel = new PluginChannel(proc, { onStderr });
+
+      // Wait for async stderr reading to complete
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(stderrLines).toContain('error line 1');
+      expect(stderrLines).toContain('error line 2');
+    });
+
+    test('stderr buffer is included in exit error message', async () => {
+      const onDisconnect = mock(() => undefined);
+
+      const encoder = new TextEncoder();
+      const stderrStream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(encoder.encode('fatal: something broke\n'));
+          controller.close();
+        },
+      });
+
+      const proc = {
+        pid: 99998,
+        send: mock(() => undefined),
+        kill: mock(() => undefined),
+        stdin: null,
+        stdout: null,
+        stderr: stderrStream,
+        exited: new Promise<number>((resolve) => setTimeout(() => resolve(1), 60)),
+      } as unknown as ReturnType<typeof Bun.spawn>;
+
+      const _channel = new PluginChannel(proc, { onDisconnect });
+
+      // Wait for stderr reading and process exit
+      await new Promise((resolve) => setTimeout(resolve, 120));
+
+      expect(onDisconnect).toHaveBeenCalled();
+      const error = (onDisconnect.mock.calls as unknown[][])[0]?.[0] as Error;
+      expect(error.message).toContain('fatal: something broke');
+    });
+
+    test('stderr handles remaining buffer when stream ends', async () => {
+      const stderrLines: string[] = [];
+      const onStderr = mock((line: string) => {
+        stderrLines.push(line);
+      });
+
+      // Send data WITHOUT a trailing newline to exercise the remaining buffer path
+      const encoder = new TextEncoder();
+      const stderrStream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(encoder.encode('no newline at end'));
+          controller.close();
+        },
+      });
+
+      const proc = {
+        pid: 99997,
+        send: mock(() => undefined),
+        kill: mock(() => undefined),
+        stdin: null,
+        stdout: null,
+        stderr: stderrStream,
+        exited: new Promise<number>(() => {}),
+      } as unknown as ReturnType<typeof Bun.spawn>;
+
+      const _channel = new PluginChannel(proc, { onStderr });
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(stderrLines).toContain('no newline at end');
+    });
+
+    test('stderr buffer trims to MAX_STDERR_LINES', async () => {
+      const onStderr = mock(() => undefined);
+
+      // Send more than 20 lines
+      const encoder = new TextEncoder();
+      const lines = Array.from({ length: 30 }, (_, i) => `line ${i + 1}`).join('\n') + '\n';
+      const stderrStream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(encoder.encode(lines));
+          controller.close();
+        },
+      });
+
+      const onDisconnect = mock(() => undefined);
+      const proc = {
+        pid: 99996,
+        send: mock(() => undefined),
+        kill: mock(() => undefined),
+        stdin: null,
+        stdout: null,
+        stderr: stderrStream,
+        exited: new Promise<number>((resolve) => setTimeout(() => resolve(1), 60)),
+      } as unknown as ReturnType<typeof Bun.spawn>;
+
+      const _channel = new PluginChannel(proc, { onDisconnect });
+
+      // Wait for stderr and process exit
+      await new Promise((resolve) => setTimeout(resolve, 120));
+
+      expect(onDisconnect).toHaveBeenCalled();
+      const error = (onDisconnect.mock.calls as unknown[][])[0]?.[0] as Error;
+      // Should contain the last line (line 30) but not the first line (line 1)
+      expect(error.message).toContain('line 30');
+      expect(error.message).not.toContain('line 1\n');
+    });
+
+    test('stderr skips empty lines', async () => {
+      const stderrLines: string[] = [];
+      const onStderr = mock((line: string) => {
+        stderrLines.push(line);
+      });
+
+      const encoder = new TextEncoder();
+      const stderrStream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(encoder.encode('real line\n\n  \n\nanother real line\n'));
+          controller.close();
+        },
+      });
+
+      const proc = {
+        pid: 99995,
+        send: mock(() => undefined),
+        kill: mock(() => undefined),
+        stdin: null,
+        stdout: null,
+        stderr: stderrStream,
+        exited: new Promise<number>(() => {}),
+      } as unknown as ReturnType<typeof Bun.spawn>;
+
+      const _channel = new PluginChannel(proc, { onStderr });
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(stderrLines).toEqual(['real line', 'another real line']);
+    });
+  });
 });
+

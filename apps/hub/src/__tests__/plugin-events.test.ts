@@ -6,10 +6,12 @@ import 'reflect-metadata';
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 import { get, provide, stub, useTestBed } from '@brika/di/testing';
 import { BlockRegistry } from '@/runtime/blocks';
+import { BrickInstanceManager, BrickTypeRegistry } from '@/runtime/bricks';
 import { EventSystem } from '@/runtime/events/event-system';
 import { Logger } from '@/runtime/logs/log-router';
 import { PluginEventHandler } from '@/runtime/plugins/plugin-events';
 import type { PluginProcess } from '@/runtime/plugins/plugin-process';
+import { PluginRouteRegistry } from '@/runtime/plugins/plugin-route-registry';
 import { SparkRegistry } from '@/runtime/sparks';
 import { StateStore } from '@/runtime/state/state-store';
 
@@ -27,6 +29,16 @@ describe('PluginEventHandler', () => {
     dispatch: ReturnType<typeof mock>;
     subscribe: ReturnType<typeof mock>;
   };
+  let mockBrickTypeRegistry: {
+    register: ReturnType<typeof mock>;
+    get: ReturnType<typeof mock>;
+  };
+  let mockBrickInstanceManager: {
+    patchBody: ReturnType<typeof mock>;
+  };
+  let mockPluginRouteRegistry: {
+    register: ReturnType<typeof mock>;
+  };
 
   beforeEach(() => {
     mockBlockRegistry = { register: mock() };
@@ -39,12 +51,25 @@ describe('PluginEventHandler', () => {
       dispatch: mock(),
       subscribe: mock().mockReturnValue(() => undefined),
     };
+    mockBrickTypeRegistry = {
+      register: mock().mockReturnValue('plugin:brick'),
+      get: mock().mockReturnValue({ fullId: 'plugin:brick', localId: 'brick', pluginName: 'plugin' }),
+    };
+    mockBrickInstanceManager = {
+      patchBody: mock().mockReturnValue(true),
+    };
+    mockPluginRouteRegistry = {
+      register: mock(),
+    };
 
     stub(Logger);
     provide(BlockRegistry, mockBlockRegistry);
     provide(SparkRegistry, mockSparkRegistry);
     provide(StateStore, mockStateStore);
     provide(EventSystem, mockEventSystem);
+    provide(BrickTypeRegistry, mockBrickTypeRegistry);
+    provide(BrickInstanceManager, mockBrickInstanceManager);
+    provide(PluginRouteRegistry, mockPluginRouteRegistry);
 
     handler = get(PluginEventHandler);
   });
@@ -179,6 +204,29 @@ describe('PluginEventHandler', () => {
 
       expect(mockBlockRegistry.register.mock.calls.length > 0).toBe(true);
     });
+
+    test('handles package metadata without matching block in blocks array', () => {
+      const block = { id: 'unmatched-block' };
+      const packageMetadata = {
+        version: '1.0.0',
+        blocks: [{ id: 'different-block' }],
+      };
+
+      handler.registerBlock('@test/plugin', block, packageMetadata);
+
+      expect(mockBlockRegistry.register.mock.calls.length > 0).toBe(true);
+    });
+
+    test('handles no package metadata', () => {
+      const block = { id: 'bare-block' };
+
+      handler.registerBlock('@test/plugin', block);
+
+      expect(mockBlockRegistry.register.mock.calls.length > 0).toBe(true);
+      // Plugin info should have 'unknown' version
+      const registeredPluginInfo = mockBlockRegistry.register.mock.calls[0][1];
+      expect(registeredPluginInfo.version).toBe('unknown');
+    });
   });
 
   describe('registerSpark', () => {
@@ -214,6 +262,139 @@ describe('PluginEventHandler', () => {
 
       expect(mockEventSystem.subscribe.mock.calls.length > 0).toBe(true);
       expect(typeof unsubscribe).toBe('function');
+    });
+
+    test('filters events by spark type', () => {
+      let capturedCallback: ((action: unknown) => void) | undefined;
+      mockEventSystem.subscribe.mockImplementation(
+        (_actionDef: unknown, callback: (action: unknown) => void) => {
+          capturedCallback = callback;
+          return () => undefined;
+        }
+      );
+
+      const sparkHandler = mock();
+      handler.subscribeToSparks('@test/plugin:my-spark', sparkHandler);
+
+      // Simulate matching event
+      if (capturedCallback) {
+        capturedCallback({
+          payload: { type: '@test/plugin:my-spark', payload: { data: 1 }, source: 'test' },
+          timestamp: Date.now(),
+          id: 'action-1',
+        });
+        expect(sparkHandler).toHaveBeenCalledTimes(1);
+
+        // Simulate non-matching event
+        capturedCallback({
+          payload: { type: 'other:spark', payload: { data: 2 }, source: 'test' },
+          timestamp: Date.now(),
+          id: 'action-2',
+        });
+        expect(sparkHandler).toHaveBeenCalledTimes(1); // Not called again
+      }
+    });
+  });
+
+  describe('registerBrickType', () => {
+    test('registers brick type and dispatches event', () => {
+      const brickType = {
+        id: 'test-brick',
+        families: ['sm', 'md'] as Array<'sm' | 'md' | 'lg'>,
+      };
+
+      handler.registerBrickType('@test/plugin', brickType);
+
+      expect(mockBrickTypeRegistry.register).toHaveBeenCalled();
+      expect(mockEventSystem.dispatch).toHaveBeenCalled();
+    });
+
+    test('registers brick type with manifest', () => {
+      const brickType = {
+        id: 'test-brick',
+        families: ['sm', 'md'] as Array<'sm' | 'md' | 'lg'>,
+        config: [{ key: 'color', type: 'string' }],
+      };
+      const manifest = {
+        name: 'Test Brick',
+        description: 'A test brick',
+        category: 'widgets',
+        icon: 'brick-icon',
+        color: '#ff0000',
+      };
+
+      handler.registerBrickType('@test/plugin', brickType, manifest);
+
+      expect(mockBrickTypeRegistry.register).toHaveBeenCalledWith(
+        brickType,
+        '@test/plugin',
+        manifest
+      );
+    });
+
+    test('registers brick type without manifest', () => {
+      const brickType = {
+        id: 'test-brick',
+        families: ['lg'] as Array<'sm' | 'md' | 'lg'>,
+      };
+
+      handler.registerBrickType('@test/plugin', brickType);
+
+      expect(mockBrickTypeRegistry.register).toHaveBeenCalledWith(
+        brickType,
+        '@test/plugin',
+        undefined
+      );
+    });
+  });
+
+  describe('registerRoute', () => {
+    test('registers route with plugin route registry', () => {
+      handler.registerRoute('@test/plugin', 'GET', '/api/custom');
+
+      expect(mockPluginRouteRegistry.register).toHaveBeenCalledWith(
+        '@test/plugin',
+        'GET',
+        '/api/custom'
+      );
+    });
+
+    test('registers multiple routes', () => {
+      handler.registerRoute('@test/plugin', 'GET', '/api/items');
+      handler.registerRoute('@test/plugin', 'POST', '/api/items');
+
+      expect(mockPluginRouteRegistry.register).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('patchBrickInstance', () => {
+    test('patches brick instance and dispatches event', () => {
+      mockBrickInstanceManager.patchBody.mockReturnValue(true);
+
+      const mutations = [{ op: 'replace', path: '/text', value: 'Hello' }];
+      handler.patchBrickInstance('inst-1', mutations);
+
+      expect(mockBrickInstanceManager.patchBody).toHaveBeenCalledWith('inst-1', mutations);
+      expect(mockEventSystem.dispatch).toHaveBeenCalled();
+    });
+
+    test('does not dispatch event if patchBody returns false', () => {
+      mockBrickInstanceManager.patchBody.mockReturnValue(false);
+      mockEventSystem.dispatch.mockClear();
+
+      const mutations = [{ op: 'replace', path: '/text', value: 'Hello' }];
+      handler.patchBrickInstance('inst-1', mutations);
+
+      expect(mockBrickInstanceManager.patchBody).toHaveBeenCalledWith('inst-1', mutations);
+      expect(mockEventSystem.dispatch).not.toHaveBeenCalled();
+    });
+
+    test('handles empty mutations array', () => {
+      mockBrickInstanceManager.patchBody.mockReturnValue(true);
+
+      handler.patchBrickInstance('inst-1', []);
+
+      expect(mockBrickInstanceManager.patchBody).toHaveBeenCalledWith('inst-1', []);
     });
   });
 });

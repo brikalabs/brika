@@ -370,6 +370,98 @@ schedules: []
         })
       ).rejects.toThrow('Cannot resolve npm package');
     });
+
+    test('throws for workspace:* when package not found', async () => {
+      await loader.load();
+
+      await expect(
+        loader.resolvePluginEntry({
+          name: '@test/nonexistent-package',
+          version: 'workspace:*',
+        })
+      ).rejects.toThrow('Workspace package not found');
+    });
+
+    test('throws for workspace:./path when package.json not found', async () => {
+      await loader.load();
+
+      await expect(
+        loader.resolvePluginEntry({
+          name: '@test/missing',
+          version: 'workspace:./nonexistent-dir',
+        })
+      ).rejects.toThrow('Workspace package not found at');
+    });
+
+    test('resolves workspace:./relative-path when package.json exists', async () => {
+      await loader.load();
+
+      // Create a fake plugin directory relative to workspace root (which falls back to TEST_DIR)
+      const pluginDir = join(TEST_DIR, 'test-plugin-dir');
+      await Bun.write(
+        join(pluginDir, 'package.json'),
+        JSON.stringify({ name: '@test/workspace-plugin', version: '1.0.0' })
+      );
+
+      // workspace:./test-plugin-dir => resolves relative to workspace root
+      const result = await loader.resolvePluginEntry({
+        name: '@test/workspace-plugin',
+        version: 'workspace:./test-plugin-dir',
+      });
+
+      expect(result.name).toBe('@test/workspace-plugin');
+      expect(result.rootDirectory).toBe(pluginDir);
+
+      // Cleanup
+      const { rm: rmFs } = await import('node:fs/promises');
+      await rmFs(pluginDir, { recursive: true, force: true });
+    });
+
+    test('resolves workspace path without ./ prefix', async () => {
+      await loader.load();
+
+      // Create a fake plugin directory relative to workspace root
+      const pluginDir = join(TEST_DIR, 'abs-plugin');
+      await Bun.write(
+        join(pluginDir, 'package.json'),
+        JSON.stringify({ name: '@test/abs-plugin', version: '1.0.0' })
+      );
+
+      // workspace:abs-plugin => resolves relative to workspace root (without ./ prefix)
+      const result = await loader.resolvePluginEntry({
+        name: '@test/abs-plugin',
+        version: 'workspace:abs-plugin',
+      });
+
+      expect(result.name).toBe('@test/abs-plugin');
+      expect(result.rootDirectory).toBe(pluginDir);
+
+      // Cleanup
+      const { rm: rmFs } = await import('node:fs/promises');
+      await rmFs(pluginDir, { recursive: true, force: true });
+    });
+
+    test('uses fallback name when package.json has no name', async () => {
+      await loader.load();
+
+      const pluginDir = join(TEST_DIR, 'nameless-plugin');
+      await Bun.write(
+        join(pluginDir, 'package.json'),
+        JSON.stringify({ version: '1.0.0' })
+      );
+
+      const result = await loader.resolvePluginEntry({
+        name: 'fallback-name',
+        version: 'workspace:./nameless-plugin',
+      });
+
+      expect(result.name).toBe('fallback-name');
+      expect(result.rootDirectory).toBe(pluginDir);
+
+      // Cleanup
+      const { rm: rmFs } = await import('node:fs/promises');
+      await rmFs(pluginDir, { recursive: true, force: true });
+    });
   });
 
   describe('path getters', () => {

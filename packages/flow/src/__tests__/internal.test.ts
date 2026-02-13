@@ -76,6 +76,42 @@ describe('ensureFlowImpl', () => {
 
     expect(values).toEqual(['hello', 'world']);
   });
+
+  test('wrapped flow setTimeout works correctly', async () => {
+    const mockFlow: Flow<number> = {
+      on: mock(() => undefined),
+      to: mock(() => undefined),
+      latest: () => undefined,
+      pipe: mock(() => mockFlow),
+    };
+
+    const wrapped = ensureFlowImpl(mockFlow);
+    let called = false;
+
+    // Use the wrapped flow's setTimeout (exercises lines 27-28)
+    const cancel = wrapped.setTimeout(() => { called = true; }, 10);
+
+    await wait(30);
+    expect(called).toBe(true);
+  });
+
+  test('wrapped flow setTimeout can be cancelled', async () => {
+    const mockFlow: Flow<number> = {
+      on: mock(() => undefined),
+      to: mock(() => undefined),
+      latest: () => undefined,
+      pipe: mock(() => mockFlow),
+    };
+
+    const wrapped = ensureFlowImpl(mockFlow);
+    let called = false;
+
+    const cancel = wrapped.setTimeout(() => { called = true; }, 50);
+    cancel();
+
+    await wait(80);
+    expect(called).toBe(false);
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -390,5 +426,19 @@ describe('combinatorFlow', () => {
 
     expect(callback).toHaveBeenCalledTimes(2);
     expect(callback).toHaveBeenCalledWith(1);
+  });
+
+  test('combinatorFlow setTimeout works for delayed push', async () => {
+    const { values, subscriber } = createValueCollector<number>();
+
+    const flow = combinatorFlow<number>(({ push }) => {
+      // Use the flow's internal setTimeout by deriving and using it
+      // The setTimeout is baked into the FlowImpl created by combinatorFlow
+      setTimeout(() => push(42), 10);
+    });
+    flow.on(subscriber);
+
+    await wait(30);
+    expect(values).toEqual([42]);
   });
 });

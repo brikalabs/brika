@@ -180,4 +180,117 @@ describe('generateCacheKey', () => {
     expect(key).not.toContain('b=');
     expect(key).not.toContain('c=');
   });
+
+  test('should hash string body for POST requests', () => {
+    const config: RequestConfig = {
+      method: 'POST',
+      url: 'https://api.example.com/data',
+      body: 'raw string body',
+    };
+
+    const key = generateCacheKey(config);
+
+    expect(key.split('|').length).toBe(3);
+  });
+
+  test('should handle FormData body', () => {
+    const formData = new FormData();
+    formData.append('field', 'value');
+
+    const config: RequestConfig = {
+      method: 'POST',
+      url: 'https://api.example.com/upload',
+      body: formData,
+    };
+
+    const key = generateCacheKey(config);
+
+    expect(key).toContain('formdata');
+  });
+
+  test('should handle Blob body', () => {
+    const blob = new Blob(['test content'], { type: 'text/plain' });
+
+    const config: RequestConfig = {
+      method: 'PUT',
+      url: 'https://api.example.com/upload',
+      body: blob,
+    };
+
+    const key = generateCacheKey(config);
+
+    expect(key).toContain('blob:');
+    expect(key).toContain('text/plain');
+  });
+
+  test('should handle ArrayBuffer body', () => {
+    const buffer = new ArrayBuffer(16);
+
+    const config: RequestConfig = {
+      method: 'PATCH',
+      url: 'https://api.example.com/binary',
+      body: buffer as unknown as RequestConfig['body'],
+    };
+
+    const key = generateCacheKey(config);
+
+    expect(key).toContain('arraybuffer:16');
+  });
+
+  test('should handle URLSearchParams body', () => {
+    const params = new URLSearchParams();
+    params.set('key', 'value');
+
+    const config: RequestConfig = {
+      method: 'POST',
+      url: 'https://api.example.com/form',
+      body: params,
+    };
+
+    const key = generateCacheKey(config);
+
+    // URLSearchParams body should produce a hash
+    expect(key.split('|').length).toBe(3);
+  });
+
+  test('should handle non-serializable object body gracefully', () => {
+    const circular: Record<string, unknown> = {};
+    circular.self = circular;
+
+    const config: RequestConfig = {
+      method: 'POST',
+      url: 'https://api.example.com/data',
+      body: circular,
+    };
+
+    const key = generateCacheKey(config);
+
+    // Falls back to 'object' when JSON.stringify throws
+    expect(key).toContain('object');
+  });
+
+  test('should not include body hash for GET requests', () => {
+    const config: RequestConfig = {
+      method: 'GET',
+      url: 'https://api.example.com/data',
+      body: { data: 'test' },
+    };
+
+    const key = generateCacheKey(config);
+
+    // GET requests should only have method|url
+    expect(key).toBe('GET|https://api.example.com/data');
+  });
+
+  test('should skip empty params object', () => {
+    const config: RequestConfig = {
+      method: 'GET',
+      url: 'https://api.example.com/data',
+      params: {},
+    };
+
+    const key = generateCacheKey(config);
+
+    expect(key).toBe('GET|https://api.example.com/data');
+  });
 });

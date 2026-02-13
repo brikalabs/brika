@@ -122,6 +122,86 @@ describe('TestApp', () => {
   });
 });
 
+describe('TestApp instance methods', () => {
+  const updateUserRoute = route.put(
+    '/api/users/:id',
+    { params: z.object({ id: z.string() }), body: z.object({ name: z.string() }) },
+    ({ params, body }) => ({ id: params.id, name: body.name, updated: true })
+  );
+
+  const patchUserRoute = route.patch(
+    '/api/users/:id',
+    { params: z.object({ id: z.string() }), body: z.object({ name: z.string().optional() }) },
+    ({ params, body }) => ({ id: params.id, ...body, patched: true })
+  );
+
+  const deleteUserRoute = route.delete(
+    '/api/users/:id',
+    { params: z.object({ id: z.string() }) },
+    ({ params }) => ({ id: params.id, deleted: true })
+  );
+
+  test('PUT request with body', async () => {
+    const app = TestApp.create([updateUserRoute]);
+
+    const res = await app.put('/api/users/123', { name: 'Updated' });
+
+    expect(res.status).toBe(200);
+    expect(res.ok).toBeTrue();
+    expect(res.body).toEqual({ id: '123', name: 'Updated', updated: true });
+  });
+
+  test('PATCH request with body', async () => {
+    const app = TestApp.create([patchUserRoute]);
+
+    const res = await app.patch('/api/users/456', { name: 'Patched' });
+
+    expect(res.status).toBe(200);
+    expect(res.ok).toBeTrue();
+    expect(res.body).toEqual({ id: '456', name: 'Patched', patched: true });
+  });
+
+  test('DELETE request', async () => {
+    const app = TestApp.create([deleteUserRoute]);
+
+    const res = await app.delete('/api/users/789');
+
+    expect(res.status).toBe(200);
+    expect(res.ok).toBeTrue();
+    expect(res.body).toEqual({ id: '789', deleted: true });
+  });
+
+  test('PUT request with custom headers', async () => {
+    const app = TestApp.create([updateUserRoute]);
+
+    const res = await app.put('/api/users/123', { name: 'Updated' }, {
+      headers: { 'X-Custom': 'test' },
+    });
+
+    expect(res.status).toBe(200);
+  });
+
+  test('PATCH request with query params', async () => {
+    const app = TestApp.create([patchUserRoute]);
+
+    const res = await app.patch('/api/users/456', { name: 'Patched' }, {
+      query: { version: '2' },
+    });
+
+    expect(res.status).toBe(200);
+  });
+
+  test('DELETE request with custom headers', async () => {
+    const app = TestApp.create([deleteUserRoute]);
+
+    const res = await app.delete('/api/users/789', {
+      headers: { 'Authorization': 'Bearer token' },
+    });
+
+    expect(res.status).toBe(200);
+  });
+});
+
 describe('TestApp.call', () => {
   test('simple GET route with inferred types', async () => {
     const res = await TestApp.call(healthRoute);

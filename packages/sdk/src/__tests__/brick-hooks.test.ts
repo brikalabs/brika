@@ -11,6 +11,13 @@ import { useRef } from '../brick-hooks/use-ref';
 import { useMemo, useCallback } from '../brick-hooks/use-memo';
 import { useBrickSize } from '../brick-hooks/use-brick-size';
 import { usePreference } from '../brick-hooks/use-preference';
+// resolveAction is not in @brika/ui-kit's public exports, but we need it
+// to exercise the registrar that _beginRender installs.
+// Use the resolved filesystem path to bypass package exports restrictions.
+const uiKitNodesPath = require.resolve('@brika/ui-kit').replace('/src/index.ts', '/src/nodes/_shared.ts');
+const uiKitNodes = require(uiKitNodesPath) as {
+  resolveAction: (handler: () => void) => string;
+};
 
 /** Wait for queued microtasks (scheduleRender uses queueMicrotask). */
 const flush = () => new Promise<void>((r) => setTimeout(r, 10));
@@ -477,6 +484,87 @@ describe('usePreference', () => {
     } finally {
       console.warn = originalWarn;
     }
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// _beginRender action registrar
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('_beginRender action registrar', () => {
+  test('clears auto-registered actions (keys starting with __a) on each render', () => {
+    const state = _createState(() => {});
+    // Simulate auto-registered actions from a previous render
+    state.actionRefs.set('__a0', { current: () => {} });
+    state.actionRefs.set('__a1', { current: () => {} });
+    // A manually-registered action should not be cleared
+    state.actionRefs.set('my-action', { current: () => {} });
+
+    _beginRender(state);
+
+    expect(state.actionRefs.has('__a0')).toBe(false);
+    expect(state.actionRefs.has('__a1')).toBe(false);
+    expect(state.actionRefs.has('my-action')).toBe(true);
+
+    _endRender();
+  });
+
+  test('registrar auto-registers action handlers with incrementing IDs', () => {
+    const state = _createState(() => {});
+    const handler1 = () => {};
+    const handler2 = () => {};
+
+    _beginRender(state);
+
+    // resolveAction calls the registrar installed by _beginRender
+    const id1 = uiKitNodes.resolveAction(handler1);
+    const id2 = uiKitNodes.resolveAction(handler2);
+
+    expect(id1).toBe('__a0');
+    expect(id2).toBe('__a1');
+    expect(state.actionRefs.has('__a0')).toBe(true);
+    expect(state.actionRefs.has('__a1')).toBe(true);
+    expect(state.actionRefs.get('__a0')!.current).toBe(handler1);
+    expect(state.actionRefs.get('__a1')!.current).toBe(handler2);
+
+    _endRender();
+  });
+
+  test('registrar updates existing action ref handler when key already exists', () => {
+    const state = _createState(() => {});
+    const handler1 = () => 'first';
+    const handler2 = () => 'second';
+
+    _beginRender(state);
+
+    // Manually add the existing ref AFTER _beginRender clears __a keys
+    // but BEFORE calling resolveAction, to test the "existing" branch
+    state.actionRefs.set('__a0', { current: handler1 });
+
+    // resolveAction with the registrar will see __a0 already exists
+    const id = uiKitNodes.resolveAction(handler2);
+    expect(id).toBe('__a0');
+    // The existing ref's current should be updated (not replaced)
+    expect(state.actionRefs.get('__a0')!.current).toBe(handler2);
+
+    _endRender();
+  });
+
+  test('action refs are tracked across render cycles', () => {
+    const state = _createState(() => {});
+
+    // First render cycle
+    _beginRender(state);
+    uiKitNodes.resolveAction(() => {});
+    uiKitNodes.resolveAction(() => {});
+    _endRender();
+
+    expect(state.actionRefs.size).toBe(2);
+
+    // Second render cycle - __a-prefixed keys should be cleared
+    _beginRender(state);
+    expect(state.actionRefs.size).toBe(0);
+    _endRender();
   });
 });
 

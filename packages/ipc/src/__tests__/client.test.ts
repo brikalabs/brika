@@ -210,6 +210,91 @@ describe('Client', () => {
       expect(handler2).not.toHaveBeenCalled();
       expect(handler3).not.toHaveBeenCalled();
     });
+
+    test('stop handlers are called in reverse order on stop message', async () => {
+      const { Client } = require('../client');
+      // Mock process.exit to prevent actually exiting
+      const originalExit = process.exit;
+      const exitMock = mock(() => undefined);
+      (process as unknown as { exit: typeof exitMock }).exit = exitMock as unknown as typeof process.exit;
+
+      try {
+        const client = new Client();
+
+        const order: number[] = [];
+        client.onStop(() => { order.push(1); });
+        client.onStop(() => { order.push(2); });
+        client.onStop(() => { order.push(3); });
+
+        // Simulate receiving stop message
+        const messageHandler = messageHandlers.get('message');
+        await messageHandler?.({ t: 'stop' } as WireMessage);
+
+        // Wait for async stop handlers to run
+        await new Promise((resolve) => setTimeout(resolve, 50));
+
+        // Should be called in reverse order (3, 2, 1)
+        expect(order).toEqual([3, 2, 1]);
+      } finally {
+        (process as unknown as { exit: typeof originalExit }).exit = originalExit;
+      }
+    });
+
+    test('stop handlers tolerate errors in individual handlers', async () => {
+      const { Client } = require('../client');
+      const originalExit = process.exit;
+      const exitMock = mock(() => undefined);
+      (process as unknown as { exit: typeof exitMock }).exit = exitMock as unknown as typeof process.exit;
+
+      try {
+        const client = new Client();
+
+        const handler1 = mock(() => { throw new Error('cleanup fail'); });
+        const handler2 = mock(() => undefined);
+
+        client.onStop(handler2);
+        client.onStop(handler1); // This will throw but should be caught
+
+        // Simulate stop
+        const messageHandler = messageHandlers.get('message');
+        await messageHandler?.({ t: 'stop' } as WireMessage);
+        await new Promise((resolve) => setTimeout(resolve, 50));
+
+        // Both handlers should have been called despite error in handler1
+        expect(handler1).toHaveBeenCalledTimes(1);
+        expect(handler2).toHaveBeenCalledTimes(1);
+      } finally {
+        (process as unknown as { exit: typeof originalExit }).exit = originalExit;
+      }
+    });
+  });
+
+  describe('disconnect handling', () => {
+    test('cleanup removes listeners on disconnect', () => {
+      const { Client } = require('../client');
+      const disconnectHandlers: (() => void)[] = [];
+
+      // Capture disconnect handler
+      (process as unknown as { on: ReturnType<typeof mock> }).on = mock(
+        (event: string, handler: () => void) => {
+          if (event === 'message') {
+            messageHandlers.set(event, handler as unknown as (msg: WireMessage) => void);
+          }
+          if (event === 'disconnect') {
+            disconnectHandlers.push(handler);
+          }
+          return process;
+        }
+      );
+
+      const _client = new Client();
+
+      // Simulate disconnect
+      disconnectHandlers.forEach((h) => h());
+
+      // removeAllListeners should have been called for cleanup
+      expect(mockRemoveAllListeners).toHaveBeenCalled();
+    });
   });
 
   describe('call with response', () => {

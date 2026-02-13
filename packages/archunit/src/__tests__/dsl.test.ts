@@ -160,6 +160,63 @@ describe('files()', () => {
     });
   });
 
+  describe('onlyImportFrom', () => {
+    it('passes when all imports match allowed pattern', async () => {
+      await setupFixtures({
+        'file.ts': "import { foo } from './utils';\nimport { bar } from './helpers';",
+      });
+      const rules = arch(
+        files('*.ts')
+          .should()
+          .onlyImportFrom(/^\.\//)
+      );
+      const result = await runRules(rules);
+      expect(result.passed).toBe(true);
+    });
+
+    it('fails when an import does not match allowed pattern', async () => {
+      await setupFixtures({
+        'file.ts': "import { foo } from './utils';\nimport _ from 'lodash';",
+      });
+      const rules = arch(
+        files('*.ts')
+          .should()
+          .onlyImportFrom(/^\.\//)
+      );
+      const result = await runRules(rules);
+      expect(result.passed).toBe(false);
+      expect(result.violations[0]!.violations[0]!.message).toContain('Import not allowed');
+      expect(result.violations[0]!.violations[0]!.message).toContain('lodash');
+    });
+
+    it('passes when no imports exist', async () => {
+      await setupFixtures({
+        'file.ts': 'const x = 1;',
+      });
+      const rules = arch(
+        files('*.ts')
+          .should()
+          .onlyImportFrom(/^\.\//)
+      );
+      const result = await runRules(rules);
+      expect(result.passed).toBe(true);
+    });
+
+    it('uses custom description when provided', async () => {
+      await setupFixtures({
+        'file.ts': "import _ from 'lodash';",
+      });
+      const rules = arch(
+        files('*.ts')
+          .should()
+          .onlyImportFrom(/^@brika\//, 'internal packages')
+      );
+      const result = await runRules(rules);
+      expect(result.passed).toBe(false);
+      expect(result.violations[0]!.violations[0]!.line).toBeGreaterThan(0);
+    });
+  });
+
   describe('haveExportsMatching', () => {
     it('passes when exports match pattern', async () => {
       await setupFixtures({

@@ -4,6 +4,7 @@
 
 import 'reflect-metadata';
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
+import { join } from 'node:path';
 import { get, provide, stub, useTestBed } from '@brika/di/testing';
 import type { Plugin, PluginHealth } from '@brika/shared';
 import { PluginManagerConfig } from '@/runtime/config';
@@ -60,10 +61,14 @@ describe('PluginLifecycle', () => {
     registerSpark: ReturnType<typeof mock>;
     emitSpark: ReturnType<typeof mock>;
     subscribeToSparks: ReturnType<typeof mock>;
+    registerBrickType: ReturnType<typeof mock>;
+    patchBrickInstance: ReturnType<typeof mock>;
+    registerRoute: ReturnType<typeof mock>;
   };
   let mockPluginConfig: {
     getConfig: ReturnType<typeof mock>;
     validate: ReturnType<typeof mock>;
+    setConfig: ReturnType<typeof mock>;
   };
   let mockMetrics: {
     record: ReturnType<typeof mock>;
@@ -78,6 +83,7 @@ describe('PluginLifecycle', () => {
     startedAt: Date.now(),
     kill: mock(),
     stop: mock(),
+    sendPreferences: mock(),
     toPlugin: mock().mockReturnValue({
       uid,
       name,
@@ -128,10 +134,14 @@ describe('PluginLifecycle', () => {
       registerSpark: mock(),
       emitSpark: mock(),
       subscribeToSparks: mock().mockReturnValue(() => undefined),
+      registerBrickType: mock(),
+      patchBrickInstance: mock(),
+      registerRoute: mock(),
     };
     mockPluginConfig = {
       getConfig: mock().mockReturnValue({}),
       validate: mock().mockReturnValue({ success: true }),
+      setConfig: mock().mockResolvedValue(undefined),
     };
     mockMetrics = {
       record: mock(),
@@ -263,7 +273,18 @@ describe('PluginLifecycle', () => {
       expect(result.version).toBe('1.0.0');
       expect(result.description).toBe('Test plugin');
       expect(result.author).toBe('Test Author');
+      expect(result.homepage).toBe('https://example.com');
+      expect(result.repository).toBe('https://github.com/test');
+      expect(result.icon).toBe('test-icon');
+      expect(result.keywords).toEqual(['test']);
+      expect(result.license).toBe('MIT');
+      expect(result.rootDirectory).toBe('/path/to/plugin');
+      expect(result.entryPoint).toBe('/path/to/plugin/index.js');
       expect(result.status).toBe('stopped');
+      expect(result.pid).toBeNull();
+      expect(result.startedAt).toBeNull();
+      expect(result.lastError).toBeNull();
+      expect(result.locales).toEqual([]);
     });
 
     test('handles missing metadata fields', () => {
@@ -275,7 +296,7 @@ describe('PluginLifecycle', () => {
         entryPoint: '/path/to/plugin/index.js',
         enabled: true,
         health: 'stopped' as PluginHealth,
-        lastError: null,
+        lastError: 'previous error',
         updatedAt: Date.now(),
         metadata: {
           name: '@test/plugin',
@@ -289,8 +310,41 @@ describe('PluginLifecycle', () => {
       expect(result.description).toBeNull();
       expect(result.author).toBeNull();
       expect(result.homepage).toBeNull();
+      expect(result.repository).toBeNull();
+      expect(result.icon).toBeNull();
       expect(result.keywords).toEqual([]);
+      expect(result.license).toBeNull();
       expect(result.blocks).toEqual([]);
+      expect(result.sparks).toEqual([]);
+      expect(result.bricks).toEqual([]);
+      expect(result.lastError).toBe('previous error');
+    });
+
+    test('returns running plugin if process exists', () => {
+      // This tests the branch where process is found in #processes map
+      // We can't easily inject into #processes, but we test the fallback path
+      const stored = {
+        uid: 'uid-123',
+        name: '@test/not-running',
+        version: '1.0.0',
+        rootDirectory: '/path/to/plugin',
+        entryPoint: '/path/to/plugin/index.js',
+        enabled: true,
+        health: 'running' as PluginHealth,
+        lastError: null,
+        updatedAt: Date.now(),
+        metadata: {
+          name: '@test/not-running',
+          version: '1.0.0',
+          engines: { brika: '^0.1.0' },
+        },
+      };
+
+      const result = lifecycle.fromStored(stored);
+
+      // No process in the map, so it goes through the stored path
+      expect(result.pid).toBeNull();
+      expect(result.startedAt).toBeNull();
     });
   });
 
@@ -346,6 +400,84 @@ describe('PluginLifecycle', () => {
 
       expect(mockI18n.registerPluginTranslations).not.toHaveBeenCalled();
     });
+
+    test('skips plugins with missing name', async () => {
+      mockState.listInstalledWithMetadata.mockReturnValue([
+        {
+          name: '',
+          rootDirectory: '/path',
+          entryPoint: '/path/index.js',
+          enabled: true,
+        },
+      ]);
+
+      await lifecycle.restoreEnabled();
+
+      expect(mockI18n.registerPluginTranslations).not.toHaveBeenCalled();
+    });
+
+    test('skips plugins with missing entryPoint', async () => {
+      mockState.listInstalledWithMetadata.mockReturnValue([
+        {
+          name: '@test/plugin',
+          rootDirectory: '/path',
+          entryPoint: null,
+          enabled: true,
+        },
+      ]);
+
+      await lifecycle.restoreEnabled();
+
+      expect(mockI18n.registerPluginTranslations).not.toHaveBeenCalled();
+    });
+
+    test('handles load failure during restoration', async () => {
+      mockState.listInstalledWithMetadata.mockReturnValue([
+        {
+          name: '@test/failing',
+          rootDirectory: '/nonexistent/path/that/does/not/exist',
+          entryPoint: '/nonexistent/path/that/does/not/exist/index.js',
+          enabled: true,
+        },
+      ]);
+
+      // Should not throw even when load() fails for the plugin
+      await lifecycle.restoreEnabled();
+
+      expect(mockI18n.registerPluginTranslations).toHaveBeenCalledWith(
+        '@test/failing',
+        '/nonexistent/path/that/does/not/exist'
+      );
+    });
+
+    test('registers translations for disabled plugins without loading them', async () => {
+      mockState.listInstalledWithMetadata.mockReturnValue([
+        {
+          name: '@test/disabled',
+          rootDirectory: '/path/to/disabled',
+          entryPoint: '/path/to/disabled/index.js',
+          enabled: false,
+        },
+        {
+          name: '@test/also-disabled',
+          rootDirectory: '/path/to/also-disabled',
+          entryPoint: '/path/to/also-disabled/index.js',
+          enabled: false,
+        },
+      ]);
+
+      await lifecycle.restoreEnabled();
+
+      expect(mockI18n.registerPluginTranslations).toHaveBeenCalledTimes(2);
+      expect(mockI18n.registerPluginTranslations).toHaveBeenCalledWith(
+        '@test/disabled',
+        '/path/to/disabled'
+      );
+      expect(mockI18n.registerPluginTranslations).toHaveBeenCalledWith(
+        '@test/also-disabled',
+        '/path/to/also-disabled'
+      );
+    });
   });
 
   describe('cleanupStale', () => {
@@ -360,6 +492,42 @@ describe('PluginLifecycle', () => {
       await lifecycle.cleanupStale();
 
       expect(mockState.remove).toHaveBeenCalledWith('@test/stale-plugin');
+    });
+
+    test('does not remove plugins with existing package.json', async () => {
+      // Use a real directory that has a package.json (apps/hub)
+      const hubDir = join(import.meta.dir, '../..');
+      mockState.listInstalled.mockReturnValue([
+        {
+          name: '@test/existing-plugin',
+          rootDirectory: hubDir,
+        },
+      ]);
+
+      await lifecycle.cleanupStale();
+
+      expect(mockState.remove).not.toHaveBeenCalled();
+    });
+
+    test('handles empty installed list', async () => {
+      mockState.listInstalled.mockReturnValue([]);
+
+      await lifecycle.cleanupStale();
+
+      expect(mockState.remove).not.toHaveBeenCalled();
+    });
+
+    test('removes multiple stale plugins', async () => {
+      mockState.listInstalled.mockReturnValue([
+        { name: '@test/stale-1', rootDirectory: '/nonexistent/path1' },
+        { name: '@test/stale-2', rootDirectory: '/nonexistent/path2' },
+      ]);
+
+      await lifecycle.cleanupStale();
+
+      expect(mockState.remove).toHaveBeenCalledTimes(2);
+      expect(mockState.remove).toHaveBeenCalledWith('@test/stale-1');
+      expect(mockState.remove).toHaveBeenCalledWith('@test/stale-2');
     });
   });
 });

@@ -52,4 +52,42 @@ describe('proxify', () => {
     increment();
     expect(getValue()).toBe(1);
   });
+
+  test('set trap delegates property assignment to instance', () => {
+    counter.value = 99;
+    expect(current.value).toBe(99);
+  });
+
+  test('has trap delegates "in" operator to instance', () => {
+    expect('value' in counter).toBe(true);
+    expect('increment' in counter).toBe(true);
+    expect('nonExistent' in counter).toBe(false);
+  });
+
+  test('ownKeys trap delegates to instance', () => {
+    const keys = Reflect.ownKeys(counter);
+    expect(keys).toContain('value');
+  });
+
+  test('getOwnPropertyDescriptor trap delegates to instance', () => {
+    const desc = Object.getOwnPropertyDescriptor(counter, 'value');
+    expect(desc).toBeDefined();
+    expect(desc!.value).toBe(0);
+  });
+
+  test('getOwnPropertyDescriptor returns undefined for non-existent prop', () => {
+    const desc = Object.getOwnPropertyDescriptor(counter, 'nonExistent');
+    expect(desc).toBeUndefined();
+  });
+
+  test('set trap works with new properties on underlying instance', () => {
+    (counter as Record<string, unknown>).newProp = 'hello';
+    expect((current as Record<string, unknown>).newProp).toBe('hello');
+  });
+
+  test('ownKeys reflects changes after mutation', () => {
+    (current as Record<string, unknown>).extra = true;
+    const keys = Reflect.ownKeys(counter);
+    expect(keys).toContain('extra');
+  });
 });
