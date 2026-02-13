@@ -17,7 +17,7 @@ interface PluginBlocksListProps {
   plugin: Plugin;
 }
 
-export function PluginBlocksList({ plugin }: PluginBlocksListProps) {
+export function PluginBlocksList({ plugin }: Readonly<PluginBlocksListProps>) {
   const { t, tp } = useLocale();
   const blocks = plugin.blocks ?? [];
 

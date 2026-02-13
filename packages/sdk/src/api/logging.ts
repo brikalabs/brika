@@ -31,7 +31,7 @@ export function parseStackLine(line: string): { sourceFile: string; sourceLine: 
  * @param depth - Stack depth to capture (default: 3 for direct log calls)
  */
 function captureCallSite(depth = 3): { sourceFile?: string; sourceLine?: number } {
-  const err = new Error();
+  const err = new Error('captureCallSite');
   const stack = err.stack;
   if (!stack) return {};
 

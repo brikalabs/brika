@@ -1,4 +1,4 @@
-import { group, NotFound, route, UnprocessableEntity } from '@brika/router';
+import { group, route, UnprocessableEntity } from '@brika/router';
 import { z } from 'zod';
 import { getProcessMetrics, MetricsStore } from '@/runtime/metrics';
 import { PluginConfigService } from '@/runtime/plugins/plugin-config';

@@ -80,7 +80,7 @@ export class Channel {
   readonly #onClose?: () => void;
 
   readonly #messageHandlers = new Map<string, Set<(payload: unknown) => void | Promise<void>>>();
-  readonly #rpcHandlers = new Map<string, (input: unknown) => unknown | Promise<unknown>>();
+  readonly #rpcHandlers = new Map<string, (input: unknown) => unknown>();
   readonly #pending = new Map<number, PendingRequest<unknown>>();
 
   #nextId = 1;

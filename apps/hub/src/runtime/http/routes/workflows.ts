@@ -1,4 +1,4 @@
-import { BadRequest, createSSEStream, group, NotFound, route } from '@brika/router';
+import { BadRequest, createSSEStream, group, route } from '@brika/router';
 import { nonEmptyRecord, PositionSchema } from '@brika/shared';
 import { z } from 'zod';
 import { BlockRegistry } from '@/runtime/blocks';

@@ -38,7 +38,7 @@ registerCheck('haveClassNamed', (pattern: RegExp, description?: string) => {
   return {
     name: `class named ${desc}`,
     check: (_, file, content) => {
-      const match = content.match(/class\s+(\w+)/);
+      const match = /class\s+(\w+)/.exec(content);
       if (!match?.[1]) {
         return { file, message: 'No class found' };
       }
@@ -53,7 +53,7 @@ registerCheck('haveClassNamed', (pattern: RegExp, description?: string) => {
 registerCheck('extendClass', (baseName: string) => ({
   name: `extend ${baseName}`,
   check: (_, file, content) => {
-    const pattern = new RegExp(`class\\s+\\w+\\s+extends\\s+${baseName}`);
+    const pattern = new RegExp(String.raw`class\s+\w+\s+extends\s+${baseName}`);
     if (!pattern.test(content)) {
       return { file, message: `Must extend ${baseName}` };
     }
@@ -63,7 +63,7 @@ registerCheck('extendClass', (baseName: string) => ({
 registerCheck('implementInterface', (interfaceName: string) => ({
   name: `implement ${interfaceName}`,
   check: (_, file, content) => {
-    const pattern = new RegExp(`class\\s+\\w+[^{]*implements[^{]*${interfaceName}`);
+    const pattern = new RegExp(String.raw`class\s+\w+[^{]*implements[^{]*${interfaceName}`);
     if (!pattern.test(content)) {
       return { file, message: `Must implement ${interfaceName}` };
     }

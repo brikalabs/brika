@@ -1,4 +1,4 @@
-import { DirRule, registerDirCheck } from '../dir-rule';
+import { registerDirCheck } from '../dir-rule';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Type augmentation for DirRule

@@ -6,7 +6,7 @@ interface StorePluginDetailsCardProps {
   plugin: StorePlugin;
 }
 
-export function StorePluginDetailsCard({ plugin }: StorePluginDetailsCardProps) {
+export function StorePluginDetailsCard({ plugin }: Readonly<StorePluginDetailsCardProps>) {
   const { t } = useLocale();
 
   if (!plugin.engines?.brika) {

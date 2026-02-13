@@ -8,7 +8,7 @@ interface UpdateListPreviewProps {
   updates: UpdateItem[];
 }
 
-export function UpdateListPreview({ updates }: UpdateListPreviewProps) {
+export function UpdateListPreview({ updates }: Readonly<UpdateListPreviewProps>) {
   return (
     <div className="space-y-2">
       {updates.map((u) => (

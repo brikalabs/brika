@@ -102,9 +102,9 @@ export function InstallButton({
         </TooltipTrigger>
         <TooltipContent>
           <p>
-            {!plugin.compatible
-              ? t('store:badges.incompatibleTooltip')
-              : t('store:actions.clickToInstall')}
+            {plugin.compatible
+              ? t('store:actions.clickToInstall')
+              : t('store:badges.incompatibleTooltip')}
           </p>
         </TooltipContent>
       </Tooltip>

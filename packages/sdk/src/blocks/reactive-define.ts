@@ -120,11 +120,13 @@ export interface BlockInstance {
  * });
  * ```
  */
+type OutputDefSchema = z.ZodType | PassthroughRef | GenericRef<string> | ResolvedRef;
+
 export function defineReactiveBlock<
   TInputs extends Record<string, InputDef<z.ZodType | GenericRef<string>>>,
   TOutputs extends Record<
     string,
-    OutputDef<z.ZodType | PassthroughRef | GenericRef<string> | ResolvedRef>
+    OutputDef<OutputDefSchema>
   >,
   TConfig extends z.ZodObject<z.ZodRawShape>,
 >(

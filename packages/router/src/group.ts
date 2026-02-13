@@ -71,13 +71,19 @@ export interface CombineOptions {
 export function combineRoutes(...args: (RouteDefinition[] | CombineOptions)[]): RouteDefinition[] {
   // Check if first arg is options
   const firstArg = args[0];
-  const hasOptions =
+  const isOptions =
     firstArg && !Array.isArray(firstArg) && typeof firstArg === 'object' && 'prefix' in firstArg;
 
-  const options: CombineOptions = hasOptions ? (firstArg as CombineOptions) : {};
-  const routeArrays = hasOptions
-    ? (args.slice(1) as RouteDefinition[][])
-    : (args as RouteDefinition[][]);
+  let options: CombineOptions;
+  let routeArrays: RouteDefinition[][];
+
+  if (isOptions) {
+    options = firstArg;
+    routeArrays = args.slice(1) as RouteDefinition[][];
+  } else {
+    options = {};
+    routeArrays = args as RouteDefinition[][];
+  }
 
   // Flatten all route arrays
   const allRoutes = routeArrays.flat();

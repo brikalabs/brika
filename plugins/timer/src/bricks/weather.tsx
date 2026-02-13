@@ -15,10 +15,10 @@ function formatTemp(value: number, unit: string): string {
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
-function WeatherStatsNarrow({ temp, condition, humidity, unit, height, onSetTemp }: {
+function WeatherStatsNarrow({ temp, condition, humidity, unit, height, onSetTemp }: Readonly<{
   temp: number; condition: string; humidity: number; unit: string; height: number;
   onSetTemp: (payload?: Record<string, unknown>) => void;
-}) {
+}>) {
   return (
     <>
       <Stat label={condition} value={formatTemp(temp, unit)} icon={WEATHER_ICONS[condition] ?? 'thermometer'} color="#f59e0b" />
@@ -29,11 +29,11 @@ function WeatherStatsNarrow({ temp, condition, humidity, unit, height, onSetTemp
   );
 }
 
-function WeatherStatsMedium({ temp, condition, humidity, unit, height, history, onSetTemp }: {
+function WeatherStatsMedium({ temp, condition, humidity, unit, height, history, onSetTemp }: Readonly<{
   temp: number; condition: string; humidity: number; unit: string; height: number;
   history: Array<{ ts: number; value: number }>;
   onSetTemp: (payload?: Record<string, unknown>) => void;
-}) {
+}>) {
   return (
     <>
       <Grid columns={2} gap="sm">
@@ -49,11 +49,11 @@ function WeatherStatsMedium({ temp, condition, humidity, unit, height, history, 
   );
 }
 
-function WeatherStatsWide({ temp, condition, humidity, unit, width, height, history, onSetTemp }: {
+function WeatherStatsWide({ temp, condition, humidity, unit, width, height, history, onSetTemp }: Readonly<{
   temp: number; condition: string; humidity: number; unit: string; width: number; height: number;
   history: Array<{ ts: number; value: number }>;
   onSetTemp: (payload?: Record<string, unknown>) => void;
-}) {
+}>) {
   return (
     <>
       {height >= 3 && <Image src={`https://picsum.photos/seed/weather-${condition}/800/300`} rounded aspectRatio="2.5/1" fit="cover" />}

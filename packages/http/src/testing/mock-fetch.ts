@@ -75,17 +75,15 @@ export class MockFetch {
 
       let body: string;
 
-      if (mockResponse.data !== undefined) {
-        if (typeof mockResponse.data === 'string') {
-          body = mockResponse.data;
-        } else {
-          body = JSON.stringify(mockResponse.data);
-          if (!headers.has('content-type')) {
-            headers.set('content-type', 'application/json');
-          }
-        }
-      } else {
+      if (mockResponse.data === undefined) {
         body = '';
+      } else if (typeof mockResponse.data === 'string') {
+        body = mockResponse.data;
+      } else {
+        body = JSON.stringify(mockResponse.data);
+        if (!headers.has('content-type')) {
+          headers.set('content-type', 'application/json');
+        }
       }
 
       return new Response(body, {

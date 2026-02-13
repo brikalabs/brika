@@ -39,7 +39,7 @@ interface RegisteredSpark {
 // Simple ping animation using DOM manipulation
 function pingHandle(blockId: string, portId: string) {
   const selector = `.react-flow__node[data-id="${blockId}"] .react-flow__handle[data-handleid="${portId}"]`;
-  const handle = document.querySelector(selector) as HTMLElement | null;
+  const handle = document.querySelector<HTMLElement>(selector);
 
   if (handle) {
     // Remove class first to allow re-triggering

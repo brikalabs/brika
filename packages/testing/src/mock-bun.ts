@@ -34,7 +34,7 @@ interface SpawnConfig {
   stderr?: string;
 }
 
-type FileSystemTree = Record<string, unknown | string[]>;
+type FileSystemTree = Record<string, unknown>;
 
 export class BunMock {
   readonly #files = new Map<string, unknown>();
@@ -108,13 +108,13 @@ export class BunMock {
 
     // Build parent directories
     let currentPath = '';
-    for (let i = 0; i < parts.length; i++) {
+    for (const part of parts) {
       const parentPath = currentPath;
-      currentPath = currentPath + '/' + parts[i];
+      currentPath = currentPath + '/' + part;
 
       // Add this directory to its parent (if parent exists and not explicit)
       if (parentPath && !explicitDirs.has(parentPath)) {
-        const dirEntry = parts[i] + '/';
+        const dirEntry = part + '/';
         const existing = this.#directories.get(parentPath) ?? [];
         if (!existing.includes(dirEntry)) {
           this.#directories.set(parentPath, [...existing, dirEntry]);
@@ -252,8 +252,8 @@ export class BunMock {
     const files = this.#files;
 
     this.#writeSpy = spyOn(Bun, 'write').mockImplementation((path, content) => {
-      const p = String(path);
-      const str = String(content);
+      const p = typeof path === 'object' ? JSON.stringify(path) : String(path);
+      const str = typeof content === 'object' ? JSON.stringify(content) : String(content);
       try {
         files.set(p, JSON.parse(str));
       } catch {
@@ -332,7 +332,7 @@ export class BunMock {
         const p = this.pattern;
         if (p === '*/') return entry.endsWith('/');
         if (p.startsWith('*.')) return entry.endsWith(p.slice(1));
-        if (p.includes('*')) return entry.includes(p.replace(/\*/g, ''));
+        if (p.includes('*')) return entry.includes(p.replaceAll(/\*/g, ''));
         return entry === p;
       }
     } as unknown as typeof Bun.Glob;

@@ -47,7 +47,7 @@ export function createPortRef(blockId: string, portId: string): PortRef {
   if (blockId.includes(':') || portId.includes(':')) {
     throw new Error('Block ID and port ID cannot contain ":"');
   }
-  return `${blockId}:${portId}` as PortRef;
+  return `${blockId}:${portId}`;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

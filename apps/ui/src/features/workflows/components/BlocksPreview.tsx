@@ -29,7 +29,7 @@ export function BlocksPreview({ blocks }: Readonly<BlocksPreviewProps>) {
     <div className="flex items-center gap-1.5">
       {blocks?.slice(0, 3).map((block) => {
         const iconName = (block.icon || 'box') as IconName;
-        const color = (block.color || '#6b7280') as string;
+        const color = block.color || '#6b7280';
         return (
           <div
             key={block.id}

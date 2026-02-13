@@ -116,7 +116,7 @@ export const condition = defineReactiveBlock(
     inputs.in.on((data) => {
       const fieldValue = getFieldValue(data, config.field);
       const result = evaluate(fieldValue, config.operator, config.value);
-      log.debug(`Condition: ${config.field} ${config.operator} ${config.value} = ${result}`);
+      log.debug(`Condition: ${config.field} ${config.operator} ${JSON.stringify(config.value)} = ${result}`);
 
       if (result) {
         outputs.pass.emit(data);

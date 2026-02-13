@@ -20,7 +20,7 @@ function crossFeaturePattern(allowed: string[]): RegExp {
   // Example: ../../other-feature/file → blocked
   // Example: ../../index → allowed (if 'index' in allowed)
   const exceptions = ['index', ...allowed].join('|');
-  return new RegExp(`\\.\\.[\\\\/]\\.\\.[\\\\/](?!(?:${exceptions})[\\\\/]|(?:${exceptions})$)`);
+  return new RegExp(String.raw`\.\.[\\/]\.\.[\\/](?!(?:${exceptions})[\\/]|(?:${exceptions})$)`);
 }
 
 /**

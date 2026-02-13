@@ -10,7 +10,7 @@ const PHOTOS = [
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
-function PhotoControls({ onPrev, onNext }: { onPrev: () => void; onNext: () => void }) {
+function PhotoControls({ onPrev, onNext }: Readonly<{ onPrev: () => void; onNext: () => void }>) {
   return (
     <Stack direction="horizontal" gap="sm">
       <Button label="Previous" onPress={onPrev} icon="chevron-left" variant="outline" />

@@ -156,7 +156,7 @@ interface CodeBlockHeaderProps
   extends React.ComponentProps<'div'>,
     VariantProps<typeof codeBlockHeaderVariants> {}
 
-function CodeBlockHeader({ className, variant, ...props }: CodeBlockHeaderProps) {
+function CodeBlockHeader({ className, variant, ...props }: Readonly<CodeBlockHeaderProps>) {
   return (
     <div
       data-slot="code-block-header"
@@ -384,7 +384,7 @@ function CodeBlockContent({
                 <span key={`line-${lineNumberStart + i}`} className={cn('block min-h-6 whitespace-pre', lineHeight)}>
                   {tokens?.length
                     ? tokens.map((token, j) => (
-                        <span key={`tok-${j}`} style={getTokenStyle(token)}>
+                        <span key={`${lineNumberStart + i}-${j}`} style={getTokenStyle(token)}>
                           {token.content}
                         </span>
                       ))

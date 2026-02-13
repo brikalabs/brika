@@ -2,7 +2,7 @@ import type { ImageNode } from '@brika/ui-kit';
 import { memo } from 'react';
 import { cn } from '@/lib/utils';
 
-export const ImageRenderer = memo(function ImageRenderer({ node }: { node: ImageNode }) {
+export const ImageRenderer = memo(function ImageRenderer({ node }: Readonly<{ node: ImageNode }>) {
   const hasDimension = node.width != null || node.height != null;
 
   const img = (
@@ -23,8 +23,8 @@ export const ImageRenderer = memo(function ImageRenderer({ node }: { node: Image
           node.rounded && 'rounded-md',
         )}
         style={{
-          ...(node.width != null ? { width: node.width } : {}),
-          ...(node.height != null ? { height: node.height } : {}),
+          ...(node.width == null ? {} : { width: node.width }),
+          ...(node.height == null ? {} : { height: node.height }),
           ...(node.aspectRatio ? { aspectRatio: node.aspectRatio } : {}),
         }}
       >

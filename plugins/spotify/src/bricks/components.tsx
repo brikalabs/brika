@@ -20,13 +20,13 @@ export interface PlayerActions {
 
 // ─── Transport Controls ─────────────────────────────────────────────────────
 
-export function Controls({ isPlaying, onPlay, onPause, onPrev, onNext }: {
+export function Controls({ isPlaying, onPlay, onPause, onPrev, onNext }: Readonly<{
   isPlaying: boolean;
   onPlay: () => void;
   onPause: () => void;
   onPrev: () => void;
   onNext: () => void;
-}) {
+}>) {
   return (
     <Stack direction="horizontal" gap="sm" justify="center" align="center">
       <Button onPress={onPrev} icon="skip-back" variant="ghost" />
@@ -40,7 +40,7 @@ export function Controls({ isPlaying, onPlay, onPause, onPrev, onNext }: {
 
 // ─── Track Info ─────────────────────────────────────────────────────────────
 
-export function TrackInfo({ playback }: { playback: PlaybackState }) {
+export function TrackInfo({ playback }: Readonly<{ playback: PlaybackState }>) {
   return (
     <Stack direction="horizontal" gap="sm" align="center">
       <Text content={playback.trackName} variant="heading" />
@@ -51,11 +51,11 @@ export function TrackInfo({ playback }: { playback: PlaybackState }) {
 
 // ─── Progress Bar ───────────────────────────────────────────────────────────
 
-export function ProgressBar({ localProgressMs, playback, onSeek }: {
+export function ProgressBar({ localProgressMs, playback, onSeek }: Readonly<{
   localProgressMs: number;
   playback: PlaybackState;
   onSeek: (payload?: Record<string, unknown>) => void;
-}) {
+}>) {
   return (
     <Stack direction="horizontal" gap="sm" align="center">
       <Text content={formatMs(localProgressMs)} variant="caption" color="#888" />
@@ -69,10 +69,10 @@ export function ProgressBar({ localProgressMs, playback, onSeek }: {
 
 // ─── Volume Slider ──────────────────────────────────────────────────────────
 
-export function VolumeSlider({ playback, onVolume }: {
+export function VolumeSlider({ playback, onVolume }: Readonly<{
   playback: PlaybackState;
   onVolume: (payload?: Record<string, unknown>) => void;
-}) {
+}>) {
   return (
     <Slider label="Volume" value={playback.volume} min={0} max={100} step={5} unit="%" onChange={onVolume} icon="volume-2" />
   );

@@ -42,7 +42,7 @@ registerCheck('notContain', (pattern: RegExp, description?: string) => {
   return {
     name: `not contain ${desc}`,
     check: (_, file, content) => {
-      const match = content.match(pattern);
+      const match = pattern.exec(content);
       if (match) {
         const line = content.substring(0, match.index).split('\n').length;
         return { file, line, message: `Found ${desc}` };

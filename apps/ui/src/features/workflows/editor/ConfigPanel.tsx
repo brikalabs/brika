@@ -81,7 +81,7 @@ function getTypeMarker(description?: string): { marker: TypeMarker | null; extra
   for (const marker of markers) {
     if (description.includes(`$type:${marker}`)) {
       // Extract extra info after colon (e.g., $type:code:javascript)
-      const match = new RegExp(new RegExp(`\\$type:${marker}:?(\\w+)?`)).exec(description);
+      const match = new RegExp(String.raw`\$type:${marker}:?(\w+)?`).exec(description);
       return { marker, extra: match?.[1] };
     }
   }
@@ -546,7 +546,9 @@ interface DurationInputProps {
 
 function DurationInput({ value, onChange, placeholder }: Readonly<DurationInputProps>) {
   // Convert ms to display value based on unit
-  const [unit, setUnit] = useState<'ms' | 's' | 'm' | 'h'>(() => {
+  type DurationUnit = 'ms' | 's' | 'm' | 'h';
+
+  const [unit, setUnit] = useState<DurationUnit>(() => {
     if (!value) return 'ms';
     if (value >= 3600000) return 'h';
     if (value >= 60000) return 'm';
@@ -556,7 +558,7 @@ function DurationInput({ value, onChange, placeholder }: Readonly<DurationInputP
 
   const multipliers = { ms: 1, s: 1000, m: 60000, h: 3600000 };
 
-  const displayValue = value !== undefined ? value / multipliers[unit] : '';
+  const displayValue = value === undefined ? '' : value / multipliers[unit];
 
   const handleValueChange = (inputValue: string) => {
     const num = Number(inputValue);
@@ -565,7 +567,7 @@ function DurationInput({ value, onChange, placeholder }: Readonly<DurationInputP
     }
   };
 
-  const handleUnitChange = (newUnit: 'ms' | 's' | 'm' | 'h') => {
+  const handleUnitChange = (newUnit: DurationUnit) => {
     setUnit(newUnit);
     // Recalculate value with new unit
     if (value !== undefined) {
@@ -583,7 +585,7 @@ function DurationInput({ value, onChange, placeholder }: Readonly<DurationInputP
         className="flex-1 bg-background"
         min={0}
       />
-      <Select value={unit} onValueChange={(v) => handleUnitChange(v as 'ms' | 's' | 'm' | 'h')}>
+      <Select value={unit} onValueChange={(v) => handleUnitChange(v as DurationUnit)}>
         <SelectTrigger className="w-20 bg-background">
           <SelectValue />
         </SelectTrigger>

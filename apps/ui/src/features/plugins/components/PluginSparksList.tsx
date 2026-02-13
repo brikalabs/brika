@@ -16,7 +16,7 @@ interface PluginSparksListProps {
   plugin: Plugin;
 }
 
-export function PluginSparksList({ plugin }: PluginSparksListProps) {
+export function PluginSparksList({ plugin }: Readonly<PluginSparksListProps>) {
   const { t, tp } = useLocale();
   const sparks = plugin.sparks ?? [];
 

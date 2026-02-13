@@ -39,8 +39,8 @@ export function isSchemaCompatible(outputSchema: z.ZodType, inputSchema: z.ZodTy
   const inputType = getBaseType(inputSchema);
 
   // For structured types (objects, arrays), we need deeper checking
-  const structuredTypes = ['object', 'array'];
-  if (structuredTypes.includes(outputType) || structuredTypes.includes(inputType)) {
+  const structuredTypes = new Set(['object', 'array']);
+  if (structuredTypes.has(outputType) || structuredTypes.has(inputType)) {
     return checkStructuralCompatibility(outputSchema, inputSchema);
   }
 
@@ -182,8 +182,8 @@ function checkUnionTypeCompatibility(
  * Check primitive type compatibility
  */
 function checkPrimitiveTypeCompatibility(outputType: string, inputType: string): boolean | null {
-  const primitiveTypes = ['string', 'number', 'boolean', 'null'];
-  if (primitiveTypes.includes(outputType) && primitiveTypes.includes(inputType)) {
+  const primitiveTypes = new Set(['string', 'number', 'boolean', 'null']);
+  if (primitiveTypes.has(outputType) && primitiveTypes.has(inputType)) {
     return outputType === inputType;
   }
   return null;

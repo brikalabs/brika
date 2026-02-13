@@ -5,7 +5,7 @@ const startedAt = Date.now();
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
-function OverviewGrid({ uptime, monitoring, width }: { uptime: number; monitoring: boolean; width: number }) {
+function OverviewGrid({ uptime, monitoring, width }: Readonly<{ uptime: number; monitoring: boolean; width: number }>) {
   return (
     <>
       <Grid columns={width >= 6 ? 3 : 2} gap="sm">

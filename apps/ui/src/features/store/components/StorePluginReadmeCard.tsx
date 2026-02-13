@@ -8,7 +8,7 @@ interface StorePluginReadmeCardProps {
   filename?: string | null;
 }
 
-export function StorePluginReadmeCard({ readme, filename }: StorePluginReadmeCardProps) {
+export function StorePluginReadmeCard({ readme, filename }: Readonly<StorePluginReadmeCardProps>) {
   const { t } = useLocale();
 
   return (

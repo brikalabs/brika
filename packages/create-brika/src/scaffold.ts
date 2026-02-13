@@ -3,8 +3,8 @@
  */
 
 import * as p from '@clack/prompts';
-import * as fs from 'fs/promises';
-import * as path from 'path';
+import * as fs from 'node:fs/promises';
+import * as path from 'node:path';
 import pc from 'picocolors';
 import type { PluginConfig, PluginFeature } from './prompts';
 import { type TemplateData, walkTemplate } from './render';

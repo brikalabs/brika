@@ -573,7 +573,7 @@ export function useWorkflowEditor(
 
   // Get selected node
   const selectedNode = useMemo(
-    () => nodes.find((n) => n.id === selectedNodeId) || null,
+    () => nodes.find((n) => n.id === selectedNodeId) ?? null,
     [nodes, selectedNodeId]
   );
 

@@ -1,6 +1,6 @@
 import type { StorePlugin } from '@brika/shared';
 import { Link } from '@tanstack/react-router';
-import { ArrowLeft, Download, ExternalLink, Github, Home, Package, Tag, User } from 'lucide-react';
+import { ArrowLeft, Code2, Download, ExternalLink, Home, Package, Tag, User } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage, Badge, Button } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
 import { CompatibilityBadge } from './CompatibilityBadge';
@@ -17,7 +17,7 @@ function formatDownloads(count: number): string {
   return String(count);
 }
 
-export function StorePluginHeader({ plugin }: StorePluginHeaderProps) {
+export function StorePluginHeader({ plugin }: Readonly<StorePluginHeaderProps>) {
   const { t } = useLocale();
 
   const authorName = typeof plugin.author === 'string' ? plugin.author : plugin.author?.name;
@@ -83,7 +83,7 @@ export function StorePluginHeader({ plugin }: StorePluginHeaderProps) {
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 transition-colors hover:text-foreground"
                 >
-                  <Github className="size-3" />
+                  <Code2 className="size-3" />
                   {t('store:labels.repository')}
                   <ExternalLink className="size-3" />
                 </a>

@@ -21,7 +21,7 @@ export const markdownComponents: Components = {
     </blockquote>
   ),
   code: ({ className, children, node }) => {
-    const text = Children.toArray(children).join('');
+    const text = Children.toArray(children).map(String).join('');
     const isBlock = Boolean(className) || text.includes('\n');
 
     if (!isBlock) {

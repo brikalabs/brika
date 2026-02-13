@@ -7,7 +7,7 @@ interface StorePluginDetailEmptyProps {
   packageName: string;
 }
 
-export function StorePluginDetailEmpty({ packageName }: StorePluginDetailEmptyProps) {
+export function StorePluginDetailEmpty({ packageName }: Readonly<StorePluginDetailEmptyProps>) {
   const { t } = useLocale();
 
   return (

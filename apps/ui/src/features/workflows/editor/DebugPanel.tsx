@@ -152,9 +152,9 @@ export function DebugPanel({ workflow, onCollapse, className }: Readonly<DebugPa
       {/* Footer */}
       <div className="flex items-center justify-between border-t bg-background/80 px-3 py-1.5">
         <span className="text-[10px] text-muted-foreground">
-          {filter !== 'all'
-            ? `${filteredEvents.length} / ${events.length} ${t('workflows:debug.events')}`
-            : `${filteredEvents.length} ${t('workflows:debug.events')}`}
+          {filter === 'all'
+            ? `${filteredEvents.length} ${t('workflows:debug.events')}`
+            : `${filteredEvents.length} / ${events.length} ${t('workflows:debug.events')}`}
           {showAll && ` (${t('workflows:debug.all').toLowerCase()})`}
         </span>
         <span className="text-[10px] text-muted-foreground/70">{workflow.id}</span>

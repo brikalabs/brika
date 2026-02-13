@@ -207,7 +207,7 @@ export class SparkStore {
       event.type,
       event.source,
       event.pluginId ?? null,
-      event.payload != null ? JSON.stringify(event.payload) : null
+      event.payload == null ? null : JSON.stringify(event.payload)
     );
   }
 

@@ -87,8 +87,11 @@ function DraggableBlock({ block, onDragStart }: Readonly<DraggableBlockProps>) {
     <Tooltip>
       <TooltipTrigger asChild>
         <div
+          role="button"
+          tabIndex={0}
           draggable
           onDragStart={(e) => onDragStart(e, block, blockName)}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') e.currentTarget.dispatchEvent(new DragEvent('dragstart', { bubbles: true })); }}
           className={cn(
             'group flex cursor-grab items-center gap-2 rounded-lg border bg-card p-2.5',
             'transition-all hover:border-accent-foreground/20 hover:bg-accent',

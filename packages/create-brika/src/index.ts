@@ -12,7 +12,7 @@
 
 import * as p from '@clack/prompts';
 import pc from 'picocolors';
-import { parseArgs } from 'util';
+import { parseArgs } from 'node:util';
 import { promptForConfig } from './prompts';
 import { scaffold } from './scaffold';
 
@@ -49,7 +49,9 @@ const { positionals, values } = parseArgs({
   },
 });
 
-if (!values.help) {
+if (values.help) {
+  console.log(HELP);
+} else {
   try {
     const config = await promptForConfig(positionals[0]);
 
@@ -75,6 +77,4 @@ if (!values.help) {
     console.error(error);
     process.exit(1);
   }
-} else {
-  console.log(HELP);
 }

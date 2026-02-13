@@ -13,8 +13,8 @@ export function BaseNode({ className, ...props }: ComponentProps<'div'>) {
         // When a node is selected, the class `selected` is added to the
         // `react-flow__node` element. This allows us to style the node when it
         // is selected, using Tailwind's `&` selector.
-        '[.react-flow\\_\\_node.selected_&]:border-muted-foreground',
-        '[.react-flow\\_\\_node.selected_&]:shadow-lg',
+        String.raw`[.react-flow\_\_node.selected_&]:border-muted-foreground`,
+        String.raw`[.react-flow\_\_node.selected_&]:shadow-lg`,
         className
       )}
       {...props}

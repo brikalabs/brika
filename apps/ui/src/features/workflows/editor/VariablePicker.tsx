@@ -73,18 +73,15 @@ function buildTree(variables: VariableInfo[]): TreeNode[] {
   });
 
   // Add vars group
-  const varsChildren: TreeNode[] = [];
-  variables
+  const varsChildren: TreeNode[] = variables
     .filter((v) => v.name.startsWith('vars.'))
-    .forEach((v) => {
-      varsChildren.push({
-        name: v.name.replace('vars.', ''),
-        fullPath: v.name,
-        type: v.type,
-        source: v.source,
-        children: [],
-      });
-    });
+    .map((v) => ({
+      name: v.name.replace('vars.', ''),
+      fullPath: v.name,
+      type: v.type,
+      source: v.source,
+      children: [],
+    }));
 
   if (varsChildren.length > 0) {
     root.push({

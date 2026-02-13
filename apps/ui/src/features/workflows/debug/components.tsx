@@ -227,9 +227,11 @@ export function ExpandableEventEntry({ event }: Readonly<ExpandableEventEntryPro
 // Event Filter Buttons
 // ─────────────────────────────────────────────────────────────────────────────
 
+type EventFilterType = 'all' | 'logs' | 'emits';
+
 export interface EventFilterButtonsProps {
-  filter: 'all' | 'logs' | 'emits';
-  onChange: (filter: 'all' | 'logs' | 'emits') => void;
+  filter: EventFilterType;
+  onChange: (filter: EventFilterType) => void;
   labels?: {
     all?: string;
     logs?: string;

@@ -38,11 +38,14 @@ export interface InputDef<T extends z.ZodType | GenericRef<string>> {
   readonly meta: PortMeta;
 }
 
+/** Schema types accepted for output ports */
+type OutputSchema = z.ZodType | PassthroughRef<string> | GenericRef<string> | ResolvedRef;
+
 /**
  * Output port definition - can hold a Zod schema, PassthroughRef, GenericRef, or ResolvedRef.
  */
 export interface OutputDef<
-  T extends z.ZodType | PassthroughRef<string> | GenericRef<string> | ResolvedRef,
+  T extends OutputSchema,
 > {
   readonly __type: 'output';
   readonly schema: T;

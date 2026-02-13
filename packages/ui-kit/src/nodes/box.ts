@@ -1,6 +1,4 @@
-import type { BaseNode } from './_shared';
-import { normalizeChildren, type Child } from './_shared';
-import type { ComponentNode } from './_shared';
+import { normalizeChildren, type BaseNode, type Child, type ComponentNode } from './_shared';
 
 export interface BoxNode extends BaseNode {
   type: 'box';

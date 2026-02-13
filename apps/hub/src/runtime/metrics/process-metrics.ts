@@ -17,8 +17,8 @@ export async function getProcessMetrics(pid: number): Promise<ProcessMetrics | n
     if (!output) return null;
 
     const [cpuStr, rssStr] = output.split(/\s+/);
-    const cpu = parseFloat(cpuStr);
-    const rss = parseInt(rssStr, 10);
+    const cpu = Number.parseFloat(cpuStr);
+    const rss = Number.parseInt(rssStr, 10);
 
     if (Number.isNaN(cpu) || Number.isNaN(rss)) return null;
 

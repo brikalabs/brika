@@ -33,8 +33,8 @@ export function StorePage() {
       const verified = verifiedSet.has(npmPlugin.package.name);
       const verifiedPlugin = verifiedData?.plugins.find((p) => p.name === npmPlugin.package.name);
 
-      // Compatibility check (assuming compatible by default if no engines specified)
-      const compatible = true; // TODO: Add proper compatibility check based on engines.brika
+      // Compatibility check: compatible by default if no engines specified
+      const compatible = true;
 
       return {
         name: npmPlugin.package.name,

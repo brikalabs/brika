@@ -27,8 +27,10 @@ export function SparkSchemaViewer({ schema }: SparkSchemaViewerProps) {
       </button>
       {expanded && (
         <div
+          role="region"
           className="mt-2 max-h-48 overflow-auto rounded-md border bg-muted/50 p-2"
           onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => { if (e.key === 'Escape') setExpanded(false); }}
         >
           <pre className="font-mono text-xs">{JSON.stringify(schema, null, 2)}</pre>
         </div>

@@ -1,4 +1,5 @@
 import { ChevronDown, ChevronRight } from "lucide-react";
+import type React from "react";
 import { useState } from "react";
 import type { StoredLogEvent } from "../api";
 import { LogRowExpandedSection } from "./LogRowExpandedSection";
@@ -8,74 +9,92 @@ interface LogRowProps {
   log: StoredLogEvent;
 }
 
+const SOURCE_LOCATION_KEYS = new Set(["sourceFile", "sourceLine"]);
+
+function extractGeneralMeta(meta: Record<string, unknown> | undefined): Record<string, unknown> | null {
+  if (!meta) return null;
+  return Object.fromEntries(
+    Object.entries(meta).filter(([key]) => !SOURCE_LOCATION_KEYS.has(key)),
+  );
+}
+
+interface LogRowColumnsProps {
+  timestamp: string;
+  source: string;
+  config: { color: string; icon: React.ElementType; label: string };
+  level: string;
+  message: string;
+}
+
+function LogRowColumns({ timestamp, source, config, level, message }: Readonly<LogRowColumnsProps>) {
+  const Icon = config.icon;
+  const messageClass = level === "error" ? "font-medium text-red-400" : "text-foreground";
+
+  return (
+    <>
+      <span className="shrink-0 text-muted-foreground tabular-nums">{timestamp}</span>
+      <span className={`flex shrink-0 items-center gap-1 rounded border px-1.5 py-0.5 font-semibold text-[10px] ${config.color}`}>
+        <Icon className="h-3 w-3" />
+        {config.label}
+      </span>
+      <span className="w-32 shrink-0 truncate text-muted-foreground" title={source}>{source}</span>
+      <span className={`flex-1 ${messageClass}`}>{message}</span>
+    </>
+  );
+}
+
+function MetadataFieldCount({ generalMeta }: Readonly<{ generalMeta: Record<string, unknown> }>) {
+  const count = Object.keys(generalMeta).length;
+  if (count === 0) return null;
+  return (
+    <span className="shrink-0 text-[10px] text-muted-foreground/50">
+      {count} field{count === 1 ? "" : "s"}
+    </span>
+  );
+}
+
 export function LogRow({ log }: Readonly<LogRowProps>) {
   const [isExpanded, setIsExpanded] = useState(false);
   const timestamp = new Date(log.ts).toISOString().slice(11, 23);
   const source = log.pluginName ? `${log.source}:${log.pluginName}` : log.source;
-  const isNew = log.id < 0; // Negative IDs are live logs
+  const isNew = log.id < 0;
   const config = LEVEL_CONFIG[log.level] || LEVEL_CONFIG.info;
-  const Icon = config.icon;
 
-  // Check if this log has error details or any metadata
   const hasError = !!log.error;
   const hasMetadata = log.meta && Object.keys(log.meta).length > 0;
   const isExpandable = hasError || hasMetadata;
 
-  // Extract source location if available
   const sourceFile = log.meta?.sourceFile ? String(log.meta.sourceFile) : null;
   const sourceLine = log.meta?.sourceLine ? Number(log.meta.sourceLine) : null;
-
-  // Filter out source location fields from general metadata
-  const generalMeta = log.meta
-    ? Object.fromEntries(
-        Object.entries(log.meta).filter(([key]) => !["sourceFile", "sourceLine"].includes(key)),
-      )
-    : null;
-
+  const generalMeta = extractGeneralMeta(log.meta);
   const hasGeneralMeta = generalMeta && Object.keys(generalMeta).length > 0;
 
+  const columnProps: LogRowColumnsProps = { timestamp, source, config, level: log.level, message: log.message };
+  const bgNew = isNew ? "bg-primary/5" : "";
+  const bgExpanded = isExpanded ? "bg-muted/50" : "hover:bg-muted/30";
+  const ExpandIcon = isExpanded ? ChevronDown : ChevronRight;
+
   return (
-    <div
-      className={`border-border/30 border-b px-4 py-2 transition-colors ${isNew ? "bg-primary/5" : ""} ${isExpanded ? "bg-muted/50" : "hover:bg-muted/30"}`}
-    >
-      {/* Main log row */}
+    <div className={`border-border/30 border-b px-4 py-2 transition-colors ${bgNew} ${bgExpanded}`}>
       {isExpandable ? (
         <button
           type="button"
           className="flex w-full items-start gap-3 cursor-pointer bg-transparent border-none p-0 text-left font-inherit text-inherit"
           onClick={() => setIsExpanded(!isExpanded)}
         >
-          {/* Expand indicator */}
           <div className="flex w-4 shrink-0 items-center justify-center">
-            {isExpanded ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />}
+            <ExpandIcon className="h-3.5 w-3.5 text-muted-foreground" />
           </div>
-          <span className="shrink-0 text-muted-foreground tabular-nums">{timestamp}</span>
-          <span className={`flex shrink-0 items-center gap-1 rounded border px-1.5 py-0.5 font-semibold text-[10px] ${config.color}`}>
-            <Icon className="h-3 w-3" />
-            {config.label}
-          </span>
-          <span className="w-32 shrink-0 truncate text-muted-foreground" title={source}>{source}</span>
-          <span className={`flex-1 ${log.level === "error" ? "font-medium text-red-400" : "text-foreground"}`}>{log.message}</span>
-          {hasGeneralMeta && !isExpanded && (
-            <span className="shrink-0 text-[10px] text-muted-foreground/50">
-              {Object.keys(generalMeta).length} field{Object.keys(generalMeta).length !== 1 ? "s" : ""}
-            </span>
-          )}
+          <LogRowColumns {...columnProps} />
+          {hasGeneralMeta && !isExpanded && <MetadataFieldCount generalMeta={generalMeta} />}
         </button>
       ) : (
         <div className="flex items-start gap-3">
           <div className="flex w-4 shrink-0 items-center justify-center" />
-          <span className="shrink-0 text-muted-foreground tabular-nums">{timestamp}</span>
-          <span className={`flex shrink-0 items-center gap-1 rounded border px-1.5 py-0.5 font-semibold text-[10px] ${config.color}`}>
-            <Icon className="h-3 w-3" />
-            {config.label}
-          </span>
-          <span className="w-32 shrink-0 truncate text-muted-foreground" title={source}>{source}</span>
-          <span className={`flex-1 ${log.level === "error" ? "font-medium text-red-400" : "text-foreground"}`}>{log.message}</span>
+          <LogRowColumns {...columnProps} />
         </div>
       )}
 
-      {/* Expanded section */}
       {isExpanded && (
         <LogRowExpandedSection
           log={log}

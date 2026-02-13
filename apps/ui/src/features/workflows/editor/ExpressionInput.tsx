@@ -69,7 +69,7 @@ export function ExpressionInput({
 
       commonProps.forEach((p) => {
         if (!search || p.name.toLowerCase().includes(search.toLowerCase())) {
-          if (!items.find((i) => i.label === p.name)) {
+          if (!items.some((i) => i.label === p.name)) {
             items.push({
               label: p.name,
               insert: `{{ ${p.name} }}`,
@@ -90,7 +90,7 @@ export function ExpressionInput({
     (text: string, cursor: number) => {
       // Look for {{ before cursor
       const beforeCursor = text.slice(0, cursor);
-      const match = beforeCursor.match(/\{\{\s*(\w*)$/);
+      const match = /\{\{\s*(\w*)$/.exec(beforeCursor);
 
       if (match) {
         const search = match[1] || '';
@@ -146,7 +146,7 @@ export function ExpressionInput({
     const afterCursor = value.slice(cursorPosition);
 
     // Find the {{ and replace from there
-    const match = beforeCursor.match(/\{\{\s*\w*$/);
+    const match = /\{\{\s*\w*$/.exec(beforeCursor);
     if (match) {
       const insertPoint = beforeCursor.length - match[0].length;
       const newValue = value.slice(0, insertPoint) + item.insert + afterCursor;

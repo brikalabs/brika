@@ -21,11 +21,11 @@ function SparkCard({
   spark,
   pluginId,
   onClick,
-}: {
+}: Readonly<{
   spark: RegisteredSpark;
   pluginId: string;
   onClick: () => void;
-}) {
+}>) {
   const { tp } = useLocale();
 
   return (
@@ -66,11 +66,11 @@ function SparkPluginGroup({
   pluginId,
   sparks,
   onSelectSpark,
-}: {
+}: Readonly<{
   pluginId: string;
   sparks: RegisteredSpark[];
   onSelectSpark: (spark: RegisteredSpark) => void;
-}) {
+}>) {
   return (
     <div key={pluginId}>
       <div className="mb-3 flex items-center gap-2">

@@ -9,7 +9,7 @@ import {
 } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
 
-export function WorkflowTableSkeleton({ rows = 5 }: { rows?: number }) {
+export function WorkflowTableSkeleton({ rows = 5 }: Readonly<{ rows?: number }>) {
   const { t } = useLocale();
 
   return (

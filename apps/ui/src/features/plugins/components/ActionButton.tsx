@@ -14,7 +14,7 @@ export function ActionButton({
   onClick,
   disabled,
   variant = 'outline',
-}: ActionButtonProps) {
+}: Readonly<ActionButtonProps>) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>

@@ -48,7 +48,7 @@ interface RequestOptions {
  */
 function substitutePath(pattern: string, params?: Record<string, string>): string {
   if (!params) return pattern;
-  return pattern.replace(/:(\w+)/g, (_, key) => {
+  return pattern.replaceAll(/:(\w+)/g, (_, key) => {
     const value = params[key];
     if (value === undefined) {
       throw new Error(`Missing path parameter: ${key}`);
@@ -93,7 +93,7 @@ async function makeRequest<T>(
     new Request(url, {
       method,
       headers,
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      body: body === undefined ? undefined : JSON.stringify(body),
     })
   );
 

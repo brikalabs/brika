@@ -12,14 +12,10 @@ function createRoute<S extends Schema, R>(
   schemaOrHandler: S | Handler<S, R>,
   maybeHandler?: Handler<S, R>
 ): RouteDefinition<S, R> {
-  const hasSchema = typeof schemaOrHandler === 'object' && maybeHandler !== undefined;
-
-  return {
-    method,
-    path,
-    schema: hasSchema ? (schemaOrHandler as S) : undefined,
-    handler: hasSchema ? maybeHandler : (schemaOrHandler as Handler<S, R>),
-  };
+  if (typeof schemaOrHandler === 'object' && maybeHandler !== undefined) {
+    return { method, path, schema: schemaOrHandler, handler: maybeHandler };
+  }
+  return { method, path, schema: undefined, handler: schemaOrHandler as Handler<S, R> };
 }
 
 type RouteMethod = <S extends Schema, R>(

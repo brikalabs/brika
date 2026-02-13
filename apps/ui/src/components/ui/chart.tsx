@@ -1,9 +1,10 @@
 'use client';
 
+import { useCallback } from 'react';
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { cn } from '@/lib/utils';
 
-function ChartTooltipContent({ active, payload, formatValue }: { active?: boolean; payload?: Array<{ value: unknown }>; formatValue: (value: number) => string }) {
+function ChartTooltipContent({ active, payload, formatValue }: Readonly<{ active?: boolean; payload?: Array<{ value: unknown }>; formatValue: (value: number) => string }>) {
   if (active && payload?.[0]) {
     return (
       <div className="rounded-md border bg-popover px-2 py-1 text-sm shadow-md">
@@ -29,6 +30,12 @@ export function MetricsChart({
 }: Readonly<MetricsChartProps>) {
   const gradientId = `gradient-${color.replaceAll(/[^a-zA-Z0-9]/g, '')}`;
   const hasData = data.length > 0;
+  const renderTooltip = useCallback(
+    ({ active, payload }: { active?: boolean; payload?: Array<{ value: unknown }> }) => (
+      <ChartTooltipContent active={active} payload={payload} formatValue={formatValue} />
+    ),
+    [formatValue],
+  );
 
   // Show empty placeholder when no data
   if (!hasData) {
@@ -51,11 +58,7 @@ export function MetricsChart({
           </defs>
           <XAxis dataKey="ts" hide />
           <YAxis hide domain={['auto', 'auto']} />
-          <Tooltip
-            content={({ active, payload }) => (
-              <ChartTooltipContent active={active} payload={payload} formatValue={formatValue} />
-            )}
-          />
+          <Tooltip content={renderTooltip} />
           <Area
             type="monotone"
             dataKey="value"

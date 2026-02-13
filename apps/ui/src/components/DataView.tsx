@@ -68,7 +68,7 @@ export function createDataView<T>() {
     return context;
   }
 
-  function Root({ data, isLoading, isEmpty: isEmptyFn, children }: DataViewRootProps<T>) {
+  function Root({ data, isLoading, isEmpty: isEmptyFn, children }: Readonly<DataViewRootProps<T>>) {
     const isEmpty = useMemo(() => {
       if (data === undefined) return true;
       if (isEmptyFn) return isEmptyFn(data);
@@ -81,19 +81,19 @@ export function createDataView<T>() {
     return <Context.Provider value={contextValue}>{children}</Context.Provider>;
   }
 
-  function Skeleton({ children }: { children: ReactNode }) {
+  function Skeleton({ children }: Readonly<{ children: ReactNode }>) {
     const { isLoading } = useDataViewContext();
     if (!isLoading) return null;
     return <>{children}</>;
   }
 
-  function Empty({ children }: { children: ReactNode }) {
+  function Empty({ children }: Readonly<{ children: ReactNode }>) {
     const { isLoading, isEmpty } = useDataViewContext();
     if (isLoading || !isEmpty) return null;
     return <>{children}</>;
   }
 
-  function Content({ children }: DataViewContentProps<T>) {
+  function Content({ children }: Readonly<DataViewContentProps<T>>) {
     const { data, isLoading, isEmpty } = useDataViewContext();
     if (isLoading || isEmpty || data === undefined) return null;
     return <>{children(data)}</>;
@@ -153,21 +153,21 @@ export function useDataView<T>({ data, isLoading, isEmpty: isEmptyFn }: UseDataV
     }
 
     // Simple components that use closure over the options
-    function Root({ children }: { children: ReactNode }) {
+    function Root({ children }: Readonly<{ children: ReactNode }>) {
       return <>{children}</>;
     }
 
-    function Skeleton({ children }: { children: ReactNode }) {
+    function Skeleton({ children }: Readonly<{ children: ReactNode }>) {
       if (!isLoading) return null;
       return <>{children}</>;
     }
 
-    function Empty({ children }: { children: ReactNode }) {
+    function Empty({ children }: Readonly<{ children: ReactNode }>) {
       if (isLoading || !computedIsEmpty) return null;
       return <>{children}</>;
     }
 
-    function Content({ children }: { children: (data: T) => ReactNode }) {
+    function Content({ children }: Readonly<{ children: (data: T) => ReactNode }>) {
       if (isLoading || computedIsEmpty || data === undefined) return null;
       return <>{children(data)}</>;
     }
@@ -184,5 +184,4 @@ export function useDataView<T>({ data, isLoading, isEmpty: isEmptyFn }: UseDataV
  * Pre-created DataView for unknown/any types.
  * For better type safety, use createDataView<T>() instead.
  */
-// biome-ignore lint/suspicious/noShadowRestrictedNames: intentional name for component pattern
-export const DataView = createDataView<unknown>();
+export const DefaultDataView = createDataView<unknown>();

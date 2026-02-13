@@ -11,12 +11,12 @@ const STREAMS = [
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
-function CameraControls({ recording, onPrev, onNext, onToggleRec }: {
+function CameraControls({ recording, onPrev, onNext, onToggleRec }: Readonly<{
   recording: boolean;
   onPrev: () => void;
   onNext: () => void;
   onToggleRec: () => void;
-}) {
+}>) {
   return (
     <Stack direction="horizontal" gap="sm">
       <Button label="Prev" onPress={onPrev} icon="chevron-left" variant="outline" />
@@ -31,7 +31,7 @@ function CameraControls({ recording, onPrev, onNext, onToggleRec }: {
   );
 }
 
-function CameraInfoGrid({ streamName, recording, wide }: { streamName: string; recording: boolean; wide: boolean }) {
+function CameraInfoGrid({ streamName, recording, wide }: Readonly<{ streamName: string; recording: boolean; wide: boolean }>) {
   return (
     <Grid columns={wide ? 3 : 2} gap="sm">
       <Stat label="Stream" value={streamName} icon="video" color="#ef4444" />

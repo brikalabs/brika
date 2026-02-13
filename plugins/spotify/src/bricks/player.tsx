@@ -22,11 +22,11 @@ import { Controls, type PlayerActions, ProgressBar, TrackInfo, VolumeSlider } fr
 
 // ─── Layout: Small (1-2 cols) ───────────────────────────────────────────────
 
-function SmallPlayer({ playback, width, actions }: {
+function SmallPlayer({ playback, width, actions }: Readonly<{
   playback: PlaybackState;
   width: number;
   actions: PlayerActions;
-}) {
+}>) {
   return (
     <Box backgroundImage={playback.albumArt ?? undefined} backgroundFit="cover" rounded="lg" grow>
       <Box background="rgba(0,0,0,0.3)" grow>
@@ -44,12 +44,12 @@ function SmallPlayer({ playback, width, actions }: {
 
 // ─── Layout: Medium (3-4 cols) ──────────────────────────────────────────────
 
-function MediumPlayer({ playback, height, localProgressMs, actions }: {
+function MediumPlayer({ playback, height, localProgressMs, actions }: Readonly<{
   playback: PlaybackState;
   height: number;
   localProgressMs: number;
   actions: PlayerActions;
-}) {
+}>) {
   const panel = (
     <Stack direction="vertical" gap="sm">
       <TrackInfo playback={playback} />
@@ -72,19 +72,19 @@ function MediumPlayer({ playback, height, localProgressMs, actions }: {
 
 // ─── Layout: Large (5+ cols) ────────────────────────────────────────────────
 
-function LargePlayer({ playback, height, localProgressMs, actions }: {
+function LargePlayer({ playback, height, localProgressMs, actions }: Readonly<{
   playback: PlaybackState;
   height: number;
   localProgressMs: number;
   actions: PlayerActions;
-}) {
+}>) {
   return (
     <Box backgroundImage={playback.albumArt ?? undefined} backgroundFit="cover" rounded="lg" blur="sm">
       <Box background="rgba(0,0,0,0.7)" blur="lg" padding="lg" rounded="lg" grow>
         <Stack direction="horizontal" gap="lg">
-          {playback.albumArt != null
-            ? <Image src={playback.albumArt} alt={playback.albumName} fit="cover" rounded aspectRatio="1/1" />
-            : <Box padding="none" />}
+          {playback.albumArt == null
+            ? <Box padding="none" />
+            : <Image src={playback.albumArt} alt={playback.albumName} fit="cover" rounded aspectRatio="1/1" />}
           <Box grow padding="none">
             <Stack direction="vertical" gap="sm" justify="center">
               <TrackInfo playback={playback} />

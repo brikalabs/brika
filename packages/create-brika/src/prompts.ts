@@ -130,10 +130,10 @@ export async function promptForConfig(pluginName?: string): Promise<PluginConfig
   );
 
   return {
-    name: answers.name as string,
+    name: answers.name,
     description: answers.description as string,
     features: answers.features as PluginFeature[],
     category: answers.category as PluginConfig['category'],
-    author: answers.author as string,
+    author: answers.author,
   };
 }

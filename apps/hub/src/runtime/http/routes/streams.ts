@@ -1,4 +1,4 @@
-import { createSSEStream, NotFound, route } from '@brika/router';
+import { createSSEStream, route } from '@brika/router';
 import type { Json } from '@brika/shared';
 import { z } from 'zod';
 import { BrickInstanceManager } from '@/runtime/bricks';

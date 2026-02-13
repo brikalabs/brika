@@ -112,9 +112,9 @@ export function DebugDialog({
         <DialogFooter>
           <div className="flex w-full items-center justify-between">
             <span className="text-muted-foreground text-xs">
-              {filter !== 'all'
-                ? `${filteredEvents.length} / ${events.length} ${t('workflows:debug.events')}`
-                : `${events.length} ${t('workflows:debug.events')}`}
+              {filter === 'all'
+                ? `${events.length} ${t('workflows:debug.events')}`
+                : `${filteredEvents.length} / ${events.length} ${t('workflows:debug.events')}`}
             </span>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={clear}>

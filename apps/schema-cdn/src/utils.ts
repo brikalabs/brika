@@ -58,7 +58,7 @@ export const parseVersion = async (
   const path = decodeURIComponent(pathname).replace(/^\/latest\//, '/');
 
   // Range: /^0.1.1/, /~0.1.0/, />=0.1.0/
-  const rangeMatch = path.match(/^\/([\^~>=]+)(\d+\.\d+\.\d+(?:-[^/]*)?)\//);
+  const rangeMatch = /^\/([\^~>=]+)(\d+\.\d+\.\d+(?:-[^/]*)?)\//.exec(path);
   if (rangeMatch) {
     const [, prefix, ver] = rangeMatch;
     const meta = await fetchPackageMetadata(pkg);
@@ -72,7 +72,7 @@ export const parseVersion = async (
   }
 
   // Exact: /0.1.0/
-  const exactMatch = path.match(/^\/(\d+\.\d+\.\d+(?:-[^/]*)?)\//);
+  const exactMatch = /^\/(\d+\.\d+\.\d+(?:-[^/]*)?)\//.exec(path);
   if (exactMatch) {
     return { version: `@${exactMatch[1]}`, path: path.replace(/^\/[^/]+/, '') };
   }

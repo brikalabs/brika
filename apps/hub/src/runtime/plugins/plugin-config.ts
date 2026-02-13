@@ -62,7 +62,7 @@ export class PluginConfigService {
       const s = this.#zodFieldForPref(p);
       shape[p.name] = p.required ? s : s.optional();
     }
-    return z.object(shape).passthrough();
+    return z.looseObject(shape);
   }
 
   #zodFieldForPref(p: PreferenceDefinition): z.ZodTypeAny {

@@ -242,7 +242,7 @@ export class NpmSearchService {
     try {
       const data = await this.#http
         .get<NpmApiDownloads>(`${NPM_DOWNLOADS_URL}/last-week/${packageName}`)
-        .cache({ ttl: 3600_000, tags: ['npm-downloads'] }) // Cache for 1 hour
+        .cache({ ttl: 3_600_000, tags: ['npm-downloads'] }) // Cache for 1 hour
         .data();
 
       return data.downloads || 0;

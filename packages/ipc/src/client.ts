@@ -57,7 +57,7 @@ export class Client {
 
   constructor(options: ClientOptions = {}) {
     if (typeof process.send !== 'function') {
-      throw new Error('IPC Client requires process.send - spawn with IPC enabled');
+      throw new TypeError('IPC Client requires process.send - spawn with IPC enabled');
     }
 
     this.#channel = new Channel({

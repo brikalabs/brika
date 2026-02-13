@@ -82,7 +82,7 @@ interface CombineValueOptions {
   v: unknown;
   i: number;
   mode: 'combineLatest' | 'zip' | 'all';
-  values: (unknown | undefined)[];
+  values: unknown[];
   hasValue: boolean[];
   pendingZip: unknown[][];
   allEmitted: { current: boolean };
@@ -127,7 +127,7 @@ function createCombineFlow(
   mode: 'combineLatest' | 'zip' | 'all'
 ): Flow<unknown[]> {
   return combinatorFlow(({ push }) => {
-    const values: (unknown | undefined)[] = new Array(flows.length).fill(undefined);
+    const values: unknown[] = new Array(flows.length).fill(undefined);
     const hasValue: boolean[] = new Array(flows.length).fill(false);
     const pendingZip: unknown[][] = flows.map(() => []);
     const allEmitted = { current: false };

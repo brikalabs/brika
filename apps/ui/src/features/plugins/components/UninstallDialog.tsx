@@ -22,7 +22,7 @@ interface UninstallDialogProps {
   onUninstall: () => void;
 }
 
-export function UninstallDialog({ pluginName, isBusy, onUninstall }: UninstallDialogProps) {
+export function UninstallDialog({ pluginName, isBusy, onUninstall }: Readonly<UninstallDialogProps>) {
   const { t } = useLocale();
 
   return (

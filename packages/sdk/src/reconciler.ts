@@ -12,6 +12,44 @@
 
 import type { ComponentNode, Mutation } from '@brika/ui-kit';
 
+function nodePath(basePath: string, index: number): string {
+  return basePath ? `${basePath}.${index}` : `${index}`;
+}
+
+function diffMatchedNode(
+  prev: ComponentNode,
+  next: ComponentNode,
+  path: string,
+  basePath: string,
+  mutations: Mutation[],
+): void {
+  if (prev.type !== next.type) {
+    mutations.push({ op: 'replace', path, node: next });
+    return;
+  }
+
+  const diff = diffProps(prev, next);
+  if (diff) {
+    mutations.push({
+      op: 'update',
+      path,
+      props: diff.props,
+      ...(diff.removed.length > 0 ? { removed: diff.removed } : {}),
+    });
+  }
+
+  if ('children' in prev && 'children' in next) {
+    const childMuts = reconcile(
+      prev.children as ComponentNode[],
+      next.children as ComponentNode[],
+      path,
+    );
+    if (childMuts.length > 0) {
+      mutations.push(...childMuts);
+    }
+  }
+}
+
 /**
  * Diff two component node trees and return a list of mutations.
  * Paths use dot-separated indices: "0" → body[0], "2.0" → body[2].children[0].
@@ -27,50 +65,16 @@ export function reconcile(
   for (let i = 0; i < minLen; i++) {
     const prev = oldNodes[i]!;
     const next = newNodes[i]!;
-
-    // Reference equality — same object, skip entirely
     if (prev === next) continue;
-
-    const path = basePath ? `${basePath}.${i}` : `${i}`;
-
-    if (prev.type !== next.type) {
-      // Type changed — atomic replace (no remove+create dance)
-      mutations.push({ op: 'replace', path, node: next });
-    } else {
-      // Same type — diff props
-      const diff = diffProps(prev, next);
-      if (diff) {
-        mutations.push({
-          op: 'update',
-          path,
-          props: diff.props,
-          ...(diff.removed.length > 0 ? { removed: diff.removed } : {}),
-        });
-      }
-      // Recurse into container children
-      if ('children' in prev && 'children' in next) {
-        const childMuts = reconcile(
-          prev.children as ComponentNode[],
-          next.children as ComponentNode[],
-          path,
-        );
-        if (childMuts.length > 0) {
-          mutations.push(...childMuts);
-        }
-      }
-    }
+    diffMatchedNode(prev, next, nodePath(basePath, i), basePath, mutations);
   }
 
-  // Appended nodes (new tree is longer)
   for (let i = minLen; i < newNodes.length; i++) {
-    const path = basePath ? `${basePath}.${i}` : `${i}`;
-    mutations.push({ op: 'create', path, node: newNodes[i]! });
+    mutations.push({ op: 'create', path: nodePath(basePath, i), node: newNodes[i]! });
   }
 
-  // Removed nodes (old tree is longer) — highest index first
   for (let i = oldNodes.length - 1; i >= minLen; i--) {
-    const path = basePath ? `${basePath}.${i}` : `${i}`;
-    mutations.push({ op: 'remove', path });
+    mutations.push({ op: 'remove', path: nodePath(basePath, i) });
   }
 
   return mutations;
@@ -114,30 +118,37 @@ function diffProps(
   return { props: props ?? {}, removed };
 }
 
-/** Fast deep-ish equality for prop values (primitives, arrays, plain objects) */
+function arraysEqual(a: unknown[], b: unknown[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (!valuesEqual(a[i], b[i])) return false;
+  }
+  return true;
+}
+
+function objectsEqual(a: Record<string, unknown>, b: Record<string, unknown>): boolean {
+  const aKeys = Object.keys(a);
+  if (aKeys.length !== Object.keys(b).length) return false;
+  for (const k of aKeys) {
+    if (!valuesEqual(a[k], b[k])) return false;
+  }
+  return true;
+}
+
 function valuesEqual(a: unknown, b: unknown): boolean {
   if (Object.is(a, b)) return true;
   if (a == null || b == null) return false;
   if (typeof a !== typeof b) return false;
 
   if (Array.isArray(a)) {
-    if (!Array.isArray(b) || a.length !== b.length) return false;
-    for (let i = 0; i < a.length; i++) {
-      if (!valuesEqual(a[i], b[i])) return false;
-    }
-    return true;
+    return Array.isArray(b) && arraysEqual(a, b);
   }
 
   if (typeof a === 'object') {
-    const aObj = a as Record<string, unknown>;
-    const bObj = b as Record<string, unknown>;
-    const aKeys = Object.keys(aObj);
-    const bKeys = Object.keys(bObj);
-    if (aKeys.length !== bKeys.length) return false;
-    for (const k of aKeys) {
-      if (!valuesEqual(aObj[k], bObj[k])) return false;
-    }
-    return true;
+    return objectsEqual(
+      a as Record<string, unknown>,
+      b as Record<string, unknown>,
+    );
   }
 
   return false;
