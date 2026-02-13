@@ -47,7 +47,7 @@ export function MarkdownCodeBlock({ code, language, filename }: Readonly<Markdow
             return (
               <div className="flex min-w-0 flex-1 items-center gap-2 text-xs">
                 {items.map((item, i) => (
-                  <Fragment key={i}>
+                  <Fragment key={`info-${i}`}>
                     {item}
                     {i < items.length - 1 && <span className="text-muted-foreground/50">/</span>}
                   </Fragment>

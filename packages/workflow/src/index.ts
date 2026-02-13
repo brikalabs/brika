@@ -11,7 +11,6 @@
 
 export type {
   // Block types
-  BlockCategory,
   BlockConfig,
   BlockInstance,
   BlockRuntimeContext,

@@ -87,8 +87,6 @@ function DraggableBlock({ block, onDragStart }: Readonly<DraggableBlockProps>) {
     <Tooltip>
       <TooltipTrigger asChild>
         <div
-          role="button"
-          tabIndex={0}
           draggable
           onDragStart={(e) => onDragStart(e, block, blockName)}
           className={cn(

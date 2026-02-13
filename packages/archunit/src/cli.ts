@@ -39,39 +39,35 @@ async function findConfig(cwd: string): Promise<string | null> {
   return null;
 }
 
-async function main() {
-  const cwd = process.cwd();
-  const configPath = await findConfig(cwd);
+const cwd = process.cwd();
+const configPath = await findConfig(cwd);
 
-  if (!configPath) {
-    console.error(chalk.red(`No config file found. Create ${CONFIG_FILES[0]}`));
-    process.exit(1);
-  }
-
-  // Clear registry before loading config
-  clearRegistry();
-
-  // Import config (side effects register rules via use())
-  const mod = await import(configPath);
-
-  // Check registry first, then fallback to default export
-  let rules = getRegisteredRules();
-
-  if (rules.length === 0 && mod.default) {
-    const config = typeof mod.default === 'function' ? mod.default() : mod.default;
-    if (Array.isArray(config)) {
-      rules = normalizeRules(config);
-    }
-  }
-
-  if (rules.length === 0) {
-    console.error(chalk.red('No rules found. Use use() or export default.'));
-    process.exit(1);
-  }
-
-  const result = await runArch({ rules, cwd });
-  printResult(result);
-  process.exit(result.passed ? 0 : 1);
+if (!configPath) {
+  console.error(chalk.red(`No config file found. Create ${CONFIG_FILES[0]}`));
+  process.exit(1);
 }
 
-main();
+// Clear registry before loading config
+clearRegistry();
+
+// Import config (side effects register rules via use())
+const mod = await import(configPath);
+
+// Check registry first, then fallback to default export
+let rules = getRegisteredRules();
+
+if (rules.length === 0 && mod.default) {
+  const config = typeof mod.default === 'function' ? mod.default() : mod.default;
+  if (Array.isArray(config)) {
+    rules = normalizeRules(config);
+  }
+}
+
+if (rules.length === 0) {
+  console.error(chalk.red('No rules found. Use use() or export default.'));
+  process.exit(1);
+}
+
+const result = await runArch({ rules, cwd });
+printResult(result);
+process.exit(result.passed ? 0 : 1);

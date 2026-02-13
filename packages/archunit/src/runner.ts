@@ -119,7 +119,8 @@ export function printResult(result: ArchResult): void {
   console.log(`\n${chalk.red('✗')} ${chalk.bold('Architecture violations:')}\n`);
 
   for (const { rule, violations } of result.violations) {
-    console.log(`  ${chalk.bold(rule)} ${chalk.dim(`(${violations.length})`)}`);
+    const countLabel = chalk.dim(`(${violations.length})`);
+    console.log(`  ${chalk.bold(rule)} ${countLabel}`);
     for (const v of violations) {
       const loc = v.line ? chalk.dim(`:${v.line}`) : '';
       const hint = v.suggestion ? chalk.dim(` → ${v.suggestion}`) : '';

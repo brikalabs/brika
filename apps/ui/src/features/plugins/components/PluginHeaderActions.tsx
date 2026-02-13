@@ -37,8 +37,14 @@ export function PluginHeaderActions({
 }: Readonly<PluginHeaderActionsProps>) {
   const { t } = useLocale();
 
-  const statusBadgeVariant =
-    status === 'running' ? 'default' : status === 'crashed' ? 'destructive' : 'secondary';
+  let statusBadgeVariant: 'default' | 'destructive' | 'secondary';
+  if (status === 'running') {
+    statusBadgeVariant = 'default';
+  } else if (status === 'crashed') {
+    statusBadgeVariant = 'destructive';
+  } else {
+    statusBadgeVariant = 'secondary';
+  }
 
   return (
     <div className="flex items-center gap-2">

@@ -13,8 +13,8 @@ export type CheckFactory<Args extends unknown[] = []> = (...args: Args) => {
 
 /** File rule builder with extensible check methods */
 export class FileRule {
-  #pattern: string;
-  #checks: CheckFn[] = [];
+  readonly #pattern: string;
+  readonly #checks: CheckFn[] = [];
   #name = '';
   #reason = '';
   #skipped = false;
@@ -56,7 +56,8 @@ export class FileRule {
 
     const patternName = pattern.split('/').pop() ?? pattern;
     const checkNames = this.#name || checks.map(() => 'check').join(', ');
-    const name = `${patternName} should ${checkNames}${reason ? ` (${reason})` : ''}`;
+    const reasonSuffix = reason ? ` (${reason})` : '';
+    const name = `${patternName} should ${checkNames}${reasonSuffix}`;
 
     return {
       name,

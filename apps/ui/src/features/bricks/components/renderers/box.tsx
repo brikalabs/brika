@@ -106,7 +106,7 @@ export const BoxRenderer = memo(function BoxRenderer({
 
       <div className="relative flex min-h-0 flex-1 flex-col only:*:min-h-0 only:*:flex-1">
         {node.children.map((child, i) => (
-          <ComponentNodeRenderer key={i} node={child} onAction={onAction} />
+          <ComponentNodeRenderer key={`${child.type}-${i}`} node={child} onAction={onAction} />
         ))}
       </div>
     </div>

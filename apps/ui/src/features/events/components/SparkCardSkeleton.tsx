@@ -28,7 +28,7 @@ export function SparkGroupSkeleton() {
       </div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {Array.from({ length: 3 }).map((_, i) => (
-          <SparkCardSkeleton key={i} />
+          <SparkCardSkeleton key={`spark-skeleton-${i}`} />
         ))}
       </div>
     </div>

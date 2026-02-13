@@ -12,12 +12,6 @@ import type { PortDefinition } from './ports';
 // Block Category
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Block category for UI grouping.
- * Free-form string - plugins can define any category.
- */
-export type BlockCategory = string;
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Block State
 // ─────────────────────────────────────────────────────────────────────────────
@@ -49,7 +43,7 @@ export interface BlockTypeDefinition {
   descriptionKey: string;
 
   /** Category for UI grouping */
-  category: BlockCategory;
+  category: string;
 
   /** Lucide icon name */
   icon: string;

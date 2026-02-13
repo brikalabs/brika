@@ -20,8 +20,10 @@ interface TabsProps extends React.ComponentProps<'div'> {
 }
 
 function Tabs({ value, onValueChange, className, ...props }: Readonly<TabsProps>) {
+  const contextValue = React.useMemo(() => ({ value, onValueChange }), [value, onValueChange]);
+
   return (
-    <TabsContext.Provider value={{ value, onValueChange }}>
+    <TabsContext.Provider value={contextValue}>
       <div data-slot="tabs" className={cn('flex flex-col gap-4', className)} {...props} />
     </TabsContext.Provider>
   );

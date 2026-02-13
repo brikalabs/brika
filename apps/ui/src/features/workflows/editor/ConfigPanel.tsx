@@ -875,20 +875,18 @@ export function ConfigPanel({
               </div>
               <div className="grid gap-1.5">
                 {availableVariables.map((v) => (
-                  <div
+                  <button
+                    type="button"
                     key={v.name}
-                    className="flex cursor-pointer items-center justify-between rounded-md bg-muted/50 p-2 text-xs transition-colors hover:bg-muted"
-                    role="button"
-                    tabIndex={0}
+                    className="flex w-full cursor-pointer items-center justify-between rounded-md bg-muted/50 p-2 text-xs transition-colors hover:bg-muted border-none text-left font-inherit"
                     onClick={() => navigator.clipboard.writeText(`{{ ${v.name} }}`)}
-                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigator.clipboard.writeText(`{{ ${v.name} }}`); } }}
                     title={t('workflows:editor.panels.clickToCopy')}
                   >
                     <code className="font-mono text-primary">{`{{ ${v.name} }}`}</code>
                     <Badge variant="outline" className="h-5 text-[10px]">
                       {v.type}
                     </Badge>
-                  </div>
+                  </button>
                 ))}
               </div>
               <p className="mt-2 text-center text-[10px] text-muted-foreground">

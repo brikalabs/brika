@@ -39,47 +39,41 @@ export function LogRow({ log }: Readonly<LogRowProps>) {
       className={`border-border/30 border-b px-4 py-2 transition-colors ${isNew ? "bg-primary/5" : ""} ${isExpanded ? "bg-muted/50" : "hover:bg-muted/30"}`}
     >
       {/* Main log row */}
-      <div
-        className={`flex items-start gap-3 ${isExpandable ? "cursor-pointer" : ""}`}
-        role={isExpandable ? 'button' : undefined}
-        tabIndex={isExpandable ? 0 : undefined}
-        onClick={() => isExpandable && setIsExpanded(!isExpanded)}
-        onKeyDown={(e) => { if (isExpandable && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); setIsExpanded(!isExpanded); } }}
-      >
-        {/* Expand indicator */}
-        <div className="flex w-4 shrink-0 items-center justify-center">
-          {isExpandable && isExpanded && <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />}
-          {isExpandable && !isExpanded && <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />}
-        </div>
-
-        {/* Timestamp */}
-        <span className="shrink-0 text-muted-foreground tabular-nums">{timestamp}</span>
-
-        {/* Level badge with icon */}
-        <span
-          className={`flex shrink-0 items-center gap-1 rounded border px-1.5 py-0.5 font-semibold text-[10px] ${config.color}`}
+      {isExpandable ? (
+        <button
+          type="button"
+          className="flex w-full items-start gap-3 cursor-pointer bg-transparent border-none p-0 text-left font-inherit text-inherit"
+          onClick={() => setIsExpanded(!isExpanded)}
         >
-          <Icon className="h-3 w-3" />
-          {config.label}
-        </span>
-
-        {/* Source */}
-        <span className="w-32 shrink-0 truncate text-muted-foreground" title={source}>
-          {source}
-        </span>
-
-        {/* Message */}
-        <span className={`flex-1 ${log.level === "error" ? "font-medium text-red-400" : "text-foreground"}`}>
-          {log.message}
-        </span>
-
-        {/* Metadata indicator */}
-        {hasGeneralMeta && !isExpanded && (
-          <span className="shrink-0 text-[10px] text-muted-foreground/50">
-            {Object.keys(generalMeta).length} field{Object.keys(generalMeta).length !== 1 ? "s" : ""}
+          {/* Expand indicator */}
+          <div className="flex w-4 shrink-0 items-center justify-center">
+            {isExpanded ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />}
+          </div>
+          <span className="shrink-0 text-muted-foreground tabular-nums">{timestamp}</span>
+          <span className={`flex shrink-0 items-center gap-1 rounded border px-1.5 py-0.5 font-semibold text-[10px] ${config.color}`}>
+            <Icon className="h-3 w-3" />
+            {config.label}
           </span>
-        )}
-      </div>
+          <span className="w-32 shrink-0 truncate text-muted-foreground" title={source}>{source}</span>
+          <span className={`flex-1 ${log.level === "error" ? "font-medium text-red-400" : "text-foreground"}`}>{log.message}</span>
+          {hasGeneralMeta && !isExpanded && (
+            <span className="shrink-0 text-[10px] text-muted-foreground/50">
+              {Object.keys(generalMeta).length} field{Object.keys(generalMeta).length !== 1 ? "s" : ""}
+            </span>
+          )}
+        </button>
+      ) : (
+        <div className="flex items-start gap-3">
+          <div className="flex w-4 shrink-0 items-center justify-center" />
+          <span className="shrink-0 text-muted-foreground tabular-nums">{timestamp}</span>
+          <span className={`flex shrink-0 items-center gap-1 rounded border px-1.5 py-0.5 font-semibold text-[10px] ${config.color}`}>
+            <Icon className="h-3 w-3" />
+            {config.label}
+          </span>
+          <span className="w-32 shrink-0 truncate text-muted-foreground" title={source}>{source}</span>
+          <span className={`flex-1 ${log.level === "error" ? "font-medium text-red-400" : "text-foreground"}`}>{log.message}</span>
+        </div>
+      )}
 
       {/* Expanded section */}
       {isExpanded && (

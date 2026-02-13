@@ -10,7 +10,7 @@ export function BlocksSkeleton() {
         </div>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
           {Array.from({ length: 8 }).map((_, i) => (
-            <BlockCardSkeleton key={i} />
+            <BlockCardSkeleton key={`block-skeleton-${i}`} />
           ))}
         </div>
       </div>

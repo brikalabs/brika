@@ -44,8 +44,14 @@ export class MockFetch {
    */
   getFetchFn() {
     return async (input: string | Request | URL, init?: RequestInit): Promise<Response> => {
-      const url =
-        typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+      let url: string;
+      if (typeof input === 'string') {
+        url = input;
+      } else if (input instanceof URL) {
+        url = input.toString();
+      } else {
+        url = input.url;
+      }
       const method = init?.method ?? 'GET';
 
       // Find matching mock

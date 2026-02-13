@@ -83,7 +83,7 @@ export function UpdateProgressSection({
       <ScrollArea className="h-40 rounded-md border bg-muted/30 p-3">
         <div ref={scrollRef} className="space-y-1 font-mono text-xs">
           {logs.map((log, i) => (
-            <div key={i} className="text-muted-foreground">
+            <div key={`log-${i}`} className="text-muted-foreground">
               {log}
             </div>
           ))}

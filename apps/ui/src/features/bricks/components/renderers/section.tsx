@@ -19,7 +19,7 @@ export const SectionRenderer = memo(function SectionRenderer({
       </div>
       <div className="flex min-h-0 flex-1 flex-col gap-1.5">
         {node.children.map((child, i) => (
-          <ComponentNodeRenderer key={i} node={child} onAction={onAction} />
+          <ComponentNodeRenderer key={`${child.type}-${i}`} node={child} onAction={onAction} />
         ))}
       </div>
     </div>

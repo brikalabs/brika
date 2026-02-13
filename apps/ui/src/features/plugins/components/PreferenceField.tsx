@@ -108,11 +108,14 @@ export function PreferenceField({
       );
 
     case 'link': {
-      const href = pref.url.startsWith('/api/')
-        ? pref.url // Absolute hub path — use as-is
-        : pref.url.startsWith('/')
-          ? `/api/plugins/${encodeURIComponent(pluginUid)}/routes${pref.url}` // Relative plugin route
-          : pref.url; // External URL
+      let href: string;
+      if (pref.url.startsWith('/api/')) {
+        href = pref.url; // Absolute hub path — use as-is
+      } else if (pref.url.startsWith('/')) {
+        href = `/api/plugins/${encodeURIComponent(pluginUid)}/routes${pref.url}`; // Relative plugin route
+      } else {
+        href = pref.url; // External URL
+      }
       return (
         <div className="space-y-2">
           <Button

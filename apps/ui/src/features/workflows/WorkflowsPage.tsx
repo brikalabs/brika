@@ -27,7 +27,7 @@ export function WorkflowsPage() {
   const disableMutation = useDisableWorkflow();
   const deleteMutation = useDeleteWorkflow();
 
-  const handleToggle = (id: string, enabled: boolean) => {
+  const handleToggle = ({ id, enabled }: { id: string; enabled: boolean }) => {
     if (enabled) {
       enableMutation.mutate(id);
     } else {

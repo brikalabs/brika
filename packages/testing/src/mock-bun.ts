@@ -41,7 +41,7 @@ export class BunMock {
   readonly #directories = new Map<string, string[]>();
   readonly #resolves = new Map<string, string>();
   #spawnConfig: SpawnConfig = { exitCode: 0 };
-  #spawnCalls: Array<{ cmd: string[]; options?: unknown }> = [];
+  readonly #spawnCalls: Array<{ cmd: string[]; options?: unknown }> = [];
 
   #fileSpy: SpyInstance | null = null;
   #writeSpy: SpyInstance | null = null;
@@ -264,18 +264,19 @@ export class BunMock {
   }
 
   #applySpawnMock(): void {
-    const self = this;
+    const spawnCalls = this.#spawnCalls;
+    const spawnConfig = this.#spawnConfig;
 
     this.#spawnSpy = spyOn(Bun, 'spawn').mockImplementation(((cmd: unknown, options?: unknown) => {
       const cmdArray = Array.isArray(cmd) ? cmd : [cmd];
-      self.#spawnCalls.push({ cmd: cmdArray as string[], options });
+      spawnCalls.push({ cmd: cmdArray as string[], options });
 
       return {
         pid: 12345,
         stdin: null,
-        stdout: createStream(self.#spawnConfig.stdout),
-        stderr: createStream(self.#spawnConfig.stderr),
-        exited: Promise.resolve(self.#spawnConfig.exitCode ?? 0),
+        stdout: createStream(spawnConfig.stdout),
+        stderr: createStream(spawnConfig.stderr),
+        exited: Promise.resolve(spawnConfig.exitCode ?? 0),
         exitCode: null,
         signalCode: null,
         killed: false,
@@ -307,7 +308,7 @@ export class BunMock {
     const directories = this.#directories;
 
     Bun.Glob = class MockGlob {
-      constructor(private pattern: string) {}
+      constructor(private readonly pattern: string) {}
 
       *scan(options: { cwd: string }) {
         yield* this.#iter(options.cwd);

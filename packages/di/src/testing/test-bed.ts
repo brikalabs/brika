@@ -13,8 +13,8 @@ interface Restorable {
 }
 
 class TestBedImpl {
-  #providers = new Map<Constructor, unknown>();
-  #spies: Restorable[] = [];
+  readonly #providers = new Map<Constructor, unknown>();
+  readonly #spies: Restorable[] = [];
   #autoStub = false;
   #originalResolve: typeof container.resolve | null = null;
 

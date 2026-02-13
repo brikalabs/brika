@@ -22,7 +22,7 @@ export function PluginsPage() {
         <View.Skeleton>
           <div className="grid gap-4">
             {Array.from({ length: 4 }).map((_, i) => (
-              <PluginCardSkeleton key={i} />
+              <PluginCardSkeleton key={`plugin-skeleton-${i}`} />
             ))}
           </div>
         </View.Skeleton>

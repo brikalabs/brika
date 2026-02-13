@@ -75,7 +75,7 @@ const LARGE_DATA = {
 // Benchmark Runner
 // ─────────────────────────────────────────────────────────────────────────────
 
-async function main(): Promise<void> {
+try {
   console.info('Starting IPC Benchmarks...\n');
   console.info('Using Bun native IPC with advanced serialization\n');
 
@@ -165,9 +165,7 @@ async function main(): Promise<void> {
 
   plugin.kill();
   console.info('\nBenchmarks complete');
-}
-
-main().catch((err: unknown) => {
+} catch (err: unknown) {
   console.error('Benchmark error:', err);
   process.exit(1);
-});
+}

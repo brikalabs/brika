@@ -110,8 +110,11 @@ const BasePackageJson = z.looseObject({
 
 const semverPattern = /^\d+\.\d+\.\d+(-[a-zA-Z0-9.-]+)?(\+[a-zA-Z0-9.-]+)?$/;
 // Simplified: allows ^1.0.0, ~1.0.0, >=1.0.0, 1.0.0, etc.
-const semverRangePattern =
-  /^[~^><=]*\d+\.\d+\.\d+(-[\w.-]+)?(\s+[~^><=]*\d+\.\d+\.\d+(-[\w.-]+)?)*$/;
+// Split into a per-token pattern to keep regex cognitive complexity low.
+const semverRangeToken = /^[~^><=]*\d+\.\d+\.\d+(-[\w.-]+)?$/;
+function isValidSemverRange(s: string): boolean {
+  return s.split(/\s+/).every((t) => semverRangeToken.test(t));
+}
 
 const ToolSchema = z.object({
   id: z.string().describe('Tool identifier (local to plugin)'),
@@ -259,7 +262,7 @@ export const PluginPackageSchema = BasePackageJson.extend({
     .looseObject({
       brika: z
         .string()
-        .regex(semverRangePattern)
+        .refine(isValidSemverRange, 'Invalid semver range')
         .describe('Required BRIKA hub version (semver range). Should match @brika/sdk version.'),
     })
     .describe("Engine requirements. Must include 'brika' field."),

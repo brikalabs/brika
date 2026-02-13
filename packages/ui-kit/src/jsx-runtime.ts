@@ -50,7 +50,7 @@ export function Fragment(props: { children?: NodeOrNodes | (NodeOrNodes | false 
 // ─────────────────────────────────────────────────────────────────────────────
 
 export namespace JSX {
-  export type Element = NodeOrNodes;
+  export type Element = ComponentNode | ComponentNode[];
   export interface ElementChildrenAttribute {
     children: {};
   }

@@ -99,8 +99,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       const existing = current.get(id);
       // Keep the old reference if structurally identical — prevents re-render
       if (
-        existing &&
-        existing.length === body.length &&
+        existing?.length === body.length &&
         JSON.stringify(existing) === JSON.stringify(body)
       )
         continue;

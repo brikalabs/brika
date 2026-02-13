@@ -63,7 +63,7 @@ export class WorkflowEngine {
   #updateWorkflowState(
     workflow: Workflow,
     status: 'stopped' | 'running' | 'error',
-    options?: { error?: string; startedAt?: number | undefined }
+    options?: { error?: string; startedAt?: number }
   ): void {
     workflow.status = status;
     workflow.error = options?.error;

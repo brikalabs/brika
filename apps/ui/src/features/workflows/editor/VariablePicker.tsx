@@ -149,9 +149,9 @@ function TreeNodeItem({
 
         {getIcon()}
 
-        <span className="flex-1 truncate font-mono text-sm" role="button" tabIndex={0} onClick={handleInsert} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleInsert(); } }}>
+        <button type="button" className="flex-1 truncate font-mono text-sm bg-transparent border-none p-0 text-left cursor-pointer text-inherit font-inherit" onClick={handleInsert}>
           {node.name}
-        </span>
+        </button>
 
         <Badge variant="outline" className="px-1 py-0 text-[10px]">
           {node.type}

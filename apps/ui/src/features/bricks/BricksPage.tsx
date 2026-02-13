@@ -22,7 +22,7 @@ function GridSkeleton() {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {Array.from({ length: 6 }).map((_, i) => (
-        <Skeleton key={i} className="h-48 rounded-xl" />
+        <Skeleton key={`grid-skeleton-${i}`} className="h-48 rounded-xl" />
       ))}
     </div>
   );
@@ -129,9 +129,8 @@ export function BricksPage() {
       />
 
       {/* Grid */}
-      {isLoading ? (
-        <GridSkeleton />
-      ) : !hasBricks ? (
+      {isLoading && <GridSkeleton />}
+      {!isLoading && !hasBricks && (
         <div className="py-12 text-center">
           <LayoutGrid className="mx-auto mb-4 size-12 text-muted-foreground" />
           <h3 className="font-semibold">{t('bricks:empty')}</h3>
@@ -141,8 +140,9 @@ export function BricksPage() {
             {t('bricks:addFirstBrick')}
           </Button>
         </div>
-      ) : (
-        dashboard && <DashboardGrid dashboard={dashboard} onSaveLayout={saveLayout} />
+      )}
+      {!isLoading && hasBricks && dashboard && (
+        <DashboardGrid dashboard={dashboard} onSaveLayout={saveLayout} />
       )}
 
       {/* Sheets */}

@@ -26,7 +26,7 @@ export function WorkflowTableSkeleton({ rows = 5 }: { rows?: number }) {
         </TableHeader>
         <TableBody>
           {Array.from({ length: rows }).map((_, i) => (
-            <TableRow key={i}>
+            <TableRow key={`workflow-row-${i}`}>
               <TableCell>
                 <div className="flex flex-col gap-1.5">
                   <Skeleton className="h-5 w-40" />

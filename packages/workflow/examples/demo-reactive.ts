@@ -131,8 +131,16 @@ const comfortBlock = defineReactiveBlock(
           const tempDiff = Math.abs(temp - config.optimalTemp);
           const humidityDiff = Math.abs(humidity - config.optimalHumidity);
           const score = Math.round(100 - tempDiff * 3 - humidityDiff);
-          const label =
-            score > 80 ? 'Excellent' : score > 60 ? 'Good' : score > 40 ? 'Fair' : 'Poor';
+          let label: string;
+          if (score > 80) {
+            label = 'Excellent';
+          } else if (score > 60) {
+            label = 'Good';
+          } else if (score > 40) {
+            label = 'Fair';
+          } else {
+            label = 'Poor';
+          }
           return { score, label, temp, humidity };
         })
       )
@@ -193,7 +201,7 @@ const loggerBlock = defineReactiveBlock(
 // Run Demo
 // ─────────────────────────────────────────────────────────────────────────────
 
-async function main() {
+try {
   console.log('╔═══════════════════════════════════════════════════════════════╗');
   console.log('║       BRIKA Reactive Block Demo with Pipe-based API           ║');
   console.log('║                                                               ║');
@@ -244,6 +252,6 @@ async function main() {
 
   console.log('');
   console.log('✅ Demo completed!');
+} catch (err) {
+  console.error(err);
 }
-
-main().catch(console.error);

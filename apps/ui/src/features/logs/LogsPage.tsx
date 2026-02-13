@@ -35,10 +35,11 @@ export function LogsPage() {
 
   const handleExport = () => {
     const content = logs
-      .map(
-        (l) =>
-          `${new Date(l.ts).toISOString()} [${l.level.toUpperCase()}] ${l.source}${l.pluginName ? `:${l.pluginName}` : ""}: ${l.message} ${l.meta ? JSON.stringify(l.meta) : ""}`,
-      )
+      .map((l) => {
+        const pluginSuffix = l.pluginName ? `:${l.pluginName}` : "";
+        const metaSuffix = l.meta ? ` ${JSON.stringify(l.meta)}` : "";
+        return `${new Date(l.ts).toISOString()} [${l.level.toUpperCase()}] ${l.source}${pluginSuffix}: ${l.message}${metaSuffix}`;
+      })
       .join("\n");
 
     const a = document.createElement("a");

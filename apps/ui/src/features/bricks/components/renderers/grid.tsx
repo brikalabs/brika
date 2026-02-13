@@ -30,7 +30,7 @@ export const GridRenderer = memo(function GridRenderer({
       style={gridStyle}
     >
       {node.children.map((child, i) => (
-        <ComponentNodeRenderer key={i} node={child} onAction={onAction} />
+        <ComponentNodeRenderer key={`${child.type}-${i}`} node={child} onAction={onAction} />
       ))}
     </div>
   );

@@ -9,6 +9,23 @@ const SSE_HEADERS = {
   'Access-Control-Allow-Origin': '*',
 };
 
+const encoder = new TextEncoder();
+
+function createSSESender(controller: ReadableStreamDefaultController<Uint8Array>) {
+  return (data: unknown, event?: string) => {
+    try {
+      let message = '';
+      if (event) {
+        message += `event: ${event}\n`;
+      }
+      message += `data: ${JSON.stringify(data)}\n\n`;
+      controller.enqueue(encoder.encode(message));
+    } catch {
+      // Stream might be closed
+    }
+  };
+}
+
 /**
  * Create an SSE response with a stream that can be written to.
  *
@@ -30,23 +47,11 @@ const SSE_HEADERS = {
 export function createSSEStream(
   setup: (send: (data: unknown, event?: string) => void, close: () => void) => (() => void) | void
 ): Response {
-  const encoder = new TextEncoder();
   let cleanup: (() => void) | void;
 
   const stream = new ReadableStream({
     start(controller) {
-      const send = (data: unknown, event?: string) => {
-        try {
-          let message = '';
-          if (event) {
-            message += `event: ${event}\n`;
-          }
-          message += `data: ${JSON.stringify(data)}\n\n`;
-          controller.enqueue(encoder.encode(message));
-        } catch {
-          // Stream might be closed
-        }
-      };
+      const send = createSSESender(controller);
 
       const close = () => {
         try {
@@ -83,22 +88,9 @@ export function createSSEStream(
 export function createAsyncSSEStream(
   handler: (send: (data: unknown, event?: string) => void) => Promise<void>
 ): Response {
-  const encoder = new TextEncoder();
-
   const stream = new ReadableStream({
     async start(controller) {
-      const send = (data: unknown, event?: string) => {
-        try {
-          let message = '';
-          if (event) {
-            message += `event: ${event}\n`;
-          }
-          message += `data: ${JSON.stringify(data)}\n\n`;
-          controller.enqueue(encoder.encode(message));
-        } catch {
-          // Stream might be closed
-        }
-      };
+      const send = createSSESender(controller);
 
       try {
         await handler(send);

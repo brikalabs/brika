@@ -62,7 +62,8 @@ export function createBanner(options: BannerOptions): string {
 
   // Add metadata entries
   for (const [key, value] of Object.entries(metadata)) {
-    contentParts.push(`${chalk.yellow(`${key}:`)} ${chalk.bold(value)}`);
+    const label = chalk.yellow(`${key}:`);
+    contentParts.push(`${label} ${chalk.bold(value)}`);
   }
 
   const content = contentParts.join('\n');

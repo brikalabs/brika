@@ -11,7 +11,14 @@ export function getPhaseLabel(
 ): string {
   if (!progress) return '';
 
-  const action = mode === 'reinstall' ? t('plugins:actions.reinstall') : mode === 'update' ? t('plugins:actions.update') : t('store:install.title');
+  let action: string;
+  if (mode === 'reinstall') {
+    action = t('plugins:actions.reinstall');
+  } else if (mode === 'update') {
+    action = t('plugins:actions.update');
+  } else {
+    action = t('store:install.title');
+  }
 
   switch (progress.phase) {
     case 'resolving':

@@ -76,7 +76,9 @@ export function createDataView<T>() {
       return !data;
     }, [data, isEmptyFn]);
 
-    return <Context.Provider value={{ data, isLoading, isEmpty }}>{children}</Context.Provider>;
+    const contextValue = useMemo(() => ({ data, isLoading, isEmpty }), [data, isLoading, isEmpty]);
+
+    return <Context.Provider value={contextValue}>{children}</Context.Provider>;
   }
 
   function Skeleton({ children }: { children: ReactNode }) {
@@ -139,9 +141,16 @@ interface UseDataViewOptions<T> {
  */
 export function useDataView<T>({ data, isLoading, isEmpty: isEmptyFn }: UseDataViewOptions<T>) {
   return useMemo(() => {
-    const computedIsEmpty =
-      data === undefined ||
-      (isEmptyFn ? isEmptyFn(data) : Array.isArray(data) ? data.length === 0 : !data);
+    let computedIsEmpty: boolean;
+    if (data === undefined) {
+      computedIsEmpty = true;
+    } else if (isEmptyFn) {
+      computedIsEmpty = isEmptyFn(data);
+    } else if (Array.isArray(data)) {
+      computedIsEmpty = data.length === 0;
+    } else {
+      computedIsEmpty = !data;
+    }
 
     // Simple components that use closure over the options
     function Root({ children }: { children: ReactNode }) {
@@ -176,4 +185,4 @@ export function useDataView<T>({ data, isLoading, isEmpty: isEmptyFn }: UseDataV
  * For better type safety, use createDataView<T>() instead.
  */
 // biome-ignore lint/suspicious/noShadowRestrictedNames: intentional name for component pattern
-export const DataView = createDataView<unknown>(); // NOSONAR — intentional shadowing of global DataView
+export const DataView = createDataView<unknown>();

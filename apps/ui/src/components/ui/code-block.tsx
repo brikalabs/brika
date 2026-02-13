@@ -136,8 +136,13 @@ function CodeBlock({ className, variant, ...props }: CodeBlockProps) {
     setState((prev) => (prev.filename === filename ? prev : { ...prev, filename }));
   }, []);
 
+  const contextValue = React.useMemo(
+    () => ({ ...state, setCodeInfo, setLanguage, setFilename }),
+    [state, setCodeInfo, setLanguage, setFilename]
+  );
+
   return (
-    <CodeBlockContext.Provider value={{ ...state, setCodeInfo, setLanguage, setFilename }}>
+    <CodeBlockContext.Provider value={contextValue}>
       <div
         data-slot="code-block"
         className={cn(codeBlockVariants({ variant }), className)}
@@ -360,7 +365,7 @@ function CodeBlockContent({
       {showLineNumbers && (
         <div className={codeBlockGutterVariants({ size })} aria-hidden="true">
           {lines.map((_, i) => (
-            <div key={i} className={cn('text-right', lineHeight)}>
+            <div key={`ln-${lineNumberStart + i}`} className={cn('text-right', lineHeight)}>
               {lineNumberStart + i}
             </div>
           ))}
@@ -376,10 +381,10 @@ function CodeBlockContent({
             {lines.map((line, i) => {
               const tokens = highlightTokens?.[i];
               return (
-                <span key={i} className={cn('block min-h-6 whitespace-pre', lineHeight)}>
+                <span key={`line-${lineNumberStart + i}`} className={cn('block min-h-6 whitespace-pre', lineHeight)}>
                   {tokens?.length
                     ? tokens.map((token, j) => (
-                        <span key={j} style={getTokenStyle(token)}>
+                        <span key={`tok-${j}`} style={getTokenStyle(token)}>
                           {token.content}
                         </span>
                       ))

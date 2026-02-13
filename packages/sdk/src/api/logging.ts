@@ -17,7 +17,7 @@ const STACK_REGEX_WITHOUT_PARENS = /at\s+(?=((?:[A-Za-z]:)?[^:\s]+))\1:(\d+):(\d
  */
 export function parseStackLine(line: string): { sourceFile: string; sourceLine: number } | null {
   const match = STACK_REGEX_WITH_PARENS.exec(line) || STACK_REGEX_WITHOUT_PARENS.exec(line);
-  if (!match || !match[1] || !match[2]) return null;
+  if (!match?.[1] || !match[2]) return null;
 
   return {
     sourceFile: match[1],

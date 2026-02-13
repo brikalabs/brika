@@ -4,7 +4,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-@custom-variant dark (&:is(.dark *)); /* NOSONAR — Tailwind CSS v4 syntax */
+@custom-variant dark (&:is(.dark *));
 
 /* ─────────────────────────────────────────────────────────────
    1. DEFINE BASE TOKENS (theme-independent)

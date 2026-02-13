@@ -3,6 +3,17 @@
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { cn } from '@/lib/utils';
 
+function ChartTooltipContent({ active, payload, formatValue }: { active?: boolean; payload?: Array<{ value: unknown }>; formatValue: (value: number) => string }) {
+  if (active && payload?.[0]) {
+    return (
+      <div className="rounded-md border bg-popover px-2 py-1 text-sm shadow-md">
+        {formatValue(payload[0].value as number)}
+      </div>
+    );
+  }
+  return null;
+}
+
 interface MetricsChartProps {
   data: Array<{ ts: number; value: number }>;
   color?: string;
@@ -41,16 +52,9 @@ export function MetricsChart({
           <XAxis dataKey="ts" hide />
           <YAxis hide domain={['auto', 'auto']} />
           <Tooltip
-            content={({ active, payload }) => {
-              if (active && payload?.[0]) {
-                return (
-                  <div className="rounded-md border bg-popover px-2 py-1 text-sm shadow-md">
-                    {formatValue(payload[0].value as number)}
-                  </div>
-                );
-              }
-              return null;
-            }}
+            content={({ active, payload }) => (
+              <ChartTooltipContent active={active} payload={payload} formatValue={formatValue} />
+            )}
           />
           <Area
             type="monotone"

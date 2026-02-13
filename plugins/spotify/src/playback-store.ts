@@ -35,7 +35,10 @@ const POLL_MS = 3000;
 
 /** Lazily initialized — avoids circular import with index.tsx */
 let api: ReturnType<typeof createSpotifyApi> | null = null;
-function getApi() { return (api ??= createSpotifyApi(spotify)); }
+function getApi() {
+  api ??= createSpotifyApi(spotify);
+  return api;
+}
 
 let refCount = 0;
 let timer: ReturnType<typeof setInterval> | null = null;

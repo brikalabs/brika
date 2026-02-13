@@ -16,7 +16,7 @@ import type { ComponentNode, Mutation } from '@brika/ui-kit';
  * Diff two component node trees and return a list of mutations.
  * Paths use dot-separated indices: "0" → body[0], "2.0" → body[2].children[0].
  */
-export function reconcile( // NOSONAR — hot-path reconciler, kept flat for performance
+export function reconcile(
   oldNodes: ComponentNode[],
   newNodes: ComponentNode[],
   basePath = '',
@@ -115,7 +115,7 @@ function diffProps(
 }
 
 /** Fast deep-ish equality for prop values (primitives, arrays, plain objects) */
-function valuesEqual(a: unknown, b: unknown): boolean { // NOSONAR — hot-path equality check, kept flat for performance
+function valuesEqual(a: unknown, b: unknown): boolean {
   if (Object.is(a, b)) return true;
   if (a == null || b == null) return false;
   if (typeof a !== typeof b) return false;

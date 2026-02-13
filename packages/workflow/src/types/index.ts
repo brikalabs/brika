@@ -6,7 +6,6 @@
 
 // Block types
 export type {
-  BlockCategory,
   BlockInstance,
   BlockRuntimeContext,
   BlockRuntimeState,

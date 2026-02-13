@@ -49,8 +49,14 @@ export const DashboardGrid = memo(function DashboardGrid({
   }, []);
 
   // Determine columns for current width
-  const cols =
-    width >= BREAKPOINTS.lg ? COL_MAP.lg : width >= BREAKPOINTS.md ? COL_MAP.md : COL_MAP.sm;
+  let cols: number;
+  if (width >= BREAKPOINTS.lg) {
+    cols = COL_MAP.lg;
+  } else if (width >= BREAKPOINTS.md) {
+    cols = COL_MAP.md;
+  } else {
+    cols = COL_MAP.sm;
+  }
 
   // Square cells: rowHeight = colWidth
   const colWidth = width > 0 ? (width - GAP * (cols + 1)) / cols : 0;

@@ -19,7 +19,7 @@ export function SystemInfoSkeleton() {
       </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {Array.from({ length: 12 }).map((_, i) => (
-          <InfoItemSkeleton key={i} />
+          <InfoItemSkeleton key={`info-skeleton-${i}`} />
         ))}
       </div>
     </div>

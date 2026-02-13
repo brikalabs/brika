@@ -77,17 +77,29 @@ export function all(...flows: Flow<unknown>[]): Flow<unknown[]> {
 // Internal Helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
+/** Options for handleCombineValue */
+interface CombineValueOptions {
+  v: unknown;
+  i: number;
+  mode: 'combineLatest' | 'zip' | 'all';
+  values: (unknown | undefined)[];
+  hasValue: boolean[];
+  pendingZip: unknown[][];
+  allEmitted: { current: boolean };
+  push: (value: unknown[]) => void;
+}
+
 /** Handle value emission for combine operators */
-function handleCombineValue(
-  v: unknown,
-  i: number,
-  mode: 'combineLatest' | 'zip' | 'all',
-  values: (unknown | undefined)[],
-  hasValue: boolean[],
-  pendingZip: unknown[][],
-  allEmitted: { current: boolean },
-  push: (value: unknown[]) => void
-): void {
+function handleCombineValue({
+  v,
+  i,
+  mode,
+  values,
+  hasValue,
+  pendingZip,
+  allEmitted,
+  push,
+}: CombineValueOptions): void {
   if (mode === 'zip') {
     pendingZip[i]?.push(v);
     if (pendingZip.every((arr) => arr.length > 0)) {
@@ -122,7 +134,7 @@ function createCombineFlow(
 
     flows.forEach((flow, i) => {
       const handleValue = (v: unknown) => {
-        handleCombineValue(v, i, mode, values, hasValue, pendingZip, allEmitted, push);
+        handleCombineValue({ v, i, mode, values, hasValue, pendingZip, allEmitted, push });
       };
       flow.on(handleValue);
     });

@@ -67,7 +67,8 @@ function buildQueryString(params: LogQueryParams): string {
 export const logsApi = {
   query: (params: LogQueryParams) => {
     const qs = buildQueryString(params);
-    return fetcher<LogQueryResult>(`${API_BASE}/api/logs${qs ? `?${qs}` : ""}`);
+    const queryString = qs ? `?${qs}` : "";
+    return fetcher<LogQueryResult>(`${API_BASE}/api/logs${queryString}`);
   },
 
   getPlugins: () => fetcher<{ plugins: PluginInfo[] }>(`${API_BASE}/api/logs/plugins`),

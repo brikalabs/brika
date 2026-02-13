@@ -51,9 +51,10 @@ export async function proxyToPlugin(
   const result = await process.sendRouteRequest(routeId, method, path, query, headers, body);
 
   const contentType = result.headers?.['Content-Type'] ?? result.headers?.['content-type'] ?? 'application/json';
-  const responseBody = result.body != null
-    ? (typeof result.body === 'string' ? result.body : JSON.stringify(result.body))
-    : null;
+  let responseBody: string | null = null;
+  if (result.body != null) {
+    responseBody = typeof result.body === 'string' ? result.body : JSON.stringify(result.body);
+  }
 
   return new Response(responseBody, {
     status: result.status,

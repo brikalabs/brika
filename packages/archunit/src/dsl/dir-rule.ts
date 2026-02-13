@@ -12,8 +12,8 @@ export type DirCheckFactory<Args extends unknown[] = []> = (...args: Args) => {
 
 /** Directory rule builder with extensible check methods */
 export class DirRule {
-  #pattern: string;
-  #checks: DirCheckFn[] = [];
+  readonly #pattern: string;
+  readonly #checks: DirCheckFn[] = [];
   #name = '';
   #reason = '';
   #skipped = false;
@@ -54,7 +54,8 @@ export class DirRule {
     const skipped = this.#skipped;
 
     const checkNames = this.#name || 'check';
-    const name = `${pattern} should ${checkNames}${reason ? ` (${reason})` : ''}`;
+    const reasonSuffix = reason ? ` (${reason})` : '';
+    const name = `${pattern} should ${checkNames}${reasonSuffix}`;
 
     return {
       name,

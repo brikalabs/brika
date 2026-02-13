@@ -25,7 +25,7 @@ function mergeNodeProps(
   props: Record<string, unknown>,
   removed?: string[],
 ): ComponentNode {
-  const updated: Record<string, unknown> = Object.assign({}, node, props);
+  const updated: Record<string, unknown> = { ...node, ...props };
   if (removed) {
     for (const k of removed) delete updated[k];
   }
@@ -95,8 +95,7 @@ function updateAtPath(
   );
 
   // Structural sharing: new array, new node at idx, siblings unchanged
-  // Object.assign avoids TS excess-property-check issues with discriminated union spreads
   const result = [...nodes];
-  result[idx] = Object.assign({}, node, { children: updatedChildren });
+  result[idx] = { ...node, children: updatedChildren } as ComponentNode;
   return result;
 }

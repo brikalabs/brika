@@ -218,7 +218,7 @@ export class TransformerRegistry {
     // Custom transformer
     const transformer = this.findByName(typeName);
     if (transformer) {
-      return Promise.resolve(transformer.deserialize(value.data));
+      return transformer.deserialize(value.data);
     }
 
     // Unknown type - return as-is

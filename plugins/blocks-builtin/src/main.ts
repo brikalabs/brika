@@ -336,7 +336,7 @@ function interpolate(
   template: string,
   context: { inputs: Record<string, unknown>; config: Record<string, unknown> }
 ): string {
-  return template.replaceAll(/\{\{([^}]+)}}/g, (_, expr: string) => {
+  return template.replaceAll(/\{\{([^{}]+)}}/g, (_, expr: string) => {
     const path = expr.trim().split('.');
     let value: unknown = context;
 

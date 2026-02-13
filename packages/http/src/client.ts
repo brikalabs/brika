@@ -32,7 +32,7 @@ import { buildUrl } from './utils/url-builder';
 export class HttpClient {
   #config: HttpClientConfig;
   #cache?: CacheAdapter;
-  #interceptorChain: InterceptorChain;
+  readonly #interceptorChain: InterceptorChain;
   #deduplicationInterceptor?: DeduplicationInterceptor;
 
   /**

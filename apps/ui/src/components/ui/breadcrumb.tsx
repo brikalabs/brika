@@ -62,7 +62,6 @@ const BreadcrumbPage = React.forwardRef<HTMLSpanElement, React.ComponentPropsWit
   ({ className, ...props }, ref) => (
     <span
       ref={ref}
-      role="link"
       aria-current="page"
       className={cn('text-foreground', className)}
       {...props}
@@ -76,7 +75,6 @@ const BreadcrumbSeparator = React.forwardRef<HTMLLIElement, React.ComponentProps
   ({ children, className, ...props }, ref) => (
     <li
       ref={ref}
-      role="presentation"
       aria-hidden="true"
       className={cn('[&>svg]:size-3.5', className)}
       {...props}
@@ -94,7 +92,6 @@ const BreadcrumbEllipsis = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <span
     ref={ref}
-    role="presentation"
     aria-hidden="true"
     className={cn('flex size-9 items-center justify-center', className)}
     {...props}

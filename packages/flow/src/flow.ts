@@ -128,11 +128,7 @@ export class FlowImpl<T> implements Flow<T> {
   // biome-ignore lint/suspicious/noExplicitAny: implementation signature must be compatible with all overloads
   pipe(...ops: Operator<any, any>[]): Flow<any> {
     // biome-ignore lint/suspicious/noExplicitAny: type-safe via overloads
-    let result: Flow<any> = this;
-    for (const op of ops) {
-      result = op(result);
-    }
-    return result;
+    return ops.reduce<Flow<any>>((acc, op) => op(acc), this);
   }
 }
 

@@ -97,7 +97,7 @@ async function generateCodeChallenge(verifier: string): Promise<string> {
 
 function base64url(bytes: Uint8Array): string {
   const b64 = btoa(String.fromCharCode(...bytes));
-  return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/={1,2}$/, '');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -192,7 +192,8 @@ export function defineOAuth(config: OAuthProviderConfig): OAuthClient {
     };
     if (!usePkce) {
       const clientSecret = getClientSecret();
-      headers['Authorization'] = `Basic ${btoa(`${clientId}:${clientSecret}`)}`;
+      const credentials = `${clientId}:${clientSecret}`;
+      headers['Authorization'] = `Basic ${btoa(credentials)}`;
     }
     return headers;
   }
@@ -359,7 +360,7 @@ export function defineOAuth(config: OAuthProviderConfig): OAuthClient {
 
     isAuthenticated() {
       const token = client.getToken();
-      return token != null && token.access_token != null;
+      return token?.access_token != null;
     },
 
     async fetch(url: string, init?: RequestInit) {

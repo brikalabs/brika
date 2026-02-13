@@ -60,7 +60,7 @@ export function isSchemaCompatible(outputSchema: z.ZodType, inputSchema: z.ZodTy
 function getZodTypeName(schema: z.ZodType): string {
   // Use constructor name (most reliable across Zod versions)
   const constructorName = schema.constructor?.name;
-  if (constructorName && constructorName.startsWith('Zod')) {
+  if (constructorName?.startsWith('Zod')) {
     return constructorName.slice(3).toLowerCase();
   }
   // Fallback to _def.type (Zod v3.23+)

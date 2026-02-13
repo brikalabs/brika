@@ -34,9 +34,7 @@ function SmallPlayer({ playback, width, actions }: {
           <Spacer />
           {width >= 2
             ? <Controls isPlaying={playback.isPlaying} onPlay={actions.onPlay} onPause={actions.onPause} onPrev={actions.onPrev} onNext={actions.onNext} />
-            : playback.isPlaying
-              ? <Button onPress={actions.onPause} icon="pause" variant="ghost" />
-              : <Button onPress={actions.onPlay} icon="play" variant="ghost" />}
+            : <Button onPress={playback.isPlaying ? actions.onPause : actions.onPlay} icon={playback.isPlaying ? 'pause' : 'play'} variant="ghost" />}
           <Spacer />
         </Stack>
       </Box>

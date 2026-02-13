@@ -41,7 +41,7 @@ export function LogList({ logs, isLoading, isFetchingMore, hasMore, onLoadMore }
       <View.Skeleton>
         <div className="space-y-2 p-4">
           {Array.from({ length: 10 }).map((_, i) => (
-            <Skeleton key={i} className="h-8 w-full" />
+            <Skeleton key={`log-skeleton-${i}`} className="h-8 w-full" />
           ))}
         </div>
       </View.Skeleton>

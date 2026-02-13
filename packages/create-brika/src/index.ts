@@ -38,23 +38,18 @@ ${pc.bold('Examples:')}
   bun create brika my-plugin --no-git --no-install
 `;
 
-async function main(): Promise<void> {
-  const { positionals, values } = parseArgs({
-    args: Bun.argv.slice(2),
-    allowPositionals: true,
-    strict: false,
-    options: {
-      help: { type: 'boolean', short: 'h', default: false },
-      git: { type: 'boolean', default: true },
-      install: { type: 'boolean', default: true },
-    },
-  });
+const { positionals, values } = parseArgs({
+  args: Bun.argv.slice(2),
+  allowPositionals: true,
+  strict: false,
+  options: {
+    help: { type: 'boolean', short: 'h', default: false },
+    git: { type: 'boolean', default: true },
+    install: { type: 'boolean', default: true },
+  },
+});
 
-  if (values.help) {
-    console.log(HELP);
-    return;
-  }
-
+if (!values.help) {
   try {
     const config = await promptForConfig(positionals[0]);
 
@@ -64,7 +59,8 @@ async function main(): Promise<void> {
       install: values.install !== false,
     });
 
-    p.outro(`${pc.green('Success!')} Your plugin is ready at ${pc.cyan(`./${config.name}`)}`);
+    const pluginPath = pc.cyan(`./${config.name}`);
+    p.outro(`${pc.green('Success!')} Your plugin is ready at ${pluginPath}`);
 
     console.log();
     console.log(pc.bold('Next steps:'));
@@ -73,12 +69,12 @@ async function main(): Promise<void> {
     console.log();
   } catch (error) {
     if (error instanceof Error && error.message === 'cancelled') {
-      return;
+      process.exit(0);
     }
     p.cancel('An error occurred');
     console.error(error);
     process.exit(1);
   }
+} else {
+  console.log(HELP);
 }
-
-main();

@@ -23,7 +23,7 @@ import { StatusBadge } from './StatusBadge';
 
 interface WorkflowsTableProps {
   workflows: Workflow[];
-  onToggle: (id: string, enabled: boolean) => void;
+  onToggle: (options: { id: string; enabled: boolean }) => void;
   onDelete: (id: string) => void;
   onDebug: (workflow: Workflow) => void;
 }
@@ -106,7 +106,7 @@ export function WorkflowsTable({
                     </Button>
                     <Switch
                       checked={workflow.enabled}
-                      onCheckedChange={(checked) => onToggle(workflow.id, checked)}
+                      onCheckedChange={(checked) => onToggle({ id: workflow.id, enabled: checked })}
                       disabled={isError}
                     />
                     <Button
