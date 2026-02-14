@@ -87,7 +87,9 @@ function CardTitle({ className, ...props }: React.ComponentProps<'h3'>) {
   return (
     <h3
       data-slot="card-title"
-      aria-label={props['aria-label'] ?? (typeof props.children === 'string' ? props.children : undefined)}
+      aria-label={
+        props['aria-label'] ?? (typeof props.children === 'string' ? props.children : undefined)
+      }
       className={cn('font-semibold text-lg leading-none tracking-tight', className)}
       {...props}
     />

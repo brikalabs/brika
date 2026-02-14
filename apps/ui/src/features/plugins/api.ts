@@ -64,6 +64,12 @@ export const pluginsApi = {
   /** Get plugin config (schema + values) */
   getConfig: (uid: string) => fetcher<PluginPreferences>(`/api/plugins/${uid}/config`),
 
+  /** Fetch dynamic options for a single preference */
+  getPreferenceOptions: (uid: string, name: string) =>
+    fetcher<{ options: Array<{ value: string; label: string }> }>(
+      `/api/plugins/${uid}/preferences/${encodeURIComponent(name)}/options`
+    ),
+
   /** Update plugin config */
   setConfig: (uid: string, config: Record<string, unknown>) =>
     fetcher<{ ok: boolean }>(`/api/plugins/${uid}/config`, {

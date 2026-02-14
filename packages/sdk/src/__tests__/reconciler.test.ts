@@ -3,7 +3,14 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import type { ButtonNode, ChartNode, ComponentNode, StackNode, TextNode } from '@brika/ui-kit';
+import {
+  type ButtonNode,
+  type ChartNode,
+  type ColumnNode,
+  type ComponentNode,
+  MUT,
+  type TextNode,
+} from '@brika/ui-kit';
 import { reconcile } from '../reconciler';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -17,11 +24,9 @@ const text = (content: string, extra?: Record<string, unknown>): TextNode => {
   return node;
 };
 
-const stack = (children: ComponentNode[], direction: 'horizontal' | 'vertical' = 'vertical'): StackNode =>
-  ({ type: 'stack', direction, children });
+const column = (children: ComponentNode[]): ColumnNode => ({ type: 'column', children });
 
-const chart = (data: ChartNode['data']): ChartNode =>
-  ({ type: 'chart', variant: 'line', data });
+const chart = (data: ChartNode['data']): ChartNode => ({ type: 'chart', variant: 'line', data });
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Tests
@@ -46,17 +51,17 @@ describe('reconcile', () => {
       const mutations = reconcile([], [text('New')]);
 
       expect(mutations).toHaveLength(1);
-      expect(mutations[0].op).toBe('create');
-      expect(mutations[0].path).toBe('0');
-      expect(mutations[0]).toHaveProperty('node.content', 'New');
+      expect(mutations[0]?.[0]).toBe(MUT.CREATE);
+      expect(mutations[0]?.[1]).toBe('0');
+      expect(mutations[0]?.[2]).toHaveProperty('content', 'New');
     });
 
     test('produces create for appended node', () => {
       const mutations = reconcile([text('A')], [text('A'), text('B')]);
 
       expect(mutations).toHaveLength(1);
-      expect(mutations[0].op).toBe('create');
-      expect(mutations[0].path).toBe('1');
+      expect(mutations[0]?.[0]).toBe(MUT.CREATE);
+      expect(mutations[0]?.[1]).toBe('1');
     });
   });
 
@@ -65,28 +70,25 @@ describe('reconcile', () => {
       const mutations = reconcile([text('A')], []);
 
       expect(mutations).toHaveLength(1);
-      expect(mutations[0].op).toBe('remove');
-      expect(mutations[0].path).toBe('0');
+      expect(mutations[0]?.[0]).toBe(MUT.REMOVE);
+      expect(mutations[0]?.[1]).toBe('0');
     });
 
     test('produces remove for trailing node', () => {
       const mutations = reconcile([text('A'), text('B')], [text('A')]);
 
       expect(mutations).toHaveLength(1);
-      expect(mutations[0].op).toBe('remove');
-      expect(mutations[0].path).toBe('1');
+      expect(mutations[0]?.[0]).toBe(MUT.REMOVE);
+      expect(mutations[0]?.[1]).toBe('1');
     });
 
     test('removes multiple trailing nodes in reverse order', () => {
-      const mutations = reconcile(
-        [text('A'), text('B'), text('C')],
-        [text('A')],
-      );
+      const mutations = reconcile([text('A'), text('B'), text('C')], [text('A')]);
 
       // Two removes, highest index first so sequential application works
       expect(mutations).toHaveLength(2);
-      expect(mutations[0]).toEqual({ op: 'remove', path: '2' });
-      expect(mutations[1]).toEqual({ op: 'remove', path: '1' });
+      expect(mutations[0]).toEqual([MUT.REMOVE, '2']);
+      expect(mutations[1]).toEqual([MUT.REMOVE, '1']);
     });
 
     test('replace + trailing removes produces correct result when applied', () => {
@@ -97,16 +99,16 @@ describe('reconcile', () => {
       const mutations = reconcile(oldNodes, newNodes);
 
       // Apply mutations sequentially and verify correct result
-      let result = [...oldNodes];
+      let result: ComponentNode[] = [...oldNodes];
       for (const m of mutations) {
-        const idx = Number(m.path);
-        if (m.op === 'remove') {
+        const idx = Number(m[1]);
+        if (m[0] === MUT.REMOVE) {
           result = result.filter((_, i) => i !== idx);
-        } else if (m.op === 'replace') {
-          result[idx] = m.node;
-        } else if (m.op === 'create') {
-          if (idx >= result.length) result.push(m.node);
-          else result.splice(idx, 0, m.node);
+        } else if (m[0] === MUT.REPLACE) {
+          result[idx] = m[2];
+        } else if (m[0] === MUT.CREATE) {
+          if (idx >= result.length) result.push(m[2]);
+          else result.splice(idx, 0, m[2]);
         }
       }
       expect(result).toHaveLength(1);
@@ -118,25 +120,26 @@ describe('reconcile', () => {
     test('produces update with only changed props', () => {
       const mutations = reconcile(
         [text('Old', { variant: 'body' })],
-        [text('New', { variant: 'body' })],
+        [text('New', { variant: 'body' })]
       );
 
       expect(mutations).toHaveLength(1);
-      expect(mutations[0].op).toBe('update');
-      expect(mutations[0].path).toBe('0');
-      expect(mutations[0]).toHaveProperty('props', { content: 'New' });
+      expect(mutations[0]?.[0]).toBe(MUT.UPDATE);
+      expect(mutations[0]?.[1]).toBe('0');
+      expect(mutations[0]?.[2]).toEqual({ content: 'New' });
     });
 
     test('detects multiple changed props', () => {
       const mutations = reconcile(
         [text('A', { variant: 'body', color: '#000' })],
-        [text('B', { variant: 'heading', color: '#000' })],
+        [text('B', { variant: 'heading', color: '#000' })]
       );
 
       expect(mutations).toHaveLength(1);
-      expect(mutations[0]).toHaveProperty('props.content', 'B');
-      expect(mutations[0]).toHaveProperty('props.variant', 'heading');
-      expect(mutations[0]).not.toHaveProperty('props.color'); // unchanged, not included
+      const props = mutations[0]?.[2] as Record<string, unknown>;
+      expect(props.content).toBe('B');
+      expect(props.variant).toBe('heading');
+      expect(props).not.toHaveProperty('color'); // unchanged, not included
     });
   });
 
@@ -146,69 +149,86 @@ describe('reconcile', () => {
       const mutations = reconcile([text('A')], [button]);
 
       expect(mutations).toHaveLength(1);
-      expect(mutations[0].op).toBe('replace');
-      expect(mutations[0].path).toBe('0');
-      expect(mutations[0]).toHaveProperty('node.type', 'button');
+      expect(mutations[0]?.[0]).toBe(MUT.REPLACE);
+      expect(mutations[0]?.[1]).toBe('0');
+      expect(mutations[0]?.[2]).toHaveProperty('type', 'button');
     });
   });
 
   describe('nested children', () => {
     test('diffs children recursively with correct paths', () => {
-      const oldTree = [stack([text('A'), text('B')])];
-      const newTree = [stack([text('A'), text('C')])];
+      const oldTree = [column([text('A'), text('B')])];
+      const newTree = [column([text('A'), text('C')])];
 
       const mutations = reconcile(oldTree, newTree);
 
       expect(mutations).toHaveLength(1);
-      expect(mutations[0].op).toBe('update');
-      expect(mutations[0].path).toBe('0.1');
-      expect(mutations[0]).toHaveProperty('props', { content: 'C' });
+      expect(mutations[0]?.[0]).toBe(MUT.UPDATE);
+      expect(mutations[0]?.[1]).toBe('0.1');
+      expect(mutations[0]?.[2]).toEqual({ content: 'C' });
     });
 
     test('detects added child in container', () => {
-      const oldTree = [stack([text('A')])];
-      const newTree = [stack([text('A'), text('B')])];
+      const oldTree = [column([text('A')])];
+      const newTree = [column([text('A'), text('B')])];
 
       const mutations = reconcile(oldTree, newTree);
 
       expect(mutations).toHaveLength(1);
-      expect(mutations[0].op).toBe('create');
-      expect(mutations[0].path).toBe('0.1');
+      expect(mutations[0]?.[0]).toBe(MUT.CREATE);
+      expect(mutations[0]?.[1]).toBe('0.1');
     });
 
     test('detects removed child in container', () => {
-      const oldTree = [stack([text('A'), text('B')])];
-      const newTree = [stack([text('A')])];
+      const oldTree = [column([text('A'), text('B')])];
+      const newTree = [column([text('A')])];
 
       const mutations = reconcile(oldTree, newTree);
 
       expect(mutations).toHaveLength(1);
-      expect(mutations[0].op).toBe('remove');
-      expect(mutations[0].path).toBe('0.1');
+      expect(mutations[0]?.[0]).toBe(MUT.REMOVE);
+      expect(mutations[0]?.[1]).toBe('0.1');
     });
 
     test('handles deeply nested paths', () => {
-      const oldTree = [stack([stack([text('deep')])])];
-      const newTree = [stack([stack([text('deeper')])])];
+      const oldTree = [column([column([text('deep')])])];
+      const newTree = [column([column([text('deeper')])])];
 
       const mutations = reconcile(oldTree, newTree);
 
       expect(mutations).toHaveLength(1);
-      expect(mutations[0].path).toBe('0.0.0');
-      expect(mutations[0]).toHaveProperty('props', { content: 'deeper' });
+      expect(mutations[0]?.[1]).toBe('0.0.0');
+      expect(mutations[0]?.[2]).toEqual({ content: 'deeper' });
     });
   });
 
   describe('diffProps edge cases', () => {
     test('detects array value changes', () => {
-      const old = [chart([{ ts: 1, value: 1 }, { ts: 2, value: 2 }, { ts: 3, value: 3 }])];
-      const next = [chart([{ ts: 1, value: 1 }, { ts: 2, value: 2 }, { ts: 3, value: 4 }])];
+      const old = [
+        chart([
+          { ts: 1, value: 1 },
+          { ts: 2, value: 2 },
+          { ts: 3, value: 3 },
+        ]),
+      ];
+      const next = [
+        chart([
+          { ts: 1, value: 1 },
+          { ts: 2, value: 2 },
+          { ts: 3, value: 4 },
+        ]),
+      ];
 
       const mutations = reconcile(old, next);
 
       expect(mutations).toHaveLength(1);
-      expect(mutations[0].op).toBe('update');
-      expect(mutations[0]).toHaveProperty('props.data', [{ ts: 1, value: 1 }, { ts: 2, value: 2 }, { ts: 3, value: 4 }]);
+      expect(mutations[0]?.[0]).toBe(MUT.UPDATE);
+      const props = mutations[0]?.[2] as Record<string, unknown>;
+      expect(props.data).toEqual([
+        { ts: 1, value: 1 },
+        { ts: 2, value: 2 },
+        { ts: 3, value: 4 },
+      ]);
     });
 
     test('detects object value changes', () => {
@@ -218,7 +238,8 @@ describe('reconcile', () => {
       const mutations = reconcile(old, next);
 
       expect(mutations).toHaveLength(1);
-      expect(mutations[0]).toHaveProperty('props.style', { bold: false });
+      const props = mutations[0]?.[2] as Record<string, unknown>;
+      expect(props.style).toEqual({ bold: false });
     });
 
     test('detects added and removed props', () => {
@@ -228,9 +249,10 @@ describe('reconcile', () => {
       const mutations = reconcile(old, next);
 
       expect(mutations).toHaveLength(1);
-      expect(mutations[0]).toHaveProperty('props.variant', 'heading');
-      expect(mutations[0]).not.toHaveProperty('props.color'); // not in props — it's in removed
-      expect(mutations[0]).toHaveProperty('removed', ['color']);
+      const props = mutations[0]?.[2] as Record<string, unknown>;
+      expect(props.variant).toBe('heading');
+      expect(props).not.toHaveProperty('color'); // not in props — it's in removed
+      expect(mutations[0]?.[3]).toEqual(['color']);
     });
 
     test('treats null and undefined as different', () => {
@@ -239,7 +261,7 @@ describe('reconcile', () => {
 
       const mutations = reconcile(old, next);
       expect(mutations).toHaveLength(1);
-      expect(mutations[0]).toHaveProperty('removed', ['color']);
+      expect(mutations[0]?.[3]).toEqual(['color']);
     });
   });
 
@@ -257,24 +279,24 @@ describe('reconcile', () => {
     /**
      * Apply mutations to a tree (simulates what the hub does).
      */
-    function applyMutations(tree: ComponentNode[], mutations: ReturnType<typeof reconcile>): ComponentNode[] {
+    function applyMutations(
+      tree: ComponentNode[],
+      mutations: ReturnType<typeof reconcile>
+    ): ComponentNode[] {
       const result = [...tree];
       for (const m of mutations) {
-        const parts = m.path.split('.');
-        if (parts.length === 1) {
-          const idx = Number(parts[0]);
-          if (m.op === 'remove') {
-            result.splice(idx, 1);
-          } else if (m.op === 'replace') {
-            result[idx] = m.node;
-          } else if (m.op === 'create') {
-            result.splice(idx, 0, m.node);
-          } else if (m.op === 'update') {
-            const node = { ...result[idx] } as unknown as Record<string, unknown>;
-            for (const [k, v] of Object.entries(m.props)) node[k] = v;
-            if (m.removed) for (const k of m.removed) delete node[k];
-            result[idx] = node as unknown as ComponentNode;
-          }
+        const idx = Number(m[1]);
+        if (m[0] === MUT.REMOVE) {
+          result.splice(idx, 1);
+        } else if (m[0] === MUT.REPLACE) {
+          result[idx] = m[2];
+        } else if (m[0] === MUT.CREATE) {
+          result.splice(idx, 0, m[2]);
+        } else if (m[0] === MUT.UPDATE) {
+          const node = { ...result[idx] } as unknown as Record<string, unknown>;
+          for (const [k, v] of Object.entries(m[2])) node[k] = v;
+          if (m[3]) for (const k of m[3]) delete node[k];
+          result[idx] = node as unknown as ComponentNode;
         }
       }
       return result;
@@ -327,10 +349,11 @@ describe('reconcile', () => {
       const mutations = reconcile(sentBody, finalBody);
 
       expect(mutations).toHaveLength(1);
-      expect(mutations[0]!.op).toBe('update');
-      expect(mutations[0]).toHaveProperty('props.content', 'world');
-      expect(mutations[0]).toHaveProperty('props.variant', 'heading');
-      expect(mutations[0]).toHaveProperty('props.color', '#f00');
+      expect(mutations[0]?.[0]).toBe(MUT.UPDATE);
+      const props = mutations[0]?.[2] as Record<string, unknown>;
+      expect(props.content).toBe('world');
+      expect(props.variant).toBe('heading');
+      expect(props.color).toBe('#f00');
     });
 
     test('structural changes (add/remove) are correct against sentBody', () => {

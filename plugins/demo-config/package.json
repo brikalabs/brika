@@ -15,16 +15,22 @@
     {
       "name": "apiKey",
       "type": "password",
+      "label": "API Key",
+      "description": "Your secret API key for authentication",
       "required": true
     },
     {
       "name": "serverUrl",
       "type": "text",
+      "label": "Server URL",
+      "description": "The base URL of the API server",
       "default": "https://api.example.com"
     },
     {
       "name": "maxRetries",
       "type": "number",
+      "label": "Max Retries",
+      "description": "Maximum number of retry attempts (1-10)",
       "default": 3,
       "min": 1,
       "max": 10
@@ -32,11 +38,15 @@
     {
       "name": "debugMode",
       "type": "checkbox",
+      "label": "Debug Mode",
+      "description": "Enable verbose logging for troubleshooting",
       "default": false
     },
     {
       "name": "logLevel",
       "type": "dropdown",
+      "label": "Log Level",
+      "description": "Minimum log level to display",
       "default": "info",
       "options": [
         { "value": "debug" },

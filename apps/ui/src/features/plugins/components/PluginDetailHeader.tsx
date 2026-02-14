@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router';
-import { ArrowLeft, ExternalLink, Github, Plug, User } from 'lucide-react';
+import { ArrowLeft, Code2, ExternalLink, Plug, User } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage, Badge } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
 import type { Plugin } from '../api';
@@ -29,7 +29,7 @@ export function PluginDetailHeader({
   onEnable,
   onKill,
   onUninstall,
-}: PluginDetailHeaderProps) {
+}: Readonly<PluginDetailHeaderProps>) {
   const { t, tp } = useLocale();
 
   const authorName = getAuthorName(plugin);
@@ -77,7 +77,7 @@ export function PluginDetailHeader({
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 transition-colors hover:text-foreground"
                 >
-                  <Github className="size-3" />
+                  <Code2 className="size-3" />
                   {t('plugins:details.repository')}
                   <ExternalLink className="size-3" />
                 </a>

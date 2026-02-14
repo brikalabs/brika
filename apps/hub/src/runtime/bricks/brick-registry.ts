@@ -6,7 +6,7 @@
  */
 
 import { inject, singleton } from '@brika/di';
-import { type ComponentNode, type Mutation, applyMutations } from '@brika/ui-kit';
+import { applyMutations, type ComponentNode, type Mutation } from '@brika/ui-kit';
 import { Logger } from '@/runtime/logs/log-router';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -121,10 +121,7 @@ export class BrickRegistry {
     const brick = this.#bricks.get(fullId);
     if (!brick) return false;
 
-    brick.body = applyMutations(
-      brick.body as ComponentNode[],
-      mutations as Mutation[],
-    );
+    brick.body = applyMutations(brick.body as ComponentNode[], mutations as Mutation[]);
     return true;
   }
 

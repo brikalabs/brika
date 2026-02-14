@@ -5,7 +5,7 @@ export type ActionHandler = (actionId: string, payload?: Record<string, unknown>
 
 export type NodeRenderer<T = any> = FC<{ node: T; onAction?: ActionHandler }>;
 
-/** Internal record — populated by index.ts at module init */
+/** Internal record — populated at module init by each renderer's register() call */
 const renderers: Record<string, NodeRenderer> = {};
 
 /**
@@ -16,7 +16,20 @@ export function register<K extends keyof NodeTypeMap>(
   type: K,
   renderer: NodeRenderer<NodeTypeMap[K]>
 ): void {
-  renderers[type] = renderer as NodeRenderer;
+  renderers[type] = renderer;
+}
+
+/**
+ * Define and register a renderer in one call. Wraps memo() + register().
+ * Types are inferred from the NodeTypeMap key — no manual type annotations needed.
+ */
+export function defineRenderer<K extends keyof NodeTypeMap>(
+  type: K,
+  renderer: FC<{ node: NodeTypeMap[K]; onAction?: ActionHandler }>
+): void {
+  const Memoized = memo(renderer);
+  Memoized.displayName = `${String(type)}Renderer`;
+  renderers[type] = Memoized as NodeRenderer;
 }
 
 /** Dispatcher: looks up the renderer for a node type and renders it */
@@ -28,6 +41,9 @@ export const ComponentNodeRenderer = memo(function ComponentNodeRenderer({
   onAction?: ActionHandler;
 }) {
   const Renderer = renderers[node.type];
-  if (!Renderer) return null;
+  if (!Renderer) {
+    console.warn(`[bricks] No renderer registered for node type "${node.type}"`);
+    return null;
+  }
   return <Renderer node={node} onAction={onAction} />;
 });

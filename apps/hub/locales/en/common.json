@@ -24,7 +24,8 @@
     "reload": "Reload",
     "view": "View",
     "select": "Select",
-    "copy": "Copy"
+    "copy": "Copy",
+    "rename": "Rename"
   },
   "status": {
     "running": "Running",

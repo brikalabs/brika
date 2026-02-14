@@ -8,9 +8,9 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, mock, tes
 import { mkdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { get, reset, stub, useTestBed } from '@brika/di/testing';
-import { Logger } from '@/runtime/logs/log-router';
 import { DashboardLoader } from '@/runtime/dashboards/dashboard-loader';
 import type { Dashboard, DashboardBrickPlacement } from '@/runtime/dashboards/types';
+import { Logger } from '@/runtime/logs/log-router';
 
 useTestBed({ autoStub: false });
 
@@ -30,7 +30,7 @@ const createDashboard = (id = 'test-dash', bricks: DashboardBrickPlacement[] = [
 
 const createPlacement = (
   instanceId = 'inst-1',
-  brickTypeId = 'plugin:brick',
+  brickTypeId = 'plugin:brick'
 ): DashboardBrickPlacement => ({
   instanceId,
   brickTypeId,
@@ -172,10 +172,13 @@ describe('DashboardLoader', () => {
     });
 
     test('skips YAML files that fail schema validation', async () => {
-      await Bun.write(join(TEST_DIR, 'invalid-schema.yaml'), `
+      await Bun.write(
+        join(TEST_DIR, 'invalid-schema.yaml'),
+        `
 version: "1"
 notadashboard: true
-`);
+`
+      );
 
       await loader.loadDir(TEST_DIR);
 
@@ -236,9 +239,7 @@ notadashboard: true
     test('saves dashboard to YAML file', async () => {
       await loader.loadDir(TEST_DIR);
 
-      const dashboard = createDashboard('saved-dash', [
-        createPlacement('inst-1', 'plugin:widget'),
-      ]);
+      const dashboard = createDashboard('saved-dash', [createPlacement('inst-1', 'plugin:widget')]);
       const filePath = await loader.saveDashboard(dashboard);
 
       expect(filePath).toContain('saved-dash.yaml');
@@ -485,24 +486,30 @@ notadashboard: true
 
   describe('unload behavior', () => {
     test('reloading a file replaces the old dashboard', async () => {
-      await Bun.write(join(TEST_DIR, 'mutable.yaml'), `
+      await Bun.write(
+        join(TEST_DIR, 'mutable.yaml'),
+        `
 version: "1"
 dashboard:
   id: mutable-dash
   name: Original Name
   columns: 12
-`);
+`
+      );
       await loader.loadDir(TEST_DIR);
       expect(loader.get('mutable-dash')!.name).toBe('Original Name');
 
       // Overwrite the file and reload
-      await Bun.write(join(TEST_DIR, 'mutable.yaml'), `
+      await Bun.write(
+        join(TEST_DIR, 'mutable.yaml'),
+        `
 version: "1"
 dashboard:
   id: mutable-dash
   name: Updated Name
   columns: 12
-`);
+`
+      );
 
       // Simulate reload by creating a new loader
       reset();

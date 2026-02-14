@@ -5,11 +5,13 @@
  * `usePlayerStore()` automatically re-renders when the state changes.
  */
 
+import { log } from '@brika/sdk';
 import { defineSharedStore } from '@brika/sdk/bricks/core';
-import type { PlaybackState } from './spotify-api';
-import { SpotifyAuthError, createSpotifyApi } from './spotify-api';
 import { spotify } from './index';
+import { getApi, resolveDeviceId } from './shared';
 import { trackChanged } from './sparks';
+import type { PlaybackState, SpotifyDevice } from './spotify-api';
+import { SpotifyAuthError } from './spotify-api';
 
 // ─── Store ───────────────────────────────────────────────────────────────────
 
@@ -17,6 +19,7 @@ export interface Anchor { progressMs: number; timestamp: number }
 
 interface PlayerState {
   playback: PlaybackState | null;
+  devices: SpotifyDevice[];
   isAuthed: boolean;
   loaded: boolean;
   anchor: Anchor;
@@ -24,6 +27,7 @@ interface PlayerState {
 
 export const usePlayerStore = defineSharedStore<PlayerState>({
   playback: null,
+  devices: [],
   isAuthed: false,
   loaded: false,
   anchor: { progressMs: 0, timestamp: Date.now() },
@@ -33,16 +37,10 @@ export const usePlayerStore = defineSharedStore<PlayerState>({
 
 const POLL_MS = 3000;
 
-/** Lazily initialized — avoids circular import with index.tsx */
-let api: ReturnType<typeof createSpotifyApi> | null = null;
-function getApi() {
-  api ??= createSpotifyApi(spotify);
-  return api;
-}
-
 let refCount = 0;
 let timer: ReturnType<typeof setInterval> | null = null;
 let lastTrack = '';
+let autoTransferAttempted = false;
 
 /** Reset the polling interval so the next poll is a full POLL_MS away. */
 function resetPollTimer(): void {
@@ -60,14 +58,31 @@ function pollNow(): void {
 async function poll(): Promise<void> {
   const authed = spotify.isAuthenticated();
   if (!authed) {
-    usePlayerStore.set({ playback: null, isAuthed: false, loaded: true, anchor: { progressMs: 0, timestamp: Date.now() } });
+    usePlayerStore.set({ playback: null, devices: [], isAuthed: false, loaded: true, anchor: { progressMs: 0, timestamp: Date.now() } });
     return;
   }
 
   try {
     const state = await getApi().getCurrentPlayback();
     const anchor: Anchor = { progressMs: state?.progressMs ?? 0, timestamp: Date.now() };
-    usePlayerStore.set({ playback: state, isAuthed: true, loaded: true, anchor });
+
+    // When no active playback, fetch devices and auto-transfer to the preferred one
+    let devices: SpotifyDevice[] = [];
+    if (!state) {
+      devices = await getApi().getDevices();
+
+      if (!autoTransferAttempted && devices.length > 0) {
+        const prefId = resolveDeviceId();
+        const targetId = prefId && devices.some((d) => d.id === prefId) ? prefId : devices[0].id;
+        autoTransferAttempted = true;
+        getApi().transferPlayback(targetId).then(() => pollNow());
+        return;
+      }
+    } else {
+      // Reset so auto-transfer fires again if playback stops later
+      autoTransferAttempted = false;
+    }
+    usePlayerStore.set({ playback: state, devices, isAuthed: true, loaded: true, anchor });
 
     if (state && state.trackName !== lastTrack) {
       lastTrack = state.trackName;
@@ -116,8 +131,15 @@ export function acquirePolling(): () => void {
 
 // ─── Actions ─────────────────────────────────────────────────────────────────
 
-export function play(): void {
-  getApi().play();
+/** Catch and log errors from fire-and-forget API calls. */
+function silent(promise: Promise<unknown>): void {
+  promise.catch((err) => {
+    log.error(`Spotify API error: ${err instanceof Error ? err.message : String(err)}`);
+  });
+}
+
+export function play(deviceId?: string): void {
+  silent(getApi().play(deviceId));
   usePlayerStore.set((prev) => {
     if (!prev.playback) return prev;
     const elapsed = Date.now() - prev.anchor.timestamp;
@@ -130,8 +152,8 @@ export function play(): void {
   resetPollTimer();
 }
 
-export function pause(): void {
-  getApi().pause();
+export function pause(deviceId?: string): void {
+  silent(getApi().pause(deviceId));
   usePlayerStore.set((prev) => {
     if (!prev.playback) return prev;
     const elapsed = Date.now() - prev.anchor.timestamp;
@@ -146,15 +168,15 @@ export function pause(): void {
 }
 
 export function next(): void {
-  getApi().next().then(() => pollNow());
+  silent(getApi().next().then(() => pollNow()));
 }
 
 export function previous(): void {
-  getApi().previous().then(() => pollNow());
+  silent(getApi().previous().then(() => pollNow()));
 }
 
 export function seek(positionMs: number): void {
-  getApi().seek(positionMs);
+  silent(getApi().seek(positionMs));
   usePlayerStore.set((prev) => ({
     ...prev,
     playback: prev.playback ? { ...prev.playback, progressMs: positionMs } : null,
@@ -164,10 +186,21 @@ export function seek(positionMs: number): void {
 }
 
 export function setVolume(percent: number): void {
-  getApi().setVolume(percent);
+  silent(getApi().setVolume(percent));
   usePlayerStore.set((prev) => {
     if (!prev.playback) return prev;
     return { ...prev, playback: { ...prev.playback, volume: percent } };
   });
   resetPollTimer();
+}
+
+export function transferPlayback(deviceId: string): void {
+  silent(getApi().transferPlayback(deviceId).then(() => pollNow()));
+}
+
+export async function startPlayback(deviceId?: string): Promise<void> {
+  if (deviceId) await getApi().transferPlayback(deviceId);
+  const contextUri = await getApi().getRecentlyPlayed();
+  await getApi().play(deviceId, contextUri ?? undefined);
+  pollNow();
 }

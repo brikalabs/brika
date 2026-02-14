@@ -3,7 +3,7 @@
   "description": "Contrôlez la lecture Spotify et affichez les pochettes d'album sur votre tableau de bord",
   "preferences": {
     "clientId": {
-      "label": "ID Client",
+      "title": "ID Client",
       "description": "ID client de l'application Spotify Developer (créez-en un sur developer.spotify.com)"
     },
     "connect": {
@@ -13,6 +13,10 @@
     "developer": {
       "title": "Portail développeur Spotify",
       "description": "Créez et gérez vos identifiants d'application Spotify"
+    },
+    "defaultDevice": {
+      "title": "Appareil par défaut",
+      "description": "Sélectionnez l'appareil pour démarrer automatiquement la lecture"
     }
   },
   "bricks": {
@@ -20,10 +24,20 @@
       "name": "Lecteur Spotify",
       "description": "Contrôlez Spotify et affichez les pochettes d'album",
       "config": {
+        "device": {
+          "label": "Appareil",
+          "description": "Remplacer l'appareil par défaut pour cette brique"
+        },
         "refreshInterval": {
           "label": "Intervalle de rafraîchissement (ms)"
         }
       }
+    }
+  },
+  "blocks": {
+    "play": {
+      "name": "Lire Spotify",
+      "description": "Démarrer la lecture sur un appareil Spotify"
     }
   },
   "sparks": {

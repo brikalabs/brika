@@ -81,4 +81,4 @@ export function getContext(): Context {
   return ctx;
 }
 
-export type { LogLevel, Manifest };
+export type { LogLevel, Manifest } from './context/register';

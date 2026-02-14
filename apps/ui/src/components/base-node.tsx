@@ -48,7 +48,9 @@ export function BaseNodeHeaderTitle({ className, ...props }: ComponentProps<'h3'
   return (
     <h3
       data-slot="base-node-title"
-      aria-label={props['aria-label'] ?? (typeof props.children === 'string' ? props.children : undefined)}
+      aria-label={
+        props['aria-label'] ?? (typeof props.children === 'string' ? props.children : undefined)
+      }
       className={cn('user-select-none flex-1 font-semibold', className)}
       {...props}
     />

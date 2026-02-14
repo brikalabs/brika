@@ -3,7 +3,7 @@
  * Each renders a reusable piece of the player UI.
  */
 
-import { Box, Button, Slider, Stack, Text } from '@brika/sdk/bricks/components';
+import { Box, Button, Row, Slider, Text } from '@brika/sdk/bricks/components';
 import type { PlaybackState } from '../spotify-api';
 import { formatMs, progressPercent } from './utils';
 
@@ -28,13 +28,13 @@ export function Controls({ isPlaying, onPlay, onPause, onPrev, onNext }: Readonl
   onNext: () => void;
 }>) {
   return (
-    <Stack direction="horizontal" gap="sm" justify="center" align="center">
-      <Button onPress={onPrev} icon="skip-back" variant="ghost" />
+    <Row gap="sm" justify="center" align="center">
+      <Button onPress={onPrev} icon="skip-back" color="rgba(0,0,0,0.3)" />
       {isPlaying
-        ? <Button onPress={onPause} icon="pause" />
-        : <Button onPress={onPlay} icon="play" />}
-      <Button onPress={onNext} icon="skip-forward" variant="ghost" />
-    </Stack>
+        ? <Button onPress={onPause} icon="pause" color="rgba(0,0,0,0.5)" />
+        : <Button onPress={onPlay} icon="play" color="rgba(0,0,0,0.5)" />}
+      <Button onPress={onNext} icon="skip-forward" color="rgba(0,0,0,0.3)" />
+    </Row>
   );
 }
 
@@ -42,10 +42,10 @@ export function Controls({ isPlaying, onPlay, onPause, onPrev, onNext }: Readonl
 
 export function TrackInfo({ playback }: Readonly<{ playback: PlaybackState }>) {
   return (
-    <Stack direction="horizontal" gap="sm" align="center">
-      <Text content={playback.trackName} variant="heading" />
-      <Text content={playback.artistName} variant="caption" color="#888" />
-    </Stack>
+    <Row gap="sm" align="center">
+      <Text content={playback.trackName} variant="heading" color="rgba(255,255,255,0.95)" />
+      <Text content={playback.artistName} variant="caption" color="rgba(255,255,255,0.55)" />
+    </Row>
   );
 }
 
@@ -57,13 +57,13 @@ export function ProgressBar({ localProgressMs, playback, onSeek }: Readonly<{
   onSeek: (payload?: Record<string, unknown>) => void;
 }>) {
   return (
-    <Stack direction="horizontal" gap="sm" align="center">
-      <Text content={formatMs(localProgressMs)} variant="caption" color="#888" />
+    <Row gap="sm" align="center">
+      <Text content={formatMs(localProgressMs)} variant="caption" color="rgba(255,255,255,0.55)" />
       <Box grow>
         <Slider value={progressPercent(localProgressMs, playback.durationMs)} min={0} max={100} step={1} onChange={onSeek} color="#1DB954" />
       </Box>
-      <Text content={formatMs(playback.durationMs)} variant="caption" color="#888" />
-    </Stack>
+      <Text content={formatMs(playback.durationMs)} variant="caption" color="rgba(255,255,255,0.55)" />
+    </Row>
   );
 }
 
@@ -74,6 +74,6 @@ export function VolumeSlider({ playback, onVolume }: Readonly<{
   onVolume: (payload?: Record<string, unknown>) => void;
 }>) {
   return (
-    <Slider label="Volume" value={playback.volume} min={0} max={100} step={5} unit="%" onChange={onVolume} icon="volume-2" />
+    <Slider label="Volume" value={playback.volume} min={0} max={100} step={5} unit="%" onChange={onVolume} icon="volume-2" color="rgba(255,255,255,0.6)" />
   );
 }

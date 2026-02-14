@@ -12,8 +12,8 @@
  */
 
 import { Channel, type WireMessage } from './channel';
+import { applyChannelDelegate, type ChannelDelegateMethods } from './channel-delegate';
 import { ping, stop } from './contract';
-import type { InputOf, MessageDef, OutputOf, PayloadOf, RpcDef } from './define';
 
 /** Subprocess from Bun.spawn */
 type Subprocess = ReturnType<typeof Bun.spawn>;
@@ -137,43 +137,7 @@ export class PluginChannel {
     this.#channel.handle(msg);
   }
 
-  /**
-   * Send a message to plugin
-   */
-  send<T extends MessageDef>(def: T, payload: PayloadOf<T>): void {
-    this.#channel.send(def, payload);
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Control
-  // ─────────────────────────────────────────────────────────────────────────
-
-  /**
-   * Handle messages from plugin
-   */
-  on<T extends MessageDef>(
-    def: T,
-    handler: (payload: PayloadOf<T>) => void | Promise<void>
-  ): () => void {
-    return this.#channel.on(def, handler);
-  }
-
-  /**
-   * Implement an RPC (hub responds to plugin requests)
-   */
-  implement<T extends RpcDef>(
-    def: T,
-    handler: (input: InputOf<T>) => OutputOf<T> | Promise<OutputOf<T>>
-  ): void {
-    this.#channel.implement(def, handler);
-  }
-
-  /**
-   * Call an RPC on the plugin
-   */
-  call<T extends RpcDef>(def: T, input: InputOf<T>, timeoutMs?: number): Promise<OutputOf<T>> {
-    return this.#channel.call(def, input, timeoutMs);
-  }
+  // send, on, implement, call — provided by applyChannelDelegate() below
 
   // ─────────────────────────────────────────────────────────────────────────
   // State
@@ -251,6 +215,10 @@ export class PluginChannel {
     this.#onDisconnect?.(error);
   }
 }
+
+// Apply shared send/on/implement/call delegate methods
+export interface PluginChannel extends ChannelDelegateMethods {}
+applyChannelDelegate(PluginChannel);
 
 /** Options for spawning a plugin */
 export interface SpawnPluginOptions {

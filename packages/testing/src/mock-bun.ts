@@ -332,7 +332,7 @@ export class BunMock {
         const p = this.pattern;
         if (p === '*/') return entry.endsWith('/');
         if (p.startsWith('*.')) return entry.endsWith(p.slice(1));
-        if (p.includes('*')) return entry.includes(p.replaceAll(/\*/g, ''));
+        if (p.includes('*')) return entry.includes(p.replaceAll('*', ''));
         return entry === p;
       }
     } as unknown as typeof Bun.Glob;

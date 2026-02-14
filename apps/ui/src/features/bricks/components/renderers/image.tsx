@@ -1,9 +1,17 @@
-import type { ImageNode } from '@brika/ui-kit';
-import { memo } from 'react';
 import { cn } from '@/lib/utils';
+import { defineRenderer } from './registry';
 
-export const ImageRenderer = memo(function ImageRenderer({ node }: Readonly<{ node: ImageNode }>) {
+defineRenderer('image', ({ node, onAction }) => {
   const hasDimension = node.width != null || node.height != null;
+  const clickable = !!node.onPress;
+  const clickProps = clickable
+    ? {
+        onClick: () => onAction?.(node.onPress as string),
+        role: 'button' as const,
+        tabIndex: 0,
+        className: 'cursor-pointer',
+      }
+    : {};
 
   const img = (
     <img
@@ -21,12 +29,14 @@ export const ImageRenderer = memo(function ImageRenderer({ node }: Readonly<{ no
         className={cn(
           'min-h-0 min-w-0 overflow-hidden',
           node.rounded && 'rounded-md',
+          clickable && 'cursor-pointer'
         )}
         style={{
           ...(node.width == null ? {} : { width: node.width }),
           ...(node.height == null ? {} : { height: node.height }),
           ...(node.aspectRatio ? { aspectRatio: node.aspectRatio } : {}),
         }}
+        {...clickProps}
       >
         {img}
       </div>
@@ -35,11 +45,24 @@ export const ImageRenderer = memo(function ImageRenderer({ node }: Readonly<{ no
 
   // Default: fill available space
   if (!node.caption) {
-    return <div className="min-h-0 flex-1 overflow-hidden rounded-md">{img}</div>;
+    return (
+      <div
+        className={cn('min-h-0 flex-1 overflow-hidden rounded-md', clickable && 'cursor-pointer')}
+        {...clickProps}
+      >
+        {img}
+      </div>
+    );
   }
 
   return (
-    <figure className="flex min-h-0 flex-1 flex-col gap-1 overflow-hidden">
+    <figure
+      className={cn(
+        'flex min-h-0 flex-1 flex-col gap-1 overflow-hidden',
+        clickable && 'cursor-pointer'
+      )}
+      {...clickProps}
+    >
       <div className="min-h-0 flex-1 overflow-hidden rounded-md">{img}</div>
       <figcaption className="shrink-0 text-[11px] text-muted-foreground">{node.caption}</figcaption>
     </figure>

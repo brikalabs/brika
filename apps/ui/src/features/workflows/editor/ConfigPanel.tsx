@@ -880,7 +880,7 @@ export function ConfigPanel({
                   <button
                     type="button"
                     key={v.name}
-                    className="flex w-full cursor-pointer items-center justify-between rounded-md bg-muted/50 p-2 text-xs transition-colors hover:bg-muted border-none text-left font-inherit"
+                    className="flex w-full cursor-pointer items-center justify-between rounded-md border-none bg-muted/50 p-2 text-left font-inherit text-xs transition-colors hover:bg-muted"
                     onClick={() => navigator.clipboard.writeText(`{{ ${v.name} }}`)}
                     title={t('workflows:editor.panels.clickToCopy')}
                   >

@@ -30,7 +30,7 @@ interface EmitSparkDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export function EmitSparkDialog({ spark, open, onOpenChange }: EmitSparkDialogProps) {
+export function EmitSparkDialog({ spark, open, onOpenChange }: Readonly<EmitSparkDialogProps>) {
   const { t } = useLocale();
   const emitSpark = useEmitEvent();
   const [payload, setPayload] = useState('{}');

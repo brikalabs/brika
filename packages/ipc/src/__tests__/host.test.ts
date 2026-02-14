@@ -577,4 +577,3 @@ describe('PluginChannel', () => {
     });
   });
 });
-

@@ -32,10 +32,32 @@ export class DashboardService {
   private readonly lifecycle = inject(PluginLifecycle);
   private readonly events = inject(EventSystem);
 
-  /**
-   * Mount all brick instances for a dashboard.
-   * Called when a dashboard is loaded from YAML.
-   */
+  readonly #activeViewers = new Map<string, number>();
+
+  viewerConnected(dashboardId: string): void {
+    const count = (this.#activeViewers.get(dashboardId) ?? 0) + 1;
+    this.#activeViewers.set(dashboardId, count);
+    if (count === 1) {
+      const dashboard = this.loader.get(dashboardId);
+      if (dashboard) this.mountDashboard(dashboard);
+    }
+  }
+
+  viewerDisconnected(dashboardId: string): void {
+    const count = (this.#activeViewers.get(dashboardId) ?? 1) - 1;
+    if (count <= 0) {
+      this.#activeViewers.delete(dashboardId);
+      const dashboard = this.loader.get(dashboardId);
+      if (dashboard) this.unmountDashboard(dashboard);
+    } else {
+      this.#activeViewers.set(dashboardId, count);
+    }
+  }
+
+  hasActiveViewers(dashboardId: string): boolean {
+    return (this.#activeViewers.get(dashboardId) ?? 0) > 0;
+  }
+
   mountDashboard(dashboard: Dashboard): void {
     for (const brick of dashboard.bricks) {
       this.#mountPlacement(brick);
@@ -48,6 +70,7 @@ export class DashboardService {
    */
   mountPendingForType(brickTypeId: string): void {
     for (const dashboard of this.loader.list()) {
+      if (!this.hasActiveViewers(dashboard.id)) continue;
       for (const brick of dashboard.bricks) {
         if (brick.brickTypeId === brickTypeId && !this.instances.has(brick.instanceId)) {
           this.#mountPlacement(brick);
@@ -73,7 +96,7 @@ export class DashboardService {
     brickTypeId: string,
     config: Record<string, Json>,
     position?: { x: number; y: number },
-    size?: { w: number; h: number },
+    size?: { w: number; h: number }
   ): Promise<DashboardBrickPlacement | null> {
     const dashboard = this.loader.get(dashboardId);
     if (!dashboard) return null;
@@ -91,13 +114,15 @@ export class DashboardService {
 
     dashboard.bricks.push(placement);
     await this.loader.saveDashboard(dashboard);
-    this.#mountPlacement(placement);
+    if (this.hasActiveViewers(dashboardId)) {
+      this.#mountPlacement(placement);
+    }
 
     this.events.dispatch(
       DashboardActions.brickAdded.create(
         { dashboardId, instanceId: placement.instanceId, placement },
-        'hub',
-      ),
+        'hub'
+      )
     );
 
     return placement;
@@ -117,12 +142,7 @@ export class DashboardService {
     await this.loader.saveDashboard(dashboard);
     this.#unmountPlacement(placement);
 
-    this.events.dispatch(
-      DashboardActions.brickRemoved.create(
-        { dashboardId, instanceId },
-        'hub',
-      ),
-    );
+    this.events.dispatch(DashboardActions.brickRemoved.create({ dashboardId, instanceId }, 'hub'));
 
     return true;
   }
@@ -134,7 +154,7 @@ export class DashboardService {
   async updateBrickConfig(
     dashboardId: string,
     instanceId: string,
-    config: Record<string, Json>,
+    config: Record<string, Json>
   ): Promise<boolean> {
     const found = this.#findPlacement(dashboardId, instanceId);
     if (!found) return false;
@@ -160,10 +180,29 @@ export class DashboardService {
     await this.loader.saveDashboard(dashboard);
 
     this.events.dispatch(
-      DashboardActions.brickConfigChanged.create(
-        { dashboardId, instanceId, config },
-        'hub',
-      ),
+      DashboardActions.brickConfigChanged.create({ dashboardId, instanceId, config }, 'hub')
+    );
+
+    return true;
+  }
+
+  /**
+   * Rename a brick instance (custom label).
+   */
+  async updateBrickLabel(
+    dashboardId: string,
+    instanceId: string,
+    label: string | undefined
+  ): Promise<boolean> {
+    const found = this.#findPlacement(dashboardId, instanceId);
+    if (!found) return false;
+
+    const { dashboard, brick } = found;
+    brick.label = label;
+    await this.loader.saveDashboard(dashboard);
+
+    this.events.dispatch(
+      DashboardActions.brickLabelChanged.create({ dashboardId, instanceId, label }, 'hub')
     );
 
     return true;
@@ -176,7 +215,7 @@ export class DashboardService {
     dashboardId: string,
     instanceId: string,
     position: { x: number; y: number },
-    size: { w: number; h: number },
+    size: { w: number; h: number }
   ): Promise<boolean> {
     const found = this.#findPlacement(dashboardId, instanceId);
     if (!found) return false;
@@ -200,7 +239,7 @@ export class DashboardService {
    */
   async batchUpdateLayout(
     dashboardId: string,
-    layouts: Array<{ instanceId: string; x: number; y: number; w: number; h: number }>,
+    layouts: Array<{ instanceId: string; x: number; y: number; w: number; h: number }>
   ): Promise<boolean> {
     const dashboard = this.loader.get(dashboardId);
     if (!dashboard) return false;
@@ -228,16 +267,14 @@ export class DashboardService {
       this.#resizePlacement(brick);
     }
 
-    this.events.dispatch(
-      DashboardActions.layoutChanged.create({ dashboardId, layouts }, 'hub'),
-    );
+    this.events.dispatch(DashboardActions.layoutChanged.create({ dashboardId, layouts }, 'hub'));
 
     return true;
   }
 
   #findPlacement(
     dashboardId: string,
-    instanceId: string,
+    instanceId: string
   ): { dashboard: Dashboard; brick: DashboardBrickPlacement } | null {
     const dashboard = this.loader.get(dashboardId);
     if (!dashboard) return null;
@@ -266,7 +303,7 @@ export class DashboardService {
       brickType.pluginName,
       placement.size.w,
       placement.size.h,
-      placement.config,
+      placement.config
     );
 
     // Tell the plugin to mount
@@ -277,15 +314,15 @@ export class DashboardService {
         placement.brickTypeId,
         placement.size.w,
         placement.size.h,
-        placement.config,
+        placement.config
       );
     }
 
     this.events.dispatch(
       BrickActions.instanceMounted.create(
         { instanceId: placement.instanceId, brickTypeId: placement.brickTypeId },
-        'hub',
-      ),
+        'hub'
+      )
     );
   }
 
@@ -320,10 +357,7 @@ export class DashboardService {
     this.instances.unmount(placement.instanceId);
 
     this.events.dispatch(
-      BrickActions.instanceUnmounted.create(
-        { instanceId: placement.instanceId },
-        'hub',
-      ),
+      BrickActions.instanceUnmounted.create({ instanceId: placement.instanceId }, 'hub')
     );
   }
 

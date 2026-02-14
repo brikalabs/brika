@@ -188,6 +188,7 @@ export class WorkspaceLoader {
       await proc.exited;
       if (proc.exitCode !== 0) return false;
 
+      this.#fileHashes.delete(filePath);
       this.#unloadFile(filePath);
       return true;
     } catch {
@@ -240,7 +241,6 @@ export class WorkspaceLoader {
     this.#loaded.delete(filePath);
     this.#pathToId.delete(filePath);
     this.#idToPath.delete(workflowId);
-    this.#fileHashes.delete(filePath);
 
     this.#events.onUnload?.(workflowId, filePath);
   }
@@ -273,6 +273,7 @@ export class WorkspaceLoader {
       // Check for deleted files
       for (const filePath of this.#fileHashes.keys()) {
         if (!currentFiles.has(filePath)) {
+          this.#fileHashes.delete(filePath);
           this.#unloadFile(filePath);
         }
       }

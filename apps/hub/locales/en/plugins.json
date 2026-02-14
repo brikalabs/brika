@@ -35,7 +35,13 @@
     "compatibleVersion": "Compatible Version",
     "readme": "README",
     "clickToExpand": "Click to expand",
-    "clickToCollapse": "Click to collapse"
+    "clickToCollapse": "Click to collapse",
+    "uid": "UID",
+    "entryPoint": "Entry Point",
+    "package": "Package",
+    "currentVersion": "Current Version",
+    "cpu": "CPU",
+    "memory": "Memory"
   },
   "actions": {
     "load": "Load Plugin",
@@ -80,7 +86,11 @@
     "title": "Install Plugin",
     "description": "Install a plugin from the npm registry or add a local workspace plugin.",
     "installing": "Installing...",
-    "done": "Done"
+    "done": "Done",
+    "packageName": "Package Name",
+    "packageNamePlaceholder": "@brika/plugin-timer or workspace:/path/to/plugin",
+    "versionOptional": "Version (optional)",
+    "versionPlaceholder": "^1.0.0 or latest"
   },
   "update": {
     "title": "Update Plugins",
@@ -90,7 +100,13 @@
     "updateCount_other": "Update {{count}} plugins",
     "updating": "Updating...",
     "updateAll": "Update All",
-    "done": "Done"
+    "done": "Done",
+    "reinstallTitle": "Reinstall Plugin",
+    "updateTitle": "Update Plugin",
+    "reinstallDesc": "Reinstall <code>{{package}}</code>",
+    "updateDesc": "Update <code>{{package}}</code>",
+    "versionRange": "from v{{from}} to v{{to}}",
+    "processing": "{{action}}ing..."
   },
   "progress": {
     "resolving": "Resolving dependencies...",

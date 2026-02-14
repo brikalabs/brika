@@ -215,16 +215,22 @@ describe('Client', () => {
       const { Client } = require('../client');
       // Mock process.exit to prevent actually exiting
       const originalExit = process.exit;
-      const exitMock = mock(() => undefined);
-      (process as unknown as { exit: typeof exitMock }).exit = exitMock as unknown as typeof process.exit;
+      const exitMock = mock(() => undefined) as never;
+      (process as unknown as Record<string, unknown>).exit = exitMock;
 
       try {
         const client = new Client();
 
         const order: number[] = [];
-        client.onStop(() => { order.push(1); });
-        client.onStop(() => { order.push(2); });
-        client.onStop(() => { order.push(3); });
+        client.onStop(() => {
+          order.push(1);
+        });
+        client.onStop(() => {
+          order.push(2);
+        });
+        client.onStop(() => {
+          order.push(3);
+        });
 
         // Simulate receiving stop message
         const messageHandler = messageHandlers.get('message');
@@ -236,20 +242,22 @@ describe('Client', () => {
         // Should be called in reverse order (3, 2, 1)
         expect(order).toEqual([3, 2, 1]);
       } finally {
-        (process as unknown as { exit: typeof originalExit }).exit = originalExit;
+        (process as unknown as Record<string, unknown>).exit = originalExit;
       }
     });
 
     test('stop handlers tolerate errors in individual handlers', async () => {
       const { Client } = require('../client');
       const originalExit = process.exit;
-      const exitMock = mock(() => undefined);
-      (process as unknown as { exit: typeof exitMock }).exit = exitMock as unknown as typeof process.exit;
+      const exitMock = mock(() => undefined) as never;
+      (process as unknown as Record<string, unknown>).exit = exitMock;
 
       try {
         const client = new Client();
 
-        const handler1 = mock(() => { throw new Error('cleanup fail'); });
+        const handler1 = mock(() => {
+          throw new Error('cleanup fail');
+        });
         const handler2 = mock(() => undefined);
 
         client.onStop(handler2);
@@ -264,7 +272,7 @@ describe('Client', () => {
         expect(handler1).toHaveBeenCalledTimes(1);
         expect(handler2).toHaveBeenCalledTimes(1);
       } finally {
-        (process as unknown as { exit: typeof originalExit }).exit = originalExit;
+        (process as unknown as Record<string, unknown>).exit = originalExit;
       }
     });
   });

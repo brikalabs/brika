@@ -74,7 +74,7 @@ mock.module('@/runtime/plugins/plugin-process', () => ({
         locales: string[];
       },
       _config: unknown,
-      callbacks: PluginProcessCallbacks,
+      callbacks: PluginProcessCallbacks
     ) {
       this.name = info.name;
       this.uid = info.uid;
@@ -138,7 +138,9 @@ describe('PluginLifecycle (with mocked spawn)', () => {
 
   beforeEach(() => {
     // Mock PluginResolver.resolve via prototype spyOn (avoids mock.module bleed)
-    resolverSpy = spyOn(PluginResolver.prototype, 'resolve').mockResolvedValue(defaultResolverResult as never);
+    resolverSpy = spyOn(PluginResolver.prototype, 'resolve').mockResolvedValue(
+      defaultResolverResult as never
+    );
     capturedCallbacks = null;
     capturedSpawnDisconnect = null;
     capturedSpawnStderr = null;
@@ -183,6 +185,7 @@ describe('PluginLifecycle (with mocked spawn)', () => {
       registerBrickType: mock(),
       patchBrickInstance: mock(),
       registerRoute: mock(),
+      onPluginDisconnected: mock(),
     };
     mockPluginConfig = {
       getConfig: mock().mockReturnValue({}),
@@ -261,76 +264,116 @@ describe('PluginLifecycle (with mocked spawn)', () => {
     test('onLog callback delegates to event handler', async () => {
       const callbacks = await loadPlugin();
       callbacks.onLog('info', 'test message', { extra: 'data' });
-      expect(mockEventHandler.onPluginLog).toHaveBeenCalledWith('@test/plugin', 'info', 'test message', { extra: 'data' });
+      expect(mockEventHandler.onPluginLog).toHaveBeenCalledWith(
+        '@test/plugin',
+        'info',
+        'test message',
+        { extra: 'data' }
+      );
     });
 
     test('onBlock callback delegates to event handler', async () => {
       const callbacks = await loadPlugin();
       callbacks.onBlock({ id: 'test-block' });
-      expect(mockEventHandler.registerBlock).toHaveBeenCalledWith('@test/plugin', { id: 'test-block' }, expect.objectContaining({ name: '@test/plugin' }));
+      expect(mockEventHandler.registerBlock).toHaveBeenCalledWith(
+        '@test/plugin',
+        { id: 'test-block' },
+        expect.objectContaining({ name: '@test/plugin' })
+      );
     });
 
     test('onBlockEmit callback delegates to event handler', async () => {
       const callbacks = await loadPlugin();
       callbacks.onBlockEmit('instance-1', 'output', { value: 42 });
-      expect(mockEventHandler.onBlockEmit).toHaveBeenCalledWith('instance-1', 'output', { value: 42 });
+      expect(mockEventHandler.onBlockEmit).toHaveBeenCalledWith('instance-1', 'output', {
+        value: 42,
+      });
     });
 
     test('onBlockLog callback delegates to event handler', async () => {
       const callbacks = await loadPlugin();
       callbacks.onBlockLog('instance-1', 'workflow-1', 'info', 'Block log message');
-      expect(mockEventHandler.onBlockLog).toHaveBeenCalledWith('instance-1', 'workflow-1', 'info', 'Block log message');
+      expect(mockEventHandler.onBlockLog).toHaveBeenCalledWith(
+        'instance-1',
+        'workflow-1',
+        'info',
+        'Block log message'
+      );
     });
 
     test('onSpark callback delegates to event handler', async () => {
       const callbacks = await loadPlugin();
       callbacks.onSpark({ id: 'test-spark' });
-      expect(mockEventHandler.registerSpark).toHaveBeenCalledWith('@test/plugin', { id: 'test-spark' });
+      expect(mockEventHandler.registerSpark).toHaveBeenCalledWith('@test/plugin', {
+        id: 'test-spark',
+      });
     });
 
     test('onSparkEmit callback delegates to event handler', async () => {
       const callbacks = await loadPlugin();
       callbacks.onSparkEmit('my-spark', { data: 'payload' });
-      expect(mockEventHandler.emitSpark).toHaveBeenCalledWith('@test/plugin', 'my-spark', { data: 'payload' });
+      expect(mockEventHandler.emitSpark).toHaveBeenCalledWith('@test/plugin', 'my-spark', {
+        data: 'payload',
+      });
     });
 
     test('onSparkSubscribe callback delegates to event handler', async () => {
       const callbacks = await loadPlugin();
       const process = mockProcessInstance as unknown as PluginProcess;
       callbacks.onSparkSubscribe('some:type', 'sub-1', process);
-      expect(mockEventHandler.subscribeToSparks).toHaveBeenCalledWith('some:type', expect.any(Function));
+      expect(mockEventHandler.subscribeToSparks).toHaveBeenCalledWith(
+        'some:type',
+        expect.any(Function)
+      );
     });
 
     test('onBrickType callback delegates to event handler with manifest', async () => {
       const callbacks = await loadPlugin();
       callbacks.onBrickType({ id: 'test-brick', families: ['sm' as const] });
-      expect(mockEventHandler.registerBrickType).toHaveBeenCalledWith('@test/plugin', { id: 'test-brick', families: ['sm'] }, { id: 'test-brick' });
+      expect(mockEventHandler.registerBrickType).toHaveBeenCalledWith(
+        '@test/plugin',
+        { id: 'test-brick', families: ['sm'] },
+        { id: 'test-brick' }
+      );
     });
 
     test('onBrickInstancePatch callback delegates to event handler', async () => {
       const callbacks = await loadPlugin();
       callbacks.onBrickInstancePatch('brick-1', [{ op: 'replace', path: '/text', value: 'hi' }]);
-      expect(mockEventHandler.patchBrickInstance).toHaveBeenCalledWith('brick-1', [{ op: 'replace', path: '/text', value: 'hi' }]);
+      expect(mockEventHandler.patchBrickInstance).toHaveBeenCalledWith('brick-1', [
+        { op: 'replace', path: '/text', value: 'hi' },
+      ]);
     });
 
     test('onRoute callback delegates to event handler', async () => {
       const callbacks = await loadPlugin();
       callbacks.onRoute('GET', '/oauth/callback');
-      expect(mockEventHandler.registerRoute).toHaveBeenCalledWith('@test/plugin', 'GET', '/oauth/callback');
+      expect(mockEventHandler.registerRoute).toHaveBeenCalledWith(
+        '@test/plugin',
+        'GET',
+        '/oauth/callback'
+      );
     });
 
     test('onUpdatePreference callback updates plugin config', async () => {
       mockPluginConfig.getConfig.mockReturnValue({ existingKey: 'value' });
       const callbacks = await loadPlugin();
       callbacks.onUpdatePreference('newKey', 'newValue');
-      expect(mockPluginConfig.setConfig).toHaveBeenCalledWith('@test/plugin', { existingKey: 'value', newKey: 'newValue' });
+      expect(mockPluginConfig.setConfig).toHaveBeenCalledWith('@test/plugin', {
+        existingKey: 'value',
+        newKey: 'newValue',
+      });
     });
 
     test('onMetrics callback records metrics', async () => {
       const callbacks = await loadPlugin();
       const process = mockProcessInstance as unknown as PluginProcess;
       callbacks.onMetrics!(process, 15.5, 1024000);
-      expect(mockMetrics.record).toHaveBeenCalledWith('@test/plugin', { ts: expect.any(Number), cpu: 15.5, memory: 1024000 });
+      expect(mockMetrics.record).toHaveBeenCalledWith('@test/plugin', {
+        ts: expect.any(Number),
+        cpu: 15.5,
+        memory: 1024000,
+      });
     });
   });
 
@@ -347,7 +390,11 @@ describe('PluginLifecycle (with mocked spawn)', () => {
       const callbacks = await loadPlugin();
       const process = mockProcessInstance as unknown as PluginProcess;
       callbacks.onHeartbeatFailed(process, 10000);
-      expect(mockState.setHealth).toHaveBeenCalledWith('@test/plugin', 'crashed', 'heartbeat timeout');
+      expect(mockState.setHealth).toHaveBeenCalledWith(
+        '@test/plugin',
+        'crashed',
+        'heartbeat timeout'
+      );
     });
   });
 
@@ -356,7 +403,11 @@ describe('PluginLifecycle (with mocked spawn)', () => {
       const callbacks = await loadPlugin();
       const process = mockProcessInstance as unknown as PluginProcess;
       callbacks.onDisconnect(process, new Error('Connection lost'));
-      expect(mockState.setHealth).toHaveBeenCalledWith('@test/plugin', 'crashed', 'Connection lost');
+      expect(mockState.setHealth).toHaveBeenCalledWith(
+        '@test/plugin',
+        'crashed',
+        'Connection lost'
+      );
       expect(mockEvents.dispatch).toHaveBeenCalled();
     });
 
@@ -387,7 +438,11 @@ describe('PluginLifecycle (with mocked spawn)', () => {
 
       const healthCalls = mockState.setHealth.mock.calls;
       const restartingCalls = healthCalls.filter(
-        (c: unknown[]) => c[0] === '@test/plugin' && c[1] === 'restarting' && typeof c[2] === 'string' && (c[2] as string).startsWith('Restarting in')
+        (c: unknown[]) =>
+          c[0] === '@test/plugin' &&
+          c[1] === 'restarting' &&
+          typeof c[2] === 'string' &&
+          (c[2] as string).startsWith('Restarting in')
       );
       expect(restartingCalls.length).toBe(0);
     });
@@ -402,7 +457,11 @@ describe('PluginLifecycle (with mocked spawn)', () => {
 
       const healthCalls = mockState.setHealth.mock.calls;
       const restartingCalls = healthCalls.filter(
-        (c: unknown[]) => c[0] === '@test/plugin' && c[1] === 'restarting' && typeof c[2] === 'string' && (c[2] as string).startsWith('Restarting in')
+        (c: unknown[]) =>
+          c[0] === '@test/plugin' &&
+          c[1] === 'restarting' &&
+          typeof c[2] === 'string' &&
+          (c[2] as string).startsWith('Restarting in')
       );
       expect(restartingCalls.length).toBe(0);
     });
@@ -417,7 +476,11 @@ describe('PluginLifecycle (with mocked spawn)', () => {
 
       const healthCalls = mockState.setHealth.mock.calls;
       const restartingCalls = healthCalls.filter(
-        (c: unknown[]) => c[0] === '@test/plugin' && c[1] === 'restarting' && typeof c[2] === 'string' && (c[2] as string).startsWith('Restarting in')
+        (c: unknown[]) =>
+          c[0] === '@test/plugin' &&
+          c[1] === 'restarting' &&
+          typeof c[2] === 'string' &&
+          (c[2] as string).startsWith('Restarting in')
       );
       expect(restartingCalls.length).toBeGreaterThanOrEqual(1);
     });
@@ -436,9 +499,10 @@ describe('PluginLifecycle (with mocked spawn)', () => {
         } catch {
           // May fail on subsequent loads
         }
-        if (capturedCallbacks && mockProcessInstance) {
+        if (capturedCallbacks !== null && mockProcessInstance !== null) {
+          const cbs = capturedCallbacks as PluginProcessCallbacks;
           const process = mockProcessInstance as unknown as PluginProcess;
-          capturedCallbacks.onDisconnect(process, new Error(`crash-${i}`));
+          cbs.onDisconnect(process, new Error(`crash-${i}`));
           await new Promise((r) => setTimeout(r, 100));
         }
       }
@@ -465,7 +529,12 @@ describe('PluginLifecycle (with mocked spawn)', () => {
       resolverSpy.mockResolvedValue({
         rootDirectory: '/mock/path',
         entryPoint: '/mock/path/index.js',
-        metadata: { name: '@test/incompat', version: '1.0.0', main: 'index.js', engines: { brika: '^99.0.0' } },
+        metadata: {
+          name: '@test/incompat',
+          version: '1.0.0',
+          main: 'index.js',
+          engines: { brika: '^99.0.0' },
+        },
       } as never);
 
       lifecycle = get(PluginLifecycleMocked);

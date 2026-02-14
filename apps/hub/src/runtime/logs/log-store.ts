@@ -163,9 +163,9 @@ export class LogStore {
   }
 
   /**
-   * Build WHERE clause conditions and values from query params
+   * Build common filter conditions for level, source, pluginName, time range
    */
-  private buildWhereConditions(params: LogQueryParams): {
+  private buildFilterConditions(params: Partial<LogQueryParams>): {
     conditions: string[];
     values: SQLQueryBindings[];
   } {
@@ -189,11 +189,6 @@ export class LogStore {
       values.push(params.pluginName);
     }
 
-    if (params.search) {
-      conditions.push("message LIKE ?");
-      values.push(`%${params.search}%`);
-    }
-
     if (params.startTs) {
       conditions.push("ts >= ?");
       values.push(params.startTs);
@@ -202,6 +197,23 @@ export class LogStore {
     if (params.endTs) {
       conditions.push("ts <= ?");
       values.push(params.endTs);
+    }
+
+    return { conditions, values };
+  }
+
+  /**
+   * Build WHERE clause conditions and values from query params (includes search + cursor)
+   */
+  private buildWhereConditions(params: LogQueryParams): {
+    conditions: string[];
+    values: SQLQueryBindings[];
+  } {
+    const { conditions, values } = this.buildFilterConditions(params);
+
+    if (params.search) {
+      conditions.push("message LIKE ?");
+      values.push(`%${params.search}%`);
     }
 
     // Cursor-based pagination
@@ -244,35 +256,7 @@ export class LogStore {
   clear(params: Partial<LogQueryParams> = {}): number {
     if (!this.#db) return 0;
 
-    const conditions: string[] = [];
-    const values: SQLQueryBindings[] = [];
-
-    if (params.level) {
-      const levels = Array.isArray(params.level) ? params.level : [params.level];
-      conditions.push(`level IN (${levels.map(() => "?").join(", ")})`);
-      values.push(...levels);
-    }
-
-    if (params.source) {
-      const sources = Array.isArray(params.source) ? params.source : [params.source];
-      conditions.push(`source IN (${sources.map(() => "?").join(", ")})`);
-      values.push(...sources);
-    }
-
-    if (params.pluginName) {
-      conditions.push("plugin_name = ?");
-      values.push(params.pluginName);
-    }
-
-    if (params.startTs) {
-      conditions.push("ts >= ?");
-      values.push(params.startTs);
-    }
-
-    if (params.endTs) {
-      conditions.push("ts <= ?");
-      values.push(params.endTs);
-    }
+    const { conditions, values } = this.buildFilterConditions(params);
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
     const result = this.#db.run(

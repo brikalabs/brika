@@ -81,6 +81,10 @@ export class PluginConfigService {
         return z.boolean();
       case 'dropdown':
         return z.enum(p.options.map((o) => o.value) as [string, ...string[]]);
+      case 'dynamic-dropdown':
+        return p.required ? z.string().min(1) : z.string();
+      default:
+        return z.unknown();
     }
   }
 }

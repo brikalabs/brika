@@ -53,8 +53,6 @@ export const servicePreset = definePreset<ServicePresetOptions>((options = {}) =
       .because('Routes should be concise'),
 
     // Route naming
-    files(`${routesDir}/*.ts`)
-      .should()
-      .beCamelCase(),
+    files(`${routesDir}/*.ts`).should().beCamelCase(),
   ];
 });

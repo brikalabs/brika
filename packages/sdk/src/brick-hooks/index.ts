@@ -8,12 +8,19 @@
  * (e.g. `onToggle`, `onPress`, `onChange`) — no manual registration needed.
  */
 
-export { type BrickState, _beginRender, _cleanupEffects, _createState, _endRender, _flushEffects } from './state';
-export { useState } from './use-state';
-export { useEffect } from './use-effect';
-export { useMemo, useCallback } from './use-memo';
-export { useRef } from './use-ref';
+export { defineSharedStore, type SharedStore } from './define-shared-store';
+export {
+  _beginRender,
+  _cleanupEffects,
+  _createState,
+  _endRender,
+  _flushEffects,
+  type BrickState,
+} from './state';
 export { useBrickSize } from './use-brick-size';
-export { usePreference } from './use-preference';
+export { useEffect } from './use-effect';
+export { useCallback, useMemo } from './use-memo';
 export { usePluginPreference } from './use-plugin-preference';
-export { type SharedStore, defineSharedStore } from './define-shared-store';
+export { usePreference } from './use-preference';
+export { useRef } from './use-ref';
+export { useState } from './use-state';

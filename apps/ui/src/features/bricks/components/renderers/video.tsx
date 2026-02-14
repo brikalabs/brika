@@ -1,8 +1,14 @@
-import type { VideoNode } from '@brika/ui-kit';
 import Hls from 'hls.js';
-import { memo, useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
+import { defineRenderer } from './registry';
 
-function HlsVideo({ src, poster, muted }: { src: string; poster?: string; muted: boolean }) {
+function HlsVideo({
+  src,
+  poster,
+  muted,
+  controls,
+  loop,
+}: Readonly<{ src: string; poster?: string; muted: boolean; controls?: boolean; loop?: boolean }>) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
@@ -10,7 +16,6 @@ function HlsVideo({ src, poster, muted }: { src: string; poster?: string; muted:
     if (!video) return;
 
     if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      // Safari — native HLS
       video.src = src;
       return;
     }
@@ -30,12 +35,16 @@ function HlsVideo({ src, poster, muted }: { src: string; poster?: string; muted:
       muted={muted}
       autoPlay
       playsInline
+      controls={controls}
+      loop={loop}
       className="h-full w-full object-cover"
-    />
+    >
+      <track kind="captions" />
+    </video>
   );
 }
 
-export const VideoRenderer = memo(function VideoRenderer({ node }: { node: VideoNode }) {
+defineRenderer('video', ({ node }) => {
   if (node.format === 'mjpeg') {
     return (
       <div className="min-h-0 flex-1 overflow-hidden rounded-md">
@@ -46,7 +55,13 @@ export const VideoRenderer = memo(function VideoRenderer({ node }: { node: Video
 
   return (
     <div className="min-h-0 flex-1 overflow-hidden rounded-md">
-      <HlsVideo src={node.src} poster={node.poster} muted={node.muted ?? true} />
+      <HlsVideo
+        src={node.src}
+        poster={node.poster}
+        muted={node.muted ?? true}
+        controls={node.controls}
+        loop={node.loop}
+      />
     </div>
   );
 });

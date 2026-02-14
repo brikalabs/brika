@@ -5,16 +5,10 @@
  */
 
 import 'reflect-metadata';
-import {
-  type DependencyContainer,
-  type InjectionToken,
-  injectable,
-  singleton,
-  container as tsyringeContainer,
-} from 'tsyringe';
+import { container as tsyringeContainer } from 'tsyringe';
 
-export type { DependencyContainer, InjectionToken };
-export { injectable, singleton };
+export type { DependencyContainer, InjectionToken } from 'tsyringe';
+export { injectable, singleton } from 'tsyringe';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Hot Reload Support: Persist DI container across module reloads

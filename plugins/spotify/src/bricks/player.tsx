@@ -1,12 +1,13 @@
+import { Badge, Box, Button, Column, Icon, Image, Row, Spacer, Text } from '@brika/sdk/bricks/components';
 import {
   defineBrick,
   useBrickSize,
   useEffect,
+  usePluginPreference,
+  usePreference,
   useRef,
   useState,
 } from '@brika/sdk/bricks/core';
-import { Badge, Box, Button, Icon, Image, Spacer, Stack, Text } from '@brika/sdk/bricks/components';
-import type { PlaybackState } from '../spotify-api';
 import { spotify } from '../index';
 import {
   acquirePolling,
@@ -16,8 +17,11 @@ import {
   previous,
   seek,
   setVolume,
+  startPlayback,
+  transferPlayback,
   usePlayerStore,
 } from '../playback-store';
+import type { PlaybackState } from '../spotify-api';
 import { Controls, type PlayerActions, ProgressBar, TrackInfo, VolumeSlider } from './components';
 
 // ─── Layout: Small (1-2 cols) ───────────────────────────────────────────────
@@ -30,13 +34,13 @@ function SmallPlayer({ playback, width, actions }: Readonly<{
   return (
     <Box backgroundImage={playback.albumArt ?? undefined} backgroundFit="cover" rounded="lg" grow>
       <Box background="rgba(0,0,0,0.3)" grow>
-        <Stack direction="vertical" justify="center" align="center" gap="sm">
+        <Column justify="center" align="center" gap="sm">
           <Spacer />
           {width >= 2
             ? <Controls isPlaying={playback.isPlaying} onPlay={actions.onPlay} onPause={actions.onPause} onPrev={actions.onPrev} onNext={actions.onNext} />
-            : <Button onPress={playback.isPlaying ? actions.onPause : actions.onPlay} icon={playback.isPlaying ? 'pause' : 'play'} variant="ghost" />}
+            : <Button onPress={playback.isPlaying ? actions.onPause : actions.onPlay} icon={playback.isPlaying ? 'pause' : 'play'} color="rgba(0,0,0,0.4)" />}
           <Spacer />
-        </Stack>
+        </Column>
       </Box>
     </Box>
   );
@@ -51,21 +55,21 @@ function MediumPlayer({ playback, height, localProgressMs, actions }: Readonly<{
   actions: PlayerActions;
 }>) {
   const panel = (
-    <Stack direction="vertical" gap="sm">
+    <Column gap="sm">
       <TrackInfo playback={playback} />
       <Controls isPlaying={playback.isPlaying} onPlay={actions.onPlay} onPause={actions.onPause} onPrev={actions.onPrev} onNext={actions.onNext} />
       <ProgressBar localProgressMs={localProgressMs} playback={playback} onSeek={actions.onSeek} />
       {height >= 4 && <VolumeSlider playback={playback} onVolume={actions.onVolume} />}
-    </Stack>
+    </Column>
   );
 
   return (
     <Box backgroundImage={playback.albumArt ?? undefined} backgroundFit="cover" rounded="lg" grow padding="sm">
-      <Stack direction="vertical" grow justify={height >= 2 ? 'end' : 'start'}>
+      <Column grow justify={height >= 2 ? 'end' : 'start'}>
         <Box background="rgba(0,0,0,0.7)" blur="lg" padding="md" grow={height < 2} rounded={height < 2 ? 'lg' : 'md'}>
           {panel}
         </Box>
-      </Stack>
+      </Column>
     </Box>
   );
 }
@@ -81,20 +85,20 @@ function LargePlayer({ playback, height, localProgressMs, actions }: Readonly<{
   return (
     <Box backgroundImage={playback.albumArt ?? undefined} backgroundFit="cover" rounded="lg" blur="sm">
       <Box background="rgba(0,0,0,0.7)" blur="lg" padding="lg" rounded="lg" grow>
-        <Stack direction="horizontal" gap="lg">
+        <Row gap="lg">
           {playback.albumArt == null
             ? <Box padding="none" />
             : <Image src={playback.albumArt} alt={playback.albumName} fit="cover" rounded aspectRatio="1/1" />}
           <Box grow padding="none">
-            <Stack direction="vertical" gap="sm" justify="center">
+            <Column gap="sm" justify="center">
               <TrackInfo playback={playback} />
               <Controls isPlaying={playback.isPlaying} onPlay={actions.onPlay} onPause={actions.onPause} onPrev={actions.onPrev} onNext={actions.onNext} />
               <ProgressBar localProgressMs={localProgressMs} playback={playback} onSeek={actions.onSeek} />
               {height >= 4 && <VolumeSlider playback={playback} onVolume={actions.onVolume} />}
-              {height >= 5 && <Badge label={playback.deviceName} icon="speaker" variant="secondary" />}
-            </Stack>
+              {height >= 5 && <Badge label={playback.deviceName} icon="speaker" variant="secondary" color="rgba(255,255,255,0.6)" />}
+            </Column>
           </Box>
-        </Stack>
+        </Row>
       </Box>
     </Box>
   );
@@ -111,12 +115,28 @@ export const playerBrick = defineBrick(
   },
   () => {
     const { width, height } = useBrickSize();
-    const { playback, isAuthed, loaded, anchor } = usePlayerStore();
+    const { playback, devices, isAuthed, loaded, anchor } = usePlayerStore();
+    const [instanceDeviceId] = usePreference<string>('device', '');
+    const pluginDeviceId = usePluginPreference<string>('defaultDevice', '');
+    const preferredId = instanceDeviceId || pluginDeviceId || undefined;
+    const targetId = preferredId ?? devices[0]?.id;
     const [localProgressMs, setLocalProgressMs] = useState(anchor.progressMs);
     const anchorRef = useRef(anchor);
 
     // Start/stop shared polling
     useEffect(() => acquirePolling(), []);
+
+    // Auto-transfer to the best available device when no playback
+    const autoTransferRef = useRef(false);
+    useEffect(() => {
+      if (playback) {
+        autoTransferRef.current = false;
+        return;
+      }
+      if (autoTransferRef.current || !loaded || !targetId) return;
+      autoTransferRef.current = true;
+      transferPlayback(targetId);
+    }, [loaded, playback, targetId]);
 
     // Keep anchor ref in sync and snap localProgressMs immediately
     useEffect(() => {
@@ -142,8 +162,11 @@ export const playerBrick = defineBrick(
     // ─── Actions ────────────────────────────────────────────────────────
 
     const actions: PlayerActions = {
-      onPlay() { play(); },
-      onPause() { pause(); },
+      onPlay() {
+        if (playback) play(targetId);
+        else startPlayback(targetId);
+      },
+      onPause() { pause(targetId); },
       onNext() { next(); },
       onPrev() { previous(); },
       onSeek(payload) {
@@ -163,12 +186,12 @@ export const playerBrick = defineBrick(
     if (!isAuthed) {
       return (
         <Box background="rgba(0,0,0,0.4)" blur="md" padding="lg" rounded="lg">
-          <Stack direction="vertical" gap="md" align="center" justify="center" grow>
+          <Column gap="md" align="center" justify="center" grow>
             <Icon name="music" size="lg" color="#1DB954" />
-            <Text content="Spotify" variant="heading" />
+            <Text content="Spotify" variant="heading" color="rgba(255,255,255,0.95)" />
             <Spacer size="sm" />
             <Button label="Login with Spotify" url={spotify.getAuthUrl()} icon="log-in" color="#1DB954" />
-          </Stack>
+          </Column>
         </Box>
       );
     }
@@ -176,10 +199,9 @@ export const playerBrick = defineBrick(
     if (!playback) {
       return (
         <Box background="rgba(0,0,0,0.3)" blur="sm" padding="md" rounded="lg">
-          <Stack direction="vertical" gap="sm" align="center" justify="center" grow>
-            <Icon name="music" size="md" color="#1DB954" />
-            <Text content={loaded ? 'No playback' : 'Connecting…'} variant="caption" />
-          </Stack>
+          <Column align="center" justify="center" grow>
+            <Button icon="play" color="#1DB954" onPress={actions.onPlay} />
+          </Column>
         </Box>
       );
     }

@@ -305,7 +305,8 @@ export const z = {
    * // { name: string }
    * ```
    */
-  infer: undefined as unknown as zod.infer<zod.ZodType>,
+  // Type-level only: enables z.infer<T> syntax for type inference
+  infer: undefined as never,
 } as const;
 
 // Type for z.infer usage

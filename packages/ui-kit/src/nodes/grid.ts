@@ -1,6 +1,11 @@
-import type { BaseNode } from './_shared';
-import { normalizeChildren, type Child } from './_shared';
-import type { ComponentNode } from './_shared';
+import {
+  type ActionHandler,
+  type BaseNode,
+  type Child,
+  type ComponentNode,
+  normalizeChildren,
+  resolveAction,
+} from './_shared';
 
 export interface GridNode extends BaseNode {
   type: 'grid';
@@ -11,6 +16,8 @@ export interface GridNode extends BaseNode {
   autoFit?: boolean;
   /** Minimum column width in px when autoFit is true (default: 120) */
   minColumnWidth?: number;
+  /** Action dispatched when clicked */
+  onPress?: string;
 }
 
 export function Grid(props: {
@@ -18,10 +25,16 @@ export function Grid(props: {
   gap?: 'sm' | 'md' | 'lg';
   autoFit?: boolean;
   minColumnWidth?: number;
+  onPress?: ActionHandler;
   children?: Child | Child[];
 }): GridNode {
-  const { children, ...rest } = props;
-  return { type: 'grid', ...rest, children: normalizeChildren(children) };
+  const { children, onPress, ...rest } = props;
+  return {
+    type: 'grid',
+    ...rest,
+    onPress: onPress ? resolveAction(onPress) : undefined,
+    children: normalizeChildren(children),
+  };
 }
 
 declare module './_shared' {

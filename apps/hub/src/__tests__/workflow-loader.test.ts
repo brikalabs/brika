@@ -9,9 +9,9 @@ import { join } from 'node:path';
 import { get, provide, reset, stub, useTestBed } from '@brika/di/testing';
 import { BlockRegistry } from '@/runtime/blocks/block-registry';
 import { Logger } from '@/runtime/logs/log-router';
+import type { Workflow } from '@/runtime/workflows/types';
 import { WorkflowEngine } from '@/runtime/workflows/workflow-engine';
 import { WorkflowLoader } from '@/runtime/workflows/workflow-loader';
-import type { Workflow } from '@/runtime/workflows/types';
 
 useTestBed({ autoStub: false });
 
@@ -393,14 +393,17 @@ describe('WorkflowLoader - Save and Delete', () => {
   });
 
   it('saves to existing file if workflow was loaded from disk', async () => {
-    await Bun.write(join(TEST_DIR, 'existing.yaml'), `
+    await Bun.write(
+      join(TEST_DIR, 'existing.yaml'),
+      `
 version: "1"
 workspace:
   id: existing-wf
   name: Existing Workflow
   enabled: false
 blocks: []
-`);
+`
+    );
     await loader.loadDir(TEST_DIR);
 
     const workflow: Workflow = {
@@ -428,9 +431,7 @@ blocks: []
         { id: 'block-a', type: 'timer' },
         { id: 'block-b', type: 'logger' },
       ],
-      connections: [
-        { from: 'block-a', fromPort: 'tick', to: 'block-b', toPort: 'input' },
-      ],
+      connections: [{ from: 'block-a', fromPort: 'tick', to: 'block-b', toPort: 'input' }],
     };
 
     const filePath = await loader.saveWorkflow(workflow);
@@ -448,9 +449,7 @@ blocks: []
       id: 'plugins-wf',
       name: 'With Plugins',
       enabled: false,
-      blocks: [
-        { id: 'block-a', type: 'timer' },
-      ],
+      blocks: [{ id: 'block-a', type: 'timer' }],
       connections: [],
     };
 
@@ -520,14 +519,17 @@ blocks: []
   });
 
   it('deletes a workflow file and cleans internal state', async () => {
-    await Bun.write(join(TEST_DIR, 'to-delete.yaml'), `
+    await Bun.write(
+      join(TEST_DIR, 'to-delete.yaml'),
+      `
 version: "1"
 workspace:
   id: to-delete
   name: To Delete
   enabled: false
 blocks: []
-`);
+`
+    );
     await loader.loadDir(TEST_DIR);
 
     const result = await loader.deleteWorkflow('to-delete');
@@ -549,10 +551,13 @@ blocks: []
   });
 
   it('handles YAML that fails schema validation', async () => {
-    await Bun.write(join(TEST_DIR, 'bad-schema.yaml'), `
+    await Bun.write(
+      join(TEST_DIR, 'bad-schema.yaml'),
+      `
 version: "1"
 notaworkspace: true
-`);
+`
+    );
 
     await loader.loadDir(TEST_DIR);
 
@@ -573,7 +578,7 @@ describe('WorkflowLoader - Watch', () => {
         pluginId: 'test-plugin',
         schema: { type: 'object' as const, properties: {} },
       }),
-      getPluginInfo: () => null,
+      getPluginInfo: () => undefined,
     });
     provide(WorkflowEngine, {
       register: mockRegister,
@@ -755,9 +760,7 @@ blocks:
     const registered = mockRegister.mock.calls[0][0] as Workflow;
     expect(registered.connections.length).toBeGreaterThanOrEqual(1);
 
-    const conn = registered.connections.find(
-      (c) => c.from === 'block-a' && c.to === 'block-b'
-    );
+    const conn = registered.connections.find((c) => c.from === 'block-a' && c.to === 'block-b');
     expect(conn).toBeDefined();
     expect(conn!.fromPort).toBe('tick');
     expect(conn!.toPort).toBe('data');
@@ -791,7 +794,8 @@ blocks:
     const registered = mockRegister.mock.calls[0][0] as Workflow;
     // The same connection is defined in both outputs and inputs, should be deduplicated
     const matching = registered.connections.filter(
-      (c) => c.from === 'block-a' && c.fromPort === 'tick' && c.to === 'block-b' && c.toPort === 'input'
+      (c) =>
+        c.from === 'block-a' && c.fromPort === 'tick' && c.to === 'block-b' && c.toPort === 'input'
     );
     expect(matching).toHaveLength(1);
   });
@@ -1093,9 +1097,7 @@ describe('WorkflowLoader - YAML Round Trip', () => {
         { id: 'block-a', type: 'timer', position: { x: 10, y: 20 }, config: { interval: 1000 } },
         { id: 'block-b', type: 'logger', position: { x: 100, y: 200 } },
       ],
-      connections: [
-        { from: 'block-a', fromPort: 'tick', to: 'block-b', toPort: 'input' },
-      ],
+      connections: [{ from: 'block-a', fromPort: 'tick', to: 'block-b', toPort: 'input' }],
     };
 
     await loader.saveWorkflow(workflow);

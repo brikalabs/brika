@@ -1,10 +1,10 @@
-import type { BadgeNode } from '@brika/ui-kit';
 import { cva } from 'class-variance-authority';
 import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
-import { memo } from 'react';
+import { defineRenderer } from './registry';
+import { isToken, resolveColor } from './resolve-color';
 
 const badgeVariants = cva(
-  'inline-flex shrink-0 items-center gap-1 self-start rounded-md px-1.5 py-0.5 text-[10px] font-semibold',
+  'inline-flex shrink-0 items-center gap-1 self-start rounded-md px-1.5 py-0.5 font-semibold text-[10px]',
   {
     variants: {
       variant: {
@@ -19,14 +19,32 @@ const badgeVariants = cva(
     defaultVariants: {
       variant: 'default',
     },
-  },
+  }
 );
 
-export const BadgeRenderer = memo(function BadgeRenderer({ node }: { node: BadgeNode }) {
+function getColorStyle(color: string): React.CSSProperties {
+  const resolved = resolveColor(color);
+  if (isToken(color)) {
+    // Token: use color-mix for semi-transparent bg (can't append hex alpha to var())
+    return {
+      backgroundColor: `color-mix(in oklch, ${resolved} 12%, transparent)`,
+      color: resolved as string,
+    };
+  }
+  // Literal CSS color: existing hex-alpha approach
+  return { backgroundColor: `${color}20`, color };
+}
+
+defineRenderer('badge', ({ node, onAction }) => {
+  const clickable = !!node.onPress;
+
   return (
     <span
-      className={node.color ? badgeVariants({ variant: null }) : badgeVariants({ variant: node.variant })}
-      style={node.color ? { backgroundColor: `${node.color}20`, color: node.color } : undefined}
+      className={`${node.color ? badgeVariants({ variant: null }) : badgeVariants({ variant: node.variant })}${clickable ? 'cursor-pointer' : ''}`}
+      style={node.color ? getColorStyle(node.color) : undefined}
+      onClick={clickable ? () => onAction?.(node.onPress as string) : undefined}
+      role={clickable ? 'button' : undefined}
+      tabIndex={clickable ? 0 : undefined}
     >
       {node.icon && <DynamicIcon name={node.icon as IconName} className="size-2.5 shrink-0" />}
       {node.label}

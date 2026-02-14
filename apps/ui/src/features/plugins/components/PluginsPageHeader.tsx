@@ -11,7 +11,7 @@ interface PluginsPageHeaderProps {
   onRefresh: () => void;
 }
 
-export function PluginsPageHeader({ isLoading, onRefresh }: PluginsPageHeaderProps) {
+export function PluginsPageHeader({ isLoading, onRefresh }: Readonly<PluginsPageHeaderProps>) {
   const { t } = useLocale();
   const [installDialogOpen, setInstallDialogOpen] = React.useState(false);
 

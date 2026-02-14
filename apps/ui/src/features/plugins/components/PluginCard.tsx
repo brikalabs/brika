@@ -15,7 +15,13 @@ interface PluginCardProps {
   onKill: (uid: string) => void;
 }
 
-export function PluginCard({ plugin: p, isBusy, onReload, onDisable, onKill }: Readonly<PluginCardProps>) {
+export function PluginCard({
+  plugin: p,
+  isBusy,
+  onReload,
+  onDisable,
+  onKill,
+}: Readonly<PluginCardProps>) {
   const { t, tp } = useLocale();
 
   const health = p.status;

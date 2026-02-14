@@ -28,10 +28,11 @@ plugins:
     version: workspace:*
     config:
       clientId: 03c6f60116984bc3a71e045402c71ab0
+      defaultDevice: 22482c70ee260835a6275373853f8ec57a01d3ec
       __oauth_spotify_token:
-        access_token: BQDUMPUTk_aYlOWJ4SZTcPqszGGMJyNuSYRj4qUpMYaE0JKU33Sfs0mQmYAXCQm7bYPiWVb7_N2txWblqOrrHrhtsgoo6YZ0ZB09QINSPdXW4C9GwgmSmA0ziSUbxQZMOS6g4l4ToSX-flZ9WKpYulh0vDUDJjbF46bA-dkfPNCSGKKmD47Ll9OTXas0a0Zoit2MP5oaZuvaVIR6gIKNMbFJCj61tCVX7-niGYI
-        refresh_token: AQChdidM7654bO6LukQWrPv503HCDpBka7d0lKSriP1mOnbJZ8fehDHarEY0x4FMUouccw7EmYD9dbmngGp0rFASqmnE-mlvH7hTvi5UzBMKc327PBS6DB2xUAsV1HlXb3YsAw
-        expires_at: 1770526250967
+        access_token: BQBCRevW12wxznBv9yfvAwX2mFqiyZ1FVwATgTjOgYSQCWzh_qOYmFuxenw_2-2huQW7EjhnCvreL7zAWZzvLT7QxISbI2GY3eXmqRVWt68uD4ketSE6GluNT3lSbm54pqxMa3tKcwvvLv0hX5-t-TDT4BPQr_lZkPWtidheQUh90RHrUKvC-geOMEf2WTo--KvewXKgY-mF7N5Qwb4-dGCKKDAvKtBxXwegmrtYxg
+        refresh_token: AQCj3bLcAdHfZOVHiQEXBCOHx3wqUj63Ygauem-9vgMXRaDxtVLoF4tJbxZF5eNbJaMtBh8Eht6SI2Mo1SWpV0O3JeZuu_6jV0ZU91Bb-cR8o_olcgg5yPxcggdx4o5EDG8
+        expires_at: 1771081169695
         token_type: Bearer
 
 # Event-based rules

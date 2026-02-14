@@ -32,6 +32,20 @@ export function resolveAction(handler: ActionHandler): string {
   return `__action_${_fallbackIdx++}`;
 }
 
+/** Shared flex layout props for Row, Column, and other flex containers */
+export interface FlexLayoutProps {
+  /** Gap between children */
+  gap?: 'sm' | 'md' | 'lg';
+  /** Cross-axis alignment */
+  align?: 'start' | 'center' | 'end' | 'stretch';
+  /** Main-axis distribution */
+  justify?: 'start' | 'center' | 'end' | 'between' | 'around';
+  /** Allow wrapping */
+  wrap?: boolean;
+  /** Fill available space (flex-1) */
+  grow?: boolean;
+}
+
 /** Extensible map — each node file self-registers via declaration merging */
 export interface NodeTypeMap {}
 
@@ -45,7 +59,5 @@ export type Child = ComponentNode | ComponentNode[] | false | null | undefined;
 export function normalizeChildren(children: Child | Child[]): ComponentNode[] {
   if (!children) return [];
   if (!Array.isArray(children)) return [children];
-  return children
-    .flat()
-    .filter((c): c is ComponentNode => c != null && c !== false);
+  return children.flat().filter((c): c is ComponentNode => c != null && c !== false);
 }

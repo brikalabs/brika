@@ -16,21 +16,8 @@ export type Subscriber<T> = (value: T) => void;
 /** Operator function type */
 export type Operator<In, Out> = (source: Flow<In>) => Flow<Out>;
 
-/**
- * Reactive flow - a typed event stream.
- * Use pipe() with operators to transform, .to() to route, .on() for side effects.
- */
-export interface Flow<T> {
-  /** Subscribe with callback (auto-cleaned up) */
-  on(fn: Subscriber<T>): void;
-
-  /** Route to one or more output emitters (auto-cleaned up) */
-  to(...emitters: Emitter<T>[]): void;
-
-  /** Get last received value */
-  latest(): T | undefined;
-
-  /** Pipe through operators */
+/** Type-safe pipe overloads for composing operators */
+export interface Pipeable<T> {
   pipe<A>(op1: Operator<T, A>): Flow<A>;
   pipe<A, B>(op1: Operator<T, A>, op2: Operator<A, B>): Flow<B>;
   pipe<A, B, C>(op1: Operator<T, A>, op2: Operator<A, B>, op3: Operator<B, C>): Flow<C>;
@@ -48,6 +35,21 @@ export interface Flow<T> {
     op5: Operator<D, E>
   ): Flow<E>;
   pipe(...ops: Operator<unknown, unknown>[]): Flow<unknown>;
+}
+
+/**
+ * Reactive flow - a typed event stream.
+ * Use pipe() with operators to transform, .to() to route, .on() for side effects.
+ */
+export interface Flow<T> extends Pipeable<T> {
+  /** Subscribe with callback (auto-cleaned up) */
+  on(fn: Subscriber<T>): void;
+
+  /** Route to one or more output emitters (auto-cleaned up) */
+  to(...emitters: Emitter<T>[]): void;
+
+  /** Get last received value */
+  latest(): T | undefined;
 }
 
 /**

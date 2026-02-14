@@ -15,6 +15,7 @@ interface DashboardStore {
 
   // ─── Instance bodies (live from SSE) ───────────────────────────────────
   bodies: Map<string, ComponentNode[]>;
+  disconnectedInstances: Set<string>;
 
   // ─── Sheet state ───────────────────────────────────────────────────────────
   addBrickOpen: boolean;
@@ -32,6 +33,8 @@ interface DashboardStore {
   setInstanceBody(instanceId: string, body: ComponentNode[]): void;
   setBodiesBatch(entries: Array<[string, ComponentNode[]]>): void;
   removeInstanceBody(instanceId: string): void;
+  markDisconnected(instanceIds: string[]): void;
+  clearDisconnected(instanceId: string): void;
 
   // Optimistic dashboard mutations
   addBrickPlacement(placement: DashboardBrickPlacement): void;
@@ -40,6 +43,7 @@ interface DashboardStore {
     layouts: Array<{ instanceId: string; x: number; y: number; w: number; h: number }>
   ): void;
   updateBrickConfig(instanceId: string, config: Record<string, Json>): void;
+  updateBrickLabel(instanceId: string, label: string | undefined): void;
 }
 
 export const useDashboardStore = create<DashboardStore>((set, get) => ({
@@ -48,6 +52,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
   activeDashboard: null,
   brickTypes: new Map(),
   bodies: new Map(),
+  disconnectedInstances: new Set(),
   addBrickOpen: false,
   configBrickId: null,
 
@@ -85,6 +90,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
   },
 
   setInstanceBody(instanceId, body) {
+    if (get().bodies.get(instanceId) === body) return;
     const bodies = new Map(get().bodies);
     bodies.set(instanceId, body);
     set({ bodies });
@@ -92,27 +98,33 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
 
   setBodiesBatch(entries) {
     if (entries.length === 0) return;
-    const current = get().bodies;
-    const bodies = new Map(current);
-    let changed = false;
+    const bodies = new Map(get().bodies);
     for (const [id, body] of entries) {
-      const existing = current.get(id);
-      // Keep the old reference if structurally identical — prevents re-render
-      if (
-        existing?.length === body.length &&
-        JSON.stringify(existing) === JSON.stringify(body)
-      )
-        continue;
       bodies.set(id, body);
-      changed = true;
     }
-    if (changed) set({ bodies });
+    set({ bodies });
   },
 
   removeInstanceBody(instanceId) {
     const bodies = new Map(get().bodies);
     bodies.delete(instanceId);
     set({ bodies });
+  },
+
+  markDisconnected(instanceIds) {
+    const current = get().disconnectedInstances;
+    if (instanceIds.every((id) => current.has(id))) return;
+    const next = new Set(current);
+    for (const id of instanceIds) next.add(id);
+    set({ disconnectedInstances: next });
+  },
+
+  clearDisconnected(instanceId) {
+    const current = get().disconnectedInstances;
+    if (!current.has(instanceId)) return;
+    const next = new Set(current);
+    next.delete(instanceId);
+    set({ disconnectedInstances: next });
   },
 
   addBrickPlacement(placement) {
@@ -158,9 +170,20 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
     );
     set({ activeDashboard: { ...dashboard, bricks } });
   },
+
+  updateBrickLabel(instanceId, label) {
+    const dashboard = get().activeDashboard;
+    if (!dashboard) return;
+    const bricks = dashboard.bricks.map((b) => (b.instanceId === instanceId ? { ...b, label } : b));
+    set({ activeDashboard: { ...dashboard, bricks } });
+  },
 }));
 
 // Selective subscriptions
 export const useActiveDashboard = () => useDashboardStore((s) => s.activeDashboard);
 export const useBrickTypes = () => useDashboardStore((s) => s.brickTypes);
 export const useInstanceBody = (id: string) => useDashboardStore((s) => s.bodies.get(id));
+export const useIsInstanceDisconnected = (id: string) =>
+  useDashboardStore((s) => s.disconnectedInstances.has(id));
+export const useBrickPlacement = (id: string) =>
+  useDashboardStore((s) => s.activeDashboard?.bricks.find((b) => b.instanceId === id));

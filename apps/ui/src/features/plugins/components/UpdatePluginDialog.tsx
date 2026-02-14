@@ -75,9 +75,11 @@ export function UpdatePluginDialog({
     }
   };
 
-  const title = mode === 'reinstall' ? 'Reinstall Plugin' : 'Update Plugin';
+  const title =
+    mode === 'reinstall' ? t('plugins:update.reinstallTitle') : t('plugins:update.updateTitle');
   const Icon = mode === 'reinstall' ? RotateCcw : ArrowUpCircle;
-  const actionLabel = mode === 'reinstall' ? 'Reinstall' : 'Update';
+  const actionLabel =
+    mode === 'reinstall' ? t('plugins:actions.reinstall') : t('plugins:actions.update');
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -88,21 +90,12 @@ export function UpdatePluginDialog({
             {title}
           </DialogTitle>
           <DialogDescription>
-            {mode === 'reinstall' ? (
-              <>
-                Reinstall{' '}
-                <code className="rounded bg-muted px-1 font-mono text-xs">{packageName}</code>
-              </>
-            ) : (
-              <>
-                Update{' '}
-                <code className="rounded bg-muted px-1 font-mono text-xs">{packageName}</code>
-                {currentVersion && latestVersion && (
-                  <span className="ml-1">
-                    from v{currentVersion} to v{latestVersion}
-                  </span>
-                )}
-              </>
+            {actionLabel}{' '}
+            <code className="rounded bg-muted px-1 font-mono text-xs">{packageName}</code>
+            {mode === 'update' && currentVersion && latestVersion && (
+              <span className="ml-1">
+                {t('plugins:update.versionRange', { from: currentVersion, to: latestVersion })}
+              </span>
             )}
           </DialogDescription>
         </DialogHeader>

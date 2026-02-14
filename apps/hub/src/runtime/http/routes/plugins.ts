@@ -126,15 +126,44 @@ export const pluginsRoutes = group('/api/plugins', [
   createPluginAction('kill'),
 
   // Get plugin config (schema + values)
-  route.get('/:uid/config', { params: z.object({ uid: z.string() }) }, ({ params, inject }) => {
-    const plugin = getOrThrow(inject(PluginManager).get(params.uid), 'Plugin not found');
+  route.get(
+    '/:uid/config',
+    { params: z.object({ uid: z.string() }) },
+    async ({ params, inject }) => {
+      const plugin = getOrThrow(inject(PluginManager).get(params.uid), 'Plugin not found');
 
-    const configService = inject(PluginConfigService);
-    return {
-      schema: configService.getSchema(plugin.name),
-      values: configService.getConfig(plugin.name),
-    };
-  }),
+      const configService = inject(PluginConfigService);
+      const schema = configService.getSchema(plugin.name);
+
+      // Resolve dynamic-dropdown options via IPC
+      const process = inject(PluginLifecycle).getProcess(plugin.name);
+      const resolved = await Promise.all(
+        schema.map(async (pref) => {
+          if (pref.type !== 'dynamic-dropdown' || !process) return pref;
+          const options = await process.fetchPreferenceOptions(pref.name);
+          return { ...pref, options };
+        })
+      );
+
+      return {
+        schema: resolved,
+        values: configService.getConfig(plugin.name),
+      };
+    }
+  ),
+
+  // Fetch dynamic options for a single preference
+  route.get(
+    '/:uid/preferences/:name/options',
+    { params: z.object({ uid: z.string(), name: z.string() }) },
+    async ({ params, inject }) => {
+      const plugin = getOrThrow(inject(PluginManager).get(params.uid), 'Plugin not found');
+      const process = inject(PluginLifecycle).getProcess(plugin.name);
+      if (!process) return { options: [] };
+      const options = await process.fetchPreferenceOptions(params.name);
+      return { options };
+    }
+  ),
 
   // Update plugin config
   route.put(

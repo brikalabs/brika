@@ -38,7 +38,7 @@ describe('defineSharedStore', () => {
   test('set() skips notification when state is the same reference', () => {
     const initial = { count: 0 };
     const store = defineSharedStore(initial);
-    let notified = false;
+    const notified = false;
     // Manually poke a listener to detect spurious notifications
     // (listeners are Set<fn> on the closure — we test indirectly via render count below)
     store.set(initial); // same reference → no-op
@@ -53,7 +53,9 @@ describe('defineSharedStore', () => {
     const state = _createState(() => {});
     let captured: { value: string } | undefined;
 
-    render(state, () => { captured = store(); });
+    render(state, () => {
+      captured = store();
+    });
 
     expect(captured).toEqual({ value: 'hello' });
     _cleanupEffects(state);
@@ -65,12 +67,16 @@ describe('defineSharedStore', () => {
     const state = _createState(() => {});
     let captured = 0;
 
-    render(state, () => { captured = store().n; });
+    render(state, () => {
+      captured = store().n;
+    });
     expect(captured).toBe(1);
 
     store.set({ n: 42 });
 
-    render(state, () => { captured = store().n; });
+    render(state, () => {
+      captured = store().n;
+    });
     expect(captured).toBe(42);
 
     _cleanupEffects(state);
@@ -82,9 +88,13 @@ describe('defineSharedStore', () => {
     const store = defineSharedStore({ x: 0 });
 
     let renders = 0;
-    const state = _createState(() => { renders++; });
+    const state = _createState(() => {
+      renders++;
+    });
 
-    render(state, () => { store(); });
+    render(state, () => {
+      store();
+    });
     await flush(); // let useEffect register the listener
 
     store.set({ x: 1 });
@@ -99,11 +109,19 @@ describe('defineSharedStore', () => {
 
     let r1 = 0;
     let r2 = 0;
-    const s1 = _createState(() => { r1++; });
-    const s2 = _createState(() => { r2++; });
+    const s1 = _createState(() => {
+      r1++;
+    });
+    const s2 = _createState(() => {
+      r2++;
+    });
 
-    render(s1, () => { store(); });
-    render(s2, () => { store(); });
+    render(s1, () => {
+      store();
+    });
+    render(s2, () => {
+      store();
+    });
     await flush();
 
     store.set({ v: 99 });
@@ -120,9 +138,13 @@ describe('defineSharedStore', () => {
     const store = defineSharedStore({ v: 0 });
 
     let renders = 0;
-    const state = _createState(() => { renders++; });
+    const state = _createState(() => {
+      renders++;
+    });
 
-    render(state, () => { store(); });
+    render(state, () => {
+      store();
+    });
     await flush();
 
     // Unmount — cleans up effects (removes listener)
@@ -141,10 +163,14 @@ describe('defineSharedStore', () => {
     const store = defineSharedStore({ tick: 0 });
 
     let renders = 0;
-    const state = _createState(() => { renders++; });
+    const state = _createState(() => {
+      renders++;
+    });
 
     // First render subscribes synchronously during render
-    render(state, () => { store(); });
+    render(state, () => {
+      store();
+    });
 
     // Update BEFORE effects flush — old deferred subscription would miss this
     store.set({ tick: 1 });
@@ -159,9 +185,13 @@ describe('defineSharedStore', () => {
     const store = defineSharedStore({ count: 0 });
 
     let renderCount = 0;
-    const state = _createState(() => { renderCount++; });
+    const state = _createState(() => {
+      renderCount++;
+    });
 
-    render(state, () => { store(); });
+    render(state, () => {
+      store();
+    });
 
     // Rapid-fire updates — listener must already be registered
     store.set({ count: 1 });
@@ -179,13 +209,19 @@ describe('defineSharedStore', () => {
     const store = defineSharedStore({ v: 0 });
 
     let renders = 0;
-    const state = _createState(() => { renders++; });
+    const state = _createState(() => {
+      renders++;
+    });
 
     // First render — subscribes
-    render(state, () => { store(); });
+    render(state, () => {
+      store();
+    });
 
     // Second render — same hook slot, must NOT double-subscribe
-    render(state, () => { store(); });
+    render(state, () => {
+      store();
+    });
 
     store.set({ v: 1 });
     await flush();
@@ -203,9 +239,13 @@ describe('defineSharedStore', () => {
     const storeB = defineSharedStore({ b: 2 });
 
     let rendersA = 0;
-    const sA = _createState(() => { rendersA++; });
+    const sA = _createState(() => {
+      rendersA++;
+    });
 
-    render(sA, () => { storeA(); });
+    render(sA, () => {
+      storeA();
+    });
     await flush();
 
     // Updating storeB should NOT re-render storeA's subscriber
@@ -226,13 +266,17 @@ describe('defineSharedStore', () => {
     const state = _createState(() => {});
     let captured = -1;
 
-    render(state, () => { captured = store(); });
+    render(state, () => {
+      captured = store();
+    });
     expect(captured).toBe(0);
 
     store.set(42);
     expect(store.get()).toBe(42);
 
-    render(state, () => { captured = store(); });
+    render(state, () => {
+      captured = store();
+    });
     expect(captured).toBe(42);
 
     _cleanupEffects(state);

@@ -114,7 +114,7 @@ interface CodeBlockProps
   extends React.ComponentProps<'div'>,
     VariantProps<typeof codeBlockVariants> {}
 
-function CodeBlock({ className, variant, ...props }: CodeBlockProps) {
+function CodeBlock({ className, variant, ...props }: Readonly<CodeBlockProps>) {
   const [state, setState] = React.useState({
     code: '',
     lineCount: 0,
@@ -381,7 +381,10 @@ function CodeBlockContent({
             {lines.map((line, i) => {
               const tokens = highlightTokens?.[i];
               return (
-                <span key={`line-${lineNumberStart + i}`} className={cn('block min-h-6 whitespace-pre', lineHeight)}>
+                <span
+                  key={`line-${lineNumberStart + i}`}
+                  className={cn('block min-h-6 whitespace-pre', lineHeight)}
+                >
                   {tokens?.length
                     ? tokens.map((token, j) => (
                         <span key={`${lineNumberStart + i}-${j}`} style={getTokenStyle(token)}>

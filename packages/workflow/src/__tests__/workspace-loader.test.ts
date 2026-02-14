@@ -351,4 +351,152 @@ blocks: []
       expect(errors.length).toBeGreaterThan(0);
     });
   });
+
+  describe('pollForChanges (watch)', () => {
+    test('detects new files added after watch starts', async () => {
+      const loaded: string[] = [];
+      const loader = new WorkspaceLoader({
+        dir: tempDir,
+        registry,
+        pollInterval: 50,
+        events: {
+          onLoad: (workflow) => loaded.push(workflow.workspace.id),
+        },
+      });
+
+      await loader.loadAll();
+      loader.watch();
+
+      try {
+        // Write a new file after watch started
+        writeFileSync(join(tempDir, 'new.yaml'), createWorkspaceYaml('new-wf', 'New'));
+
+        // Wait for poll to detect the change
+        await new Promise((resolve) => setTimeout(resolve, 200));
+
+        expect(loaded).toContain('new-wf');
+        expect(loader.get('new-wf')).toBeDefined();
+      } finally {
+        loader.stopWatching();
+      }
+    });
+
+    test('detects modified files while watching', async () => {
+      writeFileSync(join(tempDir, 'modify.yaml'), createWorkspaceYaml('modify-wf', 'Original'));
+
+      const loaded: string[] = [];
+      const loader = new WorkspaceLoader({
+        dir: tempDir,
+        registry,
+        pollInterval: 50,
+        events: {
+          onLoad: (workflow) => loaded.push(workflow.workspace.name),
+        },
+      });
+
+      await loader.loadAll();
+      loaded.length = 0; // Clear initial load events
+      loader.watch();
+
+      try {
+        // Modify the file
+        writeFileSync(join(tempDir, 'modify.yaml'), createWorkspaceYaml('modify-wf', 'Updated'));
+
+        await new Promise((resolve) => setTimeout(resolve, 200));
+
+        expect(loaded).toContain('Updated');
+      } finally {
+        loader.stopWatching();
+      }
+    });
+
+    test('detects deleted files while watching', async () => {
+      writeFileSync(join(tempDir, 'delete-me.yaml'), createWorkspaceYaml('delete-wf', 'Delete Me'));
+
+      const unloaded: string[] = [];
+      const loader = new WorkspaceLoader({
+        dir: tempDir,
+        registry,
+        pollInterval: 50,
+        events: {
+          onUnload: (id) => unloaded.push(id),
+        },
+      });
+
+      await loader.loadAll();
+      expect(loader.get('delete-wf')).toBeDefined();
+      loader.watch();
+
+      try {
+        // Wait for the first poll to register the file hash
+        await new Promise((resolve) => setTimeout(resolve, 150));
+
+        // Now delete the file
+        rmSync(join(tempDir, 'delete-me.yaml'));
+
+        // Wait for the next poll to detect the deletion
+        await new Promise((resolve) => setTimeout(resolve, 200));
+
+        expect(unloaded).toContain('delete-wf');
+        expect(loader.get('delete-wf')).toBeUndefined();
+      } finally {
+        loader.stopWatching();
+      }
+    });
+
+    test('does not reload unchanged files after hash is established', async () => {
+      writeFileSync(join(tempDir, 'stable.yaml'), createWorkspaceYaml('stable-wf', 'Stable'));
+
+      let loadCount = 0;
+      const loader = new WorkspaceLoader({
+        dir: tempDir,
+        registry,
+        pollInterval: 50,
+        events: {
+          onLoad: () => loadCount++,
+        },
+      });
+
+      await loader.loadAll();
+      loader.watch();
+
+      try {
+        // Wait for the first poll to establish the hash (this triggers one reload)
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        const countAfterHashEstablished = loadCount;
+
+        // Wait for several more poll cycles — should NOT reload again
+        await new Promise((resolve) => setTimeout(resolve, 200));
+
+        expect(loadCount).toBe(countAfterHashEstablished);
+      } finally {
+        loader.stopWatching();
+      }
+    });
+
+    test('calls onError when polling encounters errors', async () => {
+      const errors: string[] = [];
+      // Use a non-existent directory to trigger errors during polling
+      const badDir = join(tempDir, 'nonexistent-subdir');
+      const loader = new WorkspaceLoader({
+        dir: badDir,
+        registry,
+        pollInterval: 50,
+        events: {
+          onError: (error) => errors.push(error),
+        },
+      });
+
+      // Don't loadAll — just watch the non-existent dir
+      loader.watch();
+
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 200));
+
+        expect(errors.some((e) => e.startsWith('Watch error:'))).toBe(true);
+      } finally {
+        loader.stopWatching();
+      }
+    });
+  });
 });

@@ -44,6 +44,7 @@ export interface DashboardSummary {
 export interface DashboardBrickPlacement {
   instanceId: string;
   brickTypeId: string;
+  label?: string;
   config: Record<string, Json>;
   position: { x: number; y: number };
   size: { w: number; h: number };
@@ -62,6 +63,10 @@ export interface Dashboard {
 export const brickTypesApi = {
   list: () => fetcher<BrickType[]>('/api/bricks/types'),
   get: (id: string) => fetcher<BrickType>(`/api/bricks/types/${encodeURIComponent(id)}`),
+  getConfigOptions: (typeId: string, name: string) =>
+    fetcher<{ options: Array<{ value: string; label: string }> }>(
+      `/api/bricks/types/${encodeURIComponent(typeId)}/config/${encodeURIComponent(name)}/options`
+    ),
 };
 
 export const brickInstancesApi = {
@@ -105,6 +110,7 @@ export const dashboardsApi = {
     dashboardId: string,
     instanceId: string,
     data: {
+      label?: string;
       config?: Record<string, unknown>;
       position?: { x: number; y: number };
       size?: { w: number; h: number };

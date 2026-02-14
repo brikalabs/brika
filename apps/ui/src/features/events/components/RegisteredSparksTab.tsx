@@ -29,12 +29,7 @@ function SparkCard({
   const { tp } = useLocale();
 
   return (
-    <Card
-      key={spark.type}
-      interactive
-      className="cursor-pointer p-4"
-      onClick={onClick}
-    >
+    <Card key={spark.type} interactive className="cursor-pointer p-4" onClick={onClick}>
       <div className="flex items-start gap-3">
         <Avatar className="size-10 bg-amber-500/20">
           <AvatarFallback className="bg-amber-500/20 text-amber-500">
@@ -45,9 +40,7 @@ function SparkCard({
           <div className="truncate font-medium text-sm">
             {tp(pluginId, `sparks.${spark.id}.name`, spark.name || spark.id)}
           </div>
-          <div className="truncate font-mono text-muted-foreground text-xs">
-            {spark.type}
-          </div>
+          <div className="truncate font-mono text-muted-foreground text-xs">{spark.type}</div>
           {spark.description && (
             <div className="mt-1 line-clamp-2 text-muted-foreground text-xs">
               {tp(pluginId, `sparks.${spark.id}.description`, spark.description)}

@@ -174,9 +174,13 @@ describe('TestApp instance methods', () => {
   test('PUT request with custom headers', async () => {
     const app = TestApp.create([updateUserRoute]);
 
-    const res = await app.put('/api/users/123', { name: 'Updated' }, {
-      headers: { 'X-Custom': 'test' },
-    });
+    const res = await app.put(
+      '/api/users/123',
+      { name: 'Updated' },
+      {
+        headers: { 'X-Custom': 'test' },
+      }
+    );
 
     expect(res.status).toBe(200);
   });
@@ -184,9 +188,13 @@ describe('TestApp instance methods', () => {
   test('PATCH request with query params', async () => {
     const app = TestApp.create([patchUserRoute]);
 
-    const res = await app.patch('/api/users/456', { name: 'Patched' }, {
-      query: { version: '2' },
-    });
+    const res = await app.patch(
+      '/api/users/456',
+      { name: 'Patched' },
+      {
+        query: { version: '2' },
+      }
+    );
 
     expect(res.status).toBe(200);
   });
@@ -195,7 +203,7 @@ describe('TestApp instance methods', () => {
     const app = TestApp.create([deleteUserRoute]);
 
     const res = await app.delete('/api/users/789', {
-      headers: { 'Authorization': 'Bearer token' },
+      headers: { Authorization: 'Bearer token' },
     });
 
     expect(res.status).toBe(200);

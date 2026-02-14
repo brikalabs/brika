@@ -1,7 +1,6 @@
-import type { StatusNode } from '@brika/ui-kit';
 import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
-import { memo } from 'react';
 import { cn } from '@/lib/utils';
+import { defineRenderer } from './registry';
 
 const statusConfig: Record<string, { bg: string; pulse: boolean }> = {
   online: { bg: 'bg-emerald-500', pulse: true },
@@ -11,7 +10,7 @@ const statusConfig: Record<string, { bg: string; pulse: boolean }> = {
   idle: { bg: 'bg-blue-500', pulse: false },
 };
 
-export const StatusRenderer = memo(function StatusRenderer({ node }: { node: StatusNode }) {
+defineRenderer('status', ({ node }) => {
   const config = statusConfig[node.status] ?? { bg: 'bg-muted-foreground', pulse: false };
 
   return (

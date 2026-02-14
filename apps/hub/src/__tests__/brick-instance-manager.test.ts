@@ -22,7 +22,7 @@ describe('BrickInstanceManager', () => {
     pluginName = 'plugin',
     w = 2,
     h = 2,
-    config: Record<string, unknown> = {},
+    config: Record<string, unknown> = {}
   ) => {
     manager.mount(instanceId, brickTypeId, pluginName, w, h, config);
   };
@@ -86,9 +86,7 @@ describe('BrickInstanceManager', () => {
   describe('patchBody', () => {
     test('applies mutations to body', () => {
       mountDefault();
-      const result = manager.patchBody('inst-1', [
-        { op: 'create', path: '0', node: { type: 'text', content: 'Hello' } },
-      ]);
+      const result = manager.patchBody('inst-1', [[0, '0', { type: 'text', content: 'Hello' }]]);
 
       expect(result).toBe(true);
       expect(manager.getBody('inst-1')).toHaveLength(1);

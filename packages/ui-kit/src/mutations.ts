@@ -1,39 +1,22 @@
-/**
- * Mutation Applicator
- *
- * Applies reconciler mutations to a ComponentNode tree with structural sharing.
- * Only creates new object references along the mutation path — siblings
- * and their subtrees keep their original references.
- *
- * Shared between Hub (Bun) and UI (Browser).
- */
+import { MUT, type Mutation } from './descriptors';
+import type { ComponentNode } from './nodes';
 
-import type { ComponentNode, Mutation } from './descriptors';
-
-/** Type guard for container nodes (nodes that have a `children` array). */
 function hasChildren(node: ComponentNode): node is ComponentNode & { children: ComponentNode[] } {
   return 'children' in node;
 }
 
-/**
- * Merge props into a node and optionally remove keys — returns a valid ComponentNode.
- * Encapsulates the unavoidable cast needed for dynamic property manipulation
- * on a discriminated union.
- */
-function mergeNodeProps(
+function applyChanges(
   node: ComponentNode,
-  props: Record<string, unknown>,
-  removed?: string[],
+  changes: Record<string, unknown>,
+  removed?: string[]
 ): ComponentNode {
-  const updated: Record<string, unknown> = { ...node, ...props };
+  const updated = Object.assign({}, node, changes);
   if (removed) {
-    for (const k of removed) delete updated[k];
+    for (const k of removed) Reflect.deleteProperty(updated, k);
   }
-  // Safe: we're merging props onto a structurally valid node
-  return updated as unknown as ComponentNode;
+  return updated;
 }
 
-/** Apply a batch of mutations to a component tree, returning a new tree with structural sharing. */
 export function applyMutations(body: ComponentNode[], mutations: Mutation[]): ComponentNode[] {
   let result = body;
   for (const m of mutations) {
@@ -43,7 +26,7 @@ export function applyMutations(body: ComponentNode[], mutations: Mutation[]): Co
 }
 
 function applyOne(body: ComponentNode[], mutation: Mutation): ComponentNode[] {
-  const segments = mutation.path.split('.').map(Number);
+  const segments = mutation[1].split('.').map(Number);
   return updateAtPath(body, segments, 0, mutation);
 }
 
@@ -51,50 +34,45 @@ function updateAtPath(
   nodes: ComponentNode[],
   segments: number[],
   depth: number,
-  mutation: Mutation,
+  mutation: Mutation
 ): ComponentNode[] {
-  const idx = segments[depth]!;
+  const idx = segments[depth] ?? 0;
   const isLeaf = depth === segments.length - 1;
 
   if (isLeaf) {
-    switch (mutation.op) {
-      case 'create': {
+    switch (mutation[0]) {
+      case MUT.CREATE: {
         const result = [...nodes];
         if (idx >= result.length) {
-          result.push(mutation.node);
+          result.push(mutation[2]);
         } else {
-          result.splice(idx, 0, mutation.node);
+          result.splice(idx, 0, mutation[2]);
         }
         return result;
       }
-      case 'replace': {
+      case MUT.REPLACE: {
         const result = [...nodes];
-        result[idx] = mutation.node;
+        result[idx] = mutation[2];
         return result;
       }
-      case 'update': {
+      case MUT.UPDATE: {
+        const target = nodes[idx];
+        if (!target) return nodes;
         const result = [...nodes];
-        result[idx] = mergeNodeProps(result[idx]!, mutation.props, mutation.removed);
+        result[idx] = applyChanges(target, mutation[2], mutation[3]);
         return result;
       }
-      case 'remove': {
+      case MUT.REMOVE: {
         return nodes.filter((_, i) => i !== idx);
       }
     }
   }
 
-  // Not at leaf yet — recurse into children of the node at idx
   const node = nodes[idx];
   if (!node || !hasChildren(node)) return nodes;
 
-  const updatedChildren = updateAtPath(
-    node.children,
-    segments,
-    depth + 1,
-    mutation,
-  );
+  const updatedChildren = updateAtPath(node.children, segments, depth + 1, mutation);
 
-  // Structural sharing: new array, new node at idx, siblings unchanged
   const result = [...nodes];
   result[idx] = { ...node, children: updatedChildren } as ComponentNode;
   return result;

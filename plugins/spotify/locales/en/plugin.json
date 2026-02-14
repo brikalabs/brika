@@ -3,7 +3,7 @@
   "description": "Control Spotify playback and display album art on your dashboard",
   "preferences": {
     "clientId": {
-      "label": "Client ID",
+      "title": "Client ID",
       "description": "Spotify Developer App client ID (create one at developer.spotify.com)"
     },
     "connect": {
@@ -13,6 +13,10 @@
     "developer": {
       "title": "Spotify Developer Portal",
       "description": "Create and manage your Spotify app credentials"
+    },
+    "defaultDevice": {
+      "title": "Default Device",
+      "description": "Select the device to auto-start playback on"
     }
   },
   "bricks": {
@@ -20,10 +24,20 @@
       "name": "Spotify Player",
       "description": "Control Spotify playback and display album art",
       "config": {
+        "device": {
+          "label": "Device",
+          "description": "Override the default device for this brick"
+        },
         "refreshInterval": {
           "label": "Refresh interval (ms)"
         }
       }
+    }
+  },
+  "blocks": {
+    "play": {
+      "name": "Play Spotify",
+      "description": "Start playback on a Spotify device"
     }
   },
   "sparks": {

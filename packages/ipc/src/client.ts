@@ -12,8 +12,8 @@
  */
 
 import { Channel, type WireMessage } from './channel';
+import { applyChannelDelegate, type ChannelDelegateMethods } from './channel-delegate';
 import { hello, type PluginInfo, ready, stop } from './contract';
-import type { InputOf, MessageDef, OutputOf, PayloadOf, RpcDef } from './define';
 
 /** Client options */
 export interface ClientOptions {
@@ -90,43 +90,11 @@ export class Client {
     return this.#channel;
   }
 
-  /**
-   * Send a message
-   */
-  send<T extends MessageDef>(def: T, payload: PayloadOf<T>): void {
-    this.#channel.send(def, payload);
-  }
-
-  /**
-   * Handle incoming messages
-   */
-  on<T extends MessageDef>(
-    def: T,
-    handler: (payload: PayloadOf<T>) => void | Promise<void>
-  ): () => void {
-    return this.#channel.on(def, handler);
-  }
-
-  /**
-   * Implement an RPC
-   */
-  implement<T extends RpcDef>(
-    def: T,
-    handler: (input: InputOf<T>) => OutputOf<T> | Promise<OutputOf<T>>
-  ): void {
-    this.#channel.implement(def, handler);
-  }
+  // send, on, implement, call — provided by applyChannelDelegate() below
 
   // ─────────────────────────────────────────────────────────────────────────
   // Lifecycle
   // ─────────────────────────────────────────────────────────────────────────
-
-  /**
-   * Call an RPC (to hub or other services)
-   */
-  call<T extends RpcDef>(def: T, input: InputOf<T>, timeoutMs?: number): Promise<OutputOf<T>> {
-    return this.#channel.call(def, input, timeoutMs);
-  }
 
   /**
    * Start the client
@@ -158,6 +126,10 @@ export class Client {
     process.removeAllListeners('disconnect');
   }
 }
+
+// Apply shared send/on/implement/call delegate methods
+export interface Client extends ChannelDelegateMethods {}
+applyChannelDelegate(Client);
 
 /**
  * Create a new IPC client

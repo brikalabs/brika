@@ -35,7 +35,13 @@
     "compatibleVersion": "Version compatible",
     "readme": "README",
     "clickToExpand": "Cliquez pour développer",
-    "clickToCollapse": "Cliquez pour réduire"
+    "clickToCollapse": "Cliquez pour réduire",
+    "uid": "UID",
+    "entryPoint": "Point d'entrée",
+    "package": "Paquet",
+    "currentVersion": "Version actuelle",
+    "cpu": "CPU",
+    "memory": "Mémoire"
   },
   "actions": {
     "load": "Charger un plugin",
@@ -80,7 +86,11 @@
     "title": "Installer un plugin",
     "description": "Installer un plugin depuis le registre npm ou ajouter un plugin local.",
     "installing": "Installation...",
-    "done": "Terminé"
+    "done": "Terminé",
+    "packageName": "Nom du paquet",
+    "packageNamePlaceholder": "@brika/plugin-timer ou workspace:/chemin/vers/plugin",
+    "versionOptional": "Version (optionnel)",
+    "versionPlaceholder": "^1.0.0 ou latest"
   },
   "update": {
     "title": "Mettre à jour les plugins",
@@ -90,7 +100,13 @@
     "updateCount_other": "Mettre à jour {{count}} plugins",
     "updating": "Mise à jour...",
     "updateAll": "Tout mettre à jour",
-    "done": "Terminé"
+    "done": "Terminé",
+    "reinstallTitle": "Réinstaller le plugin",
+    "updateTitle": "Mettre à jour le plugin",
+    "reinstallDesc": "Réinstaller <code>{{package}}</code>",
+    "updateDesc": "Mettre à jour <code>{{package}}</code>",
+    "versionRange": "de v{{from}} à v{{to}}",
+    "processing": "{{action}} en cours..."
   },
   "progress": {
     "resolving": "Résolution des dépendances...",

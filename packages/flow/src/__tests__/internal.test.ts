@@ -89,7 +89,9 @@ describe('ensureFlowImpl', () => {
     let called = false;
 
     // Use the wrapped flow's setTimeout (exercises lines 27-28)
-    const cancel = wrapped.setTimeout(() => { called = true; }, 10);
+    const cancel = wrapped.setTimeout(() => {
+      called = true;
+    }, 10);
 
     await wait(30);
     expect(called).toBe(true);
@@ -106,7 +108,9 @@ describe('ensureFlowImpl', () => {
     const wrapped = ensureFlowImpl(mockFlow);
     let called = false;
 
-    const cancel = wrapped.setTimeout(() => { called = true; }, 50);
+    const cancel = wrapped.setTimeout(() => {
+      called = true;
+    }, 50);
     cancel();
 
     await wait(80);

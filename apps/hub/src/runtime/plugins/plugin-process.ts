@@ -8,8 +8,10 @@ import {
   log,
   mountBrickInstance,
   patchBrickInstance,
+  preferenceOptions,
   preferences,
   pushInput,
+  type RouteResponseType,
   ready,
   registerBlock,
   registerBrickType,
@@ -17,7 +19,6 @@ import {
   registerSpark,
   resizeBrickInstance,
   routeRequest,
-  type RouteResponseType,
   type SparkEvent as SparkEventType,
   sparkEvent,
   startBlock,
@@ -28,9 +29,8 @@ import {
   updateBrickConfig,
   updatePreference,
 } from '@brika/ipc/contract';
-import type { BrickFamily } from '@brika/shared';
 import type { PluginPackageSchema } from '@brika/schema';
-import type { Plugin, PluginHealth } from '@brika/shared';
+import type { BrickFamily, Plugin, PluginHealth } from '@brika/shared';
 import { getProcessMetrics } from '@/runtime/metrics';
 import { now } from './utils';
 
@@ -50,7 +50,7 @@ export interface SparkRegistration {
 
 export interface PluginProcessCallbacks {
   onReady: (process: PluginProcess) => void;
-  onLog: (level: string, message: string, meta?: Record<string, unknown>) => void;
+  onLog: (level: string, message: string, meta?: Record<string, Json>) => void;
   onBlock: (block: BlockRegistration) => void;
   onBlockEmit: (instanceId: string, port: string, data: Json) => void;
   onBlockLog: (instanceId: string, workflowId: string, level: string, message: string) => void;
@@ -208,7 +208,13 @@ export class PluginProcess {
   /**
    * Tell the plugin to mount a brick instance
    */
-  sendMountBrickInstance(instanceId: string, brickTypeId: string, w: number, h: number, config: Record<string, unknown>): void {
+  sendMountBrickInstance(
+    instanceId: string,
+    brickTypeId: string,
+    w: number,
+    h: number,
+    config: Record<string, unknown>
+  ): void {
     if (this.#stopped) return;
     this.#channel.send(mountBrickInstance, { instanceId, brickTypeId, w, h, config });
   }
@@ -240,7 +246,12 @@ export class PluginProcess {
   /**
    * Send a brick action to a specific instance on the plugin
    */
-  sendBrickInstanceAction(instanceId: string, brickTypeId: string, actionId: string, payload?: Json): void {
+  sendBrickInstanceAction(
+    instanceId: string,
+    brickTypeId: string,
+    actionId: string,
+    payload?: Json
+  ): void {
     if (this.#stopped) return;
     this.#channel.send(brickInstanceAction, { instanceId, brickTypeId, actionId, payload });
   }
@@ -254,13 +265,33 @@ export class PluginProcess {
     path: string,
     query: Record<string, string>,
     headers: Record<string, string>,
-    body?: Json,
+    body?: Json
   ): Promise<RouteResponseType> {
     if (this.#stopped) return { status: 503 };
     try {
-      return await this.#channel.call(routeRequest, { routeId, method, path, query, headers, body });
+      return await this.#channel.call(routeRequest, {
+        routeId,
+        method,
+        path,
+        query,
+        headers,
+        body,
+      });
     } catch {
       return { status: 502, body: { error: 'Plugin route handler failed' } };
+    }
+  }
+
+  /**
+   * Fetch dynamic options for a preference from the plugin via IPC
+   */
+  async fetchPreferenceOptions(name: string): Promise<Array<{ value: string; label: string }>> {
+    if (this.#stopped) return [];
+    try {
+      const result = await this.#channel.call(preferenceOptions, { name });
+      return result.options;
+    } catch {
+      return [];
     }
   }
 
@@ -390,7 +421,7 @@ export class PluginProcess {
     });
 
     this.#channel.on(patchBrickInstance, ({ instanceId, mutations }) => {
-      this.callbacks.onBrickInstancePatch(instanceId, mutations as unknown[]);
+      this.callbacks.onBrickInstancePatch(instanceId, mutations);
     });
 
     this.#channel.on(registerRoute, ({ method, path }) => {

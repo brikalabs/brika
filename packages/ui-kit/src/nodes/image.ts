@@ -1,4 +1,4 @@
-import type { BaseNode } from './_shared';
+import { type ActionHandler, type BaseNode, resolveAction } from './_shared';
 
 export interface ImageNode extends BaseNode {
   type: 'image';
@@ -11,10 +11,15 @@ export interface ImageNode extends BaseNode {
   rounded?: boolean;
   aspectRatio?: string;
   caption?: string;
+  /** Action dispatched when clicked */
+  onPress?: string;
 }
 
-export function Image(props: Omit<ImageNode, 'type'>): ImageNode {
-  return { type: 'image', ...props };
+export function Image(
+  props: Omit<ImageNode, 'type' | 'onPress'> & { onPress?: ActionHandler }
+): ImageNode {
+  const { onPress, ...rest } = props;
+  return { type: 'image', ...rest, onPress: onPress ? resolveAction(onPress) : undefined };
 }
 
 declare module './_shared' {

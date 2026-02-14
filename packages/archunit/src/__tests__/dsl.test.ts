@@ -165,11 +165,7 @@ describe('files()', () => {
       await setupFixtures({
         'file.ts': "import { foo } from './utils';\nimport { bar } from './helpers';",
       });
-      const rules = arch(
-        files('*.ts')
-          .should()
-          .onlyImportFrom(/^\.\//)
-      );
+      const rules = arch(files('*.ts').should().onlyImportFrom(/^\.\//));
       const result = await runRules(rules);
       expect(result.passed).toBe(true);
     });
@@ -178,11 +174,7 @@ describe('files()', () => {
       await setupFixtures({
         'file.ts': "import { foo } from './utils';\nimport _ from 'lodash';",
       });
-      const rules = arch(
-        files('*.ts')
-          .should()
-          .onlyImportFrom(/^\.\//)
-      );
+      const rules = arch(files('*.ts').should().onlyImportFrom(/^\.\//));
       const result = await runRules(rules);
       expect(result.passed).toBe(false);
       expect(result.violations[0]!.violations[0]!.message).toContain('Import not allowed');
@@ -193,11 +185,7 @@ describe('files()', () => {
       await setupFixtures({
         'file.ts': 'const x = 1;',
       });
-      const rules = arch(
-        files('*.ts')
-          .should()
-          .onlyImportFrom(/^\.\//)
-      );
+      const rules = arch(files('*.ts').should().onlyImportFrom(/^\.\//));
       const result = await runRules(rules);
       expect(result.passed).toBe(true);
     });

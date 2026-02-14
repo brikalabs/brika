@@ -1,20 +1,23 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 import {
-  type BrickState,
   _beginRender,
   _cleanupEffects,
   _createState,
   _endRender,
+  type BrickState,
 } from '../brick-hooks';
-import { useState } from '../brick-hooks/use-state';
-import { useRef } from '../brick-hooks/use-ref';
-import { useMemo, useCallback } from '../brick-hooks/use-memo';
 import { useBrickSize } from '../brick-hooks/use-brick-size';
+import { useCallback, useMemo } from '../brick-hooks/use-memo';
 import { usePreference } from '../brick-hooks/use-preference';
+import { useRef } from '../brick-hooks/use-ref';
+import { useState } from '../brick-hooks/use-state';
+
 // resolveAction is not in @brika/ui-kit's public exports, but we need it
 // to exercise the registrar that _beginRender installs.
 // Use the resolved filesystem path to bypass package exports restrictions.
-const uiKitNodesPath = require.resolve('@brika/ui-kit').replace('/src/index.ts', '/src/nodes/_shared.ts');
+const uiKitNodesPath = require
+  .resolve('@brika/ui-kit')
+  .replace('/src/index.ts', '/src/nodes/_shared.ts');
 const uiKitNodes = require(uiKitNodesPath) as {
   resolveAction: (handler: () => void) => string;
 };
@@ -64,9 +67,15 @@ describe('useState', () => {
       return 42;
     };
 
-    render(state, () => { useState(factory); });
-    render(state, () => { useState(factory); });
-    render(state, () => { useState(factory); });
+    render(state, () => {
+      useState(factory);
+    });
+    render(state, () => {
+      useState(factory);
+    });
+    render(state, () => {
+      useState(factory);
+    });
 
     expect(callCount).toBe(1);
   });
@@ -75,52 +84,72 @@ describe('useState', () => {
     const state = _createState(() => {});
     let val: number | undefined;
 
-    render(state, () => { [val] = useState(0); });
+    render(state, () => {
+      [val] = useState(0);
+    });
     expect(val).toBe(0);
 
-    render(state, () => { [val] = useState(0); });
+    render(state, () => {
+      [val] = useState(0);
+    });
     expect(val).toBe(0);
   });
 
   test('setter with direct value updates state and triggers re-render', async () => {
     let renders = 0;
-    const state = _createState(() => { renders++; });
+    const state = _createState(() => {
+      renders++;
+    });
     let val: number | undefined;
     let set!: (v: number | ((p: number) => number)) => void;
 
-    render(state, () => { [val, set] = useState(0); });
+    render(state, () => {
+      [val, set] = useState(0);
+    });
     expect(val).toBe(0);
 
     set(5);
     await flush();
     expect(renders).toBeGreaterThanOrEqual(1);
 
-    render(state, () => { [val, set] = useState(0); });
+    render(state, () => {
+      [val, set] = useState(0);
+    });
     expect(val).toBe(5);
   });
 
   test('setter with updater function receives previous value', async () => {
     let renders = 0;
-    const state = _createState(() => { renders++; });
+    const state = _createState(() => {
+      renders++;
+    });
     let val: number | undefined;
     let set!: (v: number | ((p: number) => number)) => void;
 
-    render(state, () => { [val, set] = useState(10); });
+    render(state, () => {
+      [val, set] = useState(10);
+    });
     expect(val).toBe(10);
 
     set((prev) => prev + 5);
     await flush();
 
-    render(state, () => { [val, set] = useState(10); });
+    render(state, () => {
+      [val, set] = useState(10);
+    });
     expect(val).toBe(15);
   });
 
   test('setter does not trigger re-render when value is the same (Object.is)', async () => {
     let renders = 0;
-    const state = _createState(() => { renders++; });
+    const state = _createState(() => {
+      renders++;
+    });
     let set!: (v: number | ((p: number) => number)) => void;
 
-    render(state, () => { [, set] = useState(0); });
+    render(state, () => {
+      [, set] = useState(0);
+    });
 
     set(0); // same value
     await flush();
@@ -164,8 +193,12 @@ describe('useRef', () => {
     let ref1: { current: number } | undefined;
     let ref2: { current: number } | undefined;
 
-    render(state, () => { ref1 = useRef(0); });
-    render(state, () => { ref2 = useRef(0); });
+    render(state, () => {
+      ref1 = useRef(0);
+    });
+    render(state, () => {
+      ref2 = useRef(0);
+    });
 
     expect(ref1).toBe(ref2); // same reference
   });
@@ -174,10 +207,14 @@ describe('useRef', () => {
     const state = _createState(() => {});
     let ref!: { current: number };
 
-    render(state, () => { ref = useRef(0); });
+    render(state, () => {
+      ref = useRef(0);
+    });
     ref.current = 99;
 
-    render(state, () => { ref = useRef(0); });
+    render(state, () => {
+      ref = useRef(0);
+    });
     expect(ref.current).toBe(99);
   });
 
@@ -185,7 +222,9 @@ describe('useRef', () => {
     const state = _createState(() => {});
     let ref: { current: null } | undefined;
 
-    render(state, () => { ref = useRef(null); });
+    render(state, () => {
+      ref = useRef(null);
+    });
 
     expect(ref).toEqual({ current: null });
   });
@@ -215,10 +254,16 @@ describe('useMemo', () => {
     const dep = 'stable';
 
     render(state, () => {
-      val = useMemo(() => { callCount++; return 10; }, [dep]);
+      val = useMemo(() => {
+        callCount++;
+        return 10;
+      }, [dep]);
     });
     render(state, () => {
-      val = useMemo(() => { callCount++; return 10; }, [dep]);
+      val = useMemo(() => {
+        callCount++;
+        return 10;
+      }, [dep]);
     });
 
     expect(callCount).toBe(1);
@@ -247,10 +292,16 @@ describe('useMemo', () => {
     let callCount = 0;
 
     render(state, () => {
-      useMemo(() => { callCount++; return 0; }, [1]);
+      useMemo(() => {
+        callCount++;
+        return 0;
+      }, [1]);
     });
     render(state, () => {
-      useMemo(() => { callCount++; return 0; }, [1, 2]);
+      useMemo(() => {
+        callCount++;
+        return 0;
+      }, [1, 2]);
     });
 
     expect(callCount).toBe(2);
@@ -326,12 +377,16 @@ describe('useBrickSize', () => {
     const state = _createState(() => {});
     let size: { width: number; height: number } | undefined;
 
-    render(state, () => { size = useBrickSize(); });
+    render(state, () => {
+      size = useBrickSize();
+    });
     expect(size).toEqual({ width: 2, height: 2 });
 
     state.brickSize = { width: 6, height: 4 };
 
-    render(state, () => { size = useBrickSize(); });
+    render(state, () => {
+      size = useBrickSize();
+    });
     expect(size).toEqual({ width: 6, height: 4 });
   });
 });
@@ -384,14 +439,18 @@ describe('usePreference', () => {
 
   test('setter updates config value and triggers re-render', async () => {
     let renders = 0;
-    const state = _createState(() => { renders++; });
+    const state = _createState(() => {
+      renders++;
+    });
     state.config = { count: 0 };
     state.configKeys = new Set(['count']);
 
     let val: number | undefined;
     let set!: (v: number | ((p: number) => number)) => void;
 
-    render(state, () => { [val, set] = usePreference('count', 0); });
+    render(state, () => {
+      [val, set] = usePreference('count', 0);
+    });
     expect(val).toBe(0);
 
     set(5);
@@ -407,7 +466,9 @@ describe('usePreference', () => {
 
     let set!: (v: number | ((p: number) => number)) => void;
 
-    render(state, () => { [, set] = usePreference('count', 0); });
+    render(state, () => {
+      [, set] = usePreference('count', 0);
+    });
 
     set((prev) => prev + 5);
     await flush();
@@ -417,13 +478,17 @@ describe('usePreference', () => {
 
   test('setter does not trigger re-render when value is the same', async () => {
     let renders = 0;
-    const state = _createState(() => { renders++; });
+    const state = _createState(() => {
+      renders++;
+    });
     state.config = { x: 'hello' };
     state.configKeys = new Set(['x']);
 
     let set!: (v: string | ((p: string) => string)) => void;
 
-    render(state, () => { [, set] = usePreference('x', ''); });
+    render(state, () => {
+      [, set] = usePreference('x', '');
+    });
 
     set('hello'); // same value
     await flush();
@@ -438,7 +503,9 @@ describe('usePreference', () => {
 
     let set!: (v: number | ((p: number) => number)) => void;
 
-    render(state, () => { [, set] = usePreference('val', 100); });
+    render(state, () => {
+      [, set] = usePreference('val', 100);
+    });
 
     set((prev) => prev + 1);
     await flush();
@@ -457,12 +524,16 @@ describe('usePreference', () => {
 
     try {
       // First call with undeclared key — should warn
-      render(state, () => { usePreference('undeclared_test_key_xyz', 'default'); });
+      render(state, () => {
+        usePreference('undeclared_test_key_xyz', 'default');
+      });
       expect(warnSpy).toHaveBeenCalledTimes(1);
-      expect(warnSpy.mock.calls[0]?.[0]).toContain('undeclared_test_key_xyz');
+      expect((warnSpy.mock.calls as unknown[][])[0]?.[0]).toContain('undeclared_test_key_xyz');
 
       // Second call with same key — should NOT warn again (warn-once)
-      render(state, () => { usePreference('undeclared_test_key_xyz', 'default'); });
+      render(state, () => {
+        usePreference('undeclared_test_key_xyz', 'default');
+      });
       expect(warnSpy).toHaveBeenCalledTimes(1);
     } finally {
       console.warn = originalWarn;
@@ -479,7 +550,9 @@ describe('usePreference', () => {
     console.warn = warnSpy;
 
     try {
-      render(state, () => { usePreference('anything', 'default'); });
+      render(state, () => {
+        usePreference('anything', 'default');
+      });
       expect(warnSpy).not.toHaveBeenCalled();
     } finally {
       console.warn = originalWarn;
@@ -606,7 +679,9 @@ describe('_createState', () => {
 
   test('scheduleRender debounces via microtask', async () => {
     let renderCount = 0;
-    const state = _createState(() => { renderCount++; });
+    const state = _createState(() => {
+      renderCount++;
+    });
 
     // Multiple calls to scheduleRender should batch into one
     state.scheduleRender();
@@ -620,7 +695,9 @@ describe('_createState', () => {
 
   test('scheduleRender fires again after microtask drains', async () => {
     let renderCount = 0;
-    const state = _createState(() => { renderCount++; });
+    const state = _createState(() => {
+      renderCount++;
+    });
 
     state.scheduleRender();
     await flush();
@@ -636,7 +713,12 @@ describe('_cleanupEffects', () => {
   test('calls cleanup on effects and clears the array', () => {
     const state = _createState(() => {});
     let cleaned = false;
-    state.effects.push({ cleanup: () => { cleaned = true; }, deps: [] });
+    state.effects.push({
+      cleanup: () => {
+        cleaned = true;
+      },
+      deps: [],
+    });
 
     _cleanupEffects(state);
 

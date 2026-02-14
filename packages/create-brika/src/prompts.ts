@@ -93,9 +93,17 @@ export async function promptForConfig(pluginName?: string): Promise<PluginConfig
         p.multiselect({
           message: 'What does your plugin provide?',
           options: [
-            { value: 'blocks' as const, label: 'Blocks', hint: 'Workflow blocks (triggers, actions, transforms)' },
+            {
+              value: 'blocks' as const,
+              label: 'Blocks',
+              hint: 'Workflow blocks (triggers, actions, transforms)',
+            },
             { value: 'bricks' as const, label: 'Bricks', hint: 'Dashboard UI components' },
-            { value: 'sparks' as const, label: 'Sparks', hint: 'Event types for inter-plugin communication' },
+            {
+              value: 'sparks' as const,
+              label: 'Sparks',
+              hint: 'Event types for inter-plugin communication',
+            },
           ],
           required: true,
         }),

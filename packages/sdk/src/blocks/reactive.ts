@@ -44,9 +44,7 @@ type OutputSchema = z.ZodType | PassthroughRef<string> | GenericRef<string> | Re
 /**
  * Output port definition - can hold a Zod schema, PassthroughRef, GenericRef, or ResolvedRef.
  */
-export interface OutputDef<
-  T extends OutputSchema,
-> {
+export interface OutputDef<T extends OutputSchema> {
   readonly __type: 'output';
   readonly schema: T;
   readonly meta: PortMeta;
@@ -65,9 +63,7 @@ export function input<T extends z.ZodType | GenericRef<string>>(
 /**
  * Create a typed output port with Zod schema, passthrough, generic, or resolved.
  */
-export function output<
-  T extends z.ZodType | PassthroughRef<string> | GenericRef<string> | ResolvedRef,
->(schema: T, meta: PortMeta): OutputDef<T> {
+export function output<T extends OutputSchema>(schema: T, meta: PortMeta): OutputDef<T> {
   return { __type: 'output', schema, meta };
 }
 

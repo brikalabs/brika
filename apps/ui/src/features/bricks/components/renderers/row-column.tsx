@@ -1,14 +1,13 @@
-import type { StackNode } from '@brika/ui-kit';
+import type { ColumnNode, RowNode } from '@brika/ui-kit';
 import { cva } from 'class-variance-authority';
-import { memo } from 'react';
-import { type ActionHandler, ComponentNodeRenderer } from './registry';
+import { type ActionHandler, ComponentNodeRenderer, defineRenderer } from './registry';
 import { gapVariant } from './shared';
 
-const stackVariants = cva('flex min-h-0', {
+const flexVariants = cva('flex min-h-0', {
   variants: {
     direction: {
-      horizontal: 'flex-row',
-      vertical: 'flex-col',
+      row: 'flex-row',
+      column: 'flex-col',
     },
     gap: gapVariant,
     align: {
@@ -36,27 +35,36 @@ const stackVariants = cva('flex min-h-0', {
   },
 });
 
-export const StackRenderer = memo(function StackRenderer({
+function FlexRenderer({
   node,
   onAction,
 }: {
-  node: StackNode;
+  node: RowNode | ColumnNode;
   onAction?: ActionHandler;
 }) {
+  const clickable = !!node.onPress;
+  const direction = node.type === 'row' ? 'row' : 'column';
+
   return (
     <div
-      className={stackVariants({
-        direction: node.direction,
+      className={`${flexVariants({
+        direction,
         gap: node.gap,
         align: node.align,
         justify: node.justify,
         wrap: node.wrap || undefined,
         grow: node.grow || undefined,
-      })}
+      })}${clickable ? 'cursor-pointer' : ''}`}
+      onClick={clickable ? () => onAction?.(node.onPress as string) : undefined}
+      role={clickable ? 'button' : undefined}
+      tabIndex={clickable ? 0 : undefined}
     >
       {node.children.map((child, i) => (
         <ComponentNodeRenderer key={`${child.type}-${i}`} node={child} onAction={onAction} />
       ))}
     </div>
   );
-});
+}
+
+defineRenderer('row', FlexRenderer);
+defineRenderer('column', FlexRenderer);

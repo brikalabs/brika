@@ -7,7 +7,7 @@
  */
 
 import type { PreferenceDefinition } from '@brika/shared';
-import type { ComponentNode } from './descriptors';
+import type { ComponentNode } from './nodes';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types

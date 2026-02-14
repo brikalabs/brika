@@ -63,7 +63,14 @@ export class BrickTypeRegistry {
       config?: unknown[];
     },
     pluginName: string,
-    manifest?: { name?: string; description?: string; category?: string; icon?: string; color?: string },
+    manifest?: {
+      name?: string;
+      description?: string;
+      category?: string;
+      icon?: string;
+      color?: string;
+      config?: unknown[];
+    }
   ): string {
     const fullId = `${pluginName}:${brickType.id}`;
 
@@ -83,7 +90,7 @@ export class BrickTypeRegistry {
       families: brickType.families ?? ['sm', 'md', 'lg'],
       minSize: brickType.minSize,
       maxSize: brickType.maxSize,
-      config: brickType.config as PreferenceDefinition[] | undefined,
+      config: (brickType.config ?? manifest?.config) as PreferenceDefinition[] | undefined,
     });
 
     this.logs.info('Brick type registered', { brickTypeId: fullId, pluginName });

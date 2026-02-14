@@ -1,6 +1,6 @@
 import type { TemplateData } from '../src/render';
 
-export default (data: TemplateData): string => {
+export default function template(data: TemplateData): string {
   const opts: Record<string, unknown> = {
     target: 'ESNext',
     module: 'ESNext',
@@ -19,4 +19,4 @@ export default (data: TemplateData): string => {
   }
 
   return JSON.stringify({ compilerOptions: opts, include: ['src'] }, null, 2) + '\n';
-};
+}

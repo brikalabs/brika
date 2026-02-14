@@ -45,7 +45,9 @@ export function defineSharedStore<T>(initial: T): SharedStore<T> {
 
     // Register cleanup for unmount
     useEffect(() => {
-      return () => { listeners.delete(brickState.scheduleRender); };
+      return () => {
+        listeners.delete(brickState.scheduleRender);
+      };
     }, []);
 
     return state;

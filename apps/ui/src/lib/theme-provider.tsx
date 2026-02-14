@@ -31,7 +31,7 @@ export function ThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
   );
 
   const [mode, setModeState] = useState<ThemeMode>(() => {
-    const stored = localStorage.getItem(MODE_STORAGE_KEY);
+    const stored = localStorage.getItem(MODE_STORAGE_KEY) as string | null;
     if (stored === 'light' || stored === 'dark' || stored === 'system') return stored;
     return 'system';
   });

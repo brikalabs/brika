@@ -7,14 +7,12 @@
 // Lifecycle
 export type { InitHandler, StopHandler, UninstallHandler } from '../api/lifecycle';
 export { onInit, onStop, onUninstall } from '../api/lifecycle';
-
-// Preferences
-export type { PreferencesChangeHandler } from '../api/preferences';
-export { getPreferences, onPreferencesChange } from '../api/preferences';
-
 // Logging
 export type { Logger } from '../api/logging';
 export { log } from '../api/logging';
+// Preferences
+export type { PreferencesChangeHandler } from '../api/preferences';
+export { getPreferences, onPreferencesChange, setPreference } from '../api/preferences';
 
 // Assets
 

@@ -29,5 +29,5 @@ export const allRoutes = combineRoutes(
   logsRoutes,
   streamsRoutes,
   i18nRoutes,
-  registryRoutes,
+  registryRoutes
 );

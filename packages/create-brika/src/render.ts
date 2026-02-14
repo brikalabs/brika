@@ -14,8 +14,8 @@
  *   {{#key}}...{{/key}}  — conditional block (included when data[key] is truthy)
  */
 
-import * as fs from 'fs/promises';
-import * as path from 'path';
+import * as fs from 'node:fs/promises';
+import * as path from 'node:path';
 
 export type TemplateData = Record<string, string | boolean>;
 
@@ -24,19 +24,19 @@ export type TemplateData = Record<string, string | boolean>;
 /** Render a template string: process conditionals, interpolate variables, clean up. */
 export function render(template: string, data: TemplateData): string {
   // 1. Conditional blocks: {{#key}}...{{/key}}
-  let result = template.replace(
+  let result = template.replaceAll(
     /\{\{#(\w+)\}\}\n?([\s\S]*?)\{\{\/\1\}\}\n?/g,
-    (_, key, content) => (data[key] ? content : ''),
+    (_, key, content) => (data[key] ? content : '')
   );
 
   // 2. Variable interpolation: {{key}}
-  result = result.replace(/\{\{(\w+)\}\}/g, (_, key) => {
+  result = result.replaceAll(/\{\{(\w+)\}\}/g, (_, key) => {
     const val = data[key];
     return typeof val === 'string' ? val : '';
   });
 
   // 3. Collapse excessive blank lines
-  result = result.replace(/\n{3,}/g, '\n\n');
+  result = result.replaceAll(/\n{3,}/g, '\n\n');
 
   return result;
 }
@@ -51,7 +51,7 @@ const FILE_RENAMES: Record<string, string> = {
 export function resolveFilename(name: string, data: TemplateData): string {
   if (name.endsWith('.tpl')) name = name.slice(0, -4);
   else if (name.endsWith('.ts')) name = name.slice(0, -3);
-  name = name.replace(/\{\{(\w+)\}\}/g, (_, key) => {
+  name = name.replaceAll(/\{\{(\w+)\}\}/g, (_, key) => {
     const val = data[key];
     return typeof val === 'string' ? val : '';
   });
@@ -60,7 +60,7 @@ export function resolveFilename(name: string, data: TemplateData): string {
 
 /** Parse [condition] prefix from a directory name. */
 export function parseCondition(name: string): { name: string; condition?: string } {
-  const match = name.match(/^\[(\w+)\](.+)$/);
+  const match = /^\[(\w+)\](.+)$/.exec(name);
   if (match) return { name: match[2], condition: match[1] };
   return { name };
 }
@@ -71,7 +71,7 @@ export function parseCondition(name: string): { name: string; condition?: string
 export async function walkTemplate(
   templateDir: string,
   targetDir: string,
-  data: TemplateData,
+  data: TemplateData
 ): Promise<void> {
   await fs.mkdir(targetDir, { recursive: true });
   const entries = await fs.readdir(templateDir, { withFileTypes: true });

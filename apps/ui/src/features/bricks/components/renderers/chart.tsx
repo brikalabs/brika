@@ -1,5 +1,6 @@
-import type { ChartNode } from '@brika/ui-kit';
-import { memo } from 'react';
 import { BrickChart } from '../BrickChart';
+import { defineRenderer } from './registry';
 
-export const ChartRenderer = memo(BrickChart) as React.NamedExoticComponent<{ node: ChartNode }>;
+defineRenderer('chart', ({ node }) => {
+  return <BrickChart node={node} />;
+});

@@ -1,3 +1,4 @@
+import type { ColorValue } from '../colors';
 import type { ActionHandler, BaseNode } from './_shared';
 import { resolveAction } from './_shared';
 
@@ -9,7 +10,15 @@ export interface ButtonNode extends BaseNode {
   url?: string;
   icon?: string;
   variant?: 'default' | 'secondary' | 'outline' | 'ghost' | 'destructive' | 'link';
-  color?: string;
+  color?: ColorValue;
+  /** Disable the button */
+  disabled?: boolean;
+  /** Show loading spinner */
+  loading?: boolean;
+  /** Button size */
+  size?: 'sm' | 'md' | 'lg';
+  /** Stretch to full width */
+  fullWidth?: boolean;
 }
 
 export function Button(props: {
@@ -18,7 +27,11 @@ export function Button(props: {
   url?: string;
   icon?: string;
   variant?: 'default' | 'secondary' | 'outline' | 'ghost' | 'destructive' | 'link';
-  color?: string;
+  color?: ColorValue;
+  disabled?: boolean;
+  loading?: boolean;
+  size?: 'sm' | 'md' | 'lg';
+  fullWidth?: boolean;
 }): ButtonNode {
   const { onPress, ...rest } = props;
   return { type: 'button', ...rest, onPress: onPress ? resolveAction(onPress) : undefined };

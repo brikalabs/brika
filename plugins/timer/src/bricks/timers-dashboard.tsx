@@ -1,5 +1,5 @@
-import { defineBrick, useBrickSize, useEffect, usePreference, useState } from '@brika/sdk/bricks/core';
 import { Chart, Grid, Section, Stat, Status, Toggle } from '@brika/sdk/bricks/components';
+import { defineBrick, useBrickSize, useEffect, usePreference, useState } from '@brika/sdk/bricks/core';
 
 const startedAt = Date.now();
 

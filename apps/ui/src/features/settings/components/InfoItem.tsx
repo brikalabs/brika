@@ -27,7 +27,7 @@ export function InfoItem({
   href,
   mono = true,
   secondary,
-}: InfoItemProps) {
+}: Readonly<InfoItemProps>) {
   const [copied, setCopied] = useState(false);
   const canCopy = copyable && typeof value === 'string';
 

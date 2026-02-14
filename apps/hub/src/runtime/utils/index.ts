@@ -6,3 +6,4 @@
 
 export { checkCompatibility, checkPluginCompatibility, meetsMinimumVersion } from './compatibility';
 export * as semver from './semver';
+export { ensureAndScanYamlDir } from './yaml-dir';

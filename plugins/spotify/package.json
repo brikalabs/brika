@@ -21,17 +21,29 @@
     {
       "name": "clientId",
       "type": "text",
+      "label": "Client ID",
+      "description": "Spotify Developer App client ID",
       "required": true
     },
     {
       "name": "connect",
       "type": "link",
+      "label": "Connect to Spotify",
+      "description": "Authorize BRIKA to access your Spotify account",
       "url": "/api/oauth/spotify/authorize"
     },
     {
       "name": "developer",
       "type": "link",
+      "label": "Spotify Developer Portal",
+      "description": "Create and manage your Spotify app credentials",
       "url": "https://developer.spotify.com"
+    },
+    {
+      "name": "defaultDevice",
+      "type": "dynamic-dropdown",
+      "label": "Default Device",
+      "description": "Device to auto-start playback on"
     }
   ],
   "bricks": [
@@ -44,6 +56,12 @@
       "color": "#1DB954",
       "config": [
         {
+          "type": "dynamic-dropdown",
+          "name": "device",
+          "label": "Device",
+          "description": "Override the default device for this brick"
+        },
+        {
           "type": "number",
           "name": "refreshInterval",
           "label": "Refresh interval (ms)",
@@ -53,6 +71,16 @@
           "step": 1000
         }
       ]
+    }
+  ],
+  "blocks": [
+    {
+      "id": "play",
+      "name": "Play Spotify",
+      "description": "Start playback on a Spotify device",
+      "category": "action",
+      "icon": "play",
+      "color": "#1DB954"
     }
   ],
   "sparks": [

@@ -3,9 +3,14 @@
  */
 
 import { describe, expect, test } from 'bun:test';
+import type {
+  BrickComponent,
+  BrickInstanceContext,
+  BrickTypeSpec,
+  CompiledBrickType,
+} from '../define-brick';
 import { defineBrick } from '../define-brick';
-import type { BrickTypeSpec, BrickComponent, CompiledBrickType, BrickInstanceContext } from '../define-brick';
-import { Text, Stat } from '../nodes';
+import { Stat, Text } from '../nodes';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -26,9 +31,7 @@ const fullSpec: BrickTypeSpec = {
   families: ['sm', 'md', 'lg'],
   minSize: { w: 1, h: 1 },
   maxSize: { w: 6, h: 6 },
-  config: [
-    { key: 'room', type: 'string', label: 'Room name', default: 'Living Room' },
-  ],
+  config: [{ name: 'room', type: 'text', label: 'Room name', default: 'Living Room' }],
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

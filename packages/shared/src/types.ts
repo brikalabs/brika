@@ -214,7 +214,14 @@ export interface PluginManifest {
 // Plugin Preferences (Raycast-style configuration)
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type PreferenceType = 'text' | 'password' | 'checkbox' | 'dropdown' | 'number' | 'link';
+export type PreferenceType =
+  | 'text'
+  | 'password'
+  | 'checkbox'
+  | 'dropdown'
+  | 'dynamic-dropdown'
+  | 'number'
+  | 'link';
 
 export interface BasePreference {
   name: string;
@@ -253,6 +260,13 @@ export interface DropdownPreference extends BasePreference {
   options: Array<{ value: string }>;
 }
 
+export interface DynamicDropdownPreference extends BasePreference {
+  type: 'dynamic-dropdown';
+  default?: string;
+  /** Options resolved server-side via plugin route GET /preferences/{name}. */
+  options?: Array<{ value: string; label: string }>;
+}
+
 export interface LinkPreference extends BasePreference {
   type: 'link';
   /** URL to open. Relative paths (starting with /) resolve to plugin routes. */
@@ -265,6 +279,7 @@ export type PreferenceDefinition =
   | NumberPreference
   | CheckboxPreference
   | DropdownPreference
+  | DynamicDropdownPreference
   | LinkPreference;
 
 /** Plugin preferences with schema and current values */
@@ -399,15 +414,15 @@ export function arePortTypesCompatible(sourceType?: string, targetType?: string)
   if (src === tgt) return true;
 
   // Number compatibility (number, integer)
-  const numberTypes = ['number', 'integer', 'float', 'double'];
-  if (numberTypes.includes(src) && numberTypes.includes(tgt)) return true;
+  const numberTypes = new Set(['number', 'integer', 'float', 'double']);
+  if (numberTypes.has(src) && numberTypes.has(tgt)) return true;
 
   // String can accept most primitive types (implicit toString)
-  if (tgt === 'string' && ['number', 'integer', 'boolean'].includes(src)) return true;
+  if (tgt === 'string' && new Set(['number', 'integer', 'boolean']).has(src)) return true;
 
   // JSON/object types are flexible
-  const objectTypes = ['object', 'json', 'record', 'any'];
-  if (objectTypes.includes(src) && objectTypes.includes(tgt)) return true;
+  const objectTypes = new Set(['object', 'json', 'record', 'any']);
+  if (objectTypes.has(src) && objectTypes.has(tgt)) return true;
 
   // Array compatibility - check if base types match
   if (src.endsWith('[]') && tgt.endsWith('[]')) {

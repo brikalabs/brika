@@ -148,12 +148,7 @@ describe('setupBlocks', () => {
       expect(result).toEqual({ ok: true });
       expect(mockStartFn).toHaveBeenCalledTimes(1);
 
-      const callArgs = mockStartFn.mock.calls[0]![0] as {
-        blockId: string;
-        workflowId: string;
-        config: Record<string, unknown>;
-        emit: (...args: unknown[]) => void;
-      };
+      const callArgs = (mockStartFn.mock.calls[0] as unknown[])[0] as Record<string, unknown>;
       expect(callArgs.blockId).toBe('inst-1');
       expect(callArgs.workflowId).toBe('wf-1');
       expect(callArgs.config).toEqual({ key: 'value' });
@@ -224,10 +219,9 @@ describe('setupBlocks', () => {
         config: {},
       });
 
-      const callArgs = mockStartFn.mock.calls[0]![0] as {
-        emit: (port: string, data: unknown) => void;
-      };
-      callArgs.emit('out', { value: 42 });
+      const callArgs = (mockStartFn.mock.calls[0] as unknown[])[0] as Record<string, unknown>;
+      const emit = callArgs.emit as Function;
+      emit('out', { value: 42 });
 
       const emitMsg = h.sentMessages.find((m) => m.name === 'blockEmit');
       expect(emitMsg).toBeDefined();

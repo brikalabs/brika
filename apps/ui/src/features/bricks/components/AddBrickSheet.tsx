@@ -14,7 +14,7 @@ import { useAddBrick } from '../hooks';
 import { useDashboardStore } from '../store';
 
 export function AddBrickSheet() {
-  const { t } = useLocale();
+  const { t, tp } = useLocale();
   const open = useDashboardStore((s) => s.addBrickOpen);
   const setOpen = useDashboardStore((s) => s.setAddBrickOpen);
   const brickTypes = useDashboardStore((s) => s.brickTypes);
@@ -80,10 +80,20 @@ export function AddBrickSheet() {
                         </AvatarFallback>
                       </Avatar>
                       <div className="min-w-0 flex-1">
-                        <div className="truncate font-medium text-sm">{t.name ?? t.localId}</div>
-                        {t.description && (
+                        <div className="truncate font-medium text-sm">
+                          {tp(t.pluginName, `bricks.${t.localId}.name`, t.name ?? t.localId)}
+                        </div>
+                        {tp(
+                          t.pluginName,
+                          `bricks.${t.localId}.description`,
+                          t.description ?? ''
+                        ) && (
                           <div className="truncate text-muted-foreground text-xs">
-                            {t.description}
+                            {tp(
+                              t.pluginName,
+                              `bricks.${t.localId}.description`,
+                              t.description ?? ''
+                            )}
                           </div>
                         )}
                       </div>

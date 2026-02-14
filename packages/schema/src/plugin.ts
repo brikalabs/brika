@@ -197,10 +197,18 @@ const DropdownPreference = BasePreference.extend({
   options: z.array(DropdownOption).describe('Available options'),
 });
 
+/** Dynamic dropdown — options fetched via plugin route GET /preferences/{name} at runtime */
+const DynamicDropdownPreference = BasePreference.extend({
+  type: z.literal('dynamic-dropdown'),
+  default: z.optional(z.string().describe('Default selected value')),
+});
+
 /** Link preference — renders as a button that opens a URL */
 const LinkPreference = BasePreference.extend({
   type: z.literal('link'),
-  url: z.string().describe('URL to open. Relative paths (starting with /) resolve to plugin routes.'),
+  url: z
+    .string()
+    .describe('URL to open. Relative paths (starting with /) resolve to plugin routes.'),
 });
 
 /** Discriminated union of all preference types */
@@ -210,6 +218,7 @@ const PreferenceSchema = z.discriminatedUnion('type', [
   NumberPreference,
   CheckboxPreference,
   DropdownPreference,
+  DynamicDropdownPreference,
   LinkPreference,
 ]);
 
@@ -233,12 +242,8 @@ const BrickSchema = z.object({
       .regex(/^#[0-9a-fA-F]{6}$/)
       .describe('Hex color')
   ),
-  families: z.optional(
-    z.array(BrickFamilySchema).describe('Supported size families (sm, md, lg)')
-  ),
-  config: z.optional(
-    z.array(PreferenceSchema).describe('Per-instance configuration schema')
-  ),
+  families: z.optional(z.array(BrickFamilySchema).describe('Supported size families (sm, md, lg)')),
+  config: z.optional(z.array(PreferenceSchema).describe('Per-instance configuration schema')),
 });
 
 // ============================================================================
@@ -273,9 +278,7 @@ export const PluginPackageSchema = BasePackageJson.extend({
   sparks: z.optional(
     z.array(SparkSchema).describe('Typed event (spark) definitions provided by this plugin')
   ),
-  bricks: z.optional(
-    z.array(BrickSchema).describe('Dashboard bricks provided by this plugin')
-  ),
+  bricks: z.optional(z.array(BrickSchema).describe('Dashboard bricks provided by this plugin')),
   icon: z.optional(z.string().describe('Path to plugin icon (PNG/SVG, relative to package root)')),
   preferences: z.optional(
     z.array(PreferenceSchema).describe('Plugin preferences/configuration schema')

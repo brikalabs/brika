@@ -59,16 +59,17 @@ describe('sparks routes', () => {
       },
     ]);
 
-    const res = await app.get<
-      Array<{
-        type: string;
-        id: string;
-        pluginId: string;
-        name: string;
-        description?: string;
-        schema: unknown;
-      }>
-    >('/api/sparks');
+    const res =
+      await app.get<
+        Array<{
+          type: string;
+          id: string;
+          pluginId: string;
+          name: string;
+          description?: string;
+          schema: unknown;
+        }>
+      >('/api/sparks');
 
     expect(res.status).toBe(200);
     expect(res.body).toHaveLength(2);

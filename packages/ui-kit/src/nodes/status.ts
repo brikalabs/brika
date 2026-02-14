@@ -1,3 +1,4 @@
+import type { ColorValue } from '../colors';
 import type { BaseNode } from './_shared';
 
 export interface StatusNode extends BaseNode {
@@ -5,7 +6,7 @@ export interface StatusNode extends BaseNode {
   label: string;
   status: 'online' | 'offline' | 'warning' | 'error' | 'idle';
   icon?: string;
-  color?: string;
+  color?: ColorValue;
 }
 
 export function Status(props: Omit<StatusNode, 'type'>): StatusNode {

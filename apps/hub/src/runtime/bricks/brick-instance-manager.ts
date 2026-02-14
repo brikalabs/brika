@@ -6,7 +6,7 @@
  */
 
 import { inject, singleton } from '@brika/di';
-import { type ComponentNode, type Mutation, applyMutations } from '@brika/ui-kit';
+import { applyMutations, type ComponentNode, type Mutation } from '@brika/ui-kit';
 import { Logger } from '@/runtime/logs/log-router';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -43,7 +43,7 @@ export class BrickInstanceManager {
     pluginName: string,
     w: number,
     h: number,
-    config: Record<string, unknown>,
+    config: Record<string, unknown>
   ): void {
     if (this.#instances.has(instanceId)) {
       this.logs.warn('Instance already mounted', { instanceId });
@@ -83,10 +83,7 @@ export class BrickInstanceManager {
     const instance = this.#instances.get(instanceId);
     if (!instance) return false;
 
-    instance.body = applyMutations(
-      instance.body,
-      mutations as Mutation[],
-    );
+    instance.body = applyMutations(instance.body, mutations as Mutation[]);
     return true;
   }
 

@@ -254,7 +254,13 @@ function inferNodeTypes(
   let changed = false;
 
   for (const input of data.inputs || []) {
-    const inferredType = inferInputTypeFromConnection(input, nodeId, nodeIncoming, nodeMap, inferred);
+    const inferredType = inferInputTypeFromConnection(
+      input,
+      nodeId,
+      nodeIncoming,
+      nodeMap,
+      inferred
+    );
     if (inferredType && nodeInferred.get(input.id) !== inferredType) {
       nodeInferred.set(input.id, inferredType);
       changed = true;

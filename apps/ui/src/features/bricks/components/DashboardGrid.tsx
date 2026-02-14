@@ -128,6 +128,7 @@ export const DashboardGrid = memo(function DashboardGrid({
         isDraggable
         isResizable
         draggableHandle=".drag-handle"
+        draggableCancel=".no-drag"
         onDragStop={handleDragStop}
         onResizeStop={handleResizeStop}
         compactType="vertical"

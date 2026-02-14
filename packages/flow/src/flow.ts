@@ -4,7 +4,7 @@
  * Core FlowImpl class and CleanupRegistry.
  */
 
-import type { Cleanup, Emitter, Flow, Operator, Subscriber } from './types';
+import type { Cleanup, Emitter, Flow, Operator, Pipeable, Subscriber } from './types';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Cleanup Registry
@@ -109,22 +109,6 @@ export class FlowImpl<T> implements Flow<T> {
     return this.#latest;
   }
 
-  pipe<A>(op1: Operator<T, A>): Flow<A>;
-  pipe<A, B>(op1: Operator<T, A>, op2: Operator<A, B>): Flow<B>;
-  pipe<A, B, C>(op1: Operator<T, A>, op2: Operator<A, B>, op3: Operator<B, C>): Flow<C>;
-  pipe<A, B, C, D>(
-    op1: Operator<T, A>,
-    op2: Operator<A, B>,
-    op3: Operator<B, C>,
-    op4: Operator<C, D>
-  ): Flow<D>;
-  pipe<A, B, C, D, E>(
-    op1: Operator<T, A>,
-    op2: Operator<A, B>,
-    op3: Operator<B, C>,
-    op4: Operator<C, D>,
-    op5: Operator<D, E>
-  ): Flow<E>;
   // biome-ignore lint/suspicious/noExplicitAny: implementation signature must be compatible with all overloads
   pipe(...ops: Operator<any, any>[]): Flow<any> {
     // biome-ignore lint/suspicious/noExplicitAny: type-safe via overloads

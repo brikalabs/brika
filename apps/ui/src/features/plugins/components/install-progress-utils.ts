@@ -1,5 +1,5 @@
-import type { TFunction } from 'i18next';
 import type { InstallProgress } from '@brika/shared';
+import type { TFunction } from 'i18next';
 
 /**
  * Get human-readable label for installation progress phase

@@ -39,3 +39,40 @@ export function onPreferencesChange<T extends Record<string, unknown> = Record<s
     handler as PreferencesChangeHandler<Record<string, unknown>>
   );
 }
+
+/**
+ * Update a single preference value.
+ *
+ * Sends the change to the hub so it's persisted and visible in the UI.
+ *
+ * @example
+ * ```typescript
+ * setPreference('defaultDevice', 'Living Room Speaker');
+ * ```
+ */
+export function setPreference(key: string, value: unknown): void {
+  getContext().updatePreference(key, value);
+}
+
+/**
+ * Register a dynamic options provider for a preference.
+ *
+ * Used with `dynamic-dropdown` preferences — the hub calls this
+ * when loading the config UI to populate options at runtime.
+ *
+ * @example
+ * ```typescript
+ * definePreferenceOptions('defaultDevice', async () => {
+ *   const devices = await api.getDevices();
+ *   return devices.map(d => ({ value: d.name, label: `${d.name} (${d.type})` }));
+ * });
+ * ```
+ */
+export function definePreferenceOptions(
+  name: string,
+  provider: () =>
+    | Array<{ value: string; label: string }>
+    | Promise<Array<{ value: string; label: string }>>
+): void {
+  getContext().definePreferenceOptions(name, provider);
+}

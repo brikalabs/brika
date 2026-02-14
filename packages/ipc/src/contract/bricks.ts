@@ -40,7 +40,7 @@ export const registerBrickType = message(
   'registerBrickType',
   z.object({
     brickType: BrickTypeDefinition,
-  }),
+  })
 );
 
 /** Plugin sends incremental mutations to an instance's body */
@@ -51,7 +51,7 @@ export const patchBrickInstance = message(
     instanceId: z.string(),
     /** Reconciler mutations (create/update/remove) */
     mutations: z.array(z.unknown()),
-  }),
+  })
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -67,7 +67,7 @@ export const mountBrickInstance = message(
     w: z.number(),
     h: z.number(),
     config: z.record(z.string(), z.unknown()),
-  }),
+  })
 );
 
 /** Hub tells plugin to resize an existing instance (no remount) */
@@ -77,7 +77,7 @@ export const resizeBrickInstance = message(
     instanceId: z.string(),
     w: z.number(),
     h: z.number(),
-  }),
+  })
 );
 
 /** Hub pushes updated config to a running instance (no remount) */
@@ -86,7 +86,7 @@ export const updateBrickConfig = message(
   z.object({
     instanceId: z.string(),
     config: z.record(z.string(), z.unknown()),
-  }),
+  })
 );
 
 /** Hub tells plugin to stop rendering an instance */
@@ -94,7 +94,7 @@ export const unmountBrickInstance = message(
   'unmountBrickInstance',
   z.object({
     instanceId: z.string(),
-  }),
+  })
 );
 
 /** Hub sends a user interaction event to a specific instance */
@@ -105,5 +105,5 @@ export const brickInstanceAction = message(
     brickTypeId: z.string(),
     actionId: z.string(),
     payload: Json.optional(),
-  }),
+  })
 );

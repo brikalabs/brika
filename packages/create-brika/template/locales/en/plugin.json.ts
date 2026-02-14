@@ -1,6 +1,6 @@
 import type { TemplateData } from '../../../src/render';
 
-export default (data: TemplateData): string => {
+export default function template(data: TemplateData): string {
   const locale: Record<string, unknown> = {
     name: data.pascal,
     description: data.description,
@@ -18,4 +18,4 @@ export default (data: TemplateData): string => {
   }
 
   return JSON.stringify(locale, null, 2) + '\n';
-};
+}

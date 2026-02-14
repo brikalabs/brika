@@ -113,12 +113,24 @@ export function createSpotifyApi(oauth: OAuthClient) {
       };
     },
 
-    async play(): Promise<void> {
-      await api('/me/player/play', { method: 'PUT' });
+    async play(deviceId?: string, contextUri?: string): Promise<void> {
+      const qs = deviceId ? `?device_id=${deviceId}` : '';
+      const body = contextUri
+        ? JSON.stringify(
+            contextUri.includes(':track:')
+              ? { uris: [contextUri] }
+              : { context_uri: contextUri },
+          )
+        : undefined;
+      await api(`/me/player/play${qs}`, {
+        method: 'PUT',
+        ...(body && { headers: { 'Content-Type': 'application/json' }, body }),
+      });
     },
 
-    async pause(): Promise<void> {
-      await api('/me/player/pause', { method: 'PUT' });
+    async pause(deviceId?: string): Promise<void> {
+      const qs = deviceId ? `?device_id=${deviceId}` : '';
+      await api(`/me/player/pause${qs}`, { method: 'PUT' });
     },
 
     async next(): Promise<void> {
@@ -137,6 +149,25 @@ export function createSpotifyApi(oauth: OAuthClient) {
     async setVolume(percent: number): Promise<void> {
       const vol = Math.round(Math.max(0, Math.min(100, percent)));
       await api(`/me/player/volume?volume_percent=${vol}`, { method: 'PUT' });
+    },
+
+    async transferPlayback(deviceId: string): Promise<void> {
+      await api('/me/player', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ device_ids: [deviceId], play: true }),
+      });
+    },
+
+    async getRecentlyPlayed(): Promise<string | null> {
+      const data = await api<{
+        items: Array<{
+          context?: { uri: string };
+          track: { uri: string };
+        }>;
+      }>('/me/player/recently-played?limit=1');
+      if (!data?.items?.[0]) return null;
+      return data.items[0].context?.uri ?? data.items[0].track.uri;
     },
 
     async getDevices(): Promise<SpotifyDevice[]> {

@@ -10,6 +10,8 @@ const SSE_HEADERS = {
 };
 
 const encoder = new TextEncoder();
+const HEARTBEAT_INTERVAL = 30_000;
+const heartbeatFrame = encoder.encode(': heartbeat\n\n');
 
 function createSSESender(controller: ReadableStreamDefaultController<Uint8Array>) {
   return (data: unknown, event?: string) => {
@@ -48,12 +50,14 @@ export function createSSEStream(
   setup: (send: (data: unknown, event?: string) => void, close: () => void) => (() => void) | void
 ): Response {
   let cleanup: (() => void) | void;
+  let heartbeat: ReturnType<typeof setInterval> | undefined;
 
   const stream = new ReadableStream({
     start(controller) {
       const send = createSSESender(controller);
 
       const close = () => {
+        clearInterval(heartbeat);
         try {
           controller.close();
         } catch {
@@ -62,8 +66,18 @@ export function createSSEStream(
       };
 
       cleanup = setup(send, close);
+
+      heartbeat = setInterval(() => {
+        try {
+          controller.enqueue(heartbeatFrame);
+        } catch {
+          clearInterval(heartbeat);
+          cleanup?.();
+        }
+      }, HEARTBEAT_INTERVAL);
     },
     cancel() {
+      clearInterval(heartbeat);
       cleanup?.();
     },
   });

@@ -5,7 +5,7 @@
  */
 
 import { z } from 'zod';
-import { message } from '../define';
+import { message, rpc } from '../define';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Schemas
@@ -68,4 +68,11 @@ export const updatePreference = message(
     key: z.string(),
     value: z.unknown(),
   })
+);
+
+/** Hub asks plugin for dynamic preference options */
+export const preferenceOptions = rpc(
+  'preferenceOptions',
+  z.object({ name: z.string() }),
+  z.object({ options: z.array(z.object({ value: z.string(), label: z.string() })) })
 );

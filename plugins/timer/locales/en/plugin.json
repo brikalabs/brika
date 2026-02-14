@@ -19,6 +19,67 @@
       "description": "Clear all active timers at once"
     }
   },
+  "bricks": {
+    "timers-dashboard": {
+      "name": "Timers Dashboard",
+      "description": "Overview of active timers and countdowns",
+      "config": {
+        "refreshInterval": {
+          "label": "Refresh Interval (ms)",
+          "description": "How often to update uptime"
+        }
+      }
+    },
+    "photo": {
+      "name": "Photo",
+      "description": "Photo showcase with auto-rotation",
+      "config": {
+        "autoRotate": {
+          "label": "Auto-rotate",
+          "description": "Automatically cycle through photos"
+        },
+        "interval": {
+          "label": "Interval (ms)",
+          "description": "Time between photo changes"
+        }
+      }
+    },
+    "weather": {
+      "name": "Weather",
+      "description": "Simulated weather display",
+      "config": {
+        "unit": {
+          "label": "Temperature Unit",
+          "options": {
+            "celsius": "Celsius",
+            "fahrenheit": "Fahrenheit"
+          }
+        },
+        "refreshInterval": {
+          "label": "Refresh Interval (ms)",
+          "description": "How often to update weather data"
+        }
+      }
+    },
+    "camera": {
+      "name": "Live Video",
+      "description": "HLS video stream with controls",
+      "config": {
+        "defaultStream": {
+          "label": "Default Stream",
+          "options": {
+            "Big Buck Bunny": "Big Buck Bunny",
+            "Elephants Dream": "Elephants Dream",
+            "Sintel": "Sintel"
+          }
+        },
+        "muted": {
+          "label": "Muted by default",
+          "description": "Start the stream muted"
+        }
+      }
+    }
+  },
   "events": {
     "completed": "Timer completed",
     "cancelled": "Timer cancelled"
@@ -35,6 +96,24 @@
     "target": {
       "label": "Target",
       "description": "Timer ID or name to cancel"
+    }
+  },
+  "sparks": {
+    "timer-started": {
+      "name": "Timer Started",
+      "description": "Emitted when a timer begins"
+    },
+    "timer-completed": {
+      "name": "Timer Completed",
+      "description": "Emitted when a timer finishes"
+    },
+    "countdown-tick": {
+      "name": "Countdown Tick",
+      "description": "Emitted on each countdown progress tick"
+    },
+    "countdown-completed": {
+      "name": "Countdown Completed",
+      "description": "Emitted when a countdown finishes"
     }
   }
 }

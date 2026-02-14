@@ -10,9 +10,9 @@
  *   bunx create-brika my-plugin
  */
 
+import { parseArgs } from 'node:util';
 import * as p from '@clack/prompts';
 import pc from 'picocolors';
-import { parseArgs } from 'node:util';
 import { promptForConfig } from './prompts';
 import { scaffold } from './scaffold';
 

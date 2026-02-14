@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from 'bun:
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { parseCondition, render, resolveFilename } from '../render';
-import { type ScaffoldOptions, createTemplateData, scaffold } from '../scaffold';
+import { createTemplateData, type ScaffoldOptions, scaffold } from '../scaffold';
 
 // Mock @clack/prompts
 const mockSpinner = {
@@ -163,7 +163,9 @@ describe('scaffold', () => {
   test('creates package.json with correct name', async () => {
     await scaffold(defaultOptions);
 
-    const pkg = JSON.parse(await fs.readFile(path.join(testDir, 'test-plugin', 'package.json'), 'utf-8'));
+    const pkg = JSON.parse(
+      await fs.readFile(path.join(testDir, 'test-plugin', 'package.json'), 'utf-8')
+    );
     expect(pkg.name).toBe('@brika/plugin-test-plugin');
   });
 
@@ -194,7 +196,9 @@ describe('scaffold', () => {
 
   test('handles npm fetch error', async () => {
     fetchSpy.mockResolvedValueOnce(new Response('Not found', { status: 404 }));
-    await expect(scaffold(defaultOptions)).rejects.toThrow('Failed to fetch @brika/sdk version: 404');
+    await expect(scaffold(defaultOptions)).rejects.toThrow(
+      'Failed to fetch @brika/sdk version: 404'
+    );
   });
 
   // ─── Spinner / summary ────────────────────────────────────────────
@@ -225,7 +229,10 @@ describe('scaffold', () => {
 
   test('uses correct template variables for plugin name with hyphens', async () => {
     await scaffold({ ...defaultOptions, name: 'my-awesome-plugin' });
-    const content = await fs.readFile(path.join(testDir, 'my-awesome-plugin', 'package.json'), 'utf-8');
+    const content = await fs.readFile(
+      path.join(testDir, 'my-awesome-plugin', 'package.json'),
+      'utf-8'
+    );
     expect(content).toContain('@brika/plugin-my-awesome-plugin');
   });
 
@@ -234,7 +241,9 @@ describe('scaffold', () => {
   test('blocks-only: package.json has blocks, no bricks', async () => {
     await scaffold(defaultOptions);
 
-    const pkg = JSON.parse(await fs.readFile(path.join(testDir, 'test-plugin', 'package.json'), 'utf-8'));
+    const pkg = JSON.parse(
+      await fs.readFile(path.join(testDir, 'test-plugin', 'package.json'), 'utf-8')
+    );
     expect(pkg.blocks).toBeDefined();
     expect(pkg.blocks[0].id).toBe('test-plugin');
     expect(pkg.bricks).toBeUndefined();
@@ -243,13 +252,22 @@ describe('scaffold', () => {
   });
 
   test('bricks-only: JSX-enabled tsconfig', async () => {
-    await scaffold({ ...defaultOptions, name: 'test-brick', features: ['bricks'], category: 'general' });
+    await scaffold({
+      ...defaultOptions,
+      name: 'test-brick',
+      features: ['bricks'],
+      category: 'general',
+    });
 
-    const tsconfig = JSON.parse(await fs.readFile(path.join(testDir, 'test-brick', 'tsconfig.json'), 'utf-8'));
+    const tsconfig = JSON.parse(
+      await fs.readFile(path.join(testDir, 'test-brick', 'tsconfig.json'), 'utf-8')
+    );
     expect(tsconfig.compilerOptions.jsx).toBe('react-jsx');
     expect(tsconfig.compilerOptions.jsxImportSource).toBe('@brika/ui-kit');
 
-    const pkg = JSON.parse(await fs.readFile(path.join(testDir, 'test-brick', 'package.json'), 'utf-8'));
+    const pkg = JSON.parse(
+      await fs.readFile(path.join(testDir, 'test-brick', 'package.json'), 'utf-8')
+    );
     expect(pkg.bricks).toBeDefined();
     expect(pkg.bricks[0].id).toBe('test-brick');
     expect(pkg.blocks).toBeUndefined();
@@ -257,18 +275,32 @@ describe('scaffold', () => {
   });
 
   test('bricks-only: creates brick component file', async () => {
-    await scaffold({ ...defaultOptions, name: 'test-brick', features: ['bricks'], category: 'general' });
+    await scaffold({
+      ...defaultOptions,
+      name: 'test-brick',
+      features: ['bricks'],
+      category: 'general',
+    });
 
-    const content = await fs.readFile(path.join(testDir, 'test-brick', 'src', 'bricks', 'dashboard.tsx'), 'utf-8');
+    const content = await fs.readFile(
+      path.join(testDir, 'test-brick', 'src', 'bricks', 'dashboard.tsx'),
+      'utf-8'
+    );
     expect(content).toContain('defineBrick');
     expect(content).toContain('useBrickSize');
     expect(content).toContain('testBrickBrick');
   });
 
   test('all features: package.json has blocks, bricks, and sparks', async () => {
-    await scaffold({ ...defaultOptions, name: 'test-all', features: ['blocks', 'bricks', 'sparks'] });
+    await scaffold({
+      ...defaultOptions,
+      name: 'test-all',
+      features: ['blocks', 'bricks', 'sparks'],
+    });
 
-    const pkg = JSON.parse(await fs.readFile(path.join(testDir, 'test-all', 'package.json'), 'utf-8'));
+    const pkg = JSON.parse(
+      await fs.readFile(path.join(testDir, 'test-all', 'package.json'), 'utf-8')
+    );
     expect(pkg.blocks).toBeDefined();
     expect(pkg.bricks).toBeDefined();
     expect(pkg.sparks).toBeDefined();
@@ -276,9 +308,16 @@ describe('scaffold', () => {
   });
 
   test('sparks-only: package.json has sparks, no blocks or bricks', async () => {
-    await scaffold({ ...defaultOptions, name: 'test-spark', features: ['sparks'], category: 'general' });
+    await scaffold({
+      ...defaultOptions,
+      name: 'test-spark',
+      features: ['sparks'],
+      category: 'general',
+    });
 
-    const pkg = JSON.parse(await fs.readFile(path.join(testDir, 'test-spark', 'package.json'), 'utf-8'));
+    const pkg = JSON.parse(
+      await fs.readFile(path.join(testDir, 'test-spark', 'package.json'), 'utf-8')
+    );
     expect(pkg.sparks).toBeDefined();
     expect(pkg.blocks).toBeUndefined();
     expect(pkg.bricks).toBeUndefined();
@@ -297,15 +336,26 @@ describe('scaffold', () => {
   test('blocks-only: creates block file in blocks/ directory', async () => {
     await scaffold(defaultOptions);
 
-    const content = await fs.readFile(path.join(testDir, 'test-plugin', 'src', 'blocks', 'test-plugin.ts'), 'utf-8');
+    const content = await fs.readFile(
+      path.join(testDir, 'test-plugin', 'src', 'blocks', 'test-plugin.ts'),
+      'utf-8'
+    );
     expect(content).toContain('defineReactiveBlock');
     expect(content).toContain('testPlugin');
   });
 
   test('sparks-only: creates spark file in sparks/ directory', async () => {
-    await scaffold({ ...defaultOptions, name: 'test-spark', features: ['sparks'], category: 'general' });
+    await scaffold({
+      ...defaultOptions,
+      name: 'test-spark',
+      features: ['sparks'],
+      category: 'general',
+    });
 
-    const content = await fs.readFile(path.join(testDir, 'test-spark', 'src', 'sparks', 'test-spark.ts'), 'utf-8');
+    const content = await fs.readFile(
+      path.join(testDir, 'test-spark', 'src', 'sparks', 'test-spark.ts'),
+      'utf-8'
+    );
     expect(content).toContain('defineSpark');
     expect(content).toContain('testSparkSpark');
   });
@@ -321,7 +371,9 @@ describe('scaffold', () => {
   test('blocks-only: no jsx in tsconfig', async () => {
     await scaffold(defaultOptions);
 
-    const tsconfig = JSON.parse(await fs.readFile(path.join(testDir, 'test-plugin', 'tsconfig.json'), 'utf-8'));
+    const tsconfig = JSON.parse(
+      await fs.readFile(path.join(testDir, 'test-plugin', 'tsconfig.json'), 'utf-8')
+    );
     expect(tsconfig.compilerOptions.jsx).toBeUndefined();
   });
 
@@ -329,7 +381,11 @@ describe('scaffold', () => {
     await scaffold(defaultOptions);
 
     const base = path.join(testDir, 'test-plugin', 'src');
-    const exists = async (dir: string) => fs.access(path.join(base, dir)).then(() => true).catch(() => false);
+    const exists = async (dir: string) =>
+      fs
+        .access(path.join(base, dir))
+        .then(() => true)
+        .catch(() => false);
     expect(await exists('blocks')).toBe(true);
     expect(await exists('bricks')).toBe(false);
     expect(await exists('sparks')).toBe(false);
@@ -341,8 +397,14 @@ describe('scaffold', () => {
 describe('createTemplateData', () => {
   test('creates all required template data', () => {
     const data = createTemplateData(
-      { name: 'my-plugin', description: 'My plugin', features: ['blocks'], category: 'trigger', author: 'John' },
-      '2.0.0',
+      {
+        name: 'my-plugin',
+        description: 'My plugin',
+        features: ['blocks'],
+        category: 'trigger',
+        author: 'John',
+      },
+      '2.0.0'
     );
 
     expect(data).toEqual({
@@ -363,8 +425,14 @@ describe('createTemplateData', () => {
 
   test('handles multi-hyphen plugin names', () => {
     const data = createTemplateData(
-      { name: 'my-awesome-plugin', description: 'Test', features: ['blocks'], category: 'action', author: 'A' },
-      '1.0.0',
+      {
+        name: 'my-awesome-plugin',
+        description: 'Test',
+        features: ['blocks'],
+        category: 'action',
+        author: 'A',
+      },
+      '1.0.0'
     );
     expect(data.pascal).toBe('MyAwesomePlugin');
     expect(data.camel).toBe('myAwesomePlugin');
@@ -372,8 +440,14 @@ describe('createTemplateData', () => {
 
   test('handles single word plugin names', () => {
     const data = createTemplateData(
-      { name: 'timer', description: 'Timer', features: ['blocks'], category: 'trigger', author: 'A' },
-      '1.0.0',
+      {
+        name: 'timer',
+        description: 'Timer',
+        features: ['blocks'],
+        category: 'trigger',
+        author: 'A',
+      },
+      '1.0.0'
     );
     expect(data.pascal).toBe('Timer');
     expect(data.camel).toBe('timer');

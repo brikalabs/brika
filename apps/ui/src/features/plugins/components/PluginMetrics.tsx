@@ -1,13 +1,15 @@
 import { Cpu, MemoryStick } from 'lucide-react';
 import { Avatar, AvatarFallback, Card } from '@/components/ui';
 import { MetricsChart } from '@/components/ui/chart';
+import { useLocale } from '@/lib/use-locale';
 import type { PluginMetrics as PluginMetricsType } from '../api';
 
 interface PluginMetricsProps {
   metrics: PluginMetricsType | undefined;
 }
 
-export function PluginMetrics({ metrics }: PluginMetricsProps) {
+export function PluginMetrics({ metrics }: Readonly<PluginMetricsProps>) {
+  const { t } = useLocale();
   return (
     <div className="grid gap-4 md:grid-cols-2">
       <Card accent="emerald" className="p-5">
@@ -20,7 +22,7 @@ export function PluginMetrics({ metrics }: PluginMetricsProps) {
           <div className="font-bold text-2xl tracking-tight">
             {metrics?.current?.cpu.toFixed(1) ?? '-'}%
           </div>
-          <div className="mt-1 text-muted-foreground text-sm">CPU</div>
+          <div className="mt-1 text-muted-foreground text-sm">{t('plugins:details.cpu')}</div>
           <MetricsChart
             data={metrics?.history?.map((h) => ({ ts: h.ts, value: h.cpu })) ?? []}
             color="oklch(0.765 0.177 163.223)"
@@ -40,7 +42,7 @@ export function PluginMetrics({ metrics }: PluginMetricsProps) {
           <div className="font-bold text-2xl tracking-tight">
             {metrics?.current ? formatBytes(metrics.current.memory) : '-'}
           </div>
-          <div className="mt-1 text-muted-foreground text-sm">Memory</div>
+          <div className="mt-1 text-muted-foreground text-sm">{t('plugins:details.memory')}</div>
           <MetricsChart
             data={metrics?.history?.map((h) => ({ ts: h.ts, value: h.memory })) ?? []}
             color="oklch(0.714 0.203 305.504)"

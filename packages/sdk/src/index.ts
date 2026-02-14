@@ -110,7 +110,12 @@ export { onInit, onStop, onUninstall } from './api/lifecycle';
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type { PreferencesChangeHandler } from './api/preferences';
-export { getPreferences, onPreferencesChange } from './api/preferences';
+export {
+  definePreferenceOptions,
+  getPreferences,
+  onPreferencesChange,
+  setPreference,
+} from './api/preferences';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Routes

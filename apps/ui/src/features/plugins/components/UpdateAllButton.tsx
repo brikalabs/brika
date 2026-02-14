@@ -10,10 +10,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui';
+import { useLocale } from '@/lib/use-locale';
 import { pluginsKeys } from '../api';
 import { type OperationProgress, registryApi, registryKeys } from '../registry-api';
 import { UpdateListPreview } from './UpdateListPreview';
-import { useLocale } from '@/lib/use-locale';
 import { UpdateProgressSection } from './UpdateProgressSection';
 
 export function UpdateAllButton() {

@@ -7,6 +7,7 @@
  */
 
 import {
+  preferenceOptions as preferenceOptionsRpc,
   preferences as preferencesMsg,
   uninstall as uninstallMsg,
   updatePreference as updatePreferenceMsg,
@@ -20,6 +21,12 @@ type StopHandler = () => void | Promise<void>;
 type UninstallHandler = () => void | Promise<void>;
 type PreferencesChangeHandler = (preferences: Record<string, unknown>) => void;
 
+export interface PreferenceOption {
+  value: string;
+  label: string;
+}
+type PreferenceOptionsProvider = () => PreferenceOption[] | Promise<PreferenceOption[]>;
+
 // ─── Setup ────────────────────────────────────────────────────────────────────
 
 export function setupLifecycle(core: ContextCore) {
@@ -28,6 +35,7 @@ export function setupLifecycle(core: ContextCore) {
   const stopHandlers = new Set<StopHandler>();
   const uninstallHandlers = new Set<UninstallHandler>();
   const preferencesChangeHandlers = new Set<PreferencesChangeHandler>();
+  const prefOptionsProviders = new Map<string, PreferenceOptionsProvider>();
   let preferences: Record<string, unknown> = {};
   let initialized = false;
 
@@ -63,6 +71,17 @@ export function setupLifecycle(core: ContextCore) {
       } catch (e) {
         core.log('error', `Uninstall handler error: ${e}`);
       }
+    }
+  });
+
+  client.implement(preferenceOptionsRpc, async ({ name }) => {
+    const provider = prefOptionsProviders.get(name);
+    if (!provider) return { options: [] };
+    try {
+      return { options: await provider() };
+    } catch (e) {
+      core.log('error', `Preference options provider error for "${name}": ${e}`);
+      return { options: [] };
     }
   });
 
@@ -108,6 +127,10 @@ export function setupLifecycle(core: ContextCore) {
       updatePreference(key: string, value: unknown): void {
         preferences[key] = value;
         client.send(updatePreferenceMsg, { key, value });
+      },
+
+      definePreferenceOptions(name: string, provider: PreferenceOptionsProvider): void {
+        prefOptionsProviders.set(name, provider);
       },
     },
 

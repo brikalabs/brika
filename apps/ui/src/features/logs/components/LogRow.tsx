@@ -64,8 +64,8 @@ export function LogRow({ log }: Readonly<LogRowProps>) {
   const hasMetadata = log.meta && Object.keys(log.meta).length > 0;
   const isExpandable = hasError || hasMetadata;
 
-  const sourceFile = log.meta?.sourceFile ? String(log.meta.sourceFile) : null;
-  const sourceLine = log.meta?.sourceLine ? Number(log.meta.sourceLine) : null;
+  const sourceFile = log.meta?.sourceFile != null ? String(log.meta.sourceFile) : null;
+  const sourceLine = log.meta?.sourceLine != null ? Number(log.meta.sourceLine) : null;
   const generalMeta = extractGeneralMeta(log.meta);
   const hasGeneralMeta = generalMeta && Object.keys(generalMeta).length > 0;
 
@@ -79,7 +79,7 @@ export function LogRow({ log }: Readonly<LogRowProps>) {
       {isExpandable ? (
         <button
           type="button"
-          className="flex w-full items-start gap-3 cursor-pointer bg-transparent border-none p-0 text-left font-inherit text-inherit"
+          className="flex w-full cursor-pointer items-start gap-3 border-none bg-transparent p-0 text-left font-inherit text-inherit"
           onClick={() => setIsExpanded(!isExpanded)}
         >
           <div className="flex w-4 shrink-0 items-center justify-center">

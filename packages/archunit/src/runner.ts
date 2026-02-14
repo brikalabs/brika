@@ -1,40 +1,7 @@
 import { Glob } from 'bun';
 import chalk from 'chalk';
-import type {
-  ArchConfig,
-  ArchResult,
-  Buildable,
-  Rule,
-  RuleContext,
-  RuleInput,
-  Violation,
-} from './types';
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Rule Normalization
-// ─────────────────────────────────────────────────────────────────────────────
-
-function isBuildable(input: RuleInput): input is Buildable {
-  return typeof input === 'object' && 'build' in input && typeof input.build === 'function';
-}
-
-function isRule(input: RuleInput): input is Rule {
-  return typeof input === 'object' && 'check' in input && typeof input.check === 'function';
-}
-
-function normalizeRules(inputs: RuleInput[]): Rule[] {
-  const rules: Rule[] = [];
-  for (const input of inputs) {
-    if (Array.isArray(input)) {
-      rules.push(...normalizeRules(input));
-    } else if (isBuildable(input)) {
-      rules.push(input.build());
-    } else if (isRule(input)) {
-      rules.push(input);
-    }
-  }
-  return rules;
-}
+import { normalizeRules } from './normalize';
+import type { ArchConfig, ArchResult, Rule, RuleContext, RuleInput, Violation } from './types';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Context

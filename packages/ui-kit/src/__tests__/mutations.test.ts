@@ -3,7 +3,8 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import type { BoxNode, ButtonNode, ComponentNode, Mutation, StackNode, TextNode } from '../descriptors';
+import { MUT } from '../descriptors';
+import type { BoxNode, ButtonNode, ColumnNode, ComponentNode, Mutation, TextNode } from '../index';
 import { applyMutations } from '../mutations';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -12,7 +13,7 @@ import { applyMutations } from '../mutations';
 
 const text = (content: string): TextNode => ({ type: 'text', content });
 
-const stack = (children: ComponentNode[]): StackNode => ({ type: 'stack', direction: 'vertical', children });
+const column = (children: ComponentNode[]): ColumnNode => ({ type: 'column', children });
 
 /** Extract children from a container node at a given index in the result array. */
 function childrenAt(nodes: ComponentNode[], index: number): ComponentNode[] {
@@ -29,9 +30,7 @@ describe('applyMutations', () => {
   describe('create', () => {
     test('appends node when index >= length', () => {
       const body = [text('A')];
-      const result = applyMutations(body, [
-        { op: 'create', path: '1', node: text('B') },
-      ]);
+      const result = applyMutations(body, [[MUT.CREATE, '1', text('B')]]);
 
       expect(result).toHaveLength(2);
       expect(result[1]).toHaveProperty('content', 'B');
@@ -39,9 +38,7 @@ describe('applyMutations', () => {
 
     test('inserts node at index', () => {
       const body = [text('A'), text('C')];
-      const result = applyMutations(body, [
-        { op: 'create', path: '1', node: text('B') },
-      ]);
+      const result = applyMutations(body, [[MUT.CREATE, '1', text('B')]]);
 
       expect(result).toHaveLength(3);
       expect(result[0]).toHaveProperty('content', 'A');
@@ -51,9 +48,7 @@ describe('applyMutations', () => {
 
     test('inserts at beginning', () => {
       const body = [text('B')];
-      const result = applyMutations(body, [
-        { op: 'create', path: '0', node: text('A') },
-      ]);
+      const result = applyMutations(body, [[MUT.CREATE, '0', text('A')]]);
 
       expect(result).toHaveLength(2);
       expect(result[0]).toHaveProperty('content', 'A');
@@ -65,9 +60,7 @@ describe('applyMutations', () => {
     test('replaces node at index in-place', () => {
       const button: ButtonNode = { type: 'button', label: 'Click' };
       const body = [text('A'), text('B')];
-      const result = applyMutations(body, [
-        { op: 'replace', path: '0', node: button },
-      ]);
+      const result = applyMutations(body, [[MUT.REPLACE, '0', button]]);
 
       expect(result).toHaveLength(2);
       expect(result[0]).toBe(button);
@@ -78,9 +71,7 @@ describe('applyMutations', () => {
   describe('update', () => {
     test('merges props into existing node', () => {
       const body = [text('Hello')];
-      const result = applyMutations(body, [
-        { op: 'update', path: '0', props: { content: 'Updated' } },
-      ]);
+      const result = applyMutations(body, [[MUT.UPDATE, '0', { content: 'Updated' }]]);
 
       expect(result[0]).toHaveProperty('content', 'Updated');
       expect(result[0]).toHaveProperty('type', 'text');
@@ -88,9 +79,7 @@ describe('applyMutations', () => {
 
     test('adds new props without removing existing ones', () => {
       const body = [text('Hello')];
-      const result = applyMutations(body, [
-        { op: 'update', path: '0', props: { variant: 'heading' } },
-      ]);
+      const result = applyMutations(body, [[MUT.UPDATE, '0', { variant: 'heading' }]]);
 
       expect(result[0]).toHaveProperty('content', 'Hello');
       expect(result[0]).toHaveProperty('variant', 'heading');
@@ -98,9 +87,7 @@ describe('applyMutations', () => {
 
     test('removes props listed in removed array', () => {
       const box: BoxNode = { type: 'box', blur: 'sm', padding: 'lg', children: [] };
-      const result = applyMutations([box], [
-        { op: 'update', path: '0', props: {}, removed: ['blur'] },
-      ]);
+      const result = applyMutations([box], [[MUT.UPDATE, '0', {}, ['blur']]]);
 
       expect(result[0]).not.toHaveProperty('blur');
       expect(result[0]).toHaveProperty('padding', 'lg');
@@ -108,9 +95,7 @@ describe('applyMutations', () => {
 
     test('preserves null as a legitimate prop value', () => {
       const body = [text('Hello')];
-      const result = applyMutations(body, [
-        { op: 'update', path: '0', props: { color: null } },
-      ]);
+      const result = applyMutations(body, [[MUT.UPDATE, '0', { color: null }]]);
 
       expect(result[0]).toHaveProperty('color', null);
     });
@@ -119,9 +104,7 @@ describe('applyMutations', () => {
   describe('remove', () => {
     test('removes node at index', () => {
       const body = [text('A'), text('B'), text('C')];
-      const result = applyMutations(body, [
-        { op: 'remove', path: '1' },
-      ]);
+      const result = applyMutations(body, [[MUT.REMOVE, '1']]);
 
       expect(result).toHaveLength(2);
       expect(result[0]).toHaveProperty('content', 'A');
@@ -130,9 +113,7 @@ describe('applyMutations', () => {
 
     test('removes first node', () => {
       const body = [text('A'), text('B')];
-      const result = applyMutations(body, [
-        { op: 'remove', path: '0' },
-      ]);
+      const result = applyMutations(body, [[MUT.REMOVE, '0']]);
 
       expect(result).toHaveLength(1);
       expect(result[0]).toHaveProperty('content', 'B');
@@ -141,20 +122,16 @@ describe('applyMutations', () => {
 
   describe('nested paths', () => {
     test('updates a nested child', () => {
-      const body = [stack([text('inner')])];
-      const result = applyMutations(body, [
-        { op: 'update', path: '0.0', props: { content: 'updated-inner' } },
-      ]);
+      const body = [column([text('inner')])];
+      const result = applyMutations(body, [[MUT.UPDATE, '0.0', { content: 'updated-inner' }]]);
 
       const children = childrenAt(result, 0);
       expect(children[0]).toHaveProperty('content', 'updated-inner');
     });
 
     test('creates a nested child', () => {
-      const body = [stack([text('first')])];
-      const result = applyMutations(body, [
-        { op: 'create', path: '0.1', node: text('second') },
-      ]);
+      const body = [column([text('first')])];
+      const result = applyMutations(body, [[MUT.CREATE, '0.1', text('second')]]);
 
       const children = childrenAt(result, 0);
       expect(children).toHaveLength(2);
@@ -162,10 +139,8 @@ describe('applyMutations', () => {
     });
 
     test('removes a nested child', () => {
-      const body = [stack([text('A'), text('B')])];
-      const result = applyMutations(body, [
-        { op: 'remove', path: '0.0' },
-      ]);
+      const body = [column([text('A'), text('B')])];
+      const result = applyMutations(body, [[MUT.REMOVE, '0.0']]);
 
       const children = childrenAt(result, 0);
       expect(children).toHaveLength(1);
@@ -179,9 +154,7 @@ describe('applyMutations', () => {
       const b = text('B');
       const body = [a, b];
 
-      const result = applyMutations(body, [
-        { op: 'update', path: '0', props: { content: 'A2' } },
-      ]);
+      const result = applyMutations(body, [[MUT.UPDATE, '0', { content: 'A2' }]]);
 
       // Updated node is a new reference
       expect(result[0]).not.toBe(a);
@@ -192,11 +165,9 @@ describe('applyMutations', () => {
     test('parent is new reference but sibling subtrees are shared', () => {
       const child0 = text('unchanged');
       const child1 = text('will-change');
-      const body = [stack([child0, child1])];
+      const body = [column([child0, child1])];
 
-      const result = applyMutations(body, [
-        { op: 'update', path: '0.1', props: { content: 'changed' } },
-      ]);
+      const result = applyMutations(body, [[MUT.UPDATE, '0.1', { content: 'changed' }]]);
 
       // Parent container is a new reference
       expect(result[0]).not.toBe(body[0]);
@@ -209,9 +180,9 @@ describe('applyMutations', () => {
     test('applies multiple mutations in sequence', () => {
       const body = [text('A')];
       const mutations: Mutation[] = [
-        { op: 'create', path: '1', node: text('B') },
-        { op: 'create', path: '2', node: text('C') },
-        { op: 'update', path: '0', props: { content: 'A2' } },
+        [MUT.CREATE, '1', text('B')],
+        [MUT.CREATE, '2', text('C')],
+        [MUT.UPDATE, '0', { content: 'A2' }],
       ];
 
       const result = applyMutations(body, mutations);
@@ -233,9 +204,7 @@ describe('applyMutations', () => {
     test('returns nodes unchanged when targeting non-existent nested path on leaf', () => {
       const body = [text('leaf')];
       // text node has no children, so path "0.0" should return nodes unchanged
-      const result = applyMutations(body, [
-        { op: 'update', path: '0.0', props: { content: 'nope' } },
-      ]);
+      const result = applyMutations(body, [[MUT.UPDATE, '0.0', { content: 'nope' }]]);
       expect(result).toBe(body);
     });
   });

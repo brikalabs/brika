@@ -1,5 +1,6 @@
 import { inject, singleton } from '@brika/di';
 import { spawnPlugin } from '@brika/ipc';
+import type { LogLevelType } from '@brika/ipc/contract';
 import type { Plugin, PluginHealth } from '@brika/shared';
 import { PluginManagerConfig } from '@/runtime/config';
 import { PluginActions } from '@/runtime/events/actions';
@@ -196,7 +197,8 @@ export class PluginLifecycle {
           p.sendPreferences(prefs);
           this.#eventHandler.onPluginReady(p);
         },
-        onLog: (level, msg, meta) => this.#eventHandler.onPluginLog(pluginName, level, msg, meta),
+        onLog: (level, msg, meta) =>
+          this.#eventHandler.onPluginLog(pluginName, level as LogLevelType, msg, meta),
         onBlock: (block) => this.#eventHandler.registerBlock(metadata.name, block, metadata),
         onBlockEmit: (instanceId, port, data) =>
           this.#eventHandler.onBlockEmit(instanceId, port, data),
@@ -218,8 +220,7 @@ export class PluginLifecycle {
         },
         onBrickInstancePatch: (instanceId, mutations) =>
           this.#eventHandler.patchBrickInstance(instanceId, mutations),
-        onRoute: (method, path) =>
-          this.#eventHandler.registerRoute(metadata.name, method, path),
+        onRoute: (method, path) => this.#eventHandler.registerRoute(metadata.name, method, path),
         onUpdatePreference: (key, value) => {
           const current = this.#pluginConfig.getConfig(metadata.name);
           this.#pluginConfig.setConfig(metadata.name, { ...current, [key]: value });
@@ -331,6 +332,7 @@ export class PluginLifecycle {
     });
 
     this.#state.setHealth(process.name, 'crashed', 'heartbeat timeout');
+    this.#eventHandler.onPluginDisconnected(process.name);
     this.unload(process.name, true).then(() => {
       this.#attemptAutoRestart(process.name, 'heartbeat timeout');
     });
@@ -351,6 +353,7 @@ export class PluginLifecycle {
       { error }
     );
     this.#state.setHealth(name, 'crashed', reason);
+    this.#eventHandler.onPluginDisconnected(name);
 
     this.#events.dispatch(
       PluginActions.error.create({ uid: process.uid, name: process.name, error: reason }, 'hub')

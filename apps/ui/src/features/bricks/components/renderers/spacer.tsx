@@ -1,6 +1,5 @@
-import type { SpacerNode } from '@brika/ui-kit';
 import { cva } from 'class-variance-authority';
-import { memo } from 'react';
+import { defineRenderer } from './registry';
 
 const spacerVariants = cva('', {
   variants: {
@@ -12,7 +11,7 @@ const spacerVariants = cva('', {
   },
 });
 
-export const SpacerRenderer = memo(function SpacerRenderer({ node }: { node: SpacerNode }) {
+defineRenderer('spacer', ({ node }) => {
   if (node.size) {
     return <div className={spacerVariants({ size: node.size })} />;
   }

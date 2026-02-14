@@ -1,0 +1,44 @@
+version: "1"
+workspace:
+  id: workflow-mlme3sad
+  name: New Workflow
+  enabled: true
+plugins:
+  "@brika/blocks-builtin": 0.2.1
+  "@brika/plugin-spotify": 0.1.0
+blocks:
+  - id: spark-receiver-mlme3yi5-1
+    type: "@brika/blocks-builtin:spark-receiver"
+    position:
+      x: 248
+      y: 290
+    config:
+      sparkType: "@brika/plugin-example-echo:echoed"
+    outputs:
+      out: play-mlme4c1i-2:trigger
+  - id: play-mlme4c1i-2
+    type: "@brika/plugin-spotify:play"
+    position:
+      x: 234
+      y: 441
+    config:
+      contextUri: spotify:track:2Ms33RTRCT6gArrpcrPxmo
+    inputs:
+      trigger: spark-receiver-mlme3yi5-1:out
+    outputs:
+      started: end-mlme7v9e-3:in
+      error: end-mlme7ys4-4:in
+  - id: end-mlme7v9e-3
+    type: "@brika/blocks-builtin:end"
+    position:
+      x: 140
+      y: 576
+    inputs:
+      in: play-mlme4c1i-2:started
+  - id: end-mlme7ys4-4
+    type: "@brika/blocks-builtin:end"
+    position:
+      x: 389
+      y: 556
+    inputs:
+      in: play-mlme4c1i-2:error

@@ -445,10 +445,7 @@ schedules: []
       await loader.load();
 
       const pluginDir = join(TEST_DIR, 'nameless-plugin');
-      await Bun.write(
-        join(pluginDir, 'package.json'),
-        JSON.stringify({ version: '1.0.0' })
-      );
+      await Bun.write(join(pluginDir, 'package.json'), JSON.stringify({ version: '1.0.0' }));
 
       const result = await loader.resolvePluginEntry({
         name: 'fallback-name',

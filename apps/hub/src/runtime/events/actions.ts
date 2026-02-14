@@ -66,6 +66,10 @@ export const BrickActions = defineActions('brick', {
   instanceUnmounted: z.object({
     instanceId: z.string(),
   }),
+  pluginDisconnected: z.object({
+    pluginName: z.string(),
+    instanceIds: z.array(z.string()),
+  }),
 });
 
 export type BrickAction = ActionsUnion<typeof BrickActions>;
@@ -89,13 +93,20 @@ export const DashboardActions = defineActions('dashboard', {
   }),
   layoutChanged: z.object({
     dashboardId: z.string(),
-    layouts: z.array(z.object({
-      instanceId: z.string(),
-      x: z.number(),
-      y: z.number(),
-      w: z.number(),
-      h: z.number(),
-    })),
+    layouts: z.array(
+      z.object({
+        instanceId: z.string(),
+        x: z.number(),
+        y: z.number(),
+        w: z.number(),
+        h: z.number(),
+      })
+    ),
+  }),
+  brickLabelChanged: z.object({
+    dashboardId: z.string(),
+    instanceId: z.string(),
+    label: z.string().optional(),
   }),
   brickConfigChanged: z.object({
     dashboardId: z.string(),

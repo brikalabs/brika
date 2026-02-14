@@ -35,8 +35,8 @@ export const pluginRoutesHandler = group('/api/plugins', [
         pluginPath,
         extractQuery(url),
         extractHeaders(req, url, plugin.uid),
-        await extractBody(req),
+        await extractBody(req)
       );
-    },
+    }
   ),
 ]);

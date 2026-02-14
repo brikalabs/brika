@@ -59,7 +59,15 @@ export function scan<T, R>(fn: (acc: R, value: T) => R, seed: R): Operator<T, R>
 
 /** Debounce operator - wait for silence before emitting */
 export function debounce<T>(ms: number): Operator<T, T> {
-  function setup({ subscribe, push, setTimeout }: { subscribe: (fn: (v: T) => void) => void; push: (v: T) => void; setTimeout: (fn: () => void, ms: number) => Cleanup }) {
+  function setup({
+    subscribe,
+    push,
+    setTimeout,
+  }: {
+    subscribe: (fn: (v: T) => void) => void;
+    push: (v: T) => void;
+    setTimeout: (fn: () => void, ms: number) => Cleanup;
+  }) {
     let cancel: Cleanup | null = null;
     subscribe((v) => {
       cancel?.();
@@ -86,7 +94,15 @@ export function throttle<T>(ms: number): Operator<T, T> {
 
 /** Delay operator - delay each value by ms */
 export function delay<T>(ms: number): Operator<T, T> {
-  function setup({ subscribe, push, setTimeout }: { subscribe: (fn: (v: T) => void) => void; push: (v: T) => void; setTimeout: (fn: () => void, ms: number) => Cleanup }) {
+  function setup({
+    subscribe,
+    push,
+    setTimeout,
+  }: {
+    subscribe: (fn: (v: T) => void) => void;
+    push: (v: T) => void;
+    setTimeout: (fn: () => void, ms: number) => Cleanup;
+  }) {
     subscribe((v) => {
       setTimeout(() => push(v), ms);
     });
@@ -176,7 +192,13 @@ export function sample<T>(trigger: Flow<unknown>): Operator<T, T> {
 
 /** SwitchMap operator - switch to new flow on each value */
 export function switchMap<T, R>(fn: (value: T) => Flow<R>): Operator<T, R> {
-  function setup({ subscribe, push }: { subscribe: (fn: (v: T) => void) => void; push: (v: R) => void }) {
+  function setup({
+    subscribe,
+    push,
+  }: {
+    subscribe: (fn: (v: T) => void) => void;
+    push: (v: R) => void;
+  }) {
     let currentUnsub: Cleanup | null = null;
     subscribe((v) => {
       currentUnsub?.();
@@ -189,7 +211,13 @@ export function switchMap<T, R>(fn: (value: T) => Flow<R>): Operator<T, R> {
 
 /** FlatMap operator - flatten nested flows */
 export function flatMap<T, R>(fn: (value: T) => Flow<R>): Operator<T, R> {
-  function setup({ subscribe, push }: { subscribe: (fn: (v: T) => void) => void; push: (v: R) => void }) {
+  function setup({
+    subscribe,
+    push,
+  }: {
+    subscribe: (fn: (v: T) => void) => void;
+    push: (v: R) => void;
+  }) {
     subscribe((v) => {
       const inner = fn(v);
       inner.on((r) => push(r));

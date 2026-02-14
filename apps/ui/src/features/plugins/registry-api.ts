@@ -41,10 +41,7 @@ function parseSseLine(line: string): OperationProgress | null {
   }
 }
 
-function processChunk(
-  text: string,
-  onData: (data: OperationProgress) => void
-): void {
+function processChunk(text: string, onData: (data: OperationProgress) => void): void {
   for (const line of text.split('\n')) {
     const data = parseSseLine(line);
     if (data) onData(data);

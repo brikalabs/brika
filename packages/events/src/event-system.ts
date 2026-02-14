@@ -292,9 +292,10 @@ export class EventSystem {
     handler: (action: Action) => void | Promise<void>
   ): Unsubscribe {
     const patternList = Array.isArray(patterns) ? patterns : [patterns];
-    const regexes = patternList.map(
-      (p) => new RegExp(`^${p.replaceAll('.', String.raw`\.`).replaceAll('*', '.*')}$`)
-    );
+    const regexes = patternList.map((p) => {
+      const escaped = p.replaceAll('.', '\\.').replaceAll('*', '.*');
+      return new RegExp(`^${escaped}$`);
+    });
 
     const wrappedHandler: GlobalHandler = (action) => {
       if (regexes.some((r) => r.test(action.type))) {

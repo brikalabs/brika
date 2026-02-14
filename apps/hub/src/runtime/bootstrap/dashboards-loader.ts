@@ -17,9 +17,9 @@ export class DashboardsLoader implements Loader {
   private unsubTypeRegistered: (() => void) | null = null;
 
   async load(_config: BrikaConfig): Promise<void> {
-    // Mount instances when dashboards are loaded
+    // Mount instances when dashboards are hot-reloaded (only if actively viewed)
     this.dashboardLoader.onChange((id, action) => {
-      if (action === 'load') {
+      if (action === 'load' && this.dashboardService.hasActiveViewers(id)) {
         const dashboard = this.dashboardLoader.get(id);
         if (dashboard) this.dashboardService.mountDashboard(dashboard);
       }

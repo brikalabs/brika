@@ -1,7 +1,14 @@
 import type { Json } from '@brika/ipc';
 import type { PluginProcess } from '@/runtime/plugins/plugin-process';
 
-const FORWARDED_HEADERS = ['content-type', 'accept', 'authorization', 'user-agent', 'host', 'x-forwarded-proto'];
+const FORWARDED_HEADERS = [
+  'content-type',
+  'accept',
+  'authorization',
+  'user-agent',
+  'host',
+  'x-forwarded-proto',
+];
 
 /** Extract query params from a URL into a plain record. */
 export function extractQuery(url: URL): Record<string, string> {
@@ -32,7 +39,7 @@ export async function extractBody(req: Request): Promise<Json> {
   const ct = req.headers.get('content-type') ?? '';
   if (!ct.includes('application/json')) return undefined;
   try {
-    return await req.json();
+    return (await req.json()) as Json;
   } catch {
     return undefined;
   }
@@ -46,11 +53,12 @@ export async function proxyToPlugin(
   path: string,
   query: Record<string, string>,
   headers: Record<string, string>,
-  body?: Json,
+  body?: Json
 ): Promise<Response> {
   const result = await process.sendRouteRequest(routeId, method, path, query, headers, body);
 
-  const contentType = result.headers?.['Content-Type'] ?? result.headers?.['content-type'] ?? 'application/json';
+  const contentType =
+    result.headers?.['Content-Type'] ?? result.headers?.['content-type'] ?? 'application/json';
   let responseBody: string | null = null;
   if (result.body != null) {
     responseBody = typeof result.body === 'string' ? result.body : JSON.stringify(result.body);

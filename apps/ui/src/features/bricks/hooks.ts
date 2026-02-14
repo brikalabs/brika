@@ -21,13 +21,14 @@ export function useDashboards() {
   });
 }
 
-export function useLoadDashboard(dashboardId: string | null) {
+export function useLoadDashboard(dashboardId: string | undefined) {
   const setActiveDashboard = useDashboardStore((s) => s.setActiveDashboard);
 
   return useQuery({
     queryKey: dashboardKeys.detail(dashboardId ?? ''),
     queryFn: async () => {
-      const data = await dashboardsApi.get(dashboardId!);
+      if (!dashboardId) throw new Error('No dashboard ID');
+      const data = await dashboardsApi.get(dashboardId);
       setActiveDashboard(data);
       return data;
     },
@@ -169,6 +170,25 @@ export function useRemoveBrick() {
   });
 }
 
+export function useRenameBrick() {
+  return useMutation({
+    mutationFn: async ({
+      instanceId,
+      label,
+    }: {
+      instanceId: string;
+      label: string | undefined;
+    }) => {
+      const dashboardId = useDashboardStore.getState().activeDashboardId;
+      if (!dashboardId) throw new Error('No active dashboard');
+      return dashboardsApi.updateBrick(dashboardId, instanceId, { label: label ?? '' });
+    },
+    onSuccess: (_, { instanceId, label }) => {
+      useDashboardStore.getState().updateBrickLabel(instanceId, label);
+    },
+  });
+}
+
 export function useSaveLayout() {
   return useCallback(
     (layouts: Array<{ instanceId: string; x: number; y: number; w: number; h: number }>) => {
@@ -183,15 +203,25 @@ export function useSaveLayout() {
 
 // ─── SSE streams ───────────────────────────────────────────────────────────
 
-export function useBrickStream() {
-  useEffect(() => {
-    const es = new EventSource(getStreamUrl('/api/stream/bricks'));
+export function useDashboardSSE(dashboardId: string | undefined) {
+  const qc = useQueryClient();
 
-    es.addEventListener('brick', (ev: MessageEvent) => {
-      const event = JSON.parse(ev.data) as {
-        type: string;
-        payload: Record<string, unknown>;
-      };
+  useEffect(() => {
+    if (!dashboardId) return;
+
+    let aborted = false;
+    const es = new EventSource(getStreamUrl(`/api/dashboards/${dashboardId}/sse`));
+
+    es.addEventListener('dashboard', (ev: MessageEvent) => {
+      if (aborted) return;
+
+      let event: { type: string; payload: Record<string, unknown> };
+      try {
+        event = JSON.parse(ev.data);
+      } catch {
+        return;
+      }
+      const store = useDashboardStore.getState();
 
       switch (event.type) {
         case 'brick.snapshot': {
@@ -199,51 +229,30 @@ export function useBrickStream() {
             instanceId: string;
             body: ComponentNode[];
           }>;
-          useDashboardStore.getState().setBodiesBatch(instances.map((i) => [i.instanceId, i.body]));
+          store.setBodiesBatch(instances.map((i) => [i.instanceId, i.body]));
           break;
         }
         case 'brick.instancePatched': {
           const instanceId = event.payload.instanceId as string;
           const mutations = event.payload.mutations as Mutation[];
-          useDashboardStore.getState().patchInstance(instanceId, mutations);
+          store.clearDisconnected(instanceId);
+          store.patchInstance(instanceId, mutations);
           break;
         }
         case 'brick.instanceMounted': {
           const instanceId = event.payload.instanceId as string;
-          useDashboardStore.getState().setInstanceBody(instanceId, []);
+          store.setInstanceBody(instanceId, []);
           break;
         }
-      }
-    });
-
-    return () => es.close();
-  }, []);
-}
-
-export function useDashboardStream() {
-  const qc = useQueryClient();
-
-  useEffect(() => {
-    const es = new EventSource(getStreamUrl('/api/stream/dashboards'));
-
-    es.addEventListener('dashboard', (ev: MessageEvent) => {
-      const event = JSON.parse(ev.data) as {
-        type: string;
-        payload: Record<string, unknown>;
-      };
-
-      switch (event.type) {
-        case 'dashboard.created':
-        case 'dashboard.deleted':
-          qc.invalidateQueries({ queryKey: dashboardKeys.all, exact: true });
+        case 'brick.pluginDisconnected': {
+          const instanceIds = event.payload.instanceIds as string[];
+          store.markDisconnected(instanceIds);
           break;
+        }
         case 'dashboard.brickAdded':
-        case 'dashboard.brickRemoved': {
-          // Already handled optimistically by addBrickPlacement / removeBrickPlacement.
-          // Only refresh the dashboard list for brickCount display.
+        case 'dashboard.brickRemoved':
           qc.invalidateQueries({ queryKey: dashboardKeys.all, exact: true });
           break;
-        }
         case 'dashboard.layoutChanged': {
           const layouts = event.payload.layouts as Array<{
             instanceId: string;
@@ -252,7 +261,15 @@ export function useDashboardStream() {
             w: number;
             h: number;
           }>;
-          useDashboardStore.getState().updateBrickLayouts(layouts);
+          store.updateBrickLayouts(layouts);
+          break;
+        }
+        case 'dashboard.brickLabelChanged': {
+          const { instanceId, label } = event.payload as {
+            instanceId: string;
+            label?: string;
+          };
+          store.updateBrickLabel(instanceId, label);
           break;
         }
         case 'dashboard.brickConfigChanged': {
@@ -260,12 +277,18 @@ export function useDashboardStream() {
             instanceId: string;
             config: Record<string, Json>;
           };
-          useDashboardStore.getState().updateBrickConfig(instanceId, config);
+          store.updateBrickConfig(instanceId, config);
           break;
         }
       }
     });
 
-    return () => es.close();
-  }, [qc]);
+    // EventSource auto-reconnects on error; heartbeat on server detects stale connections
+    es.onerror = () => {};
+
+    return () => {
+      aborted = true;
+      es.close();
+    };
+  }, [dashboardId, qc]);
 }

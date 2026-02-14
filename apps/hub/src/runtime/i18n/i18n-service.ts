@@ -222,6 +222,21 @@ export class I18nService {
   }
 
   /**
+   * Get ALL translations for a locale in a single call.
+   * Returns a map of namespace → translations (with fallback chain applied).
+   * Used by the bulk loading endpoint.
+   */
+  getAllTranslations(locale: string): Record<string, TranslationData> {
+    const namespaces = this.listNamespaces();
+    const result: Record<string, TranslationData> = {};
+    for (const ns of namespaces) {
+      const data = this.getNamespaceTranslations(locale, ns);
+      if (data) result[ns] = data;
+    }
+    return result;
+  }
+
+  /**
    * Unregister translations for a plugin.
    * Called by PluginManager when unloading a plugin.
    */

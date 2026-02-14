@@ -10,6 +10,7 @@ import type { Json } from '@brika/shared';
 export interface DashboardBrickPlacement {
   instanceId: string;
   brickTypeId: string;
+  label?: string;
   config: Record<string, Json>;
   position: { x: number; y: number };
   size: { w: number; h: number };

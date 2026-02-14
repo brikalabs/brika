@@ -4,33 +4,46 @@
  * Covers:
  * - _shared.ts: normalizeChildren, resolveAction, _setActionRegistrar
  * - Simple spread factories: Badge, Chart, Divider, Icon, Image, Progress, Spacer, Stat, Status, Text, Video
- * - Container factories: Box, Grid, Section, Stack
- * - Action-resolving factories: Button, Slider, Toggle
+ * - Container factories: Box, Grid, Section, Row, Column
+ * - Action-resolving factories: Button, Slider, Toggle, Checkbox, Tabs, Select, TextInput
+ * - New components: Avatar, CodeBlock, KeyValue, Link, Skeleton, Table
  */
 
-import { describe, expect, test, beforeEach } from 'bun:test';
+import { beforeEach, describe, expect, test } from 'bun:test';
 import {
+  _setActionRegistrar,
+  Avatar,
   Badge,
   Box,
   Button,
+  Callout,
   Chart,
+  Checkbox,
+  CodeBlock,
+  Column,
   Divider,
   Grid,
   Icon,
   Image,
+  KeyValue,
+  Link,
+  normalizeChildren,
   Progress,
+  Row,
+  resolveAction,
   Section,
+  Select,
+  Skeleton,
   Slider,
   Spacer,
-  Stack,
   Stat,
   Status,
+  Table,
+  Tabs,
   Text,
+  TextInput,
   Toggle,
   Video,
-  normalizeChildren,
-  resolveAction,
-  _setActionRegistrar,
 } from '../nodes';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -176,7 +189,14 @@ describe('Badge', () => {
   });
 
   test('all variant values work', () => {
-    for (const v of ['default', 'secondary', 'outline', 'success', 'warning', 'destructive'] as const) {
+    for (const v of [
+      'default',
+      'secondary',
+      'outline',
+      'success',
+      'warning',
+      'destructive',
+    ] as const) {
       expect(Badge({ label: '', variant: v }).variant).toBe(v);
     }
   });
@@ -530,29 +550,26 @@ describe('Section', () => {
   });
 });
 
-describe('Stack', () => {
-  test('creates stack node with direction and empty children', () => {
-    const node = Stack({ direction: 'vertical' });
-    expect(node.type).toBe('stack');
-    expect(node.direction).toBe('vertical');
-    expect(node.children).toEqual([]);
+describe('Row', () => {
+  beforeEach(() => {
+    _setActionRegistrar(null);
   });
 
-  test('creates horizontal stack', () => {
-    const node = Stack({ direction: 'horizontal' });
-    expect(node.direction).toBe('horizontal');
+  test('creates row node with empty children by default', () => {
+    const node = Row({});
+    expect(node.type).toBe('row');
+    expect(node.children).toEqual([]);
   });
 
   test('normalizes children', () => {
     const a = Text({ content: 'a' });
     const b = Text({ content: 'b' });
-    const node = Stack({ direction: 'vertical', children: [a, b] });
+    const node = Row({ children: [a, b] });
     expect(node.children).toEqual([a, b]);
   });
 
-  test('includes all optional props', () => {
-    const node = Stack({
-      direction: 'horizontal',
+  test('includes all FlexLayoutProps', () => {
+    const node = Row({
       gap: 'lg',
       align: 'center',
       justify: 'between',
@@ -566,9 +583,59 @@ describe('Stack', () => {
     expect(node.grow).toBe(true);
   });
 
+  test('resolves onPress to action ID', () => {
+    const node = Row({ onPress: () => {} });
+    expect(node.onPress).toMatch(/^__action_\d+$/);
+  });
+
   test('filters falsy children', () => {
     const a = Text({ content: 'a' });
-    const node = Stack({ direction: 'vertical', children: [a, null, undefined, false] });
+    const node = Row({ children: [a, null, undefined, false] });
+    expect(node.children).toEqual([a]);
+  });
+});
+
+describe('Column', () => {
+  beforeEach(() => {
+    _setActionRegistrar(null);
+  });
+
+  test('creates column node with empty children by default', () => {
+    const node = Column({});
+    expect(node.type).toBe('column');
+    expect(node.children).toEqual([]);
+  });
+
+  test('normalizes children', () => {
+    const a = Text({ content: 'a' });
+    const b = Text({ content: 'b' });
+    const node = Column({ children: [a, b] });
+    expect(node.children).toEqual([a, b]);
+  });
+
+  test('includes all FlexLayoutProps', () => {
+    const node = Column({
+      gap: 'sm',
+      align: 'stretch',
+      justify: 'around',
+      wrap: false,
+      grow: true,
+    });
+    expect(node.gap).toBe('sm');
+    expect(node.align).toBe('stretch');
+    expect(node.justify).toBe('around');
+    expect(node.wrap).toBe(false);
+    expect(node.grow).toBe(true);
+  });
+
+  test('resolves onPress to action ID', () => {
+    const node = Column({ onPress: () => {} });
+    expect(node.onPress).toMatch(/^__action_\d+$/);
+  });
+
+  test('filters falsy children', () => {
+    const a = Text({ content: 'a' });
+    const node = Column({ children: [a, null, undefined, false] });
     expect(node.children).toEqual([a]);
   });
 });
@@ -704,5 +771,562 @@ describe('Toggle', () => {
     });
     expect(node.icon).toBe('volume-x');
     expect(node.color).toBe('orange');
+  });
+
+  test('includes disabled prop', () => {
+    const node = Toggle({ label: 'Off', checked: false, onToggle: () => {}, disabled: true });
+    expect(node.disabled).toBe(true);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// New props on existing components
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('Text (new props)', () => {
+  beforeEach(() => {
+    _setActionRegistrar(null);
+  });
+
+  test('includes align and weight', () => {
+    const node = Text({ content: 'hi', align: 'center', weight: 'bold' });
+    expect(node.align).toBe('center');
+    expect(node.weight).toBe('bold');
+  });
+
+  test('includes truncate and maxLines', () => {
+    const node = Text({ content: 'long', truncate: true, maxLines: 3 });
+    expect(node.truncate).toBe(true);
+    expect(node.maxLines).toBe(3);
+  });
+
+  test('includes size', () => {
+    for (const s of ['xs', 'sm', 'md', 'lg', 'xl'] as const) {
+      expect(Text({ content: '', size: s }).size).toBe(s);
+    }
+  });
+
+  test('resolves onPress to action ID', () => {
+    const node = Text({ content: 'click', onPress: () => {} });
+    expect(node.onPress).toMatch(/^__action_\d+$/);
+  });
+
+  test('omits onPress when not provided', () => {
+    const node = Text({ content: 'plain' });
+    expect(node.onPress).toBeUndefined();
+  });
+});
+
+describe('Button (new props)', () => {
+  beforeEach(() => {
+    _setActionRegistrar(null);
+  });
+
+  test('includes disabled and loading', () => {
+    const node = Button({ label: 'Go', disabled: true, loading: true });
+    expect(node.disabled).toBe(true);
+    expect(node.loading).toBe(true);
+  });
+
+  test('includes size and fullWidth', () => {
+    const node = Button({ label: 'Big', size: 'lg', fullWidth: true });
+    expect(node.size).toBe('lg');
+    expect(node.fullWidth).toBe(true);
+  });
+});
+
+describe('Stat (new props)', () => {
+  test('includes trendValue and description', () => {
+    const node = Stat({ label: 'Rev', value: 100, trendValue: '+5.2%', description: 'Monthly' });
+    expect(node.trendValue).toBe('+5.2%');
+    expect(node.description).toBe('Monthly');
+  });
+});
+
+describe('Divider (new props)', () => {
+  test('includes label', () => {
+    const node = Divider({ label: 'OR' });
+    expect(node.label).toBe('OR');
+  });
+});
+
+describe('Badge (onPress)', () => {
+  beforeEach(() => {
+    _setActionRegistrar(null);
+  });
+
+  test('resolves onPress to action ID', () => {
+    const node = Badge({ label: 'Tag', onPress: () => {} });
+    expect(node.onPress).toMatch(/^__action_\d+$/);
+  });
+
+  test('omits onPress when not provided', () => {
+    const node = Badge({ label: 'Static' });
+    expect(node.onPress).toBeUndefined();
+  });
+});
+
+describe('Icon (onPress)', () => {
+  beforeEach(() => {
+    _setActionRegistrar(null);
+  });
+
+  test('resolves onPress to action ID', () => {
+    const node = Icon({ name: 'star', onPress: () => {} });
+    expect(node.onPress).toMatch(/^__action_\d+$/);
+  });
+
+  test('omits onPress when not provided', () => {
+    const node = Icon({ name: 'star' });
+    expect(node.onPress).toBeUndefined();
+  });
+});
+
+describe('Slider (disabled)', () => {
+  beforeEach(() => {
+    _setActionRegistrar(null);
+  });
+
+  test('includes disabled prop', () => {
+    const node = Slider({ value: 5, min: 0, max: 10, onChange: () => {}, disabled: true });
+    expect(node.disabled).toBe(true);
+  });
+});
+
+describe('Section (new props)', () => {
+  test('includes gap and icon', () => {
+    const node = Section({ title: 'Info', gap: 'lg', icon: 'settings' });
+    expect(node.gap).toBe('lg');
+    expect(node.icon).toBe('settings');
+  });
+});
+
+describe('Video (new props)', () => {
+  test('includes controls and loop', () => {
+    const node = Video({ src: 'test.m3u8', format: 'hls', controls: true, loop: true });
+    expect(node.controls).toBe(true);
+    expect(node.loop).toBe(true);
+  });
+});
+
+describe('Progress (new props)', () => {
+  test('includes size and variant', () => {
+    const node = Progress({ value: 50, size: 'lg', variant: 'ring' });
+    expect(node.size).toBe('lg');
+    expect(node.variant).toBe('ring');
+  });
+
+  test('all size values work', () => {
+    for (const s of ['sm', 'md', 'lg'] as const) {
+      expect(Progress({ value: 50, size: s }).size).toBe(s);
+    }
+  });
+});
+
+describe('Chart (new props)', () => {
+  test('includes series', () => {
+    const series = [
+      { key: 'temp', data: [{ ts: 1, value: 20 }], color: 'red' },
+      { key: 'humidity', label: 'Humid', data: [{ ts: 1, value: 60 }] },
+    ];
+    const node = Chart({ variant: 'line', data: [], series });
+    expect(node.series).toEqual(series);
+  });
+
+  test('includes axis and grid controls', () => {
+    const node = Chart({
+      variant: 'area',
+      data: [],
+      showXAxis: true,
+      showYAxis: true,
+      showGrid: true,
+      showLegend: true,
+    });
+    expect(node.showXAxis).toBe(true);
+    expect(node.showYAxis).toBe(true);
+    expect(node.showGrid).toBe(true);
+    expect(node.showLegend).toBe(true);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// New components
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('Callout', () => {
+  test('creates callout with required fields', () => {
+    const node = Callout({ variant: 'info', message: 'Hello' });
+    expect(node.type).toBe('callout');
+    expect(node.variant).toBe('info');
+    expect(node.message).toBe('Hello');
+  });
+
+  test('includes optional title and icon', () => {
+    const node = Callout({
+      variant: 'warning',
+      message: 'Watch out',
+      title: 'Heads up',
+      icon: 'zap',
+    });
+    expect(node.title).toBe('Heads up');
+    expect(node.icon).toBe('zap');
+  });
+
+  test('all variant values work', () => {
+    for (const v of ['info', 'warning', 'error', 'success'] as const) {
+      expect(Callout({ variant: v, message: '' }).variant).toBe(v);
+    }
+  });
+});
+
+describe('TextInput', () => {
+  beforeEach(() => {
+    _setActionRegistrar(null);
+  });
+
+  test('creates text-input with required fields', () => {
+    const node = TextInput({ value: 'hello', onChange: () => {} });
+    expect(node.type).toBe('text-input');
+    expect(node.value).toBe('hello');
+    expect(node.onChange).toMatch(/^__action_\d+$/);
+  });
+
+  test('resolves onSubmit when provided', () => {
+    const node = TextInput({ value: '', onChange: () => {}, onSubmit: () => {} });
+    expect(node.onSubmit).toMatch(/^__action_\d+$/);
+  });
+
+  test('omits onSubmit when not provided', () => {
+    const node = TextInput({ value: '', onChange: () => {} });
+    expect(node.onSubmit).toBeUndefined();
+  });
+
+  test('includes all optional props', () => {
+    const node = TextInput({
+      value: '',
+      onChange: () => {},
+      placeholder: 'Type here',
+      label: 'Name',
+      icon: 'user',
+      disabled: true,
+      inputType: 'email',
+    });
+    expect(node.placeholder).toBe('Type here');
+    expect(node.label).toBe('Name');
+    expect(node.icon).toBe('user');
+    expect(node.disabled).toBe(true);
+    expect(node.inputType).toBe('email');
+  });
+
+  test('all inputType values work', () => {
+    for (const t of ['text', 'password', 'email', 'number'] as const) {
+      expect(TextInput({ value: '', onChange: () => {}, inputType: t }).inputType).toBe(t);
+    }
+  });
+});
+
+describe('Select', () => {
+  beforeEach(() => {
+    _setActionRegistrar(null);
+  });
+
+  const opts = [
+    { value: 'a', label: 'Alpha' },
+    { value: 'b', label: 'Beta' },
+  ];
+
+  test('creates select with required fields', () => {
+    const node = Select({ value: 'a', options: opts, onChange: () => {} });
+    expect(node.type).toBe('select');
+    expect(node.value).toBe('a');
+    expect(node.options).toEqual(opts);
+    expect(node.onChange).toMatch(/^__action_\d+$/);
+  });
+
+  test('includes all optional props', () => {
+    const node = Select({
+      value: 'a',
+      options: opts,
+      onChange: () => {},
+      label: 'Pick one',
+      placeholder: 'Choose…',
+      disabled: true,
+      icon: 'list',
+    });
+    expect(node.label).toBe('Pick one');
+    expect(node.placeholder).toBe('Choose…');
+    expect(node.disabled).toBe(true);
+    expect(node.icon).toBe('list');
+  });
+
+  test('uses custom registrar for onChange', () => {
+    _setActionRegistrar(() => 'sel-action');
+    const node = Select({ value: 'a', options: opts, onChange: () => {} });
+    expect(node.onChange).toBe('sel-action');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// New components (Row/Column era)
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('Table', () => {
+  const cols = [
+    { key: 'name', label: 'Name' },
+    { key: 'age', label: 'Age', align: 'right' as const },
+  ];
+  const rows = [
+    { name: 'Alice', age: 30 },
+    { name: 'Bob', age: 25 },
+  ];
+
+  test('creates table with required fields', () => {
+    const node = Table({ columns: cols, rows });
+    expect(node.type).toBe('table');
+    expect(node.columns).toEqual(cols);
+    expect(node.rows).toEqual(rows);
+  });
+
+  test('includes optional props', () => {
+    const node = Table({ columns: cols, rows, striped: true, compact: true, maxRows: 5 });
+    expect(node.striped).toBe(true);
+    expect(node.compact).toBe(true);
+    expect(node.maxRows).toBe(5);
+  });
+
+  test('resolves onRowPress', () => {
+    _setActionRegistrar(null);
+    const node = Table({ columns: cols, rows, onRowPress: () => {} });
+    expect(node.onRowPress).toMatch(/^__action_\d+$/);
+  });
+});
+
+describe('KeyValue', () => {
+  const items = [
+    { label: 'Host', value: 'localhost' },
+    { label: 'Port', value: 8080 },
+  ];
+
+  test('creates key-value with required fields', () => {
+    const node = KeyValue({ items });
+    expect(node.type).toBe('key-value');
+    expect(node.items).toEqual(items);
+  });
+
+  test('includes optional props', () => {
+    const node = KeyValue({ items, layout: 'stacked', dividers: true, compact: true });
+    expect(node.layout).toBe('stacked');
+    expect(node.dividers).toBe(true);
+    expect(node.compact).toBe(true);
+  });
+
+  test('items support icon, color, copyable', () => {
+    const node = KeyValue({
+      items: [{ label: 'IP', value: '127.0.0.1', icon: 'globe', color: '#0f0', copyable: true }],
+    });
+    const item = node.items[0];
+    expect(item?.icon).toBe('globe');
+    expect(item?.color).toBe('#0f0');
+    expect(item?.copyable).toBe(true);
+  });
+});
+
+describe('Avatar', () => {
+  beforeEach(() => {
+    _setActionRegistrar(null);
+  });
+
+  test('creates avatar with defaults', () => {
+    const node = Avatar({});
+    expect(node.type).toBe('avatar');
+  });
+
+  test('includes all optional props', () => {
+    const node = Avatar({
+      src: 'photo.jpg',
+      fallback: 'JD',
+      alt: 'John Doe',
+      size: 'lg',
+      shape: 'square',
+      status: 'online',
+    });
+    expect(node.src).toBe('photo.jpg');
+    expect(node.fallback).toBe('JD');
+    expect(node.alt).toBe('John Doe');
+    expect(node.size).toBe('lg');
+    expect(node.shape).toBe('square');
+    expect(node.status).toBe('online');
+  });
+
+  test('resolves onPress', () => {
+    const node = Avatar({ onPress: () => {} });
+    expect(node.onPress).toMatch(/^__action_\d+$/);
+  });
+
+  test('all status values work', () => {
+    for (const s of ['online', 'offline', 'busy', 'away'] as const) {
+      expect(Avatar({ status: s }).status).toBe(s);
+    }
+  });
+});
+
+describe('Link', () => {
+  test('creates link with required fields', () => {
+    const node = Link({ label: 'Docs', url: 'https://docs.example.com' });
+    expect(node.type).toBe('link');
+    expect(node.label).toBe('Docs');
+    expect(node.url).toBe('https://docs.example.com');
+  });
+
+  test('includes optional props', () => {
+    const node = Link({
+      label: 'API',
+      url: 'https://api.example.com',
+      icon: 'external-link',
+      variant: 'underline',
+      size: 'xs',
+    });
+    expect(node.icon).toBe('external-link');
+    expect(node.variant).toBe('underline');
+    expect(node.size).toBe('xs');
+  });
+
+  test('all variant values work', () => {
+    for (const v of ['default', 'muted', 'underline'] as const) {
+      expect(Link({ label: '', url: '', variant: v }).variant).toBe(v);
+    }
+  });
+});
+
+describe('Tabs', () => {
+  beforeEach(() => {
+    _setActionRegistrar(null);
+  });
+
+  test('creates tabs with required fields', () => {
+    const node = Tabs({
+      value: 'a',
+      tabs: [
+        { key: 'a', label: 'Tab A' },
+        { key: 'b', label: 'Tab B' },
+      ],
+      onChange: () => {},
+    });
+    expect(node.type).toBe('tabs');
+    expect(node.value).toBe('a');
+    expect(node.tabs).toHaveLength(2);
+    expect(node.onChange).toMatch(/^__action_\d+$/);
+  });
+
+  test('normalizes tab children', () => {
+    const child = Text({ content: 'content' });
+    const node = Tabs({
+      value: 'a',
+      tabs: [{ key: 'a', label: 'Tab', children: child }],
+      onChange: () => {},
+    });
+    expect(node.tabs[0]?.children).toEqual([child]);
+  });
+
+  test('includes optional variant and icon', () => {
+    const node = Tabs({
+      value: 'a',
+      tabs: [{ key: 'a', label: 'Tab', icon: 'star' }],
+      onChange: () => {},
+      variant: 'pills',
+    });
+    expect(node.variant).toBe('pills');
+    expect(node.tabs[0]?.icon).toBe('star');
+  });
+});
+
+describe('CodeBlock', () => {
+  test('creates code-block with required fields', () => {
+    const node = CodeBlock({ code: 'console.log("hi")' });
+    expect(node.type).toBe('code-block');
+    expect(node.code).toBe('console.log("hi")');
+  });
+
+  test('includes all optional props', () => {
+    const node = CodeBlock({
+      code: 'fn main() {}',
+      language: 'rust',
+      showLineNumbers: true,
+      maxLines: 20,
+      copyable: true,
+      label: 'main.rs',
+    });
+    expect(node.language).toBe('rust');
+    expect(node.showLineNumbers).toBe(true);
+    expect(node.maxLines).toBe(20);
+    expect(node.copyable).toBe(true);
+    expect(node.label).toBe('main.rs');
+  });
+});
+
+describe('Checkbox', () => {
+  beforeEach(() => {
+    _setActionRegistrar(null);
+  });
+
+  test('creates checkbox with required fields', () => {
+    const node = Checkbox({ label: 'Accept terms', checked: false, onToggle: () => {} });
+    expect(node.type).toBe('checkbox');
+    expect(node.label).toBe('Accept terms');
+    expect(node.checked).toBe(false);
+    expect(node.onToggle).toMatch(/^__action_\d+$/);
+  });
+
+  test('includes optional props', () => {
+    const node = Checkbox({
+      label: 'Enable',
+      checked: true,
+      onToggle: () => {},
+      description: 'Turn it on',
+      icon: 'check',
+      disabled: true,
+    });
+    expect(node.description).toBe('Turn it on');
+    expect(node.icon).toBe('check');
+    expect(node.disabled).toBe(true);
+  });
+});
+
+describe('Skeleton', () => {
+  test('creates skeleton with required variant', () => {
+    const node = Skeleton({ variant: 'text' });
+    expect(node.type).toBe('skeleton');
+    expect(node.variant).toBe('text');
+  });
+
+  test('includes optional props', () => {
+    const node = Skeleton({ variant: 'rect', width: '100px', height: '50px', lines: 3 });
+    expect(node.width).toBe('100px');
+    expect(node.height).toBe('50px');
+    expect(node.lines).toBe(3);
+  });
+
+  test('all variant values work', () => {
+    for (const v of ['text', 'circle', 'rect'] as const) {
+      expect(Skeleton({ variant: v }).variant).toBe(v);
+    }
+  });
+});
+
+describe('TextInput (multiline)', () => {
+  beforeEach(() => {
+    _setActionRegistrar(null);
+  });
+
+  test('includes multiline and rows', () => {
+    const node = TextInput({ value: '', onChange: () => {}, multiline: true, rows: 5 });
+    expect(node.multiline).toBe(true);
+    expect(node.rows).toBe(5);
+  });
+
+  test('multiline defaults are omitted when not set', () => {
+    const node = TextInput({ value: '', onChange: () => {} });
+    expect(node.multiline).toBeUndefined();
+    expect(node.rows).toBeUndefined();
   });
 });

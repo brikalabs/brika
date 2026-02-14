@@ -1,3 +1,4 @@
+import { Link, useNavigate } from '@tanstack/react-router';
 import { LayoutDashboard, Pencil, Plus } from 'lucide-react';
 import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
 import { useState } from 'react';
@@ -21,13 +22,12 @@ import type { DashboardSummary } from '../api';
 import { useCreateDashboard, useDashboards } from '../hooks';
 
 interface DashboardSwitcherProps {
-  activeDashboardId: string | null;
-  onSelect: (id: string) => void;
   onEdit: () => void;
 }
 
-export function DashboardSwitcher({ activeDashboardId, onSelect, onEdit }: DashboardSwitcherProps) {
+export function DashboardSwitcher({ onEdit }: Readonly<DashboardSwitcherProps>) {
   const { t } = useLocale();
+  const navigate = useNavigate();
   const { data: dashboards = [] } = useDashboards();
   const [createOpen, setCreateOpen] = useState(false);
   const [newName, setNewName] = useState('');
@@ -41,7 +41,7 @@ export function DashboardSwitcher({ activeDashboardId, onSelect, onEdit }: Dashb
         onSuccess: (dashboard) => {
           setCreateOpen(false);
           setNewName('');
-          onSelect(dashboard.id);
+          navigate({ to: '/bricks/$dashboardId', params: { dashboardId: dashboard.id } });
         },
       }
     );
@@ -50,28 +50,23 @@ export function DashboardSwitcher({ activeDashboardId, onSelect, onEdit }: Dashb
   return (
     <>
       <div className="flex items-center gap-1 rounded-lg bg-muted/50 p-1">
-        {(dashboards as DashboardSummary[]).map((d) => {
-          const isActive = d.id === activeDashboardId;
-          return (
-            <button
-              key={d.id}
-              type="button"
-              onClick={() => onSelect(d.id)}
-              className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition-colors ${
-                isActive
-                  ? 'bg-background font-medium shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              {d.icon ? (
-                <DynamicIcon name={d.icon as IconName} className="size-3.5" />
-              ) : (
-                <LayoutDashboard className="size-3.5" />
-              )}
-              {d.name}
-            </button>
-          );
-        })}
+        {(dashboards as DashboardSummary[]).map((d) => (
+          <Link
+            key={d.id}
+            to="/bricks/$dashboardId"
+            params={{ dashboardId: d.id }}
+            className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition-colors"
+            activeProps={{ className: 'bg-background font-medium shadow-sm' }}
+            inactiveProps={{ className: 'text-muted-foreground hover:text-foreground' }}
+          >
+            {d.icon ? (
+              <DynamicIcon name={d.icon as IconName} className="size-3.5" />
+            ) : (
+              <LayoutDashboard className="size-3.5" />
+            )}
+            {d.name}
+          </Link>
+        ))}
 
         <Separator orientation="vertical" className="mx-0.5 h-5" />
 
@@ -83,7 +78,7 @@ export function DashboardSwitcher({ activeDashboardId, onSelect, onEdit }: Dashb
               size="icon"
               className="size-7"
               onClick={onEdit}
-              disabled={!activeDashboardId}
+              disabled={dashboards.length === 0}
             >
               <Pencil className="size-3" />
             </Button>

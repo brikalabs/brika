@@ -10,7 +10,7 @@ import '@/lib/i18n';
 
 // Feature Pages
 import { BlocksPage } from '@/features/blocks';
-import { BricksPage } from '@/features/bricks';
+import { BricksLayout, DashboardContent } from '@/features/bricks';
 import { DashboardPage } from '@/features/dashboard';
 import { SparksPage } from '@/features/events';
 import { LogsPage } from '@/features/logs';
@@ -56,17 +56,17 @@ const storePluginDetailRoute = createRoute({
   component: StorePluginDetailPage,
 });
 
-// Bricks routes with dashboard parameter
+// Bricks routes — nested layout with Outlet
 const bricksRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/bricks',
-  component: BricksPage,
+  component: BricksLayout,
 });
 
 const bricksDashboardRoute = createRoute({
   getParentRoute: () => bricksRoute,
   path: '/$dashboardId',
-  component: BricksPage,
+  component: DashboardContent,
 });
 
 // Sparks routes with tab parameter

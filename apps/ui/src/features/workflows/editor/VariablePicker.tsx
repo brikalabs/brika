@@ -34,45 +34,7 @@ interface TreeNode {
 }
 
 function buildTree(variables: VariableInfo[]): TreeNode[] {
-  const root: TreeNode[] = [];
-
-  // Add trigger group
-  const triggerNode: TreeNode = {
-    name: 'trigger',
-    fullPath: 'trigger',
-    type: 'object',
-    source: 'Event data',
-    children: [
-      { name: 'type', fullPath: 'trigger.type', type: 'string', source: 'trigger', children: [] },
-      {
-        name: 'payload',
-        fullPath: 'trigger.payload',
-        type: 'object',
-        source: 'trigger',
-        children: [],
-      },
-      {
-        name: 'source',
-        fullPath: 'trigger.source',
-        type: 'string',
-        source: 'trigger',
-        children: [],
-      },
-      { name: 'ts', fullPath: 'trigger.ts', type: 'number', source: 'trigger', children: [] },
-    ],
-  };
-  root.push(triggerNode);
-
-  // Add prev
-  root.push({
-    name: 'prev',
-    fullPath: 'prev',
-    type: 'generic',
-    source: 'Previous block output',
-    children: [],
-  });
-
-  // Add vars group
+  // Add vars group (conditionally)
   const varsChildren: TreeNode[] = variables
     .filter((v) => v.name.startsWith('vars.'))
     .map((v) => ({
@@ -83,17 +45,53 @@ function buildTree(variables: VariableInfo[]): TreeNode[] {
       children: [],
     }));
 
-  if (varsChildren.length > 0) {
-    root.push({
-      name: 'vars',
-      fullPath: 'vars',
+  return [
+    // Trigger group
+    {
+      name: 'trigger',
+      fullPath: 'trigger',
       type: 'object',
-      source: 'Workflow variables',
-      children: varsChildren,
-    });
-  }
-
-  return root;
+      source: 'Event data',
+      children: [
+        { name: 'type', fullPath: 'trigger.type', type: 'string', source: 'trigger', children: [] },
+        {
+          name: 'payload',
+          fullPath: 'trigger.payload',
+          type: 'object',
+          source: 'trigger',
+          children: [],
+        },
+        {
+          name: 'source',
+          fullPath: 'trigger.source',
+          type: 'string',
+          source: 'trigger',
+          children: [],
+        },
+        { name: 'ts', fullPath: 'trigger.ts', type: 'number', source: 'trigger', children: [] },
+      ],
+    },
+    // Previous block output
+    {
+      name: 'prev',
+      fullPath: 'prev',
+      type: 'generic',
+      source: 'Previous block output',
+      children: [],
+    },
+    // Vars group (only if there are workflow variables)
+    ...(varsChildren.length > 0
+      ? [
+          {
+            name: 'vars',
+            fullPath: 'vars',
+            type: 'object',
+            source: 'Workflow variables',
+            children: varsChildren,
+          },
+        ]
+      : []),
+  ];
 }
 
 function TreeNodeItem({
@@ -146,7 +144,11 @@ function TreeNodeItem({
 
         {getIcon()}
 
-        <button type="button" className="flex-1 truncate font-mono text-sm bg-transparent border-none p-0 text-left cursor-pointer text-inherit font-inherit" onClick={handleInsert}>
+        <button
+          type="button"
+          className="flex-1 cursor-pointer truncate border-none bg-transparent p-0 text-left font-inherit font-mono text-inherit text-sm"
+          onClick={handleInsert}
+        >
           {node.name}
         </button>
 

@@ -13,8 +13,12 @@
   "config": {
     "title": "Configure Brick",
     "description": "Edit this brick instance's configuration.",
-    "noOptions": "This brick type has no configurable options."
+    "noOptions": "This brick type has no configurable options.",
+    "instance": "Instance",
+    "plugin": "Plugin",
+    "configuration": "Configuration"
   },
+  "pluginDisconnected": "Plugin disconnected",
   "dashboard": {
     "new": "New Dashboard",
     "newDescription": "Create a new dashboard to organize your bricks.",

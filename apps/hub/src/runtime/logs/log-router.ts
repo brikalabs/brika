@@ -155,13 +155,16 @@ export class Logger {
               ? `${options.error.cause.name}: ${options.error.cause.message}`
               : JSON.stringify(options.error.cause);
         }
-      } else {
+      } else if (typeof options.error === "object" && options.error !== null) {
         // Handle non-Error objects
         logError = {
           name: "Error",
-          message: typeof options.error === "object" && options.error !== null
-            ? JSON.stringify(options.error)
-            : String(options.error),
+          message: JSON.stringify(options.error),
+        };
+      } else {
+        logError = {
+          name: "Error",
+          message: String(options.error),
         };
       }
     }

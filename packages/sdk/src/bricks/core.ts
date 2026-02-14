@@ -17,8 +17,8 @@ export type {
   BrickFamily,
   BrickInstanceContext,
   BrickTypeSpec,
-  ComponentNode,
   CompiledBrickType,
+  ComponentNode,
 } from '@brika/ui-kit';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -31,10 +31,19 @@ export { defineBrick } from '../api/bricks';
 // Hooks (React-like hooks for brick components)
 // ─────────────────────────────────────────────────────────────────────────────
 
-export { useCallback, useBrickSize, useEffect, useMemo, usePluginPreference, usePreference, useRef, useState } from '../brick-hooks';
+export {
+  useBrickSize,
+  useCallback,
+  useEffect,
+  useMemo,
+  usePluginPreference,
+  usePreference,
+  useRef,
+  useState,
+} from '../brick-hooks';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Shared Store (Zustand-style reactive store across brick instances)
 // ─────────────────────────────────────────────────────────────────────────────
 
-export { type SharedStore, defineSharedStore } from '../brick-hooks';
+export { defineSharedStore, type SharedStore } from '../brick-hooks';

@@ -1,7 +1,7 @@
-import type { BoxNode } from '@brika/ui-kit';
 import { cva } from 'class-variance-authority';
-import { memo } from 'react';
-import { type ActionHandler, ComponentNodeRenderer } from './registry';
+import { cn } from '@/lib/utils';
+import { ComponentNodeRenderer, defineRenderer } from './registry';
+import { resolveBackground } from './resolve-color';
 
 const boxVariants = cva('relative flex min-h-0 flex-col overflow-clip', {
   variants: {
@@ -51,16 +51,10 @@ const bgFitVariants = cva('', {
   },
 });
 
-export const BoxRenderer = memo(function BoxRenderer({
-  node,
-  onAction,
-}: {
-  node: BoxNode;
-  onAction?: ActionHandler;
-}) {
+defineRenderer('box', ({ node, onAction }) => {
   const hasImage = !!node.backgroundImage;
+  const bg = resolveBackground(node.background);
 
-  // Build inline style: background-image natively clips to border-radius.
   const style: React.CSSProperties = {};
 
   if (hasImage) {
@@ -68,8 +62,8 @@ export const BoxRenderer = memo(function BoxRenderer({
     style.backgroundPosition = node.backgroundPosition ?? 'center';
   }
 
-  if (!hasImage && !node.blur && node.background) {
-    style.backgroundColor = node.background;
+  if (!hasImage && !node.blur && bg) {
+    style.backgroundColor = bg;
   }
 
   const boxClass = boxVariants({
@@ -79,28 +73,27 @@ export const BoxRenderer = memo(function BoxRenderer({
   });
 
   const fitClass = hasImage ? bgFitVariants({ fit: node.backgroundFit }) : '';
+  const clickable = !!node.onPress;
 
   return (
     <div
-      className={fitClass ? `${boxClass} ${fitClass}` : boxClass}
+      className={cn(boxClass, fitClass, clickable && 'cursor-pointer')}
       style={Object.keys(style).length > 0 ? style : undefined}
+      onClick={clickable ? () => onAction?.(node.onPress as string) : undefined}
+      role={clickable ? 'button' : undefined}
+      tabIndex={clickable ? 0 : undefined}
     >
-      {/* Tint overlay on background images */}
-      {hasImage && node.background && (
+      {hasImage && bg && (
         <div
           className="absolute inset-0 rounded-[inherit]"
-          style={{
-            backgroundColor: node.background,
-            opacity: node.opacity ?? 0.5,
-          }}
+          style={{ backgroundColor: bg, opacity: node.opacity ?? 0.5 }}
         />
       )}
 
-      {/* Blur layer: separate div so children stay crisp */}
       {node.blur && (
         <div
           className={blurOverlayVariants({ blur: node.blur })}
-          style={!hasImage && node.background ? { backgroundColor: node.background } : undefined}
+          style={!hasImage && bg ? { backgroundColor: bg } : undefined}
         />
       )}
 

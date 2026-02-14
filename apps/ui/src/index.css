@@ -377,7 +377,6 @@
   }
 }
 
-
 /* react-grid-layout overrides */
 .grid-placeholder .react-grid-item.react-grid-placeholder {
   @apply rounded-2xl border-2 border-dashed border-border bg-muted opacity-100;
@@ -389,6 +388,33 @@
 
 .grid-placeholder .react-grid-item.react-draggable-dragging {
   @apply scale-[1.02] shadow-lg transition-[transform,box-shadow] duration-200 ease-out;
+}
+
+/* Resize handle — 6-dot grip in bottom-right corner */
+.grid-placeholder .react-grid-item > .react-resizable-handle {
+  width: 20px;
+  height: 20px;
+  bottom: 4px;
+  right: 4px;
+}
+
+.grid-placeholder .react-grid-item > .react-resizable-handle::after {
+  content: "";
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  right: 4px;
+  bottom: 4px;
+  border: none;
+  background-image: radial-gradient(circle, var(--color-border) 1px, transparent 1px);
+  background-size: 4px 4px;
+  background-position: right bottom;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.grid-placeholder .react-grid-item:hover > .react-resizable-handle::after {
+  opacity: 1;
 }
 
 /* Handle ping animation for data flow visualization */
@@ -441,4 +467,26 @@
 /* Functional utility for superellipse with custom values */
 @utility corner-superellipse-* {
   corner-shape: superellipse(--value(number));
+}
+
+:root {
+  --sidebar: hsl(0 0% 98%);
+  --sidebar-foreground: hsl(240 5.3% 26.1%);
+  --sidebar-primary: hsl(240 5.9% 10%);
+  --sidebar-primary-foreground: hsl(0 0% 98%);
+  --sidebar-accent: hsl(240 4.8% 95.9%);
+  --sidebar-accent-foreground: hsl(240 5.9% 10%);
+  --sidebar-border: hsl(220 13% 91%);
+  --sidebar-ring: hsl(217.2 91.2% 59.8%);
+}
+
+.dark {
+  --sidebar: hsl(240 5.9% 10%);
+  --sidebar-foreground: hsl(240 4.8% 95.9%);
+  --sidebar-primary: hsl(224.3 76.3% 48%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(240 3.7% 15.9%);
+  --sidebar-accent-foreground: hsl(240 4.8% 95.9%);
+  --sidebar-border: hsl(240 3.7% 15.9%);
+  --sidebar-ring: hsl(217.2 91.2% 59.8%);
 }

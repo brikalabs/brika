@@ -124,10 +124,7 @@ type OutputDefSchema = z.ZodType | PassthroughRef | GenericRef<string> | Resolve
 
 export function defineReactiveBlock<
   TInputs extends Record<string, InputDef<z.ZodType | GenericRef<string>>>,
-  TOutputs extends Record<
-    string,
-    OutputDef<OutputDefSchema>
-  >,
+  TOutputs extends Record<string, OutputDef<OutputDefSchema>>,
   TConfig extends z.ZodObject<z.ZodRawShape>,
 >(
   spec: ReactiveBlockSpec<TInputs, TOutputs, TConfig>,
@@ -136,26 +133,21 @@ export function defineReactiveBlock<
   const configJsonSchema = zodToBlockSchema(spec.config);
 
   // Get TypeScript-like type name from schema (not resolving passthrough/resolved)
-  const getBaseTypeName = (
-    schema: z.ZodType | GenericRef<string> | PassthroughRef | ResolvedRef
-  ): string => {
+  const getBaseTypeName = (schema: OutputDefSchema): string => {
     if (schema && typeof schema === 'object' && '__type' in schema) {
-      if (schema.__type === 'generic') return `generic<${(schema as GenericRef).__generic}>`;
+      if (schema.__type === 'generic') return `generic<${schema.__generic}>`;
       // Don't resolve passthrough here - it will be resolved later
       if (schema.__type === 'passthrough') return `__passthrough:${schema.__passthrough}`;
       // Resolved types use $resolve:source:configField format for UI type inference
       if (schema.__type === 'resolved') {
-        const r = schema as ResolvedRef;
-        return `$resolve:${r.__source}:${r.__configField}`;
+        return `$resolve:${schema.__source}:${schema.__configField}`;
       }
     }
     return zodToTypeName(schema);
   };
 
   // Get JSON Schema from Zod schema (returns undefined for generic/passthrough/resolved)
-  const getJsonSchema = (
-    schema: z.ZodType | GenericRef<string> | PassthroughRef | ResolvedRef
-  ): Record<string, unknown> | undefined => {
+  const getJsonSchema = (schema: OutputDefSchema): Record<string, unknown> | undefined => {
     if (schema && typeof schema === 'object' && '__type' in schema) {
       return undefined;
     }
@@ -167,9 +159,7 @@ export function defineReactiveBlock<
   };
 
   // Get runtime schema - returns the internal _schema for GenericRef/PassthroughRef/ResolvedRef
-  const getRuntimeSchema = (
-    schema: z.ZodType | GenericRef<string> | PassthroughRef | ResolvedRef
-  ): z.ZodType => {
+  const getRuntimeSchema = (schema: OutputDefSchema): z.ZodType => {
     if (schema && typeof schema === 'object' && '_schema' in schema) {
       return (schema as GenericRef | PassthroughRef | ResolvedRef)._schema;
     }

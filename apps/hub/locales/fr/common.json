@@ -24,7 +24,8 @@
     "reload": "Recharger",
     "view": "Voir",
     "select": "Sélectionner",
-    "copy": "Copier"
+    "copy": "Copier",
+    "rename": "Renommer"
   },
   "status": {
     "running": "En cours",

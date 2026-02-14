@@ -1,23 +1,40 @@
 // Shared types — ComponentNode and NodeTypeMap are auto-derived via declaration merging
-export type { ActionHandler, BaseNode, ComponentNode, NodeTypeMap } from './_shared';
-export { normalizeChildren, resolveAction, _setActionRegistrar, type Child } from './_shared';
-
+export type {
+  ActionHandler,
+  BaseNode,
+  ComponentNode,
+  FlexLayoutProps,
+  NodeTypeMap,
+} from './_shared';
+export { _setActionRegistrar, type Child, normalizeChildren, resolveAction } from './_shared';
+export { Avatar, type AvatarNode } from './avatar';
+export { Badge, type BadgeNode } from './badge';
+export { Box, type BoxNode } from './box';
+export { Button, type ButtonNode } from './button';
+export { Callout, type CalloutNode } from './callout';
+export { Chart, type ChartDataPoint, type ChartNode, type ChartSeries } from './chart';
+export { Checkbox, type CheckboxNode } from './checkbox';
+export { CodeBlock, type CodeBlockNode } from './code-block';
+export { Column, type ColumnNode } from './column';
+export { Divider, type DividerNode } from './divider';
+export { Grid, type GridNode } from './grid';
+export { Icon, type IconNode } from './icon';
+export { Image, type ImageNode } from './image';
+export { KeyValue, type KeyValueItem, type KeyValueNode } from './key-value';
+export { Link, type LinkNode } from './link';
+export { Progress, type ProgressNode } from './progress';
 // Node types + components (each file self-registers into NodeTypeMap)
-export { type StatValueNode, Stat } from './stat-value';
-export { type ToggleNode, Toggle } from './toggle';
-export { type SliderNode, Slider } from './slider';
-export { type ChartNode, type ChartDataPoint, Chart } from './chart';
-export { type StatusNode, Status } from './status';
-export { type TextNode, Text } from './text';
-export { type ImageNode, Image } from './image';
-export { type VideoNode, Video } from './video';
-export { type ButtonNode, Button } from './button';
-export { type GridNode, Grid } from './grid';
-export { type StackNode, Stack } from './stack';
-export { type SectionNode, Section } from './section';
-export { type BoxNode, Box } from './box';
-export { type SpacerNode, Spacer } from './spacer';
-export { type DividerNode, Divider } from './divider';
-export { type ProgressNode, Progress } from './progress';
-export { type BadgeNode, Badge } from './badge';
-export { type IconNode, Icon } from './icon';
+export { Row, type RowNode } from './row';
+export { Section, type SectionNode } from './section';
+export { Select, type SelectNode, type SelectOption } from './select';
+export { Skeleton, type SkeletonNode } from './skeleton';
+export { Slider, type SliderNode } from './slider';
+export { Spacer, type SpacerNode } from './spacer';
+export { Stat, type StatValueNode } from './stat-value';
+export { Status, type StatusNode } from './status';
+export { Table, type TableColumn, type TableNode } from './table';
+export { type TabItem, Tabs, type TabsNode } from './tabs';
+export { Text, type TextNode } from './text';
+export { TextInput, type TextInputNode } from './text-input';
+export { Toggle, type ToggleNode } from './toggle';
+export { Video, type VideoNode } from './video';

@@ -1,6 +1,6 @@
 import type { TemplateData } from '../src/render';
 
-export default (data: TemplateData): string => {
+export default function template(data: TemplateData): string {
   const pkg: Record<string, unknown> = {
     $schema: 'https://schema.brika.dev/plugin.schema.json',
     name: data.packageName,
@@ -40,4 +40,4 @@ export default (data: TemplateData): string => {
   pkg.devDependencies = { 'bun-types': '^1.3.5' };
 
   return JSON.stringify(pkg, null, 2) + '\n';
-};
+}

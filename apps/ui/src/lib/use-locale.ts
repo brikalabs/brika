@@ -37,17 +37,10 @@ export function useLocale() {
 
   const t = useCallback(
     ((rawKey: string, options?: TOptions) => {
-      // CI-Mode: return keys directly without loading namespaces
-      if (locale === 'cimode') {
-        return rawKey;
-      }
+      if (locale === 'cimode') return rawKey;
 
       const ns = options?.ns as string | undefined;
       const effectiveNs = ns ?? extractNamespace(rawKey, nsSeparator);
-
-      if (effectiveNs && !i18next.hasResourceBundle(locale, effectiveNs)) {
-        throw i18next.loadNamespaces(effectiveNs);
-      }
 
       if (effectiveNs && !ns) {
         const key = rawKey.slice(rawKey.lastIndexOf(nsSeparator) + 1);
@@ -80,7 +73,7 @@ export function useLocale() {
       locale,
 
       tp: (pluginId: string, key: string, defaultValue?: string) =>
-        t(key, { ns: `plugin:${pluginId}`, defaultValue }),
+        baseT(key, { ns: `plugin:${pluginId}`, defaultValue }) as string,
 
       changeLocale: (loc: string) => i18n.changeLanguage(loc),
 

@@ -20,7 +20,7 @@ interface CustomEmitDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export function CustomEmitDialog({ open, onOpenChange }: CustomEmitDialogProps) {
+export function CustomEmitDialog({ open, onOpenChange }: Readonly<CustomEmitDialogProps>) {
   const { t } = useLocale();
   const emitEvent = useEmitEvent();
   const [type, setType] = useState('test.event');

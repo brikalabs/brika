@@ -1,11 +1,19 @@
-import { normalizeChildren, type BaseNode, type Child, type ComponentNode } from './_shared';
+import type { BackgroundValue } from '../colors';
+import {
+  type ActionHandler,
+  type BaseNode,
+  type Child,
+  type ComponentNode,
+  normalizeChildren,
+  resolveAction,
+} from './_shared';
 
 export interface BoxNode extends BaseNode {
   type: 'box';
   children: ComponentNode[];
 
-  /** CSS color or gradient string (e.g. "#ff6b35", "linear-gradient(...)") */
-  background?: string;
+  /** CSS color, gradient, or theme token (e.g. "#ff6b35", "muted", "card") */
+  background?: BackgroundValue;
   /** Background image URL */
   backgroundImage?: string;
   /** How the background image fits */
@@ -22,10 +30,12 @@ export interface BoxNode extends BaseNode {
   rounded?: 'none' | 'sm' | 'md' | 'lg' | 'full';
   /** Fill available space (flex-1) */
   grow?: boolean;
+  /** Action dispatched when clicked */
+  onPress?: string;
 }
 
 export function Box(props: {
-  background?: string;
+  background?: BackgroundValue;
   backgroundImage?: string;
   backgroundFit?: 'cover' | 'contain' | 'fill';
   backgroundPosition?: 'center' | 'top' | 'bottom' | 'left' | 'right';
@@ -34,10 +44,16 @@ export function Box(props: {
   padding?: 'none' | 'sm' | 'md' | 'lg';
   rounded?: 'none' | 'sm' | 'md' | 'lg' | 'full';
   grow?: boolean;
+  onPress?: ActionHandler;
   children?: Child | Child[];
 }): BoxNode {
-  const { children, ...rest } = props;
-  return { type: 'box', ...rest, children: normalizeChildren(children) };
+  const { children, onPress, ...rest } = props;
+  return {
+    type: 'box',
+    ...rest,
+    onPress: onPress ? resolveAction(onPress) : undefined,
+    children: normalizeChildren(children),
+  };
 }
 
 declare module './_shared' {

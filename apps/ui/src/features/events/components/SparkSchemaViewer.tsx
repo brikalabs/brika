@@ -5,7 +5,7 @@ interface SparkSchemaViewerProps {
   schema?: Record<string, unknown>;
 }
 
-export function SparkSchemaViewer({ schema }: SparkSchemaViewerProps) {
+export function SparkSchemaViewer({ schema }: Readonly<SparkSchemaViewerProps>) {
   const [expanded, setExpanded] = useState(false);
 
   if (!schema) {
@@ -26,14 +26,21 @@ export function SparkSchemaViewer({ schema }: SparkSchemaViewerProps) {
         <span>Schema</span>
       </button>
       {expanded && (
-        <div
-          role="region"
+        <section
+          aria-label="Schema details"
           className="mt-2 max-h-48 overflow-auto rounded-md border bg-muted/50 p-2"
-          onClick={(e) => e.stopPropagation()}
-          onKeyDown={(e) => { if (e.key === 'Escape') setExpanded(false); }}
         >
-          <pre className="font-mono text-xs">{JSON.stringify(schema, null, 2)}</pre>
-        </div>
+          <button
+            type="button"
+            className="w-full cursor-default border-none bg-transparent p-0 text-left font-inherit"
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') setExpanded(false);
+            }}
+          >
+            <pre className="font-mono text-xs">{JSON.stringify(schema, null, 2)}</pre>
+          </button>
+        </section>
       )}
     </div>
   );

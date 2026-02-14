@@ -13,6 +13,9 @@ export function useMemo<T>(factory: () => T, deps: unknown[]): T {
   return existing.value;
 }
 
-export function useCallback<T extends (...args: unknown[]) => unknown>(callback: T, deps: unknown[]): T {
+export function useCallback<T extends (...args: unknown[]) => unknown>(
+  callback: T,
+  deps: unknown[]
+): T {
   return useMemo(() => callback, deps);
 }

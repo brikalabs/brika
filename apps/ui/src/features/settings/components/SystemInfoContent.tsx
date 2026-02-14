@@ -7,11 +7,11 @@
 import {
   Calendar,
   Clock,
+  Code2,
   FileText,
   FolderOpen,
   GitBranch,
   GitCommit,
-  Github,
   Laptop,
   Server,
   Tag,
@@ -109,7 +109,7 @@ export function SystemInfoContent({ system }: Readonly<SystemInfoContentProps>) 
         )}
         {repo && (
           <InfoItem
-            icon={Github}
+            icon={Code2}
             label={t('settings:system.repository')}
             value={repo.replace('https://github.com/', '')}
             href={repo}

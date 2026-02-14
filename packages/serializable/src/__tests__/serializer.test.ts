@@ -201,7 +201,7 @@ describe('BlobTransformer', () => {
     const base64 = Buffer.from('hello world').toString('base64');
     const data = { data: base64, type: 'application/octet-stream' };
 
-    const blob = BlobTransformer.deserialize(data);
+    const blob = BlobTransformer.deserialize(data) as Blob;
 
     expect(blob).toBeInstanceOf(Blob);
     expect(blob.type).toBe('application/octet-stream');

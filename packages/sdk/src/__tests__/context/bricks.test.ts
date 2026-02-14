@@ -7,6 +7,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
+import { type ComponentNode, MUT, type Mutation } from '@brika/ui-kit';
 import { createTestHarness, type Handler, noopMock } from './_test-utils';
 
 // Mock brick-hooks
@@ -41,8 +42,8 @@ mock.module('../../brick-hooks', () => ({
 }));
 
 // Mock reconciler
-const mockReconcile = mock((_oldNodes: unknown[], _newNodes: unknown[]) => {
-  return [{ op: 'create', path: '0', node: { type: 'Text', value: 'test' } }];
+const mockReconcile = mock((_oldNodes: unknown[], _newNodes: unknown[]): Mutation[] => {
+  return [[MUT.CREATE, '0', { type: 'text', content: 'test' } as ComponentNode]];
 });
 
 mock.module('../../reconciler', () => ({
@@ -59,7 +60,7 @@ const h = createTestHarness({ bricks: [{ id: 'test-brick' }] });
 // ─── Mock component ──────────────────────────────────────────────────────────
 
 const mockComponent = mock((_ctx: { instanceId: string; config: Record<string, unknown> }) => {
-  return { type: 'Text' as const, value: 'Hello' };
+  return { type: 'text' as const, content: 'Hello' };
 });
 
 function makeBrickType(overrides?: { id?: string; component?: Handler }) {
@@ -91,8 +92,8 @@ describe('setupBricks', () => {
     mockComponent.mockClear();
 
     // Reset mockReconcile to default behavior
-    mockReconcile.mockImplementation(() => {
-      return [{ op: 'create', path: '0', node: { type: 'Text', value: 'test' } }];
+    mockReconcile.mockImplementation((_old: unknown[], _new: unknown[]) => {
+      return [[MUT.CREATE, '0', { type: 'text', content: 'test' } as ComponentNode]];
     });
 
     const result = setupBricks(h.core);
@@ -215,7 +216,7 @@ describe('setupBricks', () => {
 
     test('sends patch on initial render when reconcile returns mutations', () => {
       mockReconcile.mockReturnValueOnce([
-        { op: 'create', path: '0', node: { type: 'Text', value: 'Hello' } },
+        [MUT.CREATE, '0', { type: 'text', content: 'Hello' } as ComponentNode],
       ]);
 
       h.onHandlers.get('mountBrickInstance')!({
@@ -368,9 +369,7 @@ describe('setupBricks', () => {
 
   describe('brickInstanceAction', () => {
     test('dispatches to action ref and re-renders', () => {
-      const actionHandler = mock((_payload?: Record<string, unknown>) => {
-        /* noop */
-      });
+      const actionHandler = mock(() => {}) as unknown as Handler;
 
       mockCreateState.mockImplementationOnce((scheduleRender: () => void) => ({
         hooks: [],
@@ -453,7 +452,7 @@ describe('setupBricks', () => {
     test('subsequent renders use debounce', async () => {
       // Initial mount: immediate render
       mockReconcile.mockReturnValueOnce([
-        { op: 'create', path: '0', node: { type: 'Text', value: 'V' } },
+        [MUT.CREATE, '0', { type: 'text', content: 'V' } as ComponentNode],
       ]);
 
       h.onHandlers.get('mountBrickInstance')!({
@@ -470,7 +469,7 @@ describe('setupBricks', () => {
       expect(patchCountAfterMount).toBe(1);
 
       // Resize triggers debounced render (not immediate)
-      mockReconcile.mockReturnValueOnce([{ op: 'update', path: '0', props: { value: 'V2' } }]);
+      mockReconcile.mockReturnValueOnce([[MUT.UPDATE, '0', { value: 'V2' }]]);
       h.onHandlers.get('resizeBrickInstance')!({
         instanceId: 'i1',
         w: 4,
@@ -494,7 +493,7 @@ describe('setupBricks', () => {
 
     test('debounce skips send when no mutations', async () => {
       mockReconcile
-        .mockReturnValueOnce([{ op: 'create', path: '0', node: { type: 'Text', value: 'V' } }])
+        .mockReturnValueOnce([[MUT.CREATE, '0', { type: 'text', content: 'V' } as ComponentNode]])
         .mockReturnValueOnce([]); // No changes for debounced reconcile
 
       h.onHandlers.get('mountBrickInstance')!({
@@ -523,7 +522,7 @@ describe('setupBricks', () => {
 
     test('unmount clears pending debounce timer', async () => {
       mockReconcile.mockReturnValue([
-        { op: 'create', path: '0', node: { type: 'Text', value: 'V' } },
+        [MUT.CREATE, '0', { type: 'text', content: 'V' } as ComponentNode],
       ]);
 
       h.onHandlers.get('mountBrickInstance')!({

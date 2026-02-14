@@ -23,6 +23,7 @@ export {
   BreadcrumbSeparator,
 } from './breadcrumb';
 export { Button } from './button';
+export { ButtonGroup } from './button-group';
 export {
   Card,
   CardContent,
@@ -57,6 +58,12 @@ export {
   DialogTrigger,
 } from './dialog';
 export { Input } from './input';
+export {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from './input-group';
 export { Label } from './label';
 export { Progress } from './progress';
 export { ProgressDisplay } from './progress-display';

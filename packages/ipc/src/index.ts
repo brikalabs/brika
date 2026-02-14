@@ -43,6 +43,7 @@
 // ─── Channel ───
 export type { ChannelOptions, MessageHandler, RpcHandler, WireMessage } from './channel';
 export { Channel } from './channel';
+export type { ChannelDelegateMethods } from './channel-delegate';
 
 // ─── Client ───
 export type { ClientOptions } from './client';

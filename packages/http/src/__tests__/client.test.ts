@@ -253,15 +253,27 @@ describe('HttpClient', () => {
       const url2 = 'https://httpbin.org/uuid?a=2';
 
       // Populate with different tags
-      await client.get(url1).cache({ ttl: 60_000, tags: ['tag-a'] }).send();
-      await client.get(url2).cache({ ttl: 60_000, tags: ['tag-b'] }).send();
+      await client
+        .get(url1)
+        .cache({ ttl: 60_000, tags: ['tag-a'] })
+        .send();
+      await client
+        .get(url2)
+        .cache({ ttl: 60_000, tags: ['tag-b'] })
+        .send();
 
       // Invalidate both tags
       client.invalidateCacheTags(['tag-a', 'tag-b']);
 
       // Both should be uncached now
-      const r1 = await client.get(url1).cache({ ttl: 60_000, tags: ['tag-a'] }).send();
-      const r2 = await client.get(url2).cache({ ttl: 60_000, tags: ['tag-b'] }).send();
+      const r1 = await client
+        .get(url1)
+        .cache({ ttl: 60_000, tags: ['tag-a'] })
+        .send();
+      const r2 = await client
+        .get(url2)
+        .cache({ ttl: 60_000, tags: ['tag-b'] })
+        .send();
 
       expect(r1.cached).toBe(false);
       expect(r2.cached).toBe(false);

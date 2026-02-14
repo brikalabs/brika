@@ -4,8 +4,16 @@ import { useCallback } from 'react';
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { cn } from '@/lib/utils';
 
-function ChartTooltipContent({ active, payload, formatValue }: Readonly<{ active?: boolean; payload?: Array<{ value: unknown }>; formatValue: (value: number) => string }>) {
-  if (active && payload?.[0]) {
+function ChartTooltipContent({
+  active,
+  payload,
+  formatValue,
+}: Readonly<{
+  active?: boolean;
+  payload?: ReadonlyArray<{ value?: unknown }>;
+  formatValue: (value: number) => string;
+}>) {
+  if (active && payload?.[0]?.value != null) {
     return (
       <div className="rounded-md border bg-popover px-2 py-1 text-sm shadow-md">
         {formatValue(payload[0].value as number)}
@@ -31,10 +39,10 @@ export function MetricsChart({
   const gradientId = `gradient-${color.replaceAll(/[^a-zA-Z0-9]/g, '')}`;
   const hasData = data.length > 0;
   const renderTooltip = useCallback(
-    ({ active, payload }: { active?: boolean; payload?: Array<{ value: unknown }> }) => (
+    ({ active, payload }: { active?: boolean; payload?: ReadonlyArray<{ value?: unknown }> }) => (
       <ChartTooltipContent active={active} payload={payload} formatValue={formatValue} />
     ),
-    [formatValue],
+    [formatValue]
   );
 
   // Show empty placeholder when no data

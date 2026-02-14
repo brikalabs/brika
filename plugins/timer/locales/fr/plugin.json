@@ -19,6 +19,67 @@
       "description": "Effacer toutes les minuteries actives en une fois"
     }
   },
+  "bricks": {
+    "timers-dashboard": {
+      "name": "Tableau de bord des minuteries",
+      "description": "Aperçu des minuteries actives et comptes à rebours",
+      "config": {
+        "refreshInterval": {
+          "label": "Intervalle de rafraîchissement (ms)",
+          "description": "Fréquence de mise à jour"
+        }
+      }
+    },
+    "photo": {
+      "name": "Photo",
+      "description": "Vitrine photo avec rotation automatique",
+      "config": {
+        "autoRotate": {
+          "label": "Rotation automatique",
+          "description": "Faire défiler automatiquement les photos"
+        },
+        "interval": {
+          "label": "Intervalle (ms)",
+          "description": "Temps entre les changements de photo"
+        }
+      }
+    },
+    "weather": {
+      "name": "Météo",
+      "description": "Affichage météo simulé",
+      "config": {
+        "unit": {
+          "label": "Unité de température",
+          "options": {
+            "celsius": "Celsius",
+            "fahrenheit": "Fahrenheit"
+          }
+        },
+        "refreshInterval": {
+          "label": "Intervalle de rafraîchissement (ms)",
+          "description": "Fréquence de mise à jour des données météo"
+        }
+      }
+    },
+    "camera": {
+      "name": "Vidéo en direct",
+      "description": "Flux vidéo HLS avec contrôles",
+      "config": {
+        "defaultStream": {
+          "label": "Flux par défaut",
+          "options": {
+            "Big Buck Bunny": "Big Buck Bunny",
+            "Elephants Dream": "Elephants Dream",
+            "Sintel": "Sintel"
+          }
+        },
+        "muted": {
+          "label": "Muet par défaut",
+          "description": "Démarrer le flux en sourdine"
+        }
+      }
+    }
+  },
   "events": {
     "completed": "Minuterie terminée",
     "cancelled": "Minuterie annulée"
@@ -35,6 +96,24 @@
     "target": {
       "label": "Cible",
       "description": "ID ou nom de la minuterie à annuler"
+    }
+  },
+  "sparks": {
+    "timer-started": {
+      "name": "Minuterie démarrée",
+      "description": "Émis lorsqu'une minuterie commence"
+    },
+    "timer-completed": {
+      "name": "Minuterie terminée",
+      "description": "Émis lorsqu'une minuterie se termine"
+    },
+    "countdown-tick": {
+      "name": "Tic de compte à rebours",
+      "description": "Émis à chaque progression du compte à rebours"
+    },
+    "countdown-completed": {
+      "name": "Compte à rebours terminé",
+      "description": "Émis lorsqu'un compte à rebours se termine"
     }
   }
 }

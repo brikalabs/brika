@@ -12,6 +12,7 @@ import type { Json } from '@brika/shared';
 import { parse as parseYAML, stringify as stringifyYAML } from 'yaml';
 import { z } from 'zod';
 import { Logger } from '@/runtime/logs/log-router';
+import { ensureAndScanYamlDir } from '@/runtime/utils/yaml-dir';
 import type { Dashboard, DashboardBrickPlacement } from './types';
 
 const YAML_OPTIONS = {
@@ -31,6 +32,7 @@ const YAMLBrickSchema = z.object({
   instanceId: z.string(),
   type: z.string(),
   family: z.string().optional(), // legacy — ignored on load
+  label: z.string().optional(),
   config: z.record(z.string(), z.unknown()).optional(),
   position: z.object({ x: z.number(), y: z.number() }),
   size: z.object({ w: z.number(), h: z.number() }),
@@ -75,17 +77,8 @@ export class DashboardLoader {
   async loadDir(dir: string): Promise<void> {
     this.#dir = dir;
 
-    // Ensure directory exists
-    try {
-      await Array.fromAsync(new Bun.Glob('*').scan({ cwd: dir }));
-    } catch {
-      await Bun.write(`${dir}/.keep`, '');
-      this.logs.info('Dashboards directory created', { directory: dir });
-    }
-
-    // Load all YAML files
-    const files = await Array.fromAsync(new Bun.Glob('*.{yaml,yml}').scan({ cwd: dir }));
-    for (const file of files) await this.#loadFile(join(dir, file));
+    const filePaths = await ensureAndScanYamlDir(dir, this.logs, 'Dashboards');
+    for (const filePath of filePaths) await this.#loadFile(filePath);
 
     // Create default "Home" dashboard if none exist
     if (this.#dashboards.size === 0) {
@@ -192,7 +185,10 @@ export class DashboardLoader {
 
       for (const l of this.#changeListeners) l(dashboard.id, 'load');
 
-      this.logs.info('Dashboard loaded', { fileName: basename(filePath), dashboardId: dashboard.id });
+      this.logs.info('Dashboard loaded', {
+        fileName: basename(filePath),
+        dashboardId: dashboard.id,
+      });
     } catch (error) {
       this.logs.error('Failed to load dashboard', { fileName: basename(filePath) }, { error });
     }
@@ -217,6 +213,7 @@ export class DashboardLoader {
     const bricks: DashboardBrickPlacement[] = yamlBricks.map((c) => ({
       instanceId: c.instanceId,
       brickTypeId: c.type,
+      label: c.label,
       config: (c.config ?? {}) as Record<string, Json>,
       position: c.position,
       size: c.size,
@@ -243,6 +240,7 @@ export class DashboardLoader {
       bricks: dashboard.bricks.map((c) => ({
         instanceId: c.instanceId,
         type: c.brickTypeId,
+        label: c.label,
         config: Object.keys(c.config).length > 0 ? c.config : undefined,
         position: c.position,
         size: c.size,

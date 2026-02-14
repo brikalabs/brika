@@ -1,4 +1,6 @@
-import type { BaseNode } from './_shared';
+import type { ColorValue } from '../colors';
+import type { ActionHandler, BaseNode } from './_shared';
+import { resolveAction } from './_shared';
 
 export interface IconNode extends BaseNode {
   type: 'icon';
@@ -7,11 +9,16 @@ export interface IconNode extends BaseNode {
   /** Display size */
   size?: 'sm' | 'md' | 'lg';
   /** Icon color */
-  color?: string;
+  color?: ColorValue;
+  /** Action dispatched when clicked */
+  onPress?: string;
 }
 
-export function Icon(props: Omit<IconNode, 'type'>): IconNode {
-  return { type: 'icon', ...props };
+export function Icon(
+  props: Omit<IconNode, 'type' | 'onPress'> & { onPress?: ActionHandler }
+): IconNode {
+  const { onPress, ...rest } = props;
+  return { type: 'icon', ...rest, onPress: onPress ? resolveAction(onPress) : undefined };
 }
 
 declare module './_shared' {

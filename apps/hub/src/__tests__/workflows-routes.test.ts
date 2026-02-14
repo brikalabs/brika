@@ -103,9 +103,7 @@ describe('workflows routes', () => {
         { id: 'block-a', type: 'timer' },
         { id: 'block-b', type: 'logger' },
       ],
-      connections: [
-        { from: 'block-a', fromPort: 'tick', to: 'block-b', toPort: 'input' },
-      ],
+      connections: [{ from: 'block-a', fromPort: 'tick', to: 'block-b', toPort: 'input' }],
     });
 
     expect(res.status).toBe(200);
@@ -125,9 +123,7 @@ describe('workflows routes', () => {
         { id: 'block-a', type: 'timer' },
         { id: 'block-b', type: 'logger' },
       ],
-      connections: [
-        { from: 'block-a', fromPort: 'tick', to: 'block-b', toPort: 'input' },
-      ],
+      connections: [{ from: 'block-a', fromPort: 'tick', to: 'block-b', toPort: 'input' }],
     });
 
     expect(res.status).toBe(400);
@@ -144,9 +140,8 @@ describe('workflows routes', () => {
     expect(res.status).toBe(200);
     expect(res.body.ok).toBeTrue();
     // Verify the workflow was saved with enabled flag
-    const savedWorkflow = mockLoader.saveWorkflow.mock.calls[
-      mockLoader.saveWorkflow.mock.calls.length - 1
-    ][0];
+    const savedWorkflow =
+      mockLoader.saveWorkflow.mock.calls[mockLoader.saveWorkflow.mock.calls.length - 1][0];
     expect(savedWorkflow.enabled).toBe(true);
   });
 
@@ -158,9 +153,8 @@ describe('workflows routes', () => {
     });
 
     expect(res.status).toBe(200);
-    const savedWorkflow = mockLoader.saveWorkflow.mock.calls[
-      mockLoader.saveWorkflow.mock.calls.length - 1
-    ][0];
+    const savedWorkflow =
+      mockLoader.saveWorkflow.mock.calls[mockLoader.saveWorkflow.mock.calls.length - 1][0];
     expect(savedWorkflow.enabled).toBe(false);
   });
 
@@ -236,7 +230,9 @@ describe('workflows routes', () => {
     let capturedListener: ((event: unknown) => void) | undefined;
     mockEngine.addGlobalListener.mockImplementation((listener: (event: unknown) => void) => {
       capturedListener = listener;
-      return () => { capturedListener = undefined; };
+      return () => {
+        capturedListener = undefined;
+      };
     });
 
     const raw = await app.hono.fetch(new Request('http://test/api/workflows/debug'));

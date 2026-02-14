@@ -1,7 +1,5 @@
-import type { GridNode } from '@brika/ui-kit';
 import { cva } from 'class-variance-authority';
-import { memo } from 'react';
-import { type ActionHandler, ComponentNodeRenderer } from './registry';
+import { ComponentNodeRenderer, defineRenderer } from './registry';
 import { gapVariant } from './shared';
 
 const gridVariants = cva('grid min-h-0', {
@@ -13,21 +11,20 @@ const gridVariants = cva('grid min-h-0', {
   },
 });
 
-export const GridRenderer = memo(function GridRenderer({
-  node,
-  onAction,
-}: {
-  node: GridNode;
-  onAction?: ActionHandler;
-}) {
+defineRenderer('grid', ({ node, onAction }) => {
   const gridStyle: React.CSSProperties = node.autoFit
     ? { gridTemplateColumns: `repeat(auto-fit, minmax(${node.minColumnWidth ?? 120}px, 1fr))` }
     : { gridTemplateColumns: `repeat(${node.columns ?? 2}, minmax(0, 1fr))` };
 
+  const clickable = !!node.onPress;
+
   return (
     <div
-      className={gridVariants({ gap: node.gap })}
+      className={`${gridVariants({ gap: node.gap })}${clickable ? 'cursor-pointer' : ''}`}
       style={gridStyle}
+      onClick={clickable ? () => onAction?.(node.onPress as string) : undefined}
+      role={clickable ? 'button' : undefined}
+      tabIndex={clickable ? 0 : undefined}
     >
       {node.children.map((child, i) => (
         <ComponentNodeRenderer key={`${child.type}-${i}`} node={child} onAction={onAction} />

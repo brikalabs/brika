@@ -1,5 +1,5 @@
+import { Button, Grid, Row, Stat, Status, Video } from '@brika/sdk/bricks/components';
 import { defineBrick, useBrickSize, usePreference, useState } from '@brika/sdk/bricks/core';
-import { Button, Grid, Stack, Stat, Status, Video } from '@brika/sdk/bricks/components';
 
 const STREAMS = [
   { name: 'Sintel', src: 'https://bitdash-a.akamaihd.net/content/sintel/hls/playlist.m3u8' },
@@ -18,7 +18,7 @@ function CameraControls({ recording, onPrev, onNext, onToggleRec }: Readonly<{
   onToggleRec: () => void;
 }>) {
   return (
-    <Stack direction="horizontal" gap="sm">
+    <Row gap="sm">
       <Button label="Prev" onPress={onPrev} icon="chevron-left" variant="outline" />
       <Button
         label={recording ? 'Stop' : 'Record'}
@@ -27,7 +27,7 @@ function CameraControls({ recording, onPrev, onNext, onToggleRec }: Readonly<{
         variant={recording ? 'destructive' : 'default'}
       />
       <Button label="Next" onPress={onNext} icon="chevron-right" variant="outline" />
-    </Stack>
+    </Row>
   );
 }
 

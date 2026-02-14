@@ -17,7 +17,7 @@ interface PluginInstallInfoProps {
   plugin: Plugin;
 }
 
-export function PluginInstallInfo({ plugin }: PluginInstallInfoProps) {
+export function PluginInstallInfo({ plugin }: Readonly<PluginInstallInfoProps>) {
   const { t, getLanguageName } = useLocale();
   const locales = plugin.locales ?? [];
 
@@ -31,9 +31,9 @@ export function PluginInstallInfo({ plugin }: PluginInstallInfoProps) {
         <CardDescription>{t('plugins:details.installationDesc')}</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-2">
-        <InfoRow label="UID" value={plugin.uid} />
+        <InfoRow label={t('plugins:details.uid')} value={plugin.uid} />
         <InfoRow label={t('plugins:details.directory')} value={plugin.rootDirectory} truncate />
-        <InfoRow label="Entry Point" value={plugin.entryPoint} truncate />
+        <InfoRow label={t('plugins:details.entryPoint')} value={plugin.entryPoint} truncate />
         <InfoRow label={t('plugins:details.compatibleVersion')} value={plugin.engines.brika} />
 
         {locales.length > 0 && (
@@ -65,7 +65,11 @@ export function PluginInstallInfo({ plugin }: PluginInstallInfoProps) {
   );
 }
 
-function InfoRow({ label, value, truncate }: { label: string; value: string; truncate?: boolean }) {
+function InfoRow({
+  label,
+  value,
+  truncate,
+}: Readonly<{ label: string; value: string; truncate?: boolean }>) {
   return (
     <div className="flex items-center justify-between rounded-lg bg-muted/30 p-2.5">
       <span className="text-sm">{label}</span>

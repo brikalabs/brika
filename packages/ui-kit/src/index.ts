@@ -6,42 +6,105 @@
  */
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Descriptor Types
+// Node Types
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type {
-  ActionNode,
+  // Shared
+  ActionHandler,
+  AvatarNode,
+  BadgeNode,
   BaseNode,
+  BoxNode,
+  // Input
   ButtonNode,
-  BrickDescriptor,
+  // Feedback
+  CalloutNode,
   ChartDataPoint,
   ChartNode,
+  ChartSeries,
+  CheckboxNode,
+  CodeBlockNode,
+  ColumnNode,
   ComponentNode,
+  DividerNode,
+  FlexLayoutProps,
   GridNode,
+  IconNode,
   ImageNode,
-  Mutation,
+  KeyValueItem,
+  KeyValueNode,
+  LinkNode,
   NodeTypeMap,
+  ProgressNode,
+  // Layout
+  RowNode,
   SectionNode,
+  SelectNode,
+  SelectOption,
+  SkeletonNode,
   SliderNode,
-  StackNode,
-  StatValueNode,
+  SpacerNode,
   StatusNode,
+  StatValueNode,
+  TabItem,
+  TableColumn,
+  TableNode,
+  TabsNode,
+  TextInputNode,
+  // Data display
   TextNode,
   ToggleNode,
   VideoNode,
-  BoxNode,
-  SpacerNode,
-  DividerNode,
-  ProgressNode,
-  BadgeNode,
-  IconNode,
-} from './descriptors';
+} from './nodes';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Components (PascalCase — used with custom jsx-runtime and as builder functions)
+// Component Builders (PascalCase — used with custom jsx-runtime)
 // ─────────────────────────────────────────────────────────────────────────────
 
-export { Badge, Box, Button, Chart, Divider, Grid, Icon, Image, Progress, Section, Slider, Spacer, Stack, Stat, Status, Text, Toggle, Video } from './components';
+export {
+  Avatar,
+  Badge,
+  Box,
+  // Input
+  Button,
+  // Feedback
+  Callout,
+  Chart,
+  Checkbox,
+  CodeBlock,
+  Column,
+  Divider,
+  Grid,
+  Icon,
+  Image,
+  KeyValue,
+  Link,
+  Progress,
+  // Layout
+  Row,
+  Section,
+  Select,
+  Skeleton,
+  Slider,
+  Spacer,
+  Stat,
+  Status,
+  Table,
+  Tabs,
+  // Data display
+  Text,
+  TextInput,
+  Toggle,
+  Video,
+} from './nodes';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Descriptors
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type { ActionNode, BrickDescriptor, Mutation } from './descriptors';
+export { MUT } from './descriptors';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // defineBrick
@@ -65,8 +128,14 @@ export { defineBrick } from './define-brick';
 export { applyMutations } from './mutations';
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Theme-aware color tokens
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type { BackgroundToken, BackgroundValue, ColorToken, ColorValue } from './colors';
+export { colors } from './colors';
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Auto-action registration (internal — used by SDK render pipeline)
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type { ActionHandler } from './nodes';
 export { _setActionRegistrar } from './nodes';

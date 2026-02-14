@@ -7,8 +7,8 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from 'bun:test';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { Buildable, Rule, Violation } from '../types';
 import { runArch } from '../runner';
+import type { Buildable, Rule, Violation } from '../types';
 
 const TEST_DIR = join(import.meta.dir, '.test-runner-fixtures');
 
@@ -45,9 +45,7 @@ describe('runner', () => {
       expect(result.passed).toBe(false);
       expect(result.violations).toHaveLength(1);
       expect(result.violations[0]!.rule).toBe('promise-rule');
-      expect(result.violations[0]!.violations[0]!.message).toBe(
-        'violation from promise rule'
-      );
+      expect(result.violations[0]!.violations[0]!.message).toBe('violation from promise rule');
     });
 
     it('handles rules returning empty Promise<Violation[]>', async () => {

@@ -14,6 +14,7 @@ import { parse as parseYAML, stringify as stringifyYAML } from 'yaml';
 import { z } from 'zod';
 import { BlockRegistry } from '@/runtime/blocks/block-registry';
 import { Logger } from '@/runtime/logs/log-router';
+import { ensureAndScanYamlDir } from '@/runtime/utils/yaml-dir';
 import type { BlockConnection, Workflow, WorkflowBlock } from './types';
 import { WorkflowEngine } from './workflow-engine';
 
@@ -70,17 +71,8 @@ export class WorkflowLoader {
   async loadDir(dir: string): Promise<void> {
     this.#dir = dir;
 
-    // Ensure directory exists
-    try {
-      await Array.fromAsync(new Bun.Glob('*').scan({ cwd: dir }));
-    } catch {
-      await Bun.write(`${dir}/.keep`, '');
-      this.logs.info('Workflows directory created', { directory: dir });
-    }
-
-    // Load all YAML files
-    const files = await Array.fromAsync(new Bun.Glob('*.{yaml,yml}').scan({ cwd: dir }));
-    for (const file of files) await this.#loadFile(join(dir, file));
+    const filePaths = await ensureAndScanYamlDir(dir, this.logs, 'Workflows');
+    for (const filePath of filePaths) await this.#loadFile(filePath);
 
     this.logs.info('Workflow files loaded', { directory: dir, count: this.#loaded.size });
   }

@@ -159,7 +159,7 @@ export function setupBricks(core: ContextCore) {
   client.on(mountBrickInstance, ({ instanceId, brickTypeId, w, h, config }) => {
     const colonIndex = brickTypeId.indexOf(':');
     const localId = colonIndex >= 0 ? brickTypeId.slice(colonIndex + 1) : brickTypeId;
-    mountInstance(instanceId, localId, w, h, config as Record<string, unknown>);
+    mountInstance(instanceId, localId, w, h, config);
   });
 
   client.on(resizeBrickInstance, ({ instanceId, w, h }) => {
@@ -173,7 +173,7 @@ export function setupBricks(core: ContextCore) {
   client.on(updateBrickConfig, ({ instanceId, config }) => {
     const state = brickInstances.get(instanceId);
     if (!state) return;
-    state.config = config as Record<string, unknown>;
+    state.config = config;
     state.hookState.config = state.config;
     renderInstance(state);
   });
@@ -216,7 +216,8 @@ export function setupBricks(core: ContextCore) {
     },
 
     stop() {
-      for (const instanceId of [...brickInstances.keys()]) {
+      const instanceIds = Array.from(brickInstances.keys());
+      for (const instanceId of instanceIds) {
         unmountInstance(instanceId);
       }
     },

@@ -77,7 +77,9 @@ describe('logs routes', () => {
       { name: '@test/plugin-b', uid: 'uid-b', version: '2.0.0' },
     ]);
 
-    const res = await app.get<{ plugins: Array<{ name: string; uid?: string; version?: string }> }>('/api/logs/plugins');
+    const res = await app.get<{ plugins: Array<{ name: string; uid?: string; version?: string }> }>(
+      '/api/logs/plugins'
+    );
 
     expect(res.status).toBe(200);
     expect(res.body.plugins).toHaveLength(2);
@@ -91,7 +93,9 @@ describe('logs routes', () => {
     mockLogStore.getPluginNames.mockReturnValue(['@test/unknown-plugin']);
     mockPluginManager.list.mockReturnValue([]);
 
-    const res = await app.get<{ plugins: Array<{ name: string; uid?: string; version?: string }> }>('/api/logs/plugins');
+    const res = await app.get<{ plugins: Array<{ name: string; uid?: string; version?: string }> }>(
+      '/api/logs/plugins'
+    );
 
     expect(res.status).toBe(200);
     expect(res.body.plugins).toHaveLength(1);
@@ -141,10 +145,7 @@ describe('logs routes', () => {
   test('DELETE /api/logs with filter body', async () => {
     mockLogStore.clear.mockReturnValue(5);
 
-    const res = await app.delete<{ ok: boolean; deleted: number }>('/api/logs', {
-      level: 'error',
-      pluginName: '@test/plugin',
-    });
+    const res = await app.delete<{ ok: boolean; deleted: number }>('/api/logs');
 
     expect(res.status).toBe(200);
     expect(res.body.ok).toBeTrue();

@@ -1,5 +1,5 @@
-import { defineBrick, useBrickSize, useEffect, usePreference, useState } from '@brika/sdk/bricks/core';
 import { Chart, Grid, Image, Section, Slider, Stat, Status, Text } from '@brika/sdk/bricks/components';
+import { defineBrick, useBrickSize, useEffect, usePreference, useState } from '@brika/sdk/bricks/core';
 
 const WEATHER_CONDITIONS = ['sunny', 'cloudy', 'rainy', 'stormy', 'snowy'] as const;
 const WEATHER_ICONS: Record<string, string> = {

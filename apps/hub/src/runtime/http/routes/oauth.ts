@@ -33,8 +33,8 @@ export const oauthRoutes = group('/api/oauth', [
         req.method,
         pluginPath,
         extractQuery(url),
-        extractHeaders(req, url, process.uid),
+        extractHeaders(req, url, process.uid)
       );
-    },
+    }
   ),
 ]);

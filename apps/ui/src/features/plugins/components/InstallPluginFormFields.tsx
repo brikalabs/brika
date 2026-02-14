@@ -1,4 +1,5 @@
 import { Input, Label } from '@/components/ui';
+import { useLocale } from '@/lib/use-locale';
 
 interface InstallPluginFormFieldsProps {
   packageName: string;
@@ -15,26 +16,28 @@ export function InstallPluginFormFields({
   onVersionChange,
   disabled,
 }: Readonly<InstallPluginFormFieldsProps>) {
+  const { t } = useLocale();
+
   return (
     <>
       <div className="space-y-2">
-        <Label htmlFor="package">Package Name</Label>
+        <Label htmlFor="package">{t('plugins:install.packageName')}</Label>
         <Input
           id="package"
           value={packageName}
           onChange={(e) => onPackageNameChange(e.target.value)}
-          placeholder="@brika/plugin-timer or workspace:/path/to/plugin"
+          placeholder={t('plugins:install.packageNamePlaceholder')}
           className="font-mono text-sm"
           disabled={disabled}
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="version">Version (optional)</Label>
+        <Label htmlFor="version">{t('plugins:install.versionOptional')}</Label>
         <Input
           id="version"
           value={version}
           onChange={(e) => onVersionChange(e.target.value)}
-          placeholder="^1.0.0 or latest"
+          placeholder={t('plugins:install.versionPlaceholder')}
           className="font-mono text-sm"
           disabled={disabled}
         />

@@ -7,6 +7,10 @@ export interface VideoNode extends BaseNode {
   poster?: string;
   aspectRatio?: string;
   muted?: boolean;
+  /** Show native video controls */
+  controls?: boolean;
+  /** Loop playback */
+  loop?: boolean;
 }
 
 export function Video(props: Omit<VideoNode, 'type'>): VideoNode {

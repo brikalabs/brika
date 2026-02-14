@@ -1,5 +1,5 @@
 import { LayoutDashboard, Search, Trash2 } from 'lucide-react';
-import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
+import { DynamicIcon, iconNames } from 'lucide-react/dynamic';
 import { useEffect, useMemo, useState } from 'react';
 import {
   AlertDialog,
@@ -26,147 +26,6 @@ import { cn } from '@/lib/utils';
 import type { Dashboard } from '../api';
 import { useDeleteDashboard, useUpdateDashboard } from '../hooks';
 
-// Curated set of icons suitable for dashboards
-const ICON_OPTIONS: string[] = [
-  // Layout & Dashboard
-  'layout-dashboard',
-  'layout-grid',
-  'layout-list',
-  'columns-3',
-  'grid-3x3',
-  'panel-top',
-  // Home & Navigation
-  'home',
-  'compass',
-  'map',
-  'map-pin',
-  'navigation',
-  'signpost',
-  // Charts & Analytics
-  'chart-bar',
-  'chart-line',
-  'chart-pie',
-  'chart-area',
-  'trending-up',
-  'trending-down',
-  'activity',
-  'bar-chart-3',
-  'gauge',
-  'percent',
-  // Time
-  'clock',
-  'timer',
-  'calendar',
-  'alarm-clock',
-  'hourglass',
-  // Notifications & Communication
-  'bell',
-  'mail',
-  'message-circle',
-  'phone',
-  'globe',
-  'radio',
-  'megaphone',
-  'rss',
-  // Media
-  'camera',
-  'image',
-  'video',
-  'music',
-  'headphones',
-  'mic',
-  'tv',
-  'film',
-  // Tech
-  'monitor',
-  'cpu',
-  'server',
-  'database',
-  'hard-drive',
-  'wifi',
-  'smartphone',
-  'tablet',
-  // Weather & Nature
-  'cloud',
-  'sun',
-  'moon',
-  'thermometer',
-  'droplet',
-  'leaf',
-  'flower',
-  'mountain',
-  // Commerce
-  'shopping-cart',
-  'shopping-bag',
-  'credit-card',
-  'wallet',
-  'receipt',
-  'tag',
-  // Energy
-  'zap',
-  'battery',
-  'plug',
-  'flame',
-  'power',
-  'lightbulb',
-  // People & Security
-  'user',
-  'users',
-  'shield',
-  'lock',
-  'key',
-  'eye',
-  'fingerprint',
-  // Files & Docs
-  'folder',
-  'file',
-  'file-text',
-  'clipboard',
-  'archive',
-  'book',
-  'notebook',
-  // Status & Favorites
-  'heart',
-  'star',
-  'bookmark',
-  'flag',
-  'target',
-  'trophy',
-  'award',
-  'medal',
-  // Dev & Tools
-  'code',
-  'terminal',
-  'git-branch',
-  'package',
-  'puzzle',
-  'wrench',
-  'settings',
-  'cog',
-  // Transport
-  'car',
-  'truck',
-  'plane',
-  'train',
-  'bike',
-  'ship',
-  // Buildings
-  'building',
-  'store',
-  'warehouse',
-  'factory',
-  'landmark',
-  'hotel',
-  // Misc
-  'rocket',
-  'gamepad',
-  'palette',
-  'graduation-cap',
-  'stethoscope',
-  'scale',
-  'umbrella',
-];
-
 interface EditDashboardDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -179,7 +38,7 @@ export function EditDashboardDialog({
   onOpenChange,
   dashboard,
   onDeleted,
-}: EditDashboardDialogProps) {
+}: Readonly<EditDashboardDialogProps>) {
   const { t } = useLocale();
   const [name, setName] = useState(dashboard.name);
   const [icon, setIcon] = useState(dashboard.icon ?? '');
@@ -197,8 +56,7 @@ export function EditDashboardDialog({
   }, [dashboard.id, dashboard.name, dashboard.icon]);
 
   const filteredIcons = useMemo(
-    () =>
-      iconSearch ? ICON_OPTIONS.filter((n) => n.includes(iconSearch.toLowerCase())) : ICON_OPTIONS,
+    () => (iconSearch ? iconNames.filter((n) => n.includes(iconSearch.toLowerCase())) : iconNames),
     [iconSearch]
   );
 
@@ -223,7 +81,7 @@ export function EditDashboardDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>{t('bricks:dashboard.edit')}</DialogTitle>
             <DialogDescription>{t('bricks:dashboard.editDescription')}</DialogDescription>
@@ -278,11 +136,7 @@ export function EditDashboardDialog({
                         icon === iconName && 'bg-primary/10 ring-2 ring-primary'
                       )}
                     >
-                      <DynamicIcon
-                        name={iconName as IconName}
-                        className="size-4"
-                        fallback={() => null}
-                      />
+                      <DynamicIcon name={iconName} className="size-4" fallback={() => null} />
                     </button>
                   ))}
                 </div>

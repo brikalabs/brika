@@ -1,5 +1,5 @@
+import { Box, Button, Column, Row, Text } from '@brika/sdk/bricks/components';
 import { defineBrick, useBrickSize, useEffect, usePreference, useState } from '@brika/sdk/bricks/core';
-import { Button, Image, Stack, Text } from '@brika/sdk/bricks/components';
 
 const PHOTOS = [
   { src: 'https://picsum.photos/seed/brika1/800/600', caption: 'Mountain sunrise' },
@@ -7,19 +7,6 @@ const PHOTOS = [
   { src: 'https://picsum.photos/seed/brika3/800/600', caption: 'Forest trail' },
   { src: 'https://picsum.photos/seed/brika4/800/600', caption: 'City skyline' },
 ];
-
-// ─── Sub-components ──────────────────────────────────────────────────────────
-
-function PhotoControls({ onPrev, onNext }: Readonly<{ onPrev: () => void; onNext: () => void }>) {
-  return (
-    <Stack direction="horizontal" gap="sm">
-      <Button label="Previous" onPress={onPrev} icon="chevron-left" variant="outline" />
-      <Button label="Next" onPress={onNext} icon="chevron-right" variant="outline" />
-    </Stack>
-  );
-}
-
-// ─── Brick ───────────────────────────────────────────────────────────────────
 
 export const photoBrick = defineBrick(
   {
@@ -44,6 +31,7 @@ export const photoBrick = defineBrick(
 
     const [index, setIndex] = useState(0);
     const photo = PHOTOS[index % PHOTOS.length];
+    const counter = `${(index % PHOTOS.length) + 1}/${PHOTOS.length}`;
 
     const handleNext = () => setIndex((i: number) => (i + 1) % PHOTOS.length);
     const handlePrev = () => setIndex((i: number) => (i - 1 + PHOTOS.length) % PHOTOS.length);
@@ -56,24 +44,24 @@ export const photoBrick = defineBrick(
       return () => clearInterval(id);
     }, []);
 
-    // ── Narrow (1-2 cols): image only ────────────────────────────────────
-    if (width <= 2) {
-      return (
-        <>
-          <Image src={photo.src} rounded aspectRatio="1/1" fit="cover" />
-          {height >= 3 && <Text variant="caption" content={photo.caption} />}
-        </>
-      );
-    }
-
-    // ── Medium+ (3+ cols): image with caption + controls ─────────────────
-    const aspectRatio = width >= 5 ? '16/9' : '4/3';
-
+    // Full-bleed photo with compact overlay at bottom
     return (
-      <>
-        <Image src={photo.src} rounded aspectRatio={aspectRatio} fit="cover" caption={photo.caption} />
-        {height >= 3 && <PhotoControls onPrev={handlePrev} onNext={handleNext} />}
-      </>
+      <Box backgroundImage={photo.src} backgroundFit="cover" rounded="md" grow onPress={handleNext}>
+        <Column justify="end" grow>
+          <Box background="rgba(0,0,0,0.5)" blur="sm" padding="sm" rounded="sm">
+            <Row justify="between" align="center" gap="sm">
+              <Text variant="caption" content={photo.caption} color="#fff" />
+              {width > 2 && height > 2 && (
+                <Row gap="sm" align="center">
+                  <Text variant="caption" content={counter} color="rgba(255,255,255,0.7)" />
+                  <Button onPress={handlePrev} icon="chevron-left" variant="ghost" color="#fff" />
+                  <Button onPress={handleNext} icon="chevron-right" variant="ghost" color="#fff" />
+                </Row>
+              )}
+            </Row>
+          </Box>
+        </Column>
+      </Box>
     );
   },
 );

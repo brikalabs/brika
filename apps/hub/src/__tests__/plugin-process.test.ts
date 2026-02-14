@@ -353,13 +353,7 @@ describe('PluginProcess', () => {
       test('sends route request and returns response', async () => {
         mockChannel.call.mockResolvedValueOnce({ status: 200, body: { ok: true } });
 
-        const result = await process.sendRouteRequest(
-          'route-1',
-          'GET',
-          '/api/test',
-          {},
-          {},
-        );
+        const result = await process.sendRouteRequest('route-1', 'GET', '/api/test', {}, {});
 
         expect(result.status).toBe(200);
         expect(mockChannel.call).toHaveBeenCalled();
@@ -368,13 +362,7 @@ describe('PluginProcess', () => {
       test('returns 503 when stopped', async () => {
         process.stop();
 
-        const result = await process.sendRouteRequest(
-          'route-1',
-          'GET',
-          '/api/test',
-          {},
-          {},
-        );
+        const result = await process.sendRouteRequest('route-1', 'GET', '/api/test', {}, {});
 
         expect(result.status).toBe(503);
       });
@@ -382,13 +370,7 @@ describe('PluginProcess', () => {
       test('returns 502 on channel error', async () => {
         mockChannel.call.mockRejectedValueOnce(new Error('Channel error'));
 
-        const result = await process.sendRouteRequest(
-          'route-1',
-          'GET',
-          '/api/test',
-          {},
-          {},
-        );
+        const result = await process.sendRouteRequest('route-1', 'GET', '/api/test', {}, {});
 
         expect(result.status).toBe(502);
       });
@@ -498,18 +480,111 @@ describe('PluginProcess', () => {
     });
   });
 
-  describe('Channel Handlers', () => {
-    // The handlers are set up in the constructor via #setupHandlers
-    // We can test them by finding the right handler from channelHandlers
+  describe('Heartbeat', () => {
+    test('pings the plugin and updates lastPong on success', async () => {
+      const shortConfig: PluginProcessConfig = {
+        heartbeatIntervalMs: 50,
+        heartbeatTimeoutMs: 1000,
+      };
 
+      const pp = new PluginProcess(
+        mockChannel as never,
+        {
+          name: '@test/plugin',
+          rootDirectory: '/path/to/plugin',
+          entryPoint: '/path/to/plugin/index.js',
+          uid: 'uid-hb',
+          version: '1.0.0',
+          metadata: createMockMetadata(),
+          locales: [],
+        },
+        shortConfig,
+        callbacks
+      );
+
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 150));
+
+        expect(mockChannel.ping).toHaveBeenCalled();
+        expect(pp.lastPong).toBeGreaterThan(0);
+      } finally {
+        pp.stop();
+      }
+    });
+
+    test('calls onHeartbeatFailed when ping times out', async () => {
+      mockChannel.ping.mockRejectedValue(new Error('Ping timeout'));
+
+      const shortConfig: PluginProcessConfig = {
+        heartbeatIntervalMs: 50,
+        heartbeatTimeoutMs: 100,
+      };
+
+      const pp = new PluginProcess(
+        mockChannel as never,
+        {
+          name: '@test/plugin',
+          rootDirectory: '/path/to/plugin',
+          entryPoint: '/path/to/plugin/index.js',
+          uid: 'uid-fail',
+          version: '1.0.0',
+          metadata: createMockMetadata(),
+          locales: [],
+        },
+        shortConfig,
+        callbacks
+      );
+
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 150));
+
+        expect(callbacks.onHeartbeatFailed).toHaveBeenCalled();
+        const [failedProcess, silentMs] = (callbacks.onHeartbeatFailed as ReturnType<typeof mock>)
+          .mock.calls[0];
+        expect(failedProcess).toBe(pp);
+        expect(silentMs).toBeGreaterThanOrEqual(0);
+      } finally {
+        pp.stop();
+      }
+    });
+
+    test('stops heartbeat when process is stopped', async () => {
+      const shortConfig: PluginProcessConfig = {
+        heartbeatIntervalMs: 50,
+        heartbeatTimeoutMs: 1000,
+      };
+
+      const pp = new PluginProcess(
+        mockChannel as never,
+        {
+          name: '@test/plugin',
+          rootDirectory: '/path/to/plugin',
+          entryPoint: '/path/to/plugin/index.js',
+          uid: 'uid-stop',
+          version: '1.0.0',
+          metadata: createMockMetadata(),
+          locales: [],
+        },
+        shortConfig,
+        callbacks
+      );
+
+      pp.stop();
+
+      const callsBefore = mockChannel.ping.mock.calls.length;
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
+      // No new pings after stop
+      expect(mockChannel.ping.mock.calls.length).toBe(callsBefore);
+    });
+  });
+
+  describe('Channel Handlers', () => {
     test('registers channel handlers on construction', () => {
-      // The constructor calls #setupHandlers which registers handlers via channel.on
       expect(mockChannel.on.mock.calls.length).toBeGreaterThan(0);
     });
 
     test('handles registerBlock for declared blocks', () => {
-      // Find the registerBlock handler
-      // We find it by iterating channel handlers
       for (const [, handler] of channelHandlers) {
         try {
           handler({ block: { id: 'test-block', name: 'Test Block' } });
@@ -517,15 +592,10 @@ describe('PluginProcess', () => {
           // Some handlers may not accept this format
         }
       }
-
-      // If the block was declared in metadata, onBlock should be called
-      // Check if blocks set has the right entry
     });
 
     test('handles spark subscription and unsubscription', () => {
-      // The spark subscribe handler should call callbacks.onSparkSubscribe
-      // and store the unsubscribe function
-      // This is covered through the channel handlers registered in constructor
+      // Covered through the channel handlers registered in constructor
     });
   });
 });

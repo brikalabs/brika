@@ -64,11 +64,7 @@ async function fetchBlocks(): Promise<BlockDefinition[]> {
 
 interface DraggableBlockProps {
   block: BlockDefinition;
-  onDragStart: (
-    e: DragEvent<HTMLDivElement>,
-    block: BlockDefinition,
-    translatedLabel: string
-  ) => void;
+  onDragStart: (e: DragEvent<Element>, block: BlockDefinition, translatedLabel: string) => void;
 }
 
 function DraggableBlock({ block, onDragStart }: Readonly<DraggableBlockProps>) {
@@ -86,17 +82,20 @@ function DraggableBlock({ block, onDragStart }: Readonly<DraggableBlockProps>) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <div
-          role="button"
-          tabIndex={0}
+        <button
+          type="button"
           draggable
           onDragStart={(e) => onDragStart(e, block, blockName)}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') e.currentTarget.dispatchEvent(new DragEvent('dragstart', { bubbles: true })); }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ')
+              e.currentTarget.dispatchEvent(new DragEvent('dragstart', { bubbles: true }));
+          }}
           className={cn(
             'group flex cursor-grab items-center gap-2 rounded-lg border bg-card p-2.5',
             'transition-all hover:border-accent-foreground/20 hover:bg-accent',
             'active:scale-[0.98] active:cursor-grabbing',
-            'shadow-sm hover:shadow'
+            'shadow-sm hover:shadow',
+            'w-full text-left'
           )}
         >
           <GripVertical className="size-3 text-muted-foreground/50 opacity-0 transition-opacity group-hover:opacity-100" />
@@ -125,7 +124,7 @@ function DraggableBlock({ block, onDragStart }: Readonly<DraggableBlockProps>) {
               )}
             </div>
           </div>
-        </div>
+        </button>
       </TooltipTrigger>
       <TooltipContent side="right" className="w-64 p-3">
         {/* Header */}

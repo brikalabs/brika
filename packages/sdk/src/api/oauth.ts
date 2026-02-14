@@ -96,8 +96,11 @@ async function generateCodeChallenge(verifier: string): Promise<string> {
 }
 
 function base64url(bytes: Uint8Array): string {
-  const b64 = btoa(String.fromCharCode(...bytes));
-  return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/={1,2}$/, '');
+  const b64 = btoa(String.fromCodePoint(...bytes));
+  return b64
+    .replaceAll('+', '-')
+    .replaceAll('/', '_')
+    .replace(/={1,2}$/, '');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -118,7 +121,9 @@ function parseTokenResponse(json: unknown, existingRefreshToken?: string): OAuth
   if (typeof accessToken !== 'string') return null;
   return {
     access_token: accessToken,
-    refresh_token: (typeof data.refresh_token === 'string' ? data.refresh_token : undefined) ?? existingRefreshToken,
+    refresh_token:
+      (typeof data.refresh_token === 'string' ? data.refresh_token : undefined) ??
+      existingRefreshToken,
     expires_at: Date.now() + (typeof data.expires_in === 'number' ? data.expires_in : 3600) * 1000,
     token_type: typeof data.token_type === 'string' ? data.token_type : 'Bearer',
   };
@@ -173,7 +178,9 @@ export function defineOAuth(config: OAuthProviderConfig): OAuthClient {
       const id = getStringPreference(config.clientIdPreference);
       if (id) return id;
     }
-    throw new Error('Missing client ID. Set "clientId" in defineOAuth config or provide a clientIdPreference.');
+    throw new Error(
+      'Missing client ID. Set "clientId" in defineOAuth config or provide a clientIdPreference.'
+    );
   }
 
   function getClientSecret(): string {
@@ -182,7 +189,9 @@ export function defineOAuth(config: OAuthProviderConfig): OAuthClient {
       const secret = getStringPreference(config.clientSecretPreference);
       if (secret) return secret;
     }
-    throw new Error('Missing client secret. Set "clientSecret" in defineOAuth config or provide a clientSecretPreference.');
+    throw new Error(
+      'Missing client secret. Set "clientSecret" in defineOAuth config or provide a clientSecretPreference.'
+    );
   }
 
   /** Build auth headers for token requests (Basic auth for non-PKCE flows). */

@@ -46,8 +46,4 @@ export const registerRoute = message(
 );
 
 /** Hub forwards an incoming HTTP request to the plugin */
-export const routeRequest = rpc(
-  'routeRequest',
-  RouteRequest,
-  RouteResponse,
-);
+export const routeRequest = rpc('routeRequest', RouteRequest, RouteResponse);

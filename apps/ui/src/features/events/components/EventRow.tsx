@@ -10,7 +10,13 @@ interface EventRowProps {
   t: (key: string) => string;
 }
 
-export function EventRow({ event: e, resending, onResend, formatTime, t }: EventRowProps) {
+export function EventRow({
+  event: e,
+  resending,
+  onResend,
+  formatTime,
+  t,
+}: Readonly<EventRowProps>) {
   return (
     <div className="group px-4 py-3.5 transition-colors hover:bg-muted/30">
       <div className="flex items-start justify-between gap-4">

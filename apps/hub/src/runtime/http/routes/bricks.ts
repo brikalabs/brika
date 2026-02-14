@@ -1,12 +1,16 @@
 import { group, NotFound, route } from '@brika/router';
 import type { Json } from '@brika/shared';
 import { z } from 'zod';
+import { BrickInstanceManager, BrickTypeRegistry } from '@/runtime/bricks';
 import type { BrickInstance } from '@/runtime/bricks/brick-instance-manager';
 import type { RegisteredBrickType } from '@/runtime/bricks/brick-type-registry';
-import { BrickInstanceManager, BrickTypeRegistry } from '@/runtime/bricks';
 import { PluginLifecycle } from '@/runtime/plugins/plugin-lifecycle';
 
-function toBrickTypeDto(t: RegisteredBrickType) {
+async function toBrickTypeDto(t: RegisteredBrickType, lifecycle: PluginLifecycle) {
+  const process = t.config?.some((f) => f.type === 'dynamic-dropdown')
+    ? lifecycle.getProcess(t.pluginName)
+    : null;
+
   return {
     id: t.fullId,
     localId: t.localId,
@@ -19,7 +23,14 @@ function toBrickTypeDto(t: RegisteredBrickType) {
     families: t.families,
     minSize: t.minSize,
     maxSize: t.maxSize,
-    config: t.config,
+    config: process
+      ? await Promise.all(
+          t.config!.map(async (f) => {
+            if (f.type !== 'dynamic-dropdown') return f;
+            return { ...f, options: await process.fetchPreferenceOptions(f.name) };
+          })
+        )
+      : t.config,
   };
 }
 
@@ -39,23 +50,39 @@ export const bricksRoutes = group('/api/bricks', [
   // ─── Brick Types ────────────────────────────────────────────────────────────
 
   /**
-   * List all registered brick types
+   * List all registered brick types (prefetches dynamic-dropdown options)
    */
-  route.get('/types', ({ inject }) => {
-    return inject(BrickTypeRegistry).list().map(toBrickTypeDto);
+  route.get('/types', async ({ inject }) => {
+    const lifecycle = inject(PluginLifecycle);
+    return Promise.all(
+      inject(BrickTypeRegistry)
+        .list()
+        .map((t) => toBrickTypeDto(t, lifecycle))
+    );
   }),
 
   /**
    * Get a specific brick type by full ID
    */
+  route.get('/types/:id', { params: z.object({ id: z.string() }) }, async ({ params, inject }) => {
+    const t = inject(BrickTypeRegistry).get(params.id);
+    if (!t) throw new NotFound('Brick type not found');
+    return toBrickTypeDto(t, inject(PluginLifecycle));
+  }),
+
+  /**
+   * Fetch dynamic options for a brick config field via IPC
+   */
   route.get(
-    '/types/:id',
-    { params: z.object({ id: z.string() }) },
-    ({ params, inject }) => {
-      const t = inject(BrickTypeRegistry).get(params.id);
-      if (!t) throw new NotFound('Brick type not found');
-      return toBrickTypeDto(t);
-    },
+    '/types/:typeId/config/:name/options',
+    { params: z.object({ typeId: z.string(), name: z.string() }) },
+    async ({ params, inject }) => {
+      const brickType = inject(BrickTypeRegistry).get(params.typeId);
+      if (!brickType) return { options: [] };
+      const process = inject(PluginLifecycle).getProcess(brickType.pluginName);
+      if (!process) return { options: [] };
+      return { options: await process.fetchPreferenceOptions(params.name) };
+    }
   ),
 
   // ─── Brick Instances ────────────────────────────────────────────────────────
@@ -70,15 +97,11 @@ export const bricksRoutes = group('/api/bricks', [
   /**
    * Get a specific brick instance
    */
-  route.get(
-    '/instances/:id',
-    { params: z.object({ id: z.string() }) },
-    ({ params, inject }) => {
-      const i = inject(BrickInstanceManager).get(params.id);
-      if (!i) throw new NotFound('Brick instance not found');
-      return toBrickInstanceDto(i);
-    },
-  ),
+  route.get('/instances/:id', { params: z.object({ id: z.string() }) }, ({ params, inject }) => {
+    const i = inject(BrickInstanceManager).get(params.id);
+    if (!i) throw new NotFound('Brick instance not found');
+    return toBrickInstanceDto(i);
+  }),
 
   /**
    * Send an action to a brick instance
@@ -103,9 +126,9 @@ export const bricksRoutes = group('/api/bricks', [
         instance.instanceId,
         instance.brickTypeId,
         body.actionId,
-        body.payload as Json,
+        body.payload as Json
       );
       return { ok: true };
-    },
+    }
   ),
 ]);

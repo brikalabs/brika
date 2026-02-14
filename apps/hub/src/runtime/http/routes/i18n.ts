@@ -1,4 +1,4 @@
-import { BadRequest, route } from '@brika/router';
+import { BadRequest, NotFound, route } from '@brika/router';
 import { z } from 'zod';
 import { I18nService } from '@/runtime/i18n';
 
@@ -22,6 +22,20 @@ export const i18nRoutes = [
   }),
 
   /**
+   * GET /api/i18n/bundle/:locale
+   * Returns ALL namespaces for a locale in a single response.
+   * Used by the UI for bulk-loading translations at startup.
+   */
+  route.get(
+    '/api/i18n/bundle/:locale',
+    { params: z.object({ locale: z.string() }) },
+    ({ inject, params }) => {
+      const i18n = inject(I18nService);
+      return i18n.getAllTranslations(params.locale || 'en');
+    }
+  ),
+
+  /**
    * GET /api/i18n/:locale/:namespace
    * Returns translations for a specific namespace.
    * Plugin namespaces use URL encoding for special characters.
@@ -43,7 +57,10 @@ export const i18nRoutes = [
       }
 
       const translations = i18n.getNamespaceTranslations(locale, namespace);
-      return translations ?? {};
+      if (!translations) {
+        throw new NotFound(`Namespace not found: ${namespace}`);
+      }
+      return translations;
     }
   ),
 ];

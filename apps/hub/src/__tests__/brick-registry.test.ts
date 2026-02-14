@@ -77,7 +77,7 @@ describe('BrickRegistry', () => {
       registry.register(createBrick(), 'plugin');
 
       const result = registry.patch('plugin:thermostat', [
-        { op: 'update', path: '0', props: { content: 'Updated' } },
+        [2, '0', { content: 'Updated' }],
       ]);
 
       expect(result).toBe(true);

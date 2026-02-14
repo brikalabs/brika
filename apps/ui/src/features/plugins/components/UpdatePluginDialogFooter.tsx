@@ -1,6 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
 import { Loader2 } from 'lucide-react';
 import { Button, DialogFooter } from '@/components/ui';
+import { useLocale } from '@/lib/use-locale';
 
 interface UpdatePluginDialogFooterProps {
   success: boolean;
@@ -19,10 +20,12 @@ export function UpdatePluginDialogFooter({
   onClose,
   onAction,
 }: Readonly<UpdatePluginDialogFooterProps>) {
+  const { t } = useLocale();
+
   if (success) {
     return (
       <DialogFooter>
-        <Button onClick={onClose}>Done</Button>
+        <Button onClick={onClose}>{t('plugins:update.done')}</Button>
       </DialogFooter>
     );
   }
@@ -30,13 +33,13 @@ export function UpdatePluginDialogFooter({
   return (
     <DialogFooter>
       <Button variant="outline" onClick={onClose} disabled={isProcessing}>
-        Cancel
+        {t('common:actions.cancel')}
       </Button>
       <Button onClick={onAction} disabled={isProcessing} className="gap-2">
         {isProcessing ? (
           <>
             <Loader2 className="size-4 animate-spin" />
-            {actionLabel}ing...
+            {t('plugins:update.processing', { action: actionLabel })}
           </>
         ) : (
           <>

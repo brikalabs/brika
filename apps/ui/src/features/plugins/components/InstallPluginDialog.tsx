@@ -12,10 +12,10 @@ import {
   ProgressDisplay,
 } from '@/components/ui';
 import { getProgressValue, useProgressStream } from '@/hooks/use-progress-stream';
+import { useLocale } from '@/lib/use-locale';
 import { pluginsKeys } from '../api';
 import { registryApi } from '../registry-api';
 import { InstallPluginFormFields } from './InstallPluginFormFields';
-import { useLocale } from '@/lib/use-locale';
 import { getPhaseLabel } from './install-progress-utils';
 
 interface InstallPluginDialogProps {
@@ -83,9 +83,7 @@ export function InstallPluginDialog({ open, onOpenChange }: Readonly<InstallPlug
             <Package className="size-5" />
             {t('plugins:install.title')}
           </DialogTitle>
-          <DialogDescription>
-            {t('plugins:install.description')}
-          </DialogDescription>
+          <DialogDescription>{t('plugins:install.description')}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">

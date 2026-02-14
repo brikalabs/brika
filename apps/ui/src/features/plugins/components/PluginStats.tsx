@@ -8,7 +8,7 @@ interface PluginStatsProps {
   plugin: Plugin;
 }
 
-export function PluginStats({ plugin }: PluginStatsProps) {
+export function PluginStats({ plugin }: Readonly<PluginStatsProps>) {
   const { t, formatTime } = useLocale();
   const blocksCount = plugin.blocks?.length ?? 0;
 

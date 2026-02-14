@@ -13,8 +13,12 @@
   "config": {
     "title": "Configurer la brique",
     "description": "Modifier la configuration de cette instance de brique.",
-    "noOptions": "Ce type de brique n'a aucune option configurable."
+    "noOptions": "Ce type de brique n'a aucune option configurable.",
+    "instance": "Instance",
+    "plugin": "Plugin",
+    "configuration": "Configuration"
   },
+  "pluginDisconnected": "Plugin déconnecté",
   "dashboard": {
     "new": "Nouveau tableau de bord",
     "newDescription": "Créez un nouveau tableau de bord pour organiser vos briques.",

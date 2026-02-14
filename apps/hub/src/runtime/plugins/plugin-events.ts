@@ -192,7 +192,14 @@ export class PluginEventHandler {
       families: Array<'sm' | 'md' | 'lg'>;
       config?: unknown[];
     },
-    manifest?: { name?: string; description?: string; category?: string; icon?: string; color?: string },
+    manifest?: {
+      name?: string;
+      description?: string;
+      category?: string;
+      icon?: string;
+      color?: string;
+      config?: unknown[];
+    }
   ): void {
     const fullId = this.#brickTypes.register(brickType, pluginName, manifest);
     this.#logs.debug('Brick type registered from plugin', {
@@ -206,8 +213,8 @@ export class PluginEventHandler {
           brickTypeId: fullId,
           descriptor: this.#brickTypes.get(fullId),
         },
-        pluginName,
-      ),
+        pluginName
+      )
     );
   }
 
@@ -220,6 +227,15 @@ export class PluginEventHandler {
     });
   }
 
+  onPluginDisconnected(pluginName: string): void {
+    const removed = this.#brickInstances.unmountByPlugin(pluginName);
+    if (removed.length > 0) {
+      this.#events.dispatch(
+        BrickActions.pluginDisconnected.create({ pluginName, instanceIds: removed }, 'hub')
+      );
+    }
+  }
+
   patchBrickInstance(instanceId: string, mutations: unknown[]): void {
     const patched = this.#brickInstances.patchBody(instanceId, mutations);
     if (patched) {
@@ -229,8 +245,8 @@ export class PluginEventHandler {
             instanceId,
             mutations,
           },
-          'hub',
-        ),
+          'hub'
+        )
       );
     }
   }

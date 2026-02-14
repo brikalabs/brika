@@ -110,7 +110,7 @@ function requireToken(): string {
   if (!token) {
     die(
       `SONAR_TOKEN is required for write operations.\n` +
-      `  ${c.dim}Get yours at: ${c.cyan}https://sonarcloud.io/account/security${c.reset}`,
+        `  ${c.dim}Get yours at: ${c.cyan}https://sonarcloud.io/account/security${c.reset}`
     );
   }
   return token;
@@ -136,7 +136,10 @@ async function api<T = unknown>(path: string, params?: Record<string, string>): 
   return res.json() as Promise<T>;
 }
 
-async function apiPost<T = unknown>(path: string, body: Record<string, string>): Promise<T | string> {
+async function apiPost<T = unknown>(
+  path: string,
+  body: Record<string, string>
+): Promise<T | string> {
   const url = new URL(path, BASE_URL);
   const res = await fetch(url.toString(), {
     method: 'POST',
@@ -215,14 +218,10 @@ async function cmdList(flags: Record<string, string>): Promise<void> {
     const file = shortPath(issue.component);
     const loc = issue.line ? `:${issue.line}` : '';
     console.log(
-      `  ${typeBadge(issue.type)} ${severityBadge(issue.severity)}  ${c.cyan}${file}${loc}${c.reset}`,
+      `  ${typeBadge(issue.type)} ${severityBadge(issue.severity)}  ${c.cyan}${file}${loc}${c.reset}`
     );
-    console.log(
-      `  ${' '.repeat(16)}  ${issue.message} ${c.dim}(${issue.rule})${c.reset}`,
-    );
-    console.log(
-      `  ${' '.repeat(16)}  ${c.dim}key: ${issue.key}${c.reset}`,
-    );
+    console.log(`  ${' '.repeat(16)}  ${issue.message} ${c.dim}(${issue.rule})${c.reset}`);
+    console.log(`  ${' '.repeat(16)}  ${c.dim}key: ${issue.key}${c.reset}`);
     console.log();
   }
 
@@ -251,15 +250,9 @@ async function cmdHotspots(flags: Record<string, string>): Promise<void> {
   for (const h of data.hotspots) {
     const file = shortPath(h.component);
     const loc = h.line ? `:${h.line}` : '';
-    console.log(
-      `  ${probBadge(h.vulnerabilityProbability)}  ${c.cyan}${file}${loc}${c.reset}`,
-    );
-    console.log(
-      `  ${' '.repeat(6)}${h.message} ${c.dim}(${h.rule})${c.reset}`,
-    );
-    console.log(
-      `  ${' '.repeat(6)}${c.dim}key: ${h.key}${c.reset}`,
-    );
+    console.log(`  ${probBadge(h.vulnerabilityProbability)}  ${c.cyan}${file}${loc}${c.reset}`);
+    console.log(`  ${' '.repeat(6)}${h.message} ${c.dim}(${h.rule})${c.reset}`);
+    console.log(`  ${' '.repeat(6)}${c.dim}key: ${h.key}${c.reset}`);
     console.log();
   }
 }
@@ -309,7 +302,7 @@ async function cmdSummary(): Promise<void> {
 async function cmdTransition(
   issueKey: string,
   transition: string,
-  comment?: string,
+  comment?: string
 ): Promise<void> {
   await apiPost('/api/issues/do_transition', { issue: issueKey, transition });
   success(`Issue ${c.cyan}${issueKey}${c.reset}${c.green} → ${transition}`);
@@ -320,7 +313,11 @@ async function cmdTransition(
   }
 }
 
-async function cmdBulkFp(ruleKey: string, reason: string, flags: Record<string, string>): Promise<void> {
+async function cmdBulkFp(
+  ruleKey: string,
+  reason: string,
+  flags: Record<string, string>
+): Promise<void> {
   const data = await api<IssueSearchResult>('/api/issues/search', {
     componentKeys: PROJECT_KEY,
     statuses: 'OPEN',
@@ -372,7 +369,11 @@ async function cmdHotspotSafe(hotspotKey: string, comment?: string): Promise<voi
   }
 }
 
-async function cmdBulkHotspotSafe(ruleKey: string, comment: string, flags: Record<string, string>): Promise<void> {
+async function cmdBulkHotspotSafe(
+  ruleKey: string,
+  comment: string,
+  flags: Record<string, string>
+): Promise<void> {
   const data = await api<HotspotSearchResult>('/api/hotspots/search', {
     projectKey: PROJECT_KEY,
     status: 'TO_REVIEW',
@@ -384,7 +385,9 @@ async function cmdBulkHotspotSafe(ruleKey: string, comment: string, flags: Recor
     ? data.hotspots.filter((h) => h.rule === ruleKey || h.rule.endsWith(`:${ruleKey}`))
     : data.hotspots;
 
-  heading(`Bulk Hotspot Review — ${matching.length} hotspots${ruleKey ? ` for rule ${c.cyan}${ruleKey}${c.reset}` : ''}`);
+  heading(
+    `Bulk Hotspot Review — ${matching.length} hotspots${ruleKey ? ` for rule ${c.cyan}${ruleKey}${c.reset}` : ''}`
+  );
 
   if (matching.length === 0) {
     info('No matching hotspots found.');
@@ -420,7 +423,11 @@ async function cmdBulkHotspotSafe(ruleKey: string, comment: string, flags: Recor
 
 // ─── CLI Router ──────────────────────────────────────────────────────────────
 
-function parseArgs(argv: string[]): { command: string; flags: Record<string, string>; positional: string[] } {
+function parseArgs(argv: string[]): {
+  command: string;
+  flags: Record<string, string>;
+  positional: string[];
+} {
   const [command = '', ...rest] = argv;
   const flags: Record<string, string> = {};
   const positional: string[] = [];

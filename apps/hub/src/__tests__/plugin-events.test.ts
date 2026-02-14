@@ -53,7 +53,11 @@ describe('PluginEventHandler', () => {
     };
     mockBrickTypeRegistry = {
       register: mock().mockReturnValue('plugin:brick'),
-      get: mock().mockReturnValue({ fullId: 'plugin:brick', localId: 'brick', pluginName: 'plugin' }),
+      get: mock().mockReturnValue({
+        fullId: 'plugin:brick',
+        localId: 'brick',
+        pluginName: 'plugin',
+      }),
     };
     mockBrickInstanceManager = {
       patchBody: mock().mockReturnValue(true),

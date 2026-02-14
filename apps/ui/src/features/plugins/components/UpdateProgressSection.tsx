@@ -28,7 +28,10 @@ function getProgressValue(progress: OperationProgress | null) {
   }
 }
 
-function getPhaseLabel(progress: OperationProgress | null, t: (key: string, options?: Record<string, unknown>) => string) {
+function getPhaseLabel(
+  progress: OperationProgress | null,
+  t: (key: string, options?: Record<string, unknown>) => string
+) {
   if (!progress) return '';
   switch (progress.phase) {
     case 'resolving':
@@ -51,7 +54,7 @@ export function UpdateProgressSection({
   logs,
   error,
   success,
-}: UpdateProgressSectionProps) {
+}: Readonly<UpdateProgressSectionProps>) {
   const { t } = useLocale();
   const scrollRef = React.useRef<HTMLDivElement>(null);
 
