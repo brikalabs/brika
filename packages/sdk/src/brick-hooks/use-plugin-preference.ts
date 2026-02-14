@@ -5,6 +5,7 @@ import { getContext } from '../context';
  * Falls back to `defaultValue` when the key is missing.
  */
 export function usePluginPreference<T>(name: string, defaultValue: T): T {
-  const val = getContext().getPreferences()[name];
-  return (val !== undefined ? val : defaultValue) as T;
+  const preferences = getContext().getPreferences();
+  const val = preferences[name];
+  return (val === undefined ? defaultValue : val) as T;
 }

@@ -31,7 +31,8 @@ export const playBlock = defineReactiveBlock(
         if (deviceId) await getApi().transferPlayback(deviceId);
         await getApi().play(deviceId, uri);
 
-        log.info(`Spotify playback started${deviceId ? ` on ${deviceId}` : ''}`);
+        const target = deviceId ? ` on ${deviceId}` : '';
+        log.info(`Spotify playback started${target}`);
         outputs.started.emit({ deviceId: deviceId ?? '', contextUri: uri });
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);

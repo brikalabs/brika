@@ -39,15 +39,14 @@ const textVariants = cva('shrink-0', {
 defineRenderer('text', ({ node, onAction }) => {
   const clickable = !!node.onPress;
 
-  const style: React.CSSProperties = {};
   const resolved = resolveColor(node.color);
-  if (resolved) style.color = resolved;
-  if (node.maxLines) {
-    style.display = '-webkit-box';
-    style.WebkitLineClamp = node.maxLines;
-    style.WebkitBoxOrient = 'vertical';
-    style.overflow = 'hidden';
-  }
+  const lineClampStyle: Record<string, unknown> = node.maxLines
+    ? { display: '-webkit-box', WebkitLineClamp: node.maxLines, WebkitBoxOrient: 'vertical', overflow: 'hidden' }
+    : {};
+  const style: React.CSSProperties = {
+    ...(resolved ? { color: resolved } : undefined),
+    ...lineClampStyle,
+  };
 
   return (
     <p
@@ -59,7 +58,8 @@ defineRenderer('text', ({ node, onAction }) => {
         truncate: node.truncate || undefined,
       })}${clickable ? 'cursor-pointer' : ''}`}
       style={Object.keys(style).length > 0 ? style : undefined}
-      onClick={clickable ? () => onAction?.(node.onPress as string) : undefined}
+      onClick={clickable ? () => onAction?.(String(node.onPress)) : undefined}
+      onKeyDown={clickable ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onAction?.(String(node.onPress)); } } : undefined}
       role={clickable ? 'button' : undefined}
       tabIndex={clickable ? 0 : undefined}
     >

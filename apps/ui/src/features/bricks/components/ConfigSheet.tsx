@@ -45,6 +45,12 @@ function getDefault(field: PreferenceDefinition): unknown {
   return undefined;
 }
 
+function toStr(value: unknown): string {
+  if (value === undefined || value === null) return '';
+  if (typeof value === 'object') return JSON.stringify(value);
+  return String(value);
+}
+
 interface FieldProps {
   field: PreferenceDefinition;
   value: Json;
@@ -59,7 +65,7 @@ function TextField({ field, value, onChange }: Readonly<FieldProps>) {
     <Input
       id={field.name}
       type={field.type === 'password' ? 'password' : 'text'}
-      value={String(value ?? getDefault(field) ?? '')}
+      value={toStr(value ?? getDefault(field))}
       onChange={(e) => onChange(field.name, e.target.value)}
     />
   );
@@ -74,7 +80,7 @@ function NumberField({ field, value, onChange }: Readonly<FieldProps>) {
       min={field.min}
       max={field.max}
       step={field.step}
-      value={String(value ?? getDefault(field) ?? '')}
+      value={toStr(value ?? getDefault(field))}
       onChange={(e) => onChange(field.name, Number(e.target.value))}
     />
   );
@@ -97,7 +103,6 @@ function DropdownField({
 }: Readonly<FieldProps>) {
   const { tp } = useLocale();
   const isDynamic = field.type === 'dynamic-dropdown';
-  if (field.type !== 'dropdown' && !isDynamic) return null;
 
   const [dynamicOptions, setDynamicOptions] = useState<Array<{ value: string; label?: string }>>(
     isDynamic ? (field.options ?? []) : []
@@ -114,6 +119,8 @@ function DropdownField({
     }
   }, [brickTypeId, field.name]);
 
+  if (field.type !== 'dropdown' && !isDynamic) return null;
+
   const options = isDynamic ? dynamicOptions : field.options;
   const optionLabel = (opt: { value: string; label?: string }) =>
     opt.label ??
@@ -122,7 +129,7 @@ function DropdownField({
   return (
     <div className="flex items-center gap-2">
       <Select
-        value={String(value ?? getDefault(field) ?? '')}
+        value={toStr(value ?? getDefault(field))}
         onValueChange={(v) => onChange(field.name, v)}
       >
         <SelectTrigger id={field.name} className="min-w-0 flex-1">

@@ -55,9 +55,29 @@ function pollNow(): void {
   resetPollTimer();
 }
 
+async function tryAutoTransfer(devices: SpotifyDevice[]): Promise<boolean> {
+  if (autoTransferAttempted || devices.length === 0) return false;
+  const prefId = resolveDeviceId();
+  const targetId = prefId && devices.some((d) => d.id === prefId) ? prefId : devices[0].id;
+  autoTransferAttempted = true;
+  getApi().transferPlayback(targetId).then(() => pollNow());
+  return true;
+}
+
+function emitTrackChanged(state: PlaybackState): void {
+  if (state.trackName === lastTrack) return;
+  lastTrack = state.trackName;
+  trackChanged.emit({
+    trackName: state.trackName,
+    artistName: state.artistName,
+    albumName: state.albumName,
+    albumArt: state.albumArt,
+    timestamp: Date.now(),
+  });
+}
+
 async function poll(): Promise<void> {
-  const authed = spotify.isAuthenticated();
-  if (!authed) {
+  if (!spotify.isAuthenticated()) {
     usePlayerStore.set({ playback: null, devices: [], isAuthed: false, loaded: true, anchor: { progressMs: 0, timestamp: Date.now() } });
     return;
   }
@@ -66,39 +86,20 @@ async function poll(): Promise<void> {
     const state = await getApi().getCurrentPlayback();
     const anchor: Anchor = { progressMs: state?.progressMs ?? 0, timestamp: Date.now() };
 
-    // When no active playback, fetch devices and auto-transfer to the preferred one
     let devices: SpotifyDevice[] = [];
     if (!state) {
       devices = await getApi().getDevices();
-
-      if (!autoTransferAttempted && devices.length > 0) {
-        const prefId = resolveDeviceId();
-        const targetId = prefId && devices.some((d) => d.id === prefId) ? prefId : devices[0].id;
-        autoTransferAttempted = true;
-        getApi().transferPlayback(targetId).then(() => pollNow());
-        return;
-      }
+      if (await tryAutoTransfer(devices)) return;
     } else {
-      // Reset so auto-transfer fires again if playback stops later
       autoTransferAttempted = false;
     }
     usePlayerStore.set({ playback: state, devices, isAuthed: true, loaded: true, anchor });
 
-    if (state && state.trackName !== lastTrack) {
-      lastTrack = state.trackName;
-      trackChanged.emit({
-        trackName: state.trackName,
-        artistName: state.artistName,
-        albumName: state.albumName,
-        albumArt: state.albumArt,
-        timestamp: Date.now(),
-      });
-    }
+    if (state) emitTrackChanged(state);
   } catch (err) {
     if (err instanceof SpotifyAuthError) {
       usePlayerStore.set((prev) => ({ ...prev, playback: null, isAuthed: false, loaded: true }));
     } else {
-      // Network/timeout errors — mark loaded so bricks don't stay on "Connecting…"
       usePlayerStore.set((prev) => ({ ...prev, loaded: true }));
     }
   }

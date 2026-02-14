@@ -115,13 +115,13 @@ export function createSpotifyApi(oauth: OAuthClient) {
 
     async play(deviceId?: string, contextUri?: string): Promise<void> {
       const qs = deviceId ? `?device_id=${deviceId}` : '';
-      const body = contextUri
-        ? JSON.stringify(
-            contextUri.includes(':track:')
-              ? { uris: [contextUri] }
-              : { context_uri: contextUri },
-          )
-        : undefined;
+      let body: string | undefined;
+      if (contextUri) {
+        const payload = contextUri.includes(':track:')
+          ? { uris: [contextUri] }
+          : { context_uri: contextUri };
+        body = JSON.stringify(payload);
+      }
       await api(`/me/player/play${qs}`, {
         method: 'PUT',
         ...(body && { headers: { 'Content-Type': 'application/json' }, body }),

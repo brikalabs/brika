@@ -33,11 +33,11 @@ export function usePreference<T>(name?: string, defaultValue?: T) {
   }
 
   // Read current value from config
-  const current = (config[name] !== undefined ? config[name] : defaultValue) as T;
+  const current = (config[name] === undefined ? defaultValue : config[name]) as T;
 
   // Setter: write to config and schedule re-render
   const setter = (value: T | ((prev: T) => T)) => {
-    const prev = (config[name] !== undefined ? config[name] : defaultValue) as T;
+    const prev = (config[name] === undefined ? defaultValue : config[name]) as T;
     const next = typeof value === 'function' ? (value as (prev: T) => T)(prev) : value;
     if (!Object.is(prev, next)) {
       config[name] = next;

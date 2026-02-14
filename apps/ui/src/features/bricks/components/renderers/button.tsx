@@ -30,12 +30,18 @@ defineRenderer('button', ({ node, onAction }) => {
   const variant = node.variant ?? 'default';
   const iconOnly = !node.loading && node.icon && !node.label;
   const isDisabled = node.disabled || node.loading;
-  const size = node.size ? sizeMap[node.size] : iconOnly ? 'icon-sm' : 'sm';
+  type ButtonSize = 'sm' | 'default' | 'lg' | 'icon-sm';
+  let size: ButtonSize;
+  if (node.size) {
+    size = sizeMap[node.size];
+  } else {
+    size = iconOnly ? 'icon-sm' : 'sm';
+  }
 
   return (
     <Button
       variant={variant}
-      size={size as 'sm' | 'default' | 'lg' | 'icon-sm'}
+      size={size}
       className={cn('shrink-0', iconOnly && 'rounded-full', node.fullWidth && 'w-full')}
       onClick={getClickHandler(node, onAction)}
       style={getColorStyle(node.color, variant)}

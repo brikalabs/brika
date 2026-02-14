@@ -19,12 +19,12 @@ function RingProgress({
   color,
   label,
   showValue,
-}: {
+}: Readonly<{
   pct: number;
   color: string;
   label?: string;
   showValue?: boolean;
-}) {
+}>) {
   const offset = RING_CIRCUMFERENCE - (pct / 100) * RING_CIRCUMFERENCE;
 
   return (

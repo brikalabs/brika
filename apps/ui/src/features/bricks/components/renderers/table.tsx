@@ -37,13 +37,13 @@ defineRenderer('table', ({ node, onAction }) => {
       <TableBody>
         {rows.map((row, i) => (
           <TableRow
-            key={i}
+            key={`row-${i}`}
             className={cn(
               node.striped && i % 2 === 1 && 'bg-muted/30',
               clickable && 'cursor-pointer'
             )}
             onClick={
-              clickable ? () => onAction?.(node.onRowPress as string, { index: i, row }) : undefined
+              clickable ? () => onAction?.(String(node.onRowPress), { index: i, row }) : undefined
             }
           >
             {node.columns.map((col) => (

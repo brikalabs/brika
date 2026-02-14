@@ -36,14 +36,14 @@ function DynamicDropdown({
   pluginUid,
   label,
   description,
-}: {
+}: Readonly<{
   pref: Extract<PreferenceDefinition, { type: 'dynamic-dropdown' }>;
   value: unknown;
   onChange: (value: unknown) => void;
   pluginUid: string;
   label: string;
   description: string;
-}) {
+}>) {
   const [options, setOptions] = useState(pref.options ?? []);
   const [isRefreshing, setIsRefreshing] = useState(false);
 

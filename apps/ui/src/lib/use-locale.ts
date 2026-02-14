@@ -73,7 +73,7 @@ export function useLocale() {
       locale,
 
       tp: (pluginId: string, key: string, defaultValue?: string) =>
-        baseT(key, { ns: `plugin:${pluginId}`, defaultValue }) as string,
+        String(baseT(key, { ns: `plugin:${pluginId}`, defaultValue })),
 
       changeLocale: (loc: string) => i18n.changeLanguage(loc),
 

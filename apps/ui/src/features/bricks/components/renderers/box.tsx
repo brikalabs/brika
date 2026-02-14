@@ -79,7 +79,8 @@ defineRenderer('box', ({ node, onAction }) => {
     <div
       className={cn(boxClass, fitClass, clickable && 'cursor-pointer')}
       style={Object.keys(style).length > 0 ? style : undefined}
-      onClick={clickable ? () => onAction?.(node.onPress as string) : undefined}
+      onClick={clickable ? () => onAction?.(String(node.onPress)) : undefined}
+      onKeyDown={clickable ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onAction?.(String(node.onPress)); } } : undefined}
       role={clickable ? 'button' : undefined}
       tabIndex={clickable ? 0 : undefined}
     >

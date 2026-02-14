@@ -33,7 +33,7 @@ function ChartTooltip({
   return (
     <div className="rounded-md border bg-popover px-2 py-1 text-sm shadow-md">
       {payload.map((entry, i) => (
-        <div key={i} className="flex items-center gap-1.5">
+        <div key={`tooltip-${i}`} className="flex items-center gap-1.5">
           {payload.length > 1 && (
             <span
               className="size-2 shrink-0 rounded-full"

@@ -25,15 +25,18 @@ function emitPropDiff(
   for (const k in p) {
     if (k === 'type' || k === 'children') continue;
     if (!(k in n)) {
-      (removed ??= []).push(k);
+      removed ??= [];
+      removed.push(k);
     } else if (!deepEqual(p[k], n[k])) {
-      (changes ??= {})[k] = n[k];
+      changes ??= {};
+      changes[k] = n[k];
     }
   }
 
   for (const k in n) {
     if (k === 'type' || k === 'children' || k in p) continue;
-    (changes ??= {})[k] = n[k];
+    changes ??= {};
+    changes[k] = n[k];
   }
 
   if (changes || removed) {

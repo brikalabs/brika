@@ -64,8 +64,8 @@ export function LogRow({ log }: Readonly<LogRowProps>) {
   const hasMetadata = log.meta && Object.keys(log.meta).length > 0;
   const isExpandable = hasError || hasMetadata;
 
-  const sourceFile = log.meta?.sourceFile != null ? String(log.meta.sourceFile) : null;
-  const sourceLine = log.meta?.sourceLine != null ? Number(log.meta.sourceLine) : null;
+  const sourceFile = log.meta?.sourceFile == null ? null : String(log.meta.sourceFile);
+  const sourceLine = log.meta?.sourceLine == null ? null : Number(log.meta.sourceLine);
   const generalMeta = extractGeneralMeta(log.meta);
   const hasGeneralMeta = generalMeta && Object.keys(generalMeta).length > 0;
 

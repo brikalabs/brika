@@ -118,20 +118,21 @@ export const DashboardBrick = memo(function DashboardBrick({
       {/* Body — fills remaining space, no scroll */}
       <div className="no-drag flex min-h-0 flex-1 flex-col gap-1.5 overflow-hidden px-2.5 pt-1.5 pb-2.5 *:min-h-0 *:flex-1">
         <BrickErrorBoundary>
-          {body && body.length > 0 ? (
+          {body && body.length > 0 &&
             body
               .filter(Boolean)
               .map((node, i) => (
                 <ComponentNodeRenderer key={nodeKey(node, i)} node={node} onAction={handleAction} />
-              ))
-          ) : disconnected ? (
+              ))}
+          {(!body || body.length === 0) && disconnected && (
             <div className="flex flex-1 flex-col items-center justify-center gap-1.5">
               <WifiOff className="size-4 text-muted-foreground/50" />
               <span className="text-muted-foreground/70 text-xs">
                 {t('bricks:pluginDisconnected')}
               </span>
             </div>
-          ) : (
+          )}
+          {(!body || body.length === 0) && !disconnected && (
             <div className="flex flex-1 items-center justify-center">
               <Loader2 className="size-4 animate-spin text-muted-foreground/50" />
             </div>

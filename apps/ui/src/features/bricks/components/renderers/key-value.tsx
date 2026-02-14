@@ -10,7 +10,7 @@ defineRenderer('key-value', ({ node }) => {
   return (
     <div className={cn('flex flex-col', node.compact ? 'gap-1' : 'gap-2')}>
       {node.items.map((item, i) => (
-        <div key={i}>
+        <div key={`kv-${i}`}>
           <div
             className={cn(
               'flex items-center',

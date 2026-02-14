@@ -38,10 +38,10 @@ const flexVariants = cva('flex min-h-0', {
 function FlexRenderer({
   node,
   onAction,
-}: {
+}: Readonly<{
   node: RowNode | ColumnNode;
   onAction?: ActionHandler;
-}) {
+}>) {
   const clickable = !!node.onPress;
   const direction = node.type === 'row' ? 'row' : 'column';
 
@@ -55,7 +55,8 @@ function FlexRenderer({
         wrap: node.wrap || undefined,
         grow: node.grow || undefined,
       })}${clickable ? 'cursor-pointer' : ''}`}
-      onClick={clickable ? () => onAction?.(node.onPress as string) : undefined}
+      onClick={clickable ? () => onAction?.(String(node.onPress)) : undefined}
+      onKeyDown={clickable ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onAction?.(String(node.onPress)); } } : undefined}
       role={clickable ? 'button' : undefined}
       tabIndex={clickable ? 0 : undefined}
     >

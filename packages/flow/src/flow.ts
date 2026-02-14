@@ -4,7 +4,7 @@
  * Core FlowImpl class and CleanupRegistry.
  */
 
-import type { Cleanup, Emitter, Flow, Operator, Pipeable, Subscriber } from './types';
+import type { Cleanup, Emitter, Flow, Operator, Subscriber } from './types';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Cleanup Registry

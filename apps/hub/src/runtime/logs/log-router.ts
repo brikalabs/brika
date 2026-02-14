@@ -164,7 +164,7 @@ export class Logger {
       } else {
         logError = {
           name: "Error",
-          message: String(options.error),
+          message: typeof options.error === "string" ? options.error : JSON.stringify(options.error),
         };
       }
     }

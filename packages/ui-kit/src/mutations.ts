@@ -10,7 +10,7 @@ function applyChanges(
   changes: Record<string, unknown>,
   removed?: string[]
 ): ComponentNode {
-  const updated = Object.assign({}, node, changes);
+  const updated = { ...node, ...changes };
   if (removed) {
     for (const k of removed) Reflect.deleteProperty(updated, k);
   }

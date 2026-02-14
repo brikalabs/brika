@@ -1,7 +1,7 @@
 import { Glob } from 'bun';
 import chalk from 'chalk';
 import { normalizeRules } from './normalize';
-import type { ArchConfig, ArchResult, Rule, RuleContext, RuleInput, Violation } from './types';
+import type { ArchConfig, ArchResult, RuleContext, RuleInput, Violation } from './types';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Context

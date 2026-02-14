@@ -41,7 +41,7 @@ defineRenderer('code-block', ({ node }) => {
         <pre className="p-3 text-xs leading-6">
           <code className="block font-mono">
             {visibleLines.map((line, i) => (
-              <span key={i} className="block whitespace-pre">
+              <span key={`line-${i}`} className="block whitespace-pre">
                 {node.showLineNumbers && (
                   <span className="mr-4 inline-block w-6 select-none text-right text-muted-foreground tabular-nums">
                     {i + 1}

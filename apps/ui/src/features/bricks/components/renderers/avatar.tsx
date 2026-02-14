@@ -29,7 +29,8 @@ defineRenderer('avatar', ({ node, onAction }) => {
   return (
     <div
       className={cn('relative inline-flex shrink-0', clickable && 'cursor-pointer')}
-      onClick={clickable ? () => onAction?.(node.onPress as string) : undefined}
+      onClick={clickable ? () => onAction?.(String(node.onPress)) : undefined}
+      onKeyDown={clickable ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onAction?.(String(node.onPress)); } } : undefined}
       role={clickable ? 'button' : undefined}
       tabIndex={clickable ? 0 : undefined}
     >

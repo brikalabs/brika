@@ -42,7 +42,8 @@ defineRenderer('badge', ({ node, onAction }) => {
     <span
       className={`${node.color ? badgeVariants({ variant: null }) : badgeVariants({ variant: node.variant })}${clickable ? 'cursor-pointer' : ''}`}
       style={node.color ? getColorStyle(node.color) : undefined}
-      onClick={clickable ? () => onAction?.(node.onPress as string) : undefined}
+      onClick={clickable ? () => onAction?.(String(node.onPress)) : undefined}
+      onKeyDown={clickable ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onAction?.(String(node.onPress)); } } : undefined}
       role={clickable ? 'button' : undefined}
       tabIndex={clickable ? 0 : undefined}
     >

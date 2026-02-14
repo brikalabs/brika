@@ -47,10 +47,10 @@ export type BackgroundToken =
   | 'destructive';
 
 /** Value for a `color` prop — token name or any CSS color string. */
-export type ColorValue = ColorToken | (string & {});
+export type ColorValue = ColorToken | (string & Record<never, never>);
 
 /** Value for a `background` prop — token name or any CSS color string. */
-export type BackgroundValue = BackgroundToken | (string & {});
+export type BackgroundValue = BackgroundToken | (string & Record<never, never>);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Runtime color object (var() CSS references)
