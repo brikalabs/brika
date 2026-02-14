@@ -87,11 +87,11 @@ async function poll(): Promise<void> {
     const anchor: Anchor = { progressMs: state?.progressMs ?? 0, timestamp: Date.now() };
 
     let devices: SpotifyDevice[] = [];
-    if (!state) {
+    if (state) {
+      autoTransferAttempted = false;
+    } else {
       devices = await getApi().getDevices();
       if (await tryAutoTransfer(devices)) return;
-    } else {
-      autoTransferAttempted = false;
     }
     usePlayerStore.set({ playback: state, devices, isAuthed: true, loaded: true, anchor });
 

@@ -2,6 +2,7 @@ import { cva } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 import { ComponentNodeRenderer, defineRenderer } from './registry';
 import { resolveBackground } from './resolve-color';
+import { clickableProps } from './shared';
 
 const boxVariants = cva('relative flex min-h-0 flex-col overflow-clip', {
   variants: {
@@ -73,16 +74,12 @@ defineRenderer('box', ({ node, onAction }) => {
   });
 
   const fitClass = hasImage ? bgFitVariants({ fit: node.backgroundFit }) : '';
-  const clickable = !!node.onPress;
 
   return (
     <div
-      className={cn(boxClass, fitClass, clickable && 'cursor-pointer')}
+      className={cn(boxClass, fitClass, node.onPress && 'cursor-pointer')}
       style={Object.keys(style).length > 0 ? style : undefined}
-      onClick={clickable ? () => onAction?.(String(node.onPress)) : undefined}
-      onKeyDown={clickable ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onAction?.(String(node.onPress)); } } : undefined}
-      role={clickable ? 'button' : undefined}
-      tabIndex={clickable ? 0 : undefined}
+      {...clickableProps(node.onPress, onAction)}
     >
       {hasImage && bg && (
         <div

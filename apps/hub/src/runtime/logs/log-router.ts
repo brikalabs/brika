@@ -21,6 +21,30 @@ export interface LogOptions {
 
 type Subscriber = (event: LogEvent) => void;
 
+function extractLogError(error: unknown): LogError {
+  if (error instanceof Error) {
+    const logError: LogError = {
+      name: error.name,
+      message: error.message,
+      stack: error.stack,
+    };
+    if (error.cause) {
+      logError.cause =
+        error.cause instanceof Error
+          ? `${error.cause.name}: ${error.cause.message}`
+          : JSON.stringify(error.cause);
+    }
+    return logError;
+  }
+  if (typeof error === "object" && error !== null) {
+    return { name: "Error", message: JSON.stringify(error) };
+  }
+  return {
+    name: "Error",
+    message: typeof error === "string" ? error : JSON.stringify(error),
+  };
+}
+
 /**
  * Scoped logger that wraps a Logger instance with a preset source.
  */
@@ -140,34 +164,7 @@ export class Logger {
       ...captureCallSite(),
     };
 
-    // Extract error information into dedicated field
-    let logError: LogError | undefined;
-    if (options?.error) {
-      if (options.error instanceof Error) {
-        logError = {
-          name: options.error.name,
-          message: options.error.message,
-          stack: options.error.stack,
-        };
-        if (options.error.cause) {
-          logError.cause =
-            options.error.cause instanceof Error
-              ? `${options.error.cause.name}: ${options.error.cause.message}`
-              : JSON.stringify(options.error.cause);
-        }
-      } else if (typeof options.error === "object" && options.error !== null) {
-        // Handle non-Error objects
-        logError = {
-          name: "Error",
-          message: JSON.stringify(options.error),
-        };
-      } else {
-        logError = {
-          name: "Error",
-          message: typeof options.error === "string" ? options.error : JSON.stringify(options.error),
-        };
-      }
-    }
+    const logError = options?.error ? extractLogError(options.error) : undefined;
 
     this.emit({
       ts: Date.now(),

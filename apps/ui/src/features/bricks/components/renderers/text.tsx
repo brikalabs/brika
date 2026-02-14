@@ -1,6 +1,8 @@
 import { cva } from 'class-variance-authority';
+import { cn } from '@/lib/utils';
 import { defineRenderer } from './registry';
 import { resolveColor } from './resolve-color';
+import { clickableProps } from './shared';
 
 const textVariants = cva('shrink-0', {
   variants: {
@@ -37,8 +39,6 @@ const textVariants = cva('shrink-0', {
 });
 
 defineRenderer('text', ({ node, onAction }) => {
-  const clickable = !!node.onPress;
-
   const resolved = resolveColor(node.color);
   const lineClampStyle: Record<string, unknown> = node.maxLines
     ? { display: '-webkit-box', WebkitLineClamp: node.maxLines, WebkitBoxOrient: 'vertical', overflow: 'hidden' }
@@ -50,18 +50,18 @@ defineRenderer('text', ({ node, onAction }) => {
 
   return (
     <p
-      className={`${textVariants({
-        variant: node.variant,
-        align: node.align,
-        weight: node.weight,
-        size: node.size,
-        truncate: node.truncate || undefined,
-      })}${clickable ? 'cursor-pointer' : ''}`}
+      className={cn(
+        textVariants({
+          variant: node.variant,
+          align: node.align,
+          weight: node.weight,
+          size: node.size,
+          truncate: node.truncate || undefined,
+        }),
+        node.onPress && 'cursor-pointer'
+      )}
       style={Object.keys(style).length > 0 ? style : undefined}
-      onClick={clickable ? () => onAction?.(String(node.onPress)) : undefined}
-      onKeyDown={clickable ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onAction?.(String(node.onPress)); } } : undefined}
-      role={clickable ? 'button' : undefined}
-      tabIndex={clickable ? 0 : undefined}
+      {...clickableProps(node.onPress, onAction)}
     >
       {node.content}
     </p>

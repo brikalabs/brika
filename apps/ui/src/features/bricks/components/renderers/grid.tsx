@@ -1,6 +1,7 @@
 import { cva } from 'class-variance-authority';
+import { cn } from '@/lib/utils';
 import { ComponentNodeRenderer, defineRenderer } from './registry';
-import { gapVariant } from './shared';
+import { clickableProps, gapVariant } from './shared';
 
 const gridVariants = cva('grid min-h-0', {
   variants: {
@@ -16,16 +17,11 @@ defineRenderer('grid', ({ node, onAction }) => {
     ? { gridTemplateColumns: `repeat(auto-fit, minmax(${node.minColumnWidth ?? 120}px, 1fr))` }
     : { gridTemplateColumns: `repeat(${node.columns ?? 2}, minmax(0, 1fr))` };
 
-  const clickable = !!node.onPress;
-
   return (
     <div
-      className={`${gridVariants({ gap: node.gap })}${clickable ? 'cursor-pointer' : ''}`}
+      className={cn(gridVariants({ gap: node.gap }), node.onPress && 'cursor-pointer')}
       style={gridStyle}
-      onClick={clickable ? () => onAction?.(String(node.onPress)) : undefined}
-      onKeyDown={clickable ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onAction?.(String(node.onPress)); } } : undefined}
-      role={clickable ? 'button' : undefined}
-      tabIndex={clickable ? 0 : undefined}
+      {...clickableProps(node.onPress, onAction)}
     >
       {node.children.map((child, i) => (
         <ComponentNodeRenderer key={`${child.type}-${i}`} node={child} onAction={onAction} />

@@ -1,19 +1,15 @@
 import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
 import { cn } from '@/lib/utils';
 import { ComponentNodeRenderer, defineRenderer } from './registry';
-import { gapVariant } from './shared';
+import { clickableProps, gapVariant } from './shared';
 
 defineRenderer('section', ({ node, onAction }) => {
-  const clickable = !!node.onPress;
   const gap = node.gap ? gapVariant[node.gap] : 'gap-1.5';
 
   return (
     <div
-      className={cn('flex min-h-0 flex-col', gap, clickable && 'cursor-pointer')}
-      onClick={clickable ? () => onAction?.(String(node.onPress)) : undefined}
-      onKeyDown={clickable ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onAction?.(String(node.onPress)); } } : undefined}
-      role={clickable ? 'button' : undefined}
-      tabIndex={clickable ? 0 : undefined}
+      className={cn('flex min-h-0 flex-col', gap, node.onPress && 'cursor-pointer')}
+      {...clickableProps(node.onPress, onAction)}
     >
       <div className="flex shrink-0 items-center gap-2">
         {node.icon && (

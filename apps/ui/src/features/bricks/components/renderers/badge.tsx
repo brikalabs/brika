@@ -1,7 +1,9 @@
 import { cva } from 'class-variance-authority';
 import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
+import { cn } from '@/lib/utils';
 import { defineRenderer } from './registry';
 import { isToken, resolveColor } from './resolve-color';
+import { clickableProps } from './shared';
 
 const badgeVariants = cva(
   'inline-flex shrink-0 items-center gap-1 self-start rounded-md px-1.5 py-0.5 font-semibold text-[10px]',
@@ -36,16 +38,14 @@ function getColorStyle(color: string): React.CSSProperties {
 }
 
 defineRenderer('badge', ({ node, onAction }) => {
-  const clickable = !!node.onPress;
-
   return (
     <span
-      className={`${node.color ? badgeVariants({ variant: null }) : badgeVariants({ variant: node.variant })}${clickable ? 'cursor-pointer' : ''}`}
+      className={cn(
+        node.color ? badgeVariants({ variant: null }) : badgeVariants({ variant: node.variant }),
+        node.onPress && 'cursor-pointer'
+      )}
       style={node.color ? getColorStyle(node.color) : undefined}
-      onClick={clickable ? () => onAction?.(String(node.onPress)) : undefined}
-      onKeyDown={clickable ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onAction?.(String(node.onPress)); } } : undefined}
-      role={clickable ? 'button' : undefined}
-      tabIndex={clickable ? 0 : undefined}
+      {...clickableProps(node.onPress, onAction)}
     >
       {node.icon && <DynamicIcon name={node.icon as IconName} className="size-2.5 shrink-0" />}
       {node.label}

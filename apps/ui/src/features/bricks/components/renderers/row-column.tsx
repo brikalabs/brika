@@ -1,7 +1,8 @@
 import type { ColumnNode, RowNode } from '@brika/ui-kit';
 import { cva } from 'class-variance-authority';
+import { cn } from '@/lib/utils';
 import { type ActionHandler, ComponentNodeRenderer, defineRenderer } from './registry';
-import { gapVariant } from './shared';
+import { clickableProps, gapVariant } from './shared';
 
 const flexVariants = cva('flex min-h-0', {
   variants: {
@@ -42,23 +43,22 @@ function FlexRenderer({
   node: RowNode | ColumnNode;
   onAction?: ActionHandler;
 }>) {
-  const clickable = !!node.onPress;
   const direction = node.type === 'row' ? 'row' : 'column';
 
   return (
     <div
-      className={`${flexVariants({
-        direction,
-        gap: node.gap,
-        align: node.align,
-        justify: node.justify,
-        wrap: node.wrap || undefined,
-        grow: node.grow || undefined,
-      })}${clickable ? 'cursor-pointer' : ''}`}
-      onClick={clickable ? () => onAction?.(String(node.onPress)) : undefined}
-      onKeyDown={clickable ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onAction?.(String(node.onPress)); } } : undefined}
-      role={clickable ? 'button' : undefined}
-      tabIndex={clickable ? 0 : undefined}
+      className={cn(
+        flexVariants({
+          direction,
+          gap: node.gap,
+          align: node.align,
+          justify: node.justify,
+          wrap: node.wrap || undefined,
+          grow: node.grow || undefined,
+        }),
+        node.onPress && 'cursor-pointer'
+      )}
+      {...clickableProps(node.onPress, onAction)}
     >
       {node.children.map((child, i) => (
         <ComponentNodeRenderer key={`${child.type}-${i}`} node={child} onAction={onAction} />

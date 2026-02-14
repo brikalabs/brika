@@ -2,6 +2,7 @@ import { cva } from 'class-variance-authority';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { defineRenderer } from './registry';
+import { clickableProps } from './shared';
 
 const sizeVariants = cva('', {
   variants: {
@@ -24,15 +25,10 @@ const statusColors = {
 } as const;
 
 defineRenderer('avatar', ({ node, onAction }) => {
-  const clickable = !!node.onPress;
-
   return (
     <div
-      className={cn('relative inline-flex shrink-0', clickable && 'cursor-pointer')}
-      onClick={clickable ? () => onAction?.(String(node.onPress)) : undefined}
-      onKeyDown={clickable ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onAction?.(String(node.onPress)); } } : undefined}
-      role={clickable ? 'button' : undefined}
-      tabIndex={clickable ? 0 : undefined}
+      className={cn('relative inline-flex shrink-0', node.onPress && 'cursor-pointer')}
+      {...clickableProps(node.onPress, onAction)}
     >
       <Avatar
         className={cn(sizeVariants({ size: node.size }), node.shape === 'square' && 'rounded-md')}
