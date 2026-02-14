@@ -9,12 +9,12 @@ export const gapVariant = {
 
 /** Shared interactive props for clickable brick elements (onClick, onKeyDown, role, tabIndex) */
 export function clickableProps(
-  onPress: unknown,
+  onPress: string | undefined,
   onAction?: ActionHandler,
   payload?: Record<string, unknown>
 ) {
   if (!onPress) return {};
-  const handler = () => onAction?.(String(onPress), payload);
+  const handler = () => onAction?.(onPress, payload);
   return {
     onClick: handler,
     onKeyDown: (e: React.KeyboardEvent) => {
