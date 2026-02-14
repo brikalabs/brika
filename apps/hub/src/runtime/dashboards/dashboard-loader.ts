@@ -6,7 +6,7 @@
  */
 
 import { watch } from 'node:fs';
-import { basename, join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { inject, singleton } from '@brika/di';
 import type { Json } from '@brika/shared';
 import { parse as parseYAML, stringify as stringifyYAML } from 'yaml';
@@ -65,6 +65,7 @@ export class DashboardLoader {
   readonly #idToFile = new Map<string, string>(); // dashboardId -> filePath
   readonly #dashboards = new Map<string, Dashboard>();
   readonly #skipWatchPaths = new Set<string>(); // files we just saved — ignore watcher
+  #order: string[] = []; // ordered dashboard IDs
 
   /** Listeners called when dashboards change */
   readonly #changeListeners = new Set<(id: string, action: 'load' | 'unload') => void>();
@@ -91,6 +92,9 @@ export class DashboardLoader {
       };
       await this.saveDashboard(home);
     }
+
+    // Load order from file, falling back to current map iteration order
+    await this.#loadOrder();
 
     this.logs.info('Dashboard files loaded', { directory: dir, count: this.#dashboards.size });
   }
@@ -128,6 +132,7 @@ export class DashboardLoader {
   async saveDashboard(dashboard: Dashboard): Promise<string> {
     if (!this.#dir) throw new Error('Call loadDir() first');
 
+    const isNew = !this.#dashboards.has(dashboard.id);
     const filePath = this.#idToFile.get(dashboard.id) ?? `${this.#dir}/${dashboard.id}.yaml`;
 
     // Prevent the file watcher from re-loading what we just saved
@@ -138,6 +143,12 @@ export class DashboardLoader {
     this.#loaded.set(filePath, dashboard.id);
     this.#idToFile.set(dashboard.id, filePath);
     this.#dashboards.set(dashboard.id, dashboard);
+
+    // Append new dashboards to the end of the order
+    if (isNew && !this.#order.includes(dashboard.id)) {
+      this.#order.push(dashboard.id);
+      await this.#persistOrder();
+    }
 
     this.logs.info('Dashboard saved', { fileName: basename(filePath), dashboardId: dashboard.id });
     return filePath;
@@ -157,6 +168,10 @@ export class DashboardLoader {
     this.#idToFile.delete(id);
     this.#dashboards.delete(id);
 
+    // Remove from order
+    this.#order = this.#order.filter((oid) => oid !== id);
+    await this.#persistOrder();
+
     for (const l of this.#changeListeners) l(id, 'unload');
 
     this.logs.info('Dashboard deleted', { fileName: basename(filePath), dashboardId: id });
@@ -168,7 +183,30 @@ export class DashboardLoader {
   }
 
   list(): Dashboard[] {
-    return [...this.#dashboards.values()];
+    const ordered: Dashboard[] = [];
+    for (const id of this.#order) {
+      const d = this.#dashboards.get(id);
+      if (d) ordered.push(d);
+    }
+    // Include any dashboards not yet in the order (e.g. loaded via file watcher)
+    for (const d of this.#dashboards.values()) {
+      if (!this.#order.includes(d.id)) ordered.push(d);
+    }
+    return ordered;
+  }
+
+  async reorder(ids: string[]): Promise<boolean> {
+    // Validate: all provided IDs must exist
+    for (const id of ids) {
+      if (!this.#dashboards.has(id)) return false;
+    }
+    this.#order = ids;
+    // Append any existing dashboards not in the provided list
+    for (const id of this.#dashboards.keys()) {
+      if (!this.#order.includes(id)) this.#order.push(id);
+    }
+    await this.#persistOrder();
+    return true;
   }
 
   async #loadFile(filePath: string): Promise<void> {
@@ -246,5 +284,40 @@ export class DashboardLoader {
         size: c.size,
       })),
     };
+  }
+
+  get #orderFilePath(): string {
+    // Store order file in parent dir (e.g. .brika/dashboard-order.json)
+    return join(dirname(this.#dir ?? ''), 'dashboard-order.json');
+  }
+
+  async #loadOrder(): Promise<void> {
+    try {
+      const file = Bun.file(this.#orderFilePath);
+      if (await file.exists()) {
+        const data = await file.json();
+        if (Array.isArray(data)) {
+          // Filter to only IDs that exist
+          this.#order = data.filter((id) => typeof id === 'string' && this.#dashboards.has(id));
+          // Append any dashboards not in the saved order
+          for (const id of this.#dashboards.keys()) {
+            if (!this.#order.includes(id)) this.#order.push(id);
+          }
+          return;
+        }
+      }
+    } catch {
+      // Ignore read errors, fall through to default order
+    }
+    // Default: use current map iteration order
+    this.#order = [...this.#dashboards.keys()];
+  }
+
+  async #persistOrder(): Promise<void> {
+    try {
+      await Bun.write(this.#orderFilePath, JSON.stringify(this.#order));
+    } catch (error) {
+      this.logs.error('Failed to persist dashboard order', {}, { error });
+    }
   }
 }

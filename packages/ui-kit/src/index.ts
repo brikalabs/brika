@@ -35,6 +35,7 @@ export type {
   KeyValueItem,
   KeyValueNode,
   LinkNode,
+  MarkdownNode,
   NodeTypeMap,
   ProgressNode,
   // Layout
@@ -80,6 +81,7 @@ export {
   Image,
   KeyValue,
   Link,
+  Markdown,
   Progress,
   // Layout
   Row,

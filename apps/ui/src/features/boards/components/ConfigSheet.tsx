@@ -35,7 +35,7 @@ import {
 import { useLocale } from '@/lib/use-locale';
 import { brickTypesApi, dashboardsApi } from '../api';
 import { useRemoveBrick, useRenameBrick } from '../hooks';
-import { useDashboardStore } from '../store';
+import { useBoardStore } from '../store';
 
 // ─── Field Renderers ──────────────────────────────────────────────────────────
 
@@ -171,10 +171,10 @@ function ConfigField(props: Readonly<FieldProps>) {
 
 export function ConfigSheet() {
   const { t, tp } = useLocale();
-  const configBrickId = useDashboardStore((s) => s.configBrickId);
-  const setConfigBrickId = useDashboardStore((s) => s.setConfigBrickId);
-  const activeDashboard = useDashboardStore((s) => s.activeDashboard);
-  const brickTypes = useDashboardStore((s) => s.brickTypes);
+  const configBrickId = useBoardStore((s) => s.configBrickId);
+  const setConfigBrickId = useBoardStore((s) => s.setConfigBrickId);
+  const activeDashboard = useBoardStore((s) => s.activeBoard);
+  const brickTypes = useBoardStore((s) => s.brickTypes);
   const [saving, setSaving] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const { mutate: removeBrick } = useRemoveBrick();
@@ -228,7 +228,7 @@ export function ConfigSheet() {
     const configSchema = brickType?.config;
     if (configSchema && configSchema.length > 0) {
       await dashboardsApi.updateBrick(activeDashboard.id, configBrickId, { config: localConfig });
-      useDashboardStore.getState().updateBrickConfig(configBrickId, localConfig);
+      useBoardStore.getState().updateBrickConfig(configBrickId, localConfig);
     }
 
     setSaving(false);
@@ -282,7 +282,7 @@ export function ConfigSheet() {
               </Avatar>
               {displayName}
             </SheetTitle>
-            <SheetDescription>{t('bricks:config.description')}</SheetDescription>
+            <SheetDescription>{t('boards:config.description')}</SheetDescription>
           </SheetHeader>
 
           <div className="flex-1 overflow-auto px-4">
@@ -352,7 +352,7 @@ export function ConfigSheet() {
               </span>
               <dl className="mt-2 space-y-1 text-xs">
                 <div className="flex justify-between gap-2">
-                  <dt className="text-muted-foreground">{t('bricks:config.instance')}</dt>
+                  <dt className="text-muted-foreground">{t('boards:config.instance')}</dt>
                   <dd className="truncate font-mono">{configBrickId}</dd>
                 </div>
                 <div className="flex justify-between gap-2">
@@ -361,7 +361,7 @@ export function ConfigSheet() {
                 </div>
                 {brickType?.pluginName && (
                   <div className="flex justify-between gap-2">
-                    <dt className="text-muted-foreground">{t('bricks:config.plugin')}</dt>
+                    <dt className="text-muted-foreground">{t('boards:config.plugin')}</dt>
                     <dd className="truncate font-mono">{brickType.pluginName}</dd>
                   </div>
                 )}

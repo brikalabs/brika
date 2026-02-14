@@ -1,4 +1,4 @@
-import { Box, Plug, Workflow, Zap } from 'lucide-react';
+import { Box, LayoutDashboard, Plug, Workflow, Zap } from 'lucide-react';
 import { useDataView } from '@/components/DataView';
 import { useLocale } from '@/lib/use-locale';
 import { StatCard } from './StatCard';
@@ -9,6 +9,7 @@ export interface Stats {
   blocks: { total: number };
   workflows: { total: number; enabled: number };
   sparks: { total: number };
+  bricks: { total: number };
 }
 
 export interface StatsGridProps {
@@ -28,7 +29,8 @@ export function StatsGrid({ stats, isLoading }: Readonly<StatsGridProps>) {
   return (
     <StatsView.Root>
       <StatsView.Skeleton>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          <StatCardSkeleton />
           <StatCardSkeleton />
           <StatCardSkeleton />
           <StatCardSkeleton />
@@ -38,7 +40,7 @@ export function StatsGrid({ stats, isLoading }: Readonly<StatsGridProps>) {
 
       <StatsView.Content>
         {(stats) => (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
             <StatCard
               icon={Plug}
               label={t('dashboard:stats.plugins')}
@@ -69,6 +71,13 @@ export function StatsGrid({ stats, isLoading }: Readonly<StatsGridProps>) {
               subValue={t('dashboard:stats.registered')}
               href="/sparks"
               accent="emerald"
+            />
+            <StatCard
+              icon={LayoutDashboard}
+              label={t('dashboard:stats.brickTypes')}
+              value={stats.bricks.total}
+              href="/boards"
+              accent="purple"
             />
           </div>
         )}

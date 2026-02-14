@@ -1,0 +1,36 @@
+{
+  "title": "Tableaux",
+  "subtitle": "Vos tableaux en un coup d'œil",
+  "empty": "Aucune brique pour le moment",
+  "emptyHint": "Ajoutez une brique pour commencer.",
+  "addBrick": "Ajouter une brique",
+  "addFirstBrick": "Ajoutez votre première brique",
+  "addSheet": {
+    "title": "Ajouter une brique",
+    "description": "Choisissez une brique à ajouter à votre tableau.",
+    "empty": "Aucun type de brique disponible. Installez un plugin qui fournit des briques."
+  },
+  "config": {
+    "title": "Configurer la brique",
+    "description": "Modifier la configuration de cette instance de brique.",
+    "noOptions": "Ce type de brique n'a aucune option configurable.",
+    "instance": "Instance",
+    "plugin": "Plugin",
+    "configuration": "Configuration"
+  },
+  "pluginDisconnected": "Plugin déconnecté",
+  "dashboard": {
+    "new": "Nouveau tableau",
+    "newDescription": "Créez un nouveau tableau pour organiser vos briques.",
+    "edit": "Modifier le tableau",
+    "editDescription": "Personnalisez le nom et l'icône de votre tableau.",
+    "delete": "Supprimer le tableau",
+    "deleteDescription": "Cela supprimera définitivement ce tableau et toutes ses briques. Cette action est irréversible.",
+    "deleteConfirm": "Supprimer",
+    "icon": "Icône",
+    "iconHint": "Rechercher une icône (ex : home, chart, settings)",
+    "moreCount": "{{count}} autre(s)",
+    "reorder": "Réorganiser les tableaux",
+    "reorderDescription": "Glissez pour réorganiser l'ordre de vos tableaux."
+  }
+}

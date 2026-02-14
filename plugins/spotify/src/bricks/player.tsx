@@ -18,27 +18,37 @@ import {
   seek,
   setVolume,
   startPlayback,
-  transferPlayback,
   usePlayerStore,
 } from '../playback-store';
 import type { PlaybackState } from '../spotify-api';
 import { Controls, type PlayerActions, ProgressBar, TrackInfo, VolumeSlider } from './components';
 
+// ─── Common layout props ─────────────────────────────────────────────────────
+
+interface TrackDisplay {
+  trackName: string;
+  artistName: string;
+  albumArt: string | null;
+}
+
+interface LayoutProps {
+  track: TrackDisplay;
+  playback: PlaybackState | null;
+  actions: PlayerActions;
+}
+
 // ─── Layout: Small (1-2 cols) ───────────────────────────────────────────────
 
-function SmallPlayer({ playback, width, actions }: Readonly<{
-  playback: PlaybackState;
-  width: number;
-  actions: PlayerActions;
-}>) {
+function SmallPlayer({ track, playback, width, actions }: Readonly<LayoutProps & { width: number }>) {
+  const isPlaying = playback?.isPlaying ?? false;
   return (
-    <Box backgroundImage={playback.albumArt ?? undefined} backgroundFit="cover" rounded="lg" grow>
+    <Box backgroundImage={track.albumArt ?? undefined} backgroundFit="cover" rounded="lg" grow>
       <Box background="rgba(0,0,0,0.3)" grow>
         <Column justify="center" align="center" gap="sm">
           <Spacer />
           {width >= 2
-            ? <Controls isPlaying={playback.isPlaying} onPlay={actions.onPlay} onPause={actions.onPause} onPrev={actions.onPrev} onNext={actions.onNext} />
-            : <Button onPress={playback.isPlaying ? actions.onPause : actions.onPlay} icon={playback.isPlaying ? 'pause' : 'play'} color="rgba(0,0,0,0.4)" />}
+            ? <Controls isPlaying={isPlaying} onPlay={actions.onPlay} onPause={actions.onPause} onPrev={actions.onPrev} onNext={actions.onNext} />
+            : <Button onPress={isPlaying ? actions.onPause : actions.onPlay} icon={isPlaying ? 'pause' : 'play'} color="rgba(0,0,0,0.4)" />}
           <Spacer />
         </Column>
       </Box>
@@ -48,26 +58,18 @@ function SmallPlayer({ playback, width, actions }: Readonly<{
 
 // ─── Layout: Medium (3-4 cols) ──────────────────────────────────────────────
 
-function MediumPlayer({ playback, height, localProgressMs, actions }: Readonly<{
-  playback: PlaybackState;
-  height: number;
-  localProgressMs: number;
-  actions: PlayerActions;
-}>) {
-  const panel = (
-    <Column gap="sm">
-      <TrackInfo playback={playback} />
-      <Controls isPlaying={playback.isPlaying} onPlay={actions.onPlay} onPause={actions.onPause} onPrev={actions.onPrev} onNext={actions.onNext} />
-      <ProgressBar localProgressMs={localProgressMs} playback={playback} onSeek={actions.onSeek} />
-      {height >= 4 && <VolumeSlider playback={playback} onVolume={actions.onVolume} />}
-    </Column>
-  );
-
+function MediumPlayer({ track, playback, height, localProgressMs, actions }: Readonly<LayoutProps & { height: number; localProgressMs: number }>) {
+  const isPlaying = playback?.isPlaying ?? false;
   return (
-    <Box backgroundImage={playback.albumArt ?? undefined} backgroundFit="cover" rounded="lg" grow padding="sm">
+    <Box backgroundImage={track.albumArt ?? undefined} backgroundFit="cover" rounded="lg" grow padding="sm">
       <Column grow justify={height >= 2 ? 'end' : 'start'}>
         <Box background="rgba(0,0,0,0.7)" blur="lg" padding="md" grow={height < 2} rounded={height < 2 ? 'lg' : 'md'}>
-          {panel}
+          <Column gap="sm">
+            <TrackInfo trackName={track.trackName} artistName={track.artistName} />
+            <Controls isPlaying={isPlaying} onPlay={actions.onPlay} onPause={actions.onPause} onPrev={actions.onPrev} onNext={actions.onNext} />
+            {playback && <ProgressBar localProgressMs={localProgressMs} durationMs={playback.durationMs} onSeek={actions.onSeek} />}
+            {playback && height >= 4 && <VolumeSlider volume={playback.volume} onVolume={actions.onVolume} />}
+          </Column>
         </Box>
       </Column>
     </Box>
@@ -76,26 +78,22 @@ function MediumPlayer({ playback, height, localProgressMs, actions }: Readonly<{
 
 // ─── Layout: Large (5+ cols) ────────────────────────────────────────────────
 
-function LargePlayer({ playback, height, localProgressMs, actions }: Readonly<{
-  playback: PlaybackState;
-  height: number;
-  localProgressMs: number;
-  actions: PlayerActions;
-}>) {
+function LargePlayer({ track, playback, height, localProgressMs, actions }: Readonly<LayoutProps & { height: number; localProgressMs: number }>) {
+  const isPlaying = playback?.isPlaying ?? false;
   return (
-    <Box backgroundImage={playback.albumArt ?? undefined} backgroundFit="cover" rounded="lg" blur="sm">
+    <Box backgroundImage={track.albumArt ?? undefined} backgroundFit="cover" rounded="lg" blur="sm">
       <Box background="rgba(0,0,0,0.7)" blur="lg" padding="lg" rounded="lg" grow>
         <Row gap="lg">
-          {playback.albumArt == null
+          {track.albumArt == null
             ? <Box padding="none" />
-            : <Image src={playback.albumArt} alt={playback.albumName} fit="cover" rounded aspectRatio="1/1" />}
+            : <Image src={track.albumArt} alt={playback?.albumName ?? track.trackName} fit="cover" rounded aspectRatio="1/1" />}
           <Box grow padding="none">
             <Column gap="sm" justify="center">
-              <TrackInfo playback={playback} />
-              <Controls isPlaying={playback.isPlaying} onPlay={actions.onPlay} onPause={actions.onPause} onPrev={actions.onPrev} onNext={actions.onNext} />
-              <ProgressBar localProgressMs={localProgressMs} playback={playback} onSeek={actions.onSeek} />
-              {height >= 4 && <VolumeSlider playback={playback} onVolume={actions.onVolume} />}
-              {height >= 5 && <Badge label={playback.deviceName} icon="speaker" variant="secondary" color="rgba(255,255,255,0.6)" />}
+              <TrackInfo trackName={track.trackName} artistName={track.artistName} />
+              <Controls isPlaying={isPlaying} onPlay={actions.onPlay} onPause={actions.onPause} onPrev={actions.onPrev} onNext={actions.onNext} />
+              {playback && <ProgressBar localProgressMs={localProgressMs} durationMs={playback.durationMs} onSeek={actions.onSeek} />}
+              {playback && height >= 4 && <VolumeSlider volume={playback.volume} onVolume={actions.onVolume} />}
+              {playback && height >= 5 && <Badge label={playback.deviceName} icon="speaker" variant="secondary" color="rgba(255,255,255,0.6)" />}
             </Column>
           </Box>
         </Row>
@@ -115,7 +113,7 @@ export const playerBrick = defineBrick(
   },
   () => {
     const { width, height } = useBrickSize();
-    const { playback, devices, isAuthed, loaded, anchor } = usePlayerStore();
+    const { playback, recentTrack, devices, isAuthed, anchor } = usePlayerStore();
     const [instanceDeviceId] = usePreference<string>('device', '');
     const pluginDeviceId = usePluginPreference<string>('defaultDevice', '');
     const preferredId = instanceDeviceId || pluginDeviceId || undefined;
@@ -125,18 +123,6 @@ export const playerBrick = defineBrick(
 
     // Start/stop shared polling
     useEffect(() => acquirePolling(), []);
-
-    // Auto-transfer to the best available device when no playback
-    const autoTransferRef = useRef(false);
-    useEffect(() => {
-      if (playback) {
-        autoTransferRef.current = false;
-        return;
-      }
-      if (autoTransferRef.current || !loaded || !targetId) return;
-      autoTransferRef.current = true;
-      transferPlayback(targetId);
-    }, [loaded, playback, targetId]);
 
     // Keep anchor ref in sync and snap localProgressMs immediately
     useEffect(() => {
@@ -196,7 +182,9 @@ export const playerBrick = defineBrick(
       );
     }
 
-    if (!playback) {
+    const track = playback ?? recentTrack;
+
+    if (!track) {
       return (
         <Box background="rgba(0,0,0,0.3)" blur="sm" padding="md" rounded="lg">
           <Column align="center" justify="center" grow>
@@ -206,8 +194,10 @@ export const playerBrick = defineBrick(
       );
     }
 
-    if (width <= 2) return <SmallPlayer playback={playback} width={width} actions={actions} />;
-    if (width <= 4) return <MediumPlayer playback={playback} height={height} localProgressMs={localProgressMs} actions={actions} />;
-    return <LargePlayer playback={playback} height={height} localProgressMs={localProgressMs} actions={actions} />;
+    const layoutProps = { track, playback, actions };
+
+    if (width <= 2) return <SmallPlayer {...layoutProps} width={width} />;
+    if (width <= 4) return <MediumPlayer {...layoutProps} height={height} localProgressMs={localProgressMs} />;
+    return <LargePlayer {...layoutProps} height={height} localProgressMs={localProgressMs} />;
   },
 );

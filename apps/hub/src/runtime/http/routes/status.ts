@@ -5,6 +5,7 @@ import { getBuildDate, getGitBranch, getGitCommit } from '@/build-info.macro' wi
 };
 import { HUB_VERSION, hub } from '@/hub';
 import { BlockRegistry } from '@/runtime/blocks';
+import { BrickTypeRegistry } from '@/runtime/bricks';
 import { ConfigLoader } from '@/runtime/config';
 import { PluginManager } from '@/runtime/plugins/plugin-manager';
 import { SparkRegistry } from '@/runtime/sparks/spark-registry';
@@ -34,6 +35,7 @@ export const systemRoute = route.get('/api/system', ({ inject }) => {
   const blocks = inject(BlockRegistry);
   const workflows = inject(WorkflowEngine);
   const sparks = inject(SparkRegistry);
+  const brickTypes = inject(BrickTypeRegistry);
 
   const config = configLoader.get();
   const pluginList = plugins.list();
@@ -65,6 +67,7 @@ export const systemRoute = route.get('/api/system', ({ inject }) => {
         enabled: workflowList.filter((w) => w.enabled).length,
       },
       sparks: { total: sparkList.length },
+      bricks: { total: brickTypes.size },
     },
   };
 });

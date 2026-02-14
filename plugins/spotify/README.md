@@ -15,11 +15,11 @@ Spotify playback controller for BRIKA dashboards. Displays now-playing info, alb
 
 Responsive player that adapts to the grid size:
 
-| Size | Layout |
-|------|--------|
-| 1-2 cols | Album art with play/pause overlay |
-| 3-4 cols | Album art background with floating control panel |
-| 5+ cols | Split layout — album art left, full controls right |
+| Size     | Layout                                             |
+|----------|----------------------------------------------------|
+| 1-2 cols | Album art with play/pause overlay                  |
+| 3-4 cols | Album art background with floating control panel   |
+| 5+ cols  | Split layout — album art left, full controls right |
 
 Height unlocks additional features:
 
@@ -29,9 +29,9 @@ Height unlocks additional features:
 
 ### Config
 
-| Name | Type | Default | Description |
-|------|------|---------|-------------|
-| `refreshInterval` | number | 3000 | Polling interval in ms (1000–30000) |
+| Name              | Type   | Default | Description                         |
+|-------------------|--------|---------|-------------------------------------|
+| `refreshInterval` | number | 3000    | Polling interval in ms (1000–30000) |
 
 Progress is interpolated locally between polls for smooth UI updates.
 
@@ -41,13 +41,13 @@ Emitted whenever the playing track changes.
 
 **Payload:**
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `trackName` | string | Track title |
-| `artistName` | string | Artist name(s), comma-separated |
-| `albumName` | string | Album title |
-| `albumArt` | string \| null | Album art URL (640px) |
-| `timestamp` | number | Unix timestamp (ms) |
+| Field        | Type           | Description                     |
+|--------------|----------------|---------------------------------|
+| `trackName`  | string         | Track title                     |
+| `artistName` | string         | Artist name(s), comma-separated |
+| `albumName`  | string         | Album title                     |
+| `albumArt`   | string \| null | Album art URL (640px)           |
+| `timestamp`  | number         | Unix timestamp (ms)             |
 
 ## Scopes
 

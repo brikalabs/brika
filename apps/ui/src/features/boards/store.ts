@@ -2,13 +2,13 @@ import type { Json } from '@brika/shared';
 import type { ComponentNode, Mutation } from '@brika/ui-kit';
 import { applyMutations } from '@brika/ui-kit';
 import { create } from 'zustand';
-import type { BrickType, Dashboard, DashboardBrickPlacement, DashboardSummary } from './api';
+import type { Board, BoardBrickPlacement, BoardSummary, BrickType } from './api';
 
-interface DashboardStore {
+interface BoardStore {
   // ─── Dashboard list ────────────────────────────────────────────────────────
-  dashboards: Map<string, DashboardSummary>;
-  activeDashboardId: string | null;
-  activeDashboard: Dashboard | null;
+  dashboards: Map<string, BoardSummary>;
+  activeBoardId: string | null;
+  activeBoard: Board | null;
 
   // ─── Brick type catalog ─────────────────────────────────────────────────
   brickTypes: Map<string, BrickType>;
@@ -22,8 +22,8 @@ interface DashboardStore {
   configBrickId: string | null;
 
   // ─── Actions ───────────────────────────────────────────────────────────────
-  setDashboards(list: DashboardSummary[]): void;
-  setActiveDashboard(dashboard: Dashboard | null): void;
+  setBoards(list: BoardSummary[]): void;
+  setActiveBoard(dashboard: Board | null): void;
   setBrickTypes(types: BrickType[]): void;
   setAddBrickOpen(open: boolean): void;
   setConfigBrickId(id: string | null): void;
@@ -37,7 +37,7 @@ interface DashboardStore {
   clearDisconnected(instanceId: string): void;
 
   // Optimistic dashboard mutations
-  addBrickPlacement(placement: DashboardBrickPlacement): void;
+  addBrickPlacement(placement: BoardBrickPlacement): void;
   removeBrickPlacement(instanceId: string): void;
   updateBrickLayouts(
     layouts: Array<{ instanceId: string; x: number; y: number; w: number; h: number }>
@@ -46,26 +46,26 @@ interface DashboardStore {
   updateBrickLabel(instanceId: string, label: string | undefined): void;
 }
 
-export const useDashboardStore = create<DashboardStore>((set, get) => ({
+export const useBoardStore = create<BoardStore>((set, get) => ({
   dashboards: new Map(),
-  activeDashboardId: null,
-  activeDashboard: null,
+  activeBoardId: null,
+  activeBoard: null,
   brickTypes: new Map(),
   bodies: new Map(),
   disconnectedInstances: new Set(),
   addBrickOpen: false,
   configBrickId: null,
 
-  setDashboards(list) {
+  setBoards(list) {
     set({ dashboards: new Map(list.map((d) => [d.id, d])) });
   },
 
-  setActiveDashboard(dashboard) {
+  setActiveBoard(dashboard) {
     if (!dashboard) {
-      set({ activeDashboardId: null, activeDashboard: null });
+      set({ activeBoardId: null, activeBoard: null });
       return;
     }
-    set({ activeDashboardId: dashboard.id, activeDashboard: dashboard });
+    set({ activeBoardId: dashboard.id, activeBoard: dashboard });
   },
 
   setBrickTypes(types) {
@@ -128,18 +128,18 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
   },
 
   addBrickPlacement(placement) {
-    const dashboard = get().activeDashboard;
+    const dashboard = get().activeBoard;
     if (!dashboard) return;
     set({
-      activeDashboard: { ...dashboard, bricks: [...dashboard.bricks, placement] },
+      activeBoard: { ...dashboard, bricks: [...dashboard.bricks, placement] },
     });
   },
 
   removeBrickPlacement(instanceId) {
-    const dashboard = get().activeDashboard;
+    const dashboard = get().activeBoard;
     if (!dashboard) return;
     set({
-      activeDashboard: {
+      activeBoard: {
         ...dashboard,
         bricks: dashboard.bricks.filter((c) => c.instanceId !== instanceId),
       },
@@ -147,7 +147,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
   },
 
   updateBrickLayouts(layouts) {
-    const dashboard = get().activeDashboard;
+    const dashboard = get().activeBoard;
     if (!dashboard) return;
     const layoutMap = new Map(layouts.map((l) => [l.instanceId, l]));
     let changed = false;
@@ -159,31 +159,31 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       changed = true;
       return { ...b, position: { x: l.x, y: l.y }, size: { w: l.w, h: l.h } };
     });
-    if (changed) set({ activeDashboard: { ...dashboard, bricks } });
+    if (changed) set({ activeBoard: { ...dashboard, bricks } });
   },
 
   updateBrickConfig(instanceId, config) {
-    const dashboard = get().activeDashboard;
+    const dashboard = get().activeBoard;
     if (!dashboard) return;
     const bricks = dashboard.bricks.map((b) =>
       b.instanceId === instanceId ? { ...b, config } : b
     );
-    set({ activeDashboard: { ...dashboard, bricks } });
+    set({ activeBoard: { ...dashboard, bricks } });
   },
 
   updateBrickLabel(instanceId, label) {
-    const dashboard = get().activeDashboard;
+    const dashboard = get().activeBoard;
     if (!dashboard) return;
     const bricks = dashboard.bricks.map((b) => (b.instanceId === instanceId ? { ...b, label } : b));
-    set({ activeDashboard: { ...dashboard, bricks } });
+    set({ activeBoard: { ...dashboard, bricks } });
   },
 }));
 
 // Selective subscriptions
-export const useActiveDashboard = () => useDashboardStore((s) => s.activeDashboard);
-export const useBrickTypes = () => useDashboardStore((s) => s.brickTypes);
-export const useInstanceBody = (id: string) => useDashboardStore((s) => s.bodies.get(id));
+export const useActiveBoard = () => useBoardStore((s) => s.activeBoard);
+export const useBrickTypes = () => useBoardStore((s) => s.brickTypes);
+export const useInstanceBody = (id: string) => useBoardStore((s) => s.bodies.get(id));
 export const useIsInstanceDisconnected = (id: string) =>
-  useDashboardStore((s) => s.disconnectedInstances.has(id));
+  useBoardStore((s) => s.disconnectedInstances.has(id));
 export const useBrickPlacement = (id: string) =>
-  useDashboardStore((s) => s.activeDashboard?.bricks.find((b) => b.instanceId === id));
+  useBoardStore((s) => s.activeBoard?.bricks.find((b) => b.instanceId === id));

@@ -7,7 +7,7 @@ import { useLocale } from '@/lib/use-locale';
 import { useBrickInstanceAction } from '../hooks';
 import {
   useBrickPlacement,
-  useDashboardStore,
+  useBoardStore,
   useInstanceBody,
   useIsInstanceDisconnected,
 } from '../store';
@@ -62,22 +62,22 @@ function nodeKey(node: ComponentNode, index: number): string {
   }
 }
 
-interface DashboardBrickProps {
+interface BoardBrickProps {
   instanceId: string;
   brickTypeId: string;
 }
 
-export const DashboardBrick = memo(function DashboardBrick({
+export const BoardBrick = memo(function BoardBrick({
   instanceId,
   brickTypeId,
-}: DashboardBrickProps) {
+}: BoardBrickProps) {
   const { t, tp } = useLocale();
-  const brickType = useDashboardStore((s) => s.brickTypes.get(brickTypeId));
+  const brickType = useBoardStore((s) => s.brickTypes.get(brickTypeId));
   const placement = useBrickPlacement(instanceId);
   const body = useInstanceBody(instanceId);
   const disconnected = useIsInstanceDisconnected(instanceId);
   const { mutate: sendAction } = useBrickInstanceAction();
-  const setConfigBrickId = useDashboardStore((s) => s.setConfigBrickId);
+  const setConfigBrickId = useBoardStore((s) => s.setConfigBrickId);
 
   const iconName = (brickType?.icon || 'layout-dashboard') as IconName;
   const color = brickType?.color ?? 'var(--color-primary)';
@@ -128,7 +128,7 @@ export const DashboardBrick = memo(function DashboardBrick({
             <div className="flex flex-1 flex-col items-center justify-center gap-1.5">
               <WifiOff className="size-4 text-muted-foreground/50" />
               <span className="text-muted-foreground/70 text-xs">
-                {t('bricks:pluginDisconnected')}
+                {t('boards:pluginDisconnected')}
               </span>
             </div>
           )}

@@ -57,7 +57,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { to: '/sparks', labelKey: 'nav:sparks', icon: Zap },
       { to: '/blocks', labelKey: 'nav:blocks', icon: Blocks },
-      { to: '/bricks', labelKey: 'nav:bricks', icon: LayoutGrid },
+      { to: '/boards', labelKey: 'nav:boards', icon: LayoutGrid },
       { to: '/logs', labelKey: 'nav:logs', icon: FileText },
     ],
   },
@@ -188,8 +188,8 @@ export function RootLayout() {
     <ThemeProvider>
       <SidebarProvider>
         <AppSidebar />
-        <SidebarInset>
-          <main className={cn('flex-1 overflow-auto', !isFullBleed && 'p-8')}>
+        <SidebarInset className="min-w-0">
+          <main className={cn('min-w-0 flex-1 overflow-auto', !isFullBleed && 'p-8')}>
             <Outlet />
           </main>
         </SidebarInset>

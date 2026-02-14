@@ -46,6 +46,13 @@ export {
 } from './code-block';
 export { Collapsible, CollapsibleContent, CollapsibleTrigger } from './collapsible';
 export {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from './dropdown-menu';
+export {
   Dialog,
   DialogClose,
   DialogContent,
@@ -65,6 +72,15 @@ export {
   InputGroupInput,
 } from './input-group';
 export { Label } from './label';
+export {
+  OverflowList,
+  OverflowListContent,
+  OverflowListIndicator,
+  OverflowListItem,
+  useOverflowList,
+} from './overflow-list';
+export type { UseOverflowListOptions, UseOverflowListReturn } from './overflow-list';
+export { Popover, PopoverContent, PopoverTrigger } from './popover';
 export { Progress } from './progress';
 export { ProgressDisplay } from './progress-display';
 export { ScrollArea } from './scroll-area';

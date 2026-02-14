@@ -3,9 +3,9 @@ import { LayoutGrid, Plus } from 'lucide-react';
 import { useCallback, useEffect, useRef } from 'react';
 import { Button, Skeleton } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
-import { DashboardGrid } from './components/DashboardGrid';
-import { useDashboardSSE, useLoadDashboard, useSaveLayout } from './hooks';
-import { useActiveDashboard, useDashboardStore } from './store';
+import { BoardGrid } from './components/BoardGrid';
+import { useBoardSSE, useLoadBoard, useSaveLayout } from './hooks';
+import { useActiveBoard, useBoardStore } from './store';
 
 function GridSkeleton() {
   return (
@@ -17,7 +17,7 @@ function GridSkeleton() {
   );
 }
 
-export function DashboardContent() {
+export function BoardContent() {
   const { t } = useLocale();
   const { dashboardId } = useParams({ strict: false });
 
@@ -30,10 +30,10 @@ export function DashboardContent() {
     const changed = prevIdRef.current !== dashboardId;
     prevIdRef.current = dashboardId;
 
-    useDashboardStore.setState({ activeDashboardId: dashboardId });
+    useBoardStore.setState({ activeBoardId: dashboardId });
 
     if (changed) {
-      useDashboardStore.setState({
+      useBoardStore.setState({
         bodies: new Map(),
         disconnectedInstances: new Set(),
       });
@@ -41,19 +41,19 @@ export function DashboardContent() {
   }, [dashboardId]);
 
   // Per-dashboard data loading and SSE
-  const { data: loadedDashboard, isLoading } = useLoadDashboard(dashboardId);
-  useDashboardSSE(dashboardId);
+  const { data: loadedDashboard, isLoading } = useLoadBoard(dashboardId);
+  useBoardSSE(dashboardId);
 
   // Sync query data → store (covers cache hits where queryFn doesn't re-run)
   useEffect(() => {
     if (loadedDashboard) {
-      useDashboardStore.getState().setActiveDashboard(loadedDashboard);
+      useBoardStore.getState().setActiveBoard(loadedDashboard);
     }
   }, [loadedDashboard]);
 
-  const dashboard = useActiveDashboard();
+  const dashboard = useActiveBoard();
   const saveLayout = useSaveLayout();
-  const setAddBrickOpen = useDashboardStore((s) => s.setAddBrickOpen);
+  const setAddBrickOpen = useBoardStore((s) => s.setAddBrickOpen);
   const handleAddBrick = useCallback(() => setAddBrickOpen(true), [setAddBrickOpen]);
 
   if (!dashboardId) return null;
@@ -67,11 +67,11 @@ export function DashboardContent() {
     return (
       <div className="py-12 text-center">
         <LayoutGrid className="mx-auto mb-4 size-12 text-muted-foreground" />
-        <h3 className="font-semibold">{t('bricks:empty')}</h3>
-        <p className="mt-1 text-muted-foreground">{t('bricks:emptyHint')}</p>
+        <h3 className="font-semibold">{t('boards:empty')}</h3>
+        <p className="mt-1 text-muted-foreground">{t('boards:emptyHint')}</p>
         <Button variant="outline" className="mt-4" onClick={handleAddBrick}>
           <Plus className="mr-1.5 size-4" />
-          {t('bricks:addFirstBrick')}
+          {t('boards:addFirstBrick')}
         </Button>
       </div>
     );
@@ -79,5 +79,5 @@ export function DashboardContent() {
 
   if (!dashboard) return null;
 
-  return <DashboardGrid dashboard={dashboard} onSaveLayout={saveLayout} />;
+  return <BoardGrid dashboard={dashboard} onSaveLayout={saveLayout} />;
 }

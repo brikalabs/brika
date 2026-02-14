@@ -28,6 +28,13 @@ export interface PlaybackState {
   deviceName: string;
 }
 
+export interface RecentTrack {
+  trackName: string;
+  artistName: string;
+  albumArt: string | null;
+  uri: string;
+}
+
 export interface SpotifyDevice {
   id: string;
   name: string;
@@ -46,6 +53,11 @@ export class SpotifyAuthError extends Error {
     super('Spotify token expired or revoked');
     this.name = 'SpotifyAuthError';
   }
+}
+
+function pickArt(images: SpotifyImage[]): string | null {
+  const art = images.find((i) => i.width === 640) ?? images[0];
+  return art?.url ?? null;
 }
 
 export function createSpotifyApi(oauth: OAuthClient) {
@@ -96,16 +108,12 @@ export function createSpotifyApi(oauth: OAuthClient) {
 
       if (!data?.item) return null;
 
-      // Pick the best album art (640px preferred)
-      const images = data.item.album.images;
-      const art = images.find((i) => i.width === 640) ?? images[0] ?? null;
-
       return {
         isPlaying: data.is_playing,
         trackName: data.item.name,
         artistName: data.item.artists.map((a) => a.name).join(', '),
         albumName: data.item.album.name,
-        albumArt: art?.url ?? null,
+        albumArt: pickArt(data.item.album.images),
         progressMs: data.progress_ms,
         durationMs: data.item.duration_ms,
         volume: data.device.volume_percent,
@@ -155,19 +163,30 @@ export function createSpotifyApi(oauth: OAuthClient) {
       await api('/me/player', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ device_ids: [deviceId], play: true }),
+        body: JSON.stringify({ device_ids: [deviceId], play: false }),
       });
     },
 
-    async getRecentlyPlayed(): Promise<string | null> {
+    async getRecentlyPlayed(): Promise<RecentTrack | null> {
       const data = await api<{
         items: Array<{
           context?: { uri: string };
-          track: { uri: string };
+          track: {
+            uri: string;
+            name: string;
+            artists: { name: string }[];
+            album: { images: SpotifyImage[] };
+          };
         }>;
       }>('/me/player/recently-played?limit=1');
       if (!data?.items?.[0]) return null;
-      return data.items[0].context?.uri ?? data.items[0].track.uri;
+      const { context, track } = data.items[0];
+      return {
+        trackName: track.name,
+        artistName: track.artists.map((a) => a.name).join(', '),
+        albumArt: pickArt(track.album.images),
+        uri: context?.uri ?? track.uri,
+      };
     },
 
     async getDevices(): Promise<SpotifyDevice[]> {

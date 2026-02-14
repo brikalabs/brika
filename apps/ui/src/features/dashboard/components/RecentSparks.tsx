@@ -23,7 +23,7 @@ export function RecentSparks({ sparks }: Readonly<RecentSparksProps>) {
   const { t, formatTime } = useLocale();
 
   return (
-    <Card className="lg:col-span-2">
+    <Card className="flex flex-col lg:col-span-2">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div>
@@ -36,8 +36,8 @@ export function RecentSparks({ sparks }: Readonly<RecentSparksProps>) {
           <Badge variant="secondary">{sparks.length}</Badge>
         </div>
       </CardHeader>
-      <CardContent>
-        <ScrollArea className="-mx-2 h-70 px-2">
+      <CardContent className="flex min-h-0 flex-1 flex-col">
+        <ScrollArea className="-mx-2 flex-1 px-2">
           <div className="flex flex-col gap-2">
             {sparks.slice(0, 8).map((e) => (
               <div

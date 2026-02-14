@@ -49,6 +49,22 @@ export const dashboardsRoutes = group('/api/dashboards', [
   ),
 
   /**
+   * Reorder dashboards (tab drag-and-drop).
+   * Must be defined before /:id routes so the router doesn't match "order" as an :id.
+   */
+  route.put(
+    '/order',
+    {
+      body: z.object({ ids: z.array(z.string()) }),
+    },
+    async ({ body, inject }) => {
+      const ok = await inject(DashboardLoader).reorder(body.ids);
+      if (!ok) throw new NotFound('One or more dashboard IDs not found');
+      return { ok: true };
+    }
+  ),
+
+  /**
    * Get a specific dashboard with all placements
    */
   route.get('/:id', { params: z.object({ id: z.string() }) }, ({ params, inject }) => {

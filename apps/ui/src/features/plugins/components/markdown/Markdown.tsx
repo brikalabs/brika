@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { markdownComponents } from './markdown-components';
 
 export function Markdown({ children }: Readonly<{ children: string }>) {
@@ -16,7 +17,7 @@ export function Markdown({ children }: Readonly<{ children: string }>) {
 
   return (
     <div className="px-6 text-foreground [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
-      <ReactMarkdown components={markdownComponents}>{children}</ReactMarkdown>
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>{children}</ReactMarkdown>
     </div>
   );
 }

@@ -25,7 +25,8 @@
     "view": "View",
     "select": "Select",
     "copy": "Copy",
-    "rename": "Rename"
+    "rename": "Rename",
+    "done": "Done"
   },
   "status": {
     "running": "Running",

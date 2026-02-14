@@ -31,9 +31,9 @@ export interface BrickInstance {
   body: ComponentNode[];
 }
 
-// ─── Dashboard ─────────────────────────────────────────────────────────────
+// ─── Board ────────────────────────────────────────────────────────────────
 
-export interface DashboardSummary {
+export interface BoardSummary {
   id: string;
   name: string;
   icon?: string;
@@ -41,7 +41,7 @@ export interface DashboardSummary {
   brickCount: number;
 }
 
-export interface DashboardBrickPlacement {
+export interface BoardBrickPlacement {
   instanceId: string;
   brickTypeId: string;
   label?: string;
@@ -50,12 +50,12 @@ export interface DashboardBrickPlacement {
   size: { w: number; h: number };
 }
 
-export interface Dashboard {
+export interface Board {
   id: string;
   name: string;
   icon?: string;
   columns: number;
-  bricks: DashboardBrickPlacement[];
+  bricks: BoardBrickPlacement[];
 }
 
 // ─── API Clients ───────────────────────────────────────────────────────────
@@ -79,15 +79,15 @@ export const brickInstancesApi = {
 };
 
 export const dashboardsApi = {
-  list: () => fetcher<DashboardSummary[]>('/api/dashboards'),
-  get: (id: string) => fetcher<Dashboard>(`/api/dashboards/${encodeURIComponent(id)}`),
+  list: () => fetcher<BoardSummary[]>('/api/dashboards'),
+  get: (id: string) => fetcher<Board>(`/api/dashboards/${encodeURIComponent(id)}`),
   create: (name: string, icon?: string) =>
-    fetcher<Dashboard>('/api/dashboards', {
+    fetcher<Board>('/api/dashboards', {
       method: 'POST',
       body: JSON.stringify({ name, icon }),
     }),
   update: (id: string, data: { name?: string; icon?: string }) =>
-    fetcher<Dashboard>(`/api/dashboards/${encodeURIComponent(id)}`, {
+    fetcher<Board>(`/api/dashboards/${encodeURIComponent(id)}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
@@ -102,7 +102,7 @@ export const dashboardsApi = {
     position?: { x: number; y: number },
     size?: { w: number; h: number }
   ) =>
-    fetcher<DashboardBrickPlacement>(`/api/dashboards/${encodeURIComponent(dashboardId)}/bricks`, {
+    fetcher<BoardBrickPlacement>(`/api/dashboards/${encodeURIComponent(dashboardId)}/bricks`, {
       method: 'POST',
       body: JSON.stringify({ brickTypeId, config, position, size }),
     }),
@@ -137,6 +137,11 @@ export const dashboardsApi = {
     fetcher<{ ok: boolean }>(`/api/dashboards/${encodeURIComponent(dashboardId)}/layout`, {
       method: 'PUT',
       body: JSON.stringify({ layouts }),
+    }),
+  reorder: (ids: string[]) =>
+    fetcher<{ ok: boolean }>('/api/dashboards/order', {
+      method: 'PUT',
+      body: JSON.stringify({ ids }),
     }),
 };
 

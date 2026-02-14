@@ -9,6 +9,7 @@ export interface SystemStatusCardProps {
   totalPlugins: number;
   totalSparks: number;
   totalBlocks: number;
+  totalBricks: number;
 }
 
 export function SystemStatusCard({
@@ -17,6 +18,7 @@ export function SystemStatusCard({
   totalPlugins,
   totalSparks,
   totalBlocks,
+  totalBricks,
 }: Readonly<SystemStatusCardProps>) {
   const { t } = useLocale();
 
@@ -54,6 +56,12 @@ export function SystemStatusCard({
           <span className="font-medium text-sm">{t('dashboard:stats.blocks')}</span>
           <Badge variant="secondary" className="font-semibold">
             {totalBlocks}
+          </Badge>
+        </div>
+        <div className="flex items-center justify-between rounded-lg border bg-card p-3">
+          <span className="font-medium text-sm">{t('dashboard:stats.brickTypes')}</span>
+          <Badge variant="secondary" className="font-semibold">
+            {totalBricks}
           </Badge>
         </div>
       </CardContent>

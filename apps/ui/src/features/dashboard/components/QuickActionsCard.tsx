@@ -1,4 +1,4 @@
-import { Play, Plug, Workflow, Zap } from 'lucide-react';
+import { LayoutDashboard, Play, Plug, Workflow, Zap } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
 import { QuickAction } from './QuickAction';
@@ -23,6 +23,7 @@ export function QuickActionsCard() {
         />
         <QuickAction icon={Plug} label={t('nav:plugins')} href="/plugins" accent="blue" />
         <QuickAction icon={Zap} label={t('sparks:title')} href="/sparks" accent="emerald" />
+        <QuickAction icon={LayoutDashboard} label={t('boards:title')} href="/boards" accent="purple" />
       </CardContent>
     </Card>
   );

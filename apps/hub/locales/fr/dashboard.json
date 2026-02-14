@@ -25,7 +25,13 @@
     "enabledWorkflows_one": "{{count}} Workflow actif",
     "enabledWorkflows_other": "{{count}} Workflows actifs",
     "totalBlocks_one": "{{count}} Bloc",
-    "totalBlocks_other": "{{count}} Blocs"
+    "totalBlocks_other": "{{count}} Blocs",
+    "brickTypes": "Tableaux"
+  },
+  "bricks": {
+    "title": "Briques installées",
+    "subtitle": "Types de briques disponibles depuis vos plugins",
+    "empty": "Aucun type de brique installé. Ajoutez un plugin qui fournit des briques."
   },
   "uptime": {
     "title": "Uptime",

@@ -22,6 +22,7 @@ export { Icon, type IconNode } from './icon';
 export { Image, type ImageNode } from './image';
 export { KeyValue, type KeyValueItem, type KeyValueNode } from './key-value';
 export { Link, type LinkNode } from './link';
+export { Markdown, type MarkdownNode } from './markdown';
 export { Progress, type ProgressNode } from './progress';
 // Node types + components (each file self-registers into NodeTypeMap)
 export { Row, type RowNode } from './row';

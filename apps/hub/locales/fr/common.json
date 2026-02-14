@@ -25,7 +25,8 @@
     "view": "Voir",
     "select": "Sélectionner",
     "copy": "Copier",
-    "rename": "Renommer"
+    "rename": "Renommer",
+    "done": "Terminé"
   },
   "status": {
     "running": "En cours",

@@ -1,9 +1,9 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Layout } from 'react-grid-layout/legacy';
 import { ReactGridLayout } from 'react-grid-layout/legacy';
-import type { Dashboard } from '../api';
+import type { Board } from '../api';
 import { useBrickTypes } from '../store';
-import { DashboardBrick } from './DashboardBrick';
+import { BoardBrick } from './BoardBrick';
 
 import 'react-grid-layout/css/styles.css';
 
@@ -12,8 +12,8 @@ const GAP = 12;
 const BREAKPOINTS = { lg: 1200, md: 800, sm: 0 } as const;
 const COL_MAP = { lg: 12, md: 8, sm: 4 } as const;
 
-interface DashboardGridProps {
-  dashboard: Dashboard;
+interface BoardGridProps {
+  dashboard: Board;
   onSaveLayout: (
     layouts: Array<{ instanceId: string; x: number; y: number; w: number; h: number }>
   ) => void;
@@ -29,10 +29,10 @@ function layoutToPayload(currentLayout: Layout) {
   }));
 }
 
-export const DashboardGrid = memo(function DashboardGrid({
+export const BoardGrid = memo(function BoardGrid({
   dashboard,
   onSaveLayout,
-}: DashboardGridProps) {
+}: BoardGridProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
   const brickTypes = useBrickTypes();
@@ -92,7 +92,7 @@ export const DashboardGrid = memo(function DashboardGrid({
     () =>
       dashboard.bricks.map((brick) => (
         <div key={brick.instanceId}>
-          <DashboardBrick instanceId={brick.instanceId} brickTypeId={brick.brickTypeId} />
+          <BoardBrick instanceId={brick.instanceId} brickTypeId={brick.brickTypeId} />
         </div>
       )),
     // eslint-disable-next-line react-hooks/exhaustive-deps

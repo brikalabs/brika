@@ -26,7 +26,13 @@
     "enabledWorkflows_one": "{{count}} Enabled Workflow",
     "enabledWorkflows_other": "{{count}} Enabled Workflows",
     "totalBlocks_one": "{{count}} Block",
-    "totalBlocks_other": "{{count}} Blocks"
+    "totalBlocks_other": "{{count}} Blocks",
+    "brickTypes": "Boards"
+  },
+  "bricks": {
+    "title": "Installed Bricks",
+    "subtitle": "Brick types available from your plugins",
+    "empty": "No brick types installed. Add a plugin that provides bricks."
   },
   "uptime": {
     "title": "System Uptime",

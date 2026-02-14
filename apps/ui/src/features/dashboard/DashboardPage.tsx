@@ -61,6 +61,7 @@ export function DashboardPage() {
             totalPlugins={plugins.length}
             totalSparks={stats?.sparks.total ?? 0}
             totalBlocks={stats?.blocks.total ?? 0}
+            totalBricks={stats?.bricks?.total ?? 0}
           />
         </div>
       </div>

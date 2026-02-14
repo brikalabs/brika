@@ -26,7 +26,8 @@ export const playBlock = defineReactiveBlock(
       try {
         const deviceId = await resolveDevice(config.deviceId);
         const contextUri = toSpotifyUri(config.contextUri);
-        const uri = contextUri ?? await getApi().getRecentlyPlayed() ?? undefined;
+        const recent = await getApi().getRecentlyPlayed();
+        const uri = contextUri ?? recent?.uri;
 
         if (deviceId) await getApi().transferPlayback(deviceId);
         await getApi().play(deviceId, uri);

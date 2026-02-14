@@ -10,7 +10,7 @@ import '@/lib/i18n';
 
 // Feature Pages
 import { BlocksPage } from '@/features/blocks';
-import { BricksLayout, DashboardContent } from '@/features/bricks';
+import { BoardsLayout, BoardContent } from '@/features/boards';
 import { DashboardPage } from '@/features/dashboard';
 import { SparksPage } from '@/features/events';
 import { LogsPage } from '@/features/logs';
@@ -56,17 +56,17 @@ const storePluginDetailRoute = createRoute({
   component: StorePluginDetailPage,
 });
 
-// Bricks routes — nested layout with Outlet
-const bricksRoute = createRoute({
+// Boards routes — nested layout with Outlet
+const boardsRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/bricks',
-  component: BricksLayout,
+  path: '/boards',
+  component: BoardsLayout,
 });
 
-const bricksDashboardRoute = createRoute({
-  getParentRoute: () => bricksRoute,
+const boardDetailRoute = createRoute({
+  getParentRoute: () => boardsRoute,
   path: '/$dashboardId',
-  component: DashboardContent,
+  component: BoardContent,
 });
 
 // Sparks routes with tab parameter
@@ -91,7 +91,7 @@ const routes = [
   workflowNewRoute,
   workflowEditorRoute,
   createRoute({ getParentRoute: () => rootRoute, path: '/blocks', component: BlocksPage }),
-  bricksRoute.addChildren([bricksDashboardRoute]),
+  boardsRoute.addChildren([boardDetailRoute]),
   createRoute({ getParentRoute: () => rootRoute, path: '/logs', component: LogsPage }),
   createRoute({ getParentRoute: () => rootRoute, path: '/store', component: StorePage }),
   storePluginDetailRoute,

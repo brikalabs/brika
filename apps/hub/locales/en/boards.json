@@ -1,13 +1,13 @@
 {
-  "title": "Dashboard",
-  "subtitle": "Your bricks at a glance",
+  "title": "Boards",
+  "subtitle": "Your boards at a glance",
   "empty": "No bricks yet",
   "emptyHint": "Add a brick to get started.",
   "addBrick": "Add Brick",
   "addFirstBrick": "Add your first brick",
   "addSheet": {
     "title": "Add Brick",
-    "description": "Choose a brick to add to your dashboard.",
+    "description": "Choose a brick to add to your board.",
     "empty": "No brick types available. Install a plugin that provides bricks."
   },
   "config": {
@@ -20,14 +20,17 @@
   },
   "pluginDisconnected": "Plugin disconnected",
   "dashboard": {
-    "new": "New Dashboard",
-    "newDescription": "Create a new dashboard to organize your bricks.",
-    "edit": "Edit Dashboard",
-    "editDescription": "Customize your dashboard's name and icon.",
-    "delete": "Delete Dashboard",
-    "deleteDescription": "This will permanently delete this dashboard and remove all its bricks. This action cannot be undone.",
+    "new": "New Board",
+    "newDescription": "Create a new board to organize your bricks.",
+    "edit": "Edit Board",
+    "editDescription": "Customize your board's name and icon.",
+    "delete": "Delete Board",
+    "deleteDescription": "This will permanently delete this board and remove all its bricks. This action cannot be undone.",
     "deleteConfirm": "Delete",
     "icon": "Icon",
-    "iconHint": "Enter a Lucide icon name (e.g. home, chart-bar, settings)."
+    "iconHint": "Search icons (e.g. home, chart, settings)",
+    "moreCount": "{{count}} more",
+    "reorder": "Reorder boards",
+    "reorderDescription": "Drag to rearrange the order of your boards."
   }
 }

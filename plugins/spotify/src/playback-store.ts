@@ -8,9 +8,9 @@
 import { log } from '@brika/sdk';
 import { defineSharedStore } from '@brika/sdk/bricks/core';
 import { spotify } from './index';
-import { getApi, resolveDeviceId } from './shared';
+import { getApi } from './shared';
 import { trackChanged } from './sparks';
-import type { PlaybackState, SpotifyDevice } from './spotify-api';
+import type { PlaybackState, RecentTrack, SpotifyDevice } from './spotify-api';
 import { SpotifyAuthError } from './spotify-api';
 
 // ─── Store ───────────────────────────────────────────────────────────────────
@@ -19,6 +19,7 @@ export interface Anchor { progressMs: number; timestamp: number }
 
 interface PlayerState {
   playback: PlaybackState | null;
+  recentTrack: RecentTrack | null;
   devices: SpotifyDevice[];
   isAuthed: boolean;
   loaded: boolean;
@@ -27,6 +28,7 @@ interface PlayerState {
 
 export const usePlayerStore = defineSharedStore<PlayerState>({
   playback: null,
+  recentTrack: null,
   devices: [],
   isAuthed: false,
   loaded: false,
@@ -40,7 +42,6 @@ const POLL_MS = 3000;
 let refCount = 0;
 let timer: ReturnType<typeof setInterval> | null = null;
 let lastTrack = '';
-let autoTransferAttempted = false;
 
 /** Reset the polling interval so the next poll is a full POLL_MS away. */
 function resetPollTimer(): void {
@@ -53,15 +54,6 @@ function resetPollTimer(): void {
 function pollNow(): void {
   poll();
   resetPollTimer();
-}
-
-async function tryAutoTransfer(devices: SpotifyDevice[]): Promise<boolean> {
-  if (autoTransferAttempted || devices.length === 0) return false;
-  const prefId = resolveDeviceId();
-  const targetId = prefId && devices.some((d) => d.id === prefId) ? prefId : devices[0].id;
-  autoTransferAttempted = true;
-  getApi().transferPlayback(targetId).then(() => pollNow());
-  return true;
 }
 
 function emitTrackChanged(state: PlaybackState): void {
@@ -78,7 +70,7 @@ function emitTrackChanged(state: PlaybackState): void {
 
 async function poll(): Promise<void> {
   if (!spotify.isAuthenticated()) {
-    usePlayerStore.set({ playback: null, devices: [], isAuthed: false, loaded: true, anchor: { progressMs: 0, timestamp: Date.now() } });
+    usePlayerStore.set({ playback: null, recentTrack: null, devices: [], isAuthed: false, loaded: true, anchor: { progressMs: 0, timestamp: Date.now() } });
     return;
   }
 
@@ -87,13 +79,16 @@ async function poll(): Promise<void> {
     const anchor: Anchor = { progressMs: state?.progressMs ?? 0, timestamp: Date.now() };
 
     let devices: SpotifyDevice[] = [];
-    if (state) {
-      autoTransferAttempted = false;
+    let recentTrack = usePlayerStore.get().recentTrack;
+    if (!state) {
+      [devices, recentTrack] = await Promise.all([
+        getApi().getDevices(),
+        recentTrack ? Promise.resolve(recentTrack) : getApi().getRecentlyPlayed(),
+      ]);
     } else {
-      devices = await getApi().getDevices();
-      if (await tryAutoTransfer(devices)) return;
+      recentTrack = null;
     }
-    usePlayerStore.set({ playback: state, devices, isAuthed: true, loaded: true, anchor });
+    usePlayerStore.set({ playback: state, recentTrack, devices, isAuthed: true, loaded: true, anchor });
 
     if (state) emitTrackChanged(state);
   } catch (err) {
@@ -201,7 +196,7 @@ export function transferPlayback(deviceId: string): void {
 
 export async function startPlayback(deviceId?: string): Promise<void> {
   if (deviceId) await getApi().transferPlayback(deviceId);
-  const contextUri = await getApi().getRecentlyPlayed();
-  await getApi().play(deviceId, contextUri ?? undefined);
+  const recent = await getApi().getRecentlyPlayed();
+  await getApi().play(deviceId, recent?.uri);
   pollNow();
 }

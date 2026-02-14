@@ -11,13 +11,13 @@ import {
 import { useLocale } from '@/lib/use-locale';
 import type { BrickType } from '../api';
 import { useAddBrick } from '../hooks';
-import { useDashboardStore } from '../store';
+import { useBoardStore } from '../store';
 
 export function AddBrickSheet() {
   const { t, tp } = useLocale();
-  const open = useDashboardStore((s) => s.addBrickOpen);
-  const setOpen = useDashboardStore((s) => s.setAddBrickOpen);
-  const brickTypes = useDashboardStore((s) => s.brickTypes);
+  const open = useBoardStore((s) => s.addBrickOpen);
+  const setOpen = useBoardStore((s) => s.setAddBrickOpen);
+  const brickTypes = useBoardStore((s) => s.brickTypes);
   const { mutate: addBrick, isPending } = useAddBrick();
 
   const typesByPlugin = useMemo(() => {
@@ -41,14 +41,14 @@ export function AddBrickSheet() {
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetContent side="right" className="w-full sm:max-w-sm">
         <SheetHeader>
-          <SheetTitle>{t('bricks:addSheet.title')}</SheetTitle>
-          <SheetDescription>{t('bricks:addSheet.description')}</SheetDescription>
+          <SheetTitle>{t('boards:addSheet.title')}</SheetTitle>
+          <SheetDescription>{t('boards:addSheet.description')}</SheetDescription>
         </SheetHeader>
 
         <div className="flex-1 overflow-auto px-4">
           {brickTypes.size === 0 && (
             <div className="py-8 text-center text-muted-foreground text-sm">
-              {t('bricks:addSheet.empty')}
+              {t('boards:addSheet.empty')}
             </div>
           )}
           {[...typesByPlugin.entries()].map(([pluginName, types]) => (
