@@ -25,10 +25,10 @@ const DEFAULT_COLORS = [
 function ChartTooltip({
   active,
   payload,
-}: {
+}: Readonly<{
   active?: boolean;
   payload?: Array<{ value?: number; name?: string; color?: string }>;
-}) {
+}>) {
   if (!active || !payload?.length) return null;
   return (
     <div className="rounded-md border bg-popover px-2 py-1 text-sm shadow-md">

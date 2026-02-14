@@ -161,7 +161,7 @@ export function defineReactiveBlock<
   // Get runtime schema - returns the internal _schema for GenericRef/PassthroughRef/ResolvedRef
   const getRuntimeSchema = (schema: OutputDefSchema): z.ZodType => {
     if (schema && typeof schema === 'object' && '_schema' in schema) {
-      return (schema as GenericRef | PassthroughRef | ResolvedRef)._schema;
+      return schema._schema;
     }
     return schema;
   };

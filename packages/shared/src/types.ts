@@ -407,8 +407,8 @@ export function arePortTypesCompatible(sourceType?: string, targetType?: string)
 
   // Normalize types for comparison
   const normalizeType = (t: string) => t.toLowerCase().trim();
-  const src = normalizeType(sourceType!);
-  const tgt = normalizeType(targetType!);
+  const src = normalizeType(sourceType ?? '');
+  const tgt = normalizeType(targetType ?? '');
 
   // Exact match
   if (src === tgt) return true;

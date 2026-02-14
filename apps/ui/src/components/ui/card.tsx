@@ -51,7 +51,7 @@ const cardVariants = cva(
 
 interface CardProps extends React.ComponentProps<'div'>, VariantProps<typeof cardVariants> {}
 
-function Card({ className, accent, interactive, children, ...props }: CardProps) {
+function Card({ className, accent, interactive, children, ...props }: Readonly<CardProps>) {
   const hasAccent = accent && accent !== 'none';
 
   return (

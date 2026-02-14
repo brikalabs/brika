@@ -356,17 +356,15 @@ async function cmdBulkFp(
 }
 
 async function cmdHotspotSafe(hotspotKey: string, comment?: string): Promise<void> {
-  await apiPost('/api/hotspots/change_status', {
+  const body: Record<string, string> = {
     hotspot: hotspotKey,
     status: 'REVIEWED',
     resolution: 'SAFE',
-  });
+  };
+  if (comment) body.comment = comment;
+  await apiPost('/api/hotspots/change_status', body);
   success(`Hotspot ${c.cyan}${hotspotKey}${c.reset}${c.green} → SAFE`);
-
-  if (comment) {
-    await apiPost('/api/hotspots/add_comment', { hotspot: hotspotKey, text: comment });
-    info(`Comment: "${comment}"`);
-  }
+  if (comment) info(`Comment: "${comment}"`);
 }
 
 async function cmdBulkHotspotSafe(
@@ -401,14 +399,13 @@ async function cmdBulkHotspotSafe(
     const file = shortPath(h.component);
     const loc = h.line ? `:${h.line}` : '';
     try {
-      await apiPost('/api/hotspots/change_status', {
+      const body: Record<string, string> = {
         hotspot: h.key,
         status: 'REVIEWED',
         resolution: 'SAFE',
-      });
-      if (comment) {
-        await apiPost('/api/hotspots/add_comment', { hotspot: h.key, text: comment });
-      }
+      };
+      if (comment) body.comment = comment;
+      await apiPost('/api/hotspots/change_status', body);
       success(`${file}${loc} → SAFE`);
       ok++;
     } catch {

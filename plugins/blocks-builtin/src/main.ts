@@ -78,7 +78,7 @@ export const httpRequest = defineReactiveBlock(
           body,
         });
       } catch (err) {
-        log.error(`HTTP request failed: ${err}`);
+        log.error(`HTTP request failed: ${err instanceof Error ? err.message : String(err)}`);
         outputs.error.emit({ message: String(err) });
       }
     });

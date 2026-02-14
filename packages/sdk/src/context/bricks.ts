@@ -209,15 +209,14 @@ export function setupBricks(core: ContextCore) {
             families: brick.spec.families,
             minSize: brick.spec.minSize,
             maxSize: brick.spec.maxSize,
-            config: brick.spec.config as unknown[] | undefined,
+            config: brick.spec.config,
           },
         });
       },
     },
 
     stop() {
-      const instanceIds = Array.from(brickInstances.keys());
-      for (const instanceId of instanceIds) {
+      for (const instanceId of brickInstances.keys()) {
         unmountInstance(instanceId);
       }
     },

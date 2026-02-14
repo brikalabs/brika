@@ -163,7 +163,7 @@ export function filePath(description?: string) {
  */
 export function urlSchema(description?: string) {
   const desc = description ? `${TypeMarker.URL} ${description}` : TypeMarker.URL;
-  return z.url().describe(desc);
+  return z.string().url().describe(desc);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

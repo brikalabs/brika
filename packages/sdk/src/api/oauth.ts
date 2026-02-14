@@ -100,7 +100,7 @@ function base64url(bytes: Uint8Array): string {
   return b64
     .replaceAll('+', '-')
     .replaceAll('/', '_')
-    .replace(/={1,2}$/, '');
+    .replaceAll(/={1,2}$/g, '');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -6,5 +6,5 @@ import { getContext } from '../context';
  */
 export function usePluginPreference<T>(name: string, defaultValue: T): T {
   const val = getContext().getPreferences()[name];
-  return (val === undefined ? defaultValue : val) as T;
+  return (val !== undefined ? val : defaultValue) as T;
 }

@@ -18,7 +18,6 @@ import {
   TooltipTrigger,
 } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
-import type { DashboardSummary } from '../api';
 import { useCreateDashboard, useDashboards } from '../hooks';
 
 interface DashboardSwitcherProps {
@@ -50,7 +49,7 @@ export function DashboardSwitcher({ onEdit }: Readonly<DashboardSwitcherProps>) 
   return (
     <>
       <div className="flex items-center gap-1 rounded-lg bg-muted/50 p-1">
-        {(dashboards as DashboardSummary[]).map((d) => (
+        {dashboards.map((d) => (
           <Link
             key={d.id}
             to="/bricks/$dashboardId"
