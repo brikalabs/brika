@@ -1,7 +1,7 @@
 /**
  * Brick Registry
  *
- * Central registry for dashboard brick descriptors received from plugins.
+ * Central registry for board brick descriptors received from plugins.
  * Bricks are qualified as `pluginName:brickId` (e.g., "plugin-thermostat:thermostat").
  */
 

@@ -80,13 +80,13 @@ async function poll(): Promise<void> {
 
     let devices: SpotifyDevice[] = [];
     let recentTrack = usePlayerStore.get().recentTrack;
-    if (!state) {
+    if (state) {
+      recentTrack = null;
+    } else {
       [devices, recentTrack] = await Promise.all([
         getApi().getDevices(),
         recentTrack ? Promise.resolve(recentTrack) : getApi().getRecentlyPlayed(),
       ]);
-    } else {
-      recentTrack = null;
     }
     usePlayerStore.set({ playback: state, recentTrack, devices, isAuthed: true, loaded: true, anchor });
 

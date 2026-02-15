@@ -19,7 +19,7 @@
     "configuration": "Configuration"
   },
   "pluginDisconnected": "Plugin déconnecté",
-  "dashboard": {
+  "board": {
     "new": "Nouveau tableau",
     "newDescription": "Créez un nouveau tableau pour organiser vos briques.",
     "edit": "Modifier le tableau",

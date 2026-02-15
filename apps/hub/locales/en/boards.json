@@ -19,7 +19,7 @@
     "configuration": "Configuration"
   },
   "pluginDisconnected": "Plugin disconnected",
-  "dashboard": {
+  "board": {
     "new": "New Board",
     "newDescription": "Create a new board to organize your bricks.",
     "edit": "Edit Board",

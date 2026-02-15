@@ -1,7 +1,7 @@
 /**
  * @brika/sdk/bricks
  *
- * Dashboard brick API: defineBrick, hooks, and UI components.
+ * Board brick API: defineBrick, hooks, and UI components.
  *
  * For finer-grained imports:
  *   - '@brika/sdk/bricks/core'       — defineBrick + hooks

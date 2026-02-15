@@ -2,16 +2,16 @@ import { createSSEStream, group, NotFound, route } from '@brika/router';
 import type { Json } from '@brika/shared';
 import { z } from 'zod';
 import { BrickInstanceManager } from '@/runtime/bricks';
-import { DashboardLoader, DashboardService } from '@/runtime/dashboards';
-import { BrickActions, DashboardActions } from '@/runtime/events/actions';
+import { BoardLoader, BoardService } from '@/runtime/boards';
+import { BoardActions, BrickActions } from '@/runtime/events/actions';
 import { EventSystem } from '@/runtime/events/event-system';
 
-export const dashboardsRoutes = group('/api/dashboards', [
+export const boardsRoutes = group('/api/boards', [
   /**
-   * List all dashboards
+   * List all boards
    */
   route.get('/', ({ inject }) => {
-    return inject(DashboardLoader)
+    return inject(BoardLoader)
       .list()
       .map((d) => ({
         id: d.id,
@@ -23,7 +23,7 @@ export const dashboardsRoutes = group('/api/dashboards', [
   }),
 
   /**
-   * Create a new dashboard
+   * Create a new board
    */
   route.post(
     '/',
@@ -34,22 +34,22 @@ export const dashboardsRoutes = group('/api/dashboards', [
       }),
     },
     async ({ body, inject }) => {
-      const loader = inject(DashboardLoader);
-      const id = `dashboard-${Date.now().toString(36)}`;
-      const dashboard = {
+      const loader = inject(BoardLoader);
+      const id = `board-${Date.now().toString(36)}`;
+      const board = {
         id,
         name: body.name,
         icon: body.icon,
         columns: 12,
         bricks: [],
       };
-      await loader.saveDashboard(dashboard);
-      return dashboard;
+      await loader.saveBoard(board);
+      return board;
     }
   ),
 
   /**
-   * Reorder dashboards (tab drag-and-drop).
+   * Reorder boards (tab drag-and-drop).
    * Must be defined before /:id routes so the router doesn't match "order" as an :id.
    */
   route.put(
@@ -58,23 +58,23 @@ export const dashboardsRoutes = group('/api/dashboards', [
       body: z.object({ ids: z.array(z.string()) }),
     },
     async ({ body, inject }) => {
-      const ok = await inject(DashboardLoader).reorder(body.ids);
-      if (!ok) throw new NotFound('One or more dashboard IDs not found');
+      const ok = await inject(BoardLoader).reorder(body.ids);
+      if (!ok) throw new NotFound('One or more board IDs not found');
       return { ok: true };
     }
   ),
 
   /**
-   * Get a specific dashboard with all placements
+   * Get a specific board with all placements
    */
   route.get('/:id', { params: z.object({ id: z.string() }) }, ({ params, inject }) => {
-    const dashboard = inject(DashboardLoader).get(params.id);
-    if (!dashboard) throw new NotFound('Dashboard not found');
-    return dashboard;
+    const board = inject(BoardLoader).get(params.id);
+    if (!board) throw new NotFound('Board not found');
+    return board;
   }),
 
   /**
-   * Update dashboard metadata
+   * Update board metadata
    */
   route.put(
     '/:id',
@@ -86,38 +86,38 @@ export const dashboardsRoutes = group('/api/dashboards', [
       }),
     },
     async ({ params, body, inject }) => {
-      const loader = inject(DashboardLoader);
-      const dashboard = loader.get(params.id);
-      if (!dashboard) throw new NotFound('Dashboard not found');
+      const loader = inject(BoardLoader);
+      const board = loader.get(params.id);
+      if (!board) throw new NotFound('Board not found');
 
-      if (body.name !== undefined) dashboard.name = body.name;
-      if (body.icon !== undefined) dashboard.icon = body.icon;
+      if (body.name !== undefined) board.name = body.name;
+      if (body.icon !== undefined) board.icon = body.icon;
 
-      await loader.saveDashboard(dashboard);
-      return dashboard;
+      await loader.saveBoard(board);
+      return board;
     }
   ),
 
   /**
-   * Delete a dashboard
+   * Delete a board
    */
   route.delete('/:id', { params: z.object({ id: z.string() }) }, async ({ params, inject }) => {
-    const service = inject(DashboardService);
-    const loader = inject(DashboardLoader);
+    const service = inject(BoardService);
+    const loader = inject(BoardLoader);
 
-    const dashboard = loader.get(params.id);
-    if (!dashboard) throw new NotFound('Dashboard not found');
+    const board = loader.get(params.id);
+    if (!board) throw new NotFound('Board not found');
 
     // Unmount all brick instances
-    service.unmountDashboard(dashboard);
+    service.unmountBoard(board);
 
-    const deleted = await loader.deleteDashboard(params.id);
-    if (!deleted) throw new NotFound('Dashboard not found');
+    const deleted = await loader.deleteBoard(params.id);
+    if (!deleted) throw new NotFound('Board not found');
     return { ok: true };
   }),
 
   /**
-   * Add a brick to a dashboard
+   * Add a brick to a board
    */
   route.post(
     '/:id/bricks',
@@ -131,14 +131,14 @@ export const dashboardsRoutes = group('/api/dashboards', [
       }),
     },
     async ({ params, body, inject }) => {
-      const placement = await inject(DashboardService).addBrick(
+      const placement = await inject(BoardService).addBrick(
         params.id,
         body.brickTypeId,
         (body.config ?? {}) as Record<string, Json>,
         body.position,
         body.size
       );
-      if (!placement) throw new NotFound('Dashboard or brick type not found');
+      if (!placement) throw new NotFound('Board or brick type not found');
       return placement;
     }
   ),
@@ -158,7 +158,7 @@ export const dashboardsRoutes = group('/api/dashboards', [
       }),
     },
     async ({ params, body, inject }) => {
-      const service = inject(DashboardService);
+      const service = inject(BoardService);
 
       if (body.label !== undefined) {
         await service.updateBrickLabel(params.id, params.instanceId, body.label || undefined);
@@ -178,14 +178,14 @@ export const dashboardsRoutes = group('/api/dashboards', [
   ),
 
   /**
-   * Remove a brick from a dashboard
+   * Remove a brick from a board
    */
   route.delete(
     '/:id/bricks/:instanceId',
     { params: z.object({ id: z.string(), instanceId: z.string() }) },
     async ({ params, inject }) => {
-      const removed = await inject(DashboardService).removeBrick(params.id, params.instanceId);
-      if (!removed) throw new NotFound('Brick not found on dashboard');
+      const removed = await inject(BoardService).removeBrick(params.id, params.instanceId);
+      if (!removed) throw new NotFound('Brick not found on board');
       return { ok: true };
     }
   ),
@@ -210,33 +210,33 @@ export const dashboardsRoutes = group('/api/dashboards', [
       }),
     },
     async ({ params, body, inject }) => {
-      const updated = await inject(DashboardService).batchUpdateLayout(params.id, body.layouts);
-      if (!updated) throw new NotFound('Dashboard not found');
+      const updated = await inject(BoardService).batchUpdateLayout(params.id, body.layouts);
+      if (!updated) throw new NotFound('Board not found');
       return { ok: true };
     }
   ),
 
   /**
-   * SSE: Per-dashboard event stream.
+   * SSE: Per-board event stream.
    * Mounts brick instances on connect, unmounts on disconnect.
-   * Sends snapshot + incremental brick and dashboard events.
+   * Sends snapshot + incremental brick and board events.
    */
   route.get('/:id/sse', { params: z.object({ id: z.string() }) }, ({ params, inject }) => {
-    const service = inject(DashboardService);
+    const service = inject(BoardService);
     const events = inject(EventSystem);
     const instances = inject(BrickInstanceManager);
-    const loader = inject(DashboardLoader);
+    const loader = inject(BoardLoader);
 
-    const dashboard = loader.get(params.id);
-    if (!dashboard) return new Response('Not found', { status: 404 });
+    const board = loader.get(params.id);
+    if (!board) return new Response('Not found', { status: 404 });
 
     return createSSEStream((send) => {
       service.viewerConnected(params.id);
 
-      // Track which instances belong to this dashboard
-      const instanceIds = new Set(dashboard.bricks.map((b) => b.instanceId));
+      // Track which instances belong to this board
+      const instanceIds = new Set(board.bricks.map((b) => b.instanceId));
 
-      // Send snapshot of current bodies for this dashboard's instances
+      // Send snapshot of current bodies for this board's instances
       const snapshot: Array<{ instanceId: string; brickTypeId: string; body: unknown[] }> = [];
       for (const id of instanceIds) {
         const inst = instances.get(id);
@@ -247,10 +247,10 @@ export const dashboardsRoutes = group('/api/dashboards', [
             body: inst.body,
           });
       }
-      send({ type: 'brick.snapshot', payload: { instances: snapshot } }, 'dashboard');
+      send({ type: 'brick.snapshot', payload: { instances: snapshot } }, 'board');
 
       const forward = (type: string, payload: Json) =>
-        send({ type, payload, ts: Date.now() }, 'dashboard');
+        send({ type, payload, ts: Date.now() }, 'board');
 
       // Typed brick event subscriptions (O(1) matching instead of glob regex)
       const unsubs = [
@@ -268,27 +268,27 @@ export const dashboardsRoutes = group('/api/dashboards', [
             forward(action.type, { ...action.payload, instanceIds: matching } as unknown as Json);
         }),
 
-        // Dashboard events filtered by ID
-        events.subscribe(DashboardActions.brickAdded, (action) => {
-          if (action.payload.dashboardId !== params.id) return;
+        // Board events filtered by ID
+        events.subscribe(BoardActions.brickAdded, (action) => {
+          if (action.payload.boardId !== params.id) return;
           instanceIds.add(action.payload.instanceId);
           forward(action.type, action.payload as unknown as Json);
         }),
-        events.subscribe(DashboardActions.brickRemoved, (action) => {
-          if (action.payload.dashboardId !== params.id) return;
+        events.subscribe(BoardActions.brickRemoved, (action) => {
+          if (action.payload.boardId !== params.id) return;
           instanceIds.delete(action.payload.instanceId);
           forward(action.type, action.payload as unknown as Json);
         }),
-        events.subscribe(DashboardActions.layoutChanged, (action) => {
-          if (action.payload.dashboardId === params.id)
+        events.subscribe(BoardActions.layoutChanged, (action) => {
+          if (action.payload.boardId === params.id)
             forward(action.type, action.payload as unknown as Json);
         }),
-        events.subscribe(DashboardActions.brickLabelChanged, (action) => {
-          if (action.payload.dashboardId === params.id)
+        events.subscribe(BoardActions.brickLabelChanged, (action) => {
+          if (action.payload.boardId === params.id)
             forward(action.type, action.payload as unknown as Json);
         }),
-        events.subscribe(DashboardActions.brickConfigChanged, (action) => {
-          if (action.payload.dashboardId === params.id)
+        events.subscribe(BoardActions.brickConfigChanged, (action) => {
+          if (action.payload.boardId === params.id)
             forward(action.type, action.payload as unknown as Json);
         }),
       ];

@@ -1,0 +1,7 @@
+version: "1"
+board:
+  id: board-mlmoa83k
+  name: fdfdf
+  icon: ""
+  columns: 12
+bricks: []

@@ -14,7 +14,7 @@ import { useActiveBoard, useBoardStore } from './store';
 export function BoardsLayout() {
   const { t } = useLocale();
   const navigate = useNavigate();
-  const { dashboardId } = useParams({ strict: false });
+  const { boardId } = useParams({ strict: false });
 
   // ─── Data shared across all boards ──────────────────────────────────────
   const { data: boards = [], isLoading: boardsLoading } = useBoards();
@@ -22,14 +22,14 @@ export function BoardsLayout() {
 
   // Auto-redirect /boards → /boards/{first}
   useEffect(() => {
-    if (!dashboardId && !boardsLoading && boards.length > 0) {
+    if (!boardId && !boardsLoading && boards.length > 0) {
       navigate({
-        to: '/boards/$dashboardId',
-        params: { dashboardId: boards[0].id },
+        to: '/boards/$boardId',
+        params: { boardId: boards[0].id },
         replace: true,
       });
     }
-  }, [dashboardId, boards, boardsLoading, navigate]);
+  }, [boardId, boards, boardsLoading, navigate]);
 
   // ─── UI chrome state ────────────────────────────────────────────────────────
   const board = useActiveBoard();
@@ -46,8 +46,8 @@ export function BoardsLayout() {
     const remaining = boards.filter((d) => d.id !== deletedId);
     if (remaining.length > 0) {
       navigate({
-        to: '/boards/$dashboardId',
-        params: { dashboardId: remaining[0].id },
+        to: '/boards/$boardId',
+        params: { boardId: remaining[0].id },
         replace: true,
       });
     } else {
@@ -93,7 +93,7 @@ export function BoardsLayout() {
         <EditBoardDialog
           open
           onOpenChange={(open) => { if (!open) setEditBoard(null); }}
-          dashboard={editBoard}
+          board={editBoard}
           onDeleted={handleBoardDeleted}
         />
       )}

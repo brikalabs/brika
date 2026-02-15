@@ -10,8 +10,8 @@ import { useActiveBoard, useBoardStore } from './store';
 function GridSkeleton() {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {Array.from({ length: 6 }).map((_, i) => (
-        <Skeleton key={`grid-skeleton-${i}`} className="h-48 rounded-xl" />
+      {['a', 'b', 'c', 'd', 'e', 'f'].map((id) => (
+        <Skeleton key={id} className="h-48 rounded-xl" />
       ))}
     </div>
   );
@@ -19,18 +19,18 @@ function GridSkeleton() {
 
 export function BoardContent() {
   const { t } = useLocale();
-  const { dashboardId } = useParams({ strict: false });
+  const { boardId } = useParams({ strict: false });
 
-  // Sync route param → store (for mutations that read activeDashboardId).
-  // Also clear per-instance data when the dashboard changes.
-  const prevIdRef = useRef(dashboardId);
+  // Sync route param → store (for mutations that read activeBoardId).
+  // Also clear per-instance data when the board changes.
+  const prevIdRef = useRef(boardId);
   useEffect(() => {
-    if (!dashboardId) return;
+    if (!boardId) return;
 
-    const changed = prevIdRef.current !== dashboardId;
-    prevIdRef.current = dashboardId;
+    const changed = prevIdRef.current !== boardId;
+    prevIdRef.current = boardId;
 
-    useBoardStore.setState({ activeBoardId: dashboardId });
+    useBoardStore.setState({ activeBoardId: boardId });
 
     if (changed) {
       useBoardStore.setState({
@@ -38,27 +38,27 @@ export function BoardContent() {
         disconnectedInstances: new Set(),
       });
     }
-  }, [dashboardId]);
+  }, [boardId]);
 
-  // Per-dashboard data loading and SSE
-  const { data: loadedDashboard, isLoading } = useLoadBoard(dashboardId);
-  useBoardSSE(dashboardId);
+  // Per-board data loading and SSE
+  const { data: loadedBoard, isLoading } = useLoadBoard(boardId);
+  useBoardSSE(boardId);
 
   // Sync query data → store (covers cache hits where queryFn doesn't re-run)
   useEffect(() => {
-    if (loadedDashboard) {
-      useBoardStore.getState().setActiveBoard(loadedDashboard);
+    if (loadedBoard) {
+      useBoardStore.getState().setActiveBoard(loadedBoard);
     }
-  }, [loadedDashboard]);
+  }, [loadedBoard]);
 
-  const dashboard = useActiveBoard();
+  const board = useActiveBoard();
   const saveLayout = useSaveLayout();
   const setAddBrickOpen = useBoardStore((s) => s.setAddBrickOpen);
   const handleAddBrick = useCallback(() => setAddBrickOpen(true), [setAddBrickOpen]);
 
-  if (!dashboardId) return null;
+  if (!boardId) return null;
 
-  const brickCount = dashboard?.bricks.length ?? 0;
+  const brickCount = board?.bricks.length ?? 0;
   const hasBricks = brickCount > 0;
 
   if (isLoading) return <GridSkeleton />;
@@ -77,7 +77,7 @@ export function BoardContent() {
     );
   }
 
-  if (!dashboard) return null;
+  if (!board) return null;
 
-  return <BoardGrid dashboard={dashboard} onSaveLayout={saveLayout} />;
+  return <BoardGrid board={board} onSaveLayout={saveLayout} />;
 }

@@ -33,7 +33,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { useLocale } from '@/lib/use-locale';
-import { brickTypesApi, dashboardsApi } from '../api';
+import { brickTypesApi, boardsApi } from '../api';
 import { useRemoveBrick, useRenameBrick } from '../hooks';
 import { useBoardStore } from '../store';
 
@@ -173,7 +173,7 @@ export function ConfigSheet() {
   const { t, tp } = useLocale();
   const configBrickId = useBoardStore((s) => s.configBrickId);
   const setConfigBrickId = useBoardStore((s) => s.setConfigBrickId);
-  const activeDashboard = useBoardStore((s) => s.activeBoard);
+  const activeBoard = useBoardStore((s) => s.activeBoard);
   const brickTypes = useBoardStore((s) => s.brickTypes);
   const [saving, setSaving] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -181,8 +181,8 @@ export function ConfigSheet() {
   const { mutate: renameBrick } = useRenameBrick();
 
   const placement = useMemo(
-    () => activeDashboard?.bricks.find((c) => c.instanceId === configBrickId),
-    [activeDashboard, configBrickId]
+    () => activeBoard?.bricks.find((c) => c.instanceId === configBrickId),
+    [activeBoard, configBrickId]
   );
   const brickType = placement ? brickTypes.get(placement.brickTypeId) : null;
 
@@ -214,7 +214,7 @@ export function ConfigSheet() {
   }, []);
 
   const handleSave = useCallback(async () => {
-    if (!activeDashboard || !configBrickId) return;
+    if (!activeBoard || !configBrickId) return;
     setSaving(true);
 
     // Save label if changed
@@ -227,7 +227,7 @@ export function ConfigSheet() {
     // Save config if there are config fields
     const configSchema = brickType?.config;
     if (configSchema && configSchema.length > 0) {
-      await dashboardsApi.updateBrick(activeDashboard.id, configBrickId, { config: localConfig });
+      await boardsApi.updateBrick(activeBoard.id, configBrickId, { config: localConfig });
       useBoardStore.getState().updateBrickConfig(configBrickId, localConfig);
     }
 
@@ -236,7 +236,7 @@ export function ConfigSheet() {
     setLocalConfig({});
     setLocalLabel('');
   }, [
-    activeDashboard,
+    activeBoard,
     configBrickId,
     localConfig,
     localLabel,

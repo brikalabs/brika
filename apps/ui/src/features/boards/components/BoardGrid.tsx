@@ -13,7 +13,7 @@ const BREAKPOINTS = { lg: 1200, md: 800, sm: 0 } as const;
 const COL_MAP = { lg: 12, md: 8, sm: 4 } as const;
 
 interface BoardGridProps {
-  dashboard: Board;
+  board: Board;
   onSaveLayout: (
     layouts: Array<{ instanceId: string; x: number; y: number; w: number; h: number }>
   ) => void;
@@ -30,7 +30,7 @@ function layoutToPayload(currentLayout: Layout) {
 }
 
 export const BoardGrid = memo(function BoardGrid({
-  dashboard,
+  board,
   onSaveLayout,
 }: BoardGridProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -64,14 +64,14 @@ export const BoardGrid = memo(function BoardGrid({
 
   // Stable key — only changes when bricks are added/removed.
   const brickSetKey = useMemo(
-    () => dashboard.bricks.map((c) => c.instanceId).join(','),
-    [dashboard.bricks]
+    () => board.bricks.map((c) => c.instanceId).join(','),
+    [board.bricks]
   );
 
   // Layout: computed from store positions. Recomputes on position/size/add/remove changes.
   // During drag/resize RGL manages positions internally — this only provides the "resting" state.
   const layout = useMemo(() => {
-    return dashboard.bricks.map((brick) => {
+    return board.bricks.map((brick) => {
       const ct = brickTypes.get(brick.brickTypeId);
       return {
         i: brick.instanceId,
@@ -85,12 +85,12 @@ export const BoardGrid = memo(function BoardGrid({
         maxH: ct?.maxSize?.h ?? 8,
       };
     });
-  }, [dashboard.bricks, brickTypes]);
+  }, [board.bricks, brickTypes]);
 
   // Children: only recreated on brick add/remove.
   const children = useMemo(
     () =>
-      dashboard.bricks.map((brick) => (
+      board.bricks.map((brick) => (
         <div key={brick.instanceId}>
           <BoardBrick instanceId={brick.instanceId} brickTypeId={brick.brickTypeId} />
         </div>

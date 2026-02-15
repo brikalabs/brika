@@ -1,20 +1,20 @@
 /**
- * Dashboard Service
+ * Board Service
  *
- * High-level operations for managing dashboards and their brick placements.
- * Bridges between DashboardLoader (YAML persistence), BrickTypeRegistry
+ * High-level operations for managing boards and their brick placements.
+ * Bridges between BoardLoader (YAML persistence), BrickTypeRegistry
  * (type validation), and BrickInstanceManager (instance lifecycle).
  */
 
 import { inject, singleton } from '@brika/di';
 import type { Json } from '@brika/shared';
 import { BrickInstanceManager, BrickTypeRegistry } from '@/runtime/bricks';
-import { BrickActions, DashboardActions } from '@/runtime/events/actions';
+import { BoardActions, BrickActions } from '@/runtime/events/actions';
 import { EventSystem } from '@/runtime/events/event-system';
 import { Logger } from '@/runtime/logs/log-router';
 import { PluginLifecycle } from '@/runtime/plugins/plugin-lifecycle';
-import { DashboardLoader } from './dashboard-loader';
-import type { Dashboard, DashboardBrickPlacement } from './types';
+import { BoardLoader } from './board-loader';
+import type { Board, BoardBrickPlacement } from './types';
 
 let instanceCounter = 0;
 function generateInstanceId(): string {
@@ -24,9 +24,9 @@ function generateInstanceId(): string {
 const DEFAULT_SIZE = { w: 2, h: 2 };
 
 @singleton()
-export class DashboardService {
+export class BoardService {
   private readonly logs = inject(Logger).withSource('state');
-  private readonly loader = inject(DashboardLoader);
+  private readonly loader = inject(BoardLoader);
   private readonly brickTypes = inject(BrickTypeRegistry);
   private readonly instances = inject(BrickInstanceManager);
   private readonly lifecycle = inject(PluginLifecycle);
@@ -34,44 +34,44 @@ export class DashboardService {
 
   readonly #activeViewers = new Map<string, number>();
 
-  viewerConnected(dashboardId: string): void {
-    const count = (this.#activeViewers.get(dashboardId) ?? 0) + 1;
-    this.#activeViewers.set(dashboardId, count);
+  viewerConnected(boardId: string): void {
+    const count = (this.#activeViewers.get(boardId) ?? 0) + 1;
+    this.#activeViewers.set(boardId, count);
     if (count === 1) {
-      const dashboard = this.loader.get(dashboardId);
-      if (dashboard) this.mountDashboard(dashboard);
+      const board = this.loader.get(boardId);
+      if (board) this.mountBoard(board);
     }
   }
 
-  viewerDisconnected(dashboardId: string): void {
-    const count = (this.#activeViewers.get(dashboardId) ?? 1) - 1;
+  viewerDisconnected(boardId: string): void {
+    const count = (this.#activeViewers.get(boardId) ?? 1) - 1;
     if (count <= 0) {
-      this.#activeViewers.delete(dashboardId);
-      const dashboard = this.loader.get(dashboardId);
-      if (dashboard) this.unmountDashboard(dashboard);
+      this.#activeViewers.delete(boardId);
+      const board = this.loader.get(boardId);
+      if (board) this.unmountBoard(board);
     } else {
-      this.#activeViewers.set(dashboardId, count);
+      this.#activeViewers.set(boardId, count);
     }
   }
 
-  hasActiveViewers(dashboardId: string): boolean {
-    return (this.#activeViewers.get(dashboardId) ?? 0) > 0;
+  hasActiveViewers(boardId: string): boolean {
+    return (this.#activeViewers.get(boardId) ?? 0) > 0;
   }
 
-  mountDashboard(dashboard: Dashboard): void {
-    for (const brick of dashboard.bricks) {
+  mountBoard(board: Board): void {
+    for (const brick of board.bricks) {
       this.#mountPlacement(brick);
     }
   }
 
   /**
    * Mount any pending placements that reference a newly registered brick type.
-   * Solves the startup race where dashboards load before plugins register types.
+   * Solves the startup race where boards load before plugins register types.
    */
   mountPendingForType(brickTypeId: string): void {
-    for (const dashboard of this.loader.list()) {
-      if (!this.hasActiveViewers(dashboard.id)) continue;
-      for (const brick of dashboard.bricks) {
+    for (const board of this.loader.list()) {
+      if (!this.hasActiveViewers(board.id)) continue;
+      for (const brick of board.bricks) {
         if (brick.brickTypeId === brickTypeId && !this.instances.has(brick.instanceId)) {
           this.#mountPlacement(brick);
         }
@@ -80,47 +80,47 @@ export class DashboardService {
   }
 
   /**
-   * Unmount all brick instances for a dashboard.
+   * Unmount all brick instances for a board.
    */
-  unmountDashboard(dashboard: Dashboard): void {
-    for (const brick of dashboard.bricks) {
+  unmountBoard(board: Board): void {
+    for (const brick of board.bricks) {
       this.#unmountPlacement(brick);
     }
   }
 
   /**
-   * Add a brick to a dashboard.
+   * Add a brick to a board.
    */
   async addBrick(
-    dashboardId: string,
+    boardId: string,
     brickTypeId: string,
     config: Record<string, Json>,
     position?: { x: number; y: number },
     size?: { w: number; h: number }
-  ): Promise<DashboardBrickPlacement | null> {
-    const dashboard = this.loader.get(dashboardId);
-    if (!dashboard) return null;
+  ): Promise<BoardBrickPlacement | null> {
+    const board = this.loader.get(boardId);
+    if (!board) return null;
 
     const brickType = this.brickTypes.get(brickTypeId);
     if (!brickType) return null;
 
-    const placement: DashboardBrickPlacement = {
+    const placement: BoardBrickPlacement = {
       instanceId: generateInstanceId(),
       brickTypeId,
       config,
-      position: position ?? this.#findNextPosition(dashboard),
+      position: position ?? this.#findNextPosition(board),
       size: size ?? DEFAULT_SIZE,
     };
 
-    dashboard.bricks.push(placement);
-    await this.loader.saveDashboard(dashboard);
-    if (this.hasActiveViewers(dashboardId)) {
+    board.bricks.push(placement);
+    await this.loader.saveBoard(board);
+    if (this.hasActiveViewers(boardId)) {
       this.#mountPlacement(placement);
     }
 
     this.events.dispatch(
-      DashboardActions.brickAdded.create(
-        { dashboardId, instanceId: placement.instanceId, placement },
+      BoardActions.brickAdded.create(
+        { boardId, instanceId: placement.instanceId, placement },
         'hub'
       )
     );
@@ -129,20 +129,20 @@ export class DashboardService {
   }
 
   /**
-   * Remove a brick from a dashboard.
+   * Remove a brick from a board.
    */
-  async removeBrick(dashboardId: string, instanceId: string): Promise<boolean> {
-    const dashboard = this.loader.get(dashboardId);
-    if (!dashboard) return false;
+  async removeBrick(boardId: string, instanceId: string): Promise<boolean> {
+    const board = this.loader.get(boardId);
+    if (!board) return false;
 
-    const idx = dashboard.bricks.findIndex((c) => c.instanceId === instanceId);
+    const idx = board.bricks.findIndex((c) => c.instanceId === instanceId);
     if (idx === -1) return false;
 
-    const [placement] = dashboard.bricks.splice(idx, 1);
-    await this.loader.saveDashboard(dashboard);
+    const [placement] = board.bricks.splice(idx, 1);
+    await this.loader.saveBoard(board);
     this.#unmountPlacement(placement);
 
-    this.events.dispatch(DashboardActions.brickRemoved.create({ dashboardId, instanceId }, 'hub'));
+    this.events.dispatch(BoardActions.brickRemoved.create({ boardId, instanceId }, 'hub'));
 
     return true;
   }
@@ -152,14 +152,14 @@ export class DashboardService {
    * without unmount/remount so hook state (timers, effects) is preserved.
    */
   async updateBrickConfig(
-    dashboardId: string,
+    boardId: string,
     instanceId: string,
     config: Record<string, Json>
   ): Promise<boolean> {
-    const found = this.#findPlacement(dashboardId, instanceId);
+    const found = this.#findPlacement(boardId, instanceId);
     if (!found) return false;
 
-    const { dashboard, brick } = found;
+    const { board, brick } = found;
     brick.config = config;
 
     // Update config on the hub-side manager
@@ -177,10 +177,10 @@ export class DashboardService {
       }
     }
 
-    await this.loader.saveDashboard(dashboard);
+    await this.loader.saveBoard(board);
 
     this.events.dispatch(
-      DashboardActions.brickConfigChanged.create({ dashboardId, instanceId, config }, 'hub')
+      BoardActions.brickConfigChanged.create({ boardId, instanceId, config }, 'hub')
     );
 
     return true;
@@ -190,19 +190,19 @@ export class DashboardService {
    * Rename a brick instance (custom label).
    */
   async updateBrickLabel(
-    dashboardId: string,
+    boardId: string,
     instanceId: string,
     label: string | undefined
   ): Promise<boolean> {
-    const found = this.#findPlacement(dashboardId, instanceId);
+    const found = this.#findPlacement(boardId, instanceId);
     if (!found) return false;
 
-    const { dashboard, brick } = found;
+    const { board, brick } = found;
     brick.label = label;
-    await this.loader.saveDashboard(dashboard);
+    await this.loader.saveBoard(board);
 
     this.events.dispatch(
-      DashboardActions.brickLabelChanged.create({ dashboardId, instanceId, label }, 'hub')
+      BoardActions.brickLabelChanged.create({ boardId, instanceId, label }, 'hub')
     );
 
     return true;
@@ -212,15 +212,15 @@ export class DashboardService {
    * Move/resize a brick. Sends resize IPC to the plugin (no remount).
    */
   async moveBrick(
-    dashboardId: string,
+    boardId: string,
     instanceId: string,
     position: { x: number; y: number },
     size: { w: number; h: number }
   ): Promise<boolean> {
-    const found = this.#findPlacement(dashboardId, instanceId);
+    const found = this.#findPlacement(boardId, instanceId);
     if (!found) return false;
 
-    const { dashboard, brick } = found;
+    const { board, brick } = found;
     const sizeChanged = brick.size.w !== size.w || brick.size.h !== size.h;
     brick.position = position;
     brick.size = size;
@@ -229,7 +229,7 @@ export class DashboardService {
       this.#resizePlacement(brick);
     }
 
-    await this.loader.saveDashboard(dashboard);
+    await this.loader.saveBoard(board);
     return true;
   }
 
@@ -238,14 +238,14 @@ export class DashboardService {
    * Sends resize IPC for bricks whose size changed (no remount).
    */
   async batchUpdateLayout(
-    dashboardId: string,
+    boardId: string,
     layouts: Array<{ instanceId: string; x: number; y: number; w: number; h: number }>
   ): Promise<boolean> {
-    const dashboard = this.loader.get(dashboardId);
-    if (!dashboard) return false;
+    const board = this.loader.get(boardId);
+    if (!board) return false;
 
-    const resizedBricks: DashboardBrickPlacement[] = [];
-    const brickMap = new Map(dashboard.bricks.map((c) => [c.instanceId, c]));
+    const resizedBricks: BoardBrickPlacement[] = [];
+    const brickMap = new Map(board.bricks.map((c) => [c.instanceId, c]));
 
     for (const layout of layouts) {
       const brick = brickMap.get(layout.instanceId);
@@ -260,30 +260,30 @@ export class DashboardService {
       }
     }
 
-    await this.loader.saveDashboard(dashboard);
+    await this.loader.saveBoard(board);
 
     // Send resize IPC for bricks whose size changed (no remount needed)
     for (const brick of resizedBricks) {
       this.#resizePlacement(brick);
     }
 
-    this.events.dispatch(DashboardActions.layoutChanged.create({ dashboardId, layouts }, 'hub'));
+    this.events.dispatch(BoardActions.layoutChanged.create({ boardId, layouts }, 'hub'));
 
     return true;
   }
 
   #findPlacement(
-    dashboardId: string,
+    boardId: string,
     instanceId: string
-  ): { dashboard: Dashboard; brick: DashboardBrickPlacement } | null {
-    const dashboard = this.loader.get(dashboardId);
-    if (!dashboard) return null;
-    const brick = dashboard.bricks.find((c) => c.instanceId === instanceId);
+  ): { board: Board; brick: BoardBrickPlacement } | null {
+    const board = this.loader.get(boardId);
+    if (!board) return null;
+    const brick = board.bricks.find((c) => c.instanceId === instanceId);
     if (!brick) return null;
-    return { dashboard, brick };
+    return { board, brick };
   }
 
-  #mountPlacement(placement: DashboardBrickPlacement): void {
+  #mountPlacement(placement: BoardBrickPlacement): void {
     const brickType = this.brickTypes.get(placement.brickTypeId);
     if (!brickType) {
       this.logs.warn('Cannot mount brick: type not found', {
@@ -326,7 +326,7 @@ export class DashboardService {
     );
   }
 
-  #resizePlacement(placement: DashboardBrickPlacement): void {
+  #resizePlacement(placement: BoardBrickPlacement): void {
     const instance = this.instances.get(placement.instanceId);
     if (!instance) return;
 
@@ -343,7 +343,7 @@ export class DashboardService {
     }
   }
 
-  #unmountPlacement(placement: DashboardBrickPlacement): void {
+  #unmountPlacement(placement: BoardBrickPlacement): void {
     const brickType = this.brickTypes.get(placement.brickTypeId);
 
     // Tell the plugin to unmount
@@ -361,12 +361,12 @@ export class DashboardService {
     );
   }
 
-  #findNextPosition(dashboard: Dashboard): { x: number; y: number } {
-    if (dashboard.bricks.length === 0) return { x: 0, y: 0 };
+  #findNextPosition(board: Board): { x: number; y: number } {
+    if (board.bricks.length === 0) return { x: 0, y: 0 };
 
     // Find the lowest y + h to place below existing bricks
     let maxBottom = 0;
-    for (const brick of dashboard.bricks) {
+    for (const brick of board.bricks) {
       const bottom = brick.position.y + brick.size.h;
       if (bottom > maxBottom) maxBottom = bottom;
     }

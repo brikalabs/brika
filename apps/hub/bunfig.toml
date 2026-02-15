@@ -3,3 +3,6 @@
 
 # Preload the folder-tar plugin so tar: imports work at runtime
 preload = ["./src/plugins/preload.ts"]
+
+[test]
+preload = ["./src/plugins/preload.ts"]

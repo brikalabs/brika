@@ -4,7 +4,7 @@ import 'reflect-metadata';
 import {
   bootstrap,
   cache,
-  DashboardsLoader,
+  BoardsLoader,
   I18nLoader,
   loader,
   PluginLoader,
@@ -27,6 +27,6 @@ await bootstrap()
   .use(loader(I18nLoader))
   .use(loader(PluginLoader))
   .use(loader(WorkflowsLoader))
-  .use(loader(DashboardsLoader))
+  .use(loader(BoardsLoader))
   .use(trapSignals())
   .start();

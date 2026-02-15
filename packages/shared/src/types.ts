@@ -77,7 +77,7 @@ export interface SparkManifest {
 /** Brick size family */
 export type BrickFamily = 'sm' | 'md' | 'lg';
 
-/** Brick (dashboard UI) manifest from package.json */
+/** Brick (board UI) manifest from package.json */
 export interface BrickManifest {
   id: string;
   name?: string;
@@ -138,7 +138,7 @@ export interface Plugin {
   blocks: BlockManifest[];
   /** Available sparks (typed events) */
   sparks: SparkManifest[];
-  /** Available bricks (dashboard UI) */
+  /** Available bricks (board UI) */
   bricks: BrickManifest[];
 
   // ─── i18n ───────────────────────────────────────────────────────────────────

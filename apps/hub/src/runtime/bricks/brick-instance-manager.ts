@@ -1,7 +1,7 @@
 /**
  * Brick Instance Manager
  *
- * Manages mounted brick instances on dashboards. Each instance references
+ * Manages mounted brick instances on boards. Each instance references
  * a brick type and stores the rendered component tree from the plugin.
  */
 

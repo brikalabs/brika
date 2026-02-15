@@ -1,7 +1,7 @@
 /**
  * Shared YAML directory helpers
  *
- * Extracted from WorkflowLoader / DashboardLoader to eliminate duplication.
+ * Extracted from WorkflowLoader / BoardLoader to eliminate duplication.
  */
 
 import { join } from 'node:path';

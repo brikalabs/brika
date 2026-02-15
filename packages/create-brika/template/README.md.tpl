@@ -35,7 +35,7 @@ plugins:
 
 ### {{pascal}}
 
-Dashboard brick with responsive layouts for small, medium, and large sizes.
+Board brick with responsive layouts for small, medium, and large sizes.
 
 {{/bricks}}
 {{#sparks}}

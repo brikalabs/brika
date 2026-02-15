@@ -65,7 +65,7 @@ const boardsRoute = createRoute({
 
 const boardDetailRoute = createRoute({
   getParentRoute: () => boardsRoute,
-  path: '/$dashboardId',
+  path: '/$boardId',
   component: BoardContent,
 });
 

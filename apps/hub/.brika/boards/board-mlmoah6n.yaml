@@ -1,0 +1,7 @@
+version: "1"
+board:
+  id: board-mlmoah6n
+  name: grgrg
+  icon: ""
+  columns: 12
+bricks: []

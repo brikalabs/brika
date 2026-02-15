@@ -2,7 +2,7 @@
  * defineBrick — Brick Type Registration
  *
  * Plugins register brick **types** via `defineBrick()`. Each type can be placed
- * multiple times on dashboards as independent **instances**, each with its own
+ * multiple times on boards as independent **instances**, each with its own
  * size (w/h grid units), config values, and isolated hooks state.
  */
 
@@ -62,7 +62,7 @@ export interface CompiledBrickType {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Define a dashboard brick type with hooks.
+ * Define a board brick type with hooks.
  *
  * @example
  * ```tsx

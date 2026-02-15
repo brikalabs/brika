@@ -27,41 +27,41 @@ import { IconPicker } from './IconPicker';
 interface EditBoardDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  dashboard: BoardSummary;
+  board: BoardSummary;
   onDeleted: () => void;
 }
 
 export function EditBoardDialog({
   open,
   onOpenChange,
-  dashboard,
+  board,
   onDeleted,
 }: Readonly<EditBoardDialogProps>) {
   const { t } = useLocale();
-  const [name, setName] = useState(dashboard.name);
-  const [icon, setIcon] = useState(dashboard.icon ?? '');
+  const [name, setName] = useState(board.name);
+  const [icon, setIcon] = useState(board.icon ?? '');
   const [deleteOpen, setDeleteOpen] = useState(false);
 
-  const { mutate: updateDashboard, isPending: saving } = useUpdateBoard();
-  const { mutate: deleteDashboard, isPending: deleting } = useDeleteBoard();
+  const { mutate: updateBoard, isPending: saving } = useUpdateBoard();
+  const { mutate: deleteBoard, isPending: deleting } = useDeleteBoard();
 
-  // Reset form state when dialog opens or dashboard changes
+  // Reset form state when dialog opens or board changes
   useEffect(() => {
     if (!open) return;
-    setName(dashboard.name);
-    setIcon(dashboard.icon ?? '');
-  }, [open, dashboard.id, dashboard.name, dashboard.icon]);
+    setName(board.name);
+    setIcon(board.icon ?? '');
+  }, [open, board.id, board.name, board.icon]);
 
   const handleSave = () => {
     if (!name.trim()) return;
-    updateDashboard(
-      { id: dashboard.id, data: { name: name.trim(), icon: icon.trim() } },
+    updateBoard(
+      { id: board.id, data: { name: name.trim(), icon: icon.trim() } },
       { onSuccess: () => onOpenChange(false) }
     );
   };
 
   const handleDelete = () => {
-    deleteDashboard(dashboard.id, {
+    deleteBoard(board.id, {
       onSuccess: () => {
         setDeleteOpen(false);
         onOpenChange(false);
@@ -75,8 +75,8 @@ export function EditBoardDialog({
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{t('boards:dashboard.edit')}</DialogTitle>
-            <DialogDescription>{t('boards:dashboard.editDescription')}</DialogDescription>
+            <DialogTitle>{t('boards:board.edit')}</DialogTitle>
+            <DialogDescription>{t('boards:board.editDescription')}</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
@@ -101,7 +101,7 @@ export function EditBoardDialog({
               onClick={() => setDeleteOpen(true)}
             >
               <Trash2 className="mr-1.5 size-3.5" />
-              {t('boards:dashboard.delete')}
+              {t('boards:board.delete')}
             </Button>
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => onOpenChange(false)}>
@@ -118,9 +118,9 @@ export function EditBoardDialog({
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t('boards:dashboard.delete')}</AlertDialogTitle>
+            <AlertDialogTitle>{t('boards:board.delete')}</AlertDialogTitle>
             <AlertDialogDescription>
-              {t('boards:dashboard.deleteDescription')}
+              {t('boards:board.deleteDescription')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -130,7 +130,7 @@ export function EditBoardDialog({
               disabled={deleting}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {deleting ? t('common:messages.loading') : t('boards:dashboard.deleteConfirm')}
+              {deleting ? t('common:messages.loading') : t('boards:board.deleteConfirm')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

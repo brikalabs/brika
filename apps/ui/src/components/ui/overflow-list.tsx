@@ -32,7 +32,7 @@ interface UseOverflowListReturn<T> {
   /** Shorthand for `overflow.length > 0`. */
   hasOverflow: boolean;
   /** Set `.current = true` to pause measurement (e.g. during drag). */
-  pauseRef: React.MutableRefObject<boolean>;
+  pauseRef: React.RefObject<boolean>;
 }
 
 function useOverflowList<T>({
@@ -63,14 +63,14 @@ function useOverflowList<T>({
     const els = container.querySelectorAll<HTMLElement>(`[${ITEM_ATTR}]`);
 
     // Cache every measured width for ResizeObserver recomputation
-    for (let i = 0; i < els.length; i++) {
-      const id = els[i].getAttribute(ITEM_ATTR);
-      if (id) widthCache.current.set(id, els[i].offsetWidth);
+    for (const el of els) {
+      const id = el.getAttribute(ITEM_ATTR);
+      if (id) widthCache.current.set(id, el.offsetWidth);
     }
 
     let visible = 0;
-    for (let i = 0; i < els.length; i++) {
-      if (els[i].getBoundingClientRect().right <= containerRight + 1) {
+    for (const el of els) {
+      if (el.getBoundingClientRect().right <= containerRight + 1) {
         visible++;
       } else {
         break;
@@ -92,7 +92,7 @@ function useOverflowList<T>({
       const key = getKeyRef.current;
       if (currentItems.length === 0) return;
 
-      const gap = parseFloat(getComputedStyle(container).gap) || 0;
+      const gap = Number.parseFloat(getComputedStyle(container).gap) || 0;
       const available = container.clientWidth;
       let used = 0;
       let fits = 0;

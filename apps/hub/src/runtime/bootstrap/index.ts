@@ -2,7 +2,7 @@
 
 export * from './bootstrap';
 // Loaders
-export * from './dashboards-loader';
+export * from './boards-loader';
 export * from './i18n-loader';
 export * from './loader';
 export * from './plugin';

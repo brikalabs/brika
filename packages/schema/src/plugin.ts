@@ -278,7 +278,7 @@ export const PluginPackageSchema = BasePackageJson.extend({
   sparks: z.optional(
     z.array(SparkSchema).describe('Typed event (spark) definitions provided by this plugin')
   ),
-  bricks: z.optional(z.array(BrickSchema).describe('Dashboard bricks provided by this plugin')),
+  bricks: z.optional(z.array(BrickSchema).describe('Board bricks provided by this plugin')),
   icon: z.optional(z.string().describe('Path to plugin icon (PNG/SVG, relative to package root)')),
   preferences: z.optional(
     z.array(PreferenceSchema).describe('Plugin preferences/configuration schema')

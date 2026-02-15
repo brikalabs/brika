@@ -45,7 +45,7 @@ export const SparkActions = defineActions('spark', {
 
 export type SparkAction = ActionsUnion<typeof SparkActions>;
 
-// Brick actions for dashboard bricks
+// Brick actions for board bricks
 export const BrickActions = defineActions('brick', {
   typeRegistered: z.object({
     pluginName: z.string(),
@@ -74,25 +74,25 @@ export const BrickActions = defineActions('brick', {
 
 export type BrickAction = ActionsUnion<typeof BrickActions>;
 
-// Dashboard actions for layout management
-export const DashboardActions = defineActions('dashboard', {
+// Board actions for layout management
+export const BoardActions = defineActions('board', {
   created: z.object({
-    dashboardId: z.string(),
+    boardId: z.string(),
   }),
   deleted: z.object({
-    dashboardId: z.string(),
+    boardId: z.string(),
   }),
   brickAdded: z.object({
-    dashboardId: z.string(),
+    boardId: z.string(),
     instanceId: z.string(),
     placement: z.unknown(),
   }),
   brickRemoved: z.object({
-    dashboardId: z.string(),
+    boardId: z.string(),
     instanceId: z.string(),
   }),
   layoutChanged: z.object({
-    dashboardId: z.string(),
+    boardId: z.string(),
     layouts: z.array(
       z.object({
         instanceId: z.string(),
@@ -104,15 +104,15 @@ export const DashboardActions = defineActions('dashboard', {
     ),
   }),
   brickLabelChanged: z.object({
-    dashboardId: z.string(),
+    boardId: z.string(),
     instanceId: z.string(),
     label: z.string().optional(),
   }),
   brickConfigChanged: z.object({
-    dashboardId: z.string(),
+    boardId: z.string(),
     instanceId: z.string(),
     config: z.record(z.string(), z.unknown()),
   }),
 });
 
-export type DashboardAction = ActionsUnion<typeof DashboardActions>;
+export type BoardAction = ActionsUnion<typeof BoardActions>;

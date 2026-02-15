@@ -14,7 +14,7 @@
     "url": "git+https://github.com/maxscharwath/brika.git",
     "directory": "packages/ui-kit"
   },
-  "keywords": ["brika", "ui", "bricks", "dashboard", "descriptors"],
+  "keywords": ["brika", "ui", "bricks", "board", "descriptors"],
   "exports": {
     ".": "./src/index.ts",
     "./jsx-runtime": "./src/jsx-runtime.ts",

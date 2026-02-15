@@ -2,7 +2,7 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "composite": true,
-    "lib": ["DOM", "ES2024", "ESNext"],
+    "lib": ["DOM", "DOM.Iterable", "ES2024", "ESNext"],
     "jsx": "react-jsx",
     "types": ["vite/client"],
     "baseUrl": ".",

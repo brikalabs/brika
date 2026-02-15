@@ -1,0 +1,7 @@
+version: "1"
+board:
+  id: board-mlmoakpg
+  name: rgrgrgr
+  icon: a-arrow-up
+  columns: 12
+bricks: []

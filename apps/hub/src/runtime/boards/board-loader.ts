@@ -1,7 +1,7 @@
 /**
- * Dashboard Loader
+ * Board Loader
  *
- * Loads dashboard layouts from YAML files with hot-reload support.
+ * Loads board layouts from YAML files with hot-reload support.
  * Follows the WorkflowLoader pattern.
  */
 
@@ -13,7 +13,7 @@ import { parse as parseYAML, stringify as stringifyYAML } from 'yaml';
 import { z } from 'zod';
 import { Logger } from '@/runtime/logs/log-router';
 import { ensureAndScanYamlDir } from '@/runtime/utils/yaml-dir';
-import type { Dashboard, DashboardBrickPlacement } from './types';
+import type { Board, BoardBrickPlacement } from './types';
 
 const YAML_OPTIONS = {
   indent: 2,
@@ -38,9 +38,9 @@ const YAMLBrickSchema = z.object({
   size: z.object({ w: z.number(), h: z.number() }),
 });
 
-const YAMLDashboardSchema = z.object({
+const YAMLBoardSchema = z.object({
   version: z.optional(z.string()),
-  dashboard: z.object({
+  board: z.object({
     id: z.string(),
     name: z.string(),
     icon: z.optional(z.string()),
@@ -49,25 +49,25 @@ const YAMLDashboardSchema = z.object({
   bricks: z.optional(z.array(YAMLBrickSchema)),
 });
 
-type YAMLDashboard = z.output<typeof YAMLDashboardSchema>;
+type YAMLBoard = z.output<typeof YAMLBoardSchema>;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Loader
 // ─────────────────────────────────────────────────────────────────────────────
 
 @singleton()
-export class DashboardLoader {
+export class BoardLoader {
   private readonly logs = inject(Logger).withSource('state');
 
   #dir: string | null = null;
   #watcher: ReturnType<typeof watch> | null = null;
-  readonly #loaded = new Map<string, string>(); // filePath -> dashboardId
-  readonly #idToFile = new Map<string, string>(); // dashboardId -> filePath
-  readonly #dashboards = new Map<string, Dashboard>();
+  readonly #loaded = new Map<string, string>(); // filePath -> boardId
+  readonly #idToFile = new Map<string, string>(); // boardId -> filePath
+  readonly #boards = new Map<string, Board>();
   readonly #skipWatchPaths = new Set<string>(); // files we just saved — ignore watcher
-  #order: string[] = []; // ordered dashboard IDs
+  #order: string[] = []; // ordered board IDs
 
-  /** Listeners called when dashboards change */
+  /** Listeners called when boards change */
   readonly #changeListeners = new Set<(id: string, action: 'load' | 'unload') => void>();
 
   onChange(listener: (id: string, action: 'load' | 'unload') => void): () => void {
@@ -78,25 +78,25 @@ export class DashboardLoader {
   async loadDir(dir: string): Promise<void> {
     this.#dir = dir;
 
-    const filePaths = await ensureAndScanYamlDir(dir, this.logs, 'Dashboards');
+    const filePaths = await ensureAndScanYamlDir(dir, this.logs, 'Boards');
     for (const filePath of filePaths) await this.#loadFile(filePath);
 
-    // Create default "Home" dashboard if none exist
-    if (this.#dashboards.size === 0) {
-      const home: Dashboard = {
+    // Create default "Home" board if none exist
+    if (this.#boards.size === 0) {
+      const home: Board = {
         id: 'home',
         name: 'Home',
         icon: 'home',
         columns: 12,
         bricks: [],
       };
-      await this.saveDashboard(home);
+      await this.saveBoard(home);
     }
 
     // Load order from file, falling back to current map iteration order
     await this.#loadOrder();
 
-    this.logs.info('Dashboard files loaded', { directory: dir, count: this.#dashboards.size });
+    this.logs.info('Board files loaded', { directory: dir, count: this.#boards.size });
   }
 
   watch(): void {
@@ -110,7 +110,7 @@ export class DashboardLoader {
       void (async () => {
         const filePath = join(dir, String(filename));
 
-        // Skip events triggered by our own saveDashboard() calls
+        // Skip events triggered by our own saveBoard() calls
         if (this.#skipWatchPaths.has(filePath)) return;
 
         if (await Bun.file(filePath).exists()) {
@@ -121,7 +121,7 @@ export class DashboardLoader {
       })();
     });
 
-    this.logs.info('Started watching dashboard files', { directory: dir });
+    this.logs.info('Started watching board files', { directory: dir });
   }
 
   stopWatching(): void {
@@ -129,32 +129,32 @@ export class DashboardLoader {
     this.#watcher = null;
   }
 
-  async saveDashboard(dashboard: Dashboard): Promise<string> {
+  async saveBoard(board: Board): Promise<string> {
     if (!this.#dir) throw new Error('Call loadDir() first');
 
-    const isNew = !this.#dashboards.has(dashboard.id);
-    const filePath = this.#idToFile.get(dashboard.id) ?? `${this.#dir}/${dashboard.id}.yaml`;
+    const isNew = !this.#boards.has(board.id);
+    const filePath = this.#idToFile.get(board.id) ?? `${this.#dir}/${board.id}.yaml`;
 
     // Prevent the file watcher from re-loading what we just saved
     this.#skipWatchPaths.add(filePath);
-    await Bun.write(filePath, stringifyYAML(this.#toYAML(dashboard), YAML_OPTIONS));
+    await Bun.write(filePath, stringifyYAML(this.#toYAML(board), YAML_OPTIONS));
     setTimeout(() => this.#skipWatchPaths.delete(filePath), 1000);
 
-    this.#loaded.set(filePath, dashboard.id);
-    this.#idToFile.set(dashboard.id, filePath);
-    this.#dashboards.set(dashboard.id, dashboard);
+    this.#loaded.set(filePath, board.id);
+    this.#idToFile.set(board.id, filePath);
+    this.#boards.set(board.id, board);
 
-    // Append new dashboards to the end of the order
-    if (isNew && !this.#order.includes(dashboard.id)) {
-      this.#order.push(dashboard.id);
+    // Append new boards to the end of the order
+    if (isNew && !this.#order.includes(board.id)) {
+      this.#order.push(board.id);
       await this.#persistOrder();
     }
 
-    this.logs.info('Dashboard saved', { fileName: basename(filePath), dashboardId: dashboard.id });
+    this.logs.info('Board saved', { fileName: basename(filePath), boardId: board.id });
     return filePath;
   }
 
-  async deleteDashboard(id: string): Promise<boolean> {
+  async deleteBoard(id: string): Promise<boolean> {
     if (!this.#dir) throw new Error('Call loadDir() first');
 
     const filePath = this.#idToFile.get(id) ?? `${this.#dir}/${id}.yaml`;
@@ -166,7 +166,7 @@ export class DashboardLoader {
 
     this.#loaded.delete(filePath);
     this.#idToFile.delete(id);
-    this.#dashboards.delete(id);
+    this.#boards.delete(id);
 
     // Remove from order
     this.#order = this.#order.filter((oid) => oid !== id);
@@ -174,22 +174,22 @@ export class DashboardLoader {
 
     for (const l of this.#changeListeners) l(id, 'unload');
 
-    this.logs.info('Dashboard deleted', { fileName: basename(filePath), dashboardId: id });
+    this.logs.info('Board deleted', { fileName: basename(filePath), boardId: id });
     return true;
   }
 
-  get(id: string): Dashboard | undefined {
-    return this.#dashboards.get(id);
+  get(id: string): Board | undefined {
+    return this.#boards.get(id);
   }
 
-  list(): Dashboard[] {
-    const ordered: Dashboard[] = [];
+  list(): Board[] {
+    const ordered: Board[] = [];
     for (const id of this.#order) {
-      const d = this.#dashboards.get(id);
+      const d = this.#boards.get(id);
       if (d) ordered.push(d);
     }
-    // Include any dashboards not yet in the order (e.g. loaded via file watcher)
-    for (const d of this.#dashboards.values()) {
+    // Include any boards not yet in the order (e.g. loaded via file watcher)
+    for (const d of this.#boards.values()) {
       if (!this.#order.includes(d.id)) ordered.push(d);
     }
     return ordered;
@@ -198,11 +198,11 @@ export class DashboardLoader {
   async reorder(ids: string[]): Promise<boolean> {
     // Validate: all provided IDs must exist
     for (const id of ids) {
-      if (!this.#dashboards.has(id)) return false;
+      if (!this.#boards.has(id)) return false;
     }
     this.#order = ids;
-    // Append any existing dashboards not in the provided list
-    for (const id of this.#dashboards.keys()) {
+    // Append any existing boards not in the provided list
+    for (const id of this.#boards.keys()) {
       if (!this.#order.includes(id)) this.#order.push(id);
     }
     await this.#persistOrder();
@@ -214,41 +214,41 @@ export class DashboardLoader {
 
     try {
       const yaml = parseYAML(await Bun.file(filePath).text());
-      const dashboard = this.#fromYAML(yaml);
-      if (!dashboard) return;
+      const board = this.#fromYAML(yaml);
+      if (!board) return;
 
-      this.#dashboards.set(dashboard.id, dashboard);
-      this.#loaded.set(filePath, dashboard.id);
-      this.#idToFile.set(dashboard.id, filePath);
+      this.#boards.set(board.id, board);
+      this.#loaded.set(filePath, board.id);
+      this.#idToFile.set(board.id, filePath);
 
-      for (const l of this.#changeListeners) l(dashboard.id, 'load');
+      for (const l of this.#changeListeners) l(board.id, 'load');
 
-      this.logs.info('Dashboard loaded', {
+      this.logs.info('Board loaded', {
         fileName: basename(filePath),
-        dashboardId: dashboard.id,
+        boardId: board.id,
       });
     } catch (error) {
-      this.logs.error('Failed to load dashboard', { fileName: basename(filePath) }, { error });
+      this.logs.error('Failed to load board', { fileName: basename(filePath) }, { error });
     }
   }
 
   #unloadFile(filePath: string): void {
-    const dashboardId = this.#loaded.get(filePath);
-    if (!dashboardId) return;
+    const boardId = this.#loaded.get(filePath);
+    if (!boardId) return;
 
-    this.#dashboards.delete(dashboardId);
+    this.#boards.delete(boardId);
     this.#loaded.delete(filePath);
-    this.#idToFile.delete(dashboardId);
+    this.#idToFile.delete(boardId);
 
-    for (const l of this.#changeListeners) l(dashboardId, 'unload');
+    for (const l of this.#changeListeners) l(boardId, 'unload');
   }
 
-  #fromYAML(yaml: unknown): Dashboard | null {
-    const result = YAMLDashboardSchema.safeParse(yaml);
+  #fromYAML(yaml: unknown): Board | null {
+    const result = YAMLBoardSchema.safeParse(yaml);
     if (!result.success) return null;
 
-    const { dashboard, bricks: yamlBricks = [] } = result.data;
-    const bricks: DashboardBrickPlacement[] = yamlBricks.map((c) => ({
+    const { board, bricks: yamlBricks = [] } = result.data;
+    const bricks: BoardBrickPlacement[] = yamlBricks.map((c) => ({
       instanceId: c.instanceId,
       brickTypeId: c.type,
       label: c.label,
@@ -258,24 +258,24 @@ export class DashboardLoader {
     }));
 
     return {
-      id: dashboard.id,
-      name: dashboard.name,
-      icon: dashboard.icon,
-      columns: dashboard.columns ?? 12,
+      id: board.id,
+      name: board.name,
+      icon: board.icon,
+      columns: board.columns ?? 12,
       bricks,
     };
   }
 
-  #toYAML(dashboard: Dashboard): YAMLDashboard {
+  #toYAML(board: Board): YAMLBoard {
     return {
       version: '1',
-      dashboard: {
-        id: dashboard.id,
-        name: dashboard.name,
-        icon: dashboard.icon,
-        columns: dashboard.columns,
+      board: {
+        id: board.id,
+        name: board.name,
+        icon: board.icon,
+        columns: board.columns,
       },
-      bricks: dashboard.bricks.map((c) => ({
+      bricks: board.bricks.map((c) => ({
         instanceId: c.instanceId,
         type: c.brickTypeId,
         label: c.label,
@@ -287,8 +287,8 @@ export class DashboardLoader {
   }
 
   get #orderFilePath(): string {
-    // Store order file in parent dir (e.g. .brika/dashboard-order.json)
-    return join(dirname(this.#dir ?? ''), 'dashboard-order.json');
+    // Store order file in parent dir (e.g. .brika/board-order.json)
+    return join(dirname(this.#dir ?? ''), 'board-order.json');
   }
 
   async #loadOrder(): Promise<void> {
@@ -298,9 +298,9 @@ export class DashboardLoader {
         const data = await file.json();
         if (Array.isArray(data)) {
           // Filter to only IDs that exist
-          this.#order = data.filter((id) => typeof id === 'string' && this.#dashboards.has(id));
-          // Append any dashboards not in the saved order
-          for (const id of this.#dashboards.keys()) {
+          this.#order = data.filter((id) => typeof id === 'string' && this.#boards.has(id));
+          // Append any boards not in the saved order
+          for (const id of this.#boards.keys()) {
             if (!this.#order.includes(id)) this.#order.push(id);
           }
           return;
@@ -310,14 +310,14 @@ export class DashboardLoader {
       // Ignore read errors, fall through to default order
     }
     // Default: use current map iteration order
-    this.#order = [...this.#dashboards.keys()];
+    this.#order = [...this.#boards.keys()];
   }
 
   async #persistOrder(): Promise<void> {
     try {
       await Bun.write(this.#orderFilePath, JSON.stringify(this.#order));
     } catch (error) {
-      this.logs.error('Failed to persist dashboard order', {}, { error });
+      this.logs.error('Failed to persist board order', {}, { error });
     }
   }
 }

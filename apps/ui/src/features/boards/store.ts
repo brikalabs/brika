@@ -5,8 +5,8 @@ import { create } from 'zustand';
 import type { Board, BoardBrickPlacement, BoardSummary, BrickType } from './api';
 
 interface BoardStore {
-  // ─── Dashboard list ────────────────────────────────────────────────────────
-  dashboards: Map<string, BoardSummary>;
+  // ─── Board list ────────────────────────────────────────────────────────
+  boards: Map<string, BoardSummary>;
   activeBoardId: string | null;
   activeBoard: Board | null;
 
@@ -23,7 +23,7 @@ interface BoardStore {
 
   // ─── Actions ───────────────────────────────────────────────────────────────
   setBoards(list: BoardSummary[]): void;
-  setActiveBoard(dashboard: Board | null): void;
+  setActiveBoard(board: Board | null): void;
   setBrickTypes(types: BrickType[]): void;
   setAddBrickOpen(open: boolean): void;
   setConfigBrickId(id: string | null): void;
@@ -36,7 +36,7 @@ interface BoardStore {
   markDisconnected(instanceIds: string[]): void;
   clearDisconnected(instanceId: string): void;
 
-  // Optimistic dashboard mutations
+  // Optimistic board mutations
   addBrickPlacement(placement: BoardBrickPlacement): void;
   removeBrickPlacement(instanceId: string): void;
   updateBrickLayouts(
@@ -47,7 +47,7 @@ interface BoardStore {
 }
 
 export const useBoardStore = create<BoardStore>((set, get) => ({
-  dashboards: new Map(),
+  boards: new Map(),
   activeBoardId: null,
   activeBoard: null,
   brickTypes: new Map(),
@@ -57,15 +57,15 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
   configBrickId: null,
 
   setBoards(list) {
-    set({ dashboards: new Map(list.map((d) => [d.id, d])) });
+    set({ boards: new Map(list.map((d) => [d.id, d])) });
   },
 
-  setActiveBoard(dashboard) {
-    if (!dashboard) {
+  setActiveBoard(board) {
+    if (!board) {
       set({ activeBoardId: null, activeBoard: null });
       return;
     }
-    set({ activeBoardId: dashboard.id, activeBoard: dashboard });
+    set({ activeBoardId: board.id, activeBoard: board });
   },
 
   setBrickTypes(types) {
@@ -128,30 +128,30 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
   },
 
   addBrickPlacement(placement) {
-    const dashboard = get().activeBoard;
-    if (!dashboard) return;
+    const board = get().activeBoard;
+    if (!board) return;
     set({
-      activeBoard: { ...dashboard, bricks: [...dashboard.bricks, placement] },
+      activeBoard: { ...board, bricks: [...board.bricks, placement] },
     });
   },
 
   removeBrickPlacement(instanceId) {
-    const dashboard = get().activeBoard;
-    if (!dashboard) return;
+    const board = get().activeBoard;
+    if (!board) return;
     set({
       activeBoard: {
-        ...dashboard,
-        bricks: dashboard.bricks.filter((c) => c.instanceId !== instanceId),
+        ...board,
+        bricks: board.bricks.filter((c) => c.instanceId !== instanceId),
       },
     });
   },
 
   updateBrickLayouts(layouts) {
-    const dashboard = get().activeBoard;
-    if (!dashboard) return;
+    const board = get().activeBoard;
+    if (!board) return;
     const layoutMap = new Map(layouts.map((l) => [l.instanceId, l]));
     let changed = false;
-    const bricks = dashboard.bricks.map((b) => {
+    const bricks = board.bricks.map((b) => {
       const l = layoutMap.get(b.instanceId);
       if (!l) return b;
       if (b.position.x === l.x && b.position.y === l.y && b.size.w === l.w && b.size.h === l.h)
@@ -159,23 +159,23 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
       changed = true;
       return { ...b, position: { x: l.x, y: l.y }, size: { w: l.w, h: l.h } };
     });
-    if (changed) set({ activeBoard: { ...dashboard, bricks } });
+    if (changed) set({ activeBoard: { ...board, bricks } });
   },
 
   updateBrickConfig(instanceId, config) {
-    const dashboard = get().activeBoard;
-    if (!dashboard) return;
-    const bricks = dashboard.bricks.map((b) =>
+    const board = get().activeBoard;
+    if (!board) return;
+    const bricks = board.bricks.map((b) =>
       b.instanceId === instanceId ? { ...b, config } : b
     );
-    set({ activeBoard: { ...dashboard, bricks } });
+    set({ activeBoard: { ...board, bricks } });
   },
 
   updateBrickLabel(instanceId, label) {
-    const dashboard = get().activeBoard;
-    if (!dashboard) return;
-    const bricks = dashboard.bricks.map((b) => (b.instanceId === instanceId ? { ...b, label } : b));
-    set({ activeBoard: { ...dashboard, bricks } });
+    const board = get().activeBoard;
+    if (!board) return;
+    const bricks = board.bricks.map((b) => (b.instanceId === instanceId ? { ...b, label } : b));
+    set({ activeBoard: { ...board, bricks } });
   },
 }));
 

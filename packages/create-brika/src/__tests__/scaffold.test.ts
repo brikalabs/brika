@@ -283,7 +283,7 @@ describe('scaffold', () => {
     });
 
     const content = await fs.readFile(
-      path.join(testDir, 'test-brick', 'src', 'bricks', 'dashboard.tsx'),
+      path.join(testDir, 'test-brick', 'src', 'bricks', 'board.tsx'),
       'utf-8'
     );
     expect(content).toContain('defineBrick');
@@ -330,7 +330,7 @@ describe('scaffold', () => {
     const content = await fs.readFile(path.join(testDir, 'test-combo', 'src', 'index.ts'), 'utf-8');
     expect(content).toContain("from './blocks/test-combo'");
     expect(content).toContain("from './sparks/test-combo'");
-    expect(content).not.toContain('bricks/dashboard');
+    expect(content).not.toContain('bricks/board');
   });
 
   test('blocks-only: creates block file in blocks/ directory', async () => {

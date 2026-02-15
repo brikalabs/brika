@@ -1,13 +1,13 @@
 /**
- * Dashboard Types
+ * Board Types
  *
- * Core types for dashboard persistence and layout management.
+ * Core types for board persistence and layout management.
  */
 
 import type { Json } from '@brika/shared';
 
-/** A brick placed on a dashboard */
-export interface DashboardBrickPlacement {
+/** A brick placed on a board */
+export interface BoardBrickPlacement {
   instanceId: string;
   brickTypeId: string;
   label?: string;
@@ -16,11 +16,11 @@ export interface DashboardBrickPlacement {
   size: { w: number; h: number };
 }
 
-/** A dashboard layout */
-export interface Dashboard {
+/** A board layout */
+export interface Board {
   id: string;
   name: string;
   icon?: string;
   columns: number;
-  bricks: DashboardBrickPlacement[];
+  bricks: BoardBrickPlacement[];
 }

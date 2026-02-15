@@ -105,8 +105,8 @@ function SortableTab({ board, onEdit, activeId }: Readonly<SortableTabProps>) {
         <TabContent board={board} />
       ) : (
         <Link
-          to="/boards/$dashboardId"
-          params={{ dashboardId: board.id }}
+          to="/boards/$boardId"
+          params={{ boardId: board.id }}
           className="flex items-center gap-1.5 whitespace-nowrap rounded-md py-1.5 pl-3 pr-7 text-sm transition-colors"
           activeProps={{ className: 'bg-background font-medium shadow-sm' }}
           inactiveProps={{ className: 'text-muted-foreground hover:text-foreground' }}
@@ -153,22 +153,22 @@ const getKey = (d: BoardSummary) => d.id;
 export function BoardSwitcher({ onEdit }: Readonly<BoardSwitcherProps>) {
   const { t } = useLocale();
   const navigate = useNavigate();
-  const { dashboardId } = useParams({ strict: false });
-  const { data: dashboards = [] } = useBoards();
+  const { boardId } = useParams({ strict: false });
+  const { data: boards = [] } = useBoards();
   const { mutate: reorderBoards } = useReorderBoards();
 
   const [createOpen, setCreateOpen] = useState(false);
   const [newName, setNewName] = useState('');
   const [newIcon, setNewIcon] = useState('');
-  const { mutate: createDashboard, isPending: creating } = useCreateBoard();
+  const { mutate: createBoard, isPending: creating } = useCreateBoard();
   const [activeId, setActiveId] = useState<string | null>(null);
 
   // ─── Overflow detection (via reusable hook) ────────────────────────────
 
   const { containerRef, visible, overflow, hasOverflow, pauseRef } = useOverflowList({
-    items: dashboards,
+    items: boards,
     getKey,
-    activeKey: dashboardId,
+    activeKey: boardId,
     deps: [activeId],
   });
 
@@ -178,7 +178,7 @@ export function BoardSwitcher({ onEdit }: Readonly<BoardSwitcherProps>) {
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   );
 
-  const activeDrag = activeId ? dashboards.find((d) => d.id === activeId) : undefined;
+  const activeDrag = activeId ? boards.find((d) => d.id === activeId) : undefined;
 
   const handleDragStart = (event: DragStartEvent) => {
     pauseRef.current = true;
@@ -191,10 +191,10 @@ export function BoardSwitcher({ onEdit }: Readonly<BoardSwitcherProps>) {
 
     const { active, over } = event;
     if (over && active.id !== over.id) {
-      const oldIndex = dashboards.findIndex((d) => d.id === active.id);
-      const newIndex = dashboards.findIndex((d) => d.id === over.id);
+      const oldIndex = boards.findIndex((d) => d.id === active.id);
+      const newIndex = boards.findIndex((d) => d.id === over.id);
       if (oldIndex >= 0 && newIndex >= 0) {
-        const reordered = arrayMove(dashboards, oldIndex, newIndex);
+        const reordered = arrayMove(boards, oldIndex, newIndex);
         reorderBoards(reordered.map((d) => d.id));
       }
     }
@@ -209,14 +209,14 @@ export function BoardSwitcher({ onEdit }: Readonly<BoardSwitcherProps>) {
 
   const handleCreate = () => {
     if (!newName.trim()) return;
-    createDashboard(
+    createBoard(
       { name: newName.trim(), icon: newIcon.trim() },
       {
-        onSuccess: (dashboard) => {
+        onSuccess: (board) => {
           setCreateOpen(false);
           setNewName('');
           setNewIcon('');
-          navigate({ to: '/boards/$dashboardId', params: { dashboardId: dashboard.id } });
+          navigate({ to: '/boards/$boardId', params: { boardId: board.id } });
         },
       }
     );
@@ -283,14 +283,14 @@ export function BoardSwitcher({ onEdit }: Readonly<BoardSwitcherProps>) {
                     className="group/item flex items-center justify-between gap-3"
                     onClick={() =>
                       navigate({
-                        to: '/boards/$dashboardId',
-                        params: { dashboardId: d.id },
+                        to: '/boards/$boardId',
+                        params: { boardId: d.id },
                       })
                     }
                   >
                     <span className="flex items-center gap-1.5">
                       <BoardIcon icon={d.icon} />
-                      <span className={cn(d.id === dashboardId && 'font-medium')}>{d.name}</span>
+                      <span className={cn(d.id === boardId && 'font-medium')}>{d.name}</span>
                     </span>
                     <button
                       type="button"
@@ -323,7 +323,7 @@ export function BoardSwitcher({ onEdit }: Readonly<BoardSwitcherProps>) {
               <Plus className="size-3.5" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="bottom">{t('boards:dashboard.new')}</TooltipContent>
+          <TooltipContent side="bottom">{t('boards:board.new')}</TooltipContent>
         </Tooltip>
       </OverflowList>
 
@@ -331,8 +331,8 @@ export function BoardSwitcher({ onEdit }: Readonly<BoardSwitcherProps>) {
       <Dialog open={createOpen} onOpenChange={handleCreateOpenChange}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{t('boards:dashboard.new')}</DialogTitle>
-            <DialogDescription>{t('boards:dashboard.newDescription')}</DialogDescription>
+            <DialogTitle>{t('boards:board.new')}</DialogTitle>
+            <DialogDescription>{t('boards:board.newDescription')}</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">

@@ -1,12 +1,13 @@
 version: "1"
-dashboard:
-  id: dashboard-mlckw3lh
+board:
+  id: board-mlckw3lh
   name: Spotify
   icon: music-4
   columns: 12
 bricks:
   - instanceId: inst-mlcwhgyc-1
     type: "@brika/plugin-spotify:player"
+    label: Yolo
     config:
       refreshInterval: 600
       device: 22482c70ee260835a6275373853f8ec57a01d3ec
@@ -44,6 +45,8 @@ bricks:
       h: 2
   - instanceId: inst-mld29naa-4
     type: "@brika/plugin-spotify:player"
+    config:
+      device: 42ac4e0f685cf2d6edce56982a2a092b7061a26c
     position:
       x: 2
       y: 0

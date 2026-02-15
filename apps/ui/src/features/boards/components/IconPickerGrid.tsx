@@ -80,7 +80,7 @@ export default function IconPickerGrid({ value, onChange }: Readonly<IconPickerG
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          {t('boards:dashboard.icon')}
+          {t('boards:board.icon')}
         </Label>
         {isSearching && (
           <Badge variant="secondary" className="font-mono tabular-nums">
@@ -94,7 +94,7 @@ export default function IconPickerGrid({ value, onChange }: Readonly<IconPickerG
           ref={searchRef}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder={t('boards:dashboard.iconHint')}
+          placeholder={t('boards:board.iconHint')}
           className="h-9 pl-8 pr-8 text-sm"
         />
         {isSearching && (

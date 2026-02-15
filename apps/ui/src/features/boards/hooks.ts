@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect } from 'react';
 import { getStreamUrl } from '@/lib/query';
 import type { BoardSummary } from './api';
-import { brickInstancesApi, brickTypesApi, dashboardKeys, dashboardsApi } from './api';
+import { brickInstancesApi, brickTypesApi, boardKeys, boardsApi } from './api';
 import { useBoardStore } from './store';
 
 // ─── Data fetching ─────────────────────────────────────────────────────────
@@ -13,27 +13,27 @@ export function useBoards() {
   const setBoards = useBoardStore((s) => s.setBoards);
 
   return useQuery({
-    queryKey: dashboardKeys.all,
+    queryKey: boardKeys.all,
     queryFn: async () => {
-      const data = await dashboardsApi.list();
+      const data = await boardsApi.list();
       setBoards(data);
       return data;
     },
   });
 }
 
-export function useLoadBoard(dashboardId: string | undefined) {
+export function useLoadBoard(boardId: string | undefined) {
   const setActiveBoard = useBoardStore((s) => s.setActiveBoard);
 
   return useQuery({
-    queryKey: dashboardKeys.detail(dashboardId ?? ''),
+    queryKey: boardKeys.detail(boardId ?? ''),
     queryFn: async () => {
-      if (!dashboardId) throw new Error('No dashboard ID');
-      const data = await dashboardsApi.get(dashboardId);
+      if (!boardId) throw new Error('No board ID');
+      const data = await boardsApi.get(boardId);
       setActiveBoard(data);
       return data;
     },
-    enabled: !!dashboardId,
+    enabled: !!boardId,
   });
 }
 
@@ -41,7 +41,7 @@ export function useBrickTypesList() {
   const setBrickTypes = useBoardStore((s) => s.setBrickTypes);
 
   return useQuery({
-    queryKey: dashboardKeys.brickTypes,
+    queryKey: boardKeys.brickTypes,
     queryFn: async () => {
       const data = await brickTypesApi.list();
       setBrickTypes(data);
@@ -50,16 +50,16 @@ export function useBrickTypesList() {
   });
 }
 
-// ─── Dashboard CRUD mutations ───────────────────────────────────────────────
+// ─── Board CRUD mutations ───────────────────────────────────────────────
 
 export function useCreateBoard() {
   const qc = useQueryClient();
 
   return useMutation({
     mutationFn: (args: { name: string; icon?: string }) =>
-      dashboardsApi.create(args.name, args.icon),
+      boardsApi.create(args.name, args.icon),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: dashboardKeys.all });
+      qc.invalidateQueries({ queryKey: boardKeys.all });
     },
   });
 }
@@ -69,14 +69,14 @@ export function useUpdateBoard() {
 
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: { name?: string; icon?: string } }) =>
-      dashboardsApi.update(id, data),
+      boardsApi.update(id, data),
     onSuccess: (updated) => {
       const store = useBoardStore.getState();
       if (store.activeBoardId === updated.id) {
         store.setActiveBoard(updated);
       }
-      qc.invalidateQueries({ queryKey: dashboardKeys.all });
-      qc.invalidateQueries({ queryKey: dashboardKeys.detail(updated.id) });
+      qc.invalidateQueries({ queryKey: boardKeys.all });
+      qc.invalidateQueries({ queryKey: boardKeys.detail(updated.id) });
     },
   });
 }
@@ -85,9 +85,9 @@ export function useDeleteBoard() {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: string) => dashboardsApi.delete(id),
+    mutationFn: (id: string) => boardsApi.delete(id),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: dashboardKeys.all });
+      qc.invalidateQueries({ queryKey: boardKeys.all });
     },
   });
 }
@@ -96,26 +96,26 @@ export function useReorderBoards() {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: (ids: string[]) => dashboardsApi.reorder(ids),
+    mutationFn: (ids: string[]) => boardsApi.reorder(ids),
     onMutate: async (ids) => {
-      await qc.cancelQueries({ queryKey: dashboardKeys.all });
-      const previous = qc.getQueryData<BoardSummary[]>(dashboardKeys.all);
+      await qc.cancelQueries({ queryKey: boardKeys.all });
+      const previous = qc.getQueryData<BoardSummary[]>(boardKeys.all);
       if (previous) {
         const byId = new Map(previous.map((b) => [b.id, b]));
         const reordered = ids.map((id) => byId.get(id)).filter(Boolean) as BoardSummary[];
-        qc.setQueryData(dashboardKeys.all, reordered);
+        qc.setQueryData(boardKeys.all, reordered);
         useBoardStore.getState().setBoards(reordered);
       }
       return { previous };
     },
     onError: (_err, _ids, context) => {
       if (context?.previous) {
-        qc.setQueryData(dashboardKeys.all, context.previous);
+        qc.setQueryData(boardKeys.all, context.previous);
         useBoardStore.getState().setBoards(context.previous);
       }
     },
     onSettled: () => {
-      qc.invalidateQueries({ queryKey: dashboardKeys.all });
+      qc.invalidateQueries({ queryKey: boardKeys.all });
     },
   });
 }
@@ -136,7 +136,7 @@ export function useBrickInstanceAction() {
   });
 }
 
-// ─── Dashboard mutations ───────────────────────────────────────────────────
+// ─── Board mutations ───────────────────────────────────────────────────
 
 export function useAddBrick() {
   const qc = useQueryClient();
@@ -148,10 +148,10 @@ export function useAddBrick() {
       position?: { x: number; y: number };
       size?: { w: number; h: number };
     }) => {
-      const dashboardId = useBoardStore.getState().activeBoardId;
-      if (!dashboardId) throw new Error('No active dashboard');
-      return dashboardsApi.addBrick(
-        dashboardId,
+      const boardId = useBoardStore.getState().activeBoardId;
+      if (!boardId) throw new Error('No active board');
+      return boardsApi.addBrick(
+        boardId,
         args.brickTypeId,
         args.config,
         args.position,
@@ -161,9 +161,9 @@ export function useAddBrick() {
     onSuccess: (placement) => {
       useBoardStore.getState().addBrickPlacement(placement);
       useBoardStore.getState().setInstanceBody(placement.instanceId, []);
-      // Only invalidate the dashboard list (for brickCount), not the detail query.
+      // Only invalidate the board list (for brickCount), not the detail query.
       // The detail is already updated optimistically via addBrickPlacement.
-      qc.invalidateQueries({ queryKey: dashboardKeys.all, exact: true });
+      qc.invalidateQueries({ queryKey: boardKeys.all, exact: true });
 
       // Safety net: fetch the body from API after plugin has had time to render.
       setTimeout(() => {
@@ -185,16 +185,16 @@ export function useRemoveBrick() {
 
   return useMutation({
     mutationFn: async (instanceId: string) => {
-      const dashboardId = useBoardStore.getState().activeBoardId;
-      if (!dashboardId) throw new Error('No active dashboard');
-      await dashboardsApi.removeBrick(dashboardId, instanceId);
+      const boardId = useBoardStore.getState().activeBoardId;
+      if (!boardId) throw new Error('No active board');
+      await boardsApi.removeBrick(boardId, instanceId);
       return instanceId;
     },
     onSuccess: (instanceId) => {
       useBoardStore.getState().removeBrickPlacement(instanceId);
       useBoardStore.getState().removeInstanceBody(instanceId);
-      // Only invalidate the dashboard list (for brickCount), not the detail query.
-      qc.invalidateQueries({ queryKey: dashboardKeys.all, exact: true });
+      // Only invalidate the board list (for brickCount), not the detail query.
+      qc.invalidateQueries({ queryKey: boardKeys.all, exact: true });
     },
   });
 }
@@ -208,9 +208,9 @@ export function useRenameBrick() {
       instanceId: string;
       label: string | undefined;
     }) => {
-      const dashboardId = useBoardStore.getState().activeBoardId;
-      if (!dashboardId) throw new Error('No active dashboard');
-      return dashboardsApi.updateBrick(dashboardId, instanceId, { label: label ?? '' });
+      const boardId = useBoardStore.getState().activeBoardId;
+      if (!boardId) throw new Error('No active board');
+      return boardsApi.updateBrick(boardId, instanceId, { label: label ?? '' });
     },
     onSuccess: (_, { instanceId, label }) => {
       useBoardStore.getState().updateBrickLabel(instanceId, label);
@@ -224,7 +224,7 @@ export function useSaveLayout() {
       const store = useBoardStore.getState();
       if (!store.activeBoardId) return;
       store.updateBrickLayouts(layouts);
-      dashboardsApi.batchLayout(store.activeBoardId, layouts);
+      boardsApi.batchLayout(store.activeBoardId, layouts);
     },
     []
   );
@@ -232,16 +232,16 @@ export function useSaveLayout() {
 
 // ─── SSE streams ───────────────────────────────────────────────────────────
 
-export function useBoardSSE(dashboardId: string | undefined) {
+export function useBoardSSE(boardId: string | undefined) {
   const qc = useQueryClient();
 
   useEffect(() => {
-    if (!dashboardId) return;
+    if (!boardId) return;
 
     let aborted = false;
-    const es = new EventSource(getStreamUrl(`/api/dashboards/${dashboardId}/sse`));
+    const es = new EventSource(getStreamUrl(`/api/boards/${boardId}/sse`));
 
-    es.addEventListener('dashboard', (ev: MessageEvent) => {
+    es.addEventListener('board', (ev: MessageEvent) => {
       if (aborted) return;
 
       let event: { type: string; payload: Record<string, unknown> };
@@ -278,11 +278,11 @@ export function useBoardSSE(dashboardId: string | undefined) {
           store.markDisconnected(instanceIds);
           break;
         }
-        case 'dashboard.brickAdded':
-        case 'dashboard.brickRemoved':
-          qc.invalidateQueries({ queryKey: dashboardKeys.all, exact: true });
+        case 'board.brickAdded':
+        case 'board.brickRemoved':
+          qc.invalidateQueries({ queryKey: boardKeys.all, exact: true });
           break;
-        case 'dashboard.layoutChanged': {
+        case 'board.layoutChanged': {
           const layouts = event.payload.layouts as Array<{
             instanceId: string;
             x: number;
@@ -293,7 +293,7 @@ export function useBoardSSE(dashboardId: string | undefined) {
           store.updateBrickLayouts(layouts);
           break;
         }
-        case 'dashboard.brickLabelChanged': {
+        case 'board.brickLabelChanged': {
           const { instanceId, label } = event.payload as {
             instanceId: string;
             label?: string;
@@ -301,7 +301,7 @@ export function useBoardSSE(dashboardId: string | undefined) {
           store.updateBrickLabel(instanceId, label);
           break;
         }
-        case 'dashboard.brickConfigChanged': {
+        case 'board.brickConfigChanged': {
           const { instanceId, config } = event.payload as {
             instanceId: string;
             config: Record<string, Json>;
@@ -319,5 +319,5 @@ export function useBoardSSE(dashboardId: string | undefined) {
       aborted = true;
       es.close();
     };
-  }, [dashboardId, qc]);
+  }, [boardId, qc]);
 }

@@ -1,5 +1,5 @@
 /**
- * Tests for DashboardService
+ * Tests for BoardService
  */
 
 import 'reflect-metadata';
@@ -9,9 +9,9 @@ import type { Json } from '@brika/shared';
 import { BrickInstanceManager, BrickTypeRegistry } from '@/runtime/bricks';
 import type { BrickInstance } from '@/runtime/bricks/brick-instance-manager';
 import type { RegisteredBrickType } from '@/runtime/bricks/brick-type-registry';
-import { DashboardLoader } from '@/runtime/dashboards/dashboard-loader';
-import { DashboardService } from '@/runtime/dashboards/dashboard-service';
-import type { Dashboard, DashboardBrickPlacement } from '@/runtime/dashboards/types';
+import { BoardLoader } from '@/runtime/boards/board-loader';
+import { BoardService } from '@/runtime/boards/board-service';
+import type { Board, BoardBrickPlacement } from '@/runtime/boards/types';
 import { EventSystem } from '@/runtime/events/event-system';
 import { Logger } from '@/runtime/logs/log-router';
 import { PluginLifecycle } from '@/runtime/plugins/plugin-lifecycle';
@@ -20,9 +20,9 @@ import { PluginLifecycle } from '@/runtime/plugins/plugin-lifecycle';
 // Fixtures
 // ─────────────────────────────────────────────────────────────────────────────
 
-const createDashboard = (id = 'dash-1', bricks: DashboardBrickPlacement[] = []): Dashboard => ({
+const createBoard = (id = 'dash-1', bricks: BoardBrickPlacement[] = []): Board => ({
   id,
-  name: 'Test Dashboard',
+  name: 'Test Board',
   columns: 12,
   bricks,
 });
@@ -30,7 +30,7 @@ const createDashboard = (id = 'dash-1', bricks: DashboardBrickPlacement[] = []):
 const createPlacement = (
   instanceId = 'inst-1',
   brickTypeId = 'plugin:brick'
-): DashboardBrickPlacement => ({
+): BoardBrickPlacement => ({
   instanceId,
   brickTypeId,
   config: {},
@@ -49,9 +49,9 @@ const createBrickType = (fullId = 'plugin:brick', pluginName = 'plugin'): Regist
 // Test setup
 // ─────────────────────────────────────────────────────────────────────────────
 
-describe('DashboardService', () => {
-  let service: DashboardService;
-  let dashboards: Map<string, Dashboard>;
+describe('BoardService', () => {
+  let service: BoardService;
+  let boards: Map<string, Board>;
   let brickTypes: Map<string, RegisteredBrickType>;
   let mountedInstances: Map<string, BrickInstance>;
   let mockProcess: Record<string, ReturnType<typeof mock>>;
@@ -64,7 +64,7 @@ describe('DashboardService', () => {
   useTestBed({ autoStub: false }, () => {
     stub(Logger);
 
-    dashboards = new Map();
+    boards = new Map();
     brickTypes = new Map();
     mountedInstances = new Map();
 
@@ -101,10 +101,10 @@ describe('DashboardService', () => {
     mockUnmount = mock((id: string) => mountedInstances.delete(id));
     mockResize = mock();
 
-    stub(DashboardLoader, {
-      get: (id: string) => dashboards.get(id),
-      list: () => [...dashboards.values()],
-      saveDashboard: mockSave,
+    stub(BoardLoader, {
+      get: (id: string) => boards.get(id),
+      list: () => [...boards.values()],
+      saveBoard: mockSave,
     });
 
     stub(BrickTypeRegistry, {
@@ -127,22 +127,22 @@ describe('DashboardService', () => {
       dispatch: mockDispatch,
     });
 
-    service = get(DashboardService);
+    service = get(BoardService);
   });
 
-  // ─── mountDashboard ──────────────────────────────────────────────────────
+  // ─── mountBoard ──────────────────────────────────────────────────────
 
-  describe('mountDashboard', () => {
+  describe('mountBoard', () => {
     test('mounts all placements', () => {
       const type = createBrickType();
       brickTypes.set(type.fullId, type);
 
-      const dashboard = createDashboard('d1', [
+      const board = createBoard('d1', [
         createPlacement('inst-1', 'plugin:brick'),
         createPlacement('inst-2', 'plugin:brick'),
       ]);
 
-      service.mountDashboard(dashboard);
+      service.mountBoard(board);
 
       expect(mockMount).toHaveBeenCalledTimes(2);
       expect(mockProcess.sendMountBrickInstance).toHaveBeenCalledTimes(2);
@@ -152,8 +152,8 @@ describe('DashboardService', () => {
       const type = createBrickType();
       brickTypes.set(type.fullId, type);
 
-      const dashboard = createDashboard('d1', [createPlacement('inst-1')]);
-      service.mountDashboard(dashboard);
+      const board = createBoard('d1', [createPlacement('inst-1')]);
+      service.mountBoard(board);
 
       expect(mockDispatch).toHaveBeenCalled();
     });
@@ -173,34 +173,34 @@ describe('DashboardService', () => {
         body: [],
       });
 
-      const dashboard = createDashboard('d1', [createPlacement('inst-1')]);
-      service.mountDashboard(dashboard);
+      const board = createBoard('d1', [createPlacement('inst-1')]);
+      service.mountBoard(board);
 
       expect(mockMount).not.toHaveBeenCalled();
     });
 
     test('skips placements with unknown brick type', () => {
       // No brick type registered
-      const dashboard = createDashboard('d1', [createPlacement('inst-1')]);
-      service.mountDashboard(dashboard);
+      const board = createBoard('d1', [createPlacement('inst-1')]);
+      service.mountBoard(board);
 
       expect(mockMount).not.toHaveBeenCalled();
     });
   });
 
-  // ─── unmountDashboard ────────────────────────────────────────────────────
+  // ─── unmountBoard ────────────────────────────────────────────────────
 
-  describe('unmountDashboard', () => {
+  describe('unmountBoard', () => {
     test('unmounts all placements and sends IPC', () => {
       const type = createBrickType();
       brickTypes.set(type.fullId, type);
 
-      const dashboard = createDashboard('d1', [
+      const board = createBoard('d1', [
         createPlacement('inst-1'),
         createPlacement('inst-2'),
       ]);
 
-      service.unmountDashboard(dashboard);
+      service.unmountBoard(board);
 
       expect(mockUnmount).toHaveBeenCalledTimes(2);
       expect(mockProcess.sendUnmountBrickInstance).toHaveBeenCalledTimes(2);
@@ -210,23 +210,23 @@ describe('DashboardService', () => {
       const type = createBrickType();
       brickTypes.set(type.fullId, type);
 
-      const dashboard = createDashboard('d1', [createPlacement('inst-1')]);
-      service.unmountDashboard(dashboard);
+      const board = createBoard('d1', [createPlacement('inst-1')]);
+      service.unmountBoard(board);
 
       expect(mockDispatch).toHaveBeenCalled();
     });
   });
 
-  // ─── addBrick ────────────────────────────────────────────────────────────
+  // ─── addBrick ────────────────────────────────────────────────────────
 
   describe('addBrick', () => {
     test('creates placement, saves, mounts, and returns it', async () => {
       const type = createBrickType();
       brickTypes.set(type.fullId, type);
 
-      const dashboard = createDashboard('d1');
-      dashboards.set('d1', dashboard);
-      service.viewerConnected('d1'); // mark dashboard as actively viewed
+      const board = createBoard('d1');
+      boards.set('d1', board);
+      service.viewerConnected('d1'); // mark board as actively viewed
 
       const result = await service.addBrick('d1', 'plugin:brick', { key: 'val' } as Record<
         string,
@@ -239,26 +239,26 @@ describe('DashboardService', () => {
       expect(result!.instanceId).toMatch(/^inst-/);
       expect(mockSave).toHaveBeenCalledTimes(1);
       expect(mockMount).toHaveBeenCalledTimes(1);
-      expect(dashboard.bricks).toHaveLength(1);
+      expect(board.bricks).toHaveLength(1);
     });
 
     test('dispatches brickAdded event', async () => {
       const type = createBrickType();
       brickTypes.set(type.fullId, type);
-      dashboards.set('d1', createDashboard('d1'));
+      boards.set('d1', createBoard('d1'));
 
       await service.addBrick('d1', 'plugin:brick', {});
 
       expect(mockDispatch).toHaveBeenCalled();
     });
 
-    test('returns null if dashboard not found', async () => {
+    test('returns null if board not found', async () => {
       const result = await service.addBrick('missing', 'plugin:brick', {});
       expect(result).toBeNull();
     });
 
     test('returns null if brick type not found', async () => {
-      dashboards.set('d1', createDashboard('d1'));
+      boards.set('d1', createBoard('d1'));
       const result = await service.addBrick('d1', 'missing:type', {});
       expect(result).toBeNull();
     });
@@ -266,7 +266,7 @@ describe('DashboardService', () => {
     test('uses default size when not provided', async () => {
       const type = createBrickType();
       brickTypes.set(type.fullId, type);
-      dashboards.set('d1', createDashboard('d1'));
+      boards.set('d1', createBoard('d1'));
 
       const result = await service.addBrick('d1', 'plugin:brick', {});
 
@@ -274,20 +274,20 @@ describe('DashboardService', () => {
     });
   });
 
-  // ─── removeBrick ─────────────────────────────────────────────────────────
+  // ─── removeBrick ─────────────────────────────────────────────────────
 
   describe('removeBrick', () => {
     test('removes placement, saves, unmounts, returns true', async () => {
       const type = createBrickType();
       brickTypes.set(type.fullId, type);
 
-      const dashboard = createDashboard('d1', [createPlacement('inst-1')]);
-      dashboards.set('d1', dashboard);
+      const board = createBoard('d1', [createPlacement('inst-1')]);
+      boards.set('d1', board);
 
       const result = await service.removeBrick('d1', 'inst-1');
 
       expect(result).toBe(true);
-      expect(dashboard.bricks).toHaveLength(0);
+      expect(board.bricks).toHaveLength(0);
       expect(mockSave).toHaveBeenCalledTimes(1);
       expect(mockUnmount).toHaveBeenCalledTimes(1);
     });
@@ -295,24 +295,24 @@ describe('DashboardService', () => {
     test('dispatches brickRemoved event', async () => {
       const type = createBrickType();
       brickTypes.set(type.fullId, type);
-      dashboards.set('d1', createDashboard('d1', [createPlacement('inst-1')]));
+      boards.set('d1', createBoard('d1', [createPlacement('inst-1')]));
 
       await service.removeBrick('d1', 'inst-1');
 
       expect(mockDispatch).toHaveBeenCalled();
     });
 
-    test('returns false if dashboard not found', async () => {
+    test('returns false if board not found', async () => {
       expect(await service.removeBrick('missing', 'inst-1')).toBe(false);
     });
 
-    test('returns false if instance not on dashboard', async () => {
-      dashboards.set('d1', createDashboard('d1'));
+    test('returns false if instance not on board', async () => {
+      boards.set('d1', createBoard('d1'));
       expect(await service.removeBrick('d1', 'missing')).toBe(false);
     });
   });
 
-  // ─── updateBrickConfig ───────────────────────────────────────────────────
+  // ─── updateBrickConfig ───────────────────────────────────────────────
 
   describe('updateBrickConfig', () => {
     test('updates config on placement, instance, and IPC', async () => {
@@ -320,8 +320,8 @@ describe('DashboardService', () => {
       brickTypes.set(type.fullId, type);
 
       const placement = createPlacement('inst-1');
-      const dashboard = createDashboard('d1', [placement]);
-      dashboards.set('d1', dashboard);
+      const board = createBoard('d1', [placement]);
+      boards.set('d1', board);
 
       // Pre-mount instance
       mountedInstances.set('inst-1', {
@@ -346,24 +346,24 @@ describe('DashboardService', () => {
     test('dispatches brickConfigChanged event', async () => {
       const type = createBrickType();
       brickTypes.set(type.fullId, type);
-      dashboards.set('d1', createDashboard('d1', [createPlacement('inst-1')]));
+      boards.set('d1', createBoard('d1', [createPlacement('inst-1')]));
 
       await service.updateBrickConfig('d1', 'inst-1', {});
 
       expect(mockDispatch).toHaveBeenCalled();
     });
 
-    test('returns false if dashboard not found', async () => {
+    test('returns false if board not found', async () => {
       expect(await service.updateBrickConfig('missing', 'inst-1', {})).toBe(false);
     });
 
-    test('returns false if instance not on dashboard', async () => {
-      dashboards.set('d1', createDashboard('d1'));
+    test('returns false if instance not on board', async () => {
+      boards.set('d1', createBoard('d1'));
       expect(await service.updateBrickConfig('d1', 'missing', {})).toBe(false);
     });
   });
 
-  // ─── moveBrick ───────────────────────────────────────────────────────────
+  // ─── moveBrick ───────────────────────────────────────────────────────
 
   describe('moveBrick', () => {
     test('updates position and size', async () => {
@@ -371,7 +371,7 @@ describe('DashboardService', () => {
       brickTypes.set(type.fullId, type);
 
       const placement = createPlacement('inst-1');
-      dashboards.set('d1', createDashboard('d1', [placement]));
+      boards.set('d1', createBoard('d1', [placement]));
       mountedInstances.set('inst-1', {
         instanceId: 'inst-1',
         brickTypeId: 'plugin:brick',
@@ -395,7 +395,7 @@ describe('DashboardService', () => {
       brickTypes.set(type.fullId, type);
 
       const placement = createPlacement('inst-1');
-      dashboards.set('d1', createDashboard('d1', [placement]));
+      boards.set('d1', createBoard('d1', [placement]));
       mountedInstances.set('inst-1', {
         instanceId: 'inst-1',
         brickTypeId: 'plugin:brick',
@@ -417,19 +417,19 @@ describe('DashboardService', () => {
       expect(mockProcess.sendResizeBrickInstance).toHaveBeenCalled();
     });
 
-    test('returns false if dashboard not found', async () => {
+    test('returns false if board not found', async () => {
       expect(await service.moveBrick('missing', 'inst-1', { x: 0, y: 0 }, { w: 2, h: 2 })).toBe(
         false
       );
     });
 
-    test('returns false if instance not on dashboard', async () => {
-      dashboards.set('d1', createDashboard('d1'));
+    test('returns false if instance not on board', async () => {
+      boards.set('d1', createBoard('d1'));
       expect(await service.moveBrick('d1', 'missing', { x: 0, y: 0 }, { w: 2, h: 2 })).toBe(false);
     });
   });
 
-  // ─── batchUpdateLayout ───────────────────────────────────────────────────
+  // ─── batchUpdateLayout ───────────────────────────────────────────────
 
   describe('batchUpdateLayout', () => {
     test('updates multiple placements', async () => {
@@ -438,7 +438,7 @@ describe('DashboardService', () => {
 
       const p1 = createPlacement('inst-1');
       const p2 = createPlacement('inst-2');
-      dashboards.set('d1', createDashboard('d1', [p1, p2]));
+      boards.set('d1', createBoard('d1', [p1, p2]));
 
       const result = await service.batchUpdateLayout('d1', [
         { instanceId: 'inst-1', x: 0, y: 0, w: 3, h: 3 },
@@ -458,7 +458,7 @@ describe('DashboardService', () => {
 
       const p1 = createPlacement('inst-1'); // size 2x2
       const p2 = createPlacement('inst-2'); // size 2x2
-      dashboards.set('d1', createDashboard('d1', [p1, p2]));
+      boards.set('d1', createBoard('d1', [p1, p2]));
       mountedInstances.set('inst-1', {
         instanceId: 'inst-1',
         brickTypeId: 'plugin:brick',
@@ -489,34 +489,34 @@ describe('DashboardService', () => {
     });
 
     test('dispatches layoutChanged event', async () => {
-      dashboards.set('d1', createDashboard('d1'));
+      boards.set('d1', createBoard('d1'));
 
       await service.batchUpdateLayout('d1', []);
 
       expect(mockDispatch).toHaveBeenCalled();
     });
 
-    test('returns false if dashboard not found', async () => {
+    test('returns false if board not found', async () => {
       expect(await service.batchUpdateLayout('missing', [])).toBe(false);
     });
   });
 
-  // ─── mountPendingForType ─────────────────────────────────────────────────
+  // ─── mountPendingForType ─────────────────────────────────────────────
 
   describe('mountPendingForType', () => {
     test('mounts unmounted placements matching the type', () => {
       const type = createBrickType('plugin:brick', 'plugin');
       brickTypes.set(type.fullId, type);
 
-      dashboards.set(
+      boards.set(
         'd1',
-        createDashboard('d1', [
+        createBoard('d1', [
           createPlacement('inst-1', 'plugin:brick'),
           createPlacement('inst-2', 'plugin:other'), // different type
         ])
       );
 
-      // Register active viewer — mountDashboard will mount inst-1 (plugin:other not registered so inst-2 skips)
+      // Register active viewer — mountBoard will mount inst-1 (plugin:other not registered so inst-2 skips)
       service.viewerConnected('d1');
       // Clear the mount from viewerConnected so we can test mountPendingForType in isolation
       mountedInstances.clear();
@@ -542,7 +542,7 @@ describe('DashboardService', () => {
         body: [],
       });
 
-      dashboards.set('d1', createDashboard('d1', [createPlacement('inst-1')]));
+      boards.set('d1', createBoard('d1', [createPlacement('inst-1')]));
 
       service.mountPendingForType('plugin:brick');
 

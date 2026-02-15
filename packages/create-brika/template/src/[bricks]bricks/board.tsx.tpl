@@ -1,5 +1,5 @@
 /**
- * {{pascal}} Dashboard Brick
+ * {{pascal}} Board Brick
  */
 
 import { defineBrick, useBrickSize, useState, useEffect } from '@brika/sdk/bricks/core';

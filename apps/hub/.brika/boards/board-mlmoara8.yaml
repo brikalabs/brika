@@ -1,0 +1,7 @@
+version: "1"
+board:
+  id: board-mlmoara8
+  name: rgrgrgr
+  icon: ""
+  columns: 12
+bricks: []

@@ -10,7 +10,7 @@ import { log, onStop } from '@brika/sdk';
 export { {{camel}} } from './blocks/{{id}}';
 {{/blocks}}
 {{#bricks}}
-export { {{camel}}Brick } from './bricks/dashboard';
+export { {{camel}}Brick } from './bricks/board';
 {{/bricks}}
 {{#sparks}}
 export { {{camel}}Spark } from './sparks/{{id}}';

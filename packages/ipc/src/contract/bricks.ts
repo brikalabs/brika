@@ -4,7 +4,7 @@
  * Brick type registration, instance lifecycle, and action dispatch.
  *
  * Plugins register brick **types**. The hub manages brick **instances** —
- * mounting/unmounting them as dashboards are loaded.
+ * mounting/unmounting them as boards are loaded.
  */
 
 import { z } from 'zod';
