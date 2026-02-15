@@ -1,5 +1,5 @@
 import type { ComponentNode } from '@brika/ui-kit';
-import { Bug, Ellipsis, Loader2, WifiOff } from 'lucide-react';
+import { Bug, Ellipsis, Loader2, PackageX, WifiOff } from 'lucide-react';
 import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
 import { Component, type ErrorInfo, memo, type ReactNode, useCallback } from 'react';
 import { Button } from '@/components/ui';
@@ -132,7 +132,15 @@ export const BoardBrick = memo(function BoardBrick({
               </span>
             </div>
           )}
-          {(!body || body.length === 0) && !disconnected && (
+          {(!body || body.length === 0) && !disconnected && !brickType && (
+            <div className="flex flex-1 flex-col items-center justify-center gap-1.5">
+              <PackageX className="size-4 text-muted-foreground/50" />
+              <span className="text-muted-foreground/70 text-xs">
+                {t('boards:brickUnavailable')}
+              </span>
+            </div>
+          )}
+          {(!body || body.length === 0) && !disconnected && brickType && (
             <div className="flex flex-1 items-center justify-center">
               <Loader2 className="size-4 animate-spin text-muted-foreground/50" />
             </div>

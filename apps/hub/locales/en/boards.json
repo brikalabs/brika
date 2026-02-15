@@ -19,6 +19,7 @@
     "configuration": "Configuration"
   },
   "pluginDisconnected": "Plugin disconnected",
+  "brickUnavailable": "Brick unavailable",
   "board": {
     "new": "New Board",
     "newDescription": "Create a new board to organize your bricks.",

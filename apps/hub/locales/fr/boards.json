@@ -19,6 +19,7 @@
     "configuration": "Configuration"
   },
   "pluginDisconnected": "Plugin déconnecté",
+  "brickUnavailable": "Brique indisponible",
   "board": {
     "new": "Nouveau tableau",
     "newDescription": "Créez un nouveau tableau pour organiser vos briques.",
