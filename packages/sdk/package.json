@@ -22,6 +22,7 @@
     "./bricks/components": "./src/bricks/components.ts",
     "./sparks": "./src/sparks/index.ts",
     "./lifecycle": "./src/lifecycle/index.ts",
+    "./testing": "./src/testing/index.ts",
     "./jsx-runtime": "./src/jsx-runtime.ts",
     "./jsx-dev-runtime": "./src/jsx-dev-runtime.ts"
   },

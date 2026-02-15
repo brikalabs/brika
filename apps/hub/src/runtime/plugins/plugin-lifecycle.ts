@@ -147,6 +147,7 @@ export class PluginLifecycle {
     const channel = spawnPlugin('bun', [entryPoint], {
       cwd: rootDirectory,
       env: { ...globalThis.process.env, BRIKA_PLUGIN_NAME: metadata.name, BRIKA_PLUGIN_UID: uid },
+      processName: `brika:${metadata.name}`,
       defaultTimeoutMs: this.#config.callTimeoutMs,
       onDisconnect: (error) => this.#handleDisconnect(pluginName, error),
       onStderr: (line) =>

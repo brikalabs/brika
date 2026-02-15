@@ -24,3 +24,6 @@ export { usePluginPreference } from './use-plugin-preference';
 export { usePreference } from './use-preference';
 export { useRef } from './use-ref';
 export { useState } from './use-state';
+export { useIntl } from './use-intl';
+export { useLocale } from './use-locale';
+export { useTranslation } from './use-translation';

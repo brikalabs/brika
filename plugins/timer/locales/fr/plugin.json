@@ -44,23 +44,6 @@
         }
       }
     },
-    "weather": {
-      "name": "Météo",
-      "description": "Affichage météo simulé",
-      "config": {
-        "unit": {
-          "label": "Unité de température",
-          "options": {
-            "celsius": "Celsius",
-            "fahrenheit": "Fahrenheit"
-          }
-        },
-        "refreshInterval": {
-          "label": "Intervalle de rafraîchissement (ms)",
-          "description": "Fréquence de mise à jour des données météo"
-        }
-      }
-    },
     "camera": {
       "name": "Vidéo en direct",
       "description": "Flux vidéo HLS avec contrôles",

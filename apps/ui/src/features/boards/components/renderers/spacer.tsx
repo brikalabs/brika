@@ -4,9 +4,9 @@ import { defineRenderer } from './registry';
 const spacerVariants = cva('', {
   variants: {
     size: {
-      sm: 'h-1 w-1 shrink-0',
-      md: 'h-2 w-2 shrink-0',
-      lg: 'h-4 w-4 shrink-0',
+      sm: 'h-0.5 w-0.5 @xs:h-1 @xs:w-1 shrink-0',
+      md: 'h-1 w-1 @xs:h-2 @xs:w-2 shrink-0',
+      lg: 'h-2 w-2 @xs:h-4 @xs:w-4 shrink-0',
     },
   },
 });

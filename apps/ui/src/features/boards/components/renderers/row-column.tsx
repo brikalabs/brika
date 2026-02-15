@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 import { type ActionHandler, ComponentNodeRenderer, defineRenderer } from './registry';
 import { clickableProps, gapVariant } from './shared';
 
-const flexVariants = cva('flex min-h-0', {
+const flexVariants = cva('flex min-h-0 min-w-0', {
   variants: {
     direction: {
       row: 'flex-row',
@@ -45,6 +45,14 @@ function FlexRenderer({
 }>) {
   const direction = node.type === 'row' ? 'row' : 'column';
 
+  const dimStyle: React.CSSProperties | undefined =
+    node.width || node.height
+      ? {
+          ...(node.width ? { width: node.width, flexShrink: 0 } : undefined),
+          ...(node.height ? { height: node.height } : undefined),
+        }
+      : undefined;
+
   return (
     <div
       className={cn(
@@ -58,6 +66,7 @@ function FlexRenderer({
         }),
         node.onPress && 'cursor-pointer'
       )}
+      style={dimStyle}
       {...clickableProps(node.onPress, onAction)}
     >
       {node.children.map((child, i) => (

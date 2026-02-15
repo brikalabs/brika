@@ -2,9 +2,9 @@ import type { ActionHandler } from './registry';
 
 /** Shared gap variant config for container cva definitions */
 export const gapVariant = {
-  sm: 'gap-1.5',
-  md: 'gap-2.5',
-  lg: 'gap-4',
+  sm: 'gap-1 @xs:gap-1.5',
+  md: 'gap-1.5 @xs:gap-2.5',
+  lg: 'gap-2.5 @xs:gap-4',
 } as const;
 
 /** Shared interactive props for clickable brick elements (onClick, onKeyDown, role, tabIndex) */

@@ -19,6 +19,9 @@ export type {
   BrickTypeSpec,
   CompiledBrickType,
   ComponentNode,
+  I18nRef,
+  IntlRef,
+  TextContent,
 } from '@brika/ui-kit';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -35,11 +38,14 @@ export {
   useBrickSize,
   useCallback,
   useEffect,
+  useIntl,
+  useLocale,
   useMemo,
   usePluginPreference,
   usePreference,
   useRef,
   useState,
+  useTranslation,
 } from '../brick-hooks';
 
 // ─────────────────────────────────────────────────────────────────────────────

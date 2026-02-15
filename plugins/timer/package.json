@@ -70,18 +70,6 @@
       ]
     },
     {
-      "id": "weather",
-      "name": "Weather",
-      "description": "Simulated weather display",
-      "category": "info",
-      "icon": "cloud-sun",
-      "color": "#f59e0b",
-      "config": [
-        { "type": "dropdown", "name": "unit", "label": "Temperature Unit", "options": [{ "value": "celsius" }, { "value": "fahrenheit" }], "default": "celsius" },
-        { "type": "number", "name": "refreshInterval", "label": "Refresh Interval (ms)", "description": "How often to update weather data", "default": 5000, "min": 1000, "max": 60000, "step": 1000 }
-      ]
-    },
-    {
       "id": "camera",
       "name": "Live Video",
       "description": "HLS video stream with controls",

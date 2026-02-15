@@ -20,8 +20,6 @@ plugins:
     version: workspace:*
   "@brika/plugin-example-echo":
     version: workspace:*
-  "@brika/plugin-time":
-    version: workspace:*
   "@brika/plugin-timer":
     version: workspace:*
   "@brika/plugin-spotify":
@@ -30,10 +28,15 @@ plugins:
       clientId: 03c6f60116984bc3a71e045402c71ab0
       defaultDevice: 22482c70ee260835a6275373853f8ec57a01d3ec
       __oauth_spotify_token:
-        access_token: BQBCRevW12wxznBv9yfvAwX2mFqiyZ1FVwATgTjOgYSQCWzh_qOYmFuxenw_2-2huQW7EjhnCvreL7zAWZzvLT7QxISbI2GY3eXmqRVWt68uD4ketSE6GluNT3lSbm54pqxMa3tKcwvvLv0hX5-t-TDT4BPQr_lZkPWtidheQUh90RHrUKvC-geOMEf2WTo--KvewXKgY-mF7N5Qwb4-dGCKKDAvKtBxXwegmrtYxg
-        refresh_token: AQCj3bLcAdHfZOVHiQEXBCOHx3wqUj63Ygauem-9vgMXRaDxtVLoF4tJbxZF5eNbJaMtBh8Eht6SI2Mo1SWpV0O3JeZuu_6jV0ZU91Bb-cR8o_olcgg5yPxcggdx4o5EDG8
-        expires_at: 1771081169695
+        access_token: BQAbm9-pirVCA_FUWBBEI_wvtI0M_BkRqLTv6jkPieCv3NSXuHqSMCRJBBFoVru6U1lyOJCqTSQyjGxWblEq-4uAXFasqSJoVUVZrLm4nfLTy1o2W9G_ouQPpR5YdK6kLdJjwvpzEhve4_EMJSp7QmNUB_6oWDow72zKhsKYH43SmX092Ksyi4GQmlertG6X0CH3UowpNgiX-UBetDILOza0Wt9HdWAKoLqoYBHbIg
+        refresh_token: AQB69rxO7ZqmpbZT8ro8YqM00gRS3oD6FIfOj2b74lAS5KkPSqhS87xYKK40OQJPFPmh9u6EgE5_4oLn6Z4p7VHP9qHLCWUHzFRKvPrf0Hxgx8tOYfhBTW08lzfhapxrcBZLzg
+        expires_at: 1771174281380
         token_type: Bearer
+  "@brika/plugin-weather":
+    version: workspace:*
+    config:
+      city: ""
+      unit: celsius
 
 # Event-based rules
 rules: []

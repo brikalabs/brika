@@ -1,31 +1,54 @@
 import type { ColorValue } from '../colors';
-import type { ActionHandler, BaseNode } from './_shared';
-import { resolveAction } from './_shared';
+import type { ActionHandler, BaseNode, IntlRef, TextContent } from './_shared';
+import { isI18nRef, isIntlRef, resolveAction, resolveIntlRef } from './_shared';
 
+/** Wire-format node — sent over IPC to the UI renderer. */
 export interface TextNode extends BaseNode {
   type: 'text';
   content: string;
+  /** When set, the UI renderer resolves this via i18next instead of using content. */
+  i18n?: { ns: string; key: string; params?: Record<string, string | number> };
+  /** When set, the UI renderer formats this value via Intl APIs with the user's locale. */
+  intl?: IntlRef;
   variant?: 'body' | 'caption' | 'heading';
   color?: ColorValue;
-  /** Text alignment */
   align?: 'left' | 'center' | 'right';
-  /** Font weight override */
   weight?: 'normal' | 'medium' | 'semibold' | 'bold';
-  /** Truncate with ellipsis (single line) */
-  truncate?: boolean;
-  /** Max visible lines before clamping */
   maxLines?: number;
-  /** Font size override */
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
-  /** Action dispatched when clicked */
   onPress?: string;
 }
 
-export function Text(
-  props: Omit<TextNode, 'type' | 'onPress'> & { onPress?: ActionHandler }
-): TextNode {
-  const { onPress, ...rest } = props;
-  return { type: 'text', ...rest, onPress: onPress ? resolveAction(onPress) : undefined };
+/** Props accepted by the Text() builder. */
+export interface TextProps {
+  /** Text content — string, I18nRef from t(), or IntlRef from formatters. */
+  content?: TextContent;
+  /** Alias for content — allows `<Text>hello</Text>` JSX syntax. */
+  children?: TextContent;
+  variant?: 'body' | 'caption' | 'heading';
+  color?: ColorValue;
+  align?: 'left' | 'center' | 'right';
+  weight?: 'normal' | 'medium' | 'semibold' | 'bold';
+  maxLines?: number;
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+  onPress?: ActionHandler;
+}
+
+export function Text(props: TextProps): TextNode {
+  const { onPress, children, content: contentProp, ...rest } = props;
+  const content = contentProp ?? children ?? '';
+  const press = onPress ? resolveAction(onPress) : undefined;
+  if (isI18nRef(content)) {
+    return {
+      type: 'text', ...rest, content: content.key,
+      i18n: { ns: content.ns, key: content.key, params: content.params },
+      onPress: press,
+    };
+  }
+  if (isIntlRef(content)) {
+    return { type: 'text', ...rest, content: resolveIntlRef(content), intl: content, onPress: press };
+  }
+  return { type: 'text', ...rest, content, onPress: press };
 }
 
 declare module './_shared' {

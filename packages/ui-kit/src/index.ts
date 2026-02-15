@@ -30,6 +30,9 @@ export type {
   DividerNode,
   FlexLayoutProps,
   GridNode,
+  // I18n + Intl
+  I18nRef,
+  IntlRef,
   IconNode,
   ImageNode,
   KeyValueItem,
@@ -53,6 +56,7 @@ export type {
   TableNode,
   TabsNode,
   TextInputNode,
+  TextContent,
   // Data display
   TextNode,
   ToggleNode,
@@ -140,4 +144,4 @@ export { colors } from './colors';
 // Auto-action registration (internal — used by SDK render pipeline)
 // ─────────────────────────────────────────────────────────────────────────────
 
-export { _setActionRegistrar } from './nodes';
+export { _setActionRegistrar, i18nRef, intlRef, isI18nRef, isIntlRef, resolveIntlRef } from './nodes';

@@ -1,0 +1,137 @@
+{
+  "name": "Météo",
+  "description": "Affichage météo avec conditions actuelles, prévisions et widget compact",
+  "preferences": {
+    "city": {
+      "title": "Ville",
+      "description": "Nom de la ville pour les données météo (laisser vide pour détection automatique)"
+    },
+    "unit": {
+      "title": "Unité de température",
+      "options": {
+        "celsius": "Celsius",
+        "fahrenheit": "Fahrenheit"
+      }
+    }
+  },
+  "bricks": {
+    "current": {
+      "name": "Météo actuelle",
+      "description": "Conditions météo en direct avec de belles images de fond",
+      "config": {
+        "city": {
+          "label": "Ville (remplacement)",
+          "description": "Remplacer la ville du plugin pour cette brique"
+        },
+        "unit": {
+          "label": "Unité de température",
+          "description": "Remplacer l'unité du plugin pour cette brique",
+          "options": {
+            "default": "Utiliser la valeur du plugin",
+            "celsius": "Celsius",
+            "fahrenheit": "Fahrenheit"
+          }
+        }
+      }
+    },
+    "forecast": {
+      "name": "Prévisions météo",
+      "description": "Prévisions météo sur plusieurs jours avec max, min et conditions",
+      "config": {
+        "city": {
+          "label": "Ville (remplacement)",
+          "description": "Remplacer la ville du plugin pour cette brique"
+        },
+        "unit": {
+          "label": "Unité de température",
+          "description": "Remplacer l'unité du plugin pour cette brique",
+          "options": {
+            "default": "Utiliser la valeur du plugin",
+            "celsius": "Celsius",
+            "fahrenheit": "Fahrenheit"
+          }
+        },
+        "days": {
+          "label": "Jours de prévisions",
+          "description": "Nombre de jours à afficher (1-7)"
+        }
+      }
+    },
+    "compact": {
+      "name": "Température",
+      "description": "Affichage compact de la température et des conditions",
+      "config": {
+        "city": {
+          "label": "Ville (remplacement)",
+          "description": "Remplacer la ville du plugin pour cette brique"
+        },
+        "unit": {
+          "label": "Unité de température",
+          "description": "Remplacer l'unité du plugin pour cette brique",
+          "options": {
+            "default": "Utiliser la valeur du plugin",
+            "celsius": "Celsius",
+            "fahrenheit": "Fahrenheit"
+          }
+        }
+      }
+    }
+  },
+  "conditions": {
+    "clearSky": "Ciel dégagé",
+    "mainlyClear": "Principalement dégagé",
+    "partlyCloudy": "Partiellement nuageux",
+    "overcast": "Couvert",
+    "fog": "Brouillard",
+    "rimeFog": "Brouillard givrant",
+    "lightDrizzle": "Bruine légère",
+    "drizzle": "Bruine",
+    "denseDrizzle": "Bruine dense",
+    "freezingDrizzle": "Bruine verglaçante",
+    "heavyFreezingDrizzle": "Forte bruine verglaçante",
+    "lightRain": "Pluie légère",
+    "rain": "Pluie",
+    "heavyRain": "Forte pluie",
+    "freezingRain": "Pluie verglaçante",
+    "heavyFreezingRain": "Forte pluie verglaçante",
+    "lightSnow": "Neige légère",
+    "snow": "Neige",
+    "heavySnow": "Forte neige",
+    "snowGrains": "Grésil",
+    "lightShowers": "Averses légères",
+    "showers": "Averses",
+    "heavyShowers": "Fortes averses",
+    "snowShowers": "Averses de neige",
+    "heavySnowShowers": "Fortes averses de neige",
+    "thunderstorm": "Orage",
+    "thunderstormHail": "Orage avec grêle",
+    "severeThunderstorm": "Orage violent",
+    "unknown": "Inconnu"
+  },
+  "stats": {
+    "feelsLike": "Ressenti",
+    "feelsLikeTemp": "Ressenti {{temp}}",
+    "humidity": "Humidité",
+    "wind": "Vent",
+    "pressure": "Pression"
+  },
+  "days": {
+    "today": "Aujourd'hui",
+    "tomorrow": "Demain",
+    "mon": "Lun",
+    "tue": "Mar",
+    "wed": "Mer",
+    "thu": "Jeu",
+    "fri": "Ven",
+    "sat": "Sam",
+    "sun": "Dim"
+  },
+  "ui": {
+    "forecast": "Prévisions",
+    "dayForecast": "Prévisions {{count}} jours",
+    "locationForecast": "Prévisions {{name}}",
+    "locationDayForecast": "{{name}} — Prévisions {{count}} jours",
+    "noData": "Aucune donnée",
+    "updated": "Mis à jour {{time}}"
+  }
+}

@@ -30,6 +30,10 @@ export interface BoxNode extends BaseNode {
   rounded?: 'none' | 'sm' | 'md' | 'lg' | 'full';
   /** Fill available space (flex-1) */
   grow?: boolean;
+  /** Explicit width — CSS value like "50%", "200px" */
+  width?: string;
+  /** Explicit height — CSS value like "50%", "100px" */
+  height?: string;
   /** Action dispatched when clicked */
   onPress?: string;
 }
@@ -44,6 +48,8 @@ export function Box(props: {
   padding?: 'none' | 'sm' | 'md' | 'lg';
   rounded?: 'none' | 'sm' | 'md' | 'lg' | 'full';
   grow?: boolean;
+  width?: string;
+  height?: string;
   onPress?: ActionHandler;
   children?: Child | Child[];
 }): BoxNode {

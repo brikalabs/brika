@@ -9,5 +9,6 @@
 import './sparks';
 import './routes';
 import './blocks';
+import './i18n';
 import './bricks';
 import './lifecycle';

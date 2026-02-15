@@ -15,7 +15,6 @@ export { timer } from './blocks/timer';
 export { cameraBrick } from './bricks/camera';
 export { photoBrick } from './bricks/photo';
 export { timersDashboard } from './bricks/timers-dashboard';
-export { weatherBrick } from './bricks/weather';
 // Sparks (typed events)
 export { countdownCompleted, countdownTick, timerCompleted, timerStarted } from './sparks';
 

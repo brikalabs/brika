@@ -35,8 +35,8 @@ bricks:
       x: 0
       y: 3
     size:
-      w: 7
-      h: 1
+      w: 5
+      h: 2
   - instanceId: inst-mlcfrplo-1
     type: "@brika/plugin-timer:camera"
     config:

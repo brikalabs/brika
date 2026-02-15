@@ -1,0 +1,137 @@
+{
+  "name": "Weather",
+  "description": "Beautiful weather display with current conditions, forecast, and compact widget",
+  "preferences": {
+    "city": {
+      "title": "City",
+      "description": "City name for weather data (leave empty for auto-detect)"
+    },
+    "unit": {
+      "title": "Temperature Unit",
+      "options": {
+        "celsius": "Celsius",
+        "fahrenheit": "Fahrenheit"
+      }
+    }
+  },
+  "bricks": {
+    "current": {
+      "name": "Current Weather",
+      "description": "Live weather conditions with beautiful background imagery",
+      "config": {
+        "city": {
+          "label": "City Override",
+          "description": "Override the plugin-level city for this brick"
+        },
+        "unit": {
+          "label": "Temperature Unit",
+          "description": "Override the plugin-level unit for this brick",
+          "options": {
+            "default": "Use plugin default",
+            "celsius": "Celsius",
+            "fahrenheit": "Fahrenheit"
+          }
+        }
+      }
+    },
+    "forecast": {
+      "name": "Weather Forecast",
+      "description": "Multi-day weather forecast with highs, lows, and conditions",
+      "config": {
+        "city": {
+          "label": "City Override",
+          "description": "Override the plugin-level city for this brick"
+        },
+        "unit": {
+          "label": "Temperature Unit",
+          "description": "Override the plugin-level unit for this brick",
+          "options": {
+            "default": "Use plugin default",
+            "celsius": "Celsius",
+            "fahrenheit": "Fahrenheit"
+          }
+        },
+        "days": {
+          "label": "Forecast Days",
+          "description": "Number of days to show (1-7)"
+        }
+      }
+    },
+    "compact": {
+      "name": "Temperature",
+      "description": "Compact temperature and condition display",
+      "config": {
+        "city": {
+          "label": "City Override",
+          "description": "Override the plugin-level city for this brick"
+        },
+        "unit": {
+          "label": "Temperature Unit",
+          "description": "Override the plugin-level unit for this brick",
+          "options": {
+            "default": "Use plugin default",
+            "celsius": "Celsius",
+            "fahrenheit": "Fahrenheit"
+          }
+        }
+      }
+    }
+  },
+  "conditions": {
+    "clearSky": "Clear Sky",
+    "mainlyClear": "Mainly Clear",
+    "partlyCloudy": "Partly Cloudy",
+    "overcast": "Overcast",
+    "fog": "Fog",
+    "rimeFog": "Rime Fog",
+    "lightDrizzle": "Light Drizzle",
+    "drizzle": "Drizzle",
+    "denseDrizzle": "Dense Drizzle",
+    "freezingDrizzle": "Freezing Drizzle",
+    "heavyFreezingDrizzle": "Heavy Freezing Drizzle",
+    "lightRain": "Light Rain",
+    "rain": "Rain",
+    "heavyRain": "Heavy Rain",
+    "freezingRain": "Freezing Rain",
+    "heavyFreezingRain": "Heavy Freezing Rain",
+    "lightSnow": "Light Snow",
+    "snow": "Snow",
+    "heavySnow": "Heavy Snow",
+    "snowGrains": "Snow Grains",
+    "lightShowers": "Light Showers",
+    "showers": "Showers",
+    "heavyShowers": "Heavy Showers",
+    "snowShowers": "Snow Showers",
+    "heavySnowShowers": "Heavy Snow Showers",
+    "thunderstorm": "Thunderstorm",
+    "thunderstormHail": "Thunderstorm + Hail",
+    "severeThunderstorm": "Severe Thunderstorm",
+    "unknown": "Unknown"
+  },
+  "stats": {
+    "feelsLike": "Feels like",
+    "feelsLikeTemp": "Feels like {{temp}}",
+    "humidity": "Humidity",
+    "wind": "Wind",
+    "pressure": "Pressure"
+  },
+  "days": {
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "mon": "Mon",
+    "tue": "Tue",
+    "wed": "Wed",
+    "thu": "Thu",
+    "fri": "Fri",
+    "sat": "Sat",
+    "sun": "Sun"
+  },
+  "ui": {
+    "forecast": "Forecast",
+    "dayForecast": "{{count}}-Day Forecast",
+    "locationForecast": "{{name}} Forecast",
+    "locationDayForecast": "{{name}} — {{count}}-Day Forecast",
+    "noData": "No data",
+    "updated": "Updated {{time}}"
+  }
+}

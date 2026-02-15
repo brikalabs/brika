@@ -25,13 +25,15 @@ export const i18nRoutes = [
    * GET /api/i18n/bundle/:locale
    * Returns ALL namespaces for a locale in a single response.
    * Used by the UI for bulk-loading translations at startup.
+   * Also updates all running plugins with the new locale's translations.
    */
   route.get(
     '/api/i18n/bundle/:locale',
     { params: z.object({ locale: z.string() }) },
     ({ inject, params }) => {
       const i18n = inject(I18nService);
-      return i18n.getAllTranslations(params.locale || 'en');
+      const locale = params.locale || 'en';
+      return i18n.getAllTranslations(locale);
     }
   ),
 

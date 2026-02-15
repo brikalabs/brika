@@ -4,9 +4,12 @@ export type {
   BaseNode,
   ComponentNode,
   FlexLayoutProps,
+  I18nRef,
+  IntlRef,
   NodeTypeMap,
+  TextContent,
 } from './_shared';
-export { _setActionRegistrar, type Child, normalizeChildren, resolveAction } from './_shared';
+export { _setActionRegistrar, type Child, i18nRef, intlRef, isI18nRef, isIntlRef, normalizeChildren, resolveAction, resolveIntlRef } from './_shared';
 export { Avatar, type AvatarNode } from './avatar';
 export { Badge, type BadgeNode } from './badge';
 export { Box, type BoxNode } from './box';
@@ -35,7 +38,7 @@ export { Stat, type StatValueNode } from './stat-value';
 export { Status, type StatusNode } from './status';
 export { Table, type TableColumn, type TableNode } from './table';
 export { type TabItem, Tabs, type TabsNode } from './tabs';
-export { Text, type TextNode } from './text';
+export { Text, type TextNode, type TextProps } from './text';
 export { TextInput, type TextInputNode } from './text-input';
 export { Toggle, type ToggleNode } from './toggle';
 export { Video, type VideoNode } from './video';

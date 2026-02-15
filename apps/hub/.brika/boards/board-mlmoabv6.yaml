@@ -1,7 +1,40 @@
 version: "1"
 board:
   id: board-mlmoabv6
-  name: rhrhrh
-  icon: ""
+  name: Météo
+  icon: cloud-sun
   columns: 12
-bricks: []
+bricks:
+  - instanceId: inst-mlnksns9-1
+    type: "@brika/plugin-weather:compact"
+    config:
+      city: Ropraz
+    position:
+      x: 0
+      y: 0
+    size:
+      w: 2
+      h: 2
+  - instanceId: inst-mlnkwqea-1
+    type: "@brika/plugin-weather:current"
+    config:
+      city: Dubai
+      unit: default
+    position:
+      x: 0
+      y: 2
+    size:
+      w: 4
+      h: 3
+  - instanceId: inst-mlnn5ykt-1
+    type: "@brika/plugin-weather:forecast"
+    config:
+      city: ""
+      days: 7
+      unit: default
+    position:
+      x: 2
+      y: 0
+    size:
+      w: 5
+      h: 2

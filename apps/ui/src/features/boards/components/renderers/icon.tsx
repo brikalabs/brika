@@ -6,9 +6,9 @@ import { resolveColor } from './resolve-color';
 const iconVariants = cva('shrink-0', {
   variants: {
     size: {
-      sm: 'size-3.5',
-      md: 'size-5',
-      lg: 'size-7',
+      sm: 'size-3 @xs:size-3.5',
+      md: 'size-4 @xs:size-5',
+      lg: 'size-5 @xs:size-7',
     },
   },
   defaultVariants: {

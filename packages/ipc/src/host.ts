@@ -224,6 +224,8 @@ applyChannelDelegate(PluginChannel);
 export interface SpawnPluginOptions {
   cwd?: string;
   env?: Record<string, string | undefined>;
+  /** Custom process name visible in `ps` (sets argv0). Slashes are replaced with dots. */
+  processName?: string;
   defaultTimeoutMs?: number;
   onDisconnect?: (error?: Error) => void;
   onStderr?: (line: string) => void;
@@ -245,6 +247,7 @@ export function spawnPlugin(
   let channel: PluginChannel;
 
   const proc = Bun.spawn([cmd, ...args], {
+    argv0: options.processName?.replace(/\//g, '.'),
     cwd: options.cwd,
     env: options.env,
     stdin: 'pipe',

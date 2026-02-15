@@ -6,6 +6,10 @@ export interface AvatarNode extends BaseNode {
   src?: string;
   /** Fallback text (typically initials, e.g. "MS") */
   fallback?: string;
+  /** Lucide icon name shown inside the avatar (overrides fallback text) */
+  icon?: string;
+  /** Background color for icon/fallback mode */
+  color?: string;
   /** Accessible label */
   alt?: string;
   /** Display size */

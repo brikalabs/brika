@@ -25,6 +25,8 @@ import {
   Grid,
   Icon,
   Image,
+  isI18nRef,
+  isIntlRef,
   KeyValue,
   Link,
   normalizeChildren,
@@ -44,7 +46,10 @@ import {
   TextInput,
   Toggle,
   Video,
+  i18nRef,
+  intlRef,
 } from '../nodes';
+import type { I18nRef, IntlRef } from '../nodes';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // _shared utilities
@@ -94,6 +99,156 @@ describe('_shared', () => {
 
     test('handles array of only falsy values', () => {
       expect(normalizeChildren([null, false, undefined])).toEqual([]);
+    });
+
+    test('wraps I18nRef into TextNode with i18n field', () => {
+      const ref = i18nRef('plugin:weather', 'stats.humidity');
+      const result = normalizeChildren(ref);
+      expect(result).toEqual([{
+        type: 'text',
+        content: 'stats.humidity',
+        i18n: { ns: 'plugin:weather', key: 'stats.humidity', params: undefined },
+      }]);
+    });
+
+    test('wraps I18nRef with params into TextNode', () => {
+      const ref: I18nRef = { __i18n: true, ns: 'plugin:weather', key: 'ui.dayForecast', params: { count: 7 } };
+      const result = normalizeChildren(ref);
+      expect(result).toEqual([{
+        type: 'text',
+        content: 'ui.dayForecast',
+        i18n: { ns: 'plugin:weather', key: 'ui.dayForecast', params: { count: 7 } },
+      }]);
+    });
+
+    test('handles mixed I18nRef and ComponentNode in array', () => {
+      const textNode = Text({ content: 'plain' });
+      const ref = i18nRef('plugin:x', 'hello');
+      const result = normalizeChildren([textNode, ref, null, false]);
+      expect(result).toHaveLength(2);
+      expect(result[0]).toBe(textNode);
+      expect(result[1]).toEqual({
+        type: 'text',
+        content: 'hello',
+        i18n: { ns: 'plugin:x', key: 'hello', params: undefined },
+      });
+    });
+
+    test('wraps IntlRef number into TextNode with intl field', () => {
+      const ref = intlRef.number(1234);
+      const result = normalizeChildren(ref);
+      expect(result).toEqual([{
+        type: 'text',
+        content: '1234',
+        intl: ref,
+      }]);
+    });
+
+    test('wraps IntlRef dateTime into TextNode with timestamp fallback', () => {
+      const ref: IntlRef = { __intl: true, type: 'dateTime', value: 0, options: { dateStyle: 'medium' } };
+      const result = normalizeChildren(ref);
+      expect(result).toEqual([{
+        type: 'text',
+        content: '0',
+        intl: ref,
+      }]);
+    });
+
+    test('wraps IntlRef list into TextNode with joined fallback', () => {
+      const ref = intlRef.list(['a', 'b', 'c']);
+      const result = normalizeChildren(ref);
+      expect(result).toEqual([{
+        type: 'text',
+        content: 'a, b, c',
+        intl: ref,
+      }]);
+    });
+
+    test('handles mixed IntlRef, I18nRef, and ComponentNode in array', () => {
+      const textNode = Text({ content: 'plain' });
+      const i18n = i18nRef('plugin:x', 'hello');
+      const intl = intlRef.number(42);
+      const result = normalizeChildren([textNode, i18n, intl, null]);
+      expect(result).toHaveLength(3);
+      expect(result[0]).toBe(textNode);
+      expect((result[1] as { i18n: unknown }).i18n).toBeDefined();
+      expect((result[2] as { intl: unknown }).intl).toBe(intl);
+    });
+  });
+
+  describe('isI18nRef', () => {
+    test('returns true for valid I18nRef', () => {
+      expect(isI18nRef({ __i18n: true, ns: 'plugin:x', key: 'k' })).toBe(true);
+    });
+
+    test('returns true for I18nRef with params', () => {
+      expect(isI18nRef({ __i18n: true, ns: 'n', key: 'k', params: { a: 1 } })).toBe(true);
+    });
+
+    test('returns false for null', () => {
+      expect(isI18nRef(null)).toBe(false);
+    });
+
+    test('returns false for undefined', () => {
+      expect(isI18nRef(undefined)).toBe(false);
+    });
+
+    test('returns false for string', () => {
+      expect(isI18nRef('hello')).toBe(false);
+    });
+
+    test('returns false for number', () => {
+      expect(isI18nRef(42)).toBe(false);
+    });
+
+    test('returns false for object without __i18n', () => {
+      expect(isI18nRef({ ns: 'x', key: 'k' })).toBe(false);
+    });
+
+    test('returns false for object with __i18n = false', () => {
+      expect(isI18nRef({ __i18n: false, ns: 'x', key: 'k' })).toBe(false);
+    });
+  });
+
+  describe('isIntlRef', () => {
+    test('returns true for dateTime ref', () => {
+      expect(isIntlRef({ __intl: true, type: 'dateTime', value: 0 })).toBe(true);
+    });
+
+    test('returns true for number ref', () => {
+      expect(isIntlRef({ __intl: true, type: 'number', value: 42 })).toBe(true);
+    });
+
+    test('returns true for relativeTime ref', () => {
+      expect(isIntlRef({ __intl: true, type: 'relativeTime', value: -1, unit: 'day' })).toBe(true);
+    });
+
+    test('returns true for list ref', () => {
+      expect(isIntlRef({ __intl: true, type: 'list', value: ['a', 'b'] })).toBe(true);
+    });
+
+    test('returns false for null', () => {
+      expect(isIntlRef(null)).toBe(false);
+    });
+
+    test('returns false for undefined', () => {
+      expect(isIntlRef(undefined)).toBe(false);
+    });
+
+    test('returns false for string', () => {
+      expect(isIntlRef('hello')).toBe(false);
+    });
+
+    test('returns false for I18nRef', () => {
+      expect(isIntlRef({ __i18n: true, ns: 'x', key: 'k' })).toBe(false);
+    });
+
+    test('returns false for object without __intl', () => {
+      expect(isIntlRef({ type: 'number', value: 42 })).toBe(false);
+    });
+
+    test('returns false for object with __intl = false', () => {
+      expect(isIntlRef({ __intl: false, type: 'number', value: 42 })).toBe(false);
     });
   });
 
@@ -167,6 +322,59 @@ describe('Text', () => {
     for (const v of ['body', 'caption', 'heading'] as const) {
       expect(Text({ content: '', variant: v }).variant).toBe(v);
     }
+  });
+
+  test('accepts I18nRef as content and sets i18n field', () => {
+    const ref = i18nRef('plugin:weather', 'stats.humidity');
+    const node = Text({ content: ref });
+    expect(node.type).toBe('text');
+    expect(node.content).toBe('stats.humidity');
+    expect(node.i18n).toEqual({ ns: 'plugin:weather', key: 'stats.humidity', params: undefined });
+  });
+
+  test('I18nRef with params preserves params in i18n field', () => {
+    const ref: I18nRef = { __i18n: true, ns: 'plugin:weather', key: 'ui.dayForecast', params: { count: 7 } };
+    const node = Text({ content: ref, variant: 'heading', weight: 'bold' });
+    expect(node.content).toBe('ui.dayForecast');
+    expect(node.i18n).toEqual({ ns: 'plugin:weather', key: 'ui.dayForecast', params: { count: 7 } });
+    expect(node.variant).toBe('heading');
+    expect(node.weight).toBe('bold');
+  });
+
+  test('string content does not set i18n field', () => {
+    const node = Text({ content: 'plain text' });
+    expect(node.i18n).toBeUndefined();
+  });
+
+  test('accepts IntlRef number as content and sets intl field', () => {
+    const ref: IntlRef = { __intl: true, type: 'number', value: 1234.5, options: { minimumFractionDigits: 2 } };
+    const node = Text({ content: ref });
+    expect(node.type).toBe('text');
+    expect(node.content).toBe('1234.5');
+    expect(node.intl).toBe(ref);
+    expect(node.i18n).toBeUndefined();
+  });
+
+  test('accepts IntlRef dateTime as content', () => {
+    const ref = intlRef.dateTime(1700000000000);
+    const node = Text({ content: ref });
+    expect(node.content).toBe('1700000000000');
+    expect(node.intl).toBe(ref);
+  });
+
+  test('accepts IntlRef list as content with joined fallback', () => {
+    const ref = intlRef.list(['apples', 'oranges']);
+    const node = Text({ content: ref });
+    expect(node.content).toBe('apples, oranges');
+    expect(node.intl).toBe(ref);
+  });
+
+  test('IntlRef preserves other props', () => {
+    const ref = intlRef.number(99);
+    const node = Text({ content: ref, variant: 'heading', weight: 'bold' });
+    expect(node.variant).toBe('heading');
+    expect(node.weight).toBe('bold');
+    expect(node.intl).toBe(ref);
   });
 });
 
@@ -794,9 +1002,8 @@ describe('Text (new props)', () => {
     expect(node.weight).toBe('bold');
   });
 
-  test('includes truncate and maxLines', () => {
-    const node = Text({ content: 'long', truncate: true, maxLines: 3 });
-    expect(node.truncate).toBe(true);
+  test('includes maxLines', () => {
+    const node = Text({ content: 'long', maxLines: 3 });
     expect(node.maxLines).toBe(3);
   });
 
@@ -814,6 +1021,28 @@ describe('Text (new props)', () => {
   test('omits onPress when not provided', () => {
     const node = Text({ content: 'plain' });
     expect(node.onPress).toBeUndefined();
+  });
+
+  test('accepts children as alias for content', () => {
+    const node = Text({ children: 'hello' });
+    expect(node).toEqual({ type: 'text', content: 'hello' });
+  });
+
+  test('children works with I18nRef', () => {
+    const ref = i18nRef('plugin:test', 'greeting');
+    const node = Text({ children: ref });
+    expect(node.content).toBe('greeting');
+    expect(node.i18n).toEqual({ ns: 'plugin:test', key: 'greeting' });
+  });
+
+  test('content takes precedence over children', () => {
+    const node = Text({ content: 'from-content', children: 'from-children' });
+    expect(node.content).toBe('from-content');
+  });
+
+  test('defaults to empty string when neither content nor children provided', () => {
+    const node = Text({});
+    expect(node.content).toBe('');
   });
 });
 

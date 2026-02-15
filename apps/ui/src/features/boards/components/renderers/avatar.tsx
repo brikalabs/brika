@@ -1,4 +1,5 @@
 import { cva } from 'class-variance-authority';
+import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { defineRenderer } from './registry';
@@ -7,9 +8,22 @@ import { clickableProps } from './shared';
 const sizeVariants = cva('', {
   variants: {
     size: {
-      sm: 'size-6',
-      md: 'size-8',
-      lg: 'size-12',
+      sm: 'size-5 @xs:size-6',
+      md: 'size-6 @xs:size-8',
+      lg: 'size-10 @xs:size-12',
+    },
+  },
+  defaultVariants: {
+    size: 'md',
+  },
+});
+
+const iconSizeVariants = cva('', {
+  variants: {
+    size: {
+      sm: 'size-2.5 @xs:size-3',
+      md: 'size-3 @xs:size-4',
+      lg: 'size-5 @xs:size-6',
     },
   },
   defaultVariants: {
@@ -34,8 +48,18 @@ defineRenderer('avatar', ({ node, onAction }) => {
         className={cn(sizeVariants({ size: node.size }), node.shape === 'square' && 'rounded-md')}
       >
         {node.src && <AvatarImage src={node.src} alt={node.alt ?? ''} />}
-        <AvatarFallback className={node.shape === 'square' ? 'rounded-md' : undefined}>
-          {node.fallback ?? '?'}
+        <AvatarFallback
+          className={cn(node.shape === 'square' ? 'rounded-md' : undefined)}
+          style={node.color ? { background: node.color } : undefined}
+        >
+          {node.icon ? (
+            <DynamicIcon
+              name={node.icon as IconName}
+              className={cn(iconSizeVariants({ size: node.size }), 'text-white')}
+            />
+          ) : (
+            node.fallback ?? '?'
+          )}
         </AvatarFallback>
       </Avatar>
       {node.status && (

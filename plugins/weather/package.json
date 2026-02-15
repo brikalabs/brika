@@ -1,0 +1,120 @@
+{
+  "$schema": "https://schema.brika.dev/plugin.schema.json",
+  "name": "@brika/plugin-weather",
+  "version": "0.1.0",
+  "description": "Beautiful weather display with current conditions, forecast, and compact widget",
+  "author": "BRIKA Team",
+  "icon": "./icon.svg",
+  "type": "module",
+  "main": "./src/index.tsx",
+  "exports": {
+    ".": "./src/index.tsx"
+  },
+  "engines": {
+    "brika": "^0.2.0"
+  },
+  "scripts": {
+    "link": "bun link",
+    "tsc": "bunx --bun tsc --noEmit"
+  },
+  "preferences": [
+    {
+      "name": "city",
+      "type": "text",
+      "label": "City",
+      "description": "City name for weather data (leave empty for auto-detect)",
+      "default": ""
+    },
+    {
+      "name": "unit",
+      "type": "dropdown",
+      "label": "Temperature Unit",
+      "options": [{ "value": "celsius" }, { "value": "fahrenheit" }],
+      "default": "celsius"
+    }
+  ],
+  "bricks": [
+    {
+      "id": "current",
+      "name": "Current Weather",
+      "description": "Live weather conditions with beautiful background imagery",
+      "category": "info",
+      "icon": "cloud-sun",
+      "color": "#f59e0b",
+      "config": [
+        {
+          "type": "text",
+          "name": "city",
+          "label": "City",
+          "description": "City name (leave empty for auto-detect or plugin default)"
+        },
+        {
+          "type": "dropdown",
+          "name": "unit",
+          "label": "Temperature Unit",
+          "options": [{ "value": "default" }, { "value": "celsius" }, { "value": "fahrenheit" }],
+          "default": "default"
+        }
+      ]
+    },
+    {
+      "id": "forecast",
+      "name": "Weather Forecast",
+      "description": "Multi-day weather forecast with highs, lows, and conditions",
+      "category": "info",
+      "icon": "calendar-days",
+      "color": "#3b82f6",
+      "config": [
+        {
+          "type": "text",
+          "name": "city",
+          "label": "City",
+          "description": "City name (leave empty for auto-detect or plugin default)"
+        },
+        {
+          "type": "dropdown",
+          "name": "unit",
+          "label": "Temperature Unit",
+          "options": [{ "value": "default" }, { "value": "celsius" }, { "value": "fahrenheit" }],
+          "default": "default"
+        },
+        {
+          "type": "number",
+          "name": "days",
+          "label": "Forecast Days",
+          "description": "Number of days to show (1-7)",
+          "default": 7,
+          "min": 1,
+          "max": 7,
+          "step": 1
+        }
+      ]
+    },
+    {
+      "id": "compact",
+      "name": "Temperature",
+      "description": "Compact temperature and condition display",
+      "category": "info",
+      "icon": "thermometer",
+      "color": "#ef4444",
+      "config": [
+        {
+          "type": "text",
+          "name": "city",
+          "label": "City",
+          "description": "City name (leave empty for auto-detect or plugin default)"
+        },
+        {
+          "type": "dropdown",
+          "name": "unit",
+          "label": "Temperature Unit",
+          "options": [{ "value": "default" }, { "value": "celsius" }, { "value": "fahrenheit" }],
+          "default": "default"
+        }
+      ]
+    }
+  ],
+  "dependencies": {
+    "@brika/sdk": "workspace:*"
+  }
+}

@@ -8,9 +8,9 @@ const boxVariants = cva('relative flex min-h-0 flex-col overflow-clip', {
   variants: {
     padding: {
       none: 'p-0',
-      sm: 'p-1',
-      md: 'p-2',
-      lg: 'p-3',
+      sm: 'p-0.5 @xs:p-1',
+      md: 'p-1 @xs:p-2',
+      lg: 'p-2 @xs:p-3',
     },
     rounded: {
       none: 'rounded-none',
@@ -64,8 +64,11 @@ defineRenderer('box', ({ node, onAction }) => {
   }
 
   if (!hasImage && !node.blur && bg) {
-    style.backgroundColor = bg;
+    style.background = bg;
   }
+
+  if (node.width) { style.width = node.width; style.flexShrink = 0; }
+  if (node.height) { style.height = node.height; }
 
   const boxClass = boxVariants({
     padding: node.padding,
@@ -84,14 +87,14 @@ defineRenderer('box', ({ node, onAction }) => {
       {hasImage && bg && (
         <div
           className="absolute inset-0 rounded-[inherit]"
-          style={{ backgroundColor: bg, opacity: node.opacity ?? 0.5 }}
+          style={{ background: bg, opacity: node.opacity ?? 0.5 }}
         />
       )}
 
       {node.blur && (
         <div
           className={blurOverlayVariants({ blur: node.blur })}
-          style={!hasImage && bg ? { backgroundColor: bg } : undefined}
+          style={!hasImage && bg ? { background: bg } : undefined}
         />
       )}
 
