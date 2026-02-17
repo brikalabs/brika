@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { Channel, type WireMessage } from '../channel';
 import { callTool, hello, PluginInfo, ping, ready, ToolResult } from '../contract';
 import { isMessage, isRpc, message, rpc } from '../define';
+import { RpcError, isRpcErrorWire } from '../errors';
 
 describe('Define helpers', () => {
   it('should create a message definition', () => {
@@ -163,6 +164,31 @@ describe('Channel', () => {
       expect(sent[0]?.t).toBe('callToolResult');
       expect(((sent[0] as Record<string, unknown>)?.result as { ok: boolean })?.ok).toBe(false);
     });
+
+    it('should serialize RpcError with code on the wire', async () => {
+      channel.implement(callTool, () => {
+        throw new RpcError('PERMISSION_DENIED', 'Permission required', {
+          permission: 'location',
+        });
+      });
+
+      await channel.handle({
+        t: 'callTool',
+        _id: 1,
+        tool: 'test',
+        args: {},
+        ctx: { traceId: 'x', source: 'api' },
+      });
+
+      expect(sent).toHaveLength(1);
+      const result = (sent[0] as Record<string, unknown>)?.result;
+      expect(isRpcErrorWire(result)).toBe(true);
+      expect((result as { code: string }).code).toBe('PERMISSION_DENIED');
+      expect((result as { message: string }).message).toBe('Permission required');
+      expect((result as { data: Record<string, unknown> }).data).toEqual({
+        permission: 'location',
+      });
+    });
   });
 
   describe('call RPC', () => {
@@ -198,6 +224,59 @@ describe('Channel', () => {
 
       expect(promise).rejects.toThrow(/timeout/i);
     });
+
+    it('should reject with RpcError when response contains typed error', async () => {
+      const promise = channel.call(callTool, {
+        tool: 'test',
+        args: {},
+        ctx: { traceId: 't', source: 'api' },
+      });
+
+      // Simulate an RpcError response from the server (with data)
+      await channel.handle({
+        t: 'callToolResult',
+        _id: 1,
+        result: {
+          _rpcError: true,
+          code: 'PERMISSION_DENIED',
+          message: 'Permission required',
+          data: { permission: 'location' },
+        },
+      });
+
+      try {
+        await promise;
+        expect.unreachable('should have thrown');
+      } catch (err) {
+        expect(err).toBeInstanceOf(RpcError);
+        expect((err as RpcError).code).toBe('PERMISSION_DENIED');
+        expect((err as RpcError).message).toBe('Permission required');
+        expect((err as RpcError).data).toEqual({ permission: 'location' });
+      }
+    });
+
+    it('should reject with RpcError preserving custom error codes', async () => {
+      const promise = channel.call(callTool, {
+        tool: 'test',
+        args: {},
+        ctx: { traceId: 't', source: 'api' },
+      });
+
+      await channel.handle({
+        t: 'callToolResult',
+        _id: 1,
+        result: { _rpcError: true, code: 'NOT_FOUND', message: 'Block xyz not found' },
+      });
+
+      try {
+        await promise;
+        expect.unreachable('should have thrown');
+      } catch (err) {
+        expect(err).toBeInstanceOf(RpcError);
+        expect((err as RpcError).code).toBe('NOT_FOUND');
+        expect((err as RpcError).message).toBe('Block xyz not found');
+      }
+    });
   });
 
   describe('close', () => {
@@ -220,6 +299,110 @@ describe('Channel', () => {
 
       expect(sent).toHaveLength(0);
     });
+  });
+});
+
+describe('RpcError', () => {
+  it('should create error with code and message', () => {
+    const err = new RpcError('PERMISSION_DENIED', 'location');
+    expect(err).toBeInstanceOf(Error);
+    expect(err).toBeInstanceOf(RpcError);
+    expect(err.name).toBe('RpcError');
+    expect(err.code).toBe('PERMISSION_DENIED');
+    expect(err.message).toBe('location');
+  });
+
+  it('should serialize to wire format', () => {
+    const err = new RpcError('NOT_FOUND', 'Block xyz');
+    const wire = err.toWire();
+    expect(wire).toEqual({
+      _rpcError: true,
+      code: 'NOT_FOUND',
+      message: 'Block xyz',
+    });
+  });
+
+  it('should reconstruct from wire format', () => {
+    const wire = { _rpcError: true as const, code: 'INTERNAL', message: 'oops' };
+    const err = RpcError.fromWire(wire);
+    expect(err).toBeInstanceOf(RpcError);
+    expect(err.code).toBe('INTERNAL');
+    expect(err.message).toBe('oops');
+  });
+
+  it('should carry structured data', () => {
+    const err = new RpcError('PERMISSION_DENIED', 'Location permission required', {
+      permission: 'location',
+    });
+    expect(err.data).toEqual({ permission: 'location' });
+  });
+
+  it('should serialize data to wire format', () => {
+    const err = new RpcError('NOT_FOUND', 'Block xyz', { blockId: 'timer:set' });
+    const wire = err.toWire();
+    expect(wire).toEqual({
+      _rpcError: true,
+      code: 'NOT_FOUND',
+      message: 'Block xyz',
+      data: { blockId: 'timer:set' },
+    });
+  });
+
+  it('should omit data from wire when not provided', () => {
+    const err = new RpcError('INTERNAL', 'oops');
+    const wire = err.toWire();
+    expect(wire.data).toBeUndefined();
+  });
+
+  it('should round-trip correctly without data', () => {
+    const original = new RpcError('PERMISSION_DENIED', 'location');
+    const restored = RpcError.fromWire(original.toWire());
+    expect(restored.code).toBe(original.code);
+    expect(restored.message).toBe(original.message);
+    expect(restored.data).toBeUndefined();
+  });
+
+  it('should round-trip correctly with data', () => {
+    const original = new RpcError('PERMISSION_DENIED', 'Permission required', {
+      permission: 'location',
+      plugin: '@brika/weather',
+    });
+    const restored = RpcError.fromWire(original.toWire());
+    expect(restored.code).toBe(original.code);
+    expect(restored.message).toBe(original.message);
+    expect(restored.data).toEqual(original.data);
+  });
+});
+
+describe('isRpcErrorWire', () => {
+  it('should detect valid wire errors', () => {
+    expect(isRpcErrorWire({ _rpcError: true, code: 'X', message: 'Y' })).toBe(true);
+  });
+
+  it('should reject non-objects', () => {
+    expect(isRpcErrorWire(null)).toBe(false);
+    expect(isRpcErrorWire(undefined)).toBe(false);
+    expect(isRpcErrorWire('string')).toBe(false);
+    expect(isRpcErrorWire(42)).toBe(false);
+  });
+
+  it('should reject objects without _rpcError flag', () => {
+    expect(isRpcErrorWire({ code: 'X', message: 'Y' })).toBe(false);
+    expect(isRpcErrorWire({ _rpcError: false, code: 'X', message: 'Y' })).toBe(false);
+  });
+
+  it('should reject objects with missing fields', () => {
+    expect(isRpcErrorWire({ _rpcError: true, code: 'X' })).toBe(false);
+    expect(isRpcErrorWire({ _rpcError: true, message: 'Y' })).toBe(false);
+  });
+
+  it('should reject objects with wrong field types', () => {
+    expect(isRpcErrorWire({ _rpcError: true, code: 123, message: 'Y' })).toBe(false);
+    expect(isRpcErrorWire({ _rpcError: true, code: 'X', message: 123 })).toBe(false);
+  });
+
+  it('should not confuse regular { ok: false } errors with RpcError', () => {
+    expect(isRpcErrorWire({ ok: false, error: 'something failed' })).toBe(false);
   });
 });
 

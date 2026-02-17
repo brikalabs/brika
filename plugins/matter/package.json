@@ -1,0 +1,98 @@
+{
+  "$schema": "https://schema.brika.dev/plugin.schema.json",
+  "name": "@brika/plugin-matter",
+  "version": "0.1.0",
+  "description": "Matter smart home device integration for BRIKA",
+  "author": "BRIKA Team",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/maxscharwath/brika.git",
+    "directory": "plugins/matter"
+  },
+  "icon": "./icon.svg",
+  "keywords": ["matter", "smart-home", "iot", "light", "switch"],
+  "engines": {
+    "brika": "^0.2.0"
+  },
+  "type": "module",
+  "main": "./src/index.tsx",
+  "exports": {
+    ".": "./src/index.tsx"
+  },
+  "scripts": {
+    "link": "bun link",
+    "tsc": "bunx --bun tsc --noEmit"
+  },
+  "sparks": [
+    {
+      "id": "device-state-changed",
+      "name": "Device State Changed",
+      "description": "Emitted when any Matter device changes state"
+    },
+    {
+      "id": "device-discovered",
+      "name": "Device Discovered",
+      "description": "Emitted when a new Matter device is found on the network"
+    }
+  ],
+  "blocks": [
+    {
+      "id": "command",
+      "name": "Matter Command",
+      "description": "Send a command to a Matter device (on/off, level, color)",
+      "category": "action",
+      "icon": "cpu",
+      "color": "#6366f1"
+    }
+  ],
+  "pages": [
+    {
+      "id": "devices",
+      "icon": "cpu"
+    }
+  ],
+  "actions": "src/actions.ts",
+  "bricks": [
+    {
+      "id": "devices",
+      "name": "Matter Devices",
+      "description": "View and manage Matter devices on your network",
+      "category": "monitoring",
+      "icon": "cpu",
+      "color": "#6366f1"
+    },
+    {
+      "id": "device",
+      "name": "Matter Device",
+      "description": "Control any Matter device — adapts to lights, locks, covers, thermostats and more",
+      "category": "control",
+      "icon": "cpu",
+      "color": "#6366f1",
+      "config": [
+        {
+          "type": "dynamic-dropdown",
+          "name": "deviceId",
+          "label": "Device",
+          "description": "Select a commissioned Matter device"
+        }
+      ]
+    }
+  ],
+  "preferences": [
+    {
+      "name": "autoCommission",
+      "type": "checkbox",
+      "label": "Auto-commission",
+      "description": "Automatically commission discovered devices",
+      "default": false
+    }
+  ],
+  "dependencies": {
+    "@brika/sdk": "workspace:*",
+    "@matter/main": "^0.16.0",
+    "@project-chip/matter.js": "^0.16.0"
+  },
+  "devDependencies": {
+    "bun-types": "^1.3.5"
+  }
+}

@@ -4,6 +4,7 @@ import { getProcessMetrics, MetricsStore } from '@/runtime/metrics';
 import { PluginConfigService } from '@/runtime/plugins/plugin-config';
 import { PluginLifecycle } from '@/runtime/plugins/plugin-lifecycle';
 import { PluginManager } from '@/runtime/plugins/plugin-manager';
+import { PluginPermissionService } from '@/runtime/plugins/plugin-permissions';
 import { PluginRegistry } from '@/runtime/registry';
 import { StateStore } from '@/runtime/state/state-store';
 import { getOrThrow } from '../utils/resource-helpers';
@@ -187,6 +188,22 @@ export const pluginsRoutes = group('/api/plugins', [
       }
 
       return { values: configService.getConfig(plugin.name) };
+    }
+  ),
+
+  // Toggle a plugin permission (grant or revoke)
+  route.put(
+    '/:uid/permissions',
+    {
+      params: z.object({ uid: z.string() }),
+      body: z.object({ permission: z.string(), granted: z.boolean() }),
+    },
+    async ({ params, body, inject }) => {
+      const plugin = getOrThrow(inject(PluginManager).get(params.uid), 'Plugin not found');
+      const permService = inject(PluginPermissionService);
+
+      const updated = await permService.setPermission(plugin.name, body.permission, body.granted);
+      return { grantedPermissions: updated };
     }
   ),
 

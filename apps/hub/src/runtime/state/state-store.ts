@@ -25,6 +25,7 @@ export interface InstalledPluginState {
   health: PluginHealth;
   lastError: string | null;
   updatedAt: number;
+  grantedPermissions?: string[];
 }
 
 /**
@@ -35,8 +36,22 @@ export interface PluginStateWithMetadata extends InstalledPluginState {
   metadata: PluginPackageSchema;
 }
 
+export interface HubLocation {
+  latitude: number;
+  longitude: number;
+  street: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+  countryCode: string;
+  formattedAddress: string;
+  timezone: string;
+}
+
 type StateFile = {
   plugins: Record<string, InstalledPluginState>;
+  hubLocation?: HubLocation | null;
 };
 
 @singleton()
@@ -66,6 +81,7 @@ export class StateStore {
 
     this.#state = {
       plugins: parsed.plugins ?? {},
+      hubLocation: parsed.hubLocation ?? null,
     };
   }
 
@@ -135,6 +151,39 @@ export class StateStore {
     return this.#withMetadata(p) ?? undefined;
   }
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // Hub Location
+  // ─────────────────────────────────────────────────────────────────────────
+
+  getHubLocation(): HubLocation | null {
+    return this.#state.hubLocation ?? null;
+  }
+
+  async setHubLocation(location: HubLocation | null): Promise<void> {
+    this.#state.hubLocation = location;
+    await this.#flush();
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Plugin Permissions
+  // ─────────────────────────────────────────────────────────────────────────
+
+  getGrantedPermissions(name: string): string[] {
+    return this.#state.plugins[name]?.grantedPermissions ?? [];
+  }
+
+  async setGrantedPermissions(name: string, permissions: string[]): Promise<void> {
+    const cur = this.#state.plugins[name];
+    if (!cur) return;
+    cur.grantedPermissions = permissions;
+    cur.updatedAt = Date.now();
+    await this.#flush();
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Plugin State
+  // ─────────────────────────────────────────────────────────────────────────
+
   /** Remove a plugin entry from state (used to clean up stale entries) */
   async remove(name: string): Promise<void> {
     delete this.#state.plugins[name];
@@ -177,6 +226,13 @@ export class StateStore {
     enabled?: boolean;
   }): Promise<void> {
     const cur = this.#state.plugins[info.name];
+
+    // Load metadata into cache first (needed for auto-granting permissions)
+    const metadata = await this.refreshMetadata(info.name, info.rootDirectory);
+
+    // Auto-grant declared permissions on first install, preserve existing grants on update
+    const grantedPermissions = cur?.grantedPermissions ?? metadata.permissions ?? [];
+
     this.#state.plugins[info.name] = {
       name: info.name,
       rootDirectory: info.rootDirectory,
@@ -186,11 +242,9 @@ export class StateStore {
       health: 'restarting', // Will be set to 'running' when plugin sends hello
       lastError: null,
       updatedAt: Date.now(),
+      grantedPermissions,
     };
     await this.#flush();
-
-    // Load metadata into cache
-    await this.refreshMetadata(info.name, info.rootDirectory);
   }
 
   /**

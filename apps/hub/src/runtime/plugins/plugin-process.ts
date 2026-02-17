@@ -1,9 +1,11 @@
-import type { Json, PluginChannel } from '@brika/ipc';
+import { type Json, type PluginChannel, RpcError } from '@brika/ipc';
 import {
   blockEmit,
   blockLog,
   brickInstanceAction,
+  callAction,
   emitSpark,
+  getHubLocation,
   hello,
   log,
   mountBrickInstance,
@@ -13,6 +15,7 @@ import {
   pushInput,
   type RouteResponseType,
   ready,
+  registerAction,
   registerBlock,
   registerBrickType,
   registerRoute,
@@ -30,7 +33,8 @@ import {
   updatePreference,
 } from '@brika/ipc/contract';
 import type { PluginPackageSchema } from '@brika/schema';
-import type { BrickFamily, Plugin, PluginHealth } from '@brika/shared';
+import type { BrickFamily, Permission, Plugin, PluginHealth } from '@brika/shared';
+import type { HubLocation } from '@/runtime/state/state-store';
 import { getProcessMetrics } from '@/runtime/metrics';
 import { now } from './utils';
 
@@ -66,6 +70,8 @@ export interface PluginProcessCallbacks {
   onBrickInstancePatch: (instanceId: string, mutations: unknown[]) => void;
   onRoute: (method: string, path: string) => void;
   onUpdatePreference: (key: string, value: unknown) => void;
+  onGetHubLocation: () => HubLocation | null;
+  onGetGrantedPermissions: (name: string) => string[];
   onHeartbeatFailed: (process: PluginProcess, silentMs: number) => void;
   onDisconnect: (process: PluginProcess, error?: Error) => void;
   onMetrics?: (process: PluginProcess, cpu: number, memory: number) => void;
@@ -104,6 +110,7 @@ export class PluginProcess {
   readonly #blocks = new Set<string>();
   readonly #sparks = new Set<string>();
   readonly #brickTypes = new Set<string>();
+  readonly #actions = new Set<string>();
   readonly #sparkSubscriptions = new Map<string, () => void>(); // subscriptionId -> unsubscribe
   #stopped = false;
 
@@ -155,6 +162,10 @@ export class PluginProcess {
 
   get brickTypes(): ReadonlySet<string> {
     return this.#brickTypes;
+  }
+
+  get actions(): ReadonlySet<string> {
+    return this.#actions;
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -257,7 +268,8 @@ export class PluginProcess {
   }
 
   /**
-   * Forward an HTTP request to the plugin and return its response
+   * Forward an HTTP request to the plugin and return its response.
+   * Returns 503 if the plugin is stopped, 502 if the RPC fails.
    */
   async sendRouteRequest(
     routeId: string,
@@ -277,21 +289,41 @@ export class PluginProcess {
         headers,
         body,
       });
-    } catch {
+    } catch (e) {
+      this.callbacks.onLog('error', `Route handler failed [${method} ${path}]: ${e}`);
       return { status: 502, body: { error: 'Plugin route handler failed' } };
     }
   }
 
   /**
-   * Fetch dynamic options for a preference from the plugin via IPC
+   * Fetch dynamic options for a preference from the plugin via IPC.
+   * Returns empty array if the plugin is stopped or the RPC fails.
    */
   async fetchPreferenceOptions(name: string): Promise<Array<{ value: string; label: string }>> {
     if (this.#stopped) return [];
     try {
       const result = await this.#channel.call(preferenceOptions, { name });
       return result.options;
-    } catch {
+    } catch (e) {
+      this.callbacks.onLog('warn', `Failed to fetch preference options for "${name}": ${e}`);
       return [];
+    }
+  }
+
+  /**
+   * Call a plugin-defined action via IPC.
+   * Returns `{ ok, data?, error? }`.
+   */
+  async callPluginAction(
+    actionId: string,
+    input?: Json
+  ): Promise<{ ok: boolean; data?: Json; error?: string }> {
+    if (this.#stopped) return { ok: false, error: 'Plugin stopped' };
+    try {
+      return await this.#channel.call(callAction, { actionId, input }, 0);
+    } catch (e) {
+      this.callbacks.onLog('error', `Action call failed [${actionId}]: ${e}`);
+      return { ok: false, error: 'Action call failed' };
     }
   }
 
@@ -349,6 +381,9 @@ export class PluginProcess {
       blocks: m.blocks ?? [],
       sparks: m.sparks ?? [],
       bricks: m.bricks ?? [],
+      pages: m.pages ?? [],
+      permissions: m.permissions ?? [],
+      grantedPermissions: this.callbacks.onGetGrantedPermissions(this.name),
       locales: this.locales,
     };
   }
@@ -424,6 +459,10 @@ export class PluginProcess {
       this.callbacks.onBrickInstancePatch(instanceId, mutations);
     });
 
+    this.#channel.on(registerAction, ({ id }) => {
+      this.#actions.add(id);
+    });
+
     this.#channel.on(registerRoute, ({ method, path }) => {
       this.callbacks.onRoute(method, path);
     });
@@ -431,6 +470,21 @@ export class PluginProcess {
     this.#channel.on(updatePreference, ({ key, value }) => {
       this.callbacks.onUpdatePreference(key, value);
     });
+
+    // Permissions: hub location — requires 'location' grant
+    this.#channel.implement(getHubLocation, () => {
+      this.#requirePermission('location');
+      return { location: this.callbacks.onGetHubLocation() };
+    });
+  }
+
+  #requirePermission(permission: Permission): void {
+    const granted = this.callbacks.onGetGrantedPermissions(this.name);
+    if (!granted.includes(permission)) {
+      throw new RpcError('PERMISSION_DENIED', `Permission "${permission}" is not granted`, {
+        permission,
+      });
+    }
   }
 
   #startHeartbeat(): void {

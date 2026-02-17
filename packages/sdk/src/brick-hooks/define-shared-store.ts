@@ -26,6 +26,8 @@ export interface SharedStore<T> {
   get(): T;
   /** Update state and re-render all subscribed brick instances. */
   set(value: T | ((prev: T) => T)): void;
+  /** Subscribe to state changes. Returns unsubscribe function. */
+  subscribe(listener: () => void): () => void;
 }
 
 export function defineSharedStore<T>(initial: T): SharedStore<T> {
@@ -61,6 +63,11 @@ export function defineSharedStore<T>(initial: T): SharedStore<T> {
       state = next;
       for (const fn of listeners) fn();
     }
+  };
+
+  useStore.subscribe = (listener: () => void): (() => void) => {
+    listeners.add(listener);
+    return () => { listeners.delete(listener); };
   };
 
   return useStore as SharedStore<T>;

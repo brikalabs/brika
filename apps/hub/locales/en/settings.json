@@ -37,6 +37,26 @@
     "workflowsEnabled": "{{enabled}} of {{total}} enabled",
     "sparks": "Sparks"
   },
+  "location": {
+    "title": "Hub Location",
+    "description": "Set the physical location of your hub. Plugins with location permission will use this data.",
+    "searchPlaceholder": "Search for an address...",
+    "detect": "Detect",
+    "detecting": "Detecting...",
+    "street": "Street",
+    "city": "City",
+    "state": "State / Region",
+    "postalCode": "Postal Code",
+    "country": "Country",
+    "latitude": "Latitude",
+    "longitude": "Longitude",
+    "timezone": "Timezone",
+    "notConfigured": "No location configured",
+    "noResults": "No results found",
+    "emptyHint": "Search for an address or detect your location to get started.",
+    "editDetails": "Edit details",
+    "saved": "Saved"
+  },
   "themes": {
     "default": "Default",
     "ocean": "Ocean",

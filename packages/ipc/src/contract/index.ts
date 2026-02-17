@@ -80,6 +80,9 @@ export {
   subscribeSpark,
   unsubscribeSpark,
 } from './sparks';
+export type { HubLocation as HubLocationType } from './permissions';
+// ─── Permissions ───
+export { HubLocation, getHubLocation } from './permissions';
 export type {
   ToolCallContext as ToolCallContextType,
   ToolCallSource as ToolCallSourceType,
@@ -99,3 +102,5 @@ export {
   ToolInputSchemaProperty,
   ToolResult,
 } from './tools';
+// ─── Actions ───
+export { callAction, registerAction } from './actions';

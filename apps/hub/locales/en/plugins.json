@@ -114,5 +114,16 @@
     "linking": "Linking packages...",
     "complete": "{{action}} complete!",
     "failed": "{{action}} failed"
+  },
+  "tabs": {
+    "overview": "Overview"
+  },
+  "pageStopped": "Plugin is not running. Enable it to view this page.",
+  "pageDisconnected": "Plugin disconnected. The page will reconnect when the plugin is available.",
+  "permissions": {
+    "title": "Permissions",
+    "description": "Control what this plugin can access",
+    "location": "Location",
+    "locationDesc": "Access the hub's physical location (address, coordinates, timezone)"
   }
 }

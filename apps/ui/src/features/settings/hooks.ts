@@ -2,7 +2,7 @@
  * Settings Hooks
  */
 
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetcher } from '@/lib/query';
 import { fetchAvailableLocales } from './api';
 
@@ -44,5 +44,49 @@ export function useSystem() {
     queryKey: ['system'],
     queryFn: () => fetcher<SystemResponse>('/api/system'),
     staleTime: 1000 * 30, // 30 seconds
+  });
+}
+
+// ─── Hub Location ────────────────────────────────────────────────────────────
+
+export interface HubLocation {
+  latitude: number;
+  longitude: number;
+  street: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+  countryCode: string;
+  formattedAddress: string;
+  timezone: string;
+}
+
+interface HubLocationResponse {
+  location: HubLocation | null;
+}
+
+const locationKeys = {
+  all: ['settings', 'location'] as const,
+};
+
+export function useHubLocation() {
+  return useQuery({
+    queryKey: locationKeys.all,
+    queryFn: () => fetcher<HubLocationResponse>('/api/settings/location'),
+  });
+}
+
+export function useUpdateHubLocation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (location: HubLocation) =>
+      fetcher<HubLocationResponse>('/api/settings/location', {
+        method: 'PUT',
+        body: JSON.stringify(location),
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: locationKeys.all });
+    },
   });
 }

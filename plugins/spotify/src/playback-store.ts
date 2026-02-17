@@ -6,7 +6,7 @@
  */
 
 import { log } from '@brika/sdk';
-import { defineSharedStore } from '@brika/sdk/bricks/core';
+import { defineSharedStore } from '@brika/sdk/bricks';
 import { spotify } from './index';
 import { getApi } from './shared';
 import { trackChanged } from './sparks';

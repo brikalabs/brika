@@ -1,5 +1,4 @@
-import { Box, Button, Column, Row, Text } from '@brika/sdk/bricks/components';
-import { defineBrick, useBrickSize, useEffect, usePreference, useState } from '@brika/sdk/bricks/core';
+import { Box, Button, Column, Row, Text, defineBrick, useBrickSize, useEffect, usePreference, useState } from '@brika/sdk/bricks';
 
 const PHOTOS = [
   { src: 'https://picsum.photos/seed/brika1/800/600', caption: 'Mountain sunrise' },

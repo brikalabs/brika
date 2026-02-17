@@ -1,16 +1,4 @@
-import type { I18nRef } from '@brika/sdk/bricks/core';
-import {
-  Avatar,
-  Box,
-  Column,
-  Divider,
-  Grid,
-  Icon,
-  Row,
-  Spacer,
-  Text,
-} from '@brika/sdk/bricks/components';
-import { defineBrick, useBrickSize, useLocale, usePreference } from '@brika/sdk/bricks/core';
+import { type I18nRef, Avatar, Box, Column, Divider, Grid, Icon, Row, Spacer, Text, defineBrick, useBrickSize, useLocale, usePreference } from '@brika/sdk/bricks';
 import { useWeather } from '../use-weather';
 import { dayName, formatTempWithUnit, getWeatherVisuals } from '../utils';
 import { CITY_UNIT_CONFIG, WeatherError, WeatherLoading } from './shared';

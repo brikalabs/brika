@@ -66,7 +66,14 @@ export const registerTool = message(
   })
 );
 
-/** Hub calls a tool on a plugin */
+/**
+ * Hub calls a tool on a plugin.
+ *
+ * Returns a `ToolResult` with `{ ok, content?, data? }`.
+ * Handler exceptions are caught and returned as `{ ok: false, error }`.
+ *
+ * @throws {RpcError} code `NOT_FOUND` if the tool is not registered (future).
+ */
 export const callTool = rpc(
   'callTool',
   z.object({

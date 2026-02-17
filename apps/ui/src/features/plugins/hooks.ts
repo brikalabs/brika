@@ -54,6 +54,15 @@ export function usePluginConfigMutation(uid: string) {
   });
 }
 
+export function useTogglePermission(uid: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ permission, granted }: { permission: string; granted: boolean }) =>
+      pluginsApi.togglePermission(uid, permission, granted),
+    onSuccess: () => qc.invalidateQueries({ queryKey: pluginsKeys.detail(uid) }),
+  });
+}
+
 export function usePluginMetrics(uid: string, enabled = true) {
   return useQuery({
     queryKey: pluginsKeys.metrics(uid),

@@ -15,7 +15,7 @@ export default function template(data: TemplateData): string {
 
   if (data.bricks) {
     opts.jsx = 'react-jsx';
-    opts.jsxImportSource = '@brika/ui-kit';
+    opts.jsxImportSource = '@brika/sdk';
   }
 
   return JSON.stringify({ compilerOptions: opts, include: ['src'] }, null, 2) + '\n';

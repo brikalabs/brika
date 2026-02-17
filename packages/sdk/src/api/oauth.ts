@@ -76,7 +76,12 @@ export interface OAuthClient {
   getToken(): OAuthToken | null;
   /** Check if the user is authenticated with a valid token */
   isAuthenticated(): boolean;
-  /** Make an authenticated HTTP request — auto-refreshes expired tokens */
+  /**
+   * Make an authenticated HTTP request — auto-refreshes expired tokens.
+   *
+   * @throws {Error} if not authenticated (call `isAuthenticated()` first or check `getAuthUrl()`)
+   * @throws {Error} if the token is expired and refresh fails (user must re-authorize)
+   */
   fetch(url: string, init?: RequestInit): Promise<Response>;
 }
 

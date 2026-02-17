@@ -114,5 +114,16 @@
     "linking": "Liaison des paquets...",
     "complete": "{{action}} terminé(e) !",
     "failed": "{{action}} a échoué"
+  },
+  "tabs": {
+    "overview": "Aperçu"
+  },
+  "pageStopped": "Le plugin n'est pas en cours d'exécution. Activez-le pour afficher cette page.",
+  "pageDisconnected": "Plugin déconnecté. La page se reconnectera lorsque le plugin sera disponible.",
+  "permissions": {
+    "title": "Permissions",
+    "description": "Contrôlez les accès de ce plugin",
+    "location": "Localisation",
+    "locationDesc": "Accéder à la localisation physique du hub (adresse, coordonnées, fuseau horaire)"
   }
 }

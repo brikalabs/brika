@@ -263,7 +263,7 @@ describe('scaffold', () => {
       await fs.readFile(path.join(testDir, 'test-brick', 'tsconfig.json'), 'utf-8')
     );
     expect(tsconfig.compilerOptions.jsx).toBe('react-jsx');
-    expect(tsconfig.compilerOptions.jsxImportSource).toBe('@brika/ui-kit');
+    expect(tsconfig.compilerOptions.jsxImportSource).toBe('@brika/sdk');
 
     const pkg = JSON.parse(
       await fs.readFile(path.join(testDir, 'test-brick', 'package.json'), 'utf-8')

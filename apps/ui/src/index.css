@@ -4,6 +4,11 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* Plugin-page color safelist — always compiled so runtime-loaded plugin
+   pages can use the theme's data-visualization palette (data-1 … data-8).
+   These colors adapt automatically to the active user theme. */
+@source inline("text-data-1 text-data-2 text-data-3 text-data-4 text-data-5 text-data-6 text-data-7 text-data-8 bg-data-1 bg-data-2 bg-data-3 bg-data-4 bg-data-5 bg-data-6 bg-data-7 bg-data-8 bg-data-1/15 bg-data-2/15 bg-data-3/15 bg-data-4/15 bg-data-5/15 bg-data-6/15 bg-data-7/15 bg-data-8/15 bg-success ring-card");
+
 @custom-variant dark (&:is(.dark *));
 
 /* ─────────────────────────────────────────────────────────────
@@ -469,24 +474,3 @@
   corner-shape: superellipse(--value(number));
 }
 
-:root {
-  --sidebar: hsl(0 0% 98%);
-  --sidebar-foreground: hsl(240 5.3% 26.1%);
-  --sidebar-primary: hsl(240 5.9% 10%);
-  --sidebar-primary-foreground: hsl(0 0% 98%);
-  --sidebar-accent: hsl(240 4.8% 95.9%);
-  --sidebar-accent-foreground: hsl(240 5.9% 10%);
-  --sidebar-border: hsl(220 13% 91%);
-  --sidebar-ring: hsl(217.2 91.2% 59.8%);
-}
-
-.dark {
-  --sidebar: hsl(240 5.9% 10%);
-  --sidebar-foreground: hsl(240 4.8% 95.9%);
-  --sidebar-primary: hsl(224.3 76.3% 48%);
-  --sidebar-primary-foreground: hsl(0 0% 100%);
-  --sidebar-accent: hsl(240 3.7% 15.9%);
-  --sidebar-accent-foreground: hsl(240 4.8% 95.9%);
-  --sidebar-border: hsl(240 3.7% 15.9%);
-  --sidebar-ring: hsl(217.2 91.2% 59.8%);
-}

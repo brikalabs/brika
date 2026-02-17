@@ -29,6 +29,10 @@ export type RouteHandler = (req: RouteRequest) => RouteResponse | Promise<RouteR
 /**
  * Register an HTTP route on the hub.
  *
+ * The handler receives a `RouteRequest` and must return a `RouteResponse`.
+ * Unhandled exceptions inside the handler are caught by the SDK and returned
+ * as `{ status: 500, body: { error: "..." } }` to the caller.
+ *
  * @example
  * ```ts
  * import { defineRoute } from '@brika/sdk';

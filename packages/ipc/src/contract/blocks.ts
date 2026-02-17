@@ -52,7 +52,12 @@ export const registerBlock = message(
 // Reactive Block Lifecycle
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Hub starts a block instance in the plugin (reactive) */
+/**
+ * Hub starts a block instance in the plugin (reactive).
+ *
+ * Returns `{ ok: true }` on success, or `{ ok: false, error: string }` on failure.
+ * The plugin handler may throw, which gets serialized as `{ ok: false, error }`.
+ */
 export const startBlock = rpc(
   'startBlock',
   z.object({

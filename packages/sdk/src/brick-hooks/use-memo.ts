@@ -13,7 +13,8 @@ export function useMemo<T>(factory: () => T, deps: unknown[]): T {
   return existing.value;
 }
 
-export function useCallback<T extends (...args: unknown[]) => unknown>(
+// biome-ignore lint: any[] needed to accept all callback signatures
+export function useCallback<T extends (...args: any[]) => any>(
   callback: T,
   deps: unknown[]
 ): T {

@@ -228,10 +228,10 @@ export class PluginEventHandler {
   }
 
   onPluginDisconnected(pluginName: string): void {
-    const removed = this.#brickInstances.unmountByPlugin(pluginName);
-    if (removed.length > 0) {
+    const removedBricks = this.#brickInstances.unmountByPlugin(pluginName);
+    if (removedBricks.length > 0) {
       this.#events.dispatch(
-        BrickActions.pluginDisconnected.create({ pluginName, instanceIds: removed }, 'hub')
+        BrickActions.pluginDisconnected.create({ pluginName, instanceIds: removedBricks }, 'hub')
       );
     }
   }

@@ -8,9 +8,9 @@ const boxVariants = cva('relative flex min-h-0 flex-col overflow-clip', {
   variants: {
     padding: {
       none: 'p-0',
-      sm: 'p-0.5 @xs:p-1',
-      md: 'p-1 @xs:p-2',
-      lg: 'p-2 @xs:p-3',
+      sm: 'p-0.5 @xs:p-1 @md:p-2',
+      md: 'p-1 @xs:p-2 @md:p-3',
+      lg: 'p-2 @xs:p-3 @md:p-4',
     },
     rounded: {
       none: 'rounded-none',

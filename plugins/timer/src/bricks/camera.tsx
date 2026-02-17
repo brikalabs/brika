@@ -1,5 +1,4 @@
-import { Button, Grid, Row, Stat, Status, Video } from '@brika/sdk/bricks/components';
-import { defineBrick, useBrickSize, usePreference, useState } from '@brika/sdk/bricks/core';
+import { Button, Grid, Row, Stat, Status, Video, defineBrick, useBrickSize, usePreference, useState } from '@brika/sdk/bricks';
 
 const STREAMS = [
   { name: 'Sintel', src: 'https://bitdash-a.akamaihd.net/content/sintel/hls/playlist.m3u8' },

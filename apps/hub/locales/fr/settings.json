@@ -37,6 +37,26 @@
     "workflowsEnabled": "{{enabled}} sur {{total}} activés",
     "sparks": "Sparks"
   },
+  "location": {
+    "title": "Emplacement du hub",
+    "description": "Définissez l'emplacement physique de votre hub. Les plugins avec la permission de localisation utiliseront ces données.",
+    "searchPlaceholder": "Rechercher une adresse...",
+    "detect": "Détecter",
+    "detecting": "Détection...",
+    "street": "Rue",
+    "city": "Ville",
+    "state": "État / Région",
+    "postalCode": "Code postal",
+    "country": "Pays",
+    "latitude": "Latitude",
+    "longitude": "Longitude",
+    "timezone": "Fuseau horaire",
+    "notConfigured": "Aucun emplacement configuré",
+    "noResults": "Aucun résultat trouvé",
+    "emptyHint": "Recherchez une adresse ou détectez votre emplacement pour commencer.",
+    "editDetails": "Modifier les détails",
+    "saved": "Enregistré"
+  },
   "themes": {
     "default": "Par défaut",
     "ocean": "Océan",

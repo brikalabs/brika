@@ -3,7 +3,7 @@
  * Each renders a reusable piece of the player UI.
  */
 
-import { Box, Button, Row, Slider, Text } from '@brika/sdk/bricks/components';
+import { Box, Button, Row, Slider, Text } from '@brika/sdk/bricks';
 import { formatMs, progressPercent } from './utils';
 
 // ─── Types ──────────────────────────────────────────────────────────────────

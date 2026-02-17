@@ -1,0 +1,91 @@
+{
+  "name": "Matter",
+  "description": "Integration des appareils Matter pour la maison connectee",
+  "pages": {
+    "devices": {
+      "name": "Appareils",
+      "description": "Gerer vos appareils Matter"
+    }
+  },
+  "bricks": {
+    "devices": {
+      "name": "Appareils Matter",
+      "description": "Voir et gerer les appareils Matter sur votre reseau"
+    },
+    "device": {
+      "name": "Appareil Matter",
+      "description": "Controler un appareil Matter",
+      "config": {
+        "deviceId": {
+          "label": "Appareil",
+          "description": "Selectionner un appareil Matter connecte"
+        }
+      }
+    }
+  },
+  "blocks": {
+    "command": {
+      "name": "Commande Matter",
+      "description": "Envoyer une commande a un appareil Matter"
+    }
+  },
+  "sparks": {
+    "device-state-changed": {
+      "name": "Etat de l'appareil modifie",
+      "description": "Emis lorsqu'un appareil Matter change d'etat"
+    },
+    "device-discovered": {
+      "name": "Appareil decouvert",
+      "description": "Emis lorsqu'un nouvel appareil Matter est detecte sur le reseau"
+    }
+  },
+  "devicesPage": {
+    "scanNetwork": "Scanner le reseau",
+    "scanning": "Scan en cours...",
+    "commissionTitle": "Connecter un nouvel appareil",
+    "commissionDescription": "Entrez le code d'appairage a 11 chiffres ou la chaine QR (MT:...) de votre appareil Matter.",
+    "commissionPlaceholder": "12345678901 ou MT:Y3.13OTB...",
+    "commission": "Connecter",
+    "commissioning": "Connexion...",
+    "deviceCount": "{{count}} appareil",
+    "deviceCount_other": "{{count}} appareils",
+    "onlineCount": "{{count}} en ligne",
+    "online": "En ligne",
+    "offline": "Hors ligne",
+    "on": "Allume",
+    "off": "Eteint",
+    "toggling": "Basculement...",
+    "remove": "Supprimer",
+    "removing": "Suppression...",
+    "emptyTitle": "Aucun appareil connecte.",
+    "emptyDescription": "Scannez votre reseau ou connectez un appareil pour commencer.",
+    "vendor": "Fabricant",
+    "product": "Produit",
+    "serial": "Serie",
+    "software": "Logiciel",
+    "locked": "Verrouille",
+    "unlocked": "Deverrouille",
+    "brightness": "{{value}}%",
+    "position": "Pos : {{value}}%",
+    "temperature": "{{value}}°C",
+    "viaBridge": "via {{bridge}}",
+    "connectedDevices": "{{count}} appareil connecte",
+    "connectedDevices_other": "{{count}} appareils connectes",
+    "deviceTypes": {
+      "light": "Lumieres",
+      "lock": "Verrous",
+      "cover": "Volets",
+      "thermostat": "Thermostats",
+      "switch": "Interrupteurs",
+      "sensor": "Capteurs",
+      "bridge": "Ponts",
+      "unknown": "Autres appareils"
+    }
+  },
+  "preferences": {
+    "autoCommission": {
+      "label": "Commission automatique",
+      "description": "Commissionnement automatique des appareils decouverts"
+    }
+  }
+}

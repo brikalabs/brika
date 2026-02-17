@@ -1,12 +1,4 @@
-import {
-  Avatar,
-  Box,
-  Column,
-  Icon,
-  Row,
-  Text,
-} from '@brika/sdk/bricks/components';
-import { defineBrick, useLocale } from '@brika/sdk/bricks/core';
+import { Avatar, Box, Column, Icon, Row, Text, defineBrick, useLocale } from '@brika/sdk/bricks';
 import { useWeather } from '../use-weather';
 import { formatTempWithUnit, getWeatherVisuals } from '../utils';
 import { CITY_UNIT_CONFIG, WeatherError, WeatherLoading } from './shared';

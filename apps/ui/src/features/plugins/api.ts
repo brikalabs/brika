@@ -77,6 +77,13 @@ export const pluginsApi = {
       body: JSON.stringify(config),
     }),
 
+  /** Toggle a plugin permission (grant or revoke) */
+  togglePermission: (uid: string, permission: string, granted: boolean) =>
+    fetcher<{ grantedPermissions: string[] }>(`/api/plugins/${uid}/permissions`, {
+      method: 'PUT',
+      body: JSON.stringify({ permission, granted }),
+    }),
+
   /** Get plugin metrics (CPU, memory) */
   getMetrics: (uid: string) => fetcher<PluginMetrics>(`/api/plugins/${uid}/metrics`),
 };

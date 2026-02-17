@@ -247,6 +247,15 @@ const BrickSchema = z.object({
 });
 
 // ============================================================================
+// Page Schema (custom tabs on plugin detail view)
+// ============================================================================
+
+const PageSchema = z.object({
+  id: z.string().describe('Page identifier (local to plugin)'),
+  icon: z.optional(z.string().describe('Lucide icon name')),
+});
+
+// ============================================================================
 // Final Plugin Package Schema
 // ============================================================================
 
@@ -279,9 +288,18 @@ export const PluginPackageSchema = BasePackageJson.extend({
     z.array(SparkSchema).describe('Typed event (spark) definitions provided by this plugin')
   ),
   bricks: z.optional(z.array(BrickSchema).describe('Board bricks provided by this plugin')),
+  pages: z.optional(
+    z.array(PageSchema).describe('Custom pages shown as tabs on the plugin detail view')
+  ),
+  actions: z.optional(
+    z.string().describe('Path to actions file, e.g. "src/actions.ts"')
+  ),
   icon: z.optional(z.string().describe('Path to plugin icon (PNG/SVG, relative to package root)')),
   preferences: z.optional(
     z.array(PreferenceSchema).describe('Plugin preferences/configuration schema')
+  ),
+  permissions: z.optional(
+    z.array(z.string()).describe('Permissions required by this plugin (e.g., "location")')
   ),
 });
 

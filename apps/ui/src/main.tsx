@@ -14,7 +14,7 @@ import { BoardsLayout, BoardContent } from '@/features/boards';
 import { DashboardPage } from '@/features/dashboard';
 import { SparksPage } from '@/features/events';
 import { LogsPage } from '@/features/logs';
-import { PluginDetailPage, PluginsPage } from '@/features/plugins';
+import { PluginDetailPage, PluginOverviewTab, PluginPageTab, PluginsPage } from '@/features/plugins';
 import { SettingsPage } from '@/features/settings';
 import { StorePage, StorePluginDetailPage } from '@/features/store';
 import { WorkflowEditorPage, WorkflowsPage } from '@/features/workflows';
@@ -29,11 +29,23 @@ import './index.css';
 
 const rootRoute = createRootRoute({ component: RootLayout });
 
-// Plugin detail route with typed params
+// Plugin detail routes — nested layout with Outlet
 const pluginDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/plugins/$uid',
   component: PluginDetailPage,
+});
+
+const pluginOverviewRoute = createRoute({
+  getParentRoute: () => pluginDetailRoute,
+  path: '/',
+  component: PluginOverviewTab,
+});
+
+const pluginPageRoute = createRoute({
+  getParentRoute: () => pluginDetailRoute,
+  path: '/$tab',
+  component: PluginPageTab,
 });
 
 // Workflow routes
@@ -85,7 +97,7 @@ const sparksTabRoute = createRoute({
 const routes = [
   createRoute({ getParentRoute: () => rootRoute, path: '/', component: DashboardPage }),
   createRoute({ getParentRoute: () => rootRoute, path: '/plugins', component: PluginsPage }),
-  pluginDetailRoute,
+  pluginDetailRoute.addChildren([pluginOverviewRoute, pluginPageRoute]),
   sparksRoute.addChildren([sparksTabRoute]),
   createRoute({ getParentRoute: () => rootRoute, path: '/workflows', component: WorkflowsPage }),
   workflowNewRoute,

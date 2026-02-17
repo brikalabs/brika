@@ -89,6 +89,7 @@ export type { BlockDefinition, BlockPort, BlockSchema, PortDirection } from './b
 // Logging
 // ─────────────────────────────────────────────────────────────────────────────
 
+export type { Logger } from './api/logging';
 export { log } from './api/logging';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -125,11 +126,34 @@ export type { RouteHandler, RouteMethod, RouteRequest, RouteResponse } from './a
 export { defineRoute } from './api/routes';
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Actions
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type { ActionRef } from './api/actions';
+export { defineAction } from './api/actions';
+
+// ─────────────────────────────────────────────────────────────────────────────
 // OAuth
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type { OAuthClient, OAuthProviderConfig, OAuthToken } from './api/oauth';
 export { defineOAuth } from './api/oauth';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Storage
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type { Store } from './api/storage';
+export {
+  clearAllData,
+  defineStore,
+  deleteJSON,
+  exists,
+  getDataDir,
+  readJSON,
+  updateJSON,
+  writeJSON,
+} from './api/storage';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Common Types
@@ -142,7 +166,21 @@ export * from './types';
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type { DeviceLocation } from './api/location';
+export type { HubLocationData } from './context/location';
 export { getDeviceLocation } from './api/location';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Errors
+// ─────────────────────────────────────────────────────────────────────────────
+
+export {
+  PermissionDeniedError,
+  NotFoundError,
+  InvalidInputError,
+  InternalError,
+  rethrowRpcError,
+  sdkErrors,
+} from './errors';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Utilities

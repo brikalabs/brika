@@ -8,7 +8,7 @@
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
-import { loadManifest } from '../../context/manifest';
+import { getPluginRootDirectory, loadManifest } from '../../context/manifest';
 
 // ─── Fixture Setup ───────────────────────────────────────────────────────────
 
@@ -69,5 +69,26 @@ describe('loadManifest', () => {
     (Bun as { main: string }).main = '/nonexistent/path/index.ts';
 
     expect(() => loadManifest()).toThrow('No package.json found for /nonexistent/path/index.ts');
+  });
+});
+
+describe('getPluginRootDirectory', () => {
+  const origBunMain = Bun.main;
+
+  afterEach(() => {
+    (Bun as { main: string }).main = origBunMain;
+  });
+
+  test('returns the directory containing package.json', () => {
+    (Bun as { main: string }).main = '/tmp/brika-test-plugin/src/index.ts';
+    loadManifest(); // Populate cache
+    expect(getPluginRootDirectory()).toBe('/tmp/brika-test-plugin');
+  });
+
+  test('resolves by calling loadManifest if cache is empty', () => {
+    (Bun as { main: string }).main = '/tmp/brika-test-plugin/src/index.ts';
+    // getPluginRootDirectory should trigger loadManifest internally
+    const root = getPluginRootDirectory();
+    expect(root).toBe('/tmp/brika-test-plugin');
   });
 });

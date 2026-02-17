@@ -5,6 +5,7 @@
  */
 
 import type { InputOf, MessageDef, OutputOf, PayloadOf, RpcDef } from './define';
+import { RpcError, isRpcErrorWire } from './errors';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -33,7 +34,7 @@ export type RpcHandler<T extends RpcDef> = (
 interface PendingRequest<T> {
   resolve: (value: T) => void;
   reject: (error: Error) => void;
-  timer: Timer;
+  timer?: Timer;
 }
 
 /** Channel options */
@@ -173,10 +174,12 @@ export class Channel {
     const timeout = timeoutMs ?? this.#timeoutMs;
 
     return new Promise<OutputOf<T>>((resolve, reject) => {
-      const timer = setTimeout(() => {
-        this.#pending.delete(id);
-        reject(new Error(`RPC timeout: ${def.name} (id=${id}) after ${timeout}ms`));
-      }, timeout);
+      const timer = timeout > 0
+        ? setTimeout(() => {
+            this.#pending.delete(id);
+            reject(new Error(`RPC timeout: ${def.name} (id=${id}) after ${timeout}ms`));
+          }, timeout)
+        : undefined;
 
       this.#pending.set(id, {
         resolve: resolve as (value: unknown) => void,
@@ -223,7 +226,13 @@ export class Channel {
       if (pending) {
         clearTimeout(pending.timer);
         this.#pending.delete(id);
-        pending.resolve('result' in payload ? payload.result : payload);
+        const result = 'result' in payload ? payload.result : payload;
+        // Reconstruct typed RPC errors → reject instead of resolve
+        if (isRpcErrorWire(result)) {
+          pending.reject(RpcError.fromWire(result));
+        } else {
+          pending.resolve(result);
+        }
         return true;
       }
     }
@@ -244,11 +253,20 @@ export class Channel {
         const result = await rpcHandler(payload);
         this.#send({ t: `${type}Result`, _id: id, result });
       } catch (e) {
-        this.#send({
-          t: `${type}Result`,
-          _id: id,
-          result: { ok: false, error: String(e) },
-        });
+        // Preserve typed error codes across the wire
+        if (e instanceof RpcError) {
+          this.#send({
+            t: `${type}Result`,
+            _id: id,
+            result: e.toWire(),
+          });
+        } else {
+          this.#send({
+            t: `${type}Result`,
+            _id: id,
+            result: { ok: false, error: String(e) },
+          });
+        }
       }
       return true;
     }

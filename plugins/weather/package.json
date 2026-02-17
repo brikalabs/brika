@@ -13,6 +13,7 @@
   "engines": {
     "brika": "^0.2.0"
   },
+  "permissions": ["location"],
   "scripts": {
     "link": "bun link",
     "tsc": "bunx --bun tsc --noEmit"

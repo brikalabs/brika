@@ -18,7 +18,7 @@ import {
   usePluginPreference,
   usePreference,
   useState,
-} from '@brika/sdk/bricks/core';
+} from '@brika/sdk/bricks';
 import type { WeatherState } from './types';
 import { acquirePolling, DEFAULT_WEATHER, useWeatherMap } from './weather-store';
 
@@ -48,9 +48,13 @@ export function useWeather(): UseWeatherResult {
   // Auto-detect location when no city is configured
   useEffect(() => {
     if (configuredCity) return;
-    getDeviceLocation().then((loc) => {
-      if (loc?.city) setAutoCity(loc.city);
-    });
+    getDeviceLocation()
+      .then((loc) => {
+        if (loc?.city) setAutoCity(loc.city);
+      })
+      .catch(() => {
+        // Permission denied or location not configured — fall back to default city
+      });
   }, [configuredCity]);
 
   const resolvedCity = configuredCity || autoCity || 'Zurich';

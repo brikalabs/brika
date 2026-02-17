@@ -89,6 +89,12 @@ export interface BrickManifest {
   config?: PreferenceDefinition[];
 }
 
+/** Plugin page manifest from package.json */
+export interface PageManifest {
+  id: string;
+  icon?: string;
+}
+
 /** Plugin representation - flattened for easy consumption */
 export interface Plugin {
   // ─── Identity ──────────────────────────────────────────────────────────────
@@ -140,6 +146,14 @@ export interface Plugin {
   sparks: SparkManifest[];
   /** Available bricks (board UI) */
   bricks: BrickManifest[];
+  /** Custom pages provided by this plugin */
+  pages: PageManifest[];
+
+  // ─── Permissions ──────────────────────────────────────────────────────────
+  /** Permissions declared by this plugin (from package.json) */
+  permissions: string[];
+  /** Permissions currently granted by the user */
+  grantedPermissions: string[];
 
   // ─── i18n ───────────────────────────────────────────────────────────────────
   /** Available translation locales (e.g., ["en", "fr", "fr-CH"]) */
@@ -207,6 +221,7 @@ export interface PluginManifest {
   blocks?: BlockManifest[];
   sparks?: SparkManifest[];
   bricks?: BrickManifest[];
+  pages?: PageManifest[];
   preferences?: PreferenceDefinition[];
 }
 

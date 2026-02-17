@@ -19,6 +19,7 @@ describe('PluginProcess', () => {
     call: ReturnType<typeof mock>;
     send: ReturnType<typeof mock>;
     on: ReturnType<typeof mock>;
+    implement: ReturnType<typeof mock>;
     ping: ReturnType<typeof mock>;
     stop: ReturnType<typeof mock>;
     kill: ReturnType<typeof mock>;
@@ -53,6 +54,7 @@ describe('PluginProcess', () => {
       on: mock((contract: unknown, handler: (...args: unknown[]) => void) => {
         channelHandlers.set(contract, handler);
       }),
+      implement: mock(),
       ping: mock().mockResolvedValue(undefined),
       stop: mock(),
       kill: mock(),
@@ -72,6 +74,8 @@ describe('PluginProcess', () => {
       onSparkUnsubscribe: mock(),
       onBrickType: mock(),
       onBrickInstancePatch: mock(),
+      onGetHubLocation: mock().mockReturnValue(null),
+      onGetGrantedPermissions: mock().mockReturnValue([]),
       onHeartbeatFailed: mock(),
       onDisconnect: mock(),
       onMetrics: mock(),
@@ -445,6 +449,42 @@ describe('PluginProcess', () => {
         const plugin = process.toPlugin(status);
         expect(plugin.status).toBe(status);
       }
+    });
+
+    test('includes permissions and grantedPermissions', () => {
+      const metaWithPerms = createMockMetadata();
+      metaWithPerms.permissions = ['location'];
+
+      const grantedCb = mock().mockReturnValue(['location']);
+      const cbsWithGrants = { ...callbacks, onGetGrantedPermissions: grantedCb };
+
+      const pp = new PluginProcess(
+        mockChannel as never,
+        {
+          name: '@test/plugin-perms',
+          rootDirectory: '/path',
+          entryPoint: '/path/index.js',
+          uid: 'uid-perms',
+          version: '1.0.0',
+          metadata: metaWithPerms,
+          locales: [],
+        },
+        config,
+        cbsWithGrants
+      );
+
+      const plugin = pp.toPlugin('running');
+      expect(plugin.permissions).toEqual(['location']);
+      expect(plugin.grantedPermissions).toEqual(['location']);
+      expect(grantedCb).toHaveBeenCalledWith('@test/plugin-perms');
+
+      pp.stop();
+    });
+
+    test('returns empty arrays when no permissions declared', () => {
+      const plugin = process.toPlugin('running');
+      expect(plugin.permissions).toEqual([]);
+      expect(plugin.grantedPermissions).toEqual([]);
     });
 
     test('handles missing metadata fields', () => {

@@ -2,8 +2,7 @@
  * {{pascal}} Board Brick
  */
 
-import { defineBrick, useBrickSize, useState, useEffect } from '@brika/sdk/bricks/core';
-import { Grid, Section, Stat, Stack, Toggle } from '@brika/sdk/bricks/components';
+import { defineBrick, useBrickSize, useState, useEffect, Grid, Section, Stat, Stack, Toggle } from '@brika/sdk/bricks';
 
 export const {{camel}}Brick = defineBrick(
   {

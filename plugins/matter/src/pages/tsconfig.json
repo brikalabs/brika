@@ -1,0 +1,19 @@
+{
+  "extends": "../../../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["bun-types"],
+    "lib": ["DOM", "DOM.Iterable", "ES2024"],
+    "jsx": "react-jsx",
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@brika/sdk/ui-kit": ["../../../../apps/ui/src/components/ui/index.ts"],
+      "@/*": ["../../../../apps/ui/src/*"],
+      "radix-ui": ["../../../../apps/ui/node_modules/radix-ui"],
+      "class-variance-authority": ["../../../../apps/ui/node_modules/class-variance-authority"],
+      "clsx": ["../../../../apps/ui/node_modules/clsx"],
+      "tailwind-merge": ["../../../../apps/ui/node_modules/tailwind-merge"]
+    }
+  },
+  "include": ["./**/*.ts", "./**/*.tsx"]
+}

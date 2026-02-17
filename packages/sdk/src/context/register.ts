@@ -38,12 +38,18 @@ export interface BrickDecl {
   color?: string;
 }
 
+export interface PageDecl {
+  id: string;
+  icon?: string;
+}
+
 export interface Manifest {
   name: string;
   version: string;
   blocks?: BlockDecl[];
   sparks?: SparkDecl[];
   bricks?: BrickDecl[];
+  pages?: PageDecl[];
 }
 
 /** Shared core passed to every module setup function. */

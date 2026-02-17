@@ -22,8 +22,7 @@ Three steps to create a brick:
 
 ```tsx
 // src/bricks/hello.tsx
-import { defineBrick, useState } from '@brika/sdk/bricks/core';
-import { Stat, Toggle } from '@brika/sdk/bricks/components';
+import { defineBrick, useState, Stat, Toggle, defineSharedStore } from '@brika/sdk/bricks';
 
 export const helloBrick = defineBrick(
   { id: 'hello', name: 'Hello', families: ['sm', 'md'] },
@@ -86,7 +85,7 @@ Files must use `.tsx` extension. Fragments (`<>...</>`) flatten children into ar
 
 ## Hooks
 
-Import from `@brika/sdk/bricks/core`. React-like semantics, custom implementation.
+Import from `@brika/sdk/bricks`. React-like semantics, custom implementation.
 
 ### useState
 
@@ -166,7 +165,7 @@ Payloads: Toggle → `{ checked }`, Slider → `{ value }`, Button → `undefine
 
 ## Components
 
-Import from `@brika/sdk/bricks/components`.
+Import from `@brika/sdk/bricks`.
 
 ### Data Display
 
@@ -245,7 +244,6 @@ Gate content by both width and height. Charts need `height >= 4`, extra controls
 When multiple instances need shared state (e.g., a music player polling once for all instances), use `defineSharedStore` — a Zustand-style reactive store:
 
 ```tsx
-import { defineSharedStore } from '@brika/sdk/bricks/core';
 
 // Define at module level (shared across all instances)
 const usePlayerStore = defineSharedStore<PlayerState>({

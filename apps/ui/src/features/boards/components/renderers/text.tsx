@@ -9,9 +9,9 @@ import { clickableProps } from './shared';
 const textVariants = cva('min-w-0 truncate tabular-nums', {
   variants: {
     variant: {
-      heading: 'font-semibold text-xs @xs:text-sm',
-      caption: 'text-[10px] @xs:text-[11px] text-muted-foreground',
-      body: 'text-[11px] @xs:text-xs',
+      heading: 'font-semibold text-xs @xs:text-sm @md:text-base',
+      caption: 'text-[10px] @xs:text-[11px] @md:text-xs text-muted-foreground',
+      body: 'text-[11px] @xs:text-xs @md:text-sm',
     },
     align: {
       left: 'text-left',
@@ -25,11 +25,11 @@ const textVariants = cva('min-w-0 truncate tabular-nums', {
       bold: 'font-bold',
     },
     size: {
-      xs: '!text-[10px] @xs:!text-[11px]',
-      sm: '!text-[11px] @xs:!text-xs',
-      md: '!text-xs @xs:!text-sm',
-      lg: '!text-sm @xs:!text-base',
-      xl: '!text-base @xs:!text-lg',
+      xs: '!text-[10px] @xs:!text-[11px] @md:!text-xs',
+      sm: '!text-[11px] @xs:!text-xs @md:!text-sm',
+      md: '!text-xs @xs:!text-sm @md:!text-base',
+      lg: '!text-sm @xs:!text-base @md:!text-lg',
+      xl: '!text-base @xs:!text-lg @md:!text-xl',
     },
   },
   defaultVariants: {

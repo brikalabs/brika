@@ -1,16 +1,22 @@
 /**
- * Device Location API
+ * Hub Location API
  *
- * Auto-detect the device's approximate location via IP geolocation.
- * Cached for the lifetime of the process — the device location rarely changes.
+ * Requests the hub's stored location via IPC.
+ * Requires "location" permission in plugin package.json.
  *
  * @example
  * ```typescript
- * import { getDeviceLocation } from '@brika/sdk';
+ * import { getDeviceLocation, PermissionDeniedError } from '@brika/sdk';
  *
- * const loc = await getDeviceLocation();
- * if (loc) {
- *   console.log(`Located in ${loc.city}, ${loc.country}`);
+ * try {
+ *   const loc = await getDeviceLocation();
+ *   if (loc) {
+ *     console.log(`Located in ${loc.city}, ${loc.country}`);
+ *   }
+ * } catch (err) {
+ *   if (err instanceof PermissionDeniedError) {
+ *     console.log('Location permission not granted');
+ *   }
  * }
  * ```
  */
@@ -18,54 +24,32 @@
 export interface DeviceLocation {
   latitude: number;
   longitude: number;
+  street: string;
   city: string;
+  state: string;
+  postalCode: string;
   country: string;
+  countryCode: string;
+  formattedAddress: string;
   timezone: string;
 }
-
-interface IpApiResponse {
-  latitude: number;
-  longitude: number;
-  city: string;
-  country_name: string;
-  timezone: string;
-}
-
-let cached: DeviceLocation | null = null;
-let fetched = false;
 
 /**
- * Get the device's approximate location via IP geolocation.
+ * Get the hub's configured location.
  *
  * Returns cached result on subsequent calls.
- * Returns `null` if geolocation fails (network error, rate limit, etc.).
+ * Returns `null` if location is not configured on the hub.
+ *
+ * @throws {PermissionDeniedError} if the "location" permission is not granted.
+ *   Add `"permissions": ["location"]` to your plugin's package.json.
+ *
+ * @deprecated Prefer importing from `@brika/sdk` and calling `getDeviceLocation()`
+ * directly — the function still works but will be removed in a future major version.
+ * Inside brick render functions, use the context-based `getLocation()` instead.
  */
 export async function getDeviceLocation(): Promise<DeviceLocation | null> {
-  if (fetched) return cached;
-
-  try {
-    const res = await fetch('https://ipapi.co/json/', {
-      headers: { Accept: 'application/json' },
-      signal: AbortSignal.timeout(5000),
-    });
-
-    if (!res.ok) {
-      fetched = true;
-      return null;
-    }
-
-    const data = (await res.json()) as IpApiResponse;
-    cached = {
-      latitude: data.latitude,
-      longitude: data.longitude,
-      city: data.city,
-      country: data.country_name,
-      timezone: data.timezone,
-    };
-    fetched = true;
-    return cached;
-  } catch {
-    fetched = true;
-    return null;
-  }
+  // Lazy import to avoid circular deps and ensure context is initialized
+  const { getContext } = await import('../context');
+  const ctx = getContext();
+  return ctx.getLocation();
 }

@@ -7,7 +7,7 @@
 import { ThemeSelector } from '@/components/theme-selector';
 import { Card, CardContent } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
-import { LanguageSelector, SystemInfo } from './components';
+import { LanguageSelector, LocationSettings, SystemInfo } from './components';
 
 export function SettingsPage() {
   const { t } = useLocale();
@@ -35,6 +35,13 @@ export function SettingsPage() {
       <Card>
         <CardContent className="p-6">
           <LanguageSelector />
+        </CardContent>
+      </Card>
+
+      {/* Hub Location */}
+      <Card>
+        <CardContent className="p-6">
+          <LocationSettings />
         </CardContent>
       </Card>
 

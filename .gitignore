@@ -19,6 +19,14 @@ config/
 .brika/logs.db-wal
 # Keep tracked: .brika/elia.yml, .brika/automations/, .brika/.gitignore
 
+# SQLite cache files
+.brika/cache.db
+.brika/cache.db-shm
+.brika/cache.db-wal
+
+# Plugin persistent data
+plugins/*/data/
+
 # SonarQube
 .scannerwork/
 .sonar/

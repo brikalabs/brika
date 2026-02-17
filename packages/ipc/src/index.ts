@@ -64,5 +64,9 @@ export { isMessage, isRpc, message, rpc } from './define';
 export type { PluginChannelOptions, SpawnPluginOptions } from './host';
 export { PluginChannel, spawnPlugin } from './host';
 
+// ─── Errors ───
+export type { RpcErrorCode, RpcErrorWire } from './errors';
+export { RpcError, isRpcErrorWire } from './errors';
+
 // ─── Core Types ───
 export { Json, JsonRecord } from './types';

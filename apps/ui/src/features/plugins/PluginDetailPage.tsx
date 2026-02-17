@@ -1,33 +1,26 @@
 import { useQuery } from '@tanstack/react-query';
-import { Link, useNavigate, useParams } from '@tanstack/react-router';
-import { ArrowLeft, FileText, Plug, Tag } from 'lucide-react';
+import { Link, Outlet, useNavigate, useParams } from '@tanstack/react-router';
+import { ArrowLeft, Info, Plug, Tag } from 'lucide-react';
+import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
 import { useState } from 'react';
 import { useDataView } from '@/components/DataView';
-import { Badge, Card, CardContent, CardHeader, CardTitle, Skeleton } from '@/components/ui';
+import { Badge, Card, CardContent, Skeleton } from '@/components/ui';
+import { cn } from '@/lib/utils';
 import { useLocale } from '@/lib/use-locale';
-import {
-  PluginBlocksList,
-  PluginBricksList,
-  PluginDetailHeader,
-  PluginInstallInfo,
-  PluginMetrics,
-  PluginSparksList,
-  PluginStats,
-} from './components';
-import { Markdown } from './components/Markdown';
-import { PluginConfigForm } from './components/PluginConfigForm';
+import { PluginDetailHeader } from './components';
 import { UpdatePluginDialog } from './components/UpdatePluginDialog';
-import { usePlugin, usePluginMetrics, usePluginMutations, usePluginReadme } from './hooks';
+import { usePlugin, usePluginMutations } from './hooks';
 import { registryApi, registryKeys } from './registry-api';
 
 export function PluginDetailPage() {
-  const { uid: pluginUid } = useParams({ strict: false });
+  const params = useParams({ strict: false });
+  const pluginUid = params.uid;
   const navigate = useNavigate();
-  const { data: plugin, isLoading, refetch } = usePlugin(pluginUid!);
-  const { data: readmeData } = usePluginReadme(pluginUid!);
-  const { t } = useLocale();
+  const { data: plugin, isLoading, refetch } = usePlugin(pluginUid ?? '');
+  const { t, tp } = useLocale();
 
   const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
+  const activeTab = params.tab ?? 'overview';
 
   const { data: updatesData } = useQuery({
     queryKey: registryKeys.updates,
@@ -36,7 +29,6 @@ export function PluginDetailPage() {
   });
 
   const updateInfo = updatesData?.updates.find((u) => u.name === plugin?.name);
-  const { data: metrics } = usePluginMetrics(pluginUid!, plugin?.status === 'running');
   const { reload, disable, enable, kill, uninstall } = usePluginMutations();
 
   const isBusy =
@@ -56,6 +48,14 @@ export function PluginDetailPage() {
     setUpdateDialogOpen(open);
     if (!open) refetch();
   };
+
+  const tabLink = (tab: string, isActive: boolean) =>
+    cn(
+      'relative inline-flex items-center gap-1.5 rounded-md px-3 py-2 font-medium text-sm transition-all',
+      isActive
+        ? 'text-foreground after:absolute after:inset-x-0 after:-bottom-px after:h-0.5 after:rounded-full after:bg-primary'
+        : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+    );
 
   const View = useDataView({ data: plugin, isLoading });
 
@@ -99,72 +99,82 @@ export function PluginDetailPage() {
       </View.Empty>
 
       <View.Content>
-        {(plugin) => (
-          <div className="space-y-6">
-            <PluginDetailHeader
-              plugin={plugin}
-              isBusy={isBusy}
-              onRefresh={() => refetch()}
-              onUpdate={() => setUpdateDialogOpen(true)}
-              onReload={() => reload.mutate(plugin.uid)}
-              onDisable={() => disable.mutate(plugin.uid)}
-              onEnable={() => enable.mutate(plugin.uid)}
-              onKill={() => kill.mutate(plugin.uid)}
-              onUninstall={handleUninstall}
-            />
+        {(plugin) => {
+          const hasPages = plugin.pages && plugin.pages.length > 0;
 
-            {plugin.keywords.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {plugin.keywords.map((kw) => (
-                  <Badge key={kw} variant="secondary" className="gap-1">
-                    <Tag className="size-3" />
-                    {kw}
-                  </Badge>
-                ))}
-              </div>
-            )}
+          return (
+            <div className="space-y-6">
+              <PluginDetailHeader
+                plugin={plugin}
+                isBusy={isBusy}
+                onRefresh={() => refetch()}
+                onUpdate={() => setUpdateDialogOpen(true)}
+                onReload={() => reload.mutate(plugin.uid)}
+                onDisable={() => disable.mutate(plugin.uid)}
+                onEnable={() => enable.mutate(plugin.uid)}
+                onKill={() => kill.mutate(plugin.uid)}
+                onUninstall={handleUninstall}
+              />
 
-            {plugin.lastError && (
-              <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-4 text-destructive">
-                <strong>{t('common:labels.error')}:</strong> {plugin.lastError}
-              </div>
-            )}
-
-            <PluginStats plugin={plugin} />
-            <PluginMetrics metrics={metrics} />
-            <PluginBlocksList plugin={plugin} />
-            <PluginSparksList plugin={plugin} />
-            <PluginBricksList plugin={plugin} />
-            <PluginConfigForm pluginUid={plugin.uid} pluginName={plugin.name} />
-            <PluginInstallInfo plugin={plugin} />
-
-            {readmeData?.readme && (
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText className="size-5 text-primary" />
-                    {t('plugins:details.readme')}
-                    <Badge variant="outline" className="ml-auto font-mono text-xs">
-                      {readmeData.filename}
+              {plugin.keywords.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {plugin.keywords.map((kw) => (
+                    <Badge key={kw} variant="secondary" className="gap-1">
+                      <Tag className="size-3" />
+                      {kw}
                     </Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Markdown>{readmeData.readme}</Markdown>
-                </CardContent>
-              </Card>
-            )}
+                  ))}
+                </div>
+              )}
 
-            <UpdatePluginDialog
-              open={updateDialogOpen}
-              onOpenChange={handleUpdateDialogClose}
-              packageName={plugin.name}
-              currentVersion={updateInfo?.currentVersion || plugin.version}
-              latestVersion={updateInfo?.latestVersion}
-              mode="update"
-            />
-          </div>
-        )}
+              {plugin.lastError && (
+                <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-4 text-destructive">
+                  <strong>{t('common:labels.error')}:</strong> {plugin.lastError}
+                </div>
+              )}
+
+              {hasPages && (
+                <div className="border-b border-border">
+                  <nav className="flex gap-1">
+                    <Link
+                      to="/plugins/$uid"
+                      params={{ uid: pluginUid ?? '' }}
+                      className={tabLink('overview', activeTab === 'overview')}
+                    >
+                      <Info className="size-4" />
+                      {t('plugins:tabs.overview')}
+                    </Link>
+                    {plugin.pages.map((page) => (
+                      <Link
+                        key={page.id}
+                        to="/plugins/$uid/$tab"
+                        params={{ uid: pluginUid ?? '', tab: page.id }}
+                        className={tabLink(page.id, activeTab === page.id)}
+                      >
+                        <DynamicIcon
+                          name={(page.icon ?? 'file') as IconName}
+                          className="size-4"
+                        />
+                        {tp(plugin.name, `pages.${page.id}.name`, page.id)}
+                      </Link>
+                    ))}
+                  </nav>
+                </div>
+              )}
+
+              <Outlet />
+
+              <UpdatePluginDialog
+                open={updateDialogOpen}
+                onOpenChange={handleUpdateDialogClose}
+                packageName={plugin.name}
+                currentVersion={updateInfo?.currentVersion || plugin.version}
+                latestVersion={updateInfo?.latestVersion}
+                mode="update"
+              />
+            </div>
+          );
+        }}
       </View.Content>
     </View.Root>
   );

@@ -5,14 +5,14 @@
  */
 
 // Lifecycle
-export type { InitHandler, StopHandler, UninstallHandler } from '../api/lifecycle';
-export { onInit, onStop, onUninstall } from '../api/lifecycle';
+export type { InitHandler, StopHandler, UninstallHandler } from './api/lifecycle';
+export { onInit, onStop, onUninstall } from './api/lifecycle';
 // Logging
-export type { Logger } from '../api/logging';
-export { log } from '../api/logging';
+export type { Logger } from './api/logging';
+export { log } from './api/logging';
 // Preferences
-export type { PreferencesChangeHandler } from '../api/preferences';
-export { getPreferences, onPreferencesChange, setPreference } from '../api/preferences';
+export type { PreferencesChangeHandler } from './api/preferences';
+export { getPreferences, onPreferencesChange, setPreference } from './api/preferences';
 
 // Assets
 

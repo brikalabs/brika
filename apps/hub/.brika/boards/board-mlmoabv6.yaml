@@ -14,7 +14,7 @@ bricks:
       y: 0
     size:
       w: 2
-      h: 2
+      h: 3
   - instanceId: inst-mlnkwqea-1
     type: "@brika/plugin-weather:current"
     config:
@@ -22,7 +22,7 @@ bricks:
       unit: default
     position:
       x: 0
-      y: 2
+      y: 3
     size:
       w: 4
       h: 3
@@ -36,5 +36,5 @@ bricks:
       x: 2
       y: 0
     size:
-      w: 5
-      h: 2
+      w: 3
+      h: 3

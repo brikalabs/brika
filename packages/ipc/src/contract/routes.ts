@@ -45,5 +45,12 @@ export const registerRoute = message(
   })
 );
 
-/** Hub forwards an incoming HTTP request to the plugin */
+/**
+ * Hub forwards an incoming HTTP request to the plugin.
+ *
+ * Plugin returns a `RouteResponse` with `{ status, headers?, body? }`.
+ * Unhandled exceptions in the plugin are caught by the SDK and returned as
+ * `{ status: 500, body: { error: string } }`.
+ * IPC timeouts result in a 502 from the hub.
+ */
 export const routeRequest = rpc('routeRequest', RouteRequest, RouteResponse);

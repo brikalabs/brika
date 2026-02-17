@@ -14,16 +14,16 @@ defineRenderer('text-input', ({ node, onAction }) => {
   const hasLabel = node.label || node.icon;
 
   return (
-    <div className={cn('shrink-0 space-y-1', node.disabled && 'opacity-50')}>
+    <div className={cn('shrink-0 space-y-1 @md:space-y-1.5', node.disabled && 'opacity-50')}>
       {hasLabel && (
         <div className="flex items-center gap-1.5">
           {node.icon && (
             <DynamicIcon
               name={node.icon as IconName}
-              className="size-3.5 shrink-0 text-muted-foreground"
+              className="size-3.5 @md:size-4 shrink-0 text-muted-foreground"
             />
           )}
-          {node.label && <span className="font-medium text-xs">{node.label}</span>}
+          {node.label && <span className="font-medium text-xs @md:text-sm">{node.label}</span>}
         </div>
       )}
       {node.multiline ? (
@@ -40,7 +40,7 @@ defineRenderer('text-input', ({ node, onAction }) => {
               onAction?.(node.onChange, { value });
             }, 300);
           }}
-          className="w-full resize-none rounded-md border border-input bg-background px-2 py-1.5 text-xs shadow-sm outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring/30 disabled:cursor-not-allowed"
+          className="w-full resize-none rounded-md border border-input bg-background px-2 @md:px-2.5 py-1.5 @md:py-2 text-xs @md:text-sm shadow-sm outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring/30 disabled:cursor-not-allowed"
         />
       ) : (
         <input
@@ -62,7 +62,7 @@ defineRenderer('text-input', ({ node, onAction }) => {
               onAction?.(node.onSubmit, { value: local });
             }
           }}
-          className="h-7 w-full rounded-md border border-input bg-background px-2 text-xs shadow-sm outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring/30 disabled:cursor-not-allowed"
+          className="h-7 @md:h-9 w-full rounded-md border border-input bg-background px-2 @md:px-2.5 text-xs @md:text-sm shadow-sm outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring/30 disabled:cursor-not-allowed"
         />
       )}
     </div>

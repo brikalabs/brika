@@ -1,3 +1,4 @@
+import { join } from 'node:path';
 import { inject, singleton } from '@brika/di';
 import { spawnPlugin } from '@brika/ipc';
 import type { LogLevelType } from '@brika/ipc/contract';
@@ -8,6 +9,7 @@ import { EventSystem } from '@/runtime/events/event-system';
 import { I18nService } from '@/runtime/i18n';
 import { Logger } from '@/runtime/logs/log-router';
 import { MetricsStore } from '@/runtime/metrics';
+import { ModuleCompiler } from '@/runtime/modules';
 import { type PluginStateWithMetadata, StateStore } from '@/runtime/state/state-store';
 import { PluginConfigService } from './plugin-config';
 import { PluginEventHandler } from './plugin-events';
@@ -30,6 +32,7 @@ export class PluginLifecycle {
   readonly #eventHandler = inject(PluginEventHandler);
   readonly #pluginConfig = inject(PluginConfigService);
   readonly #metrics = inject(MetricsStore);
+  readonly #moduleCompiler = inject(ModuleCompiler);
   readonly #resolver = new PluginResolver();
 
   readonly #processes = new Map<string, PluginProcess>();
@@ -109,6 +112,9 @@ export class PluginLifecycle {
       blocks: m.blocks ?? [],
       sparks: m.sparks ?? [],
       bricks: m.bricks ?? [],
+      pages: m.pages ?? [],
+      permissions: m.permissions ?? [],
+      grantedPermissions: stored.grantedPermissions ?? [],
       locales: [],
     };
   }
@@ -137,6 +143,12 @@ export class PluginLifecycle {
     const existingState = this.#state.get(pluginName);
     const uid = existingState?.uid ?? generateUid(metadata.name);
     const locales = await this.#i18n.registerPluginTranslations(metadata.name, rootDirectory);
+
+    // Compile plugin modules (TSX → browser ESM) before spawning
+    if (metadata.pages?.length) {
+      const actionsFile = metadata.actions ? join(rootDirectory, metadata.actions) : undefined;
+      await this.#moduleCompiler.compile(metadata.name, rootDirectory, metadata.pages, actionsFile);
+    }
 
     this.#logs.info('Starting plugin', {
       pluginName: pluginName,
@@ -226,6 +238,8 @@ export class PluginLifecycle {
           const current = this.#pluginConfig.getConfig(metadata.name);
           this.#pluginConfig.setConfig(metadata.name, { ...current, [key]: value });
         },
+        onGetHubLocation: () => this.#state.getHubLocation(),
+        onGetGrantedPermissions: (name) => this.#state.getGrantedPermissions(name),
         onHeartbeatFailed: (p, silentMs) => this.#handleHeartbeatFailed(p, silentMs),
         onDisconnect: (p, error) => this.#handleDisconnect(p.name, error),
         onMetrics: (p, cpu, memory) => {
@@ -258,7 +272,8 @@ export class PluginLifecycle {
     await new Promise((r) => setTimeout(r, 50));
     process.kill();
 
-    // Clear metrics history for this plugin
+    // Clear compiled modules and metrics
+    this.#moduleCompiler.remove(name);
     this.#metrics.clear(name);
 
     const restartState = this.#restartPolicy.getState(name);

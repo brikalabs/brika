@@ -1,13 +1,4 @@
-import { Badge, Box, Button, Column, Icon, Image, Row, Spacer, Text } from '@brika/sdk/bricks/components';
-import {
-  defineBrick,
-  useBrickSize,
-  useEffect,
-  usePluginPreference,
-  usePreference,
-  useRef,
-  useState,
-} from '@brika/sdk/bricks/core';
+import { Badge, Box, Button, Column, Icon, Image, Row, Spacer, Text, defineBrick, useBrickSize, useEffect, usePluginPreference, usePreference, useRef, useState } from '@brika/sdk/bricks';
 import { spotify } from '../index';
 import {
   acquirePolling,
