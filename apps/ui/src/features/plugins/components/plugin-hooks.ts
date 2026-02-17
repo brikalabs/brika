@@ -79,8 +79,8 @@ export function setActivePluginUid(uid: string) {
 export async function pluginCallAction<O>(ref: ActionRef, input?: unknown): Promise<O> {
   const res = await fetch(`/api/plugins/${activePluginUid}/actions/${ref.__actionId}`, {
     method: 'POST',
-    headers: input !== undefined ? { 'Content-Type': 'application/json' } : {},
-    body: input !== undefined ? JSON.stringify(input) : undefined,
+    headers: input === undefined ? {} : { 'Content-Type': 'application/json' },
+    body: input === undefined ? undefined : JSON.stringify(input),
   });
   if (res.ok) {
     const json = await res.json();

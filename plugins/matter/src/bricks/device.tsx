@@ -232,8 +232,8 @@ function ThermostatControls({ device }: Readonly<{ device: MatterDevice }>) {
       {temp != null && (
         <Stat label="Temperature" value={`${Number(temp)}`} unit="°C" icon="thermometer" color="#ef4444" />
       )}
-      {modeName != null && (
-        <Stat label="Mode" value={typeof modeName === 'string' ? modeName : String(modeName)} icon="gauge" />
+      {typeof modeName === 'string' && (
+        <Stat label="Mode" value={modeName} icon="gauge" />
       )}
     </>
   );

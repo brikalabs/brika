@@ -482,6 +482,86 @@ notaboard: true
     });
   });
 
+  // ─── reorder ─────────────────────────────────────────────────────────────
+
+  describe('reorder', () => {
+    test('reorders boards and persists order', async () => {
+      await Bun.write(
+        join(TEST_DIR, 'a.yaml'),
+        `version: "1"\nboard:\n  id: board-a\n  name: Board A\n  columns: 12\n`
+      );
+      await Bun.write(
+        join(TEST_DIR, 'b.yaml'),
+        `version: "1"\nboard:\n  id: board-b\n  name: Board B\n  columns: 12\n`
+      );
+      await loader.loadDir(TEST_DIR);
+
+      const result = await loader.reorder(['board-b', 'board-a']);
+
+      expect(result).toBeTrue();
+      const boards = loader.list();
+      expect(boards[0].id).toBe('board-b');
+      expect(boards[1].id).toBe('board-a');
+    });
+
+    test('returns false for unknown board id', async () => {
+      await loader.loadDir(TEST_DIR);
+
+      const result = await loader.reorder(['nonexistent']);
+
+      expect(result).toBeFalse();
+    });
+
+    test('appends boards not in provided list', async () => {
+      await Bun.write(
+        join(TEST_DIR, 'a.yaml'),
+        `version: "1"\nboard:\n  id: board-a\n  name: Board A\n  columns: 12\n`
+      );
+      await Bun.write(
+        join(TEST_DIR, 'b.yaml'),
+        `version: "1"\nboard:\n  id: board-b\n  name: Board B\n  columns: 12\n`
+      );
+      await Bun.write(
+        join(TEST_DIR, 'c.yaml'),
+        `version: "1"\nboard:\n  id: board-c\n  name: Board C\n  columns: 12\n`
+      );
+      await loader.loadDir(TEST_DIR);
+
+      const result = await loader.reorder(['board-c', 'board-a']);
+
+      expect(result).toBeTrue();
+      const boards = loader.list();
+      expect(boards[0].id).toBe('board-c');
+      expect(boards[1].id).toBe('board-a');
+      // board-b was not in provided list, should be appended
+      expect(boards[2].id).toBe('board-b');
+    });
+
+    test('persists order to file and reloads correctly', async () => {
+      await Bun.write(
+        join(TEST_DIR, 'a.yaml'),
+        `version: "1"\nboard:\n  id: board-a\n  name: Board A\n  columns: 12\n`
+      );
+      await Bun.write(
+        join(TEST_DIR, 'b.yaml'),
+        `version: "1"\nboard:\n  id: board-b\n  name: Board B\n  columns: 12\n`
+      );
+      await loader.loadDir(TEST_DIR);
+      await loader.reorder(['board-b', 'board-a']);
+
+      // Reload in a fresh loader to verify persistence
+      reset();
+      stub(Logger);
+      const loader2 = get(BoardLoader);
+      await loader2.loadDir(TEST_DIR);
+
+      const boards = loader2.list();
+      expect(boards[0].id).toBe('board-b');
+      expect(boards[1].id).toBe('board-a');
+      loader2.stopWatching();
+    });
+  });
+
   // ─── #unloadFile ─────────────────────────────────────────────────────────
 
   describe('unload behavior', () => {

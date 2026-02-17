@@ -119,9 +119,8 @@ function buildStateParts(device: MatterDevice, t: TFn): StatePart[] {
     parts.push({ icon: Thermometer, label: t('devicesPage.temperature', { value: device.state.temperature }) });
   if (device.state.coverPosition != null)
     parts.push({ icon: Blinds, label: t('devicesPage.position', { value: device.state.coverPosition }) });
-  if (device.state.systemModeName != null) {
-    const name = device.state.systemModeName;
-    parts.push({ icon: Wrench, label: typeof name === 'string' ? name : String(name) });
+  if (typeof device.state.systemModeName === 'string') {
+    parts.push({ icon: Wrench, label: device.state.systemModeName });
   }
   return parts;
 }
