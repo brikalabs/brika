@@ -73,21 +73,19 @@ function miredsToHex(mireds: number): string {
 
 // ─── Device-type specific controls ──────────────────────────────────────────
 
-function LightControls({ device, height }: { device: MatterDevice; height: number }) {
+function LightControls({ device, height }: Readonly<{ device: MatterDevice; height: number }>) {
   const isOn = Boolean(device.state.on);
-  const brightness = device.state.brightness != null ? Number(device.state.brightness) : null;
-  const hue = device.state.hue != null ? Number(device.state.hue) : null;
-  const saturation = device.state.saturation != null ? Number(device.state.saturation) : null;
-  const colorTempMireds = device.state.colorTempMireds != null ? Number(device.state.colorTempMireds) : null;
+  const brightness = device.state.brightness == null ? null : Number(device.state.brightness);
+  const hue = device.state.hue == null ? null : Number(device.state.hue);
+  const saturation = device.state.saturation == null ? null : Number(device.state.saturation);
+  const colorTempMireds = device.state.colorTempMireds == null ? null : Number(device.state.colorTempMireds);
   const hasColor = hue != null && saturation != null;
   const hasColorTemp = colorTempMireds != null;
 
   // Compute a preview color from current state
-  const previewColor = hasColor
-    ? hsvToHex(hue, saturation, brightness ?? 100)
-    : hasColorTemp
-      ? miredsToHex(colorTempMireds)
-      : '#f59e0b';
+  let previewColor = '#f59e0b';
+  if (hasColor) previewColor = hsvToHex(hue, saturation, brightness ?? 100);
+  else if (hasColorTemp) previewColor = miredsToHex(colorTempMireds);
 
   const handleToggle = () => {
     getMatterController().sendCommand(device.nodeId, 'toggle');
@@ -103,7 +101,7 @@ function LightControls({ device, height }: { device: MatterDevice; height: numbe
     const deg = Number(payload?.value ?? 0);
     // degrees 0-360 → Matter hue 0-254
     const matterHue = Math.round((deg / 360) * 254);
-    const matterSat = saturation != null ? Math.round((saturation / 100) * 254) : 254;
+    const matterSat = saturation == null ? 254 : Math.round((saturation / 100) * 254);
     getMatterController().sendCommand(device.nodeId, 'setHueSaturation', {
       hue: String(matterHue),
       saturation: String(matterSat),
@@ -112,7 +110,7 @@ function LightControls({ device, height }: { device: MatterDevice; height: numbe
 
   const handleSaturation = (payload?: Record<string, unknown>) => {
     const pct = Number(payload?.value ?? 100);
-    const matterHue = hue != null ? Math.round((hue / 360) * 254) : 0;
+    const matterHue = hue == null ? 0 : Math.round((hue / 360) * 254);
     const matterSat = Math.round((pct / 100) * 254);
     getMatterController().sendCommand(device.nodeId, 'setHueSaturation', {
       hue: String(matterHue),
@@ -186,7 +184,7 @@ function LightControls({ device, height }: { device: MatterDevice; height: numbe
   );
 }
 
-function LockControls({ device }: { device: MatterDevice }) {
+function LockControls({ device }: Readonly<{ device: MatterDevice }>) {
   const isLocked = Boolean(device.state.locked);
 
   const handleToggle = () => {
@@ -204,8 +202,8 @@ function LockControls({ device }: { device: MatterDevice }) {
   );
 }
 
-function CoverControls({ device }: { device: MatterDevice }) {
-  const position = device.state.coverPosition;
+function CoverControls({ device }: Readonly<{ device: MatterDevice }>) {
+  const position = Number(device.state.coverPosition);
 
   const handleOpen = () => getMatterController().sendCommand(device.nodeId, 'coverOpen');
   const handleClose = () => getMatterController().sendCommand(device.nodeId, 'coverClose');
@@ -225,23 +223,23 @@ function CoverControls({ device }: { device: MatterDevice }) {
   );
 }
 
-function ThermostatControls({ device }: { device: MatterDevice }) {
+function ThermostatControls({ device }: Readonly<{ device: MatterDevice }>) {
   const temp = device.state.temperature;
   const modeName = device.state.systemModeName;
 
   return (
     <>
       {temp != null && (
-        <Stat label="Temperature" value={`${temp}`} unit="°C" icon="thermometer" color="#ef4444" />
+        <Stat label="Temperature" value={`${Number(temp)}`} unit="°C" icon="thermometer" color="#ef4444" />
       )}
       {modeName != null && (
-        <Stat label="Mode" value={String(modeName)} icon="gauge" />
+        <Stat label="Mode" value={typeof modeName === 'string' ? modeName : String(modeName)} icon="gauge" />
       )}
     </>
   );
 }
 
-function SwitchControls({ device }: { device: MatterDevice }) {
+function SwitchControls({ device }: Readonly<{ device: MatterDevice }>) {
   const isOn = Boolean(device.state.on);
 
   const handleToggle = () => {
@@ -251,7 +249,7 @@ function SwitchControls({ device }: { device: MatterDevice }) {
   return <Toggle label="Power" checked={isOn} onToggle={handleToggle} icon="power" />;
 }
 
-function SensorControls({ device }: { device: MatterDevice }) {
+function SensorControls({ device }: Readonly<{ device: MatterDevice }>) {
   const entries = Object.entries(device.state);
   if (entries.length === 0) {
     return <Stat label="Sensor" value="No data" icon="eye" />;
@@ -260,13 +258,13 @@ function SensorControls({ device }: { device: MatterDevice }) {
   return (
     <>
       {entries.slice(0, 2).map(([key, val]) => (
-        <Stat label={key} value={String(val)} icon="activity" />
+        <Stat key={key} label={key} value={String(val)} icon="activity" />
       ))}
     </>
   );
 }
 
-function DeviceControls({ device, height }: { device: MatterDevice; height: number }) {
+function DeviceControls({ device, height }: Readonly<{ device: MatterDevice; height: number }>) {
   switch (device.deviceType) {
     case 'light':      return <LightControls device={device} height={height} />;
     case 'lock':       return <LockControls device={device} />;

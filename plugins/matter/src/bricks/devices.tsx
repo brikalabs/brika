@@ -14,6 +14,12 @@ const DEVICE_ICONS: Record<DeviceType, string> = {
 
 const deviceIcon = (type: DeviceType) => DEVICE_ICONS[type] ?? 'cpu';
 
+function gridColumns(width: number): number {
+  if (width >= 6) return 3;
+  if (width >= 4) return 2;
+  return 1;
+}
+
 export const devicesBrick = defineBrick(
   {
     id: 'devices',
@@ -62,9 +68,10 @@ export const devicesBrick = defineBrick(
 
         {height >= 3 && commissioned.length > 0 && (
           <Section title="Devices">
-            <Grid columns={width >= 6 ? 3 : width >= 4 ? 2 : 1} gap="sm">
+            <Grid columns={gridColumns(width)} gap="sm">
               {commissioned.map((d) => (
                 <Status
+                  key={d.nodeId}
                   label={d.name}
                   status={d.online ? 'online' : 'offline'}
                   icon={deviceIcon(d.deviceType)}

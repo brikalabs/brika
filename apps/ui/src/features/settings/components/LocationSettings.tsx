@@ -63,18 +63,20 @@ export function LocationSettings() {
       async (position) => {
         const { latitude, longitude } = position.coords;
         const location = await reverseGeocode(latitude, longitude);
-        setDraft(location ?? {
-          latitude,
-          longitude,
-          street: '',
-          city: '',
-          state: '',
-          postalCode: '',
-          country: '',
-          countryCode: '',
-          formattedAddress: '',
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        });
+        setDraft(
+          location ?? {
+            latitude,
+            longitude,
+            street: '',
+            city: '',
+            state: '',
+            postalCode: '',
+            country: '',
+            countryCode: '',
+            formattedAddress: '',
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          }
+        );
         setIsDirty(true);
         setDetecting(false);
       },
@@ -228,16 +230,14 @@ export function LocationSettings() {
       {/* Save */}
       {isDirty && draft && (
         <Button onClick={handleSave} disabled={mutation.isPending} size="sm">
-          {showSaved ? (
+          {showSaved && (
             <>
               <Check className="mr-2 size-4" />
               {t('settings:location.saved')}
             </>
-          ) : mutation.isPending ? (
-            t('common:actions.saving')
-          ) : (
-            t('common:actions.save')
           )}
+          {!showSaved &&
+            (mutation.isPending ? t('common:actions.saving') : t('common:actions.save'))}
         </Button>
       )}
     </div>
@@ -259,7 +259,7 @@ function latLngToTile(lat: number, lng: number, zoom: number) {
   return { x, y };
 }
 
-function StaticMap({ latitude, longitude }: { latitude: number; longitude: number }) {
+function StaticMap({ latitude, longitude }: Readonly<{ latitude: number; longitude: number }>) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
 
@@ -329,15 +329,29 @@ function StaticMap({ latitude, longitude }: { latitude: number; longitude: numbe
         );
       })}
       {/* Center marker */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
         <MapPin className="size-8 text-primary drop-shadow-md" style={{ marginTop: -16 }} />
       </div>
       {/* Attribution */}
       <span className="absolute right-1 bottom-1 rounded bg-white/70 px-1 text-[10px] text-gray-600 dark:bg-black/50 dark:text-gray-300">
         {'© '}
-        <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer" className="hover:underline">OSM</a>
+        <a
+          href="https://www.openstreetmap.org/copyright"
+          target="_blank"
+          rel="noreferrer"
+          className="hover:underline"
+        >
+          OSM
+        </a>
         {' © '}
-        <a href="https://carto.com/attributions" target="_blank" rel="noreferrer" className="hover:underline">CARTO</a>
+        <a
+          href="https://carto.com/attributions"
+          target="_blank"
+          rel="noreferrer"
+          className="hover:underline"
+        >
+          CARTO
+        </a>
       </span>
     </div>
   );

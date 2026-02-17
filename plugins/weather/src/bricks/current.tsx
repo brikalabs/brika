@@ -121,7 +121,7 @@ export const currentBrick = defineBrick(
 
           {/* Updated timestamp */}
           <Text
-            content={t('ui.updated', { time: weather.lastUpdated !== null ? new Date(weather.lastUpdated).toLocaleTimeString() : '' })}
+            content={t('ui.updated', { time: weather.lastUpdated === null ? '' : new Date(weather.lastUpdated).toLocaleTimeString() })}
             variant="caption"
             color="rgba(255,255,255,0.35)"
             maxLines={1}

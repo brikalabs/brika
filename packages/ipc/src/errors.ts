@@ -51,7 +51,8 @@ export type RpcErrorCode =
   | 'NOT_FOUND'
   | 'INVALID_INPUT'
   | 'INTERNAL'
-  | (string & {}); // allow custom codes while keeping autocomplete
+  // Open-ended union: custom string codes allowed, literal members provide autocomplete
+  | (string & Record<never, never>);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Wire Format

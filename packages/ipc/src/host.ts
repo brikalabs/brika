@@ -247,7 +247,7 @@ export function spawnPlugin(
   let channel: PluginChannel;
 
   const proc = Bun.spawn([cmd, ...args], {
-    argv0: options.processName?.replace(/\//g, '.'),
+    argv0: options.processName?.replaceAll('/', '.'),
     cwd: options.cwd,
     env: options.env,
     stdin: 'pipe',

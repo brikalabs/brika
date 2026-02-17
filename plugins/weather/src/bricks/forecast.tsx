@@ -77,7 +77,12 @@ export const forecastBrick = defineBrick(
     const useGrid = width >= 4;
 
     // Grid: one row only — cap days by width. List: cap by height.
-    const maxVisible = useGrid ? width : height >= 3 ? 7 : height >= 2 ? 5 : 3;
+    let maxVisible = width;
+    if (!useGrid) {
+      if (height >= 3) maxVisible = 7;
+      else if (height >= 2) maxVisible = 5;
+      else maxVisible = 3;
+    }
     const visibleDays = weather.daily.slice(0, Math.min(days, maxVisible));
 
     return (
@@ -103,6 +108,7 @@ export const forecastBrick = defineBrick(
                 <>
                   {visibleDays.map((day) => (
                     <DayCell
+                      key={day.date}
                       dayLabel={dayName(day.date, t)}
                       code={day.weatherCode}
                       high={day.tempMax}
@@ -118,6 +124,7 @@ export const forecastBrick = defineBrick(
                 <>
                   {visibleDays.map((day) => (
                     <DayRow
+                      key={day.date}
                       dayLabel={dayName(day.date, t)}
                       code={day.weatherCode}
                       high={day.tempMax}

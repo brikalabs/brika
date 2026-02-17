@@ -82,10 +82,10 @@ export async function pluginCallAction<O>(ref: ActionRef, input?: unknown): Prom
     headers: input !== undefined ? { 'Content-Type': 'application/json' } : {},
     body: input !== undefined ? JSON.stringify(input) : undefined,
   });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.error ?? `Action failed (${res.status})`);
+  if (res.ok) {
+    const json = await res.json();
+    return json.data;
   }
-  const json = await res.json();
-  return json.data;
+  const body = await res.json().catch(() => ({}));
+  throw new Error(body.error ?? `Action failed (${res.status})`);
 }

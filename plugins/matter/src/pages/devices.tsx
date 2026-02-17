@@ -119,8 +119,10 @@ function buildStateParts(device: MatterDevice, t: TFn): StatePart[] {
     parts.push({ icon: Thermometer, label: t('devicesPage.temperature', { value: device.state.temperature }) });
   if (device.state.coverPosition != null)
     parts.push({ icon: Blinds, label: t('devicesPage.position', { value: device.state.coverPosition }) });
-  if (device.state.systemModeName != null)
-    parts.push({ icon: Wrench, label: String(device.state.systemModeName) });
+  if (device.state.systemModeName != null) {
+    const name = device.state.systemModeName;
+    parts.push({ icon: Wrench, label: typeof name === 'string' ? name : String(name) });
+  }
   return parts;
 }
 
@@ -162,14 +164,14 @@ function findBridgeName(device: MatterDevice, allDevices: MatterDevice[]): strin
 
 // ─── Device card ────────────────────────────────────────────────────────────
 
-function DeviceCard({ device, allDevices, onRemove, onInfo, removingId, t }: {
+function DeviceCard({ device, allDevices, onRemove, onInfo, removingId, t }: Readonly<{
   device: MatterDevice;
   allDevices: MatterDevice[];
   onRemove: (id: string) => void;
   onInfo: (device: MatterDevice) => void;
   removingId: string | null;
   t: TFn;
-}) {
+}>) {
   const meta = DEVICE_META[device.deviceType] ?? DEVICE_META.unknown;
   const Icon = meta.icon;
   const stateParts = buildStateParts(device, t);
@@ -199,8 +201,8 @@ function DeviceCard({ device, allDevices, onRemove, onInfo, removingId, t }: {
           {/* State badges */}
           {stateParts.length > 0 && (
             <div className="mt-1 flex flex-wrap gap-1">
-              {stateParts.map((part, i) => (
-                <Badge key={i} variant="secondary" className="gap-1 text-xs">
+              {stateParts.map((part) => (
+                <Badge key={part.label} variant="secondary" className="gap-1 text-xs">
                   <part.icon className="size-3 shrink-0" />
                   <span className="truncate">{part.label}</span>
                 </Badge>
@@ -252,7 +254,7 @@ function DeviceCard({ device, allDevices, onRemove, onInfo, removingId, t }: {
 
 // ─── Type group ─────────────────────────────────────────────────────────────
 
-function DeviceTypeGroup({ type, devices, allDevices, onRemove, onInfo, removingId, t }: {
+function DeviceTypeGroup({ type, devices, allDevices, onRemove, onInfo, removingId, t }: Readonly<{
   type: DeviceType;
   devices: MatterDevice[];
   allDevices: MatterDevice[];
@@ -260,7 +262,7 @@ function DeviceTypeGroup({ type, devices, allDevices, onRemove, onInfo, removing
   onInfo: (device: MatterDevice) => void;
   removingId: string | null;
   t: TFn;
-}) {
+}>) {
   const meta = DEVICE_META[type] ?? DEVICE_META.unknown;
   const Icon = meta.icon;
   const [open, setOpen] = useState(true);
@@ -310,7 +312,7 @@ function DeviceTypeGroup({ type, devices, allDevices, onRemove, onInfo, removing
 
 // ─── Device info dialog ─────────────────────────────────────────────────────
 
-function InfoRow({ label, value }: { label: string; value: string | null | undefined }) {
+function InfoRow({ label, value }: Readonly<{ label: string; value: string | null | undefined }>) {
   if (!value) return null;
   return (
     <div className="flex items-baseline justify-between gap-4 py-1.5">
@@ -320,12 +322,12 @@ function InfoRow({ label, value }: { label: string; value: string | null | undef
   );
 }
 
-function DeviceInfoDialog({ device, allDevices, onClose, t }: {
+function DeviceInfoDialog({ device, allDevices, onClose, t }: Readonly<{
   device: MatterDevice | null;
   allDevices: MatterDevice[];
   onClose: () => void;
   t: TFn;
-}) {
+}>) {
   if (!device) return null;
 
   const meta = DEVICE_META[device.deviceType] ?? DEVICE_META.unknown;
@@ -362,8 +364,8 @@ function DeviceInfoDialog({ device, allDevices, onClose, t }: {
         {/* State */}
         {stateParts.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
-            {stateParts.map((part, i) => (
-              <Badge key={i} variant="secondary" className="gap-1 text-xs">
+            {stateParts.map((part) => (
+              <Badge key={part.label} variant="secondary" className="gap-1 text-xs">
                 <part.icon className="size-3 shrink-0" />
                 {part.label}
               </Badge>

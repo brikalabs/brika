@@ -1,6 +1,6 @@
 import { AlertTriangle, Loader2 } from 'lucide-react';
 import type React from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { PluginContext } from './plugin-context';
 import { setActivePluginUid } from './plugin-hooks';
 import './plugin-bridge';
@@ -11,11 +11,11 @@ export function ModuleStatus({
   icon: Icon,
   label,
   spin,
-}: {
+}: Readonly<{
   icon: React.FC<{ className?: string }>;
   label?: string;
   spin?: boolean;
-}) {
+}>) {
   return (
     <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
       <Icon className={`text-muted-foreground ${spin ? 'size-6 animate-spin' : 'size-10'}`} />
@@ -49,8 +49,12 @@ interface PluginModuleProps {
   moduleUrl: string;
 }
 
-export function PluginModule({ pluginUid, pluginName, moduleUrl }: PluginModuleProps) {
+export function PluginModule({ pluginUid, pluginName, moduleUrl }: Readonly<PluginModuleProps>) {
   const { Module, error } = useModuleImport(moduleUrl);
+  const contextValue = useMemo(
+    () => ({ uid: pluginUid, namespace: `plugin:${pluginName}` }),
+    [pluginUid, pluginName]
+  );
 
   // Set module-level uid for non-hook callAction
   setActivePluginUid(pluginUid);
@@ -59,7 +63,7 @@ export function PluginModule({ pluginUid, pluginName, moduleUrl }: PluginModuleP
   if (!Module) return <ModuleStatus icon={Loader2} spin />;
 
   return (
-    <PluginContext.Provider value={{ uid: pluginUid, namespace: `plugin:${pluginName}` }}>
+    <PluginContext.Provider value={contextValue}>
       <Module />
     </PluginContext.Provider>
   );

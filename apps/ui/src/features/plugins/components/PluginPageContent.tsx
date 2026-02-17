@@ -13,7 +13,7 @@ export function PluginPageContent({
   pluginName,
   pluginStatus,
   pageId,
-}: PluginPageContentProps) {
+}: Readonly<PluginPageContentProps>) {
   if (pluginStatus !== 'running') {
     return <ModuleStatus icon={Plug} label="Plugin is not running" />;
   }

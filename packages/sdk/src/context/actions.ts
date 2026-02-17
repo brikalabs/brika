@@ -13,7 +13,7 @@ import { type ContextCore, type MethodsOf, registerContextModule } from './regis
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type ActionHandler = (input?: unknown) => unknown | Promise<unknown>;
+type ActionHandler = (input?: unknown) => unknown;
 
 // ─── Setup ────────────────────────────────────────────────────────────────────
 

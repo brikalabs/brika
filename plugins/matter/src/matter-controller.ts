@@ -94,14 +94,51 @@ function classifyDeviceTypes(deviceTypeIds: number[]): DeviceType {
   return 'unknown';
 }
 
+/** Recursively collect all device endpoints (bridges expose children under the aggregator) */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function collectAllEndpoints(topEndpoints: any[]): any[] {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const all: any[] = [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const collect = (ep: any) => {
+    all.push(ep);
+    try {
+      const children = ep.getChildEndpoints?.() ?? [];
+      for (const child of children) collect(child);
+    } catch { /* no children */ }
+  };
+  for (const ep of topEndpoints) collect(ep);
+  return all;
+}
+
+/** Read color control cluster state from an endpoint */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function readColorControlState(ep: any, state: Record<string, unknown>): void {
+  try {
+    const colorState = ep.state?.colorControl;
+    if (colorState) {
+      state.colorMode = colorState.colorMode;
+      if (colorState.currentHue != null) {
+        state.hue = Math.round((Number(colorState.currentHue) / 254) * 360);
+      }
+      if (colorState.currentSaturation != null) {
+        state.saturation = Math.round((Number(colorState.currentSaturation) / 254) * 100);
+      }
+      if (colorState.colorTemperatureMireds != null) {
+        state.colorTempMireds = Number(colorState.colorTemperatureMireds);
+      }
+    }
+  } catch { /* cluster not present */ }
+}
+
 // ─── Controller ──────────────────────────────────────────────────────────────
 
 export class MatterController {
   #controller?: CommissioningController;
-  #onStateChanged = new Set<DeviceCallback>();
-  #onDiscovered = new Set<DeviceCallback>();
-  #pairedNodes = new Map<string, PairedNode>();
-  #deviceCache = new Map<string, MatterDevice>();
+  readonly #onStateChanged = new Set<DeviceCallback>();
+  readonly #onDiscovered = new Set<DeviceCallback>();
+  readonly #pairedNodes = new Map<string, PairedNode>();
+  readonly #deviceCache = new Map<string, MatterDevice>();
   #started = false;
 
   async start(): Promise<void> {
@@ -484,19 +521,7 @@ export class MatterController {
   #refreshDeviceState(nodeIdStr: string, node: PairedNode): void {
     const info = node.basicInformation;
     const topEndpoints = node.getDevices();
-
-    // Recursively collect all device endpoints (bridges expose children under the aggregator)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const allEndpoints: any[] = [];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const collectEndpoints = (ep: any) => {
-      allEndpoints.push(ep);
-      try {
-        const children = ep.getChildEndpoints?.() ?? [];
-        for (const child of children) collectEndpoints(child);
-      } catch { /* no children */ }
-    };
-    for (const ep of topEndpoints) collectEndpoints(ep);
+    const allEndpoints = collectAllEndpoints(topEndpoints);
 
     log.info(`Node ${nodeIdStr}: ${topEndpoints.length} top-level, ${allEndpoints.length} total endpoint(s)`);
 
@@ -540,9 +565,8 @@ export class MatterController {
     for (const { ep, deviceType } of classified) {
       const epNumber = ep.number;
       // Bridge gets root nodeId so children (nodeId:ep) can be matched by prefix
-      const deviceId = deviceType === 'bridge'
-        ? nodeIdStr
-        : (hasMultiple ? `${nodeIdStr}:${epNumber}` : nodeIdStr);
+      const isChild = hasMultiple && deviceType !== 'bridge';
+      const deviceId = isChild ? `${nodeIdStr}:${epNumber}` : nodeIdStr;
 
       // Read cluster states for this endpoint
       const state = this.#readEndpointState(ep);
@@ -602,27 +626,7 @@ export class MatterController {
       }
     } catch { /* cluster not present */ }
 
-    try {
-      // Access ColorControl state directly — ColorControlClient isn't barrel-exported,
-      // so we read from the endpoint's generic state (same approach as descriptor)
-      const colorState = ep.state?.colorControl;
-      if (colorState) {
-        // Color mode: 0 = HS, 1 = XY, 2 = CT
-        state.colorMode = colorState.colorMode;
-        // Hue: Matter 0-254 → degrees 0-360
-        if (colorState.currentHue != null) {
-          state.hue = Math.round((Number(colorState.currentHue) / 254) * 360);
-        }
-        // Saturation: Matter 0-254 → percentage 0-100
-        if (colorState.currentSaturation != null) {
-          state.saturation = Math.round((Number(colorState.currentSaturation) / 254) * 100);
-        }
-        // Color temperature in mireds (lower = cooler/bluer, higher = warmer/yellower)
-        if (colorState.colorTemperatureMireds != null) {
-          state.colorTempMireds = Number(colorState.colorTemperatureMireds);
-        }
-      }
-    } catch { /* cluster not present */ }
+    readColorControlState(ep, state);
 
     try {
       const lockState = ep.maybeStateOf(DoorLockClient);
@@ -645,7 +649,7 @@ export class MatterController {
       const thermoState = ep.maybeStateOf(ThermostatClient);
       if (thermoState) {
         const local = thermoState.localTemperature;
-        state.temperature = local != null ? Number(local) / 100 : null;
+        state.temperature = local == null ? null : Number(local) / 100;
         state.systemMode = thermoState.systemMode;
         state.systemModeName = Thermostat.SystemMode[thermoState.systemMode] ?? 'unknown';
       }
@@ -660,8 +664,6 @@ export class MatterController {
 let controller: MatterController | null = null;
 
 export function getMatterController(): MatterController {
-  if (!controller) {
-    controller = new MatterController();
-  }
+  controller ??= new MatterController();
   return controller;
 }
