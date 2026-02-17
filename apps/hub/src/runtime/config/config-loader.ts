@@ -357,6 +357,10 @@ export class ConfigLoader {
     return null;
   }
 
+  async getWorkspaceRoot(): Promise<string> {
+    return this.#findWorkspaceRoot();
+  }
+
   async #findWorkspaceRoot(): Promise<string> {
     let dir = this.rootDir;
     const { dirname } = await import('node:path');

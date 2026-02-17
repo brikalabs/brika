@@ -27,6 +27,16 @@ export const storeApi = {
       `/api/registry/plugins/${encodeURIComponent(name)}/readme`
     ),
 
+  /** Get local workspace plugins (auto-detected) */
+  getLocalPlugins: (params: { q?: string }) => {
+    const searchParams = new URLSearchParams();
+    if (params.q) searchParams.set('q', params.q);
+
+    return fetcher<{ plugins: NpmSearchResult[] }>(
+      `/api/registry/local-plugins?${searchParams.toString()}`
+    );
+  },
+
   /** Get current Brika version */
   getCurrentVersion: () => fetcher<{ version: string }>('/api/registry/version'),
 };
@@ -38,5 +48,6 @@ export const storeKeys = {
   verified: ['store', 'verified'] as const,
   plugin: (name: string) => ['store', 'plugin', name] as const,
   readme: (name: string) => ['store', 'readme', name] as const,
+  localPlugins: (params: { q?: string }) => ['store', 'local-plugins', params] as const,
   version: ['store', 'version'] as const,
 };

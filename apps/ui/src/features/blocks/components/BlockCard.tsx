@@ -19,7 +19,11 @@ export function BlockCard({ block, plugin }: Readonly<BlockCardProps>) {
   const blockKey = block.id.split(':').pop() || block.id;
   const blockName = tp(block.pluginId, `blocks.${blockKey}.name`, block.name || blockKey);
   const blockDesc = tp(block.pluginId, `blocks.${blockKey}.description`, block.description);
-  const pluginName = tp(block.pluginId, 'name', plugin?.name ?? block.pluginId);
+  const pluginName = tp(
+    block.pluginId,
+    'name',
+    plugin?.displayName ?? plugin?.name ?? block.pluginId
+  );
 
   return (
     <Card className="h-full p-5">

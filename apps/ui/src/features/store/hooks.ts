@@ -33,6 +33,14 @@ export function useStorePluginReadme(name: string, enabled = true) {
   });
 }
 
+export function useLocalPlugins(params: { q?: string }) {
+  return useQuery({
+    queryKey: storeKeys.localPlugins(params),
+    queryFn: () => storeApi.getLocalPlugins(params),
+    staleTime: 30 * 1000, // 30 seconds — local FS changes frequently during dev
+  });
+}
+
 export function useBrikaVersion() {
   return useQuery({
     queryKey: storeKeys.version,

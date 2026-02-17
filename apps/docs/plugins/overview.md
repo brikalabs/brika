@@ -63,8 +63,10 @@ plugins/my-plugin/
 ├── package.json       # Plugin manifest with blocks metadata
 ├── src/
 │   └── index.ts       # Entry point with block definitions
-├── locales/           # Optional: Translations
-│   └── en/
+├── locales/           # Translations (en + fr)
+│   ├── en/
+│   │   └── plugin.json
+│   └── fr/
 │       └── plugin.json
 ├── icon.svg           # Optional: Plugin icon
 └── tsconfig.json

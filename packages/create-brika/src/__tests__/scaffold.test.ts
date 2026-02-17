@@ -160,13 +160,14 @@ describe('scaffold', () => {
     expect(stat.isDirectory()).toBe(true);
   });
 
-  test('creates package.json with correct name', async () => {
+  test('creates package.json with correct name and displayName', async () => {
     await scaffold(defaultOptions);
 
     const pkg = JSON.parse(
       await fs.readFile(path.join(testDir, 'test-plugin', 'package.json'), 'utf-8')
     );
     expect(pkg.name).toBe('@brika/plugin-test-plugin');
+    expect(pkg.displayName).toBe('TestPlugin');
   });
 
   test('creates .gitignore, src, and locales directories', async () => {
@@ -375,6 +376,47 @@ describe('scaffold', () => {
       await fs.readFile(path.join(testDir, 'test-plugin', 'tsconfig.json'), 'utf-8')
     );
     expect(tsconfig.compilerOptions.jsx).toBeUndefined();
+  });
+
+  test('creates both en and fr locale files', async () => {
+    await scaffold(defaultOptions);
+
+    const base = path.join(testDir, 'test-plugin', 'locales');
+    const en = JSON.parse(await fs.readFile(path.join(base, 'en', 'plugin.json'), 'utf-8'));
+    const fr = JSON.parse(await fs.readFile(path.join(base, 'fr', 'plugin.json'), 'utf-8'));
+
+    expect(en.name).toBe('TestPlugin');
+    expect(en.description).toBe('A test plugin');
+    expect(fr.name).toBe('TestPlugin');
+    expect(fr.description).toBe('A test plugin');
+  });
+
+  test('fr locale has translated field labels', async () => {
+    await scaffold(defaultOptions);
+
+    const fr = JSON.parse(
+      await fs.readFile(path.join(testDir, 'test-plugin', 'locales', 'fr', 'plugin.json'), 'utf-8')
+    );
+    expect(fr.fields.enabled.label).toBe('Activé');
+    expect(fr.fields.enabled.description).toBe('Activer le traitement');
+  });
+
+  test('manifest blocks/bricks/sparks have no name or description', async () => {
+    await scaffold({
+      ...defaultOptions,
+      name: 'test-all',
+      features: ['blocks', 'bricks', 'sparks'],
+    });
+
+    const pkg = JSON.parse(
+      await fs.readFile(path.join(testDir, 'test-all', 'package.json'), 'utf-8')
+    );
+    expect(pkg.blocks[0].name).toBeUndefined();
+    expect(pkg.blocks[0].description).toBeUndefined();
+    expect(pkg.bricks[0].name).toBeUndefined();
+    expect(pkg.bricks[0].description).toBeUndefined();
+    expect(pkg.sparks[0].name).toBeUndefined();
+    expect(pkg.sparks[0].description).toBeUndefined();
   });
 
   test('conditional directories only created for selected features', async () => {

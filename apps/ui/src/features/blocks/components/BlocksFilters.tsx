@@ -75,7 +75,9 @@ export function BlocksFilters({
                         <Plug className="size-3" />
                       </AvatarFallback>
                     </Avatar>
-                    <span className="truncate">{tp(id, 'name', plugin?.name ?? id)}</span>
+                    <span className="truncate">
+                      {tp(id, 'name', plugin?.displayName ?? plugin?.name ?? id)}
+                    </span>
                   </span>
                 </SelectItem>
               );

@@ -49,8 +49,10 @@ my-plugin/
 ├── src/
 │   └── index.ts          # Block definitions
 └── locales/
-    └── en/
-        └── plugin.json   # i18n translations
+    ├── en/
+    │   └── plugin.json   # English translations
+    └── fr/
+        └── plugin.json   # French translations
 ```
 
 ## Manual Setup
@@ -73,6 +75,7 @@ Create `package.json` with the plugin manifest:
   "$schema": "https://schema.brika.dev/plugin.schema.json",
   "name": "@brika/plugin-my-plugin",
   "version": "0.1.0",
+  "displayName": "MyPlugin",
   "description": "My first BRIKA plugin",
   "author": "Your Name",
   "keywords": ["automation", "iot"],
@@ -84,8 +87,6 @@ Create `package.json` with the plugin manifest:
   "blocks": [
     {
       "id": "greet",
-      "name": "Greet",
-      "description": "Sends a greeting message",
       "category": "action",
       "icon": "hand",
       "color": "#3b82f6"
@@ -96,6 +97,8 @@ Create `package.json` with the plugin manifest:
   }
 }
 ```
+
+> **Note:** Block `name` and `description` are defined in the `locales/` translation files, not in `package.json`. The `displayName` field is a fallback for the store when translations aren't loaded.
 
 ### Block Categories
 

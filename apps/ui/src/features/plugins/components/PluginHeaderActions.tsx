@@ -1,20 +1,23 @@
-/**
- * PluginHeaderActions Component
- *
- * Action buttons for plugin detail header.
- */
-
-import { ArrowUp, Power, RefreshCw, RotateCcw, Skull } from 'lucide-react';
-import { Badge, Button } from '@/components/ui';
+import { ArrowUp, EllipsisVertical, Power, RotateCcw, Skull, Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import {
+  Badge,
+  Button,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
-import { ActionButton } from './ActionButton';
 import { UninstallDialog } from './UninstallDialog';
 
 interface PluginHeaderActionsProps {
   pluginName: string;
   status: string;
   isBusy: boolean;
-  onRefresh: () => void;
+  updateAvailable: boolean;
+  latestVersion?: string;
   onUpdate: () => void;
   onReload: () => void;
   onDisable: () => void;
@@ -27,7 +30,8 @@ export function PluginHeaderActions({
   pluginName,
   status,
   isBusy,
-  onRefresh,
+  updateAvailable,
+  latestVersion,
   onUpdate,
   onReload,
   onDisable,
@@ -36,6 +40,7 @@ export function PluginHeaderActions({
   onUninstall,
 }: Readonly<PluginHeaderActionsProps>) {
   const { t } = useLocale();
+  const [uninstallOpen, setUninstallOpen] = useState(false);
 
   let statusBadgeVariant: 'default' | 'destructive' | 'secondary';
   if (status === 'running') {
@@ -52,41 +57,89 @@ export function PluginHeaderActions({
         {t(`common:status.${status}`)}
       </Badge>
 
-      <ActionButton icon={RefreshCw} tooltip={t('common:actions.refresh')} onClick={onRefresh} />
-      <ActionButton
-        icon={ArrowUp}
-        tooltip={t('plugins:actions.update')}
-        onClick={onUpdate}
-        disabled={isBusy}
-      />
-      <ActionButton
-        icon={RotateCcw}
-        tooltip={t('plugins:actions.reload')}
-        onClick={onReload}
-        disabled={isBusy}
-      />
+      <Button variant="outline" size="sm" onClick={onReload} disabled={isBusy} className="gap-1.5">
+        <RotateCcw className="size-3.5" />
+        {t('plugins:actions.reload')}
+      </Button>
 
       {status === 'running' ? (
-        <Button variant="outline" onClick={onDisable} disabled={isBusy} className="gap-2">
-          <Power className="size-4" />
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onDisable}
+          disabled={isBusy}
+          className="gap-1.5"
+        >
+          <Power className="size-3.5" />
           {t('plugins:actions.disable')}
         </Button>
       ) : (
-        <Button variant="outline" onClick={onEnable} disabled={isBusy} className="gap-2">
-          <Power className="size-4" />
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onEnable}
+          disabled={isBusy}
+          className="gap-1.5"
+        >
+          <Power className="size-3.5" />
           {t('plugins:actions.enable')}
         </Button>
       )}
 
-      <ActionButton
-        icon={Skull}
-        tooltip={t('plugins:actions.kill')}
-        onClick={onKill}
-        disabled={isBusy || status !== 'running'}
-        variant="destructive"
-      />
+      {updateAvailable && (
+        <Button
+          variant="default"
+          size="sm"
+          onClick={onUpdate}
+          disabled={isBusy}
+          className="gap-1.5"
+        >
+          <ArrowUp className="size-3.5" />
+          {t('plugins:actions.update')}
+          {latestVersion && (
+            <Badge variant="secondary" className="px-1.5 py-0 text-xs">
+              v{latestVersion}
+            </Badge>
+          )}
+        </Button>
+      )}
 
-      <UninstallDialog pluginName={pluginName} isBusy={isBusy} onUninstall={onUninstall} />
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" size="icon-sm">
+            <EllipsisVertical className="size-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          {!updateAvailable && (
+            <DropdownMenuItem onClick={onUpdate} disabled={isBusy}>
+              <ArrowUp />
+              {t('plugins:actions.update')}
+            </DropdownMenuItem>
+          )}
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            variant="destructive"
+            onClick={onKill}
+            disabled={isBusy || status !== 'running'}
+          >
+            <Skull />
+            {t('plugins:actions.kill')}
+          </DropdownMenuItem>
+          <DropdownMenuItem variant="destructive" onClick={() => setUninstallOpen(true)}>
+            <Trash2 />
+            {t('plugins:actions.uninstall')}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <UninstallDialog
+        pluginName={pluginName}
+        isBusy={isBusy}
+        onUninstall={onUninstall}
+        open={uninstallOpen}
+        onOpenChange={setUninstallOpen}
+      />
     </div>
   );
 }

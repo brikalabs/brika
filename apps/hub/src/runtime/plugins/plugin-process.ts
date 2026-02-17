@@ -34,8 +34,8 @@ import {
 } from '@brika/ipc/contract';
 import type { PluginPackageSchema } from '@brika/schema';
 import type { BrickFamily, Permission, Plugin, PluginHealth } from '@brika/shared';
-import type { HubLocation } from '@/runtime/state/state-store';
 import { getProcessMetrics } from '@/runtime/metrics';
+import type { HubLocation } from '@/runtime/state/state-store';
 import { now } from './utils';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -364,6 +364,7 @@ export class PluginProcess {
       uid: this.uid,
       name: this.name,
       version: this.version,
+      displayName: m.displayName ?? null,
       description: m.description ?? null,
       author: m.author ?? null,
       homepage: m.homepage ?? null,

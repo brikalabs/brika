@@ -1,12 +1,14 @@
-import { createSSEStream, group, route } from '@brika/router';
+import { createSSEStream, group, NotFound, route } from '@brika/router';
+import { PluginPackageSchema } from '@brika/schema';
 import { z } from 'zod';
 import { HUB_VERSION } from '@/hub';
+import { ConfigLoader } from '@/runtime/config/config-loader';
 import { Logger } from '@/runtime/logs/log-router';
-import { PluginManager } from '@/runtime/plugins/plugin-manager';
 import { PluginRegistry } from '@/runtime/registry';
 import type { OperationProgress } from '@/runtime/registry/types';
 import { NpmSearchService } from '@/runtime/services/npm-search';
 import { VerifiedPluginsService } from '@/runtime/services/verified-plugins';
+import { WorkspaceSearchService } from '@/runtime/services/workspace-search';
 import { checkCompatibility } from '@/runtime/utils/compatibility';
 
 /**
@@ -136,20 +138,36 @@ export const registryRoutes = group('/api/registry', [
     },
     async ({ query, inject }) => {
       const npmSearch = inject(NpmSearchService);
-      const pluginManager = inject(PluginManager);
+      const configLoader = inject(ConfigLoader);
+      const config = configLoader.get();
       const { plugins, total } = await npmSearch.search(query.q, query.limit, query.offset);
 
-      // Enrich with installed status
+      // Enrich with installed status from config (source of truth)
       const enrichedPlugins = plugins.map((plugin) => {
-        const installed = pluginManager.getByName(plugin.package.name);
+        const entry = config.plugins.find((p) => p.name === plugin.package.name);
         return {
           ...plugin,
-          installed: installed !== null,
-          installedVersion: installed?.version,
+          installed: entry !== undefined,
+          installedVersion: entry ? plugin.package.version : undefined,
         };
       });
 
       return { plugins: enrichedPlugins, total };
+    }
+  ),
+
+  // Discover local workspace plugins (auto-detected)
+  route.get(
+    '/local-plugins',
+    {
+      query: z.object({
+        q: z.string().optional(),
+      }),
+    },
+    async ({ query, inject }) => {
+      const workspaceSearch = inject(WorkspaceSearchService);
+      const plugins = await workspaceSearch.discover(query.q);
+      return { plugins };
     }
   ),
 
@@ -169,15 +187,62 @@ export const registryRoutes = group('/api/registry', [
       }),
     },
     async ({ params, inject }) => {
+      const configLoader = inject(ConfigLoader);
+
+      // Config is the source of truth for installed status
+      const config = configLoader.get();
+      const configEntry = config.plugins.find((p) => p.name === params.name);
+      const workspaceEntry = configEntry?.version.startsWith('workspace:')
+        ? configEntry
+        : undefined;
+
+      // Helper to build a local plugin response
+      const buildLocalResponse = (pkg: PluginPackageSchema) => ({
+        name: pkg.name,
+        version: pkg.version,
+        displayName: pkg.displayName,
+        description: pkg.description,
+        author: pkg.author,
+        keywords: pkg.keywords ?? [],
+        repository: pkg.repository,
+        homepage: pkg.homepage,
+        license: pkg.license,
+        engines: pkg.engines,
+        verified: false,
+        featured: false,
+        compatible: true,
+        source: 'local' as const,
+        installed: configEntry !== undefined,
+        installedVersion: configEntry ? pkg.version : undefined,
+        npm: { downloads: 0, publishedAt: '' },
+      });
+
+      // Check if this is an installed workspace plugin (in brika.yml)
+      if (workspaceEntry) {
+        try {
+          const resolved = await configLoader.resolvePluginEntry(workspaceEntry);
+          const raw = await Bun.file(`${resolved.rootDirectory}/package.json`).json();
+          return buildLocalResponse(PluginPackageSchema.parse(raw));
+        } catch {
+          // Fall through to workspace scan
+        }
+      }
+
+      // Check if this is a local workspace plugin (in plugins/ directory)
+      const workspaceSearch = inject(WorkspaceSearchService);
+      const localPlugin = await workspaceSearch.findByName(params.name);
+      if (localPlugin) {
+        return buildLocalResponse(localPlugin.pkg);
+      }
+
       const npmSearch = inject(NpmSearchService);
       const verifiedService = inject(VerifiedPluginsService);
-      const pluginManager = inject(PluginManager);
 
       // Fetch package details from npm
       const packageData = await npmSearch.getPackageDetails(params.name);
 
       if (!packageData) {
-        return { error: 'Package not found' };
+        throw new NotFound('Package not found');
       }
 
       // Check verification status
@@ -187,10 +252,6 @@ export const registryRoutes = group('/api/registry', [
       // Check compatibility
       const compatibilityResult = checkCompatibility(packageData.engines?.brika);
 
-      // Check if installed
-      const installedPlugin = pluginManager.getByName(params.name);
-      const installed = installedPlugin !== null;
-
       return {
         ...packageData,
         verified,
@@ -198,8 +259,8 @@ export const registryRoutes = group('/api/registry', [
         featured: verifiedPlugin?.featured || false,
         compatible: compatibilityResult.compatible,
         compatibilityReason: compatibilityResult.reason,
-        installed,
-        installedVersion: installedPlugin?.version,
+        installed: configEntry !== undefined,
+        installedVersion: configEntry ? packageData.version : undefined,
       };
     }
   ),
@@ -213,25 +274,52 @@ export const registryRoutes = group('/api/registry', [
       }),
     },
     async ({ params, inject }) => {
+      // Try to read local README from workspace
+      const localReadme = async (rootDir: string) => {
+        const file = Bun.file(`${rootDir}/README.md`);
+        if (await file.exists()) {
+          return { readme: await file.text(), filename: 'README.md' };
+        }
+        return null;
+      };
+
+      // Check installed workspace plugin (brika.yml)
+      const configLoader = inject(ConfigLoader);
+      const config = configLoader.get();
+      const workspaceEntry = config.plugins.find(
+        (p) => p.name === params.name && p.version.startsWith('workspace:')
+      );
+
+      if (workspaceEntry) {
+        try {
+          const resolved = await configLoader.resolvePluginEntry(workspaceEntry);
+          const result = await localReadme(resolved.rootDirectory);
+          if (result) return result;
+        } catch {
+          // Fall through
+        }
+      }
+
+      // Check local workspace plugin (filesystem scan)
+      const workspaceSearch = inject(WorkspaceSearchService);
+      const localPlugin = await workspaceSearch.findByName(params.name);
+      if (localPlugin) {
+        const result = await localReadme(localPlugin.rootDir);
+        if (result) return result;
+      }
+
       try {
-        // Fetch README from unpkg (CDN for npm packages)
-        // params.name is already decoded by the router, unpkg can handle @ and /
         const url = `https://unpkg.com/${params.name}@latest/README.md`;
 
         const response = await fetch(url, {
-          redirect: 'follow', // Follow redirects
+          redirect: 'follow',
         });
 
         if (!response.ok) {
           return { readme: null, filename: null };
         }
 
-        const readme = await response.text();
-
-        return {
-          readme,
-          filename: 'README.md',
-        };
+        return { readme: await response.text(), filename: 'README.md' };
       } catch (error) {
         const log = inject(Logger);
         log.error('Failed to fetch README from CDN', {
@@ -252,11 +340,53 @@ export const registryRoutes = group('/api/registry', [
       }),
     },
     async ({ params, inject }) => {
-      try {
-        // Try to fetch icon from unpkg
-        // params.name is already decoded by the router, unpkg can handle @ and /
-        const iconPaths = ['icon.png', 'icon.svg', 'logo.png', 'logo.svg'];
+      const iconPaths = ['icon.png', 'icon.svg', 'logo.png', 'logo.svg'];
 
+      // Try to serve icon from a local directory
+      const serveLocalIcon = async (rootDir: string) => {
+        for (const iconPath of iconPaths) {
+          const file = Bun.file(`${rootDir}/${iconPath}`);
+          if (await file.exists()) {
+            const blob = await file.arrayBuffer();
+            const ext = iconPath.split('.').pop();
+            const contentType = ext === 'svg' ? 'image/svg+xml' : 'image/png';
+            return new Response(blob, {
+              headers: {
+                'Content-Type': contentType,
+                'Cache-Control': 'public, max-age=60',
+              },
+            });
+          }
+        }
+        return null;
+      };
+
+      // Check installed workspace plugin (brika.yml)
+      const configLoader = inject(ConfigLoader);
+      const config = configLoader.get();
+      const workspaceEntry = config.plugins.find(
+        (p) => p.name === params.name && p.version.startsWith('workspace:')
+      );
+
+      if (workspaceEntry) {
+        try {
+          const resolved = await configLoader.resolvePluginEntry(workspaceEntry);
+          const result = await serveLocalIcon(resolved.rootDirectory);
+          if (result) return result;
+        } catch {
+          // Fall through
+        }
+      }
+
+      // Check local workspace plugin (filesystem scan)
+      const workspaceSearch = inject(WorkspaceSearchService);
+      const localPlugin = await workspaceSearch.findByName(params.name);
+      if (localPlugin) {
+        const result = await serveLocalIcon(localPlugin.rootDir);
+        if (result) return result;
+      }
+
+      try {
         for (const iconPath of iconPaths) {
           const url = `https://unpkg.com/${params.name}@latest/${iconPath}`;
           const response = await fetch(url, {
@@ -270,13 +400,12 @@ export const registryRoutes = group('/api/registry', [
             return new Response(blob, {
               headers: {
                 'Content-Type': contentType,
-                'Cache-Control': 'public, max-age=86400', // Cache for 1 day
+                'Cache-Control': 'public, max-age=86400',
               },
             });
           }
         }
 
-        // If no icon found, return 404
         return new Response(null, { status: 404 });
       } catch (error) {
         const log = inject(Logger);

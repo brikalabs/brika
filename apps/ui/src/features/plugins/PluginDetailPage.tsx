@@ -5,8 +5,8 @@ import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
 import { useState } from 'react';
 import { useDataView } from '@/components/DataView';
 import { Badge, Card, CardContent, Skeleton } from '@/components/ui';
-import { cn } from '@/lib/utils';
 import { useLocale } from '@/lib/use-locale';
+import { cn } from '@/lib/utils';
 import { PluginDetailHeader } from './components';
 import { UpdatePluginDialog } from './components/UpdatePluginDialog';
 import { usePlugin, usePluginMutations } from './hooks';
@@ -54,7 +54,7 @@ export function PluginDetailPage() {
       'relative inline-flex items-center gap-1.5 rounded-md px-3 py-2 font-medium text-sm transition-all',
       isActive
         ? 'text-foreground after:absolute after:inset-x-0 after:-bottom-px after:h-0.5 after:rounded-full after:bg-primary'
-        : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+        : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
     );
 
   const View = useDataView({ data: plugin, isLoading });
@@ -107,7 +107,8 @@ export function PluginDetailPage() {
               <PluginDetailHeader
                 plugin={plugin}
                 isBusy={isBusy}
-                onRefresh={() => refetch()}
+                updateAvailable={!!updateInfo?.updateAvailable}
+                latestVersion={updateInfo?.latestVersion}
                 onUpdate={() => setUpdateDialogOpen(true)}
                 onReload={() => reload.mutate(plugin.uid)}
                 onDisable={() => disable.mutate(plugin.uid)}
@@ -134,7 +135,7 @@ export function PluginDetailPage() {
               )}
 
               {hasPages && (
-                <div className="border-b border-border">
+                <div className="border-border border-b">
                   <nav className="flex gap-1">
                     <Link
                       to="/plugins/$uid"
@@ -151,10 +152,7 @@ export function PluginDetailPage() {
                         params={{ uid: pluginUid ?? '', tab: page.id }}
                         className={tabLink(page.id, activeTab === page.id)}
                       >
-                        <DynamicIcon
-                          name={(page.icon ?? 'file') as IconName}
-                          className="size-4"
-                        />
+                        <DynamicIcon name={(page.icon ?? 'file') as IconName} className="size-4" />
                         {tp(plugin.name, `pages.${page.id}.name`, page.id)}
                       </Link>
                     ))}

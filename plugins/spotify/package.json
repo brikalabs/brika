@@ -1,6 +1,7 @@
 {
   "$schema": "https://schema.brika.dev/plugin.schema.json",
   "name": "@brika/plugin-spotify",
+  "displayName": "Spotify",
   "version": "0.1.0",
   "description": "Spotify Connect player for BRIKA dashboards",
   "author": "BRIKA Team",

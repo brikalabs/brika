@@ -10,7 +10,7 @@ import { useLocale } from '@/lib/use-locale';
 import { InstallProgressDialog } from './InstallProgressDialog';
 
 interface InstallButtonProps {
-  plugin: Pick<StorePlugin, 'name' | 'version' | 'installed' | 'compatible'>;
+  plugin: Pick<StorePlugin, 'name' | 'version' | 'installed' | 'compatible' | 'source'>;
   size?: 'default' | 'sm' | 'lg' | 'icon';
   variant?: 'default' | 'outline' | 'ghost';
 }
@@ -40,10 +40,12 @@ export function InstallButton({
     try {
       await registryApi.uninstall(plugin.name);
 
-      // Invalidate relevant queries
-      queryClient.invalidateQueries({ queryKey: pluginsKeys.all });
-      queryClient.invalidateQueries({ queryKey: registryKeys.packages });
-      queryClient.invalidateQueries({ queryKey: ['store'] });
+      // Await invalidation so the spinner stays until fresh data arrives
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: pluginsKeys.all }),
+        queryClient.invalidateQueries({ queryKey: registryKeys.packages }),
+        queryClient.invalidateQueries({ queryKey: ['store'] }),
+      ]);
     } catch (error) {
       console.error('Uninstall failed:', error);
     } finally {
@@ -113,7 +115,7 @@ export function InstallButton({
         open={showInstallDialog}
         onOpenChange={setShowInstallDialog}
         packageName={plugin.name}
-        version={plugin.version}
+        version={plugin.source === 'local' ? 'workspace:*' : plugin.version}
       />
     </>
   );

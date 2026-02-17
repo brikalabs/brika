@@ -282,6 +282,7 @@ export const PluginPackageSchema = BasePackageJson.extend({
     .describe("Engine requirements. Must include 'brika' field."),
 
   // BRIKA-specific fields
+  displayName: z.optional(z.string().describe('Human-readable display name')),
   tools: z.optional(z.array(ToolSchema).describe('Tools provided by this plugin')),
   blocks: z.optional(z.array(BlockSchema).describe('Workflow blocks provided by this plugin')),
   sparks: z.optional(
@@ -291,9 +292,7 @@ export const PluginPackageSchema = BasePackageJson.extend({
   pages: z.optional(
     z.array(PageSchema).describe('Custom pages shown as tabs on the plugin detail view')
   ),
-  actions: z.optional(
-    z.string().describe('Path to actions file, e.g. "src/actions.ts"')
-  ),
+  actions: z.optional(z.string().describe('Path to actions file, e.g. "src/actions.ts"')),
   icon: z.optional(z.string().describe('Path to plugin icon (PNG/SVG, relative to package root)')),
   preferences: z.optional(
     z.array(PreferenceSchema).describe('Plugin preferences/configuration schema')

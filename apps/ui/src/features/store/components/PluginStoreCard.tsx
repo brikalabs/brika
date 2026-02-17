@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage, Badge, Card } from '@/components/u
 import { useLocale } from '@/lib/use-locale';
 import { CompatibilityBadge } from './CompatibilityBadge';
 import { InstallButton } from './InstallButton';
+import { LocalBadge } from './LocalBadge';
 import { VerifiedBadge } from './VerifiedBadge';
 
 interface PluginStoreCardProps {
@@ -18,7 +19,7 @@ function formatDownloads(count: number): string {
 }
 
 export function PluginStoreCard({ plugin }: Readonly<PluginStoreCardProps>) {
-  const { t } = useLocale();
+  const { t, tp } = useLocale();
   const accent = plugin.featured ? 'blue' : 'none';
   const authorName = typeof plugin.author === 'string' ? plugin.author : plugin.author?.name;
 
@@ -44,13 +45,14 @@ export function PluginStoreCard({ plugin }: Readonly<PluginStoreCardProps>) {
               {/* Title + Verified Badge */}
               <div className="flex items-center gap-1.5 overflow-hidden">
                 <h3 className="truncate font-semibold text-base leading-tight transition-colors group-hover:text-foreground">
-                  {plugin.name}
+                  {tp(plugin.name, 'name', plugin.displayName ?? plugin.name)}
                 </h3>
                 {plugin.verified && <VerifiedBadge />}
               </div>
 
               {/* Status Badges */}
               <div className="flex flex-wrap items-center gap-1.5">
+                {plugin.source === 'local' && <LocalBadge />}
                 <CompatibilityBadge
                   compatible={plugin.compatible}
                   reason={plugin.compatibilityReason}
@@ -80,7 +82,7 @@ export function PluginStoreCard({ plugin }: Readonly<PluginStoreCardProps>) {
           {/* Description */}
           {plugin.description && (
             <p className="line-clamp-2 text-muted-foreground text-sm leading-relaxed">
-              {plugin.description}
+              {tp(plugin.name, 'description', plugin.description)}
             </p>
           )}
 

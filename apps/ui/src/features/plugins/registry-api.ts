@@ -111,14 +111,16 @@ export const registryApi = {
 
   /** Get a specific package */
   get: (name: string) =>
-    fetcher<{ package: InstalledPackage | null }>(`/api/registry/packages/${name}`),
+    fetcher<{ package: InstalledPackage | null }>(
+      `/api/registry/packages/${encodeURIComponent(name)}`
+    ),
 
   /** Check for available updates */
   checkUpdates: () => fetcher<{ updates: UpdateInfo[] }>('/api/registry/updates'),
 
   /** Uninstall a package */
   uninstall: (name: string) =>
-    fetcher<{ success: boolean }>(`/api/registry/packages/${name}`, {
+    fetcher<{ success: boolean }>(`/api/registry/packages/${encodeURIComponent(name)}`, {
       method: 'DELETE',
     }),
 

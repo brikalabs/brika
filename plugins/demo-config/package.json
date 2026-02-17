@@ -1,5 +1,6 @@
 {
   "name": "@brika/plugin-demo-config",
+  "displayName": "Config Demo",
   "version": "0.2.1",
   "private": true,
   "type": "module",

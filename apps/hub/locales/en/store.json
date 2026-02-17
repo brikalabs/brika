@@ -29,7 +29,8 @@
     "all": "All $t(common:items.plugin_other)",
     "verified": "Verified Only",
     "compatible": "Compatible Only",
-    "installed": "Installed"
+    "installed": "Installed",
+    "local": "Local Only"
   },
   "sort": {
     "downloads": "Most Downloads",
@@ -43,7 +44,9 @@
     "compatibleTooltip": "Compatible with your Brika version",
     "incompatible": "Incompatible",
     "incompatibleTooltip": "Not compatible with your Brika version",
-    "featured": "Featured"
+    "featured": "Featured",
+    "local": "Local",
+    "localTooltip": "This plugin is from your local workspace"
   },
   "actions": {
     "install": "Install",

@@ -194,6 +194,15 @@ export class PluginManager {
     return this.#lifecycle.unload(name, skipRestartReset);
   }
 
+  /** Unload a plugin and remove it from the state store (full uninstall). */
+  async remove(name: string): Promise<void> {
+    const process = this.#lifecycle.getProcessByName(name);
+    if (process) {
+      await this.#lifecycle.unload(name);
+    }
+    await this.#state.remove(name);
+  }
+
   stopAll(): Promise<void> {
     return this.#lifecycle.stopAll();
   }

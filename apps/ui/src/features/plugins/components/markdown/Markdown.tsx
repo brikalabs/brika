@@ -17,7 +17,9 @@ export function Markdown({ children }: Readonly<{ children: string }>) {
 
   return (
     <div className="px-6 text-foreground [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
-      <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>{children}</ReactMarkdown>
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+        {children}
+      </ReactMarkdown>
     </div>
   );
 }

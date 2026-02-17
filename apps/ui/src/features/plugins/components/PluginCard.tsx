@@ -46,7 +46,7 @@ export function PluginCard({
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <span className="truncate font-semibold text-sm leading-tight transition-colors group-hover:text-foreground">
-                {tp(p.name, 'name')}
+                {tp(p.name, 'name', p.displayName ?? p.name)}
               </span>
               <Badge variant="outline" className="shrink-0 text-[10px]">
                 v{p.version}

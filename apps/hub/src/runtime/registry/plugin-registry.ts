@@ -339,8 +339,7 @@ export class PluginRegistry {
     try {
       const { PluginManager } = await import('@/runtime/plugins/plugin-manager');
       const pm = inject(PluginManager);
-      const plugin = pm.list().find((p) => p.name === name);
-      if (plugin) await pm.unload(plugin.name);
+      await pm.remove(name);
     } catch {
       // Ignore unload errors
     }

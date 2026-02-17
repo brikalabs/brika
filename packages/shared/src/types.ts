@@ -106,6 +106,8 @@ export interface Plugin {
   version: string;
 
   // ─── Metadata (inlined from package.json) ──────────────────────────────────
+  /** Human-readable display name */
+  displayName: string | null;
   /** Human-readable description */
   description: string | null;
   /** Author name or object */
@@ -310,6 +312,7 @@ export interface PluginPreferences {
 /** Plugin data from the store (combines npm + verified status + compatibility) */
 export interface StorePlugin {
   name: string;
+  displayName?: string;
   version: string;
   description: string;
   author: string | { name: string; email?: string };
@@ -325,6 +328,8 @@ export interface StorePlugin {
   compatibilityReason?: string;
   installed: boolean;
   installedVersion?: string;
+  /** Where this plugin comes from: 'npm' (default) or 'local' (workspace) */
+  source?: 'npm' | 'local';
   npm: {
     downloads: number;
     publishedAt: string;
@@ -352,6 +357,7 @@ export interface VerifiedPluginsList {
 export interface NpmPackageData {
   name: string;
   version: string;
+  displayName?: string;
   description?: string;
   author?: string | { name: string; email?: string };
   keywords?: string[];
@@ -447,4 +453,22 @@ export function arePortTypesCompatible(sourceType?: string, targetType?: string)
   }
 
   return false;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Localized Strings
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** A string that can be plain or localized as { en: "...", fr: "..." } */
+export type LocalizedString = string | Record<string, string>;
+
+/** Resolve a localized string to a plain string for the given locale. */
+export function resolveLocalized(
+  value: LocalizedString | null | undefined,
+  locale?: string
+): string | undefined {
+  if (value == null) return undefined;
+  if (typeof value === 'string') return value;
+  if (locale) return value[locale] ?? value[locale.split('-')[0] ?? ''] ?? value.en;
+  return value.en ?? Object.values(value)[0];
 }

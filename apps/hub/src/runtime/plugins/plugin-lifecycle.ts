@@ -95,6 +95,7 @@ export class PluginLifecycle {
       uid: stored.uid,
       name: stored.name,
       version: stored.version,
+      displayName: m.displayName ?? null,
       description: m.description ?? null,
       author: m.author ?? null,
       homepage: m.homepage ?? null,

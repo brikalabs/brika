@@ -2,12 +2,14 @@ import 'reflect-metadata';
 import { afterEach, describe, expect, mock, spyOn, test } from 'bun:test';
 import { stub, useTestBed } from '@brika/di/testing';
 import { TestApp } from '@brika/router/testing';
+import { ConfigLoader } from '@/runtime/config/config-loader';
 import { registryRoutes } from '@/runtime/http/routes/registry';
 import { Logger } from '@/runtime/logs/log-router';
 import { PluginManager } from '@/runtime/plugins/plugin-manager';
 import { PluginRegistry } from '@/runtime/registry';
 import { NpmSearchService } from '@/runtime/services/npm-search';
 import { VerifiedPluginsService } from '@/runtime/services/verified-plugins';
+import { WorkspaceSearchService } from '@/runtime/services/workspace-search';
 
 describe('registry routes', () => {
   let app: ReturnType<typeof TestApp.create>;
@@ -26,6 +28,10 @@ describe('registry routes', () => {
     getVerifiedList: ReturnType<typeof mock>;
     isVerified: ReturnType<typeof mock>;
     getVerifiedPlugin: ReturnType<typeof mock>;
+  };
+  let mockWorkspace: {
+    findByName: ReturnType<typeof mock>;
+    discover: ReturnType<typeof mock>;
   };
 
   useTestBed(() => {
@@ -50,6 +56,12 @@ describe('registry routes', () => {
     stub(NpmSearchService, mockNpmSearch);
     stub(VerifiedPluginsService, mockVerified);
     stub(PluginManager, { getByName: mock().mockReturnValue(null) });
+    stub(ConfigLoader, { get: mock().mockReturnValue({ plugins: [] }) });
+    mockWorkspace = {
+      findByName: mock().mockResolvedValue(null),
+      discover: mock().mockResolvedValue([]),
+    };
+    stub(WorkspaceSearchService, mockWorkspace);
     stub(Logger);
     app = TestApp.create(registryRoutes);
   });
@@ -116,6 +128,33 @@ describe('registry routes', () => {
     expect(res.body.plugins[0].installed).toBeFalse();
   });
 
+  // ─── Local plugins ───────────────────────────────────────────────────────
+
+  test('GET /api/registry/local-plugins returns discovered workspace plugins', async () => {
+    mockWorkspace.discover.mockResolvedValue([
+      {
+        package: { name: '@brika/plugin-timer', version: '1.0.0' },
+        installed: true,
+        installedVersion: '1.0.0',
+      },
+    ]);
+
+    const res = await app.get<{ plugins: Array<{ package: { name: string } }> }>(
+      '/api/registry/local-plugins'
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body.plugins).toHaveLength(1);
+    expect(res.body.plugins[0].package.name).toBe('@brika/plugin-timer');
+    expect(mockWorkspace.discover).toHaveBeenCalled();
+  });
+
+  test('GET /api/registry/local-plugins passes query parameter', async () => {
+    await app.get('/api/registry/local-plugins', { query: { q: 'timer' } });
+
+    expect(mockWorkspace.discover).toHaveBeenCalledWith('timer');
+  });
+
   // ─── Verified ─────────────────────────────────────────────────────────────
 
   test('GET /api/registry/verified returns verified list', async () => {
@@ -126,11 +165,34 @@ describe('registry routes', () => {
 
   // ─── Plugin details ───────────────────────────────────────────────────────
 
-  test('GET /api/registry/plugins/:name returns error for unknown package', async () => {
+  test('GET /api/registry/plugins/:name returns 404 for unknown package', async () => {
     const res = await app.get<{ error: string }>('/api/registry/plugins/unknown-pkg');
 
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(404);
     expect(res.body.error).toBe('Package not found');
+  });
+
+  test('GET /api/registry/plugins/:name returns local plugin when found in workspace', async () => {
+    mockWorkspace.findByName.mockResolvedValue({
+      rootDir: '/workspace/plugins/timer',
+      pkg: {
+        name: 'brika-plugin-timer',
+        version: '1.0.0',
+        displayName: 'Timer',
+        description: 'A timer plugin',
+        keywords: ['brika'],
+        engines: { brika: '^0.1.0' },
+      },
+    });
+
+    const res = await app.get<{ name: string; source: string; installed: boolean }>(
+      '/api/registry/plugins/brika-plugin-timer'
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body.name).toBe('brika-plugin-timer');
+    expect(res.body.source).toBe('local');
+    expect(res.body.installed).toBeFalse();
   });
 
   test('GET /api/registry/plugins/:name returns enriched details', async () => {

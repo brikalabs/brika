@@ -53,6 +53,7 @@ interface NpmApiPackageResponse {
     {
       name: string;
       version: string;
+      displayName?: string;
       description?: string;
       author?: string | { name: string; email?: string };
       keywords?: string[];
@@ -221,6 +222,7 @@ export class NpmSearchService {
       return {
         name: data.name,
         version: latestVersion,
+        displayName: versionData.displayName,
         description: versionData.description,
         author: versionData.author,
         keywords: versionData.keywords || [],

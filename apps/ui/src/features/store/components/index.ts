@@ -1,6 +1,7 @@
 export { CompatibilityBadge } from './CompatibilityBadge';
 export { InstallButton } from './InstallButton';
 export { InstallProgressDialog } from './InstallProgressDialog';
+export { LocalBadge } from './LocalBadge';
 export { PluginStoreCard } from './PluginStoreCard';
 export { PluginStoreCardSkeleton } from './PluginStoreCardSkeleton';
 export type { FilterValue, SortValue } from './PluginStoreFilters';

@@ -7,10 +7,10 @@ import { useDebouncedState } from '@/hooks/use-debounce';
 import { useLocale } from '@/lib/use-locale';
 import type { FilterValue, SortValue } from './components';
 import { PluginStoreCard, PluginStoreCardSkeleton, PluginStoreFilters } from './components';
-import { useStorePlugins, useVerifiedPlugins } from './hooks';
+import { useLocalPlugins, useStorePlugins, useVerifiedPlugins } from './hooks';
 
 export function StorePage() {
-  const { t } = useLocale();
+  const { t, tp } = useLocale();
   const [debouncedSearch, setSearch] = useDebouncedState('', 300);
   const [filter, setFilter] = React.useState<FilterValue>('all');
   const [sort, setSort] = React.useState<SortValue>('downloads');
@@ -22,24 +22,22 @@ export function StorePage() {
   });
 
   const { data: verifiedData } = useVerifiedPlugins();
+  const { data: localData } = useLocalPlugins({ q: debouncedSearch });
 
-  // Merge npm results with verified status and compatibility
+  // Merge npm + local results with verified status and compatibility
   const allPlugins = React.useMemo(() => {
-    if (!searchData?.plugins) return [];
-
     const verifiedSet = new Set(verifiedData?.plugins.map((p) => p.name) || []);
 
-    return searchData.plugins.map((npmPlugin) => {
+    // Map npm results
+    const npmPlugins: StorePlugin[] = (searchData?.plugins ?? []).map((npmPlugin) => {
       const verified = verifiedSet.has(npmPlugin.package.name);
       const verifiedPlugin = verifiedData?.plugins.find((p) => p.name === npmPlugin.package.name);
 
-      // Compatibility check: compatible by default if no engines specified
-      const compatible = true;
-
       return {
         name: npmPlugin.package.name,
+        displayName: npmPlugin.package.displayName,
         version: npmPlugin.package.version,
-        description: npmPlugin.package.description || '',
+        description: npmPlugin.package.description ?? '',
         author: npmPlugin.package.author || '',
         keywords: npmPlugin.package.keywords || [],
         repository: npmPlugin.package.repository,
@@ -49,16 +47,47 @@ export function StorePage() {
         verified,
         verifiedAt: verifiedPlugin?.verifiedAt,
         featured: verifiedPlugin?.featured || false,
-        compatible,
+        compatible: true,
         installed: npmPlugin.installed || false,
         installedVersion: npmPlugin.installedVersion,
+        source: 'npm',
         npm: {
           downloads: npmPlugin.downloadCount || 0,
           publishedAt: npmPlugin.package.date || '',
         },
-      } as StorePlugin;
+      } satisfies StorePlugin;
     });
-  }, [searchData, verifiedData]);
+
+    // Map local workspace results
+    const localPlugins: StorePlugin[] = (localData?.plugins ?? []).map(
+      (local) =>
+        ({
+          name: local.package.name,
+          displayName: local.package.displayName,
+          version: local.package.version,
+          description: local.package.description ?? '',
+          author: local.package.author || '',
+          keywords: local.package.keywords || [],
+          repository: local.package.repository,
+          homepage: local.package.homepage,
+          license: local.package.license,
+          engines: local.package.engines,
+          verified: false,
+          featured: false,
+          compatible: true,
+          installed: local.installed || false,
+          installedVersion: local.installedVersion,
+          source: 'local',
+          npm: { downloads: 0, publishedAt: '' },
+        }) satisfies StorePlugin
+    );
+
+    // Deduplicate: local plugins take precedence over npm
+    const localNames = new Set(localPlugins.map((p) => p.name));
+    const deduped = npmPlugins.filter((p) => !localNames.has(p.name));
+
+    return [...localPlugins, ...deduped];
+  }, [searchData, verifiedData, localData]);
 
   // Apply filters
   const filteredPlugins = React.useMemo(() => {
@@ -88,12 +117,16 @@ export function StorePage() {
         );
         break;
       case 'name':
-        filtered = [...filtered].sort((a, b) => a.name.localeCompare(b.name));
+        filtered = [...filtered].sort((a, b) =>
+          tp(a.name, 'name', a.displayName ?? a.name).localeCompare(
+            tp(b.name, 'name', b.displayName ?? b.name)
+          )
+        );
         break;
     }
 
     return filtered;
-  }, [allPlugins, filter, sort]);
+  }, [allPlugins, filter, sort, tp]);
 
   // Sort plugins to show featured first
   const sortedPlugins = React.useMemo(
