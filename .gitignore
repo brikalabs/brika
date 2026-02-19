@@ -11,18 +11,9 @@ node_modules
 # Docker volume mount folder
 config/
 
-# BRIKA runtime data (ignore generated files, keep config and automations)
-.brika/state.json
-.brika/plugins/
-.brika/logs.db
-.brika/logs.db-shm
-.brika/logs.db-wal
-# Keep tracked: .brika/elia.yml, .brika/automations/, .brika/.gitignore
-
-# SQLite cache files
-.brika/cache.db
-.brika/cache.db-shm
-.brika/cache.db-wal
+# BRIKA runtime data
+.brika/
+**/.brika/
 
 # Plugin persistent data
 plugins/*/data/

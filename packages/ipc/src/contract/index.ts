@@ -4,6 +4,8 @@
  * All message and RPC definitions for plugin-hub communication.
  */
 
+// ─── Actions ───
+export { callAction, registerAction } from './actions';
 export type {
   BlockCategory as BlockCategoryType,
   BlockDefinition as BlockDefinitionType,
@@ -53,6 +55,9 @@ export {
   uninstall,
   updatePreference,
 } from './lifecycle';
+export type { HubLocation as HubLocationType } from './permissions';
+// ─── Permissions ───
+export { getHubLocation, HubLocation } from './permissions';
 export type {
   RouteMethod as RouteMethodType,
   RouteRequest as RouteRequestType,
@@ -80,9 +85,6 @@ export {
   subscribeSpark,
   unsubscribeSpark,
 } from './sparks';
-export type { HubLocation as HubLocationType } from './permissions';
-// ─── Permissions ───
-export { HubLocation, getHubLocation } from './permissions';
 export type {
   ToolCallContext as ToolCallContextType,
   ToolCallSource as ToolCallSourceType,
@@ -102,5 +104,3 @@ export {
   ToolInputSchemaProperty,
   ToolResult,
 } from './tools';
-// ─── Actions ───
-export { callAction, registerAction } from './actions';

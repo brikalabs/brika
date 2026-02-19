@@ -1,6 +1,6 @@
 import { defineReactiveBlock, input, output, z } from '@brika/sdk';
 import { log } from '@brika/sdk/lifecycle';
-import { type MatterCommand, getMatterController } from '../matter-controller';
+import { getMatterController, type MatterCommand } from '../matter-controller';
 
 export const matterCommand = defineReactiveBlock(
   {

@@ -52,7 +52,7 @@ export const bricksRoutes = group('/api/bricks', [
   /**
    * List all registered brick types (prefetches dynamic-dropdown options)
    */
-  route.get('/types', async ({ inject }) => {
+  route.get('/types', ({ inject }) => {
     const lifecycle = inject(PluginLifecycle);
     return Promise.all(
       inject(BrickTypeRegistry)
@@ -64,7 +64,7 @@ export const bricksRoutes = group('/api/bricks', [
   /**
    * Get a specific brick type by full ID
    */
-  route.get('/types/:id', { params: z.object({ id: z.string() }) }, async ({ params, inject }) => {
+  route.get('/types/:id', { params: z.object({ id: z.string() }) }, ({ params, inject }) => {
     const t = inject(BrickTypeRegistry).get(params.id);
     if (!t) throw new NotFound('Brick type not found');
     return toBrickTypeDto(t, inject(PluginLifecycle));

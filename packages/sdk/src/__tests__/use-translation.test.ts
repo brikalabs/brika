@@ -9,12 +9,14 @@ import { beforeEach, describe, expect, mock, test } from 'bun:test';
 import type { I18nRef } from '@brika/ui-kit';
 
 // Mock the context module
-const mockT = mock((key: string, params?: Record<string, string | number>): I18nRef => ({
-  __i18n: true,
-  ns: 'plugin:test-plugin',
-  key,
-  params,
-}));
+const mockT = mock(
+  (key: string, params?: Record<string, string | number>): I18nRef => ({
+    __i18n: true,
+    ns: 'plugin:test-plugin',
+    key,
+    params,
+  })
+);
 
 mock.module('../context', () => ({
   getContext: () => ({ t: mockT }),

@@ -1,5 +1,5 @@
-import { Grid, Section, Stat, Status, defineBrick, useBrickSize, useEffect, useState } from '@brika/sdk/bricks';
-import { type DeviceType, type MatterDevice, getMatterController } from '../matter-controller';
+import { defineBrick, Grid, Section, Stat, Status, useBrickSize, useEffect, useState } from '@brika/sdk/bricks';
+import { type DeviceType, getMatterController, type MatterDevice } from '../matter-controller';
 
 const DEVICE_ICONS: Record<DeviceType, string> = {
   light: 'lightbulb',
@@ -71,7 +71,6 @@ export const devicesBrick = defineBrick(
             <Grid columns={gridColumns(width)} gap="sm">
               {commissioned.map((d) => (
                 <Status
-                  key={d.nodeId}
                   label={d.name}
                   status={d.online ? 'online' : 'offline'}
                   icon={deviceIcon(d.deviceType)}

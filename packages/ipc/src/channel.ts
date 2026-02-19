@@ -5,7 +5,7 @@
  */
 
 import type { InputOf, MessageDef, OutputOf, PayloadOf, RpcDef } from './define';
-import { RpcError, isRpcErrorWire } from './errors';
+import { isRpcErrorWire, RpcError } from './errors';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -174,12 +174,13 @@ export class Channel {
     const timeout = timeoutMs ?? this.#timeoutMs;
 
     return new Promise<OutputOf<T>>((resolve, reject) => {
-      const timer = timeout > 0
-        ? setTimeout(() => {
-            this.#pending.delete(id);
-            reject(new Error(`RPC timeout: ${def.name} (id=${id}) after ${timeout}ms`));
-          }, timeout)
-        : undefined;
+      const timer =
+        timeout > 0
+          ? setTimeout(() => {
+              this.#pending.delete(id);
+              reject(new Error(`RPC timeout: ${def.name} (id=${id}) after ${timeout}ms`));
+            }, timeout)
+          : undefined;
 
       this.#pending.set(id, {
         resolve: resolve as (value: unknown) => void,

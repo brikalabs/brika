@@ -6,11 +6,11 @@
 
 import { describe, expect, test } from 'bun:test';
 import {
-  type Permission,
-  PERMISSIONS,
-  PERMISSION_LIST,
   filterValidPermissions,
   isValidPermission,
+  PERMISSION_LIST,
+  PERMISSIONS,
+  type Permission,
 } from '@brika/shared';
 
 describe('Permission System', () => {

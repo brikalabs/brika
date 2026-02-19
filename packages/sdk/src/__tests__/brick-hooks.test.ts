@@ -119,9 +119,9 @@ describe('useState', () => {
   });
 
   test('setter with updater function receives previous value', async () => {
-    let renders = 0;
+    let _renders = 0;
     const state = _createState(() => {
-      renders++;
+      _renders++;
     });
     let val: number | undefined;
     let set!: (v: number | ((p: number) => number)) => void;

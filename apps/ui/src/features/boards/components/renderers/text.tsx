@@ -9,9 +9,9 @@ import { clickableProps } from './shared';
 const textVariants = cva('min-w-0 truncate tabular-nums', {
   variants: {
     variant: {
-      heading: 'font-semibold text-xs @xs:text-sm @md:text-base',
-      caption: 'text-[10px] @xs:text-[11px] @md:text-xs text-muted-foreground',
-      body: 'text-[11px] @xs:text-xs @md:text-sm',
+      heading: 'font-semibold @md:text-base @xs:text-sm text-xs',
+      caption: '@md:text-xs @xs:text-[11px] text-[10px] text-muted-foreground',
+      body: '@md:text-sm @xs:text-xs text-[11px]',
     },
     align: {
       left: 'text-left',
@@ -42,7 +42,12 @@ defineRenderer('text', ({ node, onAction }) => {
 
   let content: string;
   if (node.i18n) {
-    content = t(node.i18n.key, { ns: node.i18n.ns, nsSeparator: false, defaultValue: node.content, ...node.i18n.params });
+    content = t(node.i18n.key, {
+      ns: node.i18n.ns,
+      nsSeparator: false,
+      defaultValue: node.content,
+      ...node.i18n.params,
+    });
   } else if (node.intl) {
     const locale = i18n.language === 'cimode' ? 'en' : i18n.language;
     content = resolveIntlRef(node.intl, locale);
@@ -51,7 +56,12 @@ defineRenderer('text', ({ node, onAction }) => {
   }
   const resolved = resolveColor(node.color);
   const lineClampStyle: Record<string, unknown> = node.maxLines
-    ? { display: '-webkit-box', WebkitLineClamp: node.maxLines, WebkitBoxOrient: 'vertical', overflow: 'hidden' }
+    ? {
+        display: '-webkit-box',
+        WebkitLineClamp: node.maxLines,
+        WebkitBoxOrient: 'vertical',
+        overflow: 'hidden',
+      }
     : {};
   const style: React.CSSProperties = {
     ...(resolved ? { color: resolved } : undefined),

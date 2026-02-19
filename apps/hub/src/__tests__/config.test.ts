@@ -17,6 +17,7 @@ describe('HubConfig', () => {
     delete process.env.BRIKA_PORT;
     delete process.env.BRIKA_HOME;
     delete process.env.BRIKA_STATIC_DIR;
+    delete process.env.BRIKA_BUN_PATH;
   });
 
   test('uses defaults when ConfigLoader not available', () => {
@@ -26,6 +27,7 @@ describe('HubConfig', () => {
     expect(config.port).toBe(3001);
     expect(config.homeDir).toBe('.brika');
     expect(config.staticDir).toBe('');
+    expect(config.bunPath).toBe('bun');
   });
 
   test('uses environment variables over defaults', () => {

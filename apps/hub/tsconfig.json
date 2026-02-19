@@ -8,5 +8,5 @@
       "@/*": ["src/*"]
     }
   },
-  "include": ["src", "scripts"]
+  "include": ["src", "compiler"]
 }

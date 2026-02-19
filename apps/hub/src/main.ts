@@ -2,15 +2,17 @@
 import 'reflect-metadata';
 
 import {
+  BoardsLoader,
   bootstrap,
   cache,
-  BoardsLoader,
   I18nLoader,
   loader,
   PluginLoader,
+  pid,
   routes,
   sparks,
   trapSignals,
+  updates,
   WorkflowsLoader,
 } from '@/runtime/bootstrap';
 import { allRoutes } from '@/runtime/http/routes';
@@ -21,12 +23,14 @@ import { allRoutes } from '@/runtime/http/routes';
  * Declarative bootstrap with modular plugins.
  */
 await bootstrap()
-  .use(cache()) // Initialize SQLite cache early
+  .use(pid()) // Check for duplicate instance early; writes PID on start
+  .use(cache()) // Initialize SQLite cache before loaders
   .use(sparks())
   .use(routes(allRoutes))
   .use(loader(I18nLoader))
   .use(loader(PluginLoader))
   .use(loader(WorkflowsLoader))
   .use(loader(BoardsLoader))
+  .use(updates())
   .use(trapSignals())
   .start();

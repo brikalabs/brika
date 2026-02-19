@@ -8,9 +8,9 @@ const boxVariants = cva('relative flex min-h-0 flex-col overflow-clip', {
   variants: {
     padding: {
       none: 'p-0',
-      sm: 'p-0.5 @xs:p-1 @md:p-2',
-      md: 'p-1 @xs:p-2 @md:p-3',
-      lg: 'p-2 @xs:p-3 @md:p-4',
+      sm: '@md:p-2 @xs:p-1 p-0.5',
+      md: '@md:p-3 @xs:p-2 p-1',
+      lg: '@md:p-4 @xs:p-3 p-2',
     },
     rounded: {
       none: 'rounded-none',
@@ -67,8 +67,13 @@ defineRenderer('box', ({ node, onAction }) => {
     style.background = bg;
   }
 
-  if (node.width) { style.width = node.width; style.flexShrink = 0; }
-  if (node.height) { style.height = node.height; }
+  if (node.width) {
+    style.width = node.width;
+    style.flexShrink = 0;
+  }
+  if (node.height) {
+    style.height = node.height;
+  }
 
   const boxClass = boxVariants({
     padding: node.padding,

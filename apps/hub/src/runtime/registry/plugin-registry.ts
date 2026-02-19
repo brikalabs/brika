@@ -214,7 +214,8 @@ export class PluginRegistry {
   // ─────────────────────────────────────────────────────────────────────────────
 
   async #runBun(args: string[]): Promise<void> {
-    const proc = Bun.spawn(['bun', ...args], {
+    const bunPath = this.hubConfig.bunPath || 'bun';
+    const proc = Bun.spawn([bunPath, ...args], {
       cwd: this.pluginsDir,
       stdout: 'ignore',
       stderr: 'ignore',
@@ -231,7 +232,8 @@ export class PluginRegistry {
     packageName: string,
     args: string[]
   ): AsyncGenerator<OperationProgress> {
-    const proc = Bun.spawn(['bun', ...args], {
+    const bunPath = this.hubConfig.bunPath || 'bun';
+    const proc = Bun.spawn([bunPath, ...args], {
       cwd: this.pluginsDir,
       stdout: 'pipe',
       stderr: 'pipe',

@@ -6,7 +6,7 @@ import { isToken, resolveColor } from './resolve-color';
 import { clickableProps } from './shared';
 
 const badgeVariants = cva(
-  'inline-flex shrink-0 items-center gap-0.5 @xs:gap-1 @md:gap-1.5 self-start rounded-md px-1 @xs:px-1.5 @md:px-2 py-0.5 font-semibold text-[9px] @xs:text-[10px] @md:text-xs',
+  'inline-flex shrink-0 items-center @md:gap-1.5 @xs:gap-1 gap-0.5 self-start rounded-md @md:px-2 @xs:px-1.5 px-1 py-0.5 font-semibold @md:text-xs @xs:text-[10px] text-[9px]',
   {
     variants: {
       variant: {
@@ -47,7 +47,12 @@ defineRenderer('badge', ({ node, onAction }) => {
       style={node.color ? getColorStyle(node.color) : undefined}
       {...clickableProps(node.onPress, onAction)}
     >
-      {node.icon && <DynamicIcon name={node.icon as IconName} className="size-2 @xs:size-2.5 @md:size-3.5 shrink-0" />}
+      {node.icon && (
+        <DynamicIcon
+          name={node.icon as IconName}
+          className="@md:size-3.5 @xs:size-2.5 size-2 shrink-0"
+        />
+      )}
       {node.label}
     </span>
   );

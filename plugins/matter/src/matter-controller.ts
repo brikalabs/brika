@@ -8,6 +8,9 @@
  * pointed at our plugin's data directory.
  */
 
+import { log } from '@brika/sdk/lifecycle';
+import { getDataDir } from '@brika/sdk/storage';
+import { Environment, Seconds, StorageService } from '@matter/main';
 import { BridgedDeviceBasicInformationClient } from '@matter/main/behaviors/bridged-device-basic-information';
 import { DoorLockClient } from '@matter/main/behaviors/door-lock';
 import { LevelControlClient } from '@matter/main/behaviors/level-control';
@@ -15,12 +18,9 @@ import { OnOffClient } from '@matter/main/behaviors/on-off';
 import { ThermostatClient } from '@matter/main/behaviors/thermostat';
 import { WindowCoveringClient } from '@matter/main/behaviors/window-covering';
 import { DoorLock, GeneralCommissioning, Thermostat } from '@matter/main/clusters';
-import { ManualPairingCodeCodec, QrPairingCodeCodec, NodeId } from '@matter/main/types';
-import { Environment, Seconds, StorageService } from '@matter/main';
+import { ManualPairingCodeCodec, NodeId, QrPairingCodeCodec, VendorId } from '@matter/main/types';
 import { CommissioningController, type NodeCommissioningOptions } from '@project-chip/matter.js';
 import { NodeStates, type PairedNode } from '@project-chip/matter.js/device';
-import { log } from '@brika/sdk/lifecycle';
-import { getDataDir } from '@brika/sdk/storage';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -131,6 +131,12 @@ function readColorControlState(ep: any, state: Record<string, unknown>): void {
   } catch { /* cluster not present */ }
 }
 
+const CONTROLLER_VENDOR_NAME = 'Brika';
+const CONTROLLER_NAME = 'Brika Matter';
+const CONTROLLER_VENDOR_ID = VendorId(0xfff1);
+const CONTROLLER_PRODUCT_ID = 0x8000;
+const CONTROLLER_STORAGE_ID = 'brika-matter-controller';
+
 // ─── Controller ──────────────────────────────────────────────────────────────
 
 export class MatterController {
@@ -158,17 +164,20 @@ export class MatterController {
     this.#controller = new CommissioningController({
       environment: {
         environment,
-        id: 'brika-matter-controller',
+        id: CONTROLLER_STORAGE_ID,
       },
       autoConnect: false,
-      adminFabricLabel: 'Brika Hub',
+      adminVendorId: CONTROLLER_VENDOR_ID,
+      adminFabricLabel: CONTROLLER_NAME,
       basicInformation: {
-        vendorName: 'Brika',
-        productName: 'Matter Brika',
+        vendorName: CONTROLLER_VENDOR_NAME,
+        productName: CONTROLLER_NAME,
+        productId: CONTROLLER_PRODUCT_ID,
       },
     });
 
     await this.#controller.start();
+    await this.#controller.updateFabricLabel(CONTROLLER_NAME);
 
     // Reconnect to any previously commissioned nodes
     const nodeIds = this.#controller.getCommissionedNodes();
@@ -177,6 +186,7 @@ export class MatterController {
     for (const nodeId of nodeIds) {
       try {
         await this.#connectNode(nodeId);
+        await this.#controller.validateAndUpdateFabricLabel(nodeId);
       } catch (err) {
         log.warn(`Failed to connect to node ${nodeId}: ${err}`);
       }
@@ -271,6 +281,7 @@ export class MatterController {
       log.info(`Commissioned node: ${nodeId}`);
 
       await this.#connectNode(nodeId);
+      await this.#controller.validateAndUpdateFabricLabel(nodeId);
 
       const device = this.#deviceCache.get(String(nodeId));
       if (device) {

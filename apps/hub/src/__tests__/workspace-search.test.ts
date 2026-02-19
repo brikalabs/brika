@@ -1,5 +1,5 @@
 /**
- * Tests for WorkspaceSearchService
+ * Tests for LocalRegistry
  */
 
 import 'reflect-metadata';
@@ -8,21 +8,18 @@ import { get, stub, useTestBed } from '@brika/di/testing';
 import { useBunMock } from '@brika/testing';
 import { ConfigLoader } from '@/runtime/config/config-loader';
 import { Logger } from '@/runtime/logs/log-router';
-import { WorkspaceSearchService } from '@/runtime/services/workspace-search';
+import { LocalRegistry } from '@/runtime/store';
 
 useTestBed({ autoStub: false });
 
-describe('WorkspaceSearchService', () => {
+describe('LocalRegistry', () => {
   const bun = useBunMock();
-  let service: WorkspaceSearchService;
-  let mockConfigLoader: {
-    getWorkspaceRoot: ReturnType<typeof mock>;
-    get: ReturnType<typeof mock>;
-  };
+  let service: LocalRegistry;
 
   const validPlugin = {
     name: '@brika/plugin-timer',
     version: '1.0.0',
+    main: './src/index.ts',
     displayName: 'Timer',
     description: 'A timer plugin',
     author: 'Test',
@@ -33,6 +30,7 @@ describe('WorkspaceSearchService', () => {
   const secondPlugin = {
     name: '@brika/plugin-weather',
     version: '2.0.0',
+    main: './src/index.ts',
     displayName: 'Weather',
     description: 'A weather plugin',
     author: 'Test',
@@ -41,96 +39,120 @@ describe('WorkspaceSearchService', () => {
   };
 
   beforeEach(() => {
-    mockConfigLoader = {
-      getWorkspaceRoot: mock().mockResolvedValue('/workspace'),
-      get: mock().mockReturnValue({ plugins: [] }),
-    };
-
     stub(Logger);
-    stub(ConfigLoader, mockConfigLoader);
-    service = get(WorkspaceSearchService);
+    stub(ConfigLoader, { getWorkspaceRoot: mock().mockResolvedValue('/workspace') });
+    service = get(LocalRegistry);
   });
 
-  // ─── discover ──────────────────────────────────────────────────────────────
+  // ─── search ────────────────────────────────────────────────────────────────
 
-  describe('discover', () => {
-    test('returns plugins from workspace plugins directory', async () => {
+  describe('search', () => {
+    test('returns plugins from workspace packages matching engines.brika', async () => {
       bun
+        .fs({ '/workspace/package.json': { workspaces: ['plugins/*'] } })
         .directory('/workspace/plugins', ['timer/package.json'])
         .fs({ '/workspace/plugins/timer/package.json': validPlugin })
         .apply();
 
-      const results = await service.discover();
+      const { plugins } = await service.search();
 
-      expect(results).toHaveLength(1);
-      expect(results[0].package.name).toBe('@brika/plugin-timer');
-      expect(results[0].package.version).toBe('1.0.0');
-      expect(results[0].package.displayName).toBe('Timer');
-      expect(results[0].package.description).toBe('A timer plugin');
-      expect(results[0].installed).toBe(false);
+      expect(plugins).toHaveLength(1);
+      expect(plugins[0].package.name).toBe('@brika/plugin-timer');
+      expect(plugins[0].package.version).toBe('1.0.0');
+      expect(plugins[0].package.displayName).toBe('Timer');
+      expect(plugins[0].package.description).toBe('A timer plugin');
+      expect(plugins[0].source).toBe('local');
+      expect(plugins[0].installVersion).toBe('workspace:*');
     });
 
-    test('marks plugin as installed when in config', async () => {
-      mockConfigLoader.get.mockReturnValue({
-        plugins: [{ name: '@brika/plugin-timer', version: 'workspace:*' }],
-      });
-
+    test('returns downloadCount 0 for local plugins', async () => {
       bun
+        .fs({ '/workspace/package.json': { workspaces: ['plugins/*'] } })
         .directory('/workspace/plugins', ['timer/package.json'])
         .fs({ '/workspace/plugins/timer/package.json': validPlugin })
         .apply();
 
-      const results = await service.discover();
+      const { plugins } = await service.search();
 
-      expect(results).toHaveLength(1);
-      expect(results[0].installed).toBe(true);
-      expect(results[0].installedVersion).toBe('1.0.0');
+      expect(plugins[0].downloadCount).toBe(0);
     });
 
-    test('returns empty array when no plugins directory', async () => {
+    test('returns empty when no workspaces field in root package.json', async () => {
+      bun.fs({ '/workspace/package.json': {} }).apply();
+
+      const { plugins } = await service.search();
+
+      expect(plugins).toEqual([]);
+    });
+
+    test('returns empty when root package.json is missing', async () => {
       bun.apply();
 
-      const results = await service.discover();
+      const { plugins } = await service.search();
 
-      expect(results).toEqual([]);
+      expect(plugins).toEqual([]);
+    });
+
+    test('scans multiple workspace directories', async () => {
+      bun
+        .fs({ '/workspace/package.json': { workspaces: ['plugins/*', 'apps/*'] } })
+        .directory('/workspace/plugins', ['timer/package.json'])
+        .directory('/workspace/apps', ['weather/package.json'])
+        .fs({
+          '/workspace/plugins/timer/package.json': validPlugin,
+          '/workspace/apps/weather/package.json': secondPlugin,
+        })
+        .apply();
+
+      const { plugins } = await service.search();
+
+      expect(plugins).toHaveLength(2);
+      const names = plugins.map((p) => p.package.name);
+      expect(names).toContain('@brika/plugin-timer');
+      expect(names).toContain('@brika/plugin-weather');
+    });
+
+    test('skips packages without engines.brika', async () => {
+      bun
+        .fs({ '/workspace/package.json': { workspaces: ['packages/*'] } })
+        .directory('/workspace/packages', ['not-a-plugin/package.json', 'timer/package.json'])
+        .fs({
+          '/workspace/packages/not-a-plugin/package.json': {
+            name: 'not-a-plugin',
+            version: '1.0.0',
+            main: './index.ts',
+          },
+          '/workspace/packages/timer/package.json': validPlugin,
+        })
+        .apply();
+
+      const { plugins } = await service.search();
+
+      expect(plugins).toHaveLength(1);
+      expect(plugins[0].package.name).toBe('@brika/plugin-timer');
     });
 
     test('skips invalid package.json files', async () => {
       bun
+        .fs({ '/workspace/package.json': { workspaces: ['plugins/*'] } })
         .directory('/workspace/plugins', ['valid/package.json', 'invalid/package.json'])
         .fs({
           '/workspace/plugins/valid/package.json': validPlugin,
-          '/workspace/plugins/invalid/package.json': { name: 123 }, // invalid: name must be string
+          '/workspace/plugins/invalid/package.json': { name: 123 },
         })
         .apply();
 
-      const results = await service.discover();
+      const { plugins } = await service.search();
 
-      expect(results).toHaveLength(1);
-      expect(results[0].package.name).toBe('@brika/plugin-timer');
-    });
-
-    test('discovers multiple plugins', async () => {
-      bun
-        .directory('/workspace/plugins', ['timer/package.json', 'weather/package.json'])
-        .fs({
-          '/workspace/plugins/timer/package.json': validPlugin,
-          '/workspace/plugins/weather/package.json': secondPlugin,
-        })
-        .apply();
-
-      const results = await service.discover();
-
-      expect(results).toHaveLength(2);
-      const names = results.map((r) => r.package.name);
-      expect(names).toContain('@brika/plugin-timer');
-      expect(names).toContain('@brika/plugin-weather');
+      expect(plugins).toHaveLength(1);
+      expect(plugins[0].package.name).toBe('@brika/plugin-timer');
     });
 
     // ─── Query filtering ──────────────────────────────────────────────
 
     test('filters by name query', async () => {
       bun
+        .fs({ '/workspace/package.json': { workspaces: ['plugins/*'] } })
         .directory('/workspace/plugins', ['timer/package.json', 'weather/package.json'])
         .fs({
           '/workspace/plugins/timer/package.json': validPlugin,
@@ -138,14 +160,15 @@ describe('WorkspaceSearchService', () => {
         })
         .apply();
 
-      const results = await service.discover('timer');
+      const { plugins } = await service.search('timer');
 
-      expect(results).toHaveLength(1);
-      expect(results[0].package.name).toBe('@brika/plugin-timer');
+      expect(plugins).toHaveLength(1);
+      expect(plugins[0].package.name).toBe('@brika/plugin-timer');
     });
 
     test('filters by description query', async () => {
       bun
+        .fs({ '/workspace/package.json': { workspaces: ['plugins/*'] } })
         .directory('/workspace/plugins', ['timer/package.json', 'weather/package.json'])
         .fs({
           '/workspace/plugins/timer/package.json': validPlugin,
@@ -153,14 +176,15 @@ describe('WorkspaceSearchService', () => {
         })
         .apply();
 
-      const results = await service.discover('weather');
+      const { plugins } = await service.search('weather plugin');
 
-      expect(results).toHaveLength(1);
-      expect(results[0].package.name).toBe('@brika/plugin-weather');
+      expect(plugins).toHaveLength(1);
+      expect(plugins[0].package.name).toBe('@brika/plugin-weather');
     });
 
     test('filters by keyword query', async () => {
       bun
+        .fs({ '/workspace/package.json': { workspaces: ['plugins/*'] } })
         .directory('/workspace/plugins', ['timer/package.json', 'weather/package.json'])
         .fs({
           '/workspace/plugins/timer/package.json': validPlugin,
@@ -168,40 +192,43 @@ describe('WorkspaceSearchService', () => {
         })
         .apply();
 
-      const results = await service.discover('forecast');
+      const { plugins } = await service.search('forecast');
 
-      expect(results).toHaveLength(1);
-      expect(results[0].package.name).toBe('@brika/plugin-weather');
+      expect(plugins).toHaveLength(1);
+      expect(plugins[0].package.name).toBe('@brika/plugin-weather');
     });
 
     test('query is case-insensitive', async () => {
       bun
+        .fs({ '/workspace/package.json': { workspaces: ['plugins/*'] } })
         .directory('/workspace/plugins', ['timer/package.json'])
         .fs({ '/workspace/plugins/timer/package.json': validPlugin })
         .apply();
 
-      const results = await service.discover('TIMER');
+      const { plugins } = await service.search('TIMER');
 
-      expect(results).toHaveLength(1);
+      expect(plugins).toHaveLength(1);
     });
 
     test('returns empty when query matches nothing', async () => {
       bun
+        .fs({ '/workspace/package.json': { workspaces: ['plugins/*'] } })
         .directory('/workspace/plugins', ['timer/package.json'])
         .fs({ '/workspace/plugins/timer/package.json': validPlugin })
         .apply();
 
-      const results = await service.discover('nonexistent');
+      const { plugins } = await service.search('nonexistent');
 
-      expect(results).toEqual([]);
+      expect(plugins).toEqual([]);
     });
   });
 
   // ─── findByName ────────────────────────────────────────────────────────────
 
   describe('findByName', () => {
-    test('finds plugin by exact name', async () => {
+    test('finds plugin by exact name across workspace directories', async () => {
       bun
+        .fs({ '/workspace/package.json': { workspaces: ['plugins/*'] } })
         .directory('/workspace/plugins', ['timer/package.json'])
         .fs({ '/workspace/plugins/timer/package.json': validPlugin })
         .apply();
@@ -213,8 +240,27 @@ describe('WorkspaceSearchService', () => {
       expect(result?.rootDir).toBe('/workspace/plugins/timer');
     });
 
+    test('finds plugin in a different workspace directory', async () => {
+      bun
+        .fs({ '/workspace/package.json': { workspaces: ['plugins/*', 'apps/*'] } })
+        .directory('/workspace/plugins', ['timer/package.json'])
+        .directory('/workspace/apps', ['weather/package.json'])
+        .fs({
+          '/workspace/plugins/timer/package.json': validPlugin,
+          '/workspace/apps/weather/package.json': secondPlugin,
+        })
+        .apply();
+
+      const result = await service.findByName('@brika/plugin-weather');
+
+      expect(result).not.toBeNull();
+      expect(result?.pkg.name).toBe('@brika/plugin-weather');
+      expect(result?.rootDir).toBe('/workspace/apps/weather');
+    });
+
     test('returns null when plugin not found', async () => {
       bun
+        .fs({ '/workspace/package.json': { workspaces: ['plugins/*'] } })
         .directory('/workspace/plugins', ['timer/package.json'])
         .fs({ '/workspace/plugins/timer/package.json': validPlugin })
         .apply();
@@ -224,8 +270,8 @@ describe('WorkspaceSearchService', () => {
       expect(result).toBeNull();
     });
 
-    test('returns null when no plugins directory', async () => {
-      bun.apply();
+    test('returns null when no workspaces configured', async () => {
+      bun.fs({ '/workspace/package.json': {} }).apply();
 
       const result = await service.findByName('@brika/plugin-timer');
 
@@ -234,6 +280,7 @@ describe('WorkspaceSearchService', () => {
 
     test('skips invalid package.json and finds valid one', async () => {
       bun
+        .fs({ '/workspace/package.json': { workspaces: ['plugins/*'] } })
         .directory('/workspace/plugins', ['broken/package.json', 'timer/package.json'])
         .fs({
           '/workspace/plugins/broken/package.json': 'not json',

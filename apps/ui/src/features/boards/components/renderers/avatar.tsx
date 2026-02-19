@@ -8,9 +8,9 @@ import { clickableProps } from './shared';
 const sizeVariants = cva('', {
   variants: {
     size: {
-      sm: 'size-5 @xs:size-6',
-      md: 'size-6 @xs:size-8',
-      lg: 'size-10 @xs:size-12',
+      sm: '@xs:size-6 size-5',
+      md: '@xs:size-8 size-6',
+      lg: '@xs:size-12 size-10',
     },
   },
   defaultVariants: {
@@ -21,9 +21,9 @@ const sizeVariants = cva('', {
 const iconSizeVariants = cva('', {
   variants: {
     size: {
-      sm: 'size-2.5 @xs:size-3',
-      md: 'size-3 @xs:size-4',
-      lg: 'size-5 @xs:size-6',
+      sm: '@xs:size-3 size-2.5',
+      md: '@xs:size-4 size-3',
+      lg: '@xs:size-6 size-5',
     },
   },
   defaultVariants: {
@@ -58,7 +58,7 @@ defineRenderer('avatar', ({ node, onAction }) => {
               className={cn(iconSizeVariants({ size: node.size }), 'text-white')}
             />
           ) : (
-            node.fallback ?? '?'
+            (node.fallback ?? '?')
           )}
         </AvatarFallback>
       </Avatar>

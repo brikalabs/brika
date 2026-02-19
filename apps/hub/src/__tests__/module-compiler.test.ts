@@ -47,8 +47,7 @@ describe('Module Compiler: export scanning', () => {
   function simulateCompile(source: string, exportNames: string[]) {
     // Re-sort to source order (matches compiler logic line 82-84)
     const sorted = [...exportNames].sort(
-      (a, b) =>
-        source.indexOf(`export const ${a}`) - source.indexOf(`export const ${b}`)
+      (a, b) => source.indexOf(`export const ${a}`) - source.indexOf(`export const ${b}`)
     );
 
     return sorted.map((name, i) => ({
@@ -107,8 +106,7 @@ describe('Module Compiler: export scanning', () => {
   });
 
   test('source-order sorting is stable across multiple calls', () => {
-    const source =
-      'export const b = 1;\nexport const a = 2;\nexport const c = 3;';
+    const source = 'export const b = 1;\nexport const a = 2;\nexport const c = 3;';
     const exports = ['a', 'b', 'c'];
 
     const result1 = simulateCompile(source, exports);
@@ -138,8 +136,7 @@ describe('Module Compiler: synthetic module format', () => {
 
     // Sort by source order
     const sorted = [...names].sort(
-      (a, b) =>
-        source.indexOf(`export const ${a}`) - source.indexOf(`export const ${b}`)
+      (a, b) => source.indexOf(`export const ${a}`) - source.indexOf(`export const ${b}`)
     );
 
     const lines = sorted.map(

@@ -27,7 +27,7 @@ function createStubStateStore() {
 
 // ─── Re-implement service logic without DI for unit testing ─────────────────
 // We test the same logic as PluginPermissionService but without @singleton()/@inject()
-import { type Permission, filterValidPermissions, isValidPermission } from '@brika/shared';
+import { filterValidPermissions, isValidPermission, type Permission } from '@brika/shared';
 
 function createPermissionService(stateStore: ReturnType<typeof createStubStateStore>) {
   return {
@@ -44,7 +44,7 @@ function createPermissionService(stateStore: ReturnType<typeof createStubStateSt
     async setPermission(
       pluginName: string,
       permission: string,
-      granted: boolean,
+      granted: boolean
     ): Promise<Permission[]> {
       if (!isValidPermission(permission)) {
         throw new Error(`Unknown permission: "${permission}"`);
@@ -142,21 +142,21 @@ describe('PluginPermissionService', () => {
     });
 
     test('throws for unknown permission', async () => {
-      await expect(
-        service.setPermission('weather', 'network', true)
-      ).rejects.toThrow('Unknown permission: "network"');
+      await expect(service.setPermission('weather', 'network', true)).rejects.toThrow(
+        'Unknown permission: "network"'
+      );
     });
 
     test('throws for prototype pollution attempts', async () => {
-      await expect(
-        service.setPermission('weather', '__proto__', true)
-      ).rejects.toThrow('Unknown permission');
+      await expect(service.setPermission('weather', '__proto__', true)).rejects.toThrow(
+        'Unknown permission'
+      );
     });
 
     test('throws for constructor injection', async () => {
-      await expect(
-        service.setPermission('weather', 'constructor', true)
-      ).rejects.toThrow('Unknown permission');
+      await expect(service.setPermission('weather', 'constructor', true)).rejects.toThrow(
+        'Unknown permission'
+      );
     });
 
     test('granting same permission twice is idempotent', async () => {
@@ -179,7 +179,7 @@ describe('PluginPermissionService', () => {
     test('filters invalid entries during set', () => {
       // Pre-populate with invalid data, then grant valid permission
       store._state.permissions['weather'] = ['garbage'];
-      return service.setPermission('weather', 'location', true).then(result => {
+      return service.setPermission('weather', 'location', true).then((result) => {
         // 'garbage' should be filtered out, only 'location' remains
         expect(result).toEqual(['location']);
       });

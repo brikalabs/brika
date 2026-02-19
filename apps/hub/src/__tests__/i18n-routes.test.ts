@@ -2,8 +2,8 @@ import 'reflect-metadata';
 import { describe, expect, mock, test } from 'bun:test';
 import { stub, useTestBed } from '@brika/di/testing';
 import { TestApp } from '@brika/router/testing';
-import { I18nService } from '@/runtime/i18n';
 import { i18nRoutes } from '@/runtime/http/routes/i18n';
+import { I18nService } from '@/runtime/i18n';
 
 describe('i18n routes', () => {
   let app: ReturnType<typeof TestApp.create>;

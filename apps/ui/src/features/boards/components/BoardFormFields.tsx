@@ -41,7 +41,7 @@ export function BoardFormFields({
           onChange={(e) => onNameChange(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && onSubmit?.()}
           placeholder={t('common:labels.name')}
-          className="text-base font-medium"
+          className="font-medium text-base"
         />
       </div>
     </div>

@@ -9,7 +9,17 @@ export type {
   NodeTypeMap,
   TextContent,
 } from './_shared';
-export { _setActionRegistrar, type Child, i18nRef, intlRef, isI18nRef, isIntlRef, normalizeChildren, resolveAction, resolveIntlRef } from './_shared';
+export {
+  _setActionRegistrar,
+  type Child,
+  i18nRef,
+  intlRef,
+  isI18nRef,
+  isIntlRef,
+  normalizeChildren,
+  resolveAction,
+  resolveIntlRef,
+} from './_shared';
 export { Avatar, type AvatarNode } from './avatar';
 export { Badge, type BadgeNode } from './badge';
 export { Box, type BoxNode } from './box';

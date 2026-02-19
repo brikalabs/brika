@@ -1,7 +1,0 @@
-version: "1"
-board:
-  id: board-mlmoaivj
-  name: grgrgr
-  icon: ""
-  columns: 12
-bricks: []

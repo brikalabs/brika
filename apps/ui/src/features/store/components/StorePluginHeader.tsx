@@ -99,7 +99,7 @@ export function StorePluginHeader({ plugin }: Readonly<StorePluginHeaderProps>) 
               {authorName}
             </span>
           )}
-          {plugin.npm?.downloads > 0 && (
+          {plugin.npm.downloads > 0 && (
             <span className="flex items-center gap-1">
               <Download className="size-3" />
               {formatDownloads(plugin.npm.downloads)} {t('store:plugin.downloadsPerWeek')}

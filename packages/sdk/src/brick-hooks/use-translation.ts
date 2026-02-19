@@ -15,7 +15,9 @@ import { getContext } from '../context';
  * <Text content={t('ui.dayForecast', { count: 7 })} />
  * ```
  */
-export function useTranslation(): { t: (key: string, params?: Record<string, string | number>) => I18nRef } {
+export function useTranslation(): {
+  t: (key: string, params?: Record<string, string | number>) => I18nRef;
+} {
   const ctx = getContext();
   return { t: (key, params) => ctx.t(key, params) };
 }

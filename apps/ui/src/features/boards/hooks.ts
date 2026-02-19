@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect } from 'react';
 import { getStreamUrl } from '@/lib/query';
 import type { BoardSummary } from './api';
-import { brickInstancesApi, brickTypesApi, boardKeys, boardsApi } from './api';
+import { boardKeys, boardsApi, brickInstancesApi, brickTypesApi } from './api';
 import { useBoardStore } from './store';
 
 // ─── Data fetching ─────────────────────────────────────────────────────────
@@ -56,8 +56,7 @@ export function useCreateBoard() {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: (args: { name: string; icon?: string }) =>
-      boardsApi.create(args.name, args.icon),
+    mutationFn: (args: { name: string; icon?: string }) => boardsApi.create(args.name, args.icon),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: boardKeys.all });
     },
@@ -142,7 +141,7 @@ export function useAddBrick() {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: async (args: {
+    mutationFn: (args: {
       brickTypeId: string;
       config?: Record<string, unknown>;
       position?: { x: number; y: number };
@@ -150,13 +149,7 @@ export function useAddBrick() {
     }) => {
       const boardId = useBoardStore.getState().activeBoardId;
       if (!boardId) throw new Error('No active board');
-      return boardsApi.addBrick(
-        boardId,
-        args.brickTypeId,
-        args.config,
-        args.position,
-        args.size
-      );
+      return boardsApi.addBrick(boardId, args.brickTypeId, args.config, args.position, args.size);
     },
     onSuccess: (placement) => {
       useBoardStore.getState().addBrickPlacement(placement);
@@ -174,7 +167,9 @@ export function useAddBrick() {
               useBoardStore.getState().setInstanceBody(inst.instanceId, inst.body);
             }
           })
-          .catch(() => {});
+          .catch(() => {
+            // Ignore delayed body refresh errors.
+          });
       }, 500);
     },
   });
@@ -201,13 +196,7 @@ export function useRemoveBrick() {
 
 export function useRenameBrick() {
   return useMutation({
-    mutationFn: async ({
-      instanceId,
-      label,
-    }: {
-      instanceId: string;
-      label: string | undefined;
-    }) => {
+    mutationFn: ({ instanceId, label }: { instanceId: string; label: string | undefined }) => {
       const boardId = useBoardStore.getState().activeBoardId;
       if (!boardId) throw new Error('No active board');
       return boardsApi.updateBrick(boardId, instanceId, { label: label ?? '' });
@@ -313,7 +302,9 @@ export function useBoardSSE(boardId: string | undefined) {
     });
 
     // EventSource auto-reconnects on error; heartbeat on server detects stale connections
-    es.onerror = () => {};
+    es.onerror = () => {
+      // Intentionally empty: EventSource will retry automatically.
+    };
 
     return () => {
       aborted = true;

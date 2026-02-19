@@ -1,12 +1,12 @@
 import {
   closestCenter,
   DndContext,
+  type DragEndEvent,
   DragOverlay,
+  type DragStartEvent,
   PointerSensor,
   useSensor,
   useSensors,
-  type DragEndEvent,
-  type DragStartEvent,
 } from '@dnd-kit/core';
 import {
   arrayMove,
@@ -59,7 +59,7 @@ function TabContent({ board, isDragging }: Readonly<TabContentProps>) {
   return (
     <div
       className={cn(
-        'flex items-center gap-1.5 whitespace-nowrap rounded-md py-1.5 pl-3 pr-7 text-sm',
+        'flex items-center gap-1.5 whitespace-nowrap rounded-md py-1.5 pr-7 pl-3 text-sm',
         isDragging && 'bg-background shadow-sm'
       )}
     >
@@ -107,7 +107,7 @@ function SortableTab({ board, onEdit, activeId }: Readonly<SortableTabProps>) {
         <Link
           to="/boards/$boardId"
           params={{ boardId: board.id }}
-          className="flex items-center gap-1.5 whitespace-nowrap rounded-md py-1.5 pl-3 pr-7 text-sm transition-colors"
+          className="flex items-center gap-1.5 whitespace-nowrap rounded-md py-1.5 pr-7 pl-3 text-sm transition-colors"
           activeProps={{ className: 'bg-background font-medium shadow-sm' }}
           inactiveProps={{ className: 'text-muted-foreground hover:text-foreground' }}
         >
@@ -123,7 +123,7 @@ function SortableTab({ board, onEdit, activeId }: Readonly<SortableTabProps>) {
         <button
           type="button"
           onClick={() => onEdit(board)}
-          className="absolute right-1 top-1/2 flex size-5 -translate-y-1/2 items-center justify-center rounded opacity-0 transition-opacity hover:bg-accent group-hover:opacity-100"
+          className="absolute top-1/2 right-1 flex size-5 -translate-y-1/2 items-center justify-center rounded opacity-0 transition-opacity hover:bg-accent group-hover:opacity-100"
         >
           <Pencil className="size-2.5" />
         </button>
@@ -269,7 +269,7 @@ export function BoardSwitcher({ onEdit }: Readonly<BoardSwitcherProps>) {
                 size="sm"
                 className="h-7 shrink-0 gap-0.5 px-1.5 text-muted-foreground"
               >
-                <span className="text-[10px] font-medium">
+                <span className="font-medium text-[10px]">
                   +{hasOverflow ? overflow.length : 1}
                 </span>
                 <ChevronDown className="size-3" />

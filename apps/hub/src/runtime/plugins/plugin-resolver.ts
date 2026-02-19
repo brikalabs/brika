@@ -1,11 +1,27 @@
 import { dirname, extname, join, resolve } from 'node:path';
 import { PluginPackageSchema } from '@brika/schema';
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object';
+}
+
 /**
  * Load and parse package.json with Zod validation
  */
 export async function loadPluginPackageJson(packageJsonPath: string) {
-  return PluginPackageSchema.parse(await import(packageJsonPath, { with: { type: 'json' } }));
+  const raw = await import(packageJsonPath, { with: { type: 'json' } });
+  const parsed = PluginPackageSchema.safeParse(raw);
+  if (parsed.success) return parsed.data;
+
+  const hasMissingMain = parsed.error.issues.some(
+    (issue) => issue.path.length === 1 && issue.path[0] === 'main'
+  );
+  if (hasMissingMain) {
+    const name = isRecord(raw) && typeof raw.name === 'string' ? raw.name : '(unknown)';
+    throw new Error(`Plugin "${name}" must have a "main" field in package.json`);
+  }
+
+  throw parsed.error;
 }
 
 /**

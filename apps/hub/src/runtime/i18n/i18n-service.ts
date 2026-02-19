@@ -253,7 +253,9 @@ export class I18nService {
   // ─────────────────────────────────────────────────────────────────────────
 
   /**
-   * Load all core translations from apps/hub/locales/
+   * Load all core translations — from the embedded archive when the
+   * locales directory doesn't exist (standalone binary), or from the
+   * filesystem when it does (development / custom install).
    */
   async #loadCoreTranslations(): Promise<void> {
     try {
@@ -271,8 +273,43 @@ export class I18nService {
           this.#coreTranslations.set(locale, localeData);
         }
       }
+    } catch {
+      // Locales directory absent — load from the archive embedded at build time.
+      await this.#loadEmbeddedLocales();
+    }
+  }
+
+  /**
+   * Load core translations from the gzip-tar archive embedded at build time.
+   * Archive layout mirrors locales/: "{locale}/{namespace}.json"
+   */
+  async #loadEmbeddedLocales(): Promise<void> {
+    try {
+      const { default: compressed } = await import('@/locales.tar');
+      const tarData = Bun.gunzipSync(compressed);
+      const archive = new Bun.Archive(tarData);
+      const files = await archive.files();
+
+      for (const [relativePath, file] of files) {
+        const slash = relativePath.indexOf('/');
+        if (slash === -1) continue;
+        const locale = relativePath.slice(0, slash);
+        const nsFile = relativePath.slice(slash + 1);
+        if (!locale || !nsFile.endsWith('.json')) continue;
+        const namespace = nsFile.replace('.json', '');
+
+        try {
+          const content = JSON.parse(await file.text()) as TranslationData;
+          this.#availableLocales.add(locale);
+          const localeData = this.#coreTranslations.get(locale) ?? {};
+          localeData[namespace] = content;
+          this.#coreTranslations.set(locale, localeData);
+        } catch (e) {
+          this.#logs.warn('Failed to parse embedded locale', { path: relativePath }, { error: e });
+        }
+      }
     } catch (e) {
-      this.#logs.warn('Failed to load core translations', {}, { error: e });
+      this.#logs.warn('Failed to load embedded core translations', {}, { error: e });
     }
   }
 

@@ -473,4 +473,3 @@
 @utility corner-superellipse-* {
   corner-shape: superellipse(--value(number));
 }
-

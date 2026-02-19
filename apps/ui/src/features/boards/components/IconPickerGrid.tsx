@@ -1,7 +1,7 @@
 import uFuzzy from '@leeoniya/ufuzzy';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { LayoutDashboard, Search, SearchX, X } from 'lucide-react';
-import { DynamicIcon, iconNames, type IconName } from 'lucide-react/dynamic';
+import { DynamicIcon, type IconName, iconNames } from 'lucide-react/dynamic';
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { Badge, Input, Label } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
@@ -79,7 +79,7 @@ export default function IconPickerGrid({ value, onChange }: Readonly<IconPickerG
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        <Label className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
           {t('boards:board.icon')}
         </Label>
         {isSearching && (
@@ -95,7 +95,7 @@ export default function IconPickerGrid({ value, onChange }: Readonly<IconPickerG
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder={t('boards:board.iconHint')}
-          className="h-9 pl-8 pr-8 text-sm"
+          className="h-9 pr-8 pl-8 text-sm"
         />
         {isSearching && (
           <button
@@ -122,10 +122,7 @@ export default function IconPickerGrid({ value, onChange }: Readonly<IconPickerG
           className="overflow-y-auto rounded-md border"
           style={{ height: CONTAINER_HEIGHT }}
         >
-          <div
-            className="relative p-2"
-            style={{ height: virtualizer.getTotalSize() + GAP }}
-          >
+          <div className="relative p-2" style={{ height: virtualizer.getTotalSize() + GAP }}>
             {virtualizer.getVirtualItems().map((virtualRow) => {
               const startIdx = virtualRow.index * COLS;
               return (
@@ -148,7 +145,7 @@ export default function IconPickerGrid({ value, onChange }: Readonly<IconPickerG
                           onClick={() => onChange('')}
                           className={cn(
                             'flex size-9 items-center justify-center rounded-md transition-colors hover:bg-accent',
-                            !value && 'bg-primary/10 ring-2 ring-inset ring-primary'
+                            !value && 'bg-primary/10 ring-2 ring-primary ring-inset'
                           )}
                         >
                           <LayoutDashboard className="size-4 text-muted-foreground" />
@@ -165,7 +162,7 @@ export default function IconPickerGrid({ value, onChange }: Readonly<IconPickerG
                         onClick={() => onChange(iconName)}
                         className={cn(
                           'flex size-9 items-center justify-center rounded-md transition-colors hover:bg-accent',
-                          value === iconName && 'bg-primary/10 ring-2 ring-inset ring-primary'
+                          value === iconName && 'bg-primary/10 ring-2 ring-primary ring-inset'
                         )}
                       >
                         <DynamicIcon name={iconName} className="size-4" fallback={() => null} />

@@ -21,6 +21,14 @@ export {};
 const PROJECT_KEY = Bun.env.SONAR_PROJECT ?? 'brika';
 const BASE_URL = Bun.env.SONAR_URL ?? 'https://sonarcloud.io';
 
+// Set after CLI parsing — injected into all relevant API calls when present
+let PR_KEY: string | undefined;
+
+/** Returns `{ pullRequest: PR_KEY }` when a PR is active, else `{}`. */
+function prParam(): Record<string, string> {
+  return PR_KEY ? { pullRequest: PR_KEY } : {};
+}
+
 // ─── ANSI Colors ─────────────────────────────────────────────────────────────
 
 const isColor = Bun.enableANSIColors;
@@ -223,6 +231,7 @@ async function cmdList(flags: Record<string, string>): Promise<void> {
     ps: flags.limit ?? '100',
     s: 'SEVERITY',
     asc: 'false',
+    ...prParam(),
   };
   if (flags.type) params.types = flags.type;
   if (flags.severity) params.severities = flags.severity;
@@ -260,6 +269,7 @@ async function cmdHotspots(flags: Record<string, string>): Promise<void> {
     projectKey: PROJECT_KEY,
     status: 'TO_REVIEW',
     ps: flags.limit ?? '50',
+    ...prParam(),
   });
 
   const shown = data.hotspots.length;
@@ -289,11 +299,13 @@ async function cmdSummary(): Promise<void> {
       statuses: 'OPEN',
       ps: '1',
       facets: 'types,severities',
+      ...prParam(),
     }),
     api<HotspotSearchResult>('/api/hotspots/search', {
       projectKey: PROJECT_KEY,
       status: 'TO_REVIEW',
       ps: '1',
+      ...prParam(),
     }),
   ]);
 
@@ -348,6 +360,7 @@ async function cmdBulkFp(
     statuses: 'OPEN',
     rules: ruleKey,
     ps: flags.limit ?? '100',
+    ...prParam(),
   });
 
   heading(`Bulk False Positive — ${data.total} issues for rule ${c.cyan}${ruleKey}${c.reset}`);
@@ -401,6 +414,7 @@ async function cmdBulkHotspotSafe(
     projectKey: PROJECT_KEY,
     status: 'TO_REVIEW',
     ps: flags.limit ?? '50',
+    ...prParam(),
   });
 
   // Filter by rule if specified
@@ -451,14 +465,21 @@ async function cmdCoverage(flags: Record<string, string>): Promise<void> {
   // Fetch project-level metrics
   const proj = await api<ProjectMeasures>('/api/measures/component', {
     component: PROJECT_KEY,
-    metricKeys: 'coverage,new_coverage,new_lines_to_cover,new_uncovered_lines,lines_to_cover,uncovered_lines',
+    metricKeys:
+      'coverage,new_coverage,new_lines_to_cover,new_uncovered_lines,lines_to_cover,uncovered_lines',
+    ...prParam(),
   });
 
-  const metric = (key: string) => proj.component.measures.find((m) => m.metric === key)?.value ?? '—';
+  const metric = (key: string) =>
+    proj.component.measures.find((m) => m.metric === key)?.value ?? '—';
 
   heading('Coverage Overview');
-  console.log(`  ${c.bold}Overall:${c.reset}      ${metric('coverage')}%  (${metric('uncovered_lines')} / ${metric('lines_to_cover')} uncovered)`);
-  console.log(`  ${c.bold}New code:${c.reset}     ${metric('new_coverage')}%  (${metric('new_uncovered_lines')} / ${metric('new_lines_to_cover')} uncovered)`);
+  console.log(
+    `  ${c.bold}Overall:${c.reset}      ${metric('coverage')}%  (${metric('uncovered_lines')} / ${metric('lines_to_cover')} uncovered)`
+  );
+  console.log(
+    `  ${c.bold}New code:${c.reset}     ${metric('new_coverage')}%  (${metric('new_uncovered_lines')} / ${metric('new_lines_to_cover')} uncovered)`
+  );
   console.log();
 
   // Fetch per-file breakdown
@@ -476,6 +497,7 @@ async function cmdCoverage(flags: Record<string, string>): Promise<void> {
     metricSort: isNew ? 'new_coverage' : 'coverage',
     ...(isNew ? { metricPeriodSort: '1' } : {}),
     qualifiers: 'FIL',
+    ...prParam(),
   });
 
   // Extract & filter files under threshold
@@ -506,7 +528,9 @@ async function cmdCoverage(flags: Record<string, string>): Promise<void> {
   for (const f of files) {
     const covStr = f.cov < 0 ? '  —  ' : `${f.cov.toFixed(1).padStart(5)}%`;
     const bar = f.cov < 0 ? c.dim : f.cov === 0 ? c.red : f.cov < threshold / 2 ? c.yellow : c.blue;
-    console.log(`  ${bar}${covStr}${c.reset}  ${c.dim}(${String(f.uncov).padStart(3)} uncov / ${f.lines})${c.reset}  ${f.path}`);
+    console.log(
+      `  ${bar}${covStr}${c.reset}  ${c.dim}(${String(f.uncov).padStart(3)} uncov / ${f.lines})${c.reset}  ${f.path}`
+    );
     totalLines += f.lines;
     totalUncov += f.uncov;
   }
@@ -573,6 +597,7 @@ ${c.bold}  COMMANDS${c.reset}
              [--threshold N] [--limit N]           ${c.dim}(default: new code, 80%, 100 files)${c.reset}
 
 ${c.bold}  OPTIONS${c.reset}
+    --pr        Pull request number (scopes all commands to the PR analysis)
     --type      BUG | CODE_SMELL | VULNERABILITY
     --severity  BLOCKER | CRITICAL | MAJOR | MINOR | INFO
     --rule      SonarCloud rule key (e.g. typescript:S2245)
@@ -602,6 +627,7 @@ ${c.bold}  EXAMPLES${c.reset}
 // ─── Main ────────────────────────────────────────────────────────────────────
 
 const { command, flags, positional } = parseArgs(Bun.argv.slice(2));
+PR_KEY = flags.pr;
 
 switch (command) {
   case 'summary':

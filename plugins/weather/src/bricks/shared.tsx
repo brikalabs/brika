@@ -1,4 +1,4 @@
-import { type BrickTypeSpec, type TextContent, Column, Icon, Skeleton, Text } from '@brika/sdk/bricks';
+import { type BrickTypeSpec, Column, Icon, Skeleton, Text, type TextContent } from '@brika/sdk/bricks';
 
 // ─── Shared brick config (city + unit dropdown) ─────────────────────────────
 

@@ -1,6 +1,6 @@
 {
   "name": "@brika/sdk",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "SDK for building BRIKA plugins and workflow blocks",
   "type": "module",
   "license": "MIT",
@@ -28,6 +28,9 @@
     "./jsx-runtime": "./src/jsx-runtime.ts",
     "./jsx-dev-runtime": "./src/jsx-dev-runtime.ts"
   },
+  "bin": {
+    "brika-verify-plugin": "./src/verify.ts"
+  },
   "files": ["src"],
   "scripts": {
     "tsc": "bunx --biome tsc --noEmit",
@@ -36,8 +39,10 @@
   "dependencies": {
     "@brika/flow": "workspace:*",
     "@brika/ipc": "workspace:*",
+    "@brika/schema": "workspace:*",
     "@brika/serializable": "workspace:*",
     "@brika/ui-kit": "workspace:*",
+    "picocolors": "^1.1.1",
     "zod": "^4.3.4"
   },
   "devDependencies": {

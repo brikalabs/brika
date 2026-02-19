@@ -67,7 +67,9 @@ export function defineSharedStore<T>(initial: T): SharedStore<T> {
 
   useStore.subscribe = (listener: () => void): (() => void) => {
     listeners.add(listener);
-    return () => { listeners.delete(listener); };
+    return () => {
+      listeners.delete(listener);
+    };
   };
 
   return useStore as SharedStore<T>;

@@ -1,13 +1,15 @@
 {
   "name": "@brika/workflow",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "type": "module",
   "description": "Workflow engine with typed ports, serialization, and execution history",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/maxscharwath/brika.git",
     "directory": "packages/workflow"
   },
+  "keywords": ["brika", "workflow", "automation", "engine"],
   "exports": {
     ".": "./src/index.ts"
   },

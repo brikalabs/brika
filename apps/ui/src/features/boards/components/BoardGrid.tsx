@@ -29,10 +29,7 @@ function layoutToPayload(currentLayout: Layout) {
   }));
 }
 
-export const BoardGrid = memo(function BoardGrid({
-  board,
-  onSaveLayout,
-}: BoardGridProps) {
+export const BoardGrid = memo(function BoardGrid({ board, onSaveLayout }: BoardGridProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
   const brickTypes = useBrickTypes();

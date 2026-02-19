@@ -6,12 +6,12 @@ import 'reflect-metadata';
 import { describe, expect, mock, test } from 'bun:test';
 import { get, stub, useTestBed } from '@brika/di/testing';
 import type { Json } from '@brika/shared';
-import { BrickInstanceManager, BrickTypeRegistry } from '@/runtime/bricks';
-import type { BrickInstance } from '@/runtime/bricks/brick-instance-manager';
-import type { RegisteredBrickType } from '@/runtime/bricks/brick-type-registry';
 import { BoardLoader } from '@/runtime/boards/board-loader';
 import { BoardService } from '@/runtime/boards/board-service';
 import type { Board, BoardBrickPlacement } from '@/runtime/boards/types';
+import { BrickInstanceManager, BrickTypeRegistry } from '@/runtime/bricks';
+import type { BrickInstance } from '@/runtime/bricks/brick-instance-manager';
+import type { RegisteredBrickType } from '@/runtime/bricks/brick-type-registry';
 import { EventSystem } from '@/runtime/events/event-system';
 import { Logger } from '@/runtime/logs/log-router';
 import { PluginLifecycle } from '@/runtime/plugins/plugin-lifecycle';
@@ -195,10 +195,7 @@ describe('BoardService', () => {
       const type = createBrickType();
       brickTypes.set(type.fullId, type);
 
-      const board = createBoard('d1', [
-        createPlacement('inst-1'),
-        createPlacement('inst-2'),
-      ]);
+      const board = createBoard('d1', [createPlacement('inst-1'), createPlacement('inst-2')]);
 
       service.unmountBoard(board);
 

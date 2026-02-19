@@ -6,7 +6,7 @@
  */
 
 import { defineRoute, type RouteResponse } from '@brika/sdk';
-import { type MatterCommand, getMatterController } from './matter-controller';
+import { getMatterController, type MatterCommand } from './matter-controller';
 import { serializeDevice } from './serialize';
 
 function json(status: number, body: unknown): RouteResponse {

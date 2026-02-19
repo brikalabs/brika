@@ -12,8 +12,12 @@ function isMarker<T>(brand: string) {
 
 // ── I18n Reference ───────────────────────────────────────────────────────────
 
-export const i18nRef = (ns: string, key: string, params?: Record<string, string | number>) =>
-  ({ __i18n: true as const, ns, key, params });
+export const i18nRef = (ns: string, key: string, params?: Record<string, string | number>) => ({
+  __i18n: true as const,
+  ns,
+  key,
+  params,
+});
 
 export type I18nRef = Readonly<ReturnType<typeof i18nRef>>;
 export const isI18nRef = isMarker<I18nRef>('__i18n');
@@ -21,26 +25,51 @@ export const isI18nRef = isMarker<I18nRef>('__i18n');
 // ── Intl Reference ───────────────────────────────────────────────────────────
 
 export const intlRef = {
-  dateTime: (value: number, options?: Intl.DateTimeFormatOptions) =>
-    ({ __intl: true as const, type: 'dateTime' as const, value, options }),
-  number: (value: number, options?: Intl.NumberFormatOptions) =>
-    ({ __intl: true as const, type: 'number' as const, value, options }),
-  relativeTime: (value: number, unit: Intl.RelativeTimeFormatUnit) =>
-    ({ __intl: true as const, type: 'relativeTime' as const, value, unit }),
-  list: (value: string[], options?: Intl.ListFormatOptions) =>
-    ({ __intl: true as const, type: 'list' as const, value, options }),
+  dateTime: (value: number, options?: Intl.DateTimeFormatOptions) => ({
+    __intl: true as const,
+    type: 'dateTime' as const,
+    value,
+    options,
+  }),
+  number: (value: number, options?: Intl.NumberFormatOptions) => ({
+    __intl: true as const,
+    type: 'number' as const,
+    value,
+    options,
+  }),
+  relativeTime: (value: number, unit: Intl.RelativeTimeFormatUnit) => ({
+    __intl: true as const,
+    type: 'relativeTime' as const,
+    value,
+    unit,
+  }),
+  list: (value: string[], options?: Intl.ListFormatOptions) => ({
+    __intl: true as const,
+    type: 'list' as const,
+    value,
+    options,
+  }),
 };
 
-export type IntlRef = { [K in keyof typeof intlRef]: Readonly<ReturnType<typeof intlRef[K]>> }[keyof typeof intlRef];
+export type IntlRef = {
+  [K in keyof typeof intlRef]: Readonly<ReturnType<(typeof intlRef)[K]>>;
+}[keyof typeof intlRef];
 export const isIntlRef = isMarker<IntlRef>('__intl');
 
 export function resolveIntlRef(ref: IntlRef, locale?: string): string {
   if (!locale) return ref.type === 'list' ? ref.value.join(', ') : String(ref.value);
   switch (ref.type) {
-    case 'dateTime': return new Intl.DateTimeFormat(locale, ref.options).format(ref.value);
-    case 'number': return new Intl.NumberFormat(locale, ref.options).format(ref.value);
-    case 'relativeTime': return new Intl.RelativeTimeFormat(locale, { numeric: 'auto' }).format(ref.value, ref.unit);
-    case 'list': return new Intl.ListFormat(locale, ref.options ?? { style: 'long', type: 'conjunction' }).format(ref.value);
+    case 'dateTime':
+      return new Intl.DateTimeFormat(locale, ref.options).format(ref.value);
+    case 'number':
+      return new Intl.NumberFormat(locale, ref.options).format(ref.value);
+    case 'relativeTime':
+      return new Intl.RelativeTimeFormat(locale, { numeric: 'auto' }).format(ref.value, ref.unit);
+    case 'list':
+      return new Intl.ListFormat(
+        locale,
+        ref.options ?? { style: 'long', type: 'conjunction' }
+      ).format(ref.value);
   }
 }
 
@@ -85,7 +114,11 @@ export function normalizeChildren(children: Child | Child[]): ComponentNode[] {
   for (const c of items) {
     if (c == null || c === false) continue;
     if (isI18nRef(c)) {
-      result.push({ type: 'text', content: c.key, i18n: { ns: c.ns, key: c.key, params: c.params } } as ComponentNode);
+      result.push({
+        type: 'text',
+        content: c.key,
+        i18n: { ns: c.ns, key: c.key, params: c.params },
+      } as ComponentNode);
     } else if (isIntlRef(c)) {
       result.push({ type: 'text', content: resolveIntlRef(c), intl: c } as ComponentNode);
     } else {

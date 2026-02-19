@@ -1,7 +1,14 @@
 {
   "name": "@brika/testing",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/maxscharwath/brika.git",
+    "directory": "packages/testing"
+  },
+  "keywords": ["brika", "testing", "bun", "mocks"],
   "main": "src/index.ts",
   "types": "src/index.ts",
   "exports": {

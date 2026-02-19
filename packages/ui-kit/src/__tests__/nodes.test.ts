@@ -10,6 +10,7 @@
  */
 
 import { beforeEach, describe, expect, test } from 'bun:test';
+import type { I18nRef, IntlRef } from '../nodes';
 import {
   _setActionRegistrar,
   Avatar,
@@ -25,6 +26,8 @@ import {
   Grid,
   Icon,
   Image,
+  i18nRef,
+  intlRef,
   isI18nRef,
   isIntlRef,
   KeyValue,
@@ -46,10 +49,7 @@ import {
   TextInput,
   Toggle,
   Video,
-  i18nRef,
-  intlRef,
 } from '../nodes';
-import type { I18nRef, IntlRef } from '../nodes';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // _shared utilities
@@ -104,21 +104,30 @@ describe('_shared', () => {
     test('wraps I18nRef into TextNode with i18n field', () => {
       const ref = i18nRef('plugin:weather', 'stats.humidity');
       const result = normalizeChildren(ref);
-      expect(result).toEqual([{
-        type: 'text',
-        content: 'stats.humidity',
-        i18n: { ns: 'plugin:weather', key: 'stats.humidity', params: undefined },
-      }]);
+      expect(result).toEqual([
+        {
+          type: 'text',
+          content: 'stats.humidity',
+          i18n: { ns: 'plugin:weather', key: 'stats.humidity', params: undefined },
+        },
+      ]);
     });
 
     test('wraps I18nRef with params into TextNode', () => {
-      const ref: I18nRef = { __i18n: true, ns: 'plugin:weather', key: 'ui.dayForecast', params: { count: 7 } };
+      const ref: I18nRef = {
+        __i18n: true,
+        ns: 'plugin:weather',
+        key: 'ui.dayForecast',
+        params: { count: 7 },
+      };
       const result = normalizeChildren(ref);
-      expect(result).toEqual([{
-        type: 'text',
-        content: 'ui.dayForecast',
-        i18n: { ns: 'plugin:weather', key: 'ui.dayForecast', params: { count: 7 } },
-      }]);
+      expect(result).toEqual([
+        {
+          type: 'text',
+          content: 'ui.dayForecast',
+          i18n: { ns: 'plugin:weather', key: 'ui.dayForecast', params: { count: 7 } },
+        },
+      ]);
     });
 
     test('handles mixed I18nRef and ComponentNode in array', () => {
@@ -137,31 +146,42 @@ describe('_shared', () => {
     test('wraps IntlRef number into TextNode with intl field', () => {
       const ref = intlRef.number(1234);
       const result = normalizeChildren(ref);
-      expect(result).toEqual([{
-        type: 'text',
-        content: '1234',
-        intl: ref,
-      }]);
+      expect(result).toEqual([
+        {
+          type: 'text',
+          content: '1234',
+          intl: ref,
+        },
+      ]);
     });
 
     test('wraps IntlRef dateTime into TextNode with timestamp fallback', () => {
-      const ref: IntlRef = { __intl: true, type: 'dateTime', value: 0, options: { dateStyle: 'medium' } };
+      const ref: IntlRef = {
+        __intl: true,
+        type: 'dateTime',
+        value: 0,
+        options: { dateStyle: 'medium' },
+      };
       const result = normalizeChildren(ref);
-      expect(result).toEqual([{
-        type: 'text',
-        content: '0',
-        intl: ref,
-      }]);
+      expect(result).toEqual([
+        {
+          type: 'text',
+          content: '0',
+          intl: ref,
+        },
+      ]);
     });
 
     test('wraps IntlRef list into TextNode with joined fallback', () => {
       const ref = intlRef.list(['a', 'b', 'c']);
       const result = normalizeChildren(ref);
-      expect(result).toEqual([{
-        type: 'text',
-        content: 'a, b, c',
-        intl: ref,
-      }]);
+      expect(result).toEqual([
+        {
+          type: 'text',
+          content: 'a, b, c',
+          intl: ref,
+        },
+      ]);
     });
 
     test('handles mixed IntlRef, I18nRef, and ComponentNode in array', () => {
@@ -333,10 +353,19 @@ describe('Text', () => {
   });
 
   test('I18nRef with params preserves params in i18n field', () => {
-    const ref: I18nRef = { __i18n: true, ns: 'plugin:weather', key: 'ui.dayForecast', params: { count: 7 } };
+    const ref: I18nRef = {
+      __i18n: true,
+      ns: 'plugin:weather',
+      key: 'ui.dayForecast',
+      params: { count: 7 },
+    };
     const node = Text({ content: ref, variant: 'heading', weight: 'bold' });
     expect(node.content).toBe('ui.dayForecast');
-    expect(node.i18n).toEqual({ ns: 'plugin:weather', key: 'ui.dayForecast', params: { count: 7 } });
+    expect(node.i18n).toEqual({
+      ns: 'plugin:weather',
+      key: 'ui.dayForecast',
+      params: { count: 7 },
+    });
     expect(node.variant).toBe('heading');
     expect(node.weight).toBe('bold');
   });
@@ -347,7 +376,12 @@ describe('Text', () => {
   });
 
   test('accepts IntlRef number as content and sets intl field', () => {
-    const ref: IntlRef = { __intl: true, type: 'number', value: 1234.5, options: { minimumFractionDigits: 2 } };
+    const ref: IntlRef = {
+      __intl: true,
+      type: 'number',
+      value: 1234.5,
+      options: { minimumFractionDigits: 2 },
+    };
     const node = Text({ content: ref });
     expect(node.type).toBe('text');
     expect(node.content).toBe('1234.5');

@@ -31,6 +31,7 @@ describe('PluginProcess', () => {
   const createMockMetadata = (): PluginPackageSchema => ({
     name: '@test/plugin',
     version: '1.0.0',
+    main: './index.js',
     description: 'Test plugin',
     author: 'Test Author',
     homepage: 'https://example.com',

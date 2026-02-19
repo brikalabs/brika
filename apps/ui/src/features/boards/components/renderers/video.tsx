@@ -1,4 +1,3 @@
-import Hls from 'hls.js';
 import { useEffect, useRef } from 'react';
 import { defineRenderer } from './registry';
 
@@ -20,12 +19,17 @@ function HlsVideo({
       return;
     }
 
-    if (Hls.isSupported()) {
-      const hls = new Hls({ enableWorker: false, lowLatencyMode: true });
-      hls.loadSource(src);
-      hls.attachMedia(video);
-      return () => hls.destroy();
-    }
+    let hls: { destroy(): void } | undefined;
+
+    import('hls.js').then(({ default: Hls }) => {
+      if (!Hls.isSupported()) return;
+      const instance = new Hls({ enableWorker: false, lowLatencyMode: true });
+      instance.loadSource(src);
+      instance.attachMedia(video);
+      hls = instance;
+    });
+
+    return () => hls?.destroy();
   }, [src]);
 
   return (

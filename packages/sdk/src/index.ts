@@ -166,18 +166,18 @@ export * from './types';
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type { DeviceLocation } from './api/location';
-export type { HubLocationData } from './context/location';
 export { getDeviceLocation } from './api/location';
+export type { HubLocationData } from './context/location';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Errors
 // ─────────────────────────────────────────────────────────────────────────────
 
 export {
-  PermissionDeniedError,
-  NotFoundError,
-  InvalidInputError,
   InternalError,
+  InvalidInputError,
+  NotFoundError,
+  PermissionDeniedError,
   rethrowRpcError,
   sdkErrors,
 } from './errors';

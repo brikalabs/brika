@@ -1,29 +1,158 @@
 # BRIKA
 
+**Build. Run. Integrate. Keep Automating.**
+
 [![Docker](https://img.shields.io/badge/Docker-maxscharwath%2Fbrika-blue?logo=docker)](https://hub.docker.com/r/maxscharwath/brika)
 
-A Bun-first home automation runtime with reactive block-based visual workflows.
-
-## Features
+A self-hosted automation hub that runs locally on your machine. Manage plugins, build reactive workflows, and control everything through a web UI — all in a single self-contained binary.
 
 - **Reactive Blocks** — Type-safe workflow blocks with Zod schemas and reactive streams
 - **Isolated Plugins** — Each plugin runs in a separate process with binary IPC
 - **Visual Editor** — Block-based automation builder with React Flow
 - **Event-driven** — Pub/sub event bus with glob pattern matching
 
-## Quick Start
+---
 
-```bash
-bun install
-bun run dev
+## Installation
+
+### Linux / macOS
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/maxscharwath/brika/master/scripts/install.sh | sh
 ```
 
-- **UI**: http://localhost:5173
-- **API**: http://localhost:3001/api/health
+### Windows (PowerShell)
+
+```powershell
+irm https://raw.githubusercontent.com/maxscharwath/brika/master/scripts/install.ps1 | iex
+```
+
+The installer downloads the binary for your platform, places it in `~/.brika/bin/` (or `%LOCALAPPDATA%\brika\bin\` on Windows), and adds it to your shell PATH. A bundled Bun runtime is included — no separate Node.js or Bun install needed.
+
+To install a specific version set `BRIKA_VERSION` before running:
+
+```sh
+BRIKA_VERSION=0.2.1 curl -fsSL https://raw.githubusercontent.com/maxscharwath/brika/master/scripts/install.sh | sh
+```
+
+---
+
+## Quick Start
+
+```sh
+# Start the hub in the current directory
+brika start
+
+# Open the web UI
+open http://localhost:3001
+
+# Stop the hub
+brika stop
+```
+
+On first start BRIKA creates a `.brika/` directory in the current working directory containing configuration, installed plugins, and logs.
+
+---
+
+## Commands
+
+| Command           | Description                                       |
+|-------------------|---------------------------------------------------|
+| `brika start`     | Start the hub (foreground, Ctrl+C to stop)        |
+| `brika stop`      | Stop a running hub in the current directory       |
+| `brika status`    | Show whether the hub is running                   |
+| `brika version`   | Show version and platform info                    |
+| `brika update`    | Update to the latest release in-place             |
+| `brika uninstall` | Remove BRIKA from this machine                    |
+| `brika help`      | Show help                                         |
+
+### Flags
+
+| Flag                 | Description                            |
+|----------------------|----------------------------------------|
+| `-p, --port <port>`  | Listen port (default: `3001`)          |
+| `--host <addr>`      | Listen address (default: `127.0.0.1`) |
+| `-v, --version`      | Print version number                   |
+| `-h, --help`         | Show help                              |
+
+```sh
+brika start -p 8080            # Start on port 8080
+brika start --host 0.0.0.0    # Listen on all interfaces (e.g. Docker/VM)
+brika status                   # Check if hub is running
+brika update                   # Update to latest version
+```
+
+---
+
+## Configuration
+
+On first start BRIKA creates `.brika/brika.yml` with defaults. Edit it to change the hub settings or add plugins:
+
+```yaml
+hub:
+  port: 3001
+  host: 127.0.0.1
+  plugins:
+    installDir: ./plugins/.installed
+    heartbeatInterval: 5000    # ms between plugin health checks
+    heartbeatTimeout: 15000    # ms before a plugin is considered unresponsive
+
+plugins:
+  "@brika/plugin-timer":
+    version: "^1.0.0"
+  my-local-plugin:
+    version: "workspace:./plugins/my-plugin"
+
+rules: []
+schedules: []
+```
+
+Environment variables override config file values:
+
+| Variable           | Description                         | Default       |
+|--------------------|-------------------------------------|---------------|
+| `BRIKA_PORT`       | Listen port                         | `3001`        |
+| `BRIKA_HOST`       | Listen address                      | `127.0.0.1`  |
+| `BRIKA_HOME`       | Override `.brika` directory path    | `.brika`      |
+| `BRIKA_STATIC_DIR` | Serve custom UI from this directory | *(bundled)*   |
+| `BRIKA_BUN_PATH`   | Path to Bun binary for plugins      | *(bundled)*   |
+
+---
+
+## Process Management
+
+`brika start` runs in the foreground. The hub writes its PID to `.brika/brika.pid` on startup so `brika stop` and `brika status` can track it.
+
+Starting a second instance in the same directory is rejected immediately:
+
+```
+Error: Another instance of Brika is already running in this directory (PID 12345).
+Run 'brika stop' to stop it first.
+```
+
+To run BRIKA as a background service use your OS process manager (launchd, systemd, Task Scheduler).
+
+---
+
+## Installed Files
+
+| Path                    | Description                            |
+|-------------------------|----------------------------------------|
+| `~/.brika/bin/brika`    | The BRIKA binary                       |
+| `~/.brika/bin/bun`      | Bundled Bun runtime (used by plugins)  |
+| `~/.brika/bin/ui/`      | Bundled web UI static files            |
+| `~/.brika/bin/locales/` | Bundled UI translations                |
+| `.brika/`               | Workspace directory (per project)      |
+| `.brika/brika.yml`      | Hub configuration                      |
+| `.brika/brika.pid`      | PID of the running hub                 |
+| `.brika/logs/`          | Log files                              |
+| `.brika/plugins/`       | Installed plugins                      |
+
+On Windows the install directory is `%LOCALAPPDATA%\brika\bin\`.
+
+---
 
 ## Docker
-
-Run BRIKA with Docker:
 
 ```bash
 docker run -d \
@@ -32,8 +161,6 @@ docker run -d \
   -v ./config:/app/.brika \
   maxscharwath/brika:latest
 ```
-
-The UI and API are available at http://localhost:3001
 
 ### Docker Compose
 
@@ -53,25 +180,7 @@ services:
 docker compose up -d
 ```
 
-## Project Structure
-
-```
-brika/
-├── apps/
-│   ├── hub/          # Bun runtime (API, plugins, workflows)
-│   └── ui/           # React frontend (TanStack, React Flow)
-├── packages/
-│   ├── sdk/          # Plugin SDK
-│   ├── flow/         # Reactive streams
-│   ├── events/       # Event system
-│   ├── ipc/          # Binary IPC protocol
-│   └── shared/       # Shared types & DI
-├── plugins/
-│   ├── blocks-builtin/   # Core blocks (condition, delay, log, etc.)
-│   ├── timer/            # Timer & countdown blocks
-│   └── example-echo/     # Example plugin
-└── docs/
-```
+---
 
 ## Creating a Plugin
 
@@ -116,10 +225,52 @@ log.info("Plugin loaded");
 }
 ```
 
-## Documentation
+---
 
-- [Architecture](docs/ARCHITECTURE.md)
-- [SDK Reference](packages/sdk/README.md)
+## Development
+
+Prerequisites: [Bun](https://bun.sh) ≥ 1.2
+
+```sh
+bun install              # Install dependencies
+
+bun run dev              # Start hub + UI in dev mode (hot reload)
+bun test                 # Run all tests
+bun run build            # Build the standalone binary (output: apps/hub/dist/)
+```
+
+Or target a specific app:
+
+```sh
+bun run dev --filter=@brika/hub   # Hub only
+bun run dev --filter=@brika/ui    # UI only (http://localhost:5173)
+```
+
+### Project Structure
+
+```
+apps/
+  hub/              Hub server (Bun, TypeScript)
+  ui/               Web UI (React, Vite)
+packages/
+  sdk/              Plugin SDK
+  di/               Dependency injection
+  router/           HTTP router
+  events/           Event system
+  ipc/              Binary IPC protocol
+  shared/           Shared types
+plugins/
+  blocks-builtin/   Core blocks (condition, delay, log, …)
+  timer/            Timer & countdown blocks
+  example-echo/     Example plugin
+scripts/
+  install.sh        Linux/macOS installer
+  install.ps1       Windows installer
+  uninstall.sh      Linux/macOS uninstaller
+  uninstall.ps1     Windows uninstaller
+```
+
+---
 
 ## Tech Stack
 

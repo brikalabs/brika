@@ -6,8 +6,8 @@
  */
 
 import {
-  registerAction as registerActionMsg,
   callAction as callActionMsg,
+  registerAction as registerActionMsg,
 } from '@brika/ipc/contract';
 import { type ContextCore, type MethodsOf, registerContextModule } from './register';
 

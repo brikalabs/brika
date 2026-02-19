@@ -7,6 +7,7 @@
 
 import { describe, expect, test } from 'bun:test';
 import { createMockTranslation } from '@brika/sdk/testing';
+import type { WeatherCondition } from '../utils';
 import {
   dayName,
   formatTemp,
@@ -18,7 +19,6 @@ import {
   tempUnit,
   windDirectionLabel,
 } from '../utils';
-import type { WeatherCondition } from '../utils';
 
 // ─── getWeatherMeta ─────────────────────────────────────────────────────────
 

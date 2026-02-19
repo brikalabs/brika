@@ -11,14 +11,14 @@ defineRenderer('section', ({ node, onAction }) => {
       className={cn('flex min-h-0 flex-col', gap, node.onPress && 'cursor-pointer')}
       {...clickableProps(node.onPress, onAction)}
     >
-      <div className="flex shrink-0 items-center gap-2 @md:gap-2.5">
+      <div className="flex shrink-0 items-center @md:gap-2.5 gap-2">
         {node.icon && (
           <DynamicIcon
             name={node.icon as IconName}
-            className="size-3 @md:size-4 shrink-0 text-muted-foreground"
+            className="@md:size-4 size-3 shrink-0 text-muted-foreground"
           />
         )}
-        <h4 className="font-medium text-[10px] @md:text-xs text-muted-foreground uppercase tracking-wider">
+        <h4 className="font-medium @md:text-xs text-[10px] text-muted-foreground uppercase tracking-wider">
           {node.title}
         </h4>
         <div className="h-px flex-1 bg-border/50" />

@@ -28,7 +28,12 @@ mock.module('@clack/prompts', () => ({
 // Mock picocolors (pass through)
 mock.module('picocolors', () => ({
   default: {
+    black: (s: string) => s,
+    bgCyan: (s: string) => s,
+    bgYellow: (s: string) => s,
     cyan: (s: string) => s,
+    red: (s: string) => s,
+    yellow: (s: string) => s,
     green: (s: string) => s,
     bold: (s: string) => s,
     dim: (s: string) => s,
@@ -249,6 +254,8 @@ describe('scaffold', () => {
     expect(pkg.blocks[0].id).toBe('test-plugin');
     expect(pkg.bricks).toBeUndefined();
     expect(pkg.sparks).toBeUndefined();
+    expect(pkg.keywords).toContain('brika-plugin');
+    expect(pkg.scripts.prepublishOnly).toBe('brika-verify-plugin');
     expect(pkg.main).toBe('./src/index.ts');
   });
 

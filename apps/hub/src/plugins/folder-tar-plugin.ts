@@ -16,7 +16,7 @@ export function folderTarPlugin(): BunPlugin {
       build.onLoad({ filter: /\.tar$/ }, async ({ path }) => {
         const bytes = await packFolder(path.replace(/\.tar$/, ''));
         return {
-          contents: `export default new Uint8Array([${[...bytes]}]);`,
+          contents: `export default new Uint8Array([${bytes.join(',')}]);`,
           loader: 'js',
         };
       });

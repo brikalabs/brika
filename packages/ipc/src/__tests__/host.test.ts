@@ -510,7 +510,7 @@ describe('PluginChannel', () => {
     });
 
     test('stderr buffer trims to MAX_STDERR_LINES', async () => {
-      const onStderr = mock(() => undefined);
+      const _onStderr = mock(() => undefined);
 
       // Send more than 20 lines
       const encoder = new TextEncoder();

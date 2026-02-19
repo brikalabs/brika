@@ -38,7 +38,7 @@ describe('defineSharedStore', () => {
   test('set() skips notification when state is the same reference', () => {
     const initial = { count: 0 };
     const store = defineSharedStore(initial);
-    const notified = false;
+    const _notified = false;
     // Manually poke a listener to detect spurious notifications
     // (listeners are Set<fn> on the closure — we test indirectly via render count below)
     store.set(initial); // same reference → no-op

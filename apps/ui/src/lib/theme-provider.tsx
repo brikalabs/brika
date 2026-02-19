@@ -26,13 +26,19 @@ function useSystemTheme(): 'light' | 'dark' {
 export function ThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
   const systemTheme = useSystemTheme();
 
-  const [theme, setThemeState] = useState<ThemeName>(
-    () => {
-      const stored = localStorage.getItem(THEME_STORAGE_KEY);
-      if (stored === 'default' || stored === 'ocean' || stored === 'forest' || stored === 'sunset' || stored === 'lavender' || stored === 'ruby') return stored;
-      return 'default';
-    }
-  );
+  const [theme, setThemeState] = useState<ThemeName>(() => {
+    const stored = localStorage.getItem(THEME_STORAGE_KEY);
+    if (
+      stored === 'default' ||
+      stored === 'ocean' ||
+      stored === 'forest' ||
+      stored === 'sunset' ||
+      stored === 'lavender' ||
+      stored === 'ruby'
+    )
+      return stored;
+    return 'default';
+  });
 
   const [mode, setModeState] = useState<ThemeMode>(() => {
     const stored = localStorage.getItem(MODE_STORAGE_KEY);

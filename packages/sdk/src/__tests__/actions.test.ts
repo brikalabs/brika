@@ -79,8 +79,7 @@ describe('action source-order matching', () => {
 
     // Re-sort by source position
     const sorted = [...alphabetical].sort(
-      (a, b) =>
-        source.indexOf(`export const ${a}`) - source.indexOf(`export const ${b}`)
+      (a, b) => source.indexOf(`export const ${a}`) - source.indexOf(`export const ${b}`)
     );
 
     expect(sorted).toEqual(['getDevices', 'scan', 'commission']);
@@ -97,9 +96,7 @@ describe('action source-order matching', () => {
 
     const sortBySource = (names: string[], source: string) =>
       [...names].sort(
-        (a, b) =>
-          source.indexOf(`export const ${a}`) -
-          source.indexOf(`export const ${b}`)
+        (a, b) => source.indexOf(`export const ${a}`) - source.indexOf(`export const ${b}`)
       );
 
     const order1 = sortBySource(['a', 'b'], source1);

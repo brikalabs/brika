@@ -14,9 +14,6 @@ export function useMemo<T>(factory: () => T, deps: unknown[]): T {
 }
 
 // biome-ignore lint: any[] needed to accept all callback signatures
-export function useCallback<T extends (...args: any[]) => any>(
-  callback: T,
-  deps: unknown[]
-): T {
+export function useCallback<T extends (...args: any[]) => any>(callback: T, deps: unknown[]): T {
   return useMemo(() => callback, deps);
 }

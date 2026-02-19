@@ -11,7 +11,8 @@ export type LogSource =
   | 'events'
   | 'http'
   | 'i18n'
-  | 'state';
+  | 'state'
+  | 'updates';
 
 /** Available log levels as a constant array */
 export const LOG_LEVELS: LogLevel[] = ['debug', 'info', 'warn', 'error'];
@@ -28,6 +29,7 @@ export const LOG_SOURCES: LogSource[] = [
   'http',
   'i18n',
   'state',
+  'updates',
 ];
 
 export interface LogError {
@@ -314,6 +316,8 @@ export interface StorePlugin {
   name: string;
   displayName?: string;
   version: string;
+  /** Version string to pass to the installer (e.g. 'workspace:*' for local plugins) */
+  installVersion: string;
   description: string;
   author: string | { name: string; email?: string };
   keywords: string[];
@@ -323,13 +327,12 @@ export interface StorePlugin {
   engines?: { brika?: string };
   verified: boolean;
   verifiedAt?: string;
-  featured?: boolean;
+  featured: boolean;
   compatible: boolean;
   compatibilityReason?: string;
   installed: boolean;
   installedVersion?: string;
-  /** Where this plugin comes from: 'npm' (default) or 'local' (workspace) */
-  source?: 'npm' | 'local';
+  source: string;
   npm: {
     downloads: number;
     publishedAt: string;
@@ -354,7 +357,7 @@ export interface VerifiedPluginsList {
 }
 
 /** npm package data from registry API */
-export interface NpmPackageData {
+export interface PluginPackageData {
   name: string;
   version: string;
   displayName?: string;
@@ -383,11 +386,15 @@ export interface NpmPackageData {
 }
 
 /** npm search result from registry API */
-export interface NpmSearchResult {
-  package: NpmPackageData;
-  downloadCount?: number;
-  installed?: boolean;
+export interface PluginSearchResult {
+  package: PluginPackageData;
+  source: string;
+  installVersion: string;
+  downloadCount: number;
+  installed: boolean;
   installedVersion?: string;
+  compatible: boolean;
+  compatibilityReason?: string;
 }
 
 /** Compatibility check result */

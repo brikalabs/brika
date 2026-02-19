@@ -39,7 +39,7 @@ function ensureDataDir(): string {
 function resolveJsonPath(key: string): string {
   if (!/^[\w.\-/]+$/.test(key)) {
     throw new Error(
-      `Invalid storage key "${key}". Use alphanumeric, hyphens, underscores, dots, slashes only.`,
+      `Invalid storage key "${key}". Use alphanumeric, hyphens, underscores, dots, slashes only.`
     );
   }
   if (key.includes('..')) {
@@ -100,13 +100,14 @@ export async function writeJSON(key: string, value: unknown): Promise<void> {
  *
  * @param key Storage key to delete.
  */
-export async function deleteJSON(key: string): Promise<void> {
+export function deleteJSON(key: string): Promise<void> {
   const path = resolveJsonPath(key);
   try {
     unlinkSync(path);
   } catch {
     // Ignore if file doesn't exist
   }
+  return Promise.resolve();
 }
 
 /**
@@ -114,7 +115,7 @@ export async function deleteJSON(key: string): Promise<void> {
  *
  * @param key Storage key to check.
  */
-export async function exists(key: string): Promise<boolean> {
+export function exists(key: string): Promise<boolean> {
   const path = resolveJsonPath(key);
   return Bun.file(path).exists();
 }
@@ -129,7 +130,7 @@ export async function exists(key: string): Promise<boolean> {
 export async function updateJSON<T>(
   key: string,
   updater: (current: T) => T,
-  defaultValue: T,
+  defaultValue: T
 ): Promise<T> {
   const current = (await readJSON<T>(key)) ?? defaultValue;
   const next = updater(current);

@@ -24,7 +24,11 @@ export function PluginStoreCard({ plugin }: Readonly<PluginStoreCardProps>) {
   const authorName = typeof plugin.author === 'string' ? plugin.author : plugin.author?.name;
 
   return (
-    <Link to="/store/$name" params={{ name: plugin.name }} className="group block">
+    <Link
+      to="/store/$source/$"
+      params={{ source: plugin.source, _splat: plugin.name }}
+      className="group block"
+    >
       <Card accent={accent} interactive className="h-full p-5">
         <div className="space-y-3">
           {/* Header: Icon + Title/Badges + Install Button */}

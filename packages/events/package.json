@@ -1,12 +1,14 @@
 {
   "name": "@brika/events",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "type": "module",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/maxscharwath/brika.git",
     "directory": "packages/events"
   },
+  "keywords": ["brika", "events", "event-bus", "typed-events"],
   "exports": {
     ".": "./src/index.ts"
   },

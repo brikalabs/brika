@@ -5,10 +5,10 @@ import { Button } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
 import type { BoardSummary } from './api';
 import { AddBrickSheet } from './components/AddBrickSheet';
-import { ConfigSheet } from './components/ConfigSheet';
 import { BoardSwitcher } from './components/BoardSwitcher';
+import { ConfigSheet } from './components/ConfigSheet';
 import { EditBoardDialog } from './components/EditBoardDialog';
-import { useBrickTypesList, useBoards } from './hooks';
+import { useBoards, useBrickTypesList } from './hooks';
 import { useActiveBoard, useBoardStore } from './store';
 
 export function BoardsLayout() {
@@ -92,7 +92,9 @@ export function BoardsLayout() {
       {editBoard && (
         <EditBoardDialog
           open
-          onOpenChange={(open) => { if (!open) setEditBoard(null); }}
+          onOpenChange={(open) => {
+            if (!open) setEditBoard(null);
+          }}
           board={editBoard}
           onDeleted={handleBoardDeleted}
         />

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, spyOn, test } from 'bun:test';
 import { get, reset, stub, trackSpy, useTestBed } from '@brika/di/testing';
 import type { VerifiedPluginsList } from '@brika/shared';
 import { Logger } from '@/runtime/logs/log-router';
-import { VerifiedPluginsService } from '@/runtime/services/verified-plugins';
+import { VerifiedPluginsService } from '@/runtime/store';
 
 useTestBed({ autoStub: false });
 

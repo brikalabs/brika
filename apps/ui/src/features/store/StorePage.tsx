@@ -1,4 +1,4 @@
-import type { StorePlugin } from '@brika/shared';
+import type { PluginSearchResult, StorePlugin } from '@brika/shared';
 import { Package } from 'lucide-react';
 import React from 'react';
 import { useDataView } from '@/components/DataView';
@@ -7,7 +7,7 @@ import { useDebouncedState } from '@/hooks/use-debounce';
 import { useLocale } from '@/lib/use-locale';
 import type { FilterValue, SortValue } from './components';
 import { PluginStoreCard, PluginStoreCardSkeleton, PluginStoreFilters } from './components';
-import { useLocalPlugins, useStorePlugins, useVerifiedPlugins } from './hooks';
+import { useStorePlugins, useVerifiedPlugins } from './hooks';
 
 export function StorePage() {
   const { t, tp } = useLocale();
@@ -15,85 +15,47 @@ export function StorePage() {
   const [filter, setFilter] = React.useState<FilterValue>('all');
   const [sort, setSort] = React.useState<SortValue>('downloads');
 
-  // Fetch plugins (debounced to avoid excessive API calls)
   const { data: searchData, isLoading } = useStorePlugins({
     q: debouncedSearch,
     limit: 50,
   });
-
   const { data: verifiedData } = useVerifiedPlugins();
-  const { data: localData } = useLocalPlugins({ q: debouncedSearch });
 
-  // Merge npm + local results with verified status and compatibility
+  // Map PluginSearchResult → StorePlugin, adding verified metadata from the verified list
   const allPlugins = React.useMemo(() => {
-    const verifiedSet = new Set(verifiedData?.plugins.map((p) => p.name) || []);
-
-    // Map npm results
-    const npmPlugins: StorePlugin[] = (searchData?.plugins ?? []).map((npmPlugin) => {
-      const verified = verifiedSet.has(npmPlugin.package.name);
-      const verifiedPlugin = verifiedData?.plugins.find((p) => p.name === npmPlugin.package.name);
-
+    const toStorePlugin = (plugin: PluginSearchResult): StorePlugin => {
+      const verifiedPlugin = verifiedData?.plugins.find((p) => p.name === plugin.package.name);
       return {
-        name: npmPlugin.package.name,
-        displayName: npmPlugin.package.displayName,
-        version: npmPlugin.package.version,
-        description: npmPlugin.package.description ?? '',
-        author: npmPlugin.package.author || '',
-        keywords: npmPlugin.package.keywords || [],
-        repository: npmPlugin.package.repository,
-        homepage: npmPlugin.package.homepage,
-        license: npmPlugin.package.license,
-        engines: npmPlugin.package.engines,
-        verified,
+        name: plugin.package.name,
+        displayName: plugin.package.displayName,
+        version: plugin.package.version,
+        installVersion: plugin.installVersion,
+        description: plugin.package.description ?? '',
+        author: plugin.package.author || '',
+        keywords: plugin.package.keywords || [],
+        repository: plugin.package.repository,
+        homepage: plugin.package.homepage,
+        license: plugin.package.license,
+        engines: plugin.package.engines,
+        verified: !!verifiedPlugin,
         verifiedAt: verifiedPlugin?.verifiedAt,
         featured: verifiedPlugin?.featured || false,
-        compatible: true,
-        installed: npmPlugin.installed || false,
-        installedVersion: npmPlugin.installedVersion,
-        source: 'npm',
-        npm: {
-          downloads: npmPlugin.downloadCount || 0,
-          publishedAt: npmPlugin.package.date || '',
-        },
-      } satisfies StorePlugin;
-    });
+        compatible: plugin.compatible,
+        compatibilityReason: plugin.compatibilityReason,
+        installed: plugin.installed,
+        installedVersion: plugin.installedVersion,
+        source: plugin.source,
+        npm: { downloads: plugin.downloadCount, publishedAt: plugin.package.date || '' },
+      };
+    };
 
-    // Map local workspace results
-    const localPlugins: StorePlugin[] = (localData?.plugins ?? []).map(
-      (local) =>
-        ({
-          name: local.package.name,
-          displayName: local.package.displayName,
-          version: local.package.version,
-          description: local.package.description ?? '',
-          author: local.package.author || '',
-          keywords: local.package.keywords || [],
-          repository: local.package.repository,
-          homepage: local.package.homepage,
-          license: local.package.license,
-          engines: local.package.engines,
-          verified: false,
-          featured: false,
-          compatible: true,
-          installed: local.installed || false,
-          installedVersion: local.installedVersion,
-          source: 'local',
-          npm: { downloads: 0, publishedAt: '' },
-        }) satisfies StorePlugin
-    );
-
-    // Deduplicate: local plugins take precedence over npm
-    const localNames = new Set(localPlugins.map((p) => p.name));
-    const deduped = npmPlugins.filter((p) => !localNames.has(p.name));
-
-    return [...localPlugins, ...deduped];
-  }, [searchData, verifiedData, localData]);
+    return (searchData?.plugins ?? []).map(toStorePlugin);
+  }, [searchData, verifiedData]);
 
   // Apply filters
   const filteredPlugins = React.useMemo(() => {
     let filtered = allPlugins;
 
-    // Apply filter
     switch (filter) {
       case 'verified':
         filtered = filtered.filter((p) => p.verified);
@@ -106,7 +68,6 @@ export function StorePage() {
         break;
     }
 
-    // Apply sort
     switch (sort) {
       case 'downloads':
         filtered = [...filtered].sort((a, b) => b.npm.downloads - a.npm.downloads);
@@ -128,11 +89,10 @@ export function StorePage() {
     return filtered;
   }, [allPlugins, filter, sort, tp]);
 
-  // Sort plugins to show featured first
+  // Featured plugins first
   const sortedPlugins = React.useMemo(
     () =>
       [...filteredPlugins].sort((a, b) => {
-        // Featured plugins come first
         if (a.featured && !b.featured) return -1;
         if (!a.featured && b.featured) return 1;
         return 0;
@@ -144,13 +104,11 @@ export function StorePage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
         <h1 className="font-semibold text-2xl tracking-tight">{t('store:title')}</h1>
         <p className="mt-1 text-muted-foreground">{t('store:description')}</p>
       </div>
 
-      {/* Search and Filters */}
       <PluginStoreFilters
         onSearchChange={setSearch}
         filter={filter}
@@ -189,7 +147,7 @@ export function StorePage() {
             <section>
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {plugins.map((plugin) => (
-                  <PluginStoreCard key={plugin.name} plugin={plugin} />
+                  <PluginStoreCard key={`${plugin.source}:${plugin.name}`} plugin={plugin} />
                 ))}
               </div>
             </section>

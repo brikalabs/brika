@@ -1,7 +1,7 @@
 import { inject, singleton } from '@brika/di';
+import { BoardLoader, BoardService } from '@/runtime/boards';
 import type { BrikaConfig } from '@/runtime/config';
 import { ConfigLoader } from '@/runtime/config';
-import { BoardLoader, BoardService } from '@/runtime/boards';
 import { BrickActions } from '@/runtime/events/actions';
 import { EventSystem } from '@/runtime/events/event-system';
 import type { Loader } from './loader';
@@ -36,7 +36,7 @@ export class BoardsLoader implements Loader {
     this.boardLoader.watch();
   }
 
-  async stop(): Promise<void> {
+  stop(): Promise<void> {
     this.unsubTypeRegistered?.();
     this.boardLoader.stopWatching();
 
@@ -44,5 +44,6 @@ export class BoardsLoader implements Loader {
     for (const board of this.boardLoader.list()) {
       this.boardService.unmountBoard(board);
     }
+    return Promise.resolve();
   }
 }

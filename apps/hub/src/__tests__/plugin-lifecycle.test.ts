@@ -253,6 +253,7 @@ describe('PluginLifecycle', () => {
         metadata: {
           name: '@test/plugin',
           version: '1.0.0',
+          main: './index.js',
           description: 'Test plugin',
           author: 'Test Author',
           homepage: 'https://example.com',
@@ -301,6 +302,7 @@ describe('PluginLifecycle', () => {
         metadata: {
           name: '@test/plugin',
           version: '1.0.0',
+          main: './index.js',
           engines: { brika: '^0.1.0' },
         },
       };
@@ -336,6 +338,7 @@ describe('PluginLifecycle', () => {
         metadata: {
           name: '@test/not-running',
           version: '1.0.0',
+          main: './index.js',
           engines: { brika: '^0.1.0' },
         },
       };

@@ -2,9 +2,10 @@
   "$schema": "https://schema.brika.dev/plugin.schema.json",
   "name": "@brika/plugin-timer",
   "displayName": "Timer",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Timer and countdown blocks for BRIKA workflows",
   "author": "BRIKA Team",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/maxscharwath/brika.git",
@@ -12,12 +13,14 @@
   },
   "icon": "./icon.svg",
   "keywords": [
+    "brika",
+    "brika-plugin",
     "timer",
     "countdown",
     "delay"
   ],
   "engines": {
-    "brika": "^0.2.0"
+    "brika": "^0.3.0"
   },
   "type": "module",
   "main": "./src/index.tsx",
@@ -26,7 +29,8 @@
   },
   "scripts": {
     "link": "bun link",
-    "tsc": "bunx --bun tsc --noEmit"
+    "tsc": "bunx --bun tsc --noEmit",
+    "prepublishOnly": "brika-verify-plugin"
   },
   "blocks": [
     {
@@ -55,7 +59,16 @@
       "icon": "timer",
       "color": "#22c55e",
       "config": [
-        { "type": "number", "name": "refreshInterval", "label": "Refresh Interval (ms)", "description": "How often to update uptime", "default": 5000, "min": 1000, "max": 30000, "step": 1000 }
+        {
+          "type": "number",
+          "name": "refreshInterval",
+          "label": "Refresh Interval (ms)",
+          "description": "How often to update uptime",
+          "default": 5000,
+          "min": 1000,
+          "max": 30000,
+          "step": 1000
+        }
       ]
     },
     {
@@ -66,8 +79,23 @@
       "icon": "image",
       "color": "#8b5cf6",
       "config": [
-        { "type": "checkbox", "name": "autoRotate", "label": "Auto-rotate", "description": "Automatically cycle through photos", "default": true },
-        { "type": "number", "name": "interval", "label": "Interval (ms)", "description": "Time between photo changes", "default": 8000, "min": 1000, "max": 60000, "step": 1000 }
+        {
+          "type": "checkbox",
+          "name": "autoRotate",
+          "label": "Auto-rotate",
+          "description": "Automatically cycle through photos",
+          "default": true
+        },
+        {
+          "type": "number",
+          "name": "interval",
+          "label": "Interval (ms)",
+          "description": "Time between photo changes",
+          "default": 8000,
+          "min": 1000,
+          "max": 60000,
+          "step": 1000
+        }
       ]
     },
     {
@@ -78,8 +106,30 @@
       "icon": "video",
       "color": "#ef4444",
       "config": [
-        { "type": "dropdown", "name": "defaultStream", "label": "Default Stream", "options": [{ "value": "Big Buck Bunny" }, { "value": "Elephants Dream" }, { "value": "Sintel" }], "default": "Big Buck Bunny" },
-        { "type": "checkbox", "name": "muted", "label": "Muted by default", "description": "Start the stream muted", "default": true }
+        {
+          "type": "dropdown",
+          "name": "defaultStream",
+          "label": "Default Stream",
+          "options": [
+            {
+              "value": "Big Buck Bunny"
+            },
+            {
+              "value": "Elephants Dream"
+            },
+            {
+              "value": "Sintel"
+            }
+          ],
+          "default": "Big Buck Bunny"
+        },
+        {
+          "type": "checkbox",
+          "name": "muted",
+          "label": "Muted by default",
+          "description": "Start the stream muted",
+          "default": true
+        }
       ]
     }
   ],
@@ -110,5 +160,11 @@
   },
   "devDependencies": {
     "bun-types": "^1.3.5"
-  }
+  },
+  "files": [
+    "src",
+    "locales",
+    "icon.svg",
+    "README.md"
+  ]
 }

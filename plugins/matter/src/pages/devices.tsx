@@ -1,5 +1,3 @@
-import { useState } from 'react';
-import { useAction, callAction, useLocale } from '@brika/sdk/ui-kit/hooks';
 import {
   Avatar,
   AvatarFallback,
@@ -23,6 +21,7 @@ import {
   Separator,
   Skeleton,
 } from '@brika/sdk/ui-kit';
+import { callAction, useAction, useLocale } from '@brika/sdk/ui-kit/hooks';
 import {
   Blinds,
   ChevronRight,
@@ -42,7 +41,8 @@ import {
   Trash2,
   Wrench,
 } from '@brika/sdk/ui-kit/icons';
-import { getDevices, scan, commission, remove } from '../actions';
+import { useState } from 'react';
+import { commission, getDevices, remove, scan } from '../actions';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 

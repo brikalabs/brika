@@ -32,7 +32,10 @@ describe('useIntl', () => {
     });
 
     test('merges custom options', () => {
-      const ref = intl.formatDate(0, { dateStyle: 'long', weekday: 'long' }) as Extract<IntlRef, { type: 'dateTime' }>;
+      const ref = intl.formatDate(0, { dateStyle: 'long', weekday: 'long' }) as Extract<
+        IntlRef,
+        { type: 'dateTime' }
+      >;
       expect(ref.options).toEqual({ dateStyle: 'long', weekday: 'long' });
     });
   });
@@ -57,7 +60,10 @@ describe('useIntl', () => {
     });
 
     test('custom options override defaults', () => {
-      const ref = intl.formatTime(0, { timeStyle: 'long' }) as Extract<IntlRef, { type: 'dateTime' }>;
+      const ref = intl.formatTime(0, { timeStyle: 'long' }) as Extract<
+        IntlRef,
+        { type: 'dateTime' }
+      >;
       expect(ref.options).toEqual({ timeStyle: 'long' });
     });
   });
@@ -76,7 +82,10 @@ describe('useIntl', () => {
     });
 
     test('custom options override defaults', () => {
-      const ref = intl.formatDateTime(0, { dateStyle: 'full', timeStyle: 'full' }) as Extract<IntlRef, { type: 'dateTime' }>;
+      const ref = intl.formatDateTime(0, { dateStyle: 'full', timeStyle: 'full' }) as Extract<
+        IntlRef,
+        { type: 'dateTime' }
+      >;
       expect(ref.options).toEqual({ dateStyle: 'full', timeStyle: 'full' });
     });
 
@@ -101,7 +110,10 @@ describe('useIntl', () => {
     });
 
     test('includes custom options', () => {
-      const ref = intl.formatNumber(3.14159, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) as Extract<IntlRef, { type: 'number' }>;
+      const ref = intl.formatNumber(3.14159, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }) as Extract<IntlRef, { type: 'number' }>;
       expect(ref.options).toEqual({ minimumFractionDigits: 2, maximumFractionDigits: 2 });
     });
 
@@ -171,7 +183,10 @@ describe('useIntl', () => {
     });
 
     test('merges custom options', () => {
-      const ref = intl.formatList(['a', 'b'], { type: 'disjunction' }) as Extract<IntlRef, { type: 'list' }>;
+      const ref = intl.formatList(['a', 'b'], { type: 'disjunction' }) as Extract<
+        IntlRef,
+        { type: 'list' }
+      >;
       expect(ref.options).toEqual({ style: 'long', type: 'disjunction' });
     });
 

@@ -98,12 +98,7 @@ export type InputFlows<I extends Record<string, InputDef<z.ZodType | GenericRef<
 };
 
 /** Convert output definitions to typed emitters */
-export type OutputEmitters<
-  O extends Record<
-    string,
-    OutputDef<OutputSchema>
-  >,
-> = {
+export type OutputEmitters<O extends Record<string, OutputDef<OutputSchema>>> = {
   readonly [K in keyof O]: Emitter<OutputType<O[K]>>;
 };
 
@@ -112,10 +107,7 @@ export type OutputEmitters<
  */
 export interface BlockContext<
   TInputs extends Record<string, InputDef<z.ZodType | GenericRef<string>>>,
-  TOutputs extends Record<
-    string,
-    OutputDef<OutputSchema>
-  >,
+  TOutputs extends Record<string, OutputDef<OutputSchema>>,
   TConfig extends z.ZodObject<z.ZodRawShape>,
 > {
   /** Block instance ID */
@@ -151,10 +143,7 @@ export interface BlockContext<
  */
 export interface ReactiveBlockSpec<
   TInputs extends Record<string, InputDef<z.ZodType | GenericRef<string>>>,
-  TOutputs extends Record<
-    string,
-    OutputDef<OutputSchema>
-  >,
+  TOutputs extends Record<string, OutputDef<OutputSchema>>,
   TConfig extends z.ZodObject<z.ZodRawShape>,
 > {
   /** Unique block ID */
@@ -182,10 +171,7 @@ export interface ReactiveBlockSpec<
  */
 export type BlockSetup<
   TInputs extends Record<string, InputDef<z.ZodType | GenericRef<string>>>,
-  TOutputs extends Record<
-    string,
-    OutputDef<OutputSchema>
-  >,
+  TOutputs extends Record<string, OutputDef<OutputSchema>>,
   TConfig extends z.ZodObject<z.ZodRawShape>,
 > = (ctx: BlockContext<TInputs, TOutputs, TConfig>) => void;
 

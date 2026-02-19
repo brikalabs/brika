@@ -40,13 +40,21 @@ export function Text(props: TextProps): TextNode {
   const press = onPress ? resolveAction(onPress) : undefined;
   if (isI18nRef(content)) {
     return {
-      type: 'text', ...rest, content: content.key,
+      type: 'text',
+      ...rest,
+      content: content.key,
       i18n: { ns: content.ns, key: content.key, params: content.params },
       onPress: press,
     };
   }
   if (isIntlRef(content)) {
-    return { type: 'text', ...rest, content: resolveIntlRef(content), intl: content, onPress: press };
+    return {
+      type: 'text',
+      ...rest,
+      content: resolveIntlRef(content),
+      intl: content,
+      onPress: press,
+    };
   }
   return { type: 'text', ...rest, content, onPress: press };
 }

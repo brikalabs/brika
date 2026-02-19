@@ -89,7 +89,7 @@ describe('ensureFlowImpl', () => {
     let called = false;
 
     // Use the wrapped flow's setTimeout (exercises lines 27-28)
-    const cancel = wrapped.setTimeout(() => {
+    const _cancel = wrapped.setTimeout(() => {
       called = true;
     }, 10);
 

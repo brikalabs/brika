@@ -26,9 +26,9 @@ type AllNamespaces = Record<string, Record<string, unknown>>;
 const cache = new Map<string, AllNamespaces>();
 const inflight = new Map<string, Promise<AllNamespaces>>();
 
-async function fetchAll(language: string): Promise<AllNamespaces> {
+function fetchAll(language: string): Promise<AllNamespaces> {
   const cached = cache.get(language);
-  if (cached) return cached;
+  if (cached) return Promise.resolve(cached);
 
   let pending = inflight.get(language);
   if (!pending) {
@@ -58,7 +58,9 @@ async function fetchAll(language: string): Promise<AllNamespaces> {
 
 const BulkBackend = {
   type: 'backend' as const,
-  init() {},
+  init() {
+    // No backend initialization needed.
+  },
   read(language: string, namespace: string, callback: ReadCallback) {
     if (language === 'cimode') {
       callback(null, {});

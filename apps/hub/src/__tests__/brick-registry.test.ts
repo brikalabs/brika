@@ -76,9 +76,7 @@ describe('BrickRegistry', () => {
     test('applies mutations to body', () => {
       registry.register(createBrick(), 'plugin');
 
-      const result = registry.patch('plugin:thermostat', [
-        [2, '0', { content: 'Updated' }],
-      ]);
+      const result = registry.patch('plugin:thermostat', [[2, '0', { content: 'Updated' }]]);
 
       expect(result).toBe(true);
       expect((registry.get('plugin:thermostat')!.body[0] as any).content).toBe('Updated');

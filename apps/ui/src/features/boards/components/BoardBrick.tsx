@@ -6,8 +6,8 @@ import { Button } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
 import { useBrickInstanceAction } from '../hooks';
 import {
-  useBrickPlacement,
   useBoardStore,
+  useBrickPlacement,
   useInstanceBody,
   useIsInstanceDisconnected,
 } from '../store';
@@ -67,10 +67,7 @@ interface BoardBrickProps {
   brickTypeId: string;
 }
 
-export const BoardBrick = memo(function BoardBrick({
-  instanceId,
-  brickTypeId,
-}: BoardBrickProps) {
+export const BoardBrick = memo(function BoardBrick({ instanceId, brickTypeId }: BoardBrickProps) {
   const { t, tp } = useLocale();
   const brickType = useBoardStore((s) => s.brickTypes.get(brickTypeId));
   const placement = useBrickPlacement(instanceId);
@@ -118,7 +115,8 @@ export const BoardBrick = memo(function BoardBrick({
       {/* Body — fills remaining space, no scroll */}
       <div className="@container no-drag flex min-h-0 flex-1 flex-col gap-1.5 overflow-hidden px-2.5 pt-1.5 pb-2.5 *:min-h-0 *:flex-1">
         <BrickErrorBoundary>
-          {body && body.length > 0 &&
+          {body &&
+            body.length > 0 &&
             body
               .filter(Boolean)
               .map((node, i) => (

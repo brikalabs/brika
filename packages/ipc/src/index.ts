@@ -60,13 +60,12 @@ export type {
   RpcDef,
 } from './define';
 export { isMessage, isRpc, message, rpc } from './define';
+// ─── Errors ───
+export type { RpcErrorCode, RpcErrorWire } from './errors';
+export { isRpcErrorWire, RpcError } from './errors';
 // ─── Host ───
 export type { PluginChannelOptions, SpawnPluginOptions } from './host';
 export { PluginChannel, spawnPlugin } from './host';
-
-// ─── Errors ───
-export type { RpcErrorCode, RpcErrorWire } from './errors';
-export { RpcError, isRpcErrorWire } from './errors';
 
 // ─── Core Types ───
 export { Json, JsonRecord } from './types';

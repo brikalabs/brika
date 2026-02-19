@@ -36,15 +36,18 @@ defineRenderer('callout', ({ node }) => {
   return (
     <div
       className={cn(
-        'flex shrink-0 items-start gap-2 @md:gap-3 rounded-md border px-2.5 @md:px-3.5 py-2 @md:py-2.5',
+        'flex shrink-0 items-start @md:gap-3 gap-2 rounded-md border @md:px-3.5 px-2.5 @md:py-2.5 py-2',
         cfg.bg,
         cfg.border
       )}
     >
-      <DynamicIcon name={iconName} className={cn('mt-0.5 size-3.5 @md:size-4 shrink-0', cfg.text)} />
+      <DynamicIcon
+        name={iconName}
+        className={cn('mt-0.5 @md:size-4 size-3.5 shrink-0', cfg.text)}
+      />
       <div className="min-w-0 flex-1 space-y-0.5">
-        {node.title && <p className="font-medium text-xs @md:text-sm">{node.title}</p>}
-        <p className="text-muted-foreground text-xs @md:text-sm">{node.message}</p>
+        {node.title && <p className="font-medium @md:text-sm text-xs">{node.title}</p>}
+        <p className="@md:text-sm text-muted-foreground text-xs">{node.message}</p>
       </div>
     </div>
   );

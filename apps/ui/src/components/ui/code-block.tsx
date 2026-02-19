@@ -1,12 +1,6 @@
 import { cva, type VariantProps } from 'class-variance-authority';
 import { Check, Copy } from 'lucide-react';
 import * as React from 'react';
-import {
-  BundledLanguage,
-  type BundledTheme,
-  bundledLanguages,
-  codeToTokens,
-} from 'shiki/bundle/web';
 import { cn } from '@/lib/utils';
 import { Button } from './button';
 import { Tooltip, TooltipContent, TooltipTrigger } from './tooltip';
@@ -272,7 +266,7 @@ interface CodeBlockContentProps
     VariantProps<typeof codeBlockContentVariants> {
   language?: string | null;
   filename?: string | null;
-  theme?: BundledTheme;
+  theme?: string;
   showLineNumbers?: boolean;
   lineNumberStart?: number;
 }
@@ -303,12 +297,6 @@ function CodeBlockContent({
   const normalizedCode = React.useMemo(() => code.replace(/\n$/, ''), [code]);
   const lines = React.useMemo(() => normalizedCode.split('\n'), [normalizedCode]);
 
-  const languageKey = React.useMemo(() => {
-    if (!languageProp) return null;
-    const key = languageProp.toLowerCase();
-    return key in bundledLanguages ? (key as BundledLanguage) : null;
-  }, [languageProp]);
-
   // Set language and filename in context
   React.useEffect(() => {
     setLanguage(languageProp ?? null);
@@ -319,32 +307,43 @@ function CodeBlockContent({
   }, [filenameProp, setFilename]);
 
   React.useEffect(() => {
+    if (!languageProp) {
+      setHighlightTokens(null);
+      setForeground(null);
+      return;
+    }
+
     let cancelled = false;
 
-    async function highlight() {
-      if (!languageKey) {
+    import('shiki/bundle/web').then(async (shiki) => {
+      if (cancelled) return;
+      const key = languageProp.toLowerCase();
+      if (!(key in shiki.bundledLanguages)) {
         setHighlightTokens(null);
         setForeground(null);
         return;
       }
 
       try {
-        const result = await codeToTokens(normalizedCode, { lang: languageKey, theme });
+        const result = await shiki.codeToTokens(normalizedCode, {
+          lang: key as Parameters<typeof shiki.codeToTokens>[1]['lang'],
+          theme,
+        });
         if (cancelled) return;
         setHighlightTokens(result.tokens);
         setForeground(result.fg ?? null);
       } catch {
-        if (cancelled) return;
-        setHighlightTokens(null);
-        setForeground(null);
+        if (!cancelled) {
+          setHighlightTokens(null);
+          setForeground(null);
+        }
       }
-    }
+    });
 
-    highlight();
     return () => {
       cancelled = true;
     };
-  }, [languageKey, normalizedCode, theme]);
+  }, [languageProp, normalizedCode, theme]);
 
   React.useEffect(() => {
     setCodeInfo(normalizedCode, lines.length);

@@ -41,14 +41,21 @@ export class BunMock {
   readonly #directories = new Map<string, string[]>();
   readonly #resolves = new Map<string, string>();
   #spawnConfig: SpawnConfig = { exitCode: 0 };
+  #fetchImpl: ((...args: Parameters<typeof fetch>) => ReturnType<typeof fetch>) | null = null;
+  readonly #fetchDispatch = (...args: Parameters<typeof fetch>): ReturnType<typeof fetch> => {
+    if (!this.#fetchImpl) throw new Error('No fetch mock configured');
+    return this.#fetchImpl(...args);
+  };
   readonly #spawnCalls: Array<{ cmd: string[]; options?: unknown }> = [];
 
   #fileSpy: SpyInstance | null = null;
   #writeSpy: SpyInstance | null = null;
   #spawnSpy: SpyInstance | null = null;
   #resolveSyncSpy: SpyInstance | null = null;
+  #fetchSpy: SpyInstance | null = null;
 
   readonly #originalGlob = Bun.Glob;
+  readonly #originalFetch = globalThis.fetch;
 
   /**
    * Define a virtual filesystem
@@ -156,6 +163,20 @@ export class BunMock {
   }
 
   /**
+   * Configure fetch mock. Installs the spy on first call; subsequent calls
+   * just swap the implementation without re-installing.
+   */
+  fetch(impl: (...args: Parameters<typeof fetch>) => ReturnType<typeof fetch>): this {
+    this.#fetchImpl = impl;
+    if (!this.#fetchSpy) {
+      this.#fetchSpy = spyOn(globalThis, 'fetch').mockImplementation(
+        Object.assign(this.#fetchDispatch, { preconnect: this.#originalFetch.preconnect })
+      );
+    }
+    return this;
+  }
+
+  /**
    * Mock package resolution
    */
   resolve(packageName: string, resolvedPath: string): this {
@@ -201,6 +222,7 @@ export class BunMock {
     this.#applySpawnMock();
     this.#applyResolveSyncMock();
     this.#applyGlobMock();
+    this.#applyFetchMock();
     return this;
   }
 
@@ -212,18 +234,21 @@ export class BunMock {
     this.#writeSpy?.mockRestore();
     this.#spawnSpy?.mockRestore();
     this.#resolveSyncSpy?.mockRestore();
+    this.#fetchSpy?.mockRestore();
     Bun.Glob = this.#originalGlob;
 
     this.#fileSpy = null;
     this.#writeSpy = null;
     this.#spawnSpy = null;
     this.#resolveSyncSpy = null;
+    this.#fetchSpy = null;
 
     this.#files.clear();
     this.#directories.clear();
     this.#resolves.clear();
     this.#spawnCalls.length = 0;
     this.#spawnConfig = { exitCode: 0 };
+    this.#fetchImpl = null;
 
     return this;
   }
@@ -336,6 +361,14 @@ export class BunMock {
         return entry === p;
       }
     } as unknown as typeof Bun.Glob;
+  }
+
+  #applyFetchMock(): void {
+    if (!this.#fetchImpl || this.#fetchSpy) return;
+
+    this.#fetchSpy = spyOn(globalThis, 'fetch').mockImplementation(
+      Object.assign(this.#fetchDispatch, { preconnect: this.#originalFetch.preconnect })
+    );
   }
 }
 

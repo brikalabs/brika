@@ -32,9 +32,9 @@ export type {
   GridNode,
   // I18n + Intl
   I18nRef,
-  IntlRef,
   IconNode,
   ImageNode,
+  IntlRef,
   KeyValueItem,
   KeyValueNode,
   LinkNode,
@@ -55,8 +55,8 @@ export type {
   TableColumn,
   TableNode,
   TabsNode,
-  TextInputNode,
   TextContent,
+  TextInputNode,
   // Data display
   TextNode,
   ToggleNode,
@@ -144,4 +144,11 @@ export { colors } from './colors';
 // Auto-action registration (internal — used by SDK render pipeline)
 // ─────────────────────────────────────────────────────────────────────────────
 
-export { _setActionRegistrar, i18nRef, intlRef, isI18nRef, isIntlRef, resolveIntlRef } from './nodes';
+export {
+  _setActionRegistrar,
+  i18nRef,
+  intlRef,
+  isI18nRef,
+  isIntlRef,
+  resolveIntlRef,
+} from './nodes';

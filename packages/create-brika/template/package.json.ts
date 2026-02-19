@@ -8,12 +8,16 @@ export default function template(data: TemplateData): string {
     version: '0.1.0',
     description: data.description,
     author: data.author,
-    keywords: ['brika', 'plugin', data.name],
+    keywords: ['brika', 'brika-plugin'],
     engines: { brika: `^${data.sdkVersion}` },
     type: 'module',
     main: './src/index.ts',
     exports: { '.': './src/index.ts' },
-    scripts: { link: 'bun link', tsc: 'bunx --bun tsc --noEmit' },
+    scripts: {
+      link: 'bun link',
+      tsc: 'bunx --bun tsc --noEmit',
+      prepublishOnly: 'brika-verify-plugin',
+    },
   };
 
   if (data.blocks) {

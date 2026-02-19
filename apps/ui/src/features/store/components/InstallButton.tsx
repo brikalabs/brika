@@ -10,7 +10,7 @@ import { useLocale } from '@/lib/use-locale';
 import { InstallProgressDialog } from './InstallProgressDialog';
 
 interface InstallButtonProps {
-  plugin: Pick<StorePlugin, 'name' | 'version' | 'installed' | 'compatible' | 'source'>;
+  plugin: Pick<StorePlugin, 'name' | 'installVersion' | 'installed' | 'compatible' | 'source'>;
   size?: 'default' | 'sm' | 'lg' | 'icon';
   variant?: 'default' | 'outline' | 'ghost';
 }
@@ -115,7 +115,7 @@ export function InstallButton({
         open={showInstallDialog}
         onOpenChange={setShowInstallDialog}
         packageName={plugin.name}
-        version={plugin.source === 'local' ? 'workspace:*' : plugin.version}
+        version={plugin.installVersion}
       />
     </>
   );

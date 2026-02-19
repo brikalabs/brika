@@ -2,10 +2,10 @@ import 'reflect-metadata';
 import { describe, expect, mock, test } from 'bun:test';
 import { stub, useTestBed } from '@brika/di/testing';
 import { TestApp } from '@brika/router/testing';
-import { BrickInstanceManager, BrickTypeRegistry } from '@/runtime/bricks';
 import type { RegisteredBrickType } from '@/runtime/bricks';
-import { PluginLifecycle } from '@/runtime/plugins/plugin-lifecycle';
+import { BrickInstanceManager, BrickTypeRegistry } from '@/runtime/bricks';
 import { bricksRoutes } from '@/runtime/http/routes/bricks';
+import { PluginLifecycle } from '@/runtime/plugins/plugin-lifecycle';
 
 const BRICK_TYPE: RegisteredBrickType = {
   fullId: 'timer:clock',

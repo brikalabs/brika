@@ -3,6 +3,7 @@
  */
 
 import { describe, expect, test } from 'bun:test';
+import { HUB_VERSION } from '@/hub';
 import {
   checkCompatibility,
   checkPluginCompatibility,
@@ -75,7 +76,7 @@ describe('compatibility', () => {
       const result = checkPluginCompatibility({
         name: 'test-plugin',
         version: '1.0.0',
-        engines: { brika: '^0.2.0' },
+        engines: { brika: HUB_VERSION },
       });
       expect(result.compatible).toBe(true);
     });

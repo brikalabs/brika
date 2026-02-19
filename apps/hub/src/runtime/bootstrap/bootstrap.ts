@@ -60,17 +60,25 @@ export class Bootstrap {
     const config = await this.configLoader.load();
 
     // 4. Run plugin lifecycle
-    for (const p of this.plugins) {
-      this.logs.info('Initializing bootstrap plugin', { plugin: p.name });
-      await p.onInit?.();
-    }
-    for (const p of this.plugins) {
-      this.logs.info('Loading bootstrap plugin', { plugin: p.name });
-      await p.onLoad?.(config);
-    }
-    for (const p of this.plugins) {
-      this.logs.info('Starting bootstrap plugin', { plugin: p.name });
-      await p.onStart?.();
+    try {
+      for (const p of this.plugins) {
+        this.logs.info('Initializing bootstrap plugin', { plugin: p.name });
+        await p.onInit?.();
+      }
+      for (const p of this.plugins) {
+        this.logs.info('Loading bootstrap plugin', { plugin: p.name });
+        await p.onLoad?.(config);
+      }
+      for (const p of this.plugins) {
+        this.logs.info('Starting bootstrap plugin', { plugin: p.name });
+        await p.onStart?.();
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logs.error('Bootstrap failed', { error: message });
+      process.stderr.write(`\n  Error: ${message}\n\n`);
+      await this.stop().catch(() => undefined);
+      process.exit(1);
     }
 
     this.logs.info('Brika Hub started successfully', {

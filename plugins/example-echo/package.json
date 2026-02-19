@@ -2,30 +2,35 @@
   "$schema": "https://schema.brika.dev/plugin.schema.json",
   "name": "@brika/plugin-example-echo",
   "displayName": "Echo Example",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Example echo plugin demonstrating reactive blocks",
   "author": "BRIKA Team",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/maxscharwath/brika.git",
     "directory": "plugins/example-echo"
   },
   "keywords": [
+    "brika",
+    "brika-plugin",
     "example",
     "echo",
     "demo"
   ],
   "engines": {
-    "brika": "^0.2.0"
+    "brika": "^0.3.0"
   },
   "type": "module",
   "main": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts"
   },
+  "files": ["src", "locales", "README.md"],
   "scripts": {
     "link": "bun link",
-    "tsc": "bunx --bun tsc --noEmit"
+    "tsc": "bunx --bun tsc --noEmit",
+    "prepublishOnly": "brika-verify-plugin"
   },
   "blocks": [
     {

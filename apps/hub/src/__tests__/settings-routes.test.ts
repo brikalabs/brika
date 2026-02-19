@@ -2,8 +2,8 @@ import 'reflect-metadata';
 import { describe, expect, mock, test } from 'bun:test';
 import { stub, useTestBed } from '@brika/di/testing';
 import { TestApp } from '@brika/router/testing';
-import { StateStore } from '@/runtime/state/state-store';
 import { settingsRoutes } from '@/runtime/http/routes/settings';
+import { StateStore } from '@/runtime/state/state-store';
 
 describe('settings routes', () => {
   let app: ReturnType<typeof TestApp.create>;

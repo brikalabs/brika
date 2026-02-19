@@ -117,7 +117,9 @@ describe('rethrowRpcError', () => {
   test('maps PERMISSION_DENIED → PermissionDeniedError', () => {
     const rpc = new RpcError('PERMISSION_DENIED', 'denied', { permission: 'location' });
     expect(() => rethrowRpcError(rpc)).toThrow(PermissionDeniedError);
-    try { rethrowRpcError(rpc); } catch (err) {
+    try {
+      rethrowRpcError(rpc);
+    } catch (err) {
       expect((err as PermissionDeniedError).permission).toBe('location');
     }
   });
@@ -125,7 +127,9 @@ describe('rethrowRpcError', () => {
   test('maps NOT_FOUND → NotFoundError', () => {
     const rpc = new RpcError('NOT_FOUND', 'gone', { resource: 'timer:block' });
     expect(() => rethrowRpcError(rpc)).toThrow(NotFoundError);
-    try { rethrowRpcError(rpc); } catch (err) {
+    try {
+      rethrowRpcError(rpc);
+    } catch (err) {
       expect((err as NotFoundError).resource).toBe('timer:block');
     }
   });
@@ -133,7 +137,9 @@ describe('rethrowRpcError', () => {
   test('maps INVALID_INPUT → InvalidInputError', () => {
     const rpc = new RpcError('INVALID_INPUT', 'bad', { field: 'email' });
     expect(() => rethrowRpcError(rpc)).toThrow(InvalidInputError);
-    try { rethrowRpcError(rpc); } catch (err) {
+    try {
+      rethrowRpcError(rpc);
+    } catch (err) {
       expect((err as InvalidInputError).field).toBe('email');
     }
   });
@@ -145,14 +151,18 @@ describe('rethrowRpcError', () => {
 
   test('falls back to "unknown" when data has no permission field', () => {
     const rpc = new RpcError('PERMISSION_DENIED', 'msg');
-    try { rethrowRpcError(rpc); } catch (err) {
+    try {
+      rethrowRpcError(rpc);
+    } catch (err) {
       expect((err as PermissionDeniedError).permission).toBe('unknown');
     }
   });
 
   test('rethrows unknown RpcError codes as-is', () => {
     const rpc = new RpcError('SOME_FUTURE_CODE', 'something');
-    try { rethrowRpcError(rpc); } catch (err) {
+    try {
+      rethrowRpcError(rpc);
+    } catch (err) {
       expect(err).toBeInstanceOf(RpcError);
       expect((err as RpcError).code).toBe('SOME_FUTURE_CODE');
     }
@@ -160,13 +170,17 @@ describe('rethrowRpcError', () => {
 
   test('rethrows non-RpcError errors as-is', () => {
     const plain = new Error('plain error');
-    try { rethrowRpcError(plain); } catch (err) {
+    try {
+      rethrowRpcError(plain);
+    } catch (err) {
       expect(err).toBe(plain);
     }
   });
 
   test('rethrows non-Error values as-is', () => {
-    try { rethrowRpcError('string error'); } catch (err) {
+    try {
+      rethrowRpcError('string error');
+    } catch (err) {
       expect(err).toBe('string error');
     }
   });
@@ -199,7 +213,9 @@ describe('sdkErrors registry', () => {
     sdkErrors.push(CustomError);
 
     const rpc = new RpcError('CUSTOM_TEST', 'custom msg');
-    try { rethrowRpcError(rpc); } catch (err) {
+    try {
+      rethrowRpcError(rpc);
+    } catch (err) {
       expect(err).toBeInstanceOf(CustomError);
       expect((err as CustomError).message).toBe('custom msg');
     }

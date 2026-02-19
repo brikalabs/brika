@@ -172,6 +172,32 @@ describe('BunMock', () => {
     });
   });
 
+  describe('fetch()', () => {
+    test('mocks fetch responses', async () => {
+      bun
+        .fetch(() =>
+          Promise.resolve(
+            new Response(JSON.stringify({ version: '1.2.3' }), {
+              status: 200,
+              headers: { 'Content-Type': 'application/json' },
+            })
+          )
+        )
+        .apply();
+
+      const response = await fetch('https://registry.npmjs.org/test/latest');
+      const body = await response.json();
+      expect(body).toEqual({ version: '1.2.3' });
+    });
+
+    test('supports rejected fetch calls', async () => {
+      bun.fetch(() => Promise.reject(new Error('Network error'))).apply();
+      await expect(fetch('https://registry.npmjs.org/test/latest')).rejects.toThrow(
+        'Network error'
+      );
+    });
+  });
+
   describe('resolve()', () => {
     test('mocks resolveSync', () => {
       bun.resolve('@test/pkg', '/node_modules/@test/pkg/index.js').apply();

@@ -7,9 +7,9 @@ import { clickableProps } from './shared';
 const iconVariants = cva('shrink-0', {
   variants: {
     size: {
-      sm: 'size-3 @xs:size-3.5 @md:size-4',
-      md: 'size-4 @xs:size-5 @md:size-6',
-      lg: 'size-5 @xs:size-7 @md:size-8',
+      sm: '@md:size-4 @xs:size-3.5 size-3',
+      md: '@md:size-6 @xs:size-5 size-4',
+      lg: '@md:size-8 @xs:size-7 size-5',
     },
   },
   defaultVariants: {

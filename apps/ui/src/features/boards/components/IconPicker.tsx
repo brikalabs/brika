@@ -9,7 +9,7 @@ function IconPickerSkeleton() {
 
   return (
     <div className="space-y-2">
-      <Label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+      <Label className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
         {t('boards:board.icon')}
       </Label>
       <Skeleton className="h-9 w-full rounded-md" />

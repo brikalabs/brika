@@ -1,4 +1,4 @@
-import { type I18nRef, Avatar, Box, Column, Divider, Grid, Icon, Row, Spacer, Text, defineBrick, useBrickSize, useLocale, usePreference } from '@brika/sdk/bricks';
+import { Avatar, Box, Column, Divider, defineBrick, Grid, type I18nRef, Icon, Row, Spacer, Text, useBrickSize, useLocale, usePreference } from '@brika/sdk/bricks';
 import { useWeather } from '../use-weather';
 import { dayName, formatTempWithUnit, getWeatherVisuals } from '../utils';
 import { CITY_UNIT_CONFIG, WeatherError, WeatherLoading } from './shared';
@@ -105,34 +105,28 @@ export const forecastBrick = defineBrick(
           {useGrid
             ? (
               <Grid columns={visibleDays.length} gap="md">
-                <>
-                  {visibleDays.map((day) => (
-                    <DayCell
-                      key={day.date}
-                      dayLabel={dayName(day.date, t)}
-                      code={day.weatherCode}
-                      high={day.tempMax}
-                      low={day.tempMin}
-                      unit={unit}
-                    />
-                  ))}
-                </>
+                {visibleDays.map((day) => (
+                  <DayCell
+                    dayLabel={dayName(day.date, t)}
+                    code={day.weatherCode}
+                    high={day.tempMax}
+                    low={day.tempMin}
+                    unit={unit}
+                  />
+                ))}
               </Grid>
             )
             : (
               <Column gap="sm" grow justify="between">
-                <>
-                  {visibleDays.map((day) => (
-                    <DayRow
-                      key={day.date}
-                      dayLabel={dayName(day.date, t)}
-                      code={day.weatherCode}
-                      high={day.tempMax}
-                      low={day.tempMin}
-                      unit={unit}
-                    />
-                  ))}
-                </>
+                {visibleDays.map((day) => (
+                  <DayRow
+                    dayLabel={dayName(day.date, t)}
+                    code={day.weatherCode}
+                    high={day.tempMax}
+                    low={day.tempMin}
+                    unit={unit}
+                  />
+                ))}
               </Column>
             )}
         </Column>

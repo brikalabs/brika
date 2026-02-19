@@ -5,7 +5,7 @@
  */
 
 import { defineAction } from '@brika/sdk';
-import { type MatterCommand, getMatterController } from './matter-controller';
+import { getMatterController, type MatterCommand } from './matter-controller';
 import { serializeDevice } from './serialize';
 
 /** Get all commissioned devices */

@@ -32,7 +32,7 @@ export class PermissionDeniedError extends Error {
   constructor(permission: string) {
     super(
       `Permission "${permission}" is required but not granted. ` +
-        `Add "${permission}" to "permissions" in your plugin's package.json.`,
+        `Add "${permission}" to "permissions" in your plugin's package.json.`
     );
     this.name = 'PermissionDeniedError';
     this.permission = permission;
@@ -42,10 +42,7 @@ export class PermissionDeniedError extends Error {
 export class NotFoundError extends Error {
   static readonly rpcCode = 'NOT_FOUND';
   static fromRpcError(err: RpcError) {
-    return new NotFoundError(
-      (err.data?.resource as string) ?? 'unknown',
-      err.message,
-    );
+    return new NotFoundError((err.data?.resource as string) ?? 'unknown', err.message);
   }
 
   readonly resource: string;
@@ -60,10 +57,7 @@ export class NotFoundError extends Error {
 export class InvalidInputError extends Error {
   static readonly rpcCode = 'INVALID_INPUT';
   static fromRpcError(err: RpcError) {
-    return new InvalidInputError(
-      err.message,
-      (err.data?.field as string) ?? undefined,
-    );
+    return new InvalidInputError(err.message, (err.data?.field as string) ?? undefined);
   }
 
   /** The specific field that failed validation, if available */

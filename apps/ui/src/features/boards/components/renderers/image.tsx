@@ -1,17 +1,11 @@
 import { cn } from '@/lib/utils';
 import { defineRenderer } from './registry';
+import { clickableProps } from './shared';
 
 defineRenderer('image', ({ node, onAction }) => {
   const hasDimension = node.width != null || node.height != null;
   const clickable = !!node.onPress;
-  const clickProps = clickable
-    ? {
-        onClick: () => onAction?.(node.onPress as string),
-        role: 'button' as const,
-        tabIndex: 0,
-        className: 'cursor-pointer',
-      }
-    : {};
+  const clickProps = clickableProps(node.onPress, onAction);
 
   const img = (
     <img

@@ -4,8 +4,8 @@
  * Hub-level configuration endpoints (location, etc.).
  */
 
-import { group, route } from '@brika/router';
 import { HubLocation as HubLocationSchema } from '@brika/ipc/contract';
+import { group, route } from '@brika/router';
 import { StateStore } from '@/runtime/state/state-store';
 
 export const settingsRoutes = group('/api/settings', [

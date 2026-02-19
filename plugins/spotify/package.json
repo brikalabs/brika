@@ -2,21 +2,35 @@
   "$schema": "https://schema.brika.dev/plugin.schema.json",
   "name": "@brika/plugin-spotify",
   "displayName": "Spotify",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "description": "Spotify Connect player for BRIKA dashboards",
   "author": "BRIKA Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/maxscharwath/brika.git",
+    "directory": "plugins/spotify"
+  },
   "icon": "./icon.svg",
+  "keywords": [
+    "brika",
+    "brika-plugin",
+    "spotify",
+    "music",
+    "player"
+  ],
   "type": "module",
   "main": "./src/index.tsx",
   "exports": {
     ".": "./src/index.tsx"
   },
   "engines": {
-    "brika": "^0.2.0"
+    "brika": "^0.3.0"
   },
   "scripts": {
     "link": "bun link",
-    "tsc": "bunx --bun tsc --noEmit"
+    "tsc": "bunx --bun tsc --noEmit",
+    "prepublishOnly": "brika-verify-plugin"
   },
   "preferences": [
     {
@@ -93,5 +107,11 @@
   ],
   "dependencies": {
     "@brika/sdk": "workspace:*"
-  }
+  },
+  "files": [
+    "src",
+    "locales",
+    "icon.svg",
+    "README.md"
+  ]
 }

@@ -1,19 +1,28 @@
 {
   "$schema": "https://schema.brika.dev/plugin.schema.json",
   "name": "@brika/plugin-matter",
-  "displayName": "Matter",
-  "version": "0.1.0",
+  "displayName": "Brika Matter",
+  "version": "0.3.0",
   "description": "Matter smart home device integration for BRIKA",
   "author": "BRIKA Team",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/maxscharwath/brika.git",
     "directory": "plugins/matter"
   },
   "icon": "./icon.svg",
-  "keywords": ["matter", "smart-home", "iot", "light", "switch"],
+  "keywords": [
+    "brika",
+    "brika-plugin",
+    "matter",
+    "smart-home",
+    "iot",
+    "light",
+    "switch"
+  ],
   "engines": {
-    "brika": "^0.2.0"
+    "brika": "^0.3.0"
   },
   "type": "module",
   "main": "./src/index.tsx",
@@ -22,7 +31,8 @@
   },
   "scripts": {
     "link": "bun link",
-    "tsc": "bunx --bun tsc --noEmit"
+    "tsc": "bunx --bun tsc --noEmit",
+    "prepublishOnly": "brika-verify-plugin"
   },
   "sparks": [
     {
@@ -95,5 +105,11 @@
   },
   "devDependencies": {
     "bun-types": "^1.3.5"
-  }
+  },
+  "files": [
+    "src",
+    "locales",
+    "icon.svg",
+    "README.md"
+  ]
 }

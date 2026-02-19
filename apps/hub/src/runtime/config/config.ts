@@ -8,6 +8,8 @@ export class HubConfig {
   readonly homeDir: string;
   /** Directory for static UI files (empty = disabled) */
   readonly staticDir: string;
+  /** Path to the Bun runtime binary for spawning plugins */
+  readonly bunPath: string;
 
   constructor() {
     // Try to get values from ConfigLoader if already loaded, else use env/defaults
@@ -27,6 +29,8 @@ export class HubConfig {
     }
     // Static file serving directory (empty = disabled, used in production Docker)
     this.staticDir = process.env.BRIKA_STATIC_DIR ?? '';
+    // Bun runtime path for plugin spawning (standalone installs use bundled bun)
+    this.bunPath = process.env.BRIKA_BUN_PATH ?? 'bun';
   }
 }
 

@@ -9,7 +9,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Input, Popover, PopoverContent, PopoverTrigger } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
 import type { HubLocation } from '../hooks';
-import { type PhotonFeature, featureToLocation, formatAddress, searchAddress } from '../photon';
+import { featureToLocation, formatAddress, type PhotonFeature, searchAddress } from '../photon';
 
 interface AddressSearchProps {
   onSelect: (location: HubLocation) => void;

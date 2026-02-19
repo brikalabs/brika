@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { Channel, type WireMessage } from '../channel';
 import { callTool, hello, PluginInfo, ping, ready, ToolResult } from '../contract';
 import { isMessage, isRpc, message, rpc } from '../define';
-import { RpcError, isRpcErrorWire } from '../errors';
+import { isRpcErrorWire, RpcError } from '../errors';
 
 describe('Define helpers', () => {
   it('should create a message definition', () => {

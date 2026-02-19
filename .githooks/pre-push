@@ -1,0 +1,16 @@
+#!/usr/bin/env sh
+set -eu
+
+if ! command -v bun >/dev/null 2>&1; then
+  echo "Error: 'bun' is required for pre-push checks."
+  exit 1
+fi
+
+echo "Running tests..."
+bun run test
+
+echo "Running TypeScript checks..."
+bun run tsc
+
+echo "Running Biome check (warnings are blocking)..."
+bun run lint:strict

@@ -26,6 +26,7 @@ const YAML_OPTIONS = {
 } as const;
 
 const isYAMLFile = (name: string) => name.endsWith('.yaml') || name.endsWith('.yml');
+const WATCH_EVENT_DEBOUNCE_MS = 50;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // YAML Schema
@@ -65,8 +66,10 @@ export class WorkflowLoader {
 
   #dir: string | null = null;
   #watcher: ReturnType<typeof watch> | null = null;
+  readonly #watchTimers = new Map<string, ReturnType<typeof setTimeout>>();
   readonly #loaded = new Map<string, string>();
   readonly #idToFile = new Map<string, string>();
+  readonly #fileContents = new Map<string, string>();
 
   async loadDir(dir: string): Promise<void> {
     this.#dir = dir;
@@ -83,16 +86,7 @@ export class WorkflowLoader {
 
     const dir = this.#dir;
     this.#watcher = watch(dir, { recursive: false }, (_event, filename) => {
-      if (!filename || !isYAMLFile(String(filename))) return;
-
-      void (async () => {
-        const filePath = join(dir, String(filename));
-        if (await Bun.file(filePath).exists()) {
-          await this.#loadFile(filePath);
-        } else {
-          this.#unloadFile(filePath);
-        }
-      })();
+      void this.#handleWatchEvent(dir, filename);
     });
 
     this.logs.info('Started watching workflow files', { directory: dir });
@@ -101,6 +95,8 @@ export class WorkflowLoader {
   stopWatching(): void {
     this.#watcher?.close();
     this.#watcher = null;
+    for (const timer of this.#watchTimers.values()) clearTimeout(timer);
+    this.#watchTimers.clear();
   }
 
   async saveWorkflow(workflow: Workflow): Promise<string> {
@@ -136,16 +132,20 @@ export class WorkflowLoader {
   }
 
   async #loadFile(filePath: string): Promise<void> {
-    this.#unloadFile(filePath);
-
     try {
-      const yaml = parseYAML(await Bun.file(filePath).text());
+      const content = await Bun.file(filePath).text();
+      if (this.#fileContents.get(filePath) === content) return;
+
+      this.#unloadFile(filePath);
+
+      const yaml = parseYAML(content);
       const workflow = this.#fromYAML(yaml);
       if (!workflow) return;
 
       this.engine.register(workflow);
       this.#loaded.set(filePath, workflow.id);
       this.#idToFile.set(workflow.id, filePath);
+      this.#fileContents.set(filePath, content);
 
       this.logs.info('Workflow loaded', { fileName: basename(filePath), workflowId: workflow.id });
     } catch (error) {
@@ -160,6 +160,64 @@ export class WorkflowLoader {
     this.engine.unregister(workflowId);
     this.#loaded.delete(filePath);
     this.#idToFile.delete(workflowId);
+  }
+
+  async #handleWatchEvent(dir: string, filename: string | Buffer | null): Promise<void> {
+    if (!filename) {
+      await this.#rescanWatchedDir(dir);
+      return;
+    }
+
+    const fileName = String(filename);
+    if (!isYAMLFile(fileName)) return;
+
+    const filePath = join(dir, fileName);
+    this.#scheduleWatchLoad(filePath);
+  }
+
+  async #rescanWatchedDir(dir: string): Promise<void> {
+    const entries = await Array.fromAsync(new Bun.Glob('*.{yaml,yml}').scan({ cwd: dir }));
+    const filePaths = new Set(entries.map((entry) => join(dir, entry)));
+
+    for (const filePath of filePaths) {
+      this.#scheduleWatchLoad(filePath);
+    }
+
+    for (const loadedPath of this.#loaded.keys()) {
+      if (!filePaths.has(loadedPath)) {
+        this.#unloadFile(loadedPath);
+        this.#fileContents.delete(loadedPath);
+      }
+    }
+  }
+
+  #scheduleWatchLoad(filePath: string): void {
+    const existing = this.#watchTimers.get(filePath);
+    if (existing) clearTimeout(existing);
+
+    const timer = setTimeout(() => {
+      this.#watchTimers.delete(filePath);
+      void this.#processWatchLoad(filePath);
+    }, WATCH_EVENT_DEBOUNCE_MS);
+
+    this.#watchTimers.set(filePath, timer);
+  }
+
+  async #processWatchLoad(filePath: string): Promise<void> {
+    if (await Bun.file(filePath).exists()) {
+      await this.#loadFile(filePath);
+
+      // File-system watch can fire before writes finish under load.
+      // Retry once if parsing/loading did not complete.
+      if (!this.#loaded.has(filePath) && (await Bun.file(filePath).exists())) {
+        await new Promise((resolve) => setTimeout(resolve, WATCH_EVENT_DEBOUNCE_MS));
+        await this.#loadFile(filePath);
+      }
+      return;
+    }
+
+    this.#unloadFile(filePath);
+    this.#fileContents.delete(filePath);
   }
 
   #fromYAML(yaml: unknown): Workflow | null {

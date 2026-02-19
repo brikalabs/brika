@@ -165,9 +165,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
   updateBrickConfig(instanceId, config) {
     const board = get().activeBoard;
     if (!board) return;
-    const bricks = board.bricks.map((b) =>
-      b.instanceId === instanceId ? { ...b, config } : b
-    );
+    const bricks = board.bricks.map((b) => (b.instanceId === instanceId ? { ...b, config } : b));
     set({ activeBoard: { ...board, bricks } });
   },
 

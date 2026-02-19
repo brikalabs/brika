@@ -34,7 +34,7 @@ beforeAll(() => {
   }
   writeFileSync(
     fixturePackageJson,
-    JSON.stringify({ name: 'test-storage-plugin', version: '1.0.0' }, null, 2),
+    JSON.stringify({ name: 'test-storage-plugin', version: '1.0.0' }, null, 2)
   );
   (Bun as { main: string }).main = `${fixtureDir}/src/index.ts`;
 });

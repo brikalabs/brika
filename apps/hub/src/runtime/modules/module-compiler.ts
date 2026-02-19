@@ -5,7 +5,7 @@ import { Logger } from '@/runtime/logs/log-router';
 
 // CJS proxy modules — maps plugin imports to globalThis.__brika.* at build time
 const EXTERNALS: Record<string, string> = {
-  'react': 'module.exports=globalThis.__brika.React;',
+  react: 'module.exports=globalThis.__brika.React;',
   '@brika/sdk/ui-kit': 'module.exports=globalThis.__brika.ui;',
   '@brika/sdk/ui-kit/icons': 'module.exports=globalThis.__brika.icons;',
   'lucide-react': 'module.exports=globalThis.__brika.icons;',
@@ -17,10 +17,10 @@ function brikaExternalsPlugin(): BunPlugin {
   return {
     name: 'brika-externals',
     setup(build) {
-      build.onResolve(
-        { filter: /^(react|@brika\/sdk|lucide-react)(\/.*)?$/ },
-        (args) => ({ path: args.path, namespace: 'brika-ext' })
-      );
+      build.onResolve({ filter: /^(react|@brika\/sdk|lucide-react)(\/.*)?$/ }, (args) => ({
+        path: args.path,
+        namespace: 'brika-ext',
+      }));
 
       build.onLoad({ namespace: 'brika-ext', filter: /.*/ }, (args) => {
         if (args.path.includes('jsx-runtime') || args.path.includes('jsx-dev-runtime')) {
@@ -114,7 +114,11 @@ export class ModuleCompiler {
         const entrypoint = join(rootDirectory, 'src', 'pages', `${mod.id}.tsx`);
 
         if (!(await Bun.file(entrypoint).exists())) {
-          this.#logs.warn('Module source not found', { pluginName, moduleId: mod.id, path: entrypoint });
+          this.#logs.warn('Module source not found', {
+            pluginName,
+            moduleId: mod.id,
+            path: entrypoint,
+          });
           return;
         }
 
@@ -128,7 +132,8 @@ export class ModuleCompiler {
 
         if (!result.success) {
           this.#logs.error('Module compilation failed', {
-            pluginName, moduleId: mod.id,
+            pluginName,
+            moduleId: mod.id,
             errors: result.logs.map((l) => l.message).join('; '),
           });
           return;

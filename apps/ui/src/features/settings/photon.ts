@@ -62,14 +62,10 @@ export function featureToLocation(f: PhotonFeature, tz: string): HubLocation {
 
 // ── API calls ────────────────────────────────────────────────────────────────
 
-export async function searchAddress(
-  query: string,
-  signal?: AbortSignal,
-): Promise<PhotonFeature[]> {
-  const res = await fetch(
-    `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=5`,
-    { signal },
-  );
+export async function searchAddress(query: string, signal?: AbortSignal): Promise<PhotonFeature[]> {
+  const res = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=5`, {
+    signal,
+  });
   if (!res.ok) return [];
   const data = (await res.json()) as PhotonResponse;
   return data.features;
@@ -77,12 +73,10 @@ export async function searchAddress(
 
 export async function reverseGeocode(
   latitude: number,
-  longitude: number,
+  longitude: number
 ): Promise<HubLocation | null> {
   try {
-    const res = await fetch(
-      `https://photon.komoot.io/reverse?lat=${latitude}&lon=${longitude}`,
-    );
+    const res = await fetch(`https://photon.komoot.io/reverse?lat=${latitude}&lon=${longitude}`);
     if (!res.ok) return null;
     const data = (await res.json()) as PhotonResponse;
     const feature = data.features[0];

@@ -26,8 +26,8 @@ export { matterCommand } from './blocks/command';
 
 // ─── Bricks ──────────────────────────────────────────────────────────────────
 
-export { devicesBrick } from './bricks/devices';
 export { deviceBrick } from './bricks/device';
+export { devicesBrick } from './bricks/devices';
 
 // ─── Dynamic Dropdown Options ────────────────────────────────────────────────
 

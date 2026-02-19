@@ -119,9 +119,7 @@ export function EditBoardDialog({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t('boards:board.delete')}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t('boards:board.deleteDescription')}
-            </AlertDialogDescription>
+            <AlertDialogDescription>{t('boards:board.deleteDescription')}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleting}>{t('common:actions.cancel')}</AlertDialogCancel>

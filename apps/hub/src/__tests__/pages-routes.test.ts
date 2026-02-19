@@ -2,9 +2,9 @@ import 'reflect-metadata';
 import { describe, expect, mock, test } from 'bun:test';
 import { stub, useTestBed } from '@brika/di/testing';
 import { TestApp } from '@brika/router/testing';
+import { pageRoutes } from '@/runtime/http/routes/pages';
 import { ModuleCompiler } from '@/runtime/modules';
 import { PluginManager } from '@/runtime/plugins/plugin-manager';
-import { pageRoutes } from '@/runtime/http/routes/pages';
 
 const PLUGIN = { uid: 'plg-1', name: '@brika/plugin-timer' };
 

@@ -1,8 +1,8 @@
 // Core
 
-export * from './bootstrap';
 // Loaders
 export * from './boards-loader';
+export * from './bootstrap';
 export * from './i18n-loader';
 export * from './loader';
 export * from './plugin';

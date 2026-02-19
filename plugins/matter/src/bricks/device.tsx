@@ -1,18 +1,18 @@
 import {
   Box,
   Button,
+  defineBrick,
   Row,
   Slider,
   Stat,
   Status,
   Toggle,
-  defineBrick,
   useBrickSize,
   useEffect,
   usePreference,
   useState,
 } from '@brika/sdk/bricks';
-import { type DeviceType, type MatterDevice, getMatterController } from '../matter-controller';
+import { type DeviceType, getMatterController, type MatterDevice } from '../matter-controller';
 
 // ─── Icon / color per device type ───────────────────────────────────────────
 
@@ -257,8 +257,8 @@ function SensorControls({ device }: Readonly<{ device: MatterDevice }>) {
   // Show first two sensor values
   return (
     <>
-      {entries.slice(0, 2).map(([key, val]) => (
-        <Stat key={key} label={key} value={String(val)} icon="activity" />
+      {entries.slice(0, 2).map(([sensorKey, value]) => (
+        <Stat label={sensorKey} value={String(value)} icon="activity" />
       ))}
     </>
   );

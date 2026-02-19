@@ -1,12 +1,17 @@
 import type { ComponentNode, NodeTypeMap } from '@brika/ui-kit';
-import { type FC, memo } from 'react';
+import { createElement, type FC, memo } from 'react';
 
 export type ActionHandler = (actionId: string, payload?: Record<string, unknown>) => void;
 
-export type NodeRenderer<T = any> = FC<{ node: T; onAction?: ActionHandler }>;
+export type NodeRenderer<T = unknown> = FC<{ node: T; onAction?: ActionHandler }>;
+type NodeOf<K extends keyof NodeTypeMap> = Extract<ComponentNode, { type: K }>;
+
+function isNodeType<K extends keyof NodeTypeMap>(node: ComponentNode, type: K): node is NodeOf<K> {
+  return node.type === type;
+}
 
 /** Internal record — populated at module init by each renderer's register() call */
-const renderers: Record<string, NodeRenderer> = {};
+const renderers: Record<string, NodeRenderer<ComponentNode>> = {};
 
 /**
  * Type-safe registration: ensures the renderer's node prop matches the registered type key.
@@ -14,9 +19,12 @@ const renderers: Record<string, NodeRenderer> = {};
  */
 export function register<K extends keyof NodeTypeMap>(
   type: K,
-  renderer: NodeRenderer<NodeTypeMap[K]>
+  renderer: NodeRenderer<NodeOf<K>>
 ): void {
-  renderers[type] = renderer;
+  renderers[type] = ({ node, onAction }) => {
+    if (!isNodeType(node, type)) return null;
+    return createElement(renderer, { node, onAction });
+  };
 }
 
 /**
@@ -25,11 +33,11 @@ export function register<K extends keyof NodeTypeMap>(
  */
 export function defineRenderer<K extends keyof NodeTypeMap>(
   type: K,
-  renderer: FC<{ node: NodeTypeMap[K]; onAction?: ActionHandler }>
+  renderer: FC<{ node: NodeOf<K>; onAction?: ActionHandler }>
 ): void {
   const Memoized = memo(renderer);
   Memoized.displayName = `${String(type)}Renderer`;
-  renderers[type] = Memoized as NodeRenderer;
+  register(type, Memoized);
 }
 
 /** Dispatcher: looks up the renderer for a node type and renders it */

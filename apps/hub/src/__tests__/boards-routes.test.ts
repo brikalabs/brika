@@ -2,8 +2,8 @@ import 'reflect-metadata';
 import { describe, expect, mock, test } from 'bun:test';
 import { stub, useTestBed } from '@brika/di/testing';
 import { TestApp } from '@brika/router/testing';
-import { BrickInstanceManager } from '@/runtime/bricks';
 import { BoardLoader, BoardService } from '@/runtime/boards';
+import { BrickInstanceManager } from '@/runtime/bricks';
 import { EventSystem } from '@/runtime/events/event-system';
 import { boardsRoutes } from '@/runtime/http/routes/boards';
 
@@ -60,14 +60,18 @@ describe('boards routes', () => {
     stub(BoardLoader, mockLoader);
     stub(BoardService, mockService);
     stub(EventSystem);
-    stub(BrickInstanceManager, { get: mock().mockReturnValue(null), list: mock().mockReturnValue([]) });
+    stub(BrickInstanceManager, {
+      get: mock().mockReturnValue(null),
+      list: mock().mockReturnValue([]),
+    });
     app = TestApp.create(boardsRoutes);
   });
 
   // ─── List (handler creates new objects via .map → body works) ─────────────
 
   test('GET /api/boards returns summary list', async () => {
-    const res = await app.get<Array<{ id: string; name: string; brickCount: number }>>('/api/boards');
+    const res =
+      await app.get<Array<{ id: string; name: string; brickCount: number }>>('/api/boards');
 
     expect(res.status).toBe(200);
     expect(res.body).toHaveLength(1);

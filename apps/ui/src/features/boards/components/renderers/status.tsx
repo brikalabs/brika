@@ -14,18 +14,24 @@ defineRenderer('status', ({ node }) => {
   const config = statusConfig[node.status] ?? { bg: 'bg-muted-foreground', pulse: false };
 
   return (
-    <div className="flex shrink-0 items-center gap-2 @md:gap-2.5 rounded-md bg-muted/40 px-2.5 @md:px-3 py-2 @md:py-2.5">
+    <div className="flex shrink-0 items-center @md:gap-2.5 gap-2 rounded-md bg-muted/40 @md:px-3 px-2.5 @md:py-2.5 py-2">
       {node.icon && (
         <DynamicIcon
           name={node.icon as IconName}
-          className="size-3.5 @md:size-4 shrink-0 text-muted-foreground"
+          className="@md:size-4 size-3.5 shrink-0 text-muted-foreground"
         />
       )}
-      <span className="flex-1 truncate font-medium text-xs @md:text-sm">{node.label}</span>
+      <span className="flex-1 truncate font-medium @md:text-sm text-xs">{node.label}</span>
       <span
-        className={cn('size-2 @md:size-2.5 shrink-0 rounded-full', config.bg, config.pulse && 'animate-pulse')}
+        className={cn(
+          '@md:size-2.5 size-2 shrink-0 rounded-full',
+          config.bg,
+          config.pulse && 'animate-pulse'
+        )}
       />
-      <span className="text-[11px] @md:text-xs text-muted-foreground capitalize">{node.status}</span>
+      <span className="@md:text-xs text-[11px] text-muted-foreground capitalize">
+        {node.status}
+      </span>
     </div>
   );
 });

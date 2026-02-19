@@ -15,7 +15,6 @@ export type Handler = (...args: unknown[]) => unknown;
 // ─── Noop Mock ───────────────────────────────────────────────────────────────
 
 /** Create a fresh mock function with a noop body (biome-safe). */
-// biome-ignore lint/suspicious/noExplicitAny: generic mock factory
 export const noopMock = (): ReturnType<typeof mock<(...args: any[]) => any>> =>
   mock(() => {
     /* noop */

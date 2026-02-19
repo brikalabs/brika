@@ -1,8 +1,8 @@
 import { createSSEStream, group, NotFound, route } from '@brika/router';
 import type { Json } from '@brika/shared';
 import { z } from 'zod';
-import { BrickInstanceManager } from '@/runtime/bricks';
 import { BoardLoader, BoardService } from '@/runtime/boards';
+import { BrickInstanceManager } from '@/runtime/bricks';
 import { BoardActions, BrickActions } from '@/runtime/events/actions';
 import { EventSystem } from '@/runtime/events/event-system';
 

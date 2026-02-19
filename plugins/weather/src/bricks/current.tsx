@@ -1,4 +1,4 @@
-import { type I18nRef, Avatar, Box, Column, Divider, Grid, Icon, Row, Spacer, Text, defineBrick, useLocale } from '@brika/sdk/bricks';
+import { Avatar, Box, Column, Divider, defineBrick, Grid, type I18nRef, Icon, Row, Spacer, Text, useLocale } from '@brika/sdk/bricks';
 import { useWeather } from '../use-weather';
 import {
   formatTemp,

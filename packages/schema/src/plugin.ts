@@ -271,6 +271,13 @@ export const PluginPackageSchema = BasePackageJson.extend({
   // Override: strict semver for plugins
   version: z.string().regex(semverPattern).describe('Plugin version (semver)'),
 
+  // Override: plugin runtime entrypoint is required by hub resolver
+  main: z
+    .string()
+    .trim()
+    .min(1, 'main must not be empty')
+    .describe('Plugin entrypoint file, e.g. "./src/index.ts"'),
+
   // Override: require engines with brika field
   engines: z
     .looseObject({

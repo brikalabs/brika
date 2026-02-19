@@ -6,22 +6,26 @@ import { resolveColor } from './resolve-color';
 
 defineRenderer('stat-value', ({ node }) => {
   return (
-    <div className="flex shrink-0 flex-col justify-center rounded-md bg-muted/40 px-2 @xs:px-2.5 py-1.5 @xs:py-2">
-      <div className="flex items-center gap-1 @xs:gap-1.5">
+    <div className="flex shrink-0 flex-col justify-center rounded-md bg-muted/40 @xs:px-2.5 px-2 @xs:py-2 py-1.5">
+      <div className="flex items-center @xs:gap-1.5 gap-1">
         {node.icon && (
           <DynamicIcon
             name={node.icon as IconName}
-            className="size-3 @xs:size-3.5 shrink-0"
+            className="@xs:size-3.5 size-3 shrink-0"
             style={{ color: resolveColor(node.color) ?? undefined }}
           />
         )}
-        <span className="truncate text-[10px] @xs:text-[11px] text-muted-foreground">{node.label}</span>
+        <span className="truncate @xs:text-[11px] text-[10px] text-muted-foreground">
+          {node.label}
+        </span>
       </div>
       <div className="flex items-baseline gap-1">
-        <span className="font-semibold text-sm @xs:text-base tabular-nums leading-tight">
+        <span className="font-semibold @xs:text-base text-sm tabular-nums leading-tight">
           {typeof node.value === 'number' ? node.value.toLocaleString() : node.value}
         </span>
-        {node.unit && <span className="text-[10px] @xs:text-[11px] text-muted-foreground">{node.unit}</span>}
+        {node.unit && (
+          <span className="@xs:text-[11px] text-[10px] text-muted-foreground">{node.unit}</span>
+        )}
         {node.trend &&
           node.trend !== 'flat' &&
           (node.trend === 'up' ? (
@@ -32,7 +36,7 @@ defineRenderer('stat-value', ({ node }) => {
         {node.trendValue && (
           <span
             className={cn(
-              'font-medium text-[10px] @xs:text-[11px]',
+              'font-medium @xs:text-[11px] text-[10px]',
               node.trend === 'up' && 'text-emerald-500',
               node.trend === 'down' && 'text-red-500',
               (!node.trend || node.trend === 'flat') && 'text-muted-foreground'
@@ -43,7 +47,9 @@ defineRenderer('stat-value', ({ node }) => {
         )}
       </div>
       {node.description && (
-        <span className="mt-0.5 text-[10px] @xs:text-[11px] text-muted-foreground">{node.description}</span>
+        <span className="mt-0.5 @xs:text-[11px] text-[10px] text-muted-foreground">
+          {node.description}
+        </span>
       )}
     </div>
   );

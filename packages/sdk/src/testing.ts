@@ -23,7 +23,6 @@ import { i18nRef } from '@brika/ui-kit';
  */
 export function createMockTranslation(ns = 'plugin:test-plugin') {
   return {
-    t: (key: string, params?: Record<string, string | number>): I18nRef =>
-      i18nRef(ns, key, params),
+    t: (key: string, params?: Record<string, string | number>): I18nRef => i18nRef(ns, key, params),
   };
 }

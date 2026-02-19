@@ -9,12 +9,14 @@ import { beforeEach, describe, expect, mock, test } from 'bun:test';
 import type { I18nRef, IntlRef } from '@brika/ui-kit';
 
 // Mock the context module
-const mockT = mock((key: string, params?: Record<string, string | number>): I18nRef => ({
-  __i18n: true,
-  ns: 'plugin:test-plugin',
-  key,
-  params,
-}));
+const mockT = mock(
+  (key: string, params?: Record<string, string | number>): I18nRef => ({
+    __i18n: true,
+    ns: 'plugin:test-plugin',
+    key,
+    params,
+  })
+);
 
 mock.module('../context', () => ({
   getContext: () => ({ t: mockT }),
@@ -112,7 +114,10 @@ describe('useLocale', () => {
 
     test('custom options override defaults', () => {
       const { formatDateTime } = useLocale();
-      const ref = formatDateTime(0, { dateStyle: 'full', timeStyle: 'full' }) as Extract<IntlRef, { type: 'dateTime' }>;
+      const ref = formatDateTime(0, { dateStyle: 'full', timeStyle: 'full' }) as Extract<
+        IntlRef,
+        { type: 'dateTime' }
+      >;
       expect(ref.options).toEqual({ dateStyle: 'full', timeStyle: 'full' });
     });
   });
@@ -132,7 +137,10 @@ describe('useLocale', () => {
 
     test('includes custom options', () => {
       const { formatNumber } = useLocale();
-      const ref = formatNumber(3.14, { minimumFractionDigits: 2 }) as Extract<IntlRef, { type: 'number' }>;
+      const ref = formatNumber(3.14, { minimumFractionDigits: 2 }) as Extract<
+        IntlRef,
+        { type: 'number' }
+      >;
       expect(ref.options).toEqual({ minimumFractionDigits: 2 });
     });
   });

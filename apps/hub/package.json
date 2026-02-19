@@ -1,6 +1,6 @@
 {
   "name": "@brika/hub",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "homepage": "https://github.com/maxscharwath/brika",
@@ -11,7 +11,7 @@
   },
   "scripts": {
     "dev": "bun --watch src/main.ts",
-    "build": "bun run scripts/build.ts",
+    "build": "bun run compiler/build.ts",
     "tsc": "bun x --bun tsc --noEmit",
     "lint": "bun x biome check .",
     "lint:fix": "bun x biome check . --write"

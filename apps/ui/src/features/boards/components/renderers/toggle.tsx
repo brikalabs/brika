@@ -15,20 +15,20 @@ defineRenderer('toggle', ({ node, onAction }) => {
   return (
     <div
       className={cn(
-        'flex shrink-0 items-center justify-between gap-2 @md:gap-3 rounded-md px-2.5 @md:px-3 py-2 @md:py-2.5 transition-colors',
+        'flex shrink-0 items-center justify-between @md:gap-3 gap-2 rounded-md @md:px-3 px-2.5 @md:py-2.5 py-2 transition-colors',
         local ? 'bg-primary/10' : 'bg-muted/40',
         node.disabled && 'pointer-events-none opacity-50'
       )}
     >
-      <div className="flex items-center gap-1.5 @md:gap-2">
+      <div className="flex items-center @md:gap-2 gap-1.5">
         {node.icon && (
           <DynamicIcon
             name={node.icon as IconName}
-            className="size-3.5 @md:size-4 shrink-0"
+            className="@md:size-4 size-3.5 shrink-0"
             style={{ color: resolveColor(node.color) ?? undefined }}
           />
         )}
-        <span className="font-medium text-xs @md:text-sm">{node.label}</span>
+        <span className="font-medium @md:text-sm text-xs">{node.label}</span>
       </div>
       <Switch
         checked={local}

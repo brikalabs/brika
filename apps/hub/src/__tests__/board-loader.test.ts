@@ -14,7 +14,8 @@ import { Logger } from '@/runtime/logs/log-router';
 
 useTestBed({ autoStub: false });
 
-const TEST_DIR = join(import.meta.dir, '.test-board-loader');
+const TEST_ROOT = join(import.meta.dir, '.test-board-loader');
+const TEST_DIR = join(TEST_ROOT, 'boards');
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -74,7 +75,7 @@ describe('BoardLoader', () => {
   let loader: BoardLoader;
 
   beforeAll(async () => {
-    await rm(TEST_DIR, { recursive: true, force: true });
+    await rm(TEST_ROOT, { recursive: true, force: true });
     await mkdir(TEST_DIR, { recursive: true });
   });
 
@@ -94,13 +95,15 @@ describe('BoardLoader', () => {
       }
       // Also remove .keep
       await rm(join(TEST_DIR, '.keep'), { force: true });
+      // Remove generated board order file from test root.
+      await rm(join(TEST_ROOT, 'board-order.json'), { force: true });
     } catch {
       // Ignore
     }
   });
 
   afterAll(async () => {
-    await rm(TEST_DIR, { recursive: true, force: true });
+    await rm(TEST_ROOT, { recursive: true, force: true });
   });
 
   // ─── loadDir ─────────────────────────────────────────────────────────────

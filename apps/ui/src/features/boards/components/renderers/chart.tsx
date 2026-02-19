@@ -1,6 +1,11 @@
-import { BrickChart } from '../BrickChart';
+import { lazy, Suspense } from 'react';
+import { Skeleton } from '@/components/ui';
 import { defineRenderer } from './registry';
 
-defineRenderer('chart', ({ node }) => {
-  return <BrickChart node={node} />;
-});
+const BrickChart = lazy(() => import('../BrickChart').then((m) => ({ default: m.BrickChart })));
+
+defineRenderer('chart', ({ node }) => (
+  <Suspense fallback={<Skeleton className="h-full w-full" />}>
+    <BrickChart node={node} />
+  </Suspense>
+));

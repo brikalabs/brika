@@ -17,7 +17,7 @@ export const oauthRoutes = group('/api/oauth', [
   route.all(
     '/:providerId/*',
     { params: z.object({ providerId: z.string() }) },
-    async ({ params, req, inject }) => {
+    ({ params, req, inject }) => {
       const url = new URL(req.url);
       const pluginPath = url.pathname.slice('/api'.length) || '/';
 

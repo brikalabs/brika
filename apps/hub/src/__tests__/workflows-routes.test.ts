@@ -227,11 +227,11 @@ describe('workflows routes', () => {
   test('GET /api/workflows/debug subscribes to global workflow events', async () => {
     mockEngine.list.mockReturnValue([]);
 
-    let capturedListener: ((event: unknown) => void) | undefined;
+    let _capturedListener: ((event: unknown) => void) | undefined;
     mockEngine.addGlobalListener.mockImplementation((listener: (event: unknown) => void) => {
-      capturedListener = listener;
+      _capturedListener = listener;
       return () => {
-        capturedListener = undefined;
+        _capturedListener = undefined;
       };
     });
 
