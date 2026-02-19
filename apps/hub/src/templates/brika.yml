@@ -1,0 +1,26 @@
+# BRIKA Configuration
+# https://brika.dev/docs/configuration
+
+hub:
+  port: 3001
+  host: 0.0.0.0
+  plugins:
+    installDir: ./plugins/.installed
+    heartbeatInterval: 5000
+    heartbeatTimeout: 15000
+
+# Installed plugins
+# Format:
+#   "package-name":
+#     version: "version-specifier"
+#     config:
+#       key: value
+plugins:
+  "@brika/blocks-builtin":
+    version: "latest"
+
+# Event-based rules
+rules: []
+
+# Scheduled tasks
+schedules: []

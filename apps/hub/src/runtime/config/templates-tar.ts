@@ -22,7 +22,7 @@ export async function unpackTemplates(
   const files = await archive.files();
 
   for (const [relativePath, file] of files) {
-    const filePath = join(targetDir, relativePath);
+    const filePath = join(targetDir, '.brika', relativePath);
     const targetFile = Bun.file(filePath);
     if (await targetFile.exists()) {
       logger.debug("Skipping template file (already exists)", { file: relativePath });

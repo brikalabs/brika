@@ -84,7 +84,7 @@ jobs:
 
           - target: bun-darwin-x64
             artifact: brika-darwin-x64
-            os: macos-13
+            os: macos-latest
             ext: tar.gz
             bun-platform: bun-darwin-x64
 

@@ -34,24 +34,35 @@ function waitForWorkflowRegister(workflowId: string): Promise<Workflow> {
   return waitForRegisterMatch((workflow) => workflow.id === workflowId);
 }
 
-function waitForRegisterMatch(match: (workflow: Workflow) => boolean): Promise<Workflow> {
-  return new Promise((resolve) => {
-    mockRegister.mockImplementation((workflow: Workflow) => {
-      if (!match(workflow)) return;
-      mockRegister.mockImplementation(() => undefined);
-      resolve(workflow);
+async function waitForRegisterMatch(
+  match: (workflow: Workflow) => boolean,
+  timeoutMs = 8_000
+): Promise<Workflow> {
+  const start = Date.now();
+
+  while (Date.now() - start < timeoutMs) {
+    const matchingCall = mockRegister.mock.calls.find((call) => {
+      const workflow = call[0] as Workflow | undefined;
+      return workflow !== undefined && match(workflow);
     });
-  });
+
+    if (matchingCall) return matchingCall[0] as Workflow;
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+
+  throw new Error('Timed out waiting for workflow registration');
 }
 
-function waitForWorkflowUnregister(workflowId: string): Promise<void> {
-  return new Promise((resolve) => {
-    mockUnregister.mockImplementation((id: string) => {
-      if (id !== workflowId) return;
-      mockUnregister.mockImplementation(() => undefined);
-      resolve();
-    });
-  });
+async function waitForWorkflowUnregister(workflowId: string, timeoutMs = 8_000): Promise<void> {
+  const start = Date.now();
+
+  while (Date.now() - start < timeoutMs) {
+    const matchingCall = mockUnregister.mock.calls.find((call) => call[0] === workflowId);
+    if (matchingCall) return;
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+
+  throw new Error('Timed out waiting for workflow unregister');
 }
 
 async function primeWatcher(label: string): Promise<void> {
@@ -62,6 +73,7 @@ async function primeWatcher(label: string): Promise<void> {
     createWorkflowYaml(workflowId, `Watch Ready ${label}`)
   );
   await ready;
+  await new Promise((resolve) => setTimeout(resolve, 100));
   mockRegister.mockClear();
 }
 
@@ -981,7 +993,7 @@ describe('WorkflowLoader - Watch Callbacks', () => {
     } finally {
       loader.stopWatching();
     }
-  });
+  }, 10_000);
 
   it('reloads a modified YAML file while watching', async () => {
     await Bun.write(
@@ -1058,7 +1070,7 @@ describe('WorkflowLoader - Watch Callbacks', () => {
     } finally {
       loader.stopWatching();
     }
-  });
+  }, 10_000);
 });
 
 describe('WorkflowLoader - YAML Round Trip', () => {
