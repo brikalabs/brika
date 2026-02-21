@@ -368,7 +368,7 @@ describe('PluginRegistry', () => {
       expect(phases[0]?.package).toBe('all');
       const updateCalls = bun.spawnCalls.filter((c) => c.cmd.includes('update'));
       expect(updateCalls.length).toBe(1);
-      expect(updateCalls[0]?.cmd).toEqual(['bun', 'update']);
+      expect(updateCalls[0]?.cmd).toEqual([process.execPath, 'update']);
     });
 
     test('updates specific package when name specified', async () => {
@@ -381,7 +381,7 @@ describe('PluginRegistry', () => {
 
       const updateCalls = bun.spawnCalls.filter((c) => c.cmd.includes('update'));
       expect(updateCalls.length).toBe(1);
-      expect(updateCalls[0]?.cmd).toEqual(['bun', 'update', '@test/plugin']);
+      expect(updateCalls[0]?.cmd).toEqual([process.execPath, 'update', '@test/plugin']);
     });
 
     test('yields error on failure', async () => {

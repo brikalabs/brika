@@ -229,8 +229,7 @@ main() {
   fi
   printf "\n"
   dim "  Install directory: $BIN_DIR"
-  dim "  Binary:            $BIN_DIR/brika"
-  dim "  Bun runtime:       $BIN_DIR/bun  (bundled)"
+  dim "  Binary:            $BIN_DIR/brika  (Bun runtime embedded)"
   printf "\n"
 
   # Check if we need to reload shell

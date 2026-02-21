@@ -3,7 +3,7 @@ import { inject, singleton } from '@brika/di';
 import { spawnPlugin } from '@brika/ipc';
 import type { LogLevelType } from '@brika/ipc/contract';
 import type { Plugin, PluginHealth } from '@brika/shared';
-import { HubConfig, PluginManagerConfig } from '@/runtime/config';
+import { BunRunner, PluginManagerConfig } from '@/runtime/config';
 import { PluginActions } from '@/runtime/events/actions';
 import { EventSystem } from '@/runtime/events/event-system';
 import { I18nService } from '@/runtime/i18n';
@@ -25,7 +25,7 @@ import { generateUid, HUB_VERSION, satisfiesVersion } from './utils';
 @singleton()
 export class PluginLifecycle {
   readonly #config = inject(PluginManagerConfig);
-  readonly #hubConfig = inject(HubConfig);
+  readonly #bunRunner = inject(BunRunner);
   readonly #logs = inject(Logger).withSource('plugin');
   readonly #state = inject(StateStore);
   readonly #events = inject(EventSystem);
@@ -158,9 +158,9 @@ export class PluginLifecycle {
       uid,
     });
 
-    const channel = spawnPlugin(this.#hubConfig.bunPath, [entryPoint], {
+    const channel = spawnPlugin(this.#bunRunner.bin, [entryPoint], {
       cwd: rootDirectory,
-      env: { ...globalThis.process.env, BRIKA_PLUGIN_NAME: metadata.name, BRIKA_PLUGIN_UID: uid },
+      env: this.#bunRunner.env({ BRIKA_PLUGIN_NAME: metadata.name, BRIKA_PLUGIN_UID: uid }),
       processName: `brika:${metadata.name}`,
       defaultTimeoutMs: this.#config.callTimeoutMs,
       onDisconnect: (error) => this.#handleDisconnect(pluginName, error),

@@ -1,7 +1,8 @@
 import { join, resolve } from 'node:path';
 import { inject, singleton } from '@brika/di';
-import { ConfigLoader, HubConfig } from '@/runtime/config';
+import { BunRunner, ConfigLoader, HubConfig } from '@/runtime/config';
 import { Logger } from '@/runtime/logs/log-router';
+import { PackageManager } from './package-manager';
 import type { InstalledPackage, OperationProgress, UpdateInfo } from './types';
 
 @singleton()
@@ -10,10 +11,12 @@ export class PluginRegistry {
   private readonly logs = inject(Logger).withSource('registry');
   private readonly configLoader = inject(ConfigLoader);
   private readonly pluginsDir: string;
+  readonly #pm: PackageManager;
 
   constructor() {
     // Use absolute path for Bun.resolveSync compatibility
     this.pluginsDir = resolve(this.hubConfig.homeDir, 'plugins');
+    this.#pm = new PackageManager(inject(BunRunner), this.pluginsDir);
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -43,16 +46,12 @@ export class PluginRegistry {
     try {
       yield this.#msg('resolving', 'install', name, version);
 
-      // Install package (npm or workspace)
       if (!isWorkspace) {
-        const spec = version ? `${name}@${version}` : name;
-        yield* this.#runBunWithProgress('install', name, ['install', spec]);
+        yield* this.#pm.install(name, version);
       }
 
-      // Add to config for persistence
       await this.configLoader.addPlugin(name, version ?? 'latest');
 
-      // Load plugin
       yield this.#msg('linking', 'install', name, version, 'Loading plugin...');
       await this.#loadPlugin(name, !!isWorkspace);
 
@@ -63,16 +62,12 @@ export class PluginRegistry {
   }
 
   async uninstall(name: string): Promise<void> {
-    // Unload plugin
     await this.#unloadPlugin(name);
-
-    // Remove from config
     await this.configLoader.removePlugin(name);
 
-    // Remove from npm if exists
     const npmPath = join(this.pluginsDir, 'node_modules', name, 'package.json');
     if (await Bun.file(npmPath).exists()) {
-      await this.#runBun(['remove', name]);
+      await this.#pm.remove(name);
     }
 
     this.logs.info('Plugin uninstalled successfully', {
@@ -129,11 +124,7 @@ export class PluginRegistry {
   async *update(name?: string): AsyncGenerator<OperationProgress> {
     try {
       yield this.#msg('resolving', 'update', name ?? 'all');
-      const args = name ? ['update', name] : ['update'];
-      // Run bun update and stream progress
-      for await (const progress of this.#runBunWithProgress('update', name ?? 'all', args)) {
-        yield progress;
-      }
+      yield* this.#pm.update(name);
       yield this.#msg('complete', 'update', name ?? 'all', undefined, 'Updated successfully');
     } catch (error) {
       yield this.#msg('error', 'update', name ?? 'all', undefined, String(error), String(error));
@@ -212,113 +203,6 @@ export class PluginRegistry {
   // ─────────────────────────────────────────────────────────────────────────────
   // Private Helpers
   // ─────────────────────────────────────────────────────────────────────────────
-
-  async #runBun(args: string[]): Promise<void> {
-    const bunPath = this.hubConfig.bunPath || 'bun';
-    const proc = Bun.spawn([bunPath, ...args], {
-      cwd: this.pluginsDir,
-      stdout: 'ignore',
-      stderr: 'ignore',
-    });
-
-    const exitCode = await proc.exited;
-    if (exitCode !== 0) {
-      throw new Error(`Command failed: bun ${args.join(' ')}`);
-    }
-  }
-
-  async *#runBunWithProgress(
-    operation: OperationProgress['operation'],
-    packageName: string,
-    args: string[]
-  ): AsyncGenerator<OperationProgress> {
-    const bunPath = this.hubConfig.bunPath || 'bun';
-    const proc = Bun.spawn([bunPath, ...args], {
-      cwd: this.pluginsDir,
-      stdout: 'pipe',
-      stderr: 'pipe',
-      env: {
-        ...process.env,
-        BUN_INSTALL_CACHE_DIR: join(this.pluginsDir, '.cache'),
-      },
-    });
-
-    // Stream stderr output line by line
-    if (proc.stderr) {
-      yield* this.#streamBunOutput(proc.stderr, operation, packageName);
-    }
-
-    // Check exit code
-    const exitCode = await proc.exited;
-    if (exitCode !== 0) {
-      throw new Error(`Command failed with exit code ${exitCode}`);
-    }
-  }
-
-  async *#streamBunOutput(
-    stderr: ReadableStream,
-    operation: OperationProgress['operation'],
-    packageName: string
-  ): AsyncGenerator<OperationProgress> {
-    const reader = (stderr as ReadableStream<Uint8Array>).getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-    let phase: OperationProgress['phase'] = 'downloading';
-
-    try {
-      while (true) {
-        const { value, done } = await reader.read();
-
-        if (value) {
-          buffer = this.#appendToBuffer(buffer, decoder, value);
-          const { lines, remaining } = this.#extractLines(buffer);
-          buffer = remaining;
-
-          // Process and yield each line
-          for (const line of lines) {
-            if (!line) continue;
-
-            this.logs.debug('Package manager output', { line });
-            phase = this.#detectPhase(line);
-            yield this.#msg(phase, operation, packageName, undefined, line);
-          }
-        }
-
-        if (done) {
-          // Yield any remaining buffer
-          if (buffer.trim()) {
-            yield this.#msg(phase, operation, packageName, undefined, buffer.trim());
-          }
-          break;
-        }
-      }
-    } finally {
-      reader.releaseLock();
-    }
-  }
-
-  #appendToBuffer(buffer: string, decoder: TextDecoder, value: Uint8Array): string {
-    return buffer + decoder.decode(value, { stream: true });
-  }
-
-  #extractLines(buffer: string): { lines: string[]; remaining: string } {
-    const lines = buffer.split('\n');
-    const remaining = lines.pop() || '';
-    return { lines: lines.map((l) => l.trim()), remaining };
-  }
-
-  #detectPhase(line: string): OperationProgress['phase'] {
-    if (line.includes('resolving') || line.includes('Resolving')) {
-      return 'resolving';
-    }
-    if (line.includes('downloading') || line.includes('GET') || line.includes('fetch')) {
-      return 'downloading';
-    }
-    if (line.includes('linking') || line.includes('installed') || line.includes('Saved')) {
-      return 'linking';
-    }
-    return 'downloading';
-  }
 
   async #loadPlugin(name: string, isWorkspace: boolean): Promise<void> {
     const { PluginManager } = await import('@/runtime/plugins/plugin-manager');
