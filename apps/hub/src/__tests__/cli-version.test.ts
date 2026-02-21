@@ -28,8 +28,8 @@ describe('cli/commands/version', () => {
   test('has -v and --version aliases', () => {
     expect(version?.aliases).toContain('-v');
     expect(version?.aliases).toContain('--version');
-    expect(commandMap.get('-v')?.name).toBe('version');
-    expect(commandMap.get('--version')?.name).toBe('version');
+    expect(cli.get('-v')?.name).toBe('version');
+    expect(cli.get('--version')?.name).toBe('version');
   });
 
   test('outputs platform info', () => {
