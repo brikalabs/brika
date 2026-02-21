@@ -65,9 +65,37 @@ describe('pid plugin', () => {
       expect(exists).toBe(false);
     });
 
+    test('does not remove pid file if it belongs to another process', async () => {
+      await mkdir(brikaDir, { recursive: true });
+      await writeFile(pidFile, '999999999');
+
+      const plugin = pid();
+      await getLifecycleHook(plugin, 'onStop')();
+
+      const content = await readFile(pidFile, 'utf8');
+      expect(content).toBe('999999999');
+    });
+
     test('does not throw when pid file is already gone', async () => {
       const plugin = pid();
       await expect(getLifecycleHook(plugin, 'onStop')()).resolves.toBeUndefined();
+    });
+
+    test('consecutive start: failed instance does not wipe running instance PID', async () => {
+      await mkdir(brikaDir, { recursive: true });
+      // PID 1 (init/launchd) is always alive — simulates a running first instance
+      await writeFile(pidFile, '1');
+
+      const plugin = pid();
+
+      // Second instance detects the conflict
+      await expect(getLifecycleHook(plugin, 'onInit')()).rejects.toThrow('already running');
+
+      // Second instance's onStop must leave the first instance's PID intact
+      await getLifecycleHook(plugin, 'onStop')();
+
+      const content = await readFile(pidFile, 'utf8');
+      expect(content).toBe('1');
     });
   });
 

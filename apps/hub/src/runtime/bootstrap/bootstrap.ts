@@ -8,6 +8,10 @@ import type { BootstrapPlugin } from './plugin';
 
 const HOT_STARTED = Symbol.for('brika.hub.started');
 
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 /**
  * Declarative bootstrap builder for the BRIKA hub.
  *
@@ -38,48 +42,23 @@ export class Bootstrap {
       this.logs.info('Hot reload detected, skipping initialization');
       return;
     }
+
     console.log(
       createBanner({
         title: 'BRIKA',
         subtitle: 'Build. Run. Integrate. Keep Automating.',
-        metadata: {
-          Version: hub.version,
-          Package: hub.name,
-        },
+        metadata: { Version: hub.version, Package: hub.name },
       })
     );
 
-    // 1. Logging first
     await this.logStore.init();
     this.logs.setStore(this.logStore);
-
-    // 2. Initialize .brika directory
     await this.initializer.init();
-
-    // 3. Load config
     const config = await this.configLoader.load();
 
-    // 4. Run plugin lifecycle
-    try {
-      for (const p of this.plugins) {
-        this.logs.info('Initializing bootstrap plugin', { plugin: p.name });
-        await p.onInit?.();
-      }
-      for (const p of this.plugins) {
-        this.logs.info('Loading bootstrap plugin', { plugin: p.name });
-        await p.onLoad?.(config);
-      }
-      for (const p of this.plugins) {
-        this.logs.info('Starting bootstrap plugin', { plugin: p.name });
-        await p.onStart?.();
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      this.logs.error('Bootstrap failed', { error: message });
-      process.stderr.write(`\n  Error: ${message}\n\n`);
-      await this.stop().catch(() => undefined);
-      process.exit(1);
-    }
+    await this.runPhase('Initializing', (p) => p.onInit?.());
+    await this.runPhase('Loading', (p) => p.onLoad?.(config));
+    await this.runPhase('Starting', (p) => p.onStart?.());
 
     this.logs.info('Brika Hub started successfully', {
       version: hub.version,
@@ -89,12 +68,27 @@ export class Bootstrap {
   }
 
   async stop(): Promise<void> {
-    for (const p of this.plugins.toReversed()) {
-      this.logs.info('Stopping bootstrap plugin', { plugin: p.name });
-      await p.onStop?.();
-    }
+    await this.runPhase('Stopping', (p) => p.onStop?.(), this.plugins.toReversed());
     this.logs.info('Brika Hub stopped successfully');
     this.logStore.close();
+  }
+
+  private async runPhase(
+    label: string,
+    fn: (plugin: BootstrapPlugin) => Promise<void> | void,
+    plugins = this.plugins
+  ): Promise<void> {
+    for (const p of plugins) {
+      this.logs.info(`${label} bootstrap plugin`, { plugin: p.name });
+      try {
+        await fn(p);
+      } catch (error) {
+        this.logs.warn(`${label} bootstrap plugin failed`, {
+          plugin: p.name,
+          error: errorMessage(error),
+        });
+      }
+    }
   }
 }
 

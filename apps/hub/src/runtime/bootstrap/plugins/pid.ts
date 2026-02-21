@@ -52,7 +52,15 @@ export function pid(): BootstrapPlugin {
     },
 
     async onStop() {
-      await rm(pidFile, { force: true }).catch(() => undefined);
+      // Only remove the PID file if it belongs to this process.
+      // Avoids wiping another instance's PID when a duplicate-start check triggers onStop.
+      const storedPid = await readFile(pidFile, 'utf8')
+        .then((s) => Number.parseInt(s, 10))
+        .catch(() => null);
+
+      if (storedPid === process.pid) {
+        await rm(pidFile, { force: true });
+      }
     },
   };
 }
