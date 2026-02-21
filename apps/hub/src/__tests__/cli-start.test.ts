@@ -4,11 +4,11 @@
 
 import { describe, expect, test } from 'bun:test';
 import { useBunMock } from '@brika/testing';
-import { commandMap } from '@/cli/commands';
+import { cli } from '@/cli/commands';
 
 describe('cli/commands/start', () => {
   const bun = useBunMock();
-  const start = commandMap.get('start');
+  const start = cli.get('start');
 
   test('is registered', () => {
     expect(start).toBeDefined();

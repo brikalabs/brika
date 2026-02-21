@@ -3,10 +3,10 @@
  */
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { commandMap } from '@/cli/commands';
+import { cli } from '@/cli/commands';
 
 describe('cli/commands/version', () => {
-  const version = commandMap.get('version');
+  const version = cli.get('version');
 
   let output: string[];
   const originalLog = console.log;

@@ -3,7 +3,9 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { commandMap, commands } from '@/cli/commands';
+import { cli } from '@/cli/commands';
+
+const { commands } = cli;
 
 describe('cli/commands', () => {
   const expectedCommands = ['start', 'stop', 'status', 'version', 'update', 'uninstall', 'help'];
@@ -38,28 +40,28 @@ describe('cli/commands', () => {
   describe('commandMap', () => {
     test('resolves commands by name', () => {
       for (const name of expectedCommands) {
-        expect(commandMap.get(name)?.name).toBe(name);
+        expect(cli.get(name)?.name).toBe(name);
       }
     });
 
     test('resolves version command via -v alias', () => {
-      expect(commandMap.get('-v')?.name).toBe('version');
+      expect(cli.get('-v')?.name).toBe('version');
     });
 
     test('resolves version command via --version alias', () => {
-      expect(commandMap.get('--version')?.name).toBe('version');
+      expect(cli.get('--version')?.name).toBe('version');
     });
 
     test('resolves help command via -h alias', () => {
-      expect(commandMap.get('-h')?.name).toBe('help');
+      expect(cli.get('-h')?.name).toBe('help');
     });
 
     test('resolves help command via --help alias', () => {
-      expect(commandMap.get('--help')?.name).toBe('help');
+      expect(cli.get('--help')?.name).toBe('help');
     });
 
     test('returns undefined for unknown command', () => {
-      expect(commandMap.get('nonexistent')).toBeUndefined();
+      expect(cli.get('nonexistent')).toBeUndefined();
     });
   });
 
