@@ -1,10 +1,10 @@
 /**
  * SystemInfoStats Component
  *
- * Stats section of system info (plugins, blocks, workflows, sparks).
+ * Stats section of system info (plugins, blocks, workflows, sparks, bricks).
  */
 
-import { Blocks, Plug, Workflow, Zap } from 'lucide-react';
+import { Blocks, LayoutGrid, Plug, Workflow, Zap } from 'lucide-react';
 import { useLocale } from '@/lib/use-locale';
 import { InfoItem } from './InfoItem';
 
@@ -13,6 +13,7 @@ interface SystemStats {
   blocks: { total: number };
   workflows: { total: number; enabled: number };
   sparks: { total: number };
+  bricks: { total: number };
 }
 
 interface SystemInfoStatsProps {
@@ -52,6 +53,12 @@ export function SystemInfoStats({ stats }: Readonly<SystemInfoStatsProps>) {
         icon={Zap}
         label={t('settings:system.sparks')}
         value={stats.sparks.total}
+        mono={false}
+      />
+      <InfoItem
+        icon={LayoutGrid}
+        label={t('settings:system.bricks')}
+        value={stats.bricks.total}
         mono={false}
       />
     </>

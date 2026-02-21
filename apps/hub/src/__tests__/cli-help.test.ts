@@ -50,6 +50,24 @@ describe('cli/help', () => {
     });
   });
 
+  describe('generateHelp with custom prefix', () => {
+    test('uses custom prefix in global help', () => {
+      const output = generateHelp(testCommands, undefined, 'brika plugin');
+      expect(output).toContain('brika plugin');
+      expect(output).not.toContain('Build. Run. Integrate.');
+    });
+
+    test('uses custom prefix in command help', () => {
+      const output = generateHelp(testCommands, testCommands[0], 'brika plugin');
+      expect(output).toContain('brika plugin start');
+    });
+
+    test('default prefix is brika', () => {
+      const output = generateHelp(testCommands);
+      expect(output).toContain('Build. Run. Integrate.');
+    });
+  });
+
   describe('generateHelp (command-specific)', () => {
     test('includes command name in header', () => {
       const output = generateHelp(testCommands, testCommands[0]);

@@ -8,7 +8,17 @@ import { cli } from '@/cli/commands';
 const { commands } = cli;
 
 describe('cli/commands', () => {
-  const expectedCommands = ['start', 'stop', 'status', 'version', 'update', 'uninstall', 'help'];
+  const expectedCommands = [
+    'start',
+    'stop',
+    'status',
+    'open',
+    'plugin',
+    'version',
+    'update',
+    'uninstall',
+    'help',
+  ];
 
   describe('auto-discovery', () => {
     test('discovers all built-in commands', () => {

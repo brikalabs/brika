@@ -8,7 +8,7 @@
 import { existsSync } from 'node:fs';
 import { readFile, rm, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
-import { dirname } from 'node:path';
+import { dirname, resolve } from 'node:path';
 import pc from 'picocolors';
 import { HUB_REPO_URL, hub } from '@/hub';
 
@@ -21,13 +21,18 @@ const SHELL_RC_FILES = [
   `${homedir()}/.config/fish/config.fish`,
 ];
 
-export async function selfUninstall(): Promise<void> {
+export async function selfUninstall(options?: { purge?: boolean }): Promise<void> {
   const installDir = dirname(process.execPath);
   const isWindows = process.platform === 'win32';
+  const purge = options?.purge ?? false;
+  const brikaHome = resolve(process.env.BRIKA_HOME ?? '.brika');
 
   console.log(`${pc.cyan('brika')} ${pc.dim('v' + hub.version)}`);
   console.log();
   console.log(`  ${pc.bold('This will remove:')} ${installDir}`);
+  if (purge) {
+    console.log(`  ${pc.bold('This will also remove:')} ${brikaHome}`);
+  }
   console.log();
 
   const answer = prompt(`  Continue? ${pc.dim('[y/N]')} `) ?? '';
@@ -77,6 +82,12 @@ export async function selfUninstall(): Promise<void> {
     } catch {
       // Non-critical — a harmless PATH entry pointing to a non-existent dir is OK
     }
+  }
+
+  if (purge && existsSync(brikaHome)) {
+    console.log(`  ${pc.dim('Removing workspace data...')}`);
+    await rm(brikaHome, { recursive: true, force: true });
+    console.log(`  ${pc.dim('Removed ' + brikaHome)}`);
   }
 
   console.log();

@@ -143,14 +143,12 @@
       "name": "create-brika",
       "version": "0.3.0",
       "bin": {
-        "create-brika": "./src/index.ts",
-      },
-      "dependencies": {
-        "@clack/prompts": "^0.11.0",
-        "picocolors": "^1.1.1",
+        "create-brika": "./dist/index.js",
       },
       "devDependencies": {
+        "@clack/prompts": "^0.11.0",
         "@types/bun": "^1.3.5",
+        "picocolors": "^1.1.1",
       },
     },
     "packages/di": {
@@ -225,20 +223,27 @@
       "name": "@brika/sdk",
       "version": "0.3.0",
       "bin": {
-        "brika-verify-plugin": "./src/verify.ts",
+        "brika-verify-plugin": "./dist/verify.js",
       },
       "dependencies": {
+        "zod": "^4.3.4",
+      },
+      "devDependencies": {
         "@brika/flow": "workspace:*",
         "@brika/ipc": "workspace:*",
         "@brika/schema": "workspace:*",
         "@brika/serializable": "workspace:*",
         "@brika/ui-kit": "workspace:*",
-        "picocolors": "^1.1.1",
-        "zod": "^4.3.4",
-      },
-      "devDependencies": {
         "@types/bun": "^1.3.5",
+        "picocolors": "^1.1.1",
       },
+      "peerDependencies": {
+        "lucide-react": ">=0.400.0",
+        "zod": "^4.0.0",
+      },
+      "optionalPeers": [
+        "lucide-react",
+      ],
     },
     "packages/serializable": {
       "name": "@brika/serializable",

@@ -27,6 +27,13 @@ describe('cli/commands/start', () => {
     expect(start?.options?.host).toMatchObject({ type: 'string' });
   });
 
+  test('has --open option with -o short alias', () => {
+    expect(start?.options?.open).toMatchObject({
+      type: 'boolean',
+      short: 'o',
+    });
+  });
+
   test('has examples', () => {
     expect(start?.examples?.length).toBeGreaterThan(0);
   });
@@ -106,6 +113,28 @@ describe('cli/commands/start', () => {
       }
 
       expect(capturedHost).toBe('0.0.0.0');
+    });
+
+    test('opens browser when --open is set in detach mode', async () => {
+      const originalExit = process.exit;
+      process.exit = (() => {
+        throw new Error('__EXIT__');
+      }) as never;
+
+      bun.spawn({ exitCode: 0 }).apply();
+
+      try {
+        await start?.handler({ values: { open: true }, positionals: [] });
+      } catch (e) {
+        if (!(e instanceof Error && e.message === '__EXIT__')) throw e;
+      } finally {
+        process.exit = originalExit;
+      }
+
+      // First spawn is the detached hub, second is the browser open
+      expect(bun.spawnCalls.length).toBe(2);
+      const openCall = bun.spawnCalls[1];
+      expect(openCall?.cmd).toContain('http://127.0.0.1:3001');
     });
   });
 });

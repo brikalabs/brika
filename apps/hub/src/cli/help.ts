@@ -4,15 +4,28 @@ import type { Command } from './command';
 
 /**
  * Generate help text from command metadata.
+ * @param prefix — CLI prefix for display (default: 'brika')
  */
-export function generateHelp(commands: Command[], specific?: Command): string {
-  return specific ? generateCommandHelp(specific) : generateGlobalHelp(commands);
+export function generateHelp(commands: Command[], specific?: Command, prefix = 'brika'): string {
+  return specific ? generateCommandHelp(specific, prefix) : generateGlobalHelp(commands, prefix);
 }
 
-function generateGlobalHelp(commands: Command[]): string {
+function generateGlobalHelp(commands: Command[], prefix: string): string {
   const commandsSection = commands
     .map((cmd) => `  ${pc.green(cmd.name.padEnd(12))} ${cmd.description}`)
     .join('\n');
+
+  if (prefix !== 'brika') {
+    return `
+${pc.bold(pc.cyan(prefix))}
+
+${pc.bold('Usage:')}
+  ${prefix} <command> [args]
+
+${pc.bold('Commands:')}
+${commandsSection}
+`.trim();
+  }
 
   return `
 ${pc.bold(pc.cyan('brika'))} - Build. Run. Integrate. Keep Automating.
@@ -32,7 +45,7 @@ ${pc.dim('v' + hub.version + ' | ' + HUB_REPO_URL)}
 `.trim();
 }
 
-function generateCommandHelp(cmd: Command): string {
+function generateCommandHelp(cmd: Command, prefix: string): string {
   let flagsSection = '';
   if (cmd.options) {
     const flags = Object.entries(cmd.options)
@@ -53,7 +66,7 @@ function generateCommandHelp(cmd: Command): string {
   const details = cmd.details ? `\n\n${cmd.details}` : '';
 
   return `
-${pc.bold(pc.cyan('brika ' + cmd.name))}
+${pc.bold(pc.cyan(prefix + ' ' + cmd.name))}
 
 ${cmd.description}${details}
 ${flagsSection}${examplesSection}

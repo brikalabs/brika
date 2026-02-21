@@ -40,11 +40,12 @@ BRIKA_VERSION=0.2.1 curl -fsSL https://raw.githubusercontent.com/maxscharwath/br
 ## Quick Start
 
 ```sh
-# Start the hub in the current directory
-brika start
+# Start the hub and open the web UI
+brika start --open
 
-# Open the web UI
-open http://localhost:3001
+# Or start first, open later
+brika start
+brika open
 
 # Stop the hub
 brika stop
@@ -56,30 +57,53 @@ On first start BRIKA creates a `.brika/` directory in the current working direct
 
 ## Commands
 
-| Command           | Description                                       |
-|-------------------|---------------------------------------------------|
-| `brika start`     | Start the hub (foreground, Ctrl+C to stop)        |
-| `brika stop`      | Stop a running hub in the current directory       |
-| `brika status`    | Show whether the hub is running                   |
-| `brika version`   | Show version and platform info                    |
-| `brika update`    | Update to the latest release in-place             |
-| `brika uninstall` | Remove BRIKA from this machine                    |
-| `brika help`      | Show help                                         |
+| Command           | Description                                                              |
+|-------------------|--------------------------------------------------------------------------|
+| `brika start`     | Start the hub (detaches by default)                                      |
+| `brika stop`      | Stop a running hub in the current directory                              |
+| `brika status`    | Show whether the hub is running                                          |
+| `brika open`      | Open the web UI in the default browser                                   |
+| `brika plugin`    | Manage plugins (install, uninstall, list)                                |
+| `brika version`   | Show version and platform info                                           |
+| `brika update`    | Update to the latest release in-place                                    |
+| `brika uninstall` | Remove BRIKA from this machine (`--purge` to also delete `.brika/` data) |
+| `brika help`      | Show help                                                                |
 
-### Flags
+### Start Flags
 
-| Flag                 | Description                            |
-|----------------------|----------------------------------------|
-| `-p, --port <port>`  | Listen port (default: `3001`)          |
-| `--host <addr>`      | Listen address (default: `127.0.0.1`) |
-| `-v, --version`      | Print version number                   |
-| `-h, --help`         | Show help                              |
+| Flag                   | Description                                    |
+|------------------------|------------------------------------------------|
+| `-p, --port <port>`    | Listen port (default: `3001`)                  |
+| `--host <addr>`        | Listen address (default: `127.0.0.1`)          |
+| `-f, --foreground`     | Keep attached to terminal (default: detach)    |
+| `-o, --open`           | Open the UI in the default browser after start |
+
+### Global Flags
+
+| Flag             | Description          |
+|------------------|----------------------|
+| `-v, --version`  | Print version number |
+| `-h, --help`     | Show help            |
 
 ```sh
+brika start --open             # Start and open the UI
 brika start -p 8080            # Start on port 8080
 brika start --host 0.0.0.0    # Listen on all interfaces (e.g. Docker/VM)
+brika start --foreground       # Stay attached to terminal
 brika status                   # Check if hub is running
 brika update                   # Update to latest version
+```
+
+### Plugin Management
+
+Manage plugins directly from the CLI. The hub must be running.
+
+```sh
+brika plugin install @brika/plugin-timer           # Install a plugin
+brika plugin install @brika/plugin-timer@1.0.0     # Install a specific version
+brika plugin uninstall @brika/plugin-timer          # Uninstall a plugin
+brika plugin list                                   # List installed plugins
+brika plugin help                                   # Show plugin subcommand help
 ```
 
 ---
@@ -109,19 +133,19 @@ schedules: []
 
 Environment variables override config file values:
 
-| Variable           | Description                         | Default       |
-|--------------------|-------------------------------------|---------------|
-| `BRIKA_PORT`       | Listen port                         | `3001`        |
-| `BRIKA_HOST`       | Listen address                      | `127.0.0.1`  |
-| `BRIKA_HOME`       | Override `.brika` directory path    | `.brika`      |
-| `BRIKA_STATIC_DIR` | Serve custom UI from this directory | *(bundled)*   |
-| `BRIKA_BUN_PATH`   | Path to Bun binary for plugins      | *(bundled)*   |
+| Variable           | Description                         | Default     |
+|--------------------|-------------------------------------|-------------|
+| `BRIKA_PORT`       | Listen port                         | `3001`      |
+| `BRIKA_HOST`       | Listen address                      | `127.0.0.1` |
+| `BRIKA_HOME`       | Override `.brika` directory path    | `.brika`    |
+| `BRIKA_STATIC_DIR` | Serve custom UI from this directory | *(bundled)* |
+| `BRIKA_BUN_PATH`   | Path to Bun binary for plugins      | *(bundled)* |
 
 ---
 
 ## Process Management
 
-`brika start` runs in the foreground. The hub writes its PID to `.brika/brika.pid` on startup so `brika stop` and `brika status` can track it.
+`brika start` detaches the hub into the background by default. Use `--foreground` to keep it attached. The hub writes its PID to `.brika/brika.pid` on startup so `brika stop` and `brika status` can track it.
 
 Starting a second instance in the same directory is rejected immediately:
 
@@ -129,8 +153,6 @@ Starting a second instance in the same directory is rejected immediately:
 Error: Another instance of Brika is already running in this directory (PID 12345).
 Run 'brika stop' to stop it first.
 ```
-
-To run BRIKA as a background service use your OS process manager (launchd, systemd, Task Scheduler).
 
 ---
 

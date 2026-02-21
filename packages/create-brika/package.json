@@ -12,18 +12,18 @@
   },
   "keywords": ["brika", "plugin", "scaffold", "cli", "create"],
   "bin": {
-    "create-brika": "./src/index.ts"
+    "create-brika": "./dist/index.js"
   },
-  "files": ["src", "template"],
+  "files": ["dist", "template"],
   "scripts": {
+    "build": "bun run build.ts",
     "dev": "bun run src/index.ts",
-    "tsc": "bunx --bun tsc --noEmit"
-  },
-  "dependencies": {
-    "@clack/prompts": "^0.11.0",
-    "picocolors": "^1.1.1"
+    "tsc": "bunx --bun tsc --noEmit",
+    "prepublishOnly": "bun run build"
   },
   "devDependencies": {
-    "@types/bun": "^1.3.5"
+    "@clack/prompts": "^0.11.0",
+    "@types/bun": "^1.3.5",
+    "picocolors": "^1.1.1"
   }
 }

@@ -12,7 +12,8 @@
   },
   "bin": {
     "bump-version": "./src/index.ts",
-    "publish-packages": "./src/publish.ts"
+    "publish-packages": "./src/publish.ts",
+    "local-install": "./src/local-install.ts"
   },
   "scripts": {
     "dev": "bun run src/index.ts",

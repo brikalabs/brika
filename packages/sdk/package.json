@@ -16,36 +16,80 @@
   },
   "keywords": ["brika", "sdk", "plugins", "workflow", "home-automation"],
   "exports": {
-    ".": "./src/index.ts",
-    "./bricks": "./src/bricks.ts",
-    "./sparks": "./src/sparks.ts",
-    "./lifecycle": "./src/lifecycle.ts",
-    "./storage": "./src/storage.ts",
-    "./testing": "./src/testing.ts",
-    "./ui-kit": "./src/ui-kit/index.ts",
-    "./ui-kit/icons": "./src/ui-kit/icons.ts",
-    "./ui-kit/hooks": "./src/ui-kit/hooks.ts",
-    "./jsx-runtime": "./src/jsx-runtime.ts",
-    "./jsx-dev-runtime": "./src/jsx-dev-runtime.ts"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./bricks": {
+      "types": "./dist/bricks.d.ts",
+      "default": "./dist/bricks.js"
+    },
+    "./sparks": {
+      "types": "./dist/sparks.d.ts",
+      "default": "./dist/sparks.js"
+    },
+    "./lifecycle": {
+      "types": "./dist/lifecycle.d.ts",
+      "default": "./dist/lifecycle.js"
+    },
+    "./storage": {
+      "types": "./dist/storage.d.ts",
+      "default": "./dist/storage.js"
+    },
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "default": "./dist/testing.js"
+    },
+    "./ui-kit": {
+      "types": "./dist/ui-kit/index.d.ts",
+      "default": "./dist/ui-kit/index.js"
+    },
+    "./ui-kit/icons": {
+      "types": "./dist/ui-kit/icons.d.ts",
+      "default": "./dist/ui-kit/icons.js"
+    },
+    "./ui-kit/hooks": {
+      "types": "./dist/ui-kit/hooks.d.ts",
+      "default": "./dist/ui-kit/hooks.js"
+    },
+    "./jsx-runtime": {
+      "types": "./dist/jsx-runtime.d.ts",
+      "default": "./dist/jsx-runtime.js"
+    },
+    "./jsx-dev-runtime": {
+      "types": "./dist/jsx-dev-runtime.d.ts",
+      "default": "./dist/jsx-dev-runtime.js"
+    },
+    "./tsconfig.plugin.json": "./tsconfig.plugin.json"
   },
   "bin": {
-    "brika-verify-plugin": "./src/verify.ts"
+    "brika-verify-plugin": "./dist/verify.js"
   },
-  "files": ["src"],
+  "files": ["dist", "tsconfig.plugin.json"],
   "scripts": {
+    "build": "bun run build.ts",
     "tsc": "bunx --biome tsc --noEmit",
-    "prepublishOnly": "bun run tsc"
+    "prepublishOnly": "bun run build"
   },
   "dependencies": {
+    "zod": "^4.3.4"
+  },
+  "peerDependencies": {
+    "zod": "^4.0.0",
+    "lucide-react": ">=0.400.0"
+  },
+  "peerDependenciesMeta": {
+    "lucide-react": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
     "@brika/flow": "workspace:*",
     "@brika/ipc": "workspace:*",
     "@brika/schema": "workspace:*",
     "@brika/serializable": "workspace:*",
     "@brika/ui-kit": "workspace:*",
-    "picocolors": "^1.1.1",
-    "zod": "^4.3.4"
-  },
-  "devDependencies": {
-    "@types/bun": "^1.3.5"
+    "@types/bun": "^1.3.5",
+    "picocolors": "^1.1.1"
   }
 }

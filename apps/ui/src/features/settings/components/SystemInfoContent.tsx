@@ -43,6 +43,7 @@ interface SystemData {
     blocks: { total: number };
     workflows: { total: number; enabled: number };
     sparks: { total: number };
+    bricks: { total: number };
   };
 }
 

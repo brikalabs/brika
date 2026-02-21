@@ -138,8 +138,9 @@ try {
     p.log.info(`Publishing ${plurals(packageForms, selectedPackages.length)}`);
   } else {
     const available = pc.dim(`(${candidates.length} available)`);
+    const keyHints = pc.dim(`[space] toggle, [a] select/deselect all`);
     const picked = await p.multiselect({
-      message: `Select packages to publish ${available}`,
+      message: `Select packages to publish ${available}\n${keyHints}`,
       options: candidates.map((pkg) => {
         const npmHint = formatNpmHint(npmVersionMap.get(pkg.name) ?? null);
         return {
@@ -148,7 +149,6 @@ try {
           hint: `${npmHint}  ${pkg.relativePath}`,
         };
       }),
-      initialValues: candidates,
       required: true,
     });
 

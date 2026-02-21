@@ -35,7 +35,8 @@
     "blocks": "Blocs",
     "workflows": "Workflows",
     "workflowsEnabled": "{{enabled}} sur {{total}} activés",
-    "sparks": "Sparks"
+    "sparks": "Sparks",
+    "bricks": "Briques"
   },
   "location": {
     "title": "Emplacement du hub",

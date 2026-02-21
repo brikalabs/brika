@@ -259,7 +259,7 @@ describe('scaffold', () => {
     expect(pkg.main).toBe('./src/index.ts');
   });
 
-  test('bricks-only: JSX-enabled tsconfig', async () => {
+  test('bricks-only: tsconfig extends SDK base', async () => {
     await scaffold({
       ...defaultOptions,
       name: 'test-brick',
@@ -270,8 +270,7 @@ describe('scaffold', () => {
     const tsconfig = JSON.parse(
       await fs.readFile(path.join(testDir, 'test-brick', 'tsconfig.json'), 'utf-8')
     );
-    expect(tsconfig.compilerOptions.jsx).toBe('react-jsx');
-    expect(tsconfig.compilerOptions.jsxImportSource).toBe('@brika/sdk');
+    expect(tsconfig.extends).toBe('@brika/sdk/tsconfig.plugin.json');
 
     const pkg = JSON.parse(
       await fs.readFile(path.join(testDir, 'test-brick', 'package.json'), 'utf-8')
@@ -376,13 +375,13 @@ describe('scaffold', () => {
     expect(content).toContain("from './blocks/test-both'");
   });
 
-  test('blocks-only: no jsx in tsconfig', async () => {
+  test('blocks-only: tsconfig extends SDK base', async () => {
     await scaffold(defaultOptions);
 
     const tsconfig = JSON.parse(
       await fs.readFile(path.join(testDir, 'test-plugin', 'tsconfig.json'), 'utf-8')
     );
-    expect(tsconfig.compilerOptions.jsx).toBeUndefined();
+    expect(tsconfig.extends).toBe('@brika/sdk/tsconfig.plugin.json');
   });
 
   test('creates both en and fr locale files', async () => {

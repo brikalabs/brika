@@ -1,8 +1,122 @@
 # CLI Reference
 
-Reference for the `create-brika` command-line tool.
+## BRIKA CLI
 
-## Installation
+The `brika` command-line tool manages the hub, plugins, and browser access.
+
+### Installation
+
+#### Linux / macOS
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/maxscharwath/brika/master/scripts/install.sh | sh
+```
+
+#### Windows (PowerShell)
+
+```powershell
+irm https://raw.githubusercontent.com/maxscharwath/brika/master/scripts/install.ps1 | iex
+```
+
+The installer downloads the binary for your platform, places it in `~/.brika/bin/`, and adds it to your shell PATH. A bundled Bun runtime is included.
+
+### Commands
+
+| Command | Description |
+|---------|-------------|
+| `brika start` | Start the hub (detaches by default) |
+| `brika stop` | Stop a running hub in the current directory |
+| `brika status` | Show whether the hub is running |
+| `brika open` | Open the web UI in the default browser |
+| `brika plugin` | Manage plugins (install, uninstall, list) |
+| `brika version` | Show version and platform info |
+| `brika update` | Update to the latest release in-place |
+| `brika uninstall` | Remove BRIKA from this machine |
+| `brika help` | Show help |
+
+### `brika start`
+
+Start the hub. By default the process detaches into the background.
+
+| Flag | Description |
+|------|-------------|
+| `-p, --port <port>` | Listen port (default: `3001`) |
+| `--host <addr>` | Listen address (default: `127.0.0.1`) |
+| `-f, --foreground` | Keep attached to terminal |
+| `-o, --open` | Open the UI in the default browser after start |
+
+```bash
+brika start --open             # Start and open the UI
+brika start -p 8080            # Start on port 8080
+brika start --host 0.0.0.0    # Listen on all interfaces
+brika start --foreground       # Stay attached to terminal
+```
+
+### `brika stop`
+
+Stop the hub running in the current directory. Uses the PID stored in `.brika/brika.pid`.
+
+### `brika status`
+
+Show whether the hub is running and its PID.
+
+### `brika open`
+
+Open the web UI in the default browser. The hub must be running.
+
+### `brika plugin`
+
+Manage plugins via the hub's HTTP API. The hub must be running.
+
+| Subcommand | Description |
+|------------|-------------|
+| `brika plugin install <name>[@version]` | Install a plugin from the registry |
+| `brika plugin uninstall <name>` | Uninstall a plugin |
+| `brika plugin list` | List installed plugins |
+| `brika plugin help` | Show plugin subcommand help |
+
+```bash
+brika plugin install @brika/plugin-timer           # Install a plugin
+brika plugin install @brika/plugin-timer@1.0.0     # Install a specific version
+brika plugin uninstall @brika/plugin-timer          # Uninstall a plugin
+brika plugin list                                   # List installed plugins
+```
+
+### `brika version`
+
+Show BRIKA version and platform information.
+
+### `brika update`
+
+Update BRIKA to the latest release in-place.
+
+### `brika uninstall`
+
+Remove BRIKA from this machine. Removes the install directory and cleans up shell PATH entries.
+
+| Flag | Description |
+|------|-------------|
+| `--purge` | Also remove the `.brika/` workspace directory (config, plugins, logs) |
+
+```bash
+brika uninstall            # Remove binary + clean PATH
+brika uninstall --purge    # Also delete .brika/ workspace data
+```
+
+### Global Flags
+
+| Flag | Description |
+|------|-------------|
+| `-v, --version` | Print version number |
+| `-h, --help` | Show help |
+
+---
+
+## `create-brika` CLI
+
+Reference for the `create-brika` plugin scaffolding tool.
+
+### Installation
 
 The CLI is available via `bun create`:
 
@@ -16,9 +130,9 @@ Or install globally:
 bun add -g create-brika
 ```
 
-## Usage
+### Usage
 
-### Interactive Mode
+#### Interactive Mode
 
 Run without arguments to launch the interactive wizard:
 
@@ -33,7 +147,7 @@ The wizard prompts for:
 3. **Category** — Type of plugin (trigger, action, transform, flow)
 4. **Author** — Your name (defaults to git config)
 
-### With Plugin Name
+#### With Plugin Name
 
 Provide a name to skip the first prompt:
 
@@ -41,7 +155,7 @@ Provide a name to skip the first prompt:
 bun create brika my-plugin
 ```
 
-### Options
+#### Options
 
 | Option | Description |
 |--------|-------------|
@@ -49,7 +163,7 @@ bun create brika my-plugin
 | `--no-git` | Skip git repository initialization |
 | `--no-install` | Skip dependency installation |
 
-### Examples
+#### Examples
 
 ```bash
 # Interactive mode
@@ -68,7 +182,7 @@ bun create brika my-plugin --no-install
 bun create brika my-plugin --no-git --no-install
 ```
 
-## Generated Structure
+### Generated Structure
 
 The CLI creates the following structure:
 
@@ -85,7 +199,7 @@ my-plugin/
         └── plugin.json   # i18n translations
 ```
 
-### package.json
+#### package.json
 
 The generated `package.json` includes:
 
@@ -111,7 +225,7 @@ The generated `package.json` includes:
 }
 ```
 
-### src/index.ts
+#### src/index.ts
 
 The generated entry point includes a starter block:
 
@@ -151,7 +265,7 @@ onStop(() => log.info("Plugin stopping"));
 log.info("Plugin loaded");
 ```
 
-## Categories
+### Categories
 
 When prompted for category, choose based on your plugin's purpose:
 
@@ -162,7 +276,7 @@ When prompted for category, choose based on your plugin's purpose:
 | `transform` | Processes data | Map, filter, format |
 | `flow` | Controls execution | Condition, delay, split |
 
-## Next Steps
+### Next Steps
 
 After creating your plugin:
 

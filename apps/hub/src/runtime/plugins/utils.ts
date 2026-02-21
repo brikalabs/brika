@@ -1,3 +1,4 @@
+import { join } from 'node:path';
 import { semver } from '@/runtime/utils';
 
 // Re-export hub version from centralized module
@@ -19,25 +20,47 @@ export function generateUid(pluginName: string): string {
   return hash.toString(36);
 }
 
-/**
- * Check if a version satisfies a semver range.
- *
- * This is a wrapper around the centralized semver.satisfies utility.
- * Uses the robust semver implementation from @/runtime/utils.
- *
- * Supports: ^x.y.z, ~x.y.z, >=x.y.z, >x.y.z, <=x.y.z, <x.y.z, x.y.z, and ranges
- *
- * @param version - Version to check
- * @param range - Semver range expression
- * @returns true if version satisfies range
- *
- * @example
- * ```ts
- * satisfiesVersion('1.2.3', '^1.0.0') // true
- * satisfiesVersion('0.2.5', '^0.2.0') // true
- * satisfiesVersion('2.0.0', '^1.0.0') // false
- * ```
- */
+/** Check if a version satisfies a semver range. */
 export function satisfiesVersion(version: string, range: string): boolean {
   return semver.satisfies(version, range);
+}
+
+/**
+ * Ensure a tsconfig.json with inline `jsxImportSource` exists in the plugin root.
+ *
+ * Bun does NOT resolve the `extends` field in tsconfig.json, so even plugins
+ * that extend `@brika/sdk/tsconfig.plugin.json` will fall back to `react`
+ * unless `jsxImportSource` is specified directly.
+ */
+export async function ensurePluginTsconfig(rootDirectory: string): Promise<void> {
+  try {
+    const tsconfigPath = join(rootDirectory, 'tsconfig.json');
+    const file = Bun.file(tsconfigPath);
+
+    if (await file.exists()) {
+      const raw = await file.json();
+      if (raw?.compilerOptions?.jsxImportSource) return;
+
+      // Bun ignores extends — inline the critical JSX settings
+      raw.compilerOptions = raw.compilerOptions ?? {};
+      raw.compilerOptions.jsx = 'react-jsx';
+      raw.compilerOptions.jsxImportSource = '@brika/sdk';
+      await Bun.write(tsconfigPath, JSON.stringify(raw, null, 2));
+      return;
+    }
+
+    await Bun.write(
+      tsconfigPath,
+      JSON.stringify(
+        {
+          extends: '@brika/sdk/tsconfig.plugin.json',
+          compilerOptions: { jsx: 'react-jsx', jsxImportSource: '@brika/sdk' },
+        },
+        null,
+        2
+      )
+    );
+  } catch {
+    // Non-critical — plugin may still work if it doesn't use JSX.
+  }
 }

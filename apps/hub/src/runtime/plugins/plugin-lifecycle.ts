@@ -16,7 +16,7 @@ import { PluginEventHandler } from './plugin-events';
 import { PluginProcess } from './plugin-process';
 import { PluginResolver } from './plugin-resolver';
 import { RestartPolicy } from './restart-policy';
-import { generateUid, HUB_VERSION, satisfiesVersion } from './utils';
+import { ensurePluginTsconfig, generateUid, HUB_VERSION, satisfiesVersion } from './utils';
 
 /**
  * Manages plugin lifecycle: loading, unloading, and restart handling.
@@ -151,6 +151,10 @@ export class PluginLifecycle {
       const actionsFile = metadata.actions ? join(rootDirectory, metadata.actions) : undefined;
       await this.#moduleCompiler.compile(metadata.name, rootDirectory, metadata.pages, actionsFile);
     }
+
+    // Ensure a tsconfig.json exists so Bun resolves jsxImportSource correctly.
+    // Published plugins may omit it, causing Bun to default to "react".
+    await ensurePluginTsconfig(rootDirectory);
 
     this.#logs.info('Starting plugin', {
       pluginName: pluginName,
