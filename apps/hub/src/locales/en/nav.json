@@ -12,8 +12,8 @@
   "store": "Store",
   "settings": "Settings",
   "groups": {
-    "core": "Core",
-    "tools": "Tools",
+    "overview": "Overview",
+    "registry": "Registry",
     "system": "System"
   }
 }

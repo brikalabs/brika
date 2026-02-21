@@ -12,8 +12,8 @@
   "store": "Boutique",
   "settings": "Paramètres",
   "groups": {
-    "core": "Principal",
-    "tools": "Outils",
+    "overview": "Aperçu",
+    "registry": "Registre",
     "system": "Système"
   }
 }

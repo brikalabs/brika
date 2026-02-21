@@ -45,26 +45,26 @@ interface NavGroup {
 
 const NAV_GROUPS: NavGroup[] = [
   {
-    labelKey: 'nav:groups.core',
+    labelKey: 'nav:groups.overview',
     items: [
       { to: '/', labelKey: 'nav:dashboard', icon: LayoutDashboard },
-      { to: '/plugins', labelKey: 'nav:plugins', icon: Plug },
+      { to: '/boards', labelKey: 'nav:boards', icon: LayoutGrid },
       { to: '/workflows', labelKey: 'nav:workflows', icon: Workflow },
     ],
   },
   {
-    labelKey: 'nav:groups.tools',
+    labelKey: 'nav:groups.registry',
     items: [
+      { to: '/plugins', labelKey: 'nav:plugins', icon: Plug },
       { to: '/sparks', labelKey: 'nav:sparks', icon: Zap },
       { to: '/blocks', labelKey: 'nav:blocks', icon: Blocks },
-      { to: '/boards', labelKey: 'nav:boards', icon: LayoutGrid },
-      { to: '/logs', labelKey: 'nav:logs', icon: FileText },
     ],
   },
   {
     labelKey: 'nav:groups.system',
     items: [
       { to: '/store', labelKey: 'nav:store', icon: Package },
+      { to: '/logs', labelKey: 'nav:logs', icon: FileText },
       { to: '/settings', labelKey: 'nav:settings', icon: Settings },
     ],
   },
