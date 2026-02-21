@@ -45,10 +45,11 @@ export class DeduplicationInterceptor implements RequestInterceptor {
   registerRequest(key: string, promise: Promise<HttpResponse<unknown>>): void {
     this.#pendingRequests.set(key, promise);
 
-    // Clean up when request completes
-    promise.finally(() => {
-      this.#pendingRequests.delete(key);
-    });
+    // Clean up when request completes.
+    // Use .then(fn, fn) instead of .finally() to avoid creating
+    // an unhandled rejection when the request fails.
+    const cleanup = () => this.#pendingRequests.delete(key);
+    promise.then(cleanup, cleanup);
   }
 
   /**

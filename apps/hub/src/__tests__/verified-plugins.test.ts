@@ -1,11 +1,9 @@
 import 'reflect-metadata';
-import { beforeEach, describe, expect, spyOn, test } from 'bun:test';
-import { get, reset, stub, trackSpy, useTestBed } from '@brika/di/testing';
+import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test';
+import { get, reset, stub } from '@brika/di/testing';
 import type { VerifiedPluginsList } from '@brika/shared';
 import { Logger } from '@/runtime/logs/log-router';
 import { VerifiedPluginsService } from '@/runtime/store';
-
-useTestBed({ autoStub: false });
 
 const createVerifiedList = (overrides: Partial<VerifiedPluginsList> = {}): VerifiedPluginsList => ({
   plugins: [
@@ -28,45 +26,23 @@ const createVerifiedList = (overrides: Partial<VerifiedPluginsList> = {}): Verif
   ...overrides,
 });
 
-// Mock state
-let mockContent: string | null = null;
+// Mock fetch response
+let mockResponse: { ok: boolean; status: number; body: string } | null = null;
 let mockError: Error | null = null;
+let fetchSpy: ReturnType<typeof spyOn>;
 
-// Create a mock BunFile object
-function createMockBunFile() {
-  return {
-    text: () => {
-      if (mockError) return Promise.reject(mockError);
-      return Promise.resolve(mockContent ?? '');
-    },
-    json: () => {
-      if (mockError) return Promise.reject(mockError);
-      try {
-        return Promise.resolve(JSON.parse(mockContent ?? '{}'));
-      } catch {
-        return Promise.reject(new Error('Invalid JSON'));
-      }
-    },
-    exists: () => Promise.resolve(mockContent !== null),
-    size: 0,
-    type: 'application/json',
-    name: 'verified-plugins.json',
-    lastModified: Date.now(),
-  };
-}
-
-function setMockContent(content: string): void {
-  mockContent = content;
+function setMockResponse(body: string, ok = true, status = 200): void {
+  mockResponse = { ok, status, body };
   mockError = null;
 }
 
 function setMockError(error: Error): void {
   mockError = error;
-  mockContent = null;
+  mockResponse = null;
 }
 
 function resetMock(): void {
-  mockContent = null;
+  mockResponse = null;
   mockError = null;
 }
 
@@ -78,37 +54,38 @@ describe('VerifiedPluginsService', () => {
     stub(Logger);
     resetMock();
 
-    // Store original for passthrough
-    const originalBunFile = Bun.file.bind(Bun);
-
-    // Spy on Bun.file and intercept calls for verified-plugins.json
-    // trackSpy registers for auto-cleanup via useTestBed's afterEach
-    trackSpy(
-      spyOn(Bun, 'file').mockImplementation(((path: string | URL) => {
-        const pathStr = String(path);
-        if (pathStr.includes('verified-plugins.json')) {
-          return createMockBunFile();
-        }
-        // For other files, call the real implementation
-        return originalBunFile(path);
-      }) as typeof Bun.file)
-    );
+    const originalFetch = globalThis.fetch;
+    fetchSpy = spyOn(globalThis, 'fetch').mockImplementation((input, init) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+      if (url.includes('verified-plugins.json')) {
+        if (mockError) return Promise.reject(mockError);
+        return Promise.resolve(
+          new Response(mockResponse?.body ?? '', {
+            status: mockResponse?.status ?? 200,
+            headers: { 'Content-Type': 'application/json' },
+          })
+        );
+      }
+      return originalFetch(input, init);
+    });
 
     service = get(VerifiedPluginsService);
   });
 
+  afterEach(() => {
+    fetchSpy.mockRestore();
+  });
+
   describe('init', () => {
     test('should not refetch if data is fresh', async () => {
-      const verifiedList = createVerifiedList();
-      setMockContent(JSON.stringify(verifiedList));
+      setMockResponse(JSON.stringify(createVerifiedList()));
 
       await service.init();
       await service.init();
     });
 
     test('should deduplicate concurrent init calls', async () => {
-      const verifiedList = createVerifiedList();
-      setMockContent(JSON.stringify(verifiedList));
+      setMockResponse(JSON.stringify(createVerifiedList()));
 
       await Promise.all([service.init(), service.init(), service.init()]);
     });
@@ -116,8 +93,7 @@ describe('VerifiedPluginsService', () => {
 
   describe('getVerifiedList', () => {
     test('should return the full verified plugins list', async () => {
-      const verifiedList = createVerifiedList();
-      setMockContent(JSON.stringify(verifiedList));
+      setMockResponse(JSON.stringify(createVerifiedList()));
 
       const result = await service.getVerifiedList();
 
@@ -126,8 +102,8 @@ describe('VerifiedPluginsService', () => {
       expect(result.lastUpdated).toBe('2024-02-01T00:00:00.000Z');
     });
 
-    test('should return empty list on read failure', async () => {
-      setMockError(new Error('File not found'));
+    test('should return empty list on fetch failure', async () => {
+      setMockError(new Error('Network error'));
 
       const result = await service.getVerifiedList();
 
@@ -135,8 +111,16 @@ describe('VerifiedPluginsService', () => {
       expect(result.version).toBe('1.0.0');
     });
 
+    test('should return empty list on non-ok response', async () => {
+      setMockResponse('Internal Server Error', false, 500);
+
+      const result = await service.getVerifiedList();
+
+      expect(result.plugins).toHaveLength(0);
+    });
+
     test('should return empty list on invalid response format', async () => {
-      setMockContent(JSON.stringify({ invalid: 'data' }));
+      setMockResponse(JSON.stringify({ invalid: 'data' }));
 
       const result = await service.getVerifiedList();
 
@@ -146,8 +130,7 @@ describe('VerifiedPluginsService', () => {
 
   describe('isVerified', () => {
     test('should return true for verified plugins', async () => {
-      const verifiedList = createVerifiedList();
-      setMockContent(JSON.stringify(verifiedList));
+      setMockResponse(JSON.stringify(createVerifiedList()));
 
       const result = await service.isVerified('@brika/verified-plugin');
 
@@ -155,8 +138,7 @@ describe('VerifiedPluginsService', () => {
     });
 
     test('should return false for non-verified plugins', async () => {
-      const verifiedList = createVerifiedList();
-      setMockContent(JSON.stringify(verifiedList));
+      setMockResponse(JSON.stringify(createVerifiedList()));
 
       const result = await service.isVerified('@brika/unknown-plugin');
 
@@ -166,8 +148,7 @@ describe('VerifiedPluginsService', () => {
 
   describe('getVerifiedPlugin', () => {
     test('should return plugin details for verified plugins', async () => {
-      const verifiedList = createVerifiedList();
-      setMockContent(JSON.stringify(verifiedList));
+      setMockResponse(JSON.stringify(createVerifiedList()));
 
       const result = await service.getVerifiedPlugin('@brika/verified-plugin');
 
@@ -181,8 +162,7 @@ describe('VerifiedPluginsService', () => {
     });
 
     test('should return null for non-verified plugins', async () => {
-      const verifiedList = createVerifiedList();
-      setMockContent(JSON.stringify(verifiedList));
+      setMockResponse(JSON.stringify(createVerifiedList()));
 
       const result = await service.getVerifiedPlugin('@brika/nonexistent');
 
@@ -192,8 +172,7 @@ describe('VerifiedPluginsService', () => {
 
   describe('getFeaturedPlugins', () => {
     test('should return only featured plugins', async () => {
-      const verifiedList = createVerifiedList();
-      setMockContent(JSON.stringify(verifiedList));
+      setMockResponse(JSON.stringify(createVerifiedList()));
 
       const result = await service.getFeaturedPlugins();
 
@@ -203,16 +182,19 @@ describe('VerifiedPluginsService', () => {
     });
 
     test('should return empty array when no plugins are featured', async () => {
-      const verifiedList = createVerifiedList({
-        plugins: [
-          {
-            name: '@brika/unfeatured',
-            verifiedAt: '2024-01-01T00:00:00.000Z',
-            verifiedBy: 'admin',
-          },
-        ],
-      });
-      setMockContent(JSON.stringify(verifiedList));
+      setMockResponse(
+        JSON.stringify(
+          createVerifiedList({
+            plugins: [
+              {
+                name: '@brika/unfeatured',
+                verifiedAt: '2024-01-01T00:00:00.000Z',
+                verifiedBy: 'admin',
+              },
+            ],
+          })
+        )
+      );
 
       const result = await service.getFeaturedPlugins();
 
@@ -222,24 +204,26 @@ describe('VerifiedPluginsService', () => {
 
   describe('refresh', () => {
     test('should force refetch of verified list', async () => {
-      const initialList = createVerifiedList();
-      setMockContent(JSON.stringify(initialList));
+      setMockResponse(JSON.stringify(createVerifiedList()));
 
       await service.init();
       const beforeRefresh = await service.isVerified('@brika/new-plugin');
       expect(beforeRefresh).toBeFalse();
 
-      const updatedList = createVerifiedList({
-        plugins: [
-          {
-            name: '@brika/new-plugin',
-            verifiedAt: '2024-03-01T00:00:00.000Z',
-            verifiedBy: 'admin',
-          },
-        ],
-        lastUpdated: '2024-03-01T00:00:00.000Z',
-      });
-      setMockContent(JSON.stringify(updatedList));
+      setMockResponse(
+        JSON.stringify(
+          createVerifiedList({
+            plugins: [
+              {
+                name: '@brika/new-plugin',
+                verifiedAt: '2024-03-01T00:00:00.000Z',
+                verifiedBy: 'admin',
+              },
+            ],
+            lastUpdated: '2024-03-01T00:00:00.000Z',
+          })
+        )
+      );
 
       await service.refresh();
       const afterRefresh = await service.isVerified('@brika/new-plugin');
@@ -250,7 +234,7 @@ describe('VerifiedPluginsService', () => {
 
   describe('error handling', () => {
     test('should handle malformed JSON response', async () => {
-      setMockContent('not json');
+      setMockResponse('not json');
 
       const result = await service.getVerifiedList();
 
@@ -258,7 +242,7 @@ describe('VerifiedPluginsService', () => {
     });
 
     test('should handle response with plugins as non-array', async () => {
-      setMockContent(
+      setMockResponse(
         JSON.stringify({
           plugins: 'not an array',
           version: '1.0.0',

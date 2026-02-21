@@ -136,11 +136,11 @@ describe('formatNpmStatus', () => {
 
 describe('buildPublishArgs', () => {
   test('returns base args when not dry-run', () => {
-    expect(buildPublishArgs(false)).toEqual(['bun', 'publish', '--access', 'public']);
+    expect(buildPublishArgs(false)).toEqual(['bun', 'publish', '--access', 'public', '--ignore-scripts']);
   });
 
   test('appends --dry-run flag', () => {
-    expect(buildPublishArgs(true)).toEqual(['bun', 'publish', '--access', 'public', '--dry-run']);
+    expect(buildPublishArgs(true)).toEqual(['bun', 'publish', '--access', 'public', '--ignore-scripts', '--dry-run']);
   });
 });
 

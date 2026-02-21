@@ -1,19 +1,15 @@
-import { join } from 'node:path';
 import { inject, singleton } from '@brika/di';
 import type { VerifiedPlugin, VerifiedPluginsList } from '@brika/shared';
 import { Logger } from '@/runtime/logs/log-router';
 
 // Configuration
 const REGISTRY_URL = process.env.BRIKA_REGISTRY || 'https://registry.brika.dev';
-const VERIFIED_PLUGINS_PATH = join(process.cwd(), '..', 'registry', 'verified-plugins.json');
-const USE_LOCAL_FILE = process.env.NODE_ENV === 'development' || !process.env.BRIKA_REGISTRY;
 
 const REFRESH_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
 
 /**
  * Service for managing verified plugins list.
- * In development: reads from local file (apps/registry/verified-plugins.json)
- * In production: fetches from CDN (registry.brika.dev)
+ * Fetches from the registry service (CDN in production, configurable via BRIKA_REGISTRY).
  */
 @singleton()
 export class VerifiedPluginsService {
@@ -95,35 +91,23 @@ export class VerifiedPluginsService {
   }
 
   /**
-   * Fetch verified plugins list from local file or CDN.
+   * Fetch verified plugins list from the registry service.
    */
   async #fetchVerifiedList(): Promise<void> {
     try {
-      let data: VerifiedPluginsList;
+      this.#log.info('Fetching verified plugins list', { url: REGISTRY_URL });
+      const response = await fetch(`${REGISTRY_URL}/verified-plugins.json`, {
+        headers: {
+          Accept: 'application/json',
+          'Cache-Control': 'no-cache',
+        },
+      });
 
-      if (USE_LOCAL_FILE) {
-        // Development: read from local file
-        this.#log.info('Loading verified plugins list from local file', {
-          path: VERIFIED_PLUGINS_PATH,
-        });
-        const fileContent = await Bun.file(VERIFIED_PLUGINS_PATH).text();
-        data = JSON.parse(fileContent) as VerifiedPluginsList;
-      } else {
-        // Production: fetch from CDN
-        this.#log.info('Fetching verified plugins list from CDN', { url: REGISTRY_URL });
-        const response = await fetch(`${REGISTRY_URL}/verified-plugins.json`, {
-          headers: {
-            Accept: 'application/json',
-            'Cache-Control': 'no-cache',
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error(`Failed to fetch verified plugins: ${response.statusText}`);
-        }
-
-        data = (await response.json()) as VerifiedPluginsList;
+      if (!response.ok) {
+        throw new Error(`Failed to fetch verified plugins: ${response.statusText}`);
       }
+
+      const data = (await response.json()) as VerifiedPluginsList;
 
       // Validate the response structure
       if (!data.plugins || !Array.isArray(data.plugins)) {
@@ -143,7 +127,7 @@ export class VerifiedPluginsService {
     } catch (error) {
       this.#log.error('Failed to load verified plugins list', { error: String(error) });
 
-      // Use empty list if file doesn't exist or is invalid
+      // Use empty list if fetch failed
       this.#verifiedList = {
         plugins: [],
         version: '1.0.0',
