@@ -23,5 +23,8 @@ plugins/*/data/
 .sonar/
 coverage/
 
+# Next.js
+.next/
+
 # Biome reports
 biome-report.json
