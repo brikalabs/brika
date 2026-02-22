@@ -24,6 +24,19 @@ export function ModuleStatus({
   );
 }
 
+// ── Stylesheet injection hook ────────────────────────────────────────────────
+
+/** Injects a <link rel="stylesheet"> on mount, removes it on unmount. */
+function useStylesheet(href: string) {
+  useEffect(() => {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = href;
+    document.head.appendChild(link);
+    return () => { link.remove(); };
+  }, [href]);
+}
+
 // ── Dynamic module loader hook ──────────────────────────────────────────────
 
 function useModuleImport(url: string) {
@@ -50,6 +63,10 @@ interface PluginModuleProps {
 }
 
 export function PluginModule({ pluginUid, pluginName, moduleUrl }: Readonly<PluginModuleProps>) {
+  // Inject plugin-specific Tailwind CSS alongside the JS module
+  const styleUrl = useMemo(() => moduleUrl.replace(/\.js$/, '.css'), [moduleUrl]);
+  useStylesheet(styleUrl);
+
   const { Module, error } = useModuleImport(moduleUrl);
   const contextValue = useMemo(
     () => ({ uid: pluginUid, namespace: `plugin:${pluginName}` }),

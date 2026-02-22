@@ -15,12 +15,23 @@ function resolveModuleTypeId(inject: Inject, uid: string, pageId: string) {
 }
 
 export const pageRoutes = group('/api/plugins/:uid/pages/:pageId', [
-  route.get('/module.js', { params: pageParams }, ({ params, inject }) => {
-    const code = inject(ModuleCompiler).get(resolveModuleTypeId(inject, params.uid, params.pageId));
-    if (!code) return new Response('Page not found', { status: 404 });
+  route.get('/module.js', { params: pageParams }, ({ params, inject, req }) => {
+    const entry = inject(ModuleCompiler).get(resolveModuleTypeId(inject, params.uid, params.pageId));
+    if (!entry) return new Response('Page not found', { status: 404 });
+    if (req.headers.get('if-none-match') === entry.etag) return new Response(null, { status: 304 });
 
-    return new Response(code, {
-      headers: { 'Content-Type': 'application/javascript', 'Cache-Control': 'public, max-age=60' },
+    return new Response(entry.content, {
+      headers: { 'Content-Type': 'application/javascript', 'Cache-Control': 'public, max-age=3600', ETag: entry.etag },
+    });
+  }),
+
+  route.get('/module.css', { params: pageParams }, ({ params, inject, req }) => {
+    const entry = inject(ModuleCompiler).getStyle(resolveModuleTypeId(inject, params.uid, params.pageId));
+    if (!entry) return new Response(null, { status: 204 });
+    if (req.headers.get('if-none-match') === entry.etag) return new Response(null, { status: 304 });
+
+    return new Response(entry.content, {
+      headers: { 'Content-Type': 'text/css', 'Cache-Control': 'public, max-age=3600', ETag: entry.etag },
     });
   }),
 ]);

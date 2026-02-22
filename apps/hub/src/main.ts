@@ -9,6 +9,7 @@ import {
   loader,
   PluginLoader,
   pid,
+  processGuard,
   routes,
   sparks,
   trapSignals,
@@ -24,6 +25,7 @@ import { allRoutes } from '@/runtime/http/routes';
  */
 await bootstrap()
   .use(pid()) // Check for duplicate instance early; writes PID on start
+  .use(processGuard()) // Kill orphan plugins from previous crash; guard current ones
   .use(cache()) // Initialize SQLite cache before loaders
   .use(sparks())
   .use(routes(allRoutes))

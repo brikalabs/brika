@@ -15,18 +15,27 @@ describe('page routes', () => {
 
   useTestBed(() => {
     mockManager = { get: mock().mockReturnValue(PLUGIN) };
-    mockCompiler = { get: mock().mockReturnValue('console.log("hello")') };
+    mockCompiler = { get: mock().mockReturnValue({ content: 'console.log("hello")', etag: '"abc123"' }) };
     stub(PluginManager, mockManager);
     stub(ModuleCompiler, mockCompiler);
     app = TestApp.create(pageRoutes);
   });
 
-  test('GET /module.js returns compiled JS', async () => {
+  test('GET /module.js returns compiled JS with ETag', async () => {
     const res = await app.get('/api/plugins/plg-1/pages/settings/module.js');
 
     expect(res.status).toBe(200);
     expect(res.headers.get('content-type')).toBe('application/javascript');
+    expect(res.headers.get('etag')).toBe('"abc123"');
     expect(mockCompiler.get).toHaveBeenCalledWith('@brika/plugin-timer:settings');
+  });
+
+  test('GET /module.js returns 304 when ETag matches', async () => {
+    const res = await app.get('/api/plugins/plg-1/pages/settings/module.js', {
+      headers: { 'If-None-Match': '"abc123"' },
+    });
+
+    expect(res.status).toBe(304);
   });
 
   test('GET /module.js returns 404 when module not found', async () => {

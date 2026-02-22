@@ -65,7 +65,14 @@ export class ApiServer {
     if (!staticDir) return;
 
     this.#app?.use('/*', serveStatic({ root: staticDir }));
-    this.#app?.get('*', serveStatic({ root: staticDir, path: 'index.html' }));
+
+    // SPA fallback — only for non-API paths to avoid intercepting API routes
+    const spaFallback = serveStatic({ root: staticDir, path: 'index.html' });
+    this.#app?.get('*', (c, next) => {
+      if (c.req.path.startsWith('/api/')) return next();
+      return spaFallback(c, next);
+    });
+
     this.#logs.info('Static file serving enabled', { directory: staticDir });
   }
 }

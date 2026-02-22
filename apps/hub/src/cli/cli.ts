@@ -1,6 +1,6 @@
 import { parseArgs } from 'node:util';
 import pc from 'picocolors';
-import type { Command } from './command';
+import type { Command, CommandOption } from './command';
 import { CliError } from './errors';
 import { generateHelp } from './help';
 
@@ -20,6 +20,36 @@ export interface Cli {
   toCommand(name: string, description: string): Command;
 }
 
+type ParseOption = { type: 'string' | 'boolean'; short?: string };
+
+function buildParseOptions(
+  command: Command,
+): Record<string, ParseOption> {
+  const result: Record<string, ParseOption> = {
+    help: { type: 'boolean', short: 'h' },
+  };
+  for (const [key, opt] of Object.entries(command.options ?? {})) {
+    const entry: ParseOption = { type: opt.type === 'number' ? 'string' : opt.type };
+    if (opt.short) entry.short = opt.short;
+    result[key] = entry;
+  }
+  return result;
+}
+
+function applyCoercionAndDefaults(
+  raw: Record<string, unknown>,
+  options: Record<string, CommandOption>,
+): Record<string, string | boolean | number | undefined> {
+  const values = { ...raw } as Record<string, string | boolean | number | undefined>;
+  for (const [key, opt] of Object.entries(options)) {
+    if (opt.type === 'number' && typeof values[key] === 'string') {
+      values[key] = Number(values[key]);
+    }
+    values[key] ??= opt.default;
+  }
+  return values;
+}
+
 export function createCli(config?: CliConfig): Cli {
   let prefix = 'brika';
   const defaultCommand = config?.defaultCommand ?? 'start';
@@ -32,7 +62,7 @@ export function createCli(config?: CliConfig): Cli {
     const existing = map.get(key);
     if (existing) {
       throw new Error(
-        `CLI command collision: "${key}" is claimed by both "${existing.name}" and "${cmd.name}"`
+        `CLI command collision: "${key}" is claimed by both "${existing.name}" and "${cmd.name}"`,
       );
     }
     map.set(key, cmd);
@@ -57,8 +87,7 @@ export function createCli(config?: CliConfig): Cli {
           aliases: ['-h', '--help'],
           description: 'Show help for a command',
           handler({ positionals }) {
-            const name = positionals[0];
-            const cmd = name ? commands.find((c) => c.name === name) : undefined;
+            const cmd = positionals[0] ? commands.find((c) => c.name === positionals[0]) : undefined;
             console.log(generateHelp(commands, cmd, prefix));
           },
         });
@@ -79,31 +108,15 @@ export function createCli(config?: CliConfig): Cli {
       try {
         const first = argv[0] ?? '';
         const command = map.get(first || defaultCommand);
-
         if (!command) {
           throw new CliError(
-            `${pc.red('Unknown command:')} ${first}\nRun ${pc.cyan(`${prefix} help`)} for usage.`
+            `${pc.red('Unknown command:')} ${first}\nRun ${pc.cyan(`${prefix} help`)} for usage.`,
           );
         }
 
-        const skip = first ? 1 : 0;
-
-        // Build parseArgs options — number types are parsed as strings then coerced
-        const parseOptions: Record<string, { type: 'string' | 'boolean'; short?: string }> = {
-          help: { type: 'boolean', short: 'h' },
-        };
-        if (command.options) {
-          for (const [key, opt] of Object.entries(command.options)) {
-            parseOptions[key] = {
-              type: opt.type === 'number' ? 'string' : opt.type,
-              short: opt.short,
-            };
-          }
-        }
-
         const parsed = parseArgs({
-          args: argv.slice(skip),
-          options: parseOptions,
+          args: argv.slice(first ? 1 : 0),
+          options: buildParseOptions(command),
           allowPositionals: true,
           strict: false,
         });
@@ -113,18 +126,9 @@ export function createCli(config?: CliConfig): Cli {
           return;
         }
 
-        // Apply number coercion and defaults
-        const values: Record<string, string | boolean | number | undefined> = { ...parsed.values };
-        if (command.options) {
-          for (const [key, opt] of Object.entries(command.options)) {
-            if (opt.type === 'number' && typeof values[key] === 'string') {
-              values[key] = Number(values[key]);
-            }
-            if (values[key] === undefined && opt.default !== undefined) {
-              values[key] = opt.default;
-            }
-          }
-        }
+        const values = command.options
+          ? applyCoercionAndDefaults(parsed.values, command.options)
+          : { ...parsed.values };
 
         if (beforeFn && command.name !== 'help') await beforeFn();
         await command.handler({ values, positionals: parsed.positionals, commands });

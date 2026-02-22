@@ -1,158 +1,82 @@
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 import { inject, singleton } from '@brika/di';
 import type { BunPlugin } from 'bun';
+import { ConfigLoader } from '@/runtime/config/config-loader';
 import { Logger } from '@/runtime/logs/log-router';
-
-// CJS proxy modules — maps plugin imports to globalThis.__brika.* at build time
-const EXTERNALS: Record<string, string> = {
-  react: 'module.exports=globalThis.__brika.React;',
-  '@brika/sdk/ui-kit': 'module.exports=globalThis.__brika.ui;',
-  '@brika/sdk/ui-kit/icons': 'module.exports=globalThis.__brika.icons;',
-  'lucide-react': 'module.exports=globalThis.__brika.icons;',
-  '@brika/sdk/ui-kit/hooks': 'module.exports=globalThis.__brika.hooks;',
-};
-
-/** Replaces plugin imports with globalThis.__brika proxies at build time */
-function brikaExternalsPlugin(): BunPlugin {
-  return {
-    name: 'brika-externals',
-    setup(build) {
-      build.onResolve({ filter: /^(react|@brika\/sdk|lucide-react)(\/.*)?$/ }, (args) => ({
-        path: args.path,
-        namespace: 'brika-ext',
-      }));
-
-      build.onLoad({ namespace: 'brika-ext', filter: /.*/ }, (args) => {
-        if (args.path.includes('jsx-runtime') || args.path.includes('jsx-dev-runtime')) {
-          return {
-            contents: `const J=globalThis.__brika.jsx;export const jsx=J.jsx;export const jsxs=J.jsxs;export const jsxDEV=J.jsxDEV||J.jsx;export const Fragment=J.Fragment;`,
-            loader: 'js',
-          };
-        }
-
-        const proxy = EXTERNALS[args.path];
-        return { contents: proxy ?? '', loader: 'js' };
-      });
-    },
-  };
-}
-
-/** Multiplicative hash → base36. Matches the SDK's `actionId()`. */
-function actionId(index: number): string {
-  return (Math.imul(index + 1, 0x9e3779b9) >>> 0).toString(36);
-}
-
-/**
- * Intercepts imports of the plugin's actions file and replaces them with
- * synthetic modules containing only `{ __actionId }` refs.
- *
- * Export names are extracted via `Bun.Transpiler.scan()`, then each index is
- * hashed with `actionId()` — the same function the SDK uses at runtime.
- */
-function brikaActionsPlugin(actionsFilePath: string): BunPlugin {
-  const normalizedActionsPath = resolve(actionsFilePath);
-
-  return {
-    name: 'brika-actions',
-    setup(build) {
-      // Intercept relative imports that resolve to the actions file
-      build.onResolve({ filter: /\./ }, (args) => {
-        if (!args.importer || args.namespace !== 'file') return;
-        try {
-          const resolved = resolve(args.resolveDir, args.path);
-          // Check common extensions
-          for (const ext of ['', '.ts', '.tsx', '.js', '.jsx']) {
-            if (resolved + ext === normalizedActionsPath) {
-              return { path: args.path, namespace: 'brika-actions' };
-            }
-          }
-        } catch {
-          // resolve failed — not our file
-        }
-        return undefined;
-      });
-
-      build.onLoad({ namespace: 'brika-actions', filter: /.*/ }, async () => {
-        const source = await Bun.file(normalizedActionsPath).text();
-        const transpiler = new Bun.Transpiler({ loader: 'ts' });
-        const { exports: names } = transpiler.scan(source);
-
-        // scan() returns alphabetical — re-sort to source order so
-        // indices match the runtime's defineAction() execution order
-        names.sort(
-          (a, b) => source.indexOf(`export const ${a}`) - source.indexOf(`export const ${b}`)
-        );
-
-        const lines = names.map(
-          (name, i) => `export const ${name} = { __actionId: '${actionId(i)}' };`
-        );
-
-        return { contents: lines.join('\n'), loader: 'js' };
-      });
-    },
-  };
-}
+import { brikaActionsPlugin, brikaExternalsPlugin } from './bun-plugins';
+import { type CacheEntry, ModuleCache, hashSource } from './module-cache';
+import { TailwindCompiler } from './tailwind';
 
 @singleton()
 export class ModuleCompiler {
   readonly #logs = inject(Logger).withSource('hub');
-  readonly #cache = new Map<string, string>();
+  readonly #cache = new ModuleCache(join(inject(ConfigLoader).brikaDir, 'cache', 'modules'));
+  readonly #tailwind = new TailwindCompiler();
 
   async compile(
     pluginName: string,
     rootDirectory: string,
     modules: Array<{ id: string }>,
-    actionsFile?: string
+    actionsFile?: string,
   ): Promise<void> {
     const plugins: BunPlugin[] = [brikaExternalsPlugin()];
-    if (actionsFile) {
-      plugins.push(brikaActionsPlugin(actionsFile));
-    }
+    if (actionsFile) plugins.push(brikaActionsPlugin(actionsFile));
 
-    await Promise.all(
-      modules.map(async (mod) => {
-        const entrypoint = join(rootDirectory, 'src', 'pages', `${mod.id}.tsx`);
-
-        if (!(await Bun.file(entrypoint).exists())) {
-          this.#logs.warn('Module source not found', {
-            pluginName,
-            moduleId: mod.id,
-            path: entrypoint,
-          });
-          return;
-        }
-
-        const result = await Bun.build({
-          entrypoints: [entrypoint],
-          target: 'browser',
-          format: 'esm',
-          minify: true,
-          plugins,
-        });
-
-        if (!result.success) {
-          this.#logs.error('Module compilation failed', {
-            pluginName,
-            moduleId: mod.id,
-            errors: result.logs.map((l) => l.message).join('; '),
-          });
-          return;
-        }
-
-        const code = await result.outputs[0].text();
-        this.#cache.set(`${pluginName}:${mod.id}`, code);
-        this.#logs.info('Module compiled', { pluginName, moduleId: mod.id, size: code.length });
-      })
-    );
+    await Promise.all(modules.map((mod) => this.#compileModule(pluginName, mod.id, rootDirectory, plugins)));
   }
 
-  get(fullModuleTypeId: string): string | undefined {
-    return this.#cache.get(fullModuleTypeId);
+  get(key: string): CacheEntry | undefined {
+    return this.#cache.getJs(key);
+  }
+
+  getStyle(key: string): CacheEntry | undefined {
+    return this.#cache.getCss(key);
   }
 
   remove(pluginName: string): void {
-    for (const key of this.#cache.keys()) {
-      if (key.startsWith(`${pluginName}:`)) this.#cache.delete(key);
+    this.#cache.remove(pluginName);
+  }
+
+  // ── Per-module pipeline ────────────────────────────────────────────
+
+  async #compileModule(pluginName: string, moduleId: string, rootDirectory: string, plugins: BunPlugin[]): Promise<void> {
+    const entrypoint = join(rootDirectory, 'src', 'pages', `${moduleId}.tsx`);
+
+    if (!(await Bun.file(entrypoint).exists())) {
+      this.#logs.warn('Module source not found', { pluginName, moduleId, path: entrypoint });
+      return;
+    }
+
+    const hash = await hashSource(entrypoint);
+    if (await this.#cache.loadFromDisk(pluginName, moduleId, hash)) {
+      this.#logs.info('Module loaded from cache', { pluginName, moduleId });
+      return;
+    }
+
+    const result = await Bun.build({ entrypoints: [entrypoint], target: 'browser', format: 'esm', minify: true, plugins });
+    if (!result.success) {
+      this.#logs.error('Module build failed', { pluginName, moduleId, errors: result.logs.map((l) => l.message).join('; ') });
+      return;
+    }
+
+    const js = await result.outputs[0].text();
+    const css = await this.#compileCss(pluginName, moduleId, js);
+
+    this.#cache.set(`${pluginName}:${moduleId}`, js, css);
+    await this.#cache.writeToDisk(pluginName, moduleId, hash, js, css);
+    this.#logs.info('Module compiled', { pluginName, moduleId, jsSize: js.length, cssSize: css?.length });
+  }
+
+  async #compileCss(pluginName: string, moduleId: string, js: string): Promise<string | undefined> {
+    try {
+      return await this.#tailwind.compileCss(js);
+    } catch (error) {
+      this.#logs.warn('CSS compilation failed', {
+        pluginName,
+        moduleId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return undefined;
     }
   }
 }
