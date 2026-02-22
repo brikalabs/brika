@@ -1,29 +1,24 @@
-import { rm } from 'node:fs/promises';
 import pc from 'picocolors';
-import type { Command } from '../command';
-import { isErrnoException, PID_FILE, readPid } from '../utils/pid';
+import { defineCommand } from '../command';
+import { CliError } from '../errors';
+import { checkPid, removePidFile } from '../utils/pid';
 
-export default {
+export default defineCommand({
   name: 'stop',
   description: 'Stop a running hub',
   details: 'Sends SIGTERM to the running Brika hub process in the current directory.',
   examples: ['brika stop'],
   async handler() {
-    const pid = await readPid();
-    if (pid === null) {
-      console.error(`${pc.red('Not running')} — no PID file found in this directory`);
-      process.exit(1);
+    const status = await checkPid();
+    if (status.state === 'stopped') {
+      throw new CliError(`${pc.red('Not running')} — no PID file found in this directory`);
     }
-    try {
-      process.kill(pid, 'SIGTERM');
-      console.log(`${pc.green('Stopped')} — sent SIGTERM to PID ${pc.dim(String(pid))}`);
-    } catch (e) {
-      if (isErrnoException(e) && e.code === 'ESRCH') {
-        console.error(`${pc.yellow('Not running')} — stale PID file (process ${pid} not found)`);
-        await rm(PID_FILE, { force: true });
-      } else {
-        throw e;
-      }
+    if (status.state === 'stale') {
+      console.error(`${pc.yellow('Not running')} — stale PID file (process ${status.pid} not found)`);
+      await removePidFile();
+      return;
     }
+    process.kill(status.pid, 'SIGTERM');
+    console.log(`${pc.green('Stopped')} — sent SIGTERM to PID ${pc.dim(String(status.pid))}`);
   },
-} satisfies Command;
+});

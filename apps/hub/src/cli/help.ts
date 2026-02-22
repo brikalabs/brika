@@ -51,7 +51,9 @@ function generateCommandHelp(cmd: Command, prefix: string): string {
     const flags = Object.entries(cmd.options)
       .map(([key, opt]) => {
         const nameStr = `${opt.short ? `-${opt.short}, ` : ''}--${key}`;
-        return `  ${pc.green(nameStr.padEnd(20))} ${opt.description ?? ''}`;
+        const desc = opt.description ?? '';
+        const def = opt.default !== undefined ? pc.dim(` (default: ${opt.default})`) : '';
+        return `  ${pc.green(nameStr.padEnd(20))} ${desc}${def}`;
       })
       .join('\n');
     flagsSection = `\n${pc.bold('Flags:')}\n${flags}`;

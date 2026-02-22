@@ -57,17 +57,19 @@ On first start BRIKA creates a `.brika/` directory in the current working direct
 
 ## Commands
 
-| Command           | Description                                                              |
-|-------------------|--------------------------------------------------------------------------|
-| `brika start`     | Start the hub (detaches by default)                                      |
-| `brika stop`      | Stop a running hub in the current directory                              |
-| `brika status`    | Show whether the hub is running                                          |
-| `brika open`      | Open the web UI in the default browser                                   |
-| `brika plugin`    | Manage plugins (install, uninstall, list)                                |
-| `brika version`   | Show version and platform info                                           |
-| `brika update`    | Update to the latest release in-place                                    |
-| `brika uninstall` | Remove BRIKA from this machine (`--purge` to also delete `.brika/` data) |
-| `brika help`      | Show help                                                                |
+| Command              | Description                                                              |
+|----------------------|--------------------------------------------------------------------------|
+| `brika start`        | Start the hub (detaches by default)                                      |
+| `brika stop`         | Stop a running hub in the current directory                              |
+| `brika status`       | Show whether the hub is running                                          |
+| `brika open`         | Open the web UI in the default browser                                   |
+| `brika log`          | Show and search application logs                                         |
+| `brika plugin`       | Manage plugins (install, uninstall, list)                                |
+| `brika version`      | Show version and platform info                                           |
+| `brika update`       | Update to the latest release in-place                                    |
+| `brika uninstall`    | Remove BRIKA from this machine (`--purge` to also delete `.brika/` data) |
+| `brika completions`  | Install shell tab-completion (bash, zsh, fish)                           |
+| `brika help`         | Show help                                                                |
 
 ### Start Flags
 
@@ -78,12 +80,25 @@ On first start BRIKA creates a `.brika/` directory in the current working direct
 | `-f, --foreground`     | Keep attached to terminal (default: detach)    |
 | `-o, --open`           | Open the UI in the default browser after start |
 
+### Log Flags
+
+| Flag                      | Description                                    |
+|---------------------------|------------------------------------------------|
+| `-f, --follow`            | Live tail via SSE (Ctrl+C to stop)             |
+| `-l, --level <level>`     | Filter by level (debug, info, warn, error)     |
+| `-s, --source <source>`   | Filter by source (hub, plugin, ...)            |
+| `-p, --plugin <name>`     | Filter by plugin name                          |
+| `-q, --search <text>`     | Search text in messages                        |
+| `-n, --limit <count>`     | Number of logs to show (default: 50)           |
+| `--clear`                 | Clear all stored logs                          |
+
 ### Global Flags
 
-| Flag             | Description          |
-|------------------|----------------------|
-| `-v, --version`  | Print version number |
-| `-h, --help`     | Show help            |
+| Flag             | Description              |
+|------------------|--------------------------|
+| `-v, --version`  | Print version number     |
+| `-h, --help`     | Show help                |
+| `--no-color`     | Disable colored output   |
 
 ```sh
 brika start --open             # Start and open the UI
@@ -91,7 +106,11 @@ brika start -p 8080            # Start on port 8080
 brika start --host 0.0.0.0    # Listen on all interfaces (e.g. Docker/VM)
 brika start --foreground       # Stay attached to terminal
 brika status                   # Check if hub is running
+brika log                      # Show recent logs
+brika log -f                   # Live tail logs
+brika log --level error -n 100 # Last 100 error logs
 brika update                   # Update to latest version
+brika completions              # Install shell completions
 ```
 
 ### Plugin Management

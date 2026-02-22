@@ -1,6 +1,6 @@
-import type { Command } from '../command';
+import { defineCommand } from '../command';
 
-export default {
+export default defineCommand({
   name: 'update',
   description: 'Update to the latest version',
   details: 'Checks for newer versions and updates Brika if available.',
@@ -9,4 +9,4 @@ export default {
     const { selfUpdate } = await import('@/updater');
     await selfUpdate();
   },
-} satisfies Command;
+});

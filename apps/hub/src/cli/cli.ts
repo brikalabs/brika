@@ -1,6 +1,7 @@
 import { parseArgs } from 'node:util';
 import pc from 'picocolors';
 import type { Command } from './command';
+import { CliError } from './errors';
 import { generateHelp } from './help';
 
 export interface CliConfig {
@@ -16,7 +17,6 @@ export interface Cli {
   addHelp(): Cli;
   get(name: string): Command | undefined;
   run(argv?: string[]): Promise<void>;
-  /** Convert this CLI into a Command for nesting as a subcommand group */
   toCommand(name: string, description: string): Command;
 }
 
@@ -71,36 +71,69 @@ export function createCli(config?: CliConfig): Cli {
     },
 
     async run(argv: string[] = Bun.argv.slice(2)): Promise<void> {
-      const first = argv[0] ?? '';
-      const command = map.get(first || defaultCommand);
-
-      if (!command) {
-        console.error(`${pc.red('Unknown command:')} ${first}`);
-        console.error(`Run ${pc.cyan(`${prefix} help`)} for usage.`);
-        process.exit(1);
-      }
-
-      const skip = first ? 1 : 0;
-      const parsed = parseArgs({
-        args: argv.slice(skip),
-        options: {
-          help: { type: 'boolean', short: 'h' },
-          ...command.options,
-        },
-        allowPositionals: true,
-        strict: false,
-      });
-
-      if (parsed.values.help) {
-        console.log(generateHelp(commands, command, prefix));
-        return;
+      if (argv.includes('--no-color')) {
+        process.env.NO_COLOR = '1';
+        argv = argv.filter((a) => a !== '--no-color');
       }
 
       try {
+        const first = argv[0] ?? '';
+        const command = map.get(first || defaultCommand);
+
+        if (!command) {
+          throw new CliError(
+            `${pc.red('Unknown command:')} ${first}\nRun ${pc.cyan(`${prefix} help`)} for usage.`
+          );
+        }
+
+        const skip = first ? 1 : 0;
+
+        // Build parseArgs options — number types are parsed as strings then coerced
+        const parseOptions: Record<string, { type: 'string' | 'boolean'; short?: string }> = {
+          help: { type: 'boolean', short: 'h' },
+        };
+        if (command.options) {
+          for (const [key, opt] of Object.entries(command.options)) {
+            parseOptions[key] = {
+              type: opt.type === 'number' ? 'string' : opt.type,
+              short: opt.short,
+            };
+          }
+        }
+
+        const parsed = parseArgs({
+          args: argv.slice(skip),
+          options: parseOptions,
+          allowPositionals: true,
+          strict: false,
+        });
+
+        if (parsed.values.help) {
+          console.log(generateHelp(commands, command, prefix));
+          return;
+        }
+
+        // Apply number coercion and defaults
+        const values: Record<string, string | boolean | number | undefined> = { ...parsed.values };
+        if (command.options) {
+          for (const [key, opt] of Object.entries(command.options)) {
+            if (opt.type === 'number' && typeof values[key] === 'string') {
+              values[key] = Number(values[key]);
+            }
+            if (values[key] === undefined && opt.default !== undefined) {
+              values[key] = opt.default;
+            }
+          }
+        }
+
         if (beforeFn && command.name !== 'help') await beforeFn();
-        await command.handler(parsed);
+        await command.handler({ values, positionals: parsed.positionals, commands });
       } catch (error) {
-        console.error(`${pc.red('Error:')} ${error instanceof Error ? error.message : error}`);
+        if (error instanceof CliError) {
+          console.error(error.message);
+        } else {
+          console.error(`${pc.red('Error:')} ${error instanceof Error ? error.message : error}`);
+        }
         process.exit(1);
       }
     },
@@ -110,6 +143,7 @@ export function createCli(config?: CliConfig): Cli {
       return {
         name,
         description,
+        subcommands: commands,
         examples: commands.flatMap((c) => c.examples ?? []).slice(0, 4),
         async handler({ positionals }) {
           await cli.run(positionals);

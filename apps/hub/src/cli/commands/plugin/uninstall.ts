@@ -1,5 +1,6 @@
 import pc from 'picocolors';
-import type { Command } from '../../command';
+import { defineCommand } from '../../command';
+import { CliError } from '../../errors';
 import { hubFetch, hubFetchOk } from '../../utils/hub-client';
 
 /** Resolve a package name to its plugin UID via the running hub. */
@@ -12,7 +13,7 @@ async function resolvePluginUid(name: string): Promise<string | null> {
   return match?.uid ?? null;
 }
 
-export default {
+export default defineCommand({
   name: 'uninstall',
   aliases: ['remove'],
   description: 'Uninstall a plugin',
@@ -20,8 +21,7 @@ export default {
   async handler({ positionals }) {
     const name = positionals[0];
     if (!name) {
-      console.error(`${pc.red('Missing package name.')} Usage: brika plugin uninstall <name>`);
-      process.exit(1);
+      throw new CliError(`${pc.red('Missing package name.')} Usage: brika plugin uninstall <name>`);
     }
 
     console.log(`${pc.cyan('Uninstalling')} ${pc.bold(name)} …`);
@@ -35,4 +35,4 @@ export default {
 
     console.log(`  ${pc.green('✓')} ${name} uninstalled`);
   },
-} satisfies Command;
+});

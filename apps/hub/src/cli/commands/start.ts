@@ -1,12 +1,12 @@
 import pc from 'picocolors';
-import type { Command } from '../command';
+import { defineCommand } from '../command';
 import { hubUrl } from '../utils/hub-client';
 import { openBrowser } from '../utils/open';
 import { detect, spawnDetached } from '../utils/runtime';
 
 const uiDir = detect('ui');
 
-export default {
+export default defineCommand({
   name: 'start',
   description: 'Start the Brika hub',
   details: 'Starts the Brika hub server. Detaches by default; use --foreground to keep attached.',
@@ -28,8 +28,9 @@ export default {
     'brika start --foreground',
   ],
   async handler({ values }) {
-    if (typeof values.port === 'string') process.env.BRIKA_PORT = values.port;
-    if (typeof values.host === 'string') process.env.BRIKA_HOST = values.host;
+    // values.port is string | undefined, values.foreground is boolean | undefined
+    if (values.port) process.env.BRIKA_PORT = values.port;
+    if (values.host) process.env.BRIKA_HOST = values.host;
     process.env.BRIKA_STATIC_DIR ??= uiDir;
 
     if (values.foreground !== true) {
@@ -43,4 +44,4 @@ export default {
     await import('@/main');
     if (values.open) openBrowser(hubUrl());
   },
-} satisfies Command;
+});

@@ -51,7 +51,7 @@ describe('cli/commands/start', () => {
       bun.spawn({ exitCode: 0 }).apply();
 
       try {
-        await start?.handler({ values: {}, positionals: [] });
+        await start?.handler({ values: {}, positionals: [], commands: [] });
       } catch (e) {
         if (!(e instanceof Error && e.message === '__EXIT__')) throw e;
       } finally {
@@ -78,7 +78,7 @@ describe('cli/commands/start', () => {
       bun.spawn({ exitCode: 0 }).apply();
 
       try {
-        await start?.handler({ values: { port: '9090' }, positionals: [] });
+        await start?.handler({ values: { port: '9090' }, positionals: [], commands: [] });
       } catch (e) {
         if (!(e instanceof Error && e.message === '__EXIT__')) throw e;
       } finally {
@@ -103,7 +103,7 @@ describe('cli/commands/start', () => {
       bun.spawn({ exitCode: 0 }).apply();
 
       try {
-        await start?.handler({ values: { host: '0.0.0.0' }, positionals: [] });
+        await start?.handler({ values: { host: '0.0.0.0' }, positionals: [], commands: [] });
       } catch (e) {
         if (!(e instanceof Error && e.message === '__EXIT__')) throw e;
       } finally {
@@ -124,7 +124,7 @@ describe('cli/commands/start', () => {
       bun.spawn({ exitCode: 0 }).apply();
 
       try {
-        await start?.handler({ values: { open: true }, positionals: [] });
+        await start?.handler({ values: { open: true }, positionals: [], commands: [] });
       } catch (e) {
         if (!(e instanceof Error && e.message === '__EXIT__')) throw e;
       } finally {

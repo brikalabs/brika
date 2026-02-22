@@ -1,13 +1,13 @@
 import pc from 'picocolors';
 import { getBuildDate, getGitCommit } from '@/build-info.macro' with { type: 'macro' };
 import { hub } from '@/hub';
-import type { Command } from '../command';
+import { defineCommand } from '../command';
 import { installDir } from '../utils/runtime';
 
 const commit = getGitCommit();
 const buildDate = getBuildDate();
 
-export default {
+export default defineCommand({
   name: 'version',
   aliases: ['-v', '--version'],
   description: 'Show version and platform info',
@@ -22,4 +22,4 @@ export default {
     console.log(`  ${pc.dim('Built:')}     ${new Date(buildDate).toLocaleString()}`);
     console.log(`  ${pc.dim('Install:')}   ${installDir}`);
   },
-} satisfies Command;
+});

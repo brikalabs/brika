@@ -1,8 +1,8 @@
 import pc from 'picocolors';
-import type { Command } from '../../command';
+import { defineCommand } from '../../command';
 import { hubFetchOk } from '../../utils/hub-client';
 
-export default {
+export default defineCommand({
   name: 'list',
   aliases: ['ls'],
   description: 'List installed plugins',
@@ -25,4 +25,4 @@ export default {
     }
     console.log();
   },
-} satisfies Command;
+});

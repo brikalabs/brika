@@ -1,20 +1,16 @@
 import pc from 'picocolors';
-import type { Command } from '../command';
+import { defineCommand } from '../command';
 import { hubUrl, requireRunningHub } from '../utils/hub-client';
 import { openBrowser } from '../utils/open';
 
-export default {
+export default defineCommand({
   name: 'open',
   description: 'Open the Brika UI in the default browser',
-  options: {
-    port: { type: 'string', short: 'p', description: 'Hub port (default: 3001)' },
-  },
-  examples: ['brika open', 'brika open -p 8080'],
-  async handler({ values }) {
+  examples: ['brika open'],
+  async handler() {
     await requireRunningHub();
-    const port = typeof values.port === 'string' ? Number(values.port) : undefined;
-    const url = hubUrl(port);
+    const url = hubUrl();
     console.log(`${pc.cyan('Opening')} ${pc.dim(url)}`);
     openBrowser(url);
   },
-} satisfies Command;
+});

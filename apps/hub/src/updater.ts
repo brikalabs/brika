@@ -14,6 +14,7 @@ import { chmod, cp, mkdir, rename, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import pc from 'picocolors';
+import { CliError } from '@/cli/errors';
 import { HUB_GITHUB_RELEASES_API, hub } from '@/hub';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -312,6 +313,17 @@ export async function selfUpdate(): Promise<void> {
       }
     });
 
+    // Regenerate completions with the new binary (it's already on disk)
+    try {
+      const proc = Bun.spawn([process.execPath, 'completions'], {
+        stdout: 'ignore',
+        stderr: 'ignore',
+      });
+      await proc.exited;
+    } catch {
+      // Non-critical
+    }
+
     console.log();
     console.log(
       `  ${pc.green('Updated successfully!')} v${result.previousVersion} → v${pc.bold(result.newVersion)}`
@@ -321,8 +333,7 @@ export async function selfUpdate(): Promise<void> {
     if (msg.includes('Already up to date')) {
       console.log(`  ${pc.green(msg)}`);
     } else {
-      console.error(`  ${pc.red('Update failed:')} ${msg}`);
-      process.exit(1);
+      throw new CliError(`  ${pc.red('Update failed:')} ${msg}`);
     }
   }
 }

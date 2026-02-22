@@ -1,6 +1,8 @@
 import pc from 'picocolors';
-import type { Command } from '../../command';
+import { defineCommand } from '../../command';
+import { CliError } from '../../errors';
 import { hubFetchOk } from '../../utils/hub-client';
+import { streamSseEvents } from '../../utils/sse';
 
 /** Parse `@scope/name@version` or `name@version` into [name, version?]. */
 function parsePackageSpec(spec: string): [name: string, version: string | undefined] {
@@ -11,12 +13,14 @@ function parsePackageSpec(spec: string): [name: string, version: string | undefi
   return [spec, undefined];
 }
 
-function printProgress(p: {
+interface Progress {
   phase: string;
   package?: string;
   message?: string;
   error?: string;
-}): void {
+}
+
+function printProgress(p: Progress): void {
   switch (p.phase) {
     case 'resolving':
       console.log(`  ${pc.dim('◌')} Resolving ${pc.dim(p.package ?? '')} …`);
@@ -31,13 +35,11 @@ function printProgress(p: {
       console.log(`  ${pc.green('✓')} ${p.message ?? 'Installed successfully'}`);
       break;
     case 'error':
-      console.error(`  ${pc.red('✗')} ${p.error ?? p.message ?? 'Installation failed'}`);
-      process.exit(1);
-      break;
+      throw new CliError(`  ${pc.red('✗')} ${p.error ?? p.message ?? 'Installation failed'}`);
   }
 }
 
-export default {
+export default defineCommand({
   name: 'install',
   description: 'Install a plugin',
   examples: [
@@ -47,10 +49,9 @@ export default {
   async handler({ positionals }) {
     const spec = positionals[0];
     if (!spec) {
-      console.error(
+      throw new CliError(
         `${pc.red('Missing package name.')} Usage: brika plugin install <name>[@version]`
       );
-      process.exit(1);
     }
 
     const [name, version] = parsePackageSpec(spec);
@@ -65,33 +66,9 @@ export default {
       body: JSON.stringify({ package: name, version }),
     });
 
-    const reader = res.body?.getReader();
-    if (!reader) {
-      console.error(`${pc.red('Error')} — no response stream`);
-      process.exit(1);
-    }
-
-    const decoder = new TextDecoder();
-    let buf = '';
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      buf += decoder.decode(value, { stream: true });
-      const lines = buf.split('\n');
-      buf = lines.pop() ?? '';
-
-      for (const line of lines) {
-        if (!line.startsWith('data: ')) continue;
-        try {
-          const progress = JSON.parse(line.slice(6));
-          printProgress(progress);
-          if (progress.phase === 'complete' || progress.phase === 'error') return;
-        } catch {
-          // ignore malformed SSE lines
-        }
-      }
+    for await (const progress of streamSseEvents<Progress>(res)) {
+      printProgress(progress);
+      if (progress.phase === 'complete') return;
     }
   },
-} satisfies Command;
+});

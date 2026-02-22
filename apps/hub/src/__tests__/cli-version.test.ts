@@ -33,7 +33,7 @@ describe('cli/commands/version', () => {
   });
 
   test('outputs platform info', () => {
-    version?.handler({ values: {}, positionals: [] });
+    version?.handler({ values: {}, positionals: [], commands: [] });
 
     const joined = output.join('\n');
     expect(joined).toContain('Platform:');
@@ -41,7 +41,7 @@ describe('cli/commands/version', () => {
   });
 
   test('outputs runtime info', () => {
-    version?.handler({ values: {}, positionals: [] });
+    version?.handler({ values: {}, positionals: [], commands: [] });
 
     const joined = output.join('\n');
     expect(joined).toContain('Runtime:');
@@ -49,7 +49,7 @@ describe('cli/commands/version', () => {
   });
 
   test('outputs install directory', () => {
-    version?.handler({ values: {}, positionals: [] });
+    version?.handler({ values: {}, positionals: [], commands: [] });
 
     const joined = output.join('\n');
     expect(joined).toContain('Install:');

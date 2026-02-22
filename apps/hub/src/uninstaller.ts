@@ -10,6 +10,7 @@ import { readFile, rm, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { dirname, resolve } from 'node:path';
 import pc from 'picocolors';
+import { uninstallCompletions } from '@/cli/completions';
 import { HUB_REPO_URL, hub } from '@/hub';
 
 /** Shell rc files that may contain a PATH entry added by the installer */
@@ -59,9 +60,10 @@ export async function selfUninstall(options?: { purge?: boolean }): Promise<void
   console.log(`  ${pc.dim('Removing installation...')}`);
   await rm(installDir, { recursive: true, force: true });
 
-  // Clean up the PATH block the installer added to shell rc files.
-  // The installer writes exactly two lines: "# Brika" followed by the export/set line.
-  // We remove both by matching on the install directory path.
+  // Remove completions (scripts + rc entries) — delegated to the completions module
+  await uninstallCompletions();
+
+  // Clean up PATH entries the installer added to shell rc files
   for (const rcFile of SHELL_RC_FILES) {
     if (!existsSync(rcFile)) continue;
     try {
@@ -70,9 +72,7 @@ export async function selfUninstall(options?: { purge?: boolean }): Promise<void
 
       const lines = content.split('\n');
       const cleaned = lines.filter((line, i) => {
-        // Remove the export/set line that references our install directory
         if (line.includes(installDir)) return false;
-        // Remove the "# Brika" comment only when it directly precedes that line
         if (line === '# Brika' && lines[i + 1]?.includes(installDir)) return false;
         return true;
       });
@@ -80,7 +80,7 @@ export async function selfUninstall(options?: { purge?: boolean }): Promise<void
       await writeFile(rcFile, cleaned.join('\n'), 'utf8');
       console.log(`  ${pc.dim('Cleaned ' + rcFile)}`);
     } catch {
-      // Non-critical — a harmless PATH entry pointing to a non-existent dir is OK
+      // Non-critical — leftover lines are harmless
     }
   }
 

@@ -1,6 +1,6 @@
-import type { Command } from '../command';
+import { defineCommand } from '../command';
 
-export default {
+export default defineCommand({
   name: 'uninstall',
   description: 'Remove Brika from this machine',
   details:
@@ -13,7 +13,8 @@ export default {
   },
   examples: ['brika uninstall', 'brika uninstall --purge'],
   async handler({ values }) {
+    // values.purge is boolean | undefined
     const { selfUninstall } = await import('@/uninstaller');
     await selfUninstall({ purge: !!values.purge });
   },
-} satisfies Command;
+});

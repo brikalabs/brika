@@ -208,6 +208,15 @@ setup_path() {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Setup shell completions
+# ─────────────────────────────────────────────────────────────────────────────
+
+setup_completions() {
+  "$BIN_DIR/brika" completions >/dev/null 2>&1 && \
+    dim "  Installed shell completions" || true
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Main
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -220,6 +229,7 @@ main() {
   install_brika
   verify_installation
   setup_path
+  setup_completions
 
   printf "\n"
   if [ -n "$EXISTING_VERSION" ]; then

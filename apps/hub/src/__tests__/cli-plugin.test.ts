@@ -68,7 +68,7 @@ describe('cli/commands/plugin (subcommand group)', () => {
   describe('dispatch', () => {
     test('dispatches "install" to install handler', async () => {
       const { cmd, handlers } = buildPluginCli();
-      await cmd.handler({ values: {}, positionals: ['install', '@brika/plugin-timer'] });
+      await cmd.handler({ values: {}, positionals: ['install', '@brika/plugin-timer'], commands: [] });
 
       expect(handlers.install).toHaveBeenCalled();
       expect(handlers.before).toHaveBeenCalled();
@@ -76,28 +76,28 @@ describe('cli/commands/plugin (subcommand group)', () => {
 
     test('dispatches "uninstall" to uninstall handler', async () => {
       const { cmd, handlers } = buildPluginCli();
-      await cmd.handler({ values: {}, positionals: ['uninstall', '@brika/plugin-timer'] });
+      await cmd.handler({ values: {}, positionals: ['uninstall', '@brika/plugin-timer'], commands: [] });
 
       expect(handlers.uninstall).toHaveBeenCalled();
     });
 
     test('dispatches "remove" alias to uninstall handler', async () => {
       const { cmd, handlers } = buildPluginCli();
-      await cmd.handler({ values: {}, positionals: ['remove', '@brika/plugin-timer'] });
+      await cmd.handler({ values: {}, positionals: ['remove', '@brika/plugin-timer'], commands: [] });
 
       expect(handlers.uninstall).toHaveBeenCalled();
     });
 
     test('dispatches "list" to list handler', async () => {
       const { cmd, handlers } = buildPluginCli();
-      await cmd.handler({ values: {}, positionals: ['list'] });
+      await cmd.handler({ values: {}, positionals: ['list'], commands: [] });
 
       expect(handlers.list).toHaveBeenCalled();
     });
 
     test('dispatches "ls" alias to list handler', async () => {
       const { cmd, handlers } = buildPluginCli();
-      await cmd.handler({ values: {}, positionals: ['ls'] });
+      await cmd.handler({ values: {}, positionals: ['ls'], commands: [] });
 
       expect(handlers.list).toHaveBeenCalled();
     });
@@ -108,7 +108,7 @@ describe('cli/commands/plugin (subcommand group)', () => {
       const { cmd, handlers } = buildPluginCli();
       const log = captureLog();
 
-      await cmd.handler({ values: {}, positionals: [] });
+      await cmd.handler({ values: {}, positionals: [], commands: [] });
       log.restore();
 
       const output = log.lines.join('\n');
@@ -124,7 +124,7 @@ describe('cli/commands/plugin (subcommand group)', () => {
       const { cmd, handlers } = buildPluginCli();
       const log = captureLog();
 
-      await cmd.handler({ values: {}, positionals: ['help'] });
+      await cmd.handler({ values: {}, positionals: ['help'], commands: [] });
       log.restore();
 
       expect(log.lines.join('\n')).toContain('brika plugin');
@@ -151,7 +151,7 @@ describe('cli/commands/plugin (subcommand group)', () => {
         .addHelp()
         .toCommand('test', 'Test');
 
-      await cmd.handler({ values: {}, positionals: ['action'] });
+      await cmd.handler({ values: {}, positionals: ['action'], commands: [] });
       expect(order).toEqual(['before', 'action']);
     });
 
@@ -164,7 +164,7 @@ describe('cli/commands/plugin (subcommand group)', () => {
         .addHelp()
         .toCommand('test', 'Test');
 
-      await cmd.handler({ values: {}, positionals: ['help'] });
+      await cmd.handler({ values: {}, positionals: ['help'], commands: [] });
       log.restore();
 
       expect(beforeFn).not.toHaveBeenCalled();
@@ -177,7 +177,7 @@ describe('cli/commands/plugin (subcommand group)', () => {
       const exit = captureExit();
 
       try {
-        await cmd.handler({ values: {}, positionals: ['nonexistent'] });
+        await cmd.handler({ values: {}, positionals: ['nonexistent'], commands: [] });
       } catch {}
       exit.restore();
 

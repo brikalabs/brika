@@ -146,7 +146,7 @@ describe('createCli', () => {
         .addHelp()
         .toCommand('sub', 'Sub');
 
-      await cmd.handler({ values: {}, positionals: ['action', 'arg1'] });
+      await cmd.handler({ values: {}, positionals: ['action', 'arg1'], commands: [] });
       expect(handler).toHaveBeenCalled();
       // The nested handler receives ['arg1'] as positionals
       const call = handler.mock.calls[0] as [{ positionals: string[] }];

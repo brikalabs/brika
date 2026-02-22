@@ -1,10 +1,38 @@
 /**
  * Option descriptor extending Node's parseArgs format with a description for help display.
+ *
+ * - `type: 'string'`  → parsed as string
+ * - `type: 'boolean'` → parsed as boolean flag
+ * - `type: 'number'`  → parsed as string by parseArgs, auto-coerced to number by the CLI
+ * - `default`         → applied when the option is not provided; makes the value non-optional
  */
 export interface CommandOption {
-  type: 'string' | 'boolean';
+  type: 'string' | 'boolean' | 'number';
   short?: string;
   description?: string;
+  default?: string | boolean | number;
+}
+
+/** Resolve the base JS type for an option's `type` field. */
+type BaseValue<T extends CommandOption> =
+  T['type'] extends 'boolean' ? boolean :
+  T['type'] extends 'number' ? number :
+  string;
+
+/** If a default is declared, the value is guaranteed (non-optional). */
+type InferValue<T extends CommandOption> =
+  T extends { default: any } ? BaseValue<T> : BaseValue<T> | undefined;
+
+/** Map an options record to its parsed values type. */
+type InferValues<O extends Record<string, CommandOption> | undefined> =
+  O extends Record<string, CommandOption>
+    ? { [K in keyof O]: InferValue<O[K]> }
+    : Record<string, string | boolean | number | undefined>;
+
+export interface HandlerArgs<O extends Record<string, CommandOption> | undefined = undefined> {
+  values: InferValues<O>;
+  positionals: string[];
+  commands: Command[];
 }
 
 /**
@@ -12,27 +40,30 @@ export interface CommandOption {
  * All metadata is inferred from this single object.
  */
 export interface Command {
-  /** Command name (e.g., 'start', 'stop') */
   name: string;
-
-  /** One-line description shown in help */
   description: string;
-
-  /** Multi-line detailed description (optional) */
   details?: string;
-
-  /** Command-specific options (passed to parseArgs, with optional description for help) */
   options?: Record<string, CommandOption>;
-
-  /** Alternative names or flags that invoke this command (e.g., ['-v', '--version']) */
   aliases?: string[];
-
-  /** Usage examples (displayed in help) */
   examples?: string[];
+  subcommands?: Command[];
+  handler: (args: HandlerArgs<any>) => Promise<void> | void;
+}
 
-  /** Handler function that receives parsed args */
-  handler: (args: {
-    values: Record<string, string | boolean | undefined>;
-    positionals: string[];
-  }) => Promise<void> | void;
+/**
+ * Define a command with fully typed option values in the handler.
+ *
+ * Uses `const` type parameter to preserve literal types from option descriptors,
+ * giving the handler properly narrowed values based on `type` and `default`.
+ */
+export function defineCommand<const O extends Record<string, CommandOption>>(def: {
+  name: string;
+  description: string;
+  details?: string;
+  options?: O;
+  aliases?: string[];
+  examples?: string[];
+  handler: (args: HandlerArgs<O>) => Promise<void> | void;
+}): Command {
+  return def as Command;
 }
