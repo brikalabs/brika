@@ -32,8 +32,7 @@ apps/hub/.brika/
 coverage/
 
 # Node modules are installed fresh in container
-# But we keep the lockfile for reproducible builds
-# node_modules/ is not ignored because we copy it from deps stage
+node_modules/
 
 # OS files
 .DS_Store

@@ -31,7 +31,7 @@ WORKDIR /app
 COPY --from=build-hub /usr/local/bin/bun /usr/local/bin/bun
 
 COPY --from=build-hub /app/apps/hub/dist/brika ./brika
-COPY --from=build-hub /app/apps/hub/locales     ./locales
+COPY --from=build-hub /app/apps/hub/src/locales  ./locales
 COPY --from=build-ui  /app/apps/ui/dist         ./ui
 
 ENV NODE_ENV=production \
@@ -46,4 +46,4 @@ VOLUME ["/app/.brika"]
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD /app/brika version || exit 1
 
-CMD ["./brika", "start"]
+CMD ["./brika", "start", "--foreground"]
