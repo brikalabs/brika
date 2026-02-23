@@ -35,7 +35,7 @@ export function LogSearchBar({
   const { t } = useLocale();
   const [searchInput, setSearchInput] = useState(search);
 
-  const handleSearchSubmit = (e: React.FormEvent) => {
+  const handleSearchSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     onSearchChange(searchInput);
   };

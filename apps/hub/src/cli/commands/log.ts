@@ -93,7 +93,7 @@ function queryDb(filters: Filters, limit: number): LogEvent[] {
     .all(...vals, limit) as LogRow[];
 
   db.close();
-  return rows.reverse().map(rowToEvent);
+  return rows.toReversed().map(rowToEvent);
 }
 
 function clearDb(): number {

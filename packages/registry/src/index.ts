@@ -29,7 +29,7 @@ export function canonicalize(value: unknown): string {
 	}
 
 	const sorted = Object.keys(value as Record<string, unknown>)
-		.sort()
+		.sort((a, b) => a.localeCompare(b))
 		.filter((k) => (value as Record<string, unknown>)[k] !== undefined);
 
 	const pairs = sorted.map((k) => `${JSON.stringify(k)}:${canonicalize((value as Record<string, unknown>)[k])}`);

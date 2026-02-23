@@ -265,7 +265,7 @@ function WorkflowEditorWithBlocks({
 
   // Get block schema for selected node
   const selectedBlockSchema = useMemo(() => {
-    if (!selectedNode || selectedNode.type !== 'block') return undefined;
+    if (selectedNode?.type !== 'block') return undefined;
     const blockData = selectedNode.data as unknown as BlockNodeData;
     const blockType = blockData.type || '';
     return blockSchemaMap[blockType]?.schema;

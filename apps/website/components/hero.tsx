@@ -1,4 +1,5 @@
-import { ArrowDown, Github, Sparkles } from 'lucide-react';
+import { ArrowDown, Sparkles } from 'lucide-react';
+import { GithubIcon } from './ui/github-icon';
 import { github } from '@/lib/config';
 
 export function Hero() {
@@ -45,7 +46,7 @@ export function Hero() {
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-6 py-3 text-sm font-semibold transition-colors hover:bg-muted"
           >
-            <Github className="size-4" />
+            <GithubIcon className="size-4" />
             GitHub
           </a>
         </div>

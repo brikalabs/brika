@@ -15,19 +15,8 @@ function generateGlobalHelp(commands: Command[], prefix: string): string {
     .map((cmd) => `  ${pc.green(cmd.name.padEnd(12))} ${cmd.description}`)
     .join('\n');
 
-  if (prefix !== 'brika') {
+  if (prefix === 'brika') {
     return `
-${pc.bold(pc.cyan(prefix))}
-
-${pc.bold('Usage:')}
-  ${prefix} <command> [args]
-
-${pc.bold('Commands:')}
-${commandsSection}
-`.trim();
-  }
-
-  return `
 ${pc.bold(pc.cyan('brika'))} - Build. Run. Integrate. Keep Automating.
 
 ${pc.bold('Usage:')}
@@ -43,6 +32,17 @@ ${pc.bold('Examples:')}
 
 ${pc.dim('v' + hub.version + ' | ' + HUB_REPO_URL)}
 `.trim();
+  }
+
+  return `
+${pc.bold(pc.cyan(prefix))}
+
+${pc.bold('Usage:')}
+  ${prefix} <command> [args]
+
+${pc.bold('Commands:')}
+${commandsSection}
+`.trim();
 }
 
 function generateCommandHelp(cmd: Command, prefix: string): string {
@@ -50,9 +50,11 @@ function generateCommandHelp(cmd: Command, prefix: string): string {
   if (cmd.options) {
     const flags = Object.entries(cmd.options)
       .map(([key, opt]) => {
-        const nameStr = `${opt.short ? `-${opt.short}, ` : ''}--${key}`;
+        const shortPrefix = opt.short ? `-${opt.short}, ` : '';
+        const nameStr = `${shortPrefix}--${key}`;
         const desc = opt.description ?? '';
-        const def = opt.default !== undefined ? pc.dim(` (default: ${opt.default})`) : '';
+        const defaultLabel = ` (default: ${opt.default})`;
+        const def = opt.default === undefined ? '' : pc.dim(defaultLabel);
         return `  ${pc.green(nameStr.padEnd(20))} ${desc}${def}`;
       })
       .join('\n');

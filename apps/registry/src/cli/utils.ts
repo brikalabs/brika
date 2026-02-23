@@ -49,3 +49,13 @@ export function verifyPluginSignature(
 export function parseTags(input: string): string[] {
 	return input.split(',').map((t) => t.trim()).filter(Boolean);
 }
+
+/** Hint text for plugin source options. */
+const sourceHints: Record<string, string> = {
+	npm: 'npmjs.com registry',
+	github: 'GitHub repository',
+};
+
+export function sourceHint(src: string): string {
+	return sourceHints[src] ?? 'Direct URL';
+}

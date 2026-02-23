@@ -9,7 +9,7 @@ interface CopyButtonProps {
   className?: string;
 }
 
-export function CopyButton({ value, className }: CopyButtonProps) {
+export function CopyButton({ value, className }: Readonly<CopyButtonProps>) {
   const [copied, setCopied] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 

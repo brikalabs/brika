@@ -82,7 +82,7 @@ const initialLayout: LayoutItem[] = [
   { i: 'lights', x: 0, y: 2, w: 2, h: 1 },
 ];
 
-function BrickCard({ brick }: { brick: Brick }) {
+function BrickCard({ brick }: Readonly<{ brick: Brick }>) {
   return (
     <div className="group flex h-full flex-col rounded-xl corner-squircle border border-border bg-surface p-3 transition-shadow hover:shadow-md">
       <div className="drag-handle flex cursor-grab items-center gap-1.5 active:cursor-grabbing">
@@ -157,15 +157,15 @@ export function Bricks() {
             </p>
             <ul className="mt-6 space-y-2 text-sm text-muted-foreground">
               <li className="flex items-center gap-2">
-                <span className="size-1.5 rounded-full bg-primary" />
+                <span className="size-1.5 rounded-full bg-primary" />{' '}
                 Drag-and-drop grid layout
               </li>
               <li className="flex items-center gap-2">
-                <span className="size-1.5 rounded-full bg-primary" />
+                <span className="size-1.5 rounded-full bg-primary" />{' '}
                 Real-time data from plugins
               </li>
               <li className="flex items-center gap-2">
-                <span className="size-1.5 rounded-full bg-primary" />
+                <span className="size-1.5 rounded-full bg-primary" />{' '}
                 Interactive actions and controls
               </li>
             </ul>

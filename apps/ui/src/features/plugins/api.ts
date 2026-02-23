@@ -1,14 +1,13 @@
-import type { Plugin } from '@brika/plugin';
-import type { PreferenceDefinition } from '@brika/plugin';
+import type { Plugin, PreferenceDefinition } from '@brika/plugin';
+import { fetcher } from '@/lib/query';
+
+export type { Plugin } from '@brika/plugin';
 
 /** Plugin preferences with schema and current values */
 export interface PluginPreferences {
   schema: PreferenceDefinition[];
   values: Record<string, unknown>;
 }
-import { fetcher } from '@/lib/query';
-
-export type { Plugin } from '@brika/plugin';
 
 export interface MetricsSample {
   ts: number;

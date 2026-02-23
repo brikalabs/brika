@@ -13,8 +13,9 @@ export default defineCommand({
   description: 'Show version and platform info',
   examples: ['brika version', 'brika -v'],
   handler() {
+    const commitLabel = `(${commit})`;
     console.log(
-      `${pc.bold(pc.cyan('brika'))} ${pc.green('v' + hub.version)} ${pc.dim(`(${commit})`)}`
+      `${pc.bold(pc.cyan('brika'))} ${pc.green('v' + hub.version)} ${pc.dim(commitLabel)}`
     );
     console.log();
     console.log(`  ${pc.dim('Platform:')}  ${process.platform}/${process.arch}`);

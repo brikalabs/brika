@@ -100,7 +100,7 @@ export function generateCompletions(commands: Command[], shell: Shell): string {
 
 // ── shared ───────────────────────────────────────────────────────────────────
 
-const esc = (s: string) => s.replace(/'/g, "'\\''");
+const esc = (s: string) => s.replaceAll("'", "'\\''");
 const userCmds = (list: Command[]) => list.filter((c) => c.name !== 'help');
 const nameList = (list: Command[]) => [...userCmds(list).map((c) => c.name), 'help'].join(' ');
 const flags = (opts: Record<string, CommandOption>) =>

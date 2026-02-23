@@ -17,11 +17,11 @@ export function Terminal({
   actions,
   children,
   className,
-}: {
+}: Readonly<{
   actions?: ReactNode;
   children: ReactNode;
   className?: string;
-}) {
+}>) {
   return (
     <div
       className={cn(
@@ -40,7 +40,7 @@ export function Terminal({
   );
 }
 
-export function Line({ prompt = '$', children }: { prompt?: string; children: ReactNode }) {
+export function Line({ prompt = '$', children }: Readonly<{ prompt?: string; children: ReactNode }>) {
   return (
     <div className="flex items-start gap-2">
       <span className="select-none text-muted-foreground">{prompt}</span>
@@ -49,7 +49,7 @@ export function Line({ prompt = '$', children }: { prompt?: string; children: Re
   );
 }
 
-export function Comment({ children }: { children: ReactNode }) {
+export function Comment({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <div className="select-none" style={{ color: 'var(--comment)' }}>
       {children}
@@ -57,10 +57,10 @@ export function Comment({ children }: { children: ReactNode }) {
   );
 }
 
-export function Cmd({ children }: { children: ReactNode }) {
+export function Cmd({ children }: Readonly<{ children: ReactNode }>) {
   return <span style={{ color: 'var(--cmd)' }}>{children}</span>;
 }
 
-export function Flag({ children }: { children: ReactNode }) {
+export function Flag({ children }: Readonly<{ children: ReactNode }>) {
   return <span className="text-muted-foreground">{children}</span>;
 }

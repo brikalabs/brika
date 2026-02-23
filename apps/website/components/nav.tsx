@@ -1,6 +1,7 @@
 'use client';
 
-import { BookOpen, Github } from 'lucide-react';
+import { BookOpen } from 'lucide-react';
+import { GithubIcon } from './ui/github-icon';
 import { useEffect, useState } from 'react';
 import { github, site } from '@/lib/config';
 import { cn } from '@/lib/utils';
@@ -28,7 +29,7 @@ export function Nav() {
       )}
     >
       <nav className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-        <a href="#" className="group flex items-center gap-2">
+        <a href="#top" className="group flex items-center gap-2">
           <div className="flex size-7 items-center justify-center rounded-lg corner-squircle bg-primary text-[10px] font-black text-primary-foreground">
             B
           </div>
@@ -52,7 +53,7 @@ export function Nav() {
             aria-label="GitHub"
             className={iconLink}
           >
-            <Github className="size-4" />
+            <GithubIcon className="size-4" />
           </a>
           <div className="ml-1 h-5 w-px bg-border" />
           <ThemeToggle />

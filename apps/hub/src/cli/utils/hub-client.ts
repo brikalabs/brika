@@ -22,7 +22,8 @@ export async function hubFetchOk(path: string, init?: RequestInit): Promise<Resp
   const res = await hubFetch(path, init);
   if (!res.ok) {
     const body = await res.text();
-    throw new CliError(`${pc.red('Error')} — ${body || `hub returned ${res.status}`}`);
+    const detail = body || `hub returned ${res.status}`;
+    throw new CliError(`${pc.red('Error')} — ${detail}`);
   }
   return res;
 }

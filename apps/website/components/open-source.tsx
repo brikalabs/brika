@@ -1,4 +1,5 @@
-import { Github, Heart } from 'lucide-react';
+import { Heart } from 'lucide-react';
+import { GithubIcon } from './ui/github-icon';
 import { github } from '@/lib/config';
 import { AnimatedSection } from './ui/animated-section';
 
@@ -33,7 +34,7 @@ export function OpenSource() {
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-6 py-3 text-sm font-semibold transition-all hover:bg-muted hover:shadow-lg hover:shadow-primary/5"
             >
-              <Github className="size-4" />
+              <GithubIcon className="size-4" />
               View on GitHub
             </a>
           </div>

@@ -19,7 +19,7 @@
 
 import { parseArgs } from 'node:util';
 import pc from 'picocolors';
-import { printAvailableCommands, runCommand } from './src/cli/index';
+import { runCommand } from './src/cli/index';
 
 const HELP = `
 ${pc.bold('registry-cli')} — Brika Verified Plugins Registry Manager

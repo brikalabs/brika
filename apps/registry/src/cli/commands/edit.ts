@@ -1,7 +1,7 @@
 import * as p from '@clack/prompts';
 import pc from 'picocolors';
 import type { Command } from '../index';
-import { autoSign, parseTags } from '../utils';
+import { autoSign, parseTags, sourceHint } from '../utils';
 import { PluginCategory, PluginSource } from '../../schema';
 import {
 	modifyRegistry,
@@ -81,7 +81,7 @@ export const edit: Command = {
 						options: PluginSource.options.map((src) => ({
 							value: src,
 							label: src,
-							hint: src === 'npm' ? 'npmjs.com registry' : src === 'github' ? 'GitHub repository' : 'Direct URL',
+							hint: sourceHint(src),
 						})),
 						initialValue: plugin.source as string,
 					}),

@@ -15,7 +15,7 @@ export function folderTarPlugin(): BunPlugin {
     name: 'folder-tar',
     setup(build) {
       build.onLoad({ filter: /\.tar(?:\0)?$/ }, async ({ path }) => {
-        const normalizedPath = path.replace(/\0/g, '');
+        const normalizedPath = path.replaceAll('\0', '');
         const folderPath = normalizedPath.endsWith('.tar')
           ? normalizedPath.slice(0, -4)
           : normalizedPath;

@@ -109,8 +109,9 @@ export function createCli(config?: CliConfig): Cli {
         const first = argv[0] ?? '';
         const command = map.get(first || defaultCommand);
         if (!command) {
+          const helpCmd = `${prefix} help`;
           throw new CliError(
-            `${pc.red('Unknown command:')} ${first}\nRun ${pc.cyan(`${prefix} help`)} for usage.`,
+            `${pc.red('Unknown command:')} ${first}\nRun ${pc.cyan(helpCmd)} for usage.`,
           );
         }
 

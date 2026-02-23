@@ -26,8 +26,8 @@ export interface KeyPair {
 /** Generate a new Ed25519 key pair. */
 export function generateKeys(): KeyPair {
 	const { privateKey, publicKey } = generateKeyPairSync('ed25519');
-	const privateKeyPem = privateKey.export({ type: 'pkcs8', format: 'pem' }) as string;
-	const publicKeyPem = publicKey.export({ type: 'spki', format: 'pem' }) as string;
+	const privateKeyPem = privateKey.export({ type: 'pkcs8', format: 'pem' });
+	const publicKeyPem = publicKey.export({ type: 'spki', format: 'pem' });
 	const publicKeyDer = publicKey.export({ type: 'spki', format: 'der' });
 	const publicKeyBase64 = Buffer.from(publicKeyDer.subarray(SPKI_HEADER.length)).toString('base64');
 	return { privateKeyPem, publicKeyPem, publicKeyBase64 };

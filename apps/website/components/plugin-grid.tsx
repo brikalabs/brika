@@ -13,7 +13,7 @@ function formatDownloads(n: number) {
   return String(n);
 }
 
-function PluginIcon({ src, name }: { src: string; name: string }) {
+function PluginIcon({ src, name }: Readonly<{ src: string; name: string }>) {
   const [failed, setFailed] = useState(false);
 
   if (failed) {
@@ -36,7 +36,7 @@ function PluginIcon({ src, name }: { src: string; name: string }) {
   );
 }
 
-function PluginCard({ plugin }: { plugin: Plugin }) {
+function PluginCard({ plugin }: Readonly<{ plugin: Plugin }>) {
   return (
     <a
       href={`${npm.packageUrl}/${plugin.name}`}
@@ -70,7 +70,7 @@ function PluginCard({ plugin }: { plugin: Plugin }) {
   );
 }
 
-export function PluginGrid({ plugins }: { plugins: Plugin[] }) {
+export function PluginGrid({ plugins }: Readonly<{ plugins: Plugin[] }>) {
   const [expanded, setExpanded] = useState(false);
 
   const visible = expanded ? plugins : plugins.slice(0, VISIBLE_COUNT);

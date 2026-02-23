@@ -23,7 +23,7 @@ export type PluginSource = z.infer<typeof PluginSource>;
 /** A single verified plugin entry in the registry. */
 export const VerifiedPluginSchema = z.object({
 	name: z.string().regex(npmNamePattern, 'Must be a valid npm package name'),
-	verifiedAt: z.string().datetime(),
+	verifiedAt: z.iso.datetime(),
 	verifiedBy: z.string().min(1),
 	description: z.string().default(''),
 	tags: z.array(z.string()).default([]),
@@ -39,7 +39,7 @@ export type VerifiedPlugin = z.infer<typeof VerifiedPluginSchema>;
 export const VerifiedPluginsListSchema = z.object({
 	$schema: z.string().optional(),
 	version: z.string().regex(/^\d+\.\d+\.\d+$/),
-	lastUpdated: z.string().datetime(),
+	lastUpdated: z.iso.datetime(),
 	publicKey: z.string().optional(),
 	signature: z.string().optional(),
 	plugins: z.array(VerifiedPluginSchema),
@@ -59,7 +59,7 @@ export function extractPluginSignablePayload(
 		verifiedBy: plugin.verifiedBy,
 		description: plugin.description,
 		tags: plugin.tags,
-		...(plugin.minVersion !== undefined ? { minVersion: plugin.minVersion } : {}),
+		...(plugin.minVersion === undefined ? {} : { minVersion: plugin.minVersion }),
 		featured: plugin.featured,
 		category: plugin.category,
 		source: plugin.source,
@@ -76,7 +76,7 @@ export function extractRegistrySignablePayload(
 	return {
 		version: registry.version,
 		lastUpdated: registry.lastUpdated,
-		...(registry.publicKey !== undefined ? { publicKey: registry.publicKey } : {}),
+		...(registry.publicKey === undefined ? {} : { publicKey: registry.publicKey }),
 		plugins: registry.plugins,
 	};
 }

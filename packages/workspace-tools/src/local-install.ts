@@ -96,20 +96,22 @@ await cp(UI_SRC, join(BIN_DIR, 'ui'), { recursive: true });
 
 const inPath = process.env.PATH?.split(':').includes(BIN_DIR);
 
+function resolveRcFile(shell: string, isFish: boolean): string {
+  if (shell === 'zsh') return join(homedir(), '.zshrc');
+  if (shell === 'bash') {
+    return existsSync(join(homedir(), '.bash_profile'))
+      ? join(homedir(), '.bash_profile')
+      : join(homedir(), '.bashrc');
+  }
+  if (isFish) return join(homedir(), '.config/fish/config.fish');
+  return join(homedir(), '.profile');
+}
+
 if (!inPath) {
   const shell = basename(process.env.SHELL ?? 'sh');
   const isFish = shell === 'fish';
 
-  const rcFile =
-    shell === 'zsh'
-      ? join(homedir(), '.zshrc')
-      : shell === 'bash'
-        ? existsSync(join(homedir(), '.bash_profile'))
-          ? join(homedir(), '.bash_profile')
-          : join(homedir(), '.bashrc')
-        : isFish
-          ? join(homedir(), '.config/fish/config.fish')
-          : join(homedir(), '.profile');
+  const rcFile = resolveRcFile(shell, isFish);
 
   const alreadyInRc = existsSync(rcFile) && (await readFile(rcFile, 'utf8')).includes(BIN_DIR);
 
@@ -144,7 +146,8 @@ log(pc.dim(`${BIN_DIR}/${BINARY_NAME}`));
 
 if (!inPath) {
   console.log();
-  log(`Restart your shell or: ${pc.bold(`export PATH="${BIN_DIR}:$PATH"`)}`);
+  const exportCmd = `export PATH="${BIN_DIR}:$PATH"`;
+  log(`Restart your shell or: ${pc.bold(exportCmd)}`);
 }
 
 console.log();

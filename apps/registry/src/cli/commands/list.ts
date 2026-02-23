@@ -10,10 +10,12 @@ export const list: Command = {
 		const registry = readRegistry();
 
 		console.log();
+		const versionLabel = `(v${registry.version})`;
+		const updatedLabel = `Last updated: ${registry.lastUpdated}`;
 		console.log(
-			`  ${pc.bold('Brika Verified Plugins')} ${pc.dim(`(v${registry.version})`)}`,
+			`  ${pc.bold('Brika Verified Plugins')} ${pc.dim(versionLabel)}`,
 		);
-		console.log(`  ${pc.dim(`Last updated: ${registry.lastUpdated}`)}`);
+		console.log(`  ${pc.dim(updatedLabel)}`);
 		console.log();
 
 		if (registry.plugins.length === 0) {

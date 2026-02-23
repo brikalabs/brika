@@ -10,7 +10,7 @@ interface AnimatedSectionProps {
   id?: string;
 }
 
-export function AnimatedSection({ children, className, delay = 0, id }: AnimatedSectionProps) {
+export function AnimatedSection({ children, className, delay = 0, id }: Readonly<AnimatedSectionProps>) {
   const ref = useRef<HTMLElement>(null);
   const [visible, setVisible] = useState(false);
 
