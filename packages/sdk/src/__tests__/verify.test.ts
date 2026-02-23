@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { verifyPlugin } from '../verify-plugin';
+import { isRecord, readDependencyVersion, verifyPlugin } from '../verify-plugin';
 
 const VERIFY_SCRIPT = join(import.meta.dir, '..', 'verify.ts');
 // SDK version read from its own package.json — keep in sync
@@ -540,5 +540,108 @@ describe('verifyPlugin', () => {
     } finally {
       await cleanup();
     }
+  });
+});
+
+// ─── isRecord ─────────────────────────────────────────────────────────────────
+
+describe('isRecord', () => {
+  test('returns true for plain objects', () => {
+    expect(isRecord({})).toBe(true);
+    expect(isRecord({ a: 1, b: 'two' })).toBe(true);
+  });
+
+  test('returns true for arrays (arrays are objects)', () => {
+    expect(isRecord([])).toBe(true);
+    expect(isRecord([1, 2, 3])).toBe(true);
+  });
+
+  test('returns false for null', () => {
+    expect(isRecord(null)).toBe(false);
+  });
+
+  test('returns false for undefined', () => {
+    expect(isRecord(undefined)).toBe(false);
+  });
+
+  test('returns false for primitives', () => {
+    expect(isRecord(42)).toBe(false);
+    expect(isRecord('string')).toBe(false);
+    expect(isRecord(true)).toBe(false);
+    expect(isRecord(0)).toBe(false);
+    expect(isRecord('')).toBe(false);
+  });
+});
+
+// ─── readDependencyVersion ────────────────────────────────────────────────────
+
+describe('readDependencyVersion', () => {
+  test('returns version from dependencies', () => {
+    const raw = { dependencies: { '@brika/sdk': '^1.0.0' } };
+    expect(readDependencyVersion(raw, '@brika/sdk')).toBe('^1.0.0');
+  });
+
+  test('returns version from peerDependencies', () => {
+    const raw = { peerDependencies: { '@brika/sdk': '>=0.3.0' } };
+    expect(readDependencyVersion(raw, '@brika/sdk')).toBe('>=0.3.0');
+  });
+
+  test('returns version from devDependencies', () => {
+    const raw = { devDependencies: { '@brika/sdk': 'workspace:*' } };
+    expect(readDependencyVersion(raw, '@brika/sdk')).toBe('workspace:*');
+  });
+
+  test('prefers dependencies over peerDependencies', () => {
+    const raw = {
+      dependencies: { '@brika/sdk': '^1.0.0' },
+      peerDependencies: { '@brika/sdk': '^2.0.0' },
+    };
+    expect(readDependencyVersion(raw, '@brika/sdk')).toBe('^1.0.0');
+  });
+
+  test('prefers peerDependencies over devDependencies', () => {
+    const raw = {
+      peerDependencies: { '@brika/sdk': '^2.0.0' },
+      devDependencies: { '@brika/sdk': '^3.0.0' },
+    };
+    expect(readDependencyVersion(raw, '@brika/sdk')).toBe('^2.0.0');
+  });
+
+  test('returns null when package is not found in any dependency map', () => {
+    const raw = {
+      dependencies: { lodash: '^4.0.0' },
+      peerDependencies: { react: '^18.0.0' },
+    };
+    expect(readDependencyVersion(raw, '@brika/sdk')).toBeNull();
+  });
+
+  test('returns null when no dependency fields exist', () => {
+    const raw = { name: 'my-package', version: '1.0.0' };
+    expect(readDependencyVersion(raw, '@brika/sdk')).toBeNull();
+  });
+
+  test('returns null for non-object input', () => {
+    expect(readDependencyVersion(null, '@brika/sdk')).toBeNull();
+    expect(readDependencyVersion(undefined, '@brika/sdk')).toBeNull();
+    expect(readDependencyVersion('string', '@brika/sdk')).toBeNull();
+    expect(readDependencyVersion(42, '@brika/sdk')).toBeNull();
+  });
+
+  test('skips non-string version values', () => {
+    const raw = {
+      dependencies: { '@brika/sdk': 123 },
+      peerDependencies: { '@brika/sdk': true },
+      devDependencies: { '@brika/sdk': '^1.0.0' },
+    };
+    expect(readDependencyVersion(raw, '@brika/sdk')).toBe('^1.0.0');
+  });
+
+  test('skips non-object dependency maps', () => {
+    const raw = {
+      dependencies: 'not-an-object',
+      peerDependencies: null,
+      devDependencies: { '@brika/sdk': '^1.0.0' },
+    };
+    expect(readDependencyVersion(raw, '@brika/sdk')).toBe('^1.0.0');
   });
 });

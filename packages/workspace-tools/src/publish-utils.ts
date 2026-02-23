@@ -4,6 +4,7 @@
  */
 
 import { isObjectRecord } from './type-guards';
+import type { WorkspacePackage } from './workspace';
 
 export type { PackageDetails, PluginDetails } from './package-details';
 export { readPackageDetails } from './package-details';
@@ -16,6 +17,30 @@ export {
   getBinNames,
   getHooks,
 } from './package-preview';
+
+/** Returns true if the package lives under the plugins/ workspace directory. */
+export function isPluginPackage(pkg: WorkspacePackage): boolean {
+  return pkg.relativePath.startsWith('plugins/');
+}
+
+/**
+ * Coerces a raw `--filter` flag value into a string array.
+ * Handles `string`, `string[]`, and any other type (returns []).
+ */
+export function parseFilters(filter: unknown): string[] {
+  if (typeof filter === 'string') return [filter];
+  if (!Array.isArray(filter)) return [];
+  return filter.filter((entry): entry is string => typeof entry === 'string');
+}
+
+/**
+ * Gets a value from a Map, throwing with the given message if absent.
+ */
+export function mustGet<K, V>(map: Map<K, V>, key: K, errorMessage: string): V {
+  const value = map.get(key);
+  if (value === undefined) throw new Error(errorMessage);
+  return value;
+}
 
 /**
  * Fetches the latest published version of a package from the npm registry.

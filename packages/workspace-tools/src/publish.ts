@@ -21,33 +21,20 @@ import {
   formatNpmHint,
   formatPackageLabel,
   formatPackagePreview,
+  isPluginPackage,
+  mustGet,
+  parseFilters,
   type PackageDetails,
   readPackageDetails,
 } from './publish-utils';
 import { getPrivateWorkspaceDependencyWarnings } from './publish-warnings';
 import { getPreviewWarnings, runVerifyForPackages } from './verify-runner';
-import { discoverPackages, filterPackages, type WorkspacePackage } from './workspace';
+import { discoverPackages, filterPackages } from './workspace';
 
 const ROOT = process.cwd();
 
 const packageForms = { one: 'package', other: 'packages' };
 const pluginForms = { one: 'plugin', other: 'plugins' };
-
-function isPluginPackage(pkg: WorkspacePackage): boolean {
-  return pkg.relativePath.startsWith('plugins/');
-}
-
-function parseFilters(filter: unknown): string[] {
-  if (typeof filter === 'string') return [filter];
-  if (!Array.isArray(filter)) return [];
-  return filter.filter((entry): entry is string => typeof entry === 'string');
-}
-
-function mustGet<K, V>(map: Map<K, V>, key: K, errorMessage: string): V {
-  const value = map.get(key);
-  if (value === undefined) throw new Error(errorMessage);
-  return value;
-}
 
 const HELP = `
 ${pc.bold('workspace-tools')} — Interactive Workspace Publisher

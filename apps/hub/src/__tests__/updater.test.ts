@@ -4,7 +4,12 @@
 
 import { describe, expect, test } from 'bun:test';
 import { useBunMock } from '@brika/testing';
-import { checkForUpdate, isNewer } from '@/updater';
+import type { UpdateInfo } from '@/updater';
+import { checkForUpdate, isNewer, noUpdateInfo } from '@/updater';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// isNewer
+// ─────────────────────────────────────────────────────────────────────────────
 
 describe('isNewer', () => {
   test('returns true when latest has higher major', () => {
@@ -21,6 +26,10 @@ describe('isNewer', () => {
 
   test('returns false when versions are equal', () => {
     expect(isNewer('1.2.3', '1.2.3')).toBe(false);
+  });
+
+  test('returns false for 0.0.0 vs 0.0.0', () => {
+    expect(isNewer('0.0.0', '0.0.0')).toBe(false);
   });
 
   test('returns false when current is newer', () => {
@@ -42,18 +51,93 @@ describe('isNewer', () => {
     expect(isNewer('1.0', '1.0.1')).toBe(true);
     expect(isNewer('1.0.1', '1.0')).toBe(false);
   });
+
+  test('treats missing segments as zero', () => {
+    // 1.0 === 1.0.0, so 1.0.0 is not newer
+    expect(isNewer('1.0', '1.0.0')).toBe(false);
+    expect(isNewer('1.0.0', '1.0')).toBe(false);
+  });
+
+  test('handles single segment versions', () => {
+    expect(isNewer('1', '2')).toBe(true);
+    expect(isNewer('2', '1')).toBe(false);
+    expect(isNewer('1', '1')).toBe(false);
+  });
+
+  test('handles large version numbers', () => {
+    expect(isNewer('100.200.300', '100.200.301')).toBe(true);
+    expect(isNewer('100.200.300', '100.201.0')).toBe(true);
+    expect(isNewer('100.200.300', '101.0.0')).toBe(true);
+    expect(isNewer('100.200.300', '100.200.299')).toBe(false);
+  });
+
+  test('higher major wins even when minor/patch are lower', () => {
+    expect(isNewer('1.9.9', '2.0.0')).toBe(true);
+    expect(isNewer('2.0.0', '1.9.9')).toBe(false);
+  });
+
+  test('higher minor wins even when patch is lower', () => {
+    expect(isNewer('1.0.9', '1.1.0')).toBe(true);
+    expect(isNewer('1.1.0', '1.0.9')).toBe(false);
+  });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// noUpdateInfo
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('noUpdateInfo', () => {
+  test('returns correct shape with no update available', async () => {
+    const { hub } = await import('@/hub');
+    const info = noUpdateInfo();
+
+    expect(info).toEqual({
+      currentVersion: hub.version,
+      latestVersion: hub.version,
+      updateAvailable: false,
+      releaseUrl: '',
+      releaseNotes: '',
+      publishedAt: '',
+      assetName: null,
+      assetSize: null,
+    } satisfies UpdateInfo);
+  });
+
+  test('uses the actual hub version as both current and latest', async () => {
+    const { hub } = await import('@/hub');
+    const info = noUpdateInfo();
+
+    expect(info.currentVersion).toBe(hub.version);
+    expect(info.latestVersion).toBe(hub.version);
+  });
+
+  test('returns a fresh object each call', () => {
+    const a = noUpdateInfo();
+    const b = noUpdateInfo();
+    expect(a).toEqual(b);
+    expect(a).not.toBe(b);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// checkForUpdate
+// ─────────────────────────────────────────────────────────────────────────────
 
 function mockGitHubRelease(
   bun: ReturnType<typeof useBunMock>,
   tagName: string,
-  assetName?: string
+  options?: {
+    assetName?: string;
+    body?: string;
+    publishedAt?: string;
+    htmlUrl?: string;
+  }
 ) {
-  const asset = assetName
+  const asset = options?.assetName
     ? [
         {
-          name: assetName,
-          browser_download_url: `https://example.com/${assetName}`,
+          name: options.assetName,
+          browser_download_url: `https://example.com/${options.assetName}`,
           size: 1024 * 1024 * 10,
         },
       ]
@@ -64,9 +148,11 @@ function mockGitHubRelease(
       new Response(
         JSON.stringify({
           tag_name: tagName,
-          published_at: '2026-01-01T00:00:00Z',
-          html_url: `https://github.com/maxscharwath/brika/releases/tag/${tagName}`,
-          body: 'Release notes',
+          published_at: options?.publishedAt ?? '2026-01-01T00:00:00Z',
+          html_url:
+            options?.htmlUrl ??
+            `https://github.com/maxscharwath/brika/releases/tag/${tagName}`,
+          body: options?.body ?? 'Release notes',
           assets: asset,
         }),
         { status: 200, headers: { 'Content-Type': 'application/json' } }
@@ -112,7 +198,7 @@ describe('checkForUpdate', () => {
     const ext = process.platform === 'win32' ? '.zip' : '.tar.gz';
     const assetName = `brika-${os}-${process.arch}${ext}`;
 
-    mockGitHubRelease(bun, 'v99.0.0', assetName);
+    mockGitHubRelease(bun, 'v99.0.0', { assetName });
 
     const info = await checkForUpdate();
 
@@ -133,5 +219,99 @@ describe('checkForUpdate', () => {
     }
     expect(caughtError).toBeInstanceOf(Error);
     expect((caughtError as Error).message).toContain('GitHub API returned 404');
+  });
+
+  test('throws on network error', async () => {
+    bun.fetch(() => Promise.reject(new TypeError('fetch failed')));
+
+    await expect(checkForUpdate()).rejects.toThrow('fetch failed');
+  });
+
+  test('strips v-prefix from tag_name in latestVersion', async () => {
+    mockGitHubRelease(bun, 'v3.2.1');
+
+    const info = await checkForUpdate();
+
+    expect(info.latestVersion).toBe('3.2.1');
+  });
+
+  test('passes through releaseNotes from GitHub body', async () => {
+    mockGitHubRelease(bun, 'v99.0.0', { body: '## Changelog\n- Fixed bugs' });
+
+    const info = await checkForUpdate();
+
+    expect(info.releaseNotes).toBe('## Changelog\n- Fixed bugs');
+  });
+
+  test('returns empty string for releaseNotes when body is null', async () => {
+    bun.fetch(() =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({
+            tag_name: 'v99.0.0',
+            published_at: '2026-01-01T00:00:00Z',
+            html_url: 'https://github.com/maxscharwath/brika/releases/tag/v99.0.0',
+            body: null,
+            assets: [],
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
+      )
+    );
+
+    const info = await checkForUpdate();
+
+    expect(info.releaseNotes).toBe('');
+  });
+
+  test('passes through publishedAt and releaseUrl', async () => {
+    const publishedAt = '2026-06-15T12:30:00Z';
+    const htmlUrl = 'https://github.com/maxscharwath/brika/releases/tag/v99.0.0';
+
+    mockGitHubRelease(bun, 'v99.0.0', { publishedAt, htmlUrl });
+
+    const info = await checkForUpdate();
+
+    expect(info.publishedAt).toBe(publishedAt);
+    expect(info.releaseUrl).toBe(htmlUrl);
+  });
+
+  test('ignores assets that do not match the current platform', async () => {
+    // Use a fake asset name that doesn't match any real platform
+    mockGitHubRelease(bun, 'v99.0.0', { assetName: 'brika-fakeos-fakeArch.tar.gz' });
+
+    const info = await checkForUpdate();
+
+    expect(info.assetName).toBeNull();
+    expect(info.assetSize).toBeNull();
+  });
+
+  test('throws on server error status codes', async () => {
+    bun.fetch(() =>
+      Promise.resolve(
+        new Response('Internal Server Error', {
+          status: 500,
+          statusText: 'Internal Server Error',
+        })
+      )
+    );
+
+    let caughtError: unknown;
+    try {
+      await checkForUpdate();
+    } catch (e) {
+      caughtError = e;
+    }
+    expect(caughtError).toBeInstanceOf(Error);
+    expect((caughtError as Error).message).toContain('GitHub API returned 500');
+  });
+
+  test('returns updateAvailable=false when current version is ahead', async () => {
+    mockGitHubRelease(bun, 'v0.0.1');
+
+    const info = await checkForUpdate();
+
+    // The current hub version should be >= 0.0.1 in any realistic scenario
+    expect(info.updateAvailable).toBe(false);
   });
 });

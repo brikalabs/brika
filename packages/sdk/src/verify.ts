@@ -13,7 +13,7 @@
 
 import { resolve } from 'node:path';
 import pc from 'picocolors';
-import { isRecord, verifyPlugin } from './verify-plugin';
+import { isRecord, readDependencyVersion, verifyPlugin } from './verify-plugin';
 
 const args = process.argv.slice(2);
 const jsonOutput = args.includes('--json');
@@ -28,17 +28,6 @@ async function readVersion(pkgJsonPath: string | URL): Promise<string | null> {
   } catch {
     return null;
   }
-}
-
-function readDependencyVersion(raw: unknown, packageName: string): string | null {
-  if (!isRecord(raw)) return null;
-  const candidates = [raw.dependencies, raw.peerDependencies, raw.devDependencies];
-  for (const deps of candidates) {
-    if (!isRecord(deps)) continue;
-    const value = deps[packageName];
-    if (typeof value === 'string') return value;
-  }
-  return null;
 }
 
 async function readPluginSdkSpec(fromDir: string): Promise<string | null> {

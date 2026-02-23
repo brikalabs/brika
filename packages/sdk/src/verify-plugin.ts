@@ -16,6 +16,22 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === 'object';
 }
 
+/**
+ * Reads a dependency version specifier from a raw package.json object.
+ * Searches dependencies, peerDependencies, devDependencies in order.
+ * Returns null if the package is not found in any dependency map.
+ */
+export function readDependencyVersion(raw: unknown, packageName: string): string | null {
+  if (!isRecord(raw)) return null;
+  const candidates = [raw.dependencies, raw.peerDependencies, raw.devDependencies];
+  for (const deps of candidates) {
+    if (!isRecord(deps)) continue;
+    const value = deps[packageName];
+    if (typeof value === 'string') return value;
+  }
+  return null;
+}
+
 export interface VerifyResult {
   name: string;
   version: string;
