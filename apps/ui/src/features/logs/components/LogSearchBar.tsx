@@ -1,6 +1,5 @@
 import { Search, X } from "lucide-react";
-import type React from "react";
-import { useState } from "react";
+import { type FormEvent, useState } from "react";
 import {
   Button,
   Input,
@@ -35,7 +34,7 @@ export function LogSearchBar({
   const { t } = useLocale();
   const [searchInput, setSearchInput] = useState(search);
 
-  const handleSearchSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSearchSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     onSearchChange(searchInput);
   };

@@ -1,6 +1,6 @@
 import { readFile, rm } from 'node:fs/promises';
+export { PID_FILE } from '@/runtime/bootstrap/plugins/pid';
 import { PID_FILE } from '@/runtime/bootstrap/plugins/pid';
-export { PID_FILE };
 
 export type PidStatus =
   | { state: 'running'; pid: number }

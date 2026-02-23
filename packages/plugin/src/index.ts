@@ -10,6 +10,7 @@
 
 export * from './manifests';
 export * from './preferences';
+export * from './store';
 
 import type {
   BlockManifest,
