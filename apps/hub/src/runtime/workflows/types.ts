@@ -4,7 +4,7 @@
  * Local type definitions for the automation engine.
  */
 
-import type { Json } from '@brika/shared';
+import type { Json } from '@/types';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Workflow Block

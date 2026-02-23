@@ -3,5 +3,5 @@
   "compilerOptions": {
     "resolveJsonModule": true
   },
-  "include": ["src", "worker.ts", "verified-plugins.json"]
+  "include": ["src", "worker.ts", "cli.ts", "verified-plugins.json"]
 }

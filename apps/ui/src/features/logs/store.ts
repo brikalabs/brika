@@ -1,4 +1,4 @@
-import type { LogLevel, LogSource } from "@brika/shared";
+import type { LogLevel, LogSource } from "./types";
 import { create } from "zustand";
 import type { StoredLogEvent } from "./api";
 

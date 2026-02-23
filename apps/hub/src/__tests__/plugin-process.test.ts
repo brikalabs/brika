@@ -4,8 +4,8 @@
 
 import 'reflect-metadata';
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
+import type { PluginHealth } from '@brika/plugin';
 import type { PluginPackageSchema } from '@brika/schema';
-import type { PluginHealth } from '@brika/shared';
 import {
   PluginProcess,
   type PluginProcessCallbacks,

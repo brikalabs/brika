@@ -1,6 +1,7 @@
 import { Database } from 'bun:sqlite';
 import { join } from 'node:path';
-import type { Json, LogEvent, LogLevel, LogSource } from '@brika/shared';
+import type { Json } from '@/types';
+import type { LogEvent, LogLevel, LogSource } from '@/runtime/logs/types';
 import pc from 'picocolors';
 import { defineCommand } from '../command';
 import { CliError } from '../errors';

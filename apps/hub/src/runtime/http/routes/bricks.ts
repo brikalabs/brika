@@ -1,5 +1,5 @@
 import { group, NotFound, route } from '@brika/router';
-import type { Json } from '@brika/shared';
+import type { Json } from '@/types';
 import { z } from 'zod';
 import { BrickInstanceManager, BrickTypeRegistry } from '@/runtime/bricks';
 import type { BrickInstance } from '@/runtime/bricks/brick-instance-manager';

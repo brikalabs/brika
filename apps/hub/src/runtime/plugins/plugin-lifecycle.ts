@@ -2,7 +2,7 @@ import { join } from 'node:path';
 import { inject, singleton } from '@brika/di';
 import { spawnPlugin } from '@brika/ipc';
 import type { LogLevelType } from '@brika/ipc/contract';
-import type { Plugin, PluginHealth } from '@brika/shared';
+import type { Plugin, PluginHealth } from '@brika/plugin';
 import { BunRunner, PluginManagerConfig } from '@/runtime/config';
 import { PluginActions } from '@/runtime/events/actions';
 import { EventSystem } from '@/runtime/events/event-system';

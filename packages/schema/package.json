@@ -21,7 +21,8 @@
     "dev": "bun run src/generate-schemas.ts --watch",
     "prepublishOnly": "bun run build",
     "release": "bun run scripts/publish.ts",
-    "tsc": "bunx --biome tsc --noEmit"
+    "tsc": "bunx --biome tsc --noEmit",
+    "test": "bun test"
   },
   "dependencies": {
     "zod": "^4.3.4"

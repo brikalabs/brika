@@ -5,7 +5,7 @@
 import 'reflect-metadata';
 import { describe, expect, mock, test } from 'bun:test';
 import { get, stub, useTestBed } from '@brika/di/testing';
-import type { Json } from '@brika/shared';
+import type { Json } from '@/types';
 import { BoardLoader } from '@/runtime/boards/board-loader';
 import { BoardService } from '@/runtime/boards/board-service';
 import type { Board, BoardBrickPlacement } from '@/runtime/boards/types';

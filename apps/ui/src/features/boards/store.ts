@@ -1,4 +1,4 @@
-import type { Json } from '@brika/shared';
+import type { Json } from '@/types';
 import type { ComponentNode, Mutation } from '@brika/ui-kit';
 import { applyMutations } from '@brika/ui-kit';
 import { create } from 'zustand';

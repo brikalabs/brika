@@ -7,8 +7,7 @@
 import { watch } from 'node:fs';
 import { basename, join } from 'node:path';
 import { inject, singleton } from '@brika/di';
-import type { Json } from '@brika/shared';
-import { nonEmptyRecord, PositionSchema } from '@brika/shared';
+import type { Json } from '@/types';
 import { parsePortRef } from '@brika/workflow';
 import { parse as parseYAML, stringify as stringifyYAML } from 'yaml';
 import { z } from 'zod';
@@ -17,6 +16,13 @@ import { Logger } from '@/runtime/logs/log-router';
 import { ensureAndScanYamlDir } from '@/runtime/utils/yaml-dir';
 import type { BlockConnection, Workflow, WorkflowBlock } from './types';
 import { WorkflowEngine } from './workflow-engine';
+
+const PositionSchema = z
+  .object({ x: z.number(), y: z.number() })
+  .transform((pos) => ({ x: Math.round(pos.x), y: Math.round(pos.y) }));
+
+const nonEmptyRecord = <T extends z.ZodTypeAny>(schema: T) =>
+  z.optional(schema).transform((val) => (val && Object.keys(val).length > 0 ? val : undefined));
 
 const YAML_OPTIONS = {
   indent: 2,

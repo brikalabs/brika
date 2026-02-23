@@ -5,7 +5,7 @@
 import 'reflect-metadata';
 import { describe, expect, test } from 'bun:test';
 import { get, stub, useTestBed } from '@brika/di/testing';
-import type { BrickFamily } from '@brika/shared';
+import type { BrickFamily } from '@brika/plugin';
 import { BrickTypeRegistry } from '@/runtime/bricks/brick-type-registry';
 import { Logger } from '@/runtime/logs/log-router';
 

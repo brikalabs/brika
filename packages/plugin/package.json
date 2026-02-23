@@ -1,0 +1,23 @@
+{
+  "name": "@brika/plugin",
+  "version": "0.3.0",
+  "description": "Core plugin runtime types and port compatibility for BRIKA",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/maxscharwath/brika.git",
+    "directory": "packages/plugin"
+  },
+  "keywords": ["brika", "plugin", "types"],
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "tsc": "bunx --bun tsc --noEmit",
+    "test": "bun test"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.9"
+  }
+}

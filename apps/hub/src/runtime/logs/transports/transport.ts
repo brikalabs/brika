@@ -1,4 +1,4 @@
-import type { LogEvent } from "@brika/shared";
+import type { LogEvent } from "../types";
 
 /**
  * Transport interface for routing log events to different destinations.

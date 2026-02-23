@@ -3,7 +3,7 @@
  */
 
 import { inject, singleton } from '@brika/di';
-import type { PreferenceDefinition } from '@brika/shared';
+import type { PreferenceDefinition } from '@brika/plugin';
 import { z } from 'zod';
 import { ConfigLoader } from '@/runtime/config';
 import { StateStore } from '@/runtime/state/state-store';

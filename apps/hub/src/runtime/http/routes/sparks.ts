@@ -1,5 +1,5 @@
 import { group, NotFound, route } from '@brika/router';
-import type { Json } from '@brika/shared';
+import type { Json } from '@/types';
 import { z } from 'zod';
 import { SparkActions } from '@/runtime/events/actions';
 import { EventSystem } from '@/runtime/events/event-system';

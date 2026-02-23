@@ -1,4 +1,4 @@
-import type { StorePlugin } from '@brika/shared';
+import type { StorePlugin } from '../types';
 import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
 

@@ -6,8 +6,27 @@
 
 import { inject, singleton } from '@brika/di';
 import type { BlockDefinition } from '@brika/sdk';
-import type { BlockSummary } from '@brika/shared';
-import { arePortTypesCompatible } from '@brika/shared';
+import { arePortTypesCompatible } from '@brika/plugin';
+
+/** Runtime block info (includes ports from running plugin) */
+export interface BlockSummary {
+  /** Full block ID (e.g., "@brika/blocks-builtin:condition") */
+  id: string;
+  /** Display name */
+  name?: string;
+  /** Block description */
+  description?: string;
+  /** Block category */
+  category?: 'trigger' | 'flow' | 'action' | 'transform';
+  /** Lucide icon name */
+  icon?: string;
+  /** Hex color */
+  color?: string;
+  /** Input ports */
+  inputs?: Array<{ id: string; name: string; typeName?: string }>;
+  /** Output ports */
+  outputs?: Array<{ id: string; name: string; typeName?: string }>;
+}
 import { Logger } from '@/runtime/logs/log-router';
 
 // ─────────────────────────────────────────────────────────────────────────────

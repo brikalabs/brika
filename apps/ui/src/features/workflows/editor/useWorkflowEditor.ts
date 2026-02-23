@@ -1,4 +1,4 @@
-import { arePortTypesCompatible } from '@brika/shared';
+import { arePortTypesCompatible } from '@brika/plugin';
 import {
   addEdge,
   type Connection,

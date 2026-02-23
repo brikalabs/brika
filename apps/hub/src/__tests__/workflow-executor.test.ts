@@ -5,7 +5,7 @@
 import 'reflect-metadata';
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { reset, stub, useTestBed } from '@brika/di/testing';
-import type { Json } from '@brika/shared';
+import type { Json } from '@/types';
 import { BlockRegistry } from '@/runtime/blocks';
 import { PluginManager } from '@/runtime/plugins/plugin-manager';
 import type { Workflow } from '@/runtime/workflows/types';

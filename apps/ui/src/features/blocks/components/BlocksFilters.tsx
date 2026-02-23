@@ -1,4 +1,4 @@
-import type { Plugin } from '@brika/shared';
+import type { Plugin } from '@brika/plugin';
 import { Filter, Plug, Search, X } from 'lucide-react';
 import {
   Avatar,

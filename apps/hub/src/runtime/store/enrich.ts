@@ -1,4 +1,4 @@
-import type { PluginSearchResult } from '@brika/shared';
+import type { PluginSearchResult } from './types';
 import { checkCompatibility } from '@/runtime/utils/compatibility';
 import type { RawRegistryPlugin } from './sources/registry-source';
 

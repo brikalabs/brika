@@ -7,7 +7,7 @@
  */
 
 import { inject, singleton } from '@brika/di';
-import type { Json } from '@brika/shared';
+import type { Json } from '@/types';
 import { BrickInstanceManager, BrickTypeRegistry } from '@/runtime/bricks';
 import { BoardActions, BrickActions } from '@/runtime/events/actions';
 import { EventSystem } from '@/runtime/events/event-system';

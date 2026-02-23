@@ -5,7 +5,7 @@
 import 'reflect-metadata';
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 import { get, reset, useTestBed } from '@brika/di/testing';
-import type { LogEvent, LogSource } from '@brika/shared';
+import type { LogEvent, LogSource } from '@/runtime/logs/types';
 import { Logger, ScopedLogger } from '@/runtime/logs/log-router';
 
 useTestBed({ autoStub: false });

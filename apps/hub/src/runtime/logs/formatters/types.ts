@@ -1,4 +1,4 @@
-import type { LogEvent } from "@brika/shared";
+import type { LogEvent } from "../types";
 
 /**
  * Formatter transforms a LogEvent into a string for output.

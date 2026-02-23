@@ -6,7 +6,7 @@ import 'reflect-metadata';
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 import { join } from 'node:path';
 import { get, provide, stub, useTestBed } from '@brika/di/testing';
-import type { Plugin, PluginHealth } from '@brika/shared';
+import type { Plugin, PluginHealth } from '@brika/plugin';
 import { PluginManagerConfig } from '@/runtime/config';
 import { EventSystem } from '@/runtime/events/event-system';
 import { I18nService } from '@/runtime/i18n';

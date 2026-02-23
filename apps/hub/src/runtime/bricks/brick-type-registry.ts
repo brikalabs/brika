@@ -6,7 +6,7 @@
  */
 
 import { inject, singleton } from '@brika/di';
-import type { BrickFamily, PreferenceDefinition } from '@brika/shared';
+import type { BrickFamily, PreferenceDefinition } from '@brika/plugin';
 import { Logger } from '@/runtime/logs/log-router';
 
 // ─────────────────────────────────────────────────────────────────────────────

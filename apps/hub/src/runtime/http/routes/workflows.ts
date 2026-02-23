@@ -1,9 +1,16 @@
 import { BadRequest, createSSEStream, group, route } from '@brika/router';
-import { nonEmptyRecord, PositionSchema } from '@brika/shared';
+import type { Json } from '@/types';
 import { z } from 'zod';
 import { BlockRegistry } from '@/runtime/blocks';
 import { WorkflowEngine, WorkflowLoader } from '@/runtime/workflows';
 import { getOrThrow } from '../utils/resource-helpers';
+
+const PositionSchema = z
+  .object({ x: z.number(), y: z.number() })
+  .transform((pos) => ({ x: Math.round(pos.x), y: Math.round(pos.y) }));
+
+const nonEmptyRecord = <T extends z.ZodTypeAny>(schema: T) =>
+  z.optional(schema).transform((val) => (val && Object.keys(val).length > 0 ? val : undefined));
 
 const blockSchema = z.object({
   id: z.string(),
@@ -54,7 +61,7 @@ export const workflowsRoutes = group('/api/workflows', [
       blocks: body.blocks.map((b) => ({
         id: b.id,
         type: b.type,
-        config: b.config as Record<string, import('@brika/shared').Json> | undefined,
+        config: b.config as Record<string, Json> | undefined,
         position: b.position,
       })),
       connections,

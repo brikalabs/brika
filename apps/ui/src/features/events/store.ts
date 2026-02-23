@@ -1,4 +1,4 @@
-import type { BrikaEvent } from '@brika/shared';
+import type { BrikaEvent } from './types';
 import { create } from 'zustand';
 
 interface EventsStore {

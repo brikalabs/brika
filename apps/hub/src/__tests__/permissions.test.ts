@@ -11,7 +11,7 @@ import {
   PERMISSION_LIST,
   PERMISSIONS,
   type Permission,
-} from '@brika/shared';
+} from '@brika/permissions';
 
 describe('Permission System', () => {
   describe('isValidPermission', () => {
@@ -69,7 +69,7 @@ describe('Permission System', () => {
 
     test('all entries have consistent id', () => {
       for (const def of PERMISSION_LIST) {
-        expect(PERMISSIONS[def.id]).toBe(def);
+        expect(PERMISSIONS[def.id as Permission]).toBe(def);
       }
     });
 

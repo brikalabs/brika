@@ -1,4 +1,5 @@
-import type { Json, LogError, LogEvent, LogLevel } from "@brika/shared";
+import type { Json } from "@/types";
+import type { LogError, LogEvent, LogLevel } from "../types";
 import { format } from "date-fns";
 import pc from "picocolors";
 import type { Formatter, TerminalFormatterOptions } from "./types";

@@ -1,4 +1,4 @@
-import type { CompatibilityResult } from '@brika/shared';
+import type { CompatibilityResult } from '@/runtime/store/types';
 import { HUB_VERSION } from '@/hub';
 import * as semver from './semver';
 

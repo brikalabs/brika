@@ -1,4 +1,4 @@
-import type { Plugin } from '@brika/shared';
+import type { Plugin } from '@brika/plugin';
 import { Link } from '@tanstack/react-router';
 import { ArrowRight, Boxes, LayoutDashboard, Plug, Zap } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage, Badge, Card } from '@/components/ui';

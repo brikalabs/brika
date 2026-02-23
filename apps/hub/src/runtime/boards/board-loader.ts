@@ -8,7 +8,7 @@
 import { watch } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import { inject, singleton } from '@brika/di';
-import type { Json } from '@brika/shared';
+import type { Json } from '@/types';
 import { parse as parseYAML, stringify as stringifyYAML } from 'yaml';
 import { z } from 'zod';
 import { Logger } from '@/runtime/logs/log-router';

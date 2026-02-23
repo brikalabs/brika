@@ -1,4 +1,4 @@
-import type { LogSource } from "@brika/shared";
+import type { LogSource } from "../types";
 import { Badge } from "@/components/ui";
 import { useLocale } from "@/lib/use-locale";
 

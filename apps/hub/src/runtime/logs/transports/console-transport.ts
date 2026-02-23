@@ -1,4 +1,4 @@
-import type { LogEvent, LogLevel } from "@brika/shared";
+import type { LogEvent, LogLevel } from "../types";
 import type { Formatter } from "../formatters/types";
 import type { Transport } from "./transport";
 

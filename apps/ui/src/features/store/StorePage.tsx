@@ -1,4 +1,4 @@
-import type { PluginSearchResult, StorePlugin } from '@brika/shared';
+import type { PluginSearchResult, StorePlugin } from './types';
 import { Package } from 'lucide-react';
 import React from 'react';
 import { useDataView } from '@/components/DataView';

@@ -5,7 +5,7 @@
 import 'reflect-metadata';
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 import { get, provide, stub, useTestBed } from '@brika/di/testing';
-import type { Plugin } from '@brika/shared';
+import type { Plugin } from '@brika/plugin';
 import { BlockRegistry } from '@/runtime/blocks';
 import { EventSystem } from '@/runtime/events/event-system';
 import { Logger } from '@/runtime/logs/log-router';

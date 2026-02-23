@@ -5,7 +5,7 @@
 import 'reflect-metadata';
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 import { get, provide, useTestBed } from '@brika/di/testing';
-import type { PreferenceDefinition } from '@brika/shared';
+import type { PreferenceDefinition } from '@brika/plugin';
 import { ConfigLoader } from '@/runtime/config';
 import { PluginConfigService } from '@/runtime/plugins/plugin-config';
 import { StateStore } from '@/runtime/state/state-store';

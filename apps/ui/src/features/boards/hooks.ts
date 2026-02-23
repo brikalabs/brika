@@ -1,4 +1,4 @@
-import type { Json } from '@brika/shared';
+import type { Json } from '@/types';
 import type { ComponentNode, Mutation } from '@brika/ui-kit';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect } from 'react';

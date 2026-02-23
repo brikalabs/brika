@@ -1,4 +1,5 @@
-import type { Json, PreferenceDefinition } from '@brika/shared';
+import type { PreferenceDefinition } from '@brika/plugin';
+import type { Json } from '@/types';
 import { RefreshCw, Trash2, X } from 'lucide-react';
 import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
 import { useCallback, useEffect, useMemo, useState } from 'react';

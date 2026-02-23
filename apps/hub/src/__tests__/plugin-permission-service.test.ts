@@ -27,7 +27,7 @@ function createStubStateStore() {
 
 // ─── Re-implement service logic without DI for unit testing ─────────────────
 // We test the same logic as PluginPermissionService but without @singleton()/@inject()
-import { filterValidPermissions, isValidPermission, type Permission } from '@brika/shared';
+import { filterValidPermissions, isValidPermission, type Permission } from '@brika/permissions';
 
 function createPermissionService(stateStore: ReturnType<typeof createStubStateStore>) {
   return {

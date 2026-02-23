@@ -1,4 +1,4 @@
-import type { StorePlugin } from '@brika/shared';
+import type { StorePlugin } from '../types';
 import { useQueryClient } from '@tanstack/react-query';
 import { Check, Download, Loader2, Trash2 } from 'lucide-react';
 import React from 'react';

@@ -1,9 +1,10 @@
 import { inject, singleton } from '@brika/di';
-import type { VerifiedPlugin, VerifiedPluginsList } from '@brika/shared';
+import { REGISTRY_PUBLIC_KEY, canonicalize, verifyWithRawKey, type VerifiedPlugin, type VerifiedPluginsList } from '@brika/registry';
 import { Logger } from '@/runtime/logs/log-router';
 
 // Configuration
 const REGISTRY_URL = process.env.BRIKA_REGISTRY || 'https://registry.brika.dev';
+const PINNED_PUBLIC_KEY = process.env.BRIKA_REGISTRY_PUBLIC_KEY ?? REGISTRY_PUBLIC_KEY;
 
 const REFRESH_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
 
@@ -114,6 +115,17 @@ export class VerifiedPluginsService {
         throw new Error('Invalid verified plugins list format');
       }
 
+      // Verify registry signature if present
+      if (data.signature && data.publicKey) {
+        const verified = this.#verifyRegistrySignature(data);
+        if (!verified) {
+          throw new Error('Registry signature verification failed');
+        }
+        this.#log.info('Registry signature verified');
+      } else if (PINNED_PUBLIC_KEY) {
+        this.#log.warn('Registry response is unsigned but a pinned key is configured');
+      }
+
       this.#verifiedList = data;
       this.#lastFetch = Date.now();
 
@@ -135,6 +147,30 @@ export class VerifiedPluginsService {
       };
       this.#lastFetch = Date.now();
     }
+  }
+
+  /**
+   * Verify the Ed25519 signature of the registry data.
+   * Returns true if signature is valid, false otherwise.
+   */
+  #verifyRegistrySignature(data: VerifiedPluginsList): boolean {
+    if (!data.publicKey || !data.signature) return false;
+
+    // If a pinned key is configured, ensure it matches
+    if (PINNED_PUBLIC_KEY && data.publicKey !== PINNED_PUBLIC_KEY) {
+      this.#log.error('Registry public key does not match pinned key');
+      return false;
+    }
+
+    // Build the signable payload (everything except $schema and signature)
+    const signable = {
+      version: data.version,
+      lastUpdated: data.lastUpdated,
+      publicKey: data.publicKey,
+      plugins: data.plugins,
+    };
+
+    return verifyWithRawKey(canonicalize(signable), data.signature, data.publicKey);
   }
 
   /**

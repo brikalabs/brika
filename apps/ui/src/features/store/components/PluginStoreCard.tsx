@@ -1,4 +1,4 @@
-import type { StorePlugin } from '@brika/shared';
+import type { StorePlugin } from '../types';
 import { Link } from '@tanstack/react-router';
 import { Download, Package, Tag, User } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage, Badge, Card } from '@/components/ui';

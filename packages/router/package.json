@@ -18,7 +18,6 @@
   },
   "dependencies": {
     "@brika/di": "workspace:*",
-    "@brika/shared": "workspace:*",
     "hono": "^4.11.3",
     "zod": "^4.3.4"
   }

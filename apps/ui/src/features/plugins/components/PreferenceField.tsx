@@ -1,4 +1,4 @@
-import type { PreferenceDefinition } from '@brika/shared';
+import type { PreferenceDefinition } from '@brika/plugin';
 import { ExternalLink, RefreshCw } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import {

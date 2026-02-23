@@ -1,4 +1,4 @@
-import type { Plugin } from '@brika/shared';
+import type { Plugin } from '@brika/plugin';
 import { Link } from '@tanstack/react-router';
 import { Plug } from 'lucide-react';
 import { DynamicIcon, type IconName } from 'lucide-react/dynamic';

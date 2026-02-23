@@ -6,7 +6,8 @@
 
 import { Database, SQLQueryBindings } from 'bun:sqlite'
 import { inject, singleton } from "@brika/di";
-import type { Json, LogEvent, LogLevel, LogSource } from "@brika/shared";
+import type { Json } from "@/types";
+import type { LogEvent, LogLevel, LogSource } from "./types";
 import { ConfigLoader } from "@/runtime/config/config-loader";
 
 // ─────────────────────────────────────────────────────────────────────────────

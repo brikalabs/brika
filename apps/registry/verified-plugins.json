@@ -1,14 +1,40 @@
 {
   "$schema": "./schema.json",
-  "version": "1.0.0",
-  "lastUpdated": "2026-01-17T00:00:00Z",
+  "version": "2.0.0",
+  "lastUpdated": "2026-02-23T12:40:07.718Z",
   "plugins": [
     {
       "name": "@brika/blocks-builtin",
       "verifiedAt": "2026-01-17T00:00:00Z",
       "verifiedBy": "maintainer",
+      "description": "Built-in blocks for Brika workflows",
+      "tags": ["blocks", "official", "core"],
       "featured": true,
-      "category": "official"
+      "category": "official",
+      "source": "npm",
+      "signature": "8d72213890f0c01df6ff927b94fdf1711e6d3766ccdacbd6e1d264df12ccb6672b2e4a320e1c9f110508bf10913077e63b25504d459d30c7c0d4ed6256ec400f"
+    },
+    {
+      "name": "@brika/plugin-spotify",
+      "verifiedAt": "2026-02-23T00:00:00Z",
+      "verifiedBy": "maintainer",
+      "description": "Spotify Connect player for BRIKA dashboards",
+      "tags": ["spotify", "music", "media", "integration"],
+      "featured": true,
+      "category": "official",
+      "source": "npm"
+    },
+    {
+      "name": "@brika/plugin-matter",
+      "verifiedAt": "2026-02-23T00:00:00Z",
+      "verifiedBy": "maintainer",
+      "description": "Matter smart home device integration for BRIKA",
+      "tags": ["matter", "smart-home", "iot", "integration"],
+      "featured": true,
+      "category": "official",
+      "source": "npm"
     }
-  ]
+  ],
+  "publicKey": "ncl/idhhH3NPxm3Gy6Rjk9CZ3Cv4vBkze5sUFShYhnc=",
+  "signature": "d67c3a1926637af8ec7d7267193343cf685d013fc339782ee2fdaa373ec81c10ddb616d5af2fda39c27b1c3dae67acf9ff2cf2782c58c26bfdfe8adaf5038e09"
 }

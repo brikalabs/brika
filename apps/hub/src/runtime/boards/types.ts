@@ -4,7 +4,7 @@
  * Core types for board persistence and layout management.
  */
 
-import type { Json } from '@brika/shared';
+import type { Json } from '@/types';
 
 /** A brick placed on a board */
 export interface BoardBrickPlacement {

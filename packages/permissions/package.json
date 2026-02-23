@@ -1,0 +1,23 @@
+{
+  "name": "@brika/permissions",
+  "version": "0.3.0",
+  "description": "Plugin permission definitions and validation for BRIKA",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/maxscharwath/brika.git",
+    "directory": "packages/permissions"
+  },
+  "keywords": ["brika", "permissions", "validation"],
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "tsc": "bunx --bun tsc --noEmit",
+    "test": "bun test"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.9"
+  }
+}

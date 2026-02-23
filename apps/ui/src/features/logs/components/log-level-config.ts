@@ -1,4 +1,4 @@
-import type { LogLevel } from "@brika/shared";
+import type { LogLevel } from "../types";
 import { AlertCircle, AlertTriangle, Bug, Info } from "lucide-react";
 import type React from "react";
 

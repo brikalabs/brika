@@ -6,7 +6,7 @@ import 'reflect-metadata';
 import { Database } from 'bun:sqlite';
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { get, provide, reset, stub, useTestBed } from '@brika/di/testing';
-import type { LogEvent } from '@brika/shared';
+import type { LogEvent } from '@/runtime/logs/types';
 import { ConfigLoader } from '@/runtime/config';
 import { type LogQueryParams, LogStore } from '@/runtime/logs/log-store';
 

@@ -7,7 +7,7 @@
  */
 
 import { inject } from '@brika/di';
-import type { Json } from '@brika/shared';
+import type { Json } from '@/types';
 import { BlockRegistry } from '@/runtime/blocks';
 import { Logger } from '@/runtime/logs/log-router';
 import { PluginManager } from '@/runtime/plugins/plugin-manager';

@@ -1,4 +1,4 @@
-import type { BrikaEvent } from '@brika/shared';
+import type { BrikaEvent } from './types';
 import { useMutation } from '@tanstack/react-query';
 import { useEffect, useMemo } from 'react';
 import { fetcher, getStreamUrl } from '@/lib/query';

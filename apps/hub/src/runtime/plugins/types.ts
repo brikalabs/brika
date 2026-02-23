@@ -1,5 +1,5 @@
 import type { PluginChannel } from '@brika/ipc';
-import type { PluginManifest } from '@brika/shared';
+import type { PluginManifest } from '@brika/plugin';
 
 /**
  * Internal representation of a running plugin process.

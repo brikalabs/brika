@@ -1,6 +1,7 @@
 import { inject, singleton } from '@brika/di';
 import { Action, EventSystem as BaseEventSystem } from '@brika/events';
-import type { BrikaEvent, Json } from '@brika/shared';
+import type { Json } from '@/types';
+import type { BrikaEvent } from './types';
 import { Logger } from '@/runtime/logs/log-router';
 import type { SparkStore } from '@/runtime/sparks/spark-store';
 

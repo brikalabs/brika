@@ -32,8 +32,10 @@ import {
   updateBrickConfig,
   updatePreference,
 } from '@brika/ipc/contract';
+import type { Permission } from '@brika/permissions';
+import type { Plugin, PluginHealth } from '@brika/plugin';
+import type { BrickFamily } from '@brika/plugin';
 import type { PluginPackageSchema } from '@brika/schema';
-import type { BrickFamily, Permission, Plugin, PluginHealth } from '@brika/shared';
 import { getProcessMetrics } from '@/runtime/metrics';
 import type { HubLocation } from '@/runtime/state/state-store';
 import { now } from './utils';

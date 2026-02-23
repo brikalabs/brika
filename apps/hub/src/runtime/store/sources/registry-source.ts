@@ -1,4 +1,4 @@
-import type { PluginPackageData } from '@brika/shared';
+import type { PluginPackageData } from '../types';
 
 /** Raw plugin from any registry source — no enrichment (installed, compatible) */
 export interface RawRegistryPlugin {

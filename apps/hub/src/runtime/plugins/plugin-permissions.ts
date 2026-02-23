@@ -13,7 +13,7 @@
  */
 
 import { inject, singleton } from '@brika/di';
-import { filterValidPermissions, isValidPermission, type Permission } from '@brika/shared';
+import { filterValidPermissions, isValidPermission, type Permission } from '@brika/permissions';
 import { Logger } from '@/runtime/logs/log-router';
 import { StateStore } from '@/runtime/state/state-store';
 

@@ -1,4 +1,4 @@
-import type { InstallProgress } from '@brika/shared';
+import type { InstallProgress } from '../types';
 import type { TFunction } from 'i18next';
 
 /**

@@ -1,4 +1,4 @@
-import type { Plugin } from '@brika/shared';
+import type { Plugin } from '@brika/plugin';
 import { Badge } from '@/components/ui';
 import type { BlockDefinition } from '../../workflows/api';
 import { BlockCard } from './BlockCard';

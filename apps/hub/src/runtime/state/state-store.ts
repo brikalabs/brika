@@ -1,6 +1,6 @@
 import { inject, singleton } from '@brika/di';
+import type { PluginHealth } from '@brika/plugin';
 import { PluginPackageSchema } from '@brika/schema';
-import type { PluginHealth } from '@brika/shared';
 import { HubConfig } from '@/runtime/config';
 import { Logger } from '@/runtime/logs/log-router';
 

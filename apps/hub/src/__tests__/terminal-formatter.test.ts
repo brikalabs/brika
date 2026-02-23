@@ -3,7 +3,7 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import type { LogEvent } from '@brika/shared';
+import type { LogEvent } from '@/runtime/logs/types';
 import { TerminalFormatter } from '@/runtime/logs/formatters/terminal-formatter';
 
 const createLogEvent = (overrides: Partial<LogEvent> = {}): LogEvent => ({

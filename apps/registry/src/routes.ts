@@ -11,7 +11,25 @@ export function createRoutes() {
 
   // Health check endpoint
   app.get('/health', (c) => {
-    return c.json({ status: 'ok', service: 'brika-registry' });
+    const data = getRegistryData();
+    return c.json({
+      status: 'ok',
+      service: 'brika-registry',
+      signed: Boolean(data.signature),
+      pluginCount: data.plugins.length,
+    });
+  });
+
+  // Public key endpoint
+  app.get('/public-key', (c) => {
+    const data = getRegistryData();
+    if (!data.publicKey) {
+      return c.json({ error: 'No public key configured' }, 404);
+    }
+    return c.json({
+      publicKey: data.publicKey,
+      format: 'base64-raw-ed25519',
+    });
   });
 
   // Serve verified plugins list

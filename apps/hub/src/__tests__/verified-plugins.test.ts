@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test';
 import { get, reset, stub } from '@brika/di/testing';
-import type { VerifiedPluginsList } from '@brika/shared';
+import type { VerifiedPluginsList } from '@brika/registry';
 import { Logger } from '@/runtime/logs/log-router';
 import { VerifiedPluginsService } from '@/runtime/store';
 
@@ -55,7 +55,7 @@ describe('VerifiedPluginsService', () => {
     resetMock();
 
     const originalFetch = globalThis.fetch;
-    fetchSpy = spyOn(globalThis, 'fetch').mockImplementation((input, init) => {
+    fetchSpy = spyOn(globalThis, 'fetch').mockImplementation(((input, init) => {
       const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
       if (url.includes('verified-plugins.json')) {
         if (mockError) return Promise.reject(mockError);
@@ -67,7 +67,7 @@ describe('VerifiedPluginsService', () => {
         );
       }
       return originalFetch(input, init);
-    });
+    }) as typeof fetch);
 
     service = get(VerifiedPluginsService);
   });

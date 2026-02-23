@@ -1,4 +1,4 @@
-import type { LogLevel, LogSource } from "@brika/shared";
+import type { LogLevel, LogSource } from "../types";
 import type { PluginInfo } from "../api";
 import type { LogFilters } from "../store";
 import { LogDateRangeFilter } from "./LogDateRangeFilter";

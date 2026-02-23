@@ -6,15 +6,10 @@
  * size (w/h grid units), config values, and isolated hooks state.
  */
 
-import type { PreferenceDefinition } from '@brika/shared';
+import type { BrickFamily, PreferenceDefinition } from '@brika/plugin';
 import type { ComponentNode } from './nodes';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Types
-// ─────────────────────────────────────────────────────────────────────────────
-
-/** Supported brick size families (convention sizes for catalog display) */
-export type BrickFamily = 'sm' | 'md' | 'lg';
+export type { BrickFamily } from '@brika/plugin';
 
 /** Brick type spec — static metadata for type registration */
 export interface BrickTypeSpec {
