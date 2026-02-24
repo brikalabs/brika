@@ -6,7 +6,7 @@
  */
 
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
-import type { OAuthProviderConfig, OAuthToken, OAuthClient } from '../api/oauth';
+import type { OAuthClient, OAuthProviderConfig, OAuthToken } from '../api/oauth';
 
 // ─── Mock Setup ────────────────────────────────────────────────────────────────
 

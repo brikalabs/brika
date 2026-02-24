@@ -1,6 +1,6 @@
 import { ArrowDown, Sparkles } from 'lucide-react';
-import { GithubIcon } from './ui/github-icon';
 import { github } from '@/lib/config';
+import { GithubIcon } from './ui/github-icon';
 
 export function Hero() {
   return (

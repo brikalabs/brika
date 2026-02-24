@@ -1,8 +1,8 @@
-import type { BrikaEvent } from './types';
 import { useMutation } from '@tanstack/react-query';
 import { useEffect, useMemo } from 'react';
 import { fetcher, getStreamUrl } from '@/lib/query';
 import { useEventsStore } from './store';
+import type { BrikaEvent } from './types';
 
 /** Spark event structure for display */
 export interface SparkEvent {

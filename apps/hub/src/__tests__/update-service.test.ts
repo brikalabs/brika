@@ -5,21 +5,27 @@ import 'reflect-metadata';
 import { describe, expect, test } from 'bun:test';
 import { get, stub, useTestBed } from '@brika/di/testing';
 import { useBunMock } from '@brika/testing';
+import { buildInfo } from '@/runtime/http/routes/status';
 import { Logger } from '@/runtime/logs/log-router';
 import { UpdateService } from '@/runtime/updates/update-service';
 
-function mockGitHub(bun: ReturnType<typeof useBunMock>, tagName: string, status = 200) {
+function mockGitHub(
+  bun: ReturnType<typeof useBunMock>,
+  tagName: string,
+  options?: { status?: number; targetCommitish?: string }
+) {
   bun.fetch(() =>
     Promise.resolve(
       new Response(
         JSON.stringify({
           tag_name: tagName,
+          target_commitish: options?.targetCommitish ?? 'mock-commit',
           published_at: '2026-01-01T00:00:00Z',
           html_url: `https://github.com/example/releases/${tagName}`,
           body: 'Release notes',
           assets: [],
         }),
-        { status, headers: { 'Content-Type': 'application/json' } }
+        { status: options?.status ?? 200, headers: { 'Content-Type': 'application/json' } }
       )
     )
   );
@@ -52,7 +58,9 @@ describe('UpdateService', () => {
 
   test('check() caches false when already on latest', async () => {
     const { hub } = await import('@/hub');
-    mockGitHub(bun, `v${hub.version}`);
+    mockGitHub(bun, `v${hub.version}`, {
+      targetCommitish: buildInfo.commitFull,
+    });
 
     const result = await service.check();
 

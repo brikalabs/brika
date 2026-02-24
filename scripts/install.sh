@@ -34,10 +34,10 @@ else
   RED='' GREEN='' CYAN='' DIM='' BOLD='' RESET=''
 fi
 
-info()  { printf "${CYAN}%s${RESET}\n" "$*"; }
+info()    { printf "${CYAN}%s${RESET}\n" "$*"; }
 success() { printf "${GREEN}%s${RESET}\n" "$*"; }
-error() { printf "${RED}error:${RESET} %s\n" "$*" >&2; }
-dim()   { printf "${DIM}%s${RESET}\n" "$*"; }
+error()   { printf "${RED}error:${RESET} %s\n" "$*" >&2; }
+dim()     { printf "${DIM}%s${RESET}\n" "$*"; }
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Platform detection
@@ -87,26 +87,45 @@ download() {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Resolve latest version from GitHub
+# SHA-256 helper
 # ─────────────────────────────────────────────────────────────────────────────
 
+sha256_file() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$1" | cut -d' ' -f1
+  else
+    shasum -a 256 "$1" | cut -d' ' -f1
+  fi
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Resolve version and fetch release metadata
+# ─────────────────────────────────────────────────────────────────────────────
+
+TMP_DIR=""
+META_FILE=""
+COMMIT_SHORT=""
+
 resolve_version() {
+  TMP_DIR=$(mktemp -d)
+  trap 'rm -rf "$TMP_DIR"' EXIT
+
+  META_FILE="$TMP_DIR/release-meta.json"
+
   if [ -n "$VERSION" ]; then
-    return
+    META_URL="https://github.com/$GITHUB_REPO/releases/download/v${VERSION}/release-meta.json"
+  else
+    info "Checking latest version..."
+    META_URL="https://github.com/$GITHUB_REPO/releases/latest/download/release-meta.json"
   fi
 
-  info "Checking latest version..."
+  download "$META_URL" "$META_FILE"
 
-  if command -v curl >/dev/null 2>&1; then
-    VERSION=$(curl -fsSL "https://api.github.com/repos/$GITHUB_REPO/releases/latest" \
-      | grep '"tag_name"' | head -1 | sed 's/.*"tag_name": *"v\{0,1\}\([^"]*\)".*/\1/')
-  elif command -v wget >/dev/null 2>&1; then
-    VERSION=$(wget -qO- "https://api.github.com/repos/$GITHUB_REPO/releases/latest" \
-      | grep '"tag_name"' | head -1 | sed 's/.*"tag_name": *"v\{0,1\}\([^"]*\)".*/\1/')
-  fi
+  VERSION=$(grep '"version"' "$META_FILE" | head -1 | sed 's/.*"version": *"\([^"]*\)".*/\1/')
+  COMMIT_SHORT=$(grep '"commit"' "$META_FILE" | head -1 | sed 's/.*"commit": *"\([^"]*\)".*/\1/' | cut -c1-7)
 
-  if [ -z "$VERSION" ]; then
-    error "Failed to determine latest version"
+  if [ -z "$VERSION" ] || [ -z "$COMMIT_SHORT" ]; then
+    error "Failed to parse release metadata"
     exit 1
   fi
 }
@@ -118,7 +137,21 @@ resolve_version() {
 detect_existing() {
   EXISTING_VERSION=""
   if [ -x "$BIN_DIR/brika" ]; then
-    EXISTING_VERSION=$("$BIN_DIR/brika" --version 2>/dev/null || echo "")
+    # Try JSON format first (new binary), fall back to human-readable (old binary)
+    _json=$("$BIN_DIR/brika" version --json 2>/dev/null || echo "")
+    _v=$(printf '%s' "$_json" | sed 's/.*"version":"\([^"]*\)".*/\1/')
+    _c=$(printf '%s' "$_json" | sed 's/.*"commit":"\([^"]*\)".*/\1/')
+    if [ -n "$_v" ] && [ "$_v" != "$_json" ]; then
+      EXISTING_VERSION="v${_v} (${_c})"
+    else
+      # Old binary: "brika v0.3.0 (abc1234)"
+      _out=$("$BIN_DIR/brika" --version 2>/dev/null || echo "")
+      _v=$(printf '%s' "$_out" | head -1 | sed 's/.*brika v\([^ ]*\).*/\1/')
+      _c=$(printf '%s' "$_out" | head -1 | sed 's/.*(\([^)]*\)).*/\1/')
+      if [ -n "$_v" ] && [ "$_v" != "$_out" ]; then
+        EXISTING_VERSION="v${_v} (${_c})"
+      fi
+    fi
   fi
 }
 
@@ -131,16 +164,26 @@ install_brika() {
   DOWNLOAD_URL="https://github.com/$GITHUB_REPO/releases/download/v${VERSION}/${ASSET_NAME}"
 
   if [ -n "$EXISTING_VERSION" ]; then
-    info "Upgrading brika v${EXISTING_VERSION} → v${VERSION} for ${PLATFORM}..."
+    info "Upgrading brika ${EXISTING_VERSION} → v${VERSION} (${COMMIT_SHORT}) for ${PLATFORM}..."
   else
-    info "Downloading brika v${VERSION} for ${PLATFORM}..."
+    info "Downloading brika v${VERSION} (${COMMIT_SHORT}) for ${PLATFORM}..."
   fi
   dim "  $DOWNLOAD_URL"
 
-  TMP_DIR=$(mktemp -d)
-  trap 'rm -rf "$TMP_DIR"' EXIT
-
   download "$DOWNLOAD_URL" "$TMP_DIR/$ASSET_NAME"
+
+  # Verify checksum
+  EXPECTED=$(grep "\"${ASSET_NAME}\"" "$META_FILE" | sed 's/.*"[^"]*": *"\([a-f0-9]*\)".*/\1/')
+  if [ -n "$EXPECTED" ]; then
+    ACTUAL=$(sha256_file "$TMP_DIR/$ASSET_NAME")
+    if [ "$ACTUAL" != "$EXPECTED" ]; then
+      error "Checksum mismatch for $ASSET_NAME"
+      error "  expected: $EXPECTED"
+      error "  got:      $ACTUAL"
+      exit 1
+    fi
+    dim "  Checksum verified"
+  fi
 
   # Create install directory
   mkdir -p "$BIN_DIR"
@@ -158,11 +201,12 @@ install_brika() {
 # ─────────────────────────────────────────────────────────────────────────────
 
 verify_installation() {
-  INSTALLED_VERSION=$("$BIN_DIR/brika" --version 2>/dev/null || echo "")
-  if [ -z "$INSTALLED_VERSION" ]; then
-    error "Installation may have failed — could not run brika"
+  _out=$("$BIN_DIR/brika" --version 2>/dev/null || echo "")
+  if [ -z "$_out" ]; then
+    error "Installation may have failed — brika binary failed to run"
     exit 1
   fi
+  INSTALLED_VERSION="v${VERSION} (${COMMIT_SHORT})"
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -233,9 +277,9 @@ main() {
 
   printf "\n"
   if [ -n "$EXISTING_VERSION" ]; then
-    success "  Brika upgraded successfully!  v${EXISTING_VERSION} → v${VERSION}"
+    success "  Brika upgraded successfully!  ${EXISTING_VERSION} → ${INSTALLED_VERSION}"
   else
-    success "  Brika v${VERSION} installed successfully!"
+    success "  Brika ${INSTALLED_VERSION} installed successfully!"
   fi
   printf "\n"
   dim "  Install directory: $BIN_DIR"

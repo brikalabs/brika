@@ -1,9 +1,9 @@
 import { inject, singleton } from '@brika/di';
 import { Action, EventSystem as BaseEventSystem } from '@brika/events';
-import type { Json } from '@/types';
-import type { BrikaEvent } from './types';
 import { Logger } from '@/runtime/logs/log-router';
 import type { SparkStore } from '@/runtime/sparks/spark-store';
+import type { Json } from '@/types';
+import type { BrikaEvent } from './types';
 
 class RingBuffer<T> {
   readonly #buf: Array<T | undefined>;

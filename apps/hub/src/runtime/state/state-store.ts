@@ -1,5 +1,5 @@
 import { inject, singleton } from '@brika/di';
-import type { PluginHealth } from '@brika/plugin';
+import type { PluginError, PluginHealth } from '@brika/plugin';
 import { PluginPackageSchema } from '@brika/schema';
 import { HubConfig } from '@/runtime/config';
 import { Logger } from '@/runtime/logs/log-router';
@@ -23,7 +23,7 @@ export interface InstalledPluginState {
   uid: string;
   enabled: boolean;
   health: PluginHealth;
-  lastError: string | null;
+  lastError: PluginError | null;
   updatedAt: number;
   grantedPermissions?: string[];
 }
@@ -204,7 +204,11 @@ export class StateStore {
     await this.#flush();
   }
 
-  async setHealth(name: string, health: PluginHealth, lastError?: string | null): Promise<void> {
+  async setHealth(
+    name: string,
+    health: PluginHealth,
+    lastError?: PluginError | null
+  ): Promise<void> {
     const cur = this.#state.plugins[name];
     if (!cur) return; // Plugin must be registered first
     cur.health = health;

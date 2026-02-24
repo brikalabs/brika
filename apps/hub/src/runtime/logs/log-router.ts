@@ -1,10 +1,10 @@
 import { singleton } from "@brika/di";
 import type { Json } from "@/types";
-import type { LogError, LogEvent, LogLevel, LogSource } from "./types";
 import { TerminalFormatter } from "./formatters/terminal-formatter";
 import type { LogStore } from "./log-store";
 import { ConsoleTransport } from "./transports/console-transport";
 import type { Transport } from "./transports/transport";
+import type { LogError, LogEvent, LogLevel, LogSource } from "./types";
 import { captureCallSite } from "./utils/call-site";
 import { RingBuffer } from "./utils/ring-buffer";
 

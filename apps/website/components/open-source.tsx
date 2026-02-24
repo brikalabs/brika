@@ -1,7 +1,7 @@
 import { Heart } from 'lucide-react';
-import { GithubIcon } from './ui/github-icon';
 import { github } from '@/lib/config';
 import { AnimatedSection } from './ui/animated-section';
+import { GithubIcon } from './ui/github-icon';
 
 export function OpenSource() {
   return (

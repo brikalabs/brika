@@ -4,9 +4,11 @@
  * Dropdown to select the application language.
  */
 
+import { Languages } from 'lucide-react';
 import { useDataView } from '@/components/DataView';
 import {
-  Label,
+  Avatar,
+  AvatarFallback,
   Select,
   SelectContent,
   SelectItem,
@@ -32,11 +34,19 @@ export function LanguageSelector() {
       <View.Content>
         {(locales) => (
           <div className="space-y-3">
-            <div>
-              <Label className="font-medium text-base">{t('settings:language.title')}</Label>
-              <p className="text-muted-foreground text-sm">{t('settings:language.description')}</p>
+            <div className="flex items-start gap-3">
+              <Avatar size="lg">
+                <AvatarFallback>
+                  <Languages className="size-4" />
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="font-semibold text-base">{t('settings:language.title')}</p>
+                <p className="text-muted-foreground text-sm">
+                  {t('settings:language.description')}
+                </p>
+              </div>
             </div>
-
             <Select value={locale} onValueChange={changeLocale}>
               <SelectTrigger className="w-64">
                 <SelectValue />

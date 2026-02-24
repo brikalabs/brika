@@ -7,10 +7,10 @@
  */
 
 import { inject } from '@brika/di';
-import type { Json } from '@/types';
 import { BlockRegistry } from '@/runtime/blocks';
 import { Logger } from '@/runtime/logs/log-router';
 import { PluginManager } from '@/runtime/plugins/plugin-manager';
+import type { Json } from '@/types';
 import type { BlockConnection, Workflow, WorkflowBlock } from './types';
 
 /** Events emitted during workflow execution */

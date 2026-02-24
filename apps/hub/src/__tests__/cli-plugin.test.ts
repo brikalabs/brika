@@ -68,7 +68,11 @@ describe('cli/commands/plugin (subcommand group)', () => {
   describe('dispatch', () => {
     test('dispatches "install" to install handler', async () => {
       const { cmd, handlers } = buildPluginCli();
-      await cmd.handler({ values: {}, positionals: ['install', '@brika/plugin-timer'], commands: [] });
+      await cmd.handler({
+        values: {},
+        positionals: ['install', '@brika/plugin-timer'],
+        commands: [],
+      });
 
       expect(handlers.install).toHaveBeenCalled();
       expect(handlers.before).toHaveBeenCalled();
@@ -76,14 +80,22 @@ describe('cli/commands/plugin (subcommand group)', () => {
 
     test('dispatches "uninstall" to uninstall handler', async () => {
       const { cmd, handlers } = buildPluginCli();
-      await cmd.handler({ values: {}, positionals: ['uninstall', '@brika/plugin-timer'], commands: [] });
+      await cmd.handler({
+        values: {},
+        positionals: ['uninstall', '@brika/plugin-timer'],
+        commands: [],
+      });
 
       expect(handlers.uninstall).toHaveBeenCalled();
     });
 
     test('dispatches "remove" alias to uninstall handler', async () => {
       const { cmd, handlers } = buildPluginCli();
-      await cmd.handler({ values: {}, positionals: ['remove', '@brika/plugin-timer'], commands: [] });
+      await cmd.handler({
+        values: {},
+        positionals: ['remove', '@brika/plugin-timer'],
+        commands: [],
+      });
 
       expect(handlers.uninstall).toHaveBeenCalled();
     });

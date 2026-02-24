@@ -9,6 +9,7 @@
 import { join } from 'node:path';
 import { inject } from '@brika/di';
 import { HttpClient, SqliteCache } from '@brika/http';
+import { dataDir } from '@/cli/utils/runtime';
 import { Logger } from '@/runtime/logs/log-router';
 import type { BootstrapPlugin } from '../plugin';
 
@@ -34,8 +35,7 @@ export function cache(): BootstrapPlugin {
 
     // biome-ignore lint/suspicious/useAwait: bootstrap expects async lifecycle methods
     async onInit() {
-      const brikaDir = join(process.cwd(), '.brika');
-      const cachePath = join(brikaDir, 'cache.db');
+      const cachePath = join(dataDir, 'cache.db');
 
       logger.info('Initializing SQLite cache', { path: cachePath });
 

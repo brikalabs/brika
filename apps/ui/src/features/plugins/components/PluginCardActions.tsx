@@ -1,9 +1,3 @@
-/**
- * PluginCardActions Component
- *
- * Action buttons for plugin cards (reload, disable, kill).
- */
-
 import { Power, RotateCcw, Skull } from 'lucide-react';
 import { Button, Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
@@ -26,20 +20,20 @@ export function PluginCardActions({
   const { t } = useLocale();
 
   return (
-    <div className="flex gap-1">
+    <div className="flex gap-0.5">
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
             size="icon"
             variant="ghost"
-            className="size-8 hover:bg-muted/80"
+            className="size-7"
             onClick={(e) => {
               e.preventDefault();
               onReload(uid);
             }}
             disabled={isBusy}
           >
-            <RotateCcw className="size-4" />
+            <RotateCcw className="size-3.5" />
           </Button>
         </TooltipTrigger>
         <TooltipContent>{t('plugins:actions.reload')}</TooltipContent>
@@ -50,14 +44,14 @@ export function PluginCardActions({
           <Button
             size="icon"
             variant="ghost"
-            className="size-8 hover:bg-muted/80"
+            className="size-7"
             onClick={(e) => {
               e.preventDefault();
               onDisable(uid);
             }}
             disabled={isBusy}
           >
-            <Power className="size-4" />
+            <Power className="size-3.5" />
           </Button>
         </TooltipTrigger>
         <TooltipContent>{t('plugins:actions.disable')}</TooltipContent>
@@ -68,14 +62,14 @@ export function PluginCardActions({
           <Button
             size="icon"
             variant="ghost"
-            className="size-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+            className="size-7 text-destructive hover:bg-destructive/10 hover:text-destructive"
             onClick={(e) => {
               e.preventDefault();
               onKill(uid);
             }}
             disabled={isBusy}
           >
-            <Skull className="size-4" />
+            <Skull className="size-3.5" />
           </Button>
         </TooltipTrigger>
         <TooltipContent>{t('plugins:actions.kill')}</TooltipContent>

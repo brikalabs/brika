@@ -393,7 +393,7 @@ describe('PluginLifecycle (with mocked spawn)', () => {
       expect(mockState.setHealth).toHaveBeenCalledWith(
         '@test/plugin',
         'crashed',
-        'heartbeat timeout'
+        expect.objectContaining({ key: 'plugins:errors.heartbeatTimeout' })
       );
     });
   });
@@ -406,7 +406,10 @@ describe('PluginLifecycle (with mocked spawn)', () => {
       expect(mockState.setHealth).toHaveBeenCalledWith(
         '@test/plugin',
         'crashed',
-        'Connection lost'
+        expect.objectContaining({
+          key: 'plugins:errors.crashed',
+          params: { reason: 'Connection lost' },
+        })
       );
       expect(mockEvents.dispatch).toHaveBeenCalled();
     });
@@ -415,7 +418,14 @@ describe('PluginLifecycle (with mocked spawn)', () => {
       const callbacks = await loadPlugin();
       const process = mockProcessInstance as unknown as PluginProcess;
       callbacks.onDisconnect(process);
-      expect(mockState.setHealth).toHaveBeenCalledWith('@test/plugin', 'crashed', 'disconnected');
+      expect(mockState.setHealth).toHaveBeenCalledWith(
+        '@test/plugin',
+        'crashed',
+        expect.objectContaining({
+          key: 'plugins:errors.crashed',
+          params: { reason: 'disconnected' },
+        })
+      );
     });
 
     test('spawnPlugin onDisconnect is a no-op when process already removed', async () => {
@@ -479,8 +489,8 @@ describe('PluginLifecycle (with mocked spawn)', () => {
         (c: unknown[]) =>
           c[0] === '@test/plugin' &&
           c[1] === 'restarting' &&
-          typeof c[2] === 'string' &&
-          (c[2] as string).startsWith('Restarting in')
+          typeof c[2] === 'object' &&
+          (c[2] as Record<string, unknown>).key === 'plugins:errors.restarting'
       );
       expect(restartingCalls.length).toBeGreaterThanOrEqual(1);
     });
@@ -514,7 +524,7 @@ describe('PluginLifecycle (with mocked spawn)', () => {
   });
 
   describe('#checkCompatibility', () => {
-    test('rejects plugin without engines.brika declaration', async () => {
+    test('persists plugin without engines.brika as incompatible', async () => {
       resolverSpy.mockResolvedValue({
         rootDirectory: '/mock/path',
         entryPoint: '/mock/path/index.js',
@@ -522,10 +532,22 @@ describe('PluginLifecycle (with mocked spawn)', () => {
       } as never);
 
       lifecycle = get(PluginLifecycleMocked);
-      await expect(lifecycle.load('/mock/path')).rejects.toThrow('incompatible');
+      await lifecycle.load('/mock/path');
+
+      expect(mockState.registerPlugin).toHaveBeenCalledWith(
+        expect.objectContaining({ name: '@test/no-engines', enabled: false })
+      );
+      expect(mockState.setHealth).toHaveBeenCalledWith(
+        '@test/no-engines',
+        'incompatible',
+        expect.objectContaining({
+          key: 'plugins:errors.incompatibleUnknown',
+          message: 'Missing engines.brika in package.json',
+        })
+      );
     });
 
-    test('rejects plugin with incompatible brika version', async () => {
+    test('persists plugin with incompatible brika version as incompatible', async () => {
       resolverSpy.mockResolvedValue({
         rootDirectory: '/mock/path',
         entryPoint: '/mock/path/index.js',
@@ -538,7 +560,19 @@ describe('PluginLifecycle (with mocked spawn)', () => {
       } as never);
 
       lifecycle = get(PluginLifecycleMocked);
-      await expect(lifecycle.load('/mock/path')).rejects.toThrow('incompatible');
+      await lifecycle.load('/mock/path');
+
+      expect(mockState.registerPlugin).toHaveBeenCalledWith(
+        expect.objectContaining({ name: '@test/incompat', enabled: false })
+      );
+      expect(mockState.setHealth).toHaveBeenCalledWith(
+        '@test/incompat',
+        'incompatible',
+        expect.objectContaining({
+          key: 'plugins:errors.incompatibleVersion',
+          params: expect.objectContaining({ required: '^99.0.0' }),
+        })
+      );
     });
   });
 });

@@ -57,9 +57,7 @@ export default defineCommand({
     const [name, version] = parsePackageSpec(spec);
 
     const versionSuffix = version ? pc.dim(`@${version}`) : '';
-    console.log(
-      `${pc.cyan('Installing')} ${pc.bold(name)}${versionSuffix} …`
-    );
+    console.log(`${pc.cyan('Installing')} ${pc.bold(name)}${versionSuffix} …`);
 
     const res = await hubFetchOk('/api/registry/install', {
       method: 'POST',

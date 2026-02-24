@@ -12,17 +12,14 @@ describe('computeEnrichment', () => {
   test('marks plugin as installed when found in config', () => {
     const result = computeEnrichment(
       { name: '@brika/test', version: '1.0.0', engines: { brika: '>=0.1.0' } },
-      makeConfig([{ name: '@brika/test', version: '1.0.0' }]),
+      makeConfig([{ name: '@brika/test', version: '1.0.0' }])
     );
     expect(result.installed).toBe(true);
     expect(result.installedVersion).toBe('1.0.0');
   });
 
   test('marks plugin as not installed when not in config', () => {
-    const result = computeEnrichment(
-      { name: '@brika/test', version: '1.0.0' },
-      makeConfig([]),
-    );
+    const result = computeEnrichment({ name: '@brika/test', version: '1.0.0' }, makeConfig([]));
     expect(result.installed).toBe(false);
     expect(result.installedVersion).toBeUndefined();
   });
@@ -30,16 +27,13 @@ describe('computeEnrichment', () => {
   test('checks compatibility with engine requirement', () => {
     const result = computeEnrichment(
       { name: '@brika/test', version: '1.0.0', engines: { brika: '>=0.1.0' } },
-      makeConfig([]),
+      makeConfig([])
     );
     expect(result.compatible).toBe(true);
   });
 
   test('returns incompatible when no engines field', () => {
-    const result = computeEnrichment(
-      { name: '@brika/test', version: '1.0.0' },
-      makeConfig([]),
-    );
+    const result = computeEnrichment({ name: '@brika/test', version: '1.0.0' }, makeConfig([]));
     expect(result.compatible).toBe(false);
   });
 });

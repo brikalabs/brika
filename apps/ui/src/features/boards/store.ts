@@ -1,7 +1,7 @@
-import type { Json } from '@/types';
 import type { ComponentNode, Mutation } from '@brika/ui-kit';
 import { applyMutations } from '@brika/ui-kit';
 import { create } from 'zustand';
+import type { Json } from '@/types';
 import type { Board, BoardBrickPlacement, BoardSummary, BrickType } from './api';
 
 interface BoardStore {

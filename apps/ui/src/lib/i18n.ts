@@ -88,7 +88,9 @@ function scheduleMissingNsReload(ns: string) {
 
 const BulkBackend = {
   type: 'backend' as const,
-  init() {},
+  init() {
+    // required by the i18next backend interface
+  },
   read(language: string, namespace: string, callback: ReadCallback) {
     if (language === 'cimode') {
       callback(null, {});

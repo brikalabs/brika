@@ -266,7 +266,14 @@ describe('matchesFilters', () => {
     };
 
     // All filters match
-    expect(matchesFilters(event, { level: 'error', source: 'plugin', plugin: 'timer', search: 'timeout' })).toBe(true);
+    expect(
+      matchesFilters(event, {
+        level: 'error',
+        source: 'plugin',
+        plugin: 'timer',
+        search: 'timeout',
+      })
+    ).toBe(true);
 
     // One filter fails
     expect(matchesFilters(event, { level: 'error', source: 'hub' })).toBe(false);
@@ -297,6 +304,13 @@ describe('matchesFilters', () => {
       error: { name: 'RateLimitWarning', message: 'Approaching limit' },
     };
 
-    expect(matchesFilters(fullEvent, { level: 'warn', source: 'plugin', plugin: 'weather', search: 'rate limit' })).toBe(true);
+    expect(
+      matchesFilters(fullEvent, {
+        level: 'warn',
+        source: 'plugin',
+        plugin: 'weather',
+        search: 'rate limit',
+      })
+    ).toBe(true);
   });
 });

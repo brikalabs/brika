@@ -4,7 +4,7 @@ import type { BunPlugin } from 'bun';
 import { ConfigLoader } from '@/runtime/config/config-loader';
 import { Logger } from '@/runtime/logs/log-router';
 import { brikaActionsPlugin, brikaExternalsPlugin } from './bun-plugins';
-import { type CacheEntry, ModuleCache, hashSource } from './module-cache';
+import { type CacheEntry, hashSource, ModuleCache } from './module-cache';
 import { TailwindCompiler } from './tailwind';
 
 @singleton()
@@ -17,12 +17,14 @@ export class ModuleCompiler {
     pluginName: string,
     rootDirectory: string,
     modules: Array<{ id: string }>,
-    actionsFile?: string,
+    actionsFile?: string
   ): Promise<void> {
     const plugins: BunPlugin[] = [brikaExternalsPlugin()];
     if (actionsFile) plugins.push(brikaActionsPlugin(actionsFile));
 
-    await Promise.all(modules.map((mod) => this.#compileModule(pluginName, mod.id, rootDirectory, plugins)));
+    await Promise.all(
+      modules.map((mod) => this.#compileModule(pluginName, mod.id, rootDirectory, plugins))
+    );
   }
 
   get(key: string): CacheEntry | undefined {
@@ -39,7 +41,12 @@ export class ModuleCompiler {
 
   // ── Per-module pipeline ────────────────────────────────────────────
 
-  async #compileModule(pluginName: string, moduleId: string, rootDirectory: string, plugins: BunPlugin[]): Promise<void> {
+  async #compileModule(
+    pluginName: string,
+    moduleId: string,
+    rootDirectory: string,
+    plugins: BunPlugin[]
+  ): Promise<void> {
     const entrypoint = join(rootDirectory, 'src', 'pages', `${moduleId}.tsx`);
 
     if (!(await Bun.file(entrypoint).exists())) {
@@ -53,9 +60,19 @@ export class ModuleCompiler {
       return;
     }
 
-    const result = await Bun.build({ entrypoints: [entrypoint], target: 'browser', format: 'esm', minify: true, plugins });
+    const result = await Bun.build({
+      entrypoints: [entrypoint],
+      target: 'browser',
+      format: 'esm',
+      minify: true,
+      plugins,
+    });
     if (!result.success) {
-      this.#logs.error('Module build failed', { pluginName, moduleId, errors: result.logs.map((l) => l.message).join('; ') });
+      this.#logs.error('Module build failed', {
+        pluginName,
+        moduleId,
+        errors: result.logs.map((l) => l.message).join('; '),
+      });
       return;
     }
 
@@ -64,7 +81,12 @@ export class ModuleCompiler {
 
     this.#cache.set(`${pluginName}:${moduleId}`, js, css);
     await this.#cache.writeToDisk(pluginName, moduleId, hash, js, css);
-    this.#logs.info('Module compiled', { pluginName, moduleId, jsSize: js.length, cssSize: css?.length });
+    this.#logs.info('Module compiled', {
+      pluginName,
+      moduleId,
+      jsSize: js.length,
+      cssSize: css?.length,
+    });
   }
 
   async #compileCss(pluginName: string, moduleId: string, js: string): Promise<string | undefined> {

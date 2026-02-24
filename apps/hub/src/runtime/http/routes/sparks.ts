@@ -1,10 +1,10 @@
 import { group, NotFound, route } from '@brika/router';
-import type { Json } from '@/types';
 import { z } from 'zod';
 import { SparkActions } from '@/runtime/events/actions';
 import { EventSystem } from '@/runtime/events/event-system';
 import { SparkRegistry } from '@/runtime/sparks/spark-registry';
 import { SparkStore } from '@/runtime/sparks/spark-store';
+import type { Json } from '@/types';
 
 export const sparksRoutes = group('/api/sparks', [
   /**

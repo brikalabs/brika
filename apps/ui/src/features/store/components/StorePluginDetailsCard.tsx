@@ -1,6 +1,6 @@
-import type { StorePlugin } from '../types';
 import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
+import type { StorePlugin } from '../types';
 
 interface StorePluginDetailsCardProps {
   plugin: StorePlugin;

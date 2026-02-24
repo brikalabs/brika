@@ -2,7 +2,11 @@
  * Tests for compatibility checking utilities
  */
 import { describe, expect, test } from 'bun:test';
-import { checkCompatibility, checkPluginCompatibility, meetsMinimumVersion } from '@/runtime/utils/compatibility';
+import {
+  checkCompatibility,
+  checkPluginCompatibility,
+  meetsMinimumVersion,
+} from '@/runtime/utils/compatibility';
 
 describe('checkCompatibility', () => {
   test('returns incompatible when no engine requirement', () => {

@@ -1,5 +1,5 @@
-import type { CompatibilityResult } from '@/runtime/store/types';
 import { HUB_VERSION } from '@/hub';
+import type { CompatibilityResult } from '@/runtime/store/types';
 import * as semver from './semver';
 
 /**

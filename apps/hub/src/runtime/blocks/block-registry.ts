@@ -5,8 +5,8 @@
  */
 
 import { inject, singleton } from '@brika/di';
-import type { BlockDefinition } from '@brika/sdk';
 import { arePortTypesCompatible } from '@brika/plugin';
+import type { BlockDefinition } from '@brika/sdk';
 
 /** Runtime block info (includes ports from running plugin) */
 export interface BlockSummary {
@@ -27,6 +27,7 @@ export interface BlockSummary {
   /** Output ports */
   outputs?: Array<{ id: string; name: string; typeName?: string }>;
 }
+
 import { Logger } from '@/runtime/logs/log-router';
 
 // ─────────────────────────────────────────────────────────────────────────────

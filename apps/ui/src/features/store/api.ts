@@ -1,6 +1,6 @@
 import type { VerifiedPluginsList } from '@brika/registry/types';
-import type { PluginSearchResult, StorePlugin } from './types';
 import { fetcher } from '@/lib/query';
+import type { PluginSearchResult, StorePlugin } from './types';
 
 export const storeApi = {
   /** Search npm for Brika plugins */

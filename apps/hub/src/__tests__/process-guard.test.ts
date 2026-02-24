@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 import { provide, useTestBed } from '@brika/di/testing';
+import { processGuard } from '@/runtime/bootstrap/plugins/process-guard';
 import { PluginLifecycle } from '@/runtime/plugins/plugin-lifecycle';
 import type { PluginProcess } from '@/runtime/plugins/plugin-process';
-import { processGuard } from '@/runtime/bootstrap/plugins/process-guard';
 
 useTestBed({ autoStub: false });
 

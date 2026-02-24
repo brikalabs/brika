@@ -12,12 +12,7 @@ export * from './manifests';
 export * from './preferences';
 export * from './store';
 
-import type {
-  BlockManifest,
-  BrickManifest,
-  PageManifest,
-  SparkManifest,
-} from './manifests';
+import type { BlockManifest, BrickManifest, PageManifest, SparkManifest } from './manifests';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Plugin Health & Runtime Representation
@@ -31,7 +26,21 @@ export type PluginHealth =
   | 'installing'
   | 'updating'
   | 'restarting'
-  | 'crash-loop';
+  | 'crash-loop'
+  | 'incompatible';
+
+/**
+ * Structured error with i18n support.
+ *
+ * - `key`: i18n translation key (e.g. `"plugins:errors.incompatibleVersion"`)
+ * - `params`: interpolation parameters for the key
+ * - `message`: pre-built English fallback (used in logs and when translations are unavailable)
+ */
+export interface PluginError {
+  key: string;
+  params?: Record<string, string>;
+  message: string;
+}
 
 /** Plugin representation - flattened for easy consumption */
 export interface Plugin {
@@ -76,8 +85,8 @@ export interface Plugin {
   pid: number | null;
   /** Timestamp when plugin was started (null when stopped) */
   startedAt: number | null;
-  /** Last error message if crashed */
-  lastError: string | null;
+  /** Last error (structured with i18n key, params, and English fallback) */
+  lastError: PluginError | null;
 
   // ─── Capabilities ──────────────────────────────────────────────────────────
   /** Available blocks */

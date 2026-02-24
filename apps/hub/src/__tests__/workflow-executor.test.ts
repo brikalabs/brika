@@ -5,12 +5,12 @@
 import 'reflect-metadata';
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { reset, stub, useTestBed } from '@brika/di/testing';
-import type { Json } from '@/types';
 import { BlockRegistry } from '@/runtime/blocks';
 import { PluginManager } from '@/runtime/plugins/plugin-manager';
 import type { Workflow } from '@/runtime/workflows/types';
 import type { ExecutionEvent, ExecutionListener } from '@/runtime/workflows/workflow-executor';
 import { WorkflowExecutor } from '@/runtime/workflows/workflow-executor';
+import type { Json } from '@/types';
 
 useTestBed({ autoStub: false });
 

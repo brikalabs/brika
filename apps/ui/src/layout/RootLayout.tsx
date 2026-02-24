@@ -28,6 +28,7 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import { useHealth } from '@/features/dashboard/hooks';
+import { useUpdateCheck } from '@/features/updates';
 import { ThemeProvider } from '@/lib/theme-provider';
 import { useLocale } from '@/lib/use-locale';
 import { cn } from '@/lib/utils';
@@ -129,6 +130,9 @@ function AppSidebarHeader() {
 function AppSidebarFooter() {
   const { t } = useLocale();
   const { data: health } = useHealth();
+  const { data: updateInfo } = useUpdateCheck();
+
+  const hasUpdate = updateInfo?.updateAvailable;
 
   return (
     <SidebarFooter>
@@ -136,7 +140,12 @@ function AppSidebarFooter() {
         <SidebarMenuItem>
           <SidebarMenuButton asChild tooltip={t('nav:settings')}>
             <Link to="/settings">
-              <Settings />
+              <span className="relative">
+                <Settings className="size-4" />
+                {hasUpdate && (
+                  <span className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-primary" />
+                )}
+              </span>
               <span>{t('nav:settings')}</span>
               {health && (
                 <span className="ml-auto text-[10px] text-muted-foreground">v{health.version}</span>

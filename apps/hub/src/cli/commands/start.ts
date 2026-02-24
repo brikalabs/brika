@@ -1,8 +1,6 @@
-import pc from 'picocolors';
 import { defineCommand } from '../command';
-import { hubUrl } from '../utils/hub-client';
-import { openBrowser } from '../utils/open';
-import { detect, spawnDetached } from '../utils/runtime';
+import { detect } from '../utils/runtime';
+import { runSupervisor, startBackground } from '../utils/supervisor';
 
 const uiDir = detect('ui');
 
@@ -28,20 +26,16 @@ export default defineCommand({
     'brika start --foreground',
   ],
   async handler({ values }) {
-    // values.port is string | undefined, values.foreground is boolean | undefined
     if (values.port) process.env.BRIKA_PORT = values.port;
     if (values.host) process.env.BRIKA_HOST = values.host;
     process.env.BRIKA_STATIC_DIR ??= uiDir;
 
-    if (values.foreground !== true) {
-      const { pid } = spawnDetached(['start', '--foreground']);
-      console.log(`${pc.green('Started')} — hub running in background  ${pc.dim('PID ' + pid)}`);
-      console.log(pc.dim(`  Stop with: brika stop`));
-      if (values.open) openBrowser(hubUrl());
-      process.exit(0);
+    if (process.env.BRIKA_SUPERVISOR_PID) {
+      await import('@/main');
+      return;
     }
 
-    await import('@/main');
-    if (values.open) openBrowser(hubUrl());
+    if (!values.foreground) startBackground(values.open);
+    await runSupervisor(values.open);
   },
 });

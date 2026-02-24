@@ -13,14 +13,21 @@ export function buildLocale(data: TemplateData, strings: LocaleStrings): string 
   };
 
   if (data.blocks) {
-    locale.blocks = { [data.id as string]: { name: data.pascal, description: data.description } };
-    locale.fields = { enabled: { label: strings.enabledLabel, description: strings.enabledDescription } };
+    locale.blocks = { [String(data.id)]: { name: data.pascal, description: data.description } };
+    locale.fields = {
+      enabled: { label: strings.enabledLabel, description: strings.enabledDescription },
+    };
   }
   if (data.bricks) {
-    locale.bricks = { [data.id as string]: { name: data.pascal, description: data.description } };
+    locale.bricks = { [String(data.id)]: { name: data.pascal, description: data.description } };
   }
   if (data.sparks) {
-    locale.sparks = { [data.id as string]: { name: data.pascal, description: strings.sparkDescription(data.name) } };
+    locale.sparks = {
+      [String(data.id)]: {
+        name: data.pascal,
+        description: strings.sparkDescription(String(data.name)),
+      },
+    };
   }
 
   return JSON.stringify(locale, null, 2) + '\n';

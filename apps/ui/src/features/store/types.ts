@@ -1,1 +1,1 @@
-export type { StorePlugin, PluginPackageData, PluginSearchResult } from '@brika/plugin';
+export type { PluginPackageData, PluginSearchResult, StorePlugin } from '@brika/plugin';

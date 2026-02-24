@@ -5,9 +5,24 @@
  * Used by the frontend to show update notifications and trigger upgrades.
  */
 
-import { group, route } from '@brika/router';
+import { createSSEStream, group, route } from '@brika/router';
+import { z } from 'zod';
+import { RESTART_CODE } from '@/cli/utils/runtime';
 import { UpdateService } from '@/runtime/updates';
-import { applyUpdate } from '@/updater';
+import { applyUpdate, type UpdatePhase } from '@/updater';
+
+export const systemRoutes = group('/api/system', [
+  /** POST /api/system/restart — signal supervisor to restart the hub */
+  route.post('/restart', () => {
+    setTimeout(() => process.exit(RESTART_CODE), 100);
+    return { ok: true };
+  }),
+  /** POST /api/system/stop — shut down the hub and supervisor */
+  route.post('/stop', () => {
+    setTimeout(() => process.exit(0), 100);
+    return { ok: true };
+  }),
+]);
 
 export const updateRoutes = group('/api/system/update', [
   /**
@@ -24,27 +39,43 @@ export const updateRoutes = group('/api/system/update', [
   }),
 
   /**
-   * POST /api/system/update
-   * Apply the latest update. Returns progress via JSON response.
-   * The hub should be restarted after a successful update.
+   * POST /api/system/update/apply
+   * Apply the latest update. Streams progress via SSE.
+   * After a successful update, the hub process exits so the process manager can restart it.
    */
-  route.post('/apply', async () => {
-    try {
-      const result = await applyUpdate();
-      return {
-        ok: true,
-        previousVersion: result.previousVersion,
-        newVersion: result.newVersion,
-        message: `Updated from v${result.previousVersion} to v${result.newVersion}. Restart required.`,
-        restartRequired: true,
-      };
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      return {
-        ok: false,
-        message,
-        restartRequired: false,
-      };
+  route.post(
+    '/apply',
+    { query: z.object({ force: z.coerce.boolean().optional() }) },
+    ({ query }) => {
+      return createSSEStream((send, close) => {
+        const sendProgress = (phase: UpdatePhase, message: string, error?: string) => {
+          send({ phase, message, error }, 'progress');
+        };
+
+        (async () => {
+          try {
+            const result = await applyUpdate({
+              force: query.force,
+              onProgress(phase, detail) {
+                sendProgress(phase, detail);
+              },
+            });
+
+            sendProgress(
+              'restarting',
+              `Updated v${result.previousVersion} → v${result.newVersion}. Restarting...`
+            );
+            close();
+
+            // Give the SSE stream time to flush, then signal supervisor to restart
+            setTimeout(() => process.exit(RESTART_CODE), 1000);
+          } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            sendProgress('error', message, message);
+            close();
+          }
+        })();
+      });
     }
-  }),
+  ),
 ]);

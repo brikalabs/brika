@@ -6,14 +6,14 @@
  */
 
 import 'reflect-metadata';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { mkdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { mkdir, rm } from 'node:fs/promises';
-import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { get, provide, stub, useTestBed } from '@brika/di/testing';
-import { ModuleCompiler } from '@/runtime/modules/module-compiler';
 import { ConfigLoader } from '@/runtime/config/config-loader';
 import { Logger } from '@/runtime/logs/log-router';
+import { ModuleCompiler } from '@/runtime/modules/module-compiler';
 
 // ─── Temp directory for ModuleCache disk path (required by constructor) ──────
 

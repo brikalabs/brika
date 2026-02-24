@@ -58,6 +58,19 @@
     "editDetails": "Modifier les détails",
     "saved": "Enregistré"
   },
+  "update": {
+    "title": "Mises à jour",
+    "description": "Vérifier les mises à jour et gérer la version du hub"
+  },
+  "hubControl": {
+    "title": "Contrôle du hub",
+    "description": "Redémarrer ou arrêter le processus Brika",
+    "restart": "Redémarrer",
+    "stop": "Arrêter",
+    "confirmStop": "Confirmer l'arrêt",
+    "restarting": "Redémarrage en cours…",
+    "stopped": "Le hub a été arrêté."
+  },
   "themes": {
     "default": "Par défaut",
     "ocean": "Océan",

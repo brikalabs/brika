@@ -1,7 +1,7 @@
 import type { PreferenceDefinition } from '@brika/plugin';
-import type { Json } from '@/types';
 import type { BrickFamily, ComponentNode } from '@brika/ui-kit';
 import { fetcher } from '@/lib/query';
+import type { Json } from '@/types';
 
 // ─── Brick Types (plugin-provided) ──────────────────────────────────────────
 

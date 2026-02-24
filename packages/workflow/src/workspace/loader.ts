@@ -4,6 +4,7 @@
  * Load and watch YAML workspace files with hot-reload support.
  */
 
+import { rm } from 'node:fs/promises';
 import type { BlockTypeDefinition, Workflow } from '../types';
 import { validateWorkspace } from '../validation';
 import { parseWorkspaceFile, serializeWorkspace } from './parser';
@@ -177,17 +178,8 @@ export class WorkspaceLoader {
     const filePath = this.#idToPath.get(id);
     if (!filePath) return false;
 
-    // biome-ignore lint/suspicious/noExplicitAny: Bun global type
-    const Bun = (globalThis as any).Bun;
-    if (!Bun) {
-      throw new Error('WorkspaceLoader requires Bun runtime');
-    }
-
     try {
-      const proc = Bun.spawn(['rm', filePath]);
-      await proc.exited;
-      if (proc.exitCode !== 0) return false;
-
+      await rm(filePath, { force: true });
       this.#fileHashes.delete(filePath);
       this.#unloadFile(filePath);
       return true;

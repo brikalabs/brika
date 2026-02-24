@@ -5,21 +5,23 @@
  * Templates are packed via the folder-tar plugin (works at both runtime and bundle-time).
  */
 
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { inject, singleton } from "@brika/di";
+import { installDir } from "@/cli/utils/runtime";
 import { Logger } from "../logs/log-router";
 import { unpackTemplates } from "./templates-tar";
 
+const isCompiled = import.meta.path.startsWith('/$bunfs/');
+
+function resolveDataDir(): string {
+  return isCompiled ? dirname(installDir) : join(process.cwd(), '.brika');
+}
+
 @singleton()
 export class BrikaInitializer {
-  readonly #brikaDir: string;
-  readonly #rootDir: string;
   readonly #logger = inject(Logger);
-
-  constructor() {
-    this.#rootDir = process.cwd();
-    this.#brikaDir = join(this.#rootDir, ".brika");
-  }
+  readonly #brikaDir = resolveDataDir();
+  readonly #rootDir = dirname(this.#brikaDir);
 
   get brikaDir(): string {
     return this.#brikaDir;

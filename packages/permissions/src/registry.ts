@@ -17,11 +17,10 @@ export function createRegistry<T extends Record<string, { icon: string }>>(map: 
         labelKey: `plugins:permissions.${id}`,
         descriptionKey: `plugins:permissions.${id}Desc`,
       },
-    ]),
+    ])
   ) as Readonly<Record<P, PermissionDefinition>>;
 
-  const PERMISSION_LIST: readonly PermissionDefinition[] =
-    Object.values(PERMISSIONS);
+  const PERMISSION_LIST: readonly PermissionDefinition[] = Object.values(PERMISSIONS);
 
   function isValidPermission(value: string): value is P {
     return Object.hasOwn(PERMISSIONS, value);

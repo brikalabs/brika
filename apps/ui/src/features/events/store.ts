@@ -1,5 +1,5 @@
-import type { BrikaEvent } from './types';
 import { create } from 'zustand';
+import type { BrikaEvent } from './types';
 
 interface EventsStore {
   events: BrikaEvent[];

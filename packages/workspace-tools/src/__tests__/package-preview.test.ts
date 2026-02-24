@@ -1,5 +1,12 @@
 import { describe, expect, test } from 'bun:test';
-import { countExports, formatNpmHint, formatNpmStatus, formatPackageLabel, getBinNames, getHooks } from '../package-preview';
+import {
+  countExports,
+  formatNpmHint,
+  formatNpmStatus,
+  formatPackageLabel,
+  getBinNames,
+  getHooks,
+} from '../package-preview';
 
 // ---------------------------------------------------------------------------
 // formatPackageLabel
@@ -87,7 +94,9 @@ describe('countExports', () => {
   });
 
   test('counts keys for an exports map', () => {
-    expect(countExports({ '.': './index.js', './utils': './utils.js', './types': './types.js' })).toBe(3);
+    expect(
+      countExports({ '.': './index.js', './utils': './utils.js', './types': './types.js' })
+    ).toBe(3);
   });
 });
 

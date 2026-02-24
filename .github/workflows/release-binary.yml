@@ -156,6 +156,27 @@ jobs:
           path: artifacts/
           merge-multiple: true
 
+      - name: Generate release metadata
+        env:
+          VERSION: ${{ needs.setup.outputs.version }}
+          BUN_VERSION: ${{ needs.setup.outputs.bun-version }}
+        run: |
+          cd artifacts
+          CHECKSUMS=$(for f in brika-*; do
+            printf '%s %s\n' "$(sha256sum "$f" | cut -d' ' -f1)" "$f"
+          done | jq -Rn '[inputs | split(" ") | {(.[1]): .[0]}] | add')
+
+          jq -n \
+            --arg version "$VERSION" \
+            --arg commit "$(git rev-parse HEAD)" \
+            --arg branch "$(git rev-parse --abbrev-ref HEAD)" \
+            --arg date "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg bun "$BUN_VERSION" \
+            --argjson checksums "$CHECKSUMS" \
+            '{version: $version, commit: $commit, branch: $branch, date: $date, bun: $bun, checksums: $checksums}' \
+            > release-meta.json
+          cat release-meta.json
+
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -6,6 +6,8 @@
  */
 
 import { inject, singleton } from '@brika/di';
+import { UpdateActions } from '@/runtime/events/actions';
+import { EventSystem } from '@/runtime/events/event-system';
 import { Logger } from '@/runtime/logs/log-router';
 import { checkForUpdate, noUpdateInfo, type UpdateInfo } from '@/updater';
 
@@ -15,6 +17,7 @@ const CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
 @singleton()
 export class UpdateService {
   readonly #logs = inject(Logger).withSource('updates');
+  readonly #events = inject(EventSystem);
   #cachedInfo: UpdateInfo | null = null;
   #lastCheckedAt: number = 0;
   #checking = false;
@@ -61,6 +64,17 @@ export class UpdateService {
           currentVersion: this.#cachedInfo.currentVersion,
           latestVersion: this.#cachedInfo.latestVersion,
         });
+
+        this.#events.dispatch(
+          UpdateActions.available.create(
+            {
+              currentVersion: this.#cachedInfo.currentVersion,
+              latestVersion: this.#cachedInfo.latestVersion,
+              releaseCommit: this.#cachedInfo.releaseCommit,
+            },
+            'hub'
+          )
+        );
       }
 
       return this.#cachedInfo;

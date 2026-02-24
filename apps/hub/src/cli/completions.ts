@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { appendFile, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
-import { basename, dirname, join } from 'node:path';
 import { homedir } from 'node:os';
+import { basename, dirname, join } from 'node:path';
 import type { Command, CommandOption } from './command';
 
 export type Shell = 'bash' | 'zsh' | 'fish';

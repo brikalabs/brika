@@ -2,10 +2,10 @@
  * Tests for archunit presets and custom rule
  */
 import { describe, expect, test } from 'bun:test';
-import { custom } from '../rules/custom';
 import { definePreset } from '../presets/define';
 import { reactFeaturePreset } from '../presets/react';
 import { servicePreset } from '../presets/service';
+import { custom } from '../rules/custom';
 
 describe('custom rule', () => {
   test('creates a rule with name and check function', () => {
@@ -35,9 +35,7 @@ describe('definePreset', () => {
   });
 
   test('handles void options', () => {
-    const preset = definePreset(() => [
-      custom('always', async function* () {}),
-    ]);
+    const preset = definePreset(() => [custom('always', async function* () {})]);
 
     const rules = preset();
     expect(rules).toHaveLength(1);

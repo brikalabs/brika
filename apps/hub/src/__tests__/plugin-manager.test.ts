@@ -386,7 +386,13 @@ describe('PluginManager', () => {
         await manager.kill('uid-123');
 
         expect(process.kill).toHaveBeenCalledWith(9);
-        expect(mockState.setHealth).toHaveBeenCalledWith('@test/plugin', 'crashed', 'killed');
+        expect(mockState.setHealth).toHaveBeenCalledWith(
+          '@test/plugin',
+          'crashed',
+          expect.objectContaining({
+            key: 'plugins:errors.killed',
+          })
+        );
         expect(mockLifecycle.unload).toHaveBeenCalledWith('@test/plugin');
       });
 

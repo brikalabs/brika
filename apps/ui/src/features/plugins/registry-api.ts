@@ -1,4 +1,5 @@
 import { fetcher } from '@/lib/query';
+import { fetchProgressStream } from '@/lib/sse-stream';
 
 // Types matching the backend
 export interface OperationProgress {
@@ -25,86 +26,6 @@ export interface InstalledPackage {
   path: string;
 }
 
-// Stream utilities
-interface ProgressStream {
-  onProgress: (callback: (progress: OperationProgress) => void) => void;
-  onComplete: () => Promise<void>;
-  close: () => void;
-}
-
-function parseSseLine(line: string): OperationProgress | null {
-  if (!line.startsWith('data: ')) return null;
-  try {
-    return JSON.parse(line.slice(6)) as OperationProgress;
-  } catch {
-    return null;
-  }
-}
-
-function processChunk(text: string, onData: (data: OperationProgress) => void): void {
-  for (const line of text.split('\n')) {
-    const data = parseSseLine(line);
-    if (data) onData(data);
-  }
-}
-
-function createProgressStream(response: Response): ProgressStream {
-  const reader = response.body?.getReader();
-  const decoder = new TextDecoder();
-  let progressCallback: ((progress: OperationProgress) => void) | null = null;
-  let completeResolve: (() => void) | null = null;
-  let closed = false;
-
-  const handleData = (data: OperationProgress) => {
-    progressCallback?.(data);
-    if (data.phase === 'complete' || data.phase === 'error') {
-      completeResolve?.();
-    }
-  };
-
-  const read = async () => {
-    if (!reader || closed) return;
-
-    try {
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done || closed) break;
-        processChunk(decoder.decode(value), handleData);
-      }
-    } catch {
-      // Stream closed
-    }
-  };
-
-  read();
-
-  return {
-    onProgress: (callback) => {
-      progressCallback = callback;
-    },
-    onComplete: () =>
-      new Promise<void>((resolve) => {
-        completeResolve = resolve;
-      }),
-    close: () => {
-      closed = true;
-      reader?.cancel();
-    },
-  };
-}
-
-async function fetchWithProgressStream(
-  url: string,
-  body: Record<string, unknown>
-): Promise<ProgressStream> {
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  return createProgressStream(response);
-}
-
 export const registryApi = {
   /** List all installed packages */
   list: () => fetcher<{ packages: InstalledPackage[] }>('/api/registry/packages'),
@@ -126,11 +47,15 @@ export const registryApi = {
 
   /** Install a package with SSE progress streaming */
   installStream: (packageName: string, version?: string) =>
-    fetchWithProgressStream('/api/registry/install', { package: packageName, version }),
+    fetchProgressStream<OperationProgress>('/api/registry/install', {
+      body: JSON.stringify({ package: packageName, version }),
+    }),
 
   /** Update package(s) with SSE progress streaming */
   updateStream: (packageName?: string) =>
-    fetchWithProgressStream('/api/registry/update', { package: packageName }),
+    fetchProgressStream<OperationProgress>('/api/registry/update', {
+      body: JSON.stringify({ package: packageName }),
+    }),
 };
 
 export const registryKeys = {

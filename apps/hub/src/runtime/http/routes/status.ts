@@ -1,22 +1,16 @@
 import { resolve } from 'node:path';
 import { route } from '@brika/router';
-import { getBuildDate, getGitBranch, getGitCommit } from '@/build-info.macro' with {
-  type: 'macro',
-};
+import { buildInfo } from '@/build-info';
 import { HUB_VERSION, hub } from '@/hub';
 import { BlockRegistry } from '@/runtime/blocks';
 import { BrickTypeRegistry } from '@/runtime/bricks';
 import { ConfigLoader } from '@/runtime/config';
 import { PluginManager } from '@/runtime/plugins/plugin-manager';
+import { isHubReady } from '@/runtime/readiness';
 import { SparkRegistry } from '@/runtime/sparks/spark-registry';
 import { WorkflowEngine } from '@/runtime/workflows';
 
-// Build info - computed at bundle-time via Bun macros
-const buildInfo = {
-  commit: getGitCommit(),
-  branch: getGitBranch(),
-  date: getBuildDate(),
-};
+export { buildInfo };
 
 // Process start time - computed once at module load
 const startedAt = new Date(Date.now() - process.uptime() * 1000).toISOString();
@@ -24,6 +18,7 @@ const startedAt = new Date(Date.now() - process.uptime() * 1000).toISOString();
 /** Simple health check endpoint */
 export const healthRoute = route.get('/api/health', () => ({
   ok: true as const,
+  ready: isHubReady(),
   version: HUB_VERSION,
   build: buildInfo,
 }));
@@ -45,6 +40,7 @@ export const systemRoute = route.get('/api/system', ({ inject }) => {
 
   return {
     version: HUB_VERSION,
+    pid: process.pid,
     runtime: `Bun ${Bun.version}`,
     os: `${Bun.env.OS ?? process.platform} ${process.arch}`,
     startedAt,

@@ -14,7 +14,9 @@ export default defineCommand({
       throw new CliError(`${pc.red('Not running')} — no PID file found in this directory`);
     }
     if (status.state === 'stale') {
-      console.error(`${pc.yellow('Not running')} — stale PID file (process ${status.pid} not found)`);
+      console.error(
+        `${pc.yellow('Not running')} — stale PID file (process ${status.pid} not found)`
+      );
       await removePidFile();
       return;
     }

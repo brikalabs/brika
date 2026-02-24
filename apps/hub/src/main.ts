@@ -8,7 +8,6 @@ import {
   I18nLoader,
   loader,
   PluginLoader,
-  pid,
   processGuard,
   routes,
   sparks,
@@ -24,7 +23,6 @@ import { allRoutes } from '@/runtime/http/routes';
  * Declarative bootstrap with modular plugins.
  */
 await bootstrap()
-  .use(pid()) // Check for duplicate instance early; writes PID on start
   .use(processGuard()) // Kill orphan plugins from previous crash; guard current ones
   .use(cache()) // Initialize SQLite cache before loaders
   .use(sparks())

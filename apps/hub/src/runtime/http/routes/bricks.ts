@@ -1,10 +1,10 @@
 import { group, NotFound, route } from '@brika/router';
-import type { Json } from '@/types';
 import { z } from 'zod';
 import { BrickInstanceManager, BrickTypeRegistry } from '@/runtime/bricks';
 import type { BrickInstance } from '@/runtime/bricks/brick-instance-manager';
 import type { RegisteredBrickType } from '@/runtime/bricks/brick-type-registry';
 import { PluginLifecycle } from '@/runtime/plugins/plugin-lifecycle';
+import type { Json } from '@/types';
 
 async function toBrickTypeDto(t: RegisteredBrickType, lifecycle: PluginLifecycle) {
   const process = t.config?.some((f) => f.type === 'dynamic-dropdown')

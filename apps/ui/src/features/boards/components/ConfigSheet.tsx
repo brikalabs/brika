@@ -1,5 +1,4 @@
 import type { PreferenceDefinition } from '@brika/plugin';
-import type { Json } from '@/types';
 import { RefreshCw, Trash2, X } from 'lucide-react';
 import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -34,6 +33,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { useLocale } from '@/lib/use-locale';
+import type { Json } from '@/types';
 import { boardsApi, brickTypesApi } from '../api';
 import { useRemoveBrick, useRenameBrick } from '../hooks';
 import { useBoardStore } from '../store';

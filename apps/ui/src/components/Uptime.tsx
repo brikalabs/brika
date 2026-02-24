@@ -1,67 +1,73 @@
 import { useEffect, useState } from 'react';
+import type { DurationInput } from '@/lib/use-locale';
+import { useLocale } from '@/lib/use-locale';
 
-const durationFormat = new Intl.DurationFormat(undefined, {
-  style: 'narrow',
-});
+type StartedAtInput = string | number | Date | null | undefined;
 
 /**
- * Format seconds into a human-readable uptime string using Intl.DurationFormat
+ * Normalize any supported input to a millisecond timestamp, or null.
  */
-function formatUptime(totalSeconds: number): string {
+function toTimestamp(value: StartedAtInput): number | null {
+  if (value == null) return null;
+  if (value instanceof Date) return value.getTime();
+  if (typeof value === 'number') return value;
+  const parsed = new Date(value).getTime();
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
+/**
+ * Build a duration object with only the two largest non-zero units for readability.
+ */
+function toDuration(totalSeconds: number): DurationInput {
   const days = Math.floor(totalSeconds / 86400);
   const hours = Math.floor((totalSeconds % 86400) / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
 
-  // Build duration object with only non-zero largest units for readability
-  if (days > 0) {
-    return durationFormat.format({ days, hours });
-  }
-  if (hours > 0) {
-    return durationFormat.format({ hours, minutes });
-  }
-  if (minutes > 0) {
-    return durationFormat.format({ minutes, seconds });
-  }
-  return durationFormat.format({ seconds });
+  if (days > 0) return { days, hours };
+  if (hours > 0) return { hours, minutes };
+  if (minutes > 0) return { minutes, seconds };
+  return { seconds };
 }
 
 /**
- * Hook that returns a live uptime string that updates every second
+ * Hook that returns a live uptime string that updates every second.
  */
-export function useUptime(startedAt: number | null): string | null {
+export function useUptime(startedAt: StartedAtInput): string | null {
+  const { formatDuration } = useLocale();
+  const ts = toTimestamp(startedAt);
+
   const [uptime, setUptime] = useState<string | null>(() => {
-    if (!startedAt) return null;
-    return formatUptime(Math.floor((Date.now() - startedAt) / 1000));
+    if (ts == null) return null;
+    return formatDuration(toDuration(Math.floor((Date.now() - ts) / 1000)), { style: 'narrow' });
   });
 
   useEffect(() => {
-    if (!startedAt) {
+    if (ts == null) {
       setUptime(null);
       return;
     }
 
-    // Update immediately
-    setUptime(formatUptime(Math.floor((Date.now() - startedAt) / 1000)));
+    const update = () =>
+      setUptime(
+        formatDuration(toDuration(Math.floor((Date.now() - ts) / 1000)), { style: 'narrow' })
+      );
 
-    // Then update every second
-    const interval = setInterval(() => {
-      setUptime(formatUptime(Math.floor((Date.now() - startedAt) / 1000)));
-    }, 1000);
-
+    update();
+    const interval = setInterval(update, 1000);
     return () => clearInterval(interval);
-  }, [startedAt]);
+  }, [ts, formatDuration]);
 
   return uptime;
 }
 
 interface UptimeProps {
-  startedAt: number | null;
+  startedAt: StartedAtInput;
   className?: string;
 }
 
 /**
- * Component that displays a live uptime that updates every second
+ * Component that displays a live uptime that updates every second.
  */
 export function Uptime({ startedAt, className }: Readonly<UptimeProps>) {
   const uptime = useUptime(startedAt);

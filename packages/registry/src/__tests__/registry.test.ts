@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { generateKeyPairSync, sign } from 'node:crypto';
-import { REGISTRY_PUBLIC_KEY, SPKI_HEADER, canonicalize, verifyWithRawKey } from '..';
+import { canonicalize, REGISTRY_PUBLIC_KEY, SPKI_HEADER, verifyWithRawKey } from '..';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // canonicalize

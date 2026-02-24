@@ -244,11 +244,20 @@ describe('StateStore', () => {
         uid: 'uid1',
       });
 
-      await store.setHealth('@test/plugin', 'crashed', 'Connection timeout');
+      await store.setHealth('@test/plugin', 'crashed', {
+        key: 'plugins:errors.crashed',
+        params: { reason: 'Connection timeout' },
+        message: 'Connection timeout',
+      });
 
       const plugin = store.get('@test/plugin');
       expect(plugin?.health).toBe('crashed');
-      expect(plugin?.lastError).toBe('Connection timeout');
+      expect(plugin?.lastError).toEqual(
+        expect.objectContaining({
+          key: 'plugins:errors.crashed',
+          message: 'Connection timeout',
+        })
+      );
     });
 
     test('ignores non-existent plugin', async () => {

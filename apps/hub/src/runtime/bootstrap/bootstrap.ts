@@ -4,6 +4,7 @@ import { hub } from '@/hub';
 import { BrikaInitializer, ConfigLoader } from '@/runtime/config';
 import { Logger } from '@/runtime/logs/log-router';
 import { LogStore } from '@/runtime/logs/log-store';
+import { setHubReady, setHubStopping } from '@/runtime/readiness';
 import type { BootstrapPlugin } from './plugin';
 
 const HOT_STARTED = Symbol.for('brika.hub.started');
@@ -60,6 +61,7 @@ export class Bootstrap {
     await this.runPhase('Loading', (p) => p.onLoad?.(config));
     await this.runPhase('Starting', (p) => p.onStart?.());
 
+    setHubReady();
     this.logs.info('Brika Hub started successfully', {
       version: hub.version,
       pluginCount: this.plugins.length,
@@ -68,6 +70,7 @@ export class Bootstrap {
   }
 
   async stop(): Promise<void> {
+    setHubStopping();
     await this.runPhase('Stopping', (p) => p.onStop?.(), this.plugins.toReversed());
     this.logs.info('Brika Hub stopped successfully');
     this.logStore.close();

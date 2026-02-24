@@ -1,5 +1,11 @@
 import { inject, singleton } from '@brika/di';
-import { REGISTRY_PUBLIC_KEY, canonicalize, verifyWithRawKey, type VerifiedPlugin, type VerifiedPluginsList } from '@brika/registry';
+import {
+  canonicalize,
+  REGISTRY_PUBLIC_KEY,
+  type VerifiedPlugin,
+  type VerifiedPluginsList,
+  verifyWithRawKey,
+} from '@brika/registry';
 import { Logger } from '@/runtime/logs/log-router';
 
 // Configuration

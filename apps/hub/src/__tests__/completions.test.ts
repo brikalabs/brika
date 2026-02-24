@@ -2,9 +2,9 @@
  * Tests for CLI shell completion script generation
  */
 
-import { describe, expect, test, beforeEach, afterEach } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import type { Command } from '@/cli/command';
-import { isShell, shellList, detectShell, generateCompletions } from '@/cli/completions';
+import { detectShell, generateCompletions, isShell, shellList } from '@/cli/completions';
 
 // ── mock command factories ──────────────────────────────────────────────────
 
@@ -317,9 +317,7 @@ describe('generateCompletions — bash', () => {
       const output = generateCompletions(commandsWithSubcommands, 'bash');
       // "list" subcommand has no options — should not appear as a case
       const lines = output.split('\n');
-      const listCases = lines.filter(
-        (l) => l.trim().startsWith('list)') && l.includes('compgen')
-      );
+      const listCases = lines.filter((l) => l.trim().startsWith('list)') && l.includes('compgen'));
       expect(listCases).toHaveLength(0);
     });
 
@@ -350,10 +348,7 @@ describe('generateCompletions — bash', () => {
 
   describe('edge cases', () => {
     test('empty commands array produces valid bash function', () => {
-      const output = generateCompletions(
-        [simpleCmd('help', 'Show help')],
-        'bash'
-      );
+      const output = generateCompletions([simpleCmd('help', 'Show help')], 'bash');
       expect(output).toContain('_brika()');
       expect(output).toContain('complete -F _brika brika');
       // only help in the list
@@ -638,7 +633,7 @@ describe('generateCompletions — fish', () => {
       const lines = output.split('\n');
       const flagLine = lines.find((l) => l.includes('-l flag'));
       expect(flagLine).toBeDefined();
-      expect(flagLine).not.toContain(" -d ");
+      expect(flagLine).not.toContain(' -d ');
     });
   });
 
@@ -655,7 +650,7 @@ describe('generateCompletions — fish', () => {
       const output = generateCompletions(commandsWithSubcommands, 'fish');
       // The condition should be "__fish_seen_subcommand_from plugin; and not __fish_seen_subcommand_from install list remove"
       expect(output).toContain(
-        "__fish_seen_subcommand_from plugin; and not __fish_seen_subcommand_from install list remove"
+        '__fish_seen_subcommand_from plugin; and not __fish_seen_subcommand_from install list remove'
       );
     });
 
@@ -663,7 +658,7 @@ describe('generateCompletions — fish', () => {
       const output = generateCompletions(commandsWithSubcommands, 'fish');
       // install's options should be conditioned on both plugin and install being seen
       expect(output).toContain(
-        "__fish_seen_subcommand_from plugin; and __fish_seen_subcommand_from install"
+        '__fish_seen_subcommand_from plugin; and __fish_seen_subcommand_from install'
       );
       expect(output).toContain('-l registry');
       expect(output).toContain('-l force');
@@ -672,7 +667,7 @@ describe('generateCompletions — fish', () => {
     test('generates options for remove subcommand', () => {
       const output = generateCompletions(commandsWithSubcommands, 'fish');
       expect(output).toContain(
-        "__fish_seen_subcommand_from plugin; and __fish_seen_subcommand_from remove"
+        '__fish_seen_subcommand_from plugin; and __fish_seen_subcommand_from remove'
       );
       expect(output).toContain('-l purge');
     });
@@ -851,9 +846,7 @@ describe('generateCompletions — output snapshots', () => {
     // First line: disable file completions
     expect(lines[0]).toBe('complete -c brika -f');
     // Second line: run subcommand
-    expect(lines[1]).toBe(
-      "complete -c brika -n '__fish_use_subcommand' -a run -d 'Run something'"
-    );
+    expect(lines[1]).toBe("complete -c brika -n '__fish_use_subcommand' -a run -d 'Run something'");
     // Third line: watch option
     expect(lines[2]).toBe(
       "complete -c brika -n '__fish_seen_subcommand_from run' -l watch -s w -d 'Watch mode'"

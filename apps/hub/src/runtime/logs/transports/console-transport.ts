@@ -1,5 +1,5 @@
-import type { LogEvent, LogLevel } from "../types";
 import type { Formatter } from "../formatters/types";
+import type { LogEvent, LogLevel } from "../types";
 import type { Transport } from "./transport";
 
 const LEVEL_ORDER: Record<LogLevel, number> = {

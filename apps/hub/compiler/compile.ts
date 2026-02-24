@@ -77,6 +77,14 @@ export async function compile(target?: string): Promise<void> {
   await rm(`${bundlePath}.map`, { force: true }).catch(() => {});
 
   log(pc.dim(`  ${await fileSize(outPath)}`));
+
+  // Step 3: Compute SHA256 of compiled binary
+  step('Computing SHA256...');
+  const hasher = new Bun.CryptoHasher('sha256');
+  hasher.update(await Bun.file(outPath).arrayBuffer());
+  const sha256 = hasher.digest('hex');
+  log(pc.dim(`  ${sha256}`));
+
   console.log();
   done(`Compiled in ${pc.bold(elapsed())}`);
 }

@@ -1,5 +1,5 @@
-import type { LogEvent, LogLevel, LogSource } from "./types";
 import { API_BASE, fetcher } from "@/lib/query";
+import type { LogEvent, LogLevel, LogSource } from "./types";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types

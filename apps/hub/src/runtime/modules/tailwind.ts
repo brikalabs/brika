@@ -1,5 +1,5 @@
-import TW_DEFAULT_THEME from 'tailwindcss/theme.css' with { type: 'text' };
 import TW_CUSTOM_THEME from '@brika/ui-kit/tailwind-theme.css' with { type: 'text' };
+import TW_DEFAULT_THEME from 'tailwindcss/theme.css' with { type: 'text' };
 
 type Build = (candidates: string[]) => string;
 
@@ -36,7 +36,9 @@ export class TailwindCompiler {
 
   async #init(): Promise<Build> {
     const { compile } = await import('tailwindcss');
-    const compiled = await compile([TW_DEFAULT_THEME, TW_CUSTOM_THEME, '@tailwind utilities;'].join('\n'));
+    const compiled = await compile(
+      [TW_DEFAULT_THEME, TW_CUSTOM_THEME, '@tailwind utilities;'].join('\n')
+    );
     return (candidates) => compiled.build(candidates);
   }
 }

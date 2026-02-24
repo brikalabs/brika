@@ -13,10 +13,12 @@ import {
   GitBranch,
   GitCommit,
   Laptop,
+  Monitor,
   Server,
   Tag,
 } from 'lucide-react';
 import { Uptime } from '@/components/Uptime';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useLocale } from '@/lib/use-locale';
 import { InfoItem } from './InfoItem';
 import { SystemInfoStats } from './SystemInfoStats';
@@ -57,13 +59,19 @@ export function SystemInfoContent({ system }: Readonly<SystemInfoContentProps>) 
   const repo = system.repository;
   const commitUrl =
     repo && system.build.commit ? `${repo}/commit/${system.build.commit}` : undefined;
-  const branchUrl = repo && system.build.branch ? `${repo}/tree/${system.build.branch}` : undefined;
 
   return (
     <div className="space-y-4">
-      <div>
-        <h3 className="font-semibold text-base">{t('settings:system.title')}</h3>
-        <p className="text-muted-foreground text-sm">{t('settings:system.description')}</p>
+      <div className="flex items-start gap-3">
+        <Avatar size="lg">
+          <AvatarFallback>
+            <Monitor className="size-4" />
+          </AvatarFallback>
+        </Avatar>
+        <div>
+          <h3 className="font-semibold text-base">{t('settings:system.title')}</h3>
+          <p className="text-muted-foreground text-sm">{t('settings:system.description')}</p>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -78,9 +86,7 @@ export function SystemInfoContent({ system }: Readonly<SystemInfoContentProps>) 
         <InfoItem
           icon={Clock}
           label={t('settings:system.uptime')}
-          value={
-            <Uptime startedAt={system.startedAt ? new Date(system.startedAt).getTime() : null} />
-          }
+          value={<Uptime startedAt={system.startedAt} />}
         />
 
         {system.build.commit && (
@@ -97,7 +103,7 @@ export function SystemInfoContent({ system }: Readonly<SystemInfoContentProps>) 
             icon={GitBranch}
             label={t('settings:system.branch')}
             value={system.build.branch}
-            href={branchUrl}
+            href={repo ? `${repo}/tree/${system.build.branch}` : undefined}
             copyable
           />
         )}

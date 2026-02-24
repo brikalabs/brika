@@ -1,4 +1,3 @@
-import type { StorePlugin } from '../types';
 import { useQueryClient } from '@tanstack/react-query';
 import { Check, Download, Loader2, Trash2 } from 'lucide-react';
 import React from 'react';
@@ -7,6 +6,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { pluginsKeys } from '@/features/plugins/api';
 import { registryApi, registryKeys } from '@/features/plugins/registry-api';
 import { useLocale } from '@/lib/use-locale';
+import type { StorePlugin } from '../types';
 import { InstallProgressDialog } from './InstallProgressDialog';
 
 interface InstallButtonProps {

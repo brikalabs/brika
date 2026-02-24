@@ -23,8 +23,8 @@ import {
   formatPackagePreview,
   isPluginPackage,
   mustGet,
-  parseFilters,
   type PackageDetails,
+  parseFilters,
   readPackageDetails,
 } from './publish-utils';
 import { getPrivateWorkspaceDependencyWarnings } from './publish-warnings';

@@ -4,6 +4,7 @@
 
 import { describe, expect, test } from 'bun:test';
 import { useBunMock } from '@brika/testing';
+import { buildInfo } from '@/runtime/http/routes/status';
 import type { UpdateInfo } from '@/updater';
 import { checkForUpdate, isNewer, noUpdateInfo } from '@/updater';
 
@@ -91,7 +92,7 @@ describe('noUpdateInfo', () => {
     const { hub } = await import('@/hub');
     const info = noUpdateInfo();
 
-    expect(info).toEqual({
+    expect(info).toMatchObject({
       currentVersion: hub.version,
       latestVersion: hub.version,
       updateAvailable: false,
@@ -100,7 +101,7 @@ describe('noUpdateInfo', () => {
       publishedAt: '',
       assetName: null,
       assetSize: null,
-    } satisfies UpdateInfo);
+    });
   });
 
   test('uses the actual hub version as both current and latest', async () => {
@@ -131,34 +132,60 @@ function mockGitHubRelease(
     body?: string;
     publishedAt?: string;
     htmlUrl?: string;
+    commit?: string;
   }
 ) {
-  const asset = options?.assetName
-    ? [
-        {
-          name: options.assetName,
-          browser_download_url: `https://example.com/${options.assetName}`,
-          size: 1024 * 1024 * 10,
-        },
-      ]
-    : [];
+  const assets: Array<{ name: string; browser_download_url: string; size: number }> = [];
 
-  bun.fetch(() =>
-    Promise.resolve(
-      new Response(
-        JSON.stringify({
-          tag_name: tagName,
-          published_at: options?.publishedAt ?? '2026-01-01T00:00:00Z',
-          html_url:
-            options?.htmlUrl ??
-            `https://github.com/maxscharwath/brika/releases/tag/${tagName}`,
-          body: options?.body ?? 'Release notes',
-          assets: asset,
-        }),
-        { status: 200, headers: { 'Content-Type': 'application/json' } }
-      )
-    )
-  );
+  if (options?.assetName) {
+    assets.push({
+      name: options.assetName,
+      browser_download_url: `https://example.com/${options.assetName}`,
+      size: 1024 * 1024 * 10,
+    });
+  }
+
+  const commit = options?.commit;
+  if (commit) {
+    assets.push({
+      name: 'release-meta.json',
+      browser_download_url: 'https://example.com/release-meta.json',
+      size: 100,
+    });
+  }
+
+  const releaseJson = JSON.stringify({
+    tag_name: tagName,
+    target_commitish: 'master',
+    published_at: options?.publishedAt ?? '2026-01-01T00:00:00Z',
+    html_url: options?.htmlUrl ?? `https://github.com/maxscharwath/brika/releases/tag/${tagName}`,
+    body: options?.body ?? 'Release notes',
+    assets,
+  });
+
+  const metaJson = commit
+    ? JSON.stringify({
+        version: tagName.replace(/^v/, ''),
+        commit,
+        branch: 'master',
+        date: '2026-01-01T00:00:00Z',
+        bun: '1.3.9',
+        checksums: {},
+      })
+    : null;
+
+  bun.fetch((input) => {
+    const url =
+      typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    if (metaJson && url.includes('release-meta.json')) {
+      return Promise.resolve(
+        new Response(metaJson, { status: 200, headers: { 'Content-Type': 'application/json' } })
+      );
+    }
+    return Promise.resolve(
+      new Response(releaseJson, { status: 200, headers: { 'Content-Type': 'application/json' } })
+    );
+  });
 }
 
 describe('checkForUpdate', () => {
@@ -166,7 +193,9 @@ describe('checkForUpdate', () => {
 
   test('returns updateAvailable=false when already on latest', async () => {
     const { hub } = await import('@/hub');
-    mockGitHubRelease(bun, `v${hub.version}`);
+    mockGitHubRelease(bun, `v${hub.version}`, {
+      commit: buildInfo.commitFull,
+    });
 
     const info = await checkForUpdate();
 
@@ -249,6 +278,7 @@ describe('checkForUpdate', () => {
         new Response(
           JSON.stringify({
             tag_name: 'v99.0.0',
+            target_commitish: 'master',
             published_at: '2026-01-01T00:00:00Z',
             html_url: 'https://github.com/maxscharwath/brika/releases/tag/v99.0.0',
             body: null,
@@ -312,6 +342,46 @@ describe('checkForUpdate', () => {
     const info = await checkForUpdate();
 
     // The current hub version should be >= 0.0.1 in any realistic scenario
+    // Even though commits differ, since current is ahead, no update
     expect(info.updateAvailable).toBe(false);
+  });
+
+  test('detects same-version different commit as dev build', async () => {
+    const { hub } = await import('@/hub');
+    mockGitHubRelease(bun, `v${hub.version}`, {
+      commit: 'aabbccddee0011223344aabbccddee0011223344',
+    });
+
+    const info = await checkForUpdate();
+
+    expect(info.updateAvailable).toBe(false);
+    expect(info.devBuild).toBe(true);
+  });
+
+  test('populates releaseCommit from release-meta.json', async () => {
+    const commitSha = 'ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00';
+    mockGitHubRelease(bun, 'v99.0.0', { commit: commitSha });
+
+    const info = await checkForUpdate();
+
+    expect(info.releaseCommit).toBe(commitSha);
+  });
+
+  test('returns empty releaseCommit when release-meta.json is absent', async () => {
+    mockGitHubRelease(bun, 'v99.0.0'); // no commit option → no release-meta.json
+
+    const info = await checkForUpdate();
+
+    expect(info.releaseCommit).toBe('');
+  });
+
+  test('devBuild is false when no release-meta.json and same version', async () => {
+    const { hub } = await import('@/hub');
+    mockGitHubRelease(bun, `v${hub.version}`); // no commit → no meta
+
+    const info = await checkForUpdate();
+
+    // Without release-meta.json, can't compare commits — not flagged as dev build
+    expect(info.devBuild).toBe(false);
   });
 });

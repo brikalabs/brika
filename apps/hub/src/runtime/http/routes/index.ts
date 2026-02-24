@@ -14,7 +14,7 @@ import { settingsRoutes } from './settings';
 import { sparksRoutes } from './sparks';
 import { statusRoutes } from './status';
 import { streamsRoutes } from './streams';
-import { updateRoutes } from './updates';
+import { systemRoutes, updateRoutes } from './updates';
 import { workflowsRoutes } from './workflows';
 
 /**
@@ -37,5 +37,6 @@ export const allRoutes = combineRoutes(
   i18nRoutes,
   registryRoutes,
   settingsRoutes,
-  updateRoutes
+  updateRoutes,
+  systemRoutes
 );

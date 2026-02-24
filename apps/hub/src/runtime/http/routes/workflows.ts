@@ -1,8 +1,8 @@
 import { BadRequest, createSSEStream, group, route } from '@brika/router';
-import type { Json } from '@/types';
 import { z } from 'zod';
 import { BlockRegistry } from '@/runtime/blocks';
 import { WorkflowEngine, WorkflowLoader } from '@/runtime/workflows';
+import type { Json } from '@/types';
 import { getOrThrow } from '../utils/resource-helpers';
 
 const PositionSchema = z

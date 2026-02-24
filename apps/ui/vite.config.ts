@@ -4,11 +4,7 @@ import { defineConfig } from 'vite';
 import { bannerPlugin } from './vite-plugin-banner';
 
 export default defineConfig({
-  plugins: [
-    bannerPlugin(),
-    react(),
-    tailwindcss(),
-  ],
+  plugins: [bannerPlugin(), react(), tailwindcss()],
   resolve: {
     alias: {
       '@': new URL('./src', import.meta.url).pathname,

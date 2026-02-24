@@ -5,10 +5,13 @@
 import 'reflect-metadata';
 import { Database } from 'bun:sqlite';
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { get, provide, reset, stub, useTestBed } from '@brika/di/testing';
-import type { LogEvent } from '@/runtime/logs/types';
 import { ConfigLoader } from '@/runtime/config';
 import { type LogQueryParams, LogStore } from '@/runtime/logs/log-store';
+import type { LogEvent } from '@/runtime/logs/types';
 
 useTestBed({ autoStub: false });
 
@@ -34,8 +37,7 @@ describe('LogStore', () => {
 
   beforeEach(async () => {
     // Create temp directory for test database
-    tempDir = await Bun.$`mktemp -d`.text();
-    tempDir = tempDir.trim();
+    tempDir = await mkdtemp(join(tmpdir(), 'brika-log-test-'));
 
     stub(ConfigLoader, {
       getRootDir: () => tempDir,
@@ -49,7 +51,7 @@ describe('LogStore', () => {
     store.close();
     reset();
     // Cleanup temp directory
-    await Bun.$`rm -rf ${tempDir}`.quiet();
+    await rm(tempDir, { recursive: true, force: true });
   });
 
   describe('init', () => {

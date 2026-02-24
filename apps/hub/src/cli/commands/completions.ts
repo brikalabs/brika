@@ -1,6 +1,5 @@
 import pc from 'picocolors';
 import { defineCommand } from '../command';
-import { CliError } from '../errors';
 import {
   detectShell,
   generateCompletions,
@@ -9,6 +8,7 @@ import {
   shellList,
   uninstallCompletions,
 } from '../completions';
+import { CliError } from '../errors';
 
 export default defineCommand({
   name: 'completions',
@@ -24,11 +24,7 @@ export default defineCommand({
   options: {
     uninstall: { type: 'boolean', description: 'Remove completions from shell profile' },
   },
-  examples: [
-    'brika completions',
-    'brika completions --uninstall',
-    'brika completions zsh',
-  ],
+  examples: ['brika completions', 'brika completions --uninstall', 'brika completions zsh'],
   async handler({ values, positionals, commands }) {
     // values.uninstall is boolean | undefined
     if (values.uninstall) {

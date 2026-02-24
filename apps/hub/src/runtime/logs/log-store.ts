@@ -5,10 +5,11 @@
  */
 
 import { Database, SQLQueryBindings } from 'bun:sqlite'
+import { mkdir } from 'node:fs/promises';
 import { inject, singleton } from "@brika/di";
+import { ConfigLoader } from "@/runtime/config/config-loader";
 import type { Json } from "@/types";
 import type { LogEvent, LogLevel, LogSource } from "./types";
-import { ConfigLoader } from "@/runtime/config/config-loader";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -63,9 +64,9 @@ export class LogStore {
     const rootDir = configLoader.getRootDir();
     const dbPath = `${rootDir}/.brika/logs.db`;
 
-    // Ensure .brika directory exists (mkdir -p is idempotent)
+    // Ensure .brika directory exists
     const brikaDir = `${rootDir}/.brika`;
-    await Bun.$`mkdir -p ${brikaDir}`.quiet();
+    await mkdir(brikaDir, { recursive: true });
 
     this.#db = new Database(dbPath);
 

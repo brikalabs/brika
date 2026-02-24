@@ -116,3 +116,14 @@ export const BoardActions = defineActions('board', {
 });
 
 export type BoardAction = ActionsUnion<typeof BoardActions>;
+
+// Update actions for hub version updates
+export const UpdateActions = defineActions('update', {
+  available: z.object({
+    currentVersion: z.string(),
+    latestVersion: z.string(),
+    releaseCommit: z.string(),
+  }),
+});
+
+export type UpdateAction = ActionsUnion<typeof UpdateActions>;

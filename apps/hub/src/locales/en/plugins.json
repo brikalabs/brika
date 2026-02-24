@@ -8,6 +8,8 @@
   "notFoundDetail": "The plugin \"{{uid}}\" is not loaded or doesn't exist",
   "count_one": "{{count}} plugin",
   "count_other": "{{count}} plugins",
+  "needsAttention_one": "{{count}} plugin needs attention",
+  "needsAttention_other": "{{count}} plugins need attention",
   "details": {
     "title": "$t(common:items.plugin_one) Details",
     "info": "Information",
@@ -69,6 +71,15 @@
     "stopped": "Stopped",
     "crashed": "Crashed",
     "restarting": "Restarting..."
+  },
+  "errors": {
+    "incompatibleVersion": "Requires Brika {{required}}, running {{current}}",
+    "incompatibleUnknown": "Incompatible with this version of Brika",
+    "heartbeatTimeout": "Plugin stopped responding",
+    "crashed": "Plugin crashed: {{reason}}",
+    "crashLoop": "Crash loop: {{reason}}",
+    "restarting": "Restarting in {{seconds}}s",
+    "killed": "Plugin was forcefully terminated"
   },
   "table": {
     "name": "Name",

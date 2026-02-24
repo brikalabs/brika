@@ -54,4 +54,24 @@ describe('cli/commands/version', () => {
     const joined = output.join('\n');
     expect(joined).toContain('Install:');
   });
+
+  test('--json outputs valid JSON with required fields', () => {
+    version?.handler({ values: { json: true }, positionals: [], commands: [] });
+
+    expect(output).toHaveLength(1);
+    const parsed = JSON.parse(output[0] ?? '{}');
+    expect(parsed).toMatchObject({
+      version: expect.any(String),
+      commit: expect.any(String),
+      platform: `${process.platform}/${process.arch}`,
+      runtime: Bun.version,
+      date: expect.any(String),
+    });
+  });
+
+  test('--json output does not contain color codes', () => {
+    version?.handler({ values: { json: true }, positionals: [], commands: [] });
+
+    expect(output[0]).not.toContain('\u001b[');
+  });
 });

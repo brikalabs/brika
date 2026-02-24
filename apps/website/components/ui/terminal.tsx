@@ -40,7 +40,10 @@ export function Terminal({
   );
 }
 
-export function Line({ prompt = '$', children }: Readonly<{ prompt?: string; children: ReactNode }>) {
+export function Line({
+  prompt = '$',
+  children,
+}: Readonly<{ prompt?: string; children: ReactNode }>) {
   return (
     <div className="flex items-start gap-2">
       <span className="select-none text-muted-foreground">{prompt}</span>

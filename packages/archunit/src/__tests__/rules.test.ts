@@ -2,11 +2,11 @@
  * Tests for archunit rule functions
  */
 import { describe, expect, test } from 'bun:test';
-import type { Rule, RuleContext, Violation } from '../types';
-import { pascalCase, camelCase, kebabCase } from '../rules/naming';
-import { exportsMatch, noPattern, mustContain } from '../rules/patterns';
-import { noImportsFrom, onlyImportsFrom } from '../rules/imports';
 import { maxLines, requiredFiles } from '../rules/files';
+import { noImportsFrom, onlyImportsFrom } from '../rules/imports';
+import { camelCase, kebabCase, pascalCase } from '../rules/naming';
+import { exportsMatch, mustContain, noPattern } from '../rules/patterns';
+import type { Rule, RuleContext, Violation } from '../types';
 
 // ─── Test Helpers ────────────────────────────────────────────────────────────
 
@@ -277,16 +277,22 @@ describe('file rules', () => {
         async *glob() {
           for (const d of dirs) yield d;
         },
-        async read() { return ''; },
-        async lines() { return 0; },
-        async exists(path: string) { return existingFiles.has(path); },
+        async read() {
+          return '';
+        },
+        async lines() {
+          return 0;
+        },
+        async exists(path: string) {
+          return existingFiles.has(path);
+        },
       };
     }
 
     test('passes when all required files exist', async () => {
       const ctx = createDirContext(
         ['src/features/auth/'],
-        new Set(['src/features/auth/index.ts', 'src/features/auth/types.ts']),
+        new Set(['src/features/auth/index.ts', 'src/features/auth/types.ts'])
       );
       const rule = requiredFiles('src/features/*/', ['index.ts', 'types.ts']);
       const violations = await collectViolations(rule, ctx);
@@ -294,10 +300,7 @@ describe('file rules', () => {
     });
 
     test('fails when required file is missing', async () => {
-      const ctx = createDirContext(
-        ['src/features/auth/'],
-        new Set(['src/features/auth/index.ts']),
-      );
+      const ctx = createDirContext(['src/features/auth/'], new Set(['src/features/auth/index.ts']));
       const rule = requiredFiles('src/features/*/', ['index.ts', 'types.ts']);
       const violations = await collectViolations(rule, ctx);
       expect(violations).toHaveLength(1);

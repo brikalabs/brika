@@ -14,14 +14,16 @@ export interface CommandOption {
 }
 
 /** Resolve the base JS type for an option's `type` field. */
-type BaseValue<T extends CommandOption> =
-  T['type'] extends 'boolean' ? boolean :
-  T['type'] extends 'number' ? number :
-  string;
+type BaseValue<T extends CommandOption> = T['type'] extends 'boolean'
+  ? boolean
+  : T['type'] extends 'number'
+    ? number
+    : string;
 
 /** If a default is declared, the value is guaranteed (non-optional). */
-type InferValue<T extends CommandOption> =
-  T extends { default: any } ? BaseValue<T> : BaseValue<T> | undefined;
+type InferValue<T extends CommandOption> = T extends { default: string | boolean | number }
+  ? BaseValue<T>
+  : BaseValue<T> | undefined;
 
 /** Map an options record to its parsed values type. */
 type InferValues<O extends Record<string, CommandOption> | undefined> =
@@ -47,7 +49,7 @@ export interface Command {
   aliases?: string[];
   examples?: string[];
   subcommands?: Command[];
-  handler: (args: HandlerArgs<any>) => Promise<void> | void;
+  handler: (args: HandlerArgs) => Promise<void> | void;
 }
 
 /**

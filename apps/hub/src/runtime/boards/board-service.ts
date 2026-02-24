@@ -7,12 +7,12 @@
  */
 
 import { inject, singleton } from '@brika/di';
-import type { Json } from '@/types';
 import { BrickInstanceManager, BrickTypeRegistry } from '@/runtime/bricks';
 import { BoardActions, BrickActions } from '@/runtime/events/actions';
 import { EventSystem } from '@/runtime/events/event-system';
 import { Logger } from '@/runtime/logs/log-router';
 import { PluginLifecycle } from '@/runtime/plugins/plugin-lifecycle';
+import type { Json } from '@/types';
 import { BoardLoader } from './board-loader';
 import type { Board, BoardBrickPlacement } from './types';
 

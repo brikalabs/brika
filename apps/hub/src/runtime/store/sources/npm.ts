@@ -1,7 +1,7 @@
 import { inject, singleton } from '@brika/di';
 import { HttpClient } from '@brika/http';
-import type { PluginPackageData } from '../types';
 import { Logger } from '@/runtime/logs/log-router';
+import type { PluginPackageData } from '../types';
 import type { RawRegistryPlugin, RegistrySource } from './registry-source';
 
 const NPM_REGISTRY_URL = 'https://registry.npmjs.org';

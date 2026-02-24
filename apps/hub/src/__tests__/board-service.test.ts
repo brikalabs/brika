@@ -5,7 +5,6 @@
 import 'reflect-metadata';
 import { describe, expect, mock, test } from 'bun:test';
 import { get, stub, useTestBed } from '@brika/di/testing';
-import type { Json } from '@/types';
 import { BoardLoader } from '@/runtime/boards/board-loader';
 import { BoardService } from '@/runtime/boards/board-service';
 import type { Board, BoardBrickPlacement } from '@/runtime/boards/types';
@@ -15,6 +14,7 @@ import type { RegisteredBrickType } from '@/runtime/bricks/brick-type-registry';
 import { EventSystem } from '@/runtime/events/event-system';
 import { Logger } from '@/runtime/logs/log-router';
 import { PluginLifecycle } from '@/runtime/plugins/plugin-lifecycle';
+import type { Json } from '@/types';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Fixtures

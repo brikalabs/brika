@@ -1,4 +1,3 @@
-import type { PluginSearchResult, StorePlugin } from './types';
 import { Package } from 'lucide-react';
 import React from 'react';
 import { useDataView } from '@/components/DataView';
@@ -8,6 +7,7 @@ import { useLocale } from '@/lib/use-locale';
 import type { FilterValue, SortValue } from './components';
 import { PluginStoreCard, PluginStoreCardSkeleton, PluginStoreFilters } from './components';
 import { useStorePlugins, useVerifiedPlugins } from './hooks';
+import type { PluginSearchResult, StorePlugin } from './types';
 
 export function StorePage() {
   const { t, tp } = useLocale();

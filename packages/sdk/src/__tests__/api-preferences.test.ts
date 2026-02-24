@@ -2,17 +2,20 @@
  * Tests for SDK preferences, lifecycle, bricks, routes, and location APIs
  */
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
+import type { BrickComponent, BrickTypeSpec } from '@brika/ui-kit';
+import { Text } from '@brika/ui-kit';
+import type { DeviceLocation } from '../api/location';
 
 const mockGetPreferences = mock(() => ({ apiKey: 'test-key' }));
 const mockOnPreferencesChange = mock(() => () => {});
 const mockUpdatePreference = mock(() => {});
 const mockDefinePreferenceOptions = mock(() => {});
-const mockOnInit = mock((fn: Function) => () => {});
-const mockOnStop = mock((fn: Function) => () => {});
-const mockOnUninstall = mock((fn: Function) => () => {});
+const mockOnInit = mock((_fn: () => void) => () => {});
+const mockOnStop = mock((_fn: () => void) => () => {});
+const mockOnUninstall = mock((_fn: () => void) => () => {});
 const mockRegisterBrickType = mock(() => {});
 const mockRegisterRoute = mock(() => {});
-const mockGetLocation = mock(() => Promise.resolve(null));
+const mockGetLocation = mock((): Promise<DeviceLocation | null> => Promise.resolve(null));
 
 mock.module('../context', () => ({
   getContext: () => ({
@@ -98,23 +101,22 @@ describe('lifecycle API', () => {
   });
 });
 
+const testSpec: BrickTypeSpec = { id: 'test', name: 'Test', families: ['sm'] };
+const testComponent: BrickComponent = () => Text({ content: 'test' });
+
 describe('bricks API', () => {
   beforeEach(() => {
     mockRegisterBrickType.mockClear();
   });
 
   test('defineBrick returns compiled brick type', () => {
-    const spec = { id: 'test', name: 'Test', families: ['sm'] as const } as any;
-    const component = () => null;
-    const result = defineBrick(spec, component);
-    expect(result.spec).toBe(spec);
-    expect(result.component).toBe(component);
+    const result = defineBrick(testSpec, testComponent);
+    expect(result.spec).toBe(testSpec);
+    expect(result.component).toBe(testComponent);
   });
 
   test('defineBrick tries to register with context', () => {
-    const spec = { id: 'test', name: 'Test' } as any;
-    const component = () => null;
-    defineBrick(spec, component);
+    defineBrick(testSpec, testComponent);
     expect(mockRegisterBrickType).toHaveBeenCalledTimes(1);
   });
 
@@ -122,9 +124,8 @@ describe('bricks API', () => {
     mockRegisterBrickType.mockImplementationOnce(() => {
       throw new Error('No context');
     });
-    const spec = { id: 'test', name: 'Test' } as any;
-    const result = defineBrick(spec, () => null);
-    expect(result.spec).toBe(spec);
+    const result = defineBrick(testSpec, testComponent);
+    expect(result.spec).toBe(testSpec);
   });
 });
 
@@ -157,11 +158,17 @@ describe('location API', () => {
   });
 
   test('getDeviceLocation returns location from context', async () => {
-    const location = {
+    const location: DeviceLocation = {
       latitude: 46.52,
       longitude: 6.63,
+      street: '1 Rue du Port',
       city: 'Lausanne',
+      state: 'Vaud',
+      postalCode: '1000',
       country: 'Switzerland',
+      countryCode: 'CH',
+      formattedAddress: '1 Rue du Port, 1000 Lausanne, Switzerland',
+      timezone: 'Europe/Zurich',
     };
     mockGetLocation.mockResolvedValueOnce(location);
     const result = await getDeviceLocation();

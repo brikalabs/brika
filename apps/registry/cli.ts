@@ -46,17 +46,17 @@ ${pc.bold('Examples:')}
 `;
 
 const { positionals, values } = parseArgs({
-	args: Bun.argv.slice(2),
-	allowPositionals: true,
-	strict: false,
-	options: {
-		help: { type: 'boolean', short: 'h', default: false },
-	},
+  args: Bun.argv.slice(2),
+  allowPositionals: true,
+  strict: false,
+  options: {
+    help: { type: 'boolean', short: 'h', default: false },
+  },
 });
 
 if (values.help || positionals.length === 0) {
-	console.log(HELP);
-	process.exit(0);
+  console.log(HELP);
+  process.exit(0);
 }
 
 await runCommand(positionals[0], positionals.slice(1));

@@ -6,6 +6,7 @@ import { BlockRegistry } from '@/runtime/blocks';
 import { PluginActions } from '@/runtime/events/actions';
 import { EventSystem } from '@/runtime/events/event-system';
 import { StateStore } from '@/runtime/state/state-store';
+import { PluginErrors } from './plugin-errors';
 import { PluginEventHandler } from './plugin-events';
 import { PluginLifecycle } from './plugin-lifecycle';
 
@@ -182,7 +183,7 @@ export class PluginManager {
     if (!process) return;
 
     process.kill(9);
-    await this.#state.setHealth(name, 'crashed', 'killed');
+    await this.#state.setHealth(name, 'crashed', PluginErrors.killed());
     await this.#lifecycle.unload(name);
   }
 

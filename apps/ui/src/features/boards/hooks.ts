@@ -1,8 +1,8 @@
-import type { Json } from '@/types';
 import type { ComponentNode, Mutation } from '@brika/ui-kit';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect } from 'react';
 import { getStreamUrl } from '@/lib/query';
+import type { Json } from '@/types';
 import type { BoardSummary } from './api';
 import { boardKeys, boardsApi, brickInstancesApi, brickTypesApi } from './api';
 import { useBoardStore } from './store';

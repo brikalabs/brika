@@ -1,5 +1,5 @@
-import { join } from 'node:path';
 import { mkdir, rm } from 'node:fs/promises';
+import { join } from 'node:path';
 
 export interface CacheEntry {
   content: string;
@@ -66,7 +66,13 @@ export class ModuleCache {
   }
 
   /** Persist a compiled module to disk. */
-  async writeToDisk(pluginName: string, moduleId: string, hash: string, js: string, css?: string): Promise<void> {
+  async writeToDisk(
+    pluginName: string,
+    moduleId: string,
+    hash: string,
+    js: string,
+    css?: string
+  ): Promise<void> {
     const dir = join(this.cacheDir, pluginName);
     await mkdir(dir, { recursive: true });
 
@@ -81,7 +87,7 @@ export class ModuleCache {
     for (const key of this.#mem.keys()) {
       if (key.startsWith(`${pluginName}:`)) this.#mem.delete(key);
     }
-    rm(join(this.cacheDir, pluginName), { recursive: true, force: true }).catch(() => {});
+    rm(join(this.cacheDir, pluginName), { recursive: true, force: true }).catch(() => undefined);
   }
 }
 

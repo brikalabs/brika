@@ -1,33 +1,54 @@
+import type { Plugin } from '@brika/plugin';
 import { Plus, RefreshCw } from 'lucide-react';
 import React from 'react';
 import { Button } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
 import { cn } from '@/lib/utils';
+import type { UpdateInfo } from '../registry-api';
 import { InstallPluginDialog } from './InstallPluginDialog';
 import { UpdateAllButton } from './UpdateAllButton';
 
 interface PluginsPageHeaderProps {
   isLoading: boolean;
+  pluginCount: number;
+  plugins: Plugin[];
+  availableUpdates: UpdateInfo[];
   onRefresh: () => void;
 }
 
-export function PluginsPageHeader({ isLoading, onRefresh }: Readonly<PluginsPageHeaderProps>) {
+export function PluginsPageHeader({
+  isLoading,
+  pluginCount,
+  plugins,
+  availableUpdates,
+  onRefresh,
+}: Readonly<PluginsPageHeaderProps>) {
   const { t } = useLocale();
   const [installDialogOpen, setInstallDialogOpen] = React.useState(false);
 
   return (
     <div className="flex items-center justify-between">
       <div>
-        <h1 className="font-semibold text-2xl tracking-tight">{t('plugins:title')}</h1>
-        <p className="mt-1 text-muted-foreground">{t('plugins:subtitle')}</p>
+        <div className="flex items-baseline gap-2">
+          <h1 className="font-semibold text-2xl tracking-tight">{t('plugins:title')}</h1>
+          {pluginCount > 0 && (
+            <span className="text-muted-foreground text-sm">({pluginCount})</span>
+          )}
+        </div>
+        <p className="mt-0.5 text-muted-foreground text-sm">{t('plugins:subtitle')}</p>
       </div>
-      <div className="flex gap-2">
-        <Button variant="outline" onClick={onRefresh} disabled={isLoading} className="gap-2">
+      <div className="flex items-center gap-2">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onRefresh}
+          disabled={isLoading}
+          className="size-8"
+        >
           <RefreshCw className={cn('size-4', isLoading && 'animate-spin')} />
-          {t('common:actions.refresh')}
         </Button>
-        <UpdateAllButton />
-        <Button className="gap-2" onClick={() => setInstallDialogOpen(true)}>
+        <UpdateAllButton updates={availableUpdates} plugins={plugins} />
+        <Button size="sm" className="gap-1.5" onClick={() => setInstallDialogOpen(true)}>
           <Plus className="size-4" />
           {t('plugins:actions.load')}
         </Button>

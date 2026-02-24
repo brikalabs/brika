@@ -1,12 +1,12 @@
 import { inject, singleton } from '@brika/di';
 import type { Json } from '@brika/ipc';
 import type { BlockDefinition } from '@brika/sdk';
-import type { LogLevel } from '@/runtime/logs/types';
 import { BlockRegistry } from '@/runtime/blocks';
 import { BrickInstanceManager, BrickTypeRegistry } from '@/runtime/bricks';
 import { BrickActions, PluginActions, SparkActions } from '@/runtime/events/actions';
 import { EventSystem } from '@/runtime/events/event-system';
 import { Logger } from '@/runtime/logs/log-router';
+import type { LogLevel } from '@/runtime/logs/types';
 import { SparkRegistry } from '@/runtime/sparks';
 import { StateStore } from '@/runtime/state/state-store';
 import type { PluginProcess } from './plugin-process';

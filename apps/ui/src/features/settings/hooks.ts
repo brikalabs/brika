@@ -8,6 +8,7 @@ import { fetchAvailableLocales } from './api';
 
 interface SystemResponse {
   version: string;
+  pid: number;
   runtime: string;
   os: string;
   startedAt: string;
@@ -89,5 +90,19 @@ export function useUpdateHubLocation() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: locationKeys.all });
     },
+  });
+}
+
+// ─── Hub Control ─────────────────────────────────────────────────────────────
+
+export function useRestartHub() {
+  return useMutation({
+    mutationFn: () => fetcher<{ ok: boolean }>('/api/system/restart', { method: 'POST' }),
+  });
+}
+
+export function useStopHub() {
+  return useMutation({
+    mutationFn: () => fetcher<{ ok: boolean }>('/api/system/stop', { method: 'POST' }),
   });
 }

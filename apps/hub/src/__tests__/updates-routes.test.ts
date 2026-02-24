@@ -5,6 +5,7 @@ import 'reflect-metadata';
 import { describe, expect, mock, test } from 'bun:test';
 import { stub, useTestBed } from '@brika/di/testing';
 import { TestApp } from '@brika/router/testing';
+import { useBunMock } from '@brika/testing';
 import { updateRoutes } from '@/runtime/http/routes/updates';
 import { UpdateService } from '@/runtime/updates/update-service';
 
@@ -12,19 +13,22 @@ const MOCK_INFO = {
   currentVersion: '1.0.0',
   latestVersion: '1.1.0',
   updateAvailable: true,
+  devBuild: false,
   releaseUrl: 'https://github.com/example/releases/v1.1.0',
   releaseNotes: 'Fixes',
   publishedAt: '2026-01-01T00:00:00Z',
+  releaseCommit: 'abc123',
+  currentCommit: 'def456',
   assetName: null,
   assetSize: null,
 };
 
 type UpdateInfoResponse = typeof MOCK_INFO & { lastCheckedAt: number };
-type ApplyUpdateResponse = { ok: boolean; message: string };
 
 describe('update routes', () => {
   let app: ReturnType<typeof TestApp.create>;
   let mockCheck: ReturnType<typeof mock>;
+  const bun = useBunMock();
 
   useTestBed(() => {
     mockCheck = mock().mockResolvedValue(MOCK_INFO);
@@ -45,15 +49,29 @@ describe('update routes', () => {
 
   // ─── POST /api/system/update/apply ───────────────────────────────────────
 
-  test('POST /apply returns ok on success', async () => {
-    // Mock applyUpdate via fetch override is complex — test the error path directly
-    // by checking the module resolution. The success path requires spawning processes.
-    // We verify the error path is reachable.
-    const res = await app.post<ApplyUpdateResponse>('/api/system/update/apply');
+  test('POST /apply returns SSE stream with progress events', async () => {
+    // Mock fetch to prevent applyUpdate from making real network calls or
+    // replacing binaries — without this, applyUpdate may succeed and call
+    // process.exit(RESTART_CODE), killing the test process.
+    bun.fetch(() => Promise.reject(new Error('Network unavailable in tests'))).apply();
 
-    // applyUpdate will fail in test (no binary), but response shape should be ok:false
-    expect(res.status).toBe(200);
-    expect(typeof res.body.ok).toBe('boolean');
-    expect(typeof res.body.message).toBe('string');
+    // Use hono.fetch directly to avoid TestApp body parsing (which hangs on SSE)
+    const raw = await app.hono.fetch(
+      new Request('http://test/api/system/update/apply', { method: 'POST' })
+    );
+
+    expect(raw.status).toBe(200);
+    expect(raw.headers.get('Content-Type')).toBe('text/event-stream');
+
+    // Read chunks until we get a progress event.
+    // First chunk = 'checking', subsequent = error (from failed fetch).
+    const reader = raw.body?.getReader();
+    expect(reader).toBeDefined();
+
+    const { value } = await reader!.read();
+    await reader!.cancel();
+
+    const text = new TextDecoder().decode(value);
+    expect(text).toContain('event: progress');
   });
 });

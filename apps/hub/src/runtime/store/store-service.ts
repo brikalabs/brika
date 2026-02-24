@@ -1,11 +1,11 @@
 import { inject, singleton } from '@brika/di';
-import { PluginPackageSchema } from '@brika/schema';
 import type { VerifiedPluginsList } from '@brika/registry';
-import type { PluginSearchResult, StorePlugin } from './types';
+import { PluginPackageSchema } from '@brika/schema';
 import { type BrikaConfig, ConfigLoader } from '@/runtime/config/config-loader';
 import { computeEnrichment, enrichPlugins } from './enrich';
 import { LocalRegistry } from './sources/local';
 import { NpmRegistry } from './sources/npm';
+import type { PluginSearchResult, StorePlugin } from './types';
 import { VerifiedPluginsService } from './verified';
 
 /**

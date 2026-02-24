@@ -1,16 +1,17 @@
 import { Database } from 'bun:sqlite';
 import { join } from 'node:path';
-import type { Json } from '@/types';
-import type { LogEvent, LogLevel, LogSource } from '@/runtime/logs/types';
 import pc from 'picocolors';
+import { TerminalFormatter } from '@/runtime/logs/formatters/terminal-formatter';
+import type { LogEvent, LogLevel, LogSource } from '@/runtime/logs/types';
+import type { Json } from '@/types';
 import { defineCommand } from '../command';
 import { CliError } from '../errors';
 import { hubFetch, requireRunningHub } from '../utils/hub-client';
+import { dataDir } from '../utils/runtime';
 import { streamSseEvents } from '../utils/sse';
-import { TerminalFormatter } from '@/runtime/logs/formatters/terminal-formatter';
 
 const fmt = new TerminalFormatter({ color: process.stdout.isTTY ?? false });
-const DB_PATH = join(process.cwd(), '.brika', 'logs.db');
+const DB_PATH = join(dataDir, 'logs.db');
 
 interface Filters {
   level?: LogLevel;
@@ -88,7 +89,7 @@ function queryDb(filters: Filters, limit: number): LogEvent[] {
     .query(
       `SELECT id, ts, level, source, plugin_name, message, meta,
               error_name, error_message, error_stack, error_cause
-       FROM logs ${where} ORDER BY id DESC LIMIT ?`,
+       FROM logs ${where} ORDER BY id DESC LIMIT ?`
     )
     .all(...vals, limit) as LogRow[];
 

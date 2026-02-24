@@ -2,7 +2,7 @@ import i18next, { type TFunction, type TOptions } from 'i18next';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-interface DurationFormatOptions {
+export interface DurationFormatOptions {
   style?: 'long' | 'short' | 'narrow' | 'digital';
 }
 
@@ -107,7 +107,10 @@ export function useLocale() {
       formatCurrency: (value: number, currency: string) =>
         new Intl.NumberFormat(intlLocale, { style: 'currency', currency }).format(value),
 
-      formatDuration: (duration: DurationInput) => formatters.duration.format(duration),
+      formatDuration: (duration: DurationInput, opts?: DurationFormatOptions) =>
+        opts
+          ? new Intl.DurationFormat(intlLocale, { style: 'long', ...opts }).format(duration)
+          : formatters.duration.format(duration),
 
       formatList: (items: string[], opts?: Intl.ListFormatOptions) =>
         opts

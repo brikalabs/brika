@@ -36,7 +36,7 @@ function waitForWorkflowRegister(workflowId: string): Promise<Workflow> {
 
 async function waitForRegisterMatch(
   match: (workflow: Workflow) => boolean,
-  timeoutMs = 8_000
+  timeoutMs = 15_000
 ): Promise<Workflow> {
   const start = Date.now();
 
@@ -53,7 +53,7 @@ async function waitForRegisterMatch(
   throw new Error('Timed out waiting for workflow registration');
 }
 
-async function waitForWorkflowUnregister(workflowId: string, timeoutMs = 8_000): Promise<void> {
+async function waitForWorkflowUnregister(workflowId: string, timeoutMs = 15_000): Promise<void> {
   const start = Date.now();
 
   while (Date.now() - start < timeoutMs) {

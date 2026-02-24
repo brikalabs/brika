@@ -1,8 +1,8 @@
 import { group, route } from '@brika/router';
-import { LOG_LEVELS, LOG_SOURCES } from '@/runtime/logs/types';
 import { z } from 'zod';
 import { Logger } from '@/runtime/logs/log-router';
 import { LogStore } from '@/runtime/logs/log-store';
+import { LOG_LEVELS, LOG_SOURCES } from '@/runtime/logs/types';
 import { PluginManager } from '@/runtime/plugins/plugin-manager';
 
 const LogLevelSchema = z.enum(['debug', 'info', 'warn', 'error']);

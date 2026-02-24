@@ -1,5 +1,5 @@
-import type { InstallProgress } from '../types';
 import type { TFunction } from 'i18next';
+import type { InstallProgress } from '../types';
 
 /**
  * Get human-readable label for installation progress phase

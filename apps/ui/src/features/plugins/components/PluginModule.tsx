@@ -33,7 +33,9 @@ function useStylesheet(href: string) {
     link.rel = 'stylesheet';
     link.href = href;
     document.head.appendChild(link);
-    return () => { link.remove(); };
+    return () => {
+      link.remove();
+    };
   }, [href]);
 }
 

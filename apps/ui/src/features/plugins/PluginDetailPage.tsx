@@ -8,6 +8,7 @@ import { Badge, Card, CardContent, Skeleton } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
 import { cn } from '@/lib/utils';
 import { PluginDetailHeader } from './components';
+import { formatPluginError } from './components/plugin-utils';
 import { UpdatePluginDialog } from './components/UpdatePluginDialog';
 import { usePlugin, usePluginMutations } from './hooks';
 import { registryApi, registryKeys } from './registry-api';
@@ -129,8 +130,15 @@ export function PluginDetailPage() {
               )}
 
               {plugin.lastError && (
-                <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-4 text-destructive">
-                  <strong>{t('common:labels.error')}:</strong> {plugin.lastError}
+                <div
+                  className={cn(
+                    'rounded-lg border p-4',
+                    plugin.status === 'incompatible'
+                      ? 'border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-400'
+                      : 'border-destructive/20 bg-destructive/10 text-destructive'
+                  )}
+                >
+                  {formatPluginError(plugin.lastError, t)}
                 </div>
               )}
 

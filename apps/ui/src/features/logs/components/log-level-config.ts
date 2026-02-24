@@ -1,6 +1,6 @@
-import type { LogLevel } from "../types";
 import { AlertCircle, AlertTriangle, Bug, Info } from "lucide-react";
 import type React from "react";
+import type { LogLevel } from "../types";
 
 export const LEVEL_CONFIG: Record<string, { color: string; icon: React.ElementType; label: string }> = {
   error: {

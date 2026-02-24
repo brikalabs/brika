@@ -5,15 +5,16 @@
  */
 
 import { watch } from 'node:fs';
+import { rm } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 import { inject, singleton } from '@brika/di';
-import type { Json } from '@/types';
 import { parsePortRef } from '@brika/workflow';
 import { parse as parseYAML, stringify as stringifyYAML } from 'yaml';
 import { z } from 'zod';
 import { BlockRegistry } from '@/runtime/blocks/block-registry';
 import { Logger } from '@/runtime/logs/log-router';
 import { ensureAndScanYamlDir } from '@/runtime/utils/yaml-dir';
+import type { Json } from '@/types';
 import type { BlockConnection, Workflow, WorkflowBlock } from './types';
 import { WorkflowEngine } from './workflow-engine';
 
@@ -125,9 +126,7 @@ export class WorkflowLoader {
     const filePath = this.#idToFile.get(id) ?? `${this.#dir}/${id}.yaml`;
     if (!(await Bun.file(filePath).exists())) return false;
 
-    const proc = Bun.spawn(['rm', filePath]);
-    await proc.exited;
-    if (proc.exitCode !== 0) return false;
+    await rm(filePath, { force: true });
 
     this.#loaded.delete(filePath);
     this.#idToFile.delete(id);

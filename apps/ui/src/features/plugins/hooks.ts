@@ -1,11 +1,36 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMemo } from 'react';
 import { pluginsApi, pluginsKeys } from './api';
+import { registryApi, registryKeys, type UpdateInfo } from './registry-api';
 
 export function usePlugins() {
   return useQuery({
     queryKey: pluginsKeys.all,
     queryFn: pluginsApi.list,
   });
+}
+
+/** Centralized hook for plugin update checks */
+export function usePluginUpdates() {
+  const query = useQuery({
+    queryKey: registryKeys.updates,
+    queryFn: () => registryApi.checkUpdates(),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const updates = query.data?.updates ?? [];
+  const available = useMemo(() => updates.filter((u) => u.updateAvailable), [updates]);
+  const updateMap = useMemo(() => new Map(updates.map((u) => [u.name, u])), [updates]);
+
+  return {
+    ...query,
+    updates,
+    available,
+    updateMap,
+    getUpdate: (packageName: string): UpdateInfo | undefined => updateMap.get(packageName),
+    hasUpdates: available.length > 0,
+    count: available.length,
+  };
 }
 
 export function usePlugin(uid: string) {

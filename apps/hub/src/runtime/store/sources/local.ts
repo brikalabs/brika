@@ -1,8 +1,8 @@
 import { inject, singleton } from '@brika/di';
 import { PluginPackageSchema } from '@brika/schema';
-import type { PluginPackageData } from '../types';
 import { ConfigLoader } from '@/runtime/config/config-loader';
 import { Logger } from '@/runtime/logs/log-router';
+import type { PluginPackageData } from '../types';
 import type { RawRegistryPlugin, RegistrySource } from './registry-source';
 
 /**

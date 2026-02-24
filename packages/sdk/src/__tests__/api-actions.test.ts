@@ -3,7 +3,7 @@
  */
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 
-const mockRegisterAction = mock(() => {});
+const mockRegisterAction = mock((_id: string, _handler: (...args: unknown[]) => unknown) => {});
 
 mock.module('../context', () => ({
   getContext: () => ({
@@ -32,7 +32,9 @@ describe('defineAction', () => {
     defineAction(handler);
 
     expect(mockRegisterAction).toHaveBeenCalledTimes(1);
-    const [id, registeredHandler] = mockRegisterAction.mock.calls[0] as [string, Function];
+    const call = mockRegisterAction.mock.calls[0];
+    if (!call) throw new Error('Expected mock to have been called');
+    const [id, registeredHandler] = call;
     expect(typeof id).toBe('string');
     expect(typeof registeredHandler).toBe('function');
   });

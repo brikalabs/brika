@@ -17,6 +17,19 @@ export function getGitCommit(): string {
   }
 }
 
+/** Full 40-char git commit SHA — used for exact build identification. */
+export function getGitCommitFull(): string {
+  try {
+    const { stdout, exitCode } = Bun.spawnSync({
+      cmd: ['git', 'rev-parse', 'HEAD'],
+      stdout: 'pipe',
+    });
+    return exitCode === 0 ? stdout.toString().trim() : 'unknown';
+  } catch {
+    return 'unknown';
+  }
+}
+
 export function getGitBranch(): string {
   try {
     const { stdout, exitCode } = Bun.spawnSync({

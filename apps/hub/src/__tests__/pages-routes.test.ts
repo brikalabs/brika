@@ -15,7 +15,9 @@ describe('page routes', () => {
 
   useTestBed(() => {
     mockManager = { get: mock().mockReturnValue(PLUGIN) };
-    mockCompiler = { get: mock().mockReturnValue({ content: 'console.log("hello")', etag: '"abc123"' }) };
+    mockCompiler = {
+      get: mock().mockReturnValue({ content: 'console.log("hello")', etag: '"abc123"' }),
+    };
     stub(PluginManager, mockManager);
     stub(ModuleCompiler, mockCompiler);
     app = TestApp.create(pageRoutes);

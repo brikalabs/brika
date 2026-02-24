@@ -3,8 +3,8 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import type { LogEvent } from '@/runtime/logs/types';
 import { TerminalFormatter } from '@/runtime/logs/formatters/terminal-formatter';
+import type { LogEvent } from '@/runtime/logs/types';
 
 const createLogEvent = (overrides: Partial<LogEvent> = {}): LogEvent => ({
   ts: new Date('2024-01-15T12:00:00Z').getTime(),

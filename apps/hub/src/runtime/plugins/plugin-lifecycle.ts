@@ -12,6 +12,7 @@ import { MetricsStore } from '@/runtime/metrics';
 import { ModuleCompiler } from '@/runtime/modules';
 import { type PluginStateWithMetadata, StateStore } from '@/runtime/state/state-store';
 import { PluginConfigService } from './plugin-config';
+import { PluginErrors } from './plugin-errors';
 import { PluginEventHandler } from './plugin-events';
 import { PluginProcess } from './plugin-process';
 import { PluginResolver } from './plugin-resolver';
@@ -139,7 +140,24 @@ export class PluginLifecycle {
     }
 
     if (!this.#checkCompatibility(metadata)) {
-      throw new Error(`Plugin ${pluginName} is incompatible with hub v${HUB_VERSION}`);
+      // Persist the plugin in state so the UI can display it
+      const existingUid = this.#state.get(pluginName)?.uid ?? generateUid(metadata.name);
+      await this.#state.registerPlugin({
+        name: pluginName,
+        rootDirectory,
+        entryPoint,
+        uid: existingUid,
+        enabled: false,
+      });
+      // Register translations so the UI can display the plugin name/description
+      await this.#i18n.registerPluginTranslations(metadata.name, rootDirectory);
+      const required = metadata.engines?.brika;
+      await this.#state.setHealth(
+        pluginName,
+        'incompatible',
+        required ? PluginErrors.incompatibleVersion(required) : PluginErrors.incompatibleUnknown()
+      );
+      return;
     }
 
     const existingState = this.#state.get(pluginName);
@@ -353,7 +371,7 @@ export class PluginLifecycle {
       timeoutMs: this.#config.heartbeatTimeoutMs,
     });
 
-    this.#state.setHealth(process.name, 'crashed', 'heartbeat timeout');
+    this.#state.setHealth(process.name, 'crashed', PluginErrors.heartbeatTimeout());
     this.#eventHandler.onPluginDisconnected(process.name);
     this.unload(process.name, true).then(() => {
       this.#attemptAutoRestart(process.name, 'heartbeat timeout');
@@ -374,7 +392,7 @@ export class PluginLifecycle {
       },
       { error }
     );
-    this.#state.setHealth(name, 'crashed', reason);
+    this.#state.setHealth(name, 'crashed', PluginErrors.crashed(reason));
     this.#eventHandler.onPluginDisconnected(name);
 
     this.#events.dispatch(
@@ -403,7 +421,7 @@ export class PluginLifecycle {
         pluginName: name,
         reason: decision.reason,
       });
-      this.#state.setHealth(name, 'crash-loop', `Crash loop: ${decision.reason}`);
+      this.#state.setHealth(name, 'crash-loop', PluginErrors.crashLoop(decision.reason));
       return;
     }
 
@@ -412,11 +430,7 @@ export class PluginLifecycle {
       delayMs: decision.delayMs,
       reason,
     });
-    this.#state.setHealth(
-      name,
-      'restarting',
-      `Restarting in ${Math.round(decision.delayMs / 1000)}s`
-    );
+    this.#state.setHealth(name, 'restarting', PluginErrors.restarting(decision.delayMs));
 
     this.#restartPolicy.scheduleRestart(name, decision.delayMs, async () => {
       try {

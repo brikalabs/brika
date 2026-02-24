@@ -2,13 +2,17 @@
  * Tests for the start CLI command
  */
 
-import { describe, expect, test } from 'bun:test';
+import { afterEach, describe, expect, test } from 'bun:test';
 import { useBunMock } from '@brika/testing';
 import { cli } from '@/cli/commands';
 
 describe('cli/commands/start', () => {
   const bun = useBunMock();
   const start = cli.get('start');
+
+  afterEach(() => {
+    delete process.env.BRIKA_STATIC_DIR;
+  });
 
   test('is registered', () => {
     expect(start).toBeDefined();

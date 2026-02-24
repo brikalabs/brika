@@ -9,6 +9,8 @@
 import { Check, ChevronDown, MapPin, Navigation } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import {
+  Avatar,
+  AvatarFallback,
   Button,
   Collapsible,
   CollapsibleContent,
@@ -102,9 +104,16 @@ export function LocationSettings() {
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
-        <div>
-          <h3 className="font-semibold text-base">{t('settings:location.title')}</h3>
-          <p className="text-muted-foreground text-sm">{t('settings:location.description')}</p>
+        <div className="flex items-start gap-3">
+          <Avatar size="lg">
+            <AvatarFallback>
+              <MapPin className="size-4" />
+            </AvatarFallback>
+          </Avatar>
+          <div>
+            <h3 className="font-semibold text-base">{t('settings:location.title')}</h3>
+            <p className="text-muted-foreground text-sm">{t('settings:location.description')}</p>
+          </div>
         </div>
         <Button variant="outline" size="sm" onClick={handleDetect} disabled={detecting}>
           <Navigation className="mr-2 size-4" />

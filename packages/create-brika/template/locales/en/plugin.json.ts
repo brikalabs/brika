@@ -1,5 +1,5 @@
-import type { TemplateData } from '../../../src/render';
 import { buildLocale } from '../../../src/locale-builder';
+import type { TemplateData } from '../../../src/render';
 
 export default function template(data: TemplateData): string {
   return buildLocale(data, {

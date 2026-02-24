@@ -22,9 +22,7 @@ export interface Cli {
 
 type ParseOption = { type: 'string' | 'boolean'; short?: string };
 
-function buildParseOptions(
-  command: Command,
-): Record<string, ParseOption> {
+function buildParseOptions(command: Command): Record<string, ParseOption> {
   const result: Record<string, ParseOption> = {
     help: { type: 'boolean', short: 'h' },
   };
@@ -38,7 +36,7 @@ function buildParseOptions(
 
 function applyCoercionAndDefaults(
   raw: Record<string, unknown>,
-  options: Record<string, CommandOption>,
+  options: Record<string, CommandOption>
 ): Record<string, string | boolean | number | undefined> {
   const values = { ...raw } as Record<string, string | boolean | number | undefined>;
   for (const [key, opt] of Object.entries(options)) {
@@ -62,7 +60,7 @@ export function createCli(config?: CliConfig): Cli {
     const existing = map.get(key);
     if (existing) {
       throw new Error(
-        `CLI command collision: "${key}" is claimed by both "${existing.name}" and "${cmd.name}"`,
+        `CLI command collision: "${key}" is claimed by both "${existing.name}" and "${cmd.name}"`
       );
     }
     map.set(key, cmd);
@@ -87,7 +85,9 @@ export function createCli(config?: CliConfig): Cli {
           aliases: ['-h', '--help'],
           description: 'Show help for a command',
           handler({ positionals }) {
-            const cmd = positionals[0] ? commands.find((c) => c.name === positionals[0]) : undefined;
+            const cmd = positionals[0]
+              ? commands.find((c) => c.name === positionals[0])
+              : undefined;
             console.log(generateHelp(commands, cmd, prefix));
           },
         });
@@ -111,7 +111,7 @@ export function createCli(config?: CliConfig): Cli {
         if (!command) {
           const helpCmd = `${prefix} help`;
           throw new CliError(
-            `${pc.red('Unknown command:')} ${first}\nRun ${pc.cyan(helpCmd)} for usage.`,
+            `${pc.red('Unknown command:')} ${first}\nRun ${pc.cyan(helpCmd)} for usage.`
           );
         }
 

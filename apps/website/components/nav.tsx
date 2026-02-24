@@ -1,10 +1,10 @@
 'use client';
 
 import { BookOpen } from 'lucide-react';
-import { GithubIcon } from './ui/github-icon';
 import { useEffect, useState } from 'react';
 import { github, site } from '@/lib/config';
 import { cn } from '@/lib/utils';
+import { GithubIcon } from './ui/github-icon';
 import { ThemeToggle } from './ui/theme-toggle';
 
 const iconLink =

@@ -157,16 +157,14 @@ export function Bricks() {
             </p>
             <ul className="mt-6 space-y-2 text-sm text-muted-foreground">
               <li className="flex items-center gap-2">
-                <span className="size-1.5 rounded-full bg-primary" />{' '}
-                Drag-and-drop grid layout
+                <span className="size-1.5 rounded-full bg-primary" /> Drag-and-drop grid layout
               </li>
               <li className="flex items-center gap-2">
-                <span className="size-1.5 rounded-full bg-primary" />{' '}
-                Real-time data from plugins
+                <span className="size-1.5 rounded-full bg-primary" /> Real-time data from plugins
               </li>
               <li className="flex items-center gap-2">
-                <span className="size-1.5 rounded-full bg-primary" />{' '}
-                Interactive actions and controls
+                <span className="size-1.5 rounded-full bg-primary" /> Interactive actions and
+                controls
               </li>
             </ul>
             <p className="mt-4 text-xs text-muted-foreground italic">

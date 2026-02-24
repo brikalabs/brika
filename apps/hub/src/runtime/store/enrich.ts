@@ -1,6 +1,6 @@
-import type { PluginSearchResult } from './types';
 import { checkCompatibility } from '@/runtime/utils/compatibility';
 import type { RawRegistryPlugin } from './sources/registry-source';
+import type { PluginSearchResult } from './types';
 
 interface PluginConfig {
   plugins: ReadonlyArray<{ name: string; version: string }>;

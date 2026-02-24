@@ -1,6 +1,6 @@
-import type { LogLevel, LogSource } from "../types";
 import type { PluginInfo } from "../api";
 import type { LogFilters } from "../store";
+import type { LogLevel, LogSource } from "../types";
 import { LogDateRangeFilter } from "./LogDateRangeFilter";
 import { LogLevelFilter } from "./LogLevelFilter";
 import { LogSearchBar } from "./LogSearchBar";

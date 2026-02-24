@@ -1,9 +1,9 @@
 import { createSSEStream, route } from '@brika/router';
-import type { Json } from '@/types';
 import { z } from 'zod';
 import { EventSystem } from '@/runtime/events/event-system';
 import { Logger } from '@/runtime/logs/log-router';
 import { WorkflowEngine } from '@/runtime/workflows';
+import type { Json } from '@/types';
 import { getOrThrow } from '../utils/resource-helpers';
 
 /**

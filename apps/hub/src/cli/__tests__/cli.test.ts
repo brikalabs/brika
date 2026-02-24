@@ -1,6 +1,6 @@
 import { describe, expect, it, mock } from 'bun:test';
-import { defineCommand } from '../command';
 import { createCli } from '../cli';
+import { defineCommand } from '../command';
 
 // Suppress process.exit calls during tests
 mock.module('node:process', () => ({ exit: mock() }));
@@ -9,7 +9,9 @@ function spyCli() {
   const log: string[] = [];
   const originalLog = console.log;
   console.log = (...args: unknown[]) => log.push(args.join(' '));
-  const restore = () => { console.log = originalLog; };
+  const restore = () => {
+    console.log = originalLog;
+  };
   return { log, restore };
 }
 
@@ -25,7 +27,7 @@ describe('createCli', () => {
           host: { type: 'string' },
         },
         handler,
-      }),
+      })
     );
 
     await cli.run(['start', '--host', '0.0.0.0', '-p', '8080']);
@@ -44,7 +46,7 @@ describe('createCli', () => {
         description: 'test',
         options: { count: { type: 'number', short: 'n' } },
         handler,
-      }),
+      })
     );
 
     await cli.run(['run', '-n', '42']);
@@ -63,7 +65,7 @@ describe('createCli', () => {
           port: { type: 'number', default: 3001 },
         },
         handler,
-      }),
+      })
     );
 
     await cli.run(['run']);
@@ -76,7 +78,7 @@ describe('createCli', () => {
   it('runs the default command when no args are given', async () => {
     const handler = mock();
     const cli = createCli({ defaultCommand: 'start' }).addCommand(
-      defineCommand({ name: 'start', description: 'test', handler }),
+      defineCommand({ name: 'start', description: 'test', handler })
     );
 
     await cli.run([]);
@@ -88,7 +90,7 @@ describe('createCli', () => {
     const handler = mock();
     const spy = spyCli();
     const cli = createCli().addCommand(
-      defineCommand({ name: 'start', description: 'Start the server', handler }),
+      defineCommand({ name: 'start', description: 'Start the server', handler })
     );
 
     await cli.run(['start', '--help']);
@@ -107,7 +109,7 @@ describe('createCli', () => {
   it('resolves commands by alias', async () => {
     const handler = mock();
     const cli = createCli().addCommand(
-      defineCommand({ name: 'version', description: 'test', aliases: ['-v'], handler }),
+      defineCommand({ name: 'version', description: 'test', aliases: ['-v'], handler })
     );
 
     await cli.run(['-v']);

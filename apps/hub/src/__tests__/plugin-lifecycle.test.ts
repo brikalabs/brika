@@ -297,7 +297,11 @@ describe('PluginLifecycle', () => {
         entryPoint: '/path/to/plugin/index.js',
         enabled: true,
         health: 'stopped' as PluginHealth,
-        lastError: 'previous error',
+        lastError: {
+          key: 'plugins:errors.crashed',
+          params: { reason: 'previous error' },
+          message: 'previous error',
+        },
         updatedAt: Date.now(),
         metadata: {
           name: '@test/plugin',
@@ -319,7 +323,7 @@ describe('PluginLifecycle', () => {
       expect(result.blocks).toEqual([]);
       expect(result.sparks).toEqual([]);
       expect(result.bricks).toEqual([]);
-      expect(result.lastError).toBe('previous error');
+      expect(result.lastError?.message).toBe('previous error');
     });
 
     test('returns running plugin if process exists', () => {
