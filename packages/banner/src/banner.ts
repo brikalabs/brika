@@ -1,6 +1,6 @@
-import boxen, { Options as BoxenOptions } from 'boxen';
+import boxen, { type Options as BoxenOptions } from 'boxen';
 import chalk from 'chalk';
-import figlet, { FontName } from 'figlet';
+import figlet, { type FontName } from 'figlet';
 import SlantFont from 'figlet/fonts/Slant';
 
 figlet.parseFont('Slant', SlantFont);
@@ -60,7 +60,6 @@ export function createBanner(options: BannerOptions): string {
 
   const contentParts: string[] = [chalk.cyan.bold(asciiArt), chalk.green(subtitle), ''];
 
-  // Add metadata entries
   for (const [key, value] of Object.entries(metadata)) {
     const label = chalk.yellow(`${key}:`);
     contentParts.push(`${label} ${chalk.bold(value)}`);

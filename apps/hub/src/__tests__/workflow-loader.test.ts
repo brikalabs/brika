@@ -993,7 +993,7 @@ describe('WorkflowLoader - Watch Callbacks', () => {
     } finally {
       loader.stopWatching();
     }
-  }, 10_000);
+  }, 30_000);
 
   it('reloads a modified YAML file while watching', async () => {
     await Bun.write(

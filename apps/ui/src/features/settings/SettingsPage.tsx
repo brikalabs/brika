@@ -6,7 +6,15 @@
 
 import { Palette } from 'lucide-react';
 import { ThemeSelector } from '@/components/theme-selector';
-import { Avatar, AvatarFallback, Card, CardContent } from '@/components/ui';
+import {
+  Section,
+  SectionContent,
+  SectionDescription,
+  SectionHeader,
+  SectionIcon,
+  SectionInfo,
+  SectionTitle,
+} from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
 import {
   HubControlSection,
@@ -28,59 +36,47 @@ export function SettingsPage() {
       </div>
 
       {/* Appearance */}
-      <Card id="appearance" className="scroll-mt-4">
-        <CardContent className="space-y-4 p-6">
-          <div className="flex items-start gap-3">
-            <Avatar size="lg">
-              <AvatarFallback>
-                <Palette className="size-4" />
-              </AvatarFallback>
-            </Avatar>
+      <Section id="appearance" className="scroll-mt-4">
+        <SectionHeader>
+          <SectionInfo>
+            <SectionIcon>
+              <Palette className="size-4" />
+            </SectionIcon>
             <div>
-              <h3 className="font-semibold text-base">{t('settings:appearance.title')}</h3>
-              <p className="text-muted-foreground text-sm">
-                {t('settings:appearance.description')}
-              </p>
+              <SectionTitle>{t('settings:appearance.title')}</SectionTitle>
+              <SectionDescription>{t('settings:appearance.description')}</SectionDescription>
             </div>
-          </div>
+          </SectionInfo>
+        </SectionHeader>
+        <SectionContent>
           <ThemeSelector />
-        </CardContent>
-      </Card>
+        </SectionContent>
+      </Section>
 
       {/* Language */}
-      <Card id="language" className="scroll-mt-4">
-        <CardContent className="p-6">
-          <LanguageSelector />
-        </CardContent>
-      </Card>
+      <Section id="language" className="scroll-mt-4">
+        <LanguageSelector />
+      </Section>
 
       {/* Hub Location */}
-      <Card id="location" className="scroll-mt-4">
-        <CardContent className="p-6">
-          <LocationSettings />
-        </CardContent>
-      </Card>
+      <Section id="location" className="scroll-mt-4">
+        <LocationSettings />
+      </Section>
 
       {/* Updates */}
-      <Card id="updates" className="scroll-mt-4">
-        <CardContent className="p-6">
-          <UpdateSection />
-        </CardContent>
-      </Card>
+      <Section id="updates" className="scroll-mt-4">
+        <UpdateSection />
+      </Section>
 
       {/* Hub Control */}
-      <Card id="hub-control" className="scroll-mt-4">
-        <CardContent className="p-6">
-          <HubControlSection />
-        </CardContent>
-      </Card>
+      <Section id="hub-control" className="scroll-mt-4">
+        <HubControlSection />
+      </Section>
 
       {/* System Information */}
-      <Card id="system" className="scroll-mt-4">
-        <CardContent className="p-6">
-          <SystemInfo />
-        </CardContent>
-      </Card>
+      <Section id="system" className="scroll-mt-4">
+        <SystemInfo />
+      </Section>
     </div>
   );
 }

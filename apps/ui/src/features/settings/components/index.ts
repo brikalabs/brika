@@ -1,8 +1,5 @@
-export { AddressSearch } from './AddressSearch';
-export { HubControlSection } from './HubControlSection';
-export { InfoItem, type InfoItemProps } from './InfoItem';
-export { LanguageSelector } from './LanguageSelector';
-export { LocationSettings } from './LocationSettings';
-export { SystemInfo } from './SystemInfo';
-export { LanguageSelectorSkeleton, SystemInfoSkeleton } from './SystemInfoSkeleton';
-export { UpdateSection } from './UpdateSection';
+export { HubControlSection } from './hub-control';
+export { LanguageSelector } from './language';
+export { LocationSettings } from './location';
+export { SystemInfo } from './system-info';
+export { UpdateSection } from './update';

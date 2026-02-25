@@ -31,10 +31,10 @@
     "@brika/ui-kit": "workspace:*",
     "@brika/workflow": "workspace:*",
     "date-fns": "^4.1.0",
-    "hono": "^4.11.3",
+    "hono": "^4.12.2",
     "picocolors": "^1.1.1",
     "reflect-metadata": "^0.2.2",
-    "tailwindcss": "^4.1.18",
+    "tailwindcss": "^4.2.1",
     "yaml": "^2.8.2",
     "zod": "^4.3.4"
   },

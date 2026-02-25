@@ -138,6 +138,6 @@
   ],
   "dependencies": {
     "@brika/sdk": "workspace:*",
-    "zod": "^4.3.4"
+    "zod": "^4.3.6"
   }
 }

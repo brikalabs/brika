@@ -1,9 +1,3 @@
-/**
- * SystemInfoStats Component
- *
- * Stats section of system info (plugins, blocks, workflows, sparks, bricks).
- */
-
 import { Blocks, LayoutGrid, Plug, Workflow, Zap } from 'lucide-react';
 import { useLocale } from '@/lib/use-locale';
 import { InfoItem } from './InfoItem';
@@ -16,11 +10,11 @@ interface SystemStats {
   bricks: { total: number };
 }
 
-interface SystemInfoStatsProps {
+interface StatsProps {
   stats: SystemStats;
 }
 
-export function SystemInfoStats({ stats }: Readonly<SystemInfoStatsProps>) {
+export function Stats({ stats }: Readonly<StatsProps>) {
   const { t } = useLocale();
 
   return (

@@ -106,7 +106,7 @@ export async function promptForBump(
           message: 'Enter exact version (x.y.z)',
           placeholder: currentVersion,
           validate: (value) => {
-            if (!isExactVersion(value)) return 'Must be in the form x.y.z (e.g. 1.2.3)';
+            if (!value || !isExactVersion(value)) return 'Must be in the form x.y.z (e.g. 1.2.3)';
             if (compareVersions(currentVersion, value) >= 0) {
               return `New version must be greater than current ${currentVersion}`;
             }

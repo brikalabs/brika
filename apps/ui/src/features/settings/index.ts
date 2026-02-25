@@ -1,2 +1,2 @@
-export { useAvailableLocales } from './hooks';
+export { useAvailableLocales } from './components/language/hooks';
 export { SettingsPage } from './SettingsPage';

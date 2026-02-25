@@ -1,9 +1,3 @@
-/**
- * Info Item Component
- *
- * A single info item displaying a label, value, and optional copy functionality.
- */
-
 import type { LucideIcon } from 'lucide-react';
 import { Check, Copy } from 'lucide-react';
 import { useState } from 'react';

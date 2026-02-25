@@ -42,7 +42,7 @@ const CATEGORIES = [
 /**
  * Validate plugin name (kebab-case)
  */
-function validatePluginName(name: string): string | undefined {
+function validatePluginName(name: string | undefined): string | undefined {
   if (!name) return 'Plugin name is required';
   if (!/^[a-z][a-z0-9-]*$/.test(name)) {
     return 'Plugin name must be kebab-case (e.g., my-plugin)';

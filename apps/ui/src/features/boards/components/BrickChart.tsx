@@ -1,5 +1,6 @@
 import type { ChartNode, ChartSeries } from '@brika/ui-kit';
 import { useId, useMemo } from 'react';
+import type { TooltipContentProps } from 'recharts';
 import {
   Area,
   AreaChart,
@@ -22,13 +23,7 @@ const DEFAULT_COLORS = [
   'var(--color-chart-5)',
 ];
 
-function ChartTooltip({
-  active,
-  payload,
-}: Readonly<{
-  active?: boolean;
-  payload?: Array<{ value?: number; name?: string; color?: string }>;
-}>) {
+function ChartTooltip({ active, payload }: TooltipContentProps<number, string>) {
   if (!active || !payload?.length) return null;
   return (
     <div className="rounded-md border bg-popover px-2 py-1 text-sm shadow-md">
@@ -40,7 +35,7 @@ function ChartTooltip({
               style={{ backgroundColor: entry.color }}
             />
           )}
-          <span>{(entry.value ?? 0).toLocaleString()}</span>
+          <span>{typeof entry.value === 'number' ? entry.value.toLocaleString() : ''}</span>
         </div>
       ))}
     </div>

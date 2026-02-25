@@ -85,6 +85,15 @@ export { Progress } from './progress';
 export { ProgressDisplay } from './progress-display';
 export { ScrollArea } from './scroll-area';
 export {
+  Section,
+  SectionContent,
+  SectionDescription,
+  SectionHeader,
+  SectionIcon,
+  SectionInfo,
+  SectionTitle,
+} from './section';
+export {
   Select,
   SelectContent,
   SelectGroup,

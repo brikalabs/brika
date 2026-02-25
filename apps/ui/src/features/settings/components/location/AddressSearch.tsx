@@ -1,15 +1,9 @@
-/**
- * AddressSearch Component
- *
- * Autocomplete address search powered by Photon (Komoot/OSM).
- */
-
 import { MapPin, Search } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Input, Popover, PopoverContent, PopoverTrigger } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
-import type { HubLocation } from '../hooks';
-import { featureToLocation, formatAddress, type PhotonFeature, searchAddress } from '../photon';
+import type { HubLocation } from './hooks';
+import { featureToLocation, formatAddress, type PhotonFeature, searchAddress } from './photon';
 
 interface AddressSearchProps {
   onSelect: (location: HubLocation) => void;

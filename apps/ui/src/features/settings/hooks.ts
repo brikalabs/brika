@@ -1,12 +1,7 @@
-/**
- * Settings Hooks
- */
-
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { fetcher } from '@/lib/query';
-import { fetchAvailableLocales } from './api';
 
-interface SystemResponse {
+export interface SystemResponse {
   version: string;
   pid: number;
   runtime: string;
@@ -33,76 +28,10 @@ interface SystemResponse {
   };
 }
 
-export function useAvailableLocales() {
-  return useQuery({
-    queryKey: ['i18n', 'locales'],
-    queryFn: fetchAvailableLocales,
-    staleTime: 1000 * 60 * 10, // 10 minutes
-  });
-}
-
 export function useSystem() {
   return useQuery({
     queryKey: ['system'],
     queryFn: () => fetcher<SystemResponse>('/api/system'),
     staleTime: 1000 * 30, // 30 seconds
-  });
-}
-
-// ─── Hub Location ────────────────────────────────────────────────────────────
-
-export interface HubLocation {
-  latitude: number;
-  longitude: number;
-  street: string;
-  city: string;
-  state: string;
-  postalCode: string;
-  country: string;
-  countryCode: string;
-  formattedAddress: string;
-  timezone: string;
-}
-
-interface HubLocationResponse {
-  location: HubLocation | null;
-}
-
-const locationKeys = {
-  all: ['settings', 'location'] as const,
-};
-
-export function useHubLocation() {
-  return useQuery({
-    queryKey: locationKeys.all,
-    queryFn: () => fetcher<HubLocationResponse>('/api/settings/location'),
-  });
-}
-
-export function useUpdateHubLocation() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (location: HubLocation) =>
-      fetcher<HubLocationResponse>('/api/settings/location', {
-        method: 'PUT',
-        body: JSON.stringify(location),
-      }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: locationKeys.all });
-    },
-  });
-}
-
-// ─── Hub Control ─────────────────────────────────────────────────────────────
-
-export function useRestartHub() {
-  return useMutation({
-    mutationFn: () => fetcher<{ ok: boolean }>('/api/system/restart', { method: 'POST' }),
-  });
-}
-
-export function useStopHub() {
-  return useMutation({
-    mutationFn: () => fetcher<{ ok: boolean }>('/api/system/stop', { method: 'POST' }),
   });
 }
