@@ -10,10 +10,8 @@
 import { describe, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
-
-/** Strip ANSI escape sequences so assertions work regardless of color output. */
-const stripAnsi = (s: string) => s.replace(/\x1b\[[0-9;]*m/g, '');
+import { dirname, join } from 'node:path';
+import { runCli } from './helpers/run-cli';
 
 const VERIFY_SCRIPT = join(import.meta.dir, '..', 'verify.ts');
 
@@ -51,14 +49,7 @@ async function runVerify(
       await mkdir(dirname(fullPath), { recursive: true });
       await writeFile(fullPath, content);
     }
-    const proc = Bun.spawn(['bun', VERIFY_SCRIPT, dir, ...extraArgs], {
-      stdout: 'pipe',
-      stderr: 'pipe',
-    });
-    const exitCode = await proc.exited;
-    const stdout = stripAnsi(await new Response(proc.stdout).text());
-    const stderr = await new Response(proc.stderr).text();
-    return { exitCode, stdout, stderr };
+    return await runCli(['bun', VERIFY_SCRIPT, dir, ...extraArgs]);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
@@ -147,12 +138,7 @@ describe('verify CLI --json output', () => {
       await writeFile(mainFilePath, 'export {};');
 
       // Pass --json BEFORE the directory
-      const proc = Bun.spawn(['bun', VERIFY_SCRIPT, '--json', dir], {
-        stdout: 'pipe',
-        stderr: 'pipe',
-      });
-      const exitCode = await proc.exited;
-      const stdout = await new Response(proc.stdout).text();
+      const { exitCode, stdout } = await runCli(['bun', VERIFY_SCRIPT, '--json', dir]);
       expect(exitCode).toBe(0);
       const payload = JSON.parse(stdout.trim());
       expect(payload.passed).toBe(true);
@@ -174,12 +160,7 @@ describe('verify CLI argument parsing', () => {
 
   test('exits 1 when given a non-existent directory', async () => {
     const dir = join(tmpdir(), 'brika-vcli-nonexistent-' + Date.now());
-    const proc = Bun.spawn(['bun', VERIFY_SCRIPT, dir], {
-      stdout: 'pipe',
-      stderr: 'pipe',
-    });
-    const exitCode = await proc.exited;
-    const stderr = await new Response(proc.stderr).text();
+    const { exitCode, stderr } = await runCli(['bun', VERIFY_SCRIPT, dir]);
     expect(exitCode).toBe(1);
     expect(stderr).toContain('Could not read');
   });
@@ -187,12 +168,7 @@ describe('verify CLI argument parsing', () => {
   test('exits 1 when directory has no package.json', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'brika-vcli-empty-'));
     try {
-      const proc = Bun.spawn(['bun', VERIFY_SCRIPT, dir], {
-        stdout: 'pipe',
-        stderr: 'pipe',
-      });
-      const exitCode = await proc.exited;
-      const stderr = await new Response(proc.stderr).text();
+      const { exitCode, stderr } = await runCli(['bun', VERIFY_SCRIPT, dir]);
       expect(exitCode).toBe(1);
       expect(stderr).toContain('Could not read');
       expect(stderr).toContain('package.json');
@@ -293,12 +269,7 @@ describe('readPluginSdkSpec error handling via CLI', () => {
     const dir = await mkdtemp(join(tmpdir(), 'brika-vcli-badjson-'));
     try {
       await writeFile(join(dir, 'package.json'), '{ invalid json !!!');
-      const proc = Bun.spawn(['bun', VERIFY_SCRIPT, dir], {
-        stdout: 'pipe',
-        stderr: 'pipe',
-      });
-      const exitCode = await proc.exited;
-      const stderr = await new Response(proc.stderr).text();
+      const { exitCode, stderr } = await runCli(['bun', VERIFY_SCRIPT, dir]);
       expect(exitCode).toBe(1);
       expect(stderr).toContain('Could not read');
     } finally {

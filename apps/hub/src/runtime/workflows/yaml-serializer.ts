@@ -73,7 +73,7 @@ export class YAMLSerializer {
         id: block.id,
         type: block.type,
         position: block.position,
-        config: block.config as Record<string, unknown> | undefined,
+        config: block.config,
       }));
 
       return {

@@ -1,26 +1,97 @@
 /**
  * Tests for HttpClient
  *
- * These are integration tests that hit httpbin.org and registry.npmjs.org.
- * Skipped on CI because external services can be unreliable on GitHub Actions.
+ * Uses a mock fetch to avoid external service dependencies.
+ * All tests run on CI.
  */
 
-import { beforeEach, describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { MemoryCache } from '../cache';
 import { HttpClient } from '../client';
 import { HttpError } from '../types';
 
-describe.skipIf(!!process.env.CI)('HttpClient', () => {
+let originalFetch: typeof globalThis.fetch;
+let fetchCallCount: number;
+
+/**
+ * Mock fetch that simulates httpbin-like responses without hitting the network.
+ */
+function createMockFetch() {
+  fetchCallCount = 0;
+
+  return async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    fetchCallCount++;
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    const method = init?.method ?? 'GET';
+
+    // /status/NNN — return that HTTP status
+    const statusMatch = url.match(/\/status\/(\d+)/);
+    if (statusMatch) {
+      return new Response(null, { status: Number(statusMatch[1]) });
+    }
+
+    // /uuid — return unique JSON each call
+    if (url.includes('/uuid')) {
+      return Response.json({ uuid: `test-uuid-${fetchCallCount}` });
+    }
+
+    // /search — simulate npm registry search
+    if (url.includes('/search')) {
+      return Response.json({ objects: [{ package: { name: 'brika' } }] });
+    }
+
+    // /headers — echo request headers
+    if (url.includes('/headers')) {
+      const headers: Record<string, string> = {};
+      if (init?.headers) {
+        new Headers(init.headers).forEach((v, k) => {
+          headers[k] = v;
+        });
+      }
+      return Response.json({ headers });
+    }
+
+    // POST/PUT/PATCH — echo back the JSON body
+    if (method === 'POST' || method === 'PUT' || method === 'PATCH') {
+      let json: unknown = null;
+      if (init?.body && typeof init.body === 'string') {
+        try {
+          json = JSON.parse(init.body);
+        } catch {
+          json = init.body;
+        }
+      }
+      return Response.json({ json, data: json });
+    }
+
+    // HEAD — no body
+    if (method === 'HEAD') {
+      return new Response(null, { status: 200 });
+    }
+
+    // Default — generic success
+    return Response.json({ ok: true });
+  };
+}
+
+describe('HttpClient', () => {
   let client: HttpClient;
 
   beforeEach(() => {
-    client = new HttpClient();
+    originalFetch = globalThis.fetch;
+    globalThis.fetch = createMockFetch() as typeof globalThis.fetch;
+    // Disable retry to keep tests fast
+    client = HttpClient.create({ retry: { maxAttempts: 1, delay: 0, backoff: 'linear' } });
+  });
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
   });
 
   describe('Basic requests', () => {
     test('should make GET request', async () => {
       const response = await client
-        .get<{ name: string }>('https://registry.npmjs.org/-/v1/search')
+        .get<{ objects: unknown[] }>('https://registry.npmjs.org/-/v1/search')
         .params({ text: 'brika', size: '1' })
         .send();
 
@@ -76,6 +147,7 @@ describe.skipIf(!!process.env.CI)('HttpClient', () => {
     beforeEach(() => {
       client = HttpClient.create({
         cache: new MemoryCache(),
+        retry: { maxAttempts: 1, delay: 0, backoff: 'linear' },
       });
     });
 
@@ -196,12 +268,8 @@ describe.skipIf(!!process.env.CI)('HttpClient', () => {
     });
 
     test('should make OPTIONS request', async () => {
-      // httpbin doesn't have a dedicated OPTIONS endpoint, but we can verify
-      // the method creates a builder with the correct HTTP method
       const builder = client.options('https://httpbin.org/get');
       expect(builder).toBeDefined();
-      // OPTIONS requests may get CORS-blocked in some environments,
-      // so just verify the builder was created correctly
     });
   });
 
@@ -222,7 +290,6 @@ describe.skipIf(!!process.env.CI)('HttpClient', () => {
     test('getCache returns the current cache adapter', () => {
       const cache = client.getCache();
 
-      // Default client has a MemoryCache
       expect(cache).toBeDefined();
       expect(cache).toBeInstanceOf(MemoryCache);
     });
@@ -294,6 +361,7 @@ describe.skipIf(!!process.env.CI)('HttpClient', () => {
     test('should use baseUrl', async () => {
       const clientWithBase = HttpClient.create({
         baseUrl: 'https://httpbin.org',
+        retry: { maxAttempts: 1, delay: 0, backoff: 'linear' },
       });
 
       const response = await clientWithBase.get('/get').send();
@@ -306,6 +374,7 @@ describe.skipIf(!!process.env.CI)('HttpClient', () => {
         headers: {
           'X-Default-Header': 'default-value',
         },
+        retry: { maxAttempts: 1, delay: 0, backoff: 'linear' },
       });
 
       const response = await clientWithHeaders

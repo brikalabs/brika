@@ -9,7 +9,7 @@ import * as fsModule from 'node:fs';
 type WatchCallback = (event: string, filename: string | Buffer | null) => void;
 
 export class FsWatchMock {
-  #callbacks = new Map<string, WatchCallback>();
+  readonly #callbacks = new Map<string, WatchCallback>();
   #spy: ReturnType<typeof spyOn> | null = null;
 
   /**

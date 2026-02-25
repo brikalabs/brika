@@ -3,9 +3,7 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { isRecord, readDependencyVersion, verifyPlugin } from '../verify-plugin';
-
-/** Strip ANSI escape sequences so assertions work regardless of color output. */
-const stripAnsi = (s: string) => s.replace(/\x1b\[[0-9;]*m/g, '');
+import { runCli } from './helpers/run-cli';
 
 const VERIFY_SCRIPT = join(import.meta.dir, '..', 'verify.ts');
 // SDK version read from its own package.json — keep in sync
@@ -35,13 +33,7 @@ async function runVerify(
       await mkdir(dirname(fullPath), { recursive: true });
       await writeFile(fullPath, content);
     }
-    const proc = Bun.spawn(['bun', VERIFY_SCRIPT, dir], {
-      stdout: 'pipe',
-      stderr: 'pipe',
-    });
-    const exitCode = await proc.exited;
-    const stdout = stripAnsi(await new Response(proc.stdout).text());
-    return { exitCode, stdout };
+    return await runCli(['bun', VERIFY_SCRIPT, dir]);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
@@ -265,11 +257,7 @@ describe('brika-verify-plugin', () => {
     test('exits with error when package.json does not exist', async () => {
       const dir = await mkdtemp(join(tmpdir(), 'brika-verify-empty-'));
       try {
-        const proc = Bun.spawn(['bun', VERIFY_SCRIPT, dir], {
-          stdout: 'pipe',
-          stderr: 'pipe',
-        });
-        const exitCode = await proc.exited;
+        const { exitCode } = await runCli(['bun', VERIFY_SCRIPT, dir]);
         expect(exitCode).toBe(1);
       } finally {
         await rm(dir, { recursive: true, force: true });
