@@ -5,7 +5,13 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { canonicalize } from '@brika/registry';
 import { applyEdits, modify } from 'jsonc-parser';
-import { loadPrivateKey, loadPublicKeyPem, publicKeyToBase64, signData } from './crypto';
+import {
+  derivePublicKeyPem,
+  loadPrivateKey,
+  loadPublicKeyPem,
+  publicKeyToBase64,
+  signData,
+} from './crypto';
 import {
   extractPluginSignablePayload,
   extractRegistrySignablePayload,
@@ -44,20 +50,18 @@ export function modifyRegistry(
 }
 
 /**
- * Sign the registry and write it to disk with format preservation.
- * Returns true if signed, false if no keys found.
+ * Sign a registry file at the given path using the provided PEM keys.
+ * Re-signs every plugin entry and then the registry as a whole.
  */
-export function signAndWriteRegistry(): boolean {
-  const privateKeyPem = loadPrivateKey();
-  if (!privateKeyPem) return false;
-
-  const publicKeyPem = loadPublicKeyPem();
-  if (!publicKeyPem) return false;
-
-  const registry = readRegistry();
+export function signRegistryAtPath(
+  registryPath: string,
+  privateKeyPem: string,
+  publicKeyPem: string
+): void {
+  const registry = VerifiedPluginsListSchema.parse(JSON.parse(readFileSync(registryPath, 'utf-8')));
   const publicKeyBase64 = publicKeyToBase64(publicKeyPem);
 
-  let content = readRegistryRaw();
+  let content = readFileSync(registryPath, 'utf-8');
 
   // Update metadata
   content = modifyRegistry(content, ['lastUpdated'], new Date().toISOString());
@@ -76,7 +80,20 @@ export function signAndWriteRegistry(): boolean {
   const regSig = signData(canonicalize(regPayload), privateKeyPem);
   content = modifyRegistry(content, ['signature'], regSig);
 
-  writeRegistryRaw(content);
+  writeFileSync(registryPath, content, 'utf-8');
+}
+
+/**
+ * Sign the registry and write it to disk with format preservation.
+ * Returns true if signed, false if no keys found.
+ */
+export function signAndWriteRegistry(): boolean {
+  const privateKeyPem = loadPrivateKey();
+  if (!privateKeyPem) return false;
+
+  const publicKeyPem = loadPublicKeyPem() ?? derivePublicKeyPem(privateKeyPem);
+
+  signRegistryAtPath(REGISTRY_PATH, privateKeyPem, publicKeyPem);
   return true;
 }
 

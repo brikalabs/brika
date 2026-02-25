@@ -7,7 +7,7 @@
  *
  * Verification lives in @brika/registry (canonicalize, verifyWithRawKey).
  */
-import { createPublicKey, generateKeyPairSync, sign } from 'node:crypto';
+import { createPrivateKey, createPublicKey, generateKeyPairSync, sign } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
@@ -21,6 +21,12 @@ export interface KeyPair {
   privateKeyPem: string;
   publicKeyPem: string;
   publicKeyBase64: string;
+}
+
+/** Derive the public key PEM from a private key PEM. */
+export function derivePublicKeyPem(privateKeyPem: string): string {
+  const pub = createPublicKey(createPrivateKey(privateKeyPem));
+  return pub.export({ type: 'spki', format: 'pem' });
 }
 
 /** Generate a new Ed25519 key pair. */
@@ -53,10 +59,10 @@ export function keysExistOnDisk(): boolean {
   return existsSync(PRIVATE_KEY_PATH) && existsSync(PUBLIC_KEY_PATH);
 }
 
-/** Load the private key PEM (env var → disk). */
+/** Load the private key PEM (env var → disk). Unescapes \n sequences for CI-style env vars. */
 export function loadPrivateKey(): string | null {
   const envKey = process.env.BRIKA_REGISTRY_PRIVATE_KEY;
-  if (envKey) return envKey;
+  if (envKey) return envKey.replaceAll(String.raw`\n`, '\n');
   if (!existsSync(PRIVATE_KEY_PATH)) return null;
   return readFileSync(PRIVATE_KEY_PATH, 'utf-8');
 }

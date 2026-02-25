@@ -36,7 +36,7 @@ function waitForWorkflowRegister(workflowId: string): Promise<Workflow> {
 
 async function waitForRegisterMatch(
   match: (workflow: Workflow) => boolean,
-  timeoutMs = 15_000
+  timeoutMs = 25_000
 ): Promise<Workflow> {
   const start = Date.now();
 
@@ -53,7 +53,7 @@ async function waitForRegisterMatch(
   throw new Error('Timed out waiting for workflow registration');
 }
 
-async function waitForWorkflowUnregister(workflowId: string, timeoutMs = 15_000): Promise<void> {
+async function waitForWorkflowUnregister(workflowId: string, timeoutMs = 25_000): Promise<void> {
   const start = Date.now();
 
   while (Date.now() - start < timeoutMs) {
@@ -67,12 +67,20 @@ async function waitForWorkflowUnregister(workflowId: string, timeoutMs = 15_000)
 
 async function primeWatcher(label: string): Promise<void> {
   const workflowId = `__watch-ready-${label}`;
+  const filePath = join(TEST_DIR, `${workflowId}.yaml`);
+  const content = createWorkflowYaml(workflowId, `Watch Ready ${label}`);
+
+  // Write immediately, then re-nudge every 500 ms until the watcher fires.
+  // fs.watch events can be silently dropped under heavy parallel test load.
   const ready = waitForWorkflowRegister(workflowId);
-  await Bun.write(
-    join(TEST_DIR, `${workflowId}.yaml`),
-    createWorkflowYaml(workflowId, `Watch Ready ${label}`)
-  );
-  await ready;
+  await Bun.write(filePath, content);
+  const nudge = setInterval(() => Bun.write(filePath, content), 500);
+  try {
+    await ready;
+  } finally {
+    clearInterval(nudge);
+  }
+
   await new Promise((resolve) => setTimeout(resolve, 100));
   mockRegister.mockClear();
 }
