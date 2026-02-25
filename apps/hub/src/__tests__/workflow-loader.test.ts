@@ -12,6 +12,7 @@ import { Logger } from '@/runtime/logs/log-router';
 import type { Workflow } from '@/runtime/workflows/types';
 import { WorkflowEngine } from '@/runtime/workflows/workflow-engine';
 import { WorkflowLoader } from '@/runtime/workflows/workflow-loader';
+import { FsWatchMock } from './fs-watch-mock';
 
 useTestBed({ autoStub: false });
 
@@ -950,9 +951,8 @@ blocks:
   });
 });
 
-// fs.watch is unreliable on CI Linux — events silently drop under parallel test load.
-// These integration tests pass locally but flake on GitHub Actions Ubuntu runners.
-describe.skipIf(!!process.env.CI)('WorkflowLoader - Watch Callbacks', () => {
+describe('WorkflowLoader - Watch Callbacks (with FsWatchMock)', () => {
+  let fsWatchMock: FsWatchMock;
   beforeEach(async () => {
     await rm(TEST_DIR, { recursive: true, force: true });
     mockRegister.mockImplementation(() => undefined);
@@ -960,6 +960,9 @@ describe.skipIf(!!process.env.CI)('WorkflowLoader - Watch Callbacks', () => {
     mockUnregister.mockImplementation(() => undefined);
     mockUnregister.mockClear();
     mockGetPluginInfo.mockClear();
+
+    fsWatchMock = new FsWatchMock();
+    fsWatchMock.apply();
 
     stub(Logger);
     provide(BlockRegistry, {
@@ -980,6 +983,7 @@ describe.skipIf(!!process.env.CI)('WorkflowLoader - Watch Callbacks', () => {
   });
 
   afterEach(async () => {
+    fsWatchMock.restore();
     reset();
     await rm(TEST_DIR, { recursive: true, force: true });
   });
@@ -989,21 +993,18 @@ describe.skipIf(!!process.env.CI)('WorkflowLoader - Watch Callbacks', () => {
     await loader.loadDir(TEST_DIR);
     loader.watch();
 
-    try {
-      await primeWatcher('new');
-      const watchedPath = join(TEST_DIR, 'watched-new.yaml');
-      const registration = waitForWorkflowRegister('watched-new');
-      const watchedYaml = createWorkflowYaml('watched-new', 'Watched New');
-      await Bun.write(watchedPath, watchedYaml);
-      // fs.watch events can be dropped under heavy parallel test load; nudge once.
-      await Bun.write(watchedPath, watchedYaml);
+    // Create the file and simulate watcher event
+    const watchedPath = join(TEST_DIR, 'watched-new.yaml');
+    const watchedYaml = createWorkflowYaml('watched-new', 'Watched New');
+    await Bun.write(watchedPath, watchedYaml);
+    fsWatchMock.simulateChange(TEST_DIR, 'watched-new.yaml');
 
-      const registered = await registration;
-      expect(registered.id).toBe('watched-new');
-    } finally {
-      loader.stopWatching();
-    }
-  }, 30_000);
+    // Wait for registration
+    const registered = await waitForWorkflowRegister('watched-new');
+    expect(registered.id).toBe('watched-new');
+
+    loader.stopWatching();
+  });
 
   it('reloads a modified YAML file while watching', async () => {
     await Bun.write(
@@ -1015,22 +1016,18 @@ describe.skipIf(!!process.env.CI)('WorkflowLoader - Watch Callbacks', () => {
     await loader.loadDir(TEST_DIR);
     loader.watch();
 
-    try {
-      await primeWatcher('modify');
-      const registration = waitForRegisterMatch(
-        (workflow) => workflow.id === 'watched-modify' && workflow.name === 'Updated Name'
-      );
-      await Bun.write(
-        join(TEST_DIR, 'watched-modify.yaml'),
-        createWorkflowYaml('watched-modify', 'Updated Name', true)
-      );
+    // Modify the file and simulate watcher event
+    const modifiedYaml = createWorkflowYaml('watched-modify', 'Updated Name', true);
+    await Bun.write(join(TEST_DIR, 'watched-modify.yaml'), modifiedYaml);
+    fsWatchMock.simulateChange(TEST_DIR, 'watched-modify.yaml');
 
-      const registered = await registration;
-      expect(registered.id).toBe('watched-modify');
-      expect(registered.name).toBe('Updated Name');
-    } finally {
-      loader.stopWatching();
-    }
+    // Wait for the updated registration
+    const registered = await waitForRegisterMatch(
+      (workflow) => workflow.id === 'watched-modify' && workflow.name === 'Updated Name'
+    );
+
+    expect(registered.name).toBe('Updated Name');
+    loader.stopWatching();
   });
 
   it('unloads a YAML file deleted while watching', async () => {
@@ -1043,15 +1040,15 @@ describe.skipIf(!!process.env.CI)('WorkflowLoader - Watch Callbacks', () => {
     await loader.loadDir(TEST_DIR);
     loader.watch();
 
-    try {
-      await primeWatcher('delete');
-      const unregistration = waitForWorkflowUnregister('watched-delete');
-      await rm(join(TEST_DIR, 'watched-delete.yaml'));
-      await unregistration;
-      expect(mockUnregister).toHaveBeenCalledWith('watched-delete');
-    } finally {
-      loader.stopWatching();
-    }
+    // Delete the file and simulate watcher event
+    await rm(join(TEST_DIR, 'watched-delete.yaml'));
+    fsWatchMock.simulateChange(TEST_DIR, 'watched-delete.yaml');
+
+    // Wait for unregister
+    await waitForWorkflowUnregister('watched-delete');
+    expect(mockUnregister).toHaveBeenCalledWith('watched-delete');
+
+    loader.stopWatching();
   });
 
   it('ignores non-YAML files in the watcher', async () => {
@@ -1059,28 +1056,28 @@ describe.skipIf(!!process.env.CI)('WorkflowLoader - Watch Callbacks', () => {
     await loader.loadDir(TEST_DIR);
     loader.watch();
 
-    try {
-      await primeWatcher('ignore');
-      const registerCountBefore = mockRegister.mock.calls.length;
-      const registration = waitForWorkflowRegister('watched-yaml');
-      await Bun.write(join(TEST_DIR, 'readme.txt'), 'not a workflow');
-      // Give the watcher a beat to process the non-YAML write.
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      expect(mockRegister.mock.calls.length).toBe(registerCountBefore);
+    const registerCountBefore = mockRegister.mock.calls.length;
 
-      const watchedPath = join(TEST_DIR, 'watched-yaml.yaml');
-      const watchedYaml = createWorkflowYaml('watched-yaml', 'Watched YAML');
-      await Bun.write(watchedPath, watchedYaml);
-      // fs.watch events can be dropped under heavy parallel test load; nudge once.
-      await Bun.write(watchedPath, watchedYaml);
+    // Simulate watcher event for non-YAML file
+    await Bun.write(join(TEST_DIR, 'readme.txt'), 'not a workflow');
+    fsWatchMock.simulateChange(TEST_DIR, 'readme.txt');
 
-      const registered = await registration;
-      expect(registered.id).toBe('watched-yaml');
-      expect(mockRegister.mock.calls.length).toBeGreaterThanOrEqual(1);
-    } finally {
-      loader.stopWatching();
-    }
-  }, 10_000);
+    // Wait a bit and verify no registration happened
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(mockRegister.mock.calls.length).toBe(registerCountBefore);
+
+    // Now add a valid YAML file
+    const watchedPath = join(TEST_DIR, 'watched-yaml.yaml');
+    const watchedYaml = createWorkflowYaml('watched-yaml', 'Watched YAML');
+    await Bun.write(watchedPath, watchedYaml);
+    fsWatchMock.simulateChange(TEST_DIR, 'watched-yaml.yaml');
+
+    // Wait for registration
+    const registered = await waitForWorkflowRegister('watched-yaml');
+    expect(registered.id).toBe('watched-yaml');
+
+    loader.stopWatching();
+  });
 });
 
 describe('WorkflowLoader - YAML Round Trip', () => {
