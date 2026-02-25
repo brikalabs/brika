@@ -116,11 +116,13 @@ export function PluginCard({
                 <p className="mt-0.5 line-clamp-1 text-amber-600 text-xs dark:text-amber-400">
                   {formatPluginError(p.lastError, t)}
                 </p>
-              ) : p.description ? (
-                <p className="mt-0.5 line-clamp-1 text-muted-foreground text-xs">
-                  {tp(p.name, 'description')}
-                </p>
-              ) : null}
+              ) : (
+                p.description && (
+                  <p className="mt-0.5 line-clamp-1 text-muted-foreground text-xs">
+                    {tp(p.name, 'description')}
+                  </p>
+                )
+              )}
             </div>
 
             {/* Status badge */}

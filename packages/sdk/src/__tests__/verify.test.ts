@@ -4,6 +4,9 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { isRecord, readDependencyVersion, verifyPlugin } from '../verify-plugin';
 
+/** Strip ANSI escape sequences so assertions work regardless of color output. */
+const stripAnsi = (s: string) => s.replace(/\x1b\[[0-9;]*m/g, '');
+
 const VERIFY_SCRIPT = join(import.meta.dir, '..', 'verify.ts');
 // SDK version read from its own package.json — keep in sync
 const SDK_VERSION = (
@@ -37,7 +40,7 @@ async function runVerify(
       stderr: 'pipe',
     });
     const exitCode = await proc.exited;
-    const stdout = await new Response(proc.stdout).text();
+    const stdout = stripAnsi(await new Response(proc.stdout).text());
     return { exitCode, stdout };
   } finally {
     await rm(dir, { recursive: true, force: true });

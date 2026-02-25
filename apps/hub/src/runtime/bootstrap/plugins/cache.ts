@@ -8,12 +8,18 @@
 
 import { join } from 'node:path';
 import { inject } from '@brika/di';
-import { HttpClient, SqliteCache } from '@brika/http';
+import { HttpClient, SqliteCache, type SqliteCacheOptions } from '@brika/http';
 import { dataDir } from '@/cli/utils/runtime';
 import { Logger } from '@/runtime/logs/log-router';
 import type { BootstrapPlugin } from '../plugin';
 
 let cacheInstance: SqliteCache | null = null;
+
+/** Options accepted by the cache bootstrap plugin. */
+export interface CachePluginOptions {
+  /** Override the SqliteCache constructor (useful for testing). */
+  CacheClass?: new (opts: SqliteCacheOptions) => SqliteCache;
+}
 
 /**
  * Creates a cache bootstrap plugin that initializes SQLite caching.
@@ -26,7 +32,8 @@ let cacheInstance: SqliteCache | null = null;
  *   .start();
  * ```
  */
-export function cache(): BootstrapPlugin {
+export function cache(options?: CachePluginOptions): BootstrapPlugin {
+  const CacheImpl = options?.CacheClass ?? SqliteCache;
   const logger = inject(Logger);
   const httpClient = inject(HttpClient);
 
@@ -40,7 +47,7 @@ export function cache(): BootstrapPlugin {
       logger.info('Initializing SQLite cache', { path: cachePath });
 
       try {
-        cacheInstance = new SqliteCache({
+        cacheInstance = new CacheImpl({
           path: cachePath,
           cleanupIntervalMs: 300_000, // Clean up expired entries every 5 minutes
           walMode: true, // Better concurrent performance

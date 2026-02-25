@@ -1,5 +1,5 @@
 import { Search, X } from "lucide-react";
-import { type FormEvent, useState } from "react";
+import { useState } from "react";
 import {
   Button,
   Input,
@@ -34,14 +34,9 @@ export function LogSearchBar({
   const { t } = useLocale();
   const [searchInput, setSearchInput] = useState(search);
 
-  const handleSearchSubmit = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    onSearchChange(searchInput);
-  };
-
   return (
     <div className="flex gap-3">
-      <form onSubmit={handleSearchSubmit} className="flex flex-1 gap-2">
+      <form onSubmit={(e) => { e.preventDefault(); onSearchChange(searchInput); }} className="flex flex-1 gap-2">
         <div className="relative flex-1">
           <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input

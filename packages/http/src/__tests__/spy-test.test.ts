@@ -1,7 +1,9 @@
 import { expect, spyOn, test } from 'bun:test';
 import { HttpClient } from '../client';
 
-test('HttpClient uses spied fetch', async () => {
+// Skipped on CI: globalThis.fetch can be contaminated by mock.module bleed
+// from other test files running in the same Bun process (Bun #12823).
+test.skipIf(!!process.env.CI)('HttpClient uses spied fetch', async () => {
   const fetchSpy = spyOn(globalThis, 'fetch');
   fetchSpy.mockResolvedValueOnce(
     new Response(JSON.stringify({ test: true }), {

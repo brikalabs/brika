@@ -10,7 +10,7 @@ import { isHubReady } from '@/runtime/readiness';
 import { SparkRegistry } from '@/runtime/sparks/spark-registry';
 import { WorkflowEngine } from '@/runtime/workflows';
 
-export { buildInfo };
+export { buildInfo } from '@/build-info';
 
 // Process start time - computed once at module load
 const startedAt = new Date(Date.now() - process.uptime() * 1000).toISOString();

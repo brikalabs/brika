@@ -34,6 +34,7 @@ export function LocationSettings() {
     handleSave,
   } = useLocationSettings();
   const [showDetails, setShowDetails] = useState(false);
+  const saveLabel = isSaving ? t('common:actions.saving') : t('common:actions.save');
 
   return (
     <>
@@ -133,10 +134,8 @@ export function LocationSettings() {
                 <Check className="mr-2 size-4" />
                 {t('settings:location.saved')}
               </>
-            ) : isSaving ? (
-              t('common:actions.saving')
             ) : (
-              t('common:actions.save')
+              saveLabel
             )}
           </Button>
         )}

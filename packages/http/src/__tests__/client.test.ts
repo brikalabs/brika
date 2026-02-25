@@ -1,5 +1,8 @@
 /**
  * Tests for HttpClient
+ *
+ * These are integration tests that hit httpbin.org and registry.npmjs.org.
+ * Skipped on CI because external services can be unreliable on GitHub Actions.
  */
 
 import { beforeEach, describe, expect, test } from 'bun:test';
@@ -7,7 +10,7 @@ import { MemoryCache } from '../cache';
 import { HttpClient } from '../client';
 import { HttpError } from '../types';
 
-describe('HttpClient', () => {
+describe.skipIf(!!process.env.CI)('HttpClient', () => {
   let client: HttpClient;
 
   beforeEach(() => {
