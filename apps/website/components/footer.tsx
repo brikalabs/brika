@@ -2,13 +2,17 @@ import { github, site } from '@/lib/config';
 
 export function Footer() {
   return (
-    <footer className="border-t border-border py-8">
+    <footer className="py-8">
+      <div
+        className="mx-auto mb-8 h-px max-w-xs bg-linear-to-r from-transparent via-border to-transparent"
+        aria-hidden
+      />
       <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-4 px-6 sm:flex-row">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <div className="flex size-5 items-center justify-center rounded-md corner-squircle bg-primary text-[8px] font-black text-primary-foreground">
             B
           </div>
-          <span>&copy; {new Date().getFullYear()} Brika</span>
+          <span>&copy; {new Date().getFullYear()} Brika Labs</span>
         </div>
         <div className="flex items-center gap-6 text-sm text-muted-foreground">
           <a

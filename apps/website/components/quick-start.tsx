@@ -6,7 +6,7 @@ import { docker, site } from '@/lib/config';
 import { cn } from '@/lib/utils';
 import { AnimatedSection } from './ui/animated-section';
 import { CopyButton } from './ui/copy-button';
-import { Cmd, Comment, Flag, Line, Terminal } from './ui/terminal';
+import { Cmd, Comment, Cursor, Flag, Line, Terminal } from './ui/terminal';
 
 type Tab = 'unix' | 'windows' | 'docker';
 
@@ -136,9 +136,10 @@ export function QuickStart() {
             <div className="h-3" />
             <Line prompt={prompts[active]}>
               <span className="break-all">{current.body}</span>
+              <Cursor />
             </Line>
             <div className="h-2" />
-            <div className="text-xs text-primary/70">{current.output}</div>
+            <div className="select-none text-xs text-primary/70">{current.output}</div>
           </Terminal>
 
           <p className="mt-4 text-center text-xs text-muted-foreground">{current.note}</p>

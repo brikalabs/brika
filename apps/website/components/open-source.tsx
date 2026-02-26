@@ -1,18 +1,25 @@
 import { Heart } from 'lucide-react';
 import { github } from '@/lib/config';
 import { AnimatedSection } from './ui/animated-section';
-import { GithubIcon } from './ui/github-icon';
+import { Button } from './ui/button';
+import { SiGithub } from 'react-icons/si';
 
 export function OpenSource() {
   return (
     <AnimatedSection className="py-20 md:py-28">
       <div className="mx-auto max-w-5xl px-6">
         <div className="relative overflow-hidden rounded-3xl corner-squircle border border-border bg-surface px-6 py-16 text-center md:px-16">
-          {/* Subtle radial glow */}
-          <div
-            className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 size-100 rounded-full opacity-30 blur-3xl"
-            style={{ background: 'radial-gradient(circle, var(--glow) 0%, transparent 70%)' }}
-          />
+          {/* Aurora glow */}
+          <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]">
+            <div
+              className="aurora-blob absolute -top-20 left-1/3 size-80"
+              style={{ background: 'var(--primary)', animation: 'aurora-drift-1 15s ease-in-out infinite' }}
+            />
+            <div
+              className="aurora-blob absolute -bottom-20 right-1/3 size-60"
+              style={{ background: 'var(--accent)', animation: 'aurora-drift-2 20s ease-in-out infinite' }}
+            />
+          </div>
 
           <div className="relative">
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-sm font-medium text-primary">
@@ -28,15 +35,10 @@ export function OpenSource() {
               yours.
             </p>
 
-            <a
-              href={github.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-6 py-3 text-sm font-semibold transition-all hover:bg-muted hover:shadow-lg hover:shadow-primary/5"
-            >
-              <GithubIcon className="size-4" />
+            <Button href={github.url} target="_blank" rel="noopener noreferrer" variant="outline" size="lg">
+              <SiGithub className="size-4" />
               View on GitHub
-            </a>
+            </Button>
           </div>
         </div>
       </div>

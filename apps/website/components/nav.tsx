@@ -4,7 +4,8 @@ import { BookOpen } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { github, site } from '@/lib/config';
 import { cn } from '@/lib/utils';
-import { GithubIcon } from './ui/github-icon';
+import { SiGithub } from 'react-icons/si';
+import { Button } from './ui/button';
 import { ThemeToggle } from './ui/theme-toggle';
 
 const iconLink =
@@ -22,7 +23,7 @@ export function Nav() {
   return (
     <header
       className={cn(
-        'fixed inset-x-0 top-0 z-50 transition-all duration-500',
+        'nav-entrance fixed inset-x-0 top-0 z-50 transition-all duration-500',
         scrolled
           ? 'bg-background/70 border-b border-border/50 backdrop-blur-2xl backdrop-saturate-150'
           : 'bg-transparent'
@@ -53,10 +54,13 @@ export function Nav() {
             aria-label="GitHub"
             className={iconLink}
           >
-            <GithubIcon className="size-4" />
+            <SiGithub className="size-4" />
           </a>
           <div className="ml-1 h-5 w-px bg-border" />
           <ThemeToggle />
+          <Button href="#install" variant="filled" size="sm" className="ml-2 font-semibold">
+            Get Brika
+          </Button>
         </div>
       </nav>
     </header>

@@ -137,6 +137,7 @@
       "name": "website",
       "version": "0.1.0",
       "dependencies": {
+        "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
         "lucide-react": "^0.575.0",
         "next": "^16.1.6",

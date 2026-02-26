@@ -1,60 +1,103 @@
-import { ArrowDown, Sparkles } from 'lucide-react';
+import { ArrowDown, Sparkles, Tag } from 'lucide-react';
 import { github } from '@/lib/config';
-import { GithubIcon } from './ui/github-icon';
+import { SiGithub } from 'react-icons/si';
+import { Button } from './ui/button';
 
-export function Hero() {
+interface HeroProps {
+  release?: { version: string; url: string } | null;
+}
+
+export function Hero({ release }: Readonly<HeroProps>) {
   return (
-    <section className="relative flex min-h-svh flex-col items-center justify-center overflow-hidden px-6">
-      {/* Glow */}
-      <div
-        className="hero-glow pointer-events-none absolute top-1/2 left-1/2 -z-10 size-150 rounded-full md:size-200"
-        style={{
-          background: 'radial-gradient(circle, var(--glow) 0%, transparent 70%)',
-        }}
-      />
+    <section className="hero-parallax relative flex min-h-svh flex-col items-center justify-center overflow-hidden px-6">
+      {/* Aurora blobs */}
+      <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+        <div
+          className="aurora-blob absolute top-[15%] left-[20%] size-[500px] bg-primary md:size-[700px]"
+          style={{ animation: 'aurora-drift-1 20s ease-in-out infinite' }}
+        />
+        <div
+          className="aurora-blob absolute top-[40%] right-[15%] size-[400px] bg-accent md:size-[600px]"
+          style={{ animation: 'aurora-drift-2 25s ease-in-out infinite' }}
+        />
+        <div
+          className="aurora-blob absolute bottom-[10%] left-[40%] size-[450px] bg-primary md:size-[650px]"
+          style={{ animation: 'aurora-drift-3 18s ease-in-out infinite' }}
+        />
+      </div>
+
+      {/* Dot grid */}
       <div className="bg-grid pointer-events-none absolute inset-0 -z-10 opacity-[0.04]" />
 
       <div className="max-w-4xl text-center">
-        {/* Badge */}
-        <div className="badge-glow mb-8 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-sm font-medium text-primary">
-          <Sparkles className="size-3.5" />
-          Open source &middot; Self-hosted &middot; Local-first
+        {/* Badges */}
+        <div
+          className="reveal-up mb-8 flex flex-wrap items-center justify-center gap-3"
+          style={{ animationDelay: '200ms' }}
+        >
+          <div className="badge-glow inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-sm font-medium text-primary">
+            <Sparkles className="size-3.5 shrink-0" />
+            <span>Open source &middot; Self-hosted &middot; Local-first</span>
+          </div>
+          {release && (
+            <a
+              href={release.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface/50 px-3 py-1.5 text-xs font-medium text-muted-foreground backdrop-blur-sm transition-colors hover:text-foreground hover:bg-surface"
+            >
+              <Tag className="size-3 shrink-0" />
+              {release.version}
+            </a>
+          )}
         </div>
 
         <h1 className="text-4xl leading-[1.1] font-extrabold tracking-tight sm:text-5xl md:text-7xl">
-          Build. Run. Integrate. <br className="hidden sm:block" />
-          <span className="hero-gradient">Keep Automating.</span>
+          <span className="block overflow-hidden pb-1">
+            <span className="text-reveal-word" style={{ animationDelay: '350ms' }}>
+              Build.
+            </span>{' '}
+            <span className="text-reveal-word" style={{ animationDelay: '470ms' }}>
+              Run.
+            </span>{' '}
+            <span className="text-reveal-word" style={{ animationDelay: '590ms' }}>
+              Integrate.
+            </span>
+          </span>
+          <span className="block overflow-hidden pb-1">
+            <span className="hero-gradient text-reveal-word" style={{ animationDelay: '770ms' }}>
+              Keep Automating.
+            </span>
+          </span>
         </h1>
 
-        <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">
+        <p
+          className="reveal-up mx-auto mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground"
+          style={{ animationDelay: '950ms' }}
+        >
           A self-hosted automation hub that runs on your machine. One binary, no cloud, full
           control.
         </p>
 
         {/* CTAs */}
-        <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
-          <a
-            href="#install"
-            className="group inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition-all hover:shadow-xl hover:shadow-primary/30 hover:brightness-110"
-          >
+        <div
+          className="reveal-up mt-10 flex flex-wrap items-center justify-center gap-4"
+          style={{ animationDelay: '1100ms' }}
+        >
+          <Button href="#install" variant="filled" size="lg" className="group">
             Get started
             <ArrowDown className="size-4 transition-transform group-hover:translate-y-0.5" />
-          </a>
-          <a
-            href={github.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-6 py-3 text-sm font-semibold transition-colors hover:bg-muted"
-          >
-            <GithubIcon className="size-4" />
+          </Button>
+          <Button href={github.url} target="_blank" rel="noopener noreferrer" variant="outline" size="lg">
+            <SiGithub className="size-4" />
             GitHub
-          </a>
+          </Button>
         </div>
       </div>
 
       {/* Scroll hint */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce text-muted-foreground/40">
-        <ArrowDown className="size-5" />
+      <div className="absolute bottom-8 left-1/2 -translate-x-1/2">
+        <ArrowDown className="scroll-hint size-5 text-muted-foreground" />
       </div>
     </section>
   );

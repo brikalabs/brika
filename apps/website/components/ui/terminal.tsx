@@ -29,7 +29,7 @@ export function Terminal({
         className
       )}
     >
-      <div className="flex items-center gap-3 overflow-x-auto border-b border-code-border px-3 py-3 sm:px-4">
+      <div className="flex items-center border-b border-code-border px-3 py-2.5 sm:px-4">
         <TrafficLights />
         {actions && <div className="ml-auto flex items-center">{actions}</div>}
       </div>
@@ -66,4 +66,8 @@ export function Cmd({ children }: Readonly<{ children: ReactNode }>) {
 
 export function Flag({ children }: Readonly<{ children: ReactNode }>) {
   return <span className="text-muted-foreground">{children}</span>;
+}
+
+export function Cursor() {
+  return <span className="terminal-cursor" aria-hidden />;
 }

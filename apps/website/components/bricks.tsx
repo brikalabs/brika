@@ -1,109 +1,101 @@
 'use client';
 
-import type { LucideIcon } from 'lucide-react';
-import { Gauge, GripVertical, LayoutGrid, Lightbulb, Music, Sun, Timer, Zap } from 'lucide-react';
-import { useCallback, useState } from 'react';
+import {
+  Gauge,
+  GripVertical,
+  LayoutGrid,
+  Lightbulb,
+  Music,
+  Sun,
+  Timer,
+  Zap,
+} from 'lucide-react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Layout, LayoutItem } from 'react-grid-layout';
 import { ReactGridLayout } from 'react-grid-layout/legacy';
 import 'react-grid-layout/css/styles.css';
+import type { WeatherData } from '@/lib/weather';
 import { AnimatedSection } from './ui/animated-section';
+import { WeatherContext } from './bricks/weather-context';
 
 const GAP = 8;
 const COLS = 3;
-const GRID_SIZE = 360;
+const MAX_GRID_SIZE = 400;
 
-interface Brick {
-  id: string;
-  title: string;
-  icon: LucideIcon;
-  value: string;
-  label: string;
-  color: string;
-}
+const brickContent: Record<string, React.LazyExoticComponent<React.ComponentType>> = {
+  weather: lazy(() => import('./bricks/weather-brick')),
+  energy: lazy(() => import('./bricks/energy-brick')),
+  timer: lazy(() => import('./bricks/timer-brick')),
+  cpu: lazy(() => import('./bricks/cpu-brick')),
+  spotify: lazy(() => import('./bricks/spotify-brick')),
+  lights: lazy(() => import('./bricks/lights-brick')),
+};
 
-const bricks: Brick[] = [
-  {
-    id: 'weather',
-    title: 'Weather',
-    icon: Sun,
-    value: '22\u00b0C',
-    label: 'Sunny',
-    color: 'oklch(0.72 0.18 45)',
-  },
-  {
-    id: 'energy',
-    title: 'Energy',
-    icon: Zap,
-    value: '3.2 kWh',
-    label: "Today's usage",
-    color: 'oklch(0.72 0.15 145)',
-  },
-  {
-    id: 'timer',
-    title: 'Timer',
-    icon: Timer,
-    value: '04:32',
-    label: 'Remaining',
-    color: 'oklch(0.7 0.16 265)',
-  },
-  {
-    id: 'cpu',
-    title: 'CPU',
-    icon: Gauge,
-    value: '47%',
-    label: 'Load average',
-    color: 'oklch(0.7 0.16 300)',
-  },
-  {
-    id: 'spotify',
-    title: 'Spotify',
-    icon: Music,
-    value: 'Playing',
-    label: 'Lo-fi Beats',
-    color: 'oklch(0.72 0.15 145)',
-  },
-  {
-    id: 'lights',
-    title: 'Lights',
-    icon: Lightbulb,
-    value: 'On',
-    label: 'Living room',
-    color: 'oklch(0.8 0.16 90)',
-  },
-];
+const brickMeta: Record<string, { icon: React.ComponentType<{ className?: string }>; label: string }> = {
+  weather: { icon: Sun, label: 'Weather' },
+  energy: { icon: Zap, label: 'Energy' },
+  timer: { icon: Timer, label: 'Timer' },
+  cpu: { icon: Gauge, label: 'CPU' },
+  spotify: { icon: Music, label: 'Now Playing' },
+  lights: { icon: Lightbulb, label: 'Lights' },
+};
 
-// 3×3 grid: fills nicely, some bricks span 2 cols
+const brickIds = ['weather', 'energy', 'timer', 'cpu', 'spotify', 'lights'];
+
 const initialLayout: LayoutItem[] = [
   { i: 'weather', x: 0, y: 0, w: 1, h: 1 },
-  { i: 'energy', x: 1, y: 0, w: 1, h: 1 },
-  { i: 'timer', x: 2, y: 0, w: 1, h: 1 },
-  { i: 'cpu', x: 0, y: 1, w: 1, h: 1 },
-  { i: 'spotify', x: 1, y: 1, w: 2, h: 1 },
-  { i: 'lights', x: 0, y: 2, w: 2, h: 1 },
+  { i: 'spotify', x: 1, y: 0, w: 2, h: 2 },
+  { i: 'energy', x: 0, y: 1, w: 1, h: 1 },
+  { i: 'timer', x: 0, y: 2, w: 1, h: 1 },
+  { i: 'cpu', x: 1, y: 2, w: 1, h: 1 },
+  { i: 'lights', x: 2, y: 2, w: 1, h: 1 },
 ];
 
-function BrickCard({ brick }: Readonly<{ brick: Brick }>) {
+function BrickCard({ id }: Readonly<{ id: string }>) {
+  const Content = brickContent[id];
+  const meta = brickMeta[id];
+  const Icon = meta.icon;
+
   return (
-    <div className="group flex h-full flex-col rounded-xl corner-squircle border border-border bg-surface p-3 transition-shadow hover:shadow-md">
-      <div className="drag-handle flex cursor-grab items-center gap-1.5 active:cursor-grabbing">
-        <brick.icon className="size-3.5 shrink-0" style={{ color: brick.color }} />
-        <span className="min-w-0 flex-1 truncate text-[11px] font-medium text-muted-foreground">
-          {brick.title}
+    <div className="group relative flex h-full flex-col rounded-xl corner-squircle border border-border bg-surface select-none overflow-hidden transition-shadow hover:shadow-md">
+      <div className="flex items-center gap-1.5 px-2.5 pt-2 pb-1.5">
+        <Icon className="size-3.5 shrink-0 text-muted-foreground" />
+        <span className="flex-1 truncate text-[11px] font-medium text-muted-foreground">
+          {meta.label}
         </span>
-        <GripVertical className="size-3 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+        <div className="drag-handle cursor-grab rounded p-0.5 transition-colors hover:bg-muted active:cursor-grabbing">
+          <GripVertical className="size-3 text-muted-foreground/40 opacity-0 transition-opacity group-hover:opacity-100" />
+        </div>
       </div>
-      <div className="no-drag mt-auto pt-1.5">
-        <div className="text-lg font-bold leading-tight tracking-tight">{brick.value}</div>
-        <div className="mt-0.5 text-[10px] text-muted-foreground">{brick.label}</div>
+      <div className="no-drag mx-0.5 mb-0.5 min-h-0 flex-1 overflow-hidden rounded-[13px] corner-squircle">
+        {Content && (
+          <Suspense fallback={<div className="h-full animate-pulse bg-muted/30" />}>
+            <Content />
+          </Suspense>
+        )}
       </div>
     </div>
   );
 }
 
 function DraggableGrid() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [gridWidth, setGridWidth] = useState(MAX_GRID_SIZE);
   const [layout, setLayout] = useState(initialLayout);
 
-  const colWidth = (GRID_SIZE - GAP * (COLS + 1)) / COLS;
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const observer = new ResizeObserver((entries) => {
+      const width = entries[0]?.contentRect.width ?? MAX_GRID_SIZE;
+      setGridWidth(Math.min(MAX_GRID_SIZE, Math.floor(width)));
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  const colWidth = (gridWidth - GAP * (COLS + 1)) / COLS;
   const rowHeight = colWidth;
 
   const handleLayoutChange = useCallback((newLayout: Layout) => {
@@ -111,9 +103,9 @@ function DraggableGrid() {
   }, []);
 
   return (
-    <div className="brick-grid mx-auto" style={{ width: GRID_SIZE }}>
+    <div ref={containerRef} className="brick-grid mx-auto w-full max-w-100">
       <ReactGridLayout
-        width={GRID_SIZE}
+        width={gridWidth}
         layout={layout}
         cols={COLS}
         rowHeight={rowHeight}
@@ -126,9 +118,9 @@ function DraggableGrid() {
         containerPadding={[0, 0]}
         margin={[GAP, GAP]}
       >
-        {bricks.map((brick) => (
-          <div key={brick.id}>
-            <BrickCard brick={brick} />
+        {brickIds.map((id) => (
+          <div key={id}>
+            <BrickCard id={id} />
           </div>
         ))}
       </ReactGridLayout>
@@ -136,46 +128,48 @@ function DraggableGrid() {
   );
 }
 
-export function Bricks() {
-  return (
-    <AnimatedSection id="bricks" className="py-20 md:py-28">
-      <div className="mx-auto max-w-5xl px-6">
-        <div className="grid items-center gap-12 md:grid-cols-2">
-          {/* Text */}
-          <div>
-            <div className="mb-4 flex items-center gap-2">
-              <LayoutGrid className="size-5 text-primary" />
-              <span className="text-sm font-semibold text-primary">Bricks</span>
-            </div>
-            <h2 className="mb-4 text-3xl font-bold tracking-tight md:text-4xl">
-              Your dashboard, your data
-            </h2>
-            <p className="leading-relaxed text-muted-foreground">
-              Bricks are live dashboard cards that plugins provide. Weather, timers, device
-              controls, music — each brick displays real-time data and actions on a customizable
-              grid.
-            </p>
-            <ul className="mt-6 space-y-2 text-sm text-muted-foreground">
-              <li className="flex items-center gap-2">
-                <span className="size-1.5 rounded-full bg-primary" /> Drag-and-drop grid layout
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="size-1.5 rounded-full bg-primary" /> Real-time data from plugins
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="size-1.5 rounded-full bg-primary" /> Interactive actions and
-                controls
-              </li>
-            </ul>
-            <p className="mt-4 text-xs text-muted-foreground italic">
-              Try dragging the cards to rearrange them.
-            </p>
-          </div>
+export function Bricks({ weather }: Readonly<{ weather?: WeatherData | null }>) {
+  const weatherValue = useMemo(() => weather ?? null, [weather]);
 
-          {/* Interactive mock dashboard */}
-          <DraggableGrid />
+  return (
+    <WeatherContext.Provider value={weatherValue}>
+      <AnimatedSection id="bricks" className="py-20 md:py-28">
+        <div className="mx-auto max-w-5xl px-6">
+          <div className="grid items-center gap-12 md:grid-cols-2">
+            <div>
+              <div className="mb-4 flex items-center gap-2">
+                <LayoutGrid className="size-5 text-primary" />
+                <span className="text-sm font-semibold text-primary">Bricks</span>
+              </div>
+              <h2 className="mb-4 text-3xl font-bold tracking-tight md:text-4xl">
+                Your dashboard, your data
+              </h2>
+              <p className="leading-relaxed text-muted-foreground">
+                Bricks are live dashboard cards that plugins provide. Weather, timers, device
+                controls, music — each brick displays real-time data and actions on a customizable
+                grid.
+              </p>
+              <ul className="mt-6 space-y-2 text-sm text-muted-foreground">
+                <li className="flex items-center gap-2">
+                  <span className="size-1.5 rounded-full bg-primary" /> Drag-and-drop grid layout
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="size-1.5 rounded-full bg-primary" /> Real-time data from plugins
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="size-1.5 rounded-full bg-primary" /> Interactive actions and
+                  controls
+                </li>
+              </ul>
+              <p className="mt-4 text-xs text-muted-foreground italic">
+                Try dragging the cards to rearrange them.
+              </p>
+            </div>
+
+            <DraggableGrid />
+          </div>
         </div>
-      </div>
-    </AnimatedSection>
+      </AnimatedSection>
+    </WeatherContext.Provider>
   );
 }
