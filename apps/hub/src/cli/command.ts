@@ -13,6 +13,21 @@ export interface CommandOption {
   default?: string | boolean | number;
 }
 
+/**
+ * Command context - passed to handlers
+ */
+export interface CommandContext<O extends Record<string, CommandOption> | undefined = undefined>
+  extends HandlerArgs<O> {
+  // Extended in CLI integration
+}
+
+/**
+ * Middleware type - wraps handlers
+ */
+export type Middleware<O extends Record<string, CommandOption> | undefined = undefined> = (
+  handler: (args: HandlerArgs<O>) => Promise<void> | void
+) => (args: HandlerArgs<O>) => Promise<void> | void;
+
 /** Resolve the base JS type for an option's `type` field. */
 type BaseValue<T extends CommandOption> = T['type'] extends 'boolean'
   ? boolean

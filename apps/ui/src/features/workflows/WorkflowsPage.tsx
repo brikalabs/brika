@@ -10,6 +10,7 @@ import { useState } from 'react';
 import { useDataView } from '@/components/DataView';
 import { Button, Card, Input } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
+import { routes } from '@/routes';
 import type { Workflow } from './api';
 import { DebugDialog, DeleteDialog, WorkflowsTable, WorkflowTableSkeleton } from './components';
 import { useDeleteWorkflow, useDisableWorkflow, useEnableWorkflow, useWorkflows } from './hooks';
@@ -78,7 +79,7 @@ export function WorkflowsPage() {
               className="w-64 pl-9"
             />
           </div>
-          <Button onClick={() => navigate({ to: '/workflows/new' })}>
+          <Button onClick={() => navigate({ to: routes.workflows.new.path })}>
             <Plus className="mr-2 size-4" />
             {t('workflows:actions.create')}
           </Button>
@@ -97,7 +98,7 @@ export function WorkflowsPage() {
               {search ? t('workflows:noResults') : t('workflows:empty')}
             </p>
             {!search && (
-              <Button onClick={() => navigate({ to: '/workflows/new' })}>
+              <Button onClick={() => navigate({ to: routes.workflows.new.path })}>
                 <Plus className="mr-2 size-4" />
                 {t('workflows:actions.create')}
               </Button>

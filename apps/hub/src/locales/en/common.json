@@ -110,6 +110,30 @@
     "days": "days",
     "ago": "ago"
   },
+  "errors": {
+    "401": {
+      "title": "Session expired",
+      "description": "Your session has expired. Please sign in again."
+    },
+    "403": {
+      "title": "Access denied",
+      "description": "You don't have permission to access this page."
+    },
+    "404": {
+      "title": "Page not found",
+      "description": "The page you're looking for doesn't exist or has been moved."
+    },
+    "500": {
+      "title": "Something went wrong",
+      "description": "An unexpected error occurred. Please try again."
+    },
+    "generic": {
+      "title": "Unexpected error",
+      "description": "Something didn't work as expected. Please try again later."
+    },
+    "goHome": "Go to dashboard",
+    "tryAgain": "Try again"
+  },
   "code": {
     "lines_one": "{{count}} line",
     "lines_other": "{{count}} lines"

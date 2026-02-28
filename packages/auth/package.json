@@ -1,0 +1,51 @@
+{
+  "name": "@brika/auth",
+  "version": "0.1.0",
+  "description": "Authentication & authorization system for Brika",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/maxscharwath/brika",
+    "directory": "packages/auth"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./server": "./src/server/index.ts",
+    "./client": "./src/client/index.ts",
+    "./react": "./src/react/index.ts",
+    "./tanstack": "./src/tanstack/index.ts"
+  },
+  "scripts": {
+    "tsc": "bunx --bun tsc --noEmit",
+    "test": "bun test",
+    "test:watch": "bun test --watch"
+  },
+  "dependencies": {
+    "@brika/di": "workspace:*",
+    "@brika/photon": "workspace:*",
+    "@brika/router": "workspace:*",
+    "bcryptjs": "^2.4.3",
+    "zod": "^4.3.4"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/bun": "latest",
+    "@types/react": "^19.2.0",
+    "typescript": "^5.9.3",
+    "react": "^19.2.0",
+    "@tanstack/react-router": "^1.163.2"
+  },
+  "peerDependencies": {
+    "react": "^18 || ^19",
+    "@tanstack/react-router": ">=1.29.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "@tanstack/react-router": {
+      "optional": true
+    }
+  }
+}

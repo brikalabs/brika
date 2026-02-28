@@ -67,20 +67,20 @@ const LogClearSchema = z.object({
   endTs: z.coerce.number().optional(),
 });
 
-export const logsRoutes = group('/api/logs', [
+export const logsRoutes = group({ prefix: '/api/logs', routes: [
   // GET /api/logs - Query historical logs with filters
-  route.get('/', { query: LogQuerySchema }, ({ query, inject }) => {
+  route.get({ path: '/', query: LogQuerySchema, handler: ({ query, inject }) => {
     const store = inject(LogStore);
     return store.query(query);
-  }),
+  }}),
 
   // GET /api/logs/recent - Get ring buffer (in-memory recent logs)
-  route.get('/recent', ({ inject }) => {
+  route.get({ path: '/recent', handler: ({ inject }) => {
     return inject(Logger).query();
-  }),
+  }}),
 
   // GET /api/logs/plugins - Get distinct plugin names with metadata for filter dropdown
-  route.get('/plugins', ({ inject }) => {
+  route.get({ path: '/plugins', handler: ({ inject }) => {
     const store = inject(LogStore);
     const pm = inject(PluginManager);
     const names = store.getPluginNames();
@@ -100,37 +100,37 @@ export const logsRoutes = group('/api/logs', [
     });
 
     return { plugins: pluginInfos };
-  }),
+  }}),
 
   // GET /api/logs/stats - Get log statistics
-  route.get('/stats', ({ inject }) => {
+  route.get({ path: '/stats', handler: ({ inject }) => {
     const store = inject(LogStore);
     return {
       total: store.count(),
       ringBufferSize: inject(Logger).query().length,
     };
-  }),
+  }}),
 
   // GET /api/logs/sources - Get available log sources
-  route.get('/sources', ({ inject }) => {
+  route.get({ path: '/sources', handler: ({ inject }) => {
     const store = inject(LogStore);
     return {
       all: LOG_SOURCES, // All defined sources from type
       used: store.getSources(), // Sources that have been used in logs
     };
-  }),
+  }}),
 
   // GET /api/logs/levels - Get available log levels
-  route.get('/levels', () => {
+  route.get({ path: '/levels', handler: () => {
     return {
       all: LOG_LEVELS,
     };
-  }),
+  }}),
 
   // DELETE /api/logs - Clear logs with optional filters
-  route.delete('/', { body: LogClearSchema.optional() }, ({ body, inject }) => {
+  route.delete({ path: '/', body: LogClearSchema.optional(), handler: ({ body, inject }) => {
     const store = inject(LogStore);
     const deleted = store.clear(body ?? {});
     return { ok: true, deleted };
-  }),
-]);
+  }}),
+]});

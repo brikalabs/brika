@@ -14,8 +14,8 @@ function resolveModuleTypeId(inject: Inject, uid: string, pageId: string) {
   return `${plugin.name}:${pageId}`;
 }
 
-export const pageRoutes = group('/api/plugins/:uid/pages/:pageId', [
-  route.get('/module.js', { params: pageParams }, ({ params, inject, req }) => {
+export const pageRoutes = group({ prefix: '/api/plugins/:uid/pages/:pageId', routes: [
+  route.get({ path: '/module.js', params: pageParams, handler: ({ params, inject, req }) => {
     const entry = inject(ModuleCompiler).get(
       resolveModuleTypeId(inject, params.uid, params.pageId)
     );
@@ -29,9 +29,9 @@ export const pageRoutes = group('/api/plugins/:uid/pages/:pageId', [
         ETag: entry.etag,
       },
     });
-  }),
+  }}),
 
-  route.get('/module.css', { params: pageParams }, ({ params, inject, req }) => {
+  route.get({ path: '/module.css', params: pageParams, handler: ({ params, inject, req }) => {
     const entry = inject(ModuleCompiler).getStyle(
       resolveModuleTypeId(inject, params.uid, params.pageId)
     );
@@ -45,5 +45,5 @@ export const pageRoutes = group('/api/plugins/:uid/pages/:pageId', [
         ETag: entry.etag,
       },
     });
-  }),
-]);
+  }}),
+]});

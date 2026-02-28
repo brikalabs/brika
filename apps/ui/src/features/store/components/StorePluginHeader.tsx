@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router';
 import { ArrowLeft, Code2, Download, ExternalLink, Home, Package, Tag, User } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage, Badge, Button } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
+import { routes } from '@/routes';
 import type { StorePlugin } from '../types';
 import { CompatibilityBadge } from './CompatibilityBadge';
 import { InstallButton } from './InstallButton';
@@ -31,7 +32,7 @@ export function StorePluginHeader({ plugin }: Readonly<StorePluginHeaderProps>) 
     <>
       {/* Back link */}
       <Link
-        to="/store"
+        to={routes.store.list.path}
         className="inline-flex items-center gap-2 text-muted-foreground transition-colors hover:text-foreground"
       >
         <ArrowLeft className="size-4" />

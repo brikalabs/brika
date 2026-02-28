@@ -46,76 +46,74 @@ function toBrickInstanceDto(i: BrickInstance) {
   };
 }
 
-export const bricksRoutes = group('/api/bricks', [
+export const bricksRoutes = group({ prefix: '/api/bricks', routes: [
   // ─── Brick Types ────────────────────────────────────────────────────────────
 
   /**
    * List all registered brick types (prefetches dynamic-dropdown options)
    */
-  route.get('/types', ({ inject }) => {
+  route.get({ path: '/types', handler: ({ inject }) => {
     const lifecycle = inject(PluginLifecycle);
     return Promise.all(
       inject(BrickTypeRegistry)
         .list()
         .map((t) => toBrickTypeDto(t, lifecycle))
     );
-  }),
+  }}),
 
   /**
    * Get a specific brick type by full ID
    */
-  route.get('/types/:id', { params: z.object({ id: z.string() }) }, ({ params, inject }) => {
+  route.get({ path: '/types/:id', params: z.object({ id: z.string() }), handler: ({ params, inject }) => {
     const t = inject(BrickTypeRegistry).get(params.id);
     if (!t) throw new NotFound('Brick type not found');
     return toBrickTypeDto(t, inject(PluginLifecycle));
-  }),
+  }}),
 
   /**
    * Fetch dynamic options for a brick config field via IPC
    */
-  route.get(
-    '/types/:typeId/config/:name/options',
-    { params: z.object({ typeId: z.string(), name: z.string() }) },
-    async ({ params, inject }) => {
+  route.get({
+    path: '/types/:typeId/config/:name/options',
+    params: z.object({ typeId: z.string(), name: z.string() }),
+    handler: async ({ params, inject }) => {
       const brickType = inject(BrickTypeRegistry).get(params.typeId);
       if (!brickType) return { options: [] };
       const process = inject(PluginLifecycle).getProcess(brickType.pluginName);
       if (!process) return { options: [] };
       return { options: await process.fetchPreferenceOptions(params.name) };
-    }
-  ),
+    },
+  }),
 
   // ─── Brick Instances ────────────────────────────────────────────────────────
 
   /**
    * List all active brick instances with their bodies
    */
-  route.get('/instances', ({ inject }) => {
+  route.get({ path: '/instances', handler: ({ inject }) => {
     return inject(BrickInstanceManager).list().map(toBrickInstanceDto);
-  }),
+  }}),
 
   /**
    * Get a specific brick instance
    */
-  route.get('/instances/:id', { params: z.object({ id: z.string() }) }, ({ params, inject }) => {
+  route.get({ path: '/instances/:id', params: z.object({ id: z.string() }), handler: ({ params, inject }) => {
     const i = inject(BrickInstanceManager).get(params.id);
     if (!i) throw new NotFound('Brick instance not found');
     return toBrickInstanceDto(i);
-  }),
+  }}),
 
   /**
    * Send an action to a brick instance
    */
-  route.post(
-    '/instances/:id/action',
-    {
-      params: z.object({ id: z.string() }),
-      body: z.object({
-        actionId: z.string(),
-        payload: z.unknown().optional(),
-      }),
-    },
-    ({ params, body, inject }) => {
+  route.post({
+    path: '/instances/:id/action',
+    params: z.object({ id: z.string() }),
+    body: z.object({
+      actionId: z.string(),
+      payload: z.unknown().optional(),
+    }),
+    handler: ({ params, body, inject }) => {
       const instance = inject(BrickInstanceManager).get(params.id);
       if (!instance) throw new NotFound('Brick instance not found');
 
@@ -129,6 +127,6 @@ export const bricksRoutes = group('/api/bricks', [
         body.payload as Json
       );
       return { ok: true };
-    }
-  ),
-]);
+    },
+  }),
+]});

@@ -51,7 +51,7 @@ export async function Plugins() {
                 <ArrowRight className="size-3.5" />
               </Button>
               <Button href={`${npm.packageUrl}/@brika/sdk`} target="_blank" rel="noopener noreferrer" variant="glow" size="md" className="px-4">
-                <span className="font-mono text-xs text-muted-foreground">npm</span>
+                <span className="font-mono text-xs text-muted-foreground">npm</span>{' '}
                 @brika/sdk
               </Button>
             </div>

@@ -48,6 +48,19 @@ function applyCoercionAndDefaults(
   return values;
 }
 
+/** Remove a global flag and its value from argv (e.g. --cwd /path). */
+function stripFlag(argv: string[], ...names: string[]): string[] {
+  const out: string[] = [];
+  for (let i = 0; i < argv.length; i++) {
+    if (names.includes(argv[i]) && argv[i + 1]) {
+      i++; // skip the value
+    } else {
+      out.push(argv[i]);
+    }
+  }
+  return out;
+}
+
 export function createCli(config?: CliConfig): Cli {
   let prefix = 'brika';
   const defaultCommand = config?.defaultCommand ?? 'start';
@@ -100,6 +113,9 @@ export function createCli(config?: CliConfig): Cli {
     },
 
     async run(argv: string[] = Bun.argv.slice(2)): Promise<void> {
+      // Strip global options already handled by the entry point
+      argv = stripFlag(argv, '--cwd', '-C');
+
       if (argv.includes('--no-color')) {
         process.env.NO_COLOR = '1';
         argv = argv.filter((a) => a !== '--no-color');

@@ -17,7 +17,7 @@
 
 import type { Hono } from 'hono';
 import { createApp } from '../create-app';
-import type { HttpMethod, RouteDefinition, RouteInput, Schema } from '../types';
+import type { HttpMethod, Middleware, RouteDefinition, RouteInput, Schema } from '../types';
 
 const TEST_BASE_URL = 'http://test';
 const JSON_CONTENT_TYPE = 'application/json';
@@ -180,8 +180,8 @@ class TestAppInstance {
  * const res = await app.post('/api/users', { name: 'John' });
  * expect(res.body.id).toBeDefined();
  */
-function create(routes: RouteDefinition[]): TestAppInstance {
-  return new TestAppInstance(createApp(routes));
+function create(routes: RouteDefinition[], middleware?: Middleware[]): TestAppInstance {
+  return new TestAppInstance(createApp(routes, middleware));
 }
 
 /**

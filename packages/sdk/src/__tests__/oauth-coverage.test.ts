@@ -66,13 +66,15 @@ function findRoute(method: string, pathFragment: string) {
   return registeredRoutes.find((r) => r.method === method && r.path.includes(pathFragment));
 }
 
-function makeReq(overrides: Partial<{
-  method: string;
-  path: string;
-  query: Record<string, string>;
-  headers: Record<string, string>;
-  body: unknown;
-}> = {}) {
+function makeReq(
+  overrides: Partial<{
+    method: string;
+    path: string;
+    query: Record<string, string>;
+    headers: Record<string, string>;
+    body: unknown;
+  }> = {}
+) {
   return {
     method: overrides.method ?? 'GET',
     path: overrides.path ?? '/',
@@ -129,9 +131,7 @@ describe('OAuth coverage: authorize route + PKCE', () => {
     defineOAuth(createConfig({ id }));
 
     const authorizeRoute = findRoute('GET', `/oauth/${id}/authorize`);
-    const result = await authorizeRoute!.handler(
-      makeReq({ headers: { host: 'localhost:3001' } })
-    );
+    const result = await authorizeRoute!.handler(makeReq({ headers: { host: 'localhost:3001' } }));
 
     const location = new URL(result.headers.Location);
     const redirectUri = location.searchParams.get('redirect_uri');
@@ -144,9 +144,7 @@ describe('OAuth coverage: authorize route + PKCE', () => {
     defineOAuth(createConfig({ id }));
 
     const authorizeRoute = findRoute('GET', `/oauth/${id}/authorize`);
-    const result = await authorizeRoute!.handler(
-      makeReq({ headers: { host: '0.0.0.0:3001' } })
-    );
+    const result = await authorizeRoute!.handler(makeReq({ headers: { host: '0.0.0.0:3001' } }));
 
     const location = new URL(result.headers.Location);
     const redirectUri = location.searchParams.get('redirect_uri');
@@ -172,9 +170,7 @@ describe('OAuth coverage: authorize route + PKCE', () => {
     defineOAuth(createConfig({ id }));
 
     const authorizeRoute = findRoute('GET', `/oauth/${id}/authorize`);
-    const result = await authorizeRoute!.handler(
-      makeReq({ headers: {} })
-    );
+    const result = await authorizeRoute!.handler(makeReq({ headers: {} }));
 
     const location = new URL(result.headers.Location);
     const redirectUri = location.searchParams.get('redirect_uri');
@@ -206,11 +202,13 @@ describe('OAuth coverage: authorize route non-PKCE', () => {
 
   test('authorize route omits PKCE params when pkce: false', async () => {
     const id = uniqueId('nopkce');
-    defineOAuth(createConfig({
-      id,
-      pkce: false,
-      clientSecret: 'my-secret',
-    }));
+    defineOAuth(
+      createConfig({
+        id,
+        pkce: false,
+        clientSecret: 'my-secret',
+      })
+    );
 
     const authorizeRoute = findRoute('GET', `/oauth/${id}/authorize`);
     const result = await authorizeRoute!.handler(makeReq());
@@ -242,9 +240,7 @@ describe('OAuth coverage: callback route error cases', () => {
     defineOAuth(createConfig({ id }));
 
     const callbackRoute = findRoute('GET', `/oauth/${id}/callback`);
-    const result = await callbackRoute!.handler(
-      makeReq({ query: { error: 'access_denied' } })
-    );
+    const result = await callbackRoute!.handler(makeReq({ query: { error: 'access_denied' } }));
 
     expect(result.status).toBe(200);
     expect(result.headers['Content-Type']).toBe('text/html');
@@ -283,9 +279,7 @@ describe('OAuth coverage: callback route error cases', () => {
 
     const callbackRoute = findRoute('GET', `/oauth/${id}/callback`);
     // Provide code but no state — PKCE verifier lookup fails
-    const result = await callbackRoute!.handler(
-      makeReq({ query: { code: 'auth-code' } })
-    );
+    const result = await callbackRoute!.handler(makeReq({ query: { code: 'auth-code' } }));
 
     expect(result.status).toBe(400);
     expect(result.body).toContain('PKCE verifier not found');
@@ -336,9 +330,7 @@ describe('OAuth coverage: callback route error cases', () => {
     const id = uniqueId('netfail');
     defineOAuth(createConfig({ id, pkce: false, clientSecret: 'secret' }));
 
-    globalThis.fetch = mock(() =>
-      Promise.reject(new Error('Network error'))
-    ) as typeof fetch;
+    globalThis.fetch = mock(() => Promise.reject(new Error('Network error'))) as typeof fetch;
 
     const callbackRoute = findRoute('GET', `/oauth/${id}/callback`);
     const result = await callbackRoute!.handler(
@@ -387,12 +379,14 @@ describe('OAuth coverage: callback route error cases', () => {
 
   test('callback sends Basic auth header for non-PKCE flow', async () => {
     const id = uniqueId('basic');
-    defineOAuth(createConfig({
-      id,
-      pkce: false,
-      clientId: 'my-client',
-      clientSecret: 'my-secret',
-    }));
+    defineOAuth(
+      createConfig({
+        id,
+        pkce: false,
+        clientId: 'my-client',
+        clientSecret: 'my-secret',
+      })
+    );
 
     let capturedHeaders: Headers | undefined;
     globalThis.fetch = mock((url: string, init?: RequestInit) => {
@@ -406,9 +400,7 @@ describe('OAuth coverage: callback route error cases', () => {
     }) as typeof fetch;
 
     const callbackRoute = findRoute('GET', `/oauth/${id}/callback`);
-    await callbackRoute!.handler(
-      makeReq({ query: { code: 'auth-code', state: 'state' } })
-    );
+    await callbackRoute!.handler(makeReq({ query: { code: 'auth-code', state: 'state' } }));
 
     expect(capturedHeaders).toBeDefined();
     const authHeader = capturedHeaders!.get('Authorization');
@@ -440,9 +432,7 @@ describe('OAuth coverage: callback route error cases', () => {
     }) as typeof fetch;
 
     const callbackRoute = findRoute('GET', `/oauth/${id}/callback`);
-    await callbackRoute!.handler(
-      makeReq({ query: { code: 'auth-code', state } })
-    );
+    await callbackRoute!.handler(makeReq({ query: { code: 'auth-code', state } }));
 
     expect(capturedHeaders).toBeDefined();
     expect(capturedHeaders!.get('Authorization')).toBeNull();
@@ -532,16 +522,12 @@ describe('OAuth coverage: PKCE full authorize + callback flow', () => {
     const callbackRoute = findRoute('GET', `/oauth/${id}/callback`);
 
     // First callback should succeed
-    const result1 = await callbackRoute!.handler(
-      makeReq({ query: { code: 'code1', state } })
-    );
+    const result1 = await callbackRoute!.handler(makeReq({ query: { code: 'code1', state } }));
     expect(result1.status).toBe(200);
     expect(result1.body).toContain('Connected!');
 
     // Second callback with same state should fail (verifier already consumed)
-    const result2 = await callbackRoute!.handler(
-      makeReq({ query: { code: 'code2', state } })
-    );
+    const result2 = await callbackRoute!.handler(makeReq({ query: { code: 'code2', state } }));
     expect(result2.status).toBe(400);
     expect(result2.body).toContain('PKCE verifier not found');
   });
@@ -567,17 +553,15 @@ describe('OAuth coverage: parseTokenResponse edge cases (via callback)', () => {
     const before = Date.now();
     globalThis.fetch = mock(() =>
       Promise.resolve(
-        new Response(
-          JSON.stringify({ access_token: 'tok', token_type: 'Bearer' }),
-          { status: 200, headers: { 'Content-Type': 'application/json' } }
-        )
+        new Response(JSON.stringify({ access_token: 'tok', token_type: 'Bearer' }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
       )
     ) as typeof fetch;
 
     const callbackRoute = findRoute('GET', `/oauth/${id}/callback`);
-    await callbackRoute!.handler(
-      makeReq({ query: { code: 'code', state: 'state' } })
-    );
+    await callbackRoute!.handler(makeReq({ query: { code: 'code', state: 'state' } }));
 
     const storedToken = preferences[`__oauth_${id}_token`] as Record<string, unknown>;
     const expiresAt = storedToken.expires_at as number;
@@ -592,17 +576,15 @@ describe('OAuth coverage: parseTokenResponse edge cases (via callback)', () => {
 
     globalThis.fetch = mock(() =>
       Promise.resolve(
-        new Response(
-          JSON.stringify({ access_token: 'tok', expires_in: 1000 }),
-          { status: 200, headers: { 'Content-Type': 'application/json' } }
-        )
+        new Response(JSON.stringify({ access_token: 'tok', expires_in: 1000 }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
       )
     ) as typeof fetch;
 
     const callbackRoute = findRoute('GET', `/oauth/${id}/callback`);
-    await callbackRoute!.handler(
-      makeReq({ query: { code: 'code', state: 'state' } })
-    );
+    await callbackRoute!.handler(makeReq({ query: { code: 'code', state: 'state' } }));
 
     const storedToken = preferences[`__oauth_${id}_token`] as Record<string, unknown>;
     expect(storedToken.token_type).toBe('Bearer');
@@ -622,9 +604,7 @@ describe('OAuth coverage: parseTokenResponse edge cases (via callback)', () => {
     ) as typeof fetch;
 
     const callbackRoute = findRoute('GET', `/oauth/${id}/callback`);
-    await callbackRoute!.handler(
-      makeReq({ query: { code: 'code', state: 'state' } })
-    );
+    await callbackRoute!.handler(makeReq({ query: { code: 'code', state: 'state' } }));
 
     const storedToken = preferences[`__oauth_${id}_token`] as Record<string, unknown>;
     expect(storedToken.refresh_token).toBeUndefined();
@@ -657,10 +637,10 @@ describe('OAuth coverage: parseTokenResponse edge cases (via callback)', () => {
 
     globalThis.fetch = mock(() =>
       Promise.resolve(
-        new Response(
-          JSON.stringify({ access_token: 12345, expires_in: 3600 }),
-          { status: 200, headers: { 'Content-Type': 'application/json' } }
-        )
+        new Response(JSON.stringify({ access_token: 12345, expires_in: 3600 }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
       )
     ) as typeof fetch;
 
@@ -748,11 +728,13 @@ describe('OAuth coverage: getStringPreference + getClientId/getClientSecret', ()
   test('clientIdPreference reads client ID from preferences', async () => {
     const id = uniqueId('prefid');
     preferences['myClientIdPref'] = 'pref-client-id';
-    defineOAuth(createConfig({
-      id,
-      clientId: undefined,
-      clientIdPreference: 'myClientIdPref',
-    }));
+    defineOAuth(
+      createConfig({
+        id,
+        clientId: undefined,
+        clientIdPreference: 'myClientIdPref',
+      })
+    );
 
     const authorizeRoute = findRoute('GET', `/oauth/${id}/authorize`);
     const result = await authorizeRoute!.handler(makeReq());
@@ -764,11 +746,13 @@ describe('OAuth coverage: getStringPreference + getClientId/getClientSecret', ()
   test('hardcoded clientId takes priority over clientIdPreference', async () => {
     const id = uniqueId('prioid');
     preferences['myClientIdPref'] = 'pref-value';
-    defineOAuth(createConfig({
-      id,
-      clientId: 'hardcoded-value',
-      clientIdPreference: 'myClientIdPref',
-    }));
+    defineOAuth(
+      createConfig({
+        id,
+        clientId: 'hardcoded-value',
+        clientIdPreference: 'myClientIdPref',
+      })
+    );
 
     const authorizeRoute = findRoute('GET', `/oauth/${id}/authorize`);
     const result = await authorizeRoute!.handler(makeReq());
@@ -779,11 +763,13 @@ describe('OAuth coverage: getStringPreference + getClientId/getClientSecret', ()
 
   test('throws when no clientId and no clientIdPreference value', async () => {
     const id = uniqueId('noid');
-    defineOAuth(createConfig({
-      id,
-      clientId: undefined,
-      clientIdPreference: undefined,
-    }));
+    defineOAuth(
+      createConfig({
+        id,
+        clientId: undefined,
+        clientIdPreference: undefined,
+      })
+    );
 
     const authorizeRoute = findRoute('GET', `/oauth/${id}/authorize`);
     // getClientId throws, which is caught by the route try/catch in callback
@@ -794,11 +780,13 @@ describe('OAuth coverage: getStringPreference + getClientId/getClientSecret', ()
   test('throws when clientIdPreference key exists but value is not a string', async () => {
     const id = uniqueId('nonstr');
     preferences['numPref'] = 42;
-    defineOAuth(createConfig({
-      id,
-      clientId: undefined,
-      clientIdPreference: 'numPref',
-    }));
+    defineOAuth(
+      createConfig({
+        id,
+        clientId: undefined,
+        clientIdPreference: 'numPref',
+      })
+    );
 
     const authorizeRoute = findRoute('GET', `/oauth/${id}/authorize`);
     await expect(authorizeRoute!.handler(makeReq())).rejects.toThrow('Missing client ID');
@@ -807,12 +795,14 @@ describe('OAuth coverage: getStringPreference + getClientId/getClientSecret', ()
   test('clientSecretPreference reads secret from preferences (non-PKCE)', async () => {
     const id = uniqueId('prefsecret');
     preferences['mySecretPref'] = 'pref-secret';
-    defineOAuth(createConfig({
-      id,
-      pkce: false,
-      clientSecret: undefined,
-      clientSecretPreference: 'mySecretPref',
-    }));
+    defineOAuth(
+      createConfig({
+        id,
+        pkce: false,
+        clientSecret: undefined,
+        clientSecretPreference: 'mySecretPref',
+      })
+    );
 
     let capturedHeaders: Headers | undefined;
     globalThis.fetch = mock((url: string, init?: RequestInit) => {
@@ -826,9 +816,7 @@ describe('OAuth coverage: getStringPreference + getClientId/getClientSecret', ()
     }) as typeof fetch;
 
     const callbackRoute = findRoute('GET', `/oauth/${id}/callback`);
-    await callbackRoute!.handler(
-      makeReq({ query: { code: 'code', state: 'state' } })
-    );
+    await callbackRoute!.handler(makeReq({ query: { code: 'code', state: 'state' } }));
 
     const authHeader = capturedHeaders!.get('Authorization')!;
     const decoded = atob(authHeader.replace('Basic ', ''));
@@ -840,12 +828,14 @@ describe('OAuth coverage: getStringPreference + getClientId/getClientSecret', ()
 
   test('throws when no clientSecret and no clientSecretPreference value (non-PKCE callback)', async () => {
     const id = uniqueId('nosecret');
-    defineOAuth(createConfig({
-      id,
-      pkce: false,
-      clientSecret: undefined,
-      clientSecretPreference: undefined,
-    }));
+    defineOAuth(
+      createConfig({
+        id,
+        pkce: false,
+        clientSecret: undefined,
+        clientSecretPreference: undefined,
+      })
+    );
 
     const callbackRoute = findRoute('GET', `/oauth/${id}/callback`);
     const result = await callbackRoute!.handler(
@@ -1248,11 +1238,13 @@ describe('OAuth coverage: refresh sends correct body params', () => {
 
   test('non-PKCE refresh sends Basic auth header', async () => {
     const id = uniqueId('refreshbasic');
-    const client = defineOAuth(createConfig({
-      id,
-      pkce: false,
-      clientSecret: 'the-secret',
-    }));
+    const client = defineOAuth(
+      createConfig({
+        id,
+        pkce: false,
+        clientSecret: 'the-secret',
+      })
+    );
 
     preferences[`__oauth_${id}_token`] = {
       access_token: 'old',

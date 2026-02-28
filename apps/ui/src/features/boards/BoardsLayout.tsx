@@ -3,6 +3,7 @@ import { Plus } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
+import { routes } from '@/routes';
 import type { BoardSummary } from './api';
 import { AddBrickSheet } from './components/AddBrickSheet';
 import { BoardSwitcher } from './components/BoardSwitcher';
@@ -24,8 +25,7 @@ export function BoardsLayout() {
   useEffect(() => {
     if (!boardId && !boardsLoading && boards.length > 0) {
       navigate({
-        to: '/boards/$boardId',
-        params: { boardId: boards[0].id },
+        to: routes.boards.detail.to({ boardId: boards[0].id }),
         replace: true,
       });
     }
@@ -46,12 +46,11 @@ export function BoardsLayout() {
     const remaining = boards.filter((d) => d.id !== deletedId);
     if (remaining.length > 0) {
       navigate({
-        to: '/boards/$boardId',
-        params: { boardId: remaining[0].id },
+        to: routes.boards.detail.to({ boardId: remaining[0].id }),
         replace: true,
       });
     } else {
-      navigate({ to: '/boards', replace: true });
+      navigate({ to: routes.boards.list.path, replace: true });
     }
   }, [boards, editBoard?.id, navigate]);
 

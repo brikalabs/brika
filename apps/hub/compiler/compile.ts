@@ -1,7 +1,6 @@
 /**
  * Compile mode — outputs a standalone binary with embedded Bun runtime
  */
-import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import pc from 'picocolors';
 import { folderTarPlugin } from '@/plugins';
@@ -33,48 +32,23 @@ export async function compile(target?: string): Promise<void> {
   log(pc.dim(`target: ${displayTarget}  output: ${outPath}`));
   console.log();
 
-  // Step 1: Bundle (applies folder-tar plugin for embedded templates)
-  step('Bundling...');
+  step('Bundling & compiling...');
 
-  const bundle = await Bun.build({
+  const result = await Bun.build({
     entrypoints: [join(import.meta.dir, '../src/cli.ts')],
-    outdir: distDir,
     target: 'bun',
     minify: true,
     plugins: [folderTarPlugin()],
+    compile: {
+      outfile: outPath,
+      ...(target ? { target: target as Bun.Target } : {}),
+    },
   });
 
-  if (!bundle.success) {
-    for (const l of bundle.logs) console.error(`  ${l.message}`);
+  if (!result.success) {
+    for (const l of result.logs) console.error(`  ${l.message}`);
     process.exit(1);
   }
-
-  const bundlePath = bundle.outputs[0]?.path;
-  if (!bundlePath) {
-    fail('No bundle output');
-    process.exit(1);
-  }
-  log(pc.dim(`  ${await fileSize(bundlePath)}`));
-
-  // Step 2: Compile bundle into standalone binary
-  step('Compiling...');
-
-  const compileArgs = ['bun', 'build', '--compile', bundlePath, '--outfile', outPath];
-  if (target) compileArgs.push(`--target=${target}`);
-
-  const proc = Bun.spawn(compileArgs, { stdout: 'pipe', stderr: 'pipe' });
-  const exitCode = await proc.exited;
-
-  if (exitCode !== 0) {
-    const stderr = await new Response(proc.stderr).text();
-    fail(`Compile failed (exit ${exitCode})`);
-    if (stderr.trim()) log(stderr.trim());
-    process.exit(1);
-  }
-
-  // Cleanup intermediate bundle
-  await rm(bundlePath, { force: true }).catch(() => {});
-  await rm(`${bundlePath}.map`, { force: true }).catch(() => {});
 
   log(pc.dim(`  ${await fileSize(outPath)}`));
 

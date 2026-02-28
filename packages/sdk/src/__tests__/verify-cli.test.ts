@@ -97,7 +97,9 @@ describe('verify CLI --json output', () => {
     const payload = JSON.parse(stdout.trim());
     expect(payload.passed).toBe(false);
     expect(payload.errors.length).toBeGreaterThan(0);
-    expect(payload.errors.some((e: string) => e.includes('does not cover current SDK version'))).toBe(true);
+    expect(
+      payload.errors.some((e: string) => e.includes('does not cover current SDK version'))
+    ).toBe(true);
   });
 
   test('JSON output includes sdkVersion field', async () => {
@@ -336,9 +338,7 @@ describe('verify CLI human-readable output formatting', () => {
   });
 
   test('does not show $schema check when schema URL is not brika', async () => {
-    const { stdout } = await runVerify(
-      validPlugin({ $schema: 'https://example.com/schema.json' })
-    );
+    const { stdout } = await runVerify(validPlugin({ $schema: 'https://example.com/schema.json' }));
     // The $schema success line should NOT appear since the URL is wrong
     expect(stdout).not.toContain('$schema https://example.com');
     // But a warning should appear

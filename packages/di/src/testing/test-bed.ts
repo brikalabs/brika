@@ -63,7 +63,7 @@ class TestBedImpl {
   /** Register a mock value for a service. */
   provide<T>(token: Constructor<T>, value: T | Partial<T>): this {
     if (this.#providers.size === 0) {
-      container.reset();
+      container.clearInstances();
     }
     this.#providers.set(token, value);
     container.registerInstance(token, value);
@@ -92,9 +92,12 @@ class TestBedImpl {
     }
     this.#spies.length = 0;
 
-    // Reset DI container
+    // Clear test-specific instances while preserving @singleton() class registrations.
+    // container.reset() destroys ALL registrations including decorator-based ones,
+    // which breaks cross-file test isolation. clearInstances() only removes
+    // value providers (stubs/provides) and clears cached singleton instances.
     this.#disableAutoStub();
-    container.reset();
+    container.clearInstances();
     this.#providers.clear();
   }
 }

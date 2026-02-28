@@ -15,6 +15,7 @@ import {
 } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
 import { cn } from '@/lib/utils';
+import { routes } from '@/routes';
 import { pluginsApi } from '../api';
 import type { UpdateInfo } from '../registry-api';
 import { PluginCardActions } from './PluginCardActions';
@@ -82,7 +83,7 @@ export function PluginCard({
 
   return (
     <>
-      <Link to="/plugins/$uid" params={{ uid: p.uid }}>
+      <Link to={routes.plugins.detail.to({ uid: p.uid })}>
         <Card interactive className="p-4">
           <div className="flex items-center gap-3">
             {/* Icon */}

@@ -6,11 +6,11 @@ import { BoardActions, BrickActions } from '@/runtime/events/actions';
 import { EventSystem } from '@/runtime/events/event-system';
 import type { Json } from '@/types';
 
-export const boardsRoutes = group('/api/boards', [
+export const boardsRoutes = group({ prefix: '/api/boards', routes: [
   /**
    * List all boards
    */
-  route.get('/', ({ inject }) => {
+  route.get({ path: '/', handler: ({ inject }) => {
     return inject(BoardLoader)
       .list()
       .map((d) => ({
@@ -20,20 +20,18 @@ export const boardsRoutes = group('/api/boards', [
         columns: d.columns,
         brickCount: d.bricks.length,
       }));
-  }),
+  }}),
 
   /**
    * Create a new board
    */
-  route.post(
-    '/',
-    {
-      body: z.object({
-        name: z.string(),
-        icon: z.optional(z.string()),
-      }),
-    },
-    async ({ body, inject }) => {
+  route.post({
+    path: '/',
+    body: z.object({
+      name: z.string(),
+      icon: z.optional(z.string()),
+    }),
+    handler: async ({ body, inject }) => {
       const loader = inject(BoardLoader);
       const id = `board-${Date.now().toString(36)}`;
       const board = {
@@ -45,47 +43,43 @@ export const boardsRoutes = group('/api/boards', [
       };
       await loader.saveBoard(board);
       return board;
-    }
-  ),
+    },
+  }),
 
   /**
    * Reorder boards (tab drag-and-drop).
    * Must be defined before /:id routes so the router doesn't match "order" as an :id.
    */
-  route.put(
-    '/order',
-    {
-      body: z.object({ ids: z.array(z.string()) }),
-    },
-    async ({ body, inject }) => {
+  route.put({
+    path: '/order',
+    body: z.object({ ids: z.array(z.string()) }),
+    handler: async ({ body, inject }) => {
       const ok = await inject(BoardLoader).reorder(body.ids);
       if (!ok) throw new NotFound('One or more board IDs not found');
       return { ok: true };
-    }
-  ),
+    },
+  }),
 
   /**
    * Get a specific board with all placements
    */
-  route.get('/:id', { params: z.object({ id: z.string() }) }, ({ params, inject }) => {
+  route.get({ path: '/:id', params: z.object({ id: z.string() }), handler: ({ params, inject }) => {
     const board = inject(BoardLoader).get(params.id);
     if (!board) throw new NotFound('Board not found');
     return board;
-  }),
+  }}),
 
   /**
    * Update board metadata
    */
-  route.put(
-    '/:id',
-    {
-      params: z.object({ id: z.string() }),
-      body: z.object({
-        name: z.optional(z.string()),
-        icon: z.optional(z.string()),
-      }),
-    },
-    async ({ params, body, inject }) => {
+  route.put({
+    path: '/:id',
+    params: z.object({ id: z.string() }),
+    body: z.object({
+      name: z.optional(z.string()),
+      icon: z.optional(z.string()),
+    }),
+    handler: async ({ params, body, inject }) => {
       const loader = inject(BoardLoader);
       const board = loader.get(params.id);
       if (!board) throw new NotFound('Board not found');
@@ -95,13 +89,13 @@ export const boardsRoutes = group('/api/boards', [
 
       await loader.saveBoard(board);
       return board;
-    }
-  ),
+    },
+  }),
 
   /**
    * Delete a board
    */
-  route.delete('/:id', { params: z.object({ id: z.string() }) }, async ({ params, inject }) => {
+  route.delete({ path: '/:id', params: z.object({ id: z.string() }), handler: async ({ params, inject }) => {
     const service = inject(BoardService);
     const loader = inject(BoardLoader);
 
@@ -114,23 +108,21 @@ export const boardsRoutes = group('/api/boards', [
     const deleted = await loader.deleteBoard(params.id);
     if (!deleted) throw new NotFound('Board not found');
     return { ok: true };
-  }),
+  }}),
 
   /**
    * Add a brick to a board
    */
-  route.post(
-    '/:id/bricks',
-    {
-      params: z.object({ id: z.string() }),
-      body: z.object({
-        brickTypeId: z.string(),
-        config: z.record(z.string(), z.unknown()).optional(),
-        position: z.object({ x: z.number(), y: z.number() }).optional(),
-        size: z.object({ w: z.number(), h: z.number() }).optional(),
-      }),
-    },
-    async ({ params, body, inject }) => {
+  route.post({
+    path: '/:id/bricks',
+    params: z.object({ id: z.string() }),
+    body: z.object({
+      brickTypeId: z.string(),
+      config: z.record(z.string(), z.unknown()).optional(),
+      position: z.object({ x: z.number(), y: z.number() }).optional(),
+      size: z.object({ w: z.number(), h: z.number() }).optional(),
+    }),
+    handler: async ({ params, body, inject }) => {
       const placement = await inject(BoardService).addBrick(
         params.id,
         body.brickTypeId,
@@ -140,24 +132,22 @@ export const boardsRoutes = group('/api/boards', [
       );
       if (!placement) throw new NotFound('Board or brick type not found');
       return placement;
-    }
-  ),
+    },
+  }),
 
   /**
    * Update a brick placement (label, config, position, size)
    */
-  route.put(
-    '/:id/bricks/:instanceId',
-    {
-      params: z.object({ id: z.string(), instanceId: z.string() }),
-      body: z.object({
-        label: z.string().optional(),
-        config: z.record(z.string(), z.unknown()).optional(),
-        position: z.object({ x: z.number(), y: z.number() }).optional(),
-        size: z.object({ w: z.number(), h: z.number() }).optional(),
-      }),
-    },
-    async ({ params, body, inject }) => {
+  route.put({
+    path: '/:id/bricks/:instanceId',
+    params: z.object({ id: z.string(), instanceId: z.string() }),
+    body: z.object({
+      label: z.string().optional(),
+      config: z.record(z.string(), z.unknown()).optional(),
+      position: z.object({ x: z.number(), y: z.number() }).optional(),
+      size: z.object({ w: z.number(), h: z.number() }).optional(),
+    }),
+    handler: async ({ params, body, inject }) => {
       const service = inject(BoardService);
 
       if (body.label !== undefined) {
@@ -174,54 +164,52 @@ export const boardsRoutes = group('/api/boards', [
         await service.moveBrick(params.id, params.instanceId, body.position, body.size);
       }
       return { ok: true };
-    }
-  ),
+    },
+  }),
 
   /**
    * Remove a brick from a board
    */
-  route.delete(
-    '/:id/bricks/:instanceId',
-    { params: z.object({ id: z.string(), instanceId: z.string() }) },
-    async ({ params, inject }) => {
+  route.delete({
+    path: '/:id/bricks/:instanceId',
+    params: z.object({ id: z.string(), instanceId: z.string() }),
+    handler: async ({ params, inject }) => {
       const removed = await inject(BoardService).removeBrick(params.id, params.instanceId);
       if (!removed) throw new NotFound('Brick not found on board');
       return { ok: true };
-    }
-  ),
+    },
+  }),
 
   /**
    * Batch update layout after drag-and-drop
    */
-  route.put(
-    '/:id/layout',
-    {
-      params: z.object({ id: z.string() }),
-      body: z.object({
-        layouts: z.array(
-          z.object({
-            instanceId: z.string(),
-            x: z.number(),
-            y: z.number(),
-            w: z.number(),
-            h: z.number(),
-          })
-        ),
-      }),
-    },
-    async ({ params, body, inject }) => {
+  route.put({
+    path: '/:id/layout',
+    params: z.object({ id: z.string() }),
+    body: z.object({
+      layouts: z.array(
+        z.object({
+          instanceId: z.string(),
+          x: z.number(),
+          y: z.number(),
+          w: z.number(),
+          h: z.number(),
+        })
+      ),
+    }),
+    handler: async ({ params, body, inject }) => {
       const updated = await inject(BoardService).batchUpdateLayout(params.id, body.layouts);
       if (!updated) throw new NotFound('Board not found');
       return { ok: true };
-    }
-  ),
+    },
+  }),
 
   /**
    * SSE: Per-board event stream.
    * Mounts brick instances on connect, unmounts on disconnect.
    * Sends snapshot + incremental brick and board events.
    */
-  route.get('/:id/sse', { params: z.object({ id: z.string() }) }, ({ params, inject }) => {
+  route.get({ path: '/:id/sse', params: z.object({ id: z.string() }), handler: ({ params, inject }) => {
     const service = inject(BoardService);
     const events = inject(EventSystem);
     const instances = inject(BrickInstanceManager);
@@ -298,5 +286,5 @@ export const boardsRoutes = group('/api/boards', [
         service.viewerDisconnected(params.id);
       };
     });
-  }),
-]);
+  }}),
+]});

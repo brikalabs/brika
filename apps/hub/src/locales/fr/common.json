@@ -110,6 +110,30 @@
     "days": "jours",
     "ago": "il y a"
   },
+  "errors": {
+    "401": {
+      "title": "Session expirée",
+      "description": "Votre session a expiré. Veuillez vous reconnecter."
+    },
+    "403": {
+      "title": "Accès refusé",
+      "description": "Vous n'avez pas la permission d'accéder à cette page."
+    },
+    "404": {
+      "title": "Page introuvable",
+      "description": "La page que vous recherchez n'existe pas ou a été déplacée."
+    },
+    "500": {
+      "title": "Une erreur est survenue",
+      "description": "Une erreur inattendue s'est produite. Veuillez réessayer."
+    },
+    "generic": {
+      "title": "Erreur inattendue",
+      "description": "Quelque chose n'a pas fonctionné comme prévu. Veuillez réessayer plus tard."
+    },
+    "goHome": "Aller au tableau de bord",
+    "tryAgain": "Réessayer"
+  },
   "code": {
     "lines_one": "{{count}} ligne",
     "lines_other": "{{count}} lignes"

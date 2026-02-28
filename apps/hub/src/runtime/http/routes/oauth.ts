@@ -13,11 +13,11 @@ import { extractHeaders, extractQuery, proxyToPlugin } from '../utils/route-prox
  * Looks up which plugin registered the route `/oauth/{providerId}/callback`
  * and proxies the request to that plugin.
  */
-export const oauthRoutes = group('/api/oauth', [
-  route.all(
-    '/:providerId/*',
-    { params: z.object({ providerId: z.string() }) },
-    ({ params, req, inject }) => {
+export const oauthRoutes = group({ prefix: '/api/oauth', routes: [
+  route.all({
+    path: '/:providerId/*',
+    params: z.object({ providerId: z.string() }),
+    handler: ({ params, req, inject }) => {
       const url = new URL(req.url);
       const pluginPath = url.pathname.slice('/api'.length) || '/';
 
@@ -35,6 +35,6 @@ export const oauthRoutes = group('/api/oauth', [
         extractQuery(url),
         extractHeaders(req, url, process.uid)
       );
-    }
-  ),
-]);
+    },
+  }),
+]});

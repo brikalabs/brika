@@ -16,6 +16,7 @@
     "check:arch": "archunit"
   },
   "dependencies": {
+    "@brika/auth": "workspace:*",
     "@brika/permissions": "workspace:*",
     "@brika/plugin": "workspace:*",
     "@brika/registry": "workspace:*",

@@ -547,10 +547,7 @@ describe('boards routes', () => {
 
   test('GET /api/boards/:id/sse forwards pluginDisconnected with filtered instanceIds', async () => {
     const board = makeBoard({
-      bricks: [
-        makePlacement({ instanceId: 'inst-1' }),
-        makePlacement({ instanceId: 'inst-2' }),
-      ],
+      bricks: [makePlacement({ instanceId: 'inst-1' }), makePlacement({ instanceId: 'inst-2' })],
     });
     mockLoader.get.mockReturnValue(board);
 

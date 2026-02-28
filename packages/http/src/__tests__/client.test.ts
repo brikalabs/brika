@@ -21,7 +21,8 @@ function createMockFetch() {
 
   return async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     fetchCallCount++;
-    const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    const url =
+      typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
     const method = init?.method ?? 'GET';
 
     // /status/NNN — return that HTTP status

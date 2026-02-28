@@ -11,6 +11,7 @@ import { ArrowLeft, Loader2, Save } from 'lucide-react';
 import { useCallback, useRef, useState } from 'react';
 import { Button, Input } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
+import { routes } from '@/routes';
 import type { Workflow } from './api';
 import { WorkflowEditor } from './editor';
 import { useSaveWorkflow, useWorkflow } from './hooks';
@@ -90,7 +91,7 @@ export function WorkflowEditorPage() {
 
       // If new workflow, navigate to edit URL
       if (isNew) {
-        navigate({ to: '/workflows/$id/edit', params: { id: toSave.id } });
+        navigate({ to: routes.workflows.edit.to({ id: toSave.id }) });
       }
     },
     [workflowName, isNew, navigate, saveWorkflowMutation]
@@ -100,10 +101,10 @@ export function WorkflowEditorPage() {
   const handleBack = useCallback(() => {
     if (isDirty) {
       if (confirm(t('workflows:editor.unsavedChanges'))) {
-        navigate({ to: '/workflows' });
+        navigate({ to: routes.workflows.list.path });
       }
     } else {
-      navigate({ to: '/workflows' });
+      navigate({ to: routes.workflows.list.path });
     }
   }, [isDirty, navigate, t]);
 
@@ -121,7 +122,7 @@ export function WorkflowEditorPage() {
     return (
       <div className="flex h-screen flex-col items-center justify-center gap-4">
         <p className="text-muted-foreground">{t('workflows:notFound')}</p>
-        <Button variant="outline" onClick={() => navigate({ to: '/workflows' })}>
+        <Button variant="outline" onClick={() => navigate({ to: routes.workflows.list.path })}>
           <ArrowLeft className="mr-2 size-4" />
           {t('common:actions.back')}
         </Button>

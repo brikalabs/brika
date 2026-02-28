@@ -88,6 +88,16 @@ Some settings can be configured via environment variables:
 | `BRIKA_LOG_LEVEL` | info | Log level (debug, info, warn, error) |
 | `BRIKA_DATA_DIR` | ./.brika | Data directory |
 
+### Authentication
+
+See [Authentication](../architecture/authentication.md) for full details.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `BRIKA_DATA_DIR` | ./.brika | Directory for auth.db and other data |
+
+Auth is configured programmatically at bootstrap. The password policy and session TTL are set in the auth config object (see the authentication docs).
+
 ## Docker Configuration
 
 When running in Docker, mount your configuration:

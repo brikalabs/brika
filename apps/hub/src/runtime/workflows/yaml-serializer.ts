@@ -92,7 +92,10 @@ export class YAMLSerializer {
   /**
    * Convert Workflow object to YAML string.
    */
-  static toYAML(workflow: Workflow, getPluginInfo: (blockType: string) => { id: string; version: string } | null): string {
+  static toYAML(
+    workflow: Workflow,
+    getPluginInfo: (blockType: string) => { id: string; version: string } | null
+  ): string {
     const inputs = new Map<string, Record<string, string>>();
     const outputs = new Map<string, Record<string, string>>();
 

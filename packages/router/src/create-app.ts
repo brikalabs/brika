@@ -1,14 +1,20 @@
 import { inject } from '@brika/di';
-import { Hono } from 'hono';
+import { Hono, type Context } from 'hono';
 import { cors } from 'hono/cors';
 import { ZodError, z } from 'zod';
 import { HttpException } from './exceptions';
-import type { RouteContext, RouteDefinition, Schema } from './types';
+import type { Middleware, RouteContext, RouteDefinition, Schema } from './types';
 
+/**
+ * CORS: Reflect the request origin so the browser accepts credentialed
+ * responses (cookies). A literal '*' cannot be combined with credentials.
+ * In production, replace with an explicit allowlist of trusted origins.
+ */
 const CORS_CONFIG = {
-  origin: '*',
+  origin: (origin: string) => origin,
   allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
 };
 
 /**
@@ -75,8 +81,11 @@ function handleError(error: Error, c: { json: (data: unknown, status: number) =>
   }
 
   console.error('[router] Unhandled error:', error);
-  return c.json({ error: error.message }, 500);
+  return c.json({ error: 'Internal server error' }, 500);
 }
+
+export type HonoContext = Context;
+export type { Middleware } from './types';
 
 /**
  * Create a route handler for a route definition.
@@ -85,6 +94,7 @@ function createHandler(routeDef: RouteDefinition) {
   return async (c: {
     req: { raw: Request; param: () => Record<string, string> };
     json: (data: unknown) => Response;
+    get(key: string): unknown;
   }) => {
     const { params, query, body } = await parseRequest(c.req.raw, c.req.param(), routeDef.schema);
 
@@ -94,6 +104,7 @@ function createHandler(routeDef: RouteDefinition) {
       body,
       inject,
       req: c.req.raw,
+      get: c.get,
     };
 
     const result = await routeDef.handler(ctx);
@@ -112,19 +123,19 @@ function createHandler(routeDef: RouteDefinition) {
  *
  * @example
  * ```ts
- * const app = createApp([
- *   ...healthRoutes,
- *   ...userRoutes,
- *   ...postRoutes,
- * ]);
- *
+ * const app = createApp(allRoutes, [verifyToken(), requireAuth()]);
  * Bun.serve({ fetch: app.fetch, port: 3000 });
  * ```
  */
-export function createApp(routes: RouteDefinition[]): Hono {
+export function createApp(routes: RouteDefinition[], middleware: Middleware[] = []): Hono {
   const app = new Hono();
 
   app.use('*', cors(CORS_CONFIG));
+
+  for (const mw of middleware) {
+    app.use('*', mw);
+  }
+
   app.onError(handleError);
 
   for (const routeDef of routes) {
@@ -135,6 +146,13 @@ export function createApp(routes: RouteDefinition[]): Hono {
       | 'patch'
       | 'delete'
       | 'all';
+
+    if (routeDef.middleware) {
+      for (const mw of routeDef.middleware) {
+        app[method](routeDef.path, mw);
+      }
+    }
+
     app[method](routeDef.path, createHandler(routeDef));
   }
 

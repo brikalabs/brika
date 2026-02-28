@@ -51,44 +51,48 @@ function transformActionToWorkflowEvent(
 
 export const streamsRoutes = [
   // SSE: Stream logs
-  route.get('/api/stream/logs', ({ inject }) => {
-    const logs = inject(Logger);
+  route.get({
+    path: '/api/stream/logs',
+    handler: ({ inject }) => {
+      const logs = inject(Logger);
 
-    return createSSEStream((send) => {
-      const unsub = logs.subscribe((event) => {
-        send(event, 'log');
+      return createSSEStream((send) => {
+        const unsub = logs.subscribe((event) => {
+          send(event, 'log');
+        });
+        return () => unsub();
       });
-      return () => unsub();
-    });
+    },
   }),
 
   // SSE: Stream events
-  route.get('/api/stream/events', ({ inject }) => {
-    const events = inject(EventSystem);
+  route.get({
+    path: '/api/stream/events',
+    handler: ({ inject }) => {
+      const events = inject(EventSystem);
 
-    return createSSEStream((send) => {
-      const unsub = events.subscribeAll((action) => {
-        // Convert Action to BrikaEvent format for SSE
-        const event = {
-          id: action.id,
-          type: action.type,
-          source: action.source ?? 'unknown',
-          payload: action.payload as Json,
-          ts: action.timestamp,
-        };
-        send(event, 'event');
+      return createSSEStream((send) => {
+        const unsub = events.subscribeAll((action) => {
+          // Convert Action to BrikaEvent format for SSE
+          const event = {
+            id: action.id,
+            type: action.type,
+            source: action.source ?? 'unknown',
+            payload: action.payload as Json,
+            ts: action.timestamp,
+          };
+          send(event, 'event');
+        });
+        return () => unsub();
       });
-      return () => unsub();
-    });
+    },
   }),
 
   // SSE: Live workflow events for debugging
-  route.get(
-    '/api/workflows/:id/events',
-    {
-      params: z.object({ id: z.string() }),
-    },
-    ({ params, inject }) => {
+  route.get({
+    path: '/api/workflows/:id/events',
+    params: z.object({ id: z.string() }),
+    handler: ({ params, inject }) => {
       const workflows = inject(WorkflowEngine);
       const events = inject(EventSystem);
 
@@ -114,6 +118,6 @@ export const streamsRoutes = [
 
         return () => unsub();
       });
-    }
-  ),
+    },
+  }),
 ];

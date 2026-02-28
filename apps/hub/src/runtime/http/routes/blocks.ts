@@ -1,12 +1,21 @@
 import { group, route } from '@brika/router';
 import { BlockRegistry } from '@/runtime/blocks';
 
-export const blocksRoutes = group('/api/blocks', [
-  route.get('/', ({ inject }) => {
-    return inject(BlockRegistry).list();
-  }),
+export const blocksRoutes = group({
+  prefix: '/api/blocks',
+  routes: [
+    route.get({
+      path: '/',
+      handler: ({ inject }) => {
+        return inject(BlockRegistry).list();
+      },
+    }),
 
-  route.get('/categories', ({ inject }) => {
-    return inject(BlockRegistry).listByCategory();
-  }),
-]);
+    route.get({
+      path: '/categories',
+      handler: ({ inject }) => {
+        return inject(BlockRegistry).listByCategory();
+      },
+    }),
+  ],
+});

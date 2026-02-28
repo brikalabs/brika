@@ -530,8 +530,7 @@ describe('registry routes', () => {
         if (p === '/plugins/my-plugin/icon.svg') {
           return {
             exists: () => Promise.resolve(true),
-            arrayBuffer: () =>
-              Promise.resolve(new TextEncoder().encode('<svg></svg>').buffer),
+            arrayBuffer: () => Promise.resolve(new TextEncoder().encode('<svg></svg>').buffer),
           } as ReturnType<typeof Bun.file>;
         }
         return {
@@ -637,10 +636,9 @@ describe('registry routes', () => {
 
       expect(raw.status).toBe(200);
       // Should use 'my-plugin' not 'npm:my-plugin' in the CDN URL
-      expect(fetchSpy).toHaveBeenCalledWith(
-        'https://unpkg.com/my-plugin@latest/icon.png',
-        { redirect: 'follow' }
-      );
+      expect(fetchSpy).toHaveBeenCalledWith('https://unpkg.com/my-plugin@latest/icon.png', {
+        redirect: 'follow',
+      });
     });
 
     test('returns icon when CDN has it', async () => {

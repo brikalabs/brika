@@ -1,93 +1,78 @@
-import type { RouteDefinition } from './types';
+import type { Middleware, RouteDefinition } from './types';
 
-/**
- * Normalize a path prefix.
- */
-function normalizePrefix(prefix: string): string {
-  if (!prefix) return '';
-  const withLeadingSlash = prefix.startsWith('/') ? prefix : `/${prefix}`;
-  return withLeadingSlash.endsWith('/') ? withLeadingSlash.slice(0, -1) : withLeadingSlash;
+/** Join path segments, collapsing duplicate slashes and stripping trailing slash. */
+function joinPath(...segments: string[]): string {
+  return segments.join('/').replaceAll(/\/+/g, '/').replace(/\/$/, '');
+}
+
+export interface GroupConfig {
+  /** Path prefix prepended to all routes in this group. */
+  prefix?: string;
+  /** Middleware applied to all routes in this group (before per-route middleware). */
+  middleware?: Middleware[];
+  /** Routes in this group. */
+  routes: (RouteDefinition | RouteDefinition[])[];
 }
 
 /**
- * Apply a prefix to routes.
+ * Group routes, optionally under a common prefix and/or with shared middleware.
+ *
+ * @example
+ * ```ts
+ * // Basic prefix
+ * export const userRoutes = group({
+ *   prefix: '/users',
+ *   routes: [
+ *     route.get({ path: '/', handler }),
+ *     route.get({ path: '/:id', handler }),
+ *   ],
+ * });
+ *
+ * // Prefix + middleware
+ * export const adminRoutes = group({
+ *   prefix: '/admin',
+ *   middleware: [requireScope(Scope.ADMIN_ALL)],
+ *   routes: [
+ *     route.get({ path: '/users', handler: listUsers }),
+ *     route.post({ path: '/users', handler: createUser }),
+ *   ],
+ * });
+ *
+ * // Middleware-only (no prefix)
+ * export const protectedRoutes = group({
+ *   middleware: [requireAuth()],
+ *   routes: [userRoutes, settingsRoutes],
+ * });
+ * ```
  */
-function applyPrefix(routes: RouteDefinition[], prefix: string): RouteDefinition[] {
-  if (!prefix) return routes;
-  const cleanPrefix = normalizePrefix(prefix);
+export function group(config: GroupConfig): RouteDefinition[] {
+  const { prefix = '', middleware: groupMiddleware, routes } = config;
 
-  return routes.map((route) => ({
+  return routes.flat().map((route) => ({
     ...route,
-    path: route.path === '/' ? cleanPrefix : `${cleanPrefix}${route.path}`,
+    ...(prefix && { path: joinPath('/', prefix, route.path) }),
+    ...(groupMiddleware && {
+      middleware: [...groupMiddleware, ...(route.middleware ?? [])],
+    }),
   }));
 }
 
 /**
- * Group routes under a common prefix.
+ * Combine multiple route definitions into a single array.
+ * Accepts both single routes and arrays.
  *
  * @example
  * ```ts
- * export const userRoutes = group("/users", [
- *   route.get("/", handler),        // GET /users
- *   route.get("/:id", handler),     // GET /users/:id
- *   route.post("/", handler),       // POST /users
- * ]);
- * ```
- */
-export function group(prefix: string, routes: RouteDefinition[]): RouteDefinition[] {
-  return applyPrefix(routes, prefix);
-}
-
-/**
- * Options for combineRoutes.
- */
-export interface CombineOptions {
-  /** Optional prefix to apply to all routes (e.g., "/api" or "/api/v1") */
-  prefix?: string;
-}
-
-/**
- * Combine multiple route groups into a single array.
- * Optionally apply a common prefix to all routes.
- *
- * @example
- * ```ts
- * // Without prefix
  * export const allRoutes = combineRoutes(
  *   healthRoutes,
  *   userRoutes,
  *   postRoutes,
- * );
- *
- * // With prefix
- * export const allRoutes = combineRoutes(
- *   { prefix: "/api/v1" },
- *   healthRoutes,
- *   userRoutes,
- *   postRoutes,
+ *   singleRoute,
  * );
  * ```
  */
-export function combineRoutes(...args: (RouteDefinition[] | CombineOptions)[]): RouteDefinition[] {
-  // Check if first arg is options
-  const firstArg = args[0];
-  const isOptions =
-    firstArg && !Array.isArray(firstArg) && typeof firstArg === 'object' && 'prefix' in firstArg;
-
-  let options: CombineOptions;
-  let routeArrays: RouteDefinition[][];
-
-  if (isOptions) {
-    options = firstArg;
-    routeArrays = args.slice(1) as RouteDefinition[][];
-  } else {
-    options = {};
-    routeArrays = args as RouteDefinition[][];
-  }
-
-  // Flatten all route arrays
-  const allRoutes = routeArrays.flat();
-
-  // Apply prefix if provided
-  return options.prefix ? applyPrefix(allRoutes, options.prefix) : allRoutes;
+export function combineRoutes(
+  ...routes: (RouteDefinition | RouteDefinition[])[]
+): RouteDefinition[] {
+  return routes.flat();
 }

@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router';
 import { Download, Package, Tag, User } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage, Badge, Card } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
+import { routes } from '@/routes';
 import type { StorePlugin } from '../types';
 import { CompatibilityBadge } from './CompatibilityBadge';
 import { InstallButton } from './InstallButton';
@@ -25,8 +26,7 @@ export function PluginStoreCard({ plugin }: Readonly<PluginStoreCardProps>) {
 
   return (
     <Link
-      to="/store/$source/$"
-      params={{ source: plugin.source, _splat: plugin.name }}
+      to={routes.store.detail.to({ source: plugin.source, _splat: plugin.name })}
       className="group block"
     >
       <Card accent={accent} interactive className="h-full p-5">

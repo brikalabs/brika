@@ -58,19 +58,21 @@ export default function SpotifyBrick() {
   const track = TRACKS[trackIdx];
   const pct = (progress / track.duration) * 100;
 
+  const tick = useCallback(() => {
+    setProgress((p) => {
+      if (p >= track.duration) {
+        setTrackIdx((i) => (i + 1) % TRACKS.length);
+        return 0;
+      }
+      return p + 1;
+    });
+  }, [track.duration]);
+
   useEffect(() => {
     if (!playing || dragging) return;
-    const id = setInterval(() => {
-      setProgress((p) => {
-        if (p >= track.duration) {
-          setTrackIdx((i) => (i + 1) % TRACKS.length);
-          return 0;
-        }
-        return p + 1;
-      });
-    }, 1000);
+    const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-  }, [playing, dragging, track.duration]);
+  }, [playing, dragging, tick]);
 
   const updateProgress = useCallback(
     (clientX: number) => {

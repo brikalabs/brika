@@ -4,6 +4,7 @@ import { Plug } from 'lucide-react';
 import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
 import { Avatar, AvatarFallback, AvatarImage, Badge, Card } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
+import { routes } from '@/routes';
 import { pluginsApi } from '../../plugins/api';
 import type { BlockDefinition } from '../../workflows/api';
 
@@ -52,8 +53,7 @@ export function BlockCard({ block, plugin }: Readonly<BlockCardProps>) {
 
         {plugin ? (
           <Link
-            to="/plugins/$uid"
-            params={{ uid: plugin.uid }}
+            to={routes.plugins.detail.to({ uid: plugin.uid })}
             className="group/plugin -mx-2 -mb-2 flex items-center gap-2 rounded-lg p-2 transition-colors hover:bg-muted/50"
             onClick={(e) => e.stopPropagation()}
           >

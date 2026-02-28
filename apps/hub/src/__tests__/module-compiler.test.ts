@@ -10,7 +10,17 @@
  */
 
 import 'reflect-metadata';
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, mock, spyOn, test } from 'bun:test';
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  mock,
+  spyOn,
+  test,
+} from 'bun:test';
 import { mkdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -39,16 +49,14 @@ afterAll(async () => {
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-function makeFakeFile(
-  fakeFs: Map<string, string>,
-  path: string
-): ReturnType<typeof Bun.file> {
+function makeFakeFile(fakeFs: Map<string, string>, path: string): ReturnType<typeof Bun.file> {
   const exists = fakeFs.has(path);
   const content = fakeFs.get(path) ?? '';
   return {
     exists: () => Promise.resolve(exists),
     text: () => (exists ? Promise.resolve(content) : Promise.reject(new Error(`ENOENT: ${path}`))),
-    json: () => (exists ? Promise.resolve(JSON.parse(content)) : Promise.reject(new Error(`ENOENT: ${path}`))),
+    json: () =>
+      exists ? Promise.resolve(JSON.parse(content)) : Promise.reject(new Error(`ENOENT: ${path}`)),
     arrayBuffer: () =>
       exists
         ? Promise.resolve(new TextEncoder().encode(content).buffer)
@@ -190,10 +198,7 @@ describe('ModuleCompiler - compile()', () => {
     const buildSpy = spyOn(Bun, 'build').mockResolvedValue(makeBuildSuccess('export default 1;'));
 
     try {
-      await compiler.compile('my-plugin', '/root', [
-        { id: 'existing' },
-        { id: 'missing' },
-      ]);
+      await compiler.compile('my-plugin', '/root', [{ id: 'existing' }, { id: 'missing' }]);
       // Build should have been called once — for the existing module only
       expect(buildSpy).toHaveBeenCalledTimes(1);
     } finally {

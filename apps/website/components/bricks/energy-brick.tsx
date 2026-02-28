@@ -8,7 +8,7 @@ export default function EnergyBrick() {
       <div className="flex min-h-0 flex-1 items-end gap-0.75 pb-[8%]">
         {bars.map((h, i) => (
           <div
-            key={i}
+            key={`bar-${h}`}
             className="flex-1 origin-bottom rounded-sm"
             style={{
               height: `${h * 100}%`,

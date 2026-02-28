@@ -1,6 +1,7 @@
 // Route builders
 
-export { createApp } from './create-app';
+export { createApp, type HonoContext } from './create-app';
+
 // Exceptions
 export {
   BadRequest,
@@ -12,9 +13,13 @@ export {
   Unauthorized,
   UnprocessableEntity,
 } from './exceptions';
-export type { CombineOptions } from './group';
-export { combineRoutes, group } from './group';
+
+export { combineRoutes, group, type GroupConfig } from './group';
 export { route } from './route';
+
+// Middleware
+export { rateLimit, type RateLimitOptions } from './middleware/rate-limit';
+
 // SSE helpers
 export { createAsyncSSEStream, createSSEStream } from './sse';
 
@@ -22,6 +27,7 @@ export { createAsyncSSEStream, createSSEStream } from './sse';
 export type {
   Handler,
   HttpMethod,
+  Middleware,
   RouteContext,
   RouteDefinition,
   RouteInput,

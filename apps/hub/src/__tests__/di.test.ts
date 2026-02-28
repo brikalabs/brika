@@ -1,16 +1,11 @@
 import 'reflect-metadata';
-import { beforeEach, describe, expect, it } from 'bun:test';
+import { describe, expect, it } from 'bun:test';
 import { container, inject, injectable, singleton } from '@brika/di';
 import { get, provide, reset, useTestBed } from '@brika/di/testing';
 
 useTestBed({ autoStub: false });
 
 describe('DI Container', () => {
-  beforeEach(() => {
-    container.reset();
-  });
-
-  container.reset();
 
   it('should resolve singleton services', () => {
     @singleton()
@@ -65,11 +60,6 @@ describe('DI Container', () => {
 });
 
 describe('inject() function', () => {
-  beforeEach(() => {
-    container.reset();
-  });
-
-  container.reset();
 
   it('should work as property initializer', () => {
     @singleton()

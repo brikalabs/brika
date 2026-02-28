@@ -18,7 +18,9 @@ let cacheInstance: SqliteCache | null = null;
 /** Options accepted by the cache bootstrap plugin. */
 export interface CachePluginOptions {
   /** Override the SqliteCache constructor (useful for testing). */
-  CacheClass?: new (opts: SqliteCacheOptions) => SqliteCache;
+  CacheClass?: new (
+    opts: SqliteCacheOptions
+  ) => SqliteCache;
 }
 
 /**

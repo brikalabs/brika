@@ -80,6 +80,7 @@ export {
   OverflowListItem,
   useOverflowList,
 } from './overflow-list';
+export { PasswordInput } from './password-input';
 export { Popover, PopoverContent, PopoverTrigger } from './popover';
 export { Progress } from './progress';
 export { ProgressDisplay } from './progress-display';

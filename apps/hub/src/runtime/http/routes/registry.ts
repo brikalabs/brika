@@ -33,101 +33,99 @@ function streamProgress(
   })();
 }
 
-export const registryRoutes = group('/api/registry', [
+export const registryRoutes = group({ prefix: '/api/registry', routes: [
   // ─── Package management (install / uninstall / update) ───────────────────
 
-  route.post(
-    '/install',
-    { body: z.object({ package: z.string(), version: z.string().optional() }) },
-    async ({ body, inject }) => {
+  route.post({
+    path: '/install',
+    body: z.object({ package: z.string(), version: z.string().optional() }),
+    handler: async ({ body, inject }) => {
       const registry = inject(PluginRegistry);
       await registry.init();
       const generator = registry.install(body.package, body.version);
       return createSSEStream((send, close) => streamProgress(generator, send, close));
-    }
-  ),
+    },
+  }),
 
-  route.post(
-    '/update',
-    { body: z.object({ package: z.string().optional() }) },
-    async ({ body, inject }) => {
+  route.post({
+    path: '/update',
+    body: z.object({ package: z.string().optional() }),
+    handler: async ({ body, inject }) => {
       const registry = inject(PluginRegistry);
       await registry.init();
       const generator = registry.update(body.package);
       return createSSEStream((send, close) => streamProgress(generator, send, close));
-    }
-  ),
+    },
+  }),
 
-  route.get('/updates', async ({ inject }) => {
+  route.get({ path: '/updates', handler: async ({ inject }) => {
     const registry = inject(PluginRegistry);
     const updates = await registry.checkUpdates();
     return { updates };
-  }),
+  }}),
 
-  route.get('/packages', async ({ inject }) => {
+  route.get({ path: '/packages', handler: async ({ inject }) => {
     const registry = inject(PluginRegistry);
     const packages = await registry.list();
     return { packages };
-  }),
+  }}),
 
-  route.get(
-    '/packages/:name',
-    { params: z.object({ name: z.string() }) },
-    async ({ params, inject }) => {
+  route.get({
+    path: '/packages/:name',
+    params: z.object({ name: z.string() }),
+    handler: async ({ params, inject }) => {
       const registry = inject(PluginRegistry);
       const pkg = await registry.get(params.name);
       return { package: pkg };
-    }
-  ),
+    },
+  }),
 
-  route.delete(
-    '/packages/:name',
-    { params: z.object({ name: z.string() }) },
-    async ({ params, inject }) => {
+  route.delete({
+    path: '/packages/:name',
+    params: z.object({ name: z.string() }),
+    handler: async ({ params, inject }) => {
       const registry = inject(PluginRegistry);
       await registry.uninstall(params.name);
       return { success: true };
-    }
-  ),
+    },
+  }),
 
   // ─── Store API ────────────────────────────────────────────────────────────
 
-  route.get('/version', () => ({
+  route.get({ path: '/version', handler: () => ({
     version: HUB_VERSION,
     engines: { node: process.version },
-  })),
+  })}),
 
-  route.get(
-    '/search',
-    {
-      query: z.object({
-        q: z.string().optional(),
-        limit: z.coerce.number().optional().default(20),
-        offset: z.coerce.number().optional().default(0),
-      }),
-    },
-    ({ query, inject }) => inject(StoreService).search(query.q, query.limit, query.offset)
-  ),
+  route.get({
+    path: '/search',
+    query: z.object({
+      q: z.string().optional(),
+      limit: z.coerce.number().optional().default(20),
+      offset: z.coerce.number().optional().default(0),
+    }),
+    handler: ({ query, inject }) => inject(StoreService).search(query.q, query.limit, query.offset),
+  }),
 
-  route.get('/verified', ({ inject }) => inject(StoreService).getVerifiedList()),
+  route.get({ path: '/verified', handler: ({ inject }) => inject(StoreService).getVerifiedList() }),
 
-  route.get(
-    '/plugins/:name',
-    { params: z.object({ name: z.string() }) },
-    async ({ params, inject }) => {
+  route.get({
+    path: '/plugins/:name',
+    params: z.object({ name: z.string() }),
+    handler: async ({ params, inject }) => {
       const store = inject(StoreService);
       const plugin = await store.getPluginDetails(params.name);
       if (!plugin) throw new NotFound('Package not found');
       return plugin;
-    }
-  ),
+    },
+  }),
 
   // ─── Plugin assets (README / icon) ────────────────────────────────────────
 
-  route.get(
-    '/plugins/:name/readme',
-    { params: z.object({ name: z.string() }) },
-    async ({ params, inject }) => {
+  route.get({
+    path: '/plugins/:name/readme',
+    params: z.object({ name: z.string() }),
+    handler: async ({ params, inject }) => {
       const store = inject(StoreService);
       const pkgName = stripSourcePrefix(params.name);
       const rootDir = await store.getLocalPluginRoot(params.name);
@@ -152,13 +150,13 @@ export const registryRoutes = group('/api/registry', [
         });
         return { readme: null, filename: null };
       }
-    }
-  ),
+    },
+  }),
 
-  route.get(
-    '/plugins/:name/icon',
-    { params: z.object({ name: z.string() }) },
-    async ({ params, inject }) => {
+  route.get({
+    path: '/plugins/:name/icon',
+    params: z.object({ name: z.string() }),
+    handler: async ({ params, inject }) => {
       const iconPaths = ['icon.png', 'icon.svg', 'logo.png', 'logo.svg'];
       const pkgName = stripSourcePrefix(params.name);
 
@@ -209,6 +207,6 @@ export const registryRoutes = group('/api/registry', [
         });
         return new Response(null, { status: 404 });
       }
-    }
-  ),
-]);
+    },
+  }),
+]});

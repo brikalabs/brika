@@ -213,7 +213,10 @@ describe('StoreService', () => {
 
   describe('getPluginDetails', () => {
     test('routes to local only when id has "local:" prefix', async () => {
-      mockLocal.findByName.mockResolvedValue({ rootDir: '/workspace/plugins/timer', pkg: localPkg });
+      mockLocal.findByName.mockResolvedValue({
+        rootDir: '/workspace/plugins/timer',
+        pkg: localPkg,
+      });
 
       const result = await service.getPluginDetails('local:@brika/plugin-timer');
 
@@ -237,7 +240,10 @@ describe('StoreService', () => {
     });
 
     test('tries local first then npm when no prefix', async () => {
-      mockLocal.findByName.mockResolvedValue({ rootDir: '/workspace/plugins/timer', pkg: localPkg });
+      mockLocal.findByName.mockResolvedValue({
+        rootDir: '/workspace/plugins/timer',
+        pkg: localPkg,
+      });
 
       const result = await service.getPluginDetails('@brika/plugin-timer');
 
@@ -268,9 +274,7 @@ describe('StoreService', () => {
     // ─── local details (via getPluginDetails) ─────────────────────────
 
     test('reads workspace package.json for workspace entries', async () => {
-      bun
-        .fs({ '/workspace/plugins/timer/package.json': localPkg })
-        .apply();
+      bun.fs({ '/workspace/plugins/timer/package.json': localPkg }).apply();
 
       const result = await service.getPluginDetails('local:@brika/plugin-timer');
 
@@ -285,7 +289,10 @@ describe('StoreService', () => {
 
     test('falls back to local registry findByName on workspace resolve error', async () => {
       mockConfigLoader.resolvePluginEntry.mockRejectedValue(new Error('resolve failed'));
-      mockLocal.findByName.mockResolvedValue({ rootDir: '/workspace/plugins/timer', pkg: localPkg });
+      mockLocal.findByName.mockResolvedValue({
+        rootDir: '/workspace/plugins/timer',
+        pkg: localPkg,
+      });
 
       const result = await service.getPluginDetails('local:@brika/plugin-timer');
 
@@ -300,7 +307,10 @@ describe('StoreService', () => {
         rootDirectory: '/bad/path',
       });
       bun.apply(); // no files mocked, so Bun.file().json() will throw
-      mockLocal.findByName.mockResolvedValue({ rootDir: '/workspace/plugins/timer', pkg: localPkg });
+      mockLocal.findByName.mockResolvedValue({
+        rootDir: '/workspace/plugins/timer',
+        pkg: localPkg,
+      });
 
       const result = await service.getPluginDetails('local:@brika/plugin-timer');
 
@@ -318,7 +328,10 @@ describe('StoreService', () => {
     });
 
     test('local details populates all StorePlugin fields', async () => {
-      mockLocal.findByName.mockResolvedValue({ rootDir: '/workspace/plugins/timer', pkg: localPkg });
+      mockLocal.findByName.mockResolvedValue({
+        rootDir: '/workspace/plugins/timer',
+        pkg: localPkg,
+      });
       mockConfigLoader.get.mockReturnValue({ plugins: [] });
 
       const result = await service.getPluginDetails('local:@brika/plugin-timer');

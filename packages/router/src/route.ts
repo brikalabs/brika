@@ -1,58 +1,93 @@
-import type { Handler, HttpMethod, RouteContext, RouteDefinition, Schema } from './types';
+import type { ZodType } from 'zod';
+import type { Handler, HttpMethod, Middleware, RouteContext, RouteDefinition } from './types';
 
 /**
- * Create a route definition with inferred return type.
- * Supports both with and without schema:
- *   route.get("/path", handler)
- *   route.get("/path", { params: z.object({...}) }, handler)
- */
-function createRoute<S extends Schema, R>(
-  method: HttpMethod,
-  path: string,
-  schemaOrHandler: S | Handler<S, R>,
-  maybeHandler?: Handler<S, R>
-): RouteDefinition<S, R> {
-  if (typeof schemaOrHandler === 'object' && maybeHandler !== undefined) {
-    return { method, path, schema: schemaOrHandler, handler: maybeHandler };
-  }
-  return { method, path, schema: undefined, handler: schemaOrHandler as Handler<S, R> };
-}
-
-type RouteMethod = <S extends Schema, R>(
-  path: string,
-  schemaOrHandler: S | ((ctx: RouteContext<S>) => R | Promise<R>),
-  maybeHandler?: (ctx: RouteContext<S>) => R | Promise<R>
-) => RouteDefinition<S, Awaited<R>>;
-
-function createMethod(method: HttpMethod): RouteMethod {
-  return <S extends Schema, R>(
-    path: string,
-    schemaOrHandler: S | ((ctx: RouteContext<S>) => R | Promise<R>),
-    maybeHandler?: (ctx: RouteContext<S>) => R | Promise<R>
-  ) =>
-    createRoute<S, Awaited<R>>(
-      method,
-      path,
-      schemaOrHandler as S | Handler<S, Awaited<R>>,
-      maybeHandler as Handler<S, Awaited<R>> | undefined
-    );
-}
-
-/**
- * Route builder with fluent API.
+ * Route configuration object.
+ * Pass Zod schemas for params/query/body to get typed handler context.
  *
  * @example
  * ```ts
- * route.get("/users", async ({ inject }) => {
- *   return inject(UserService).list();
+ * route.get({
+ *   path: '/users/:id',
+ *   params: z.object({ id: z.string() }),
+ *   handler: ({ params }) => getUserById(params.id),
+ * })
+ * ```
+ */
+type RouteConfig<
+  P extends ZodType | undefined = undefined,
+  Q extends ZodType | undefined = undefined,
+  B extends ZodType | undefined = undefined,
+  R = unknown,
+> = {
+  path: string;
+  params?: P;
+  query?: Q;
+  body?: B;
+  middleware?: Middleware[];
+  handler: (ctx: RouteContext<{ params: P; query: Q; body: B }>) => R | Promise<R>;
+};
+
+type ConfigSchema<
+  P extends ZodType | undefined,
+  Q extends ZodType | undefined,
+  B extends ZodType | undefined,
+> = { params: P; query: Q; body: B };
+
+function buildRoute<
+  P extends ZodType | undefined,
+  Q extends ZodType | undefined,
+  B extends ZodType | undefined,
+  R,
+>(
+  method: HttpMethod,
+  config: RouteConfig<P, Q, B, R>
+): RouteDefinition<ConfigSchema<P, Q, B>, Awaited<R>> {
+  const schema: Record<string, unknown> = {};
+  if (config.params) schema.params = config.params;
+  if (config.query) schema.query = config.query;
+  if (config.body) schema.body = config.body;
+
+  return {
+    method,
+    path: config.path,
+    ...(Object.keys(schema).length > 0 && { schema: schema as ConfigSchema<P, Q, B> }),
+    handler: config.handler as Handler<ConfigSchema<P, Q, B>, Awaited<R>>,
+    middleware: config.middleware,
+  };
+}
+
+function createMethod(method: HttpMethod) {
+  return <
+    P extends ZodType | undefined = undefined,
+    Q extends ZodType | undefined = undefined,
+    B extends ZodType | undefined = undefined,
+    R = unknown,
+  >(
+    config: RouteConfig<P, Q, B, R>
+  ): RouteDefinition<ConfigSchema<P, Q, B>, Awaited<R>> => buildRoute(method, config);
+}
+
+/**
+ * Route builder with config-object API.
+ *
+ * @example
+ * ```ts
+ * // Simple route
+ * route.get({ path: '/health', handler: () => ({ ok: true }) })
+ *
+ * // With Zod schemas — handler params/body/query are fully typed
+ * route.post({
+ *   path: '/users',
+ *   body: z.object({ name: z.string(), email: z.string().email() }),
+ *   handler: ({ body }) => createUser(body.name, body.email),
  * })
  *
- * route.get("/users/:id", {
- *   params: z.object({ id: z.string() })
- * }, async ({ params, inject }) => {
- *   const user = inject(UserService).get(params.id);
- *   if (!user) throw new NotFound();
- *   return user;
+ * // With middleware
+ * route.get({
+ *   path: '/admin/users',
+ *   middleware: [requireScope(Scope.ADMIN_ALL)],
+ *   handler: ({ inject }) => inject(UserService).list(),
  * })
  * ```
  */

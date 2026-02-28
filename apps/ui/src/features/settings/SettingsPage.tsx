@@ -5,6 +5,8 @@
  */
 
 import { Palette } from 'lucide-react';
+import { useCanAccess } from '@brika/auth/react';
+import { Scope } from '@brika/auth';
 import { ThemeSelector } from '@/components/theme-selector';
 import {
   Section,
@@ -26,6 +28,7 @@ import {
 
 export function SettingsPage() {
   const { t } = useLocale();
+  const isAdmin = useCanAccess(Scope.ADMIN_ALL);
 
   return (
     <div className="space-y-6">
@@ -58,25 +61,30 @@ export function SettingsPage() {
         <LanguageSelector />
       </Section>
 
-      {/* Hub Location */}
-      <Section id="location" className="scroll-mt-4">
-        <LocationSettings />
-      </Section>
+      {/* Admin-only sections */}
+      {isAdmin && (
+        <>
+          {/* Hub Location */}
+          <Section id="location" className="scroll-mt-4">
+            <LocationSettings />
+          </Section>
 
-      {/* Updates */}
-      <Section id="updates" className="scroll-mt-4">
-        <UpdateSection />
-      </Section>
+          {/* Updates */}
+          <Section id="updates" className="scroll-mt-4">
+            <UpdateSection />
+          </Section>
 
-      {/* Hub Control */}
-      <Section id="hub-control" className="scroll-mt-4">
-        <HubControlSection />
-      </Section>
+          {/* Hub Control */}
+          <Section id="hub-control" className="scroll-mt-4">
+            <HubControlSection />
+          </Section>
 
-      {/* System Information */}
-      <Section id="system" className="scroll-mt-4">
-        <SystemInfo />
-      </Section>
+          {/* System Information */}
+          <Section id="system" className="scroll-mt-4">
+            <SystemInfo />
+          </Section>
+        </>
+      )}
     </div>
   );
 }

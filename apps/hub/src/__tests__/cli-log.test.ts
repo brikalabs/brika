@@ -243,7 +243,12 @@ describe('cli/commands/log', () => {
 
       test('prints log events from database', async () => {
         const db = createTestDb(DB_PATH);
-        insertRow(db, { ts: 1700000000000, message: 'Hello from test', level: 'info', source: 'hub' });
+        insertRow(db, {
+          ts: 1700000000000,
+          message: 'Hello from test',
+          level: 'info',
+          source: 'hub',
+        });
         db.close();
 
         await logCommand.handler({
@@ -370,7 +375,13 @@ describe('cli/commands/log', () => {
         db.close();
 
         await logCommand.handler({
-          values: { level: 'error', source: 'plugin', plugin: 'timer', search: 'timeout', limit: 50 },
+          values: {
+            level: 'error',
+            source: 'plugin',
+            plugin: 'timer',
+            search: 'timeout',
+            limit: 50,
+          },
           positionals: [],
           commands: [],
         });

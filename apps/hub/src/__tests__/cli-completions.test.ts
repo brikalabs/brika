@@ -406,9 +406,7 @@ describe('uninstallCompletions', () => {
 
     expect(result.scriptExists).toBe(false);
     expect(result.cleaned.length).toBeGreaterThan(0);
-    expect(result.cleaned).toContainEqual(
-      expect.stringContaining('brika.fish')
-    );
+    expect(result.cleaned).toContainEqual(expect.stringContaining('brika.fish'));
   });
 
   test('removes all shells at once after installing all three', async () => {
@@ -724,9 +722,7 @@ describe('uninstallCompletions — RC line filtering', () => {
       return { rcContent: await readFile(join(HOME, '.zshrc'), 'utf8') };
     `);
 
-    expect(result.rcContent).toBe(
-      ['export FOO=bar', 'export BAZ=qux'].join('\n')
-    );
+    expect(result.rcContent).toBe(['export FOO=bar', 'export BAZ=qux'].join('\n'));
   });
 
   test('removes only the source line if marker is not on the previous line', async () => {

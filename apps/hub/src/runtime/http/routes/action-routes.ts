@@ -11,20 +11,24 @@ const actionParams = z.object({ uid: z.string(), actionId: z.string() });
  * Action endpoint for plugin page → plugin process communication.
  * Pages call `callAction(ref, input)` which POSTs here.
  */
-export const actionRoutes = group('/api/plugins', [
-  route.post(
-    '/:uid/actions/:actionId',
-    { params: actionParams, body: z.unknown().optional() },
-    async ({ params, body, inject }) => {
-      const plugin = getOrThrow(inject(PluginManager).get(params.uid), 'Plugin not found');
-      const process = inject(PluginLifecycle).getProcess(plugin.name);
-      if (!process) throw new NotFound('Plugin not running');
+export const actionRoutes = group({
+  prefix: '/api/plugins',
+  routes: [
+    route.post({
+      path: '/:uid/actions/:actionId',
+      params: actionParams,
+      body: z.unknown().optional(),
+      handler: async ({ params, body, inject }) => {
+        const plugin = getOrThrow(inject(PluginManager).get(params.uid), 'Plugin not found');
+        const process = inject(PluginLifecycle).getProcess(plugin.name);
+        if (!process) throw new NotFound('Plugin not running');
 
-      const result = await process.callPluginAction(params.actionId, body as Json | undefined);
-      if (!result.ok) {
-        return Response.json({ error: result.error }, { status: 500 });
-      }
-      return Response.json({ data: result.data });
-    }
-  ),
-]);
+        const result = await process.callPluginAction(params.actionId, body as Json | undefined);
+        if (!result.ok) {
+          return Response.json({ error: result.error }, { status: 500 });
+        }
+        return Response.json({ data: result.data });
+      },
+    }),
+  ],
+});

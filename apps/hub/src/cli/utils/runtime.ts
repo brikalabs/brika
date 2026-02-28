@@ -8,10 +8,12 @@ export const installDir = dirname(process.execPath);
 
 /**
  * Root data directory for Brika state (PID file, database, etc.).
+ * Precedence: BRIKA_HOME env var → auto-detect from binary / cwd.
  * Production: parent of installDir (e.g., ~/.brika/bin → ~/.brika).
  * Dev: .brika in the current working directory.
  */
-export const dataDir = isCompiled ? dirname(installDir) : join(process.cwd(), '.brika');
+export const dataDir =
+  process.env.BRIKA_HOME ?? (isCompiled ? dirname(installDir) : join(process.cwd(), '.brika'));
 
 /** Absolute path of a bundled asset next to the binary, or `''` if missing. */
 export function detect(asset: string): string {

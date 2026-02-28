@@ -1,6 +1,7 @@
 import { Box, LayoutDashboard, Plug, Workflow, Zap } from 'lucide-react';
 import { useDataView } from '@/components/DataView';
 import { useLocale } from '@/lib/use-locale';
+import { routes } from '@/routes';
 import { StatCard } from './StatCard';
 import { StatCardSkeleton } from './StatCardSkeleton';
 
@@ -46,14 +47,14 @@ export function StatsGrid({ stats, isLoading }: Readonly<StatsGridProps>) {
               label={t('dashboard:stats.plugins')}
               value={stats.plugins.running}
               subValue={t('dashboard:stats.running')}
-              href="/plugins"
+              href={routes.plugins.list.path}
               accent="blue"
             />
             <StatCard
               icon={Box}
               label={t('dashboard:stats.blocks')}
               value={stats.blocks.total}
-              href="/workflows"
+              href={routes.workflows.list.path}
               accent="violet"
             />
             <StatCard
@@ -61,7 +62,7 @@ export function StatsGrid({ stats, isLoading }: Readonly<StatsGridProps>) {
               label={t('dashboard:stats.workflows')}
               value={stats.workflows.enabled}
               subValue={t('dashboard:stats.enabled')}
-              href="/workflows"
+              href={routes.workflows.list.path}
               accent="orange"
             />
             <StatCard
@@ -69,14 +70,14 @@ export function StatsGrid({ stats, isLoading }: Readonly<StatsGridProps>) {
               label={t('dashboard:stats.sparks')}
               value={stats.sparks.total}
               subValue={t('dashboard:stats.registered')}
-              href="/sparks"
+              href={routes.sparks.list.path}
               accent="emerald"
             />
             <StatCard
               icon={LayoutDashboard}
               label={t('dashboard:stats.brickTypes')}
               value={stats.bricks.total}
-              href="/boards"
+              href={routes.boards.list.path}
               accent="purple"
             />
           </div>

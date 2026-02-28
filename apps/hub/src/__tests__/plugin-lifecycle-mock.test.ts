@@ -497,11 +497,11 @@ describe('PluginLifecycle (with mocked spawn)', () => {
 
     test('detects crash loop after max crashes', async () => {
       mockState.get.mockReturnValue({ enabled: true });
-      mockConfig.restartMaxCrashes = 2;
-      mockConfig.restartCrashWindowMs = 60000;
-      lifecycle = get(PluginLifecycleMocked);
+      // Note: PluginLifecycle is @singleton() so the instance from beforeEach is reused.
+      // The RestartPolicy was constructed with default restartMaxCrashes (5), so we
+      // need to exceed that threshold by crashing more than 5 times.
 
-      for (let i = 0; i < 3; i++) {
+      for (let i = 0; i < 6; i++) {
         capturedCallbacks = null;
         mockProcessInstance = null;
         try {
@@ -513,14 +513,15 @@ describe('PluginLifecycle (with mocked spawn)', () => {
           const cbs = capturedCallbacks as PluginProcessCallbacks;
           const process = mockProcessInstance as unknown as PluginProcess;
           cbs.onDisconnect(process, new Error(`crash-${i}`));
-          await new Promise((r) => setTimeout(r, 100));
+          // Wait for the fire-and-forget unload() (which has a 50ms internal delay)
+          await new Promise((r) => setTimeout(r, 200));
         }
       }
 
       const healthCalls = mockState.setHealth.mock.calls;
       const crashLoopCalls = healthCalls.filter((c: unknown[]) => c[1] === 'crash-loop');
       expect(crashLoopCalls.length).toBeGreaterThanOrEqual(1);
-    });
+    }, 10_000);
   });
 
   describe('#checkCompatibility', () => {

@@ -1,0 +1,63 @@
+{
+  "title": "Gestion des utilisateurs",
+  "subtitle": "Créer et gérer les comptes utilisateurs",
+  "createUser": "Créer un utilisateur",
+  "editUser": "Modifier l'utilisateur",
+  "deleteUser": "Supprimer l'utilisateur",
+  "deleteConfirm": "Êtes-vous sûr de vouloir supprimer {{name}}\u00a0? Cette action est irréversible.",
+  "resetPassword": "Réinitialiser le mot de passe",
+  "resetPasswordDesc": "Définir un nouveau mot de passe pour {{name}}",
+  "noUsers": "Aucun utilisateur trouvé",
+  "fields": {
+    "email": "Email",
+    "name": "Nom",
+    "role": "Rôle",
+    "password": "Mot de passe",
+    "status": "Statut",
+    "createdAt": "Créé",
+    "active": "Actif"
+  },
+  "roles": {
+    "admin": "Administrateur",
+    "user": "Utilisateur",
+    "guest": "Invité",
+    "service": "Service"
+  },
+  "status": {
+    "active": "Actif",
+    "inactive": "Inactif"
+  },
+  "messages": {
+    "created": "Utilisateur créé avec succès",
+    "updated": "Utilisateur modifié avec succès",
+    "deleted": "Utilisateur supprimé avec succès",
+    "passwordReset": "Mot de passe réinitialisé avec succès",
+    "cannotDeleteAdmin": "Impossible de supprimer les utilisateurs administrateurs",
+    "cannotDeleteSelf": "Impossible de supprimer votre propre compte"
+  },
+  "placeholders": {
+    "email": "utilisateur@exemple.com",
+    "name": "Nom complet",
+    "password": "Saisir le mot de passe"
+  },
+  "scopes": {
+    "title": "Permissions",
+    "description": "Désactiver des permissions spécifiques pour cet utilisateur",
+    "adminWarning": "Les administrateurs ont un accès complet. Les restrictions par permission ne s'appliquent pas.",
+    "categories": {
+      "workflow": "Flux de travail",
+      "board": "Tableaux",
+      "plugin": "Extensions",
+      "settings": "Paramètres"
+    },
+    "workflow:read": "Lire les flux de travail",
+    "workflow:write": "Créer et modifier les flux de travail",
+    "workflow:execute": "Exécuter les flux de travail",
+    "board:read": "Lire les tableaux",
+    "board:write": "Créer et modifier les tableaux",
+    "plugin:read": "Lister et lire les extensions",
+    "plugin:manage": "Installer et désinstaller les extensions",
+    "settings:read": "Lire les paramètres système",
+    "settings:write": "Modifier les paramètres système"
+  }
+}

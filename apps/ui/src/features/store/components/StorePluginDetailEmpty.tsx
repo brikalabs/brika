@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router';
 import { ArrowLeft, Package } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
+import { routes } from '@/routes';
 
 interface StorePluginDetailEmptyProps {
   packageName: string;
@@ -13,7 +14,7 @@ export function StorePluginDetailEmpty({ packageName }: Readonly<StorePluginDeta
   return (
     <div className="space-y-6">
       <Link
-        to="/store"
+        to={routes.store.list.path}
         className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="size-4" />

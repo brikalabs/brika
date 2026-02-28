@@ -1,0 +1,63 @@
+{
+  "title": "User Management",
+  "subtitle": "Create and manage user accounts",
+  "createUser": "Create user",
+  "editUser": "Edit user",
+  "deleteUser": "Delete user",
+  "deleteConfirm": "Are you sure you want to delete {{name}}? This action cannot be undone.",
+  "resetPassword": "Reset password",
+  "resetPasswordDesc": "Set a new password for {{name}}",
+  "noUsers": "No users found",
+  "fields": {
+    "email": "Email",
+    "name": "Name",
+    "role": "Role",
+    "password": "Password",
+    "status": "Status",
+    "createdAt": "Created",
+    "active": "Active"
+  },
+  "roles": {
+    "admin": "Admin",
+    "user": "User",
+    "guest": "Guest",
+    "service": "Service"
+  },
+  "status": {
+    "active": "Active",
+    "inactive": "Inactive"
+  },
+  "messages": {
+    "created": "User created successfully",
+    "updated": "User updated successfully",
+    "deleted": "User deleted successfully",
+    "passwordReset": "Password reset successfully",
+    "cannotDeleteAdmin": "Cannot delete admin users",
+    "cannotDeleteSelf": "Cannot delete your own account"
+  },
+  "placeholders": {
+    "email": "user@example.com",
+    "name": "Full name",
+    "password": "Enter password"
+  },
+  "scopes": {
+    "title": "Permissions",
+    "description": "Disable specific permissions for this user",
+    "adminWarning": "Admin users have full access. Per-scope restrictions do not apply.",
+    "categories": {
+      "workflow": "Workflows",
+      "board": "Boards",
+      "plugin": "Plugins",
+      "settings": "Settings"
+    },
+    "workflow:read": "Read workflows",
+    "workflow:write": "Create and edit workflows",
+    "workflow:execute": "Execute workflows",
+    "board:read": "Read boards",
+    "board:write": "Create and edit boards",
+    "plugin:read": "List and read plugins",
+    "plugin:manage": "Install and uninstall plugins",
+    "settings:read": "Read system settings",
+    "settings:write": "Modify system settings"
+  }
+}

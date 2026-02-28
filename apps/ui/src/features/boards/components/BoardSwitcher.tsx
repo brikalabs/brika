@@ -43,6 +43,7 @@ import {
 } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
 import { cn } from '@/lib/utils';
+import { routes } from '@/routes';
 import type { BoardSummary } from '../api';
 import { useBoards, useCreateBoard, useReorderBoards } from '../hooks';
 import { BoardFormFields } from './BoardFormFields';
@@ -105,8 +106,7 @@ function SortableTab({ board, onEdit, activeId }: Readonly<SortableTabProps>) {
         <TabContent board={board} />
       ) : (
         <Link
-          to="/boards/$boardId"
-          params={{ boardId: board.id }}
+          to={routes.boards.detail.to({ boardId: board.id })}
           className="flex items-center gap-1.5 whitespace-nowrap rounded-md py-1.5 pr-7 pl-3 text-sm transition-colors"
           activeProps={{ className: 'bg-background font-medium shadow-sm' }}
           inactiveProps={{ className: 'text-muted-foreground hover:text-foreground' }}
@@ -216,7 +216,7 @@ export function BoardSwitcher({ onEdit }: Readonly<BoardSwitcherProps>) {
           setCreateOpen(false);
           setNewName('');
           setNewIcon('');
-          navigate({ to: '/boards/$boardId', params: { boardId: board.id } });
+          navigate({ to: routes.boards.detail.to({ boardId: board.id }) });
         },
       }
     );
@@ -283,8 +283,7 @@ export function BoardSwitcher({ onEdit }: Readonly<BoardSwitcherProps>) {
                     className="group/item flex items-center justify-between gap-3"
                     onClick={() =>
                       navigate({
-                        to: '/boards/$boardId',
-                        params: { boardId: d.id },
+                        to: routes.boards.detail.to({ boardId: d.id }),
                       })
                     }
                   >

@@ -35,12 +35,12 @@ const workflowSchema = z.object({
   enabled: z.boolean().optional(),
 });
 
-export const workflowsRoutes = group('/api/workflows', [
-  route.get('/', ({ inject }) => {
+export const workflowsRoutes = group({ prefix: '/api/workflows', routes: [
+  route.get({ path: '/', handler: ({ inject }) => {
     return inject(WorkflowEngine).list();
-  }),
+  }}),
 
-  route.post('/', { body: workflowSchema }, async ({ body, inject }) => {
+  route.post({ path: '/', body: workflowSchema, handler: async ({ body, inject }) => {
     // Validate connections for type compatibility
     const blockRegistry = inject(BlockRegistry);
     const connections = body.connections ?? [];
@@ -68,22 +68,22 @@ export const workflowsRoutes = group('/api/workflows', [
     };
     await inject(WorkflowLoader).saveWorkflow(workflow);
     return { ok: true, id: body.id };
-  }),
+  }}),
 
-  route.get('/blocks', ({ inject }) => {
+  route.get({ path: '/blocks', handler: ({ inject }) => {
     return inject(WorkflowEngine).getBlockTypes();
-  }),
+  }}),
 
-  route.post('/enable', { body: z.object({ id: z.string() }) }, async ({ body, inject }) => {
+  route.post({ path: '/enable', body: z.object({ id: z.string() }), handler: async ({ body, inject }) => {
     return { ok: await inject(WorkflowEngine).setEnabled(body.id, true) };
-  }),
+  }}),
 
-  route.post('/disable', { body: z.object({ id: z.string() }) }, async ({ body, inject }) => {
+  route.post({ path: '/disable', body: z.object({ id: z.string() }), handler: async ({ body, inject }) => {
     return { ok: await inject(WorkflowEngine).setEnabled(body.id, false) };
-  }),
+  }}),
 
   // SSE: Stream ALL workflow runtime events (debug)
-  route.get('/debug', ({ inject }) => {
+  route.get({ path: '/debug', handler: ({ inject }) => {
     const workflowEngine = inject(WorkflowEngine);
 
     return createSSEStream((send) => {
@@ -111,15 +111,15 @@ export const workflowsRoutes = group('/api/workflows', [
 
       return () => unsub();
     });
-  }),
+  }}),
 
-  route.get('/:id', { params: z.object({ id: z.string() }) }, ({ params, inject }) => {
+  route.get({ path: '/:id', params: z.object({ id: z.string() }), handler: ({ params, inject }) => {
     const workflow = getOrThrow(inject(WorkflowEngine).get(params.id), 'Workflow not found');
     return workflow;
-  }),
+  }}),
 
-  route.delete('/:id', { params: z.object({ id: z.string() }) }, async ({ params, inject }) => {
+  route.delete({ path: '/:id', params: z.object({ id: z.string() }), handler: async ({ params, inject }) => {
     const ok = await inject(WorkflowLoader).deleteWorkflow(params.id);
     return { ok };
-  }),
-]);
+  }}),
+]});

@@ -37,10 +37,7 @@ async function collect<T>(gen: AsyncGenerator<T>): Promise<T[]> {
 describe('cli/utils/sse', () => {
   describe('streamSseEvents', () => {
     test('yields parsed JSON objects from SSE data lines', async () => {
-      const res = sseResponse([
-        'data: {"type":"start","id":1}\n',
-        'data: {"type":"end","id":2}\n',
-      ]);
+      const res = sseResponse(['data: {"type":"start","id":1}\n', 'data: {"type":"end","id":2}\n']);
 
       const events = await collect(streamSseEvents(res));
 
@@ -67,10 +64,7 @@ describe('cli/utils/sse', () => {
 
     test('handles multi-chunk data split across reads', async () => {
       // Single SSE frame split across two chunks
-      const res = sseResponse([
-        'data: {"he',
-        'llo":"world"}\n',
-      ]);
+      const res = sseResponse(['data: {"he', 'llo":"world"}\n']);
 
       const events = await collect(streamSseEvents(res));
 
@@ -134,11 +128,7 @@ describe('cli/utils/sse', () => {
     });
 
     test('releases reader lock on early break', async () => {
-      const res = sseResponse([
-        'data: {"a":1}\n',
-        'data: {"a":2}\n',
-        'data: {"a":3}\n',
-      ]);
+      const res = sseResponse(['data: {"a":1}\n', 'data: {"a":2}\n', 'data: {"a":3}\n']);
 
       const gen = streamSseEvents(res);
       // Read only the first event then break
@@ -155,11 +145,7 @@ describe('cli/utils/sse', () => {
 
     test('handles buffered incomplete lines across chunks', async () => {
       // Line split in the middle: "data: " in one chunk, JSON in next
-      const res = sseResponse([
-        'data: {"x":1}\ndat',
-        'a: {"x":2}\ndata: {"x"',
-        ':3}\n',
-      ]);
+      const res = sseResponse(['data: {"x":1}\ndat', 'a: {"x":2}\ndata: {"x"', ':3}\n']);
 
       const events = await collect(streamSseEvents(res));
 
@@ -167,9 +153,7 @@ describe('cli/utils/sse', () => {
     });
 
     test('handles multiple data lines in a single chunk', async () => {
-      const res = sseResponse([
-        'data: {"a":1}\ndata: {"b":2}\ndata: {"c":3}\n',
-      ]);
+      const res = sseResponse(['data: {"a":1}\ndata: {"b":2}\ndata: {"c":3}\n']);
 
       const events = await collect(streamSseEvents(res));
 
@@ -202,10 +186,7 @@ describe('cli/utils/sse', () => {
     });
 
     test('skips lines that are only "data:" without space prefix', async () => {
-      const res = sseResponse([
-        'data:{"no_space":true}\n',
-        'data: {"with_space":true}\n',
-      ]);
+      const res = sseResponse(['data:{"no_space":true}\n', 'data: {"with_space":true}\n']);
 
       const events = await collect(streamSseEvents(res));
 

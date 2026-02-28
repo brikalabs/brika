@@ -11,71 +11,86 @@ import { RESTART_CODE } from '@/cli/utils/runtime';
 import { UpdateService } from '@/runtime/updates';
 import { applyUpdate, type UpdatePhase } from '@/updater';
 
-export const systemRoutes = group('/api/system', [
-  /** POST /api/system/restart — signal supervisor to restart the hub */
-  route.post('/restart', () => {
-    setTimeout(() => process.exit(RESTART_CODE), 100);
-    return { ok: true };
-  }),
-  /** POST /api/system/stop — shut down the hub and supervisor */
-  route.post('/stop', () => {
-    setTimeout(() => process.exit(0), 100);
-    return { ok: true };
-  }),
-]);
+export const systemRoutes = group({
+  prefix: '/api/system',
+  routes: [
+    /** POST /api/system/restart — signal supervisor to restart the hub */
+    route.post({
+      path: '/restart',
+      handler: () => {
+        setTimeout(() => process.exit(RESTART_CODE), 100);
+        return { ok: true };
+      },
+    }),
+    /** POST /api/system/stop — shut down the hub and supervisor */
+    route.post({
+      path: '/stop',
+      handler: () => {
+        setTimeout(() => process.exit(0), 100);
+        return { ok: true };
+      },
+    }),
+  ],
+});
 
-export const updateRoutes = group('/api/system/update', [
-  /**
-   * GET /api/system/update
-   * Check for available updates (uses cached result if recent, otherwise checks now)
-   */
-  route.get('/', async ({ inject }) => {
-    const updates = inject(UpdateService);
-    const info = await updates.check();
-    return {
-      ...info,
-      lastCheckedAt: updates.lastCheckedAt,
-    };
-  }),
-
-  /**
-   * POST /api/system/update/apply
-   * Apply the latest update. Streams progress via SSE.
-   * After a successful update, the hub process exits so the process manager can restart it.
-   */
-  route.post(
-    '/apply',
-    { query: z.object({ force: z.coerce.boolean().optional() }) },
-    ({ query }) => {
-      return createSSEStream((send, close) => {
-        const sendProgress = (phase: UpdatePhase, message: string, error?: string) => {
-          send({ phase, message, error }, 'progress');
+export const updateRoutes = group({
+  prefix: '/api/system/update',
+  routes: [
+    /**
+     * GET /api/system/update
+     * Check for available updates (uses cached result if recent, otherwise checks now)
+     */
+    route.get({
+      path: '/',
+      handler: async ({ inject }) => {
+        const updates = inject(UpdateService);
+        const info = await updates.check();
+        return {
+          ...info,
+          lastCheckedAt: updates.lastCheckedAt,
         };
+      },
+    }),
 
-        (async () => {
-          try {
-            const result = await applyUpdate({
-              force: query.force,
-              onProgress(phase, detail) {
-                sendProgress(phase, detail);
-              },
-            });
+    /**
+     * POST /api/system/update/apply
+     * Apply the latest update. Streams progress via SSE.
+     * After a successful update, the hub process exits so the process manager can restart it.
+     */
+    route.post({
+      path: '/apply',
+      query: z.object({ force: z.coerce.boolean().optional() }),
+      handler: ({ query }) => {
+        return createSSEStream((send, close) => {
+          const sendProgress = (phase: UpdatePhase, message: string, error?: string) => {
+            send({ phase, message, error }, 'progress');
+          };
 
-            sendProgress(
-              'restarting',
-              `Updated v${result.previousVersion} → v${result.newVersion}. Restarting...`
-            );
-            close();
+          (async () => {
+            try {
+              const result = await applyUpdate({
+                force: query.force,
+                onProgress(phase, detail) {
+                  sendProgress(phase, detail);
+                },
+              });
 
-            // Give the SSE stream time to flush, then signal supervisor to restart
-            setTimeout(() => process.exit(RESTART_CODE), 1000);
-          } catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            sendProgress('error', message, message);
-            close();
-          }
-        })();
-      });
-    }
-  ),
-]);
+              sendProgress(
+                'restarting',
+                `Updated v${result.previousVersion} → v${result.newVersion}. Restarting...`
+              );
+              close();
+
+              // Give the SSE stream time to flush, then signal supervisor to restart
+              setTimeout(() => process.exit(RESTART_CODE), 1000);
+            } catch (error) {
+              const message = error instanceof Error ? error.message : String(error);
+              sendProgress('error', message, message);
+              close();
+            }
+          })();
+        });
+      },
+    }),
+  ],
+});

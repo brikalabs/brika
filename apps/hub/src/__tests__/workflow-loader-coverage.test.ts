@@ -158,13 +158,11 @@ blocks: []
     expect(mockRegister).toHaveBeenCalledTimes(1);
     mockRegister.mockClear();
 
-    // Save the same workflow again (same id -> same file)
-    // Then reload from dir to trigger loadFile on the same content
-    const loader2 = get(WorkflowLoader);
-    await loader2.loadDir(TEST_DIR);
+    // Reload from the same dir — same singleton, same #fileContents cache.
+    // Content hash matches so loadFile skips re-registration (the dedup path).
+    await loader.loadDir(TEST_DIR);
 
-    // The second loader should also register once (fresh instance, fresh #fileContents)
-    expect(mockRegister).toHaveBeenCalledTimes(1);
+    expect(mockRegister).toHaveBeenCalledTimes(0);
   });
 });
 
@@ -429,9 +427,7 @@ describe('WorkflowLoader - toYAML edge cases', () => {
       id: 'round-pos-wf',
       name: 'Round Positions',
       enabled: false,
-      blocks: [
-        { id: 'block-a', type: 'timer', position: { x: 10.6, y: 20.4 } },
-      ],
+      blocks: [{ id: 'block-a', type: 'timer', position: { x: 10.6, y: 20.4 } }],
       connections: [],
     };
 

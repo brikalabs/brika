@@ -14,7 +14,10 @@ import { unpackTemplates } from "./templates-tar";
 const isCompiled = import.meta.path.startsWith('/$bunfs/');
 
 function resolveDataDir(): string {
-  return isCompiled ? dirname(installDir) : join(process.cwd(), '.brika');
+  const autoDetected = isCompiled 
+    ? dirname(installDir) 
+    : join(process.cwd(), '.brika');
+  return process.env.BRIKA_HOME ?? autoDetected;
 }
 
 @singleton()

@@ -11,6 +11,7 @@
   "logs": "Logs",
   "store": "Store",
   "settings": "Settings",
+  "users": "Users",
   "groups": {
     "overview": "Overview",
     "registry": "Registry",

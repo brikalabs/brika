@@ -4,24 +4,25 @@ import { NotFound, route } from '../index';
 import { TestApp } from '../testing';
 
 // Individual route definitions for TestApp.call() tests
-const healthRoute = route.get('/api/health', () => ({ ok: true }));
-const userByIdRoute = route.get(
-  '/api/users/:id',
-  { params: z.object({ id: z.string() }) },
-  ({ params }) => ({ id: params.id })
-);
-const createUserRoute = route.post(
-  '/api/users',
-  { body: z.object({ name: z.string() }) },
-  ({ body }) => ({ created: true, name: body.name })
-);
-const searchRoute = route.get(
-  '/api/search',
-  { query: z.object({ q: z.string() }) },
-  ({ query }) => ({ query: query.q })
-);
-const notFoundRoute = route.get('/api/notfound', () => {
-  throw new NotFound('Resource not found');
+const healthRoute = route.get({ path: '/api/health', handler: () => ({ ok: true }) });
+const userByIdRoute = route.get({
+  path: '/api/users/:id',
+  params: z.object({ id: z.string() }),
+  handler: ({ params }) => ({ id: params.id }),
+});
+const createUserRoute = route.post({
+  path: '/api/users',
+  body: z.object({ name: z.string() }),
+  handler: ({ body }) => ({ created: true, name: body.name }),
+});
+const searchRoute = route.get({
+  path: '/api/search',
+  query: z.object({ q: z.string() }),
+  handler: ({ query }) => ({ query: query.q }),
+});
+const notFoundRoute = route.get({
+  path: '/api/notfound',
+  handler: () => { throw new NotFound('Resource not found'); },
 });
 
 describe('TestApp', () => {
@@ -29,9 +30,11 @@ describe('TestApp', () => {
     healthRoute,
     userByIdRoute,
     createUserRoute,
-    route.delete('/api/users/:id', { params: z.object({ id: z.string() }) }, () => ({
-      deleted: true,
-    })),
+    route.delete({
+      path: '/api/users/:id',
+      params: z.object({ id: z.string() }),
+      handler: () => ({ deleted: true }),
+    }),
     notFoundRoute,
   ];
 
@@ -56,9 +59,11 @@ describe('TestApp', () => {
 
   test('GET with query params', async () => {
     const app = TestApp.create([
-      route.get('/api/search', { query: z.object({ q: z.string() }) }, ({ query }) => ({
-        query: query.q,
-      })),
+      route.get({
+        path: '/api/search',
+        query: z.object({ q: z.string() }),
+        handler: ({ query }) => ({ query: query.q }),
+      }),
     ]);
 
     const res = await app.get('/api/search', { query: { q: 'test' } });
@@ -123,23 +128,25 @@ describe('TestApp', () => {
 });
 
 describe('TestApp instance methods', () => {
-  const updateUserRoute = route.put(
-    '/api/users/:id',
-    { params: z.object({ id: z.string() }), body: z.object({ name: z.string() }) },
-    ({ params, body }) => ({ id: params.id, name: body.name, updated: true })
-  );
+  const updateUserRoute = route.put({
+    path: '/api/users/:id',
+    params: z.object({ id: z.string() }),
+    body: z.object({ name: z.string() }),
+    handler: ({ params, body }) => ({ id: params.id, name: body.name, updated: true }),
+  });
 
-  const patchUserRoute = route.patch(
-    '/api/users/:id',
-    { params: z.object({ id: z.string() }), body: z.object({ name: z.string().optional() }) },
-    ({ params, body }) => ({ id: params.id, ...body, patched: true })
-  );
+  const patchUserRoute = route.patch({
+    path: '/api/users/:id',
+    params: z.object({ id: z.string() }),
+    body: z.object({ name: z.string().optional() }),
+    handler: ({ params, body }) => ({ id: params.id, ...body, patched: true }),
+  });
 
-  const deleteUserRoute = route.delete(
-    '/api/users/:id',
-    { params: z.object({ id: z.string() }) },
-    ({ params }) => ({ id: params.id, deleted: true })
-  );
+  const deleteUserRoute = route.delete({
+    path: '/api/users/:id',
+    params: z.object({ id: z.string() }),
+    handler: ({ params }) => ({ id: params.id, deleted: true }),
+  });
 
   test('PUT request with body', async () => {
     const app = TestApp.create([updateUserRoute]);

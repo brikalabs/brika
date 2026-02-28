@@ -11,6 +11,7 @@
   "logs": "Journaux",
   "store": "Boutique",
   "settings": "Paramètres",
+  "users": "Utilisateurs",
   "groups": {
     "overview": "Aperçu",
     "registry": "Registre",

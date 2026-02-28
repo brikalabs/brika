@@ -1,4 +1,5 @@
-import { combineRoutes } from '@brika/router';
+import { combineRoutes, group } from '@brika/router';
+import { requireAuth } from '@brika/auth/server';
 import { actionRoutes } from './action-routes';
 import { blocksRoutes } from './blocks';
 import { boardsRoutes } from './boards';
@@ -12,31 +13,38 @@ import { pluginsRoutes } from './plugins';
 import { registryRoutes } from './registry';
 import { settingsRoutes } from './settings';
 import { sparksRoutes } from './sparks';
-import { statusRoutes } from './status';
+import { healthRoute, systemRoute } from './status';
 import { streamsRoutes } from './streams';
 import { systemRoutes, updateRoutes } from './updates';
 import { workflowsRoutes } from './workflows';
 
 /**
  * All API routes combined.
+ * Health and i18n are public; everything else requires authentication.
  */
 export const allRoutes = combineRoutes(
-  statusRoutes,
-  actionRoutes,
-  blocksRoutes,
-  bricksRoutes,
-  boardsRoutes,
-  oauthRoutes,
-  pageRoutes,
-  pluginRoutesHandler,
-  pluginsRoutes,
-  sparksRoutes,
-  workflowsRoutes,
-  logsRoutes,
-  streamsRoutes,
+  healthRoute,
   i18nRoutes,
-  registryRoutes,
-  settingsRoutes,
-  updateRoutes,
-  systemRoutes
+  group({
+    middleware: [requireAuth()],
+    routes: [
+      systemRoute,
+      actionRoutes,
+      blocksRoutes,
+      bricksRoutes,
+      boardsRoutes,
+      oauthRoutes,
+      pageRoutes,
+      pluginRoutesHandler,
+      pluginsRoutes,
+      sparksRoutes,
+      workflowsRoutes,
+      logsRoutes,
+      streamsRoutes,
+      registryRoutes,
+      settingsRoutes,
+      updateRoutes,
+      systemRoutes,
+    ],
+  }),
 );

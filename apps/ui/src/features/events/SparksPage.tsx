@@ -2,6 +2,7 @@ import { useNavigate, useParams } from '@tanstack/react-router';
 import { Clock, Zap } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
+import { routes } from '@/routes';
 import { EventStreamTab, RegisteredSparksTab } from './components';
 
 type SparkTab = 'registry' | 'stream';
@@ -13,7 +14,7 @@ export function SparksPage() {
   const activeTab: SparkTab = params.tab === 'stream' ? 'stream' : 'registry';
 
   const handleTabChange = (tab: string) => {
-    navigate({ to: `/sparks/${tab}` });
+    navigate({ to: routes.sparks.tab.to({ tab }) });
   };
 
   return (

@@ -1,5 +1,15 @@
 import type { InjectionToken } from '@brika/di';
+import type { Context } from 'hono';
 import type { output, ZodType } from 'zod';
+
+/**
+ * Hono-compatible middleware function.
+ * Runs before the route handler. Call `next()` to continue, or return a Response to short-circuit.
+ */
+export type Middleware = (
+  c: Context,
+  next: () => Promise<void>
+) => Promise<void | Response>;
 
 /**
  * Schema definition for route validation.
@@ -34,6 +44,8 @@ export interface RouteContext<S extends Schema = Schema> {
   inject: <T>(token: InjectionToken<T>) => T;
   /** Raw request object */
   req: Request;
+  /** Retrieve a value from the request context (set by middleware) */
+  get(key: string): unknown;
 }
 
 /**
@@ -59,6 +71,8 @@ export interface RouteDefinition<S extends Schema = Schema, R = unknown> {
   path: string;
   schema?: S;
   handler: Handler<S, R>;
+  /** Per-route middleware, runs before the handler (in order). */
+  middleware?: Middleware[];
 }
 
 /**

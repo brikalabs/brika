@@ -31,6 +31,7 @@
 
 * [System Overview](architecture/overview.md)
 * [Plugin Isolation](architecture/plugin-isolation.md)
+* [Authentication](architecture/authentication.md)
 
 ## Contributing
 

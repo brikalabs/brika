@@ -17,6 +17,7 @@ import {
   TableRow,
 } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
+import { routes } from '@/routes';
 import type { Workflow } from '../api';
 import { BlocksPreview } from './BlocksPreview';
 import { StatusBadge } from './StatusBadge';
@@ -59,8 +60,7 @@ export function WorkflowsTable({
                 <TableCell>
                   <div className="flex flex-col gap-0.5">
                     <Link
-                      to="/workflows/$id/edit"
-                      params={{ id: workflow.id }}
+                      to={routes.workflows.edit.to({ id: workflow.id })}
                       className="font-semibold text-sm leading-tight hover:underline"
                     >
                       {workflow.name || workflow.id}
@@ -98,7 +98,7 @@ export function WorkflowsTable({
                       size="sm"
                       variant="ghost"
                       onClick={() =>
-                        navigate({ to: '/workflows/$id/edit', params: { id: workflow.id } })
+                        navigate({ to: routes.workflows.edit.to({ id: workflow.id }) })
                       }
                       title={t('common:actions.edit')}
                     >

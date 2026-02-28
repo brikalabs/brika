@@ -1,4 +1,5 @@
 import { createCli } from './cli';
+import auth from './commands/auth';
 import completions from './commands/completions';
 import log from './commands/log';
 import open from './commands/open';
@@ -18,6 +19,7 @@ export const cli = createCli()
   .addCommand(status)
   .addCommand(open)
   .addCommand(log)
+  .addCommand(auth)
   .addCommand(plugin)
   .addCommand(version)
   .addCommand(update)

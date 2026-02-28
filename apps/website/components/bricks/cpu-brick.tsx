@@ -13,7 +13,9 @@ export default function CpuBrick() {
   }, []);
 
   const rounded = Math.round(load);
-  const hue = load < 60 ? 145 : load < 80 ? 90 : 30;
+  let hue = 30;
+  if (load < 60) hue = 145;
+  else if (load < 80) hue = 90;
   const color = `oklch(0.7 0.16 ${hue})`;
 
   return (

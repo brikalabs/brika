@@ -20,7 +20,7 @@ export interface CliResult {
  */
 export async function runCli(
   args: string[],
-  opts: { timeout?: number; env?: Record<string, string> } = {},
+  opts: { timeout?: number; env?: Record<string, string> } = {}
 ): Promise<CliResult> {
   const { timeout = 15_000, env = {} } = opts;
 

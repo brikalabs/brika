@@ -8,6 +8,7 @@ import { PluginPermissionService } from '@/runtime/plugins/plugin-permissions';
 import { PluginRegistry } from '@/runtime/registry';
 import { StateStore } from '@/runtime/state/state-store';
 import { getOrThrow } from '../utils/resource-helpers';
+import { safePath } from '../utils/safe-path';
 
 /**
  * Create a generic plugin action handler
@@ -15,35 +16,35 @@ import { getOrThrow } from '../utils/resource-helpers';
 const createPluginAction = (
   action: keyof Pick<PluginManager, 'enable' | 'disable' | 'reload' | 'kill'>
 ) =>
-  route.post(
-    `/:uid/${action}`,
-    { params: z.object({ uid: z.string() }) },
-    async ({ params, inject }) => {
+  route.post({
+    path: `/:uid/${action}`,
+    params: z.object({ uid: z.string() }),
+    handler: async ({ params, inject }) => {
       await inject(PluginManager)[action](params.uid);
       return { ok: true };
-    }
-  );
+    },
+  });
 
-export const pluginsRoutes = group('/api/plugins', [
+export const pluginsRoutes = group({ prefix: '/api/plugins', routes: [
   // List all plugins
-  route.get('/', ({ inject }) => {
+  route.get({ path: '/', handler: ({ inject }) => {
     return inject(PluginManager).list();
-  }),
+  }}),
 
   // Load a new plugin by ref
-  route.post('/load', { body: z.object({ ref: z.string() }) }, async ({ body, inject }) => {
+  route.post({ path: '/load', body: z.object({ ref: z.string() }), handler: async ({ body, inject }) => {
     await inject(PluginManager).load(body.ref);
     return { ok: true };
-  }),
+  }}),
 
   // Get plugin details by uid
-  route.get('/:uid', { params: z.object({ uid: z.string() }) }, ({ params, inject }) => {
+  route.get({ path: '/:uid', params: z.object({ uid: z.string() }), handler: ({ params, inject }) => {
     const plugin = getOrThrow(inject(PluginManager).get(params.uid), 'Plugin not found');
     return plugin;
-  }),
+  }}),
 
   // Plugin icon endpoint
-  route.get('/:uid/icon', { params: z.object({ uid: z.string() }) }, async ({ params, inject }) => {
+  route.get({ path: '/:uid/icon', params: z.object({ uid: z.string() }), handler: async ({ params, inject }) => {
     const plugin = getOrThrow(inject(PluginManager).get(params.uid), 'Plugin not found');
 
     if (!plugin.icon) {
@@ -62,25 +63,25 @@ export const pluginsRoutes = group('/api/plugins', [
     }
 
     return new Response(null, { status: 204 });
-  }),
+  }}),
 
   // Plugin assets endpoint — serves files from plugin's assets/ directory
-  route.get(
-    '/:uid/assets/*',
-    { params: z.object({ uid: z.string() }) },
-    async ({ params, req, inject }) => {
+  route.get({
+    path: '/:uid/assets/*',
+    params: z.object({ uid: z.string() }),
+    handler: async ({ params, req, inject }) => {
       const plugin = getOrThrow(inject(PluginManager).get(params.uid), 'Plugin not found');
 
       const url = new URL(req.url);
       const prefix = `/api/plugins/${params.uid}/assets/`;
-      const assetPath = url.pathname.slice(prefix.length);
+      const assetPath = decodeURIComponent(url.pathname.slice(prefix.length));
 
-      // Prevent path traversal
-      if (!assetPath || assetPath.includes('..')) {
+      const assetsDir = `${plugin.rootDirectory}/assets`;
+      const filePath = safePath(assetsDir, assetPath);
+      if (!filePath) {
         return new Response(null, { status: 400 });
       }
 
-      const filePath = `${plugin.rootDirectory}/assets/${assetPath}`;
       const file = Bun.file(filePath);
 
       if (await file.exists()) {
@@ -93,14 +94,14 @@ export const pluginsRoutes = group('/api/plugins', [
       }
 
       return new Response(null, { status: 404 });
-    }
-  ),
+    },
+  }),
 
   // Plugin README endpoint - returns markdown content
-  route.get(
-    '/:uid/readme',
-    { params: z.object({ uid: z.string() }) },
-    async ({ params, inject }) => {
+  route.get({
+    path: '/:uid/readme',
+    params: z.object({ uid: z.string() }),
+    handler: async ({ params, inject }) => {
       const plugin = getOrThrow(inject(PluginManager).get(params.uid), 'Plugin not found');
 
       // Try common README file names
@@ -117,8 +118,8 @@ export const pluginsRoutes = group('/api/plugins', [
       }
 
       return { readme: null, filename: null };
-    }
-  ),
+    },
+  }),
 
   // Plugin lifecycle actions
   createPluginAction('enable'),
@@ -127,10 +128,10 @@ export const pluginsRoutes = group('/api/plugins', [
   createPluginAction('kill'),
 
   // Get plugin config (schema + values)
-  route.get(
-    '/:uid/config',
-    { params: z.object({ uid: z.string() }) },
-    async ({ params, inject }) => {
+  route.get({
+    path: '/:uid/config',
+    params: z.object({ uid: z.string() }),
+    handler: async ({ params, inject }) => {
       const plugin = getOrThrow(inject(PluginManager).get(params.uid), 'Plugin not found');
 
       const configService = inject(PluginConfigService);
@@ -150,27 +151,28 @@ export const pluginsRoutes = group('/api/plugins', [
         schema: resolved,
         values: configService.getConfig(plugin.name),
       };
-    }
-  ),
+    },
+  }),
 
   // Fetch dynamic options for a single preference
-  route.get(
-    '/:uid/preferences/:name/options',
-    { params: z.object({ uid: z.string(), name: z.string() }) },
-    async ({ params, inject }) => {
+  route.get({
+    path: '/:uid/preferences/:name/options',
+    params: z.object({ uid: z.string(), name: z.string() }),
+    handler: async ({ params, inject }) => {
       const plugin = getOrThrow(inject(PluginManager).get(params.uid), 'Plugin not found');
       const process = inject(PluginLifecycle).getProcess(plugin.name);
       if (!process) return { options: [] };
       const options = await process.fetchPreferenceOptions(params.name);
       return { options };
-    }
-  ),
+    },
+  }),
 
   // Update plugin config
-  route.put(
-    '/:uid/config',
-    { params: z.object({ uid: z.string() }), body: z.record(z.string(), z.unknown()) },
-    async ({ params, body, inject }) => {
+  route.put({
+    path: '/:uid/config',
+    params: z.object({ uid: z.string() }),
+    body: z.record(z.string(), z.unknown()),
+    handler: async ({ params, body, inject }) => {
       const plugin = getOrThrow(inject(PluginManager).get(params.uid), 'Plugin not found');
 
       const configService = inject(PluginConfigService);
@@ -188,30 +190,28 @@ export const pluginsRoutes = group('/api/plugins', [
       }
 
       return { values: configService.getConfig(plugin.name) };
-    }
-  ),
+    },
+  }),
 
   // Toggle a plugin permission (grant or revoke)
-  route.put(
-    '/:uid/permissions',
-    {
-      params: z.object({ uid: z.string() }),
-      body: z.object({ permission: z.string(), granted: z.boolean() }),
-    },
-    async ({ params, body, inject }) => {
+  route.put({
+    path: '/:uid/permissions',
+    params: z.object({ uid: z.string() }),
+    body: z.object({ permission: z.string(), granted: z.boolean() }),
+    handler: async ({ params, body, inject }) => {
       const plugin = getOrThrow(inject(PluginManager).get(params.uid), 'Plugin not found');
       const permService = inject(PluginPermissionService);
 
       const updated = await permService.setPermission(plugin.name, body.permission, body.granted);
       return { grantedPermissions: updated };
-    }
-  ),
+    },
+  }),
 
   // Get plugin metrics (CPU, memory)
-  route.get(
-    '/:uid/metrics',
-    { params: z.object({ uid: z.string() }) },
-    async ({ params, inject }) => {
+  route.get({
+    path: '/:uid/metrics',
+    params: z.object({ uid: z.string() }),
+    handler: async ({ params, inject }) => {
       const plugin = getOrThrow(inject(PluginManager).get(params.uid), 'Plugin not found');
 
       const metricsStore = inject(MetricsStore);
@@ -229,11 +229,11 @@ export const pluginsRoutes = group('/api/plugins', [
         current,
         history: metricsStore.get(plugin.name),
       };
-    }
-  ),
+    },
+  }),
 
   // Uninstall plugin by uid (unload, remove state, remove package)
-  route.delete('/:uid', { params: z.object({ uid: z.string() }) }, async ({ params, inject }) => {
+  route.delete({ path: '/:uid', params: z.object({ uid: z.string() }), handler: async ({ params, inject }) => {
     const manager = inject(PluginManager);
     const registry = inject(PluginRegistry);
     const state = inject(StateStore);
@@ -260,5 +260,5 @@ export const pluginsRoutes = group('/api/plugins', [
     }
 
     return { ok: true };
-  }),
-]);
+  }}),
+]});

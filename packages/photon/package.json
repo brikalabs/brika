@@ -1,0 +1,27 @@
+{
+  "name": "@brika/photon",
+  "version": "0.3.0",
+  "description": "Sharp-like image processing wrapper for @cf-wasm/photon (Rust WASM)",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/maxscharwath/brika.git",
+    "directory": "packages/photon"
+  },
+  "keywords": ["brika", "image", "photon", "wasm", "resize", "webp"],
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "tsc": "bunx --bun tsc --noEmit",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@cf-wasm/photon": "^0.3.4"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.9.3"
+  }
+}

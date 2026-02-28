@@ -10,33 +10,36 @@ import { extractBody, extractHeaders, extractQuery, proxyToPlugin } from '../uti
  * Proxy handler for plugin-registered HTTP routes.
  * Routes are served at: /api/plugins/:uid/routes/<plugin-path>
  */
-export const pluginRoutesHandler = group('/api/plugins', [
-  route.all(
-    '/:uid/routes/*',
-    { params: z.object({ uid: z.string() }) },
-    async ({ params, req, inject }) => {
-      const plugin = getOrThrow(inject(PluginManager).get(params.uid), 'Plugin not found');
-      const process = inject(PluginLifecycle).getProcess(plugin.name);
-      if (!process) throw new NotFound('Plugin not running');
+export const pluginRoutesHandler = group({
+  prefix: '/api/plugins',
+  routes: [
+    route.all({
+      path: '/:uid/routes/*',
+      params: z.object({ uid: z.string() }),
+      handler: async ({ params, req, inject }) => {
+        const plugin = getOrThrow(inject(PluginManager).get(params.uid), 'Plugin not found');
+        const process = inject(PluginLifecycle).getProcess(plugin.name);
+        if (!process) throw new NotFound('Plugin not running');
 
-      const url = new URL(req.url);
-      const prefix = `/api/plugins/${params.uid}/routes`;
-      const pluginPath = url.pathname.slice(prefix.length) || '/';
+        const url = new URL(req.url);
+        const prefix = `/api/plugins/${params.uid}/routes`;
+        const pluginPath = url.pathname.slice(prefix.length) || '/';
 
-      const registry = inject(PluginRouteRegistry);
-      if (!registry.resolve(plugin.name, req.method, pluginPath)) {
-        throw new NotFound('Route not found');
-      }
+        const registry = inject(PluginRouteRegistry);
+        if (!registry.resolve(plugin.name, req.method, pluginPath)) {
+          throw new NotFound('Route not found');
+        }
 
-      return proxyToPlugin(
-        process,
-        `${req.method}:${pluginPath}`,
-        req.method,
-        pluginPath,
-        extractQuery(url),
-        extractHeaders(req, url, plugin.uid),
-        await extractBody(req)
-      );
-    }
-  ),
-]);
+        return proxyToPlugin(
+          process,
+          `${req.method}:${pluginPath}`,
+          req.method,
+          pluginPath,
+          extractQuery(url),
+          extractHeaders(req, url, plugin.uid),
+          await extractBody(req)
+        );
+      },
+    }),
+  ],
+});

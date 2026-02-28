@@ -157,7 +157,11 @@ describe('cli/commands/plugin/install', () => {
       });
 
       const log = captureLog();
-      await installCmd.handler({ positionals: ['@brika/plugin-timer@1.0.0'], values: {}, commands: [] });
+      await installCmd.handler({
+        positionals: ['@brika/plugin-timer@1.0.0'],
+        values: {},
+        commands: [],
+      });
       log.restore();
 
       const parsed = JSON.parse(sentBody ?? '{}');
@@ -257,9 +261,7 @@ describe('cli/commands/plugin/install', () => {
     });
 
     test('downloading phase logs downloading message', async () => {
-      mockFetch.mockResolvedValue(
-        sseResponse([{ phase: 'downloading' }, { phase: 'complete' }])
-      );
+      mockFetch.mockResolvedValue(sseResponse([{ phase: 'downloading' }, { phase: 'complete' }]));
 
       const log = captureLog();
       await installCmd.handler({ positionals: ['@brika/test'], values: {}, commands: [] });
@@ -269,9 +271,7 @@ describe('cli/commands/plugin/install', () => {
     });
 
     test('linking phase logs linking message', async () => {
-      mockFetch.mockResolvedValue(
-        sseResponse([{ phase: 'linking' }, { phase: 'complete' }])
-      );
+      mockFetch.mockResolvedValue(sseResponse([{ phase: 'linking' }, { phase: 'complete' }]));
 
       const log = captureLog();
       await installCmd.handler({ positionals: ['@brika/test'], values: {}, commands: [] });

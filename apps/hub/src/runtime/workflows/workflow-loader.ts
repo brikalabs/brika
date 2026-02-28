@@ -63,7 +63,9 @@ export class WorkflowLoader {
     if (!this.#dir) throw new Error('Call loadDir() first');
 
     const filePath = this.#idToFile.get(workflow.id) ?? `${this.#dir}/${workflow.id}.yaml`;
-    const yaml = YAMLSerializer.toYAML(workflow, (blockType) => this.blocks.getPluginInfo(blockType));
+    const yaml = YAMLSerializer.toYAML(workflow, (blockType) =>
+      this.blocks.getPluginInfo(blockType)
+    );
     await Bun.write(filePath, yaml);
 
     this.#loaded.set(filePath, workflow.id);
@@ -177,5 +179,4 @@ export class WorkflowLoader {
     this.#unloadFile(filePath);
     this.#fileContents.delete(filePath);
   }
-
 }

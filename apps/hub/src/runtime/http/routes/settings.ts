@@ -8,24 +8,37 @@ import { HubLocation as HubLocationSchema } from '@brika/ipc/contract';
 import { group, route } from '@brika/router';
 import { StateStore } from '@/runtime/state/state-store';
 
-export const settingsRoutes = group('/api/settings', [
-  /** Get the hub's configured location */
-  route.get('/location', ({ inject }) => {
-    const state = inject(StateStore);
-    return { location: state.getHubLocation() };
-  }),
+export const settingsRoutes = group({
+  prefix: '/api/settings',
+  routes: [
+    /** Get the hub's configured location */
+    route.get({
+      path: '/location',
+      handler: ({ inject }) => {
+        const state = inject(StateStore);
+        return { location: state.getHubLocation() };
+      },
+    }),
 
-  /** Set the hub's location */
-  route.put('/location', { body: HubLocationSchema }, async ({ body, inject }) => {
-    const state = inject(StateStore);
-    await state.setHubLocation(body);
-    return { location: body };
-  }),
+    /** Set the hub's location */
+    route.put({
+      path: '/location',
+      body: HubLocationSchema,
+      handler: async ({ body, inject }) => {
+        const state = inject(StateStore);
+        await state.setHubLocation(body);
+        return { location: body };
+      },
+    }),
 
-  /** Clear the hub's location */
-  route.delete('/location', async ({ inject }) => {
-    const state = inject(StateStore);
-    await state.setHubLocation(null);
-    return { ok: true };
-  }),
-]);
+    /** Clear the hub's location */
+    route.delete({
+      path: '/location',
+      handler: async ({ inject }) => {
+        const state = inject(StateStore);
+        await state.setHubLocation(null);
+        return { ok: true };
+      },
+    }),
+  ],
+});

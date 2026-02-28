@@ -22,12 +22,16 @@ ${pc.bold(pc.cyan('brika'))} - Build. Run. Integrate. Keep Automating.
 ${pc.bold('Usage:')}
   brika [command] [options]
 
+${pc.bold('Global options:')}
+  ${pc.green('-C, --cwd <path>'.padEnd(20))} Set the .brika data directory
+
 ${pc.bold('Commands:')}
 ${commandsSection}
 
 ${pc.bold('Examples:')}
   ${pc.dim('$')} brika                       ${pc.dim('# start with defaults')}
   ${pc.dim('$')} brika start -p 8080         ${pc.dim('# start on port 8080')}
+  ${pc.dim('$')} brika -C ~/.brika status    ${pc.dim('# use a specific data dir')}
   ${pc.dim('$')} brika help start            ${pc.dim('# show start command help')}
 
 ${pc.dim('v' + hub.version + ' | ' + HUB_REPO_URL)}

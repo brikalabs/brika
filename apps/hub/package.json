@@ -9,6 +9,9 @@
     "url": "https://github.com/maxscharwath/brika.git",
     "directory": "apps/hub"
   },
+  "bin": {
+    "brika": "src/cli.ts"
+  },
   "scripts": {
     "dev": "bun --watch src/main.ts",
     "build": "bun run compiler/build.ts",
@@ -17,6 +20,7 @@
     "lint:fix": "bun x biome check . --write"
   },
   "dependencies": {
+    "@brika/auth": "workspace:*",
     "@brika/banner": "workspace:*",
     "@brika/di": "workspace:*",
     "@brika/events": "workspace:*",
@@ -30,6 +34,8 @@
     "@brika/sdk": "workspace:*",
     "@brika/ui-kit": "workspace:*",
     "@brika/workflow": "workspace:*",
+    "@clack/prompts": "^1.0.1",
+    "bcryptjs": "^2.4.3",
     "date-fns": "^4.1.0",
     "hono": "^4.12.2",
     "picocolors": "^1.1.1",

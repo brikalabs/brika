@@ -1,6 +1,7 @@
 import { LayoutDashboard, Play, Plug, Workflow, Zap } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
+import { routes } from '@/routes';
 import { QuickAction } from './QuickAction';
 
 export function QuickActionsCard() {
@@ -18,15 +19,15 @@ export function QuickActionsCard() {
         <QuickAction
           icon={Workflow}
           label={t('workflows:actions.create')}
-          href="/workflows"
+          href={routes.workflows.list.path}
           accent="orange"
         />
-        <QuickAction icon={Plug} label={t('nav:plugins')} href="/plugins" accent="blue" />
-        <QuickAction icon={Zap} label={t('sparks:title')} href="/sparks" accent="emerald" />
+        <QuickAction icon={Plug} label={t('nav:plugins')} href={routes.plugins.list.path} accent="blue" />
+        <QuickAction icon={Zap} label={t('sparks:title')} href={routes.sparks.list.path} accent="emerald" />
         <QuickAction
           icon={LayoutDashboard}
           label={t('boards:title')}
-          href="/boards"
+          href={routes.boards.list.path}
           accent="purple"
         />
       </CardContent>
