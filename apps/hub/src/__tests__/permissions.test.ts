@@ -36,34 +36,15 @@ describe('Permission System', () => {
 
   describe('filterValidPermissions', () => {
     test('keeps valid permissions', () => {
-      expect(
-        filterValidPermissions([
-          'location',
-        ])
-      ).toEqual([
-        'location',
-      ]);
+      expect(filterValidPermissions(['location'])).toEqual(['location']);
     });
 
     test('removes unknown permissions', () => {
-      expect(
-        filterValidPermissions([
-          'location',
-          'unknown',
-          'bad',
-        ])
-      ).toEqual([
-        'location',
-      ]);
+      expect(filterValidPermissions(['location', 'unknown', 'bad'])).toEqual(['location']);
     });
 
     test('returns empty array for all-invalid input', () => {
-      expect(
-        filterValidPermissions([
-          'foo',
-          'bar',
-        ])
-      ).toEqual([]);
+      expect(filterValidPermissions(['foo', 'bar'])).toEqual([]);
     });
 
     test('returns empty array for empty input', () => {
@@ -71,13 +52,7 @@ describe('Permission System', () => {
     });
 
     test('rejects prototype pollution attempts', () => {
-      expect(
-        filterValidPermissions([
-          '__proto__',
-          'constructor',
-          'location',
-        ])
-      ).toEqual([
+      expect(filterValidPermissions(['__proto__', 'constructor', 'location'])).toEqual([
         'location',
       ]);
     });

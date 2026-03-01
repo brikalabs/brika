@@ -33,24 +33,14 @@ export function BoardsLayout() {
         replace: true,
       });
     }
-  }, [
-    boardId,
-    boards,
-    boardsLoading,
-    navigate,
-  ]);
+  }, [boardId, boards, boardsLoading, navigate]);
 
   // ─── UI chrome state ────────────────────────────────────────────────────────
   const board = useActiveBoard();
   const setAddBrickOpen = useBoardStore((s) => s.setAddBrickOpen);
   const [editBoard, setEditBoard] = useState<BoardSummary | null>(null);
 
-  const handleAddBrick = useCallback(
-    () => setAddBrickOpen(true),
-    [
-      setAddBrickOpen,
-    ]
-  );
+  const handleAddBrick = useCallback(() => setAddBrickOpen(true), [setAddBrickOpen]);
 
   const brickCount = board?.bricks.length ?? 0;
 
@@ -71,11 +61,7 @@ export function BoardsLayout() {
         replace: true,
       });
     }
-  }, [
-    boards,
-    editBoard?.id,
-    navigate,
-  ]);
+  }, [boards, editBoard?.id, navigate]);
 
   return (
     <div className="space-y-4">

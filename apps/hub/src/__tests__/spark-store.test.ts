@@ -183,10 +183,7 @@ describe('SparkStore', () => {
       );
 
       const result = store.query({
-        type: [
-          'type.a',
-          'type.c',
-        ],
+        type: ['type.a', 'type.c'],
       });
 
       expect(result.sparks).toHaveLength(2);
@@ -237,10 +234,7 @@ describe('SparkStore', () => {
       );
 
       const result = store.query({
-        source: [
-          'source-a',
-          'source-b',
-        ],
+        source: ['source-a', 'source-b'],
       });
 
       expect(result.sparks).toHaveLength(2);
@@ -650,11 +644,7 @@ describe('SparkStore', () => {
 
       const types = store.getTypes();
 
-      expect(types).toEqual([
-        'type.a',
-        'type.b',
-        'type.c',
-      ]);
+      expect(types).toEqual(['type.a', 'type.b', 'type.c']);
     });
   });
 

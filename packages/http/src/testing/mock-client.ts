@@ -56,9 +56,7 @@ export class MockHttpClient extends HttpClient {
    * Get all recorded requests
    */
   getRequests(): RecordedRequest[] {
-    return [
-      ...this.#requests,
-    ];
+    return [...this.#requests];
   }
 
   /**

@@ -432,12 +432,7 @@ function inferPortTypes(
   const { incoming } = buildEdgeLookups(edges);
   const withOriginals = addOriginalTypesToNodes(nodes);
   const nodeMap = new Map(
-    withOriginals
-      .filter((n) => n.type === 'block')
-      .map((n) => [
-        n.id,
-        n.data as BlockNodeData,
-      ])
+    withOriginals.filter((n) => n.type === 'block').map((n) => [n.id, n.data as BlockNodeData])
   );
 
   // Phase 1: Resolve external types
@@ -603,10 +598,7 @@ export function useWorkflowEditor(
 ) {
   const { nodes: initialNodes, edges: initialEdges } = useMemo(
     () => workflowToFlow(initialWorkflow, blockDefs),
-    [
-      initialWorkflow,
-      blockDefs,
-    ]
+    [initialWorkflow, blockDefs]
   );
 
   const [nodes, setNodes, onNodesChangeBase] = useNodesState(initialNodes);
@@ -626,18 +618,14 @@ export function useWorkflowEditor(
     () => ({
       lookup: options?.typeLookup ?? (() => undefined),
     }),
-    [
-      options?.typeLookup,
-    ]
+    [options?.typeLookup]
   );
 
   // Reset dirty state when initialWorkflow changes (after save)
   // This happens when parent calls setInitialWorkflow with the saved workflow
   useEffect(() => {
     setIsDirty(false);
-  }, [
-    initialWorkflow,
-  ]);
+  }, [initialWorkflow]);
 
   // Wrap onNodesChange to detect position changes and mark dirty
   const onNodesChange = useCallback(
@@ -653,9 +641,7 @@ export function useWorkflowEditor(
         setIsDirty(true);
       }
     },
-    [
-      onNodesChangeBase,
-    ]
+    [onNodesChangeBase]
   );
 
   // Wrap onEdgesChange to mark dirty
@@ -667,9 +653,7 @@ export function useWorkflowEditor(
         setIsDirty(true);
       }
     },
-    [
-      onEdgesChangeBase,
-    ]
+    [onEdgesChangeBase]
   );
 
   // Run type inference when graph changes (nodes, edges, or resolver context)
@@ -692,38 +676,23 @@ export function useWorkflowEditor(
     if (hasChanges) {
       setNodes(inferred);
     }
-  }, [
-    nodes,
-    edges,
-    resolverContext,
-    setNodes,
-  ]);
+  }, [nodes, edges, resolverContext, setNodes]);
 
   // Get current workflow from nodes/edges
   const workflow = useMemo(
     () => flowToWorkflow(nodes, edges, initialWorkflow),
-    [
-      nodes,
-      edges,
-      initialWorkflow,
-    ]
+    [nodes, edges, initialWorkflow]
   );
 
   // Notify parent of workflow changes
   useEffect(() => {
     onChangeRef.current?.(workflow, isDirty);
-  }, [
-    workflow,
-    isDirty,
-  ]);
+  }, [workflow, isDirty]);
 
   // Get selected node
   const selectedNode = useMemo(
     () => nodes.find((n) => n.id === selectedNodeId) ?? null,
-    [
-      nodes,
-      selectedNodeId,
-    ]
+    [nodes, selectedNodeId]
   );
 
   // Validate connection compatibility
@@ -757,9 +726,7 @@ export function useWorkflowEditor(
       // Check type compatibility
       return arePortTypesCompatible(sourcePort.typeName, targetPort.typeName);
     },
-    [
-      nodes,
-    ]
+    [nodes]
   );
 
   // Handle new connections (enforces single connection per port)
@@ -790,9 +757,7 @@ export function useWorkflowEditor(
       });
       setIsDirty(true);
     },
-    [
-      setEdges,
-    ]
+    [setEdges]
   );
 
   // Handle node selection
@@ -812,9 +777,7 @@ export function useWorkflowEditor(
       }
       setIsDirty(true);
     },
-    [
-      selectedNodeId,
-    ]
+    [selectedNodeId]
   );
 
   // Handle edge deletion
@@ -863,17 +826,12 @@ export function useWorkflowEditor(
           status: 'idle',
         } as BlockNodeData,
       };
-      setNodes((nds) => [
-        ...nds,
-        newNode,
-      ]);
+      setNodes((nds) => [...nds, newNode]);
       setSelectedNodeId(nodeId);
       setIsDirty(true);
       return nodeId;
     },
-    [
-      setNodes,
-    ]
+    [setNodes]
   );
 
   // Update block config
@@ -899,9 +857,7 @@ export function useWorkflowEditor(
       );
       setIsDirty(true);
     },
-    [
-      setNodes,
-    ]
+    [setNodes]
   );
 
   // Set block status (for debugging)
@@ -933,9 +889,7 @@ export function useWorkflowEditor(
         })
       );
     },
-    [
-      setNodes,
-    ]
+    [setNodes]
   );
 
   // Add execution log
@@ -969,9 +923,7 @@ export function useWorkflowEditor(
         return node;
       })
     );
-  }, [
-    setNodes,
-  ]);
+  }, [setNodes]);
 
   // Mark workflow as clean (after successful save)
   const markClean = useCallback(() => {
@@ -1026,10 +978,7 @@ export function useWorkflowEditor(
 
       return variables;
     },
-    [
-      nodes,
-      edges,
-    ]
+    [nodes, edges]
   );
 
   return {

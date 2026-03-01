@@ -149,11 +149,7 @@ describe('transformActionToWorkflowEvent', () => {
         portId: 'status',
         state: {
           nested: {
-            data: [
-              1,
-              2,
-              3,
-            ],
+            data: [1, 2, 3],
             metadata: {
               created: Date.now(),
             },
@@ -230,26 +226,14 @@ describe('transformActionToWorkflowEvent', () => {
   it('should work with array payloads', () => {
     const action = {
       type: 'block.workflow-1.output',
-      payload: [
-        1,
-        2,
-        3,
-        4,
-        5,
-      ],
+      payload: [1, 2, 3, 4, 5],
       timestamp: Date.now(),
     };
 
     const result = transformActionToWorkflowEvent(action, 'workflow-1');
 
     expect(result.type).toBe('output');
-    expect(result.data).toEqual([
-      1,
-      2,
-      3,
-      4,
-      5,
-    ]);
+    expect(result.data).toEqual([1, 2, 3, 4, 5]);
     expect(result.blockId).toBeUndefined(); // Array doesn't have blockId property
   });
 

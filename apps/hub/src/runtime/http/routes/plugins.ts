@@ -146,13 +146,7 @@ export const pluginsRoutes = group({
         const plugin = getOrThrow(inject(PluginManager).get(params.uid), 'Plugin not found');
 
         // Try common README file names
-        const readmeNames = [
-          'README.md',
-          'readme.md',
-          'Readme.md',
-          'README',
-          'readme',
-        ];
+        const readmeNames = ['README.md', 'readme.md', 'Readme.md', 'README', 'readme'];
 
         for (const name of readmeNames) {
           const readmePath = `${plugin.rootDirectory}/${name}`;

@@ -333,12 +333,8 @@ describe('WorkflowEngine - Block Registry Passthrough', () => {
           throw new Error('Expected mock blocks to be defined');
         }
         return {
-          input: [
-            input,
-          ],
-          output: [
-            output,
-          ],
+          input: [input],
+          output: [output],
         };
       },
     });

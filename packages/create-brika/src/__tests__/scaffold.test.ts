@@ -206,9 +206,7 @@ describe('scaffold', () => {
   const defaultOptions: ScaffoldOptions = {
     name: 'test-plugin',
     description: 'A test plugin',
-    features: [
-      'blocks',
-    ],
+    features: ['blocks'],
     category: 'action',
     author: 'Test Author',
     git: false,
@@ -337,9 +335,7 @@ describe('scaffold', () => {
     await scaffold({
       ...defaultOptions,
       name: 'test-brick',
-      features: [
-        'bricks',
-      ],
+      features: ['bricks'],
       category: 'general',
     });
 
@@ -361,9 +357,7 @@ describe('scaffold', () => {
     await scaffold({
       ...defaultOptions,
       name: 'test-brick',
-      features: [
-        'bricks',
-      ],
+      features: ['bricks'],
       category: 'general',
     });
 
@@ -380,11 +374,7 @@ describe('scaffold', () => {
     await scaffold({
       ...defaultOptions,
       name: 'test-all',
-      features: [
-        'blocks',
-        'bricks',
-        'sparks',
-      ],
+      features: ['blocks', 'bricks', 'sparks'],
     });
 
     const pkg = JSON.parse(
@@ -400,9 +390,7 @@ describe('scaffold', () => {
     await scaffold({
       ...defaultOptions,
       name: 'test-spark',
-      features: [
-        'sparks',
-      ],
+      features: ['sparks'],
       category: 'general',
     });
 
@@ -419,10 +407,7 @@ describe('scaffold', () => {
     await scaffold({
       ...defaultOptions,
       name: 'test-combo',
-      features: [
-        'blocks',
-        'sparks',
-      ],
+      features: ['blocks', 'sparks'],
     });
 
     const content = await fs.readFile(path.join(testDir, 'test-combo', 'src', 'index.ts'), 'utf-8');
@@ -446,9 +431,7 @@ describe('scaffold', () => {
     await scaffold({
       ...defaultOptions,
       name: 'test-spark',
-      features: [
-        'sparks',
-      ],
+      features: ['sparks'],
       category: 'general',
     });
 
@@ -464,10 +447,7 @@ describe('scaffold', () => {
     await scaffold({
       ...defaultOptions,
       name: 'test-both',
-      features: [
-        'blocks',
-        'bricks',
-      ],
+      features: ['blocks', 'bricks'],
     });
 
     const content = await fs.readFile(path.join(testDir, 'test-both', 'src', 'index.ts'), 'utf-8');
@@ -511,11 +491,7 @@ describe('scaffold', () => {
     await scaffold({
       ...defaultOptions,
       name: 'test-all',
-      features: [
-        'blocks',
-        'bricks',
-        'sparks',
-      ],
+      features: ['blocks', 'bricks', 'sparks'],
     });
 
     const pkg = JSON.parse(
@@ -552,9 +528,7 @@ describe('createTemplateData', () => {
       {
         name: 'my-plugin',
         description: 'My plugin',
-        features: [
-          'blocks',
-        ],
+        features: ['blocks'],
         category: 'trigger',
         author: 'John',
       },
@@ -582,9 +556,7 @@ describe('createTemplateData', () => {
       {
         name: 'my-awesome-plugin',
         description: 'Test',
-        features: [
-          'blocks',
-        ],
+        features: ['blocks'],
         category: 'action',
         author: 'A',
       },
@@ -599,9 +571,7 @@ describe('createTemplateData', () => {
       {
         name: 'timer',
         description: 'Timer',
-        features: [
-          'blocks',
-        ],
+        features: ['blocks'],
         category: 'trigger',
         author: 'A',
       },

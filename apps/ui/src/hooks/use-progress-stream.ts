@@ -38,9 +38,7 @@ export function useProgressStream(options: UseProgressStreamOptions = {}): UsePr
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [
-    logs,
-  ]);
+  }, [logs]);
 
   const reset = useCallback(() => {
     setIsProcessing(false);
@@ -65,27 +63,20 @@ export function useProgressStream(options: UseProgressStreamOptions = {}): UsePr
         onError?.(errorMessage);
       }
     },
-    [
-      onError,
-    ]
+    [onError]
   );
 
   const complete = useCallback(() => {
     setIsProcessing(false);
     setSuccess(true);
     onSuccess?.();
-  }, [
-    onSuccess,
-  ]);
+  }, [onSuccess]);
 
   const handleProgress = useCallback(
     (p: OperationProgress) => {
       setProgress(p);
       if (p.message) {
-        setLogs((prev) => [
-          ...prev,
-          p.message,
-        ]);
+        setLogs((prev) => [...prev, p.message]);
       }
 
       if (p.phase === 'error') {
@@ -94,10 +85,7 @@ export function useProgressStream(options: UseProgressStreamOptions = {}): UsePr
         complete();
       }
     },
-    [
-      stop,
-      complete,
-    ]
+    [stop, complete]
   );
 
   return {

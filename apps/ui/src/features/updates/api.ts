@@ -52,8 +52,5 @@ export const updateApi = {
 };
 
 export const updateKeys = {
-  check: [
-    'system',
-    'update',
-  ] as const,
+  check: ['system', 'update'] as const,
 };

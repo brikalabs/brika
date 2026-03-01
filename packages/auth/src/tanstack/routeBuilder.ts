@@ -26,15 +26,9 @@ export type ExtractParams<T extends string> = T extends `${string}/$${infer Para
     : never;
 
 /** If the path has params, require them. Otherwise no args needed. */
-export type ParamsArg<T extends string> = [
-  ExtractParams<T>,
-] extends [
-  never,
-]
+export type ParamsArg<T extends string> = [ExtractParams<T>] extends [never]
   ? []
-  : [
-      params: Record<ExtractParams<T>, string>,
-    ];
+  : [params: Record<ExtractParams<T>, string>];
 
 // ─── Definition types (input) ────────────────────────────────────────────────
 

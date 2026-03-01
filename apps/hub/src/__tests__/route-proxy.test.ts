@@ -417,42 +417,26 @@ describe('proxyToPlugin', () => {
     const proc = createMockProcess({
       status: 200,
       body: {
-        items: [
-          1,
-          2,
-          3,
-        ],
+        items: [1, 2, 3],
       },
     });
 
     const res = await proxyToPlugin(proc, 'r', 'GET', '/', {}, {});
 
     expect(await res.json()).toEqual({
-      items: [
-        1,
-        2,
-        3,
-      ],
+      items: [1, 2, 3],
     });
   });
 
   test('serializes array body to JSON', async () => {
     const proc = createMockProcess({
       status: 200,
-      body: [
-        1,
-        2,
-        3,
-      ],
+      body: [1, 2, 3],
     });
 
     const res = await proxyToPlugin(proc, 'r', 'GET', '/', {}, {});
 
-    expect(await res.json()).toEqual([
-      1,
-      2,
-      3,
-    ]);
+    expect(await res.json()).toEqual([1, 2, 3]);
   });
 
   test('spreads extra result headers onto the response', async () => {

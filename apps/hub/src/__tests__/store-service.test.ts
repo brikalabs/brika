@@ -40,10 +40,7 @@ const localPkg = {
   displayName: 'Timer',
   description: 'A timer plugin',
   author: 'Test',
-  keywords: [
-    'brika',
-    'timer',
-  ],
+  keywords: ['brika', 'timer'],
   engines: {
     brika: '^0.1.0',
   },
@@ -55,10 +52,7 @@ const npmPkgData = {
   displayName: 'Weather',
   description: 'A weather plugin',
   author: 'Author',
-  keywords: [
-    'brika',
-    'weather',
-  ],
+  keywords: ['brika', 'weather'],
   repository: 'https://github.com/brika/weather',
   homepage: 'https://weather.brika.dev',
   license: 'MIT',
@@ -75,10 +69,7 @@ const localSearchResult = {
     displayName: 'Timer',
     description: 'A timer plugin',
     author: 'Test',
-    keywords: [
-      'brika',
-      'timer',
-    ],
+    keywords: ['brika', 'timer'],
     engines: {
       brika: '^0.1.0',
     },
@@ -95,10 +86,7 @@ const npmSearchResult = {
     displayName: 'Weather',
     description: 'A weather plugin',
     author: 'Author',
-    keywords: [
-      'brika',
-      'weather',
-    ],
+    keywords: ['brika', 'weather'],
     engines: {
       brika: '^0.1.0',
     },
@@ -188,15 +176,11 @@ describe('StoreService', () => {
   describe('search', () => {
     test('combines local and npm results with local first', async () => {
       mockLocal.search.mockResolvedValue({
-        plugins: [
-          localSearchResult,
-        ],
+        plugins: [localSearchResult],
         total: 1,
       });
       mockNpm.search.mockResolvedValue({
-        plugins: [
-          npmSearchResult,
-        ],
+        plugins: [npmSearchResult],
         total: 1,
       });
 
@@ -235,9 +219,7 @@ describe('StoreService', () => {
 
     test('enriches results with installed status', async () => {
       mockLocal.search.mockResolvedValue({
-        plugins: [
-          localSearchResult,
-        ],
+        plugins: [localSearchResult],
         total: 1,
       });
 
@@ -248,9 +230,7 @@ describe('StoreService', () => {
 
     test('enriches results with compatibility info', async () => {
       mockNpm.search.mockResolvedValue({
-        plugins: [
-          npmSearchResult,
-        ],
+        plugins: [npmSearchResult],
         total: 1,
       });
       mockConfigLoader.get.mockReturnValue(mockConfigEmpty);
@@ -408,10 +388,7 @@ describe('StoreService', () => {
       expect(result).not.toBeNull();
       expect(result?.description).toBe('A timer plugin');
       expect(result?.author).toBe('Test');
-      expect(result?.keywords).toEqual([
-        'brika',
-        'timer',
-      ]);
+      expect(result?.keywords).toEqual(['brika', 'timer']);
       expect(result?.license).toBeUndefined();
       expect(result?.npm).toEqual({
         downloads: 0,
@@ -486,10 +463,7 @@ describe('StoreService', () => {
       expect(result?.version).toBe('2.0.0');
       expect(result?.description).toBe('A weather plugin');
       expect(result?.author).toBe('Author');
-      expect(result?.keywords).toEqual([
-        'brika',
-        'weather',
-      ]);
+      expect(result?.keywords).toEqual(['brika', 'weather']);
       expect(result?.repository).toBe('https://github.com/brika/weather');
       expect(result?.homepage).toBe('https://weather.brika.dev');
       expect(result?.license).toBe('MIT');

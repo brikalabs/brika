@@ -189,12 +189,7 @@ function CodeBlock({ className, variant, ...props }: Readonly<CodeBlockProps>) {
       setLanguage,
       setFilename,
     }),
-    [
-      state,
-      setCodeInfo,
-      setLanguage,
-      setFilename,
-    ]
+    [state, setCodeInfo, setLanguage, setFilename]
   );
 
   return (
@@ -381,37 +376,19 @@ function CodeBlockContent({
       return children.filter((child) => typeof child === 'string').join('');
     }
     return '';
-  }, [
-    children,
-  ]);
+  }, [children]);
 
-  const normalizedCode = React.useMemo(
-    () => code.replace(/\n$/, ''),
-    [
-      code,
-    ]
-  );
-  const lines = React.useMemo(
-    () => normalizedCode.split('\n'),
-    [
-      normalizedCode,
-    ]
-  );
+  const normalizedCode = React.useMemo(() => code.replace(/\n$/, ''), [code]);
+  const lines = React.useMemo(() => normalizedCode.split('\n'), [normalizedCode]);
 
   // Set language and filename in context
   React.useEffect(() => {
     setLanguage(languageProp ?? null);
-  }, [
-    languageProp,
-    setLanguage,
-  ]);
+  }, [languageProp, setLanguage]);
 
   React.useEffect(() => {
     setFilename(filenameProp ?? null);
-  }, [
-    filenameProp,
-    setFilename,
-  ]);
+  }, [filenameProp, setFilename]);
 
   React.useEffect(() => {
     if (!languageProp) {
@@ -433,19 +410,11 @@ function CodeBlockContent({
     return () => {
       cancelled = true;
     };
-  }, [
-    languageProp,
-    normalizedCode,
-    theme,
-  ]);
+  }, [languageProp, normalizedCode, theme]);
 
   React.useEffect(() => {
     setCodeInfo(normalizedCode, lines.length);
-  }, [
-    lines.length,
-    normalizedCode,
-    setCodeInfo,
-  ]);
+  }, [lines.length, normalizedCode, setCodeInfo]);
 
   const lineHeight = size === 'sm' ? 'h-5 leading-5' : 'h-6 leading-6';
 

@@ -26,9 +26,7 @@ export const allRoutes = combineRoutes(
   healthRoute,
   i18nRoutes,
   group({
-    middleware: [
-      requireAuth(),
-    ],
+    middleware: [requireAuth()],
     routes: [
       systemRoute,
       actionRoutes,

@@ -49,9 +49,7 @@ export function InstallButton({
           queryKey: registryKeys.packages,
         }),
         queryClient.invalidateQueries({
-          queryKey: [
-            'store',
-          ],
+          queryKey: ['store'],
         }),
       ]);
     } catch (error) {

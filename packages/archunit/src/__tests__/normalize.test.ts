@@ -53,9 +53,7 @@ describe('normalizeRules', () => {
   test('passes through Rule objects', () => {
     const rule = createRule('direct');
 
-    const result = normalizeRules([
-      rule,
-    ]);
+    const result = normalizeRules([rule]);
 
     expect(result).toHaveLength(1);
     expect(result[0].name).toBe('direct');
@@ -64,9 +62,7 @@ describe('normalizeRules', () => {
   test('builds Buildable inputs', () => {
     const buildable = createBuildable('built');
 
-    const result = normalizeRules([
-      buildable,
-    ]);
+    const result = normalizeRules([buildable]);
 
     expect(result).toHaveLength(1);
     expect(result[0].name).toBe('built');
@@ -76,12 +72,7 @@ describe('normalizeRules', () => {
     const rule1 = createRule('r1');
     const rule2 = createRule('r2');
 
-    const result = normalizeRules([
-      [
-        rule1,
-        rule2,
-      ] as unknown as RuleInput,
-    ]);
+    const result = normalizeRules([[rule1, rule2] as unknown as RuleInput]);
 
     expect(result).toHaveLength(2);
     expect(result[0].name).toBe('r1');
@@ -92,18 +83,13 @@ describe('normalizeRules', () => {
     const rule = createRule('rule');
     const buildable = createBuildable('buildable');
 
-    const result = normalizeRules([
-      rule,
-      buildable,
-    ]);
+    const result = normalizeRules([rule, buildable]);
 
     expect(result).toHaveLength(2);
   });
 
   test('skips unrecognized inputs', () => {
-    const result = normalizeRules([
-      'not-valid' as unknown as RuleInput,
-    ]);
+    const result = normalizeRules(['not-valid' as unknown as RuleInput]);
 
     expect(result).toHaveLength(0);
   });
@@ -114,13 +100,7 @@ describe('normalizeRules', () => {
 
   test('handles deeply nested arrays', () => {
     const rule = createRule('deep');
-    const nested = [
-      [
-        [
-          rule,
-        ] as unknown as RuleInput,
-      ] as unknown as RuleInput,
-    ] as RuleInput[];
+    const nested = [[[rule] as unknown as RuleInput] as unknown as RuleInput] as RuleInput[];
 
     const result = normalizeRules(nested);
 

@@ -49,9 +49,7 @@ function createConfig(overrides?: Partial<OAuthProviderConfig>): OAuthProviderCo
     id: 'test-provider',
     authorizeUrl: 'https://auth.example.com/authorize',
     tokenUrl: 'https://auth.example.com/token',
-    scopes: [
-      'read',
-    ],
+    scopes: ['read'],
     clientId: 'test-client-id',
     ...overrides,
   };
@@ -65,10 +63,7 @@ describe('OAuth types', () => {
       id: 'test',
       authorizeUrl: 'https://auth.example.com/authorize',
       tokenUrl: 'https://auth.example.com/token',
-      scopes: [
-        'read',
-        'write',
-      ],
+      scopes: ['read', 'write'],
       clientId: 'test-client-id',
     };
     expect(config.id).toBe('test');
@@ -92,9 +87,7 @@ describe('OAuth types', () => {
       id: 'google',
       authorizeUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
       tokenUrl: 'https://oauth2.googleapis.com/token',
-      scopes: [
-        'profile',
-      ],
+      scopes: ['profile'],
       clientIdPreference: 'clientId',
       clientSecretPreference: 'clientSecret',
       pkce: false,

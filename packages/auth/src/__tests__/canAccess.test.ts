@@ -20,90 +20,47 @@ describe('canAccess', () => {
     });
 
     it('should check single scope', () => {
-      const scopes = [
-        Scope.WORKFLOW_READ,
-      ];
+      const scopes = [Scope.WORKFLOW_READ];
       expect(canAccess(scopes, Scope.WORKFLOW_READ)).toBe(true);
       expect(canAccess(scopes, Scope.WORKFLOW_WRITE)).toBe(false);
     });
 
     it('should check multiple scopes (any)', () => {
-      const scopes = [
-        Scope.WORKFLOW_READ,
-        Scope.BOARD_READ,
-      ];
-      const required = [
-        Scope.WORKFLOW_WRITE,
-        Scope.WORKFLOW_READ,
-      ];
+      const scopes = [Scope.WORKFLOW_READ, Scope.BOARD_READ];
+      const required = [Scope.WORKFLOW_WRITE, Scope.WORKFLOW_READ];
       expect(canAccess(scopes, required)).toBe(true);
     });
 
     it('should grant all to admin', () => {
-      const scopes = [
-        Scope.ADMIN_ALL,
-      ];
+      const scopes = [Scope.ADMIN_ALL];
       expect(canAccess(scopes, Scope.WORKFLOW_READ)).toBe(true);
       expect(canAccess(scopes, Scope.PLUGIN_MANAGE)).toBe(true);
       expect(canAccess(scopes, Scope.SETTINGS_WRITE)).toBe(true);
     });
 
     it('should handle array input', () => {
-      const scopes = [
-        Scope.WORKFLOW_READ,
-        Scope.WORKFLOW_WRITE,
-      ];
-      const required = [
-        Scope.WORKFLOW_WRITE,
-        Scope.WORKFLOW_EXECUTE,
-      ];
+      const scopes = [Scope.WORKFLOW_READ, Scope.WORKFLOW_WRITE];
+      const required = [Scope.WORKFLOW_WRITE, Scope.WORKFLOW_EXECUTE];
       expect(canAccess(scopes, required)).toBe(true); // Has one
     });
   });
 
   describe('canAccessAll function', () => {
     it('should return false for null/undefined scopes', () => {
-      expect(
-        canAccessAll(null, [
-          Scope.WORKFLOW_READ,
-        ])
-      ).toBe(false);
-      expect(
-        canAccessAll(undefined, [
-          Scope.WORKFLOW_READ,
-        ])
-      ).toBe(false);
+      expect(canAccessAll(null, [Scope.WORKFLOW_READ])).toBe(false);
+      expect(canAccessAll(undefined, [Scope.WORKFLOW_READ])).toBe(false);
     });
 
     it('should check all required scopes', () => {
-      const scopes = [
-        Scope.WORKFLOW_READ,
-        Scope.WORKFLOW_WRITE,
-      ];
-      expect(
-        canAccessAll(scopes, [
-          Scope.WORKFLOW_READ,
-          Scope.WORKFLOW_WRITE,
-        ])
-      ).toBe(true);
-      expect(
-        canAccessAll(scopes, [
-          Scope.WORKFLOW_READ,
-          Scope.WORKFLOW_EXECUTE,
-        ])
-      ).toBe(false);
+      const scopes = [Scope.WORKFLOW_READ, Scope.WORKFLOW_WRITE];
+      expect(canAccessAll(scopes, [Scope.WORKFLOW_READ, Scope.WORKFLOW_WRITE])).toBe(true);
+      expect(canAccessAll(scopes, [Scope.WORKFLOW_READ, Scope.WORKFLOW_EXECUTE])).toBe(false);
     });
 
     it('should grant all to admin', () => {
-      const scopes = [
-        Scope.ADMIN_ALL,
-      ];
+      const scopes = [Scope.ADMIN_ALL];
       expect(
-        canAccessAll(scopes, [
-          Scope.WORKFLOW_READ,
-          Scope.WORKFLOW_WRITE,
-          Scope.PLUGIN_MANAGE,
-        ])
+        canAccessAll(scopes, [Scope.WORKFLOW_READ, Scope.WORKFLOW_WRITE, Scope.PLUGIN_MANAGE])
       ).toBe(true);
     });
   });
@@ -127,9 +84,7 @@ describe('canAccess', () => {
         write: Scope.WORKFLOW_WRITE,
       });
 
-      const userScopes = [
-        Scope.WORKFLOW_READ,
-      ];
+      const userScopes = [Scope.WORKFLOW_READ];
       const readCheck = WorkflowPerms.read;
       const writeCheck = WorkflowPerms.write;
       if (!readCheck || !writeCheck) {
@@ -141,17 +96,11 @@ describe('canAccess', () => {
 
     it('should support array scopes', () => {
       const AdminPerms = createPermissionChecker('Admin', {
-        fullAccess: [
-          Scope.ADMIN_ALL,
-        ],
-        userManagement: [
-          Scope.ADMIN_ALL,
-        ],
+        fullAccess: [Scope.ADMIN_ALL],
+        userManagement: [Scope.ADMIN_ALL],
       });
 
-      const adminScopes = [
-        Scope.ADMIN_ALL,
-      ];
+      const adminScopes = [Scope.ADMIN_ALL];
       const fullAccessCheck = AdminPerms.fullAccess;
       const userManagementCheck = AdminPerms.userManagement;
       if (!fullAccessCheck || !userManagementCheck) {
@@ -170,10 +119,7 @@ describe('canAccess', () => {
     });
 
     it('should check Workflow permissions', () => {
-      const userScopes = [
-        Scope.WORKFLOW_READ,
-        Scope.WORKFLOW_WRITE,
-      ];
+      const userScopes = [Scope.WORKFLOW_READ, Scope.WORKFLOW_WRITE];
       const readCheck = Features.Workflow.read;
       const writeCheck = Features.Workflow.write;
       const executeCheck = Features.Workflow.execute;
@@ -205,9 +151,7 @@ describe('canAccess', () => {
     });
 
     it('should work with admin scopes', () => {
-      const adminScopes = [
-        Scope.ADMIN_ALL,
-      ];
+      const adminScopes = [Scope.ADMIN_ALL];
       const executeCheck = Features.Workflow.execute;
       const boardWriteCheck = Features.Board.write;
       const adminAllCheck = Features.Admin.all;

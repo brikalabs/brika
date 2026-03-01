@@ -100,9 +100,7 @@ export function ExpressionInput({
 
       return items.slice(0, 10);
     },
-    [
-      variables,
-    ]
+    [variables]
   );
 
   // Check for {{ trigger and show autocomplete
@@ -122,9 +120,7 @@ export function ExpressionInput({
         setShowAutocomplete(false);
       }
     },
-    [
-      buildAutocompleteItems,
-    ]
+    [buildAutocompleteItems]
   );
 
   // Handle input change

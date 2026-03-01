@@ -13,15 +13,9 @@ function getBrowserCommand(): string {
 }
 
 export function openBrowser(url: string): void {
-  Bun.spawn(
-    [
-      getBrowserCommand(),
-      url,
-    ],
-    {
-      stdin: 'ignore',
-      stdout: 'ignore',
-      stderr: 'ignore',
-    }
-  );
+  Bun.spawn([getBrowserCommand(), url], {
+    stdin: 'ignore',
+    stdout: 'ignore',
+    stderr: 'ignore',
+  });
 }

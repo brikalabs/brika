@@ -19,10 +19,7 @@ export function useDebouncedValue<T>(value: T, delay = 300): T {
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedValue(value), delay);
     return () => clearTimeout(timer);
-  }, [
-    value,
-    delay,
-  ]);
+  }, [value, delay]);
 
   return debouncedValue;
 }
@@ -42,17 +39,11 @@ export function useDebouncedValue<T>(value: T, delay = 300): T {
 export function useDebouncedState<T>(
   initialValue: T,
   delay = 300
-): [
-  T,
-  React.Dispatch<React.SetStateAction<T>>,
-] {
+): [T, React.Dispatch<React.SetStateAction<T>>] {
   const [value, setValue] = useState(initialValue);
   const debouncedValue = useDebouncedValue(value, delay);
 
-  return [
-    debouncedValue,
-    setValue,
-  ];
+  return [debouncedValue, setValue];
 }
 
 /**
@@ -79,9 +70,7 @@ export function useDebouncedCallback<T extends (...args: Parameters<T>) => void>
         clearTimeout(timer);
       }
     };
-  }, [
-    timer,
-  ]);
+  }, [timer]);
 
   return ((...args: Parameters<T>) => {
     if (timer) {

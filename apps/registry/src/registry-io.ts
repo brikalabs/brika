@@ -67,47 +67,21 @@ export function signRegistryAtPath(
   let content = readFileSync(registryPath, 'utf-8');
 
   // Update metadata
-  content = modifyRegistry(
-    content,
-    [
-      'lastUpdated',
-    ],
-    new Date().toISOString()
-  );
-  content = modifyRegistry(
-    content,
-    [
-      'publicKey',
-    ],
-    publicKeyBase64
-  );
+  content = modifyRegistry(content, ['lastUpdated'], new Date().toISOString());
+  content = modifyRegistry(content, ['publicKey'], publicKeyBase64);
 
   // Sign each plugin entry
   for (let i = 0; i < registry.plugins.length; i++) {
     const payload = extractPluginSignablePayload(registry.plugins[i]);
     const sig = signData(canonicalize(payload), privateKeyPem);
-    content = modifyRegistry(
-      content,
-      [
-        'plugins',
-        i,
-        'signature',
-      ],
-      sig
-    );
+    content = modifyRegistry(content, ['plugins', i, 'signature'], sig);
   }
 
   // Sign registry (re-parse to include updated plugin signatures)
   const updatedRegistry = VerifiedPluginsListSchema.parse(JSON.parse(content));
   const regPayload = extractRegistrySignablePayload(updatedRegistry);
   const regSig = signData(canonicalize(regPayload), privateKeyPem);
-  content = modifyRegistry(
-    content,
-    [
-      'signature',
-    ],
-    regSig
-  );
+  content = modifyRegistry(content, ['signature'], regSig);
 
   writeFileSync(registryPath, content, 'utf-8');
 }

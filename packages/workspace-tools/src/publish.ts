@@ -210,10 +210,7 @@ try {
       details,
       privateWorkspacePackageNames
     );
-    const extraWarnings = [
-      ...pluginWarnings,
-      ...privateDependencyWarnings,
-    ];
+    const extraWarnings = [...pluginWarnings, ...privateDependencyWarnings];
     console.log(
       formatPackagePreview(pkg.name, pkg.version, details, publishedVersion, extraWarnings)
     );
@@ -274,17 +271,11 @@ try {
   const installSpinner = p.spinner();
   installSpinner.start('Running bun install at workspace root…');
 
-  const installProc = Bun.spawn(
-    [
-      'bun',
-      'install',
-    ],
-    {
-      cwd: ROOT,
-      stdout: 'pipe',
-      stderr: 'pipe',
-    }
-  );
+  const installProc = Bun.spawn(['bun', 'install'], {
+    cwd: ROOT,
+    stdout: 'pipe',
+    stderr: 'pipe',
+  });
   const installExit = await installProc.exited;
 
   if (installExit !== 0) {

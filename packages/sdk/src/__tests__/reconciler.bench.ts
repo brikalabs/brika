@@ -39,9 +39,7 @@ function flatTree(n: number, prefix = ''): ComponentNode[] {
 
 function nestedTree(depth: number, width: number, prefix = ''): ComponentNode[] {
   if (depth === 0) {
-    return [
-      text(`${prefix}leaf`),
-    ];
+    return [text(`${prefix}leaf`)];
   }
   return Array.from(
     {
@@ -77,10 +75,7 @@ const flat50new = flatTree(50, 'new-');
 const flat200 = flatTree(200);
 const flat200partial = mutateProps(flatTree(200), 0.1);
 const base20 = flatTree(20);
-const appended30 = [
-  ...flatTree(20),
-  ...flatTree(10, 'new-'),
-];
+const appended30 = [...flatTree(20), ...flatTree(10, 'new-')];
 const deep4x3old = nestedTree(4, 3);
 const deep4x3new = mutateProps(nestedTree(4, 3), 0.2);
 const large500a = flatTree(500);
@@ -90,19 +85,12 @@ const mixedOld: ComponentNode[] = [
   text('change'),
   text('remove1'),
   text('remove2'),
-  column([
-    text('nested-keep'),
-    text('nested-change'),
-  ]),
+  column([text('nested-keep'), text('nested-change')]),
 ];
 const mixedNew: ComponentNode[] = [
   text('keep'),
   text('CHANGED'),
-  column([
-    text('nested-keep'),
-    text('NESTED-CHANGED'),
-    text('nested-add'),
-  ]),
+  column([text('nested-keep'), text('NESTED-CHANGED'), text('nested-add')]),
   text('added'),
 ];
 

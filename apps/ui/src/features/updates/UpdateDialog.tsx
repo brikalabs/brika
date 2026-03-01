@@ -195,18 +195,14 @@ export function UpdateDialog({
     useCallback(() => {
       setError(`${t('common:updates.waitingForHub')} — timeout`);
       setState('error');
-    }, [
-      t,
-    ])
+    }, [t])
   );
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [
-    logs,
-  ]);
+  }, [logs]);
 
   const handleUpdate = useCallback(async () => {
     setState('updating');
@@ -225,15 +221,9 @@ export function UpdateDialog({
           setLogs((prev) => {
             // Replace the last entry while still in the same phase (e.g. download %)
             if (prev.length > 0 && p.phase === 'downloading') {
-              return [
-                ...prev.slice(0, -1),
-                p.message,
-              ];
+              return [...prev.slice(0, -1), p.message];
             }
-            return [
-              ...prev,
-              p.message,
-            ];
+            return [...prev, p.message];
           });
         }
 
@@ -251,10 +241,7 @@ export function UpdateDialog({
       setError(String(err));
       setState('error');
     }
-  }, [
-    hubPoller,
-    force,
-  ]);
+  }, [hubPoller, force]);
 
   const handleClose = () => {
     if (state === 'updating' || state === 'restarting') {

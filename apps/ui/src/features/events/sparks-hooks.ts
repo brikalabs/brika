@@ -52,9 +52,7 @@ export function useSparkStream() {
         // On error, still mark as initialized so SSE events work
         setHistory([]);
       });
-  }, [
-    setHistory,
-  ]);
+  }, [setHistory]);
 
   // SSE for live events
   useEffect(() => {
@@ -69,9 +67,7 @@ export function useSparkStream() {
       /* Connection error - auto-retry handled by EventSource */
     };
     return () => es.close();
-  }, [
-    add,
-  ]);
+  }, [add]);
 
   const sparkEvents = useMemo(() => {
     return events
@@ -91,9 +87,7 @@ export function useSparkStream() {
         };
       })
       .reverse(); // Most recent first
-  }, [
-    events,
-  ]);
+  }, [events]);
 
   return {
     events: sparkEvents,

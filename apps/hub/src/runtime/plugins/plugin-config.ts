@@ -90,12 +90,7 @@ export class PluginConfigService {
       case 'checkbox':
         return z.boolean();
       case 'dropdown':
-        return z.enum(
-          p.options.map((o) => o.value) as [
-            string,
-            ...string[],
-          ]
-        );
+        return z.enum(p.options.map((o) => o.value) as [string, ...string[]]);
       case 'dynamic-dropdown':
         return p.required ? z.string().min(1) : z.string();
       default:

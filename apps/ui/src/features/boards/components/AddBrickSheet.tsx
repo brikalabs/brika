@@ -31,9 +31,7 @@ export function AddBrickSheet() {
       group.push(t);
     }
     return grouped;
-  }, [
-    brickTypes,
-  ]);
+  }, [brickTypes]);
 
   const handleSelect = (brickType: BrickType) => {
     addBrick(
@@ -60,9 +58,7 @@ export function AddBrickSheet() {
               {t('boards:addSheet.empty')}
             </div>
           )}
-          {[
-            ...typesByPlugin.entries(),
-          ].map(([pluginName, types]) => (
+          {[...typesByPlugin.entries()].map(([pluginName, types]) => (
             <div key={pluginName} className="mb-4 space-y-1">
               <div className="px-2 pb-1 font-mono text-muted-foreground text-xs">{pluginName}</div>
               {types.map((t) => {

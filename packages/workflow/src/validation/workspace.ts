@@ -322,12 +322,7 @@ export function validateWorkspace(
 
   // Build validation context
   const ctx: ValidationContext = {
-    blockMap: new Map(
-      workflow.blocks.map((b) => [
-        b.id,
-        b,
-      ])
-    ),
+    blockMap: new Map(workflow.blocks.map((b) => [b.id, b])),
     registry,
     errors,
     warnings,

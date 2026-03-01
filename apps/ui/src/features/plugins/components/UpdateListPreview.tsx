@@ -13,12 +13,7 @@ interface UpdateListPreviewProps {
 export function UpdateListPreview({ updates, plugins }: Readonly<UpdateListPreviewProps>) {
   const { tp } = useLocale();
 
-  const pluginByName = new Map(
-    plugins.map((p) => [
-      p.name,
-      p,
-    ])
-  );
+  const pluginByName = new Map(plugins.map((p) => [p.name, p]));
 
   return (
     <div className="divide-y rounded-lg border">

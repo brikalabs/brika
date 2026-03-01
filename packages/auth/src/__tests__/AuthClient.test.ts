@@ -98,9 +98,7 @@ describe('AuthClient', () => {
       mockFetch.mockResolvedValueOnce(
         jsonResponse({
           user: mockUser,
-          scopes: [
-            'workflow:read',
-          ],
+          scopes: ['workflow:read'],
         })
       );
 
@@ -110,9 +108,7 @@ describe('AuthClient', () => {
       const session = await client.login('test@example.com', 'password123');
 
       expect(session.user).toEqual(mockUser);
-      expect(session.scopes).toEqual([
-        'workflow:read',
-      ]);
+      expect(session.scopes).toEqual(['workflow:read']);
       expect(mockFetch).toHaveBeenCalledTimes(2);
 
       const [url, opts] = fetchCall(0);
@@ -197,9 +193,7 @@ describe('AuthClient', () => {
       mockFetch.mockResolvedValueOnce(
         jsonResponse({
           user: mockUser,
-          scopes: [
-            'workflow:read',
-          ],
+          scopes: ['workflow:read'],
         })
       );
 
@@ -210,9 +204,7 @@ describe('AuthClient', () => {
 
       expect(session).not.toBeNull();
       expect(session?.user).toEqual(mockUser);
-      expect(session?.scopes).toEqual([
-        'workflow:read',
-      ]);
+      expect(session?.scopes).toEqual(['workflow:read']);
 
       const [url, opts] = fetchCall(0);
       expect(url).toBe('http://test/api/auth/session');
@@ -311,14 +303,9 @@ describe('AuthClient', () => {
         })
       );
 
-      const blob = new Blob(
-        [
-          'fake-image',
-        ],
-        {
-          type: 'image/png',
-        }
-      );
+      const blob = new Blob(['fake-image'], {
+        type: 'image/png',
+      });
       const client = new AuthClient({
         apiUrl: 'http://test',
       });
@@ -343,9 +330,7 @@ describe('AuthClient', () => {
         )
       );
 
-      const blob = new Blob([
-        'big-image',
-      ]);
+      const blob = new Blob(['big-image']);
       const client = new AuthClient({
         apiUrl: 'http://test',
       });
@@ -355,9 +340,7 @@ describe('AuthClient', () => {
     it('should throw generic message when no error field', async () => {
       mockFetch.mockResolvedValueOnce(jsonResponse({}, 500));
 
-      const blob = new Blob([
-        'x',
-      ]);
+      const blob = new Blob(['x']);
       const client = new AuthClient({
         apiUrl: 'http://test',
       });

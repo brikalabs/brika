@@ -15,13 +15,9 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "composite": true,
-    "types": [
-      "bun-types"
-    ],
+    "types": ["bun-types"],
     "jsx": "react-jsx",
     "jsxImportSource": "@brika/sdk"
   },
-  "include": [
-    "src"
-  ]
+  "include": ["src"]
 }

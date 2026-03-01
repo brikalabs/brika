@@ -66,19 +66,13 @@ export default function SpotifyBrick() {
       }
       return p + 1;
     });
-  }, [
-    track.duration,
-  ]);
+  }, [track.duration]);
 
   useEffect(() => {
     if (!playing || dragging) return;
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-  }, [
-    playing,
-    dragging,
-    tick,
-  ]);
+  }, [playing, dragging, tick]);
 
   const updateProgress = useCallback(
     (clientX: number) => {
@@ -88,9 +82,7 @@ export default function SpotifyBrick() {
       const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
       setProgress(Math.floor(ratio * track.duration));
     },
-    [
-      track.duration,
-    ]
+    [track.duration]
   );
 
   const onPointerDown = useCallback(
@@ -99,9 +91,7 @@ export default function SpotifyBrick() {
       (e.target as HTMLElement).setPointerCapture(e.pointerId);
       updateProgress(e.clientX);
     },
-    [
-      updateProgress,
-    ]
+    [updateProgress]
   );
 
   const onPointerMove = useCallback(
@@ -109,10 +99,7 @@ export default function SpotifyBrick() {
       if (!dragging) return;
       updateProgress(e.clientX);
     },
-    [
-      dragging,
-      updateProgress,
-    ]
+    [dragging, updateProgress]
   );
 
   const onPointerUp = useCallback(() => setDragging(false), []);

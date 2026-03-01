@@ -49,9 +49,7 @@ export class PluginRouteRegistry {
   }
 
   listByPlugin(pluginName: string): RegisteredRoute[] {
-    return [
-      ...this.#routes.values(),
-    ].filter((r) => r.pluginName === pluginName);
+    return [...this.#routes.values()].filter((r) => r.pluginName === pluginName);
   }
 
   unregisterPlugin(pluginName: string): void {

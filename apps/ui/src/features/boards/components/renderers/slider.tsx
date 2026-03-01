@@ -10,9 +10,7 @@ defineRenderer('slider', ({ node, onAction }) => {
 
   useEffect(() => {
     setLocal(node.value);
-  }, [
-    node.value,
-  ]);
+  }, [node.value]);
 
   const pct = ((local - node.min) / (node.max - node.min)) * 100;
   const hasLabel = node.label || node.icon;

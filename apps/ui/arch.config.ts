@@ -5,13 +5,8 @@ export default defineConfig([
   reactFeaturePreset({
     pageMaxLines: 200,
     componentMaxLines: 150,
-    requiredFiles: [
-      'index.ts',
-    ],
-    allowedCrossFeatures: [
-      'plugins',
-      'workflows',
-    ],
+    requiredFiles: ['index.ts'],
+    allowedCrossFeatures: ['plugins', 'workflows'],
   }),
 
   // Hook files must export use* functions

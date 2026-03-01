@@ -52,12 +52,7 @@ export function EditBoardDialog({
     }
     setName(board.name);
     setIcon(board.icon ?? '');
-  }, [
-    open,
-    board.id,
-    board.name,
-    board.icon,
-  ]);
+  }, [open, board.id, board.name, board.icon]);
 
   const handleSave = () => {
     if (!name.trim()) {

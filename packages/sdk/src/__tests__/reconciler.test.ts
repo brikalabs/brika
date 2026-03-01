@@ -47,34 +47,20 @@ const chart = (data: ChartNode['data']): ChartNode => ({
 describe('reconcile', () => {
   describe('identical trees', () => {
     test('produces empty mutations for same nodes', () => {
-      const nodes = [
-        text('Hello'),
-      ];
+      const nodes = [text('Hello')];
       const mutations = reconcile(nodes, nodes);
       expect(mutations).toEqual([]);
     });
 
     test('produces empty mutations for structurally equal nodes', () => {
-      const mutations = reconcile(
-        [
-          text('A'),
-        ],
-        [
-          text('A'),
-        ]
-      );
+      const mutations = reconcile([text('A')], [text('A')]);
       expect(mutations).toEqual([]);
     });
   });
 
   describe('node addition', () => {
     test('produces create mutation for new node', () => {
-      const mutations = reconcile(
-        [],
-        [
-          text('New'),
-        ]
-      );
+      const mutations = reconcile([], [text('New')]);
 
       expect(mutations).toHaveLength(1);
       expect(mutations[0]?.[0]).toBe(MUT.CREATE);
@@ -83,15 +69,7 @@ describe('reconcile', () => {
     });
 
     test('produces create for appended node', () => {
-      const mutations = reconcile(
-        [
-          text('A'),
-        ],
-        [
-          text('A'),
-          text('B'),
-        ]
-      );
+      const mutations = reconcile([text('A')], [text('A'), text('B')]);
 
       expect(mutations).toHaveLength(1);
       expect(mutations[0]?.[0]).toBe(MUT.CREATE);
@@ -101,12 +79,7 @@ describe('reconcile', () => {
 
   describe('node removal', () => {
     test('produces remove mutation for deleted node', () => {
-      const mutations = reconcile(
-        [
-          text('A'),
-        ],
-        []
-      );
+      const mutations = reconcile([text('A')], []);
 
       expect(mutations).toHaveLength(1);
       expect(mutations[0]?.[0]).toBe(MUT.REMOVE);
@@ -114,15 +87,7 @@ describe('reconcile', () => {
     });
 
     test('produces remove for trailing node', () => {
-      const mutations = reconcile(
-        [
-          text('A'),
-          text('B'),
-        ],
-        [
-          text('A'),
-        ]
-      );
+      const mutations = reconcile([text('A'), text('B')], [text('A')]);
 
       expect(mutations).toHaveLength(1);
       expect(mutations[0]?.[0]).toBe(MUT.REMOVE);
@@ -130,27 +95,12 @@ describe('reconcile', () => {
     });
 
     test('removes multiple trailing nodes in reverse order', () => {
-      const mutations = reconcile(
-        [
-          text('A'),
-          text('B'),
-          text('C'),
-        ],
-        [
-          text('A'),
-        ]
-      );
+      const mutations = reconcile([text('A'), text('B'), text('C')], [text('A')]);
 
       // Two removes, highest index first so sequential application works
       expect(mutations).toHaveLength(2);
-      expect(mutations[0]).toEqual([
-        MUT.REMOVE,
-        '2',
-      ]);
-      expect(mutations[1]).toEqual([
-        MUT.REMOVE,
-        '1',
-      ]);
+      expect(mutations[0]).toEqual([MUT.REMOVE, '2']);
+      expect(mutations[1]).toEqual([MUT.REMOVE, '1']);
     });
 
     test('replace + trailing removes produces correct result when applied', () => {
@@ -158,21 +108,13 @@ describe('reconcile', () => {
         type: 'button',
         label: 'X',
       };
-      const oldNodes = [
-        text('A'),
-        text('B'),
-        text('C'),
-      ];
-      const newNodes: ComponentNode[] = [
-        button,
-      ];
+      const oldNodes = [text('A'), text('B'), text('C')];
+      const newNodes: ComponentNode[] = [button];
 
       const mutations = reconcile(oldNodes, newNodes);
 
       // Apply mutations sequentially and verify correct result
-      let result: ComponentNode[] = [
-        ...oldNodes,
-      ];
+      let result: ComponentNode[] = [...oldNodes];
       for (const m of mutations) {
         const idx = Number(m[1]);
         if (m[0] === MUT.REMOVE) {
@@ -245,14 +187,7 @@ describe('reconcile', () => {
         type: 'button',
         label: 'Click',
       };
-      const mutations = reconcile(
-        [
-          text('A'),
-        ],
-        [
-          button,
-        ]
-      );
+      const mutations = reconcile([text('A')], [button]);
 
       expect(mutations).toHaveLength(1);
       expect(mutations[0]?.[0]).toBe(MUT.REPLACE);
@@ -263,18 +198,8 @@ describe('reconcile', () => {
 
   describe('nested children', () => {
     test('diffs children recursively with correct paths', () => {
-      const oldTree = [
-        column([
-          text('A'),
-          text('B'),
-        ]),
-      ];
-      const newTree = [
-        column([
-          text('A'),
-          text('C'),
-        ]),
-      ];
+      const oldTree = [column([text('A'), text('B')])];
+      const newTree = [column([text('A'), text('C')])];
 
       const mutations = reconcile(oldTree, newTree);
 
@@ -287,17 +212,8 @@ describe('reconcile', () => {
     });
 
     test('detects added child in container', () => {
-      const oldTree = [
-        column([
-          text('A'),
-        ]),
-      ];
-      const newTree = [
-        column([
-          text('A'),
-          text('B'),
-        ]),
-      ];
+      const oldTree = [column([text('A')])];
+      const newTree = [column([text('A'), text('B')])];
 
       const mutations = reconcile(oldTree, newTree);
 
@@ -307,17 +223,8 @@ describe('reconcile', () => {
     });
 
     test('detects removed child in container', () => {
-      const oldTree = [
-        column([
-          text('A'),
-          text('B'),
-        ]),
-      ];
-      const newTree = [
-        column([
-          text('A'),
-        ]),
-      ];
+      const oldTree = [column([text('A'), text('B')])];
+      const newTree = [column([text('A')])];
 
       const mutations = reconcile(oldTree, newTree);
 
@@ -327,20 +234,8 @@ describe('reconcile', () => {
     });
 
     test('handles deeply nested paths', () => {
-      const oldTree = [
-        column([
-          column([
-            text('deep'),
-          ]),
-        ]),
-      ];
-      const newTree = [
-        column([
-          column([
-            text('deeper'),
-          ]),
-        ]),
-      ];
+      const oldTree = [column([column([text('deep')])])];
+      const newTree = [column([column([text('deeper')])])];
 
       const mutations = reconcile(oldTree, newTree);
 
@@ -451,9 +346,7 @@ describe('reconcile', () => {
       const props = mutations[0]?.[2] as Record<string, unknown>;
       expect(props.variant).toBe('heading');
       expect(props).not.toHaveProperty('color'); // not in props — it's in removed
-      expect(mutations[0]?.[3]).toEqual([
-        'color',
-      ]);
+      expect(mutations[0]?.[3]).toEqual(['color']);
     });
 
     test('treats null and undefined as different', () => {
@@ -462,15 +355,11 @@ describe('reconcile', () => {
           color: null,
         }),
       ];
-      const next = [
-        text('A'),
-      ];
+      const next = [text('A')];
 
       const mutations = reconcile(old, next);
       expect(mutations).toHaveLength(1);
-      expect(mutations[0]?.[3]).toEqual([
-        'color',
-      ]);
+      expect(mutations[0]?.[3]).toEqual(['color']);
     });
   });
 
@@ -492,9 +381,7 @@ describe('reconcile', () => {
       tree: ComponentNode[],
       mutations: ReturnType<typeof reconcile>
     ): ComponentNode[] {
-      const result = [
-        ...tree,
-      ];
+      const result = [...tree];
       for (const m of mutations) {
         const idx = Number(m[1]);
         if (m[0] === MUT.REMOVE) {
@@ -523,41 +410,27 @@ describe('reconcile', () => {
 
     test('diff against sentBody produces correct mutations after debounced renders', () => {
       // Simulates: render1 → render2 → render3, only the last diff is sent
-      const sentBody: ComponentNode[] = [
-        text('A'),
-      ];
+      const sentBody: ComponentNode[] = [text('A')];
 
       // Three rapid renders produce different trees — only the final one matters
       // intermediate: [text('B')], [text('C')]
-      const finalBody = [
-        text('D'),
-      ];
+      const finalBody = [text('D')];
 
       // Correct: diff against sentBody (what hub has)
       const mutations = reconcile(sentBody, finalBody);
       const hubState = applyMutations(sentBody, mutations);
 
-      expect(hubState).toEqual([
-        text('D'),
-      ]);
+      expect(hubState).toEqual([text('D')]);
     });
 
     test('diffing against intermediate state (the old bug) produces wrong result', () => {
       // Demonstrates the bug that existed before the sentBody fix
-      const sentBody: ComponentNode[] = [
-        text('A'),
-        text('B'),
-      ];
+      const sentBody: ComponentNode[] = [text('A'), text('B')];
 
       // Render 1: remove node B → [text('A')]
-      const intermediate = [
-        text('A'),
-      ];
+      const intermediate = [text('A')];
       // Render 2: change A to C, add D → [text('C'), text('D')]
-      const finalBody = [
-        text('C'),
-        text('D'),
-      ];
+      const finalBody = [text('C'), text('D')];
 
       // OLD BUG: diff finalBody against intermediate (hub never received)
       // Produces: update 0 (A→C), create 1 (D)
@@ -566,17 +439,9 @@ describe('reconcile', () => {
 
       // CORRECT: diff finalBody against sentBody (what hub actually has)
       const correctMutations = reconcile(sentBody, finalBody);
-      const hubState = applyMutations(
-        [
-          ...sentBody,
-        ],
-        correctMutations
-      );
+      const hubState = applyMutations([...sentBody], correctMutations);
 
-      expect(hubState).toEqual([
-        text('C'),
-        text('D'),
-      ]);
+      expect(hubState).toEqual([text('C'), text('D')]);
     });
 
     test('multiple prop changes coalesce correctly when diffed against sentBody', () => {
@@ -608,30 +473,15 @@ describe('reconcile', () => {
     });
 
     test('structural changes (add/remove) are correct against sentBody', () => {
-      const sentBody: ComponentNode[] = [
-        text('A'),
-        text('B'),
-        text('C'),
-      ];
+      const sentBody: ComponentNode[] = [text('A'), text('B'), text('C')];
 
       // Many intermediate renders, final result removes B and changes C
-      const finalBody: ComponentNode[] = [
-        text('A'),
-        text('C-updated'),
-      ];
+      const finalBody: ComponentNode[] = [text('A'), text('C-updated')];
 
       const mutations = reconcile(sentBody, finalBody);
-      const hubState = applyMutations(
-        [
-          ...sentBody,
-        ],
-        mutations
-      );
+      const hubState = applyMutations([...sentBody], mutations);
 
-      expect(hubState).toEqual([
-        text('A'),
-        text('C-updated'),
-      ]);
+      expect(hubState).toEqual([text('A'), text('C-updated')]);
     });
   });
 });

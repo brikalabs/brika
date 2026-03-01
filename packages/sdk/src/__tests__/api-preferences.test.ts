@@ -113,9 +113,7 @@ describe('lifecycle API', () => {
 const testSpec: BrickTypeSpec = {
   id: 'test',
   name: 'Test',
-  families: [
-    'sm',
-  ],
+  families: ['sm'],
 };
 const testComponent: BrickComponent = () =>
   Text({

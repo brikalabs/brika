@@ -279,17 +279,13 @@ describe('useMemo', () => {
       val = useMemo(() => {
         callCount++;
         return 10;
-      }, [
-        dep,
-      ]);
+      }, [dep]);
     });
     render(state, () => {
       val = useMemo(() => {
         callCount++;
         return 10;
-      }, [
-        dep,
-      ]);
+      }, [dep]);
     });
 
     expect(callCount).toBe(1);
@@ -302,23 +298,13 @@ describe('useMemo', () => {
     let dep = 1;
 
     render(state, () => {
-      val = useMemo(
-        () => dep * 10,
-        [
-          dep,
-        ]
-      );
+      val = useMemo(() => dep * 10, [dep]);
     });
     expect(val).toBe(10);
 
     dep = 2;
     render(state, () => {
-      val = useMemo(
-        () => dep * 10,
-        [
-          dep,
-        ]
-      );
+      val = useMemo(() => dep * 10, [dep]);
     });
     expect(val).toBe(20);
   });
@@ -331,18 +317,13 @@ describe('useMemo', () => {
       useMemo(() => {
         callCount++;
         return 0;
-      }, [
-        1,
-      ]);
+      }, [1]);
     });
     render(state, () => {
       useMemo(() => {
         callCount++;
         return 0;
-      }, [
-        1,
-        2,
-      ]);
+      }, [1, 2]);
     });
 
     expect(callCount).toBe(2);
@@ -375,14 +356,10 @@ describe('useCallback', () => {
     let fn2: (() => void) | undefined;
 
     render(state, () => {
-      fn1 = useCallback(() => {}, [
-        1,
-      ]);
+      fn1 = useCallback(() => {}, [1]);
     });
     render(state, () => {
-      fn2 = useCallback(() => {}, [
-        2,
-      ]);
+      fn2 = useCallback(() => {}, [2]);
     });
 
     expect(fn1).not.toBe(fn2);
@@ -498,9 +475,7 @@ describe('usePreference', () => {
     state.config = {
       color: 'blue',
     };
-    state.configKeys = new Set([
-      'color',
-    ]);
+    state.configKeys = new Set(['color']);
 
     let val: string | undefined;
 
@@ -514,9 +489,7 @@ describe('usePreference', () => {
   test('named preference returns defaultValue when key is missing from config', () => {
     const state = _createState(() => {});
     state.config = {};
-    state.configKeys = new Set([
-      'missing',
-    ]);
+    state.configKeys = new Set(['missing']);
 
     let val: number | undefined;
 
@@ -535,9 +508,7 @@ describe('usePreference', () => {
     state.config = {
       count: 0,
     };
-    state.configKeys = new Set([
-      'count',
-    ]);
+    state.configKeys = new Set(['count']);
 
     let val: number | undefined;
     let set!: (v: number | ((p: number) => number)) => void;
@@ -558,9 +529,7 @@ describe('usePreference', () => {
     state.config = {
       count: 10,
     };
-    state.configKeys = new Set([
-      'count',
-    ]);
+    state.configKeys = new Set(['count']);
 
     let set!: (v: number | ((p: number) => number)) => void;
 
@@ -582,9 +551,7 @@ describe('usePreference', () => {
     state.config = {
       x: 'hello',
     };
-    state.configKeys = new Set([
-      'x',
-    ]);
+    state.configKeys = new Set(['x']);
 
     let set!: (v: string | ((p: string) => string)) => void;
 
@@ -601,9 +568,7 @@ describe('usePreference', () => {
   test('setter uses defaultValue as prev when config key is missing', async () => {
     const state = _createState(() => {});
     state.config = {};
-    state.configKeys = new Set([
-      'val',
-    ]);
+    state.configKeys = new Set(['val']);
 
     let set!: (v: number | ((p: number) => number)) => void;
 
@@ -620,9 +585,7 @@ describe('usePreference', () => {
   test('warns when key is not in configKeys (once per key)', () => {
     const state = _createState(() => {});
     state.config = {};
-    state.configKeys = new Set([
-      'declared',
-    ]);
+    state.configKeys = new Set(['declared']);
 
     const warnSpy = mock(() => {});
     const originalWarn = console.warn;

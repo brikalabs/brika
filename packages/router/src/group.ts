@@ -54,10 +54,7 @@ export function group(config: GroupConfig): RouteDefinition[] {
       path: joinPath('/', prefix, route.path),
     }),
     ...(groupMiddleware && {
-      middleware: [
-        ...groupMiddleware,
-        ...(route.middleware ?? []),
-      ],
+      middleware: [...groupMiddleware, ...(route.middleware ?? [])],
     }),
   }));
 }

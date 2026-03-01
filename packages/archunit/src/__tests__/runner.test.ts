@@ -53,9 +53,7 @@ describe('runner', () => {
 
       const result = await runArch({
         cwd: TEST_DIR,
-        rules: [
-          promiseRule,
-        ],
+        rules: [promiseRule],
       });
 
       expect(result.passed).toBe(false);
@@ -78,9 +76,7 @@ describe('runner', () => {
 
       const result = await runArch({
         cwd: TEST_DIR,
-        rules: [
-          promiseRule,
-        ],
+        rules: [promiseRule],
       });
 
       expect(result.passed).toBe(true);
@@ -183,10 +179,7 @@ describe('runner', () => {
 
       try {
         // Passing as nested array (RuleInput can be Rule[])
-        await run([
-          rule1,
-          rule2,
-        ] as unknown as Rule);
+        await run([rule1, rule2] as unknown as Rule);
       } finally {
         process.exit = originalExit;
       }

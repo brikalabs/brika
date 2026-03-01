@@ -23,10 +23,7 @@ const testCommands: Command[] = [
         description: 'Verbose output',
       },
     },
-    examples: [
-      'brika start',
-      'brika start -p 8080',
-    ],
+    examples: ['brika start', 'brika start -p 8080'],
     handler() {},
   },
   {

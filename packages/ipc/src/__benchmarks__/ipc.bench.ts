@@ -75,11 +75,7 @@ const MEDIUM_DATA = {
       name: `item-${i}`,
       value: Math.random() * 1000,
       active: i % 2 === 0,
-      tags: [
-        'tag1',
-        'tag2',
-        'tag3',
-      ],
+      tags: ['tag1', 'tag2', 'tag3'],
     })
   ),
 };
@@ -128,16 +124,9 @@ try {
 
   const pluginPath = join(dirname(import.meta.path), 'fixtures/echo-plugin.ts');
 
-  const plugin = spawnPlugin(
-    'bun',
-    [
-      'run',
-      pluginPath,
-    ],
-    {
-      onStderr: (line) => console.error('[plugin]', line),
-    }
-  );
+  const plugin = spawnPlugin('bun', ['run', pluginPath], {
+    onStderr: (line) => console.error('[plugin]', line),
+  });
 
   // Wait for plugin to be ready
   const ready = await Promise.race([
@@ -206,27 +195,15 @@ try {
     bench('Map', async () => {
       await plugin.call(echo, {
         data: new Map([
-          [
-            'key1',
-            'value1',
-          ],
-          [
-            'key2',
-            'value2',
-          ],
+          ['key1', 'value1'],
+          ['key2', 'value2'],
         ]),
       });
     });
 
     bench('Set', async () => {
       await plugin.call(echo, {
-        data: new Set([
-          1,
-          2,
-          3,
-          4,
-          5,
-        ]),
+        data: new Set([1, 2, 3, 4, 5]),
       });
     });
 
@@ -235,12 +212,7 @@ try {
         data: {
           timestamp: new Date(),
           buffer: new Uint8Array(100).fill(1),
-          metadata: new Map([
-            [
-              'version',
-              '1.0.0',
-            ],
-          ]),
+          metadata: new Map([['version', '1.0.0']]),
         },
       });
     });

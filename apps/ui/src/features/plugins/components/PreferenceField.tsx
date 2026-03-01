@@ -227,10 +227,7 @@ function DynamicDropdown({
     } finally {
       setIsRefreshing(false);
     }
-  }, [
-    pluginUid,
-    pref.name,
-  ]);
+  }, [pluginUid, pref.name]);
 
   return (
     <div className="space-y-2">

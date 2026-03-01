@@ -204,15 +204,7 @@ describe('useIntl', () => {
     });
 
     test('supports various units', () => {
-      for (const unit of [
-        'second',
-        'minute',
-        'hour',
-        'day',
-        'week',
-        'month',
-        'year',
-      ] as const) {
+      for (const unit of ['second', 'minute', 'hour', 'day', 'week', 'month', 'year'] as const) {
         const ref = intl.formatRelativeTime(2, unit) as Extract<
           IntlRef,
           {
@@ -239,17 +231,11 @@ describe('useIntl', () => {
 
   describe('formatList', () => {
     test('creates list ref with default options', () => {
-      const ref = intl.formatList([
-        'apples',
-        'oranges',
-      ]);
+      const ref = intl.formatList(['apples', 'oranges']);
       expect(ref).toEqual({
         __intl: true,
         type: 'list',
-        value: [
-          'apples',
-          'oranges',
-        ],
+        value: ['apples', 'oranges'],
         options: {
           style: 'long',
           type: 'conjunction',
@@ -258,15 +244,9 @@ describe('useIntl', () => {
     });
 
     test('merges custom options', () => {
-      const ref = intl.formatList(
-        [
-          'a',
-          'b',
-        ],
-        {
-          type: 'disjunction',
-        }
-      ) as Extract<
+      const ref = intl.formatList(['a', 'b'], {
+        type: 'disjunction',
+      }) as Extract<
         IntlRef,
         {
           type: 'list';
@@ -284,12 +264,8 @@ describe('useIntl', () => {
     });
 
     test('handles single item', () => {
-      const ref = intl.formatList([
-        'only',
-      ]);
-      expect(ref.value).toEqual([
-        'only',
-      ]);
+      const ref = intl.formatList(['only']);
+      expect(ref.value).toEqual(['only']);
     });
   });
 

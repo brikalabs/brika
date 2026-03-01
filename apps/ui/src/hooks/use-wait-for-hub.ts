@@ -37,9 +37,7 @@ export function useWaitForHub(onTimeout?: () => void) {
       clearInterval(pollRef.current);
       onTimeout?.();
     }, POLL_TIMEOUT);
-  }, [
-    onTimeout,
-  ]);
+  }, [onTimeout]);
 
   const stop = useCallback(() => {
     clearInterval(pollRef.current);

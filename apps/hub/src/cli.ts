@@ -7,10 +7,7 @@
  * the overridden BRIKA_HOME at evaluation time.
  */
 function extractCwd(argv: string[]): string | undefined {
-  for (const flag of [
-    '--cwd',
-    '-C',
-  ]) {
+  for (const flag of ['--cwd', '-C']) {
     const idx = argv.indexOf(flag);
     if (idx === -1) {
       continue;

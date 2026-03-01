@@ -14,13 +14,7 @@
     "url": "git+https://github.com/maxscharwath/brika.git",
     "directory": "packages/sdk"
   },
-  "keywords": [
-    "brika",
-    "sdk",
-    "plugins",
-    "workflow",
-    "home-automation"
-  ],
+  "keywords": ["brika", "sdk", "plugins", "workflow", "home-automation"],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -71,10 +65,7 @@
   "bin": {
     "brika-verify-plugin": "./dist/verify.js"
   },
-  "files": [
-    "dist",
-    "tsconfig.plugin.json"
-  ],
+  "files": ["dist", "tsconfig.plugin.json"],
   "scripts": {
     "build": "bun run build.ts",
     "test": "bun test",

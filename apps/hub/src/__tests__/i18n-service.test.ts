@@ -94,11 +94,7 @@ describe('I18nService', () => {
     test('returns sorted locales with cimode at end', async () => {
       bun
         .fs({
-          '/test/hub/locales/': [
-            'fr/',
-            'en/',
-            'de/',
-          ],
+          '/test/hub/locales/': ['fr/', 'en/', 'de/'],
           '/test/hub/locales/en/common.json': {},
           '/test/hub/locales/fr/common.json': {},
           '/test/hub/locales/de/common.json': {},
@@ -108,12 +104,7 @@ describe('I18nService', () => {
       await service.init();
 
       const locales = service.listLocales();
-      expect(locales).toEqual([
-        'de',
-        'en',
-        'fr',
-        'cimode',
-      ]);
+      expect(locales).toEqual(['de', 'en', 'fr', 'cimode']);
     });
   });
 
@@ -130,11 +121,7 @@ describe('I18nService', () => {
       await service.init();
 
       const namespaces = service.listNamespaces();
-      expect(namespaces).toEqual([
-        'alpha',
-        'beta',
-        'zeta',
-      ]);
+      expect(namespaces).toEqual(['alpha', 'beta', 'zeta']);
     });
 
     test('includes plugin namespaces with prefix', async () => {
@@ -270,11 +257,7 @@ describe('I18nService', () => {
 
       const locales = await service.registerPluginTranslations('@test/plugin', '/test/plugin');
 
-      expect(locales).toEqual([
-        'de',
-        'en',
-        'fr',
-      ]);
+      expect(locales).toEqual(['de', 'en', 'fr']);
     });
 
     test('merges multiple JSON files in locale folder', async () => {
@@ -325,9 +308,7 @@ describe('I18nService', () => {
 
       const locales = await service.registerPluginTranslations('@test/plugin', '/test/plugin');
 
-      expect(locales).toEqual([
-        'en',
-      ]);
+      expect(locales).toEqual(['en']);
     });
   });
 
@@ -466,17 +447,10 @@ describe('I18nService', () => {
       bun
         .fs({
           '/test/hub/locales/en/test.json': {
-            items: [
-              'a',
-              'b',
-              'c',
-            ],
+            items: ['a', 'b', 'c'],
           },
           '/test/hub/locales/fr/test.json': {
-            items: [
-              'x',
-              'y',
-            ],
+            items: ['x', 'y'],
           },
         })
         .apply();
@@ -485,10 +459,7 @@ describe('I18nService', () => {
 
       const translations = service.getNamespaceTranslations('fr', 'test');
       expect(translations).toEqual({
-        items: [
-          'x',
-          'y',
-        ],
+        items: ['x', 'y'],
       });
     });
   });

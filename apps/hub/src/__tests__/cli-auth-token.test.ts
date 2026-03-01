@@ -115,10 +115,7 @@ describe('cli/commands/auth/token-create', () => {
     mockText
       .mockResolvedValueOnce('alice@test.com') // userEmail
       .mockResolvedValueOnce('my-integration'); // tokenName
-    mockMultiselect.mockResolvedValue([
-      'workflow:read',
-      'workflow:write',
-    ]);
+    mockMultiselect.mockResolvedValue(['workflow:read', 'workflow:write']);
     mockSelect.mockResolvedValue((30 * 24 * 60 * 60).toString());
 
     // Mock API response
@@ -127,10 +124,7 @@ describe('cli/commands/auth/token-create', () => {
         id: 'tok_123',
         name: 'my-integration',
         token: 'bk_secret_abc123',
-        scopes: [
-          'workflow:read',
-          'workflow:write',
-        ],
+        scopes: ['workflow:read', 'workflow:write'],
         createdAt: '2026-01-01T00:00:00Z',
         expiresAt: '2026-01-31T00:00:00Z',
       },
@@ -156,10 +150,7 @@ describe('cli/commands/auth/token-create', () => {
       body: JSON.stringify({
         userEmail: 'alice@test.com',
         name: 'my-integration',
-        scopes: [
-          'workflow:read',
-          'workflow:write',
-        ],
+        scopes: ['workflow:read', 'workflow:write'],
         expiresIn: 30 * 24 * 60 * 60,
       }),
     });
@@ -183,9 +174,7 @@ describe('cli/commands/auth/token-create', () => {
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
     mockText.mockResolvedValueOnce('alice@test.com').mockResolvedValueOnce('permanent-token');
-    mockMultiselect.mockResolvedValue([
-      'workflow:read',
-    ]);
+    mockMultiselect.mockResolvedValue(['workflow:read']);
     mockSelect.mockResolvedValue('0');
 
     const tokenResponse = {
@@ -193,9 +182,7 @@ describe('cli/commands/auth/token-create', () => {
         id: 'tok_456',
         name: 'permanent-token',
         token: 'bk_secret_xyz',
-        scopes: [
-          'workflow:read',
-        ],
+        scopes: ['workflow:read'],
         createdAt: '2026-01-01T00:00:00Z',
         expiresAt: null,
       },
@@ -220,9 +207,7 @@ describe('cli/commands/auth/token-create', () => {
     vi.spyOn(console, 'log').mockImplementation(() => {});
 
     mockText.mockResolvedValueOnce('alice@test.com').mockResolvedValueOnce('my-token');
-    mockMultiselect.mockResolvedValue([
-      'workflow:read',
-    ]);
+    mockMultiselect.mockResolvedValue(['workflow:read']);
     mockSelect.mockResolvedValue('0');
 
     mockHubFetchOk.mockRejectedValue(new MockCliError('Hub returned 401 — Unauthorized'));
@@ -243,9 +228,7 @@ describe('cli/commands/auth/token-create', () => {
     vi.spyOn(console, 'log').mockImplementation(() => {});
 
     mockText.mockResolvedValueOnce('alice@test.com').mockResolvedValueOnce('my-token');
-    mockMultiselect.mockResolvedValue([
-      'workflow:read',
-    ]);
+    mockMultiselect.mockResolvedValue(['workflow:read']);
     mockSelect.mockResolvedValue('0');
 
     mockHubFetchOk.mockRejectedValue(new Error('Network error'));
@@ -264,9 +247,7 @@ describe('cli/commands/auth/token-create', () => {
 
   test('rethrows non-Error values', async () => {
     mockText.mockResolvedValueOnce('alice@test.com').mockResolvedValueOnce('my-token');
-    mockMultiselect.mockResolvedValue([
-      'workflow:read',
-    ]);
+    mockMultiselect.mockResolvedValue(['workflow:read']);
     mockSelect.mockResolvedValue('0');
 
     mockHubFetchOk.mockRejectedValue('string-error');
@@ -278,9 +259,7 @@ describe('cli/commands/auth/token-create', () => {
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
     mockText.mockResolvedValueOnce('alice@test.com').mockResolvedValueOnce('my-token');
-    mockMultiselect.mockResolvedValue([
-      'workflow:read',
-    ]);
+    mockMultiselect.mockResolvedValue(['workflow:read']);
     mockSelect.mockResolvedValue('0');
 
     mockHubFetchOk.mockResolvedValue({
@@ -289,9 +268,7 @@ describe('cli/commands/auth/token-create', () => {
           id: 'tok_1',
           name: 'my-token',
           token: 'bk_xxx',
-          scopes: [
-            'workflow:read',
-          ],
+          scopes: ['workflow:read'],
           createdAt: '2026-01-01',
           expiresAt: null,
         },
@@ -318,9 +295,7 @@ describe('cli/commands/auth/token-create', () => {
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
     mockText.mockResolvedValueOnce('alice@test.com').mockResolvedValueOnce('my-token');
-    mockMultiselect.mockResolvedValue([
-      'workflow:read',
-    ]);
+    mockMultiselect.mockResolvedValue(['workflow:read']);
     mockSelect.mockResolvedValue('0');
 
     mockHubFetchOk.mockResolvedValue({
@@ -329,9 +304,7 @@ describe('cli/commands/auth/token-create', () => {
           id: 'tok_1',
           name: 'my-token',
           token: 'bk_xxx',
-          scopes: [
-            'workflow:read',
-          ],
+          scopes: ['workflow:read'],
           createdAt: '2026-01-01',
           expiresAt: null,
         },
@@ -356,9 +329,7 @@ describe('cli/commands/auth/token-create', () => {
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
     mockText.mockResolvedValueOnce('alice@test.com').mockResolvedValueOnce('my-token');
-    mockMultiselect.mockResolvedValue([
-      'workflow:read',
-    ]);
+    mockMultiselect.mockResolvedValue(['workflow:read']);
     mockSelect.mockResolvedValue('604800'); // 7 days in seconds
 
     mockHubFetchOk.mockResolvedValue({
@@ -367,9 +338,7 @@ describe('cli/commands/auth/token-create', () => {
           id: 'tok_1',
           name: 'my-token',
           token: 'bk_xxx',
-          scopes: [
-            'workflow:read',
-          ],
+          scopes: ['workflow:read'],
           createdAt: '2026-01-01',
           expiresAt: '2026-01-08',
         },

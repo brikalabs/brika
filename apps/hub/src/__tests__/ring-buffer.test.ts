@@ -14,11 +14,7 @@ describe('RingBuffer', () => {
     buffer.push(3);
 
     expect(buffer.length).toBe(3);
-    expect(buffer.snapshot()).toEqual([
-      1,
-      2,
-      3,
-    ]);
+    expect(buffer.snapshot()).toEqual([1, 2, 3]);
   });
 
   test('overwrites oldest items when full', () => {
@@ -30,11 +26,7 @@ describe('RingBuffer', () => {
     buffer.push(4); // Overwrites 1
 
     expect(buffer.length).toBe(3);
-    expect(buffer.snapshot()).toEqual([
-      2,
-      3,
-      4,
-    ]);
+    expect(buffer.snapshot()).toEqual([2, 3, 4]);
   });
 
   test('continues overwriting as more items are added', () => {
@@ -47,11 +39,7 @@ describe('RingBuffer', () => {
     buffer.push(5);
     buffer.push(6);
 
-    expect(buffer.snapshot()).toEqual([
-      4,
-      5,
-      6,
-    ]);
+    expect(buffer.snapshot()).toEqual([4, 5, 6]);
   });
 
   test('returns empty array when buffer is empty', () => {
@@ -77,10 +65,7 @@ describe('RingBuffer', () => {
     buffer.push('hello');
     buffer.push('world');
 
-    expect(buffer.snapshot()).toEqual([
-      'hello',
-      'world',
-    ]);
+    expect(buffer.snapshot()).toEqual(['hello', 'world']);
   });
 
   test('capacity getter returns max size', () => {

@@ -149,10 +149,7 @@ export function createCli(config?: CliConfig): Cli {
       if (!map.has('help')) {
         cli.addCommand({
           name: 'help',
-          aliases: [
-            '-h',
-            '--help',
-          ],
+          aliases: ['-h', '--help'],
           description: 'Show help for a command',
           handler({ positionals }) {
             const cmd = positionals[0]

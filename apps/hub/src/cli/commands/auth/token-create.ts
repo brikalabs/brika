@@ -19,9 +19,7 @@ interface CreateTokenResponse {
 export default defineCommand({
   name: 'create',
   description: 'Create an API token for a user',
-  examples: [
-    'brika auth token create',
-  ],
+  examples: ['brika auth token create'],
   async handler() {
     try {
       p.intro(pc.bgCyan(pc.black(' Create API Token ')));

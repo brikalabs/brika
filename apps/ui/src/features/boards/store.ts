@@ -31,14 +31,7 @@ interface BoardStore {
   // Instance body mutations
   patchInstance(instanceId: string, mutations: Mutation[]): void;
   setInstanceBody(instanceId: string, body: ComponentNode[]): void;
-  setBodiesBatch(
-    entries: Array<
-      [
-        string,
-        ComponentNode[],
-      ]
-    >
-  ): void;
+  setBodiesBatch(entries: Array<[string, ComponentNode[]]>): void;
   removeInstanceBody(instanceId: string): void;
   markDisconnected(instanceIds: string[]): void;
   clearDisconnected(instanceId: string): void;
@@ -71,12 +64,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
 
   setBoards(list) {
     set({
-      boards: new Map(
-        list.map((d) => [
-          d.id,
-          d,
-        ])
-      ),
+      boards: new Map(list.map((d) => [d.id, d])),
     });
   },
 
@@ -96,12 +84,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
 
   setBrickTypes(types) {
     set({
-      brickTypes: new Map(
-        types.map((t) => [
-          t.id,
-          t,
-        ])
-      ),
+      brickTypes: new Map(types.map((t) => [t.id, t])),
     });
   },
 
@@ -196,10 +179,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
     set({
       activeBoard: {
         ...board,
-        bricks: [
-          ...board.bricks,
-          placement,
-        ],
+        bricks: [...board.bricks, placement],
       },
     });
   },
@@ -222,12 +202,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
     if (!board) {
       return;
     }
-    const layoutMap = new Map(
-      layouts.map((l) => [
-        l.instanceId,
-        l,
-      ])
-    );
+    const layoutMap = new Map(layouts.map((l) => [l.instanceId, l]));
     let changed = false;
     const bricks = board.bricks.map((b) => {
       const l = layoutMap.get(b.instanceId);

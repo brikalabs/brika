@@ -120,11 +120,7 @@ export function normalizeChildren(children: Child | Child[]): ComponentNode[] {
   if (!children) {
     return [];
   }
-  const items = Array.isArray(children)
-    ? children.flat()
-    : [
-        children,
-      ];
+  const items = Array.isArray(children) ? children.flat() : [children];
   const result: ComponentNode[] = [];
   for (const c of items) {
     if (c === null || c === false || c === undefined) {

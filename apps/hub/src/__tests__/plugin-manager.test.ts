@@ -224,22 +224,15 @@ describe('PluginManager', () => {
         };
         const storedPlugin = createMockPlugin('@test/stored', 'uid-2');
 
-        mockLifecycle.listProcesses.mockReturnValue([
-          process,
-        ]);
+        mockLifecycle.listProcesses.mockReturnValue([process]);
         mockLifecycle.toPlugin.mockReturnValue(runningPlugin);
-        mockState.listInstalledWithMetadata.mockReturnValue([
-          storedData,
-        ]);
+        mockState.listInstalledWithMetadata.mockReturnValue([storedData]);
         mockLifecycle.fromStored.mockReturnValue(storedPlugin);
 
         const result = manager.list();
 
         expect(result).toHaveLength(2);
-        expect(result.map((p) => p.name).sort()).toEqual([
-          '@test/running',
-          '@test/stored',
-        ]);
+        expect(result.map((p) => p.name).sort()).toEqual(['@test/running', '@test/stored']);
       });
 
       test('does not duplicate plugins that are both running and stored', () => {
@@ -250,13 +243,9 @@ describe('PluginManager', () => {
           uid: 'uid-1',
         };
 
-        mockLifecycle.listProcesses.mockReturnValue([
-          process,
-        ]);
+        mockLifecycle.listProcesses.mockReturnValue([process]);
         mockLifecycle.toPlugin.mockReturnValue(plugin);
-        mockState.listInstalledWithMetadata.mockReturnValue([
-          storedData,
-        ]);
+        mockState.listInstalledWithMetadata.mockReturnValue([storedData]);
 
         const result = manager.list();
 
@@ -349,9 +338,7 @@ describe('PluginManager', () => {
           type: 'plugin.configInvalid',
           payload: {
             uid: 'uid-123',
-            errors: [
-              'Invalid config',
-            ],
+            errors: ['Invalid config'],
           },
         });
 
@@ -568,10 +555,7 @@ describe('PluginManager', () => {
       test('broadcasts input to all processes', () => {
         const process1 = createMockProcess('@test/plugin1', 'uid-1');
         const process2 = createMockProcess('@test/plugin2', 'uid-2');
-        mockLifecycle.listProcesses.mockReturnValue([
-          process1,
-          process2,
-        ]);
+        mockLifecycle.listProcesses.mockReturnValue([process1, process2]);
 
         manager.pushBlockInput('instance-1', 'input', {
           value: 42,
@@ -590,10 +574,7 @@ describe('PluginManager', () => {
       test('stops instance on all processes', () => {
         const process1 = createMockProcess('@test/plugin1', 'uid-1');
         const process2 = createMockProcess('@test/plugin2', 'uid-2');
-        mockLifecycle.listProcesses.mockReturnValue([
-          process1,
-          process2,
-        ]);
+        mockLifecycle.listProcesses.mockReturnValue([process1, process2]);
 
         manager.stopBlockInstance('instance-1');
 

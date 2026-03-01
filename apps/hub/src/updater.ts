@@ -396,19 +396,10 @@ async function downloadFile(
 }
 
 async function extractTarGz(archivePath: string, destDir: string): Promise<void> {
-  const proc = Bun.spawn(
-    [
-      'tar',
-      'xzf',
-      archivePath,
-      '-C',
-      destDir,
-    ],
-    {
-      stdout: 'ignore',
-      stderr: 'pipe',
-    }
-  );
+  const proc = Bun.spawn(['tar', 'xzf', archivePath, '-C', destDir], {
+    stdout: 'ignore',
+    stderr: 'pipe',
+  });
 
   const exitCode = await proc.exited;
   if (exitCode !== 0) {
@@ -493,20 +484,10 @@ async function replaceBinary(
 
   if (isWindows) {
     // On Windows, running executables are locked — use shell move
-    const proc = Bun.spawn(
-      [
-        'cmd',
-        '/c',
-        'move',
-        '/Y',
-        currentPath,
-        backupPath,
-      ],
-      {
-        stdout: 'ignore',
-        stderr: 'ignore',
-      }
-    );
+    const proc = Bun.spawn(['cmd', '/c', 'move', '/Y', currentPath, backupPath], {
+      stdout: 'ignore',
+      stderr: 'ignore',
+    });
     await proc.exited;
   } else {
     await rename(currentPath, backupPath);
@@ -570,16 +551,10 @@ export async function selfUpdate(options?: { force?: boolean }): Promise<void> {
 
     // Regenerate completions with the new binary (it's already on disk)
     try {
-      const proc = Bun.spawn(
-        [
-          process.execPath,
-          'completions',
-        ],
-        {
-          stdout: 'ignore',
-          stderr: 'ignore',
-        }
-      );
+      const proc = Bun.spawn([process.execPath, 'completions'], {
+        stdout: 'ignore',
+        stderr: 'ignore',
+      });
       await proc.exited;
     } catch {
       // Non-critical

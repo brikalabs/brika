@@ -284,13 +284,7 @@ describe('EventSystem', () => {
     const handler = mock();
 
     // Subscribe to multiple action types
-    events.subscribe(
-      [
-        SparkActions.emit,
-        PluginActions.loaded,
-      ],
-      handler
-    );
+    events.subscribe([SparkActions.emit, PluginActions.loaded], handler);
 
     events.dispatch(
       SparkActions.emit.create(

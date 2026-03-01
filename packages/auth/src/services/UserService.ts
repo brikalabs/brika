@@ -128,14 +128,8 @@ export class UserService {
     const now = Date.now();
     const name = updates.name ?? user.name;
 
-    const sets: string[] = [
-      'name = ?',
-      'updated_at = ?',
-    ];
-    const params: (string | number)[] = [
-      name,
-      now,
-    ];
+    const sets: string[] = ['name = ?', 'updated_at = ?'];
+    const params: (string | number)[] = [name, now];
 
     if (updates.role !== undefined) {
       sets.push('role = ?');

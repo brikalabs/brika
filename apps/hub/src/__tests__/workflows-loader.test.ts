@@ -111,10 +111,7 @@ describe('WorkflowsLoader', () => {
 
       await loader.load(createMockConfig());
 
-      expect(callOrder).toEqual([
-        'loadDir',
-        'watch',
-      ]);
+      expect(callOrder).toEqual(['loadDir', 'watch']);
     });
 
     test('uses correct workflows path from config loader', async () => {
@@ -150,10 +147,7 @@ describe('WorkflowsLoader', () => {
 
       await loader.stop();
 
-      expect(callOrder).toEqual([
-        'stopWatching',
-        'engineStop',
-      ]);
+      expect(callOrder).toEqual(['stopWatching', 'engineStop']);
     });
   });
 });

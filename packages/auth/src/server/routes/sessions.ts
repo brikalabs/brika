@@ -65,8 +65,4 @@ const revokeAllSessions = route.delete({
   },
 });
 
-export const sessionRoutes = [
-  listSessions,
-  revokeSession,
-  revokeAllSessions,
-];
+export const sessionRoutes = [listSessions, revokeSession, revokeAllSessions];

@@ -100,11 +100,7 @@ describe('Bootstrap', () => {
 
     await b.start();
 
-    expect(order).toEqual([
-      'init',
-      'load',
-      'start',
-    ]);
+    expect(order).toEqual(['init', 'load', 'start']);
   });
 
   test('start() passes config to onLoad', async () => {
@@ -150,14 +146,7 @@ describe('Bootstrap', () => {
 
     await b.start();
 
-    expect(order).toEqual([
-      'p1-init',
-      'p2-init',
-      'p1-load',
-      'p2-load',
-      'p1-start',
-      'p2-start',
-    ]);
+    expect(order).toEqual(['p1-init', 'p2-init', 'p1-load', 'p2-load', 'p1-start', 'p2-start']);
   });
 
   test('start() skips on hot reload', async () => {
@@ -192,10 +181,7 @@ describe('Bootstrap', () => {
 
     await b.stop();
 
-    expect(order).toEqual([
-      'p2',
-      'p1',
-    ]);
+    expect(order).toEqual(['p2', 'p1']);
   });
 
   test('handles plugins without optional hooks', async () => {

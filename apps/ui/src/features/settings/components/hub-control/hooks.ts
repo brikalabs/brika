@@ -40,19 +40,14 @@ export function useHubControl() {
       onSuccess: () => hubPoller.start(),
       onError: () => setState('idle'),
     });
-  }, [
-    restartMutation,
-    hubPoller,
-  ]);
+  }, [restartMutation, hubPoller]);
 
   const handleStop = useCallback(() => {
     stopMutation.mutate(undefined, {
       onSuccess: () => setState('stopped'),
       onError: () => setState('idle'),
     });
-  }, [
-    stopMutation,
-  ]);
+  }, [stopMutation]);
 
   return {
     state,

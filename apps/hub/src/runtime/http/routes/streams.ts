@@ -115,10 +115,7 @@ export const streamsRoutes = [
 
         // Subscribe to events related to this workflow
         const unsub = events.subscribeGlob(
-          [
-            `workflow.${params.id}.*`,
-            `block.${params.id}.*`,
-          ],
+          [`workflow.${params.id}.*`, `block.${params.id}.*`],
           (action) => {
             const event = transformActionToWorkflowEvent(action, params.id);
             send(event, 'workflow-event');

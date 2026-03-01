@@ -84,16 +84,12 @@ describe('PluginConfigService', () => {
   describe('getSchema', () => {
     test('returns preferences from metadata', () => {
       mockStateStore.getMetadata.mockReturnValue({
-        preferences: [
-          textPreference,
-        ],
+        preferences: [textPreference],
       });
 
       const schema = service.getSchema('@test/plugin');
 
-      expect(schema).toEqual([
-        textPreference,
-      ]);
+      expect(schema).toEqual([textPreference]);
     });
 
     test('returns empty array when no metadata', () => {
@@ -116,10 +112,7 @@ describe('PluginConfigService', () => {
   describe('getConfig', () => {
     test('merges user config with defaults', () => {
       mockStateStore.getMetadata.mockReturnValue({
-        preferences: [
-          textPreference,
-          numberPreference,
-        ],
+        preferences: [textPreference, numberPreference],
       });
       mockConfigLoader.getPluginConfig.mockReturnValue({
         apiKey: 'user-key',
@@ -133,10 +126,7 @@ describe('PluginConfigService', () => {
 
     test('uses all defaults when no user config', () => {
       mockStateStore.getMetadata.mockReturnValue({
-        preferences: [
-          numberPreference,
-          checkboxPreference,
-        ],
+        preferences: [numberPreference, checkboxPreference],
       });
       mockConfigLoader.getPluginConfig.mockReturnValue(undefined);
 
@@ -150,9 +140,7 @@ describe('PluginConfigService', () => {
   describe('validate', () => {
     test('validates valid config', () => {
       mockStateStore.getMetadata.mockReturnValue({
-        preferences: [
-          textPreference,
-        ],
+        preferences: [textPreference],
       });
 
       const result = service.validate('@test/plugin', {
@@ -164,9 +152,7 @@ describe('PluginConfigService', () => {
 
     test('validates required text field', () => {
       mockStateStore.getMetadata.mockReturnValue({
-        preferences: [
-          textPreference,
-        ],
+        preferences: [textPreference],
       });
 
       const result = service.validate('@test/plugin', {
@@ -178,9 +164,7 @@ describe('PluginConfigService', () => {
 
     test('validates number range', () => {
       mockStateStore.getMetadata.mockReturnValue({
-        preferences: [
-          numberPreference,
-        ],
+        preferences: [numberPreference],
       });
 
       const valid = service.validate('@test/plugin', {
@@ -201,9 +185,7 @@ describe('PluginConfigService', () => {
 
     test('validates checkbox as boolean', () => {
       mockStateStore.getMetadata.mockReturnValue({
-        preferences: [
-          checkboxPreference,
-        ],
+        preferences: [checkboxPreference],
       });
 
       const valid = service.validate('@test/plugin', {
@@ -219,9 +201,7 @@ describe('PluginConfigService', () => {
 
     test('validates dropdown options', () => {
       mockStateStore.getMetadata.mockReturnValue({
-        preferences: [
-          dropdownPreference,
-        ],
+        preferences: [dropdownPreference],
       });
 
       const valid = service.validate('@test/plugin', {
@@ -237,9 +217,7 @@ describe('PluginConfigService', () => {
 
     test('allows optional fields to be omitted', () => {
       mockStateStore.getMetadata.mockReturnValue({
-        preferences: [
-          numberPreference,
-        ], // optional
+        preferences: [numberPreference], // optional
       });
 
       const result = service.validate('@test/plugin', {});
@@ -250,9 +228,7 @@ describe('PluginConfigService', () => {
   describe('setConfig', () => {
     test('saves valid config', async () => {
       mockStateStore.getMetadata.mockReturnValue({
-        preferences: [
-          textPreference,
-        ],
+        preferences: [textPreference],
       });
 
       const result = await service.setConfig('@test/plugin', {
@@ -265,9 +241,7 @@ describe('PluginConfigService', () => {
 
     test('does not save invalid config', async () => {
       mockStateStore.getMetadata.mockReturnValue({
-        preferences: [
-          textPreference,
-        ], // required
+        preferences: [textPreference], // required
       });
 
       const result = await service.setConfig('@test/plugin', {

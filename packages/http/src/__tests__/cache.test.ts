@@ -65,16 +65,9 @@ describe('MemoryCache', () => {
   });
 
   test('should support tag-based invalidation', () => {
-    cache.set('key1', 'value1', 60_000, [
-      'tag1',
-    ]);
-    cache.set('key2', 'value2', 60_000, [
-      'tag1',
-      'tag2',
-    ]);
-    cache.set('key3', 'value3', 60_000, [
-      'tag2',
-    ]);
+    cache.set('key1', 'value1', 60_000, ['tag1']);
+    cache.set('key2', 'value2', 60_000, ['tag1', 'tag2']);
+    cache.set('key3', 'value3', 60_000, ['tag2']);
 
     cache.invalidateByTag('tag1');
 
@@ -84,20 +77,11 @@ describe('MemoryCache', () => {
   });
 
   test('should support multiple tag invalidation', () => {
-    cache.set('key1', 'value1', 60_000, [
-      'tag1',
-    ]);
-    cache.set('key2', 'value2', 60_000, [
-      'tag2',
-    ]);
-    cache.set('key3', 'value3', 60_000, [
-      'tag3',
-    ]);
+    cache.set('key1', 'value1', 60_000, ['tag1']);
+    cache.set('key2', 'value2', 60_000, ['tag2']);
+    cache.set('key3', 'value3', 60_000, ['tag3']);
 
-    cache.invalidateByTags([
-      'tag1',
-      'tag2',
-    ]);
+    cache.invalidateByTags(['tag1', 'tag2']);
 
     expect(cache.has('key1')).toBe(false);
     expect(cache.has('key2')).toBe(false);
@@ -106,9 +90,7 @@ describe('MemoryCache', () => {
 
   test('should provide cache statistics', () => {
     cache.set('key1', 'value1', 60_000);
-    cache.set('key2', 'value2', 60_000, [
-      'tag1',
-    ]);
+    cache.set('key2', 'value2', 60_000, ['tag1']);
 
     const stats = cache.stats();
 
@@ -242,14 +224,9 @@ describe('generateCacheKey', () => {
   });
 
   test('should handle Blob body', () => {
-    const blob = new Blob(
-      [
-        'test content',
-      ],
-      {
-        type: 'text/plain',
-      }
-    );
+    const blob = new Blob(['test content'], {
+      type: 'text/plain',
+    });
 
     const config: RequestConfig = {
       method: 'PUT',

@@ -43,10 +43,7 @@ export function useCanAccess(required: Scope | Scope[] | null): boolean {
       return false;
     }
     return canAccess((session.scopes || []) as Scope[], required);
-  }, [
-    required,
-    session?.scopes,
-  ]);
+  }, [required, session?.scopes]);
 }
 
 /**
@@ -65,10 +62,7 @@ export function useCanAccessAll(required: Scope[] | null): boolean {
       return false;
     }
     return canAccessAll((session.scopes || []) as Scope[], required);
-  }, [
-    required,
-    session?.scopes,
-  ]);
+  }, [required, session?.scopes]);
 }
 
 /**
@@ -92,21 +86,13 @@ export function useFeaturePermissions<
     return Object.fromEntries(
       Object.entries(featurePermissions).map(([key, checker]) => {
         if (!session) {
-          return [
-            key,
-            false,
-          ];
+          return [key, false];
         }
         const value = typeof checker === 'function' ? checker(scopes) : checker;
-        return [
-          key,
-          value,
-        ];
+        return [key, value];
       })
     ) as Record<keyof T, boolean>;
-  }, [
-    session?.scopes,
-  ]);
+  }, [session?.scopes]);
 }
 
 /**

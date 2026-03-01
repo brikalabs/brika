@@ -52,9 +52,7 @@ export function InstallProgressDialog({
         queryKey: registryKeys.packages,
       });
       queryClient.invalidateQueries({
-        queryKey: [
-          'store',
-        ],
+        queryKey: ['store'],
       });
     },
   });
@@ -64,10 +62,7 @@ export function InstallProgressDialog({
     if (open && packageName && !isProcessing && !success) {
       handleInstall();
     }
-  }, [
-    open,
-    packageName,
-  ]);
+  }, [open, packageName]);
 
   const handleClose = () => {
     if (isProcessing) {

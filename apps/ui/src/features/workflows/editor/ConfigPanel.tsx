@@ -684,12 +684,7 @@ interface DurationInputProps {
 
 type DurationUnit = 'ms' | 's' | 'm' | 'h';
 
-const durationUnits = new Set<string>([
-  'ms',
-  's',
-  'm',
-  'h',
-]);
+const durationUnits = new Set<string>(['ms', 's', 'm', 'h']);
 
 function isDurationUnit(v: string): v is DurationUnit {
   return durationUnits.has(v);
@@ -790,9 +785,7 @@ interface SparkTypeInputProps {
 
 function SparkTypeInput({ value, onChange, placeholder }: Readonly<SparkTypeInputProps>) {
   const { data: sparks = [] } = useQuery({
-    queryKey: [
-      'sparks',
-    ],
+    queryKey: ['sparks'],
     queryFn: () => fetcher<RegisteredSpark[]>('/api/sparks'),
     staleTime: 30000,
   });
@@ -802,15 +795,10 @@ function SparkTypeInput({ value, onChange, placeholder }: Readonly<SparkTypeInpu
     const grouped = new Map<string, RegisteredSpark[]>();
     for (const spark of sparks) {
       const existing = grouped.get(spark.pluginId) || [];
-      grouped.set(spark.pluginId, [
-        ...existing,
-        spark,
-      ]);
+      grouped.set(spark.pluginId, [...existing, spark]);
     }
     return grouped;
-  }, [
-    sparks,
-  ]);
+  }, [sparks]);
 
   if (sparks.length === 0) {
     return (
@@ -834,9 +822,7 @@ function SparkTypeInput({ value, onChange, placeholder }: Readonly<SparkTypeInpu
         </SelectValue>
       </SelectTrigger>
       <SelectContent>
-        {[
-          ...sparksByPlugin.entries(),
-        ].map(([pluginId, pluginSparks]) => (
+        {[...sparksByPlugin.entries()].map(([pluginId, pluginSparks]) => (
           <SelectGroup key={pluginId}>
             <SelectLabel className="font-mono text-xs">{pluginId}</SelectLabel>
             {pluginSparks.map((spark) => (

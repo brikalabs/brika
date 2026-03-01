@@ -103,15 +103,9 @@ describe('EventSystem', () => {
     > = [];
 
     // Array of action creators - handler gets union of those actions
-    events.subscribe(
-      [
-        TestActions.hello,
-        TestActions.goodbye,
-      ],
-      (action) => {
-        received.push(action);
-      }
-    );
+    events.subscribe([TestActions.hello, TestActions.goodbye], (action) => {
+      received.push(action);
+    });
 
     await events.dispatch(
       TestActions.hello.create({
@@ -200,15 +194,9 @@ describe('EventSystem', () => {
       );
     }, 50);
 
-    const action = await events.race(
-      [
-        TestActions.hello,
-        TestActions.goodbye,
-      ],
-      {
-        timeout: 1000,
-      }
-    );
+    const action = await events.race([TestActions.hello, TestActions.goodbye], {
+      timeout: 1000,
+    });
     expect(action.type).toBe('test.goodbye');
     if (action.type === 'test.goodbye') {
       expect(action.payload.message).toBe('Goodbye');
@@ -391,15 +379,9 @@ describe('EventSystem', () => {
     const events = new EventSystem();
 
     expect(
-      events.race(
-        [
-          TestActions.hello,
-          TestActions.goodbye,
-        ],
-        {
-          timeout: 100,
-        }
-      )
+      events.race([TestActions.hello, TestActions.goodbye], {
+        timeout: 100,
+      })
     ).rejects.toThrow('Timeout');
   });
 
@@ -494,16 +476,9 @@ describe('EventSystem', () => {
       );
     }, 50);
 
-    const action = await events.race(
-      [
-        TestActions.hello,
-        TestActions.goodbye,
-        TestActions.count,
-      ],
-      {
-        timeout: 1000,
-      }
-    );
+    const action = await events.race([TestActions.hello, TestActions.goodbye, TestActions.count], {
+      timeout: 1000,
+    });
 
     expect(action.type).toBe('test.goodbye');
     expect((action as ReturnType<typeof TestActions.goodbye.create>).payload.message).toBe(
@@ -534,18 +509,9 @@ describe('EventSystem', () => {
     expect(boolAction.type).toBe('mixed.boolean');
     expect(boolAction.payload).toBe(true);
 
-    const arrAction = MixedActions.array.create(
-      [
-        'a',
-        'b',
-      ],
-      'source'
-    );
+    const arrAction = MixedActions.array.create(['a', 'b'], 'source');
     expect(arrAction.type).toBe('mixed.array');
-    expect(arrAction.payload).toEqual([
-      'a',
-      'b',
-    ]);
+    expect(arrAction.payload).toEqual(['a', 'b']);
 
     const objAction = MixedActions.object.create(
       {
@@ -830,15 +796,9 @@ describe('defineAction (single action without namespace)', () => {
       );
     }, 50);
 
-    const action = await events.race(
-      [
-        UserLoggedIn,
-        SystemStarted,
-      ],
-      {
-        timeout: 1000,
-      }
-    );
+    const action = await events.race([UserLoggedIn, SystemStarted], {
+      timeout: 1000,
+    });
 
     expect(action.type).toBe('system.started');
   });
@@ -864,9 +824,7 @@ describe('withPredicate', () => {
     }, 50);
 
     const action = await events.race(
-      [
-        withPredicate(TestActions.count, (a) => a.payload.value > 10),
-      ],
+      [withPredicate(TestActions.count, (a) => a.payload.value > 10)],
       {
         timeout: 1000,
       }
@@ -1000,14 +958,9 @@ describe('withPredicate', () => {
     }, 50);
 
     expect(
-      events.race(
-        [
-          withPredicate(TestActions.count, (a) => a.payload.value > 100),
-        ],
-        {
-          timeout: 200,
-        }
-      )
+      events.race([withPredicate(TestActions.count, (a) => a.payload.value > 100)], {
+        timeout: 200,
+      })
     ).rejects.toThrow('Timeout');
   });
 });
@@ -1070,15 +1023,9 @@ describe('subscribeGlob', () => {
     const events = new EventSystem();
     const received: string[] = [];
 
-    events.subscribeGlob(
-      [
-        'test.hello',
-        'test.count',
-      ],
-      (action) => {
-        received.push(action.type);
-      }
-    );
+    events.subscribeGlob(['test.hello', 'test.count'], (action) => {
+      received.push(action.type);
+    });
 
     await events.dispatch(
       TestActions.hello.create({

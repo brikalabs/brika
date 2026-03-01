@@ -75,26 +75,16 @@ main().then(r => console.log(JSON.stringify(r))).catch(e => {
 });
 `;
 
-  const proc = Bun.spawn(
-    [
-      'bun',
-      'run',
-      '--silent',
-      '-',
-    ],
-    {
-      stdin: new Blob([
-        script,
-      ]),
-      stdout: 'pipe',
-      stderr: 'pipe',
-      env: {
-        ...process.env,
-        HOME: tmpHome,
-      },
-      cwd: join(__dirname, '..', '..'),
-    }
-  );
+  const proc = Bun.spawn(['bun', 'run', '--silent', '-'], {
+    stdin: new Blob([script]),
+    stdout: 'pipe',
+    stderr: 'pipe',
+    env: {
+      ...process.env,
+      HOME: tmpHome,
+    },
+    cwd: join(__dirname, '..', '..'),
+  });
 
   const [stdout, stderr] = await Promise.all([
     new Response(proc.stdout).text(),
@@ -785,12 +775,7 @@ describe('uninstallCompletions — RC line filtering', () => {
       return { rcContent: await readFile(join(HOME, '.zshrc'), 'utf8') };
     `);
 
-    expect(result.rcContent).toBe(
-      [
-        'export FOO=bar',
-        'export BAZ=qux',
-      ].join('\n')
-    );
+    expect(result.rcContent).toBe(['export FOO=bar', 'export BAZ=qux'].join('\n'));
   });
 
   test('removes only the source line if marker is not on the previous line', async () => {

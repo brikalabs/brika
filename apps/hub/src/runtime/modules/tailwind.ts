@@ -20,9 +20,7 @@ function extractCandidates(js: string): string[] {
       }
     }
   }
-  return [
-    ...tokens,
-  ];
+  return [...tokens];
 }
 
 /**
@@ -49,11 +47,7 @@ export class TailwindCompiler {
   async #init(): Promise<Build> {
     const { compile } = await import('tailwindcss');
     const compiled = await compile(
-      [
-        TW_DEFAULT_THEME,
-        TW_CUSTOM_THEME,
-        '@tailwind utilities;',
-      ].join('\n')
+      [TW_DEFAULT_THEME, TW_CUSTOM_THEME, '@tailwind utilities;'].join('\n')
     );
     return (candidates) => compiled.build(candidates);
   }

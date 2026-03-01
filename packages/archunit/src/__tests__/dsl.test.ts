@@ -719,9 +719,7 @@ describe('defineConfig and printResult', () => {
 
   it('defineConfig returns the rules array', async () => {
     const { defineConfig } = await import('../runner');
-    const rules = [
-      files('*.ts').should().beCamelCase(),
-    ];
+    const rules = [files('*.ts').should().beCamelCase()];
     const config = defineConfig(rules);
     expect(config).toBe(rules);
   });
@@ -786,9 +784,7 @@ describe('normalizeRules', () => {
     const { runArch } = await import('../runner');
 
     const nestedRules = [
-      [
-        files('*.ts').should().beCamelCase(),
-      ],
+      [files('*.ts').should().beCamelCase()],
       files('*.ts').should().haveMaxLines(100),
     ];
 
@@ -816,9 +812,7 @@ describe('normalizeRules', () => {
 
     const result = await runArch({
       cwd: TEST_DIR,
-      rules: [
-        rawRule,
-      ],
+      rules: [rawRule],
     });
 
     expect(result.rulesChecked).toBe(1);

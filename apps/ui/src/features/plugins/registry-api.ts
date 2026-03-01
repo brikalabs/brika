@@ -72,12 +72,6 @@ export const registryApi = {
 };
 
 export const registryKeys = {
-  packages: [
-    'registry',
-    'packages',
-  ] as const,
-  updates: [
-    'registry',
-    'updates',
-  ] as const,
+  packages: ['registry', 'packages'] as const,
+  updates: ['registry', 'updates'] as const,
 };

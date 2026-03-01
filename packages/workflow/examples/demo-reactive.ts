@@ -237,12 +237,7 @@ try {
   console.log('╚═══════════════════════════════════════════════════════════════╝');
   console.log('');
 
-  const blocks = [
-    timerBlock,
-    tempSensorBlock,
-    comfortBlock,
-    loggerBlock,
-  ];
+  const blocks = [timerBlock, tempSensorBlock, comfortBlock, loggerBlock];
 
   console.log('📋 Block Definitions:');
   for (const block of blocks) {

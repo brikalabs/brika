@@ -34,14 +34,10 @@ export async function compile(target?: string): Promise<void> {
   step('Bundling & compiling...');
 
   const result = await Bun.build({
-    entrypoints: [
-      join(import.meta.dir, '../src/cli.ts'),
-    ],
+    entrypoints: [join(import.meta.dir, '../src/cli.ts')],
     target: 'bun',
     minify: true,
-    plugins: [
-      folderTarPlugin(),
-    ],
+    plugins: [folderTarPlugin()],
     compile: {
       outfile: outPath,
       ...(validTarget

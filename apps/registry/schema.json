@@ -3,11 +3,7 @@
   "title": "Brika Verified Plugins Registry",
   "description": "Schema for the verified plugins registry (v2 with signatures)",
   "type": "object",
-  "required": [
-    "version",
-    "lastUpdated",
-    "plugins"
-  ],
+  "required": ["version", "lastUpdated", "plugins"],
   "properties": {
     "version": {
       "type": "string",
@@ -31,11 +27,7 @@
       "description": "List of verified plugins",
       "items": {
         "type": "object",
-        "required": [
-          "name",
-          "verifiedAt",
-          "verifiedBy"
-        ],
+        "required": ["name", "verifiedAt", "verifiedBy"],
         "properties": {
           "name": {
             "type": "string",
@@ -75,23 +67,13 @@
           "category": {
             "type": "string",
             "description": "Plugin category",
-            "enum": [
-              "official",
-              "community",
-              "utility",
-              "integration",
-              "workflow"
-            ],
+            "enum": ["official", "community", "utility", "integration", "workflow"],
             "default": "community"
           },
           "source": {
             "type": "string",
             "description": "Where the package is hosted",
-            "enum": [
-              "npm",
-              "github",
-              "url"
-            ],
+            "enum": ["npm", "github", "url"],
             "default": "npm"
           },
           "signature": {

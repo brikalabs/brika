@@ -7,11 +7,7 @@ import { semver } from 'bun';
 
 export type BumpType = 'major' | 'minor' | 'patch';
 
-export const BUMP_TYPES: BumpType[] = [
-  'major',
-  'minor',
-  'patch',
-];
+export const BUMP_TYPES: BumpType[] = ['major', 'minor', 'patch'];
 
 /** Returns true if the string is a valid x.y.z version literal. */
 export function isExactVersion(value: string): boolean {
@@ -36,11 +32,7 @@ export function applyBump(current: string, bump: string): string {
   if (parts.length !== 3 || parts.some(Number.isNaN)) {
     throw new Error(`"${current}" is not a valid semver string.`);
   }
-  const [major, minor, patch] = parts as [
-    number,
-    number,
-    number,
-  ];
+  const [major, minor, patch] = parts as [number, number, number];
 
   switch (bump) {
     case 'major':

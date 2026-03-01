@@ -19,11 +19,7 @@ import {
 import { useLocale } from '@/lib/use-locale';
 import { useUserMutations } from '../hooks';
 
-const ROLES = [
-  'admin',
-  'user',
-  'guest',
-] as const;
+const ROLES = ['admin', 'user', 'guest'] as const;
 
 interface CreateUserDialogProps {
   open: boolean;

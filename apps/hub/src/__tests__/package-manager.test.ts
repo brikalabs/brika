@@ -45,11 +45,7 @@ describe('PackageManager', () => {
 
       await collect(pm.install('@brika/plugin', '1.2.0'));
 
-      expect(bun.spawnCalls[0]?.cmd).toEqual([
-        process.execPath,
-        'install',
-        '@brika/plugin@1.2.0',
-      ]);
+      expect(bun.spawnCalls[0]?.cmd).toEqual([process.execPath, 'install', '@brika/plugin@1.2.0']);
     });
 
     test('spawns: bun install <name> when no version given', async () => {
@@ -61,11 +57,7 @@ describe('PackageManager', () => {
 
       await collect(pm.install('@brika/plugin'));
 
-      expect(bun.spawnCalls[0]?.cmd).toEqual([
-        process.execPath,
-        'install',
-        '@brika/plugin',
-      ]);
+      expect(bun.spawnCalls[0]?.cmd).toEqual([process.execPath, 'install', '@brika/plugin']);
     });
 
     test('uses pluginsDir as cwd', async () => {
@@ -131,11 +123,7 @@ describe('PackageManager', () => {
 
       await pm.remove('@brika/plugin');
 
-      expect(bun.spawnCalls[0]?.cmd).toEqual([
-        process.execPath,
-        'remove',
-        '@brika/plugin',
-      ]);
+      expect(bun.spawnCalls[0]?.cmd).toEqual([process.execPath, 'remove', '@brika/plugin']);
     });
 
     test('uses pluginsDir as cwd', async () => {
@@ -173,10 +161,7 @@ describe('PackageManager', () => {
 
       await collect(pm.update());
 
-      expect(bun.spawnCalls[0]?.cmd).toEqual([
-        process.execPath,
-        'update',
-      ]);
+      expect(bun.spawnCalls[0]?.cmd).toEqual([process.execPath, 'update']);
     });
 
     test('spawns: bun update <name> for specific package', async () => {
@@ -188,11 +173,7 @@ describe('PackageManager', () => {
 
       await collect(pm.update('@brika/plugin'));
 
-      expect(bun.spawnCalls[0]?.cmd).toEqual([
-        process.execPath,
-        'update',
-        '@brika/plugin',
-      ]);
+      expect(bun.spawnCalls[0]?.cmd).toEqual([process.execPath, 'update', '@brika/plugin']);
     });
 
     test('streams events with correct operation', async () => {
@@ -237,48 +218,16 @@ describe('PackageManager', () => {
   // ─── phase detection ───────────────────────────────────────────────────────
 
   describe('phase detection', () => {
-    const cases: Array<
-      [
-        input: string,
-        phase: OperationProgress['phase'],
-      ]
-    > = [
-      [
-        'Resolving packages...',
-        'resolving',
-      ],
-      [
-        'resolving dependencies',
-        'resolving',
-      ],
-      [
-        'GET https://registry.npmjs.org/foo',
-        'downloading',
-      ],
-      [
-        'downloading 1.2.3',
-        'downloading',
-      ],
-      [
-        'fetch https://cdn.example.com',
-        'downloading',
-      ],
-      [
-        'Saved lockfile',
-        'linking',
-      ],
-      [
-        'installed @brika/plugin',
-        'linking',
-      ],
-      [
-        'linking node_modules',
-        'linking',
-      ],
-      [
-        'some other output',
-        'downloading',
-      ], // default falls back to downloading
+    const cases: Array<[input: string, phase: OperationProgress['phase']]> = [
+      ['Resolving packages...', 'resolving'],
+      ['resolving dependencies', 'resolving'],
+      ['GET https://registry.npmjs.org/foo', 'downloading'],
+      ['downloading 1.2.3', 'downloading'],
+      ['fetch https://cdn.example.com', 'downloading'],
+      ['Saved lockfile', 'linking'],
+      ['installed @brika/plugin', 'linking'],
+      ['linking node_modules', 'linking'],
+      ['some other output', 'downloading'], // default falls back to downloading
     ];
 
     for (const [input, expected] of cases) {

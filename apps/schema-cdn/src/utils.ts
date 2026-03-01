@@ -7,19 +7,9 @@ export const CDN_URLS = {
 } as const;
 
 // Version utilities
-const parseVer = (
-  v: string
-): [
-  number,
-  number,
-  number,
-] => {
+const parseVer = (v: string): [number, number, number] => {
   const p = v.replace(/^\D*/, '').split('.').map(Number);
-  return [
-    p[0] ?? 0,
-    p[1] ?? 0,
-    p[2] ?? 0,
-  ];
+  return [p[0] ?? 0, p[1] ?? 0, p[2] ?? 0];
 };
 
 const isPreRelease = (v: string) => /^\d+\.\d+\.\d+-/.test(v);
@@ -45,9 +35,7 @@ export const satisfiesVersion = (ver: string, range: string): boolean => {
 };
 
 export const sortVersions = (versions: string[]): string[] =>
-  [
-    ...versions,
-  ].sort((a, b) => {
+  [...versions].sort((a, b) => {
     const [aMaj, aMin, aPat] = parseVer(a);
     const [bMaj, bMin, bPat] = parseVer(b);
     return bMaj - aMaj || bMin - aMin || bPat - aPat;

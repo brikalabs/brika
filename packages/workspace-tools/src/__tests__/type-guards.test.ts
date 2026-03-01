@@ -20,13 +20,7 @@ describe('isObjectRecord', () => {
 
   test('returns true for arrays (arrays are objects)', () => {
     expect(isObjectRecord([])).toBe(true);
-    expect(
-      isObjectRecord([
-        1,
-        2,
-        3,
-      ])
-    ).toBe(true);
+    expect(isObjectRecord([1, 2, 3])).toBe(true);
   });
 
   test('returns false for null', () => {

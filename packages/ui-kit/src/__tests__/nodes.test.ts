@@ -74,9 +74,7 @@ describe('_shared', () => {
         content: 'hello',
       });
       const result = normalizeChildren(node);
-      expect(result).toEqual([
-        node,
-      ]);
+      expect(result).toEqual([node]);
     });
 
     test('returns flat array from array of nodes', () => {
@@ -86,15 +84,7 @@ describe('_shared', () => {
       const b = Text({
         content: 'b',
       });
-      expect(
-        normalizeChildren([
-          a,
-          b,
-        ])
-      ).toEqual([
-        a,
-        b,
-      ]);
+      expect(normalizeChildren([a, b])).toEqual([a, b]);
     });
 
     test('flattens nested arrays', () => {
@@ -104,34 +94,15 @@ describe('_shared', () => {
       const b = Text({
         content: 'b',
       });
-      expect(
-        normalizeChildren([
-          [
-            a,
-          ],
-          [
-            b,
-          ],
-        ])
-      ).toEqual([
-        a,
-        b,
-      ]);
+      expect(normalizeChildren([[a], [b]])).toEqual([a, b]);
     });
 
     test('filters out null, undefined, and false from arrays', () => {
       const a = Text({
         content: 'a',
       });
-      const result = normalizeChildren([
-        a,
-        null,
-        undefined,
-        false,
-      ]);
-      expect(result).toEqual([
-        a,
-      ]);
+      const result = normalizeChildren([a, null, undefined, false]);
+      expect(result).toEqual([a]);
     });
 
     test('handles empty array', () => {
@@ -139,13 +110,7 @@ describe('_shared', () => {
     });
 
     test('handles array of only falsy values', () => {
-      expect(
-        normalizeChildren([
-          null,
-          false,
-          undefined,
-        ])
-      ).toEqual([]);
+      expect(normalizeChildren([null, false, undefined])).toEqual([]);
     });
 
     test('wraps I18nRef into TextNode with i18n field', () => {
@@ -194,12 +159,7 @@ describe('_shared', () => {
         content: 'plain',
       });
       const ref = i18nRef('plugin:x', 'hello');
-      const result = normalizeChildren([
-        textNode,
-        ref,
-        null,
-        false,
-      ]);
+      const result = normalizeChildren([textNode, ref, null, false]);
       expect(result).toHaveLength(2);
       expect(result[0]).toBe(textNode);
       expect(result[1]).toEqual({
@@ -245,11 +205,7 @@ describe('_shared', () => {
     });
 
     test('wraps IntlRef list into TextNode with joined fallback', () => {
-      const ref = intlRef.list([
-        'a',
-        'b',
-        'c',
-      ]);
+      const ref = intlRef.list(['a', 'b', 'c']);
       const result = normalizeChildren(ref);
       expect(result).toEqual([
         {
@@ -266,12 +222,7 @@ describe('_shared', () => {
       });
       const i18n = i18nRef('plugin:x', 'hello');
       const intl = intlRef.number(42);
-      const result = normalizeChildren([
-        textNode,
-        i18n,
-        intl,
-        null,
-      ]);
+      const result = normalizeChildren([textNode, i18n, intl, null]);
       expect(result).toHaveLength(3);
       expect(result[0]).toBe(textNode);
       expect(
@@ -388,10 +339,7 @@ describe('_shared', () => {
         isIntlRef({
           __intl: true,
           type: 'list',
-          value: [
-            'a',
-            'b',
-          ],
+          value: ['a', 'b'],
         })
       ).toBe(true);
     });
@@ -516,11 +464,7 @@ describe('Text', () => {
   });
 
   test('all variant values work', () => {
-    for (const v of [
-      'body',
-      'caption',
-      'heading',
-    ] as const) {
+    for (const v of ['body', 'caption', 'heading'] as const) {
       expect(
         Text({
           content: '',
@@ -605,10 +549,7 @@ describe('Text', () => {
   });
 
   test('accepts IntlRef list as content with joined fallback', () => {
-    const ref = intlRef.list([
-      'apples',
-      'oranges',
-    ]);
+    const ref = intlRef.list(['apples', 'oranges']);
     const node = Text({
       content: ref,
     });
@@ -714,11 +655,7 @@ describe('Chart', () => {
   });
 
   test('all variant values work', () => {
-    for (const v of [
-      'line',
-      'area',
-      'bar',
-    ] as const) {
+    for (const v of ['line', 'area', 'bar'] as const) {
       expect(
         Chart({
           variant: v,
@@ -778,11 +715,7 @@ describe('Icon', () => {
   });
 
   test('all size values work', () => {
-    for (const s of [
-      'sm',
-      'md',
-      'lg',
-    ] as const) {
+    for (const s of ['sm', 'md', 'lg'] as const) {
       expect(
         Icon({
           name: 'x',
@@ -885,11 +818,7 @@ describe('Spacer', () => {
   });
 
   test('accepts size', () => {
-    for (const s of [
-      'sm',
-      'md',
-      'lg',
-    ] as const) {
+    for (const s of ['sm', 'md', 'lg'] as const) {
       expect(
         Spacer({
           size: s,
@@ -939,11 +868,7 @@ describe('Stat', () => {
   });
 
   test('all trend values work', () => {
-    for (const t of [
-      'up',
-      'down',
-      'flat',
-    ] as const) {
+    for (const t of ['up', 'down', 'flat'] as const) {
       expect(
         Stat({
           label: '',
@@ -978,13 +903,7 @@ describe('Status', () => {
   });
 
   test('all status values work', () => {
-    for (const s of [
-      'online',
-      'offline',
-      'warning',
-      'error',
-      'idle',
-    ] as const) {
+    for (const s of ['online', 'offline', 'warning', 'error', 'idle'] as const) {
       expect(
         Status({
           label: '',
@@ -1053,9 +972,7 @@ describe('Box', () => {
     const node = Box({
       children: child,
     });
-    expect(node.children).toEqual([
-      child,
-    ]);
+    expect(node.children).toEqual([child]);
   });
 
   test('normalizes array children', () => {
@@ -1066,15 +983,9 @@ describe('Box', () => {
       content: 'b',
     });
     const node = Box({
-      children: [
-        a,
-        b,
-      ],
+      children: [a, b],
     });
-    expect(node.children).toEqual([
-      a,
-      b,
-    ]);
+    expect(node.children).toEqual([a, b]);
   });
 
   test('filters out falsy children', () => {
@@ -1082,16 +993,9 @@ describe('Box', () => {
       content: 'a',
     });
     const node = Box({
-      children: [
-        a,
-        null,
-        false,
-        undefined,
-      ],
+      children: [a, null, false, undefined],
     });
-    expect(node.children).toEqual([
-      a,
-    ]);
+    expect(node.children).toEqual([a]);
   });
 
   test('includes all optional props', () => {
@@ -1145,15 +1049,9 @@ describe('Grid', () => {
       content: 'b',
     });
     const node = Grid({
-      children: [
-        a,
-        b,
-      ],
+      children: [a, b],
     });
-    expect(node.children).toEqual([
-      a,
-      b,
-    ]);
+    expect(node.children).toEqual([a, b]);
   });
 
   test('includes optional fields', () => {
@@ -1174,15 +1072,9 @@ describe('Grid', () => {
       content: 'a',
     });
     const node = Grid({
-      children: [
-        a,
-        null,
-        false,
-      ],
+      children: [a, null, false],
     });
-    expect(node.children).toEqual([
-      a,
-    ]);
+    expect(node.children).toEqual([a]);
   });
 });
 
@@ -1204,9 +1096,7 @@ describe('Section', () => {
       title: 'Main',
       children: child,
     });
-    expect(node.children).toEqual([
-      child,
-    ]);
+    expect(node.children).toEqual([child]);
   });
 
   test('normalizes array children with falsy values', () => {
@@ -1215,15 +1105,9 @@ describe('Section', () => {
     });
     const node = Section({
       title: 'S',
-      children: [
-        a,
-        null,
-        false,
-      ],
+      children: [a, null, false],
     });
-    expect(node.children).toEqual([
-      a,
-    ]);
+    expect(node.children).toEqual([a]);
   });
 });
 
@@ -1246,15 +1130,9 @@ describe('Row', () => {
       content: 'b',
     });
     const node = Row({
-      children: [
-        a,
-        b,
-      ],
+      children: [a, b],
     });
-    expect(node.children).toEqual([
-      a,
-      b,
-    ]);
+    expect(node.children).toEqual([a, b]);
   });
 
   test('includes all FlexLayoutProps', () => {
@@ -1284,16 +1162,9 @@ describe('Row', () => {
       content: 'a',
     });
     const node = Row({
-      children: [
-        a,
-        null,
-        undefined,
-        false,
-      ],
+      children: [a, null, undefined, false],
     });
-    expect(node.children).toEqual([
-      a,
-    ]);
+    expect(node.children).toEqual([a]);
   });
 });
 
@@ -1316,15 +1187,9 @@ describe('Column', () => {
       content: 'b',
     });
     const node = Column({
-      children: [
-        a,
-        b,
-      ],
+      children: [a, b],
     });
-    expect(node.children).toEqual([
-      a,
-      b,
-    ]);
+    expect(node.children).toEqual([a, b]);
   });
 
   test('includes all FlexLayoutProps', () => {
@@ -1354,16 +1219,9 @@ describe('Column', () => {
       content: 'a',
     });
     const node = Column({
-      children: [
-        a,
-        null,
-        undefined,
-        false,
-      ],
+      children: [a, null, undefined, false],
     });
-    expect(node.children).toEqual([
-      a,
-    ]);
+    expect(node.children).toEqual([a]);
   });
 });
 
@@ -1427,14 +1285,7 @@ describe('Button', () => {
   });
 
   test('all variant values work', () => {
-    for (const v of [
-      'default',
-      'secondary',
-      'outline',
-      'ghost',
-      'destructive',
-      'link',
-    ] as const) {
+    for (const v of ['default', 'secondary', 'outline', 'ghost', 'destructive', 'link'] as const) {
       expect(
         Button({
           variant: v,
@@ -1583,13 +1434,7 @@ describe('Text (new props)', () => {
   });
 
   test('includes size', () => {
-    for (const s of [
-      'xs',
-      'sm',
-      'md',
-      'lg',
-      'xl',
-    ] as const) {
+    for (const s of ['xs', 'sm', 'md', 'lg', 'xl'] as const) {
       expect(
         Text({
           content: '',
@@ -1794,11 +1639,7 @@ describe('Progress (new props)', () => {
   });
 
   test('all size values work', () => {
-    for (const s of [
-      'sm',
-      'md',
-      'lg',
-    ] as const) {
+    for (const s of ['sm', 'md', 'lg'] as const) {
       expect(
         Progress({
           value: 50,
@@ -1884,12 +1725,7 @@ describe('Callout', () => {
   });
 
   test('all variant values work', () => {
-    for (const v of [
-      'info',
-      'warning',
-      'error',
-      'success',
-    ] as const) {
+    for (const v of ['info', 'warning', 'error', 'success'] as const) {
       expect(
         Callout({
           variant: v,
@@ -1950,12 +1786,7 @@ describe('TextInput', () => {
   });
 
   test('all inputType values work', () => {
-    for (const t of [
-      'text',
-      'password',
-      'email',
-      'number',
-    ] as const) {
+    for (const t of ['text', 'password', 'email', 'number'] as const) {
       expect(
         TextInput({
           value: '',
@@ -2169,12 +2000,7 @@ describe('Avatar', () => {
   });
 
   test('all status values work', () => {
-    for (const s of [
-      'online',
-      'offline',
-      'busy',
-      'away',
-    ] as const) {
+    for (const s of ['online', 'offline', 'busy', 'away'] as const) {
       expect(
         Avatar({
           status: s,
@@ -2209,11 +2035,7 @@ describe('Link', () => {
   });
 
   test('all variant values work', () => {
-    for (const v of [
-      'default',
-      'muted',
-      'underline',
-    ] as const) {
+    for (const v of ['default', 'muted', 'underline'] as const) {
       expect(
         Link({
           label: '',
@@ -2266,9 +2088,7 @@ describe('Tabs', () => {
       ],
       onChange: () => {},
     });
-    expect(node.tabs[0]?.children).toEqual([
-      child,
-    ]);
+    expect(node.tabs[0]?.children).toEqual([child]);
   });
 
   test('includes optional variant and icon', () => {
@@ -2369,11 +2189,7 @@ describe('Skeleton', () => {
   });
 
   test('all variant values work', () => {
-    for (const v of [
-      'text',
-      'circle',
-      'rect',
-    ] as const) {
+    for (const v of ['text', 'circle', 'rect'] as const) {
       expect(
         Skeleton({
           variant: v,

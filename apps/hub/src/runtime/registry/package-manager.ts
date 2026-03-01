@@ -29,28 +29,15 @@ export class PackageManager {
 
   async *install(name: string, version?: string): AsyncGenerator<OperationProgress> {
     const spec = version ? `${name}@${version}` : name;
-    yield* this.#stream('install', name, [
-      'install',
-      spec,
-    ]);
+    yield* this.#stream('install', name, ['install', spec]);
   }
 
   async remove(name: string): Promise<void> {
-    await this.#run([
-      'remove',
-      name,
-    ]);
+    await this.#run(['remove', name]);
   }
 
   async *update(name?: string): AsyncGenerator<OperationProgress> {
-    const args = name
-      ? [
-          'update',
-          name,
-        ]
-      : [
-          'update',
-        ];
+    const args = name ? ['update', name] : ['update'];
     yield* this.#stream('update', name ?? 'all', args);
   }
 

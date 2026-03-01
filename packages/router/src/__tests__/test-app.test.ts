@@ -219,9 +219,7 @@ describe('TestApp instance methods', () => {
   });
 
   test('PUT request with body', async () => {
-    const app = TestApp.create([
-      updateUserRoute,
-    ]);
+    const app = TestApp.create([updateUserRoute]);
 
     const res = await app.put('/api/users/123', {
       name: 'Updated',
@@ -237,9 +235,7 @@ describe('TestApp instance methods', () => {
   });
 
   test('PATCH request with body', async () => {
-    const app = TestApp.create([
-      patchUserRoute,
-    ]);
+    const app = TestApp.create([patchUserRoute]);
 
     const res = await app.patch('/api/users/456', {
       name: 'Patched',
@@ -255,9 +251,7 @@ describe('TestApp instance methods', () => {
   });
 
   test('DELETE request', async () => {
-    const app = TestApp.create([
-      deleteUserRoute,
-    ]);
+    const app = TestApp.create([deleteUserRoute]);
 
     const res = await app.delete('/api/users/789');
 
@@ -270,9 +264,7 @@ describe('TestApp instance methods', () => {
   });
 
   test('PUT request with custom headers', async () => {
-    const app = TestApp.create([
-      updateUserRoute,
-    ]);
+    const app = TestApp.create([updateUserRoute]);
 
     const res = await app.put(
       '/api/users/123',
@@ -290,9 +282,7 @@ describe('TestApp instance methods', () => {
   });
 
   test('PATCH request with query params', async () => {
-    const app = TestApp.create([
-      patchUserRoute,
-    ]);
+    const app = TestApp.create([patchUserRoute]);
 
     const res = await app.patch(
       '/api/users/456',
@@ -310,9 +300,7 @@ describe('TestApp instance methods', () => {
   });
 
   test('DELETE request with custom headers', async () => {
-    const app = TestApp.create([
-      deleteUserRoute,
-    ]);
+    const app = TestApp.create([deleteUserRoute]);
 
     const res = await app.delete('/api/users/789', {
       headers: {

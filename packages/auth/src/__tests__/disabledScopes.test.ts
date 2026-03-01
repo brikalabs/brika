@@ -32,10 +32,7 @@ describe('Per-user scopes (allow-list)', () => {
   it('should use only explicitly granted scopes in session', () => {
     const user = userService.createUser('test@test.com', 'Test', Role.USER);
     userService.updateUser(user.id, {
-      scopes: [
-        Scope.WORKFLOW_READ,
-        Scope.WORKFLOW_EXECUTE,
-      ],
+      scopes: [Scope.WORKFLOW_READ, Scope.WORKFLOW_EXECUTE],
     });
 
     const token = sessionService.createSession(user.id);
@@ -52,9 +49,7 @@ describe('Per-user scopes (allow-list)', () => {
     const user = userService.createUser('admin@test.com', 'Admin', Role.ADMIN);
     // Even if scopes are manually narrowed, admin always gets ADMIN_ALL
     userService.updateUser(user.id, {
-      scopes: [
-        Scope.WORKFLOW_READ,
-      ],
+      scopes: [Scope.WORKFLOW_READ],
     });
 
     const token = sessionService.createSession(user.id);
@@ -67,16 +62,10 @@ describe('Per-user scopes (allow-list)', () => {
   it('should persist and retrieve scopes on User object', () => {
     const user = userService.createUser('test@test.com', 'Test', Role.USER);
     const updated = userService.updateUser(user.id, {
-      scopes: [
-        Scope.PLUGIN_READ,
-        Scope.BOARD_READ,
-      ],
+      scopes: [Scope.PLUGIN_READ, Scope.BOARD_READ],
     });
 
-    expect(updated.scopes).toEqual([
-      Scope.PLUGIN_READ,
-      Scope.BOARD_READ,
-    ]);
+    expect(updated.scopes).toEqual([Scope.PLUGIN_READ, Scope.BOARD_READ]);
   });
 
   it('should handle empty scopes (no permissions)', () => {
@@ -103,15 +92,10 @@ describe('Per-user scopes (allow-list)', () => {
   it('should drop invalid scope strings when reading from DB', () => {
     const user = userService.createUser('test@test.com', 'Test', Role.USER);
     userService.updateUser(user.id, {
-      scopes: [
-        Scope.WORKFLOW_READ,
-        'not:a:scope' as Scope,
-      ],
+      scopes: [Scope.WORKFLOW_READ, 'not:a:scope' as Scope],
     });
 
     const fetched = userService.getUser(user.id);
-    expect(fetched?.scopes).toEqual([
-      Scope.WORKFLOW_READ,
-    ]);
+    expect(fetched?.scopes).toEqual([Scope.WORKFLOW_READ]);
   });
 });

@@ -888,12 +888,7 @@ describe('cli/commands/log', () => {
     });
 
     test('preserves all log levels', () => {
-      for (const level of [
-        'debug',
-        'info',
-        'warn',
-        'error',
-      ] as LogLevel[]) {
+      for (const level of ['debug', 'info', 'warn', 'error'] as LogLevel[]) {
         expect(
           rowToEvent({
             ...baseRow,

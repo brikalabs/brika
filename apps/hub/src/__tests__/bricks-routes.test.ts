@@ -67,15 +67,11 @@ describe('bricks routes', () => {
 
   useTestBed(() => {
     mockTypeRegistry = {
-      list: mock().mockReturnValue([
-        BRICK_TYPE,
-      ]),
+      list: mock().mockReturnValue([BRICK_TYPE]),
       get: mock().mockReturnValue(BRICK_TYPE),
     };
     mockInstanceManager = {
-      list: mock().mockReturnValue([
-        BRICK_INSTANCE,
-      ]),
+      list: mock().mockReturnValue([BRICK_INSTANCE]),
       get: mock().mockReturnValue(BRICK_INSTANCE),
     };
     mockLifecycle = {

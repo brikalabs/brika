@@ -10,9 +10,7 @@ defineRenderer('toggle', ({ node, onAction }) => {
 
   useEffect(() => {
     setLocal(node.checked);
-  }, [
-    node.checked,
-  ]);
+  }, [node.checked]);
 
   return (
     <div

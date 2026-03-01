@@ -41,10 +41,7 @@ export function Hero({ release }: Readonly<HeroProps>) {
 
       <div className="max-w-4xl text-center">
         {/* Hero logo */}
-        <div
-          className="reveal-up mb-10 flex justify-center"
-          style={{ animationDelay: '50ms' }}
-        >
+        <div className="reveal-up mb-10 flex justify-center" style={{ animationDelay: '50ms' }}>
           <div className="hero-icon p-0.5 rounded-full corner-squircle">
             <div className="relative z-10 flex size-20 items-center justify-center rounded-full corner-squircle bg-black sm:size-24">
               <BrikaLogo className="size-16 text-white sm:size-20" />

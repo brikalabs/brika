@@ -17,29 +17,15 @@ const IMAGE_MAGIC_BYTES: Array<{
 }> = [
   {
     mime: 'image/png',
-    bytes: [
-      0x89,
-      0x50,
-      0x4e,
-      0x47,
-    ],
+    bytes: [0x89, 0x50, 0x4e, 0x47],
   },
   {
     mime: 'image/jpeg',
-    bytes: [
-      0xff,
-      0xd8,
-      0xff,
-    ],
+    bytes: [0xff, 0xd8, 0xff],
   },
   {
     mime: 'image/webp',
-    bytes: [
-      0x52,
-      0x49,
-      0x46,
-      0x46,
-    ],
+    bytes: [0x52, 0x49, 0x46, 0x46],
   }, // "RIFF"
 ];
 
@@ -173,10 +159,4 @@ const getAvatar = route.get({
   },
 });
 
-export const profileRoutes = [
-  updateProfile,
-  changePassword,
-  uploadAvatar,
-  removeAvatar,
-  getAvatar,
-];
+export const profileRoutes = [updateProfile, changePassword, uploadAvatar, removeAvatar, getAvatar];

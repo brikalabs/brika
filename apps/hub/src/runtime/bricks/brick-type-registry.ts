@@ -101,11 +101,7 @@ export class BrickTypeRegistry {
       category: manifest?.category,
       icon: manifest?.icon,
       color: manifest?.color,
-      families: brickType.families ?? [
-        'sm',
-        'md',
-        'lg',
-      ],
+      families: brickType.families ?? ['sm', 'md', 'lg'],
       minSize: brickType.minSize,
       maxSize: brickType.maxSize,
       config: (brickType.config ?? manifest?.config) as PreferenceDefinition[] | undefined,
@@ -144,15 +140,11 @@ export class BrickTypeRegistry {
   }
 
   list(): RegisteredBrickType[] {
-    return [
-      ...this.#types.values(),
-    ].sort((a, b) => a.fullId.localeCompare(b.fullId));
+    return [...this.#types.values()].sort((a, b) => a.fullId.localeCompare(b.fullId));
   }
 
   listByPlugin(pluginName: string): RegisteredBrickType[] {
-    return [
-      ...this.#types.values(),
-    ].filter((t) => t.pluginName === pluginName);
+    return [...this.#types.values()].filter((t) => t.pluginName === pluginName);
   }
 
   getProvider(fullId: string): string | undefined {

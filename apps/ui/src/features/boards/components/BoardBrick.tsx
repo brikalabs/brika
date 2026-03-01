@@ -104,10 +104,7 @@ export const BoardBrick = memo(function BoardBrick({ instanceId, brickTypeId }: 
         payload,
       });
     },
-    [
-      instanceId,
-      sendAction,
-    ]
+    [instanceId, sendAction]
   );
 
   return (

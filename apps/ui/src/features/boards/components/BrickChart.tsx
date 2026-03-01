@@ -84,9 +84,7 @@ function mergeSeriesData(series: ChartSeries[]): Record<string, number | undefin
       row[s.key] = d.value;
     }
   }
-  return [
-    ...map.values(),
-  ].sort((a, b) => (a.ts as number) - (b.ts as number));
+  return [...map.values()].sort((a, b) => (a.ts as number) - (b.ts as number));
 }
 
 /** Shared chart axes, grid, tooltip and legend elements used by both BarChart and AreaChart */
@@ -107,10 +105,7 @@ function chartElements(node: ChartNode, series: ChartSeries[]): ReactNode[] {
       tick={{
         fontSize: 10,
       }}
-      domain={[
-        'auto',
-        'auto',
-      ]}
+      domain={['auto', 'auto']}
     />,
     <Tooltip key="tip" content={ChartTooltip} />,
     node.showLegend && series.length > 1 ? (
@@ -131,20 +126,8 @@ export function BrickChart({
   node: ChartNode;
 }>) {
   const baseId = useId();
-  const series = useMemo(
-    () => buildSeries(node),
-    [
-      node.series,
-      node.data,
-      node.color,
-    ]
-  );
-  const mergedData = useMemo(
-    () => mergeSeriesData(series),
-    [
-      series,
-    ]
-  );
+  const series = useMemo(() => buildSeries(node), [node.series, node.data, node.color]);
+  const mergedData = useMemo(() => mergeSeriesData(series), [series]);
 
   if (mergedData.length === 0) {
     return null;
@@ -177,12 +160,7 @@ export function BrickChart({
                   name={s.label ?? s.key}
                   fill={s.color ?? DEFAULT_COLORS[i % DEFAULT_COLORS.length]}
                   opacity={0.8}
-                  radius={[
-                    2,
-                    2,
-                    0,
-                    0,
-                  ]}
+                  radius={[2, 2, 0, 0]}
                 />
               ))}
             </BarChart>

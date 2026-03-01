@@ -92,30 +92,12 @@ export function LocationSettings() {
                 <div className="grid grid-cols-2 gap-3 pt-3">
                   {(
                     [
-                      [
-                        'street',
-                        'street',
-                      ],
-                      [
-                        'city',
-                        'city',
-                      ],
-                      [
-                        'postalCode',
-                        'postalCode',
-                      ],
-                      [
-                        'state',
-                        'state',
-                      ],
-                      [
-                        'country',
-                        'country',
-                      ],
-                      [
-                        'timezone',
-                        'timezone',
-                      ],
+                      ['street', 'street'],
+                      ['city', 'city'],
+                      ['postalCode', 'postalCode'],
+                      ['state', 'state'],
+                      ['country', 'country'],
+                      ['timezone', 'timezone'],
                     ] as const
                   ).map(([field, labelKey]) => (
                     <div key={field}>
@@ -127,12 +109,7 @@ export function LocationSettings() {
                       />
                     </div>
                   ))}
-                  {(
-                    [
-                      'latitude',
-                      'longitude',
-                    ] as const
-                  ).map((field) => (
+                  {(['latitude', 'longitude'] as const).map((field) => (
                     <div key={field}>
                       <Label className="text-xs">{t(`settings:location.${field}`)}</Label>
                       <Input

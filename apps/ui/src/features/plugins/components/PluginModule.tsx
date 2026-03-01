@@ -38,9 +38,7 @@ function useStylesheet(href: string) {
     return () => {
       link.remove();
     };
-  }, [
-    href,
-  ]);
+  }, [href]);
 }
 
 // ── Dynamic module loader hook ──────────────────────────────────────────────
@@ -55,9 +53,7 @@ function useModuleImport(url: string) {
     import(/* @vite-ignore */ url)
       .then((mod) => setModule(() => mod.default))
       .catch(() => setError(true));
-  }, [
-    url,
-  ]);
+  }, [url]);
 
   return {
     Module,
@@ -75,12 +71,7 @@ interface PluginModuleProps {
 
 export function PluginModule({ pluginUid, pluginName, moduleUrl }: Readonly<PluginModuleProps>) {
   // Inject plugin-specific Tailwind CSS alongside the JS module
-  const styleUrl = useMemo(
-    () => moduleUrl.replace(/\.js$/, '.css'),
-    [
-      moduleUrl,
-    ]
-  );
+  const styleUrl = useMemo(() => moduleUrl.replace(/\.js$/, '.css'), [moduleUrl]);
   useStylesheet(styleUrl);
 
   const { Module, error } = useModuleImport(moduleUrl);
@@ -89,10 +80,7 @@ export function PluginModule({ pluginUid, pluginName, moduleUrl }: Readonly<Plug
       uid: pluginUid,
       namespace: `plugin:${pluginName}`,
     }),
-    [
-      pluginUid,
-      pluginName,
-    ]
+    [pluginUid, pluginName]
   );
 
   // Set module-level uid for non-hook callAction

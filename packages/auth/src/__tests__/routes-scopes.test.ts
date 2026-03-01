@@ -36,13 +36,7 @@ describe('GET /scopes', () => {
       categories: string[];
     };
 
-    expect(body.categories).toEqual([
-      'admin',
-      'workflow',
-      'board',
-      'plugin',
-      'settings',
-    ]);
+    expect(body.categories).toEqual(['admin', 'workflow', 'board', 'plugin', 'settings']);
     const adminScope = body.scopes[Scope.ADMIN_ALL];
     expect(adminScope).toBeDefined();
     if (!adminScope) {

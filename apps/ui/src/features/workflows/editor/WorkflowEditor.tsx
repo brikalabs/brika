@@ -466,9 +466,7 @@ function WorkflowEditorInner({
 
   // Fetch block definitions for schemas - must load before editor initializes
   const { data: blockDefinitions, isLoading: isLoadingBlocks } = useQuery({
-    queryKey: [
-      'blocks',
-    ],
+    queryKey: ['blocks'],
     queryFn: fetchBlockDefinitions,
     staleTime: 60000,
   });
@@ -516,9 +514,7 @@ function WorkflowEditorWithBlocks({
 
   // Fetch sparks for type resolution
   const { data: sparks = [] } = useQuery({
-    queryKey: [
-      'sparks',
-    ],
+    queryKey: ['sparks'],
     queryFn: () => fetcher<RegisteredSpark[]>('/api/sparks'),
     staleTime: 30000,
   });
@@ -531,9 +527,7 @@ function WorkflowEditorWithBlocks({
       }
       return undefined;
     },
-    [
-      sparks,
-    ]
+    [sparks]
   );
 
   // Pass block definitions and type lookup to editor
@@ -548,9 +542,7 @@ function WorkflowEditorWithBlocks({
       map[def.type || def.id] = def;
     }
     return map;
-  }, [
-    blockDefinitions,
-  ]);
+  }, [blockDefinitions]);
 
   const {
     nodes,
@@ -582,10 +574,7 @@ function WorkflowEditorWithBlocks({
   // Trigger port pings when emit events come in
   useEffect(() => {
     processNewEvents(events, edges, lastProcessedTimestamp);
-  }, [
-    events,
-    edges,
-  ]);
+  }, [events, edges]);
 
   // Handle drop from toolbar
   const onDragOver = useCallback((event: React.DragEvent) => {
@@ -623,10 +612,7 @@ function WorkflowEditorWithBlocks({
 
       addBlock(blockType, position);
     },
-    [
-      addBlock,
-      screenToFlowPosition,
-    ]
+    [addBlock, screenToFlowPosition]
   );
 
   // Get available variables for selected block
@@ -639,10 +625,7 @@ function WorkflowEditorWithBlocks({
     }
     const blockType = getBlockType(selectedNode);
     return blockSchemaMap[blockType]?.schema;
-  }, [
-    selectedNode,
-    blockSchemaMap,
-  ]);
+  }, [selectedNode, blockSchemaMap]);
 
   // Check which panels are collapsed for stacking
   const leftCollapsed = !readonly && !panelStates.blocks;

@@ -21,9 +21,7 @@ export class ModuleCompiler {
     }>,
     actionsFile?: string
   ): Promise<void> {
-    const plugins: BunPlugin[] = [
-      brikaExternalsPlugin(),
-    ];
+    const plugins: BunPlugin[] = [brikaExternalsPlugin()];
     if (actionsFile) {
       plugins.push(brikaActionsPlugin(actionsFile));
     }
@@ -74,9 +72,7 @@ export class ModuleCompiler {
     }
 
     const result = await Bun.build({
-      entrypoints: [
-        entrypoint,
-      ],
+      entrypoints: [entrypoint],
       target: 'browser',
       format: 'esm',
       minify: true,

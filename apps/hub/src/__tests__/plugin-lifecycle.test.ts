@@ -267,9 +267,7 @@ describe('PluginLifecycle', () => {
           homepage: 'https://example.com',
           repository: 'https://github.com/test',
           icon: 'test-icon',
-          keywords: [
-            'test',
-          ],
+          keywords: ['test'],
           license: 'MIT',
           engines: {
             brika: '^0.1.0',
@@ -289,9 +287,7 @@ describe('PluginLifecycle', () => {
       expect(result.homepage).toBe('https://example.com');
       expect(result.repository).toBe('https://github.com/test');
       expect(result.icon).toBe('test-icon');
-      expect(result.keywords).toEqual([
-        'test',
-      ]);
+      expect(result.keywords).toEqual(['test']);
       expect(result.license).toBe('MIT');
       expect(result.rootDirectory).toBe('/path/to/plugin');
       expect(result.entryPoint).toBe('/path/to/plugin/index.js');

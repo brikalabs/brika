@@ -34,9 +34,7 @@ function makeBoard(overrides?: Partial<Board>): Board {
     name: 'Home',
     icon: 'house',
     columns: 12,
-    bricks: [
-      makePlacement(),
-    ],
+    bricks: [makePlacement()],
     ...overrides,
   };
 }
@@ -72,9 +70,7 @@ describe('boards routes', () => {
   useTestBed(() => {
     const board = makeBoard();
     mockLoader = {
-      list: mock().mockReturnValue([
-        board,
-      ]),
+      list: mock().mockReturnValue([board]),
       get: mock().mockReturnValue(board),
       saveBoard: mock().mockResolvedValue(undefined),
       deleteBoard: mock().mockResolvedValue(true),
@@ -176,26 +172,18 @@ describe('boards routes', () => {
 
   test('PUT /api/boards/order reorders boards', async () => {
     const res = await app.put('/api/boards/order', {
-      ids: [
-        'board-1',
-        'board-2',
-      ],
+      ids: ['board-1', 'board-2'],
     });
 
     expect(res.status).toBe(200);
-    expect(mockLoader.reorder).toHaveBeenCalledWith([
-      'board-1',
-      'board-2',
-    ]);
+    expect(mockLoader.reorder).toHaveBeenCalledWith(['board-1', 'board-2']);
   });
 
   test('PUT /api/boards/order returns 404 for invalid IDs', async () => {
     mockLoader.reorder.mockResolvedValue(false);
 
     const res = await app.put('/api/boards/order', {
-      ids: [
-        'missing',
-      ],
+      ids: ['missing'],
     });
 
     expect(res.status).toBe(404);
@@ -748,11 +736,7 @@ describe('boards routes', () => {
       type: 'brick.pluginDisconnected',
       payload: {
         pluginName: 'timer',
-        instanceIds: [
-          'inst-1',
-          'other-inst',
-          'inst-2',
-        ],
+        instanceIds: ['inst-1', 'other-inst', 'inst-2'],
       },
     });
 
@@ -801,9 +785,7 @@ describe('boards routes', () => {
       type: 'brick.pluginDisconnected',
       payload: {
         pluginName: 'timer',
-        instanceIds: [
-          'other-inst',
-        ],
+        instanceIds: ['other-inst'],
       },
     });
 

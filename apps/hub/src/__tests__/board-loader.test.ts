@@ -282,9 +282,7 @@ notaboard: true
     test('saves board to YAML file', async () => {
       await loader.loadDir(TEST_DIR);
 
-      const board = createBoard('saved-dash', [
-        createPlacement('inst-1', 'plugin:widget'),
-      ]);
+      const board = createBoard('saved-dash', [createPlacement('inst-1', 'plugin:widget')]);
       const filePath = await loader.saveBoard(board);
 
       expect(filePath).toContain('saved-dash.yaml');
@@ -327,9 +325,7 @@ notaboard: true
         apiKey: 'secret',
         timeout: 5000,
       };
-      const board = createBoard('config-dash', [
-        placement,
-      ]);
+      const board = createBoard('config-dash', [placement]);
       const filePath = await loader.saveBoard(board);
 
       const content = await Bun.file(filePath).text();
@@ -342,9 +338,7 @@ notaboard: true
 
       const placement = createPlacement('inst-1', 'plugin:brick');
       placement.config = {};
-      const board = createBoard('no-config-dash', [
-        placement,
-      ]);
+      const board = createBoard('no-config-dash', [placement]);
       const filePath = await loader.saveBoard(board);
 
       const content = await Bun.file(filePath).text();
@@ -497,9 +491,7 @@ notaboard: true
         h: 3,
       };
 
-      const original = createBoard('round-trip', [
-        placement,
-      ]);
+      const original = createBoard('round-trip', [placement]);
       await loader.saveBoard(original);
 
       // Create a fresh loader to reload from disk
@@ -569,10 +561,7 @@ notaboard: true
       );
       await loader.loadDir(TEST_DIR);
 
-      const result = await loader.reorder([
-        'board-b',
-        'board-a',
-      ]);
+      const result = await loader.reorder(['board-b', 'board-a']);
 
       expect(result).toBeTrue();
       const boards = loader.list();
@@ -583,9 +572,7 @@ notaboard: true
     test('returns false for unknown board id', async () => {
       await loader.loadDir(TEST_DIR);
 
-      const result = await loader.reorder([
-        'nonexistent',
-      ]);
+      const result = await loader.reorder(['nonexistent']);
 
       expect(result).toBeFalse();
     });
@@ -605,10 +592,7 @@ notaboard: true
       );
       await loader.loadDir(TEST_DIR);
 
-      const result = await loader.reorder([
-        'board-c',
-        'board-a',
-      ]);
+      const result = await loader.reorder(['board-c', 'board-a']);
 
       expect(result).toBeTrue();
       const boards = loader.list();
@@ -628,10 +612,7 @@ notaboard: true
         `version: "1"\nboard:\n  id: board-b\n  name: Board B\n  columns: 12\n`
       );
       await loader.loadDir(TEST_DIR);
-      await loader.reorder([
-        'board-b',
-        'board-a',
-      ]);
+      await loader.reorder(['board-b', 'board-a']);
 
       // Reload in a fresh loader to verify persistence
       reset();

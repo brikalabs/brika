@@ -11,9 +11,7 @@ import { dataDir } from '../../utils/runtime';
 export default defineCommand({
   name: 'delete',
   description: 'Delete a user',
-  examples: [
-    'brika auth user delete',
-  ],
+  examples: ['brika auth user delete'],
   async handler() {
     p.intro(pc.bgRed(pc.black(' Delete User ')));
 

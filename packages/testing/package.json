@@ -8,12 +8,7 @@
     "url": "https://github.com/maxscharwath/brika.git",
     "directory": "packages/testing"
   },
-  "keywords": [
-    "brika",
-    "testing",
-    "bun",
-    "mocks"
-  ],
+  "keywords": ["brika", "testing", "bun", "mocks"],
   "main": "src/index.ts",
   "types": "src/index.ts",
   "exports": {

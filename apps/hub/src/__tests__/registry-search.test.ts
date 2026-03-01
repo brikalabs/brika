@@ -49,9 +49,7 @@ describe('NpmRegistry', () => {
               name: '@brika/test-plugin',
               version: '1.0.0',
               description: 'Test plugin',
-              keywords: [
-                'brika',
-              ],
+              keywords: ['brika'],
             },
           },
         ],
@@ -324,10 +322,7 @@ describe('NpmRegistry', () => {
             version: '2.0.0',
             description: 'A test plugin',
             author: 'Test Author',
-            keywords: [
-              'brika',
-              'plugin',
-            ],
+            keywords: ['brika', 'plugin'],
             license: 'MIT',
             engines: {
               brika: '^0.1.0',
@@ -352,10 +347,7 @@ describe('NpmRegistry', () => {
         version: '2.0.0',
         description: 'A test plugin',
         author: 'Test Author',
-        keywords: [
-          'brika',
-          'plugin',
-        ],
+        keywords: ['brika', 'plugin'],
         license: 'MIT',
         engines: {
           brika: '^0.1.0',

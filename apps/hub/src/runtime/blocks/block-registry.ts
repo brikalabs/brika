@@ -138,21 +138,15 @@ export class BlockRegistry {
   }
 
   list(): BlockDefinition[] {
-    return [
-      ...this.#blocks.values(),
-    ].sort((a, b) => a.id.localeCompare(b.id));
+    return [...this.#blocks.values()].sort((a, b) => a.id.localeCompare(b.id));
   }
 
   listByPlugin(pluginId: string): BlockDefinition[] {
-    return [
-      ...this.#blocks.values(),
-    ].filter((b) => b.pluginId === pluginId);
+    return [...this.#blocks.values()].filter((b) => b.pluginId === pluginId);
   }
 
   listByOwner(pluginId: string): BlockSummary[] {
-    return [
-      ...this.#blocks.values(),
-    ]
+    return [...this.#blocks.values()]
       .filter((b) => b.pluginId === pluginId)
       .map((b) => ({
         id: b.type ?? `${b.pluginId}:${b.id}`,
@@ -194,9 +188,7 @@ export class BlockRegistry {
   }
 
   getPlugins(): PluginInfo[] {
-    return [
-      ...this.#plugins.values(),
-    ];
+    return [...this.#plugins.values()];
   }
 
   validateConfig(type: string, config: Record<string, unknown>): ValidationResult {
@@ -204,9 +196,7 @@ export class BlockRegistry {
     if (!block) {
       return {
         valid: false,
-        errors: [
-          `Unknown block type: ${type}`,
-        ],
+        errors: [`Unknown block type: ${type}`],
       };
     }
 
@@ -246,12 +236,7 @@ export class BlockRegistry {
     }>
   ): ValidationResult {
     const errors: string[] = [];
-    const blockMap = new Map(
-      blocks.map((b) => [
-        b.id,
-        b,
-      ])
-    );
+    const blockMap = new Map(blocks.map((b) => [b.id, b]));
 
     for (const conn of connections) {
       this.#validateSingleConnection(conn, blockMap, errors);

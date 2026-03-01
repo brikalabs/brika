@@ -24,16 +24,7 @@ export const useEventsStore = create<EventsStore>((set) => ({
       if (s.events.some((ev) => ev.id === e.id)) {
         return s;
       }
-      const events =
-        s.events.length > 500
-          ? [
-              ...s.events.slice(-450),
-              e,
-            ]
-          : [
-              ...s.events,
-              e,
-            ];
+      const events = s.events.length > 500 ? [...s.events.slice(-450), e] : [...s.events, e];
       return {
         events,
       };
@@ -44,10 +35,7 @@ export const useEventsStore = create<EventsStore>((set) => ({
       const existingIds = new Set(s.events.map((e) => e.id));
       const newFromHistory = history.filter((e) => !existingIds.has(e.id));
       // Combine and sort by timestamp (oldest first for internal storage)
-      const merged = [
-        ...newFromHistory,
-        ...s.events,
-      ].sort((a, b) => a.ts - b.ts);
+      const merged = [...newFromHistory, ...s.events].sort((a, b) => a.ts - b.ts);
       return {
         events: merged,
         initialized: true,

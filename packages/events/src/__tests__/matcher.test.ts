@@ -129,10 +129,7 @@ describe('matcher', () => {
       );
       const action3 = TestActions.three.create(undefined, 'test');
 
-      const pattern = [
-        TestActions.one,
-        TestActions.two,
-      ];
+      const pattern = [TestActions.one, TestActions.two];
 
       expect(matchesPattern(pattern, action1)).toBe(true);
       expect(matchesPattern(pattern, action2)).toBe(true);
@@ -148,10 +145,7 @@ describe('matcher', () => {
       );
       const filtered = withPredicate(TestActions.one, (a) => a.payload.value > 5);
 
-      const pattern = [
-        filtered,
-        TestActions.two,
-      ];
+      const pattern = [filtered, TestActions.two];
 
       expect(matchesPattern(pattern, action)).toBe(true);
     });
@@ -192,10 +186,7 @@ describe('matcher', () => {
     });
 
     test('creates set from array', () => {
-      const result = createPatternSet([
-        TestActions.one,
-        TestActions.two,
-      ]);
+      const result = createPatternSet([TestActions.one, TestActions.two]);
 
       expect(result.ids.size).toBe(2);
     });
@@ -215,20 +206,14 @@ describe('matcher', () => {
         },
         'test'
       );
-      const patternSet = createPatternSet([
-        TestActions.one,
-        TestActions.two,
-      ]);
+      const patternSet = createPatternSet([TestActions.one, TestActions.two]);
 
       expect(matchesPatternSet(patternSet, action)).toBe(true);
     });
 
     test('does not match action not in set', () => {
       const action = TestActions.three.create(undefined, 'test');
-      const patternSet = createPatternSet([
-        TestActions.one,
-        TestActions.two,
-      ]);
+      const patternSet = createPatternSet([TestActions.one, TestActions.two]);
 
       expect(matchesPatternSet(patternSet, action)).toBe(false);
     });

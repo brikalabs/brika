@@ -19,24 +19,8 @@ export function usePluginUpdates() {
   });
 
   const updates = query.data?.updates ?? [];
-  const available = useMemo(
-    () => updates.filter((u) => u.updateAvailable),
-    [
-      updates,
-    ]
-  );
-  const updateMap = useMemo(
-    () =>
-      new Map(
-        updates.map((u) => [
-          u.name,
-          u,
-        ])
-      ),
-    [
-      updates,
-    ]
-  );
+  const available = useMemo(() => updates.filter((u) => u.updateAvailable), [updates]);
+  const updateMap = useMemo(() => new Map(updates.map((u) => [u.name, u])), [updates]);
 
   return {
     ...query,

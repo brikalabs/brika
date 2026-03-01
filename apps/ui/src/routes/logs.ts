@@ -6,9 +6,6 @@ export const logRoutes = {
     path: '/logs',
     load: () => import('@/features/logs'),
     select: (m) => m.LogsPage,
-    scopes: [
-      Scope.PLUGIN_READ,
-      Scope.ADMIN_ALL,
-    ],
+    scopes: [Scope.PLUGIN_READ, Scope.ADMIN_ALL],
   }),
 };

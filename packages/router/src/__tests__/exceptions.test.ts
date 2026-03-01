@@ -125,9 +125,7 @@ describe('UnprocessableEntity', () => {
 
   test('accepts custom message and data', () => {
     const data = {
-      errors: [
-        'field required',
-      ],
+      errors: ['field required'],
     };
     const ex = new UnprocessableEntity('Validation failed', data);
 

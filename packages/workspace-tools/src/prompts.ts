@@ -72,9 +72,7 @@ export async function promptForBump(
       : pc.bgCyan(pc.black(' workspace-tools '))
   );
 
-  const uniqueVersions = [
-    ...new Set(allPackages.map((pkg) => pkg.version)),
-  ];
+  const uniqueVersions = [...new Set(allPackages.map((pkg) => pkg.version))];
   if (uniqueVersions.length === 1) {
     const packagesCount = pc.dim(` (${allPackages.length} packages)`);
     p.log.info(`Current version: ${pc.cyan(currentVersion)}${packagesCount}`);

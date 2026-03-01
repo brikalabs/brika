@@ -424,11 +424,7 @@ describe('setupLifecycle', () => {
 
       await stop();
 
-      expect(order).toEqual([
-        1,
-        2,
-        3,
-      ]);
+      expect(order).toEqual([1, 2, 3]);
     });
 
     test('does nothing when no stop handlers registered', async () => {

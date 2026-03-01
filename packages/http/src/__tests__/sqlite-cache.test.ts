@@ -122,16 +122,9 @@ describe('SqliteCache', () => {
 
   describe('tag-based invalidation', () => {
     it('should store entries with tags', () => {
-      cache.set('key1', 'value1', 60_000, [
-        'tag-a',
-        'tag-b',
-      ]);
-      cache.set('key2', 'value2', 60_000, [
-        'tag-a',
-      ]);
-      cache.set('key3', 'value3', 60_000, [
-        'tag-b',
-      ]);
+      cache.set('key1', 'value1', 60_000, ['tag-a', 'tag-b']);
+      cache.set('key2', 'value2', 60_000, ['tag-a']);
+      cache.set('key3', 'value3', 60_000, ['tag-b']);
 
       expect(cache.get('key1')).toBe('value1');
       expect(cache.get('key2')).toBe('value2');
@@ -139,16 +132,9 @@ describe('SqliteCache', () => {
     });
 
     it('should invalidate entries by single tag', () => {
-      cache.set('key1', 'value1', 60_000, [
-        'tag-a',
-        'tag-b',
-      ]);
-      cache.set('key2', 'value2', 60_000, [
-        'tag-a',
-      ]);
-      cache.set('key3', 'value3', 60_000, [
-        'tag-b',
-      ]);
+      cache.set('key1', 'value1', 60_000, ['tag-a', 'tag-b']);
+      cache.set('key2', 'value2', 60_000, ['tag-a']);
+      cache.set('key3', 'value3', 60_000, ['tag-b']);
 
       cache.invalidateByTag('tag-a');
 
@@ -158,20 +144,11 @@ describe('SqliteCache', () => {
     });
 
     it('should invalidate entries by multiple tags', () => {
-      cache.set('key1', 'value1', 60_000, [
-        'tag-a',
-      ]);
-      cache.set('key2', 'value2', 60_000, [
-        'tag-b',
-      ]);
-      cache.set('key3', 'value3', 60_000, [
-        'tag-c',
-      ]);
+      cache.set('key1', 'value1', 60_000, ['tag-a']);
+      cache.set('key2', 'value2', 60_000, ['tag-b']);
+      cache.set('key3', 'value3', 60_000, ['tag-c']);
 
-      cache.invalidateByTags([
-        'tag-a',
-        'tag-b',
-      ]);
+      cache.invalidateByTags(['tag-a', 'tag-b']);
 
       expect(cache.get('key1')).toBeNull();
       expect(cache.get('key2')).toBeNull();
@@ -179,34 +156,20 @@ describe('SqliteCache', () => {
     });
 
     it('should get entries by tag', () => {
-      cache.set('key1', 'value1', 60_000, [
-        'npm-search',
-      ]);
-      cache.set('key2', 'value2', 60_000, [
-        'npm-search',
-      ]);
-      cache.set('key3', 'value3', 60_000, [
-        'other',
-      ]);
+      cache.set('key1', 'value1', 60_000, ['npm-search']);
+      cache.set('key2', 'value2', 60_000, ['npm-search']);
+      cache.set('key3', 'value3', 60_000, ['other']);
 
       const results = cache.getByTag<string>('npm-search');
       expect(results).toHaveLength(2);
-      expect(results.map((r) => r.key).sort()).toEqual([
-        'key1',
-        'key2',
-      ]);
+      expect(results.map((r) => r.key).sort()).toEqual(['key1', 'key2']);
     });
   });
 
   describe('statistics', () => {
     it('should report cache stats', () => {
-      cache.set('key1', 'value1', 60_000, [
-        'tag-a',
-      ]);
-      cache.set('key2', 'value2', 60_000, [
-        'tag-a',
-        'tag-b',
-      ]);
+      cache.set('key1', 'value1', 60_000, ['tag-a']);
+      cache.set('key2', 'value2', 60_000, ['tag-a', 'tag-b']);
       cache.set('key3', 'value3', 60_000);
 
       const stats = cache.stats();
@@ -234,9 +197,7 @@ describe('SqliteCache', () => {
           data: 'test',
         },
         60_000,
-        [
-          'tag-a',
-        ]
+        ['tag-a']
       );
 
       const entry = cache.getEntry('key1');
@@ -245,9 +206,7 @@ describe('SqliteCache', () => {
         data: 'test',
       });
       expect(entry?.ttl).toBe(60_000);
-      expect(entry?.tags).toEqual([
-        'tag-a',
-      ]);
+      expect(entry?.tags).toEqual(['tag-a']);
       expect(entry?.timestamp).toBeLessThanOrEqual(Date.now());
     });
 
@@ -271,12 +230,8 @@ describe('SqliteCache', () => {
     });
 
     it('should handle overwriting existing keys', () => {
-      cache.set('key1', 'value1', 60_000, [
-        'tag-old',
-      ]);
-      cache.set('key1', 'value2', 60_000, [
-        'tag-new',
-      ]);
+      cache.set('key1', 'value1', 60_000, ['tag-old']);
+      cache.set('key1', 'value2', 60_000, ['tag-new']);
 
       expect(cache.get('key1')).toBe('value2');
 

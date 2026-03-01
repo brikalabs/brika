@@ -5,10 +5,7 @@ import { claimPidFile, removePidFile } from './pid';
 import { RESTART_CODE, spawnDetached, spawnHub } from './runtime';
 
 export function startBackground(open = false): never {
-  const { pid } = spawnDetached([
-    'start',
-    '--foreground',
-  ]);
+  const { pid } = spawnDetached(['start', '--foreground']);
   const pidLabel = pc.dim(`PID ${pid}`);
   console.log(`${pc.green('Started')} — hub running in background  ${pidLabel}`);
   console.log(pc.dim(`  Stop with: brika stop`));
@@ -43,13 +40,7 @@ export async function runSupervisor(open = false): Promise<void> {
   process.on('SIGTERM', () => child?.kill('SIGTERM'));
   process.on('SIGINT', () => child?.kill('SIGINT'));
 
-  child = spawnHub(
-    [
-      'start',
-      '--foreground',
-    ],
-    env
-  );
+  child = spawnHub(['start', '--foreground'], env);
   if (open) {
     openBrowser(hubUrl());
   }
@@ -62,13 +53,7 @@ export async function runSupervisor(open = false): Promise<void> {
       break;
     }
     console.log(pc.dim('  Restarting hub...'));
-    child = spawnHub(
-      [
-        'start',
-        '--foreground',
-      ],
-      env
-    );
+    child = spawnHub(['start', '--foreground'], env);
   }
 
   await removePidFile();

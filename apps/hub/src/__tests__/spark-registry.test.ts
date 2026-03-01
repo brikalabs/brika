@@ -89,10 +89,7 @@ describe('SparkRegistry', () => {
         '@test/switch'
       );
 
-      expect(registered).toEqual([
-        '@test/switch:pressed',
-        '@test/switch:released',
-      ]);
+      expect(registered).toEqual(['@test/switch:pressed', '@test/switch:released']);
     });
 
     test('handles listener errors gracefully', () => {
@@ -132,9 +129,7 @@ describe('SparkRegistry', () => {
         '@test/plugin'
       );
 
-      expect(registered).toEqual([
-        '@test/plugin:first',
-      ]);
+      expect(registered).toEqual(['@test/plugin:first']);
     });
 
     test('supports multiple listeners', () => {
@@ -151,12 +146,8 @@ describe('SparkRegistry', () => {
         '@test/plugin'
       );
 
-      expect(list1).toEqual([
-        '@test/plugin:test',
-      ]);
-      expect(list2).toEqual([
-        '@test/plugin:test',
-      ]);
+      expect(list1).toEqual(['@test/plugin:test']);
+      expect(list2).toEqual(['@test/plugin:test']);
     });
   });
 

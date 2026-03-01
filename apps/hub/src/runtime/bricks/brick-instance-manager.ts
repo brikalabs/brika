@@ -113,15 +113,11 @@ export class BrickInstanceManager {
   }
 
   list(): BrickInstance[] {
-    return [
-      ...this.#instances.values(),
-    ];
+    return [...this.#instances.values()];
   }
 
   listByType(brickTypeId: string): BrickInstance[] {
-    return [
-      ...this.#instances.values(),
-    ].filter((i) => i.brickTypeId === brickTypeId);
+    return [...this.#instances.values()].filter((i) => i.brickTypeId === brickTypeId);
   }
 
   /** Unmount all instances of a specific brick type. Returns removed instance IDs. */

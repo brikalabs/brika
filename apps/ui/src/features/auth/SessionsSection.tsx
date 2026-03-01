@@ -399,9 +399,7 @@ export function SessionsSection() {
     return () => {
       cancelled = true;
     };
-  }, [
-    client,
-  ]);
+  }, [client]);
 
   const handleRevoke = useCallback(
     async (session: SessionInfo) => {
@@ -418,10 +416,7 @@ export function SessionsSection() {
         setConfirmSession(null);
       }
     },
-    [
-      client,
-      clearSession,
-    ]
+    [client, clearSession]
   );
 
   const handleRevokeAll = useCallback(async () => {
@@ -433,10 +428,7 @@ export function SessionsSection() {
       setRevokingAll(false);
       setConfirmRevokeAll(false);
     }
-  }, [
-    client,
-    clearSession,
-  ]);
+  }, [client, clearSession]);
 
   const otherSessionsCount = sessions.filter((s) => !s.current).length;
 

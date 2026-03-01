@@ -35,9 +35,7 @@ export function useUpdateCheck() {
       }
     });
     return () => es.close();
-  }, [
-    queryClient,
-  ]);
+  }, [queryClient]);
 
   return query;
 }

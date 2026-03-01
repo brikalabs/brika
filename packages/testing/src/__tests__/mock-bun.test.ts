@@ -45,30 +45,20 @@ describe('BunMock', () => {
           cwd: '/locales',
         })
       );
-      expect(locales).toEqual([
-        'en/',
-        'fr/',
-      ]);
+      expect(locales).toEqual(['en/', 'fr/']);
 
       const enFiles = await Array.fromAsync(
         new Bun.Glob('*.json').scan({
           cwd: '/locales/en',
         })
       );
-      expect(enFiles).toEqual([
-        'common.json',
-        'nav.json',
-      ]);
+      expect(enFiles).toEqual(['common.json', 'nav.json']);
     });
 
     test('supports explicit directory definitions for ordering', async () => {
       bun
         .fs({
-          '/locales/': [
-            'fr/',
-            'en/',
-            'de/',
-          ], // explicit order
+          '/locales/': ['fr/', 'en/', 'de/'], // explicit order
           '/locales/en/common.json': {},
           '/locales/fr/common.json': {},
           '/locales/de/common.json': {},
@@ -80,11 +70,7 @@ describe('BunMock', () => {
           cwd: '/locales',
         })
       );
-      expect(locales).toEqual([
-        'fr/',
-        'en/',
-        'de/',
-      ]); // maintains explicit order
+      expect(locales).toEqual(['fr/', 'en/', 'de/']); // maintains explicit order
     });
 
     test('supports empty directories', async () => {
@@ -100,9 +86,7 @@ describe('BunMock', () => {
           cwd: '/locales',
         })
       );
-      expect(locales).toEqual([
-        'en/',
-      ]);
+      expect(locales).toEqual(['en/']);
 
       // Empty directory
       const enFiles = await Array.fromAsync(
@@ -174,44 +158,25 @@ describe('BunMock', () => {
 
   describe('directory()', () => {
     test('mocks glob scan for directories', async () => {
-      bun
-        .directory('/locales', [
-          'en/',
-          'fr/',
-          'de/',
-        ])
-        .apply();
+      bun.directory('/locales', ['en/', 'fr/', 'de/']).apply();
 
       const dirs = await Array.fromAsync(
         new Bun.Glob('*/').scan({
           cwd: '/locales',
         })
       );
-      expect(dirs).toEqual([
-        'en/',
-        'fr/',
-        'de/',
-      ]);
+      expect(dirs).toEqual(['en/', 'fr/', 'de/']);
     });
 
     test('mocks glob scan for files', async () => {
-      bun
-        .directory('/src', [
-          'index.ts',
-          'utils.ts',
-          'README.md',
-        ])
-        .apply();
+      bun.directory('/src', ['index.ts', 'utils.ts', 'README.md']).apply();
 
       const files = await Array.fromAsync(
         new Bun.Glob('*.ts').scan({
           cwd: '/src',
         })
       );
-      expect(files).toEqual([
-        'index.ts',
-        'utils.ts',
-      ]);
+      expect(files).toEqual(['index.ts', 'utils.ts']);
     });
 
     test('returns empty for unknown directory', async () => {
@@ -233,11 +198,7 @@ describe('BunMock', () => {
           exitCode: 0,
         })
         .apply();
-      expect(
-        await Bun.spawn([
-          'test',
-        ]).exited
-      ).toBe(0);
+      expect(await Bun.spawn(['test']).exited).toBe(0);
     });
 
     test('mocks non-zero exit code', async () => {
@@ -246,11 +207,7 @@ describe('BunMock', () => {
           exitCode: 1,
         })
         .apply();
-      expect(
-        await Bun.spawn([
-          'fail',
-        ]).exited
-      ).toBe(1);
+      expect(await Bun.spawn(['fail']).exited).toBe(1);
     });
 
     test('mocks stderr', async () => {
@@ -260,58 +217,35 @@ describe('BunMock', () => {
         })
         .apply();
 
-      const proc = Bun.spawn([
-        'cmd',
-      ]);
+      const proc = Bun.spawn(['cmd']);
       expect(await new Response(proc.stderr).text()).toBe('Error!');
     });
 
     test('records calls', () => {
       bun.apply();
 
-      Bun.spawn([
-        'npm',
-        'install',
-      ]);
-      Bun.spawn(
-        [
-          'bun',
-          'test',
-        ],
-        {
-          cwd: '/project',
-        }
-      );
+      Bun.spawn(['npm', 'install']);
+      Bun.spawn(['bun', 'test'], {
+        cwd: '/project',
+      });
 
       expect(bun.spawnCalls).toHaveLength(2);
-      expect(bun.spawnCalls[0]?.cmd).toEqual([
-        'npm',
-        'install',
-      ]);
-      expect(bun.spawnCalls[1]?.cmd).toEqual([
-        'bun',
-        'test',
-      ]);
+      expect(bun.spawnCalls[0]?.cmd).toEqual(['npm', 'install']);
+      expect(bun.spawnCalls[1]?.cmd).toEqual(['bun', 'test']);
     });
 
     test('clearSpawnCalls resets history', () => {
       bun.apply();
 
-      Bun.spawn([
-        'first',
-      ]);
+      Bun.spawn(['first']);
       expect(bun.spawnCalls).toHaveLength(1);
 
       bun.clearSpawnCalls();
       expect(bun.spawnCalls).toHaveLength(0);
 
-      Bun.spawn([
-        'second',
-      ]);
+      Bun.spawn(['second']);
       expect(bun.spawnCalls).toHaveLength(1);
-      expect(bun.spawnCalls[0]?.cmd).toEqual([
-        'second',
-      ]);
+      expect(bun.spawnCalls[0]?.cmd).toEqual(['second']);
     });
   });
 
@@ -368,22 +302,14 @@ describe('BunMock', () => {
     test('checks and retrieves files', () => {
       bun
         .file('/data.json', {
-          items: [
-            1,
-            2,
-            3,
-          ],
+          items: [1, 2, 3],
         })
         .apply();
 
       expect(bun.hasFile('/data.json')).toBe(true);
       expect(bun.hasFile('/missing.json')).toBe(false);
       expect(bun.getFile('/data.json')).toMatchObject({
-        items: [
-          1,
-          2,
-          3,
-        ],
+        items: [1, 2, 3],
       });
       expect(bun.getFile('/missing.json')).toBeUndefined();
     });
@@ -406,18 +332,13 @@ describe('BunMock', () => {
         .file('/test.json', {
           data: true,
         })
-        .directory('/dir', [
-          'a/',
-          'b/',
-        ])
+        .directory('/dir', ['a/', 'b/'])
         .spawn({
           exitCode: 0,
         })
         .apply();
 
-      Bun.spawn([
-        'cmd',
-      ]);
+      Bun.spawn(['cmd']);
       expect(bun.spawnCalls).toHaveLength(1);
 
       bun.restore();
@@ -459,10 +380,7 @@ describe('BunMock', () => {
       })) {
         locales.push(dir.replace('/', ''));
       }
-      expect(locales).toEqual([
-        'en',
-        'fr',
-      ]);
+      expect(locales).toEqual(['en', 'fr']);
 
       // Load translations
       expect(await Bun.file('/app/locales/en/common.json').json()).toEqual({
@@ -500,19 +418,10 @@ describe('BunMock', () => {
       expect(Bun.resolveSync('@test/plugin', '/plugins')).toContain('@test/plugin');
 
       // Run install
-      Bun.spawn(
-        [
-          'bun',
-          'install',
-        ],
-        {
-          cwd: '/plugins',
-        }
-      );
-      expect(bun.spawnCalls[0]?.cmd).toEqual([
-        'bun',
-        'install',
-      ]);
+      Bun.spawn(['bun', 'install'], {
+        cwd: '/plugins',
+      });
+      expect(bun.spawnCalls[0]?.cmd).toEqual(['bun', 'install']);
     });
   });
 });
@@ -559,9 +468,7 @@ describe('useBunMock', () => {
       .resolve('@test/pkg', '/node_modules/@test/pkg/index.js')
       .apply();
 
-    Bun.spawn([
-      'test',
-    ]);
+    Bun.spawn(['test']);
     expect(bun.spawnCalls).toHaveLength(1);
     expect(Bun.resolveSync('@test/pkg', '/')).toBe('/node_modules/@test/pkg/index.js');
   });

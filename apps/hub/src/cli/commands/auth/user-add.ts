@@ -10,9 +10,7 @@ import { dataDir } from '../../utils/runtime';
 export default defineCommand({
   name: 'add',
   description: 'Add a new user',
-  examples: [
-    'brika auth user add',
-  ],
+  examples: ['brika auth user add'],
   async handler() {
     const cli = await bootstrapCLI(
       auth({

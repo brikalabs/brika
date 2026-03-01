@@ -5,9 +5,7 @@ import { checkPid, removePidFile } from '../utils/pid';
 export default defineCommand({
   name: 'status',
   description: 'Show whether the hub is running',
-  examples: [
-    'brika status',
-  ],
+  examples: ['brika status'],
   async handler() {
     const status = await checkPid();
     switch (status.state) {

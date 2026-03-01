@@ -412,9 +412,7 @@ describe('cli/commands/auth/user-edit', () => {
       role: 'admin',
       isActive: true,
     };
-    mockUserService.listUsers.mockReturnValue([
-      user,
-    ]);
+    mockUserService.listUsers.mockReturnValue([user]);
     mockPromptSelectUser.mockResolvedValue('u1');
     mockPromptEditUser.mockResolvedValue({
       name: 'Alicia',
@@ -454,9 +452,7 @@ describe('cli/commands/auth/user-edit', () => {
       role: 'admin',
       isActive: true,
     };
-    mockUserService.listUsers.mockReturnValue([
-      user,
-    ]);
+    mockUserService.listUsers.mockReturnValue([user]);
     mockPromptSelectUser.mockResolvedValue('u1');
     mockPromptEditUser.mockResolvedValue({
       name: 'Alicia',
@@ -486,9 +482,7 @@ describe('cli/commands/auth/user-edit', () => {
       role: 'admin',
       isActive: true,
     };
-    mockUserService.listUsers.mockReturnValue([
-      user,
-    ]);
+    mockUserService.listUsers.mockReturnValue([user]);
     mockPromptSelectUser.mockResolvedValue('u1');
     mockPromptEditUser.mockResolvedValue({});
 
@@ -510,9 +504,7 @@ describe('cli/commands/auth/user-edit', () => {
       role: 'admin',
       isActive: true,
     };
-    mockUserService.listUsers.mockReturnValue([
-      user,
-    ]);
+    mockUserService.listUsers.mockReturnValue([user]);
     mockPromptSelectUser.mockResolvedValue('u1');
     mockPromptEditUser.mockResolvedValue({
       isActive: false,

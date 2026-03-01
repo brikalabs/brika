@@ -35,41 +35,13 @@ describe('isSource', () => {
       },
       false,
     ],
-    [
-      'null value',
-      null,
-      false,
-    ],
-    [
-      'undefined value',
-      undefined,
-      false,
-    ],
-    [
-      'string value',
-      'source',
-      false,
-    ],
-    [
-      'number value',
-      123,
-      false,
-    ],
-    [
-      'empty object',
-      {},
-      false,
-    ],
-    [
-      'array',
-      [],
-      false,
-    ],
-    [
-      'function',
-      () => undefined,
-      false,
-    ],
+    ['null value', null, false],
+    ['undefined value', undefined, false],
+    ['string value', 'source', false],
+    ['number value', 123, false],
+    ['empty object', {}, false],
+    ['array', [], false],
+    ['function', () => undefined, false],
     [
       'object with only __source',
       {
@@ -198,9 +170,7 @@ describe('timer', () => {
     await wait(50);
     cleanup();
 
-    expect(values).toEqual([
-      0,
-    ]);
+    expect(values).toEqual([0]);
   });
 
   test('emits only once', async () => {
@@ -213,9 +183,7 @@ describe('timer', () => {
     await wait(100);
     cleanup();
 
-    expect(values).toEqual([
-      0,
-    ]);
+    expect(values).toEqual([0]);
   });
 
   test('cleanup cancels timer if not fired', async () => {
@@ -241,9 +209,7 @@ describe('timer', () => {
     await wait(50);
     cleanup(); // Should be safe to call after timer fired
 
-    expect(values).toEqual([
-      0,
-    ]);
+    expect(values).toEqual([0]);
   });
 
   test('multiple starts create independent timers', async () => {
@@ -259,11 +225,7 @@ describe('timer', () => {
     cleanup1();
     cleanup2();
 
-    expect(values1).toEqual([
-      0,
-    ]);
-    expect(values2).toEqual([
-      0,
-    ]);
+    expect(values1).toEqual([0]);
+    expect(values2).toEqual([0]);
   });
 });

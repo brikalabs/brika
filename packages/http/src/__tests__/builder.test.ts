@@ -249,17 +249,13 @@ describe('RequestBuilder', () => {
 
       builder.cache({
         ttl: 60000,
-        tags: [
-          'users',
-        ],
+        tags: ['users'],
       });
 
       const config = builder.getConfig();
       expect(config.cache).toEqual({
         ttl: 60000,
-        tags: [
-          'users',
-        ],
+        tags: ['users'],
       });
     });
 

@@ -56,9 +56,7 @@ describe('PluginProcess', () => {
     homepage: 'https://example.com',
     repository: 'https://github.com/test',
     icon: 'test-icon',
-    keywords: [
-      'test',
-    ],
+    keywords: ['test'],
     license: 'MIT',
     engines: {
       brika: '^0.1.0',
@@ -139,10 +137,7 @@ describe('PluginProcess', () => {
         uid: 'uid-123',
         version: '1.0.0',
         metadata: createMockMetadata(),
-        locales: [
-          'en',
-          'fr',
-        ],
+        locales: ['en', 'fr'],
       },
       config,
       callbacks
@@ -201,10 +196,7 @@ describe('PluginProcess', () => {
     });
 
     test('exposes locales', () => {
-      expect(process.locales).toEqual([
-        'en',
-        'fr',
-      ]);
+      expect(process.locales).toEqual(['en', 'fr']);
     });
 
     test('exposes startedAt', () => {
@@ -640,18 +632,13 @@ describe('PluginProcess', () => {
       expect(plugin.homepage).toBe('https://example.com');
       expect(plugin.repository).toBe('https://github.com/test');
       expect(plugin.icon).toBe('test-icon');
-      expect(plugin.keywords).toEqual([
-        'test',
-      ]);
+      expect(plugin.keywords).toEqual(['test']);
       expect(plugin.license).toBe('MIT');
       expect(plugin.status).toBe('running');
       expect(plugin.pid).toBe(12345);
       expect(plugin.rootDirectory).toBe('/path/to/plugin');
       expect(plugin.entryPoint).toBe('/path/to/plugin/index.js');
-      expect(plugin.locales).toEqual([
-        'en',
-        'fr',
-      ]);
+      expect(plugin.locales).toEqual(['en', 'fr']);
       expect(plugin.lastError).toBeNull();
       expect(plugin.startedAt).toBeGreaterThan(0);
     });
@@ -673,13 +660,9 @@ describe('PluginProcess', () => {
 
     test('includes permissions and grantedPermissions', () => {
       const metaWithPerms = createMockMetadata();
-      metaWithPerms.permissions = [
-        'location',
-      ];
+      metaWithPerms.permissions = ['location'];
 
-      const grantedCb = mock().mockReturnValue([
-        'location',
-      ]);
+      const grantedCb = mock().mockReturnValue(['location']);
       const cbsWithGrants = {
         ...callbacks,
         onGetGrantedPermissions: grantedCb,
@@ -701,12 +684,8 @@ describe('PluginProcess', () => {
       );
 
       const plugin = pp.toPlugin('running');
-      expect(plugin.permissions).toEqual([
-        'location',
-      ]);
-      expect(plugin.grantedPermissions).toEqual([
-        'location',
-      ]);
+      expect(plugin.permissions).toEqual(['location']);
+      expect(plugin.grantedPermissions).toEqual(['location']);
       expect(grantedCb).toHaveBeenCalledWith('@test/plugin-perms');
 
       pp.stop();
@@ -1145,9 +1124,7 @@ describe('PluginProcess', () => {
       test('registers a declared brick type and calls onBrickType', () => {
         const brickType = {
           id: 'test-brick',
-          families: [
-            'dashboard',
-          ],
+          families: ['dashboard'],
         };
 
         triggerHandler(registerBrickType, {
@@ -1161,9 +1138,7 @@ describe('PluginProcess', () => {
       test('ignores undeclared brick types', () => {
         const brickType = {
           id: 'undeclared-brick',
-          families: [
-            'dashboard',
-          ],
+          families: ['dashboard'],
         };
 
         triggerHandler(registerBrickType, {

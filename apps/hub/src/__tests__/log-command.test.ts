@@ -185,12 +185,7 @@ describe('rowToEvent', () => {
   });
 
   test('preserves all LogLevel values', () => {
-    const levels: LogLevel[] = [
-      'debug',
-      'info',
-      'warn',
-      'error',
-    ];
+    const levels: LogLevel[] = ['debug', 'info', 'warn', 'error'];
     for (const level of levels) {
       const row: LogRow = {
         ...baseRow,
@@ -202,14 +197,7 @@ describe('rowToEvent', () => {
   });
 
   test('preserves LogSource values', () => {
-    const sources: LogSource[] = [
-      'hub',
-      'plugin',
-      'installer',
-      'registry',
-      'stderr',
-      'workflow',
-    ];
+    const sources: LogSource[] = ['hub', 'plugin', 'installer', 'registry', 'stderr', 'workflow'];
     for (const source of sources) {
       const row: LogRow = {
         ...baseRow,
@@ -224,11 +212,7 @@ describe('rowToEvent', () => {
     const meta = {
       nested: {
         deep: {
-          value: [
-            1,
-            2,
-            3,
-          ],
+          value: [1, 2, 3],
         },
       },
       flag: true,

@@ -96,12 +96,7 @@ function useOverflowList<T>({
 
     setOverflowCount(Math.max(items.length - visible, 0));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    items,
-    overflowCount,
-    activeKey,
-    ...deps,
-  ]);
+  }, [items, overflowCount, activeKey, ...deps]);
 
   // ── Resize: recompute from cached widths (pure math, no DOM reads) ─────
   React.useEffect(() => {
@@ -172,9 +167,7 @@ function useOverflowList<T>({
         widthCache.current.delete(id);
       }
     }
-  }, [
-    items,
-  ]);
+  }, [items]);
 
   // ── Derive visible / overflow split ────────────────────────────────────
   const visibleCount = items.length - overflowCount;
@@ -192,10 +185,7 @@ function useOverflowList<T>({
     if (activeKey !== null && activeKey !== undefined) {
       const activeIdx = items.findIndex((item) => key(item) === activeKey);
       if (activeIdx >= 0 && activeIdx >= visibleCount) {
-        const vis = [
-          ...items.slice(0, visibleCount - 1),
-          items[activeIdx],
-        ];
+        const vis = [...items.slice(0, visibleCount - 1), items[activeIdx]];
         const visKeys = new Set(vis.map(key));
         const ovf = items.filter((item) => !visKeys.has(key(item)));
         return {
@@ -209,12 +199,7 @@ function useOverflowList<T>({
       visible: items.slice(0, visibleCount),
       overflow: items.slice(visibleCount),
     };
-  }, [
-    items,
-    visibleCount,
-    overflowCount,
-    activeKey,
-  ]);
+  }, [items, visibleCount, overflowCount, activeKey]);
 
   return {
     containerRef,

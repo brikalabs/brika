@@ -25,13 +25,7 @@ describe('canonicalize', () => {
   });
 
   test('preserves array order', () => {
-    expect(
-      canonicalize([
-        3,
-        1,
-        2,
-      ])
-    ).toBe('[3,1,2]');
+    expect(canonicalize([3, 1, 2])).toBe('[3,1,2]');
   });
 
   test('preserves null values', () => {
@@ -55,10 +49,7 @@ describe('canonicalize', () => {
   test('produces compact form (no whitespace)', () => {
     const result = canonicalize({
       key: 'value',
-      arr: [
-        1,
-        2,
-      ],
+      arr: [1, 2],
     });
     expect(result).not.toContain(' ');
     expect(result).not.toContain('\n');

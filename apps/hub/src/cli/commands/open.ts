@@ -6,9 +6,7 @@ import { openBrowser } from '../utils/open';
 export default defineCommand({
   name: 'open',
   description: 'Open the Brika UI in the default browser',
-  examples: [
-    'brika open',
-  ],
+  examples: ['brika open'],
   async handler() {
     await requireRunningHub();
     const url = hubUrl();

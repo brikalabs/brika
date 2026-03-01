@@ -52,33 +52,17 @@ describe('utils', () => {
 
   describe('runCommand', () => {
     test('returns true for successful command', async () => {
-      const result = await runCommand(
-        [
-          'echo',
-          'test',
-        ],
-        process.cwd()
-      );
+      const result = await runCommand(['echo', 'test'], process.cwd());
       expect(result).toBe(true);
     });
 
     test('returns false for failed command', async () => {
-      const result = await runCommand(
-        [
-          'false',
-        ],
-        process.cwd()
-      );
+      const result = await runCommand(['false'], process.cwd());
       expect(result).toBe(false);
     });
 
     test('returns false for non-existent command', async () => {
-      const result = await runCommand(
-        [
-          'nonexistent-command-xyz',
-        ],
-        process.cwd()
-      );
+      const result = await runCommand(['nonexistent-command-xyz'], process.cwd());
       expect(result).toBe(false);
     });
   });

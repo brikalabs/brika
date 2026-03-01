@@ -78,9 +78,7 @@ export const BoardGrid = memo(function BoardGrid({ board, onSaveLayout }: BoardG
   // Stable key — only changes when bricks are added/removed.
   const brickSetKey = useMemo(
     () => board.bricks.map((c) => c.instanceId).join(','),
-    [
-      board.bricks,
-    ]
+    [board.bricks]
   );
 
   // Layout: computed from store positions. Recomputes on position/size/add/remove changes.
@@ -100,10 +98,7 @@ export const BoardGrid = memo(function BoardGrid({ board, onSaveLayout }: BoardG
         maxH: ct?.maxSize?.h ?? 8,
       };
     });
-  }, [
-    board.bricks,
-    brickTypes,
-  ]);
+  }, [board.bricks, brickTypes]);
 
   // Children: only recreated on brick add/remove.
   const children = useMemo(
@@ -114,9 +109,7 @@ export const BoardGrid = memo(function BoardGrid({ board, onSaveLayout }: BoardG
         </div>
       )),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [
-      brickSetKey,
-    ]
+    [brickSetKey]
   );
 
   // Only save when drag/resize ends — NOT on every frame
@@ -124,17 +117,13 @@ export const BoardGrid = memo(function BoardGrid({ board, onSaveLayout }: BoardG
     (currentLayout: Layout) => {
       onSaveLayout(layoutToPayload(currentLayout));
     },
-    [
-      onSaveLayout,
-    ]
+    [onSaveLayout]
   );
   const handleResizeStop = useCallback(
     (currentLayout: Layout) => {
       onSaveLayout(layoutToPayload(currentLayout));
     },
-    [
-      onSaveLayout,
-    ]
+    [onSaveLayout]
   );
 
   // First render: just measure, don't render the grid yet
@@ -163,14 +152,8 @@ export const BoardGrid = memo(function BoardGrid({ board, onSaveLayout }: BoardG
         onDragStop={handleDragStop}
         onResizeStop={handleResizeStop}
         compactType="vertical"
-        containerPadding={[
-          0,
-          0,
-        ]}
-        margin={[
-          GAP,
-          GAP,
-        ]}
+        containerPadding={[0, 0]}
+        margin={[GAP, GAP]}
       >
         {children}
       </ReactGridLayout>

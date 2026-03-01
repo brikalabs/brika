@@ -56,19 +56,8 @@ describe('canonicalize', () => {
   });
 
   test('handles arrays preserving order', () => {
-    expect(
-      canonicalize([
-        3,
-        1,
-        2,
-      ])
-    ).toBe('[3,1,2]');
-    expect(
-      canonicalize([
-        'b',
-        'a',
-      ])
-    ).toBe('["b","a"]');
+    expect(canonicalize([3, 1, 2])).toBe('[3,1,2]');
+    expect(canonicalize(['b', 'a'])).toBe('["b","a"]');
   });
 
   test('handles arrays of objects', () => {
@@ -121,20 +110,7 @@ describe('SPKI_HEADER', () => {
 
   test('matches known Ed25519 SPKI DER prefix', () => {
     // ASN.1 DER: SEQUENCE { SEQUENCE { OID 1.3.101.112 }, BIT STRING (33 bytes) }
-    expect(Array.from(SPKI_HEADER)).toEqual([
-      48,
-      42,
-      48,
-      5,
-      6,
-      3,
-      43,
-      101,
-      112,
-      3,
-      33,
-      0,
-    ]);
+    expect(Array.from(SPKI_HEADER)).toEqual([48, 42, 48, 5, 6, 3, 43, 101, 112, 3, 33, 0]);
   });
 });
 

@@ -94,11 +94,7 @@ export function setupBricks(core: ContextCore) {
         config: state.config,
       };
       const result = brickType.component(ctx);
-      const body: ComponentNode[] = Array.isArray(result)
-        ? result
-        : [
-            result,
-          ];
+      const body: ComponentNode[] = Array.isArray(result) ? result : [result];
 
       if (immediate) {
         const mutations = reconcile(state.sentBody, body);

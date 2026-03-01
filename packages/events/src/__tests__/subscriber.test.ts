@@ -217,15 +217,9 @@ describe('SubscriberManager', () => {
     const manager = new SubscriberManager();
     const received: unknown[] = [];
 
-    manager.subscribe(
-      [
-        TestActions.one,
-        TestActions.two,
-      ],
-      (action) => {
-        received.push(action);
-      }
-    );
+    manager.subscribe([TestActions.one, TestActions.two], (action) => {
+      received.push(action);
+    });
 
     manager.notify(
       TestActions.one.create(

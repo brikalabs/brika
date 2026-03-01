@@ -89,10 +89,7 @@ function createConfig(overrides?: Partial<OAuthProviderConfig>): OAuthProviderCo
     id: uniqueId(),
     authorizeUrl: 'https://auth.example.com/authorize',
     tokenUrl: 'https://auth.example.com/token',
-    scopes: [
-      'read',
-      'write',
-    ],
+    scopes: ['read', 'write'],
     clientId: 'test-client-id',
     ...overrides,
   };
@@ -147,9 +144,7 @@ describe('OAuth coverage: authorize route + PKCE', () => {
     defineOAuth(
       createConfig({
         id,
-        scopes: [
-          'user-read-playback-state',
-        ],
+        scopes: ['user-read-playback-state'],
       })
     );
 

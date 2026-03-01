@@ -265,9 +265,7 @@ describe('HttpClient', () => {
         .get(url)
         .cache({
           ttl: 60_000,
-          tags: [
-            'test',
-          ],
+          tags: ['test'],
         })
         .send();
 
@@ -277,9 +275,7 @@ describe('HttpClient', () => {
         .get(url)
         .cache({
           ttl: 60_000,
-          tags: [
-            'test',
-          ],
+          tags: ['test'],
         })
         .send();
 
@@ -437,44 +433,33 @@ describe('HttpClient', () => {
         .get(url1)
         .cache({
           ttl: 60_000,
-          tags: [
-            'tag-a',
-          ],
+          tags: ['tag-a'],
         })
         .send();
       await client
         .get(url2)
         .cache({
           ttl: 60_000,
-          tags: [
-            'tag-b',
-          ],
+          tags: ['tag-b'],
         })
         .send();
 
       // Invalidate both tags
-      client.invalidateCacheTags([
-        'tag-a',
-        'tag-b',
-      ]);
+      client.invalidateCacheTags(['tag-a', 'tag-b']);
 
       // Both should be uncached now
       const r1 = await client
         .get(url1)
         .cache({
           ttl: 60_000,
-          tags: [
-            'tag-a',
-          ],
+          tags: ['tag-a'],
         })
         .send();
       const r2 = await client
         .get(url2)
         .cache({
           ttl: 60_000,
-          tags: [
-            'tag-b',
-          ],
+          tags: ['tag-b'],
         })
         .send();
 
@@ -486,11 +471,7 @@ describe('HttpClient', () => {
       client.setCache(null);
 
       // Should not throw
-      expect(() =>
-        client.invalidateCacheTags([
-          'any-tag',
-        ])
-      ).not.toThrow();
+      expect(() => client.invalidateCacheTags(['any-tag'])).not.toThrow();
     });
   });
 

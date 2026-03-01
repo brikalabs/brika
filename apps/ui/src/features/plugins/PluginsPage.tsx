@@ -47,9 +47,7 @@ export function PluginsPage() {
       healthy: h,
       unhealthy: u,
     };
-  }, [
-    plugins,
-  ]);
+  }, [plugins]);
 
   const View = useDataView({
     data: plugins,

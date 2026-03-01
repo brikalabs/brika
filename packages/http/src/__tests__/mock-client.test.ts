@@ -231,11 +231,7 @@ describe('MockHttpClient', () => {
     const client = createMockClient();
     client.mockResponse('GET', '/api/items', {
       status: 200,
-      data: [
-        1,
-        2,
-        3,
-      ],
+      data: [1, 2, 3],
     });
     client.mockResponse('POST', '/api/items', {
       status: 201,
@@ -253,11 +249,7 @@ describe('MockHttpClient', () => {
       url: '/api/items',
     });
     expect(getRes.status).toBe(200);
-    expect(getRes.data).toEqual([
-      1,
-      2,
-      3,
-    ]);
+    expect(getRes.data).toEqual([1, 2, 3]);
 
     const postRes = await client.execute({
       method: 'POST',

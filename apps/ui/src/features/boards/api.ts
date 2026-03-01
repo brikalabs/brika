@@ -209,18 +209,8 @@ export const boardsApi = {
 };
 
 export const boardKeys = {
-  all: [
-    'boards',
-  ] as const,
-  detail: (id: string) =>
-    [
-      'boards',
-      id,
-    ] as const,
-  brickTypes: [
-    'brickTypes',
-  ] as const,
-  instances: [
-    'brickInstances',
-  ] as const,
+  all: ['boards'] as const,
+  detail: (id: string) => ['boards', id] as const,
+  brickTypes: ['brickTypes'] as const,
+  instances: ['brickInstances'] as const,
 };

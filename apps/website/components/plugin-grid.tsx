@@ -137,10 +137,7 @@ function MarqueeRow({
       }
     >
       <div className={cn('marquee-track flex gap-5', reverse && 'marquee-reverse')}>
-        {[
-          0,
-          1,
-        ].map((copy) => (
+        {[0, 1].map((copy) => (
           <div key={copy} className="flex shrink-0 gap-5" aria-hidden={copy === 1}>
             {cards.map((plugin, i) => (
               <PluginCard key={`${copy}-${plugin.name}-${i}`} plugin={plugin} />

@@ -26,10 +26,7 @@ function PluginsSkeleton() {
         </div>
       </div>
       <div className="marquee-container space-y-5">
-        {[
-          0,
-          1,
-        ].map((row) => (
+        {[0, 1].map((row) => (
           <div key={row} className="flex gap-5 overflow-hidden">
             {Array.from(
               {
@@ -59,10 +56,7 @@ function Divider() {
 }
 
 export default async function Home() {
-  const [release, h] = await Promise.all([
-    fetchLatestRelease(),
-    headers(),
-  ]);
+  const [release, h] = await Promise.all([fetchLatestRelease(), headers()]);
 
   const lat = h.get('x-vercel-ip-latitude');
   const lon = h.get('x-vercel-ip-longitude');

@@ -74,11 +74,7 @@ export class SparkStore {
       return;
     }
 
-    const list = Array.isArray(value)
-      ? value
-      : [
-          value,
-        ];
+    const list = Array.isArray(value) ? value : [value];
     if (list.length === 0) {
       return;
     }

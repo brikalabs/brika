@@ -5,12 +5,7 @@ import { LogStore } from '@/runtime/logs/log-store';
 import { LOG_LEVELS, LOG_SOURCES } from '@/runtime/logs/types';
 import { PluginManager } from '@/runtime/plugins/plugin-manager';
 
-const LogLevelSchema = z.enum([
-  'debug',
-  'info',
-  'warn',
-  'error',
-]);
+const LogLevelSchema = z.enum(['debug', 'info', 'warn', 'error']);
 const LogSourceSchema = z.enum([
   'hub',
   'plugin',
@@ -61,27 +56,12 @@ const LogQuerySchema = z.object({
   endTs: z.coerce.number().optional(),
   cursor: z.coerce.number().optional(),
   limit: z.coerce.number().min(1).max(1000).default(100),
-  order: z
-    .enum([
-      'asc',
-      'desc',
-    ])
-    .default('desc'),
+  order: z.enum(['asc', 'desc']).default('desc'),
 });
 
 const LogClearSchema = z.object({
-  level: z
-    .union([
-      LogLevelSchema,
-      z.array(LogLevelSchema),
-    ])
-    .optional(),
-  source: z
-    .union([
-      LogSourceSchema,
-      z.array(LogSourceSchema),
-    ])
-    .optional(),
+  level: z.union([LogLevelSchema, z.array(LogLevelSchema)]).optional(),
+  source: z.union([LogSourceSchema, z.array(LogSourceSchema)]).optional(),
   pluginName: z.string().optional(),
   startTs: z.coerce.number().optional(),
   endTs: z.coerce.number().optional(),
@@ -118,12 +98,7 @@ export const logsRoutes = group({
 
         // Build a map of name -> plugin info from running/known plugins
         const pluginList = pm.list();
-        const nameToPlugin = new Map(
-          pluginList.map((p) => [
-            p.name,
-            p,
-          ])
-        );
+        const nameToPlugin = new Map(pluginList.map((p) => [p.name, p]));
 
         // Enrich with plugin metadata
         const pluginInfos = names.map((name) => {

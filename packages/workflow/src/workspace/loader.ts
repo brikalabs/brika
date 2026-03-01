@@ -140,9 +140,7 @@ export class WorkspaceLoader {
    * List all loaded workflows.
    */
   list(): Workflow[] {
-    return [
-      ...this.#loaded.values(),
-    ];
+    return [...this.#loaded.values()];
   }
 
   /**

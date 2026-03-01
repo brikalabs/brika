@@ -217,9 +217,7 @@ function call<S extends Schema, R>(
   route: RouteDefinition<S, R>,
   input?: RouteInput<S>
 ): Promise<TestResponse<R>> {
-  const app = createApp([
-    route,
-  ]);
+  const app = createApp([route]);
   const path = substitutePath(route.path, input?.params as Record<string, string> | undefined);
 
   return makeRequest<R>(app, route.method, path, input?.body, {

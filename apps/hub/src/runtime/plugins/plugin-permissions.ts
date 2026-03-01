@@ -75,9 +75,7 @@ export class PluginPermissionService {
       current.delete(permission);
     }
 
-    const updated = filterValidPermissions([
-      ...current,
-    ]);
+    const updated = filterValidPermissions([...current]);
     await this.#state.setGrantedPermissions(pluginName, updated);
 
     this.#logs.info(`Permission ${granted ? 'granted' : 'revoked'}`, {

@@ -57,14 +57,7 @@ const brickMeta: Record<
   },
 };
 
-const brickIds = [
-  'weather',
-  'energy',
-  'timer',
-  'cpu',
-  'spotify',
-  'lights',
-];
+const brickIds = ['weather', 'energy', 'timer', 'cpu', 'spotify', 'lights'];
 
 const initialLayout: LayoutItem[] = [
   {
@@ -163,9 +156,7 @@ function DraggableGrid() {
   const rowHeight = colWidth;
 
   const handleLayoutChange = useCallback((newLayout: Layout) => {
-    setLayout([
-      ...newLayout,
-    ]);
+    setLayout([...newLayout]);
   }, []);
 
   return (
@@ -181,14 +172,8 @@ function DraggableGrid() {
         draggableCancel=".no-drag"
         onLayoutChange={handleLayoutChange}
         compactType="vertical"
-        containerPadding={[
-          0,
-          0,
-        ]}
-        margin={[
-          GAP,
-          GAP,
-        ]}
+        containerPadding={[0, 0]}
+        margin={[GAP, GAP]}
       >
         {brickIds.map((id) => (
           <div key={id}>
@@ -205,12 +190,7 @@ export function Bricks({
 }: Readonly<{
   weather?: WeatherData | null;
 }>) {
-  const weatherValue = useMemo(
-    () => weather ?? null,
-    [
-      weather,
-    ]
-  );
+  const weatherValue = useMemo(() => weather ?? null, [weather]);
 
   return (
     <WeatherContext.Provider value={weatherValue}>

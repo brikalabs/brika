@@ -51,10 +51,7 @@ export function AddressSearch({ onSelect }: Readonly<AddressSearchProps>) {
         clearTimeout(timerRef.current);
       }
     };
-  }, [
-    query,
-    search,
-  ]);
+  }, [query, search]);
 
   function handleSelect(feature: PhotonFeature) {
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;

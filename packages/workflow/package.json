@@ -9,12 +9,7 @@
     "url": "https://github.com/maxscharwath/brika.git",
     "directory": "packages/workflow"
   },
-  "keywords": [
-    "brika",
-    "workflow",
-    "automation",
-    "engine"
-  ],
+  "keywords": ["brika", "workflow", "automation", "engine"],
   "exports": {
     ".": "./src/index.ts"
   },

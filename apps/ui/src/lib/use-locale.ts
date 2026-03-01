@@ -45,11 +45,7 @@ export function useLocale() {
 
       return baseT(rawKey, options);
     }) as TFunction,
-    [
-      baseT,
-      locale,
-      nsSeparator,
-    ]
+    [baseT, locale, nsSeparator]
   );
 
   const formatters = useMemo(
@@ -75,26 +71,14 @@ export function useLocale() {
       duration: new Intl.DurationFormat(intlLocale, {
         style: 'long',
       }),
-      languageNames: new Intl.DisplayNames(
-        [
-          intlLocale,
-        ],
-        {
-          type: 'language',
-        }
-      ),
-      regionNames: new Intl.DisplayNames(
-        [
-          intlLocale,
-        ],
-        {
-          type: 'region',
-        }
-      ),
+      languageNames: new Intl.DisplayNames([intlLocale], {
+        type: 'language',
+      }),
+      regionNames: new Intl.DisplayNames([intlLocale], {
+        type: 'region',
+      }),
     }),
-    [
-      intlLocale,
-    ]
+    [intlLocale]
   );
 
   return useMemo(
@@ -187,13 +171,7 @@ export function useLocale() {
         }
       },
     }),
-    [
-      t,
-      locale,
-      intlLocale,
-      i18n,
-      formatters,
-    ]
+    [t, locale, intlLocale, i18n, formatters]
   );
 }
 

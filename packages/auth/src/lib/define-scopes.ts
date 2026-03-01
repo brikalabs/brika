@@ -28,10 +28,7 @@ export function defineScopes<const TDefs extends Record<string, ScopeDef>>(confi
   const { scopes } = config;
 
   const Scope = Object.fromEntries(
-    Object.entries(scopes).map(([k, v]) => [
-      k,
-      v.value,
-    ])
+    Object.entries(scopes).map(([k, v]) => [k, v.value])
   ) as BuiltScopes<TDefs>['Scope'];
 
   const SCOPES_REGISTRY = Object.fromEntries(

@@ -49,9 +49,7 @@ function updateAtPath(
   if (isLeaf) {
     switch (mutation[0]) {
       case MUT.CREATE: {
-        const result = [
-          ...nodes,
-        ];
+        const result = [...nodes];
         if (idx >= result.length) {
           result.push(mutation[2]);
         } else {
@@ -60,9 +58,7 @@ function updateAtPath(
         return result;
       }
       case MUT.REPLACE: {
-        const result = [
-          ...nodes,
-        ];
+        const result = [...nodes];
         result[idx] = mutation[2];
         return result;
       }
@@ -71,9 +67,7 @@ function updateAtPath(
         if (!target) {
           return nodes;
         }
-        const result = [
-          ...nodes,
-        ];
+        const result = [...nodes];
         result[idx] = applyChanges(target, mutation[2], mutation[3]);
         return result;
       }
@@ -90,9 +84,7 @@ function updateAtPath(
 
   const updatedChildren = updateAtPath(node.children, segments, depth + 1, mutation);
 
-  const result = [
-    ...nodes,
-  ];
+  const result = [...nodes];
   result[idx] = {
     ...node,
     children: updatedChildren,

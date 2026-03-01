@@ -131,10 +131,7 @@ export class BunMock {
         const dirEntry = `${part}/`;
         const existing = this.#directories.get(parentPath) ?? [];
         if (!existing.includes(dirEntry)) {
-          this.#directories.set(parentPath, [
-            ...existing,
-            dirEntry,
-          ]);
+          this.#directories.set(parentPath, [...existing, dirEntry]);
         }
       }
     }
@@ -143,10 +140,7 @@ export class BunMock {
     if (currentPath && !explicitDirs.has(currentPath) && !lastPart.startsWith('_')) {
       const existing = this.#directories.get(currentPath) ?? [];
       if (!existing.includes(lastPart)) {
-        this.#directories.set(currentPath, [
-          ...existing,
-          lastPart,
-        ]);
+        this.#directories.set(currentPath, [...existing, lastPart]);
       }
     }
   }
@@ -320,11 +314,7 @@ export class BunMock {
     const spawnConfig = this.#spawnConfig;
 
     this.#spawnSpy = spyOn(Bun, 'spawn').mockImplementation(((cmd: unknown, options?: unknown) => {
-      const cmdArray = Array.isArray(cmd)
-        ? cmd
-        : [
-            cmd,
-          ];
+      const cmdArray = Array.isArray(cmd) ? cmd : [cmd];
       spawnCalls.push({
         cmd: cmdArray as string[],
         options,

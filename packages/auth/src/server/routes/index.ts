@@ -16,21 +16,12 @@ import { userRoutes } from './users';
 export const allAuthRoutes = combineRoutes(
   group({
     prefix: '/api/auth',
-    routes: [
-      authPublicRoutes,
-      scopeRoutes,
-    ],
+    routes: [authPublicRoutes, scopeRoutes],
   }),
   group({
     prefix: '/api/auth',
-    middleware: [
-      requireAuth(),
-    ],
-    routes: [
-      authProtectedRoutes,
-      sessionRoutes,
-      profileRoutes,
-    ],
+    middleware: [requireAuth()],
+    routes: [authProtectedRoutes, sessionRoutes, profileRoutes],
   }),
   userRoutes
 );

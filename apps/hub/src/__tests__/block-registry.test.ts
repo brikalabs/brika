@@ -679,10 +679,7 @@ describe('BlockRegistry - Validation', () => {
       outputs: [],
       schema: {
         type: 'object',
-        required: [
-          'name',
-          'value',
-        ],
+        required: ['name', 'value'],
         properties: {
           name: {
             type: 'string',
@@ -769,9 +766,7 @@ describe('BlockRegistry - Validation', () => {
       outputs: [],
       schema: {
         type: 'object',
-        required: [
-          'name',
-        ],
+        required: ['name'],
         properties: {
           name: {
             type: 'string',

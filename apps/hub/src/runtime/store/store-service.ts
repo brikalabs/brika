@@ -38,10 +38,7 @@ export class StoreService {
       this.#local.search(query),
     ]);
 
-    const all = [
-      ...localResult.plugins,
-      ...npmResult.plugins,
-    ];
+    const all = [...localResult.plugins, ...npmResult.plugins];
     return {
       plugins: enrichPlugins(all, config),
       total: all.length,

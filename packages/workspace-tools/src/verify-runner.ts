@@ -88,18 +88,7 @@ async function runVerify(
   output: string;
   payload?: VerifyJsonPayload;
 }> {
-  const args = json
-    ? [
-        'bun',
-        verifyScript,
-        pluginDir,
-        '--json',
-      ]
-    : [
-        'bun',
-        verifyScript,
-        pluginDir,
-      ];
+  const args = json ? ['bun', verifyScript, pluginDir, '--json'] : ['bun', verifyScript, pluginDir];
   const proc = Bun.spawn(args, {
     cwd,
     stdout: 'pipe',
@@ -108,10 +97,7 @@ async function runVerify(
   const exitCode = await proc.exited;
   const stdout = (await new Response(proc.stdout).text()).trim();
   const stderr = (await new Response(proc.stderr).text()).trim();
-  const output = [
-    stdout,
-    stderr,
-  ]
+  const output = [stdout, stderr]
     .filter((chunk) => chunk.length > 0)
     .join('\n')
     .trim();
@@ -143,15 +129,10 @@ export function runVerifyForPackages(
 
 export function getPreviewWarnings(result: VerifyExecution): string[] | undefined {
   if (result.payload) {
-    return [
-      ...result.payload.errors,
-      ...result.payload.warnings,
-    ].map(normalizeWarningMessage);
+    return [...result.payload.errors, ...result.payload.warnings].map(normalizeWarningMessage);
   }
   if (result.exitCode !== 0) {
-    return [
-      'plugin verification failed (could not parse output)',
-    ];
+    return ['plugin verification failed (could not parse output)'];
   }
   return undefined;
 }

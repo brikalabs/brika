@@ -12,18 +12,8 @@ import type { Middleware, RouteContext, RouteDefinition, Schema } from './types'
  */
 const CORS_CONFIG = {
   origin: (origin: string) => origin,
-  allowMethods: [
-    'GET',
-    'POST',
-    'PUT',
-    'PATCH',
-    'DELETE',
-    'OPTIONS',
-  ],
-  allowHeaders: [
-    'Content-Type',
-    'Authorization',
-  ],
+  allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
 };
 

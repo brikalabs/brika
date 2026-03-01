@@ -52,10 +52,7 @@ const createBrickType = (fullId = 'plugin:brick', pluginName = 'plugin'): Regist
   fullId,
   localId: fullId.split(':')[1],
   pluginName,
-  families: [
-    'sm',
-    'md',
-  ],
+  families: ['sm', 'md'],
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -120,9 +117,7 @@ describe('BoardService — coverage gaps', () => {
 
       stub(BoardLoader, {
         get: (id: string) => boards.get(id),
-        list: () => [
-          ...boards.values(),
-        ],
+        list: () => [...boards.values()],
         saveBoard: mockSave,
       });
 
@@ -157,9 +152,7 @@ describe('BoardService — coverage gaps', () => {
       const type = createBrickType();
       brickTypes.set(type.fullId, type);
 
-      const board = createBoard('d1', [
-        createPlacement('inst-1'),
-      ]);
+      const board = createBoard('d1', [createPlacement('inst-1')]);
       boards.set('d1', board);
 
       // Connect a single viewer — this mounts the board
@@ -177,9 +170,7 @@ describe('BoardService — coverage gaps', () => {
       const type = createBrickType();
       brickTypes.set(type.fullId, type);
 
-      const board = createBoard('d1', [
-        createPlacement('inst-1'),
-      ]);
+      const board = createBoard('d1', [createPlacement('inst-1')]);
       boards.set('d1', board);
 
       // Connect two viewers
@@ -202,9 +193,7 @@ describe('BoardService — coverage gaps', () => {
 
     test('handles disconnect for board with no brick types (no unmountBoard IPC)', () => {
       // Board has a placement but no registered brick type
-      const board = createBoard('d1', [
-        createPlacement('inst-1'),
-      ]);
+      const board = createBoard('d1', [createPlacement('inst-1')]);
       boards.set('d1', board);
 
       // Connect and disconnect — viewerConnected won't mount (no type),
@@ -232,9 +221,7 @@ describe('BoardService — coverage gaps', () => {
       brickTypes.set(type.fullId, type);
 
       const placement = createPlacement('inst-1');
-      const board = createBoard('d1', [
-        placement,
-      ]);
+      const board = createBoard('d1', [placement]);
       boards.set('d1', board);
 
       const result = await service.updateBrickLabel('d1', 'inst-1', 'My Custom Label');
@@ -248,9 +235,7 @@ describe('BoardService — coverage gaps', () => {
     test('clears label when set to undefined', async () => {
       const placement = createPlacement('inst-1');
       placement.label = 'Old Label';
-      const board = createBoard('d1', [
-        placement,
-      ]);
+      const board = createBoard('d1', [placement]);
       boards.set('d1', board);
 
       const result = await service.updateBrickLabel('d1', 'inst-1', undefined);
@@ -273,9 +258,7 @@ describe('BoardService — coverage gaps', () => {
 
     test('dispatches brickLabelChanged event with correct payload', async () => {
       const placement = createPlacement('inst-1');
-      const board = createBoard('d1', [
-        placement,
-      ]);
+      const board = createBoard('d1', [placement]);
       boards.set('d1', board);
 
       await service.updateBrickLabel('d1', 'inst-1', 'Weather');

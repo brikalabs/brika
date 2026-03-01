@@ -8,12 +8,7 @@
     "url": "https://github.com/maxscharwath/brika.git",
     "directory": "packages/events"
   },
-  "keywords": [
-    "brika",
-    "events",
-    "event-bus",
-    "typed-events"
-  ],
+  "keywords": ["brika", "events", "event-bus", "typed-events"],
   "exports": {
     ".": "./src/index.ts"
   },

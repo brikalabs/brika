@@ -93,10 +93,7 @@ function makeBrickType(overrides?: { id?: string; component?: Handler }) {
   return {
     spec: {
       id: overrides?.id ?? 'test-brick',
-      families: [
-        'sm',
-        'md',
-      ] as ('sm' | 'md')[],
+      families: ['sm', 'md'] as ('sm' | 'md')[],
       config: [
         {
           name: 'title',

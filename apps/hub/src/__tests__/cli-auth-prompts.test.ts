@@ -318,10 +318,7 @@ describe('cli/auth-prompts', () => {
     };
 
     test('returns name and role changes', async () => {
-      mockMultiselect.mockResolvedValue([
-        'name',
-        'role',
-      ]);
+      mockMultiselect.mockResolvedValue(['name', 'role']);
       mockText.mockResolvedValue('New Name');
       mockSelect.mockResolvedValue('user');
 
@@ -334,9 +331,7 @@ describe('cli/auth-prompts', () => {
     });
 
     test('returns active status change', async () => {
-      mockMultiselect.mockResolvedValue([
-        'active',
-      ]);
+      mockMultiselect.mockResolvedValue(['active']);
       mockConfirm.mockResolvedValue(false);
 
       const result = await promptEditUser(user);
@@ -345,9 +340,7 @@ describe('cli/auth-prompts', () => {
     });
 
     test('returns password reset', async () => {
-      mockMultiselect.mockResolvedValue([
-        'password',
-      ]);
+      mockMultiselect.mockResolvedValue(['password']);
       mockPassword.mockResolvedValue('NewPass1!');
 
       const result = await promptEditUser(user);
@@ -356,12 +349,7 @@ describe('cli/auth-prompts', () => {
     });
 
     test('returns all changes when all selected', async () => {
-      mockMultiselect.mockResolvedValue([
-        'name',
-        'role',
-        'active',
-        'password',
-      ]);
+      mockMultiselect.mockResolvedValue(['name', 'role', 'active', 'password']);
       mockText.mockResolvedValue('New Name');
       mockSelect.mockResolvedValue('guest');
       mockConfirm.mockResolvedValue(true);
@@ -400,9 +388,7 @@ describe('cli/auth-prompts', () => {
 
     test('cancelling name prompt calls cancel and exits', async () => {
       const cancelSymbol = Symbol('cancel');
-      mockMultiselect.mockResolvedValue([
-        'name',
-      ]);
+      mockMultiselect.mockResolvedValue(['name']);
       mockText.mockResolvedValue(cancelSymbol);
       mockIsCancel.mockImplementation((v) => v === cancelSymbol);
 
@@ -418,9 +404,7 @@ describe('cli/auth-prompts', () => {
 
     test('cancelling role prompt calls cancel and exits', async () => {
       const cancelSymbol = Symbol('cancel');
-      mockMultiselect.mockResolvedValue([
-        'role',
-      ]);
+      mockMultiselect.mockResolvedValue(['role']);
       mockSelect.mockResolvedValue(cancelSymbol);
       mockIsCancel.mockImplementation((v) => v === cancelSymbol);
 
@@ -436,9 +420,7 @@ describe('cli/auth-prompts', () => {
 
     test('cancelling active prompt calls cancel and exits', async () => {
       const cancelSymbol = Symbol('cancel');
-      mockMultiselect.mockResolvedValue([
-        'active',
-      ]);
+      mockMultiselect.mockResolvedValue(['active']);
       mockConfirm.mockResolvedValue(cancelSymbol);
       mockIsCancel.mockImplementation((v) => v === cancelSymbol);
 
@@ -454,9 +436,7 @@ describe('cli/auth-prompts', () => {
 
     test('cancelling password prompt calls cancel and exits', async () => {
       const cancelSymbol = Symbol('cancel');
-      mockMultiselect.mockResolvedValue([
-        'password',
-      ]);
+      mockMultiselect.mockResolvedValue(['password']);
       mockPassword.mockResolvedValue(cancelSymbol);
       mockIsCancel.mockImplementation((v) => v === cancelSymbol);
 
@@ -538,17 +518,11 @@ describe('cli/auth-prompts', () => {
     ];
 
     test('returns selected scopes', async () => {
-      mockMultiselect.mockResolvedValue([
-        'read',
-        'write',
-      ]);
+      mockMultiselect.mockResolvedValue(['read', 'write']);
 
       const result = await promptSelectScopes(scopes);
 
-      expect(result).toEqual([
-        'read',
-        'write',
-      ]);
+      expect(result).toEqual(['read', 'write']);
     });
 
     test('calls cancel and exits when selection is empty', async () => {
@@ -595,27 +569,21 @@ describe('cli/auth-prompts', () => {
     test('returns token creation data', async () => {
       setupGroupCallbacks();
       mockText.mockResolvedValueOnce('my-token'); // name
-      mockMultiselect.mockResolvedValueOnce([
-        'read',
-      ]); // scopes
+      mockMultiselect.mockResolvedValueOnce(['read']); // scopes
       mockSelect.mockResolvedValueOnce(2592000); // expiresIn
 
       const result = await promptCreateToken(scopes);
 
       expect(mockIntro).toHaveBeenCalled();
       expect(result.name).toBe('my-token');
-      expect(result.scopes).toEqual([
-        'read',
-      ]);
+      expect(result.scopes).toEqual(['read']);
       expect(result.expiresIn).toBe(2592000);
     });
 
     test('calls each prompt with correct options', async () => {
       setupGroupCallbacks();
       mockText.mockResolvedValueOnce('token');
-      mockMultiselect.mockResolvedValueOnce([
-        'read',
-      ]);
+      mockMultiselect.mockResolvedValueOnce(['read']);
       mockSelect.mockResolvedValueOnce(0);
 
       await promptCreateToken(scopes);
@@ -631,9 +599,7 @@ describe('cli/auth-prompts', () => {
     test('converts expiresIn to number', async () => {
       setupGroupCallbacks();
       mockText.mockResolvedValueOnce('token');
-      mockMultiselect.mockResolvedValueOnce([
-        'read',
-      ]);
+      mockMultiselect.mockResolvedValueOnce(['read']);
       mockSelect.mockResolvedValueOnce('3600');
 
       const result = await promptCreateToken(scopes);
@@ -644,9 +610,7 @@ describe('cli/auth-prompts', () => {
     test('name validator rejects empty', async () => {
       setupGroupCallbacks();
       mockText.mockResolvedValueOnce('token');
-      mockMultiselect.mockResolvedValueOnce([
-        'read',
-      ]);
+      mockMultiselect.mockResolvedValueOnce(['read']);
       mockSelect.mockResolvedValueOnce(0);
 
       await promptCreateToken(scopes);

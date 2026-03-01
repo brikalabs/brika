@@ -8,13 +8,7 @@ export type Signal = 'SIGINT' | 'SIGTERM' | 'SIGHUP';
 /**
  * Creates a plugin that traps OS signals for graceful shutdown.
  */
-export function trapSignals(
-  signals: Signal[] = [
-    'SIGINT',
-    'SIGTERM',
-    'SIGHUP',
-  ]
-): BootstrapPlugin {
+export function trapSignals(signals: Signal[] = ['SIGINT', 'SIGTERM', 'SIGHUP']): BootstrapPlugin {
   // Import bootstrap lazily to avoid circular dependency
   let stopFn: () => Promise<void>;
 

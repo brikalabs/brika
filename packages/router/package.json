@@ -8,13 +8,7 @@
     "url": "https://github.com/maxscharwath/brika.git",
     "directory": "packages/router"
   },
-  "keywords": [
-    "brika",
-    "router",
-    "http",
-    "hono",
-    "di"
-  ],
+  "keywords": ["brika", "router", "http", "hono", "di"],
   "exports": {
     ".": "./src/index.ts",
     "./testing": "./src/testing/index.ts"

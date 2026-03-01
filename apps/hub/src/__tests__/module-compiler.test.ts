@@ -389,9 +389,7 @@ describe('ModuleCompiler - compile()', () => {
       return makeFakeFile(fakeFs, String(path));
     }) as typeof Bun.file);
     const buildSpy = spyOn(Bun, 'build').mockResolvedValue(
-      makeBuildFailure([
-        'SyntaxError: unexpected token',
-      ])
+      makeBuildFailure(['SyntaxError: unexpected token'])
     );
 
     try {
@@ -417,11 +415,7 @@ describe('ModuleCompiler - compile()', () => {
     }) as typeof Bun.file);
     const buildSpy = spyOn(Bun, 'build').mockImplementation(((opts: { entrypoints: string[] }) => {
       if (opts.entrypoints[0].includes('bad')) {
-        return Promise.resolve(
-          makeBuildFailure([
-            'error',
-          ])
-        );
+        return Promise.resolve(makeBuildFailure(['error']));
       }
       return Promise.resolve(makeBuildSuccess('good-output'));
     }) as typeof Bun.build);
@@ -466,9 +460,7 @@ describe('ModuleCompiler - compile()', () => {
       expect(buildOpts.target).toBe('browser');
       expect(buildOpts.format).toBe('esm');
       expect(buildOpts.minify).toBe(true);
-      expect(buildOpts.entrypoints).toEqual([
-        '/proj/src/pages/settings.tsx',
-      ]);
+      expect(buildOpts.entrypoints).toEqual(['/proj/src/pages/settings.tsx']);
     } finally {
       fileSpy.mockRestore();
       buildSpy.mockRestore();

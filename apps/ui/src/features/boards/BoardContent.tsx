@@ -10,14 +10,7 @@ import { useActiveBoard, useBoardStore } from './store';
 function GridSkeleton() {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {[
-        'a',
-        'b',
-        'c',
-        'd',
-        'e',
-        'f',
-      ].map((id) => (
+      {['a', 'b', 'c', 'd', 'e', 'f'].map((id) => (
         <Skeleton key={id} className="h-48 rounded-xl" />
       ))}
     </div>
@@ -51,9 +44,7 @@ export function BoardContent() {
         disconnectedInstances: new Set(),
       });
     }
-  }, [
-    boardId,
-  ]);
+  }, [boardId]);
 
   // Per-board data loading and SSE
   const { data: loadedBoard, isLoading } = useLoadBoard(boardId);
@@ -64,19 +55,12 @@ export function BoardContent() {
     if (loadedBoard) {
       useBoardStore.getState().setActiveBoard(loadedBoard);
     }
-  }, [
-    loadedBoard,
-  ]);
+  }, [loadedBoard]);
 
   const board = useActiveBoard();
   const saveLayout = useSaveLayout();
   const setAddBrickOpen = useBoardStore((s) => s.setAddBrickOpen);
-  const handleAddBrick = useCallback(
-    () => setAddBrickOpen(true),
-    [
-      setAddBrickOpen,
-    ]
-  );
+  const handleAddBrick = useCallback(() => setAddBrickOpen(true), [setAddBrickOpen]);
 
   if (!boardId) {
     return null;

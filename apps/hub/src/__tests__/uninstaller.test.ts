@@ -114,19 +114,12 @@ describe('RC file line-filtering logic', () => {
   const installDir = '/opt/brika/bin';
 
   test('removes lines containing installDir', () => {
-    const content = [
-      'export FOO=bar',
-      `export PATH="/opt/brika/bin:$PATH"`,
-      'export BAZ=qux',
-    ].join('\n');
+    const content = ['export FOO=bar', `export PATH="/opt/brika/bin:$PATH"`, 'export BAZ=qux'].join(
+      '\n'
+    );
 
     const result = filterRcLines(content, installDir);
-    expect(result).toBe(
-      [
-        'export FOO=bar',
-        'export BAZ=qux',
-      ].join('\n')
-    );
+    expect(result).toBe(['export FOO=bar', 'export BAZ=qux'].join('\n'));
   });
 
   test('removes "# Brika" comment when next line contains installDir', () => {
@@ -138,27 +131,14 @@ describe('RC file line-filtering logic', () => {
     ].join('\n');
 
     const result = filterRcLines(content, installDir);
-    expect(result).toBe(
-      [
-        'export FOO=bar',
-        'export BAZ=qux',
-      ].join('\n')
-    );
+    expect(result).toBe(['export FOO=bar', 'export BAZ=qux'].join('\n'));
   });
 
   test('keeps "# Brika" comment when next line does NOT contain installDir', () => {
-    const content = [
-      '# Brika',
-      'export FOO=bar',
-    ].join('\n');
+    const content = ['# Brika', 'export FOO=bar'].join('\n');
 
     const result = filterRcLines(content, installDir);
-    expect(result).toBe(
-      [
-        '# Brika',
-        'export FOO=bar',
-      ].join('\n')
-    );
+    expect(result).toBe(['# Brika', 'export FOO=bar'].join('\n'));
   });
 
   test('leaves content unchanged when installDir is not present', () => {
@@ -194,10 +174,7 @@ describe('RC file line-filtering logic', () => {
   });
 
   test('handles "# Brika" as the very last line with no next line', () => {
-    const content = [
-      'export FOO=bar',
-      '# Brika',
-    ].join('\n');
+    const content = ['export FOO=bar', '# Brika'].join('\n');
 
     const result = filterRcLines(content, installDir);
     // "# Brika" is last line, lines[i+1] is undefined, so it stays
@@ -217,21 +194,14 @@ describe('RC file line-filtering logic', () => {
   });
 
   test('does not remove "# Brika" when it is not immediately followed by installDir line', () => {
-    const content = [
-      '# Brika',
-      '# This is a spacer',
-      `export PATH="/opt/brika/bin:$PATH"`,
-    ].join('\n');
+    const content = ['# Brika', '# This is a spacer', `export PATH="/opt/brika/bin:$PATH"`].join(
+      '\n'
+    );
 
     const result = filterRcLines(content, installDir);
     // "# Brika" stays because lines[i+1] is "# This is a spacer" (no installDir)
     // The PATH line itself is removed
-    expect(result).toBe(
-      [
-        '# Brika',
-        '# This is a spacer',
-      ].join('\n')
-    );
+    expect(result).toBe(['# Brika', '# This is a spacer'].join('\n'));
   });
 });
 

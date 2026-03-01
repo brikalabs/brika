@@ -25,9 +25,7 @@ const adminSession: Session = {
   userEmail: 'admin@test.com',
   userName: 'Admin',
   userRole: Role.ADMIN,
-  scopes: [
-    Scope.ADMIN_ALL,
-  ],
+  scopes: [Scope.ADMIN_ALL],
 };
 
 const userSession: Session = {
@@ -36,11 +34,7 @@ const userSession: Session = {
   userEmail: 'user@test.com',
   userName: 'User',
   userRole: Role.USER,
-  scopes: [
-    Scope.WORKFLOW_READ,
-    Scope.WORKFLOW_WRITE,
-    Scope.BOARD_READ,
-  ],
+  scopes: [Scope.WORKFLOW_READ, Scope.WORKFLOW_WRITE, Scope.BOARD_READ],
 };
 
 describe('requireSession', () => {
@@ -68,19 +62,13 @@ describe('requireSession', () => {
   });
 
   it('should accept array of scopes (any match)', () => {
-    const session = requireSession(mockCtx(userSession), [
-      Scope.ADMIN_ALL,
-      Scope.WORKFLOW_READ,
-    ]);
+    const session = requireSession(mockCtx(userSession), [Scope.ADMIN_ALL, Scope.WORKFLOW_READ]);
     expect(session).toBe(userSession);
   });
 
   it('should throw Forbidden when no array scopes match', () => {
     expect(() =>
-      requireSession(mockCtx(userSession), [
-        Scope.ADMIN_ALL,
-        Scope.PLUGIN_MANAGE,
-      ])
+      requireSession(mockCtx(userSession), [Scope.ADMIN_ALL, Scope.PLUGIN_MANAGE])
     ).toThrow(Forbidden);
   });
 

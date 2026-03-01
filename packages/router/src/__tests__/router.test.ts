@@ -133,9 +133,7 @@ describe('@brika/router', () => {
       };
       const r = route.get({
         path: '/test',
-        middleware: [
-          mw,
-        ],
+        middleware: [mw],
         handler: async () => ({
           ok: true,
         }),
@@ -156,9 +154,7 @@ describe('@brika/router', () => {
         body: z.object({
           name: z.string(),
         }),
-        middleware: [
-          mw,
-        ],
+        middleware: [mw],
         handler: async ({ body }) => ({
           name: body.name,
         }),
@@ -239,9 +235,7 @@ describe('@brika/router', () => {
       };
       const routes = group({
         prefix: '/api/users',
-        middleware: [
-          mw,
-        ],
+        middleware: [mw],
         routes: [
           route.get({
             path: '/',
@@ -269,15 +263,11 @@ describe('@brika/router', () => {
       };
       const routes = group({
         prefix: '/api',
-        middleware: [
-          groupMw,
-        ],
+        middleware: [groupMw],
         routes: [
           route.get({
             path: '/test',
-            middleware: [
-              routeMw,
-            ],
+            middleware: [routeMw],
             handler: async () => ({}),
           }),
         ],
@@ -307,9 +297,7 @@ describe('@brika/router', () => {
         await next();
       };
       const routes = group({
-        middleware: [
-          mw,
-        ],
+        middleware: [mw],
         routes: [
           route.get({
             path: '/api/users',
@@ -345,12 +333,8 @@ describe('@brika/router', () => {
         }),
       ];
       const routes = group({
-        middleware: [
-          mw,
-        ],
-        routes: [
-          userRoutes,
-        ],
+        middleware: [mw],
+        routes: [userRoutes],
       });
 
       expect(routes).toHaveLength(2);
@@ -681,9 +665,7 @@ describe('@brika/router', () => {
       const app = createApp([
         route.get({
           path: '/api/test',
-          middleware: [
-            mw,
-          ],
+          middleware: [mw],
           handler: (ctx) => ({
             user: ctx.get('user'),
           }),
@@ -709,9 +691,7 @@ describe('@brika/router', () => {
       const app = createApp([
         route.get({
           path: '/api/test',
-          middleware: [
-            blockMw,
-          ],
+          middleware: [blockMw],
           handler: () => ({
             ok: true,
           }),
@@ -732,9 +712,7 @@ describe('@brika/router', () => {
       };
       const routes = group({
         prefix: '/api/admin',
-        middleware: [
-          mw,
-        ],
+        middleware: [mw],
         routes: [
           route.get({
             path: '/users',
@@ -770,15 +748,11 @@ describe('@brika/router', () => {
 
       const routes = group({
         prefix: '/api',
-        middleware: [
-          groupMw,
-        ],
+        middleware: [groupMw],
         routes: [
           route.get({
             path: '/test',
-            middleware: [
-              routeMw,
-            ],
+            middleware: [routeMw],
             handler: () => {
               order.push('handler');
               return {
@@ -788,17 +762,10 @@ describe('@brika/router', () => {
           }),
         ],
       });
-      const app = createApp(routes, [
-        globalMw,
-      ]);
+      const app = createApp(routes, [globalMw]);
 
       await app.fetch(new Request('http://localhost/api/test'));
-      expect(order).toEqual([
-        'global',
-        'group',
-        'route',
-        'handler',
-      ]);
+      expect(order).toEqual(['global', 'group', 'route', 'handler']);
     });
   });
 });

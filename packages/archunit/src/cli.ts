@@ -5,10 +5,7 @@ import { clearRegistry, getRegisteredRules } from './registry';
 import { printResult, runArch } from './runner';
 import type { Buildable, Rule, RuleInput } from './types';
 
-const CONFIG_FILES = [
-  'arch.config.ts',
-  'arch.config.js',
-];
+const CONFIG_FILES = ['arch.config.ts', 'arch.config.js'];
 
 function isBuildable(input: RuleInput): input is Buildable {
   return typeof input === 'object' && 'build' in input && typeof input.build === 'function';

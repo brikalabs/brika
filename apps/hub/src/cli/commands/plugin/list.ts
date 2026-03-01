@@ -4,13 +4,9 @@ import { hubFetchOk } from '../../utils/hub-client';
 
 export default defineCommand({
   name: 'list',
-  aliases: [
-    'ls',
-  ],
+  aliases: ['ls'],
   description: 'List installed plugins',
-  examples: [
-    'brika plugin list',
-  ],
+  examples: ['brika plugin list'],
   async handler() {
     const res = await hubFetchOk('/api/registry/packages');
 

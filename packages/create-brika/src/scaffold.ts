@@ -78,26 +78,14 @@ export async function scaffold(options: ScaffoldOptions): Promise<void> {
   // Git init
   if (git) {
     spinner.start('Initializing git repository');
-    const success = await runCommand(
-      [
-        'git',
-        'init',
-      ],
-      targetDir
-    );
+    const success = await runCommand(['git', 'init'], targetDir);
     spinner.stop(success ? 'Initialized git repository' : 'Skipped git init');
   }
 
   // Install deps
   if (install) {
     spinner.start('Installing dependencies');
-    const success = await runCommand(
-      [
-        'bun',
-        'install',
-      ],
-      targetDir
-    );
+    const success = await runCommand(['bun', 'install'], targetDir);
     if (success) {
       spinner.stop('Installed dependencies');
     } else {
@@ -113,21 +101,9 @@ export async function scaffold(options: ScaffoldOptions): Promise<void> {
     [
       `${pc.cyan('package.json')}     Plugin manifest (${featureLabels})`,
       `${pc.cyan('src/index.ts')}     Plugin entry`,
-      ...(has('blocks')
-        ? [
-            `${pc.cyan('src/blocks/')}      Block definitions`,
-          ]
-        : []),
-      ...(has('bricks')
-        ? [
-            `${pc.cyan('src/bricks/')}      Brick components`,
-          ]
-        : []),
-      ...(has('sparks')
-        ? [
-            `${pc.cyan('src/sparks/')}      Spark definitions`,
-          ]
-        : []),
+      ...(has('blocks') ? [`${pc.cyan('src/blocks/')}      Block definitions`] : []),
+      ...(has('bricks') ? [`${pc.cyan('src/bricks/')}      Brick components`] : []),
+      ...(has('sparks') ? [`${pc.cyan('src/sparks/')}      Spark definitions`] : []),
       `${pc.cyan('tsconfig.json')}    TypeScript config${has('bricks') ? ' (JSX enabled)' : ''}`,
       `${pc.cyan('README.md')}        Documentation`,
       `${pc.cyan('locales/')}         i18n translations`,

@@ -48,9 +48,7 @@ export default function IconPickerGrid({ value, onChange }: Readonly<IconPickerG
       return;
     }
     ensureIndex().then(() => setIndexed(true));
-  }, [
-    indexed,
-  ]);
+  }, [indexed]);
 
   const deferredSearch = useDeferredValue(search);
 
@@ -70,10 +68,7 @@ export default function IconPickerGrid({ value, onChange }: Readonly<IconPickerG
     }
 
     return order.map((i) => iconNames[info.idx[i]]) as IconName[];
-  }, [
-    deferredSearch,
-    indexed,
-  ]);
+  }, [deferredSearch, indexed]);
 
   // +1 for the default icon in the first row
   const totalItems = filteredIcons.length + 1;

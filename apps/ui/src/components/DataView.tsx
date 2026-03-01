@@ -80,10 +80,7 @@ export function createDataView<T>() {
         return data.length === 0;
       }
       return !data;
-    }, [
-      data,
-      isEmptyFn,
-    ]);
+    }, [data, isEmptyFn]);
 
     const contextValue = useMemo(
       () => ({
@@ -91,11 +88,7 @@ export function createDataView<T>() {
         isLoading,
         isEmpty,
       }),
-      [
-        data,
-        isLoading,
-        isEmpty,
-      ]
+      [data, isLoading, isEmpty]
     );
 
     return <Context.Provider value={contextValue}>{children}</Context.Provider>;
@@ -239,11 +232,7 @@ export function useDataView<T>({ data, isLoading, isEmpty: isEmptyFn }: UseDataV
       Empty,
       Content,
     };
-  }, [
-    data,
-    isLoading,
-    isEmptyFn,
-  ]);
+  }, [data, isLoading, isEmptyFn]);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

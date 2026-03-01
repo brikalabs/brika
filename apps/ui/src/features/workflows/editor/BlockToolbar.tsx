@@ -258,9 +258,7 @@ export function BlockToolbar({ onDragStart, onCollapse, className }: Readonly<Bl
     isLoading,
     error,
   } = useQuery({
-    queryKey: [
-      'blocks',
-    ],
+    queryKey: ['blocks'],
     queryFn: fetchBlocks,
     staleTime: 30000,
   });
@@ -286,9 +284,9 @@ export function BlockToolbar({ onDragStart, onCollapse, className }: Readonly<Bl
     : blocks;
 
   // Group by category
-  const categories = [
-    ...new Set(filteredBlocks.map((b) => b.category)),
-  ].sort((a, b) => a.localeCompare(b));
+  const categories = [...new Set(filteredBlocks.map((b) => b.category))].sort((a, b) =>
+    a.localeCompare(b)
+  );
   const groupedBlocks = categories.map((cat) => ({
     id: cat,
     label: cat.charAt(0).toUpperCase() + cat.slice(1),

@@ -287,18 +287,10 @@ export class PluginRegistry {
 
   async #getLatestVersion(name: string): Promise<string | null> {
     try {
-      const proc = Bun.spawn(
-        [
-          'npm',
-          'view',
-          name,
-          'version',
-        ],
-        {
-          cwd: this.pluginsDir,
-          stdout: 'pipe',
-        }
-      );
+      const proc = Bun.spawn(['npm', 'view', name, 'version'], {
+        cwd: this.pluginsDir,
+        stdout: 'pipe',
+      });
       const version = (await new Response(proc.stdout).text()).trim();
       await proc.exited;
       return version || null;

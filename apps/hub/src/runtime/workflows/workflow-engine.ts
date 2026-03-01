@@ -283,9 +283,7 @@ export class WorkflowEngine {
   }
 
   list(): Workflow[] {
-    return [
-      ...this.#workflows.values(),
-    ]
+    return [...this.#workflows.values()]
       .map((w) => ({
         ...w,
         enabled: w.enabled ?? false,

@@ -85,10 +85,7 @@ export function useUptime(startedAt: StartedAtInput): string | null {
     update();
     const interval = setInterval(update, 1000);
     return () => clearInterval(interval);
-  }, [
-    ts,
-    formatDuration,
-  ]);
+  }, [ts, formatDuration]);
 
   return uptime;
 }

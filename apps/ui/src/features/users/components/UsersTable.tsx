@@ -44,11 +44,7 @@ export function UsersTable({ users, isLoading }: Readonly<UsersTableProps>) {
     return (
       <Card>
         <CardContent className="space-y-3 p-6">
-          {[
-            's1',
-            's2',
-            's3',
-          ].map((id) => (
+          {['s1', 's2', 's3'].map((id) => (
             <Skeleton key={id} className="h-12 w-full" />
           ))}
         </CardContent>

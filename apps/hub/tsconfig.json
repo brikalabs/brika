@@ -2,20 +2,11 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "baseUrl": ".",
-    "lib": [
-      "ES2024"
-    ],
-    "types": [
-      "bun-types"
-    ],
+    "lib": ["ES2024"],
+    "types": ["bun-types"],
     "paths": {
-      "@/*": [
-        "./src/*"
-      ]
+      "@/*": ["./src/*"]
     }
   },
-  "include": [
-    "src",
-    "compiler"
-  ]
+  "include": ["src", "compiler"]
 }

@@ -20,23 +20,12 @@ import { useLocale } from '@/lib/use-locale';
 import type { UserRecord } from '../api';
 import { useUserMutations } from '../hooks';
 
-const ROLES = [
-  'admin',
-  'user',
-  'guest',
-] as const;
+const ROLES = ['admin', 'user', 'guest'] as const;
 
-const SCOPE_CATEGORIES = [
-  'workflow',
-  'board',
-  'plugin',
-  'settings',
-] as const;
+const SCOPE_CATEGORIES = ['workflow', 'board', 'plugin', 'settings'] as const;
 
 const ROLE_SCOPES_MAP: Record<string, string[]> = {
-  admin: [
-    'admin:*',
-  ],
+  admin: ['admin:*'],
   user: [
     'workflow:read',
     'workflow:write',
@@ -46,11 +35,7 @@ const ROLE_SCOPES_MAP: Record<string, string[]> = {
     'plugin:read',
     'settings:read',
   ],
-  guest: [
-    'workflow:read',
-    'board:read',
-    'plugin:read',
-  ],
+  guest: ['workflow:read', 'board:read', 'plugin:read'],
   service: [],
 };
 
@@ -83,34 +68,18 @@ export function EditUserDialog({ open, onOpenChange, user }: Readonly<EditUserDi
     setIsActive(user.isActive);
     setScopes(user.scopes ?? []);
     setError('');
-  }, [
-    open,
-    user.id,
-    user.name,
-    user.role,
-    user.isActive,
-    user.scopes,
-  ]);
+  }, [open, user.id, user.name, user.role, user.isActive, user.scopes]);
 
   // Reset scopes to role defaults when role changes
   useEffect(() => {
     setScopes(ROLE_SCOPES_MAP[role] ?? []);
-  }, [
-    role,
-  ]);
+  }, [role]);
 
   const roleScopes = ROLE_SCOPES_MAP[role] ?? [];
   const isAdmin = role === 'admin';
 
   function handleScopeToggle(scope: string, enabled: boolean) {
-    setScopes((prev) =>
-      enabled
-        ? [
-            ...prev,
-            scope,
-          ]
-        : prev.filter((s) => s !== scope)
-    );
+    setScopes((prev) => (enabled ? [...prev, scope] : prev.filter((s) => s !== scope)));
   }
 
   const handleSubmit: SubmitEventHandler<HTMLFormElement> = (e) => {
@@ -132,12 +101,8 @@ export function EditUserDialog({ open, onOpenChange, user }: Readonly<EditUserDi
     );
   };
 
-  const sortedScopes = [
-    ...scopes,
-  ].sort((a, b) => a.localeCompare(b));
-  const sortedOriginal = [
-    ...(user.scopes ?? []),
-  ].sort((a, b) => a.localeCompare(b));
+  const sortedScopes = [...scopes].sort((a, b) => a.localeCompare(b));
+  const sortedOriginal = [...(user.scopes ?? [])].sort((a, b) => a.localeCompare(b));
   const isDirty =
     name.trim() !== user.name ||
     role !== user.role ||

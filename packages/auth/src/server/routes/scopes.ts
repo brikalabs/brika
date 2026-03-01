@@ -14,17 +14,9 @@ const listScopes = route.get({
 
     return {
       scopes: scopeService.getRegistry(),
-      categories: [
-        'admin',
-        'workflow',
-        'board',
-        'plugin',
-        'settings',
-      ],
+      categories: ['admin', 'workflow', 'board', 'plugin', 'settings'],
     };
   },
 });
 
-export const scopeRoutes = [
-  listScopes,
-];
+export const scopeRoutes = [listScopes];

@@ -8,11 +8,7 @@
       "verifiedAt": "2026-01-17T00:00:00Z",
       "verifiedBy": "maintainer",
       "description": "Built-in blocks for Brika workflows",
-      "tags": [
-        "blocks",
-        "official",
-        "core"
-      ],
+      "tags": ["blocks", "official", "core"],
       "featured": true,
       "category": "official",
       "source": "npm",
@@ -23,12 +19,7 @@
       "verifiedAt": "2026-02-23T00:00:00Z",
       "verifiedBy": "maintainer",
       "description": "Spotify Connect player for BRIKA dashboards",
-      "tags": [
-        "spotify",
-        "music",
-        "media",
-        "integration"
-      ],
+      "tags": ["spotify", "music", "media", "integration"],
       "featured": true,
       "category": "official",
       "source": "npm",
@@ -39,12 +30,7 @@
       "verifiedAt": "2026-02-23T00:00:00Z",
       "verifiedBy": "maintainer",
       "description": "Matter smart home device integration for BRIKA",
-      "tags": [
-        "matter",
-        "smart-home",
-        "iot",
-        "integration"
-      ],
+      "tags": ["matter", "smart-home", "iot", "integration"],
       "featured": true,
       "category": "official",
       "source": "npm",

@@ -23,10 +23,7 @@ const userSession: Session = {
   userEmail: 'user@test.com',
   userName: 'User',
   userRole: Role.USER,
-  scopes: [
-    Scope.WORKFLOW_READ,
-    Scope.BOARD_READ,
-  ],
+  scopes: [Scope.WORKFLOW_READ, Scope.BOARD_READ],
 };
 
 const now = new Date();
@@ -60,9 +57,7 @@ describe('PUT /profile — authenticated', () => {
         name: updates.name ?? mockUser.name,
       }),
     });
-    app = TestApp.create(profileRoutes, [
-      withSession(userSession),
-    ]);
+    app = TestApp.create(profileRoutes, [withSession(userSession)]);
   });
 
   test('updates name and returns user', async () => {
@@ -102,9 +97,7 @@ describe('PUT /profile/avatar — JSON base64 upload', () => {
     stub(UserService, {
       setAvatar: () => 'abc12345',
     });
-    app = TestApp.create(profileRoutes, [
-      withSession(userSession),
-    ]);
+    app = TestApp.create(profileRoutes, [withSession(userSession)]);
   });
 
   test('uploads avatar from base64 JSON', async () => {
@@ -146,9 +139,7 @@ describe('PUT /profile/avatar — binary upload', () => {
     stub(UserService, {
       setAvatar: () => 'bin12345',
     });
-    app = TestApp.create(profileRoutes, [
-      withSession(userSession),
-    ]);
+    app = TestApp.create(profileRoutes, [withSession(userSession)]);
   });
 
   test('uploads avatar from binary body', async () => {
@@ -236,9 +227,7 @@ describe('DELETE /profile/avatar — authenticated', () => {
     stub(UserService, {
       removeAvatar: () => {},
     });
-    app = TestApp.create(profileRoutes, [
-      withSession(userSession),
-    ]);
+    app = TestApp.create(profileRoutes, [withSession(userSession)]);
   });
 
   test('removes avatar and returns ok', async () => {
@@ -278,9 +267,7 @@ describe('PUT /profile/password — valid current password', () => {
       verifyPassword: async (_userId: string, password: string) => password === 'OldPass123!',
       setPassword: async () => {},
     });
-    app = TestApp.create(profileRoutes, [
-      withSession(userSession),
-    ]);
+    app = TestApp.create(profileRoutes, [withSession(userSession)]);
   });
 
   test('changes password with valid current password', async () => {
@@ -329,9 +316,7 @@ describe('PUT /profile/password — setPassword throws', () => {
         throw new Error('Password does not meet requirements');
       },
     });
-    app = TestApp.create(profileRoutes, [
-      withSession(userSession),
-    ]);
+    app = TestApp.create(profileRoutes, [withSession(userSession)]);
   });
 
   test('returns 400 when setPassword throws (invalid new password)', async () => {

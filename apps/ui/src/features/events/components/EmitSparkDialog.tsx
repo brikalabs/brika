@@ -46,10 +46,7 @@ export function EmitSparkDialog({ spark, open, onOpenChange }: Readonly<EmitSpar
         setPayload('{}');
       }
     }
-  }, [
-    spark.schema,
-    open,
-  ]);
+  }, [spark.schema, open]);
 
   const handleEmit = async () => {
     try {

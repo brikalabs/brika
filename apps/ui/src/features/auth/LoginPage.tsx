@@ -99,7 +99,7 @@ export function LoginPage() {
       </Card>
 
       <div className="flex flex-1" />
-      <footer className="flex items-center gap-2 pt-8 text-sm text-muted-foreground">
+      <footer className="flex items-center gap-2 pt-8 text-muted-foreground text-sm">
         <BrikaLogo className="size-4" />
         <span>&copy; {new Date().getFullYear()} Brika Labs</span>
       </footer>

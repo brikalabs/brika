@@ -79,13 +79,7 @@ export function brikaActionsPlugin(actionsFilePath: string): BunPlugin {
           try {
             const resolved = resolve(args.resolveDir, args.path);
             // Check common extensions
-            for (const ext of [
-              '',
-              '.ts',
-              '.tsx',
-              '.js',
-              '.jsx',
-            ]) {
+            for (const ext of ['', '.ts', '.tsx', '.js', '.jsx']) {
               if (resolved + ext === normalizedActionsPath) {
                 return {
                   path: args.path,

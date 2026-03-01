@@ -9,14 +9,7 @@
     "url": "https://github.com/maxscharwath/brika.git",
     "directory": "packages/photon"
   },
-  "keywords": [
-    "brika",
-    "image",
-    "photon",
-    "wasm",
-    "resize",
-    "webp"
-  ],
+  "keywords": ["brika", "image", "photon", "wasm", "resize", "webp"],
   "exports": {
     ".": "./src/index.ts"
   },

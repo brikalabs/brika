@@ -35,11 +35,7 @@ export function requireSession(
 
   if (scope !== undefined) {
     if (!canAccess(session.scopes, scope)) {
-      const required = Array.isArray(scope)
-        ? scope
-        : [
-            scope,
-          ];
+      const required = Array.isArray(scope) ? scope : [scope];
       throw new Forbidden(`Insufficient permissions. Required: ${required.join(', ')}`);
     }
   }

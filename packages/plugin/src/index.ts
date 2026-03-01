@@ -151,33 +151,16 @@ export function arePortTypesCompatible(sourceType?: string, targetType?: string)
     return true;
   }
 
-  const numberTypes = new Set([
-    'number',
-    'integer',
-    'float',
-    'double',
-  ]);
+  const numberTypes = new Set(['number', 'integer', 'float', 'double']);
   if (numberTypes.has(src) && numberTypes.has(tgt)) {
     return true;
   }
 
-  if (
-    tgt === 'string' &&
-    new Set([
-      'number',
-      'integer',
-      'boolean',
-    ]).has(src)
-  ) {
+  if (tgt === 'string' && new Set(['number', 'integer', 'boolean']).has(src)) {
     return true;
   }
 
-  const objectTypes = new Set([
-    'object',
-    'json',
-    'record',
-    'any',
-  ]);
+  const objectTypes = new Set(['object', 'json', 'record', 'any']);
   if (objectTypes.has(src) && objectTypes.has(tgt)) {
     return true;
   }

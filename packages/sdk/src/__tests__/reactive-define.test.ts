@@ -173,13 +173,7 @@ describe('isCompiledReactiveBlock', () => {
 
   test('returns false for arrays', () => {
     expect(isCompiledReactiveBlock([])).toBe(false);
-    expect(
-      isCompiledReactiveBlock([
-        1,
-        2,
-        3,
-      ])
-    ).toBe(false);
+    expect(isCompiledReactiveBlock([1, 2, 3])).toBe(false);
   });
 });
 
@@ -446,10 +440,7 @@ describe('defineReactiveBlock', () => {
     instance.pushInput('in', 42);
     instance.pushInput('in', 100);
 
-    expect(receivedValues).toEqual([
-      42,
-      100,
-    ]);
+    expect(receivedValues).toEqual([42, 100]);
     instance.stop();
   });
 
@@ -602,24 +593,14 @@ describe('defineReactiveBlock', () => {
         inputs: {},
         outputs: {},
         config: z.object({
-          mode: z
-            .enum([
-              'fast',
-              'slow',
-              'auto',
-            ])
-            .default('auto'),
+          mode: z.enum(['fast', 'slow', 'auto']).default('auto'),
         }),
       },
       () => undefined
     );
 
     expect(block.schema.properties?.mode).toBeDefined();
-    expect(block.schema.properties?.mode?.enum).toEqual([
-      'fast',
-      'slow',
-      'auto',
-    ]);
+    expect(block.schema.properties?.mode?.enum).toEqual(['fast', 'slow', 'auto']);
   });
 
   test('config with default values', () => {

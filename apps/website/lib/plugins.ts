@@ -37,10 +37,7 @@ import { npm, registry } from '@/lib/config';
 /** Revalidate every 10 minutes */
 const REVALIDATE = 600;
 
-const EXCLUDED = new Set([
-  '@brika/plugin-example-echo',
-  '@brika/plugin-demo-config',
-]);
+const EXCLUDED = new Set(['@brika/plugin-example-echo', '@brika/plugin-demo-config']);
 
 function iconUrl(name: string) {
   return `${npm.unpkgUrl}/${name}/icon.svg`;

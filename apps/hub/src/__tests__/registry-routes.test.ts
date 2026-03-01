@@ -207,9 +207,7 @@ describe('registry routes', () => {
       version: '1.0.0',
       displayName: 'Timer',
       description: 'A timer plugin',
-      keywords: [
-        'brika',
-      ],
+      keywords: ['brika'],
       engines: {
         brika: '^0.1.0',
       },
@@ -649,15 +647,7 @@ describe('registry routes', () => {
         if (p === '/plugins/my-plugin/icon.png') {
           return {
             exists: () => Promise.resolve(true),
-            arrayBuffer: () =>
-              Promise.resolve(
-                new Uint8Array([
-                  137,
-                  80,
-                  78,
-                  71,
-                ]).buffer
-              ),
+            arrayBuffer: () => Promise.resolve(new Uint8Array([137, 80, 78, 71]).buffer),
           } as ReturnType<typeof Bun.file>;
         }
         return {
@@ -709,14 +699,7 @@ describe('registry routes', () => {
         if (p === '/plugins/my-plugin/logo.png') {
           return {
             exists: () => Promise.resolve(true),
-            arrayBuffer: () =>
-              Promise.resolve(
-                new Uint8Array([
-                  1,
-                  2,
-                  3,
-                ]).buffer
-              ),
+            arrayBuffer: () => Promise.resolve(new Uint8Array([1, 2, 3]).buffer),
           } as ReturnType<typeof Bun.file>;
         }
         return {
@@ -743,19 +726,12 @@ describe('registry routes', () => {
       }) as typeof Bun.file);
 
       fetchSpy = spyOn(globalThis, 'fetch').mockResolvedValue(
-        new Response(
-          new Uint8Array([
-            1,
-            2,
-            3,
-          ]),
-          {
-            status: 200,
-            headers: {
-              'content-type': 'image/png',
-            },
-          }
-        )
+        new Response(new Uint8Array([1, 2, 3]), {
+          status: 200,
+          headers: {
+            'content-type': 'image/png',
+          },
+        })
       );
 
       const raw = await app.hono.fetch(
@@ -795,19 +771,12 @@ describe('registry routes', () => {
 
     test('strips source prefix for CDN icon URL', async () => {
       fetchSpy = spyOn(globalThis, 'fetch').mockResolvedValue(
-        new Response(
-          new Uint8Array([
-            1,
-            2,
-            3,
-          ]),
-          {
-            status: 200,
-            headers: {
-              'content-type': 'image/png',
-            },
-          }
-        )
+        new Response(new Uint8Array([1, 2, 3]), {
+          status: 200,
+          headers: {
+            'content-type': 'image/png',
+          },
+        })
       );
 
       const raw = await app.hono.fetch(
@@ -823,19 +792,12 @@ describe('registry routes', () => {
 
     test('returns icon when CDN has it', async () => {
       fetchSpy = spyOn(globalThis, 'fetch').mockResolvedValue(
-        new Response(
-          new Uint8Array([
-            1,
-            2,
-            3,
-          ]),
-          {
-            status: 200,
-            headers: {
-              'content-type': 'image/png',
-            },
-          }
-        )
+        new Response(new Uint8Array([1, 2, 3]), {
+          status: 200,
+          headers: {
+            'content-type': 'image/png',
+          },
+        })
       );
 
       const raw = await app.hono.fetch(
@@ -875,17 +837,12 @@ describe('registry routes', () => {
 
     test('CDN icon uses content-type from response when available', async () => {
       fetchSpy = spyOn(globalThis, 'fetch').mockResolvedValue(
-        new Response(
-          new Uint8Array([
-            1,
-          ]),
-          {
-            status: 200,
-            headers: {
-              'content-type': 'image/webp',
-            },
-          }
-        )
+        new Response(new Uint8Array([1]), {
+          status: 200,
+          headers: {
+            'content-type': 'image/webp',
+          },
+        })
       );
 
       const raw = await app.hono.fetch(
@@ -898,14 +855,9 @@ describe('registry routes', () => {
 
     test('CDN icon defaults to image/png when no content-type header', async () => {
       fetchSpy = spyOn(globalThis, 'fetch').mockResolvedValue(
-        new Response(
-          new Uint8Array([
-            1,
-          ]),
-          {
-            status: 200,
-          }
-        )
+        new Response(new Uint8Array([1]), {
+          status: 200,
+        })
       );
 
       const raw = await app.hono.fetch(
@@ -919,17 +871,12 @@ describe('registry routes', () => {
     test('no local root falls through directly to CDN', async () => {
       // getLocalPluginRoot returns null (default mock)
       fetchSpy = spyOn(globalThis, 'fetch').mockResolvedValue(
-        new Response(
-          new Uint8Array([
-            1,
-          ]),
-          {
-            status: 200,
-            headers: {
-              'content-type': 'image/png',
-            },
-          }
-        )
+        new Response(new Uint8Array([1]), {
+          status: 200,
+          headers: {
+            'content-type': 'image/png',
+          },
+        })
       );
 
       const raw = await app.hono.fetch(

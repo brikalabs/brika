@@ -84,14 +84,7 @@ describe('WorkflowRuntime', () => {
   describe('constructor', () => {
     test('creates runtime with valid blocks', () => {
       const blockType = createMockBlockType();
-      const registry = createMockRegistry(
-        new Map([
-          [
-            'mock-block',
-            blockType,
-          ],
-        ])
-      );
+      const registry = createMockRegistry(new Map([['mock-block', blockType]]));
       const workflow = createTestWorkflow([
         {
           id: 'block-1',
@@ -130,14 +123,7 @@ describe('WorkflowRuntime', () => {
           required: z.string(),
         }),
       };
-      const registry = createMockRegistry(
-        new Map([
-          [
-            'strict-block',
-            blockType,
-          ],
-        ])
-      );
+      const registry = createMockRegistry(new Map([['strict-block', blockType]]));
       const workflow = createTestWorkflow([
         {
           id: 'block-1',
@@ -158,14 +144,7 @@ describe('WorkflowRuntime', () => {
   describe('start/stop', () => {
     test('starts workflow and sets running state', () => {
       const blockType = createMockBlockType();
-      const registry = createMockRegistry(
-        new Map([
-          [
-            'mock-block',
-            blockType,
-          ],
-        ])
-      );
+      const registry = createMockRegistry(new Map([['mock-block', blockType]]));
       const workflow = createTestWorkflow([
         {
           id: 'block-1',
@@ -184,14 +163,7 @@ describe('WorkflowRuntime', () => {
 
     test('stops workflow', () => {
       const blockType = createMockBlockType();
-      const registry = createMockRegistry(
-        new Map([
-          [
-            'mock-block',
-            blockType,
-          ],
-        ])
-      );
+      const registry = createMockRegistry(new Map([['mock-block', blockType]]));
       const workflow = createTestWorkflow([
         {
           id: 'block-1',
@@ -211,14 +183,7 @@ describe('WorkflowRuntime', () => {
 
     test('start is idempotent', () => {
       const blockType = createMockBlockType();
-      const registry = createMockRegistry(
-        new Map([
-          [
-            'mock-block',
-            blockType,
-          ],
-        ])
-      );
+      const registry = createMockRegistry(new Map([['mock-block', blockType]]));
       const workflow = createTestWorkflow([
         {
           id: 'block-1',
@@ -237,14 +202,7 @@ describe('WorkflowRuntime', () => {
 
     test('stop is idempotent', () => {
       const blockType = createMockBlockType();
-      const registry = createMockRegistry(
-        new Map([
-          [
-            'mock-block',
-            blockType,
-          ],
-        ])
-      );
+      const registry = createMockRegistry(new Map([['mock-block', blockType]]));
       const workflow = createTestWorkflow([
         {
           id: 'block-1',
@@ -267,14 +225,7 @@ describe('WorkflowRuntime', () => {
   describe('pauseBlock/resumeBlock', () => {
     test('pauses a running block', () => {
       const blockType = createMockBlockType();
-      const registry = createMockRegistry(
-        new Map([
-          [
-            'mock-block',
-            blockType,
-          ],
-        ])
-      );
+      const registry = createMockRegistry(new Map([['mock-block', blockType]]));
       const workflow = createTestWorkflow([
         {
           id: 'block-1',
@@ -293,14 +244,7 @@ describe('WorkflowRuntime', () => {
 
     test('resumes a paused block', () => {
       const blockType = createMockBlockType();
-      const registry = createMockRegistry(
-        new Map([
-          [
-            'mock-block',
-            blockType,
-          ],
-        ])
-      );
+      const registry = createMockRegistry(new Map([['mock-block', blockType]]));
       const workflow = createTestWorkflow([
         {
           id: 'block-1',
@@ -320,14 +264,7 @@ describe('WorkflowRuntime', () => {
 
     test('does not pause stopped block', () => {
       const blockType = createMockBlockType();
-      const registry = createMockRegistry(
-        new Map([
-          [
-            'mock-block',
-            blockType,
-          ],
-        ])
-      );
+      const registry = createMockRegistry(new Map([['mock-block', blockType]]));
       const workflow = createTestWorkflow([
         {
           id: 'block-1',
@@ -347,14 +284,7 @@ describe('WorkflowRuntime', () => {
   describe('stopBlock', () => {
     test('stops a specific block', () => {
       const blockType = createMockBlockType();
-      const registry = createMockRegistry(
-        new Map([
-          [
-            'mock-block',
-            blockType,
-          ],
-        ])
-      );
+      const registry = createMockRegistry(new Map([['mock-block', blockType]]));
       const workflow = createTestWorkflow([
         {
           id: 'block-1',
@@ -378,14 +308,7 @@ describe('WorkflowRuntime', () => {
 
     test('handles stopping non-existent block', () => {
       const blockType = createMockBlockType();
-      const registry = createMockRegistry(
-        new Map([
-          [
-            'mock-block',
-            blockType,
-          ],
-        ])
-      );
+      const registry = createMockRegistry(new Map([['mock-block', blockType]]));
       const workflow = createTestWorkflow([
         {
           id: 'block-1',
@@ -404,14 +327,7 @@ describe('WorkflowRuntime', () => {
   describe('getBlockStates', () => {
     test('returns all block states', () => {
       const blockType = createMockBlockType();
-      const registry = createMockRegistry(
-        new Map([
-          [
-            'mock-block',
-            blockType,
-          ],
-        ])
-      );
+      const registry = createMockRegistry(new Map([['mock-block', blockType]]));
       const workflow = createTestWorkflow([
         {
           id: 'block-1',
@@ -443,14 +359,7 @@ describe('WorkflowRuntime', () => {
         state: string;
       }[] = [];
       const blockType = createMockBlockType();
-      const registry = createMockRegistry(
-        new Map([
-          [
-            'mock-block',
-            blockType,
-          ],
-        ])
-      );
+      const registry = createMockRegistry(new Map([['mock-block', blockType]]));
       const workflow = createTestWorkflow([
         {
           id: 'block-1',
@@ -498,14 +407,7 @@ describe('WorkflowRuntime', () => {
           };
         },
       };
-      const registry = createMockRegistry(
-        new Map([
-          [
-            'mock-block',
-            blockType,
-          ],
-        ])
-      );
+      const registry = createMockRegistry(new Map([['mock-block', blockType]]));
       const workflow = createTestWorkflow([
         {
           id: 'block-1',
@@ -550,14 +452,7 @@ describe('WorkflowRuntime', () => {
           };
         },
       };
-      const registry = createMockRegistry(
-        new Map([
-          [
-            'mock-block',
-            blockType,
-          ],
-        ])
-      );
+      const registry = createMockRegistry(new Map([['mock-block', blockType]]));
       const workflow = createTestWorkflow([
         {
           id: 'block-1',
@@ -589,14 +484,7 @@ describe('WorkflowRuntime', () => {
           };
         },
       };
-      const registry = createMockRegistry(
-        new Map([
-          [
-            'mock-block',
-            blockType,
-          ],
-        ])
-      );
+      const registry = createMockRegistry(new Map([['mock-block', blockType]]));
       const workflow = createTestWorkflow([
         {
           id: 'block-1',
@@ -625,14 +513,7 @@ describe('WorkflowRuntime', () => {
   describe('eventBus', () => {
     test('exposes event bus', () => {
       const blockType = createMockBlockType();
-      const registry = createMockRegistry(
-        new Map([
-          [
-            'mock-block',
-            blockType,
-          ],
-        ])
-      );
+      const registry = createMockRegistry(new Map([['mock-block', blockType]]));
       const workflow = createTestWorkflow([
         {
           id: 'block-1',
@@ -648,14 +529,7 @@ describe('WorkflowRuntime', () => {
 
     test('observe returns unsubscribe function', () => {
       const blockType = createMockBlockType();
-      const registry = createMockRegistry(
-        new Map([
-          [
-            'mock-block',
-            blockType,
-          ],
-        ])
-      );
+      const registry = createMockRegistry(new Map([['mock-block', blockType]]));
       const workflow = createTestWorkflow([
         {
           id: 'block-1',
@@ -675,14 +549,7 @@ describe('WorkflowRuntime', () => {
   describe('port buffers', () => {
     test('getAllPortBuffers returns empty initially', () => {
       const blockType = createMockBlockType();
-      const registry = createMockRegistry(
-        new Map([
-          [
-            'mock-block',
-            blockType,
-          ],
-        ])
-      );
+      const registry = createMockRegistry(new Map([['mock-block', blockType]]));
       const workflow = createTestWorkflow([
         {
           id: 'block-1',
@@ -698,14 +565,7 @@ describe('WorkflowRuntime', () => {
 
     test('getPortBuffer returns undefined for unknown port', () => {
       const blockType = createMockBlockType();
-      const registry = createMockRegistry(
-        new Map([
-          [
-            'mock-block',
-            blockType,
-          ],
-        ])
-      );
+      const registry = createMockRegistry(new Map([['mock-block', blockType]]));
       const workflow = createTestWorkflow([
         {
           id: 'block-1',
@@ -721,14 +581,7 @@ describe('WorkflowRuntime', () => {
 
     test('retrigger returns false for unknown port', async () => {
       const blockType = createMockBlockType();
-      const registry = createMockRegistry(
-        new Map([
-          [
-            'mock-block',
-            blockType,
-          ],
-        ])
-      );
+      const registry = createMockRegistry(new Map([['mock-block', blockType]]));
       const workflow = createTestWorkflow([
         {
           id: 'block-1',
@@ -745,14 +598,7 @@ describe('WorkflowRuntime', () => {
 
     test('inject injects data into port', async () => {
       const blockType = createMockBlockType();
-      const registry = createMockRegistry(
-        new Map([
-          [
-            'mock-block',
-            blockType,
-          ],
-        ])
-      );
+      const registry = createMockRegistry(new Map([['mock-block', blockType]]));
       const workflow = createTestWorkflow([
         {
           id: 'block-1',
@@ -791,14 +637,7 @@ describe('WorkflowRuntime', () => {
           };
         },
       };
-      const registry = createMockRegistry(
-        new Map([
-          [
-            'mock-block',
-            blockType,
-          ],
-        ])
-      );
+      const registry = createMockRegistry(new Map([['mock-block', blockType]]));
       const workflow = createTestWorkflow([
         {
           id: 'block-1',
@@ -837,14 +676,7 @@ describe('WorkflowRuntime', () => {
           };
         },
       };
-      const registry = createMockRegistry(
-        new Map([
-          [
-            'mock-block',
-            blockType,
-          ],
-        ])
-      );
+      const registry = createMockRegistry(new Map([['mock-block', blockType]]));
       const workflow = createTestWorkflow([
         {
           id: 'block-1',
@@ -879,14 +711,7 @@ describe('WorkflowRuntime', () => {
           stop: () => undefined,
         }),
       };
-      const registry = createMockRegistry(
-        new Map([
-          [
-            'mock-block',
-            blockType,
-          ],
-        ])
-      );
+      const registry = createMockRegistry(new Map([['mock-block', blockType]]));
 
       // Create workflow with connection
       const workflow: Workflow = {
@@ -969,14 +794,7 @@ describe('WorkflowRuntime', () => {
           stop: () => undefined,
         }),
       };
-      const registry = createMockRegistry(
-        new Map([
-          [
-            'mock-block',
-            blockType,
-          ],
-        ])
-      );
+      const registry = createMockRegistry(new Map([['mock-block', blockType]]));
 
       const workflow: Workflow = {
         version: '1.0',
@@ -1031,14 +849,7 @@ describe('WorkflowRuntime', () => {
 
     test('resume does nothing for non-paused block', () => {
       const blockType = createMockBlockType();
-      const registry = createMockRegistry(
-        new Map([
-          [
-            'mock-block',
-            blockType,
-          ],
-        ])
-      );
+      const registry = createMockRegistry(new Map([['mock-block', blockType]]));
       const workflow = createTestWorkflow([
         {
           id: 'block-1',
@@ -1059,14 +870,7 @@ describe('WorkflowRuntime', () => {
 
     test('resume does nothing for non-existent block', () => {
       const blockType = createMockBlockType();
-      const registry = createMockRegistry(
-        new Map([
-          [
-            'mock-block',
-            blockType,
-          ],
-        ])
-      );
+      const registry = createMockRegistry(new Map([['mock-block', blockType]]));
       const workflow = createTestWorkflow([
         {
           id: 'block-1',

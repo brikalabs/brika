@@ -118,28 +118,9 @@ export const add: Command = {
     }
 
     let content = readRegistryRaw();
-    content = modifyRegistry(
-      content,
-      [
-        'plugins',
-        registry.plugins.length,
-      ],
-      entry
-    );
-    content = modifyRegistry(
-      content,
-      [
-        'lastUpdated',
-      ],
-      new Date().toISOString()
-    );
-    content = modifyRegistry(
-      content,
-      [
-        'version',
-      ],
-      '2.0.0'
-    );
+    content = modifyRegistry(content, ['plugins', registry.plugins.length], entry);
+    content = modifyRegistry(content, ['lastUpdated'], new Date().toISOString());
+    content = modifyRegistry(content, ['version'], '2.0.0');
     writeRegistryRaw(content);
 
     autoSign();

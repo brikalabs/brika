@@ -83,9 +83,7 @@ function scheduleMissingNsReload(ns: string) {
   pendingNs.add(ns);
   clearTimeout(reloadTimer);
   reloadTimer = setTimeout(async () => {
-    const missed = [
-      ...pendingNs,
-    ];
+    const missed = [...pendingNs];
     pendingNs.clear();
     const data = await refetch(lng);
     for (const missedNs of missed) {
@@ -127,13 +125,8 @@ i18n
     load: 'currentOnly',
 
     detection: {
-      order: [
-        'localStorage',
-        'navigator',
-      ],
-      caches: [
-        'localStorage',
-      ],
+      order: ['localStorage', 'navigator'],
+      caches: ['localStorage'],
       lookupLocalStorage: 'i18nextLng',
       convertDetectedLanguage: (lng: string) => lng.split('-')[0],
     },

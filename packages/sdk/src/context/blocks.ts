@@ -17,12 +17,7 @@ import { type ContextCore, registerContextModule } from './register';
 export function setupBlocks(core: ContextCore) {
   const { client, manifest } = core;
   const declaredBlocks = new Set(manifest.blocks?.map((b) => b.id) ?? []);
-  const blockMeta = new Map(
-    manifest.blocks?.map((b) => [
-      b.id,
-      b,
-    ])
-  );
+  const blockMeta = new Map(manifest.blocks?.map((b) => [b.id, b]));
   const blocks = new Set<string>();
   const reactiveBlocks = new Map<string, CompiledReactiveBlock>();
   const blockInstances = new Map<string, BlockInstance>();

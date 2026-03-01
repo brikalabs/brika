@@ -25,16 +25,9 @@ export function toCamelCase(str: string): string {
  */
 export async function getGitUser(): Promise<string> {
   try {
-    const proc = Bun.spawn(
-      [
-        'git',
-        'config',
-        'user.name',
-      ],
-      {
-        stdout: 'pipe',
-      }
-    );
+    const proc = Bun.spawn(['git', 'config', 'user.name'], {
+      stdout: 'pipe',
+    });
     const text = await new Response(proc.stdout).text();
     return text.trim();
   } catch {

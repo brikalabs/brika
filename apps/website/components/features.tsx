@@ -20,11 +20,7 @@ const features: Feature[] = [
     description:
       'Type-safe workflow blocks powered by Zod and reactive streams. Full inference, zero boilerplate.',
     color: 'oklch(0.72 0.15 145)',
-    tags: [
-      'Zod',
-      'Type-safe',
-      'Reactive',
-    ],
+    tags: ['Zod', 'Type-safe', 'Reactive'],
   },
   {
     icon: Cable,
@@ -32,11 +28,7 @@ const features: Feature[] = [
     description:
       'Every plugin runs in its own process. Crash isolation, binary IPC, hot-reload out of the box.',
     color: 'oklch(0.7 0.16 265)',
-    tags: [
-      'Process isolation',
-      'IPC',
-      'Hot-reload',
-    ],
+    tags: ['Process isolation', 'IPC', 'Hot-reload'],
   },
   {
     icon: LayoutDashboard,
@@ -44,11 +36,7 @@ const features: Feature[] = [
     description:
       'Drag-and-drop automation builder in your browser. Connect blocks, configure flows, see results live.',
     color: 'oklch(0.72 0.18 45)',
-    tags: [
-      'Drag & drop',
-      'Real-time',
-      'Browser',
-    ],
+    tags: ['Drag & drop', 'Real-time', 'Browser'],
   },
 ];
 

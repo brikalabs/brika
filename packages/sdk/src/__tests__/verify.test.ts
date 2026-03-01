@@ -42,11 +42,7 @@ async function runVerify(
       });
       await writeFile(fullPath, content);
     }
-    return await runCli([
-      'bun',
-      VERIFY_SCRIPT,
-      dir,
-    ]);
+    return await runCli(['bun', VERIFY_SCRIPT, dir]);
   } finally {
     await rm(dir, {
       recursive: true,
@@ -65,10 +61,7 @@ function validPlugin(overrides: Record<string, unknown> = {}): Record<string, un
       brika: `^${SDK_VERSION}`,
     },
     $schema: 'https://schema.brika.dev/plugin.schema.json',
-    keywords: [
-      'brika',
-      'brika-plugin',
-    ],
+    keywords: ['brika', 'brika-plugin'],
     ...overrides,
   };
 }
@@ -186,9 +179,7 @@ describe('brika-verify-plugin', () => {
     test('fails when keywords do not include brika', async () => {
       const { exitCode, stdout } = await runVerify(
         validPlugin({
-          keywords: [
-            'plugin',
-          ],
+          keywords: ['plugin'],
         })
       );
       expect(exitCode).toBe(1);
@@ -198,9 +189,7 @@ describe('brika-verify-plugin', () => {
     test('shows brika-plugin success even when brika is missing', async () => {
       const { exitCode, stdout } = await runVerify(
         validPlugin({
-          keywords: [
-            'brika-plugin',
-          ],
+          keywords: ['brika-plugin'],
         })
       );
       expect(exitCode).toBe(1);
@@ -211,9 +200,7 @@ describe('brika-verify-plugin', () => {
     test('warns (but passes) when brika-plugin keyword is missing', async () => {
       const { exitCode, stdout } = await runVerify(
         validPlugin({
-          keywords: [
-            'brika',
-          ],
+          keywords: ['brika'],
         })
       );
       expect(exitCode).toBe(0);
@@ -264,9 +251,7 @@ describe('brika-verify-plugin', () => {
       const { exitCode, stdout } = await runVerify(
         validPlugin({
           icon: './icon.svg',
-          files: [
-            'src',
-          ],
+          files: ['src'],
         }),
         pluginFiles
       );
@@ -281,12 +266,7 @@ describe('brika-verify-plugin', () => {
       const { exitCode, stdout } = await runVerify(
         validPlugin({
           icon: './icon.svg',
-          files: [
-            'src',
-            'locales',
-            'icon.svg',
-            'README.md',
-          ],
+          files: ['src', 'locales', 'icon.svg', 'README.md'],
         }),
         pluginFiles
       );
@@ -339,11 +319,7 @@ describe('brika-verify-plugin', () => {
     test('exits with error when package.json does not exist', async () => {
       const dir = await mkdtemp(join(tmpdir(), 'brika-verify-empty-'));
       try {
-        const { exitCode } = await runCli([
-          'bun',
-          VERIFY_SCRIPT,
-          dir,
-        ]);
+        const { exitCode } = await runCli(['bun', VERIFY_SCRIPT, dir]);
         expect(exitCode).toBe(1);
       } finally {
         await rm(dir, {
@@ -359,9 +335,7 @@ describe('brika-verify-plugin', () => {
         engines: {
           brika: '^0.1.0',
         },
-        keywords: [
-          'something-else',
-        ],
+        keywords: ['something-else'],
       });
       const { exitCode, stdout } = await runVerify(pkg);
       expect(exitCode).toBe(1);
@@ -443,15 +417,9 @@ describe('verifyPlugin', () => {
           brika: `^${SDK_VERSION}`,
         },
         $schema: 'https://schema.brika.dev/plugin.schema.json',
-        keywords: [
-          'brika',
-          'brika-plugin',
-        ],
+        keywords: ['brika', 'brika-plugin'],
         icon: './icon.svg',
-        files: [
-          'src',
-          'icon.svg',
-        ],
+        files: ['src', 'icon.svg'],
       },
       {
         'icon.svg': '<svg></svg>',
@@ -479,10 +447,7 @@ describe('verifyPlugin', () => {
         brika: `^${SDK_VERSION}`,
       },
       $schema: 'https://schema.brika.dev/plugin.schema.json',
-      keywords: [
-        'brika',
-        'brika-plugin',
-      ],
+      keywords: ['brika', 'brika-plugin'],
     });
     try {
       const result = await verifyPlugin(dir, SDK_VERSION);
@@ -558,10 +523,7 @@ describe('verifyPlugin', () => {
       engines: {
         brika: `^${SDK_VERSION}`,
       },
-      keywords: [
-        'brika',
-        'brika-plugin',
-      ],
+      keywords: ['brika', 'brika-plugin'],
     });
     try {
       const result = await verifyPlugin(dir, SDK_VERSION);
@@ -580,10 +542,7 @@ describe('verifyPlugin', () => {
         brika: `^${SDK_VERSION}`,
       },
       $schema: 'https://json.schemastore.org/package',
-      keywords: [
-        'brika',
-        'brika-plugin',
-      ],
+      keywords: ['brika', 'brika-plugin'],
     });
     try {
       const result = await verifyPlugin(dir, SDK_VERSION);
@@ -620,15 +579,9 @@ describe('verifyPlugin', () => {
           brika: `^${SDK_VERSION}`,
         },
         $schema: 'https://schema.brika.dev/plugin.schema.json',
-        keywords: [
-          'brika',
-          'brika-plugin',
-        ],
+        keywords: ['brika', 'brika-plugin'],
         icon: './icon.svg',
-        files: [
-          'src',
-          'README.md',
-        ],
+        files: ['src', 'README.md'],
       },
       {
         'src/index.ts': 'export {};',
@@ -653,14 +606,9 @@ describe('verifyPlugin', () => {
           brika: `^${SDK_VERSION}`,
         },
         $schema: 'https://schema.brika.dev/plugin.schema.json',
-        keywords: [
-          'brika',
-          'brika-plugin',
-        ],
+        keywords: ['brika', 'brika-plugin'],
         icon: './icon.svg',
-        files: [
-          'src',
-        ],
+        files: ['src'],
       },
       {
         'src/index.ts': 'export {};',
@@ -711,13 +659,7 @@ describe('isRecord', () => {
 
   test('returns true for arrays (arrays are objects)', () => {
     expect(isRecord([])).toBe(true);
-    expect(
-      isRecord([
-        1,
-        2,
-        3,
-      ])
-    ).toBe(true);
+    expect(isRecord([1, 2, 3])).toBe(true);
   });
 
   test('returns false for null', () => {

@@ -9,11 +9,7 @@
     "url": "git+https://github.com/maxscharwath/brika.git",
     "directory": "packages/permissions"
   },
-  "keywords": [
-    "brika",
-    "permissions",
-    "validation"
-  ],
+  "keywords": ["brika", "permissions", "validation"],
   "exports": {
     ".": "./src/index.ts"
   },

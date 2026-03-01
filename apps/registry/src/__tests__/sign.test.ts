@@ -22,9 +22,7 @@ const REGISTRY_FIXTURE = JSON.stringify({
       verifiedAt: '2026-01-01T00:00:00Z',
       verifiedBy: 'maintainer',
       description: 'Plugin A',
-      tags: [
-        'a',
-      ],
+      tags: ['a'],
       featured: false,
       category: 'community',
       source: 'npm',
@@ -34,9 +32,7 @@ const REGISTRY_FIXTURE = JSON.stringify({
       verifiedAt: '2026-01-02T00:00:00Z',
       verifiedBy: 'maintainer',
       description: 'Plugin B',
-      tags: [
-        'b',
-      ],
+      tags: ['b'],
       featured: true,
       category: 'official',
       source: 'npm',

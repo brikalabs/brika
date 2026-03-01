@@ -8,9 +8,7 @@ interface HealthResponse {
 
 export function useHealth() {
   return useQuery({
-    queryKey: [
-      'health',
-    ],
+    queryKey: ['health'],
     queryFn: () => fetcher<HealthResponse>('/api/health'),
     refetchInterval: 5000,
   });

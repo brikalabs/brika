@@ -48,10 +48,7 @@ const createBrickType = (fullId = 'plugin:brick', pluginName = 'plugin'): Regist
   fullId,
   localId: fullId.split(':')[1],
   pluginName,
-  families: [
-    'sm',
-    'md',
-  ],
+  families: ['sm', 'md'],
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -116,9 +113,7 @@ describe('BoardService', () => {
 
       stub(BoardLoader, {
         get: (id: string) => boards.get(id),
-        list: () => [
-          ...boards.values(),
-        ],
+        list: () => [...boards.values()],
         saveBoard: mockSave,
       });
 
@@ -168,9 +163,7 @@ describe('BoardService', () => {
       const type = createBrickType();
       brickTypes.set(type.fullId, type);
 
-      const board = createBoard('d1', [
-        createPlacement('inst-1'),
-      ]);
+      const board = createBoard('d1', [createPlacement('inst-1')]);
       service.mountBoard(board);
 
       expect(mockDispatch).toHaveBeenCalled();
@@ -191,9 +184,7 @@ describe('BoardService', () => {
         body: [],
       });
 
-      const board = createBoard('d1', [
-        createPlacement('inst-1'),
-      ]);
+      const board = createBoard('d1', [createPlacement('inst-1')]);
       service.mountBoard(board);
 
       expect(mockMount).not.toHaveBeenCalled();
@@ -201,9 +192,7 @@ describe('BoardService', () => {
 
     test('skips placements with unknown brick type', () => {
       // No brick type registered
-      const board = createBoard('d1', [
-        createPlacement('inst-1'),
-      ]);
+      const board = createBoard('d1', [createPlacement('inst-1')]);
       service.mountBoard(board);
 
       expect(mockMount).not.toHaveBeenCalled();
@@ -217,10 +206,7 @@ describe('BoardService', () => {
       const type = createBrickType();
       brickTypes.set(type.fullId, type);
 
-      const board = createBoard('d1', [
-        createPlacement('inst-1'),
-        createPlacement('inst-2'),
-      ]);
+      const board = createBoard('d1', [createPlacement('inst-1'), createPlacement('inst-2')]);
 
       service.unmountBoard(board);
 
@@ -232,9 +218,7 @@ describe('BoardService', () => {
       const type = createBrickType();
       brickTypes.set(type.fullId, type);
 
-      const board = createBoard('d1', [
-        createPlacement('inst-1'),
-      ]);
+      const board = createBoard('d1', [createPlacement('inst-1')]);
       service.unmountBoard(board);
 
       expect(mockDispatch).toHaveBeenCalled();
@@ -309,9 +293,7 @@ describe('BoardService', () => {
       const type = createBrickType();
       brickTypes.set(type.fullId, type);
 
-      const board = createBoard('d1', [
-        createPlacement('inst-1'),
-      ]);
+      const board = createBoard('d1', [createPlacement('inst-1')]);
       boards.set('d1', board);
 
       const result = await service.removeBrick('d1', 'inst-1');
@@ -325,12 +307,7 @@ describe('BoardService', () => {
     test('dispatches brickRemoved event', async () => {
       const type = createBrickType();
       brickTypes.set(type.fullId, type);
-      boards.set(
-        'd1',
-        createBoard('d1', [
-          createPlacement('inst-1'),
-        ])
-      );
+      boards.set('d1', createBoard('d1', [createPlacement('inst-1')]));
 
       await service.removeBrick('d1', 'inst-1');
 
@@ -355,9 +332,7 @@ describe('BoardService', () => {
       brickTypes.set(type.fullId, type);
 
       const placement = createPlacement('inst-1');
-      const board = createBoard('d1', [
-        placement,
-      ]);
+      const board = createBoard('d1', [placement]);
       boards.set('d1', board);
 
       // Pre-mount instance
@@ -385,12 +360,7 @@ describe('BoardService', () => {
     test('dispatches brickConfigChanged event', async () => {
       const type = createBrickType();
       brickTypes.set(type.fullId, type);
-      boards.set(
-        'd1',
-        createBoard('d1', [
-          createPlacement('inst-1'),
-        ])
-      );
+      boards.set('d1', createBoard('d1', [createPlacement('inst-1')]));
 
       await service.updateBrickConfig('d1', 'inst-1', {});
 
@@ -415,12 +385,7 @@ describe('BoardService', () => {
       brickTypes.set(type.fullId, type);
 
       const placement = createPlacement('inst-1');
-      boards.set(
-        'd1',
-        createBoard('d1', [
-          placement,
-        ])
-      );
+      boards.set('d1', createBoard('d1', [placement]));
       mountedInstances.set('inst-1', {
         instanceId: 'inst-1',
         brickTypeId: 'plugin:brick',
@@ -461,12 +426,7 @@ describe('BoardService', () => {
       brickTypes.set(type.fullId, type);
 
       const placement = createPlacement('inst-1');
-      boards.set(
-        'd1',
-        createBoard('d1', [
-          placement,
-        ])
-      );
+      boards.set('d1', createBoard('d1', [placement]));
       mountedInstances.set('inst-1', {
         instanceId: 'inst-1',
         brickTypeId: 'plugin:brick',
@@ -555,13 +515,7 @@ describe('BoardService', () => {
 
       const p1 = createPlacement('inst-1');
       const p2 = createPlacement('inst-2');
-      boards.set(
-        'd1',
-        createBoard('d1', [
-          p1,
-          p2,
-        ])
-      );
+      boards.set('d1', createBoard('d1', [p1, p2]));
 
       const result = await service.batchUpdateLayout('d1', [
         {
@@ -602,13 +556,7 @@ describe('BoardService', () => {
 
       const p1 = createPlacement('inst-1'); // size 2x2
       const p2 = createPlacement('inst-2'); // size 2x2
-      boards.set(
-        'd1',
-        createBoard('d1', [
-          p1,
-          p2,
-        ])
-      );
+      boards.set('d1', createBoard('d1', [p1, p2]));
       mountedInstances.set('inst-1', {
         instanceId: 'inst-1',
         brickTypeId: 'plugin:brick',
@@ -704,12 +652,7 @@ describe('BoardService', () => {
         body: [],
       });
 
-      boards.set(
-        'd1',
-        createBoard('d1', [
-          createPlacement('inst-1'),
-        ])
-      );
+      boards.set('d1', createBoard('d1', [createPlacement('inst-1')]));
 
       service.mountPendingForType('plugin:brick');
 

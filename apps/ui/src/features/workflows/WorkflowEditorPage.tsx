@@ -104,12 +104,7 @@ export function WorkflowEditorPage() {
         });
       }
     },
-    [
-      workflowName,
-      isNew,
-      navigate,
-      saveWorkflowMutation,
-    ]
+    [workflowName, isNew, navigate, saveWorkflowMutation]
   );
 
   // Handle back navigation
@@ -125,11 +120,7 @@ export function WorkflowEditorPage() {
         to: paths.workflows.list.path,
       });
     }
-  }, [
-    isDirty,
-    navigate,
-    t,
-  ]);
+  }, [isDirty, navigate, t]);
 
   // Loading state
   if (!isNew && isLoading) {

@@ -106,11 +106,7 @@ describe('VerifiedPluginsService', () => {
     test('should deduplicate concurrent init calls', async () => {
       setMockResponse(JSON.stringify(createVerifiedList()));
 
-      await Promise.all([
-        service.init(),
-        service.init(),
-        service.init(),
-      ]);
+      await Promise.all([service.init(), service.init(), service.init()]);
     });
   });
 

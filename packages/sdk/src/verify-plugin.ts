@@ -25,11 +25,7 @@ export function readDependencyVersion(raw: unknown, packageName: string): string
   if (!isRecord(raw)) {
     return null;
   }
-  const candidates = [
-    raw.dependencies,
-    raw.peerDependencies,
-    raw.devDependencies,
-  ];
+  const candidates = [raw.dependencies, raw.peerDependencies, raw.devDependencies];
   for (const deps of candidates) {
     if (!isRecord(deps)) {
       continue;

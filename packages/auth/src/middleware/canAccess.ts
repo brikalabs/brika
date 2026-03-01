@@ -27,11 +27,7 @@ export function canAccess(scopes: Scope[] | null | undefined, required: Scope | 
     return false;
   }
 
-  const requiredScopes = Array.isArray(required)
-    ? required
-    : [
-        required,
-      ];
+  const requiredScopes = Array.isArray(required) ? required : [required];
 
   // Admin can access everything
   if (scopes.includes(Scope.ADMIN_ALL)) {
@@ -105,20 +101,13 @@ export const Features = {
     read: Scope.WORKFLOW_READ,
     write: Scope.WORKFLOW_WRITE,
     execute: Scope.WORKFLOW_EXECUTE,
-    all: [
-      Scope.WORKFLOW_READ,
-      Scope.WORKFLOW_WRITE,
-      Scope.WORKFLOW_EXECUTE,
-    ],
+    all: [Scope.WORKFLOW_READ, Scope.WORKFLOW_WRITE, Scope.WORKFLOW_EXECUTE],
   }),
 
   Board: createPermissionChecker('Board', {
     read: Scope.BOARD_READ,
     write: Scope.BOARD_WRITE,
-    all: [
-      Scope.BOARD_READ,
-      Scope.BOARD_WRITE,
-    ],
+    all: [Scope.BOARD_READ, Scope.BOARD_WRITE],
   }),
 
   Plugin: createPermissionChecker('Plugin', {

@@ -206,14 +206,7 @@ export class HttpError extends Error {
       return false;
     }
 
-    const retryableStatusCodes = [
-      408,
-      429,
-      500,
-      502,
-      503,
-      504,
-    ];
+    const retryableStatusCodes = [408, 429, 500, 502, 503, 504];
     return retryableStatusCodes.includes(this.status);
   }
 }

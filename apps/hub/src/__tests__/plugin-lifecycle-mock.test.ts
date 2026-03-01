@@ -275,9 +275,7 @@ describe('PluginLifecycle (with mocked spawn)', () => {
         error: {
           issues: [
             {
-              path: [
-                'key',
-              ],
+              path: ['key'],
               message: 'required',
             },
           ],
@@ -379,17 +377,13 @@ describe('PluginLifecycle (with mocked spawn)', () => {
       const callbacks = await loadPlugin();
       callbacks.onBrickType({
         id: 'test-brick',
-        families: [
-          'sm' as const,
-        ],
+        families: ['sm' as const],
       });
       expect(mockEventHandler.registerBrickType).toHaveBeenCalledWith(
         '@test/plugin',
         {
           id: 'test-brick',
-          families: [
-            'sm',
-          ],
+          families: ['sm'],
         },
         {
           id: 'test-brick',

@@ -170,15 +170,6 @@ const deleteUser = route.delete({
 
 export const userRoutes = group({
   prefix: '/api/users',
-  middleware: [
-    requireAuth(),
-  ],
-  routes: [
-    listUsers,
-    createUser,
-    resetPassword,
-    updateUser,
-    deleteUser,
-    getUser,
-  ],
+  middleware: [requireAuth()],
+  routes: [listUsers, createUser, resetPassword, updateUser, deleteUser, getUser],
 });

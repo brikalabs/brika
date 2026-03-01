@@ -77,15 +77,8 @@ describe('BunRunner', () => {
         })
         .apply();
       const runner = new BunRunner();
-      runner.spawn([
-        'install',
-        'pkg',
-      ]);
-      expect(bun.spawnCalls[0]?.cmd).toEqual([
-        process.execPath,
-        'install',
-        'pkg',
-      ]);
+      runner.spawn(['install', 'pkg']);
+      expect(bun.spawnCalls[0]?.cmd).toEqual([process.execPath, 'install', 'pkg']);
     });
 
     test('uses pluginsDir as cwd when passed', () => {
@@ -95,14 +88,9 @@ describe('BunRunner', () => {
         })
         .apply();
       const runner = new BunRunner();
-      runner.spawn(
-        [
-          'install',
-        ],
-        {
-          cwd: '/my/dir',
-        }
-      );
+      runner.spawn(['install'], {
+        cwd: '/my/dir',
+      });
       const opts = bun.spawnCalls[0]?.options as Record<string, unknown>;
       expect(opts?.cwd).toBe('/my/dir');
     });
@@ -114,16 +102,11 @@ describe('BunRunner', () => {
         })
         .apply();
       const runner = new BunRunner();
-      runner.spawn(
-        [
-          'install',
-        ],
-        {
-          env: {
-            MY_VAR: 'test',
-          },
-        }
-      );
+      runner.spawn(['install'], {
+        env: {
+          MY_VAR: 'test',
+        },
+      });
       const opts = bun.spawnCalls[0]?.options as Record<string, unknown>;
       const env = opts?.env as Record<string, string>;
       expect(env?.MY_VAR).toBe('test');
@@ -136,16 +119,10 @@ describe('BunRunner', () => {
         })
         .apply();
       const runner = new BunRunner();
-      runner.spawn(
-        [
-          'run',
-          'script',
-        ],
-        {
-          stdout: 'pipe',
-          stderr: 'ignore',
-        }
-      );
+      runner.spawn(['run', 'script'], {
+        stdout: 'pipe',
+        stderr: 'ignore',
+      });
       const opts = bun.spawnCalls[0]?.options as Record<string, unknown>;
       expect(opts?.stdout).toBe('pipe');
       expect(opts?.stderr).toBe('ignore');

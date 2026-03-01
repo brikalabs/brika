@@ -215,15 +215,7 @@ describe('useLocale', () => {
 
     test('supports various units', () => {
       const { formatRelativeTime } = useLocale();
-      for (const unit of [
-        'second',
-        'minute',
-        'hour',
-        'day',
-        'week',
-        'month',
-        'year',
-      ] as const) {
+      for (const unit of ['second', 'minute', 'hour', 'day', 'week', 'month', 'year'] as const) {
         const ref = formatRelativeTime(2, unit) as Extract<
           IntlRef,
           {
@@ -240,18 +232,10 @@ describe('useLocale', () => {
   describe('formatList', () => {
     test('creates list ref with default options', () => {
       const { formatList } = useLocale();
-      expect(
-        formatList([
-          'a',
-          'b',
-        ])
-      ).toEqual({
+      expect(formatList(['a', 'b'])).toEqual({
         __intl: true,
         type: 'list',
-        value: [
-          'a',
-          'b',
-        ],
+        value: ['a', 'b'],
         options: {
           style: 'long',
           type: 'conjunction',
@@ -261,14 +245,9 @@ describe('useLocale', () => {
 
     test('merges custom options', () => {
       const { formatList } = useLocale();
-      const ref = formatList(
-        [
-          'x',
-        ],
-        {
-          type: 'disjunction',
-        }
-      ) as Extract<
+      const ref = formatList(['x'], {
+        type: 'disjunction',
+      }) as Extract<
         IntlRef,
         {
           type: 'list';

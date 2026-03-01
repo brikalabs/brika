@@ -60,10 +60,7 @@ export function ThemeProvider({
     html.dataset.theme = theme;
     html.classList.remove('light', 'dark');
     html.classList.add(resolvedMode);
-  }, [
-    theme,
-    resolvedMode,
-  ]);
+  }, [theme, resolvedMode]);
 
   const setTheme = useCallback((newTheme: ThemeName) => {
     setThemeState(newTheme);
@@ -83,13 +80,7 @@ export function ThemeProvider({
       setTheme,
       setMode,
     }),
-    [
-      theme,
-      mode,
-      resolvedMode,
-      setTheme,
-      setMode,
-    ]
+    [theme, mode, resolvedMode, setTheme, setMode]
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

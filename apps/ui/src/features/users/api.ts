@@ -61,12 +61,6 @@ export const usersApi = {
 };
 
 export const usersKeys = {
-  all: [
-    'users',
-  ] as const,
-  detail: (id: string) =>
-    [
-      'users',
-      id,
-    ] as const,
+  all: ['users'] as const,
+  detail: (id: string) => ['users', id] as const,
 };

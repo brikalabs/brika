@@ -219,12 +219,7 @@ export const registryRoutes = group({
         name: z.string(),
       }),
       handler: async ({ params, inject }) => {
-        const iconPaths = [
-          'icon.png',
-          'icon.svg',
-          'logo.png',
-          'logo.svg',
-        ];
+        const iconPaths = ['icon.png', 'icon.svg', 'logo.png', 'logo.svg'];
         const pkgName = stripSourcePrefix(params.name);
 
         const serveLocalIcon = async (rootDir: string) => {

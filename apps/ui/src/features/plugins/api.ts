@@ -125,30 +125,9 @@ export const pluginsApi = {
 };
 
 export const pluginsKeys = {
-  all: [
-    'plugins',
-  ] as const,
-  detail: (uid: string) =>
-    [
-      'plugins',
-      uid,
-    ] as const,
-  readme: (uid: string) =>
-    [
-      'plugins',
-      uid,
-      'readme',
-    ] as const,
-  config: (uid: string) =>
-    [
-      'plugins',
-      uid,
-      'config',
-    ] as const,
-  metrics: (uid: string) =>
-    [
-      'plugins',
-      uid,
-      'metrics',
-    ] as const,
+  all: ['plugins'] as const,
+  detail: (uid: string) => ['plugins', uid] as const,
+  readme: (uid: string) => ['plugins', uid, 'readme'] as const,
+  config: (uid: string) => ['plugins', uid, 'config'] as const,
+  metrics: (uid: string) => ['plugins', uid, 'metrics'] as const,
 };

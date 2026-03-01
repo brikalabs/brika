@@ -14,26 +14,10 @@ export const MUT = {
 } as const;
 
 export type Mutation =
-  | [
-      op: 0,
-      path: string,
-      node: ComponentNode,
-    ]
-  | [
-      op: 1,
-      path: string,
-      node: ComponentNode,
-    ]
-  | [
-      op: 2,
-      path: string,
-      changes: Record<string, unknown>,
-      removed?: string[],
-    ]
-  | [
-      op: 3,
-      path: string,
-    ];
+  | [op: 0, path: string, node: ComponentNode]
+  | [op: 1, path: string, node: ComponentNode]
+  | [op: 2, path: string, changes: Record<string, unknown>, removed?: string[]]
+  | [op: 3, path: string];
 
 export interface BrickDescriptor {
   id: string;

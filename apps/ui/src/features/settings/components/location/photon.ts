@@ -11,10 +11,7 @@ import type { HubLocation } from './hooks';
 
 export interface PhotonFeature {
   geometry: {
-    coordinates: [
-      number,
-      number,
-    ];
+    coordinates: [number, number];
   }; // [lng, lat]
   properties: {
     name?: string;

@@ -9,16 +9,8 @@
     "url": "git+https://github.com/maxscharwath/brika.git",
     "directory": "packages/schema"
   },
-  "keywords": [
-    "brika",
-    "schema",
-    "zod",
-    "validation"
-  ],
-  "files": [
-    "dist",
-    "src"
-  ],
+  "keywords": ["brika", "schema", "zod", "validation"],
+  "files": ["dist", "src"],
   "exports": {
     ".": "./src/index.ts",
     "./plugin": "./src/plugin.ts",

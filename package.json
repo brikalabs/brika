@@ -11,11 +11,7 @@
   "bugs": {
     "url": "https://github.com/maxscharwath/brika/issues"
   },
-  "workspaces": [
-    "apps/*",
-    "packages/*",
-    "plugins/*"
-  ],
+  "workspaces": ["apps/*", "packages/*", "plugins/*"],
   "scripts": {
     "dev": "bun --filter @brika/hub --filter @brika/ui dev",
     "dev:hub": "bun --filter @brika/hub dev",

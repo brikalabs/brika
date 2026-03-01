@@ -98,10 +98,7 @@ describe('writeJSON + readJSON', () => {
   test('round-trips a JSON value', async () => {
     const data = {
       version: 1,
-      nodes: [
-        'a',
-        'b',
-      ],
+      nodes: ['a', 'b'],
     };
     await writeJSON('config', data);
     const result = await readJSON<typeof data>('config');
@@ -181,20 +178,9 @@ describe('clearAllData', () => {
 
 describe('updateJSON', () => {
   test('creates value from default when key missing', async () => {
-    const result = await updateJSON<string[]>(
-      'items',
-      (items) => [
-        ...items,
-        'a',
-      ],
-      []
-    );
-    expect(result).toEqual([
-      'a',
-    ]);
-    expect(await readJSON<string[]>('items')).toEqual([
-      'a',
-    ]);
+    const result = await updateJSON<string[]>('items', (items) => [...items, 'a'], []);
+    expect(result).toEqual(['a']);
+    expect(await readJSON<string[]>('items')).toEqual(['a']);
   });
 
   test('updates existing value', async () => {

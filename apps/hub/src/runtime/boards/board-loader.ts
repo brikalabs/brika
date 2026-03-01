@@ -380,9 +380,7 @@ export class BoardLoader {
       // Ignore read errors, fall through to default order
     }
     // Default: use current map iteration order
-    this.#order = [
-      ...this.#boards.keys(),
-    ];
+    this.#order = [...this.#boards.keys()];
   }
 
   async #persistOrder(): Promise<void> {

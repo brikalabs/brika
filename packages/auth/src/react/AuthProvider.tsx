@@ -61,9 +61,7 @@ export function AuthProvider({ children, apiUrl }: Readonly<AuthProviderProps>) 
     };
 
     loadSession();
-  }, [
-    client,
-  ]);
+  }, [client]);
 
   const clearSession = useCallback(() => setSession(null), []);
 
@@ -74,9 +72,7 @@ export function AuthProvider({ children, apiUrl }: Readonly<AuthProviderProps>) 
     } catch {
       setSession(null);
     }
-  }, [
-    client,
-  ]);
+  }, [client]);
 
   const value = useMemo<AuthContextType>(
     () => ({
@@ -89,14 +85,7 @@ export function AuthProvider({ children, apiUrl }: Readonly<AuthProviderProps>) 
       clearSession,
       refreshSession,
     }),
-    [
-      session,
-      isLoading,
-      error,
-      client,
-      clearSession,
-      refreshSession,
-    ]
+    [session, isLoading, error, client, clearSession, refreshSession]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

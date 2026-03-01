@@ -173,15 +173,11 @@ export class BrickRegistry {
   }
 
   list(): RegisteredBrick[] {
-    return [
-      ...this.#bricks.values(),
-    ].sort((a, b) => a.fullId.localeCompare(b.fullId));
+    return [...this.#bricks.values()].sort((a, b) => a.fullId.localeCompare(b.fullId));
   }
 
   listByPlugin(pluginName: string): RegisteredBrick[] {
-    return [
-      ...this.#bricks.values(),
-    ].filter((c) => c.pluginName === pluginName);
+    return [...this.#bricks.values()].filter((c) => c.pluginName === pluginName);
   }
 
   /** Find the plugin that owns a brick (by full ID) */

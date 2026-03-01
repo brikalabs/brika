@@ -14,7 +14,5 @@ export function useAuthInterceptor() {
   useEffect(() => {
     setOnUnauthorized(() => clearSession());
     return () => setOnUnauthorized(null);
-  }, [
-    clearSession,
-  ]);
+  }, [clearSession]);
 }

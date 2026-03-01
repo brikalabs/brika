@@ -171,31 +171,12 @@ describe('isSchemaCompatible - wrapper types', () => {
 
 describe('isSchemaCompatible - union types', () => {
   test('output compatible with union input (at least one match)', () => {
-    expect(
-      isSchemaCompatible(
-        z.string(),
-        z.union([
-          z.string(),
-          z.number(),
-        ])
-      )
-    ).toBe(true);
-    expect(
-      isSchemaCompatible(
-        z.number(),
-        z.union([
-          z.string(),
-          z.number(),
-        ])
-      )
-    ).toBe(true);
+    expect(isSchemaCompatible(z.string(), z.union([z.string(), z.number()]))).toBe(true);
+    expect(isSchemaCompatible(z.number(), z.union([z.string(), z.number()]))).toBe(true);
   });
 
   test('union output with any/unknown input is always compatible', () => {
-    const stringOrNumber = z.union([
-      z.string(),
-      z.number(),
-    ]);
+    const stringOrNumber = z.union([z.string(), z.number()]);
     // Any/unknown accepts everything
     expect(isSchemaCompatible(stringOrNumber, z.any())).toBe(true);
     expect(isSchemaCompatible(stringOrNumber, z.unknown())).toBe(true);
@@ -302,18 +283,12 @@ describe('isSchemaCompatible - incompatible types', () => {
   });
 
   test('union output where not all variants match input', () => {
-    const output = z.union([
-      z.string(),
-      z.number(),
-    ]);
+    const output = z.union([z.string(), z.number()]);
     expect(isSchemaCompatible(output, z.boolean())).toBe(false);
   });
 
   test('output incompatible with union input (no match)', () => {
-    const input = z.union([
-      z.string(),
-      z.number(),
-    ]);
+    const input = z.union([z.string(), z.number()]);
     expect(isSchemaCompatible(z.boolean(), input)).toBe(false);
   });
 });
@@ -327,10 +302,7 @@ describe('isSchemaCompatible - edge cases', () => {
 
   test('union output where all variants satisfy input', () => {
     // Both string and number can flow into any
-    const output = z.union([
-      z.string(),
-      z.number(),
-    ]);
+    const output = z.union([z.string(), z.number()]);
     expect(isSchemaCompatible(output, z.any())).toBe(true);
   });
 
@@ -489,19 +461,12 @@ describe('isSchemaCompatible - structural compatibility', () => {
 
   test('union input matches single type output', () => {
     const output = z.string();
-    const input = z.union([
-      z.string(),
-      z.number(),
-      z.boolean(),
-    ]);
+    const input = z.union([z.string(), z.number(), z.boolean()]);
     expect(isSchemaCompatible(output, input)).toBe(true);
   });
 
   test('union output compatible with any', () => {
-    const output = z.union([
-      z.string(),
-      z.number(),
-    ]);
+    const output = z.union([z.string(), z.number()]);
     expect(isSchemaCompatible(output, z.any())).toBe(true);
   });
 

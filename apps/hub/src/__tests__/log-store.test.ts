@@ -251,10 +251,7 @@ describe('LogStore', () => {
 
     test('filters by multiple levels', () => {
       const result = store.query({
-        level: [
-          'info',
-          'warn',
-        ],
+        level: ['info', 'warn'],
       });
       expect(result.logs).toHaveLength(3);
     });
@@ -269,10 +266,7 @@ describe('LogStore', () => {
 
     test('filters by multiple sources', () => {
       const result = store.query({
-        source: [
-          'hub',
-          'plugin',
-        ],
+        source: ['hub', 'plugin'],
       });
       expect(result.logs).toHaveLength(4);
     });
@@ -436,10 +430,7 @@ describe('LogStore', () => {
 
     test('clears by multiple levels', () => {
       const deleted = store.clear({
-        level: [
-          'info',
-          'warn',
-        ],
+        level: ['info', 'warn'],
       });
       expect(deleted).toBe(2);
       expect(store.count()).toBe(1);

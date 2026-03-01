@@ -144,9 +144,7 @@ describe('getBinNames', () => {
   });
 
   test('returns package name for string shorthand', () => {
-    expect(getBinNames('my-cli', './bin/cli.js')).toEqual([
-      'my-cli',
-    ]);
+    expect(getBinNames('my-cli', './bin/cli.js')).toEqual(['my-cli']);
   });
 
   test('returns keys for object form', () => {
@@ -155,10 +153,7 @@ describe('getBinNames', () => {
         foo: './foo.js',
         bar: './bar.js',
       })
-    ).toEqual([
-      'foo',
-      'bar',
-    ]);
+    ).toEqual(['foo', 'bar']);
   });
 });
 
@@ -173,9 +168,7 @@ describe('getHooks', () => {
       getHooks({
         prepublishOnly: 'tsc',
       })
-    ).toEqual([
-      'prepublishOnly',
-    ]);
+    ).toEqual(['prepublishOnly']);
   });
 
   test('includes build when present', () => {
@@ -183,9 +176,7 @@ describe('getHooks', () => {
       getHooks({
         build: 'bun run generate',
       })
-    ).toEqual([
-      'build',
-    ]);
+    ).toEqual(['build']);
   });
 
   test('includes both when both present', () => {
@@ -194,10 +185,7 @@ describe('getHooks', () => {
         prepublishOnly: 'tsc',
         build: 'bun run generate',
       })
-    ).toEqual([
-      'prepublishOnly',
-      'build',
-    ]);
+    ).toEqual(['prepublishOnly', 'build']);
   });
 
   test('ignores unrelated scripts', () => {
@@ -254,16 +242,9 @@ describe('getPrivateWorkspaceDependencyWarnings', () => {
   test('warns when package depends on private workspace packages', () => {
     const warnings = getPrivateWorkspaceDependencyWarnings(
       {
-        dependencyNames: [
-          '@brika/private-a',
-          '@brika/public-a',
-          '@brika/private-b',
-        ],
+        dependencyNames: ['@brika/private-a', '@brika/public-a', '@brika/private-b'],
       },
-      new Set([
-        '@brika/private-a',
-        '@brika/private-b',
-      ])
+      new Set(['@brika/private-a', '@brika/private-b'])
     );
     expect(warnings).toEqual([
       'depends on private workspace package "@brika/private-a"',
@@ -274,13 +255,9 @@ describe('getPrivateWorkspaceDependencyWarnings', () => {
   test('returns no warnings without matches', () => {
     const warnings = getPrivateWorkspaceDependencyWarnings(
       {
-        dependencyNames: [
-          '@brika/public-a',
-        ],
+        dependencyNames: ['@brika/public-a'],
       },
-      new Set([
-        '@brika/private-a',
-      ])
+      new Set(['@brika/private-a'])
     );
     expect(warnings).toEqual([]);
   });
@@ -307,10 +284,7 @@ describe('formatPackagePreview', () => {
 
   test('shows files list when present', () => {
     const output = formatPackagePreview('my-pkg', '1.0.0', {
-      files: [
-        'src',
-        'dist',
-      ],
+      files: ['src', 'dist'],
     });
     expect(output).toContain('src');
     expect(output).toContain('dist');
@@ -471,9 +445,7 @@ describe('formatPackagePreview', () => {
         keywordsCount: 2,
       },
       null,
-      [
-        'engines.brika "^0.2.0" does not cover current SDK version 0.3.0',
-      ]
+      ['engines.brika "^0.2.0" does not cover current SDK version 0.3.0']
     );
     expect(output).toContain('does not cover current SDK version 0.3.0');
   });
@@ -493,9 +465,7 @@ describe('formatPackagePreview', () => {
         keywordsCount: 1,
       },
       null,
-      [
-        'keywords must include "brika" so the plugin can be found by the npm registry search',
-      ]
+      ['keywords must include "brika" so the plugin can be found by the npm registry search']
     );
     expect(output).toContain('keywords must include "brika"');
   });
@@ -514,10 +484,7 @@ describe('readPackageDetails', () => {
           name: 'my-pkg',
           version: '1.0.0',
           description: 'A package',
-          files: [
-            'src',
-            'dist',
-          ],
+          files: ['src', 'dist'],
           exports: {
             '.': './index.js',
           },
@@ -538,10 +505,7 @@ describe('readPackageDetails', () => {
           },
           license: 'MIT',
           repository: 'https://github.com/example/repo',
-          keywords: [
-            'sdk',
-            'tools',
-          ],
+          keywords: ['sdk', 'tools'],
         },
         '/workspace/my-pkg/README.md': '# Readme',
       })
@@ -549,10 +513,7 @@ describe('readPackageDetails', () => {
 
     const details = await readPackageDetails(path);
     expect(details.description).toBe('A package');
-    expect(details.files).toEqual([
-      'src',
-      'dist',
-    ]);
+    expect(details.files).toEqual(['src', 'dist']);
     expect(details.exports).toEqual({
       '.': './index.js',
     });
@@ -633,11 +594,7 @@ describe('readPackageDetails', () => {
       .apply();
 
     const details = await readPackageDetails(path);
-    expect(details.dependencyNames).toEqual([
-      '@brika/a',
-      '@brika/b',
-      '@brika/c',
-    ]);
+    expect(details.dependencyNames).toEqual(['@brika/a', '@brika/b', '@brika/c']);
   });
 });
 

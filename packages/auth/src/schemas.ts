@@ -7,14 +7,8 @@ import { getAuthConfig } from './config';
 import { Role } from './roles';
 import { Scope } from './scopes';
 
-const roleValues = Object.values(Role) as [
-  Role,
-  ...Role[],
-];
-const scopeValues = Object.values(Scope) as [
-  Scope,
-  ...Scope[],
-];
+const roleValues = Object.values(Role) as [Role, ...Role[]];
+const scopeValues = Object.values(Scope) as [Scope, ...Scope[]];
 
 export const RoleSchema = z.enum(roleValues);
 

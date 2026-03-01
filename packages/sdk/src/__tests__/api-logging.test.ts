@@ -30,11 +30,7 @@ function getCallArgs(index = 0): {
   if (!call || call.length < 3) {
     throw new Error(`No call at index ${index}`);
   }
-  const args = call as unknown as [
-    string,
-    string,
-    Record<string, unknown>,
-  ];
+  const args = call as unknown as [string, string, Record<string, unknown>];
   return {
     level: args[0],
     message: args[1],

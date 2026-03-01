@@ -37,9 +37,7 @@ describe('createCli', () => {
     test('resolves aliases', () => {
       const cli = createCli().addCommand({
         ...noop,
-        aliases: [
-          '-p',
-        ],
+        aliases: ['-p'],
       });
       expect(cli.get('-p')?.name).toBe('ping');
     });
@@ -83,13 +81,8 @@ describe('createCli', () => {
         },
       });
 
-      await cli.run([
-        'start',
-      ]);
-      expect(order).toEqual([
-        'before',
-        'handler',
-      ]);
+      await cli.run(['start']);
+      expect(order).toEqual(['before', 'handler']);
     });
 
     test('skips before hook for help command', async () => {
@@ -102,9 +95,7 @@ describe('createCli', () => {
         .addCommand(noop)
         .addHelp();
 
-      await cli.run([
-        'help',
-      ]);
+      await cli.run(['help']);
       log.restore();
 
       expect(beforeFn).not.toHaveBeenCalled();
@@ -120,10 +111,7 @@ describe('createCli', () => {
         .addCommand(noop)
         .addHelp();
 
-      await cli.run([
-        'ping',
-        '--help',
-      ]);
+      await cli.run(['ping', '--help']);
       log.restore();
 
       expect(beforeFn).not.toHaveBeenCalled();
@@ -142,9 +130,7 @@ describe('createCli', () => {
         cli.addCommand({
           name: 'other',
           description: 'Other',
-          aliases: [
-            'ping',
-          ],
+          aliases: ['ping'],
           handler() {},
         })
       ).toThrow(/collision/i);
@@ -157,9 +143,7 @@ describe('createCli', () => {
       const cli = createCli().addCommand(noop).addHelp();
 
       try {
-        await cli.run([
-          'nonexistent',
-        ]);
+        await cli.run(['nonexistent']);
       } catch {}
       exit.restore();
 
@@ -179,9 +163,7 @@ describe('createCli', () => {
       const cmd = createCli()
         .addCommand({
           ...noop,
-          examples: [
-            'brika sub ping',
-          ],
+          examples: ['brika sub ping'],
         })
         .addHelp()
         .toCommand('sub', 'A subcommand');
@@ -205,10 +187,7 @@ describe('createCli', () => {
 
       await cmd.handler({
         values: {},
-        positionals: [
-          'action',
-          'arg1',
-        ],
+        positionals: ['action', 'arg1'],
         commands: [],
       });
       expect(handler).toHaveBeenCalled();
@@ -233,9 +212,7 @@ describe('createCli', () => {
       nested.toCommand('sub', 'Sub');
 
       // Now run help — it should show "brika sub" prefix
-      nested.run([
-        'help',
-      ]);
+      nested.run(['help']);
       log.restore();
 
       const output = log.lines.join('\n');
@@ -256,13 +233,9 @@ describe('createCli', () => {
       });
 
       try {
-        await cli.run([
-          'start',
-        ]);
+        await cli.run(['start']);
       } catch {}
-      const errors = [
-        ...exit.errors,
-      ];
+      const errors = [...exit.errors];
       exit.restore();
 
       expect(exit.code).toBe(1);

@@ -58,11 +58,7 @@ export function createBanner(options: BannerOptions): string {
     verticalLayout: 'default',
   });
 
-  const contentParts: string[] = [
-    chalk.cyan.bold(asciiArt),
-    chalk.green(subtitle),
-    '',
-  ];
+  const contentParts: string[] = [chalk.cyan.bold(asciiArt), chalk.green(subtitle), ''];
 
   for (const [key, value] of Object.entries(metadata)) {
     const label = chalk.yellow(`${key}:`);

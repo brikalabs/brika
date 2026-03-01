@@ -264,24 +264,18 @@ export function spawnPlugin(
 ): PluginChannel {
   let channel: PluginChannel;
 
-  const proc = Bun.spawn(
-    [
-      cmd,
-      ...args,
-    ],
-    {
-      argv0: options.processName?.replaceAll('/', '.'),
-      cwd: options.cwd,
-      env: options.env,
-      stdin: 'pipe',
-      stdout: 'pipe',
-      stderr: 'pipe',
-      serialization: 'advanced',
-      ipc: (msg) => {
-        channel.handle(msg as WireMessage);
-      },
-    }
-  );
+  const proc = Bun.spawn([cmd, ...args], {
+    argv0: options.processName?.replaceAll('/', '.'),
+    cwd: options.cwd,
+    env: options.env,
+    stdin: 'pipe',
+    stdout: 'pipe',
+    stderr: 'pipe',
+    serialization: 'advanced',
+    ipc: (msg) => {
+      channel.handle(msg as WireMessage);
+    },
+  });
 
   channel = new PluginChannel(proc, {
     defaultTimeoutMs: options.defaultTimeoutMs,

@@ -44,33 +44,11 @@ export const storeApi = {
 };
 
 export const storeKeys = {
-  all: [
-    'store',
-  ] as const,
+  all: ['store'] as const,
   search: (params: { q?: string; limit?: number; offset?: number }) =>
-    [
-      'store',
-      'search',
-      params,
-    ] as const,
-  verified: [
-    'store',
-    'verified',
-  ] as const,
-  plugin: (name: string) =>
-    [
-      'store',
-      'plugin',
-      name,
-    ] as const,
-  readme: (name: string) =>
-    [
-      'store',
-      'readme',
-      name,
-    ] as const,
-  version: [
-    'store',
-    'version',
-  ] as const,
+    ['store', 'search', params] as const,
+  verified: ['store', 'verified'] as const,
+  plugin: (name: string) => ['store', 'plugin', name] as const,
+  readme: (name: string) => ['store', 'readme', name] as const,
+  version: ['store', 'version'] as const,
 };

@@ -14,21 +14,12 @@
     "url": "git+https://github.com/maxscharwath/brika.git",
     "directory": "packages/ipc"
   },
-  "keywords": [
-    "brika",
-    "ipc",
-    "bun",
-    "communication",
-    "typed"
-  ],
+  "keywords": ["brika", "ipc", "bun", "communication", "typed"],
   "exports": {
     ".": "./src/index.ts",
     "./contract": "./src/contract/index.ts"
   },
-  "files": [
-    "src",
-    "README.md"
-  ],
+  "files": ["src", "README.md"],
   "scripts": {
     "test": "bun test",
     "typecheck": "tsgo --noEmit",

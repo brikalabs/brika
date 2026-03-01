@@ -34,9 +34,7 @@ export function DashboardPage() {
   const { events: sparks } = useSparkStream();
 
   const { data: stats, isLoading: statsLoading } = useQuery({
-    queryKey: [
-      'stats',
-    ],
+    queryKey: ['stats'],
     queryFn: fetchStats,
     refetchInterval: 10000,
   });

@@ -28,11 +28,7 @@ export function requireScope(required: Scope | Scope[]): Middleware {
       );
     }
 
-    const requiredScopes = Array.isArray(required)
-      ? required
-      : [
-          required,
-        ];
+    const requiredScopes = Array.isArray(required) ? required : [required];
     const hasScope = requiredScopes.some((scope) => scopeService.hasScope(session.scopes, scope));
 
     if (!hasScope) {

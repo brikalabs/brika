@@ -382,12 +382,7 @@ describe('generateCompletions — bash', () => {
 
   describe('edge cases', () => {
     test('empty commands array produces valid bash function', () => {
-      const output = generateCompletions(
-        [
-          simpleCmd('help', 'Show help'),
-        ],
-        'bash'
-      );
+      const output = generateCompletions([simpleCmd('help', 'Show help')], 'bash');
       expect(output).toContain('_brika()');
       expect(output).toContain('complete -F _brika brika');
       // only help in the list
@@ -788,11 +783,7 @@ describe('generateCompletions — fish', () => {
 
 describe('generateCompletions — cross-shell', () => {
   test('all shells produce non-empty output', () => {
-    for (const shell of [
-      'bash',
-      'zsh',
-      'fish',
-    ] as const) {
+    for (const shell of ['bash', 'zsh', 'fish'] as const) {
       const output = generateCompletions(minimalCommands, shell);
       expect(output.length).toBeGreaterThan(0);
     }
@@ -808,11 +799,7 @@ describe('generateCompletions — cross-shell', () => {
   });
 
   test('all shells include command names for the same input', () => {
-    for (const shell of [
-      'bash',
-      'zsh',
-      'fish',
-    ] as const) {
+    for (const shell of ['bash', 'zsh', 'fish'] as const) {
       const output = generateCompletions(fullCommands, shell);
       expect(output).toContain('start');
       expect(output).toContain('plugin');
@@ -821,21 +808,14 @@ describe('generateCompletions — cross-shell', () => {
   });
 
   test('all shells handle commands with options', () => {
-    for (const shell of [
-      'bash',
-      'zsh',
-      'fish',
-    ] as const) {
+    for (const shell of ['bash', 'zsh', 'fish'] as const) {
       const output = generateCompletions(commandsWithOptions, shell);
       // Fish uses `-l port` not `--port`, so check for the flag name generically
       expect(output).toContain('port');
       expect(output).toContain('verbose');
     }
     // Bash and zsh use -- prefix
-    for (const shell of [
-      'bash',
-      'zsh',
-    ] as const) {
+    for (const shell of ['bash', 'zsh'] as const) {
       const output = generateCompletions(commandsWithOptions, shell);
       expect(output).toContain('--port');
       expect(output).toContain('--verbose');
@@ -847,11 +827,7 @@ describe('generateCompletions — cross-shell', () => {
   });
 
   test('all shells handle commands with subcommands', () => {
-    for (const shell of [
-      'bash',
-      'zsh',
-      'fish',
-    ] as const) {
+    for (const shell of ['bash', 'zsh', 'fish'] as const) {
       const output = generateCompletions(commandsWithSubcommands, shell);
       expect(output).toContain('install');
       expect(output).toContain('list');
@@ -871,14 +847,8 @@ describe('generateCompletions — cross-shell', () => {
   });
 
   test('only help command produces minimal output', () => {
-    const commands: Command[] = [
-      simpleCmd('help', 'Show help'),
-    ];
-    for (const shell of [
-      'bash',
-      'zsh',
-      'fish',
-    ] as const) {
+    const commands: Command[] = [simpleCmd('help', 'Show help')];
+    for (const shell of ['bash', 'zsh', 'fish'] as const) {
       const output = generateCompletions(commands, shell);
       expect(output.length).toBeGreaterThan(0);
     }

@@ -27,9 +27,7 @@ describe('definePreset', () => {
   test('returns a function that produces rules', () => {
     const preset = definePreset<{
       maxLines: number;
-    }>((options) => [
-      custom(`max-${options.maxLines}`, async function* () {}),
-    ]);
+    }>((options) => [custom(`max-${options.maxLines}`, async function* () {})]);
 
     const rules = preset({
       maxLines: 100,
@@ -39,9 +37,7 @@ describe('definePreset', () => {
   });
 
   test('handles void options', () => {
-    const preset = definePreset(() => [
-      custom('always', async function* () {}),
-    ]);
+    const preset = definePreset(() => [custom('always', async function* () {})]);
 
     const rules = preset();
     expect(rules).toHaveLength(1);

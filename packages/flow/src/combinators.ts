@@ -15,39 +15,14 @@ import type { Flow } from './types';
  * Combine latest values from multiple flows.
  * Emits when any flow emits, using latest value from each.
  */
-export function combine<A, B>(
-  a: Flow<A>,
-  b: Flow<B>
-): Flow<
-  [
-    A,
-    B,
-  ]
->;
-export function combine<A, B, C>(
-  a: Flow<A>,
-  b: Flow<B>,
-  c: Flow<C>
-): Flow<
-  [
-    A,
-    B,
-    C,
-  ]
->;
+export function combine<A, B>(a: Flow<A>, b: Flow<B>): Flow<[A, B]>;
+export function combine<A, B, C>(a: Flow<A>, b: Flow<B>, c: Flow<C>): Flow<[A, B, C]>;
 export function combine<A, B, C, D>(
   a: Flow<A>,
   b: Flow<B>,
   c: Flow<C>,
   d: Flow<D>
-): Flow<
-  [
-    A,
-    B,
-    C,
-    D,
-  ]
->;
+): Flow<[A, B, C, D]>;
 export function combine(...flows: Flow<unknown>[]): Flow<unknown[]> {
   return createCombineFlow(flows, 'combineLatest');
 }
@@ -55,26 +30,8 @@ export function combine(...flows: Flow<unknown>[]): Flow<unknown[]> {
 /**
  * Wait for all flows to emit, then emit tuple.
  */
-export function zip<A, B>(
-  a: Flow<A>,
-  b: Flow<B>
-): Flow<
-  [
-    A,
-    B,
-  ]
->;
-export function zip<A, B, C>(
-  a: Flow<A>,
-  b: Flow<B>,
-  c: Flow<C>
-): Flow<
-  [
-    A,
-    B,
-    C,
-  ]
->;
+export function zip<A, B>(a: Flow<A>, b: Flow<B>): Flow<[A, B]>;
+export function zip<A, B, C>(a: Flow<A>, b: Flow<B>, c: Flow<C>): Flow<[A, B, C]>;
 export function zip(...flows: Flow<unknown>[]): Flow<unknown[]> {
   return createCombineFlow(flows, 'zip');
 }
@@ -110,26 +67,8 @@ export function race<T>(...flows: Flow<T>[]): Flow<T> {
 /**
  * Wait for all flows to emit at least once.
  */
-export function all<A, B>(
-  a: Flow<A>,
-  b: Flow<B>
-): Flow<
-  [
-    A,
-    B,
-  ]
->;
-export function all<A, B, C>(
-  a: Flow<A>,
-  b: Flow<B>,
-  c: Flow<C>
-): Flow<
-  [
-    A,
-    B,
-    C,
-  ]
->;
+export function all<A, B>(a: Flow<A>, b: Flow<B>): Flow<[A, B]>;
+export function all<A, B, C>(a: Flow<A>, b: Flow<B>, c: Flow<C>): Flow<[A, B, C]>;
 export function all(...flows: Flow<unknown>[]): Flow<unknown[]> {
   return createCombineFlow(flows, 'all');
 }
@@ -174,17 +113,13 @@ function handleCombineValue({
     hasValue[i] = true;
     if (!allEmitted.current && hasValue.every(Boolean)) {
       allEmitted.current = true;
-      push([
-        ...values,
-      ]);
+      push([...values]);
     }
   } else {
     values[i] = v;
     hasValue[i] = true;
     if (hasValue.every(Boolean)) {
-      push([
-        ...values,
-      ]);
+      push([...values]);
     }
   }
 }

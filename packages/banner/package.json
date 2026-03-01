@@ -8,12 +8,7 @@
     "url": "https://github.com/maxscharwath/brika.git",
     "directory": "packages/banner"
   },
-  "keywords": [
-    "brika",
-    "cli",
-    "banner",
-    "terminal"
-  ],
+  "keywords": ["brika", "cli", "banner", "terminal"],
   "exports": {
     ".": "./src/index.ts"
   },

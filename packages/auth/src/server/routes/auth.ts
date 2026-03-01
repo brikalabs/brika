@@ -103,10 +103,5 @@ const sessionInfo = route.get({
   },
 });
 
-export const authPublicRoutes = [
-  login,
-];
-export const authProtectedRoutes = [
-  logout,
-  sessionInfo,
-];
+export const authPublicRoutes = [login];
+export const authProtectedRoutes = [logout, sessionInfo];

@@ -108,10 +108,7 @@ describe('PluginLoader', () => {
 
       await loader.init();
 
-      expect(callOrder).toEqual([
-        'state',
-        'registry',
-      ]);
+      expect(callOrder).toEqual(['state', 'registry']);
     });
   });
 
@@ -153,12 +150,7 @@ describe('PluginLoader', () => {
 
       await loader.load(config);
 
-      expect(stateSyncMock).toHaveBeenCalledWith(
-        new Set([
-          '@test/plugin-a',
-          '@test/plugin-b',
-        ])
-      );
+      expect(stateSyncMock).toHaveBeenCalledWith(new Set(['@test/plugin-a', '@test/plugin-b']));
     });
 
     test('loads each configured plugin', async () => {

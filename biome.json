@@ -20,7 +20,7 @@
     "attributePosition": "auto",
     "bracketSameLine": false,
     "bracketSpacing": true,
-    "expand": "always",
+    "expand": "auto",
     "useEditorconfig": true,
     "includes": [
       "apps/**",
@@ -109,9 +109,7 @@
           "options": {
             "paths": {
               "zod": {
-                "importNames": [
-                  "nativeEnum"
-                ],
+                "importNames": ["nativeEnum"],
                 "message": "The 'z.nativeEnum' method is deprecated. Use 'z.enum(Object.values(MyEnum))' or 'z.enum([...])' instead."
               }
             }
@@ -127,12 +125,7 @@
         "noConsole": {
           "level": "warn",
           "options": {
-            "allow": [
-              "warn",
-              "error",
-              "info",
-              "log"
-            ]
+            "allow": ["warn", "error", "info", "log"]
           }
         },
         "noControlCharactersInRegex": "error",
@@ -172,18 +165,8 @@
           "level": "error",
           "fix": "safe",
           "options": {
-            "attributes": [
-              "class",
-              "className",
-              "classList"
-            ],
-            "functions": [
-              "clsx",
-              "cva",
-              "tw",
-              "tw.*",
-              "cn"
-            ]
+            "attributes": ["class", "className", "classList"],
+            "functions": ["clsx", "cva", "tw", "tw.*", "cn"]
           }
         },
         "noUselessReturn": "error",
@@ -193,9 +176,7 @@
   },
 
   "javascript": {
-    "globals": [
-      "Bun"
-    ],
+    "globals": ["Bun"],
     "formatter": {
       "jsxQuoteStyle": "double",
       "quoteProperties": "asNeeded",
@@ -246,9 +227,7 @@
       }
     },
     {
-      "includes": [
-        "packages/ui-kit/src/jsx-runtime.ts"
-      ],
+      "includes": ["packages/ui-kit/src/jsx-runtime.ts"],
       "linter": {
         "rules": {
           "complexity": {
@@ -261,10 +240,7 @@
       }
     },
     {
-      "includes": [
-        "packages/ipc/src/client.ts",
-        "packages/ipc/src/host.ts"
-      ],
+      "includes": ["packages/ipc/src/client.ts", "packages/ipc/src/host.ts"],
       "linter": {
         "rules": {
           "suspicious": {
@@ -274,9 +250,7 @@
       }
     },
     {
-      "includes": [
-        "scripts/**/*.{ts,tsx,js,jsx,mts,cts}"
-      ],
+      "includes": ["scripts/**/*.{ts,tsx,js,jsx,mts,cts}"],
       "linter": {
         "rules": {
           "suspicious": {
@@ -288,15 +262,11 @@
         }
       },
       "javascript": {
-        "globals": [
-          "Bun"
-        ]
+        "globals": ["Bun"]
       }
     },
     {
-      "includes": [
-        "**/*.{ts,tsx,mts,cts,js,jsx}"
-      ],
+      "includes": ["**/*.{ts,tsx,mts,cts,js,jsx}"],
       "linter": {
         "rules": {
           "complexity": {
@@ -329,10 +299,7 @@
       }
     },
     {
-      "includes": [
-        "packages/di/src/testing/types.ts",
-        "packages/flow/src/flow.ts"
-      ],
+      "includes": ["packages/di/src/testing/types.ts", "packages/flow/src/flow.ts"],
       "linter": {
         "rules": {
           "suspicious": {

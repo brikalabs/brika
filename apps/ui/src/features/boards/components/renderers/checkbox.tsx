@@ -8,9 +8,7 @@ defineRenderer('checkbox', ({ node, onAction }) => {
 
   useEffect(() => {
     setLocal(node.checked);
-  }, [
-    node.checked,
-  ]);
+  }, [node.checked]);
 
   return (
     <label

@@ -414,36 +414,16 @@ describe('WorkflowExecutor - Data Injection', () => {
   });
 
   test.each([
-    [
-      'string value',
-      'port1',
-      'string',
-    ],
-    [
-      'number value',
-      'port2',
-      123,
-    ],
-    [
-      'boolean value',
-      'port3',
-      true,
-    ],
-    [
-      'null value',
-      'port4',
-      null,
-    ],
+    ['string value', 'port1', 'string'],
+    ['number value', 'port2', 123],
+    ['boolean value', 'port3', true],
+    ['null value', 'port4', null],
     [
       'nested object',
       'port5',
       {
         nested: {
-          data: [
-            1,
-            2,
-            3,
-          ],
+          data: [1, 2, 3],
         },
       },
     ],

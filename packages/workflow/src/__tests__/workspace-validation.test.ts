@@ -55,12 +55,7 @@ const createBlockType = (
 });
 
 const createMockRegistry = (blockTypes: BlockTypeDefinition[]): BlockTypeRegistry => {
-  const map = new Map(
-    blockTypes.map((bt) => [
-      bt.type,
-      bt,
-    ])
-  );
+  const map = new Map(blockTypes.map((bt) => [bt.type, bt]));
   return {
     get: (type: string) => map.get(type),
   };
@@ -99,9 +94,7 @@ describe('Workspace Validation - Valid Workflows', () => {
         },
       ]
     );
-    const registry = createMockRegistry([
-      blockType,
-    ]);
+    const registry = createMockRegistry([blockType]);
 
     const workflow: Workflow = {
       ...createSimpleWorkflow(),
@@ -143,10 +136,7 @@ describe('Workspace Validation - Valid Workflows', () => {
       ],
       []
     );
-    const registry = createMockRegistry([
-      timerType,
-      loggerType,
-    ]);
+    const registry = createMockRegistry([timerType, loggerType]);
 
     const workflow: Workflow = {
       ...createSimpleWorkflow(),
@@ -214,11 +204,7 @@ describe('Workspace Validation - Valid Workflows', () => {
       ],
       []
     );
-    const registry = createMockRegistry([
-      timerType,
-      filterType,
-      loggerType,
-    ]);
+    const registry = createMockRegistry([timerType, filterType, loggerType]);
 
     const workflow: Workflow = {
       ...createSimpleWorkflow(),
@@ -340,9 +326,7 @@ describe('Workspace Validation - Port Errors', () => {
         },
       ]
     );
-    const registry = createMockRegistry([
-      blockType,
-    ]);
+    const registry = createMockRegistry([blockType]);
 
     const workflow: Workflow = {
       ...createSimpleWorkflow(),
@@ -381,9 +365,7 @@ describe('Workspace Validation - Port Errors', () => {
       ],
       []
     );
-    const registry = createMockRegistry([
-      blockType,
-    ]);
+    const registry = createMockRegistry([blockType]);
 
     const workflow: Workflow = {
       ...createSimpleWorkflow(),
@@ -428,9 +410,7 @@ describe('Workspace Validation - Connection Errors', () => {
         },
       ]
     );
-    const registry = createMockRegistry([
-      blockType,
-    ]);
+    const registry = createMockRegistry([blockType]);
 
     const workflow: Workflow = {
       ...createSimpleWorkflow(),
@@ -469,9 +449,7 @@ describe('Workspace Validation - Connection Errors', () => {
         },
       ]
     );
-    const registry = createMockRegistry([
-      blockType,
-    ]);
+    const registry = createMockRegistry([blockType]);
 
     const workflow: Workflow = {
       ...createSimpleWorkflow(),
@@ -510,9 +488,7 @@ describe('Workspace Validation - Connection Errors', () => {
       ],
       []
     );
-    const registry = createMockRegistry([
-      blockType,
-    ]);
+    const registry = createMockRegistry([blockType]);
 
     const workflow: Workflow = {
       ...createSimpleWorkflow(),
@@ -551,9 +527,7 @@ describe('Workspace Validation - Connection Errors', () => {
         },
       ]
     );
-    const registry = createMockRegistry([
-      timerType,
-    ]);
+    const registry = createMockRegistry([timerType]);
 
     const workflow: Workflow = {
       ...createSimpleWorkflow(),
@@ -609,10 +583,7 @@ describe('Workspace Validation - Connection Errors', () => {
       ],
       []
     );
-    const registry = createMockRegistry([
-      timerType,
-      loggerType,
-    ]);
+    const registry = createMockRegistry([timerType, loggerType]);
 
     const workflow: Workflow = {
       ...createSimpleWorkflow(),
@@ -690,10 +661,7 @@ describe('Workspace Validation - Connection Errors', () => {
       configSchema: z.object({}),
     };
 
-    const registry = createMockRegistry([
-      sourceType,
-      targetType,
-    ]);
+    const registry = createMockRegistry([sourceType, targetType]);
 
     const workflow: Workflow = {
       ...createSimpleWorkflow(),
@@ -762,10 +730,7 @@ describe('Workspace Validation - Warnings', () => {
       ],
       []
     );
-    const registry = createMockRegistry([
-      timerType,
-      loggerType,
-    ]);
+    const registry = createMockRegistry([timerType, loggerType]);
 
     const workflow: Workflow = {
       ...createSimpleWorkflow(),
@@ -813,9 +778,7 @@ describe('Workspace Validation - Warnings', () => {
       ],
       []
     );
-    const registry = createMockRegistry([
-      loggerType,
-    ]);
+    const registry = createMockRegistry([loggerType]);
 
     const workflow: Workflow = {
       ...createSimpleWorkflow(),
@@ -852,9 +815,7 @@ describe('Workspace Validation - Warnings', () => {
         },
       ]
     );
-    const registry = createMockRegistry([
-      timerType,
-    ]);
+    const registry = createMockRegistry([timerType]);
 
     const workflow: Workflow = {
       ...createSimpleWorkflow(),
@@ -892,9 +853,7 @@ describe('Workspace Validation - Edge Cases', () => {
         },
       ]
     );
-    const registry = createMockRegistry([
-      blockType,
-    ]);
+    const registry = createMockRegistry([blockType]);
 
     const workflow: Workflow = {
       ...createSimpleWorkflow(),
@@ -926,9 +885,7 @@ describe('Workspace Validation - Edge Cases', () => {
         },
       ]
     );
-    const registry = createMockRegistry([
-      blockType,
-    ]);
+    const registry = createMockRegistry([blockType]);
 
     const workflow: Workflow = {
       ...createSimpleWorkflow(),

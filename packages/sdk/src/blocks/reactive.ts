@@ -290,14 +290,7 @@ function toTS(s: Record<string, unknown>): string {
   if (t === 'integer') {
     return 'number';
   }
-  if (
-    [
-      'string',
-      'number',
-      'boolean',
-      'null',
-    ].includes(t)
-  ) {
+  if (['string', 'number', 'boolean', 'null'].includes(t)) {
     return t;
   }
   if (t === 'array') {

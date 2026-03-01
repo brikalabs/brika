@@ -56,17 +56,10 @@ function makeTestPng(size: number): Buffer {
   function chunk(type: string, data: Buffer): Buffer {
     const len = Buffer.alloc(4);
     len.writeUInt32BE(data.length);
-    const td = Buffer.concat([
-      Buffer.from(type),
-      data,
-    ]);
+    const td = Buffer.concat([Buffer.from(type), data]);
     const crc = Buffer.alloc(4);
     crc.writeUInt32BE(crc32(td));
-    return Buffer.concat([
-      len,
-      td,
-      crc,
-    ]);
+    return Buffer.concat([len, td, crc]);
   }
   const rowBytes = 1 + size * 3; // filter byte + RGB per pixel
   const raw = Buffer.alloc(size * rowBytes);
@@ -82,16 +75,7 @@ function makeTestPng(size: number): Buffer {
   ihdr[8] = 8;
   ihdr[9] = 2; // RGB
   return Buffer.concat([
-    Buffer.from([
-      137,
-      80,
-      78,
-      71,
-      13,
-      10,
-      26,
-      10,
-    ]),
+    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
     chunk('IHDR', ihdr),
     chunk('IDAT', deflateSync(raw)),
     chunk('IEND', Buffer.alloc(0)),
@@ -151,13 +135,7 @@ describe('serveImage', () => {
     });
 
     it('should produce different ETag for different data', () => {
-      const otherImage = Buffer.from([
-        0x89,
-        0x50,
-        0x4e,
-        0x47,
-        0x00,
-      ]);
+      const otherImage = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x00]);
       const r1 = serveImage(TINY_IMAGE, createCtx());
       const r2 = serveImage(otherImage, createCtx());
       expect(r1.headers.get('ETag')).not.toBe(r2.headers.get('ETag'));

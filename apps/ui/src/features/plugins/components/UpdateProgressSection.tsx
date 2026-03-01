@@ -71,9 +71,7 @@ export function UpdateProgressSection({
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [
-    logs,
-  ]);
+  }, [logs]);
 
   return (
     <div className="space-y-3">

@@ -49,9 +49,7 @@ describe('plugins routes', () => {
 
   useTestBed(() => {
     mockManager = {
-      list: mock().mockReturnValue([
-        PLUGIN,
-      ]),
+      list: mock().mockReturnValue([PLUGIN]),
       get: mock().mockReturnValue(PLUGIN),
       load: mock().mockResolvedValue(undefined),
       enable: mock().mockResolvedValue(undefined),
@@ -71,9 +69,7 @@ describe('plugins routes', () => {
       }),
     };
     mockPermService = {
-      setPermission: mock().mockResolvedValue([
-        'location',
-      ]),
+      setPermission: mock().mockResolvedValue(['location']),
     };
     mockMetrics = {
       get: mock().mockReturnValue([]),

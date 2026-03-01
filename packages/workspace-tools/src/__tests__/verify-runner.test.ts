@@ -82,21 +82,14 @@ function makeExecution(overrides: Partial<VerifyExecution>): VerifyExecution {
 describe('getPreviewWarnings', () => {
   test('returns normalized errors and warnings when payload is present', () => {
     const payload: VerifyJsonPayload = {
-      errors: [
-        'keywords must include "brika" so the plugin can be found',
-      ],
-      warnings: [
-        '$schema field is missing',
-      ],
+      errors: ['keywords must include "brika" so the plugin can be found'],
+      warnings: ['$schema field is missing'],
     };
     const result = makeExecution({
       payload,
     });
     const warnings = getPreviewWarnings(result);
-    expect(warnings).toEqual([
-      'keyword "brika" missing',
-      '$schema missing',
-    ]);
+    expect(warnings).toEqual(['keyword "brika" missing', '$schema missing']);
   });
 
   test('returns empty array when payload has no errors or warnings', () => {
@@ -117,9 +110,7 @@ describe('getPreviewWarnings', () => {
       output: 'raw output here',
     });
     const warnings = getPreviewWarnings(result);
-    expect(warnings).toEqual([
-      'plugin verification failed (could not parse output)',
-    ]);
+    expect(warnings).toEqual(['plugin verification failed (could not parse output)']);
   });
 
   test('returns undefined when no payload and exit code is zero', () => {
@@ -132,9 +123,7 @@ describe('getPreviewWarnings', () => {
 
   test('prefers payload over exit code when both are present', () => {
     const payload: VerifyJsonPayload = {
-      errors: [
-        'some error',
-      ],
+      errors: ['some error'],
       warnings: [],
     };
     const result = makeExecution({
@@ -142,8 +131,6 @@ describe('getPreviewWarnings', () => {
       payload,
     });
     const warnings = getPreviewWarnings(result);
-    expect(warnings).toEqual([
-      'some error',
-    ]);
+    expect(warnings).toEqual(['some error']);
   });
 });

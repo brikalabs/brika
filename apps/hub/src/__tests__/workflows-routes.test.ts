@@ -134,9 +134,7 @@ describe('workflows routes', () => {
   test('POST /api/workflows returns 400 for invalid connections', async () => {
     mockBlockRegistry.validateConnections.mockReturnValue({
       valid: false,
-      errors: [
-        'Incompatible types',
-      ],
+      errors: ['Incompatible types'],
     });
 
     const res = await app.post('/api/workflows', {

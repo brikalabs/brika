@@ -29,9 +29,7 @@ export function CopyButton({ value, className }: Readonly<CopyButtonProps>) {
     } catch {
       // Ignore clipboard failures
     }
-  }, [
-    value,
-  ]);
+  }, [value]);
 
   return (
     <button

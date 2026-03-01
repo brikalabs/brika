@@ -120,12 +120,7 @@ export function useReorderBoards() {
       });
       const previous = qc.getQueryData<BoardSummary[]>(boardKeys.all);
       if (previous) {
-        const byId = new Map(
-          previous.map((b) => [
-            b.id,
-            b,
-          ])
-        );
+        const byId = new Map(previous.map((b) => [b.id, b]));
         const reordered = ids.map((id) => byId.get(id)).filter(Boolean) as BoardSummary[];
         qc.setQueryData(boardKeys.all, reordered);
         useBoardStore.getState().setBoards(reordered);
@@ -313,12 +308,7 @@ export function useBoardSSE(boardId: string | undefined) {
             instanceId: string;
             body: ComponentNode[];
           }>;
-          store.setBodiesBatch(
-            instances.map((i) => [
-              i.instanceId,
-              i.body,
-            ])
-          );
+          store.setBodiesBatch(instances.map((i) => [i.instanceId, i.body]));
           break;
         }
         case 'brick.instancePatched': {
@@ -384,8 +374,5 @@ export function useBoardSSE(boardId: string | undefined) {
       aborted = true;
       es.close();
     };
-  }, [
-    boardId,
-    qc,
-  ]);
+  }, [boardId, qc]);
 }

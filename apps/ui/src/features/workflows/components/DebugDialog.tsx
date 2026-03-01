@@ -58,9 +58,7 @@ export function DebugDialog({
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [
-    filteredEvents,
-  ]);
+  }, [filteredEvents]);
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>

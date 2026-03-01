@@ -5,9 +5,7 @@ const ROOT = import.meta.dir;
 const DIST = join(ROOT, 'dist');
 
 const result = await Bun.build({
-  entrypoints: [
-    join(ROOT, 'src/index.ts'),
-  ],
+  entrypoints: [join(ROOT, 'src/index.ts')],
   outdir: DIST,
   target: 'bun',
   minify: true,

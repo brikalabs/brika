@@ -179,9 +179,7 @@ export class EventBus {
    * Get all port buffers (for UI state display).
    */
   getAllBuffers(): PortBuffer[] {
-    return [
-      ...this.#buffers.values(),
-    ];
+    return [...this.#buffers.values()];
   }
 
   /**

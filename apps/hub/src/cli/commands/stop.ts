@@ -7,9 +7,7 @@ export default defineCommand({
   name: 'stop',
   description: 'Stop a running hub',
   details: 'Sends SIGTERM to the running Brika hub process in the current directory.',
-  examples: [
-    'brika stop',
-  ],
+  examples: ['brika stop'],
   async handler() {
     const status = await checkPid();
     if (status.state === 'stopped') {

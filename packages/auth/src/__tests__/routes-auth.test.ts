@@ -11,10 +11,7 @@ import { AuthService } from '../services/AuthService';
 import { UserService } from '../services/UserService';
 import { Role, Scope, type Session, type User } from '../types';
 
-const authRoutes = [
-  ...authPublicRoutes,
-  ...authProtectedRoutes,
-];
+const authRoutes = [...authPublicRoutes, ...authProtectedRoutes];
 
 import { getAuthConfig } from '../config';
 
@@ -31,9 +28,7 @@ const adminSession: Session = {
   userEmail: 'admin@test.com',
   userName: 'Admin',
   userRole: Role.ADMIN,
-  scopes: [
-    Scope.ADMIN_ALL,
-  ],
+  scopes: [Scope.ADMIN_ALL],
 };
 
 const mockUser: User = {
@@ -173,9 +168,7 @@ describe('POST /logout — with session', () => {
         revokedId = id;
       },
     });
-    app = TestApp.create(authRoutes, [
-      withSession(adminSession),
-    ]);
+    app = TestApp.create(authRoutes, [withSession(adminSession)]);
   });
 
   test('clears session cookie when logged in', async () => {
@@ -224,9 +217,7 @@ describe('GET /session — authenticated', () => {
     stub(UserService, {
       getUser: () => mockUser,
     });
-    app = TestApp.create(authRoutes, [
-      withSession(adminSession),
-    ]);
+    app = TestApp.create(authRoutes, [withSession(adminSession)]);
   });
 
   test('returns user and scopes', async () => {
@@ -238,9 +229,7 @@ describe('GET /session — authenticated', () => {
       scopes: Scope[];
     };
     expect(body.user.email).toBe('admin@test.com');
-    expect(body.scopes).toEqual([
-      Scope.ADMIN_ALL,
-    ]);
+    expect(body.scopes).toEqual([Scope.ADMIN_ALL]);
   });
 });
 

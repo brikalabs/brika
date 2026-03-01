@@ -149,19 +149,13 @@ describe('openAuthDatabase', () => {
     const now = Date.now();
     db.run(
       "INSERT INTO users (id, email, name, role, is_active, created_at, updated_at) VALUES ('u1', 'a@b.com', 'A', 'user', 1, ?, ?)",
-      [
-        now,
-        now,
-      ]
+      [now, now]
     );
     // Inserting duplicate email should fail
     expect(() =>
       db.run(
         "INSERT INTO users (id, email, name, role, is_active, created_at, updated_at) VALUES ('u2', 'a@b.com', 'B', 'user', 1, ?, ?)",
-        [
-          now,
-          now,
-        ]
+        [now, now]
       )
     ).toThrow();
     db.close();
@@ -173,19 +167,12 @@ describe('openAuthDatabase', () => {
     // Insert a user first
     db.run(
       "INSERT INTO users (id, email, name, role, is_active, created_at, updated_at) VALUES ('u1', 'a@b.com', 'A', 'user', 1, ?, ?)",
-      [
-        now,
-        now,
-      ]
+      [now, now]
     );
     // Insert session referencing the user (should succeed)
     db.run(
       "INSERT INTO sessions (id, user_id, token_hash, created_at, last_seen_at, expires_at) VALUES ('s1', 'u1', 'hash1', ?, ?, ?)",
-      [
-        now,
-        now,
-        now + 86400000,
-      ]
+      [now, now, now + 86400000]
     );
     const sessions = db.query('SELECT * FROM sessions WHERE user_id = ?').all('u1');
     expect(sessions).toHaveLength(1);

@@ -119,9 +119,7 @@ export class NpmRegistry implements RegistrySource {
         })
         .cache({
           ttl: 300_000,
-          tags: [
-            'npm-search',
-          ],
+          tags: ['npm-search'],
         }) // 5 minutes
         .data();
 
@@ -148,9 +146,7 @@ export class NpmRegistry implements RegistrySource {
         .get<NpmApiPackageResponse>(`${NPM_REGISTRY_URL}/${packageName}`)
         .cache({
           ttl: 600_000,
-          tags: [
-            'npm-package',
-          ],
+          tags: ['npm-package'],
         }) // 10 minutes
         .data();
 
@@ -241,9 +237,7 @@ export class NpmRegistry implements RegistrySource {
         .get<NpmApiDownloads>(`${NPM_DOWNLOADS_URL}/last-week/${packageName}`)
         .cache({
           ttl: 3_600_000,
-          tags: [
-            'npm-downloads',
-          ],
+          tags: ['npm-downloads'],
         }) // 1 hour
         .data();
       return data.downloads || 0;

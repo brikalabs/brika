@@ -37,33 +37,16 @@ function childrenAt(nodes: ComponentNode[], index: number): ComponentNode[] {
 describe('applyMutations', () => {
   describe('create', () => {
     test('appends node when index >= length', () => {
-      const body = [
-        text('A'),
-      ];
-      const result = applyMutations(body, [
-        [
-          MUT.CREATE,
-          '1',
-          text('B'),
-        ],
-      ]);
+      const body = [text('A')];
+      const result = applyMutations(body, [[MUT.CREATE, '1', text('B')]]);
 
       expect(result).toHaveLength(2);
       expect(result[1]).toHaveProperty('content', 'B');
     });
 
     test('inserts node at index', () => {
-      const body = [
-        text('A'),
-        text('C'),
-      ];
-      const result = applyMutations(body, [
-        [
-          MUT.CREATE,
-          '1',
-          text('B'),
-        ],
-      ]);
+      const body = [text('A'), text('C')];
+      const result = applyMutations(body, [[MUT.CREATE, '1', text('B')]]);
 
       expect(result).toHaveLength(3);
       expect(result[0]).toHaveProperty('content', 'A');
@@ -72,16 +55,8 @@ describe('applyMutations', () => {
     });
 
     test('inserts at beginning', () => {
-      const body = [
-        text('B'),
-      ];
-      const result = applyMutations(body, [
-        [
-          MUT.CREATE,
-          '0',
-          text('A'),
-        ],
-      ]);
+      const body = [text('B')];
+      const result = applyMutations(body, [[MUT.CREATE, '0', text('A')]]);
 
       expect(result).toHaveLength(2);
       expect(result[0]).toHaveProperty('content', 'A');
@@ -95,17 +70,8 @@ describe('applyMutations', () => {
         type: 'button',
         label: 'Click',
       };
-      const body = [
-        text('A'),
-        text('B'),
-      ];
-      const result = applyMutations(body, [
-        [
-          MUT.REPLACE,
-          '0',
-          button,
-        ],
-      ]);
+      const body = [text('A'), text('B')];
+      const result = applyMutations(body, [[MUT.REPLACE, '0', button]]);
 
       expect(result).toHaveLength(2);
       expect(result[0]).toBe(button);
@@ -115,9 +81,7 @@ describe('applyMutations', () => {
 
   describe('update', () => {
     test('merges props into existing node', () => {
-      const body = [
-        text('Hello'),
-      ];
+      const body = [text('Hello')];
       const result = applyMutations(body, [
         [
           MUT.UPDATE,
@@ -133,9 +97,7 @@ describe('applyMutations', () => {
     });
 
     test('adds new props without removing existing ones', () => {
-      const body = [
-        text('Hello'),
-      ];
+      const body = [text('Hello')];
       const result = applyMutations(body, [
         [
           MUT.UPDATE,
@@ -157,30 +119,14 @@ describe('applyMutations', () => {
         padding: 'lg',
         children: [],
       };
-      const result = applyMutations(
-        [
-          box,
-        ],
-        [
-          [
-            MUT.UPDATE,
-            '0',
-            {},
-            [
-              'blur',
-            ],
-          ],
-        ]
-      );
+      const result = applyMutations([box], [[MUT.UPDATE, '0', {}, ['blur']]]);
 
       expect(result[0]).not.toHaveProperty('blur');
       expect(result[0]).toHaveProperty('padding', 'lg');
     });
 
     test('preserves null as a legitimate prop value', () => {
-      const body = [
-        text('Hello'),
-      ];
+      const body = [text('Hello')];
       const result = applyMutations(body, [
         [
           MUT.UPDATE,
@@ -197,17 +143,8 @@ describe('applyMutations', () => {
 
   describe('remove', () => {
     test('removes node at index', () => {
-      const body = [
-        text('A'),
-        text('B'),
-        text('C'),
-      ];
-      const result = applyMutations(body, [
-        [
-          MUT.REMOVE,
-          '1',
-        ],
-      ]);
+      const body = [text('A'), text('B'), text('C')];
+      const result = applyMutations(body, [[MUT.REMOVE, '1']]);
 
       expect(result).toHaveLength(2);
       expect(result[0]).toHaveProperty('content', 'A');
@@ -215,16 +152,8 @@ describe('applyMutations', () => {
     });
 
     test('removes first node', () => {
-      const body = [
-        text('A'),
-        text('B'),
-      ];
-      const result = applyMutations(body, [
-        [
-          MUT.REMOVE,
-          '0',
-        ],
-      ]);
+      const body = [text('A'), text('B')];
+      const result = applyMutations(body, [[MUT.REMOVE, '0']]);
 
       expect(result).toHaveLength(1);
       expect(result[0]).toHaveProperty('content', 'B');
@@ -233,11 +162,7 @@ describe('applyMutations', () => {
 
   describe('nested paths', () => {
     test('updates a nested child', () => {
-      const body = [
-        column([
-          text('inner'),
-        ]),
-      ];
+      const body = [column([text('inner')])];
       const result = applyMutations(body, [
         [
           MUT.UPDATE,
@@ -253,18 +178,8 @@ describe('applyMutations', () => {
     });
 
     test('creates a nested child', () => {
-      const body = [
-        column([
-          text('first'),
-        ]),
-      ];
-      const result = applyMutations(body, [
-        [
-          MUT.CREATE,
-          '0.1',
-          text('second'),
-        ],
-      ]);
+      const body = [column([text('first')])];
+      const result = applyMutations(body, [[MUT.CREATE, '0.1', text('second')]]);
 
       const children = childrenAt(result, 0);
       expect(children).toHaveLength(2);
@@ -272,18 +187,8 @@ describe('applyMutations', () => {
     });
 
     test('removes a nested child', () => {
-      const body = [
-        column([
-          text('A'),
-          text('B'),
-        ]),
-      ];
-      const result = applyMutations(body, [
-        [
-          MUT.REMOVE,
-          '0.0',
-        ],
-      ]);
+      const body = [column([text('A'), text('B')])];
+      const result = applyMutations(body, [[MUT.REMOVE, '0.0']]);
 
       const children = childrenAt(result, 0);
       expect(children).toHaveLength(1);
@@ -295,10 +200,7 @@ describe('applyMutations', () => {
     test('siblings keep original references after update', () => {
       const a = text('A');
       const b = text('B');
-      const body = [
-        a,
-        b,
-      ];
+      const body = [a, b];
 
       const result = applyMutations(body, [
         [
@@ -319,12 +221,7 @@ describe('applyMutations', () => {
     test('parent is new reference but sibling subtrees are shared', () => {
       const child0 = text('unchanged');
       const child1 = text('will-change');
-      const body = [
-        column([
-          child0,
-          child1,
-        ]),
-      ];
+      const body = [column([child0, child1])];
 
       const result = applyMutations(body, [
         [
@@ -345,20 +242,10 @@ describe('applyMutations', () => {
 
   describe('batch mutations', () => {
     test('applies multiple mutations in sequence', () => {
-      const body = [
-        text('A'),
-      ];
+      const body = [text('A')];
       const mutations: Mutation[] = [
-        [
-          MUT.CREATE,
-          '1',
-          text('B'),
-        ],
-        [
-          MUT.CREATE,
-          '2',
-          text('C'),
-        ],
+        [MUT.CREATE, '1', text('B')],
+        [MUT.CREATE, '2', text('C')],
         [
           MUT.UPDATE,
           '0',
@@ -379,17 +266,13 @@ describe('applyMutations', () => {
 
   describe('edge cases', () => {
     test('empty mutations returns same array', () => {
-      const body = [
-        text('A'),
-      ];
+      const body = [text('A')];
       const result = applyMutations(body, []);
       expect(result).toBe(body);
     });
 
     test('returns nodes unchanged when targeting non-existent nested path on leaf', () => {
-      const body = [
-        text('leaf'),
-      ];
+      const body = [text('leaf')];
       // text node has no children, so path "0.0" should return nodes unchanged
       const result = applyMutations(body, [
         [

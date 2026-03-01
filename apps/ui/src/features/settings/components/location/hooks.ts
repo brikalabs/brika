@@ -21,10 +21,7 @@ interface HubLocationResponse {
 }
 
 const locationKeys = {
-  all: [
-    'settings',
-    'location',
-  ] as const,
+  all: ['settings', 'location'] as const,
 };
 
 export function useHubLocation() {
@@ -62,10 +59,7 @@ export function useLocationSettings() {
     if (data?.location && !isDirty) {
       setDraft(data.location);
     }
-  }, [
-    data,
-    isDirty,
-  ]);
+  }, [data, isDirty]);
 
   function handleAddressSelect(location: HubLocation) {
     setDraft(location);
@@ -77,10 +71,7 @@ export function useLocationSettings() {
       if (!prev) {
         return prev;
       }
-      const numFields = new Set<keyof HubLocation>([
-        'latitude',
-        'longitude',
-      ]);
+      const numFields = new Set<keyof HubLocation>(['latitude', 'longitude']);
       return {
         ...prev,
         [field]: numFields.has(field) ? Number(value) || 0 : value,

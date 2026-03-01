@@ -7,9 +7,7 @@ export default defineCommand({
   name: 'restart',
   description: 'Restart the running hub',
   details: 'Signals the Brika supervisor to restart the hub process in the current directory.',
-  examples: [
-    'brika restart',
-  ],
+  examples: ['brika restart'],
   async handler() {
     const status = await checkPid();
     if (status.state === 'stopped') {

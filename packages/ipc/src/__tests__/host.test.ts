@@ -640,10 +640,7 @@ describe('PluginChannel', () => {
 
       await new Promise((resolve) => setTimeout(resolve, 50));
 
-      expect(stderrLines).toEqual([
-        'real line',
-        'another real line',
-      ]);
+      expect(stderrLines).toEqual(['real line', 'another real line']);
     });
   });
 });

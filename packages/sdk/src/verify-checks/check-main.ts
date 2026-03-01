@@ -14,9 +14,7 @@ async function pathExists(path: string): Promise<boolean> {
 registerCheck(async ({ pkg, pluginDir }) => {
   if (!(await pathExists(resolve(pluginDir, pkg.main)))) {
     return {
-      errors: [
-        `main path "${pkg.main}" is declared but missing on disk`,
-      ],
+      errors: [`main path "${pkg.main}" is declared but missing on disk`],
     };
   }
   return {};

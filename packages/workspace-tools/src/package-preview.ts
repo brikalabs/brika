@@ -68,9 +68,7 @@ function warningLines(warnings: string[]): string[] {
   const warningCount = warnings.length;
   const warningLabel = plurals(WARNING_FORMS, warningCount);
   const warningSummary = `⚠ ${warningLabel}`;
-  const lines = [
-    `    ${pc.yellow(warningSummary)}`,
-  ];
+  const lines = [`    ${pc.yellow(warningSummary)}`];
   for (const warning of warnings) {
     lines.push(`      ${pc.yellow('•')} ${pc.yellow(warning)}`);
   }
@@ -121,9 +119,7 @@ export function getBinNames(name: string, bin: PackageDetails['bin']): string[] 
     return [];
   }
   if (typeof bin === 'string') {
-    return [
-      name,
-    ];
+    return [name];
   }
   return Object.keys(bin);
 }
@@ -190,10 +186,7 @@ export function formatPackagePreview(
   const pluginDetails = details.plugin;
   const pluginFeatures = pluginDetails ? buildPluginFeatures(pluginDetails) : [];
   const warnings = getPackageWarnings(details);
-  const mergedWarnings = [
-    ...warnings,
-    ...extraWarnings,
-  ];
+  const mergedWarnings = [...warnings, ...extraWarnings];
   const uniqueWarnings = Array.from(new Set(mergedWarnings));
   if (uniqueWarnings.length > 0) {
     lines.push(...warningLines(uniqueWarnings));

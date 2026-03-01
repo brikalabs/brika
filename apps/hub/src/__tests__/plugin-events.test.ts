@@ -367,10 +367,7 @@ describe('PluginEventHandler', () => {
     test('registers brick type and dispatches event', () => {
       const brickType = {
         id: 'test-brick',
-        families: [
-          'sm',
-          'md',
-        ] as Array<'sm' | 'md' | 'lg'>,
+        families: ['sm', 'md'] as Array<'sm' | 'md' | 'lg'>,
       };
 
       handler.registerBrickType('@test/plugin', brickType);
@@ -382,10 +379,7 @@ describe('PluginEventHandler', () => {
     test('registers brick type with manifest', () => {
       const brickType = {
         id: 'test-brick',
-        families: [
-          'sm',
-          'md',
-        ] as Array<'sm' | 'md' | 'lg'>,
+        families: ['sm', 'md'] as Array<'sm' | 'md' | 'lg'>,
         config: [
           {
             key: 'color',
@@ -413,9 +407,7 @@ describe('PluginEventHandler', () => {
     test('registers brick type without manifest', () => {
       const brickType = {
         id: 'test-brick',
-        families: [
-          'lg',
-        ] as Array<'sm' | 'md' | 'lg'>,
+        families: ['lg'] as Array<'sm' | 'md' | 'lg'>,
       };
 
       handler.registerBrickType('@test/plugin', brickType);

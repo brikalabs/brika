@@ -318,35 +318,17 @@ describe('file rules', () => {
 
     test('passes when all required files exist', async () => {
       const ctx = createDirContext(
-        [
-          'src/features/auth/',
-        ],
-        new Set([
-          'src/features/auth/index.ts',
-          'src/features/auth/types.ts',
-        ])
+        ['src/features/auth/'],
+        new Set(['src/features/auth/index.ts', 'src/features/auth/types.ts'])
       );
-      const rule = requiredFiles('src/features/*/', [
-        'index.ts',
-        'types.ts',
-      ]);
+      const rule = requiredFiles('src/features/*/', ['index.ts', 'types.ts']);
       const violations = await collectViolations(rule, ctx);
       expect(violations).toHaveLength(0);
     });
 
     test('fails when required file is missing', async () => {
-      const ctx = createDirContext(
-        [
-          'src/features/auth/',
-        ],
-        new Set([
-          'src/features/auth/index.ts',
-        ])
-      );
-      const rule = requiredFiles('src/features/*/', [
-        'index.ts',
-        'types.ts',
-      ]);
+      const ctx = createDirContext(['src/features/auth/'], new Set(['src/features/auth/index.ts']));
+      const rule = requiredFiles('src/features/*/', ['index.ts', 'types.ts']);
       const violations = await collectViolations(rule, ctx);
       expect(violations).toHaveLength(1);
       expect(violations[0].message).toContain('types.ts');

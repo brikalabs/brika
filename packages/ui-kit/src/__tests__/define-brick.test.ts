@@ -18,9 +18,7 @@ import { Stat, Text } from '../nodes';
 
 const minimalSpec: BrickTypeSpec = {
   id: 'test-brick',
-  families: [
-    'sm',
-  ],
+  families: ['sm'],
 };
 
 const fullSpec: BrickTypeSpec = {
@@ -30,11 +28,7 @@ const fullSpec: BrickTypeSpec = {
   icon: 'thermometer',
   color: '#ff6b35',
   category: 'climate',
-  families: [
-    'sm',
-    'md',
-    'lg',
-  ],
+  families: ['sm', 'md', 'lg'],
   minSize: {
     w: 1,
     h: 1,
@@ -138,11 +132,7 @@ describe('defineBrick', () => {
     expect(result.spec.icon).toBe('thermometer');
     expect(result.spec.color).toBe('#ff6b35');
     expect(result.spec.category).toBe('climate');
-    expect(result.spec.families).toEqual([
-      'sm',
-      'md',
-      'lg',
-    ]);
+    expect(result.spec.families).toEqual(['sm', 'md', 'lg']);
     expect(result.spec.minSize).toEqual({
       w: 1,
       h: 1,

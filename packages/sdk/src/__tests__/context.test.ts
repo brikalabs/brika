@@ -18,20 +18,12 @@ describe('context module', () => {
   test('exports Context class', async () => {
     const mod = await import('../context');
     // Context may be undefined if side-effect imports fail outside IPC
-    expect([
-      'function',
-      'undefined',
-    ]).toContain(typeof mod.Context);
+    expect(['function', 'undefined']).toContain(typeof mod.Context);
   });
 
   test('exports LogLevel type', () => {
     const _level: import('../context').LogLevel = 'debug';
-    expect([
-      'debug',
-      'info',
-      'warn',
-      'error',
-    ]).toContain(_level);
+    expect(['debug', 'info', 'warn', 'error']).toContain(_level);
   });
 
   test('exports StopHandler type', () => {

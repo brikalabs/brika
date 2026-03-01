@@ -47,9 +47,7 @@ function HlsVideo({
     });
 
     return () => hls?.destroy();
-  }, [
-    src,
-  ]);
+  }, [src]);
 
   return (
     <video

@@ -34,16 +34,10 @@ export function useBlocksFilters(blockTypes: BlockDefinition[]) {
       cats.add(block.category || 'other');
     }
     return {
-      pluginIds: [
-        ...pIds,
-      ],
-      categories: [
-        ...cats,
-      ].sort((a, b) => a.localeCompare(b)),
+      pluginIds: [...pIds],
+      categories: [...cats].sort((a, b) => a.localeCompare(b)),
     };
-  }, [
-    blockTypes,
-  ]);
+  }, [blockTypes]);
 
   // Filter blocks
   const filteredBlocks = useMemo(() => {
@@ -70,13 +64,7 @@ export function useBlocksFilters(blockTypes: BlockDefinition[]) {
         b.pluginId.toLowerCase().includes(searchLower)
       );
     });
-  }, [
-    blockTypes,
-    search,
-    pluginFilter,
-    categoryFilter,
-    tp,
-  ]);
+  }, [blockTypes, search, pluginFilter, categoryFilter, tp]);
 
   // Group by category
   const groupedBlocks = useMemo(() => {
@@ -89,9 +77,7 @@ export function useBlocksFilters(blockTypes: BlockDefinition[]) {
       },
       {} as Record<string, BlockDefinition[]>
     );
-  }, [
-    filteredBlocks,
-  ]);
+  }, [filteredBlocks]);
 
   const hasActiveFilters = pluginFilter !== 'all' || categoryFilter !== 'all' || search !== '';
 

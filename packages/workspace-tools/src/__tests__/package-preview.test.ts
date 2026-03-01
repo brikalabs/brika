@@ -114,9 +114,7 @@ describe('getBinNames', () => {
   });
 
   test('returns package name for string shorthand bin', () => {
-    expect(getBinNames('my-tool', './cli.js')).toEqual([
-      'my-tool',
-    ]);
+    expect(getBinNames('my-tool', './cli.js')).toEqual(['my-tool']);
   });
 
   test('returns multiple keys for object bin', () => {
@@ -126,11 +124,7 @@ describe('getBinNames', () => {
         b: './b.js',
         c: './c.js',
       })
-    ).toEqual([
-      'a',
-      'b',
-      'c',
-    ]);
+    ).toEqual(['a', 'b', 'c']);
   });
 });
 
@@ -153,9 +147,7 @@ describe('getHooks', () => {
         prepublishOnly: 'tsc',
         dev: 'bun run dev',
       })
-    ).toEqual([
-      'prepublishOnly',
-    ]);
+    ).toEqual(['prepublishOnly']);
   });
 
   test('detects build hook', () => {
@@ -164,9 +156,7 @@ describe('getHooks', () => {
         build: 'bun run build',
         test: 'bun test',
       })
-    ).toEqual([
-      'build',
-    ]);
+    ).toEqual(['build']);
   });
 
   test('detects both hooks in order', () => {
@@ -175,10 +165,7 @@ describe('getHooks', () => {
         prepublishOnly: 'tsc',
         build: 'bun run generate',
       })
-    ).toEqual([
-      'prepublishOnly',
-      'build',
-    ]);
+    ).toEqual(['prepublishOnly', 'build']);
   });
 
   test('ignores irrelevant scripts', () => {

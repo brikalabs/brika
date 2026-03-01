@@ -17,10 +17,7 @@ export function usePluginLocale() {
       ...locale,
       t: (key: string, options?: Record<string, unknown>) => String(scopedT(key, options)),
     }),
-    [
-      locale,
-      scopedT,
-    ]
+    [locale, scopedT]
   );
 }
 
@@ -68,16 +65,11 @@ export function usePluginAction<T>(ref: ActionRef): {
           setLoading(false);
         }
       });
-  }, [
-    uid,
-    ref.__actionId,
-  ]);
+  }, [uid, ref.__actionId]);
 
   useEffect(() => {
     execute();
-  }, [
-    execute,
-  ]);
+  }, [execute]);
 
   return {
     data,

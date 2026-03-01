@@ -12,13 +12,7 @@ import { Json, JsonRecord } from '../types';
 // Schemas
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const ToolCallSource = z.enum([
-  'api',
-  'ui',
-  'voice',
-  'rule',
-  'automation',
-]);
+export const ToolCallSource = z.enum(['api', 'ui', 'voice', 'rule', 'automation']);
 export type ToolCallSource = z.infer<typeof ToolCallSource>;
 
 export const ToolCallContext = z.object({
@@ -35,13 +29,7 @@ export const ToolResult = z.object({
 export type ToolResult = z.infer<typeof ToolResult>;
 
 export const ToolInputSchemaProperty = z.object({
-  type: z.enum([
-    'string',
-    'number',
-    'boolean',
-    'array',
-    'object',
-  ]),
+  type: z.enum(['string', 'number', 'boolean', 'array', 'object']),
   description: z.string().optional(),
   default: Json.optional(),
   enum: z.array(Json).optional(),

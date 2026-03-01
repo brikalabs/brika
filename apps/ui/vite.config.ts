@@ -5,12 +5,7 @@ import { bannerPlugin } from './vite-plugin-banner';
 import { chunkSplitPlugin } from './vite-plugin-chunk-split';
 
 export default defineConfig({
-  plugins: [
-    bannerPlugin(),
-    chunkSplitPlugin(),
-    react(),
-    tailwindcss(),
-  ],
+  plugins: [bannerPlugin(), chunkSplitPlugin(), react(), tailwindcss()],
   resolve: {
     alias: {
       '@': new URL('./src', import.meta.url).pathname,

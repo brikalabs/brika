@@ -42,9 +42,7 @@ export interface SystemResponse {
 
 export function useSystem() {
   return useQuery({
-    queryKey: [
-      'system',
-    ],
+    queryKey: ['system'],
     queryFn: () => fetcher<SystemResponse>('/api/system'),
     staleTime: 1000 * 30, // 30 seconds
   });

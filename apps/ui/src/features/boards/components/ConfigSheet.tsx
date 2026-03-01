@@ -129,10 +129,7 @@ function DropdownField({
     } finally {
       setIsRefreshing(false);
     }
-  }, [
-    brickTypeId,
-    field.name,
-  ]);
+  }, [brickTypeId, field.name]);
 
   if (field.type !== 'dropdown' && !isDynamic) {
     return null;
@@ -199,10 +196,7 @@ export function ConfigSheet() {
 
   const placement = useMemo(
     () => activeBoard?.bricks.find((c) => c.instanceId === configBrickId),
-    [
-      activeBoard,
-      configBrickId,
-    ]
+    [activeBoard, configBrickId]
   );
   const brickType = placement ? brickTypes.get(placement.brickTypeId) : null;
 
@@ -218,9 +212,7 @@ export function ConfigSheet() {
       });
       setLocalLabel(placement.label ?? '');
     }
-  }, [
-    placement,
-  ]);
+  }, [placement]);
 
   const handleClose = useCallback(
     (isOpen: boolean) => {
@@ -230,9 +222,7 @@ export function ConfigSheet() {
         setLocalLabel('');
       }
     },
-    [
-      setConfigBrickId,
-    ]
+    [setConfigBrickId]
   );
 
   const handleFieldChange = useCallback((name: string, value: Json) => {
@@ -289,11 +279,7 @@ export function ConfigSheet() {
     removeBrick(configBrickId);
     setDeleteOpen(false);
     setConfigBrickId(null);
-  }, [
-    configBrickId,
-    removeBrick,
-    setConfigBrickId,
-  ]);
+  }, [configBrickId, removeBrick, setConfigBrickId]);
 
   const configSchema = brickType?.config;
   const hasConfig = Array.isArray(configSchema) && configSchema.length > 0;

@@ -1,14 +1,6 @@
 'use client';
 
-const bars = [
-  0.4,
-  0.7,
-  0.55,
-  0.85,
-  0.6,
-  0.45,
-  0.75,
-];
+const bars = [0.4, 0.7, 0.55, 0.85, 0.6, 0.45, 0.75];
 
 export default function EnergyBrick() {
   return (

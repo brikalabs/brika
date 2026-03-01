@@ -20,13 +20,9 @@ async function resolvePluginUid(name: string): Promise<string | null> {
 
 export default defineCommand({
   name: 'uninstall',
-  aliases: [
-    'remove',
-  ],
+  aliases: ['remove'],
   description: 'Uninstall a plugin',
-  examples: [
-    'brika plugin uninstall @brika/plugin-timer',
-  ],
+  examples: ['brika plugin uninstall @brika/plugin-timer'],
   async handler({ positionals }) {
     const name = positionals[0];
     if (!name) {

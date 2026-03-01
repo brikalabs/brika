@@ -15,11 +15,7 @@ import { Json } from '../types';
 // Schemas
 // ─────────────────────────────────────────────────────────────────────────────
 
-const BrickFamilySchema = z.literal([
-  'sm',
-  'md',
-  'lg',
-]);
+const BrickFamilySchema = z.literal(['sm', 'md', 'lg']);
 
 export const BrickTypeDefinition = z.object({
   /** Local brick type ID (without plugin prefix) */

@@ -28,13 +28,7 @@ describe('serialize/deserialize', () => {
   });
 
   test('serializes and deserializes arrays', async () => {
-    const data = [
-      1,
-      2,
-      3,
-      'four',
-      true,
-    ];
+    const data = [1, 2, 3, 'four', true];
 
     const json = await serialize(data);
     const result = await deserialize(json);
@@ -74,14 +68,8 @@ describe('serialize/deserialize', () => {
   test('serializes Map objects', async () => {
     const data = {
       map: new Map([
-        [
-          'key1',
-          'value1',
-        ],
-        [
-          'key2',
-          'value2',
-        ],
+        ['key1', 'value1'],
+        ['key2', 'value2'],
       ]),
     };
 
@@ -97,11 +85,7 @@ describe('serialize/deserialize', () => {
 
   test('serializes Set objects', async () => {
     const data = {
-      set: new Set([
-        1,
-        2,
-        3,
-      ]),
+      set: new Set([1, 2, 3]),
     };
 
     const json = await serialize(data);
@@ -212,11 +196,7 @@ describe('TransformerRegistry', () => {
     const buf = Buffer.from('hello');
     expect(registry.findForValue(buf)?.name).toBe('Buffer');
 
-    const u8 = new Uint8Array([
-      1,
-      2,
-      3,
-    ]);
+    const u8 = new Uint8Array([1, 2, 3]);
     expect(registry.findForValue(u8)?.name).toBe('Uint8Array');
 
     expect(registry.findForValue('not a buffer')).toBeUndefined();
@@ -227,14 +207,9 @@ describe('BlobTransformer', () => {
   const { BlobTransformer } = require('../transformer') as typeof import('../transformer');
 
   test('serializes Blob to base64 with type', async () => {
-    const blob = new Blob(
-      [
-        'hello world',
-      ],
-      {
-        type: 'text/plain',
-      }
-    );
+    const blob = new Blob(['hello world'], {
+      type: 'text/plain',
+    });
 
     const serialized = await BlobTransformer.serialize(blob);
 
@@ -279,9 +254,7 @@ describe('TransformerRegistry sync operations with async transformer', () => {
     const registry = new TransformerRegistry();
     registry.register(BlobTransformer);
 
-    const blob = new Blob([
-      'test',
-    ]);
+    const blob = new Blob(['test']);
     expect(() => registry.serializeSync(blob)).toThrow('Cannot sync serialize async type');
   });
 

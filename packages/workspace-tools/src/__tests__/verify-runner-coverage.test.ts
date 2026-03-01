@@ -44,9 +44,7 @@ describe('runVerifyForPackages', () => {
         stderr: '',
       })
       .apply();
-    const pkgs = [
-      makePkg(),
-    ];
+    const pkgs = [makePkg()];
     const results = await runVerifyForPackages('/scripts/verify.ts', pkgs, '/workspace', false);
 
     expect(results).toHaveLength(1);
@@ -56,11 +54,7 @@ describe('runVerifyForPackages', () => {
 
     // Verify the spawn call did NOT include --json
     const call = bun.spawnCalls[0];
-    expect(call.cmd).toEqual([
-      'bun',
-      '/scripts/verify.ts',
-      '/workspace/plugins/test-plugin',
-    ]);
+    expect(call.cmd).toEqual(['bun', '/scripts/verify.ts', '/workspace/plugins/test-plugin']);
     expect(call.cmd).not.toContain('--json');
   });
 
@@ -76,9 +70,7 @@ describe('runVerifyForPackages', () => {
         stderr: '',
       })
       .apply();
-    const pkgs = [
-      makePkg(),
-    ];
+    const pkgs = [makePkg()];
     const results = await runVerifyForPackages('/scripts/verify.ts', pkgs, '/workspace', true);
 
     expect(results).toHaveLength(1);
@@ -99,9 +91,7 @@ describe('runVerifyForPackages', () => {
         stderr: '',
       })
       .apply();
-    const pkgs = [
-      makePkg(),
-    ];
+    const pkgs = [makePkg()];
     const results = await runVerifyForPackages('/scripts/verify.ts', pkgs, '/workspace');
 
     expect(results).toHaveLength(1);
@@ -121,9 +111,7 @@ describe('runVerifyForPackages', () => {
       .apply();
     const results = await runVerifyForPackages(
       '/scripts/verify.ts',
-      [
-        makePkg(),
-      ],
+      [makePkg()],
       '/workspace',
       false
     );
@@ -141,9 +129,7 @@ describe('runVerifyForPackages', () => {
       .apply();
     const results = await runVerifyForPackages(
       '/scripts/verify.ts',
-      [
-        makePkg(),
-      ],
+      [makePkg()],
       '/workspace',
       false
     );
@@ -161,9 +147,7 @@ describe('runVerifyForPackages', () => {
       .apply();
     const results = await runVerifyForPackages(
       '/scripts/verify.ts',
-      [
-        makePkg(),
-      ],
+      [makePkg()],
       '/workspace',
       false
     );
@@ -181,9 +165,7 @@ describe('runVerifyForPackages', () => {
       .apply();
     const results = await runVerifyForPackages(
       '/scripts/verify.ts',
-      [
-        makePkg(),
-      ],
+      [makePkg()],
       '/workspace',
       false
     );
@@ -201,9 +183,7 @@ describe('runVerifyForPackages', () => {
       .apply();
     const results = await runVerifyForPackages(
       '/scripts/verify.ts',
-      [
-        makePkg(),
-      ],
+      [makePkg()],
       '/workspace',
       false
     );
@@ -223,9 +203,7 @@ describe('runVerifyForPackages', () => {
       .apply();
     const results = await runVerifyForPackages(
       '/scripts/verify.ts',
-      [
-        makePkg(),
-      ],
+      [makePkg()],
       '/workspace',
       false
     );
@@ -238,12 +216,8 @@ describe('runVerifyForPackages', () => {
 
   test('parses valid JSON payload with errors and warnings', async () => {
     const payload = JSON.stringify({
-      errors: [
-        'missing field X',
-      ],
-      warnings: [
-        'consider adding Y',
-      ],
+      errors: ['missing field X'],
+      warnings: ['consider adding Y'],
     });
     bun
       .spawn({
@@ -254,20 +228,14 @@ describe('runVerifyForPackages', () => {
       .apply();
     const results = await runVerifyForPackages(
       '/scripts/verify.ts',
-      [
-        makePkg(),
-      ],
+      [makePkg()],
       '/workspace',
       true
     );
 
     expect(results[0].payload).toEqual({
-      errors: [
-        'missing field X',
-      ],
-      warnings: [
-        'consider adding Y',
-      ],
+      errors: ['missing field X'],
+      warnings: ['consider adding Y'],
     });
   });
 
@@ -285,9 +253,7 @@ describe('runVerifyForPackages', () => {
       .apply();
     const results = await runVerifyForPackages(
       '/scripts/verify.ts',
-      [
-        makePkg(),
-      ],
+      [makePkg()],
       '/workspace',
       true
     );
@@ -300,15 +266,8 @@ describe('runVerifyForPackages', () => {
 
   test('parses payload with multiple errors and warnings', async () => {
     const payload = JSON.stringify({
-      errors: [
-        'err1',
-        'err2',
-        'err3',
-      ],
-      warnings: [
-        'warn1',
-        'warn2',
-      ],
+      errors: ['err1', 'err2', 'err3'],
+      warnings: ['warn1', 'warn2'],
     });
     bun
       .spawn({
@@ -319,23 +278,14 @@ describe('runVerifyForPackages', () => {
       .apply();
     const results = await runVerifyForPackages(
       '/scripts/verify.ts',
-      [
-        makePkg(),
-      ],
+      [makePkg()],
       '/workspace',
       true
     );
 
     expect(results[0].payload).toEqual({
-      errors: [
-        'err1',
-        'err2',
-        'err3',
-      ],
-      warnings: [
-        'warn1',
-        'warn2',
-      ],
+      errors: ['err1', 'err2', 'err3'],
+      warnings: ['warn1', 'warn2'],
     });
   });
 
@@ -351,9 +301,7 @@ describe('runVerifyForPackages', () => {
       .apply();
     const results = await runVerifyForPackages(
       '/scripts/verify.ts',
-      [
-        makePkg(),
-      ],
+      [makePkg()],
       '/workspace',
       true
     );
@@ -371,9 +319,7 @@ describe('runVerifyForPackages', () => {
       .apply();
     const results = await runVerifyForPackages(
       '/scripts/verify.ts',
-      [
-        makePkg(),
-      ],
+      [makePkg()],
       '/workspace',
       true
     );
@@ -391,9 +337,7 @@ describe('runVerifyForPackages', () => {
       .apply();
     const results = await runVerifyForPackages(
       '/scripts/verify.ts',
-      [
-        makePkg(),
-      ],
+      [makePkg()],
       '/workspace',
       true
     );
@@ -411,9 +355,7 @@ describe('runVerifyForPackages', () => {
       .apply();
     const results = await runVerifyForPackages(
       '/scripts/verify.ts',
-      [
-        makePkg(),
-      ],
+      [makePkg()],
       '/workspace',
       true
     );
@@ -431,9 +373,7 @@ describe('runVerifyForPackages', () => {
       .apply();
     const results = await runVerifyForPackages(
       '/scripts/verify.ts',
-      [
-        makePkg(),
-      ],
+      [makePkg()],
       '/workspace',
       true
     );
@@ -446,9 +386,7 @@ describe('runVerifyForPackages', () => {
 
   test('returns undefined payload when errors field is missing', async () => {
     const payload = JSON.stringify({
-      warnings: [
-        'warn1',
-      ],
+      warnings: ['warn1'],
     });
     bun
       .spawn({
@@ -459,9 +397,7 @@ describe('runVerifyForPackages', () => {
       .apply();
     const results = await runVerifyForPackages(
       '/scripts/verify.ts',
-      [
-        makePkg(),
-      ],
+      [makePkg()],
       '/workspace',
       true
     );
@@ -471,9 +407,7 @@ describe('runVerifyForPackages', () => {
 
   test('returns undefined payload when warnings field is missing', async () => {
     const payload = JSON.stringify({
-      errors: [
-        'err1',
-      ],
+      errors: ['err1'],
     });
     bun
       .spawn({
@@ -484,9 +418,7 @@ describe('runVerifyForPackages', () => {
       .apply();
     const results = await runVerifyForPackages(
       '/scripts/verify.ts',
-      [
-        makePkg(),
-      ],
+      [makePkg()],
       '/workspace',
       true
     );
@@ -508,9 +440,7 @@ describe('runVerifyForPackages', () => {
       .apply();
     const results = await runVerifyForPackages(
       '/scripts/verify.ts',
-      [
-        makePkg(),
-      ],
+      [makePkg()],
       '/workspace',
       true
     );
@@ -532,9 +462,7 @@ describe('runVerifyForPackages', () => {
       .apply();
     const results = await runVerifyForPackages(
       '/scripts/verify.ts',
-      [
-        makePkg(),
-      ],
+      [makePkg()],
       '/workspace',
       true
     );
@@ -547,16 +475,8 @@ describe('runVerifyForPackages', () => {
   test('readStringArray filters out non-string entries from errors', async () => {
     // The JSON has non-string values mixed in — readStringArray should keep only strings
     const payload = JSON.stringify({
-      errors: [
-        'real error',
-        42,
-        null,
-        true,
-        'another error',
-      ],
-      warnings: [
-        'warn',
-      ],
+      errors: ['real error', 42, null, true, 'another error'],
+      warnings: ['warn'],
     });
     bun
       .spawn({
@@ -567,36 +487,21 @@ describe('runVerifyForPackages', () => {
       .apply();
     const results = await runVerifyForPackages(
       '/scripts/verify.ts',
-      [
-        makePkg(),
-      ],
+      [makePkg()],
       '/workspace',
       true
     );
 
     expect(results[0].payload).toEqual({
-      errors: [
-        'real error',
-        'another error',
-      ],
-      warnings: [
-        'warn',
-      ],
+      errors: ['real error', 'another error'],
+      warnings: ['warn'],
     });
   });
 
   test('readStringArray filters out non-string entries from warnings', async () => {
     const payload = JSON.stringify({
-      errors: [
-        'err',
-      ],
-      warnings: [
-        123,
-        'real warning',
-        false,
-        {},
-        'second warning',
-      ],
+      errors: ['err'],
+      warnings: [123, 'real warning', false, {}, 'second warning'],
     });
     bun
       .spawn({
@@ -607,21 +512,14 @@ describe('runVerifyForPackages', () => {
       .apply();
     const results = await runVerifyForPackages(
       '/scripts/verify.ts',
-      [
-        makePkg(),
-      ],
+      [makePkg()],
       '/workspace',
       true
     );
 
     expect(results[0].payload).toEqual({
-      errors: [
-        'err',
-      ],
-      warnings: [
-        'real warning',
-        'second warning',
-      ],
+      errors: ['err'],
+      warnings: ['real warning', 'second warning'],
     });
   });
 
@@ -674,14 +572,7 @@ describe('runVerifyForPackages', () => {
     const pkg = makePkg({
       path: '/workspace/deep/nested/plugins/my-plugin/package.json',
     });
-    await runVerifyForPackages(
-      '/scripts/verify.ts',
-      [
-        pkg,
-      ],
-      '/workspace',
-      false
-    );
+    await runVerifyForPackages('/scripts/verify.ts', [pkg], '/workspace', false);
 
     expect(bun.spawnCalls[0].cmd).toEqual([
       'bun',
@@ -714,14 +605,7 @@ describe('runVerifyForPackages', () => {
         stderr: '',
       })
       .apply();
-    await runVerifyForPackages(
-      '/scripts/verify.ts',
-      [
-        makePkg(),
-      ],
-      '/my/custom/cwd',
-      false
-    );
+    await runVerifyForPackages('/scripts/verify.ts', [makePkg()], '/my/custom/cwd', false);
 
     const call = bun.spawnCalls[0];
     const options = call.options as {
@@ -734,12 +618,8 @@ describe('runVerifyForPackages', () => {
 
   test('does not parse JSON even if stdout is valid JSON when json is false', async () => {
     const payload = JSON.stringify({
-      errors: [
-        'err',
-      ],
-      warnings: [
-        'warn',
-      ],
+      errors: ['err'],
+      warnings: ['warn'],
     });
     bun
       .spawn({
@@ -750,9 +630,7 @@ describe('runVerifyForPackages', () => {
       .apply();
     const results = await runVerifyForPackages(
       '/scripts/verify.ts',
-      [
-        makePkg(),
-      ],
+      [makePkg()],
       '/workspace',
       false
     );
@@ -767,12 +645,8 @@ describe('runVerifyForPackages', () => {
 
   test('ignores extra fields in JSON payload and only keeps errors/warnings', async () => {
     const payload = JSON.stringify({
-      errors: [
-        'e1',
-      ],
-      warnings: [
-        'w1',
-      ],
+      errors: ['e1'],
+      warnings: ['w1'],
       extraField: 'should be ignored',
       count: 42,
     });
@@ -785,20 +659,14 @@ describe('runVerifyForPackages', () => {
       .apply();
     const results = await runVerifyForPackages(
       '/scripts/verify.ts',
-      [
-        makePkg(),
-      ],
+      [makePkg()],
       '/workspace',
       true
     );
 
     expect(results[0].payload).toEqual({
-      errors: [
-        'e1',
-      ],
-      warnings: [
-        'w1',
-      ],
+      errors: ['e1'],
+      warnings: ['w1'],
     });
   });
 
@@ -814,9 +682,7 @@ describe('runVerifyForPackages', () => {
       .apply();
     const results = await runVerifyForPackages(
       '/scripts/verify.ts',
-      [
-        makePkg(),
-      ],
+      [makePkg()],
       '/workspace',
       true
     );
@@ -836,9 +702,7 @@ describe('runVerifyForPackages', () => {
       .apply();
     const results = await runVerifyForPackages(
       '/scripts/verify.ts',
-      [
-        makePkg(),
-      ],
+      [makePkg()],
       '/workspace',
       true
     );
@@ -856,9 +720,7 @@ describe('runVerifyForPackages', () => {
       .apply();
     const results = await runVerifyForPackages(
       '/scripts/verify.ts',
-      [
-        makePkg(),
-      ],
+      [makePkg()],
       '/workspace',
       true
     );

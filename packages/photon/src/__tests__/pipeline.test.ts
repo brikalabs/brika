@@ -27,17 +27,10 @@ function makeTestPng(width: number, height: number = width): Buffer {
   function chunk(type: string, data: Buffer): Buffer {
     const len = Buffer.alloc(4);
     len.writeUInt32BE(data.length);
-    const td = Buffer.concat([
-      Buffer.from(type),
-      data,
-    ]);
+    const td = Buffer.concat([Buffer.from(type), data]);
     const crc = Buffer.alloc(4);
     crc.writeUInt32BE(crc32(td));
-    return Buffer.concat([
-      len,
-      td,
-      crc,
-    ]);
+    return Buffer.concat([len, td, crc]);
   }
 
   const rowBytes = 1 + width * 3; // filter byte + RGB per pixel
@@ -56,16 +49,7 @@ function makeTestPng(width: number, height: number = width): Buffer {
   ihdr[9] = 2; // RGB
 
   return Buffer.concat([
-    Buffer.from([
-      137,
-      80,
-      78,
-      71,
-      13,
-      10,
-      26,
-      10,
-    ]), // PNG signature
+    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), // PNG signature
     chunk('IHDR', ihdr),
     chunk('IDAT', deflateSync(raw)),
     chunk('IEND', Buffer.alloc(0)),
@@ -321,15 +305,7 @@ describe('photon()', () => {
     });
 
     it('should throw on invalid input', () => {
-      expect(() =>
-        photon(
-          new Uint8Array([
-            0,
-            1,
-            2,
-          ])
-        ).toBuffer()
-      ).toThrow();
+      expect(() => photon(new Uint8Array([0, 1, 2])).toBuffer()).toThrow();
     });
   });
 });

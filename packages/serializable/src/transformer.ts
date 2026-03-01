@@ -129,15 +129,9 @@ export class TransformerRegistry {
 
     // Handle Map
     if (value instanceof Map) {
-      const entries: [
-        unknown,
-        unknown,
-      ][] = [];
+      const entries: [unknown, unknown][] = [];
       for (const [k, v] of value) {
-        entries.push([
-          await this.serialize(k),
-          await this.serialize(v),
-        ]);
+        entries.push([await this.serialize(k), await this.serialize(v)]);
       }
       return wrapSerialized('Map', entries);
     }
@@ -207,10 +201,7 @@ export class TransformerRegistry {
     }
 
     if (typeName === 'Map') {
-      const entries = value.data as [
-        unknown,
-        unknown,
-      ][];
+      const entries = value.data as [unknown, unknown][];
       const map = new Map();
       for (const [k, v] of entries) {
         map.set(await this.deserialize(k), await this.deserialize(v));
@@ -243,15 +234,9 @@ export class TransformerRegistry {
       return wrapSerialized('Date', value.toISOString());
     }
     if (value instanceof Map) {
-      const entries: [
-        unknown,
-        unknown,
-      ][] = [];
+      const entries: [unknown, unknown][] = [];
       for (const [k, v] of value) {
-        entries.push([
-          this.serializeSync(k),
-          this.serializeSync(v),
-        ]);
+        entries.push([this.serializeSync(k), this.serializeSync(v)]);
       }
       return wrapSerialized('Map', entries);
     }
@@ -346,10 +331,7 @@ export class TransformerRegistry {
     }
 
     if (typeName === 'Map') {
-      const entries = value.data as [
-        unknown,
-        unknown,
-      ][];
+      const entries = value.data as [unknown, unknown][];
       const map = new Map();
       for (const [k, v] of entries) {
         map.set(this.deserializeSync(k), this.deserializeSync(v));
@@ -420,14 +402,9 @@ export const BlobTransformer: Transformer<
   },
   deserialize: (data) => {
     const buffer = Buffer.from(data.data, 'base64');
-    return new Blob(
-      [
-        buffer,
-      ],
-      {
-        type: data.type,
-      }
-    );
+    return new Blob([buffer], {
+      type: data.type,
+    });
   },
 };
 

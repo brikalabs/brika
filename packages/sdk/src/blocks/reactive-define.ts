@@ -262,14 +262,7 @@ export function defineReactiveBlock<
       const config = configResult.success ? configResult.data : ({} as z.infer<TConfig>);
 
       // Build input flows object
-      const inputFlows = Object.fromEntries(
-        [
-          ...flows.entries(),
-        ].map(([id, flow]) => [
-          id,
-          flow,
-        ])
-      );
+      const inputFlows = Object.fromEntries([...flows.entries()].map(([id, flow]) => [id, flow]));
 
       // start() function for creating flows from values/sources/factories
       const start = <T>(input: T | Source<T> | Factory<T>): Flow<T> => {
@@ -380,13 +373,7 @@ function zodToBlockSchema(schema: z.ZodObject<z.ZodRawShape>): BlockSchema {
       }
     ).properties ?? {};
   type PropType = 'string' | 'number' | 'boolean' | 'object' | 'array';
-  const validTypes = new Set<PropType>([
-    'string',
-    'number',
-    'boolean',
-    'object',
-    'array',
-  ]);
+  const validTypes = new Set<PropType>(['string', 'number', 'boolean', 'object', 'array']);
   return {
     type: 'object',
     properties: Object.fromEntries(

@@ -61,9 +61,7 @@ const fakeSession: Session = {
   userEmail: 'user@test.com',
   userName: 'Test User',
   userRole: Role.USER,
-  scopes: [
-    Scope.WORKFLOW_READ,
-  ],
+  scopes: [Scope.WORKFLOW_READ],
 };
 
 // ---------------------------------------------------------------------------

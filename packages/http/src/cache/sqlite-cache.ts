@@ -77,9 +77,7 @@ export class SqliteCache implements CacheAdapter {
         value: string;
         expires_at: number;
       },
-      [
-        string,
-      ]
+      [string]
     >('SELECT value, expires_at FROM cache_entries WHERE key = ?');
 
     const row = stmt.get(key);
@@ -149,9 +147,7 @@ export class SqliteCache implements CacheAdapter {
       {
         expires_at: number;
       },
-      [
-        string,
-      ]
+      [string]
     >('SELECT expires_at FROM cache_entries WHERE key = ?');
 
     const row = stmt.get(key);
@@ -240,9 +236,7 @@ export class SqliteCache implements CacheAdapter {
         {
           count: number;
         },
-        [
-          number,
-        ]
+        [number]
       >('SELECT COUNT(*) as count FROM cache_entries WHERE expires_at < ?')
       .get(now);
 
@@ -311,10 +305,7 @@ export class SqliteCache implements CacheAdapter {
           key: string;
           value: string;
         },
-        [
-          string,
-          number,
-        ]
+        [string, number]
       >(
         `SELECT e.key, e.value FROM cache_entries e
          INNER JOIN cache_tags t ON e.key = t.key
@@ -340,9 +331,7 @@ export class SqliteCache implements CacheAdapter {
           ttl: number;
           expires_at: number;
         },
-        [
-          string,
-        ]
+        [string]
       >('SELECT value, timestamp, ttl, expires_at FROM cache_entries WHERE key = ?')
       .get(key);
 
@@ -355,9 +344,7 @@ export class SqliteCache implements CacheAdapter {
         {
           tag: string;
         },
-        [
-          string,
-        ]
+        [string]
       >('SELECT tag FROM cache_tags WHERE key = ?')
       .all(key)
       .map((r) => r.tag);

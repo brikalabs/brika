@@ -9,10 +9,7 @@ import {
 } from './components';
 import { useStorePluginDetails, useStorePluginReadme } from './hooks';
 
-const KNOWN_SOURCES = new Set([
-  'npm',
-  'local',
-]);
+const KNOWN_SOURCES = new Set(['npm', 'local']);
 
 export function StorePluginDetailPage() {
   // Route: /store/$source/$  →  e.g. /store/npm/@brika/plugin-timer
@@ -24,14 +21,7 @@ export function StorePluginDetailPage() {
   });
 
   const isKnownSource = source ? KNOWN_SOURCES.has(source) : false;
-  const packageName = isKnownSource
-    ? (_splat ?? '')
-    : [
-        source,
-        _splat,
-      ]
-        .filter(Boolean)
-        .join('/');
+  const packageName = isKnownSource ? (_splat ?? '') : [source, _splat].filter(Boolean).join('/');
   let pluginId = '';
   if (packageName) {
     pluginId = isKnownSource ? `${source}:${packageName}` : packageName;

@@ -40,13 +40,7 @@ describe('createCli', () => {
       })
     );
 
-    await cli.run([
-      'start',
-      '--host',
-      '0.0.0.0',
-      '-p',
-      '8080',
-    ]);
+    await cli.run(['start', '--host', '0.0.0.0', '-p', '8080']);
 
     expect(handler).toHaveBeenCalledTimes(1);
     const { values } = handler.mock.calls[0][0];
@@ -70,11 +64,7 @@ describe('createCli', () => {
       })
     );
 
-    await cli.run([
-      'run',
-      '-n',
-      '42',
-    ]);
+    await cli.run(['run', '-n', '42']);
 
     expect(handler.mock.calls[0][0].values.count).toBe(42);
   });
@@ -99,9 +89,7 @@ describe('createCli', () => {
       })
     );
 
-    await cli.run([
-      'run',
-    ]);
+    await cli.run(['run']);
 
     const { values } = handler.mock.calls[0][0];
     expect(values.verbose).toBe(false);
@@ -136,10 +124,7 @@ describe('createCli', () => {
       })
     );
 
-    await cli.run([
-      'start',
-      '--help',
-    ]);
+    await cli.run(['start', '--help']);
     spy.restore();
 
     expect(handler).not.toHaveBeenCalled();
@@ -162,16 +147,12 @@ describe('createCli', () => {
       defineCommand({
         name: 'version',
         description: 'test',
-        aliases: [
-          '-v',
-        ],
+        aliases: ['-v'],
         handler,
       })
     );
 
-    await cli.run([
-      '-v',
-    ]);
+    await cli.run(['-v']);
 
     expect(handler).toHaveBeenCalledTimes(1);
   });

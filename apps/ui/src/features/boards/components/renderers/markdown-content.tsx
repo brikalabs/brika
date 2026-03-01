@@ -60,12 +60,7 @@ export default function MarkdownContent({
 }>) {
   return (
     <div className="min-w-0 text-foreground [&>*:first-child]:mt-0">
-      <ReactMarkdown
-        remarkPlugins={[
-          remarkGfm,
-        ]}
-        components={components}
-      >
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
         {content}
       </ReactMarkdown>
     </div>

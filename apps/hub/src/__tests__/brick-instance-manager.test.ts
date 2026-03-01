@@ -170,10 +170,7 @@ describe('BrickInstanceManager', () => {
 
       const filtered = manager.listByType('plugin:brick');
       expect(filtered).toHaveLength(2);
-      expect(filtered.map((i) => i.instanceId).sort()).toEqual([
-        'a',
-        'c',
-      ]);
+      expect(filtered.map((i) => i.instanceId).sort()).toEqual(['a', 'c']);
     });
   });
 
@@ -185,10 +182,7 @@ describe('BrickInstanceManager', () => {
 
       const removed = manager.unmountByType('plugin:brick');
 
-      expect(removed.sort()).toEqual([
-        'a',
-        'c',
-      ]);
+      expect(removed.sort()).toEqual(['a', 'c']);
       expect(manager.size).toBe(1);
       expect(manager.has('b')).toBe(true);
     });
@@ -207,10 +201,7 @@ describe('BrickInstanceManager', () => {
 
       const removed = manager.unmountByPlugin('p1');
 
-      expect(removed.sort()).toEqual([
-        'a',
-        'c',
-      ]);
+      expect(removed.sort()).toEqual(['a', 'c']);
       expect(manager.size).toBe(1);
       expect(manager.has('b')).toBe(true);
     });

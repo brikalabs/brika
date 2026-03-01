@@ -46,9 +46,7 @@ export function Fragment(props: {
     return [];
   }
   if (!Array.isArray(children)) {
-    return [
-      children as ComponentNode,
-    ];
+    return [children as ComponentNode];
   }
   return (children as unknown[]).flat(Infinity).filter(Boolean) as ComponentNode[];
 }

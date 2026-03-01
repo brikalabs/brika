@@ -50,9 +50,7 @@ export function MetricsChart({
         value?: unknown;
       }>;
     }) => <ChartTooltipContent {...props} formatValue={formatValue} />,
-    [
-      formatValue,
-    ]
+    [formatValue]
   );
 
   // Show empty placeholder when no data
@@ -88,13 +86,7 @@ export function MetricsChart({
             </linearGradient>
           </defs>
           <XAxis dataKey="ts" hide />
-          <YAxis
-            hide
-            domain={[
-              'auto',
-              'auto',
-            ]}
-          />
+          <YAxis hide domain={['auto', 'auto']} />
           <Tooltip content={renderTooltip} />
           <Area
             type="monotone"

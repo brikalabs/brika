@@ -32,9 +32,7 @@ const createBrick = (id = 'thermostat') => ({
     },
   ],
   category: 'sensor',
-  tags: [
-    'temperature',
-  ],
+  tags: ['temperature'],
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -80,9 +78,7 @@ describe('BrickRegistry', () => {
       expect(brick.body).toHaveLength(1);
       expect(brick.actions).toHaveLength(1);
       expect(brick.category).toBe('sensor');
-      expect(brick.tags).toEqual([
-        'temperature',
-      ]);
+      expect(brick.tags).toEqual(['temperature']);
     });
 
     test('handles duplicate registration (overwrites)', () => {
@@ -165,10 +161,7 @@ describe('BrickRegistry', () => {
       registry.register(createBrick('a-brick'), 'plugin');
 
       const ids = registry.list().map((b) => b.fullId);
-      expect(ids).toEqual([
-        'plugin:a-brick',
-        'plugin:z-brick',
-      ]);
+      expect(ids).toEqual(['plugin:a-brick', 'plugin:z-brick']);
     });
 
     test('list returns empty array initially', () => {
@@ -201,10 +194,7 @@ describe('BrickRegistry', () => {
       registry.register(createBrick('a'), 'plugin');
       registry.register(createBrick('b'), 'plugin');
 
-      expect(registered).toEqual([
-        'plugin:a',
-        'plugin:b',
-      ]);
+      expect(registered).toEqual(['plugin:a', 'plugin:b']);
     });
 
     test('supports multiple listeners', () => {
@@ -227,9 +217,7 @@ describe('BrickRegistry', () => {
       unsub();
       registry.register(createBrick('b'), 'plugin');
 
-      expect(registered).toEqual([
-        'plugin:a',
-      ]);
+      expect(registered).toEqual(['plugin:a']);
     });
 
     test('listener errors do not prevent other listeners', () => {
@@ -242,9 +230,7 @@ describe('BrickRegistry', () => {
 
       // Should not throw
       registry.register(createBrick(), 'plugin');
-      expect(registered).toEqual([
-        'plugin:thermostat',
-      ]);
+      expect(registered).toEqual(['plugin:thermostat']);
     });
   });
 

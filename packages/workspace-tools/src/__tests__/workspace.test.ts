@@ -48,62 +48,33 @@ describe('filterPackages', () => {
   });
 
   test('exact name match', () => {
-    const result = filterPackages(packages, [
-      '@brika/sdk',
-    ]);
-    expect(result.map((p) => p.name)).toEqual([
-      '@brika/sdk',
-    ]);
+    const result = filterPackages(packages, ['@brika/sdk']);
+    expect(result.map((p) => p.name)).toEqual(['@brika/sdk']);
   });
 
   test('substring match', () => {
-    const result = filterPackages(packages, [
-      'hub',
-    ]);
-    expect(result.map((p) => p.name)).toEqual([
-      '@brika/hub',
-    ]);
+    const result = filterPackages(packages, ['hub']);
+    expect(result.map((p) => p.name)).toEqual(['@brika/hub']);
   });
 
   test('glob match', () => {
-    const result = filterPackages(packages, [
-      '@brika/*',
-    ]);
-    expect(result.map((p) => p.name)).toEqual([
-      '@brika/sdk',
-      '@brika/hub',
-      '@brika/ui',
-    ]);
+    const result = filterPackages(packages, ['@brika/*']);
+    expect(result.map((p) => p.name)).toEqual(['@brika/sdk', '@brika/hub', '@brika/ui']);
   });
 
   test('multiple patterns are OR-ed', () => {
-    const result = filterPackages(packages, [
-      '@brika/sdk',
-      'create-brika',
-    ]);
-    expect(result.map((p) => p.name)).toEqual([
-      '@brika/sdk',
-      'create-brika',
-    ]);
+    const result = filterPackages(packages, ['@brika/sdk', 'create-brika']);
+    expect(result.map((p) => p.name)).toEqual(['@brika/sdk', 'create-brika']);
   });
 
   test('returns empty array when nothing matches', () => {
-    expect(
-      filterPackages(packages, [
-        'nonexistent',
-      ])
-    ).toEqual([]);
+    expect(filterPackages(packages, ['nonexistent'])).toEqual([]);
   });
 
   test('deduplicates when multiple patterns match same package', () => {
     // 'sdk' substring and '@brika/sdk' exact both match @brika/sdk
-    const result = filterPackages(packages, [
-      'sdk',
-      '@brika/sdk',
-    ]);
-    expect(result.map((p) => p.name)).toEqual([
-      '@brika/sdk',
-    ]);
+    const result = filterPackages(packages, ['sdk', '@brika/sdk']);
+    expect(result.map((p) => p.name)).toEqual(['@brika/sdk']);
   });
 });
 
@@ -221,13 +192,7 @@ describe('applyVersionToPackages', () => {
       path: pkgPath,
     });
 
-    await applyVersionToPackages(
-      [
-        pkg,
-      ],
-      '2.0.0',
-      false
-    );
+    await applyVersionToPackages([pkg], '2.0.0', false);
 
     const updated = (await Bun.file(pkgPath).json()) as {
       version: string;
@@ -244,13 +209,7 @@ describe('applyVersionToPackages', () => {
       path: pkgPath,
     });
 
-    await applyVersionToPackages(
-      [
-        pkg,
-      ],
-      '2.0.0',
-      true
-    );
+    await applyVersionToPackages([pkg], '2.0.0', true);
 
     const unchanged = (await Bun.file(pkgPath).json()) as {
       version: string;
@@ -267,24 +226,13 @@ describe('applyVersionToPackages', () => {
       path: pkgPath,
     });
 
-    const result = await applyVersionToPackages(
-      [
-        pkg,
-      ],
-      '2.0.0'
-    );
-    expect(result).toEqual([
-      pkg,
-    ]);
+    const result = await applyVersionToPackages([pkg], '2.0.0');
+    expect(result).toEqual([pkg]);
   });
 
   test('applies version to multiple packages', async () => {
     const paths = await Promise.all(
-      [
-        'a',
-        'b',
-        'c',
-      ].map((n) =>
+      ['a', 'b', 'c'].map((n) =>
         writePkg(tmpDir, {
           name: n,
           version: '1.0.0',
@@ -355,9 +303,7 @@ describe('discoverPackages', () => {
     await setup(
       {
         name: 'my-root',
-        workspaces: [
-          'packages/*',
-        ],
+        workspaces: ['packages/*'],
       },
       {
         'packages/a': {
@@ -375,9 +321,7 @@ describe('discoverPackages', () => {
       {
         name: 'root',
         version: '1.0.0',
-        workspaces: [
-          'packages/*',
-        ],
+        workspaces: ['packages/*'],
       },
       {
         'packages/alpha': {
@@ -401,9 +345,7 @@ describe('discoverPackages', () => {
       {
         name: 'root',
         version: '1.0.0',
-        workspaces: [
-          'packages/*',
-        ],
+        workspaces: ['packages/*'],
       },
       {
         'packages/no-ver': {
@@ -425,9 +367,7 @@ describe('discoverPackages', () => {
       {
         name: 'root',
         version: '1.0.0',
-        workspaces: [
-          'packages/*',
-        ],
+        workspaces: ['packages/*'],
       },
       {
         'packages/pub': {
@@ -452,9 +392,7 @@ describe('discoverPackages', () => {
       {
         name: 'root',
         version: '1.0.0',
-        workspaces: [
-          'packages/*',
-        ],
+        workspaces: ['packages/*'],
       },
       {
         'packages/a': {

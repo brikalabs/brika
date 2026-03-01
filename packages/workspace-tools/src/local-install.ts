@@ -83,22 +83,9 @@ console.log(`\n  ${pc.bold(pc.cyan('BRIKA Local Install'))}\n`);
 
 if (!values['skip-build']) {
   log('Building UI...');
-  await exec([
-    'bun',
-    'run',
-    '--filter',
-    '@brika/ui',
-    'build',
-  ]);
+  await exec(['bun', 'run', '--filter', '@brika/ui', 'build']);
   log('Compiling binary...');
-  await exec([
-    'bun',
-    'run',
-    '--filter',
-    '@brika/hub',
-    'build',
-    '--compile',
-  ]);
+  await exec(['bun', 'run', '--filter', '@brika/hub', 'build', '--compile']);
   console.log();
 }
 
@@ -163,20 +150,14 @@ if (!inPath) {
 
 // ── Verify ──────────────────────────────────────────────────────────────────
 
-const proc = Bun.spawn(
-  [
-    join(BIN_DIR, BINARY_NAME),
-    '--version',
-  ],
-  {
-    stdout: 'pipe',
-    stderr: 'pipe',
-    env: {
-      ...process.env,
-      NO_COLOR: '1',
-    },
-  }
-);
+const proc = Bun.spawn([join(BIN_DIR, BINARY_NAME), '--version'], {
+  stdout: 'pipe',
+  stderr: 'pipe',
+  env: {
+    ...process.env,
+    NO_COLOR: '1',
+  },
+});
 const kill = setTimeout(() => proc.kill(), 10_000);
 const output = await new Response(proc.stdout).text();
 clearTimeout(kill);

@@ -23,9 +23,7 @@ export function PluginConfigForm({ pluginUid, pluginName }: Readonly<Props>) {
       setValues({});
       setIsDirty(false);
     }
-  }, [
-    data,
-  ]);
+  }, [data]);
 
   if (isLoading || !data) {
     return null;

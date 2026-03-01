@@ -286,11 +286,7 @@ describe('Client', () => {
         await new Promise((resolve) => setTimeout(resolve, 50));
 
         // Should be called in reverse order (3, 2, 1)
-        expect(order).toEqual([
-          3,
-          2,
-          1,
-        ]);
+        expect(order).toEqual([3, 2, 1]);
       } finally {
         (process as unknown as Record<string, unknown>).exit = originalExit;
       }

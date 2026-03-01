@@ -19,11 +19,7 @@ function createSpawnMock(exitCode = 0) {
   const calls: SpawnCall[] = [];
 
   const spy = spyOn(Bun, 'spawn').mockImplementation(((cmd: unknown, options?: unknown) => {
-    const cmdArray = Array.isArray(cmd)
-      ? (cmd as string[])
-      : [
-          String(cmd),
-        ];
+    const cmdArray = Array.isArray(cmd) ? (cmd as string[]) : [String(cmd)];
     calls.push({
       cmd: cmdArray,
       options,

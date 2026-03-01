@@ -6,16 +6,9 @@ import { dataDir, installDir } from '../utils/runtime';
 
 export default defineCommand({
   name: 'version',
-  aliases: [
-    '-v',
-    '--version',
-  ],
+  aliases: ['-v', '--version'],
   description: 'Show version and platform info',
-  examples: [
-    'brika version',
-    'brika -v',
-    'brika version --json',
-  ],
+  examples: ['brika version', 'brika -v', 'brika version --json'],
   options: {
     json: {
       type: 'boolean',

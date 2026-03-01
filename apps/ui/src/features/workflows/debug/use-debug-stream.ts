@@ -77,10 +77,7 @@ export function useDebugStream({
         }
 
         setEvents((prev) => {
-          const next = [
-            ...prev,
-            data,
-          ];
+          const next = [...prev, data];
           return next.length > maxEvents ? next.slice(-maxEvents) : next;
         });
       } catch {
@@ -95,11 +92,7 @@ export function useDebugStream({
       es.close();
       eventSourceRef.current = null;
     };
-  }, [
-    enabled,
-    workflowId,
-    maxEvents,
-  ]);
+  }, [enabled, workflowId, maxEvents]);
 
   return {
     events,

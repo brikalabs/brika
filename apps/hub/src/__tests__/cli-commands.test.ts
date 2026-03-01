@@ -88,10 +88,7 @@ describe('cli/commands', () => {
     test('no duplicate names or aliases exist in the registry', () => {
       const seen = new Map<string, string>();
       for (const cmd of commands) {
-        const keys = [
-          cmd.name,
-          ...(cmd.aliases ?? []),
-        ];
+        const keys = [cmd.name, ...(cmd.aliases ?? [])];
         for (const key of keys) {
           const existing = seen.get(key);
           if (existing) {
@@ -175,9 +172,7 @@ describe('cli/commands/plugin/install', () => {
 
       const log = captureLog();
       await installCmd.handler({
-        positionals: [
-          '@brika/plugin-timer@1.0.0',
-        ],
+        positionals: ['@brika/plugin-timer@1.0.0'],
         values: {},
         commands: [],
       });
@@ -201,9 +196,7 @@ describe('cli/commands/plugin/install', () => {
 
       const log = captureLog();
       await installCmd.handler({
-        positionals: [
-          '@brika/plugin-timer',
-        ],
+        positionals: ['@brika/plugin-timer'],
         values: {},
         commands: [],
       });
@@ -227,9 +220,7 @@ describe('cli/commands/plugin/install', () => {
 
       const log = captureLog();
       await installCmd.handler({
-        positionals: [
-          'my-plugin@2.3.4',
-        ],
+        positionals: ['my-plugin@2.3.4'],
         values: {},
         commands: [],
       });
@@ -281,9 +272,7 @@ describe('cli/commands/plugin/install', () => {
 
       const log = captureLog();
       await installCmd.handler({
-        positionals: [
-          '@brika/test',
-        ],
+        positionals: ['@brika/test'],
         values: {},
         commands: [],
       });
@@ -304,9 +293,7 @@ describe('cli/commands/plugin/install', () => {
 
       const log = captureLog();
       await installCmd.handler({
-        positionals: [
-          '@brika/test',
-        ],
+        positionals: ['@brika/test'],
         values: {},
         commands: [],
       });
@@ -332,9 +319,7 @@ describe('cli/commands/plugin/install', () => {
 
       const log = captureLog();
       await installCmd.handler({
-        positionals: [
-          '@brika/test',
-        ],
+        positionals: ['@brika/test'],
         values: {},
         commands: [],
       });
@@ -357,9 +342,7 @@ describe('cli/commands/plugin/install', () => {
 
       const log = captureLog();
       await installCmd.handler({
-        positionals: [
-          '@brika/test',
-        ],
+        positionals: ['@brika/test'],
         values: {},
         commands: [],
       });
@@ -382,9 +365,7 @@ describe('cli/commands/plugin/install', () => {
 
       const log = captureLog();
       await installCmd.handler({
-        positionals: [
-          '@brika/test',
-        ],
+        positionals: ['@brika/test'],
         values: {},
         commands: [],
       });
@@ -405,9 +386,7 @@ describe('cli/commands/plugin/install', () => {
 
       const log = captureLog();
       await installCmd.handler({
-        positionals: [
-          '@brika/test',
-        ],
+        positionals: ['@brika/test'],
         values: {},
         commands: [],
       });
@@ -427,9 +406,7 @@ describe('cli/commands/plugin/install', () => {
 
       const log = captureLog();
       await installCmd.handler({
-        positionals: [
-          '@brika/test',
-        ],
+        positionals: ['@brika/test'],
         values: {},
         commands: [],
       });
@@ -451,9 +428,7 @@ describe('cli/commands/plugin/install', () => {
       const log = captureLog();
       try {
         await installCmd.handler({
-          positionals: [
-            '@brika/test',
-          ],
+          positionals: ['@brika/test'],
           values: {},
           commands: [],
         });
@@ -478,9 +453,7 @@ describe('cli/commands/plugin/install', () => {
       const log = captureLog();
       try {
         await installCmd.handler({
-          positionals: [
-            '@brika/test',
-          ],
+          positionals: ['@brika/test'],
           values: {},
           commands: [],
         });
@@ -554,9 +527,7 @@ describe('cli/commands/plugin/uninstall', () => {
 
     const log = captureLog();
     await uninstallCmd.handler({
-      positionals: [
-        '@brika/plugin-timer',
-      ],
+      positionals: ['@brika/plugin-timer'],
       values: {},
       commands: [],
     });
@@ -585,9 +556,7 @@ describe('cli/commands/plugin/uninstall', () => {
 
     const log = captureLog();
     await uninstallCmd.handler({
-      positionals: [
-        '@brika/plugin-timer',
-      ],
+      positionals: ['@brika/plugin-timer'],
       values: {},
       commands: [],
     });
@@ -613,9 +582,7 @@ describe('cli/commands/plugin/uninstall', () => {
 
     const log = captureLog();
     await uninstallCmd.handler({
-      positionals: [
-        '@brika/plugin-timer',
-      ],
+      positionals: ['@brika/plugin-timer'],
       values: {},
       commands: [],
     });
@@ -637,9 +604,7 @@ describe('cli/commands/plugin/uninstall', () => {
 
     const log = captureLog();
     await uninstallCmd.handler({
-      positionals: [
-        '@brika/plugin-timer',
-      ],
+      positionals: ['@brika/plugin-timer'],
       values: {},
       commands: [],
     });

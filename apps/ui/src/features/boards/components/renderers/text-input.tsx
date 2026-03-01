@@ -9,9 +9,7 @@ defineRenderer('text-input', ({ node, onAction }) => {
 
   useEffect(() => {
     setLocal(node.value);
-  }, [
-    node.value,
-  ]);
+  }, [node.value]);
 
   const hasLabel = node.label || node.icon;
 

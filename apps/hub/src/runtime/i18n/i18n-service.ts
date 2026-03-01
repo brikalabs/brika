@@ -96,9 +96,7 @@ export class I18nService {
 
     await this.#loadCoreTranslations();
     this.#logs.info('I18n system initialized', {
-      availableLocales: [
-        ...this.#availableLocales,
-      ],
+      availableLocales: [...this.#availableLocales],
       namespaceCount: this.listNamespaces().length,
     });
   }
@@ -168,9 +166,7 @@ export class I18nService {
       namespaces.add(`${PLUGIN_NS_PREFIX}${pluginId}`);
     }
 
-    return [
-      ...namespaces,
-    ].sort((a, b) => a.localeCompare(b));
+    return [...namespaces].sort((a, b) => a.localeCompare(b));
   }
 
   /**
@@ -178,9 +174,7 @@ export class I18nService {
    * Includes "cimode" for development (i18next shows keys instead of values).
    */
   listLocales(): string[] {
-    const locales = [
-      ...this.#availableLocales,
-    ].sort((a, b) => a.localeCompare(b));
+    const locales = [...this.#availableLocales].sort((a, b) => a.localeCompare(b));
     // Add cimode at the end - handled client-side by i18next
     locales.push('cimode');
     return locales;
@@ -447,9 +441,7 @@ export class I18nService {
    * e.g., "fr-CH" → ["fr-CH", "fr", "en"]
    */
   #buildFallbackChain(locale: string): string[] {
-    const chain: string[] = [
-      locale,
-    ];
+    const chain: string[] = [locale];
 
     // Add base language if regional variant
     if (locale.includes('-')) {

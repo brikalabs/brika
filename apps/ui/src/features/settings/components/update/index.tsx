@@ -30,9 +30,7 @@ export function UpdateSection() {
   const handleCheck = useCallback(async () => {
     await refetch();
     setCheckedAt(Date.now());
-  }, [
-    refetch,
-  ]);
+  }, [refetch]);
 
   const openDialog = (force: boolean) => {
     setForceReinstall(force);

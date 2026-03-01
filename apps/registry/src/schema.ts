@@ -17,11 +17,7 @@ export const PluginCategory = z.enum([
 export type PluginCategory = z.infer<typeof PluginCategory>;
 
 /** Plugin source — where the package is hosted */
-export const PluginSource = z.enum([
-  'npm',
-  'github',
-  'url',
-]);
+export const PluginSource = z.enum(['npm', 'github', 'url']);
 export type PluginSource = z.infer<typeof PluginSource>;
 
 /** A single verified plugin entry in the registry. */

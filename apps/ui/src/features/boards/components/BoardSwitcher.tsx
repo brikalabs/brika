@@ -177,9 +177,7 @@ export function BoardSwitcher({ onEdit }: Readonly<BoardSwitcherProps>) {
     items: boards,
     getKey,
     activeKey: boardId,
-    deps: [
-      activeId,
-    ],
+    deps: [activeId],
   });
 
   // ─── Drag-to-reorder ──────────────────────────────────────────────────

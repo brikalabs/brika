@@ -22,9 +22,7 @@ const adminSession: Session = {
   userEmail: 'admin@test.com',
   userName: 'Admin',
   userRole: Role.ADMIN,
-  scopes: [
-    Scope.ADMIN_ALL,
-  ],
+  scopes: [Scope.ADMIN_ALL],
 };
 
 const userSession: Session = {
@@ -33,11 +31,7 @@ const userSession: Session = {
   userEmail: 'user@test.com',
   userName: 'User',
   userRole: Role.USER,
-  scopes: [
-    Scope.WORKFLOW_READ,
-    Scope.WORKFLOW_WRITE,
-    Scope.BOARD_READ,
-  ],
+  scopes: [Scope.WORKFLOW_READ, Scope.WORKFLOW_WRITE, Scope.BOARD_READ],
 };
 
 function mockContext(url: string, session: Session | null = null) {
@@ -161,10 +155,7 @@ describe('requireScope', () => {
   });
 
   it('should accept an array of scopes (any match)', async () => {
-    const middleware = requireScope([
-      Scope.PLUGIN_MANAGE,
-      Scope.WORKFLOW_READ,
-    ]);
+    const middleware = requireScope([Scope.PLUGIN_MANAGE, Scope.WORKFLOW_READ]);
     const { ctx, next } = mockContext('http://localhost:3001/api/mixed', userSession);
     await middleware(ctx as never, next);
     // userSession has WORKFLOW_READ, so should pass
@@ -172,10 +163,7 @@ describe('requireScope', () => {
   });
 
   it('should return 403 when none of the array scopes match', async () => {
-    const middleware = requireScope([
-      Scope.PLUGIN_MANAGE,
-      Scope.SETTINGS_WRITE,
-    ]);
+    const middleware = requireScope([Scope.PLUGIN_MANAGE, Scope.SETTINGS_WRITE]);
     const { ctx, next } = mockContext('http://localhost:3001/api/admin-op', userSession);
     await middleware(ctx as never, next);
     expect(next).not.toHaveBeenCalled();

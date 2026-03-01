@@ -314,12 +314,7 @@ export class BoardService {
     }
 
     const resizedBricks: BoardBrickPlacement[] = [];
-    const brickMap = new Map(
-      board.bricks.map((c) => [
-        c.instanceId,
-        c,
-      ])
-    );
+    const brickMap = new Map(board.bricks.map((c) => [c.instanceId, c]));
 
     for (const layout of layouts) {
       const brick = brickMap.get(layout.instanceId);

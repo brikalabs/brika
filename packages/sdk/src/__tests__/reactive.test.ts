@@ -89,11 +89,7 @@ describe('createEmitter', () => {
     const emitFn = mock();
     const emitter = createEmitter<number>('out', z.number(), emitFn);
 
-    emitter.emitAll([
-      1,
-      2,
-      3,
-    ]);
+    emitter.emitAll([1, 2, 3]);
 
     expect(emitFn).toHaveBeenCalledTimes(3);
     expect(emitFn).toHaveBeenCalledWith('out', 1);
@@ -146,9 +142,7 @@ describe('createFlowFromInput', () => {
     // Wait for async push
     await new Promise((r) => setTimeout(r, 10));
 
-    expect(values).toEqual([
-      42,
-    ]);
+    expect(values).toEqual([42]);
     cleanup.cleanup();
   });
 
@@ -176,10 +170,7 @@ describe('createFlowFromInput', () => {
     // Wait for async push
     await new Promise((r) => setTimeout(r, 20));
 
-    expect(values).toEqual([
-      1,
-      2,
-    ]);
+    expect(values).toEqual([1, 2]);
     cleanup.cleanup();
   });
 
@@ -210,10 +201,7 @@ describe('createFlowFromInput', () => {
     // Wait for async push
     await new Promise((r) => setTimeout(r, 20));
 
-    expect(values).toEqual([
-      'a',
-      'b',
-    ]);
+    expect(values).toEqual(['a', 'b']);
     cleanup.cleanup();
   });
 });
@@ -255,27 +243,12 @@ describe('zodToJsonSchema', () => {
   });
 
   test('converts enum schema', () => {
-    const schema = zodToJsonSchema(
-      z.enum([
-        'a',
-        'b',
-        'c',
-      ])
-    );
-    expect(schema.enum).toEqual([
-      'a',
-      'b',
-      'c',
-    ]);
+    const schema = zodToJsonSchema(z.enum(['a', 'b', 'c']));
+    expect(schema.enum).toEqual(['a', 'b', 'c']);
   });
 
   test('converts union schema', () => {
-    const schema = zodToJsonSchema(
-      z.union([
-        z.string(),
-        z.number(),
-      ])
-    );
+    const schema = zodToJsonSchema(z.union([z.string(), z.number()]));
     expect(schema.anyOf).toBeDefined();
   });
 
@@ -336,25 +309,14 @@ describe('zodToTypeName', () => {
   });
 
   test('converts union schema', () => {
-    const result = zodToTypeName(
-      z.union([
-        z.string(),
-        z.number(),
-      ])
-    );
+    const result = zodToTypeName(z.union([z.string(), z.number()]));
     expect(result).toContain('string');
     expect(result).toContain('number');
     expect(result).toContain('|');
   });
 
   test('converts enum schema', () => {
-    const result = zodToTypeName(
-      z.enum([
-        'a',
-        'b',
-        'c',
-      ])
-    );
+    const result = zodToTypeName(z.enum(['a', 'b', 'c']));
     // Enum might be converted to string or union of literals
     expect(typeof result).toBe('string');
   });

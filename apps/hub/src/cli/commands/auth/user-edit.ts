@@ -11,9 +11,7 @@ import { dataDir } from '../../utils/runtime';
 export default defineCommand({
   name: 'edit',
   description: 'Edit a user interactively',
-  examples: [
-    'brika auth user edit',
-  ],
+  examples: ['brika auth user edit'],
   async handler() {
     const cli = await bootstrapCLI(
       auth({

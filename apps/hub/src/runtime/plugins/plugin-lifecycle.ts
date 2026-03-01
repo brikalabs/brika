@@ -77,9 +77,7 @@ export class PluginLifecycle {
   }
 
   listProcesses(): PluginProcess[] {
-    return [
-      ...this.#processes.values(),
-    ];
+    return [...this.#processes.values()];
   }
 
   getStatus(name: string): PluginHealth {
@@ -192,33 +190,27 @@ export class PluginLifecycle {
       uid,
     });
 
-    const channel = spawnPlugin(
-      this.#bunRunner.bin,
-      [
-        entryPoint,
-      ],
-      {
-        cwd: rootDirectory,
-        env: this.#bunRunner.env({
-          BRIKA_PLUGIN_NAME: metadata.name,
-          BRIKA_PLUGIN_UID: uid,
-        }),
-        processName: `brika:${metadata.name}`,
-        defaultTimeoutMs: this.#config.callTimeoutMs,
-        onDisconnect: (error) => this.#handleDisconnect(pluginName, error),
-        onStderr: (line) =>
-          this.#logs.error(
-            'Plugin error output received',
-            {
-              pluginName: pluginName,
-              message: line,
-            },
-            {
-              source: 'stderr',
-            }
-          ),
-      }
-    );
+    const channel = spawnPlugin(this.#bunRunner.bin, [entryPoint], {
+      cwd: rootDirectory,
+      env: this.#bunRunner.env({
+        BRIKA_PLUGIN_NAME: metadata.name,
+        BRIKA_PLUGIN_UID: uid,
+      }),
+      processName: `brika:${metadata.name}`,
+      defaultTimeoutMs: this.#config.callTimeoutMs,
+      onDisconnect: (error) => this.#handleDisconnect(pluginName, error),
+      onStderr: (line) =>
+        this.#logs.error(
+          'Plugin error output received',
+          {
+            pluginName: pluginName,
+            message: line,
+          },
+          {
+            source: 'stderr',
+          }
+        ),
+    });
 
     const process = new PluginProcess(
       channel,
@@ -366,9 +358,7 @@ export class PluginLifecycle {
   }
 
   async stopAll(): Promise<void> {
-    const names = [
-      ...this.#processes.keys(),
-    ];
+    const names = [...this.#processes.keys()];
     await Promise.all(names.map((name) => this.unload(name)));
   }
 

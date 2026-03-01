@@ -88,10 +88,7 @@ describe('logs routes', () => {
   });
 
   test('GET /api/logs/plugins returns plugin names with metadata', async () => {
-    mockLogStore.getPluginNames.mockReturnValue([
-      '@test/plugin-a',
-      '@test/plugin-b',
-    ]);
+    mockLogStore.getPluginNames.mockReturnValue(['@test/plugin-a', '@test/plugin-b']);
     mockPluginManager.list.mockReturnValue([
       {
         name: '@test/plugin-a',
@@ -122,9 +119,7 @@ describe('logs routes', () => {
   });
 
   test('GET /api/logs/plugins handles unknown plugins', async () => {
-    mockLogStore.getPluginNames.mockReturnValue([
-      '@test/unknown-plugin',
-    ]);
+    mockLogStore.getPluginNames.mockReturnValue(['@test/unknown-plugin']);
     mockPluginManager.list.mockReturnValue([]);
 
     const res = await app.get<{
@@ -144,11 +139,7 @@ describe('logs routes', () => {
 
   test('GET /api/logs/stats returns log statistics', async () => {
     mockLogStore.count.mockReturnValue(42);
-    mockLogger.query.mockReturnValue([
-      1,
-      2,
-      3,
-    ]);
+    mockLogger.query.mockReturnValue([1, 2, 3]);
 
     const res = await app.get<{
       total: number;
@@ -161,10 +152,7 @@ describe('logs routes', () => {
   });
 
   test('GET /api/logs/sources returns all and used sources', async () => {
-    mockLogStore.getSources.mockReturnValue([
-      'hub',
-      'plugin',
-    ]);
+    mockLogStore.getSources.mockReturnValue(['hub', 'plugin']);
 
     const res = await app.get<{
       all: string[];
@@ -173,10 +161,7 @@ describe('logs routes', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.all).toBeDefined();
-    expect(res.body.used).toEqual([
-      'hub',
-      'plugin',
-    ]);
+    expect(res.body.used).toEqual(['hub', 'plugin']);
   });
 
   test('GET /api/logs/levels returns log levels', async () => {
@@ -185,12 +170,7 @@ describe('logs routes', () => {
     }>('/api/logs/levels');
 
     expect(res.status).toBe(200);
-    expect(res.body.all).toEqual([
-      'debug',
-      'info',
-      'warn',
-      'error',
-    ]);
+    expect(res.body.all).toEqual(['debug', 'info', 'warn', 'error']);
   });
 
   test('DELETE /api/logs clears logs', async () => {

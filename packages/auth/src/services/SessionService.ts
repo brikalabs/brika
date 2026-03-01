@@ -116,10 +116,7 @@ export class SessionService {
         {
           id: string;
         },
-        [
-          string,
-          number,
-        ]
+        [string, number]
       >(
         `SELECT id FROM sessions
          WHERE user_id = ? AND revoked_at IS NULL AND expires_at > ?
@@ -148,12 +145,7 @@ export class SessionService {
     const now = Date.now();
 
     const row = this.db
-      .query<
-        SessionWithUserRow,
-        [
-          string,
-        ]
-      >(
+      .query<SessionWithUserRow, [string]>(
         `SELECT s.*, u.email, u.name, u.role, u.scopes
          FROM sessions s
          JOIN users u ON u.id = s.user_id
@@ -220,13 +212,7 @@ export class SessionService {
   listUserSessions(userId: string): SessionRecord[] {
     const now = Date.now();
     const rows = this.db
-      .query<
-        SessionRow,
-        [
-          string,
-          number,
-        ]
-      >(
+      .query<SessionRow, [string, number]>(
         `SELECT * FROM sessions
          WHERE user_id = ? AND revoked_at IS NULL AND expires_at > ?
          ORDER BY last_seen_at DESC`

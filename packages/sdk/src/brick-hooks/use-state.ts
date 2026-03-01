@@ -1,9 +1,6 @@
 import { getState, nextHookIdx } from './state';
 
-export function useState<T>(initial: T | (() => T)): [
-  T,
-  (value: T | ((prev: T) => T)) => void,
-] {
+export function useState<T>(initial: T | (() => T)): [T, (value: T | ((prev: T) => T)) => void] {
   const state = getState();
   const idx = nextHookIdx();
 
@@ -20,8 +17,5 @@ export function useState<T>(initial: T | (() => T)): [
     }
   };
 
-  return [
-    state.hooks[idx] as T,
-    setState,
-  ];
+  return [state.hooks[idx] as T, setState];
 }

@@ -80,22 +80,14 @@ describe('action source-order matching', () => {
     ].join('\n');
 
     // Alphabetical order (what scan() returns)
-    const alphabetical = [
-      'commission',
-      'getDevices',
-      'scan',
-    ];
+    const alphabetical = ['commission', 'getDevices', 'scan'];
 
     // Re-sort by source position
-    const sorted = [
-      ...alphabetical,
-    ].sort((a, b) => source.indexOf(`export const ${a}`) - source.indexOf(`export const ${b}`));
+    const sorted = [...alphabetical].sort(
+      (a, b) => source.indexOf(`export const ${a}`) - source.indexOf(`export const ${b}`)
+    );
 
-    expect(sorted).toEqual([
-      'getDevices',
-      'scan',
-      'commission',
-    ]);
+    expect(sorted).toEqual(['getDevices', 'scan', 'commission']);
 
     // Verify IDs match what SDK would produce
     const expectedIds = sorted.map((_, i) => actionId(i));
@@ -108,34 +100,16 @@ describe('action source-order matching', () => {
     const source2 = 'export const b = 1;\nexport const a = 2;';
 
     const sortBySource = (names: string[], source: string) =>
-      [
-        ...names,
-      ].sort((a, b) => source.indexOf(`export const ${a}`) - source.indexOf(`export const ${b}`));
+      [...names].sort(
+        (a, b) => source.indexOf(`export const ${a}`) - source.indexOf(`export const ${b}`)
+      );
 
-    const order1 = sortBySource(
-      [
-        'a',
-        'b',
-      ],
-      source1
-    );
-    const order2 = sortBySource(
-      [
-        'a',
-        'b',
-      ],
-      source2
-    );
+    const order1 = sortBySource(['a', 'b'], source1);
+    const order2 = sortBySource(['a', 'b'], source2);
 
     // Order is different
-    expect(order1).toEqual([
-      'a',
-      'b',
-    ]);
-    expect(order2).toEqual([
-      'b',
-      'a',
-    ]);
+    expect(order1).toEqual(['a', 'b']);
+    expect(order2).toEqual(['b', 'a']);
 
     // So IDs for 'a' differ between source1 and source2
     const idA_source1 = actionId(order1.indexOf('a'));

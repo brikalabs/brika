@@ -74,18 +74,7 @@ function emitPropDiff(
 
   if (changes || removed) {
     out.push(
-      removed
-        ? [
-            MUT.UPDATE,
-            path,
-            changes ?? {},
-            removed,
-          ]
-        : [
-            MUT.UPDATE,
-            path,
-            changes ?? {},
-          ]
+      removed ? [MUT.UPDATE, path, changes ?? {}, removed] : [MUT.UPDATE, path, changes ?? {}]
     );
   }
 }
@@ -104,18 +93,11 @@ function emitCreatesAndRemoves(
   for (let i = minLen; i < newNodes.length; i++) {
     const node = newNodes[i];
     if (node) {
-      out.push([
-        MUT.CREATE,
-        nodePath(basePath, i),
-        node,
-      ]);
+      out.push([MUT.CREATE, nodePath(basePath, i), node]);
     }
   }
   for (let i = oldLen - 1; i >= minLen; i--) {
-    out.push([
-      MUT.REMOVE,
-      nodePath(basePath, i),
-    ]);
+    out.push([MUT.REMOVE, nodePath(basePath, i)]);
   }
 }
 
@@ -135,11 +117,7 @@ function walk(
     }
 
     if (prev.type !== next.type) {
-      out.push([
-        MUT.REPLACE,
-        nodePath(basePath, i),
-        next,
-      ]);
+      out.push([MUT.REPLACE, nodePath(basePath, i), next]);
       continue;
     }
 

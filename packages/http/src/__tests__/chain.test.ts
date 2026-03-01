@@ -105,10 +105,7 @@ describe('InterceptorChain', () => {
       };
       const result = await chain.executeRequest(config);
 
-      expect(calls).toEqual([
-        1,
-        2,
-      ]);
+      expect(calls).toEqual([1, 2]);
       expect(result.headers?.['X-First']).toBe('true');
       expect(result.headers?.['X-Second']).toBe('true');
     });
@@ -215,10 +212,7 @@ describe('InterceptorChain', () => {
 
       await chain.executeResponse(response);
 
-      expect(calls).toEqual([
-        1,
-        2,
-      ]);
+      expect(calls).toEqual([1, 2]);
     });
 
     test('transforms response through chain', async () => {

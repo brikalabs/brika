@@ -409,11 +409,7 @@ describe('StateStore', () => {
         uid: 'uid1',
       });
 
-      await store.syncToConfig(
-        new Set([
-          '@test/plugin',
-        ])
-      );
+      await store.syncToConfig(new Set(['@test/plugin']));
 
       expect(store.get('@test/plugin')).toBeDefined();
     });

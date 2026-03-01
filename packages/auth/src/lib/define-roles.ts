@@ -21,19 +21,11 @@ export function defineRoles<const TDefs extends Record<string, RoleDef<string>>>
   defs: TDefs
 ): BuiltRoles<TDefs> {
   const Role = Object.fromEntries(
-    Object.entries(defs).map(([k, v]) => [
-      k,
-      v.value,
-    ])
+    Object.entries(defs).map(([k, v]) => [k, v.value])
   ) as BuiltRoles<TDefs>['Role'];
 
   const ROLE_SCOPES = Object.fromEntries(
-    Object.entries(defs).map(([, v]) => [
-      v.value,
-      [
-        ...v.defaultScopes,
-      ],
-    ])
+    Object.entries(defs).map(([, v]) => [v.value, [...v.defaultScopes]])
   ) as BuiltRoles<TDefs>['ROLE_SCOPES'];
 
   return {

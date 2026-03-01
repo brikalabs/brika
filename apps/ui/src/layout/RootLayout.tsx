@@ -17,6 +17,7 @@ import {
   Workflow,
   Zap,
 } from 'lucide-react';
+import { BrikaLogo } from '@/components/ui/brika-logo';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,7 +41,6 @@ import {
   SidebarRail,
   useSidebar,
 } from '@/components/ui/sidebar';
-import { BrikaLogo } from '@/components/ui/brika-logo';
 import { UserAvatar } from '@/components/user-avatar';
 import { LoginPage } from '@/features/auth';
 import { useHealth } from '@/features/dashboard/hooks';
@@ -314,10 +314,7 @@ function AppSidebar() {
 }
 
 // Routes that should have no padding (full-bleed layout)
-const FULL_BLEED_ROUTES = [
-  '/workflows/new',
-  '/workflows/$id/edit',
-];
+const FULL_BLEED_ROUTES = ['/workflows/new', '/workflows/$id/edit'];
 
 export function RootLayout() {
   const { isAuthenticated, isLoading } = useAuth();

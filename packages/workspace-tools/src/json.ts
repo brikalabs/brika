@@ -21,13 +21,7 @@ export function updateJsonField(
 export function updateJsonObject(content: string, patch: JsonObjectPatch): string {
   let updated = content;
   for (const [key, value] of Object.entries(patch)) {
-    updated = updateJsonField(
-      updated,
-      [
-        key,
-      ],
-      value
-    );
+    updated = updateJsonField(updated, [key], value);
   }
   return updated;
 }

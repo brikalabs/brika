@@ -13,9 +13,7 @@ import { Scope } from './scopes';
 export const { Role, ROLE_SCOPES } = defineRoles({
   ADMIN: {
     value: 'admin',
-    defaultScopes: [
-      Scope.ADMIN_ALL,
-    ],
+    defaultScopes: [Scope.ADMIN_ALL],
   },
   USER: {
     value: 'user',
@@ -31,11 +29,7 @@ export const { Role, ROLE_SCOPES } = defineRoles({
   },
   GUEST: {
     value: 'guest',
-    defaultScopes: [
-      Scope.WORKFLOW_READ,
-      Scope.BOARD_READ,
-      Scope.PLUGIN_READ,
-    ],
+    defaultScopes: [Scope.WORKFLOW_READ, Scope.BOARD_READ, Scope.PLUGIN_READ],
   },
   SERVICE: {
     value: 'service',

@@ -19,26 +19,20 @@ function buildPluginCli() {
   const install: Command = {
     name: 'install',
     description: 'Install a plugin',
-    examples: [
-      'brika plugin install @brika/plugin-timer',
-    ],
+    examples: ['brika plugin install @brika/plugin-timer'],
     handler: handlers.install,
   };
 
   const uninstall: Command = {
     name: 'uninstall',
-    aliases: [
-      'remove',
-    ],
+    aliases: ['remove'],
     description: 'Uninstall a plugin',
     handler: handlers.uninstall,
   };
 
   const list: Command = {
     name: 'list',
-    aliases: [
-      'ls',
-    ],
+    aliases: ['ls'],
     description: 'List installed plugins',
     handler: handlers.list,
   };
@@ -79,10 +73,7 @@ describe('cli/commands/plugin (subcommand group)', () => {
       const { cmd, handlers } = buildPluginCli();
       await cmd.handler({
         values: {},
-        positionals: [
-          'install',
-          '@brika/plugin-timer',
-        ],
+        positionals: ['install', '@brika/plugin-timer'],
         commands: [],
       });
 
@@ -94,10 +85,7 @@ describe('cli/commands/plugin (subcommand group)', () => {
       const { cmd, handlers } = buildPluginCli();
       await cmd.handler({
         values: {},
-        positionals: [
-          'uninstall',
-          '@brika/plugin-timer',
-        ],
+        positionals: ['uninstall', '@brika/plugin-timer'],
         commands: [],
       });
 
@@ -108,10 +96,7 @@ describe('cli/commands/plugin (subcommand group)', () => {
       const { cmd, handlers } = buildPluginCli();
       await cmd.handler({
         values: {},
-        positionals: [
-          'remove',
-          '@brika/plugin-timer',
-        ],
+        positionals: ['remove', '@brika/plugin-timer'],
         commands: [],
       });
 
@@ -122,9 +107,7 @@ describe('cli/commands/plugin (subcommand group)', () => {
       const { cmd, handlers } = buildPluginCli();
       await cmd.handler({
         values: {},
-        positionals: [
-          'list',
-        ],
+        positionals: ['list'],
         commands: [],
       });
 
@@ -135,9 +118,7 @@ describe('cli/commands/plugin (subcommand group)', () => {
       const { cmd, handlers } = buildPluginCli();
       await cmd.handler({
         values: {},
-        positionals: [
-          'ls',
-        ],
+        positionals: ['ls'],
         commands: [],
       });
 
@@ -172,9 +153,7 @@ describe('cli/commands/plugin (subcommand group)', () => {
 
       await cmd.handler({
         values: {},
-        positionals: [
-          'help',
-        ],
+        positionals: ['help'],
         commands: [],
       });
       log.restore();
@@ -205,15 +184,10 @@ describe('cli/commands/plugin (subcommand group)', () => {
 
       await cmd.handler({
         values: {},
-        positionals: [
-          'action',
-        ],
+        positionals: ['action'],
         commands: [],
       });
-      expect(order).toEqual([
-        'before',
-        'action',
-      ]);
+      expect(order).toEqual(['before', 'action']);
     });
 
     test('does not run before hook for help', async () => {
@@ -234,9 +208,7 @@ describe('cli/commands/plugin (subcommand group)', () => {
 
       await cmd.handler({
         values: {},
-        positionals: [
-          'help',
-        ],
+        positionals: ['help'],
         commands: [],
       });
       log.restore();
@@ -253,9 +225,7 @@ describe('cli/commands/plugin (subcommand group)', () => {
       try {
         await cmd.handler({
           values: {},
-          positionals: [
-            'nonexistent',
-          ],
+          positionals: ['nonexistent'],
           commands: [],
         });
       } catch {}
