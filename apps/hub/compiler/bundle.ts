@@ -14,12 +14,16 @@ export async function bundle(): Promise<void> {
   step('Bundling...');
 
   const result = await Bun.build({
-    entrypoints: [join(import.meta.dir, '../src/main.ts')],
+    entrypoints: [
+      join(import.meta.dir, '../src/main.ts'),
+    ],
     outdir: distDir,
     target: 'bun',
     minify: true,
     sourcemap: 'linked',
-    plugins: [folderTarPlugin()],
+    plugins: [
+      folderTarPlugin(),
+    ],
   });
 
   if (!result.success) {

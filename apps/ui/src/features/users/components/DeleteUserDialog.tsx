@@ -39,7 +39,9 @@ export function DeleteUserDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>{t('users:deleteUser')}</AlertDialogTitle>
           <AlertDialogDescription>
-            {t('users:deleteConfirm', { name: userName })}
+            {t('users:deleteConfirm', {
+              name: userName,
+            })}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

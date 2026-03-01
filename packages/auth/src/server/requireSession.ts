@@ -23,15 +23,23 @@ import { canAccess } from '../middleware/canAccess';
 import type { Scope, Session } from '../types';
 
 export function requireSession(
-  ctx: { get(key: string): unknown },
+  ctx: {
+    get(key: string): unknown;
+  },
   scope?: Scope | Scope[]
 ): Session {
   const session = ctx.get('session') as Session | null;
-  if (!session) throw new Unauthorized();
+  if (!session) {
+    throw new Unauthorized();
+  }
 
   if (scope !== undefined) {
     if (!canAccess(session.scopes, scope)) {
-      const required = Array.isArray(scope) ? scope : [scope];
+      const required = Array.isArray(scope)
+        ? scope
+        : [
+            scope,
+          ];
       throw new Forbidden(`Insufficient permissions. Required: ${required.join(', ')}`);
     }
   }

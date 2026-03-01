@@ -18,7 +18,9 @@ const HOT_CONTAINER_KEY = Symbol.for('brika.di.container');
 
 function getOrCreateContainer() {
   const existing = (globalThis as Record<symbol, typeof tsyringeContainer>)[HOT_CONTAINER_KEY];
-  if (existing) return existing;
+  if (existing) {
+    return existing;
+  }
   (globalThis as Record<symbol, typeof tsyringeContainer>)[HOT_CONTAINER_KEY] = tsyringeContainer;
   return tsyringeContainer;
 }

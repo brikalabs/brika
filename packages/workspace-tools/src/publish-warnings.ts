@@ -4,7 +4,9 @@ export function getPrivateWorkspaceDependencyWarnings(
   details: PackageDetails,
   privateWorkspacePackageNames: Set<string>
 ): string[] {
-  if (privateWorkspacePackageNames.size === 0 || !details.dependencyNames) return [];
+  if (privateWorkspacePackageNames.size === 0 || !details.dependencyNames) {
+    return [];
+  }
   const warnings: string[] = [];
   for (const dependencyName of details.dependencyNames) {
     if (privateWorkspacePackageNames.has(dependencyName)) {

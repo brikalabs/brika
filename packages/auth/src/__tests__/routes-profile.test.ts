@@ -4,11 +4,11 @@
 
 import { describe, expect, test } from 'bun:test';
 import { stub, useTestBed } from '@brika/di/testing';
-import { TestApp } from '@brika/router/testing';
 import type { Middleware } from '@brika/router';
-import { Role, Scope, type Session, type User } from '../types';
-import { UserService } from '../services/UserService';
+import { TestApp } from '@brika/router/testing';
 import { profileRoutes } from '../server/routes/profile';
+import { UserService } from '../services/UserService';
+import { Role, Scope, type Session, type User } from '../types';
 
 function withSession(session: Session): Middleware {
   return async (c, next) => {
@@ -23,7 +23,10 @@ const userSession: Session = {
   userEmail: 'user@test.com',
   userName: 'User',
   userRole: Role.USER,
-  scopes: [Scope.WORKFLOW_READ, Scope.BOARD_READ],
+  scopes: [
+    Scope.WORKFLOW_READ,
+    Scope.BOARD_READ,
+  ],
 };
 
 const now = new Date();
@@ -47,18 +50,29 @@ describe('PUT /profile — authenticated', () => {
 
   useTestBed(() => {
     stub(UserService, {
-      updateUser: async (_id: string, updates: { name?: string }) => ({
+      updateUser: (
+        _id: string,
+        updates: {
+          name?: string;
+        }
+      ) => ({
         ...mockUser,
         name: updates.name ?? mockUser.name,
       }),
     });
-    app = TestApp.create(profileRoutes, [withSession(userSession)]);
+    app = TestApp.create(profileRoutes, [
+      withSession(userSession),
+    ]);
   });
 
   test('updates name and returns user', async () => {
-    const res = await app.put('/profile', { name: 'New Name' });
+    const res = await app.put('/profile', {
+      name: 'New Name',
+    });
     expect(res.status).toBe(200);
-    const body = res.body as { user: User };
+    const body = res.body as {
+      user: User;
+    };
     expect(body.user.name).toBe('New Name');
   });
 });
@@ -72,7 +86,9 @@ describe('PUT /profile — unauthenticated', () => {
   });
 
   test('returns 401 without session', async () => {
-    const res = await app.put('/profile', { name: 'Test' });
+    const res = await app.put('/profile', {
+      name: 'Test',
+    });
     expect(res.status).toBe(401);
   });
 });
@@ -84,18 +100,34 @@ describe('PUT /profile/avatar — JSON base64 upload', () => {
 
   useTestBed(() => {
     stub(UserService, {
-      setAvatar: async () => 'abc12345',
+      setAvatar: () => 'abc12345',
     });
-    app = TestApp.create(profileRoutes, [withSession(userSession)]);
+    app = TestApp.create(profileRoutes, [
+      withSession(userSession),
+    ]);
   });
 
   test('uploads avatar from base64 JSON', async () => {
     // PNG magic bytes + minimal padding
-    const pngHeader = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, ...new Array(100).fill(0)]);
+    const pngHeader = Buffer.from([
+      0x89,
+      0x50,
+      0x4e,
+      0x47,
+      0x0d,
+      0x0a,
+      0x1a,
+      0x0a,
+      ...new Array(100).fill(0),
+    ]);
     const imageData = pngHeader.toString('base64');
-    const res = await app.put('/profile/avatar', { data: imageData });
+    const res = await app.put('/profile/avatar', {
+      data: imageData,
+    });
     expect(res.status).toBe(200);
-    const body = res.body as { ok: boolean };
+    const body = res.body as {
+      ok: boolean;
+    };
     expect(body.ok).toBe(true);
   });
 
@@ -112,24 +144,40 @@ describe('PUT /profile/avatar — binary upload', () => {
 
   useTestBed(() => {
     stub(UserService, {
-      setAvatar: async () => 'bin12345',
+      setAvatar: () => 'bin12345',
     });
-    app = TestApp.create(profileRoutes, [withSession(userSession)]);
+    app = TestApp.create(profileRoutes, [
+      withSession(userSession),
+    ]);
   });
 
   test('uploads avatar from binary body', async () => {
     const hono = app.hono;
     // PNG magic bytes + minimal padding
-    const imageBuffer = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, ...new Array(100).fill(0)]);
+    const imageBuffer = Buffer.from([
+      0x89,
+      0x50,
+      0x4e,
+      0x47,
+      0x0d,
+      0x0a,
+      0x1a,
+      0x0a,
+      ...new Array(100).fill(0),
+    ]);
     const res = await hono.fetch(
       new Request('http://test/profile/avatar', {
         method: 'PUT',
-        headers: { 'content-type': 'image/png' },
+        headers: {
+          'content-type': 'image/png',
+        },
         body: imageBuffer,
       })
     );
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { ok: boolean };
+    const body = (await res.json()) as {
+      ok: boolean;
+    };
     expect(body.ok).toBe(true);
   });
 
@@ -138,7 +186,9 @@ describe('PUT /profile/avatar — binary upload', () => {
     const res = await hono.fetch(
       new Request('http://test/profile/avatar', {
         method: 'PUT',
-        headers: { 'content-type': 'image/png' },
+        headers: {
+          'content-type': 'image/png',
+        },
         body: new Uint8Array(0),
       })
     );
@@ -151,7 +201,9 @@ describe('PUT /profile/avatar — binary upload', () => {
     const res = await hono.fetch(
       new Request('http://test/profile/avatar', {
         method: 'PUT',
-        headers: { 'content-type': 'image/png' },
+        headers: {
+          'content-type': 'image/png',
+        },
         body: largeBuffer,
       })
     );
@@ -168,7 +220,9 @@ describe('PUT /profile/avatar — unauthenticated', () => {
   });
 
   test('returns 401 without session', async () => {
-    const res = await app.put('/profile/avatar', { data: 'abc' });
+    const res = await app.put('/profile/avatar', {
+      data: 'abc',
+    });
     expect(res.status).toBe(401);
   });
 });
@@ -180,15 +234,23 @@ describe('DELETE /profile/avatar — authenticated', () => {
 
   useTestBed(() => {
     stub(UserService, {
-      removeAvatar: async () => {},
+      removeAvatar: () => {},
     });
-    app = TestApp.create(profileRoutes, [withSession(userSession)]);
+    app = TestApp.create(profileRoutes, [
+      withSession(userSession),
+    ]);
   });
 
   test('removes avatar and returns ok', async () => {
     const res = await app.delete('/profile/avatar');
     expect(res.status).toBe(200);
-    expect((res.body as { ok: boolean }).ok).toBe(true);
+    expect(
+      (
+        res.body as {
+          ok: boolean;
+        }
+      ).ok
+    ).toBe(true);
   });
 });
 
@@ -216,7 +278,9 @@ describe('PUT /profile/password — valid current password', () => {
       verifyPassword: async (_userId: string, password: string) => password === 'OldPass123!',
       setPassword: async () => {},
     });
-    app = TestApp.create(profileRoutes, [withSession(userSession)]);
+    app = TestApp.create(profileRoutes, [
+      withSession(userSession),
+    ]);
   });
 
   test('changes password with valid current password', async () => {
@@ -225,7 +289,13 @@ describe('PUT /profile/password — valid current password', () => {
       newPassword: 'NewPass456!',
     });
     expect(res.status).toBe(200);
-    expect((res.body as { ok: boolean }).ok).toBe(true);
+    expect(
+      (
+        res.body as {
+          ok: boolean;
+        }
+      ).ok
+    ).toBe(true);
   });
 
   test('returns 400 when current password is wrong', async () => {
@@ -242,7 +312,9 @@ describe('PUT /profile/password — valid current password', () => {
   });
 
   test('returns 400 when only currentPassword is provided', async () => {
-    const res = await app.put('/profile/password', { currentPassword: 'OldPass123!' });
+    const res = await app.put('/profile/password', {
+      currentPassword: 'OldPass123!',
+    });
     expect(res.status).toBe(400);
   });
 });
@@ -257,7 +329,9 @@ describe('PUT /profile/password — setPassword throws', () => {
         throw new Error('Password does not meet requirements');
       },
     });
-    app = TestApp.create(profileRoutes, [withSession(userSession)]);
+    app = TestApp.create(profileRoutes, [
+      withSession(userSession),
+    ]);
   });
 
   test('returns 400 when setPassword throws (invalid new password)', async () => {
@@ -311,7 +385,10 @@ describe('GET /avatar/:userId — with avatar', () => {
 
   useTestBed(() => {
     stub(UserService, {
-      getAvatarData: () => ({ data: fakeImage, mimeType: 'image/webp' }),
+      getAvatarData: () => ({
+        data: fakeImage,
+        mimeType: 'image/webp',
+      }),
     });
     app = TestApp.create(profileRoutes);
   });
@@ -332,7 +409,9 @@ describe('GET /avatar/:userId — with avatar', () => {
 
     // Second request with If-None-Match
     const second = await app.get('/avatar/user-1', {
-      headers: { 'if-none-match': etag },
+      headers: {
+        'if-none-match': etag,
+      },
     });
     expect(second.status).toBe(304);
   });

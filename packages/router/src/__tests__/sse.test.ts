@@ -17,8 +17,12 @@ describe('SSE', () => {
 
     test('sends data correctly', async () => {
       const response = createSSEStream((send, close) => {
-        send({ message: 'hello' });
-        send({ message: 'world' });
+        send({
+          message: 'hello',
+        });
+        send({
+          message: 'world',
+        });
         setTimeout(close, 10);
       });
 
@@ -30,7 +34,12 @@ describe('SSE', () => {
 
     test('sends data with event name', async () => {
       const response = createSSEStream((send, close) => {
-        send({ value: 42 }, 'custom-event');
+        send(
+          {
+            value: 42,
+          },
+          'custom-event'
+        );
         setTimeout(close, 10);
       });
 
@@ -50,7 +59,10 @@ describe('SSE', () => {
       });
 
       // Cancel the stream
-      const reader = response.body!.getReader();
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error('Expected readable stream reader');
+      }
       await reader.cancel();
 
       expect(cleaned).toBe(true);
@@ -67,9 +79,13 @@ describe('SSE', () => {
 
     test('sends async data correctly', async () => {
       const response = createAsyncSSEStream(async (send) => {
-        send({ type: 'start' });
+        send({
+          type: 'start',
+        });
         await new Promise((r) => setTimeout(r, 5));
-        send({ type: 'end' });
+        send({
+          type: 'end',
+        });
       });
 
       const text = await response.text();
@@ -81,7 +97,12 @@ describe('SSE', () => {
     test('sends event name with data', async () => {
       const response = createAsyncSSEStream(async (send) => {
         await Promise.resolve();
-        send({ data: 'test' }, 'progress');
+        send(
+          {
+            data: 'test',
+          },
+          'progress'
+        );
       });
 
       const text = await response.text();

@@ -2,9 +2,14 @@
   "compilerOptions": {
     "target": "ESNext",
     "module": "ESNext",
-    "lib": ["ESNext", "DOM"],
+    "lib": [
+      "ESNext",
+      "DOM"
+    ],
     "moduleResolution": "bundler",
-    "types": ["bun-types"],
+    "types": [
+      "bun-types"
+    ],
 
     // Strict mode
     "strict": true,
@@ -25,7 +30,6 @@
     "isolatedModules": true,
 
     // Paths
-    "baseUrl": ".",
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
 
@@ -33,5 +37,9 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true
   },
-  "exclude": ["node_modules", "dist", "build"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "build"
+  ]
 }

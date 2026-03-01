@@ -33,7 +33,11 @@ export interface RegisteredBrick {
   /** Component node tree */
   body: unknown[];
   /** Action definitions */
-  actions?: Array<{ id: string; label?: string; icon?: string }>;
+  actions?: Array<{
+    id: string;
+    label?: string;
+    icon?: string;
+  }>;
   /** Brick category */
   category?: string;
   /** Tags for filtering */
@@ -72,7 +76,11 @@ export class BrickRegistry {
       color?: string;
       size: 'sm' | 'md' | 'lg' | 'xl';
       body: unknown[];
-      actions?: Array<{ id: string; label?: string; icon?: string }>;
+      actions?: Array<{
+        id: string;
+        label?: string;
+        icon?: string;
+      }>;
       category?: string;
       tags?: string[];
     },
@@ -112,14 +120,24 @@ export class BrickRegistry {
       try {
         listener(fullId);
       } catch (e) {
-        this.logs.error('Brick registration listener failed', { brickId: fullId }, { error: e });
+        this.logs.error(
+          'Brick registration listener failed',
+          {
+            brickId: fullId,
+          },
+          {
+            error: e,
+          }
+        );
       }
     }
   }
 
   patch(fullId: string, mutations: unknown[]): boolean {
     const brick = this.#bricks.get(fullId);
-    if (!brick) return false;
+    if (!brick) {
+      return false;
+    }
 
     brick.body = applyMutations(brick.body as ComponentNode[], mutations as Mutation[]);
     return true;
@@ -155,11 +173,15 @@ export class BrickRegistry {
   }
 
   list(): RegisteredBrick[] {
-    return [...this.#bricks.values()].sort((a, b) => a.fullId.localeCompare(b.fullId));
+    return [
+      ...this.#bricks.values(),
+    ].sort((a, b) => a.fullId.localeCompare(b.fullId));
   }
 
   listByPlugin(pluginName: string): RegisteredBrick[] {
-    return [...this.#bricks.values()].filter((c) => c.pluginName === pluginName);
+    return [
+      ...this.#bricks.values(),
+    ].filter((c) => c.pluginName === pluginName);
   }
 
   /** Find the plugin that owns a brick (by full ID) */

@@ -10,7 +10,10 @@ function latLngToTile(lat: number, lng: number, zoom: number) {
   const x = ((lng + 180) / 360) * n;
   const latRad = (lat * Math.PI) / 180;
   const y = ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) * n;
-  return { x, y };
+  return {
+    x,
+    y,
+  };
 }
 
 interface StaticMapProps {
@@ -24,7 +27,9 @@ export function StaticMap({ latitude, longitude }: Readonly<StaticMapProps>) {
 
   useEffect(() => {
     const el = containerRef.current;
-    if (!el) return;
+    if (!el) {
+      return;
+    }
     const observer = new ResizeObserver(([entry]) => setWidth(Math.round(entry.contentRect.width)));
     observer.observe(el);
     return () => observer.disconnect();
@@ -44,7 +49,13 @@ export function StaticMap({ latitude, longitude }: Readonly<StaticMapProps>) {
   const offsetX = width / 2 - (fracX + halfCol) * TILE_SIZE;
   const offsetY = MAP_HEIGHT / 2 - (fracY + halfRow) * TILE_SIZE;
 
-  const tiles: Array<{ key: string; tx: number; ty: number; left: number; top: number }> = [];
+  const tiles: Array<{
+    key: string;
+    tx: number;
+    ty: number;
+    left: number;
+    top: number;
+  }> = [];
   for (let row = 0; row < rows; row++) {
     for (let col = 0; col < cols; col++) {
       const tx = centerTileX - halfCol + col;
@@ -63,7 +74,9 @@ export function StaticMap({ latitude, longitude }: Readonly<StaticMapProps>) {
     <div
       ref={containerRef}
       className="relative overflow-hidden rounded-md"
-      style={{ height: MAP_HEIGHT }}
+      style={{
+        height: MAP_HEIGHT,
+      }}
     >
       {tiles.map((t) => {
         const src = `https://a.basemaps.cartocdn.com/rastertiles/voyager/${MAP_ZOOM}/${t.tx}/${t.ty}.png`;
@@ -77,14 +90,22 @@ export function StaticMap({ latitude, longitude }: Readonly<StaticMapProps>) {
             width={TILE_SIZE}
             height={TILE_SIZE}
             className="absolute"
-            style={{ left: t.left, top: t.top }}
+            style={{
+              left: t.left,
+              top: t.top,
+            }}
             loading="lazy"
             draggable={false}
           />
         );
       })}
       <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-        <MapPin className="size-8 text-primary drop-shadow-md" style={{ marginTop: -16 }} />
+        <MapPin
+          className="size-8 text-primary drop-shadow-md"
+          style={{
+            marginTop: -16,
+          }}
+        />
       </div>
       <span className="absolute right-1 bottom-1 rounded bg-white/70 px-1 text-[10px] text-gray-600 dark:bg-black/50 dark:text-gray-300">
         {'© '}

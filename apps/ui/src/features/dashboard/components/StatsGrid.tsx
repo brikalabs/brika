@@ -1,16 +1,28 @@
 import { Box, LayoutDashboard, Plug, Workflow, Zap } from 'lucide-react';
 import { useDataView } from '@/components/DataView';
 import { useLocale } from '@/lib/use-locale';
-import { routes } from '@/routes';
+import { paths } from '@/routes/paths';
 import { StatCard } from './StatCard';
 import { StatCardSkeleton } from './StatCardSkeleton';
 
 export interface Stats {
-  plugins: { total: number; running: number };
-  blocks: { total: number };
-  workflows: { total: number; enabled: number };
-  sparks: { total: number };
-  bricks: { total: number };
+  plugins: {
+    total: number;
+    running: number;
+  };
+  blocks: {
+    total: number;
+  };
+  workflows: {
+    total: number;
+    enabled: number;
+  };
+  sparks: {
+    total: number;
+  };
+  bricks: {
+    total: number;
+  };
 }
 
 export interface StatsGridProps {
@@ -47,14 +59,14 @@ export function StatsGrid({ stats, isLoading }: Readonly<StatsGridProps>) {
               label={t('dashboard:stats.plugins')}
               value={stats.plugins.running}
               subValue={t('dashboard:stats.running')}
-              href={routes.plugins.list.path}
+              href={paths.plugins.list.path}
               accent="blue"
             />
             <StatCard
               icon={Box}
               label={t('dashboard:stats.blocks')}
               value={stats.blocks.total}
-              href={routes.workflows.list.path}
+              href={paths.workflows.list.path}
               accent="violet"
             />
             <StatCard
@@ -62,7 +74,7 @@ export function StatsGrid({ stats, isLoading }: Readonly<StatsGridProps>) {
               label={t('dashboard:stats.workflows')}
               value={stats.workflows.enabled}
               subValue={t('dashboard:stats.enabled')}
-              href={routes.workflows.list.path}
+              href={paths.workflows.list.path}
               accent="orange"
             />
             <StatCard
@@ -70,14 +82,14 @@ export function StatsGrid({ stats, isLoading }: Readonly<StatsGridProps>) {
               label={t('dashboard:stats.sparks')}
               value={stats.sparks.total}
               subValue={t('dashboard:stats.registered')}
-              href={routes.sparks.list.path}
+              href={paths.sparks.list.path}
               accent="emerald"
             />
             <StatCard
               icon={LayoutDashboard}
               label={t('dashboard:stats.brickTypes')}
               value={stats.bricks.total}
-              href={routes.boards.list.path}
+              href={paths.boards.list.path}
               accent="purple"
             />
           </div>

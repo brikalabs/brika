@@ -13,6 +13,27 @@ export interface BumpConfig {
   selectedPackages: WorkspacePackage[];
 }
 
+interface PackageOptionParams {
+  pkg: WorkspacePackage;
+  nextVersion: string;
+  changedPackages?: Set<string>;
+}
+
+/** Map a workspace package to a multiselect option descriptor. */
+function buildPackageOption({ pkg, nextVersion, changedPackages }: PackageOptionParams) {
+  const changed = changedPackages ? changedPackages.has(pkg.name) : true;
+  const badgeSymbol = changed ? pc.green('● ') : pc.dim('○ ');
+  const badge = changedPackages ? badgeSymbol : '';
+  const label = badge + (changed ? pc.cyan(pkg.name) : pc.dim(pkg.name));
+  const changeStatus = changed ? `${pc.green('changed')}  ` : `${pc.dim('unchanged')}  `;
+  const changeHint = changedPackages ? changeStatus : '';
+  return {
+    value: pkg,
+    label,
+    hint: `${changeHint + pkg.version} → ${nextVersion}  ${pc.dim(pkg.relativePath)}`,
+  };
+}
+
 export interface PromptOptions {
   /** When set, the bump type question is skipped. */
   preselectedBump?: string;
@@ -51,22 +72,21 @@ export async function promptForBump(
       : pc.bgCyan(pc.black(' workspace-tools '))
   );
 
-  const uniqueVersions = [...new Set(allPackages.map((pkg) => pkg.version))];
+  const uniqueVersions = [
+    ...new Set(allPackages.map((pkg) => pkg.version)),
+  ];
   if (uniqueVersions.length === 1) {
-    p.log.info(
-      'Current version: ' +
-        pc.cyan(currentVersion) +
-        pc.dim(' (' + allPackages.length + ' packages)')
-    );
+    const packagesCount = pc.dim(` (${allPackages.length} packages)`);
+    p.log.info(`Current version: ${pc.cyan(currentVersion)}${packagesCount}`);
   } else {
     p.log.warn('Package versions are out of sync:');
     for (const pkg of allPackages) {
-      console.log('  ' + pc.dim(pkg.relativePath.padEnd(45)) + pc.cyan(pkg.version));
+      console.log(`  ${pc.dim(pkg.relativePath.padEnd(45))}${pc.cyan(pkg.version)}`);
     }
   }
 
   if (changedPackages !== undefined) {
-    const since = sinceRef ? pc.dim(' since ' + sinceRef) : '';
+    const since = sinceRef ? pc.dim(` since ${sinceRef}`) : '';
     p.log.info(
       pc.green(String(changedPackages.size)) +
         ' of ' +
@@ -94,19 +114,27 @@ export async function promptForBump(
               label: type.charAt(0).toUpperCase() + type.slice(1),
               hint: `${currentVersion} → ${applyBump(currentVersion, type)}`,
             })),
-            { value: 'custom', label: 'Custom', hint: 'Enter an exact version number' },
+            {
+              value: 'custom',
+              label: 'Custom',
+              hint: 'Enter an exact version number',
+            },
           ],
           initialValue: 'patch' as string,
         });
       },
 
       customVersion: ({ results }) => {
-        if (results.bumpType !== 'custom') return Promise.resolve(undefined as unknown as string);
+        if (results.bumpType !== 'custom') {
+          return Promise.resolve(undefined as unknown as string);
+        }
         return p.text({
           message: 'Enter exact version (x.y.z)',
           placeholder: currentVersion,
           validate: (value) => {
-            if (!value || !isExactVersion(value)) return 'Must be in the form x.y.z (e.g. 1.2.3)';
+            if (!value || !isExactVersion(value)) {
+              return 'Must be in the form x.y.z (e.g. 1.2.3)';
+            }
             if (compareVersions(currentVersion, value) >= 0) {
               return `New version must be greater than current ${currentVersion}`;
             }
@@ -126,26 +154,20 @@ export async function promptForBump(
           return Promise.resolve(allPackages);
         }
 
-        const available = pc.dim('(' + allPackages.length + ' available)');
+        const available = pc.dim(`(${allPackages.length} available)`);
         const preselected = changedPackages
           ? allPackages.filter((pkg) => changedPackages.has(pkg.name))
           : allPackages;
 
         return p.multiselect({
           message: `Select packages to update ${available}`,
-          options: allPackages.map((pkg) => {
-            const changed = changedPackages ? changedPackages.has(pkg.name) : true;
-            const badgeSymbol = changed ? pc.green('● ') : pc.dim('○ ');
-            const badge = changedPackages ? badgeSymbol : '';
-            const label = badge + (changed ? pc.cyan(pkg.name) : pc.dim(pkg.name));
-            const changeStatus = changed ? pc.green('changed') + '  ' : pc.dim('unchanged') + '  ';
-            const changeHint = changedPackages ? changeStatus : '';
-            return {
-              value: pkg,
-              label,
-              hint: changeHint + pkg.version + ' → ' + next + '  ' + pc.dim(pkg.relativePath),
-            };
-          }),
+          options: allPackages.map((pkg) =>
+            buildPackageOption({
+              pkg,
+              nextVersion: next,
+              changedPackages,
+            })
+          ),
           initialValues: preselected,
           required: true,
         });

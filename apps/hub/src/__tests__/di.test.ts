@@ -3,10 +3,11 @@ import { describe, expect, it } from 'bun:test';
 import { container, inject, injectable, singleton } from '@brika/di';
 import { get, provide, reset, useTestBed } from '@brika/di/testing';
 
-useTestBed({ autoStub: false });
+useTestBed({
+  autoStub: false,
+});
 
 describe('DI Container', () => {
-
   it('should resolve singleton services', () => {
     @singleton()
     class Counter {
@@ -60,7 +61,6 @@ describe('DI Container', () => {
 });
 
 describe('inject() function', () => {
-
   it('should work as property initializer', () => {
     @singleton()
     class Logger {
@@ -123,7 +123,9 @@ describe('TestBed', () => {
       }
     }
 
-    const mockLogger = { log: () => 'MOCKED' };
+    const mockLogger = {
+      log: () => 'MOCKED',
+    };
     provide(RealLogger, mockLogger);
 
     const service = get(Service);

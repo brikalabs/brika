@@ -17,7 +17,7 @@ import {
   TableRow,
 } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
-import { routes } from '@/routes';
+import { paths } from '@/routes/paths';
 import type { Workflow } from '../api';
 import { BlocksPreview } from './BlocksPreview';
 import { StatusBadge } from './StatusBadge';
@@ -60,7 +60,9 @@ export function WorkflowsTable({
                 <TableCell>
                   <div className="flex flex-col gap-0.5">
                     <Link
-                      to={routes.workflows.edit.to({ id: workflow.id })}
+                      to={paths.workflows.edit.to({
+                        id: workflow.id,
+                      })}
                       className="font-semibold text-sm leading-tight hover:underline"
                     >
                       {workflow.name || workflow.id}
@@ -98,7 +100,11 @@ export function WorkflowsTable({
                       size="sm"
                       variant="ghost"
                       onClick={() =>
-                        navigate({ to: routes.workflows.edit.to({ id: workflow.id }) })
+                        navigate({
+                          to: paths.workflows.edit.to({
+                            id: workflow.id,
+                          }),
+                        })
                       }
                       title={t('common:actions.edit')}
                     >
@@ -106,7 +112,12 @@ export function WorkflowsTable({
                     </Button>
                     <Switch
                       checked={workflow.enabled}
-                      onCheckedChange={(checked) => onToggle({ id: workflow.id, enabled: checked })}
+                      onCheckedChange={(checked) =>
+                        onToggle({
+                          id: workflow.id,
+                          enabled: checked,
+                        })
+                      }
                       disabled={isError}
                     />
                     <Button

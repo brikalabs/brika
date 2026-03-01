@@ -15,8 +15,9 @@
   "scripts": {
     "dev": "bun --watch src/main.ts",
     "build": "bun run compiler/build.ts",
-    "tsc": "bun x --bun tsc --noEmit",
+    "typecheck": "tsgo --project tsconfig.check.json --noEmit",
     "lint": "bun x biome check .",
+    "test": "bun test $(ls src/__tests__/*.test.ts | grep -v cli-auth-) && bun test src/__tests__/cli-auth-prompts.test.ts && bun test src/__tests__/cli-auth-token.test.ts && bun test src/__tests__/cli-auth-users.test.ts",
     "lint:fix": "bun x biome check . --write"
   },
   "dependencies": {

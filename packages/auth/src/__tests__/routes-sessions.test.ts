@@ -4,11 +4,11 @@
 
 import { describe, expect, test } from 'bun:test';
 import { stub, useTestBed } from '@brika/di/testing';
-import { TestApp } from '@brika/router/testing';
 import type { Middleware } from '@brika/router';
-import { Role, Scope, type Session, type SessionRecord } from '../types';
-import { SessionService } from '../services/SessionService';
+import { TestApp } from '@brika/router/testing';
 import { sessionRoutes } from '../server/routes/sessions';
+import { SessionService } from '../services/SessionService';
+import { Role, Scope, type Session, type SessionRecord } from '../types';
 
 function withSession(session: Session): Middleware {
   return async (c, next) => {
@@ -23,7 +23,9 @@ const adminSession: Session = {
   userEmail: 'admin@test.com',
   userName: 'Admin',
   userRole: Role.ADMIN,
-  scopes: [Scope.ADMIN_ALL],
+  scopes: [
+    Scope.ADMIN_ALL,
+  ],
 };
 
 const userSession: Session = {
@@ -32,7 +34,10 @@ const userSession: Session = {
   userEmail: 'user@test.com',
   userName: 'User',
   userRole: Role.USER,
-  scopes: [Scope.WORKFLOW_READ, Scope.BOARD_READ],
+  scopes: [
+    Scope.WORKFLOW_READ,
+    Scope.BOARD_READ,
+  ],
 };
 
 const now = Date.now();
@@ -71,7 +76,9 @@ describe('GET /sessions — authenticated', () => {
     stub(SessionService, {
       listUserSessions: () => mockUserSessions,
     });
-    app = TestApp.create(sessionRoutes, [withSession(userSession)]);
+    app = TestApp.create(sessionRoutes, [
+      withSession(userSession),
+    ]);
   });
 
   test('returns sessions for current user with current flag', async () => {
@@ -99,7 +106,9 @@ describe('GET /sessions — authenticated', () => {
 
   test('strips sensitive fields (tokenHash, expiresAt, revokedAt)', async () => {
     const res = await app.get('/sessions');
-    const body = res.body as { sessions: Array<Record<string, unknown>> };
+    const body = res.body as {
+      sessions: Array<Record<string, unknown>>;
+    };
     for (const session of body.sessions) {
       expect(session.tokenHash).toBeUndefined();
       expect(session.expiresAt).toBeUndefined();
@@ -136,7 +145,9 @@ describe('DELETE /sessions/:id — as session owner', () => {
         revokedId = id;
       },
     });
-    app = TestApp.create(sessionRoutes, [withSession(userSession)]);
+    app = TestApp.create(sessionRoutes, [
+      withSession(userSession),
+    ]);
   });
 
   test('revokes own session', async () => {
@@ -164,7 +175,9 @@ describe('DELETE /sessions/:id — as admin', () => {
         revokedId = id;
       },
     });
-    app = TestApp.create(sessionRoutes, [withSession(adminSession)]);
+    app = TestApp.create(sessionRoutes, [
+      withSession(adminSession),
+    ]);
   });
 
   test('can revoke any session via admin scope', async () => {
@@ -201,13 +214,21 @@ describe('DELETE /sessions — authenticated', () => {
         revokedUserId = userId;
       },
     });
-    app = TestApp.create(sessionRoutes, [withSession(userSession)]);
+    app = TestApp.create(sessionRoutes, [
+      withSession(userSession),
+    ]);
   });
 
   test('revokes all sessions for current user', async () => {
     const res = await app.delete('/sessions');
     expect(res.status).toBe(200);
-    expect((res.body as { ok: boolean }).ok).toBe(true);
+    expect(
+      (
+        res.body as {
+          ok: boolean;
+        }
+      ).ok
+    ).toBe(true);
     expect(revokedUserId).toBe('user-regular');
   });
 });

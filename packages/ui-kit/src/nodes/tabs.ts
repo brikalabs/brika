@@ -27,7 +27,12 @@ export interface TabsNode extends BaseNode {
 
 export function Tabs(props: {
   value: string;
-  tabs: { key: string; label: string; icon?: string; children?: Child | Child[] }[];
+  tabs: {
+    key: string;
+    label: string;
+    icon?: string;
+    children?: Child | Child[];
+  }[];
   onChange: ActionHandler;
   variant?: 'default' | 'pills';
 }): TabsNode {

@@ -6,13 +6,20 @@ defineRenderer('skeleton', ({ node }) => {
   if (node.variant === 'text' && (node.lines ?? 1) > 1) {
     return (
       <div className="flex flex-col gap-2">
-        {Array.from({ length: node.lines ?? 1 }, (_, i) => (
-          <Skeleton
-            key={i}
-            className={cn('h-4', i === (node.lines ?? 1) - 1 && 'w-3/4')}
-            style={{ width: i < (node.lines ?? 1) - 1 ? node.width : undefined }}
-          />
-        ))}
+        {Array.from(
+          {
+            length: node.lines ?? 1,
+          },
+          (_, i) => (
+            <Skeleton
+              key={i}
+              className={cn('h-4', i === (node.lines ?? 1) - 1 && 'w-3/4')}
+              style={{
+                width: i < (node.lines ?? 1) - 1 ? node.width : undefined,
+              }}
+            />
+          )
+        )}
       </div>
     );
   }

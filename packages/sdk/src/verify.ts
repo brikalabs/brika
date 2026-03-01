@@ -23,7 +23,9 @@ const pluginDir = pluginDirArg ? resolve(pluginDirArg) : process.cwd();
 async function readVersion(pkgJsonPath: string | URL): Promise<string | null> {
   try {
     const raw = await Bun.file(pkgJsonPath).json();
-    if (!isRecord(raw)) return null;
+    if (!isRecord(raw)) {
+      return null;
+    }
     return typeof raw.version === 'string' ? raw.version : null;
   } catch {
     return null;
@@ -41,7 +43,9 @@ async function readPluginSdkSpec(fromDir: string): Promise<string | null> {
 
 async function resolveSdkVersion(fromDir: string): Promise<string> {
   const localVersion = await readVersion(new URL('../package.json', import.meta.url));
-  if (!localVersion) throw new Error('Could not resolve @brika/sdk version');
+  if (!localVersion) {
+    throw new Error('Could not resolve @brika/sdk version');
+  }
 
   const pluginSdkSpec = await readPluginSdkSpec(fromDir);
   if (pluginSdkSpec?.startsWith('workspace:')) {
@@ -52,7 +56,9 @@ async function resolveSdkVersion(fromDir: string): Promise<string> {
     try {
       const resolved = Bun.resolveSync('@brika/sdk/package.json', fromDir);
       const resolvedVersion = await readVersion(resolved);
-      if (resolvedVersion) return resolvedVersion;
+      if (resolvedVersion) {
+        return resolvedVersion;
+      }
     } catch {
       // Fall back to local workspace SDK version below.
     }

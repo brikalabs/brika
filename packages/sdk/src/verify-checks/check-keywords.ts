@@ -14,5 +14,8 @@ registerCheck(({ pkg }) => {
     warnings.push('keywords should include "brika-plugin" for better npm discoverability');
   }
 
-  return { errors, warnings };
+  return {
+    errors,
+    warnings,
+  };
 });

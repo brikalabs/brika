@@ -46,7 +46,9 @@ export class AuthClient {
   constructor(config: AuthClientConfig = {}) {
     this.apiUrl =
       config.apiUrl ||
-      (globalThis.window === undefined ? 'http://localhost:3001' : globalThis.window.location.origin);
+      (globalThis.window === undefined
+        ? 'http://localhost:3001'
+        : globalThis.window.location.origin);
 
     // Clean up legacy localStorage keys from pre-cookie auth
     if (globalThis.window !== undefined) {
@@ -63,13 +65,20 @@ export class AuthClient {
   async login(email: string, password: string): Promise<Session> {
     await this.request('/api/auth/login', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email,
+        password,
+      }),
     });
 
     // Cookie is now set — fetch full session including scopes
     const session = await this.getSession();
-    if (!session) throw new Error('Login failed');
+    if (!session) {
+      throw new Error('Login failed');
+    }
     return session;
   }
 
@@ -92,8 +101,14 @@ export class AuthClient {
    */
   async getSession(): Promise<Session | null> {
     try {
-      const data = await this.request<{ user: Session['user']; scopes: string[] }>('/api/auth/session');
-      return { user: data.user, scopes: data.scopes };
+      const data = await this.request<{
+        user: Session['user'];
+        scopes: string[];
+      }>('/api/auth/session');
+      return {
+        user: data.user,
+        scopes: data.scopes,
+      };
     } catch {
       return null;
     }
@@ -103,9 +118,11 @@ export class AuthClient {
    * Update own profile (name).
    */
   async updateProfile(updates: { name?: string }): Promise<Session> {
-    return this.request<Session>('/api/auth/profile', {
+    return await this.request<Session>('/api/auth/profile', {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify(updates),
     });
   }
@@ -115,7 +132,10 @@ export class AuthClient {
    * Returns the new avatar content hash for cache busting.
    */
   async uploadAvatar(file: Blob): Promise<string> {
-    const data = await this.request<{ ok: boolean; avatarHash: string }>('/api/auth/profile/avatar', {
+    const data = await this.request<{
+      ok: boolean;
+      avatarHash: string;
+    }>('/api/auth/profile/avatar', {
       method: 'PUT',
       body: file,
     });
@@ -126,7 +146,9 @@ export class AuthClient {
    * Remove avatar.
    */
   async removeAvatar(): Promise<void> {
-    await this.request('/api/auth/profile/avatar', { method: 'DELETE' });
+    await this.request('/api/auth/profile/avatar', {
+      method: 'DELETE',
+    });
   }
 
   /**
@@ -134,14 +156,27 @@ export class AuthClient {
    * Accepts a user-like object `{ id, avatarHash }` — the hash makes the URL
    * content-addressed so the browser fetches a new image when the avatar changes.
    */
-  avatarUrl(user: { id: string; avatarHash?: string | null }, options?: { size?: number; dpr?: number }): string {
+  avatarUrl(
+    user: {
+      id: string;
+      avatarHash?: string | null;
+    },
+    options?: {
+      size?: number;
+      dpr?: number;
+    }
+  ): string {
     const params = new URLSearchParams();
 
     const dpr = options?.dpr ?? globalThis.devicePixelRatio ?? 1;
     const size = options?.size ? Math.round(options.size * dpr) : undefined;
-    if (size) params.set('s', String(size));
+    if (size) {
+      params.set('s', String(size));
+    }
 
-    if (user.avatarHash) params.set('v', user.avatarHash);
+    if (user.avatarHash) {
+      params.set('v', user.avatarHash);
+    }
 
     const qs = params.toString();
     const suffix = qs ? `?${qs}` : '';
@@ -152,7 +187,9 @@ export class AuthClient {
    * List all active sessions for the current user.
    */
   async listSessions(): Promise<SessionInfo[]> {
-    const data = await this.request<{ sessions: SessionInfo[] }>('/api/auth/sessions');
+    const data = await this.request<{
+      sessions: SessionInfo[];
+    }>('/api/auth/sessions');
     return data.sessions;
   }
 
@@ -160,7 +197,9 @@ export class AuthClient {
    * Revoke a specific session by ID.
    */
   async revokeSession(sessionId: string): Promise<void> {
-    await this.request<{ ok: boolean }>(`/api/auth/sessions/${sessionId}`, {
+    await this.request<{
+      ok: boolean;
+    }>(`/api/auth/sessions/${sessionId}`, {
       method: 'DELETE',
     });
   }
@@ -171,8 +210,13 @@ export class AuthClient {
   async changePassword(currentPassword: string, newPassword: string): Promise<void> {
     await this.request('/api/auth/profile/password', {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ currentPassword, newPassword }),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        currentPassword,
+        newPassword,
+      }),
     });
   }
 
@@ -180,7 +224,9 @@ export class AuthClient {
    * Revoke all sessions for the current user (signs out everywhere).
    */
   async revokeAllSessions(): Promise<void> {
-    await this.request<{ ok: boolean }>('/api/auth/sessions', {
+    await this.request<{
+      ok: boolean;
+    }>('/api/auth/sessions', {
       method: 'DELETE',
     });
   }

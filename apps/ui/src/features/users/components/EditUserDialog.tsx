@@ -20,19 +20,37 @@ import { useLocale } from '@/lib/use-locale';
 import type { UserRecord } from '../api';
 import { useUserMutations } from '../hooks';
 
-const ROLES = ['admin', 'user', 'guest'] as const;
+const ROLES = [
+  'admin',
+  'user',
+  'guest',
+] as const;
 
-const SCOPE_CATEGORIES = ['workflow', 'board', 'plugin', 'settings'] as const;
+const SCOPE_CATEGORIES = [
+  'workflow',
+  'board',
+  'plugin',
+  'settings',
+] as const;
 
 const ROLE_SCOPES_MAP: Record<string, string[]> = {
-  admin: ['admin:*'],
+  admin: [
+    'admin:*',
+  ],
   user: [
-    'workflow:read', 'workflow:write', 'workflow:execute',
-    'board:read', 'board:write',
+    'workflow:read',
+    'workflow:write',
+    'workflow:execute',
+    'board:read',
+    'board:write',
     'plugin:read',
     'settings:read',
   ],
-  guest: ['workflow:read', 'board:read', 'plugin:read'],
+  guest: [
+    'workflow:read',
+    'board:read',
+    'plugin:read',
+  ],
   service: [],
 };
 
@@ -57,25 +75,41 @@ export function EditUserDialog({ open, onOpenChange, user }: Readonly<EditUserDi
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      return;
+    }
     setName(user.name);
     setRole(user.role);
     setIsActive(user.isActive);
     setScopes(user.scopes ?? []);
     setError('');
-  }, [open, user.id, user.name, user.role, user.isActive, user.scopes]);
+  }, [
+    open,
+    user.id,
+    user.name,
+    user.role,
+    user.isActive,
+    user.scopes,
+  ]);
 
   // Reset scopes to role defaults when role changes
   useEffect(() => {
     setScopes(ROLE_SCOPES_MAP[role] ?? []);
-  }, [role]);
+  }, [
+    role,
+  ]);
 
   const roleScopes = ROLE_SCOPES_MAP[role] ?? [];
   const isAdmin = role === 'admin';
 
   function handleScopeToggle(scope: string, enabled: boolean) {
     setScopes((prev) =>
-      enabled ? [...prev, scope] : prev.filter((s) => s !== scope),
+      enabled
+        ? [
+            ...prev,
+            scope,
+          ]
+        : prev.filter((s) => s !== scope)
     );
   }
 
@@ -84,16 +118,26 @@ export function EditUserDialog({ open, onOpenChange, user }: Readonly<EditUserDi
     setError('');
 
     update.mutate(
-      { id: user.id, name: name.trim(), role, isActive, scopes },
+      {
+        id: user.id,
+        name: name.trim(),
+        role,
+        isActive,
+        scopes,
+      },
       {
         onSuccess: () => onOpenChange(false),
         onError: (err) => setError(err.message),
-      },
+      }
     );
   };
 
-  const sortedScopes = [...scopes].sort((a, b) => a.localeCompare(b));
-  const sortedOriginal = [...(user.scopes ?? [])].sort((a, b) => a.localeCompare(b));
+  const sortedScopes = [
+    ...scopes,
+  ].sort((a, b) => a.localeCompare(b));
+  const sortedOriginal = [
+    ...(user.scopes ?? []),
+  ].sort((a, b) => a.localeCompare(b));
   const isDirty =
     name.trim() !== user.name ||
     role !== user.role ||
@@ -108,7 +152,11 @@ export function EditUserDialog({ open, onOpenChange, user }: Readonly<EditUserDi
           <DialogDescription>{user.email}</DialogDescription>
         </DialogHeader>
 
-        <form id="edit-user-form" onSubmit={handleSubmit} className="space-y-4 overflow-y-auto flex-1 min-h-0 pr-1">
+        <form
+          id="edit-user-form"
+          onSubmit={handleSubmit}
+          className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-1"
+        >
           <div className="space-y-2">
             <Label htmlFor="edit-name">{t('users:fields.name')}</Label>
             <Input
@@ -147,42 +195,46 @@ export function EditUserDialog({ open, onOpenChange, user }: Readonly<EditUserDi
                 {t('users:scopes.adminWarning')}
               </p>
             </div>
-          ) : roleScopes.length > 0 && (
-            <div className="space-y-3">
-              <div>
-                <Label>{t('users:scopes.title')}</Label>
-                <p className="mt-1 text-muted-foreground text-xs">
-                  {t('users:scopes.description')}
-                </p>
-              </div>
-              {SCOPE_CATEGORIES.map((category) => {
-                const categoryScopes = roleScopes.filter((s) => scopeCategory(s) === category);
-                if (categoryScopes.length === 0) return null;
+          ) : (
+            roleScopes.length > 0 && (
+              <div className="space-y-3">
+                <div>
+                  <Label>{t('users:scopes.title')}</Label>
+                  <p className="mt-1 text-muted-foreground text-xs">
+                    {t('users:scopes.description')}
+                  </p>
+                </div>
+                {SCOPE_CATEGORIES.map((category) => {
+                  const categoryScopes = roleScopes.filter((s) => scopeCategory(s) === category);
+                  if (categoryScopes.length === 0) {
+                    return null;
+                  }
 
-                return (
-                  <div key={category} className="space-y-1">
-                    <p className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
-                      {t(`users:scopes.categories.${category}`)}
-                    </p>
-                    {categoryScopes.map((scope) => {
-                      const isEnabled = scopes.includes(scope);
-                      return (
-                        <div
-                          key={scope}
-                          className="flex items-center justify-between rounded-lg bg-muted/30 px-3 py-2"
-                        >
-                          <p className="text-sm">{t(`users:scopes.${scope}`)}</p>
-                          <Switch
-                            checked={isEnabled}
-                            onCheckedChange={(checked) => handleScopeToggle(scope, !!checked)}
-                          />
-                        </div>
-                      );
-                    })}
-                  </div>
-                );
-              })}
-            </div>
+                  return (
+                    <div key={category} className="space-y-1">
+                      <p className="font-medium text-muted-foreground text-xs uppercase tracking-wider">
+                        {t(`users:scopes.categories.${category}`)}
+                      </p>
+                      {categoryScopes.map((scope) => {
+                        const isEnabled = scopes.includes(scope);
+                        return (
+                          <div
+                            key={scope}
+                            className="flex items-center justify-between rounded-lg bg-muted/30 px-3 py-2"
+                          >
+                            <p className="text-sm">{t(`users:scopes.${scope}`)}</p>
+                            <Switch
+                              checked={isEnabled}
+                              onCheckedChange={(checked) => handleScopeToggle(scope, !!checked)}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
+              </div>
+            )
           )}
 
           {error && <p className="text-destructive text-sm">{error}</p>}

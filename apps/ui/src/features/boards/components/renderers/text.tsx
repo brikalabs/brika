@@ -64,7 +64,11 @@ defineRenderer('text', ({ node, onAction }) => {
       }
     : {};
   const style: React.CSSProperties = {
-    ...(resolved ? { color: resolved } : undefined),
+    ...(resolved
+      ? {
+          color: resolved,
+        }
+      : undefined),
     ...lineClampStyle,
   };
 

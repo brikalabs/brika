@@ -53,9 +53,20 @@ const minimalCommands: Command[] = [
 /** Commands with options (both long and short flags, string and boolean types) */
 const commandsWithOptions: Command[] = [
   cmdWithOptions('start', 'Start the server', {
-    port: { type: 'string', short: 'p', description: 'Port number' },
-    verbose: { type: 'boolean', short: 'V', description: 'Verbose output' },
-    config: { type: 'string', description: 'Config file path' },
+    port: {
+      type: 'string',
+      short: 'p',
+      description: 'Port number',
+    },
+    verbose: {
+      type: 'boolean',
+      short: 'V',
+      description: 'Verbose output',
+    },
+    config: {
+      type: 'string',
+      description: 'Config file path',
+    },
   }),
   simpleCmd('stop', 'Stop the server'),
   simpleCmd('help', 'Show help'),
@@ -65,12 +76,23 @@ const commandsWithOptions: Command[] = [
 const commandsWithSubcommands: Command[] = [
   cmdWithSubcommands('plugin', 'Manage plugins', [
     cmdWithOptions('install', 'Install a plugin', {
-      registry: { type: 'string', short: 'r', description: 'Registry URL' },
-      force: { type: 'boolean', short: 'f', description: 'Force install' },
+      registry: {
+        type: 'string',
+        short: 'r',
+        description: 'Registry URL',
+      },
+      force: {
+        type: 'boolean',
+        short: 'f',
+        description: 'Force install',
+      },
     }),
     simpleCmd('list', 'List plugins'),
     cmdWithOptions('remove', 'Remove a plugin', {
-      purge: { type: 'boolean', description: 'Remove all data' },
+      purge: {
+        type: 'boolean',
+        description: 'Remove all data',
+      },
     }),
     simpleCmd('help', 'Show plugin help'),
   ]),
@@ -81,12 +103,24 @@ const commandsWithSubcommands: Command[] = [
 /** Commands combining options + subcommands for full coverage */
 const fullCommands: Command[] = [
   cmdWithOptions('start', 'Start the server', {
-    port: { type: 'string', short: 'p', description: 'Port number' },
-    daemon: { type: 'boolean', short: 'd', description: 'Run as daemon' },
+    port: {
+      type: 'string',
+      short: 'p',
+      description: 'Port number',
+    },
+    daemon: {
+      type: 'boolean',
+      short: 'd',
+      description: 'Run as daemon',
+    },
   }),
   cmdWithSubcommands('plugin', 'Manage plugins', [
     cmdWithOptions('install', 'Install a plugin', {
-      registry: { type: 'string', short: 'r', description: 'Registry URL' },
+      registry: {
+        type: 'string',
+        short: 'r',
+        description: 'Registry URL',
+      },
     }),
     simpleCmd('list', 'List installed plugins'),
     simpleCmd('help', 'Show plugin help'),
@@ -348,7 +382,12 @@ describe('generateCompletions — bash', () => {
 
   describe('edge cases', () => {
     test('empty commands array produces valid bash function', () => {
-      const output = generateCompletions([simpleCmd('help', 'Show help')], 'bash');
+      const output = generateCompletions(
+        [
+          simpleCmd('help', 'Show help'),
+        ],
+        'bash'
+      );
       expect(output).toContain('_brika()');
       expect(output).toContain('complete -F _brika brika');
       // only help in the list
@@ -521,7 +560,9 @@ describe('generateCompletions — zsh', () => {
     test('handles option with no description', () => {
       const commands: Command[] = [
         cmdWithOptions('test', 'A test', {
-          flag: { type: 'boolean' },
+          flag: {
+            type: 'boolean',
+          },
         }),
         simpleCmd('help', 'Show help'),
       ];
@@ -625,7 +666,9 @@ describe('generateCompletions — fish', () => {
     test('omits -d when option has no description', () => {
       const commands: Command[] = [
         cmdWithOptions('test', 'A test', {
-          flag: { type: 'boolean' },
+          flag: {
+            type: 'boolean',
+          },
         }),
         simpleCmd('help', 'Show help'),
       ];
@@ -692,7 +735,11 @@ describe('generateCompletions — fish', () => {
           name: 'plugin',
           description: 'Manage plugins',
           options: {
-            global: { type: 'boolean', short: 'g', description: 'Global scope' },
+            global: {
+              type: 'boolean',
+              short: 'g',
+              description: 'Global scope',
+            },
           },
           subcommands: [
             simpleCmd('install', 'Install a plugin'),
@@ -724,7 +771,10 @@ describe('generateCompletions — fish', () => {
     test('escapes single quotes in option descriptions', () => {
       const commands: Command[] = [
         cmdWithOptions('test', 'A test', {
-          name: { type: 'string', description: "it's quoted" },
+          name: {
+            type: 'string',
+            description: "it's quoted",
+          },
         }),
         simpleCmd('help', 'Show help'),
       ];
@@ -738,7 +788,11 @@ describe('generateCompletions — fish', () => {
 
 describe('generateCompletions — cross-shell', () => {
   test('all shells produce non-empty output', () => {
-    for (const shell of ['bash', 'zsh', 'fish'] as const) {
+    for (const shell of [
+      'bash',
+      'zsh',
+      'fish',
+    ] as const) {
       const output = generateCompletions(minimalCommands, shell);
       expect(output.length).toBeGreaterThan(0);
     }
@@ -754,7 +808,11 @@ describe('generateCompletions — cross-shell', () => {
   });
 
   test('all shells include command names for the same input', () => {
-    for (const shell of ['bash', 'zsh', 'fish'] as const) {
+    for (const shell of [
+      'bash',
+      'zsh',
+      'fish',
+    ] as const) {
       const output = generateCompletions(fullCommands, shell);
       expect(output).toContain('start');
       expect(output).toContain('plugin');
@@ -763,14 +821,21 @@ describe('generateCompletions — cross-shell', () => {
   });
 
   test('all shells handle commands with options', () => {
-    for (const shell of ['bash', 'zsh', 'fish'] as const) {
+    for (const shell of [
+      'bash',
+      'zsh',
+      'fish',
+    ] as const) {
       const output = generateCompletions(commandsWithOptions, shell);
       // Fish uses `-l port` not `--port`, so check for the flag name generically
       expect(output).toContain('port');
       expect(output).toContain('verbose');
     }
     // Bash and zsh use -- prefix
-    for (const shell of ['bash', 'zsh'] as const) {
+    for (const shell of [
+      'bash',
+      'zsh',
+    ] as const) {
       const output = generateCompletions(commandsWithOptions, shell);
       expect(output).toContain('--port');
       expect(output).toContain('--verbose');
@@ -782,7 +847,11 @@ describe('generateCompletions — cross-shell', () => {
   });
 
   test('all shells handle commands with subcommands', () => {
-    for (const shell of ['bash', 'zsh', 'fish'] as const) {
+    for (const shell of [
+      'bash',
+      'zsh',
+      'fish',
+    ] as const) {
       const output = generateCompletions(commandsWithSubcommands, shell);
       expect(output).toContain('install');
       expect(output).toContain('list');
@@ -802,8 +871,14 @@ describe('generateCompletions — cross-shell', () => {
   });
 
   test('only help command produces minimal output', () => {
-    const commands: Command[] = [simpleCmd('help', 'Show help')];
-    for (const shell of ['bash', 'zsh', 'fish'] as const) {
+    const commands: Command[] = [
+      simpleCmd('help', 'Show help'),
+    ];
+    for (const shell of [
+      'bash',
+      'zsh',
+      'fish',
+    ] as const) {
       const output = generateCompletions(commands, shell);
       expect(output.length).toBeGreaterThan(0);
     }
@@ -815,7 +890,11 @@ describe('generateCompletions — cross-shell', () => {
 describe('generateCompletions — output snapshots', () => {
   const singleOptionCmd: Command[] = [
     cmdWithOptions('run', 'Run something', {
-      watch: { type: 'boolean', short: 'w', description: 'Watch mode' },
+      watch: {
+        type: 'boolean',
+        short: 'w',
+        description: 'Watch mode',
+      },
     }),
     simpleCmd('help', 'Show help'),
   ];
@@ -856,7 +935,10 @@ describe('generateCompletions — output snapshots', () => {
   test('zsh: string option without short flag', () => {
     const commands: Command[] = [
       cmdWithOptions('build', 'Build project', {
-        target: { type: 'string', description: 'Build target' },
+        target: {
+          type: 'string',
+          description: 'Build target',
+        },
       }),
       simpleCmd('help', 'Show help'),
     ];
@@ -868,7 +950,10 @@ describe('generateCompletions — output snapshots', () => {
   test('fish: string option includes -r flag', () => {
     const commands: Command[] = [
       cmdWithOptions('build', 'Build project', {
-        target: { type: 'string', description: 'Build target' },
+        target: {
+          type: 'string',
+          description: 'Build target',
+        },
       }),
       simpleCmd('help', 'Show help'),
     ];

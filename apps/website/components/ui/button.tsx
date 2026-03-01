@@ -1,4 +1,4 @@
-import { type VariantProps, cva } from 'class-variance-authority';
+import { cva, type VariantProps } from 'class-variance-authority';
 import type { AnchorHTMLAttributes, ButtonHTMLAttributes } from 'react';
 import { cn } from '@/lib/utils';
 
@@ -22,7 +22,7 @@ const buttonVariants = cva(
       variant: 'outline',
       size: 'lg',
     },
-  },
+  }
 );
 
 type ButtonBaseProps = VariantProps<typeof buttonVariants> & {
@@ -30,15 +30,25 @@ type ButtonBaseProps = VariantProps<typeof buttonVariants> & {
 };
 
 type ButtonAsAnchor = ButtonBaseProps &
-  AnchorHTMLAttributes<HTMLAnchorElement> & { href: string };
+  AnchorHTMLAttributes<HTMLAnchorElement> & {
+    href: string;
+  };
 
 type ButtonAsButton = ButtonBaseProps &
-  ButtonHTMLAttributes<HTMLButtonElement> & { href?: never };
+  ButtonHTMLAttributes<HTMLButtonElement> & {
+    href?: never;
+  };
 
 type ButtonProps = ButtonAsAnchor | ButtonAsButton;
 
 function Button({ variant, size, className, ...props }: Readonly<ButtonProps>) {
-  const classes = cn(buttonVariants({ variant, size }), className);
+  const classes = cn(
+    buttonVariants({
+      variant,
+      size,
+    }),
+    className
+  );
 
   if ('href' in props && props.href != null) {
     return <a className={classes} {...(props as AnchorHTMLAttributes<HTMLAnchorElement>)} />;

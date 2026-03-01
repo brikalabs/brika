@@ -12,7 +12,7 @@ interface LogRowProps {
 const SOURCE_LOCATION_KEYS = new Set(["sourceFile", "sourceLine"]);
 
 function extractGeneralMeta(meta: Record<string, unknown> | undefined): Record<string, unknown> | null {
-  if (!meta) return null;
+  if (!meta) { return null; }
   return Object.fromEntries(
     Object.entries(meta).filter(([key]) => !SOURCE_LOCATION_KEYS.has(key)),
   );
@@ -45,7 +45,7 @@ function LogRowColumns({ timestamp, source, config, level, message }: Readonly<L
 
 function MetadataFieldCount({ generalMeta }: Readonly<{ generalMeta: Record<string, unknown> }>) {
   const count = Object.keys(generalMeta).length;
-  if (count === 0) return null;
+  if (count === 0) { return null; }
   return (
     <span className="shrink-0 text-[10px] text-muted-foreground/50">
       {count} field{count === 1 ? "" : "s"}
@@ -64,8 +64,10 @@ export function LogRow({ log }: Readonly<LogRowProps>) {
   const hasMetadata = log.meta && Object.keys(log.meta).length > 0;
   const isExpandable = hasError || hasMetadata;
 
-  const sourceFile = log.meta?.sourceFile == null ? null : String(log.meta.sourceFile);
-  const sourceLine = log.meta?.sourceLine == null ? null : Number(log.meta.sourceLine);
+  const sourceFile =
+    log.meta?.sourceFile === null || log.meta?.sourceFile === undefined ? null : String(log.meta.sourceFile);
+  const sourceLine =
+    log.meta?.sourceLine === null || log.meta?.sourceLine === undefined ? null : Number(log.meta.sourceLine);
   const generalMeta = extractGeneralMeta(log.meta);
   const hasGeneralMeta = generalMeta && Object.keys(generalMeta).length > 0;
 

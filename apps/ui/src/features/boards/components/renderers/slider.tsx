@@ -10,7 +10,9 @@ defineRenderer('slider', ({ node, onAction }) => {
 
   useEffect(() => {
     setLocal(node.value);
-  }, [node.value]);
+  }, [
+    node.value,
+  ]);
 
   const pct = ((local - node.min) / (node.max - node.min)) * 100;
   const hasLabel = node.label || node.icon;
@@ -29,7 +31,9 @@ defineRenderer('slider', ({ node, onAction }) => {
               <DynamicIcon
                 name={node.icon as IconName}
                 className="size-3.5 shrink-0"
-                style={{ color: resolveColor(node.color) ?? undefined }}
+                style={{
+                  color: resolveColor(node.color) ?? undefined,
+                }}
               />
             )}
             {node.label && <span className="font-medium text-xs">{node.label}</span>}
@@ -52,7 +56,9 @@ defineRenderer('slider', ({ node, onAction }) => {
           setLocal(value);
           clearTimeout(timerRef.current);
           timerRef.current = setTimeout(() => {
-            onAction?.(node.onChange, { value });
+            onAction?.(node.onChange, {
+              value,
+            });
           }, 80);
         }}
         className="h-1.5 w-full cursor-pointer appearance-none rounded-full [&::-webkit-slider-thumb]:size-3.5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:shadow-sm"

@@ -12,8 +12,14 @@ export interface BoardBrickPlacement {
   brickTypeId: string;
   label?: string;
   config: Record<string, Json>;
-  position: { x: number; y: number };
-  size: { w: number; h: number };
+  position: {
+    x: number;
+    y: number;
+  };
+  size: {
+    w: number;
+    h: number;
+  };
 }
 
 /** A board layout */

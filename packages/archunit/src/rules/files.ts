@@ -28,7 +28,10 @@ export function requiredFiles(dirPattern: string, files: string[]): Rule {
         for (const file of files) {
           const path = dir.endsWith('/') ? `${dir}${file}` : `${dir}/${file}`;
           if (!(await ctx.exists(path))) {
-            yield { file: dir, message: `Missing "${file}"` };
+            yield {
+              file: dir,
+              message: `Missing "${file}"`,
+            };
           }
         }
       }

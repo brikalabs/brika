@@ -15,10 +15,16 @@ export interface IconNode extends BaseNode {
 }
 
 export function Icon(
-  props: Omit<IconNode, 'type' | 'onPress'> & { onPress?: ActionHandler }
+  props: Omit<IconNode, 'type' | 'onPress'> & {
+    onPress?: ActionHandler;
+  }
 ): IconNode {
   const { onPress, ...rest } = props;
-  return { type: 'icon', ...rest, onPress: onPress ? resolveAction(onPress) : undefined };
+  return {
+    type: 'icon',
+    ...rest,
+    onPress: onPress ? resolveAction(onPress) : undefined,
+  };
 }
 
 declare module './_shared' {

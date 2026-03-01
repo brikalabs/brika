@@ -43,15 +43,33 @@ describe('isPluginPackage', () => {
 
 describe('parseFilters', () => {
   test('wraps a single string into an array', () => {
-    expect(parseFilters('@brika/*')).toEqual(['@brika/*']);
+    expect(parseFilters('@brika/*')).toEqual([
+      '@brika/*',
+    ]);
   });
 
   test('returns the array as-is for a string array', () => {
-    expect(parseFilters(['@brika/sdk', '@brika/hub'])).toEqual(['@brika/sdk', '@brika/hub']);
+    expect(
+      parseFilters([
+        '@brika/sdk',
+        '@brika/hub',
+      ])
+    ).toEqual([
+      '@brika/sdk',
+      '@brika/hub',
+    ]);
   });
 
   test('filters out non-string entries from an array', () => {
-    expect(parseFilters(['valid', 123, null, 'also-valid', undefined])).toEqual([
+    expect(
+      parseFilters([
+        'valid',
+        123,
+        null,
+        'also-valid',
+        undefined,
+      ])
+    ).toEqual([
       'valid',
       'also-valid',
     ]);
@@ -79,7 +97,9 @@ describe('parseFilters', () => {
   });
 
   test('returns single-element array for empty string', () => {
-    expect(parseFilters('')).toEqual(['']);
+    expect(parseFilters('')).toEqual([
+      '',
+    ]);
   });
 });
 
@@ -88,8 +108,14 @@ describe('parseFilters', () => {
 describe('mustGet', () => {
   test('returns the value when key exists', () => {
     const map = new Map<string, number>([
-      ['a', 1],
-      ['b', 2],
+      [
+        'a',
+        1,
+      ],
+      [
+        'b',
+        2,
+      ],
     ]);
     expect(mustGet(map, 'a', 'not found')).toBe(1);
     expect(mustGet(map, 'b', 'not found')).toBe(2);
@@ -103,7 +129,12 @@ describe('mustGet', () => {
   });
 
   test('throws when value is explicitly undefined', () => {
-    const map = new Map<string, undefined>([['key', undefined]]);
+    const map = new Map<string, undefined>([
+      [
+        'key',
+        undefined,
+      ],
+    ]);
     expect(() => mustGet(map, 'key', 'undefined value')).toThrow('undefined value');
   });
 
@@ -121,7 +152,12 @@ describe('mustGet', () => {
   });
 
   test('works with non-string keys', () => {
-    const map = new Map<number, string>([[42, 'answer']]);
+    const map = new Map<number, string>([
+      [
+        42,
+        'answer',
+      ],
+    ]);
     expect(mustGet(map, 42, 'not found')).toBe('answer');
   });
 });

@@ -7,8 +7,8 @@
  *   </AuthProvider>
  */
 
-import React, { createContext, useCallback, useEffect, useMemo, useState, ReactNode } from 'react';
-import { AuthClient, Session, createAuthClient } from '../client/AuthClient';
+import React, { createContext, ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
+import { AuthClient, createAuthClient, Session } from '../client/AuthClient';
 
 export interface AuthContextType {
   user: Session['user'] | null;
@@ -33,7 +33,13 @@ export interface AuthProviderProps {
 }
 
 export function AuthProvider({ children, apiUrl }: Readonly<AuthProviderProps>) {
-  const client = useMemo(() => createAuthClient({ apiUrl }), []);
+  const client = useMemo(
+    () =>
+      createAuthClient({
+        apiUrl,
+      }),
+    []
+  );
 
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -55,7 +61,9 @@ export function AuthProvider({ children, apiUrl }: Readonly<AuthProviderProps>) 
     };
 
     loadSession();
-  }, [client]);
+  }, [
+    client,
+  ]);
 
   const clearSession = useCallback(() => setSession(null), []);
 
@@ -66,18 +74,30 @@ export function AuthProvider({ children, apiUrl }: Readonly<AuthProviderProps>) 
     } catch {
       setSession(null);
     }
-  }, [client]);
-
-  const value = useMemo<AuthContextType>(() => ({
-    user: session?.user || null,
-    session,
-    isAuthenticated: session !== null,
-    isLoading,
-    error,
+  }, [
     client,
-    clearSession,
-    refreshSession,
-  }), [session, isLoading, error, client, clearSession, refreshSession]);
+  ]);
+
+  const value = useMemo<AuthContextType>(
+    () => ({
+      user: session?.user || null,
+      session,
+      isAuthenticated: session !== null,
+      isLoading,
+      error,
+      client,
+      clearSession,
+      refreshSession,
+    }),
+    [
+      session,
+      isLoading,
+      error,
+      client,
+      clearSession,
+      refreshSession,
+    ]
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

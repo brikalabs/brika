@@ -1,14 +1,25 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "composite": true,
-    "lib": ["DOM", "DOM.Iterable", "ES2024", "ESNext"],
-    "jsx": "react-jsx",
-    "types": ["vite/client"],
     "baseUrl": ".",
+    "composite": true,
+    "lib": [
+      "DOM",
+      "DOM.Iterable",
+      "ES2024",
+      "ESNext"
+    ],
+    "jsx": "react-jsx",
+    "types": [
+      "vite/client"
+    ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": [
+        "./src/*"
+      ]
     }
   },
-  "include": ["src"]
+  "include": [
+    "src"
+  ]
 }

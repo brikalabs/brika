@@ -64,7 +64,12 @@ function InputGroupAddon({
       role="group"
       data-slot="input-group-addon"
       data-align={align}
-      className={cn(inputGroupAddonVariants({ align }), className)}
+      className={cn(
+        inputGroupAddonVariants({
+          align,
+        }),
+        className
+      )}
       onClick={(e) => {
         const target = e.target;
         if (target instanceof HTMLElement && target.closest('button')) {
@@ -110,7 +115,12 @@ function InputGroupButton({
       type={type}
       data-size={size}
       variant={variant}
-      className={cn(inputGroupButtonVariants({ size }), className)}
+      className={cn(
+        inputGroupButtonVariants({
+          size,
+        }),
+        className
+      )}
       {...props}
     />
   );

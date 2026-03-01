@@ -29,15 +29,28 @@ export class PackageManager {
 
   async *install(name: string, version?: string): AsyncGenerator<OperationProgress> {
     const spec = version ? `${name}@${version}` : name;
-    yield* this.#stream('install', name, ['install', spec]);
+    yield* this.#stream('install', name, [
+      'install',
+      spec,
+    ]);
   }
 
   async remove(name: string): Promise<void> {
-    await this.#run(['remove', name]);
+    await this.#run([
+      'remove',
+      name,
+    ]);
   }
 
   async *update(name?: string): AsyncGenerator<OperationProgress> {
-    const args = name ? ['update', name] : ['update'];
+    const args = name
+      ? [
+          'update',
+          name,
+        ]
+      : [
+          'update',
+        ];
     yield* this.#stream('update', name ?? 'all', args);
   }
 
@@ -48,13 +61,17 @@ export class PackageManager {
       cwd: this.#cwd,
       stdout: stdio,
       stderr: stdio,
-      env: { BUN_INSTALL_CACHE_DIR: this.#cacheDir },
+      env: {
+        BUN_INSTALL_CACHE_DIR: this.#cacheDir,
+      },
     });
   }
 
   async #run(args: string[]): Promise<void> {
     const code = await this.#spawn(args, 'ignore').exited;
-    if (code !== 0) throw new Error(`bun ${args.join(' ')} failed with exit code ${code}`);
+    if (code !== 0) {
+      throw new Error(`bun ${args.join(' ')} failed with exit code ${code}`);
+    }
   }
 
   async *#stream(
@@ -69,14 +86,23 @@ export class PackageManager {
       let buffer = '';
 
       for await (const chunk of proc.stderr) {
-        buffer += decoder.decode(chunk, { stream: true });
+        buffer += decoder.decode(chunk, {
+          stream: true,
+        });
         const lines = buffer.split('\n');
         buffer = lines.pop() ?? '';
 
         for (const line of lines) {
           const trimmed = line.trim();
-          if (!trimmed) continue;
-          yield { phase: detectPhase(trimmed), operation, package: packageName, message: trimmed };
+          if (!trimmed) {
+            continue;
+          }
+          yield {
+            phase: detectPhase(trimmed),
+            operation,
+            package: packageName,
+            message: trimmed,
+          };
         }
       }
 
@@ -92,14 +118,22 @@ export class PackageManager {
     }
 
     const code = await proc.exited;
-    if (code !== 0) throw new Error(`bun ${args.join(' ')} failed with exit code ${code}`);
+    if (code !== 0) {
+      throw new Error(`bun ${args.join(' ')} failed with exit code ${code}`);
+    }
   }
 }
 
 function detectPhase(line: string): OperationProgress['phase'] {
   const l = line.toLowerCase();
-  if (l.includes('resolving')) return 'resolving';
-  if (l.includes('downloading') || l.includes('get ') || l.includes('fetch')) return 'downloading';
-  if (l.includes('linking') || l.includes('installed') || l.includes('saved')) return 'linking';
+  if (l.includes('resolving')) {
+    return 'resolving';
+  }
+  if (l.includes('downloading') || l.includes('get ') || l.includes('fetch')) {
+    return 'downloading';
+  }
+  if (l.includes('linking') || l.includes('installed') || l.includes('saved')) {
+    return 'linking';
+  }
   return 'downloading';
 }

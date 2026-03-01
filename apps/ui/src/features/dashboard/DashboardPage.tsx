@@ -17,7 +17,9 @@ import { useHealth } from './hooks';
 
 async function fetchStats(): Promise<Stats> {
   const res = await fetch('/api/system');
-  if (!res.ok) throw new Error('Failed to fetch system info');
+  if (!res.ok) {
+    throw new Error('Failed to fetch system info');
+  }
   const data = await res.json();
   return data.stats;
 }
@@ -32,7 +34,9 @@ export function DashboardPage() {
   const { events: sparks } = useSparkStream();
 
   const { data: stats, isLoading: statsLoading } = useQuery({
-    queryKey: ['stats'],
+    queryKey: [
+      'stats',
+    ],
     queryFn: fetchStats,
     refetchInterval: 10000,
   });

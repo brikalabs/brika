@@ -15,23 +15,53 @@ import { getPrivateWorkspaceDependencyWarnings } from '../publish-warnings';
 
 describe('plurals', () => {
   test('returns singular form for count of 1', () => {
-    expect(plurals({ one: '# package', other: '# packages' }, 1)).toBe('1 package');
+    expect(
+      plurals(
+        {
+          one: '# package',
+          other: '# packages',
+        },
+        1
+      )
+    ).toBe('1 package');
   });
 
   test('supports exact value forms such as =0', () => {
-    expect(plurals({ '=0': 'no packages', one: '# package', other: '# packages' }, 0)).toBe(
-      'no packages'
-    );
-    expect(plurals({ '=0': 'no packages', one: '# package', other: '# packages' }, 2)).toBe(
-      '2 packages'
-    );
+    expect(
+      plurals(
+        {
+          '=0': 'no packages',
+          one: '# package',
+          other: '# packages',
+        },
+        0
+      )
+    ).toBe('no packages');
+    expect(
+      plurals(
+        {
+          '=0': 'no packages',
+          one: '# package',
+          other: '# packages',
+        },
+        2
+      )
+    ).toBe('2 packages');
   });
 
   test('uses locale category overrides via forms', () => {
-    const output = plurals({ one: '# entry', two: '# dual-entry', other: '# entries' }, 2, {
-      locale: 'ar',
-      numberFormat: new Intl.NumberFormat('en'),
-    });
+    const output = plurals(
+      {
+        one: '# entry',
+        two: '# dual-entry',
+        other: '# entries',
+      },
+      2,
+      {
+        locale: 'ar',
+        numberFormat: new Intl.NumberFormat('en'),
+      }
+    );
     expect(output).toBe('2 dual-entry');
   });
 
@@ -51,14 +81,36 @@ describe('plurals', () => {
   });
 
   test('supports forms without # placeholder', () => {
-    expect(plurals({ one: 'package', other: 'packages' }, 1)).toBe('package');
-    expect(plurals({ one: 'package', other: 'packages' }, 2)).toBe('packages');
+    expect(
+      plurals(
+        {
+          one: 'package',
+          other: 'packages',
+        },
+        1
+      )
+    ).toBe('package');
+    expect(
+      plurals(
+        {
+          one: 'package',
+          other: 'packages',
+        },
+        2
+      )
+    ).toBe('packages');
   });
 
   test('formats # with provided number formatter', () => {
-    const output = plurals({ other: '# packages' }, 1000, {
-      numberFormat: new Intl.NumberFormat('de-DE'),
-    });
+    const output = plurals(
+      {
+        other: '# packages',
+      },
+      1000,
+      {
+        numberFormat: new Intl.NumberFormat('de-DE'),
+      }
+    );
     expect(output).toBe('1.000 packages');
   });
 });
@@ -71,8 +123,17 @@ describe('countExports', () => {
   });
 
   test('counts keys in object exports', () => {
-    expect(countExports({ '.': './index.js' })).toBe(1);
-    expect(countExports({ '.': './index.js', './types': './types.js' })).toBe(2);
+    expect(
+      countExports({
+        '.': './index.js',
+      })
+    ).toBe(1);
+    expect(
+      countExports({
+        '.': './index.js',
+        './types': './types.js',
+      })
+    ).toBe(2);
     expect(countExports({})).toBe(0);
   });
 });
@@ -83,11 +144,21 @@ describe('getBinNames', () => {
   });
 
   test('returns package name for string shorthand', () => {
-    expect(getBinNames('my-cli', './bin/cli.js')).toEqual(['my-cli']);
+    expect(getBinNames('my-cli', './bin/cli.js')).toEqual([
+      'my-cli',
+    ]);
   });
 
   test('returns keys for object form', () => {
-    expect(getBinNames('my-pkg', { foo: './foo.js', bar: './bar.js' })).toEqual(['foo', 'bar']);
+    expect(
+      getBinNames('my-pkg', {
+        foo: './foo.js',
+        bar: './bar.js',
+      })
+    ).toEqual([
+      'foo',
+      'bar',
+    ]);
   });
 });
 
@@ -98,22 +169,44 @@ describe('getHooks', () => {
   });
 
   test('includes prepublishOnly when present', () => {
-    expect(getHooks({ prepublishOnly: 'tsc' })).toEqual(['prepublishOnly']);
+    expect(
+      getHooks({
+        prepublishOnly: 'tsc',
+      })
+    ).toEqual([
+      'prepublishOnly',
+    ]);
   });
 
   test('includes build when present', () => {
-    expect(getHooks({ build: 'bun run generate' })).toEqual(['build']);
+    expect(
+      getHooks({
+        build: 'bun run generate',
+      })
+    ).toEqual([
+      'build',
+    ]);
   });
 
   test('includes both when both present', () => {
-    expect(getHooks({ prepublishOnly: 'tsc', build: 'bun run generate' })).toEqual([
+    expect(
+      getHooks({
+        prepublishOnly: 'tsc',
+        build: 'bun run generate',
+      })
+    ).toEqual([
       'prepublishOnly',
       'build',
     ]);
   });
 
   test('ignores unrelated scripts', () => {
-    expect(getHooks({ dev: 'bun run src/index.ts', test: 'bun test' })).toEqual([]);
+    expect(
+      getHooks({
+        dev: 'bun run src/index.ts',
+        test: 'bun test',
+      })
+    ).toEqual([]);
   });
 });
 
@@ -160,8 +253,17 @@ describe('buildPublishArgs', () => {
 describe('getPrivateWorkspaceDependencyWarnings', () => {
   test('warns when package depends on private workspace packages', () => {
     const warnings = getPrivateWorkspaceDependencyWarnings(
-      { dependencyNames: ['@brika/private-a', '@brika/public-a', '@brika/private-b'] },
-      new Set(['@brika/private-a', '@brika/private-b'])
+      {
+        dependencyNames: [
+          '@brika/private-a',
+          '@brika/public-a',
+          '@brika/private-b',
+        ],
+      },
+      new Set([
+        '@brika/private-a',
+        '@brika/private-b',
+      ])
     );
     expect(warnings).toEqual([
       'depends on private workspace package "@brika/private-a"',
@@ -171,8 +273,14 @@ describe('getPrivateWorkspaceDependencyWarnings', () => {
 
   test('returns no warnings without matches', () => {
     const warnings = getPrivateWorkspaceDependencyWarnings(
-      { dependencyNames: ['@brika/public-a'] },
-      new Set(['@brika/private-a'])
+      {
+        dependencyNames: [
+          '@brika/public-a',
+        ],
+      },
+      new Set([
+        '@brika/private-a',
+      ])
     );
     expect(warnings).toEqual([]);
   });
@@ -186,7 +294,9 @@ describe('formatPackagePreview', () => {
   });
 
   test('shows description when present', () => {
-    const output = formatPackagePreview('my-pkg', '1.0.0', { description: 'A cool package' });
+    const output = formatPackagePreview('my-pkg', '1.0.0', {
+      description: 'A cool package',
+    });
     expect(output).toContain('A cool package');
   });
 
@@ -196,21 +306,31 @@ describe('formatPackagePreview', () => {
   });
 
   test('shows files list when present', () => {
-    const output = formatPackagePreview('my-pkg', '1.0.0', { files: ['src', 'dist'] });
+    const output = formatPackagePreview('my-pkg', '1.0.0', {
+      files: [
+        'src',
+        'dist',
+      ],
+    });
     expect(output).toContain('src');
     expect(output).toContain('dist');
   });
 
   test('shows export count for object exports', () => {
     const output = formatPackagePreview('my-pkg', '1.0.0', {
-      exports: { '.': './index.js', './types': './types.js' },
+      exports: {
+        '.': './index.js',
+        './types': './types.js',
+      },
     });
     expect(output).toContain('2 paths');
   });
 
   test('shows singular export path', () => {
     const output = formatPackagePreview('my-pkg', '1.0.0', {
-      exports: { '.': './index.js' },
+      exports: {
+        '.': './index.js',
+      },
     });
     expect(output).toContain('1 path');
     expect(output).not.toContain('1 paths');
@@ -218,14 +338,18 @@ describe('formatPackagePreview', () => {
 
   test('shows bin names', () => {
     const output = formatPackagePreview('create-brika', '1.0.0', {
-      bin: { 'create-brika': './src/index.ts' },
+      bin: {
+        'create-brika': './src/index.ts',
+      },
     });
     expect(output).toContain('create-brika');
   });
 
   test('shows hooks when prepublishOnly present', () => {
     const output = formatPackagePreview('my-pkg', '1.0.0', {
-      scripts: { prepublishOnly: 'bun run tsc' },
+      scripts: {
+        prepublishOnly: 'bun run tsc',
+      },
     });
     expect(output).toContain('prepublishOnly');
     expect(output).toContain('✓');
@@ -233,7 +357,9 @@ describe('formatPackagePreview', () => {
 
   test('omits hooks section when no relevant scripts', () => {
     const output = formatPackagePreview('my-pkg', '1.0.0', {
-      scripts: { dev: 'bun run src/index.ts' },
+      scripts: {
+        dev: 'bun run src/index.ts',
+      },
     });
     expect(output).not.toContain('hooks');
   });
@@ -268,7 +394,14 @@ describe('formatPackagePreview', () => {
   });
 
   test('shows warning details when important metadata is missing', () => {
-    const output = formatPackagePreview('my-pkg', '1.0.0', { hasReadme: false }, null);
+    const output = formatPackagePreview(
+      'my-pkg',
+      '1.0.0',
+      {
+        hasReadme: false,
+      },
+      null
+    );
     expect(output).toContain('⚠');
     expect(output).toContain('README.md missing');
     expect(output).toContain('license missing');
@@ -338,7 +471,9 @@ describe('formatPackagePreview', () => {
         keywordsCount: 2,
       },
       null,
-      ['engines.brika "^0.2.0" does not cover current SDK version 0.3.0']
+      [
+        'engines.brika "^0.2.0" does not cover current SDK version 0.3.0',
+      ]
     );
     expect(output).toContain('does not cover current SDK version 0.3.0');
   });
@@ -358,7 +493,9 @@ describe('formatPackagePreview', () => {
         keywordsCount: 1,
       },
       null,
-      ['keywords must include "brika" so the plugin can be found by the npm registry search']
+      [
+        'keywords must include "brika" so the plugin can be found by the npm registry search',
+      ]
     );
     expect(output).toContain('keywords must include "brika"');
   });
@@ -377,16 +514,34 @@ describe('readPackageDetails', () => {
           name: 'my-pkg',
           version: '1.0.0',
           description: 'A package',
-          files: ['src', 'dist'],
-          exports: { '.': './index.js' },
-          bin: { 'my-cli': './bin.js' },
-          scripts: { build: 'tsc' },
-          dependencies: { '@brika/public-dep': '^1.0.0' },
-          peerDependencies: { '@brika/peer-dep': '^1.0.0' },
-          optionalDependencies: { '@brika/optional-dep': '^1.0.0' },
+          files: [
+            'src',
+            'dist',
+          ],
+          exports: {
+            '.': './index.js',
+          },
+          bin: {
+            'my-cli': './bin.js',
+          },
+          scripts: {
+            build: 'tsc',
+          },
+          dependencies: {
+            '@brika/public-dep': '^1.0.0',
+          },
+          peerDependencies: {
+            '@brika/peer-dep': '^1.0.0',
+          },
+          optionalDependencies: {
+            '@brika/optional-dep': '^1.0.0',
+          },
           license: 'MIT',
           repository: 'https://github.com/example/repo',
-          keywords: ['sdk', 'tools'],
+          keywords: [
+            'sdk',
+            'tools',
+          ],
         },
         '/workspace/my-pkg/README.md': '# Readme',
       })
@@ -394,10 +549,19 @@ describe('readPackageDetails', () => {
 
     const details = await readPackageDetails(path);
     expect(details.description).toBe('A package');
-    expect(details.files).toEqual(['src', 'dist']);
-    expect(details.exports).toEqual({ '.': './index.js' });
-    expect(details.bin).toEqual({ 'my-cli': './bin.js' });
-    expect(details.scripts).toEqual({ build: 'tsc' });
+    expect(details.files).toEqual([
+      'src',
+      'dist',
+    ]);
+    expect(details.exports).toEqual({
+      '.': './index.js',
+    });
+    expect(details.bin).toEqual({
+      'my-cli': './bin.js',
+    });
+    expect(details.scripts).toEqual({
+      build: 'tsc',
+    });
     expect(details.hasReadme).toBe(true);
     expect(details.license).toBe('MIT');
     expect(details.hasRepository).toBe(true);
@@ -411,7 +575,12 @@ describe('readPackageDetails', () => {
 
   test('returns undefined fields when absent', async () => {
     const path = '/workspace/minimal/package.json';
-    bun.file(path, { name: 'minimal', version: '1.0.0' }).apply();
+    bun
+      .file(path, {
+        name: 'minimal',
+        version: '1.0.0',
+      })
+      .apply();
 
     const details = await readPackageDetails(path);
     expect(details.description).toBeUndefined();
@@ -429,7 +598,10 @@ describe('readPackageDetails', () => {
     const path = '/workspace/readme-case/package.json';
     bun
       .fs({
-        [path]: { name: 'readme-case', version: '1.0.0' },
+        [path]: {
+          name: 'readme-case',
+          version: '1.0.0',
+        },
         '/workspace/readme-case/ReadMe.MD': '# Readme',
       })
       .apply();
@@ -461,7 +633,11 @@ describe('readPackageDetails', () => {
       .apply();
 
     const details = await readPackageDetails(path);
-    expect(details.dependencyNames).toEqual(['@brika/a', '@brika/b', '@brika/c']);
+    expect(details.dependencyNames).toEqual([
+      '@brika/a',
+      '@brika/b',
+      '@brika/c',
+    ]);
   });
 });
 
@@ -474,10 +650,17 @@ describe('fetchPublishedVersion', () => {
     bun
       .fetch(() =>
         Promise.resolve(
-          new Response(JSON.stringify({ version: '2.3.4' }), {
-            status: 200,
-            headers: { 'Content-Type': 'application/json' },
-          })
+          new Response(
+            JSON.stringify({
+              version: '2.3.4',
+            }),
+            {
+              status: 200,
+              headers: {
+                'Content-Type': 'application/json',
+              },
+            }
+          )
         )
       )
       .apply();
@@ -487,7 +670,15 @@ describe('fetchPublishedVersion', () => {
   });
 
   test('returns null on 404 (package not published)', async () => {
-    bun.fetch(() => Promise.resolve(new Response('Not Found', { status: 404 }))).apply();
+    bun
+      .fetch(() =>
+        Promise.resolve(
+          new Response('Not Found', {
+            status: 404,
+          })
+        )
+      )
+      .apply();
 
     const version = await fetchPublishedVersion('unpublished-pkg');
     expect(version).toBeNull();
@@ -499,7 +690,9 @@ describe('fetchPublishedVersion', () => {
         Promise.resolve(
           new Response(JSON.stringify({}), {
             status: 200,
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+            },
           })
         )
       )

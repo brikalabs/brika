@@ -183,7 +183,10 @@ export function createPatternSet(pattern: ActionPattern): PatternSetResult {
     processMapPattern(pattern, ids, predicates);
   }
 
-  return { ids, predicates };
+  return {
+    ids,
+    predicates,
+  };
 }
 
 /**
@@ -191,10 +194,14 @@ export function createPatternSet(pattern: ActionPattern): PatternSetResult {
  */
 export function matchesPatternSet(result: PatternSetResult, action: Action): boolean {
   const actionId = action[ACTION_ID];
-  if (!result.ids.has(actionId)) return false;
+  if (!result.ids.has(actionId)) {
+    return false;
+  }
 
   const predicate = result.predicates.get(actionId);
-  if (predicate && !predicate(action)) return false;
+  if (predicate && !predicate(action)) {
+    return false;
+  }
 
   return true;
 }

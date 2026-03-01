@@ -50,7 +50,9 @@ export function checkCompatibility(
     const satisfied = semver.satisfies(currentVersion, engineRequirement);
 
     if (satisfied) {
-      return { compatible: true };
+      return {
+        compatible: true,
+      };
     }
 
     return {
@@ -96,8 +98,12 @@ export function meetsMinimumVersion(
 export function checkPluginCompatibility(pluginManifest: {
   name: string;
   version: string;
-  engines?: { brika?: string };
-}): CompatibilityResult & { suggestion?: string } {
+  engines?: {
+    brika?: string;
+  };
+}): CompatibilityResult & {
+  suggestion?: string;
+} {
   const result = checkCompatibility(pluginManifest.engines?.brika);
 
   if (!result.compatible && !pluginManifest.engines?.brika) {
@@ -109,7 +115,7 @@ export function checkPluginCompatibility(pluginManifest: {
 
   if (!result.compatible) {
     // Provide helpful suggestion
-    const requirement = pluginManifest.engines!.brika!;
+    const requirement = pluginManifest.engines?.brika ?? 'unknown';
 
     return {
       ...result,

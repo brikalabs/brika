@@ -61,7 +61,9 @@ export function defineSharedStore<T>(initial: T): SharedStore<T> {
     const next = typeof value === 'function' ? (value as (prev: T) => T)(state) : value;
     if (!Object.is(state, next)) {
       state = next;
-      for (const fn of listeners) fn();
+      for (const fn of listeners) {
+        fn();
+      }
     }
   };
 

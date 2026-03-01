@@ -11,7 +11,9 @@ import { HubConfig } from '@/runtime/config';
 import { Logger } from '@/runtime/logs/log-router';
 import { StateStore } from '@/runtime/state/state-store';
 
-useTestBed({ autoStub: false });
+useTestBed({
+  autoStub: false,
+});
 
 const TEST_DIR = join(import.meta.dir, '.test-state-store');
 
@@ -20,26 +22,37 @@ describe('StateStore', () => {
   let testPluginDir: string;
 
   beforeAll(async () => {
-    await rm(TEST_DIR, { recursive: true, force: true });
-    await mkdir(TEST_DIR, { recursive: true });
+    await rm(TEST_DIR, {
+      recursive: true,
+      force: true,
+    });
+    await mkdir(TEST_DIR, {
+      recursive: true,
+    });
 
     // Create a test plugin directory with valid package.json
     testPluginDir = join(TEST_DIR, 'test-plugin');
-    await mkdir(testPluginDir, { recursive: true });
+    await mkdir(testPluginDir, {
+      recursive: true,
+    });
     await Bun.write(
       join(testPluginDir, 'package.json'),
       JSON.stringify({
         name: '@test/plugin',
         version: '1.0.0',
         main: './index.ts',
-        engines: { brika: '^0.2.0' },
+        engines: {
+          brika: '^0.2.0',
+        },
       })
     );
     await Bun.write(join(testPluginDir, 'index.ts'), 'export default {}');
   });
 
   beforeEach(() => {
-    provide(HubConfig, { homeDir: TEST_DIR });
+    provide(HubConfig, {
+      homeDir: TEST_DIR,
+    });
     stub(Logger);
     store = get(StateStore);
   });
@@ -49,14 +62,19 @@ describe('StateStore', () => {
     // Clean up state file between tests
     const stateFile = join(TEST_DIR, 'state.json');
     try {
-      await rm(stateFile, { force: true });
+      await rm(stateFile, {
+        force: true,
+      });
     } catch {
       // Ignore if file doesn't exist
     }
   });
 
   afterAll(async () => {
-    await rm(TEST_DIR, { recursive: true, force: true });
+    await rm(TEST_DIR, {
+      recursive: true,
+      force: true,
+    });
   });
 
   describe('init', () => {
@@ -246,7 +264,9 @@ describe('StateStore', () => {
 
       await store.setHealth('@test/plugin', 'crashed', {
         key: 'plugins:errors.crashed',
-        params: { reason: 'Connection timeout' },
+        params: {
+          reason: 'Connection timeout',
+        },
         message: 'Connection timeout',
       });
 
@@ -389,7 +409,11 @@ describe('StateStore', () => {
         uid: 'uid1',
       });
 
-      await store.syncToConfig(new Set(['@test/plugin']));
+      await store.syncToConfig(
+        new Set([
+          '@test/plugin',
+        ])
+      );
 
       expect(store.get('@test/plugin')).toBeDefined();
     });

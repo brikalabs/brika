@@ -6,16 +6,25 @@ import { PluginRouteRegistry } from '@/runtime/plugins/plugin-route-registry';
 describe('PluginRouteRegistry', () => {
   let registry: PluginRouteRegistry;
 
-  useTestBed({ autoStub: false }, () => {
-    registry = get(PluginRouteRegistry);
-  });
+  useTestBed(
+    {
+      autoStub: false,
+    },
+    () => {
+      registry = get(PluginRouteRegistry);
+    }
+  );
 
   describe('register()', () => {
     test('adds a route', () => {
       registry.register('my-plugin', 'GET', '/hello');
 
       const result = registry.resolve('my-plugin', 'GET', '/hello');
-      expect(result).toEqual({ pluginName: 'my-plugin', method: 'GET', path: '/hello' });
+      expect(result).toEqual({
+        pluginName: 'my-plugin',
+        method: 'GET',
+        path: '/hello',
+      });
     });
 
     test('adds multiple routes for the same plugin', () => {
@@ -40,7 +49,11 @@ describe('PluginRouteRegistry', () => {
       registry.register('alpha', 'POST', '/submit');
 
       const result = registry.resolve('alpha', 'POST', '/submit');
-      expect(result).toEqual({ pluginName: 'alpha', method: 'POST', path: '/submit' });
+      expect(result).toEqual({
+        pluginName: 'alpha',
+        method: 'POST',
+        path: '/submit',
+      });
     });
 
     test('returns undefined for unknown plugin', () => {
@@ -75,7 +88,11 @@ describe('PluginRouteRegistry', () => {
       registry.register('plugin-a', 'GET', '/oauth/callback');
 
       const result = registry.resolveByPath('GET', '/oauth/callback');
-      expect(result).toEqual({ pluginName: 'plugin-a', method: 'GET', path: '/oauth/callback' });
+      expect(result).toEqual({
+        pluginName: 'plugin-a',
+        method: 'GET',
+        path: '/oauth/callback',
+      });
     });
 
     test('returns the first matching route when multiple plugins register the same path', () => {
@@ -85,8 +102,8 @@ describe('PluginRouteRegistry', () => {
       const result = registry.resolveByPath('GET', '/shared');
       expect(result).toBeDefined();
       // Should return one of them (first inserted via Map iteration order)
-      expect(result!.method).toBe('GET');
-      expect(result!.path).toBe('/shared');
+      expect(result?.method).toBe('GET');
+      expect(result?.path).toBe('/shared');
     });
 
     test('returns undefined for unknown method', () => {
@@ -117,9 +134,21 @@ describe('PluginRouteRegistry', () => {
 
       const routes = registry.listByPlugin('my-plugin');
       expect(routes).toHaveLength(3);
-      expect(routes).toContainEqual({ pluginName: 'my-plugin', method: 'GET', path: '/a' });
-      expect(routes).toContainEqual({ pluginName: 'my-plugin', method: 'POST', path: '/b' });
-      expect(routes).toContainEqual({ pluginName: 'my-plugin', method: 'PUT', path: '/c' });
+      expect(routes).toContainEqual({
+        pluginName: 'my-plugin',
+        method: 'GET',
+        path: '/a',
+      });
+      expect(routes).toContainEqual({
+        pluginName: 'my-plugin',
+        method: 'POST',
+        path: '/b',
+      });
+      expect(routes).toContainEqual({
+        pluginName: 'my-plugin',
+        method: 'PUT',
+        path: '/c',
+      });
     });
 
     test('returns empty array for unknown plugin', () => {

@@ -11,7 +11,7 @@
   "scripts": {
     "dev": "bunx --bun vite --configLoader runner",
     "build": "bunx --bun vite build --configLoader runner",
-    "tsc": "bunx --bun tsc --noEmit --skipLibCheck",
+    "typecheck": "tsgo --project tsconfig.check.json --noEmit --skipLibCheck",
     "lint": "bunx --bun biome check .",
     "check:arch": "archunit"
   },
@@ -71,7 +71,6 @@
     "@types/react-dom": "^19.2.3",
     "@types/react-grid-layout": "^2.1.0",
     "@vitejs/plugin-react": "^5.1.4",
-    "typescript": "^5.9.3",
     "vite": "^7.3.0"
   }
 }

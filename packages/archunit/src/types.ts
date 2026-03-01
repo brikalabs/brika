@@ -32,7 +32,10 @@ export type RuleInput = Rule | Rule[] | Buildable;
 
 export interface ArchResult {
   passed: boolean;
-  violations: { rule: string; violations: Violation[] }[];
+  violations: {
+    rule: string;
+    violations: Violation[];
+  }[];
   elapsed: number;
   rulesChecked: number;
   filesScanned: number;

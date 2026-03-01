@@ -24,7 +24,10 @@ export default function CpuBrick() {
         <div className="mb-[8%] h-[6%] min-h-1 rounded-full bg-muted">
           <div
             className="h-full rounded-full transition-all duration-1000 ease-out"
-            style={{ width: `${rounded}%`, background: color }}
+            style={{
+              width: `${rounded}%`,
+              background: color,
+            }}
           />
         </div>
         <div className="text-[clamp(1.25rem,22%,1.5rem)] font-bold leading-tight tracking-tight tabular-nums">

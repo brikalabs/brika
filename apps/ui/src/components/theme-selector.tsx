@@ -11,12 +11,31 @@ import { type ThemeMode, useTheme } from '@/lib/theme-context';
 import { useLocale } from '@/lib/use-locale';
 import { cn } from '@/lib/utils';
 
-const THEME_KEYS = ['default', 'ocean', 'forest', 'sunset', 'lavender', 'ruby'] as const;
+const THEME_KEYS = [
+  'default',
+  'ocean',
+  'forest',
+  'sunset',
+  'lavender',
+  'ruby',
+] as const;
 
-const MODE_OPTIONS: { value: ThemeMode; icon: typeof Sun }[] = [
-  { value: 'light', icon: Sun },
-  { value: 'dark', icon: Moon },
-  { value: 'system', icon: Monitor },
+const MODE_OPTIONS: {
+  value: ThemeMode;
+  icon: typeof Sun;
+}[] = [
+  {
+    value: 'light',
+    icon: Sun,
+  },
+  {
+    value: 'dark',
+    icon: Moon,
+  },
+  {
+    value: 'system',
+    icon: Monitor,
+  },
 ];
 
 export function ThemeSelector() {

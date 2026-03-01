@@ -62,12 +62,16 @@ export class FileRule {
     return {
       name,
       async *check(ctx: RuleContext) {
-        if (skipped) return;
+        if (skipped) {
+          return;
+        }
         for await (const file of ctx.glob(pattern)) {
           const content = await ctx.read(file);
           for (const check of checks) {
             const violation = await check(ctx, file, content);
-            if (violation) yield violation;
+            if (violation) {
+              yield violation;
+            }
           }
         }
       },

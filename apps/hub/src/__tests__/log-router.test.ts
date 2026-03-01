@@ -8,7 +8,9 @@ import { get, reset, useTestBed } from '@brika/di/testing';
 import { Logger, ScopedLogger } from '@/runtime/logs/log-router';
 import type { LogEvent, LogSource } from '@/runtime/logs/types';
 
-useTestBed({ autoStub: false });
+useTestBed({
+  autoStub: false,
+});
 
 describe('Logger', () => {
   let logger: Logger;
@@ -156,7 +158,9 @@ describe('Logger', () => {
       const events: LogEvent[] = [];
       logger.subscribe((e) => events.push(e));
 
-      logger.info('test', { key: 'value' });
+      logger.info('test', {
+        key: 'value',
+      });
 
       expect(events[0]?.meta?.key).toBe('value');
     });
@@ -165,7 +169,17 @@ describe('Logger', () => {
       const events: LogEvent[] = [];
       logger.subscribe((e) => events.push(e));
 
-      logger.info('test', { a: 1 }, { meta: { b: 2 } });
+      logger.info(
+        'test',
+        {
+          a: 1,
+        },
+        {
+          meta: {
+            b: 2,
+          },
+        }
+      );
 
       expect(events[0]?.meta?.a).toBe(1);
       expect(events[0]?.meta?.b).toBe(2);
@@ -178,7 +192,9 @@ describe('Logger', () => {
       logger.subscribe((e) => events.push(e));
 
       const error = new Error('test error');
-      logger.error('failed', undefined, { error });
+      logger.error('failed', undefined, {
+        error,
+      });
 
       expect(events[0]?.error?.name).toBe('Error');
       expect(events[0]?.error?.message).toBe('test error');
@@ -190,8 +206,12 @@ describe('Logger', () => {
       logger.subscribe((e) => events.push(e));
 
       const cause = new Error('root cause');
-      const error = new Error('wrapper', { cause });
-      logger.error('failed', undefined, { error });
+      const error = new Error('wrapper', {
+        cause,
+      });
+      logger.error('failed', undefined, {
+        error,
+      });
 
       expect(events[0]?.error?.cause).toContain('root cause');
     });
@@ -200,7 +220,9 @@ describe('Logger', () => {
       const events: LogEvent[] = [];
       logger.subscribe((e) => events.push(e));
 
-      logger.error('failed', undefined, { error: 'string error' });
+      logger.error('failed', undefined, {
+        error: 'string error',
+      });
 
       expect(events[0]?.error?.name).toBe('Error');
       expect(events[0]?.error?.message).toBe('string error');
@@ -210,7 +232,11 @@ describe('Logger', () => {
       const events: LogEvent[] = [];
       logger.subscribe((e) => events.push(e));
 
-      logger.error('failed', undefined, { error: { code: 'E001' } });
+      logger.error('failed', undefined, {
+        error: {
+          code: 'E001',
+        },
+      });
 
       expect(events[0]?.error?.message).toContain('E001');
     });
@@ -247,7 +273,9 @@ describe('ScopedLogger', () => {
     const events: LogEvent[] = [];
     logger.subscribe((e) => events.push(e));
 
-    scoped.info('test', undefined, { source: 'events' });
+    scoped.info('test', undefined, {
+      source: 'events',
+    });
 
     expect(events[0]?.source).toBe('events');
   });

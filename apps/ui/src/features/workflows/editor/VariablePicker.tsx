@@ -53,7 +53,13 @@ function buildTree(variables: VariableInfo[]): TreeNode[] {
       type: 'object',
       source: 'Event data',
       children: [
-        { name: 'type', fullPath: 'trigger.type', type: 'string', source: 'trigger', children: [] },
+        {
+          name: 'type',
+          fullPath: 'trigger.type',
+          type: 'string',
+          source: 'trigger',
+          children: [],
+        },
         {
           name: 'payload',
           fullPath: 'trigger.payload',
@@ -68,7 +74,13 @@ function buildTree(variables: VariableInfo[]): TreeNode[] {
           source: 'trigger',
           children: [],
         },
-        { name: 'ts', fullPath: 'trigger.ts', type: 'number', source: 'trigger', children: [] },
+        {
+          name: 'ts',
+          fullPath: 'trigger.ts',
+          type: 'number',
+          source: 'trigger',
+          children: [],
+        },
       ],
     },
     // Previous block output
@@ -119,9 +131,15 @@ function TreeNodeItem({
   };
 
   const getIcon = () => {
-    if (node.name === 'trigger') return <Zap className="size-3.5 text-green-500" />;
-    if (node.name === 'prev') return <Clock className="size-3.5 text-blue-500" />;
-    if (node.name === 'vars') return <Database className="size-3.5 text-purple-500" />;
+    if (node.name === 'trigger') {
+      return <Zap className="size-3.5 text-green-500" />;
+    }
+    if (node.name === 'prev') {
+      return <Clock className="size-3.5 text-blue-500" />;
+    }
+    if (node.name === 'vars') {
+      return <Database className="size-3.5 text-purple-500" />;
+    }
     return <Variable className="size-3.5 text-primary" />;
   };
 
@@ -132,7 +150,9 @@ function TreeNodeItem({
           'group flex cursor-pointer items-center gap-1 rounded px-2 py-1 hover:bg-accent',
           'transition-colors'
         )}
-        style={{ paddingLeft: `${depth * 16 + 8}px` }}
+        style={{
+          paddingLeft: `${depth * 16 + 8}px`,
+        }}
       >
         {hasChildren ? (
           <button onClick={() => setExpanded(!expanded)} className="rounded p-0.5 hover:bg-muted">

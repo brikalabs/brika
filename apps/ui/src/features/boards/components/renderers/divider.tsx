@@ -3,7 +3,11 @@ import { defineRenderer } from './registry';
 
 defineRenderer('divider', ({ node }) => {
   const isVertical = node.direction === 'vertical';
-  const lineStyle = node.color ? { backgroundColor: node.color } : undefined;
+  const lineStyle = node.color
+    ? {
+        backgroundColor: node.color,
+      }
+    : undefined;
 
   if (node.label && !isVertical) {
     return (

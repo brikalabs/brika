@@ -5,13 +5,13 @@
  * IP forwarding, and session attachment to context.
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 import { container } from '@brika/di';
+import { initAuthConfig } from '../config';
 import { verifyToken } from '../middleware/verifyToken';
 import { SessionService } from '../services/SessionService';
-import { initAuthConfig } from '../config';
-import { Role, Scope } from '../types';
 import type { Session } from '../types';
+import { Role, Scope } from '../types';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -19,24 +19,40 @@ import type { Session } from '../types';
 
 function mockContext(
   url: string,
-  options?: { cookie?: string; auth?: string; ip?: string; realIp?: string }
+  options?: {
+    cookie?: string;
+    auth?: string;
+    ip?: string;
+    realIp?: string;
+  }
 ) {
   const next = vi.fn().mockResolvedValue(undefined);
   const ctx = {
     req: {
       url,
       header: vi.fn((name: string) => {
-        if (name === 'Cookie') return options?.cookie;
-        if (name === 'Authorization') return options?.auth;
-        if (name === 'x-forwarded-for') return options?.ip;
-        if (name === 'x-real-ip') return options?.realIp;
+        if (name === 'Cookie') {
+          return options?.cookie;
+        }
+        if (name === 'Authorization') {
+          return options?.auth;
+        }
+        if (name === 'x-forwarded-for') {
+          return options?.ip;
+        }
+        if (name === 'x-real-ip') {
+          return options?.realIp;
+        }
         return undefined;
       }),
     },
     get: vi.fn(),
     set: vi.fn(),
   };
-  return { ctx, next };
+  return {
+    ctx,
+    next,
+  };
 }
 
 const fakeSession: Session = {
@@ -45,7 +61,9 @@ const fakeSession: Session = {
   userEmail: 'user@test.com',
   userName: 'Test User',
   userRole: Role.USER,
-  scopes: [Scope.WORKFLOW_READ],
+  scopes: [
+    Scope.WORKFLOW_READ,
+  ],
 };
 
 // ---------------------------------------------------------------------------
@@ -58,7 +76,9 @@ const mockSessionService = {
 
 beforeEach(() => {
   container.clearInstances();
-  container.register(SessionService, { useValue: mockSessionService as never });
+  container.register(SessionService, {
+    useValue: mockSessionService as never,
+  });
   mockSessionService.validateSession.mockReset();
   initAuthConfig(); // ensures cookieName defaults to 'brika_session'
 });
@@ -106,7 +126,10 @@ describe('verifyToken', () => {
 
     await middleware(ctx as never, next);
 
-    expect(mockSessionService.validateSession).toHaveBeenCalledWith('bearer-token-value', undefined);
+    expect(mockSessionService.validateSession).toHaveBeenCalledWith(
+      'bearer-token-value',
+      undefined
+    );
     expect(ctx.set).toHaveBeenCalledWith('session', fakeSession);
     expect(next).toHaveBeenCalledTimes(1);
   });

@@ -4,7 +4,10 @@ import { getOrThrow } from '@/runtime/http/utils/resource-helpers';
 
 describe('getOrThrow', () => {
   test('should return value when not null', () => {
-    const value = { id: 1, name: 'test' };
+    const value = {
+      id: 1,
+      name: 'test',
+    };
 
     const result = getOrThrow(value, 'Not found');
 
@@ -61,7 +64,10 @@ describe('getOrThrow', () => {
       name: string;
     }
 
-    const user: User | null = { id: 1, name: 'Test' };
+    const user: User | null = {
+      id: 1,
+      name: 'Test',
+    };
     const result: User = getOrThrow(user, 'User not found');
 
     expect(result.id).toBe(1);

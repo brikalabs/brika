@@ -199,10 +199,21 @@ export class HttpError extends Error {
    * Check if error is retryable
    */
   get isRetryable(): boolean {
-    if (this.isNetworkError) return true;
-    if (!this.status) return false;
+    if (this.isNetworkError) {
+      return true;
+    }
+    if (!this.status) {
+      return false;
+    }
 
-    const retryableStatusCodes = [408, 429, 500, 502, 503, 504];
+    const retryableStatusCodes = [
+      408,
+      429,
+      500,
+      502,
+      503,
+      504,
+    ];
     return retryableStatusCodes.includes(this.status);
   }
 }

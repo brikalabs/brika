@@ -71,7 +71,13 @@ export class SparkRegistry {
    * Register a spark definition from a plugin
    * The full type will be `pluginId:sparkId` (e.g., "plugin-switch:pressed")
    */
-  register(spark: { id: string; schema?: Record<string, unknown> }, pluginId: string): void {
+  register(
+    spark: {
+      id: string;
+      schema?: Record<string, unknown>;
+    },
+    pluginId: string
+  ): void {
     const fullType = `${pluginId}:${spark.id}`;
 
     if (this.#sparks.has(fullType)) {
@@ -104,7 +110,9 @@ export class SparkRegistry {
           {
             sparkType: fullType,
           },
-          { error: e }
+          {
+            error: e,
+          }
         );
       }
     }
@@ -148,21 +156,27 @@ export class SparkRegistry {
    * Get all registered spark definitions
    */
   list(): RegisteredSpark[] {
-    return [...this.#sparks.values()].sort((a, b) => a.type.localeCompare(b.type));
+    return [
+      ...this.#sparks.values(),
+    ].sort((a, b) => a.type.localeCompare(b.type));
   }
 
   /**
    * Get sparks registered by a specific plugin
    */
   listByPlugin(pluginId: string): RegisteredSpark[] {
-    return [...this.#sparks.values()].filter((s) => s.pluginId === pluginId);
+    return [
+      ...this.#sparks.values(),
+    ].filter((s) => s.pluginId === pluginId);
   }
 
   /**
    * Get sparks by owner returning SparkSummary
    */
   listByOwner(pluginId: string): SparkSummary[] {
-    return [...this.#sparks.values()]
+    return [
+      ...this.#sparks.values(),
+    ]
       .filter((s) => s.pluginId === pluginId)
       .map((s) => ({
         type: s.type,
@@ -176,7 +190,9 @@ export class SparkRegistry {
    * Get all spark summaries for UI
    */
   listSummaries(): SparkSummary[] {
-    return [...this.#sparks.values()].map((s) => ({
+    return [
+      ...this.#sparks.values(),
+    ].map((s) => ({
       type: s.type,
       name: s.name,
       description: s.description,

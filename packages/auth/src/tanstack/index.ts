@@ -3,10 +3,13 @@
  * TanStack Router integration for protected routes
  */
 
-export { createProtectedRoute, createProtectedRoutes } from './routeBuilder';
 export type {
+  ExtractParams,
+  NormalizeParam,
+  ParamsArg,
   ProtectedRouteDefinition,
-  ProtectedRouteWithChildren,
   ProtectedRouteResult,
   ProtectedRoutesOptions,
+  ProtectedRouteWithChildren,
 } from './routeBuilder';
+export { createProtectedRoute, createProtectedRoutes, resolvePath } from './routeBuilder';

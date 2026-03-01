@@ -53,7 +53,9 @@ describe('ensureFlowImpl', () => {
     // Simulate the original flow emitting
     subscribers.forEach((s) => s(42));
 
-    expect(values).toEqual([42]);
+    expect(values).toEqual([
+      42,
+    ]);
   });
 
   test('wrapped flow pushes values correctly', () => {
@@ -74,7 +76,10 @@ describe('ensureFlowImpl', () => {
     subscribers.forEach((s) => s('hello'));
     subscribers.forEach((s) => s('world'));
 
-    expect(values).toEqual(['hello', 'world']);
+    expect(values).toEqual([
+      'hello',
+      'world',
+    ]);
   });
 
   test('wrapped flow setTimeout works correctly', async () => {
@@ -134,7 +139,9 @@ describe('operatorFlow', () => {
 
     flow.push(42);
 
-    expect(values).toEqual(['42']);
+    expect(values).toEqual([
+      '42',
+    ]);
   });
 
   test('provides subscribe in context', () => {
@@ -166,7 +173,9 @@ describe('operatorFlow', () => {
     unsubscribeFn?.();
     flow.push(2);
 
-    expect(values).toEqual([1]);
+    expect(values).toEqual([
+      1,
+    ]);
   });
 
   test('provides push in context', () => {
@@ -183,7 +192,10 @@ describe('operatorFlow', () => {
 
     flow.push(1);
 
-    expect(values).toEqual([10, 100]);
+    expect(values).toEqual([
+      10,
+      100,
+    ]);
   });
 
   test('provides setTimeout in context', async () => {
@@ -202,7 +214,9 @@ describe('operatorFlow', () => {
     expect(values).toHaveLength(0);
 
     await wait(50);
-    expect(values).toEqual([42]);
+    expect(values).toEqual([
+      42,
+    ]);
   });
 
   test('provides latest in context', () => {
@@ -242,7 +256,9 @@ describe('operatorFlow', () => {
 
     subscribers.forEach((s) => s(42));
 
-    expect(values).toEqual(['value: 42']);
+    expect(values).toEqual([
+      'value: 42',
+    ]);
   });
 });
 
@@ -259,7 +275,10 @@ describe('subscribeRaw', () => {
     flow.push(1);
     flow.push(2);
 
-    expect(values).toEqual([1, 2]);
+    expect(values).toEqual([
+      1,
+      2,
+    ]);
   });
 
   test('returns cleanup function', () => {
@@ -271,7 +290,9 @@ describe('subscribeRaw', () => {
     cleanup();
     flow.push(2);
 
-    expect(values).toEqual([1]);
+    expect(values).toEqual([
+      1,
+    ]);
   });
 
   test('handles FlowImpl directly', () => {
@@ -283,7 +304,9 @@ describe('subscribeRaw', () => {
     cleanup();
     flow.push('world');
 
-    expect(values).toEqual(['hello']);
+    expect(values).toEqual([
+      'hello',
+    ]);
   });
 
   test('handles non-FlowImpl by wrapping', () => {
@@ -302,7 +325,9 @@ describe('subscribeRaw', () => {
     subscribeRaw(mockFlow, subscriber);
     subscribers.forEach((s) => s(99));
 
-    expect(values).toEqual([99]);
+    expect(values).toEqual([
+      99,
+    ]);
   });
 
   test('cleanup works for wrapped flows', () => {
@@ -325,7 +350,9 @@ describe('subscribeRaw', () => {
     // But the original mock flow still has the subscriber
     // This tests the subscribeRaw behavior
 
-    expect(values).toEqual([1]);
+    expect(values).toEqual([
+      1,
+    ]);
   });
 });
 
@@ -349,7 +376,11 @@ describe('combinatorFlow', () => {
 
     trigger.push(undefined);
 
-    expect(values).toEqual([1, 2, 3]);
+    expect(values).toEqual([
+      1,
+      2,
+      3,
+    ]);
   });
 
   test('provides push in context', () => {
@@ -366,7 +397,10 @@ describe('combinatorFlow', () => {
 
     trigger.push(undefined);
 
-    expect(values).toEqual(['a', 'b']);
+    expect(values).toEqual([
+      'a',
+      'b',
+    ]);
   });
 
   test('can be used with external subscriptions', () => {
@@ -381,7 +415,10 @@ describe('combinatorFlow', () => {
     source.push(5);
     source.push(10);
 
-    expect(values).toEqual([10, 20]);
+    expect(values).toEqual([
+      10,
+      20,
+    ]);
   });
 
   test('multiple subscribers receive values', () => {
@@ -397,8 +434,12 @@ describe('combinatorFlow', () => {
 
     trigger.push(undefined);
 
-    expect(values1).toEqual([100]);
-    expect(values2).toEqual([100]);
+    expect(values1).toEqual([
+      100,
+    ]);
+    expect(values2).toEqual([
+      100,
+    ]);
   });
 
   test('created flow has latest() method', () => {
@@ -443,6 +484,8 @@ describe('combinatorFlow', () => {
     flow.on(subscriber);
 
     await wait(30);
-    expect(values).toEqual([42]);
+    expect(values).toEqual([
+      42,
+    ]);
   });
 });

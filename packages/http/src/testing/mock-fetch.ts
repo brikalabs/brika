@@ -20,14 +20,20 @@ export interface MockMatcher {
  * Mock fetch implementation for testing
  */
 export class MockFetch {
-  #mocks: Array<{ matcher: MockMatcher; response: MockResponse }> = [];
+  #mocks: Array<{
+    matcher: MockMatcher;
+    response: MockResponse;
+  }> = [];
   #fallbackResponse?: MockResponse;
 
   /**
    * Add a mock response
    */
   mock(matcher: MockMatcher, response: MockResponse): this {
-    this.#mocks.push({ matcher, response });
+    this.#mocks.push({
+      matcher,
+      response,
+    });
     return this;
   }
 
@@ -55,7 +61,12 @@ export class MockFetch {
       const method = init?.method ?? 'GET';
 
       // Find matching mock
-      const mock = this.#mocks.find(({ matcher }) => this.#matches(matcher, { method, url }));
+      const mock = this.#mocks.find(({ matcher }) =>
+        this.#matches(matcher, {
+          method,
+          url,
+        })
+      );
 
       const mockResponse = mock?.response ?? this.#fallbackResponse;
 
@@ -105,7 +116,13 @@ export class MockFetch {
   /**
    * Check if request matches matcher
    */
-  #matches(matcher: MockMatcher, request: { method: string; url: string }): boolean {
+  #matches(
+    matcher: MockMatcher,
+    request: {
+      method: string;
+      url: string;
+    }
+  ): boolean {
     if (matcher.method && matcher.method !== request.method) {
       return false;
     }

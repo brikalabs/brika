@@ -14,7 +14,9 @@ const tabs: {
   value: Tab;
   label: string;
   shortLabel: string;
-  icon: ComponentType<{ className?: string }>;
+  icon: ComponentType<{
+    className?: string;
+  }>;
   command: string;
   comment: string;
   note: string;

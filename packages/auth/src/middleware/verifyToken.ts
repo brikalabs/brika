@@ -5,14 +5,18 @@
 
 import { inject } from '@brika/di';
 import type { HonoContext, Middleware } from '@brika/router';
-import { SessionService } from '../services/SessionService';
 import { getAuthConfig } from '../config';
+import { SessionService } from '../services/SessionService';
 
 function getCookieValue(header: string | undefined, name: string): string | undefined {
-  if (!header) return undefined;
+  if (!header) {
+    return undefined;
+  }
   for (const pair of header.split(';')) {
     const [key, ...rest] = pair.split('=');
-    if (key?.trim() === name) return rest.join('=').trim();
+    if (key?.trim() === name) {
+      return rest.join('=').trim();
+    }
   }
   return undefined;
 }

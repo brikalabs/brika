@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { KeyRound, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import { useAuth } from '@brika/auth/react';
+import { KeyRound, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { useState } from 'react';
 import {
   Badge,
   Button,
@@ -19,13 +19,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui';
+import { UserAvatar } from '@/components/user-avatar';
 import { useLocale } from '@/lib/use-locale';
 import type { UserRecord } from '../api';
-import { UserRoleBadge } from './UserRoleBadge';
+import { DeleteUserDialog } from './DeleteUserDialog';
 import { EditUserDialog } from './EditUserDialog';
 import { ResetPasswordDialog } from './ResetPasswordDialog';
-import { DeleteUserDialog } from './DeleteUserDialog';
-import { UserAvatar } from '@/components/user-avatar';
+import { UserRoleBadge } from './UserRoleBadge';
 
 interface UsersTableProps {
   users: UserRecord[];
@@ -43,8 +43,12 @@ export function UsersTable({ users, isLoading }: Readonly<UsersTableProps>) {
   if (isLoading) {
     return (
       <Card>
-        <CardContent className="p-6 space-y-3">
-          {['s1', 's2', 's3'].map((id) => (
+        <CardContent className="space-y-3 p-6">
+          {[
+            's1',
+            's2',
+            's3',
+          ].map((id) => (
             <Skeleton key={id} className="h-12 w-full" />
           ))}
         </CardContent>
@@ -154,7 +158,11 @@ export function UsersTable({ users, isLoading }: Readonly<UsersTableProps>) {
       {editUser && (
         <EditUserDialog
           open={!!editUser}
-          onOpenChange={(open) => { if (!open) setEditUser(null); }}
+          onOpenChange={(open) => {
+            if (!open) {
+              setEditUser(null);
+            }
+          }}
           user={editUser}
         />
       )}
@@ -162,7 +170,11 @@ export function UsersTable({ users, isLoading }: Readonly<UsersTableProps>) {
       {resetUser && (
         <ResetPasswordDialog
           open={!!resetUser}
-          onOpenChange={(open) => { if (!open) setResetUser(null); }}
+          onOpenChange={(open) => {
+            if (!open) {
+              setResetUser(null);
+            }
+          }}
           userId={resetUser.id}
           userName={resetUser.name}
         />
@@ -171,7 +183,11 @@ export function UsersTable({ users, isLoading }: Readonly<UsersTableProps>) {
       {deleteUser && (
         <DeleteUserDialog
           open={!!deleteUser}
-          onOpenChange={(open) => { if (!open) setDeleteUser(null); }}
+          onOpenChange={(open) => {
+            if (!open) {
+              setDeleteUser(null);
+            }
+          }}
           userId={deleteUser.id}
           userName={deleteUser.name}
         />

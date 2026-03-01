@@ -30,7 +30,9 @@ export function useTestBed(
   const autoStub = options.autoStub !== false;
 
   beforeEach(() => {
-    if (autoStub) TestBed.autoStub(true);
+    if (autoStub) {
+      TestBed.autoStub(true);
+    }
     setupFn?.();
   });
 

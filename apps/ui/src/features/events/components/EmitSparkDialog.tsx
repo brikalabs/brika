@@ -46,12 +46,18 @@ export function EmitSparkDialog({ spark, open, onOpenChange }: Readonly<EmitSpar
         setPayload('{}');
       }
     }
-  }, [spark.schema, open]);
+  }, [
+    spark.schema,
+    open,
+  ]);
 
   const handleEmit = async () => {
     try {
       const parsedPayload = JSON.parse(payload);
-      await emitSpark.mutateAsync({ type: spark.type, payload: parsedPayload });
+      await emitSpark.mutateAsync({
+        type: spark.type,
+        payload: parsedPayload,
+      });
       onOpenChange(false);
       setError(null);
     } catch (e) {
@@ -115,9 +121,17 @@ function generateDefaultFromSchema(schema: Record<string, unknown>): unknown {
     }
     return result;
   }
-  if (schema.type === 'string') return schema.default ?? '';
-  if (schema.type === 'number' || schema.type === 'integer') return schema.default ?? 0;
-  if (schema.type === 'boolean') return schema.default ?? false;
-  if (schema.type === 'array') return schema.default ?? [];
+  if (schema.type === 'string') {
+    return schema.default ?? '';
+  }
+  if (schema.type === 'number' || schema.type === 'integer') {
+    return schema.default ?? 0;
+  }
+  if (schema.type === 'boolean') {
+    return schema.default ?? false;
+  }
+  if (schema.type === 'array') {
+    return schema.default ?? [];
+  }
   return null;
 }

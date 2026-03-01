@@ -117,8 +117,12 @@ export function isNewer(current: string, latest: string): boolean {
   for (let i = 0; i < Math.max(a.length, b.length); i++) {
     const av = a[i] ?? 0;
     const bv = b[i] ?? 0;
-    if (bv > av) return true;
-    if (bv < av) return false;
+    if (bv > av) {
+      return true;
+    }
+    if (bv < av) {
+      return false;
+    }
   }
   return false;
 }
@@ -127,10 +131,14 @@ export function isNewer(current: string, latest: string): boolean {
 async function fetchReleaseMeta(release: GitHubRelease): Promise<ReleaseMeta | null> {
   try {
     const metaAsset = release.assets.find((a) => a.name === 'release-meta.json');
-    if (!metaAsset) return null;
+    if (!metaAsset) {
+      return null;
+    }
 
     const response = await fetch(metaAsset.browser_download_url);
-    if (!response.ok) return null;
+    if (!response.ok) {
+      return null;
+    }
 
     return (await response.json()) as ReleaseMeta;
   } catch {
@@ -139,9 +147,14 @@ async function fetchReleaseMeta(release: GitHubRelease): Promise<ReleaseMeta | n
 }
 
 /** Fetch latest release info from GitHub API */
-async function fetchLatestRelease(): Promise<{ release: GitHubRelease; meta: ReleaseMeta | null }> {
+async function fetchLatestRelease(): Promise<{
+  release: GitHubRelease;
+  meta: ReleaseMeta | null;
+}> {
   const response = await fetch(HUB_GITHUB_RELEASES_API, {
-    headers: { Accept: 'application/vnd.github+json' },
+    headers: {
+      Accept: 'application/vnd.github+json',
+    },
   });
 
   if (!response.ok) {
@@ -151,7 +164,10 @@ async function fetchLatestRelease(): Promise<{ release: GitHubRelease; meta: Rel
   const release = (await response.json()) as GitHubRelease;
   const meta = await fetchReleaseMeta(release);
 
-  return { release, meta };
+  return {
+    release,
+    meta,
+  };
 }
 
 interface ReleaseComparison {
@@ -250,7 +266,9 @@ export async function applyUpdate(options?: ApplyUpdateOptions): Promise<{
 
   // Download
   const tmpDir = join(tmpdir(), `brika-update-${Date.now()}`);
-  await mkdir(tmpDir, { recursive: true });
+  await mkdir(tmpDir, {
+    recursive: true,
+  });
   const archivePath = join(tmpDir, asset.name);
 
   try {
@@ -269,7 +287,9 @@ export async function applyUpdate(options?: ApplyUpdateOptions): Promise<{
     // Extract
     onProgress?.('extracting', 'Extracting...');
     const extractDir = join(tmpDir, 'extracted');
-    await mkdir(extractDir, { recursive: true });
+    await mkdir(extractDir, {
+      recursive: true,
+    });
 
     if (asset.name.endsWith('.zip')) {
       await extractZip(archivePath, extractDir);
@@ -292,7 +312,10 @@ export async function applyUpdate(options?: ApplyUpdateOptions): Promise<{
     };
   } finally {
     try {
-      await rm(tmpDir, { recursive: true, force: true });
+      await rm(tmpDir, {
+        recursive: true,
+        force: true,
+      });
     } catch {
       // Non-critical
     }
@@ -309,7 +332,9 @@ async function verifyChecksum(
   assetName: string,
   archivePath: string
 ): Promise<void> {
-  if (!meta) return; // No metadata — skip verification (pre-meta releases)
+  if (!meta) {
+    return; // No metadata — skip verification (pre-meta releases)
+  }
 
   const expectedHash = meta.checksums[assetName];
   if (!expectedHash) {
@@ -355,7 +380,9 @@ async function downloadFile(
 
   while (true) {
     const { done, value } = await reader.read();
-    if (done) break;
+    if (done) {
+      break;
+    }
     chunks.push(value);
     downloaded += value.byteLength;
     const pct = Math.round((downloaded / totalBytes) * 100);
@@ -369,10 +396,19 @@ async function downloadFile(
 }
 
 async function extractTarGz(archivePath: string, destDir: string): Promise<void> {
-  const proc = Bun.spawn(['tar', 'xzf', archivePath, '-C', destDir], {
-    stdout: 'ignore',
-    stderr: 'pipe',
-  });
+  const proc = Bun.spawn(
+    [
+      'tar',
+      'xzf',
+      archivePath,
+      '-C',
+      destDir,
+    ],
+    {
+      stdout: 'ignore',
+      stderr: 'pipe',
+    }
+  );
 
   const exitCode = await proc.exited;
   if (exitCode !== 0) {
@@ -388,7 +424,10 @@ async function extractZip(archivePath: string, destDir: string): Promise<void> {
       '-Command',
       `Expand-Archive -Path '${archivePath}' -DestinationPath '${destDir}' -Force`,
     ],
-    { stdout: 'ignore', stderr: 'pipe' }
+    {
+      stdout: 'ignore',
+      stderr: 'pipe',
+    }
   );
 
   const exitCode = await proc.exited;
@@ -414,12 +453,24 @@ async function replaceInstallation(extractedDir: string, installDir: string): Pr
  * layout the same way.
  */
 function resolveSourceDir(extractedDir: string): string {
-  const entries = [...new Bun.Glob('*').scanSync({ cwd: extractedDir, onlyFiles: false })];
-  if (entries.length !== 1) return extractedDir;
+  const entries = [
+    ...new Bun.Glob('*').scanSync({
+      cwd: extractedDir,
+      onlyFiles: false,
+    }),
+  ];
+  if (entries.length !== 1) {
+    return extractedDir;
+  }
 
   const subDir = join(extractedDir, entries[0] ?? '');
   try {
-    const subEntries = [...new Bun.Glob('*').scanSync({ cwd: subDir, onlyFiles: false })];
+    const subEntries = [
+      ...new Bun.Glob('*').scanSync({
+        cwd: subDir,
+        onlyFiles: false,
+      }),
+    ];
     return subEntries.length > 0 ? subDir : extractedDir;
   } catch {
     return extractedDir;
@@ -431,39 +482,70 @@ async function replaceBinary(
   currentPath: string,
   isWindows: boolean
 ): Promise<void> {
-  if (!(await Bun.file(newPath).exists())) return;
+  if (!(await Bun.file(newPath).exists())) {
+    return;
+  }
 
   const backupPath = `${currentPath}.${isWindows ? 'old' : 'bak'}`;
-  await rm(backupPath, { force: true }).catch(() => undefined);
+  await rm(backupPath, {
+    force: true,
+  }).catch(() => undefined);
 
   if (isWindows) {
     // On Windows, running executables are locked — use shell move
-    const proc = Bun.spawn(['cmd', '/c', 'move', '/Y', currentPath, backupPath], {
-      stdout: 'ignore',
-      stderr: 'ignore',
-    });
+    const proc = Bun.spawn(
+      [
+        'cmd',
+        '/c',
+        'move',
+        '/Y',
+        currentPath,
+        backupPath,
+      ],
+      {
+        stdout: 'ignore',
+        stderr: 'ignore',
+      }
+    );
     await proc.exited;
   } else {
     await rename(currentPath, backupPath);
   }
 
   await Bun.write(currentPath, Bun.file(newPath));
-  if (!isWindows) await chmod(currentPath, 0o755);
+  if (!isWindows) {
+    await chmod(currentPath, 0o755);
+  }
 
-  await rm(backupPath, { force: true }).catch(() => undefined);
+  await rm(backupPath, {
+    force: true,
+  }).catch(() => undefined);
 }
 
 async function replaceDir(newDir: string, currentDir: string): Promise<void> {
   let hasEntries: boolean;
   try {
-    hasEntries = [...new Bun.Glob('*').scanSync({ cwd: newDir, onlyFiles: false })].length > 0;
+    hasEntries =
+      [
+        ...new Bun.Glob('*').scanSync({
+          cwd: newDir,
+          onlyFiles: false,
+        }),
+      ].length > 0;
   } catch {
     return; // source dir doesn't exist
   }
-  if (!hasEntries) return;
+  if (!hasEntries) {
+    return;
+  }
 
-  await rm(currentDir, { recursive: true, force: true });
-  await cp(newDir, currentDir, { recursive: true });
+  await rm(currentDir, {
+    recursive: true,
+    force: true,
+  });
+  await cp(newDir, currentDir, {
+    recursive: true,
+  });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -472,7 +554,8 @@ async function replaceDir(newDir: string, currentDir: string): Promise<void> {
 
 export async function selfUpdate(options?: { force?: boolean }): Promise<void> {
   const currentCommitLabel = pc.dim(`(${buildInfo.commit})`);
-  console.log(`${pc.cyan('brika')} ${pc.dim('v' + hub.version)} ${currentCommitLabel}`);
+  const versionLabel = pc.dim(`v${hub.version}`);
+  console.log(`${pc.cyan('brika')} ${versionLabel} ${currentCommitLabel}`);
   console.log();
 
   try {
@@ -487,10 +570,16 @@ export async function selfUpdate(options?: { force?: boolean }): Promise<void> {
 
     // Regenerate completions with the new binary (it's already on disk)
     try {
-      const proc = Bun.spawn([process.execPath, 'completions'], {
-        stdout: 'ignore',
-        stderr: 'ignore',
-      });
+      const proc = Bun.spawn(
+        [
+          process.execPath,
+          'completions',
+        ],
+        {
+          stdout: 'ignore',
+          stderr: 'ignore',
+        }
+      );
       await proc.exited;
     } catch {
       // Non-critical

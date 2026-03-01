@@ -65,7 +65,10 @@ describe('registry', () => {
       const rule1 = createRule('rule-1');
       const rule2 = createBuildable('rule-2');
 
-      use([rule1, rule2]);
+      use([
+        rule1,
+        rule2,
+      ]);
 
       const rules = getRegisteredRules();
       expect(rules).toHaveLength(2);
@@ -76,7 +79,11 @@ describe('registry', () => {
     test('handles nested arrays', () => {
       const rule = createRule('nested');
 
-      use([[rule] as unknown as Rule]);
+      use([
+        [
+          rule,
+        ] as unknown as Rule,
+      ]);
 
       const rules = getRegisteredRules();
       expect(rules).toHaveLength(1);

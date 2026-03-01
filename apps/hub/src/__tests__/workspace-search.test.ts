@@ -10,7 +10,9 @@ import { ConfigLoader } from '@/runtime/config/config-loader';
 import { Logger } from '@/runtime/logs/log-router';
 import { LocalRegistry } from '@/runtime/store';
 
-useTestBed({ autoStub: false });
+useTestBed({
+  autoStub: false,
+});
 
 describe('LocalRegistry', () => {
   const bun = useBunMock();
@@ -23,8 +25,13 @@ describe('LocalRegistry', () => {
     displayName: 'Timer',
     description: 'A timer plugin',
     author: 'Test',
-    keywords: ['brika', 'timer'],
-    engines: { brika: '^0.1.0' },
+    keywords: [
+      'brika',
+      'timer',
+    ],
+    engines: {
+      brika: '^0.1.0',
+    },
   };
 
   const secondPlugin = {
@@ -34,13 +41,21 @@ describe('LocalRegistry', () => {
     displayName: 'Weather',
     description: 'A weather plugin',
     author: 'Test',
-    keywords: ['brika', 'weather', 'forecast'],
-    engines: { brika: '^0.1.0' },
+    keywords: [
+      'brika',
+      'weather',
+      'forecast',
+    ],
+    engines: {
+      brika: '^0.1.0',
+    },
   };
 
   beforeEach(() => {
     stub(Logger);
-    stub(ConfigLoader, { getWorkspaceRoot: mock().mockResolvedValue('/workspace') });
+    stub(ConfigLoader, {
+      getWorkspaceRoot: mock().mockResolvedValue('/workspace'),
+    });
     service = get(LocalRegistry);
   });
 
@@ -49,9 +64,19 @@ describe('LocalRegistry', () => {
   describe('search', () => {
     test('returns plugins from workspace packages matching engines.brika', async () => {
       bun
-        .fs({ '/workspace/package.json': { workspaces: ['plugins/*'] } })
-        .directory('/workspace/plugins', ['timer/package.json'])
-        .fs({ '/workspace/plugins/timer/package.json': validPlugin })
+        .fs({
+          '/workspace/package.json': {
+            workspaces: [
+              'plugins/*',
+            ],
+          },
+        })
+        .directory('/workspace/plugins', [
+          'timer/package.json',
+        ])
+        .fs({
+          '/workspace/plugins/timer/package.json': validPlugin,
+        })
         .apply();
 
       const { plugins } = await service.search();
@@ -67,9 +92,19 @@ describe('LocalRegistry', () => {
 
     test('returns downloadCount 0 for local plugins', async () => {
       bun
-        .fs({ '/workspace/package.json': { workspaces: ['plugins/*'] } })
-        .directory('/workspace/plugins', ['timer/package.json'])
-        .fs({ '/workspace/plugins/timer/package.json': validPlugin })
+        .fs({
+          '/workspace/package.json': {
+            workspaces: [
+              'plugins/*',
+            ],
+          },
+        })
+        .directory('/workspace/plugins', [
+          'timer/package.json',
+        ])
+        .fs({
+          '/workspace/plugins/timer/package.json': validPlugin,
+        })
         .apply();
 
       const { plugins } = await service.search();
@@ -78,7 +113,11 @@ describe('LocalRegistry', () => {
     });
 
     test('returns empty when no workspaces field in root package.json', async () => {
-      bun.fs({ '/workspace/package.json': {} }).apply();
+      bun
+        .fs({
+          '/workspace/package.json': {},
+        })
+        .apply();
 
       const { plugins } = await service.search();
 
@@ -95,9 +134,20 @@ describe('LocalRegistry', () => {
 
     test('scans multiple workspace directories', async () => {
       bun
-        .fs({ '/workspace/package.json': { workspaces: ['plugins/*', 'apps/*'] } })
-        .directory('/workspace/plugins', ['timer/package.json'])
-        .directory('/workspace/apps', ['weather/package.json'])
+        .fs({
+          '/workspace/package.json': {
+            workspaces: [
+              'plugins/*',
+              'apps/*',
+            ],
+          },
+        })
+        .directory('/workspace/plugins', [
+          'timer/package.json',
+        ])
+        .directory('/workspace/apps', [
+          'weather/package.json',
+        ])
         .fs({
           '/workspace/plugins/timer/package.json': validPlugin,
           '/workspace/apps/weather/package.json': secondPlugin,
@@ -114,8 +164,17 @@ describe('LocalRegistry', () => {
 
     test('skips packages without engines.brika', async () => {
       bun
-        .fs({ '/workspace/package.json': { workspaces: ['packages/*'] } })
-        .directory('/workspace/packages', ['not-a-plugin/package.json', 'timer/package.json'])
+        .fs({
+          '/workspace/package.json': {
+            workspaces: [
+              'packages/*',
+            ],
+          },
+        })
+        .directory('/workspace/packages', [
+          'not-a-plugin/package.json',
+          'timer/package.json',
+        ])
         .fs({
           '/workspace/packages/not-a-plugin/package.json': {
             name: 'not-a-plugin',
@@ -134,11 +193,22 @@ describe('LocalRegistry', () => {
 
     test('skips invalid package.json files', async () => {
       bun
-        .fs({ '/workspace/package.json': { workspaces: ['plugins/*'] } })
-        .directory('/workspace/plugins', ['valid/package.json', 'invalid/package.json'])
+        .fs({
+          '/workspace/package.json': {
+            workspaces: [
+              'plugins/*',
+            ],
+          },
+        })
+        .directory('/workspace/plugins', [
+          'valid/package.json',
+          'invalid/package.json',
+        ])
         .fs({
           '/workspace/plugins/valid/package.json': validPlugin,
-          '/workspace/plugins/invalid/package.json': { name: 123 },
+          '/workspace/plugins/invalid/package.json': {
+            name: 123,
+          },
         })
         .apply();
 
@@ -152,8 +222,17 @@ describe('LocalRegistry', () => {
 
     test('filters by name query', async () => {
       bun
-        .fs({ '/workspace/package.json': { workspaces: ['plugins/*'] } })
-        .directory('/workspace/plugins', ['timer/package.json', 'weather/package.json'])
+        .fs({
+          '/workspace/package.json': {
+            workspaces: [
+              'plugins/*',
+            ],
+          },
+        })
+        .directory('/workspace/plugins', [
+          'timer/package.json',
+          'weather/package.json',
+        ])
         .fs({
           '/workspace/plugins/timer/package.json': validPlugin,
           '/workspace/plugins/weather/package.json': secondPlugin,
@@ -168,8 +247,17 @@ describe('LocalRegistry', () => {
 
     test('filters by description query', async () => {
       bun
-        .fs({ '/workspace/package.json': { workspaces: ['plugins/*'] } })
-        .directory('/workspace/plugins', ['timer/package.json', 'weather/package.json'])
+        .fs({
+          '/workspace/package.json': {
+            workspaces: [
+              'plugins/*',
+            ],
+          },
+        })
+        .directory('/workspace/plugins', [
+          'timer/package.json',
+          'weather/package.json',
+        ])
         .fs({
           '/workspace/plugins/timer/package.json': validPlugin,
           '/workspace/plugins/weather/package.json': secondPlugin,
@@ -184,8 +272,17 @@ describe('LocalRegistry', () => {
 
     test('filters by keyword query', async () => {
       bun
-        .fs({ '/workspace/package.json': { workspaces: ['plugins/*'] } })
-        .directory('/workspace/plugins', ['timer/package.json', 'weather/package.json'])
+        .fs({
+          '/workspace/package.json': {
+            workspaces: [
+              'plugins/*',
+            ],
+          },
+        })
+        .directory('/workspace/plugins', [
+          'timer/package.json',
+          'weather/package.json',
+        ])
         .fs({
           '/workspace/plugins/timer/package.json': validPlugin,
           '/workspace/plugins/weather/package.json': secondPlugin,
@@ -200,9 +297,19 @@ describe('LocalRegistry', () => {
 
     test('query is case-insensitive', async () => {
       bun
-        .fs({ '/workspace/package.json': { workspaces: ['plugins/*'] } })
-        .directory('/workspace/plugins', ['timer/package.json'])
-        .fs({ '/workspace/plugins/timer/package.json': validPlugin })
+        .fs({
+          '/workspace/package.json': {
+            workspaces: [
+              'plugins/*',
+            ],
+          },
+        })
+        .directory('/workspace/plugins', [
+          'timer/package.json',
+        ])
+        .fs({
+          '/workspace/plugins/timer/package.json': validPlugin,
+        })
         .apply();
 
       const { plugins } = await service.search('TIMER');
@@ -212,9 +319,19 @@ describe('LocalRegistry', () => {
 
     test('returns empty when query matches nothing', async () => {
       bun
-        .fs({ '/workspace/package.json': { workspaces: ['plugins/*'] } })
-        .directory('/workspace/plugins', ['timer/package.json'])
-        .fs({ '/workspace/plugins/timer/package.json': validPlugin })
+        .fs({
+          '/workspace/package.json': {
+            workspaces: [
+              'plugins/*',
+            ],
+          },
+        })
+        .directory('/workspace/plugins', [
+          'timer/package.json',
+        ])
+        .fs({
+          '/workspace/plugins/timer/package.json': validPlugin,
+        })
         .apply();
 
       const { plugins } = await service.search('nonexistent');
@@ -228,9 +345,19 @@ describe('LocalRegistry', () => {
   describe('findByName', () => {
     test('finds plugin by exact name across workspace directories', async () => {
       bun
-        .fs({ '/workspace/package.json': { workspaces: ['plugins/*'] } })
-        .directory('/workspace/plugins', ['timer/package.json'])
-        .fs({ '/workspace/plugins/timer/package.json': validPlugin })
+        .fs({
+          '/workspace/package.json': {
+            workspaces: [
+              'plugins/*',
+            ],
+          },
+        })
+        .directory('/workspace/plugins', [
+          'timer/package.json',
+        ])
+        .fs({
+          '/workspace/plugins/timer/package.json': validPlugin,
+        })
         .apply();
 
       const result = await service.findByName('@brika/plugin-timer');
@@ -242,9 +369,20 @@ describe('LocalRegistry', () => {
 
     test('finds plugin in a different workspace directory', async () => {
       bun
-        .fs({ '/workspace/package.json': { workspaces: ['plugins/*', 'apps/*'] } })
-        .directory('/workspace/plugins', ['timer/package.json'])
-        .directory('/workspace/apps', ['weather/package.json'])
+        .fs({
+          '/workspace/package.json': {
+            workspaces: [
+              'plugins/*',
+              'apps/*',
+            ],
+          },
+        })
+        .directory('/workspace/plugins', [
+          'timer/package.json',
+        ])
+        .directory('/workspace/apps', [
+          'weather/package.json',
+        ])
         .fs({
           '/workspace/plugins/timer/package.json': validPlugin,
           '/workspace/apps/weather/package.json': secondPlugin,
@@ -260,9 +398,19 @@ describe('LocalRegistry', () => {
 
     test('returns null when plugin not found', async () => {
       bun
-        .fs({ '/workspace/package.json': { workspaces: ['plugins/*'] } })
-        .directory('/workspace/plugins', ['timer/package.json'])
-        .fs({ '/workspace/plugins/timer/package.json': validPlugin })
+        .fs({
+          '/workspace/package.json': {
+            workspaces: [
+              'plugins/*',
+            ],
+          },
+        })
+        .directory('/workspace/plugins', [
+          'timer/package.json',
+        ])
+        .fs({
+          '/workspace/plugins/timer/package.json': validPlugin,
+        })
         .apply();
 
       const result = await service.findByName('@brika/plugin-nonexistent');
@@ -271,7 +419,11 @@ describe('LocalRegistry', () => {
     });
 
     test('returns null when no workspaces configured', async () => {
-      bun.fs({ '/workspace/package.json': {} }).apply();
+      bun
+        .fs({
+          '/workspace/package.json': {},
+        })
+        .apply();
 
       const result = await service.findByName('@brika/plugin-timer');
 
@@ -280,8 +432,17 @@ describe('LocalRegistry', () => {
 
     test('skips invalid package.json and finds valid one', async () => {
       bun
-        .fs({ '/workspace/package.json': { workspaces: ['plugins/*'] } })
-        .directory('/workspace/plugins', ['broken/package.json', 'timer/package.json'])
+        .fs({
+          '/workspace/package.json': {
+            workspaces: [
+              'plugins/*',
+            ],
+          },
+        })
+        .directory('/workspace/plugins', [
+          'broken/package.json',
+          'timer/package.json',
+        ])
         .fs({
           '/workspace/plugins/broken/package.json': 'not json',
           '/workspace/plugins/timer/package.json': validPlugin,

@@ -21,38 +21,51 @@ import { generic, passthrough } from '../blocks/schema-types';
 
 describe('input', () => {
   test('creates InputDef with Zod schema', () => {
-    const def = input(z.string(), { name: 'Test Input' });
+    const def = input(z.string(), {
+      name: 'Test Input',
+    });
     expect(def.__type).toBe('input');
     expect(def.meta.name).toBe('Test Input');
   });
 
   test('creates InputDef with GenericRef', () => {
-    const def = input(generic(), { name: 'Generic Input' });
+    const def = input(generic(), {
+      name: 'Generic Input',
+    });
     expect(def.__type).toBe('input');
     expect(def.schema.__type).toBe('generic');
   });
 
   test('preserves description in meta', () => {
-    const def = input(z.number(), { name: 'Count', description: 'A count value' });
+    const def = input(z.number(), {
+      name: 'Count',
+      description: 'A count value',
+    });
     expect(def.meta.description).toBe('A count value');
   });
 });
 
 describe('output', () => {
   test('creates OutputDef with Zod schema', () => {
-    const def = output(z.number(), { name: 'Test Output' });
+    const def = output(z.number(), {
+      name: 'Test Output',
+    });
     expect(def.__type).toBe('output');
     expect(def.meta.name).toBe('Test Output');
   });
 
   test('creates OutputDef with PassthroughRef', () => {
-    const def = output(passthrough('in'), { name: 'Passthrough Output' });
+    const def = output(passthrough('in'), {
+      name: 'Passthrough Output',
+    });
     expect(def.__type).toBe('output');
     expect(def.schema.__type).toBe('passthrough');
   });
 
   test('creates OutputDef with GenericRef', () => {
-    const def = output(generic('T'), { name: 'Generic Output' });
+    const def = output(generic('T'), {
+      name: 'Generic Output',
+    });
     expect(def.__type).toBe('output');
     expect(def.schema.__type).toBe('generic');
   });
@@ -76,7 +89,11 @@ describe('createEmitter', () => {
     const emitFn = mock();
     const emitter = createEmitter<number>('out', z.number(), emitFn);
 
-    emitter.emitAll([1, 2, 3]);
+    emitter.emitAll([
+      1,
+      2,
+      3,
+    ]);
 
     expect(emitFn).toHaveBeenCalledTimes(3);
     expect(emitFn).toHaveBeenCalledWith('out', 1);
@@ -96,8 +113,8 @@ describe('createEmitter', () => {
       const emitFn = mock();
       const emitter = createEmitter<string>('out', z.string(), emitFn);
 
-      // @ts-expect-error - intentionally passing wrong type
-      emitter.emit(123);
+      const wrongType: unknown = 123;
+      emitter.emit(wrongType as never);
 
       // Should still emit but warn
       expect(emitFn).toHaveBeenCalled();
@@ -129,7 +146,9 @@ describe('createFlowFromInput', () => {
     // Wait for async push
     await new Promise((r) => setTimeout(r, 10));
 
-    expect(values).toEqual([42]);
+    expect(values).toEqual([
+      42,
+    ]);
     cleanup.cleanup();
   });
 
@@ -157,7 +176,10 @@ describe('createFlowFromInput', () => {
     // Wait for async push
     await new Promise((r) => setTimeout(r, 20));
 
-    expect(values).toEqual([1, 2]);
+    expect(values).toEqual([
+      1,
+      2,
+    ]);
     cleanup.cleanup();
   });
 
@@ -188,7 +210,10 @@ describe('createFlowFromInput', () => {
     // Wait for async push
     await new Promise((r) => setTimeout(r, 20));
 
-    expect(values).toEqual(['a', 'b']);
+    expect(values).toEqual([
+      'a',
+      'b',
+    ]);
     cleanup.cleanup();
   });
 });
@@ -214,7 +239,12 @@ describe('zodToJsonSchema', () => {
   });
 
   test('converts object schema', () => {
-    const schema = zodToJsonSchema(z.object({ name: z.string(), age: z.number() }));
+    const schema = zodToJsonSchema(
+      z.object({
+        name: z.string(),
+        age: z.number(),
+      })
+    );
     expect(schema.type).toBe('object');
     expect(schema.properties).toBeDefined();
   });
@@ -225,12 +255,27 @@ describe('zodToJsonSchema', () => {
   });
 
   test('converts enum schema', () => {
-    const schema = zodToJsonSchema(z.enum(['a', 'b', 'c']));
-    expect(schema.enum).toEqual(['a', 'b', 'c']);
+    const schema = zodToJsonSchema(
+      z.enum([
+        'a',
+        'b',
+        'c',
+      ])
+    );
+    expect(schema.enum).toEqual([
+      'a',
+      'b',
+      'c',
+    ]);
   });
 
   test('converts union schema', () => {
-    const schema = zodToJsonSchema(z.union([z.string(), z.number()]));
+    const schema = zodToJsonSchema(
+      z.union([
+        z.string(),
+        z.number(),
+      ])
+    );
     expect(schema.anyOf).toBeDefined();
   });
 
@@ -276,7 +321,12 @@ describe('zodToTypeName', () => {
   });
 
   test('converts object schema', () => {
-    const result = zodToTypeName(z.object({ name: z.string(), age: z.number() }));
+    const result = zodToTypeName(
+      z.object({
+        name: z.string(),
+        age: z.number(),
+      })
+    );
     expect(result).toContain('name: string');
     expect(result).toContain('age: number');
   });
@@ -286,14 +336,25 @@ describe('zodToTypeName', () => {
   });
 
   test('converts union schema', () => {
-    const result = zodToTypeName(z.union([z.string(), z.number()]));
+    const result = zodToTypeName(
+      z.union([
+        z.string(),
+        z.number(),
+      ])
+    );
     expect(result).toContain('string');
     expect(result).toContain('number');
     expect(result).toContain('|');
   });
 
   test('converts enum schema', () => {
-    const result = zodToTypeName(z.enum(['a', 'b', 'c']));
+    const result = zodToTypeName(
+      z.enum([
+        'a',
+        'b',
+        'c',
+      ])
+    );
     // Enum might be converted to string or union of literals
     expect(typeof result).toBe('string');
   });
@@ -307,7 +368,9 @@ describe('zodToTypeName', () => {
   test('handles schema conversion error gracefully', () => {
     // Create a mock schema that throws during conversion
     const mockSchema = {
-      _def: { typeName: 'invalid' },
+      _def: {
+        typeName: 'invalid',
+      },
     } as unknown as z.ZodType;
 
     // Should return 'unknown' on error

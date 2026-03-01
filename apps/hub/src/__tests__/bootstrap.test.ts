@@ -11,7 +11,9 @@ import { Logger } from '@/runtime/logs/log-router';
 import { LogStore } from '@/runtime/logs/log-store';
 
 // autoStub: false because we want real Bootstrap with mocked dependencies
-useTestBed({ autoStub: false });
+useTestBed({
+  autoStub: false,
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Test Fixtures
@@ -21,7 +23,11 @@ const mockConfig: BrikaConfig = {
   hub: {
     host: '0.0.0.0',
     port: 3001,
-    plugins: { installDir: '/tmp', heartbeatInterval: 5000, heartbeatTimeout: 15000 },
+    plugins: {
+      installDir: '/tmp',
+      heartbeatInterval: 5000,
+      heartbeatTimeout: 15000,
+    },
   },
   plugins: [],
   rules: [],
@@ -46,7 +52,9 @@ describe('Bootstrap', () => {
     stub(Logger);
     stub(LogStore);
     stub(BrikaInitializer);
-    stub(ConfigLoader, { load: () => Promise.resolve(mockConfig) });
+    stub(ConfigLoader, {
+      load: () => Promise.resolve(mockConfig),
+    });
   });
 
   test('bootstrap() returns Bootstrap instance', () => {
@@ -58,7 +66,15 @@ describe('Bootstrap', () => {
     const setup1 = mock();
     const setup2 = mock();
 
-    const result = b.use({ name: 'p1', setup: setup1 }).use({ name: 'p2', setup: setup2 });
+    const result = b
+      .use({
+        name: 'p1',
+        setup: setup1,
+      })
+      .use({
+        name: 'p2',
+        setup: setup2,
+      });
 
     expect(result).toBe(b);
     expect(setup1).toHaveBeenCalledWith(b);
@@ -84,14 +100,21 @@ describe('Bootstrap', () => {
 
     await b.start();
 
-    expect(order).toEqual(['init', 'load', 'start']);
+    expect(order).toEqual([
+      'init',
+      'load',
+      'start',
+    ]);
   });
 
   test('start() passes config to onLoad', async () => {
     const b = get(Bootstrap);
     const onLoad = mock();
 
-    b.use({ name: 'test', onLoad });
+    b.use({
+      name: 'test',
+      onLoad,
+    });
     await b.start();
 
     expect(onLoad).toHaveBeenCalledWith(mockConfig);
@@ -127,7 +150,14 @@ describe('Bootstrap', () => {
 
     await b.start();
 
-    expect(order).toEqual(['p1-init', 'p2-init', 'p1-load', 'p2-load', 'p1-start', 'p2-start']);
+    expect(order).toEqual([
+      'p1-init',
+      'p2-init',
+      'p1-load',
+      'p2-load',
+      'p1-start',
+      'p2-start',
+    ]);
   });
 
   test('start() skips on hot reload', async () => {
@@ -135,7 +165,10 @@ describe('Bootstrap', () => {
     const onInit = mock();
 
     setHotReload();
-    b.use({ name: 'test', onInit });
+    b.use({
+      name: 'test',
+      onInit,
+    });
     await b.start();
 
     expect(onInit).not.toHaveBeenCalled();
@@ -159,12 +192,17 @@ describe('Bootstrap', () => {
 
     await b.stop();
 
-    expect(order).toEqual(['p2', 'p1']);
+    expect(order).toEqual([
+      'p2',
+      'p1',
+    ]);
   });
 
   test('handles plugins without optional hooks', async () => {
     const b = get(Bootstrap);
-    b.use({ name: 'minimal' });
+    b.use({
+      name: 'minimal',
+    });
 
     // Should not throw
     await b.start();

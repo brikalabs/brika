@@ -17,11 +17,26 @@ export const useEventsStore = create<EventsStore>((set) => ({
   initialized: false,
   add: (e) =>
     set((s) => {
-      if (s.paused) return s;
+      if (s.paused) {
+        return s;
+      }
       // Deduplicate by id
-      if (s.events.some((ev) => ev.id === e.id)) return s;
-      const events = s.events.length > 500 ? [...s.events.slice(-450), e] : [...s.events, e];
-      return { events };
+      if (s.events.some((ev) => ev.id === e.id)) {
+        return s;
+      }
+      const events =
+        s.events.length > 500
+          ? [
+              ...s.events.slice(-450),
+              e,
+            ]
+          : [
+              ...s.events,
+              e,
+            ];
+      return {
+        events,
+      };
     }),
   setHistory: (history) =>
     set((s) => {
@@ -29,9 +44,21 @@ export const useEventsStore = create<EventsStore>((set) => ({
       const existingIds = new Set(s.events.map((e) => e.id));
       const newFromHistory = history.filter((e) => !existingIds.has(e.id));
       // Combine and sort by timestamp (oldest first for internal storage)
-      const merged = [...newFromHistory, ...s.events].sort((a, b) => a.ts - b.ts);
-      return { events: merged, initialized: true };
+      const merged = [
+        ...newFromHistory,
+        ...s.events,
+      ].sort((a, b) => a.ts - b.ts);
+      return {
+        events: merged,
+        initialized: true,
+      };
     }),
-  clear: () => set({ events: [] }),
-  togglePaused: () => set((s) => ({ paused: !s.paused })),
+  clear: () =>
+    set({
+      events: [],
+    }),
+  togglePaused: () =>
+    set((s) => ({
+      paused: !s.paused,
+    })),
 }));

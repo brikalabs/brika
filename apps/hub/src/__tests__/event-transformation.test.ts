@@ -18,7 +18,11 @@ interface WorkflowEvent {
 }
 
 function transformActionToWorkflowEvent(
-  action: { type: string; payload: unknown; timestamp: number },
+  action: {
+    type: string;
+    payload: unknown;
+    timestamp: number;
+  },
   workflowId: string
 ): WorkflowEvent {
   const typeParts = action.type.split('.');
@@ -56,7 +60,9 @@ describe('transformActionToWorkflowEvent', () => {
       payload: {
         blockId: 'block-123',
         portId: 'data-in',
-        value: { test: 'data' },
+        value: {
+          test: 'data',
+        },
       },
       timestamp: 1234567890,
     };
@@ -130,7 +136,9 @@ describe('transformActionToWorkflowEvent', () => {
 
     expect(result.blockId).toBeUndefined();
     expect(result.portId).toBeUndefined();
-    expect(result.data).toEqual({ someOtherField: 'value' });
+    expect(result.data).toEqual({
+      someOtherField: 'value',
+    });
   });
 
   it('should handle complex nested payloads', () => {
@@ -141,8 +149,14 @@ describe('transformActionToWorkflowEvent', () => {
         portId: 'status',
         state: {
           nested: {
-            data: [1, 2, 3],
-            metadata: { created: Date.now() },
+            data: [
+              1,
+              2,
+              3,
+            ],
+            metadata: {
+              created: Date.now(),
+            },
           },
         },
       },
@@ -216,14 +230,26 @@ describe('transformActionToWorkflowEvent', () => {
   it('should work with array payloads', () => {
     const action = {
       type: 'block.workflow-1.output',
-      payload: [1, 2, 3, 4, 5],
+      payload: [
+        1,
+        2,
+        3,
+        4,
+        5,
+      ],
       timestamp: Date.now(),
     };
 
     const result = transformActionToWorkflowEvent(action, 'workflow-1');
 
     expect(result.type).toBe('output');
-    expect(result.data).toEqual([1, 2, 3, 4, 5]);
+    expect(result.data).toEqual([
+      1,
+      2,
+      3,
+      4,
+      5,
+    ]);
     expect(result.blockId).toBeUndefined(); // Array doesn't have blockId property
   });
 
@@ -291,7 +317,7 @@ describe('transformActionToWorkflowEvent - Edge Cases', () => {
   });
 
   it('should handle very long type strings', () => {
-    const longType = Array(100).fill('namespace').join('.') + '.start';
+    const longType = `${Array(100).fill('namespace').join('.')}.start`;
     const action = {
       type: longType,
       payload: {},

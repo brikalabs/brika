@@ -22,12 +22,22 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
  * Returns null if the package is not found in any dependency map.
  */
 export function readDependencyVersion(raw: unknown, packageName: string): string | null {
-  if (!isRecord(raw)) return null;
-  const candidates = [raw.dependencies, raw.peerDependencies, raw.devDependencies];
+  if (!isRecord(raw)) {
+    return null;
+  }
+  const candidates = [
+    raw.dependencies,
+    raw.peerDependencies,
+    raw.devDependencies,
+  ];
   for (const deps of candidates) {
-    if (!isRecord(deps)) continue;
+    if (!isRecord(deps)) {
+      continue;
+    }
     const value = deps[packageName];
-    if (typeof value === 'string') return value;
+    if (typeof value === 'string') {
+      return value;
+    }
   }
   return null;
 }
@@ -76,7 +86,11 @@ export async function verifyPlugin(pluginDir: string, sdkVersion: string): Promi
   }
 
   const pkg = schemaResult.data;
-  const { errors, warnings } = await runChecks({ pkg, pluginDir, sdkVersion });
+  const { errors, warnings } = await runChecks({
+    pkg,
+    pluginDir,
+    sdkVersion,
+  });
 
   return {
     name: pkg.name,

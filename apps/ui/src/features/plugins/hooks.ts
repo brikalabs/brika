@@ -19,8 +19,24 @@ export function usePluginUpdates() {
   });
 
   const updates = query.data?.updates ?? [];
-  const available = useMemo(() => updates.filter((u) => u.updateAvailable), [updates]);
-  const updateMap = useMemo(() => new Map(updates.map((u) => [u.name, u])), [updates]);
+  const available = useMemo(
+    () => updates.filter((u) => u.updateAvailable),
+    [
+      updates,
+    ]
+  );
+  const updateMap = useMemo(
+    () =>
+      new Map(
+        updates.map((u) => [
+          u.name,
+          u,
+        ])
+      ),
+    [
+      updates,
+    ]
+  );
 
   return {
     ...query,
@@ -51,15 +67,36 @@ export function usePluginReadme(uid: string) {
 
 export function usePluginMutations() {
   const qc = useQueryClient();
-  const invalidate = () => qc.invalidateQueries({ queryKey: pluginsKeys.all });
+  const invalidate = () =>
+    qc.invalidateQueries({
+      queryKey: pluginsKeys.all,
+    });
 
   return {
-    load: useMutation({ mutationFn: pluginsApi.load, onSuccess: invalidate }),
-    enable: useMutation({ mutationFn: pluginsApi.enable, onSuccess: invalidate }),
-    disable: useMutation({ mutationFn: pluginsApi.disable, onSuccess: invalidate }),
-    reload: useMutation({ mutationFn: pluginsApi.reload, onSuccess: invalidate }),
-    kill: useMutation({ mutationFn: pluginsApi.kill, onSuccess: invalidate }),
-    uninstall: useMutation({ mutationFn: pluginsApi.uninstall, onSuccess: invalidate }),
+    load: useMutation({
+      mutationFn: pluginsApi.load,
+      onSuccess: invalidate,
+    }),
+    enable: useMutation({
+      mutationFn: pluginsApi.enable,
+      onSuccess: invalidate,
+    }),
+    disable: useMutation({
+      mutationFn: pluginsApi.disable,
+      onSuccess: invalidate,
+    }),
+    reload: useMutation({
+      mutationFn: pluginsApi.reload,
+      onSuccess: invalidate,
+    }),
+    kill: useMutation({
+      mutationFn: pluginsApi.kill,
+      onSuccess: invalidate,
+    }),
+    uninstall: useMutation({
+      mutationFn: pluginsApi.uninstall,
+      onSuccess: invalidate,
+    }),
   };
 }
 
@@ -75,7 +112,10 @@ export function usePluginConfigMutation(uid: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (config: Record<string, unknown>) => pluginsApi.setConfig(uid, config),
-    onSuccess: () => qc.invalidateQueries({ queryKey: pluginsKeys.config(uid) }),
+    onSuccess: () =>
+      qc.invalidateQueries({
+        queryKey: pluginsKeys.config(uid),
+      }),
   });
 }
 
@@ -84,7 +124,10 @@ export function useTogglePermission(uid: string) {
   return useMutation({
     mutationFn: ({ permission, granted }: { permission: string; granted: boolean }) =>
       pluginsApi.togglePermission(uid, permission, granted),
-    onSuccess: () => qc.invalidateQueries({ queryKey: pluginsKeys.detail(uid) }),
+    onSuccess: () =>
+      qc.invalidateQueries({
+        queryKey: pluginsKeys.detail(uid),
+      }),
   });
 }
 

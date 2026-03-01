@@ -6,8 +6,8 @@
  */
 
 import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
-import { CliError } from '@/cli/errors';
 import { cli } from '@/cli/commands';
+import { CliError } from '@/cli/errors';
 import { captureLog } from './helpers/capture';
 
 /* ------------------------------------------------------------------ */
@@ -88,7 +88,10 @@ describe('cli/commands', () => {
     test('no duplicate names or aliases exist in the registry', () => {
       const seen = new Map<string, string>();
       for (const cmd of commands) {
-        const keys = [cmd.name, ...(cmd.aliases ?? [])];
+        const keys = [
+          cmd.name,
+          ...(cmd.aliases ?? []),
+        ];
         for (const key of keys) {
           const existing = seen.get(key);
           if (existing) {
@@ -105,18 +108,26 @@ describe('cli/commands', () => {
 /*  Shared helpers                                                     */
 /* ------------------------------------------------------------------ */
 
-function captureError(): { lines: string[]; restore: () => void } {
+function _captureError(): {
+  lines: string[];
+  restore: () => void;
+} {
   const lines: string[] = [];
   const original = console.error;
   console.error = (...args: unknown[]) => lines.push(args.join(' '));
-  return { lines, restore: () => (console.error = original) };
+  return {
+    lines,
+    restore: () => (console.error = original),
+  };
 }
 
 /** Build a mock Response whose .json() returns the given body. */
 function jsonResponse(body: unknown, ok = true): Response {
   return new Response(JSON.stringify(body), {
     status: ok ? 200 : 500,
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+    },
   });
 }
 
@@ -125,7 +136,9 @@ function sseResponse(events: unknown[]): Response {
   const lines = events.map((e) => `data: ${JSON.stringify(e)}\n`).join('\n');
   return new Response(lines, {
     status: 200,
-    headers: { 'Content-Type': 'text/event-stream' },
+    headers: {
+      'Content-Type': 'text/event-stream',
+    },
   });
 }
 
@@ -153,12 +166,18 @@ describe('cli/commands/plugin/install', () => {
       let sentBody: string | undefined;
       mockFetch.mockImplementation(async (_url: unknown, init: RequestInit | undefined) => {
         sentBody = init?.body as string;
-        return sseResponse([{ phase: 'complete' }]);
+        return sseResponse([
+          {
+            phase: 'complete',
+          },
+        ]);
       });
 
       const log = captureLog();
       await installCmd.handler({
-        positionals: ['@brika/plugin-timer@1.0.0'],
+        positionals: [
+          '@brika/plugin-timer@1.0.0',
+        ],
         values: {},
         commands: [],
       });
@@ -173,11 +192,21 @@ describe('cli/commands/plugin/install', () => {
       let sentBody: string | undefined;
       mockFetch.mockImplementation(async (_url: unknown, init: RequestInit | undefined) => {
         sentBody = init?.body as string;
-        return sseResponse([{ phase: 'complete' }]);
+        return sseResponse([
+          {
+            phase: 'complete',
+          },
+        ]);
       });
 
       const log = captureLog();
-      await installCmd.handler({ positionals: ['@brika/plugin-timer'], values: {}, commands: [] });
+      await installCmd.handler({
+        positionals: [
+          '@brika/plugin-timer',
+        ],
+        values: {},
+        commands: [],
+      });
       log.restore();
 
       const parsed = JSON.parse(sentBody ?? '{}');
@@ -189,11 +218,21 @@ describe('cli/commands/plugin/install', () => {
       let sentBody: string | undefined;
       mockFetch.mockImplementation(async (_url: unknown, init: RequestInit | undefined) => {
         sentBody = init?.body as string;
-        return sseResponse([{ phase: 'complete' }]);
+        return sseResponse([
+          {
+            phase: 'complete',
+          },
+        ]);
       });
 
       const log = captureLog();
-      await installCmd.handler({ positionals: ['my-plugin@2.3.4'], values: {}, commands: [] });
+      await installCmd.handler({
+        positionals: [
+          'my-plugin@2.3.4',
+        ],
+        values: {},
+        commands: [],
+      });
       log.restore();
 
       const parsed = JSON.parse(sentBody ?? '{}');
@@ -205,13 +244,21 @@ describe('cli/commands/plugin/install', () => {
   describe('handler', () => {
     test('throws CliError when no package name is provided', async () => {
       await expect(
-        installCmd.handler({ positionals: [], values: {}, commands: [] })
+        installCmd.handler({
+          positionals: [],
+          values: {},
+          commands: [],
+        })
       ).rejects.toThrow(CliError);
     });
 
     test('throws CliError with usage hint when no package name is provided', async () => {
       try {
-        await installCmd.handler({ positionals: [], values: {}, commands: [] });
+        await installCmd.handler({
+          positionals: [],
+          values: {},
+          commands: [],
+        });
         expect.unreachable('should have thrown');
       } catch (e) {
         expect(e).toBeInstanceOf(CliError);
@@ -225,11 +272,21 @@ describe('cli/commands/plugin/install', () => {
       mockFetch.mockImplementation(async (url: unknown, init: RequestInit | undefined) => {
         calledUrl = String(url);
         calledMethod = init?.method;
-        return sseResponse([{ phase: 'complete' }]);
+        return sseResponse([
+          {
+            phase: 'complete',
+          },
+        ]);
       });
 
       const log = captureLog();
-      await installCmd.handler({ positionals: ['@brika/test'], values: {}, commands: [] });
+      await installCmd.handler({
+        positionals: [
+          '@brika/test',
+        ],
+        values: {},
+        commands: [],
+      });
       log.restore();
 
       expect(calledUrl).toContain('/api/registry/install');
@@ -237,10 +294,22 @@ describe('cli/commands/plugin/install', () => {
     });
 
     test('logs installing message with package name', async () => {
-      mockFetch.mockResolvedValue(sseResponse([{ phase: 'complete' }]));
+      mockFetch.mockResolvedValue(
+        sseResponse([
+          {
+            phase: 'complete',
+          },
+        ])
+      );
 
       const log = captureLog();
-      await installCmd.handler({ positionals: ['@brika/test'], values: {}, commands: [] });
+      await installCmd.handler({
+        positionals: [
+          '@brika/test',
+        ],
+        values: {},
+        commands: [],
+      });
       log.restore();
 
       expect(log.lines.some((l) => l.includes('@brika/test'))).toBe(true);
@@ -250,62 +319,144 @@ describe('cli/commands/plugin/install', () => {
   describe('printProgress (via SSE stream)', () => {
     test('resolving phase logs resolving message', async () => {
       mockFetch.mockResolvedValue(
-        sseResponse([{ phase: 'resolving', package: '@brika/test' }, { phase: 'complete' }])
+        sseResponse([
+          {
+            phase: 'resolving',
+            package: '@brika/test',
+          },
+          {
+            phase: 'complete',
+          },
+        ])
       );
 
       const log = captureLog();
-      await installCmd.handler({ positionals: ['@brika/test'], values: {}, commands: [] });
+      await installCmd.handler({
+        positionals: [
+          '@brika/test',
+        ],
+        values: {},
+        commands: [],
+      });
       log.restore();
 
       expect(log.lines.some((l) => l.includes('Resolving'))).toBe(true);
     });
 
     test('downloading phase logs downloading message', async () => {
-      mockFetch.mockResolvedValue(sseResponse([{ phase: 'downloading' }, { phase: 'complete' }]));
+      mockFetch.mockResolvedValue(
+        sseResponse([
+          {
+            phase: 'downloading',
+          },
+          {
+            phase: 'complete',
+          },
+        ])
+      );
 
       const log = captureLog();
-      await installCmd.handler({ positionals: ['@brika/test'], values: {}, commands: [] });
+      await installCmd.handler({
+        positionals: [
+          '@brika/test',
+        ],
+        values: {},
+        commands: [],
+      });
       log.restore();
 
       expect(log.lines.some((l) => l.includes('Downloading'))).toBe(true);
     });
 
     test('linking phase logs linking message', async () => {
-      mockFetch.mockResolvedValue(sseResponse([{ phase: 'linking' }, { phase: 'complete' }]));
+      mockFetch.mockResolvedValue(
+        sseResponse([
+          {
+            phase: 'linking',
+          },
+          {
+            phase: 'complete',
+          },
+        ])
+      );
 
       const log = captureLog();
-      await installCmd.handler({ positionals: ['@brika/test'], values: {}, commands: [] });
+      await installCmd.handler({
+        positionals: [
+          '@brika/test',
+        ],
+        values: {},
+        commands: [],
+      });
       log.restore();
 
       expect(log.lines.some((l) => l.includes('Linking'))).toBe(true);
     });
 
     test('complete phase logs success message', async () => {
-      mockFetch.mockResolvedValue(sseResponse([{ phase: 'complete', message: 'Done!' }]));
+      mockFetch.mockResolvedValue(
+        sseResponse([
+          {
+            phase: 'complete',
+            message: 'Done!',
+          },
+        ])
+      );
 
       const log = captureLog();
-      await installCmd.handler({ positionals: ['@brika/test'], values: {}, commands: [] });
+      await installCmd.handler({
+        positionals: [
+          '@brika/test',
+        ],
+        values: {},
+        commands: [],
+      });
       log.restore();
 
       expect(log.lines.some((l) => l.includes('Done!'))).toBe(true);
     });
 
     test('complete phase uses default message when none provided', async () => {
-      mockFetch.mockResolvedValue(sseResponse([{ phase: 'complete' }]));
+      mockFetch.mockResolvedValue(
+        sseResponse([
+          {
+            phase: 'complete',
+          },
+        ])
+      );
 
       const log = captureLog();
-      await installCmd.handler({ positionals: ['@brika/test'], values: {}, commands: [] });
+      await installCmd.handler({
+        positionals: [
+          '@brika/test',
+        ],
+        values: {},
+        commands: [],
+      });
       log.restore();
 
       expect(log.lines.some((l) => l.includes('Installed successfully'))).toBe(true);
     });
 
     test('error phase throws CliError', async () => {
-      mockFetch.mockResolvedValue(sseResponse([{ phase: 'error', error: 'Something broke' }]));
+      mockFetch.mockResolvedValue(
+        sseResponse([
+          {
+            phase: 'error',
+            error: 'Something broke',
+          },
+        ])
+      );
 
       const log = captureLog();
       try {
-        await installCmd.handler({ positionals: ['@brika/test'], values: {}, commands: [] });
+        await installCmd.handler({
+          positionals: [
+            '@brika/test',
+          ],
+          values: {},
+          commands: [],
+        });
         expect.unreachable('should have thrown');
       } catch (e) {
         expect(e).toBeInstanceOf(CliError);
@@ -316,11 +467,23 @@ describe('cli/commands/plugin/install', () => {
     });
 
     test('error phase uses fallback message when neither error nor message provided', async () => {
-      mockFetch.mockResolvedValue(sseResponse([{ phase: 'error' }]));
+      mockFetch.mockResolvedValue(
+        sseResponse([
+          {
+            phase: 'error',
+          },
+        ])
+      );
 
       const log = captureLog();
       try {
-        await installCmd.handler({ positionals: ['@brika/test'], values: {}, commands: [] });
+        await installCmd.handler({
+          positionals: [
+            '@brika/test',
+          ],
+          values: {},
+          commands: [],
+        });
         expect.unreachable('should have thrown');
       } catch (e) {
         expect(e).toBeInstanceOf(CliError);
@@ -359,28 +522,41 @@ describe('cli/commands/plugin/uninstall', () => {
 
   test('throws CliError when no package name is provided', async () => {
     await expect(
-      uninstallCmd.handler({ positionals: [], values: {}, commands: [] })
+      uninstallCmd.handler({
+        positionals: [],
+        values: {},
+        commands: [],
+      })
     ).rejects.toThrow(CliError);
   });
 
   test('uses plugin UID endpoint when plugin is loaded', async () => {
     let deletePath: string | undefined;
-    let callCount = 0;
+    let _callCount = 0;
     mockFetch.mockImplementation(async (url: unknown) => {
-      callCount++;
+      _callCount++;
       const urlStr = String(url);
       if (urlStr.includes('/api/plugins') && !urlStr.includes('/api/plugins/')) {
         // First call: resolve UID
-        return jsonResponse([{ uid: 'abc-123', name: '@brika/plugin-timer' }]);
+        return jsonResponse([
+          {
+            uid: 'abc-123',
+            name: '@brika/plugin-timer',
+          },
+        ]);
       }
       // Second call: delete
       deletePath = urlStr;
-      return jsonResponse({ success: true });
+      return jsonResponse({
+        success: true,
+      });
     });
 
     const log = captureLog();
     await uninstallCmd.handler({
-      positionals: ['@brika/plugin-timer'],
+      positionals: [
+        '@brika/plugin-timer',
+      ],
       values: {},
       commands: [],
     });
@@ -394,15 +570,24 @@ describe('cli/commands/plugin/uninstall', () => {
     mockFetch.mockImplementation(async (url: unknown) => {
       const urlStr = String(url);
       if (urlStr.includes('/api/plugins') && !urlStr.includes('/api/plugins/')) {
-        return jsonResponse([{ uid: 'other-uid', name: '@brika/other-plugin' }]);
+        return jsonResponse([
+          {
+            uid: 'other-uid',
+            name: '@brika/other-plugin',
+          },
+        ]);
       }
       deletePath = urlStr;
-      return jsonResponse({ success: true });
+      return jsonResponse({
+        success: true,
+      });
     });
 
     const log = captureLog();
     await uninstallCmd.handler({
-      positionals: ['@brika/plugin-timer'],
+      positionals: [
+        '@brika/plugin-timer',
+      ],
       values: {},
       commands: [],
     });
@@ -416,15 +601,21 @@ describe('cli/commands/plugin/uninstall', () => {
     mockFetch.mockImplementation(async (url: unknown) => {
       const urlStr = String(url);
       if (urlStr.includes('/api/plugins') && !urlStr.includes('/api/plugins/')) {
-        return new Response('', { status: 500 });
+        return new Response('', {
+          status: 500,
+        });
       }
       deletePath = urlStr;
-      return jsonResponse({ success: true });
+      return jsonResponse({
+        success: true,
+      });
     });
 
     const log = captureLog();
     await uninstallCmd.handler({
-      positionals: ['@brika/plugin-timer'],
+      positionals: [
+        '@brika/plugin-timer',
+      ],
       values: {},
       commands: [],
     });
@@ -439,12 +630,16 @@ describe('cli/commands/plugin/uninstall', () => {
       if (urlStr.includes('/api/plugins') && !urlStr.includes('/api/plugins/')) {
         return jsonResponse([]);
       }
-      return jsonResponse({ success: true });
+      return jsonResponse({
+        success: true,
+      });
     });
 
     const log = captureLog();
     await uninstallCmd.handler({
-      positionals: ['@brika/plugin-timer'],
+      positionals: [
+        '@brika/plugin-timer',
+      ],
       values: {},
       commands: [],
     });
@@ -480,10 +675,18 @@ describe('cli/commands/plugin/list', () => {
   });
 
   test('shows empty message when no plugins are installed', async () => {
-    mockFetch.mockResolvedValue(jsonResponse({ packages: [] }));
+    mockFetch.mockResolvedValue(
+      jsonResponse({
+        packages: [],
+      })
+    );
 
     const log = captureLog();
-    await listCmd.handler({ positionals: [], values: {}, commands: [] });
+    await listCmd.handler({
+      positionals: [],
+      values: {},
+      commands: [],
+    });
     log.restore();
 
     expect(log.lines.some((l) => l.includes('No plugins installed'))).toBe(true);
@@ -493,14 +696,26 @@ describe('cli/commands/plugin/list', () => {
     mockFetch.mockResolvedValue(
       jsonResponse({
         packages: [
-          { name: '@brika/plugin-timer', version: '1.0.0', path: '/some/path' },
-          { name: '@brika/plugin-weather', version: '2.1.0', path: '/other/path' },
+          {
+            name: '@brika/plugin-timer',
+            version: '1.0.0',
+            path: '/some/path',
+          },
+          {
+            name: '@brika/plugin-weather',
+            version: '2.1.0',
+            path: '/other/path',
+          },
         ],
       })
     );
 
     const log = captureLog();
-    await listCmd.handler({ positionals: [], values: {}, commands: [] });
+    await listCmd.handler({
+      positionals: [],
+      values: {},
+      commands: [],
+    });
     log.restore();
 
     const output = log.lines.join('\n');
@@ -513,12 +728,22 @@ describe('cli/commands/plugin/list', () => {
   test('shows header when plugins exist', async () => {
     mockFetch.mockResolvedValue(
       jsonResponse({
-        packages: [{ name: '@brika/plugin-timer', version: '1.0.0', path: '/path' }],
+        packages: [
+          {
+            name: '@brika/plugin-timer',
+            version: '1.0.0',
+            path: '/path',
+          },
+        ],
       })
     );
 
     const log = captureLog();
-    await listCmd.handler({ positionals: [], values: {}, commands: [] });
+    await listCmd.handler({
+      positionals: [],
+      values: {},
+      commands: [],
+    });
     log.restore();
 
     expect(log.lines.some((l) => l.includes('Installed plugins'))).toBe(true);

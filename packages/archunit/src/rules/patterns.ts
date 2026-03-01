@@ -11,7 +11,10 @@ export function exportsMatch(pattern: string, exportPattern: RegExp, description
         const content = await ctx.read(file);
         for (const [, name] of content.matchAll(EXPORT_REGEX)) {
           if (name && !exportPattern.test(name)) {
-            yield { file, message: `Export "${name}" does not match pattern` };
+            yield {
+              file,
+              message: `Export "${name}" does not match pattern`,
+            };
           }
         }
       }
@@ -28,7 +31,11 @@ export function noPattern(filePattern: string, codePattern: RegExp, description:
         const content = await ctx.read(file);
         for (const match of content.matchAll(new RegExp(codePattern, 'g'))) {
           const line = content.substring(0, match.index).split('\n').length;
-          yield { file, line, message: `Found ${description}` };
+          yield {
+            file,
+            line,
+            message: `Found ${description}`,
+          };
         }
       }
     },
@@ -43,7 +50,10 @@ export function mustContain(filePattern: string, codePattern: RegExp, descriptio
       for await (const file of ctx.glob(filePattern)) {
         const content = await ctx.read(file);
         if (!codePattern.test(content)) {
-          yield { file, message: `Missing ${description}` };
+          yield {
+            file,
+            message: `Missing ${description}`,
+          };
         }
       }
     },

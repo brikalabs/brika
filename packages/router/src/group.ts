@@ -50,9 +50,14 @@ export function group(config: GroupConfig): RouteDefinition[] {
 
   return routes.flat().map((route) => ({
     ...route,
-    ...(prefix && { path: joinPath('/', prefix, route.path) }),
+    ...(prefix && {
+      path: joinPath('/', prefix, route.path),
+    }),
     ...(groupMiddleware && {
-      middleware: [...groupMiddleware, ...(route.middleware ?? [])],
+      middleware: [
+        ...groupMiddleware,
+        ...(route.middleware ?? []),
+      ],
     }),
   }));
 }

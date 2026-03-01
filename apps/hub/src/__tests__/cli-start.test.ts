@@ -27,8 +27,13 @@ describe('cli/commands/start', () => {
   });
 
   test('has --port and --host options', () => {
-    expect(start?.options?.port).toMatchObject({ type: 'string', short: 'p' });
-    expect(start?.options?.host).toMatchObject({ type: 'string' });
+    expect(start?.options?.port).toMatchObject({
+      type: 'string',
+      short: 'p',
+    });
+    expect(start?.options?.host).toMatchObject({
+      type: 'string',
+    });
   });
 
   test('has --open option with -o short alias', () => {
@@ -52,12 +57,22 @@ describe('cli/commands/start', () => {
         throw new Error('__EXIT__');
       }) as never;
 
-      bun.spawn({ exitCode: 0 }).apply();
+      bun
+        .spawn({
+          exitCode: 0,
+        })
+        .apply();
 
       try {
-        await start?.handler({ values: {}, positionals: [], commands: [] });
+        await start?.handler({
+          values: {},
+          positionals: [],
+          commands: [],
+        });
       } catch (e) {
-        if (!(e instanceof Error && e.message === '__EXIT__')) throw e;
+        if (!(e instanceof Error && e.message === '__EXIT__')) {
+          throw e;
+        }
       } finally {
         process.exit = originalExit;
       }
@@ -79,16 +94,31 @@ describe('cli/commands/start', () => {
         throw new Error('__EXIT__');
       }) as never;
 
-      bun.spawn({ exitCode: 0 }).apply();
+      bun
+        .spawn({
+          exitCode: 0,
+        })
+        .apply();
 
       try {
-        await start?.handler({ values: { port: '9090' }, positionals: [], commands: [] });
+        await start?.handler({
+          values: {
+            port: '9090',
+          },
+          positionals: [],
+          commands: [],
+        });
       } catch (e) {
-        if (!(e instanceof Error && e.message === '__EXIT__')) throw e;
+        if (!(e instanceof Error && e.message === '__EXIT__')) {
+          throw e;
+        }
       } finally {
         process.exit = originalExit;
-        if (originalPort === undefined) delete process.env.BRIKA_PORT;
-        else process.env.BRIKA_PORT = originalPort;
+        if (originalPort === undefined) {
+          delete process.env.BRIKA_PORT;
+        } else {
+          process.env.BRIKA_PORT = originalPort;
+        }
       }
 
       expect(capturedPort).toBe('9090');
@@ -104,16 +134,31 @@ describe('cli/commands/start', () => {
         throw new Error('__EXIT__');
       }) as never;
 
-      bun.spawn({ exitCode: 0 }).apply();
+      bun
+        .spawn({
+          exitCode: 0,
+        })
+        .apply();
 
       try {
-        await start?.handler({ values: { host: '0.0.0.0' }, positionals: [], commands: [] });
+        await start?.handler({
+          values: {
+            host: '0.0.0.0',
+          },
+          positionals: [],
+          commands: [],
+        });
       } catch (e) {
-        if (!(e instanceof Error && e.message === '__EXIT__')) throw e;
+        if (!(e instanceof Error && e.message === '__EXIT__')) {
+          throw e;
+        }
       } finally {
         process.exit = originalExit;
-        if (originalHost === undefined) delete process.env.BRIKA_HOST;
-        else process.env.BRIKA_HOST = originalHost;
+        if (originalHost === undefined) {
+          delete process.env.BRIKA_HOST;
+        } else {
+          process.env.BRIKA_HOST = originalHost;
+        }
       }
 
       expect(capturedHost).toBe('0.0.0.0');
@@ -125,12 +170,24 @@ describe('cli/commands/start', () => {
         throw new Error('__EXIT__');
       }) as never;
 
-      bun.spawn({ exitCode: 0 }).apply();
+      bun
+        .spawn({
+          exitCode: 0,
+        })
+        .apply();
 
       try {
-        await start?.handler({ values: { open: true }, positionals: [], commands: [] });
+        await start?.handler({
+          values: {
+            open: true,
+          },
+          positionals: [],
+          commands: [],
+        });
       } catch (e) {
-        if (!(e instanceof Error && e.message === '__EXIT__')) throw e;
+        if (!(e instanceof Error && e.message === '__EXIT__')) {
+          throw e;
+        }
       } finally {
         process.exit = originalExit;
       }

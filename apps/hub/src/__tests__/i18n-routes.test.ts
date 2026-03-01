@@ -16,27 +16,49 @@ describe('i18n routes', () => {
 
   useTestBed(() => {
     mockI18n = {
-      listLocales: mock().mockReturnValue(['en', 'fr']),
-      listNamespaces: mock().mockReturnValue(['common', 'bricks']),
-      getAllTranslations: mock().mockReturnValue({ common: { hello: 'Hello' } }),
-      getNamespaceTranslations: mock().mockReturnValue({ hello: 'Hello' }),
+      listLocales: mock().mockReturnValue([
+        'en',
+        'fr',
+      ]),
+      listNamespaces: mock().mockReturnValue([
+        'common',
+        'bricks',
+      ]),
+      getAllTranslations: mock().mockReturnValue({
+        common: {
+          hello: 'Hello',
+        },
+      }),
+      getNamespaceTranslations: mock().mockReturnValue({
+        hello: 'Hello',
+      }),
     };
     stub(I18nService, mockI18n);
     app = TestApp.create(i18nRoutes);
   });
 
   test('GET /api/i18n/locales returns locale list', async () => {
-    const res = await app.get<{ locales: string[] }>('/api/i18n/locales');
+    const res = await app.get<{
+      locales: string[];
+    }>('/api/i18n/locales');
 
     expect(res.status).toBe(200);
-    expect(res.body.locales).toEqual(['en', 'fr']);
+    expect(res.body.locales).toEqual([
+      'en',
+      'fr',
+    ]);
   });
 
   test('GET /api/i18n/namespaces returns namespace list', async () => {
-    const res = await app.get<{ namespaces: string[] }>('/api/i18n/namespaces');
+    const res = await app.get<{
+      namespaces: string[];
+    }>('/api/i18n/namespaces');
 
     expect(res.status).toBe(200);
-    expect(res.body.namespaces).toEqual(['common', 'bricks']);
+    expect(res.body.namespaces).toEqual([
+      'common',
+      'bricks',
+    ]);
   });
 
   test('GET /api/i18n/bundle/:locale returns all translations', async () => {

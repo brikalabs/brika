@@ -9,13 +9,27 @@ import 'react-grid-layout/css/styles.css';
 
 const GAP = 12;
 
-const BREAKPOINTS = { lg: 1200, md: 800, sm: 0 } as const;
-const COL_MAP = { lg: 12, md: 8, sm: 4 } as const;
+const BREAKPOINTS = {
+  lg: 1200,
+  md: 800,
+  sm: 0,
+} as const;
+const COL_MAP = {
+  lg: 12,
+  md: 8,
+  sm: 4,
+} as const;
 
 interface BoardGridProps {
   board: Board;
   onSaveLayout: (
-    layouts: Array<{ instanceId: string; x: number; y: number; w: number; h: number }>
+    layouts: Array<{
+      instanceId: string;
+      x: number;
+      y: number;
+      w: number;
+      h: number;
+    }>
   ) => void;
 }
 
@@ -37,7 +51,9 @@ export const BoardGrid = memo(function BoardGrid({ board, onSaveLayout }: BoardG
   // Measure container width via ResizeObserver
   useEffect(() => {
     const el = containerRef.current;
-    if (!el) return;
+    if (!el) {
+      return;
+    }
     const observer = new ResizeObserver(([entry]) => {
       setWidth(Math.floor(entry.contentRect.width));
     });
@@ -62,7 +78,9 @@ export const BoardGrid = memo(function BoardGrid({ board, onSaveLayout }: BoardG
   // Stable key — only changes when bricks are added/removed.
   const brickSetKey = useMemo(
     () => board.bricks.map((c) => c.instanceId).join(','),
-    [board.bricks]
+    [
+      board.bricks,
+    ]
   );
 
   // Layout: computed from store positions. Recomputes on position/size/add/remove changes.
@@ -82,7 +100,10 @@ export const BoardGrid = memo(function BoardGrid({ board, onSaveLayout }: BoardG
         maxH: ct?.maxSize?.h ?? 8,
       };
     });
-  }, [board.bricks, brickTypes]);
+  }, [
+    board.bricks,
+    brickTypes,
+  ]);
 
   // Children: only recreated on brick add/remove.
   const children = useMemo(
@@ -93,7 +114,9 @@ export const BoardGrid = memo(function BoardGrid({ board, onSaveLayout }: BoardG
         </div>
       )),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [brickSetKey]
+    [
+      brickSetKey,
+    ]
   );
 
   // Only save when drag/resize ends — NOT on every frame
@@ -101,18 +124,29 @@ export const BoardGrid = memo(function BoardGrid({ board, onSaveLayout }: BoardG
     (currentLayout: Layout) => {
       onSaveLayout(layoutToPayload(currentLayout));
     },
-    [onSaveLayout]
+    [
+      onSaveLayout,
+    ]
   );
   const handleResizeStop = useCallback(
     (currentLayout: Layout) => {
       onSaveLayout(layoutToPayload(currentLayout));
     },
-    [onSaveLayout]
+    [
+      onSaveLayout,
+    ]
   );
 
   // First render: just measure, don't render the grid yet
   if (width === 0) {
-    return <div ref={containerRef} style={{ minHeight: 200 }} />;
+    return (
+      <div
+        ref={containerRef}
+        style={{
+          minHeight: 200,
+        }}
+      />
+    );
   }
 
   return (
@@ -129,8 +163,14 @@ export const BoardGrid = memo(function BoardGrid({ board, onSaveLayout }: BoardG
         onDragStop={handleDragStop}
         onResizeStop={handleResizeStop}
         compactType="vertical"
-        containerPadding={[0, 0]}
-        margin={[GAP, GAP]}
+        containerPadding={[
+          0,
+          0,
+        ]}
+        margin={[
+          GAP,
+          GAP,
+        ]}
       >
         {children}
       </ReactGridLayout>

@@ -4,7 +4,13 @@
  */
 
 // Send a hello message when started
-process.send!({ t: 'hello', plugin: { id: 'echo-test', version: '0.0.1' } });
+process.send?.({
+  t: 'hello',
+  plugin: {
+    id: 'echo-test',
+    version: '0.0.1',
+  },
+});
 
 // Echo back any received IPC message
 process.on('message', (msg: { t: string; [key: string]: unknown }) => {
@@ -12,5 +18,8 @@ process.on('message', (msg: { t: string; [key: string]: unknown }) => {
     process.exit(0);
   }
   // Echo with 'echo' type
-  process.send!({ t: 'echo', original: msg });
+  process.send?.({
+    t: 'echo',
+    original: msg,
+  });
 });

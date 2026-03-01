@@ -282,7 +282,9 @@ function checkOrphanBlocks(
 ): void {
   for (const block of workflow.blocks) {
     const blockType = registry.get(block.type);
-    if (!blockType) continue;
+    if (!blockType) {
+      continue;
+    }
 
     const hasInputPorts = blockType.inputs.length > 0;
     const hasInputConnections = Object.values(block.inputs).some((ref) => ref !== undefined);
@@ -320,7 +322,12 @@ export function validateWorkspace(
 
   // Build validation context
   const ctx: ValidationContext = {
-    blockMap: new Map(workflow.blocks.map((b) => [b.id, b])),
+    blockMap: new Map(
+      workflow.blocks.map((b) => [
+        b.id,
+        b,
+      ])
+    ),
     registry,
     errors,
     warnings,
@@ -329,7 +336,9 @@ export function validateWorkspace(
   // Validate each block
   for (let i = 0; i < workflow.blocks.length; i++) {
     const block = workflow.blocks[i];
-    if (!block) continue;
+    if (!block) {
+      continue;
+    }
 
     const blockPath = `blocks[${i}]`;
 

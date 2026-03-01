@@ -51,12 +51,16 @@ export function UpdatePluginDialog({
     stop,
   } = useProgressStream({
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: pluginsKeys.all });
+      queryClient.invalidateQueries({
+        queryKey: pluginsKeys.all,
+      });
     },
   });
 
   const handleClose = () => {
-    if (isProcessing) return;
+    if (isProcessing) {
+      return;
+    }
     reset();
     onOpenChange(false);
   };
@@ -94,7 +98,10 @@ export function UpdatePluginDialog({
             <code className="rounded bg-muted px-1 font-mono text-xs">{packageName}</code>
             {mode === 'update' && currentVersion && latestVersion && (
               <span className="ml-1">
-                {t('plugins:update.versionRange', { from: currentVersion, to: latestVersion })}
+                {t('plugins:update.versionRange', {
+                  from: currentVersion,
+                  to: latestVersion,
+                })}
               </span>
             )}
           </DialogDescription>

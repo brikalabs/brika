@@ -8,13 +8,19 @@
     "url": "https://github.com/maxscharwath/brika.git",
     "directory": "packages/registry"
   },
-  "keywords": ["brika", "registry", "crypto", "ed25519", "verified-plugins"],
+  "keywords": [
+    "brika",
+    "registry",
+    "crypto",
+    "ed25519",
+    "verified-plugins"
+  ],
   "exports": {
     ".": "./src/index.ts",
     "./types": "./src/types.ts"
   },
   "scripts": {
-    "tsc": "bunx --bun tsc --noEmit",
+    "typecheck": "tsgo --noEmit",
     "test": "bun test"
   },
   "devDependencies": {

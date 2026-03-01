@@ -9,7 +9,9 @@ export function BlocksSkeleton() {
           <div className="h-5 w-8 animate-pulse rounded-full bg-accent" />
         </div>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
-          {Array.from({ length: 8 }).map((_, i) => (
+          {Array.from({
+            length: 8,
+          }).map((_, i) => (
             <BlockCardSkeleton key={`block-skeleton-${i}`} />
           ))}
         </div>

@@ -27,7 +27,11 @@ describe('Client', () => {
       sentMessages.push(msg);
       return true;
     });
-    (process as unknown as { send: typeof mockSend }).send = mockSend;
+    (
+      process as unknown as {
+        send: typeof mockSend;
+      }
+    ).send = mockSend;
 
     // Mock process.on
     mockOn = mock((event: string, handler: (msg: WireMessage) => void) => {
@@ -36,7 +40,11 @@ describe('Client', () => {
       }
       return process;
     });
-    (process as unknown as { on: typeof mockOn }).on = mockOn;
+    (
+      process as unknown as {
+        on: typeof mockOn;
+      }
+    ).on = mockOn;
 
     // Mock process.removeAllListeners
     mockRemoveAllListeners = mock((event?: string) => {
@@ -48,21 +56,37 @@ describe('Client', () => {
       return process;
     });
     (
-      process as unknown as { removeAllListeners: typeof mockRemoveAllListeners }
+      process as unknown as {
+        removeAllListeners: typeof mockRemoveAllListeners;
+      }
     ).removeAllListeners = mockRemoveAllListeners;
   });
 
   afterEach(() => {
     // Restore original process methods
-    (process as unknown as { send: typeof originalSend }).send = originalSend;
-    (process as unknown as { on: typeof originalOn }).on = originalOn;
     (
-      process as unknown as { removeAllListeners: typeof originalRemoveAllListeners }
+      process as unknown as {
+        send: typeof originalSend;
+      }
+    ).send = originalSend;
+    (
+      process as unknown as {
+        on: typeof originalOn;
+      }
+    ).on = originalOn;
+    (
+      process as unknown as {
+        removeAllListeners: typeof originalRemoveAllListeners;
+      }
     ).removeAllListeners = originalRemoveAllListeners;
   });
 
   test('constructor throws if process.send is not available', () => {
-    (process as unknown as { send: undefined }).send = undefined;
+    (
+      process as unknown as {
+        send: undefined;
+      }
+    ).send = undefined;
 
     // Import module fresh to test constructor
     const { Client } = require('../client');
@@ -94,7 +118,10 @@ describe('Client', () => {
       const { Client } = require('../client');
       const client = new Client();
 
-      client.start({ id: 'test-plugin', version: '1.0.0' });
+      client.start({
+        id: 'test-plugin',
+        version: '1.0.0',
+      });
 
       expect(sentMessages).toHaveLength(2);
       expect(sentMessages[0]?.t).toBe('hello');
@@ -114,7 +141,10 @@ describe('Client', () => {
       const messageHandler = messageHandlers.get('message');
       await messageHandler?.({
         t: 'hello',
-        plugin: { id: 'test', version: '1.0' },
+        plugin: {
+          id: 'test',
+          version: '1.0',
+        },
       } as WireMessage);
 
       expect(handler).toHaveBeenCalledTimes(1);
@@ -131,7 +161,10 @@ describe('Client', () => {
       const messageHandler = messageHandlers.get('message');
       await messageHandler?.({
         t: 'hello',
-        plugin: { id: 'test1', version: '1.0' },
+        plugin: {
+          id: 'test1',
+          version: '1.0',
+        },
       } as WireMessage);
 
       unsubscribe();
@@ -139,7 +172,10 @@ describe('Client', () => {
       // Simulate second message
       await messageHandler?.({
         t: 'hello',
-        plugin: { id: 'test2', version: '1.0' },
+        plugin: {
+          id: 'test2',
+          version: '1.0',
+        },
       } as WireMessage);
 
       expect(handler).toHaveBeenCalledTimes(1);
@@ -151,7 +187,9 @@ describe('Client', () => {
       const { Client } = require('../client');
       const client = new Client();
 
-      client.implement(ping, ({ ts }: { ts: number }) => ({ ts }));
+      client.implement(ping, ({ ts }: { ts: number }) => ({
+        ts,
+      }));
 
       // Simulate RPC request
       const messageHandler = messageHandlers.get('message');
@@ -172,7 +210,13 @@ describe('Client', () => {
       const client = new Client();
 
       // Start call (will timeout, but we can check it was sent)
-      const callPromise = client.call(ping, { ts: Date.now() }, 50);
+      const callPromise = client.call(
+        ping,
+        {
+          ts: Date.now(),
+        },
+        50
+      );
 
       expect(sentMessages.some((m) => m.t === 'ping')).toBe(true);
 
@@ -234,13 +278,19 @@ describe('Client', () => {
 
         // Simulate receiving stop message
         const messageHandler = messageHandlers.get('message');
-        await messageHandler?.({ t: 'stop' } as WireMessage);
+        await messageHandler?.({
+          t: 'stop',
+        } as WireMessage);
 
         // Wait for async stop handlers to run
         await new Promise((resolve) => setTimeout(resolve, 50));
 
         // Should be called in reverse order (3, 2, 1)
-        expect(order).toEqual([3, 2, 1]);
+        expect(order).toEqual([
+          3,
+          2,
+          1,
+        ]);
       } finally {
         (process as unknown as Record<string, unknown>).exit = originalExit;
       }
@@ -265,7 +315,9 @@ describe('Client', () => {
 
         // Simulate stop
         const messageHandler = messageHandlers.get('message');
-        await messageHandler?.({ t: 'stop' } as WireMessage);
+        await messageHandler?.({
+          t: 'stop',
+        } as WireMessage);
         await new Promise((resolve) => setTimeout(resolve, 50));
 
         // Both handlers should have been called despite error in handler1
@@ -283,17 +335,19 @@ describe('Client', () => {
       const disconnectHandlers: (() => void)[] = [];
 
       // Capture disconnect handler
-      (process as unknown as { on: ReturnType<typeof mock> }).on = mock(
-        (event: string, handler: () => void) => {
-          if (event === 'message') {
-            messageHandlers.set(event, handler as unknown as (msg: WireMessage) => void);
-          }
-          if (event === 'disconnect') {
-            disconnectHandlers.push(handler);
-          }
-          return process;
+      (
+        process as unknown as {
+          on: ReturnType<typeof mock>;
         }
-      );
+      ).on = mock((event: string, handler: () => void) => {
+        if (event === 'message') {
+          messageHandlers.set(event, handler as unknown as (msg: WireMessage) => void);
+        }
+        if (event === 'disconnect') {
+          disconnectHandlers.push(handler);
+        }
+        return process;
+      });
 
       const _client = new Client();
 
@@ -311,29 +365,49 @@ describe('Client', () => {
       const client = new Client();
 
       // Start call
-      const callPromise = client.call(ping, { ts: 123 }, 100);
+      const callPromise = client.call(
+        ping,
+        {
+          ts: 123,
+        },
+        100
+      );
 
       // Find the request ID
       const pingMsg = sentMessages.find((m) => m.t === 'ping');
-      const requestId = (pingMsg as { _id?: number })?._id;
+      const requestId = (
+        pingMsg as {
+          _id?: number;
+        }
+      )?._id;
 
       // Simulate response
       const messageHandler = messageHandlers.get('message');
       await messageHandler?.({
         t: 'pingResult',
         _id: requestId,
-        result: { ts: 456 },
+        result: {
+          ts: 456,
+        },
       } as unknown as WireMessage);
 
       const result = await callPromise;
-      expect(result).toMatchObject({ ts: 456 });
+      expect(result).toMatchObject({
+        ts: 456,
+      });
     });
 
     test('rejects on timeout', async () => {
       const { Client } = require('../client');
       const client = new Client();
 
-      const callPromise = client.call(ping, { ts: 123 }, 10);
+      const callPromise = client.call(
+        ping,
+        {
+          ts: 123,
+        },
+        10
+      );
 
       await expect(callPromise).rejects.toThrow();
     });
@@ -352,15 +426,30 @@ describe('Client', () => {
 describe('createClient', () => {
   beforeEach(() => {
     // Mock process.send for constructor
-    (process as unknown as { send: ReturnType<typeof mock> }).send = mock(() => true);
-    (process as unknown as { on: ReturnType<typeof mock> }).on = mock(() => process);
-    (process as unknown as { removeAllListeners: ReturnType<typeof mock> }).removeAllListeners =
-      mock(() => process);
+    (
+      process as unknown as {
+        send: ReturnType<typeof mock>;
+      }
+    ).send = mock(() => true);
+    (
+      process as unknown as {
+        on: ReturnType<typeof mock>;
+      }
+    ).on = mock(() => process);
+    (
+      process as unknown as {
+        removeAllListeners: ReturnType<typeof mock>;
+      }
+    ).removeAllListeners = mock(() => process);
   });
 
   afterEach(() => {
     // Restore
-    (process as unknown as { send: undefined }).send = undefined;
+    (
+      process as unknown as {
+        send: undefined;
+      }
+    ).send = undefined;
   });
 
   test('creates Client instance', () => {
@@ -372,7 +461,9 @@ describe('createClient', () => {
 
   test('passes options to Client', () => {
     const { createClient } = require('../client');
-    const client = createClient({ defaultTimeoutMs: 5000 });
+    const client = createClient({
+      defaultTimeoutMs: 5000,
+    });
 
     expect(client).toBeDefined();
   });

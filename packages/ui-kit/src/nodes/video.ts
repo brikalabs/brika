@@ -14,7 +14,10 @@ export interface VideoNode extends BaseNode {
 }
 
 export function Video(props: Omit<VideoNode, 'type'>): VideoNode {
-  return { type: 'video', ...props };
+  return {
+    type: 'video',
+    ...props,
+  };
 }
 
 declare module './_shared' {

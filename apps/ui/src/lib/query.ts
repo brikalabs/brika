@@ -49,10 +49,15 @@ export async function fetcher<T>(url: string, options?: RequestInit): Promise<T>
   const res = await fetch(url, {
     ...options,
     credentials: 'include',
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
   });
   if (!res.ok) {
-    if (res.status === 401) _onUnauthorized?.();
+    if (res.status === 401) {
+      _onUnauthorized?.();
+    }
     throw new ApiError(res.status, (await res.text()) || res.statusText);
   }
   return res.json();

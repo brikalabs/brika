@@ -6,13 +6,15 @@
  * (Bun bug #12823) and break all subsequent test files.
  */
 
-import { describe, test, expect, vi, mock, beforeEach, afterEach } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, mock, test, vi } from 'bun:test';
 import { container } from '@brika/di';
 
 // ── Mock all external dependencies BEFORE imports ──
 
 const mockStop = vi.fn();
-const mockBootstrapCLI = vi.fn().mockResolvedValue({ stop: mockStop });
+const mockBootstrapCLI = vi.fn().mockResolvedValue({
+  stop: mockStop,
+});
 const mockPrintDatabaseInfo = vi.fn();
 mock.module('@/cli/bootstrap', () => ({
   bootstrapCLI: mockBootstrapCLI,
@@ -61,7 +63,9 @@ const mockPromptEditUser = vi.fn();
 const mockPromptDeleteUser = vi.fn();
 const mockShowSuccess = vi.fn();
 const mockShowError = vi.fn();
-const mockValidators = { email: vi.fn() };
+const mockValidators = {
+  email: vi.fn(),
+};
 mock.module('@/cli/auth-prompts', () => ({
   promptAddUser: mockPromptAddUser,
   promptSelectUser: mockPromptSelectUser,
@@ -111,11 +115,11 @@ mock.module('picocolors', () => ({
 // Register mock UserService in the real DI container so inject(UserService) works
 container.registerInstance(MockUserService, mockUserService);
 
+import userAddCmd from '@/cli/commands/auth/user-add';
+import userDeleteCmd from '@/cli/commands/auth/user-delete';
+import userEditCmd from '@/cli/commands/auth/user-edit';
 // Import commands AFTER all mocks are set up
 import userListCmd from '@/cli/commands/auth/user-list';
-import userAddCmd from '@/cli/commands/auth/user-add';
-import userEditCmd from '@/cli/commands/auth/user-edit';
-import userDeleteCmd from '@/cli/commands/auth/user-delete';
 
 // Sentinel error thrown when process.exit is called
 class ExitError extends Error {
@@ -127,10 +131,14 @@ class ExitError extends Error {
 }
 const mockExit = vi.fn().mockImplementation((code: number) => {
   throw new ExitError(code);
-}) as any;
+}) as unknown as typeof process.exit;
 const originalExit = process.exit;
 
-const handlerArgs = { values: {}, positionals: [], commands: [] };
+const handlerArgs = {
+  values: {},
+  positionals: [],
+  commands: [],
+};
 
 describe('cli/commands/auth/user-list', () => {
   beforeEach(() => {
@@ -144,9 +152,19 @@ describe('cli/commands/auth/user-list', () => {
 
   test('lists users with formatted output', async () => {
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-    mockUserService.listUsers.mockResolvedValue([
-      { id: 'u1', email: 'alice@test.com', name: 'Alice', role: 'admin' },
-      { id: 'u2', email: 'bob@test.com', name: 'Bob', role: 'user' },
+    mockUserService.listUsers.mockReturnValue([
+      {
+        id: 'u1',
+        email: 'alice@test.com',
+        name: 'Alice',
+        role: 'admin',
+      },
+      {
+        id: 'u2',
+        email: 'bob@test.com',
+        name: 'Bob',
+        role: 'user',
+      },
     ]);
 
     await userListCmd.handler(handlerArgs);
@@ -161,7 +179,7 @@ describe('cli/commands/auth/user-list', () => {
 
   test('shows "No users found" for empty list', async () => {
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-    mockUserService.listUsers.mockResolvedValue([]);
+    mockUserService.listUsers.mockReturnValue([]);
 
     await userListCmd.handler(handlerArgs);
 
@@ -173,7 +191,7 @@ describe('cli/commands/auth/user-list', () => {
   });
 
   test('always calls cli.stop() in finally', async () => {
-    mockUserService.listUsers.mockResolvedValue([]);
+    mockUserService.listUsers.mockReturnValue([]);
 
     await userListCmd.handler(handlerArgs);
 
@@ -181,7 +199,9 @@ describe('cli/commands/auth/user-list', () => {
   });
 
   test('calls cli.stop() even when listUsers throws', async () => {
-    mockUserService.listUsers.mockRejectedValue(new Error('DB error'));
+    mockUserService.listUsers.mockImplementation(() => {
+      throw new Error('DB error');
+    });
 
     try {
       await userListCmd.handler(handlerArgs);
@@ -210,7 +230,7 @@ describe('cli/commands/auth/user-add', () => {
       role: 'user',
       password: 'Pass123!',
     });
-    mockUserService.createUser.mockResolvedValue({
+    mockUserService.createUser.mockReturnValue({
       id: 'u1',
       email: 'new@test.com',
       name: 'New User',
@@ -231,7 +251,7 @@ describe('cli/commands/auth/user-add', () => {
       role: 'admin',
       password: 'Pass123!',
     });
-    mockUserService.createUser.mockResolvedValue({
+    mockUserService.createUser.mockReturnValue({
       id: 'u1',
       email: 'new@test.com',
       name: 'New User',
@@ -241,10 +261,13 @@ describe('cli/commands/auth/user-add', () => {
 
     await userAddCmd.handler(handlerArgs);
 
-    expect(mockShowSuccess).toHaveBeenCalledWith('User created!', expect.objectContaining({
-      Email: 'new@test.com',
-      Name: 'New User',
-    }));
+    expect(mockShowSuccess).toHaveBeenCalledWith(
+      'User created!',
+      expect.objectContaining({
+        Email: 'new@test.com',
+        Name: 'New User',
+      })
+    );
     expect(mockPrintDatabaseInfo).toHaveBeenCalled();
   });
 
@@ -255,9 +278,9 @@ describe('cli/commands/auth/user-add', () => {
       role: 'user',
       password: 'Pass123!',
     });
-    mockUserService.createUser.mockRejectedValue(
-      new Error('UNIQUE constraint failed: users.email')
-    );
+    mockUserService.createUser.mockImplementation(() => {
+      throw new Error('UNIQUE constraint failed: users.email');
+    });
 
     try {
       await userAddCmd.handler(handlerArgs);
@@ -276,7 +299,9 @@ describe('cli/commands/auth/user-add', () => {
       role: 'user',
       password: 'Pass123!',
     });
-    mockUserService.createUser.mockRejectedValue(new Error('DB connection failed'));
+    mockUserService.createUser.mockImplementation(() => {
+      throw new Error('DB connection failed');
+    });
 
     try {
       await userAddCmd.handler(handlerArgs);
@@ -295,7 +320,9 @@ describe('cli/commands/auth/user-add', () => {
       role: 'user',
       password: 'Pass123!',
     });
-    mockUserService.createUser.mockRejectedValue('string-error');
+    mockUserService.createUser.mockImplementation(() => {
+      throw 'string-error';
+    });
 
     await expect(userAddCmd.handler(handlerArgs)).rejects.toBe('string-error');
   });
@@ -307,7 +334,7 @@ describe('cli/commands/auth/user-add', () => {
       role: 'user',
       password: 'Pass123!',
     });
-    mockUserService.createUser.mockResolvedValue({
+    mockUserService.createUser.mockReturnValue({
       id: 'u1',
       email: 'new@test.com',
       name: 'New',
@@ -327,7 +354,9 @@ describe('cli/commands/auth/user-add', () => {
       role: 'user',
       password: 'Pass123!',
     });
-    mockUserService.createUser.mockRejectedValue(new Error('fail'));
+    mockUserService.createUser.mockImplementation(() => {
+      throw new Error('fail');
+    });
 
     try {
       await userAddCmd.handler(handlerArgs);
@@ -350,7 +379,7 @@ describe('cli/commands/auth/user-edit', () => {
   });
 
   test('shows error when no users found', async () => {
-    mockUserService.listUsers.mockResolvedValue([]);
+    mockUserService.listUsers.mockReturnValue([]);
 
     await userEditCmd.handler(handlerArgs);
 
@@ -358,8 +387,14 @@ describe('cli/commands/auth/user-edit', () => {
   });
 
   test('shows error when selected user not found in list', async () => {
-    mockUserService.listUsers.mockResolvedValue([
-      { id: 'u1', email: 'a@test.com', name: 'Alice', role: 'admin', isActive: true },
+    mockUserService.listUsers.mockReturnValue([
+      {
+        id: 'u1',
+        email: 'a@test.com',
+        name: 'Alice',
+        role: 'admin',
+        isActive: true,
+      },
     ]);
     mockPromptSelectUser.mockResolvedValue('nonexistent-id');
 
@@ -370,11 +405,22 @@ describe('cli/commands/auth/user-edit', () => {
 
   test('applies name and role changes', async () => {
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-    const user = { id: 'u1', email: 'a@test.com', name: 'Alice', role: 'admin', isActive: true };
-    mockUserService.listUsers.mockResolvedValue([user]);
+    const user = {
+      id: 'u1',
+      email: 'a@test.com',
+      name: 'Alice',
+      role: 'admin',
+      isActive: true,
+    };
+    mockUserService.listUsers.mockReturnValue([
+      user,
+    ]);
     mockPromptSelectUser.mockResolvedValue('u1');
-    mockPromptEditUser.mockResolvedValue({ name: 'Alicia', role: 'user' });
-    mockUserService.updateUser.mockResolvedValue({
+    mockPromptEditUser.mockResolvedValue({
+      name: 'Alicia',
+      role: 'user',
+    });
+    mockUserService.updateUser.mockReturnValue({
       ...user,
       name: 'Alicia',
       role: 'user',
@@ -387,10 +433,13 @@ describe('cli/commands/auth/user-edit', () => {
       role: 'user',
       isActive: undefined,
     });
-    expect(mockShowSuccess).toHaveBeenCalledWith('User updated!', expect.objectContaining({
-      Email: 'a@test.com',
-      Name: 'Alicia',
-    }));
+    expect(mockShowSuccess).toHaveBeenCalledWith(
+      'User updated!',
+      expect.objectContaining({
+        Email: 'a@test.com',
+        Name: 'Alicia',
+      })
+    );
     expect(mockPrintDatabaseInfo).toHaveBeenCalled();
 
     logSpy.mockRestore();
@@ -398,11 +447,22 @@ describe('cli/commands/auth/user-edit', () => {
 
   test('applies password reset alongside other changes', async () => {
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-    const user = { id: 'u1', email: 'a@test.com', name: 'Alice', role: 'admin', isActive: true };
-    mockUserService.listUsers.mockResolvedValue([user]);
+    const user = {
+      id: 'u1',
+      email: 'a@test.com',
+      name: 'Alice',
+      role: 'admin',
+      isActive: true,
+    };
+    mockUserService.listUsers.mockReturnValue([
+      user,
+    ]);
     mockPromptSelectUser.mockResolvedValue('u1');
-    mockPromptEditUser.mockResolvedValue({ name: 'Alicia', resetPassword: 'NewPass1!' });
-    mockUserService.updateUser.mockResolvedValue({
+    mockPromptEditUser.mockResolvedValue({
+      name: 'Alicia',
+      resetPassword: 'NewPass1!',
+    });
+    mockUserService.updateUser.mockReturnValue({
       ...user,
       name: 'Alicia',
     });
@@ -419,8 +479,16 @@ describe('cli/commands/auth/user-edit', () => {
 
   test('shows "No changes made" when nothing selected', async () => {
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-    const user = { id: 'u1', email: 'a@test.com', name: 'Alice', role: 'admin', isActive: true };
-    mockUserService.listUsers.mockResolvedValue([user]);
+    const user = {
+      id: 'u1',
+      email: 'a@test.com',
+      name: 'Alice',
+      role: 'admin',
+      isActive: true,
+    };
+    mockUserService.listUsers.mockReturnValue([
+      user,
+    ]);
     mockPromptSelectUser.mockResolvedValue('u1');
     mockPromptEditUser.mockResolvedValue({});
 
@@ -435,11 +503,21 @@ describe('cli/commands/auth/user-edit', () => {
 
   test('applies isActive change', async () => {
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-    const user = { id: 'u1', email: 'a@test.com', name: 'Alice', role: 'admin', isActive: true };
-    mockUserService.listUsers.mockResolvedValue([user]);
+    const user = {
+      id: 'u1',
+      email: 'a@test.com',
+      name: 'Alice',
+      role: 'admin',
+      isActive: true,
+    };
+    mockUserService.listUsers.mockReturnValue([
+      user,
+    ]);
     mockPromptSelectUser.mockResolvedValue('u1');
-    mockPromptEditUser.mockResolvedValue({ isActive: false });
-    mockUserService.updateUser.mockResolvedValue({
+    mockPromptEditUser.mockResolvedValue({
+      isActive: false,
+    });
+    mockUserService.updateUser.mockReturnValue({
       ...user,
       isActive: false,
     });
@@ -456,7 +534,7 @@ describe('cli/commands/auth/user-edit', () => {
   });
 
   test('always calls cli.stop()', async () => {
-    mockUserService.listUsers.mockResolvedValue([]);
+    mockUserService.listUsers.mockReturnValue([]);
 
     await userEditCmd.handler(handlerArgs);
 
@@ -464,7 +542,9 @@ describe('cli/commands/auth/user-edit', () => {
   });
 
   test('catches CliError and shows error', async () => {
-    mockUserService.listUsers.mockRejectedValue(new MockCliError('Permission denied'));
+    mockUserService.listUsers.mockImplementation(() => {
+      throw new MockCliError('Permission denied');
+    });
 
     try {
       await userEditCmd.handler(handlerArgs);
@@ -477,7 +557,9 @@ describe('cli/commands/auth/user-edit', () => {
   });
 
   test('catches generic Error and shows error', async () => {
-    mockUserService.listUsers.mockRejectedValue(new Error('DB crashed'));
+    mockUserService.listUsers.mockImplementation(() => {
+      throw new Error('DB crashed');
+    });
 
     try {
       await userEditCmd.handler(handlerArgs);
@@ -490,7 +572,9 @@ describe('cli/commands/auth/user-edit', () => {
   });
 
   test('rethrows non-Error values', async () => {
-    mockUserService.listUsers.mockRejectedValue(42);
+    mockUserService.listUsers.mockImplementation(() => {
+      throw 42;
+    });
 
     await expect(userEditCmd.handler(handlerArgs)).rejects.toBe(42);
   });
@@ -510,7 +594,7 @@ describe('cli/commands/auth/user-delete', () => {
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     mockText.mockResolvedValue('alice@test.com');
     mockConfirm.mockResolvedValue(true);
-    mockUserService.deleteUser.mockResolvedValue(undefined);
+    mockUserService.deleteUser.mockReturnValue(undefined);
 
     await userDeleteCmd.handler(handlerArgs);
 
@@ -538,7 +622,9 @@ describe('cli/commands/auth/user-delete', () => {
   test('handles "not found" error from deleteUser', async () => {
     mockText.mockResolvedValue('nobody@test.com');
     mockConfirm.mockResolvedValue(true);
-    mockUserService.deleteUser.mockRejectedValue(new Error('User not found in database'));
+    mockUserService.deleteUser.mockImplementation(() => {
+      throw new Error('User not found in database');
+    });
 
     try {
       await userDeleteCmd.handler(handlerArgs);
@@ -553,7 +639,9 @@ describe('cli/commands/auth/user-delete', () => {
   test('handles generic Error', async () => {
     mockText.mockResolvedValue('alice@test.com');
     mockConfirm.mockResolvedValue(true);
-    mockUserService.deleteUser.mockRejectedValue(new Error('DB connection lost'));
+    mockUserService.deleteUser.mockImplementation(() => {
+      throw new Error('DB connection lost');
+    });
 
     try {
       await userDeleteCmd.handler(handlerArgs);
@@ -568,7 +656,9 @@ describe('cli/commands/auth/user-delete', () => {
   test('handles CliError', async () => {
     mockText.mockResolvedValue('alice@test.com');
     mockConfirm.mockResolvedValue(true);
-    mockUserService.deleteUser.mockRejectedValue(new MockCliError('CLI problem'));
+    mockUserService.deleteUser.mockImplementation(() => {
+      throw new MockCliError('CLI problem');
+    });
 
     try {
       await userDeleteCmd.handler(handlerArgs);
@@ -583,7 +673,9 @@ describe('cli/commands/auth/user-delete', () => {
   test('rethrows non-Error values', async () => {
     mockText.mockResolvedValue('alice@test.com');
     mockConfirm.mockResolvedValue(true);
-    mockUserService.deleteUser.mockRejectedValue('string-err');
+    mockUserService.deleteUser.mockImplementation(() => {
+      throw 'string-err';
+    });
 
     await expect(userDeleteCmd.handler(handlerArgs)).rejects.toBe('string-err');
   });
@@ -591,7 +683,7 @@ describe('cli/commands/auth/user-delete', () => {
   test('always calls cli.stop() after bootstrap', async () => {
     mockText.mockResolvedValue('alice@test.com');
     mockConfirm.mockResolvedValue(true);
-    mockUserService.deleteUser.mockResolvedValue(undefined);
+    mockUserService.deleteUser.mockReturnValue(undefined);
 
     await userDeleteCmd.handler(handlerArgs);
 
@@ -601,7 +693,9 @@ describe('cli/commands/auth/user-delete', () => {
   test('calls cli.stop() even on error after bootstrap', async () => {
     mockText.mockResolvedValue('alice@test.com');
     mockConfirm.mockResolvedValue(true);
-    mockUserService.deleteUser.mockRejectedValue(new Error('fail'));
+    mockUserService.deleteUser.mockImplementation(() => {
+      throw new Error('fail');
+    });
 
     try {
       await userDeleteCmd.handler(handlerArgs);

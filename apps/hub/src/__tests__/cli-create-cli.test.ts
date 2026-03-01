@@ -7,14 +7,22 @@ import { createCli } from '@/cli/cli';
 import type { Command } from '@/cli/command';
 import { captureExit, captureLog } from './helpers/capture';
 
-const noop: Command = { name: 'ping', description: 'Ping', handler() {} };
+const noop: Command = {
+  name: 'ping',
+  description: 'Ping',
+  handler() {},
+};
 
 describe('createCli', () => {
   describe('defaults', () => {
     test('defaults to "start" command when no args', async () => {
       const handler = mock();
       const cli = createCli()
-        .addCommand({ name: 'start', description: 'Start', handler })
+        .addCommand({
+          name: 'start',
+          description: 'Start',
+          handler,
+        })
         .addHelp();
 
       await cli.run([]);
@@ -27,7 +35,12 @@ describe('createCli', () => {
     });
 
     test('resolves aliases', () => {
-      const cli = createCli().addCommand({ ...noop, aliases: ['-p'] });
+      const cli = createCli().addCommand({
+        ...noop,
+        aliases: [
+          '-p',
+        ],
+      });
       expect(cli.get('-p')?.name).toBe('ping');
     });
 
@@ -40,9 +53,15 @@ describe('createCli', () => {
   describe('config.defaultCommand', () => {
     test('uses custom default command', async () => {
       const handler = mock();
-      const cli = createCli({ defaultCommand: 'help' })
+      const cli = createCli({
+        defaultCommand: 'help',
+      })
         .addCommand(noop)
-        .addCommand({ name: 'help', description: 'Help', handler });
+        .addCommand({
+          name: 'help',
+          description: 'Help',
+          handler,
+        });
 
       await cli.run([]);
       expect(handler).toHaveBeenCalled();
@@ -64,17 +83,28 @@ describe('createCli', () => {
         },
       });
 
-      await cli.run(['start']);
-      expect(order).toEqual(['before', 'handler']);
+      await cli.run([
+        'start',
+      ]);
+      expect(order).toEqual([
+        'before',
+        'handler',
+      ]);
     });
 
     test('skips before hook for help command', async () => {
       const beforeFn = mock();
       const log = captureLog();
 
-      const cli = createCli({ before: beforeFn }).addCommand(noop).addHelp();
+      const cli = createCli({
+        before: beforeFn,
+      })
+        .addCommand(noop)
+        .addHelp();
 
-      await cli.run(['help']);
+      await cli.run([
+        'help',
+      ]);
       log.restore();
 
       expect(beforeFn).not.toHaveBeenCalled();
@@ -84,9 +114,16 @@ describe('createCli', () => {
       const beforeFn = mock();
       const log = captureLog();
 
-      const cli = createCli({ before: beforeFn }).addCommand(noop).addHelp();
+      const cli = createCli({
+        before: beforeFn,
+      })
+        .addCommand(noop)
+        .addHelp();
 
-      await cli.run(['ping', '--help']);
+      await cli.run([
+        'ping',
+        '--help',
+      ]);
       log.restore();
 
       expect(beforeFn).not.toHaveBeenCalled();
@@ -102,7 +139,14 @@ describe('createCli', () => {
     test('throws on alias colliding with existing name', () => {
       const cli = createCli().addCommand(noop);
       expect(() =>
-        cli.addCommand({ name: 'other', description: 'Other', aliases: ['ping'], handler() {} })
+        cli.addCommand({
+          name: 'other',
+          description: 'Other',
+          aliases: [
+            'ping',
+          ],
+          handler() {},
+        })
       ).toThrow(/collision/i);
     });
   });
@@ -113,7 +157,9 @@ describe('createCli', () => {
       const cli = createCli().addCommand(noop).addHelp();
 
       try {
-        await cli.run(['nonexistent']);
+        await cli.run([
+          'nonexistent',
+        ]);
       } catch {}
       exit.restore();
 
@@ -131,7 +177,12 @@ describe('createCli', () => {
 
     test('collects examples from child commands', () => {
       const cmd = createCli()
-        .addCommand({ ...noop, examples: ['brika sub ping'] })
+        .addCommand({
+          ...noop,
+          examples: [
+            'brika sub ping',
+          ],
+        })
         .addHelp()
         .toCommand('sub', 'A subcommand');
 
@@ -141,27 +192,50 @@ describe('createCli', () => {
     test('dispatches positionals to nested cli.run', async () => {
       const handler = mock();
 
-      const cmd = createCli({ defaultCommand: 'help' })
-        .addCommand({ name: 'action', description: 'Do it', handler })
+      const cmd = createCli({
+        defaultCommand: 'help',
+      })
+        .addCommand({
+          name: 'action',
+          description: 'Do it',
+          handler,
+        })
         .addHelp()
         .toCommand('sub', 'Sub');
 
-      await cmd.handler({ values: {}, positionals: ['action', 'arg1'], commands: [] });
+      await cmd.handler({
+        values: {},
+        positionals: [
+          'action',
+          'arg1',
+        ],
+        commands: [],
+      });
       expect(handler).toHaveBeenCalled();
       // The nested handler receives ['arg1'] as positionals
-      const call = handler.mock.calls[0] as [{ positionals: string[] }];
+      const call = handler.mock.calls[0] as [
+        {
+          positionals: string[];
+        },
+      ];
       expect(call[0].positionals).toContain('arg1');
     });
 
     test('prefix is composed from parent for help display', () => {
       const log = captureLog();
 
-      const nested = createCli({ defaultCommand: 'help' }).addCommand(noop).addHelp();
+      const nested = createCli({
+        defaultCommand: 'help',
+      })
+        .addCommand(noop)
+        .addHelp();
 
       nested.toCommand('sub', 'Sub');
 
       // Now run help — it should show "brika sub" prefix
-      nested.run(['help']);
+      nested.run([
+        'help',
+      ]);
       log.restore();
 
       const output = log.lines.join('\n');
@@ -182,9 +256,13 @@ describe('createCli', () => {
       });
 
       try {
-        await cli.run(['start']);
+        await cli.run([
+          'start',
+        ]);
       } catch {}
-      const errors = [...exit.errors];
+      const errors = [
+        ...exit.errors,
+      ];
       exit.restore();
 
       expect(exit.code).toBe(1);

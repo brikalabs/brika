@@ -9,12 +9,16 @@
     "url": "git+https://github.com/maxscharwath/brika.git",
     "directory": "packages/plugin"
   },
-  "keywords": ["brika", "plugin", "types"],
+  "keywords": [
+    "brika",
+    "plugin",
+    "types"
+  ],
   "exports": {
     ".": "./src/index.ts"
   },
   "scripts": {
-    "tsc": "bunx --bun tsc --noEmit",
+    "typecheck": "tsgo --noEmit",
     "test": "bun test"
   },
   "devDependencies": {

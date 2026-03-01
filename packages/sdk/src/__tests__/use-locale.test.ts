@@ -19,7 +19,9 @@ const mockT = mock(
 );
 
 mock.module('../context', () => ({
-  getContext: () => ({ t: mockT }),
+  getContext: () => ({
+    t: mockT,
+  }),
 }));
 
 // Import after mocking
@@ -48,9 +50,15 @@ describe('useLocale', () => {
 
     test('passes params through', () => {
       const { t } = useLocale();
-      const ref = t('ui.dayForecast', { count: 5 });
-      expect(mockT).toHaveBeenCalledWith('ui.dayForecast', { count: 5 });
-      expect(ref.params).toEqual({ count: 5 });
+      const ref = t('ui.dayForecast', {
+        count: 5,
+      });
+      expect(mockT).toHaveBeenCalledWith('ui.dayForecast', {
+        count: 5,
+      });
+      expect(ref.params).toEqual({
+        count: 5,
+      });
     });
   });
 
@@ -63,7 +71,9 @@ describe('useLocale', () => {
         __intl: true,
         type: 'dateTime',
         value: 1700000000000,
-        options: { dateStyle: 'medium' },
+        options: {
+          dateStyle: 'medium',
+        },
       });
     });
 
@@ -75,8 +85,17 @@ describe('useLocale', () => {
 
     test('merges custom options', () => {
       const { formatDate } = useLocale();
-      const ref = formatDate(0, { dateStyle: 'long' }) as Extract<IntlRef, { type: 'dateTime' }>;
-      expect(ref.options).toEqual({ dateStyle: 'long' });
+      const ref = formatDate(0, {
+        dateStyle: 'long',
+      }) as Extract<
+        IntlRef,
+        {
+          type: 'dateTime';
+        }
+      >;
+      expect(ref.options).toEqual({
+        dateStyle: 'long',
+      });
     });
   });
 
@@ -89,7 +108,9 @@ describe('useLocale', () => {
         __intl: true,
         type: 'dateTime',
         value: 1700000000000,
-        options: { timeStyle: 'short' },
+        options: {
+          timeStyle: 'short',
+        },
       });
     });
 
@@ -108,17 +129,28 @@ describe('useLocale', () => {
         __intl: true,
         type: 'dateTime',
         value: 0,
-        options: { dateStyle: 'medium', timeStyle: 'short' },
+        options: {
+          dateStyle: 'medium',
+          timeStyle: 'short',
+        },
       });
     });
 
     test('custom options override defaults', () => {
       const { formatDateTime } = useLocale();
-      const ref = formatDateTime(0, { dateStyle: 'full', timeStyle: 'full' }) as Extract<
+      const ref = formatDateTime(0, {
+        dateStyle: 'full',
+        timeStyle: 'full',
+      }) as Extract<
         IntlRef,
-        { type: 'dateTime' }
+        {
+          type: 'dateTime';
+        }
       >;
-      expect(ref.options).toEqual({ dateStyle: 'full', timeStyle: 'full' });
+      expect(ref.options).toEqual({
+        dateStyle: 'full',
+        timeStyle: 'full',
+      });
     });
   });
 
@@ -137,11 +169,17 @@ describe('useLocale', () => {
 
     test('includes custom options', () => {
       const { formatNumber } = useLocale();
-      const ref = formatNumber(3.14, { minimumFractionDigits: 2 }) as Extract<
+      const ref = formatNumber(3.14, {
+        minimumFractionDigits: 2,
+      }) as Extract<
         IntlRef,
-        { type: 'number' }
+        {
+          type: 'number';
+        }
       >;
-      expect(ref.options).toEqual({ minimumFractionDigits: 2 });
+      expect(ref.options).toEqual({
+        minimumFractionDigits: 2,
+      });
     });
   });
 
@@ -154,7 +192,10 @@ describe('useLocale', () => {
         __intl: true,
         type: 'number',
         value: 9.99,
-        options: { style: 'currency', currency: 'USD' },
+        options: {
+          style: 'currency',
+          currency: 'USD',
+        },
       });
     });
   });
@@ -174,8 +215,21 @@ describe('useLocale', () => {
 
     test('supports various units', () => {
       const { formatRelativeTime } = useLocale();
-      for (const unit of ['second', 'minute', 'hour', 'day', 'week', 'month', 'year'] as const) {
-        const ref = formatRelativeTime(2, unit) as Extract<IntlRef, { type: 'relativeTime' }>;
+      for (const unit of [
+        'second',
+        'minute',
+        'hour',
+        'day',
+        'week',
+        'month',
+        'year',
+      ] as const) {
+        const ref = formatRelativeTime(2, unit) as Extract<
+          IntlRef,
+          {
+            type: 'relativeTime';
+          }
+        >;
         expect(ref.unit).toBe(unit);
       }
     });
@@ -186,18 +240,44 @@ describe('useLocale', () => {
   describe('formatList', () => {
     test('creates list ref with default options', () => {
       const { formatList } = useLocale();
-      expect(formatList(['a', 'b'])).toEqual({
+      expect(
+        formatList([
+          'a',
+          'b',
+        ])
+      ).toEqual({
         __intl: true,
         type: 'list',
-        value: ['a', 'b'],
-        options: { style: 'long', type: 'conjunction' },
+        value: [
+          'a',
+          'b',
+        ],
+        options: {
+          style: 'long',
+          type: 'conjunction',
+        },
       });
     });
 
     test('merges custom options', () => {
       const { formatList } = useLocale();
-      const ref = formatList(['x'], { type: 'disjunction' }) as Extract<IntlRef, { type: 'list' }>;
-      expect(ref.options).toEqual({ style: 'long', type: 'disjunction' });
+      const ref = formatList(
+        [
+          'x',
+        ],
+        {
+          type: 'disjunction',
+        }
+      ) as Extract<
+        IntlRef,
+        {
+          type: 'list';
+        }
+      >;
+      expect(ref.options).toEqual({
+        style: 'long',
+        type: 'disjunction',
+      });
     });
   });
 

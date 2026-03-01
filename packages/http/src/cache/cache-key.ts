@@ -8,7 +8,10 @@ import type { RequestConfig } from '../types';
  * Generate a cache key from request configuration
  */
 export function generateCacheKey(config: RequestConfig): string {
-  const parts: string[] = [config.method, config.url];
+  const parts: string[] = [
+    config.method,
+    config.url,
+  ];
 
   // Add sorted query parameters
   if (config.params && Object.keys(config.params).length > 0) {
@@ -24,7 +27,14 @@ export function generateCacheKey(config: RequestConfig): string {
   }
 
   // Add body hash for POST/PUT/PATCH requests
-  if (config.body && ['POST', 'PUT', 'PATCH'].includes(config.method)) {
+  if (
+    config.body &&
+    [
+      'POST',
+      'PUT',
+      'PATCH',
+    ].includes(config.method)
+  ) {
     const bodyHash = hashBody(config.body);
     if (bodyHash) {
       parts.push(bodyHash);
@@ -77,7 +87,7 @@ function simpleHash(str: string): string {
   let hash = 2166136261;
 
   for (let i = 0; i < str.length; i++) {
-    hash ^= str.codePointAt(i)!;
+    hash ^= str.codePointAt(i) ?? 0;
     hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
   }
 

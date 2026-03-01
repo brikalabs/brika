@@ -8,27 +8,33 @@
  * Scope protection is handled via withScopeGuard HOC.
  */
 
+import { type AnyRoute, createRoute, type RouteComponent } from '@tanstack/react-router';
 import React from 'react';
-import { createRoute, type AnyRoute, type RouteComponent } from '@tanstack/react-router';
-import { Scope } from '../types';
 import { withScopeGuard } from '../react/withScopeGuard';
+import { Scope } from '../types';
 
 // ─── Path param type extraction ──────────────────────────────────────────────
 
 /** Normalize bare splat `$` to `_splat` (matches TanStack Router convention) */
-type NormalizeParam<P extends string> = P extends '' ? '_splat' : P;
+export type NormalizeParam<P extends string> = P extends '' ? '_splat' : P;
 
 /** Extract `$param` names from a path string into a union */
-type ExtractParams<T extends string> = T extends `${string}/$${infer Param}/${infer Rest}`
+export type ExtractParams<T extends string> = T extends `${string}/$${infer Param}/${infer Rest}`
   ? NormalizeParam<Param> | ExtractParams<`/${Rest}`>
   : T extends `${string}/$${infer Param}`
     ? NormalizeParam<Param>
     : never;
 
 /** If the path has params, require them. Otherwise no args needed. */
-type ParamsArg<T extends string> = [ExtractParams<T>] extends [never]
+export type ParamsArg<T extends string> = [
+  ExtractParams<T>,
+] extends [
+  never,
+]
   ? []
-  : [params: Record<ExtractParams<T>, string>];
+  : [
+      params: Record<ExtractParams<T>, string>,
+    ];
 
 // ─── Definition types (input) ────────────────────────────────────────────────
 
@@ -69,31 +75,41 @@ export interface ProtectedRouteResult<TPath extends string = string> {
 
 // ─── Result type mapping ─────────────────────────────────────────────────────
 
-type UnionToIntersection<U> =
-  (U extends unknown ? (k: U) => void : never) extends (k: infer I) => void ? I : never;
+type UnionToIntersection<U> = (U extends unknown ? (k: U) => void : never) extends (
+  k: infer I
+) => void
+  ? I
+  : never;
 
 /** Compute the full absolute path for a child route */
-type ChildAbsolutePath<Parent extends string, Child extends string> =
-  Child extends '/' ? Parent
-  : Child extends `/${string}` ? `${Parent}${Child}`
-  : `${Parent}/${Child}`;
+type ChildAbsolutePath<Parent extends string, Child extends string> = Child extends '/'
+  ? Parent
+  : Child extends `/${string}`
+    ? `${Parent}${Child}`
+    : `${Parent}/${Child}`;
 
 /** Extract and flatten all children maps into a single intersection */
 type FlattenChildren<T> = UnionToIntersection<
   {
-    [K in keyof T]: T[K] extends { path: infer PP extends string; children: infer C extends Record<string, ProtectedRouteDefinition> }
+    [K in keyof T]: T[K] extends {
+      path: infer PP extends string;
+      children: infer C extends Record<string, ProtectedRouteDefinition>;
+    }
       ? { [CK in keyof C]: ProtectedRouteResult<ChildAbsolutePath<PP, C[CK]['path']>> }
-      : {};
+      : Record<string, never>;
   }[keyof T]
 >;
 
 /** Map a group of definitions to results, flattening children within the group */
-type GroupResults<T extends Record<string, ProtectedRouteDefinition | ProtectedRouteWithChildren>> = {
-  [K in keyof T]: ProtectedRouteResult<T[K]['path']>;
-} & FlattenChildren<T>;
+type GroupResults<T extends Record<string, ProtectedRouteDefinition | ProtectedRouteWithChildren>> =
+  {
+    [K in keyof T]: ProtectedRouteResult<T[K]['path']>;
+  } & FlattenChildren<T>;
 
 /** Map grouped definitions to nested route results */
-type GroupedRouteResults<T extends Record<string, Record<string, ProtectedRouteDefinition | ProtectedRouteWithChildren>>> = {
+type GroupedRouteResults<
+  T extends Record<string, Record<string, ProtectedRouteDefinition | ProtectedRouteWithChildren>>,
+> = {
   [G in keyof T]: GroupResults<T[G]>;
 };
 
@@ -107,11 +123,13 @@ export interface ProtectedRoutesOptions {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 /** Replace $param segments with actual values (supports splat $) */
-function resolvePath(path: string, params?: Record<string, string>): string {
-  if (!params) return path;
+export function resolvePath(path: string, params?: Record<string, string>): string {
+  if (!params) {
+    return path;
+  }
   let resolved = path.replaceAll(/\$(\w+)/g, (_, key) => params[key] ?? `$${key}`);
   // Handle trailing splat param ($)
-  if (resolved.endsWith('/$') && params._splat != null) {
+  if (resolved.endsWith('/$') && params._splat !== null && params._splat !== undefined) {
     resolved = resolved.slice(0, -1) + params._splat;
   }
   return resolved;
@@ -119,8 +137,12 @@ function resolvePath(path: string, params?: Record<string, string>): string {
 
 /** Resolve the absolute path for a child route */
 function resolveChildPath(parentPath: string, childPath: string): string {
-  if (childPath === '/') return parentPath;
-  if (childPath.startsWith('/')) return `${parentPath}${childPath}`;
+  if (childPath === '/') {
+    return parentPath;
+  }
+  if (childPath.startsWith('/')) {
+    return `${parentPath}${childPath}`;
+  }
   return `${parentPath}/${childPath}`;
 }
 
@@ -131,14 +153,20 @@ function processChildren(
   parentRoute: AnyRoute,
   parentScopes: Scope | Scope[] | null,
   groupResults: Record<string, ProtectedRouteResult>,
-  options?: ProtectedRoutesOptions,
+  options?: ProtectedRoutesOptions
 ): void {
   const childRoutes: AnyRoute[] = [];
 
   for (const [childKey, childDef] of Object.entries(children)) {
     const childScopes = childDef.scopes === undefined ? parentScopes : (childDef.scopes ?? null);
     const fullChildPath = resolveChildPath(parentPath, childDef.path);
-    const childResult = buildRoute(childDef, () => parentRoute, childScopes, options, fullChildPath);
+    const childResult = buildRoute(
+      childDef,
+      () => parentRoute,
+      childScopes,
+      options,
+      fullChildPath
+    );
 
     groupResults[childKey] = childResult;
     childRoutes.push(childResult.route);
@@ -153,12 +181,14 @@ function buildRoute<TPath extends string>(
   getParentRoute: () => AnyRoute,
   effectiveScopes: Scope | Scope[] | null,
   options?: ProtectedRoutesOptions,
-  absolutePath?: string,
+  absolutePath?: string
 ): ProtectedRouteResult<TPath> {
   const { path, component } = definition;
 
   const guardOptions = options?.defaultForbiddenComponent
-    ? { fallback: React.createElement(options.defaultForbiddenComponent) }
+    ? {
+        fallback: React.createElement(options.defaultForbiddenComponent),
+      }
     : undefined;
 
   const guardedComponent =
@@ -177,8 +207,10 @@ function buildRoute<TPath extends string>(
     path: displayPath as TPath,
     scopes: effectiveScopes,
     to: ((...args: unknown[]) =>
-      resolvePath(displayPath, args[0] as Record<string, string> | undefined)
-    ) as ProtectedRouteResult<TPath>['to'],
+      resolvePath(
+        displayPath,
+        args[0] as Record<string, string> | undefined
+      )) as ProtectedRouteResult<TPath>['to'],
   };
 }
 
@@ -217,12 +249,18 @@ function buildRoute<TPath extends string>(
  * ```
  */
 export function createProtectedRoutes<
-  const T extends Record<string, Record<string, ProtectedRouteDefinition<string> | ProtectedRouteWithChildren<string>>>,
+  const T extends Record<
+    string,
+    Record<string, ProtectedRouteDefinition<string> | ProtectedRouteWithChildren<string>>
+  >,
 >(
   rootRoute: AnyRoute,
   groups: T,
-  options?: ProtectedRoutesOptions,
-): { routes: GroupedRouteResults<T>; routeTree: AnyRoute } {
+  options?: ProtectedRoutesOptions
+): {
+  routes: GroupedRouteResults<T>;
+  routeTree: AnyRoute;
+} {
   const groupedRoutes: Record<string, Record<string, ProtectedRouteResult>> = {};
   const topLevelRoutes: AnyRoute[] = [];
 
@@ -237,7 +275,14 @@ export function createProtectedRoutes<
       // Process children if present
       const children = (definition as ProtectedRouteWithChildren).children;
       if (children) {
-        processChildren(children, definition.path, result.route, effectiveScopes, groupedRoutes[groupName], options);
+        processChildren(
+          children,
+          definition.path,
+          result.route,
+          effectiveScopes,
+          groupedRoutes[groupName],
+          options
+        );
       }
 
       topLevelRoutes.push(result.route);
@@ -265,7 +310,7 @@ export interface LegacyRouteDefinition<TPath extends string = string>
  * Prefer createProtectedRoutes() for most use cases.
  */
 export function createProtectedRoute<TPath extends string>(
-  definition: LegacyRouteDefinition<TPath>,
+  definition: LegacyRouteDefinition<TPath>
 ): ProtectedRouteResult<TPath> {
   const { getParentRoute, ...rest } = definition;
   return buildRoute(rest, getParentRoute, rest.scopes ?? null);

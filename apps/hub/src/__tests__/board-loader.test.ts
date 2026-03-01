@@ -12,7 +12,9 @@ import { BoardLoader } from '@/runtime/boards/board-loader';
 import type { Board, BoardBrickPlacement } from '@/runtime/boards/types';
 import { Logger } from '@/runtime/logs/log-router';
 
-useTestBed({ autoStub: false });
+useTestBed({
+  autoStub: false,
+});
 
 const TEST_ROOT = join(import.meta.dir, '.test-board-loader');
 const TEST_DIR = join(TEST_ROOT, 'boards');
@@ -36,8 +38,14 @@ const createPlacement = (
   instanceId,
   brickTypeId,
   config: {},
-  position: { x: 0, y: 0 },
-  size: { w: 2, h: 2 },
+  position: {
+    x: 0,
+    y: 0,
+  },
+  size: {
+    w: 2,
+    h: 2,
+  },
 });
 
 const VALID_YAML = `
@@ -75,8 +83,13 @@ describe('BoardLoader', () => {
   let loader: BoardLoader;
 
   beforeAll(async () => {
-    await rm(TEST_ROOT, { recursive: true, force: true });
-    await mkdir(TEST_DIR, { recursive: true });
+    await rm(TEST_ROOT, {
+      recursive: true,
+      force: true,
+    });
+    await mkdir(TEST_DIR, {
+      recursive: true,
+    });
   });
 
   beforeEach(() => {
@@ -89,21 +102,34 @@ describe('BoardLoader', () => {
     reset();
     // Clean up files between tests
     try {
-      const files = await Array.fromAsync(new Bun.Glob('*.{yaml,yml}').scan({ cwd: TEST_DIR }));
+      const files = await Array.fromAsync(
+        new Bun.Glob('*.{yaml,yml}').scan({
+          cwd: TEST_DIR,
+        })
+      );
       for (const file of files) {
-        await rm(join(TEST_DIR, file), { force: true });
+        await rm(join(TEST_DIR, file), {
+          force: true,
+        });
       }
       // Also remove .keep
-      await rm(join(TEST_DIR, '.keep'), { force: true });
+      await rm(join(TEST_DIR, '.keep'), {
+        force: true,
+      });
       // Remove generated board order file from test root.
-      await rm(join(TEST_ROOT, 'board-order.json'), { force: true });
+      await rm(join(TEST_ROOT, 'board-order.json'), {
+        force: true,
+      });
     } catch {
       // Ignore
     }
   });
 
   afterAll(async () => {
-    await rm(TEST_ROOT, { recursive: true, force: true });
+    await rm(TEST_ROOT, {
+      recursive: true,
+      force: true,
+    });
   });
 
   // ─── loadDir ─────────────────────────────────────────────────────────────
@@ -111,7 +137,10 @@ describe('BoardLoader', () => {
   describe('loadDir', () => {
     test('creates directory if it does not exist', async () => {
       const newDir = join(TEST_DIR, 'new-subdir');
-      await rm(newDir, { recursive: true, force: true });
+      await rm(newDir, {
+        recursive: true,
+        force: true,
+      });
 
       await loader.loadDir(newDir);
 
@@ -119,7 +148,10 @@ describe('BoardLoader', () => {
       expect(await keepFile.exists()).toBe(true);
 
       // Cleanup
-      await rm(newDir, { recursive: true, force: true });
+      await rm(newDir, {
+        recursive: true,
+        force: true,
+      });
     });
 
     test('creates default Home board when no boards exist', async () => {
@@ -141,16 +173,24 @@ describe('BoardLoader', () => {
 
       const board = loader.get('yaml-dash');
       expect(board).toBeDefined();
-      expect(board!.id).toBe('yaml-dash');
-      expect(board!.name).toBe('YAML Board');
-      expect(board!.icon).toBe('star');
-      expect(board!.columns).toBe(12);
-      expect(board!.bricks).toHaveLength(1);
-      expect(board!.bricks[0].instanceId).toBe('inst-1');
-      expect(board!.bricks[0].brickTypeId).toBe('plugin:brick');
-      expect(board!.bricks[0].config).toEqual({ key: 'value' });
-      expect(board!.bricks[0].position).toEqual({ x: 0, y: 0 });
-      expect(board!.bricks[0].size).toEqual({ w: 3, h: 2 });
+      expect(board?.id).toBe('yaml-dash');
+      expect(board?.name).toBe('YAML Board');
+      expect(board?.icon).toBe('star');
+      expect(board?.columns).toBe(12);
+      expect(board?.bricks).toHaveLength(1);
+      expect(board?.bricks[0].instanceId).toBe('inst-1');
+      expect(board?.bricks[0].brickTypeId).toBe('plugin:brick');
+      expect(board?.bricks[0].config).toEqual({
+        key: 'value',
+      });
+      expect(board?.bricks[0].position).toEqual({
+        x: 0,
+        y: 0,
+      });
+      expect(board?.bricks[0].size).toEqual({
+        w: 3,
+        h: 2,
+      });
     });
 
     test('loads board without bricks', async () => {
@@ -160,8 +200,8 @@ describe('BoardLoader', () => {
 
       const board = loader.get('empty-dash');
       expect(board).toBeDefined();
-      expect(board!.bricks).toEqual([]);
-      expect(board!.columns).toBe(12); // default value
+      expect(board?.bricks).toEqual([]);
+      expect(board?.columns).toBe(12); // default value
     });
 
     test('skips invalid YAML files gracefully', async () => {
@@ -216,7 +256,7 @@ notaboard: true
 
       const board = loader.get('yaml-dash');
       expect(board).toBeDefined();
-      expect(board!.id).toBe('yaml-dash');
+      expect(board?.id).toBe('yaml-dash');
     });
   });
 
@@ -242,7 +282,9 @@ notaboard: true
     test('saves board to YAML file', async () => {
       await loader.loadDir(TEST_DIR);
 
-      const board = createBoard('saved-dash', [createPlacement('inst-1', 'plugin:widget')]);
+      const board = createBoard('saved-dash', [
+        createPlacement('inst-1', 'plugin:widget'),
+      ]);
       const filePath = await loader.saveBoard(board);
 
       expect(filePath).toContain('saved-dash.yaml');
@@ -258,14 +300,17 @@ notaboard: true
       await loader.saveBoard(board);
 
       expect(loader.get('mapped-dash')).toBeDefined();
-      expect(loader.get('mapped-dash')!.name).toBe('Test Board');
+      expect(loader.get('mapped-dash')?.name).toBe('Test Board');
     });
 
     test('saves to existing file if board already loaded', async () => {
       await Bun.write(join(TEST_DIR, 'test.yaml'), VALID_YAML);
       await loader.loadDir(TEST_DIR);
 
-      const board = loader.get('yaml-dash')!;
+      const board = loader.get('yaml-dash');
+      if (!board) {
+        throw new Error('Expected board to be defined');
+      }
       board.name = 'Updated Name';
       const filePath = await loader.saveBoard(board);
 
@@ -278,8 +323,13 @@ notaboard: true
       await loader.loadDir(TEST_DIR);
 
       const placement = createPlacement('inst-1', 'plugin:brick');
-      placement.config = { apiKey: 'secret', timeout: 5000 };
-      const board = createBoard('config-dash', [placement]);
+      placement.config = {
+        apiKey: 'secret',
+        timeout: 5000,
+      };
+      const board = createBoard('config-dash', [
+        placement,
+      ]);
       const filePath = await loader.saveBoard(board);
 
       const content = await Bun.file(filePath).text();
@@ -292,7 +342,9 @@ notaboard: true
 
       const placement = createPlacement('inst-1', 'plugin:brick');
       placement.config = {};
-      const board = createBoard('no-config-dash', [placement]);
+      const board = createBoard('no-config-dash', [
+        placement,
+      ]);
       const filePath = await loader.saveBoard(board);
 
       const content = await Bun.file(filePath).text();
@@ -433,11 +485,21 @@ notaboard: true
       await loader.loadDir(TEST_DIR);
 
       const placement = createPlacement('inst-rt', 'plugin:widget');
-      placement.config = { color: 'red' };
-      placement.position = { x: 3, y: 5 };
-      placement.size = { w: 4, h: 3 };
+      placement.config = {
+        color: 'red',
+      };
+      placement.position = {
+        x: 3,
+        y: 5,
+      };
+      placement.size = {
+        w: 4,
+        h: 3,
+      };
 
-      const original = createBoard('round-trip', [placement]);
+      const original = createBoard('round-trip', [
+        placement,
+      ]);
       await loader.saveBoard(original);
 
       // Create a fresh loader to reload from disk
@@ -448,16 +510,24 @@ notaboard: true
 
       const reloaded = loader2.get('round-trip');
       expect(reloaded).toBeDefined();
-      expect(reloaded!.id).toBe('round-trip');
-      expect(reloaded!.name).toBe('Test Board');
-      expect(reloaded!.icon).toBe('star');
-      expect(reloaded!.columns).toBe(12);
-      expect(reloaded!.bricks).toHaveLength(1);
-      expect(reloaded!.bricks[0].instanceId).toBe('inst-rt');
-      expect(reloaded!.bricks[0].brickTypeId).toBe('plugin:widget');
-      expect(reloaded!.bricks[0].config).toEqual({ color: 'red' });
-      expect(reloaded!.bricks[0].position).toEqual({ x: 3, y: 5 });
-      expect(reloaded!.bricks[0].size).toEqual({ w: 4, h: 3 });
+      expect(reloaded?.id).toBe('round-trip');
+      expect(reloaded?.name).toBe('Test Board');
+      expect(reloaded?.icon).toBe('star');
+      expect(reloaded?.columns).toBe(12);
+      expect(reloaded?.bricks).toHaveLength(1);
+      expect(reloaded?.bricks[0].instanceId).toBe('inst-rt');
+      expect(reloaded?.bricks[0].brickTypeId).toBe('plugin:widget');
+      expect(reloaded?.bricks[0].config).toEqual({
+        color: 'red',
+      });
+      expect(reloaded?.bricks[0].position).toEqual({
+        x: 3,
+        y: 5,
+      });
+      expect(reloaded?.bricks[0].size).toEqual({
+        w: 4,
+        h: 3,
+      });
       loader2.stopWatching();
     });
 
@@ -479,8 +549,8 @@ notaboard: true
 
       const reloaded = loader2.get('no-icon');
       expect(reloaded).toBeDefined();
-      expect(reloaded!.icon).toBeUndefined();
-      expect(reloaded!.columns).toBe(6);
+      expect(reloaded?.icon).toBeUndefined();
+      expect(reloaded?.columns).toBe(6);
       loader2.stopWatching();
     });
   });
@@ -499,7 +569,10 @@ notaboard: true
       );
       await loader.loadDir(TEST_DIR);
 
-      const result = await loader.reorder(['board-b', 'board-a']);
+      const result = await loader.reorder([
+        'board-b',
+        'board-a',
+      ]);
 
       expect(result).toBeTrue();
       const boards = loader.list();
@@ -510,7 +583,9 @@ notaboard: true
     test('returns false for unknown board id', async () => {
       await loader.loadDir(TEST_DIR);
 
-      const result = await loader.reorder(['nonexistent']);
+      const result = await loader.reorder([
+        'nonexistent',
+      ]);
 
       expect(result).toBeFalse();
     });
@@ -530,7 +605,10 @@ notaboard: true
       );
       await loader.loadDir(TEST_DIR);
 
-      const result = await loader.reorder(['board-c', 'board-a']);
+      const result = await loader.reorder([
+        'board-c',
+        'board-a',
+      ]);
 
       expect(result).toBeTrue();
       const boards = loader.list();
@@ -550,7 +628,10 @@ notaboard: true
         `version: "1"\nboard:\n  id: board-b\n  name: Board B\n  columns: 12\n`
       );
       await loader.loadDir(TEST_DIR);
-      await loader.reorder(['board-b', 'board-a']);
+      await loader.reorder([
+        'board-b',
+        'board-a',
+      ]);
 
       // Reload in a fresh loader to verify persistence
       reset();
@@ -580,7 +661,7 @@ board:
 `
       );
       await loader.loadDir(TEST_DIR);
-      expect(loader.get('mutable-dash')!.name).toBe('Original Name');
+      expect(loader.get('mutable-dash')?.name).toBe('Original Name');
 
       // Overwrite the file and reload
       await Bun.write(
@@ -600,7 +681,7 @@ board:
       const loader2 = get(BoardLoader);
       await loader2.loadDir(TEST_DIR);
 
-      expect(loader2.get('mutable-dash')!.name).toBe('Updated Name');
+      expect(loader2.get('mutable-dash')?.name).toBe('Updated Name');
       loader2.stopWatching();
     });
   });

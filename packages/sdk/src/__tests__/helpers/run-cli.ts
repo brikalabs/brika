@@ -20,14 +20,21 @@ export interface CliResult {
  */
 export async function runCli(
   args: string[],
-  opts: { timeout?: number; env?: Record<string, string> } = {}
+  opts: {
+    timeout?: number;
+    env?: Record<string, string>;
+  } = {}
 ): Promise<CliResult> {
   const { timeout = 15_000, env = {} } = opts;
 
   const proc = Bun.spawn(args, {
     stdout: 'pipe',
     stderr: 'pipe',
-    env: { ...process.env, NO_COLOR: '1', ...env },
+    env: {
+      ...process.env,
+      NO_COLOR: '1',
+      ...env,
+    },
   });
 
   const timer = setTimeout(() => {
@@ -38,7 +45,11 @@ export async function runCli(
     const exitCode = await proc.exited;
     const stdout = await new Response(proc.stdout).text();
     const stderr = await new Response(proc.stderr).text();
-    return { exitCode, stdout, stderr };
+    return {
+      exitCode,
+      stdout,
+      stderr,
+    };
   } finally {
     clearTimeout(timer);
   }

@@ -33,13 +33,17 @@ let reloadTimer: ReturnType<typeof setTimeout> | undefined;
 
 function fetchAll(language: string): Promise<AllNamespaces> {
   const cached = cache.get(language);
-  if (cached) return Promise.resolve(cached);
+  if (cached) {
+    return Promise.resolve(cached);
+  }
 
   let pending = inflight.get(language);
   if (!pending) {
     pending = fetch(`/api/i18n/bundle/${language}`)
       .then(async (res) => {
-        if (!res.ok) throw new Error(`Failed to load translations: ${res.status}`);
+        if (!res.ok) {
+          throw new Error(`Failed to load translations: ${res.status}`);
+        }
         const data = (await res.json()) as AllNamespaces;
 
         for (const [ns, translations] of Object.entries(data)) {
@@ -72,16 +76,22 @@ function refetch(language: string): Promise<AllNamespaces> {
  */
 function scheduleMissingNsReload(ns: string) {
   const lng = i18n.language;
-  if (cache.get(lng)?.[ns] || knownMissing.has(`${lng}:${ns}`)) return;
+  if (cache.get(lng)?.[ns] || knownMissing.has(`${lng}:${ns}`)) {
+    return;
+  }
 
   pendingNs.add(ns);
   clearTimeout(reloadTimer);
   reloadTimer = setTimeout(async () => {
-    const missed = [...pendingNs];
+    const missed = [
+      ...pendingNs,
+    ];
     pendingNs.clear();
     const data = await refetch(lng);
     for (const missedNs of missed) {
-      if (!data[missedNs]) knownMissing.add(`${lng}:${missedNs}`);
+      if (!data[missedNs]) {
+        knownMissing.add(`${lng}:${missedNs}`);
+      }
     }
   }, 300);
 }
@@ -117,14 +127,23 @@ i18n
     load: 'currentOnly',
 
     detection: {
-      order: ['localStorage', 'navigator'],
-      caches: ['localStorage'],
+      order: [
+        'localStorage',
+        'navigator',
+      ],
+      caches: [
+        'localStorage',
+      ],
       lookupLocalStorage: 'i18nextLng',
       convertDetectedLanguage: (lng: string) => lng.split('-')[0],
     },
 
-    react: { useSuspense: true },
-    interpolation: { escapeValue: false },
+    react: {
+      useSuspense: true,
+    },
+    interpolation: {
+      escapeValue: false,
+    },
     debug: import.meta.env.DEV,
 
     // Detect missing namespaces: when t() is called with a namespace not in
@@ -150,4 +169,4 @@ export async function reloadTranslations(): Promise<void> {
   await refetch(i18n.language);
 }
 
-export default i18n;
+export { default } from 'i18next';

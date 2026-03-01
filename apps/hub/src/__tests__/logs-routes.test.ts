@@ -29,7 +29,10 @@ describe('logs routes', () => {
 
   useTestBed(() => {
     mockLogStore = {
-      query: mock().mockReturnValue({ logs: [], nextCursor: null }),
+      query: mock().mockReturnValue({
+        logs: [],
+        nextCursor: null,
+      }),
       clear: mock().mockReturnValue(0),
       count: mock().mockReturnValue(0),
       getPluginNames: mock().mockReturnValue([]),
@@ -54,7 +57,15 @@ describe('logs routes', () => {
   });
 
   test('GET /api/logs with query parameters', async () => {
-    mockLogStore.query.mockReturnValue({ logs: [{ id: 1, message: 'test' }], nextCursor: 5 });
+    mockLogStore.query.mockReturnValue({
+      logs: [
+        {
+          id: 1,
+          message: 'test',
+        },
+      ],
+      nextCursor: 5,
+    });
 
     const res = await app.get('/api/logs?level=info&limit=50&order=asc');
 
@@ -63,7 +74,13 @@ describe('logs routes', () => {
   });
 
   test('GET /api/logs/recent returns ring buffer', async () => {
-    mockLogger.query.mockReturnValue([{ ts: 1000, level: 'info', message: 'test' }]);
+    mockLogger.query.mockReturnValue([
+      {
+        ts: 1000,
+        level: 'info',
+        message: 'test',
+      },
+    ]);
 
     const res = await app.get('/api/logs/recent');
 
@@ -71,15 +88,30 @@ describe('logs routes', () => {
   });
 
   test('GET /api/logs/plugins returns plugin names with metadata', async () => {
-    mockLogStore.getPluginNames.mockReturnValue(['@test/plugin-a', '@test/plugin-b']);
+    mockLogStore.getPluginNames.mockReturnValue([
+      '@test/plugin-a',
+      '@test/plugin-b',
+    ]);
     mockPluginManager.list.mockReturnValue([
-      { name: '@test/plugin-a', uid: 'uid-a', version: '1.0.0' },
-      { name: '@test/plugin-b', uid: 'uid-b', version: '2.0.0' },
+      {
+        name: '@test/plugin-a',
+        uid: 'uid-a',
+        version: '1.0.0',
+      },
+      {
+        name: '@test/plugin-b',
+        uid: 'uid-b',
+        version: '2.0.0',
+      },
     ]);
 
-    const res = await app.get<{ plugins: Array<{ name: string; uid?: string; version?: string }> }>(
-      '/api/logs/plugins'
-    );
+    const res = await app.get<{
+      plugins: Array<{
+        name: string;
+        uid?: string;
+        version?: string;
+      }>;
+    }>('/api/logs/plugins');
 
     expect(res.status).toBe(200);
     expect(res.body.plugins).toHaveLength(2);
@@ -90,12 +122,18 @@ describe('logs routes', () => {
   });
 
   test('GET /api/logs/plugins handles unknown plugins', async () => {
-    mockLogStore.getPluginNames.mockReturnValue(['@test/unknown-plugin']);
+    mockLogStore.getPluginNames.mockReturnValue([
+      '@test/unknown-plugin',
+    ]);
     mockPluginManager.list.mockReturnValue([]);
 
-    const res = await app.get<{ plugins: Array<{ name: string; uid?: string; version?: string }> }>(
-      '/api/logs/plugins'
-    );
+    const res = await app.get<{
+      plugins: Array<{
+        name: string;
+        uid?: string;
+        version?: string;
+      }>;
+    }>('/api/logs/plugins');
 
     expect(res.status).toBe(200);
     expect(res.body.plugins).toHaveLength(1);
@@ -106,9 +144,16 @@ describe('logs routes', () => {
 
   test('GET /api/logs/stats returns log statistics', async () => {
     mockLogStore.count.mockReturnValue(42);
-    mockLogger.query.mockReturnValue([1, 2, 3]);
+    mockLogger.query.mockReturnValue([
+      1,
+      2,
+      3,
+    ]);
 
-    const res = await app.get<{ total: number; ringBufferSize: number }>('/api/logs/stats');
+    const res = await app.get<{
+      total: number;
+      ringBufferSize: number;
+    }>('/api/logs/stats');
 
     expect(res.status).toBe(200);
     expect(res.body.total).toBe(42);
@@ -116,26 +161,45 @@ describe('logs routes', () => {
   });
 
   test('GET /api/logs/sources returns all and used sources', async () => {
-    mockLogStore.getSources.mockReturnValue(['hub', 'plugin']);
+    mockLogStore.getSources.mockReturnValue([
+      'hub',
+      'plugin',
+    ]);
 
-    const res = await app.get<{ all: string[]; used: string[] }>('/api/logs/sources');
+    const res = await app.get<{
+      all: string[];
+      used: string[];
+    }>('/api/logs/sources');
 
     expect(res.status).toBe(200);
     expect(res.body.all).toBeDefined();
-    expect(res.body.used).toEqual(['hub', 'plugin']);
+    expect(res.body.used).toEqual([
+      'hub',
+      'plugin',
+    ]);
   });
 
   test('GET /api/logs/levels returns log levels', async () => {
-    const res = await app.get<{ all: string[] }>('/api/logs/levels');
+    const res = await app.get<{
+      all: string[];
+    }>('/api/logs/levels');
 
     expect(res.status).toBe(200);
-    expect(res.body.all).toEqual(['debug', 'info', 'warn', 'error']);
+    expect(res.body.all).toEqual([
+      'debug',
+      'info',
+      'warn',
+      'error',
+    ]);
   });
 
   test('DELETE /api/logs clears logs', async () => {
     mockLogStore.clear.mockReturnValue(10);
 
-    const res = await app.delete<{ ok: boolean; deleted: number }>('/api/logs');
+    const res = await app.delete<{
+      ok: boolean;
+      deleted: number;
+    }>('/api/logs');
 
     expect(res.status).toBe(200);
     expect(res.body.ok).toBeTrue();
@@ -145,7 +209,10 @@ describe('logs routes', () => {
   test('DELETE /api/logs with filter body', async () => {
     mockLogStore.clear.mockReturnValue(5);
 
-    const res = await app.delete<{ ok: boolean; deleted: number }>('/api/logs');
+    const res = await app.delete<{
+      ok: boolean;
+      deleted: number;
+    }>('/api/logs');
 
     expect(res.status).toBe(200);
     expect(res.body.ok).toBeTrue();

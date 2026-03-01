@@ -14,29 +14,34 @@ export function folderTarPlugin(): BunPlugin {
   return {
     name: 'folder-tar',
     setup(build) {
-      build.onLoad({ filter: /\.tar(?:\0)?$/ }, async ({ path }) => {
-        const normalizedPath = path.replaceAll('\0', '');
-        const folderPath = normalizedPath.endsWith('.tar')
-          ? normalizedPath.slice(0, -4)
-          : normalizedPath;
+      build.onLoad(
+        {
+          filter: /\.tar(?:\0)?$/,
+        },
+        async ({ path }) => {
+          const normalizedPath = path.replaceAll('\0', '');
+          const folderPath = normalizedPath.endsWith('.tar')
+            ? normalizedPath.slice(0, -4)
+            : normalizedPath;
 
-        let sourceStat;
-        try {
-          sourceStat = await stat(folderPath);
-        } catch {
-          throw new Error(`[folder-tar] Missing source folder: ${folderPath}`);
+          let sourceStat;
+          try {
+            sourceStat = await stat(folderPath);
+          } catch {
+            throw new Error(`[folder-tar] Missing source folder: ${folderPath}`);
+          }
+
+          if (!sourceStat.isDirectory()) {
+            throw new Error(`[folder-tar] Source is not a folder: ${folderPath}`);
+          }
+
+          const bytes = await packFolder(folderPath);
+          return {
+            contents: `export default new Uint8Array([${bytes.join(',')}]);`,
+            loader: 'js',
+          };
         }
-
-        if (!sourceStat.isDirectory()) {
-          throw new Error(`[folder-tar] Source is not a folder: ${folderPath}`);
-        }
-
-        const bytes = await packFolder(folderPath);
-        return {
-          contents: `export default new Uint8Array([${bytes.join(',')}]);`,
-          loader: 'js',
-        };
-      });
+      );
     },
   };
 }

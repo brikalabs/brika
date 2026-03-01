@@ -28,8 +28,14 @@ export function isPluginPackage(pkg: WorkspacePackage): boolean {
  * Handles `string`, `string[]`, and any other type (returns []).
  */
 export function parseFilters(filter: unknown): string[] {
-  if (typeof filter === 'string') return [filter];
-  if (!Array.isArray(filter)) return [];
+  if (typeof filter === 'string') {
+    return [
+      filter,
+    ];
+  }
+  if (!Array.isArray(filter)) {
+    return [];
+  }
   return filter.filter((entry): entry is string => typeof entry === 'string');
 }
 
@@ -38,7 +44,9 @@ export function parseFilters(filter: unknown): string[] {
  */
 export function mustGet<K, V>(map: Map<K, V>, key: K, errorMessage: string): V {
   const value = map.get(key);
-  if (value === undefined) throw new Error(errorMessage);
+  if (value === undefined) {
+    throw new Error(errorMessage);
+  }
   return value;
 }
 
@@ -49,9 +57,13 @@ export function mustGet<K, V>(map: Map<K, V>, key: K, errorMessage: string): V {
 export async function fetchPublishedVersion(name: string): Promise<string | null> {
   try {
     const res = await fetch(`https://registry.npmjs.org/${encodeURIComponent(name)}/latest`);
-    if (!res.ok) return null;
+    if (!res.ok) {
+      return null;
+    }
     const data = await res.json();
-    if (!isObjectRecord(data)) return null;
+    if (!isObjectRecord(data)) {
+      return null;
+    }
     return typeof data.version === 'string' ? data.version : null;
   } catch {
     return null;
@@ -64,7 +76,15 @@ export async function fetchPublishedVersion(name: string): Promise<string | null
 export function buildPublishArgs(dryRun: boolean): string[] {
   // --ignore-scripts: skip prepublishOnly hooks — verification is already
   // performed by the publish workflow before reaching this point.
-  const args = ['bun', 'publish', '--access', 'public', '--ignore-scripts'];
-  if (dryRun) args.push('--dry-run');
+  const args = [
+    'bun',
+    'publish',
+    '--access',
+    'public',
+    '--ignore-scripts',
+  ];
+  if (dryRun) {
+    args.push('--dry-run');
+  }
   return args;
 }

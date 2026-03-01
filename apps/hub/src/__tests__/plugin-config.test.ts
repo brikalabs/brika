@@ -10,7 +10,9 @@ import { ConfigLoader } from '@/runtime/config';
 import { PluginConfigService } from '@/runtime/plugins/plugin-config';
 import { StateStore } from '@/runtime/state/state-store';
 
-useTestBed({ autoStub: false });
+useTestBed({
+  autoStub: false,
+});
 
 describe('PluginConfigService', () => {
   let service: PluginConfigService;
@@ -50,7 +52,17 @@ describe('PluginConfigService', () => {
     type: 'dropdown',
     required: true,
     default: 'auto',
-    options: [{ value: 'auto' }, { value: 'manual' }, { value: 'disabled' }],
+    options: [
+      {
+        value: 'auto',
+      },
+      {
+        value: 'manual',
+      },
+      {
+        value: 'disabled',
+      },
+    ],
   };
 
   beforeEach(() => {
@@ -72,12 +84,16 @@ describe('PluginConfigService', () => {
   describe('getSchema', () => {
     test('returns preferences from metadata', () => {
       mockStateStore.getMetadata.mockReturnValue({
-        preferences: [textPreference],
+        preferences: [
+          textPreference,
+        ],
       });
 
       const schema = service.getSchema('@test/plugin');
 
-      expect(schema).toEqual([textPreference]);
+      expect(schema).toEqual([
+        textPreference,
+      ]);
     });
 
     test('returns empty array when no metadata', () => {
@@ -100,7 +116,10 @@ describe('PluginConfigService', () => {
   describe('getConfig', () => {
     test('merges user config with defaults', () => {
       mockStateStore.getMetadata.mockReturnValue({
-        preferences: [textPreference, numberPreference],
+        preferences: [
+          textPreference,
+          numberPreference,
+        ],
       });
       mockConfigLoader.getPluginConfig.mockReturnValue({
         apiKey: 'user-key',
@@ -114,7 +133,10 @@ describe('PluginConfigService', () => {
 
     test('uses all defaults when no user config', () => {
       mockStateStore.getMetadata.mockReturnValue({
-        preferences: [numberPreference, checkboxPreference],
+        preferences: [
+          numberPreference,
+          checkboxPreference,
+        ],
       });
       mockConfigLoader.getPluginConfig.mockReturnValue(undefined);
 
@@ -128,66 +150,96 @@ describe('PluginConfigService', () => {
   describe('validate', () => {
     test('validates valid config', () => {
       mockStateStore.getMetadata.mockReturnValue({
-        preferences: [textPreference],
+        preferences: [
+          textPreference,
+        ],
       });
 
-      const result = service.validate('@test/plugin', { apiKey: 'valid-key' });
+      const result = service.validate('@test/plugin', {
+        apiKey: 'valid-key',
+      });
 
       expect(result.success).toBe(true);
     });
 
     test('validates required text field', () => {
       mockStateStore.getMetadata.mockReturnValue({
-        preferences: [textPreference],
+        preferences: [
+          textPreference,
+        ],
       });
 
-      const result = service.validate('@test/plugin', { apiKey: '' });
+      const result = service.validate('@test/plugin', {
+        apiKey: '',
+      });
 
       expect(result.success).toBe(false);
     });
 
     test('validates number range', () => {
       mockStateStore.getMetadata.mockReturnValue({
-        preferences: [numberPreference],
+        preferences: [
+          numberPreference,
+        ],
       });
 
-      const valid = service.validate('@test/plugin', { timeout: 5000 });
+      const valid = service.validate('@test/plugin', {
+        timeout: 5000,
+      });
       expect(valid.success).toBe(true);
 
-      const tooLow = service.validate('@test/plugin', { timeout: 100 });
+      const tooLow = service.validate('@test/plugin', {
+        timeout: 100,
+      });
       expect(tooLow.success).toBe(false);
 
-      const tooHigh = service.validate('@test/plugin', { timeout: 100000 });
+      const tooHigh = service.validate('@test/plugin', {
+        timeout: 100000,
+      });
       expect(tooHigh.success).toBe(false);
     });
 
     test('validates checkbox as boolean', () => {
       mockStateStore.getMetadata.mockReturnValue({
-        preferences: [checkboxPreference],
+        preferences: [
+          checkboxPreference,
+        ],
       });
 
-      const valid = service.validate('@test/plugin', { enabled: false });
+      const valid = service.validate('@test/plugin', {
+        enabled: false,
+      });
       expect(valid.success).toBe(true);
 
-      const invalid = service.validate('@test/plugin', { enabled: 'yes' });
+      const invalid = service.validate('@test/plugin', {
+        enabled: 'yes',
+      });
       expect(invalid.success).toBe(false);
     });
 
     test('validates dropdown options', () => {
       mockStateStore.getMetadata.mockReturnValue({
-        preferences: [dropdownPreference],
+        preferences: [
+          dropdownPreference,
+        ],
       });
 
-      const valid = service.validate('@test/plugin', { mode: 'auto' });
+      const valid = service.validate('@test/plugin', {
+        mode: 'auto',
+      });
       expect(valid.success).toBe(true);
 
-      const invalid = service.validate('@test/plugin', { mode: 'invalid' });
+      const invalid = service.validate('@test/plugin', {
+        mode: 'invalid',
+      });
       expect(invalid.success).toBe(false);
     });
 
     test('allows optional fields to be omitted', () => {
       mockStateStore.getMetadata.mockReturnValue({
-        preferences: [numberPreference], // optional
+        preferences: [
+          numberPreference,
+        ], // optional
       });
 
       const result = service.validate('@test/plugin', {});
@@ -198,10 +250,14 @@ describe('PluginConfigService', () => {
   describe('setConfig', () => {
     test('saves valid config', async () => {
       mockStateStore.getMetadata.mockReturnValue({
-        preferences: [textPreference],
+        preferences: [
+          textPreference,
+        ],
       });
 
-      const result = await service.setConfig('@test/plugin', { apiKey: 'new-key' });
+      const result = await service.setConfig('@test/plugin', {
+        apiKey: 'new-key',
+      });
 
       expect(result.success).toBe(true);
       expect(mockConfigLoader.setPluginConfig.mock.calls.length > 0).toBe(true);
@@ -209,10 +265,14 @@ describe('PluginConfigService', () => {
 
     test('does not save invalid config', async () => {
       mockStateStore.getMetadata.mockReturnValue({
-        preferences: [textPreference], // required
+        preferences: [
+          textPreference,
+        ], // required
       });
 
-      const result = await service.setConfig('@test/plugin', { apiKey: '' });
+      const result = await service.setConfig('@test/plugin', {
+        apiKey: '',
+      });
 
       expect(result.success).toBe(false);
       expect(mockConfigLoader.setPluginConfig.mock.calls.length > 0).toBe(false);

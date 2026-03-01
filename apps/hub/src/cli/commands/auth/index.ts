@@ -1,6 +1,6 @@
 import { createCli } from '../../cli';
-import user from './user';
 import token from './token';
+import user from './user';
 
 export default createCli({
   defaultCommand: 'help',

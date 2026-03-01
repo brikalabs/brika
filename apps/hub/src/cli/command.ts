@@ -36,7 +36,9 @@ type BaseValue<T extends CommandOption> = T['type'] extends 'boolean'
     : string;
 
 /** If a default is declared, the value is guaranteed (non-optional). */
-type InferValue<T extends CommandOption> = T extends { default: string | boolean | number }
+type InferValue<T extends CommandOption> = T extends {
+  default: string | boolean | number;
+}
   ? BaseValue<T>
   : BaseValue<T> | undefined;
 

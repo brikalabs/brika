@@ -140,7 +140,10 @@ blocks:
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        expect(result.workflow.blocks[0]?.position).toEqual({ x: 100, y: 200 });
+        expect(result.workflow.blocks[0]?.position).toEqual({
+          x: 100,
+          y: 200,
+        });
       }
     });
 
@@ -160,7 +163,10 @@ blocks:
 
       expect(result.ok).toBe(true);
       if (result.ok) {
-        expect(result.workflow.blocks[0]?.position).toEqual({ x: 101, y: 200 });
+        expect(result.workflow.blocks[0]?.position).toEqual({
+          x: 101,
+          y: 200,
+        });
       }
     });
 
@@ -407,8 +413,13 @@ describe('serializeWorkspace', () => {
         {
           id: 'block-1',
           type: 'timer',
-          config: { interval: 1000 } as Record<string, unknown>,
-          position: { x: 0, y: 0 },
+          config: {
+            interval: 1000,
+          } as Record<string, unknown>,
+          position: {
+            x: 0,
+            y: 0,
+          },
           inputs: {},
           outputs: {},
         },
@@ -436,16 +447,26 @@ describe('serializeWorkspace', () => {
         {
           id: 'timer',
           type: '@brika/timer:interval',
-          config: { ms: 5000 } as Record<string, unknown>,
-          position: { x: 100, y: 200 },
+          config: {
+            ms: 5000,
+          } as Record<string, unknown>,
+          position: {
+            x: 100,
+            y: 200,
+          },
           inputs: {},
-          outputs: { tick: 'logger:input' },
+          outputs: {
+            tick: 'logger:input',
+          },
         },
         {
           id: 'logger',
           type: '@brika/log:console',
           config: {} as Record<string, unknown>,
-          position: { x: 300, y: 200 },
+          position: {
+            x: 300,
+            y: 200,
+          },
           inputs: {},
           outputs: {},
         },

@@ -26,31 +26,55 @@ export interface KeyPair {
 /** Derive the public key PEM from a private key PEM. */
 export function derivePublicKeyPem(privateKeyPem: string): string {
   const pub = createPublicKey(createPrivateKey(privateKeyPem));
-  return pub.export({ type: 'spki', format: 'pem' });
+  return pub.export({
+    type: 'spki',
+    format: 'pem',
+  });
 }
 
 /** Generate a new Ed25519 key pair. */
 export function generateKeys(): KeyPair {
   const { privateKey, publicKey } = generateKeyPairSync('ed25519');
-  const privateKeyPem = privateKey.export({ type: 'pkcs8', format: 'pem' });
-  const publicKeyPem = publicKey.export({ type: 'spki', format: 'pem' });
-  const publicKeyDer = publicKey.export({ type: 'spki', format: 'der' });
+  const privateKeyPem = privateKey.export({
+    type: 'pkcs8',
+    format: 'pem',
+  });
+  const publicKeyPem = publicKey.export({
+    type: 'spki',
+    format: 'pem',
+  });
+  const publicKeyDer = publicKey.export({
+    type: 'spki',
+    format: 'der',
+  });
   const publicKeyBase64 = Buffer.from(publicKeyDer.subarray(SPKI_HEADER.length)).toString('base64');
-  return { privateKeyPem, publicKeyPem, publicKeyBase64 };
+  return {
+    privateKeyPem,
+    publicKeyPem,
+    publicKeyBase64,
+  };
 }
 
 /** Save a key pair to ~/.brika/keys/. */
 export function saveKeys(keys: KeyPair): void {
   if (!existsSync(KEYS_DIR)) {
-    mkdirSync(KEYS_DIR, { recursive: true });
+    mkdirSync(KEYS_DIR, {
+      recursive: true,
+    });
   }
-  writeFileSync(PRIVATE_KEY_PATH, keys.privateKeyPem, { mode: 0o600 });
-  writeFileSync(PUBLIC_KEY_PATH, keys.publicKeyPem, { mode: 0o644 });
+  writeFileSync(PRIVATE_KEY_PATH, keys.privateKeyPem, {
+    mode: 0o600,
+  });
+  writeFileSync(PUBLIC_KEY_PATH, keys.publicKeyPem, {
+    mode: 0o644,
+  });
 }
 
 /** Check whether a key pair exists (env var or disk). */
 export function keysExist(): boolean {
-  if (process.env.BRIKA_REGISTRY_PRIVATE_KEY) return true;
+  if (process.env.BRIKA_REGISTRY_PRIVATE_KEY) {
+    return true;
+  }
   return existsSync(PRIVATE_KEY_PATH) && existsSync(PUBLIC_KEY_PATH);
 }
 
@@ -62,14 +86,20 @@ export function keysExistOnDisk(): boolean {
 /** Load the private key PEM (env var → disk). Unescapes \n sequences for CI-style env vars. */
 export function loadPrivateKey(): string | null {
   const envKey = process.env.BRIKA_REGISTRY_PRIVATE_KEY;
-  if (envKey) return envKey.replaceAll(String.raw`\n`, '\n');
-  if (!existsSync(PRIVATE_KEY_PATH)) return null;
+  if (envKey) {
+    return envKey.replaceAll(String.raw`\n`, '\n');
+  }
+  if (!existsSync(PRIVATE_KEY_PATH)) {
+    return null;
+  }
   return readFileSync(PRIVATE_KEY_PATH, 'utf-8');
 }
 
 /** Load the public key PEM from disk. */
 export function loadPublicKeyPem(): string | null {
-  if (!existsSync(PUBLIC_KEY_PATH)) return null;
+  if (!existsSync(PUBLIC_KEY_PATH)) {
+    return null;
+  }
   return readFileSync(PUBLIC_KEY_PATH, 'utf-8');
 }
 
@@ -81,7 +111,10 @@ export function getKeysDir(): string {
 /** Extract the raw 32-byte public key as base64 from a PEM. */
 export function publicKeyToBase64(pem: string): string {
   const key = createPublicKey(pem);
-  const der = key.export({ type: 'spki', format: 'der' });
+  const der = key.export({
+    type: 'spki',
+    format: 'der',
+  });
   return Buffer.from(der.subarray(SPKI_HEADER.length)).toString('base64');
 }
 

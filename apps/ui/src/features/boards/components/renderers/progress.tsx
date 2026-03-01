@@ -91,7 +91,10 @@ defineRenderer('progress', ({ node }: { node: ProgressNode }) => {
       >
         <div
           className="h-full rounded-full transition-all"
-          style={{ width: `${pct}%`, backgroundColor: color }}
+          style={{
+            width: `${pct}%`,
+            backgroundColor: color,
+          }}
         />
       </div>
     </div>

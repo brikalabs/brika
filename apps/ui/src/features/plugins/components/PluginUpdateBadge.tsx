@@ -16,7 +16,9 @@ export function PluginUpdateBadge({ packageName }: Readonly<PluginUpdateBadgePro
 
   const update = data?.updates.find((u) => u.name === packageName);
 
-  if (!update?.updateAvailable) return null;
+  if (!update?.updateAvailable) {
+    return null;
+  }
 
   return (
     <Badge variant="outline" className="gap-1 border-blue-500/30 bg-blue-500/10 text-blue-500">

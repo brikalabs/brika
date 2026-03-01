@@ -37,13 +37,22 @@ async function collect<T>(gen: AsyncGenerator<T>): Promise<T[]> {
 describe('cli/utils/sse', () => {
   describe('streamSseEvents', () => {
     test('yields parsed JSON objects from SSE data lines', async () => {
-      const res = sseResponse(['data: {"type":"start","id":1}\n', 'data: {"type":"end","id":2}\n']);
+      const res = sseResponse([
+        'data: {"type":"start","id":1}\n',
+        'data: {"type":"end","id":2}\n',
+      ]);
 
       const events = await collect(streamSseEvents(res));
 
       expect(events).toEqual([
-        { type: 'start', id: 1 },
-        { type: 'end', id: 2 },
+        {
+          type: 'start',
+          id: 1,
+        },
+        {
+          type: 'end',
+          id: 2,
+        },
       ]);
     });
 
@@ -59,20 +68,31 @@ describe('cli/utils/sse', () => {
 
       const events = await collect(streamSseEvents(res));
 
-      expect(events).toEqual([{ ok: true }]);
+      expect(events).toEqual([
+        {
+          ok: true,
+        },
+      ]);
     });
 
     test('handles multi-chunk data split across reads', async () => {
       // Single SSE frame split across two chunks
-      const res = sseResponse(['data: {"he', 'llo":"world"}\n']);
+      const res = sseResponse([
+        'data: {"he',
+        'llo":"world"}\n',
+      ]);
 
       const events = await collect(streamSseEvents(res));
 
-      expect(events).toEqual([{ hello: 'world' }]);
+      expect(events).toEqual([
+        {
+          hello: 'world',
+        },
+      ]);
     });
 
     test('throws CliError when response has no body', async () => {
-      const res = new Response();
+      const _res = new Response();
       // Remove the body by creating an object that looks like a Response but has no body
       const noBodyRes = {
         body: null,
@@ -82,7 +102,9 @@ describe('cli/utils/sse', () => {
     });
 
     test('CliError message mentions no response stream', async () => {
-      const noBodyRes = { body: null } as unknown as Response;
+      const noBodyRes = {
+        body: null,
+      } as unknown as Response;
 
       try {
         await collect(streamSseEvents(noBodyRes));
@@ -103,7 +125,14 @@ describe('cli/utils/sse', () => {
 
       const events = await collect(streamSseEvents(res));
 
-      expect(events).toEqual([{ good: true }, { also: 'good' }]);
+      expect(events).toEqual([
+        {
+          good: true,
+        },
+        {
+          also: 'good',
+        },
+      ]);
     });
 
     test('handles empty stream (done immediately)', async () => {
@@ -115,7 +144,9 @@ describe('cli/utils/sse', () => {
     });
 
     test('releases reader lock on completion', async () => {
-      const res = sseResponse(['data: {"a":1}\n']);
+      const res = sseResponse([
+        'data: {"a":1}\n',
+      ]);
 
       // Consume the generator fully
       await collect(streamSseEvents(res));
@@ -128,12 +159,18 @@ describe('cli/utils/sse', () => {
     });
 
     test('releases reader lock on early break', async () => {
-      const res = sseResponse(['data: {"a":1}\n', 'data: {"a":2}\n', 'data: {"a":3}\n']);
+      const res = sseResponse([
+        'data: {"a":1}\n',
+        'data: {"a":2}\n',
+        'data: {"a":3}\n',
+      ]);
 
       const gen = streamSseEvents(res);
       // Read only the first event then break
       const first = await gen.next();
-      expect(first.value).toEqual({ a: 1 });
+      expect(first.value).toEqual({
+        a: 1,
+      });
       // Force generator return (simulates break in for-await)
       await gen.return(undefined);
 
@@ -145,19 +182,45 @@ describe('cli/utils/sse', () => {
 
     test('handles buffered incomplete lines across chunks', async () => {
       // Line split in the middle: "data: " in one chunk, JSON in next
-      const res = sseResponse(['data: {"x":1}\ndat', 'a: {"x":2}\ndata: {"x"', ':3}\n']);
+      const res = sseResponse([
+        'data: {"x":1}\ndat',
+        'a: {"x":2}\ndata: {"x"',
+        ':3}\n',
+      ]);
 
       const events = await collect(streamSseEvents(res));
 
-      expect(events).toEqual([{ x: 1 }, { x: 2 }, { x: 3 }]);
+      expect(events).toEqual([
+        {
+          x: 1,
+        },
+        {
+          x: 2,
+        },
+        {
+          x: 3,
+        },
+      ]);
     });
 
     test('handles multiple data lines in a single chunk', async () => {
-      const res = sseResponse(['data: {"a":1}\ndata: {"b":2}\ndata: {"c":3}\n']);
+      const res = sseResponse([
+        'data: {"a":1}\ndata: {"b":2}\ndata: {"c":3}\n',
+      ]);
 
       const events = await collect(streamSseEvents(res));
 
-      expect(events).toEqual([{ a: 1 }, { b: 2 }, { c: 3 }]);
+      expect(events).toEqual([
+        {
+          a: 1,
+        },
+        {
+          b: 2,
+        },
+        {
+          c: 3,
+        },
+      ]);
     });
 
     test('yields typed events with generic parameter', async () => {
@@ -166,7 +229,9 @@ describe('cli/utils/sse', () => {
         payload: number;
       }
 
-      const res = sseResponse(['data: {"type":"test","payload":42}\n']);
+      const res = sseResponse([
+        'data: {"type":"test","payload":42}\n',
+      ]);
 
       const events = await collect(streamSseEvents<MyEvent>(res));
 
@@ -176,22 +241,35 @@ describe('cli/utils/sse', () => {
     });
 
     test('handles data lines with extra whitespace in payload', async () => {
-      const res = sseResponse(['data:  {"spaced":true}\n']);
+      const res = sseResponse([
+        'data:  {"spaced":true}\n',
+      ]);
 
       // "data: " is 6 chars, so "data:  {" means the parsed string starts with " {"
       // which is still valid JSON (leading space before object)
       const events = await collect(streamSseEvents(res));
 
-      expect(events).toEqual([{ spaced: true }]);
+      expect(events).toEqual([
+        {
+          spaced: true,
+        },
+      ]);
     });
 
     test('skips lines that are only "data:" without space prefix', async () => {
-      const res = sseResponse(['data:{"no_space":true}\n', 'data: {"with_space":true}\n']);
+      const res = sseResponse([
+        'data:{"no_space":true}\n',
+        'data: {"with_space":true}\n',
+      ]);
 
       const events = await collect(streamSseEvents(res));
 
       // "data:{" does not start with "data: " so it is skipped
-      expect(events).toEqual([{ with_space: true }]);
+      expect(events).toEqual([
+        {
+          with_space: true,
+        },
+      ]);
     });
   });
 });

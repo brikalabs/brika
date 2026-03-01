@@ -21,24 +21,42 @@ function createMockFetch() {
 
   return async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     fetchCallCount++;
-    const url =
-      typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    let url: string;
+    if (typeof input === 'string') {
+      url = input;
+    } else if (input instanceof URL) {
+      url = input.toString();
+    } else {
+      url = input.url;
+    }
     const method = init?.method ?? 'GET';
 
     // /status/NNN — return that HTTP status
     const statusMatch = url.match(/\/status\/(\d+)/);
     if (statusMatch) {
-      return new Response(null, { status: Number(statusMatch[1]) });
+      return new Response(null, {
+        status: Number(statusMatch[1]),
+      });
     }
 
     // /uuid — return unique JSON each call
     if (url.includes('/uuid')) {
-      return Response.json({ uuid: `test-uuid-${fetchCallCount}` });
+      return Response.json({
+        uuid: `test-uuid-${fetchCallCount}`,
+      });
     }
 
     // /search — simulate npm registry search
     if (url.includes('/search')) {
-      return Response.json({ objects: [{ package: { name: 'brika' } }] });
+      return Response.json({
+        objects: [
+          {
+            package: {
+              name: 'brika',
+            },
+          },
+        ],
+      });
     }
 
     // /headers — echo request headers
@@ -49,7 +67,9 @@ function createMockFetch() {
           headers[k] = v;
         });
       }
-      return Response.json({ headers });
+      return Response.json({
+        headers,
+      });
     }
 
     // POST/PUT/PATCH — echo back the JSON body
@@ -62,16 +82,23 @@ function createMockFetch() {
           json = init.body;
         }
       }
-      return Response.json({ json, data: json });
+      return Response.json({
+        json,
+        data: json,
+      });
     }
 
     // HEAD — no body
     if (method === 'HEAD') {
-      return new Response(null, { status: 200 });
+      return new Response(null, {
+        status: 200,
+      });
     }
 
     // Default — generic success
-    return Response.json({ ok: true });
+    return Response.json({
+      ok: true,
+    });
   };
 }
 
@@ -82,7 +109,13 @@ describe('HttpClient', () => {
     originalFetch = globalThis.fetch;
     globalThis.fetch = createMockFetch() as typeof globalThis.fetch;
     // Disable retry to keep tests fast
-    client = HttpClient.create({ retry: { maxAttempts: 1, delay: 0, backoff: 'linear' } });
+    client = HttpClient.create({
+      retry: {
+        maxAttempts: 1,
+        delay: 0,
+        backoff: 'linear',
+      },
+    });
   });
 
   afterEach(() => {
@@ -92,8 +125,13 @@ describe('HttpClient', () => {
   describe('Basic requests', () => {
     test('should make GET request', async () => {
       const response = await client
-        .get<{ objects: unknown[] }>('https://registry.npmjs.org/-/v1/search')
-        .params({ text: 'brika', size: '1' })
+        .get<{
+          objects: unknown[];
+        }>('https://registry.npmjs.org/-/v1/search')
+        .params({
+          text: 'brika',
+          size: '1',
+        })
         .send();
 
       expect(response.status).toBe(200);
@@ -103,18 +141,27 @@ describe('HttpClient', () => {
 
     test('should make POST request with JSON body', async () => {
       const response = await client
-        .post<{ json: unknown }>('https://httpbin.org/post')
-        .json({ test: 'data' })
+        .post<{
+          json: unknown;
+        }>('https://httpbin.org/post')
+        .json({
+          test: 'data',
+        })
         .send();
 
       expect(response.status).toBe(200);
-      expect(response.data.json).toEqual({ test: 'data' });
+      expect(response.data.json).toEqual({
+        test: 'data',
+      });
     });
 
     test('should handle query parameters', async () => {
       const response = await client
         .get('https://httpbin.org/get')
-        .params({ foo: 'bar', baz: '123' })
+        .params({
+          foo: 'bar',
+          baz: '123',
+        })
         .send();
 
       expect(response.status).toBe(200);
@@ -148,15 +195,29 @@ describe('HttpClient', () => {
     beforeEach(() => {
       client = HttpClient.create({
         cache: new MemoryCache(),
-        retry: { maxAttempts: 1, delay: 0, backoff: 'linear' },
+        retry: {
+          maxAttempts: 1,
+          delay: 0,
+          backoff: 'linear',
+        },
       });
     });
 
     test('should cache GET requests', async () => {
       const url = 'https://httpbin.org/uuid';
 
-      const response1 = await client.get(url).cache({ ttl: 60_000 }).send();
-      const response2 = await client.get(url).cache({ ttl: 60_000 }).send();
+      const response1 = await client
+        .get(url)
+        .cache({
+          ttl: 60_000,
+        })
+        .send();
+      const response2 = await client
+        .get(url)
+        .cache({
+          ttl: 60_000,
+        })
+        .send();
 
       expect(response1.cached).toBe(false);
       expect(response2.cached).toBe(true);
@@ -176,12 +237,22 @@ describe('HttpClient', () => {
     test('should respect cache TTL', async () => {
       const url = 'https://httpbin.org/uuid';
 
-      const response1 = await client.get(url).cache({ ttl: 100 }).send();
+      const response1 = await client
+        .get(url)
+        .cache({
+          ttl: 100,
+        })
+        .send();
 
       // Wait for cache to expire
       await new Promise((resolve) => setTimeout(resolve, 150));
 
-      const response2 = await client.get(url).cache({ ttl: 100 }).send();
+      const response2 = await client
+        .get(url)
+        .cache({
+          ttl: 100,
+        })
+        .send();
 
       expect(response1.cached).toBe(false);
       expect(response2.cached).toBe(false);
@@ -192,14 +263,24 @@ describe('HttpClient', () => {
 
       await client
         .get(url)
-        .cache({ ttl: 60_000, tags: ['test'] })
+        .cache({
+          ttl: 60_000,
+          tags: [
+            'test',
+          ],
+        })
         .send();
 
       client.invalidateCache('test');
 
       const response = await client
         .get(url)
-        .cache({ ttl: 60_000, tags: ['test'] })
+        .cache({
+          ttl: 60_000,
+          tags: [
+            'test',
+          ],
+        })
         .send();
 
       expect(response.cached).toBe(false);
@@ -210,7 +291,9 @@ describe('HttpClient', () => {
     test('should chain methods', async () => {
       const response = await client
         .get('https://httpbin.org/get')
-        .params({ foo: 'bar' })
+        .params({
+          foo: 'bar',
+        })
         .header('X-Test', 'value')
         .timeout(5000)
         .send();
@@ -219,7 +302,11 @@ describe('HttpClient', () => {
     });
 
     test('should return only data with .data()', async () => {
-      const data = await client.get<{ uuid: string }>('https://httpbin.org/uuid').data();
+      const data = await client
+        .get<{
+          uuid: string;
+        }>('https://httpbin.org/uuid')
+        .data();
 
       expect(data).toHaveProperty('uuid');
     });
@@ -228,11 +315,17 @@ describe('HttpClient', () => {
   describe('Shorthand HTTP methods', () => {
     test('should make PUT request', async () => {
       const response = await client
-        .put<{ json: unknown }>('https://httpbin.org/put', { key: 'value' })
+        .put<{
+          json: unknown;
+        }>('https://httpbin.org/put', {
+          key: 'value',
+        })
         .send();
 
       expect(response.status).toBe(200);
-      expect(response.data.json).toEqual({ key: 'value' });
+      expect(response.data.json).toEqual({
+        key: 'value',
+      });
     });
 
     test('should make PUT request without body', async () => {
@@ -243,11 +336,17 @@ describe('HttpClient', () => {
 
     test('should make PATCH request', async () => {
       const response = await client
-        .patch<{ json: unknown }>('https://httpbin.org/patch', { patched: true })
+        .patch<{
+          json: unknown;
+        }>('https://httpbin.org/patch', {
+          patched: true,
+        })
         .send();
 
       expect(response.status).toBe(200);
-      expect(response.data.json).toEqual({ patched: true });
+      expect(response.data.json).toEqual({
+        patched: true,
+      });
     });
 
     test('should make PATCH request without body', async () => {
@@ -299,13 +398,23 @@ describe('HttpClient', () => {
       const url = 'https://httpbin.org/uuid';
 
       // Populate cache
-      await client.get(url).cache({ ttl: 60_000 }).send();
+      await client
+        .get(url)
+        .cache({
+          ttl: 60_000,
+        })
+        .send();
 
       // Clear it
       client.clearCache();
 
       // Should no longer be cached
-      const response = await client.get(url).cache({ ttl: 60_000 }).send();
+      const response = await client
+        .get(url)
+        .cache({
+          ttl: 60_000,
+        })
+        .send();
       expect(response.cached).toBe(false);
     });
 
@@ -326,24 +435,47 @@ describe('HttpClient', () => {
       // Populate with different tags
       await client
         .get(url1)
-        .cache({ ttl: 60_000, tags: ['tag-a'] })
+        .cache({
+          ttl: 60_000,
+          tags: [
+            'tag-a',
+          ],
+        })
         .send();
       await client
         .get(url2)
-        .cache({ ttl: 60_000, tags: ['tag-b'] })
+        .cache({
+          ttl: 60_000,
+          tags: [
+            'tag-b',
+          ],
+        })
         .send();
 
       // Invalidate both tags
-      client.invalidateCacheTags(['tag-a', 'tag-b']);
+      client.invalidateCacheTags([
+        'tag-a',
+        'tag-b',
+      ]);
 
       // Both should be uncached now
       const r1 = await client
         .get(url1)
-        .cache({ ttl: 60_000, tags: ['tag-a'] })
+        .cache({
+          ttl: 60_000,
+          tags: [
+            'tag-a',
+          ],
+        })
         .send();
       const r2 = await client
         .get(url2)
-        .cache({ ttl: 60_000, tags: ['tag-b'] })
+        .cache({
+          ttl: 60_000,
+          tags: [
+            'tag-b',
+          ],
+        })
         .send();
 
       expect(r1.cached).toBe(false);
@@ -354,7 +486,11 @@ describe('HttpClient', () => {
       client.setCache(null);
 
       // Should not throw
-      expect(() => client.invalidateCacheTags(['any-tag'])).not.toThrow();
+      expect(() =>
+        client.invalidateCacheTags([
+          'any-tag',
+        ])
+      ).not.toThrow();
     });
   });
 
@@ -362,7 +498,11 @@ describe('HttpClient', () => {
     test('should use baseUrl', async () => {
       const clientWithBase = HttpClient.create({
         baseUrl: 'https://httpbin.org',
-        retry: { maxAttempts: 1, delay: 0, backoff: 'linear' },
+        retry: {
+          maxAttempts: 1,
+          delay: 0,
+          backoff: 'linear',
+        },
       });
 
       const response = await clientWithBase.get('/get').send();
@@ -375,7 +515,11 @@ describe('HttpClient', () => {
         headers: {
           'X-Default-Header': 'default-value',
         },
-        retry: { maxAttempts: 1, delay: 0, backoff: 'linear' },
+        retry: {
+          maxAttempts: 1,
+          delay: 0,
+          backoff: 'linear',
+        },
       });
 
       const response = await clientWithHeaders

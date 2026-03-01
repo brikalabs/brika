@@ -3,8 +3,16 @@ import { createElement, type FC, memo } from 'react';
 
 export type ActionHandler = (actionId: string, payload?: Record<string, unknown>) => void;
 
-export type NodeRenderer<T = unknown> = FC<{ node: T; onAction?: ActionHandler }>;
-type NodeOf<K extends keyof NodeTypeMap> = Extract<ComponentNode, { type: K }>;
+export type NodeRenderer<T = unknown> = FC<{
+  node: T;
+  onAction?: ActionHandler;
+}>;
+type NodeOf<K extends keyof NodeTypeMap> = Extract<
+  ComponentNode,
+  {
+    type: K;
+  }
+>;
 
 function isNodeType<K extends keyof NodeTypeMap>(node: ComponentNode, type: K): node is NodeOf<K> {
   return node.type === type;
@@ -22,8 +30,13 @@ export function register<K extends keyof NodeTypeMap>(
   renderer: NodeRenderer<NodeOf<K>>
 ): void {
   renderers[type] = ({ node, onAction }) => {
-    if (!isNodeType(node, type)) return null;
-    return createElement(renderer, { node, onAction });
+    if (!isNodeType(node, type)) {
+      return null;
+    }
+    return createElement(renderer, {
+      node,
+      onAction,
+    });
   };
 }
 
@@ -33,7 +46,10 @@ export function register<K extends keyof NodeTypeMap>(
  */
 export function defineRenderer<K extends keyof NodeTypeMap>(
   type: K,
-  renderer: FC<{ node: NodeOf<K>; onAction?: ActionHandler }>
+  renderer: FC<{
+    node: NodeOf<K>;
+    onAction?: ActionHandler;
+  }>
 ): void {
   const Memoized = memo(renderer);
   Memoized.displayName = `${String(type)}Renderer`;

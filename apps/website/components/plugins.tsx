@@ -4,7 +4,7 @@ import { fetchPlugins } from '@/lib/plugins';
 import { PluginGrid } from './plugin-grid';
 import { AnimatedSection } from './ui/animated-section';
 import { Button } from './ui/button';
-import { Terminal, Comment, Line, Cmd, Flag } from './ui/terminal';
+import { Cmd, Comment, Flag, Line, Terminal } from './ui/terminal';
 
 export async function Plugins() {
   const plugins = await fetchPlugins();
@@ -37,33 +37,49 @@ export async function Plugins() {
               <Code className="size-4" />
               Developer experience first
             </p>
-            <h3 className="mb-3 text-2xl font-bold tracking-tight">
-              Build your own plugin
-            </h3>
+            <h3 className="mb-3 text-2xl font-bold tracking-tight">Build your own plugin</h3>
             <p className="text-sm leading-relaxed text-muted-foreground">
-              Scaffold a plugin in one command. Define blocks, bricks, and integrations
-              with full TypeScript inference. Ship as an npm package — Brika handles
-              isolation, IPC, and hot-reload.
+              Scaffold a plugin in one command. Define blocks, bricks, and integrations with full
+              TypeScript inference. Ship as an npm package — Brika handles isolation, IPC, and
+              hot-reload.
             </p>
             <div className="mt-6 flex flex-wrap items-center gap-3">
-              <Button href={site.docsUrl} target="_blank" rel="noopener noreferrer" variant="outline" size="md">
+              <Button
+                href={site.docsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                variant="outline"
+                size="md"
+              >
                 Read the docs
                 <ArrowRight className="size-3.5" />
               </Button>
-              <Button href={`${npm.packageUrl}/@brika/sdk`} target="_blank" rel="noopener noreferrer" variant="glow" size="md" className="px-4">
-                <span className="font-mono text-xs text-muted-foreground">npm</span>{' '}
-                @brika/sdk
+              <Button
+                href={`${npm.packageUrl}/@brika/sdk`}
+                target="_blank"
+                rel="noopener noreferrer"
+                variant="glow"
+                size="md"
+                className="px-4"
+              >
+                <span className="font-mono text-xs text-muted-foreground">npm</span> @brika/sdk
               </Button>
             </div>
           </div>
 
           <Terminal>
             <Comment># scaffold a new plugin</Comment>
-            <Line><Cmd>bun</Cmd> create <Flag>brika</Flag> my-plugin</Line>
+            <Line>
+              <Cmd>bun</Cmd> create <Flag>brika</Flag> my-plugin
+            </Line>
             <div className="my-2" />
             <Comment># start developing with hot-reload</Comment>
-            <Line><Cmd>cd</Cmd> my-plugin</Line>
-            <Line><Cmd>bun</Cmd> dev</Line>
+            <Line>
+              <Cmd>cd</Cmd> my-plugin
+            </Line>
+            <Line>
+              <Cmd>bun</Cmd> dev
+            </Line>
           </Terminal>
         </div>
       </div>

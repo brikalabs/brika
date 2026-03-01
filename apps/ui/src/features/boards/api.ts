@@ -15,8 +15,14 @@ export interface BrickType {
   icon?: string;
   color?: string;
   families: BrickFamily[];
-  minSize?: { w: number; h: number };
-  maxSize?: { w: number; h: number };
+  minSize?: {
+    w: number;
+    h: number;
+  };
+  maxSize?: {
+    w: number;
+    h: number;
+  };
   config?: PreferenceDefinition[];
 }
 
@@ -47,8 +53,14 @@ export interface BoardBrickPlacement {
   brickTypeId: string;
   label?: string;
   config: Record<string, Json>;
-  position: { x: number; y: number };
-  size: { w: number; h: number };
+  position: {
+    x: number;
+    y: number;
+  };
+  size: {
+    w: number;
+    h: number;
+  };
 }
 
 export interface Board {
@@ -65,7 +77,12 @@ export const brickTypesApi = {
   list: () => fetcher<BrickType[]>('/api/bricks/types'),
   get: (id: string) => fetcher<BrickType>(`/api/bricks/types/${encodeURIComponent(id)}`),
   getConfigOptions: (typeId: string, name: string) =>
-    fetcher<{ options: Array<{ value: string; label: string }> }>(
+    fetcher<{
+      options: Array<{
+        value: string;
+        label: string;
+      }>;
+    }>(
       `/api/bricks/types/${encodeURIComponent(typeId)}/config/${encodeURIComponent(name)}/options`
     ),
 };
@@ -73,9 +90,14 @@ export const brickTypesApi = {
 export const brickInstancesApi = {
   get: (id: string) => fetcher<BrickInstance>(`/api/bricks/instances/${encodeURIComponent(id)}`),
   action: (instanceId: string, actionId: string, payload?: unknown) =>
-    fetcher<{ ok: boolean }>(`/api/bricks/instances/${encodeURIComponent(instanceId)}/action`, {
+    fetcher<{
+      ok: boolean;
+    }>(`/api/bricks/instances/${encodeURIComponent(instanceId)}/action`, {
       method: 'POST',
-      body: JSON.stringify({ actionId, payload }),
+      body: JSON.stringify({
+        actionId,
+        payload,
+      }),
     }),
 };
 
@@ -85,27 +107,49 @@ export const boardsApi = {
   create: (name: string, icon?: string) =>
     fetcher<Board>('/api/boards', {
       method: 'POST',
-      body: JSON.stringify({ name, icon }),
+      body: JSON.stringify({
+        name,
+        icon,
+      }),
     }),
-  update: (id: string, data: { name?: string; icon?: string }) =>
+  update: (
+    id: string,
+    data: {
+      name?: string;
+      icon?: string;
+    }
+  ) =>
     fetcher<Board>(`/api/boards/${encodeURIComponent(id)}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     }),
   delete: (id: string) =>
-    fetcher<{ ok: boolean }>(`/api/boards/${encodeURIComponent(id)}`, {
+    fetcher<{
+      ok: boolean;
+    }>(`/api/boards/${encodeURIComponent(id)}`, {
       method: 'DELETE',
     }),
   addBrick: (
     boardId: string,
     brickTypeId: string,
     config?: Record<string, unknown>,
-    position?: { x: number; y: number },
-    size?: { w: number; h: number }
+    position?: {
+      x: number;
+      y: number;
+    },
+    size?: {
+      w: number;
+      h: number;
+    }
   ) =>
     fetcher<BoardBrickPlacement>(`/api/boards/${encodeURIComponent(boardId)}/bricks`, {
       method: 'POST',
-      body: JSON.stringify({ brickTypeId, config, position, size }),
+      body: JSON.stringify({
+        brickTypeId,
+        config,
+        position,
+        size,
+      }),
     }),
   updateBrick: (
     boardId: string,
@@ -113,42 +157,70 @@ export const boardsApi = {
     data: {
       label?: string;
       config?: Record<string, unknown>;
-      position?: { x: number; y: number };
-      size?: { w: number; h: number };
+      position?: {
+        x: number;
+        y: number;
+      };
+      size?: {
+        w: number;
+        h: number;
+      };
     }
   ) =>
-    fetcher<{ ok: boolean }>(
-      `/api/boards/${encodeURIComponent(boardId)}/bricks/${encodeURIComponent(instanceId)}`,
-      {
-        method: 'PUT',
-        body: JSON.stringify(data),
-      }
-    ),
+    fetcher<{
+      ok: boolean;
+    }>(`/api/boards/${encodeURIComponent(boardId)}/bricks/${encodeURIComponent(instanceId)}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
   removeBrick: (boardId: string, instanceId: string) =>
-    fetcher<{ ok: boolean }>(
-      `/api/boards/${encodeURIComponent(boardId)}/bricks/${encodeURIComponent(instanceId)}`,
-      {
-        method: 'DELETE',
-      }
-    ),
+    fetcher<{
+      ok: boolean;
+    }>(`/api/boards/${encodeURIComponent(boardId)}/bricks/${encodeURIComponent(instanceId)}`, {
+      method: 'DELETE',
+    }),
   batchLayout: (
     boardId: string,
-    layouts: Array<{ instanceId: string; x: number; y: number; w: number; h: number }>
+    layouts: Array<{
+      instanceId: string;
+      x: number;
+      y: number;
+      w: number;
+      h: number;
+    }>
   ) =>
-    fetcher<{ ok: boolean }>(`/api/boards/${encodeURIComponent(boardId)}/layout`, {
+    fetcher<{
+      ok: boolean;
+    }>(`/api/boards/${encodeURIComponent(boardId)}/layout`, {
       method: 'PUT',
-      body: JSON.stringify({ layouts }),
+      body: JSON.stringify({
+        layouts,
+      }),
     }),
   reorder: (ids: string[]) =>
-    fetcher<{ ok: boolean }>('/api/boards/order', {
+    fetcher<{
+      ok: boolean;
+    }>('/api/boards/order', {
       method: 'PUT',
-      body: JSON.stringify({ ids }),
+      body: JSON.stringify({
+        ids,
+      }),
     }),
 };
 
 export const boardKeys = {
-  all: ['boards'] as const,
-  detail: (id: string) => ['boards', id] as const,
-  brickTypes: ['brickTypes'] as const,
-  instances: ['brickInstances'] as const,
+  all: [
+    'boards',
+  ] as const,
+  detail: (id: string) =>
+    [
+      'boards',
+      id,
+    ] as const,
+  brickTypes: [
+    'brickTypes',
+  ] as const,
+  instances: [
+    'brickInstances',
+  ] as const,
 };

@@ -60,7 +60,10 @@ export class PluginPermissionService {
     granted: boolean
   ): Promise<Permission[]> {
     if (!isValidPermission(permission)) {
-      this.#logs.warn('Rejected unknown permission', { pluginName, permission });
+      this.#logs.warn('Rejected unknown permission', {
+        pluginName,
+        permission,
+      });
       throw new Error(`Unknown permission: "${permission}"`);
     }
 
@@ -72,7 +75,9 @@ export class PluginPermissionService {
       current.delete(permission);
     }
 
-    const updated = filterValidPermissions([...current]);
+    const updated = filterValidPermissions([
+      ...current,
+    ]);
     await this.#state.setGrantedPermissions(pluginName, updated);
 
     this.#logs.info(`Permission ${granted ? 'granted' : 'revoked'}`, {

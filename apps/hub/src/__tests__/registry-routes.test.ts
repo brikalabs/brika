@@ -42,13 +42,23 @@ describe('registry routes', () => {
       install: mock(),
       update: mock(),
       list: mock().mockResolvedValue([]),
-      get: mock().mockResolvedValue({ name: 'test-pkg', version: '1.0.0' }),
+      get: mock().mockResolvedValue({
+        name: 'test-pkg',
+        version: '1.0.0',
+      }),
       checkUpdates: mock().mockResolvedValue([]),
       uninstall: mock().mockResolvedValue(undefined),
     };
     mockStore = {
-      search: mock().mockResolvedValue({ plugins: [], total: 0 }),
-      getVerifiedList: mock().mockResolvedValue({ plugins: [], version: '1.0.0', lastUpdated: '' }),
+      search: mock().mockResolvedValue({
+        plugins: [],
+        total: 0,
+      }),
+      getVerifiedList: mock().mockResolvedValue({
+        plugins: [],
+        version: '1.0.0',
+        lastUpdated: '',
+      }),
       getPluginDetails: mock().mockResolvedValue(null),
       getLocalPluginRoot: mock().mockResolvedValue(null),
     };
@@ -60,7 +70,7 @@ describe('registry routes', () => {
     // Use `provide` (not `stub`) for PluginRegistry so that async generators
     // returned by install/update are not wrapped by the deep-stub proxy, which
     // breaks async iteration (the proxy's function wrapper loses generator context).
-    provide(PluginRegistry, mockRegistry as InstanceType<typeof PluginRegistry>);
+    provide(PluginRegistry, mockRegistry);
     stub(StoreService, mockStore);
     stub(Logger, mockLogger);
 
@@ -70,14 +80,20 @@ describe('registry routes', () => {
   // ─── Packages ─────────────────────────────────────────────────────────────
 
   test('GET /api/registry/packages returns list', async () => {
-    const res = await app.get<{ packages: unknown[] }>('/api/registry/packages');
+    const res = await app.get<{
+      packages: unknown[];
+    }>('/api/registry/packages');
 
     expect(res.status).toBe(200);
     expect(res.body.packages).toEqual([]);
   });
 
   test('GET /api/registry/packages/:name returns package', async () => {
-    const res = await app.get<{ package: { name: string } }>('/api/registry/packages/test-pkg');
+    const res = await app.get<{
+      package: {
+        name: string;
+      };
+    }>('/api/registry/packages/test-pkg');
 
     expect(res.status).toBe(200);
     expect(res.body.package.name).toBe('test-pkg');
@@ -93,7 +109,9 @@ describe('registry routes', () => {
   // ─── Updates ──────────────────────────────────────────────────────────────
 
   test('GET /api/registry/updates checks for updates', async () => {
-    const res = await app.get<{ updates: unknown[] }>('/api/registry/updates');
+    const res = await app.get<{
+      updates: unknown[];
+    }>('/api/registry/updates');
 
     expect(res.status).toBe(200);
     expect(res.body.updates).toEqual([]);
@@ -102,9 +120,12 @@ describe('registry routes', () => {
   // ─── Version ──────────────────────────────────────────────────────────────
 
   test('GET /api/registry/version returns hub version', async () => {
-    const res = await app.get<{ version: string; engines: { node: string } }>(
-      '/api/registry/version'
-    );
+    const res = await app.get<{
+      version: string;
+      engines: {
+        node: string;
+      };
+    }>('/api/registry/version');
 
     expect(res.status).toBe(200);
     expect(typeof res.body.version).toBe('string');
@@ -115,14 +136,28 @@ describe('registry routes', () => {
 
   test('GET /api/registry/search returns results from all sources', async () => {
     mockStore.search.mockResolvedValue({
-      plugins: [{ package: { name: '@brika/plugin-timer' }, installed: false, source: 'local' }],
+      plugins: [
+        {
+          package: {
+            name: '@brika/plugin-timer',
+          },
+          installed: false,
+          source: 'local',
+        },
+      ],
       total: 1,
     });
 
-    const res = await app.get<{ plugins: Array<{ installed: boolean }>; total: number }>(
-      '/api/registry/search',
-      { query: { q: 'timer' } }
-    );
+    const res = await app.get<{
+      plugins: Array<{
+        installed: boolean;
+      }>;
+      total: number;
+    }>('/api/registry/search', {
+      query: {
+        q: 'timer',
+      },
+    });
 
     expect(res.status).toBe(200);
     expect(res.body.total).toBe(1);
@@ -130,7 +165,13 @@ describe('registry routes', () => {
   });
 
   test('GET /api/registry/search passes query and pagination to StoreService', async () => {
-    await app.get('/api/registry/search', { query: { q: 'timer', limit: '5', offset: '10' } });
+    await app.get('/api/registry/search', {
+      query: {
+        q: 'timer',
+        limit: '5',
+        offset: '10',
+      },
+    });
 
     expect(mockStore.search).toHaveBeenCalledWith('timer', 5, 10);
   });
@@ -152,7 +193,9 @@ describe('registry routes', () => {
   // ─── Plugin details ───────────────────────────────────────────────────────
 
   test('GET /api/registry/plugins/:name returns 404 for unknown package', async () => {
-    const res = await app.get<{ error: string }>('/api/registry/plugins/unknown-pkg');
+    const res = await app.get<{
+      error: string;
+    }>('/api/registry/plugins/unknown-pkg');
 
     expect(res.status).toBe(404);
     expect(res.body.error).toBe('Package not found');
@@ -164,20 +207,29 @@ describe('registry routes', () => {
       version: '1.0.0',
       displayName: 'Timer',
       description: 'A timer plugin',
-      keywords: ['brika'],
-      engines: { brika: '^0.1.0' },
+      keywords: [
+        'brika',
+      ],
+      engines: {
+        brika: '^0.1.0',
+      },
       verified: false,
       featured: false,
       source: 'local',
       installed: false,
       installVersion: 'workspace:*',
       compatible: true,
-      npm: { downloads: 0, publishedAt: '' },
+      npm: {
+        downloads: 0,
+        publishedAt: '',
+      },
     });
 
-    const res = await app.get<{ name: string; source: string; installed: boolean }>(
-      '/api/registry/plugins/brika-plugin-timer'
-    );
+    const res = await app.get<{
+      name: string;
+      source: string;
+      installed: boolean;
+    }>('/api/registry/plugins/brika-plugin-timer');
 
     expect(res.status).toBe(200);
     expect(res.body.name).toBe('brika-plugin-timer');
@@ -189,19 +241,26 @@ describe('registry routes', () => {
     mockStore.getPluginDetails.mockResolvedValue({
       name: 'brika-plugin-timer',
       version: '2.0.0',
-      engines: { brika: '^0.2.0' },
+      engines: {
+        brika: '^0.2.0',
+      },
       verified: false,
       featured: false,
       source: 'npm',
       installed: false,
       installVersion: '2.0.0',
       compatible: true,
-      npm: { downloads: 0, publishedAt: '' },
+      npm: {
+        downloads: 0,
+        publishedAt: '',
+      },
     });
 
-    const res = await app.get<{ name: string; verified: boolean; installed: boolean }>(
-      '/api/registry/plugins/brika-plugin-timer'
-    );
+    const res = await app.get<{
+      name: string;
+      verified: boolean;
+      installed: boolean;
+    }>('/api/registry/plugins/brika-plugin-timer');
 
     expect(res.status).toBe(200);
     expect(res.body.verified).toBeFalse();
@@ -215,7 +274,9 @@ describe('registry routes', () => {
       return app.hono.fetch(
         new Request('http://test/api/registry/install', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+          },
           body: JSON.stringify(body),
         })
       );
@@ -223,21 +284,34 @@ describe('registry routes', () => {
 
     test('returns SSE stream with progress events for install', async () => {
       async function* gen(): AsyncGenerator<OperationProgress> {
-        yield { phase: 'resolving', operation: 'install', package: 'my-plugin' };
-        yield { phase: 'complete', operation: 'install', package: 'my-plugin', message: 'Done' };
+        yield {
+          phase: 'resolving',
+          operation: 'install',
+          package: 'my-plugin',
+        };
+        yield {
+          phase: 'complete',
+          operation: 'install',
+          package: 'my-plugin',
+          message: 'Done',
+        };
       }
       mockRegistry.install.mockReturnValue(gen());
 
-      const raw = await postInstall({ package: 'my-plugin' });
+      const raw = await postInstall({
+        package: 'my-plugin',
+      });
 
       expect(raw.status).toBe(200);
       expect(raw.headers.get('Content-Type')).toBe('text/event-stream');
 
       // Consume just the first chunk to verify event format
       const reader = raw.body?.getReader();
-      expect(reader).toBeDefined();
-      const { value } = await reader!.read();
-      await reader!.cancel();
+      if (!reader) {
+        throw new Error('unreachable');
+      }
+      const { value } = await reader.read();
+      await reader.cancel();
 
       const text = new TextDecoder().decode(value);
       expect(text).toContain('event: progress');
@@ -245,11 +319,19 @@ describe('registry routes', () => {
 
     test('install with version passes version to registry', async () => {
       async function* gen(): AsyncGenerator<OperationProgress> {
-        yield { phase: 'complete', operation: 'install', package: 'p', targetVersion: '2.0.0' };
+        yield {
+          phase: 'complete',
+          operation: 'install',
+          package: 'p',
+          targetVersion: '2.0.0',
+        };
       }
       mockRegistry.install.mockReturnValue(gen());
 
-      const raw = await postInstall({ package: 'my-plugin', version: '2.0.0' });
+      const raw = await postInstall({
+        package: 'my-plugin',
+        version: '2.0.0',
+      });
 
       expect(raw.status).toBe(200);
       expect(mockRegistry.install).toHaveBeenCalledWith('my-plugin', '2.0.0');
@@ -262,12 +344,17 @@ describe('registry routes', () => {
       }
       mockRegistry.install.mockReturnValue(gen());
 
-      const raw = await postInstall({ package: 'bad-plugin' });
+      const raw = await postInstall({
+        package: 'bad-plugin',
+      });
       expect(raw.status).toBe(200);
 
       const reader = raw.body?.getReader();
-      const { value } = await reader!.read();
-      await reader!.cancel();
+      if (!reader) {
+        throw new Error('unreachable');
+      }
+      const { value } = await reader.read();
+      await reader.cancel();
 
       const text = new TextDecoder().decode(value);
       expect(text).toContain('event: progress');
@@ -287,12 +374,17 @@ describe('registry routes', () => {
       }
       mockRegistry.install.mockReturnValue(gen());
 
-      const raw = await postInstall({ package: 'bad-plugin' });
+      const raw = await postInstall({
+        package: 'bad-plugin',
+      });
       expect(raw.status).toBe(200);
 
       const reader = raw.body?.getReader();
-      const { value } = await reader!.read();
-      await reader!.cancel();
+      if (!reader) {
+        throw new Error('unreachable');
+      }
+      const { value } = await reader.read();
+      await reader.cancel();
 
       const text = new TextDecoder().decode(value);
       expect(text).toContain('"error"');
@@ -301,11 +393,17 @@ describe('registry routes', () => {
 
     test('install calls registry.init before install', async () => {
       async function* gen(): AsyncGenerator<OperationProgress> {
-        yield { phase: 'complete', operation: 'install', package: 'p' };
+        yield {
+          phase: 'complete',
+          operation: 'install',
+          package: 'p',
+        };
       }
       mockRegistry.install.mockReturnValue(gen());
 
-      const raw = await postInstall({ package: 'p' });
+      const raw = await postInstall({
+        package: 'p',
+      });
       expect(raw.status).toBe(200);
       expect(mockRegistry.init).toHaveBeenCalled();
       await raw.body?.getReader().cancel();
@@ -319,7 +417,9 @@ describe('registry routes', () => {
       return app.hono.fetch(
         new Request('http://test/api/registry/update', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+          },
           body: JSON.stringify(body),
         })
       );
@@ -327,19 +427,33 @@ describe('registry routes', () => {
 
     test('returns SSE stream with progress events for update', async () => {
       async function* gen(): AsyncGenerator<OperationProgress> {
-        yield { phase: 'resolving', operation: 'update', package: 'my-plugin' };
-        yield { phase: 'complete', operation: 'update', package: 'my-plugin', message: 'Updated' };
+        yield {
+          phase: 'resolving',
+          operation: 'update',
+          package: 'my-plugin',
+        };
+        yield {
+          phase: 'complete',
+          operation: 'update',
+          package: 'my-plugin',
+          message: 'Updated',
+        };
       }
       mockRegistry.update.mockReturnValue(gen());
 
-      const raw = await postUpdate({ package: 'my-plugin' });
+      const raw = await postUpdate({
+        package: 'my-plugin',
+      });
 
       expect(raw.status).toBe(200);
       expect(raw.headers.get('Content-Type')).toBe('text/event-stream');
 
       const reader = raw.body?.getReader();
-      const { value } = await reader!.read();
-      await reader!.cancel();
+      if (!reader) {
+        throw new Error('unreachable');
+      }
+      const { value } = await reader.read();
+      await reader.cancel();
 
       const text = new TextDecoder().decode(value);
       expect(text).toContain('event: progress');
@@ -347,7 +461,11 @@ describe('registry routes', () => {
 
     test('update without package name calls update with undefined', async () => {
       async function* gen(): AsyncGenerator<OperationProgress> {
-        yield { phase: 'complete', operation: 'update', package: 'all' };
+        yield {
+          phase: 'complete',
+          operation: 'update',
+          package: 'all',
+        };
       }
       mockRegistry.update.mockReturnValue(gen());
 
@@ -368,8 +486,11 @@ describe('registry routes', () => {
       expect(raw.status).toBe(200);
 
       const reader = raw.body?.getReader();
-      const { value } = await reader!.read();
-      await reader!.cancel();
+      if (!reader) {
+        throw new Error('unreachable');
+      }
+      const { value } = await reader.read();
+      await reader.cancel();
 
       const text = new TextDecoder().decode(value);
       expect(text).toContain('"error"');
@@ -378,7 +499,11 @@ describe('registry routes', () => {
 
     test('update calls registry.init before update', async () => {
       async function* gen(): AsyncGenerator<OperationProgress> {
-        yield { phase: 'complete', operation: 'update', package: 'all' };
+        yield {
+          phase: 'complete',
+          operation: 'update',
+          package: 'all',
+        };
       }
       mockRegistry.update.mockReturnValue(gen());
 
@@ -400,11 +525,16 @@ describe('registry routes', () => {
 
     test('returns readme from local file when it exists', async () => {
       mockStore.getLocalPluginRoot.mockResolvedValue('/plugins/brika-plugin-timer');
-      bun.fs({ '/plugins/brika-plugin-timer/README.md': '# Local Readme' }).apply();
+      bun
+        .fs({
+          '/plugins/brika-plugin-timer/README.md': '# Local Readme',
+        })
+        .apply();
 
-      const res = await app.get<{ readme: string; filename: string }>(
-        '/api/registry/plugins/brika-plugin-timer/readme'
-      );
+      const res = await app.get<{
+        readme: string;
+        filename: string;
+      }>('/api/registry/plugins/brika-plugin-timer/readme');
 
       expect(res.status).toBe(200);
       expect(res.body.readme).toBe('# Local Readme');
@@ -417,12 +547,15 @@ describe('registry routes', () => {
       bun.fs({}).apply();
 
       fetchSpy = spyOn(globalThis, 'fetch').mockResolvedValue(
-        new Response('# CDN Readme', { status: 200 })
+        new Response('# CDN Readme', {
+          status: 200,
+        })
       );
 
-      const res = await app.get<{ readme: string; filename: string }>(
-        '/api/registry/plugins/brika-plugin-timer/readme'
-      );
+      const res = await app.get<{
+        readme: string;
+        filename: string;
+      }>('/api/registry/plugins/brika-plugin-timer/readme');
 
       expect(res.status).toBe(200);
       expect(res.body.readme).toBe('# CDN Readme');
@@ -431,7 +564,9 @@ describe('registry routes', () => {
 
     test('strips source prefix for CDN URL', async () => {
       fetchSpy = spyOn(globalThis, 'fetch').mockResolvedValue(
-        new Response('# Readme', { status: 200 })
+        new Response('# Readme', {
+          status: 200,
+        })
       );
 
       await app.get('/api/registry/plugins/local:brika-plugin-timer/readme');
@@ -439,18 +574,23 @@ describe('registry routes', () => {
       // stripSourcePrefix should remove 'local:' prefix
       expect(fetchSpy).toHaveBeenCalledWith(
         'https://unpkg.com/brika-plugin-timer@latest/README.md',
-        { redirect: 'follow' }
+        {
+          redirect: 'follow',
+        }
       );
     });
 
     test('returns readme content when CDN responds ok', async () => {
       fetchSpy = spyOn(globalThis, 'fetch').mockResolvedValue(
-        new Response('# My Plugin', { status: 200 })
+        new Response('# My Plugin', {
+          status: 200,
+        })
       );
 
-      const res = await app.get<{ readme: string; filename: string }>(
-        '/api/registry/plugins/brika-plugin-timer/readme'
-      );
+      const res = await app.get<{
+        readme: string;
+        filename: string;
+      }>('/api/registry/plugins/brika-plugin-timer/readme');
 
       expect(res.status).toBe(200);
       expect(res.body.readme).toBe('# My Plugin');
@@ -458,11 +598,16 @@ describe('registry routes', () => {
     });
 
     test('returns null when CDN responds not ok', async () => {
-      fetchSpy = spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 404 }));
-
-      const res = await app.get<{ readme: null; filename: null }>(
-        '/api/registry/plugins/brika-plugin-timer/readme'
+      fetchSpy = spyOn(globalThis, 'fetch').mockResolvedValue(
+        new Response(null, {
+          status: 404,
+        })
       );
+
+      const res = await app.get<{
+        readme: null;
+        filename: null;
+      }>('/api/registry/plugins/brika-plugin-timer/readme');
 
       expect(res.status).toBe(200);
       expect(res.body.readme).toBeNull();
@@ -471,9 +616,10 @@ describe('registry routes', () => {
     test('returns null on fetch error and logs it', async () => {
       fetchSpy = spyOn(globalThis, 'fetch').mockRejectedValue(new Error('Network error'));
 
-      const res = await app.get<{ readme: null; filename: null }>(
-        '/api/registry/plugins/brika-plugin-timer/readme'
-      );
+      const res = await app.get<{
+        readme: null;
+        filename: null;
+      }>('/api/registry/plugins/brika-plugin-timer/readme');
 
       expect(res.status).toBe(200);
       expect(res.body.readme).toBeNull();
@@ -503,7 +649,15 @@ describe('registry routes', () => {
         if (p === '/plugins/my-plugin/icon.png') {
           return {
             exists: () => Promise.resolve(true),
-            arrayBuffer: () => Promise.resolve(new Uint8Array([137, 80, 78, 71]).buffer),
+            arrayBuffer: () =>
+              Promise.resolve(
+                new Uint8Array([
+                  137,
+                  80,
+                  78,
+                  71,
+                ]).buffer
+              ),
           } as ReturnType<typeof Bun.file>;
         }
         return {
@@ -555,7 +709,14 @@ describe('registry routes', () => {
         if (p === '/plugins/my-plugin/logo.png') {
           return {
             exists: () => Promise.resolve(true),
-            arrayBuffer: () => Promise.resolve(new Uint8Array([1, 2, 3]).buffer),
+            arrayBuffer: () =>
+              Promise.resolve(
+                new Uint8Array([
+                  1,
+                  2,
+                  3,
+                ]).buffer
+              ),
           } as ReturnType<typeof Bun.file>;
         }
         return {
@@ -582,10 +743,19 @@ describe('registry routes', () => {
       }) as typeof Bun.file);
 
       fetchSpy = spyOn(globalThis, 'fetch').mockResolvedValue(
-        new Response(new Uint8Array([1, 2, 3]), {
-          status: 200,
-          headers: { 'content-type': 'image/png' },
-        })
+        new Response(
+          new Uint8Array([
+            1,
+            2,
+            3,
+          ]),
+          {
+            status: 200,
+            headers: {
+              'content-type': 'image/png',
+            },
+          }
+        )
       );
 
       const raw = await app.hono.fetch(
@@ -598,20 +768,21 @@ describe('registry routes', () => {
     });
 
     test('CDN icon tries multiple paths and returns first successful', async () => {
-      let callCount = 0;
-      fetchSpy = spyOn(globalThis, 'fetch').mockImplementation(() => {
-        callCount++;
-        // First call (icon.png) fails, second call (icon.svg) succeeds
-        if (callCount === 1) {
-          return Promise.resolve(new Response(null, { status: 404 }));
-        }
-        return Promise.resolve(
-          new Response(new TextEncoder().encode('<svg/>'), {
-            status: 200,
-            headers: { 'content-type': 'image/svg+xml' },
-          })
-        );
-      });
+      fetchSpy = spyOn(globalThis, 'fetch');
+      // First call (icon.png) fails, second call (icon.svg) succeeds
+      fetchSpy.mockResolvedValueOnce(
+        new Response(null, {
+          status: 404,
+        })
+      );
+      fetchSpy.mockResolvedValueOnce(
+        new Response(new TextEncoder().encode('<svg/>'), {
+          status: 200,
+          headers: {
+            'content-type': 'image/svg+xml',
+          },
+        })
+      );
 
       const raw = await app.hono.fetch(
         new Request('http://test/api/registry/plugins/my-plugin/icon')
@@ -624,10 +795,19 @@ describe('registry routes', () => {
 
     test('strips source prefix for CDN icon URL', async () => {
       fetchSpy = spyOn(globalThis, 'fetch').mockResolvedValue(
-        new Response(new Uint8Array([1, 2, 3]), {
-          status: 200,
-          headers: { 'content-type': 'image/png' },
-        })
+        new Response(
+          new Uint8Array([
+            1,
+            2,
+            3,
+          ]),
+          {
+            status: 200,
+            headers: {
+              'content-type': 'image/png',
+            },
+          }
+        )
       );
 
       const raw = await app.hono.fetch(
@@ -643,10 +823,19 @@ describe('registry routes', () => {
 
     test('returns icon when CDN has it', async () => {
       fetchSpy = spyOn(globalThis, 'fetch').mockResolvedValue(
-        new Response(new Uint8Array([1, 2, 3]), {
-          status: 200,
-          headers: { 'content-type': 'image/png' },
-        })
+        new Response(
+          new Uint8Array([
+            1,
+            2,
+            3,
+          ]),
+          {
+            status: 200,
+            headers: {
+              'content-type': 'image/png',
+            },
+          }
+        )
       );
 
       const raw = await app.hono.fetch(
@@ -657,7 +846,11 @@ describe('registry routes', () => {
     });
 
     test('returns 404 when no icon found on CDN', async () => {
-      fetchSpy = spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 404 }));
+      fetchSpy = spyOn(globalThis, 'fetch').mockResolvedValue(
+        new Response(null, {
+          status: 404,
+        })
+      );
 
       const raw = await app.hono.fetch(
         new Request('http://test/api/registry/plugins/brika-plugin-timer/icon')
@@ -682,10 +875,17 @@ describe('registry routes', () => {
 
     test('CDN icon uses content-type from response when available', async () => {
       fetchSpy = spyOn(globalThis, 'fetch').mockResolvedValue(
-        new Response(new Uint8Array([1]), {
-          status: 200,
-          headers: { 'content-type': 'image/webp' },
-        })
+        new Response(
+          new Uint8Array([
+            1,
+          ]),
+          {
+            status: 200,
+            headers: {
+              'content-type': 'image/webp',
+            },
+          }
+        )
       );
 
       const raw = await app.hono.fetch(
@@ -698,7 +898,14 @@ describe('registry routes', () => {
 
     test('CDN icon defaults to image/png when no content-type header', async () => {
       fetchSpy = spyOn(globalThis, 'fetch').mockResolvedValue(
-        new Response(new Uint8Array([1]), { status: 200 })
+        new Response(
+          new Uint8Array([
+            1,
+          ]),
+          {
+            status: 200,
+          }
+        )
       );
 
       const raw = await app.hono.fetch(
@@ -712,10 +919,17 @@ describe('registry routes', () => {
     test('no local root falls through directly to CDN', async () => {
       // getLocalPluginRoot returns null (default mock)
       fetchSpy = spyOn(globalThis, 'fetch').mockResolvedValue(
-        new Response(new Uint8Array([1]), {
-          status: 200,
-          headers: { 'content-type': 'image/png' },
-        })
+        new Response(
+          new Uint8Array([
+            1,
+          ]),
+          {
+            status: 200,
+            headers: {
+              'content-type': 'image/png',
+            },
+          }
+        )
       );
 
       const raw = await app.hono.fetch(

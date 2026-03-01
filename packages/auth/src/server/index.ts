@@ -19,30 +19,26 @@
  * ```
  */
 
-// 🏗️ Services
-export { AuthService } from '../services/AuthService';
-export { UserService } from '../services/UserService';
-export { SessionService } from '../services/SessionService';
-export { ScopeService } from '../services/ScopeService';
-
-// 🛡️ Middleware
-export { requireAuth, type AuthContext } from '../middleware/requireAuth';
-export { requireScope } from '../middleware/requireScope';
-export { verifyToken } from '../middleware/verifyToken';
 export {
   canAccess,
   canAccessAll,
   createPermissionChecker,
   Features,
 } from '../middleware/canAccess';
-
-// 🛠️ Route Helpers
-export { requireSession } from './requireSession';
-export { serveImage } from './serveImage';
-
-// 🌐 Routes
-export { allAuthRoutes as authRoutes } from './routes/index';
-
+// 🛡️ Middleware
+export { type AuthContext, requireAuth } from '../middleware/requireAuth';
+export { requireScope } from '../middleware/requireScope';
+export { verifyToken } from '../middleware/verifyToken';
+export { auth } from '../plugin';
+// 🏗️ Services
+export { AuthService } from '../services/AuthService';
+export { ScopeService } from '../services/ScopeService';
+export { SessionService } from '../services/SessionService';
+export { UserService } from '../services/UserService';
 // 🎯 Setup & Plugin
 export { openAuthDatabase, setupAuthServices } from '../setup';
-export { auth } from '../plugin';
+// 🛠️ Route Helpers
+export { requireSession } from './requireSession';
+// 🌐 Routes
+export { allAuthRoutes as authRoutes } from './routes/index';
+export { serveImage } from './serveImage';

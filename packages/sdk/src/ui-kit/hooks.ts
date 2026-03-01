@@ -27,7 +27,10 @@ export function useLocale(): PluginLocale {
  */
 export interface ActionRef<TInput = void, TOutput = unknown> {
   readonly __actionId: string;
-  readonly __phantom?: { input: TInput; output: TOutput };
+  readonly __phantom?: {
+    input: TInput;
+    output: TOutput;
+  };
 }
 
 export interface ActionResult<T> {

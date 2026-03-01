@@ -1,2 +1,2 @@
-export { photon, PhotonPipeline } from './pipeline';
-export type { ResizeFit, ResizeOptions, JpegOptions, ImageInfo } from './types';
+export { PhotonPipeline, photon } from './pipeline';
+export type { ImageInfo, JpegOptions, ResizeFit, ResizeOptions } from './types';

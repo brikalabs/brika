@@ -7,8 +7,12 @@ import { type ActionHandler, defineRenderer } from './registry';
 import { isToken, resolveBackground, resolveColor, tokenForeground } from './resolve-color';
 
 function getClickHandler(node: ButtonNode, onAction?: ActionHandler) {
-  if (node.disabled || node.loading) return undefined;
-  if (node.url) return () => window.open(node.url, '_blank', 'noopener');
+  if (node.disabled || node.loading) {
+    return undefined;
+  }
+  if (node.url) {
+    return () => window.open(node.url, '_blank', 'noopener');
+  }
   return () => node.onPress && onAction?.(node.onPress);
 }
 
@@ -16,15 +20,29 @@ function getColorStyle(
   color: string | undefined,
   variant: string
 ): React.CSSProperties | undefined {
-  if (!color) return undefined;
-  if (variant === 'ghost' || variant === 'link') return { color: resolveColor(color) };
+  if (!color) {
+    return undefined;
+  }
+  if (variant === 'ghost' || variant === 'link') {
+    return {
+      color: resolveColor(color),
+    };
+  }
   // For filled variants, pair token with its foreground companion
   const bg = resolveBackground(color) ?? resolveColor(color);
   const fg = isToken(color) ? (tokenForeground(color) ?? '#fff') : '#fff';
-  return { backgroundColor: bg, borderColor: 'transparent', color: fg };
+  return {
+    backgroundColor: bg,
+    borderColor: 'transparent',
+    color: fg,
+  };
 }
 
-const sizeMap = { sm: 'sm', md: 'default', lg: 'lg' } as const;
+const sizeMap = {
+  sm: 'sm',
+  md: 'default',
+  lg: 'lg',
+} as const;
 
 defineRenderer('button', ({ node, onAction }) => {
   const variant = node.variant ?? 'default';

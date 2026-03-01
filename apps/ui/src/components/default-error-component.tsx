@@ -1,6 +1,6 @@
 import type { ErrorComponentProps } from '@tanstack/react-router';
 import { ApiError } from '@/lib/query';
-import { ForbiddenPage, NotFoundPage, ServerErrorPage, GenericErrorPage } from './errors';
+import { ForbiddenPage, GenericErrorPage, NotFoundPage, ServerErrorPage } from './errors';
 
 /**
  * TanStack Router default error component.
@@ -14,9 +14,15 @@ import { ForbiddenPage, NotFoundPage, ServerErrorPage, GenericErrorPage } from '
  */
 export function DefaultErrorComponent({ error, reset }: ErrorComponentProps) {
   if (error instanceof ApiError) {
-    if (error.status === 401) return null;
-    if (error.status === 403) return <ForbiddenPage />;
-    if (error.status === 404) return <NotFoundPage />;
+    if (error.status === 401) {
+      return null;
+    }
+    if (error.status === 403) {
+      return <ForbiddenPage />;
+    }
+    if (error.status === 404) {
+      return <NotFoundPage />;
+    }
     return <ServerErrorPage onRetry={reset} error={error} />;
   }
 

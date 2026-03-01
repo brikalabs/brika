@@ -26,7 +26,11 @@ let PR_KEY: string | undefined;
 
 /** Returns `{ pullRequest: PR_KEY }` when a PR is active, else `{}`. */
 function prParam(): Record<string, string> {
-  return PR_KEY ? { pullRequest: PR_KEY } : {};
+  return PR_KEY
+    ? {
+        pullRequest: PR_KEY,
+      }
+    : {};
 }
 
 // ─── ANSI Colors ─────────────────────────────────────────────────────────────
@@ -109,7 +113,11 @@ function shortPath(component: string): string {
 
 function readHeaders(): HeadersInit {
   const token = Bun.env.SONAR_TOKEN;
-  if (token) return { Authorization: `Bearer ${token}` };
+  if (token) {
+    return {
+      Authorization: `Bearer ${token}`,
+    };
+  }
   return {};
 }
 
@@ -134,9 +142,13 @@ function authHeaders(): HeadersInit {
 async function api<T = unknown>(path: string, params?: Record<string, string>): Promise<T> {
   const url = new URL(path, BASE_URL);
   if (params) {
-    for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
+    for (const [k, v] of Object.entries(params)) {
+      url.searchParams.set(k, v);
+    }
   }
-  const res = await fetch(url.toString(), { headers: readHeaders() });
+  const res = await fetch(url.toString(), {
+    headers: readHeaders(),
+  });
   if (!res.ok) {
     const text = await res.text();
     die(`API ${res.status} ${res.statusText}: ${text}`);
@@ -159,7 +171,9 @@ async function apiPost<T = unknown>(
     die(`API ${res.status} ${res.statusText}: ${text}`);
   }
   const ct = res.headers.get('content-type') ?? '';
-  if (ct.includes('json')) return res.json() as Promise<T>;
+  if (ct.includes('json')) {
+    return res.json() as Promise<T>;
+  }
   return res.text();
 }
 
@@ -193,7 +207,11 @@ interface Hotspot {
 }
 
 interface HotspotSearchResult {
-  paging: { total: number; pageIndex: number; pageSize: number };
+  paging: {
+    total: number;
+    pageIndex: number;
+    pageSize: number;
+  };
   hotspots: Hotspot[];
 }
 
@@ -218,7 +236,10 @@ interface ComponentTree {
 
 interface ProjectMeasures {
   component: {
-    measures: Array<{ metric: string; value: string }>;
+    measures: Array<{
+      metric: string;
+      value: string;
+    }>;
   };
 }
 
@@ -233,9 +254,15 @@ async function cmdList(flags: Record<string, string>): Promise<void> {
     asc: 'false',
     ...prParam(),
   };
-  if (flags.type) params.types = flags.type;
-  if (flags.severity) params.severities = flags.severity;
-  if (flags.rule) params.rules = flags.rule;
+  if (flags.type) {
+    params.types = flags.type;
+  }
+  if (flags.severity) {
+    params.severities = flags.severity;
+  }
+  if (flags.rule) {
+    params.rules = flags.rule;
+  }
 
   const data = await api<IssueSearchResult>('/api/issues/search', params);
   const shown = data.issues.length;
@@ -312,7 +339,13 @@ async function cmdSummary(): Promise<void> {
   heading(`Project: ${c.cyan}${PROJECT_KEY}${c.reset}`);
 
   const issueData = issues as IssueSearchResult & {
-    facets?: Array<{ property: string; values: Array<{ val: string; count: number }> }>;
+    facets?: Array<{
+      property: string;
+      values: Array<{
+        val: string;
+        count: number;
+      }>;
+    }>;
   };
 
   const typeFacet = issueData.facets?.find((f) => f.property === 'types');
@@ -321,14 +354,18 @@ async function cmdSummary(): Promise<void> {
   console.log(`  ${c.bold}Issues:${c.reset} ${issues.total} open`);
   if (typeFacet) {
     for (const { val, count } of typeFacet.values) {
-      if (count > 0) console.log(`    ${typeBadge(val)} ${count}`);
+      if (count > 0) {
+        console.log(`    ${typeBadge(val)} ${count}`);
+      }
     }
   }
   console.log();
   if (sevFacet) {
     console.log(`  ${c.bold}By Severity:${c.reset}`);
     for (const { val, count } of sevFacet.values) {
-      if (count > 0) console.log(`    ${severityBadge(val)} ${count}`);
+      if (count > 0) {
+        console.log(`    ${severityBadge(val)} ${count}`);
+      }
     }
   }
   console.log();
@@ -341,11 +378,17 @@ async function cmdTransition(
   transition: string,
   comment?: string
 ): Promise<void> {
-  await apiPost('/api/issues/do_transition', { issue: issueKey, transition });
+  await apiPost('/api/issues/do_transition', {
+    issue: issueKey,
+    transition,
+  });
   success(`Issue ${c.cyan}${issueKey}${c.reset}${c.green} → ${transition}`);
 
   if (comment) {
-    await apiPost('/api/issues/add_comment', { issue: issueKey, text: comment });
+    await apiPost('/api/issues/add_comment', {
+      issue: issueKey,
+      text: comment,
+    });
     info(`Comment: "${comment}"`);
   }
 }
@@ -377,9 +420,15 @@ async function cmdBulkFp(
     const file = shortPath(issue.component);
     const loc = issue.line ? `:${issue.line}` : '';
     try {
-      await apiPost('/api/issues/do_transition', { issue: issue.key, transition: 'falsepositive' });
+      await apiPost('/api/issues/do_transition', {
+        issue: issue.key,
+        transition: 'falsepositive',
+      });
       if (reason) {
-        await apiPost('/api/issues/add_comment', { issue: issue.key, text: reason });
+        await apiPost('/api/issues/add_comment', {
+          issue: issue.key,
+          text: reason,
+        });
       }
       success(`${file}${loc} → false positive`);
       ok++;
@@ -399,10 +448,14 @@ async function cmdHotspotSafe(hotspotKey: string, comment?: string): Promise<voi
     status: 'REVIEWED',
     resolution: 'SAFE',
   };
-  if (comment) body.comment = comment;
+  if (comment) {
+    body.comment = comment;
+  }
   await apiPost('/api/hotspots/change_status', body);
   success(`Hotspot ${c.cyan}${hotspotKey}${c.reset}${c.green} → SAFE`);
-  if (comment) info(`Comment: "${comment}"`);
+  if (comment) {
+    info(`Comment: "${comment}"`);
+  }
 }
 
 async function cmdBulkHotspotSafe(
@@ -443,7 +496,9 @@ async function cmdBulkHotspotSafe(
         status: 'REVIEWED',
         resolution: 'SAFE',
       };
-      if (comment) body.comment = comment;
+      if (comment) {
+        body.comment = comment;
+      }
       await apiPost('/api/hotspots/change_status', body);
       success(`${file}${loc} → SAFE`);
       ok++;
@@ -457,21 +512,10 @@ async function cmdBulkHotspotSafe(
   info(`Done: ${ok} marked safe, ${failed} failed`);
 }
 
-async function cmdCoverage(flags: Record<string, string>): Promise<void> {
-  const threshold = parseFloat(flags.threshold ?? '80');
-  const isNew = flags.scope !== 'overall';
-  const limit = parseInt(flags.limit ?? '100');
-
-  // Fetch project-level metrics
-  const proj = await api<ProjectMeasures>('/api/measures/component', {
-    component: PROJECT_KEY,
-    metricKeys:
-      'coverage,new_coverage,new_lines_to_cover,new_uncovered_lines,lines_to_cover,uncovered_lines',
-    ...prParam(),
-  });
-
+/** Print the project-level coverage overview. */
+function printCoverageOverview(measures: ProjectMeasures): void {
   const metric = (key: string) =>
-    proj.component.measures.find((m) => m.metric === key)?.value ?? '—';
+    measures.component.measures.find((m) => m.metric === key)?.value ?? '—';
 
   heading('Coverage Overview');
   console.log(
@@ -481,6 +525,98 @@ async function cmdCoverage(flags: Record<string, string>): Promise<void> {
     `  ${c.bold}New code:${c.reset}     ${metric('new_coverage')}%  (${metric('new_uncovered_lines')} / ${metric('new_lines_to_cover')} uncovered)`
   );
   console.log();
+}
+
+interface CoverageFile {
+  path: string;
+  cov: number;
+  lines: number;
+  uncov: number;
+}
+
+/** Extract and filter files under the coverage threshold from the component tree. */
+function extractFilesUnderThreshold(
+  tree: ComponentTree,
+  isNew: boolean,
+  threshold: number
+): CoverageFile[] {
+  return tree.components
+    .map((comp) => {
+      const getValue = (key: string) => {
+        const m = comp.measures.find((x) => x.metric === key);
+        return isNew ? m?.periods?.[0]?.value : m?.value;
+      };
+      const cov = Number.parseFloat(getValue(isNew ? 'new_coverage' : 'coverage') ?? '-1');
+      const lines = Number.parseInt(
+        getValue(isNew ? 'new_lines_to_cover' : 'lines_to_cover') ?? '0'
+      );
+      const uncov = Number.parseInt(
+        getValue(isNew ? 'new_uncovered_lines' : 'uncovered_lines') ?? '0'
+      );
+      return {
+        path: comp.path,
+        cov,
+        lines,
+        uncov,
+      };
+    })
+    .filter((f) => f.lines > 0 && f.cov < threshold)
+    .sort((a, b) => b.uncov - a.uncov);
+}
+
+/** Pick the ANSI color code for a coverage percentage. */
+function coverageColor(cov: number, threshold: number): string {
+  if (cov < 0) {
+    return c.dim;
+  }
+  if (cov === 0) {
+    return c.red;
+  }
+  if (cov < threshold / 2) {
+    return c.yellow;
+  }
+  return c.blue;
+}
+
+/** Print per-file coverage rows and return totals. */
+function printCoverageFiles(
+  files: CoverageFile[],
+  threshold: number
+): {
+  totalLines: number;
+  totalUncov: number;
+} {
+  let totalLines = 0;
+  let totalUncov = 0;
+  for (const f of files) {
+    const covStr = f.cov < 0 ? '  —  ' : `${f.cov.toFixed(1).padStart(5)}%`;
+    const bar = coverageColor(f.cov, threshold);
+    console.log(
+      `  ${bar}${covStr}${c.reset}  ${c.dim}(${String(f.uncov).padStart(3)} uncov / ${f.lines})${c.reset}  ${f.path}`
+    );
+    totalLines += f.lines;
+    totalUncov += f.uncov;
+  }
+  return {
+    totalLines,
+    totalUncov,
+  };
+}
+
+async function cmdCoverage(flags: Record<string, string>): Promise<void> {
+  const threshold = Number.parseFloat(flags.threshold ?? '80');
+  const isNew = flags.scope !== 'overall';
+  const limit = Number.parseInt(flags.limit ?? '100');
+
+  // Fetch project-level metrics
+  const proj = await api<ProjectMeasures>('/api/measures/component', {
+    component: PROJECT_KEY,
+    metricKeys:
+      'coverage,new_coverage,new_lines_to_cover,new_uncovered_lines,lines_to_cover,uncovered_lines',
+    ...prParam(),
+  });
+
+  printCoverageOverview(proj);
 
   // Fetch per-file breakdown
   const metricKeys = isNew
@@ -495,25 +631,16 @@ async function cmdCoverage(flags: Record<string, string>): Promise<void> {
     s: isNew ? 'metricPeriod' : 'metric',
     asc: 'true',
     metricSort: isNew ? 'new_coverage' : 'coverage',
-    ...(isNew ? { metricPeriodSort: '1' } : {}),
+    ...(isNew
+      ? {
+          metricPeriodSort: '1',
+        }
+      : {}),
     qualifiers: 'FIL',
     ...prParam(),
   });
 
-  // Extract & filter files under threshold
-  const files = tree.components
-    .map((comp) => {
-      const getValue = (key: string) => {
-        const m = comp.measures.find((x) => x.metric === key);
-        return isNew ? m?.periods?.[0]?.value : m?.value;
-      };
-      const cov = parseFloat(getValue(isNew ? 'new_coverage' : 'coverage') ?? '-1');
-      const lines = parseInt(getValue(isNew ? 'new_lines_to_cover' : 'lines_to_cover') ?? '0');
-      const uncov = parseInt(getValue(isNew ? 'new_uncovered_lines' : 'uncovered_lines') ?? '0');
-      return { path: comp.path, cov, lines, uncov };
-    })
-    .filter((f) => f.lines > 0 && f.cov < threshold)
-    .sort((a, b) => b.uncov - a.uncov); // most uncovered first for max impact
+  const files = extractFilesUnderThreshold(tree, isNew, threshold);
 
   const scope = isNew ? 'New code' : 'Overall';
   heading(`${scope} files under ${threshold}% — ${files.length} files`);
@@ -523,17 +650,7 @@ async function cmdCoverage(flags: Record<string, string>): Promise<void> {
     return;
   }
 
-  let totalLines = 0;
-  let totalUncov = 0;
-  for (const f of files) {
-    const covStr = f.cov < 0 ? '  —  ' : `${f.cov.toFixed(1).padStart(5)}%`;
-    const bar = f.cov < 0 ? c.dim : f.cov === 0 ? c.red : f.cov < threshold / 2 ? c.yellow : c.blue;
-    console.log(
-      `  ${bar}${covStr}${c.reset}  ${c.dim}(${String(f.uncov).padStart(3)} uncov / ${f.lines})${c.reset}  ${f.path}`
-    );
-    totalLines += f.lines;
-    totalUncov += f.uncov;
-  }
+  const { totalLines, totalUncov } = printCoverageFiles(files, threshold);
 
   console.log();
   const covered = totalLines - totalUncov;
@@ -561,15 +678,19 @@ function parseArgs(argv: string[]): {
   const positional: string[] = [];
 
   for (let i = 0; i < rest.length; i++) {
-    const arg = rest[i]!;
+    const arg = rest[i] ?? '';
     if (arg.startsWith('--') && i + 1 < rest.length) {
-      flags[arg.slice(2)] = rest[++i]!;
+      flags[arg.slice(2)] = rest[++i] ?? '';
     } else {
       positional.push(arg);
     }
   }
 
-  return { command, flags, positional };
+  return {
+    command,
+    flags,
+    positional,
+  };
 }
 
 function usage(): void {
@@ -647,30 +768,40 @@ switch (command) {
     break;
 
   case 'fp':
-    if (!positional[0]) die('Missing issue key. Usage: sonar-fp fp <issue-key> "reason"');
+    if (!positional[0]) {
+      die('Missing issue key. Usage: sonar-fp fp <issue-key> "reason"');
+    }
     await cmdTransition(positional[0], 'falsepositive', positional[1]);
     break;
 
   case 'wontfix':
   case 'wf':
-    if (!positional[0]) die('Missing issue key. Usage: sonar-fp wontfix <issue-key> "reason"');
+    if (!positional[0]) {
+      die('Missing issue key. Usage: sonar-fp wontfix <issue-key> "reason"');
+    }
     await cmdTransition(positional[0], 'wontfix', positional[1]);
     break;
 
   case 'reopen':
-    if (!positional[0]) die('Missing issue key. Usage: sonar-fp reopen <issue-key>');
+    if (!positional[0]) {
+      die('Missing issue key. Usage: sonar-fp reopen <issue-key>');
+    }
     await cmdTransition(positional[0], 'reopen');
     break;
 
   case 'bulk-fp':
   case 'bfp':
-    if (!flags.rule) die('Missing --rule flag. Usage: sonar-fp bulk-fp --rule <rule-key> "reason"');
+    if (!flags.rule) {
+      die('Missing --rule flag. Usage: sonar-fp bulk-fp --rule <rule-key> "reason"');
+    }
     await cmdBulkFp(flags.rule, positional[0] ?? 'Bulk false positive', flags);
     break;
 
   case 'hotspot-safe':
   case 'hss':
-    if (!positional[0]) die('Missing hotspot key. Usage: sonar-fp hotspot-safe <key> "comment"');
+    if (!positional[0]) {
+      die('Missing hotspot key. Usage: sonar-fp hotspot-safe <key> "comment"');
+    }
     await cmdHotspotSafe(positional[0], positional[1]);
     break;
 

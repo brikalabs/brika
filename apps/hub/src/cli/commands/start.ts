@@ -9,14 +9,25 @@ export default defineCommand({
   description: 'Start the Brika hub',
   details: 'Starts the Brika hub server. Detaches by default; use --foreground to keep attached.',
   options: {
-    port: { type: 'string', short: 'p', description: 'Listen port (default: 3001)' },
-    host: { type: 'string', description: 'Listen address (default: 127.0.0.1)' },
+    port: {
+      type: 'string',
+      short: 'p',
+      description: 'Listen port (default: 3001)',
+    },
+    host: {
+      type: 'string',
+      description: 'Listen address (default: 127.0.0.1)',
+    },
     foreground: {
       type: 'boolean',
       short: 'f',
       description: 'Keep attached to terminal (default: detach)',
     },
-    open: { type: 'boolean', short: 'o', description: 'Open the UI in the default browser' },
+    open: {
+      type: 'boolean',
+      short: 'o',
+      description: 'Open the UI in the default browser',
+    },
   },
   examples: [
     'brika start',
@@ -26,8 +37,12 @@ export default defineCommand({
     'brika start --foreground',
   ],
   async handler({ values }) {
-    if (values.port) process.env.BRIKA_PORT = values.port;
-    if (values.host) process.env.BRIKA_HOST = values.host;
+    if (values.port) {
+      process.env.BRIKA_PORT = values.port;
+    }
+    if (values.host) {
+      process.env.BRIKA_HOST = values.host;
+    }
     process.env.BRIKA_STATIC_DIR ??= uiDir;
 
     if (process.env.BRIKA_SUPERVISOR_PID) {
@@ -35,7 +50,9 @@ export default defineCommand({
       return;
     }
 
-    if (!values.foreground) startBackground(values.open);
+    if (!values.foreground) {
+      startBackground(values.open);
+    }
     await runSupervisor(values.open);
   },
 });

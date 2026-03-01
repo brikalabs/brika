@@ -23,12 +23,23 @@ function shortenPath(path: string): string {
   return parts.length <= 2 ? path : parts.slice(-2).join("/");
 }
 
+interface ErrorMeta {
+  name: string;
+  message: string;
+  stack?: string;
+  cause?: string;
+}
+
+function isErrorMeta(v: unknown): v is ErrorMeta {
+  return v !== null && typeof v === "object" && "name" in v && "message" in v;
+}
+
 function extractLocation(meta?: Record<string, Json>): {
   location: string | null;
-  error: { name: string; message: string; stack?: string; cause?: string } | null;
+  error: ErrorMeta | null;
   rest: Record<string, Json> | null;
 } {
-  if (!meta) return { location: null, error: null, rest: null };
+  if (!meta) { return { location: null, error: null, rest: null }; }
 
   const { sourceFile, sourceLine, __error, ...rest } = meta;
 
@@ -37,8 +48,7 @@ function extractLocation(meta?: Record<string, Json>): {
       ? `${shortenPath(sourceFile)}:${sourceLine}`
       : null;
 
-  // biome-ignore lint/suspicious/noExplicitAny: Error object extracted from Json-typed meta
-  const error = __error && typeof __error === "object" ? __error as any : null;
+  const error = isErrorMeta(__error) ? __error : null;
 
   return {
     location,
@@ -52,7 +62,7 @@ function formatMultiLineString(value: string, color: boolean): string {
   const CONTINUATION_INDENT = " ".repeat(21);
   const lines = value.split("\n");
   const formatted = lines.map((line, i) => {
-    if (i === 0) return line;
+    if (i === 0) { return line; }
     return `${CONTINUATION_INDENT}${line}`;
   }).join("\n");
   return color ? pc.dim(formatted) : formatted;
@@ -100,8 +110,8 @@ function formatMetadataEntry(key: string, value: Json, index: number, lastIndex:
 }
 
 function styleMessage(message: string, level: LogLevel, color: (s: string) => string): string {
-  if (level === "error") return pc.bold(color(message));
-  if (level === "warn") return color(message);
+  if (level === "error") { return pc.bold(color(message)); }
+  if (level === "warn") { return color(message); }
   return message;
 }
 

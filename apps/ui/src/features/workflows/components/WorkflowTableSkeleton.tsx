@@ -9,7 +9,11 @@ import {
 } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
 
-export function WorkflowTableSkeleton({ rows = 5 }: Readonly<{ rows?: number }>) {
+export function WorkflowTableSkeleton({
+  rows = 5,
+}: Readonly<{
+  rows?: number;
+}>) {
   const { t } = useLocale();
 
   return (
@@ -25,7 +29,9 @@ export function WorkflowTableSkeleton({ rows = 5 }: Readonly<{ rows?: number }>)
           </TableRow>
         </TableHeader>
         <TableBody>
-          {Array.from({ length: rows }).map((_, i) => (
+          {Array.from({
+            length: rows,
+          }).map((_, i) => (
             <TableRow key={`workflow-row-${i}`}>
               <TableCell>
                 <div className="flex flex-col gap-1.5">

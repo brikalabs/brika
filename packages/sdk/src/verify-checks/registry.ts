@@ -42,5 +42,8 @@ export async function runChecks(ctx: CheckContext): Promise<{
       errors.push(`Check failed unexpectedly: ${String(result.reason)}`);
     }
   }
-  return { errors, warnings };
+  return {
+    errors,
+    warnings,
+  };
 }

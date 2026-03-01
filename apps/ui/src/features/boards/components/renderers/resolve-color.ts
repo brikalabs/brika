@@ -53,13 +53,17 @@ const FOREGROUND_PAIR: Record<string, string> = {
 
 /** Resolve a `color` prop value — maps tokens to foreground-context CSS vars. */
 export function resolveColor(v: string | undefined): string | undefined {
-  if (!v) return undefined;
+  if (!v) {
+    return undefined;
+  }
   return COLOR_MAP[v] ?? v;
 }
 
 /** Resolve a `background` prop value — maps tokens to surface-context CSS vars. */
 export function resolveBackground(v: string | undefined): string | undefined {
-  if (!v) return undefined;
+  if (!v) {
+    return undefined;
+  }
   return BG_MAP[v] ?? v;
 }
 

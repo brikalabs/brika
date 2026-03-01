@@ -27,7 +27,9 @@ interface PluginPackageJson {
 }
 
 interface VerifiedList {
-  plugins: { name: string }[];
+  plugins: {
+    name: string;
+  }[];
 }
 
 import { npm, registry } from '@/lib/config';
@@ -35,7 +37,10 @@ import { npm, registry } from '@/lib/config';
 /** Revalidate every 10 minutes */
 const REVALIDATE = 600;
 
-const EXCLUDED = new Set(['@brika/plugin-example-echo', '@brika/plugin-demo-config']);
+const EXCLUDED = new Set([
+  '@brika/plugin-example-echo',
+  '@brika/plugin-demo-config',
+]);
 
 function iconUrl(name: string) {
   return `${npm.unpkgUrl}/${name}/icon.svg`;
@@ -47,8 +52,16 @@ function fallbackDisplayName(name: string) {
 
 export async function fetchPlugins(): Promise<Plugin[]> {
   const [npmRes, registryRes] = await Promise.all([
-    fetch(npm.searchUrl, { next: { revalidate: REVALIDATE } }),
-    fetch(registry.verifiedPluginsUrl, { next: { revalidate: REVALIDATE } }),
+    fetch(npm.searchUrl, {
+      next: {
+        revalidate: REVALIDATE,
+      },
+    }),
+    fetch(registry.verifiedPluginsUrl, {
+      next: {
+        revalidate: REVALIDATE,
+      },
+    }),
   ]);
 
   const verified = new Set<string>();
@@ -66,16 +79,28 @@ export async function fetchPlugins(): Promise<Plugin[]> {
   const [downloadResults, pkgJsonResults] = await Promise.all([
     Promise.allSettled(
       packages.map((p) =>
-        fetch(`${npm.downloadsUrl}/${p.name}`, { next: { revalidate: REVALIDATE } })
-          .then((r) => (r.ok ? r.json() : { downloads: 0 }))
+        fetch(`${npm.downloadsUrl}/${p.name}`, {
+          next: {
+            revalidate: REVALIDATE,
+          },
+        })
+          .then((r) =>
+            r.ok
+              ? r.json()
+              : {
+                  downloads: 0,
+                }
+          )
           .then((d: NpmDownloads) => d.downloads)
       )
     ),
     Promise.allSettled(
       packages.map((p) =>
-        fetch(`${npm.unpkgUrl}/${p.name}/package.json`, { next: { revalidate: REVALIDATE } }).then(
-          (r) => (r.ok ? (r.json() as Promise<PluginPackageJson>) : {})
-        )
+        fetch(`${npm.unpkgUrl}/${p.name}/package.json`, {
+          next: {
+            revalidate: REVALIDATE,
+          },
+        }).then((r) => (r.ok ? (r.json() as Promise<PluginPackageJson>) : {}))
       )
     ),
   ]);

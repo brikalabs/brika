@@ -38,15 +38,24 @@ const createPlacement = (
   instanceId,
   brickTypeId,
   config: {},
-  position: { x: 0, y: 0 },
-  size: { w: 2, h: 2 },
+  position: {
+    x: 0,
+    y: 0,
+  },
+  size: {
+    w: 2,
+    h: 2,
+  },
 });
 
 const createBrickType = (fullId = 'plugin:brick', pluginName = 'plugin'): RegisteredBrickType => ({
   fullId,
   localId: fullId.split(':')[1],
   pluginName,
-  families: ['sm', 'md'],
+  families: [
+    'sm',
+    'md',
+  ],
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -65,74 +74,81 @@ describe('BoardService — coverage gaps', () => {
   let mockResize: ReturnType<typeof mock>;
   let mockSave: ReturnType<typeof mock>;
 
-  useTestBed({ autoStub: false }, () => {
-    stub(Logger);
+  useTestBed(
+    {
+      autoStub: false,
+    },
+    () => {
+      stub(Logger);
 
-    boards = new Map();
-    brickTypes = new Map();
-    mountedInstances = new Map();
+      boards = new Map();
+      brickTypes = new Map();
+      mountedInstances = new Map();
 
-    mockProcess = {
-      sendMountBrickInstance: mock(),
-      sendUnmountBrickInstance: mock(),
-      sendResizeBrickInstance: mock(),
-      sendUpdateBrickConfig: mock(),
-      sendBrickInstanceAction: mock(),
-    };
+      mockProcess = {
+        sendMountBrickInstance: mock(),
+        sendUnmountBrickInstance: mock(),
+        sendResizeBrickInstance: mock(),
+        sendUpdateBrickConfig: mock(),
+        sendBrickInstanceAction: mock(),
+      };
 
-    mockSave = mock().mockResolvedValue('/fake/path');
-    mockDispatch = mock();
-    mockMount = mock(
-      (
-        id: string,
-        typeId: string,
-        plugin: string,
-        w: number,
-        h: number,
-        config: Record<string, unknown>
-      ) => {
-        mountedInstances.set(id, {
-          instanceId: id,
-          brickTypeId: typeId,
-          pluginName: plugin,
-          w,
-          h,
-          config,
-          body: [],
-        });
-      }
-    );
-    mockUnmount = mock((id: string) => mountedInstances.delete(id));
-    mockResize = mock();
+      mockSave = mock().mockResolvedValue('/fake/path');
+      mockDispatch = mock();
+      mockMount = mock(
+        (
+          id: string,
+          typeId: string,
+          plugin: string,
+          w: number,
+          h: number,
+          config: Record<string, unknown>
+        ) => {
+          mountedInstances.set(id, {
+            instanceId: id,
+            brickTypeId: typeId,
+            pluginName: plugin,
+            w,
+            h,
+            config,
+            body: [],
+          });
+        }
+      );
+      mockUnmount = mock((id: string) => mountedInstances.delete(id));
+      mockResize = mock();
 
-    stub(BoardLoader, {
-      get: (id: string) => boards.get(id),
-      list: () => [...boards.values()],
-      saveBoard: mockSave,
-    });
+      stub(BoardLoader, {
+        get: (id: string) => boards.get(id),
+        list: () => [
+          ...boards.values(),
+        ],
+        saveBoard: mockSave,
+      });
 
-    stub(BrickTypeRegistry, {
-      get: (id: string) => brickTypes.get(id),
-    });
+      stub(BrickTypeRegistry, {
+        get: (id: string) => brickTypes.get(id),
+      });
 
-    stub(BrickInstanceManager, {
-      mount: mockMount,
-      unmount: mockUnmount,
-      has: (id: string) => mountedInstances.has(id),
-      get: (id: string) => mountedInstances.get(id),
-      resize: mockResize,
-    });
+      stub(BrickInstanceManager, {
+        mount: mockMount,
+        unmount: mockUnmount,
+        has: (id: string) => mountedInstances.has(id),
+        get: (id: string) => mountedInstances.get(id),
+        resize: mockResize,
+      });
 
-    stub(PluginLifecycle, {
-      getProcess: () => mockProcess,
-    });
+      stub(PluginLifecycle, {
+        getProcess: () => mockProcess,
+      });
 
-    stub(EventSystem, {
-      dispatch: mockDispatch,
-    });
+      stub(EventSystem, {
+        dispatch: mockDispatch,
+      });
 
-    service = get(BoardService);
-  });
+      service = get(BoardService);
+    }
+  );
 
   // ─── viewerDisconnected (lines 46-55) ─────────────────────────────────
 
@@ -141,7 +157,9 @@ describe('BoardService — coverage gaps', () => {
       const type = createBrickType();
       brickTypes.set(type.fullId, type);
 
-      const board = createBoard('d1', [createPlacement('inst-1')]);
+      const board = createBoard('d1', [
+        createPlacement('inst-1'),
+      ]);
       boards.set('d1', board);
 
       // Connect a single viewer — this mounts the board
@@ -159,7 +177,9 @@ describe('BoardService — coverage gaps', () => {
       const type = createBrickType();
       brickTypes.set(type.fullId, type);
 
-      const board = createBoard('d1', [createPlacement('inst-1')]);
+      const board = createBoard('d1', [
+        createPlacement('inst-1'),
+      ]);
       boards.set('d1', board);
 
       // Connect two viewers
@@ -182,7 +202,9 @@ describe('BoardService — coverage gaps', () => {
 
     test('handles disconnect for board with no brick types (no unmountBoard IPC)', () => {
       // Board has a placement but no registered brick type
-      const board = createBoard('d1', [createPlacement('inst-1')]);
+      const board = createBoard('d1', [
+        createPlacement('inst-1'),
+      ]);
       boards.set('d1', board);
 
       // Connect and disconnect — viewerConnected won't mount (no type),
@@ -210,7 +232,9 @@ describe('BoardService — coverage gaps', () => {
       brickTypes.set(type.fullId, type);
 
       const placement = createPlacement('inst-1');
-      const board = createBoard('d1', [placement]);
+      const board = createBoard('d1', [
+        placement,
+      ]);
       boards.set('d1', board);
 
       const result = await service.updateBrickLabel('d1', 'inst-1', 'My Custom Label');
@@ -224,7 +248,9 @@ describe('BoardService — coverage gaps', () => {
     test('clears label when set to undefined', async () => {
       const placement = createPlacement('inst-1');
       placement.label = 'Old Label';
-      const board = createBoard('d1', [placement]);
+      const board = createBoard('d1', [
+        placement,
+      ]);
       boards.set('d1', board);
 
       const result = await service.updateBrickLabel('d1', 'inst-1', undefined);
@@ -247,7 +273,9 @@ describe('BoardService — coverage gaps', () => {
 
     test('dispatches brickLabelChanged event with correct payload', async () => {
       const placement = createPlacement('inst-1');
-      const board = createBoard('d1', [placement]);
+      const board = createBoard('d1', [
+        placement,
+      ]);
       boards.set('d1', board);
 
       await service.updateBrickLabel('d1', 'inst-1', 'Weather');

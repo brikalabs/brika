@@ -6,7 +6,11 @@ import { ComponentNodeRenderer, defineRenderer } from './registry';
 defineRenderer('tabs', ({ node, onAction }) => (
   <Tabs
     value={node.value}
-    onValueChange={(value) => onAction?.(node.onChange, { value })}
+    onValueChange={(value) =>
+      onAction?.(node.onChange, {
+        value,
+      })
+    }
     className="flex min-h-0 flex-col"
   >
     <TabsList className={cn(node.variant === 'pills' && 'gap-1 bg-transparent p-0')}>

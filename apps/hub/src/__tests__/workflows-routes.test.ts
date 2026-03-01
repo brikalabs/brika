@@ -40,7 +40,9 @@ describe('workflows routes', () => {
       deleteWorkflow: mock().mockResolvedValue(true),
     };
     mockBlockRegistry = {
-      validateConnections: mock().mockReturnValue({ valid: true }),
+      validateConnections: mock().mockReturnValue({
+        valid: true,
+      }),
     };
     stub(WorkflowEngine, mockEngine);
     stub(WorkflowLoader, mockLoader);
@@ -83,7 +85,10 @@ describe('workflows routes', () => {
   });
 
   test('POST /api/workflows creates workflow', async () => {
-    const res = await app.post<{ ok: boolean; id: string }>('/api/workflows', {
+    const res = await app.post<{
+      ok: boolean;
+      id: string;
+    }>('/api/workflows', {
       id: 'test-workflow',
       name: 'Test Workflow',
       blocks: [],
@@ -96,14 +101,30 @@ describe('workflows routes', () => {
   });
 
   test('POST /api/workflows creates workflow with connections', async () => {
-    const res = await app.post<{ ok: boolean; id: string }>('/api/workflows', {
+    const res = await app.post<{
+      ok: boolean;
+      id: string;
+    }>('/api/workflows', {
       id: 'connected-workflow',
       name: 'Connected Workflow',
       blocks: [
-        { id: 'block-a', type: 'timer' },
-        { id: 'block-b', type: 'logger' },
+        {
+          id: 'block-a',
+          type: 'timer',
+        },
+        {
+          id: 'block-b',
+          type: 'logger',
+        },
       ],
-      connections: [{ from: 'block-a', fromPort: 'tick', to: 'block-b', toPort: 'input' }],
+      connections: [
+        {
+          from: 'block-a',
+          fromPort: 'tick',
+          to: 'block-b',
+          toPort: 'input',
+        },
+      ],
     });
 
     expect(res.status).toBe(200);
@@ -113,24 +134,42 @@ describe('workflows routes', () => {
   test('POST /api/workflows returns 400 for invalid connections', async () => {
     mockBlockRegistry.validateConnections.mockReturnValue({
       valid: false,
-      errors: ['Incompatible types'],
+      errors: [
+        'Incompatible types',
+      ],
     });
 
     const res = await app.post('/api/workflows', {
       id: 'bad-workflow',
       name: 'Bad Workflow',
       blocks: [
-        { id: 'block-a', type: 'timer' },
-        { id: 'block-b', type: 'logger' },
+        {
+          id: 'block-a',
+          type: 'timer',
+        },
+        {
+          id: 'block-b',
+          type: 'logger',
+        },
       ],
-      connections: [{ from: 'block-a', fromPort: 'tick', to: 'block-b', toPort: 'input' }],
+      connections: [
+        {
+          from: 'block-a',
+          fromPort: 'tick',
+          to: 'block-b',
+          toPort: 'input',
+        },
+      ],
     });
 
     expect(res.status).toBe(400);
   });
 
   test('POST /api/workflows with enabled flag', async () => {
-    const res = await app.post<{ ok: boolean; id: string }>('/api/workflows', {
+    const res = await app.post<{
+      ok: boolean;
+      id: string;
+    }>('/api/workflows', {
       id: 'enabled-workflow',
       name: 'Enabled Workflow',
       blocks: [],
@@ -146,7 +185,10 @@ describe('workflows routes', () => {
   });
 
   test('POST /api/workflows defaults enabled to false', async () => {
-    const res = await app.post<{ ok: boolean; id: string }>('/api/workflows', {
+    const res = await app.post<{
+      ok: boolean;
+      id: string;
+    }>('/api/workflows', {
       id: 'default-workflow',
       name: 'Default Workflow',
       blocks: [],
@@ -159,7 +201,9 @@ describe('workflows routes', () => {
   });
 
   test('POST /api/workflows/enable enables a workflow', async () => {
-    const res = await app.post<{ ok: boolean }>('/api/workflows/enable', {
+    const res = await app.post<{
+      ok: boolean;
+    }>('/api/workflows/enable', {
       id: 'test-id',
     });
 
@@ -169,7 +213,9 @@ describe('workflows routes', () => {
   });
 
   test('POST /api/workflows/disable disables a workflow', async () => {
-    const res = await app.post<{ ok: boolean }>('/api/workflows/disable', {
+    const res = await app.post<{
+      ok: boolean;
+    }>('/api/workflows/disable', {
       id: 'test-id',
     });
 
@@ -179,7 +225,9 @@ describe('workflows routes', () => {
   });
 
   test('DELETE /api/workflows/:id deletes workflow', async () => {
-    const res = await app.delete<{ ok: boolean }>('/api/workflows/test-id');
+    const res = await app.delete<{
+      ok: boolean;
+    }>('/api/workflows/test-id');
 
     expect(res.status).toBe(200);
     expect(res.body.ok).toBeTrue();
@@ -189,7 +237,9 @@ describe('workflows routes', () => {
   test('DELETE /api/workflows/:id returns false when workflow not found', async () => {
     mockLoader.deleteWorkflow.mockResolvedValue(false);
 
-    const res = await app.delete<{ ok: boolean }>('/api/workflows/missing');
+    const res = await app.delete<{
+      ok: boolean;
+    }>('/api/workflows/missing');
 
     expect(res.status).toBe(200);
     expect(res.body.ok).toBeFalse();
@@ -197,8 +247,16 @@ describe('workflows routes', () => {
 
   test('GET /api/workflows/debug returns SSE stream with init event', async () => {
     mockEngine.list.mockReturnValue([
-      { id: 'wf-1', enabled: true, startedAt: 1000 },
-      { id: 'wf-2', enabled: false, startedAt: undefined },
+      {
+        id: 'wf-1',
+        enabled: true,
+        startedAt: 1000,
+      },
+      {
+        id: 'wf-2',
+        enabled: false,
+        startedAt: undefined,
+      },
     ]);
 
     // Use hono.fetch directly to avoid TestApp body parsing (which hangs on SSE)
@@ -208,7 +266,10 @@ describe('workflows routes', () => {
     expect(raw.headers.get('Content-Type')).toBe('text/event-stream');
 
     // Read just the first chunk from the SSE stream, then cancel
-    const reader = raw.body!.getReader();
+    const reader = raw.body?.getReader();
+    if (!reader) {
+      throw new Error('Expected readable stream reader');
+    }
     const { value } = await reader.read();
     await reader.cancel();
 
@@ -241,7 +302,10 @@ describe('workflows routes', () => {
     expect(mockEngine.addGlobalListener).toHaveBeenCalled();
 
     // Cancel the stream to prevent hanging
-    const reader = raw.body!.getReader();
+    const reader = raw.body?.getReader();
+    if (!reader) {
+      throw new Error('Expected readable stream reader');
+    }
     await reader.cancel();
   });
 
@@ -251,7 +315,10 @@ describe('workflows routes', () => {
     const raw = await app.hono.fetch(new Request('http://test/api/workflows/debug'));
 
     // Read just the first chunk from the SSE stream, then cancel
-    const reader = raw.body!.getReader();
+    const reader = raw.body?.getReader();
+    if (!reader) {
+      throw new Error('Expected readable stream reader');
+    }
     const { value } = await reader.read();
     await reader.cancel();
 

@@ -16,10 +16,19 @@ describe('PluginResolver', () => {
     resolver = new PluginResolver();
 
     // Create test plugin directory structure
-    await rm(TEST_DIR, { recursive: true, force: true });
-    await mkdir(TEST_DIR, { recursive: true });
-    await mkdir(join(TEST_DIR, 'valid-plugin'), { recursive: true });
-    await mkdir(join(TEST_DIR, 'no-main-plugin'), { recursive: true });
+    await rm(TEST_DIR, {
+      recursive: true,
+      force: true,
+    });
+    await mkdir(TEST_DIR, {
+      recursive: true,
+    });
+    await mkdir(join(TEST_DIR, 'valid-plugin'), {
+      recursive: true,
+    });
+    await mkdir(join(TEST_DIR, 'no-main-plugin'), {
+      recursive: true,
+    });
 
     // Create valid plugin
     await Bun.write(
@@ -28,7 +37,9 @@ describe('PluginResolver', () => {
         name: '@test/valid-plugin',
         version: '1.0.0',
         main: './index.ts',
-        engines: { brika: '^0.2.0' },
+        engines: {
+          brika: '^0.2.0',
+        },
       })
     );
     await Bun.write(join(TEST_DIR, 'valid-plugin', 'index.ts'), 'export default {}');
@@ -39,13 +50,18 @@ describe('PluginResolver', () => {
       JSON.stringify({
         name: '@test/no-main-plugin',
         version: '1.0.0',
-        engines: { brika: '^0.2.0' },
+        engines: {
+          brika: '^0.2.0',
+        },
       })
     );
   });
 
   afterAll(async () => {
-    await rm(TEST_DIR, { recursive: true, force: true });
+    await rm(TEST_DIR, {
+      recursive: true,
+      force: true,
+    });
   });
 
   describe('resolve', () => {
@@ -87,7 +103,12 @@ describe('PluginResolver', () => {
     test('throws for invalid package.json', async () => {
       // Create invalid package.json
       const invalidPath = join(TEST_DIR, 'invalid-package.json');
-      await Bun.write(invalidPath, JSON.stringify({ invalid: true }));
+      await Bun.write(
+        invalidPath,
+        JSON.stringify({
+          invalid: true,
+        })
+      );
 
       await expect(loadPluginPackageJson(invalidPath)).rejects.toThrow();
     });

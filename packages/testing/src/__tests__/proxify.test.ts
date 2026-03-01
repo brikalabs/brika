@@ -72,7 +72,7 @@ describe('proxify', () => {
   test('getOwnPropertyDescriptor trap delegates to instance', () => {
     const desc = Object.getOwnPropertyDescriptor(counter, 'value');
     expect(desc).toBeDefined();
-    expect(desc!.value).toBe(0);
+    expect(desc?.value).toBe(0);
   });
 
   test('getOwnPropertyDescriptor returns undefined for non-existent prop', () => {

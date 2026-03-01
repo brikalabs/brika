@@ -1,22 +1,13 @@
 'use client';
 
-import {
-  Gauge,
-  GripVertical,
-  LayoutGrid,
-  Lightbulb,
-  Music,
-  Sun,
-  Timer,
-  Zap,
-} from 'lucide-react';
+import { Gauge, GripVertical, LayoutGrid, Lightbulb, Music, Sun, Timer, Zap } from 'lucide-react';
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Layout, LayoutItem } from 'react-grid-layout';
 import { ReactGridLayout } from 'react-grid-layout/legacy';
 import 'react-grid-layout/css/styles.css';
 import type { WeatherData } from '@/lib/weather';
-import { AnimatedSection } from './ui/animated-section';
 import { WeatherContext } from './bricks/weather-context';
+import { AnimatedSection } from './ui/animated-section';
 
 const GAP = 8;
 const COLS = 3;
@@ -31,27 +22,100 @@ const brickContent: Record<string, React.LazyExoticComponent<React.ComponentType
   lights: lazy(() => import('./bricks/lights-brick')),
 };
 
-const brickMeta: Record<string, { icon: React.ComponentType<{ className?: string }>; label: string }> = {
-  weather: { icon: Sun, label: 'Weather' },
-  energy: { icon: Zap, label: 'Energy' },
-  timer: { icon: Timer, label: 'Timer' },
-  cpu: { icon: Gauge, label: 'CPU' },
-  spotify: { icon: Music, label: 'Now Playing' },
-  lights: { icon: Lightbulb, label: 'Lights' },
+const brickMeta: Record<
+  string,
+  {
+    icon: React.ComponentType<{
+      className?: string;
+    }>;
+    label: string;
+  }
+> = {
+  weather: {
+    icon: Sun,
+    label: 'Weather',
+  },
+  energy: {
+    icon: Zap,
+    label: 'Energy',
+  },
+  timer: {
+    icon: Timer,
+    label: 'Timer',
+  },
+  cpu: {
+    icon: Gauge,
+    label: 'CPU',
+  },
+  spotify: {
+    icon: Music,
+    label: 'Now Playing',
+  },
+  lights: {
+    icon: Lightbulb,
+    label: 'Lights',
+  },
 };
 
-const brickIds = ['weather', 'energy', 'timer', 'cpu', 'spotify', 'lights'];
-
-const initialLayout: LayoutItem[] = [
-  { i: 'weather', x: 0, y: 0, w: 1, h: 1 },
-  { i: 'spotify', x: 1, y: 0, w: 2, h: 2 },
-  { i: 'energy', x: 0, y: 1, w: 1, h: 1 },
-  { i: 'timer', x: 0, y: 2, w: 1, h: 1 },
-  { i: 'cpu', x: 1, y: 2, w: 1, h: 1 },
-  { i: 'lights', x: 2, y: 2, w: 1, h: 1 },
+const brickIds = [
+  'weather',
+  'energy',
+  'timer',
+  'cpu',
+  'spotify',
+  'lights',
 ];
 
-function BrickCard({ id }: Readonly<{ id: string }>) {
+const initialLayout: LayoutItem[] = [
+  {
+    i: 'weather',
+    x: 0,
+    y: 0,
+    w: 1,
+    h: 1,
+  },
+  {
+    i: 'spotify',
+    x: 1,
+    y: 0,
+    w: 2,
+    h: 2,
+  },
+  {
+    i: 'energy',
+    x: 0,
+    y: 1,
+    w: 1,
+    h: 1,
+  },
+  {
+    i: 'timer',
+    x: 0,
+    y: 2,
+    w: 1,
+    h: 1,
+  },
+  {
+    i: 'cpu',
+    x: 1,
+    y: 2,
+    w: 1,
+    h: 1,
+  },
+  {
+    i: 'lights',
+    x: 2,
+    y: 2,
+    w: 1,
+    h: 1,
+  },
+];
+
+function BrickCard({
+  id,
+}: Readonly<{
+  id: string;
+}>) {
   const Content = brickContent[id];
   const meta = brickMeta[id];
   const Icon = meta.icon;
@@ -99,7 +163,9 @@ function DraggableGrid() {
   const rowHeight = colWidth;
 
   const handleLayoutChange = useCallback((newLayout: Layout) => {
-    setLayout([...newLayout]);
+    setLayout([
+      ...newLayout,
+    ]);
   }, []);
 
   return (
@@ -115,8 +181,14 @@ function DraggableGrid() {
         draggableCancel=".no-drag"
         onLayoutChange={handleLayoutChange}
         compactType="vertical"
-        containerPadding={[0, 0]}
-        margin={[GAP, GAP]}
+        containerPadding={[
+          0,
+          0,
+        ]}
+        margin={[
+          GAP,
+          GAP,
+        ]}
       >
         {brickIds.map((id) => (
           <div key={id}>
@@ -128,8 +200,17 @@ function DraggableGrid() {
   );
 }
 
-export function Bricks({ weather }: Readonly<{ weather?: WeatherData | null }>) {
-  const weatherValue = useMemo(() => weather ?? null, [weather]);
+export function Bricks({
+  weather,
+}: Readonly<{
+  weather?: WeatherData | null;
+}>) {
+  const weatherValue = useMemo(
+    () => weather ?? null,
+    [
+      weather,
+    ]
+  );
 
   return (
     <WeatherContext.Provider value={weatherValue}>

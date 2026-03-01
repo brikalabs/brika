@@ -18,25 +18,42 @@ import { intlRef } from '@brika/ui-kit';
 export function useIntl() {
   return {
     formatDate(value: Date | number, options?: Intl.DateTimeFormatOptions): IntlRef {
-      return intlRef.dateTime(toMs(value), { dateStyle: 'medium', ...options });
+      return intlRef.dateTime(toMs(value), {
+        dateStyle: 'medium',
+        ...options,
+      });
     },
     formatTime(value: Date | number, options?: Intl.DateTimeFormatOptions): IntlRef {
-      return intlRef.dateTime(toMs(value), { timeStyle: 'short', ...options });
+      return intlRef.dateTime(toMs(value), {
+        timeStyle: 'short',
+        ...options,
+      });
     },
     formatDateTime(value: Date | number, options?: Intl.DateTimeFormatOptions): IntlRef {
-      return intlRef.dateTime(toMs(value), { dateStyle: 'medium', timeStyle: 'short', ...options });
+      return intlRef.dateTime(toMs(value), {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+        ...options,
+      });
     },
     formatNumber(value: number, options?: Intl.NumberFormatOptions): IntlRef {
       return intlRef.number(value, options);
     },
     formatCurrency(value: number, currency: string): IntlRef {
-      return intlRef.number(value, { style: 'currency', currency });
+      return intlRef.number(value, {
+        style: 'currency',
+        currency,
+      });
     },
     formatRelativeTime(value: number, unit: Intl.RelativeTimeFormatUnit): IntlRef {
       return intlRef.relativeTime(value, unit);
     },
     formatList(items: string[], options?: Intl.ListFormatOptions): IntlRef {
-      return intlRef.list(items, { style: 'long', type: 'conjunction', ...options });
+      return intlRef.list(items, {
+        style: 'long',
+        type: 'conjunction',
+        ...options,
+      });
     },
   };
 }

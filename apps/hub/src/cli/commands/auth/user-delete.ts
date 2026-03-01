@@ -1,17 +1,19 @@
-import pc from 'picocolors';
-import * as p from '@clack/prompts';
-import { inject } from '@brika/di';
 import { auth, UserService } from '@brika/auth/server';
-import { defineCommand } from '../../command';
+import { inject } from '@brika/di';
+import * as p from '@clack/prompts';
+import pc from 'picocolors';
+import { showError, validators } from '../../auth-prompts';
 import { bootstrapCLI, printDatabaseInfo } from '../../bootstrap';
-import { dataDir } from '../../utils/runtime';
+import { defineCommand } from '../../command';
 import { CliError } from '../../errors';
-import { validators, showError } from '../../auth-prompts';
+import { dataDir } from '../../utils/runtime';
 
 export default defineCommand({
   name: 'delete',
   description: 'Delete a user',
-  examples: ['brika auth user delete'],
+  examples: [
+    'brika auth user delete',
+  ],
   async handler() {
     p.intro(pc.bgRed(pc.black(' Delete User ')));
 
@@ -31,13 +33,17 @@ export default defineCommand({
       return;
     }
 
-    const cli = await bootstrapCLI(auth({ dataDir }));
+    const cli = await bootstrapCLI(
+      auth({
+        dataDir,
+      })
+    );
 
     try {
       const userService = inject(UserService);
 
       console.log(`\n${pc.cyan('Deleting user')} ${pc.dim(email)} …\n`);
-      await userService.deleteUser(email);
+      userService.deleteUser(email);
 
       console.log(`${pc.green('✓')} User deleted successfully!`);
       printDatabaseInfo();

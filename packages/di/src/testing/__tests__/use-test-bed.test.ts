@@ -28,13 +28,19 @@ class UserService {
 
   getUser(id: string) {
     this.logger.info(`Getting user ${id}`);
-    return { id, name: 'Test User', port: this.config.port };
+    return {
+      id,
+      name: 'Test User',
+      port: this.config.port,
+    };
   }
 }
 
 describe('useTestBed', () => {
   // Disable autoStub - these tests verify DI resolution with specific dependencies
-  useTestBed({ autoStub: false });
+  useTestBed({
+    autoStub: false,
+  });
 
   test('stub() creates deep stub', () => {
     stub(Logger);
@@ -47,7 +53,9 @@ describe('useTestBed', () => {
 
   test('stub() accepts overrides', () => {
     const infoSpy = mock().mockReturnValue('mocked');
-    stub(Logger, { info: infoSpy });
+    stub(Logger, {
+      info: infoSpy,
+    });
 
     const logger = get(Logger);
     expect(logger.info('test')).toBe('mocked');
@@ -55,7 +63,10 @@ describe('useTestBed', () => {
   });
 
   test('provide() registers mock value', () => {
-    provide(ConfigService, { port: 8080, host: 'example.com' });
+    provide(ConfigService, {
+      port: 8080,
+      host: 'example.com',
+    });
 
     const config = get(ConfigService);
     expect(config.port).toBe(8080);
@@ -64,7 +75,10 @@ describe('useTestBed', () => {
 
   test('get() resolves with mocked dependencies', () => {
     stub(Logger);
-    provide(ConfigService, { port: 4000, host: 'mock' });
+    provide(ConfigService, {
+      port: 4000,
+      host: 'mock',
+    });
 
     const service = get(UserService);
     const user = service.getUser('123');
@@ -76,7 +90,10 @@ describe('useTestBed', () => {
   test('auto-resets between tests', () => {
     // This test verifies that previous test's mocks don't persist
     // If reset didn't work, ConfigService would still have port: 4000
-    provide(ConfigService, { port: 7000, host: 'fresh' });
+    provide(ConfigService, {
+      port: 7000,
+      host: 'fresh',
+    });
     stub(Logger);
 
     const service = get(UserService);
@@ -91,7 +108,9 @@ const testObj = {
 };
 
 describe('trackSpy', () => {
-  useTestBed({ autoStub: false });
+  useTestBed({
+    autoStub: false,
+  });
 
   test('returns the spy for chaining', () => {
     const spy = trackSpy(spyOn(testObj, 'getValue'));

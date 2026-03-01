@@ -15,7 +15,14 @@ describe('status routes', () => {
       rootDir: '/test',
       configPath: '/test/brika.yml',
       brikaDir: '/test/.brika',
-      get: () => ({ hub: { plugins: { installDir: 'plugins' } } }) as BrikaConfig,
+      get: () =>
+        ({
+          hub: {
+            plugins: {
+              installDir: 'plugins',
+            },
+          },
+        }) as BrikaConfig,
     });
   });
 

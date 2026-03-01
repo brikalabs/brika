@@ -3,7 +3,7 @@ import { Plus } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
-import { routes } from '@/routes';
+import { paths } from '@/routes/paths';
 import type { BoardSummary } from './api';
 import { AddBrickSheet } from './components/AddBrickSheet';
 import { BoardSwitcher } from './components/BoardSwitcher';
@@ -15,7 +15,9 @@ import { useActiveBoard, useBoardStore } from './store';
 export function BoardsLayout() {
   const { t } = useLocale();
   const navigate = useNavigate();
-  const { boardId } = useParams({ strict: false });
+  const { boardId } = useParams({
+    strict: false,
+  });
 
   // ─── Data shared across all boards ──────────────────────────────────────
   const { data: boards = [], isLoading: boardsLoading } = useBoards();
@@ -25,18 +27,30 @@ export function BoardsLayout() {
   useEffect(() => {
     if (!boardId && !boardsLoading && boards.length > 0) {
       navigate({
-        to: routes.boards.detail.to({ boardId: boards[0].id }),
+        to: paths.boards.detail.to({
+          boardId: boards[0].id,
+        }),
         replace: true,
       });
     }
-  }, [boardId, boards, boardsLoading, navigate]);
+  }, [
+    boardId,
+    boards,
+    boardsLoading,
+    navigate,
+  ]);
 
   // ─── UI chrome state ────────────────────────────────────────────────────────
   const board = useActiveBoard();
   const setAddBrickOpen = useBoardStore((s) => s.setAddBrickOpen);
   const [editBoard, setEditBoard] = useState<BoardSummary | null>(null);
 
-  const handleAddBrick = useCallback(() => setAddBrickOpen(true), [setAddBrickOpen]);
+  const handleAddBrick = useCallback(
+    () => setAddBrickOpen(true),
+    [
+      setAddBrickOpen,
+    ]
+  );
 
   const brickCount = board?.bricks.length ?? 0;
 
@@ -46,13 +60,22 @@ export function BoardsLayout() {
     const remaining = boards.filter((d) => d.id !== deletedId);
     if (remaining.length > 0) {
       navigate({
-        to: routes.boards.detail.to({ boardId: remaining[0].id }),
+        to: paths.boards.detail.to({
+          boardId: remaining[0].id,
+        }),
         replace: true,
       });
     } else {
-      navigate({ to: routes.boards.list.path, replace: true });
+      navigate({
+        to: paths.boards.list.path,
+        replace: true,
+      });
     }
-  }, [boards, editBoard?.id, navigate]);
+  }, [
+    boards,
+    editBoard?.id,
+    navigate,
+  ]);
 
   return (
     <div className="space-y-4">
@@ -66,7 +89,10 @@ export function BoardsLayout() {
             {t('boards:subtitle')}
             {board && (
               <span className="ml-2 font-medium">
-                · {brickCount} {t('common:items.brick', { count: brickCount }).toLowerCase()}
+                · {brickCount}{' '}
+                {t('common:items.brick', {
+                  count: brickCount,
+                }).toLowerCase()}
               </span>
             )}
           </p>
@@ -92,7 +118,9 @@ export function BoardsLayout() {
         <EditBoardDialog
           open
           onOpenChange={(open) => {
-            if (!open) setEditBoard(null);
+            if (!open) {
+              setEditBoard(null);
+            }
           }}
           board={editBoard}
           onDeleted={handleBoardDeleted}

@@ -21,8 +21,12 @@ export const add: Command = {
             message: 'Package name',
             placeholder: '@brika/plugin-name',
             validate: (value = '') => {
-              if (!npmNamePattern.test(value)) return 'Must be a valid npm package name';
-              if (existingNames.has(value)) return 'Plugin already exists in registry';
+              if (!npmNamePattern.test(value)) {
+                return 'Must be a valid npm package name';
+              }
+              if (existingNames.has(value)) {
+                return 'Plugin already exists in registry';
+              }
             },
           }),
 
@@ -114,9 +118,28 @@ export const add: Command = {
     }
 
     let content = readRegistryRaw();
-    content = modifyRegistry(content, ['plugins', registry.plugins.length], entry);
-    content = modifyRegistry(content, ['lastUpdated'], new Date().toISOString());
-    content = modifyRegistry(content, ['version'], '2.0.0');
+    content = modifyRegistry(
+      content,
+      [
+        'plugins',
+        registry.plugins.length,
+      ],
+      entry
+    );
+    content = modifyRegistry(
+      content,
+      [
+        'lastUpdated',
+      ],
+      new Date().toISOString()
+    );
+    content = modifyRegistry(
+      content,
+      [
+        'version',
+      ],
+      '2.0.0'
+    );
     writeRegistryRaw(content);
 
     autoSign();

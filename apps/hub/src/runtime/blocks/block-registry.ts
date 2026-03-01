@@ -23,9 +23,17 @@ export interface BlockSummary {
   /** Hex color */
   color?: string;
   /** Input ports */
-  inputs?: Array<{ id: string; name: string; typeName?: string }>;
+  inputs?: Array<{
+    id: string;
+    name: string;
+    typeName?: string;
+  }>;
   /** Output ports */
-  outputs?: Array<{ id: string; name: string; typeName?: string }>;
+  outputs?: Array<{
+    id: string;
+    name: string;
+    typeName?: string;
+  }>;
 }
 
 import { Logger } from '@/runtime/logs/log-router';
@@ -53,7 +61,10 @@ interface RegisteredBlock extends BlockDefinition {
   color?: string;
 }
 
-type ValidationResult = { valid: boolean; errors?: string[] };
+type ValidationResult = {
+  valid: boolean;
+  errors?: string[];
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Registry
@@ -79,13 +90,24 @@ export class BlockRegistry {
     const type = `${plugin.id}:${block.id}`;
 
     if (this.#blocks.has(type)) {
-      this.logs.warn('Duplicate block registration', { type, plugin: plugin.id });
+      this.logs.warn('Duplicate block registration', {
+        type,
+        plugin: plugin.id,
+      });
     }
 
     this.#plugins.set(plugin.id, plugin);
-    this.#blocks.set(type, { ...block, type, pluginId: plugin.id });
+    this.#blocks.set(type, {
+      ...block,
+      type,
+      pluginId: plugin.id,
+    });
 
-    this.logs.info('Block registered', { type, plugin: plugin.id, version: plugin.version });
+    this.logs.info('Block registered', {
+      type,
+      plugin: plugin.id,
+      version: plugin.version,
+    });
     this.#notifyListeners(type);
   }
 
@@ -99,7 +121,10 @@ export class BlockRegistry {
     }
     if (count > 0) {
       this.#plugins.delete(pluginId);
-      this.logs.info('Plugin unregistered', { plugin: pluginId, blocks: count });
+      this.logs.info('Plugin unregistered', {
+        plugin: pluginId,
+        blocks: count,
+      });
     }
     return count;
   }
@@ -113,15 +138,21 @@ export class BlockRegistry {
   }
 
   list(): BlockDefinition[] {
-    return [...this.#blocks.values()].sort((a, b) => a.id.localeCompare(b.id));
+    return [
+      ...this.#blocks.values(),
+    ].sort((a, b) => a.id.localeCompare(b.id));
   }
 
   listByPlugin(pluginId: string): BlockDefinition[] {
-    return [...this.#blocks.values()].filter((b) => b.pluginId === pluginId);
+    return [
+      ...this.#blocks.values(),
+    ].filter((b) => b.pluginId === pluginId);
   }
 
   listByOwner(pluginId: string): BlockSummary[] {
-    return [...this.#blocks.values()]
+    return [
+      ...this.#blocks.values(),
+    ]
       .filter((b) => b.pluginId === pluginId)
       .map((b) => ({
         id: b.type ?? `${b.pluginId}:${b.id}`,
@@ -130,8 +161,16 @@ export class BlockRegistry {
         category: b.category as BlockSummary['category'],
         icon: b.icon,
         color: b.color,
-        inputs: b.inputs.map((p) => ({ id: p.id, name: p.name, typeName: p.typeName })),
-        outputs: b.outputs.map((p) => ({ id: p.id, name: p.name, typeName: p.typeName })),
+        inputs: b.inputs.map((p) => ({
+          id: p.id,
+          name: p.name,
+          typeName: p.typeName,
+        })),
+        outputs: b.outputs.map((p) => ({
+          id: p.id,
+          name: p.name,
+          typeName: p.typeName,
+        })),
       }));
   }
 
@@ -155,19 +194,30 @@ export class BlockRegistry {
   }
 
   getPlugins(): PluginInfo[] {
-    return [...this.#plugins.values()];
+    return [
+      ...this.#plugins.values(),
+    ];
   }
 
   validateConfig(type: string, config: Record<string, unknown>): ValidationResult {
     const block = this.#blocks.get(type);
-    if (!block) return { valid: false, errors: [`Unknown block type: ${type}`] };
+    if (!block) {
+      return {
+        valid: false,
+        errors: [
+          `Unknown block type: ${type}`,
+        ],
+      };
+    }
 
     const errors: string[] = [];
     const { schema } = block;
 
     // Validate required fields
     for (const field of schema.required ?? []) {
-      if (!(field in config)) errors.push(`Missing required field: ${field}`);
+      if (!(field in config)) {
+        errors.push(`Missing required field: ${field}`);
+      }
     }
 
     // Validate property types
@@ -177,26 +227,56 @@ export class BlockRegistry {
       }
     }
 
-    return { valid: errors.length === 0, errors: errors.length > 0 ? errors : undefined };
+    return {
+      valid: errors.length === 0,
+      errors: errors.length > 0 ? errors : undefined,
+    };
   }
 
   validateConnections(
-    blocks: Array<{ id: string; type: string }>,
-    connections: Array<{ from: string; fromPort?: string; to: string; toPort?: string }>
+    blocks: Array<{
+      id: string;
+      type: string;
+    }>,
+    connections: Array<{
+      from: string;
+      fromPort?: string;
+      to: string;
+      toPort?: string;
+    }>
   ): ValidationResult {
     const errors: string[] = [];
-    const blockMap = new Map(blocks.map((b) => [b.id, b]));
+    const blockMap = new Map(
+      blocks.map((b) => [
+        b.id,
+        b,
+      ])
+    );
 
     for (const conn of connections) {
       this.#validateSingleConnection(conn, blockMap, errors);
     }
 
-    return { valid: errors.length === 0, errors: errors.length > 0 ? errors : undefined };
+    return {
+      valid: errors.length === 0,
+      errors: errors.length > 0 ? errors : undefined,
+    };
   }
 
   #validateSingleConnection(
-    conn: { from: string; fromPort?: string; to: string; toPort?: string },
-    blockMap: Map<string, { id: string; type: string }>,
+    conn: {
+      from: string;
+      fromPort?: string;
+      to: string;
+      toPort?: string;
+    },
+    blockMap: Map<
+      string,
+      {
+        id: string;
+        type: string;
+      }
+    >,
     errors: string[]
   ): void {
     const fromBlock = blockMap.get(conn.from);
@@ -250,7 +330,15 @@ export class BlockRegistry {
       try {
         listener(type);
       } catch (error) {
-        this.logs.error('Listener failed', { type }, { error });
+        this.logs.error(
+          'Listener failed',
+          {
+            type,
+          },
+          {
+            error,
+          }
+        );
       }
     }
   }

@@ -23,7 +23,10 @@ registerDirCheck('containFiles', (...files: string[]) => ({
     for (const file of files) {
       const path = dir.endsWith('/') ? `${dir}${file}` : `${dir}/${file}`;
       if (!(await ctx.exists(path))) {
-        return { file: dir, message: `Missing "${file}"` };
+        return {
+          file: dir,
+          message: `Missing "${file}"`,
+        };
       }
     }
   },
@@ -34,7 +37,10 @@ registerDirCheck('containFile', (file: string) => ({
   check: async (ctx, dir) => {
     const path = dir.endsWith('/') ? `${dir}${file}` : `${dir}/${file}`;
     if (!(await ctx.exists(path))) {
-      return { file: dir, message: `Missing "${file}"` };
+      return {
+        file: dir,
+        message: `Missing "${file}"`,
+      };
     }
   },
 }));

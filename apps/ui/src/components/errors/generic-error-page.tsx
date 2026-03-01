@@ -5,7 +5,11 @@ import { ErrorLayout } from './error-layout';
 /**
  * Generic / unknown error fallback with a retry action.
  */
-export function GenericErrorPage({ variant, onRetry, error }: Readonly<{
+export function GenericErrorPage({
+  variant,
+  onRetry,
+  error,
+}: Readonly<{
   variant?: 'fullscreen' | 'inline';
   onRetry?: () => void;
   error?: Error | null;

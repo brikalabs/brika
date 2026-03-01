@@ -9,7 +9,9 @@ export function getPhaseLabel(
   t: TFunction,
   mode?: 'update' | 'reinstall'
 ): string {
-  if (!progress) return '';
+  if (!progress) {
+    return '';
+  }
 
   let action: string;
   if (mode === 'reinstall') {
@@ -28,9 +30,13 @@ export function getPhaseLabel(
     case 'linking':
       return t('plugins:progress.linking');
     case 'complete':
-      return t('plugins:progress.complete', { action });
+      return t('plugins:progress.complete', {
+        action,
+      });
     case 'error':
-      return t('plugins:progress.failed', { action });
+      return t('plugins:progress.failed', {
+        action,
+      });
     default:
       return '';
   }

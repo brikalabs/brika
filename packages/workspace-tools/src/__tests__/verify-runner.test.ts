@@ -82,40 +82,68 @@ function makeExecution(overrides: Partial<VerifyExecution>): VerifyExecution {
 describe('getPreviewWarnings', () => {
   test('returns normalized errors and warnings when payload is present', () => {
     const payload: VerifyJsonPayload = {
-      errors: ['keywords must include "brika" so the plugin can be found'],
-      warnings: ['$schema field is missing'],
+      errors: [
+        'keywords must include "brika" so the plugin can be found',
+      ],
+      warnings: [
+        '$schema field is missing',
+      ],
     };
-    const result = makeExecution({ payload });
+    const result = makeExecution({
+      payload,
+    });
     const warnings = getPreviewWarnings(result);
-    expect(warnings).toEqual(['keyword "brika" missing', '$schema missing']);
+    expect(warnings).toEqual([
+      'keyword "brika" missing',
+      '$schema missing',
+    ]);
   });
 
   test('returns empty array when payload has no errors or warnings', () => {
-    const payload: VerifyJsonPayload = { errors: [], warnings: [] };
-    const result = makeExecution({ payload });
+    const payload: VerifyJsonPayload = {
+      errors: [],
+      warnings: [],
+    };
+    const result = makeExecution({
+      payload,
+    });
     const warnings = getPreviewWarnings(result);
     expect(warnings).toEqual([]);
   });
 
   test('returns fallback message when no payload and exit code is non-zero', () => {
-    const result = makeExecution({ exitCode: 1, output: 'raw output here' });
+    const result = makeExecution({
+      exitCode: 1,
+      output: 'raw output here',
+    });
     const warnings = getPreviewWarnings(result);
-    expect(warnings).toEqual(['plugin verification failed (could not parse output)']);
+    expect(warnings).toEqual([
+      'plugin verification failed (could not parse output)',
+    ]);
   });
 
   test('returns undefined when no payload and exit code is zero', () => {
-    const result = makeExecution({ exitCode: 0 });
+    const result = makeExecution({
+      exitCode: 0,
+    });
     const warnings = getPreviewWarnings(result);
     expect(warnings).toBeUndefined();
   });
 
   test('prefers payload over exit code when both are present', () => {
     const payload: VerifyJsonPayload = {
-      errors: ['some error'],
+      errors: [
+        'some error',
+      ],
       warnings: [],
     };
-    const result = makeExecution({ exitCode: 1, payload });
+    const result = makeExecution({
+      exitCode: 1,
+      payload,
+    });
     const warnings = getPreviewWarnings(result);
-    expect(warnings).toEqual(['some error']);
+    expect(warnings).toEqual([
+      'some error',
+    ]);
   });
 });

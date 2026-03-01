@@ -18,7 +18,10 @@ export interface ProgressNode extends BaseNode {
 }
 
 export function Progress(props: Omit<ProgressNode, 'type'>): ProgressNode {
-  return { type: 'progress', ...props };
+  return {
+    type: 'progress',
+    ...props,
+  };
 }
 
 declare module './_shared' {

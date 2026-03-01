@@ -3,8 +3,8 @@
  * Shows how to build navigation links from routes
  */
 
-import { Link } from '@tanstack/react-router';
 import { useCanAccess } from '@brika/auth/react';
+import { Link } from '@tanstack/react-router';
 import { routes } from '@/router';
 
 export function Sidebar() {
@@ -15,14 +15,14 @@ export function Sidebar() {
   const canViewLogs = useCanAccess(routes.logs.list.scopes);
 
   return (
-    <nav className="w-64 bg-gray-100 p-4 h-screen">
-      <h1 className="font-bold mb-6">Brika</h1>
+    <nav className="h-screen w-64 bg-gray-100 p-4">
+      <h1 className="mb-6 font-bold">Brika</h1>
 
       <div className="space-y-2">
         {/* Dashboard - always visible */}
         <Link
           to={routes.dashboard.index.path}
-          className="block px-4 py-2 rounded hover:bg-gray-200"
+          className="block rounded px-4 py-2 hover:bg-gray-200"
         >
           Dashboard
         </Link>
@@ -31,7 +31,7 @@ export function Sidebar() {
         {canViewWorkflows && (
           <Link
             to={routes.workflows.list.path}
-            className="block px-4 py-2 rounded hover:bg-gray-200"
+            className="block rounded px-4 py-2 hover:bg-gray-200"
           >
             Workflows
           </Link>
@@ -39,39 +39,27 @@ export function Sidebar() {
 
         {/* Plugins - conditional */}
         {canViewPlugins && (
-          <Link
-            to={routes.plugins.list.path}
-            className="block px-4 py-2 rounded hover:bg-gray-200"
-          >
+          <Link to={routes.plugins.list.path} className="block rounded px-4 py-2 hover:bg-gray-200">
             Plugins
           </Link>
         )}
 
         {/* Store - conditional */}
         {canViewStore && (
-          <Link
-            to={routes.store.list.path}
-            className="block px-4 py-2 rounded hover:bg-gray-200"
-          >
+          <Link to={routes.store.list.path} className="block rounded px-4 py-2 hover:bg-gray-200">
             Store
           </Link>
         )}
 
         {/* Logs - admin only */}
         {canViewLogs && (
-          <Link
-            to={routes.logs.list.path}
-            className="block px-4 py-2 rounded hover:bg-gray-200"
-          >
+          <Link to={routes.logs.list.path} className="block rounded px-4 py-2 hover:bg-gray-200">
             Logs
           </Link>
         )}
 
         {/* Settings - always visible */}
-        <Link
-          to={routes.settings.index.path}
-          className="block px-4 py-2 rounded hover:bg-gray-200"
-        >
+        <Link to={routes.settings.index.path} className="block rounded px-4 py-2 hover:bg-gray-200">
           Settings
         </Link>
       </div>

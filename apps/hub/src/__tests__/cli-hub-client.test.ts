@@ -10,10 +10,16 @@ describe('cli/utils/hub-client', () => {
   const origHost = process.env.BRIKA_HOST;
 
   afterEach(() => {
-    if (origPort === undefined) delete process.env.BRIKA_PORT;
-    else process.env.BRIKA_PORT = origPort;
-    if (origHost === undefined) delete process.env.BRIKA_HOST;
-    else process.env.BRIKA_HOST = origHost;
+    if (origPort === undefined) {
+      delete process.env.BRIKA_PORT;
+    } else {
+      process.env.BRIKA_PORT = origPort;
+    }
+    if (origHost === undefined) {
+      delete process.env.BRIKA_HOST;
+    } else {
+      process.env.BRIKA_HOST = origHost;
+    }
   });
 
   describe('hubUrl', () => {

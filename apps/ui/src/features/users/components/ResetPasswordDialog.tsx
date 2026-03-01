@@ -45,14 +45,17 @@ export function ResetPasswordDialog({
     setError('');
 
     resetPassword.mutate(
-      { id: userId, password },
+      {
+        id: userId,
+        password,
+      },
       {
         onSuccess: () => {
           setPassword('');
           onOpenChange(false);
         },
         onError: (err) => setError(err.message),
-      },
+      }
     );
   };
 
@@ -61,7 +64,11 @@ export function ResetPasswordDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{t('users:resetPassword')}</DialogTitle>
-          <DialogDescription>{t('users:resetPasswordDesc', { name: userName })}</DialogDescription>
+          <DialogDescription>
+            {t('users:resetPasswordDesc', {
+              name: userName,
+            })}
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">

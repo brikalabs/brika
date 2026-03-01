@@ -23,7 +23,9 @@ const MOCK_INFO = {
   assetSize: null,
 };
 
-type UpdateInfoResponse = typeof MOCK_INFO & { lastCheckedAt: number };
+type UpdateInfoResponse = typeof MOCK_INFO & {
+  lastCheckedAt: number;
+};
 
 describe('update routes', () => {
   let app: ReturnType<typeof TestApp.create>;
@@ -32,7 +34,10 @@ describe('update routes', () => {
 
   useTestBed(() => {
     mockCheck = mock().mockResolvedValue(MOCK_INFO);
-    stub(UpdateService, { check: mockCheck, lastCheckedAt: 1234567890 });
+    stub(UpdateService, {
+      check: mockCheck,
+      lastCheckedAt: 1234567890,
+    });
     app = TestApp.create(updateRoutes);
   });
 
@@ -57,7 +62,9 @@ describe('update routes', () => {
 
     // Use hono.fetch directly to avoid TestApp body parsing (which hangs on SSE)
     const raw = await app.hono.fetch(
-      new Request('http://test/api/system/update/apply', { method: 'POST' })
+      new Request('http://test/api/system/update/apply', {
+        method: 'POST',
+      })
     );
 
     expect(raw.status).toBe(200);
@@ -66,10 +73,12 @@ describe('update routes', () => {
     // Read chunks until we get a progress event.
     // First chunk = 'checking', subsequent = error (from failed fetch).
     const reader = raw.body?.getReader();
-    expect(reader).toBeDefined();
+    if (!reader) {
+      throw new Error('unreachable');
+    }
 
-    const { value } = await reader!.read();
-    await reader!.cancel();
+    const { value } = await reader.read();
+    await reader.cancel();
 
     const text = new TextDecoder().decode(value);
     expect(text).toContain('event: progress');

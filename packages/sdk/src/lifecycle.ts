@@ -27,6 +27,8 @@ export { getPreferences, onPreferencesChange, setPreference } from './api/prefer
  */
 export function asset(path: string): string {
   const uid = process.env.BRIKA_PLUGIN_UID;
-  if (!uid) throw new Error('asset() can only be called from a plugin process');
+  if (!uid) {
+    throw new Error('asset() can only be called from a plugin process');
+  }
   return `/api/plugins/${uid}/assets/${path}`;
 }

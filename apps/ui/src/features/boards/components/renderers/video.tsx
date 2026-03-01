@@ -7,30 +7,49 @@ function HlsVideo({
   muted,
   controls,
   loop,
-}: Readonly<{ src: string; poster?: string; muted: boolean; controls?: boolean; loop?: boolean }>) {
+}: Readonly<{
+  src: string;
+  poster?: string;
+  muted: boolean;
+  controls?: boolean;
+  loop?: boolean;
+}>) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
     const video = videoRef.current;
-    if (!video) return;
+    if (!video) {
+      return;
+    }
 
     if (video.canPlayType('application/vnd.apple.mpegurl')) {
       video.src = src;
       return;
     }
 
-    let hls: { destroy(): void } | undefined;
+    let hls:
+      | {
+          destroy(): void;
+        }
+      | undefined;
 
     import('hls.js').then(({ default: Hls }) => {
-      if (!Hls.isSupported()) return;
-      const instance = new Hls({ enableWorker: false, lowLatencyMode: true });
+      if (!Hls.isSupported()) {
+        return;
+      }
+      const instance = new Hls({
+        enableWorker: false,
+        lowLatencyMode: true,
+      });
       instance.loadSource(src);
       instance.attachMedia(video);
       hls = instance;
     });
 
     return () => hls?.destroy();
-  }, [src]);
+  }, [
+    src,
+  ]);
 
   return (
     <video

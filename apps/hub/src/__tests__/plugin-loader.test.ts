@@ -13,7 +13,9 @@ import { PluginManager } from '@/runtime/plugins/plugin-manager';
 import { PluginRegistry } from '@/runtime/registry';
 import { StateStore } from '@/runtime/state/state-store';
 
-useTestBed({ autoStub: false });
+useTestBed({
+  autoStub: false,
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Test Fixtures
@@ -23,7 +25,11 @@ const createMockConfig = (plugins: BrikaConfig['plugins'] = []): BrikaConfig => 
   hub: {
     host: '0.0.0.0',
     port: 3001,
-    plugins: { installDir: '/tmp', heartbeatInterval: 5000, heartbeatTimeout: 15000 },
+    plugins: {
+      installDir: '/tmp',
+      heartbeatInterval: 5000,
+      heartbeatTimeout: 15000,
+    },
   },
   plugins,
   rules: [],
@@ -102,16 +108,26 @@ describe('PluginLoader', () => {
 
       await loader.init();
 
-      expect(callOrder).toEqual(['state', 'registry']);
+      expect(callOrder).toEqual([
+        'state',
+        'registry',
+      ]);
     });
   });
 
   describe('load', () => {
     test('syncs registry to config', async () => {
-      const plugins = [{ name: '@test/plugin', version: '1.0.0' }];
+      const plugins = [
+        {
+          name: '@test/plugin',
+          version: '1.0.0',
+        },
+      ];
       const config = createMockConfig(plugins);
 
-      resolvePluginMock.mockResolvedValue({ rootDirectory: '/path/to/plugin' });
+      resolvePluginMock.mockResolvedValue({
+        rootDirectory: '/path/to/plugin',
+      });
 
       await loader.load(config);
 
@@ -120,28 +136,51 @@ describe('PluginLoader', () => {
 
     test('syncs state to config with plugin names', async () => {
       const plugins = [
-        { name: '@test/plugin-a', version: '1.0.0' },
-        { name: '@test/plugin-b', version: '2.0.0' },
+        {
+          name: '@test/plugin-a',
+          version: '1.0.0',
+        },
+        {
+          name: '@test/plugin-b',
+          version: '2.0.0',
+        },
       ];
       const config = createMockConfig(plugins);
 
-      resolvePluginMock.mockResolvedValue({ rootDirectory: '/path/to/plugin' });
+      resolvePluginMock.mockResolvedValue({
+        rootDirectory: '/path/to/plugin',
+      });
 
       await loader.load(config);
 
-      expect(stateSyncMock).toHaveBeenCalledWith(new Set(['@test/plugin-a', '@test/plugin-b']));
+      expect(stateSyncMock).toHaveBeenCalledWith(
+        new Set([
+          '@test/plugin-a',
+          '@test/plugin-b',
+        ])
+      );
     });
 
     test('loads each configured plugin', async () => {
       const plugins = [
-        { name: '@test/plugin-a', version: '1.0.0' },
-        { name: '@test/plugin-b', version: '2.0.0' },
+        {
+          name: '@test/plugin-a',
+          version: '1.0.0',
+        },
+        {
+          name: '@test/plugin-b',
+          version: '2.0.0',
+        },
       ];
       const config = createMockConfig(plugins);
 
       resolvePluginMock
-        .mockResolvedValueOnce({ rootDirectory: '/path/to/plugin-a' })
-        .mockResolvedValueOnce({ rootDirectory: '/path/to/plugin-b' });
+        .mockResolvedValueOnce({
+          rootDirectory: '/path/to/plugin-a',
+        })
+        .mockResolvedValueOnce({
+          rootDirectory: '/path/to/plugin-b',
+        });
 
       await loader.load(config);
 
@@ -162,14 +201,22 @@ describe('PluginLoader', () => {
 
     test('continues loading other plugins when one fails', async () => {
       const plugins = [
-        { name: '@test/plugin-a', version: '1.0.0' },
-        { name: '@test/plugin-b', version: '2.0.0' },
+        {
+          name: '@test/plugin-a',
+          version: '1.0.0',
+        },
+        {
+          name: '@test/plugin-b',
+          version: '2.0.0',
+        },
       ];
       const config = createMockConfig(plugins);
 
       resolvePluginMock
         .mockRejectedValueOnce(new Error('Failed to resolve'))
-        .mockResolvedValueOnce({ rootDirectory: '/path/to/plugin-b' });
+        .mockResolvedValueOnce({
+          rootDirectory: '/path/to/plugin-b',
+        });
 
       await loader.load(config);
 
@@ -179,10 +226,17 @@ describe('PluginLoader', () => {
     });
 
     test('handles plugin load failure gracefully', async () => {
-      const plugins = [{ name: '@test/plugin', version: '1.0.0' }];
+      const plugins = [
+        {
+          name: '@test/plugin',
+          version: '1.0.0',
+        },
+      ];
       const config = createMockConfig(plugins);
 
-      resolvePluginMock.mockResolvedValue({ rootDirectory: '/path/to/plugin' });
+      resolvePluginMock.mockResolvedValue({
+        rootDirectory: '/path/to/plugin',
+      });
       pmLoadMock.mockRejectedValue(new Error('Load failed'));
 
       // Should not throw

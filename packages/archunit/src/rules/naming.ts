@@ -7,8 +7,8 @@ const KEBAB_CASE = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
 function getFileName(path: string): string {
   return path
     .split('/')
-    .pop()!
-    .replace(/\.\w+$/, '');
+    .pop()
+    ?.replace(/\.\w+$/, '');
 }
 
 /** Files matching pattern must use PascalCase naming */
@@ -19,7 +19,10 @@ export function pascalCase(pattern: string): Rule {
       for await (const file of ctx.glob(pattern)) {
         const name = getFileName(file);
         if (!PASCAL_CASE.test(name)) {
-          yield { file, message: `"${name}" is not PascalCase` };
+          yield {
+            file,
+            message: `"${name}" is not PascalCase`,
+          };
         }
       }
     },
@@ -34,7 +37,10 @@ export function camelCase(pattern: string): Rule {
       for await (const file of ctx.glob(pattern)) {
         const name = getFileName(file);
         if (!CAMEL_CASE.test(name)) {
-          yield { file, message: `"${name}" is not camelCase` };
+          yield {
+            file,
+            message: `"${name}" is not camelCase`,
+          };
         }
       }
     },
@@ -49,7 +55,10 @@ export function kebabCase(pattern: string): Rule {
       for await (const file of ctx.glob(pattern)) {
         const name = getFileName(file);
         if (!KEBAB_CASE.test(name)) {
-          yield { file, message: `"${name}" is not kebab-case` };
+          yield {
+            file,
+            message: `"${name}" is not kebab-case`,
+          };
         }
       }
     },

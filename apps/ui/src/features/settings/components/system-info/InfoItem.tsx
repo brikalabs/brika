@@ -28,7 +28,9 @@ export function InfoItem({
   const handleCopy = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!canCopy) return;
+    if (!canCopy) {
+      return;
+    }
 
     await navigator.clipboard.writeText(value);
     setCopied(true);

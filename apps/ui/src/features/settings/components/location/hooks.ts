@@ -21,7 +21,10 @@ interface HubLocationResponse {
 }
 
 const locationKeys = {
-  all: ['settings', 'location'] as const,
+  all: [
+    'settings',
+    'location',
+  ] as const,
 };
 
 export function useHubLocation() {
@@ -40,7 +43,9 @@ export function useUpdateHubLocation() {
         body: JSON.stringify(location),
       }),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: locationKeys.all });
+      qc.invalidateQueries({
+        queryKey: locationKeys.all,
+      });
     },
   });
 }
@@ -57,7 +62,10 @@ export function useLocationSettings() {
     if (data?.location && !isDirty) {
       setDraft(data.location);
     }
-  }, [data, isDirty]);
+  }, [
+    data,
+    isDirty,
+  ]);
 
   function handleAddressSelect(location: HubLocation) {
     setDraft(location);
@@ -66,8 +74,13 @@ export function useLocationSettings() {
 
   function handleFieldChange(field: keyof HubLocation, value: string) {
     setDraft((prev) => {
-      if (!prev) return prev;
-      const numFields = new Set<keyof HubLocation>(['latitude', 'longitude']);
+      if (!prev) {
+        return prev;
+      }
+      const numFields = new Set<keyof HubLocation>([
+        'latitude',
+        'longitude',
+      ]);
       return {
         ...prev,
         [field]: numFields.has(field) ? Number(value) || 0 : value,
@@ -77,7 +90,9 @@ export function useLocationSettings() {
   }
 
   function handleDetect() {
-    if (!navigator.geolocation) return;
+    if (!navigator.geolocation) {
+      return;
+    }
     setDetecting(true);
 
     navigator.geolocation.getCurrentPosition(
@@ -102,12 +117,16 @@ export function useLocationSettings() {
         setDetecting(false);
       },
       () => setDetecting(false),
-      { timeout: 10_000 }
+      {
+        timeout: 10_000,
+      }
     );
   }
 
   function handleSave() {
-    if (!draft) return;
+    if (!draft) {
+      return;
+    }
     mutation.mutate(draft, {
       onSuccess: () => {
         setIsDirty(false);

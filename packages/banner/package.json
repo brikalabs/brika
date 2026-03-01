@@ -8,12 +8,17 @@
     "url": "https://github.com/maxscharwath/brika.git",
     "directory": "packages/banner"
   },
-  "keywords": ["brika", "cli", "banner", "terminal"],
+  "keywords": [
+    "brika",
+    "cli",
+    "banner",
+    "terminal"
+  ],
   "exports": {
     ".": "./src/index.ts"
   },
   "scripts": {
-    "tsc": "bunx --biome tsc --noEmit"
+    "typecheck": "tsgo --noEmit"
   },
   "dependencies": {
     "boxen": "^8.0.1",

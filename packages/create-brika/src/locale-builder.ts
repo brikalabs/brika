@@ -13,13 +13,26 @@ export function buildLocale(data: TemplateData, strings: LocaleStrings): string 
   };
 
   if (data.blocks) {
-    locale.blocks = { [String(data.id)]: { name: data.pascal, description: data.description } };
+    locale.blocks = {
+      [String(data.id)]: {
+        name: data.pascal,
+        description: data.description,
+      },
+    };
     locale.fields = {
-      enabled: { label: strings.enabledLabel, description: strings.enabledDescription },
+      enabled: {
+        label: strings.enabledLabel,
+        description: strings.enabledDescription,
+      },
     };
   }
   if (data.bricks) {
-    locale.bricks = { [String(data.id)]: { name: data.pascal, description: data.description } };
+    locale.bricks = {
+      [String(data.id)]: {
+        name: data.pascal,
+        description: data.description,
+      },
+    };
   }
   if (data.sparks) {
     locale.sparks = {
@@ -30,5 +43,5 @@ export function buildLocale(data: TemplateData, strings: LocaleStrings): string 
     };
   }
 
-  return JSON.stringify(locale, null, 2) + '\n';
+  return `${JSON.stringify(locale, null, 2)}\n`;
 }

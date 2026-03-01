@@ -19,20 +19,26 @@ function buildPluginCli() {
   const install: Command = {
     name: 'install',
     description: 'Install a plugin',
-    examples: ['brika plugin install @brika/plugin-timer'],
+    examples: [
+      'brika plugin install @brika/plugin-timer',
+    ],
     handler: handlers.install,
   };
 
   const uninstall: Command = {
     name: 'uninstall',
-    aliases: ['remove'],
+    aliases: [
+      'remove',
+    ],
     description: 'Uninstall a plugin',
     handler: handlers.uninstall,
   };
 
   const list: Command = {
     name: 'list',
-    aliases: ['ls'],
+    aliases: [
+      'ls',
+    ],
     description: 'List installed plugins',
     handler: handlers.list,
   };
@@ -47,7 +53,10 @@ function buildPluginCli() {
     .addHelp()
     .toCommand('plugin', 'Manage plugins');
 
-  return { cmd, handlers };
+  return {
+    cmd,
+    handlers,
+  };
 }
 
 describe('cli/commands/plugin (subcommand group)', () => {
@@ -70,7 +79,10 @@ describe('cli/commands/plugin (subcommand group)', () => {
       const { cmd, handlers } = buildPluginCli();
       await cmd.handler({
         values: {},
-        positionals: ['install', '@brika/plugin-timer'],
+        positionals: [
+          'install',
+          '@brika/plugin-timer',
+        ],
         commands: [],
       });
 
@@ -82,7 +94,10 @@ describe('cli/commands/plugin (subcommand group)', () => {
       const { cmd, handlers } = buildPluginCli();
       await cmd.handler({
         values: {},
-        positionals: ['uninstall', '@brika/plugin-timer'],
+        positionals: [
+          'uninstall',
+          '@brika/plugin-timer',
+        ],
         commands: [],
       });
 
@@ -93,7 +108,10 @@ describe('cli/commands/plugin (subcommand group)', () => {
       const { cmd, handlers } = buildPluginCli();
       await cmd.handler({
         values: {},
-        positionals: ['remove', '@brika/plugin-timer'],
+        positionals: [
+          'remove',
+          '@brika/plugin-timer',
+        ],
         commands: [],
       });
 
@@ -102,14 +120,26 @@ describe('cli/commands/plugin (subcommand group)', () => {
 
     test('dispatches "list" to list handler', async () => {
       const { cmd, handlers } = buildPluginCli();
-      await cmd.handler({ values: {}, positionals: ['list'], commands: [] });
+      await cmd.handler({
+        values: {},
+        positionals: [
+          'list',
+        ],
+        commands: [],
+      });
 
       expect(handlers.list).toHaveBeenCalled();
     });
 
     test('dispatches "ls" alias to list handler', async () => {
       const { cmd, handlers } = buildPluginCli();
-      await cmd.handler({ values: {}, positionals: ['ls'], commands: [] });
+      await cmd.handler({
+        values: {},
+        positionals: [
+          'ls',
+        ],
+        commands: [],
+      });
 
       expect(handlers.list).toHaveBeenCalled();
     });
@@ -120,7 +150,11 @@ describe('cli/commands/plugin (subcommand group)', () => {
       const { cmd, handlers } = buildPluginCli();
       const log = captureLog();
 
-      await cmd.handler({ values: {}, positionals: [], commands: [] });
+      await cmd.handler({
+        values: {},
+        positionals: [],
+        commands: [],
+      });
       log.restore();
 
       const output = log.lines.join('\n');
@@ -136,7 +170,13 @@ describe('cli/commands/plugin (subcommand group)', () => {
       const { cmd, handlers } = buildPluginCli();
       const log = captureLog();
 
-      await cmd.handler({ values: {}, positionals: ['help'], commands: [] });
+      await cmd.handler({
+        values: {},
+        positionals: [
+          'help',
+        ],
+        commands: [],
+      });
       log.restore();
 
       expect(log.lines.join('\n')).toContain('brika plugin');
@@ -163,20 +203,42 @@ describe('cli/commands/plugin (subcommand group)', () => {
         .addHelp()
         .toCommand('test', 'Test');
 
-      await cmd.handler({ values: {}, positionals: ['action'], commands: [] });
-      expect(order).toEqual(['before', 'action']);
+      await cmd.handler({
+        values: {},
+        positionals: [
+          'action',
+        ],
+        commands: [],
+      });
+      expect(order).toEqual([
+        'before',
+        'action',
+      ]);
     });
 
     test('does not run before hook for help', async () => {
       const beforeFn = mock();
       const log = captureLog();
 
-      const cmd = createCli({ defaultCommand: 'help', before: beforeFn })
-        .addCommand({ name: 'action', description: 'Do it', handler() {} })
+      const cmd = createCli({
+        defaultCommand: 'help',
+        before: beforeFn,
+      })
+        .addCommand({
+          name: 'action',
+          description: 'Do it',
+          handler() {},
+        })
         .addHelp()
         .toCommand('test', 'Test');
 
-      await cmd.handler({ values: {}, positionals: ['help'], commands: [] });
+      await cmd.handler({
+        values: {},
+        positionals: [
+          'help',
+        ],
+        commands: [],
+      });
       log.restore();
 
       expect(beforeFn).not.toHaveBeenCalled();
@@ -189,7 +251,13 @@ describe('cli/commands/plugin (subcommand group)', () => {
       const exit = captureExit();
 
       try {
-        await cmd.handler({ values: {}, positionals: ['nonexistent'], commands: [] });
+        await cmd.handler({
+          values: {},
+          positionals: [
+            'nonexistent',
+          ],
+          commands: [],
+        });
       } catch {}
       exit.restore();
 

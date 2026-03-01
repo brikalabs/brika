@@ -22,9 +22,16 @@ export default defineCommand({
     '  brika completions zsh          Print raw script (for custom setups)',
   ].join('\n'),
   options: {
-    uninstall: { type: 'boolean', description: 'Remove completions from shell profile' },
+    uninstall: {
+      type: 'boolean',
+      description: 'Remove completions from shell profile',
+    },
   },
-  examples: ['brika completions', 'brika completions --uninstall', 'brika completions zsh'],
+  examples: [
+    'brika completions',
+    'brika completions --uninstall',
+    'brika completions zsh',
+  ],
   async handler({ values, positionals, commands }) {
     // values.uninstall is boolean | undefined
     if (values.uninstall) {

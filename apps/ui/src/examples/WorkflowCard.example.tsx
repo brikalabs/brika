@@ -3,8 +3,8 @@
  * Shows how to use routes for navigation and permission checks
  */
 
-import { useNavigate } from '@tanstack/react-router';
 import { useCanAccess } from '@brika/auth/react';
+import { useNavigate } from '@tanstack/react-router';
 import { routes } from '@/router';
 
 interface WorkflowCardProps {
@@ -29,29 +29,27 @@ export function WorkflowCard({ workflow }: Readonly<WorkflowCardProps>) {
     // ✅ Navigate using routes object
     navigate({
       to: routes.workflows.edit.path,
-      params: { id: workflow.id },
+      params: {
+        id: workflow.id,
+      },
     });
   };
 
   return (
-    <div className="border rounded-lg p-4">
+    <div className="rounded-lg border p-4">
       <h3 className="font-bold">{workflow.name}</h3>
-      <p className="text-sm text-gray-500">{workflow.status}</p>
+      <p className="text-gray-500 text-sm">{workflow.status}</p>
 
       <div className="mt-4 flex gap-2">
         <button
           onClick={handleEdit}
           disabled={!canEdit}
-          className="px-3 py-1 rounded bg-blue-500 text-white disabled:opacity-50"
+          className="rounded bg-blue-500 px-3 py-1 text-white disabled:opacity-50"
         >
           {canEdit ? 'Edit' : 'View Only'}
         </button>
 
-        {canEdit && (
-          <button className="px-3 py-1 rounded bg-red-500 text-white">
-            Delete
-          </button>
-        )}
+        {canEdit && <button className="rounded bg-red-500 px-3 py-1 text-white">Delete</button>}
       </div>
     </div>
   );

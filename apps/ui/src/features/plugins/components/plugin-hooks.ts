@@ -7,7 +7,9 @@ import { PluginContext } from './plugin-context';
 
 export function usePluginLocale() {
   const { namespace } = useContext(PluginContext);
-  const { t: scopedT } = useTranslation(namespace || undefined, { useSuspense: false });
+  const { t: scopedT } = useTranslation(namespace || undefined, {
+    useSuspense: false,
+  });
   const { tp: _, ...locale } = useHostLocale();
 
   return useMemo(
@@ -15,7 +17,10 @@ export function usePluginLocale() {
       ...locale,
       t: (key: string, options?: Record<string, unknown>) => String(scopedT(key, options)),
     }),
-    [locale, scopedT]
+    [
+      locale,
+      scopedT,
+    ]
   );
 }
 
@@ -42,9 +47,13 @@ export function usePluginAction<T>(ref: ActionRef): {
     setLoading(true);
     setError(false);
 
-    fetch(`/api/plugins/${uid}/actions/${ref.__actionId}`, { method: 'POST' })
+    fetch(`/api/plugins/${uid}/actions/${ref.__actionId}`, {
+      method: 'POST',
+    })
       .then((r) => {
-        if (!r.ok) throw r;
+        if (!r.ok) {
+          throw r;
+        }
         return r.json();
       })
       .then((json) => {
@@ -59,13 +68,23 @@ export function usePluginAction<T>(ref: ActionRef): {
           setLoading(false);
         }
       });
-  }, [uid, ref.__actionId]);
+  }, [
+    uid,
+    ref.__actionId,
+  ]);
 
   useEffect(() => {
     execute();
-  }, [execute]);
+  }, [
+    execute,
+  ]);
 
-  return { data, loading, error, refetch: execute };
+  return {
+    data,
+    loading,
+    error,
+    refetch: execute,
+  };
 }
 
 // ── Imperative action caller (non-hook) ──────────────────────────────────────
@@ -79,7 +98,12 @@ export function setActivePluginUid(uid: string) {
 export async function pluginCallAction<O>(ref: ActionRef, input?: unknown): Promise<O> {
   const res = await fetch(`/api/plugins/${activePluginUid}/actions/${ref.__actionId}`, {
     method: 'POST',
-    headers: input === undefined ? {} : { 'Content-Type': 'application/json' },
+    headers:
+      input === undefined
+        ? {}
+        : {
+            'Content-Type': 'application/json',
+          },
     body: input === undefined ? undefined : JSON.stringify(input),
   });
   if (res.ok) {

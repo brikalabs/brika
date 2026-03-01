@@ -13,8 +13,8 @@ import {
 } from '@/components/ui';
 import { PasswordInput } from '@/components/ui/password-input';
 import { useLocale } from '@/lib/use-locale';
-import { usePasswordForm } from './usePasswordForm';
 import { PasswordStrength } from './PasswordStrength';
+import { usePasswordForm } from './usePasswordForm';
 
 export function PasswordSection() {
   const { t } = useLocale();
@@ -52,7 +52,7 @@ export function PasswordSection() {
               autoComplete="current-password"
             />
             {form.errorField === 'current' && form.error && (
-              <p className="flex items-center gap-1.5 text-xs text-destructive">
+              <p className="flex items-center gap-1.5 text-destructive text-xs">
                 <AlertCircle className="size-3 shrink-0" />
                 {form.error}
               </p>
@@ -78,7 +78,7 @@ export function PasswordSection() {
               autoComplete="new-password"
             />
             {form.errorField === 'new' && form.error && (
-              <p className="flex items-center gap-1.5 text-xs text-destructive">
+              <p className="flex items-center gap-1.5 text-destructive text-xs">
                 <AlertCircle className="size-3 shrink-0" />
                 {form.error}
               </p>
@@ -101,7 +101,7 @@ export function PasswordSection() {
               autoComplete="new-password"
             />
             {form.mismatch && (
-              <p className="flex items-center gap-1.5 text-xs text-destructive">
+              <p className="flex items-center gap-1.5 text-destructive text-xs">
                 <AlertCircle className="size-3 shrink-0" />
                 {t('auth:password.mismatch')}
               </p>
@@ -122,7 +122,7 @@ export function PasswordSection() {
               )}
             </Button>
             {form.saved && (
-              <span className="flex items-center gap-1.5 text-sm text-emerald-600 dark:text-emerald-400">
+              <span className="flex items-center gap-1.5 text-emerald-600 text-sm dark:text-emerald-400">
                 <Check className="size-3.5" />
                 {t('auth:password.changed')}
               </span>

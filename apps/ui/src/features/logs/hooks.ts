@@ -24,10 +24,10 @@ function filtersToParams(filters: LogFilters): LogQueryParams {
 
 /** Check if a log matches the current filters (for client-side filtering) */
 function matchesFilters(log: StoredLogEvent, filters: LogFilters): boolean {
-  if (filters.levels.length > 0 && !filters.levels.includes(log.level)) return false;
-  if (filters.sources.length > 0 && !filters.sources.includes(log.source)) return false;
-  if (filters.pluginName && log.pluginName !== filters.pluginName) return false;
-  if (filters.search && !log.message.toLowerCase().includes(filters.search.toLowerCase())) return false;
+  if (filters.levels.length > 0 && !filters.levels.includes(log.level)) { return false; }
+  if (filters.sources.length > 0 && !filters.sources.includes(log.source)) { return false; }
+  if (filters.pluginName && log.pluginName !== filters.pluginName) { return false; }
+  if (filters.search && !log.message.toLowerCase().includes(filters.search.toLowerCase())) { return false; }
   // Date filters apply to historical, live logs are always recent
   return true;
 }
@@ -137,7 +137,7 @@ export function useLogs() {
 
   // Flatten historical pages into single array
   const historicalLogs = useMemo(() => {
-    if (!historical.data?.pages) return [];
+    if (!historical.data?.pages) { return []; }
     return historical.data.pages.flatMap((page) => page.logs);
   }, [historical.data]);
 

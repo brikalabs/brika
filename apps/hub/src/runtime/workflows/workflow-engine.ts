@@ -63,7 +63,10 @@ export class WorkflowEngine {
   #updateWorkflowState(
     workflow: Workflow,
     status: 'stopped' | 'running' | 'error',
-    options?: { error?: string; startedAt?: number }
+    options?: {
+      error?: string;
+      startedAt?: number;
+    }
   ): void {
     workflow.status = status;
     workflow.error = options?.error;
@@ -103,7 +106,10 @@ export class WorkflowEngine {
     if (missing.length > 0) {
       // Missing blocks - set error status
       const errorMessage = `Missing blocks: ${missing.join(', ')}`;
-      this.#updateWorkflowState(workflow, 'error', { error: errorMessage, startedAt: undefined });
+      this.#updateWorkflowState(workflow, 'error', {
+        error: errorMessage,
+        startedAt: undefined,
+      });
       this.logs.warn('Workflow registration failed due to missing blocks', {
         workflowId: workflow.id,
         workflowName: workflow.name,
@@ -113,7 +119,10 @@ export class WorkflowEngine {
     }
 
     // Clear any previous error and set to stopped
-    this.#updateWorkflowState(workflow, 'stopped', { error: undefined, startedAt: undefined });
+    this.#updateWorkflowState(workflow, 'stopped', {
+      error: undefined,
+      startedAt: undefined,
+    });
     this.logs.info('Workflow registered successfully', {
       workflowId: workflow.id,
       workflowName: workflow.name,
@@ -129,7 +138,9 @@ export class WorkflowEngine {
             workflowId: workflow.id,
             workflowName: workflow.name,
           },
-          { error: err }
+          {
+            error: err,
+          }
         );
       });
     }
@@ -138,13 +149,17 @@ export class WorkflowEngine {
   /** Unregister a workflow */
   unregister(id: string): boolean {
     const workflow = this.#workflows.get(id);
-    if (!workflow) return false;
+    if (!workflow) {
+      return false;
+    }
 
     // Stop if this workflow is running
     this.#stopWorkflowInternal(id);
 
     this.#workflows.delete(id);
-    this.logs.info('Workflow unregistered successfully', { workflowId: id });
+    this.logs.info('Workflow unregistered successfully', {
+      workflowId: id,
+    });
     return true;
   }
 
@@ -153,10 +168,14 @@ export class WorkflowEngine {
    */
   async #startWorkflowInternal(id: string): Promise<void> {
     const workflow = this.#workflows.get(id);
-    if (!workflow) return;
+    if (!workflow) {
+      return;
+    }
 
     // Don't start if already running
-    if (this.#executors.has(id)) return;
+    if (this.#executors.has(id)) {
+      return;
+    }
 
     // Don't start if in error state
     if (workflow.status === 'error') {
@@ -180,7 +199,10 @@ export class WorkflowEngine {
       });
 
       // Update status and startedAt
-      this.#updateWorkflowState(workflow, 'running', { error: undefined, startedAt: Date.now() });
+      this.#updateWorkflowState(workflow, 'running', {
+        error: undefined,
+        startedAt: Date.now(),
+      });
 
       await executor.start(workflow);
       this.logs.info('Workflow started successfully', {
@@ -190,7 +212,10 @@ export class WorkflowEngine {
       });
     } catch (err) {
       // Set error status
-      this.#updateWorkflowState(workflow, 'error', { error: String(err), startedAt: undefined });
+      this.#updateWorkflowState(workflow, 'error', {
+        error: String(err),
+        startedAt: undefined,
+      });
       this.#executors.delete(id);
       this.logs.error(
         'Failed to start workflow',
@@ -198,7 +223,9 @@ export class WorkflowEngine {
           workflowId: id,
           workflowName: workflow.name,
         },
-        { error: err }
+        {
+          error: err,
+        }
       );
     }
   }
@@ -216,7 +243,9 @@ export class WorkflowEngine {
     // Update workflow state
     const workflow = this.#workflows.get(id);
     if (workflow?.status === 'running') {
-      this.#updateWorkflowState(workflow, 'stopped', { startedAt: undefined });
+      this.#updateWorkflowState(workflow, 'stopped', {
+        startedAt: undefined,
+      });
     }
 
     this.logs.info('Workflow stopped successfully', {
@@ -254,7 +283,9 @@ export class WorkflowEngine {
   }
 
   list(): Workflow[] {
-    return [...this.#workflows.values()]
+    return [
+      ...this.#workflows.values(),
+    ]
       .map((w) => ({
         ...w,
         enabled: w.enabled ?? false,
@@ -264,7 +295,9 @@ export class WorkflowEngine {
 
   async setEnabled(id: string, enabled: boolean): Promise<boolean> {
     const workflow = this.#workflows.get(id);
-    if (!workflow) return false;
+    if (!workflow) {
+      return false;
+    }
 
     workflow.enabled = enabled;
 
@@ -273,7 +306,10 @@ export class WorkflowEngine {
       const missing = this.#validateBlocks(workflow);
       if (missing.length > 0) {
         const errorMessage = `Missing blocks: ${missing.join(', ')}`;
-        this.#updateWorkflowState(workflow, 'error', { error: errorMessage, startedAt: undefined });
+        this.#updateWorkflowState(workflow, 'error', {
+          error: errorMessage,
+          startedAt: undefined,
+        });
         return true;
       }
 
@@ -305,7 +341,9 @@ export class WorkflowEngine {
     this.#executors.clear();
 
     // Clean up event subscriptions
-    for (const unsub of this.#eventUnsubs) unsub();
+    for (const unsub of this.#eventUnsubs) {
+      unsub();
+    }
     this.#eventUnsubs = [];
 
     this.logs.info('Workflow engine stopped successfully', {});

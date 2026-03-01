@@ -15,14 +15,39 @@ import type { Flow } from './types';
  * Combine latest values from multiple flows.
  * Emits when any flow emits, using latest value from each.
  */
-export function combine<A, B>(a: Flow<A>, b: Flow<B>): Flow<[A, B]>;
-export function combine<A, B, C>(a: Flow<A>, b: Flow<B>, c: Flow<C>): Flow<[A, B, C]>;
+export function combine<A, B>(
+  a: Flow<A>,
+  b: Flow<B>
+): Flow<
+  [
+    A,
+    B,
+  ]
+>;
+export function combine<A, B, C>(
+  a: Flow<A>,
+  b: Flow<B>,
+  c: Flow<C>
+): Flow<
+  [
+    A,
+    B,
+    C,
+  ]
+>;
 export function combine<A, B, C, D>(
   a: Flow<A>,
   b: Flow<B>,
   c: Flow<C>,
   d: Flow<D>
-): Flow<[A, B, C, D]>;
+): Flow<
+  [
+    A,
+    B,
+    C,
+    D,
+  ]
+>;
 export function combine(...flows: Flow<unknown>[]): Flow<unknown[]> {
   return createCombineFlow(flows, 'combineLatest');
 }
@@ -30,8 +55,26 @@ export function combine(...flows: Flow<unknown>[]): Flow<unknown[]> {
 /**
  * Wait for all flows to emit, then emit tuple.
  */
-export function zip<A, B>(a: Flow<A>, b: Flow<B>): Flow<[A, B]>;
-export function zip<A, B, C>(a: Flow<A>, b: Flow<B>, c: Flow<C>): Flow<[A, B, C]>;
+export function zip<A, B>(
+  a: Flow<A>,
+  b: Flow<B>
+): Flow<
+  [
+    A,
+    B,
+  ]
+>;
+export function zip<A, B, C>(
+  a: Flow<A>,
+  b: Flow<B>,
+  c: Flow<C>
+): Flow<
+  [
+    A,
+    B,
+    C,
+  ]
+>;
 export function zip(...flows: Flow<unknown>[]): Flow<unknown[]> {
   return createCombineFlow(flows, 'zip');
 }
@@ -67,8 +110,26 @@ export function race<T>(...flows: Flow<T>[]): Flow<T> {
 /**
  * Wait for all flows to emit at least once.
  */
-export function all<A, B>(a: Flow<A>, b: Flow<B>): Flow<[A, B]>;
-export function all<A, B, C>(a: Flow<A>, b: Flow<B>, c: Flow<C>): Flow<[A, B, C]>;
+export function all<A, B>(
+  a: Flow<A>,
+  b: Flow<B>
+): Flow<
+  [
+    A,
+    B,
+  ]
+>;
+export function all<A, B, C>(
+  a: Flow<A>,
+  b: Flow<B>,
+  c: Flow<C>
+): Flow<
+  [
+    A,
+    B,
+    C,
+  ]
+>;
 export function all(...flows: Flow<unknown>[]): Flow<unknown[]> {
   return createCombineFlow(flows, 'all');
 }
@@ -85,7 +146,9 @@ interface CombineValueOptions {
   values: unknown[];
   hasValue: boolean[];
   pendingZip: unknown[][];
-  allEmitted: { current: boolean };
+  allEmitted: {
+    current: boolean;
+  };
   push: (value: unknown[]) => void;
 }
 
@@ -111,13 +174,17 @@ function handleCombineValue({
     hasValue[i] = true;
     if (!allEmitted.current && hasValue.every(Boolean)) {
       allEmitted.current = true;
-      push([...values]);
+      push([
+        ...values,
+      ]);
     }
   } else {
     values[i] = v;
     hasValue[i] = true;
     if (hasValue.every(Boolean)) {
-      push([...values]);
+      push([
+        ...values,
+      ]);
     }
   }
 }
@@ -130,11 +197,22 @@ function createCombineFlow(
     const values: unknown[] = new Array(flows.length).fill(undefined);
     const hasValue: boolean[] = new Array(flows.length).fill(false);
     const pendingZip: unknown[][] = flows.map(() => []);
-    const allEmitted = { current: false };
+    const allEmitted = {
+      current: false,
+    };
 
     flows.forEach((flow, i) => {
       const handleValue = (v: unknown) => {
-        handleCombineValue({ v, i, mode, values, hasValue, pendingZip, allEmitted, push });
+        handleCombineValue({
+          v,
+          i,
+          mode,
+          values,
+          hasValue,
+          pendingZip,
+          allEmitted,
+          push,
+        });
       };
       flow.on(handleValue);
     });

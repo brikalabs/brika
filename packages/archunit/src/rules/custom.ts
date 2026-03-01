@@ -8,5 +8,9 @@ type FixFn = (
 
 /** Create a custom rule */
 export function custom(name: string, check: CheckFn, fix?: FixFn): Rule {
-  return { name, check, fix };
+  return {
+    name,
+    check,
+    fix,
+  };
 }

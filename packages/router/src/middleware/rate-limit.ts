@@ -82,7 +82,11 @@ export class RateLimitStore {
       if (this.#entries.size >= this.#maxKeys) {
         this.#evict(now);
       }
-      entry = { prevCount: 0, currCount: 0, currStart };
+      entry = {
+        prevCount: 0,
+        currCount: 0,
+        currStart,
+      };
       this.#entries.set(key, entry);
     }
 
@@ -104,11 +108,19 @@ export class RateLimitStore {
     const estimate = entry.prevCount * weight + entry.currCount;
 
     if (estimate >= this.#max) {
-      return { allowed: false, current: Math.ceil(estimate), resetAt };
+      return {
+        allowed: false,
+        current: Math.ceil(estimate),
+        resetAt,
+      };
     }
 
     entry.currCount++;
-    return { allowed: true, current: Math.ceil(estimate) + 1, resetAt };
+    return {
+      allowed: true,
+      current: Math.ceil(estimate) + 1,
+      resetAt,
+    };
   }
 
   get size(): number {
@@ -139,7 +151,9 @@ export class RateLimitStore {
       const toRemove = this.#entries.size - this.#maxKeys + 1;
       let removed = 0;
       for (const key of this.#entries.keys()) {
-        if (removed >= toRemove) break;
+        if (removed >= toRemove) {
+          break;
+        }
         this.#entries.delete(key);
         removed++;
       }
@@ -190,7 +204,12 @@ export function rateLimit(options: RateLimitOptions): Middleware {
     if (!allowed) {
       const retryAfter = Math.ceil((resetAt - Date.now()) / 1000);
       c.header('Retry-After', String(Math.max(1, retryAfter)));
-      return c.json({ error: message }, 429);
+      return c.json(
+        {
+          error: message,
+        },
+        429
+      );
     }
 
     await next();

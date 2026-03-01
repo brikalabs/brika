@@ -19,7 +19,10 @@ function crossFeaturePattern(allowed: string[]): RegExp {
   // Matches: ../../ not followed by allowed folders
   // Example: ../../other-feature/file → blocked
   // Example: ../../index → allowed (if 'index' in allowed)
-  const exceptions = ['index', ...allowed].join('|');
+  const exceptions = [
+    'index',
+    ...allowed,
+  ].join('|');
   return new RegExp(String.raw`\.\.[\\/]\.\.[\\/](?!(?:${exceptions})[\\/]|(?:${exceptions})$)`);
 }
 
@@ -37,7 +40,10 @@ export const reactFeaturePreset = definePreset<ReactFeaturePresetOptions>((optio
     featuresDir = 'src/features',
     pageMaxLines = 100,
     componentMaxLines = 150,
-    requiredFiles: required = ['index.ts', 'hooks.ts'],
+    requiredFiles: required = [
+      'index.ts',
+      'hooks.ts',
+    ],
     allowedCrossFeatures = [],
   } = options;
 

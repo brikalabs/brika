@@ -120,7 +120,7 @@ export class LogStore {
   }
 
   insert(event: LogEvent): void {
-    if (!this.#insertStmt) return;
+    if (!this.#insertStmt) { return; }
 
     this.#insertStmt.run(
       event.ts,
@@ -137,7 +137,7 @@ export class LogStore {
   }
 
   query(params: LogQueryParams = {}): LogQueryResult {
-    if (!this.#db) return { logs: [], nextCursor: null };
+    if (!this.#db) { return { logs: [], nextCursor: null }; }
 
     const { conditions, values } = this.buildWhereConditions(params);
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
@@ -256,7 +256,7 @@ export class LogStore {
   }
 
   clear(params: Partial<LogQueryParams> = {}): number {
-    if (!this.#db) return 0;
+    if (!this.#db) { return 0; }
 
     const { conditions, values } = this.buildFilterConditions(params);
 
@@ -270,7 +270,7 @@ export class LogStore {
   }
 
   getPluginNames(): string[] {
-    if (!this.#db) return [];
+    if (!this.#db) { return []; }
 
     const rows = this.#db
       .query("SELECT DISTINCT plugin_name FROM logs WHERE plugin_name IS NOT NULL ORDER BY plugin_name")
@@ -280,7 +280,7 @@ export class LogStore {
   }
 
   getSources(): LogSource[] {
-    if (!this.#db) return [];
+    if (!this.#db) { return []; }
 
     const rows = this.#db
       .query("SELECT DISTINCT source FROM logs ORDER BY source")
@@ -290,7 +290,7 @@ export class LogStore {
   }
 
   count(): number {
-    if (!this.#db) return 0;
+    if (!this.#db) { return 0; }
 
     const row = this.#db
       .query("SELECT COUNT(*) as count FROM logs")

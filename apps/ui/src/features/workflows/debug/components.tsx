@@ -21,7 +21,9 @@ import type { DebugEvent } from './types';
 export function formatTimestamp(ts: number): string {
   const d = new Date(ts);
   return (
-    d.toLocaleTimeString('en-US', { hour12: false }) +
+    d.toLocaleTimeString('en-US', {
+      hour12: false,
+    }) +
     '.' +
     String(d.getMilliseconds()).padStart(3, '0')
   );
@@ -46,18 +48,34 @@ const LEVEL_BADGE_COLORS: Record<string, string> = {
 };
 
 function getEventBadgeColor(event: DebugEvent): string {
-  if (event.type === 'block.emit') return 'bg-data-1';
-  if (event.type === 'block.log') return LEVEL_BADGE_COLORS[event.level ?? 'info'] ?? 'bg-muted';
-  if (event.type.includes('error')) return 'bg-destructive';
-  if (event.type === 'init') return 'bg-muted';
+  if (event.type === 'block.emit') {
+    return 'bg-data-1';
+  }
+  if (event.type === 'block.log') {
+    return LEVEL_BADGE_COLORS[event.level ?? 'info'] ?? 'bg-muted';
+  }
+  if (event.type.includes('error')) {
+    return 'bg-destructive';
+  }
+  if (event.type === 'init') {
+    return 'bg-muted';
+  }
   return 'bg-muted';
 }
 
 function getEventBadgeLabel(event: DebugEvent): string {
-  if (event.type === 'block.emit') return 'EMIT';
-  if (event.type === 'block.log') return 'LOG';
-  if (event.type === 'init') return 'INIT';
-  if (event.type.includes('error')) return 'ERR';
+  if (event.type === 'block.emit') {
+    return 'EMIT';
+  }
+  if (event.type === 'block.log') {
+    return 'LOG';
+  }
+  if (event.type === 'init') {
+    return 'INIT';
+  }
+  if (event.type.includes('error')) {
+    return 'ERR';
+  }
   return event.type.split('.').pop()?.toUpperCase() || 'EVT';
 }
 
@@ -292,8 +310,14 @@ export function EventFilterButtons({
  * Filter debug events by type.
  */
 export function filterEvents(events: DebugEvent[], filter: 'all' | 'logs' | 'emits'): DebugEvent[] {
-  if (filter === 'all') return events;
-  if (filter === 'logs') return events.filter((e) => e.type === 'block.log' || e.type === 'init');
-  if (filter === 'emits') return events.filter((e) => e.type === 'block.emit' || e.type === 'init');
+  if (filter === 'all') {
+    return events;
+  }
+  if (filter === 'logs') {
+    return events.filter((e) => e.type === 'block.log' || e.type === 'init');
+  }
+  if (filter === 'emits') {
+    return events.filter((e) => e.type === 'block.emit' || e.type === 'init');
+  }
   return events;
 }

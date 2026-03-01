@@ -56,12 +56,29 @@ describe('PluginProcess', () => {
     homepage: 'https://example.com',
     repository: 'https://github.com/test',
     icon: 'test-icon',
-    keywords: ['test'],
+    keywords: [
+      'test',
+    ],
     license: 'MIT',
-    engines: { brika: '^0.1.0' },
-    blocks: [{ id: 'test-block', category: 'trigger' as const }],
-    sparks: [{ id: 'test-spark' }],
-    bricks: [{ id: 'test-brick' }],
+    engines: {
+      brika: '^0.1.0',
+    },
+    blocks: [
+      {
+        id: 'test-block',
+        category: 'trigger' as const,
+      },
+    ],
+    sparks: [
+      {
+        id: 'test-spark',
+      },
+    ],
+    bricks: [
+      {
+        id: 'test-brick',
+      },
+    ],
   });
 
   beforeEach(() => {
@@ -70,7 +87,9 @@ describe('PluginProcess', () => {
 
     mockChannel = {
       pid: 12345,
-      call: mock().mockResolvedValue({ ok: true }),
+      call: mock().mockResolvedValue({
+        ok: true,
+      }),
       send: mock(),
       on: mock((contract: unknown, handler: (...args: unknown[]) => unknown) => {
         channelHandlers.set(contract, handler);
@@ -120,7 +139,10 @@ describe('PluginProcess', () => {
         uid: 'uid-123',
         version: '1.0.0',
         metadata: createMockMetadata(),
-        locales: ['en', 'fr'],
+        locales: [
+          'en',
+          'fr',
+        ],
       },
       config,
       callbacks
@@ -136,14 +158,18 @@ describe('PluginProcess', () => {
   /** Invoke a handler registered via `channel.on(contract, handler)` */
   function triggerHandler(contract: unknown, payload: unknown): unknown {
     const handler = channelHandlers.get(contract);
-    if (!handler) throw new Error(`No handler for contract`);
+    if (!handler) {
+      throw new Error(`No handler for contract`);
+    }
     return handler(payload);
   }
 
   /** Invoke a handler registered via `channel.implement(contract, handler)` */
   function triggerImplement(contract: unknown, input: unknown): unknown {
     const handler = implementHandlers.get(contract);
-    if (!handler) throw new Error(`No implement handler for contract`);
+    if (!handler) {
+      throw new Error(`No implement handler for contract`);
+    }
     return handler(input);
   }
 
@@ -175,7 +201,10 @@ describe('PluginProcess', () => {
     });
 
     test('exposes locales', () => {
-      expect(process.locales).toEqual(['en', 'fr']);
+      expect(process.locales).toEqual([
+        'en',
+        'fr',
+      ]);
     });
 
     test('exposes startedAt', () => {
@@ -237,7 +266,9 @@ describe('PluginProcess', () => {
 
     describe('pushInput', () => {
       test('sends input to channel', () => {
-        process.pushInput('instance-1', 'input', { value: 42 });
+        process.pushInput('instance-1', 'input', {
+          value: 42,
+        });
 
         expect(mockChannel.send).toHaveBeenCalled();
       });
@@ -246,7 +277,9 @@ describe('PluginProcess', () => {
         process.stop();
         mockChannel.send.mockClear();
 
-        process.pushInput('instance-1', 'input', { value: 42 });
+        process.pushInput('instance-1', 'input', {
+          value: 42,
+        });
 
         expect(mockChannel.send).not.toHaveBeenCalled();
       });
@@ -271,7 +304,9 @@ describe('PluginProcess', () => {
 
     describe('sendPreferences', () => {
       test('sends preferences to channel', () => {
-        process.sendPreferences({ theme: 'dark' });
+        process.sendPreferences({
+          theme: 'dark',
+        });
 
         expect(mockChannel.send).toHaveBeenCalled();
       });
@@ -280,7 +315,9 @@ describe('PluginProcess', () => {
         process.stop();
         mockChannel.send.mockClear();
 
-        process.sendPreferences({ theme: 'dark' });
+        process.sendPreferences({
+          theme: 'dark',
+        });
 
         expect(mockChannel.send).not.toHaveBeenCalled();
       });
@@ -317,7 +354,9 @@ describe('PluginProcess', () => {
 
     describe('sendMountBrickInstance', () => {
       test('sends mount brick instance to channel', () => {
-        process.sendMountBrickInstance('inst-1', 'plugin:brick', 4, 3, { key: 'val' });
+        process.sendMountBrickInstance('inst-1', 'plugin:brick', 4, 3, {
+          key: 'val',
+        });
 
         expect(mockChannel.send).toHaveBeenCalled();
       });
@@ -351,7 +390,9 @@ describe('PluginProcess', () => {
 
     describe('sendUpdateBrickConfig', () => {
       test('sends update brick config to channel', () => {
-        process.sendUpdateBrickConfig('inst-1', { color: 'red' });
+        process.sendUpdateBrickConfig('inst-1', {
+          color: 'red',
+        });
 
         expect(mockChannel.send).toHaveBeenCalled();
       });
@@ -360,7 +401,9 @@ describe('PluginProcess', () => {
         process.stop();
         mockChannel.send.mockClear();
 
-        process.sendUpdateBrickConfig('inst-1', { color: 'red' });
+        process.sendUpdateBrickConfig('inst-1', {
+          color: 'red',
+        });
 
         expect(mockChannel.send).not.toHaveBeenCalled();
       });
@@ -385,7 +428,9 @@ describe('PluginProcess', () => {
 
     describe('sendBrickInstanceAction', () => {
       test('sends brick instance action to channel', () => {
-        process.sendBrickInstanceAction('inst-1', 'plugin:brick', 'refresh', { force: true });
+        process.sendBrickInstanceAction('inst-1', 'plugin:brick', 'refresh', {
+          force: true,
+        });
 
         expect(mockChannel.send).toHaveBeenCalled();
       });
@@ -402,7 +447,12 @@ describe('PluginProcess', () => {
 
     describe('sendRouteRequest', () => {
       test('sends route request and returns response', async () => {
-        mockChannel.call.mockResolvedValueOnce({ status: 200, body: { ok: true } });
+        mockChannel.call.mockResolvedValueOnce({
+          status: 200,
+          body: {
+            ok: true,
+          },
+        });
 
         const result = await process.sendRouteRequest('route-1', 'GET', '/api/test', {}, {});
 
@@ -424,7 +474,9 @@ describe('PluginProcess', () => {
         const result = await process.sendRouteRequest('route-1', 'GET', '/api/test', {}, {});
 
         expect(result.status).toBe(502);
-        expect(result.body).toEqual({ error: 'Plugin route handler failed' });
+        expect(result.body).toEqual({
+          error: 'Plugin route handler failed',
+        });
         expect(callbacks.onLog).toHaveBeenCalledWith(
           'error',
           expect.stringContaining('Route handler failed [GET /api/test]')
@@ -435,10 +487,18 @@ describe('PluginProcess', () => {
     describe('fetchPreferenceOptions', () => {
       test('returns options from channel call', async () => {
         const options = [
-          { value: 'a', label: 'Option A' },
-          { value: 'b', label: 'Option B' },
+          {
+            value: 'a',
+            label: 'Option A',
+          },
+          {
+            value: 'b',
+            label: 'Option B',
+          },
         ];
-        mockChannel.call.mockResolvedValueOnce({ options });
+        mockChannel.call.mockResolvedValueOnce({
+          options,
+        });
 
         const result = await process.fetchPreferenceOptions('theme');
 
@@ -469,10 +529,17 @@ describe('PluginProcess', () => {
 
     describe('callPluginAction', () => {
       test('returns result from channel call', async () => {
-        const actionResult = { ok: true, data: { count: 42 } };
+        const actionResult = {
+          ok: true,
+          data: {
+            count: 42,
+          },
+        };
         mockChannel.call.mockResolvedValueOnce(actionResult);
 
-        const result = await process.callPluginAction('do-stuff', { input: 1 });
+        const result = await process.callPluginAction('do-stuff', {
+          input: 1,
+        });
 
         expect(result).toEqual(actionResult);
         expect(mockChannel.call).toHaveBeenCalled();
@@ -527,8 +594,14 @@ describe('PluginProcess', () => {
           .mockReturnValueOnce(unsub2);
 
         // Simulate two spark subscriptions
-        triggerHandler(subscribeSpark, { sparkType: 'typeA', subscriptionId: 'sub-1' });
-        triggerHandler(subscribeSpark, { sparkType: 'typeB', subscriptionId: 'sub-2' });
+        triggerHandler(subscribeSpark, {
+          sparkType: 'typeA',
+          subscriptionId: 'sub-1',
+        });
+        triggerHandler(subscribeSpark, {
+          sparkType: 'typeB',
+          subscriptionId: 'sub-2',
+        });
 
         process.stop();
 
@@ -567,13 +640,18 @@ describe('PluginProcess', () => {
       expect(plugin.homepage).toBe('https://example.com');
       expect(plugin.repository).toBe('https://github.com/test');
       expect(plugin.icon).toBe('test-icon');
-      expect(plugin.keywords).toEqual(['test']);
+      expect(plugin.keywords).toEqual([
+        'test',
+      ]);
       expect(plugin.license).toBe('MIT');
       expect(plugin.status).toBe('running');
       expect(plugin.pid).toBe(12345);
       expect(plugin.rootDirectory).toBe('/path/to/plugin');
       expect(plugin.entryPoint).toBe('/path/to/plugin/index.js');
-      expect(plugin.locales).toEqual(['en', 'fr']);
+      expect(plugin.locales).toEqual([
+        'en',
+        'fr',
+      ]);
       expect(plugin.lastError).toBeNull();
       expect(plugin.startedAt).toBeGreaterThan(0);
     });
@@ -595,10 +673,17 @@ describe('PluginProcess', () => {
 
     test('includes permissions and grantedPermissions', () => {
       const metaWithPerms = createMockMetadata();
-      metaWithPerms.permissions = ['location'];
+      metaWithPerms.permissions = [
+        'location',
+      ];
 
-      const grantedCb = mock().mockReturnValue(['location']);
-      const cbsWithGrants = { ...callbacks, onGetGrantedPermissions: grantedCb };
+      const grantedCb = mock().mockReturnValue([
+        'location',
+      ]);
+      const cbsWithGrants = {
+        ...callbacks,
+        onGetGrantedPermissions: grantedCb,
+      };
 
       const pp = new PluginProcess(
         mockChannel as never,
@@ -616,8 +701,12 @@ describe('PluginProcess', () => {
       );
 
       const plugin = pp.toPlugin('running');
-      expect(plugin.permissions).toEqual(['location']);
-      expect(plugin.grantedPermissions).toEqual(['location']);
+      expect(plugin.permissions).toEqual([
+        'location',
+      ]);
+      expect(plugin.grantedPermissions).toEqual([
+        'location',
+      ]);
       expect(grantedCb).toHaveBeenCalledWith('@test/plugin-perms');
 
       pp.stop();
@@ -638,7 +727,10 @@ describe('PluginProcess', () => {
           entryPoint: '/path/index.js',
           uid: 'uid-456',
           version: '0.1.0',
-          metadata: { name: '@test/minimal', version: '0.1.0' } as PluginPackageSchema,
+          metadata: {
+            name: '@test/minimal',
+            version: '0.1.0',
+          } as PluginPackageSchema,
           locales: [],
         },
         config,
@@ -689,7 +781,9 @@ describe('PluginProcess', () => {
 
     test('includes engines from metadata', () => {
       const plugin = process.toPlugin('running');
-      expect(plugin.engines).toEqual({ brika: '^0.1.0' });
+      expect(plugin.engines).toEqual({
+        brika: '^0.1.0',
+      });
     });
   });
 
@@ -835,7 +929,10 @@ describe('PluginProcess', () => {
         heartbeatTimeoutMs: 1000,
       };
 
-      const cbsNoMetrics = { ...callbacks, onMetrics: undefined };
+      const cbsNoMetrics = {
+        ...callbacks,
+        onMetrics: undefined,
+      };
 
       const pp = new PluginProcess(
         mockChannel as never,
@@ -882,31 +979,52 @@ describe('PluginProcess', () => {
     });
 
     test('log handler calls onLog with level, message, and meta', () => {
-      triggerHandler(log, { level: 'info', message: 'test log', meta: { key: 'val' } });
+      triggerHandler(log, {
+        level: 'info',
+        message: 'test log',
+        meta: {
+          key: 'val',
+        },
+      });
 
-      expect(callbacks.onLog).toHaveBeenCalledWith('info', 'test log', { key: 'val' });
+      expect(callbacks.onLog).toHaveBeenCalledWith('info', 'test log', {
+        key: 'val',
+      });
     });
 
     test('log handler calls onLog without meta', () => {
-      triggerHandler(log, { level: 'warn', message: 'warning' });
+      triggerHandler(log, {
+        level: 'warn',
+        message: 'warning',
+      });
 
       expect(callbacks.onLog).toHaveBeenCalledWith('warn', 'warning', undefined);
     });
 
     describe('registerBlock', () => {
       test('registers a declared block and calls onBlock', () => {
-        const block = { id: 'test-block', name: 'Test Block' };
+        const block = {
+          id: 'test-block',
+          name: 'Test Block',
+        };
 
-        triggerHandler(registerBlock, { block });
+        triggerHandler(registerBlock, {
+          block,
+        });
 
         expect(process.blocks.has('@test/plugin:test-block')).toBe(true);
         expect(callbacks.onBlock).toHaveBeenCalledWith(block);
       });
 
       test('ignores undeclared blocks', () => {
-        const block = { id: 'undeclared-block', name: 'Ghost' };
+        const block = {
+          id: 'undeclared-block',
+          name: 'Ghost',
+        };
 
-        triggerHandler(registerBlock, { block });
+        triggerHandler(registerBlock, {
+          block,
+        });
 
         expect(process.blocks.size).toBe(0);
         expect(callbacks.onBlock).not.toHaveBeenCalled();
@@ -915,18 +1033,27 @@ describe('PluginProcess', () => {
 
     describe('registerSpark', () => {
       test('registers a declared spark and calls onSpark', () => {
-        const spark = { id: 'test-spark', schema: {} };
+        const spark = {
+          id: 'test-spark',
+          schema: {},
+        };
 
-        triggerHandler(registerSpark, { spark });
+        triggerHandler(registerSpark, {
+          spark,
+        });
 
         expect(process.sparks.has('@test/plugin:test-spark')).toBe(true);
         expect(callbacks.onSpark).toHaveBeenCalledWith(spark);
       });
 
       test('ignores undeclared sparks', () => {
-        const spark = { id: 'undeclared-spark' };
+        const spark = {
+          id: 'undeclared-spark',
+        };
 
-        triggerHandler(registerSpark, { spark });
+        triggerHandler(registerSpark, {
+          spark,
+        });
 
         expect(process.sparks.size).toBe(0);
         expect(callbacks.onSpark).not.toHaveBeenCalled();
@@ -934,9 +1061,16 @@ describe('PluginProcess', () => {
     });
 
     test('emitSpark handler calls onSparkEmit', () => {
-      triggerHandler(emitSpark, { sparkId: 'test-spark', payload: { data: 1 } });
+      triggerHandler(emitSpark, {
+        sparkId: 'test-spark',
+        payload: {
+          data: 1,
+        },
+      });
 
-      expect(callbacks.onSparkEmit).toHaveBeenCalledWith('test-spark', { data: 1 });
+      expect(callbacks.onSparkEmit).toHaveBeenCalledWith('test-spark', {
+        data: 1,
+      });
     });
 
     describe('subscribeSpark', () => {
@@ -944,7 +1078,10 @@ describe('PluginProcess', () => {
         const unsub = mock();
         (callbacks.onSparkSubscribe as ReturnType<typeof mock>).mockReturnValueOnce(unsub);
 
-        triggerHandler(subscribeSpark, { sparkType: 'weather', subscriptionId: 'sub-99' });
+        triggerHandler(subscribeSpark, {
+          sparkType: 'weather',
+          subscriptionId: 'sub-99',
+        });
 
         expect(callbacks.onSparkSubscribe).toHaveBeenCalledWith('weather', 'sub-99', process);
       });
@@ -956,26 +1093,41 @@ describe('PluginProcess', () => {
         (callbacks.onSparkSubscribe as ReturnType<typeof mock>).mockReturnValueOnce(unsub);
 
         // Subscribe first
-        triggerHandler(subscribeSpark, { sparkType: 'weather', subscriptionId: 'sub-99' });
+        triggerHandler(subscribeSpark, {
+          sparkType: 'weather',
+          subscriptionId: 'sub-99',
+        });
 
         // Now unsubscribe
-        triggerHandler(unsubscribeSpark, { subscriptionId: 'sub-99' });
+        triggerHandler(unsubscribeSpark, {
+          subscriptionId: 'sub-99',
+        });
 
         expect(unsub).toHaveBeenCalledTimes(1);
         expect(callbacks.onSparkUnsubscribe).toHaveBeenCalledWith('sub-99');
       });
 
       test('calls onSparkUnsubscribe even when subscription not found', () => {
-        triggerHandler(unsubscribeSpark, { subscriptionId: 'unknown-sub' });
+        triggerHandler(unsubscribeSpark, {
+          subscriptionId: 'unknown-sub',
+        });
 
         expect(callbacks.onSparkUnsubscribe).toHaveBeenCalledWith('unknown-sub');
       });
     });
 
     test('blockEmit handler calls onBlockEmit', () => {
-      triggerHandler(blockEmit, { instanceId: 'inst-1', port: 'output', data: { result: 42 } });
+      triggerHandler(blockEmit, {
+        instanceId: 'inst-1',
+        port: 'output',
+        data: {
+          result: 42,
+        },
+      });
 
-      expect(callbacks.onBlockEmit).toHaveBeenCalledWith('inst-1', 'output', { result: 42 });
+      expect(callbacks.onBlockEmit).toHaveBeenCalledWith('inst-1', 'output', {
+        result: 42,
+      });
     });
 
     test('blockLog handler calls onBlockLog', () => {
@@ -991,18 +1143,32 @@ describe('PluginProcess', () => {
 
     describe('registerBrickType', () => {
       test('registers a declared brick type and calls onBrickType', () => {
-        const brickType = { id: 'test-brick', families: ['dashboard'] };
+        const brickType = {
+          id: 'test-brick',
+          families: [
+            'dashboard',
+          ],
+        };
 
-        triggerHandler(registerBrickType, { brickType });
+        triggerHandler(registerBrickType, {
+          brickType,
+        });
 
         expect(process.brickTypes.has('@test/plugin:test-brick')).toBe(true);
         expect(callbacks.onBrickType).toHaveBeenCalledWith(brickType);
       });
 
       test('ignores undeclared brick types', () => {
-        const brickType = { id: 'undeclared-brick', families: ['dashboard'] };
+        const brickType = {
+          id: 'undeclared-brick',
+          families: [
+            'dashboard',
+          ],
+        };
 
-        triggerHandler(registerBrickType, { brickType });
+        triggerHandler(registerBrickType, {
+          brickType,
+        });
 
         expect(process.brickTypes.size).toBe(0);
         expect(callbacks.onBrickType).not.toHaveBeenCalled();
@@ -1010,22 +1176,37 @@ describe('PluginProcess', () => {
     });
 
     test('patchBrickInstance handler calls onBrickInstancePatch', () => {
-      const mutations = [{ op: 'replace', path: '/text', value: 'hello' }];
+      const mutations = [
+        {
+          op: 'replace',
+          path: '/text',
+          value: 'hello',
+        },
+      ];
 
-      triggerHandler(patchBrickInstance, { instanceId: 'inst-1', mutations });
+      triggerHandler(patchBrickInstance, {
+        instanceId: 'inst-1',
+        mutations,
+      });
 
       expect(callbacks.onBrickInstancePatch).toHaveBeenCalledWith('inst-1', mutations);
     });
 
     test('registerAction handler adds action id to the actions set', () => {
-      triggerHandler(registerAction, { id: 'my-action' });
+      triggerHandler(registerAction, {
+        id: 'my-action',
+      });
 
       expect(process.actions.has('my-action')).toBe(true);
     });
 
     test('registerAction handler accumulates multiple actions', () => {
-      triggerHandler(registerAction, { id: 'action-a' });
-      triggerHandler(registerAction, { id: 'action-b' });
+      triggerHandler(registerAction, {
+        id: 'action-a',
+      });
+      triggerHandler(registerAction, {
+        id: 'action-b',
+      });
 
       expect(process.actions.size).toBe(2);
       expect(process.actions.has('action-a')).toBe(true);
@@ -1033,20 +1214,30 @@ describe('PluginProcess', () => {
     });
 
     test('registerRoute handler calls onRoute', () => {
-      triggerHandler(registerRoute, { method: 'POST', path: '/api/webhook' });
+      triggerHandler(registerRoute, {
+        method: 'POST',
+        path: '/api/webhook',
+      });
 
       expect(callbacks.onRoute).toHaveBeenCalledWith('POST', '/api/webhook');
     });
 
     test('updatePreference handler calls onUpdatePreference', () => {
-      triggerHandler(updatePreference, { key: 'theme', value: 'dark' });
+      triggerHandler(updatePreference, {
+        key: 'theme',
+        value: 'dark',
+      });
 
       expect(callbacks.onUpdatePreference).toHaveBeenCalledWith('theme', 'dark');
     });
 
     describe('getHubLocation (implement)', () => {
       test('returns location when permission is granted', () => {
-        const locationData = { lat: 48.856, lon: 2.352, city: 'Paris' };
+        const locationData = {
+          lat: 48.856,
+          lon: 2.352,
+          city: 'Paris',
+        };
         (callbacks.onGetGrantedPermissions as ReturnType<typeof mock>).mockReturnValue([
           'location',
         ]);
@@ -1054,7 +1245,9 @@ describe('PluginProcess', () => {
 
         const result = triggerImplement(getHubLocation, {});
 
-        expect(result).toEqual({ location: locationData });
+        expect(result).toEqual({
+          location: locationData,
+        });
         expect(callbacks.onGetHubLocation).toHaveBeenCalled();
       });
 
@@ -1066,7 +1259,9 @@ describe('PluginProcess', () => {
 
         const result = triggerImplement(getHubLocation, {});
 
-        expect(result).toEqual({ location: null });
+        expect(result).toEqual({
+          location: null,
+        });
       });
 
       test('throws RpcError when location permission is not granted', () => {
@@ -1077,10 +1272,16 @@ describe('PluginProcess', () => {
         try {
           triggerImplement(getHubLocation, {});
         } catch (e: unknown) {
-          const err = e as { code?: string; message?: string; data?: Record<string, unknown> };
+          const err = e as {
+            code?: string;
+            message?: string;
+            data?: Record<string, unknown>;
+          };
           expect(err.code).toBe('PERMISSION_DENIED');
           expect(err.message).toContain('location');
-          expect(err.data).toEqual({ permission: 'location' });
+          expect(err.data).toEqual({
+            permission: 'location',
+          });
         }
       });
     });

@@ -42,8 +42,13 @@ export class PluginLoader implements Loader {
       } catch (err) {
         this.logs.error(
           'Failed to load plugin',
-          { pluginName: entry.name, version: entry.version },
-          { error: err }
+          {
+            pluginName: entry.name,
+            version: entry.version,
+          },
+          {
+            error: err,
+          }
         );
       }
     }

@@ -7,7 +7,7 @@ export interface BaseNode {
 
 function isMarker<T>(brand: string) {
   return (v: unknown): v is T =>
-    v != null && typeof v === 'object' && (v as Record<string, unknown>)[brand] === true;
+    v !== null && typeof v === 'object' && (v as Record<string, unknown>)[brand] === true;
 }
 
 // ── I18n Reference ───────────────────────────────────────────────────────────
@@ -57,18 +57,25 @@ export type IntlRef = {
 export const isIntlRef = isMarker<IntlRef>('__intl');
 
 export function resolveIntlRef(ref: IntlRef, locale?: string): string {
-  if (!locale) return ref.type === 'list' ? ref.value.join(', ') : String(ref.value);
+  if (!locale) {
+    return ref.type === 'list' ? ref.value.join(', ') : String(ref.value);
+  }
   switch (ref.type) {
     case 'dateTime':
       return new Intl.DateTimeFormat(locale, ref.options).format(ref.value);
     case 'number':
       return new Intl.NumberFormat(locale, ref.options).format(ref.value);
     case 'relativeTime':
-      return new Intl.RelativeTimeFormat(locale, { numeric: 'auto' }).format(ref.value, ref.unit);
+      return new Intl.RelativeTimeFormat(locale, {
+        numeric: 'auto',
+      }).format(ref.value, ref.unit);
     case 'list':
       return new Intl.ListFormat(
         locale,
-        ref.options ?? { style: 'long', type: 'conjunction' }
+        ref.options ?? {
+          style: 'long',
+          type: 'conjunction',
+        }
       ).format(ref.value);
   }
 }
@@ -87,7 +94,9 @@ export function _setActionRegistrar(fn: ((handler: ActionHandler) => string) | n
 }
 
 export function resolveAction(handler: ActionHandler): string {
-  if (_registrar) return _registrar(handler);
+  if (_registrar) {
+    return _registrar(handler);
+  }
   return `__action_${_fallbackIdx++}`;
 }
 
@@ -108,19 +117,35 @@ export type ComponentNode = NodeTypeMap[keyof NodeTypeMap];
 export type Child = ComponentNode | I18nRef | IntlRef | ComponentNode[] | false | null | undefined;
 
 export function normalizeChildren(children: Child | Child[]): ComponentNode[] {
-  if (!children) return [];
-  const items = Array.isArray(children) ? children.flat() : [children];
+  if (!children) {
+    return [];
+  }
+  const items = Array.isArray(children)
+    ? children.flat()
+    : [
+        children,
+      ];
   const result: ComponentNode[] = [];
   for (const c of items) {
-    if (c == null || c === false) continue;
+    if (c === null || c === false || c === undefined) {
+      continue;
+    }
     if (isI18nRef(c)) {
       result.push({
         type: 'text',
         content: c.key,
-        i18n: { ns: c.ns, key: c.key, params: c.params },
+        i18n: {
+          ns: c.ns,
+          key: c.key,
+          params: c.params,
+        },
       } as ComponentNode);
     } else if (isIntlRef(c)) {
-      result.push({ type: 'text', content: resolveIntlRef(c), intl: c } as ComponentNode);
+      result.push({
+        type: 'text',
+        content: resolveIntlRef(c),
+        intl: c,
+      } as ComponentNode);
     } else {
       result.push(c);
     }

@@ -11,7 +11,7 @@ export function parseStackLine(
 ): { sourceFile: string; sourceLine: number } | null {
   const match =
     STACK_REGEX_WITH_PARENS.exec(line) || STACK_REGEX_WITHOUT_PARENS.exec(line);
-  if (!match) return null;
+  if (!match) { return null; }
 
   return {
     sourceFile: match[1],
@@ -24,7 +24,7 @@ export function parseStackLine(
  */
 export function captureCallSite(): { sourceFile?: string; sourceLine?: number } {
   const stack = new Error("trace").stack;
-  if (!stack) return {};
+  if (!stack) { return {}; }
 
   const lines = stack.split("\n");
 
@@ -39,7 +39,7 @@ export function captureCallSite(): { sourceFile?: string; sourceLine?: number } 
 
     // This is the actual caller - extract file and line number
     const result = parseStackLine(line);
-    if (!result) continue;
+    if (!result) { continue; }
 
     return result;
   }

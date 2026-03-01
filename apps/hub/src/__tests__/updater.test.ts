@@ -34,7 +34,11 @@ interface MockReleaseOptions {
 
 /** Build a mock fetch that responds like the GitHub releases API */
 function createGitHubReleaseFetch(tagName: string, options?: MockReleaseOptions) {
-  const assets: Array<{ name: string; browser_download_url: string; size: number }> = [];
+  const assets: Array<{
+    name: string;
+    browser_download_url: string;
+    size: number;
+  }> = [];
 
   if (options?.assetName) {
     assets.push({
@@ -73,16 +77,32 @@ function createGitHubReleaseFetch(tagName: string, options?: MockReleaseOptions)
       })
     : null;
 
-  return (input: RequestInfo | URL) => {
-    const url =
-      typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+  return (input: string | URL | Request) => {
+    let url: string;
+    if (typeof input === 'string') {
+      url = input;
+    } else if (input instanceof URL) {
+      url = input.toString();
+    } else {
+      url = input.url;
+    }
     if (metaJson && url.includes('release-meta.json')) {
       return Promise.resolve(
-        new Response(metaJson, { status: 200, headers: { 'Content-Type': 'application/json' } })
+        new Response(metaJson, {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        })
       );
     }
     return Promise.resolve(
-      new Response(releaseJson, { status: 200, headers: { 'Content-Type': 'application/json' } })
+      new Response(releaseJson, {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
     );
   };
 }
@@ -105,10 +125,16 @@ describe('getAssetName (indirect)', () => {
   });
 
   test('matches brika-<platform>-<arch>.tar.gz on non-windows', async () => {
-    if (process.platform === 'win32') return; // skip on Windows
+    if (process.platform === 'win32') {
+      return; // skip on Windows
+    }
 
     const assetName = `brika-${process.platform}-${process.arch}.tar.gz`;
-    mockFetch.mockImplementation(createGitHubReleaseFetch('v99.0.0', { assetName }));
+    mockFetch.mockImplementation(
+      createGitHubReleaseFetch('v99.0.0', {
+        assetName,
+      })
+    );
 
     const info = await checkForUpdate();
 
@@ -119,7 +145,11 @@ describe('getAssetName (indirect)', () => {
   test('uses "windows" instead of "win32" for Windows platform', async () => {
     // Regardless of actual platform, verify the naming convention
     const expected = expectedAssetName();
-    mockFetch.mockImplementation(createGitHubReleaseFetch('v99.0.0', { assetName: expected }));
+    mockFetch.mockImplementation(
+      createGitHubReleaseFetch('v99.0.0', {
+        assetName: expected,
+      })
+    );
 
     const info = await checkForUpdate();
 
@@ -135,7 +165,9 @@ describe('getAssetName (indirect)', () => {
 
   test('returns null when asset name does not match current platform', async () => {
     mockFetch.mockImplementation(
-      createGitHubReleaseFetch('v99.0.0', { assetName: 'brika-fakeos-fakeArch.tar.gz' })
+      createGitHubReleaseFetch('v99.0.0', {
+        assetName: 'brika-fakeos-fakeArch.tar.gz',
+      })
     );
 
     const info = await checkForUpdate();
@@ -345,7 +377,12 @@ describe('fetchLatestRelease (indirect)', () => {
 
   test('throws on non-OK response from GitHub API', async () => {
     mockFetch.mockImplementation(() =>
-      Promise.resolve(new Response('Not Found', { status: 404, statusText: 'Not Found' }))
+      Promise.resolve(
+        new Response('Not Found', {
+          status: 404,
+          statusText: 'Not Found',
+        })
+      )
     );
 
     await expect(checkForUpdate()).rejects.toThrow('GitHub API returned 404');
@@ -380,7 +417,11 @@ describe('fetchLatestRelease (indirect)', () => {
 
   test('fetches release-meta.json when asset exists', async () => {
     const commit = 'abc123def456abc123def456abc123def456abc1';
-    mockFetch.mockImplementation(createGitHubReleaseFetch('v99.0.0', { commit }));
+    mockFetch.mockImplementation(
+      createGitHubReleaseFetch('v99.0.0', {
+        commit,
+      })
+    );
 
     const info = await checkForUpdate();
 
@@ -399,13 +440,23 @@ describe('fetchLatestRelease (indirect)', () => {
 
   test('handles release-meta.json fetch failure gracefully', async () => {
     // First call returns the release, second call (meta) fails
-    let callCount = 0;
-    mockFetch.mockImplementation((input: RequestInfo | URL) => {
-      const url =
-        typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
-      callCount++;
+    let _callCount = 0;
+    mockFetch.mockImplementation((input: string | URL | Request) => {
+      let url: string;
+      if (typeof input === 'string') {
+        url = input;
+      } else if (input instanceof URL) {
+        url = input.toString();
+      } else {
+        url = input.url;
+      }
+      _callCount++;
       if (url.includes('release-meta.json')) {
-        return Promise.resolve(new Response('Not Found', { status: 404 }));
+        return Promise.resolve(
+          new Response('Not Found', {
+            status: 404,
+          })
+        );
       }
       return Promise.resolve(
         new Response(
@@ -423,7 +474,12 @@ describe('fetchLatestRelease (indirect)', () => {
               },
             ],
           }),
-          { status: 200, headers: { 'Content-Type': 'application/json' } }
+          {
+            status: 200,
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          }
         )
       );
     });
@@ -533,7 +589,11 @@ describe('compareRelease (indirect)', () => {
 
   test('finds matching asset for current platform', async () => {
     const assetName = expectedAssetName();
-    mockFetch.mockImplementation(createGitHubReleaseFetch('v99.0.0', { assetName }));
+    mockFetch.mockImplementation(
+      createGitHubReleaseFetch('v99.0.0', {
+        assetName,
+      })
+    );
 
     const info = await checkForUpdate();
 
@@ -575,7 +635,9 @@ describe('verifySha256 (metadata population)', () => {
 
   test('release-meta.json checksums are propagated to releaseCommit', async () => {
     const assetName = expectedAssetName();
-    const checksums = { [assetName]: 'a'.repeat(64) };
+    const checksums = {
+      [assetName]: 'a'.repeat(64),
+    };
     mockFetch.mockImplementation(
       createGitHubReleaseFetch('v99.0.0', {
         assetName,
@@ -665,7 +727,11 @@ describe('checkForUpdate', () => {
 
   test('populates asset info when matching asset found', async () => {
     const assetName = expectedAssetName();
-    mockFetch.mockImplementation(createGitHubReleaseFetch('v99.0.0', { assetName }));
+    mockFetch.mockImplementation(
+      createGitHubReleaseFetch('v99.0.0', {
+        assetName,
+      })
+    );
 
     const info = await checkForUpdate();
 
@@ -675,7 +741,12 @@ describe('checkForUpdate', () => {
 
   test('throws on GitHub API error', async () => {
     mockFetch.mockImplementation(() =>
-      Promise.resolve(new Response('Not Found', { status: 404, statusText: 'Not Found' }))
+      Promise.resolve(
+        new Response('Not Found', {
+          status: 404,
+          statusText: 'Not Found',
+        })
+      )
     );
 
     let caughtError: unknown;
@@ -704,7 +775,9 @@ describe('checkForUpdate', () => {
 
   test('passes through releaseNotes from GitHub body', async () => {
     mockFetch.mockImplementation(
-      createGitHubReleaseFetch('v99.0.0', { body: '## Changelog\n- Fixed bugs' })
+      createGitHubReleaseFetch('v99.0.0', {
+        body: '## Changelog\n- Fixed bugs',
+      })
     );
 
     const info = await checkForUpdate();
@@ -724,7 +797,12 @@ describe('checkForUpdate', () => {
             body: null,
             assets: [],
           }),
-          { status: 200, headers: { 'Content-Type': 'application/json' } }
+          {
+            status: 200,
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          }
         )
       )
     );
@@ -738,7 +816,12 @@ describe('checkForUpdate', () => {
     const publishedAt = '2026-06-15T12:30:00Z';
     const htmlUrl = 'https://github.com/maxscharwath/brika/releases/tag/v99.0.0';
 
-    mockFetch.mockImplementation(createGitHubReleaseFetch('v99.0.0', { publishedAt, htmlUrl }));
+    mockFetch.mockImplementation(
+      createGitHubReleaseFetch('v99.0.0', {
+        publishedAt,
+        htmlUrl,
+      })
+    );
 
     const info = await checkForUpdate();
 
@@ -748,7 +831,9 @@ describe('checkForUpdate', () => {
 
   test('ignores assets that do not match the current platform', async () => {
     mockFetch.mockImplementation(
-      createGitHubReleaseFetch('v99.0.0', { assetName: 'brika-fakeos-fakeArch.tar.gz' })
+      createGitHubReleaseFetch('v99.0.0', {
+        assetName: 'brika-fakeos-fakeArch.tar.gz',
+      })
     );
 
     const info = await checkForUpdate();
@@ -800,7 +885,11 @@ describe('checkForUpdate', () => {
 
   test('populates releaseCommit from release-meta.json', async () => {
     const commitSha = 'ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00';
-    mockFetch.mockImplementation(createGitHubReleaseFetch('v99.0.0', { commit: commitSha }));
+    mockFetch.mockImplementation(
+      createGitHubReleaseFetch('v99.0.0', {
+        commit: commitSha,
+      })
+    );
 
     const info = await checkForUpdate();
 
@@ -844,7 +933,7 @@ describe('checkForUpdate', () => {
     mockFetch.mockImplementation(
       createGitHubReleaseFetch('v99.0.0', {
         assetName,
-        commit: 'abc'.repeat(13) + 'a',
+        commit: `${'abc'.repeat(13)}a`,
         body: 'Some notes',
         publishedAt: '2026-03-01T00:00:00Z',
         htmlUrl: 'https://github.com/example/releases/v99.0.0',
@@ -861,7 +950,7 @@ describe('checkForUpdate', () => {
       releaseUrl: 'https://github.com/example/releases/v99.0.0',
       releaseNotes: 'Some notes',
       publishedAt: '2026-03-01T00:00:00Z',
-      releaseCommit: 'abc'.repeat(13) + 'a',
+      releaseCommit: `${'abc'.repeat(13)}a`,
       currentCommit: buildInfo.commitFull,
       assetName,
       assetSize: 1024 * 1024 * 10,

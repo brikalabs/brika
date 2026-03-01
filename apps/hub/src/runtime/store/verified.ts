@@ -102,7 +102,9 @@ export class VerifiedPluginsService {
    */
   async #fetchVerifiedList(): Promise<void> {
     try {
-      this.#log.info('Fetching verified plugins list', { url: REGISTRY_URL });
+      this.#log.info('Fetching verified plugins list', {
+        url: REGISTRY_URL,
+      });
       const response = await fetch(`${REGISTRY_URL}/verified-plugins.json`, {
         headers: {
           Accept: 'application/json',
@@ -141,9 +143,13 @@ export class VerifiedPluginsService {
         this.#verifiedMap.set(plugin.name, plugin);
       }
 
-      this.#log.info('Loaded verified plugins', { count: data.plugins.length });
+      this.#log.info('Loaded verified plugins', {
+        count: data.plugins.length,
+      });
     } catch (error) {
-      this.#log.error('Failed to load verified plugins list', { error: String(error) });
+      this.#log.error('Failed to load verified plugins list', {
+        error: String(error),
+      });
 
       // Use empty list if fetch failed
       this.#verifiedList = {
@@ -160,7 +166,9 @@ export class VerifiedPluginsService {
    * Returns true if signature is valid, false otherwise.
    */
   #verifyRegistrySignature(data: VerifiedPluginsList): boolean {
-    if (!data.publicKey || !data.signature) return false;
+    if (!data.publicKey || !data.signature) {
+      return false;
+    }
 
     // If a pinned key is configured, ensure it matches
     if (PINNED_PUBLIC_KEY && data.publicKey !== PINNED_PUBLIC_KEY) {

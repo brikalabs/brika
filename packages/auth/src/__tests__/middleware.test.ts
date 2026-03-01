@@ -4,13 +4,13 @@
  * Tests for requireAuth and requireScope middleware.
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'bun:test';
 import { container } from '@brika/di';
 import { requireAuth } from '../middleware/requireAuth';
 import { requireScope } from '../middleware/requireScope';
 import { ScopeService } from '../services/ScopeService';
-import { Role, Scope } from '../types';
 import type { Session } from '../types';
+import { Role, Scope } from '../types';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -22,7 +22,9 @@ const adminSession: Session = {
   userEmail: 'admin@test.com',
   userName: 'Admin',
   userRole: Role.ADMIN,
-  scopes: [Scope.ADMIN_ALL],
+  scopes: [
+    Scope.ADMIN_ALL,
+  ],
 };
 
 const userSession: Session = {
@@ -31,23 +33,38 @@ const userSession: Session = {
   userEmail: 'user@test.com',
   userName: 'User',
   userRole: Role.USER,
-  scopes: [Scope.WORKFLOW_READ, Scope.WORKFLOW_WRITE, Scope.BOARD_READ],
+  scopes: [
+    Scope.WORKFLOW_READ,
+    Scope.WORKFLOW_WRITE,
+    Scope.BOARD_READ,
+  ],
 };
 
 function mockContext(url: string, session: Session | null = null) {
   const next = vi.fn().mockResolvedValue(undefined);
   const ctx = {
-    req: { url, header: vi.fn().mockReturnValue(undefined) },
+    req: {
+      url,
+      header: vi.fn().mockReturnValue(undefined),
+    },
     get: vi.fn((key: string) => {
-      if (key === 'session') return session;
+      if (key === 'session') {
+        return session;
+      }
       return undefined;
     }),
     set: vi.fn(),
-    json: vi.fn((body: unknown, status?: number) =>
-      new Response(JSON.stringify(body), { status: status ?? 200 })
+    json: vi.fn(
+      (body: Record<string, unknown>, status?: number) =>
+        new Response(JSON.stringify(body), {
+          status: status ?? 200,
+        })
     ),
   };
-  return { ctx, next };
+  return {
+    ctx,
+    next,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -68,7 +85,12 @@ describe('requireAuth', () => {
     const { ctx, next } = mockContext('http://localhost:3001/api/test');
     await middleware(ctx as never, next);
     expect(next).not.toHaveBeenCalled();
-    expect(ctx.json).toHaveBeenCalledWith({ error: 'Unauthorized' }, 401);
+    expect(ctx.json).toHaveBeenCalledWith(
+      {
+        error: 'Unauthorized',
+      },
+      401
+    );
   });
 
   it('should call next for admin session', async () => {
@@ -86,7 +108,9 @@ describe('requireScope', () => {
   beforeEach(() => {
     container.clearInstances();
     // ScopeService has no dependencies — register it directly
-    container.register(ScopeService, { useClass: ScopeService });
+    container.register(ScopeService, {
+      useClass: ScopeService,
+    });
   });
 
   afterEach(() => {
@@ -106,11 +130,13 @@ describe('requireScope', () => {
     const { ctx, next } = mockContext('http://localhost:3001/api/plugins', userSession);
     await middleware(ctx as never, next);
     expect(next).not.toHaveBeenCalled();
-    expect(ctx.json).toHaveBeenCalled();
-    const [body, status] = ctx.json.mock.calls[0];
-    expect(status).toBe(403);
-    expect(body.error).toBe('insufficient_permissions');
-    expect(body.message).toBe('This operation requires additional permissions');
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        error: 'insufficient_permissions',
+        message: 'This operation requires additional permissions',
+      }),
+      403
+    );
   });
 
   it('should return 401 when no session at all', async () => {
@@ -118,10 +144,12 @@ describe('requireScope', () => {
     const { ctx, next } = mockContext('http://localhost:3001/api/workflows');
     await middleware(ctx as never, next);
     expect(next).not.toHaveBeenCalled();
-    expect(ctx.json).toHaveBeenCalled();
-    const [body, status] = ctx.json.mock.calls[0];
-    expect(status).toBe(401);
-    expect(body.error).toBe('unauthorized');
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        error: 'unauthorized',
+      }),
+      401
+    );
   });
 
   it('should allow admin to bypass any scope check', async () => {
@@ -133,7 +161,10 @@ describe('requireScope', () => {
   });
 
   it('should accept an array of scopes (any match)', async () => {
-    const middleware = requireScope([Scope.PLUGIN_MANAGE, Scope.WORKFLOW_READ]);
+    const middleware = requireScope([
+      Scope.PLUGIN_MANAGE,
+      Scope.WORKFLOW_READ,
+    ]);
     const { ctx, next } = mockContext('http://localhost:3001/api/mixed', userSession);
     await middleware(ctx as never, next);
     // userSession has WORKFLOW_READ, so should pass
@@ -141,21 +172,31 @@ describe('requireScope', () => {
   });
 
   it('should return 403 when none of the array scopes match', async () => {
-    const middleware = requireScope([Scope.PLUGIN_MANAGE, Scope.SETTINGS_WRITE]);
+    const middleware = requireScope([
+      Scope.PLUGIN_MANAGE,
+      Scope.SETTINGS_WRITE,
+    ]);
     const { ctx, next } = mockContext('http://localhost:3001/api/admin-op', userSession);
     await middleware(ctx as never, next);
     expect(next).not.toHaveBeenCalled();
-    const [body, status] = ctx.json.mock.calls[0];
-    expect(status).toBe(403);
-    expect(body.error).toBe('insufficient_permissions');
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        error: 'insufficient_permissions',
+      }),
+      403
+    );
   });
 
   it('should not leak user scopes in 403 response', async () => {
     const middleware = requireScope(Scope.SETTINGS_WRITE);
     const { ctx, next } = mockContext('http://localhost:3001/api/settings', userSession);
     await middleware(ctx as never, next);
-    const [body] = ctx.json.mock.calls[0];
-    expect(body.required).toBeUndefined();
-    expect(body.provided).toBeUndefined();
+    expect(ctx.json).toHaveBeenCalledWith(
+      expect.not.objectContaining({
+        required: expect.anything(),
+        provided: expect.anything(),
+      }),
+      expect.anything()
+    );
   });
 });

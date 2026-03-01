@@ -10,15 +10,24 @@
     "url": "git+https://github.com/maxscharwath/brika.git",
     "directory": "packages/create-brika"
   },
-  "keywords": ["brika", "plugin", "scaffold", "cli", "create"],
+  "keywords": [
+    "brika",
+    "plugin",
+    "scaffold",
+    "cli",
+    "create"
+  ],
   "bin": {
     "create-brika": "./dist/index.js"
   },
-  "files": ["dist", "template"],
+  "files": [
+    "dist",
+    "template"
+  ],
   "scripts": {
     "build": "bun run build.ts",
     "dev": "bun run src/index.ts",
-    "tsc": "bunx --bun tsc --noEmit",
+    "typecheck": "tsgo --noEmit",
     "prepublishOnly": "bun run build"
   },
   "devDependencies": {

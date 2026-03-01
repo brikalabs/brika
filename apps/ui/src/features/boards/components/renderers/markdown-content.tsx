@@ -53,10 +53,19 @@ const components: Components = {
   td: ({ children }) => <td className="px-3 py-1.5">{children}</td>,
 };
 
-export default function MarkdownContent({ content }: Readonly<{ content: string }>) {
+export default function MarkdownContent({
+  content,
+}: Readonly<{
+  content: string;
+}>) {
   return (
     <div className="min-w-0 text-foreground [&>*:first-child]:mt-0">
-      <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
+      <ReactMarkdown
+        remarkPlugins={[
+          remarkGfm,
+        ]}
+        components={components}
+      >
         {content}
       </ReactMarkdown>
     </div>

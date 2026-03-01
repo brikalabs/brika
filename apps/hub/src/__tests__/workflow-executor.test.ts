@@ -12,7 +12,9 @@ import type { ExecutionEvent, ExecutionListener } from '@/runtime/workflows/work
 import { WorkflowExecutor } from '@/runtime/workflows/workflow-executor';
 import type { Json } from '@/types';
 
-useTestBed({ autoStub: false });
+useTestBed({
+  autoStub: false,
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Test Fixtures
@@ -22,7 +24,12 @@ const createSimpleWorkflow = (id = 'test-workflow'): Workflow => ({
   id,
   name: `Workflow ${id}`,
   enabled: true,
-  blocks: [{ id: 'block-1', type: 'timer' }],
+  blocks: [
+    {
+      id: 'block-1',
+      type: 'timer',
+    },
+  ],
   connections: [],
 });
 
@@ -31,8 +38,14 @@ const createMultiBlockWorkflow = (): Workflow => ({
   name: 'Multi Block Workflow',
   enabled: true,
   blocks: [
-    { id: 'block-1', type: 'timer' },
-    { id: 'block-2', type: 'logger' },
+    {
+      id: 'block-1',
+      type: 'timer',
+    },
+    {
+      id: 'block-2',
+      type: 'logger',
+    },
   ],
   connections: [],
 });
@@ -42,10 +55,23 @@ const createConnectedWorkflow = (): Workflow => ({
   name: 'Connected Workflow',
   enabled: true,
   blocks: [
-    { id: 'block-a', type: 'timer' },
-    { id: 'block-b', type: 'logger' },
+    {
+      id: 'block-a',
+      type: 'timer',
+    },
+    {
+      id: 'block-b',
+      type: 'logger',
+    },
   ],
-  connections: [{ from: 'block-a', fromPort: 'tick', to: 'block-b', toPort: 'input' }],
+  connections: [
+    {
+      from: 'block-a',
+      fromPort: 'tick',
+      to: 'block-b',
+      toPort: 'input',
+    },
+  ],
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -86,7 +112,9 @@ describe('WorkflowExecutor - Lifecycle', () => {
         _config: unknown
       ) => {
         startedBlocks.push(instanceId);
-        return Promise.resolve({ ok: true });
+        return Promise.resolve({
+          ok: true,
+        });
       },
       stopBlockInstance: () => undefined,
       pushBlockInput: () => undefined,
@@ -94,7 +122,11 @@ describe('WorkflowExecutor - Lifecycle', () => {
 
     stub(BlockRegistry, {
       has: () => true,
-      get: () => ({ id: 'test', outputs: [], inputs: [] }),
+      get: () => ({
+        id: 'test',
+        outputs: [],
+        inputs: [],
+      }),
       list: () => [],
     });
 
@@ -183,14 +215,21 @@ describe('WorkflowExecutor - Connection Map Building', () => {
       setBlockLogHandler: () => undefined,
       clearBlockEmitHandler: () => undefined,
       clearBlockLogHandler: () => undefined,
-      startBlock: () => Promise.resolve({ ok: true }),
+      startBlock: () =>
+        Promise.resolve({
+          ok: true,
+        }),
       stopBlockInstance: () => undefined,
       pushBlockInput: () => undefined,
     });
 
     stub(BlockRegistry, {
       has: () => true,
-      get: () => ({ id: 'test', outputs: [], inputs: [] }),
+      get: () => ({
+        id: 'test',
+        outputs: [],
+        inputs: [],
+      }),
       list: () => [],
     });
 
@@ -219,13 +258,32 @@ describe('WorkflowExecutor - Connection Map Building', () => {
       name: 'Multi Connection Workflow',
       enabled: true,
       blocks: [
-        { id: 'block-a', type: 'timer' },
-        { id: 'block-b', type: 'logger' },
-        { id: 'block-c', type: 'logger' },
+        {
+          id: 'block-a',
+          type: 'timer',
+        },
+        {
+          id: 'block-b',
+          type: 'logger',
+        },
+        {
+          id: 'block-c',
+          type: 'logger',
+        },
       ],
       connections: [
-        { from: 'block-a', fromPort: 'tick', to: 'block-b', toPort: 'input' },
-        { from: 'block-a', fromPort: 'tick', to: 'block-c', toPort: 'input' },
+        {
+          from: 'block-a',
+          fromPort: 'tick',
+          to: 'block-b',
+          toPort: 'input',
+        },
+        {
+          from: 'block-a',
+          fromPort: 'tick',
+          to: 'block-c',
+          toPort: 'input',
+        },
       ],
     };
 
@@ -241,11 +299,20 @@ describe('WorkflowExecutor - Connection Map Building', () => {
       name: 'Default Port Workflow',
       enabled: true,
       blocks: [
-        { id: 'block-a', type: 'timer' },
-        { id: 'block-b', type: 'logger' },
+        {
+          id: 'block-a',
+          type: 'timer',
+        },
+        {
+          id: 'block-b',
+          type: 'logger',
+        },
       ],
       connections: [
-        { from: 'block-a', to: 'block-b' }, // No port names - should use defaults
+        {
+          from: 'block-a',
+          to: 'block-b',
+        }, // No port names - should use defaults
       ],
     };
 
@@ -257,7 +324,11 @@ describe('WorkflowExecutor - Connection Map Building', () => {
 
 describe('WorkflowExecutor - Data Injection', () => {
   let executor: WorkflowExecutor;
-  let injectedData: Array<{ blockId: string; port: string; data: Json }>;
+  let injectedData: Array<{
+    blockId: string;
+    port: string;
+    data: Json;
+  }>;
 
   beforeEach(() => {
     injectedData = [];
@@ -267,16 +338,27 @@ describe('WorkflowExecutor - Data Injection', () => {
       setBlockLogHandler: () => undefined,
       clearBlockEmitHandler: () => undefined,
       clearBlockLogHandler: () => undefined,
-      startBlock: () => Promise.resolve({ ok: true }),
+      startBlock: () =>
+        Promise.resolve({
+          ok: true,
+        }),
       stopBlockInstance: () => undefined,
       pushBlockInput: (blockId: string, port: string, data: Json) => {
-        injectedData.push({ blockId, port, data });
+        injectedData.push({
+          blockId,
+          port,
+          data,
+        });
       },
     });
 
     stub(BlockRegistry, {
       has: () => true,
-      get: () => ({ id: 'test', outputs: [], inputs: [] }),
+      get: () => ({
+        id: 'test',
+        outputs: [],
+        inputs: [],
+      }),
       list: () => [],
     });
 
@@ -294,14 +376,18 @@ describe('WorkflowExecutor - Data Injection', () => {
     const workflow = createSimpleWorkflow();
 
     await executor.start(workflow);
-    const result = executor.inject('block-1', 'input', { value: 42 });
+    const result = executor.inject('block-1', 'input', {
+      value: 42,
+    });
 
     expect(result).toBeTrue();
     expect(injectedData).toHaveLength(1);
     expect(injectedData[0]).toMatchObject({
       blockId: 'block-1',
       port: 'input',
-      data: { value: 42 },
+      data: {
+        value: 42,
+      },
     });
   });
 
@@ -310,25 +396,57 @@ describe('WorkflowExecutor - Data Injection', () => {
     const workflow = createSimpleWorkflow();
 
     await executor.start(workflow);
-    const result = executor.inject('non-existent-block', 'input', { value: 42 });
+    const result = executor.inject('non-existent-block', 'input', {
+      value: 42,
+    });
 
     expect(result).toBeFalse();
     expect(injectedData).toHaveLength(0);
   });
 
   test('should reject injection when workflow is not running', () => {
-    const result = executor.inject('block-1', 'input', { value: 42 });
+    const result = executor.inject('block-1', 'input', {
+      value: 42,
+    });
 
     expect(result).toBeFalse();
     expect(injectedData).toHaveLength(0);
   });
 
   test.each([
-    ['string value', 'port1', 'string'],
-    ['number value', 'port2', 123],
-    ['boolean value', 'port3', true],
-    ['null value', 'port4', null],
-    ['nested object', 'port5', { nested: { data: [1, 2, 3] } }],
+    [
+      'string value',
+      'port1',
+      'string',
+    ],
+    [
+      'number value',
+      'port2',
+      123,
+    ],
+    [
+      'boolean value',
+      'port3',
+      true,
+    ],
+    [
+      'null value',
+      'port4',
+      null,
+    ],
+    [
+      'nested object',
+      'port5',
+      {
+        nested: {
+          data: [
+            1,
+            2,
+            3,
+          ],
+        },
+      },
+    ],
   ])('should inject %s successfully', async (_description, port, data) => {
     expect.hasAssertions();
     const workflow = createSimpleWorkflow();
@@ -350,12 +468,19 @@ describe('WorkflowExecutor - Event Listeners', () => {
 
   beforeEach(() => {
     stub(PluginManager, {
-      startBlock: () => Promise.resolve({ ok: true }),
+      startBlock: () =>
+        Promise.resolve({
+          ok: true,
+        }),
     });
 
     stub(BlockRegistry, {
       has: () => true,
-      get: () => ({ id: 'test', outputs: [], inputs: [] }),
+      get: () => ({
+        id: 'test',
+        outputs: [],
+        inputs: [],
+      }),
       list: () => [],
     });
 
@@ -441,7 +566,11 @@ describe('WorkflowExecutor - Block Emit and Data Flow', () => {
   let logHandler:
     | ((instanceId: string, workflowId: string, level: string, message: string) => void)
     | null;
-  let pushedInputs: Array<{ blockId: string; port: string; data: Json }>;
+  let pushedInputs: Array<{
+    blockId: string;
+    port: string;
+    data: Json;
+  }>;
 
   beforeEach(() => {
     emitHandler = null;
@@ -463,16 +592,27 @@ describe('WorkflowExecutor - Block Emit and Data Flow', () => {
       clearBlockLogHandler: () => {
         logHandler = null;
       },
-      startBlock: () => Promise.resolve({ ok: true }),
+      startBlock: () =>
+        Promise.resolve({
+          ok: true,
+        }),
       stopBlockInstance: () => undefined,
       pushBlockInput: (blockId: string, port: string, data: Json) => {
-        pushedInputs.push({ blockId, port, data });
+        pushedInputs.push({
+          blockId,
+          port,
+          data,
+        });
       },
     });
 
     stub(BlockRegistry, {
       has: () => true,
-      get: () => ({ id: 'test', outputs: [], inputs: [] }),
+      get: () => ({
+        id: 'test',
+        outputs: [],
+        inputs: [],
+      }),
       list: () => [],
     });
 
@@ -494,13 +634,17 @@ describe('WorkflowExecutor - Block Emit and Data Flow', () => {
     await executor.start(workflow);
 
     // Simulate block emitting data
-    emitHandler?.('block-a', 'tick', { value: 42 });
+    emitHandler?.('block-a', 'tick', {
+      value: 42,
+    });
 
     const emitEvent = events.find((e) => e.type === 'block.emit');
     expect(emitEvent).toBeDefined();
     expect(emitEvent?.blockId).toBe('block-a');
     expect(emitEvent?.port).toBe('tick');
-    expect(emitEvent?.data).toEqual({ value: 42 });
+    expect(emitEvent?.data).toEqual({
+      value: 42,
+    });
   });
 
   test('should dispatch data to connected blocks', async () => {
@@ -509,14 +653,18 @@ describe('WorkflowExecutor - Block Emit and Data Flow', () => {
     await executor.start(workflow);
 
     // Simulate block-a emitting on 'tick' port
-    emitHandler?.('block-a', 'tick', { message: 'hello' });
+    emitHandler?.('block-a', 'tick', {
+      message: 'hello',
+    });
 
     // Should push to block-b's 'input' port
     expect(pushedInputs).toHaveLength(1);
     expect(pushedInputs[0]).toMatchObject({
       blockId: 'block-b',
       port: 'input',
-      data: { message: 'hello' },
+      data: {
+        message: 'hello',
+      },
     });
   });
 
@@ -527,18 +675,39 @@ describe('WorkflowExecutor - Block Emit and Data Flow', () => {
       name: 'Multi Connection',
       enabled: true,
       blocks: [
-        { id: 'source', type: 'timer' },
-        { id: 'target-1', type: 'logger' },
-        { id: 'target-2', type: 'logger' },
+        {
+          id: 'source',
+          type: 'timer',
+        },
+        {
+          id: 'target-1',
+          type: 'logger',
+        },
+        {
+          id: 'target-2',
+          type: 'logger',
+        },
       ],
       connections: [
-        { from: 'source', fromPort: 'out', to: 'target-1', toPort: 'in' },
-        { from: 'source', fromPort: 'out', to: 'target-2', toPort: 'in' },
+        {
+          from: 'source',
+          fromPort: 'out',
+          to: 'target-1',
+          toPort: 'in',
+        },
+        {
+          from: 'source',
+          fromPort: 'out',
+          to: 'target-2',
+          toPort: 'in',
+        },
       ],
     };
 
     await executor.start(workflow);
-    emitHandler?.('source', 'out', { data: 'test' });
+    emitHandler?.('source', 'out', {
+      data: 'test',
+    });
 
     expect(pushedInputs).toHaveLength(2);
     expect(pushedInputs.map((p) => p.blockId)).toContain('target-1');
@@ -588,7 +757,9 @@ describe('WorkflowExecutor - Block Emit and Data Flow', () => {
     executor.stop();
 
     // Simulate emit after stop (should be ignored)
-    emitHandler?.('block-1', 'out', { data: 'test' });
+    emitHandler?.('block-1', 'out', {
+      data: 'test',
+    });
 
     const emitEvent = events.find((e) => e.type === 'block.emit');
     expect(emitEvent).toBeUndefined();
@@ -604,14 +775,22 @@ describe('WorkflowExecutor - Block Start Error Handling', () => {
       setBlockLogHandler: () => undefined,
       clearBlockEmitHandler: () => undefined,
       clearBlockLogHandler: () => undefined,
-      startBlock: () => Promise.resolve({ ok: false, error: 'Block start failed' }),
+      startBlock: () =>
+        Promise.resolve({
+          ok: false,
+          error: 'Block start failed',
+        }),
       stopBlockInstance: () => undefined,
       pushBlockInput: () => undefined,
     });
 
     stub(BlockRegistry, {
       has: () => true,
-      get: () => ({ id: 'test', outputs: [], inputs: [] }),
+      get: () => ({
+        id: 'test',
+        outputs: [],
+        inputs: [],
+      }),
       list: () => [],
     });
 
@@ -653,7 +832,11 @@ describe('WorkflowExecutor - Block Start Error Handling', () => {
 
     stub(BlockRegistry, {
       has: () => true,
-      get: () => ({ id: 'test', outputs: [], inputs: [] }),
+      get: () => ({
+        id: 'test',
+        outputs: [],
+        inputs: [],
+      }),
       list: () => [],
     });
 
@@ -684,7 +867,9 @@ describe('WorkflowExecutor - Block Type Resolution', () => {
       clearBlockLogHandler: () => undefined,
       startBlock: (blockType: string) => {
         startedTypes.push(blockType);
-        return Promise.resolve({ ok: true });
+        return Promise.resolve({
+          ok: true,
+        });
       },
       stopBlockInstance: () => undefined,
       pushBlockInput: () => undefined,
@@ -692,21 +877,29 @@ describe('WorkflowExecutor - Block Type Resolution', () => {
 
     stub(BlockRegistry, {
       has: () => true,
-      get: () => ({ id: 'test', outputs: [], inputs: [] }),
+      get: () => ({
+        id: 'test',
+        outputs: [],
+        inputs: [],
+      }),
       list: () => [
         {
           id: 'interval',
           type: '@brika/timer:interval',
           inputs: [],
           outputs: [],
-          schema: { type: 'object' },
+          schema: {
+            type: 'object',
+          },
         },
         {
           id: 'request',
           type: '@brika/http:request',
           inputs: [],
           outputs: [],
-          schema: { type: 'object' },
+          schema: {
+            type: 'object',
+          },
         },
       ],
     });
@@ -726,7 +919,12 @@ describe('WorkflowExecutor - Block Type Resolution', () => {
       id: 'test',
       name: 'Test',
       enabled: true,
-      blocks: [{ id: 'block-1', type: '@brika/timer:interval' }],
+      blocks: [
+        {
+          id: 'block-1',
+          type: '@brika/timer:interval',
+        },
+      ],
       connections: [],
     };
 
@@ -741,7 +939,12 @@ describe('WorkflowExecutor - Block Type Resolution', () => {
       id: 'test',
       name: 'Test',
       enabled: true,
-      blocks: [{ id: 'block-1', type: 'interval' }],
+      blocks: [
+        {
+          id: 'block-1',
+          type: 'interval',
+        },
+      ],
       connections: [],
     };
 
@@ -756,7 +959,12 @@ describe('WorkflowExecutor - Block Type Resolution', () => {
       id: 'test',
       name: 'Test',
       enabled: true,
-      blocks: [{ id: 'block-1', type: 'unknown-type' }],
+      blocks: [
+        {
+          id: 'block-1',
+          type: 'unknown-type',
+        },
+      ],
       connections: [],
     };
 
@@ -775,14 +983,21 @@ describe('WorkflowExecutor - Complex Workflows', () => {
       setBlockLogHandler: () => undefined,
       clearBlockEmitHandler: () => undefined,
       clearBlockLogHandler: () => undefined,
-      startBlock: () => Promise.resolve({ ok: true }),
+      startBlock: () =>
+        Promise.resolve({
+          ok: true,
+        }),
       stopBlockInstance: () => undefined,
       pushBlockInput: () => undefined,
     });
 
     stub(BlockRegistry, {
       has: () => true,
-      get: () => ({ id: 'test', outputs: [], inputs: [] }),
+      get: () => ({
+        id: 'test',
+        outputs: [],
+        inputs: [],
+      }),
       list: () => [],
     });
 
@@ -797,10 +1012,15 @@ describe('WorkflowExecutor - Complex Workflows', () => {
 
   test('should handle workflow with 50 blocks', async () => {
     expect.hasAssertions();
-    const blocks = Array.from({ length: 50 }, (_, i) => ({
-      id: `block-${i}`,
-      type: 'timer',
-    }));
+    const blocks = Array.from(
+      {
+        length: 50,
+      },
+      (_, i) => ({
+        id: `block-${i}`,
+        type: 'timer',
+      })
+    );
 
     const workflow: Workflow = {
       id: 'large-workflow',
@@ -822,18 +1042,58 @@ describe('WorkflowExecutor - Complex Workflows', () => {
       name: 'Complex Workflow',
       enabled: true,
       blocks: [
-        { id: 'input', type: 'trigger' },
-        { id: 'process-1', type: 'processor' },
-        { id: 'process-2', type: 'processor' },
-        { id: 'merge', type: 'merger' },
-        { id: 'output', type: 'logger' },
+        {
+          id: 'input',
+          type: 'trigger',
+        },
+        {
+          id: 'process-1',
+          type: 'processor',
+        },
+        {
+          id: 'process-2',
+          type: 'processor',
+        },
+        {
+          id: 'merge',
+          type: 'merger',
+        },
+        {
+          id: 'output',
+          type: 'logger',
+        },
       ],
       connections: [
-        { from: 'input', fromPort: 'out', to: 'process-1', toPort: 'in' },
-        { from: 'input', fromPort: 'out', to: 'process-2', toPort: 'in' },
-        { from: 'process-1', fromPort: 'out', to: 'merge', toPort: 'in1' },
-        { from: 'process-2', fromPort: 'out', to: 'merge', toPort: 'in2' },
-        { from: 'merge', fromPort: 'out', to: 'output', toPort: 'in' },
+        {
+          from: 'input',
+          fromPort: 'out',
+          to: 'process-1',
+          toPort: 'in',
+        },
+        {
+          from: 'input',
+          fromPort: 'out',
+          to: 'process-2',
+          toPort: 'in',
+        },
+        {
+          from: 'process-1',
+          fromPort: 'out',
+          to: 'merge',
+          toPort: 'in1',
+        },
+        {
+          from: 'process-2',
+          fromPort: 'out',
+          to: 'merge',
+          toPort: 'in2',
+        },
+        {
+          from: 'merge',
+          fromPort: 'out',
+          to: 'output',
+          toPort: 'in',
+        },
       ],
     };
 
@@ -852,15 +1112,28 @@ describe('WorkflowExecutor - Complex Workflows', () => {
         {
           id: 'timer-1',
           type: 'timer',
-          config: { interval: 1000, repeat: true },
+          config: {
+            interval: 1000,
+            repeat: true,
+          },
         },
         {
           id: 'logger-1',
           type: 'logger',
-          config: { level: 'info', format: 'json' },
+          config: {
+            level: 'info',
+            format: 'json',
+          },
         },
       ],
-      connections: [{ from: 'timer-1', fromPort: 'tick', to: 'logger-1', toPort: 'input' }],
+      connections: [
+        {
+          from: 'timer-1',
+          fromPort: 'tick',
+          to: 'logger-1',
+          toPort: 'input',
+        },
+      ],
     };
 
     await executor.start(workflow);

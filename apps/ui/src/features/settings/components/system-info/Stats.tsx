@@ -3,11 +3,23 @@ import { useLocale } from '@/lib/use-locale';
 import { InfoItem } from './InfoItem';
 
 interface SystemStats {
-  plugins: { total: number; running: number };
-  blocks: { total: number };
-  workflows: { total: number; enabled: number };
-  sparks: { total: number };
-  bricks: { total: number };
+  plugins: {
+    total: number;
+    running: number;
+  };
+  blocks: {
+    total: number;
+  };
+  workflows: {
+    total: number;
+    enabled: number;
+  };
+  sparks: {
+    total: number;
+  };
+  bricks: {
+    total: number;
+  };
 }
 
 interface StatsProps {

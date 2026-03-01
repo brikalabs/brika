@@ -13,7 +13,13 @@ const spacerVariants = cva('', {
 
 defineRenderer('spacer', ({ node }) => {
   if (node.size) {
-    return <div className={spacerVariants({ size: node.size })} />;
+    return (
+      <div
+        className={spacerVariants({
+          size: node.size,
+        })}
+      />
+    );
   }
   return <div className="flex-1" />;
 });

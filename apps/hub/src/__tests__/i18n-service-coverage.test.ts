@@ -14,15 +14,21 @@ import { ConfigLoader } from '@/runtime/config/config-loader';
 import { I18nService } from '@/runtime/i18n/i18n-service';
 import { Logger } from '@/runtime/logs/log-router';
 
-useTestBed({ autoStub: false });
+useTestBed({
+  autoStub: false,
+});
 const bun = useBunMock();
 
 describe('I18nService — coverage gaps', () => {
   let service: I18nService;
-  let mockConfigLoader: { getRootDir: ReturnType<typeof mock> };
+  let mockConfigLoader: {
+    getRootDir: ReturnType<typeof mock>;
+  };
 
   beforeEach(() => {
-    mockConfigLoader = { getRootDir: mock().mockReturnValue('/test/hub') };
+    mockConfigLoader = {
+      getRootDir: mock().mockReturnValue('/test/hub'),
+    };
 
     stub(Logger);
     provide(ConfigLoader, mockConfigLoader);
@@ -35,9 +41,17 @@ describe('I18nService — coverage gaps', () => {
     test('returns all namespaces for a locale with fallback applied', async () => {
       bun
         .fs({
-          '/test/hub/locales/en/common.json': { greeting: 'Hello', farewell: 'Goodbye' },
-          '/test/hub/locales/en/nav.json': { home: 'Home', settings: 'Settings' },
-          '/test/hub/locales/fr/common.json': { greeting: 'Bonjour' },
+          '/test/hub/locales/en/common.json': {
+            greeting: 'Hello',
+            farewell: 'Goodbye',
+          },
+          '/test/hub/locales/en/nav.json': {
+            home: 'Home',
+            settings: 'Settings',
+          },
+          '/test/hub/locales/fr/common.json': {
+            greeting: 'Bonjour',
+          },
         })
         .apply();
 
@@ -46,16 +60,27 @@ describe('I18nService — coverage gaps', () => {
       const result = service.getAllTranslations('fr');
 
       // common namespace: French "greeting" overrides English, English "farewell" falls through
-      expect(result.common).toEqual({ greeting: 'Bonjour', farewell: 'Goodbye' });
+      expect(result.common).toEqual({
+        greeting: 'Bonjour',
+        farewell: 'Goodbye',
+      });
       // nav namespace: only English exists, falls through for French
-      expect(result.nav).toEqual({ home: 'Home', settings: 'Settings' });
+      expect(result.nav).toEqual({
+        home: 'Home',
+        settings: 'Settings',
+      });
     });
 
     test('includes plugin namespaces in bulk response', async () => {
       bun
         .fs({
-          '/test/hub/locales/en/common.json': { greeting: 'Hello' },
-          '/test/plugin/locales/en/plugin.json': { name: 'Timer', description: 'A timer' },
+          '/test/hub/locales/en/common.json': {
+            greeting: 'Hello',
+          },
+          '/test/plugin/locales/en/plugin.json': {
+            name: 'Timer',
+            description: 'A timer',
+          },
         })
         .apply();
 
@@ -64,7 +89,9 @@ describe('I18nService — coverage gaps', () => {
 
       const result = service.getAllTranslations('en');
 
-      expect(result.common).toEqual({ greeting: 'Hello' });
+      expect(result.common).toEqual({
+        greeting: 'Hello',
+      });
       expect(result['plugin:@brika/timer']).toEqual({
         name: 'Timer',
         description: 'A timer',
@@ -72,7 +99,11 @@ describe('I18nService — coverage gaps', () => {
     });
 
     test('returns empty object when no namespaces match the locale', async () => {
-      bun.fs({ '/test/hub/locales/': [] }).apply();
+      bun
+        .fs({
+          '/test/hub/locales/': [],
+        })
+        .apply();
 
       await service.init();
 
@@ -84,9 +115,18 @@ describe('I18nService — coverage gaps', () => {
     test('applies regional locale fallback in bulk response', async () => {
       bun
         .fs({
-          '/test/hub/locales/en/common.json': { a: 'en-a', b: 'en-b', c: 'en-c' },
-          '/test/hub/locales/fr/common.json': { a: 'fr-a', b: 'fr-b' },
-          '/test/hub/locales/fr-CA/common.json': { a: 'fr-CA-a' },
+          '/test/hub/locales/en/common.json': {
+            a: 'en-a',
+            b: 'en-b',
+            c: 'en-c',
+          },
+          '/test/hub/locales/fr/common.json': {
+            a: 'fr-a',
+            b: 'fr-b',
+          },
+          '/test/hub/locales/fr-CA/common.json': {
+            a: 'fr-CA-a',
+          },
         })
         .apply();
 
@@ -155,18 +195,24 @@ describe('I18nService — coverage gaps', () => {
       // Now register plugin translations on top
       bun
         .fs({
-          '/test/plugin/locales/en/plugin.json': { name: 'Test' },
+          '/test/plugin/locales/en/plugin.json': {
+            name: 'Test',
+          },
         })
         .apply();
 
       await service.registerPluginTranslations('@test/plugin', '/test/plugin');
 
       const translations = service.getNamespaceTranslations('en', 'plugin:@test/plugin');
-      expect(translations).toEqual({ name: 'Test' });
+      expect(translations).toEqual({
+        name: 'Test',
+      });
 
       // getAllTranslations should include both core and plugin
       const all = service.getAllTranslations('en');
-      expect(all['plugin:@test/plugin']).toEqual({ name: 'Test' });
+      expect(all['plugin:@test/plugin']).toEqual({
+        name: 'Test',
+      });
       expect(all.common).not.toBeNull();
     });
   });

@@ -26,11 +26,16 @@ beforeEach(async () => {
     tmpdir(),
     `brika-completions-test-${Date.now()}-${Math.random().toString(36).slice(2)}`
   );
-  await mkdir(tmpHome, { recursive: true });
+  await mkdir(tmpHome, {
+    recursive: true,
+  });
 });
 
 afterEach(async () => {
-  await rm(tmpHome, { recursive: true, force: true });
+  await rm(tmpHome, {
+    recursive: true,
+    force: true,
+  });
 });
 
 // ── subprocess helper ────────────────────────────────────────────────────────
@@ -70,13 +75,26 @@ main().then(r => console.log(JSON.stringify(r))).catch(e => {
 });
 `;
 
-  const proc = Bun.spawn(['bun', 'run', '--silent', '-'], {
-    stdin: new Blob([script]),
-    stdout: 'pipe',
-    stderr: 'pipe',
-    env: { ...process.env, HOME: tmpHome },
-    cwd: join(__dirname, '..', '..'),
-  });
+  const proc = Bun.spawn(
+    [
+      'bun',
+      'run',
+      '--silent',
+      '-',
+    ],
+    {
+      stdin: new Blob([
+        script,
+      ]),
+      stdout: 'pipe',
+      stderr: 'pipe',
+      env: {
+        ...process.env,
+        HOME: tmpHome,
+      },
+      cwd: join(__dirname, '..', '..'),
+    }
+  );
 
   const [stdout, stderr] = await Promise.all([
     new Response(proc.stdout).text(),
@@ -96,7 +114,10 @@ main().then(r => console.log(JSON.stringify(r))).catch(e => {
 describe('installCompletions', () => {
   describe('fish shell', () => {
     test('writes completion script to ~/.config/fish/completions/brika.fish', async () => {
-      const result = await runInSubprocess<{ file: string; alreadyInstalled: boolean }>(`
+      const result = await runInSubprocess<{
+        file: string;
+        alreadyInstalled: boolean;
+      }>(`
         const commands = [
           { name: 'start', description: 'Start server', handler: () => {} },
           { name: 'help', description: 'Show help', handler: () => {} },
@@ -115,7 +136,9 @@ describe('installCompletions', () => {
     });
 
     test('returns alreadyInstalled false for fish (no rc check)', async () => {
-      const result = await runInSubprocess<{ alreadyInstalled: boolean }>(`
+      const result = await runInSubprocess<{
+        alreadyInstalled: boolean;
+      }>(`
         const commands = [
           { name: 'test', description: 'A test', handler: () => {} },
           { name: 'help', description: 'Help', handler: () => {} },
@@ -186,7 +209,9 @@ describe('installCompletions', () => {
     });
 
     test('creates .zshrc if it does not exist', async () => {
-      const result = await runInSubprocess<{ rcExists: boolean }>(`
+      const result = await runInSubprocess<{
+        rcExists: boolean;
+      }>(`
         const commands = [
           { name: 'help', description: 'Help', handler: () => {} },
         ];
@@ -232,7 +257,9 @@ describe('installCompletions', () => {
       // Pre-create .bash_profile
       await writeFile(join(tmpHome, '.bash_profile'), '# existing profile\n');
 
-      const result = await runInSubprocess<{ file: string }>(`
+      const result = await runInSubprocess<{
+        file: string;
+      }>(`
         const commands = [
           { name: 'help', description: 'Help', handler: () => {} },
         ];
@@ -244,7 +271,9 @@ describe('installCompletions', () => {
     });
 
     test('returns alreadyInstalled true on second install', async () => {
-      const result = await runInSubprocess<{ alreadyInstalled: boolean }>(`
+      const result = await runInSubprocess<{
+        alreadyInstalled: boolean;
+      }>(`
         const commands = [
           { name: 'start', description: 'Start server', handler: () => {} },
           { name: 'help', description: 'Show help', handler: () => {} },
@@ -258,7 +287,9 @@ describe('installCompletions', () => {
     });
 
     test('generates correct completion content for commands with options', async () => {
-      const result = await runInSubprocess<{ scriptContent: string }>(`
+      const result = await runInSubprocess<{
+        scriptContent: string;
+      }>(`
         const commands = [
           {
             name: 'start',
@@ -286,7 +317,9 @@ describe('installCompletions', () => {
     });
 
     test('generates correct completion content for commands with subcommands', async () => {
-      const result = await runInSubprocess<{ scriptContent: string }>(`
+      const result = await runInSubprocess<{
+        scriptContent: string;
+      }>(`
         const commands = [
           {
             name: 'plugin',
@@ -327,7 +360,9 @@ describe('installCompletions', () => {
 
 describe('uninstallCompletions', () => {
   test('returns empty array when no completion files exist', async () => {
-    const result = await runInSubprocess<{ cleaned: string[] }>(`
+    const result = await runInSubprocess<{
+      cleaned: string[];
+    }>(`
       const cleaned = await uninstallCompletions();
       return { cleaned };
     `);
@@ -506,7 +541,9 @@ describe('uninstallCompletions', () => {
 
   test('cleans fish config.fish when it contains the marker', async () => {
     const fishConfigDir = join(tmpHome, '.config', 'fish');
-    await mkdir(fishConfigDir, { recursive: true });
+    await mkdir(fishConfigDir, {
+      recursive: true,
+    });
     const rcPath = join(fishConfigDir, 'config.fish');
     await writeFile(
       rcPath,
@@ -530,9 +567,13 @@ describe('uninstallCompletions', () => {
   test('handles read errors on rc files gracefully', async () => {
     // Create a directory where a file is expected (causes read error)
     const rcDir = join(tmpHome, '.bashrc');
-    await mkdir(rcDir, { recursive: true });
+    await mkdir(rcDir, {
+      recursive: true,
+    });
 
-    const result = await runInSubprocess<{ cleaned: string[] }>(`
+    const result = await runInSubprocess<{
+      cleaned: string[];
+    }>(`
       const cleaned = await uninstallCompletions();
       return { cleaned };
     `);
@@ -547,8 +588,16 @@ describe('uninstallCompletions', () => {
 describe('install + uninstall round-trip', () => {
   test('install then uninstall leaves no completion artifacts', async () => {
     const result = await runInSubprocess<{
-      afterInstall: { bashScript: boolean; zshScript: boolean; fishScript: boolean };
-      afterUninstall: { bashScript: boolean; zshScript: boolean; fishScript: boolean };
+      afterInstall: {
+        bashScript: boolean;
+        zshScript: boolean;
+        fishScript: boolean;
+      };
+      afterUninstall: {
+        bashScript: boolean;
+        zshScript: boolean;
+        fishScript: boolean;
+      };
       cleanedCount: number;
     }>(`
       const commands = [
@@ -619,7 +668,9 @@ describe('rcFile path selection', () => {
     // Pre-create .bash_profile in temp home
     await writeFile(join(tmpHome, '.bash_profile'), '# existing\n');
 
-    const result = await runInSubprocess<{ file: string }>(`
+    const result = await runInSubprocess<{
+      file: string;
+    }>(`
       const commands = [
         { name: 'help', description: 'Help', handler: () => {} },
       ];
@@ -632,7 +683,9 @@ describe('rcFile path selection', () => {
 
   test('bash falls back to .bashrc when .bash_profile does not exist', async () => {
     // tmpHome has no .bash_profile by default
-    const result = await runInSubprocess<{ file: string }>(`
+    const result = await runInSubprocess<{
+      file: string;
+    }>(`
       const commands = [
         { name: 'help', description: 'Help', handler: () => {} },
       ];
@@ -644,7 +697,9 @@ describe('rcFile path selection', () => {
   });
 
   test('zsh always uses .zshrc', async () => {
-    const result = await runInSubprocess<{ file: string }>(`
+    const result = await runInSubprocess<{
+      file: string;
+    }>(`
       const commands = [
         { name: 'help', description: 'Help', handler: () => {} },
       ];
@@ -660,7 +715,9 @@ describe('rcFile path selection', () => {
 
 describe('scriptFile path selection', () => {
   test('bash script goes to ~/.brika/completions/brika.bash', async () => {
-    const result = await runInSubprocess<{ scriptExists: boolean }>(`
+    const result = await runInSubprocess<{
+      scriptExists: boolean;
+    }>(`
       const commands = [
         { name: 'help', description: 'Help', handler: () => {} },
       ];
@@ -674,7 +731,9 @@ describe('scriptFile path selection', () => {
   });
 
   test('zsh script goes to ~/.brika/completions/brika.zsh', async () => {
-    const result = await runInSubprocess<{ scriptExists: boolean }>(`
+    const result = await runInSubprocess<{
+      scriptExists: boolean;
+    }>(`
       const commands = [
         { name: 'help', description: 'Help', handler: () => {} },
       ];
@@ -688,7 +747,9 @@ describe('scriptFile path selection', () => {
   });
 
   test('fish script goes to ~/.config/fish/completions/brika.fish', async () => {
-    const result = await runInSubprocess<{ scriptExists: boolean }>(`
+    const result = await runInSubprocess<{
+      scriptExists: boolean;
+    }>(`
       const commands = [
         { name: 'help', description: 'Help', handler: () => {} },
       ];
@@ -717,12 +778,19 @@ describe('uninstallCompletions — RC line filtering', () => {
       ].join('\n')
     );
 
-    const result = await runInSubprocess<{ rcContent: string }>(`
+    const result = await runInSubprocess<{
+      rcContent: string;
+    }>(`
       await uninstallCompletions();
       return { rcContent: await readFile(join(HOME, '.zshrc'), 'utf8') };
     `);
 
-    expect(result.rcContent).toBe(['export FOO=bar', 'export BAZ=qux'].join('\n'));
+    expect(result.rcContent).toBe(
+      [
+        'export FOO=bar',
+        'export BAZ=qux',
+      ].join('\n')
+    );
   });
 
   test('removes only the source line if marker is not on the previous line', async () => {
@@ -737,7 +805,9 @@ describe('uninstallCompletions — RC line filtering', () => {
       ].join('\n')
     );
 
-    const result = await runInSubprocess<{ rcContent: string }>(`
+    const result = await runInSubprocess<{
+      rcContent: string;
+    }>(`
       await uninstallCompletions();
       return { rcContent: await readFile(join(HOME, '.bashrc'), 'utf8') };
     `);
@@ -788,7 +858,9 @@ describe('uninstallCompletions — RC line filtering', () => {
     ].join('\n');
     await writeFile(rcPath, original);
 
-    const result = await runInSubprocess<{ rcContent: string }>(`
+    const result = await runInSubprocess<{
+      rcContent: string;
+    }>(`
       await uninstallCompletions();
       return { rcContent: await readFile(join(HOME, '.zshrc'), 'utf8') };
     `);

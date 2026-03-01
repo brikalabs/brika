@@ -4,10 +4,14 @@ import { processGuard } from '@/runtime/bootstrap/plugins/process-guard';
 import { PluginLifecycle } from '@/runtime/plugins/plugin-lifecycle';
 import type { PluginProcess } from '@/runtime/plugins/plugin-process';
 
-useTestBed({ autoStub: false });
+useTestBed({
+  autoStub: false,
+});
 
 describe('process-guard', () => {
-  const mockLifecycle = { listProcesses: mock(() => [] as PluginProcess[]) };
+  const mockLifecycle = {
+    listProcesses: mock(() => [] as PluginProcess[]),
+  };
 
   beforeEach(() => {
     provide(PluginLifecycle, mockLifecycle);
@@ -23,8 +27,12 @@ describe('process-guard', () => {
 
   test('exit handler iterates all running processes', () => {
     mockLifecycle.listProcesses.mockReturnValue([
-      { pid: 999999999 } as PluginProcess,
-      { pid: 999999998 } as PluginProcess,
+      {
+        pid: 999999999,
+      } as PluginProcess,
+      {
+        pid: 999999998,
+      } as PluginProcess,
     ]);
 
     const plugin = processGuard();

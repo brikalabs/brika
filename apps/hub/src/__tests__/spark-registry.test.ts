@@ -9,7 +9,9 @@ import { Logger } from '@/runtime/logs/log-router';
 import { SparkRegistry } from '@/runtime/sparks/spark-registry';
 
 // autoStub: false because we need real SparkRegistry with stubbed Logger
-useTestBed({ autoStub: false });
+useTestBed({
+  autoStub: false,
+});
 
 describe('SparkRegistry', () => {
   let registry: SparkRegistry;
@@ -21,23 +23,51 @@ describe('SparkRegistry', () => {
 
   describe('register', () => {
     test('registers a spark with full type', () => {
-      registry.register({ id: 'pressed' }, '@test/switch');
+      registry.register(
+        {
+          id: 'pressed',
+        },
+        '@test/switch'
+      );
 
       expect(registry.has('@test/switch:pressed')).toBe(true);
       expect(registry.size).toBe(1);
     });
 
     test('registers spark with schema', () => {
-      const schema = { type: 'object', properties: { value: { type: 'number' } } };
-      registry.register({ id: 'value-changed', schema }, '@test/sensor');
+      const schema = {
+        type: 'object',
+        properties: {
+          value: {
+            type: 'number',
+          },
+        },
+      };
+      registry.register(
+        {
+          id: 'value-changed',
+          schema,
+        },
+        '@test/sensor'
+      );
 
       const spark = registry.get('@test/sensor:value-changed');
       expect(spark?.schema).toEqual(schema);
     });
 
     test('handles duplicate registration with warning', () => {
-      registry.register({ id: 'pressed' }, '@test/switch');
-      registry.register({ id: 'pressed' }, '@test/switch');
+      registry.register(
+        {
+          id: 'pressed',
+        },
+        '@test/switch'
+      );
+      registry.register(
+        {
+          id: 'pressed',
+        },
+        '@test/switch'
+      );
 
       expect(registry.size).toBe(1); // Still only one
     });
@@ -46,10 +76,23 @@ describe('SparkRegistry', () => {
       const registered: string[] = [];
       registry.onSparkRegistered((type) => registered.push(type));
 
-      registry.register({ id: 'pressed' }, '@test/switch');
-      registry.register({ id: 'released' }, '@test/switch');
+      registry.register(
+        {
+          id: 'pressed',
+        },
+        '@test/switch'
+      );
+      registry.register(
+        {
+          id: 'released',
+        },
+        '@test/switch'
+      );
 
-      expect(registered).toEqual(['@test/switch:pressed', '@test/switch:released']);
+      expect(registered).toEqual([
+        '@test/switch:pressed',
+        '@test/switch:released',
+      ]);
     });
 
     test('handles listener errors gracefully', () => {
@@ -58,7 +101,14 @@ describe('SparkRegistry', () => {
       });
 
       // Should not throw
-      expect(() => registry.register({ id: 'pressed' }, '@test/switch')).not.toThrow();
+      expect(() =>
+        registry.register(
+          {
+            id: 'pressed',
+          },
+          '@test/switch'
+        )
+      ).not.toThrow();
       expect(registry.size).toBe(1);
     });
   });
@@ -68,11 +118,23 @@ describe('SparkRegistry', () => {
       const registered: string[] = [];
       const unsubscribe = registry.onSparkRegistered((type) => registered.push(type));
 
-      registry.register({ id: 'first' }, '@test/plugin');
+      registry.register(
+        {
+          id: 'first',
+        },
+        '@test/plugin'
+      );
       unsubscribe();
-      registry.register({ id: 'second' }, '@test/plugin');
+      registry.register(
+        {
+          id: 'second',
+        },
+        '@test/plugin'
+      );
 
-      expect(registered).toEqual(['@test/plugin:first']);
+      expect(registered).toEqual([
+        '@test/plugin:first',
+      ]);
     });
 
     test('supports multiple listeners', () => {
@@ -82,18 +144,42 @@ describe('SparkRegistry', () => {
       registry.onSparkRegistered((type) => list1.push(type));
       registry.onSparkRegistered((type) => list2.push(type));
 
-      registry.register({ id: 'test' }, '@test/plugin');
+      registry.register(
+        {
+          id: 'test',
+        },
+        '@test/plugin'
+      );
 
-      expect(list1).toEqual(['@test/plugin:test']);
-      expect(list2).toEqual(['@test/plugin:test']);
+      expect(list1).toEqual([
+        '@test/plugin:test',
+      ]);
+      expect(list2).toEqual([
+        '@test/plugin:test',
+      ]);
     });
   });
 
   describe('unregisterPlugin', () => {
     test('removes all sparks from plugin', () => {
-      registry.register({ id: 'spark1' }, '@test/plugin');
-      registry.register({ id: 'spark2' }, '@test/plugin');
-      registry.register({ id: 'other' }, '@other/plugin');
+      registry.register(
+        {
+          id: 'spark1',
+        },
+        '@test/plugin'
+      );
+      registry.register(
+        {
+          id: 'spark2',
+        },
+        '@test/plugin'
+      );
+      registry.register(
+        {
+          id: 'other',
+        },
+        '@other/plugin'
+      );
 
       const count = registry.unregisterPlugin('@test/plugin');
 
@@ -111,7 +197,12 @@ describe('SparkRegistry', () => {
 
   describe('get', () => {
     test('returns spark by type', () => {
-      registry.register({ id: 'pressed' }, '@test/switch');
+      registry.register(
+        {
+          id: 'pressed',
+        },
+        '@test/switch'
+      );
 
       const spark = registry.get('@test/switch:pressed');
 
@@ -128,7 +219,12 @@ describe('SparkRegistry', () => {
 
   describe('has', () => {
     test('returns true for existing spark', () => {
-      registry.register({ id: 'test' }, '@test/plugin');
+      registry.register(
+        {
+          id: 'test',
+        },
+        '@test/plugin'
+      );
       expect(registry.has('@test/plugin:test')).toBe(true);
     });
 
@@ -139,8 +235,18 @@ describe('SparkRegistry', () => {
 
   describe('list', () => {
     test('returns all sparks sorted by type', () => {
-      registry.register({ id: 'z-spark' }, '@test/plugin');
-      registry.register({ id: 'a-spark' }, '@test/plugin');
+      registry.register(
+        {
+          id: 'z-spark',
+        },
+        '@test/plugin'
+      );
+      registry.register(
+        {
+          id: 'a-spark',
+        },
+        '@test/plugin'
+      );
 
       const sparks = registry.list();
 
@@ -156,9 +262,24 @@ describe('SparkRegistry', () => {
 
   describe('listByPlugin', () => {
     test('returns sparks for specific plugin', () => {
-      registry.register({ id: 'spark1' }, '@test/plugin-a');
-      registry.register({ id: 'spark2' }, '@test/plugin-a');
-      registry.register({ id: 'other' }, '@test/plugin-b');
+      registry.register(
+        {
+          id: 'spark1',
+        },
+        '@test/plugin-a'
+      );
+      registry.register(
+        {
+          id: 'spark2',
+        },
+        '@test/plugin-a'
+      );
+      registry.register(
+        {
+          id: 'other',
+        },
+        '@test/plugin-b'
+      );
 
       const sparks = registry.listByPlugin('@test/plugin-a');
 
@@ -173,7 +294,12 @@ describe('SparkRegistry', () => {
 
   describe('listByOwner', () => {
     test('returns spark summaries for plugin', () => {
-      registry.register({ id: 'test' }, '@test/plugin');
+      registry.register(
+        {
+          id: 'test',
+        },
+        '@test/plugin'
+      );
 
       const summaries = registry.listByOwner('@test/plugin');
 
@@ -185,8 +311,18 @@ describe('SparkRegistry', () => {
 
   describe('listSummaries', () => {
     test('returns all spark summaries', () => {
-      registry.register({ id: 'spark1' }, '@test/plugin-a');
-      registry.register({ id: 'spark2' }, '@test/plugin-b');
+      registry.register(
+        {
+          id: 'spark1',
+        },
+        '@test/plugin-a'
+      );
+      registry.register(
+        {
+          id: 'spark2',
+        },
+        '@test/plugin-b'
+      );
 
       const summaries = registry.listSummaries();
 
@@ -198,7 +334,12 @@ describe('SparkRegistry', () => {
 
   describe('getProvider', () => {
     test('returns plugin ID for spark', () => {
-      registry.register({ id: 'test' }, '@test/plugin');
+      registry.register(
+        {
+          id: 'test',
+        },
+        '@test/plugin'
+      );
 
       expect(registry.getProvider('@test/plugin:test')).toBe('@test/plugin');
     });
@@ -212,10 +353,20 @@ describe('SparkRegistry', () => {
     test('returns correct count', () => {
       expect(registry.size).toBe(0);
 
-      registry.register({ id: 'spark1' }, '@test/plugin');
+      registry.register(
+        {
+          id: 'spark1',
+        },
+        '@test/plugin'
+      );
       expect(registry.size).toBe(1);
 
-      registry.register({ id: 'spark2' }, '@test/plugin');
+      registry.register(
+        {
+          id: 'spark2',
+        },
+        '@test/plugin'
+      );
       expect(registry.size).toBe(2);
 
       registry.unregisterPlugin('@test/plugin');

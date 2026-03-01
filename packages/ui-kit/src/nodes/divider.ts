@@ -15,7 +15,10 @@ export function Divider(props?: {
   color?: string;
   label?: string;
 }): DividerNode {
-  return { type: 'divider', ...props };
+  return {
+    type: 'divider',
+    ...props,
+  };
 }
 
 declare module './_shared' {

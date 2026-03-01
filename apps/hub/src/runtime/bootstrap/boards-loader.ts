@@ -21,7 +21,9 @@ export class BoardsLoader implements Loader {
     this.boardLoader.onChange((id, action) => {
       if (action === 'load' && this.boardService.hasActiveViewers(id)) {
         const board = this.boardLoader.get(id);
-        if (board) this.boardService.mountBoard(board);
+        if (board) {
+          this.boardService.mountBoard(board);
+        }
       }
     });
 

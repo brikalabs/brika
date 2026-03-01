@@ -31,7 +31,9 @@ export function autoSign(): void {
  */
 export function resolvePublicKey(registry: VerifiedPluginsList): string {
   const pem = loadPublicKeyPem();
-  if (pem) return publicKeyToBase64(pem);
+  if (pem) {
+    return publicKeyToBase64(pem);
+  }
   return registry.publicKey ?? REGISTRY_PUBLIC_KEY;
 }
 

@@ -13,7 +13,10 @@ import type { BlockConfig, Workflow } from '../types';
 
 // Create test workflow
 const createTestWorkflow = (
-  blocks: Array<{ id: string; outputs?: Record<string, `${string}:${string}`> }>
+  blocks: Array<{
+    id: string;
+    outputs?: Record<string, `${string}:${string}`>;
+  }>
 ): Workflow => ({
   version: '1.0',
   workspace: {
@@ -26,7 +29,10 @@ const createTestWorkflow = (
     id: b.id,
     type: 'mock-type',
     config: {} as Record<string, unknown>,
-    position: { x: 0, y: 0 },
+    position: {
+      x: 0,
+      y: 0,
+    },
     inputs: {},
     outputs: b.outputs ?? {},
   })),
@@ -35,62 +41,111 @@ const createTestWorkflow = (
 describe('EventBus', () => {
   describe('emit', () => {
     test('emits event to connected target', async () => {
-      const receivedEvents: { blockId: string; port: string; data: unknown }[] = [];
+      const receivedEvents: {
+        blockId: string;
+        port: string;
+        data: unknown;
+      }[] = [];
       const handler: EventHandler = (blockId, port, data) => {
-        receivedEvents.push({ blockId, port, data });
+        receivedEvents.push({
+          blockId,
+          port,
+          data,
+        });
       };
 
       const workflow = createTestWorkflow([
-        { id: 'source', outputs: { output: 'target:input' } },
-        { id: 'target' },
+        {
+          id: 'source',
+          outputs: {
+            output: 'target:input',
+          },
+        },
+        {
+          id: 'target',
+        },
       ]);
       const bus = new EventBus(workflow, handler);
 
-      await bus.emit('source', 'output', { value: 42 });
+      await bus.emit('source', 'output', {
+        value: 42,
+      });
 
       expect(receivedEvents).toHaveLength(1);
       expect(receivedEvents[0]?.blockId).toBe('target');
       expect(receivedEvents[0]?.port).toBe('input');
-      expect(receivedEvents[0]?.data).toEqual({ value: 42 });
+      expect(receivedEvents[0]?.data).toEqual({
+        value: 42,
+      });
     });
 
     test('does not dispatch when no target connected', async () => {
       const receivedEvents: unknown[] = [];
       const handler: EventHandler = (blockId, port, data) => {
-        receivedEvents.push({ blockId, port, data });
+        receivedEvents.push({
+          blockId,
+          port,
+          data,
+        });
       };
 
-      const workflow = createTestWorkflow([{ id: 'source', outputs: {} }]);
+      const workflow = createTestWorkflow([
+        {
+          id: 'source',
+          outputs: {},
+        },
+      ]);
       const bus = new EventBus(workflow, handler);
 
-      await bus.emit('source', 'disconnected-output', { value: 1 });
+      await bus.emit('source', 'disconnected-output', {
+        value: 1,
+      });
 
       expect(receivedEvents).toHaveLength(0);
     });
 
     test('updates port buffer on emit', async () => {
-      const workflow = createTestWorkflow([{ id: 'block-1', outputs: {} }]);
+      const workflow = createTestWorkflow([
+        {
+          id: 'block-1',
+          outputs: {},
+        },
+      ]);
       const bus = new EventBus(workflow, () => undefined);
 
-      await bus.emit('block-1', 'output', { value: 'first' });
-      await bus.emit('block-1', 'output', { value: 'second' });
+      await bus.emit('block-1', 'output', {
+        value: 'first',
+      });
+      await bus.emit('block-1', 'output', {
+        value: 'second',
+      });
 
       const buffer = bus.getPortBuffer('block-1', 'output');
-      expect(buffer?.value).toEqual({ value: 'second' });
+      expect(buffer?.value).toEqual({
+        value: 'second',
+      });
       expect(buffer?.count).toBe(2);
     });
   });
 
   describe('getPortBuffer', () => {
     test('returns undefined for unknown port', () => {
-      const workflow = createTestWorkflow([{ id: 'block-1' }]);
+      const workflow = createTestWorkflow([
+        {
+          id: 'block-1',
+        },
+      ]);
       const bus = new EventBus(workflow, () => undefined);
 
       expect(bus.getPortBuffer('unknown', 'port')).toBeUndefined();
     });
 
     test('returns buffer after emit', async () => {
-      const workflow = createTestWorkflow([{ id: 'block-1' }]);
+      const workflow = createTestWorkflow([
+        {
+          id: 'block-1',
+        },
+      ]);
       const bus = new EventBus(workflow, () => undefined);
 
       await bus.emit('block-1', 'out', 'test-value');
@@ -104,14 +159,25 @@ describe('EventBus', () => {
 
   describe('getAllBuffers', () => {
     test('returns empty array initially', () => {
-      const workflow = createTestWorkflow([{ id: 'block-1' }]);
+      const workflow = createTestWorkflow([
+        {
+          id: 'block-1',
+        },
+      ]);
       const bus = new EventBus(workflow, () => undefined);
 
       expect(bus.getAllBuffers()).toEqual([]);
     });
 
     test('returns all buffers after emissions', async () => {
-      const workflow = createTestWorkflow([{ id: 'block-1' }, { id: 'block-2' }]);
+      const workflow = createTestWorkflow([
+        {
+          id: 'block-1',
+        },
+        {
+          id: 'block-2',
+        },
+      ]);
       const bus = new EventBus(workflow, () => undefined);
 
       await bus.emit('block-1', 'out1', 'value1');
@@ -124,7 +190,11 @@ describe('EventBus', () => {
 
   describe('retrigger', () => {
     test('returns false for unknown port', async () => {
-      const workflow = createTestWorkflow([{ id: 'block-1' }]);
+      const workflow = createTestWorkflow([
+        {
+          id: 'block-1',
+        },
+      ]);
       const bus = new EventBus(workflow, () => undefined);
 
       const result = await bus.retrigger('unknown', 'port');
@@ -134,20 +204,31 @@ describe('EventBus', () => {
     test('resends last value', async () => {
       const receivedEvents: unknown[] = [];
       const workflow = createTestWorkflow([
-        { id: 'source', outputs: { output: 'target:input' } },
-        { id: 'target' },
+        {
+          id: 'source',
+          outputs: {
+            output: 'target:input',
+          },
+        },
+        {
+          id: 'target',
+        },
       ]);
       const bus = new EventBus(workflow, (_, __, data) => {
         receivedEvents.push(data);
       });
 
-      await bus.emit('source', 'output', { value: 'original' });
+      await bus.emit('source', 'output', {
+        value: 'original',
+      });
       expect(receivedEvents).toHaveLength(1);
 
       const result = await bus.retrigger('source', 'output');
       expect(result).toBe(true);
       expect(receivedEvents).toHaveLength(2);
-      expect(receivedEvents[1]).toEqual({ value: 'original' });
+      expect(receivedEvents[1]).toEqual({
+        value: 'original',
+      });
     });
   });
 
@@ -155,17 +236,28 @@ describe('EventBus', () => {
     test('injects data into port', async () => {
       const receivedEvents: unknown[] = [];
       const workflow = createTestWorkflow([
-        { id: 'source', outputs: { output: 'target:input' } },
-        { id: 'target' },
+        {
+          id: 'source',
+          outputs: {
+            output: 'target:input',
+          },
+        },
+        {
+          id: 'target',
+        },
       ]);
       const bus = new EventBus(workflow, (_, __, data) => {
         receivedEvents.push(data);
       });
 
-      await bus.inject('source', 'output', { injected: true });
+      await bus.inject('source', 'output', {
+        injected: true,
+      });
 
       expect(receivedEvents).toHaveLength(1);
-      expect(receivedEvents[0]).toEqual({ injected: true });
+      expect(receivedEvents[0]).toEqual({
+        injected: true,
+      });
     });
   });
 
@@ -173,14 +265,23 @@ describe('EventBus', () => {
     test('notifies observer on events', async () => {
       const observed: DispatchedEvent[] = [];
       const workflow = createTestWorkflow([
-        { id: 'source', outputs: { output: 'target:input' } },
-        { id: 'target' },
+        {
+          id: 'source',
+          outputs: {
+            output: 'target:input',
+          },
+        },
+        {
+          id: 'target',
+        },
       ]);
       const bus = new EventBus(workflow, () => undefined);
 
       bus.observe((event) => observed.push(event));
 
-      await bus.emit('source', 'output', { value: 1 });
+      await bus.emit('source', 'output', {
+        value: 1,
+      });
 
       expect(observed).toHaveLength(1);
       expect(observed[0]?.sourceBlockId).toBe('source');
@@ -190,8 +291,15 @@ describe('EventBus', () => {
     test('returns unsubscribe function', async () => {
       const observed: DispatchedEvent[] = [];
       const workflow = createTestWorkflow([
-        { id: 'source', outputs: { output: 'target:input' } },
-        { id: 'target' },
+        {
+          id: 'source',
+          outputs: {
+            output: 'target:input',
+          },
+        },
+        {
+          id: 'target',
+        },
       ]);
       const bus = new EventBus(workflow, () => undefined);
 
@@ -207,7 +315,12 @@ describe('EventBus', () => {
 
   describe('connectionCount', () => {
     test('returns 0 for no connections', () => {
-      const workflow = createTestWorkflow([{ id: 'block-1', outputs: {} }]);
+      const workflow = createTestWorkflow([
+        {
+          id: 'block-1',
+          outputs: {},
+        },
+      ]);
       const bus = new EventBus(workflow, () => undefined);
 
       expect(bus.connectionCount).toBe(0);
@@ -222,7 +335,9 @@ describe('EventBus', () => {
             out2: 'target:in2',
           },
         },
-        { id: 'target' },
+        {
+          id: 'target',
+        },
       ]);
       const bus = new EventBus(workflow, () => undefined);
 
@@ -234,8 +349,15 @@ describe('EventBus', () => {
 describe('createEventStream', () => {
   test('creates a readable stream', () => {
     const workflow = createTestWorkflow([
-      { id: 'source', outputs: { output: 'target:input' } },
-      { id: 'target' },
+      {
+        id: 'source',
+        outputs: {
+          output: 'target:input',
+        },
+      },
+      {
+        id: 'target',
+      },
     ]);
     const bus = new EventBus(workflow, () => undefined);
 
@@ -245,8 +367,15 @@ describe('createEventStream', () => {
 
   test('streams events in SSE format', async () => {
     const workflow = createTestWorkflow([
-      { id: 'source', outputs: { output: 'target:input' } },
-      { id: 'target' },
+      {
+        id: 'source',
+        outputs: {
+          output: 'target:input',
+        },
+      },
+      {
+        id: 'target',
+      },
     ]);
     const bus = new EventBus(workflow, () => undefined);
 
@@ -255,7 +384,9 @@ describe('createEventStream', () => {
 
     // Emit an event after a short delay
     setTimeout(() => {
-      bus.emit('source', 'output', { value: 42 });
+      bus.emit('source', 'output', {
+        value: 42,
+      });
     }, 10);
 
     // Read the first chunk
@@ -274,8 +405,15 @@ describe('createEventStream', () => {
 
   test('unsubscribes on cancel', async () => {
     const workflow = createTestWorkflow([
-      { id: 'source', outputs: { output: 'target:input' } },
-      { id: 'target' },
+      {
+        id: 'source',
+        outputs: {
+          output: 'target:input',
+        },
+      },
+      {
+        id: 'target',
+      },
     ]);
     const bus = new EventBus(workflow, () => undefined);
 
@@ -286,7 +424,9 @@ describe('createEventStream', () => {
     await reader.cancel();
 
     // Emit an event - should not cause errors
-    await bus.emit('source', 'output', { value: 1 });
+    await bus.emit('source', 'output', {
+      value: 1,
+    });
 
     // If we got here, the unsubscribe worked correctly
     expect(true).toBe(true);

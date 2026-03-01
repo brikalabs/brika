@@ -13,7 +13,10 @@ export interface CalloutNode extends BaseNode {
 }
 
 export function Callout(props: Omit<CalloutNode, 'type'>): CalloutNode {
-  return { type: 'callout', ...props };
+  return {
+    type: 'callout',
+    ...props,
+  };
 }
 
 declare module './_shared' {

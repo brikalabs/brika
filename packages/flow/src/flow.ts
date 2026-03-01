@@ -109,9 +109,7 @@ export class FlowImpl<T> implements Flow<T> {
     return this.#latest;
   }
 
-  // biome-ignore lint/suspicious/noExplicitAny: implementation signature must be compatible with all overloads
   pipe(...ops: Operator<any, any>[]): Flow<any> {
-    // biome-ignore lint/suspicious/noExplicitAny: type-safe via overloads
     return ops.reduce<Flow<any>>((acc, op) => op(acc), this);
   }
 }

@@ -8,13 +8,19 @@
     "url": "https://github.com/maxscharwath/brika.git",
     "directory": "packages/di"
   },
-  "keywords": ["brika", "di", "dependency-injection", "tsyringe"],
+  "keywords": [
+    "brika",
+    "di",
+    "dependency-injection",
+    "tsyringe"
+  ],
   "exports": {
     ".": "./src/index.ts",
     "./testing": "./src/testing/index.ts"
   },
   "scripts": {
-    "tsc": "bunx --bun tsc --noEmit"
+    "test": "bun test",
+    "typecheck": "tsgo --noEmit"
   },
   "dependencies": {
     "reflect-metadata": "^0.2.2",

@@ -55,7 +55,9 @@ export function getContentType(headers?: HttpHeaders | Headers): string | null {
     return headers.get('content-type');
   }
 
-  if (!headers) return null;
+  if (!headers) {
+    return null;
+  }
 
   const key = Object.keys(headers).find((k) => k.toLowerCase() === 'content-type');
 

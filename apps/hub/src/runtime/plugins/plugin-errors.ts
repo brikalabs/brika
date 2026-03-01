@@ -13,7 +13,10 @@ export const PluginErrors = {
   incompatibleVersion(required: string): PluginError {
     return {
       key: 'plugins:errors.incompatibleVersion',
-      params: { required, current: HUB_VERSION },
+      params: {
+        required,
+        current: HUB_VERSION,
+      },
       message: `Requires Brika ${required}, current version is ${HUB_VERSION}`,
     };
   },
@@ -35,7 +38,9 @@ export const PluginErrors = {
   crashed(reason: string): PluginError {
     return {
       key: 'plugins:errors.crashed',
-      params: { reason },
+      params: {
+        reason,
+      },
       message: reason,
     };
   },
@@ -43,7 +48,9 @@ export const PluginErrors = {
   crashLoop(reason: string): PluginError {
     return {
       key: 'plugins:errors.crashLoop',
-      params: { reason },
+      params: {
+        reason,
+      },
       message: `Crash loop: ${reason}`,
     };
   },
@@ -52,7 +59,9 @@ export const PluginErrors = {
     const seconds = String(Math.round(delayMs / 1000));
     return {
       key: 'plugins:errors.restarting',
-      params: { seconds },
+      params: {
+        seconds,
+      },
       message: `Restarting in ${seconds}s`,
     };
   },

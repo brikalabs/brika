@@ -62,16 +62,25 @@ export const systemRoute = route.get({
           total: pluginList.length,
           running: pluginList.filter((p) => p.status === 'running').length,
         },
-        blocks: { total: blockList.length },
+        blocks: {
+          total: blockList.length,
+        },
         workflows: {
           total: workflowList.length,
           enabled: workflowList.filter((w) => w.enabled).length,
         },
-        sparks: { total: sparkList.length },
-        bricks: { total: brickTypes.size },
+        sparks: {
+          total: sparkList.length,
+        },
+        bricks: {
+          total: brickTypes.size,
+        },
       },
     };
   },
 });
 
-export const statusRoutes = [healthRoute, systemRoute];
+export const statusRoutes = [
+  healthRoute,
+  systemRoute,
+];

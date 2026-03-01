@@ -10,14 +10,20 @@ import type { Cleanup, Emitter } from '../types';
 /**
  * Create a FlowImpl for testing with standard setTimeout.
  */
-export function createTestFlow<T>(): { flow: FlowImpl<T>; cleanup: CleanupRegistry } {
+export function createTestFlow<T>(): {
+  flow: FlowImpl<T>;
+  cleanup: CleanupRegistry;
+} {
   const cleanup = new CleanupRegistry();
   const setTimeoutFn = (fn: () => void, ms: number): Cleanup => {
     const id = setTimeout(fn, ms);
     return () => clearTimeout(id);
   };
   const flow = new FlowImpl<T>(setTimeoutFn, cleanup);
-  return { flow, cleanup };
+  return {
+    flow,
+    cleanup,
+  };
 }
 
 /**
@@ -31,7 +37,11 @@ export function createValueCollector<T>(): {
   const values: T[] = [];
   const subscriber = (v: T) => values.push(v);
   const clear = () => (values.length = 0);
-  return { values, subscriber, clear };
+  return {
+    values,
+    subscriber,
+    clear,
+  };
 }
 
 /**
@@ -44,7 +54,9 @@ export function wait(ms: number): Promise<void> {
 /**
  * Create a mock emitter for testing .to() routing.
  */
-export function createMockEmitter<T>(): Emitter<T> & { emitted: T[] } {
+export function createMockEmitter<T>(): Emitter<T> & {
+  emitted: T[];
+} {
   const emitted: T[] = [];
   return {
     emit: (v: T) => emitted.push(v),

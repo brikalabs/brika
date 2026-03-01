@@ -22,7 +22,11 @@ export function Toggle(props: {
   disabled?: boolean;
 }): ToggleNode {
   const { onToggle, ...rest } = props;
-  return { type: 'toggle', ...rest, onToggle: resolveAction(onToggle) };
+  return {
+    type: 'toggle',
+    ...rest,
+    onToggle: resolveAction(onToggle),
+  };
 }
 
 declare module './_shared' {

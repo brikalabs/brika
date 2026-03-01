@@ -14,6 +14,8 @@ import { NotFound } from '@brika/router';
  * const workflow = getOrThrow(inject(WorkflowEngine).get(id), 'Workflow not found');
  */
 export function getOrThrow<T>(resource: T | null | undefined, message: string): T {
-  if (resource == null) throw new NotFound(message);
+  if (resource === null || resource === undefined) {
+    throw new NotFound(message);
+  }
   return resource;
 }

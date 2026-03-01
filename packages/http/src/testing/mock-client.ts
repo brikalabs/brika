@@ -27,7 +27,9 @@ export class MockHttpClient extends HttpClient {
    */
   override async execute<T = unknown>(config: RequestConfig): Promise<HttpResponse<T>> {
     this.#requests.push({
-      config: { ...config },
+      config: {
+        ...config,
+      },
       timestamp: Date.now(),
     });
 
@@ -54,7 +56,9 @@ export class MockHttpClient extends HttpClient {
    * Get all recorded requests
    */
   getRequests(): RecordedRequest[] {
-    return [...this.#requests];
+    return [
+      ...this.#requests,
+    ];
   }
 
   /**

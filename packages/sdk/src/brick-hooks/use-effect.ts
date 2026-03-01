@@ -14,7 +14,10 @@ export function useEffect(effect: () => void | (() => void), deps?: unknown[]): 
         existing.cleanup();
       }
       const cleanup = effect();
-      state.effects[idx] = { cleanup, deps };
+      state.effects[idx] = {
+        cleanup,
+        deps,
+      };
     });
   }
 }

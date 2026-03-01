@@ -6,11 +6,21 @@ import { dataDir, installDir } from '../utils/runtime';
 
 export default defineCommand({
   name: 'version',
-  aliases: ['-v', '--version'],
+  aliases: [
+    '-v',
+    '--version',
+  ],
   description: 'Show version and platform info',
-  examples: ['brika version', 'brika -v', 'brika version --json'],
+  examples: [
+    'brika version',
+    'brika -v',
+    'brika version --json',
+  ],
   options: {
-    json: { type: 'boolean', description: 'Output as JSON' },
+    json: {
+      type: 'boolean',
+      description: 'Output as JSON',
+    },
   },
   handler({ values }) {
     if (values.json) {
@@ -27,7 +37,8 @@ export default defineCommand({
     }
 
     const commit = pc.dim(`(${buildInfo.commit})`);
-    console.log(`${pc.bold(pc.cyan('brika'))} ${pc.green('v' + hub.version)} ${commit}`);
+    const versionLabel = pc.green(`v${hub.version}`);
+    console.log(`${pc.bold(pc.cyan('brika'))} ${versionLabel} ${commit}`);
     console.log();
     console.log(`  ${pc.dim('Platform:')}  ${process.platform}/${process.arch}`);
     console.log(`  ${pc.dim('Runtime:')}   Bun ${Bun.version}`);

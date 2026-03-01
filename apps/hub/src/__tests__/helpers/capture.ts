@@ -1,9 +1,15 @@
 /** Capture console.log output */
-export function captureLog(): { lines: string[]; restore: () => void } {
+export function captureLog(): {
+  lines: string[];
+  restore: () => void;
+} {
   const lines: string[] = [];
   const original = console.log;
   console.log = (...args: unknown[]) => lines.push(args.join(' '));
-  return { lines, restore: () => (console.log = original) };
+  return {
+    lines,
+    restore: () => (console.log = original),
+  };
 }
 
 /** Capture console.error + trap process.exit */

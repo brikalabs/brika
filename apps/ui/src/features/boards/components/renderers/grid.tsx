@@ -14,12 +14,21 @@ const gridVariants = cva('grid min-h-0', {
 
 defineRenderer('grid', ({ node, onAction }) => {
   const gridStyle: React.CSSProperties = node.autoFit
-    ? { gridTemplateColumns: `repeat(auto-fit, minmax(${node.minColumnWidth ?? 120}px, 1fr))` }
-    : { gridTemplateColumns: `repeat(${node.columns ?? 2}, minmax(0, 1fr))` };
+    ? {
+        gridTemplateColumns: `repeat(auto-fit, minmax(${node.minColumnWidth ?? 120}px, 1fr))`,
+      }
+    : {
+        gridTemplateColumns: `repeat(${node.columns ?? 2}, minmax(0, 1fr))`,
+      };
 
   return (
     <div
-      className={cn(gridVariants({ gap: node.gap }), node.onPress && 'cursor-pointer')}
+      className={cn(
+        gridVariants({
+          gap: node.gap,
+        }),
+        node.onPress && 'cursor-pointer'
+      )}
       style={gridStyle}
       {...clickableProps(node.onPress, onAction)}
     >

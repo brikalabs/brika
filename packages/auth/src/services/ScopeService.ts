@@ -4,8 +4,8 @@
  */
 
 import { injectable } from '@brika/di';
-import { Role, Scope } from '../types';
 import { ROLE_SCOPES, SCOPES_REGISTRY } from '../constants';
+import { Role, Scope } from '../types';
 
 /**
  * Service for managing scopes and permissions
@@ -23,7 +23,9 @@ export class ScopeService {
    * Validate array of scopes
    */
   validateScopes(scopes: unknown[]): Scope[] {
-    if (!Array.isArray(scopes)) return [];
+    if (!Array.isArray(scopes)) {
+      return [];
+    }
 
     return scopes.filter((s) => this.isValidScope(s as string)) as Scope[];
   }

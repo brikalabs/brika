@@ -18,7 +18,10 @@ import { UpdateBadge } from './UpdateBadge';
 export function UpdateSection() {
   const { t } = useLocale();
   const { data, isFetching, refetch } = useUpdateCheck();
-  const showLoading = useDelayedLoading(isFetching, { delay: 0, minDuration: 600 });
+  const showLoading = useDelayedLoading(isFetching, {
+    delay: 0,
+    minDuration: 600,
+  });
   const [dialogOpen, setDialogOpen] = useState(false);
   const [forceReinstall, setForceReinstall] = useState(false);
   const [checkedAt, setCheckedAt] = useState<number | undefined>(undefined);
@@ -27,7 +30,9 @@ export function UpdateSection() {
   const handleCheck = useCallback(async () => {
     await refetch();
     setCheckedAt(Date.now());
-  }, [refetch]);
+  }, [
+    refetch,
+  ]);
 
   const openDialog = (force: boolean) => {
     setForceReinstall(force);

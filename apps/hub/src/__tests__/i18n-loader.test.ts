@@ -9,7 +9,9 @@ import { I18nLoader } from '@/runtime/bootstrap/i18n-loader';
 import type { BrikaConfig } from '@/runtime/config';
 import { I18nService } from '@/runtime/i18n';
 
-useTestBed({ autoStub: false });
+useTestBed({
+  autoStub: false,
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Test Fixtures
@@ -19,7 +21,11 @@ const createMockConfig = (): BrikaConfig => ({
   hub: {
     host: '0.0.0.0',
     port: 3001,
-    plugins: { installDir: '/tmp', heartbeatInterval: 5000, heartbeatTimeout: 15000 },
+    plugins: {
+      installDir: '/tmp',
+      heartbeatInterval: 5000,
+      heartbeatTimeout: 15000,
+    },
   },
   plugins: [],
   rules: [],

@@ -12,10 +12,21 @@ const testCommands: Command[] = [
     name: 'start',
     description: 'Start the server',
     options: {
-      port: { type: 'string', short: 'p', description: 'Port number' },
-      verbose: { type: 'boolean', short: 'V', description: 'Verbose output' },
+      port: {
+        type: 'string',
+        short: 'p',
+        description: 'Port number',
+      },
+      verbose: {
+        type: 'boolean',
+        short: 'V',
+        description: 'Verbose output',
+      },
     },
-    examples: ['brika start', 'brika start -p 8080'],
+    examples: [
+      'brika start',
+      'brika start -p 8080',
+    ],
     handler() {},
   },
   {

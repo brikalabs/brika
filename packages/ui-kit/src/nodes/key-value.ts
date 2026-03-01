@@ -21,7 +21,10 @@ export interface KeyValueNode extends BaseNode {
 }
 
 export function KeyValue(props: Omit<KeyValueNode, 'type'>): KeyValueNode {
-  return { type: 'key-value', ...props };
+  return {
+    type: 'key-value',
+    ...props,
+  };
 }
 
 declare module './_shared' {

@@ -33,9 +33,15 @@ export interface RegisteredBrickType {
   /** Supported size families (catalog metadata) */
   families: BrickFamily[];
   /** Min grid size */
-  minSize?: { w: number; h: number };
+  minSize?: {
+    w: number;
+    h: number;
+  };
   /** Max grid size */
-  maxSize?: { w: number; h: number };
+  maxSize?: {
+    w: number;
+    h: number;
+  };
   /** Per-instance configuration schema */
   config?: PreferenceDefinition[];
 }
@@ -58,8 +64,14 @@ export class BrickTypeRegistry {
     brickType: {
       id: string;
       families: BrickFamily[];
-      minSize?: { w: number; h: number };
-      maxSize?: { w: number; h: number };
+      minSize?: {
+        w: number;
+        h: number;
+      };
+      maxSize?: {
+        w: number;
+        h: number;
+      };
       config?: unknown[];
     },
     pluginName: string,
@@ -75,7 +87,9 @@ export class BrickTypeRegistry {
     const fullId = `${pluginName}:${brickType.id}`;
 
     if (this.#types.has(fullId)) {
-      this.logs.warn('Duplicate brick type registration', { brickTypeId: fullId });
+      this.logs.warn('Duplicate brick type registration', {
+        brickTypeId: fullId,
+      });
     }
 
     this.#types.set(fullId, {
@@ -87,13 +101,20 @@ export class BrickTypeRegistry {
       category: manifest?.category,
       icon: manifest?.icon,
       color: manifest?.color,
-      families: brickType.families ?? ['sm', 'md', 'lg'],
+      families: brickType.families ?? [
+        'sm',
+        'md',
+        'lg',
+      ],
       minSize: brickType.minSize,
       maxSize: brickType.maxSize,
       config: (brickType.config ?? manifest?.config) as PreferenceDefinition[] | undefined,
     });
 
-    this.logs.info('Brick type registered', { brickTypeId: fullId, pluginName });
+    this.logs.info('Brick type registered', {
+      brickTypeId: fullId,
+      pluginName,
+    });
     return fullId;
   }
 
@@ -106,7 +127,10 @@ export class BrickTypeRegistry {
       }
     }
     if (removed.length > 0) {
-      this.logs.info('Brick types unregistered', { pluginName, count: removed.length });
+      this.logs.info('Brick types unregistered', {
+        pluginName,
+        count: removed.length,
+      });
     }
     return removed;
   }
@@ -120,11 +144,15 @@ export class BrickTypeRegistry {
   }
 
   list(): RegisteredBrickType[] {
-    return [...this.#types.values()].sort((a, b) => a.fullId.localeCompare(b.fullId));
+    return [
+      ...this.#types.values(),
+    ].sort((a, b) => a.fullId.localeCompare(b.fullId));
   }
 
   listByPlugin(pluginName: string): RegisteredBrickType[] {
-    return [...this.#types.values()].filter((t) => t.pluginName === pluginName);
+    return [
+      ...this.#types.values(),
+    ].filter((t) => t.pluginName === pluginName);
   }
 
   getProvider(fullId: string): string | undefined {

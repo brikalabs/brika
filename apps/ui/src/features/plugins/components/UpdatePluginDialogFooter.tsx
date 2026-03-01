@@ -39,7 +39,9 @@ export function UpdatePluginDialogFooter({
         {isProcessing ? (
           <>
             <Loader2 className="size-4 animate-spin" />
-            {t('plugins:update.processing', { action: actionLabel })}
+            {t('plugins:update.processing', {
+              action: actionLabel,
+            })}
           </>
         ) : (
           <>

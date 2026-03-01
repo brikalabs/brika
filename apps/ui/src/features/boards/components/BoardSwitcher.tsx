@@ -43,7 +43,7 @@ import {
 } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
 import { cn } from '@/lib/utils';
-import { routes } from '@/routes';
+import { paths } from '@/routes/paths';
 import type { BoardSummary } from '../api';
 import { useBoards, useCreateBoard, useReorderBoards } from '../hooks';
 import { BoardFormFields } from './BoardFormFields';
@@ -106,10 +106,16 @@ function SortableTab({ board, onEdit, activeId }: Readonly<SortableTabProps>) {
         <TabContent board={board} />
       ) : (
         <Link
-          to={routes.boards.detail.to({ boardId: board.id })}
+          to={paths.boards.detail.to({
+            boardId: board.id,
+          })}
           className="flex items-center gap-1.5 whitespace-nowrap rounded-md py-1.5 pr-7 pl-3 text-sm transition-colors"
-          activeProps={{ className: 'bg-background font-medium shadow-sm' }}
-          inactiveProps={{ className: 'text-muted-foreground hover:text-foreground' }}
+          activeProps={{
+            className: 'bg-background font-medium shadow-sm',
+          }}
+          inactiveProps={{
+            className: 'text-muted-foreground hover:text-foreground',
+          }}
         >
           {board.icon ? (
             <DynamicIcon name={board.icon as IconName} className="size-3.5" />
@@ -153,7 +159,9 @@ const getKey = (d: BoardSummary) => d.id;
 export function BoardSwitcher({ onEdit }: Readonly<BoardSwitcherProps>) {
   const { t } = useLocale();
   const navigate = useNavigate();
-  const { boardId } = useParams({ strict: false });
+  const { boardId } = useParams({
+    strict: false,
+  });
   const { data: boards = [] } = useBoards();
   const { mutate: reorderBoards } = useReorderBoards();
 
@@ -169,13 +177,19 @@ export function BoardSwitcher({ onEdit }: Readonly<BoardSwitcherProps>) {
     items: boards,
     getKey,
     activeKey: boardId,
-    deps: [activeId],
+    deps: [
+      activeId,
+    ],
   });
 
   // ─── Drag-to-reorder ──────────────────────────────────────────────────
 
   const tabSensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
   );
 
   const activeDrag = activeId ? boards.find((d) => d.id === activeId) : undefined;
@@ -208,15 +222,24 @@ export function BoardSwitcher({ onEdit }: Readonly<BoardSwitcherProps>) {
   // ─── Create dialog ────────────────────────────────────────────────────
 
   const handleCreate = () => {
-    if (!newName.trim()) return;
+    if (!newName.trim()) {
+      return;
+    }
     createBoard(
-      { name: newName.trim(), icon: newIcon.trim() },
+      {
+        name: newName.trim(),
+        icon: newIcon.trim(),
+      },
       {
         onSuccess: (board) => {
           setCreateOpen(false);
           setNewName('');
           setNewIcon('');
-          navigate({ to: routes.boards.detail.to({ boardId: board.id }) });
+          navigate({
+            to: paths.boards.detail.to({
+              boardId: board.id,
+            }),
+          });
         },
       }
     );
@@ -283,7 +306,9 @@ export function BoardSwitcher({ onEdit }: Readonly<BoardSwitcherProps>) {
                     className="group/item flex items-center justify-between gap-3"
                     onClick={() =>
                       navigate({
-                        to: routes.boards.detail.to({ boardId: d.id }),
+                        to: paths.boards.detail.to({
+                          boardId: d.id,
+                        }),
                       })
                     }
                   >

@@ -5,7 +5,14 @@ export interface PermissionDefinition {
   readonly descriptionKey: string;
 }
 
-export function createRegistry<T extends Record<string, { icon: string }>>(map: T) {
+export function createRegistry<
+  T extends Record<
+    string,
+    {
+      icon: string;
+    }
+  >,
+>(map: T) {
   type P = keyof T & string;
 
   const PERMISSIONS = Object.fromEntries(
@@ -30,5 +37,10 @@ export function createRegistry<T extends Record<string, { icon: string }>>(map: 
     return values.filter(isValidPermission);
   }
 
-  return { PERMISSIONS, PERMISSION_LIST, isValidPermission, filterValidPermissions };
+  return {
+    PERMISSIONS,
+    PERMISSION_LIST,
+    isValidPermission,
+    filterValidPermissions,
+  };
 }

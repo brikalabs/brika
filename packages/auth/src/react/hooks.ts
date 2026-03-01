@@ -5,9 +5,9 @@
  */
 
 import { useContext, useMemo } from 'react';
-import { AuthContext, AuthContextValue } from './AuthProvider';
-import { Scope } from '../types';
 import { canAccess, canAccessAll, Features } from '../middleware/canAccess';
+import { Scope } from '../types';
+import { AuthContext, AuthContextValue } from './AuthProvider';
 
 /**
  * Use authentication context
@@ -39,9 +39,14 @@ export function useCanAccess(required: Scope | Scope[] | null): boolean {
   const { session } = useAuth();
 
   return useMemo(() => {
-    if (!required || !session) return false;
+    if (!required || !session) {
+      return false;
+    }
     return canAccess((session.scopes || []) as Scope[], required);
-  }, [required, session?.scopes]);
+  }, [
+    required,
+    session?.scopes,
+  ]);
 }
 
 /**
@@ -56,9 +61,14 @@ export function useCanAccessAll(required: Scope[] | null): boolean {
   const { session } = useAuth();
 
   return useMemo(() => {
-    if (!required || !session) return false;
+    if (!required || !session) {
+      return false;
+    }
     return canAccessAll((session.scopes || []) as Scope[], required);
-  }, [required, session?.scopes]);
+  }, [
+    required,
+    session?.scopes,
+  ]);
 }
 
 /**
@@ -81,12 +91,22 @@ export function useFeaturePermissions<
     const scopes = (session?.scopes ?? []) as Scope[];
     return Object.fromEntries(
       Object.entries(featurePermissions).map(([key, checker]) => {
-        if (!session) return [key, false];
+        if (!session) {
+          return [
+            key,
+            false,
+          ];
+        }
         const value = typeof checker === 'function' ? checker(scopes) : checker;
-        return [key, value];
+        return [
+          key,
+          value,
+        ];
       })
     ) as Record<keyof T, boolean>;
-  }, [session?.scopes]);
+  }, [
+    session?.scopes,
+  ]);
 }
 
 /**

@@ -31,7 +31,7 @@
   },
   "scripts": {
     "link": "bun link",
-    "tsc": "bunx --bun tsc --noEmit",
+    "typecheck": "tsgo --noEmit",
     "prepublishOnly": "brika-verify-plugin"
   },
   "sparks": [

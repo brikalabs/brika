@@ -2,8 +2,34 @@ import { cn } from '@/lib/utils';
 import { defineRenderer } from './registry';
 import { clickableProps } from './shared';
 
+function buildDimensionStyle(node: {
+  width?: number | string;
+  height?: number | string;
+  aspectRatio?: string;
+}): React.CSSProperties {
+  return {
+    ...(node.width !== null && node.width !== undefined
+      ? {
+          width: node.width,
+        }
+      : {}),
+    ...(node.height !== null && node.height !== undefined
+      ? {
+          height: node.height,
+        }
+      : {}),
+    ...(node.aspectRatio
+      ? {
+          aspectRatio: node.aspectRatio,
+        }
+      : {}),
+  };
+}
+
 defineRenderer('image', ({ node, onAction }) => {
-  const hasDimension = node.width != null || node.height != null;
+  const hasDimension =
+    (node.width !== null && node.width !== undefined) ||
+    (node.height !== null && node.height !== undefined);
   const clickable = !!node.onPress;
   const clickProps = clickableProps(node.onPress, onAction);
 
@@ -12,7 +38,9 @@ defineRenderer('image', ({ node, onAction }) => {
       src={node.src}
       alt={node.alt ?? ''}
       className={cn('h-full w-full', node.rounded && 'rounded-md')}
-      style={{ objectFit: node.fit ?? 'cover' }}
+      style={{
+        objectFit: node.fit ?? 'cover',
+      }}
       draggable={false}
     />
   );
@@ -25,11 +53,7 @@ defineRenderer('image', ({ node, onAction }) => {
           node.rounded && 'rounded-md',
           clickable && 'cursor-pointer'
         )}
-        style={{
-          ...(node.width == null ? {} : { width: node.width }),
-          ...(node.height == null ? {} : { height: node.height }),
-          ...(node.aspectRatio ? { aspectRatio: node.aspectRatio } : {}),
-        }}
+        style={buildDimensionStyle(node)}
         {...clickProps}
       >
         {img}

@@ -18,5 +18,8 @@ import { useTranslation } from './use-translation';
  */
 export function useLocale() {
   const { t } = useTranslation();
-  return { t, ...useIntl() };
+  return {
+    t,
+    ...useIntl(),
+  };
 }

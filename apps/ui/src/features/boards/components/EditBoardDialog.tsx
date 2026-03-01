@@ -47,16 +47,33 @@ export function EditBoardDialog({
 
   // Reset form state when dialog opens or board changes
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      return;
+    }
     setName(board.name);
     setIcon(board.icon ?? '');
-  }, [open, board.id, board.name, board.icon]);
+  }, [
+    open,
+    board.id,
+    board.name,
+    board.icon,
+  ]);
 
   const handleSave = () => {
-    if (!name.trim()) return;
+    if (!name.trim()) {
+      return;
+    }
     updateBoard(
-      { id: board.id, data: { name: name.trim(), icon: icon.trim() } },
-      { onSuccess: () => onOpenChange(false) }
+      {
+        id: board.id,
+        data: {
+          name: name.trim(),
+          icon: icon.trim(),
+        },
+      },
+      {
+        onSuccess: () => onOpenChange(false),
+      }
     );
   };
 

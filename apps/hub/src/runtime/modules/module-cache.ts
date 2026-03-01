@@ -40,8 +40,16 @@ export class ModuleCache {
 
   set(key: string, js: string, css?: string): void {
     this.#mem.set(key, {
-      js: { content: js, etag: etag(js) },
-      css: css ? { content: css, etag: etag(css) } : undefined,
+      js: {
+        content: js,
+        etag: etag(js),
+      },
+      css: css
+        ? {
+            content: css,
+            etag: etag(css),
+          }
+        : undefined,
     });
   }
 
@@ -52,15 +60,25 @@ export class ModuleCache {
     const dir = join(this.cacheDir, pluginName);
     const jsFile = Bun.file(join(dir, `${moduleId}.${hash}.js`));
 
-    if (!(await jsFile.exists())) return false;
+    if (!(await jsFile.exists())) {
+      return false;
+    }
 
     const jsText = await jsFile.text();
     const cssFile = Bun.file(join(dir, `${moduleId}.${hash}.css`));
     const cssText = (await cssFile.exists()) ? await cssFile.text() : undefined;
 
     this.#mem.set(`${pluginName}:${moduleId}`, {
-      js: { content: jsText, etag: etag(jsText) },
-      css: cssText ? { content: cssText, etag: etag(cssText) } : undefined,
+      js: {
+        content: jsText,
+        etag: etag(jsText),
+      },
+      css: cssText
+        ? {
+            content: cssText,
+            etag: etag(cssText),
+          }
+        : undefined,
     });
     return true;
   }
@@ -74,7 +92,9 @@ export class ModuleCache {
     css?: string
   ): Promise<void> {
     const dir = join(this.cacheDir, pluginName);
-    await mkdir(dir, { recursive: true });
+    await mkdir(dir, {
+      recursive: true,
+    });
 
     await Promise.all([
       Bun.write(join(dir, `${moduleId}.${hash}.js`), js),
@@ -85,9 +105,14 @@ export class ModuleCache {
   /** Remove all cached data for a plugin (in-memory + disk). */
   remove(pluginName: string): void {
     for (const key of this.#mem.keys()) {
-      if (key.startsWith(`${pluginName}:`)) this.#mem.delete(key);
+      if (key.startsWith(`${pluginName}:`)) {
+        this.#mem.delete(key);
+      }
     }
-    rm(join(this.cacheDir, pluginName), { recursive: true, force: true }).catch(() => undefined);
+    rm(join(this.cacheDir, pluginName), {
+      recursive: true,
+      force: true,
+    }).catch(() => undefined);
   }
 }
 

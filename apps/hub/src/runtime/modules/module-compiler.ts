@@ -16,11 +16,17 @@ export class ModuleCompiler {
   async compile(
     pluginName: string,
     rootDirectory: string,
-    modules: Array<{ id: string }>,
+    modules: Array<{
+      id: string;
+    }>,
     actionsFile?: string
   ): Promise<void> {
-    const plugins: BunPlugin[] = [brikaExternalsPlugin()];
-    if (actionsFile) plugins.push(brikaActionsPlugin(actionsFile));
+    const plugins: BunPlugin[] = [
+      brikaExternalsPlugin(),
+    ];
+    if (actionsFile) {
+      plugins.push(brikaActionsPlugin(actionsFile));
+    }
 
     await Promise.all(
       modules.map((mod) => this.#compileModule(pluginName, mod.id, rootDirectory, plugins))
@@ -50,18 +56,27 @@ export class ModuleCompiler {
     const entrypoint = join(rootDirectory, 'src', 'pages', `${moduleId}.tsx`);
 
     if (!(await Bun.file(entrypoint).exists())) {
-      this.#logs.warn('Module source not found', { pluginName, moduleId, path: entrypoint });
+      this.#logs.warn('Module source not found', {
+        pluginName,
+        moduleId,
+        path: entrypoint,
+      });
       return;
     }
 
     const hash = await hashSource(entrypoint);
     if (await this.#cache.loadFromDisk(pluginName, moduleId, hash)) {
-      this.#logs.info('Module loaded from cache', { pluginName, moduleId });
+      this.#logs.info('Module loaded from cache', {
+        pluginName,
+        moduleId,
+      });
       return;
     }
 
     const result = await Bun.build({
-      entrypoints: [entrypoint],
+      entrypoints: [
+        entrypoint,
+      ],
       target: 'browser',
       format: 'esm',
       minify: true,

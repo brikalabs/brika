@@ -17,7 +17,11 @@ export function elapsed(): string {
 }
 
 export async function fileSize(path: string): Promise<string> {
-  const bytes = (await stat(path).catch(() => ({ size: 0 }))).size;
+  const bytes = (
+    await stat(path).catch(() => ({
+      size: 0,
+    }))
+  ).size;
   if (bytes >= 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
   return `${(bytes / 1024).toFixed(1)} KB`;
 }

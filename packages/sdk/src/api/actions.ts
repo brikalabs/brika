@@ -44,7 +44,10 @@ import { getContext } from '../context';
 export interface ActionRef<TInput = void, TOutput = unknown> {
   readonly __actionId: string;
   /** @internal phantom field — never set at runtime */
-  readonly __phantom?: { input: TInput; output: TOutput };
+  readonly __phantom?: {
+    input: TInput;
+    output: TOutput;
+  };
 }
 
 // ─── Internals ───────────────────────────────────────────────────────────────
@@ -79,5 +82,7 @@ export function defineAction<TInput = void, TOutput = unknown>(
 ): ActionRef<TInput, TOutput> {
   const id = actionId(counter++);
   getContext().registerAction(id, handler as (input?: unknown) => unknown);
-  return { __actionId: id } as ActionRef<TInput, TOutput>;
+  return {
+    __actionId: id,
+  } as ActionRef<TInput, TOutput>;
 }

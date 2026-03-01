@@ -7,14 +7,30 @@
 
 import { combineRoutes, group } from '@brika/router';
 import { requireAuth } from '../../middleware/requireAuth';
-import { authPublicRoutes, authProtectedRoutes } from './auth';
-import { sessionRoutes } from './sessions';
+import { authProtectedRoutes, authPublicRoutes } from './auth';
 import { profileRoutes } from './profile';
 import { scopeRoutes } from './scopes';
+import { sessionRoutes } from './sessions';
 import { userRoutes } from './users';
 
 export const allAuthRoutes = combineRoutes(
-  group({ prefix: '/api/auth', routes: [authPublicRoutes, scopeRoutes] }),
-  group({ prefix: '/api/auth', middleware: [requireAuth()], routes: [authProtectedRoutes, sessionRoutes, profileRoutes] }),
-  userRoutes,
+  group({
+    prefix: '/api/auth',
+    routes: [
+      authPublicRoutes,
+      scopeRoutes,
+    ],
+  }),
+  group({
+    prefix: '/api/auth',
+    middleware: [
+      requireAuth(),
+    ],
+    routes: [
+      authProtectedRoutes,
+      sessionRoutes,
+      profileRoutes,
+    ],
+  }),
+  userRoutes
 );

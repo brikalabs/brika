@@ -9,7 +9,7 @@ import {
   callAction as callActionMsg,
   registerAction as registerActionMsg,
 } from '@brika/ipc/contract';
-import { type ContextCore, type MethodsOf, registerContextModule } from './register';
+import { type ContextCore, registerContextModule } from './register';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -24,13 +24,22 @@ export function setupActions(core: ContextCore) {
   client.implement(callActionMsg, async ({ actionId, input }) => {
     const handler = handlers.get(actionId);
     if (!handler) {
-      return { ok: false, error: `Action "${actionId}" not found` };
+      return {
+        ok: false,
+        error: `Action "${actionId}" not found`,
+      };
     }
     try {
       const data = await handler(input);
-      return { ok: true, data: data as typeof input };
+      return {
+        ok: true,
+        data: data as typeof input,
+      };
     } catch (e) {
-      return { ok: false, error: String(e) };
+      return {
+        ok: false,
+        error: String(e),
+      };
     }
   });
 
@@ -38,16 +47,12 @@ export function setupActions(core: ContextCore) {
     methods: {
       registerAction(id: string, handler: ActionHandler): void {
         handlers.set(id, handler);
-        client.send(registerActionMsg, { id });
+        client.send(registerActionMsg, {
+          id,
+        });
       },
     },
   };
-}
-
-// ─── Type Augmentation (inferred from setup) ─────────────────────────────────
-
-declare module '../context' {
-  interface Context extends MethodsOf<typeof setupActions> {}
 }
 
 registerContextModule('actions', setupActions);

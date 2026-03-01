@@ -7,7 +7,10 @@ export interface SpacerNode extends BaseNode {
 }
 
 export function Spacer(props?: { size?: 'sm' | 'md' | 'lg' }): SpacerNode {
-  return { type: 'spacer', ...props };
+  return {
+    type: 'spacer',
+    ...props,
+  };
 }
 
 declare module './_shared' {

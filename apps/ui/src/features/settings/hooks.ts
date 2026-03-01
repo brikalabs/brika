@@ -20,17 +20,31 @@ export interface SystemResponse {
     plugins: string;
   };
   stats: {
-    plugins: { total: number; running: number };
-    blocks: { total: number };
-    workflows: { total: number; enabled: number };
-    sparks: { total: number };
-    bricks: { total: number };
+    plugins: {
+      total: number;
+      running: number;
+    };
+    blocks: {
+      total: number;
+    };
+    workflows: {
+      total: number;
+      enabled: number;
+    };
+    sparks: {
+      total: number;
+    };
+    bricks: {
+      total: number;
+    };
   };
 }
 
 export function useSystem() {
   return useQuery({
-    queryKey: ['system'],
+    queryKey: [
+      'system',
+    ],
     queryFn: () => fetcher<SystemResponse>('/api/system'),
     staleTime: 1000 * 30, // 30 seconds
   });

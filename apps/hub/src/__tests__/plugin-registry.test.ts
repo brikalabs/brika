@@ -12,13 +12,17 @@ import { PluginManager } from '@/runtime/plugins/plugin-manager';
 import { PluginRegistry } from '@/runtime/registry/plugin-registry';
 import type { OperationProgress } from '@/runtime/registry/types';
 
-useTestBed({ autoStub: false });
+useTestBed({
+  autoStub: false,
+});
 
 describe('PluginRegistry', () => {
   const bun = useBunMock();
 
   let registry: PluginRegistry;
-  let mockHubConfig: { homeDir: string };
+  let mockHubConfig: {
+    homeDir: string;
+  };
   let mockConfigLoader: {
     get: ReturnType<typeof mock>;
     load: ReturnType<typeof mock>;
@@ -33,14 +37,22 @@ describe('PluginRegistry', () => {
   };
 
   beforeEach(() => {
-    mockHubConfig = { homeDir: '/test/home' };
+    mockHubConfig = {
+      homeDir: '/test/home',
+    };
 
     mockConfigLoader = {
-      get: mock().mockReturnValue({ plugins: [] }),
-      load: mock().mockResolvedValue({ plugins: [] }),
+      get: mock().mockReturnValue({
+        plugins: [],
+      }),
+      load: mock().mockResolvedValue({
+        plugins: [],
+      }),
       addPlugin: mock().mockResolvedValue(undefined),
       removePlugin: mock().mockResolvedValue(undefined),
-      resolvePluginEntry: mock().mockResolvedValue({ rootDirectory: '/test/workspace/plugin' }),
+      resolvePluginEntry: mock().mockResolvedValue({
+        rootDirectory: '/test/workspace/plugin',
+      }),
     };
 
     mockPluginManager = {
@@ -77,7 +89,9 @@ describe('PluginRegistry', () => {
       bun
         .file('/test/home/plugins/package.json', {
           name: 'existing',
-          dependencies: { '@test/plugin': '1.0.0' },
+          dependencies: {
+            '@test/plugin': '1.0.0',
+          },
         })
         .apply();
 
@@ -85,7 +99,9 @@ describe('PluginRegistry', () => {
 
       expect(bun.getFile('/test/home/plugins/package.json')).toMatchObject({
         name: 'existing',
-        dependencies: { '@test/plugin': '1.0.0' },
+        dependencies: {
+          '@test/plugin': '1.0.0',
+        },
       });
     });
   });
@@ -109,7 +125,11 @@ describe('PluginRegistry', () => {
     });
 
     test('adds plugin to config after install', async () => {
-      bun.spawn({ exitCode: 0 }).apply();
+      bun
+        .spawn({
+          exitCode: 0,
+        })
+        .apply();
 
       for await (const _ of registry.install('@test/plugin', '1.0.0')) {
         // Consume progress
@@ -119,7 +139,11 @@ describe('PluginRegistry', () => {
     });
 
     test('uses latest version when not specified', async () => {
-      bun.spawn({ exitCode: 0 }).apply();
+      bun
+        .spawn({
+          exitCode: 0,
+        })
+        .apply();
 
       for await (const _ of registry.install('@test/plugin')) {
         // Consume progress
@@ -129,9 +153,18 @@ describe('PluginRegistry', () => {
     });
 
     test('skips npm install for workspace packages', async () => {
-      bun.spawn({ exitCode: 0 }).apply();
+      bun
+        .spawn({
+          exitCode: 0,
+        })
+        .apply();
       mockConfigLoader.load.mockResolvedValue({
-        plugins: [{ name: '@test/workspace-plugin', version: 'workspace:*' }],
+        plugins: [
+          {
+            name: '@test/workspace-plugin',
+            version: 'workspace:*',
+          },
+        ],
       });
 
       for await (const _ of registry.install('@test/workspace-plugin', 'workspace:*')) {
@@ -143,9 +176,18 @@ describe('PluginRegistry', () => {
     });
 
     test('skips npm install for file packages', async () => {
-      bun.spawn({ exitCode: 0 }).apply();
+      bun
+        .spawn({
+          exitCode: 0,
+        })
+        .apply();
       mockConfigLoader.load.mockResolvedValue({
-        plugins: [{ name: '@test/local-plugin', version: 'file:../local' }],
+        plugins: [
+          {
+            name: '@test/local-plugin',
+            version: 'file:../local',
+          },
+        ],
       });
 
       for await (const _ of registry.install('@test/local-plugin', 'file:../local')) {
@@ -157,7 +199,11 @@ describe('PluginRegistry', () => {
     });
 
     test('yields error on failure', async () => {
-      bun.spawn({ exitCode: 1 }).apply();
+      bun
+        .spawn({
+          exitCode: 1,
+        })
+        .apply();
 
       const phases: OperationProgress[] = [];
       for await (const progress of registry.install('@test/broken', '1.0.0')) {
@@ -172,7 +218,11 @@ describe('PluginRegistry', () => {
 
   describe('uninstall', () => {
     test('removes plugin from config', async () => {
-      bun.spawn({ exitCode: 0 }).apply();
+      bun
+        .spawn({
+          exitCode: 0,
+        })
+        .apply();
 
       await registry.uninstall('@test/plugin');
 
@@ -181,8 +231,12 @@ describe('PluginRegistry', () => {
 
     test('runs bun remove when npm package exists', async () => {
       bun
-        .file('/test/home/plugins/node_modules/@test/plugin/package.json', { name: '@test/plugin' })
-        .spawn({ exitCode: 0 })
+        .file('/test/home/plugins/node_modules/@test/plugin/package.json', {
+          name: '@test/plugin',
+        })
+        .spawn({
+          exitCode: 0,
+        })
         .apply();
 
       await registry.uninstall('@test/plugin');
@@ -193,7 +247,11 @@ describe('PluginRegistry', () => {
     });
 
     test('skips bun remove when npm package does not exist', async () => {
-      bun.spawn({ exitCode: 0 }).apply();
+      bun
+        .spawn({
+          exitCode: 0,
+        })
+        .apply();
 
       await registry.uninstall('@test/workspace-plugin');
 
@@ -214,8 +272,14 @@ describe('PluginRegistry', () => {
     test('returns npm packages from package.json', async () => {
       bun
         .fs({
-          '/test/home/plugins/package.json': { dependencies: { '@test/plugin': '^1.0.0' } },
-          '/test/home/plugins/node_modules/@test/plugin/package.json': { version: '1.2.3' },
+          '/test/home/plugins/package.json': {
+            dependencies: {
+              '@test/plugin': '^1.0.0',
+            },
+          },
+          '/test/home/plugins/node_modules/@test/plugin/package.json': {
+            version: '1.2.3',
+          },
         })
         .apply();
 
@@ -231,7 +295,12 @@ describe('PluginRegistry', () => {
     test('includes workspace packages from config', async () => {
       bun.apply();
       mockConfigLoader.get.mockReturnValue({
-        plugins: [{ name: '@test/workspace', version: 'workspace:*' }],
+        plugins: [
+          {
+            name: '@test/workspace',
+            version: 'workspace:*',
+          },
+        ],
       });
 
       const result = await registry.list();
@@ -246,7 +315,12 @@ describe('PluginRegistry', () => {
     test('includes file packages from config', async () => {
       bun.apply();
       mockConfigLoader.get.mockReturnValue({
-        plugins: [{ name: '@test/local', version: 'file:../local-plugin' }],
+        plugins: [
+          {
+            name: '@test/local',
+            version: 'file:../local-plugin',
+          },
+        ],
       });
 
       const result = await registry.list();
@@ -261,12 +335,23 @@ describe('PluginRegistry', () => {
     test('deduplicates packages that appear in both npm and config', async () => {
       bun
         .fs({
-          '/test/home/plugins/package.json': { dependencies: { '@test/plugin': '^1.0.0' } },
-          '/test/home/plugins/node_modules/@test/plugin/package.json': { version: '1.2.3' },
+          '/test/home/plugins/package.json': {
+            dependencies: {
+              '@test/plugin': '^1.0.0',
+            },
+          },
+          '/test/home/plugins/node_modules/@test/plugin/package.json': {
+            version: '1.2.3',
+          },
         })
         .apply();
       mockConfigLoader.get.mockReturnValue({
-        plugins: [{ name: '@test/plugin', version: '1.0.0' }],
+        plugins: [
+          {
+            name: '@test/plugin',
+            version: '1.0.0',
+          },
+        ],
       });
 
       const result = await registry.list();
@@ -280,8 +365,14 @@ describe('PluginRegistry', () => {
     test('returns true when plugin is installed', async () => {
       bun
         .fs({
-          '/test/home/plugins/package.json': { dependencies: { '@test/plugin': '^1.0.0' } },
-          '/test/home/plugins/node_modules/@test/plugin/package.json': { version: '1.0.0' },
+          '/test/home/plugins/package.json': {
+            dependencies: {
+              '@test/plugin': '^1.0.0',
+            },
+          },
+          '/test/home/plugins/node_modules/@test/plugin/package.json': {
+            version: '1.0.0',
+          },
         })
         .apply();
 
@@ -303,8 +394,14 @@ describe('PluginRegistry', () => {
     test('returns package info when installed', async () => {
       bun
         .fs({
-          '/test/home/plugins/package.json': { dependencies: { '@test/plugin': '^1.0.0' } },
-          '/test/home/plugins/node_modules/@test/plugin/package.json': { version: '1.2.3' },
+          '/test/home/plugins/package.json': {
+            dependencies: {
+              '@test/plugin': '^1.0.0',
+            },
+          },
+          '/test/home/plugins/node_modules/@test/plugin/package.json': {
+            version: '1.2.3',
+          },
         })
         .apply();
 
@@ -346,7 +443,11 @@ describe('PluginRegistry', () => {
 
   describe('update', () => {
     test('yields progress for update operation', async () => {
-      bun.spawn({ exitCode: 0 }).apply();
+      bun
+        .spawn({
+          exitCode: 0,
+        })
+        .apply();
 
       const phases: OperationProgress[] = [];
       for await (const progress of registry.update('@test/plugin')) {
@@ -358,7 +459,11 @@ describe('PluginRegistry', () => {
     });
 
     test('updates all packages when no name specified', async () => {
-      bun.spawn({ exitCode: 0 }).apply();
+      bun
+        .spawn({
+          exitCode: 0,
+        })
+        .apply();
 
       const phases: OperationProgress[] = [];
       for await (const progress of registry.update()) {
@@ -368,11 +473,18 @@ describe('PluginRegistry', () => {
       expect(phases[0]?.package).toBe('all');
       const updateCalls = bun.spawnCalls.filter((c) => c.cmd.includes('update'));
       expect(updateCalls.length).toBe(1);
-      expect(updateCalls[0]?.cmd).toEqual([process.execPath, 'update']);
+      expect(updateCalls[0]?.cmd).toEqual([
+        process.execPath,
+        'update',
+      ]);
     });
 
     test('updates specific package when name specified', async () => {
-      bun.spawn({ exitCode: 0 }).apply();
+      bun
+        .spawn({
+          exitCode: 0,
+        })
+        .apply();
 
       const phases: OperationProgress[] = [];
       for await (const progress of registry.update('@test/plugin')) {
@@ -381,11 +493,19 @@ describe('PluginRegistry', () => {
 
       const updateCalls = bun.spawnCalls.filter((c) => c.cmd.includes('update'));
       expect(updateCalls.length).toBe(1);
-      expect(updateCalls[0]?.cmd).toEqual([process.execPath, 'update', '@test/plugin']);
+      expect(updateCalls[0]?.cmd).toEqual([
+        process.execPath,
+        'update',
+        '@test/plugin',
+      ]);
     });
 
     test('yields error on failure', async () => {
-      bun.spawn({ exitCode: 1 }).apply();
+      bun
+        .spawn({
+          exitCode: 1,
+        })
+        .apply();
 
       const phases: OperationProgress[] = [];
       for await (const progress of registry.update('@test/plugin')) {
@@ -411,10 +531,18 @@ describe('PluginRegistry', () => {
     test('uninstalls removed plugins', async () => {
       bun
         .fs({
-          '/test/home/plugins/package.json': { dependencies: { '@test/old-plugin': '^1.0.0' } },
-          '/test/home/plugins/node_modules/@test/old-plugin/package.json': { version: '1.0.0' },
+          '/test/home/plugins/package.json': {
+            dependencies: {
+              '@test/old-plugin': '^1.0.0',
+            },
+          },
+          '/test/home/plugins/node_modules/@test/old-plugin/package.json': {
+            version: '1.0.0',
+          },
         })
-        .spawn({ exitCode: 0 })
+        .spawn({
+          exitCode: 0,
+        })
         .apply();
 
       await registry.syncToConfig([]);
@@ -423,9 +551,18 @@ describe('PluginRegistry', () => {
     });
 
     test('installs missing plugins', async () => {
-      bun.spawn({ exitCode: 0 }).apply();
+      bun
+        .spawn({
+          exitCode: 0,
+        })
+        .apply();
 
-      await registry.syncToConfig([{ name: '@test/new-plugin', version: '1.0.0' }]);
+      await registry.syncToConfig([
+        {
+          name: '@test/new-plugin',
+          version: '1.0.0',
+        },
+      ]);
 
       expect(mockConfigLoader.addPlugin).toHaveBeenCalledWith('@test/new-plugin', '1.0.0');
     });
@@ -433,10 +570,18 @@ describe('PluginRegistry', () => {
     test('handles errors during uninstall gracefully', async () => {
       bun
         .fs({
-          '/test/home/plugins/package.json': { dependencies: { '@test/broken': '^1.0.0' } },
-          '/test/home/plugins/node_modules/@test/broken/package.json': { version: '1.0.0' },
+          '/test/home/plugins/package.json': {
+            dependencies: {
+              '@test/broken': '^1.0.0',
+            },
+          },
+          '/test/home/plugins/node_modules/@test/broken/package.json': {
+            version: '1.0.0',
+          },
         })
-        .spawn({ exitCode: 0 })
+        .spawn({
+          exitCode: 0,
+        })
         .apply();
 
       mockConfigLoader.removePlugin.mockRejectedValueOnce(new Error('Failed'));
@@ -447,15 +592,29 @@ describe('PluginRegistry', () => {
     });
 
     test('handles errors during install gracefully', async () => {
-      bun.spawn({ exitCode: 1 }).apply();
+      bun
+        .spawn({
+          exitCode: 1,
+        })
+        .apply();
 
-      await registry.syncToConfig([{ name: '@test/broken', version: '1.0.0' }]);
+      await registry.syncToConfig([
+        {
+          name: '@test/broken',
+          version: '1.0.0',
+        },
+      ]);
     });
   });
 
   describe('phase detection', () => {
     test('detects resolving phase from bun output', async () => {
-      bun.spawn({ exitCode: 0, stderr: 'resolving dependencies...' }).apply();
+      bun
+        .spawn({
+          exitCode: 0,
+          stderr: 'resolving dependencies...',
+        })
+        .apply();
 
       const phases: OperationProgress[] = [];
       for await (const progress of registry.install('@test/plugin', '1.0.0')) {
@@ -466,7 +625,12 @@ describe('PluginRegistry', () => {
     });
 
     test('detects downloading phase from GET output', async () => {
-      bun.spawn({ exitCode: 0, stderr: 'GET https://registry.npmjs.org/@test/plugin' }).apply();
+      bun
+        .spawn({
+          exitCode: 0,
+          stderr: 'GET https://registry.npmjs.org/@test/plugin',
+        })
+        .apply();
 
       const phases: OperationProgress[] = [];
       for await (const progress of registry.install('@test/plugin', '1.0.0')) {
@@ -477,7 +641,12 @@ describe('PluginRegistry', () => {
     });
 
     test('detects linking phase from Saved output', async () => {
-      bun.spawn({ exitCode: 0, stderr: 'Saved lockfile' }).apply();
+      bun
+        .spawn({
+          exitCode: 0,
+          stderr: 'Saved lockfile',
+        })
+        .apply();
 
       const phases: OperationProgress[] = [];
       for await (const progress of registry.install('@test/plugin', '1.0.0')) {

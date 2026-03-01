@@ -68,9 +68,15 @@ function rowToEvent(r: LogRow): LogEvent {
 }
 
 function matchesFilters(event: LogEvent, filters: Filters): boolean {
-  if (filters.level && event.level !== filters.level) return false;
-  if (filters.source && event.source !== filters.source) return false;
-  if (filters.plugin && event.pluginName !== filters.plugin) return false;
+  if (filters.level && event.level !== filters.level) {
+    return false;
+  }
+  if (filters.source && event.source !== filters.source) {
+    return false;
+  }
+  if (filters.plugin && event.pluginName !== filters.plugin) {
+    return false;
+  }
   if (filters.search && !event.message.toLowerCase().includes(filters.search.toLowerCase())) {
     return false;
   }
@@ -100,7 +106,13 @@ function createTestDb(path: string): Database {
   return db;
 }
 
-function insertRow(db: Database, row: Partial<LogRow> & { ts: number; message: string }): void {
+function insertRow(
+  db: Database,
+  row: Partial<LogRow> & {
+    ts: number;
+    message: string;
+  }
+): void {
   db.run(
     `INSERT INTO logs (ts, level, source, plugin_name, message, meta,
        error_name, error_message, error_stack, error_cause)
@@ -149,13 +161,34 @@ describe('cli/commands/log', () => {
       const opts = logCommand.options;
       expect(opts).toBeDefined();
 
-      expect(opts?.follow).toMatchObject({ type: 'boolean', short: 'f' });
-      expect(opts?.level).toMatchObject({ type: 'string', short: 'l' });
-      expect(opts?.source).toMatchObject({ type: 'string', short: 's' });
-      expect(opts?.plugin).toMatchObject({ type: 'string', short: 'p' });
-      expect(opts?.search).toMatchObject({ type: 'string', short: 'q' });
-      expect(opts?.limit).toMatchObject({ type: 'number', short: 'n', default: 50 });
-      expect(opts?.clear).toMatchObject({ type: 'boolean' });
+      expect(opts?.follow).toMatchObject({
+        type: 'boolean',
+        short: 'f',
+      });
+      expect(opts?.level).toMatchObject({
+        type: 'string',
+        short: 'l',
+      });
+      expect(opts?.source).toMatchObject({
+        type: 'string',
+        short: 's',
+      });
+      expect(opts?.plugin).toMatchObject({
+        type: 'string',
+        short: 'p',
+      });
+      expect(opts?.search).toMatchObject({
+        type: 'string',
+        short: 'q',
+      });
+      expect(opts?.limit).toMatchObject({
+        type: 'number',
+        short: 'n',
+        default: 50,
+      });
+      expect(opts?.clear).toMatchObject({
+        type: 'boolean',
+      });
     });
 
     test('has examples array', () => {
@@ -197,7 +230,9 @@ describe('cli/commands/log', () => {
       }
 
       // Ensure .brika directory exists
-      mkdirSync(DATA_DIR, { recursive: true });
+      mkdirSync(DATA_DIR, {
+        recursive: true,
+      });
 
       log = captureLog();
     });
@@ -232,7 +267,9 @@ describe('cli/commands/log', () => {
         db.close();
 
         await logCommand.handler({
-          values: { limit: 50 },
+          values: {
+            limit: 50,
+          },
           positionals: [],
           commands: [],
         });
@@ -252,7 +289,9 @@ describe('cli/commands/log', () => {
         db.close();
 
         await logCommand.handler({
-          values: { limit: 50 },
+          values: {
+            limit: 50,
+          },
           positionals: [],
           commands: [],
         });
@@ -265,12 +304,17 @@ describe('cli/commands/log', () => {
       test('respects limit option', async () => {
         const db = createTestDb(DB_PATH);
         for (let i = 0; i < 10; i++) {
-          insertRow(db, { ts: 1700000000000 + i, message: `Log entry ${i}` });
+          insertRow(db, {
+            ts: 1700000000000 + i,
+            message: `Log entry ${i}`,
+          });
         }
         db.close();
 
         await logCommand.handler({
-          values: { limit: 3 },
+          values: {
+            limit: 3,
+          },
           positionals: [],
           commands: [],
         });
@@ -281,13 +325,28 @@ describe('cli/commands/log', () => {
 
       test('filters by level', async () => {
         const db = createTestDb(DB_PATH);
-        insertRow(db, { ts: 1000, message: 'Info msg', level: 'info' });
-        insertRow(db, { ts: 2000, message: 'Error msg', level: 'error' });
-        insertRow(db, { ts: 3000, message: 'Warn msg', level: 'warn' });
+        insertRow(db, {
+          ts: 1000,
+          message: 'Info msg',
+          level: 'info',
+        });
+        insertRow(db, {
+          ts: 2000,
+          message: 'Error msg',
+          level: 'error',
+        });
+        insertRow(db, {
+          ts: 3000,
+          message: 'Warn msg',
+          level: 'warn',
+        });
         db.close();
 
         await logCommand.handler({
-          values: { level: 'error', limit: 50 },
+          values: {
+            level: 'error',
+            limit: 50,
+          },
           positionals: [],
           commands: [],
         });
@@ -298,12 +357,23 @@ describe('cli/commands/log', () => {
 
       test('filters by source', async () => {
         const db = createTestDb(DB_PATH);
-        insertRow(db, { ts: 1000, message: 'Hub log', source: 'hub' });
-        insertRow(db, { ts: 2000, message: 'Plugin log', source: 'plugin' });
+        insertRow(db, {
+          ts: 1000,
+          message: 'Hub log',
+          source: 'hub',
+        });
+        insertRow(db, {
+          ts: 2000,
+          message: 'Plugin log',
+          source: 'plugin',
+        });
         db.close();
 
         await logCommand.handler({
-          values: { source: 'plugin', limit: 50 },
+          values: {
+            source: 'plugin',
+            limit: 50,
+          },
           positionals: [],
           commands: [],
         });
@@ -314,7 +384,12 @@ describe('cli/commands/log', () => {
 
       test('filters by plugin name', async () => {
         const db = createTestDb(DB_PATH);
-        insertRow(db, { ts: 1000, message: 'Timer tick', plugin_name: 'timer', source: 'plugin' });
+        insertRow(db, {
+          ts: 1000,
+          message: 'Timer tick',
+          plugin_name: 'timer',
+          source: 'plugin',
+        });
         insertRow(db, {
           ts: 2000,
           message: 'Weather fetch',
@@ -324,7 +399,10 @@ describe('cli/commands/log', () => {
         db.close();
 
         await logCommand.handler({
-          values: { plugin: 'timer', limit: 50 },
+          values: {
+            plugin: 'timer',
+            limit: 50,
+          },
           positionals: [],
           commands: [],
         });
@@ -335,13 +413,25 @@ describe('cli/commands/log', () => {
 
       test('filters by search text', async () => {
         const db = createTestDb(DB_PATH);
-        insertRow(db, { ts: 1000, message: 'Connection established' });
-        insertRow(db, { ts: 2000, message: 'Connection timeout' });
-        insertRow(db, { ts: 3000, message: 'Server ready' });
+        insertRow(db, {
+          ts: 1000,
+          message: 'Connection established',
+        });
+        insertRow(db, {
+          ts: 2000,
+          message: 'Connection timeout',
+        });
+        insertRow(db, {
+          ts: 3000,
+          message: 'Server ready',
+        });
         db.close();
 
         await logCommand.handler({
-          values: { search: 'timeout', limit: 50 },
+          values: {
+            search: 'timeout',
+            limit: 50,
+          },
           positionals: [],
           commands: [],
         });
@@ -392,13 +482,24 @@ describe('cli/commands/log', () => {
 
       test('returns logs in chronological order (oldest first)', async () => {
         const db = createTestDb(DB_PATH);
-        insertRow(db, { ts: 3000, message: 'Third' });
-        insertRow(db, { ts: 1000, message: 'First' });
-        insertRow(db, { ts: 2000, message: 'Second' });
+        insertRow(db, {
+          ts: 3000,
+          message: 'Third',
+        });
+        insertRow(db, {
+          ts: 1000,
+          message: 'First',
+        });
+        insertRow(db, {
+          ts: 2000,
+          message: 'Second',
+        });
         db.close();
 
         await logCommand.handler({
-          values: { limit: 50 },
+          values: {
+            limit: 50,
+          },
           positionals: [],
           commands: [],
         });
@@ -426,7 +527,9 @@ describe('cli/commands/log', () => {
         db.close();
 
         await logCommand.handler({
-          values: { limit: 50 },
+          values: {
+            limit: 50,
+          },
           positionals: [],
           commands: [],
         });
@@ -440,12 +543,17 @@ describe('cli/commands/log', () => {
         insertRow(db, {
           ts: 1000,
           message: 'With meta',
-          meta: JSON.stringify({ key: 'value', count: 42 }),
+          meta: JSON.stringify({
+            key: 'value',
+            count: 42,
+          }),
         });
         db.close();
 
         await logCommand.handler({
-          values: { limit: 50 },
+          values: {
+            limit: 50,
+          },
           positionals: [],
           commands: [],
         });
@@ -459,13 +567,25 @@ describe('cli/commands/log', () => {
     describe('--clear mode', () => {
       test('clears logs and prints count', async () => {
         const db = createTestDb(DB_PATH);
-        insertRow(db, { ts: 1000, message: 'Log 1' });
-        insertRow(db, { ts: 2000, message: 'Log 2' });
-        insertRow(db, { ts: 3000, message: 'Log 3' });
+        insertRow(db, {
+          ts: 1000,
+          message: 'Log 1',
+        });
+        insertRow(db, {
+          ts: 2000,
+          message: 'Log 2',
+        });
+        insertRow(db, {
+          ts: 3000,
+          message: 'Log 3',
+        });
         db.close();
 
         await logCommand.handler({
-          values: { clear: true, limit: 50 },
+          values: {
+            clear: true,
+            limit: 50,
+          },
           positionals: [],
           commands: [],
         });
@@ -476,19 +596,29 @@ describe('cli/commands/log', () => {
         expect(output).toContain('logs');
 
         // Verify database is actually empty
-        const verifyDb = new Database(DB_PATH, { readonly: true });
-        const count = verifyDb.query('SELECT COUNT(*) as cnt FROM logs').get() as { cnt: number };
+        const verifyDb = new Database(DB_PATH, {
+          readonly: true,
+        });
+        const count = verifyDb.query('SELECT COUNT(*) as cnt FROM logs').get() as {
+          cnt: number;
+        };
         expect(count.cnt).toBe(0);
         verifyDb.close();
       });
 
       test('prints singular "log" for single entry', async () => {
         const db = createTestDb(DB_PATH);
-        insertRow(db, { ts: 1000, message: 'Only one' });
+        insertRow(db, {
+          ts: 1000,
+          message: 'Only one',
+        });
         db.close();
 
         await logCommand.handler({
-          values: { clear: true, limit: 50 },
+          values: {
+            clear: true,
+            limit: 50,
+          },
           positionals: [],
           commands: [],
         });
@@ -504,7 +634,10 @@ describe('cli/commands/log', () => {
         db.close();
 
         await logCommand.handler({
-          values: { clear: true, limit: 50 },
+          values: {
+            clear: true,
+            limit: 50,
+          },
           positionals: [],
           commands: [],
         });
@@ -517,11 +650,18 @@ describe('cli/commands/log', () => {
       test('clear takes priority over follow', async () => {
         // When both --clear and --follow are set, clear should execute and return
         const db = createTestDb(DB_PATH);
-        insertRow(db, { ts: 1000, message: 'To be cleared' });
+        insertRow(db, {
+          ts: 1000,
+          message: 'To be cleared',
+        });
         db.close();
 
         await logCommand.handler({
-          values: { clear: true, follow: true, limit: 50 },
+          values: {
+            clear: true,
+            follow: true,
+            limit: 50,
+          },
           positionals: [],
           commands: [],
         });
@@ -541,7 +681,9 @@ describe('cli/commands/log', () => {
 
         await expect(
           logCommand.handler({
-            values: { limit: 50 },
+            values: {
+              limit: 50,
+            },
             positionals: [],
             commands: [],
           })
@@ -555,7 +697,9 @@ describe('cli/commands/log', () => {
 
         try {
           await logCommand.handler({
-            values: { limit: 50 },
+            values: {
+              limit: 50,
+            },
             positionals: [],
             commands: [],
           });
@@ -577,7 +721,10 @@ describe('cli/commands/log', () => {
         // the logs table. Let's test for some kind of error.
         await expect(
           logCommand.handler({
-            values: { clear: true, limit: 50 },
+            values: {
+              clear: true,
+              limit: 50,
+            },
             positionals: [],
             commands: [],
           })
@@ -616,7 +763,10 @@ describe('cli/commands/log', () => {
     });
 
     test('maps plugin_name to pluginName', () => {
-      const event = rowToEvent({ ...baseRow, plugin_name: '@brika/timer' });
+      const event = rowToEvent({
+        ...baseRow,
+        plugin_name: '@brika/timer',
+      });
       expect(event.pluginName).toBe('@brika/timer');
     });
 
@@ -630,7 +780,10 @@ describe('cli/commands/log', () => {
         ...baseRow,
         meta: '{"host":"localhost","port":3000}',
       });
-      expect(event.meta).toEqual({ host: 'localhost', port: 3000 });
+      expect(event.meta).toEqual({
+        host: 'localhost',
+        port: 3000,
+      });
     });
 
     test('null meta stays undefined', () => {
@@ -713,14 +866,40 @@ describe('cli/commands/log', () => {
     });
 
     test('handles deeply nested meta JSON', () => {
-      const meta = { arr: [1, 2, { nested: true }], obj: { a: { b: 'c' } } };
-      const event = rowToEvent({ ...baseRow, meta: JSON.stringify(meta) });
+      const meta = {
+        arr: [
+          1,
+          2,
+          {
+            nested: true,
+          },
+        ],
+        obj: {
+          a: {
+            b: 'c',
+          },
+        },
+      };
+      const event = rowToEvent({
+        ...baseRow,
+        meta: JSON.stringify(meta),
+      });
       expect(event.meta).toEqual(meta);
     });
 
     test('preserves all log levels', () => {
-      for (const level of ['debug', 'info', 'warn', 'error'] as LogLevel[]) {
-        expect(rowToEvent({ ...baseRow, level }).level).toBe(level);
+      for (const level of [
+        'debug',
+        'info',
+        'warn',
+        'error',
+      ] as LogLevel[]) {
+        expect(
+          rowToEvent({
+            ...baseRow,
+            level,
+          }).level
+        ).toBe(level);
       }
     });
 
@@ -739,7 +918,12 @@ describe('cli/commands/log', () => {
         'updates',
       ];
       for (const source of sources) {
-        expect(rowToEvent({ ...baseRow, source }).source).toBe(source);
+        expect(
+          rowToEvent({
+            ...baseRow,
+            source,
+          }).source
+        ).toBe(source);
       }
     });
   });
@@ -759,42 +943,101 @@ describe('cli/commands/log', () => {
     });
 
     test('matches by level', () => {
-      expect(matchesFilters(baseEvent, { level: 'info' })).toBe(true);
-      expect(matchesFilters(baseEvent, { level: 'error' })).toBe(false);
+      expect(
+        matchesFilters(baseEvent, {
+          level: 'info',
+        })
+      ).toBe(true);
+      expect(
+        matchesFilters(baseEvent, {
+          level: 'error',
+        })
+      ).toBe(false);
     });
 
     test('matches by source', () => {
-      expect(matchesFilters(baseEvent, { source: 'hub' })).toBe(true);
-      expect(matchesFilters(baseEvent, { source: 'plugin' })).toBe(false);
+      expect(
+        matchesFilters(baseEvent, {
+          source: 'hub',
+        })
+      ).toBe(true);
+      expect(
+        matchesFilters(baseEvent, {
+          source: 'plugin',
+        })
+      ).toBe(false);
     });
 
     test('matches by plugin name', () => {
-      const withPlugin: LogEvent = { ...baseEvent, pluginName: 'timer' };
-      expect(matchesFilters(withPlugin, { plugin: 'timer' })).toBe(true);
-      expect(matchesFilters(withPlugin, { plugin: 'weather' })).toBe(false);
+      const withPlugin: LogEvent = {
+        ...baseEvent,
+        pluginName: 'timer',
+      };
+      expect(
+        matchesFilters(withPlugin, {
+          plugin: 'timer',
+        })
+      ).toBe(true);
+      expect(
+        matchesFilters(withPlugin, {
+          plugin: 'weather',
+        })
+      ).toBe(false);
     });
 
     test('rejects event without pluginName when plugin filter is set', () => {
-      expect(matchesFilters(baseEvent, { plugin: 'timer' })).toBe(false);
+      expect(
+        matchesFilters(baseEvent, {
+          plugin: 'timer',
+        })
+      ).toBe(false);
     });
 
     test('search is case-insensitive', () => {
-      expect(matchesFilters(baseEvent, { search: 'server' })).toBe(true);
-      expect(matchesFilters(baseEvent, { search: 'SERVER' })).toBe(true);
-      expect(matchesFilters(baseEvent, { search: 'Server Started' })).toBe(true);
+      expect(
+        matchesFilters(baseEvent, {
+          search: 'server',
+        })
+      ).toBe(true);
+      expect(
+        matchesFilters(baseEvent, {
+          search: 'SERVER',
+        })
+      ).toBe(true);
+      expect(
+        matchesFilters(baseEvent, {
+          search: 'Server Started',
+        })
+      ).toBe(true);
     });
 
     test('search is substring match', () => {
-      expect(matchesFilters(baseEvent, { search: 'port' })).toBe(true);
-      expect(matchesFilters(baseEvent, { search: '3000' })).toBe(true);
+      expect(
+        matchesFilters(baseEvent, {
+          search: 'port',
+        })
+      ).toBe(true);
+      expect(
+        matchesFilters(baseEvent, {
+          search: '3000',
+        })
+      ).toBe(true);
     });
 
     test('search rejects non-matching text', () => {
-      expect(matchesFilters(baseEvent, { search: 'shutdown' })).toBe(false);
+      expect(
+        matchesFilters(baseEvent, {
+          search: 'shutdown',
+        })
+      ).toBe(false);
     });
 
     test('empty string search matches everything', () => {
-      expect(matchesFilters(baseEvent, { search: '' })).toBe(true);
+      expect(
+        matchesFilters(baseEvent, {
+          search: '',
+        })
+      ).toBe(true);
     });
 
     test('combines multiple filters with AND logic', () => {
@@ -816,13 +1059,33 @@ describe('cli/commands/log', () => {
       ).toBe(true);
 
       // Fail on level
-      expect(matchesFilters(event, { level: 'info', source: 'plugin' })).toBe(false);
+      expect(
+        matchesFilters(event, {
+          level: 'info',
+          source: 'plugin',
+        })
+      ).toBe(false);
       // Fail on source
-      expect(matchesFilters(event, { level: 'error', source: 'hub' })).toBe(false);
+      expect(
+        matchesFilters(event, {
+          level: 'error',
+          source: 'hub',
+        })
+      ).toBe(false);
       // Fail on plugin
-      expect(matchesFilters(event, { level: 'error', plugin: 'weather' })).toBe(false);
+      expect(
+        matchesFilters(event, {
+          level: 'error',
+          plugin: 'weather',
+        })
+      ).toBe(false);
       // Fail on search
-      expect(matchesFilters(event, { level: 'error', search: 'missing' })).toBe(false);
+      expect(
+        matchesFilters(event, {
+          level: 'error',
+          search: 'missing',
+        })
+      ).toBe(false);
     });
 
     test('filters apply short-circuit on first mismatch', () => {
@@ -843,8 +1106,13 @@ describe('cli/commands/log', () => {
         source: 'plugin',
         pluginName: 'weather',
         message: 'API rate limit',
-        meta: { remaining: 5 },
-        error: { name: 'RateLimitWarning', message: 'close to limit' },
+        meta: {
+          remaining: 5,
+        },
+        error: {
+          name: 'RateLimitWarning',
+          message: 'close to limit',
+        },
       };
 
       expect(
@@ -869,7 +1137,9 @@ describe('cli/commands/log', () => {
         backupPath = `${DB_PATH}.test-backup-q`;
         renameSync(DB_PATH, backupPath);
       }
-      mkdirSync(DATA_DIR, { recursive: true });
+      mkdirSync(DATA_DIR, {
+        recursive: true,
+      });
       log = captureLog();
     });
 
@@ -892,12 +1162,20 @@ describe('cli/commands/log', () => {
 
     test('WHERE clause omitted when no filters provided', async () => {
       const db = createTestDb(DB_PATH);
-      insertRow(db, { ts: 1000, message: 'A' });
-      insertRow(db, { ts: 2000, message: 'B' });
+      insertRow(db, {
+        ts: 1000,
+        message: 'A',
+      });
+      insertRow(db, {
+        ts: 2000,
+        message: 'B',
+      });
       db.close();
 
       await logCommand.handler({
-        values: { limit: 50 },
+        values: {
+          limit: 50,
+        },
         positionals: [],
         commands: [],
       });
@@ -908,13 +1186,25 @@ describe('cli/commands/log', () => {
 
     test('LIKE filter for search uses wildcard matching', async () => {
       const db = createTestDb(DB_PATH);
-      insertRow(db, { ts: 1000, message: 'foo bar baz' });
-      insertRow(db, { ts: 2000, message: 'hello world' });
-      insertRow(db, { ts: 3000, message: 'foo qux' });
+      insertRow(db, {
+        ts: 1000,
+        message: 'foo bar baz',
+      });
+      insertRow(db, {
+        ts: 2000,
+        message: 'hello world',
+      });
+      insertRow(db, {
+        ts: 3000,
+        message: 'foo qux',
+      });
       db.close();
 
       await logCommand.handler({
-        values: { search: 'foo', limit: 50 },
+        values: {
+          search: 'foo',
+          limit: 50,
+        },
         positionals: [],
         commands: [],
       });
@@ -926,12 +1216,17 @@ describe('cli/commands/log', () => {
     test('results are capped by LIMIT', async () => {
       const db = createTestDb(DB_PATH);
       for (let i = 0; i < 100; i++) {
-        insertRow(db, { ts: i, message: `Entry ${i}` });
+        insertRow(db, {
+          ts: i,
+          message: `Entry ${i}`,
+        });
       }
       db.close();
 
       await logCommand.handler({
-        values: { limit: 5 },
+        values: {
+          limit: 5,
+        },
         positionals: [],
         commands: [],
       });
@@ -942,13 +1237,24 @@ describe('cli/commands/log', () => {
     test('LIMIT 1 returns only the most recent log (reversed)', async () => {
       const db = createTestDb(DB_PATH);
       // Insert in id order: 1, 2, 3
-      insertRow(db, { ts: 1000, message: 'oldest' });
-      insertRow(db, { ts: 2000, message: 'middle' });
-      insertRow(db, { ts: 3000, message: 'newest' });
+      insertRow(db, {
+        ts: 1000,
+        message: 'oldest',
+      });
+      insertRow(db, {
+        ts: 2000,
+        message: 'middle',
+      });
+      insertRow(db, {
+        ts: 3000,
+        message: 'newest',
+      });
       db.close();
 
       await logCommand.handler({
-        values: { limit: 1 },
+        values: {
+          limit: 1,
+        },
         positionals: [],
         commands: [],
       });
@@ -960,13 +1266,32 @@ describe('cli/commands/log', () => {
 
     test('multiple filters produce AND conditions', async () => {
       const db = createTestDb(DB_PATH);
-      insertRow(db, { ts: 1000, message: 'A', level: 'error', source: 'hub' });
-      insertRow(db, { ts: 2000, message: 'B', level: 'error', source: 'plugin' });
-      insertRow(db, { ts: 3000, message: 'C', level: 'info', source: 'hub' });
+      insertRow(db, {
+        ts: 1000,
+        message: 'A',
+        level: 'error',
+        source: 'hub',
+      });
+      insertRow(db, {
+        ts: 2000,
+        message: 'B',
+        level: 'error',
+        source: 'plugin',
+      });
+      insertRow(db, {
+        ts: 3000,
+        message: 'C',
+        level: 'info',
+        source: 'hub',
+      });
       db.close();
 
       await logCommand.handler({
-        values: { level: 'error', source: 'hub', limit: 50 },
+        values: {
+          level: 'error',
+          source: 'hub',
+          limit: 50,
+        },
         positionals: [],
         commands: [],
       });
@@ -980,12 +1305,17 @@ describe('cli/commands/log', () => {
       insertRow(db, {
         ts: 1700000000000,
         message: 'Request handled',
-        meta: JSON.stringify({ sourceFile: '/app/server.ts', sourceLine: 42 }),
+        meta: JSON.stringify({
+          sourceFile: '/app/server.ts',
+          sourceLine: 42,
+        }),
       });
       db.close();
 
       await logCommand.handler({
-        values: { limit: 50 },
+        values: {
+          limit: 50,
+        },
         positionals: [],
         commands: [],
       });
@@ -1006,7 +1336,9 @@ describe('cli/commands/log', () => {
       db.close();
 
       await logCommand.handler({
-        values: { limit: 50 },
+        values: {
+          limit: 50,
+        },
         positionals: [],
         commands: [],
       });
@@ -1027,7 +1359,9 @@ describe('cli/commands/log', () => {
         backupPath = `${DB_PATH}.test-backup-c`;
         renameSync(DB_PATH, backupPath);
       }
-      mkdirSync(DATA_DIR, { recursive: true });
+      mkdirSync(DATA_DIR, {
+        recursive: true,
+      });
       log = captureLog();
     });
 
@@ -1050,15 +1384,33 @@ describe('cli/commands/log', () => {
 
     test('deletes all rows and returns count', async () => {
       const db = createTestDb(DB_PATH);
-      insertRow(db, { ts: 1000, message: 'A' });
-      insertRow(db, { ts: 2000, message: 'B' });
-      insertRow(db, { ts: 3000, message: 'C' });
-      insertRow(db, { ts: 4000, message: 'D' });
-      insertRow(db, { ts: 5000, message: 'E' });
+      insertRow(db, {
+        ts: 1000,
+        message: 'A',
+      });
+      insertRow(db, {
+        ts: 2000,
+        message: 'B',
+      });
+      insertRow(db, {
+        ts: 3000,
+        message: 'C',
+      });
+      insertRow(db, {
+        ts: 4000,
+        message: 'D',
+      });
+      insertRow(db, {
+        ts: 5000,
+        message: 'E',
+      });
       db.close();
 
       await logCommand.handler({
-        values: { clear: true, limit: 50 },
+        values: {
+          clear: true,
+          limit: 50,
+        },
         positionals: [],
         commands: [],
       });
@@ -1070,18 +1422,28 @@ describe('cli/commands/log', () => {
 
     test('database table remains intact after clear', async () => {
       const db = createTestDb(DB_PATH);
-      insertRow(db, { ts: 1000, message: 'Will be deleted' });
+      insertRow(db, {
+        ts: 1000,
+        message: 'Will be deleted',
+      });
       db.close();
 
       await logCommand.handler({
-        values: { clear: true, limit: 50 },
+        values: {
+          clear: true,
+          limit: 50,
+        },
         positionals: [],
         commands: [],
       });
 
       // Table should still exist, just be empty
-      const verifyDb = new Database(DB_PATH, { readonly: true });
-      const rows = verifyDb.query('SELECT COUNT(*) as cnt FROM logs').get() as { cnt: number };
+      const verifyDb = new Database(DB_PATH, {
+        readonly: true,
+      });
+      const rows = verifyDb.query('SELECT COUNT(*) as cnt FROM logs').get() as {
+        cnt: number;
+      };
       expect(rows.cnt).toBe(0);
       verifyDb.close();
     });
@@ -1091,7 +1453,10 @@ describe('cli/commands/log', () => {
       db.close();
 
       await logCommand.handler({
-        values: { clear: true, limit: 50 },
+        values: {
+          clear: true,
+          limit: 50,
+        },
         positionals: [],
         commands: [],
       });

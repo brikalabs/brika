@@ -17,7 +17,7 @@
     "./tanstack": "./src/tanstack/index.ts"
   },
   "scripts": {
-    "tsc": "bunx --bun tsc --noEmit",
+    "typecheck": "tsgo --noEmit",
     "test": "bun test",
     "test:watch": "bun test --watch"
   },
@@ -32,7 +32,6 @@
     "@types/bcryptjs": "^2.4.6",
     "@types/bun": "latest",
     "@types/react": "^19.2.0",
-    "typescript": "^5.9.3",
     "react": "^19.2.0",
     "@tanstack/react-router": "^1.163.2"
   },

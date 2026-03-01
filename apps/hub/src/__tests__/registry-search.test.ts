@@ -5,11 +5,15 @@ import { HttpClient } from '@brika/http';
 import { Logger } from '@/runtime/logs/log-router';
 import { NpmRegistry } from '@/runtime/store';
 
-useTestBed({ autoStub: false });
+useTestBed({
+  autoStub: false,
+});
 
 describe('NpmRegistry', () => {
   let service: NpmRegistry;
-  let httpMock: { get: ReturnType<typeof mock> };
+  let httpMock: {
+    get: ReturnType<typeof mock>;
+  };
 
   beforeEach(() => {
     stub(Logger);
@@ -19,7 +23,11 @@ describe('NpmRegistry', () => {
       get: mock(() => ({
         params: () => ({
           cache: () => ({
-            data: () => Promise.resolve({ objects: [], total: 0 }),
+            data: () =>
+              Promise.resolve({
+                objects: [],
+                total: 0,
+              }),
           }),
         }),
         cache: () => ({
@@ -41,7 +49,9 @@ describe('NpmRegistry', () => {
               name: '@brika/test-plugin',
               version: '1.0.0',
               description: 'Test plugin',
-              keywords: ['brika'],
+              keywords: [
+                'brika',
+              ],
             },
           },
         ],
@@ -50,19 +60,28 @@ describe('NpmRegistry', () => {
 
       const packageResponse = {
         name: '@brika/test-plugin',
-        'dist-tags': { latest: '1.0.0' },
+        'dist-tags': {
+          latest: '1.0.0',
+        },
         versions: {
           '1.0.0': {
             name: '@brika/test-plugin',
             version: '1.0.0',
             description: 'Test plugin',
-            engines: { brika: '^0.1.0' },
+            engines: {
+              brika: '^0.1.0',
+            },
           },
         },
-        time: { '1.0.0': '2024-01-01T00:00:00.000Z' },
+        time: {
+          '1.0.0': '2024-01-01T00:00:00.000Z',
+        },
       };
 
-      const downloadsResponse = { downloads: 100, package: '@brika/test-plugin' };
+      const downloadsResponse = {
+        downloads: 100,
+        package: '@brika/test-plugin',
+      };
 
       let callIndex = 0;
       httpMock.get.mockImplementation(() => ({
@@ -74,7 +93,9 @@ describe('NpmRegistry', () => {
         cache: () => ({
           data: () => {
             callIndex++;
-            if (callIndex === 1) return Promise.resolve(packageResponse);
+            if (callIndex === 1) {
+              return Promise.resolve(packageResponse);
+            }
             return Promise.resolve(downloadsResponse);
           },
         }),
@@ -90,31 +111,54 @@ describe('NpmRegistry', () => {
     test('should filter packages without brika engine', async () => {
       const searchResponse = {
         objects: [
-          { package: { name: 'non-plugin', version: '1.0.0' } },
-          { package: { name: '@brika/real-plugin', version: '1.0.0' } },
+          {
+            package: {
+              name: 'non-plugin',
+              version: '1.0.0',
+            },
+          },
+          {
+            package: {
+              name: '@brika/real-plugin',
+              version: '1.0.0',
+            },
+          },
         ],
         total: 2,
       };
 
       const nonPluginPackage = {
         name: 'non-plugin',
-        'dist-tags': { latest: '1.0.0' },
-        versions: { '1.0.0': { name: 'non-plugin', version: '1.0.0' } },
+        'dist-tags': {
+          latest: '1.0.0',
+        },
+        versions: {
+          '1.0.0': {
+            name: 'non-plugin',
+            version: '1.0.0',
+          },
+        },
         time: {},
       };
 
       const realPluginPackage = {
         name: '@brika/real-plugin',
-        'dist-tags': { latest: '1.0.0' },
+        'dist-tags': {
+          latest: '1.0.0',
+        },
         versions: {
           '1.0.0': {
             name: '@brika/real-plugin',
             version: '1.0.0',
             description: 'A test plugin for brika',
-            engines: { brika: '^0.1.0' },
+            engines: {
+              brika: '^0.1.0',
+            },
           },
         },
-        time: { '1.0.0': '2024-01-01T00:00:00.000Z' },
+        time: {
+          '1.0.0': '2024-01-01T00:00:00.000Z',
+        },
       };
 
       let callIndex = 0;
@@ -127,9 +171,15 @@ describe('NpmRegistry', () => {
         cache: () => ({
           data: () => {
             callIndex++;
-            if (callIndex === 1) return Promise.resolve(nonPluginPackage);
-            if (callIndex === 2) return Promise.resolve(realPluginPackage);
-            return Promise.resolve({ downloads: 50 });
+            if (callIndex === 1) {
+              return Promise.resolve(nonPluginPackage);
+            }
+            if (callIndex === 2) {
+              return Promise.resolve(realPluginPackage);
+            }
+            return Promise.resolve({
+              downloads: 50,
+            });
           },
         }),
       }));
@@ -151,7 +201,10 @@ describe('NpmRegistry', () => {
 
       const result = await service.search();
 
-      expect(result).toEqual({ plugins: [], total: 0 });
+      expect(result).toEqual({
+        plugins: [],
+        total: 0,
+      });
     });
 
     test('should return empty results on non-ok response', async () => {
@@ -165,7 +218,10 @@ describe('NpmRegistry', () => {
 
       const result = await service.search();
 
-      expect(result).toEqual({ plugins: [], total: 0 });
+      expect(result).toEqual({
+        plugins: [],
+        total: 0,
+      });
     });
 
     test('should include query in search terms', async () => {
@@ -175,7 +231,11 @@ describe('NpmRegistry', () => {
         return {
           params: () => ({
             cache: () => ({
-              data: () => Promise.resolve({ objects: [], total: 0 }),
+              data: () =>
+                Promise.resolve({
+                  objects: [],
+                  total: 0,
+                }),
             }),
           }),
         };
@@ -189,15 +249,27 @@ describe('NpmRegistry', () => {
     });
 
     test('should respect limit parameter', async () => {
-      const plugins = Array.from({ length: 5 }, (_, i) => ({
-        package: { name: `plugin-${i}`, version: '1.0.0' },
-      }));
+      const plugins = Array.from(
+        {
+          length: 5,
+        },
+        (_, i) => ({
+          package: {
+            name: `plugin-${i}`,
+            version: '1.0.0',
+          },
+        })
+      );
 
       let callIndex = 0;
       httpMock.get.mockImplementation(() => ({
         params: () => ({
           cache: () => ({
-            data: () => Promise.resolve({ objects: plugins, total: 5 }),
+            data: () =>
+              Promise.resolve({
+                objects: plugins,
+                total: 5,
+              }),
           }),
         }),
         cache: () => ({
@@ -207,18 +279,24 @@ describe('NpmRegistry', () => {
             if (callIndex % 2 === 1) {
               return Promise.resolve({
                 name: `plugin-${idx}`,
-                'dist-tags': { latest: '1.0.0' },
+                'dist-tags': {
+                  latest: '1.0.0',
+                },
                 versions: {
                   '1.0.0': {
                     name: `plugin-${idx}`,
                     version: '1.0.0',
-                    engines: { brika: '^0.1.0' },
+                    engines: {
+                      brika: '^0.1.0',
+                    },
                   },
                 },
                 time: {},
               });
             }
-            return Promise.resolve({ downloads: 10 });
+            return Promise.resolve({
+              downloads: 10,
+            });
           },
         }),
       }));
@@ -233,20 +311,32 @@ describe('NpmRegistry', () => {
     test('should fetch and parse package details', async () => {
       const packageResponse = {
         name: '@brika/test-plugin',
-        'dist-tags': { latest: '2.0.0' },
+        'dist-tags': {
+          latest: '2.0.0',
+        },
         versions: {
-          '1.0.0': { name: '@brika/test-plugin', version: '1.0.0' },
+          '1.0.0': {
+            name: '@brika/test-plugin',
+            version: '1.0.0',
+          },
           '2.0.0': {
             name: '@brika/test-plugin',
             version: '2.0.0',
             description: 'A test plugin',
             author: 'Test Author',
-            keywords: ['brika', 'plugin'],
+            keywords: [
+              'brika',
+              'plugin',
+            ],
             license: 'MIT',
-            engines: { brika: '^0.1.0' },
+            engines: {
+              brika: '^0.1.0',
+            },
           },
         },
-        time: { '2.0.0': '2024-06-01T00:00:00.000Z' },
+        time: {
+          '2.0.0': '2024-06-01T00:00:00.000Z',
+        },
       };
 
       httpMock.get.mockImplementation(() => ({
@@ -262,9 +352,14 @@ describe('NpmRegistry', () => {
         version: '2.0.0',
         description: 'A test plugin',
         author: 'Test Author',
-        keywords: ['brika', 'plugin'],
+        keywords: [
+          'brika',
+          'plugin',
+        ],
         license: 'MIT',
-        engines: { brika: '^0.1.0' },
+        engines: {
+          brika: '^0.1.0',
+        },
         date: '2024-06-01T00:00:00.000Z',
       });
     });
@@ -314,9 +409,14 @@ describe('NpmRegistry', () => {
     test('should fetch package details', async () => {
       const packageResponse = {
         name: '@brika/test',
-        'dist-tags': { latest: '1.0.0' },
+        'dist-tags': {
+          latest: '1.0.0',
+        },
         versions: {
-          '1.0.0': { name: '@brika/test', version: '1.0.0' },
+          '1.0.0': {
+            name: '@brika/test',
+            version: '1.0.0',
+          },
         },
         time: {},
       };
@@ -339,8 +439,15 @@ describe('NpmRegistry', () => {
         name: '@brika/no-latest',
         'dist-tags': {},
         versions: {
-          '0.1.0': { name: '@brika/no-latest', version: '0.1.0' },
-          '0.2.0': { name: '@brika/no-latest', version: '0.2.0', description: 'Fallback version' },
+          '0.1.0': {
+            name: '@brika/no-latest',
+            version: '0.1.0',
+          },
+          '0.2.0': {
+            name: '@brika/no-latest',
+            version: '0.2.0',
+            description: 'Fallback version',
+          },
         },
         time: {},
       };
@@ -360,12 +467,17 @@ describe('NpmRegistry', () => {
     test('should handle author as object', async () => {
       const packageResponse = {
         name: '@brika/author-obj',
-        'dist-tags': { latest: '1.0.0' },
+        'dist-tags': {
+          latest: '1.0.0',
+        },
         versions: {
           '1.0.0': {
             name: '@brika/author-obj',
             version: '1.0.0',
-            author: { name: 'John Doe', email: 'john@example.com' },
+            author: {
+              name: 'John Doe',
+              email: 'john@example.com',
+            },
           },
         },
         time: {},
@@ -379,7 +491,10 @@ describe('NpmRegistry', () => {
 
       const result = await service.getPackageDetails('@brika/author-obj');
 
-      expect(result?.author).toEqual({ name: 'John Doe', email: 'john@example.com' });
+      expect(result?.author).toEqual({
+        name: 'John Doe',
+        email: 'john@example.com',
+      });
     });
   });
 });

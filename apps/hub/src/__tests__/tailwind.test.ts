@@ -48,7 +48,7 @@ describe('TailwindCompiler', () => {
       const css = await tw.compileCss(src);
       expect(css).toBeDefined();
       // Should still produce valid CSS with flex appearing once in output
-      const matches = css!.match(/display:\s*flex/g);
+      const matches = css?.match(/display:\s*flex/g);
       expect(matches?.length).toBe(1);
     });
 

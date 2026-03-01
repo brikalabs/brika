@@ -46,7 +46,13 @@ describe('satisfies', () => {
 
 describe('maxSatisfying', () => {
   test('returns highest version from list', () => {
-    expect(maxSatisfying(['1.0.0', '2.0.0', '1.5.0'])).toBe('2.0.0');
+    expect(
+      maxSatisfying([
+        '1.0.0',
+        '2.0.0',
+        '1.5.0',
+      ])
+    ).toBe('2.0.0');
   });
 
   test('returns null for empty array', () => {
@@ -54,11 +60,28 @@ describe('maxSatisfying', () => {
   });
 
   test('filters by range when provided', () => {
-    expect(maxSatisfying(['1.0.0', '2.0.0', '1.5.0'], '^1.0.0')).toBe('1.5.0');
+    expect(
+      maxSatisfying(
+        [
+          '1.0.0',
+          '2.0.0',
+          '1.5.0',
+        ],
+        '^1.0.0'
+      )
+    ).toBe('1.5.0');
   });
 
   test('returns null when no versions satisfy range', () => {
-    expect(maxSatisfying(['1.0.0', '1.5.0'], '>=2.0.0')).toBeNull();
+    expect(
+      maxSatisfying(
+        [
+          '1.0.0',
+          '1.5.0',
+        ],
+        '>=2.0.0'
+      )
+    ).toBeNull();
   });
 });
 

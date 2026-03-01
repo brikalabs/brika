@@ -80,7 +80,9 @@ export class PluginManager {
 
   resolve(name: string): string | null {
     const process = this.#lifecycle.getProcessByName(name);
-    if (process) return process.uid;
+    if (process) {
+      return process.uid;
+    }
 
     const stored = this.#state.get(name);
     return stored?.uid ?? null;
@@ -92,18 +94,24 @@ export class PluginManager {
 
   async enable(uid: string): Promise<void> {
     const name = this.#getName(uid);
-    if (!name) throw new Error(`Plugin not found: ${uid}`);
+    if (!name) {
+      throw new Error(`Plugin not found: ${uid}`);
+    }
 
     await this.#state.setEnabled(name, true);
     const stored = this.#state.get(name);
-    if (!stored) throw new Error(`Plugin state not found: ${name}`);
+    if (!stored) {
+      throw new Error(`Plugin state not found: ${name}`);
+    }
 
     const racePromise = this.#events.race(
       [
         withPredicate(PluginActions.loaded, (a) => a.payload.uid === uid),
         withPredicate(PluginActions.configInvalid, (a) => a.payload.uid === uid),
       ],
-      { timeout: 30000 }
+      {
+        timeout: 30000,
+      }
     );
 
     await this.#lifecycle.load(stored.rootDirectory);
@@ -118,7 +126,9 @@ export class PluginManager {
 
   async disable(uid: string): Promise<void> {
     const name = this.#getName(uid);
-    if (!name) throw new Error(`Plugin not found: ${uid}`);
+    if (!name) {
+      throw new Error(`Plugin not found: ${uid}`);
+    }
 
     await this.#state.setEnabled(name, false);
     await this.#lifecycle.unload(name);
@@ -126,7 +136,9 @@ export class PluginManager {
 
   async reload(uid: string): Promise<void> {
     const name = this.#getName(uid);
-    if (!name) throw new Error(`Plugin not found: ${uid}`);
+    if (!name) {
+      throw new Error(`Plugin not found: ${uid}`);
+    }
 
     // Unload the plugin first
     await this.#lifecycle.unload(name);
@@ -138,7 +150,9 @@ export class PluginManager {
 
     // Get stored state to know the root directory
     const stored = this.#state.get(name);
-    if (!stored) throw new Error(`Plugin state not found: ${name}`);
+    if (!stored) {
+      throw new Error(`Plugin state not found: ${name}`);
+    }
 
     // Set up race AFTER unloading to catch events from new load
     const racePromise = this.#events.race(
@@ -146,7 +160,9 @@ export class PluginManager {
         withPredicate(PluginActions.loaded, (a) => a.payload.uid === uid),
         withPredicate(PluginActions.configInvalid, (a) => a.payload.uid === uid),
       ],
-      { timeout: 30000 }
+      {
+        timeout: 30000,
+      }
     );
 
     // Load the plugin (no need for force since we already unloaded)
@@ -171,16 +187,26 @@ export class PluginManager {
     }
 
     await this.#events.dispatch(
-      PluginActions.reloaded.create({ uid: result.payload.uid, name: result.payload.name }, 'hub')
+      PluginActions.reloaded.create(
+        {
+          uid: result.payload.uid,
+          name: result.payload.name,
+        },
+        'hub'
+      )
     );
   }
 
   async kill(uid: string): Promise<void> {
     const name = this.#getName(uid);
-    if (!name) throw new Error(`Plugin not found: ${uid}`);
+    if (!name) {
+      throw new Error(`Plugin not found: ${uid}`);
+    }
 
     const process = this.#lifecycle.getProcessByName(name);
-    if (!process) return;
+    if (!process) {
+      return;
+    }
 
     process.kill(9);
     await this.#state.setHealth(name, 'crashed', PluginErrors.killed());
@@ -243,13 +269,25 @@ export class PluginManager {
     instanceId: string,
     workflowId: string,
     config: Record<string, Json>
-  ): Promise<{ ok: boolean; error?: string }> {
+  ): Promise<{
+    ok: boolean;
+    error?: string;
+  }> {
     const pluginName = this.#blocks.getProvider(blockType);
-    if (!pluginName)
-      return Promise.resolve({ ok: false, error: `Unknown block type: ${blockType}` });
+    if (!pluginName) {
+      return Promise.resolve({
+        ok: false,
+        error: `Unknown block type: ${blockType}`,
+      });
+    }
 
     const process = this.#lifecycle.getProcessByName(pluginName);
-    if (!process) return Promise.resolve({ ok: false, error: `Plugin not loaded: ${pluginName}` });
+    if (!process) {
+      return Promise.resolve({
+        ok: false,
+        error: `Plugin not loaded: ${pluginName}`,
+      });
+    }
 
     return process.startBlock(blockType, instanceId, workflowId, config);
   }
@@ -274,7 +312,9 @@ export class PluginManager {
 
   #getName(uid: string): string | null {
     const process = this.#lifecycle.getProcessByUid(uid);
-    if (process) return process.name;
+    if (process) {
+      return process.name;
+    }
 
     const stored = this.#state.getByUid(uid);
     return stored?.name ?? null;

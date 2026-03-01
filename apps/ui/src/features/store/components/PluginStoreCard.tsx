@@ -2,7 +2,7 @@ import { Link } from '@tanstack/react-router';
 import { Download, Package, Tag, User } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage, Badge, Card } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
-import { routes } from '@/routes';
+import { paths } from '@/routes/paths';
 import type { StorePlugin } from '../types';
 import { CompatibilityBadge } from './CompatibilityBadge';
 import { InstallButton } from './InstallButton';
@@ -14,8 +14,12 @@ interface PluginStoreCardProps {
 }
 
 function formatDownloads(count: number): string {
-  if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
-  if (count >= 1000) return `${(count / 1000).toFixed(1)}K`;
+  if (count >= 1000000) {
+    return `${(count / 1000000).toFixed(1)}M`;
+  }
+  if (count >= 1000) {
+    return `${(count / 1000).toFixed(1)}K`;
+  }
   return String(count);
 }
 
@@ -26,7 +30,10 @@ export function PluginStoreCard({ plugin }: Readonly<PluginStoreCardProps>) {
 
   return (
     <Link
-      to={routes.store.detail.to({ source: plugin.source, _splat: plugin.name })}
+      to={paths.store.detail.to({
+        source: plugin.source,
+        _splat: plugin.name,
+      })}
       className="group block"
     >
       <Card accent={accent} interactive className="h-full p-5">

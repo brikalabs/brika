@@ -10,7 +10,12 @@ import type { HubLocation } from './hooks';
 // ── Types ────────────────────────────────────────────────────────────────────
 
 export interface PhotonFeature {
-  geometry: { coordinates: [number, number] }; // [lng, lat]
+  geometry: {
+    coordinates: [
+      number,
+      number,
+    ];
+  }; // [lng, lat]
   properties: {
     name?: string;
     housenumber?: string;
@@ -36,9 +41,14 @@ export function formatAddress(p: PhotonFeature['properties']): string {
   } else if (p.name) {
     parts.push(p.name);
   }
-  if (p.postcode && p.city) parts.push(`${p.postcode} ${p.city}`);
-  else if (p.city) parts.push(p.city);
-  if (p.country) parts.push(p.country);
+  if (p.postcode && p.city) {
+    parts.push(`${p.postcode} ${p.city}`);
+  } else if (p.city) {
+    parts.push(p.city);
+  }
+  if (p.country) {
+    parts.push(p.country);
+  }
   return parts.join(', ');
 }
 
@@ -66,7 +76,9 @@ export async function searchAddress(query: string, signal?: AbortSignal): Promis
   const res = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=5`, {
     signal,
   });
-  if (!res.ok) return [];
+  if (!res.ok) {
+    return [];
+  }
   const data = (await res.json()) as PhotonResponse;
   return data.features;
 }
@@ -77,10 +89,14 @@ export async function reverseGeocode(
 ): Promise<HubLocation | null> {
   try {
     const res = await fetch(`https://photon.komoot.io/reverse?lat=${latitude}&lon=${longitude}`);
-    if (!res.ok) return null;
+    if (!res.ok) {
+      return null;
+    }
     const data = (await res.json()) as PhotonResponse;
     const feature = data.features[0];
-    if (!feature) return null;
+    if (!feature) {
+      return null;
+    }
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
     return featureToLocation(feature, tz);
   } catch {

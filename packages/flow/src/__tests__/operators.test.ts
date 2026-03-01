@@ -38,14 +38,70 @@ describe('Transform Operators', () => {
       flow.push(2);
       flow.push(3);
 
-      expect(values).toEqual([2, 4, 6]);
+      expect(values).toEqual([
+        2,
+        4,
+        6,
+      ]);
     });
 
     test.each([
-      ['number to string', (x: number) => String(x), [1, 2, 3], ['1', '2', '3']],
-      ['multiply by 10', (x: number) => x * 10, [1, 2], [10, 20]],
-      ['extract property', (x: { a: number }) => x.a, [{ a: 1 }, { a: 2 }], [1, 2]],
-      ['constant transform', () => 'constant', [1, 2, 3], ['constant', 'constant', 'constant']],
+      [
+        'number to string',
+        (x: number) => String(x),
+        [
+          1,
+          2,
+          3,
+        ],
+        [
+          '1',
+          '2',
+          '3',
+        ],
+      ],
+      [
+        'multiply by 10',
+        (x: number) => x * 10,
+        [
+          1,
+          2,
+        ],
+        [
+          10,
+          20,
+        ],
+      ],
+      [
+        'extract property',
+        (x: { a: number }) => x.a,
+        [
+          {
+            a: 1,
+          },
+          {
+            a: 2,
+          },
+        ],
+        [
+          1,
+          2,
+        ],
+      ],
+      [
+        'constant transform',
+        () => 'constant',
+        [
+          1,
+          2,
+          3,
+        ],
+        [
+          'constant',
+          'constant',
+          'constant',
+        ],
+      ],
     ])('%s', (_desc, fn, input, expected) => {
       const { flow } = createTestFlow<unknown>();
       const { values, subscriber } = createValueCollector<unknown>();
@@ -71,7 +127,11 @@ describe('Transform Operators', () => {
       flow.push(null);
       flow.push(undefined);
 
-      expect(values).toEqual(['1', 'null', 'undefined']);
+      expect(values).toEqual([
+        '1',
+        'null',
+        'undefined',
+      ]);
     });
   });
 
@@ -88,7 +148,10 @@ describe('Transform Operators', () => {
       flow.push(3);
       flow.push(4);
 
-      expect(values).toEqual([2, 4]);
+      expect(values).toEqual([
+        2,
+        4,
+      ]);
     });
 
     test('filters out all values if none pass', () => {
@@ -116,13 +179,57 @@ describe('Transform Operators', () => {
       flow.push(2);
       flow.push(3);
 
-      expect(values).toEqual([1, 2, 3]);
+      expect(values).toEqual([
+        1,
+        2,
+        3,
+      ]);
     });
 
     test.each([
-      ['even numbers', (x: number) => x % 2 === 0, [1, 2, 3, 4, 5], [2, 4]],
-      ['positive', (x: number) => x > 0, [-1, 0, 1, 2], [1, 2]],
-      ['truthy strings', (x: string) => Boolean(x), ['', 'a', '', 'b'], ['a', 'b']],
+      [
+        'even numbers',
+        (x: number) => x % 2 === 0,
+        [
+          1,
+          2,
+          3,
+          4,
+          5,
+        ],
+        [
+          2,
+          4,
+        ],
+      ],
+      [
+        'positive',
+        (x: number) => x > 0,
+        [
+          -1,
+          0,
+          1,
+          2,
+        ],
+        [
+          1,
+          2,
+        ],
+      ],
+      [
+        'truthy strings',
+        (x: string) => Boolean(x),
+        [
+          '',
+          'a',
+          '',
+          'b',
+        ],
+        [
+          'a',
+          'b',
+        ],
+      ],
     ])('%s', (_desc, fn, input, expected) => {
       const { flow } = createTestFlow<unknown>();
       const { values, subscriber } = createValueCollector<unknown>();
@@ -150,18 +257,30 @@ describe('Transform Operators', () => {
       flow.push(1);
       flow.push(2);
 
-      expect(sideEffects).toEqual([10, 20]);
-      expect(values).toEqual([1, 2]);
+      expect(sideEffects).toEqual([
+        10,
+        20,
+      ]);
+      expect(values).toEqual([
+        1,
+        2,
+      ]);
     });
 
     test('passes value through unchanged', () => {
-      const { flow } = createTestFlow<{ id: number }>();
-      const { values, subscriber } = createValueCollector<{ id: number }>();
+      const { flow } = createTestFlow<{
+        id: number;
+      }>();
+      const { values, subscriber } = createValueCollector<{
+        id: number;
+      }>();
 
       const tapped = flow.pipe(tap(() => undefined));
       tapped.on(subscriber);
 
-      const obj = { id: 1 };
+      const obj = {
+        id: 1,
+      };
       flow.push(obj);
 
       expect(values[0]).toBe(obj);
@@ -195,29 +314,102 @@ describe('Transform Operators', () => {
       flow.push(2);
       flow.push(3);
 
-      expect(values).toEqual([1, 3, 6]);
+      expect(values).toEqual([
+        1,
+        3,
+        6,
+      ]);
     });
 
     test('emits after each accumulation', () => {
       const { flow } = createTestFlow<number>();
       const { values, subscriber } = createValueCollector<number[]>();
 
-      const collected = flow.pipe(scan((acc, v) => [...acc, v], [] as number[]));
+      const collected = flow.pipe(
+        scan(
+          (acc, v) => [
+            ...acc,
+            v,
+          ],
+          [] as number[]
+        )
+      );
       collected.on(subscriber);
 
       flow.push(1);
       flow.push(2);
 
       expect(values).toHaveLength(2);
-      expect(values[0]).toEqual([1]);
-      expect(values[1]).toEqual([1, 2]);
+      expect(values[0]).toEqual([
+        1,
+      ]);
+      expect(values[1]).toEqual([
+        1,
+        2,
+      ]);
     });
 
     test.each([
-      ['sum', (acc: number, v: number) => acc + v, 0, [1, 2, 3], [1, 3, 6]],
-      ['product', (acc: number, v: number) => acc * v, 1, [2, 3, 4], [2, 6, 24]],
-      ['concat', (acc: string, v: string) => acc + v, '', ['a', 'b', 'c'], ['a', 'ab', 'abc']],
-      ['count', (acc: number) => acc + 1, 0, ['x', 'y', 'z'], [1, 2, 3]],
+      [
+        'sum',
+        (acc: number, v: number) => acc + v,
+        0,
+        [
+          1,
+          2,
+          3,
+        ],
+        [
+          1,
+          3,
+          6,
+        ],
+      ],
+      [
+        'product',
+        (acc: number, v: number) => acc * v,
+        1,
+        [
+          2,
+          3,
+          4,
+        ],
+        [
+          2,
+          6,
+          24,
+        ],
+      ],
+      [
+        'concat',
+        (acc: string, v: string) => acc + v,
+        '',
+        [
+          'a',
+          'b',
+          'c',
+        ],
+        [
+          'a',
+          'ab',
+          'abc',
+        ],
+      ],
+      [
+        'count',
+        (acc: number) => acc + 1,
+        0,
+        [
+          'x',
+          'y',
+          'z',
+        ],
+        [
+          1,
+          2,
+          3,
+        ],
+      ],
     ])('%s', (_desc, fn, seed, input, expected) => {
       const { flow } = createTestFlow<unknown>();
       const { values, subscriber } = createValueCollector<unknown>();
@@ -253,7 +445,9 @@ describe('Timing Operators', () => {
       expect(values).toHaveLength(0);
       await wait(70);
 
-      expect(values).toEqual([1]);
+      expect(values).toEqual([
+        1,
+      ]);
     });
 
     test('resets timer on each value', async () => {
@@ -271,7 +465,9 @@ describe('Timing Operators', () => {
       flow.push(3);
       await wait(70);
 
-      expect(values).toEqual([3]);
+      expect(values).toEqual([
+        3,
+      ]);
     });
 
     test('only emits last value in rapid sequence', async () => {
@@ -290,7 +486,9 @@ describe('Timing Operators', () => {
 
       await wait(50);
 
-      expect(values).toEqual([5]);
+      expect(values).toEqual([
+        5,
+      ]);
     });
 
     test('emits separate values when spaced out', async () => {
@@ -306,7 +504,10 @@ describe('Timing Operators', () => {
       flow.push(2);
       await wait(50);
 
-      expect(values).toEqual([1, 2]);
+      expect(values).toEqual([
+        1,
+        2,
+      ]);
     });
   });
 
@@ -320,7 +521,9 @@ describe('Timing Operators', () => {
 
       flow.push(1);
 
-      expect(values).toEqual([1]);
+      expect(values).toEqual([
+        1,
+      ]);
     });
 
     test('ignores values within throttle window', () => {
@@ -334,7 +537,9 @@ describe('Timing Operators', () => {
       flow.push(2);
       flow.push(3);
 
-      expect(values).toEqual([1]);
+      expect(values).toEqual([
+        1,
+      ]);
     });
 
     test('allows value after window expires', async () => {
@@ -349,7 +554,10 @@ describe('Timing Operators', () => {
       await wait(50);
       flow.push(2);
 
-      expect(values).toEqual([1, 2]);
+      expect(values).toEqual([
+        1,
+        2,
+      ]);
     });
 
     test('throttles multiple bursts correctly', async () => {
@@ -372,7 +580,10 @@ describe('Timing Operators', () => {
       flow.push(5);
       flow.push(6);
 
-      expect(values).toEqual([1, 4]);
+      expect(values).toEqual([
+        1,
+        4,
+      ]);
     });
   });
 
@@ -389,7 +600,9 @@ describe('Timing Operators', () => {
       expect(values).toHaveLength(0);
 
       await wait(50);
-      expect(values).toEqual([1]);
+      expect(values).toEqual([
+        1,
+      ]);
     });
 
     test('preserves order', async () => {
@@ -406,7 +619,11 @@ describe('Timing Operators', () => {
 
       await wait(50);
 
-      expect(values).toEqual([1, 2, 3]);
+      expect(values).toEqual([
+        1,
+        2,
+        3,
+      ]);
     });
 
     test('each value delayed independently', async () => {
@@ -426,11 +643,16 @@ describe('Timing Operators', () => {
 
       await wait(30);
       // First should have emitted
-      expect(values).toEqual([1]);
+      expect(values).toEqual([
+        1,
+      ]);
 
       await wait(30);
       // Both should have emitted
-      expect(values).toEqual([1, 2]);
+      expect(values).toEqual([
+        1,
+        2,
+      ]);
     });
   });
 });
@@ -453,7 +675,10 @@ describe('Control Operators', () => {
       flow.push(3);
       flow.push(4);
 
-      expect(values).toEqual([1, 2]);
+      expect(values).toEqual([
+        1,
+        2,
+      ]);
     });
 
     test('stops after N values', () => {
@@ -472,11 +697,62 @@ describe('Control Operators', () => {
     });
 
     test.each([
-      [1, [1, 2, 3], [1]],
-      [2, [1, 2, 3], [1, 2]],
-      [3, [1, 2, 3], [1, 2, 3]],
-      [5, [1, 2], [1, 2]], // More than available
-      [0, [1, 2, 3], []], // Zero
+      [
+        1,
+        [
+          1,
+          2,
+          3,
+        ],
+        [
+          1,
+        ],
+      ],
+      [
+        2,
+        [
+          1,
+          2,
+          3,
+        ],
+        [
+          1,
+          2,
+        ],
+      ],
+      [
+        3,
+        [
+          1,
+          2,
+          3,
+        ],
+        [
+          1,
+          2,
+          3,
+        ],
+      ],
+      [
+        5,
+        [
+          1,
+          2,
+        ],
+        [
+          1,
+          2,
+        ],
+      ], // More than available
+      [
+        0,
+        [
+          1,
+          2,
+          3,
+        ],
+        [],
+      ], // Zero
     ])('take(%i) from %j = %j', (n, input, expected) => {
       const { flow } = createTestFlow<number>();
       const { values, subscriber } = createValueCollector<number>();
@@ -505,7 +781,10 @@ describe('Control Operators', () => {
       flow.push(3);
       flow.push(4);
 
-      expect(values).toEqual([3, 4]);
+      expect(values).toEqual([
+        3,
+        4,
+      ]);
     });
 
     test('emits remaining values', () => {
@@ -518,15 +797,63 @@ describe('Control Operators', () => {
       flow.push(1);
       flow.push(2);
 
-      expect(values).toEqual([2]);
+      expect(values).toEqual([
+        2,
+      ]);
     });
 
     test.each([
-      [1, [1, 2, 3], [2, 3]],
-      [2, [1, 2, 3], [3]],
-      [3, [1, 2, 3], []],
-      [5, [1, 2], []], // Skip more than available
-      [0, [1, 2], [1, 2]], // Skip none
+      [
+        1,
+        [
+          1,
+          2,
+          3,
+        ],
+        [
+          2,
+          3,
+        ],
+      ],
+      [
+        2,
+        [
+          1,
+          2,
+          3,
+        ],
+        [
+          3,
+        ],
+      ],
+      [
+        3,
+        [
+          1,
+          2,
+          3,
+        ],
+        [],
+      ],
+      [
+        5,
+        [
+          1,
+          2,
+        ],
+        [],
+      ], // Skip more than available
+      [
+        0,
+        [
+          1,
+          2,
+        ],
+        [
+          1,
+          2,
+        ],
+      ], // Skip none
     ])('skip(%i) from %j = %j', (n, input, expected) => {
       const { flow } = createTestFlow<number>();
       const { values, subscriber } = createValueCollector<number>();
@@ -556,7 +883,11 @@ describe('Control Operators', () => {
       flow.push(2);
       flow.push(1);
 
-      expect(values).toEqual([1, 2, 1]);
+      expect(values).toEqual([
+        1,
+        2,
+        1,
+      ]);
     });
 
     test('emits first value', () => {
@@ -568,24 +899,63 @@ describe('Control Operators', () => {
 
       flow.push(42);
 
-      expect(values).toEqual([42]);
+      expect(values).toEqual([
+        42,
+      ]);
     });
 
     test.each([
       [
-        [1, 1, 2, 2, 1],
-        [1, 2, 1],
+        [
+          1,
+          1,
+          2,
+          2,
+          1,
+        ],
+        [
+          1,
+          2,
+          1,
+        ],
       ],
       [
-        ['a', 'a', 'b'],
-        ['a', 'b'],
+        [
+          'a',
+          'a',
+          'b',
+        ],
+        [
+          'a',
+          'b',
+        ],
       ],
       [
-        [1, 2, 3],
-        [1, 2, 3],
+        [
+          1,
+          2,
+          3,
+        ],
+        [
+          1,
+          2,
+          3,
+        ],
       ], // All distinct
-      [[1, 1, 1], [1]], // All same
-      [[], []], // Empty
+      [
+        [
+          1,
+          1,
+          1,
+        ],
+        [
+          1,
+        ],
+      ], // All same
+      [
+        [],
+        [],
+      ], // Empty
     ])('%j becomes %j', (input, expected) => {
       const { flow } = createTestFlow<unknown>();
       const { values, subscriber } = createValueCollector<unknown>();
@@ -601,14 +971,22 @@ describe('Control Operators', () => {
     });
 
     test('uses strict equality', () => {
-      const { flow } = createTestFlow<{ id: number }>();
-      const { values, subscriber } = createValueCollector<{ id: number }>();
+      const { flow } = createTestFlow<{
+        id: number;
+      }>();
+      const { values, subscriber } = createValueCollector<{
+        id: number;
+      }>();
 
       const distincted = flow.pipe(distinct());
       distincted.on(subscriber);
 
-      const obj1 = { id: 1 };
-      const obj2 = { id: 1 };
+      const obj1 = {
+        id: 1,
+      };
+      const obj2 = {
+        id: 1,
+      };
 
       flow.push(obj1);
       flow.push(obj1); // Same reference
@@ -643,7 +1021,13 @@ describe('Advanced Operators', () => {
 
       trigger.push(undefined);
 
-      expect(values).toEqual([[1, 2, 3]]);
+      expect(values).toEqual([
+        [
+          1,
+          2,
+          3,
+        ],
+      ]);
     });
 
     test('emits buffer as array on trigger', () => {
@@ -659,7 +1043,10 @@ describe('Advanced Operators', () => {
       trigger.push(undefined);
 
       expect(values[0]).toBeInstanceOf(Array);
-      expect(values[0]).toEqual(['a', 'b']);
+      expect(values[0]).toEqual([
+        'a',
+        'b',
+      ]);
     });
 
     test('does not emit empty buffer', () => {
@@ -690,7 +1077,15 @@ describe('Advanced Operators', () => {
       source.push(3);
       trigger.push(undefined);
 
-      expect(values).toEqual([[1], [2, 3]]);
+      expect(values).toEqual([
+        [
+          1,
+        ],
+        [
+          2,
+          3,
+        ],
+      ]);
     });
   });
 
@@ -708,7 +1103,9 @@ describe('Advanced Operators', () => {
       source.push(3);
       trigger.push(undefined);
 
-      expect(values).toEqual([3]);
+      expect(values).toEqual([
+        3,
+      ]);
     });
 
     test('does not emit if no value received', () => {
@@ -737,7 +1134,11 @@ describe('Advanced Operators', () => {
       trigger.push(undefined);
       trigger.push(undefined);
 
-      expect(values).toEqual([42, 42, 42]);
+      expect(values).toEqual([
+        42,
+        42,
+        42,
+      ]);
     });
 
     test('reflects latest value at trigger time', () => {
@@ -754,7 +1155,10 @@ describe('Advanced Operators', () => {
       source.push(3);
       trigger.push(undefined);
 
-      expect(values).toEqual([1, 3]);
+      expect(values).toEqual([
+        1,
+        3,
+      ]);
     });
   });
 
@@ -765,8 +1169,19 @@ describe('Advanced Operators', () => {
       const { flow: inner2 } = createTestFlow<string>();
       const { values, subscriber } = createValueCollector<string>();
 
-      const innerFlows = [inner1, inner2];
-      const switched = source.pipe(switchMap((n) => innerFlows[n]!));
+      const innerFlows = [
+        inner1,
+        inner2,
+      ];
+      const switched = source.pipe(
+        switchMap((n) => {
+          const flow = innerFlows[n];
+          if (!flow) {
+            throw new Error(`Expected inner flow at index ${n}`);
+          }
+          return flow;
+        })
+      );
       switched.on(subscriber);
 
       source.push(0); // Switch to inner1
@@ -777,7 +1192,11 @@ describe('Advanced Operators', () => {
       inner2.push('x');
       inner1.push('c'); // Should be ignored
 
-      expect(values).toEqual(['a', 'b', 'x']);
+      expect(values).toEqual([
+        'a',
+        'b',
+        'x',
+      ]);
     });
 
     test('unsubscribes from previous inner flow', () => {
@@ -795,13 +1214,16 @@ describe('Advanced Operators', () => {
       switched.on(subscriber);
 
       source.push(0);
-      inners[0]!.flow.push('from-0');
+      inners[0]?.flow.push('from-0');
 
       source.push(1);
-      inners[0]!.flow.push('ignored'); // Should be ignored
-      inners[1]!.flow.push('from-1');
+      inners[0]?.flow.push('ignored'); // Should be ignored
+      inners[1]?.flow.push('from-1');
 
-      expect(values).toEqual(['from-0', 'from-1']);
+      expect(values).toEqual([
+        'from-0',
+        'from-1',
+      ]);
     });
 
     test('emits values from current inner flow', () => {
@@ -820,14 +1242,19 @@ describe('Advanced Operators', () => {
       switched.on(subscriber);
 
       source.push(1);
-      inners[0]!.flow.push(10);
-      inners[0]!.flow.push(11);
+      inners[0]?.flow.push(10);
+      inners[0]?.flow.push(11);
 
       source.push(2);
-      inners[1]!.flow.push(20);
-      inners[1]!.flow.push(21);
+      inners[1]?.flow.push(20);
+      inners[1]?.flow.push(21);
 
-      expect(values).toEqual([10, 11, 20, 21]);
+      expect(values).toEqual([
+        10,
+        11,
+        20,
+        21,
+      ]);
     });
   });
 
@@ -838,8 +1265,19 @@ describe('Advanced Operators', () => {
       const { flow: inner2 } = createTestFlow<string>();
       const { values, subscriber } = createValueCollector<string>();
 
-      const innerFlows = [inner1, inner2];
-      const flatMapped = source.pipe(flatMap((n) => innerFlows[n]!));
+      const innerFlows = [
+        inner1,
+        inner2,
+      ];
+      const flatMapped = source.pipe(
+        flatMap((n) => {
+          const flow = innerFlows[n];
+          if (!flow) {
+            throw new Error(`Expected inner flow at index ${n}`);
+          }
+          return flow;
+        })
+      );
       flatMapped.on(subscriber);
 
       source.push(0);
@@ -848,7 +1286,11 @@ describe('Advanced Operators', () => {
       inner2.push('x');
       inner1.push('b');
 
-      expect(values).toEqual(['a', 'x', 'b']);
+      expect(values).toEqual([
+        'a',
+        'x',
+        'b',
+      ]);
     });
 
     test('maintains all inner subscriptions', () => {
@@ -868,11 +1310,15 @@ describe('Advanced Operators', () => {
       source.push(0);
       source.push(1);
 
-      inners[0]!.flow.push('from-0');
-      inners[1]!.flow.push('from-1');
-      inners[0]!.flow.push('still-from-0');
+      inners[0]?.flow.push('from-0');
+      inners[1]?.flow.push('from-1');
+      inners[0]?.flow.push('still-from-0');
 
-      expect(values).toEqual(['from-0', 'from-1', 'still-from-0']);
+      expect(values).toEqual([
+        'from-0',
+        'from-1',
+        'still-from-0',
+      ]);
     });
 
     test('emits from all inner flows', () => {
@@ -894,11 +1340,15 @@ describe('Advanced Operators', () => {
       source.push(2);
       source.push(3);
 
-      inners[0]!.flow.push(100);
-      inners[1]!.flow.push(200);
-      inners[2]!.flow.push(300);
+      inners[0]?.flow.push(100);
+      inners[1]?.flow.push(200);
+      inners[2]?.flow.push(300);
 
-      expect(values).toEqual([100, 200, 300]);
+      expect(values).toEqual([
+        100,
+        200,
+        300,
+      ]);
     });
   });
 });
@@ -925,7 +1375,11 @@ describe('Operator Chaining', () => {
     flow.push(3);
     flow.push(4);
 
-    expect(values).toEqual([2, 4, 6]);
+    expect(values).toEqual([
+      2,
+      4,
+      6,
+    ]);
   });
 
   test('complex chain with scan and distinct', () => {
@@ -942,6 +1396,9 @@ describe('Operator Chaining', () => {
     flow.push(0); // Sum still 1
     flow.push(1); // Sum now 2
 
-    expect(values).toEqual([1, 2]);
+    expect(values).toEqual([
+      1,
+      2,
+    ]);
   });
 });

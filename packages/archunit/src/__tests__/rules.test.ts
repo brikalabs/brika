@@ -34,7 +34,9 @@ async function collectViolations(rule: Rule, ctx: RuleContext): Promise<Violatio
   const violations: Violation[] = [];
   const result = rule.check(ctx);
   if (Symbol.asyncIterator in result) {
-    for await (const v of result) violations.push(v);
+    for await (const v of result) {
+      violations.push(v);
+    }
   } else {
     violations.push(...(await result));
   }
@@ -46,20 +48,26 @@ async function collectViolations(rule: Rule, ctx: RuleContext): Promise<Violatio
 describe('naming rules', () => {
   describe('pascalCase', () => {
     test('passes for PascalCase file names', async () => {
-      const ctx = createMockContext({ 'src/MyComponent.tsx': '' });
+      const ctx = createMockContext({
+        'src/MyComponent.tsx': '',
+      });
       const violations = await collectViolations(pascalCase('**/*.tsx'), ctx);
       expect(violations).toHaveLength(0);
     });
 
     test('fails for non-PascalCase file names', async () => {
-      const ctx = createMockContext({ 'src/my-component.tsx': '' });
+      const ctx = createMockContext({
+        'src/my-component.tsx': '',
+      });
       const violations = await collectViolations(pascalCase('**/*.tsx'), ctx);
       expect(violations).toHaveLength(1);
       expect(violations[0].message).toContain('not PascalCase');
     });
 
     test('fails for camelCase file names', async () => {
-      const ctx = createMockContext({ 'src/myComponent.tsx': '' });
+      const ctx = createMockContext({
+        'src/myComponent.tsx': '',
+      });
       const violations = await collectViolations(pascalCase('**/*.tsx'), ctx);
       expect(violations).toHaveLength(1);
     });
@@ -72,13 +80,17 @@ describe('naming rules', () => {
 
   describe('camelCase', () => {
     test('passes for camelCase file names', async () => {
-      const ctx = createMockContext({ 'src/myUtils.ts': '' });
+      const ctx = createMockContext({
+        'src/myUtils.ts': '',
+      });
       const violations = await collectViolations(camelCase('**/*.ts'), ctx);
       expect(violations).toHaveLength(0);
     });
 
     test('fails for PascalCase file names', async () => {
-      const ctx = createMockContext({ 'src/MyUtils.ts': '' });
+      const ctx = createMockContext({
+        'src/MyUtils.ts': '',
+      });
       const violations = await collectViolations(camelCase('**/*.ts'), ctx);
       expect(violations).toHaveLength(1);
       expect(violations[0].message).toContain('not camelCase');
@@ -87,26 +99,34 @@ describe('naming rules', () => {
 
   describe('kebabCase', () => {
     test('passes for kebab-case file names', async () => {
-      const ctx = createMockContext({ 'src/my-component.tsx': '' });
+      const ctx = createMockContext({
+        'src/my-component.tsx': '',
+      });
       const violations = await collectViolations(kebabCase('**/*.tsx'), ctx);
       expect(violations).toHaveLength(0);
     });
 
     test('fails for PascalCase file names', async () => {
-      const ctx = createMockContext({ 'src/MyComponent.tsx': '' });
+      const ctx = createMockContext({
+        'src/MyComponent.tsx': '',
+      });
       const violations = await collectViolations(kebabCase('**/*.tsx'), ctx);
       expect(violations).toHaveLength(1);
       expect(violations[0].message).toContain('not kebab-case');
     });
 
     test('passes for single word', async () => {
-      const ctx = createMockContext({ 'src/utils.ts': '' });
+      const ctx = createMockContext({
+        'src/utils.ts': '',
+      });
       const violations = await collectViolations(kebabCase('**/*.ts'), ctx);
       expect(violations).toHaveLength(0);
     });
 
     test('fails for names with underscores', async () => {
-      const ctx = createMockContext({ 'src/my_component.tsx': '' });
+      const ctx = createMockContext({
+        'src/my_component.tsx': '',
+      });
       const violations = await collectViolations(kebabCase('**/*.tsx'), ctx);
       expect(violations).toHaveLength(1);
     });
@@ -258,7 +278,12 @@ describe('file rules', () => {
     });
 
     test('fails when file exceeds limit', async () => {
-      const lines = Array.from({ length: 200 }, (_, i) => `line ${i + 1}`).join('\n');
+      const lines = Array.from(
+        {
+          length: 200,
+        },
+        (_, i) => `line ${i + 1}`
+      ).join('\n');
       const ctx = createMockContext({
         'src/long.ts': lines,
       });
@@ -275,7 +300,9 @@ describe('file rules', () => {
       return {
         cwd: '/test',
         async *glob() {
-          for (const d of dirs) yield d;
+          for (const d of dirs) {
+            yield d;
+          }
         },
         async read() {
           return '';
@@ -291,17 +318,35 @@ describe('file rules', () => {
 
     test('passes when all required files exist', async () => {
       const ctx = createDirContext(
-        ['src/features/auth/'],
-        new Set(['src/features/auth/index.ts', 'src/features/auth/types.ts'])
+        [
+          'src/features/auth/',
+        ],
+        new Set([
+          'src/features/auth/index.ts',
+          'src/features/auth/types.ts',
+        ])
       );
-      const rule = requiredFiles('src/features/*/', ['index.ts', 'types.ts']);
+      const rule = requiredFiles('src/features/*/', [
+        'index.ts',
+        'types.ts',
+      ]);
       const violations = await collectViolations(rule, ctx);
       expect(violations).toHaveLength(0);
     });
 
     test('fails when required file is missing', async () => {
-      const ctx = createDirContext(['src/features/auth/'], new Set(['src/features/auth/index.ts']));
-      const rule = requiredFiles('src/features/*/', ['index.ts', 'types.ts']);
+      const ctx = createDirContext(
+        [
+          'src/features/auth/',
+        ],
+        new Set([
+          'src/features/auth/index.ts',
+        ])
+      );
+      const rule = requiredFiles('src/features/*/', [
+        'index.ts',
+        'types.ts',
+      ]);
       const violations = await collectViolations(rule, ctx);
       expect(violations).toHaveLength(1);
       expect(violations[0].message).toContain('types.ts');

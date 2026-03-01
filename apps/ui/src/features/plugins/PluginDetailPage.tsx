@@ -7,7 +7,7 @@ import { useDataView } from '@/components/DataView';
 import { Badge, Card, CardContent, Skeleton } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
 import { cn } from '@/lib/utils';
-import { routes } from '@/routes';
+import { paths } from '@/routes/paths';
 import { PluginDetailHeader } from './components';
 import { formatPluginError } from './components/plugin-utils';
 import { UpdatePluginDialog } from './components/UpdatePluginDialog';
@@ -15,7 +15,9 @@ import { usePlugin, usePluginMutations } from './hooks';
 import { registryApi, registryKeys } from './registry-api';
 
 export function PluginDetailPage() {
-  const params = useParams({ strict: false });
+  const params = useParams({
+    strict: false,
+  });
   const pluginUid = params.uid;
   const navigate = useNavigate();
   const { data: plugin, isLoading, refetch } = usePlugin(pluginUid ?? '');
@@ -41,14 +43,20 @@ export function PluginDetailPage() {
     uninstall.isPending;
 
   const handleUninstall = async () => {
-    if (!plugin) return;
+    if (!plugin) {
+      return;
+    }
     await uninstall.mutateAsync(plugin.uid);
-    navigate({ to: routes.plugins.list.path });
+    navigate({
+      to: paths.plugins.list.path,
+    });
   };
 
   const handleUpdateDialogClose = (open: boolean) => {
     setUpdateDialogOpen(open);
-    if (!open) refetch();
+    if (!open) {
+      refetch();
+    }
   };
 
   const tabLink = (tab: string, isActive: boolean) =>
@@ -59,7 +67,10 @@ export function PluginDetailPage() {
         : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
     );
 
-  const View = useDataView({ data: plugin, isLoading });
+  const View = useDataView({
+    data: plugin,
+    isLoading,
+  });
 
   return (
     <View.Root>
@@ -82,7 +93,7 @@ export function PluginDetailPage() {
       <View.Empty>
         <div className="space-y-6">
           <Link
-            to={routes.plugins.list.path}
+            to={paths.plugins.list.path}
             className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground"
           >
             <ArrowLeft className="size-4" />
@@ -93,7 +104,9 @@ export function PluginDetailPage() {
               <Plug className="mx-auto mb-4 size-12 text-muted-foreground" />
               <h3 className="font-semibold text-lg">{t('plugins:notFound')}</h3>
               <p className="mt-1 text-muted-foreground">
-                {t('plugins:notFoundDetail', { uid: pluginUid })}
+                {t('plugins:notFoundDetail', {
+                  uid: pluginUid,
+                })}
               </p>
             </CardContent>
           </Card>
@@ -147,7 +160,9 @@ export function PluginDetailPage() {
                 <div className="border-border border-b">
                   <nav className="flex gap-1">
                     <Link
-                      to={routes.plugins.detail.to({ uid: pluginUid ?? '' })}
+                      to={paths.plugins.detail.to({
+                        uid: pluginUid ?? '',
+                      })}
                       className={tabLink('overview', activeTab === 'overview')}
                     >
                       <Info className="size-4" />
@@ -156,7 +171,10 @@ export function PluginDetailPage() {
                     {plugin.pages.map((page) => (
                       <Link
                         key={page.id}
-                        to={routes.plugins.tab.to({ uid: pluginUid ?? '', tab: page.id })}
+                        to={paths.plugins.tab.to({
+                          uid: pluginUid ?? '',
+                          tab: page.id,
+                        })}
                         className={tabLink(page.id, activeTab === page.id)}
                       >
                         <DynamicIcon name={(page.icon ?? 'file') as IconName} className="size-4" />

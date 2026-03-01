@@ -15,7 +15,9 @@ async function pathExists(path: string): Promise<boolean> {
 
 async function findReadmeFileName(pluginDir: string): Promise<string | undefined> {
   try {
-    const entries = await readdir(pluginDir, { withFileTypes: true });
+    const entries = await readdir(pluginDir, {
+      withFileTypes: true,
+    });
     for (const entry of entries) {
       if (entry.isFile() && entry.name.toLowerCase() === README_FILE) {
         return entry.name;
@@ -29,9 +31,15 @@ async function findReadmeFileName(pluginDir: string): Promise<string | undefined
 
 function normalizePublishPath(path: string): string {
   let normalized = path.trim().replaceAll('\\', '/').toLowerCase();
-  while (normalized.startsWith('./')) normalized = normalized.slice(2);
-  while (normalized.startsWith('/')) normalized = normalized.slice(1);
-  while (normalized.endsWith('/')) normalized = normalized.slice(0, -1);
+  while (normalized.startsWith('./')) {
+    normalized = normalized.slice(2);
+  }
+  while (normalized.startsWith('/')) {
+    normalized = normalized.slice(1);
+  }
+  while (normalized.endsWith('/')) {
+    normalized = normalized.slice(0, -1);
+  }
   return normalized;
 }
 
@@ -42,7 +50,9 @@ function isDirectoryLikePath(path: string): boolean {
 }
 
 function patternBase(path: string, suffix: string): string | undefined {
-  if (!path.endsWith(suffix)) return undefined;
+  if (!path.endsWith(suffix)) {
+    return undefined;
+  }
   const base = path.slice(0, -suffix.length);
   return base.endsWith('/') ? base.slice(0, -1) : base;
 }
@@ -50,8 +60,12 @@ function patternBase(path: string, suffix: string): string | undefined {
 function filesEntryCoversPath(entry: string, requiredPath: string): boolean {
   const normalizedEntry = normalizePublishPath(entry);
   const normalizedRequiredPath = normalizePublishPath(requiredPath);
-  if (normalizedEntry.length === 0 || normalizedEntry.startsWith('!')) return false;
-  if (normalizedEntry === normalizedRequiredPath) return true;
+  if (normalizedEntry.length === 0 || normalizedEntry.startsWith('!')) {
+    return false;
+  }
+  if (normalizedEntry === normalizedRequiredPath) {
+    return true;
+  }
 
   const deepWildcardBase = patternBase(normalizedEntry, '/**');
   if (deepWildcardBase) {
@@ -81,11 +95,17 @@ registerCheck(async ({ pkg, pluginDir }) => {
   const expectedPublishPaths: string[] = [];
   const warnings: string[] = [];
 
-  if (await pathExists(resolve(pluginDir, 'src'))) expectedPublishPaths.push('src');
-  if (await pathExists(resolve(pluginDir, 'locales'))) expectedPublishPaths.push('locales');
+  if (await pathExists(resolve(pluginDir, 'src'))) {
+    expectedPublishPaths.push('src');
+  }
+  if (await pathExists(resolve(pluginDir, 'locales'))) {
+    expectedPublishPaths.push('locales');
+  }
 
   const readmeFileName = await findReadmeFileName(pluginDir);
-  if (readmeFileName) expectedPublishPaths.push(readmeFileName);
+  if (readmeFileName) {
+    expectedPublishPaths.push(readmeFileName);
+  }
 
   const { icon, files = [] } = pkg;
   if (icon) {
@@ -102,5 +122,7 @@ registerCheck(async ({ pkg, pluginDir }) => {
     warnings.push(`files should include publish paths: ${missing.join(', ')}`);
   }
 
-  return { warnings };
+  return {
+    warnings,
+  };
 });

@@ -178,27 +178,49 @@ describe('RateLimitStore', () => {
 describe('rateLimit middleware', () => {
   function createTestApp(options: Parameters<typeof rateLimit>[0]) {
     const app = new Hono();
-    app.use('*', rateLimit({ ...options, cleanupInterval: 0 }));
-    app.get('/test', (c) => c.json({ ok: true }));
-    app.post('/test', (c) => c.json({ ok: true }));
+    app.use(
+      '*',
+      rateLimit({
+        ...options,
+        cleanupInterval: 0,
+      })
+    );
+    app.get('/test', (c) =>
+      c.json({
+        ok: true,
+      })
+    );
+    app.post('/test', (c) =>
+      c.json({
+        ok: true,
+      })
+    );
     return app;
   }
 
   function req(app: Hono, path = '/test', ip = '127.0.0.1') {
     return app.request(path, {
-      headers: { 'x-real-ip': ip },
+      headers: {
+        'x-real-ip': ip,
+      },
     });
   }
 
   test('allows requests under the limit', async () => {
-    const app = createTestApp({ window: 60, max: 3 });
+    const app = createTestApp({
+      window: 60,
+      max: 3,
+    });
 
     const res = await req(app);
     expect(res.status).toBe(200);
   });
 
   test('returns 429 when limit exceeded', async () => {
-    const app = createTestApp({ window: 60, max: 2 });
+    const app = createTestApp({
+      window: 60,
+      max: 2,
+    });
 
     await req(app);
     await req(app);
@@ -210,7 +232,11 @@ describe('rateLimit middleware', () => {
   });
 
   test('uses custom error message', async () => {
-    const app = createTestApp({ window: 60, max: 1, message: 'Slow down' });
+    const app = createTestApp({
+      window: 60,
+      max: 1,
+      message: 'Slow down',
+    });
 
     await req(app);
     const res = await req(app);
@@ -221,7 +247,10 @@ describe('rateLimit middleware', () => {
   });
 
   test('sets rate limit headers on every response', async () => {
-    const app = createTestApp({ window: 60, max: 5 });
+    const app = createTestApp({
+      window: 60,
+      max: 5,
+    });
 
     const res = await req(app);
 
@@ -231,7 +260,10 @@ describe('rateLimit middleware', () => {
   });
 
   test('remaining header decrements', async () => {
-    const app = createTestApp({ window: 60, max: 5 });
+    const app = createTestApp({
+      window: 60,
+      max: 5,
+    });
 
     const r1 = await req(app);
     const r2 = await req(app);
@@ -242,7 +274,10 @@ describe('rateLimit middleware', () => {
   });
 
   test('429 response includes Retry-After header', async () => {
-    const app = createTestApp({ window: 60, max: 1 });
+    const app = createTestApp({
+      window: 60,
+      max: 1,
+    });
 
     await req(app);
     const res = await req(app);
@@ -254,7 +289,10 @@ describe('rateLimit middleware', () => {
   });
 
   test('different IPs are tracked independently', async () => {
-    const app = createTestApp({ window: 60, max: 1 });
+    const app = createTestApp({
+      window: 60,
+      max: 1,
+    });
 
     const res1 = await req(app, '/test', '10.0.0.1');
     expect(res1.status).toBe(200);
@@ -264,7 +302,10 @@ describe('rateLimit middleware', () => {
   });
 
   test('same IP is rate limited across requests', async () => {
-    const app = createTestApp({ window: 60, max: 1 });
+    const app = createTestApp({
+      window: 60,
+      max: 1,
+    });
 
     await req(app, '/test', '10.0.0.1');
     const res = await req(app, '/test', '10.0.0.1');
@@ -282,22 +323,35 @@ describe('rateLimit middleware', () => {
         key: (c) => c.req.header('x-api-key') ?? 'anon',
       })
     );
-    app.get('/test', (c) => c.json({ ok: true }));
+    app.get('/test', (c) =>
+      c.json({
+        ok: true,
+      })
+    );
 
     // Same IP but different API keys — should be independent
     const r1 = await app.request('/test', {
-      headers: { 'x-real-ip': '10.0.0.1', 'x-api-key': 'key-a' },
+      headers: {
+        'x-real-ip': '10.0.0.1',
+        'x-api-key': 'key-a',
+      },
     });
     expect(r1.status).toBe(200);
 
     const r2 = await app.request('/test', {
-      headers: { 'x-real-ip': '10.0.0.1', 'x-api-key': 'key-b' },
+      headers: {
+        'x-real-ip': '10.0.0.1',
+        'x-api-key': 'key-b',
+      },
     });
     expect(r2.status).toBe(200);
 
     // Same API key — should be limited
     const r3 = await app.request('/test', {
-      headers: { 'x-real-ip': '10.0.0.1', 'x-api-key': 'key-a' },
+      headers: {
+        'x-real-ip': '10.0.0.1',
+        'x-api-key': 'key-a',
+      },
     });
     expect(r3.status).toBe(429);
   });

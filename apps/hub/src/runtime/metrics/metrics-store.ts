@@ -22,7 +22,9 @@ export class MetricsStore {
   record(pluginName: string, sample: MetricsSample): void {
     let data = this.#data.get(pluginName);
     if (!data) {
-      data = { samples: [] };
+      data = {
+        samples: [],
+      };
       this.#data.set(pluginName, data);
     }
 

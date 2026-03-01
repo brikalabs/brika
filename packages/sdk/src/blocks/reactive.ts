@@ -57,14 +57,22 @@ export function input<T extends z.ZodType | GenericRef<string>>(
   schema: T,
   meta: PortMeta
 ): InputDef<T> {
-  return { __type: 'input', schema, meta };
+  return {
+    __type: 'input',
+    schema,
+    meta,
+  };
 }
 
 /**
  * Create a typed output port with Zod schema, passthrough, generic, or resolved.
  */
 export function output<T extends OutputSchema>(schema: T, meta: PortMeta): OutputDef<T> {
-  return { __type: 'output', schema, meta };
+  return {
+    __type: 'output',
+    schema,
+    meta,
+  };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -259,13 +267,19 @@ export function createFlowFromInput<T>(
  * Convert a Zod schema to JSON Schema for API.
  */
 export function zodToJsonSchema(schema: z.ZodType): Record<string, unknown> {
-  return z.toJSONSchema(schema, { unrepresentable: 'any' }) as Record<string, unknown>;
+  return z.toJSONSchema(schema, {
+    unrepresentable: 'any',
+  }) as Record<string, unknown>;
 }
 
 /** Convert Zod schema to TypeScript-like type string */
 export function zodToTypeName(schema: z.ZodType): string {
   try {
-    return toTS(z.toJSONSchema(schema, { unrepresentable: 'any' }) as Record<string, unknown>);
+    return toTS(
+      z.toJSONSchema(schema, {
+        unrepresentable: 'any',
+      }) as Record<string, unknown>
+    );
   } catch {
     return 'unknown';
   }
@@ -273,9 +287,22 @@ export function zodToTypeName(schema: z.ZodType): string {
 
 function toTS(s: Record<string, unknown>): string {
   const t = s.type as string;
-  if (t === 'integer') return 'number';
-  if (['string', 'number', 'boolean', 'null'].includes(t)) return t;
-  if (t === 'array') return `${toTS(s.items as Record<string, unknown>)}[]`;
+  if (t === 'integer') {
+    return 'number';
+  }
+  if (
+    [
+      'string',
+      'number',
+      'boolean',
+      'null',
+    ].includes(t)
+  ) {
+    return t;
+  }
+  if (t === 'array') {
+    return `${toTS(s.items as Record<string, unknown>)}[]`;
+  }
   if (t === 'object') {
     const p = s.properties as Record<string, Record<string, unknown>>;
     return p
@@ -284,9 +311,12 @@ function toTS(s: Record<string, unknown>): string {
           .join(', ')}}`
       : '{}';
   }
-  if (s.anyOf) return (s.anyOf as Record<string, unknown>[]).map(toTS).join(' | ');
-  if (s.enum)
+  if (s.anyOf) {
+    return (s.anyOf as Record<string, unknown>[]).map(toTS).join(' | ');
+  }
+  if (s.enum) {
     return (s.enum as unknown[]).map((v) => (typeof v === 'string' ? `"${v}"` : v)).join(' | ');
+  }
   return 'unknown';
 }
 

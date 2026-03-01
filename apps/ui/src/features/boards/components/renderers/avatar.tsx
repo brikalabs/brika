@@ -45,17 +45,33 @@ defineRenderer('avatar', ({ node, onAction }) => {
       {...clickableProps(node.onPress, onAction)}
     >
       <Avatar
-        className={cn(sizeVariants({ size: node.size }), node.shape === 'square' && 'rounded-md')}
+        className={cn(
+          sizeVariants({
+            size: node.size,
+          }),
+          node.shape === 'square' && 'rounded-md'
+        )}
       >
         {node.src && <AvatarImage src={node.src} alt={node.alt ?? ''} />}
         <AvatarFallback
           className={cn(node.shape === 'square' ? 'rounded-md' : undefined)}
-          style={node.color ? { background: node.color } : undefined}
+          style={
+            node.color
+              ? {
+                  background: node.color,
+                }
+              : undefined
+          }
         >
           {node.icon ? (
             <DynamicIcon
               name={node.icon as IconName}
-              className={cn(iconSizeVariants({ size: node.size }), 'text-white')}
+              className={cn(
+                iconSizeVariants({
+                  size: node.size,
+                }),
+                'text-white'
+              )}
             />
           ) : (
             (node.fallback ?? '?')

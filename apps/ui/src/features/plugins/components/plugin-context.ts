@@ -5,4 +5,7 @@ export interface PluginContextValue {
   namespace: string;
 }
 
-export const PluginContext = createContext<PluginContextValue>({ uid: '', namespace: '' });
+export const PluginContext = createContext<PluginContextValue>({
+  uid: '',
+  namespace: '',
+});

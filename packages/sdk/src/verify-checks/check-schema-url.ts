@@ -13,7 +13,9 @@ registerCheck(({ pkg }) => {
   }
   if (!schemaUrl.includes(EXPECTED_SCHEMA_HOST)) {
     return {
-      warnings: [`$schema "${schemaUrl}" does not point to ${EXPECTED_SCHEMA_HOST}`],
+      warnings: [
+        `$schema "${schemaUrl}" does not point to ${EXPECTED_SCHEMA_HOST}`,
+      ],
     };
   }
   return {};

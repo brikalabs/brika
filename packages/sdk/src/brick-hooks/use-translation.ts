@@ -19,5 +19,7 @@ export function useTranslation(): {
   t: (key: string, params?: Record<string, string | number>) => I18nRef;
 } {
   const ctx = getContext();
-  return { t: (key, params) => ctx.t(key, params) };
+  return {
+    t: (key, params) => ctx.t(key, params),
+  };
 }

@@ -42,12 +42,19 @@ export function AddressSearch({ onSelect }: Readonly<AddressSearchProps>) {
   }, []);
 
   useEffect(() => {
-    if (timerRef.current) clearTimeout(timerRef.current);
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+    }
     timerRef.current = setTimeout(() => search(query), 300);
     return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
     };
-  }, [query, search]);
+  }, [
+    query,
+    search,
+  ]);
 
   function handleSelect(feature: PhotonFeature) {
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;

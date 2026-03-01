@@ -3,11 +3,11 @@
  * Handles authentication operations using server-side sessions.
  */
 
-import { injectable, inject } from '@brika/di';
+import { inject, injectable } from '@brika/di';
 import { LoginResponse, User } from '../types';
+import { ScopeService } from './ScopeService';
 import { SessionService } from './SessionService';
 import { UserService } from './UserService';
-import { ScopeService } from './ScopeService';
 
 /**
  * Service for authentication operations
@@ -40,7 +40,7 @@ export class AuthService {
     ip?: string,
     userAgent?: string
   ): Promise<LoginResponse> {
-    const user = await this.userService.getUserByEmail(email);
+    const user = this.userService.getUserByEmail(email);
     if (!user) {
       throw new Error('Invalid credentials');
     }
@@ -67,14 +67,14 @@ export class AuthService {
   /**
    * Logout — revoke the current session.
    */
-  async logout(sessionId: string): Promise<void> {
+  logout(sessionId: string): void {
     this.sessionService.revokeSession(sessionId);
   }
 
   /**
    * Get current user from user ID.
    */
-  async getCurrentUser(userId: string): Promise<User | null> {
+  getCurrentUser(userId: string): User | null {
     return this.userService.getUser(userId);
   }
 }

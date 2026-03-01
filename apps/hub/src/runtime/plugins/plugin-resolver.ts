@@ -9,9 +9,15 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  * Load and parse package.json with Zod validation
  */
 export async function loadPluginPackageJson(packageJsonPath: string) {
-  const raw = await import(packageJsonPath, { with: { type: 'json' } });
+  const raw = await import(packageJsonPath, {
+    with: {
+      type: 'json',
+    },
+  });
   const parsed = PluginPackageSchema.safeParse(raw);
-  if (parsed.success) return parsed.data;
+  if (parsed.success) {
+    return parsed.data;
+  }
 
   const hasMissingMain = parsed.error.issues.some(
     (issue) => issue.path.length === 1 && issue.path[0] === 'main'
@@ -56,7 +62,11 @@ export class PluginResolver {
       // Extract entry point
       const entryPoint = this.#extractEntryPoint(metadata, rootPath);
 
-      return { rootDirectory: rootPath, entryPoint, metadata };
+      return {
+        rootDirectory: rootPath,
+        entryPoint,
+        metadata,
+      };
     } catch (error) {
       throw new Error(`Failed to resolve plugin "${moduleId}": ${error}`);
     }
@@ -74,16 +84,25 @@ export class PluginResolver {
   #resolvePackageJson(
     target: string,
     parent?: string
-  ): { rootPath: string; packageJsonPath: string } {
+  ): {
+    rootPath: string;
+    packageJsonPath: string;
+  } {
     // If target is already an absolute path to a directory, use it directly
     if (target.startsWith('/')) {
       const packageJsonPath = join(target, 'package.json');
-      return { rootPath: target, packageJsonPath };
+      return {
+        rootPath: target,
+        packageJsonPath,
+      };
     }
 
     // Otherwise use Bun's module resolution
     const base = extname(target) ? dirname(target) : target;
     const packageJsonPath = Bun.resolveSync(join(base, 'package.json'), parent || import.meta.dir);
-    return { rootPath: dirname(packageJsonPath), packageJsonPath };
+    return {
+      rootPath: dirname(packageJsonPath),
+      packageJsonPath,
+    };
   }
 }

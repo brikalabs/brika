@@ -70,27 +70,68 @@ describe('_shared', () => {
     });
 
     test('wraps a single ComponentNode in an array', () => {
-      const node = Text({ content: 'hello' });
+      const node = Text({
+        content: 'hello',
+      });
       const result = normalizeChildren(node);
-      expect(result).toEqual([node]);
+      expect(result).toEqual([
+        node,
+      ]);
     });
 
     test('returns flat array from array of nodes', () => {
-      const a = Text({ content: 'a' });
-      const b = Text({ content: 'b' });
-      expect(normalizeChildren([a, b])).toEqual([a, b]);
+      const a = Text({
+        content: 'a',
+      });
+      const b = Text({
+        content: 'b',
+      });
+      expect(
+        normalizeChildren([
+          a,
+          b,
+        ])
+      ).toEqual([
+        a,
+        b,
+      ]);
     });
 
     test('flattens nested arrays', () => {
-      const a = Text({ content: 'a' });
-      const b = Text({ content: 'b' });
-      expect(normalizeChildren([[a], [b]])).toEqual([a, b]);
+      const a = Text({
+        content: 'a',
+      });
+      const b = Text({
+        content: 'b',
+      });
+      expect(
+        normalizeChildren([
+          [
+            a,
+          ],
+          [
+            b,
+          ],
+        ])
+      ).toEqual([
+        a,
+        b,
+      ]);
     });
 
     test('filters out null, undefined, and false from arrays', () => {
-      const a = Text({ content: 'a' });
-      const result = normalizeChildren([a, null, undefined, false]);
-      expect(result).toEqual([a]);
+      const a = Text({
+        content: 'a',
+      });
+      const result = normalizeChildren([
+        a,
+        null,
+        undefined,
+        false,
+      ]);
+      expect(result).toEqual([
+        a,
+      ]);
     });
 
     test('handles empty array', () => {
@@ -98,7 +139,13 @@ describe('_shared', () => {
     });
 
     test('handles array of only falsy values', () => {
-      expect(normalizeChildren([null, false, undefined])).toEqual([]);
+      expect(
+        normalizeChildren([
+          null,
+          false,
+          undefined,
+        ])
+      ).toEqual([]);
     });
 
     test('wraps I18nRef into TextNode with i18n field', () => {
@@ -108,7 +155,11 @@ describe('_shared', () => {
         {
           type: 'text',
           content: 'stats.humidity',
-          i18n: { ns: 'plugin:weather', key: 'stats.humidity', params: undefined },
+          i18n: {
+            ns: 'plugin:weather',
+            key: 'stats.humidity',
+            params: undefined,
+          },
         },
       ]);
     });
@@ -118,28 +169,47 @@ describe('_shared', () => {
         __i18n: true,
         ns: 'plugin:weather',
         key: 'ui.dayForecast',
-        params: { count: 7 },
+        params: {
+          count: 7,
+        },
       };
       const result = normalizeChildren(ref);
       expect(result).toEqual([
         {
           type: 'text',
           content: 'ui.dayForecast',
-          i18n: { ns: 'plugin:weather', key: 'ui.dayForecast', params: { count: 7 } },
+          i18n: {
+            ns: 'plugin:weather',
+            key: 'ui.dayForecast',
+            params: {
+              count: 7,
+            },
+          },
         },
       ]);
     });
 
     test('handles mixed I18nRef and ComponentNode in array', () => {
-      const textNode = Text({ content: 'plain' });
+      const textNode = Text({
+        content: 'plain',
+      });
       const ref = i18nRef('plugin:x', 'hello');
-      const result = normalizeChildren([textNode, ref, null, false]);
+      const result = normalizeChildren([
+        textNode,
+        ref,
+        null,
+        false,
+      ]);
       expect(result).toHaveLength(2);
       expect(result[0]).toBe(textNode);
       expect(result[1]).toEqual({
         type: 'text',
         content: 'hello',
-        i18n: { ns: 'plugin:x', key: 'hello', params: undefined },
+        i18n: {
+          ns: 'plugin:x',
+          key: 'hello',
+          params: undefined,
+        },
       });
     });
 
@@ -160,7 +230,9 @@ describe('_shared', () => {
         __intl: true,
         type: 'dateTime',
         value: 0,
-        options: { dateStyle: 'medium' },
+        options: {
+          dateStyle: 'medium',
+        },
       };
       const result = normalizeChildren(ref);
       expect(result).toEqual([
@@ -173,7 +245,11 @@ describe('_shared', () => {
     });
 
     test('wraps IntlRef list into TextNode with joined fallback', () => {
-      const ref = intlRef.list(['a', 'b', 'c']);
+      const ref = intlRef.list([
+        'a',
+        'b',
+        'c',
+      ]);
       const result = normalizeChildren(ref);
       expect(result).toEqual([
         {
@@ -185,24 +261,58 @@ describe('_shared', () => {
     });
 
     test('handles mixed IntlRef, I18nRef, and ComponentNode in array', () => {
-      const textNode = Text({ content: 'plain' });
+      const textNode = Text({
+        content: 'plain',
+      });
       const i18n = i18nRef('plugin:x', 'hello');
       const intl = intlRef.number(42);
-      const result = normalizeChildren([textNode, i18n, intl, null]);
+      const result = normalizeChildren([
+        textNode,
+        i18n,
+        intl,
+        null,
+      ]);
       expect(result).toHaveLength(3);
       expect(result[0]).toBe(textNode);
-      expect((result[1] as { i18n: unknown }).i18n).toBeDefined();
-      expect((result[2] as { intl: unknown }).intl).toBe(intl);
+      expect(
+        (
+          result[1] as {
+            i18n: unknown;
+          }
+        ).i18n
+      ).toBeDefined();
+      expect(
+        (
+          result[2] as {
+            intl: unknown;
+          }
+        ).intl
+      ).toBe(intl);
     });
   });
 
   describe('isI18nRef', () => {
     test('returns true for valid I18nRef', () => {
-      expect(isI18nRef({ __i18n: true, ns: 'plugin:x', key: 'k' })).toBe(true);
+      expect(
+        isI18nRef({
+          __i18n: true,
+          ns: 'plugin:x',
+          key: 'k',
+        })
+      ).toBe(true);
     });
 
     test('returns true for I18nRef with params', () => {
-      expect(isI18nRef({ __i18n: true, ns: 'n', key: 'k', params: { a: 1 } })).toBe(true);
+      expect(
+        isI18nRef({
+          __i18n: true,
+          ns: 'n',
+          key: 'k',
+          params: {
+            a: 1,
+          },
+        })
+      ).toBe(true);
     });
 
     test('returns false for null', () => {
@@ -222,29 +332,68 @@ describe('_shared', () => {
     });
 
     test('returns false for object without __i18n', () => {
-      expect(isI18nRef({ ns: 'x', key: 'k' })).toBe(false);
+      expect(
+        isI18nRef({
+          ns: 'x',
+          key: 'k',
+        })
+      ).toBe(false);
     });
 
     test('returns false for object with __i18n = false', () => {
-      expect(isI18nRef({ __i18n: false, ns: 'x', key: 'k' })).toBe(false);
+      expect(
+        isI18nRef({
+          __i18n: false,
+          ns: 'x',
+          key: 'k',
+        })
+      ).toBe(false);
     });
   });
 
   describe('isIntlRef', () => {
     test('returns true for dateTime ref', () => {
-      expect(isIntlRef({ __intl: true, type: 'dateTime', value: 0 })).toBe(true);
+      expect(
+        isIntlRef({
+          __intl: true,
+          type: 'dateTime',
+          value: 0,
+        })
+      ).toBe(true);
     });
 
     test('returns true for number ref', () => {
-      expect(isIntlRef({ __intl: true, type: 'number', value: 42 })).toBe(true);
+      expect(
+        isIntlRef({
+          __intl: true,
+          type: 'number',
+          value: 42,
+        })
+      ).toBe(true);
     });
 
     test('returns true for relativeTime ref', () => {
-      expect(isIntlRef({ __intl: true, type: 'relativeTime', value: -1, unit: 'day' })).toBe(true);
+      expect(
+        isIntlRef({
+          __intl: true,
+          type: 'relativeTime',
+          value: -1,
+          unit: 'day',
+        })
+      ).toBe(true);
     });
 
     test('returns true for list ref', () => {
-      expect(isIntlRef({ __intl: true, type: 'list', value: ['a', 'b'] })).toBe(true);
+      expect(
+        isIntlRef({
+          __intl: true,
+          type: 'list',
+          value: [
+            'a',
+            'b',
+          ],
+        })
+      ).toBe(true);
     });
 
     test('returns false for null', () => {
@@ -260,15 +409,32 @@ describe('_shared', () => {
     });
 
     test('returns false for I18nRef', () => {
-      expect(isIntlRef({ __i18n: true, ns: 'x', key: 'k' })).toBe(false);
+      expect(
+        isIntlRef({
+          __i18n: true,
+          ns: 'x',
+          key: 'k',
+        })
+      ).toBe(false);
     });
 
     test('returns false for object without __intl', () => {
-      expect(isIntlRef({ type: 'number', value: 42 })).toBe(false);
+      expect(
+        isIntlRef({
+          type: 'number',
+          value: 42,
+        })
+      ).toBe(false);
     });
 
     test('returns false for object with __intl = false', () => {
-      expect(isIntlRef({ __intl: false, type: 'number', value: 42 })).toBe(false);
+      expect(
+        isIntlRef({
+          __intl: false,
+          type: 'number',
+          value: 42,
+        })
+      ).toBe(false);
     });
   });
 
@@ -322,34 +488,60 @@ describe('_shared', () => {
 
 describe('Text', () => {
   test('creates text node with required content', () => {
-    const node = Text({ content: 'Hello' });
-    expect(node).toEqual({ type: 'text', content: 'Hello' });
+    const node = Text({
+      content: 'Hello',
+    });
+    expect(node).toEqual({
+      type: 'text',
+      content: 'Hello',
+    });
   });
 
   test('includes optional variant', () => {
-    const node = Text({ content: 'Title', variant: 'heading' });
+    const node = Text({
+      content: 'Title',
+      variant: 'heading',
+    });
     expect(node.type).toBe('text');
     expect(node.content).toBe('Title');
     expect(node.variant).toBe('heading');
   });
 
   test('includes optional color', () => {
-    const node = Text({ content: 'red', color: '#ff0000' });
+    const node = Text({
+      content: 'red',
+      color: '#ff0000',
+    });
     expect(node.color).toBe('#ff0000');
   });
 
   test('all variant values work', () => {
-    for (const v of ['body', 'caption', 'heading'] as const) {
-      expect(Text({ content: '', variant: v }).variant).toBe(v);
+    for (const v of [
+      'body',
+      'caption',
+      'heading',
+    ] as const) {
+      expect(
+        Text({
+          content: '',
+          variant: v,
+        }).variant
+      ).toBe(v);
     }
   });
 
   test('accepts I18nRef as content and sets i18n field', () => {
     const ref = i18nRef('plugin:weather', 'stats.humidity');
-    const node = Text({ content: ref });
+    const node = Text({
+      content: ref,
+    });
     expect(node.type).toBe('text');
     expect(node.content).toBe('stats.humidity');
-    expect(node.i18n).toEqual({ ns: 'plugin:weather', key: 'stats.humidity', params: undefined });
+    expect(node.i18n).toEqual({
+      ns: 'plugin:weather',
+      key: 'stats.humidity',
+      params: undefined,
+    });
   });
 
   test('I18nRef with params preserves params in i18n field', () => {
@@ -357,21 +549,31 @@ describe('Text', () => {
       __i18n: true,
       ns: 'plugin:weather',
       key: 'ui.dayForecast',
-      params: { count: 7 },
+      params: {
+        count: 7,
+      },
     };
-    const node = Text({ content: ref, variant: 'heading', weight: 'bold' });
+    const node = Text({
+      content: ref,
+      variant: 'heading',
+      weight: 'bold',
+    });
     expect(node.content).toBe('ui.dayForecast');
     expect(node.i18n).toEqual({
       ns: 'plugin:weather',
       key: 'ui.dayForecast',
-      params: { count: 7 },
+      params: {
+        count: 7,
+      },
     });
     expect(node.variant).toBe('heading');
     expect(node.weight).toBe('bold');
   });
 
   test('string content does not set i18n field', () => {
-    const node = Text({ content: 'plain text' });
+    const node = Text({
+      content: 'plain text',
+    });
     expect(node.i18n).toBeUndefined();
   });
 
@@ -380,9 +582,13 @@ describe('Text', () => {
       __intl: true,
       type: 'number',
       value: 1234.5,
-      options: { minimumFractionDigits: 2 },
+      options: {
+        minimumFractionDigits: 2,
+      },
     };
-    const node = Text({ content: ref });
+    const node = Text({
+      content: ref,
+    });
     expect(node.type).toBe('text');
     expect(node.content).toBe('1234.5');
     expect(node.intl).toBe(ref);
@@ -391,21 +597,32 @@ describe('Text', () => {
 
   test('accepts IntlRef dateTime as content', () => {
     const ref = intlRef.dateTime(1700000000000);
-    const node = Text({ content: ref });
+    const node = Text({
+      content: ref,
+    });
     expect(node.content).toBe('1700000000000');
     expect(node.intl).toBe(ref);
   });
 
   test('accepts IntlRef list as content with joined fallback', () => {
-    const ref = intlRef.list(['apples', 'oranges']);
-    const node = Text({ content: ref });
+    const ref = intlRef.list([
+      'apples',
+      'oranges',
+    ]);
+    const node = Text({
+      content: ref,
+    });
     expect(node.content).toBe('apples, oranges');
     expect(node.intl).toBe(ref);
   });
 
   test('IntlRef preserves other props', () => {
     const ref = intlRef.number(99);
-    const node = Text({ content: ref, variant: 'heading', weight: 'bold' });
+    const node = Text({
+      content: ref,
+      variant: 'heading',
+      weight: 'bold',
+    });
     expect(node.variant).toBe('heading');
     expect(node.weight).toBe('bold');
     expect(node.intl).toBe(ref);
@@ -414,18 +631,30 @@ describe('Text', () => {
 
 describe('Badge', () => {
   test('creates badge node with required label', () => {
-    const node = Badge({ label: 'New' });
-    expect(node).toEqual({ type: 'badge', label: 'New' });
+    const node = Badge({
+      label: 'New',
+    });
+    expect(node).toEqual({
+      type: 'badge',
+      label: 'New',
+    });
   });
 
   test('includes optional variant', () => {
-    const node = Badge({ label: 'OK', variant: 'success' });
+    const node = Badge({
+      label: 'OK',
+      variant: 'success',
+    });
     expect(node.type).toBe('badge');
     expect(node.variant).toBe('success');
   });
 
   test('includes optional icon and color', () => {
-    const node = Badge({ label: 'Warn', icon: 'alert-triangle', color: '#f00' });
+    const node = Badge({
+      label: 'Warn',
+      icon: 'alert-triangle',
+      color: '#f00',
+    });
     expect(node.icon).toBe('alert-triangle');
     expect(node.color).toBe('#f00');
   });
@@ -439,19 +668,33 @@ describe('Badge', () => {
       'warning',
       'destructive',
     ] as const) {
-      expect(Badge({ label: '', variant: v }).variant).toBe(v);
+      expect(
+        Badge({
+          label: '',
+          variant: v,
+        }).variant
+      ).toBe(v);
     }
   });
 });
 
 describe('Chart', () => {
   const sampleData = [
-    { ts: 1000, value: 10 },
-    { ts: 2000, value: 20 },
+    {
+      ts: 1000,
+      value: 10,
+    },
+    {
+      ts: 2000,
+      value: 20,
+    },
   ];
 
   test('creates chart node with required fields', () => {
-    const node = Chart({ variant: 'line', data: sampleData });
+    const node = Chart({
+      variant: 'line',
+      data: sampleData,
+    });
     expect(node.type).toBe('chart');
     expect(node.variant).toBe('line');
     expect(node.data).toEqual(sampleData);
@@ -471,8 +714,17 @@ describe('Chart', () => {
   });
 
   test('all variant values work', () => {
-    for (const v of ['line', 'area', 'bar'] as const) {
-      expect(Chart({ variant: v, data: [] }).variant).toBe(v);
+    for (const v of [
+      'line',
+      'area',
+      'bar',
+    ] as const) {
+      expect(
+        Chart({
+          variant: v,
+          data: [],
+        }).variant
+      ).toBe(v);
     }
   });
 });
@@ -484,38 +736,68 @@ describe('Divider', () => {
   });
 
   test('accepts direction', () => {
-    expect(Divider({ direction: 'horizontal' }).direction).toBe('horizontal');
-    expect(Divider({ direction: 'vertical' }).direction).toBe('vertical');
+    expect(
+      Divider({
+        direction: 'horizontal',
+      }).direction
+    ).toBe('horizontal');
+    expect(
+      Divider({
+        direction: 'vertical',
+      }).direction
+    ).toBe('vertical');
   });
 
   test('accepts color', () => {
-    const node = Divider({ color: '#ccc' });
+    const node = Divider({
+      color: '#ccc',
+    });
     expect(node.color).toBe('#ccc');
   });
 });
 
 describe('Icon', () => {
   test('creates icon node with required name', () => {
-    const node = Icon({ name: 'star' });
-    expect(node).toEqual({ type: 'icon', name: 'star' });
+    const node = Icon({
+      name: 'star',
+    });
+    expect(node).toEqual({
+      type: 'icon',
+      name: 'star',
+    });
   });
 
   test('includes optional size and color', () => {
-    const node = Icon({ name: 'heart', size: 'lg', color: 'red' });
+    const node = Icon({
+      name: 'heart',
+      size: 'lg',
+      color: 'red',
+    });
     expect(node.size).toBe('lg');
     expect(node.color).toBe('red');
   });
 
   test('all size values work', () => {
-    for (const s of ['sm', 'md', 'lg'] as const) {
-      expect(Icon({ name: 'x', size: s }).size).toBe(s);
+    for (const s of [
+      'sm',
+      'md',
+      'lg',
+    ] as const) {
+      expect(
+        Icon({
+          name: 'x',
+          size: s,
+        }).size
+      ).toBe(s);
     }
   });
 });
 
 describe('Image', () => {
   test('creates image node with required src', () => {
-    const node = Image({ src: 'https://img.example.com/a.png' });
+    const node = Image({
+      src: 'https://img.example.com/a.png',
+    });
     expect(node.type).toBe('image');
     expect(node.src).toBe('https://img.example.com/a.png');
   });
@@ -541,11 +823,19 @@ describe('Image', () => {
   });
 
   test('width/height accept both number and string', () => {
-    const n1 = Image({ src: 'a', width: 200, height: 100 });
+    const n1 = Image({
+      src: 'a',
+      width: 200,
+      height: 100,
+    });
     expect(n1.width).toBe(200);
     expect(n1.height).toBe(100);
 
-    const n2 = Image({ src: 'a', width: '30%', height: '50%' });
+    const n2 = Image({
+      src: 'a',
+      width: '30%',
+      height: '50%',
+    });
     expect(n2.width).toBe('30%');
     expect(n2.height).toBe('50%');
   });
@@ -553,8 +843,13 @@ describe('Image', () => {
 
 describe('Progress', () => {
   test('creates progress node with required value', () => {
-    const node = Progress({ value: 42 });
-    expect(node).toEqual({ type: 'progress', value: 42 });
+    const node = Progress({
+      value: 42,
+    });
+    expect(node).toEqual({
+      type: 'progress',
+      value: 42,
+    });
   });
 
   test('includes optional fields', () => {
@@ -570,8 +865,16 @@ describe('Progress', () => {
   });
 
   test('handles boundary values', () => {
-    expect(Progress({ value: 0 }).value).toBe(0);
-    expect(Progress({ value: 100 }).value).toBe(100);
+    expect(
+      Progress({
+        value: 0,
+      }).value
+    ).toBe(0);
+    expect(
+      Progress({
+        value: 100,
+      }).value
+    ).toBe(100);
   });
 });
 
@@ -582,8 +885,16 @@ describe('Spacer', () => {
   });
 
   test('accepts size', () => {
-    for (const s of ['sm', 'md', 'lg'] as const) {
-      expect(Spacer({ size: s }).size).toBe(s);
+    for (const s of [
+      'sm',
+      'md',
+      'lg',
+    ] as const) {
+      expect(
+        Spacer({
+          size: s,
+        }).size
+      ).toBe(s);
     }
   });
 
@@ -595,14 +906,20 @@ describe('Spacer', () => {
 
 describe('Stat', () => {
   test('creates stat-value node with required label and value', () => {
-    const node = Stat({ label: 'Temp', value: 21.5 });
+    const node = Stat({
+      label: 'Temp',
+      value: 21.5,
+    });
     expect(node.type).toBe('stat-value');
     expect(node.label).toBe('Temp');
     expect(node.value).toBe(21.5);
   });
 
   test('value can be a string', () => {
-    const node = Stat({ label: 'Status', value: 'OK' });
+    const node = Stat({
+      label: 'Status',
+      value: 'OK',
+    });
     expect(node.value).toBe('OK');
   });
 
@@ -622,36 +939,68 @@ describe('Stat', () => {
   });
 
   test('all trend values work', () => {
-    for (const t of ['up', 'down', 'flat'] as const) {
-      expect(Stat({ label: '', value: 0, trend: t }).trend).toBe(t);
+    for (const t of [
+      'up',
+      'down',
+      'flat',
+    ] as const) {
+      expect(
+        Stat({
+          label: '',
+          value: 0,
+          trend: t,
+        }).trend
+      ).toBe(t);
     }
   });
 });
 
 describe('Status', () => {
   test('creates status node with required label and status', () => {
-    const node = Status({ label: 'Server', status: 'online' });
+    const node = Status({
+      label: 'Server',
+      status: 'online',
+    });
     expect(node.type).toBe('status');
     expect(node.label).toBe('Server');
     expect(node.status).toBe('online');
   });
 
   test('includes optional icon and color', () => {
-    const node = Status({ label: 'DB', status: 'error', icon: 'database', color: '#f00' });
+    const node = Status({
+      label: 'DB',
+      status: 'error',
+      icon: 'database',
+      color: '#f00',
+    });
     expect(node.icon).toBe('database');
     expect(node.color).toBe('#f00');
   });
 
   test('all status values work', () => {
-    for (const s of ['online', 'offline', 'warning', 'error', 'idle'] as const) {
-      expect(Status({ label: '', status: s }).status).toBe(s);
+    for (const s of [
+      'online',
+      'offline',
+      'warning',
+      'error',
+      'idle',
+    ] as const) {
+      expect(
+        Status({
+          label: '',
+          status: s,
+        }).status
+      ).toBe(s);
     }
   });
 });
 
 describe('Video', () => {
   test('creates video node with required fields', () => {
-    const node = Video({ src: 'https://stream.example.com/live.m3u8', format: 'hls' });
+    const node = Video({
+      src: 'https://stream.example.com/live.m3u8',
+      format: 'hls',
+    });
     expect(node.type).toBe('video');
     expect(node.src).toBe('https://stream.example.com/live.m3u8');
     expect(node.format).toBe('hls');
@@ -671,8 +1020,18 @@ describe('Video', () => {
   });
 
   test('both format values work', () => {
-    expect(Video({ src: '', format: 'hls' }).format).toBe('hls');
-    expect(Video({ src: '', format: 'mjpeg' }).format).toBe('mjpeg');
+    expect(
+      Video({
+        src: '',
+        format: 'hls',
+      }).format
+    ).toBe('hls');
+    expect(
+      Video({
+        src: '',
+        format: 'mjpeg',
+      }).format
+    ).toBe('mjpeg');
   });
 });
 
@@ -688,22 +1047,51 @@ describe('Box', () => {
   });
 
   test('normalizes single child', () => {
-    const child = Text({ content: 'hi' });
-    const node = Box({ children: child });
-    expect(node.children).toEqual([child]);
+    const child = Text({
+      content: 'hi',
+    });
+    const node = Box({
+      children: child,
+    });
+    expect(node.children).toEqual([
+      child,
+    ]);
   });
 
   test('normalizes array children', () => {
-    const a = Text({ content: 'a' });
-    const b = Text({ content: 'b' });
-    const node = Box({ children: [a, b] });
-    expect(node.children).toEqual([a, b]);
+    const a = Text({
+      content: 'a',
+    });
+    const b = Text({
+      content: 'b',
+    });
+    const node = Box({
+      children: [
+        a,
+        b,
+      ],
+    });
+    expect(node.children).toEqual([
+      a,
+      b,
+    ]);
   });
 
   test('filters out falsy children', () => {
-    const a = Text({ content: 'a' });
-    const node = Box({ children: [a, null, false, undefined] });
-    expect(node.children).toEqual([a]);
+    const a = Text({
+      content: 'a',
+    });
+    const node = Box({
+      children: [
+        a,
+        null,
+        false,
+        undefined,
+      ],
+    });
+    expect(node.children).toEqual([
+      a,
+    ]);
   });
 
   test('includes all optional props', () => {
@@ -730,7 +1118,12 @@ describe('Box', () => {
   });
 
   test('does not leak children into rest props', () => {
-    const node = Box({ children: Text({ content: 'x' }), padding: 'sm' });
+    const node = Box({
+      children: Text({
+        content: 'x',
+      }),
+      padding: 'sm',
+    });
     // The children key should be the normalized array, not the raw input
     expect(Array.isArray(node.children)).toBe(true);
     expect(node.padding).toBe('sm');
@@ -745,10 +1138,22 @@ describe('Grid', () => {
   });
 
   test('normalizes children', () => {
-    const a = Text({ content: 'a' });
-    const b = Text({ content: 'b' });
-    const node = Grid({ children: [a, b] });
-    expect(node.children).toEqual([a, b]);
+    const a = Text({
+      content: 'a',
+    });
+    const b = Text({
+      content: 'b',
+    });
+    const node = Grid({
+      children: [
+        a,
+        b,
+      ],
+    });
+    expect(node.children).toEqual([
+      a,
+      b,
+    ]);
   });
 
   test('includes optional fields', () => {
@@ -765,30 +1170,60 @@ describe('Grid', () => {
   });
 
   test('filters falsy children', () => {
-    const a = Text({ content: 'a' });
-    const node = Grid({ children: [a, null, false] });
-    expect(node.children).toEqual([a]);
+    const a = Text({
+      content: 'a',
+    });
+    const node = Grid({
+      children: [
+        a,
+        null,
+        false,
+      ],
+    });
+    expect(node.children).toEqual([
+      a,
+    ]);
   });
 });
 
 describe('Section', () => {
   test('creates section node with title and empty children', () => {
-    const node = Section({ title: 'Settings' });
+    const node = Section({
+      title: 'Settings',
+    });
     expect(node.type).toBe('section');
     expect(node.title).toBe('Settings');
     expect(node.children).toEqual([]);
   });
 
   test('normalizes children', () => {
-    const child = Text({ content: 'hello' });
-    const node = Section({ title: 'Main', children: child });
-    expect(node.children).toEqual([child]);
+    const child = Text({
+      content: 'hello',
+    });
+    const node = Section({
+      title: 'Main',
+      children: child,
+    });
+    expect(node.children).toEqual([
+      child,
+    ]);
   });
 
   test('normalizes array children with falsy values', () => {
-    const a = Text({ content: 'a' });
-    const node = Section({ title: 'S', children: [a, null, false] });
-    expect(node.children).toEqual([a]);
+    const a = Text({
+      content: 'a',
+    });
+    const node = Section({
+      title: 'S',
+      children: [
+        a,
+        null,
+        false,
+      ],
+    });
+    expect(node.children).toEqual([
+      a,
+    ]);
   });
 });
 
@@ -804,10 +1239,22 @@ describe('Row', () => {
   });
 
   test('normalizes children', () => {
-    const a = Text({ content: 'a' });
-    const b = Text({ content: 'b' });
-    const node = Row({ children: [a, b] });
-    expect(node.children).toEqual([a, b]);
+    const a = Text({
+      content: 'a',
+    });
+    const b = Text({
+      content: 'b',
+    });
+    const node = Row({
+      children: [
+        a,
+        b,
+      ],
+    });
+    expect(node.children).toEqual([
+      a,
+      b,
+    ]);
   });
 
   test('includes all FlexLayoutProps', () => {
@@ -826,14 +1273,27 @@ describe('Row', () => {
   });
 
   test('resolves onPress to action ID', () => {
-    const node = Row({ onPress: () => {} });
+    const node = Row({
+      onPress: () => {},
+    });
     expect(node.onPress).toMatch(/^__action_\d+$/);
   });
 
   test('filters falsy children', () => {
-    const a = Text({ content: 'a' });
-    const node = Row({ children: [a, null, undefined, false] });
-    expect(node.children).toEqual([a]);
+    const a = Text({
+      content: 'a',
+    });
+    const node = Row({
+      children: [
+        a,
+        null,
+        undefined,
+        false,
+      ],
+    });
+    expect(node.children).toEqual([
+      a,
+    ]);
   });
 });
 
@@ -849,10 +1309,22 @@ describe('Column', () => {
   });
 
   test('normalizes children', () => {
-    const a = Text({ content: 'a' });
-    const b = Text({ content: 'b' });
-    const node = Column({ children: [a, b] });
-    expect(node.children).toEqual([a, b]);
+    const a = Text({
+      content: 'a',
+    });
+    const b = Text({
+      content: 'b',
+    });
+    const node = Column({
+      children: [
+        a,
+        b,
+      ],
+    });
+    expect(node.children).toEqual([
+      a,
+      b,
+    ]);
   });
 
   test('includes all FlexLayoutProps', () => {
@@ -871,14 +1343,27 @@ describe('Column', () => {
   });
 
   test('resolves onPress to action ID', () => {
-    const node = Column({ onPress: () => {} });
+    const node = Column({
+      onPress: () => {},
+    });
     expect(node.onPress).toMatch(/^__action_\d+$/);
   });
 
   test('filters falsy children', () => {
-    const a = Text({ content: 'a' });
-    const node = Column({ children: [a, null, undefined, false] });
-    expect(node.children).toEqual([a]);
+    const a = Text({
+      content: 'a',
+    });
+    const node = Column({
+      children: [
+        a,
+        null,
+        undefined,
+        false,
+      ],
+    });
+    expect(node.children).toEqual([
+      a,
+    ]);
   });
 });
 
@@ -892,7 +1377,9 @@ describe('Button', () => {
   });
 
   test('creates button node with label only', () => {
-    const node = Button({ label: 'Click me' });
+    const node = Button({
+      label: 'Click me',
+    });
     expect(node.type).toBe('button');
     expect(node.label).toBe('Click me');
     expect(node.onPress).toBeUndefined();
@@ -900,19 +1387,28 @@ describe('Button', () => {
 
   test('resolves onPress handler to an action ID', () => {
     const handler = () => {};
-    const node = Button({ label: 'Go', onPress: handler });
+    const node = Button({
+      label: 'Go',
+      onPress: handler,
+    });
     expect(node.type).toBe('button');
     expect(node.onPress).toMatch(/^__action_\d+$/);
   });
 
   test('uses custom registrar for onPress', () => {
     _setActionRegistrar(() => 'btn-action-1');
-    const node = Button({ label: 'Go', onPress: () => {} });
+    const node = Button({
+      label: 'Go',
+      onPress: () => {},
+    });
     expect(node.onPress).toBe('btn-action-1');
   });
 
   test('includes url without onPress', () => {
-    const node = Button({ label: 'Link', url: 'https://example.com' });
+    const node = Button({
+      label: 'Link',
+      url: 'https://example.com',
+    });
     expect(node.url).toBe('https://example.com');
     expect(node.onPress).toBeUndefined();
   });
@@ -931,8 +1427,19 @@ describe('Button', () => {
   });
 
   test('all variant values work', () => {
-    for (const v of ['default', 'secondary', 'outline', 'ghost', 'destructive', 'link'] as const) {
-      expect(Button({ variant: v }).variant).toBe(v);
+    for (const v of [
+      'default',
+      'secondary',
+      'outline',
+      'ghost',
+      'destructive',
+      'link',
+    ] as const) {
+      expect(
+        Button({
+          variant: v,
+        }).variant
+      ).toBe(v);
     }
   });
 });
@@ -944,7 +1451,12 @@ describe('Slider', () => {
 
   test('creates slider node with required fields', () => {
     const handler = () => {};
-    const node = Slider({ value: 50, min: 0, max: 100, onChange: handler });
+    const node = Slider({
+      value: 50,
+      min: 0,
+      max: 100,
+      onChange: handler,
+    });
     expect(node.type).toBe('slider');
     expect(node.value).toBe(50);
     expect(node.min).toBe(0);
@@ -954,7 +1466,12 @@ describe('Slider', () => {
 
   test('uses custom registrar for onChange', () => {
     _setActionRegistrar(() => 'slider-action-1');
-    const node = Slider({ value: 10, min: 0, max: 20, onChange: () => {} });
+    const node = Slider({
+      value: 10,
+      min: 0,
+      max: 20,
+      onChange: () => {},
+    });
     expect(node.onChange).toBe('slider-action-1');
   });
 
@@ -985,7 +1502,11 @@ describe('Toggle', () => {
 
   test('creates toggle node with required fields', () => {
     const handler = () => {};
-    const node = Toggle({ label: 'Dark mode', checked: false, onToggle: handler });
+    const node = Toggle({
+      label: 'Dark mode',
+      checked: false,
+      onToggle: handler,
+    });
     expect(node.type).toBe('toggle');
     expect(node.label).toBe('Dark mode');
     expect(node.checked).toBe(false);
@@ -993,13 +1514,21 @@ describe('Toggle', () => {
   });
 
   test('checked can be true', () => {
-    const node = Toggle({ label: 'On', checked: true, onToggle: () => {} });
+    const node = Toggle({
+      label: 'On',
+      checked: true,
+      onToggle: () => {},
+    });
     expect(node.checked).toBe(true);
   });
 
   test('uses custom registrar for onToggle', () => {
     _setActionRegistrar(() => 'toggle-action-1');
-    const node = Toggle({ label: 'LED', checked: true, onToggle: () => {} });
+    const node = Toggle({
+      label: 'LED',
+      checked: true,
+      onToggle: () => {},
+    });
     expect(node.onToggle).toBe('toggle-action-1');
   });
 
@@ -1016,7 +1545,12 @@ describe('Toggle', () => {
   });
 
   test('includes disabled prop', () => {
-    const node = Toggle({ label: 'Off', checked: false, onToggle: () => {}, disabled: true });
+    const node = Toggle({
+      label: 'Off',
+      checked: false,
+      onToggle: () => {},
+      disabled: true,
+    });
     expect(node.disabled).toBe(true);
   });
 });
@@ -1031,46 +1565,82 @@ describe('Text (new props)', () => {
   });
 
   test('includes align and weight', () => {
-    const node = Text({ content: 'hi', align: 'center', weight: 'bold' });
+    const node = Text({
+      content: 'hi',
+      align: 'center',
+      weight: 'bold',
+    });
     expect(node.align).toBe('center');
     expect(node.weight).toBe('bold');
   });
 
   test('includes maxLines', () => {
-    const node = Text({ content: 'long', maxLines: 3 });
+    const node = Text({
+      content: 'long',
+      maxLines: 3,
+    });
     expect(node.maxLines).toBe(3);
   });
 
   test('includes size', () => {
-    for (const s of ['xs', 'sm', 'md', 'lg', 'xl'] as const) {
-      expect(Text({ content: '', size: s }).size).toBe(s);
+    for (const s of [
+      'xs',
+      'sm',
+      'md',
+      'lg',
+      'xl',
+    ] as const) {
+      expect(
+        Text({
+          content: '',
+          size: s,
+        }).size
+      ).toBe(s);
     }
   });
 
   test('resolves onPress to action ID', () => {
-    const node = Text({ content: 'click', onPress: () => {} });
+    const node = Text({
+      content: 'click',
+      onPress: () => {},
+    });
     expect(node.onPress).toMatch(/^__action_\d+$/);
   });
 
   test('omits onPress when not provided', () => {
-    const node = Text({ content: 'plain' });
+    const node = Text({
+      content: 'plain',
+    });
     expect(node.onPress).toBeUndefined();
   });
 
   test('accepts children as alias for content', () => {
-    const node = Text({ children: 'hello' });
-    expect(node).toEqual({ type: 'text', content: 'hello' });
+    const node = Text({
+      children: 'hello',
+    });
+    expect(node).toEqual({
+      type: 'text',
+      content: 'hello',
+    });
   });
 
   test('children works with I18nRef', () => {
     const ref = i18nRef('plugin:test', 'greeting');
-    const node = Text({ children: ref });
+    const node = Text({
+      children: ref,
+    });
     expect(node.content).toBe('greeting');
-    expect(node.i18n).toEqual({ ns: 'plugin:test', key: 'greeting' });
+    expect(node.i18n).toEqual({
+      ns: 'plugin:test',
+      key: 'greeting',
+    });
   });
 
   test('content takes precedence over children', () => {
-    const node = Text({ content: 'from-content', children: 'from-children' });
+    const node = Text({
+      content: 'from-content',
+      children: 'from-children',
+    });
     expect(node.content).toBe('from-content');
   });
 
@@ -1086,13 +1656,21 @@ describe('Button (new props)', () => {
   });
 
   test('includes disabled and loading', () => {
-    const node = Button({ label: 'Go', disabled: true, loading: true });
+    const node = Button({
+      label: 'Go',
+      disabled: true,
+      loading: true,
+    });
     expect(node.disabled).toBe(true);
     expect(node.loading).toBe(true);
   });
 
   test('includes size and fullWidth', () => {
-    const node = Button({ label: 'Big', size: 'lg', fullWidth: true });
+    const node = Button({
+      label: 'Big',
+      size: 'lg',
+      fullWidth: true,
+    });
     expect(node.size).toBe('lg');
     expect(node.fullWidth).toBe(true);
   });
@@ -1100,7 +1678,12 @@ describe('Button (new props)', () => {
 
 describe('Stat (new props)', () => {
   test('includes trendValue and description', () => {
-    const node = Stat({ label: 'Rev', value: 100, trendValue: '+5.2%', description: 'Monthly' });
+    const node = Stat({
+      label: 'Rev',
+      value: 100,
+      trendValue: '+5.2%',
+      description: 'Monthly',
+    });
     expect(node.trendValue).toBe('+5.2%');
     expect(node.description).toBe('Monthly');
   });
@@ -1108,7 +1691,9 @@ describe('Stat (new props)', () => {
 
 describe('Divider (new props)', () => {
   test('includes label', () => {
-    const node = Divider({ label: 'OR' });
+    const node = Divider({
+      label: 'OR',
+    });
     expect(node.label).toBe('OR');
   });
 });
@@ -1119,12 +1704,17 @@ describe('Badge (onPress)', () => {
   });
 
   test('resolves onPress to action ID', () => {
-    const node = Badge({ label: 'Tag', onPress: () => {} });
+    const node = Badge({
+      label: 'Tag',
+      onPress: () => {},
+    });
     expect(node.onPress).toMatch(/^__action_\d+$/);
   });
 
   test('omits onPress when not provided', () => {
-    const node = Badge({ label: 'Static' });
+    const node = Badge({
+      label: 'Static',
+    });
     expect(node.onPress).toBeUndefined();
   });
 });
@@ -1135,12 +1725,17 @@ describe('Icon (onPress)', () => {
   });
 
   test('resolves onPress to action ID', () => {
-    const node = Icon({ name: 'star', onPress: () => {} });
+    const node = Icon({
+      name: 'star',
+      onPress: () => {},
+    });
     expect(node.onPress).toMatch(/^__action_\d+$/);
   });
 
   test('omits onPress when not provided', () => {
-    const node = Icon({ name: 'star' });
+    const node = Icon({
+      name: 'star',
+    });
     expect(node.onPress).toBeUndefined();
   });
 });
@@ -1151,14 +1746,24 @@ describe('Slider (disabled)', () => {
   });
 
   test('includes disabled prop', () => {
-    const node = Slider({ value: 5, min: 0, max: 10, onChange: () => {}, disabled: true });
+    const node = Slider({
+      value: 5,
+      min: 0,
+      max: 10,
+      onChange: () => {},
+      disabled: true,
+    });
     expect(node.disabled).toBe(true);
   });
 });
 
 describe('Section (new props)', () => {
   test('includes gap and icon', () => {
-    const node = Section({ title: 'Info', gap: 'lg', icon: 'settings' });
+    const node = Section({
+      title: 'Info',
+      gap: 'lg',
+      icon: 'settings',
+    });
     expect(node.gap).toBe('lg');
     expect(node.icon).toBe('settings');
   });
@@ -1166,7 +1771,12 @@ describe('Section (new props)', () => {
 
 describe('Video (new props)', () => {
   test('includes controls and loop', () => {
-    const node = Video({ src: 'test.m3u8', format: 'hls', controls: true, loop: true });
+    const node = Video({
+      src: 'test.m3u8',
+      format: 'hls',
+      controls: true,
+      loop: true,
+    });
     expect(node.controls).toBe(true);
     expect(node.loop).toBe(true);
   });
@@ -1174,14 +1784,27 @@ describe('Video (new props)', () => {
 
 describe('Progress (new props)', () => {
   test('includes size and variant', () => {
-    const node = Progress({ value: 50, size: 'lg', variant: 'ring' });
+    const node = Progress({
+      value: 50,
+      size: 'lg',
+      variant: 'ring',
+    });
     expect(node.size).toBe('lg');
     expect(node.variant).toBe('ring');
   });
 
   test('all size values work', () => {
-    for (const s of ['sm', 'md', 'lg'] as const) {
-      expect(Progress({ value: 50, size: s }).size).toBe(s);
+    for (const s of [
+      'sm',
+      'md',
+      'lg',
+    ] as const) {
+      expect(
+        Progress({
+          value: 50,
+          size: s,
+        }).size
+      ).toBe(s);
     }
   });
 });
@@ -1189,10 +1812,32 @@ describe('Progress (new props)', () => {
 describe('Chart (new props)', () => {
   test('includes series', () => {
     const series = [
-      { key: 'temp', data: [{ ts: 1, value: 20 }], color: 'red' },
-      { key: 'humidity', label: 'Humid', data: [{ ts: 1, value: 60 }] },
+      {
+        key: 'temp',
+        data: [
+          {
+            ts: 1,
+            value: 20,
+          },
+        ],
+        color: 'red',
+      },
+      {
+        key: 'humidity',
+        label: 'Humid',
+        data: [
+          {
+            ts: 1,
+            value: 60,
+          },
+        ],
+      },
     ];
-    const node = Chart({ variant: 'line', data: [], series });
+    const node = Chart({
+      variant: 'line',
+      data: [],
+      series,
+    });
     expect(node.series).toEqual(series);
   });
 
@@ -1218,7 +1863,10 @@ describe('Chart (new props)', () => {
 
 describe('Callout', () => {
   test('creates callout with required fields', () => {
-    const node = Callout({ variant: 'info', message: 'Hello' });
+    const node = Callout({
+      variant: 'info',
+      message: 'Hello',
+    });
     expect(node.type).toBe('callout');
     expect(node.variant).toBe('info');
     expect(node.message).toBe('Hello');
@@ -1236,8 +1884,18 @@ describe('Callout', () => {
   });
 
   test('all variant values work', () => {
-    for (const v of ['info', 'warning', 'error', 'success'] as const) {
-      expect(Callout({ variant: v, message: '' }).variant).toBe(v);
+    for (const v of [
+      'info',
+      'warning',
+      'error',
+      'success',
+    ] as const) {
+      expect(
+        Callout({
+          variant: v,
+          message: '',
+        }).variant
+      ).toBe(v);
     }
   });
 });
@@ -1248,19 +1906,29 @@ describe('TextInput', () => {
   });
 
   test('creates text-input with required fields', () => {
-    const node = TextInput({ value: 'hello', onChange: () => {} });
+    const node = TextInput({
+      value: 'hello',
+      onChange: () => {},
+    });
     expect(node.type).toBe('text-input');
     expect(node.value).toBe('hello');
     expect(node.onChange).toMatch(/^__action_\d+$/);
   });
 
   test('resolves onSubmit when provided', () => {
-    const node = TextInput({ value: '', onChange: () => {}, onSubmit: () => {} });
+    const node = TextInput({
+      value: '',
+      onChange: () => {},
+      onSubmit: () => {},
+    });
     expect(node.onSubmit).toMatch(/^__action_\d+$/);
   });
 
   test('omits onSubmit when not provided', () => {
-    const node = TextInput({ value: '', onChange: () => {} });
+    const node = TextInput({
+      value: '',
+      onChange: () => {},
+    });
     expect(node.onSubmit).toBeUndefined();
   });
 
@@ -1282,8 +1950,19 @@ describe('TextInput', () => {
   });
 
   test('all inputType values work', () => {
-    for (const t of ['text', 'password', 'email', 'number'] as const) {
-      expect(TextInput({ value: '', onChange: () => {}, inputType: t }).inputType).toBe(t);
+    for (const t of [
+      'text',
+      'password',
+      'email',
+      'number',
+    ] as const) {
+      expect(
+        TextInput({
+          value: '',
+          onChange: () => {},
+          inputType: t,
+        }).inputType
+      ).toBe(t);
     }
   });
 });
@@ -1294,12 +1973,22 @@ describe('Select', () => {
   });
 
   const opts = [
-    { value: 'a', label: 'Alpha' },
-    { value: 'b', label: 'Beta' },
+    {
+      value: 'a',
+      label: 'Alpha',
+    },
+    {
+      value: 'b',
+      label: 'Beta',
+    },
   ];
 
   test('creates select with required fields', () => {
-    const node = Select({ value: 'a', options: opts, onChange: () => {} });
+    const node = Select({
+      value: 'a',
+      options: opts,
+      onChange: () => {},
+    });
     expect(node.type).toBe('select');
     expect(node.value).toBe('a');
     expect(node.options).toEqual(opts);
@@ -1324,7 +2013,11 @@ describe('Select', () => {
 
   test('uses custom registrar for onChange', () => {
     _setActionRegistrar(() => 'sel-action');
-    const node = Select({ value: 'a', options: opts, onChange: () => {} });
+    const node = Select({
+      value: 'a',
+      options: opts,
+      onChange: () => {},
+    });
     expect(node.onChange).toBe('sel-action');
   });
 });
@@ -1335,23 +2028,45 @@ describe('Select', () => {
 
 describe('Table', () => {
   const cols = [
-    { key: 'name', label: 'Name' },
-    { key: 'age', label: 'Age', align: 'right' as const },
+    {
+      key: 'name',
+      label: 'Name',
+    },
+    {
+      key: 'age',
+      label: 'Age',
+      align: 'right' as const,
+    },
   ];
   const rows = [
-    { name: 'Alice', age: 30 },
-    { name: 'Bob', age: 25 },
+    {
+      name: 'Alice',
+      age: 30,
+    },
+    {
+      name: 'Bob',
+      age: 25,
+    },
   ];
 
   test('creates table with required fields', () => {
-    const node = Table({ columns: cols, rows });
+    const node = Table({
+      columns: cols,
+      rows,
+    });
     expect(node.type).toBe('table');
     expect(node.columns).toEqual(cols);
     expect(node.rows).toEqual(rows);
   });
 
   test('includes optional props', () => {
-    const node = Table({ columns: cols, rows, striped: true, compact: true, maxRows: 5 });
+    const node = Table({
+      columns: cols,
+      rows,
+      striped: true,
+      compact: true,
+      maxRows: 5,
+    });
     expect(node.striped).toBe(true);
     expect(node.compact).toBe(true);
     expect(node.maxRows).toBe(5);
@@ -1359,25 +2074,42 @@ describe('Table', () => {
 
   test('resolves onRowPress', () => {
     _setActionRegistrar(null);
-    const node = Table({ columns: cols, rows, onRowPress: () => {} });
+    const node = Table({
+      columns: cols,
+      rows,
+      onRowPress: () => {},
+    });
     expect(node.onRowPress).toMatch(/^__action_\d+$/);
   });
 });
 
 describe('KeyValue', () => {
   const items = [
-    { label: 'Host', value: 'localhost' },
-    { label: 'Port', value: 8080 },
+    {
+      label: 'Host',
+      value: 'localhost',
+    },
+    {
+      label: 'Port',
+      value: 8080,
+    },
   ];
 
   test('creates key-value with required fields', () => {
-    const node = KeyValue({ items });
+    const node = KeyValue({
+      items,
+    });
     expect(node.type).toBe('key-value');
     expect(node.items).toEqual(items);
   });
 
   test('includes optional props', () => {
-    const node = KeyValue({ items, layout: 'stacked', dividers: true, compact: true });
+    const node = KeyValue({
+      items,
+      layout: 'stacked',
+      dividers: true,
+      compact: true,
+    });
     expect(node.layout).toBe('stacked');
     expect(node.dividers).toBe(true);
     expect(node.compact).toBe(true);
@@ -1385,7 +2117,15 @@ describe('KeyValue', () => {
 
   test('items support icon, color, copyable', () => {
     const node = KeyValue({
-      items: [{ label: 'IP', value: '127.0.0.1', icon: 'globe', color: '#0f0', copyable: true }],
+      items: [
+        {
+          label: 'IP',
+          value: '127.0.0.1',
+          icon: 'globe',
+          color: '#0f0',
+          copyable: true,
+        },
+      ],
     });
     const item = node.items[0];
     expect(item?.icon).toBe('globe');
@@ -1422,20 +2162,34 @@ describe('Avatar', () => {
   });
 
   test('resolves onPress', () => {
-    const node = Avatar({ onPress: () => {} });
+    const node = Avatar({
+      onPress: () => {},
+    });
     expect(node.onPress).toMatch(/^__action_\d+$/);
   });
 
   test('all status values work', () => {
-    for (const s of ['online', 'offline', 'busy', 'away'] as const) {
-      expect(Avatar({ status: s }).status).toBe(s);
+    for (const s of [
+      'online',
+      'offline',
+      'busy',
+      'away',
+    ] as const) {
+      expect(
+        Avatar({
+          status: s,
+        }).status
+      ).toBe(s);
     }
   });
 });
 
 describe('Link', () => {
   test('creates link with required fields', () => {
-    const node = Link({ label: 'Docs', url: 'https://docs.example.com' });
+    const node = Link({
+      label: 'Docs',
+      url: 'https://docs.example.com',
+    });
     expect(node.type).toBe('link');
     expect(node.label).toBe('Docs');
     expect(node.url).toBe('https://docs.example.com');
@@ -1455,8 +2209,18 @@ describe('Link', () => {
   });
 
   test('all variant values work', () => {
-    for (const v of ['default', 'muted', 'underline'] as const) {
-      expect(Link({ label: '', url: '', variant: v }).variant).toBe(v);
+    for (const v of [
+      'default',
+      'muted',
+      'underline',
+    ] as const) {
+      expect(
+        Link({
+          label: '',
+          url: '',
+          variant: v,
+        }).variant
+      ).toBe(v);
     }
   });
 });
@@ -1470,8 +2234,14 @@ describe('Tabs', () => {
     const node = Tabs({
       value: 'a',
       tabs: [
-        { key: 'a', label: 'Tab A' },
-        { key: 'b', label: 'Tab B' },
+        {
+          key: 'a',
+          label: 'Tab A',
+        },
+        {
+          key: 'b',
+          label: 'Tab B',
+        },
       ],
       onChange: () => {},
     });
@@ -1482,19 +2252,35 @@ describe('Tabs', () => {
   });
 
   test('normalizes tab children', () => {
-    const child = Text({ content: 'content' });
+    const child = Text({
+      content: 'content',
+    });
     const node = Tabs({
       value: 'a',
-      tabs: [{ key: 'a', label: 'Tab', children: child }],
+      tabs: [
+        {
+          key: 'a',
+          label: 'Tab',
+          children: child,
+        },
+      ],
       onChange: () => {},
     });
-    expect(node.tabs[0]?.children).toEqual([child]);
+    expect(node.tabs[0]?.children).toEqual([
+      child,
+    ]);
   });
 
   test('includes optional variant and icon', () => {
     const node = Tabs({
       value: 'a',
-      tabs: [{ key: 'a', label: 'Tab', icon: 'star' }],
+      tabs: [
+        {
+          key: 'a',
+          label: 'Tab',
+          icon: 'star',
+        },
+      ],
       onChange: () => {},
       variant: 'pills',
     });
@@ -1505,7 +2291,9 @@ describe('Tabs', () => {
 
 describe('CodeBlock', () => {
   test('creates code-block with required fields', () => {
-    const node = CodeBlock({ code: 'console.log("hi")' });
+    const node = CodeBlock({
+      code: 'console.log("hi")',
+    });
     expect(node.type).toBe('code-block');
     expect(node.code).toBe('console.log("hi")');
   });
@@ -1533,7 +2321,11 @@ describe('Checkbox', () => {
   });
 
   test('creates checkbox with required fields', () => {
-    const node = Checkbox({ label: 'Accept terms', checked: false, onToggle: () => {} });
+    const node = Checkbox({
+      label: 'Accept terms',
+      checked: false,
+      onToggle: () => {},
+    });
     expect(node.type).toBe('checkbox');
     expect(node.label).toBe('Accept terms');
     expect(node.checked).toBe(false);
@@ -1557,21 +2349,36 @@ describe('Checkbox', () => {
 
 describe('Skeleton', () => {
   test('creates skeleton with required variant', () => {
-    const node = Skeleton({ variant: 'text' });
+    const node = Skeleton({
+      variant: 'text',
+    });
     expect(node.type).toBe('skeleton');
     expect(node.variant).toBe('text');
   });
 
   test('includes optional props', () => {
-    const node = Skeleton({ variant: 'rect', width: '100px', height: '50px', lines: 3 });
+    const node = Skeleton({
+      variant: 'rect',
+      width: '100px',
+      height: '50px',
+      lines: 3,
+    });
     expect(node.width).toBe('100px');
     expect(node.height).toBe('50px');
     expect(node.lines).toBe(3);
   });
 
   test('all variant values work', () => {
-    for (const v of ['text', 'circle', 'rect'] as const) {
-      expect(Skeleton({ variant: v }).variant).toBe(v);
+    for (const v of [
+      'text',
+      'circle',
+      'rect',
+    ] as const) {
+      expect(
+        Skeleton({
+          variant: v,
+        }).variant
+      ).toBe(v);
     }
   });
 });
@@ -1582,13 +2389,21 @@ describe('TextInput (multiline)', () => {
   });
 
   test('includes multiline and rows', () => {
-    const node = TextInput({ value: '', onChange: () => {}, multiline: true, rows: 5 });
+    const node = TextInput({
+      value: '',
+      onChange: () => {},
+      multiline: true,
+      rows: 5,
+    });
     expect(node.multiline).toBe(true);
     expect(node.rows).toBe(5);
   });
 
   test('multiline defaults are omitted when not set', () => {
-    const node = TextInput({ value: '', onChange: () => {} });
+    const node = TextInput({
+      value: '',
+      onChange: () => {},
+    });
     expect(node.multiline).toBeUndefined();
     expect(node.rows).toBeUndefined();
   });

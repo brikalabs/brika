@@ -1,6 +1,14 @@
 'use client';
 
-const bars = [0.4, 0.7, 0.55, 0.85, 0.6, 0.45, 0.75];
+const bars = [
+  0.4,
+  0.7,
+  0.55,
+  0.85,
+  0.6,
+  0.45,
+  0.75,
+];
 
 export default function EnergyBrick() {
   return (
@@ -21,8 +29,12 @@ export default function EnergyBrick() {
           />
         ))}
       </div>
-      <div className="text-[clamp(0.875rem,15%,1.125rem)] font-bold leading-tight tracking-tight">3.2 kWh</div>
-      <div className="mt-[3%] text-[clamp(8px,9%,11px)] text-muted-foreground">Today&apos;s usage</div>
+      <div className="text-[clamp(0.875rem,15%,1.125rem)] font-bold leading-tight tracking-tight">
+        3.2 kWh
+      </div>
+      <div className="mt-[3%] text-[clamp(8px,9%,11px)] text-muted-foreground">
+        Today&apos;s usage
+      </div>
     </div>
   );
 }

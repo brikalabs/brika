@@ -7,7 +7,7 @@
 
 import { getHubLocation } from '@brika/ipc/contract';
 import { rethrowRpcError } from '../errors';
-import type { ContextCore, MethodsOf } from './register';
+import type { ContextCore } from './register';
 import { registerContextModule } from './register';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -43,7 +43,9 @@ export function setupLocation(core: ContextCore) {
        * @throws {PermissionDeniedError} if the "location" permission is not granted
        */
       async getLocation(): Promise<HubLocationData | null> {
-        if (fetched) return cached;
+        if (fetched) {
+          return cached;
+        }
         const result = await client.call(getHubLocation, {}).catch(rethrowRpcError);
         cached = result.location;
         fetched = true;
@@ -51,12 +53,6 @@ export function setupLocation(core: ContextCore) {
       },
     },
   };
-}
-
-// ─── Type Augmentation (inferred from setup) ─────────────────────────────────
-
-declare module '../context' {
-  interface Context extends MethodsOf<typeof setupLocation> {}
 }
 
 registerContextModule('location', setupLocation);

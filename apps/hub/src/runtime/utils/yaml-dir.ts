@@ -22,13 +22,23 @@ export async function ensureAndScanYamlDir(
 ): Promise<string[]> {
   // Ensure directory exists
   try {
-    await Array.fromAsync(new Bun.Glob('*').scan({ cwd: dir }));
+    await Array.fromAsync(
+      new Bun.Glob('*').scan({
+        cwd: dir,
+      })
+    );
   } catch {
     await Bun.write(`${dir}/.keep`, '');
-    logs.info(`${entityLabel} directory created`, { directory: dir });
+    logs.info(`${entityLabel} directory created`, {
+      directory: dir,
+    });
   }
 
   // Scan for YAML files and return absolute paths
-  const files = await Array.fromAsync(new Bun.Glob('*.{yaml,yml}').scan({ cwd: dir }));
+  const files = await Array.fromAsync(
+    new Bun.Glob('*.{yaml,yml}').scan({
+      cwd: dir,
+    })
+  );
   return files.map((file) => join(dir, file));
 }

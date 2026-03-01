@@ -4,7 +4,9 @@ export type Json =
   | number
   | string
   | Json[]
-  | { [k: string]: Json | undefined }
+  | {
+      [k: string]: Json | undefined;
+    }
   | undefined;
 
 export type AnyObj = Record<string, Json>;
@@ -19,7 +21,9 @@ export interface ToolInputSchema {
       description?: string;
       default?: Json;
       enum?: Json[];
-      items?: { type: string };
+      items?: {
+        type: string;
+      };
       required?: boolean;
     }
   >;

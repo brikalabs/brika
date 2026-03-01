@@ -10,7 +10,9 @@ import { hubFetch, requireRunningHub } from '../utils/hub-client';
 import { dataDir } from '../utils/runtime';
 import { streamSseEvents } from '../utils/sse';
 
-const fmt = new TerminalFormatter({ color: process.stdout.isTTY ?? false });
+const fmt = new TerminalFormatter({
+  color: process.stdout.isTTY ?? false,
+});
 const DB_PATH = join(dataDir, 'logs.db');
 
 interface Filters {
@@ -36,7 +38,9 @@ interface LogRow {
 
 function openDb(): Database {
   try {
-    return new Database(DB_PATH, { readonly: true });
+    return new Database(DB_PATH, {
+      readonly: true,
+    });
   } catch {
     throw new CliError(`${pc.red('No log database found.')} Is this a Brika project directory?`);
   }
@@ -105,9 +109,15 @@ function clearDb(): number {
 }
 
 function matchesFilters(event: LogEvent, filters: Filters): boolean {
-  if (filters.level && event.level !== filters.level) return false;
-  if (filters.source && event.source !== filters.source) return false;
-  if (filters.plugin && event.pluginName !== filters.plugin) return false;
+  if (filters.level && event.level !== filters.level) {
+    return false;
+  }
+  if (filters.source && event.source !== filters.source) {
+    return false;
+  }
+  if (filters.plugin && event.pluginName !== filters.plugin) {
+    return false;
+  }
   if (filters.search && !event.message.toLowerCase().includes(filters.search.toLowerCase())) {
     return false;
   }
@@ -131,7 +141,9 @@ async function followLogs(filters: Filters, limit: number): Promise<void> {
   process.on('SIGTERM', abort);
 
   for await (const event of streamSseEvents<LogEvent>(res)) {
-    if (matchesFilters(event, filters)) console.log(fmt.format(event));
+    if (matchesFilters(event, filters)) {
+      console.log(fmt.format(event));
+    }
   }
 }
 
@@ -143,13 +155,41 @@ export default defineCommand({
     'Use -f to tail live logs via SSE (requires the hub to be running).',
   ].join('\n'),
   options: {
-    follow: { type: 'boolean', short: 'f', description: 'Live tail (Ctrl+C to stop)' },
-    level: { type: 'string', short: 'l', description: 'Filter by level (debug|info|warn|error)' },
-    source: { type: 'string', short: 's', description: 'Filter by source (hub|plugin|…)' },
-    plugin: { type: 'string', short: 'p', description: 'Filter by plugin name' },
-    search: { type: 'string', short: 'q', description: 'Search text in messages' },
-    limit: { type: 'number', short: 'n', default: 50, description: 'Number of logs to show' },
-    clear: { type: 'boolean', description: 'Clear all stored logs' },
+    follow: {
+      type: 'boolean',
+      short: 'f',
+      description: 'Live tail (Ctrl+C to stop)',
+    },
+    level: {
+      type: 'string',
+      short: 'l',
+      description: 'Filter by level (debug|info|warn|error)',
+    },
+    source: {
+      type: 'string',
+      short: 's',
+      description: 'Filter by source (hub|plugin|…)',
+    },
+    plugin: {
+      type: 'string',
+      short: 'p',
+      description: 'Filter by plugin name',
+    },
+    search: {
+      type: 'string',
+      short: 'q',
+      description: 'Search text in messages',
+    },
+    limit: {
+      type: 'number',
+      short: 'n',
+      default: 50,
+      description: 'Number of logs to show',
+    },
+    clear: {
+      type: 'boolean',
+      description: 'Clear all stored logs',
+    },
   },
   examples: [
     'brika log',
@@ -186,6 +226,8 @@ export default defineCommand({
       console.log(pc.dim('No logs found.'));
       return;
     }
-    for (const log of logs) console.log(fmt.format(log));
+    for (const log of logs) {
+      console.log(fmt.format(log));
+    }
   },
 });

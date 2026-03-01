@@ -64,7 +64,7 @@ export const inspect: Command = {
       const pubKeyBase64 = resolvePublicKey(registry);
       const payload = extractPluginSignablePayload(plugin);
       const valid = verifyWithRawKey(canonicalize(payload), plugin.signature, pubKeyBase64);
-      const truncSig = plugin.signature.slice(0, 24) + '...' + plugin.signature.slice(-8);
+      const truncSig = `${plugin.signature.slice(0, 24)}...${plugin.signature.slice(-8)}`;
       field('Signature', `${truncSig} ${valid ? pc.green('(valid)') : pc.red('(INVALID)')}`);
     } else {
       field('Signature', pc.red('unsigned'));

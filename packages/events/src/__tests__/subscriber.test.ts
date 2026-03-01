@@ -8,8 +8,12 @@ import { defineActions } from '../action';
 import { SubscriberManager } from '../subscriber';
 
 const TestActions = defineActions('test', {
-  one: z.object({ value: z.number() }),
-  two: z.object({ name: z.string() }),
+  one: z.object({
+    value: z.number(),
+  }),
+  two: z.object({
+    name: z.string(),
+  }),
 });
 
 describe('SubscriberManager', () => {
@@ -21,7 +25,12 @@ describe('SubscriberManager', () => {
       received.push(action);
     });
 
-    const action = TestActions.one.create({ value: 42 }, 'test');
+    const action = TestActions.one.create(
+      {
+        value: 42,
+      },
+      'test'
+    );
     manager.notify(action);
 
     expect(received).toHaveLength(1);
@@ -36,7 +45,12 @@ describe('SubscriberManager', () => {
       received.push(action);
     });
 
-    const action = TestActions.two.create({ name: 'test' }, 'test');
+    const action = TestActions.two.create(
+      {
+        name: 'test',
+      },
+      'test'
+    );
     manager.notify(action);
 
     expect(received).toHaveLength(0);
@@ -50,13 +64,25 @@ describe('SubscriberManager', () => {
       received.push(action);
     });
 
-    const action = TestActions.one.create({ value: 1 }, 'test');
+    const action = TestActions.one.create(
+      {
+        value: 1,
+      },
+      'test'
+    );
     manager.notify(action);
     expect(received).toHaveLength(1);
 
     unsubscribe();
 
-    manager.notify(TestActions.one.create({ value: 2 }, 'test'));
+    manager.notify(
+      TestActions.one.create(
+        {
+          value: 2,
+        },
+        'test'
+      )
+    );
     expect(received).toHaveLength(1); // Still 1
   });
 
@@ -72,7 +98,14 @@ describe('SubscriberManager', () => {
       received2.push(action);
     });
 
-    manager.notify(TestActions.one.create({ value: 1 }, 'test'));
+    manager.notify(
+      TestActions.one.create(
+        {
+          value: 1,
+        },
+        'test'
+      )
+    );
 
     expect(received1).toHaveLength(1);
     expect(received2).toHaveLength(1);
@@ -87,7 +120,14 @@ describe('SubscriberManager', () => {
       resolved = true;
     });
 
-    const promises = manager.notify(TestActions.one.create({ value: 1 }, 'test'));
+    const promises = manager.notify(
+      TestActions.one.create(
+        {
+          value: 1,
+        },
+        'test'
+      )
+    );
     expect(promises).toHaveLength(1);
 
     await Promise.all(promises);
@@ -106,7 +146,14 @@ describe('SubscriberManager', () => {
     });
 
     // Should not throw
-    manager.notify(TestActions.one.create({ value: 1 }, 'test'));
+    manager.notify(
+      TestActions.one.create(
+        {
+          value: 1,
+        },
+        'test'
+      )
+    );
 
     // Second subscriber should still receive
     expect(received).toHaveLength(1);
@@ -125,7 +172,14 @@ describe('SubscriberManager', () => {
       secondHandlerCalled = true;
     });
 
-    const promises = manager.notify(TestActions.one.create({ value: 1 }, 'test'));
+    const promises = manager.notify(
+      TestActions.one.create(
+        {
+          value: 1,
+        },
+        'test'
+      )
+    );
 
     // Should not throw when awaiting - errors are caught internally
     await Promise.all(promises);
@@ -163,12 +217,32 @@ describe('SubscriberManager', () => {
     const manager = new SubscriberManager();
     const received: unknown[] = [];
 
-    manager.subscribe([TestActions.one, TestActions.two], (action) => {
-      received.push(action);
-    });
+    manager.subscribe(
+      [
+        TestActions.one,
+        TestActions.two,
+      ],
+      (action) => {
+        received.push(action);
+      }
+    );
 
-    manager.notify(TestActions.one.create({ value: 1 }, 'test'));
-    manager.notify(TestActions.two.create({ name: 'test' }, 'test'));
+    manager.notify(
+      TestActions.one.create(
+        {
+          value: 1,
+        },
+        'test'
+      )
+    );
+    manager.notify(
+      TestActions.two.create(
+        {
+          name: 'test',
+        },
+        'test'
+      )
+    );
 
     expect(received).toHaveLength(2);
   });

@@ -65,9 +65,16 @@ describe('MemoryCache', () => {
   });
 
   test('should support tag-based invalidation', () => {
-    cache.set('key1', 'value1', 60_000, ['tag1']);
-    cache.set('key2', 'value2', 60_000, ['tag1', 'tag2']);
-    cache.set('key3', 'value3', 60_000, ['tag2']);
+    cache.set('key1', 'value1', 60_000, [
+      'tag1',
+    ]);
+    cache.set('key2', 'value2', 60_000, [
+      'tag1',
+      'tag2',
+    ]);
+    cache.set('key3', 'value3', 60_000, [
+      'tag2',
+    ]);
 
     cache.invalidateByTag('tag1');
 
@@ -77,11 +84,20 @@ describe('MemoryCache', () => {
   });
 
   test('should support multiple tag invalidation', () => {
-    cache.set('key1', 'value1', 60_000, ['tag1']);
-    cache.set('key2', 'value2', 60_000, ['tag2']);
-    cache.set('key3', 'value3', 60_000, ['tag3']);
+    cache.set('key1', 'value1', 60_000, [
+      'tag1',
+    ]);
+    cache.set('key2', 'value2', 60_000, [
+      'tag2',
+    ]);
+    cache.set('key3', 'value3', 60_000, [
+      'tag3',
+    ]);
 
-    cache.invalidateByTags(['tag1', 'tag2']);
+    cache.invalidateByTags([
+      'tag1',
+      'tag2',
+    ]);
 
     expect(cache.has('key1')).toBe(false);
     expect(cache.has('key2')).toBe(false);
@@ -90,7 +106,9 @@ describe('MemoryCache', () => {
 
   test('should provide cache statistics', () => {
     cache.set('key1', 'value1', 60_000);
-    cache.set('key2', 'value2', 60_000, ['tag1']);
+    cache.set('key2', 'value2', 60_000, [
+      'tag1',
+    ]);
 
     const stats = cache.stats();
 
@@ -129,7 +147,10 @@ describe('generateCacheKey', () => {
     const config: RequestConfig = {
       method: 'GET',
       url: 'https://api.example.com/users',
-      params: { id: '123', sort: 'name' },
+      params: {
+        id: '123',
+        sort: 'name',
+      },
     };
 
     const key = generateCacheKey(config);
@@ -142,13 +163,19 @@ describe('generateCacheKey', () => {
     const config1: RequestConfig = {
       method: 'GET',
       url: 'https://api.example.com/users',
-      params: { a: '1', b: '2' },
+      params: {
+        a: '1',
+        b: '2',
+      },
     };
 
     const config2: RequestConfig = {
       method: 'GET',
       url: 'https://api.example.com/users',
-      params: { b: '2', a: '1' },
+      params: {
+        b: '2',
+        a: '1',
+      },
     };
 
     expect(generateCacheKey(config1)).toBe(generateCacheKey(config2));
@@ -158,7 +185,9 @@ describe('generateCacheKey', () => {
     const config: RequestConfig = {
       method: 'POST',
       url: 'https://api.example.com/users',
-      body: { name: 'John' },
+      body: {
+        name: 'John',
+      },
     };
 
     const key = generateCacheKey(config);
@@ -171,7 +200,11 @@ describe('generateCacheKey', () => {
     const config: RequestConfig = {
       method: 'GET',
       url: 'https://api.example.com/users',
-      params: { a: '1', b: undefined, c: null },
+      params: {
+        a: '1',
+        b: undefined,
+        c: null,
+      },
     };
 
     const key = generateCacheKey(config);
@@ -209,7 +242,14 @@ describe('generateCacheKey', () => {
   });
 
   test('should handle Blob body', () => {
-    const blob = new Blob(['test content'], { type: 'text/plain' });
+    const blob = new Blob(
+      [
+        'test content',
+      ],
+      {
+        type: 'text/plain',
+      }
+    );
 
     const config: RequestConfig = {
       method: 'PUT',
@@ -273,7 +313,9 @@ describe('generateCacheKey', () => {
     const config: RequestConfig = {
       method: 'GET',
       url: 'https://api.example.com/data',
-      body: { data: 'test' },
+      body: {
+        data: 'test',
+      },
     };
 
     const key = generateCacheKey(config);

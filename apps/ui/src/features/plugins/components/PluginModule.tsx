@@ -12,7 +12,9 @@ export function ModuleStatus({
   label,
   spin,
 }: Readonly<{
-  icon: React.FC<{ className?: string }>;
+  icon: React.FC<{
+    className?: string;
+  }>;
   label?: string;
   spin?: boolean;
 }>) {
@@ -36,7 +38,9 @@ function useStylesheet(href: string) {
     return () => {
       link.remove();
     };
-  }, [href]);
+  }, [
+    href,
+  ]);
 }
 
 // ── Dynamic module loader hook ──────────────────────────────────────────────
@@ -51,9 +55,14 @@ function useModuleImport(url: string) {
     import(/* @vite-ignore */ url)
       .then((mod) => setModule(() => mod.default))
       .catch(() => setError(true));
-  }, [url]);
+  }, [
+    url,
+  ]);
 
-  return { Module, error };
+  return {
+    Module,
+    error,
+  };
 }
 
 // ── Generic plugin module renderer ──────────────────────────────────────────
@@ -66,20 +75,35 @@ interface PluginModuleProps {
 
 export function PluginModule({ pluginUid, pluginName, moduleUrl }: Readonly<PluginModuleProps>) {
   // Inject plugin-specific Tailwind CSS alongside the JS module
-  const styleUrl = useMemo(() => moduleUrl.replace(/\.js$/, '.css'), [moduleUrl]);
+  const styleUrl = useMemo(
+    () => moduleUrl.replace(/\.js$/, '.css'),
+    [
+      moduleUrl,
+    ]
+  );
   useStylesheet(styleUrl);
 
   const { Module, error } = useModuleImport(moduleUrl);
   const contextValue = useMemo(
-    () => ({ uid: pluginUid, namespace: `plugin:${pluginName}` }),
-    [pluginUid, pluginName]
+    () => ({
+      uid: pluginUid,
+      namespace: `plugin:${pluginName}`,
+    }),
+    [
+      pluginUid,
+      pluginName,
+    ]
   );
 
   // Set module-level uid for non-hook callAction
   setActivePluginUid(pluginUid);
 
-  if (error) return <ModuleStatus icon={AlertTriangle} label="Failed to load module" />;
-  if (!Module) return <ModuleStatus icon={Loader2} spin />;
+  if (error) {
+    return <ModuleStatus icon={AlertTriangle} label="Failed to load module" />;
+  }
+  if (!Module) {
+    return <ModuleStatus icon={Loader2} spin />;
+  }
 
   return (
     <PluginContext.Provider value={contextValue}>

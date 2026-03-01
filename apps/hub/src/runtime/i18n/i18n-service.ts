@@ -39,7 +39,9 @@ interface PluginTranslations {
  * Deep merge two objects, with source values overriding target values.
  */
 function deepMerge(target: TranslationData, source: TranslationData): TranslationData {
-  const result: TranslationData = { ...target };
+  const result: TranslationData = {
+    ...target,
+  };
 
   for (const key in source) {
     const sourceVal = source[key];
@@ -94,7 +96,9 @@ export class I18nService {
 
     await this.#loadCoreTranslations();
     this.#logs.info('I18n system initialized', {
-      availableLocales: [...this.#availableLocales],
+      availableLocales: [
+        ...this.#availableLocales,
+      ],
       namespaceCount: this.listNamespaces().length,
     });
   }
@@ -118,7 +122,9 @@ export class I18nService {
     if (namespace.startsWith(PLUGIN_NS_PREFIX)) {
       const pluginId = namespace.slice(PLUGIN_NS_PREFIX.length);
       const plugin = this.#pluginTranslations.get(pluginId);
-      if (!plugin) return null;
+      if (!plugin) {
+        return null;
+      }
 
       // Apply fallback chain (reverse to start from fallback)
       for (const loc of chain.toReversed()) {
@@ -162,7 +168,9 @@ export class I18nService {
       namespaces.add(`${PLUGIN_NS_PREFIX}${pluginId}`);
     }
 
-    return [...namespaces].sort((a, b) => a.localeCompare(b));
+    return [
+      ...namespaces,
+    ].sort((a, b) => a.localeCompare(b));
   }
 
   /**
@@ -170,7 +178,9 @@ export class I18nService {
    * Includes "cimode" for development (i18next shows keys instead of values).
    */
   listLocales(): string[] {
-    const locales = [...this.#availableLocales].sort((a, b) => a.localeCompare(b));
+    const locales = [
+      ...this.#availableLocales,
+    ].sort((a, b) => a.localeCompare(b));
     // Add cimode at the end - handled client-side by i18next
     locales.push('cimode');
     return locales;
@@ -186,22 +196,34 @@ export class I18nService {
 
     try {
       const glob = new Bun.Glob('*/');
-      const entries = await Array.fromAsync(glob.scan({ cwd: localesDir, onlyFiles: false }));
+      const entries = await Array.fromAsync(
+        glob.scan({
+          cwd: localesDir,
+          onlyFiles: false,
+        })
+      );
 
       for (const entry of entries) {
         const locale = entry.replace('/', '');
-        if (!locale) continue;
+        if (!locale) {
+          continue;
+        }
 
         detectedLocales.push(locale);
 
         // Load plugin translations (flattened, not namespaced by filename)
         const localeData = await this.#loadPluginLocaleFolder(`${localesDir}/${locale}`);
-        if (Object.keys(localeData).length === 0) continue;
+        if (Object.keys(localeData).length === 0) {
+          continue;
+        }
 
         // Get or create plugin translations entry
         let plugin = this.#pluginTranslations.get(pluginId);
         if (!plugin) {
-          plugin = { pluginId, locales: new Map() };
+          plugin = {
+            pluginId,
+            locales: new Map(),
+          };
           this.#pluginTranslations.set(pluginId, plugin);
         }
 
@@ -231,7 +253,9 @@ export class I18nService {
     const result: Record<string, TranslationData> = {};
     for (const ns of namespaces) {
       const data = this.getNamespaceTranslations(locale, ns);
-      if (data) result[ns] = data;
+      if (data) {
+        result[ns] = data;
+      }
     }
     return result;
   }
@@ -260,11 +284,18 @@ export class I18nService {
   async #loadCoreTranslations(): Promise<void> {
     try {
       const glob = new Bun.Glob('*/');
-      const entries = await Array.fromAsync(glob.scan({ cwd: this.#localesDir, onlyFiles: false }));
+      const entries = await Array.fromAsync(
+        glob.scan({
+          cwd: this.#localesDir,
+          onlyFiles: false,
+        })
+      );
 
       for (const entry of entries) {
         const locale = entry.replace('/', '');
-        if (!locale) continue;
+        if (!locale) {
+          continue;
+        }
 
         this.#availableLocales.add(locale);
 
@@ -292,10 +323,14 @@ export class I18nService {
 
       for (const [relativePath, file] of files) {
         const slash = relativePath.indexOf('/');
-        if (slash === -1) continue;
+        if (slash === -1) {
+          continue;
+        }
         const locale = relativePath.slice(0, slash);
         const nsFile = relativePath.slice(slash + 1);
-        if (!locale || !nsFile.endsWith('.json')) continue;
+        if (!locale || !nsFile.endsWith('.json')) {
+          continue;
+        }
         const namespace = nsFile.replace('.json', '');
 
         try {
@@ -305,11 +340,25 @@ export class I18nService {
           localeData[namespace] = content;
           this.#coreTranslations.set(locale, localeData);
         } catch (e) {
-          this.#logs.warn('Failed to parse embedded locale', { path: relativePath }, { error: e });
+          this.#logs.warn(
+            'Failed to parse embedded locale',
+            {
+              path: relativePath,
+            },
+            {
+              error: e,
+            }
+          );
         }
       }
     } catch (e) {
-      this.#logs.warn('Failed to load embedded core translations', {}, { error: e });
+      this.#logs.warn(
+        'Failed to load embedded core translations',
+        {},
+        {
+          error: e,
+        }
+      );
     }
   }
 
@@ -322,7 +371,11 @@ export class I18nService {
 
     try {
       const glob = new Bun.Glob('*.json');
-      const files = await Array.fromAsync(glob.scan({ cwd: folderPath }));
+      const files = await Array.fromAsync(
+        glob.scan({
+          cwd: folderPath,
+        })
+      );
 
       for (const file of files) {
         const namespace = file.replace('.json', '');
@@ -335,7 +388,9 @@ export class I18nService {
             {
               filePath: `${folderPath}/${file}`,
             },
-            { error: e }
+            {
+              error: e,
+            }
           );
         }
       }
@@ -357,7 +412,11 @@ export class I18nService {
 
     try {
       const glob = new Bun.Glob('*.json');
-      const files = await Array.fromAsync(glob.scan({ cwd: folderPath }));
+      const files = await Array.fromAsync(
+        glob.scan({
+          cwd: folderPath,
+        })
+      );
 
       for (const file of files) {
         try {
@@ -370,7 +429,9 @@ export class I18nService {
             {
               filePath: `${folderPath}/${file}`,
             },
-            { error: e }
+            {
+              error: e,
+            }
           );
         }
       }
@@ -386,7 +447,9 @@ export class I18nService {
    * e.g., "fr-CH" → ["fr-CH", "fr", "en"]
    */
   #buildFallbackChain(locale: string): string[] {
-    const chain: string[] = [locale];
+    const chain: string[] = [
+      locale,
+    ];
 
     // Add base language if regional variant
     if (locale.includes('-')) {

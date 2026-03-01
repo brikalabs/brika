@@ -14,10 +14,16 @@ export interface CheckboxNode extends BaseNode {
 }
 
 export function Checkbox(
-  props: Omit<CheckboxNode, 'type' | 'onToggle'> & { onToggle: ActionHandler }
+  props: Omit<CheckboxNode, 'type' | 'onToggle'> & {
+    onToggle: ActionHandler;
+  }
 ): CheckboxNode {
   const { onToggle, ...rest } = props;
-  return { type: 'checkbox', ...rest, onToggle: resolveAction(onToggle) };
+  return {
+    type: 'checkbox',
+    ...rest,
+    onToggle: resolveAction(onToggle),
+  };
 }
 
 declare module './_shared' {

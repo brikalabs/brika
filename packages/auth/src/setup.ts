@@ -4,28 +4,37 @@
  */
 
 import { Database } from 'bun:sqlite';
+import { chmodSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { mkdirSync, chmodSync } from 'node:fs';
 import { container } from '@brika/di';
-import { AuthService } from './services/AuthService';
-import { UserService } from './services/UserService';
-import { SessionService } from './services/SessionService';
-import { ScopeService } from './services/ScopeService';
 import { type AuthConfig, initAuthConfig } from './config';
+import { AuthService } from './services/AuthService';
+import { ScopeService } from './services/ScopeService';
+import { SessionService } from './services/SessionService';
+import { UserService } from './services/UserService';
 
 /**
  * Open the SQLite database and create tables if needed.
  */
 export function openAuthDatabase(path: string): Database {
   if (path !== ':memory:') {
-    mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
+    mkdirSync(dirname(path), {
+      recursive: true,
+      mode: 0o700,
+    });
   }
 
-  const db = new Database(path, { strict: true });
+  const db = new Database(path, {
+    strict: true,
+  });
 
   // Restrict database file to owner-only access (contains password hashes and session data)
   if (path !== ':memory:') {
-    try { chmodSync(path, 0o600); } catch { /* may fail on some platforms */ }
+    try {
+      chmodSync(path, 0o600);
+    } catch {
+      /* may fail on some platforms */
+    }
   }
   db.run('PRAGMA journal_mode = WAL');
   db.run('PRAGMA synchronous = NORMAL');
@@ -75,8 +84,16 @@ export function openAuthDatabase(path: string): Database {
  */
 export function setupAuthServices(db: Database, config?: AuthConfig): void {
   const resolved = initAuthConfig(config);
-  container.register(SessionService, { useValue: new SessionService(db, resolved.session.ttl) });
-  container.register(UserService, { useValue: new UserService(db) });
-  container.register(ScopeService, { useClass: ScopeService });
-  container.register(AuthService, { useClass: AuthService });
+  container.register(SessionService, {
+    useValue: new SessionService(db, resolved.session.ttl),
+  });
+  container.register(UserService, {
+    useValue: new UserService(db),
+  });
+  container.register(ScopeService, {
+    useClass: ScopeService,
+  });
+  container.register(AuthService, {
+    useClass: AuthService,
+  });
 }

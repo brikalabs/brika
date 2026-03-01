@@ -58,7 +58,9 @@ export class RequestBuilder<T = unknown> {
    * Set a single header
    */
   header(key: string, value: string): this {
-    this.#config.headers = mergeHeaders(this.#config.headers, { [key]: value });
+    this.#config.headers = mergeHeaders(this.#config.headers, {
+      [key]: value,
+    });
     return this;
   }
 
@@ -94,7 +96,9 @@ export class RequestBuilder<T = unknown> {
    */
   cache(options: CacheOptions | number): this {
     if (typeof options === 'number') {
-      this.#config.cache = { ttl: options };
+      this.#config.cache = {
+        ttl: options,
+      };
     } else {
       this.#config.cache = options;
     }
@@ -147,6 +151,8 @@ export class RequestBuilder<T = unknown> {
    * Get the current configuration (for testing)
    */
   getConfig(): RequestConfig {
-    return { ...this.#config };
+    return {
+      ...this.#config,
+    };
   }
 }

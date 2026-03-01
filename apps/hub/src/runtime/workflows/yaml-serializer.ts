@@ -7,14 +7,9 @@
 import { parsePortRef } from '@brika/workflow';
 import { parse as parseYAML, stringify as stringifyYAML } from 'yaml';
 import { z } from 'zod';
+import type { Json } from '@/types';
+import { nonEmptyRecord, PositionSchema } from './schemas';
 import type { BlockConnection, Workflow, WorkflowBlock } from './types';
-
-const PositionSchema = z
-  .object({ x: z.number(), y: z.number() })
-  .transform((pos) => ({ x: Math.round(pos.x), y: Math.round(pos.y) }));
-
-const nonEmptyRecord = <T extends z.ZodTypeAny>(schema: T) =>
-  z.optional(schema).transform((val) => (val && Object.keys(val).length > 0 ? val : undefined));
 
 const YAML_OPTIONS = {
   indent: 2,
@@ -27,11 +22,13 @@ const YAML_OPTIONS = {
 // YAML Schemas
 // ─────────────────────────────────────────────────────────────────────────────
 
+const jsonValue: z.ZodType<Json> = z.any();
+
 const YAMLBlockSchema = z.object({
   id: z.string(),
   type: z.string(),
   position: z.optional(PositionSchema),
-  config: nonEmptyRecord(z.record(z.string(), z.unknown())),
+  config: nonEmptyRecord(z.record(z.string(), jsonValue)),
   inputs: nonEmptyRecord(z.record(z.string(), z.string())),
   outputs: nonEmptyRecord(z.record(z.string(), z.string())),
 });
@@ -51,7 +48,6 @@ const YAMLWorkflowSchema = z.object({
 });
 
 type YAMLBlock = z.infer<typeof YAMLBlockSchema>;
-type YAMLWorkflow = z.output<typeof YAMLWorkflowSchema>;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Serializer
@@ -66,7 +62,9 @@ export class YAMLSerializer {
     try {
       const yaml = parseYAML(yamlString);
       const result = YAMLWorkflowSchema.safeParse(yaml);
-      if (!result.success) return null;
+      if (!result.success) {
+        return null;
+      }
 
       const { workspace, blocks: yamlBlocks = [] } = result.data;
       const blocks: WorkflowBlock[] = yamlBlocks.map((block) => ({
@@ -94,27 +92,20 @@ export class YAMLSerializer {
    */
   static toYAML(
     workflow: Workflow,
-    getPluginInfo: (blockType: string) => { id: string; version: string } | null
+    getPluginInfo: (blockType: string) => {
+      id: string;
+      version: string;
+    } | null
   ): string {
-    const inputs = new Map<string, Record<string, string>>();
-    const outputs = new Map<string, Record<string, string>>();
-
-    // Build connection maps
-    for (const conn of workflow.connections ?? []) {
-      if (!conn.fromPort || !conn.toPort) continue;
-
-      if (!outputs.has(conn.from)) outputs.set(conn.from, {});
-      outputs.get(conn.from)![conn.fromPort] = `${conn.to}:${conn.toPort}`;
-
-      if (!inputs.has(conn.to)) inputs.set(conn.to, {});
-      inputs.get(conn.to)![conn.toPort] = `${conn.from}:${conn.fromPort}`;
-    }
+    const { inputs, outputs } = YAMLSerializer.#buildConnectionMaps(workflow.connections ?? []);
 
     // Build plugins list from block registry
     const plugins: Record<string, string> = {};
     for (const block of workflow.blocks) {
       const pluginInfo = getPluginInfo(block.type);
-      if (!pluginInfo || plugins[pluginInfo.id]) continue;
+      if (!pluginInfo || plugins[pluginInfo.id]) {
+        continue;
+      }
       plugins[pluginInfo.id] = pluginInfo.version;
     }
 
@@ -141,6 +132,41 @@ export class YAMLSerializer {
     return stringifyYAML(yamlWorkflow, YAML_OPTIONS);
   }
 
+  static #buildConnectionMaps(connections: BlockConnection[]): {
+    inputs: Map<string, Record<string, string>>;
+    outputs: Map<string, Record<string, string>>;
+  } {
+    const inputs = new Map<string, Record<string, string>>();
+    const outputs = new Map<string, Record<string, string>>();
+
+    for (const conn of connections) {
+      if (!conn.fromPort || !conn.toPort) {
+        continue;
+      }
+
+      if (!outputs.has(conn.from)) {
+        outputs.set(conn.from, {});
+      }
+      const fromEntry = outputs.get(conn.from);
+      if (fromEntry) {
+        fromEntry[conn.fromPort] = `${conn.to}:${conn.toPort}`;
+      }
+
+      if (!inputs.has(conn.to)) {
+        inputs.set(conn.to, {});
+      }
+      const toEntry = inputs.get(conn.to);
+      if (toEntry) {
+        toEntry[conn.toPort] = `${conn.from}:${conn.fromPort}`;
+      }
+    }
+
+    return {
+      inputs,
+      outputs,
+    };
+  }
+
   static #buildConnections(blocks: YAMLBlock[]): BlockConnection[] {
     const connections: BlockConnection[] = [];
     const seen = new Set<string>();
@@ -158,16 +184,25 @@ export class YAMLSerializer {
     connections: BlockConnection[],
     seen: Set<string>
   ): void {
-    if (!block.outputs) return;
+    if (!block.outputs) {
+      return;
+    }
 
     for (const [fromPort, ref] of Object.entries(block.outputs)) {
       try {
         const { blockId: to, portId: toPort } = parsePortRef(ref as `${string}:${string}`);
         const key = `${block.id}:${fromPort}->${to}:${toPort}`;
-        if (seen.has(key)) continue;
+        if (seen.has(key)) {
+          continue;
+        }
 
         seen.add(key);
-        connections.push({ from: block.id, fromPort, to, toPort });
+        connections.push({
+          from: block.id,
+          fromPort,
+          to,
+          toPort,
+        });
       } catch {
         // Skip invalid port references
       }
@@ -179,16 +214,25 @@ export class YAMLSerializer {
     connections: BlockConnection[],
     seen: Set<string>
   ): void {
-    if (!block.inputs) return;
+    if (!block.inputs) {
+      return;
+    }
 
     for (const [toPort, ref] of Object.entries(block.inputs)) {
       try {
         const { blockId: from, portId: fromPort } = parsePortRef(ref as `${string}:${string}`);
         const key = `${from}:${fromPort}->${block.id}:${toPort}`;
-        if (seen.has(key)) continue;
+        if (seen.has(key)) {
+          continue;
+        }
 
         seen.add(key);
-        connections.push({ from, fromPort, to: block.id, toPort });
+        connections.push({
+          from,
+          fromPort,
+          to: block.id,
+          toPort,
+        });
       } catch {
         // Skip invalid port references
       }

@@ -82,7 +82,9 @@ export function createSSEStream(
     },
   });
 
-  return new Response(stream, { headers: SSE_HEADERS });
+  return new Response(stream, {
+    headers: SSE_HEADERS,
+  });
 }
 
 /**
@@ -109,12 +111,17 @@ export function createAsyncSSEStream(
       try {
         await handler(send);
       } catch (error) {
-        send({ type: 'error', error: String(error) });
+        send({
+          type: 'error',
+          error: String(error),
+        });
       } finally {
         controller.close();
       }
     },
   });
 
-  return new Response(stream, { headers: SSE_HEADERS });
+  return new Response(stream, {
+    headers: SSE_HEADERS,
+  });
 }

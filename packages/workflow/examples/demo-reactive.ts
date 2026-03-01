@@ -44,7 +44,9 @@ const timerBlock = defineReactiveBlock(
           count: z.number(),
           timestamp: z.number(),
         }),
-        { name: 'Tick' }
+        {
+          name: 'Tick',
+        }
       ),
     },
     config: z.object({
@@ -73,7 +75,9 @@ const tempSensorBlock = defineReactiveBlock(
     id: 'temp-sensor',
     inputs: {},
     outputs: {
-      temperature: output(z.number(), { name: 'Temperature °C' }),
+      temperature: output(z.number(), {
+        name: 'Temperature °C',
+      }),
     },
     config: z.object({
       interval: z.number().default(2000),
@@ -101,8 +105,12 @@ const comfortBlock = defineReactiveBlock(
   {
     id: 'comfort-calc',
     inputs: {
-      temperature: input(z.number(), { name: 'Temperature' }),
-      humidity: input(z.number(), { name: 'Humidity' }),
+      temperature: input(z.number(), {
+        name: 'Temperature',
+      }),
+      humidity: input(z.number(), {
+        name: 'Humidity',
+      }),
     },
     outputs: {
       comfort: output(
@@ -112,9 +120,13 @@ const comfortBlock = defineReactiveBlock(
           temp: z.number(),
           humidity: z.number(),
         }),
-        { name: 'Comfort' }
+        {
+          name: 'Comfort',
+        }
       ),
-      alert: output(z.string(), { name: 'Alert' }),
+      alert: output(z.string(), {
+        name: 'Alert',
+      }),
     },
     config: z.object({
       optimalTemp: z.number().default(22),
@@ -141,7 +153,12 @@ const comfortBlock = defineReactiveBlock(
           } else {
             label = 'Poor';
           }
-          return { score, label, temp, humidity };
+          return {
+            score,
+            label,
+            temp,
+            humidity,
+          };
         })
       )
       .to(outputs.comfort);
@@ -172,9 +189,13 @@ const loggerBlock = defineReactiveBlock(
           temp: z.number(),
           humidity: z.number(),
         }),
-        { name: 'Comfort' }
+        {
+          name: 'Comfort',
+        }
       ),
-      alert: input(z.string(), { name: 'Alert' }),
+      alert: input(z.string(), {
+        name: 'Alert',
+      }),
     },
     outputs: {},
     config: z.object({
@@ -216,7 +237,12 @@ try {
   console.log('╚═══════════════════════════════════════════════════════════════╝');
   console.log('');
 
-  const blocks = [timerBlock, tempSensorBlock, comfortBlock, loggerBlock];
+  const blocks = [
+    timerBlock,
+    tempSensorBlock,
+    comfortBlock,
+    loggerBlock,
+  ];
 
   console.log('📋 Block Definitions:');
   for (const block of blocks) {
@@ -233,7 +259,9 @@ try {
   const timerInstance = timerBlock.start({
     blockId: 'timer-1',
     workflowId: 'demo',
-    config: { interval: 1000 },
+    config: {
+      interval: 1000,
+    },
     emit: (portId, data) => {
       console.log(`[timer-1:${portId}]`, JSON.stringify(data));
     },

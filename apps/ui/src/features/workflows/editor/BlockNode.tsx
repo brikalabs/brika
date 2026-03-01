@@ -59,8 +59,14 @@ export interface BlockNodeData {
 // Status Indicator
 // ─────────────────────────────────────────────────────────────────────────────
 
-function StatusIndicator({ status }: Readonly<{ status?: BlockStatus }>) {
-  if (!status || status === 'idle') return null;
+function StatusIndicator({
+  status,
+}: Readonly<{
+  status?: BlockStatus;
+}>) {
+  if (!status || status === 'idle') {
+    return null;
+  }
 
   if (status === 'running') {
     return <Loader2 className="size-4 animate-spin text-status-running" />;
@@ -93,7 +99,10 @@ function OutputPort({ port, index, total }: Readonly<OutputPortProps>) {
       position={Position.Bottom}
       id={port.id}
       className="!absolute !-bottom-1 !h-3 !w-3 !rounded-full !border-2 !border-background !bg-orange-500"
-      style={{ left: `${offset}%`, transform: 'translateX(-50%)' }}
+      style={{
+        left: `${offset}%`,
+        transform: 'translateX(-50%)',
+      }}
     />
   );
 }
@@ -117,7 +126,10 @@ function InputPort({ port, index, total }: Readonly<InputPortProps>) {
       position={Position.Top}
       id={port.id}
       className="!absolute !-top-1 !h-3 !w-3 !rounded-full !border-2 !border-background !bg-blue-500"
-      style={{ left: `${offset}%`, transform: 'translateX(-50%)' }}
+      style={{
+        left: `${offset}%`,
+        transform: 'translateX(-50%)',
+      }}
     />
   );
 }
@@ -125,6 +137,100 @@ function InputPort({ port, index, total }: Readonly<InputPortProps>) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Config Summary
 // ─────────────────────────────────────────────────────────────────────────────
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Config Summary
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Safely convert config values to strings */
+function configToString(value: unknown): string {
+  if (typeof value === 'object' && value !== null) {
+    return JSON.stringify(value);
+  }
+  return String(value);
+}
+
+/** Render a summary snippet for a block's config */
+function renderConfigSummary(config: Record<string, unknown>): React.ReactNode {
+  if (config.tool) {
+    return (
+      <code className="block truncate rounded-md bg-muted/50 px-2 py-1 font-mono text-muted-foreground text-xs">
+        ⚡ {configToString(config.tool)}
+      </code>
+    );
+  }
+  if (config.if) {
+    return (
+      <code className="block truncate rounded-md bg-warning/10 px-2 py-1 font-mono text-warning text-xs">
+        ❓ {configToString(config.if).slice(0, 35)}
+      </code>
+    );
+  }
+  if (config.duration) {
+    return (
+      <div className="rounded-md bg-muted/50 px-2 py-1 text-muted-foreground text-xs">
+        ⏱️ {configToString(config.duration)}
+      </div>
+    );
+  }
+  if (config.event) {
+    return (
+      <code className="block truncate rounded-md bg-success/10 px-2 py-1 font-mono text-success text-xs">
+        📤 {configToString(config.event)}
+      </code>
+    );
+  }
+  if (config.message) {
+    return (
+      <div className="truncate rounded-md bg-muted/50 px-2 py-1 text-xs">
+        💬 "{configToString(config.message).slice(0, 25)}..."
+      </div>
+    );
+  }
+  if (config.var) {
+    return (
+      <code className="block truncate rounded-md bg-data-8/10 px-2 py-1 font-mono text-data-8 text-xs">
+        📝 {configToString(config.var)} = ...
+      </code>
+    );
+  }
+  if (config.sparkType) {
+    return (
+      <code className="block truncate rounded-md bg-amber-500/10 px-2 py-1 font-mono text-amber-600 text-xs">
+        ⚡ {configToString(config.sparkType)}
+      </code>
+    );
+  }
+  return null;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Execution Result
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface ExecutionResultProps {
+  status: string;
+  output: unknown;
+}
+
+/** Render execution output or error for a completed/errored block. */
+function ExecutionResult({ status, output }: Readonly<ExecutionResultProps>) {
+  if (status === 'completed' && output !== undefined) {
+    return (
+      <div className="truncate rounded-lg border border-success/20 bg-success/10 p-2 text-success text-xs">
+        ✓ {JSON.stringify(output).slice(0, 40)}
+      </div>
+    );
+  }
+  if (status === 'error' && output) {
+    return (
+      <div className="truncate rounded-lg border border-destructive/20 bg-destructive/10 p-2 text-destructive text-xs">
+        ✗ {configToString(output).slice(0, 40)}
+      </div>
+    );
+  }
+  return null;
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Block Node
@@ -148,70 +254,18 @@ export function BlockNode(props: NodeProps) {
     : data.label;
 
   // Default ports if not specified
-  const inputs: BlockPort[] = data.inputs ?? [{ id: 'in', name: 'Input' }];
-  const outputs: BlockPort[] = data.outputs ?? [{ id: 'out', name: 'Output' }];
-
-  // Helper to safely convert config values to strings
-  const configToString = (value: unknown): string => {
-    if (typeof value === 'object' && value !== null) {
-      return JSON.stringify(value);
-    }
-    return String(value);
-  };
-
-  // Render config summary based on config type
-  const renderConfigSummary = (): React.ReactNode => {
-    if (config.tool) {
-      return (
-        <code className="block truncate rounded-md bg-muted/50 px-2 py-1 font-mono text-muted-foreground text-xs">
-          ⚡ {configToString(config.tool)}
-        </code>
-      );
-    }
-    if (config.if) {
-      return (
-        <code className="block truncate rounded-md bg-warning/10 px-2 py-1 font-mono text-warning text-xs">
-          ❓ {configToString(config.if).slice(0, 35)}
-        </code>
-      );
-    }
-    if (config.duration) {
-      return (
-        <div className="rounded-md bg-muted/50 px-2 py-1 text-muted-foreground text-xs">
-          ⏱️ {configToString(config.duration)}
-        </div>
-      );
-    }
-    if (config.event) {
-      return (
-        <code className="block truncate rounded-md bg-success/10 px-2 py-1 font-mono text-success text-xs">
-          📤 {configToString(config.event)}
-        </code>
-      );
-    }
-    if (config.message) {
-      return (
-        <div className="truncate rounded-md bg-muted/50 px-2 py-1 text-xs">
-          💬 "{configToString(config.message).slice(0, 25)}..."
-        </div>
-      );
-    }
-    if (config.var) {
-      return (
-        <code className="block truncate rounded-md bg-data-8/10 px-2 py-1 font-mono text-data-8 text-xs">
-          📝 {configToString(config.var)} = ...
-        </code>
-      );
-    }
-    if (config.sparkType) {
-      return (
-        <code className="block truncate rounded-md bg-amber-500/10 px-2 py-1 font-mono text-amber-600 text-xs">
-          ⚡ {configToString(config.sparkType)}
-        </code>
-      );
-    }
-    return null;
-  };
+  const inputs: BlockPort[] = data.inputs ?? [
+    {
+      id: 'in',
+      name: 'Input',
+    },
+  ];
+  const outputs: BlockPort[] = data.outputs ?? [
+    {
+      id: 'out',
+      name: 'Output',
+    },
+  ];
 
   const statusStyles: Record<string, string> = {
     idle: '',
@@ -236,7 +290,10 @@ export function BlockNode(props: NodeProps) {
       <BaseNodeHeader className="pb-1">
         <div
           className="flex size-8 shrink-0 items-center justify-center rounded-lg shadow-sm"
-          style={{ backgroundColor: color + '20', color }}
+          style={{
+            backgroundColor: `${color}20`,
+            color,
+          }}
         >
           <DynamicIcon name={iconName} className="size-4" />
         </div>
@@ -252,28 +309,20 @@ export function BlockNode(props: NodeProps) {
           <Badge
             variant="secondary"
             className="px-1.5 py-0 font-medium text-[10px]"
-            style={{ backgroundColor: color + '15', color }}
+            style={{
+              backgroundColor: `${color}15`,
+              color,
+            }}
           >
             {(blockType || 'block').split(':').pop()}
           </Badge>
         </div>
 
         {/* Config summary */}
-        {renderConfigSummary()}
+        {renderConfigSummary(config)}
 
-        {/* Execution output */}
-        {status === 'completed' && data.output !== undefined ? (
-          <div className="truncate rounded-lg border border-success/20 bg-success/10 p-2 text-success text-xs">
-            ✓ {JSON.stringify(data.output).slice(0, 40)}
-          </div>
-        ) : null}
-
-        {/* Error display */}
-        {status === 'error' && data.output ? (
-          <div className="truncate rounded-lg border border-destructive/20 bg-destructive/10 p-2 text-destructive text-xs">
-            ✗ {configToString(data.output).slice(0, 40)}
-          </div>
-        ) : null}
+        {/* Execution result */}
+        <ExecutionResult status={status} output={data.output} />
       </BaseNodeContent>
 
       {/* Output Handles */}

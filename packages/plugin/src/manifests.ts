@@ -57,13 +57,27 @@ export interface PluginManifest {
   name: string;
   version: string;
   description?: string;
-  author?: string | { name: string; email?: string; url?: string };
+  author?:
+    | string
+    | {
+        name: string;
+        email?: string;
+        url?: string;
+      };
   homepage?: string;
-  repository?: string | { type?: string; url: string; directory?: string };
+  repository?:
+    | string
+    | {
+        type?: string;
+        url: string;
+        directory?: string;
+      };
   icon?: string;
   keywords?: string[];
   license?: string;
-  engines?: { brika?: string };
+  engines?: {
+    brika?: string;
+  };
   main?: string;
   blocks?: BlockManifest[];
   sparks?: SparkManifest[];

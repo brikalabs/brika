@@ -25,6 +25,7 @@ import {
   Trash2,
   Zap,
 } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
 import {
   Badge,
@@ -49,7 +50,7 @@ import {
 import { fetcher } from '@/lib/query';
 import { useLocale } from '@/lib/use-locale';
 import { cn } from '@/lib/utils';
-import type { BlockNodeData } from './BlockNode';
+import type { BlockNodeData, BlockPort } from './BlockNode';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Type Markers
@@ -65,8 +66,15 @@ type TypeMarker =
   | 'json'
   | 'spark';
 
-function getTypeMarker(description?: string): { marker: TypeMarker | null; extra?: string } {
-  if (!description) return { marker: null };
+function getTypeMarker(description?: string): {
+  marker: TypeMarker | null;
+  extra?: string;
+} {
+  if (!description) {
+    return {
+      marker: null,
+    };
+  }
 
   const markers: TypeMarker[] = [
     'expression',
@@ -82,18 +90,27 @@ function getTypeMarker(description?: string): { marker: TypeMarker | null; extra
     if (description.includes(`$type:${marker}`)) {
       // Extract extra info after colon (e.g., $type:code:javascript)
       const match = new RegExp(String.raw`\$type:${marker}:?(\w+)?`).exec(description);
-      return { marker, extra: match?.[1] };
+      return {
+        marker,
+        extra: match?.[1],
+      };
     }
   }
-  return { marker: null };
+  return {
+    marker: null,
+  };
 }
 
 /**
  * Safely convert a value to string, handling objects and nullish values
  */
 function toDisplayString(value: unknown, fallback = ''): string {
-  if (value === undefined || value === null) return fallback;
-  if (typeof value === 'object') return JSON.stringify(value);
+  if (value === undefined || value === null) {
+    return fallback;
+  }
+  if (typeof value === 'object') {
+    return JSON.stringify(value);
+  }
   return String(value);
 }
 
@@ -118,6 +135,22 @@ interface BlockSchema {
   type: 'object';
   properties?: Record<string, unknown>;
   required?: string[];
+}
+
+/** Safely narrow an unknown field schema value to SchemaProperty */
+function toSchemaProperty(value: unknown): SchemaProperty {
+  if (typeof value !== 'object' || value === null || !('type' in value)) {
+    return {
+      type: 'string',
+    };
+  }
+  const obj = Object.fromEntries(Object.entries(value));
+  return {
+    type: typeof obj.type === 'string' ? obj.type : 'string',
+    description: typeof obj.description === 'string' ? obj.description : undefined,
+    default: obj.default,
+    enum: Array.isArray(obj.enum) ? obj.enum : undefined,
+  };
 }
 
 interface ConfigPanelProps {
@@ -253,17 +286,24 @@ function KeyValueEditor({
 
   const addEntry = () => {
     const newKey = `key${entries.length + 1}`;
-    onChange({ ...value, [newKey]: '' });
+    onChange({
+      ...value,
+      [newKey]: '',
+    });
   };
 
   const removeEntry = (key: string) => {
-    const newValue = { ...value };
+    const newValue = {
+      ...value,
+    };
     delete newValue[key];
     onChange(newValue);
   };
 
   const updateKey = (oldKey: string, newKey: string) => {
-    if (oldKey === newKey) return;
+    if (oldKey === newKey) {
+      return;
+    }
     const newValue: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(value)) {
       newValue[k === oldKey ? newKey : k] = v;
@@ -272,7 +312,10 @@ function KeyValueEditor({
   };
 
   const updateValue = (key: string, newVal: unknown) => {
-    onChange({ ...value, [key]: newVal });
+    onChange({
+      ...value,
+      [key]: newVal,
+    });
   };
 
   return (
@@ -327,20 +370,266 @@ interface FieldProps {
   pluginId?: string;
 }
 
-function SchemaField({
-  name,
-  schema,
+/** Resolved display info passed to each field renderer */
+interface ResolvedFieldInfo {
+  label: string;
+  cleanDescription: string | undefined;
+  value: unknown;
+  onChange: (value: unknown) => void;
+  variables: Variable[];
+  defaultValue: unknown;
+  name: string;
+}
+
+function DurationField({ value, onChange, cleanDescription, label }: Readonly<ResolvedFieldInfo>) {
+  const numericValue = typeof value === 'number' ? value : undefined;
+  return (
+    <DurationInput
+      value={numericValue}
+      onChange={onChange}
+      placeholder={cleanDescription || `Enter ${label.toLowerCase()}`}
+    />
+  );
+}
+
+function ColorField({ value, onChange }: Readonly<ResolvedFieldInfo>) {
+  return (
+    <div className="flex items-center gap-2">
+      <input
+        type="color"
+        value={toDisplayString(value, '#6366f1')}
+        onChange={(e) => onChange(e.target.value)}
+        className="h-9 w-12 cursor-pointer rounded border bg-transparent p-1"
+      />
+      <Input
+        value={toDisplayString(value)}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="#6366f1"
+        className="flex-1 bg-background font-mono"
+      />
+    </div>
+  );
+}
+
+function ExpressionMarkerField({
   value,
   onChange,
   variables,
-  required,
-  pluginId,
-}: Readonly<FieldProps>) {
+  cleanDescription,
+  label,
+}: Readonly<ResolvedFieldInfo>) {
+  return (
+    <ExpressionField
+      value={toDisplayString(value)}
+      onChange={(v) => onChange(v)}
+      variables={variables}
+      placeholder={cleanDescription || `Enter ${label.toLowerCase()}`}
+      multiline
+    />
+  );
+}
+
+function SecretField({ value, onChange, cleanDescription, label }: Readonly<ResolvedFieldInfo>) {
+  return (
+    <Input
+      type="password"
+      value={toDisplayString(value)}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={cleanDescription || `Enter ${label.toLowerCase()}`}
+      className="bg-background"
+    />
+  );
+}
+
+function SparkField({ value, onChange, cleanDescription }: Readonly<ResolvedFieldInfo>) {
+  return (
+    <SparkTypeInput
+      value={toDisplayString(value)}
+      onChange={(v) => onChange(v)}
+      placeholder={cleanDescription || 'Select spark type...'}
+    />
+  );
+}
+
+function BooleanField({
+  value,
+  onChange,
+  label,
+  cleanDescription,
+  defaultValue,
+}: Readonly<ResolvedFieldInfo>) {
+  return (
+    <div className="flex items-center justify-between rounded-lg bg-muted/30 p-3">
+      <div>
+        <span className="font-medium text-sm">{label}</span>
+        {cleanDescription && (
+          <p className="mt-0.5 text-muted-foreground text-xs">{cleanDescription}</p>
+        )}
+      </div>
+      <Switch
+        checked={Boolean(value ?? defaultValue)}
+        onCheckedChange={(checked) => onChange(checked)}
+      />
+    </div>
+  );
+}
+
+function EnumField({
+  value,
+  onChange,
+  label,
+  defaultValue,
+  enumValues,
+}: Readonly<
+  ResolvedFieldInfo & {
+    enumValues: unknown[];
+  }
+>) {
+  return (
+    <Select value={toDisplayString(value ?? defaultValue)} onValueChange={(v) => onChange(v)}>
+      <SelectTrigger className="bg-background">
+        <SelectValue placeholder={`Select ${label.toLowerCase()}`} />
+      </SelectTrigger>
+      <SelectContent>
+        {enumValues.map((opt) => (
+          <SelectItem key={String(opt)} value={String(opt)}>
+            {String(opt)}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
+function toRecord(value: unknown): Record<string, unknown> {
+  if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+    const result: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value)) {
+      result[k] = v;
+    }
+    return result;
+  }
+  return {};
+}
+
+function ObjectField({ value, onChange, variables }: Readonly<ResolvedFieldInfo>) {
+  const objValue = toRecord(value);
+  return (
+    <KeyValueEditor
+      value={objValue}
+      onChange={onChange}
+      variables={variables}
+      keyPlaceholder="argument"
+      valuePlaceholder="value or {{ expression }}"
+    />
+  );
+}
+
+function NumberField({
+  value,
+  onChange,
+  cleanDescription,
+  label,
+  defaultValue,
+}: Readonly<ResolvedFieldInfo>) {
+  return (
+    <Input
+      type="number"
+      value={toDisplayString(value ?? defaultValue)}
+      onChange={(e) => onChange(e.target.value ? Number(e.target.value) : undefined)}
+      placeholder={cleanDescription || `Enter ${label.toLowerCase()}`}
+      className="bg-background"
+    />
+  );
+}
+
+function StringField({
+  value,
+  onChange,
+  variables,
+  cleanDescription,
+  label,
+  name,
+}: Readonly<ResolvedFieldInfo>) {
+  const isMultiline =
+    name === 'message' ||
+    name === 'if' ||
+    name === 'value' ||
+    cleanDescription?.toLowerCase().includes('expression') ||
+    cleanDescription?.toLowerCase().includes('condition');
+
+  return (
+    <ExpressionField
+      value={toDisplayString(value)}
+      onChange={(v) => onChange(v)}
+      variables={variables}
+      placeholder={cleanDescription || `Enter ${label.toLowerCase()}`}
+      multiline={isMultiline}
+    />
+  );
+}
+
+/** Map from type-marker to the corresponding renderer */
+const markerRenderers: Record<TypeMarker, (info: ResolvedFieldInfo) => ReactNode> = {
+  duration: (info) => <DurationField {...info} />,
+  color: (info) => <ColorField {...info} />,
+  expression: (info) => <ExpressionMarkerField {...info} />,
+  secret: (info) => <SecretField {...info} />,
+  spark: (info) => <SparkField {...info} />,
+  url: (info) => <StringField {...info} />,
+  json: (info) => <StringField {...info} />,
+  code: (info) => <StringField {...info} />,
+};
+
+function resolveFieldInfo(
+  props: Readonly<FieldProps>,
+  label: string,
+  cleanDescription: string | undefined
+): ResolvedFieldInfo {
+  return {
+    label,
+    cleanDescription,
+    value: props.value,
+    onChange: props.onChange,
+    variables: props.variables,
+    defaultValue: props.schema.default,
+    name: props.name,
+  };
+}
+
+function renderFieldControl(
+  info: ResolvedFieldInfo,
+  schema: SchemaProperty,
+  typeMarker: TypeMarker | null
+): ReactNode {
+  if (typeMarker) {
+    const renderer = markerRenderers[typeMarker];
+    return renderer(info);
+  }
+
+  if (schema.type === 'boolean') {
+    return <BooleanField {...info} />;
+  }
+
+  if (schema.enum && schema.enum.length > 0) {
+    return <EnumField {...info} enumValues={schema.enum} />;
+  }
+
+  if (schema.type === 'object') {
+    return <ObjectField {...info} />;
+  }
+
+  if (schema.type === 'number') {
+    return <NumberField {...info} />;
+  }
+
+  return <StringField {...info} />;
+}
+
+function SchemaField(props: Readonly<FieldProps>) {
+  const { name, schema, pluginId } = props;
   const { tp } = useLocale();
-  const type = schema.type;
   const description = schema.description;
-  const enumValues = schema.enum;
-  const defaultValue = schema.default;
 
   // Check for special type markers
   const { marker: typeMarker } = getTypeMarker(description);
@@ -360,175 +649,24 @@ function SchemaField({
     ? tp(pluginId, `fields.${name}.description`, fallbackDescription ?? '')
     : fallbackDescription;
 
-  // Determine field type and render appropriate control
-  const renderField = () => {
-    // Special type: Duration (ms)
-    if (typeMarker === 'duration') {
-      return (
-        <DurationInput
-          value={value as number | undefined}
-          onChange={onChange}
-          placeholder={cleanDescription || `Enter ${label.toLowerCase()}`}
-        />
-      );
-    }
-
-    // Special type: Color
-    if (typeMarker === 'color') {
-      return (
-        <div className="flex items-center gap-2">
-          <input
-            type="color"
-            value={toDisplayString(value, '#6366f1')}
-            onChange={(e) => onChange(e.target.value)}
-            className="h-9 w-12 cursor-pointer rounded border bg-transparent p-1"
-          />
-          <Input
-            value={toDisplayString(value)}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder="#6366f1"
-            className="flex-1 bg-background font-mono"
-          />
-        </div>
-      );
-    }
-
-    // Special type: Expression
-    if (typeMarker === 'expression') {
-      return (
-        <ExpressionField
-          value={toDisplayString(value)}
-          onChange={(v) => onChange(v)}
-          variables={variables}
-          placeholder={cleanDescription || `Enter ${label.toLowerCase()}`}
-          multiline
-        />
-      );
-    }
-
-    // Special type: Secret
-    if (typeMarker === 'secret') {
-      return (
-        <Input
-          type="password"
-          value={toDisplayString(value)}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={cleanDescription || `Enter ${label.toLowerCase()}`}
-          className="bg-background"
-        />
-      );
-    }
-
-    // Special type: Spark (autocomplete for spark types)
-    if (typeMarker === 'spark') {
-      return (
-        <SparkTypeInput
-          value={toDisplayString(value)}
-          onChange={(v) => onChange(v)}
-          placeholder={cleanDescription || 'Select spark type...'}
-        />
-      );
-    }
-
-    // Boolean - Switch
-    if (type === 'boolean') {
-      return (
-        <div className="flex items-center justify-between rounded-lg bg-muted/30 p-3">
-          <div>
-            <span className="font-medium text-sm">{label}</span>
-            {cleanDescription && (
-              <p className="mt-0.5 text-muted-foreground text-xs">{cleanDescription}</p>
-            )}
-          </div>
-          <Switch
-            checked={Boolean(value ?? defaultValue)}
-            onCheckedChange={(checked) => onChange(checked)}
-          />
-        </div>
-      );
-    }
-
-    // Enum - Select dropdown
-    if (enumValues && enumValues.length > 0) {
-      return (
-        <Select value={toDisplayString(value ?? defaultValue)} onValueChange={(v) => onChange(v)}>
-          <SelectTrigger className="bg-background">
-            <SelectValue placeholder={`Select ${label.toLowerCase()}`} />
-          </SelectTrigger>
-          <SelectContent>
-            {enumValues.map((opt) => (
-              <SelectItem key={String(opt)} value={String(opt)}>
-                {String(opt)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      );
-    }
-
-    // Object - Key-Value Editor
-    if (type === 'object') {
-      const objValue =
-        typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {};
-      return (
-        <KeyValueEditor
-          value={objValue}
-          onChange={onChange}
-          variables={variables}
-          keyPlaceholder="argument"
-          valuePlaceholder="value or {{ expression }}"
-        />
-      );
-    }
-
-    // Number
-    if (type === 'number') {
-      return (
-        <Input
-          type="number"
-          value={toDisplayString(value ?? defaultValue)}
-          onChange={(e) => onChange(e.target.value ? Number(e.target.value) : undefined)}
-          placeholder={cleanDescription || `Enter ${label.toLowerCase()}`}
-          className="bg-background"
-        />
-      );
-    }
-
-    // String - Expression input with variable support
-    // Determine if multiline based on field name or description
-    const isMultiline =
-      name === 'message' ||
-      name === 'if' ||
-      name === 'value' ||
-      cleanDescription?.toLowerCase().includes('expression') ||
-      cleanDescription?.toLowerCase().includes('condition');
-
-    return (
-      <ExpressionField
-        value={toDisplayString(value)}
-        onChange={(v) => onChange(v)}
-        variables={variables}
-        placeholder={cleanDescription || `Enter ${label.toLowerCase()}`}
-        multiline={isMultiline}
-      />
-    );
-  };
+  const info = resolveFieldInfo(props, label, cleanDescription);
+  const fieldControl = renderFieldControl(info, schema, typeMarker);
 
   // Boolean fields render their own container
-  if (type === 'boolean') {
-    return renderField();
+  if (schema.type === 'boolean') {
+    return fieldControl;
   }
 
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-1.5">
         <Label className="font-medium text-sm">{label}</Label>
-        {required && <span className="text-destructive text-xs">*</span>}
+        {props.required && <span className="text-destructive text-xs">*</span>}
         {cleanDescription && (
           <HelpCircle className="size-3.5 text-muted-foreground" aria-label={cleanDescription} />
         )}
       </div>
-      {renderField()}
+      {fieldControl}
       {cleanDescription && <p className="text-muted-foreground text-xs">{cleanDescription}</p>}
     </div>
   );
@@ -544,19 +682,43 @@ interface DurationInputProps {
   placeholder?: string;
 }
 
+type DurationUnit = 'ms' | 's' | 'm' | 'h';
+
+const durationUnits = new Set<string>([
+  'ms',
+  's',
+  'm',
+  'h',
+]);
+
+function isDurationUnit(v: string): v is DurationUnit {
+  return durationUnits.has(v);
+}
+
 function DurationInput({ value, onChange, placeholder }: Readonly<DurationInputProps>) {
   // Convert ms to display value based on unit
-  type DurationUnit = 'ms' | 's' | 'm' | 'h';
-
   const [unit, setUnit] = useState<DurationUnit>(() => {
-    if (!value) return 'ms';
-    if (value >= 3600000) return 'h';
-    if (value >= 60000) return 'm';
-    if (value >= 1000) return 's';
+    if (!value) {
+      return 'ms';
+    }
+    if (value >= 3600000) {
+      return 'h';
+    }
+    if (value >= 60000) {
+      return 'm';
+    }
+    if (value >= 1000) {
+      return 's';
+    }
     return 'ms';
   });
 
-  const multipliers = { ms: 1, s: 1000, m: 60000, h: 3600000 };
+  const multipliers = {
+    ms: 1,
+    s: 1000,
+    m: 60000,
+    h: 3600000,
+  };
 
   const displayValue = value === undefined ? '' : value / multipliers[unit];
 
@@ -585,7 +747,14 @@ function DurationInput({ value, onChange, placeholder }: Readonly<DurationInputP
         className="flex-1 bg-background"
         min={0}
       />
-      <Select value={unit} onValueChange={(v) => handleUnitChange(v as DurationUnit)}>
+      <Select
+        value={unit}
+        onValueChange={(v) => {
+          if (isDurationUnit(v)) {
+            handleUnitChange(v);
+          }
+        }}
+      >
         <SelectTrigger className="w-20 bg-background">
           <SelectValue />
         </SelectTrigger>
@@ -621,7 +790,9 @@ interface SparkTypeInputProps {
 
 function SparkTypeInput({ value, onChange, placeholder }: Readonly<SparkTypeInputProps>) {
   const { data: sparks = [] } = useQuery({
-    queryKey: ['sparks'],
+    queryKey: [
+      'sparks',
+    ],
     queryFn: () => fetcher<RegisteredSpark[]>('/api/sparks'),
     staleTime: 30000,
   });
@@ -631,10 +802,15 @@ function SparkTypeInput({ value, onChange, placeholder }: Readonly<SparkTypeInpu
     const grouped = new Map<string, RegisteredSpark[]>();
     for (const spark of sparks) {
       const existing = grouped.get(spark.pluginId) || [];
-      grouped.set(spark.pluginId, [...existing, spark]);
+      grouped.set(spark.pluginId, [
+        ...existing,
+        spark,
+      ]);
     }
     return grouped;
-  }, [sparks]);
+  }, [
+    sparks,
+  ]);
 
   if (sparks.length === 0) {
     return (
@@ -658,7 +834,9 @@ function SparkTypeInput({ value, onChange, placeholder }: Readonly<SparkTypeInpu
         </SelectValue>
       </SelectTrigger>
       <SelectContent>
-        {[...sparksByPlugin.entries()].map(([pluginId, pluginSparks]) => (
+        {[
+          ...sparksByPlugin.entries(),
+        ].map(([pluginId, pluginSparks]) => (
           <SelectGroup key={pluginId}>
             <SelectLabel className="font-mono text-xs">{pluginId}</SelectLabel>
             {pluginSparks.map((spark) => (
@@ -722,9 +900,14 @@ function BlockConfig({
         <SchemaField
           key={name}
           name={name}
-          schema={fieldSchema as SchemaProperty}
+          schema={toSchemaProperty(fieldSchema)}
           value={config[name]}
-          onChange={(value) => onUpdate({ ...config, [name]: value })}
+          onChange={(value) =>
+            onUpdate({
+              ...config,
+              [name]: value,
+            })
+          }
           variables={availableVariables}
           required={requiredFields.has(name)}
           pluginId={pluginId}
@@ -738,6 +921,226 @@ function BlockConfig({
 // Config Panel
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Safely extract BlockNodeData from Node.data.
+ * BlockNodeData's index signature `[key: string]: unknown` makes it
+ * structurally compatible with `Record<string, unknown>`, so spreading
+ * preserves all runtime values while satisfying the type system.
+ */
+function toBlockData(data: Record<string, unknown>): BlockNodeData {
+  const id = typeof data.id === 'string' ? data.id : '';
+  const type = typeof data.type === 'string' ? data.type : '';
+  const label = typeof data.label === 'string' ? data.label : '';
+  const config =
+    typeof data.config === 'object' && data.config !== null ? toRecord(data.config) : {};
+
+  // BlockNodeData has [key: string]: unknown, so we build the base object
+  // with validated required fields and spread the rest for optional fields
+  // (inputs, outputs, status, icon, color, pluginId, output, etc.)
+  const base: BlockNodeData = {
+    ...data,
+    id,
+    type,
+    label,
+    config,
+  };
+  return base;
+}
+
+interface PortListProps {
+  ports: BlockPort[];
+  icon: ReactNode;
+  label: string;
+  colorClasses: {
+    iconColor: string;
+    badgeBorder: string;
+    badgeBg: string;
+    badgeText: string;
+  };
+}
+
+function PortList({ ports, icon, label, colorClasses }: Readonly<PortListProps>) {
+  if (ports.length === 0) {
+    return null;
+  }
+  return (
+    <div className="rounded-lg bg-muted/30 p-2.5">
+      <div className="mb-2 flex items-center gap-1.5">
+        {icon}
+        <span className="font-medium text-muted-foreground text-xs">{label}</span>
+      </div>
+      <div className="space-y-1.5">
+        {ports.map((p) => (
+          <div
+            key={p.id}
+            className="flex items-center justify-between rounded-md bg-background/60 px-2.5 py-1.5"
+          >
+            <span className="font-medium text-foreground text-xs">{p.name}</span>
+            <Badge
+              variant="outline"
+              className={cn(
+                'h-5 font-mono text-[10px]',
+                colorClasses.badgeBorder,
+                colorClasses.badgeBg,
+                colorClasses.badgeText
+              )}
+            >
+              {p.typeName ?? 'any'}
+            </Badge>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+interface IOTypesSectionProps {
+  inputs: BlockPort[];
+  outputs: BlockPort[];
+}
+
+function IOTypesSection({ inputs, outputs }: Readonly<IOTypesSectionProps>) {
+  const hasInputs = inputs.length > 0;
+  const hasOutputs = outputs.length > 0;
+
+  if (!hasInputs && !hasOutputs) {
+    return null;
+  }
+
+  return (
+    <div className="mt-3 grid gap-2 border-t pt-3">
+      <PortList
+        ports={inputs}
+        icon={<ArrowDownToLine className="size-3.5 text-blue-500" />}
+        label="Inputs"
+        colorClasses={{
+          iconColor: 'text-blue-500',
+          badgeBorder: 'border-blue-500/30',
+          badgeBg: 'bg-blue-500/10',
+          badgeText: 'text-blue-600 dark:text-blue-400',
+        }}
+      />
+      <PortList
+        ports={outputs}
+        icon={<ArrowUpFromLine className="size-3.5 text-orange-500" />}
+        label="Outputs"
+        colorClasses={{
+          iconColor: 'text-orange-500',
+          badgeBorder: 'border-orange-500/30',
+          badgeBg: 'bg-orange-500/10',
+          badgeText: 'text-orange-600 dark:text-orange-400',
+        }}
+      />
+    </div>
+  );
+}
+
+interface ConfigPanelHeaderProps {
+  blockData: BlockNodeData;
+  displayLabel: string;
+  onCollapse?: () => void;
+}
+
+function ConfigPanelHeader({
+  blockData,
+  displayLabel,
+  onCollapse,
+}: Readonly<ConfigPanelHeaderProps>) {
+  const { t } = useLocale();
+
+  return (
+    <div className="border-b bg-background/80 p-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          {blockData.color && (
+            <div
+              className="flex size-9 items-center justify-center rounded-lg"
+              style={{
+                backgroundColor: `${blockData.color}20`,
+              }}
+            >
+              <div
+                className="size-3.5 rounded-full"
+                style={{
+                  backgroundColor: blockData.color,
+                }}
+              />
+            </div>
+          )}
+          <div>
+            <h3 className="font-semibold text-sm">{displayLabel}</h3>
+            <p className="mt-0.5 text-muted-foreground text-xs">
+              {t('workflows:editor.panels.config')}
+            </p>
+          </div>
+        </div>
+        {onCollapse && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                onClick={onCollapse}
+              >
+                <ChevronRight className="size-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="left">
+              <p>{t('workflows:editor.panels.collapse')}</p>
+            </TooltipContent>
+          </Tooltip>
+        )}
+      </div>
+
+      <IOTypesSection inputs={blockData.inputs ?? []} outputs={blockData.outputs ?? []} />
+    </div>
+  );
+}
+
+interface VariablesReferenceProps {
+  variables: Variable[];
+}
+
+function VariablesReference({ variables }: Readonly<VariablesReferenceProps>) {
+  const { t } = useLocale();
+
+  if (variables.length === 0) {
+    return null;
+  }
+
+  return (
+    <>
+      <Separator />
+      <div className="p-4">
+        <div className="mb-3 flex items-center gap-2 font-medium text-muted-foreground text-xs">
+          <Sparkles className="size-4" />
+          {t('workflows:editor.panels.availableVariables')}
+        </div>
+        <div className="grid gap-1.5">
+          {variables.map((v) => (
+            <button
+              type="button"
+              key={v.name}
+              className="flex w-full cursor-pointer items-center justify-between rounded-md border-none bg-muted/50 p-2 text-left font-inherit text-xs transition-colors hover:bg-muted"
+              onClick={() => navigator.clipboard.writeText(`{{ ${v.name} }}`)}
+              title={t('workflows:editor.panels.clickToCopy')}
+            >
+              <code className="font-mono text-primary">{`{{ ${v.name} }}`}</code>
+              <Badge variant="outline" className="h-5 text-[10px]">
+                {v.type}
+              </Badge>
+            </button>
+          ))}
+        </div>
+        <p className="mt-2 text-center text-[10px] text-muted-foreground">
+          {t('workflows:editor.panels.clickToCopy')}
+        </p>
+      </div>
+    </>
+  );
+}
+
 export function ConfigPanel({
   node,
   onUpdateBlock,
@@ -747,114 +1150,23 @@ export function ConfigPanel({
   className,
 }: Readonly<ConfigPanelProps>) {
   const { t, tp } = useLocale();
-  const blockData = node.data as unknown as BlockNodeData;
+  const blockData = toBlockData(node.data);
 
   // Translate block label if pluginId is available
   const blockType = blockData.type || '';
-  const blockKey = blockType.split(':').pop() || blockType;
+  const blockKey = blockType.split(':').pop() ?? blockType;
   const displayLabel = blockData.pluginId
     ? tp(blockData.pluginId, `blocks.${blockKey}.name`, blockData.label || blockData.id)
     : blockData.label || blockData.id;
 
   return (
     <div className={cn('flex h-full flex-col border-l bg-card/50 backdrop-blur-sm', className)}>
-      {/* Header */}
-      <div className="border-b bg-background/80 p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {blockData.color && (
-              <div
-                className="flex size-9 items-center justify-center rounded-lg"
-                style={{ backgroundColor: blockData.color + '20' }}
-              >
-                <div
-                  className="size-3.5 rounded-full"
-                  style={{ backgroundColor: blockData.color }}
-                />
-              </div>
-            )}
-            <div>
-              <h3 className="font-semibold text-sm">{displayLabel}</h3>
-              <p className="mt-0.5 text-muted-foreground text-xs">
-                {t('workflows:editor.panels.config')}
-              </p>
-            </div>
-          </div>
-          {onCollapse && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
-                  onClick={onCollapse}
-                >
-                  <ChevronRight className="size-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="left">
-                <p>{t('workflows:editor.panels.collapse')}</p>
-              </TooltipContent>
-            </Tooltip>
-          )}
-        </div>
+      <ConfigPanelHeader
+        blockData={blockData}
+        displayLabel={displayLabel}
+        onCollapse={onCollapse}
+      />
 
-        {/* I/O Types - Improved display */}
-        {((blockData.inputs?.length ?? 0) > 0 || (blockData.outputs?.length ?? 0) > 0) && (
-          <div className="mt-3 grid gap-2 border-t pt-3">
-            {(blockData.inputs?.length ?? 0) > 0 && (
-              <div className="rounded-lg bg-muted/30 p-2.5">
-                <div className="mb-2 flex items-center gap-1.5">
-                  <ArrowDownToLine className="size-3.5 text-blue-500" />
-                  <span className="font-medium text-muted-foreground text-xs">Inputs</span>
-                </div>
-                <div className="space-y-1.5">
-                  {blockData.inputs?.map((p) => (
-                    <div
-                      key={p.id}
-                      className="flex items-center justify-between rounded-md bg-background/60 px-2.5 py-1.5"
-                    >
-                      <span className="font-medium text-foreground text-xs">{p.name}</span>
-                      <Badge
-                        variant="outline"
-                        className="h-5 border-blue-500/30 bg-blue-500/10 font-mono text-[10px] text-blue-600 dark:text-blue-400"
-                      >
-                        {p.typeName ?? 'any'}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            {(blockData.outputs?.length ?? 0) > 0 && (
-              <div className="rounded-lg bg-muted/30 p-2.5">
-                <div className="mb-2 flex items-center gap-1.5">
-                  <ArrowUpFromLine className="size-3.5 text-orange-500" />
-                  <span className="font-medium text-muted-foreground text-xs">Outputs</span>
-                </div>
-                <div className="space-y-1.5">
-                  {blockData.outputs?.map((p) => (
-                    <div
-                      key={p.id}
-                      className="flex items-center justify-between rounded-md bg-background/60 px-2.5 py-1.5"
-                    >
-                      <span className="font-medium text-foreground text-xs">{p.name}</span>
-                      <Badge
-                        variant="outline"
-                        className="h-5 border-orange-500/30 bg-orange-500/10 font-mono text-[10px] text-orange-600 dark:text-orange-400"
-                      >
-                        {p.typeName ?? 'any'}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Content */}
       <ScrollArea className="flex-1">
         <div className="p-4">
           <BlockConfig
@@ -866,40 +1178,9 @@ export function ConfigPanel({
           />
         </div>
 
-        {/* Variables Reference */}
-        {availableVariables.length > 0 && (
-          <>
-            <Separator />
-            <div className="p-4">
-              <div className="mb-3 flex items-center gap-2 font-medium text-muted-foreground text-xs">
-                <Sparkles className="size-4" />
-                {t('workflows:editor.panels.availableVariables')}
-              </div>
-              <div className="grid gap-1.5">
-                {availableVariables.map((v) => (
-                  <button
-                    type="button"
-                    key={v.name}
-                    className="flex w-full cursor-pointer items-center justify-between rounded-md border-none bg-muted/50 p-2 text-left font-inherit text-xs transition-colors hover:bg-muted"
-                    onClick={() => navigator.clipboard.writeText(`{{ ${v.name} }}`)}
-                    title={t('workflows:editor.panels.clickToCopy')}
-                  >
-                    <code className="font-mono text-primary">{`{{ ${v.name} }}`}</code>
-                    <Badge variant="outline" className="h-5 text-[10px]">
-                      {v.type}
-                    </Badge>
-                  </button>
-                ))}
-              </div>
-              <p className="mt-2 text-center text-[10px] text-muted-foreground">
-                {t('workflows:editor.panels.clickToCopy')}
-              </p>
-            </div>
-          </>
-        )}
+        <VariablesReference variables={availableVariables} />
       </ScrollArea>
 
-      {/* Footer */}
       <div className="border-t bg-background/80 p-3 text-center text-muted-foreground text-xs">
         {t('workflows:editor.panels.nodeId')}: <code className="font-mono">{node.id}</code>
       </div>

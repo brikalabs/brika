@@ -11,9 +11,15 @@ import {
 
 // Test actions
 const TestActions = defineActions('test', {
-  hello: z.object({ message: z.string() }),
-  goodbye: z.object({ message: z.string() }),
-  count: z.object({ value: z.number() }),
+  hello: z.object({
+    message: z.string(),
+  }),
+  goodbye: z.object({
+    message: z.string(),
+  }),
+  count: z.object({
+    value: z.number(),
+  }),
 });
 
 type TestAction = ActionsUnion<typeof TestActions>;
@@ -21,25 +27,36 @@ type TestAction = ActionsUnion<typeof TestActions>;
 describe('EventSystem', () => {
   it('should dispatch and subscribe to actions with type inference', async () => {
     const events = new EventSystem();
-    let received: ReturnType<typeof TestActions.hello.create> | null = null;
+    const box: {
+      value: ReturnType<typeof TestActions.hello.create> | null;
+    } = {
+      value: null,
+    };
 
     // Using action creator - automatic type inference!
     events.subscribe(TestActions.hello, (action) => {
       // action is automatically typed as Action<'test.hello', { message: string }>
-      received = action;
+      box.value = action;
       expect(action.payload.message).toBe('Hello World');
     });
 
-    const action = TestActions.hello.create({ message: 'Hello World' });
+    const action = TestActions.hello.create({
+      message: 'Hello World',
+    });
     await events.dispatch(action);
 
-    expect(received).not.toBeNull();
-    expect(received!.type).toBe('test.hello');
-    expect(received!.payload.message).toBe('Hello World');
+    const received = box.value;
+    if (received === null) {
+      throw new Error('expected received');
+    }
+    expect(received.type).toBe('test.hello');
+    expect(received.payload.message).toBe('Hello World');
   });
 
   it('should use Symbol for fast O(1) matching', () => {
-    const action = TestActions.hello.create({ message: 'test' });
+    const action = TestActions.hello.create({
+      message: 'test',
+    });
 
     // Action has the same symbol as its creator
     expect(action[ACTION_ID]).toBe(TestActions.hello[ACTION_ID]);
@@ -57,9 +74,21 @@ describe('EventSystem', () => {
       received.push(action);
     });
 
-    await events.dispatch(TestActions.hello.create({ message: 'Hello' }));
-    await events.dispatch(TestActions.goodbye.create({ message: 'Goodbye' }));
-    await events.dispatch(TestActions.count.create({ value: 42 }));
+    await events.dispatch(
+      TestActions.hello.create({
+        message: 'Hello',
+      })
+    );
+    await events.dispatch(
+      TestActions.goodbye.create({
+        message: 'Goodbye',
+      })
+    );
+    await events.dispatch(
+      TestActions.count.create({
+        value: 42,
+      })
+    );
 
     expect(received.length).toBe(3);
     expect(received[0]?.type).toBe('test.hello');
@@ -74,13 +103,31 @@ describe('EventSystem', () => {
     > = [];
 
     // Array of action creators - handler gets union of those actions
-    events.subscribe([TestActions.hello, TestActions.goodbye], (action) => {
-      received.push(action);
-    });
+    events.subscribe(
+      [
+        TestActions.hello,
+        TestActions.goodbye,
+      ],
+      (action) => {
+        received.push(action);
+      }
+    );
 
-    await events.dispatch(TestActions.hello.create({ message: 'Hello' }));
-    await events.dispatch(TestActions.goodbye.create({ message: 'Goodbye' }));
-    await events.dispatch(TestActions.count.create({ value: 42 })); // This won't be received
+    await events.dispatch(
+      TestActions.hello.create({
+        message: 'Hello',
+      })
+    );
+    await events.dispatch(
+      TestActions.goodbye.create({
+        message: 'Goodbye',
+      })
+    );
+    await events.dispatch(
+      TestActions.count.create({
+        value: 42,
+      })
+    ); // This won't be received
 
     expect(received.length).toBe(2);
     expect(received[0]?.type).toBe('test.hello');
@@ -91,10 +138,16 @@ describe('EventSystem', () => {
     const events = new EventSystem();
 
     setTimeout(() => {
-      events.dispatch(TestActions.hello.create({ message: 'Hello' }));
+      events.dispatch(
+        TestActions.hello.create({
+          message: 'Hello',
+        })
+      );
     }, 50);
 
-    const action = await events.once(TestActions.hello, { timeout: 1000 });
+    const action = await events.once(TestActions.hello, {
+      timeout: 1000,
+    });
     expect(action.type).toBe('test.hello');
     expect(action.payload.message).toBe('Hello');
   });
@@ -102,20 +155,34 @@ describe('EventSystem', () => {
   it('should timeout if action not received', () => {
     const events = new EventSystem();
 
-    expect(events.once(TestActions.hello, { timeout: 100 })).rejects.toThrow('Timeout');
+    expect(
+      events.once(TestActions.hello, {
+        timeout: 100,
+      })
+    ).rejects.toThrow('Timeout');
   });
 
   it('should support waitFor with withPredicate', async () => {
     const events = new EventSystem();
 
     setTimeout(() => {
-      events.dispatch(TestActions.count.create({ value: 10 }));
-      events.dispatch(TestActions.count.create({ value: 20 }));
+      events.dispatch(
+        TestActions.count.create({
+          value: 10,
+        })
+      );
+      events.dispatch(
+        TestActions.count.create({
+          value: 20,
+        })
+      );
     }, 50);
 
     const action = await events.waitFor(
       withPredicate(TestActions.count, (a) => a.payload.value === 20),
-      { timeout: 1000 }
+      {
+        timeout: 1000,
+      }
     );
 
     expect(action.type).toBe('test.count');
@@ -126,10 +193,22 @@ describe('EventSystem', () => {
     const events = new EventSystem();
 
     setTimeout(() => {
-      events.dispatch(TestActions.goodbye.create({ message: 'Goodbye' }));
+      events.dispatch(
+        TestActions.goodbye.create({
+          message: 'Goodbye',
+        })
+      );
     }, 50);
 
-    const action = await events.race([TestActions.hello, TestActions.goodbye], { timeout: 1000 });
+    const action = await events.race(
+      [
+        TestActions.hello,
+        TestActions.goodbye,
+      ],
+      {
+        timeout: 1000,
+      }
+    );
     expect(action.type).toBe('test.goodbye');
     if (action.type === 'test.goodbye') {
       expect(action.payload.message).toBe('Goodbye');
@@ -139,7 +218,11 @@ describe('EventSystem', () => {
   it('should validate payload with Zod', () => {
     expect(() => {
       // Testing invalid input - message should be string, not number
-      TestActions.hello.create({ message: 123 } as unknown as { message: string });
+      TestActions.hello.create({
+        message: 123,
+      } as unknown as {
+        message: string;
+      });
     }).toThrow();
   });
 
@@ -151,12 +234,20 @@ describe('EventSystem', () => {
       callCount++;
     });
 
-    await events.dispatch(TestActions.hello.create({ message: 'First' }));
+    await events.dispatch(
+      TestActions.hello.create({
+        message: 'First',
+      })
+    );
     expect(callCount).toBe(1);
 
     unsub();
 
-    await events.dispatch(TestActions.hello.create({ message: 'Second' }));
+    await events.dispatch(
+      TestActions.hello.create({
+        message: 'Second',
+      })
+    );
     expect(callCount).toBe(1); // Still 1, not called again
   });
 
@@ -174,7 +265,11 @@ describe('EventSystem', () => {
       handler2Count++;
     });
 
-    await events.dispatch(TestActions.hello.create({ message: 'Hello' }));
+    await events.dispatch(
+      TestActions.hello.create({
+        message: 'Hello',
+      })
+    );
 
     expect(handler1Count).toBe(1);
     expect(handler2Count).toBe(1);
@@ -189,13 +284,22 @@ describe('EventSystem', () => {
       resolved = true;
     });
 
-    await events.dispatch(TestActions.hello.create({ message: 'Hello' }));
+    await events.dispatch(
+      TestActions.hello.create({
+        message: 'Hello',
+      })
+    );
 
     expect(resolved).toBe(true);
   });
 
   it('should include source in action', () => {
-    const action = TestActions.hello.create({ message: 'Hello' }, 'test-source');
+    const action = TestActions.hello.create(
+      {
+        message: 'Hello',
+      },
+      'test-source'
+    );
     expect(action.source).toBe('test-source');
     expect(action.id).toBeDefined();
     expect(action.timestamp).toBeGreaterThan(0);
@@ -203,7 +307,9 @@ describe('EventSystem', () => {
 
   it('should return Promise from dispatch', async () => {
     const events = new EventSystem();
-    const action = TestActions.hello.create({ message: 'Hello' });
+    const action = TestActions.hello.create({
+      message: 'Hello',
+    });
 
     const result = events.dispatch(action);
 
@@ -226,7 +332,11 @@ describe('EventSystem', () => {
     });
 
     // Dispatch and wait for all handlers
-    await events.dispatch(TestActions.hello.create({ message: 'Hello' }));
+    await events.dispatch(
+      TestActions.hello.create({
+        message: 'Hello',
+      })
+    );
 
     // Handler should have completed
     expect(handlerCompleted).toBe(true);
@@ -251,7 +361,11 @@ describe('EventSystem', () => {
       order.push(3);
     });
 
-    await events.dispatch(TestActions.hello.create({ message: 'Hello' }));
+    await events.dispatch(
+      TestActions.hello.create({
+        message: 'Hello',
+      })
+    );
 
     // All handlers should have completed (order may vary due to timing)
     expect(order.length).toBe(3);
@@ -266,7 +380,9 @@ describe('EventSystem', () => {
     expect(
       events.waitFor(
         withPredicate(TestActions.hello, () => true),
-        { timeout: 100 }
+        {
+          timeout: 100,
+        }
       )
     ).rejects.toThrow('Timeout');
   });
@@ -274,9 +390,17 @@ describe('EventSystem', () => {
   it('should handle race timeout', () => {
     const events = new EventSystem();
 
-    expect(events.race([TestActions.hello, TestActions.goodbye], { timeout: 100 })).rejects.toThrow(
-      'Timeout'
-    );
+    expect(
+      events.race(
+        [
+          TestActions.hello,
+          TestActions.goodbye,
+        ],
+        {
+          timeout: 100,
+        }
+      )
+    ).rejects.toThrow('Timeout');
   });
 
   it('should clear all subscriptions', async () => {
@@ -289,7 +413,11 @@ describe('EventSystem', () => {
 
     events.clear();
 
-    await events.dispatch(TestActions.hello.create({ message: 'Hello' }));
+    await events.dispatch(
+      TestActions.hello.create({
+        message: 'Hello',
+      })
+    );
 
     expect(callCount).toBe(0); // Handler not called after clear
   });
@@ -297,11 +425,17 @@ describe('EventSystem', () => {
   it('should clear pending promises on clear', async () => {
     const events = new EventSystem();
 
-    void events.once(TestActions.hello, { timeout: 5000 });
+    void events.once(TestActions.hello, {
+      timeout: 5000,
+    });
 
     events.clear();
 
-    await events.dispatch(TestActions.hello.create({ message: 'Hello' }));
+    await events.dispatch(
+      TestActions.hello.create({
+        message: 'Hello',
+      })
+    );
 
     const events2 = new EventSystem();
     let received = false;
@@ -309,7 +443,11 @@ describe('EventSystem', () => {
       received = true;
     });
     events2.clear();
-    await events2.dispatch(TestActions.hello.create({ message: 'Hello' }));
+    await events2.dispatch(
+      TestActions.hello.create({
+        message: 'Hello',
+      })
+    );
     expect(received).toBe(false);
   });
 
@@ -317,14 +455,28 @@ describe('EventSystem', () => {
     const events = new EventSystem();
 
     setTimeout(() => {
-      events.dispatch(TestActions.count.create({ value: 10 }));
-      events.dispatch(TestActions.count.create({ value: 20 }));
-      events.dispatch(TestActions.count.create({ value: 30 }));
+      events.dispatch(
+        TestActions.count.create({
+          value: 10,
+        })
+      );
+      events.dispatch(
+        TestActions.count.create({
+          value: 20,
+        })
+      );
+      events.dispatch(
+        TestActions.count.create({
+          value: 30,
+        })
+      );
     }, 50);
 
     const action = await events.waitFor(
       withPredicate(TestActions.count, (a) => a.payload.value === 20),
-      { timeout: 1000 }
+      {
+        timeout: 1000,
+      }
     );
 
     expect(action.type).toBe('test.count');
@@ -335,12 +487,23 @@ describe('EventSystem', () => {
     const events = new EventSystem();
 
     setTimeout(() => {
-      events.dispatch(TestActions.goodbye.create({ message: 'Goodbye' }));
+      events.dispatch(
+        TestActions.goodbye.create({
+          message: 'Goodbye',
+        })
+      );
     }, 50);
 
-    const action = await events.race([TestActions.hello, TestActions.goodbye, TestActions.count], {
-      timeout: 1000,
-    });
+    const action = await events.race(
+      [
+        TestActions.hello,
+        TestActions.goodbye,
+        TestActions.count,
+      ],
+      {
+        timeout: 1000,
+      }
+    );
 
     expect(action.type).toBe('test.goodbye');
     expect((action as ReturnType<typeof TestActions.goodbye.create>).payload.message).toBe(
@@ -354,7 +517,9 @@ describe('EventSystem', () => {
       number: z.number(),
       boolean: z.boolean(),
       array: z.array(z.string()),
-      object: z.object({ key: z.string() }),
+      object: z.object({
+        key: z.string(),
+      }),
     });
 
     const strAction = MixedActions.string.create('hello', 'source');
@@ -369,13 +534,29 @@ describe('EventSystem', () => {
     expect(boolAction.type).toBe('mixed.boolean');
     expect(boolAction.payload).toBe(true);
 
-    const arrAction = MixedActions.array.create(['a', 'b'], 'source');
+    const arrAction = MixedActions.array.create(
+      [
+        'a',
+        'b',
+      ],
+      'source'
+    );
     expect(arrAction.type).toBe('mixed.array');
-    expect(arrAction.payload).toEqual(['a', 'b']);
+    expect(arrAction.payload).toEqual([
+      'a',
+      'b',
+    ]);
 
-    const objAction = MixedActions.object.create({ key: 'value' }, 'source');
+    const objAction = MixedActions.object.create(
+      {
+        key: 'value',
+      },
+      'source'
+    );
     expect(objAction.type).toBe('mixed.object');
-    expect(objAction.payload).toEqual({ key: 'value' });
+    expect(objAction.payload).toEqual({
+      key: 'value',
+    });
   });
 
   it('should validate all schema types with Zod', () => {
@@ -402,13 +583,21 @@ describe('EventSystem', () => {
   });
 
   it('should infer correct types for ActionsUnion', () => {
-    const testAction: TestAction = TestActions.hello.create({ message: 'test' });
+    const testAction: TestAction = TestActions.hello.create({
+      message: 'test',
+    });
     expect(testAction.type).toBe('test.hello');
 
     const actions: TestAction[] = [
-      TestActions.hello.create({ message: 'hello' }),
-      TestActions.goodbye.create({ message: 'goodbye' }),
-      TestActions.count.create({ value: 42 }),
+      TestActions.hello.create({
+        message: 'hello',
+      }),
+      TestActions.goodbye.create({
+        message: 'goodbye',
+      }),
+      TestActions.count.create({
+        value: 42,
+      }),
     ];
     expect(actions.length).toBe(3);
   });
@@ -426,7 +615,11 @@ describe('EventSystem', () => {
     });
 
     // Should not throw
-    await events.dispatch(TestActions.hello.create({ message: 'test' }));
+    await events.dispatch(
+      TestActions.hello.create({
+        message: 'test',
+      })
+    );
 
     expect(secondHandlerCalled).toBe(true);
   });
@@ -440,9 +633,21 @@ describe('EventSystem', () => {
       received.push(action as TestAction);
     });
 
-    await events.dispatch(TestActions.hello.create({ message: 'Hello' }));
-    await events.dispatch(TestActions.goodbye.create({ message: 'Goodbye' }));
-    await events.dispatch(TestActions.count.create({ value: 42 }));
+    await events.dispatch(
+      TestActions.hello.create({
+        message: 'Hello',
+      })
+    );
+    await events.dispatch(
+      TestActions.goodbye.create({
+        message: 'Goodbye',
+      })
+    );
+    await events.dispatch(
+      TestActions.count.create({
+        value: 42,
+      })
+    );
 
     expect(received.length).toBe(3);
     expect(received[0]?.type).toBe('test.hello');
@@ -458,12 +663,20 @@ describe('EventSystem', () => {
       callCount++;
     });
 
-    await events.dispatch(TestActions.hello.create({ message: 'First' }));
+    await events.dispatch(
+      TestActions.hello.create({
+        message: 'First',
+      })
+    );
     expect(callCount).toBe(1);
 
     unsub();
 
-    await events.dispatch(TestActions.hello.create({ message: 'Second' }));
+    await events.dispatch(
+      TestActions.hello.create({
+        message: 'Second',
+      })
+    );
     expect(callCount).toBe(1); // Still 1, not called again
   });
 });
@@ -486,7 +699,10 @@ describe('defineAction (single action without namespace)', () => {
   );
 
   it('should create action with correct type', () => {
-    const action = UserLoggedIn.create({ userId: '123', email: 'test@example.com' });
+    const action = UserLoggedIn.create({
+      userId: '123',
+      email: 'test@example.com',
+    });
 
     expect(action.type).toBe('user.loggedIn');
     expect(action.payload.userId).toBe('123');
@@ -504,7 +720,10 @@ describe('defineAction (single action without namespace)', () => {
   it('should validate payload with Zod', () => {
     expect(() => {
       // Testing invalid input - userId should be string, not number
-      UserLoggedIn.create({ userId: 123, email: 'test@example.com' } as unknown as {
+      UserLoggedIn.create({
+        userId: 123,
+        email: 'test@example.com',
+      } as unknown as {
         userId: string;
         email: string;
       });
@@ -513,7 +732,10 @@ describe('defineAction (single action without namespace)', () => {
 
   it('should include source in action', () => {
     const action = UserLoggedIn.create(
-      { userId: '123', email: 'test@example.com' },
+      {
+        userId: '123',
+        email: 'test@example.com',
+      },
       'auth-service'
     );
     expect(action.source).toBe('auth-service');
@@ -521,28 +743,47 @@ describe('defineAction (single action without namespace)', () => {
 
   it('should subscribe with type inference', async () => {
     const events = new EventSystem();
-    let received: ReturnType<typeof UserLoggedIn.create> | null = null;
+    const box: {
+      value: ReturnType<typeof UserLoggedIn.create> | null;
+    } = {
+      value: null,
+    };
 
     events.subscribe(UserLoggedIn, (action) => {
-      received = action;
+      box.value = action;
       expect(action.payload.userId).toBe('user-1');
       expect(action.payload.email).toBe('user@example.com');
     });
 
-    await events.dispatch(UserLoggedIn.create({ userId: 'user-1', email: 'user@example.com' }));
+    await events.dispatch(
+      UserLoggedIn.create({
+        userId: 'user-1',
+        email: 'user@example.com',
+      })
+    );
 
-    expect(received).not.toBeNull();
-    expect(received!.type).toBe('user.loggedIn');
+    const received = box.value;
+    if (received === null) {
+      throw new Error('expected received');
+    }
+    expect(received.type).toBe('user.loggedIn');
   });
 
   it('should work with once()', async () => {
     const events = new EventSystem();
 
     setTimeout(() => {
-      events.dispatch(SystemStarted.create({ version: '1.0.0', timestamp: Date.now() }));
+      events.dispatch(
+        SystemStarted.create({
+          version: '1.0.0',
+          timestamp: Date.now(),
+        })
+      );
     }, 50);
 
-    const action = await events.once(SystemStarted, { timeout: 1000 });
+    const action = await events.once(SystemStarted, {
+      timeout: 1000,
+    });
 
     expect(action.type).toBe('system.started');
     expect(action.payload.version).toBe('1.0.0');
@@ -552,13 +793,25 @@ describe('defineAction (single action without namespace)', () => {
     const events = new EventSystem();
 
     setTimeout(() => {
-      events.dispatch(UserLoggedIn.create({ userId: 'other', email: 'other@example.com' }));
-      events.dispatch(UserLoggedIn.create({ userId: 'admin', email: 'admin@example.com' }));
+      events.dispatch(
+        UserLoggedIn.create({
+          userId: 'other',
+          email: 'other@example.com',
+        })
+      );
+      events.dispatch(
+        UserLoggedIn.create({
+          userId: 'admin',
+          email: 'admin@example.com',
+        })
+      );
     }, 50);
 
     const action = await events.waitFor(
       withPredicate(UserLoggedIn, (a) => a.payload.userId === 'admin'),
-      { timeout: 1000 }
+      {
+        timeout: 1000,
+      }
     );
 
     expect(action.payload.userId).toBe('admin');
@@ -569,10 +822,23 @@ describe('defineAction (single action without namespace)', () => {
     const events = new EventSystem();
 
     setTimeout(() => {
-      events.dispatch(SystemStarted.create({ version: '1.0.0', timestamp: Date.now() }));
+      events.dispatch(
+        SystemStarted.create({
+          version: '1.0.0',
+          timestamp: Date.now(),
+        })
+      );
     }, 50);
 
-    const action = await events.race([UserLoggedIn, SystemStarted], { timeout: 1000 });
+    const action = await events.race(
+      [
+        UserLoggedIn,
+        SystemStarted,
+      ],
+      {
+        timeout: 1000,
+      }
+    );
 
     expect(action.type).toBe('system.started');
   });
@@ -584,14 +850,26 @@ describe('withPredicate', () => {
 
     setTimeout(() => {
       // Dispatch with value 5 - should NOT match
-      events.dispatch(TestActions.count.create({ value: 5 }));
+      events.dispatch(
+        TestActions.count.create({
+          value: 5,
+        })
+      );
       // Dispatch with value 15 - should match (> 10)
-      events.dispatch(TestActions.count.create({ value: 15 }));
+      events.dispatch(
+        TestActions.count.create({
+          value: 15,
+        })
+      );
     }, 50);
 
     const action = await events.race(
-      [withPredicate(TestActions.count, (a) => a.payload.value > 10)],
-      { timeout: 1000 }
+      [
+        withPredicate(TestActions.count, (a) => a.payload.value > 10),
+      ],
+      {
+        timeout: 1000,
+      }
     );
 
     expect(action.type).toBe('test.count');
@@ -603,9 +881,17 @@ describe('withPredicate', () => {
 
     setTimeout(() => {
       // Dispatch hello with wrong message - should NOT match
-      events.dispatch(TestActions.hello.create({ message: 'wrong' }));
+      events.dispatch(
+        TestActions.hello.create({
+          message: 'wrong',
+        })
+      );
       // Dispatch goodbye with correct message - should match
-      events.dispatch(TestActions.goodbye.create({ message: 'correct' }));
+      events.dispatch(
+        TestActions.goodbye.create({
+          message: 'correct',
+        })
+      );
     }, 50);
 
     const action = await events.race(
@@ -613,7 +899,9 @@ describe('withPredicate', () => {
         withPredicate(TestActions.hello, (a) => a.payload.message === 'target'),
         withPredicate(TestActions.goodbye, (a) => a.payload.message === 'correct'),
       ],
-      { timeout: 1000 }
+      {
+        timeout: 1000,
+      }
     );
 
     expect(action.type).toBe('test.goodbye');
@@ -625,9 +913,17 @@ describe('withPredicate', () => {
 
     setTimeout(() => {
       // Dispatch count with low value - filtered out
-      events.dispatch(TestActions.count.create({ value: 5 }));
+      events.dispatch(
+        TestActions.count.create({
+          value: 5,
+        })
+      );
       // Dispatch goodbye - should match (no filter)
-      events.dispatch(TestActions.goodbye.create({ message: 'bye' }));
+      events.dispatch(
+        TestActions.goodbye.create({
+          message: 'bye',
+        })
+      );
     }, 50);
 
     const action = await events.race(
@@ -635,7 +931,9 @@ describe('withPredicate', () => {
         withPredicate(TestActions.count, (a) => a.payload.value > 10),
         TestActions.goodbye, // No filter
       ],
-      { timeout: 1000 }
+      {
+        timeout: 1000,
+      }
     );
 
     expect(action.type).toBe('test.goodbye');
@@ -643,8 +941,14 @@ describe('withPredicate', () => {
 
   it('should filter by uid in realistic plugin scenario', async () => {
     const PluginActions = defineActions('plugin', {
-      loaded: z.object({ uid: z.string(), name: z.string() }),
-      error: z.object({ uid: z.string(), message: z.string() }),
+      loaded: z.object({
+        uid: z.string(),
+        name: z.string(),
+      }),
+      error: z.object({
+        uid: z.string(),
+        message: z.string(),
+      }),
     });
 
     const events = new EventSystem();
@@ -652,9 +956,19 @@ describe('withPredicate', () => {
 
     setTimeout(() => {
       // Other plugin loads - should NOT match
-      events.dispatch(PluginActions.loaded.create({ uid: 'other-plugin', name: 'Other' }));
+      events.dispatch(
+        PluginActions.loaded.create({
+          uid: 'other-plugin',
+          name: 'Other',
+        })
+      );
       // Target plugin loads - should match
-      events.dispatch(PluginActions.loaded.create({ uid: targetUid, name: 'Target' }));
+      events.dispatch(
+        PluginActions.loaded.create({
+          uid: targetUid,
+          name: 'Target',
+        })
+      );
     }, 50);
 
     const action = await events.race(
@@ -662,7 +976,9 @@ describe('withPredicate', () => {
         withPredicate(PluginActions.loaded, (a) => a.payload.uid === targetUid),
         withPredicate(PluginActions.error, (a) => a.payload.uid === targetUid),
       ],
-      { timeout: 1000 }
+      {
+        timeout: 1000,
+      }
     );
 
     expect(action.type).toBe('plugin.loaded');
@@ -676,13 +992,22 @@ describe('withPredicate', () => {
     const events = new EventSystem();
 
     setTimeout(() => {
-      events.dispatch(TestActions.count.create({ value: 5 }));
+      events.dispatch(
+        TestActions.count.create({
+          value: 5,
+        })
+      );
     }, 50);
 
     expect(
-      events.race([withPredicate(TestActions.count, (a) => a.payload.value > 100)], {
-        timeout: 200,
-      })
+      events.race(
+        [
+          withPredicate(TestActions.count, (a) => a.payload.value > 100),
+        ],
+        {
+          timeout: 200,
+        }
+      )
     ).rejects.toThrow('Timeout');
   });
 });
@@ -696,9 +1021,21 @@ describe('subscribeGlob', () => {
       received.push(action.type);
     });
 
-    await events.dispatch(TestActions.hello.create({ message: 'Hello' }));
-    await events.dispatch(TestActions.goodbye.create({ message: 'Goodbye' }));
-    await events.dispatch(TestActions.count.create({ value: 42 }));
+    await events.dispatch(
+      TestActions.hello.create({
+        message: 'Hello',
+      })
+    );
+    await events.dispatch(
+      TestActions.goodbye.create({
+        message: 'Goodbye',
+      })
+    );
+    await events.dispatch(
+      TestActions.count.create({
+        value: 42,
+      })
+    );
 
     expect(received).toHaveLength(3);
     expect(received).toContain('test.hello');
@@ -714,8 +1051,16 @@ describe('subscribeGlob', () => {
       received.push(action.type);
     });
 
-    await events.dispatch(TestActions.hello.create({ message: 'Hello' }));
-    await events.dispatch(TestActions.goodbye.create({ message: 'Goodbye' }));
+    await events.dispatch(
+      TestActions.hello.create({
+        message: 'Hello',
+      })
+    );
+    await events.dispatch(
+      TestActions.goodbye.create({
+        message: 'Goodbye',
+      })
+    );
 
     expect(received).toHaveLength(1);
     expect(received[0]).toBe('test.hello');
@@ -725,13 +1070,31 @@ describe('subscribeGlob', () => {
     const events = new EventSystem();
     const received: string[] = [];
 
-    events.subscribeGlob(['test.hello', 'test.count'], (action) => {
-      received.push(action.type);
-    });
+    events.subscribeGlob(
+      [
+        'test.hello',
+        'test.count',
+      ],
+      (action) => {
+        received.push(action.type);
+      }
+    );
 
-    await events.dispatch(TestActions.hello.create({ message: 'Hello' }));
-    await events.dispatch(TestActions.goodbye.create({ message: 'Goodbye' }));
-    await events.dispatch(TestActions.count.create({ value: 42 }));
+    await events.dispatch(
+      TestActions.hello.create({
+        message: 'Hello',
+      })
+    );
+    await events.dispatch(
+      TestActions.goodbye.create({
+        message: 'Goodbye',
+      })
+    );
+    await events.dispatch(
+      TestActions.count.create({
+        value: 42,
+      })
+    );
 
     expect(received).toHaveLength(2);
     expect(received).toContain('test.hello');
@@ -746,12 +1109,20 @@ describe('subscribeGlob', () => {
       callCount++;
     });
 
-    await events.dispatch(TestActions.hello.create({ message: 'Hello' }));
+    await events.dispatch(
+      TestActions.hello.create({
+        message: 'Hello',
+      })
+    );
     expect(callCount).toBe(1);
 
     unsub();
 
-    await events.dispatch(TestActions.hello.create({ message: 'Hello again' }));
+    await events.dispatch(
+      TestActions.hello.create({
+        message: 'Hello again',
+      })
+    );
     expect(callCount).toBe(1);
   });
 
@@ -763,7 +1134,11 @@ describe('subscribeGlob', () => {
       received.push(action.type);
     });
 
-    await events.dispatch(TestActions.hello.create({ message: 'Hello' }));
+    await events.dispatch(
+      TestActions.hello.create({
+        message: 'Hello',
+      })
+    );
 
     expect(received).toHaveLength(0);
   });
@@ -777,7 +1152,11 @@ describe('subscribeGlob', () => {
       resolved = true;
     });
 
-    await events.dispatch(TestActions.hello.create({ message: 'Hello' }));
+    await events.dispatch(
+      TestActions.hello.create({
+        message: 'Hello',
+      })
+    );
 
     expect(resolved).toBe(true);
   });

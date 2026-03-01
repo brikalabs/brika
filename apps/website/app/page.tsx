@@ -1,5 +1,5 @@
-import { Suspense } from 'react';
 import { headers } from 'next/headers';
+import { Suspense } from 'react';
 import { Bricks } from '@/components/bricks';
 import { Features } from '@/components/features';
 import { Footer } from '@/components/footer';
@@ -26,14 +26,22 @@ function PluginsSkeleton() {
         </div>
       </div>
       <div className="marquee-container space-y-5">
-        {[0, 1].map((row) => (
+        {[
+          0,
+          1,
+        ].map((row) => (
           <div key={row} className="flex gap-5 overflow-hidden">
-            {Array.from({ length: 8 }, (_, i) => (
-              <div
-                key={i}
-                className="h-44 w-64 shrink-0 animate-pulse rounded-2xl corner-squircle border border-border bg-surface"
-              />
-            ))}
+            {Array.from(
+              {
+                length: 8,
+              },
+              (_, i) => (
+                <div
+                  key={i}
+                  className="h-44 w-64 shrink-0 animate-pulse rounded-2xl corner-squircle border border-border bg-surface"
+                />
+              )
+            )}
           </div>
         ))}
       </div>
@@ -51,7 +59,10 @@ function Divider() {
 }
 
 export default async function Home() {
-  const [release, h] = await Promise.all([fetchLatestRelease(), headers()]);
+  const [release, h] = await Promise.all([
+    fetchLatestRelease(),
+    headers(),
+  ]);
 
   const lat = h.get('x-vercel-ip-latitude');
   const lon = h.get('x-vercel-ip-longitude');

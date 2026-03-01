@@ -14,7 +14,13 @@ describe('combine', () => {
   test('emits tuple when any flow emits', () => {
     const { flow: a } = createTestFlow<number>();
     const { flow: b } = createTestFlow<string>();
-    const { values, subscriber } = createValueCollector<[number, string]>();
+    const { values, subscriber } =
+      createValueCollector<
+        [
+          number,
+          string,
+        ]
+      >();
 
     const combined = combine(a, b);
     combined.on(subscriber);
@@ -24,15 +30,27 @@ describe('combine', () => {
     a.push(2);
 
     expect(values).toEqual([
-      [1, 'x'],
-      [2, 'x'],
+      [
+        1,
+        'x',
+      ],
+      [
+        2,
+        'x',
+      ],
     ]);
   });
 
   test('uses latest value from each flow', () => {
     const { flow: a } = createTestFlow<number>();
     const { flow: b } = createTestFlow<number>();
-    const { values, subscriber } = createValueCollector<[number, number]>();
+    const { values, subscriber } =
+      createValueCollector<
+        [
+          number,
+          number,
+        ]
+      >();
 
     const combined = combine(a, b);
     combined.on(subscriber);
@@ -42,13 +60,24 @@ describe('combine', () => {
     a.push(3);
     b.push(10);
 
-    expect(values).toEqual([[3, 10]]);
+    expect(values).toEqual([
+      [
+        3,
+        10,
+      ],
+    ]);
   });
 
   test('waits for all flows to have value before first emit', () => {
     const { flow: a } = createTestFlow<number>();
     const { flow: b } = createTestFlow<string>();
-    const { values, subscriber } = createValueCollector<[number, string]>();
+    const { values, subscriber } =
+      createValueCollector<
+        [
+          number,
+          string,
+        ]
+      >();
 
     const combined = combine(a, b);
     combined.on(subscriber);
@@ -63,7 +92,13 @@ describe('combine', () => {
   test('handles 2 flows', () => {
     const { flow: a } = createTestFlow<number>();
     const { flow: b } = createTestFlow<string>();
-    const { values, subscriber } = createValueCollector<[number, string]>();
+    const { values, subscriber } =
+      createValueCollector<
+        [
+          number,
+          string,
+        ]
+      >();
 
     const combined = combine(a, b);
     combined.on(subscriber);
@@ -71,14 +106,26 @@ describe('combine', () => {
     a.push(1);
     b.push('a');
 
-    expect(values).toEqual([[1, 'a']]);
+    expect(values).toEqual([
+      [
+        1,
+        'a',
+      ],
+    ]);
   });
 
   test('handles 3 flows', () => {
     const { flow: a } = createTestFlow<number>();
     const { flow: b } = createTestFlow<string>();
     const { flow: c } = createTestFlow<boolean>();
-    const { values, subscriber } = createValueCollector<[number, string, boolean]>();
+    const { values, subscriber } =
+      createValueCollector<
+        [
+          number,
+          string,
+          boolean,
+        ]
+      >();
 
     const combined = combine(a, b, c);
     combined.on(subscriber);
@@ -87,7 +134,13 @@ describe('combine', () => {
     b.push('a');
     c.push(true);
 
-    expect(values).toEqual([[1, 'a', true]]);
+    expect(values).toEqual([
+      [
+        1,
+        'a',
+        true,
+      ],
+    ]);
   });
 
   test('handles 4 flows', () => {
@@ -95,7 +148,15 @@ describe('combine', () => {
     const { flow: b } = createTestFlow<string>();
     const { flow: c } = createTestFlow<boolean>();
     const { flow: d } = createTestFlow<null>();
-    const { values, subscriber } = createValueCollector<[number, string, boolean, null]>();
+    const { values, subscriber } =
+      createValueCollector<
+        [
+          number,
+          string,
+          boolean,
+          null,
+        ]
+      >();
 
     const combined = combine(a, b, c, d);
     combined.on(subscriber);
@@ -105,13 +166,26 @@ describe('combine', () => {
     c.push(true);
     d.push(null);
 
-    expect(values).toEqual([[1, 'a', true, null]]);
+    expect(values).toEqual([
+      [
+        1,
+        'a',
+        true,
+        null,
+      ],
+    ]);
   });
 
   test('emits new tuple on each subsequent emission', () => {
     const { flow: a } = createTestFlow<number>();
     const { flow: b } = createTestFlow<number>();
-    const { values, subscriber } = createValueCollector<[number, number]>();
+    const { values, subscriber } =
+      createValueCollector<
+        [
+          number,
+          number,
+        ]
+      >();
 
     const combined = combine(a, b);
     combined.on(subscriber);
@@ -123,10 +197,22 @@ describe('combine', () => {
     a.push(3);
 
     expect(values).toEqual([
-      [1, 10],
-      [2, 10],
-      [2, 20],
-      [3, 20],
+      [
+        1,
+        10,
+      ],
+      [
+        2,
+        10,
+      ],
+      [
+        2,
+        20,
+      ],
+      [
+        3,
+        20,
+      ],
     ]);
   });
 });
@@ -139,7 +225,13 @@ describe('zip', () => {
   test('waits for all flows to emit before emitting tuple', () => {
     const { flow: a } = createTestFlow<number>();
     const { flow: b } = createTestFlow<string>();
-    const { values, subscriber } = createValueCollector<[number, string]>();
+    const { values, subscriber } =
+      createValueCollector<
+        [
+          number,
+          string,
+        ]
+      >();
 
     const zipped = zip(a, b);
     zipped.on(subscriber);
@@ -148,13 +240,24 @@ describe('zip', () => {
     expect(values).toHaveLength(0);
 
     b.push('x');
-    expect(values).toEqual([[1, 'x']]);
+    expect(values).toEqual([
+      [
+        1,
+        'x',
+      ],
+    ]);
   });
 
   test('pairs values in order', () => {
     const { flow: a } = createTestFlow<number>();
     const { flow: b } = createTestFlow<string>();
-    const { values, subscriber } = createValueCollector<[number, string]>();
+    const { values, subscriber } =
+      createValueCollector<
+        [
+          number,
+          string,
+        ]
+      >();
 
     const zipped = zip(a, b);
     zipped.on(subscriber);
@@ -165,15 +268,27 @@ describe('zip', () => {
     b.push('y');
 
     expect(values).toEqual([
-      [1, 'x'],
-      [2, 'y'],
+      [
+        1,
+        'x',
+      ],
+      [
+        2,
+        'y',
+      ],
     ]);
   });
 
   test('buffers values until all flows have emitted', () => {
     const { flow: a } = createTestFlow<number>();
     const { flow: b } = createTestFlow<string>();
-    const { values, subscriber } = createValueCollector<[number, string]>();
+    const { values, subscriber } =
+      createValueCollector<
+        [
+          number,
+          string,
+        ]
+      >();
 
     const zipped = zip(a, b);
     zipped.on(subscriber);
@@ -184,19 +299,36 @@ describe('zip', () => {
     expect(values).toHaveLength(0);
 
     b.push('x');
-    expect(values).toEqual([[1, 'x']]);
+    expect(values).toEqual([
+      [
+        1,
+        'x',
+      ],
+    ]);
 
     b.push('y');
     expect(values).toEqual([
-      [1, 'x'],
-      [2, 'y'],
+      [
+        1,
+        'x',
+      ],
+      [
+        2,
+        'y',
+      ],
     ]);
   });
 
   test('handles uneven emission rates', () => {
     const { flow: a } = createTestFlow<number>();
     const { flow: b } = createTestFlow<string>();
-    const { values, subscriber } = createValueCollector<[number, string]>();
+    const { values, subscriber } =
+      createValueCollector<
+        [
+          number,
+          string,
+        ]
+      >();
 
     const zipped = zip(a, b);
     zipped.on(subscriber);
@@ -210,8 +342,14 @@ describe('zip', () => {
     b.push('b');
 
     expect(values).toEqual([
-      [1, 'a'],
-      [2, 'b'],
+      [
+        1,
+        'a',
+      ],
+      [
+        2,
+        'b',
+      ],
     ]);
   });
 
@@ -219,7 +357,14 @@ describe('zip', () => {
     const { flow: a } = createTestFlow<number>();
     const { flow: b } = createTestFlow<string>();
     const { flow: c } = createTestFlow<boolean>();
-    const { values, subscriber } = createValueCollector<[number, string, boolean]>();
+    const { values, subscriber } =
+      createValueCollector<
+        [
+          number,
+          string,
+          boolean,
+        ]
+      >();
 
     const zipped = zip(a, b, c);
     zipped.on(subscriber);
@@ -232,15 +377,29 @@ describe('zip', () => {
     c.push(false);
 
     expect(values).toEqual([
-      [1, 'x', true],
-      [2, 'y', false],
+      [
+        1,
+        'x',
+        true,
+      ],
+      [
+        2,
+        'y',
+        false,
+      ],
     ]);
   });
 
   test('consumes buffered values in FIFO order', () => {
     const { flow: a } = createTestFlow<number>();
     const { flow: b } = createTestFlow<string>();
-    const { values, subscriber } = createValueCollector<[number, string]>();
+    const { values, subscriber } =
+      createValueCollector<
+        [
+          number,
+          string,
+        ]
+      >();
 
     const zipped = zip(a, b);
     zipped.on(subscriber);
@@ -253,8 +412,14 @@ describe('zip', () => {
     a.push(2);
 
     expect(values).toEqual([
-      [1, 'first'],
-      [2, 'second'],
+      [
+        1,
+        'first',
+      ],
+      [
+        2,
+        'second',
+      ],
     ]);
   });
 });
@@ -276,7 +441,11 @@ describe('merge', () => {
     b.push(2);
     a.push(3);
 
-    expect(values).toEqual([1, 2, 3]);
+    expect(values).toEqual([
+      1,
+      2,
+      3,
+    ]);
   });
 
   test('emits values from any source', () => {
@@ -311,7 +480,13 @@ describe('merge', () => {
     a.push(3);
     b.push(20);
 
-    expect(values).toEqual([1, 2, 10, 3, 20]);
+    expect(values).toEqual([
+      1,
+      2,
+      10,
+      3,
+      20,
+    ]);
   });
 
   test('handles single flow', () => {
@@ -324,11 +499,19 @@ describe('merge', () => {
     a.push(1);
     a.push(2);
 
-    expect(values).toEqual([1, 2]);
+    expect(values).toEqual([
+      1,
+      2,
+    ]);
   });
 
   test('handles many flows', () => {
-    const flows = Array.from({ length: 5 }, () => createTestFlow<number>());
+    const flows = Array.from(
+      {
+        length: 5,
+      },
+      () => createTestFlow<number>()
+    );
     const { values, subscriber } = createValueCollector<number>();
 
     const merged = merge(...flows.map((f) => f.flow));
@@ -336,7 +519,13 @@ describe('merge', () => {
 
     flows.forEach((f, i) => f.flow.push(i));
 
-    expect(values).toEqual([0, 1, 2, 3, 4]);
+    expect(values).toEqual([
+      0,
+      1,
+      2,
+      3,
+      4,
+    ]);
   });
 
   test('does not emit before any flow emits', () => {
@@ -366,7 +555,9 @@ describe('race', () => {
 
     b.push('winner');
 
-    expect(values).toEqual(['winner']);
+    expect(values).toEqual([
+      'winner',
+    ]);
   });
 
   test('ignores subsequent emissions from all flows', () => {
@@ -381,7 +572,9 @@ describe('race', () => {
     a.push('second');
     b.push('from-b');
 
-    expect(values).toEqual(['first']);
+    expect(values).toEqual([
+      'first',
+    ]);
   });
 
   test('only emits once', () => {
@@ -412,7 +605,9 @@ describe('race', () => {
     a.push(42);
     a.push(43);
 
-    expect(values).toEqual([42]);
+    expect(values).toEqual([
+      42,
+    ]);
   });
 
   test('first emit from any flow wins', () => {
@@ -426,7 +621,9 @@ describe('race', () => {
 
     c.push('c-wins');
 
-    expect(values).toEqual(['c-wins']);
+    expect(values).toEqual([
+      'c-wins',
+    ]);
   });
 });
 
@@ -438,7 +635,13 @@ describe('all', () => {
   test('waits for all flows to emit at least once', () => {
     const { flow: a } = createTestFlow<number>();
     const { flow: b } = createTestFlow<string>();
-    const { values, subscriber } = createValueCollector<[number, string]>();
+    const { values, subscriber } =
+      createValueCollector<
+        [
+          number,
+          string,
+        ]
+      >();
 
     const alled = all(a, b);
     alled.on(subscriber);
@@ -447,14 +650,26 @@ describe('all', () => {
     expect(values).toHaveLength(0);
 
     b.push('x');
-    expect(values).toEqual([[1, 'x']]);
+    expect(values).toEqual([
+      [
+        1,
+        'x',
+      ],
+    ]);
   });
 
   test('emits tuple of all values', () => {
     const { flow: a } = createTestFlow<number>();
     const { flow: b } = createTestFlow<string>();
     const { flow: c } = createTestFlow<boolean>();
-    const { values, subscriber } = createValueCollector<[number, string, boolean]>();
+    const { values, subscriber } =
+      createValueCollector<
+        [
+          number,
+          string,
+          boolean,
+        ]
+      >();
 
     const alled = all(a, b, c);
     alled.on(subscriber);
@@ -463,13 +678,25 @@ describe('all', () => {
     b.push('hello');
     c.push(true);
 
-    expect(values).toEqual([[42, 'hello', true]]);
+    expect(values).toEqual([
+      [
+        42,
+        'hello',
+        true,
+      ],
+    ]);
   });
 
   test('only emits once', () => {
     const { flow: a } = createTestFlow<number>();
     const { flow: b } = createTestFlow<number>();
-    const { values, subscriber } = createValueCollector<[number, number]>();
+    const { values, subscriber } =
+      createValueCollector<
+        [
+          number,
+          number,
+        ]
+      >();
 
     const alled = all(a, b);
     alled.on(subscriber);
@@ -481,13 +708,22 @@ describe('all', () => {
     a.push(5);
 
     expect(values).toHaveLength(1);
-    expect(values[0]).toEqual([1, 2]);
+    expect(values[0]).toEqual([
+      1,
+      2,
+    ]);
   });
 
   test('uses latest values at time of completion', () => {
     const { flow: a } = createTestFlow<number>();
     const { flow: b } = createTestFlow<string>();
-    const { values, subscriber } = createValueCollector<[number, string]>();
+    const { values, subscriber } =
+      createValueCollector<
+        [
+          number,
+          string,
+        ]
+      >();
 
     const alled = all(a, b);
     alled.on(subscriber);
@@ -497,13 +733,24 @@ describe('all', () => {
     a.push(3);
     b.push('final');
 
-    expect(values).toEqual([[3, 'final']]);
+    expect(values).toEqual([
+      [
+        3,
+        'final',
+      ],
+    ]);
   });
 
   test('handles 2 flows', () => {
     const { flow: a } = createTestFlow<number>();
     const { flow: b } = createTestFlow<number>();
-    const { values, subscriber } = createValueCollector<[number, number]>();
+    const { values, subscriber } =
+      createValueCollector<
+        [
+          number,
+          number,
+        ]
+      >();
 
     const alled = all(a, b);
     alled.on(subscriber);
@@ -511,14 +758,26 @@ describe('all', () => {
     a.push(1);
     b.push(2);
 
-    expect(values).toEqual([[1, 2]]);
+    expect(values).toEqual([
+      [
+        1,
+        2,
+      ],
+    ]);
   });
 
   test('handles 3 flows', () => {
     const { flow: a } = createTestFlow<number>();
     const { flow: b } = createTestFlow<number>();
     const { flow: c } = createTestFlow<number>();
-    const { values, subscriber } = createValueCollector<[number, number, number]>();
+    const { values, subscriber } =
+      createValueCollector<
+        [
+          number,
+          number,
+          number,
+        ]
+      >();
 
     const alled = all(a, b, c);
     alled.on(subscriber);
@@ -527,14 +786,27 @@ describe('all', () => {
     a.push(1);
     b.push(2);
 
-    expect(values).toEqual([[1, 2, 3]]);
+    expect(values).toEqual([
+      [
+        1,
+        2,
+        3,
+      ],
+    ]);
   });
 
   test('order of emissions does not matter', () => {
     const { flow: a } = createTestFlow<string>();
     const { flow: b } = createTestFlow<string>();
     const { flow: c } = createTestFlow<string>();
-    const { values, subscriber } = createValueCollector<[string, string, string]>();
+    const { values, subscriber } =
+      createValueCollector<
+        [
+          string,
+          string,
+          string,
+        ]
+      >();
 
     const alled = all(a, b, c);
     alled.on(subscriber);
@@ -543,6 +815,12 @@ describe('all', () => {
     b.push('b');
     a.push('a');
 
-    expect(values).toEqual([['a', 'b', 'c']]);
+    expect(values).toEqual([
+      [
+        'a',
+        'b',
+        'c',
+      ],
+    ]);
   });
 });

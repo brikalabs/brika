@@ -31,7 +31,9 @@ function resolveDataDir(): string {
 function ensureDataDir(): string {
   const dataDir = resolveDataDir();
   if (!existsSync(dataDir)) {
-    mkdirSync(dataDir, { recursive: true });
+    mkdirSync(dataDir, {
+      recursive: true,
+    });
   }
   return dataDir;
 }
@@ -71,7 +73,9 @@ export function getDataDir(): string {
 export async function readJSON<T = unknown>(key: string): Promise<T | null> {
   const path = resolveJsonPath(key);
   const file = Bun.file(path);
-  if (!(await file.exists())) return null;
+  if (!(await file.exists())) {
+    return null;
+  }
   try {
     return (await file.json()) as T;
   } catch {
@@ -90,7 +94,9 @@ export async function writeJSON(key: string, value: unknown): Promise<void> {
   const path = resolveJsonPath(key);
   const parentDir = path.substring(0, path.lastIndexOf('/'));
   if (!existsSync(parentDir)) {
-    mkdirSync(parentDir, { recursive: true });
+    mkdirSync(parentDir, {
+      recursive: true,
+    });
   }
   await Bun.write(path, JSON.stringify(value, null, 2));
 }
@@ -145,7 +151,10 @@ export async function updateJSON<T>(
 export function clearAllData(): void {
   const dataDir = resolveDataDir();
   if (existsSync(dataDir)) {
-    rmSync(dataDir, { recursive: true, force: true });
+    rmSync(dataDir, {
+      recursive: true,
+      force: true,
+    });
   }
 }
 

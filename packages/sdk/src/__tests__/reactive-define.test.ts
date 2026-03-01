@@ -6,7 +6,9 @@ import { beforeEach, describe, expect, mock, test } from 'bun:test';
 import { z } from 'zod';
 
 // Mock the context module before importing defineReactiveBlock
-const mockRegisterBlock = mock(() => ({ id: 'test' }));
+const mockRegisterBlock = mock(() => ({
+  id: 'test',
+}));
 const mockLog = {
   error: mock(),
   warn: mock(),
@@ -40,8 +42,15 @@ describe('isCompiledReactiveBlock', () => {
       id: 'test-block',
       inputs: [],
       outputs: [],
-      schema: { type: 'object', properties: {}, required: [] },
-      start: () => ({ pushInput: () => undefined, stop: () => undefined }),
+      schema: {
+        type: 'object',
+        properties: {},
+        required: [],
+      },
+      start: () => ({
+        pushInput: () => undefined,
+        stop: () => undefined,
+      }),
     };
     expect(isCompiledReactiveBlock(block)).toBe(true);
   });
@@ -49,10 +58,31 @@ describe('isCompiledReactiveBlock', () => {
   test('returns true for block with inputs and outputs', () => {
     const block = {
       id: 'sensor-block',
-      inputs: [{ id: 'in', name: 'Input', direction: 'input', typeName: 'number' }],
-      outputs: [{ id: 'out', name: 'Output', direction: 'output', typeName: 'string' }],
-      schema: { type: 'object', properties: {}, required: [] },
-      start: () => ({ pushInput: () => undefined, stop: () => undefined }),
+      inputs: [
+        {
+          id: 'in',
+          name: 'Input',
+          direction: 'input',
+          typeName: 'number',
+        },
+      ],
+      outputs: [
+        {
+          id: 'out',
+          name: 'Output',
+          direction: 'output',
+          typeName: 'string',
+        },
+      ],
+      schema: {
+        type: 'object',
+        properties: {},
+        required: [],
+      },
+      start: () => ({
+        pushInput: () => undefined,
+        stop: () => undefined,
+      }),
     };
     expect(isCompiledReactiveBlock(block)).toBe(true);
   });
@@ -76,43 +106,80 @@ describe('isCompiledReactiveBlock', () => {
   });
 
   test('returns false for object missing id', () => {
-    const block = { inputs: [], outputs: [], start: () => undefined };
+    const block = {
+      inputs: [],
+      outputs: [],
+      start: () => undefined,
+    };
     expect(isCompiledReactiveBlock(block)).toBe(false);
   });
 
   test('returns false for object missing start function', () => {
-    const block = { id: 'test-block', inputs: [], outputs: [] };
+    const block = {
+      id: 'test-block',
+      inputs: [],
+      outputs: [],
+    };
     expect(isCompiledReactiveBlock(block)).toBe(false);
   });
 
   test('returns false for object with non-function start', () => {
-    const block = { id: 'test-block', inputs: [], outputs: [], start: 'not a function' };
+    const block = {
+      id: 'test-block',
+      inputs: [],
+      outputs: [],
+      start: 'not a function',
+    };
     expect(isCompiledReactiveBlock(block)).toBe(false);
   });
 
   test('returns false for object missing inputs', () => {
-    const block = { id: 'test-block', outputs: [], start: () => undefined };
+    const block = {
+      id: 'test-block',
+      outputs: [],
+      start: () => undefined,
+    };
     expect(isCompiledReactiveBlock(block)).toBe(false);
   });
 
   test('returns false for object missing outputs', () => {
-    const block = { id: 'test-block', inputs: [], start: () => undefined };
+    const block = {
+      id: 'test-block',
+      inputs: [],
+      start: () => undefined,
+    };
     expect(isCompiledReactiveBlock(block)).toBe(false);
   });
 
   test('returns false for object with non-array inputs', () => {
-    const block = { id: 'test-block', inputs: 'not an array', outputs: [], start: () => undefined };
+    const block = {
+      id: 'test-block',
+      inputs: 'not an array',
+      outputs: [],
+      start: () => undefined,
+    };
     expect(isCompiledReactiveBlock(block)).toBe(false);
   });
 
   test('returns false for object with non-array outputs', () => {
-    const block = { id: 'test-block', inputs: [], outputs: 'not an array', start: () => undefined };
+    const block = {
+      id: 'test-block',
+      inputs: [],
+      outputs: 'not an array',
+      start: () => undefined,
+    };
     expect(isCompiledReactiveBlock(block)).toBe(false);
   });
 
   test('returns false for arrays', () => {
     expect(isCompiledReactiveBlock([])).toBe(false);
-    expect(isCompiledReactiveBlock([1, 2, 3])).toBe(false);
+    expect(
+      isCompiledReactiveBlock([
+        1,
+        2,
+        3,
+      ])
+    ).toBe(false);
   });
 });
 
@@ -147,8 +214,12 @@ describe('defineReactiveBlock', () => {
       {
         id: 'input-block',
         inputs: {
-          temperature: input(z.number(), { name: 'Temperature' }),
-          humidity: input(z.number(), { name: 'Humidity' }),
+          temperature: input(z.number(), {
+            name: 'Temperature',
+          }),
+          humidity: input(z.number(), {
+            name: 'Humidity',
+          }),
         },
         outputs: {},
         config: z.object({}),
@@ -168,8 +239,12 @@ describe('defineReactiveBlock', () => {
         id: 'output-block',
         inputs: {},
         outputs: {
-          result: output(z.string(), { name: 'Result' }),
-          status: output(z.boolean(), { name: 'Status' }),
+          result: output(z.string(), {
+            name: 'Result',
+          }),
+          status: output(z.boolean(), {
+            name: 'Status',
+          }),
         },
         config: z.object({}),
       },
@@ -187,7 +262,9 @@ describe('defineReactiveBlock', () => {
       {
         id: 'generic-block',
         inputs: {
-          data: input(generic('T'), { name: 'Data' }),
+          data: input(generic('T'), {
+            name: 'Data',
+          }),
         },
         outputs: {},
         config: z.object({}),
@@ -203,10 +280,14 @@ describe('defineReactiveBlock', () => {
       {
         id: 'passthrough-block',
         inputs: {
-          in: input(z.number(), { name: 'Input' }),
+          in: input(z.number(), {
+            name: 'Input',
+          }),
         },
         outputs: {
-          out: output(passthrough('in'), { name: 'Output' }),
+          out: output(passthrough('in'), {
+            name: 'Output',
+          }),
         },
         config: z.object({}),
       },
@@ -223,7 +304,9 @@ describe('defineReactiveBlock', () => {
         id: 'resolved-block',
         inputs: {},
         outputs: {
-          payload: output(resolved('spark', 'sparkType'), { name: 'Payload' }),
+          payload: output(resolved('spark', 'sparkType'), {
+            name: 'Payload',
+          }),
         },
         config: z.object({
           sparkType: z.string(),
@@ -260,7 +343,9 @@ describe('defineReactiveBlock', () => {
       {
         id: 'instance-block',
         inputs: {
-          in: input(z.number(), { name: 'Input' }),
+          in: input(z.number(), {
+            name: 'Input',
+          }),
         },
         outputs: {},
         config: z.object({}),
@@ -286,12 +371,18 @@ describe('defineReactiveBlock', () => {
       {
         id: 'setup-block',
         inputs: {
-          in: input(z.number(), { name: 'Input' }),
+          in: input(z.number(), {
+            name: 'Input',
+          }),
         },
         outputs: {
-          out: output(z.string(), { name: 'Output' }),
+          out: output(z.string(), {
+            name: 'Output',
+          }),
         },
-        config: z.object({ multiplier: z.number().default(2) }),
+        config: z.object({
+          multiplier: z.number().default(2),
+        }),
       },
       setupFn
     );
@@ -299,7 +390,9 @@ describe('defineReactiveBlock', () => {
     block.start({
       blockId: 'block-1',
       workflowId: 'workflow-1',
-      config: { multiplier: 3 },
+      config: {
+        multiplier: 3,
+      },
       emit: () => undefined,
     });
 
@@ -307,9 +400,15 @@ describe('defineReactiveBlock', () => {
     const ctx = setupFn.mock.calls[0]?.[0] as {
       blockId: string;
       workflowId: string;
-      config: { multiplier: number };
-      inputs: { in: unknown };
-      outputs: { out: unknown };
+      config: {
+        multiplier: number;
+      };
+      inputs: {
+        in: unknown;
+      };
+      outputs: {
+        out: unknown;
+      };
     };
     expect(ctx.blockId).toBe('block-1');
     expect(ctx.workflowId).toBe('workflow-1');
@@ -325,7 +424,9 @@ describe('defineReactiveBlock', () => {
       {
         id: 'push-block',
         inputs: {
-          in: input(z.number(), { name: 'Input' }),
+          in: input(z.number(), {
+            name: 'Input',
+          }),
         },
         outputs: {},
         config: z.object({}),
@@ -345,25 +446,38 @@ describe('defineReactiveBlock', () => {
     instance.pushInput('in', 42);
     instance.pushInput('in', 100);
 
-    expect(receivedValues).toEqual([42, 100]);
+    expect(receivedValues).toEqual([
+      42,
+      100,
+    ]);
     instance.stop();
   });
 
   test('output emitters call emit callback', () => {
     const emitFn = mock();
-    let outputEmitter: { emit: (v: string) => void };
+    const box: {
+      emitter:
+        | {
+            emit: (v: string) => void;
+          }
+        | undefined;
+    } = {
+      emitter: undefined,
+    };
 
     const block = defineReactiveBlock(
       {
         id: 'emit-block',
         inputs: {},
         outputs: {
-          out: output(z.string(), { name: 'Output' }),
+          out: output(z.string(), {
+            name: 'Output',
+          }),
         },
         config: z.object({}),
       },
       ({ outputs }) => {
-        outputEmitter = outputs.out;
+        box.emitter = outputs.out;
       }
     );
 
@@ -374,7 +488,7 @@ describe('defineReactiveBlock', () => {
       emit: emitFn,
     });
 
-    outputEmitter!.emit('hello');
+    box.emitter?.emit('hello');
 
     expect(emitFn).toHaveBeenCalledWith('out', 'hello');
   });
@@ -386,7 +500,9 @@ describe('defineReactiveBlock', () => {
       {
         id: 'cleanup-block',
         inputs: {
-          in: input(z.number(), { name: 'Input' }),
+          in: input(z.number(), {
+            name: 'Input',
+          }),
         },
         outputs: {},
         config: z.object({}),
@@ -456,7 +572,11 @@ describe('defineReactiveBlock', () => {
     });
 
     expect(startFn).toBeDefined();
-    const flow = startFn?.(42) as { on: (fn: (v: unknown) => void) => void } | undefined;
+    const flow = startFn?.(42) as
+      | {
+          on: (fn: (v: unknown) => void) => void;
+        }
+      | undefined;
     expect(flow).toBeDefined();
     expect(typeof flow?.on).toBe('function');
   });
@@ -482,14 +602,24 @@ describe('defineReactiveBlock', () => {
         inputs: {},
         outputs: {},
         config: z.object({
-          mode: z.enum(['fast', 'slow', 'auto']).default('auto'),
+          mode: z
+            .enum([
+              'fast',
+              'slow',
+              'auto',
+            ])
+            .default('auto'),
         }),
       },
       () => undefined
     );
 
     expect(block.schema.properties?.mode).toBeDefined();
-    expect(block.schema.properties?.mode?.enum).toEqual(['fast', 'slow', 'auto']);
+    expect(block.schema.properties?.mode?.enum).toEqual([
+      'fast',
+      'slow',
+      'auto',
+    ]);
   });
 
   test('config with default values', () => {
@@ -519,14 +649,31 @@ describe('defineReactiveBlock', () => {
       {
         id: 'multi-port-block',
         inputs: {
-          stringIn: input(z.string(), { name: 'String Input' }),
-          numberIn: input(z.number(), { name: 'Number Input' }),
-          boolIn: input(z.boolean(), { name: 'Boolean Input' }),
-          objectIn: input(z.object({ x: z.number() }), { name: 'Object Input' }),
-          arrayIn: input(z.array(z.string()), { name: 'Array Input' }),
+          stringIn: input(z.string(), {
+            name: 'String Input',
+          }),
+          numberIn: input(z.number(), {
+            name: 'Number Input',
+          }),
+          boolIn: input(z.boolean(), {
+            name: 'Boolean Input',
+          }),
+          objectIn: input(
+            z.object({
+              x: z.number(),
+            }),
+            {
+              name: 'Object Input',
+            }
+          ),
+          arrayIn: input(z.array(z.string()), {
+            name: 'Array Input',
+          }),
         },
         outputs: {
-          result: output(z.string(), { name: 'Result' }),
+          result: output(z.string(), {
+            name: 'Result',
+          }),
         },
         config: z.object({}),
       },
@@ -542,7 +689,9 @@ describe('defineReactiveBlock', () => {
       {
         id: 'safe-push-block',
         inputs: {
-          in: input(z.number(), { name: 'Input' }),
+          in: input(z.number(), {
+            name: 'Input',
+          }),
         },
         outputs: {},
         config: z.object({}),
@@ -569,7 +718,9 @@ describe('defineReactiveBlock', () => {
         inputs: {},
         outputs: {
           // Passthrough to non-existent input
-          out: output(passthrough('nonexistent'), { name: 'Output' }),
+          out: output(passthrough('nonexistent'), {
+            name: 'Output',
+          }),
         },
         config: z.object({}),
       },
@@ -605,7 +756,13 @@ describe('defineReactiveBlock', () => {
 
     expect(capturedContext).toBeDefined();
     // context.context should be the same object
-    expect((capturedContext as { blockId: string }).blockId).toBe('block-1');
+    expect(
+      (
+        capturedContext as {
+          blockId: string;
+        }
+      ).blockId
+    ).toBe('block-1');
   });
 
   test('output with generic ref uses runtime schema for validation', () => {
@@ -616,14 +773,18 @@ describe('defineReactiveBlock', () => {
         id: 'generic-output-block',
         inputs: {},
         outputs: {
-          out: output(generic('T'), { name: 'Generic Output' }),
+          out: output(generic('T'), {
+            name: 'Generic Output',
+          }),
         },
         config: z.object({}),
       },
       ({ outputs }) => {
         outputs.out.emit('any value works');
         outputs.out.emit(123);
-        outputs.out.emit({ complex: 'object' });
+        outputs.out.emit({
+          complex: 'object',
+        });
       }
     );
 
@@ -646,7 +807,9 @@ describe('defineReactiveBlock', () => {
         {
           id: 'validate-input-block',
           inputs: {
-            in: input(z.number(), { name: 'Number Input' }),
+            in: input(z.number(), {
+              name: 'Number Input',
+            }),
           },
           outputs: {},
           config: z.object({}),
@@ -683,7 +846,9 @@ describe('defineReactiveBlock', () => {
         {
           id: 'generic-input-block',
           inputs: {
-            in: input(generic(), { name: 'Generic Input' }),
+            in: input(generic(), {
+              name: 'Generic Input',
+            }),
           },
           outputs: {},
           config: z.object({}),
@@ -702,7 +867,9 @@ describe('defineReactiveBlock', () => {
 
       instance.pushInput('in', 'string');
       instance.pushInput('in', 123);
-      instance.pushInput('in', { obj: true });
+      instance.pushInput('in', {
+        obj: true,
+      });
 
       // Generic accepts any value, no warnings
       expect(receivedValues).toHaveLength(3);
@@ -719,7 +886,9 @@ describe('defineReactiveBlock', () => {
         id: 'resolved-input-block',
         inputs: {
           // Using resolved as input (unusual but should work)
-          data: input(resolved('spark', 'sparkType') as unknown as z.ZodType, { name: 'Data' }),
+          data: input(resolved('spark', 'sparkType') as unknown as z.ZodType, {
+            name: 'Data',
+          }),
         },
         outputs: {},
         config: z.object({
@@ -738,10 +907,14 @@ describe('defineReactiveBlock', () => {
       {
         id: 'passthrough-generic-block',
         inputs: {
-          in: input(generic('T'), { name: 'Input' }),
+          in: input(generic('T'), {
+            name: 'Input',
+          }),
         },
         outputs: {
-          out: output(passthrough('in'), { name: 'Output' }),
+          out: output(passthrough('in'), {
+            name: 'Output',
+          }),
         },
         config: z.object({}),
       },
@@ -763,7 +936,9 @@ describe('defineReactiveBlock', () => {
         id: 'empty-ports-block',
         inputs: {},
         outputs: {},
-        config: z.object({ value: z.string().default('test') }),
+        config: z.object({
+          value: z.string().default('test'),
+        }),
       },
       setupFn
     );
@@ -779,7 +954,11 @@ describe('defineReactiveBlock', () => {
     });
 
     expect(setupFn).toHaveBeenCalled();
-    const ctx = setupFn.mock.calls[0]?.[0] as { config: { value: string } };
+    const ctx = setupFn.mock.calls[0]?.[0] as {
+      config: {
+        value: string;
+      };
+    };
     expect(ctx.config.value).toBe('test');
     instance.stop();
   });

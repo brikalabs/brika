@@ -22,16 +22,22 @@ export function useUpdateCheck() {
     const es = new EventSource(getStreamUrl('/api/stream/events'));
     es.addEventListener('event', (ev: MessageEvent) => {
       try {
-        const event = JSON.parse(ev.data) as { type: string };
+        const event = JSON.parse(ev.data) as {
+          type: string;
+        };
         if (event.type === 'update.available') {
-          queryClient.invalidateQueries({ queryKey: updateKeys.check });
+          queryClient.invalidateQueries({
+            queryKey: updateKeys.check,
+          });
         }
       } catch {
         // Ignore malformed events
       }
     });
     return () => es.close();
-  }, [queryClient]);
+  }, [
+    queryClient,
+  ]);
 
   return query;
 }

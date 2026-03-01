@@ -54,7 +54,9 @@ export class ApiServer {
   }
 
   async #handleRequest(req: Request): Promise<Response> {
-    if (!this.#app) throw new Error('Server not initialized');
+    if (!this.#app) {
+      throw new Error('Server not initialized');
+    }
 
     const start = performance.now();
     const url = new URL(req.url);
@@ -70,7 +72,9 @@ export class ApiServer {
         path,
         status: res.status,
         duration,
-        ...(Object.keys(query).length > 0 && { query }),
+        ...(Object.keys(query).length > 0 && {
+          query,
+        }),
       });
 
       return res;
@@ -82,23 +86,44 @@ export class ApiServer {
         duration,
         error: error instanceof Error ? error.message : String(error),
       });
-      return Response.json({ error: 'Internal server error' }, { status: 500 });
+      return Response.json(
+        {
+          error: 'Internal server error',
+        },
+        {
+          status: 500,
+        }
+      );
     }
   }
 
   #setupStaticFiles(): void {
     const { staticDir } = this.#config;
-    if (!staticDir) return;
+    if (!staticDir) {
+      return;
+    }
 
-    this.#app?.use('/*', serveStatic({ root: staticDir }));
+    this.#app?.use(
+      '/*',
+      serveStatic({
+        root: staticDir,
+      })
+    );
 
     // SPA fallback — only for non-API paths to avoid intercepting API routes
-    const spaFallback = serveStatic({ root: staticDir, path: 'index.html' });
+    const spaFallback = serveStatic({
+      root: staticDir,
+      path: 'index.html',
+    });
     this.#app?.get('*', (c, next) => {
-      if (c.req.path.startsWith('/api/')) return next();
+      if (c.req.path.startsWith('/api/')) {
+        return next();
+      }
       return spaFallback(c, next);
     });
 
-    this.#logs.info('Static file serving enabled', { directory: staticDir });
+    this.#logs.info('Static file serving enabled', {
+      directory: staticDir,
+    });
   }
 }

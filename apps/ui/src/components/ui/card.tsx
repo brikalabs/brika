@@ -33,11 +33,25 @@ const cardVariants = cva(
         className: 'border-foreground/10 hover:border-foreground/20 hover:shadow-md',
       },
       {
-        accent: ['blue', 'emerald', 'violet', 'orange', 'purple', 'amber'],
+        accent: [
+          'blue',
+          'emerald',
+          'violet',
+          'orange',
+          'purple',
+          'amber',
+        ],
         className: 'border-[var(--accent-border)]',
       },
       {
-        accent: ['blue', 'emerald', 'violet', 'orange', 'purple', 'amber'],
+        accent: [
+          'blue',
+          'emerald',
+          'violet',
+          'orange',
+          'purple',
+          'amber',
+        ],
         interactive: true,
         className: 'hover:border-[var(--accent-border)] hover:shadow-lg',
       },
@@ -57,7 +71,13 @@ function Card({ className, accent, interactive, children, ...props }: Readonly<C
   return (
     <div
       data-slot="card"
-      className={cn(cardVariants({ accent, interactive }), className)}
+      className={cn(
+        cardVariants({
+          accent,
+          interactive,
+        }),
+        className
+      )}
       {...props}
     >
       {hasAccent && (

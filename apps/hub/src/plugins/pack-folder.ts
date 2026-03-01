@@ -26,6 +26,9 @@ export async function packFolder(folderPath: string): Promise<Uint8Array> {
     }
   }
 
-  const archive = new Bun.Archive(files, { compress: 'gzip', level: 9 });
+  const archive = new Bun.Archive(files, {
+    compress: 'gzip',
+    level: 9,
+  });
   return archive.bytes();
 }

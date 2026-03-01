@@ -10,7 +10,9 @@ describe('PluginPermissionService', () => {
   let mockGetGranted: ReturnType<typeof mock>;
   let mockSetGranted: ReturnType<typeof mock>;
 
-  useTestBed({ autoStub: false });
+  useTestBed({
+    autoStub: false,
+  });
 
   beforeEach(() => {
     mockGetGranted = mock().mockReturnValue([]);
@@ -27,7 +29,9 @@ describe('PluginPermissionService', () => {
 
   describe('hasPermission', () => {
     test('returns true when permission is granted', () => {
-      mockGetGranted.mockReturnValue(['location']);
+      mockGetGranted.mockReturnValue([
+        'location',
+      ]);
 
       const result = service.hasPermission('@brika/plugin-weather', 'location');
 
@@ -43,7 +47,9 @@ describe('PluginPermissionService', () => {
     });
 
     test('returns false for unrelated permissions', () => {
-      mockGetGranted.mockReturnValue(['other']);
+      mockGetGranted.mockReturnValue([
+        'other',
+      ]);
 
       const result = service.hasPermission('@brika/plugin-weather', 'location');
 
@@ -55,11 +61,17 @@ describe('PluginPermissionService', () => {
 
   describe('getGrantedPermissions', () => {
     test('returns only valid permissions', () => {
-      mockGetGranted.mockReturnValue(['location', 'unknown-perm', 'also-invalid']);
+      mockGetGranted.mockReturnValue([
+        'location',
+        'unknown-perm',
+        'also-invalid',
+      ]);
 
       const result = service.getGrantedPermissions('@brika/plugin-weather');
 
-      expect(result).toEqual(['location']);
+      expect(result).toEqual([
+        'location',
+      ]);
     });
 
     test('returns empty array when no permissions', () => {
@@ -71,7 +83,10 @@ describe('PluginPermissionService', () => {
     });
 
     test('filters out all invalid permissions', () => {
-      mockGetGranted.mockReturnValue(['bad', 'also-bad']);
+      mockGetGranted.mockReturnValue([
+        'bad',
+        'also-bad',
+      ]);
 
       const result = service.getGrantedPermissions('@brika/plugin-weather');
 
@@ -87,12 +102,18 @@ describe('PluginPermissionService', () => {
 
       const result = await service.setPermission('@brika/plugin-weather', 'location', true);
 
-      expect(mockSetGranted).toHaveBeenCalledWith('@brika/plugin-weather', ['location']);
-      expect(result).toEqual(['location']);
+      expect(mockSetGranted).toHaveBeenCalledWith('@brika/plugin-weather', [
+        'location',
+      ]);
+      expect(result).toEqual([
+        'location',
+      ]);
     });
 
     test('revokes a valid permission', async () => {
-      mockGetGranted.mockReturnValue(['location']);
+      mockGetGranted.mockReturnValue([
+        'location',
+      ]);
 
       const result = await service.setPermission('@brika/plugin-weather', 'location', false);
 
@@ -107,12 +128,18 @@ describe('PluginPermissionService', () => {
     });
 
     test('does not duplicate already-granted permission', async () => {
-      mockGetGranted.mockReturnValue(['location']);
+      mockGetGranted.mockReturnValue([
+        'location',
+      ]);
 
       const result = await service.setPermission('@brika/plugin-weather', 'location', true);
 
-      expect(mockSetGranted).toHaveBeenCalledWith('@brika/plugin-weather', ['location']);
-      expect(result).toEqual(['location']);
+      expect(mockSetGranted).toHaveBeenCalledWith('@brika/plugin-weather', [
+        'location',
+      ]);
+      expect(result).toEqual([
+        'location',
+      ]);
     });
 
     test('revoking non-granted permission is a no-op', async () => {

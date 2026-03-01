@@ -10,7 +10,9 @@ import type { BrikaConfig } from '@/runtime/config';
 import { ConfigLoader } from '@/runtime/config';
 import { WorkflowEngine, WorkflowLoader } from '@/runtime/workflows';
 
-useTestBed({ autoStub: false });
+useTestBed({
+  autoStub: false,
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Test Fixtures
@@ -20,7 +22,11 @@ const createMockConfig = (): BrikaConfig => ({
   hub: {
     host: '0.0.0.0',
     port: 3001,
-    plugins: { installDir: '/tmp', heartbeatInterval: 5000, heartbeatTimeout: 15000 },
+    plugins: {
+      installDir: '/tmp',
+      heartbeatInterval: 5000,
+      heartbeatTimeout: 15000,
+    },
   },
   plugins: [],
   rules: [],
@@ -105,7 +111,10 @@ describe('WorkflowsLoader', () => {
 
       await loader.load(createMockConfig());
 
-      expect(callOrder).toEqual(['loadDir', 'watch']);
+      expect(callOrder).toEqual([
+        'loadDir',
+        'watch',
+      ]);
     });
 
     test('uses correct workflows path from config loader', async () => {
@@ -141,7 +150,10 @@ describe('WorkflowsLoader', () => {
 
       await loader.stop();
 
-      expect(callOrder).toEqual(['stopWatching', 'engineStop']);
+      expect(callOrder).toEqual([
+        'stopWatching',
+        'engineStop',
+      ]);
     });
   });
 });

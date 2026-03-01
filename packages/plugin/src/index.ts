@@ -58,11 +58,25 @@ export interface Plugin {
   /** Human-readable description */
   description: string | null;
   /** Author name or object */
-  author: string | { name: string; email?: string; url?: string } | null;
+  author:
+    | string
+    | {
+        name: string;
+        email?: string;
+        url?: string;
+      }
+    | null;
   /** Homepage URL */
   homepage: string | null;
   /** Repository URL or object */
-  repository: string | { type?: string; url: string; directory?: string } | null;
+  repository:
+    | string
+    | {
+        type?: string;
+        url: string;
+        directory?: string;
+      }
+    | null;
   /** Path to icon file */
   icon: string | null;
   /** Keywords for search/categorization */
@@ -70,7 +84,9 @@ export interface Plugin {
   /** License identifier */
   license: string | null;
   /** Engine compatibility requirements */
-  engines: { brika: string };
+  engines: {
+    brika: string;
+  };
 
   // ─── Installation ──────────────────────────────────────────────────────────
   /** Plugin root directory where package.json lives */
@@ -123,21 +139,48 @@ function isGenericType(t?: string): boolean {
  * Returns true if source type can flow into target type.
  */
 export function arePortTypesCompatible(sourceType?: string, targetType?: string): boolean {
-  if (isGenericType(sourceType) || isGenericType(targetType)) return true;
+  if (isGenericType(sourceType) || isGenericType(targetType)) {
+    return true;
+  }
 
   const normalizeType = (t: string) => t.toLowerCase().trim();
   const src = normalizeType(sourceType ?? '');
   const tgt = normalizeType(targetType ?? '');
 
-  if (src === tgt) return true;
+  if (src === tgt) {
+    return true;
+  }
 
-  const numberTypes = new Set(['number', 'integer', 'float', 'double']);
-  if (numberTypes.has(src) && numberTypes.has(tgt)) return true;
+  const numberTypes = new Set([
+    'number',
+    'integer',
+    'float',
+    'double',
+  ]);
+  if (numberTypes.has(src) && numberTypes.has(tgt)) {
+    return true;
+  }
 
-  if (tgt === 'string' && new Set(['number', 'integer', 'boolean']).has(src)) return true;
+  if (
+    tgt === 'string' &&
+    new Set([
+      'number',
+      'integer',
+      'boolean',
+    ]).has(src)
+  ) {
+    return true;
+  }
 
-  const objectTypes = new Set(['object', 'json', 'record', 'any']);
-  if (objectTypes.has(src) && objectTypes.has(tgt)) return true;
+  const objectTypes = new Set([
+    'object',
+    'json',
+    'record',
+    'any',
+  ]);
+  if (objectTypes.has(src) && objectTypes.has(tgt)) {
+    return true;
+  }
 
   if (src.endsWith('[]') && tgt.endsWith('[]')) {
     const srcBase = src.slice(0, -2);

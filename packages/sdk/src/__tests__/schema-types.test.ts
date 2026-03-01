@@ -143,19 +143,26 @@ describe('duration', () => {
   });
 
   test('applies min constraint', () => {
-    const schema = duration({ min: 100 });
+    const schema = duration({
+      min: 100,
+    });
     expect(schema.safeParse(99).success).toBe(false);
     expect(schema.safeParse(100).success).toBe(true);
   });
 
   test('applies max constraint', () => {
-    const schema = duration({ max: 1000 });
+    const schema = duration({
+      max: 1000,
+    });
     expect(schema.safeParse(1000).success).toBe(true);
     expect(schema.safeParse(1001).success).toBe(false);
   });
 
   test('applies both min and max', () => {
-    const schema = duration({ min: 100, max: 1000 });
+    const schema = duration({
+      min: 100,
+      max: 1000,
+    });
     expect(schema.safeParse(99).success).toBe(false);
     expect(schema.safeParse(100).success).toBe(true);
     expect(schema.safeParse(500).success).toBe(true);
@@ -357,7 +364,11 @@ describe('isPassthroughRef', () => {
 
   test('returns false for plain objects', () => {
     expect(isPassthroughRef({})).toBe(false);
-    expect(isPassthroughRef({ __type: 'other' })).toBe(false);
+    expect(
+      isPassthroughRef({
+        __type: 'other',
+      })
+    ).toBe(false);
   });
 
   test('returns false for primitives', () => {
@@ -405,7 +416,11 @@ describe('isGenericRef', () => {
 
   test('returns false for plain objects', () => {
     expect(isGenericRef({})).toBe(false);
-    expect(isGenericRef({ __type: 'other' })).toBe(false);
+    expect(
+      isGenericRef({
+        __type: 'other',
+      })
+    ).toBe(false);
   });
 
   test('returns false for PassthroughRef', () => {
@@ -465,7 +480,10 @@ describe('isResolvedRef', () => {
 describe('parseResolvedMarker', () => {
   test('parses valid resolved marker', () => {
     const result = parseResolvedMarker('$resolve:spark:sparkType');
-    expect(result).toEqual({ source: 'spark', configField: 'sparkType' });
+    expect(result).toEqual({
+      source: 'spark',
+      configField: 'sparkType',
+    });
   });
 
   test('returns null for undefined', () => {
@@ -486,6 +504,9 @@ describe('parseResolvedMarker', () => {
   test('handles markers with extra colons', () => {
     const result = parseResolvedMarker('$resolve:spark:config:extra');
     // Should only use first two parts
-    expect(result).toEqual({ source: 'spark', configField: 'config' });
+    expect(result).toEqual({
+      source: 'spark',
+      configField: 'config',
+    });
   });
 });

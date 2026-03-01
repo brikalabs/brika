@@ -1,6 +1,9 @@
 import { chmod } from 'node:fs/promises';
 
-const external = ['zod', 'lucide-react'];
+const external = [
+  'zod',
+  'lucide-react',
+];
 
 function assertBuild(result: Awaited<ReturnType<typeof Bun.build>>): void {
   if (!result.success) {
@@ -34,7 +37,9 @@ assertBuild(result);
 
 // Build verify binary separately with shebang
 const verifyResult = await Bun.build({
-  entrypoints: ['./src/verify.ts'],
+  entrypoints: [
+    './src/verify.ts',
+  ],
   outdir: './dist',
   root: './src',
   target: 'bun',
@@ -46,8 +51,21 @@ assertBuild(verifyResult);
 await chmod('./dist/verify.js', 0o755);
 
 // Generate .d.ts declarations
-const tsc = Bun.spawn(['bunx', '--bun', 'tsc', '-p', 'tsconfig.build.json'], {
-  cwd: import.meta.dir,
-  stdio: ['ignore', 'inherit', 'inherit'],
-});
+const tsc = Bun.spawn(
+  [
+    'bunx',
+    '--bun',
+    'tsc',
+    '-p',
+    'tsconfig.build.json',
+  ],
+  {
+    cwd: import.meta.dir,
+    stdio: [
+      'ignore',
+      'inherit',
+      'inherit',
+    ],
+  }
+);
 if ((await tsc.exited) !== 0) process.exit(1);

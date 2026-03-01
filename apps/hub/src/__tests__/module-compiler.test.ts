@@ -38,11 +38,16 @@ const BRIKA_DIR = join(TEST_DIR, 'brika');
 const CACHE_DIR = join(BRIKA_DIR, 'cache', 'modules');
 
 beforeAll(async () => {
-  await mkdir(CACHE_DIR, { recursive: true });
+  await mkdir(CACHE_DIR, {
+    recursive: true,
+  });
 });
 
 afterAll(async () => {
-  await rm(TEST_DIR, { recursive: true, force: true });
+  await rm(TEST_DIR, {
+    recursive: true,
+    force: true,
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -67,7 +72,11 @@ function makeFakeFile(fakeFs: Map<string, string>, path: string): ReturnType<typ
 function makeBuildSuccess(jsOutput: string) {
   return {
     success: true,
-    outputs: [{ text: () => Promise.resolve(jsOutput) }],
+    outputs: [
+      {
+        text: () => Promise.resolve(jsOutput),
+      },
+    ],
     logs: [],
   } as unknown as Awaited<ReturnType<typeof Bun.build>>;
 }
@@ -76,7 +85,9 @@ function makeBuildFailure(messages: string[]) {
   return {
     success: false,
     outputs: [],
-    logs: messages.map((m) => ({ message: m })),
+    logs: messages.map((m) => ({
+      message: m,
+    })),
   } as unknown as Awaited<ReturnType<typeof Bun.build>>;
 }
 
@@ -87,11 +98,18 @@ function makeBuildFailure(messages: string[]) {
 describe('ModuleCompiler - get()', () => {
   let compiler: ModuleCompiler;
 
-  useTestBed({ autoStub: false }, () => {
-    stub(Logger);
-    provide(ConfigLoader, { brikaDir: BRIKA_DIR } as ConfigLoader);
-    compiler = get(ModuleCompiler);
-  });
+  useTestBed(
+    {
+      autoStub: false,
+    },
+    () => {
+      stub(Logger);
+      provide(ConfigLoader, {
+        brikaDir: BRIKA_DIR,
+      } as ConfigLoader);
+      compiler = get(ModuleCompiler);
+    }
+  );
 
   test('returns undefined for unknown key', () => {
     expect(compiler.get('nonexistent:module')).toBeUndefined();
@@ -114,11 +132,18 @@ describe('ModuleCompiler - get()', () => {
 describe('ModuleCompiler - getStyle()', () => {
   let compiler: ModuleCompiler;
 
-  useTestBed({ autoStub: false }, () => {
-    stub(Logger);
-    provide(ConfigLoader, { brikaDir: BRIKA_DIR } as ConfigLoader);
-    compiler = get(ModuleCompiler);
-  });
+  useTestBed(
+    {
+      autoStub: false,
+    },
+    () => {
+      stub(Logger);
+      provide(ConfigLoader, {
+        brikaDir: BRIKA_DIR,
+      } as ConfigLoader);
+      compiler = get(ModuleCompiler);
+    }
+  );
 
   test('returns undefined for unknown key', () => {
     expect(compiler.getStyle('nonexistent:module')).toBeUndefined();
@@ -136,11 +161,18 @@ describe('ModuleCompiler - getStyle()', () => {
 describe('ModuleCompiler - remove()', () => {
   let compiler: ModuleCompiler;
 
-  useTestBed({ autoStub: false }, () => {
-    stub(Logger);
-    provide(ConfigLoader, { brikaDir: BRIKA_DIR } as ConfigLoader);
-    compiler = get(ModuleCompiler);
-  });
+  useTestBed(
+    {
+      autoStub: false,
+    },
+    () => {
+      stub(Logger);
+      provide(ConfigLoader, {
+        brikaDir: BRIKA_DIR,
+      } as ConfigLoader);
+      compiler = get(ModuleCompiler);
+    }
+  );
 
   test('does not throw when removing unknown plugin', () => {
     expect(() => compiler.remove('nonexistent-plugin')).not.toThrow();
@@ -165,11 +197,18 @@ describe('ModuleCompiler - remove()', () => {
 describe('ModuleCompiler - compile()', () => {
   let compiler: ModuleCompiler;
 
-  useTestBed({ autoStub: false }, () => {
-    stub(Logger);
-    provide(ConfigLoader, { brikaDir: BRIKA_DIR } as ConfigLoader);
-    compiler = get(ModuleCompiler);
-  });
+  useTestBed(
+    {
+      autoStub: false,
+    },
+    () => {
+      stub(Logger);
+      provide(ConfigLoader, {
+        brikaDir: BRIKA_DIR,
+      } as ConfigLoader);
+      compiler = get(ModuleCompiler);
+    }
+  );
 
   // ── entrypoint not found ─────────────────────────────────────────────────
 
@@ -180,7 +219,11 @@ describe('ModuleCompiler - compile()', () => {
     const buildSpy = spyOn(Bun, 'build').mockResolvedValue(makeBuildSuccess(''));
 
     try {
-      await compiler.compile('my-plugin', '/root', [{ id: 'settings' }]);
+      await compiler.compile('my-plugin', '/root', [
+        {
+          id: 'settings',
+        },
+      ]);
       expect(buildSpy).not.toHaveBeenCalled();
     } finally {
       fileSpy.mockRestore();
@@ -198,7 +241,14 @@ describe('ModuleCompiler - compile()', () => {
     const buildSpy = spyOn(Bun, 'build').mockResolvedValue(makeBuildSuccess('export default 1;'));
 
     try {
-      await compiler.compile('my-plugin', '/root', [{ id: 'existing' }, { id: 'missing' }]);
+      await compiler.compile('my-plugin', '/root', [
+        {
+          id: 'existing',
+        },
+        {
+          id: 'missing',
+        },
+      ]);
       // Build should have been called once — for the existing module only
       expect(buildSpy).toHaveBeenCalledTimes(1);
     } finally {
@@ -221,7 +271,11 @@ describe('ModuleCompiler - compile()', () => {
     const buildSpy = spyOn(Bun, 'build').mockResolvedValue(makeBuildSuccess(compiledJs));
 
     try {
-      await compiler.compile('test-plugin', '/project', [{ id: 'home' }]);
+      await compiler.compile('test-plugin', '/project', [
+        {
+          id: 'home',
+        },
+      ]);
 
       const jsEntry = compiler.get('test-plugin:home');
       expect(jsEntry).toBeDefined();
@@ -249,7 +303,14 @@ describe('ModuleCompiler - compile()', () => {
     });
 
     try {
-      await compiler.compile('multi', '/proj', [{ id: 'page1' }, { id: 'page2' }]);
+      await compiler.compile('multi', '/proj', [
+        {
+          id: 'page1',
+        },
+        {
+          id: 'page2',
+        },
+      ]);
       expect(buildSpy).toHaveBeenCalledTimes(2);
     } finally {
       fileSpy.mockRestore();
@@ -269,10 +330,21 @@ describe('ModuleCompiler - compile()', () => {
     const buildSpy = spyOn(Bun, 'build').mockResolvedValue(makeBuildSuccess('built;'));
 
     try {
-      await compiler.compile('actions-plugin', '/proj', [{ id: 'main' }], '/proj/src/actions.ts');
+      await compiler.compile(
+        'actions-plugin',
+        '/proj',
+        [
+          {
+            id: 'main',
+          },
+        ],
+        '/proj/src/actions.ts'
+      );
 
       expect(buildSpy).toHaveBeenCalledTimes(1);
-      const buildCall = buildSpy.mock.calls[0][0] as { plugins: unknown[] };
+      const buildCall = buildSpy.mock.calls[0][0] as {
+        plugins: unknown[];
+      };
       expect(buildCall.plugins).toHaveLength(2);
     } finally {
       fileSpy.mockRestore();
@@ -290,10 +362,16 @@ describe('ModuleCompiler - compile()', () => {
     const buildSpy = spyOn(Bun, 'build').mockResolvedValue(makeBuildSuccess('built;'));
 
     try {
-      await compiler.compile('no-actions', '/proj', [{ id: 'main' }]);
+      await compiler.compile('no-actions', '/proj', [
+        {
+          id: 'main',
+        },
+      ]);
 
       expect(buildSpy).toHaveBeenCalledTimes(1);
-      const buildCall = buildSpy.mock.calls[0][0] as { plugins: unknown[] };
+      const buildCall = buildSpy.mock.calls[0][0] as {
+        plugins: unknown[];
+      };
       expect(buildCall.plugins).toHaveLength(1);
     } finally {
       fileSpy.mockRestore();
@@ -311,11 +389,17 @@ describe('ModuleCompiler - compile()', () => {
       return makeFakeFile(fakeFs, String(path));
     }) as typeof Bun.file);
     const buildSpy = spyOn(Bun, 'build').mockResolvedValue(
-      makeBuildFailure(['SyntaxError: unexpected token'])
+      makeBuildFailure([
+        'SyntaxError: unexpected token',
+      ])
     );
 
     try {
-      await compiler.compile('fail-plugin', '/proj', [{ id: 'broken' }]);
+      await compiler.compile('fail-plugin', '/proj', [
+        {
+          id: 'broken',
+        },
+      ]);
       expect(compiler.get('fail-plugin:broken')).toBeUndefined();
     } finally {
       fileSpy.mockRestore();
@@ -333,13 +417,24 @@ describe('ModuleCompiler - compile()', () => {
     }) as typeof Bun.file);
     const buildSpy = spyOn(Bun, 'build').mockImplementation(((opts: { entrypoints: string[] }) => {
       if (opts.entrypoints[0].includes('bad')) {
-        return Promise.resolve(makeBuildFailure(['error']));
+        return Promise.resolve(
+          makeBuildFailure([
+            'error',
+          ])
+        );
       }
       return Promise.resolve(makeBuildSuccess('good-output'));
     }) as typeof Bun.build);
 
     try {
-      await compiler.compile('mixed', '/proj', [{ id: 'good' }, { id: 'bad' }]);
+      await compiler.compile('mixed', '/proj', [
+        {
+          id: 'good',
+        },
+        {
+          id: 'bad',
+        },
+      ]);
 
       expect(compiler.get('mixed:good')?.content).toBe('good-output');
       expect(compiler.get('mixed:bad')).toBeUndefined();
@@ -361,13 +456,19 @@ describe('ModuleCompiler - compile()', () => {
     const buildSpy = spyOn(Bun, 'build').mockResolvedValue(makeBuildSuccess('out;'));
 
     try {
-      await compiler.compile('opts-plugin', '/proj', [{ id: 'settings' }]);
+      await compiler.compile('opts-plugin', '/proj', [
+        {
+          id: 'settings',
+        },
+      ]);
 
-      const buildOpts = buildSpy.mock.calls[0][0] as Record<string, unknown>;
+      const buildOpts = buildSpy.mock.calls[0][0];
       expect(buildOpts.target).toBe('browser');
       expect(buildOpts.format).toBe('esm');
       expect(buildOpts.minify).toBe(true);
-      expect(buildOpts.entrypoints).toEqual(['/proj/src/pages/settings.tsx']);
+      expect(buildOpts.entrypoints).toEqual([
+        '/proj/src/pages/settings.tsx',
+      ]);
     } finally {
       fileSpy.mockRestore();
       buildSpy.mockRestore();
@@ -399,7 +500,11 @@ describe('ModuleCompiler - compile()', () => {
     const buildSpy = spyOn(Bun, 'build').mockResolvedValue(makeBuildSuccess('widget-js;'));
 
     try {
-      await compiler.compile('removable', '/proj', [{ id: 'widget' }]);
+      await compiler.compile('removable', '/proj', [
+        {
+          id: 'widget',
+        },
+      ]);
       expect(compiler.get('removable:widget')).toBeDefined();
 
       compiler.remove('removable');
@@ -419,11 +524,18 @@ describe('ModuleCompiler - compile()', () => {
 describe('ModuleCompiler - compile() cache hit', () => {
   let compiler: ModuleCompiler;
 
-  useTestBed({ autoStub: false }, () => {
-    stub(Logger);
-    provide(ConfigLoader, { brikaDir: BRIKA_DIR } as ConfigLoader);
-    compiler = get(ModuleCompiler);
-  });
+  useTestBed(
+    {
+      autoStub: false,
+    },
+    () => {
+      stub(Logger);
+      provide(ConfigLoader, {
+        brikaDir: BRIKA_DIR,
+      } as ConfigLoader);
+      compiler = get(ModuleCompiler);
+    }
+  );
 
   test('skips build when module is loaded from disk cache', async () => {
     const pluginName = 'cache-hit-plugin';
@@ -432,7 +544,9 @@ describe('ModuleCompiler - compile() cache hit', () => {
 
     // Write the source file so hashSource can compute it
     const sourceDir = join(TEST_DIR, 'root-cache', 'src', 'pages');
-    await mkdir(sourceDir, { recursive: true });
+    await mkdir(sourceDir, {
+      recursive: true,
+    });
     await Bun.write(join(sourceDir, `${moduleId}.tsx`), sourceContent);
 
     // Compute the hash the same way hashSource would
@@ -441,14 +555,20 @@ describe('ModuleCompiler - compile() cache hit', () => {
 
     // Prepare the disk cache entry
     const pluginCacheDir = join(CACHE_DIR, pluginName);
-    await mkdir(pluginCacheDir, { recursive: true });
+    await mkdir(pluginCacheDir, {
+      recursive: true,
+    });
     await Bun.write(join(pluginCacheDir, `${moduleId}.${hash}.js`), 'cached-js');
     await Bun.write(join(pluginCacheDir, `${moduleId}.${hash}.css`), 'cached-css');
 
     const buildSpy = spyOn(Bun, 'build');
 
     try {
-      await compiler.compile(pluginName, join(TEST_DIR, 'root-cache'), [{ id: moduleId }]);
+      await compiler.compile(pluginName, join(TEST_DIR, 'root-cache'), [
+        {
+          id: moduleId,
+        },
+      ]);
 
       // Build should NOT have been called — cache hit
       expect(buildSpy).not.toHaveBeenCalled();
@@ -480,7 +600,9 @@ describe('ModuleCache - loadFromDisk', () => {
 
   beforeAll(async () => {
     const pluginDir = join(CACHE_DIR, pluginName);
-    await mkdir(pluginDir, { recursive: true });
+    await mkdir(pluginDir, {
+      recursive: true,
+    });
     await Bun.write(join(pluginDir, `${moduleId}.${hash}.js`), jsContent);
     await Bun.write(join(pluginDir, `${moduleId}.${hash}.css`), cssContent);
   });
@@ -522,7 +644,9 @@ describe('ModuleCache - loadFromDisk', () => {
   test('loadFromDisk without CSS file only loads JS', async () => {
     const jsOnlyPlugin = 'js-only';
     const jsOnlyDir = join(CACHE_DIR, jsOnlyPlugin);
-    await mkdir(jsOnlyDir, { recursive: true });
+    await mkdir(jsOnlyDir, {
+      recursive: true,
+    });
     await Bun.write(join(jsOnlyDir, `main.${hash}.js`), 'const x = 1;');
 
     const { ModuleCache } = await import('@/runtime/modules/module-cache');

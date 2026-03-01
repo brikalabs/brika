@@ -34,7 +34,9 @@ defineRenderer('code-block', ({ node }) => {
         className={cn('overflow-auto', node.maxLines && 'max-h-[var(--max-h)]')}
         style={
           node.maxLines
-            ? ({ '--max-h': `${node.maxLines * 1.5}rem` } as React.CSSProperties)
+            ? ({
+                '--max-h': `${node.maxLines * 1.5}rem`,
+              } as React.CSSProperties)
             : undefined
         }
       >

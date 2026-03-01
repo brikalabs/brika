@@ -12,17 +12,71 @@ import { wait } from './fixtures';
 
 describe('isSource', () => {
   test.each([
-    ['valid source with start function', { __source: true, start: () => () => undefined }, true],
-    ['missing __source property', { start: () => () => undefined }, false],
-    ['__source is false', { __source: false, start: () => () => undefined }, false],
-    ['null value', null, false],
-    ['undefined value', undefined, false],
-    ['string value', 'source', false],
-    ['number value', 123, false],
-    ['empty object', {}, false],
-    ['array', [], false],
-    ['function', () => undefined, false],
-    ['object with only __source', { __source: true }, true],
+    [
+      'valid source with start function',
+      {
+        __source: true,
+        start: () => () => undefined,
+      },
+      true,
+    ],
+    [
+      'missing __source property',
+      {
+        start: () => () => undefined,
+      },
+      false,
+    ],
+    [
+      '__source is false',
+      {
+        __source: false,
+        start: () => () => undefined,
+      },
+      false,
+    ],
+    [
+      'null value',
+      null,
+      false,
+    ],
+    [
+      'undefined value',
+      undefined,
+      false,
+    ],
+    [
+      'string value',
+      'source',
+      false,
+    ],
+    [
+      'number value',
+      123,
+      false,
+    ],
+    [
+      'empty object',
+      {},
+      false,
+    ],
+    [
+      'array',
+      [],
+      false,
+    ],
+    [
+      'function',
+      () => undefined,
+      false,
+    ],
+    [
+      'object with only __source',
+      {
+        __source: true,
+      },
+      true,
+    ],
   ])('returns correct result for %s', (_description, value, expected) => {
     expect(isSource(value)).toBe(expected);
   });
@@ -144,7 +198,9 @@ describe('timer', () => {
     await wait(50);
     cleanup();
 
-    expect(values).toEqual([0]);
+    expect(values).toEqual([
+      0,
+    ]);
   });
 
   test('emits only once', async () => {
@@ -157,7 +213,9 @@ describe('timer', () => {
     await wait(100);
     cleanup();
 
-    expect(values).toEqual([0]);
+    expect(values).toEqual([
+      0,
+    ]);
   });
 
   test('cleanup cancels timer if not fired', async () => {
@@ -183,7 +241,9 @@ describe('timer', () => {
     await wait(50);
     cleanup(); // Should be safe to call after timer fired
 
-    expect(values).toEqual([0]);
+    expect(values).toEqual([
+      0,
+    ]);
   });
 
   test('multiple starts create independent timers', async () => {
@@ -199,7 +259,11 @@ describe('timer', () => {
     cleanup1();
     cleanup2();
 
-    expect(values1).toEqual([0]);
-    expect(values2).toEqual([0]);
+    expect(values1).toEqual([
+      0,
+    ]);
+    expect(values2).toEqual([
+      0,
+    ]);
   });
 });

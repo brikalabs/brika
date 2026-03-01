@@ -33,7 +33,9 @@ export type TypeMarkerValue = (typeof TypeMarker)[keyof typeof TypeMarker];
  * Check if a JSON Schema description contains a type marker.
  */
 export function getTypeMarker(description?: string): TypeMarkerValue | null {
-  if (!description) return null;
+  if (!description) {
+    return null;
+  }
   for (const marker of Object.values(TypeMarker)) {
     if (description.includes(marker)) {
       return marker as TypeMarkerValue;
@@ -74,11 +76,21 @@ export function color(description?: string) {
  * @param options.max Maximum value in ms
  * @param description Optional additional description
  */
-export function duration(options?: { min?: number; max?: number }, description?: string) {
+export function duration(
+  options?: {
+    min?: number;
+    max?: number;
+  },
+  description?: string
+) {
   const desc = description ? `${TypeMarker.DURATION} ${description}` : TypeMarker.DURATION;
   let schema = z.number().int().min(0);
-  if (options?.min !== undefined) schema = schema.min(options.min);
-  if (options?.max !== undefined) schema = schema.max(options.max);
+  if (options?.min !== undefined) {
+    schema = schema.min(options.min);
+  }
+  if (options?.max !== undefined) {
+    schema = schema.max(options.max);
+  }
   return schema.describe(desc);
 }
 
@@ -414,11 +426,19 @@ export function isResolvedRef(value: unknown): value is ResolvedRef {
  * parseResolvedMarker('$resolve:spark:sparkType') // { source: 'spark', configField: 'sparkType' }
  * parseResolvedMarker('generic<T>') // null
  */
-export function parseResolvedMarker(
-  typeName?: string
-): { source: string; configField: string } | null {
-  if (!typeName?.startsWith(RESOLVED_MARKER + ':')) return null;
+export function parseResolvedMarker(typeName?: string): {
+  source: string;
+  configField: string;
+} | null {
+  if (!typeName?.startsWith(`${RESOLVED_MARKER}:`)) {
+    return null;
+  }
   const parts = typeName.slice(RESOLVED_MARKER.length + 1).split(':');
-  if (parts.length < 2 || !parts[0] || !parts[1]) return null;
-  return { source: parts[0], configField: parts[1] };
+  if (parts.length < 2 || !parts[0] || !parts[1]) {
+    return null;
+  }
+  return {
+    source: parts[0],
+    configField: parts[1],
+  };
 }

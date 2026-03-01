@@ -45,12 +45,18 @@ export function StorePage() {
         installed: plugin.installed,
         installedVersion: plugin.installedVersion,
         source: plugin.source,
-        npm: { downloads: plugin.downloadCount, publishedAt: plugin.package.date || '' },
+        npm: {
+          downloads: plugin.downloadCount,
+          publishedAt: plugin.package.date || '',
+        },
       };
     };
 
     return (searchData?.plugins ?? []).map(toStorePlugin);
-  }, [searchData, verifiedData]);
+  }, [
+    searchData,
+    verifiedData,
+  ]);
 
   // Apply filters
   const filteredPlugins = React.useMemo(() => {
@@ -70,15 +76,21 @@ export function StorePage() {
 
     switch (sort) {
       case 'downloads':
-        filtered = [...filtered].sort((a, b) => b.npm.downloads - a.npm.downloads);
+        filtered = [
+          ...filtered,
+        ].sort((a, b) => b.npm.downloads - a.npm.downloads);
         break;
       case 'recent':
-        filtered = [...filtered].sort(
+        filtered = [
+          ...filtered,
+        ].sort(
           (a, b) => new Date(b.npm.publishedAt).getTime() - new Date(a.npm.publishedAt).getTime()
         );
         break;
       case 'name':
-        filtered = [...filtered].sort((a, b) =>
+        filtered = [
+          ...filtered,
+        ].sort((a, b) =>
           tp(a.name, 'name', a.displayName ?? a.name).localeCompare(
             tp(b.name, 'name', b.displayName ?? b.name)
           )
@@ -87,20 +99,36 @@ export function StorePage() {
     }
 
     return filtered;
-  }, [allPlugins, filter, sort, tp]);
+  }, [
+    allPlugins,
+    filter,
+    sort,
+    tp,
+  ]);
 
   // Featured plugins first
   const sortedPlugins = React.useMemo(
     () =>
-      [...filteredPlugins].sort((a, b) => {
-        if (a.featured && !b.featured) return -1;
-        if (!a.featured && b.featured) return 1;
+      [
+        ...filteredPlugins,
+      ].sort((a, b) => {
+        if (a.featured && !b.featured) {
+          return -1;
+        }
+        if (!a.featured && b.featured) {
+          return 1;
+        }
         return 0;
       }),
-    [filteredPlugins]
+    [
+      filteredPlugins,
+    ]
   );
 
-  const View = useDataView({ data: sortedPlugins, isLoading });
+  const View = useDataView({
+    data: sortedPlugins,
+    isLoading,
+  });
 
   return (
     <div className="space-y-6">
@@ -121,7 +149,9 @@ export function StorePage() {
         <View.Skeleton>
           <section>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {Array.from({ length: 6 }).map((_, i) => (
+              {Array.from({
+                length: 6,
+              }).map((_, i) => (
                 <PluginStoreCardSkeleton key={`store-skeleton-${i}`} />
               ))}
             </div>

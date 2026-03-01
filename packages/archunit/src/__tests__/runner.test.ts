@@ -13,43 +13,61 @@ import type { Buildable, Rule, Violation } from '../types';
 const TEST_DIR = join(import.meta.dir, '.test-runner-fixtures');
 
 async function setupFixtures(fixtures: Record<string, string>) {
-  await mkdir(TEST_DIR, { recursive: true });
+  await mkdir(TEST_DIR, {
+    recursive: true,
+  });
   for (const [path, content] of Object.entries(fixtures)) {
     const fullPath = join(TEST_DIR, path);
-    await mkdir(join(fullPath, '..'), { recursive: true });
+    await mkdir(join(fullPath, '..'), {
+      recursive: true,
+    });
     await writeFile(fullPath, content);
   }
 }
 
 describe('runner', () => {
   afterEach(async () => {
-    await rm(TEST_DIR, { recursive: true, force: true });
+    await rm(TEST_DIR, {
+      recursive: true,
+      force: true,
+    });
   });
 
   describe('collect() with Promise<Violation[]> rules', () => {
     it('handles rules that return Promise<Violation[]> instead of AsyncIterable', async () => {
-      await setupFixtures({ 'test.ts': '' });
+      await setupFixtures({
+        'test.ts': '',
+      });
 
       const promiseRule: Rule = {
         name: 'promise-rule',
         check: async () => {
-          return [{ file: 'test.ts', message: 'violation from promise rule' }];
+          return [
+            {
+              file: 'test.ts',
+              message: 'violation from promise rule',
+            },
+          ];
         },
       };
 
       const result = await runArch({
         cwd: TEST_DIR,
-        rules: [promiseRule],
+        rules: [
+          promiseRule,
+        ],
       });
 
       expect(result.passed).toBe(false);
       expect(result.violations).toHaveLength(1);
-      expect(result.violations[0]!.rule).toBe('promise-rule');
-      expect(result.violations[0]!.violations[0]!.message).toBe('violation from promise rule');
+      expect(result.violations[0]?.rule).toBe('promise-rule');
+      expect(result.violations[0]?.violations[0]?.message).toBe('violation from promise rule');
     });
 
     it('handles rules returning empty Promise<Violation[]>', async () => {
-      await setupFixtures({ 'test.ts': '' });
+      await setupFixtures({
+        'test.ts': '',
+      });
 
       const promiseRule: Rule = {
         name: 'empty-promise-rule',
@@ -60,7 +78,9 @@ describe('runner', () => {
 
       const result = await runArch({
         cwd: TEST_DIR,
-        rules: [promiseRule],
+        rules: [
+          promiseRule,
+        ],
       });
 
       expect(result.passed).toBe(true);
@@ -70,7 +90,9 @@ describe('runner', () => {
 
   describe('run() with normalizeRules', () => {
     it('normalizes Buildable inputs and runs them', async () => {
-      await setupFixtures({ 'test.ts': '' });
+      await setupFixtures({
+        'test.ts': '',
+      });
 
       const rawRule: Rule = {
         name: 'built-rule',
@@ -104,7 +126,9 @@ describe('runner', () => {
     });
 
     it('normalizes raw Rule inputs', async () => {
-      await setupFixtures({ 'test.ts': '' });
+      await setupFixtures({
+        'test.ts': '',
+      });
 
       const rawRule: Rule = {
         name: 'raw-rule',
@@ -131,7 +155,9 @@ describe('runner', () => {
     });
 
     it('normalizes nested array inputs', async () => {
-      await setupFixtures({ 'test.ts': '' });
+      await setupFixtures({
+        'test.ts': '',
+      });
 
       const rule1: Rule = {
         name: 'rule-1',
@@ -157,7 +183,10 @@ describe('runner', () => {
 
       try {
         // Passing as nested array (RuleInput can be Rule[])
-        await run([rule1, rule2] as unknown as Rule);
+        await run([
+          rule1,
+          rule2,
+        ] as unknown as Rule);
       } finally {
         process.exit = originalExit;
       }
@@ -169,7 +198,10 @@ describe('runner', () => {
       const failingRule: Rule = {
         name: 'failing-rule',
         async *check() {
-          yield { file: 'bad.ts', message: 'something wrong' };
+          yield {
+            file: 'bad.ts',
+            message: 'something wrong',
+          };
         },
       };
 

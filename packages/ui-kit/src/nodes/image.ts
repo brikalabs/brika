@@ -16,10 +16,16 @@ export interface ImageNode extends BaseNode {
 }
 
 export function Image(
-  props: Omit<ImageNode, 'type' | 'onPress'> & { onPress?: ActionHandler }
+  props: Omit<ImageNode, 'type' | 'onPress'> & {
+    onPress?: ActionHandler;
+  }
 ): ImageNode {
   const { onPress, ...rest } = props;
-  return { type: 'image', ...rest, onPress: onPress ? resolveAction(onPress) : undefined };
+  return {
+    type: 'image',
+    ...rest,
+    onPress: onPress ? resolveAction(onPress) : undefined,
+  };
 }
 
 declare module './_shared' {

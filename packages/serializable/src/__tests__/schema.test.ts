@@ -37,27 +37,60 @@ describe('SerializableSchema', () => {
 
   describe('binary types', () => {
     test('accepts Uint8Array', () => {
-      const result = SerializableSchema.safeParse(new Uint8Array([1, 2, 3]));
+      const result = SerializableSchema.safeParse(
+        new Uint8Array([
+          1,
+          2,
+          3,
+        ])
+      );
       expect(result.success).toBe(true);
     });
 
     test('accepts Blob', () => {
-      const result = SerializableSchema.safeParse(new Blob(['test']));
+      const result = SerializableSchema.safeParse(
+        new Blob([
+          'test',
+        ])
+      );
       expect(result.success).toBe(true);
     });
   });
 
   describe('collections', () => {
     test('accepts array of primitives', () => {
-      expect(SerializableSchema.safeParse([1, 2, 3]).success).toBe(true);
-      expect(SerializableSchema.safeParse(['a', 'b', 'c']).success).toBe(true);
-      expect(SerializableSchema.safeParse([true, false]).success).toBe(true);
+      expect(
+        SerializableSchema.safeParse([
+          1,
+          2,
+          3,
+        ]).success
+      ).toBe(true);
+      expect(
+        SerializableSchema.safeParse([
+          'a',
+          'b',
+          'c',
+        ]).success
+      ).toBe(true);
+      expect(
+        SerializableSchema.safeParse([
+          true,
+          false,
+        ]).success
+      ).toBe(true);
     });
 
     test('accepts nested arrays', () => {
       const result = SerializableSchema.safeParse([
-        [1, 2],
-        [3, 4],
+        [
+          1,
+          2,
+        ],
+        [
+          3,
+          4,
+        ],
       ]);
       expect(result.success).toBe(true);
     });
@@ -94,19 +127,29 @@ describe('SerializableSchema', () => {
 
     test('accepts Map with complex values', () => {
       const map = new Map<string, object>();
-      map.set('config', { enabled: true });
+      map.set('config', {
+        enabled: true,
+      });
       const result = SerializableSchema.safeParse(map);
       expect(result.success).toBe(true);
     });
 
     test('accepts Set', () => {
-      const set = new Set([1, 2, 3]);
+      const set = new Set([
+        1,
+        2,
+        3,
+      ]);
       const result = SerializableSchema.safeParse(set);
       expect(result.success).toBe(true);
     });
 
     test('accepts Set with complex values', () => {
-      const set = new Set(['a', 'b', 'c']);
+      const set = new Set([
+        'a',
+        'b',
+        'c',
+      ]);
       const result = SerializableSchema.safeParse(set);
       expect(result.success).toBe(true);
     });
@@ -114,7 +157,12 @@ describe('SerializableSchema', () => {
 
   describe('mixed types', () => {
     test('accepts array of mixed types', () => {
-      const result = SerializableSchema.safeParse([1, 'two', true, null]);
+      const result = SerializableSchema.safeParse([
+        1,
+        'two',
+        true,
+        null,
+      ]);
       expect(result.success).toBe(true);
     });
 
@@ -124,8 +172,14 @@ describe('SerializableSchema', () => {
         string: 'hello',
         boolean: true,
         null: null,
-        array: [1, 2, 3],
-        nested: { key: 'value' },
+        array: [
+          1,
+          2,
+          3,
+        ],
+        nested: {
+          key: 'value',
+        },
       });
       expect(result.success).toBe(true);
     });
@@ -135,7 +189,13 @@ describe('SerializableSchema', () => {
         level1: {
           level2: {
             level3: {
-              value: [1, 2, { deep: true }],
+              value: [
+                1,
+                2,
+                {
+                  deep: true,
+                },
+              ],
             },
           },
         },

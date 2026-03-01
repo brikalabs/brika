@@ -2,24 +2,53 @@ import pc from 'picocolors';
 import type { PackageDetails, PluginDetails } from './package-details';
 import { plurals } from './plurals';
 
-const EXPORT_PATH_FORMS = { '=0': 'no paths', one: '# path', other: '# paths' };
-const BLOCK_FORMS = { one: '# block', other: '# blocks' };
-const BRICK_FORMS = { one: '# brick', other: '# bricks' };
-const SPARK_FORMS = { one: '# spark', other: '# sparks' };
-const PAGE_FORMS = { one: '# page', other: '# pages' };
-const WARNING_FORMS = { one: '# warning', other: '# warnings' };
+const EXPORT_PATH_FORMS = {
+  '=0': 'no paths',
+  one: '# path',
+  other: '# paths',
+};
+const BLOCK_FORMS = {
+  one: '# block',
+  other: '# blocks',
+};
+const BRICK_FORMS = {
+  one: '# brick',
+  other: '# bricks',
+};
+const SPARK_FORMS = {
+  one: '# spark',
+  other: '# sparks',
+};
+const PAGE_FORMS = {
+  one: '# page',
+  other: '# pages',
+};
+const WARNING_FORMS = {
+  one: '# warning',
+  other: '# warnings',
+};
 
 function getPackageWarnings(details: PackageDetails): string[] {
   const warnings: string[] = [];
-  if (!details.hasReadme) warnings.push('README.md missing');
-  if (!details.license) warnings.push('license missing');
-  if (!details.hasRepository) warnings.push('repository missing');
+  if (!details.hasReadme) {
+    warnings.push('README.md missing');
+  }
+  if (!details.license) {
+    warnings.push('license missing');
+  }
+  if (!details.hasRepository) {
+    warnings.push('repository missing');
+  }
   const hasKeywords =
     typeof details.keywordsCount === 'number' &&
     Number.isFinite(details.keywordsCount) &&
     details.keywordsCount > 0;
-  if (!hasKeywords) warnings.push('keywords missing');
-  if (details.plugin && !details.plugin.enginesBrika) warnings.push('engines.brika missing');
+  if (!hasKeywords) {
+    warnings.push('keywords missing');
+  }
+  if (details.plugin && !details.plugin.enginesBrika) {
+    warnings.push('engines.brika missing');
+  }
   return warnings;
 }
 
@@ -29,7 +58,9 @@ function detailLine(label: string, value: string): string {
 }
 
 function pushWhenValue(lines: string[], label: string, value: string | undefined): void {
-  if (value === undefined || value.length === 0) return;
+  if (value === undefined || value.length === 0) {
+    return;
+  }
   lines.push(detailLine(label, value));
 }
 
@@ -37,7 +68,9 @@ function warningLines(warnings: string[]): string[] {
   const warningCount = warnings.length;
   const warningLabel = plurals(WARNING_FORMS, warningCount);
   const warningSummary = `⚠ ${warningLabel}`;
-  const lines = [`    ${pc.yellow(warningSummary)}`];
+  const lines = [
+    `    ${pc.yellow(warningSummary)}`,
+  ];
   for (const warning of warnings) {
     lines.push(`      ${pc.yellow('•')} ${pc.yellow(warning)}`);
   }
@@ -58,7 +91,9 @@ function buildPluginFeatures(plugin: PluginDetails): string[] {
   if (typeof plugin.pagesCount === 'number' && plugin.pagesCount > 0) {
     features.push(plurals(PAGE_FORMS, plugin.pagesCount));
   }
-  if (plugin.hasActions) features.push('actions');
+  if (plugin.hasActions) {
+    features.push('actions');
+  }
   return features;
 }
 
@@ -71,7 +106,9 @@ export function formatPackageLabel(name: string, version: string): string {
  * Returns the number of named export paths in a package's `exports` field.
  */
 export function countExports(exports: unknown): number {
-  if (!exports || typeof exports !== 'object') return 1;
+  if (!exports || typeof exports !== 'object') {
+    return 1;
+  }
   return Object.keys(exports).length;
 }
 
@@ -80,8 +117,14 @@ export function countExports(exports: unknown): number {
  * Handles both string shorthand and object form.
  */
 export function getBinNames(name: string, bin: PackageDetails['bin']): string[] {
-  if (!bin) return [];
-  if (typeof bin === 'string') return [name];
+  if (!bin) {
+    return [];
+  }
+  if (typeof bin === 'string') {
+    return [
+      name,
+    ];
+  }
   return Object.keys(bin);
 }
 
@@ -89,10 +132,16 @@ export function getBinNames(name: string, bin: PackageDetails['bin']): string[] 
  * Returns the lifecycle hook names that are defined for a package.
  */
 export function getHooks(scripts: PackageDetails['scripts']): string[] {
-  if (!scripts) return [];
+  if (!scripts) {
+    return [];
+  }
   const hooks: string[] = [];
-  if (scripts.prepublishOnly) hooks.push('prepublishOnly');
-  if (scripts.build) hooks.push('build');
+  if (scripts.prepublishOnly) {
+    hooks.push('prepublishOnly');
+  }
+  if (scripts.build) {
+    hooks.push('build');
+  }
   return hooks;
 }
 
@@ -103,8 +152,12 @@ export function getHooks(scripts: PackageDetails['scripts']): string[] {
  *   older than local → shows the published version (normal)
  */
 export function formatNpmStatus(localVersion: string, publishedVersion: string | null): string {
-  if (publishedVersion === null) return pc.cyan('not yet published');
-  if (publishedVersion === localVersion) return pc.yellow('already published — will overwrite');
+  if (publishedVersion === null) {
+    return pc.cyan('not yet published');
+  }
+  if (publishedVersion === localVersion) {
+    return pc.yellow('already published — will overwrite');
+  }
   return publishedVersion;
 }
 
@@ -112,7 +165,9 @@ export function formatNpmStatus(localVersion: string, publishedVersion: string |
  * Builds a short npm hint used in package selection.
  */
 export function formatNpmHint(publishedVersion: string | null): string {
-  if (publishedVersion === null) return `${pc.dim('npm: ')}${pc.cyan('new')}`;
+  if (publishedVersion === null) {
+    return `${pc.dim('npm: ')}${pc.cyan('new')}`;
+  }
   return `${pc.dim('npm: ')}${publishedVersion}`;
 }
 
@@ -135,7 +190,10 @@ export function formatPackagePreview(
   const pluginDetails = details.plugin;
   const pluginFeatures = pluginDetails ? buildPluginFeatures(pluginDetails) : [];
   const warnings = getPackageWarnings(details);
-  const mergedWarnings = [...warnings, ...extraWarnings];
+  const mergedWarnings = [
+    ...warnings,
+    ...extraWarnings,
+  ];
   const uniqueWarnings = Array.from(new Set(mergedWarnings));
   if (uniqueWarnings.length > 0) {
     lines.push(...warningLines(uniqueWarnings));

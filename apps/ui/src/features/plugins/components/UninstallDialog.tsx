@@ -33,7 +33,9 @@ export function UninstallDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>{t('plugins:uninstall.title')}</AlertDialogTitle>
           <AlertDialogDescription>
-            {t('plugins:uninstall.description', { name: pluginName })}
+            {t('plugins:uninstall.description', {
+              name: pluginName,
+            })}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

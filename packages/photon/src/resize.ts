@@ -11,9 +11,11 @@ export function computeResize(
   srcH: number,
   targetW: number | undefined,
   targetH: number | undefined,
-  fit: ResizeFit,
+  fit: ResizeFit
 ): ResizeOp | null {
-  if (!targetW && !targetH) return null;
+  if (!targetW && !targetH) {
+    return null;
+  }
 
   switch (fit) {
     case 'cover':
@@ -21,7 +23,10 @@ export function computeResize(
     case 'contain':
       return contain(srcW, srcH, targetW, targetH);
     case 'fill':
-      return { width: targetW ?? srcW, height: targetH ?? srcH };
+      return {
+        width: targetW ?? srcW,
+        height: targetH ?? srcH,
+      };
   }
 }
 
@@ -48,17 +53,26 @@ function contain(
   srcW: number,
   srcH: number,
   targetW: number | undefined,
-  targetH: number | undefined,
+  targetH: number | undefined
 ): ResizeOp | null {
   if (targetW && targetH) {
     const scale = Math.min(targetW / srcW, targetH / srcH);
-    return { width: Math.round(srcW * scale), height: Math.round(srcH * scale) };
+    return {
+      width: Math.round(srcW * scale),
+      height: Math.round(srcH * scale),
+    };
   }
   if (targetW) {
-    return { width: targetW, height: Math.round(srcH * (targetW / srcW)) };
+    return {
+      width: targetW,
+      height: Math.round(srcH * (targetW / srcW)),
+    };
   }
   if (targetH) {
-    return { width: Math.round(srcW * (targetH / srcH)), height: targetH };
+    return {
+      width: Math.round(srcW * (targetH / srcH)),
+      height: targetH,
+    };
   }
   return null;
 }

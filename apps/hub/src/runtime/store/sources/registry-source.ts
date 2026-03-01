@@ -14,5 +14,8 @@ export interface RegistrySource {
     query?: string,
     limit?: number,
     offset?: number
-  ): Promise<{ plugins: RawRegistryPlugin[]; total: number }>;
+  ): Promise<{
+    plugins: RawRegistryPlugin[];
+    total: number;
+  }>;
 }

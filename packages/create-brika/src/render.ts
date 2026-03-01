@@ -49,8 +49,11 @@ const FILE_RENAMES: Record<string, string> = {
 
 /** Resolve a template filename: strip .tpl/.ts, interpolate {{key}}, apply renames. */
 export function resolveFilename(name: string, data: TemplateData): string {
-  if (name.endsWith('.tpl')) name = name.slice(0, -4);
-  else if (name.endsWith('.ts')) name = name.slice(0, -3);
+  if (name.endsWith('.tpl')) {
+    name = name.slice(0, -4);
+  } else if (name.endsWith('.ts')) {
+    name = name.slice(0, -3);
+  }
   name = name.replaceAll(/\{\{(\w+)\}\}/g, (_, key) => {
     const val = data[key];
     return typeof val === 'string' ? val : '';
@@ -59,10 +62,20 @@ export function resolveFilename(name: string, data: TemplateData): string {
 }
 
 /** Parse [condition] prefix from a directory name. */
-export function parseCondition(name: string): { name: string; condition?: string } {
+export function parseCondition(name: string): {
+  name: string;
+  condition?: string;
+} {
   const match = /^\[(\w+)\](.+)$/.exec(name);
-  if (match) return { name: match[2], condition: match[1] };
-  return { name };
+  if (match) {
+    return {
+      name: match[2],
+      condition: match[1],
+    };
+  }
+  return {
+    name,
+  };
 }
 
 // ─── Directory walker ────────────────────────────────────────────────────────
@@ -73,15 +86,21 @@ export async function walkTemplate(
   targetDir: string,
   data: TemplateData
 ): Promise<void> {
-  await fs.mkdir(targetDir, { recursive: true });
-  const entries = await fs.readdir(templateDir, { withFileTypes: true });
+  await fs.mkdir(targetDir, {
+    recursive: true,
+  });
+  const entries = await fs.readdir(templateDir, {
+    withFileTypes: true,
+  });
 
   for (const entry of entries) {
     const srcPath = path.join(templateDir, entry.name);
 
     if (entry.isDirectory()) {
       const { name: dirName, condition } = parseCondition(entry.name);
-      if (condition && !data[condition]) continue;
+      if (condition && !data[condition]) {
+        continue;
+      }
 
       await walkTemplate(srcPath, path.join(targetDir, dirName), data);
     } else if (entry.name.endsWith('.ts')) {

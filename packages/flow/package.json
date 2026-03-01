@@ -14,13 +14,22 @@
     "url": "git+https://github.com/maxscharwath/brika.git",
     "directory": "packages/flow"
   },
-  "keywords": ["brika", "reactive", "streams", "flow"],
+  "keywords": [
+    "brika",
+    "reactive",
+    "streams",
+    "flow"
+  ],
   "exports": {
     ".": "./src/index.ts"
   },
-  "files": ["src", "README.md"],
+  "files": [
+    "src",
+    "README.md"
+  ],
   "scripts": {
-    "tsc": "bunx --bun tsc --noEmit",
+    "test": "bun test",
+    "typecheck": "tsgo --noEmit",
     "prepublishOnly": "bun run tsc"
   },
   "dependencies": {

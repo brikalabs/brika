@@ -31,7 +31,11 @@ interface WorkflowEvent {
  * Extracts the event type from the action type string and safely extracts payload fields.
  */
 function transformActionToWorkflowEvent(
-  action: { type: string; payload: unknown; timestamp: number },
+  action: {
+    type: string;
+    payload: unknown;
+    timestamp: number;
+  },
   workflowId: string
 ): WorkflowEvent {
   const typeParts = action.type.split('.');
@@ -91,7 +95,9 @@ export const streamsRoutes = [
   // SSE: Live workflow events for debugging
   route.get({
     path: '/api/workflows/:id/events',
-    params: z.object({ id: z.string() }),
+    params: z.object({
+      id: z.string(),
+    }),
     handler: ({ params, inject }) => {
       const workflows = inject(WorkflowEngine);
       const events = inject(EventSystem);
@@ -109,7 +115,10 @@ export const streamsRoutes = [
 
         // Subscribe to events related to this workflow
         const unsub = events.subscribeGlob(
-          [`workflow.${params.id}.*`, `block.${params.id}.*`],
+          [
+            `workflow.${params.id}.*`,
+            `block.${params.id}.*`,
+          ],
           (action) => {
             const event = transformActionToWorkflowEvent(action, params.id);
             send(event, 'workflow-event');

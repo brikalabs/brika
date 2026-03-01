@@ -25,7 +25,9 @@ describe('extractQuery', () => {
 
     const result = extractQuery(url);
 
-    expect(result).toEqual({ foo: 'bar' });
+    expect(result).toEqual({
+      foo: 'bar',
+    });
   });
 
   test('extracts multiple query parameters', () => {
@@ -33,7 +35,11 @@ describe('extractQuery', () => {
 
     const result = extractQuery(url);
 
-    expect(result).toEqual({ a: '1', b: '2', c: '3' });
+    expect(result).toEqual({
+      a: '1',
+      b: '2',
+      c: '3',
+    });
   });
 
   test('keeps only the last value for duplicate keys', () => {
@@ -41,7 +47,9 @@ describe('extractQuery', () => {
 
     const result = extractQuery(url);
 
-    expect(result).toEqual({ key: 'second' });
+    expect(result).toEqual({
+      key: 'second',
+    });
   });
 
   test('handles URL-encoded values', () => {
@@ -49,7 +57,10 @@ describe('extractQuery', () => {
 
     const result = extractQuery(url);
 
-    expect(result).toEqual({ q: 'hello world', tag: '&special' });
+    expect(result).toEqual({
+      q: 'hello world',
+      tag: '&special',
+    });
   });
 
   test('handles empty-string values', () => {
@@ -57,7 +68,9 @@ describe('extractQuery', () => {
 
     const result = extractQuery(url);
 
-    expect(result).toEqual({ empty: '' });
+    expect(result).toEqual({
+      empty: '',
+    });
   });
 });
 
@@ -120,7 +133,9 @@ describe('extractHeaders', () => {
 
   test('does not override x-forwarded-proto when already set', () => {
     const req = new Request('http://localhost', {
-      headers: { 'x-forwarded-proto': 'https' },
+      headers: {
+        'x-forwarded-proto': 'https',
+      },
     });
     const url = new URL('http://localhost');
 
@@ -146,7 +161,9 @@ describe('extractHeaders', () => {
 
 describe('extractBody', () => {
   test('returns undefined for GET requests', async () => {
-    const req = new Request('https://example.com', { method: 'GET' });
+    const req = new Request('https://example.com', {
+      method: 'GET',
+    });
 
     const result = await extractBody(req);
 
@@ -154,7 +171,9 @@ describe('extractBody', () => {
   });
 
   test('returns undefined for HEAD requests', async () => {
-    const req = new Request('https://example.com', { method: 'HEAD' });
+    const req = new Request('https://example.com', {
+      method: 'HEAD',
+    });
 
     const result = await extractBody(req);
 
@@ -164,7 +183,9 @@ describe('extractBody', () => {
   test('returns undefined when content-type is not application/json', async () => {
     const req = new Request('https://example.com', {
       method: 'POST',
-      headers: { 'content-type': 'text/plain' },
+      headers: {
+        'content-type': 'text/plain',
+      },
       body: 'hello',
     });
 
@@ -187,55 +208,81 @@ describe('extractBody', () => {
   test('parses JSON body for POST requests', async () => {
     const req = new Request('https://example.com', {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ key: 'value' }),
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        key: 'value',
+      }),
     });
 
     const result = await extractBody(req);
 
-    expect(result).toEqual({ key: 'value' });
+    expect(result).toEqual({
+      key: 'value',
+    });
   });
 
   test('parses JSON body for PUT requests', async () => {
     const req = new Request('https://example.com', {
       method: 'PUT',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ updated: true }),
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        updated: true,
+      }),
     });
 
     const result = await extractBody(req);
 
-    expect(result).toEqual({ updated: true });
+    expect(result).toEqual({
+      updated: true,
+    });
   });
 
   test('parses JSON body for DELETE requests', async () => {
     const req = new Request('https://example.com', {
       method: 'DELETE',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ id: 42 }),
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        id: 42,
+      }),
     });
 
     const result = await extractBody(req);
 
-    expect(result).toEqual({ id: 42 });
+    expect(result).toEqual({
+      id: 42,
+    });
   });
 
   test('handles content-type with charset parameter', async () => {
     const req = new Request('https://example.com', {
       method: 'POST',
-      headers: { 'content-type': 'application/json; charset=utf-8' },
-      body: JSON.stringify({ ok: true }),
+      headers: {
+        'content-type': 'application/json; charset=utf-8',
+      },
+      body: JSON.stringify({
+        ok: true,
+      }),
     });
 
     const result = await extractBody(req);
 
-    expect(result).toEqual({ ok: true });
+    expect(result).toEqual({
+      ok: true,
+    });
   });
 
   test('returns undefined when body is invalid JSON', async () => {
     const req = new Request('https://example.com', {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: {
+        'content-type': 'application/json',
+      },
       body: 'not valid json{{{',
     });
 
@@ -261,10 +308,18 @@ describe('proxyToPlugin', () => {
   }
 
   test('forwards arguments to process.sendRouteRequest', async () => {
-    const proc = createMockProcess({ status: 200 });
-    const query = { q: 'test' };
-    const headers = { 'content-type': 'application/json' };
-    const body = { data: 1 };
+    const proc = createMockProcess({
+      status: 200,
+    });
+    const query = {
+      q: 'test',
+    };
+    const headers = {
+      'content-type': 'application/json',
+    };
+    const body = {
+      data: 1,
+    };
 
     await proxyToPlugin(proc, 'route-1', 'POST', '/api/items', query, headers, body);
 
@@ -279,7 +334,9 @@ describe('proxyToPlugin', () => {
   });
 
   test('returns a Response with the correct status', async () => {
-    const proc = createMockProcess({ status: 201 });
+    const proc = createMockProcess({
+      status: 201,
+    });
 
     const res = await proxyToPlugin(proc, 'r', 'GET', '/', {}, {});
 
@@ -289,7 +346,9 @@ describe('proxyToPlugin', () => {
   test('uses Content-Type from result headers (title case)', async () => {
     const proc = createMockProcess({
       status: 200,
-      headers: { 'Content-Type': 'text/html' },
+      headers: {
+        'Content-Type': 'text/html',
+      },
     });
 
     const res = await proxyToPlugin(proc, 'r', 'GET', '/', {}, {});
@@ -300,7 +359,9 @@ describe('proxyToPlugin', () => {
   test('uses content-type from result headers (lower case)', async () => {
     const proc = createMockProcess({
       status: 200,
-      headers: { 'content-type': 'text/plain' },
+      headers: {
+        'content-type': 'text/plain',
+      },
     });
 
     const res = await proxyToPlugin(proc, 'r', 'GET', '/', {}, {});
@@ -311,7 +372,9 @@ describe('proxyToPlugin', () => {
   });
 
   test('defaults Content-Type to application/json when no headers provided', async () => {
-    const proc = createMockProcess({ status: 200 });
+    const proc = createMockProcess({
+      status: 200,
+    });
 
     const res = await proxyToPlugin(proc, 'r', 'GET', '/', {}, {});
 
@@ -319,7 +382,10 @@ describe('proxyToPlugin', () => {
   });
 
   test('returns null body when result.body is null', async () => {
-    const proc = createMockProcess({ status: 204, body: null });
+    const proc = createMockProcess({
+      status: 204,
+      body: null,
+    });
 
     const res = await proxyToPlugin(proc, 'r', 'GET', '/', {}, {});
 
@@ -327,7 +393,9 @@ describe('proxyToPlugin', () => {
   });
 
   test('returns null body when result.body is undefined', async () => {
-    const proc = createMockProcess({ status: 204 });
+    const proc = createMockProcess({
+      status: 204,
+    });
 
     const res = await proxyToPlugin(proc, 'r', 'GET', '/', {}, {});
 
@@ -335,7 +403,10 @@ describe('proxyToPlugin', () => {
   });
 
   test('passes string body through as-is', async () => {
-    const proc = createMockProcess({ status: 200, body: '<h1>Hello</h1>' });
+    const proc = createMockProcess({
+      status: 200,
+      body: '<h1>Hello</h1>',
+    });
 
     const res = await proxyToPlugin(proc, 'r', 'GET', '/', {}, {});
 
@@ -343,25 +414,54 @@ describe('proxyToPlugin', () => {
   });
 
   test('serializes object body to JSON', async () => {
-    const proc = createMockProcess({ status: 200, body: { items: [1, 2, 3] } });
+    const proc = createMockProcess({
+      status: 200,
+      body: {
+        items: [
+          1,
+          2,
+          3,
+        ],
+      },
+    });
 
     const res = await proxyToPlugin(proc, 'r', 'GET', '/', {}, {});
 
-    expect(await res.json()).toEqual({ items: [1, 2, 3] });
+    expect(await res.json()).toEqual({
+      items: [
+        1,
+        2,
+        3,
+      ],
+    });
   });
 
   test('serializes array body to JSON', async () => {
-    const proc = createMockProcess({ status: 200, body: [1, 2, 3] });
+    const proc = createMockProcess({
+      status: 200,
+      body: [
+        1,
+        2,
+        3,
+      ],
+    });
 
     const res = await proxyToPlugin(proc, 'r', 'GET', '/', {}, {});
 
-    expect(await res.json()).toEqual([1, 2, 3]);
+    expect(await res.json()).toEqual([
+      1,
+      2,
+      3,
+    ]);
   });
 
   test('spreads extra result headers onto the response', async () => {
     const proc = createMockProcess({
       status: 200,
-      headers: { 'X-Custom': 'value', 'Content-Type': 'text/plain' },
+      headers: {
+        'X-Custom': 'value',
+        'Content-Type': 'text/plain',
+      },
     });
 
     const res = await proxyToPlugin(proc, 'r', 'GET', '/', {}, {});
@@ -371,11 +471,18 @@ describe('proxyToPlugin', () => {
   });
 
   test('works without body argument', async () => {
-    const proc = createMockProcess({ status: 200, body: { ok: true } });
+    const proc = createMockProcess({
+      status: 200,
+      body: {
+        ok: true,
+      },
+    });
 
     const res = await proxyToPlugin(proc, 'r', 'GET', '/', {}, {});
 
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ ok: true });
+    expect(await res.json()).toEqual({
+      ok: true,
+    });
   });
 });

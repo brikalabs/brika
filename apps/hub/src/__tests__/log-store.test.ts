@@ -13,7 +13,9 @@ import { ConfigLoader } from '@/runtime/config';
 import { type LogQueryParams, LogStore } from '@/runtime/logs/log-store';
 import type { LogEvent } from '@/runtime/logs/types';
 
-useTestBed({ autoStub: false });
+useTestBed({
+  autoStub: false,
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Test Fixtures
@@ -51,7 +53,10 @@ describe('LogStore', () => {
     store.close();
     reset();
     // Cleanup temp directory
-    await rm(tempDir, { recursive: true, force: true });
+    await rm(tempDir, {
+      recursive: true,
+      force: true,
+    });
   });
 
   describe('init', () => {
@@ -62,7 +67,9 @@ describe('LogStore', () => {
 
     test('creates logs table with correct schema', () => {
       const db = new Database(`${tempDir}/.brika/logs.db`);
-      const columns = db.query('PRAGMA table_info(logs)').all() as { name: string }[];
+      const columns = db.query('PRAGMA table_info(logs)').all() as {
+        name: string;
+      }[];
       const columnNames = columns.map((c) => c.name);
 
       expect(columnNames).toContain('id');
@@ -98,7 +105,9 @@ describe('LogStore', () => {
 
   describe('insert', () => {
     test('inserts basic log event', () => {
-      const event = createLogEvent({ message: 'Test insert' });
+      const event = createLogEvent({
+        message: 'Test insert',
+      });
       store.insert(event);
 
       const result = store.query();
@@ -109,12 +118,18 @@ describe('LogStore', () => {
     test('inserts log with metadata', () => {
       const event = createLogEvent({
         message: 'With meta',
-        meta: { key: 'value', count: 42 },
+        meta: {
+          key: 'value',
+          count: 42,
+        },
       });
       store.insert(event);
 
       const result = store.query();
-      expect(result.logs[0].meta).toEqual({ key: 'value', count: 42 });
+      expect(result.logs[0].meta).toEqual({
+        key: 'value',
+        count: 42,
+      });
     });
 
     test('inserts log with plugin name', () => {
@@ -150,7 +165,9 @@ describe('LogStore', () => {
     });
 
     test('handles null plugin name', () => {
-      const event = createLogEvent({ pluginName: undefined });
+      const event = createLogEvent({
+        pluginName: undefined,
+      });
       store.insert(event);
 
       const result = store.query();
@@ -161,7 +178,14 @@ describe('LogStore', () => {
   describe('query', () => {
     beforeEach(() => {
       // Insert test data
-      store.insert(createLogEvent({ ts: 1000, level: 'info', source: 'hub', message: 'Info 1' }));
+      store.insert(
+        createLogEvent({
+          ts: 1000,
+          level: 'info',
+          source: 'hub',
+          message: 'Info 1',
+        })
+      );
       store.insert(
         createLogEvent({
           ts: 2000,
@@ -171,7 +195,14 @@ describe('LogStore', () => {
           pluginName: '@test/a',
         })
       );
-      store.insert(createLogEvent({ ts: 3000, level: 'error', source: 'hub', message: 'Error 1' }));
+      store.insert(
+        createLogEvent({
+          ts: 3000,
+          level: 'error',
+          source: 'hub',
+          message: 'Error 1',
+        })
+      );
       store.insert(
         createLogEvent({
           ts: 4000,
@@ -182,7 +213,12 @@ describe('LogStore', () => {
         })
       );
       store.insert(
-        createLogEvent({ ts: 5000, level: 'debug', source: 'workflow', message: 'Debug 1' })
+        createLogEvent({
+          ts: 5000,
+          level: 'debug',
+          source: 'workflow',
+          message: 'Debug 1',
+        })
       );
     });
 
@@ -198,115 +234,190 @@ describe('LogStore', () => {
     });
 
     test('supports ascending order', () => {
-      const result = store.query({ order: 'asc' });
+      const result = store.query({
+        order: 'asc',
+      });
       expect(result.logs[0].ts).toBe(1000);
       expect(result.logs[4].ts).toBe(5000);
     });
 
     test('filters by single level', () => {
-      const result = store.query({ level: 'info' });
+      const result = store.query({
+        level: 'info',
+      });
       expect(result.logs).toHaveLength(2);
       expect(result.logs.every((l) => l.level === 'info')).toBe(true);
     });
 
     test('filters by multiple levels', () => {
-      const result = store.query({ level: ['info', 'warn'] });
+      const result = store.query({
+        level: [
+          'info',
+          'warn',
+        ],
+      });
       expect(result.logs).toHaveLength(3);
     });
 
     test('filters by single source', () => {
-      const result = store.query({ source: 'hub' });
+      const result = store.query({
+        source: 'hub',
+      });
       expect(result.logs).toHaveLength(2);
       expect(result.logs.every((l) => l.source === 'hub')).toBe(true);
     });
 
     test('filters by multiple sources', () => {
-      const result = store.query({ source: ['hub', 'plugin'] });
+      const result = store.query({
+        source: [
+          'hub',
+          'plugin',
+        ],
+      });
       expect(result.logs).toHaveLength(4);
     });
 
     test('filters by plugin name', () => {
-      const result = store.query({ pluginName: '@test/a' });
+      const result = store.query({
+        pluginName: '@test/a',
+      });
       expect(result.logs).toHaveLength(1);
       expect(result.logs[0].pluginName).toBe('@test/a');
     });
 
     test('filters by search term', () => {
-      const result = store.query({ search: 'Info' });
+      const result = store.query({
+        search: 'Info',
+      });
       expect(result.logs).toHaveLength(2);
     });
 
     test('filters by start timestamp', () => {
-      const result = store.query({ startTs: 3000 });
+      const result = store.query({
+        startTs: 3000,
+      });
       expect(result.logs).toHaveLength(3);
       expect(result.logs.every((l) => l.ts >= 3000)).toBe(true);
     });
 
     test('filters by end timestamp', () => {
-      const result = store.query({ endTs: 3000 });
+      const result = store.query({
+        endTs: 3000,
+      });
       expect(result.logs).toHaveLength(3);
       expect(result.logs.every((l) => l.ts <= 3000)).toBe(true);
     });
 
     test('filters by timestamp range', () => {
-      const result = store.query({ startTs: 2000, endTs: 4000 });
+      const result = store.query({
+        startTs: 2000,
+        endTs: 4000,
+      });
       expect(result.logs).toHaveLength(3);
     });
 
     test('combines multiple filters', () => {
-      const result = store.query({ level: 'info', source: 'plugin' });
+      const result = store.query({
+        level: 'info',
+        source: 'plugin',
+      });
       expect(result.logs).toHaveLength(1);
       expect(result.logs[0].message).toBe('Info 2');
     });
 
     test('respects limit', () => {
-      const result = store.query({ limit: 2 });
+      const result = store.query({
+        limit: 2,
+      });
       expect(result.logs).toHaveLength(2);
     });
 
     test('caps limit at 1000', () => {
       // Insert many logs
       for (let i = 0; i < 1100; i++) {
-        store.insert(createLogEvent({ message: `Log ${i}` }));
+        store.insert(
+          createLogEvent({
+            message: `Log ${i}`,
+          })
+        );
       }
 
-      const result = store.query({ limit: 2000 });
+      const result = store.query({
+        limit: 2000,
+      });
       expect(result.logs.length).toBeLessThanOrEqual(1000);
     });
 
     test('supports cursor-based pagination (desc)', () => {
-      const first = store.query({ limit: 2 });
+      const first = store.query({
+        limit: 2,
+      });
       expect(first.logs).toHaveLength(2);
       expect(first.nextCursor).not.toBeNull();
 
-      const second = store.query({ limit: 2, cursor: first.nextCursor! });
+      if (!first.nextCursor) {
+        throw new Error('Expected nextCursor to be defined');
+      }
+      const second = store.query({
+        limit: 2,
+        cursor: first.nextCursor,
+      });
       expect(second.logs).toHaveLength(2);
       expect(second.logs[0].id).toBeLessThan(first.logs[1].id);
     });
 
     test('supports cursor-based pagination (asc)', () => {
-      const first = store.query({ limit: 2, order: 'asc' });
+      const first = store.query({
+        limit: 2,
+        order: 'asc',
+      });
       expect(first.logs).toHaveLength(2);
       expect(first.nextCursor).not.toBeNull();
 
-      const second = store.query({ limit: 2, order: 'asc', cursor: first.nextCursor! });
+      if (!first.nextCursor) {
+        throw new Error('Expected nextCursor to be defined');
+      }
+      const second = store.query({
+        limit: 2,
+        order: 'asc',
+        cursor: first.nextCursor,
+      });
       expect(second.logs).toHaveLength(2);
       expect(second.logs[0].id).toBeGreaterThan(first.logs[1].id);
     });
 
     test('returns null cursor when no more results', () => {
-      const result = store.query({ limit: 10 });
+      const result = store.query({
+        limit: 10,
+      });
       expect(result.nextCursor).toBeNull();
     });
   });
 
   describe('clear', () => {
     beforeEach(() => {
-      store.insert(createLogEvent({ ts: 1000, level: 'info', source: 'hub' }));
       store.insert(
-        createLogEvent({ ts: 2000, level: 'warn', source: 'plugin', pluginName: '@test/a' })
+        createLogEvent({
+          ts: 1000,
+          level: 'info',
+          source: 'hub',
+        })
       );
-      store.insert(createLogEvent({ ts: 3000, level: 'error', source: 'hub' }));
+      store.insert(
+        createLogEvent({
+          ts: 2000,
+          level: 'warn',
+          source: 'plugin',
+          pluginName: '@test/a',
+        })
+      );
+      store.insert(
+        createLogEvent({
+          ts: 3000,
+          level: 'error',
+          source: 'hub',
+        })
+      );
     });
 
     test('clears all logs when no params', () => {
@@ -316,31 +427,45 @@ describe('LogStore', () => {
     });
 
     test('clears by level', () => {
-      const deleted = store.clear({ level: 'info' });
+      const deleted = store.clear({
+        level: 'info',
+      });
       expect(deleted).toBe(1);
       expect(store.count()).toBe(2);
     });
 
     test('clears by multiple levels', () => {
-      const deleted = store.clear({ level: ['info', 'warn'] });
+      const deleted = store.clear({
+        level: [
+          'info',
+          'warn',
+        ],
+      });
       expect(deleted).toBe(2);
       expect(store.count()).toBe(1);
     });
 
     test('clears by source', () => {
-      const deleted = store.clear({ source: 'hub' });
+      const deleted = store.clear({
+        source: 'hub',
+      });
       expect(deleted).toBe(2);
       expect(store.count()).toBe(1);
     });
 
     test('clears by plugin name', () => {
-      const deleted = store.clear({ pluginName: '@test/a' });
+      const deleted = store.clear({
+        pluginName: '@test/a',
+      });
       expect(deleted).toBe(1);
       expect(store.count()).toBe(2);
     });
 
     test('clears by timestamp range', () => {
-      const deleted = store.clear({ startTs: 2000, endTs: 2000 });
+      const deleted = store.clear({
+        startTs: 2000,
+        endTs: 2000,
+      });
       expect(deleted).toBe(1);
       expect(store.count()).toBe(2);
     });
@@ -353,9 +478,21 @@ describe('LogStore', () => {
     });
 
     test('returns distinct plugin names', () => {
-      store.insert(createLogEvent({ pluginName: '@test/a' }));
-      store.insert(createLogEvent({ pluginName: '@test/b' }));
-      store.insert(createLogEvent({ pluginName: '@test/a' }));
+      store.insert(
+        createLogEvent({
+          pluginName: '@test/a',
+        })
+      );
+      store.insert(
+        createLogEvent({
+          pluginName: '@test/b',
+        })
+      );
+      store.insert(
+        createLogEvent({
+          pluginName: '@test/a',
+        })
+      );
 
       const names = store.getPluginNames();
       expect(names).toHaveLength(2);
@@ -364,8 +501,16 @@ describe('LogStore', () => {
     });
 
     test('returns sorted plugin names', () => {
-      store.insert(createLogEvent({ pluginName: '@test/z' }));
-      store.insert(createLogEvent({ pluginName: '@test/a' }));
+      store.insert(
+        createLogEvent({
+          pluginName: '@test/z',
+        })
+      );
+      store.insert(
+        createLogEvent({
+          pluginName: '@test/a',
+        })
+      );
 
       const names = store.getPluginNames();
       expect(names[0]).toBe('@test/a');
@@ -379,9 +524,21 @@ describe('LogStore', () => {
     });
 
     test('returns distinct sources', () => {
-      store.insert(createLogEvent({ source: 'hub' }));
-      store.insert(createLogEvent({ source: 'plugin' }));
-      store.insert(createLogEvent({ source: 'hub' }));
+      store.insert(
+        createLogEvent({
+          source: 'hub',
+        })
+      );
+      store.insert(
+        createLogEvent({
+          source: 'plugin',
+        })
+      );
+      store.insert(
+        createLogEvent({
+          source: 'hub',
+        })
+      );
 
       const sources = store.getSources();
       expect(sources).toHaveLength(2);

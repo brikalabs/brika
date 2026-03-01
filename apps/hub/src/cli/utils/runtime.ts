@@ -22,17 +22,31 @@ export function detect(asset: string): string {
 }
 
 /** Argv prefix to re-invoke the current process (compiled binary vs dev). */
-const selfArgv = isCompiled ? [process.execPath] : Bun.argv.slice(0, 2);
+const selfArgv = isCompiled
+  ? [
+      process.execPath,
+    ]
+  : Bun.argv.slice(0, 2);
 
 /** Spawn a detached child re-invoking this CLI with the given args. */
-export function spawnDetached(args: string[]): { pid: number } {
-  const child = Bun.spawn([...selfArgv, ...args], {
-    stdin: 'ignore',
-    stdout: 'ignore',
-    stderr: 'ignore',
-  });
+export function spawnDetached(args: string[]): {
+  pid: number;
+} {
+  const child = Bun.spawn(
+    [
+      ...selfArgv,
+      ...args,
+    ],
+    {
+      stdin: 'ignore',
+      stdout: 'ignore',
+      stderr: 'ignore',
+    }
+  );
   child.unref();
-  return { pid: child.pid };
+  return {
+    pid: child.pid,
+  };
 }
 
 /**
@@ -49,10 +63,16 @@ export function spawnHub(
   args: string[],
   env: Record<string, string | undefined>
 ): ReturnType<typeof Bun.spawn> {
-  return Bun.spawn([...selfArgv, ...args], {
-    env,
-    stdin: 'inherit',
-    stdout: 'inherit',
-    stderr: 'inherit',
-  });
+  return Bun.spawn(
+    [
+      ...selfArgv,
+      ...args,
+    ],
+    {
+      env,
+      stdin: 'inherit',
+      stdout: 'inherit',
+      stderr: 'inherit',
+    }
+  );
 }

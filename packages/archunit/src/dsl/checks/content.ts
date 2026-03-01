@@ -31,7 +31,10 @@ registerCheck('contain', (pattern: RegExp, description?: string) => {
     name: `contain ${desc}`,
     check: (_, file, content) => {
       if (!pattern.test(content)) {
-        return { file, message: `Missing ${desc}` };
+        return {
+          file,
+          message: `Missing ${desc}`,
+        };
       }
     },
   };
@@ -45,7 +48,11 @@ registerCheck('notContain', (pattern: RegExp, description?: string) => {
       const match = pattern.exec(content);
       if (match) {
         const line = content.substring(0, match.index).split('\n').length;
-        return { file, line, message: `Found ${desc}` };
+        return {
+          file,
+          line,
+          message: `Found ${desc}`,
+        };
       }
     },
   };

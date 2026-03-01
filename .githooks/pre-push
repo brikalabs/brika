@@ -10,7 +10,7 @@ echo "Running tests..."
 bun run test
 
 echo "Running TypeScript checks..."
-bun run tsc
+bun run typecheck
 
 echo "Running Biome check (warnings are blocking)..."
 bun run lint:strict

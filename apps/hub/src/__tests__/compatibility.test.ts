@@ -76,7 +76,9 @@ describe('compatibility', () => {
       const result = checkPluginCompatibility({
         name: 'test-plugin',
         version: '1.0.0',
-        engines: { brika: HUB_VERSION },
+        engines: {
+          brika: HUB_VERSION,
+        },
       });
       expect(result.compatible).toBe(true);
     });
@@ -94,7 +96,9 @@ describe('compatibility', () => {
       const result = checkPluginCompatibility({
         name: 'test-plugin',
         version: '1.0.0',
-        engines: { brika: '^99.0.0' },
+        engines: {
+          brika: '^99.0.0',
+        },
       });
       expect(result.compatible).toBe(false);
       expect(result.suggestion).toContain('update Brika');

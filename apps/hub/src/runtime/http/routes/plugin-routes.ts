@@ -15,11 +15,15 @@ export const pluginRoutesHandler = group({
   routes: [
     route.all({
       path: '/:uid/routes/*',
-      params: z.object({ uid: z.string() }),
+      params: z.object({
+        uid: z.string(),
+      }),
       handler: async ({ params, req, inject }) => {
         const plugin = getOrThrow(inject(PluginManager).get(params.uid), 'Plugin not found');
         const process = inject(PluginLifecycle).getProcess(plugin.name);
-        if (!process) throw new NotFound('Plugin not running');
+        if (!process) {
+          throw new NotFound('Plugin not running');
+        }
 
         const url = new URL(req.url);
         const prefix = `/api/plugins/${params.uid}/routes`;

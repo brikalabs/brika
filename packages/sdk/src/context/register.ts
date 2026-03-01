@@ -59,8 +59,7 @@ export interface ContextCore {
   log(level: LogLevel, message: string, meta?: AnyObj): void;
 }
 
-// biome-ignore lint/suspicious/noExplicitAny: generic callable type for method registry
-type AnyFn = (...args: any[]) => any;
+type AnyFn = (...args: never[]) => unknown;
 
 /** Return value from a module's setup function. */
 export interface ModuleResult {
@@ -73,17 +72,25 @@ export interface ModuleResult {
 export type SetupFn = (core: ContextCore) => ModuleResult;
 
 /** Extract method types from a setup function for use in declare module augmentation. */
-// biome-ignore lint/suspicious/noExplicitAny: generic inference requires any
-export type MethodsOf<T extends (...args: any[]) => { methods?: Record<string, AnyFn> }> =
-  NonNullable<ReturnType<T>['methods']>;
+export type MethodsOf<
+  T extends (...args: never[]) => {
+    methods?: Record<string, AnyFn>;
+  },
+> = NonNullable<ReturnType<T>['methods']>;
 
 // ─── Registry ─────────────────────────────────────────────────────────────────
 
-const registry: Array<{ name: string; setup: SetupFn }> = [];
+const registry: Array<{
+  name: string;
+  setup: SetupFn;
+}> = [];
 
 /** Register a context module. Called at import time by each module file. */
 export function registerContextModule(name: string, setup: SetupFn): void {
-  registry.push({ name, setup });
+  registry.push({
+    name,
+    setup,
+  });
 }
 
 /**
@@ -102,7 +109,9 @@ export function initAllModules(
         (target as Record<string, unknown>)[key] = fn;
       }
     }
-    if (result.stop) stopFns.push(result.stop);
+    if (result.stop) {
+      stopFns.push(result.stop);
+    }
   }
   return stopFns;
 }

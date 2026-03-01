@@ -21,7 +21,9 @@ export function PluginBlocksList({ plugin }: Readonly<PluginBlocksListProps>) {
   const { t, tp } = useLocale();
   const blocks = plugin.blocks ?? [];
 
-  if (blocks.length === 0) return null;
+  if (blocks.length === 0) {
+    return null;
+  }
 
   return (
     <Card>
@@ -53,9 +55,17 @@ export function PluginBlocksList({ plugin }: Readonly<PluginBlocksListProps>) {
               >
                 <Avatar
                   className="size-10 shrink-0"
-                  style={{ backgroundColor: `${color}20`, color }}
+                  style={{
+                    backgroundColor: `${color}20`,
+                    color,
+                  }}
                 >
-                  <AvatarFallback style={{ backgroundColor: `${color}20`, color }}>
+                  <AvatarFallback
+                    style={{
+                      backgroundColor: `${color}20`,
+                      color,
+                    }}
+                  >
                     <DynamicIcon name={iconName} className="size-5" />
                   </AvatarFallback>
                 </Avatar>

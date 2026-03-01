@@ -1,6 +1,6 @@
 import { Check, X } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { useLocale } from '@/lib/use-locale';
+import { cn } from '@/lib/utils';
 
 interface Rule {
   key: string;
@@ -8,23 +8,45 @@ interface Rule {
 }
 
 const RULES: Rule[] = [
-  { key: 'minLength', test: (v) => v.length >= 8 },
-  { key: 'uppercase', test: (v) => /[A-Z]/.test(v) },
-  { key: 'number', test: (v) => /\d/.test(v) },
-  { key: 'special', test: (v) => /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(v) },
+  {
+    key: 'minLength',
+    test: (v) => v.length >= 8,
+  },
+  {
+    key: 'uppercase',
+    test: (v) => /[A-Z]/.test(v),
+  },
+  {
+    key: 'number',
+    test: (v) => /\d/.test(v),
+  },
+  {
+    key: 'special',
+    test: (v) => /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(v),
+  },
 ];
 
-export function PasswordStrength({ password }: Readonly<{ password: string }>) {
+export function PasswordStrength({
+  password,
+}: Readonly<{
+  password: string;
+}>) {
   const { t } = useLocale();
 
-  if (password.length === 0) return null;
+  if (password.length === 0) {
+    return null;
+  }
 
   const passed = RULES.filter((r) => r.test(password)).length;
   const ratio = passed / RULES.length;
 
   function strengthColor(): string {
-    if (ratio <= 0.5) return 'bg-destructive';
-    if (ratio < 1) return 'bg-amber-500';
+    if (ratio <= 0.5) {
+      return 'bg-destructive';
+    }
+    if (ratio < 1) {
+      return 'bg-amber-500';
+    }
     return 'bg-emerald-500';
   }
 
@@ -37,7 +59,7 @@ export function PasswordStrength({ password }: Readonly<{ password: string }>) {
             key={`bar-${_.key}`}
             className={cn(
               'h-1 flex-1 rounded-full transition-colors',
-              i < passed ? strengthColor() : 'bg-muted',
+              i < passed ? strengthColor() : 'bg-muted'
             )}
           />
         ))}
@@ -52,7 +74,7 @@ export function PasswordStrength({ password }: Readonly<{ password: string }>) {
               key={rule.key}
               className={cn(
                 'flex items-center gap-1.5 text-xs transition-colors',
-                met ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground',
+                met ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'
               )}
             >
               {met ? <Check className="size-3" /> : <X className="size-3" />}

@@ -2,7 +2,7 @@
  * @brika/auth - ScopeService Tests
  */
 
-import { describe, it, expect, beforeEach } from 'bun:test';
+import { beforeEach, describe, expect, it } from 'bun:test';
 import { ScopeService } from '../services/ScopeService';
 import { Role, Scope } from '../types';
 
@@ -28,7 +28,11 @@ describe('ScopeService', () => {
 
   describe('validateScopes', () => {
     it('should filter valid scopes', () => {
-      const mixed = [Scope.WORKFLOW_READ, 'invalid', Scope.WORKFLOW_WRITE];
+      const mixed = [
+        Scope.WORKFLOW_READ,
+        'invalid',
+        Scope.WORKFLOW_WRITE,
+      ];
       const valid = service.validateScopes(mixed);
 
       expect(valid).toHaveLength(2);
@@ -36,8 +40,11 @@ describe('ScopeService', () => {
       expect(valid).toContain(Scope.WORKFLOW_WRITE);
     });
 
-    it('should return empty array for non-array input', () => {
-      const result = service.validateScopes('not-an-array');
+    it('should return empty array for invalid scope strings', () => {
+      const result = service.validateScopes([
+        'not-a-scope',
+        'also-invalid',
+      ]);
       expect(result).toEqual([]);
     });
   });
@@ -69,13 +76,18 @@ describe('ScopeService', () => {
 
   describe('hasScope', () => {
     it('should check if scope is present', () => {
-      const scopes = [Scope.WORKFLOW_READ, Scope.WORKFLOW_WRITE];
+      const scopes = [
+        Scope.WORKFLOW_READ,
+        Scope.WORKFLOW_WRITE,
+      ];
       expect(service.hasScope(scopes, Scope.WORKFLOW_READ)).toBe(true);
       expect(service.hasScope(scopes, Scope.WORKFLOW_EXECUTE)).toBe(false);
     });
 
     it('should grant all scopes to admin', () => {
-      const adminScopes = [Scope.ADMIN_ALL];
+      const adminScopes = [
+        Scope.ADMIN_ALL,
+      ];
       expect(service.hasScope(adminScopes, Scope.WORKFLOW_READ)).toBe(true);
       expect(service.hasScope(adminScopes, Scope.SETTINGS_WRITE)).toBe(true);
       expect(service.hasScope(adminScopes, Scope.PLUGIN_MANAGE)).toBe(true);
@@ -84,15 +96,25 @@ describe('ScopeService', () => {
 
   describe('hasScopeAny', () => {
     it('should check if any required scope is present', () => {
-      const scopes = [Scope.WORKFLOW_READ];
-      const required = [Scope.WORKFLOW_WRITE, Scope.WORKFLOW_READ];
+      const scopes = [
+        Scope.WORKFLOW_READ,
+      ];
+      const required = [
+        Scope.WORKFLOW_WRITE,
+        Scope.WORKFLOW_READ,
+      ];
 
       expect(service.hasScopeAny(scopes, required)).toBe(true);
     });
 
     it('should return false if none present', () => {
-      const scopes = [Scope.BOARD_READ];
-      const required = [Scope.WORKFLOW_READ, Scope.WORKFLOW_WRITE];
+      const scopes = [
+        Scope.BOARD_READ,
+      ];
+      const required = [
+        Scope.WORKFLOW_READ,
+        Scope.WORKFLOW_WRITE,
+      ];
 
       expect(service.hasScopeAny(scopes, required)).toBe(false);
     });
@@ -100,15 +122,26 @@ describe('ScopeService', () => {
 
   describe('hasScopeAll', () => {
     it('should check if all required scopes are present', () => {
-      const scopes = [Scope.WORKFLOW_READ, Scope.WORKFLOW_WRITE];
-      const required = [Scope.WORKFLOW_READ, Scope.WORKFLOW_WRITE];
+      const scopes = [
+        Scope.WORKFLOW_READ,
+        Scope.WORKFLOW_WRITE,
+      ];
+      const required = [
+        Scope.WORKFLOW_READ,
+        Scope.WORKFLOW_WRITE,
+      ];
 
       expect(service.hasScopeAll(scopes, required)).toBe(true);
     });
 
     it('should return false if any missing', () => {
-      const scopes = [Scope.WORKFLOW_READ];
-      const required = [Scope.WORKFLOW_READ, Scope.WORKFLOW_WRITE];
+      const scopes = [
+        Scope.WORKFLOW_READ,
+      ];
+      const required = [
+        Scope.WORKFLOW_READ,
+        Scope.WORKFLOW_WRITE,
+      ];
 
       expect(service.hasScopeAll(scopes, required)).toBe(false);
     });

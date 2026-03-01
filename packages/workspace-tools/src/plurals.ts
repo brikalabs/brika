@@ -31,7 +31,9 @@ export function plurals(forms: PluralForms, count: number, options: PluralOption
 function getPluralRules(locale?: string): Intl.PluralRules {
   const key = locale ?? '';
   const cached = pluralRulesCache.get(key);
-  if (cached) return cached;
+  if (cached) {
+    return cached;
+  }
   const created = new Intl.PluralRules(locale);
   pluralRulesCache.set(key, created);
   return created;
@@ -40,7 +42,9 @@ function getPluralRules(locale?: string): Intl.PluralRules {
 function getNumberFormat(locale?: string): Intl.NumberFormat {
   const key = locale ?? '';
   const cached = numberFormatCache.get(key);
-  if (cached) return cached;
+  if (cached) {
+    return cached;
+  }
   const created = new Intl.NumberFormat(locale);
   numberFormatCache.set(key, created);
   return created;

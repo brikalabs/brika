@@ -90,10 +90,10 @@ export class ScopedLogger {
 }
 
 function shouldUseColor(): boolean {
-  if (process.env.NO_COLOR) return false;
-  if (process.env.FORCE_COLOR === "1" || process.env.FORCE_COLOR === "true") return true;
-  if (process.env.BRIKA_LOG_COLOR === "1") return true;
-  if (process.env.BRIKA_LOG_COLOR === "0") return false;
+  if (process.env.NO_COLOR) { return false; }
+  if (process.env.FORCE_COLOR === "1" || process.env.FORCE_COLOR === "true") { return true; }
+  if (process.env.BRIKA_LOG_COLOR === "1") { return true; }
+  if (process.env.BRIKA_LOG_COLOR === "0") { return false; }
   return process.stdout.isTTY ?? false;
 }
 

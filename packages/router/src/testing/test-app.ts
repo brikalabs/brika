@@ -47,7 +47,9 @@ interface RequestOptions {
  * e.g., "/users/:id" with { id: "123" } becomes "/users/123"
  */
 function substitutePath(pattern: string, params?: Record<string, string>): string {
-  if (!params) return pattern;
+  if (!params) {
+    return pattern;
+  }
   return pattern.replaceAll(/:(\w+)/g, (_, key) => {
     const value = params[key];
     if (value === undefined) {
@@ -83,7 +85,9 @@ async function makeRequest<T>(
   options: RequestOptions = {}
 ): Promise<TestResponse<T>> {
   const url = buildUrl(path, options.query);
-  const headers: Record<string, string> = { ...options.headers };
+  const headers: Record<string, string> = {
+    ...options.headers,
+  };
 
   if (body !== undefined) {
     headers['Content-Type'] = JSON_CONTENT_TYPE;
@@ -213,7 +217,9 @@ function call<S extends Schema, R>(
   route: RouteDefinition<S, R>,
   input?: RouteInput<S>
 ): Promise<TestResponse<R>> {
-  const app = createApp([route]);
+  const app = createApp([
+    route,
+  ]);
   const path = substitutePath(route.path, input?.params as Record<string, string> | undefined);
 
   return makeRequest<R>(app, route.method, path, input?.body, {
@@ -222,5 +228,8 @@ function call<S extends Schema, R>(
   });
 }
 
-export const TestApp = { create, call };
+export const TestApp = {
+  create,
+  call,
+};
 export type { TestAppInstance, TestResponse, RequestOptions };

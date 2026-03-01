@@ -15,7 +15,12 @@ export function requireAuth(): Middleware {
     const session = context.get('session');
 
     if (!session) {
-      return context.json({ error: 'Unauthorized' }, 401);
+      return context.json(
+        {
+          error: 'Unauthorized',
+        },
+        401
+      );
     }
 
     await next();

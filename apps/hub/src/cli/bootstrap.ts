@@ -10,13 +10,21 @@ import type { BootstrapPlugin } from '@/runtime/bootstrap/plugin';
 import { dataDir } from './utils/runtime';
 
 export async function bootstrapCLI(...plugins: BootstrapPlugin[]) {
-  for (const p of plugins) p.setup?.({} as never);
-  for (const p of plugins) await p.onInit?.();
-  for (const p of plugins) await p.onStart?.();
+  for (const p of plugins) {
+    p.setup?.({} as never);
+  }
+  for (const p of plugins) {
+    await p.onInit?.();
+  }
+  for (const p of plugins) {
+    await p.onStart?.();
+  }
 
   return {
     stop() {
-      for (const p of plugins.toReversed()) p.onStop?.();
+      for (const p of plugins.toReversed()) {
+        p.onStop?.();
+      }
     },
   };
 }

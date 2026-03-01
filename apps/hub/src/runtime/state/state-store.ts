@@ -60,7 +60,9 @@ export class StateStore {
   private readonly logs = inject(Logger).withSource('state');
   readonly #homeDir: string;
   readonly #file: string;
-  #state: StateFile = { plugins: {} };
+  #state: StateFile = {
+    plugins: {},
+  };
 
   /** In-memory cache of plugin metadata loaded from package.json files */
   readonly #metadataCache = new Map<string, PluginPackageSchema>();
@@ -133,7 +135,9 @@ export class StateStore {
    */
   getWithMetadata(name: string): PluginStateWithMetadata | undefined {
     const p = this.#state.plugins[name];
-    if (!p) return undefined;
+    if (!p) {
+      return undefined;
+    }
     return this.#withMetadata(p) ?? undefined;
   }
 
@@ -147,7 +151,9 @@ export class StateStore {
    */
   getByUidWithMetadata(uid: string): PluginStateWithMetadata | undefined {
     const p = Object.values(this.#state.plugins).find((p) => p.uid === uid);
-    if (!p) return undefined;
+    if (!p) {
+      return undefined;
+    }
     return this.#withMetadata(p) ?? undefined;
   }
 
@@ -174,7 +180,9 @@ export class StateStore {
 
   async setGrantedPermissions(name: string, permissions: string[]): Promise<void> {
     const cur = this.#state.plugins[name];
-    if (!cur) return;
+    if (!cur) {
+      return;
+    }
     cur.grantedPermissions = permissions;
     cur.updatedAt = Date.now();
     await this.#flush();
@@ -197,7 +205,9 @@ export class StateStore {
 
   async setEnabled(name: string, enabled: boolean): Promise<void> {
     const cur = this.#state.plugins[name];
-    if (!cur) return; // Plugin must be registered first
+    if (!cur) {
+      return; // Plugin must be registered first
+    }
     cur.enabled = enabled;
     cur.updatedAt = Date.now();
     this.#state.plugins[name] = cur;
@@ -210,7 +220,9 @@ export class StateStore {
     lastError?: PluginError | null
   ): Promise<void> {
     const cur = this.#state.plugins[name];
-    if (!cur) return; // Plugin must be registered first
+    if (!cur) {
+      return; // Plugin must be registered first
+    }
     cur.health = health;
     cur.lastError = lastError ?? cur.lastError ?? null;
     cur.updatedAt = Date.now();
@@ -296,7 +308,11 @@ export class StateStore {
    */
   async #readPackageJson(pluginDir: string): Promise<PluginPackageSchema> {
     return PluginPackageSchema.parse(
-      await import(`${pluginDir}/package.json`, { with: { type: 'json' } })
+      await import(`${pluginDir}/package.json`, {
+        with: {
+          type: 'json',
+        },
+      })
     );
   }
 }

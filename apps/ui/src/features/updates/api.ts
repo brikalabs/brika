@@ -45,10 +45,15 @@ export const updateApi = {
   /** Apply update with SSE progress streaming. Pass force=true to reinstall current version. */
   applyStream: (options?: { force?: boolean }): Promise<ProgressStream<UpdateProgress>> =>
     fetchProgressStream<UpdateProgress>('/api/system/update/apply', {
-      query: { force: options?.force },
+      query: {
+        force: options?.force,
+      },
     }),
 };
 
 export const updateKeys = {
-  check: ['system', 'update'] as const,
+  check: [
+    'system',
+    'update',
+  ] as const,
 };

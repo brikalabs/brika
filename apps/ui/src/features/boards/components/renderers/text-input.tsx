@@ -9,7 +9,9 @@ defineRenderer('text-input', ({ node, onAction }) => {
 
   useEffect(() => {
     setLocal(node.value);
-  }, [node.value]);
+  }, [
+    node.value,
+  ]);
 
   const hasLabel = node.label || node.icon;
 
@@ -37,7 +39,9 @@ defineRenderer('text-input', ({ node, onAction }) => {
             setLocal(value);
             clearTimeout(timerRef.current);
             timerRef.current = setTimeout(() => {
-              onAction?.(node.onChange, { value });
+              onAction?.(node.onChange, {
+                value,
+              });
             }, 300);
           }}
           className="w-full resize-none rounded-md border border-input bg-background @md:px-2.5 px-2 @md:py-2 py-1.5 @md:text-sm text-xs shadow-sm outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring/30 disabled:cursor-not-allowed"
@@ -53,13 +57,17 @@ defineRenderer('text-input', ({ node, onAction }) => {
             setLocal(value);
             clearTimeout(timerRef.current);
             timerRef.current = setTimeout(() => {
-              onAction?.(node.onChange, { value });
+              onAction?.(node.onChange, {
+                value,
+              });
             }, 300);
           }}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && node.onSubmit) {
               clearTimeout(timerRef.current);
-              onAction?.(node.onSubmit, { value: local });
+              onAction?.(node.onSubmit, {
+                value: local,
+              });
             }
           }}
           className="@md:h-9 h-7 w-full rounded-md border border-input bg-background @md:px-2.5 px-2 @md:text-sm text-xs shadow-sm outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring/30 disabled:cursor-not-allowed"

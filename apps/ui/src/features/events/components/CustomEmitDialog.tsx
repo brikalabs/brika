@@ -28,7 +28,10 @@ export function CustomEmitDialog({ open, onOpenChange }: Readonly<CustomEmitDial
 
   const handleEmit = async () => {
     try {
-      await emitEvent.mutateAsync({ type, payload: JSON.parse(payload) });
+      await emitEvent.mutateAsync({
+        type,
+        payload: JSON.parse(payload),
+      });
       onOpenChange(false);
     } catch {
       // Invalid JSON or emit error

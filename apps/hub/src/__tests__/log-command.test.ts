@@ -53,9 +53,15 @@ function rowToEvent(r: LogRow): LogEvent {
 }
 
 function matchesFilters(event: LogEvent, filters: Filters): boolean {
-  if (filters.level && event.level !== filters.level) return false;
-  if (filters.source && event.source !== filters.source) return false;
-  if (filters.plugin && event.pluginName !== filters.plugin) return false;
+  if (filters.level && event.level !== filters.level) {
+    return false;
+  }
+  if (filters.source && event.source !== filters.source) {
+    return false;
+  }
+  if (filters.plugin && event.pluginName !== filters.plugin) {
+    return false;
+  }
   if (filters.search && !event.message.toLowerCase().includes(filters.search.toLowerCase())) {
     return false;
   }
@@ -92,7 +98,10 @@ describe('rowToEvent', () => {
   });
 
   test('maps plugin_name to pluginName', () => {
-    const row: LogRow = { ...baseRow, plugin_name: 'my-plugin' };
+    const row: LogRow = {
+      ...baseRow,
+      plugin_name: 'my-plugin',
+    };
     const event = rowToEvent(row);
 
     expect(event.pluginName).toBe('my-plugin');
@@ -104,10 +113,16 @@ describe('rowToEvent', () => {
   });
 
   test('parses JSON meta string', () => {
-    const row: LogRow = { ...baseRow, meta: '{"key":"value","count":42}' };
+    const row: LogRow = {
+      ...baseRow,
+      meta: '{"key":"value","count":42}',
+    };
     const event = rowToEvent(row);
 
-    expect(event.meta).toEqual({ key: 'value', count: 42 });
+    expect(event.meta).toEqual({
+      key: 'value',
+      count: 42,
+    });
   });
 
   test('leaves meta undefined when null', () => {
@@ -170,26 +185,58 @@ describe('rowToEvent', () => {
   });
 
   test('preserves all LogLevel values', () => {
-    const levels: LogLevel[] = ['debug', 'info', 'warn', 'error'];
+    const levels: LogLevel[] = [
+      'debug',
+      'info',
+      'warn',
+      'error',
+    ];
     for (const level of levels) {
-      const row: LogRow = { ...baseRow, level };
+      const row: LogRow = {
+        ...baseRow,
+        level,
+      };
       const event = rowToEvent(row);
       expect(event.level).toBe(level);
     }
   });
 
   test('preserves LogSource values', () => {
-    const sources: LogSource[] = ['hub', 'plugin', 'installer', 'registry', 'stderr', 'workflow'];
+    const sources: LogSource[] = [
+      'hub',
+      'plugin',
+      'installer',
+      'registry',
+      'stderr',
+      'workflow',
+    ];
     for (const source of sources) {
-      const row: LogRow = { ...baseRow, source };
+      const row: LogRow = {
+        ...baseRow,
+        source,
+      };
       const event = rowToEvent(row);
       expect(event.source).toBe(source);
     }
   });
 
   test('handles complex nested meta JSON', () => {
-    const meta = { nested: { deep: { value: [1, 2, 3] } }, flag: true };
-    const row: LogRow = { ...baseRow, meta: JSON.stringify(meta) };
+    const meta = {
+      nested: {
+        deep: {
+          value: [
+            1,
+            2,
+            3,
+          ],
+        },
+      },
+      flag: true,
+    };
+    const row: LogRow = {
+      ...baseRow,
+      meta: JSON.stringify(meta),
+    };
     const event = rowToEvent(row);
 
     expect(event.meta).toEqual(meta);
@@ -225,35 +272,86 @@ describe('matchesFilters', () => {
   });
 
   test('matches by level', () => {
-    expect(matchesFilters(baseEvent, { level: 'info' })).toBe(true);
-    expect(matchesFilters(baseEvent, { level: 'error' })).toBe(false);
+    expect(
+      matchesFilters(baseEvent, {
+        level: 'info',
+      })
+    ).toBe(true);
+    expect(
+      matchesFilters(baseEvent, {
+        level: 'error',
+      })
+    ).toBe(false);
   });
 
   test('matches by source', () => {
-    expect(matchesFilters(baseEvent, { source: 'hub' })).toBe(true);
-    expect(matchesFilters(baseEvent, { source: 'plugin' })).toBe(false);
+    expect(
+      matchesFilters(baseEvent, {
+        source: 'hub',
+      })
+    ).toBe(true);
+    expect(
+      matchesFilters(baseEvent, {
+        source: 'plugin',
+      })
+    ).toBe(false);
   });
 
   test('matches by plugin name', () => {
-    const eventWithPlugin: LogEvent = { ...baseEvent, pluginName: 'timer' };
+    const eventWithPlugin: LogEvent = {
+      ...baseEvent,
+      pluginName: 'timer',
+    };
 
-    expect(matchesFilters(eventWithPlugin, { plugin: 'timer' })).toBe(true);
-    expect(matchesFilters(eventWithPlugin, { plugin: 'other' })).toBe(false);
+    expect(
+      matchesFilters(eventWithPlugin, {
+        plugin: 'timer',
+      })
+    ).toBe(true);
+    expect(
+      matchesFilters(eventWithPlugin, {
+        plugin: 'other',
+      })
+    ).toBe(false);
   });
 
   test('plugin filter rejects event without pluginName', () => {
-    expect(matchesFilters(baseEvent, { plugin: 'timer' })).toBe(false);
+    expect(
+      matchesFilters(baseEvent, {
+        plugin: 'timer',
+      })
+    ).toBe(false);
   });
 
   test('matches by search text (case-insensitive)', () => {
-    expect(matchesFilters(baseEvent, { search: 'server' })).toBe(true);
-    expect(matchesFilters(baseEvent, { search: 'SERVER' })).toBe(true);
-    expect(matchesFilters(baseEvent, { search: 'Server Started' })).toBe(true);
-    expect(matchesFilters(baseEvent, { search: 'port 3000' })).toBe(true);
+    expect(
+      matchesFilters(baseEvent, {
+        search: 'server',
+      })
+    ).toBe(true);
+    expect(
+      matchesFilters(baseEvent, {
+        search: 'SERVER',
+      })
+    ).toBe(true);
+    expect(
+      matchesFilters(baseEvent, {
+        search: 'Server Started',
+      })
+    ).toBe(true);
+    expect(
+      matchesFilters(baseEvent, {
+        search: 'port 3000',
+      })
+    ).toBe(true);
   });
 
   test('search filter rejects non-matching text', () => {
-    expect(matchesFilters(baseEvent, { search: 'shutdown' })).toBe(false);
+    expect(
+      matchesFilters(baseEvent, {
+        search: 'shutdown',
+      })
+    ).toBe(false);
   });
 
   test('combines multiple filters with AND logic', () => {
@@ -276,21 +374,57 @@ describe('matchesFilters', () => {
     ).toBe(true);
 
     // One filter fails
-    expect(matchesFilters(event, { level: 'error', source: 'hub' })).toBe(false);
-    expect(matchesFilters(event, { level: 'info', source: 'plugin' })).toBe(false);
-    expect(matchesFilters(event, { level: 'error', plugin: 'other' })).toBe(false);
-    expect(matchesFilters(event, { level: 'error', search: 'missing' })).toBe(false);
+    expect(
+      matchesFilters(event, {
+        level: 'error',
+        source: 'hub',
+      })
+    ).toBe(false);
+    expect(
+      matchesFilters(event, {
+        level: 'info',
+        source: 'plugin',
+      })
+    ).toBe(false);
+    expect(
+      matchesFilters(event, {
+        level: 'error',
+        plugin: 'other',
+      })
+    ).toBe(false);
+    expect(
+      matchesFilters(event, {
+        level: 'error',
+        search: 'missing',
+      })
+    ).toBe(false);
   });
 
   test('search is a substring match, not exact', () => {
-    expect(matchesFilters(baseEvent, { search: 'port' })).toBe(true);
-    expect(matchesFilters(baseEvent, { search: 'started' })).toBe(true);
-    expect(matchesFilters(baseEvent, { search: 'Server started on port 3000' })).toBe(true);
+    expect(
+      matchesFilters(baseEvent, {
+        search: 'port',
+      })
+    ).toBe(true);
+    expect(
+      matchesFilters(baseEvent, {
+        search: 'started',
+      })
+    ).toBe(true);
+    expect(
+      matchesFilters(baseEvent, {
+        search: 'Server started on port 3000',
+      })
+    ).toBe(true);
   });
 
   test('empty search string matches everything', () => {
     // Empty string is falsy, so the filter is skipped
-    expect(matchesFilters(baseEvent, { search: '' })).toBe(true);
+    expect(
+      matchesFilters(baseEvent, {
+        search: '',
+      })
+    ).toBe(true);
   });
 
   test('handles event with all optional fields', () => {
@@ -300,8 +434,13 @@ describe('matchesFilters', () => {
       source: 'plugin',
       pluginName: 'weather',
       message: 'API rate limit approaching',
-      meta: { remaining: 10 },
-      error: { name: 'RateLimitWarning', message: 'Approaching limit' },
+      meta: {
+        remaining: 10,
+      },
+      error: {
+        name: 'RateLimitWarning',
+        message: 'Approaching limit',
+      },
     };
 
     expect(

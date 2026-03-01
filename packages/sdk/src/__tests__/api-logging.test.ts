@@ -20,30 +20,51 @@ const { log, parseStackLine } = await import('../api/logging');
 /**
  * Helper to get typed call arguments from mock
  */
-function getCallArgs(index = 0): { level: string; message: string; meta: Record<string, unknown> } {
+function getCallArgs(index = 0): {
+  level: string;
+  message: string;
+  meta: Record<string, unknown>;
+} {
   const calls = mockLog.mock.calls;
   const call = calls[index];
   if (!call || call.length < 3) {
     throw new Error(`No call at index ${index}`);
   }
-  const args = call as unknown as [string, string, Record<string, unknown>];
-  return { level: args[0], message: args[1], meta: args[2] };
+  const args = call as unknown as [
+    string,
+    string,
+    Record<string, unknown>,
+  ];
+  return {
+    level: args[0],
+    message: args[1],
+    meta: args[2],
+  };
 }
 
 describe('parseStackLine', () => {
   test('parses stack line with parentheses', () => {
     const result = parseStackLine('    at Object.<anonymous> (/Users/test/src/app.ts:42:10)');
-    expect(result).toEqual({ sourceFile: '/Users/test/src/app.ts', sourceLine: 42 });
+    expect(result).toEqual({
+      sourceFile: '/Users/test/src/app.ts',
+      sourceLine: 42,
+    });
   });
 
   test('parses stack line without parentheses', () => {
     const result = parseStackLine('    at /Users/test/src/index.ts:15:3');
-    expect(result).toEqual({ sourceFile: '/Users/test/src/index.ts', sourceLine: 15 });
+    expect(result).toEqual({
+      sourceFile: '/Users/test/src/index.ts',
+      sourceLine: 15,
+    });
   });
 
   test('parses Windows-style paths', () => {
     const result = parseStackLine('    at Object.<anonymous> (C:\\Users\\test\\app.ts:10:5)');
-    expect(result).toEqual({ sourceFile: 'C:\\Users\\test\\app.ts', sourceLine: 10 });
+    expect(result).toEqual({
+      sourceFile: 'C:\\Users\\test\\app.ts',
+      sourceLine: 10,
+    });
   });
 
   test('returns null for non-matching lines', () => {
@@ -104,7 +125,9 @@ describe('log', () => {
   });
 
   test('passes user metadata through to context', () => {
-    log.info('test', { requestId: 'abc' });
+    log.info('test', {
+      requestId: 'abc',
+    });
     const { meta } = getCallArgs();
     expect(meta.requestId).toBe('abc');
   });
@@ -118,7 +141,9 @@ describe('log', () => {
 
   test('log.error extracts Error object details into meta', () => {
     const error = new Error('boom');
-    log.error('failed', { error: error as unknown as string });
+    log.error('failed', {
+      error: error as unknown as string,
+    });
     const { meta } = getCallArgs();
     expect(meta.errorName).toBe('Error');
     expect(meta.errorMessage).toBe('boom');
@@ -126,7 +151,9 @@ describe('log', () => {
   });
 
   test('log.error does not extract non-Error values', () => {
-    log.error('failed', { error: 'just a string' });
+    log.error('failed', {
+      error: 'just a string',
+    });
     const { meta } = getCallArgs();
     expect(meta.errorName).toBeUndefined();
     expect(meta.error).toBe('just a string');

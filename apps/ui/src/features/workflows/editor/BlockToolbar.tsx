@@ -39,8 +39,16 @@ export interface BlockDefinition {
   color: string;
   category: string;
   pluginId: string;
-  inputs: Array<{ id: string; name: string; typeName?: string }>;
-  outputs: Array<{ id: string; name: string; typeName?: string }>;
+  inputs: Array<{
+    id: string;
+    name: string;
+    typeName?: string;
+  }>;
+  outputs: Array<{
+    id: string;
+    name: string;
+    typeName?: string;
+  }>;
   schema: {
     type: 'object';
     properties?: Record<string, unknown>;
@@ -54,7 +62,9 @@ export interface BlockDefinition {
 
 async function fetchBlocks(): Promise<BlockDefinition[]> {
   const res = await fetch('/api/blocks');
-  if (!res.ok) throw new Error('Failed to fetch blocks');
+  if (!res.ok) {
+    throw new Error('Failed to fetch blocks');
+  }
   return res.json();
 }
 
@@ -87,8 +97,13 @@ function DraggableBlock({ block, onDragStart }: Readonly<DraggableBlockProps>) {
           draggable
           onDragStart={(e) => onDragStart(e, block, blockName)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ')
-              e.currentTarget.dispatchEvent(new DragEvent('dragstart', { bubbles: true }));
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.currentTarget.dispatchEvent(
+                new DragEvent('dragstart', {
+                  bubbles: true,
+                })
+              );
+            }
           }}
           className={cn(
             'group flex cursor-grab items-center gap-2 rounded-lg border bg-card p-2.5',
@@ -99,8 +114,17 @@ function DraggableBlock({ block, onDragStart }: Readonly<DraggableBlockProps>) {
           )}
         >
           <GripVertical className="size-3 text-muted-foreground/50 opacity-0 transition-opacity group-hover:opacity-100" />
-          <Avatar className="size-8" style={{ backgroundColor: block.color }}>
-            <AvatarFallback style={{ backgroundColor: block.color }}>
+          <Avatar
+            className="size-8"
+            style={{
+              backgroundColor: block.color,
+            }}
+          >
+            <AvatarFallback
+              style={{
+                backgroundColor: block.color,
+              }}
+            >
               <DynamicIcon name={iconName} className="size-4 text-white" />
             </AvatarFallback>
           </Avatar>
@@ -129,8 +153,17 @@ function DraggableBlock({ block, onDragStart }: Readonly<DraggableBlockProps>) {
       <TooltipContent side="right" className="w-64 p-3">
         {/* Header */}
         <div className="flex items-center gap-2">
-          <Avatar className="size-8" style={{ backgroundColor: block.color }}>
-            <AvatarFallback style={{ backgroundColor: block.color }}>
+          <Avatar
+            className="size-8"
+            style={{
+              backgroundColor: block.color,
+            }}
+          >
+            <AvatarFallback
+              style={{
+                backgroundColor: block.color,
+              }}
+            >
               <DynamicIcon name={iconName} className="size-4 text-white" />
             </AvatarFallback>
           </Avatar>
@@ -225,14 +258,19 @@ export function BlockToolbar({ onDragStart, onCollapse, className }: Readonly<Bl
     isLoading,
     error,
   } = useQuery({
-    queryKey: ['blocks'],
+    queryKey: [
+      'blocks',
+    ],
     queryFn: fetchBlocks,
     staleTime: 30000,
   });
 
   const handleDragStart = (e: DragEvent, block: BlockDefinition, translatedLabel: string) => {
     // Include the translated label in the drag data
-    const dragData = { ...block, translatedLabel };
+    const dragData = {
+      ...block,
+      translatedLabel,
+    };
     e.dataTransfer.setData('application/reactflow', JSON.stringify(dragData));
     e.dataTransfer.effectAllowed = 'move';
     onDragStart?.(e, block);
@@ -248,9 +286,9 @@ export function BlockToolbar({ onDragStart, onCollapse, className }: Readonly<Bl
     : blocks;
 
   // Group by category
-  const categories = [...new Set(filteredBlocks.map((b) => b.category))].sort((a, b) =>
-    a.localeCompare(b)
-  );
+  const categories = [
+    ...new Set(filteredBlocks.map((b) => b.category)),
+  ].sort((a, b) => a.localeCompare(b));
   const groupedBlocks = categories.map((cat) => ({
     id: cat,
     label: cat.charAt(0).toUpperCase() + cat.slice(1),
@@ -335,7 +373,10 @@ export function BlockToolbar({ onDragStart, onCollapse, className }: Readonly<Bl
                     key={category.id}
                     open={isOpen}
                     onOpenChange={(open) =>
-                      setOpenCategories((prev) => ({ ...prev, [category.id]: open }))
+                      setOpenCategories((prev) => ({
+                        ...prev,
+                        [category.id]: open,
+                      }))
                     }
                   >
                     <CollapsibleTrigger asChild>

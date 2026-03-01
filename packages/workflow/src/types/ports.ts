@@ -29,7 +29,10 @@ export type PortRef = `${string}:${string}`;
 /**
  * Parse a port reference into its components.
  */
-export function parsePortRef(ref: PortRef): { blockId: string; portId: string } {
+export function parsePortRef(ref: PortRef): {
+  blockId: string;
+  portId: string;
+} {
   const colonIndex = ref.indexOf(':');
   if (colonIndex === -1) {
     throw new Error(`Invalid port reference: "${ref}" - must be "blockId:portId"`);

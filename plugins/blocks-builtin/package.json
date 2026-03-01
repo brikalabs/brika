@@ -43,7 +43,7 @@
   ],
   "scripts": {
     "link": "bun link",
-    "tsc": "bunx --biome tsc --noEmit",
+    "typecheck": "tsgo --noEmit",
     "prepublishOnly": "brika-verify-plugin"
   },
   "blocks": [

@@ -17,17 +17,19 @@ export class FsWatchMock {
    */
   apply(): void {
     const callbacks = this.#callbacks;
-    this.#spy = spyOn(fsModule, 'watch' as any).mockImplementation(
-      (dir: string, _options: any, callback?: WatchCallback) => {
-        if (callback) {
-          callbacks.set(dir, callback);
-        }
-        return {
-          close: () => {
-            callbacks.delete(dir);
-          },
-        } as any;
+    const impl = (dir: string, _options: unknown, callback?: WatchCallback): fsModule.FSWatcher => {
+      if (callback) {
+        callbacks.set(dir, callback);
       }
+      return {
+        close: () => {
+          callbacks.delete(dir);
+        },
+      } as fsModule.FSWatcher;
+    };
+    // spyOn doesn't type `watch` properly due to overloads — cast the method name
+    this.#spy = spyOn(fsModule, 'watch' as 'writeFileSync').mockImplementation(
+      impl as unknown as () => void
     );
   }
 

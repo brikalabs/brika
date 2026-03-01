@@ -39,7 +39,10 @@ export function isSchemaCompatible(outputSchema: z.ZodType, inputSchema: z.ZodTy
   const inputType = getBaseType(inputSchema);
 
   // For structured types (objects, arrays), we need deeper checking
-  const structuredTypes = new Set(['object', 'array']);
+  const structuredTypes = new Set([
+    'object',
+    'array',
+  ]);
   if (structuredTypes.has(outputType) || structuredTypes.has(inputType)) {
     return checkStructuralCompatibility(outputSchema, inputSchema);
   }
@@ -64,7 +67,11 @@ function getZodTypeName(schema: z.ZodType): string {
     return constructorName.slice(3).toLowerCase();
   }
   // Fallback to _def.type (Zod v3.23+)
-  const def = schema as z.ZodType & { _def?: { type?: string } };
+  const def = schema as z.ZodType & {
+    _def?: {
+      type?: string;
+    };
+  };
   return def._def?.type ?? 'unknown';
 }
 
@@ -92,8 +99,16 @@ function checkStructuralCompatibility(outputSchema: z.ZodType, inputSchema: z.Zo
   const inputType = getZodTypeName(inputSchema);
 
   // Get _def for inner type access
-  const outputDef = (outputSchema as z.ZodType & { _def?: unknown })._def;
-  const inputDef = (inputSchema as z.ZodType & { _def?: unknown })._def;
+  const outputDef = (
+    outputSchema as z.ZodType & {
+      _def?: unknown;
+    }
+  )._def;
+  const inputDef = (
+    inputSchema as z.ZodType & {
+      _def?: unknown;
+    }
+  )._def;
 
   // Try each compatibility check in order
   const wrapperResult = checkWrapperTypeCompatibility(
@@ -102,7 +117,9 @@ function checkStructuralCompatibility(outputSchema: z.ZodType, inputSchema: z.Zo
     inputType,
     inputDef
   );
-  if (wrapperResult !== null) return wrapperResult;
+  if (wrapperResult !== null) {
+    return wrapperResult;
+  }
 
   const unionResult = checkUnionTypeCompatibility(
     outputSchema,
@@ -112,10 +129,14 @@ function checkStructuralCompatibility(outputSchema: z.ZodType, inputSchema: z.Zo
     inputType,
     inputDef
   );
-  if (unionResult !== null) return unionResult;
+  if (unionResult !== null) {
+    return unionResult;
+  }
 
   const primitiveResult = checkPrimitiveTypeCompatibility(outputType, inputType);
-  if (primitiveResult !== null) return primitiveResult;
+  if (primitiveResult !== null) {
+    return primitiveResult;
+  }
 
   const collectionResult = checkCollectionTypeCompatibility(
     outputSchema,
@@ -125,7 +146,9 @@ function checkStructuralCompatibility(outputSchema: z.ZodType, inputSchema: z.Zo
     inputType,
     inputDef
   );
-  if (collectionResult !== null) return collectionResult;
+  if (collectionResult !== null) {
+    return collectionResult;
+  }
 
   return false;
 }
@@ -140,7 +163,9 @@ function checkWrapperTypeCompatibility(
   inputDef: unknown
 ): boolean | null {
   if (inputType === 'optional' || inputType === 'nullable') {
-    const innerDef = inputDef as { innerType?: z.ZodType };
+    const innerDef = inputDef as {
+      innerType?: z.ZodType;
+    };
     if (innerDef.innerType) {
       return isSchemaCompatible(outputSchema, innerDef.innerType);
     }
@@ -161,7 +186,9 @@ function checkUnionTypeCompatibility(
 ): boolean | null {
   // Handle union inputs - output must satisfy at least one variant
   if (inputType === 'union') {
-    const unionDef = inputDef as { options?: z.ZodType[] };
+    const unionDef = inputDef as {
+      options?: z.ZodType[];
+    };
     if (unionDef.options) {
       return unionDef.options.some((opt) => isSchemaCompatible(outputSchema, opt));
     }
@@ -169,7 +196,9 @@ function checkUnionTypeCompatibility(
 
   // Handle union outputs - all variants must satisfy input
   if (outputType === 'union') {
-    const unionDef = outputDef as { options?: z.ZodType[] };
+    const unionDef = outputDef as {
+      options?: z.ZodType[];
+    };
     if (unionDef.options) {
       return unionDef.options.every((opt) => isSchemaCompatible(opt, inputSchema));
     }
@@ -182,7 +211,12 @@ function checkUnionTypeCompatibility(
  * Check primitive type compatibility
  */
 function checkPrimitiveTypeCompatibility(outputType: string, inputType: string): boolean | null {
-  const primitiveTypes = new Set(['string', 'number', 'boolean', 'null']);
+  const primitiveTypes = new Set([
+    'string',
+    'number',
+    'boolean',
+    'null',
+  ]);
   if (primitiveTypes.has(outputType) && primitiveTypes.has(inputType)) {
     return outputType === inputType;
   }
@@ -202,8 +236,16 @@ function checkCollectionTypeCompatibility(
 ): boolean | null {
   // Array compatibility
   if (outputType === 'array' && inputType === 'array') {
-    const outputElement = (outputDef as { element?: z.ZodType }).element;
-    const inputElement = (inputDef as { element?: z.ZodType }).element;
+    const outputElement = (
+      outputDef as {
+        element?: z.ZodType;
+      }
+    ).element;
+    const inputElement = (
+      inputDef as {
+        element?: z.ZodType;
+      }
+    ).element;
     if (outputElement && inputElement) {
       return isSchemaCompatible(outputElement, inputElement);
     }
@@ -268,11 +310,22 @@ function checkObjectCompatibility(
 export function validatePortData(
   data: unknown,
   schema: z.ZodType
-): { valid: true; data: unknown } | { valid: false; error: string } {
+):
+  | {
+      valid: true;
+      data: unknown;
+    }
+  | {
+      valid: false;
+      error: string;
+    } {
   const result = schema.safeParse(data);
 
   if (result.success) {
-    return { valid: true, data: result.data };
+    return {
+      valid: true,
+      data: result.data,
+    };
   }
 
   const errors = result.error.issues
@@ -282,7 +335,10 @@ export function validatePortData(
     })
     .join('; ');
 
-  return { valid: false, error: errors };
+  return {
+    valid: false,
+    error: errors,
+  };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -294,7 +350,11 @@ export function validatePortData(
  */
 export function getSchemaTypeName(schema: z.ZodType): string {
   const typeName = getZodTypeName(schema);
-  const def = (schema as z.ZodType & { _def?: unknown })._def;
+  const def = (
+    schema as z.ZodType & {
+      _def?: unknown;
+    }
+  )._def;
 
   switch (typeName) {
     case 'string':
@@ -312,7 +372,11 @@ export function getSchemaTypeName(schema: z.ZodType): string {
     case 'unknown':
       return 'unknown';
     case 'array': {
-      const element = (def as { element?: z.ZodType })?.element;
+      const element = (
+        def as {
+          element?: z.ZodType;
+        }
+      )?.element;
       return element ? `${getSchemaTypeName(element)}[]` : 'array';
     }
     case 'object':
@@ -320,11 +384,19 @@ export function getSchemaTypeName(schema: z.ZodType): string {
     case 'union':
       return 'union';
     case 'optional': {
-      const inner = (def as { innerType?: z.ZodType })?.innerType;
+      const inner = (
+        def as {
+          innerType?: z.ZodType;
+        }
+      )?.innerType;
       return inner ? `${getSchemaTypeName(inner)}?` : 'optional';
     }
     case 'nullable': {
-      const inner = (def as { innerType?: z.ZodType })?.innerType;
+      const inner = (
+        def as {
+          innerType?: z.ZodType;
+        }
+      )?.innerType;
       return inner ? `${getSchemaTypeName(inner)} | null` : 'nullable';
     }
     case 'date':

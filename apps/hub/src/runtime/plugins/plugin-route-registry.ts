@@ -20,7 +20,11 @@ export class PluginRouteRegistry {
 
   register(pluginName: string, method: string, path: string): void {
     const key = this.#key(pluginName, method, path);
-    this.#routes.set(key, { pluginName, method, path });
+    this.#routes.set(key, {
+      pluginName,
+      method,
+      path,
+    });
   }
 
   /**
@@ -37,13 +41,17 @@ export class PluginRouteRegistry {
    */
   resolveByPath(method: string, path: string): RegisteredRoute | undefined {
     for (const route of this.#routes.values()) {
-      if (route.method === method && route.path === path) return route;
+      if (route.method === method && route.path === path) {
+        return route;
+      }
     }
     return undefined;
   }
 
   listByPlugin(pluginName: string): RegisteredRoute[] {
-    return [...this.#routes.values()].filter((r) => r.pluginName === pluginName);
+    return [
+      ...this.#routes.values(),
+    ].filter((r) => r.pluginName === pluginName);
   }
 
   unregisterPlugin(pluginName: string): void {

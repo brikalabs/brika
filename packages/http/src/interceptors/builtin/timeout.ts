@@ -41,7 +41,9 @@ export class TimeoutInterceptor implements RequestInterceptor {
       () => {
         clearTimeout(timeoutId);
       },
-      { once: true }
+      {
+        once: true,
+      }
     );
 
     return {
@@ -60,8 +62,12 @@ export class TimeoutInterceptor implements RequestInterceptor {
       controller.abort(signal1.aborted ? signal1.reason : signal2.reason);
     };
 
-    signal1.addEventListener('abort', onAbort, { once: true });
-    signal2.addEventListener('abort', onAbort, { once: true });
+    signal1.addEventListener('abort', onAbort, {
+      once: true,
+    });
+    signal2.addEventListener('abort', onAbort, {
+      once: true,
+    });
 
     return controller.signal;
   }

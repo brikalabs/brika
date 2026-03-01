@@ -13,7 +13,13 @@ import { createTestHarness, type Handler } from './_test-utils';
 // ---------------------------------------------------------------------------
 
 const h = createTestHarness({
-  blocks: [{ id: 'test-block', name: 'Test Block', category: 'test' }],
+  blocks: [
+    {
+      id: 'test-block',
+      name: 'Test Block',
+      category: 'test',
+    },
+  ],
 });
 
 // ---------------------------------------------------------------------------
@@ -23,9 +29,27 @@ const h = createTestHarness({
 function makeBlockDef(overrides?: Record<string, unknown>) {
   return {
     id: 'test-block',
-    inputs: [{ id: 'in', name: 'Input', direction: 'input' as const, typeName: 'number' }],
-    outputs: [{ id: 'out', name: 'Output', direction: 'output' as const, typeName: 'string' }],
-    schema: { type: 'object' as const, properties: {}, required: [] },
+    inputs: [
+      {
+        id: 'in',
+        name: 'Input',
+        direction: 'input' as const,
+        typeName: 'number',
+      },
+    ],
+    outputs: [
+      {
+        id: 'out',
+        name: 'Output',
+        direction: 'output' as const,
+        typeName: 'string',
+      },
+    ],
+    schema: {
+      type: 'object' as const,
+      properties: {},
+      required: [],
+    },
     ...overrides,
   };
 }
@@ -61,23 +85,43 @@ describe('setupBlocks', () => {
     test('sends IPC with block metadata merged from manifest', () => {
       const result = methods.registerBlock(makeBlockDef());
 
-      expect(result).toEqual({ id: 'test-block' });
+      expect(result).toEqual({
+        id: 'test-block',
+      });
 
       const msg = h.sentMessages.find((m) => m.name === 'registerBlock');
       expect(msg).toBeDefined();
 
-      const payload = msg!.payload as { block: Record<string, unknown> };
+      const payload = msg?.payload as {
+        block: Record<string, unknown>;
+      };
       expect(payload.block.id).toBe('test-block');
       expect(payload.block.name).toBe('Test Block');
       expect(payload.block.category).toBe('test');
-      expect(payload.block.inputs).toEqual([{ id: 'in', name: 'in', typeName: 'number' }]);
-      expect(payload.block.outputs).toEqual([{ id: 'out', name: 'out', typeName: 'string' }]);
+      expect(payload.block.inputs).toEqual([
+        {
+          id: 'in',
+          name: 'in',
+          typeName: 'number',
+        },
+      ]);
+      expect(payload.block.outputs).toEqual([
+        {
+          id: 'out',
+          name: 'out',
+          typeName: 'string',
+        },
+      ]);
     });
 
     test('throws for undeclared block', () => {
-      expect(() => methods.registerBlock(makeBlockDef({ id: 'unknown-block' }))).toThrow(
-        'Block "unknown-block" not in package.json'
-      );
+      expect(() =>
+        methods.registerBlock(
+          makeBlockDef({
+            id: 'unknown-block',
+          })
+        )
+      ).toThrow('Block "unknown-block" not in package.json');
     });
 
     test('throws for duplicate registration', () => {
@@ -98,7 +142,11 @@ describe('setupBlocks', () => {
         },
       }));
 
-      methods.registerBlock(makeBlockDef({ start: startFn }));
+      methods.registerBlock(
+        makeBlockDef({
+          start: startFn,
+        })
+      );
 
       // The block should be startable through the startBlock IPC handler
       const result = h.callImpl('startBlock', {
@@ -108,7 +156,9 @@ describe('setupBlocks', () => {
         config: {},
       });
 
-      expect(result).toEqual({ ok: true });
+      expect(result).toEqual({
+        ok: true,
+      });
       expect(startFn).toHaveBeenCalledTimes(1);
     });
   });
@@ -134,7 +184,11 @@ describe('setupBlocks', () => {
       mockInstanceStop.mockClear();
       mockStartFn.mockClear();
 
-      methods.registerBlock(makeBlockDef({ start: mockStartFn }));
+      methods.registerBlock(
+        makeBlockDef({
+          start: mockStartFn,
+        })
+      );
     });
 
     test('extracts local ID from plugin:blockId, calls start, returns ok', () => {
@@ -142,16 +196,22 @@ describe('setupBlocks', () => {
         blockType: 'test-plugin:test-block',
         instanceId: 'inst-1',
         workflowId: 'wf-1',
-        config: { key: 'value' },
+        config: {
+          key: 'value',
+        },
       });
 
-      expect(result).toEqual({ ok: true });
+      expect(result).toEqual({
+        ok: true,
+      });
       expect(mockStartFn).toHaveBeenCalledTimes(1);
 
       const callArgs = (mockStartFn.mock.calls[0] as unknown[])[0] as Record<string, unknown>;
       expect(callArgs.blockId).toBe('inst-1');
       expect(callArgs.workflowId).toBe('wf-1');
-      expect(callArgs.config).toEqual({ key: 'value' });
+      expect(callArgs.config).toEqual({
+        key: 'value',
+      });
       expect(typeof callArgs.emit).toBe('function');
     });
 
@@ -163,7 +223,9 @@ describe('setupBlocks', () => {
         config: {},
       });
 
-      expect(result).toEqual({ ok: true });
+      expect(result).toEqual({
+        ok: true,
+      });
       expect(mockStartFn).toHaveBeenCalledTimes(1);
     });
 
@@ -175,7 +237,10 @@ describe('setupBlocks', () => {
         config: {},
       });
 
-      expect(result).toEqual({ ok: false, error: 'Block not found: nonexistent' });
+      expect(result).toEqual({
+        ok: false,
+        error: 'Block not found: nonexistent',
+      });
     });
 
     test('returns error for duplicate instance', () => {
@@ -193,7 +258,10 @@ describe('setupBlocks', () => {
         config: {},
       });
 
-      expect(result).toEqual({ ok: false, error: 'Block instance already exists: inst-dup' });
+      expect(result).toEqual({
+        ok: false,
+        error: 'Block instance already exists: inst-dup',
+      });
     });
 
     test('handles start errors', () => {
@@ -208,7 +276,10 @@ describe('setupBlocks', () => {
         config: {},
       });
 
-      expect(result).toEqual({ ok: false, error: 'Error: start failed' });
+      expect(result).toEqual({
+        ok: false,
+        error: 'Error: start failed',
+      });
     });
 
     test('emit callback sends blockEmit IPC', () => {
@@ -221,14 +292,18 @@ describe('setupBlocks', () => {
 
       const callArgs = (mockStartFn.mock.calls[0] as unknown[])[0] as Record<string, unknown>;
       const emit = callArgs.emit as Function;
-      emit('out', { value: 42 });
+      emit('out', {
+        value: 42,
+      });
 
       const emitMsg = h.sentMessages.find((m) => m.name === 'blockEmit');
       expect(emitMsg).toBeDefined();
-      expect(emitMsg!.payload).toEqual({
+      expect(emitMsg?.payload).toEqual({
         instanceId: 'inst-emit',
         port: 'out',
-        data: { value: 42 },
+        data: {
+          value: 42,
+        },
       });
     });
   });
@@ -254,7 +329,11 @@ describe('setupBlocks', () => {
         stop: mockInstanceStop,
       }));
 
-      methods.registerBlock(makeBlockDef({ start: startFn }));
+      methods.registerBlock(
+        makeBlockDef({
+          start: startFn,
+        })
+      );
 
       h.callImpl('startBlock', {
         blockType: 'test-plugin:test-block',
@@ -265,14 +344,22 @@ describe('setupBlocks', () => {
     });
 
     test('forwards data to instance', () => {
-      h.triggerOn('pushInput', { instanceId: 'inst-push', port: 'in', data: 42 });
+      h.triggerOn('pushInput', {
+        instanceId: 'inst-push',
+        port: 'in',
+        data: 42,
+      });
 
       expect(mockPushInput).toHaveBeenCalledWith('in', 42);
     });
 
     test('ignores unknown instance', () => {
       // Should not throw
-      h.triggerOn('pushInput', { instanceId: 'nonexistent', port: 'in', data: 42 });
+      h.triggerOn('pushInput', {
+        instanceId: 'nonexistent',
+        port: 'in',
+        data: 42,
+      });
       expect(mockPushInput).not.toHaveBeenCalled();
     });
   });
@@ -298,7 +385,11 @@ describe('setupBlocks', () => {
         stop: mockInstanceStop,
       }));
 
-      methods.registerBlock(makeBlockDef({ start: startFn }));
+      methods.registerBlock(
+        makeBlockDef({
+          start: startFn,
+        })
+      );
 
       h.callImpl('startBlock', {
         blockType: 'test-plugin:test-block',
@@ -309,19 +400,27 @@ describe('setupBlocks', () => {
     });
 
     test('stops instance and removes it', () => {
-      h.triggerOn('stopBlock', { instanceId: 'inst-stop' });
+      h.triggerOn('stopBlock', {
+        instanceId: 'inst-stop',
+      });
 
       expect(mockInstanceStop).toHaveBeenCalledTimes(1);
 
       // Instance should be gone — pushInput should be a no-op
       mockPushInput.mockClear();
-      h.triggerOn('pushInput', { instanceId: 'inst-stop', port: 'in', data: 1 });
+      h.triggerOn('pushInput', {
+        instanceId: 'inst-stop',
+        port: 'in',
+        data: 1,
+      });
       expect(mockPushInput).not.toHaveBeenCalled();
     });
 
     test('ignores unknown instance', () => {
       // Should not throw
-      h.triggerOn('stopBlock', { instanceId: 'nonexistent' });
+      h.triggerOn('stopBlock', {
+        instanceId: 'nonexistent',
+      });
       expect(mockInstanceStop).not.toHaveBeenCalled();
     });
   });
@@ -347,7 +446,11 @@ describe('setupBlocks', () => {
         };
       });
 
-      methods.registerBlock(makeBlockDef({ start: startFn }));
+      methods.registerBlock(
+        makeBlockDef({
+          start: startFn,
+        })
+      );
 
       h.callImpl('startBlock', {
         blockType: 'test-plugin:test-block',

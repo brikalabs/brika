@@ -53,7 +53,7 @@ export function EventRow({
           </span>
         </div>
       </div>
-      {e.payload != null && (
+      {e.payload !== null && e.payload !== undefined && (
         <pre className="mt-2.5 ml-12 max-h-24 overflow-auto rounded-md border border-border/50 bg-muted/50 p-2.5 font-mono text-muted-foreground text-xs leading-relaxed">
           {JSON.stringify(e.payload, null, 2)}
         </pre>

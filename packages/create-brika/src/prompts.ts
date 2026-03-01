@@ -43,7 +43,9 @@ const CATEGORIES = [
  * Validate plugin name (kebab-case)
  */
 function validatePluginName(name: string | undefined): string | undefined {
-  if (!name) return 'Plugin name is required';
+  if (!name) {
+    return 'Plugin name is required';
+  }
   if (!/^[a-z][a-z0-9-]*$/.test(name)) {
     return 'Plugin name must be kebab-case (e.g., my-plugin)';
   }
@@ -98,7 +100,11 @@ export async function promptForConfig(pluginName?: string): Promise<PluginConfig
               label: 'Blocks',
               hint: 'Workflow blocks (triggers, actions, transforms)',
             },
-            { value: 'bricks' as const, label: 'Bricks', hint: 'Dashboard UI components' },
+            {
+              value: 'bricks' as const,
+              label: 'Bricks',
+              hint: 'Dashboard UI components',
+            },
             {
               value: 'sparks' as const,
               label: 'Sparks',

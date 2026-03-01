@@ -16,10 +16,16 @@ export interface BadgeNode extends BaseNode {
 }
 
 export function Badge(
-  props: Omit<BadgeNode, 'type' | 'onPress'> & { onPress?: ActionHandler }
+  props: Omit<BadgeNode, 'type' | 'onPress'> & {
+    onPress?: ActionHandler;
+  }
 ): BadgeNode {
   const { onPress, ...rest } = props;
-  return { type: 'badge', ...rest, onPress: onPress ? resolveAction(onPress) : undefined };
+  return {
+    type: 'badge',
+    ...rest,
+    onPress: onPress ? resolveAction(onPress) : undefined,
+  };
 }
 
 declare module './_shared' {

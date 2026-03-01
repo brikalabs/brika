@@ -121,8 +121,12 @@ describe('FlowImpl', () => {
       flow.subscribe(sub2);
       flow.push(42);
 
-      expect(values1).toEqual([42]);
-      expect(values2).toEqual([42]);
+      expect(values1).toEqual([
+        42,
+      ]);
+      expect(values2).toEqual([
+        42,
+      ]);
     });
 
     test('updates latest value', () => {
@@ -152,7 +156,11 @@ describe('FlowImpl', () => {
 
       flow.push(42);
 
-      expect(order).toEqual([1, 2, 3]);
+      expect(order).toEqual([
+        1,
+        2,
+        3,
+      ]);
     });
   });
 
@@ -163,7 +171,9 @@ describe('FlowImpl', () => {
       flow.subscribe(subscriber);
       flow.push(1);
 
-      expect(values).toEqual([1]);
+      expect(values).toEqual([
+        1,
+      ]);
       expect(cleanup.count).toBe(1);
     });
 
@@ -175,7 +185,11 @@ describe('FlowImpl', () => {
       flow.push(2);
       flow.push(3);
 
-      expect(values).toEqual([1, 2, 3]);
+      expect(values).toEqual([
+        1,
+        2,
+        3,
+      ]);
     });
 
     test('auto-cleanup removes subscriber on cleanup', () => {
@@ -186,7 +200,9 @@ describe('FlowImpl', () => {
       cleanup.cleanup();
       flow.push(2);
 
-      expect(values).toEqual([1]);
+      expect(values).toEqual([
+        1,
+      ]);
     });
   });
 
@@ -197,7 +213,9 @@ describe('FlowImpl', () => {
       flow.subscribeRaw(subscriber);
       flow.push(1);
 
-      expect(values).toEqual([1]);
+      expect(values).toEqual([
+        1,
+      ]);
       expect(cleanup.count).toBe(0);
     });
 
@@ -209,7 +227,9 @@ describe('FlowImpl', () => {
       unsubscribe();
       flow.push(2);
 
-      expect(values).toEqual([1]);
+      expect(values).toEqual([
+        1,
+      ]);
     });
 
     test('unsubscribe removes only that subscriber', () => {
@@ -223,8 +243,13 @@ describe('FlowImpl', () => {
       unsub1();
       flow.push(2);
 
-      expect(values1).toEqual([1]);
-      expect(values2).toEqual([1, 2]);
+      expect(values1).toEqual([
+        1,
+      ]);
+      expect(values2).toEqual([
+        1,
+        2,
+      ]);
     });
   });
 
@@ -239,8 +264,12 @@ describe('FlowImpl', () => {
       flow.clear();
       flow.push(2);
 
-      expect(values1).toEqual([1]);
-      expect(values2).toEqual([1]);
+      expect(values1).toEqual([
+        1,
+      ]);
+      expect(values2).toEqual([
+        1,
+      ]);
     });
   });
 
@@ -251,7 +280,9 @@ describe('FlowImpl', () => {
       flow.on(subscriber);
       flow.push(42);
 
-      expect(values).toEqual([42]);
+      expect(values).toEqual([
+        42,
+      ]);
       expect(cleanup.count).toBe(1);
     });
   });
@@ -264,7 +295,10 @@ describe('FlowImpl', () => {
       flow.push(1);
       flow.push(2);
 
-      expect(emitter.emitted).toEqual([1, 2]);
+      expect(emitter.emitted).toEqual([
+        1,
+        2,
+      ]);
     });
 
     test('routes to multiple emitters', () => {
@@ -274,8 +308,12 @@ describe('FlowImpl', () => {
       flow.to(emitter1, emitter2);
       flow.push(42);
 
-      expect(emitter1.emitted).toEqual([42]);
-      expect(emitter2.emitted).toEqual([42]);
+      expect(emitter1.emitted).toEqual([
+        42,
+      ]);
+      expect(emitter2.emitted).toEqual([
+        42,
+      ]);
     });
   });
 
@@ -302,7 +340,9 @@ describe('FlowImpl', () => {
 
       flow.push(5);
 
-      expect(values).toEqual([10]);
+      expect(values).toEqual([
+        10,
+      ]);
     });
 
     test('chains multiple operators', () => {
@@ -319,13 +359,16 @@ describe('FlowImpl', () => {
       flow.push(3);
       flow.push(4);
 
-      expect(values).toEqual([30, 40]);
+      expect(values).toEqual([
+        30,
+        40,
+      ]);
     });
 
     test('preserves type through chain', () => {
       const stringFlow = flow.pipe(
         map((x) => x.toString()),
-        map((s) => s + '!')
+        map((s) => `${s}!`)
       );
 
       const { values, subscriber } = createValueCollector<string>();
@@ -333,7 +376,9 @@ describe('FlowImpl', () => {
 
       flow.push(42);
 
-      expect(values).toEqual(['42!']);
+      expect(values).toEqual([
+        '42!',
+      ]);
     });
   });
 
@@ -345,7 +390,9 @@ describe('FlowImpl', () => {
       derived.on(subscriber);
       derived.push('hello');
 
-      expect(values).toEqual(['hello']);
+      expect(values).toEqual([
+        'hello',
+      ]);
     });
 
     test('derived flow shares cleanup registry', () => {
@@ -412,6 +459,8 @@ describe('createFlow', () => {
     flow.subscribe(subscriber);
     flow.push('test');
 
-    expect(values).toEqual(['test']);
+    expect(values).toEqual([
+      'test',
+    ]);
   });
 });

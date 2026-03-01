@@ -17,7 +17,9 @@ const createLogEvent = (overrides: Partial<LogEvent> = {}): LogEvent => ({
 describe('TerminalFormatter', () => {
   describe('format', () => {
     test('formats basic log event with color', () => {
-      const formatter = new TerminalFormatter({ color: true });
+      const formatter = new TerminalFormatter({
+        color: true,
+      });
       const event = createLogEvent();
 
       const output = formatter.format(event);
@@ -27,7 +29,9 @@ describe('TerminalFormatter', () => {
     });
 
     test('formats basic log event without color', () => {
-      const formatter = new TerminalFormatter({ color: false });
+      const formatter = new TerminalFormatter({
+        color: false,
+      });
       const event = createLogEvent();
 
       const output = formatter.format(event);
@@ -37,7 +41,9 @@ describe('TerminalFormatter', () => {
     });
 
     test('includes plugin name in source', () => {
-      const formatter = new TerminalFormatter({ color: false });
+      const formatter = new TerminalFormatter({
+        color: false,
+      });
       const event = createLogEvent({
         source: 'plugin',
         pluginName: 'myplugin',
@@ -50,7 +56,9 @@ describe('TerminalFormatter', () => {
     });
 
     test('formats metadata', () => {
-      const formatter = new TerminalFormatter({ color: false });
+      const formatter = new TerminalFormatter({
+        color: false,
+      });
       const event = createLogEvent({
         meta: {
           key1: 'value1',
@@ -69,7 +77,9 @@ describe('TerminalFormatter', () => {
     });
 
     test('formats error level', () => {
-      const formatter = new TerminalFormatter({ color: false });
+      const formatter = new TerminalFormatter({
+        color: false,
+      });
       const event = createLogEvent({
         level: 'error',
         message: 'Error occurred',
@@ -82,7 +92,9 @@ describe('TerminalFormatter', () => {
     });
 
     test('formats warn level', () => {
-      const formatter = new TerminalFormatter({ color: false });
+      const formatter = new TerminalFormatter({
+        color: false,
+      });
       const event = createLogEvent({
         level: 'warn',
         message: 'Warning message',
@@ -94,7 +106,9 @@ describe('TerminalFormatter', () => {
     });
 
     test('formats debug level', () => {
-      const formatter = new TerminalFormatter({ color: false });
+      const formatter = new TerminalFormatter({
+        color: false,
+      });
       const event = createLogEvent({
         level: 'debug',
         message: 'Debug info',
@@ -106,7 +120,9 @@ describe('TerminalFormatter', () => {
     });
 
     test('formats source file location', () => {
-      const formatter = new TerminalFormatter({ color: false });
+      const formatter = new TerminalFormatter({
+        color: false,
+      });
       const event = createLogEvent({
         meta: {
           sourceFile: '/path/to/some/file.ts',
@@ -120,7 +136,9 @@ describe('TerminalFormatter', () => {
     });
 
     test('formats error with stack trace', () => {
-      const formatter = new TerminalFormatter({ color: false });
+      const formatter = new TerminalFormatter({
+        color: false,
+      });
       const event = createLogEvent({
         level: 'error',
         meta: {
@@ -139,7 +157,9 @@ describe('TerminalFormatter', () => {
     });
 
     test('formats error with cause', () => {
-      const formatter = new TerminalFormatter({ color: false });
+      const formatter = new TerminalFormatter({
+        color: false,
+      });
       const event = createLogEvent({
         level: 'error',
         meta: {
@@ -158,7 +178,9 @@ describe('TerminalFormatter', () => {
     });
 
     test('handles multi-line string values', () => {
-      const formatter = new TerminalFormatter({ color: false });
+      const formatter = new TerminalFormatter({
+        color: false,
+      });
       const event = createLogEvent({
         meta: {
           multiline: 'line1\nline2\nline3',
@@ -172,10 +194,15 @@ describe('TerminalFormatter', () => {
     });
 
     test('handles nested object metadata', () => {
-      const formatter = new TerminalFormatter({ color: false });
+      const formatter = new TerminalFormatter({
+        color: false,
+      });
       const event = createLogEvent({
         meta: {
-          nested: { foo: 'bar', baz: 123 },
+          nested: {
+            foo: 'bar',
+            baz: 123,
+          },
         },
       });
 
@@ -187,8 +214,12 @@ describe('TerminalFormatter', () => {
 
   describe('color modes', () => {
     test('colored output differs from plain output', () => {
-      const coloredFormatter = new TerminalFormatter({ color: true });
-      const plainFormatter = new TerminalFormatter({ color: false });
+      const coloredFormatter = new TerminalFormatter({
+        color: true,
+      });
+      const plainFormatter = new TerminalFormatter({
+        color: false,
+      });
       const event = createLogEvent();
 
       const coloredOutput = coloredFormatter.format(event);

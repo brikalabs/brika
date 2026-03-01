@@ -9,8 +9,16 @@
     "url": "git+https://github.com/maxscharwath/brika.git",
     "directory": "packages/schema"
   },
-  "keywords": ["brika", "schema", "zod", "validation"],
-  "files": ["dist", "src"],
+  "keywords": [
+    "brika",
+    "schema",
+    "zod",
+    "validation"
+  ],
+  "files": [
+    "dist",
+    "src"
+  ],
   "exports": {
     ".": "./src/index.ts",
     "./plugin": "./src/plugin.ts",
@@ -21,8 +29,7 @@
     "dev": "bun run src/generate-schemas.ts --watch",
     "prepublishOnly": "bun run build",
     "release": "bun run scripts/publish.ts",
-    "tsc": "bunx --biome tsc --noEmit",
-    "test": "bun test"
+    "typecheck": "tsgo --noEmit"
   },
   "dependencies": {
     "zod": "^4.3.4"

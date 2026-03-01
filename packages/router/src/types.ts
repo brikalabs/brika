@@ -6,10 +6,7 @@ import type { output, ZodType } from 'zod';
  * Hono-compatible middleware function.
  * Runs before the route handler. Call `next()` to continue, or return a Response to short-circuit.
  */
-export type Middleware = (
-  c: Context,
-  next: () => Promise<void>
-) => Promise<void | Response>;
+export type Middleware = (c: Context, next: () => Promise<void>) => Promise<void | Response>;
 
 /**
  * Schema definition for route validation.

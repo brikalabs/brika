@@ -44,7 +44,7 @@ export class LoggerInterceptor
 
     this.#requestTimestamps.set(config, Date.now());
 
-    const logger = this.options.logger!;
+    const logger = this.options.logger ?? console;
     logger.log(`→ ${config.method} ${config.url}`, {
       params: config.params,
       headers: config.headers,
@@ -60,7 +60,7 @@ export class LoggerInterceptor
     }
 
     const duration = this.#getDuration(response.config);
-    const logger = this.options.logger!;
+    const logger = this.options.logger ?? console;
 
     logger.log(
       `← ${response.status} ${response.config.method} ${response.config.url} (${duration}ms)`,

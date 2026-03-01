@@ -13,7 +13,9 @@ export function clickableProps(
   onAction?: ActionHandler,
   payload?: Record<string, unknown>
 ) {
-  if (!onPress) return {};
+  if (!onPress) {
+    return {};
+  }
   const handler = () => onAction?.(onPress, payload);
   return {
     onClick: handler,

@@ -7,15 +7,27 @@ const ROOT = join(import.meta.dir, '..', '..', '..', '..');
 
 describe('packageDir', () => {
   test('returns directory from a nested relative path', () => {
-    expect(packageDir({ relativePath: 'packages/sdk/package.json' } as never)).toBe('packages/sdk');
+    expect(
+      packageDir({
+        relativePath: 'packages/sdk/package.json',
+      } as never)
+    ).toBe('packages/sdk');
   });
 
   test('returns "." for a root-level package.json', () => {
-    expect(packageDir({ relativePath: 'package.json' } as never)).toBe('.');
+    expect(
+      packageDir({
+        relativePath: 'package.json',
+      } as never)
+    ).toBe('.');
   });
 
   test('handles paths with many segments', () => {
-    expect(packageDir({ relativePath: 'apps/hub/package.json' } as never)).toBe('apps/hub');
+    expect(
+      packageDir({
+        relativePath: 'apps/hub/package.json',
+      } as never)
+    ).toBe('apps/hub');
   });
 });
 
@@ -30,7 +42,7 @@ describe('resolveRef', () => {
   test('resolves HEAD to a non-empty string', async () => {
     const result = await resolveRef(ROOT, 'HEAD');
     expect(typeof result).toBe('string');
-    expect(result!.length).toBeGreaterThan(0);
+    expect(result?.length).toBeGreaterThan(0);
   });
 
   test('returns null for a non-existent ref', async () => {

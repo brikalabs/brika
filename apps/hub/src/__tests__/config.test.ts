@@ -9,7 +9,9 @@ import { HubConfig, PluginManagerConfig } from '@/runtime/config/config';
 import { ConfigLoader } from '@/runtime/config/config-loader';
 
 // autoStub: false because these tests verify real config behavior
-useTestBed({ autoStub: false });
+useTestBed({
+  autoStub: false,
+});
 
 describe('HubConfig', () => {
   afterEach(() => {
@@ -47,7 +49,11 @@ describe('HubConfig', () => {
       hub: {
         host: '192.168.1.1',
         port: 4000,
-        plugins: { installDir: '', heartbeatInterval: 5000, heartbeatTimeout: 15000 },
+        plugins: {
+          installDir: '',
+          heartbeatInterval: 5000,
+          heartbeatTimeout: 15000,
+        },
       },
       plugins: [],
       rules: [],

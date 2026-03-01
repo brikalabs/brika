@@ -27,7 +27,13 @@ defineRenderer('table', ({ node, onAction }) => {
             <TableHead
               key={col.key}
               className={cn('text-xs', alignClass[col.align ?? 'left'])}
-              style={col.width ? { width: col.width } : undefined}
+              style={
+                col.width
+                  ? {
+                      width: col.width,
+                    }
+                  : undefined
+              }
             >
               {col.label}
             </TableHead>
@@ -43,7 +49,13 @@ defineRenderer('table', ({ node, onAction }) => {
               clickable && 'cursor-pointer'
             )}
             onClick={
-              clickable ? () => onAction?.(String(node.onRowPress), { index: i, row }) : undefined
+              clickable
+                ? () =>
+                    onAction?.(String(node.onRowPress), {
+                      index: i,
+                      row,
+                    })
+                : undefined
             }
           >
             {node.columns.map((col) => (

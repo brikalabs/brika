@@ -21,7 +21,9 @@ export function PluginBricksList({ plugin }: Readonly<PluginBricksListProps>) {
   const { t, tp } = useLocale();
   const bricks = plugin.bricks ?? [];
 
-  if (bricks.length === 0) return null;
+  if (bricks.length === 0) {
+    return null;
+  }
 
   return (
     <Card>
@@ -53,9 +55,17 @@ export function PluginBricksList({ plugin }: Readonly<PluginBricksListProps>) {
               >
                 <Avatar
                   className="size-10 shrink-0"
-                  style={{ backgroundColor: `${color}20`, color }}
+                  style={{
+                    backgroundColor: `${color}20`,
+                    color,
+                  }}
                 >
-                  <AvatarFallback style={{ backgroundColor: `${color}20`, color }}>
+                  <AvatarFallback
+                    style={{
+                      backgroundColor: `${color}20`,
+                      color,
+                    }}
+                  >
                     <DynamicIcon name={iconName} className="size-5" />
                   </AvatarFallback>
                 </Avatar>

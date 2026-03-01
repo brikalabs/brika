@@ -35,8 +35,8 @@ describe('parseStackLine', () => {
       const result = parseStackLine(line);
 
       expect(result).not.toBeNull();
-      expect(result!.sourceFile).toBe('/Users/dev/project/src/file.ts');
-      expect(result!.sourceLine).toBe(42);
+      expect(result?.sourceFile).toBe('/Users/dev/project/src/file.ts');
+      expect(result?.sourceLine).toBe(42);
     });
 
     test('parses anonymous function', () => {
@@ -44,8 +44,8 @@ describe('parseStackLine', () => {
       const result = parseStackLine(line);
 
       expect(result).not.toBeNull();
-      expect(result!.sourceFile).toBe('/app/index.ts');
-      expect(result!.sourceLine).toBe(1);
+      expect(result?.sourceFile).toBe('/app/index.ts');
+      expect(result?.sourceLine).toBe(1);
     });
 
     test('parses path with special characters', () => {
@@ -53,8 +53,8 @@ describe('parseStackLine', () => {
       const result = parseStackLine(line);
 
       expect(result).not.toBeNull();
-      expect(result!.sourceFile).toBe('/path/to/my-project_v2/src/file.spec.ts');
-      expect(result!.sourceLine).toBe(100);
+      expect(result?.sourceFile).toBe('/path/to/my-project_v2/src/file.spec.ts');
+      expect(result?.sourceLine).toBe(100);
     });
 
     test('parses path with dots in directory names', () => {
@@ -62,8 +62,8 @@ describe('parseStackLine', () => {
       const result = parseStackLine(line);
 
       expect(result).not.toBeNull();
-      expect(result!.sourceFile).toBe('/path/to/.hidden/node_modules/@scope/pkg/index.js');
-      expect(result!.sourceLine).toBe(50);
+      expect(result?.sourceFile).toBe('/path/to/.hidden/node_modules/@scope/pkg/index.js');
+      expect(result?.sourceLine).toBe(50);
     });
   });
 
@@ -73,8 +73,8 @@ describe('parseStackLine', () => {
       const result = parseStackLine(line);
 
       expect(result).not.toBeNull();
-      expect(result!.sourceFile).toBe('/Users/dev/project/src/file.ts');
-      expect(result!.sourceLine).toBe(42);
+      expect(result?.sourceFile).toBe('/Users/dev/project/src/file.ts');
+      expect(result?.sourceLine).toBe(42);
     });
 
     test('parses path with hyphens and underscores', () => {
@@ -82,8 +82,8 @@ describe('parseStackLine', () => {
       const result = parseStackLine(line);
 
       expect(result).not.toBeNull();
-      expect(result!.sourceFile).toBe('/my-app_v2/src/utils.ts');
-      expect(result!.sourceLine).toBe(15);
+      expect(result?.sourceFile).toBe('/my-app_v2/src/utils.ts');
+      expect(result?.sourceLine).toBe(15);
     });
   });
 
@@ -93,8 +93,8 @@ describe('parseStackLine', () => {
       const result = parseStackLine(line);
 
       expect(result).not.toBeNull();
-      expect(result!.sourceFile).toBe('C:\\Users\\dev\\project\\src\\file.ts');
-      expect(result!.sourceLine).toBe(42);
+      expect(result?.sourceFile).toBe('C:\\Users\\dev\\project\\src\\file.ts');
+      expect(result?.sourceLine).toBe(42);
     });
 
     test('parses Windows path with forward slashes', () => {
@@ -102,8 +102,8 @@ describe('parseStackLine', () => {
       const result = parseStackLine(line);
 
       expect(result).not.toBeNull();
-      expect(result!.sourceFile).toBe('D:/Projects/app/src/index.ts');
-      expect(result!.sourceLine).toBe(100);
+      expect(result?.sourceFile).toBe('D:/Projects/app/src/index.ts');
+      expect(result?.sourceLine).toBe(100);
     });
   });
 
@@ -113,8 +113,8 @@ describe('parseStackLine', () => {
       const result = parseStackLine(line);
 
       expect(result).not.toBeNull();
-      expect(result!.sourceFile).toBe('C:\\Users\\dev\\project\\src\\file.ts');
-      expect(result!.sourceLine).toBe(42);
+      expect(result?.sourceFile).toBe('C:\\Users\\dev\\project\\src\\file.ts');
+      expect(result?.sourceLine).toBe(42);
     });
   });
 
@@ -139,21 +139,21 @@ describe('parseStackLine', () => {
       const result = parseStackLine('    at fn (/file.ts:1:1)');
 
       expect(result).not.toBeNull();
-      expect(result!.sourceLine).toBe(1);
+      expect(result?.sourceLine).toBe(1);
     });
 
     test('handles large line numbers', () => {
       const result = parseStackLine('    at fn (/file.ts:999999:999)');
 
       expect(result).not.toBeNull();
-      expect(result!.sourceLine).toBe(999999);
+      expect(result?.sourceLine).toBe(999999);
     });
 
     test('handles file with numbers in name', () => {
       const result = parseStackLine('    at fn (/src/file2.test.ts:10:5)');
 
       expect(result).not.toBeNull();
-      expect(result!.sourceFile).toBe('/src/file2.test.ts');
+      expect(result?.sourceFile).toBe('/src/file2.test.ts');
     });
 
     test('handles deeply nested paths', () => {
@@ -161,13 +161,13 @@ describe('parseStackLine', () => {
       const result = parseStackLine(`    at fn (${deepPath}:10:5)`);
 
       expect(result).not.toBeNull();
-      expect(result!.sourceFile).toBe(deepPath);
+      expect(result?.sourceFile).toBe(deepPath);
     });
   });
 
   describe('ReDoS protection', () => {
     test('handles input with many colons efficiently', () => {
-      const maliciousInput = '(' + ':'.repeat(100) + '!)';
+      const maliciousInput = `(${':'.repeat(100)}!)`;
       const startTime = performance.now();
 
       const result = parseStackLine(maliciousInput);
@@ -178,7 +178,12 @@ describe('parseStackLine', () => {
     });
 
     test('handles repeated colon-digit patterns efficiently', () => {
-      const segments = Array.from({ length: 50 }, (_, i) => `:${i}`).join('');
+      const segments = Array.from(
+        {
+          length: 50,
+        },
+        (_, i) => `:${i}`
+      ).join('');
       const maliciousInput = `(${segments}!)`;
       const startTime = performance.now();
 
@@ -190,7 +195,7 @@ describe('parseStackLine', () => {
     });
 
     test('handles malicious input without parens efficiently', () => {
-      const maliciousInput = 'at ' + ':'.repeat(100) + '!';
+      const maliciousInput = `at ${':'.repeat(100)}!`;
       const startTime = performance.now();
 
       const result = parseStackLine(maliciousInput);
@@ -209,14 +214,19 @@ describe('parseStackLine', () => {
 
       const elapsed = performance.now() - startTime;
       expect(result).not.toBeNull();
-      expect(result!.sourceFile).toBe(`${longPath}/file.ts`);
-      expect(result!.sourceLine).toBe(42);
+      expect(result?.sourceFile).toBe(`${longPath}/file.ts`);
+      expect(result?.sourceLine).toBe(42);
       expect(elapsed).toBeLessThan(50);
     });
 
     test('handles many segments with colons and digits efficiently', () => {
       // Pattern that could cause exponential backtracking with naive regex
-      const segments = Array.from({ length: 30 }, (_, i) => `path${i}:${i}`).join('/');
+      const segments = Array.from(
+        {
+          length: 30,
+        },
+        (_, i) => `path${i}:${i}`
+      ).join('/');
       const startTime = performance.now();
 
       const result = parseStackLine(`at (${segments}!)`);

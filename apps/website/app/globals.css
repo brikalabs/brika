@@ -80,7 +80,7 @@
 
   /* ── Grain texture overlay ── */
   body::after {
-    content: '';
+    content: "";
     position: fixed;
     inset: 0;
     z-index: 9999;
@@ -208,18 +208,32 @@
 }
 
 @keyframes card-shine-sweep {
-  0% { translate: -120% 0; }
-  100% { translate: 120% 0; }
+  0% {
+    translate: -120% 0;
+  }
+  100% {
+    translate: 120% 0;
+  }
 }
 
 @keyframes marquee-scroll {
-  from { translate: 0 0; }
-  to { translate: -50% 0; }
+  from {
+    translate: 0 0;
+  }
+  to {
+    translate: -50% 0;
+  }
 }
 
 @keyframes cursor-blink {
-  0%, 40% { opacity: 1; }
-  50%, 90% { opacity: 0.15; }
+  0%,
+  40% {
+    opacity: 1;
+  }
+  50%,
+  90% {
+    opacity: 0.15;
+  }
 }
 
 @keyframes scroll-hint {
@@ -283,7 +297,7 @@
   }
 
   .btn-rotate::before {
-    content: '';
+    content: "";
     position: absolute;
     z-index: -2;
     top: 50%;
@@ -291,12 +305,19 @@
     width: max(200%, 10rem);
     aspect-ratio: 1;
     translate: -50% -50%;
-    background: conic-gradient(var(--primary), var(--accent) 20%, color-mix(in oklch, var(--accent) 20%, transparent) 35%, color-mix(in oklch, var(--accent) 20%, transparent) 65%, var(--accent) 80%, var(--primary));
+    background: conic-gradient(
+      var(--primary),
+      var(--accent) 20%,
+      color-mix(in oklch, var(--accent) 20%, transparent) 35%,
+      color-mix(in oklch, var(--accent) 20%, transparent) 65%,
+      var(--accent) 80%,
+      var(--primary)
+    );
     animation: border-rotate 4s linear infinite;
   }
 
   .btn-rotate::after {
-    content: '';
+    content: "";
     position: absolute;
     z-index: -1;
     inset: 1.5px;
@@ -320,7 +341,14 @@
   }
 
   .btn-rotate-filled::before {
-    background: conic-gradient(oklch(1 0 0 / 0.5), var(--accent) 20%, color-mix(in oklch, var(--accent) 20%, transparent) 35%, color-mix(in oklch, var(--accent) 20%, transparent) 65%, var(--accent) 80%, oklch(1 0 0 / 0.5));
+    background: conic-gradient(
+      oklch(1 0 0 / 0.5),
+      var(--accent) 20%,
+      color-mix(in oklch, var(--accent) 20%, transparent) 35%,
+      color-mix(in oklch, var(--accent) 20%, transparent) 65%,
+      var(--accent) 80%,
+      oklch(1 0 0 / 0.5)
+    );
   }
 
   .btn-rotate-filled::after {
@@ -369,7 +397,7 @@
   }
 
   .tilt-card-shine::after {
-    content: '';
+    content: "";
     position: absolute;
     inset: 0;
     background: linear-gradient(
@@ -442,7 +470,6 @@
   .terminal-glow:hover {
     box-shadow: 0 0 64px -12px var(--glow-hover);
   }
-
 }
 
 /* ── Brick grid (react-grid-layout) — outside @layer to beat library specificity ── */

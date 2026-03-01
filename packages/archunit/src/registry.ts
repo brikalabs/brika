@@ -19,11 +19,15 @@ export function register(buildable: Buildable): void {
 export function use(...inputs: RuleInput[]): void {
   for (const input of inputs) {
     if (Array.isArray(input)) {
-      for (const i of input) use(i);
+      for (const i of input) {
+        use(i);
+      }
     } else if (isBuildable(input)) {
       registered.push(input);
     } else if (isRule(input)) {
-      registered.push({ build: () => input });
+      registered.push({
+        build: () => input,
+      });
     }
   }
 }

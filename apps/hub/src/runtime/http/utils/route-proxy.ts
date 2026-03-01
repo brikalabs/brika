@@ -24,7 +24,9 @@ export function extractHeaders(req: Request, url: URL, pluginUid: string): Recor
   const headers: Record<string, string> = {};
   for (const key of FORWARDED_HEADERS) {
     const val = req.headers.get(key);
-    if (val) headers[key] = val;
+    if (val) {
+      headers[key] = val;
+    }
   }
   if (!headers['x-forwarded-proto']) {
     headers['x-forwarded-proto'] = url.protocol.replace(':', '');
@@ -35,9 +37,13 @@ export function extractHeaders(req: Request, url: URL, pluginUid: string): Recor
 
 /** Parse the request body for non-GET/HEAD methods. */
 export async function extractBody(req: Request): Promise<Json> {
-  if (req.method === 'GET' || req.method === 'HEAD') return undefined;
+  if (req.method === 'GET' || req.method === 'HEAD') {
+    return undefined;
+  }
   const ct = req.headers.get('content-type') ?? '';
-  if (!ct.includes('application/json')) return undefined;
+  if (!ct.includes('application/json')) {
+    return undefined;
+  }
   try {
     return (await req.json()) as Json;
   } catch {
@@ -60,7 +66,7 @@ export async function proxyToPlugin(
   const contentType =
     result.headers?.['Content-Type'] ?? result.headers?.['content-type'] ?? 'application/json';
   let responseBody: string | null = null;
-  if (result.body != null) {
+  if (result.body !== null && result.body !== undefined) {
     responseBody = typeof result.body === 'string' ? result.body : JSON.stringify(result.body);
   }
 

@@ -100,7 +100,9 @@ export class Client {
    * Start the client
    */
   start(plugin: PluginInfo): void {
-    this.#channel.send(hello, { plugin });
+    this.#channel.send(hello, {
+      plugin,
+    });
     this.#channel.send(ready, {});
   }
 

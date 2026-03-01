@@ -43,11 +43,21 @@ const isGeneric = (t?: string) =>
 const isResolveMarker = (t?: string) => t?.startsWith('$resolve:');
 
 /** Parse a resolve marker into source and config field */
-function parseResolveMarker(t: string): { source: string; configField: string } | null {
-  if (!t.startsWith('$resolve:')) return null;
+function parseResolveMarker(t: string): {
+  source: string;
+  configField: string;
+} | null {
+  if (!t.startsWith('$resolve:')) {
+    return null;
+  }
   const parts = t.slice('$resolve:'.length).split(':');
-  if (parts.length < 2) return null;
-  return { source: parts[0], configField: parts[1] };
+  if (parts.length < 2) {
+    return null;
+  }
+  return {
+    source: parts[0],
+    configField: parts[1],
+  };
 }
 
 /** Get original type (stored or current) */
@@ -70,19 +80,31 @@ interface SparkEntry {
 
 /** Convert JSON schema to TypeScript-like type string */
 function jsonSchemaToTypeName(schema: Record<string, unknown> | undefined): string {
-  if (!schema) return 'unknown';
+  if (!schema) {
+    return 'unknown';
+  }
   const type = schema.type as string | undefined;
-  if (type === 'string') return 'string';
-  if (type === 'number' || type === 'integer') return 'number';
-  if (type === 'boolean') return 'boolean';
-  if (type === 'null') return 'null';
+  if (type === 'string') {
+    return 'string';
+  }
+  if (type === 'number' || type === 'integer') {
+    return 'number';
+  }
+  if (type === 'boolean') {
+    return 'boolean';
+  }
+  if (type === 'null') {
+    return 'null';
+  }
   if (type === 'array') {
     const items = schema.items as Record<string, unknown> | undefined;
     return `${jsonSchemaToTypeName(items)}[]`;
   }
   if (type === 'object') {
     const props = schema.properties as Record<string, Record<string, unknown>> | undefined;
-    if (!props) return '{}';
+    if (!props) {
+      return '{}';
+    }
     const entries = Object.entries(props)
       .map(([k, v]) => `${k}: ${jsonSchemaToTypeName(v)}`)
       .join(', ');
@@ -93,39 +115,66 @@ function jsonSchemaToTypeName(schema: Record<string, unknown> | undefined): stri
 
 /** Build edge lookup maps for type inference */
 function buildEdgeLookups(edges: Edge[]) {
-  const incoming = new Map<string, Map<string, { node: string; port: string }>>();
-  const outgoing = new Map<string, Map<string, Array<{ node: string; port: string }>>>();
+  const incoming = new Map<
+    string,
+    Map<
+      string,
+      {
+        node: string;
+        port: string;
+      }
+    >
+  >();
+  const outgoing = new Map<
+    string,
+    Map<
+      string,
+      Array<{
+        node: string;
+        port: string;
+      }>
+    >
+  >();
 
   for (const e of edges) {
     // Incoming edges
-    if (!incoming.has(e.target)) incoming.set(e.target, new Map());
-    incoming.get(e.target)!.set(e.targetHandle || 'in', {
+    if (!incoming.has(e.target)) {
+      incoming.set(e.target, new Map());
+    }
+    incoming.get(e.target)?.set(e.targetHandle || 'in', {
       node: e.source,
       port: e.sourceHandle || 'out',
     });
 
     // Outgoing edges
-    if (!outgoing.has(e.source)) outgoing.set(e.source, new Map());
+    if (!outgoing.has(e.source)) {
+      outgoing.set(e.source, new Map());
+    }
     const sourcePort = e.sourceHandle || 'out';
-    if (!outgoing.get(e.source)!.has(sourcePort)) {
-      outgoing.get(e.source)!.set(sourcePort, []);
+    if (!outgoing.get(e.source)?.has(sourcePort)) {
+      outgoing.get(e.source)?.set(sourcePort, []);
     }
     outgoing
-      .get(e.source)!
-      .get(sourcePort)!
-      .push({
+      .get(e.source)
+      ?.get(sourcePort)
+      ?.push({
         node: e.target,
         port: e.targetHandle || 'in',
       });
   }
 
-  return { incoming, outgoing };
+  return {
+    incoming,
+    outgoing,
+  };
 }
 
 /** Add original type tracking to all ports */
 function addOriginalTypesToNodes(nodes: Node[]): Node[] {
   return nodes.map((n) => {
-    if (n.type !== 'block') return n;
+    if (n.type !== 'block') {
+      return n;
+    }
     const d = n.data as BlockNodeData;
     return {
       ...n,
@@ -151,18 +200,26 @@ function resolvePortType(
   resolverContext: TypeResolverContext
 ): string | null {
   const origType = getOriginal(port as PortWithOriginal);
-  if (!isResolveMarker(origType)) return null;
+  if (!origType || !isResolveMarker(origType)) {
+    return null;
+  }
 
-  const marker = parseResolveMarker(origType!);
-  if (!marker) return null;
+  const marker = parseResolveMarker(origType);
+  if (!marker) {
+    return null;
+  }
 
   const lookupKey = data.config?.[marker.configField] as string | undefined;
-  if (!lookupKey) return null;
+  if (!lookupKey) {
+    return null;
+  }
 
   if (marker.source === 'spark') {
     const sparks = resolverContext.lookup<SparkEntry[]>('sparks');
     const spark = sparks?.find((s) => s.type === lookupKey);
-    if (spark?.schema) return jsonSchemaToTypeName(spark.schema);
+    if (spark?.schema) {
+      return jsonSchemaToTypeName(spark.schema);
+    }
   }
 
   return null;
@@ -179,8 +236,10 @@ function resolveExternalTypes(
     for (const port of data.outputs || []) {
       const resolvedType = resolvePortType(port, data, resolverContext);
       if (resolvedType) {
-        if (!inferred.has(nodeId)) inferred.set(nodeId, new Map());
-        inferred.get(nodeId)!.set(port.id, resolvedType);
+        if (!inferred.has(nodeId)) {
+          inferred.set(nodeId, new Map());
+        }
+        inferred.get(nodeId)?.set(port.id, resolvedType);
       }
     }
   }
@@ -192,23 +251,35 @@ function resolveExternalTypes(
 function inferInputTypeFromConnection(
   input: BlockPort,
   nodeId: string,
-  nodeIncoming: Map<string, { node: string; port: string }> | undefined,
+  nodeIncoming:
+    | Map<
+        string,
+        {
+          node: string;
+          port: string;
+        }
+      >
+    | undefined,
   nodeMap: Map<string, BlockNodeData>,
   inferred: Map<string, Map<string, string>>
 ): string | undefined {
   const conn = nodeIncoming?.get(input.id);
-  if (!conn) return undefined;
+  if (!conn) {
+    return undefined;
+  }
 
   const sourceData = nodeMap.get(conn.node);
   const sourcePort = sourceData?.outputs?.find((p) => p.id === conn.port);
-  if (!sourcePort) return undefined;
+  if (!sourcePort) {
+    return undefined;
+  }
 
   const sourceInferred = inferred.get(conn.node)?.get(conn.port);
   const sourceType = sourceInferred ?? getOriginal(sourcePort as PortWithOriginal);
 
   const origType = getOriginal(input as PortWithOriginal);
-  if (isConcrete(sourceType) && isGeneric(origType)) {
-    return sourceType!;
+  if (isConcrete(sourceType) && isGeneric(origType) && sourceType) {
+    return sourceType;
   }
 
   return undefined;
@@ -225,7 +296,9 @@ function inferOutputTypeFromInputs(
   }
 
   const origType = getOriginal(output as PortWithOriginal);
-  if (!isGeneric(origType)) return undefined;
+  if (!isGeneric(origType)) {
+    return undefined;
+  }
 
   for (const input of data.inputs || []) {
     const inputInferred = nodeInferred.get(input.id);
@@ -244,13 +317,24 @@ function inferOutputTypeFromInputs(
 function inferNodeTypes(
   nodeId: string,
   data: BlockNodeData,
-  incoming: Map<string, Map<string, { node: string; port: string }>>,
+  incoming: Map<
+    string,
+    Map<
+      string,
+      {
+        node: string;
+        port: string;
+      }
+    >
+  >,
   nodeMap: Map<string, BlockNodeData>,
   inferred: Map<string, Map<string, string>>
 ): boolean {
   const nodeIncoming = incoming.get(nodeId);
-  if (!inferred.has(nodeId)) inferred.set(nodeId, new Map());
-  const nodeInferred = inferred.get(nodeId)!;
+  if (!inferred.has(nodeId)) {
+    inferred.set(nodeId, new Map());
+  }
+  const nodeInferred = inferred.get(nodeId) ?? new Map<string, string>();
   let changed = false;
 
   for (const input of data.inputs || []) {
@@ -281,7 +365,16 @@ function inferNodeTypes(
 /** Propagate types through connections iteratively */
 function propagateTypesIteratively(
   nodeMap: Map<string, BlockNodeData>,
-  incoming: Map<string, Map<string, { node: string; port: string }>>,
+  incoming: Map<
+    string,
+    Map<
+      string,
+      {
+        node: string;
+        port: string;
+      }
+    >
+  >,
   inferred: Map<string, Map<string, string>>
 ): void {
   for (let iter = 0; iter < 10; iter++) {
@@ -293,14 +386,18 @@ function propagateTypesIteratively(
       }
     }
 
-    if (!changed) break;
+    if (!changed) {
+      break;
+    }
   }
 }
 
 /** Apply inferred types back to nodes */
 function applyInferredTypes(nodes: Node[], inferred: Map<string, Map<string, string>>): Node[] {
   return nodes.map((node) => {
-    if (node.type !== 'block') return node;
+    if (node.type !== 'block') {
+      return node;
+    }
     const data = node.data as BlockNodeData;
     const nodeInferred = inferred.get(node.id);
 
@@ -335,7 +432,12 @@ function inferPortTypes(
   const { incoming } = buildEdgeLookups(edges);
   const withOriginals = addOriginalTypesToNodes(nodes);
   const nodeMap = new Map(
-    withOriginals.filter((n) => n.type === 'block').map((n) => [n.id, n.data as BlockNodeData])
+    withOriginals
+      .filter((n) => n.type === 'block')
+      .map((n) => [
+        n.id,
+        n.data as BlockNodeData,
+      ])
   );
 
   // Phase 1: Resolve external types
@@ -372,7 +474,10 @@ export interface ExecutionLog {
 function workflowToFlow(
   workflow: Workflow,
   blockDefs: BlockDefinition[]
-): { nodes: Node[]; edges: Edge[] } {
+): {
+  nodes: Node[];
+  edges: Edge[];
+} {
   const nodes: Node[] = [];
   const edges: Edge[] = [];
 
@@ -380,7 +485,9 @@ function workflowToFlow(
   const defMap = new Map<string, BlockDefinition>();
   for (const d of blockDefs) {
     defMap.set(d.id, d);
-    if (d.type) defMap.set(d.type, d);
+    if (d.type) {
+      defMap.set(d.type, d);
+    }
   }
 
   // Add block nodes
@@ -393,7 +500,10 @@ function workflowToFlow(
     nodes.push({
       id: block.id,
       type: 'block',
-      position: block.position ?? { x: 300, y: 50 + index * 140 },
+      position: block.position ?? {
+        x: 300,
+        y: 50 + index * 140,
+      },
       data: {
         id: block.id,
         type: block.type,
@@ -428,11 +538,16 @@ function workflowToFlow(
       target: conn.to,
       targetHandle: conn.toPort || 'in',
       type: 'smoothstep',
-      markerEnd: { type: MarkerType.ArrowClosed },
+      markerEnd: {
+        type: MarkerType.ArrowClosed,
+      },
     });
   }
 
-  return { nodes, edges };
+  return {
+    nodes,
+    edges,
+  };
 }
 
 // Convert React Flow nodes/edges back to workflow
@@ -488,7 +603,10 @@ export function useWorkflowEditor(
 ) {
   const { nodes: initialNodes, edges: initialEdges } = useMemo(
     () => workflowToFlow(initialWorkflow, blockDefs),
-    [initialWorkflow, blockDefs]
+    [
+      initialWorkflow,
+      blockDefs,
+    ]
   );
 
   const [nodes, setNodes, onNodesChangeBase] = useNodesState(initialNodes);
@@ -508,14 +626,18 @@ export function useWorkflowEditor(
     () => ({
       lookup: options?.typeLookup ?? (() => undefined),
     }),
-    [options?.typeLookup]
+    [
+      options?.typeLookup,
+    ]
   );
 
   // Reset dirty state when initialWorkflow changes (after save)
   // This happens when parent calls setInitialWorkflow with the saved workflow
   useEffect(() => {
     setIsDirty(false);
-  }, [initialWorkflow]);
+  }, [
+    initialWorkflow,
+  ]);
 
   // Wrap onNodesChange to detect position changes and mark dirty
   const onNodesChange = useCallback(
@@ -531,7 +653,9 @@ export function useWorkflowEditor(
         setIsDirty(true);
       }
     },
-    [onNodesChangeBase]
+    [
+      onNodesChangeBase,
+    ]
   );
 
   // Wrap onEdgesChange to mark dirty
@@ -543,7 +667,9 @@ export function useWorkflowEditor(
         setIsDirty(true);
       }
     },
-    [onEdgesChangeBase]
+    [
+      onEdgesChangeBase,
+    ]
   );
 
   // Run type inference when graph changes (nodes, edges, or resolver context)
@@ -551,7 +677,9 @@ export function useWorkflowEditor(
     const inferred = inferPortTypes(nodes, edges, resolverContext);
     // Only update if types actually changed
     const hasChanges = inferred.some((node, i) => {
-      if (node.type !== 'block') return false;
+      if (node.type !== 'block') {
+        return false;
+      }
       const oldData = nodes[i]?.data as BlockNodeData | undefined;
       const newData = node.data as BlockNodeData;
       return (
@@ -564,35 +692,54 @@ export function useWorkflowEditor(
     if (hasChanges) {
       setNodes(inferred);
     }
-  }, [nodes, edges, resolverContext, setNodes]);
+  }, [
+    nodes,
+    edges,
+    resolverContext,
+    setNodes,
+  ]);
 
   // Get current workflow from nodes/edges
   const workflow = useMemo(
     () => flowToWorkflow(nodes, edges, initialWorkflow),
-    [nodes, edges, initialWorkflow]
+    [
+      nodes,
+      edges,
+      initialWorkflow,
+    ]
   );
 
   // Notify parent of workflow changes
   useEffect(() => {
     onChangeRef.current?.(workflow, isDirty);
-  }, [workflow, isDirty]);
+  }, [
+    workflow,
+    isDirty,
+  ]);
 
   // Get selected node
   const selectedNode = useMemo(
     () => nodes.find((n) => n.id === selectedNodeId) ?? null,
-    [nodes, selectedNodeId]
+    [
+      nodes,
+      selectedNodeId,
+    ]
   );
 
   // Validate connection compatibility
   const isValidConnection = useCallback(
     (connection: Edge | Connection): boolean => {
       // Don't allow self-connections
-      if (connection.source === connection.target) return false;
+      if (connection.source === connection.target) {
+        return false;
+      }
 
       // Find source and target nodes
       const sourceNode = nodes.find((n) => n.id === connection.source);
       const targetNode = nodes.find((n) => n.id === connection.target);
-      if (!sourceNode || !targetNode) return false;
+      if (!sourceNode || !targetNode) {
+        return false;
+      }
 
       const sourceData = sourceNode.data as BlockNodeData;
       const targetData = targetNode.data as BlockNodeData;
@@ -603,12 +750,16 @@ export function useWorkflowEditor(
       );
       const targetPort = targetData.inputs?.find((p) => p.id === (connection.targetHandle || 'in'));
 
-      if (!sourcePort || !targetPort) return false;
+      if (!sourcePort || !targetPort) {
+        return false;
+      }
 
       // Check type compatibility
       return arePortTypesCompatible(sourcePort.typeName, targetPort.typeName);
     },
-    [nodes]
+    [
+      nodes,
+    ]
   );
 
   // Handle new connections (enforces single connection per port)
@@ -618,7 +769,9 @@ export function useWorkflowEditor(
         ...connection,
         id: `${connection.source}:${connection.sourceHandle || 'out'}->${connection.target}:${connection.targetHandle || 'in'}`,
         type: 'smoothstep',
-        markerEnd: { type: MarkerType.ArrowClosed },
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+        },
       } as Edge;
 
       setEdges((eds) => {
@@ -637,7 +790,9 @@ export function useWorkflowEditor(
       });
       setIsDirty(true);
     },
-    [setEdges]
+    [
+      setEdges,
+    ]
   );
 
   // Handle node selection
@@ -657,7 +812,9 @@ export function useWorkflowEditor(
       }
       setIsDirty(true);
     },
-    [selectedNodeId]
+    [
+      selectedNodeId,
+    ]
   );
 
   // Handle edge deletion
@@ -667,12 +824,22 @@ export function useWorkflowEditor(
 
   // Add new block from toolbar
   const addBlock = useCallback(
-    (blockType: BlockTypeInfo, position: { x: number; y: number }) => {
+    (
+      blockType: BlockTypeInfo,
+      position: {
+        x: number;
+        y: number;
+      }
+    ) => {
       const blockTypeId = blockType.type || blockType.name;
       const nodeId = generateNodeId(blockTypeId.split(':').pop() || 'block');
       // Use translated label if available (from drag data), otherwise fall back to name
       const label =
-        (blockType as BlockTypeInfo & { translatedLabel?: string }).translatedLabel ||
+        (
+          blockType as BlockTypeInfo & {
+            translatedLabel?: string;
+          }
+        ).translatedLabel ||
         blockType.name ||
         nodeId;
       const newNode: Node = {
@@ -683,7 +850,9 @@ export function useWorkflowEditor(
           id: nodeId,
           type: blockTypeId,
           label,
-          config: { ...blockType.defaultConfig },
+          config: {
+            ...blockType.defaultConfig,
+          },
           icon: blockType.icon,
           color: blockType.color,
           pluginId: blockType.pluginId,
@@ -694,12 +863,17 @@ export function useWorkflowEditor(
           status: 'idle',
         } as BlockNodeData,
       };
-      setNodes((nds) => [...nds, newNode]);
+      setNodes((nds) => [
+        ...nds,
+        newNode,
+      ]);
       setSelectedNodeId(nodeId);
       setIsDirty(true);
       return nodeId;
     },
-    [setNodes]
+    [
+      setNodes,
+    ]
   );
 
   // Update block config
@@ -713,7 +887,10 @@ export function useWorkflowEditor(
               ...node,
               data: {
                 ...data,
-                config: { ...data.config, ...config },
+                config: {
+                  ...data.config,
+                  ...config,
+                },
               },
             };
           }
@@ -722,15 +899,23 @@ export function useWorkflowEditor(
       );
       setIsDirty(true);
     },
-    [setNodes]
+    [
+      setNodes,
+    ]
   );
 
   // Set block status (for debugging)
   const setBlockStatus = useCallback(
     (blockId: string, status: BlockStatus, output?: unknown) => {
-      setBlockStatuses((prev) => ({ ...prev, [blockId]: status }));
+      setBlockStatuses((prev) => ({
+        ...prev,
+        [blockId]: status,
+      }));
       if (output !== undefined) {
-        setBlockOutputs((prev) => ({ ...prev, [blockId]: output }));
+        setBlockOutputs((prev) => ({
+          ...prev,
+          [blockId]: output,
+        }));
       }
       // Update node data
       setNodes((nds) =>
@@ -738,21 +923,30 @@ export function useWorkflowEditor(
           if (node.id === blockId && node.type === 'block') {
             return {
               ...node,
-              data: { ...node.data, status },
+              data: {
+                ...node.data,
+                status,
+              },
             };
           }
           return node;
         })
       );
     },
-    [setNodes]
+    [
+      setNodes,
+    ]
   );
 
   // Add execution log
   const addExecutionLog = useCallback((log: Omit<ExecutionLog, 'id' | 'timestamp'>) => {
     setExecutionLogs((prev) => [
       ...prev,
-      { ...log, id: crypto.randomUUID(), timestamp: Date.now() },
+      {
+        ...log,
+        id: crypto.randomUUID(),
+        timestamp: Date.now(),
+      },
     ]);
   }, []);
 
@@ -764,12 +958,20 @@ export function useWorkflowEditor(
     setNodes((nds) =>
       nds.map((node) => {
         if (node.type === 'block') {
-          return { ...node, data: { ...node.data, status: 'idle' } };
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              status: 'idle',
+            },
+          };
         }
         return node;
       })
     );
-  }, [setNodes]);
+  }, [
+    setNodes,
+  ]);
 
   // Mark workflow as clean (after successful save)
   const markClean = useCallback(() => {
@@ -780,7 +982,11 @@ export function useWorkflowEditor(
   // Variables use the pattern: inputs.{portId} for incoming data
   const getAvailableVariables = useCallback(
     (blockId: string) => {
-      const variables: { name: string; source: string; type: string }[] = [];
+      const variables: {
+        name: string;
+        source: string;
+        type: string;
+      }[] = [];
 
       const blockNodes = nodes.filter((n) => n.type === 'block');
       const targetNode = blockNodes.find((n) => n.id === blockId);
@@ -820,7 +1026,10 @@ export function useWorkflowEditor(
 
       return variables;
     },
-    [nodes, edges]
+    [
+      nodes,
+      edges,
+    ]
   );
 
   return {

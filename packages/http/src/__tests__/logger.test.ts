@@ -30,7 +30,10 @@ describe('LoggerInterceptor', () => {
 
   describe('onRequest', () => {
     test('logs request when logRequests is true', () => {
-      const mockLogger = { log: mock(), error: mock() };
+      const mockLogger = {
+        log: mock(),
+        error: mock(),
+      };
       const interceptor = new LoggerInterceptor({
         logRequests: true,
         logger: mockLogger,
@@ -38,8 +41,12 @@ describe('LoggerInterceptor', () => {
       const config: RequestConfig = {
         method: 'GET',
         url: 'https://example.com/api',
-        params: { page: 1 },
-        headers: { 'X-Custom': 'header' },
+        params: {
+          page: 1,
+        },
+        headers: {
+          'X-Custom': 'header',
+        },
       };
 
       const result = interceptor.onRequest(config);
@@ -51,7 +58,10 @@ describe('LoggerInterceptor', () => {
     });
 
     test('does not log when logRequests is false', () => {
-      const mockLogger = { log: mock(), error: mock() };
+      const mockLogger = {
+        log: mock(),
+        error: mock(),
+      };
       const interceptor = new LoggerInterceptor({
         logRequests: false,
         logger: mockLogger,
@@ -68,7 +78,10 @@ describe('LoggerInterceptor', () => {
     });
 
     test('logs request body', () => {
-      const mockLogger = { log: mock(), error: mock() };
+      const mockLogger = {
+        log: mock(),
+        error: mock(),
+      };
       const interceptor = new LoggerInterceptor({
         logRequests: true,
         logger: mockLogger,
@@ -76,20 +89,27 @@ describe('LoggerInterceptor', () => {
       const config: RequestConfig = {
         method: 'POST',
         url: 'https://example.com/api',
-        body: { data: 'test' },
+        body: {
+          data: 'test',
+        },
       };
 
       interceptor.onRequest(config);
 
       expect(mockLogger.log).toHaveBeenCalledTimes(1);
       const loggedData = mockLogger.log.mock.calls[0]?.[1];
-      expect(loggedData.body).toEqual({ data: 'test' });
+      expect(loggedData.body).toEqual({
+        data: 'test',
+      });
     });
   });
 
   describe('onResponse', () => {
     test('logs response when logResponses is true', () => {
-      const mockLogger = { log: mock(), error: mock() };
+      const mockLogger = {
+        log: mock(),
+        error: mock(),
+      };
       const interceptor = new LoggerInterceptor({
         logResponses: true,
         logger: mockLogger,
@@ -99,7 +119,9 @@ describe('LoggerInterceptor', () => {
         url: 'https://example.com/api',
       };
       const response: HttpResponse = {
-        data: { result: 'success' },
+        data: {
+          result: 'success',
+        },
         status: 200,
         statusText: 'OK',
         headers: new Headers(),
@@ -116,7 +138,10 @@ describe('LoggerInterceptor', () => {
     });
 
     test('does not log when logResponses is false', () => {
-      const mockLogger = { log: mock(), error: mock() };
+      const mockLogger = {
+        log: mock(),
+        error: mock(),
+      };
       const interceptor = new LoggerInterceptor({
         logResponses: false,
         logger: mockLogger,
@@ -126,7 +151,10 @@ describe('LoggerInterceptor', () => {
         status: 200,
         statusText: 'OK',
         headers: new Headers(),
-        config: { method: 'GET', url: 'https://example.com' },
+        config: {
+          method: 'GET',
+          url: 'https://example.com',
+        },
         cached: false,
       };
 
@@ -137,7 +165,10 @@ describe('LoggerInterceptor', () => {
     });
 
     test('logs cached status', () => {
-      const mockLogger = { log: mock(), error: mock() };
+      const mockLogger = {
+        log: mock(),
+        error: mock(),
+      };
       const interceptor = new LoggerInterceptor({
         logResponses: true,
         logger: mockLogger,
@@ -147,7 +178,10 @@ describe('LoggerInterceptor', () => {
         status: 200,
         statusText: 'OK',
         headers: new Headers(),
-        config: { method: 'GET', url: 'https://example.com' },
+        config: {
+          method: 'GET',
+          url: 'https://example.com',
+        },
         cached: true,
       };
 
@@ -158,7 +192,10 @@ describe('LoggerInterceptor', () => {
     });
 
     test('calculates request duration', () => {
-      const mockLogger = { log: mock(), error: mock() };
+      const mockLogger = {
+        log: mock(),
+        error: mock(),
+      };
       const interceptor = new LoggerInterceptor({
         logRequests: true,
         logResponses: true,
@@ -190,7 +227,10 @@ describe('LoggerInterceptor', () => {
 
   describe('onError', () => {
     test('logs error when logErrors is true', async () => {
-      const mockLogger = { log: mock(), error: mock() };
+      const mockLogger = {
+        log: mock(),
+        error: mock(),
+      };
       const interceptor = new LoggerInterceptor({
         logErrors: true,
         logger: mockLogger,
@@ -208,7 +248,10 @@ describe('LoggerInterceptor', () => {
     });
 
     test('does not log when logErrors is false', async () => {
-      const mockLogger = { log: mock(), error: mock() };
+      const mockLogger = {
+        log: mock(),
+        error: mock(),
+      };
       const interceptor = new LoggerInterceptor({
         logErrors: false,
         logger: mockLogger,
@@ -224,7 +267,10 @@ describe('LoggerInterceptor', () => {
     });
 
     test('logs error details', async () => {
-      const mockLogger = { log: mock(), error: mock() };
+      const mockLogger = {
+        log: mock(),
+        error: mock(),
+      };
       const interceptor = new LoggerInterceptor({
         logErrors: true,
         logger: mockLogger,
@@ -245,7 +291,10 @@ describe('LoggerInterceptor', () => {
     });
 
     test('logs network error', async () => {
-      const mockLogger = { log: mock(), error: mock() };
+      const mockLogger = {
+        log: mock(),
+        error: mock(),
+      };
       const interceptor = new LoggerInterceptor({
         logErrors: true,
         logger: mockLogger,
@@ -263,7 +312,10 @@ describe('LoggerInterceptor', () => {
     });
 
     test('calculates error duration when request was logged', async () => {
-      const mockLogger = { log: mock(), error: mock() };
+      const mockLogger = {
+        log: mock(),
+        error: mock(),
+      };
       const interceptor = new LoggerInterceptor({
         logRequests: true,
         logErrors: true,

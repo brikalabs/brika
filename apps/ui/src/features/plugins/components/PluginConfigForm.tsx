@@ -23,22 +23,37 @@ export function PluginConfigForm({ pluginUid, pluginName }: Readonly<Props>) {
       setValues({});
       setIsDirty(false);
     }
-  }, [data]);
+  }, [
+    data,
+  ]);
 
-  if (isLoading || !data) return null;
-  if (data.schema.length === 0) return null;
+  if (isLoading || !data) {
+    return null;
+  }
+  if (data.schema.length === 0) {
+    return null;
+  }
 
   // Always merge server values with local changes
-  const currentValues = { ...data.values, ...values };
+  const currentValues = {
+    ...data.values,
+    ...values,
+  };
 
   const handleChange = (name: string, value: unknown) => {
-    setValues((prev) => ({ ...prev, [name]: value }));
+    setValues((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
     setIsDirty(true);
   };
 
   const handleSave = () => {
     mutation.mutate(
-      { ...data.values, ...values },
+      {
+        ...data.values,
+        ...values,
+      },
       {
         onSuccess: () => setIsDirty(false),
       }

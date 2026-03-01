@@ -7,6 +7,7 @@
 import { rm } from 'node:fs/promises';
 import type { BlockTypeDefinition, Workflow } from '../types';
 import { validateWorkspace } from '../validation';
+
 import { parseWorkspaceFile, serializeWorkspace } from './parser';
 
 /**
@@ -81,16 +82,13 @@ export class WorkspaceLoader {
    * Load all workflows from the configured directory.
    */
   async loadAll(): Promise<void> {
-    // biome-ignore lint/suspicious/noExplicitAny: Bun global type
-    const Bun = (globalThis as any).Bun;
-    if (!Bun) {
-      throw new Error('WorkspaceLoader requires Bun runtime');
-    }
-
-    // Ensure directory exists
     try {
       const glob = new Bun.Glob('*');
-      await Array.fromAsync(glob.scan({ cwd: this.#dir }));
+      await Array.fromAsync(
+        glob.scan({
+          cwd: this.#dir,
+        })
+      );
     } catch {
       // Create directory
       await Bun.write(`${this.#dir}/.keep`, '');
@@ -98,7 +96,11 @@ export class WorkspaceLoader {
 
     // Load all .yaml files
     const glob = new Bun.Glob('*.{yaml,yml}');
-    const files = await Array.fromAsync(glob.scan({ cwd: this.#dir }));
+    const files = await Array.fromAsync(
+      glob.scan({
+        cwd: this.#dir,
+      })
+    );
 
     for (const file of files) {
       await this.#loadFile(`${this.#dir}/${file}`);
@@ -109,7 +111,9 @@ export class WorkspaceLoader {
    * Start watching for file changes.
    */
   watch(): void {
-    if (this.#watcher) return;
+    if (this.#watcher) {
+      return;
+    }
 
     this.#watcher = setInterval(() => this.#pollForChanges(), this.#pollInterval);
   }
@@ -136,18 +140,16 @@ export class WorkspaceLoader {
    * List all loaded workflows.
    */
   list(): Workflow[] {
-    return [...this.#loaded.values()];
+    return [
+      ...this.#loaded.values(),
+    ];
   }
 
   /**
    * Save a workflow to file.
    */
   async save(workflow: Workflow): Promise<void> {
-    // biome-ignore lint/suspicious/noExplicitAny: Bun global type
-    const Bun = (globalThis as any).Bun;
-    if (!Bun) {
-      throw new Error('WorkspaceLoader requires Bun runtime');
-    }
+    const { Bun } = globalThis;
 
     const filePath =
       this.#idToPath.get(workflow.workspace.id) ?? `${this.#dir}/${workflow.workspace.id}.yaml`;
@@ -176,10 +178,14 @@ export class WorkspaceLoader {
    */
   async delete(id: string): Promise<boolean> {
     const filePath = this.#idToPath.get(id);
-    if (!filePath) return false;
+    if (!filePath) {
+      return false;
+    }
 
     try {
-      await rm(filePath, { force: true });
+      await rm(filePath, {
+        force: true,
+      });
       this.#fileHashes.delete(filePath);
       this.#unloadFile(filePath);
       return true;
@@ -228,7 +234,9 @@ export class WorkspaceLoader {
 
   #unloadFile(filePath: string): void {
     const workflowId = this.#pathToId.get(filePath);
-    if (!workflowId) return;
+    if (!workflowId) {
+      return;
+    }
 
     this.#loaded.delete(filePath);
     this.#pathToId.delete(filePath);
@@ -238,15 +246,15 @@ export class WorkspaceLoader {
   }
 
   async #pollForChanges(): Promise<void> {
-    // biome-ignore lint/suspicious/noExplicitAny: Bun global type
-    const Bun = (globalThis as any).Bun;
-    if (!Bun) return;
+    const { Bun } = globalThis;
 
     try {
       const glob = new Bun.Glob('*.{yaml,yml}');
       const currentFiles = new Set<string>();
 
-      for await (const file of glob.scan({ cwd: this.#dir })) {
+      for await (const file of glob.scan({
+        cwd: this.#dir,
+      })) {
         const filePath = `${this.#dir}/${file}`;
         currentFiles.add(filePath);
 

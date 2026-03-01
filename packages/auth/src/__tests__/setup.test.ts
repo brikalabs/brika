@@ -5,14 +5,14 @@
  * Verifies schema creation, indices, migrations, and DI registration.
  */
 
-import { describe, it, expect, afterEach } from 'bun:test';
 import { Database } from 'bun:sqlite';
+import { afterEach, describe, expect, it } from 'bun:test';
 import { container, inject } from '@brika/di';
-import { openAuthDatabase, setupAuthServices } from '../setup';
 import { AuthService } from '../services/AuthService';
-import { UserService } from '../services/UserService';
-import { SessionService } from '../services/SessionService';
 import { ScopeService } from '../services/ScopeService';
+import { SessionService } from '../services/SessionService';
+import { UserService } from '../services/UserService';
+import { openAuthDatabase, setupAuthServices } from '../setup';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -32,7 +32,9 @@ interface ColumnInfo {
 }
 
 function getTableNames(db: Database): string[] {
-  const rows = db.query("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'").all() as TableInfo[];
+  const rows = db
+    .query("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
+    .all() as TableInfo[];
   return rows.map((r) => r.name);
 }
 
@@ -121,7 +123,9 @@ describe('openAuthDatabase', () => {
     // In-memory databases don't support WAL (they report "memory"),
     // but the code still runs the PRAGMA without error.
     const db = openAuthDatabase(':memory:');
-    const result = db.query('PRAGMA journal_mode').get() as { journal_mode: string };
+    const result = db.query('PRAGMA journal_mode').get() as {
+      journal_mode: string;
+    };
     // :memory: databases can't use WAL, so journal_mode stays "memory"
     expect(result.journal_mode).toBe('memory');
     db.close();
@@ -145,13 +149,19 @@ describe('openAuthDatabase', () => {
     const now = Date.now();
     db.run(
       "INSERT INTO users (id, email, name, role, is_active, created_at, updated_at) VALUES ('u1', 'a@b.com', 'A', 'user', 1, ?, ?)",
-      [now, now]
+      [
+        now,
+        now,
+      ]
     );
     // Inserting duplicate email should fail
     expect(() =>
       db.run(
         "INSERT INTO users (id, email, name, role, is_active, created_at, updated_at) VALUES ('u2', 'a@b.com', 'B', 'user', 1, ?, ?)",
-        [now, now]
+        [
+          now,
+          now,
+        ]
       )
     ).toThrow();
     db.close();
@@ -163,12 +173,19 @@ describe('openAuthDatabase', () => {
     // Insert a user first
     db.run(
       "INSERT INTO users (id, email, name, role, is_active, created_at, updated_at) VALUES ('u1', 'a@b.com', 'A', 'user', 1, ?, ?)",
-      [now, now]
+      [
+        now,
+        now,
+      ]
     );
     // Insert session referencing the user (should succeed)
     db.run(
       "INSERT INTO sessions (id, user_id, token_hash, created_at, last_seen_at, expires_at) VALUES ('s1', 'u1', 'hash1', ?, ?, ?)",
-      [now, now, now + 86400000]
+      [
+        now,
+        now,
+        now + 86400000,
+      ]
     );
     const sessions = db.query('SELECT * FROM sessions WHERE user_id = ?').all('u1');
     expect(sessions).toHaveLength(1);
@@ -227,7 +244,11 @@ describe('setupAuthServices', () => {
 
   it('should accept custom session TTL', () => {
     const db = openAuthDatabase(':memory:');
-    setupAuthServices(db, { session: { ttl: 3600 } });
+    setupAuthServices(db, {
+      session: {
+        ttl: 3600,
+      },
+    });
 
     const sessionService = inject(SessionService);
     expect(sessionService).toBeDefined();
@@ -256,7 +277,7 @@ describe('setupAuthServices', () => {
     expect(authService).toBeInstanceOf(AuthService);
 
     // getCurrentUser should return null for unknown user (verifies the chain works)
-    expect(authService.getCurrentUser('nonexistent')).resolves.toBeNull();
+    expect(authService.getCurrentUser('nonexistent')).toBeNull();
     db.close();
   });
 });

@@ -19,11 +19,15 @@ const pidDir = dirname(PID_FILE);
 
 describe('cli/utils/pid', () => {
   beforeEach(async () => {
-    await rm(PID_FILE, { force: true });
+    await rm(PID_FILE, {
+      force: true,
+    });
   });
 
   afterEach(async () => {
-    await rm(PID_FILE, { force: true });
+    await rm(PID_FILE, {
+      force: true,
+    });
   });
 
   // ─── readPid ────────────────────────────────────────────────────────────────
@@ -34,19 +38,25 @@ describe('cli/utils/pid', () => {
     });
 
     test('returns the pid as a number', async () => {
-      await mkdir(pidDir, { recursive: true });
+      await mkdir(pidDir, {
+        recursive: true,
+      });
       await writeFile(PID_FILE, '12345');
       expect(await readPid()).toBe(12345);
     });
 
     test('returns null for non-numeric content', async () => {
-      await mkdir(pidDir, { recursive: true });
+      await mkdir(pidDir, {
+        recursive: true,
+      });
       await writeFile(PID_FILE, 'not-a-pid');
       expect(await readPid()).toBeNull();
     });
 
     test('returns null for empty file', async () => {
-      await mkdir(pidDir, { recursive: true });
+      await mkdir(pidDir, {
+        recursive: true,
+      });
       await writeFile(PID_FILE, '');
       expect(await readPid()).toBeNull();
     });
@@ -57,22 +67,34 @@ describe('cli/utils/pid', () => {
   describe('checkPid', () => {
     test('returns stopped when no pid file exists', async () => {
       const status = await checkPid();
-      expect(status).toEqual({ state: 'stopped' });
+      expect(status).toEqual({
+        state: 'stopped',
+      });
     });
 
     test('returns running for current process pid', async () => {
-      await mkdir(pidDir, { recursive: true });
+      await mkdir(pidDir, {
+        recursive: true,
+      });
       await writeFile(PID_FILE, String(process.pid));
       const status = await checkPid();
-      expect(status).toEqual({ state: 'running', pid: process.pid });
+      expect(status).toEqual({
+        state: 'running',
+        pid: process.pid,
+      });
     });
 
     test('returns stale for non-existent process pid', async () => {
-      await mkdir(pidDir, { recursive: true });
+      await mkdir(pidDir, {
+        recursive: true,
+      });
       // Use a very high PID that is almost certainly not running
       await writeFile(PID_FILE, '999999');
       const status = await checkPid();
-      expect(status).toEqual({ state: 'stale', pid: 999999 });
+      expect(status).toEqual({
+        state: 'stale',
+        pid: 999999,
+      });
     });
   });
 
@@ -87,7 +109,9 @@ describe('cli/utils/pid', () => {
     });
 
     test('returns existing pid when hub is already running', async () => {
-      await mkdir(pidDir, { recursive: true });
+      await mkdir(pidDir, {
+        recursive: true,
+      });
       // Write our own PID to simulate a running process
       await writeFile(PID_FILE, String(process.pid));
       const result = await claimPidFile();
@@ -95,7 +119,9 @@ describe('cli/utils/pid', () => {
     });
 
     test('removes stale pid file and claims for current process', async () => {
-      await mkdir(pidDir, { recursive: true });
+      await mkdir(pidDir, {
+        recursive: true,
+      });
       // Write a PID that does not correspond to a running process
       await writeFile(PID_FILE, '999999');
       const result = await claimPidFile();
@@ -113,7 +139,9 @@ describe('cli/utils/pid', () => {
     });
 
     test('removes existing pid file', async () => {
-      await mkdir(pidDir, { recursive: true });
+      await mkdir(pidDir, {
+        recursive: true,
+      });
       await writeFile(PID_FILE, '12345');
       await removePidFile();
       const contents = await readFile(PID_FILE, 'utf8').catch(() => null);
@@ -125,7 +153,9 @@ describe('cli/utils/pid', () => {
 
   describe('isErrnoException', () => {
     test('returns true for Error with code property', () => {
-      const err = Object.assign(new Error('fail'), { code: 'ENOENT' });
+      const err = Object.assign(new Error('fail'), {
+        code: 'ENOENT',
+      });
       expect(isErrnoException(err)).toBe(true);
     });
 
@@ -137,11 +167,17 @@ describe('cli/utils/pid', () => {
       expect(isErrnoException('string')).toBe(false);
       expect(isErrnoException(null)).toBe(false);
       expect(isErrnoException(undefined)).toBe(false);
-      expect(isErrnoException({ code: 'ENOENT' })).toBe(false);
+      expect(
+        isErrnoException({
+          code: 'ENOENT',
+        })
+      ).toBe(false);
     });
 
     test('narrows type to access code property', () => {
-      const err: unknown = Object.assign(new Error('fail'), { code: 'ESRCH' });
+      const err: unknown = Object.assign(new Error('fail'), {
+        code: 'ESRCH',
+      });
       if (isErrnoException(err)) {
         expect(err.code).toBe('ESRCH');
       }

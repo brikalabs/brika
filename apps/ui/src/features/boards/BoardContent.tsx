@@ -10,7 +10,14 @@ import { useActiveBoard, useBoardStore } from './store';
 function GridSkeleton() {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {['a', 'b', 'c', 'd', 'e', 'f'].map((id) => (
+      {[
+        'a',
+        'b',
+        'c',
+        'd',
+        'e',
+        'f',
+      ].map((id) => (
         <Skeleton key={id} className="h-48 rounded-xl" />
       ))}
     </div>
@@ -19,18 +26,24 @@ function GridSkeleton() {
 
 export function BoardContent() {
   const { t } = useLocale();
-  const { boardId } = useParams({ strict: false });
+  const { boardId } = useParams({
+    strict: false,
+  });
 
   // Sync route param → store (for mutations that read activeBoardId).
   // Also clear per-instance data when the board changes.
   const prevIdRef = useRef(boardId);
   useEffect(() => {
-    if (!boardId) return;
+    if (!boardId) {
+      return;
+    }
 
     const changed = prevIdRef.current !== boardId;
     prevIdRef.current = boardId;
 
-    useBoardStore.setState({ activeBoardId: boardId });
+    useBoardStore.setState({
+      activeBoardId: boardId,
+    });
 
     if (changed) {
       useBoardStore.setState({
@@ -38,7 +51,9 @@ export function BoardContent() {
         disconnectedInstances: new Set(),
       });
     }
-  }, [boardId]);
+  }, [
+    boardId,
+  ]);
 
   // Per-board data loading and SSE
   const { data: loadedBoard, isLoading } = useLoadBoard(boardId);
@@ -49,19 +64,30 @@ export function BoardContent() {
     if (loadedBoard) {
       useBoardStore.getState().setActiveBoard(loadedBoard);
     }
-  }, [loadedBoard]);
+  }, [
+    loadedBoard,
+  ]);
 
   const board = useActiveBoard();
   const saveLayout = useSaveLayout();
   const setAddBrickOpen = useBoardStore((s) => s.setAddBrickOpen);
-  const handleAddBrick = useCallback(() => setAddBrickOpen(true), [setAddBrickOpen]);
+  const handleAddBrick = useCallback(
+    () => setAddBrickOpen(true),
+    [
+      setAddBrickOpen,
+    ]
+  );
 
-  if (!boardId) return null;
+  if (!boardId) {
+    return null;
+  }
 
   const brickCount = board?.bricks.length ?? 0;
   const hasBricks = brickCount > 0;
 
-  if (isLoading) return <GridSkeleton />;
+  if (isLoading) {
+    return <GridSkeleton />;
+  }
 
   if (!hasBricks) {
     return (
@@ -77,7 +103,9 @@ export function BoardContent() {
     );
   }
 
-  if (!board) return null;
+  if (!board) {
+    return null;
+  }
 
   return <BoardGrid board={board} onSaveLayout={saveLayout} />;
 }

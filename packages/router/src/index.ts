@@ -14,11 +14,10 @@ export {
   UnprocessableEntity,
 } from './exceptions';
 
-export { combineRoutes, group, type GroupConfig } from './group';
-export { route } from './route';
-
+export { combineRoutes, type GroupConfig, group } from './group';
 // Middleware
-export { rateLimit, type RateLimitOptions } from './middleware/rate-limit';
+export { type RateLimitOptions, rateLimit } from './middleware/rate-limit';
+export { route } from './route';
 
 // SSE helpers
 export { createAsyncSSEStream, createSSEStream } from './sse';

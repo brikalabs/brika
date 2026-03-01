@@ -11,10 +11,15 @@ import { Logger } from '@/runtime/logs/log-router';
 describe('BrickInstanceManager', () => {
   let manager: BrickInstanceManager;
 
-  useTestBed({ autoStub: false }, () => {
-    stub(Logger);
-    manager = get(BrickInstanceManager);
-  });
+  useTestBed(
+    {
+      autoStub: false,
+    },
+    () => {
+      stub(Logger);
+      manager = get(BrickInstanceManager);
+    }
+  );
 
   const mountDefault = (
     instanceId = 'inst-1',
@@ -29,30 +34,40 @@ describe('BrickInstanceManager', () => {
 
   describe('mount', () => {
     test('creates an instance with correct fields', () => {
-      mountDefault('inst-1', 'plugin:brick', 'plugin', 3, 4, { key: 'val' });
+      mountDefault('inst-1', 'plugin:brick', 'plugin', 3, 4, {
+        key: 'val',
+      });
 
       const instance = manager.get('inst-1');
       expect(instance).toBeDefined();
-      expect(instance!.instanceId).toBe('inst-1');
-      expect(instance!.brickTypeId).toBe('plugin:brick');
-      expect(instance!.pluginName).toBe('plugin');
-      expect(instance!.w).toBe(3);
-      expect(instance!.h).toBe(4);
-      expect(instance!.config).toEqual({ key: 'val' });
+      expect(instance?.instanceId).toBe('inst-1');
+      expect(instance?.brickTypeId).toBe('plugin:brick');
+      expect(instance?.pluginName).toBe('plugin');
+      expect(instance?.w).toBe(3);
+      expect(instance?.h).toBe(4);
+      expect(instance?.config).toEqual({
+        key: 'val',
+      });
     });
 
     test('sets empty body initially', () => {
       mountDefault();
-      expect(manager.get('inst-1')!.body).toEqual([]);
+      expect(manager.get('inst-1')?.body).toEqual([]);
     });
 
     test('does not overwrite on duplicate mount', () => {
-      mountDefault('inst-1', 'plugin:brick', 'plugin', 2, 2, { original: true });
-      mountDefault('inst-1', 'plugin:other', 'other', 5, 5, { original: false });
+      mountDefault('inst-1', 'plugin:brick', 'plugin', 2, 2, {
+        original: true,
+      });
+      mountDefault('inst-1', 'plugin:other', 'other', 5, 5, {
+        original: false,
+      });
 
       const instance = manager.get('inst-1');
-      expect(instance!.config).toEqual({ original: true });
-      expect(instance!.pluginName).toBe('plugin');
+      expect(instance?.config).toEqual({
+        original: true,
+      });
+      expect(instance?.pluginName).toBe('plugin');
     });
   });
 
@@ -62,8 +77,8 @@ describe('BrickInstanceManager', () => {
       const result = manager.resize('inst-1', 6, 4);
 
       expect(result).toBe(true);
-      expect(manager.get('inst-1')!.w).toBe(6);
-      expect(manager.get('inst-1')!.h).toBe(4);
+      expect(manager.get('inst-1')?.w).toBe(6);
+      expect(manager.get('inst-1')?.h).toBe(4);
     });
 
     test('returns false for non-existent instance', () => {
@@ -86,11 +101,22 @@ describe('BrickInstanceManager', () => {
   describe('patchBody', () => {
     test('applies mutations to body', () => {
       mountDefault();
-      const result = manager.patchBody('inst-1', [[0, '0', { type: 'text', content: 'Hello' }]]);
+      const result = manager.patchBody('inst-1', [
+        [
+          0,
+          '0',
+          {
+            type: 'text',
+            content: 'Hello',
+          },
+        ],
+      ]);
 
       expect(result).toBe(true);
       expect(manager.getBody('inst-1')).toHaveLength(1);
-      expect((manager.getBody('inst-1')[0] as any).content).toBe('Hello');
+      expect((manager.getBody('inst-1')[0] as unknown as Record<string, unknown>).content).toBe(
+        'Hello'
+      );
     });
 
     test('returns false for non-existent instance', () => {
@@ -144,7 +170,10 @@ describe('BrickInstanceManager', () => {
 
       const filtered = manager.listByType('plugin:brick');
       expect(filtered).toHaveLength(2);
-      expect(filtered.map((i) => i.instanceId).sort()).toEqual(['a', 'c']);
+      expect(filtered.map((i) => i.instanceId).sort()).toEqual([
+        'a',
+        'c',
+      ]);
     });
   });
 
@@ -156,7 +185,10 @@ describe('BrickInstanceManager', () => {
 
       const removed = manager.unmountByType('plugin:brick');
 
-      expect(removed.sort()).toEqual(['a', 'c']);
+      expect(removed.sort()).toEqual([
+        'a',
+        'c',
+      ]);
       expect(manager.size).toBe(1);
       expect(manager.has('b')).toBe(true);
     });
@@ -175,7 +207,10 @@ describe('BrickInstanceManager', () => {
 
       const removed = manager.unmountByPlugin('p1');
 
-      expect(removed.sort()).toEqual(['a', 'c']);
+      expect(removed.sort()).toEqual([
+        'a',
+        'c',
+      ]);
       expect(manager.size).toBe(1);
       expect(manager.has('b')).toBe(true);
     });

@@ -42,9 +42,17 @@ export function InstallButton({
 
       // Await invalidation so the spinner stays until fresh data arrives
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: pluginsKeys.all }),
-        queryClient.invalidateQueries({ queryKey: registryKeys.packages }),
-        queryClient.invalidateQueries({ queryKey: ['store'] }),
+        queryClient.invalidateQueries({
+          queryKey: pluginsKeys.all,
+        }),
+        queryClient.invalidateQueries({
+          queryKey: registryKeys.packages,
+        }),
+        queryClient.invalidateQueries({
+          queryKey: [
+            'store',
+          ],
+        }),
       ]);
     } catch (error) {
       console.error('Uninstall failed:', error);

@@ -16,7 +16,10 @@ export function EventStreamTab() {
   const handleResend = async (eventId: string, type: string, payload: unknown) => {
     setResendingId(eventId);
     try {
-      await emitEvent.mutateAsync({ type, payload });
+      await emitEvent.mutateAsync({
+        type,
+        payload,
+      });
     } finally {
       setResendingId(null);
     }

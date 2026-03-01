@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
 import { useAuth } from '@brika/auth/react';
+import { useEffect } from 'react';
 import { setOnUnauthorized } from '@/lib/query';
 
 /**
@@ -14,5 +14,7 @@ export function useAuthInterceptor() {
   useEffect(() => {
     setOnUnauthorized(() => clearSession());
     return () => setOnUnauthorized(null);
-  }, [clearSession]);
+  }, [
+    clearSession,
+  ]);
 }

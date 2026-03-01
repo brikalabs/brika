@@ -87,7 +87,9 @@ describe('HTTP Interceptors', () => {
 
     beforeEach(() => {
       mockFetch = mock().mockResolvedValue({
-        data: { test: true },
+        data: {
+          test: true,
+        },
         status: 200,
         statusText: 'OK',
         headers: new Headers(),
@@ -202,7 +204,9 @@ describe('HTTP Interceptors', () => {
 
     beforeEach(() => {
       mockFetch = mock().mockResolvedValue({
-        data: { success: true },
+        data: {
+          success: true,
+        },
         status: 200,
         statusText: 'OK',
         headers: new Headers(),

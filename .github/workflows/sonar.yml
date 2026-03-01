@@ -28,7 +28,7 @@ jobs:
         run: bun install
 
       - name: Run tests with coverage
-        run: bash scripts/test.sh --coverage
+        run: bun test --coverage --coverage-reporter=lcov
         continue-on-error: true
 
       - name: SonarQube Scan

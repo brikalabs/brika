@@ -5,7 +5,7 @@
  * when the scope exits — no manual .free() calls or nested try-finally pyramids.
  */
 
-import { PhotonImage, SamplingFilter, crop, resize } from '@cf-wasm/photon';
+import { crop, PhotonImage, resize, SamplingFilter } from '@cf-wasm/photon';
 import type { OutputFormat, ResizeOp } from './types';
 
 /** RAII scope that tracks WASM allocations and frees them on dispose. */
@@ -28,7 +28,7 @@ export class WasmScope {
   /** Free all tracked images in reverse allocation order. */
   dispose(): void {
     for (let i = this.images.length - 1; i >= 0; i--) {
-      this.images[i]!.free();
+      this.images[i]?.free();
     }
   }
 }
@@ -47,7 +47,7 @@ export function withScope<T>(fn: (scope: WasmScope) => T): T {
 export function processImage(
   input: Uint8Array,
   resizeOp: ResizeOp | null,
-  format: OutputFormat,
+  format: OutputFormat
 ): Buffer {
   return withScope((scope) => {
     let img = scope.load(input);
@@ -66,10 +66,16 @@ export function processImage(
 }
 
 /** Read image dimensions without processing. */
-export function readMetadata(input: Uint8Array): { width: number; height: number } {
+export function readMetadata(input: Uint8Array): {
+  width: number;
+  height: number;
+} {
   return withScope((scope) => {
     const img = scope.load(input);
-    return { width: img.get_width(), height: img.get_height() };
+    return {
+      width: img.get_width(),
+      height: img.get_height(),
+    };
   });
 }
 

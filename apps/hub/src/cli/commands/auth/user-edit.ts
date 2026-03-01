@@ -1,23 +1,29 @@
-import pc from 'picocolors';
-import { inject } from '@brika/di';
-import { auth, UserService } from '@brika/auth/server';
 import { Role } from '@brika/auth';
-import { defineCommand } from '../../command';
+import { auth, UserService } from '@brika/auth/server';
+import { inject } from '@brika/di';
+import pc from 'picocolors';
+import { promptEditUser, promptSelectUser, showError, showSuccess } from '../../auth-prompts';
 import { bootstrapCLI, printDatabaseInfo } from '../../bootstrap';
-import { dataDir } from '../../utils/runtime';
+import { defineCommand } from '../../command';
 import { CliError } from '../../errors';
-import { promptSelectUser, promptEditUser, showSuccess, showError } from '../../auth-prompts';
+import { dataDir } from '../../utils/runtime';
 
 export default defineCommand({
   name: 'edit',
   description: 'Edit a user interactively',
-  examples: ['brika auth user edit'],
+  examples: [
+    'brika auth user edit',
+  ],
   async handler() {
-    const cli = await bootstrapCLI(auth({ dataDir }));
+    const cli = await bootstrapCLI(
+      auth({
+        dataDir,
+      })
+    );
 
     try {
       const userService = inject(UserService);
-      const users = await userService.listUsers();
+      const users = userService.listUsers();
 
       if (users.length === 0) {
         showError('No users found');
@@ -25,7 +31,12 @@ export default defineCommand({
       }
 
       const userId = await promptSelectUser(
-        users.map((u) => ({ id: u.id, email: u.email, name: u.name, role: u.role }))
+        users.map((u) => ({
+          id: u.id,
+          email: u.email,
+          name: u.name,
+          role: u.role,
+        }))
       );
 
       const user = users.find((u) => u.id === userId);
@@ -35,9 +46,7 @@ export default defineCommand({
       }
 
       const details = `(${user.name}, ${user.role})`;
-      console.log(
-        `\n  ${pc.cyan('Editing')} ${pc.bold(user.email)} ${pc.dim(details)}\n`
-      );
+      console.log(`\n  ${pc.cyan('Editing')} ${pc.bold(user.email)} ${pc.dim(details)}\n`);
 
       const changes = await promptEditUser({
         name: user.name,
@@ -53,7 +62,7 @@ export default defineCommand({
         return;
       }
 
-      const updated = await userService.updateUser(user.id, {
+      const updated = userService.updateUser(user.id, {
         name: changes.name,
         role: changes.role ? (changes.role as Role) : undefined,
         isActive: changes.isActive,
@@ -68,7 +77,11 @@ export default defineCommand({
         Name: updated.name,
         Role: pc.bold(updated.role),
         Status: updated.isActive ? pc.green('active') : pc.red('disabled'),
-        ...(changes.resetPassword ? { Password: pc.green('reset') } : {}),
+        ...(changes.resetPassword
+          ? {
+              Password: pc.green('reset'),
+            }
+          : {}),
       });
 
       printDatabaseInfo();

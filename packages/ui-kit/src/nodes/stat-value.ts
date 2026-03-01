@@ -16,7 +16,10 @@ export interface StatValueNode extends BaseNode {
 }
 
 export function Stat(props: Omit<StatValueNode, 'type'>): StatValueNode {
-  return { type: 'stat-value', ...props };
+  return {
+    type: 'stat-value',
+    ...props,
+  };
 }
 
 declare module './_shared' {

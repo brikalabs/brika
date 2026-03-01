@@ -22,12 +22,22 @@ defineRenderer('icon', ({ node, onAction }) => {
   const icon = (
     <DynamicIcon
       name={node.name as IconName}
-      className={iconVariants({ size: node.size })}
-      style={node.color ? { color: resolveColor(node.color) } : undefined}
+      className={iconVariants({
+        size: node.size,
+      })}
+      style={
+        node.color
+          ? {
+              color: resolveColor(node.color),
+            }
+          : undefined
+      }
     />
   );
 
-  if (!node.onPress) return icon;
+  if (!node.onPress) {
+    return icon;
+  }
 
   return (
     <span

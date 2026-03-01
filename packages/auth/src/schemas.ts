@@ -3,12 +3,18 @@
  */
 
 import { z } from 'zod';
+import { getAuthConfig } from './config';
 import { Role } from './roles';
 import { Scope } from './scopes';
-import { getAuthConfig } from './config';
 
-const roleValues = Object.values(Role) as [Role, ...Role[]];
-const scopeValues = Object.values(Scope) as [Scope, ...Scope[]];
+const roleValues = Object.values(Role) as [
+  Role,
+  ...Role[],
+];
+const scopeValues = Object.values(Scope) as [
+  Scope,
+  ...Scope[],
+];
 
 export const RoleSchema = z.enum(roleValues);
 
@@ -23,22 +29,37 @@ export const NameSchema = z.string().min(2, 'Name must be at least 2 characters'
  * Uses z.string() + superRefine so all rules are evaluated at validation time.
  * Max 72 chars: bcrypt silently truncates beyond this, so enforce it explicitly.
  */
-export const PasswordSchema = z.string().max(72, 'Max 72 characters').superRefine((v, ctx) => {
-  const { password } = getAuthConfig();
+export const PasswordSchema = z
+  .string()
+  .max(72, 'Max 72 characters')
+  .superRefine((v, ctx) => {
+    const { password } = getAuthConfig();
 
-  if (v.length < password.minLength) {
-    ctx.addIssue({ code: 'custom', message: `Min ${password.minLength} characters` });
-  }
-  if (password.requireUppercase && !/[A-Z]/.test(v)) {
-    ctx.addIssue({ code: 'custom', message: 'Need uppercase letter (A-Z)' });
-  }
-  if (password.requireNumbers && !/\d/.test(v)) {
-    ctx.addIssue({ code: 'custom', message: 'Need number (0-9)' });
-  }
-  if (password.requireSpecial && !password.specialChars.test(v)) {
-    ctx.addIssue({ code: 'custom', message: 'Need special character (!@#$%^&*...)' });
-  }
-});
+    if (v.length < password.minLength) {
+      ctx.addIssue({
+        code: 'custom',
+        message: `Min ${password.minLength} characters`,
+      });
+    }
+    if (password.requireUppercase && !/[A-Z]/.test(v)) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Need uppercase letter (A-Z)',
+      });
+    }
+    if (password.requireNumbers && !/\d/.test(v)) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Need number (0-9)',
+      });
+    }
+    if (password.requireSpecial && !password.specialChars.test(v)) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Need special character (!@#$%^&*...)',
+      });
+    }
+  });
 
 export const UserSchema = z.object({
   id: z.string().uuid(),
@@ -84,6 +105,8 @@ export const CreateApiTokenSchema = z.object({
  */
 export function validatePassword(value: string): string | undefined {
   const result = PasswordSchema.safeParse(value);
-  if (result.success) return undefined;
+  if (result.success) {
+    return undefined;
+  }
   return result.error.issues[0]?.message;
 }

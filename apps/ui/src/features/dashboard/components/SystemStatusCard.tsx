@@ -4,7 +4,9 @@ import { useLocale } from '@/lib/use-locale';
 import { cn } from '@/lib/utils';
 
 export interface SystemStatusCardProps {
-  health?: { ok: boolean };
+  health?: {
+    ok: boolean;
+  };
   runningPlugins: number;
   totalPlugins: number;
   totalSparks: number;

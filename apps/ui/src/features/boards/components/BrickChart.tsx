@@ -1,4 +1,5 @@
 import type { ChartNode, ChartSeries } from '@brika/ui-kit';
+import type { ReactNode } from 'react';
 import { useId, useMemo } from 'react';
 import type { TooltipContentProps } from 'recharts';
 import {
@@ -24,7 +25,9 @@ const DEFAULT_COLORS = [
 ];
 
 function ChartTooltip({ active, payload }: TooltipContentProps<number, string>) {
-  if (!active || !payload?.length) return null;
+  if (!active || !payload?.length) {
+    return null;
+  }
   return (
     <div className="rounded-md border bg-popover px-2 py-1 text-sm shadow-md">
       {payload.map((entry, i) => (
@@ -32,7 +35,9 @@ function ChartTooltip({ active, payload }: TooltipContentProps<number, string>) 
           {payload.length > 1 && (
             <span
               className="size-2 shrink-0 rounded-full"
-              style={{ backgroundColor: entry.color }}
+              style={{
+                backgroundColor: entry.color,
+              }}
             />
           )}
           <span>{typeof entry.value === 'number' ? entry.value.toLocaleString() : ''}</span>
@@ -44,15 +49,26 @@ function ChartTooltip({ active, payload }: TooltipContentProps<number, string>) 
 
 /** Build effective series from the node: multi-series if present, else single series from data/color */
 function buildSeries(node: ChartNode): ChartSeries[] {
-  if (node.series && node.series.length > 0) return node.series;
-  return [{ key: 'value', data: node.data, color: node.color }];
+  if (node.series && node.series.length > 0) {
+    return node.series;
+  }
+  return [
+    {
+      key: 'value',
+      data: node.data,
+      color: node.color,
+    },
+  ];
 }
 
 /** Merge multiple series into a flat data array keyed by `ts` for Recharts */
 function mergeSeriesData(series: ChartSeries[]): Record<string, number | undefined>[] {
   if (series.length === 1) {
     // Fast path: single series, no merging needed
-    return series[0].data.map((d) => ({ ts: d.ts, [series[0].key]: d.value }));
+    return series[0].data.map((d) => ({
+      ts: d.ts,
+      [series[0].key]: d.value,
+    }));
   }
 
   const map = new Map<number, Record<string, number | undefined>>();
@@ -60,38 +76,100 @@ function mergeSeriesData(series: ChartSeries[]): Record<string, number | undefin
     for (const d of s.data) {
       let row = map.get(d.ts);
       if (!row) {
-        row = { ts: d.ts };
+        row = {
+          ts: d.ts,
+        };
         map.set(d.ts, row);
       }
       row[s.key] = d.value;
     }
   }
-  return [...map.values()].sort((a, b) => (a.ts as number) - (b.ts as number));
+  return [
+    ...map.values(),
+  ].sort((a, b) => (a.ts as number) - (b.ts as number));
 }
 
-export function BrickChart({ node }: Readonly<{ node: ChartNode }>) {
+/** Shared chart axes, grid, tooltip and legend elements used by both BarChart and AreaChart */
+function chartElements(node: ChartNode, series: ChartSeries[]): ReactNode[] {
+  return [
+    node.showGrid ? <CartesianGrid key="grid" strokeDasharray="3 3" strokeOpacity={0.2} /> : null,
+    <XAxis
+      key="x"
+      dataKey="ts"
+      hide={!node.showXAxis}
+      tick={{
+        fontSize: 10,
+      }}
+    />,
+    <YAxis
+      key="y"
+      hide={!node.showYAxis}
+      tick={{
+        fontSize: 10,
+      }}
+      domain={[
+        'auto',
+        'auto',
+      ]}
+    />,
+    <Tooltip key="tip" content={ChartTooltip} />,
+    node.showLegend && series.length > 1 ? (
+      <Legend
+        key="legend"
+        iconSize={8}
+        wrapperStyle={{
+          fontSize: 11,
+        }}
+      />
+    ) : null,
+  ];
+}
+
+export function BrickChart({
+  node,
+}: Readonly<{
+  node: ChartNode;
+}>) {
   const baseId = useId();
-  const series = useMemo(() => buildSeries(node), [node.series, node.data, node.color]);
-  const mergedData = useMemo(() => mergeSeriesData(series), [series]);
+  const series = useMemo(
+    () => buildSeries(node),
+    [
+      node.series,
+      node.data,
+      node.color,
+    ]
+  );
+  const mergedData = useMemo(
+    () => mergeSeriesData(series),
+    [
+      series,
+    ]
+  );
 
-  if (mergedData.length === 0) return null;
+  if (mergedData.length === 0) {
+    return null;
+  }
 
-  const margin = { top: 2, right: 2, left: 2, bottom: 2 };
+  const margin = {
+    top: 2,
+    right: 2,
+    left: 2,
+    bottom: 2,
+  };
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-1">
       {node.label && <span className="shrink-0 text-muted-foreground text-xs">{node.label}</span>}
-      <div className="min-h-0 flex-1" style={{ minHeight: 40 }}>
+      <div
+        className="min-h-0 flex-1"
+        style={{
+          minHeight: 40,
+        }}
+      >
         <ResponsiveContainer width="100%" height="100%">
           {node.variant === 'bar' ? (
             <BarChart data={mergedData} margin={margin}>
-              {node.showGrid && <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} />}
-              <XAxis dataKey="ts" hide={!node.showXAxis} tick={{ fontSize: 10 }} />
-              <YAxis hide={!node.showYAxis} tick={{ fontSize: 10 }} domain={['auto', 'auto']} />
-              <Tooltip content={ChartTooltip} />
-              {node.showLegend && series.length > 1 && (
-                <Legend iconSize={8} wrapperStyle={{ fontSize: 11 }} />
-              )}
+              {chartElements(node, series)}
               {series.map((s, i) => (
                 <Bar
                   key={s.key}
@@ -99,7 +177,12 @@ export function BrickChart({ node }: Readonly<{ node: ChartNode }>) {
                   name={s.label ?? s.key}
                   fill={s.color ?? DEFAULT_COLORS[i % DEFAULT_COLORS.length]}
                   opacity={0.8}
-                  radius={[2, 2, 0, 0]}
+                  radius={[
+                    2,
+                    2,
+                    0,
+                    0,
+                  ]}
                 />
               ))}
             </BarChart>
@@ -123,13 +206,7 @@ export function BrickChart({ node }: Readonly<{ node: ChartNode }>) {
                   );
                 })}
               </defs>
-              {node.showGrid && <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} />}
-              <XAxis dataKey="ts" hide={!node.showXAxis} tick={{ fontSize: 10 }} />
-              <YAxis hide={!node.showYAxis} tick={{ fontSize: 10 }} domain={['auto', 'auto']} />
-              <Tooltip content={ChartTooltip} />
-              {node.showLegend && series.length > 1 && (
-                <Legend iconSize={8} wrapperStyle={{ fontSize: 11 }} />
-              )}
+              {chartElements(node, series)}
               {series.map((s, i) => {
                 const color = s.color ?? DEFAULT_COLORS[i % DEFAULT_COLORS.length];
                 return node.variant === 'line' ? (

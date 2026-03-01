@@ -1,20 +1,26 @@
-import pc from 'picocolors';
-import { inject } from '@brika/di';
 import { auth, UserService } from '@brika/auth/server';
-import { defineCommand } from '../../command';
+import { inject } from '@brika/di';
+import pc from 'picocolors';
 import { bootstrapCLI, printDatabaseInfo } from '../../bootstrap';
+import { defineCommand } from '../../command';
 import { dataDir } from '../../utils/runtime';
 
 export default defineCommand({
   name: 'list',
   description: 'List all users',
-  examples: ['brika auth user list'],
+  examples: [
+    'brika auth user list',
+  ],
   async handler() {
-    const cli = await bootstrapCLI(auth({ dataDir }));
+    const cli = await bootstrapCLI(
+      auth({
+        dataDir,
+      })
+    );
 
     try {
       const userService = inject(UserService);
-      const users = await userService.listUsers();
+      const users = userService.listUsers();
 
       if (users.length === 0) {
         console.log(`\n${pc.dim('No users found')}\n`);

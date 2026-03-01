@@ -39,7 +39,9 @@ export function MarkdownCodeBlock({ code, language, filename }: Readonly<Markdow
               ),
               lineCount > 0 && (
                 <span key="lines" className="text-muted-foreground">
-                  {t('common:code.lines', { count: lineCount })}
+                  {t('common:code.lines', {
+                    count: lineCount,
+                  })}
                 </span>
               ),
             ].filter(Boolean);

@@ -34,7 +34,11 @@ export function Select(props: {
   icon?: string;
 }): SelectNode {
   const { onChange, ...rest } = props;
-  return { type: 'select', ...rest, onChange: resolveAction(onChange) };
+  return {
+    type: 'select',
+    ...rest,
+    onChange: resolveAction(onChange),
+  };
 }
 
 declare module './_shared' {

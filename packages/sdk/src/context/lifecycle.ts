@@ -12,7 +12,7 @@ import {
   uninstall as uninstallMsg,
   updatePreference as updatePreferenceMsg,
 } from '@brika/ipc/contract';
-import { type ContextCore, type MethodsOf, registerContextModule } from './register';
+import { type ContextCore, registerContextModule } from './register';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -40,7 +40,9 @@ export function setupLifecycle(core: ContextCore) {
   let initialized = false;
 
   async function runInitHandlers(): Promise<void> {
-    if (initialized) return;
+    if (initialized) {
+      return;
+    }
     initialized = true;
     for (const h of initHandlers) {
       try {
@@ -76,12 +78,20 @@ export function setupLifecycle(core: ContextCore) {
 
   client.implement(preferenceOptionsRpc, async ({ name }) => {
     const provider = prefOptionsProviders.get(name);
-    if (!provider) return { options: [] };
+    if (!provider) {
+      return {
+        options: [],
+      };
+    }
     try {
-      return { options: await provider() };
+      return {
+        options: await provider(),
+      };
     } catch (e) {
       core.log('error', `Preference options provider error for "${name}": ${e}`);
-      return { options: [] };
+      return {
+        options: [],
+      };
     }
   });
 
@@ -126,7 +136,10 @@ export function setupLifecycle(core: ContextCore) {
 
       updatePreference(key: string, value: unknown): void {
         preferences[key] = value;
-        client.send(updatePreferenceMsg, { key, value });
+        client.send(updatePreferenceMsg, {
+          key,
+          value,
+        });
       },
 
       definePreferenceOptions(name: string, provider: PreferenceOptionsProvider): void {
@@ -135,15 +148,11 @@ export function setupLifecycle(core: ContextCore) {
     },
 
     async stop() {
-      for (const h of stopHandlers) await h();
+      for (const h of stopHandlers) {
+        await h();
+      }
     },
   };
-}
-
-// ─── Type Augmentation (inferred from setup) ─────────────────────────────────
-
-declare module '../context' {
-  interface Context extends MethodsOf<typeof setupLifecycle> {}
 }
 
 registerContextModule('lifecycle', setupLifecycle);

@@ -28,7 +28,12 @@ export function PluginsPage() {
   const isBusy = disable.isPending || reload.isPending || kill.isPending;
 
   const { healthy, unhealthy } = useMemo(() => {
-    if (!plugins) return { healthy: [], unhealthy: [] };
+    if (!plugins) {
+      return {
+        healthy: [],
+        unhealthy: [],
+      };
+    }
     const h: Plugin[] = [];
     const u: Plugin[] = [];
     for (const p of plugins) {
@@ -38,10 +43,18 @@ export function PluginsPage() {
         h.push(p);
       }
     }
-    return { healthy: h, unhealthy: u };
-  }, [plugins]);
+    return {
+      healthy: h,
+      unhealthy: u,
+    };
+  }, [
+    plugins,
+  ]);
 
-  const View = useDataView({ data: plugins, isLoading });
+  const View = useDataView({
+    data: plugins,
+    isLoading,
+  });
 
   const renderCard = (p: Plugin) => (
     <PluginCard
@@ -68,7 +81,9 @@ export function PluginsPage() {
       <View.Root>
         <View.Skeleton>
           <div className="grid gap-2">
-            {Array.from({ length: 4 }).map((_, i) => (
+            {Array.from({
+              length: 4,
+            }).map((_, i) => (
               <PluginCardSkeleton key={`skeleton-${i}`} />
             ))}
           </div>
@@ -92,7 +107,9 @@ export function PluginsPage() {
                   <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
                     <AlertTriangle className="size-3.5 text-amber-500" />
                     <span className="font-medium uppercase tracking-wider">
-                      {t('plugins:needsAttention', { count: unhealthy.length })}
+                      {t('plugins:needsAttention', {
+                        count: unhealthy.length,
+                      })}
                     </span>
                   </div>
                   <div className="grid gap-2">{unhealthy.map(renderCard)}</div>

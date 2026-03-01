@@ -4,9 +4,9 @@
  * Application preferences including language selection.
  */
 
-import { Palette } from 'lucide-react';
-import { useCanAccess } from '@brika/auth/react';
 import { Scope } from '@brika/auth';
+import { useCanAccess } from '@brika/auth/react';
+import { Palette } from 'lucide-react';
 import { ThemeSelector } from '@/components/theme-selector';
 import {
   Section,

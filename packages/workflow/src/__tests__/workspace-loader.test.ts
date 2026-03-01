@@ -12,7 +12,9 @@ import { type BlockTypeRegistry, type LoaderEvents, WorkspaceLoader } from '../w
 // Create a temporary directory for tests
 const createTempDir = (): string => {
   const dir = join(tmpdir(), `workflow-loader-test-${Date.now()}`);
-  mkdirSync(dir, { recursive: true });
+  mkdirSync(dir, {
+    recursive: true,
+  });
   return dir;
 };
 
@@ -41,7 +43,10 @@ describe('WorkspaceLoader', () => {
 
   afterEach(() => {
     try {
-      rmSync(tempDir, { recursive: true, force: true });
+      rmSync(tempDir, {
+        recursive: true,
+        force: true,
+      });
     } catch {
       // Ignore cleanup errors
     }
@@ -91,7 +96,10 @@ describe('WorkspaceLoader', () => {
       writeFileSync(join(tempDir, 'workflow1.yaml'), createWorkspaceYaml('wf1', 'Workflow 1'));
       writeFileSync(join(tempDir, 'workflow2.yml'), createWorkspaceYaml('wf2', 'Workflow 2'));
 
-      const loader = new WorkspaceLoader({ dir: tempDir, registry });
+      const loader = new WorkspaceLoader({
+        dir: tempDir,
+        registry,
+      });
       await loader.loadAll();
 
       const workflows = loader.list();
@@ -149,7 +157,10 @@ describe('WorkspaceLoader', () => {
     test('returns workflow by ID', async () => {
       writeFileSync(join(tempDir, 'test.yaml'), createWorkspaceYaml('my-workflow', 'My Workflow'));
 
-      const loader = new WorkspaceLoader({ dir: tempDir, registry });
+      const loader = new WorkspaceLoader({
+        dir: tempDir,
+        registry,
+      });
       await loader.loadAll();
 
       const workflow = loader.get('my-workflow');
@@ -158,7 +169,10 @@ describe('WorkspaceLoader', () => {
     });
 
     test('returns undefined for unknown ID', async () => {
-      const loader = new WorkspaceLoader({ dir: tempDir, registry });
+      const loader = new WorkspaceLoader({
+        dir: tempDir,
+        registry,
+      });
       await loader.loadAll();
 
       expect(loader.get('unknown')).toBeUndefined();
@@ -167,7 +181,10 @@ describe('WorkspaceLoader', () => {
 
   describe('list', () => {
     test('returns empty array when no workflows loaded', async () => {
-      const loader = new WorkspaceLoader({ dir: tempDir, registry });
+      const loader = new WorkspaceLoader({
+        dir: tempDir,
+        registry,
+      });
       await loader.loadAll();
 
       expect(loader.list()).toEqual([]);
@@ -178,7 +195,10 @@ describe('WorkspaceLoader', () => {
       writeFileSync(join(tempDir, 'b.yaml'), createWorkspaceYaml('b', 'B'));
       writeFileSync(join(tempDir, 'c.yaml'), createWorkspaceYaml('c', 'C'));
 
-      const loader = new WorkspaceLoader({ dir: tempDir, registry });
+      const loader = new WorkspaceLoader({
+        dir: tempDir,
+        registry,
+      });
       await loader.loadAll();
 
       expect(loader.list()).toHaveLength(3);
@@ -228,7 +248,10 @@ describe('WorkspaceLoader', () => {
 
   describe('save', () => {
     test('saves workflow to file', async () => {
-      const loader = new WorkspaceLoader({ dir: tempDir, registry });
+      const loader = new WorkspaceLoader({
+        dir: tempDir,
+        registry,
+      });
       await loader.loadAll();
 
       const workflow: Workflow = {
@@ -284,7 +307,10 @@ describe('WorkspaceLoader', () => {
     test('deletes workflow file', async () => {
       writeFileSync(join(tempDir, 'to-delete.yaml'), createWorkspaceYaml('to-delete', 'To Delete'));
 
-      const loader = new WorkspaceLoader({ dir: tempDir, registry });
+      const loader = new WorkspaceLoader({
+        dir: tempDir,
+        registry,
+      });
       await loader.loadAll();
 
       expect(loader.get('to-delete')).toBeDefined();
@@ -296,7 +322,10 @@ describe('WorkspaceLoader', () => {
     });
 
     test('returns false for unknown workflow', async () => {
-      const loader = new WorkspaceLoader({ dir: tempDir, registry });
+      const loader = new WorkspaceLoader({
+        dir: tempDir,
+        registry,
+      });
       await loader.loadAll();
 
       const result = await loader.delete('unknown');

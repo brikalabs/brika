@@ -3,21 +3,21 @@
  * Uses @clack/prompts for beautiful, user-friendly input
  */
 
+import { EmailSchema, NameSchema, validatePassword } from '@brika/auth';
 import * as p from '@clack/prompts';
 import pc from 'picocolors';
-import { EmailSchema, NameSchema, validatePassword } from '@brika/auth';
 
 /** Zod-based validators for @clack/prompts */
 export const validators = {
-  email: (value: string): string | undefined => {
+  email: (value: string | undefined): string | undefined => {
     const result = EmailSchema.safeParse(value);
     return result.success ? undefined : result.error.issues[0]?.message;
   },
-  name: (value: string): string | undefined => {
+  name: (value: string | undefined): string | undefined => {
     const result = NameSchema.safeParse(value);
     return result.success ? undefined : result.error.issues[0]?.message;
   },
-  password: validatePassword,
+  password: (value: string | undefined): string | undefined => validatePassword(value ?? ''),
 };
 
 /**
@@ -49,10 +49,26 @@ export async function promptAddUser(): Promise<{
         p.select({
           message: 'Role',
           options: [
-            { value: 'admin', label: 'Admin', hint: 'Full access' },
-            { value: 'user', label: 'User', hint: 'Standard user' },
-            { value: 'guest', label: 'Guest', hint: 'Limited access' },
-            { value: 'service', label: 'Service', hint: 'API access' },
+            {
+              value: 'admin',
+              label: 'Admin',
+              hint: 'Full access',
+            },
+            {
+              value: 'user',
+              label: 'User',
+              hint: 'Standard user',
+            },
+            {
+              value: 'guest',
+              label: 'Guest',
+              hint: 'Limited access',
+            },
+            {
+              value: 'service',
+              label: 'Service',
+              hint: 'API access',
+            },
           ],
           initialValue: 'user',
         }),
@@ -82,7 +98,12 @@ export async function promptAddUser(): Promise<{
  * Prompt to select a user from a list
  */
 export async function promptSelectUser(
-  users: { id: string; email: string; name: string; role: string }[]
+  users: {
+    id: string;
+    email: string;
+    name: string;
+    role: string;
+  }[]
 ): Promise<string> {
   const selected = await p.select({
     message: 'Select a user',
@@ -117,10 +138,25 @@ export async function promptEditUser(user: {
   const actions = (await p.multiselect({
     message: 'What do you want to change?',
     options: [
-      { value: 'name', label: 'Display name', hint: user.name },
-      { value: 'role', label: 'Role', hint: user.role },
-      { value: 'active', label: 'Active status', hint: user.isActive ? 'active' : 'disabled' },
-      { value: 'password', label: 'Reset password' },
+      {
+        value: 'name',
+        label: 'Display name',
+        hint: user.name,
+      },
+      {
+        value: 'role',
+        label: 'Role',
+        hint: user.role,
+      },
+      {
+        value: 'active',
+        label: 'Active status',
+        hint: user.isActive ? 'active' : 'disabled',
+      },
+      {
+        value: 'password',
+        label: 'Reset password',
+      },
     ],
   })) as string[];
 
@@ -153,10 +189,26 @@ export async function promptEditUser(user: {
     const role = await p.select({
       message: 'New role',
       options: [
-        { value: 'admin', label: 'Admin', hint: 'Full access' },
-        { value: 'user', label: 'User', hint: 'Standard user' },
-        { value: 'guest', label: 'Guest', hint: 'Limited access' },
-        { value: 'service', label: 'Service', hint: 'API access' },
+        {
+          value: 'admin',
+          label: 'Admin',
+          hint: 'Full access',
+        },
+        {
+          value: 'user',
+          label: 'User',
+          hint: 'Standard user',
+        },
+        {
+          value: 'guest',
+          label: 'Guest',
+          hint: 'Limited access',
+        },
+        {
+          value: 'service',
+          label: 'Service',
+          hint: 'API access',
+        },
       ],
       initialValue: user.role,
     });
@@ -228,7 +280,11 @@ export async function promptEmail(message = 'Email address'): Promise<string> {
  * Prompt for scope/permission selection
  */
 export async function promptSelectScopes(
-  availableScopes: { value: string; label: string; hint?: string }[]
+  availableScopes: {
+    value: string;
+    label: string;
+    hint?: string;
+  }[]
 ): Promise<string[]> {
   const selected = await p.multiselect({
     message: 'Select scopes (permissions)',
@@ -236,7 +292,7 @@ export async function promptSelectScopes(
     required: true,
   });
 
-  if (!selected || selected.length === 0) {
+  if (!selected || p.isCancel(selected) || selected.length === 0) {
     p.cancel('No scopes selected');
     process.exit(0);
   }
@@ -248,7 +304,11 @@ export async function promptSelectScopes(
  * Prompt for API token creation
  */
 export async function promptCreateToken(
-  availableScopes: { value: string; label: string; hint?: string }[]
+  availableScopes: {
+    value: string;
+    label: string;
+    hint?: string;
+  }[]
 ): Promise<{
   name: string;
   scopes: string[];
@@ -274,11 +334,27 @@ export async function promptCreateToken(
         p.select({
           message: 'Token expiration',
           options: [
-            { value: 0, label: 'Never', hint: 'No expiration' },
-            { value: 7 * 24 * 60 * 60, label: '7 days' },
-            { value: 30 * 24 * 60 * 60, label: '30 days' },
-            { value: 90 * 24 * 60 * 60, label: '90 days' },
-            { value: 365 * 24 * 60 * 60, label: '1 year' },
+            {
+              value: 0,
+              label: 'Never',
+              hint: 'No expiration',
+            },
+            {
+              value: 7 * 24 * 60 * 60,
+              label: '7 days',
+            },
+            {
+              value: 30 * 24 * 60 * 60,
+              label: '30 days',
+            },
+            {
+              value: 90 * 24 * 60 * 60,
+              label: '90 days',
+            },
+            {
+              value: 365 * 24 * 60 * 60,
+              label: '1 year',
+            },
           ],
           initialValue: 30 * 24 * 60 * 60,
         }),
@@ -301,7 +377,7 @@ export async function promptCreateToken(
 /**
  * Show success message with formatted data
  */
-export function showSuccess(title: string, data: Record<string, any>): void {
+export function showSuccess(title: string, data: Record<string, unknown>): void {
   console.log(`\n${pc.green('✓')} ${title}\n`);
   for (const [key, value] of Object.entries(data)) {
     const formattedKey = key.charAt(0).toUpperCase() + key.slice(1);

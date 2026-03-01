@@ -1,18 +1,36 @@
 /**
  * Deep stub factory - creates proxy-based stubs that auto-mock all properties and methods.
+ *
+ * Properties accessed on the stub are auto-generated as nested stubs unless overridden.
+ * Certain JS protocol properties (Promise, JSON, iteration) are excluded from auto-stubbing
+ * to prevent breaking `await`, `JSON.stringify`, and spread/iteration semantics.
  */
 
-const PROMISE_METHODS = ['then', 'catch', 'finally'] as const;
+/** Properties that must NOT be auto-stubbed — they break core JS protocols. */
+const NO_AUTO_STUB: ReadonlySet<string | symbol> = new Set([
+  // Promise protocol — stubbing makes proxies look thenable, breaks `await`
+  'then',
+  'catch',
+  'finally',
+  // Iteration / spread — stubbing breaks `for..of`, `Array.from`, `[...obj]`
+  Symbol.iterator,
+  Symbol.asyncIterator,
+]);
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === 'object' && !Array.isArray(value);
+}
 
 function isThenable(value: unknown): boolean {
   return (
     value instanceof Promise ||
-    (!!value && typeof (value as { then?: unknown }).then === 'function')
+    (!!value &&
+      typeof (
+        value as {
+          then?: unknown;
+        }
+      ).then === 'function')
   );
-}
-
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return !!value && typeof value === 'object' && !Array.isArray(value);
 }
 
 /** Creates a deep stub that returns no-op functions for any method and nested stubs for properties. */
@@ -21,12 +39,16 @@ export function createDeepStub<T>(overrides: Partial<T> = {}): T {
 
   const handler: ProxyHandler<object> = {
     get(_target, prop) {
-      // Don't make stubs look like thenables - breaks await
-      if (
-        PROMISE_METHODS.includes(prop as (typeof PROMISE_METHODS)[number]) &&
-        !(prop in overrides)
-      ) {
+      // Skip JS protocol properties that break core semantics when stubbed
+      if (NO_AUTO_STUB.has(prop) && !(prop in overrides)) {
         return undefined;
+      }
+
+      // Support JSON.stringify — return a toJSON that snapshots override values
+      if (prop === 'toJSON' && !(prop in overrides)) {
+        return () => ({
+          ...(overrides as object),
+        });
       }
 
       // Return override if provided
@@ -36,8 +58,14 @@ export function createDeepStub<T>(overrides: Partial<T> = {}): T {
         if (typeof override === 'function') {
           return function (this: unknown, ...args: unknown[]) {
             const result = (override as (...args: unknown[]) => unknown).apply(this, args);
-            if (isThenable(result)) return result;
-            if (isPlainObject(result)) return createDeepStub(result);
+            // Re-wrap plain objects so un-overridden properties auto-stub,
+            // but pass through promises and primitives as-is.
+            if (isThenable(result)) {
+              return result;
+            }
+            if (isPlainObject(result)) {
+              return createDeepStub(result);
+            }
             return result;
           };
         }

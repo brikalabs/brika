@@ -43,8 +43,12 @@ describe('RestartPolicy', () => {
       // Third crash should trigger crash loop since maxCrashes is 3
       expect(third.action).toBe('crash-loop');
 
-      if (first.action === 'restart') expect(first.delayMs).toBe(1000);
-      if (second.action === 'restart') expect(second.delayMs).toBe(2000);
+      if (first.action === 'restart') {
+        expect(first.delayMs).toBe(1000);
+      }
+      if (second.action === 'restart') {
+        expect(second.delayMs).toBe(2000);
+      }
     });
 
     test('respects max delay', () => {
@@ -64,8 +68,12 @@ describe('RestartPolicy', () => {
       const third = shortWindowPolicy.onCrash('test'); // 4000 (capped)
       const fourth = shortWindowPolicy.onCrash('test'); // 4000 (still capped)
 
-      if (third.action === 'restart') expect(third.delayMs).toBe(4000);
-      if (fourth.action === 'restart') expect(fourth.delayMs).toBe(4000);
+      if (third.action === 'restart') {
+        expect(third.delayMs).toBe(4000);
+      }
+      if (fourth.action === 'restart') {
+        expect(fourth.delayMs).toBe(4000);
+      }
 
       shortWindowPolicy.reset('test');
     });
@@ -243,7 +251,9 @@ describe('RestartPolicy', () => {
     });
 
     test('allows partial config override', () => {
-      const partialPolicy = new RestartPolicy({ baseDelayMs: 500 });
+      const partialPolicy = new RestartPolicy({
+        baseDelayMs: 500,
+      });
 
       expect(partialPolicy.config.baseDelayMs).toBe(500);
       expect(partialPolicy.config.maxDelayMs).toBe(60000); // default

@@ -94,19 +94,34 @@ export class PluginEventHandler {
 
   registerBlock(
     pluginName: string,
-    block: { id: string; [key: string]: unknown },
+    block: {
+      id: string;
+      [key: string]: unknown;
+    },
     packageMetadata?: {
       version?: string;
       description?: string;
-      author?: string | { name?: string };
+      author?:
+        | string
+        | {
+            name?: string;
+          };
       icon?: string;
       homepage?: string;
-      blocks?: Array<{ id: string; [key: string]: unknown }>;
+      blocks?: Array<{
+        id: string;
+        [key: string]: unknown;
+      }>;
     }
   ): void {
     // Merge runtime block definition with package.json metadata
     const pkgBlock = packageMetadata?.blocks?.find((b) => b.id === block.id);
-    const merged = pkgBlock ? { ...pkgBlock, ...block } : block;
+    const merged = pkgBlock
+      ? {
+          ...pkgBlock,
+          ...block,
+        }
+      : block;
 
     this.#blocks.register(merged as unknown as BlockDefinition, {
       id: pluginName,
@@ -126,7 +141,13 @@ export class PluginEventHandler {
     });
   }
 
-  registerSpark(pluginName: string, spark: { id: string; schema?: Record<string, unknown> }): void {
+  registerSpark(
+    pluginName: string,
+    spark: {
+      id: string;
+      schema?: Record<string, unknown>;
+    }
+  ): void {
     this.#sparks.register(spark, pluginName);
     this.#logs.debug('Spark registered from plugin', {
       pluginName: pluginName,
@@ -231,7 +252,13 @@ export class PluginEventHandler {
     const removedBricks = this.#brickInstances.unmountByPlugin(pluginName);
     if (removedBricks.length > 0) {
       this.#events.dispatch(
-        BrickActions.pluginDisconnected.create({ pluginName, instanceIds: removedBricks }, 'hub')
+        BrickActions.pluginDisconnected.create(
+          {
+            pluginName,
+            instanceIds: removedBricks,
+          },
+          'hub'
+        )
       );
     }
   }

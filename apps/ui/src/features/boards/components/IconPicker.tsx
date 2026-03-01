@@ -14,9 +14,14 @@ function IconPickerSkeleton() {
       </Label>
       <Skeleton className="h-9 w-full rounded-md" />
       <div className="grid grid-cols-9 gap-1 rounded-md border p-2">
-        {Array.from({ length: 36 }, (_, i) => (
-          <Skeleton key={i} className="size-9 rounded-md" />
-        ))}
+        {Array.from(
+          {
+            length: 36,
+          },
+          (_, i) => (
+            <Skeleton key={i} className="size-9 rounded-md" />
+          )
+        )}
       </div>
     </div>
   );

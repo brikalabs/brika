@@ -81,7 +81,11 @@ defineRenderer('box', ({ node, onAction }) => {
     grow: node.grow || undefined,
   });
 
-  const fitClass = hasImage ? bgFitVariants({ fit: node.backgroundFit }) : '';
+  const fitClass = hasImage
+    ? bgFitVariants({
+        fit: node.backgroundFit,
+      })
+    : '';
 
   return (
     <div
@@ -92,14 +96,25 @@ defineRenderer('box', ({ node, onAction }) => {
       {hasImage && bg && (
         <div
           className="absolute inset-0 rounded-[inherit]"
-          style={{ background: bg, opacity: node.opacity ?? 0.5 }}
+          style={{
+            background: bg,
+            opacity: node.opacity ?? 0.5,
+          }}
         />
       )}
 
       {node.blur && (
         <div
-          className={blurOverlayVariants({ blur: node.blur })}
-          style={!hasImage && bg ? { background: bg } : undefined}
+          className={blurOverlayVariants({
+            blur: node.blur,
+          })}
+          style={
+            !hasImage && bg
+              ? {
+                  background: bg,
+                }
+              : undefined
+          }
         />
       )}
 

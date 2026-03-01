@@ -13,7 +13,9 @@ export type Json =
   | number
   | string
   | Json[]
-  | { [k: string]: Json | undefined }
+  | {
+      [k: string]: Json | undefined;
+    }
   | undefined;
 
 /**

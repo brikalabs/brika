@@ -48,11 +48,18 @@ console.log(`   Dry run: ${isDryRun ? '✅ Yes' : '❌ No'}\n`);
 
 // Step 1: Build the schemas
 console.log('🔨 Building schemas...');
-const buildProcess = Bun.spawn(['bun', 'run', 'build'], {
-  cwd: rootDir,
-  stdout: 'inherit',
-  stderr: 'inherit',
-});
+const buildProcess = Bun.spawn(
+  [
+    'bun',
+    'run',
+    'build',
+  ],
+  {
+    cwd: rootDir,
+    stdout: 'inherit',
+    stderr: 'inherit',
+  }
+);
 
 const buildExit = await buildProcess.exited;
 if (buildExit !== 0) {
@@ -66,10 +73,18 @@ console.log('✅ Build complete\n');
 if (!isDryRun) {
   console.log('🔍 Checking if version exists on npm...');
 
-  const checkProcess = Bun.spawn(['npm', 'view', `${packageName}@${version}`, 'version'], {
-    stdout: 'pipe',
-    stderr: 'pipe',
-  });
+  const checkProcess = Bun.spawn(
+    [
+      'npm',
+      'view',
+      `${packageName}@${version}`,
+      'version',
+    ],
+    {
+      stdout: 'pipe',
+      stderr: 'pipe',
+    }
+  );
 
   const exitCode = await checkProcess.exited;
   let versionExists = false;
@@ -85,7 +100,12 @@ if (!isDryRun) {
         console.log('🗑️  Unpublishing existing version...\n');
 
         const unpublishProcess = Bun.spawn(
-          ['npm', 'unpublish', `${packageName}@${version}`, '--force'],
+          [
+            'npm',
+            'unpublish',
+            `${packageName}@${version}`,
+            '--force',
+          ],
           {
             cwd: rootDir,
             stdout: 'inherit',
@@ -124,11 +144,18 @@ if (!isDryRun) {
 if (isDryRun) {
   console.log('🔍 Dry run - showing what would be published...\n');
 
-  const dryRunProcess = Bun.spawn(['npm', 'publish', '--dry-run'], {
-    cwd: rootDir,
-    stdout: 'inherit',
-    stderr: 'inherit',
-  });
+  const dryRunProcess = Bun.spawn(
+    [
+      'npm',
+      'publish',
+      '--dry-run',
+    ],
+    {
+      cwd: rootDir,
+      stdout: 'inherit',
+      stderr: 'inherit',
+    }
+  );
 
   await dryRunProcess.exited;
   console.log('\n✅ Dry run complete (nothing was published)');
@@ -137,7 +164,12 @@ if (isDryRun) {
 
 console.log('📤 Publishing to npm...' + (isForce ? ' (forced)' : '') + '\n');
 
-const publishArgs = ['npm', 'publish', '--access', 'public'];
+const publishArgs = [
+  'npm',
+  'publish',
+  '--access',
+  'public',
+];
 
 if (isForce) {
   publishArgs.push('--force');

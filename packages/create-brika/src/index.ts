@@ -41,9 +41,19 @@ const { positionals, values } = parseArgs({
   allowPositionals: true,
   strict: false,
   options: {
-    help: { type: 'boolean', short: 'h', default: false },
-    git: { type: 'boolean', default: true },
-    install: { type: 'boolean', default: true },
+    help: {
+      type: 'boolean',
+      short: 'h',
+      default: false,
+    },
+    git: {
+      type: 'boolean',
+      default: true,
+    },
+    install: {
+      type: 'boolean',
+      default: true,
+    },
   },
 });
 

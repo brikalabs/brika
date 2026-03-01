@@ -1,8 +1,14 @@
 import { Link } from '@tanstack/react-router';
-import { ChevronDown, RefreshCw } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { ChevronDown, RefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Button, Collapsible, CollapsibleContent, CollapsibleTrigger, Separator } from '@/components/ui';
+import {
+  Button,
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+  Separator,
+} from '@/components/ui';
 import { cn } from '@/lib/utils';
 
 interface ErrorLayoutProps {
@@ -20,23 +26,29 @@ interface ErrorLayoutProps {
   showGoHome?: boolean;
 }
 
-function ErrorDebugPanel({ error }: Readonly<{ error: Error }>) {
+function ErrorDebugPanel({
+  error,
+}: Readonly<{
+  error: Error;
+}>) {
   return (
     <Collapsible className="w-full max-w-lg">
-      <CollapsibleTrigger className="group flex w-full items-center justify-center gap-1.5 text-xs text-muted-foreground/60 transition-colors hover:text-muted-foreground">
+      <CollapsibleTrigger className="group flex w-full items-center justify-center gap-1.5 text-muted-foreground/60 text-xs transition-colors hover:text-muted-foreground">
         <span className="font-mono">Details</span>
         <ChevronDown className="size-3 transition-transform group-data-[state=open]:rotate-180" />
       </CollapsibleTrigger>
       <CollapsibleContent>
         <div className="mt-3 overflow-hidden rounded-lg border border-border bg-muted/40 text-left">
           {/* Error name + message */}
-          <div className="border-b border-border bg-muted/60 px-3 py-2">
-            <p className="font-mono text-xs font-medium text-foreground">{error.name}: {error.message}</p>
+          <div className="border-border border-b bg-muted/60 px-3 py-2">
+            <p className="font-medium font-mono text-foreground text-xs">
+              {error.name}: {error.message}
+            </p>
           </div>
 
           {/* Stack trace */}
           {error.stack && (
-            <pre className="max-h-48 overflow-auto whitespace-pre-wrap break-all p-3 font-mono text-[11px] leading-5 text-muted-foreground">
+            <pre className="max-h-48 overflow-auto whitespace-pre-wrap break-all p-3 font-mono text-[11px] text-muted-foreground leading-5">
               {error.stack}
             </pre>
           )}
@@ -70,22 +82,27 @@ export function ErrorLayout({
     <div
       className={cn(
         'flex items-center justify-center',
-        variant === 'fullscreen' ? 'min-h-screen bg-background p-4' : 'flex-1 py-24',
+        variant === 'fullscreen' ? 'min-h-screen bg-background p-4' : 'flex-1 py-24'
       )}
     >
       <div className="flex max-w-sm flex-col items-center gap-6 text-center">
         {/* Icon */}
-        <div className={cn('flex size-20 items-center justify-center rounded-2xl', iconClassName ?? 'bg-muted')}>
+        <div
+          className={cn(
+            'flex size-20 items-center justify-center rounded-2xl',
+            iconClassName ?? 'bg-muted'
+          )}
+        >
           <Icon className="size-10" />
         </div>
 
         {/* Code + Title + Description */}
         <div className="space-y-2">
           {code && (
-            <p className="text-4xl font-bold tracking-tighter text-muted-foreground/50">{code}</p>
+            <p className="font-bold text-4xl text-muted-foreground/50 tracking-tighter">{code}</p>
           )}
-          <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
-          <p className="text-sm leading-relaxed text-muted-foreground">{description}</p>
+          <h1 className="font-semibold text-xl tracking-tight">{title}</h1>
+          <p className="text-muted-foreground text-sm leading-relaxed">{description}</p>
         </div>
 
         {/* Actions */}

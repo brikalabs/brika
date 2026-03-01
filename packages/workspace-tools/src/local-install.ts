@@ -25,9 +25,18 @@ const UI_SRC = join(ROOT, 'apps/ui/dist');
 const { values } = parseArgs({
   args: Bun.argv.slice(2),
   options: {
-    'skip-build': { type: 'boolean', default: false },
-    dir: { type: 'string' },
-    help: { type: 'boolean', short: 'h', default: false },
+    'skip-build': {
+      type: 'boolean',
+      default: false,
+    },
+    dir: {
+      type: 'string',
+    },
+    help: {
+      type: 'boolean',
+      short: 'h',
+      default: false,
+    },
   },
   strict: false,
 });
@@ -54,7 +63,11 @@ const BIN_DIR = join(
 const log = (msg: string) => console.log(`  ${msg}`);
 
 async function exec(args: string[], timeout = 5 * 60_000): Promise<void> {
-  const proc = Bun.spawn(args, { cwd: ROOT, stdout: 'inherit', stderr: 'inherit' });
+  const proc = Bun.spawn(args, {
+    cwd: ROOT,
+    stdout: 'inherit',
+    stderr: 'inherit',
+  });
   const kill = setTimeout(() => proc.kill(), timeout);
   const code = await proc.exited;
   clearTimeout(kill);
@@ -70,9 +83,22 @@ console.log(`\n  ${pc.bold(pc.cyan('BRIKA Local Install'))}\n`);
 
 if (!values['skip-build']) {
   log('Building UI...');
-  await exec(['bun', 'run', '--filter', '@brika/ui', 'build']);
+  await exec([
+    'bun',
+    'run',
+    '--filter',
+    '@brika/ui',
+    'build',
+  ]);
   log('Compiling binary...');
-  await exec(['bun', 'run', '--filter', '@brika/hub', 'build', '--compile']);
+  await exec([
+    'bun',
+    'run',
+    '--filter',
+    '@brika/hub',
+    'build',
+    '--compile',
+  ]);
   console.log();
 }
 
@@ -84,26 +110,37 @@ if (!existsSync(BINARY_SRC) || !existsSync(UI_SRC)) {
 }
 
 log(`Installing to ${BIN_DIR}...`);
-await mkdir(BIN_DIR, { recursive: true });
+await mkdir(BIN_DIR, {
+  recursive: true,
+});
 
 await copyFile(BINARY_SRC, join(BIN_DIR, BINARY_NAME));
 await chmod(join(BIN_DIR, BINARY_NAME), 0o755);
 
-await rm(join(BIN_DIR, 'ui'), { recursive: true, force: true });
-await cp(UI_SRC, join(BIN_DIR, 'ui'), { recursive: true });
+await rm(join(BIN_DIR, 'ui'), {
+  recursive: true,
+  force: true,
+});
+await cp(UI_SRC, join(BIN_DIR, 'ui'), {
+  recursive: true,
+});
 
 // ── PATH setup ──────────────────────────────────────────────────────────────
 
 const inPath = process.env.PATH?.split(':').includes(BIN_DIR);
 
 function resolveRcFile(shell: string, isFish: boolean): string {
-  if (shell === 'zsh') return join(homedir(), '.zshrc');
+  if (shell === 'zsh') {
+    return join(homedir(), '.zshrc');
+  }
   if (shell === 'bash') {
     return existsSync(join(homedir(), '.bash_profile'))
       ? join(homedir(), '.bash_profile')
       : join(homedir(), '.bashrc');
   }
-  if (isFish) return join(homedir(), '.config/fish/config.fish');
+  if (isFish) {
+    return join(homedir(), '.config/fish/config.fish');
+  }
   return join(homedir(), '.profile');
 }
 
@@ -117,18 +154,29 @@ if (!inPath) {
 
   if (!alreadyInRc) {
     const line = isFish ? `set -gx PATH ${BIN_DIR} $PATH` : `export PATH="${BIN_DIR}:$PATH"`;
-    await writeFile(rcFile, `\n# Brika\n${line}\n`, { flag: 'a' });
+    await writeFile(rcFile, `\n# Brika\n${line}\n`, {
+      flag: 'a',
+    });
     log(pc.dim(`Added to PATH in ${rcFile}`));
   }
 }
 
 // ── Verify ──────────────────────────────────────────────────────────────────
 
-const proc = Bun.spawn([join(BIN_DIR, BINARY_NAME), '--version'], {
-  stdout: 'pipe',
-  stderr: 'pipe',
-  env: { ...process.env, NO_COLOR: '1' },
-});
+const proc = Bun.spawn(
+  [
+    join(BIN_DIR, BINARY_NAME),
+    '--version',
+  ],
+  {
+    stdout: 'pipe',
+    stderr: 'pipe',
+    env: {
+      ...process.env,
+      NO_COLOR: '1',
+    },
+  }
+);
 const kill = setTimeout(() => proc.kill(), 10_000);
 const output = await new Response(proc.stdout).text();
 clearTimeout(kill);

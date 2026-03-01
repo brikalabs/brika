@@ -2,7 +2,7 @@ import { Link } from '@tanstack/react-router';
 import { ArrowLeft, Code2, Download, ExternalLink, Home, Package, Tag, User } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage, Badge, Button } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
-import { routes } from '@/routes';
+import { paths } from '@/routes/paths';
 import type { StorePlugin } from '../types';
 import { CompatibilityBadge } from './CompatibilityBadge';
 import { InstallButton } from './InstallButton';
@@ -14,8 +14,12 @@ interface StorePluginHeaderProps {
 }
 
 function formatDownloads(count: number): string {
-  if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
-  if (count >= 1000) return `${(count / 1000).toFixed(1)}K`;
+  if (count >= 1000000) {
+    return `${(count / 1000000).toFixed(1)}M`;
+  }
+  if (count >= 1000) {
+    return `${(count / 1000).toFixed(1)}K`;
+  }
   return String(count);
 }
 
@@ -32,7 +36,7 @@ export function StorePluginHeader({ plugin }: Readonly<StorePluginHeaderProps>) 
     <>
       {/* Back link */}
       <Link
-        to={routes.store.list.path}
+        to={paths.store.list.path}
         className="inline-flex items-center gap-2 text-muted-foreground transition-colors hover:text-foreground"
       >
         <ArrowLeft className="size-4" />

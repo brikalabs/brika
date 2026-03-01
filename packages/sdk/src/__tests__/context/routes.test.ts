@@ -24,18 +24,28 @@ describe('setupRoutes', () => {
 
     const result = setupRoutes(h.core);
     methods = result.methods;
-    routeRequest = h.implHandlers.get('routeRequest')!;
+    routeRequest = h.implHandlers.get('routeRequest') ?? (() => undefined);
   });
 
   test('registerRoute sends IPC with method and path', () => {
     methods.registerRoute('GET', '/api/status', () => {
-      return { status: 200 };
+      return {
+        status: 200,
+      };
     });
 
     expect(h.client.send).toHaveBeenCalledTimes(1);
-    const [def, payload] = h.client.send.mock.calls[0]! as [{ name: string }, unknown];
+    const [def, payload] = (h.client.send.mock.calls[0] ?? []) as [
+      {
+        name: string;
+      },
+      unknown,
+    ];
     expect(def.name).toBe('registerRoute');
-    expect(payload).toEqual({ method: 'GET', path: '/api/status' });
+    expect(payload).toEqual({
+      method: 'GET',
+      path: '/api/status',
+    });
   });
 
   test('routeRequest calls registered handler with correct args', async () => {
@@ -48,7 +58,9 @@ describe('setupRoutes', () => {
         body?: unknown;
       }) => ({
         status: 200,
-        body: { received: req.method },
+        body: {
+          received: req.method,
+        },
       })
     );
 
@@ -58,19 +70,36 @@ describe('setupRoutes', () => {
       routeId: 'POST:/api/data',
       method: 'POST',
       path: '/api/data',
-      query: { page: '1' },
-      headers: { 'content-type': 'application/json' },
-      body: { key: 'value' },
+      query: {
+        page: '1',
+      },
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: {
+        key: 'value',
+      },
     });
 
-    expect(result).toEqual({ status: 200, body: { received: 'POST' } });
+    expect(result).toEqual({
+      status: 200,
+      body: {
+        received: 'POST',
+      },
+    });
     expect(handler).toHaveBeenCalledTimes(1);
     expect(handler).toHaveBeenCalledWith({
       method: 'POST',
       path: '/api/data',
-      query: { page: '1' },
-      headers: { 'content-type': 'application/json' },
-      body: { key: 'value' },
+      query: {
+        page: '1',
+      },
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: {
+        key: 'value',
+      },
     });
   });
 
@@ -83,7 +112,12 @@ describe('setupRoutes', () => {
       headers: {},
     });
 
-    expect(result).toEqual({ status: 404, body: { error: 'Route handler not found' } });
+    expect(result).toEqual({
+      status: 404,
+      body: {
+        error: 'Route handler not found',
+      },
+    });
   });
 
   test('routeRequest returns 500 on handler error', async () => {
@@ -99,18 +133,35 @@ describe('setupRoutes', () => {
       headers: {},
     });
 
-    expect(result).toEqual({ status: 500, body: { error: 'Error: handler crashed' } });
+    expect(result).toEqual({
+      status: 500,
+      body: {
+        error: 'Error: handler crashed',
+      },
+    });
   });
 
   test('multiple routes can coexist', async () => {
     const getHandler = mock(() => {
-      return { status: 200, body: { action: 'get' } };
+      return {
+        status: 200,
+        body: {
+          action: 'get',
+        },
+      };
     });
     const postHandler = mock(() => {
-      return { status: 201, body: { action: 'post' } };
+      return {
+        status: 201,
+        body: {
+          action: 'post',
+        },
+      };
     });
     const deleteHandler = mock(() => {
-      return { status: 204 };
+      return {
+        status: 204,
+      };
     });
 
     methods.registerRoute('GET', '/api/items', getHandler);
@@ -127,7 +178,12 @@ describe('setupRoutes', () => {
       query: {},
       headers: {},
     });
-    expect(getResult).toEqual({ status: 200, body: { action: 'get' } });
+    expect(getResult).toEqual({
+      status: 200,
+      body: {
+        action: 'get',
+      },
+    });
     expect(getHandler).toHaveBeenCalledTimes(1);
 
     const postResult = await routeRequest({
@@ -135,10 +191,19 @@ describe('setupRoutes', () => {
       method: 'POST',
       path: '/api/items',
       query: {},
-      headers: { 'content-type': 'application/json' },
-      body: { name: 'widget' },
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: {
+        name: 'widget',
+      },
     });
-    expect(postResult).toEqual({ status: 201, body: { action: 'post' } });
+    expect(postResult).toEqual({
+      status: 201,
+      body: {
+        action: 'post',
+      },
+    });
     expect(postHandler).toHaveBeenCalledTimes(1);
 
     const deleteResult = await routeRequest({
@@ -148,7 +213,9 @@ describe('setupRoutes', () => {
       query: {},
       headers: {},
     });
-    expect(deleteResult).toEqual({ status: 204 });
+    expect(deleteResult).toEqual({
+      status: 204,
+    });
     expect(deleteHandler).toHaveBeenCalledTimes(1);
   });
 });

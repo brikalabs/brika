@@ -28,7 +28,13 @@ describe('serialize/deserialize', () => {
   });
 
   test('serializes and deserializes arrays', async () => {
-    const data = [1, 2, 3, 'four', true];
+    const data = [
+      1,
+      2,
+      3,
+      'four',
+      true,
+    ];
 
     const json = await serialize(data);
     const result = await deserialize(json);
@@ -52,10 +58,14 @@ describe('serialize/deserialize', () => {
   });
 
   test('serializes Date objects', async () => {
-    const data = { date: new Date('2024-01-15T12:00:00Z') };
+    const data = {
+      date: new Date('2024-01-15T12:00:00Z'),
+    };
 
     const json = await serialize(data);
-    const result = await deserialize<{ date: Date }>(json);
+    const result = await deserialize<{
+      date: Date;
+    }>(json);
 
     expect(result.date).toBeInstanceOf(Date);
     expect(result.date.toISOString()).toBe('2024-01-15T12:00:00.000Z');
@@ -64,13 +74,21 @@ describe('serialize/deserialize', () => {
   test('serializes Map objects', async () => {
     const data = {
       map: new Map([
-        ['key1', 'value1'],
-        ['key2', 'value2'],
+        [
+          'key1',
+          'value1',
+        ],
+        [
+          'key2',
+          'value2',
+        ],
       ]),
     };
 
     const json = await serialize(data);
-    const result = await deserialize<{ map: Map<string, string> }>(json);
+    const result = await deserialize<{
+      map: Map<string, string>;
+    }>(json);
 
     expect(result.map).toBeInstanceOf(Map);
     expect(result.map.get('key1')).toBe('value1');
@@ -78,10 +96,18 @@ describe('serialize/deserialize', () => {
   });
 
   test('serializes Set objects', async () => {
-    const data = { set: new Set([1, 2, 3]) };
+    const data = {
+      set: new Set([
+        1,
+        2,
+        3,
+      ]),
+    };
 
     const json = await serialize(data);
-    const result = await deserialize<{ set: Set<number> }>(json);
+    const result = await deserialize<{
+      set: Set<number>;
+    }>(json);
 
     expect(result.set).toBeInstanceOf(Set);
     expect(result.set.has(1)).toBe(true);
@@ -92,7 +118,9 @@ describe('serialize/deserialize', () => {
 
 describe('serializeSync/deserializeSync', () => {
   test('serializes and deserializes primitives synchronously', () => {
-    const data = { value: 42 };
+    const data = {
+      value: 42,
+    };
 
     const json = serializeSync(data);
     const result = deserializeSync(json);
@@ -101,10 +129,14 @@ describe('serializeSync/deserializeSync', () => {
   });
 
   test('handles Date synchronously', () => {
-    const data = { date: new Date('2024-01-15T12:00:00Z') };
+    const data = {
+      date: new Date('2024-01-15T12:00:00Z'),
+    };
 
     const json = serializeSync(data);
-    const result = deserializeSync<{ date: Date }>(json);
+    const result = deserializeSync<{
+      date: Date;
+    }>(json);
 
     expect(result.date).toBeInstanceOf(Date);
   });
@@ -112,7 +144,11 @@ describe('serializeSync/deserializeSync', () => {
 
 describe('assertSerializable', () => {
   test('does not throw for serializable data', async () => {
-    await expect(assertSerializable({ valid: true })).resolves.toBeUndefined();
+    await expect(
+      assertSerializable({
+        valid: true,
+      })
+    ).resolves.toBeUndefined();
   });
 
   test('throws for non-serializable data', async () => {
@@ -125,7 +161,9 @@ describe('assertSerializable', () => {
 
 describe('isSerializable', () => {
   test('returns true for serializable data', async () => {
-    const result = await isSerializable({ valid: true });
+    const result = await isSerializable({
+      valid: true,
+    });
     expect(result).toBe(true);
   });
 
@@ -174,7 +212,11 @@ describe('TransformerRegistry', () => {
     const buf = Buffer.from('hello');
     expect(registry.findForValue(buf)?.name).toBe('Buffer');
 
-    const u8 = new Uint8Array([1, 2, 3]);
+    const u8 = new Uint8Array([
+      1,
+      2,
+      3,
+    ]);
     expect(registry.findForValue(u8)?.name).toBe('Uint8Array');
 
     expect(registry.findForValue('not a buffer')).toBeUndefined();
@@ -185,7 +227,14 @@ describe('BlobTransformer', () => {
   const { BlobTransformer } = require('../transformer') as typeof import('../transformer');
 
   test('serializes Blob to base64 with type', async () => {
-    const blob = new Blob(['hello world'], { type: 'text/plain' });
+    const blob = new Blob(
+      [
+        'hello world',
+      ],
+      {
+        type: 'text/plain',
+      }
+    );
 
     const serialized = await BlobTransformer.serialize(blob);
 
@@ -199,7 +248,10 @@ describe('BlobTransformer', () => {
 
   test('deserializes base64 back to Blob', () => {
     const base64 = Buffer.from('hello world').toString('base64');
-    const data = { data: base64, type: 'application/octet-stream' };
+    const data = {
+      data: base64,
+      type: 'application/octet-stream',
+    };
 
     const blob = BlobTransformer.deserialize(data) as Blob;
 
@@ -227,7 +279,9 @@ describe('TransformerRegistry sync operations with async transformer', () => {
     const registry = new TransformerRegistry();
     registry.register(BlobTransformer);
 
-    const blob = new Blob(['test']);
+    const blob = new Blob([
+      'test',
+    ]);
     expect(() => registry.serializeSync(blob)).toThrow('Cannot sync serialize async type');
   });
 
@@ -238,7 +292,10 @@ describe('TransformerRegistry sync operations with async transformer', () => {
     // Manually construct a serialized Blob object
     const serialized = {
       __brika_type__: 'Blob',
-      data: { data: Buffer.from('test').toString('base64'), type: 'text/plain' },
+      data: {
+        data: Buffer.from('test').toString('base64'),
+        type: 'text/plain',
+      },
     };
 
     expect(() => registry.deserializeSync(serialized)).toThrow(

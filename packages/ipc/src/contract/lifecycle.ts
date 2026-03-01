@@ -73,6 +73,15 @@ export const updatePreference = message(
 /** Hub asks plugin for dynamic preference options */
 export const preferenceOptions = rpc(
   'preferenceOptions',
-  z.object({ name: z.string() }),
-  z.object({ options: z.array(z.object({ value: z.string(), label: z.string() })) })
+  z.object({
+    name: z.string(),
+  }),
+  z.object({
+    options: z.array(
+      z.object({
+        value: z.string(),
+        label: z.string(),
+      })
+    ),
+  })
 );

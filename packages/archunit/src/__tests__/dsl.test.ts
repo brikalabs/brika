@@ -8,62 +8,84 @@ import type { Rule } from '../types';
 const TEST_DIR = join(import.meta.dir, '.test-fixtures');
 
 async function setupFixtures(fixtures: Record<string, string>) {
-  await mkdir(TEST_DIR, { recursive: true });
+  await mkdir(TEST_DIR, {
+    recursive: true,
+  });
   for (const [path, content] of Object.entries(fixtures)) {
     const fullPath = join(TEST_DIR, path);
-    await mkdir(join(fullPath, '..'), { recursive: true });
+    await mkdir(join(fullPath, '..'), {
+      recursive: true,
+    });
     await writeFile(fullPath, content);
   }
 }
 
 function runRules(rules: Rule[]) {
-  return runArch({ rules, cwd: TEST_DIR });
+  return runArch({
+    rules,
+    cwd: TEST_DIR,
+  });
 }
 
 describe('files()', () => {
   afterEach(async () => {
-    await rm(TEST_DIR, { recursive: true, force: true });
+    await rm(TEST_DIR, {
+      recursive: true,
+      force: true,
+    });
   });
 
   describe('naming conventions', () => {
     it('bePascalCase - passes for PascalCase files', async () => {
-      await setupFixtures({ 'MyComponent.tsx': '' });
+      await setupFixtures({
+        'MyComponent.tsx': '',
+      });
       const rules = arch(files('*.tsx').should().bePascalCase());
       const result = await runRules(rules);
       expect(result.passed).toBe(true);
     });
 
     it('bePascalCase - fails for non-PascalCase files', async () => {
-      await setupFixtures({ 'myComponent.tsx': '' });
+      await setupFixtures({
+        'myComponent.tsx': '',
+      });
       const rules = arch(files('*.tsx').should().bePascalCase());
       const result = await runRules(rules);
       expect(result.passed).toBe(false);
-      expect(result.violations[0]!.violations[0]!.message).toContain('not PascalCase');
+      expect(result.violations[0]?.violations[0]?.message).toContain('not PascalCase');
     });
 
     it('beCamelCase - passes for camelCase files', async () => {
-      await setupFixtures({ 'myService.ts': '' });
+      await setupFixtures({
+        'myService.ts': '',
+      });
       const rules = arch(files('*.ts').should().beCamelCase());
       const result = await runRules(rules);
       expect(result.passed).toBe(true);
     });
 
     it('beCamelCase - fails for non-camelCase files', async () => {
-      await setupFixtures({ 'MyService.ts': '' });
+      await setupFixtures({
+        'MyService.ts': '',
+      });
       const rules = arch(files('*.ts').should().beCamelCase());
       const result = await runRules(rules);
       expect(result.passed).toBe(false);
     });
 
     it('beKebabCase - passes for kebab-case files', async () => {
-      await setupFixtures({ 'my-utils.ts': '' });
+      await setupFixtures({
+        'my-utils.ts': '',
+      });
       const rules = arch(files('*.ts').should().beKebabCase());
       const result = await runRules(rules);
       expect(result.passed).toBe(true);
     });
 
     it('beKebabCase - fails for non-kebab-case files', async () => {
-      await setupFixtures({ 'myUtils.ts': '' });
+      await setupFixtures({
+        'myUtils.ts': '',
+      });
       const rules = arch(files('*.ts').should().beKebabCase());
       const result = await runRules(rules);
       expect(result.passed).toBe(false);
@@ -72,24 +94,30 @@ describe('files()', () => {
 
   describe('haveMaxLines', () => {
     it('passes when file has fewer lines than max', async () => {
-      await setupFixtures({ 'small.ts': 'line1\nline2\nline3' });
+      await setupFixtures({
+        'small.ts': 'line1\nline2\nline3',
+      });
       const rules = arch(files('*.ts').should().haveMaxLines(10));
       const result = await runRules(rules);
       expect(result.passed).toBe(true);
     });
 
     it('fails when file exceeds max lines', async () => {
-      await setupFixtures({ 'large.ts': 'a\nb\nc\nd\ne\nf' });
+      await setupFixtures({
+        'large.ts': 'a\nb\nc\nd\ne\nf',
+      });
       const rules = arch(files('*.ts').should().haveMaxLines(3));
       const result = await runRules(rules);
       expect(result.passed).toBe(false);
-      expect(result.violations[0]!.violations[0]!.message).toContain('6 lines (max 3)');
+      expect(result.violations[0]?.violations[0]?.message).toContain('6 lines (max 3)');
     });
   });
 
   describe('contain / notContain', () => {
     it('contain - passes when pattern found', async () => {
-      await setupFixtures({ 'file.ts': 'export const foo = 1;' });
+      await setupFixtures({
+        'file.ts': 'export const foo = 1;',
+      });
       const rules = arch(
         files('*.ts')
           .should()
@@ -100,7 +128,9 @@ describe('files()', () => {
     });
 
     it('contain - fails when pattern not found', async () => {
-      await setupFixtures({ 'file.ts': 'const foo = 1;' });
+      await setupFixtures({
+        'file.ts': 'const foo = 1;',
+      });
       const rules = arch(
         files('*.ts')
           .should()
@@ -108,11 +138,13 @@ describe('files()', () => {
       );
       const result = await runRules(rules);
       expect(result.passed).toBe(false);
-      expect(result.violations[0]!.violations[0]!.message).toContain('Missing export');
+      expect(result.violations[0]?.violations[0]?.message).toContain('Missing export');
     });
 
     it('notContain - passes when pattern not found', async () => {
-      await setupFixtures({ 'file.ts': 'logger.info("test")' });
+      await setupFixtures({
+        'file.ts': 'logger.info("test")',
+      });
       const rules = arch(
         files('*.ts')
           .should()
@@ -123,7 +155,9 @@ describe('files()', () => {
     });
 
     it('notContain - fails when pattern found', async () => {
-      await setupFixtures({ 'file.ts': 'console.log("debug")' });
+      await setupFixtures({
+        'file.ts': 'console.log("debug")',
+      });
       const rules = arch(
         files('*.ts')
           .should()
@@ -131,13 +165,15 @@ describe('files()', () => {
       );
       const result = await runRules(rules);
       expect(result.passed).toBe(false);
-      expect(result.violations[0]!.violations[0]!.message).toContain('Found console.log');
+      expect(result.violations[0]?.violations[0]?.message).toContain('Found console.log');
     });
   });
 
   describe('notImportFrom', () => {
     it('passes when no forbidden imports', async () => {
-      await setupFixtures({ 'file.ts': "import { foo } from './utils';" });
+      await setupFixtures({
+        'file.ts': "import { foo } from './utils';",
+      });
       const rules = arch(
         files('*.ts')
           .should()
@@ -148,7 +184,9 @@ describe('files()', () => {
     });
 
     it('fails when forbidden import found', async () => {
-      await setupFixtures({ 'file.ts': "import _ from 'lodash';" });
+      await setupFixtures({
+        'file.ts': "import _ from 'lodash';",
+      });
       const rules = arch(
         files('*.ts')
           .should()
@@ -156,7 +194,7 @@ describe('files()', () => {
       );
       const result = await runRules(rules);
       expect(result.passed).toBe(false);
-      expect(result.violations[0]!.violations[0]!.message).toContain('Forbidden import');
+      expect(result.violations[0]?.violations[0]?.message).toContain('Forbidden import');
     });
   });
 
@@ -177,8 +215,8 @@ describe('files()', () => {
       const rules = arch(files('*.ts').should().onlyImportFrom(/^\.\//));
       const result = await runRules(rules);
       expect(result.passed).toBe(false);
-      expect(result.violations[0]!.violations[0]!.message).toContain('Import not allowed');
-      expect(result.violations[0]!.violations[0]!.message).toContain('lodash');
+      expect(result.violations[0]?.violations[0]?.message).toContain('Import not allowed');
+      expect(result.violations[0]?.violations[0]?.message).toContain('lodash');
     });
 
     it('passes when no imports exist', async () => {
@@ -201,7 +239,7 @@ describe('files()', () => {
       );
       const result = await runRules(rules);
       expect(result.passed).toBe(false);
-      expect(result.violations[0]!.violations[0]!.line).toBeGreaterThan(0);
+      expect(result.violations[0]?.violations[0]?.line).toBeGreaterThan(0);
     });
   });
 
@@ -220,7 +258,9 @@ describe('files()', () => {
     });
 
     it('fails when export does not match pattern', async () => {
-      await setupFixtures({ 'hooks.ts': 'export function getCounter() {}' });
+      await setupFixtures({
+        'hooks.ts': 'export function getCounter() {}',
+      });
       const rules = arch(
         files('hooks.ts')
           .should()
@@ -228,14 +268,17 @@ describe('files()', () => {
       );
       const result = await runRules(rules);
       expect(result.passed).toBe(false);
-      expect(result.violations[0]!.violations[0]!.message).toContain("doesn't match");
+      expect(result.violations[0]?.violations[0]?.message).toContain("doesn't match");
     });
   });
 });
 
 describe('class decorators', () => {
   afterEach(async () => {
-    await rm(TEST_DIR, { recursive: true, force: true });
+    await rm(TEST_DIR, {
+      recursive: true,
+      force: true,
+    });
   });
 
   describe('haveClassDecorator', () => {
@@ -264,11 +307,13 @@ class MyService {}
     });
 
     it('fails when class missing decorator', async () => {
-      await setupFixtures({ 'service.ts': 'export class MyService {}' });
+      await setupFixtures({
+        'service.ts': 'export class MyService {}',
+      });
       const rules = arch(files('*.ts').should().haveClassDecorator('@singleton'));
       const result = await runRules(rules);
       expect(result.passed).toBe(false);
-      expect(result.violations[0]!.violations[0]!.message).toContain('missing @singleton()');
+      expect(result.violations[0]?.violations[0]?.message).toContain('missing @singleton()');
     });
 
     it('does not match method decorators', async () => {
@@ -331,7 +376,9 @@ class MyService {
 
   describe('notHaveClassDecorator', () => {
     it('passes when class does not have decorator', async () => {
-      await setupFixtures({ 'service.ts': 'export class MyService {}' });
+      await setupFixtures({
+        'service.ts': 'export class MyService {}',
+      });
       const rules = arch(files('*.ts').should().notHaveClassDecorator('@deprecated'));
       const result = await runRules(rules);
       expect(result.passed).toBe(true);
@@ -353,19 +400,26 @@ export class OldService {}
 
 describe('class structure', () => {
   afterEach(async () => {
-    await rm(TEST_DIR, { recursive: true, force: true });
+    await rm(TEST_DIR, {
+      recursive: true,
+      force: true,
+    });
   });
 
   describe('exportClass', () => {
     it('passes when file exports a class', async () => {
-      await setupFixtures({ 'service.ts': 'export class MyService {}' });
+      await setupFixtures({
+        'service.ts': 'export class MyService {}',
+      });
       const rules = arch(files('*.ts').should().exportClass());
       const result = await runRules(rules);
       expect(result.passed).toBe(true);
     });
 
     it('fails when file does not export a class', async () => {
-      await setupFixtures({ 'utils.ts': 'export function helper() {}' });
+      await setupFixtures({
+        'utils.ts': 'export function helper() {}',
+      });
       const rules = arch(files('*.ts').should().exportClass());
       const result = await runRules(rules);
       expect(result.passed).toBe(false);
@@ -374,21 +428,27 @@ describe('class structure', () => {
 
   describe('exportFunction', () => {
     it('passes when file exports a function', async () => {
-      await setupFixtures({ 'utils.ts': 'export function helper() {}' });
+      await setupFixtures({
+        'utils.ts': 'export function helper() {}',
+      });
       const rules = arch(files('*.ts').should().exportFunction());
       const result = await runRules(rules);
       expect(result.passed).toBe(true);
     });
 
     it('passes with async function', async () => {
-      await setupFixtures({ 'utils.ts': 'export async function fetchData() {}' });
+      await setupFixtures({
+        'utils.ts': 'export async function fetchData() {}',
+      });
       const rules = arch(files('*.ts').should().exportFunction());
       const result = await runRules(rules);
       expect(result.passed).toBe(true);
     });
 
     it('fails when file does not export a function', async () => {
-      await setupFixtures({ 'types.ts': 'export type Foo = string;' });
+      await setupFixtures({
+        'types.ts': 'export type Foo = string;',
+      });
       const rules = arch(files('*.ts').should().exportFunction());
       const result = await runRules(rules);
       expect(result.passed).toBe(false);
@@ -397,7 +457,9 @@ describe('class structure', () => {
 
   describe('haveClassNamed', () => {
     it('passes when class name matches pattern', async () => {
-      await setupFixtures({ 'service.ts': 'class UserService {}' });
+      await setupFixtures({
+        'service.ts': 'class UserService {}',
+      });
       const rules = arch(
         files('*.ts')
           .should()
@@ -408,7 +470,9 @@ describe('class structure', () => {
     });
 
     it('fails when class name does not match', async () => {
-      await setupFixtures({ 'handler.ts': 'class UserHandler {}' });
+      await setupFixtures({
+        'handler.ts': 'class UserHandler {}',
+      });
       const rules = arch(
         files('*.ts')
           .should()
@@ -416,11 +480,13 @@ describe('class structure', () => {
       );
       const result = await runRules(rules);
       expect(result.passed).toBe(false);
-      expect(result.violations[0]!.violations[0]!.message).toContain("doesn't match");
+      expect(result.violations[0]?.violations[0]?.message).toContain("doesn't match");
     });
 
     it('fails when no class found', async () => {
-      await setupFixtures({ 'utils.ts': 'export const foo = 1;' });
+      await setupFixtures({
+        'utils.ts': 'export const foo = 1;',
+      });
       const rules = arch(
         files('*.ts')
           .should()
@@ -428,20 +494,24 @@ describe('class structure', () => {
       );
       const result = await runRules(rules);
       expect(result.passed).toBe(false);
-      expect(result.violations[0]!.violations[0]!.message).toContain('No class found');
+      expect(result.violations[0]?.violations[0]?.message).toContain('No class found');
     });
   });
 
   describe('extendClass', () => {
     it('passes when class extends base', async () => {
-      await setupFixtures({ 'service.ts': 'class UserService extends BaseService {}' });
+      await setupFixtures({
+        'service.ts': 'class UserService extends BaseService {}',
+      });
       const rules = arch(files('*.ts').should().extendClass('BaseService'));
       const result = await runRules(rules);
       expect(result.passed).toBe(true);
     });
 
     it('fails when class does not extend base', async () => {
-      await setupFixtures({ 'service.ts': 'class UserService {}' });
+      await setupFixtures({
+        'service.ts': 'class UserService {}',
+      });
       const rules = arch(files('*.ts').should().extendClass('BaseService'));
       const result = await runRules(rules);
       expect(result.passed).toBe(false);
@@ -450,7 +520,9 @@ describe('class structure', () => {
 
   describe('implementInterface', () => {
     it('passes when class implements interface', async () => {
-      await setupFixtures({ 'service.ts': 'class UserService implements Disposable {}' });
+      await setupFixtures({
+        'service.ts': 'class UserService implements Disposable {}',
+      });
       const rules = arch(files('*.ts').should().implementInterface('Disposable'));
       const result = await runRules(rules);
       expect(result.passed).toBe(true);
@@ -466,7 +538,9 @@ describe('class structure', () => {
     });
 
     it('fails when class does not implement interface', async () => {
-      await setupFixtures({ 'service.ts': 'class UserService {}' });
+      await setupFixtures({
+        'service.ts': 'class UserService {}',
+      });
       const rules = arch(files('*.ts').should().implementInterface('Disposable'));
       const result = await runRules(rules);
       expect(result.passed).toBe(false);
@@ -476,7 +550,10 @@ describe('class structure', () => {
 
 describe('dirs()', () => {
   afterEach(async () => {
-    await rm(TEST_DIR, { recursive: true, force: true });
+    await rm(TEST_DIR, {
+      recursive: true,
+      force: true,
+    });
   });
 
   describe('containFiles', () => {
@@ -497,7 +574,7 @@ describe('dirs()', () => {
       const rules = arch(dirs('features/*/').should().containFiles('index.ts', 'hooks.ts'));
       const result = await runRules(rules);
       expect(result.passed).toBe(false);
-      expect(result.violations[0]!.violations[0]!.message).toContain('Missing "hooks.ts"');
+      expect(result.violations[0]?.violations[0]?.message).toContain('Missing "hooks.ts"');
     });
   });
 
@@ -518,24 +595,29 @@ describe('dirs()', () => {
       const rules = arch(dirs('features/*/').should().containFile('index.ts'));
       const result = await runRules(rules);
       expect(result.passed).toBe(false);
-      expect(result.violations[0]!.violations[0]!.message).toContain('Missing "index.ts"');
+      expect(result.violations[0]?.violations[0]?.message).toContain('Missing "index.ts"');
     });
   });
 
   describe('because() on DirRule', () => {
     it('includes reason in rule name', async () => {
-      await setupFixtures({ 'features/auth/index.ts': '' });
+      await setupFixtures({
+        'features/auth/index.ts': '',
+      });
       const rules = arch(
         dirs('features/*/').should().containFile('index.ts').because('Features need an entry point')
       );
-      expect(rules[0]!.name).toContain('Features need an entry point');
+      expect(rules[0]?.name).toContain('Features need an entry point');
     });
   });
 });
 
 describe('chaining with and()', () => {
   afterEach(async () => {
-    await rm(TEST_DIR, { recursive: true, force: true });
+    await rm(TEST_DIR, {
+      recursive: true,
+      force: true,
+    });
   });
 
   it('chains multiple checks together', async () => {
@@ -583,23 +665,33 @@ export class MyService {
 
 describe('because() reason', () => {
   afterEach(async () => {
-    await rm(TEST_DIR, { recursive: true, force: true });
+    await rm(TEST_DIR, {
+      recursive: true,
+      force: true,
+    });
   });
 
   it('includes reason in rule name', async () => {
-    await setupFixtures({ 'myComponent.tsx': '' });
+    await setupFixtures({
+      'myComponent.tsx': '',
+    });
     const rules = arch(files('*.tsx').should().bePascalCase().because('Components use PascalCase'));
-    expect(rules[0]!.name).toContain('Components use PascalCase');
+    expect(rules[0]?.name).toContain('Components use PascalCase');
   });
 });
 
 describe('skip()', () => {
   afterEach(async () => {
-    await rm(TEST_DIR, { recursive: true, force: true });
+    await rm(TEST_DIR, {
+      recursive: true,
+      force: true,
+    });
   });
 
   it('skips file rules when skip() is called', async () => {
-    await setupFixtures({ 'myComponent.tsx': '' });
+    await setupFixtures({
+      'myComponent.tsx': '',
+    });
     const rules = arch(files('*.tsx').should().bePascalCase().skip());
     const result = await runRules(rules);
     expect(result.passed).toBe(true);
@@ -607,7 +699,9 @@ describe('skip()', () => {
   });
 
   it('skips dir rules when skip() is called', async () => {
-    await setupFixtures({ 'features/auth/index.ts': '' });
+    await setupFixtures({
+      'features/auth/index.ts': '',
+    });
     const rules = arch(dirs('features/*/').should().containFiles('index.ts', 'hooks.ts').skip());
     const result = await runRules(rules);
     expect(result.passed).toBe(true);
@@ -617,12 +711,17 @@ describe('skip()', () => {
 
 describe('defineConfig and printResult', () => {
   afterEach(async () => {
-    await rm(TEST_DIR, { recursive: true, force: true });
+    await rm(TEST_DIR, {
+      recursive: true,
+      force: true,
+    });
   });
 
   it('defineConfig returns the rules array', async () => {
     const { defineConfig } = await import('../runner');
-    const rules = [files('*.ts').should().beCamelCase()];
+    const rules = [
+      files('*.ts').should().beCamelCase(),
+    ];
     const config = defineConfig(rules);
     expect(config).toBe(rules);
   });
@@ -656,7 +755,14 @@ describe('defineConfig and printResult', () => {
       violations: [
         {
           rule: 'test rule',
-          violations: [{ file: 'test.ts', message: 'error', line: 10, suggestion: 'fix it' }],
+          violations: [
+            {
+              file: 'test.ts',
+              message: 'error',
+              line: 10,
+              suggestion: 'fix it',
+            },
+          ],
         },
       ],
       elapsed: 5.5,
@@ -674,11 +780,15 @@ describe('defineConfig and printResult', () => {
 
 describe('normalizeRules', () => {
   it('handles nested arrays', async () => {
-    await setupFixtures({ 'test.ts': '' });
+    await setupFixtures({
+      'test.ts': '',
+    });
     const { runArch } = await import('../runner');
 
     const nestedRules = [
-      [files('*.ts').should().beCamelCase()],
+      [
+        files('*.ts').should().beCamelCase(),
+      ],
       files('*.ts').should().haveMaxLines(100),
     ];
 
@@ -692,7 +802,9 @@ describe('normalizeRules', () => {
   });
 
   it('handles raw Rule objects', async () => {
-    await setupFixtures({ 'test.ts': '' });
+    await setupFixtures({
+      'test.ts': '',
+    });
     const { runArch } = await import('../runner');
 
     const rawRule: Rule = {
@@ -704,7 +816,9 @@ describe('normalizeRules', () => {
 
     const result = await runArch({
       cwd: TEST_DIR,
-      rules: [rawRule],
+      rules: [
+        rawRule,
+      ],
     });
 
     expect(result.rulesChecked).toBe(1);

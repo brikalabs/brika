@@ -13,7 +13,10 @@ export interface SkeletonNode extends BaseNode {
 }
 
 export function Skeleton(props: Omit<SkeletonNode, 'type'>): SkeletonNode {
-  return { type: 'skeleton', ...props };
+  return {
+    type: 'skeleton',
+    ...props,
+  };
 }
 
 declare module './_shared' {

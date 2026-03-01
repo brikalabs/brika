@@ -15,16 +15,22 @@ import { PluginRouteRegistry } from '@/runtime/plugins/plugin-route-registry';
 import { SparkRegistry } from '@/runtime/sparks';
 import { StateStore } from '@/runtime/state/state-store';
 
-useTestBed({ autoStub: false });
+useTestBed({
+  autoStub: false,
+});
 
 describe('PluginEventHandler', () => {
   let handler: PluginEventHandler;
-  let mockBlockRegistry: { register: ReturnType<typeof mock> };
+  let mockBlockRegistry: {
+    register: ReturnType<typeof mock>;
+  };
   let mockSparkRegistry: {
     register: ReturnType<typeof mock>;
     has: ReturnType<typeof mock>;
   };
-  let mockStateStore: { setHealth: ReturnType<typeof mock> };
+  let mockStateStore: {
+    setHealth: ReturnType<typeof mock>;
+  };
   let mockEventSystem: {
     dispatch: ReturnType<typeof mock>;
     subscribe: ReturnType<typeof mock>;
@@ -41,12 +47,16 @@ describe('PluginEventHandler', () => {
   };
 
   beforeEach(() => {
-    mockBlockRegistry = { register: mock() };
+    mockBlockRegistry = {
+      register: mock(),
+    };
     mockSparkRegistry = {
       register: mock(),
       has: mock().mockReturnValue(true),
     };
-    mockStateStore = { setHealth: mock() };
+    mockStateStore = {
+      setHealth: mock(),
+    };
     mockEventSystem = {
       dispatch: mock(),
       subscribe: mock().mockReturnValue(() => undefined),
@@ -83,13 +93,17 @@ describe('PluginEventHandler', () => {
       const emitHandler = mock();
       handler.setBlockEmitHandler(emitHandler);
 
-      handler.onBlockEmit('instance-1', 'output', { value: 42 });
+      handler.onBlockEmit('instance-1', 'output', {
+        value: 42,
+      });
 
       expect(emitHandler.mock.calls.length > 0).toBe(true);
       expect(emitHandler.mock.calls[emitHandler.mock.calls.length - 1]).toEqual([
         'instance-1',
         'output',
-        { value: 42 },
+        {
+          value: 42,
+        },
       ]);
     });
 
@@ -98,7 +112,9 @@ describe('PluginEventHandler', () => {
       handler.setBlockEmitHandler(emitHandler);
       handler.clearBlockEmitHandler();
 
-      handler.onBlockEmit('instance-1', 'output', { value: 42 });
+      handler.onBlockEmit('instance-1', 'output', {
+        value: 42,
+      });
 
       expect(emitHandler.mock.calls.length > 0).toBe(false);
     });
@@ -163,7 +179,9 @@ describe('PluginEventHandler', () => {
 
   describe('onPluginLog', () => {
     test('emits log entry', () => {
-      handler.onPluginLog('@test/plugin', 'info', 'Test log message', { key: 'value' });
+      handler.onPluginLog('@test/plugin', 'info', 'Test log message', {
+        key: 'value',
+      });
 
       // Logger emit should be called (via the mock)
       // We can verify it doesn't throw
@@ -177,20 +195,32 @@ describe('PluginEventHandler', () => {
 
   describe('registerBlock', () => {
     test('registers block with plugin info', () => {
-      handler.registerBlock('@test/plugin', { id: 'my-block', category: 'utility' });
+      handler.registerBlock('@test/plugin', {
+        id: 'my-block',
+        category: 'utility',
+      });
 
       expect(mockBlockRegistry.register.mock.calls.length > 0).toBe(true);
     });
 
     test('merges package metadata with block definition', () => {
-      const block = { id: 'timer', category: 'input' };
+      const block = {
+        id: 'timer',
+        category: 'input',
+      };
       const packageMetadata = {
         version: '1.0.0',
         description: 'Test plugin',
         author: 'Test Author',
         icon: 'timer-icon',
         homepage: 'https://example.com',
-        blocks: [{ id: 'timer', name: 'Timer Block', description: 'A timer' }],
+        blocks: [
+          {
+            id: 'timer',
+            name: 'Timer Block',
+            description: 'A timer',
+          },
+        ],
       };
 
       handler.registerBlock('@test/plugin', block, packageMetadata);
@@ -199,9 +229,13 @@ describe('PluginEventHandler', () => {
     });
 
     test('handles author as object', () => {
-      const block = { id: 'test' };
+      const block = {
+        id: 'test',
+      };
       const packageMetadata = {
-        author: { name: 'Object Author' },
+        author: {
+          name: 'Object Author',
+        },
       };
 
       handler.registerBlock('@test/plugin', block, packageMetadata);
@@ -210,10 +244,16 @@ describe('PluginEventHandler', () => {
     });
 
     test('handles package metadata without matching block in blocks array', () => {
-      const block = { id: 'unmatched-block' };
+      const block = {
+        id: 'unmatched-block',
+      };
       const packageMetadata = {
         version: '1.0.0',
-        blocks: [{ id: 'different-block' }],
+        blocks: [
+          {
+            id: 'different-block',
+          },
+        ],
       };
 
       handler.registerBlock('@test/plugin', block, packageMetadata);
@@ -222,7 +262,9 @@ describe('PluginEventHandler', () => {
     });
 
     test('handles no package metadata', () => {
-      const block = { id: 'bare-block' };
+      const block = {
+        id: 'bare-block',
+      };
 
       handler.registerBlock('@test/plugin', block);
 
@@ -235,7 +277,12 @@ describe('PluginEventHandler', () => {
 
   describe('registerSpark', () => {
     test('registers spark with spark registry', () => {
-      handler.registerSpark('@test/plugin', { id: 'my-spark', schema: { type: 'object' } });
+      handler.registerSpark('@test/plugin', {
+        id: 'my-spark',
+        schema: {
+          type: 'object',
+        },
+      });
 
       expect(mockSparkRegistry.register.mock.calls.length > 0).toBe(true);
     });
@@ -245,7 +292,9 @@ describe('PluginEventHandler', () => {
     test('dispatches spark event when spark exists', () => {
       mockSparkRegistry.has.mockReturnValue(true);
 
-      handler.emitSpark('@test/plugin', 'my-spark', { value: 42 });
+      handler.emitSpark('@test/plugin', 'my-spark', {
+        value: 42,
+      });
 
       expect(mockEventSystem.dispatch.mock.calls.length > 0).toBe(true);
     });
@@ -253,7 +302,9 @@ describe('PluginEventHandler', () => {
     test('warns and skips when spark not registered', () => {
       mockSparkRegistry.has.mockReturnValue(false);
 
-      handler.emitSpark('@test/plugin', 'unknown-spark', { value: 42 });
+      handler.emitSpark('@test/plugin', 'unknown-spark', {
+        value: 42,
+      });
 
       expect(mockEventSystem.dispatch.mock.calls.length > 0).toBe(false);
     });
@@ -283,7 +334,13 @@ describe('PluginEventHandler', () => {
       // Simulate matching event
       if (capturedCallback) {
         capturedCallback({
-          payload: { type: '@test/plugin:my-spark', payload: { data: 1 }, source: 'test' },
+          payload: {
+            type: '@test/plugin:my-spark',
+            payload: {
+              data: 1,
+            },
+            source: 'test',
+          },
           timestamp: Date.now(),
           id: 'action-1',
         });
@@ -291,7 +348,13 @@ describe('PluginEventHandler', () => {
 
         // Simulate non-matching event
         capturedCallback({
-          payload: { type: 'other:spark', payload: { data: 2 }, source: 'test' },
+          payload: {
+            type: 'other:spark',
+            payload: {
+              data: 2,
+            },
+            source: 'test',
+          },
           timestamp: Date.now(),
           id: 'action-2',
         });
@@ -304,7 +367,10 @@ describe('PluginEventHandler', () => {
     test('registers brick type and dispatches event', () => {
       const brickType = {
         id: 'test-brick',
-        families: ['sm', 'md'] as Array<'sm' | 'md' | 'lg'>,
+        families: [
+          'sm',
+          'md',
+        ] as Array<'sm' | 'md' | 'lg'>,
       };
 
       handler.registerBrickType('@test/plugin', brickType);
@@ -316,8 +382,16 @@ describe('PluginEventHandler', () => {
     test('registers brick type with manifest', () => {
       const brickType = {
         id: 'test-brick',
-        families: ['sm', 'md'] as Array<'sm' | 'md' | 'lg'>,
-        config: [{ key: 'color', type: 'string' }],
+        families: [
+          'sm',
+          'md',
+        ] as Array<'sm' | 'md' | 'lg'>,
+        config: [
+          {
+            key: 'color',
+            type: 'string',
+          },
+        ],
       };
       const manifest = {
         name: 'Test Brick',
@@ -339,7 +413,9 @@ describe('PluginEventHandler', () => {
     test('registers brick type without manifest', () => {
       const brickType = {
         id: 'test-brick',
-        families: ['lg'] as Array<'sm' | 'md' | 'lg'>,
+        families: [
+          'lg',
+        ] as Array<'sm' | 'md' | 'lg'>,
       };
 
       handler.registerBrickType('@test/plugin', brickType);
@@ -375,7 +451,13 @@ describe('PluginEventHandler', () => {
     test('patches brick instance and dispatches event', () => {
       mockBrickInstanceManager.patchBody.mockReturnValue(true);
 
-      const mutations = [{ op: 'replace', path: '/text', value: 'Hello' }];
+      const mutations = [
+        {
+          op: 'replace',
+          path: '/text',
+          value: 'Hello',
+        },
+      ];
       handler.patchBrickInstance('inst-1', mutations);
 
       expect(mockBrickInstanceManager.patchBody).toHaveBeenCalledWith('inst-1', mutations);
@@ -386,7 +468,13 @@ describe('PluginEventHandler', () => {
       mockBrickInstanceManager.patchBody.mockReturnValue(false);
       mockEventSystem.dispatch.mockClear();
 
-      const mutations = [{ op: 'replace', path: '/text', value: 'Hello' }];
+      const mutations = [
+        {
+          op: 'replace',
+          path: '/text',
+          value: 'Hello',
+        },
+      ];
       handler.patchBrickInstance('inst-1', mutations);
 
       expect(mockBrickInstanceManager.patchBody).toHaveBeenCalledWith('inst-1', mutations);

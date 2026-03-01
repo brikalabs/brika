@@ -4,7 +4,9 @@ import { useLocale } from '@/lib/use-locale';
 import { cn } from '@/lib/utils';
 
 export interface DashboardHeaderProps {
-  health?: { ok: boolean };
+  health?: {
+    ok: boolean;
+  };
 }
 
 export function DashboardHeader({ health }: Readonly<DashboardHeaderProps>) {

@@ -25,8 +25,14 @@ const createSimpleWorkflow = (): Workflow => ({
 
 const createBlockType = (
   id: string,
-  inputs: Array<{ id: string; schema: z.ZodType }> = [],
-  outputs: Array<{ id: string; schema: z.ZodType }> = []
+  inputs: Array<{
+    id: string;
+    schema: z.ZodType;
+  }> = [],
+  outputs: Array<{
+    id: string;
+    schema: z.ZodType;
+  }> = []
 ): BlockTypeDefinition => ({
   id,
   type: `plugin:${id}`,
@@ -49,7 +55,12 @@ const createBlockType = (
 });
 
 const createMockRegistry = (blockTypes: BlockTypeDefinition[]): BlockTypeRegistry => {
-  const map = new Map(blockTypes.map((bt) => [bt.type, bt]));
+  const map = new Map(
+    blockTypes.map((bt) => [
+      bt.type,
+      bt,
+    ])
+  );
   return {
     get: (type: string) => map.get(type),
   };
@@ -57,7 +68,9 @@ const createMockRegistry = (blockTypes: BlockTypeDefinition[]): BlockTypeRegistr
 
 const stringSchema = z.string();
 const numberSchema = z.number();
-const _objectSchema = z.object({ value: z.number() });
+const _objectSchema = z.object({
+  value: z.number(),
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Tests - Valid Workflows
@@ -76,8 +89,19 @@ describe('Workspace Validation - Valid Workflows', () => {
   });
 
   test('should validate workflow with single block and no connections', () => {
-    const blockType = createBlockType('timer', [], [{ id: 'tick', schema: numberSchema }]);
-    const registry = createMockRegistry([blockType]);
+    const blockType = createBlockType(
+      'timer',
+      [],
+      [
+        {
+          id: 'tick',
+          schema: numberSchema,
+        },
+      ]
+    );
+    const registry = createMockRegistry([
+      blockType,
+    ]);
 
     const workflow: Workflow = {
       ...createSimpleWorkflow(),
@@ -99,9 +123,30 @@ describe('Workspace Validation - Valid Workflows', () => {
   });
 
   test('should validate workflow with valid connection', () => {
-    const timerType = createBlockType('timer', [], [{ id: 'tick', schema: numberSchema }]);
-    const loggerType = createBlockType('logger', [{ id: 'input', schema: numberSchema }], []);
-    const registry = createMockRegistry([timerType, loggerType]);
+    const timerType = createBlockType(
+      'timer',
+      [],
+      [
+        {
+          id: 'tick',
+          schema: numberSchema,
+        },
+      ]
+    );
+    const loggerType = createBlockType(
+      'logger',
+      [
+        {
+          id: 'input',
+          schema: numberSchema,
+        },
+      ],
+      []
+    );
+    const registry = createMockRegistry([
+      timerType,
+      loggerType,
+    ]);
 
     const workflow: Workflow = {
       ...createSimpleWorkflow(),
@@ -111,13 +156,17 @@ describe('Workspace Validation - Valid Workflows', () => {
           type: 'plugin:timer',
           config: {},
           inputs: {},
-          outputs: { tick: 'logger-1:input' },
+          outputs: {
+            tick: 'logger-1:input',
+          },
         },
         {
           id: 'logger-1',
           type: 'plugin:logger',
           config: {},
-          inputs: { input: 'timer-1:tick' },
+          inputs: {
+            input: 'timer-1:tick',
+          },
           outputs: {},
         },
       ],
@@ -130,14 +179,46 @@ describe('Workspace Validation - Valid Workflows', () => {
   });
 
   test('should validate workflow with multiple blocks and connections', () => {
-    const timerType = createBlockType('timer', [], [{ id: 'tick', schema: numberSchema }]);
+    const timerType = createBlockType(
+      'timer',
+      [],
+      [
+        {
+          id: 'tick',
+          schema: numberSchema,
+        },
+      ]
+    );
     const filterType = createBlockType(
       'filter',
-      [{ id: 'in', schema: numberSchema }],
-      [{ id: 'out', schema: numberSchema }]
+      [
+        {
+          id: 'in',
+          schema: numberSchema,
+        },
+      ],
+      [
+        {
+          id: 'out',
+          schema: numberSchema,
+        },
+      ]
     );
-    const loggerType = createBlockType('logger', [{ id: 'input', schema: numberSchema }], []);
-    const registry = createMockRegistry([timerType, filterType, loggerType]);
+    const loggerType = createBlockType(
+      'logger',
+      [
+        {
+          id: 'input',
+          schema: numberSchema,
+        },
+      ],
+      []
+    );
+    const registry = createMockRegistry([
+      timerType,
+      filterType,
+      loggerType,
+    ]);
 
     const workflow: Workflow = {
       ...createSimpleWorkflow(),
@@ -147,20 +228,28 @@ describe('Workspace Validation - Valid Workflows', () => {
           type: 'plugin:timer',
           config: {},
           inputs: {},
-          outputs: { tick: 'filter-1:in' },
+          outputs: {
+            tick: 'filter-1:in',
+          },
         },
         {
           id: 'filter-1',
           type: 'plugin:filter',
           config: {},
-          inputs: { in: 'timer-1:tick' },
-          outputs: { out: 'logger-1:input' },
+          inputs: {
+            in: 'timer-1:tick',
+          },
+          outputs: {
+            out: 'logger-1:input',
+          },
         },
         {
           id: 'logger-1',
           type: 'plugin:logger',
           config: {},
-          inputs: { input: 'filter-1:out' },
+          inputs: {
+            input: 'filter-1:out',
+          },
           outputs: {},
         },
       ],
@@ -209,8 +298,20 @@ describe('Workspace Validation - Block Type Errors', () => {
     const workflow: Workflow = {
       ...createSimpleWorkflow(),
       blocks: [
-        { id: 'block-1', type: 'plugin:unknown1', config: {}, inputs: {}, outputs: {} },
-        { id: 'block-2', type: 'plugin:unknown2', config: {}, inputs: {}, outputs: {} },
+        {
+          id: 'block-1',
+          type: 'plugin:unknown1',
+          config: {},
+          inputs: {},
+          outputs: {},
+        },
+        {
+          id: 'block-2',
+          type: 'plugin:unknown2',
+          config: {},
+          inputs: {},
+          outputs: {},
+        },
       ],
     };
 
@@ -229,8 +330,19 @@ describe('Workspace Validation - Block Type Errors', () => {
 
 describe('Workspace Validation - Port Errors', () => {
   test('should detect unknown output port', () => {
-    const blockType = createBlockType('timer', [], [{ id: 'tick', schema: numberSchema }]);
-    const registry = createMockRegistry([blockType]);
+    const blockType = createBlockType(
+      'timer',
+      [],
+      [
+        {
+          id: 'tick',
+          schema: numberSchema,
+        },
+      ]
+    );
+    const registry = createMockRegistry([
+      blockType,
+    ]);
 
     const workflow: Workflow = {
       ...createSimpleWorkflow(),
@@ -240,7 +352,9 @@ describe('Workspace Validation - Port Errors', () => {
           type: 'plugin:timer',
           config: {},
           inputs: {},
-          outputs: { invalidPort: 'target:input' },
+          outputs: {
+            invalidPort: 'target:input',
+          },
         },
       ],
     };
@@ -257,8 +371,19 @@ describe('Workspace Validation - Port Errors', () => {
   });
 
   test('should detect unknown input port', () => {
-    const blockType = createBlockType('logger', [{ id: 'input', schema: stringSchema }], []);
-    const registry = createMockRegistry([blockType]);
+    const blockType = createBlockType(
+      'logger',
+      [
+        {
+          id: 'input',
+          schema: stringSchema,
+        },
+      ],
+      []
+    );
+    const registry = createMockRegistry([
+      blockType,
+    ]);
 
     const workflow: Workflow = {
       ...createSimpleWorkflow(),
@@ -267,7 +392,9 @@ describe('Workspace Validation - Port Errors', () => {
           id: 'logger-1',
           type: 'plugin:logger',
           config: {},
-          inputs: { invalidPort: 'source:output' },
+          inputs: {
+            invalidPort: 'source:output',
+          },
           outputs: {},
         },
       ],
@@ -291,8 +418,19 @@ describe('Workspace Validation - Port Errors', () => {
 
 describe('Workspace Validation - Connection Errors', () => {
   test('should detect invalid port reference format', () => {
-    const blockType = createBlockType('timer', [], [{ id: 'tick', schema: numberSchema }]);
-    const registry = createMockRegistry([blockType]);
+    const blockType = createBlockType(
+      'timer',
+      [],
+      [
+        {
+          id: 'tick',
+          schema: numberSchema,
+        },
+      ]
+    );
+    const registry = createMockRegistry([
+      blockType,
+    ]);
 
     const workflow: Workflow = {
       ...createSimpleWorkflow(),
@@ -302,7 +440,9 @@ describe('Workspace Validation - Connection Errors', () => {
           type: 'plugin:timer',
           config: {},
           inputs: {},
-          outputs: { tick: 'invalid-ref-format' as `${string}:${string}` }, // Missing colon separator (intentionally invalid)
+          outputs: {
+            tick: 'invalid-ref-format' as `${string}:${string}`,
+          }, // Missing colon separator (intentionally invalid)
         },
       ],
     };
@@ -319,8 +459,19 @@ describe('Workspace Validation - Connection Errors', () => {
   });
 
   test('should detect target block not found', () => {
-    const blockType = createBlockType('timer', [], [{ id: 'tick', schema: numberSchema }]);
-    const registry = createMockRegistry([blockType]);
+    const blockType = createBlockType(
+      'timer',
+      [],
+      [
+        {
+          id: 'tick',
+          schema: numberSchema,
+        },
+      ]
+    );
+    const registry = createMockRegistry([
+      blockType,
+    ]);
 
     const workflow: Workflow = {
       ...createSimpleWorkflow(),
@@ -330,7 +481,9 @@ describe('Workspace Validation - Connection Errors', () => {
           type: 'plugin:timer',
           config: {},
           inputs: {},
-          outputs: { tick: 'non-existent:input' },
+          outputs: {
+            tick: 'non-existent:input',
+          },
         },
       ],
     };
@@ -347,8 +500,19 @@ describe('Workspace Validation - Connection Errors', () => {
   });
 
   test('should detect source block not found in input connections', () => {
-    const blockType = createBlockType('logger', [{ id: 'input', schema: stringSchema }], []);
-    const registry = createMockRegistry([blockType]);
+    const blockType = createBlockType(
+      'logger',
+      [
+        {
+          id: 'input',
+          schema: stringSchema,
+        },
+      ],
+      []
+    );
+    const registry = createMockRegistry([
+      blockType,
+    ]);
 
     const workflow: Workflow = {
       ...createSimpleWorkflow(),
@@ -357,7 +521,9 @@ describe('Workspace Validation - Connection Errors', () => {
           id: 'logger-1',
           type: 'plugin:logger',
           config: {},
-          inputs: { input: 'non-existent:output' },
+          inputs: {
+            input: 'non-existent:output',
+          },
           outputs: {},
         },
       ],
@@ -375,8 +541,19 @@ describe('Workspace Validation - Connection Errors', () => {
   });
 
   test('should detect unknown target block type', () => {
-    const timerType = createBlockType('timer', [], [{ id: 'tick', schema: numberSchema }]);
-    const registry = createMockRegistry([timerType]);
+    const timerType = createBlockType(
+      'timer',
+      [],
+      [
+        {
+          id: 'tick',
+          schema: numberSchema,
+        },
+      ]
+    );
+    const registry = createMockRegistry([
+      timerType,
+    ]);
 
     const workflow: Workflow = {
       ...createSimpleWorkflow(),
@@ -386,13 +563,17 @@ describe('Workspace Validation - Connection Errors', () => {
           type: 'plugin:timer',
           config: {},
           inputs: {},
-          outputs: { tick: 'logger-1:input' },
+          outputs: {
+            tick: 'logger-1:input',
+          },
         },
         {
           id: 'logger-1',
           type: 'plugin:unknown-logger', // Unknown type
           config: {},
-          inputs: { input: 'timer-1:tick' },
+          inputs: {
+            input: 'timer-1:tick',
+          },
           outputs: {},
         },
       ],
@@ -408,9 +589,30 @@ describe('Workspace Validation - Connection Errors', () => {
   });
 
   test('should detect target port not found', () => {
-    const timerType = createBlockType('timer', [], [{ id: 'tick', schema: numberSchema }]);
-    const loggerType = createBlockType('logger', [{ id: 'input', schema: numberSchema }], []);
-    const registry = createMockRegistry([timerType, loggerType]);
+    const timerType = createBlockType(
+      'timer',
+      [],
+      [
+        {
+          id: 'tick',
+          schema: numberSchema,
+        },
+      ]
+    );
+    const loggerType = createBlockType(
+      'logger',
+      [
+        {
+          id: 'input',
+          schema: numberSchema,
+        },
+      ],
+      []
+    );
+    const registry = createMockRegistry([
+      timerType,
+      loggerType,
+    ]);
 
     const workflow: Workflow = {
       ...createSimpleWorkflow(),
@@ -420,7 +622,9 @@ describe('Workspace Validation - Connection Errors', () => {
           type: 'plugin:timer',
           config: {},
           inputs: {},
-          outputs: { tick: 'logger-1:wrongPort' }, // Port doesn't exist
+          outputs: {
+            tick: 'logger-1:wrongPort',
+          }, // Port doesn't exist
         },
         {
           id: 'logger-1',
@@ -454,7 +658,14 @@ describe('Workspace Validation - Connection Errors', () => {
       icon: 'box',
       color: '#888888',
       inputs: [],
-      outputs: [{ id: 'out', direction: 'output', nameKey: 'ports.out', schema: numberSchema }],
+      outputs: [
+        {
+          id: 'out',
+          direction: 'output',
+          nameKey: 'ports.out',
+          schema: numberSchema,
+        },
+      ],
       configSchema: z.object({}),
     };
 
@@ -468,13 +679,21 @@ describe('Workspace Validation - Connection Errors', () => {
       color: '#888888',
       inputs: [
         // This port is marked as output but should be input - will cause validation error
-        { id: 'in', direction: 'output' as 'input', nameKey: 'ports.in', schema: numberSchema },
+        {
+          id: 'in',
+          direction: 'output' as 'input',
+          nameKey: 'ports.in',
+          schema: numberSchema,
+        },
       ],
       outputs: [],
       configSchema: z.object({}),
     };
 
-    const registry = createMockRegistry([sourceType, targetType]);
+    const registry = createMockRegistry([
+      sourceType,
+      targetType,
+    ]);
 
     const workflow: Workflow = {
       ...createSimpleWorkflow(),
@@ -484,13 +703,17 @@ describe('Workspace Validation - Connection Errors', () => {
           type: 'plugin:source',
           config: {},
           inputs: {},
-          outputs: { out: 'target-1:in' },
+          outputs: {
+            out: 'target-1:in',
+          },
         },
         {
           id: 'target-1',
           type: 'plugin:target',
           config: {},
-          inputs: { in: 'source-1:out' },
+          inputs: {
+            in: 'source-1:out',
+          },
           outputs: {},
         },
       ],
@@ -519,9 +742,30 @@ describe('Workspace Validation - Connection Errors', () => {
 
 describe('Workspace Validation - Warnings', () => {
   test('should warn about missing bidirectional reference', () => {
-    const timerType = createBlockType('timer', [], [{ id: 'tick', schema: numberSchema }]);
-    const loggerType = createBlockType('logger', [{ id: 'input', schema: numberSchema }], []);
-    const registry = createMockRegistry([timerType, loggerType]);
+    const timerType = createBlockType(
+      'timer',
+      [],
+      [
+        {
+          id: 'tick',
+          schema: numberSchema,
+        },
+      ]
+    );
+    const loggerType = createBlockType(
+      'logger',
+      [
+        {
+          id: 'input',
+          schema: numberSchema,
+        },
+      ],
+      []
+    );
+    const registry = createMockRegistry([
+      timerType,
+      loggerType,
+    ]);
 
     const workflow: Workflow = {
       ...createSimpleWorkflow(),
@@ -531,7 +775,9 @@ describe('Workspace Validation - Warnings', () => {
           type: 'plugin:timer',
           config: {},
           inputs: {},
-          outputs: { tick: 'logger-1:input' },
+          outputs: {
+            tick: 'logger-1:input',
+          },
         },
         {
           id: 'logger-1',
@@ -557,8 +803,19 @@ describe('Workspace Validation - Warnings', () => {
   });
 
   test('should warn about orphan blocks', () => {
-    const loggerType = createBlockType('logger', [{ id: 'input', schema: stringSchema }], []);
-    const registry = createMockRegistry([loggerType]);
+    const loggerType = createBlockType(
+      'logger',
+      [
+        {
+          id: 'input',
+          schema: stringSchema,
+        },
+      ],
+      []
+    );
+    const registry = createMockRegistry([
+      loggerType,
+    ]);
 
     const workflow: Workflow = {
       ...createSimpleWorkflow(),
@@ -585,8 +842,19 @@ describe('Workspace Validation - Warnings', () => {
   });
 
   test('should not warn about blocks without input ports', () => {
-    const timerType = createBlockType('timer', [], [{ id: 'tick', schema: numberSchema }]);
-    const registry = createMockRegistry([timerType]);
+    const timerType = createBlockType(
+      'timer',
+      [],
+      [
+        {
+          id: 'tick',
+          schema: numberSchema,
+        },
+      ]
+    );
+    const registry = createMockRegistry([
+      timerType,
+    ]);
 
     const workflow: Workflow = {
       ...createSimpleWorkflow(),
@@ -614,8 +882,19 @@ describe('Workspace Validation - Warnings', () => {
 
 describe('Workspace Validation - Edge Cases', () => {
   test('should handle empty inputs and outputs objects', () => {
-    const blockType = createBlockType('timer', [], [{ id: 'tick', schema: numberSchema }]);
-    const registry = createMockRegistry([blockType]);
+    const blockType = createBlockType(
+      'timer',
+      [],
+      [
+        {
+          id: 'tick',
+          schema: numberSchema,
+        },
+      ]
+    );
+    const registry = createMockRegistry([
+      blockType,
+    ]);
 
     const workflow: Workflow = {
       ...createSimpleWorkflow(),
@@ -637,8 +916,19 @@ describe('Workspace Validation - Edge Cases', () => {
   });
 
   test('should handle undefined port references', () => {
-    const blockType = createBlockType('timer', [], [{ id: 'tick', schema: numberSchema }]);
-    const registry = createMockRegistry([blockType]);
+    const blockType = createBlockType(
+      'timer',
+      [],
+      [
+        {
+          id: 'tick',
+          schema: numberSchema,
+        },
+      ]
+    );
+    const registry = createMockRegistry([
+      blockType,
+    ]);
 
     const workflow: Workflow = {
       ...createSimpleWorkflow(),
@@ -648,7 +938,9 @@ describe('Workspace Validation - Edge Cases', () => {
           type: 'plugin:timer',
           config: {},
           inputs: {},
-          outputs: { tick: undefined }, // Undefined reference
+          outputs: {
+            tick: undefined,
+          }, // Undefined reference
         },
       ],
     };
@@ -664,9 +956,27 @@ describe('Workspace Validation - Edge Cases', () => {
     const workflow: Workflow = {
       ...createSimpleWorkflow(),
       blocks: [
-        { id: 'block-1', type: 'unknown1', config: {}, inputs: {}, outputs: {} },
-        { id: 'block-2', type: 'unknown2', config: {}, inputs: {}, outputs: {} },
-        { id: 'block-3', type: 'unknown3', config: {}, inputs: {}, outputs: {} },
+        {
+          id: 'block-1',
+          type: 'unknown1',
+          config: {},
+          inputs: {},
+          outputs: {},
+        },
+        {
+          id: 'block-2',
+          type: 'unknown2',
+          config: {},
+          inputs: {},
+          outputs: {},
+        },
+        {
+          id: 'block-3',
+          type: 'unknown3',
+          config: {},
+          inputs: {},
+          outputs: {},
+        },
       ],
     };
 

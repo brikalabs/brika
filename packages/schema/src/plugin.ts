@@ -69,15 +69,44 @@ const BasePackageJson = z.looseObject({
   funding: z.optional(Funding),
   files: z.optional(z.array(z.string())),
   exports: z.optional(
-    z.union([z.null(), z.string(), z.array(z.string()), z.record(z.string(), z.unknown())])
+    z.union([
+      z.null(),
+      z.string(),
+      z.array(z.string()),
+      z.record(z.string(), z.unknown()),
+    ])
   ),
-  type: z.optional(z.literal(['module', 'commonjs'])),
+  type: z.optional(
+    z.literal([
+      'module',
+      'commonjs',
+    ])
+  ),
   main: z.optional(z.string()),
   browser: z.optional(
-    z.union([z.string(), z.record(z.string(), z.union([z.string(), z.boolean()]))])
+    z.union([
+      z.string(),
+      z.record(
+        z.string(),
+        z.union([
+          z.string(),
+          z.boolean(),
+        ])
+      ),
+    ])
   ),
-  bin: z.optional(z.union([z.string(), z.record(z.string(), z.string())])),
-  man: z.optional(z.union([z.string(), z.array(z.string())])),
+  bin: z.optional(
+    z.union([
+      z.string(),
+      z.record(z.string(), z.string()),
+    ])
+  ),
+  man: z.optional(
+    z.union([
+      z.string(),
+      z.array(z.string()),
+    ])
+  ),
   directories: z.optional(z.record(z.string(), z.string())),
   repository: z.optional(Repository),
   scripts: z.optional(z.record(z.string(), z.string())),
@@ -85,9 +114,26 @@ const BasePackageJson = z.looseObject({
   dependencies: z.optional(z.record(z.string(), z.string())),
   devDependencies: z.optional(z.record(z.string(), z.string())),
   peerDependencies: z.optional(z.record(z.string(), z.string())),
-  peerDependenciesMeta: z.optional(z.record(z.string(), z.object({ optional: z.boolean() }))),
-  bundleDependencies: z.optional(z.union([z.boolean(), z.array(z.string())])),
-  bundledDependencies: z.optional(z.union([z.boolean(), z.array(z.string())])),
+  peerDependenciesMeta: z.optional(
+    z.record(
+      z.string(),
+      z.object({
+        optional: z.boolean(),
+      })
+    )
+  ),
+  bundleDependencies: z.optional(
+    z.union([
+      z.boolean(),
+      z.array(z.string()),
+    ])
+  ),
+  bundledDependencies: z.optional(
+    z.union([
+      z.boolean(),
+      z.array(z.string()),
+    ])
+  ),
   optionalDependencies: z.optional(z.record(z.string(), z.string())),
   overrides: z.optional(z.record(z.string(), z.unknown())),
   engines: z.optional(z.record(z.string(), z.string())),
@@ -100,7 +146,12 @@ const BasePackageJson = z.looseObject({
   types: z.optional(z.string()),
   typings: z.optional(z.string()),
   packageManager: z.optional(z.string()),
-  sideEffects: z.optional(z.union([z.boolean(), z.array(z.string())])),
+  sideEffects: z.optional(
+    z.union([
+      z.boolean(),
+      z.array(z.string()),
+    ])
+  ),
   imports: z.optional(z.record(z.string(), z.unknown())),
 });
 
@@ -132,7 +183,14 @@ const BlockSchema = z.object({
   id: z.string().describe('Block identifier (local to plugin)'),
   name: z.optional(z.string().describe('Display name')),
   description: z.optional(z.string().describe('Human-readable description')),
-  category: z.literal(['trigger', 'flow', 'action', 'transform']).describe('Block category'),
+  category: z
+    .literal([
+      'trigger',
+      'flow',
+      'action',
+      'transform',
+    ])
+    .describe('Block category'),
   icon: z.optional(z.string().describe('Lucide icon name')),
   color: z.optional(
     z
@@ -228,7 +286,11 @@ export type PreferenceSchema = z.infer<typeof PreferenceSchema>;
 // Brick Schema (depends on PreferenceSchema for per-instance config)
 // ============================================================================
 
-const BrickFamilySchema = z.literal(['sm', 'md', 'lg']);
+const BrickFamilySchema = z.literal([
+  'sm',
+  'md',
+  'lg',
+]);
 
 const BrickSchema = z.object({
   id: z.string().describe('Brick identifier (local to plugin)'),

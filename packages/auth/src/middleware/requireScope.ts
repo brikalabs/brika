@@ -5,8 +5,8 @@
 
 import { inject } from '@brika/di';
 import type { HonoContext, Middleware } from '@brika/router';
-import { Scope, Session } from '../types';
 import { ScopeService } from '../services/ScopeService';
+import { Scope, Session } from '../types';
 
 /**
  * Hono middleware to enforce scope requirements.
@@ -28,7 +28,11 @@ export function requireScope(required: Scope | Scope[]): Middleware {
       );
     }
 
-    const requiredScopes = Array.isArray(required) ? required : [required];
+    const requiredScopes = Array.isArray(required)
+      ? required
+      : [
+          required,
+        ];
     const hasScope = requiredScopes.some((scope) => scopeService.hasScope(session.scopes, scope));
 
     if (!hasScope) {

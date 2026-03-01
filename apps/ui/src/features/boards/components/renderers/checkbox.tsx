@@ -8,7 +8,9 @@ defineRenderer('checkbox', ({ node, onAction }) => {
 
   useEffect(() => {
     setLocal(node.checked);
-  }, [node.checked]);
+  }, [
+    node.checked,
+  ]);
 
   return (
     <label
@@ -25,7 +27,9 @@ defineRenderer('checkbox', ({ node, onAction }) => {
         className="mt-0.5 size-3.5 shrink-0 accent-primary"
         onChange={(e) => {
           setLocal(e.target.checked);
-          onAction?.(node.onToggle, { checked: e.target.checked });
+          onAction?.(node.onToggle, {
+            checked: e.target.checked,
+          });
         }}
       />
       <div className="flex min-w-0 flex-col gap-0.5">

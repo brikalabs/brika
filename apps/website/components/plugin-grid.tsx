@@ -22,7 +22,13 @@ function repeat<T>(items: T[], min: number): T[] {
 }
 
 /* ── Icon with fallback ── */
-function PluginIcon({ src, name }: Readonly<{ src: string; name: string }>) {
+function PluginIcon({
+  src,
+  name,
+}: Readonly<{
+  src: string;
+  name: string;
+}>) {
   const [failed, setFailed] = useState(false);
 
   if (failed) {
@@ -46,7 +52,11 @@ function PluginIcon({ src, name }: Readonly<{ src: string; name: string }>) {
 }
 
 /* ── 3D tilt card ── */
-function PluginCard({ plugin }: Readonly<{ plugin: Plugin }>) {
+function PluginCard({
+  plugin,
+}: Readonly<{
+  plugin: Plugin;
+}>) {
   const { ref, onMouseMove, onMouseLeave } = useTilt3D();
 
   return (
@@ -110,16 +120,27 @@ function MarqueeRow({
   plugins,
   reverse = false,
   duration = 35,
-}: Readonly<{ plugins: Plugin[]; reverse?: boolean; duration?: number }>) {
+}: Readonly<{
+  plugins: Plugin[];
+  reverse?: boolean;
+  duration?: number;
+}>) {
   const cards = repeat(plugins, MIN_CARDS);
 
   return (
     <div
       className="marquee-row overflow-hidden"
-      style={{ '--marquee-duration': `${duration}s` } as React.CSSProperties}
+      style={
+        {
+          '--marquee-duration': `${duration}s`,
+        } as React.CSSProperties
+      }
     >
       <div className={cn('marquee-track flex gap-5', reverse && 'marquee-reverse')}>
-        {[0, 1].map((copy) => (
+        {[
+          0,
+          1,
+        ].map((copy) => (
           <div key={copy} className="flex shrink-0 gap-5" aria-hidden={copy === 1}>
             {cards.map((plugin, i) => (
               <PluginCard key={`${copy}-${plugin.name}-${i}`} plugin={plugin} />
@@ -132,7 +153,11 @@ function MarqueeRow({
 }
 
 /* ── Grid ── */
-export function PluginGrid({ plugins }: Readonly<{ plugins: Plugin[] }>) {
+export function PluginGrid({
+  plugins,
+}: Readonly<{
+  plugins: Plugin[];
+}>) {
   const mid = Math.ceil(plugins.length / 2);
   const row1 = plugins.slice(0, mid);
   const row2 = plugins.slice(mid);

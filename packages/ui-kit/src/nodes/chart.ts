@@ -33,7 +33,10 @@ export interface ChartNode extends BaseNode {
 }
 
 export function Chart(props: Omit<ChartNode, 'type'>): ChartNode {
-  return { type: 'chart', ...props };
+  return {
+    type: 'chart',
+    ...props,
+  };
 }
 
 declare module './_shared' {

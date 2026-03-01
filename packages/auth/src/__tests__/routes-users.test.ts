@@ -4,11 +4,11 @@
 
 import { describe, expect, test } from 'bun:test';
 import { stub, useTestBed } from '@brika/di/testing';
-import { TestApp } from '@brika/router/testing';
 import type { Middleware } from '@brika/router';
-import { Role, Scope, type Session, type User } from '../types';
-import { UserService } from '../services/UserService';
+import { TestApp } from '@brika/router/testing';
 import { userRoutes } from '../server/routes/users';
+import { UserService } from '../services/UserService';
+import { Role, Scope, type Session, type User } from '../types';
 
 function withSession(session: Session): Middleware {
   return async (c, next) => {
@@ -23,7 +23,9 @@ const adminSession: Session = {
   userEmail: 'admin@test.com',
   userName: 'Admin',
   userRole: Role.ADMIN,
-  scopes: [Scope.ADMIN_ALL],
+  scopes: [
+    Scope.ADMIN_ALL,
+  ],
 };
 
 const userSession: Session = {
@@ -32,7 +34,10 @@ const userSession: Session = {
   userEmail: 'user@test.com',
   userName: 'User',
   userRole: Role.USER,
-  scopes: [Scope.WORKFLOW_READ, Scope.BOARD_READ],
+  scopes: [
+    Scope.WORKFLOW_READ,
+    Scope.BOARD_READ,
+  ],
 };
 
 const now = new Date();
@@ -68,15 +73,22 @@ describe('GET /api/users — as admin', () => {
 
   useTestBed(() => {
     stub(UserService, {
-      listUsers: async () => [adminUser, regularUser],
+      listUsers: () => [
+        adminUser,
+        regularUser,
+      ],
     });
-    app = TestApp.create(userRoutes, [withSession(adminSession)]);
+    app = TestApp.create(userRoutes, [
+      withSession(adminSession),
+    ]);
   });
 
   test('returns list of users', async () => {
     const res = await app.get('/api/users');
     expect(res.status).toBe(200);
-    const body = res.body as { users: User[] };
+    const body = res.body as {
+      users: User[];
+    };
     expect(body.users).toHaveLength(2);
   });
 });
@@ -86,7 +98,9 @@ describe('GET /api/users — as regular user', () => {
 
   useTestBed(() => {
     stub(UserService);
-    app = TestApp.create(userRoutes, [withSession(userSession)]);
+    app = TestApp.create(userRoutes, [
+      withSession(userSession),
+    ]);
   });
 
   test('returns 403 without admin scope', async () => {
@@ -118,7 +132,7 @@ describe('POST /api/users — as admin', () => {
   useTestBed(() => {
     setPasswordCalled = false;
     stub(UserService, {
-      createUser: async (email: string, name: string, role: Role) => ({
+      createUser: (email: string, name: string, role: Role) => ({
         ...regularUser,
         id: 'new-user',
         email,
@@ -129,7 +143,9 @@ describe('POST /api/users — as admin', () => {
         setPasswordCalled = true;
       },
     });
-    app = TestApp.create(userRoutes, [withSession(adminSession)]);
+    app = TestApp.create(userRoutes, [
+      withSession(adminSession),
+    ]);
   });
 
   test('creates user and returns user object', async () => {
@@ -139,7 +155,12 @@ describe('POST /api/users — as admin', () => {
       role: Role.USER,
     });
     expect(res.status).toBe(200);
-    const body = res.body as { status: number; body: { user: User } };
+    const body = res.body as {
+      status: number;
+      body: {
+        user: User;
+      };
+    };
     expect(body.body.user.email).toBe('new@test.com');
   });
 
@@ -168,11 +189,17 @@ describe('POST /api/users — as regular user', () => {
 
   useTestBed(() => {
     stub(UserService);
-    app = TestApp.create(userRoutes, [withSession(userSession)]);
+    app = TestApp.create(userRoutes, [
+      withSession(userSession),
+    ]);
   });
 
   test('returns 403 for non-admin', async () => {
-    const res = await app.post('/api/users', { email: 'test@y.com', name: 'Test', role: Role.USER });
+    const res = await app.post('/api/users', {
+      email: 'test@y.com',
+      name: 'Test',
+      role: Role.USER,
+    });
     expect(res.status).toBe(403);
   });
 });
@@ -186,7 +213,11 @@ describe('POST /api/users — unauthenticated', () => {
   });
 
   test('returns 401 without session', async () => {
-    const res = await app.post('/api/users', { email: 'test@y.com', name: 'Test', role: Role.USER });
+    const res = await app.post('/api/users', {
+      email: 'test@y.com',
+      name: 'Test',
+      role: Role.USER,
+    });
     expect(res.status).toBe(401);
   });
 });
@@ -198,16 +229,27 @@ describe('GET /api/users/:id — as admin', () => {
 
   useTestBed(() => {
     stub(UserService, {
-      getUser: async (id: string) =>
-        id === 'user-regular' ? regularUser : id === 'user-admin' ? adminUser : null,
+      getUser: (id: string) => {
+        if (id === 'user-regular') {
+          return regularUser;
+        }
+        if (id === 'user-admin') {
+          return adminUser;
+        }
+        return null;
+      },
     });
-    app = TestApp.create(userRoutes, [withSession(adminSession)]);
+    app = TestApp.create(userRoutes, [
+      withSession(adminSession),
+    ]);
   });
 
   test('returns user by id', async () => {
     const res = await app.get('/api/users/user-regular');
     expect(res.status).toBe(200);
-    const body = res.body as { user: User };
+    const body = res.body as {
+      user: User;
+    };
     expect(body.user.email).toBe('user@test.com');
   });
 
@@ -222,9 +264,11 @@ describe('GET /api/users/:id — as regular user', () => {
 
   useTestBed(() => {
     stub(UserService, {
-      getUser: async () => regularUser,
+      getUser: () => regularUser,
     });
-    app = TestApp.create(userRoutes, [withSession(userSession)]);
+    app = TestApp.create(userRoutes, [
+      withSession(userSession),
+    ]);
   });
 
   test('can access own profile', async () => {
@@ -259,16 +303,26 @@ describe('PUT /api/users/:id/password — as admin', () => {
 
   useTestBed(() => {
     stub(UserService, {
-      getUser: async (id: string) => (id === 'user-regular' ? regularUser : null),
+      getUser: (id: string) => (id === 'user-regular' ? regularUser : null),
       setPassword: async () => {},
     });
-    app = TestApp.create(userRoutes, [withSession(adminSession)]);
+    app = TestApp.create(userRoutes, [
+      withSession(adminSession),
+    ]);
   });
 
   test('resets password for existing user', async () => {
-    const res = await app.put('/api/users/user-regular/password', { password: 'NewPass123!' });
+    const res = await app.put('/api/users/user-regular/password', {
+      password: 'NewPass123!',
+    });
     expect(res.status).toBe(200);
-    expect((res.body as { ok: boolean }).ok).toBe(true);
+    expect(
+      (
+        res.body as {
+          ok: boolean;
+        }
+      ).ok
+    ).toBe(true);
   });
 
   test('returns 400 when password is missing', async () => {
@@ -277,7 +331,9 @@ describe('PUT /api/users/:id/password — as admin', () => {
   });
 
   test('returns 404 for unknown user', async () => {
-    const res = await app.put('/api/users/nonexistent/password', { password: 'ValidPass123!' });
+    const res = await app.put('/api/users/nonexistent/password', {
+      password: 'ValidPass123!',
+    });
     expect(res.status).toBe(404);
   });
 });
@@ -287,11 +343,15 @@ describe('PUT /api/users/:id/password — as regular user', () => {
 
   useTestBed(() => {
     stub(UserService);
-    app = TestApp.create(userRoutes, [withSession(userSession)]);
+    app = TestApp.create(userRoutes, [
+      withSession(userSession),
+    ]);
   });
 
   test('returns 403 for non-admin', async () => {
-    const res = await app.put('/api/users/user-regular/password', { password: 'ValidPass123!' });
+    const res = await app.put('/api/users/user-regular/password', {
+      password: 'ValidPass123!',
+    });
     expect(res.status).toBe(403);
   });
 });
@@ -305,7 +365,9 @@ describe('PUT /api/users/:id/password — unauthenticated', () => {
   });
 
   test('returns 401 without session', async () => {
-    const res = await app.put('/api/users/user-regular/password', { password: 'ValidPass123!' });
+    const res = await app.put('/api/users/user-regular/password', {
+      password: 'ValidPass123!',
+    });
     expect(res.status).toBe(401);
   });
 });
@@ -317,18 +379,29 @@ describe('PUT /api/users/:id — as admin', () => {
 
   useTestBed(() => {
     stub(UserService, {
-      updateUser: async (_id: string, updates: { name?: string }) => ({
+      updateUser: (
+        _id: string,
+        updates: {
+          name?: string;
+        }
+      ) => ({
         ...regularUser,
         name: updates.name ?? regularUser.name,
       }),
     });
-    app = TestApp.create(userRoutes, [withSession(adminSession)]);
+    app = TestApp.create(userRoutes, [
+      withSession(adminSession),
+    ]);
   });
 
   test('updates user fields', async () => {
-    const res = await app.put('/api/users/user-regular', { name: 'Updated Name' });
+    const res = await app.put('/api/users/user-regular', {
+      name: 'Updated Name',
+    });
     expect(res.status).toBe(200);
-    const body = res.body as { user: User };
+    const body = res.body as {
+      user: User;
+    };
     expect(body.user.name).toBe('Updated Name');
   });
 });
@@ -338,11 +411,15 @@ describe('PUT /api/users/:id — as regular user', () => {
 
   useTestBed(() => {
     stub(UserService);
-    app = TestApp.create(userRoutes, [withSession(userSession)]);
+    app = TestApp.create(userRoutes, [
+      withSession(userSession),
+    ]);
   });
 
   test('returns 403 for non-admin', async () => {
-    const res = await app.put('/api/users/user-regular', { name: 'Test' });
+    const res = await app.put('/api/users/user-regular', {
+      name: 'Test',
+    });
     expect(res.status).toBe(403);
   });
 });
@@ -356,7 +433,9 @@ describe('PUT /api/users/:id — unauthenticated', () => {
   });
 
   test('returns 401 without session', async () => {
-    const res = await app.put('/api/users/user-regular', { name: 'Test' });
+    const res = await app.put('/api/users/user-regular', {
+      name: 'Test',
+    });
     expect(res.status).toBe(401);
   });
 });
@@ -368,16 +447,24 @@ describe('DELETE /api/users/:id — as admin', () => {
 
   useTestBed(() => {
     stub(UserService, {
-      getUser: async (id: string) => (id === 'user-regular' ? regularUser : null),
-      deleteUser: async () => {},
+      getUser: (id: string) => (id === 'user-regular' ? regularUser : null),
+      deleteUser: () => {},
     });
-    app = TestApp.create(userRoutes, [withSession(adminSession)]);
+    app = TestApp.create(userRoutes, [
+      withSession(adminSession),
+    ]);
   });
 
   test('deletes another user', async () => {
     const res = await app.delete('/api/users/user-regular');
     expect(res.status).toBe(200);
-    expect((res.body as { ok: boolean }).ok).toBe(true);
+    expect(
+      (
+        res.body as {
+          ok: boolean;
+        }
+      ).ok
+    ).toBe(true);
   });
 
   test('returns 400 when trying to self-delete', async () => {
@@ -396,7 +483,9 @@ describe('DELETE /api/users/:id — as regular user', () => {
 
   useTestBed(() => {
     stub(UserService);
-    app = TestApp.create(userRoutes, [withSession(userSession)]);
+    app = TestApp.create(userRoutes, [
+      withSession(userSession),
+    ]);
   });
 
   test('returns 403 for non-admin', async () => {

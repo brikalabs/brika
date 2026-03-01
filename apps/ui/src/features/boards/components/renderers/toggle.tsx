@@ -10,7 +10,9 @@ defineRenderer('toggle', ({ node, onAction }) => {
 
   useEffect(() => {
     setLocal(node.checked);
-  }, [node.checked]);
+  }, [
+    node.checked,
+  ]);
 
   return (
     <div
@@ -25,7 +27,9 @@ defineRenderer('toggle', ({ node, onAction }) => {
           <DynamicIcon
             name={node.icon as IconName}
             className="@md:size-4 size-3.5 shrink-0"
-            style={{ color: resolveColor(node.color) ?? undefined }}
+            style={{
+              color: resolveColor(node.color) ?? undefined,
+            }}
           />
         )}
         <span className="font-medium @md:text-sm text-xs">{node.label}</span>
@@ -35,7 +39,9 @@ defineRenderer('toggle', ({ node, onAction }) => {
         disabled={node.disabled}
         onCheckedChange={(checked) => {
           setLocal(checked);
-          onAction?.(node.onToggle, { checked });
+          onAction?.(node.onToggle, {
+            checked,
+          });
         }}
       />
     </div>

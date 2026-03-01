@@ -5,7 +5,14 @@
 import type { HttpError, HttpResponse, RequestConfig, RetryConfig } from '../../types';
 import type { ErrorInterceptor } from '../types';
 
-const DEFAULT_RETRYABLE_STATUS_CODES = [408, 429, 500, 502, 503, 504];
+const DEFAULT_RETRYABLE_STATUS_CODES = [
+  408,
+  429,
+  500,
+  502,
+  503,
+  504,
+];
 
 /**
  * Retry interceptor with exponential/linear backoff

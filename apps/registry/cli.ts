@@ -50,7 +50,11 @@ const { positionals, values } = parseArgs({
   allowPositionals: true,
   strict: false,
   options: {
-    help: { type: 'boolean', short: 'h', default: false },
+    help: {
+      type: 'boolean',
+      short: 'h',
+      default: false,
+    },
   },
 });
 

@@ -27,7 +27,10 @@ export class StoreService {
     query?: string,
     limit = 20,
     offset = 0
-  ): Promise<{ plugins: PluginSearchResult[]; total: number }> {
+  ): Promise<{
+    plugins: PluginSearchResult[];
+    total: number;
+  }> {
     const config = this.#configLoader.get();
 
     const [npmResult, localResult] = await Promise.all([
@@ -35,8 +38,14 @@ export class StoreService {
       this.#local.search(query),
     ]);
 
-    const all = [...localResult.plugins, ...npmResult.plugins];
-    return { plugins: enrichPlugins(all, config), total: all.length };
+    const all = [
+      ...localResult.plugins,
+      ...npmResult.plugins,
+    ];
+    return {
+      plugins: enrichPlugins(all, config),
+      total: all.length,
+    };
   }
 
   /**
@@ -48,8 +57,12 @@ export class StoreService {
     const { source, name } = parseId(id);
     const config = this.#configLoader.get();
 
-    if (source === 'local') return this.#localDetails(name, config);
-    if (source === 'npm') return this.#npmDetails(name, config);
+    if (source === 'local') {
+      return this.#localDetails(name, config);
+    }
+    if (source === 'npm') {
+      return this.#npmDetails(name, config);
+    }
     return (await this.#localDetails(name, config)) ?? this.#npmDetails(name, config);
   }
 
@@ -94,13 +107,17 @@ export class StoreService {
     }
 
     const found = await this.#local.findByName(name);
-    if (found) return this.#buildLocal(found.pkg, config);
+    if (found) {
+      return this.#buildLocal(found.pkg, config);
+    }
     return null;
   }
 
   async #npmDetails(name: string, config: BrikaConfig): Promise<StorePlugin | null> {
     const pkg = await this.#npm.getPackageDetails(name);
-    if (!pkg) return null;
+    if (!pkg) {
+      return null;
+    }
 
     await this.#verified.init();
     const verified = await this.#verified.isVerified(name);
@@ -122,7 +139,10 @@ export class StoreService {
       verified,
       verifiedAt: verifiedPlugin?.verifiedAt,
       featured: verifiedPlugin?.featured ?? false,
-      npm: { downloads: 0, publishedAt: pkg.date ?? '' },
+      npm: {
+        downloads: 0,
+        publishedAt: pkg.date ?? '',
+      },
       ...computeEnrichment(pkg, config),
     };
   }
@@ -143,17 +163,29 @@ export class StoreService {
       verified: false,
       featured: false,
       source: 'local',
-      npm: { downloads: 0, publishedAt: '' },
+      npm: {
+        downloads: 0,
+        publishedAt: '',
+      },
       ...computeEnrichment(pkg, config),
     };
   }
 }
 
 /** Parse an optional source prefix from a plugin ID: `local:name` → `{ source: 'local', name }` */
-function parseId(id: string): { source: string | null; name: string } {
+function parseId(id: string): {
+  source: string | null;
+  name: string;
+} {
   const colonIdx = id.indexOf(':');
   if (colonIdx > 0) {
-    return { source: id.slice(0, colonIdx), name: id.slice(colonIdx + 1) };
+    return {
+      source: id.slice(0, colonIdx),
+      name: id.slice(colonIdx + 1),
+    };
   }
-  return { source: null, name: id };
+  return {
+    source: null,
+    name: id,
+  };
 }

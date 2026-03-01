@@ -14,13 +14,17 @@ import { PluginSparksList } from './PluginSparksList';
 import { PluginStats } from './PluginStats';
 
 export function PluginOverviewTab() {
-  const params = useParams({ strict: false });
+  const params = useParams({
+    strict: false,
+  });
   const { data: plugin } = usePlugin(params.uid ?? '');
   const { data: readmeData } = usePluginReadme(params.uid ?? '');
   const { data: metrics } = usePluginMetrics(params.uid ?? '', plugin?.status === 'running');
   const { t } = useLocale();
 
-  if (!plugin) return null;
+  if (!plugin) {
+    return null;
+  }
 
   return (
     <div className="space-y-6">

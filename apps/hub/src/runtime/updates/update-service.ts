@@ -37,7 +37,9 @@ export class UpdateService {
     // Check immediately, then periodically
     this.check();
     this.#timer = setInterval(() => this.check(), CHECK_INTERVAL_MS);
-    this.#logs.info('Update checker started', { intervalMs: CHECK_INTERVAL_MS });
+    this.#logs.info('Update checker started', {
+      intervalMs: CHECK_INTERVAL_MS,
+    });
   }
 
   /** Stop periodic checks */
@@ -79,10 +81,18 @@ export class UpdateService {
 
       return this.#cachedInfo;
     } catch (error) {
-      this.#logs.debug('Update check failed', {}, { error });
+      this.#logs.debug(
+        'Update check failed',
+        {},
+        {
+          error,
+        }
+      );
 
       // Return stale cache if available
-      if (this.#cachedInfo) return this.#cachedInfo;
+      if (this.#cachedInfo) {
+        return this.#cachedInfo;
+      }
 
       return noUpdateInfo();
     } finally {

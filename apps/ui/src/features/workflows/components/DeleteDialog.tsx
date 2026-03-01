@@ -36,7 +36,9 @@ export function DeleteDialog({
         <DialogHeader>
           <DialogTitle>{t('workflows:deleteDialog.title')}</DialogTitle>
           <DialogDescription>
-            {t('workflows:deleteDialog.description', { id: workflowId })}
+            {t('workflows:deleteDialog.description', {
+              id: workflowId,
+            })}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>

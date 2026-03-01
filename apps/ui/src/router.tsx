@@ -4,9 +4,9 @@
 
 import { createRouter, RouterProvider } from '@tanstack/react-router';
 import { Suspense } from 'react';
-import { routeTree } from './routes';
 import { DefaultErrorComponent } from '@/components/default-error-component';
 import { NotFoundPage } from '@/components/errors';
+import { routeTree } from './routes';
 
 export { routes } from './routes';
 

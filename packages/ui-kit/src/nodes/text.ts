@@ -7,7 +7,11 @@ export interface TextNode extends BaseNode {
   type: 'text';
   content: string;
   /** When set, the UI renderer resolves this via i18next instead of using content. */
-  i18n?: { ns: string; key: string; params?: Record<string, string | number> };
+  i18n?: {
+    ns: string;
+    key: string;
+    params?: Record<string, string | number>;
+  };
   /** When set, the UI renderer formats this value via Intl APIs with the user's locale. */
   intl?: IntlRef;
   variant?: 'body' | 'caption' | 'heading';
@@ -43,7 +47,11 @@ export function Text(props: TextProps): TextNode {
       type: 'text',
       ...rest,
       content: content.key,
-      i18n: { ns: content.ns, key: content.key, params: content.params },
+      i18n: {
+        ns: content.ns,
+        key: content.key,
+        params: content.params,
+      },
       onPress: press,
     };
   }
@@ -56,7 +64,12 @@ export function Text(props: TextProps): TextNode {
       onPress: press,
     };
   }
-  return { type: 'text', ...rest, content, onPress: press };
+  return {
+    type: 'text',
+    ...rest,
+    content,
+    onPress: press,
+  };
 }
 
 declare module './_shared' {

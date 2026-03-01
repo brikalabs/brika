@@ -2,7 +2,7 @@ import { useNavigate, useParams } from '@tanstack/react-router';
 import { Clock, Zap } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
-import { routes } from '@/routes';
+import { paths } from '@/routes/paths';
 import { EventStreamTab, RegisteredSparksTab } from './components';
 
 type SparkTab = 'registry' | 'stream';
@@ -10,11 +10,17 @@ type SparkTab = 'registry' | 'stream';
 export function SparksPage() {
   const { t } = useLocale();
   const navigate = useNavigate();
-  const params = useParams({ strict: false });
+  const params = useParams({
+    strict: false,
+  });
   const activeTab: SparkTab = params.tab === 'stream' ? 'stream' : 'registry';
 
   const handleTabChange = (tab: string) => {
-    navigate({ to: routes.sparks.tab.to({ tab }) });
+    navigate({
+      to: paths.sparks.tab.to({
+        tab,
+      }),
+    });
   };
 
   return (

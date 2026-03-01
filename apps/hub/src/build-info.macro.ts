@@ -8,7 +8,12 @@
 export function getGitCommit(): string {
   try {
     const { stdout, exitCode } = Bun.spawnSync({
-      cmd: ['git', 'rev-parse', '--short', 'HEAD'],
+      cmd: [
+        'git',
+        'rev-parse',
+        '--short',
+        'HEAD',
+      ],
       stdout: 'pipe',
     });
     return exitCode === 0 ? stdout.toString().trim() : 'unknown';
@@ -21,7 +26,11 @@ export function getGitCommit(): string {
 export function getGitCommitFull(): string {
   try {
     const { stdout, exitCode } = Bun.spawnSync({
-      cmd: ['git', 'rev-parse', 'HEAD'],
+      cmd: [
+        'git',
+        'rev-parse',
+        'HEAD',
+      ],
       stdout: 'pipe',
     });
     return exitCode === 0 ? stdout.toString().trim() : 'unknown';
@@ -33,7 +42,12 @@ export function getGitCommitFull(): string {
 export function getGitBranch(): string {
   try {
     const { stdout, exitCode } = Bun.spawnSync({
-      cmd: ['git', 'rev-parse', '--abbrev-ref', 'HEAD'],
+      cmd: [
+        'git',
+        'rev-parse',
+        '--abbrev-ref',
+        'HEAD',
+      ],
       stdout: 'pipe',
     });
     return exitCode === 0 ? stdout.toString().trim() : 'unknown';

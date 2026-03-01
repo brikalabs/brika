@@ -42,11 +42,12 @@ export function cache(options?: CachePluginOptions): BootstrapPlugin {
   return {
     name: 'cache',
 
-    // biome-ignore lint/suspicious/useAwait: bootstrap expects async lifecycle methods
-    async onInit() {
+    onInit() {
       const cachePath = join(dataDir, 'cache.db');
 
-      logger.info('Initializing SQLite cache', { path: cachePath });
+      logger.info('Initializing SQLite cache', {
+        path: cachePath,
+      });
 
       try {
         cacheInstance = new CacheImpl({

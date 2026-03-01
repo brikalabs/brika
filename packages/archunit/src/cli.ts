@@ -5,7 +5,10 @@ import { clearRegistry, getRegisteredRules } from './registry';
 import { printResult, runArch } from './runner';
 import type { Buildable, Rule, RuleInput } from './types';
 
-const CONFIG_FILES = ['arch.config.ts', 'arch.config.js'];
+const CONFIG_FILES = [
+  'arch.config.ts',
+  'arch.config.js',
+];
 
 function isBuildable(input: RuleInput): input is Buildable {
   return typeof input === 'object' && 'build' in input && typeof input.build === 'function';
@@ -68,6 +71,9 @@ if (rules.length === 0) {
   process.exit(1);
 }
 
-const result = await runArch({ rules, cwd });
+const result = await runArch({
+  rules,
+  cwd,
+});
 printResult(result);
 process.exit(result.passed ? 0 : 1);

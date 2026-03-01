@@ -14,16 +14,26 @@
     "url": "git+https://github.com/maxscharwath/brika.git",
     "directory": "packages/ui-kit"
   },
-  "keywords": ["brika", "ui", "bricks", "board", "descriptors"],
+  "keywords": [
+    "brika",
+    "ui",
+    "bricks",
+    "board",
+    "descriptors"
+  ],
   "exports": {
     ".": "./src/index.ts",
     "./tailwind-theme.css": "./tailwind-theme.css",
     "./jsx-runtime": "./src/jsx-runtime.ts",
     "./jsx-dev-runtime": "./src/jsx-dev-runtime.ts"
   },
-  "files": ["src", "tailwind-theme.css"],
+  "files": [
+    "src",
+    "tailwind-theme.css"
+  ],
   "scripts": {
-    "tsc": "bunx --biome tsc --noEmit",
+    "test": "bun test",
+    "typecheck": "tsgo --noEmit",
     "prepublishOnly": "bun run tsc"
   },
   "dependencies": {

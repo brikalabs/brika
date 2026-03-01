@@ -111,7 +111,12 @@ export const blockLog = message(
     /** Workflow ID */
     workflowId: z.string(),
     /** Log level */
-    level: z.enum(['debug', 'info', 'warn', 'error']),
+    level: z.enum([
+      'debug',
+      'info',
+      'warn',
+      'error',
+    ]),
     /** Log message */
     message: z.string(),
   })

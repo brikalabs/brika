@@ -2,7 +2,7 @@ import { Link } from '@tanstack/react-router';
 import { ArrowLeft, Code2, ExternalLink, Plug, User } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage, Badge } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
-import { routes } from '@/routes';
+import { paths } from '@/routes/paths';
 import type { Plugin } from '../api';
 import { pluginsApi } from '../api';
 import { PluginHeaderActions } from './PluginHeaderActions';
@@ -41,7 +41,7 @@ export function PluginDetailHeader({
   return (
     <>
       <Link
-        to={routes.plugins.list.path}
+        to={paths.plugins.list.path}
         className="inline-flex items-center gap-2 text-muted-foreground transition-colors hover:text-foreground"
       >
         <ArrowLeft className="size-4" />

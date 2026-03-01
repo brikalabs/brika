@@ -5,7 +5,11 @@ import { ErrorLayout } from './error-layout';
 /**
  * 403 — Access denied (missing scopes).
  */
-export function ForbiddenPage({ variant }: Readonly<{ variant?: 'fullscreen' | 'inline' }>) {
+export function ForbiddenPage({
+  variant,
+}: Readonly<{
+  variant?: 'fullscreen' | 'inline';
+}>) {
   const { t } = useTranslation();
 
   return (

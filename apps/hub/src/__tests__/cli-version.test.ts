@@ -33,7 +33,11 @@ describe('cli/commands/version', () => {
   });
 
   test('outputs platform info', () => {
-    version?.handler({ values: {}, positionals: [], commands: [] });
+    version?.handler({
+      values: {},
+      positionals: [],
+      commands: [],
+    });
 
     const joined = output.join('\n');
     expect(joined).toContain('Platform:');
@@ -41,7 +45,11 @@ describe('cli/commands/version', () => {
   });
 
   test('outputs runtime info', () => {
-    version?.handler({ values: {}, positionals: [], commands: [] });
+    version?.handler({
+      values: {},
+      positionals: [],
+      commands: [],
+    });
 
     const joined = output.join('\n');
     expect(joined).toContain('Runtime:');
@@ -49,14 +57,24 @@ describe('cli/commands/version', () => {
   });
 
   test('outputs install directory', () => {
-    version?.handler({ values: {}, positionals: [], commands: [] });
+    version?.handler({
+      values: {},
+      positionals: [],
+      commands: [],
+    });
 
     const joined = output.join('\n');
     expect(joined).toContain('Install:');
   });
 
   test('--json outputs valid JSON with required fields', () => {
-    version?.handler({ values: { json: true }, positionals: [], commands: [] });
+    version?.handler({
+      values: {
+        json: true,
+      },
+      positionals: [],
+      commands: [],
+    });
 
     expect(output).toHaveLength(1);
     const parsed = JSON.parse(output[0] ?? '{}');
@@ -70,7 +88,13 @@ describe('cli/commands/version', () => {
   });
 
   test('--json output does not contain color codes', () => {
-    version?.handler({ values: { json: true }, positionals: [], commands: [] });
+    version?.handler({
+      values: {
+        json: true,
+      },
+      positionals: [],
+      commands: [],
+    });
 
     expect(output[0]).not.toContain('\u001b[');
   });

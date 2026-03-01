@@ -8,9 +8,9 @@ import { get, stub, useTestBed } from '@brika/di/testing';
 import { useBunMock } from '@brika/testing';
 import { ConfigLoader } from '@/runtime/config/config-loader';
 import { Logger } from '@/runtime/logs/log-router';
-import { StoreService } from '@/runtime/store/store-service';
 import { LocalRegistry } from '@/runtime/store/sources/local';
 import { NpmRegistry } from '@/runtime/store/sources/npm';
+import { StoreService } from '@/runtime/store/store-service';
 import { VerifiedPluginsService } from '@/runtime/store/verified';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -18,10 +18,20 @@ import { VerifiedPluginsService } from '@/runtime/store/verified';
 // ─────────────────────────────────────────────────────────────────────────────
 
 const mockConfig = {
-  plugins: [{ name: '@brika/plugin-timer', version: 'workspace:*' }],
+  plugins: [
+    {
+      name: '@brika/plugin-timer',
+      version: 'workspace:*',
+    },
+  ],
 };
 
-const mockConfigEmpty = { plugins: [] as Array<{ name: string; version: string }> };
+const mockConfigEmpty = {
+  plugins: [] as Array<{
+    name: string;
+    version: string;
+  }>,
+};
 
 const localPkg = {
   name: '@brika/plugin-timer',
@@ -30,8 +40,13 @@ const localPkg = {
   displayName: 'Timer',
   description: 'A timer plugin',
   author: 'Test',
-  keywords: ['brika', 'timer'],
-  engines: { brika: '^0.1.0' },
+  keywords: [
+    'brika',
+    'timer',
+  ],
+  engines: {
+    brika: '^0.1.0',
+  },
 };
 
 const npmPkgData = {
@@ -40,11 +55,16 @@ const npmPkgData = {
   displayName: 'Weather',
   description: 'A weather plugin',
   author: 'Author',
-  keywords: ['brika', 'weather'],
+  keywords: [
+    'brika',
+    'weather',
+  ],
   repository: 'https://github.com/brika/weather',
   homepage: 'https://weather.brika.dev',
   license: 'MIT',
-  engines: { brika: '^0.1.0' },
+  engines: {
+    brika: '^0.1.0',
+  },
   date: '2024-06-01T00:00:00.000Z',
 };
 
@@ -55,8 +75,13 @@ const localSearchResult = {
     displayName: 'Timer',
     description: 'A timer plugin',
     author: 'Test',
-    keywords: ['brika', 'timer'],
-    engines: { brika: '^0.1.0' },
+    keywords: [
+      'brika',
+      'timer',
+    ],
+    engines: {
+      brika: '^0.1.0',
+    },
   },
   downloadCount: 0,
   source: 'local',
@@ -70,8 +95,13 @@ const npmSearchResult = {
     displayName: 'Weather',
     description: 'A weather plugin',
     author: 'Author',
-    keywords: ['brika', 'weather'],
-    engines: { brika: '^0.1.0' },
+    keywords: [
+      'brika',
+      'weather',
+    ],
+    engines: {
+      brika: '^0.1.0',
+    },
   },
   downloadCount: 500,
   source: 'npm',
@@ -105,49 +135,70 @@ describe('StoreService', () => {
     resolvePluginEntry: ReturnType<typeof mock>;
   };
 
-  useTestBed({ autoStub: false }, () => {
-    stub(Logger);
+  useTestBed(
+    {
+      autoStub: false,
+    },
+    () => {
+      stub(Logger);
 
-    mockNpm = {
-      search: mock().mockResolvedValue({ plugins: [], total: 0 }),
-      getPackageDetails: mock().mockResolvedValue(null),
-    };
-    mockLocal = {
-      search: mock().mockResolvedValue({ plugins: [], total: 0 }),
-      findByName: mock().mockResolvedValue(null),
-    };
-    mockVerified = {
-      init: mock().mockResolvedValue(undefined),
-      isVerified: mock().mockResolvedValue(false),
-      getVerifiedPlugin: mock().mockResolvedValue(null),
-      getVerifiedList: mock().mockResolvedValue({
-        plugins: [],
-        version: '1.0.0',
-        lastUpdated: '2024-01-01T00:00:00.000Z',
-      }),
-    };
-    mockConfigLoader = {
-      get: mock().mockReturnValue(mockConfig),
-      resolvePluginEntry: mock().mockResolvedValue({
-        name: '@brika/plugin-timer',
-        rootDirectory: '/workspace/plugins/timer',
-      }),
-    };
+      mockNpm = {
+        search: mock().mockResolvedValue({
+          plugins: [],
+          total: 0,
+        }),
+        getPackageDetails: mock().mockResolvedValue(null),
+      };
+      mockLocal = {
+        search: mock().mockResolvedValue({
+          plugins: [],
+          total: 0,
+        }),
+        findByName: mock().mockResolvedValue(null),
+      };
+      mockVerified = {
+        init: mock().mockResolvedValue(undefined),
+        isVerified: mock().mockResolvedValue(false),
+        getVerifiedPlugin: mock().mockResolvedValue(null),
+        getVerifiedList: mock().mockResolvedValue({
+          plugins: [],
+          version: '1.0.0',
+          lastUpdated: '2024-01-01T00:00:00.000Z',
+        }),
+      };
+      mockConfigLoader = {
+        get: mock().mockReturnValue(mockConfig),
+        resolvePluginEntry: mock().mockResolvedValue({
+          name: '@brika/plugin-timer',
+          rootDirectory: '/workspace/plugins/timer',
+        }),
+      };
 
-    stub(NpmRegistry, mockNpm);
-    stub(LocalRegistry, mockLocal);
-    stub(VerifiedPluginsService, mockVerified);
-    stub(ConfigLoader, mockConfigLoader);
+      stub(NpmRegistry, mockNpm);
+      stub(LocalRegistry, mockLocal);
+      stub(VerifiedPluginsService, mockVerified);
+      stub(ConfigLoader, mockConfigLoader);
 
-    service = get(StoreService);
-  });
+      service = get(StoreService);
+    }
+  );
 
   // ─── search ─────────────────────────────────────────────────────────────────
 
   describe('search', () => {
     test('combines local and npm results with local first', async () => {
-      mockLocal.search.mockResolvedValue({ plugins: [localSearchResult], total: 1 });
-      mockNpm.search.mockResolvedValue({ plugins: [npmSearchResult], total: 1 });
+      mockLocal.search.mockResolvedValue({
+        plugins: [
+          localSearchResult,
+        ],
+        total: 1,
+      });
+      mockNpm.search.mockResolvedValue({
+        plugins: [
+          npmSearchResult,
+        ],
+        total: 1,
+      });
 
       const result = await service.search('timer');
 
@@ -183,7 +234,12 @@ describe('StoreService', () => {
     });
 
     test('enriches results with installed status', async () => {
-      mockLocal.search.mockResolvedValue({ plugins: [localSearchResult], total: 1 });
+      mockLocal.search.mockResolvedValue({
+        plugins: [
+          localSearchResult,
+        ],
+        total: 1,
+      });
 
       const result = await service.search();
 
@@ -191,7 +247,12 @@ describe('StoreService', () => {
     });
 
     test('enriches results with compatibility info', async () => {
-      mockNpm.search.mockResolvedValue({ plugins: [npmSearchResult], total: 1 });
+      mockNpm.search.mockResolvedValue({
+        plugins: [
+          npmSearchResult,
+        ],
+        total: 1,
+      });
       mockConfigLoader.get.mockReturnValue(mockConfigEmpty);
 
       const result = await service.search();
@@ -274,7 +335,11 @@ describe('StoreService', () => {
     // ─── local details (via getPluginDetails) ─────────────────────────
 
     test('reads workspace package.json for workspace entries', async () => {
-      bun.fs({ '/workspace/plugins/timer/package.json': localPkg }).apply();
+      bun
+        .fs({
+          '/workspace/plugins/timer/package.json': localPkg,
+        })
+        .apply();
 
       const result = await service.getPluginDetails('local:@brika/plugin-timer');
 
@@ -319,7 +384,9 @@ describe('StoreService', () => {
     });
 
     test('returns null when local details finds nothing', async () => {
-      mockConfigLoader.get.mockReturnValue({ plugins: [] });
+      mockConfigLoader.get.mockReturnValue({
+        plugins: [],
+      });
       mockLocal.findByName.mockResolvedValue(null);
 
       const result = await service.getPluginDetails('local:@brika/plugin-timer');
@@ -332,16 +399,24 @@ describe('StoreService', () => {
         rootDir: '/workspace/plugins/timer',
         pkg: localPkg,
       });
-      mockConfigLoader.get.mockReturnValue({ plugins: [] });
+      mockConfigLoader.get.mockReturnValue({
+        plugins: [],
+      });
 
       const result = await service.getPluginDetails('local:@brika/plugin-timer');
 
       expect(result).not.toBeNull();
       expect(result?.description).toBe('A timer plugin');
       expect(result?.author).toBe('Test');
-      expect(result?.keywords).toEqual(['brika', 'timer']);
+      expect(result?.keywords).toEqual([
+        'brika',
+        'timer',
+      ]);
       expect(result?.license).toBeUndefined();
-      expect(result?.npm).toEqual({ downloads: 0, publishedAt: '' });
+      expect(result?.npm).toEqual({
+        downloads: 0,
+        publishedAt: '',
+      });
       expect(result).toHaveProperty('compatible');
       expect(result).toHaveProperty('installed');
     });
@@ -411,14 +486,22 @@ describe('StoreService', () => {
       expect(result?.version).toBe('2.0.0');
       expect(result?.description).toBe('A weather plugin');
       expect(result?.author).toBe('Author');
-      expect(result?.keywords).toEqual(['brika', 'weather']);
+      expect(result?.keywords).toEqual([
+        'brika',
+        'weather',
+      ]);
       expect(result?.repository).toBe('https://github.com/brika/weather');
       expect(result?.homepage).toBe('https://weather.brika.dev');
       expect(result?.license).toBe('MIT');
-      expect(result?.engines).toEqual({ brika: '^0.1.0' });
+      expect(result?.engines).toEqual({
+        brika: '^0.1.0',
+      });
       expect(result?.source).toBe('npm');
       expect(result?.installVersion).toBe('2.0.0');
-      expect(result?.npm).toEqual({ downloads: 0, publishedAt: '2024-06-01T00:00:00.000Z' });
+      expect(result?.npm).toEqual({
+        downloads: 0,
+        publishedAt: '2024-06-01T00:00:00.000Z',
+      });
     });
 
     test('npm details handles missing optional fields with defaults', async () => {
@@ -426,7 +509,9 @@ describe('StoreService', () => {
       mockNpm.getPackageDetails.mockResolvedValue({
         name: '@brika/minimal',
         version: '0.1.0',
-        engines: { brika: '^0.1.0' },
+        engines: {
+          brika: '^0.1.0',
+        },
       });
 
       const result = await service.getPluginDetails('npm:@brika/minimal');
@@ -482,7 +567,12 @@ describe('StoreService', () => {
 
     test('falls back to local registry when no workspace entry in config', async () => {
       mockConfigLoader.get.mockReturnValue({
-        plugins: [{ name: '@brika/plugin-timer', version: '^1.0.0' }],
+        plugins: [
+          {
+            name: '@brika/plugin-timer',
+            version: '^1.0.0',
+          },
+        ],
       });
       mockLocal.findByName.mockResolvedValue({
         rootDir: '/discovered/path',
@@ -505,7 +595,12 @@ describe('StoreService', () => {
 
     test('returns null when plugin has non-workspace version and not in local registry', async () => {
       mockConfigLoader.get.mockReturnValue({
-        plugins: [{ name: '@brika/plugin-timer', version: '^1.0.0' }],
+        plugins: [
+          {
+            name: '@brika/plugin-timer',
+            version: '^1.0.0',
+          },
+        ],
       });
       mockLocal.findByName.mockResolvedValue(null);
 
@@ -543,7 +638,9 @@ describe('StoreService', () => {
 
   describe('id parsing', () => {
     test('parses "local:name" prefix correctly', async () => {
-      mockConfigLoader.get.mockReturnValue({ plugins: [] });
+      mockConfigLoader.get.mockReturnValue({
+        plugins: [],
+      });
 
       await service.getPluginDetails('local:@brika/test');
 
@@ -561,7 +658,9 @@ describe('StoreService', () => {
     });
 
     test('handles unprefixed name', async () => {
-      mockConfigLoader.get.mockReturnValue({ plugins: [] });
+      mockConfigLoader.get.mockReturnValue({
+        plugins: [],
+      });
       mockLocal.findByName.mockResolvedValue(null);
       mockNpm.getPackageDetails.mockResolvedValue(null);
 

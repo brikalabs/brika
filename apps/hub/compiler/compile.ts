@@ -14,10 +14,9 @@ const TARGETS = [
   'bun-windows-x64',
 ] as const;
 
-type Target = (typeof TARGETS)[number];
-
 export async function compile(target?: string): Promise<void> {
-  if (target && !TARGETS.includes(target as Target)) {
+  const validTarget = target ? TARGETS.find((t) => t === target) : undefined;
+  if (target && !validTarget) {
     fail(`Invalid target: ${target}`);
     log(`Valid: ${TARGETS.join(', ')}`);
     process.exit(1);
@@ -35,13 +34,21 @@ export async function compile(target?: string): Promise<void> {
   step('Bundling & compiling...');
 
   const result = await Bun.build({
-    entrypoints: [join(import.meta.dir, '../src/cli.ts')],
+    entrypoints: [
+      join(import.meta.dir, '../src/cli.ts'),
+    ],
     target: 'bun',
     minify: true,
-    plugins: [folderTarPlugin()],
+    plugins: [
+      folderTarPlugin(),
+    ],
     compile: {
       outfile: outPath,
-      ...(target ? { target: target as Bun.Target } : {}),
+      ...(validTarget
+        ? {
+            target: validTarget,
+          }
+        : {}),
     },
   });
 

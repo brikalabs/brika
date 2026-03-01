@@ -18,7 +18,9 @@ import { PluginLifecycle } from '@/runtime/plugins/plugin-lifecycle';
 import type { PluginProcess } from '@/runtime/plugins/plugin-process';
 import { StateStore } from '@/runtime/state/state-store';
 
-useTestBed({ autoStub: false });
+useTestBed({
+  autoStub: false,
+});
 
 describe('PluginLifecycle', () => {
   let lifecycle: PluginLifecycle;
@@ -140,7 +142,9 @@ describe('PluginLifecycle', () => {
     };
     mockPluginConfig = {
       getConfig: mock().mockReturnValue({}),
-      validate: mock().mockReturnValue({ success: true }),
+      validate: mock().mockReturnValue({
+        success: true,
+      }),
       setConfig: mock().mockResolvedValue(undefined),
     };
     mockMetrics = {
@@ -194,7 +198,9 @@ describe('PluginLifecycle', () => {
 
   describe('getStatus', () => {
     test('returns stopped when no process and no restart pending', () => {
-      mockState.get.mockReturnValue({ health: 'stopped' });
+      mockState.get.mockReturnValue({
+        health: 'stopped',
+      });
 
       const result = lifecycle.getStatus('@test/plugin');
 
@@ -202,7 +208,9 @@ describe('PluginLifecycle', () => {
     });
 
     test('returns health from state when no process', () => {
-      mockState.get.mockReturnValue({ health: 'crashed' });
+      mockState.get.mockReturnValue({
+        health: 'crashed',
+      });
 
       const result = lifecycle.getStatus('@test/plugin');
 
@@ -259,9 +267,13 @@ describe('PluginLifecycle', () => {
           homepage: 'https://example.com',
           repository: 'https://github.com/test',
           icon: 'test-icon',
-          keywords: ['test'],
+          keywords: [
+            'test',
+          ],
           license: 'MIT',
-          engines: { brika: '^0.1.0' },
+          engines: {
+            brika: '^0.1.0',
+          },
           blocks: [],
           sparks: [],
         },
@@ -277,7 +289,9 @@ describe('PluginLifecycle', () => {
       expect(result.homepage).toBe('https://example.com');
       expect(result.repository).toBe('https://github.com/test');
       expect(result.icon).toBe('test-icon');
-      expect(result.keywords).toEqual(['test']);
+      expect(result.keywords).toEqual([
+        'test',
+      ]);
       expect(result.license).toBe('MIT');
       expect(result.rootDirectory).toBe('/path/to/plugin');
       expect(result.entryPoint).toBe('/path/to/plugin/index.js');
@@ -299,7 +313,9 @@ describe('PluginLifecycle', () => {
         health: 'stopped' as PluginHealth,
         lastError: {
           key: 'plugins:errors.crashed',
-          params: { reason: 'previous error' },
+          params: {
+            reason: 'previous error',
+          },
           message: 'previous error',
         },
         updatedAt: Date.now(),
@@ -307,7 +323,9 @@ describe('PluginLifecycle', () => {
           name: '@test/plugin',
           version: '1.0.0',
           main: './index.js',
-          engines: { brika: '^0.1.0' },
+          engines: {
+            brika: '^0.1.0',
+          },
         },
       };
 
@@ -343,7 +361,9 @@ describe('PluginLifecycle', () => {
           name: '@test/not-running',
           version: '1.0.0',
           main: './index.js',
-          engines: { brika: '^0.1.0' },
+          engines: {
+            brika: '^0.1.0',
+          },
         },
       };
 
@@ -526,8 +546,14 @@ describe('PluginLifecycle', () => {
 
     test('removes multiple stale plugins', async () => {
       mockState.listInstalled.mockReturnValue([
-        { name: '@test/stale-1', rootDirectory: '/nonexistent/path1' },
-        { name: '@test/stale-2', rootDirectory: '/nonexistent/path2' },
+        {
+          name: '@test/stale-1',
+          rootDirectory: '/nonexistent/path1',
+        },
+        {
+          name: '@test/stale-2',
+          rootDirectory: '/nonexistent/path2',
+        },
       ]);
 
       await lifecycle.cleanupStale();

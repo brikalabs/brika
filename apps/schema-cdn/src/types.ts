@@ -7,6 +7,13 @@ export interface Env {
 
 export interface PackageMetadata {
   name: string;
-  versions: Record<string, { dist?: unknown }>;
-  'dist-tags': { latest: string };
+  versions: Record<
+    string,
+    {
+      dist?: unknown;
+    }
+  >;
+  'dist-tags': {
+    latest: string;
+  };
 }

@@ -39,6 +39,10 @@ export function reset(): void {
 }
 
 /** Track a spy for automatic cleanup on reset. */
-export function trackSpy<T extends { mockRestore(): void }>(spy: T): T {
+export function trackSpy<
+  T extends {
+    mockRestore(): void;
+  },
+>(spy: T): T {
   return TestBed.trackSpy(spy);
 }

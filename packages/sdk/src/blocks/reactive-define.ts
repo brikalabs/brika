@@ -135,9 +135,13 @@ export function defineReactiveBlock<
   // Get TypeScript-like type name from schema (not resolving passthrough/resolved)
   const getBaseTypeName = (schema: OutputDefSchema): string => {
     if (schema && typeof schema === 'object' && '__type' in schema) {
-      if (schema.__type === 'generic') return `generic<${schema.__generic}>`;
+      if (schema.__type === 'generic') {
+        return `generic<${schema.__generic}>`;
+      }
       // Don't resolve passthrough here - it will be resolved later
-      if (schema.__type === 'passthrough') return `__passthrough:${schema.__passthrough}`;
+      if (schema.__type === 'passthrough') {
+        return `__passthrough:${schema.__passthrough}`;
+      }
       // Resolved types use $resolve:source:configField format for UI type inference
       if (schema.__type === 'resolved') {
         return `$resolve:${schema.__source}:${schema.__configField}`;
@@ -167,7 +171,13 @@ export function defineReactiveBlock<
   };
 
   // Build input map for passthrough resolution
-  const inputMap = new Map<string, { typeName: string; jsonSchema?: Record<string, unknown> }>();
+  const inputMap = new Map<
+    string,
+    {
+      typeName: string;
+      jsonSchema?: Record<string, unknown>;
+    }
+  >();
   for (const [id, def] of Object.entries(spec.inputs)) {
     inputMap.set(id, {
       typeName: getBaseTypeName(def.schema),
@@ -252,7 +262,14 @@ export function defineReactiveBlock<
       const config = configResult.success ? configResult.data : ({} as z.infer<TConfig>);
 
       // Build input flows object
-      const inputFlows = Object.fromEntries([...flows.entries()].map(([id, flow]) => [id, flow]));
+      const inputFlows = Object.fromEntries(
+        [
+          ...flows.entries(),
+        ].map(([id, flow]) => [
+          id,
+          flow,
+        ])
+      );
 
       // start() function for creating flows from values/sources/factories
       const start = <T>(input: T | Source<T> | Factory<T>): Flow<T> => {
@@ -327,7 +344,9 @@ export function defineReactiveBlock<
  * Check if a value is a CompiledReactiveBlock
  */
 export function isCompiledReactiveBlock(value: unknown): value is CompiledReactiveBlock {
-  if (typeof value !== 'object' || value === null) return false;
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
   const obj = value as Record<string, unknown>;
   return (
     typeof obj.id === 'string' &&
@@ -342,14 +361,32 @@ export function isCompiledReactiveBlock(value: unknown): value is CompiledReacti
 // ─────────────────────────────────────────────────────────────────────────────
 
 function zodToBlockSchema(schema: z.ZodObject<z.ZodRawShape>): BlockSchema {
-  const json = z.toJSONSchema(schema, { unrepresentable: 'any' });
+  const json = z.toJSONSchema(schema, {
+    unrepresentable: 'any',
+  });
   type JsonSchemaProps = Record<
     string,
-    { type?: string; description?: string; enum?: Json[]; default?: Json }
+    {
+      type?: string;
+      description?: string;
+      enum?: Json[];
+      default?: Json;
+    }
   >;
-  const props = (json as { properties?: JsonSchemaProps }).properties ?? {};
+  const props =
+    (
+      json as {
+        properties?: JsonSchemaProps;
+      }
+    ).properties ?? {};
   type PropType = 'string' | 'number' | 'boolean' | 'object' | 'array';
-  const validTypes = new Set<PropType>(['string', 'number', 'boolean', 'object', 'array']);
+  const validTypes = new Set<PropType>([
+    'string',
+    'number',
+    'boolean',
+    'object',
+    'array',
+  ]);
   return {
     type: 'object',
     properties: Object.fromEntries(
@@ -358,11 +395,24 @@ function zodToBlockSchema(schema: z.ZodObject<z.ZodRawShape>): BlockSchema {
         {
           type: (validTypes.has(v.type as PropType) ? v.type : 'string') as PropType,
           description: v.description,
-          ...(v.enum ? { enum: v.enum } : {}),
-          ...(v.default === undefined ? {} : { default: v.default }),
+          ...(v.enum
+            ? {
+                enum: v.enum,
+              }
+            : {}),
+          ...(v.default === undefined
+            ? {}
+            : {
+                default: v.default,
+              }),
         },
       ])
     ),
-    required: (json as { required?: string[] }).required ?? [],
+    required:
+      (
+        json as {
+          required?: string[];
+        }
+      ).required ?? [],
   };
 }

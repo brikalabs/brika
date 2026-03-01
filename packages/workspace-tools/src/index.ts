@@ -23,7 +23,11 @@ import type { WorkspacePackage } from './workspace';
 import { applyVersionToPackages, discoverPackages, filterPackages } from './workspace';
 
 const ROOT = process.cwd();
-const packageCountForms = { '=0': 'no packages', one: '# package', other: '# packages' };
+const packageCountForms = {
+  '=0': 'no packages',
+  one: '# package',
+  other: '# packages',
+};
 
 const HELP = `
 ${pc.bold('workspace-tools')} — Interactive Workspace Version Bumper
@@ -67,11 +71,29 @@ const { positionals, values } = parseArgs({
   allowPositionals: true,
   strict: false,
   options: {
-    help: { type: 'boolean', short: 'h', default: false },
-    all: { type: 'boolean', short: 'a', default: false },
-    'dry-run': { type: 'boolean', default: false },
-    filter: { type: 'string', short: 'f', multiple: true },
-    since: { type: 'string', short: 's' },
+    help: {
+      type: 'boolean',
+      short: 'h',
+      default: false,
+    },
+    all: {
+      type: 'boolean',
+      short: 'a',
+      default: false,
+    },
+    'dry-run': {
+      type: 'boolean',
+      default: false,
+    },
+    filter: {
+      type: 'string',
+      short: 'f',
+      multiple: true,
+    },
+    since: {
+      type: 'string',
+      short: 's',
+    },
   },
 });
 
@@ -124,7 +146,7 @@ try {
 
   if (isNonInteractive) {
     // Non-interactive path: bump type + packages are fully determined by flags
-    nextVersion = applyBump(currentVersion, bumpArg!);
+    nextVersion = applyBump(currentVersion, bumpArg ?? 'patch');
     selectedPackages = candidatePackages;
 
     if (compareVersions(currentVersion, nextVersion) === 0) {
@@ -136,8 +158,11 @@ try {
     for (const pkg of selectedPackages) {
       const changed = changedPackages ? changedPackages.has(pkg.name) : undefined;
       let badge = '  ';
-      if (changed === true) badge = pc.green('● ');
-      else if (changed === false) badge = pc.dim('○ ');
+      if (changed === true) {
+        badge = pc.green('● ');
+      } else if (changed === false) {
+        badge = pc.dim('○ ');
+      }
       const arrow = pkg.version === nextVersion ? pc.dim(' = ') : ' → ';
       const path = pc.dim(pkg.relativePath.padEnd(43));
       const ver = pc.dim(pkg.version);

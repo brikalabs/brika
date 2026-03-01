@@ -64,8 +64,14 @@ let _config: ResolvedAuthConfig = AUTH_DEFAULTS;
 /** Initialize auth config. Call once during bootstrap. */
 export function initAuthConfig(config?: AuthConfig): ResolvedAuthConfig {
   _config = {
-    session: { ...AUTH_DEFAULTS.session, ...config?.session },
-    password: { ...AUTH_DEFAULTS.password, ...config?.password },
+    session: {
+      ...AUTH_DEFAULTS.session,
+      ...config?.session,
+    },
+    password: {
+      ...AUTH_DEFAULTS.password,
+      ...config?.password,
+    },
   };
   return _config;
 }

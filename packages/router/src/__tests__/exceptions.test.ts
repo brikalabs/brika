@@ -24,7 +24,10 @@ describe('HttpException', () => {
   });
 
   test('accepts optional data', () => {
-    const data = { field: 'test', reason: 'invalid' };
+    const data = {
+      field: 'test',
+      reason: 'invalid',
+    };
     const ex = new HttpException(400, 'Bad request', data);
 
     expect(ex.data).toEqual(data);
@@ -121,7 +124,11 @@ describe('UnprocessableEntity', () => {
   });
 
   test('accepts custom message and data', () => {
-    const data = { errors: ['field required'] };
+    const data = {
+      errors: [
+        'field required',
+      ],
+    };
     const ex = new UnprocessableEntity('Validation failed', data);
 
     expect(ex.message).toBe('Validation failed');

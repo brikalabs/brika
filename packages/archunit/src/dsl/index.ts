@@ -45,7 +45,9 @@ export function dirs(pattern: string): DirBuilder {
   };
 }
 
-type Buildable = { build(): Rule };
+type Buildable = {
+  build(): Rule;
+};
 
 /**
  * Collect rules from fluent builders

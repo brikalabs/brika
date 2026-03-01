@@ -12,7 +12,10 @@ import { UpdateService } from '@/runtime/updates/update-service';
 function mockGitHub(
   bun: ReturnType<typeof useBunMock>,
   tagName: string,
-  options?: { status?: number; targetCommitish?: string }
+  options?: {
+    status?: number;
+    targetCommitish?: string;
+  }
 ) {
   bun.fetch(() =>
     Promise.resolve(
@@ -25,7 +28,12 @@ function mockGitHub(
           body: 'Release notes',
           assets: [],
         }),
-        { status: options?.status ?? 200, headers: { 'Content-Type': 'application/json' } }
+        {
+          status: options?.status ?? 200,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
       )
     )
   );
@@ -35,10 +43,15 @@ describe('UpdateService', () => {
   const bun = useBunMock();
   let service: UpdateService;
 
-  useTestBed({ autoStub: false }, () => {
-    stub(Logger);
-    service = get(UpdateService);
-  });
+  useTestBed(
+    {
+      autoStub: false,
+    },
+    () => {
+      stub(Logger);
+      service = get(UpdateService);
+    }
+  );
 
   test('initial state has null cache and zero timestamp', () => {
     expect(service.cachedInfo).toBeNull();

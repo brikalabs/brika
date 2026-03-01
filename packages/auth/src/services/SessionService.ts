@@ -4,12 +4,12 @@
  * Replaces JWT-based TokenService with revocable, trackable sessions.
  */
 
-import { randomBytes, createHash } from 'node:crypto';
 import type { Database } from 'bun:sqlite';
+import { createHash, randomBytes } from 'node:crypto';
 import { injectable } from '@brika/di';
-import { Role, Scope, type Session, type SessionRecord } from '../types';
-import { ROLE_SCOPES } from '../roles';
 import { getAuthConfig } from '../config';
+import { ROLE_SCOPES } from '../roles';
+import { Role, Scope, type Session, type SessionRecord } from '../types';
 
 interface SessionRow {
   id: string;
@@ -31,10 +31,14 @@ interface SessionWithUserRow extends SessionRow {
 }
 
 function parseScopes(raw: string | null): Scope[] {
-  if (!raw) return [];
+  if (!raw) {
+    return [];
+  }
   try {
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
     const valid = new Set<string>(Object.values(Scope));
     return parsed.filter((s: string) => valid.has(s)) as Scope[];
   } catch {
@@ -108,21 +112,29 @@ export class SessionService {
   #enforceSessionLimit(userId: string, now: number): void {
     const { maxPerUser } = getAuthConfig().session;
     const activeSessions = this.db
-      .query<{ id: string }, [string, number]>(
+      .query<
+        {
+          id: string;
+        },
+        [
+          string,
+          number,
+        ]
+      >(
         `SELECT id FROM sessions
          WHERE user_id = ? AND revoked_at IS NULL AND expires_at > ?
          ORDER BY last_seen_at DESC`
       )
       .all(userId, now);
 
-    if (activeSessions.length <= maxPerUser) return;
+    if (activeSessions.length <= maxPerUser) {
+      return;
+    }
 
     // Revoke all sessions beyond the limit (oldest first, they're at the end)
     const toRevoke = activeSessions.slice(maxPerUser);
     for (const session of toRevoke) {
-      this.db
-        .query(`UPDATE sessions SET revoked_at = ? WHERE id = ?`)
-        .run(now, session.id);
+      this.db.query(`UPDATE sessions SET revoked_at = ? WHERE id = ?`).run(now, session.id);
     }
   }
 
@@ -136,7 +148,12 @@ export class SessionService {
     const now = Date.now();
 
     const row = this.db
-      .query<SessionWithUserRow, [string]>(
+      .query<
+        SessionWithUserRow,
+        [
+          string,
+        ]
+      >(
         `SELECT s.*, u.email, u.name, u.role, u.scopes
          FROM sessions s
          JOIN users u ON u.id = s.user_id
@@ -144,9 +161,15 @@ export class SessionService {
       )
       .get(tokenHash);
 
-    if (!row) return null;
-    if (row.revoked_at !== null) return null;
-    if (row.expires_at < now) return null;
+    if (!row) {
+      return null;
+    }
+    if (row.revoked_at !== null) {
+      return null;
+    }
+    if (row.expires_at < now) {
+      return null;
+    }
 
     // Sliding expiration: extend session + update last_seen_at & ip
     const newExpiresAt = now + this.sessionTTL * 1000;
@@ -159,9 +182,7 @@ export class SessionService {
     const role = (row.role as Role) ?? Role.USER;
 
     // Admins always get full admin scopes; others use their explicit allow-list
-    const scopes: Scope[] = role === Role.ADMIN
-      ? ROLE_SCOPES[Role.ADMIN]
-      : parseScopes(row.scopes);
+    const scopes: Scope[] = role === Role.ADMIN ? ROLE_SCOPES[Role.ADMIN] : parseScopes(row.scopes);
 
     return {
       id: row.id,
@@ -199,7 +220,13 @@ export class SessionService {
   listUserSessions(userId: string): SessionRecord[] {
     const now = Date.now();
     const rows = this.db
-      .query<SessionRow, [string, number]>(
+      .query<
+        SessionRow,
+        [
+          string,
+          number,
+        ]
+      >(
         `SELECT * FROM sessions
          WHERE user_id = ? AND revoked_at IS NULL AND expires_at > ?
          ORDER BY last_seen_at DESC`

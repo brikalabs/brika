@@ -19,7 +19,9 @@ describe('defineAction', () => {
   });
 
   test('returns ActionRef with __actionId', () => {
-    const handler = async () => ({ ok: true });
+    const handler = async () => ({
+      ok: true,
+    });
     const ref = defineAction(handler);
 
     expect(ref.__actionId).toBeDefined();
@@ -33,7 +35,9 @@ describe('defineAction', () => {
 
     expect(mockRegisterAction).toHaveBeenCalledTimes(1);
     const call = mockRegisterAction.mock.calls[0];
-    if (!call) throw new Error('Expected mock to have been called');
+    if (!call) {
+      throw new Error('Expected mock to have been called');
+    }
     const [id, registeredHandler] = call;
     expect(typeof id).toBe('string');
     expect(typeof registeredHandler).toBe('function');

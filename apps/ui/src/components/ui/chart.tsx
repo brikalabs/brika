@@ -10,13 +10,15 @@ function ChartTooltipContent({
   formatValue,
 }: Readonly<{
   active?: boolean;
-  payload?: ReadonlyArray<{ value?: unknown }>;
+  payload?: ReadonlyArray<{
+    value?: unknown;
+  }>;
   formatValue: (value: number) => string;
 }>) {
-  if (active && payload?.[0]?.value != null) {
+  if (active && payload?.[0]?.value !== null && payload?.[0]?.value !== undefined) {
     return (
       <div className="rounded-md border bg-popover px-2 py-1 text-sm shadow-md">
-        {formatValue(payload[0].value as number)}
+        {formatValue(Number(payload[0].value))}
       </div>
     );
   }
@@ -24,7 +26,10 @@ function ChartTooltipContent({
 }
 
 interface MetricsChartProps {
-  data: Array<{ ts: number; value: number }>;
+  data: Array<{
+    ts: number;
+    value: number;
+  }>;
   color?: string;
   formatValue?: (value: number) => string;
   className?: string;
@@ -39,17 +44,27 @@ export function MetricsChart({
   const gradientId = `gradient-${color.replaceAll(/[^a-zA-Z0-9]/g, '')}`;
   const hasData = data.length > 0;
   const renderTooltip = useCallback(
-    ({ active, payload }: { active?: boolean; payload?: ReadonlyArray<{ value?: unknown }> }) => (
-      <ChartTooltipContent active={active} payload={payload} formatValue={formatValue} />
-    ),
-    [formatValue]
+    (props: {
+      active?: boolean;
+      payload?: ReadonlyArray<{
+        value?: unknown;
+      }>;
+    }) => <ChartTooltipContent {...props} formatValue={formatValue} />,
+    [
+      formatValue,
+    ]
   );
 
   // Show empty placeholder when no data
   if (!hasData) {
     return (
       <div className={cn('flex h-20 w-full items-center justify-center', className)}>
-        <div className="h-px w-full opacity-20" style={{ backgroundColor: color }} />
+        <div
+          className="h-px w-full opacity-20"
+          style={{
+            backgroundColor: color,
+          }}
+        />
       </div>
     );
   }
@@ -57,7 +72,15 @@ export function MetricsChart({
   return (
     <div className={cn('h-20 w-full', className)}>
       <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={data} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
+        <AreaChart
+          data={data}
+          margin={{
+            top: 5,
+            right: 5,
+            left: 5,
+            bottom: 5,
+          }}
+        >
           <defs>
             <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%" stopColor={color} stopOpacity={0.3} />
@@ -65,7 +88,13 @@ export function MetricsChart({
             </linearGradient>
           </defs>
           <XAxis dataKey="ts" hide />
-          <YAxis hide domain={['auto', 'auto']} />
+          <YAxis
+            hide
+            domain={[
+              'auto',
+              'auto',
+            ]}
+          />
           <Tooltip content={renderTooltip} />
           <Area
             type="monotone"

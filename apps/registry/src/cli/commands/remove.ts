@@ -23,7 +23,12 @@ export const remove: Command = {
       options: registry.plugins.map((pl) => ({
         value: pl.name,
         label: pc.cyan(pl.name),
-        hint: [pl.category, pl.featured ? 'featured' : ''].filter(Boolean).join(', '),
+        hint: [
+          pl.category,
+          pl.featured ? 'featured' : '',
+        ]
+          .filter(Boolean)
+          .join(', '),
       })),
       required: true,
     });
@@ -54,10 +59,23 @@ export const remove: Command = {
       .reverse();
 
     for (const idx of indicesToRemove) {
-      content = modifyRegistry(content, ['plugins', idx], undefined);
+      content = modifyRegistry(
+        content,
+        [
+          'plugins',
+          idx,
+        ],
+        undefined
+      );
     }
 
-    content = modifyRegistry(content, ['lastUpdated'], new Date().toISOString());
+    content = modifyRegistry(
+      content,
+      [
+        'lastUpdated',
+      ],
+      new Date().toISOString()
+    );
     writeRegistryRaw(content);
 
     for (const name of toRemove) {

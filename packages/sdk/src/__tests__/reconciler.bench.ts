@@ -2,36 +2,69 @@ import type { ComponentNode } from '@brika/ui-kit';
 import { bench, group, run } from 'mitata';
 import { reconcile } from '../reconciler';
 
-type TextNode = ComponentNode & { type: 'text' };
-type ColumnNode = ComponentNode & { type: 'column'; children: ComponentNode[] };
+type TextNode = ComponentNode & {
+  type: 'text';
+};
+type ColumnNode = ComponentNode & {
+  type: 'column';
+  children: ComponentNode[];
+};
 
 function text(content: string, extra?: Record<string, unknown>): TextNode {
-  const node = { type: 'text' as const, content } as TextNode;
-  if (extra) Object.assign(node, extra);
+  const node = {
+    type: 'text' as const,
+    content,
+  } as TextNode;
+  if (extra) {
+    Object.assign(node, extra);
+  }
   return node;
 }
 
 function column(children: ComponentNode[]): ColumnNode {
-  return { type: 'column' as const, children } as ColumnNode;
+  return {
+    type: 'column' as const,
+    children,
+  } as ColumnNode;
 }
 
 function flatTree(n: number, prefix = ''): ComponentNode[] {
-  return Array.from({ length: n }, (_, i) => text(`${prefix}${i}`));
+  return Array.from(
+    {
+      length: n,
+    },
+    (_, i) => text(`${prefix}${i}`)
+  );
 }
 
 function nestedTree(depth: number, width: number, prefix = ''): ComponentNode[] {
-  if (depth === 0) return [text(`${prefix}leaf`)];
-  return Array.from({ length: width }, (_, i) =>
-    column(nestedTree(depth - 1, width, `${prefix}${i}.`))
+  if (depth === 0) {
+    return [
+      text(`${prefix}leaf`),
+    ];
+  }
+  return Array.from(
+    {
+      length: width,
+    },
+    (_, i) => column(nestedTree(depth - 1, width, `${prefix}${i}.`))
   );
 }
 
 function mutateProps(nodes: ComponentNode[], frac: number): ComponentNode[] {
   return nodes.map((node, i) => {
-    if (i / nodes.length < frac) return { ...node, content: `changed-${i}` } as ComponentNode;
+    if (i / nodes.length < frac) {
+      return {
+        ...node,
+        content: `changed-${i}`,
+      } as ComponentNode;
+    }
     if ('children' in node) {
       const n = node as ColumnNode;
-      return { ...n, children: mutateProps(n.children, frac) } as ComponentNode;
+      return {
+        ...n,
+        children: mutateProps(n.children, frac),
+      } as ComponentNode;
     }
     return node;
   });
@@ -44,7 +77,10 @@ const flat50new = flatTree(50, 'new-');
 const flat200 = flatTree(200);
 const flat200partial = mutateProps(flatTree(200), 0.1);
 const base20 = flatTree(20);
-const appended30 = [...flatTree(20), ...flatTree(10, 'new-')];
+const appended30 = [
+  ...flatTree(20),
+  ...flatTree(10, 'new-'),
+];
 const deep4x3old = nestedTree(4, 3);
 const deep4x3new = mutateProps(nestedTree(4, 3), 0.2);
 const large500a = flatTree(500);
@@ -54,12 +90,19 @@ const mixedOld: ComponentNode[] = [
   text('change'),
   text('remove1'),
   text('remove2'),
-  column([text('nested-keep'), text('nested-change')]),
+  column([
+    text('nested-keep'),
+    text('nested-change'),
+  ]),
 ];
 const mixedNew: ComponentNode[] = [
   text('keep'),
   text('CHANGED'),
-  column([text('nested-keep'), text('NESTED-CHANGED'), text('nested-add')]),
+  column([
+    text('nested-keep'),
+    text('NESTED-CHANGED'),
+    text('nested-add'),
+  ]),
   text('added'),
 ];
 

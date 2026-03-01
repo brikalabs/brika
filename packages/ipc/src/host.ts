@@ -76,7 +76,9 @@ export class PluginChannel {
 
     this.#channel = new Channel({
       send: (msg) => {
-        if (this.#disconnected) return;
+        if (this.#disconnected) {
+          return;
+        }
         try {
           proc.send(msg);
         } catch (e) {
@@ -155,7 +157,13 @@ export class PluginChannel {
    */
   async ping(timeoutMs?: number): Promise<number> {
     const ts = Date.now();
-    await this.#channel.call(ping, { ts }, timeoutMs);
+    await this.#channel.call(
+      ping,
+      {
+        ts,
+      },
+      timeoutMs
+    );
     return Date.now() - ts;
   }
 
@@ -173,7 +181,9 @@ export class PluginChannel {
 
   #pipeStderr(): void {
     const stderr = this.#proc.stderr;
-    if (!stderr) return;
+    if (!stderr) {
+      return;
+    }
 
     (async () => {
       const decoder = new TextDecoder();
@@ -182,34 +192,42 @@ export class PluginChannel {
       try {
         for (;;) {
           const { value, done } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
+          if (done) {
+            break;
+          }
+          buffer += decoder.decode(value, {
+            stream: true,
+          });
           const lines = buffer.split('\n');
           buffer = lines.pop() || '';
           for (const line of lines) {
-            const trimmed = line.trim();
-            if (trimmed) {
-              // Keep last 20 lines for error context
-              this.#stderrBuffer.push(trimmed);
-              if (this.#stderrBuffer.length > MAX_STDERR_LINES) {
-                this.#stderrBuffer.shift();
-              }
-              this.#onStderr?.(trimmed);
-            }
+            this.#processStderrLine(line);
           }
         }
-        if (buffer.trim()) {
-          this.#stderrBuffer.push(buffer.trim());
-          this.#onStderr?.(buffer.trim());
-        }
+        this.#processStderrLine(buffer);
       } catch {
         // Stream closed or errored - ignore
       }
     })();
   }
 
+  #processStderrLine(line: string): void {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      return;
+    }
+    // Keep last 20 lines for error context
+    this.#stderrBuffer.push(trimmed);
+    if (this.#stderrBuffer.length > MAX_STDERR_LINES) {
+      this.#stderrBuffer.shift();
+    }
+    this.#onStderr?.(trimmed);
+  }
+
   #handleDisconnect(error?: Error): void {
-    if (this.#disconnected) return;
+    if (this.#disconnected) {
+      return;
+    }
     this.#disconnected = true;
     this.#channel.close(error);
     this.#onDisconnect?.(error);
@@ -246,18 +264,24 @@ export function spawnPlugin(
 ): PluginChannel {
   let channel: PluginChannel;
 
-  const proc = Bun.spawn([cmd, ...args], {
-    argv0: options.processName?.replaceAll('/', '.'),
-    cwd: options.cwd,
-    env: options.env,
-    stdin: 'pipe',
-    stdout: 'pipe',
-    stderr: 'pipe',
-    serialization: 'advanced',
-    ipc: (msg) => {
-      channel.handle(msg as WireMessage);
-    },
-  });
+  const proc = Bun.spawn(
+    [
+      cmd,
+      ...args,
+    ],
+    {
+      argv0: options.processName?.replaceAll('/', '.'),
+      cwd: options.cwd,
+      env: options.env,
+      stdin: 'pipe',
+      stdout: 'pipe',
+      stderr: 'pipe',
+      serialization: 'advanced',
+      ipc: (msg) => {
+        channel.handle(msg as WireMessage);
+      },
+    }
+  );
 
   channel = new PluginChannel(proc, {
     defaultTimeoutMs: options.defaultTimeoutMs,

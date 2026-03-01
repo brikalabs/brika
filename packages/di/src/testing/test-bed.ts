@@ -30,12 +30,13 @@ class TestBedImpl {
 
   #enableAutoStub(): void {
     this.#autoStub = true;
-    this.#originalResolve = container.resolve.bind(container);
+    const originalResolve = container.resolve.bind(container);
+    this.#originalResolve = originalResolve;
     container.resolve = <T>(token: Constructor<T>) => {
       if (!this.#providers.has(token)) {
         this.stub(token);
       }
-      return this.#originalResolve!(token);
+      return originalResolve(token);
     };
   }
 

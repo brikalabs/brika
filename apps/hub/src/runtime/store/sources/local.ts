@@ -19,7 +19,10 @@ export class LocalRegistry implements RegistrySource {
     query?: string,
     _limit?: number,
     _offset?: number
-  ): Promise<{ plugins: RawRegistryPlugin[]; total: number }> {
+  ): Promise<{
+    plugins: RawRegistryPlugin[];
+    total: number;
+  }> {
     const workspaceRoot = await this.#configLoader.getWorkspaceRoot();
     const patterns = await this.#getWorkspacePatterns(workspaceRoot);
     const plugins: RawRegistryPlugin[] = [];
@@ -28,7 +31,10 @@ export class LocalRegistry implements RegistrySource {
       await this.#scanDir(scanDir, query, plugins);
     }
 
-    return { plugins, total: plugins.length };
+    return {
+      plugins,
+      total: plugins.length,
+    };
   }
 
   /**
@@ -36,18 +42,26 @@ export class LocalRegistry implements RegistrySource {
    * Returns the root directory and parsed package data, or null if not found.
    * Used for detail view, README and icon serving.
    */
-  async findByName(name: string): Promise<{ rootDir: string; pkg: PluginPackageSchema } | null> {
+  async findByName(name: string): Promise<{
+    rootDir: string;
+    pkg: PluginPackageSchema;
+  } | null> {
     const workspaceRoot = await this.#configLoader.getWorkspaceRoot();
     const patterns = await this.#getWorkspacePatterns(workspaceRoot);
 
     for (const scanDir of this.#scanDirs(workspaceRoot, patterns)) {
       try {
         const glob = new Bun.Glob('*/package.json');
-        for await (const path of glob.scan({ cwd: scanDir, absolute: false })) {
+        for await (const path of glob.scan({
+          cwd: scanDir,
+          absolute: false,
+        })) {
           try {
             const raw = await Bun.file(`${scanDir}/${path}`).json();
             const parsed = PluginPackageSchema.safeParse(raw);
-            if (!parsed.success) continue;
+            if (!parsed.success) {
+              continue;
+            }
             if (parsed.data.name === name) {
               return {
                 rootDir: `${scanDir}/${path.replace('/package.json', '')}`,
@@ -92,14 +106,21 @@ export class LocalRegistry implements RegistrySource {
   ): Promise<void> {
     try {
       const glob = new Bun.Glob('*/package.json');
-      for await (const path of glob.scan({ cwd: scanDir, absolute: false })) {
+      for await (const path of glob.scan({
+        cwd: scanDir,
+        absolute: false,
+      })) {
         try {
           const raw = await Bun.file(`${scanDir}/${path}`).json();
           const parsed = PluginPackageSchema.safeParse(raw);
-          if (!parsed.success) continue;
+          if (!parsed.success) {
+            continue;
+          }
 
           const pkg = parsed.data;
-          if (query && !this.#matchesQuery(pkg, query)) continue;
+          if (query && !this.#matchesQuery(pkg, query)) {
+            continue;
+          }
 
           out.push({
             package: {
@@ -123,7 +144,9 @@ export class LocalRegistry implements RegistrySource {
         }
       }
     } catch {
-      this.#log.debug('Workspace directory not found', { scanDir });
+      this.#log.debug('Workspace directory not found', {
+        scanDir,
+      });
     }
   }
 

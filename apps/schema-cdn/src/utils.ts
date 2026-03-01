@@ -7,9 +7,19 @@ export const CDN_URLS = {
 } as const;
 
 // Version utilities
-const parseVer = (v: string): [number, number, number] => {
+const parseVer = (
+  v: string
+): [
+  number,
+  number,
+  number,
+] => {
   const p = v.replace(/^\D*/, '').split('.').map(Number);
-  return [p[0] ?? 0, p[1] ?? 0, p[2] ?? 0];
+  return [
+    p[0] ?? 0,
+    p[1] ?? 0,
+    p[2] ?? 0,
+  ];
 };
 
 const isPreRelease = (v: string) => /^\d+\.\d+\.\d+-/.test(v);
@@ -35,7 +45,9 @@ export const satisfiesVersion = (ver: string, range: string): boolean => {
 };
 
 export const sortVersions = (versions: string[]): string[] =>
-  [...versions].sort((a, b) => {
+  [
+    ...versions,
+  ].sort((a, b) => {
     const [aMaj, aMin, aPat] = parseVer(a);
     const [bMaj, bMin, bPat] = parseVer(b);
     return bMaj - aMaj || bMin - aMin || bPat - aPat;
@@ -54,7 +66,10 @@ export const fetchPackageMetadata = async (pkg: string): Promise<PackageMetadata
 export const parseVersion = async (
   pathname: string,
   pkg: string
-): Promise<{ version: string; path: string }> => {
+): Promise<{
+  version: string;
+  path: string;
+}> => {
   const path = decodeURIComponent(pathname).replace(/^\/latest\//, '/');
 
   // Range: /^0.1.1/, /~0.1.0/, />=0.1.0/
@@ -62,28 +77,49 @@ export const parseVersion = async (
   if (rangeMatch) {
     const [, prefix, ver] = rangeMatch;
     const meta = await fetchPackageMetadata(pkg);
-    if (!meta) return { version: '', path };
+    if (!meta) {
+      return {
+        version: '',
+        path,
+      };
+    }
 
     const stable = getStableVersions(meta);
     const matching = stable.filter((v) => satisfiesVersion(v, `${prefix}${ver}`));
-    if (!matching.length) return { version: '', path };
+    if (!matching.length) {
+      return {
+        version: '',
+        path,
+      };
+    }
 
-    return { version: `@${sortVersions(matching)[0]}`, path: path.replace(/^\/[^/]+/, '') };
+    return {
+      version: `@${sortVersions(matching)[0]}`,
+      path: path.replace(/^\/[^/]+/, ''),
+    };
   }
 
   // Exact: /0.1.0/
   const exactMatch = /^\/(\d+\.\d+\.\d+(?:-[^/]*)?)\//.exec(path);
   if (exactMatch) {
-    return { version: `@${exactMatch[1]}`, path: path.replace(/^\/[^/]+/, '') };
+    return {
+      version: `@${exactMatch[1]}`,
+      path: path.replace(/^\/[^/]+/, ''),
+    };
   }
 
   // Latest
-  return { version: '', path };
+  return {
+    version: '',
+    path,
+  };
 };
 
 // Path builder
 export const buildFullPath = (base: string, file: string): string => {
-  if (!base?.trim()) return file;
+  if (!base?.trim()) {
+    return file;
+  }
   const cleanBase = base.replace(/\/$/, '');
   const cleanFile = file.startsWith('/') ? file : `/${file}`;
   return `${cleanBase}${cleanFile}`;

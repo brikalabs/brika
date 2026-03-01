@@ -6,7 +6,10 @@ export interface MarkdownNode extends BaseNode {
 }
 
 export function Markdown(props: Omit<MarkdownNode, 'type'>): MarkdownNode {
-  return { type: 'markdown', ...props };
+  return {
+    type: 'markdown',
+    ...props,
+  };
 }
 
 declare module './_shared' {

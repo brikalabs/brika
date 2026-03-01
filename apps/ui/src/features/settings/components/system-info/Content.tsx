@@ -42,11 +42,23 @@ interface SystemData {
     plugins: string;
   };
   stats: {
-    plugins: { total: number; running: number };
-    blocks: { total: number };
-    workflows: { total: number; enabled: number };
-    sparks: { total: number };
-    bricks: { total: number };
+    plugins: {
+      total: number;
+      running: number;
+    };
+    blocks: {
+      total: number;
+    };
+    workflows: {
+      total: number;
+      enabled: number;
+    };
+    sparks: {
+      total: number;
+    };
+    bricks: {
+      total: number;
+    };
   };
 }
 

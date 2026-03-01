@@ -10,7 +10,7 @@
 
 import type { I18nRef } from '@brika/ui-kit';
 import { i18nRef } from '@brika/ui-kit';
-import { type ContextCore, type MethodsOf, registerContextModule } from './register';
+import { type ContextCore, registerContextModule } from './register';
 
 // ─── Setup ────────────────────────────────────────────────────────────────────
 
@@ -41,12 +41,6 @@ export function setupI18n(core: ContextCore) {
       // Nothing to clean up
     },
   };
-}
-
-// ─── Type Augmentation (inferred from setup) ─────────────────────────────────
-
-declare module '../context' {
-  interface Context extends MethodsOf<typeof setupI18n> {}
 }
 
 registerContextModule('i18n', setupI18n);

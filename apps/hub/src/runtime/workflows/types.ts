@@ -16,7 +16,10 @@ export interface WorkflowBlock {
   /** Block type (pluginId:blockId) */
   type: string;
   /** Position in the visual editor */
-  position?: { x: number; y: number };
+  position?: {
+    x: number;
+    y: number;
+  };
   /** Block configuration */
   config?: Record<string, Json>;
 }

@@ -60,11 +60,15 @@ export class DirRule {
     return {
       name,
       async *check(ctx: RuleContext) {
-        if (skipped) return;
+        if (skipped) {
+          return;
+        }
         for await (const dir of ctx.glob(pattern)) {
           for (const check of checks) {
             const violation = await check(ctx, dir);
-            if (violation) yield violation;
+            if (violation) {
+              yield violation;
+            }
           }
         }
       },

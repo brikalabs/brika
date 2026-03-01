@@ -29,8 +29,14 @@ import {
 describe('errors', () => {
   describe('createHttpError', () => {
     test('creates error from response with status', async () => {
-      const response = new Response('Not found', { status: 404, statusText: 'Not Found' });
-      const config: RequestConfig = { method: 'GET', url: 'https://example.com' };
+      const response = new Response('Not found', {
+        status: 404,
+        statusText: 'Not Found',
+      });
+      const config: RequestConfig = {
+        method: 'GET',
+        url: 'https://example.com',
+      };
 
       const error = await createHttpError(response, config);
 
@@ -40,10 +46,17 @@ describe('errors', () => {
     });
 
     test('extracts message from JSON response', async () => {
-      const response = new Response(JSON.stringify({ message: 'User not found' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      const response = new Response(
+        JSON.stringify({
+          message: 'User not found',
+        }),
+        {
+          status: 404,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
 
       const error = await createHttpError(response);
 
@@ -51,10 +64,17 @@ describe('errors', () => {
     });
 
     test('extracts error field from JSON response', async () => {
-      const response = new Response(JSON.stringify({ error: 'Validation failed' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      const response = new Response(
+        JSON.stringify({
+          error: 'Validation failed',
+        }),
+        {
+          status: 400,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
 
       const error = await createHttpError(response);
 
@@ -63,10 +83,17 @@ describe('errors', () => {
 
     test('handles error object in JSON response', async () => {
       const response = new Response(
-        JSON.stringify({ error: { code: 'INVALID', details: 'Bad input' } }),
+        JSON.stringify({
+          error: {
+            code: 'INVALID',
+            details: 'Bad input',
+          },
+        }),
         {
           status: 400,
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+          },
         }
       );
 
@@ -76,7 +103,9 @@ describe('errors', () => {
     });
 
     test('extracts message from text response', async () => {
-      const response = new Response('Server error occurred', { status: 500 });
+      const response = new Response('Server error occurred', {
+        status: 500,
+      });
 
       const error = await createHttpError(response);
 
@@ -85,7 +114,9 @@ describe('errors', () => {
 
     test('limits text message length', async () => {
       const longText = 'x'.repeat(500);
-      const response = new Response(longText, { status: 500 });
+      const response = new Response(longText, {
+        status: 500,
+      });
 
       const error = await createHttpError(response);
 
@@ -93,7 +124,10 @@ describe('errors', () => {
     });
 
     test('handles empty response body', async () => {
-      const response = new Response('', { status: 500, statusText: 'Internal Server Error' });
+      const response = new Response('', {
+        status: 500,
+        statusText: 'Internal Server Error',
+      });
 
       const error = await createHttpError(response);
 
@@ -103,7 +137,9 @@ describe('errors', () => {
     test('handles JSON parse errors gracefully', async () => {
       const response = new Response('invalid json{', {
         status: 500,
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
       });
 
       const error = await createHttpError(response);
@@ -115,7 +151,10 @@ describe('errors', () => {
 
   describe('createTimeoutError', () => {
     test('creates timeout error', () => {
-      const config: RequestConfig = { method: 'GET', url: 'https://example.com' };
+      const config: RequestConfig = {
+        method: 'GET',
+        url: 'https://example.com',
+      };
 
       const error = createTimeoutError(5000, config);
 
@@ -128,7 +167,10 @@ describe('errors', () => {
 
   describe('createNetworkError', () => {
     test('creates network error', () => {
-      const config: RequestConfig = { method: 'GET', url: 'https://example.com' };
+      const config: RequestConfig = {
+        method: 'GET',
+        url: 'https://example.com',
+      };
       const originalError = new Error('Failed to fetch');
 
       const error = createNetworkError(originalError, config);
@@ -180,8 +222,12 @@ describe('headers', () => {
   describe('mergeHeaders', () => {
     test('merges multiple header objects', () => {
       const result = mergeHeaders(
-        { 'Content-Type': 'application/json' },
-        { Authorization: 'Bearer token' }
+        {
+          'Content-Type': 'application/json',
+        },
+        {
+          Authorization: 'Bearer token',
+        }
       );
 
       expect(result).toEqual({
@@ -192,17 +238,31 @@ describe('headers', () => {
 
     test('later headers override earlier', () => {
       const result = mergeHeaders(
-        { 'Content-Type': 'text/plain' },
-        { 'Content-Type': 'application/json' }
+        {
+          'Content-Type': 'text/plain',
+        },
+        {
+          'Content-Type': 'application/json',
+        }
       );
 
-      expect(result).toEqual({ 'Content-Type': 'application/json' });
+      expect(result).toEqual({
+        'Content-Type': 'application/json',
+      });
     });
 
     test('handles undefined headers', () => {
-      const result = mergeHeaders(undefined, { 'X-Custom': 'value' }, undefined);
+      const result = mergeHeaders(
+        undefined,
+        {
+          'X-Custom': 'value',
+        },
+        undefined
+      );
 
-      expect(result).toEqual({ 'X-Custom': 'value' });
+      expect(result).toEqual({
+        'X-Custom': 'value',
+      });
     });
 
     test('returns empty object for no headers', () => {
@@ -214,7 +274,9 @@ describe('headers', () => {
 
   describe('toHeadersInstance', () => {
     test('converts object to Headers', () => {
-      const headers = toHeadersInstance({ 'Content-Type': 'application/json' });
+      const headers = toHeadersInstance({
+        'Content-Type': 'application/json',
+      });
 
       expect(headers).toBeInstanceOf(Headers);
       expect(headers.get('Content-Type')).toBe('application/json');
@@ -266,13 +328,17 @@ describe('headers', () => {
     });
 
     test('gets content type from plain object', () => {
-      const headers = { 'Content-Type': 'application/json' };
+      const headers = {
+        'Content-Type': 'application/json',
+      };
 
       expect(getContentType(headers)).toBe('application/json');
     });
 
     test('handles case-insensitive keys', () => {
-      const headers = { 'content-type': 'text/html' };
+      const headers = {
+        'content-type': 'text/html',
+      };
 
       expect(getContentType(headers)).toBe('text/html');
     });
@@ -282,7 +348,9 @@ describe('headers', () => {
     });
 
     test('returns null when content-type not present', () => {
-      const headers = { 'X-Custom': 'value' };
+      const headers = {
+        'X-Custom': 'value',
+      };
 
       expect(getContentType(headers)).toBeNull();
     });
@@ -340,7 +408,10 @@ describe('url-builder', () => {
     });
 
     test('adds query params', () => {
-      const url = buildUrl('https://api.example.com', '/users', { page: 1, limit: 10 });
+      const url = buildUrl('https://api.example.com', '/users', {
+        page: 1,
+        limit: 10,
+      });
 
       expect(url).toBe('https://api.example.com/users?page=1&limit=10');
     });
@@ -348,14 +419,19 @@ describe('url-builder', () => {
 
   describe('addQueryParams', () => {
     test('adds params to URL', () => {
-      const url = addQueryParams('https://example.com/api', { foo: 'bar', baz: 123 });
+      const url = addQueryParams('https://example.com/api', {
+        foo: 'bar',
+        baz: 123,
+      });
 
       expect(url).toContain('foo=bar');
       expect(url).toContain('baz=123');
     });
 
     test('handles boolean params', () => {
-      const url = addQueryParams('https://example.com/api', { active: true });
+      const url = addQueryParams('https://example.com/api', {
+        active: true,
+      });
 
       expect(url).toContain('active=true');
     });
@@ -385,7 +461,9 @@ describe('url-builder', () => {
     });
 
     test('handles relative URLs', () => {
-      const url = addQueryParams('/api/users', { page: 1 });
+      const url = addQueryParams('/api/users', {
+        page: 1,
+      });
 
       expect(url).toBe('/api/users?page=1');
     });
@@ -393,7 +471,9 @@ describe('url-builder', () => {
 
   describe('replacePathParams', () => {
     test('replaces single param', () => {
-      const result = replacePathParams('/users/:id', { id: '123' });
+      const result = replacePathParams('/users/:id', {
+        id: '123',
+      });
 
       expect(result).toBe('/users/123');
     });
@@ -408,7 +488,9 @@ describe('url-builder', () => {
     });
 
     test('encodes special characters', () => {
-      const result = replacePathParams('/search/:query', { query: 'hello world' });
+      const result = replacePathParams('/search/:query', {
+        query: 'hello world',
+      });
 
       expect(result).toBe('/search/hello%20world');
     });
@@ -446,7 +528,10 @@ describe('url-builder', () => {
     test('extracts params from URL', () => {
       const params = extractQueryParams('https://example.com/api?foo=bar&baz=123');
 
-      expect(params).toEqual({ foo: 'bar', baz: '123' });
+      expect(params).toEqual({
+        foo: 'bar',
+        baz: '123',
+      });
     });
 
     test('returns empty object for URL without params', () => {
@@ -458,7 +543,9 @@ describe('url-builder', () => {
     test('handles relative URL', () => {
       const params = extractQueryParams('/api?page=1');
 
-      expect(params).toEqual({ page: '1' });
+      expect(params).toEqual({
+        page: '1',
+      });
     });
   });
 });

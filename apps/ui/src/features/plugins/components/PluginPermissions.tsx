@@ -28,10 +28,15 @@ export function PluginPermissions({ plugin }: Readonly<PluginPermissionsProps>) 
   // Only show recognized permissions from the typed registry
   const declaredPermissions = plugin.permissions.filter(isValidPermission);
 
-  if (declaredPermissions.length === 0) return null;
+  if (declaredPermissions.length === 0) {
+    return null;
+  }
 
   function handleToggle(permission: Permission, granted: boolean) {
-    toggleMutation.mutate({ permission, granted });
+    toggleMutation.mutate({
+      permission,
+      granted,
+    });
   }
 
   return (

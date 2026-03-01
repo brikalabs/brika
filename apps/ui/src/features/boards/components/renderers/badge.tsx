@@ -34,14 +34,23 @@ function getColorStyle(color: string): React.CSSProperties {
     };
   }
   // Literal CSS color: existing hex-alpha approach
-  return { backgroundColor: `${color}20`, color };
+  return {
+    backgroundColor: `${color}20`,
+    color,
+  };
 }
 
 defineRenderer('badge', ({ node, onAction }) => {
   return (
     <span
       className={cn(
-        node.color ? badgeVariants({ variant: null }) : badgeVariants({ variant: node.variant }),
+        node.color
+          ? badgeVariants({
+              variant: null,
+            })
+          : badgeVariants({
+              variant: node.variant,
+            }),
         node.onPress && 'cursor-pointer'
       )}
       style={node.color ? getColorStyle(node.color) : undefined}

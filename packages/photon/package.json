@@ -9,19 +9,25 @@
     "url": "https://github.com/maxscharwath/brika.git",
     "directory": "packages/photon"
   },
-  "keywords": ["brika", "image", "photon", "wasm", "resize", "webp"],
+  "keywords": [
+    "brika",
+    "image",
+    "photon",
+    "wasm",
+    "resize",
+    "webp"
+  ],
   "exports": {
     ".": "./src/index.ts"
   },
   "scripts": {
-    "tsc": "bunx --bun tsc --noEmit",
+    "typecheck": "tsgo --noEmit",
     "test": "bun test"
   },
   "dependencies": {
     "@cf-wasm/photon": "^0.3.4"
   },
   "devDependencies": {
-    "@types/bun": "latest",
-    "typescript": "^5.9.3"
+    "@types/bun": "latest"
   }
 }

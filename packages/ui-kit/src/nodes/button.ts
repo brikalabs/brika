@@ -34,7 +34,11 @@ export function Button(props: {
   fullWidth?: boolean;
 }): ButtonNode {
   const { onPress, ...rest } = props;
-  return { type: 'button', ...rest, onPress: onPress ? resolveAction(onPress) : undefined };
+  return {
+    type: 'button',
+    ...rest,
+    onPress: onPress ? resolveAction(onPress) : undefined,
+  };
 }
 
 declare module './_shared' {

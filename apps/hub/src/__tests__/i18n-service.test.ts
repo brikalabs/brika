@@ -10,15 +10,21 @@ import { ConfigLoader } from '@/runtime/config/config-loader';
 import { I18nService } from '@/runtime/i18n/i18n-service';
 import { Logger } from '@/runtime/logs/log-router';
 
-useTestBed({ autoStub: false });
+useTestBed({
+  autoStub: false,
+});
 const bun = useBunMock();
 
 describe('I18nService', () => {
   let service: I18nService;
-  let mockConfigLoader: { getRootDir: ReturnType<typeof mock> };
+  let mockConfigLoader: {
+    getRootDir: ReturnType<typeof mock>;
+  };
 
   beforeEach(() => {
-    mockConfigLoader = { getRootDir: mock().mockReturnValue('/test/hub') };
+    mockConfigLoader = {
+      getRootDir: mock().mockReturnValue('/test/hub'),
+    };
 
     stub(Logger);
     provide(ConfigLoader, mockConfigLoader);
@@ -29,9 +35,18 @@ describe('I18nService', () => {
     test('loads core translations from locales directory', async () => {
       bun
         .fs({
-          '/test/hub/locales/en/common.json': { hello: 'Hello', world: 'World' },
-          '/test/hub/locales/en/nav.json': { home: 'Home', settings: 'Settings' },
-          '/test/hub/locales/fr/common.json': { hello: 'Bonjour', world: 'Monde' },
+          '/test/hub/locales/en/common.json': {
+            hello: 'Hello',
+            world: 'World',
+          },
+          '/test/hub/locales/en/nav.json': {
+            home: 'Home',
+            settings: 'Settings',
+          },
+          '/test/hub/locales/fr/common.json': {
+            hello: 'Bonjour',
+            world: 'Monde',
+          },
         })
         .apply();
 
@@ -45,8 +60,12 @@ describe('I18nService', () => {
     test('lists namespaces from loaded translations', async () => {
       bun
         .fs({
-          '/test/hub/locales/en/common.json': { greeting: 'Hello' },
-          '/test/hub/locales/en/plugins.json': { title: 'Plugins' },
+          '/test/hub/locales/en/common.json': {
+            greeting: 'Hello',
+          },
+          '/test/hub/locales/en/plugins.json': {
+            title: 'Plugins',
+          },
         })
         .apply();
 
@@ -58,7 +77,11 @@ describe('I18nService', () => {
     });
 
     test('handles missing locales directory gracefully', async () => {
-      bun.fs({ '/test/hub/locales/': [] }).apply();
+      bun
+        .fs({
+          '/test/hub/locales/': [],
+        })
+        .apply();
 
       await service.init();
 
@@ -71,7 +94,11 @@ describe('I18nService', () => {
     test('returns sorted locales with cimode at end', async () => {
       bun
         .fs({
-          '/test/hub/locales/': ['fr/', 'en/', 'de/'],
+          '/test/hub/locales/': [
+            'fr/',
+            'en/',
+            'de/',
+          ],
           '/test/hub/locales/en/common.json': {},
           '/test/hub/locales/fr/common.json': {},
           '/test/hub/locales/de/common.json': {},
@@ -81,7 +108,12 @@ describe('I18nService', () => {
       await service.init();
 
       const locales = service.listLocales();
-      expect(locales).toEqual(['de', 'en', 'fr', 'cimode']);
+      expect(locales).toEqual([
+        'de',
+        'en',
+        'fr',
+        'cimode',
+      ]);
     });
   });
 
@@ -98,14 +130,20 @@ describe('I18nService', () => {
       await service.init();
 
       const namespaces = service.listNamespaces();
-      expect(namespaces).toEqual(['alpha', 'beta', 'zeta']);
+      expect(namespaces).toEqual([
+        'alpha',
+        'beta',
+        'zeta',
+      ]);
     });
 
     test('includes plugin namespaces with prefix', async () => {
       bun
         .fs({
           '/test/hub/locales/en/common.json': {},
-          '/test/plugin/locales/en/plugin.json': { name: 'Test Plugin' },
+          '/test/plugin/locales/en/plugin.json': {
+            name: 'Test Plugin',
+          },
         })
         .apply();
 
@@ -122,8 +160,13 @@ describe('I18nService', () => {
     beforeEach(async () => {
       bun
         .fs({
-          '/test/hub/locales/en/common.json': { greeting: 'Hello', farewell: 'Goodbye' },
-          '/test/hub/locales/fr/common.json': { greeting: 'Bonjour' },
+          '/test/hub/locales/en/common.json': {
+            greeting: 'Hello',
+            farewell: 'Goodbye',
+          },
+          '/test/hub/locales/fr/common.json': {
+            greeting: 'Bonjour',
+          },
         })
         .apply();
 
@@ -193,7 +236,9 @@ describe('I18nService', () => {
           name: 'Test Plugin',
           description: 'English description',
         },
-        '/test/plugin/locales/fr/plugin.json': { name: 'Plugin de Test' },
+        '/test/plugin/locales/fr/plugin.json': {
+          name: 'Plugin de Test',
+        },
       });
 
       await service.registerPluginTranslations('@test/plugin', '/test/plugin');
@@ -211,23 +256,39 @@ describe('I18nService', () => {
     test('registers plugin translations and returns detected locales', async () => {
       bun
         .fs({
-          '/test/plugin/locales/en/plugin.json': { name: 'English' },
-          '/test/plugin/locales/fr/plugin.json': { name: 'French' },
-          '/test/plugin/locales/de/plugin.json': { name: 'German' },
+          '/test/plugin/locales/en/plugin.json': {
+            name: 'English',
+          },
+          '/test/plugin/locales/fr/plugin.json': {
+            name: 'French',
+          },
+          '/test/plugin/locales/de/plugin.json': {
+            name: 'German',
+          },
         })
         .apply();
 
       const locales = await service.registerPluginTranslations('@test/plugin', '/test/plugin');
 
-      expect(locales).toEqual(['de', 'en', 'fr']);
+      expect(locales).toEqual([
+        'de',
+        'en',
+        'fr',
+      ]);
     });
 
     test('merges multiple JSON files in locale folder', async () => {
       bun
         .fs({
           '/test/hub/locales/en/common.json': {},
-          '/test/plugin/locales/en/plugin.json': { name: 'Test Plugin' },
-          '/test/plugin/locales/en/blocks.json': { timer: { name: 'Timer' } },
+          '/test/plugin/locales/en/plugin.json': {
+            name: 'Test Plugin',
+          },
+          '/test/plugin/locales/en/blocks.json': {
+            timer: {
+              name: 'Timer',
+            },
+          },
         })
         .apply();
 
@@ -238,7 +299,9 @@ describe('I18nService', () => {
 
       expect(translations).toEqual({
         name: 'Test Plugin',
-        timer: { name: 'Timer' },
+        timer: {
+          name: 'Timer',
+        },
       });
     });
 
@@ -262,7 +325,9 @@ describe('I18nService', () => {
 
       const locales = await service.registerPluginTranslations('@test/plugin', '/test/plugin');
 
-      expect(locales).toEqual(['en']);
+      expect(locales).toEqual([
+        'en',
+      ]);
     });
   });
 
@@ -271,7 +336,9 @@ describe('I18nService', () => {
       bun
         .fs({
           '/test/hub/locales/en/common.json': {},
-          '/test/plugin/locales/en/plugin.json': { name: 'Test' },
+          '/test/plugin/locales/en/plugin.json': {
+            name: 'Test',
+          },
         })
         .apply();
 
@@ -295,22 +362,35 @@ describe('I18nService', () => {
     test('builds correct chain for simple locale', async () => {
       bun
         .fs({
-          '/test/hub/locales/en/test.json': { key: 'English' },
+          '/test/hub/locales/en/test.json': {
+            key: 'English',
+          },
         })
         .apply();
 
       await service.init();
 
       const translations = service.getNamespaceTranslations('de', 'test');
-      expect(translations).toEqual({ key: 'English' });
+      expect(translations).toEqual({
+        key: 'English',
+      });
     });
 
     test('builds correct chain for regional locale', async () => {
       bun
         .fs({
-          '/test/hub/locales/en/test.json': { a: 'en-a', b: 'en-b', c: 'en-c' },
-          '/test/hub/locales/pt/test.json': { a: 'pt-a', b: 'pt-b' },
-          '/test/hub/locales/pt-BR/test.json': { a: 'pt-BR-a' },
+          '/test/hub/locales/en/test.json': {
+            a: 'en-a',
+            b: 'en-b',
+            c: 'en-c',
+          },
+          '/test/hub/locales/pt/test.json': {
+            a: 'pt-a',
+            b: 'pt-b',
+          },
+          '/test/hub/locales/pt-BR/test.json': {
+            a: 'pt-BR-a',
+          },
         })
         .apply();
 
@@ -327,14 +407,18 @@ describe('I18nService', () => {
     test('does not duplicate en in fallback chain', async () => {
       bun
         .fs({
-          '/test/hub/locales/en/test.json': { key: 'value' },
+          '/test/hub/locales/en/test.json': {
+            key: 'value',
+          },
         })
         .apply();
 
       await service.init();
 
       const translations = service.getNamespaceTranslations('en', 'test');
-      expect(translations).toEqual({ key: 'value' });
+      expect(translations).toEqual({
+        key: 'value',
+      });
     });
   });
 
@@ -343,10 +427,22 @@ describe('I18nService', () => {
       bun
         .fs({
           '/test/hub/locales/en/test.json': {
-            nested: { a: 'en-a', b: 'en-b', deep: { x: 'en-x', y: 'en-y' } },
+            nested: {
+              a: 'en-a',
+              b: 'en-b',
+              deep: {
+                x: 'en-x',
+                y: 'en-y',
+              },
+            },
           },
           '/test/hub/locales/fr/test.json': {
-            nested: { a: 'fr-a', deep: { x: 'fr-x' } },
+            nested: {
+              a: 'fr-a',
+              deep: {
+                x: 'fr-x',
+              },
+            },
           },
         })
         .apply();
@@ -369,15 +465,31 @@ describe('I18nService', () => {
     test('does not merge arrays', async () => {
       bun
         .fs({
-          '/test/hub/locales/en/test.json': { items: ['a', 'b', 'c'] },
-          '/test/hub/locales/fr/test.json': { items: ['x', 'y'] },
+          '/test/hub/locales/en/test.json': {
+            items: [
+              'a',
+              'b',
+              'c',
+            ],
+          },
+          '/test/hub/locales/fr/test.json': {
+            items: [
+              'x',
+              'y',
+            ],
+          },
         })
         .apply();
 
       await service.init();
 
       const translations = service.getNamespaceTranslations('fr', 'test');
-      expect(translations).toEqual({ items: ['x', 'y'] });
+      expect(translations).toEqual({
+        items: [
+          'x',
+          'y',
+        ],
+      });
     });
   });
 });

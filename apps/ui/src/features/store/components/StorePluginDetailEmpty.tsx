@@ -2,7 +2,7 @@ import { Link } from '@tanstack/react-router';
 import { ArrowLeft, Package } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
-import { routes } from '@/routes';
+import { paths } from '@/routes/paths';
 
 interface StorePluginDetailEmptyProps {
   packageName: string;
@@ -14,7 +14,7 @@ export function StorePluginDetailEmpty({ packageName }: Readonly<StorePluginDeta
   return (
     <div className="space-y-6">
       <Link
-        to={routes.store.list.path}
+        to={paths.store.list.path}
         className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="size-4" />
@@ -25,7 +25,9 @@ export function StorePluginDetailEmpty({ packageName }: Readonly<StorePluginDeta
           <Package className="mx-auto mb-4 size-12 text-muted-foreground" />
           <h3 className="font-semibold text-lg">{t('store:plugin.notFound')}</h3>
           <p className="mt-1 text-muted-foreground">
-            {t('store:plugin.notFoundDetail', { name: packageName })}
+            {t('store:plugin.notFoundDetail', {
+              name: packageName,
+            })}
           </p>
         </CardContent>
       </Card>

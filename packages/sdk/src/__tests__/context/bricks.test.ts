@@ -14,8 +14,16 @@ import { createTestHarness, type Handler, noopMock } from './_test-utils';
 const mockCreateState = mock((scheduleRender: () => void) => ({
   hooks: [],
   effects: [],
-  actionRefs: new Map<string, { current: Handler }>(),
-  brickSize: { width: 2, height: 2 },
+  actionRefs: new Map<
+    string,
+    {
+      current: Handler;
+    }
+  >(),
+  brickSize: {
+    width: 2,
+    height: 2,
+  },
   config: {} as Record<string, unknown>,
   configKeys: null as Set<string> | null,
   scheduleRender,
@@ -43,7 +51,16 @@ mock.module('../../brick-hooks', () => ({
 
 // Mock reconciler
 const mockReconcile = mock((_oldNodes: unknown[], _newNodes: unknown[]): Mutation[] => {
-  return [[MUT.CREATE, '0', { type: 'text', content: 'test' } as ComponentNode]];
+  return [
+    [
+      MUT.CREATE,
+      '0',
+      {
+        type: 'text',
+        content: 'test',
+      } as ComponentNode,
+    ],
+  ];
 });
 
 mock.module('../../reconciler', () => ({
@@ -55,20 +72,38 @@ const { setupBricks } = await import('../../context/bricks');
 
 // ─── Test Harness ────────────────────────────────────────────────────────────
 
-const h = createTestHarness({ bricks: [{ id: 'test-brick' }] });
+const h = createTestHarness({
+  bricks: [
+    {
+      id: 'test-brick',
+    },
+  ],
+});
 
 // ─── Mock component ──────────────────────────────────────────────────────────
 
 const mockComponent = mock((_ctx: { instanceId: string; config: Record<string, unknown> }) => {
-  return { type: 'text' as const, content: 'Hello' };
+  return {
+    type: 'text' as const,
+    content: 'Hello',
+  };
 });
 
 function makeBrickType(overrides?: { id?: string; component?: Handler }) {
   return {
     spec: {
       id: overrides?.id ?? 'test-brick',
-      families: ['sm', 'md'] as ('sm' | 'md')[],
-      config: [{ name: 'title', type: 'string', label: 'Title' }],
+      families: [
+        'sm',
+        'md',
+      ] as ('sm' | 'md')[],
+      config: [
+        {
+          name: 'title',
+          type: 'string',
+          label: 'Title',
+        },
+      ],
     },
     component: (overrides?.component ?? mockComponent) as unknown,
   };
@@ -93,7 +128,16 @@ describe('setupBricks', () => {
 
     // Reset mockReconcile to default behavior
     mockReconcile.mockImplementation((_old: unknown[], _new: unknown[]) => {
-      return [[MUT.CREATE, '0', { type: 'text', content: 'test' } as ComponentNode]];
+      return [
+        [
+          MUT.CREATE,
+          '0',
+          {
+            type: 'text',
+            content: 'test',
+          } as ComponentNode,
+        ],
+      ];
     });
 
     const result = setupBricks(h.core);
@@ -115,9 +159,15 @@ describe('setupBricks', () => {
       methods.registerBrickType(makeBrickType() as never);
 
       expect(h.client.send).toHaveBeenCalledTimes(1);
-      const [def, payload] = h.client.send.mock.calls[0]! as [
-        { name: string },
-        { brickType: { id: string } },
+      const [def, payload] = (h.client.send.mock.calls[0] ?? []) as [
+        {
+          name: string;
+        },
+        {
+          brickType: {
+            id: string;
+          };
+        },
       ];
       expect(def.name).toBe('registerBrickType');
       expect(payload.brickType.id).toBe('test-brick');
@@ -125,7 +175,11 @@ describe('setupBricks', () => {
 
     test('throws for undeclared brick', () => {
       expect(() =>
-        methods.registerBrickType(makeBrickType({ id: 'unknown-brick' }) as never)
+        methods.registerBrickType(
+          makeBrickType({
+            id: 'unknown-brick',
+          }) as never
+        )
       ).toThrow('Brick "unknown-brick" not in package.json');
     });
 
@@ -152,7 +206,7 @@ describe('setupBricks', () => {
     });
 
     test('creates state and renders immediately', () => {
-      h.onHandlers.get('mountBrickInstance')!({
+      h.onHandlers.get('mountBrickInstance')?.({
         instanceId: 'i1',
         brickTypeId: 'test-plugin:test-brick',
         w: 2,
@@ -167,7 +221,7 @@ describe('setupBricks', () => {
     });
 
     test('extracts local ID from full type', () => {
-      h.onHandlers.get('mountBrickInstance')!({
+      h.onHandlers.get('mountBrickInstance')?.({
         instanceId: 'i1',
         brickTypeId: 'test-plugin:test-brick',
         w: 2,
@@ -176,12 +230,15 @@ describe('setupBricks', () => {
       });
 
       expect(mockComponent).toHaveBeenCalledTimes(1);
-      const callArg = mockComponent.mock.calls[0]![0];
+      const callArg = mockComponent.mock.calls[0]?.[0];
+      if (callArg === undefined) {
+        throw new Error('expected callArg');
+      }
       expect(callArg.instanceId).toBe('i1');
     });
 
     test('ignores unknown brick type', () => {
-      h.onHandlers.get('mountBrickInstance')!({
+      h.onHandlers.get('mountBrickInstance')?.({
         instanceId: 'i1',
         brickTypeId: 'test-plugin:nonexistent',
         w: 2,
@@ -193,7 +250,7 @@ describe('setupBricks', () => {
     });
 
     test('ignores duplicate mount', () => {
-      h.onHandlers.get('mountBrickInstance')!({
+      h.onHandlers.get('mountBrickInstance')?.({
         instanceId: 'i1',
         brickTypeId: 'test-plugin:test-brick',
         w: 2,
@@ -203,7 +260,7 @@ describe('setupBricks', () => {
 
       mockComponent.mockClear();
 
-      h.onHandlers.get('mountBrickInstance')!({
+      h.onHandlers.get('mountBrickInstance')?.({
         instanceId: 'i1',
         brickTypeId: 'test-plugin:test-brick',
         w: 4,
@@ -216,10 +273,17 @@ describe('setupBricks', () => {
 
     test('sends patch on initial render when reconcile returns mutations', () => {
       mockReconcile.mockReturnValueOnce([
-        [MUT.CREATE, '0', { type: 'text', content: 'Hello' } as ComponentNode],
+        [
+          MUT.CREATE,
+          '0',
+          {
+            type: 'text',
+            content: 'Hello',
+          } as ComponentNode,
+        ],
       ]);
 
-      h.onHandlers.get('mountBrickInstance')!({
+      h.onHandlers.get('mountBrickInstance')?.({
         instanceId: 'i1',
         brickTypeId: 'test-plugin:test-brick',
         w: 2,
@@ -229,13 +293,19 @@ describe('setupBricks', () => {
 
       const patchMsg = h.sentMessages.find((m) => m.name === 'patchBrickInstance');
       expect(patchMsg).toBeDefined();
-      expect((patchMsg!.payload as { instanceId: string }).instanceId).toBe('i1');
+      expect(
+        (
+          patchMsg?.payload as {
+            instanceId: string;
+          }
+        ).instanceId
+      ).toBe('i1');
     });
 
     test('skips patch when no mutations', () => {
       mockReconcile.mockReturnValueOnce([]);
 
-      h.onHandlers.get('mountBrickInstance')!({
+      h.onHandlers.get('mountBrickInstance')?.({
         instanceId: 'i1',
         brickTypeId: 'test-plugin:test-brick',
         w: 2,
@@ -255,7 +325,7 @@ describe('setupBricks', () => {
   describe('resizeBrickInstance', () => {
     beforeEach(() => {
       methods.registerBrickType(makeBrickType() as never);
-      h.onHandlers.get('mountBrickInstance')!({
+      h.onHandlers.get('mountBrickInstance')?.({
         instanceId: 'i1',
         brickTypeId: 'test-plugin:test-brick',
         w: 2,
@@ -268,7 +338,7 @@ describe('setupBricks', () => {
     });
 
     test('re-renders on resize', () => {
-      h.onHandlers.get('resizeBrickInstance')!({
+      h.onHandlers.get('resizeBrickInstance')?.({
         instanceId: 'i1',
         w: 6,
         h: 4,
@@ -280,7 +350,7 @@ describe('setupBricks', () => {
     });
 
     test('ignores unknown instance', () => {
-      h.onHandlers.get('resizeBrickInstance')!({
+      h.onHandlers.get('resizeBrickInstance')?.({
         instanceId: 'nonexistent',
         w: 4,
         h: 4,
@@ -297,31 +367,42 @@ describe('setupBricks', () => {
   describe('updateBrickConfig', () => {
     beforeEach(() => {
       methods.registerBrickType(makeBrickType() as never);
-      h.onHandlers.get('mountBrickInstance')!({
+      h.onHandlers.get('mountBrickInstance')?.({
         instanceId: 'i1',
         brickTypeId: 'test-plugin:test-brick',
         w: 2,
         h: 2,
-        config: { title: 'Old' },
+        config: {
+          title: 'Old',
+        },
       });
       mockComponent.mockClear();
     });
 
     test('re-renders with new config', () => {
-      h.onHandlers.get('updateBrickConfig')!({
+      h.onHandlers.get('updateBrickConfig')?.({
         instanceId: 'i1',
-        config: { title: 'New' },
+        config: {
+          title: 'New',
+        },
       });
 
       expect(mockComponent).toHaveBeenCalledTimes(1);
-      const callArg = mockComponent.mock.calls[0]![0];
-      expect(callArg.config).toEqual({ title: 'New' });
+      const callArg = mockComponent.mock.calls[0]?.[0];
+      if (callArg === undefined) {
+        throw new Error('expected callArg');
+      }
+      expect(callArg.config).toEqual({
+        title: 'New',
+      });
     });
 
     test('ignores unknown instance', () => {
-      h.onHandlers.get('updateBrickConfig')!({
+      h.onHandlers.get('updateBrickConfig')?.({
         instanceId: 'nonexistent',
-        config: { title: 'Nope' },
+        config: {
+          title: 'Nope',
+        },
       });
 
       expect(mockComponent).not.toHaveBeenCalled();
@@ -335,7 +416,7 @@ describe('setupBricks', () => {
   describe('unmountBrickInstance', () => {
     beforeEach(() => {
       methods.registerBrickType(makeBrickType() as never);
-      h.onHandlers.get('mountBrickInstance')!({
+      h.onHandlers.get('mountBrickInstance')?.({
         instanceId: 'i1',
         brickTypeId: 'test-plugin:test-brick',
         w: 2,
@@ -347,17 +428,25 @@ describe('setupBricks', () => {
     });
 
     test('cleans up effects and removes instance', () => {
-      h.onHandlers.get('unmountBrickInstance')!({ instanceId: 'i1' });
+      h.onHandlers.get('unmountBrickInstance')?.({
+        instanceId: 'i1',
+      });
 
       expect(mockCleanupEffects).toHaveBeenCalled();
 
       // Instance should be gone — resize should be a no-op
-      h.onHandlers.get('resizeBrickInstance')!({ instanceId: 'i1', w: 4, h: 4 });
+      h.onHandlers.get('resizeBrickInstance')?.({
+        instanceId: 'i1',
+        w: 4,
+        h: 4,
+      });
       expect(mockComponent).not.toHaveBeenCalled();
     });
 
     test('ignores unknown instance', () => {
-      h.onHandlers.get('unmountBrickInstance')!({ instanceId: 'nonexistent' });
+      h.onHandlers.get('unmountBrickInstance')?.({
+        instanceId: 'nonexistent',
+      });
       // Should not throw
       expect(mockCleanupEffects).not.toHaveBeenCalled();
     });
@@ -374,8 +463,18 @@ describe('setupBricks', () => {
       mockCreateState.mockImplementationOnce((scheduleRender: () => void) => ({
         hooks: [],
         effects: [],
-        actionRefs: new Map([['toggle', { current: actionHandler }]]),
-        brickSize: { width: 2, height: 2 },
+        actionRefs: new Map([
+          [
+            'toggle',
+            {
+              current: actionHandler,
+            },
+          ],
+        ]),
+        brickSize: {
+          width: 2,
+          height: 2,
+        },
         config: {} as Record<string, unknown>,
         configKeys: null as Set<string> | null,
         scheduleRender,
@@ -383,7 +482,7 @@ describe('setupBricks', () => {
 
       methods.registerBrickType(makeBrickType() as never);
 
-      h.onHandlers.get('mountBrickInstance')!({
+      h.onHandlers.get('mountBrickInstance')?.({
         instanceId: 'i1',
         brickTypeId: 'test-plugin:test-brick',
         w: 2,
@@ -393,20 +492,24 @@ describe('setupBricks', () => {
 
       mockComponent.mockClear();
 
-      h.onHandlers.get('brickInstanceAction')!({
+      h.onHandlers.get('brickInstanceAction')?.({
         instanceId: 'i1',
         actionId: 'toggle',
-        payload: { checked: true },
+        payload: {
+          checked: true,
+        },
       });
 
-      expect(actionHandler).toHaveBeenCalledWith({ checked: true });
+      expect(actionHandler).toHaveBeenCalledWith({
+        checked: true,
+      });
       expect(mockComponent).toHaveBeenCalledTimes(1);
     });
 
     test('ignores unknown instance', () => {
       methods.registerBrickType(makeBrickType() as never);
 
-      h.onHandlers.get('brickInstanceAction')!({
+      h.onHandlers.get('brickInstanceAction')?.({
         instanceId: 'nonexistent',
         actionId: 'toggle',
       });
@@ -418,7 +521,7 @@ describe('setupBricks', () => {
     test('ignores unknown action', () => {
       methods.registerBrickType(makeBrickType() as never);
 
-      h.onHandlers.get('mountBrickInstance')!({
+      h.onHandlers.get('mountBrickInstance')?.({
         instanceId: 'i1',
         brickTypeId: 'test-plugin:test-brick',
         w: 2,
@@ -428,7 +531,7 @@ describe('setupBricks', () => {
 
       mockComponent.mockClear();
 
-      h.onHandlers.get('brickInstanceAction')!({
+      h.onHandlers.get('brickInstanceAction')?.({
         instanceId: 'i1',
         actionId: 'nonexistent-action',
       });
@@ -452,10 +555,17 @@ describe('setupBricks', () => {
     test('subsequent renders use debounce', async () => {
       // Initial mount: immediate render
       mockReconcile.mockReturnValueOnce([
-        [MUT.CREATE, '0', { type: 'text', content: 'V' } as ComponentNode],
+        [
+          MUT.CREATE,
+          '0',
+          {
+            type: 'text',
+            content: 'V',
+          } as ComponentNode,
+        ],
       ]);
 
-      h.onHandlers.get('mountBrickInstance')!({
+      h.onHandlers.get('mountBrickInstance')?.({
         instanceId: 'i1',
         brickTypeId: 'test-plugin:test-brick',
         w: 2,
@@ -469,8 +579,16 @@ describe('setupBricks', () => {
       expect(patchCountAfterMount).toBe(1);
 
       // Resize triggers debounced render (not immediate)
-      mockReconcile.mockReturnValueOnce([[MUT.UPDATE, '0', { value: 'V2' }]]);
-      h.onHandlers.get('resizeBrickInstance')!({
+      mockReconcile.mockReturnValueOnce([
+        [
+          MUT.UPDATE,
+          '0',
+          {
+            value: 'V2',
+          },
+        ],
+      ]);
+      h.onHandlers.get('resizeBrickInstance')?.({
         instanceId: 'i1',
         w: 4,
         h: 4,
@@ -493,10 +611,19 @@ describe('setupBricks', () => {
 
     test('debounce skips send when no mutations', async () => {
       mockReconcile
-        .mockReturnValueOnce([[MUT.CREATE, '0', { type: 'text', content: 'V' } as ComponentNode]])
+        .mockReturnValueOnce([
+          [
+            MUT.CREATE,
+            '0',
+            {
+              type: 'text',
+              content: 'V',
+            } as ComponentNode,
+          ],
+        ])
         .mockReturnValueOnce([]); // No changes for debounced reconcile
 
-      h.onHandlers.get('mountBrickInstance')!({
+      h.onHandlers.get('mountBrickInstance')?.({
         instanceId: 'i1',
         brickTypeId: 'test-plugin:test-brick',
         w: 2,
@@ -508,7 +635,7 @@ describe('setupBricks', () => {
         (m) => m.name === 'patchBrickInstance'
       ).length;
 
-      h.onHandlers.get('resizeBrickInstance')!({
+      h.onHandlers.get('resizeBrickInstance')?.({
         instanceId: 'i1',
         w: 4,
         h: 4,
@@ -522,10 +649,17 @@ describe('setupBricks', () => {
 
     test('unmount clears pending debounce timer', async () => {
       mockReconcile.mockReturnValue([
-        [MUT.CREATE, '0', { type: 'text', content: 'V' } as ComponentNode],
+        [
+          MUT.CREATE,
+          '0',
+          {
+            type: 'text',
+            content: 'V',
+          } as ComponentNode,
+        ],
       ]);
 
-      h.onHandlers.get('mountBrickInstance')!({
+      h.onHandlers.get('mountBrickInstance')?.({
         instanceId: 'i1',
         brickTypeId: 'test-plugin:test-brick',
         w: 2,
@@ -534,7 +668,7 @@ describe('setupBricks', () => {
       });
 
       // Resize triggers debounce
-      h.onHandlers.get('resizeBrickInstance')!({
+      h.onHandlers.get('resizeBrickInstance')?.({
         instanceId: 'i1',
         w: 4,
         h: 4,
@@ -543,7 +677,9 @@ describe('setupBricks', () => {
       const patchCountBefore = h.sentMessages.filter((m) => m.name === 'patchBrickInstance').length;
 
       // Unmount before debounce fires
-      h.onHandlers.get('unmountBrickInstance')!({ instanceId: 'i1' });
+      h.onHandlers.get('unmountBrickInstance')?.({
+        instanceId: 'i1',
+      });
 
       // Wait for what would have been the debounce timer
       await new Promise((r) => setTimeout(r, 100));
@@ -561,14 +697,14 @@ describe('setupBricks', () => {
     test('unmounts all instances', () => {
       methods.registerBrickType(makeBrickType() as never);
 
-      h.onHandlers.get('mountBrickInstance')!({
+      h.onHandlers.get('mountBrickInstance')?.({
         instanceId: 'i1',
         brickTypeId: 'test-plugin:test-brick',
         w: 2,
         h: 2,
         config: {},
       });
-      h.onHandlers.get('mountBrickInstance')!({
+      h.onHandlers.get('mountBrickInstance')?.({
         instanceId: 'i2',
         brickTypeId: 'test-plugin:test-brick',
         w: 2,
@@ -584,8 +720,16 @@ describe('setupBricks', () => {
 
       // Instances should be gone — resize should be a no-op
       mockComponent.mockClear();
-      h.onHandlers.get('resizeBrickInstance')!({ instanceId: 'i1', w: 4, h: 4 });
-      h.onHandlers.get('resizeBrickInstance')!({ instanceId: 'i2', w: 4, h: 4 });
+      h.onHandlers.get('resizeBrickInstance')?.({
+        instanceId: 'i1',
+        w: 4,
+        h: 4,
+      });
+      h.onHandlers.get('resizeBrickInstance')?.({
+        instanceId: 'i2',
+        w: 4,
+        h: 4,
+      });
       expect(mockComponent).not.toHaveBeenCalled();
     });
   });

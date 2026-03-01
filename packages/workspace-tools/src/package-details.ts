@@ -32,22 +32,30 @@ function readString(value: unknown): string | undefined {
 }
 
 function readStringArray(value: unknown): string[] | undefined {
-  if (!Array.isArray(value)) return undefined;
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
   const strings = value.filter((entry) => typeof entry === 'string');
   return strings.length > 0 ? strings : undefined;
 }
 
 function readStringRecord(value: unknown): Record<string, string> | undefined {
-  if (!isObjectRecord(value)) return undefined;
+  if (!isObjectRecord(value)) {
+    return undefined;
+  }
   const out: Record<string, string> = {};
   for (const [key, entry] of Object.entries(value)) {
-    if (typeof entry === 'string') out[key] = entry;
+    if (typeof entry === 'string') {
+      out[key] = entry;
+    }
   }
   return Object.keys(out).length > 0 ? out : undefined;
 }
 
 function readBin(value: unknown): PackageDetails['bin'] {
-  if (typeof value === 'string') return value;
+  if (typeof value === 'string') {
+    return value;
+  }
   return readStringRecord(value);
 }
 
@@ -59,10 +67,16 @@ function readDependencyNames(pkg: Record<string, unknown> | undefined): string[]
   ];
   const names = new Set<string>();
   for (const record of records) {
-    if (!record) continue;
-    for (const name of Object.keys(record)) names.add(name);
+    if (!record) {
+      continue;
+    }
+    for (const name of Object.keys(record)) {
+      names.add(name);
+    }
   }
-  if (names.size === 0) return undefined;
+  if (names.size === 0) {
+    return undefined;
+  }
   return Array.from(names).sort((a, b) => a.localeCompare(b));
 }
 
@@ -71,16 +85,24 @@ function readArrayCount(value: unknown): number | undefined {
 }
 
 function hasRepositoryField(value: unknown): boolean {
-  if (typeof value === 'string') return value.length > 0;
-  if (!isObjectRecord(value)) return false;
+  if (typeof value === 'string') {
+    return value.length > 0;
+  }
+  if (!isObjectRecord(value)) {
+    return false;
+  }
   return typeof value.url === 'string' && value.url.length > 0;
 }
 
 async function hasReadmeFile(pkgPath: string): Promise<boolean> {
   const pkgDir = dirname(pkgPath);
   const entries = new Bun.Glob('*');
-  for await (const entry of entries.scan({ cwd: pkgDir })) {
-    if (entry.toLowerCase() === README_FILE) return true;
+  for await (const entry of entries.scan({
+    cwd: pkgDir,
+  })) {
+    if (entry.toLowerCase() === README_FILE) {
+      return true;
+    }
   }
   return false;
 }

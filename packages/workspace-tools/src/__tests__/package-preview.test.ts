@@ -95,7 +95,11 @@ describe('countExports', () => {
 
   test('counts keys for an exports map', () => {
     expect(
-      countExports({ '.': './index.js', './utils': './utils.js', './types': './types.js' })
+      countExports({
+        '.': './index.js',
+        './utils': './utils.js',
+        './types': './types.js',
+      })
     ).toBe(3);
   });
 });
@@ -110,11 +114,23 @@ describe('getBinNames', () => {
   });
 
   test('returns package name for string shorthand bin', () => {
-    expect(getBinNames('my-tool', './cli.js')).toEqual(['my-tool']);
+    expect(getBinNames('my-tool', './cli.js')).toEqual([
+      'my-tool',
+    ]);
   });
 
   test('returns multiple keys for object bin', () => {
-    expect(getBinNames('pkg', { a: './a.js', b: './b.js', c: './c.js' })).toEqual(['a', 'b', 'c']);
+    expect(
+      getBinNames('pkg', {
+        a: './a.js',
+        b: './b.js',
+        c: './c.js',
+      })
+    ).toEqual([
+      'a',
+      'b',
+      'c',
+    ]);
   });
 });
 
@@ -132,21 +148,45 @@ describe('getHooks', () => {
   });
 
   test('detects prepublishOnly hook', () => {
-    expect(getHooks({ prepublishOnly: 'tsc', dev: 'bun run dev' })).toEqual(['prepublishOnly']);
+    expect(
+      getHooks({
+        prepublishOnly: 'tsc',
+        dev: 'bun run dev',
+      })
+    ).toEqual([
+      'prepublishOnly',
+    ]);
   });
 
   test('detects build hook', () => {
-    expect(getHooks({ build: 'bun run build', test: 'bun test' })).toEqual(['build']);
+    expect(
+      getHooks({
+        build: 'bun run build',
+        test: 'bun test',
+      })
+    ).toEqual([
+      'build',
+    ]);
   });
 
   test('detects both hooks in order', () => {
-    expect(getHooks({ prepublishOnly: 'tsc', build: 'bun run generate' })).toEqual([
+    expect(
+      getHooks({
+        prepublishOnly: 'tsc',
+        build: 'bun run generate',
+      })
+    ).toEqual([
       'prepublishOnly',
       'build',
     ]);
   });
 
   test('ignores irrelevant scripts', () => {
-    expect(getHooks({ dev: 'bun run src', lint: 'eslint .' })).toEqual([]);
+    expect(
+      getHooks({
+        dev: 'bun run src',
+        lint: 'eslint .',
+      })
+    ).toEqual([]);
   });
 });

@@ -6,7 +6,11 @@ import { ErrorLayout } from './error-layout';
  * 401 — Session expired.
  * Shown briefly before the auth interceptor redirects to login.
  */
-export function UnauthorizedPage({ variant }: Readonly<{ variant?: 'fullscreen' | 'inline' }>) {
+export function UnauthorizedPage({
+  variant,
+}: Readonly<{
+  variant?: 'fullscreen' | 'inline';
+}>) {
   const { t } = useTranslation();
 
   return (

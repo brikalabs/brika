@@ -44,7 +44,9 @@ export interface BlockSchema {
       description?: string;
       default?: Json;
       enum?: Json[];
-      items?: { type: string };
+      items?: {
+        type: string;
+      };
     }
   >;
   required?: string[];

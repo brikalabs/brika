@@ -17,15 +17,26 @@ const fixturePackageJson = `${fixtureDir}/package.json`;
 
 // Ensure the test fixture exists
 if (!existsSync(fixtureDir)) {
-  mkdirSync(fixtureDir, { recursive: true });
+  mkdirSync(fixtureDir, {
+    recursive: true,
+  });
 }
 if (!existsSync(`${fixtureDir}/src`)) {
-  mkdirSync(`${fixtureDir}/src`, { recursive: true });
+  mkdirSync(`${fixtureDir}/src`, {
+    recursive: true,
+  });
 }
 if (!existsSync(fixturePackageJson)) {
   writeFileSync(
     fixturePackageJson,
-    JSON.stringify({ name: 'test-plugin', version: '1.0.0' }, null, 2)
+    JSON.stringify(
+      {
+        name: 'test-plugin',
+        version: '1.0.0',
+      },
+      null,
+      2
+    )
   );
 }
 
@@ -36,17 +47,29 @@ describe('loadManifest', () => {
 
   beforeEach(() => {
     // Reset Bun.main before each test
-    (Bun as { main: string }).main = origBunMain;
+    (
+      Bun as {
+        main: string;
+      }
+    ).main = origBunMain;
   });
 
   afterEach(() => {
     // Restore Bun.main after each test
-    (Bun as { main: string }).main = origBunMain;
+    (
+      Bun as {
+        main: string;
+      }
+    ).main = origBunMain;
   });
 
   test('finds package.json by walking up from Bun.main', () => {
     // Point Bun.main to a path inside the fixture directory
-    (Bun as { main: string }).main = '/tmp/brika-test-plugin/src/index.ts';
+    (
+      Bun as {
+        main: string;
+      }
+    ).main = '/tmp/brika-test-plugin/src/index.ts';
 
     const manifest = loadManifest();
 
@@ -56,7 +79,11 @@ describe('loadManifest', () => {
   });
 
   test('returns parsed manifest with name and version', () => {
-    (Bun as { main: string }).main = '/tmp/brika-test-plugin/src/index.ts';
+    (
+      Bun as {
+        main: string;
+      }
+    ).main = '/tmp/brika-test-plugin/src/index.ts';
 
     const manifest = loadManifest();
 
@@ -66,7 +93,11 @@ describe('loadManifest', () => {
 
   test('throws when no package.json found', () => {
     // Point Bun.main to a nonexistent path where no package.json exists
-    (Bun as { main: string }).main = '/nonexistent/path/index.ts';
+    (
+      Bun as {
+        main: string;
+      }
+    ).main = '/nonexistent/path/index.ts';
 
     expect(() => loadManifest()).toThrow('No package.json found for /nonexistent/path/index.ts');
   });
@@ -76,17 +107,29 @@ describe('getPluginRootDirectory', () => {
   const origBunMain = Bun.main;
 
   afterEach(() => {
-    (Bun as { main: string }).main = origBunMain;
+    (
+      Bun as {
+        main: string;
+      }
+    ).main = origBunMain;
   });
 
   test('returns the directory containing package.json', () => {
-    (Bun as { main: string }).main = '/tmp/brika-test-plugin/src/index.ts';
+    (
+      Bun as {
+        main: string;
+      }
+    ).main = '/tmp/brika-test-plugin/src/index.ts';
     loadManifest(); // Populate cache
     expect(getPluginRootDirectory()).toBe('/tmp/brika-test-plugin');
   });
 
   test('resolves by calling loadManifest if cache is empty', () => {
-    (Bun as { main: string }).main = '/tmp/brika-test-plugin/src/index.ts';
+    (
+      Bun as {
+        main: string;
+      }
+    ).main = '/tmp/brika-test-plugin/src/index.ts';
     // getPluginRootDirectory should trigger loadManifest internally
     const root = getPluginRootDirectory();
     expect(root).toBe('/tmp/brika-test-plugin');

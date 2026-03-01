@@ -3,6 +3,36 @@
 import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
 
+const OBSERVER_OPTIONS: IntersectionObserverInit = {
+  threshold: 0.1,
+  rootMargin: '0px 0px -40px 0px',
+};
+
+export function useOnceVisible() {
+  const ref = useRef<HTMLElement>(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry?.isIntersecting) {
+        setVisible(true);
+        observer.unobserve(el);
+      }
+    }, OBSERVER_OPTIONS);
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  return {
+    ref,
+    visible,
+  };
+}
+
 interface AnimatedSectionProps {
   children: ReactNode;
   className?: string;
@@ -16,26 +46,7 @@ export function AnimatedSection({
   delay = 0,
   id,
 }: Readonly<AnimatedSectionProps>) {
-  const ref = useRef<HTMLElement>(null);
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry?.isIntersecting) {
-          setVisible(true);
-          observer.unobserve(el);
-        }
-      },
-      { threshold: 0.1, rootMargin: '0px 0px -40px 0px' }
-    );
-
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
+  const { ref, visible } = useOnceVisible();
 
   return (
     <section
@@ -46,7 +57,9 @@ export function AnimatedSection({
         visible && 'opacity-100 translate-y-0',
         className
       )}
-      style={{ transitionDelay: `${delay}ms` }}
+      style={{
+        transitionDelay: `${delay}ms`,
+      }}
     >
       {children}
     </section>

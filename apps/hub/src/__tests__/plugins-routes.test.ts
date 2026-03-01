@@ -32,18 +32,26 @@ describe('plugins routes', () => {
     kill: ReturnType<typeof mock>;
     unload: ReturnType<typeof mock>;
   };
-  let mockLifecycle: { getProcess: ReturnType<typeof mock> };
+  let mockLifecycle: {
+    getProcess: ReturnType<typeof mock>;
+  };
   let mockConfig: {
     getSchema: ReturnType<typeof mock>;
     getConfig: ReturnType<typeof mock>;
     setConfig: ReturnType<typeof mock>;
   };
-  let mockPermService: { setPermission: ReturnType<typeof mock> };
-  let mockMetrics: { get: ReturnType<typeof mock> };
+  let mockPermService: {
+    setPermission: ReturnType<typeof mock>;
+  };
+  let mockMetrics: {
+    get: ReturnType<typeof mock>;
+  };
 
   useTestBed(() => {
     mockManager = {
-      list: mock().mockReturnValue([PLUGIN]),
+      list: mock().mockReturnValue([
+        PLUGIN,
+      ]),
       get: mock().mockReturnValue(PLUGIN),
       load: mock().mockResolvedValue(undefined),
       enable: mock().mockResolvedValue(undefined),
@@ -52,24 +60,36 @@ describe('plugins routes', () => {
       kill: mock().mockResolvedValue(undefined),
       unload: mock().mockResolvedValue(undefined),
     };
-    mockLifecycle = { getProcess: mock().mockReturnValue(null) };
+    mockLifecycle = {
+      getProcess: mock().mockReturnValue(null),
+    };
     mockConfig = {
       getSchema: mock().mockReturnValue([]),
       getConfig: mock().mockReturnValue({}),
-      setConfig: mock().mockResolvedValue({ success: true }),
+      setConfig: mock().mockResolvedValue({
+        success: true,
+      }),
     };
     mockPermService = {
-      setPermission: mock().mockResolvedValue(['location']),
+      setPermission: mock().mockResolvedValue([
+        'location',
+      ]),
     };
-    mockMetrics = { get: mock().mockReturnValue([]) };
+    mockMetrics = {
+      get: mock().mockReturnValue([]),
+    };
 
     stub(PluginManager, mockManager);
     stub(PluginLifecycle, mockLifecycle);
     stub(PluginConfigService, mockConfig);
     stub(PluginPermissionService, mockPermService);
     stub(MetricsStore, mockMetrics);
-    stub(PluginRegistry, { uninstall: mock().mockResolvedValue(undefined) });
-    stub(StateStore, { remove: mock().mockResolvedValue(undefined) });
+    stub(PluginRegistry, {
+      uninstall: mock().mockResolvedValue(undefined),
+    });
+    stub(StateStore, {
+      remove: mock().mockResolvedValue(undefined),
+    });
     app = TestApp.create(pluginsRoutes);
   });
 
@@ -116,7 +136,10 @@ describe('plugins routes', () => {
   // ─── README ─────────────────────────────────────────────────────────────
 
   test('GET /api/plugins/:uid/readme returns null when no readme found', async () => {
-    const res = await app.get<{ readme: null; filename: null }>('/api/plugins/plg-1/readme');
+    const res = await app.get<{
+      readme: null;
+      filename: null;
+    }>('/api/plugins/plg-1/readme');
 
     expect(res.status).toBe(200);
     expect(res.body.readme).toBeNull();
@@ -126,7 +149,9 @@ describe('plugins routes', () => {
   // ─── Load ─────────────────────────────────────────────────────────────────
 
   test('POST /api/plugins/load loads a plugin', async () => {
-    const res = await app.post('/api/plugins/load', { ref: '@brika/plugin-timer' });
+    const res = await app.post('/api/plugins/load', {
+      ref: '@brika/plugin-timer',
+    });
 
     expect(res.status).toBe(200);
     expect(mockManager.load).toHaveBeenCalledWith('@brika/plugin-timer');
@@ -165,9 +190,10 @@ describe('plugins routes', () => {
   // ─── Config ───────────────────────────────────────────────────────────────
 
   test('GET /api/plugins/:uid/config returns schema and values', async () => {
-    const res = await app.get<{ schema: unknown[]; values: Record<string, unknown> }>(
-      '/api/plugins/plg-1/config'
-    );
+    const res = await app.get<{
+      schema: unknown[];
+      values: Record<string, unknown>;
+    }>('/api/plugins/plg-1/config');
 
     expect(res.status).toBe(200);
     expect(res.body.schema).toEqual([]);
@@ -175,11 +201,24 @@ describe('plugins routes', () => {
   });
 
   test('GET /api/plugins/:uid/config resolves dynamic-dropdown options via process', async () => {
-    const fetchOptions = mock().mockResolvedValue([{ value: 'tz1', label: 'America/Montreal' }]);
-    mockLifecycle.getProcess.mockReturnValue({ fetchPreferenceOptions: fetchOptions });
+    const fetchOptions = mock().mockResolvedValue([
+      {
+        value: 'tz1',
+        label: 'America/Montreal',
+      },
+    ]);
+    mockLifecycle.getProcess.mockReturnValue({
+      fetchPreferenceOptions: fetchOptions,
+    });
     mockConfig.getSchema.mockReturnValue([
-      { name: 'timezone', type: 'dynamic-dropdown' },
-      { name: 'interval', type: 'number' },
+      {
+        name: 'timezone',
+        type: 'dynamic-dropdown',
+      },
+      {
+        name: 'interval',
+        type: 'number',
+      },
     ]);
 
     const res = await app.get('/api/plugins/plg-1/config');
@@ -189,7 +228,9 @@ describe('plugins routes', () => {
   });
 
   test('PUT /api/plugins/:uid/config updates config', async () => {
-    const res = await app.put('/api/plugins/plg-1/config', { interval: 5000 });
+    const res = await app.put('/api/plugins/plg-1/config', {
+      interval: 5000,
+    });
 
     expect(res.status).toBe(200);
     expect(mockConfig.setConfig).toHaveBeenCalled();
@@ -197,10 +238,16 @@ describe('plugins routes', () => {
 
   test('PUT /api/plugins/:uid/config sends preferences to running process', async () => {
     const sendPrefs = mock();
-    mockLifecycle.getProcess.mockReturnValue({ sendPreferences: sendPrefs });
-    mockConfig.getConfig.mockReturnValue({ interval: 5000 });
+    mockLifecycle.getProcess.mockReturnValue({
+      sendPreferences: sendPrefs,
+    });
+    mockConfig.getConfig.mockReturnValue({
+      interval: 5000,
+    });
 
-    const res = await app.put('/api/plugins/plg-1/config', { interval: 5000 });
+    const res = await app.put('/api/plugins/plg-1/config', {
+      interval: 5000,
+    });
 
     expect(res.status).toBe(200);
     expect(sendPrefs).toHaveBeenCalled();
@@ -209,10 +256,18 @@ describe('plugins routes', () => {
   test('PUT /api/plugins/:uid/config returns 422 on validation error', async () => {
     mockConfig.setConfig.mockResolvedValue({
       success: false,
-      error: { issues: [{ message: 'bad' }] },
+      error: {
+        issues: [
+          {
+            message: 'bad',
+          },
+        ],
+      },
     });
 
-    const res = await app.put('/api/plugins/plg-1/config', { bad: true });
+    const res = await app.put('/api/plugins/plg-1/config', {
+      bad: true,
+    });
 
     expect(res.status).toBe(422);
   });
@@ -220,7 +275,9 @@ describe('plugins routes', () => {
   // ─── Preferences ──────────────────────────────────────────────────────────
 
   test('GET /api/plugins/:uid/preferences/:name/options returns empty when no process', async () => {
-    const res = await app.get<{ options: unknown[] }>('/api/plugins/plg-1/preferences/tz/options');
+    const res = await app.get<{
+      options: unknown[];
+    }>('/api/plugins/plg-1/preferences/tz/options');
 
     expect(res.status).toBe(200);
     expect(res.body.options).toEqual([]);
@@ -228,9 +285,14 @@ describe('plugins routes', () => {
 
   test('GET /api/plugins/:uid/preferences/:name/options returns options from process', async () => {
     const fetchOptions = mock().mockResolvedValue([
-      { value: 'America/Montreal', label: 'Montreal' },
+      {
+        value: 'America/Montreal',
+        label: 'Montreal',
+      },
     ]);
-    mockLifecycle.getProcess.mockReturnValue({ fetchPreferenceOptions: fetchOptions });
+    mockLifecycle.getProcess.mockReturnValue({
+      fetchPreferenceOptions: fetchOptions,
+    });
 
     const res = await app.get('/api/plugins/plg-1/preferences/tz/options');
 
@@ -257,9 +319,11 @@ describe('plugins routes', () => {
   // ─── Metrics ──────────────────────────────────────────────────────────────
 
   test('GET /api/plugins/:uid/metrics returns metrics', async () => {
-    const res = await app.get<{ pid: number; current: null; history: unknown[] }>(
-      '/api/plugins/plg-1/metrics'
-    );
+    const res = await app.get<{
+      pid: number;
+      current: null;
+      history: unknown[];
+    }>('/api/plugins/plg-1/metrics');
 
     expect(res.status).toBe(200);
     expect(res.body.pid).toBe(1234);

@@ -11,7 +11,7 @@ import { ArrowLeft, Loader2, Save } from 'lucide-react';
 import { useCallback, useRef, useState } from 'react';
 import { Button, Input } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
-import { routes } from '@/routes';
+import { paths } from '@/routes/paths';
 import type { Workflow } from './api';
 import { WorkflowEditor } from './editor';
 import { useSaveWorkflow, useWorkflow } from './hooks';
@@ -31,8 +31,14 @@ function createNewWorkflow(): Workflow {
 export function WorkflowEditorPage() {
   const { t } = useLocale();
   const navigate = useNavigate();
-  const params = useParams({ strict: false });
-  const workflowId = (params as { id?: string }).id;
+  const params = useParams({
+    strict: false,
+  });
+  const workflowId = (
+    params as {
+      id?: string;
+    }
+  ).id;
   const isNew = !workflowId;
 
   // Fetch existing workflow or create new
@@ -91,22 +97,39 @@ export function WorkflowEditorPage() {
 
       // If new workflow, navigate to edit URL
       if (isNew) {
-        navigate({ to: routes.workflows.edit.to({ id: toSave.id }) });
+        navigate({
+          to: paths.workflows.edit.to({
+            id: toSave.id,
+          }),
+        });
       }
     },
-    [workflowName, isNew, navigate, saveWorkflowMutation]
+    [
+      workflowName,
+      isNew,
+      navigate,
+      saveWorkflowMutation,
+    ]
   );
 
   // Handle back navigation
   const handleBack = useCallback(() => {
     if (isDirty) {
       if (confirm(t('workflows:editor.unsavedChanges'))) {
-        navigate({ to: routes.workflows.list.path });
+        navigate({
+          to: paths.workflows.list.path,
+        });
       }
     } else {
-      navigate({ to: routes.workflows.list.path });
+      navigate({
+        to: paths.workflows.list.path,
+      });
     }
-  }, [isDirty, navigate, t]);
+  }, [
+    isDirty,
+    navigate,
+    t,
+  ]);
 
   // Loading state
   if (!isNew && isLoading) {
@@ -122,7 +145,14 @@ export function WorkflowEditorPage() {
     return (
       <div className="flex h-screen flex-col items-center justify-center gap-4">
         <p className="text-muted-foreground">{t('workflows:notFound')}</p>
-        <Button variant="outline" onClick={() => navigate({ to: routes.workflows.list.path })}>
+        <Button
+          variant="outline"
+          onClick={() =>
+            navigate({
+              to: paths.workflows.list.path,
+            })
+          }
+        >
           <ArrowLeft className="mr-2 size-4" />
           {t('common:actions.back')}
         </Button>
@@ -159,7 +189,9 @@ export function WorkflowEditorPage() {
             disabled={saveWorkflowMutation.isPending}
             onClick={() => {
               const wf = currentWorkflowRef.current || currentWorkflow;
-              if (wf) handleSave(wf);
+              if (wf) {
+                handleSave(wf);
+              }
             }}
             className="gap-2"
           >

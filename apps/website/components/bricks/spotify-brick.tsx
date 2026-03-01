@@ -1,7 +1,7 @@
 'use client';
 
-import Image from 'next/image';
 import { Pause, Play, SkipBack, SkipForward } from 'lucide-react';
+import Image from 'next/image';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 const TRACKS = [
@@ -66,13 +66,19 @@ export default function SpotifyBrick() {
       }
       return p + 1;
     });
-  }, [track.duration]);
+  }, [
+    track.duration,
+  ]);
 
   useEffect(() => {
     if (!playing || dragging) return;
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-  }, [playing, dragging, tick]);
+  }, [
+    playing,
+    dragging,
+    tick,
+  ]);
 
   const updateProgress = useCallback(
     (clientX: number) => {
@@ -82,7 +88,9 @@ export default function SpotifyBrick() {
       const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
       setProgress(Math.floor(ratio * track.duration));
     },
-    [track.duration]
+    [
+      track.duration,
+    ]
   );
 
   const onPointerDown = useCallback(
@@ -91,7 +99,9 @@ export default function SpotifyBrick() {
       (e.target as HTMLElement).setPointerCapture(e.pointerId);
       updateProgress(e.clientX);
     },
-    [updateProgress]
+    [
+      updateProgress,
+    ]
   );
 
   const onPointerMove = useCallback(
@@ -99,7 +109,10 @@ export default function SpotifyBrick() {
       if (!dragging) return;
       updateProgress(e.clientX);
     },
-    [dragging, updateProgress]
+    [
+      dragging,
+      updateProgress,
+    ]
   );
 
   const onPointerUp = useCallback(() => setDragging(false), []);
@@ -121,7 +134,9 @@ export default function SpotifyBrick() {
             fill
             sizes="280px"
             className="object-cover transition-opacity duration-500"
-            style={{ opacity: i === trackIdx ? 1 : 0 }}
+            style={{
+              opacity: i === trackIdx ? 1 : 0,
+            }}
             priority={i === 0}
           />
         ))}
@@ -129,12 +144,8 @@ export default function SpotifyBrick() {
         <div className="absolute inset-x-0 bottom-0 h-20 bg-linear-to-t from-black/70 to-transparent" />
         {/* Track info */}
         <div className="absolute inset-x-0 bottom-0 px-3 pb-2">
-          <div className="truncate text-sm font-bold text-white drop-shadow-sm">
-            {track.title}
-          </div>
-          <div className="truncate text-[11px] text-white/70 drop-shadow-sm">
-            {track.artist}
-          </div>
+          <div className="truncate text-sm font-bold text-white drop-shadow-sm">{track.title}</div>
+          <div className="truncate text-[11px] text-white/70 drop-shadow-sm">{track.artist}</div>
         </div>
       </div>
 
@@ -156,11 +167,16 @@ export default function SpotifyBrick() {
           >
             <div
               className="h-full rounded-full bg-primary"
-              style={{ width: `${pct}%`, transition: dragging ? 'none' : 'width 0.3s ease' }}
+              style={{
+                width: `${pct}%`,
+                transition: dragging ? 'none' : 'width 0.3s ease',
+              }}
             />
             <div
               className="absolute top-1/2 -translate-y-1/2 size-2.5 rounded-full bg-primary shadow-sm opacity-0 transition-opacity group-hover/bar:opacity-100"
-              style={{ left: `calc(${pct}% - 5px)` }}
+              style={{
+                left: `calc(${pct}% - 5px)`,
+              }}
             />
           </div>
           <div className="mt-0.5 flex justify-between text-[9px] text-muted-foreground tabular-nums">

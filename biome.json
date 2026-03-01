@@ -1,6 +1,10 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.4.4/schema.json",
-  "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
 
   "files": {
     "ignoreUnknown": false
@@ -16,7 +20,7 @@
     "attributePosition": "auto",
     "bracketSameLine": false,
     "bracketSpacing": true,
-    "expand": "auto",
+    "expand": "always",
     "useEditorconfig": true,
     "includes": [
       "apps/**",
@@ -57,7 +61,9 @@
         "noExtraBooleanCast": "error",
         "noUselessCatch": "error",
         "noUselessEscapeInRegex": "error",
-        "noUselessTypeConstraint": "error"
+        "noUselessTypeConstraint": "error",
+        "noUselessRename": "error",
+        "noExcessiveCognitiveComplexity": "error"
       },
 
       "correctness": {
@@ -88,15 +94,24 @@
 
       "style": {
         "noNamespace": "error",
+        "noExportedImports": "error",
+        "noNonNullAssertion": "error",
         "useArrayLiterals": "error",
         "useAsConstAssertion": "error",
-        "useBlockStatements": "off",
+        "useTemplate": "error",
+        "noYodaExpression": "error",
+        "useNodejsImportProtocol": "error",
+        "noUselessElse": "error",
+        "noNestedTernary": "error",
+        "useBlockStatements": "error",
         "noRestrictedImports": {
           "level": "error",
           "options": {
             "paths": {
               "zod": {
-                "importNames": ["nativeEnum"],
+                "importNames": [
+                  "nativeEnum"
+                ],
                 "message": "The 'z.nativeEnum' method is deprecated. Use 'z.enum(Object.values(MyEnum))' or 'z.enum([...])' instead."
               }
             }
@@ -111,7 +126,14 @@
         "noCompareNegZero": "error",
         "noConsole": {
           "level": "warn",
-          "options": { "allow": ["warn", "error", "info", "log"] }
+          "options": {
+            "allow": [
+              "warn",
+              "error",
+              "info",
+              "log"
+            ]
+          }
         },
         "noControlCharactersInRegex": "error",
         "noDebugger": "error",
@@ -141,7 +163,8 @@
         "noWith": "error",
         "useAwait": "error",
         "useGetterReturn": "error",
-        "noDeprecatedImports": "error"
+        "noDeprecatedImports": "error",
+        "noImportCycles": "error"
       },
 
       "nursery": {
@@ -149,16 +172,30 @@
           "level": "error",
           "fix": "safe",
           "options": {
-            "attributes": ["class", "className", "classList"],
-            "functions": ["clsx", "cva", "tw", "tw.*", "cn"]
+            "attributes": [
+              "class",
+              "className",
+              "classList"
+            ],
+            "functions": [
+              "clsx",
+              "cva",
+              "tw",
+              "tw.*",
+              "cn"
+            ]
           }
-        }
+        },
+        "noUselessReturn": "error",
+        "noEqualsToNull": "error"
       }
     }
   },
 
   "javascript": {
-    "globals": ["Bun"],
+    "globals": [
+      "Bun"
+    ],
     "formatter": {
       "jsxQuoteStyle": "double",
       "quoteProperties": "asNeeded",
@@ -187,50 +224,84 @@
 
   "overrides": [
     {
-      "includes": ["**/__tests__/**/*.{ts,tsx,mts,cts,js,jsx}"],
+      "includes": [
+        "**/__tests__/**/*.{ts,tsx,mts,cts,js,jsx}",
+        "**/testing/**/*.{ts,tsx,mts,cts,js,jsx}"
+      ],
       "linter": {
         "rules": {
-          "complexity": { "noBannedTypes": "off" },
+          "complexity": {
+            "noBannedTypes": "off",
+            "noExcessiveCognitiveComplexity": "off"
+          },
+          "correctness": {
+            "useYield": "off"
+          },
           "suspicious": {
             "noEmptyBlockStatements": "off",
-            "noExplicitAny": "off",
+            "noExplicitAny": "warn",
             "useAwait": "off"
           }
         }
       }
     },
     {
-      "includes": ["packages/ui-kit/src/jsx-runtime.ts"],
+      "includes": [
+        "packages/ui-kit/src/jsx-runtime.ts"
+      ],
       "linter": {
         "rules": {
-          "complexity": { "noBannedTypes": "off" },
-          "style": { "noNamespace": "off" }
+          "complexity": {
+            "noBannedTypes": "off"
+          },
+          "style": {
+            "noNamespace": "off"
+          }
         }
       }
     },
     {
-      "includes": ["packages/ipc/src/client.ts", "packages/ipc/src/host.ts"],
+      "includes": [
+        "packages/ipc/src/client.ts",
+        "packages/ipc/src/host.ts"
+      ],
       "linter": {
         "rules": {
-          "suspicious": { "noUnsafeDeclarationMerging": "off" }
+          "suspicious": {
+            "noUnsafeDeclarationMerging": "off"
+          }
         }
       }
     },
     {
-      "includes": ["scripts/**/*.{ts,tsx,js,jsx,mts,cts}"],
+      "includes": [
+        "scripts/**/*.{ts,tsx,js,jsx,mts,cts}"
+      ],
       "linter": {
         "rules": {
-          "suspicious": { "noConsole": "off" },
-          "correctness": { "noUndeclaredVariables": "off" }
+          "suspicious": {
+            "noConsole": "off"
+          },
+          "correctness": {
+            "noUndeclaredVariables": "off"
+          }
         }
       },
-      "javascript": { "globals": ["Bun"] }
+      "javascript": {
+        "globals": [
+          "Bun"
+        ]
+      }
     },
     {
-      "includes": ["**/*.{ts,tsx,mts,cts,js,jsx}"],
+      "includes": [
+        "**/*.{ts,tsx,mts,cts,js,jsx}"
+      ],
       "linter": {
         "rules": {
-          "complexity": { "noArguments": "error" },
+          "complexity": {
+            "noArguments": "error"
+          },
           "correctness": {
             "noConstAssign": "off",
             "noGlobalObjectCalls": "off",
@@ -240,7 +311,9 @@
             "noUnreachable": "off",
             "noUnreachableSuper": "off"
           },
-          "style": { "useConst": "error" },
+          "style": {
+            "useConst": "error"
+          },
           "suspicious": {
             "noDuplicateClassMembers": "off",
             "noDuplicateObjectKeys": "off",
@@ -254,11 +327,28 @@
           }
         }
       }
+    },
+    {
+      "includes": [
+        "packages/di/src/testing/types.ts",
+        "packages/flow/src/flow.ts"
+      ],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noExplicitAny": "off"
+          }
+        }
+      }
     }
   ],
 
   "assist": {
     "enabled": true,
-    "actions": { "source": { "organizeImports": "on" } }
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
   }
 }

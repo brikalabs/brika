@@ -14,7 +14,9 @@ import { WorkflowEngine } from '@/runtime/workflows/workflow-engine';
 import { WorkflowLoader } from '@/runtime/workflows/workflow-loader';
 import { FsWatchMock } from './fs-watch-mock';
 
-useTestBed({ autoStub: false });
+useTestBed({
+  autoStub: false,
+});
 
 const TEST_DIR = join(import.meta.dir, '.test-workflow-loader');
 
@@ -47,7 +49,9 @@ async function waitForRegisterMatch(
       return workflow !== undefined && match(workflow);
     });
 
-    if (matchingCall) return matchingCall[0] as Workflow;
+    if (matchingCall) {
+      return matchingCall[0] as Workflow;
+    }
     await new Promise((resolve) => setTimeout(resolve, 25));
   }
 
@@ -59,14 +63,16 @@ async function waitForWorkflowUnregister(workflowId: string, timeoutMs = 25_000)
 
   while (Date.now() - start < timeoutMs) {
     const matchingCall = mockUnregister.mock.calls.find((call) => call[0] === workflowId);
-    if (matchingCall) return;
+    if (matchingCall) {
+      return;
+    }
     await new Promise((resolve) => setTimeout(resolve, 25));
   }
 
   throw new Error('Timed out waiting for workflow unregister');
 }
 
-async function primeWatcher(label: string): Promise<void> {
+async function _primeWatcher(label: string): Promise<void> {
   const workflowId = `__watch-ready-${label}`;
   const filePath = join(TEST_DIR, `${workflowId}.yaml`);
   const content = createWorkflowYaml(workflowId, `Watch Ready ${label}`);
@@ -88,7 +94,10 @@ async function primeWatcher(label: string): Promise<void> {
 
 describe('WorkflowLoader - Port Parsing', () => {
   beforeEach(async () => {
-    await rm(TEST_DIR, { recursive: true, force: true });
+    await rm(TEST_DIR, {
+      recursive: true,
+      force: true,
+    });
     stub(Logger);
     provide(BlockRegistry, {
       has: () => true,
@@ -97,7 +106,10 @@ describe('WorkflowLoader - Port Parsing', () => {
         outputs: [],
         inputs: [],
         pluginId: 'test-plugin',
-        schema: { type: 'object' as const, properties: {} },
+        schema: {
+          type: 'object' as const,
+          properties: {},
+        },
       }),
       getPluginInfo: mockGetPluginInfo.mockReturnValue(null),
     });
@@ -108,7 +120,10 @@ describe('WorkflowLoader - Port Parsing', () => {
   });
 
   afterEach(async () => {
-    await rm(TEST_DIR, { recursive: true, force: true });
+    await rm(TEST_DIR, {
+      recursive: true,
+      force: true,
+    });
     reset();
   });
 
@@ -134,7 +149,11 @@ blocks:
 
     await new Promise((resolve) => setTimeout(resolve, 100));
 
-    const files = await Array.fromAsync(new Bun.Glob('*.yaml').scan({ cwd: TEST_DIR }));
+    const files = await Array.fromAsync(
+      new Bun.Glob('*.yaml').scan({
+        cwd: TEST_DIR,
+      })
+    );
     expect(files).toContain('test.yaml');
   });
 
@@ -162,7 +181,11 @@ blocks:
 
     await new Promise((resolve) => setTimeout(resolve, 100));
 
-    const files = await Array.fromAsync(new Bun.Glob('*.yaml').scan({ cwd: TEST_DIR }));
+    const files = await Array.fromAsync(
+      new Bun.Glob('*.yaml').scan({
+        cwd: TEST_DIR,
+      })
+    );
     expect(files).toContain('test2.yaml');
   });
 
@@ -188,7 +211,11 @@ blocks:
 
     await new Promise((resolve) => setTimeout(resolve, 100));
 
-    const files = await Array.fromAsync(new Bun.Glob('*.yaml').scan({ cwd: TEST_DIR }));
+    const files = await Array.fromAsync(
+      new Bun.Glob('*.yaml').scan({
+        cwd: TEST_DIR,
+      })
+    );
     expect(files).toContain('test3.yaml');
   });
 
@@ -215,7 +242,11 @@ blocks:
 
     await new Promise((resolve) => setTimeout(resolve, 100));
 
-    const files = await Array.fromAsync(new Bun.Glob('*.yaml').scan({ cwd: TEST_DIR }));
+    const files = await Array.fromAsync(
+      new Bun.Glob('*.yaml').scan({
+        cwd: TEST_DIR,
+      })
+    );
     expect(files).toContain('test4.yaml');
   });
 
@@ -245,7 +276,11 @@ blocks:
 
     await new Promise((resolve) => setTimeout(resolve, 100));
 
-    const files = await Array.fromAsync(new Bun.Glob('*.yaml').scan({ cwd: TEST_DIR }));
+    const files = await Array.fromAsync(
+      new Bun.Glob('*.yaml').scan({
+        cwd: TEST_DIR,
+      })
+    );
     expect(files).toContain('test5.yaml');
   });
 
@@ -275,14 +310,21 @@ blocks:
 
     await new Promise((resolve) => setTimeout(resolve, 100));
 
-    const files = await Array.fromAsync(new Bun.Glob('*.yaml').scan({ cwd: TEST_DIR }));
+    const files = await Array.fromAsync(
+      new Bun.Glob('*.yaml').scan({
+        cwd: TEST_DIR,
+      })
+    );
     expect(files).toContain('test6.yaml');
   });
 });
 
 describe('WorkflowLoader - File Operations', () => {
   beforeEach(async () => {
-    await rm(TEST_DIR, { recursive: true, force: true });
+    await rm(TEST_DIR, {
+      recursive: true,
+      force: true,
+    });
     stub(Logger);
     provide(BlockRegistry, {
       has: () => true,
@@ -291,7 +333,10 @@ describe('WorkflowLoader - File Operations', () => {
         outputs: [],
         inputs: [],
         pluginId: 'test-plugin',
-        schema: { type: 'object' as const, properties: {} },
+        schema: {
+          type: 'object' as const,
+          properties: {},
+        },
       }),
       getPluginInfo: mockGetPluginInfo.mockReturnValue(null),
     });
@@ -303,7 +348,10 @@ describe('WorkflowLoader - File Operations', () => {
   });
 
   afterEach(async () => {
-    await rm(TEST_DIR, { recursive: true, force: true });
+    await rm(TEST_DIR, {
+      recursive: true,
+      force: true,
+    });
     reset();
   });
 
@@ -332,7 +380,11 @@ blocks: []
     const loader = get(WorkflowLoader);
     await loader.loadDir(TEST_DIR);
 
-    const files = await Array.fromAsync(new Bun.Glob('*.yaml').scan({ cwd: TEST_DIR }));
+    const files = await Array.fromAsync(
+      new Bun.Glob('*.yaml').scan({
+        cwd: TEST_DIR,
+      })
+    );
     expect(files).toContain('test-workflow.yaml');
   });
 
@@ -366,7 +418,11 @@ blocks: []
 
     await new Promise((resolve) => setTimeout(resolve, 100));
 
-    const files = await Array.fromAsync(new Bun.Glob('*.{yaml,yml}').scan({ cwd: TEST_DIR }));
+    const files = await Array.fromAsync(
+      new Bun.Glob('*.{yaml,yml}').scan({
+        cwd: TEST_DIR,
+      })
+    );
     expect(files.length).toBeGreaterThanOrEqual(2);
   });
 });
@@ -375,16 +431,31 @@ describe('WorkflowLoader - Save and Delete', () => {
   let loader: WorkflowLoader;
 
   beforeAll(async () => {
-    await rm(TEST_DIR, { recursive: true, force: true });
-    await mkdir(TEST_DIR, { recursive: true });
+    await rm(TEST_DIR, {
+      recursive: true,
+      force: true,
+    });
+    await mkdir(TEST_DIR, {
+      recursive: true,
+    });
   });
 
   beforeEach(async () => {
     // Clean up YAML files
     try {
-      const files = await Array.fromAsync(new Bun.Glob('*.{yaml,yml}').scan({ cwd: TEST_DIR }));
-      for (const file of files) await rm(join(TEST_DIR, file), { force: true });
-      await rm(join(TEST_DIR, '.keep'), { force: true });
+      const files = await Array.fromAsync(
+        new Bun.Glob('*.{yaml,yml}').scan({
+          cwd: TEST_DIR,
+        })
+      );
+      for (const file of files) {
+        await rm(join(TEST_DIR, file), {
+          force: true,
+        });
+      }
+      await rm(join(TEST_DIR, '.keep'), {
+        force: true,
+      });
     } catch {
       // Ignore
     }
@@ -400,7 +471,10 @@ describe('WorkflowLoader - Save and Delete', () => {
         outputs: [],
         inputs: [],
         pluginId: 'test-plugin',
-        schema: { type: 'object' as const, properties: {} },
+        schema: {
+          type: 'object' as const,
+          properties: {},
+        },
       }),
       getPluginInfo: mockGetPluginInfo.mockReturnValue(null),
     });
@@ -417,7 +491,10 @@ describe('WorkflowLoader - Save and Delete', () => {
   });
 
   afterAll(async () => {
-    await rm(TEST_DIR, { recursive: true, force: true });
+    await rm(TEST_DIR, {
+      recursive: true,
+      force: true,
+    });
   });
 
   it('throws on saveWorkflow if loadDir not called', async () => {
@@ -441,7 +518,17 @@ describe('WorkflowLoader - Save and Delete', () => {
       description: 'A test workflow',
       enabled: true,
       blocks: [
-        { id: 'block-a', type: 'timer', position: { x: 10, y: 20 }, config: { interval: 5000 } },
+        {
+          id: 'block-a',
+          type: 'timer',
+          position: {
+            x: 10,
+            y: 20,
+          },
+          config: {
+            interval: 5000,
+          },
+        },
       ],
       connections: [],
     };
@@ -493,10 +580,23 @@ blocks: []
       name: 'Connected Workflow',
       enabled: false,
       blocks: [
-        { id: 'block-a', type: 'timer' },
-        { id: 'block-b', type: 'logger' },
+        {
+          id: 'block-a',
+          type: 'timer',
+        },
+        {
+          id: 'block-b',
+          type: 'logger',
+        },
       ],
-      connections: [{ from: 'block-a', fromPort: 'tick', to: 'block-b', toPort: 'input' }],
+      connections: [
+        {
+          from: 'block-a',
+          fromPort: 'tick',
+          to: 'block-b',
+          toPort: 'input',
+        },
+      ],
     };
 
     const filePath = await loader.saveWorkflow(workflow);
@@ -507,14 +607,22 @@ blocks: []
   });
 
   it('includes plugins section from block registry', async () => {
-    mockGetPluginInfo.mockReturnValue({ id: '@test/timer-plugin', version: '1.0.0' });
+    mockGetPluginInfo.mockReturnValue({
+      id: '@test/timer-plugin',
+      version: '1.0.0',
+    });
     await loader.loadDir(TEST_DIR);
 
     const workflow: Workflow = {
       id: 'plugins-wf',
       name: 'With Plugins',
       enabled: false,
-      blocks: [{ id: 'block-a', type: 'timer' }],
+      blocks: [
+        {
+          id: 'block-a',
+          type: 'timer',
+        },
+      ],
       connections: [],
     };
 
@@ -525,7 +633,10 @@ blocks: []
   });
 
   it('does not duplicate plugin entries in YAML', async () => {
-    mockGetPluginInfo.mockReturnValue({ id: '@test/plugin', version: '1.0.0' });
+    mockGetPluginInfo.mockReturnValue({
+      id: '@test/plugin',
+      version: '1.0.0',
+    });
     await loader.loadDir(TEST_DIR);
 
     const workflow: Workflow = {
@@ -533,8 +644,14 @@ blocks: []
       name: 'Multi Blocks',
       enabled: false,
       blocks: [
-        { id: 'block-a', type: 'timer' },
-        { id: 'block-b', type: 'counter' }, // same plugin
+        {
+          id: 'block-a',
+          type: 'timer',
+        },
+        {
+          id: 'block-b',
+          type: 'counter',
+        }, // same plugin
       ],
       connections: [],
     };
@@ -555,12 +672,26 @@ blocks: []
       name: 'Partial Connections',
       enabled: false,
       blocks: [
-        { id: 'block-a', type: 'timer' },
-        { id: 'block-b', type: 'logger' },
+        {
+          id: 'block-a',
+          type: 'timer',
+        },
+        {
+          id: 'block-b',
+          type: 'logger',
+        },
       ],
       connections: [
-        { from: 'block-a', to: 'block-b' }, // No ports
-        { from: 'block-a', fromPort: 'tick', to: 'block-b', toPort: 'input' }, // Valid
+        {
+          from: 'block-a',
+          to: 'block-b',
+        }, // No ports
+        {
+          from: 'block-a',
+          fromPort: 'tick',
+          to: 'block-b',
+          toPort: 'input',
+        }, // Valid
       ],
     };
 
@@ -632,7 +763,10 @@ notaworkspace: true
 
 describe('WorkflowLoader - Watch', () => {
   beforeEach(async () => {
-    await rm(TEST_DIR, { recursive: true, force: true });
+    await rm(TEST_DIR, {
+      recursive: true,
+      force: true,
+    });
     stub(Logger);
     provide(BlockRegistry, {
       has: () => true,
@@ -641,7 +775,10 @@ describe('WorkflowLoader - Watch', () => {
         outputs: [],
         inputs: [],
         pluginId: 'test-plugin',
-        schema: { type: 'object' as const, properties: {} },
+        schema: {
+          type: 'object' as const,
+          properties: {},
+        },
       }),
       getPluginInfo: () => undefined,
     });
@@ -653,7 +790,10 @@ describe('WorkflowLoader - Watch', () => {
 
   afterEach(async () => {
     reset();
-    await rm(TEST_DIR, { recursive: true, force: true });
+    await rm(TEST_DIR, {
+      recursive: true,
+      force: true,
+    });
   });
 
   it('throws if watch called before loadDir', () => {
@@ -684,7 +824,10 @@ describe('WorkflowLoader - Watch', () => {
 
 describe('WorkflowLoader - fromYAML Block Mapping & Connection Parsing', () => {
   beforeEach(async () => {
-    await rm(TEST_DIR, { recursive: true, force: true });
+    await rm(TEST_DIR, {
+      recursive: true,
+      force: true,
+    });
     mockRegister.mockClear();
     mockUnregister.mockClear();
     mockGetPluginInfo.mockClear();
@@ -697,7 +840,10 @@ describe('WorkflowLoader - fromYAML Block Mapping & Connection Parsing', () => {
         outputs: [],
         inputs: [],
         pluginId: 'test-plugin',
-        schema: { type: 'object' as const, properties: {} },
+        schema: {
+          type: 'object' as const,
+          properties: {},
+        },
       }),
       getPluginInfo: mockGetPluginInfo.mockReturnValue(null),
     });
@@ -709,7 +855,10 @@ describe('WorkflowLoader - fromYAML Block Mapping & Connection Parsing', () => {
 
   afterEach(async () => {
     reset();
-    await rm(TEST_DIR, { recursive: true, force: true });
+    await rm(TEST_DIR, {
+      recursive: true,
+      force: true,
+    });
   });
 
   it('registers workflow with correct block fields (id, type, position, config)', async () => {
@@ -745,8 +894,13 @@ blocks:
     // Block with position and config
     expect(registered.blocks[0].id).toBe('block-a');
     expect(registered.blocks[0].type).toBe('timer');
-    expect(registered.blocks[0].position).toEqual({ x: 10, y: 20 });
-    expect(registered.blocks[0].config).toEqual({ interval: 5000 });
+    expect(registered.blocks[0].position).toEqual({
+      x: 10,
+      y: 20,
+    });
+    expect(registered.blocks[0].config).toEqual({
+      interval: 5000,
+    });
 
     // Block without position and config
     expect(registered.blocks[1].id).toBe('block-b');
@@ -788,15 +942,15 @@ blocks:
       (c) => c.from === 'block-a' && c.fromPort === 'tick'
     );
     expect(tickConn).toBeDefined();
-    expect(tickConn!.to).toBe('block-b');
-    expect(tickConn!.toPort).toBe('input');
+    expect(tickConn?.to).toBe('block-b');
+    expect(tickConn?.toPort).toBe('input');
 
     const dataConn = registered.connections.find(
       (c) => c.from === 'block-a' && c.fromPort === 'data'
     );
     expect(dataConn).toBeDefined();
-    expect(dataConn!.to).toBe('block-c');
-    expect(dataConn!.toPort).toBe('recv');
+    expect(dataConn?.to).toBe('block-c');
+    expect(dataConn?.toPort).toBe('recv');
   });
 
   it('parses input connections into the connections array', async () => {
@@ -827,8 +981,8 @@ blocks:
 
     const conn = registered.connections.find((c) => c.from === 'block-a' && c.to === 'block-b');
     expect(conn).toBeDefined();
-    expect(conn!.fromPort).toBe('tick');
-    expect(conn!.toPort).toBe('data');
+    expect(conn?.fromPort).toBe('tick');
+    expect(conn?.toPort).toBe('data');
   });
 
   it('deduplicates connections from matching outputs and inputs', async () => {
@@ -954,7 +1108,10 @@ blocks:
 describe('WorkflowLoader - Watch Callbacks (with FsWatchMock)', () => {
   let fsWatchMock: FsWatchMock;
   beforeEach(async () => {
-    await rm(TEST_DIR, { recursive: true, force: true });
+    await rm(TEST_DIR, {
+      recursive: true,
+      force: true,
+    });
     mockRegister.mockImplementation(() => undefined);
     mockRegister.mockClear();
     mockUnregister.mockImplementation(() => undefined);
@@ -972,7 +1129,10 @@ describe('WorkflowLoader - Watch Callbacks (with FsWatchMock)', () => {
         outputs: [],
         inputs: [],
         pluginId: 'test-plugin',
-        schema: { type: 'object' as const, properties: {} },
+        schema: {
+          type: 'object' as const,
+          properties: {},
+        },
       }),
       getPluginInfo: mockGetPluginInfo.mockReturnValue(null),
     });
@@ -985,7 +1145,10 @@ describe('WorkflowLoader - Watch Callbacks (with FsWatchMock)', () => {
   afterEach(async () => {
     fsWatchMock.restore();
     reset();
-    await rm(TEST_DIR, { recursive: true, force: true });
+    await rm(TEST_DIR, {
+      recursive: true,
+      force: true,
+    });
   });
 
   it('loads a new YAML file added while watching', async () => {
@@ -1084,16 +1247,31 @@ describe('WorkflowLoader - YAML Round Trip', () => {
   let loader: WorkflowLoader;
 
   beforeAll(async () => {
-    await rm(TEST_DIR, { recursive: true, force: true });
-    await mkdir(TEST_DIR, { recursive: true });
+    await rm(TEST_DIR, {
+      recursive: true,
+      force: true,
+    });
+    await mkdir(TEST_DIR, {
+      recursive: true,
+    });
   });
 
   beforeEach(async () => {
     // Clean up YAML files
     try {
-      const files = await Array.fromAsync(new Bun.Glob('*.{yaml,yml}').scan({ cwd: TEST_DIR }));
-      for (const file of files) await rm(join(TEST_DIR, file), { force: true });
-      await rm(join(TEST_DIR, '.keep'), { force: true });
+      const files = await Array.fromAsync(
+        new Bun.Glob('*.{yaml,yml}').scan({
+          cwd: TEST_DIR,
+        })
+      );
+      for (const file of files) {
+        await rm(join(TEST_DIR, file), {
+          force: true,
+        });
+      }
+      await rm(join(TEST_DIR, '.keep'), {
+        force: true,
+      });
     } catch {
       // Ignore
     }
@@ -1118,7 +1296,10 @@ describe('WorkflowLoader - YAML Round Trip', () => {
   });
 
   afterAll(async () => {
-    await rm(TEST_DIR, { recursive: true, force: true });
+    await rm(TEST_DIR, {
+      recursive: true,
+      force: true,
+    });
   });
 
   it('save and reload produces equivalent workflow', async () => {
@@ -1130,10 +1311,34 @@ describe('WorkflowLoader - YAML Round Trip', () => {
       description: 'Testing round-trip',
       enabled: true,
       blocks: [
-        { id: 'block-a', type: 'timer', position: { x: 10, y: 20 }, config: { interval: 1000 } },
-        { id: 'block-b', type: 'logger', position: { x: 100, y: 200 } },
+        {
+          id: 'block-a',
+          type: 'timer',
+          position: {
+            x: 10,
+            y: 20,
+          },
+          config: {
+            interval: 1000,
+          },
+        },
+        {
+          id: 'block-b',
+          type: 'logger',
+          position: {
+            x: 100,
+            y: 200,
+          },
+        },
       ],
-      connections: [{ from: 'block-a', fromPort: 'tick', to: 'block-b', toPort: 'input' }],
+      connections: [
+        {
+          from: 'block-a',
+          fromPort: 'tick',
+          to: 'block-b',
+          toPort: 'input',
+        },
+      ],
     };
 
     await loader.saveWorkflow(workflow);

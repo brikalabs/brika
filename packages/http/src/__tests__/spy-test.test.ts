@@ -16,14 +16,23 @@ test('HttpClient uses globalThis.fetch', async () => {
 
   globalThis.fetch = (async () => {
     callCount++;
-    return new Response(JSON.stringify({ test: true }), {
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return new Response(
+      JSON.stringify({
+        test: true,
+      }),
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
+    );
   }) as typeof globalThis.fetch;
 
   const client = new HttpClient();
   const result = await client.get('https://example.com').send();
 
   expect(callCount).toBeGreaterThanOrEqual(1);
-  expect(result.data).toEqual({ test: true });
+  expect(result.data).toEqual({
+    test: true,
+  });
 });

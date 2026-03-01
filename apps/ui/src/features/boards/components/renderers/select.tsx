@@ -28,7 +28,11 @@ defineRenderer('select', ({ node, onAction }) => {
       <Select
         value={node.value}
         disabled={node.disabled}
-        onValueChange={(value) => onAction?.(node.onChange, { value })}
+        onValueChange={(value) =>
+          onAction?.(node.onChange, {
+            value,
+          })
+        }
       >
         <SelectTrigger size="sm" className="h-7 w-full text-xs">
           <SelectValue placeholder={node.placeholder ?? 'Select...'} />

@@ -6,18 +6,27 @@ import { hubFetch, hubFetchOk } from '../../utils/hub-client';
 /** Resolve a package name to its plugin UID via the running hub. */
 async function resolvePluginUid(name: string): Promise<string | null> {
   const res = await hubFetch('/api/plugins');
-  if (!res.ok) return null;
+  if (!res.ok) {
+    return null;
+  }
 
-  const plugins = (await res.json()) as { uid: string; name: string }[];
+  const plugins = (await res.json()) as {
+    uid: string;
+    name: string;
+  }[];
   const match = plugins.find((p) => p.name === name);
   return match?.uid ?? null;
 }
 
 export default defineCommand({
   name: 'uninstall',
-  aliases: ['remove'],
+  aliases: [
+    'remove',
+  ],
   description: 'Uninstall a plugin',
-  examples: ['brika plugin uninstall @brika/plugin-timer'],
+  examples: [
+    'brika plugin uninstall @brika/plugin-timer',
+  ],
   async handler({ positionals }) {
     const name = positionals[0];
     if (!name) {
@@ -31,7 +40,9 @@ export default defineCommand({
     const endpoint = uid
       ? `/api/plugins/${encodeURIComponent(uid)}`
       : `/api/registry/packages/${encodeURIComponent(name)}`;
-    await hubFetchOk(endpoint, { method: 'DELETE' });
+    await hubFetchOk(endpoint, {
+      method: 'DELETE',
+    });
 
     console.log(`  ${pc.green('✓')} ${name} uninstalled`);
   },

@@ -123,5 +123,8 @@ export interface BlockRuntimeState {
   instance: BlockInstance | null;
 
   /** Buffered events (when paused) */
-  buffer: Array<{ portId: string; data: Serializable }>;
+  buffer: Array<{
+    portId: string;
+    data: Serializable;
+  }>;
 }

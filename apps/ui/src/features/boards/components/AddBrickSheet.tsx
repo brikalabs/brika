@@ -31,10 +31,19 @@ export function AddBrickSheet() {
       group.push(t);
     }
     return grouped;
-  }, [brickTypes]);
+  }, [
+    brickTypes,
+  ]);
 
   const handleSelect = (brickType: BrickType) => {
-    addBrick({ brickTypeId: brickType.id }, { onSuccess: () => setOpen(false) });
+    addBrick(
+      {
+        brickTypeId: brickType.id,
+      },
+      {
+        onSuccess: () => setOpen(false),
+      }
+    );
   };
 
   return (
@@ -51,7 +60,9 @@ export function AddBrickSheet() {
               {t('boards:addSheet.empty')}
             </div>
           )}
-          {[...typesByPlugin.entries()].map(([pluginName, types]) => (
+          {[
+            ...typesByPlugin.entries(),
+          ].map(([pluginName, types]) => (
             <div key={pluginName} className="mb-4 space-y-1">
               <div className="px-2 pb-1 font-mono text-muted-foreground text-xs">{pluginName}</div>
               {types.map((t) => {
@@ -67,11 +78,16 @@ export function AddBrickSheet() {
                     >
                       <Avatar
                         className="size-8 rounded-lg"
-                        style={{ backgroundColor: `${color}20` }}
+                        style={{
+                          backgroundColor: `${color}20`,
+                        }}
                       >
                         <AvatarFallback
                           className="rounded-lg"
-                          style={{ backgroundColor: `${color}20`, color }}
+                          style={{
+                            backgroundColor: `${color}20`,
+                            color,
+                          }}
                         >
                           <DynamicIcon
                             name={(t.icon ?? 'layout-dashboard') as IconName}

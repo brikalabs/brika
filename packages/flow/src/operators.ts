@@ -25,7 +25,9 @@ export function filter<T>(fn: (value: T) => boolean): Operator<T, T> {
   return (source) =>
     operatorFlow(source, ({ subscribe, push }) => {
       subscribe((v) => {
-        if (fn(v)) push(v);
+        if (fn(v)) {
+          push(v);
+        }
       });
     });
 }

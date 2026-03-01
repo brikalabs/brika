@@ -16,15 +16,23 @@ describe('BrikaInitializer', () => {
   beforeAll(async () => {
     // Save original directory and create test directory
     originalCwd = process.cwd();
-    await rm(TEST_DIR, { recursive: true, force: true });
-    await mkdir(TEST_DIR, { recursive: true });
+    await rm(TEST_DIR, {
+      recursive: true,
+      force: true,
+    });
+    await mkdir(TEST_DIR, {
+      recursive: true,
+    });
     process.chdir(TEST_DIR);
   });
 
   afterAll(async () => {
     // Restore original directory and cleanup
     process.chdir(originalCwd);
-    await rm(TEST_DIR, { recursive: true, force: true });
+    await rm(TEST_DIR, {
+      recursive: true,
+      force: true,
+    });
   });
 
   test('creates .brika directory in current working directory', async () => {

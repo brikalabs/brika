@@ -1,7 +1,9 @@
 import { MUT, type Mutation } from './descriptors';
 import type { ComponentNode } from './nodes';
 
-function hasChildren(node: ComponentNode): node is ComponentNode & { children: ComponentNode[] } {
+function hasChildren(node: ComponentNode): node is ComponentNode & {
+  children: ComponentNode[];
+} {
   return 'children' in node;
 }
 
@@ -10,9 +12,14 @@ function applyChanges(
   changes: Record<string, unknown>,
   removed?: string[]
 ): ComponentNode {
-  const updated = { ...node, ...changes };
+  const updated = {
+    ...node,
+    ...changes,
+  };
   if (removed) {
-    for (const k of removed) Reflect.deleteProperty(updated, k);
+    for (const k of removed) {
+      Reflect.deleteProperty(updated, k);
+    }
   }
   return updated;
 }
@@ -42,7 +49,9 @@ function updateAtPath(
   if (isLeaf) {
     switch (mutation[0]) {
       case MUT.CREATE: {
-        const result = [...nodes];
+        const result = [
+          ...nodes,
+        ];
         if (idx >= result.length) {
           result.push(mutation[2]);
         } else {
@@ -51,14 +60,20 @@ function updateAtPath(
         return result;
       }
       case MUT.REPLACE: {
-        const result = [...nodes];
+        const result = [
+          ...nodes,
+        ];
         result[idx] = mutation[2];
         return result;
       }
       case MUT.UPDATE: {
         const target = nodes[idx];
-        if (!target) return nodes;
-        const result = [...nodes];
+        if (!target) {
+          return nodes;
+        }
+        const result = [
+          ...nodes,
+        ];
         result[idx] = applyChanges(target, mutation[2], mutation[3]);
         return result;
       }
@@ -69,11 +84,18 @@ function updateAtPath(
   }
 
   const node = nodes[idx];
-  if (!node || !hasChildren(node)) return nodes;
+  if (!node || !hasChildren(node)) {
+    return nodes;
+  }
 
   const updatedChildren = updateAtPath(node.children, segments, depth + 1, mutation);
 
-  const result = [...nodes];
-  result[idx] = { ...node, children: updatedChildren } as ComponentNode;
+  const result = [
+    ...nodes,
+  ];
+  result[idx] = {
+    ...node,
+    children: updatedChildren,
+  } as ComponentNode;
   return result;
 }

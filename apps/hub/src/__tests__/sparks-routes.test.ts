@@ -23,7 +23,10 @@ describe('sparks routes', () => {
       get: mock().mockReturnValue(undefined),
     };
     mockStore = {
-      query: mock().mockReturnValue({ sparks: [], nextCursor: null }),
+      query: mock().mockReturnValue({
+        sparks: [],
+        nextCursor: null,
+      }),
     };
     stub(SparkRegistry, mockRegistry);
     stub(SparkStore, mockStore);
@@ -46,7 +49,14 @@ describe('sparks routes', () => {
         pluginId: 'test-plugin',
         name: 'Test Spark',
         description: 'A test spark',
-        schema: { type: 'object', properties: { value: { type: 'number' } } },
+        schema: {
+          type: 'object',
+          properties: {
+            value: {
+              type: 'number',
+            },
+          },
+        },
         extraField: 'should-not-appear',
       },
       {
@@ -82,7 +92,11 @@ describe('sparks routes', () => {
     expect(res.body[0].description).toBe('A test spark');
     expect(res.body[0].schema).toEqual({
       type: 'object',
-      properties: { value: { type: 'number' } },
+      properties: {
+        value: {
+          type: 'number',
+        },
+      },
     });
 
     // extraField should not be included in response
@@ -94,7 +108,10 @@ describe('sparks routes', () => {
   });
 
   test('GET /api/sparks/history returns history', async () => {
-    const res = await app.get<{ sparks: unknown[]; nextCursor: unknown }>('/api/sparks/history');
+    const res = await app.get<{
+      sparks: unknown[];
+      nextCursor: unknown;
+    }>('/api/sparks/history');
 
     expect(res.status).toBe(200);
     expect(res.body.sparks).toEqual([]);
@@ -114,7 +131,14 @@ describe('sparks routes', () => {
       pluginId: 'timer-plugin',
       name: 'Timer Tick',
       description: 'Fires on a timer',
-      schema: { type: 'object', properties: { interval: { type: 'number' } } },
+      schema: {
+        type: 'object',
+        properties: {
+          interval: {
+            type: 'number',
+          },
+        },
+      },
       internalField: 'should-not-appear',
     });
 
@@ -135,14 +159,21 @@ describe('sparks routes', () => {
     expect(res.body.description).toBe('Fires on a timer');
     expect(res.body.schema).toEqual({
       type: 'object',
-      properties: { interval: { type: 'number' } },
+      properties: {
+        interval: {
+          type: 'number',
+        },
+      },
     });
     // Internal field should not be exposed
     expect((res.body as Record<string, unknown>).internalField).toBeUndefined();
   });
 
   test('POST /api/sparks/emit emits event', async () => {
-    const res = await app.post<{ type: string; source: string }>('/api/sparks/emit', {
+    const res = await app.post<{
+      type: string;
+      source: string;
+    }>('/api/sparks/emit', {
       type: 'test:event',
     });
 

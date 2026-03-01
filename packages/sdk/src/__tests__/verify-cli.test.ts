@@ -33,7 +33,11 @@ async function runVerify(
     createMainFile?: boolean;
     extraArgs?: string[];
   } = {}
-): Promise<{ exitCode: number; stdout: string; stderr: string }> {
+): Promise<{
+  exitCode: number;
+  stdout: string;
+  stderr: string;
+}> {
   const { files = {}, createMainFile = true, extraArgs = [] } = opts;
   const dir = await mkdtemp(join(tmpdir(), 'brika-vcli-'));
   try {
@@ -41,17 +45,29 @@ async function runVerify(
     const mainPath = typeof pkg.main === 'string' ? pkg.main : undefined;
     if (createMainFile && mainPath) {
       const mainFilePath = join(dir, mainPath);
-      await mkdir(dirname(mainFilePath), { recursive: true });
+      await mkdir(dirname(mainFilePath), {
+        recursive: true,
+      });
       await writeFile(mainFilePath, 'export {};');
     }
     for (const [relativePath, content] of Object.entries(files)) {
       const fullPath = join(dir, relativePath);
-      await mkdir(dirname(fullPath), { recursive: true });
+      await mkdir(dirname(fullPath), {
+        recursive: true,
+      });
       await writeFile(fullPath, content);
     }
-    return await runCli(['bun', VERIFY_SCRIPT, dir, ...extraArgs]);
+    return await runCli([
+      'bun',
+      VERIFY_SCRIPT,
+      dir,
+      ...extraArgs,
+    ]);
   } finally {
-    await rm(dir, { recursive: true, force: true });
+    await rm(dir, {
+      recursive: true,
+      force: true,
+    });
   }
 }
 
@@ -61,9 +77,14 @@ function validPlugin(overrides: Record<string, unknown> = {}): Record<string, un
     name: 'my-plugin',
     version: '1.0.0',
     main: './src/index.ts',
-    engines: { brika: '^' + SDK_VERSION },
+    engines: {
+      brika: `^${SDK_VERSION}`,
+    },
     $schema: 'https://schema.brika.dev/plugin.schema.json',
-    keywords: ['brika', 'brika-plugin'],
+    keywords: [
+      'brika',
+      'brika-plugin',
+    ],
     ...overrides,
   };
 }
@@ -72,14 +93,18 @@ function validPlugin(overrides: Record<string, unknown> = {}): Record<string, un
 
 describe('verify CLI --json output', () => {
   test('outputs valid JSON with all expected fields for a passing plugin', async () => {
-    const { exitCode, stdout } = await runVerify(validPlugin(), { extraArgs: ['--json'] });
+    const { exitCode, stdout } = await runVerify(validPlugin(), {
+      extraArgs: [
+        '--json',
+      ],
+    });
     expect(exitCode).toBe(0);
     const payload = JSON.parse(stdout.trim());
     expect(payload).toEqual(
       expect.objectContaining({
         name: 'my-plugin',
         version: '1.0.0',
-        enginesBrika: '^' + SDK_VERSION,
+        enginesBrika: `^${SDK_VERSION}`,
         schemaUrl: 'https://schema.brika.dev/plugin.schema.json',
         sdkVersion: expect.any(String),
         errors: [],
@@ -90,9 +115,18 @@ describe('verify CLI --json output', () => {
   });
 
   test('JSON output includes errors for a failing plugin', async () => {
-    const { exitCode, stdout } = await runVerify(validPlugin({ engines: { brika: '^0.0.1' } }), {
-      extraArgs: ['--json'],
-    });
+    const { exitCode, stdout } = await runVerify(
+      validPlugin({
+        engines: {
+          brika: '^0.0.1',
+        },
+      }),
+      {
+        extraArgs: [
+          '--json',
+        ],
+      }
+    );
     expect(exitCode).toBe(1);
     const payload = JSON.parse(stdout.trim());
     expect(payload.passed).toBe(false);
@@ -103,7 +137,11 @@ describe('verify CLI --json output', () => {
   });
 
   test('JSON output includes sdkVersion field', async () => {
-    const { stdout } = await runVerify(validPlugin(), { extraArgs: ['--json'] });
+    const { stdout } = await runVerify(validPlugin(), {
+      extraArgs: [
+        '--json',
+      ],
+    });
     const payload = JSON.parse(stdout.trim());
     expect(typeof payload.sdkVersion).toBe('string');
     expect(payload.sdkVersion).toBe(SDK_VERSION);
@@ -112,7 +150,11 @@ describe('verify CLI --json output', () => {
   test('JSON output for schema validation errors sets passed=false', async () => {
     const pkg = validPlugin();
     delete pkg.name;
-    const { exitCode, stdout } = await runVerify(pkg, { extraArgs: ['--json'] });
+    const { exitCode, stdout } = await runVerify(pkg, {
+      extraArgs: [
+        '--json',
+      ],
+    });
     expect(exitCode).toBe(1);
     const payload = JSON.parse(stdout.trim());
     expect(payload.passed).toBe(false);
@@ -123,7 +165,11 @@ describe('verify CLI --json output', () => {
   test('JSON output includes warnings', async () => {
     const pkg = validPlugin();
     delete pkg.$schema;
-    const { exitCode, stdout } = await runVerify(pkg, { extraArgs: ['--json'] });
+    const { exitCode, stdout } = await runVerify(pkg, {
+      extraArgs: [
+        '--json',
+      ],
+    });
     expect(exitCode).toBe(0);
     const payload = JSON.parse(stdout.trim());
     expect(payload.passed).toBe(true);
@@ -136,17 +182,27 @@ describe('verify CLI --json output', () => {
     try {
       await writeFile(join(dir, 'package.json'), JSON.stringify(validPlugin()));
       const mainFilePath = join(dir, 'src', 'index.ts');
-      await mkdir(dirname(mainFilePath), { recursive: true });
+      await mkdir(dirname(mainFilePath), {
+        recursive: true,
+      });
       await writeFile(mainFilePath, 'export {};');
 
       // Pass --json BEFORE the directory
-      const { exitCode, stdout } = await runCli(['bun', VERIFY_SCRIPT, '--json', dir]);
+      const { exitCode, stdout } = await runCli([
+        'bun',
+        VERIFY_SCRIPT,
+        '--json',
+        dir,
+      ]);
       expect(exitCode).toBe(0);
       const payload = JSON.parse(stdout.trim());
       expect(payload.passed).toBe(true);
       expect(payload.name).toBe('my-plugin');
     } finally {
-      await rm(dir, { recursive: true, force: true });
+      await rm(dir, {
+        recursive: true,
+        force: true,
+      });
     }
   });
 });
@@ -155,14 +211,22 @@ describe('verify CLI --json output', () => {
 
 describe('verify CLI argument parsing', () => {
   test('resolves plugin directory from first non-flag argument', async () => {
-    const { exitCode, stdout } = await runVerify(validPlugin({ name: 'dir-arg-test' }));
+    const { exitCode, stdout } = await runVerify(
+      validPlugin({
+        name: 'dir-arg-test',
+      })
+    );
     expect(exitCode).toBe(0);
     expect(stdout).toContain('dir-arg-test');
   });
 
   test('exits 1 when given a non-existent directory', async () => {
-    const dir = join(tmpdir(), 'brika-vcli-nonexistent-' + Date.now());
-    const { exitCode, stderr } = await runCli(['bun', VERIFY_SCRIPT, dir]);
+    const dir = join(tmpdir(), `brika-vcli-nonexistent-${Date.now()}`);
+    const { exitCode, stderr } = await runCli([
+      'bun',
+      VERIFY_SCRIPT,
+      dir,
+    ]);
     expect(exitCode).toBe(1);
     expect(stderr).toContain('Could not read');
   });
@@ -170,12 +234,19 @@ describe('verify CLI argument parsing', () => {
   test('exits 1 when directory has no package.json', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'brika-vcli-empty-'));
     try {
-      const { exitCode, stderr } = await runCli(['bun', VERIFY_SCRIPT, dir]);
+      const { exitCode, stderr } = await runCli([
+        'bun',
+        VERIFY_SCRIPT,
+        dir,
+      ]);
       expect(exitCode).toBe(1);
       expect(stderr).toContain('Could not read');
       expect(stderr).toContain('package.json');
     } finally {
-      await rm(dir, { recursive: true, force: true });
+      await rm(dir, {
+        recursive: true,
+        force: true,
+      });
     }
   });
 });
@@ -198,9 +269,15 @@ describe('resolveSdkVersion coverage via CLI', () => {
     // When the plugin declares `workspace:*` for @brika/sdk, resolveSdkVersion
     // should use the local SDK version (the workspace version).
     const pkg = validPlugin({
-      devDependencies: { '@brika/sdk': 'workspace:*' },
+      devDependencies: {
+        '@brika/sdk': 'workspace:*',
+      },
     });
-    const { exitCode, stdout } = await runVerify(pkg, { extraArgs: ['--json'] });
+    const { exitCode, stdout } = await runVerify(pkg, {
+      extraArgs: [
+        '--json',
+      ],
+    });
     expect(exitCode).toBe(0);
     const payload = JSON.parse(stdout.trim());
     expect(payload.sdkVersion).toBe(SDK_VERSION);
@@ -208,9 +285,15 @@ describe('resolveSdkVersion coverage via CLI', () => {
 
   test('handles plugin with workspace:^ sdk dependency', async () => {
     const pkg = validPlugin({
-      devDependencies: { '@brika/sdk': 'workspace:^' },
+      devDependencies: {
+        '@brika/sdk': 'workspace:^',
+      },
     });
-    const { exitCode, stdout } = await runVerify(pkg, { extraArgs: ['--json'] });
+    const { exitCode, stdout } = await runVerify(pkg, {
+      extraArgs: [
+        '--json',
+      ],
+    });
     expect(exitCode).toBe(0);
     const payload = JSON.parse(stdout.trim());
     expect(payload.sdkVersion).toBe(SDK_VERSION);
@@ -221,7 +304,11 @@ describe('resolveSdkVersion coverage via CLI', () => {
     // returns null, and resolveSdkVersion falls back to localVersion.
     const pkg = validPlugin();
     // validPlugin() doesn't have explicit devDependencies for @brika/sdk
-    const { exitCode, stdout } = await runVerify(pkg, { extraArgs: ['--json'] });
+    const { exitCode, stdout } = await runVerify(pkg, {
+      extraArgs: [
+        '--json',
+      ],
+    });
     expect(exitCode).toBe(0);
     const payload = JSON.parse(stdout.trim());
     expect(payload.sdkVersion).toBe(SDK_VERSION);
@@ -232,9 +319,15 @@ describe('resolveSdkVersion coverage via CLI', () => {
     // tries Bun.resolveSync — which may fail if @brika/sdk isn't installed in that
     // temp dir — and then falls back to localVersion.
     const pkg = validPlugin({
-      dependencies: { '@brika/sdk': `^${SDK_VERSION}` },
+      dependencies: {
+        '@brika/sdk': `^${SDK_VERSION}`,
+      },
     });
-    const { exitCode, stdout } = await runVerify(pkg, { extraArgs: ['--json'] });
+    const { exitCode, stdout } = await runVerify(pkg, {
+      extraArgs: [
+        '--json',
+      ],
+    });
     expect(exitCode).toBe(0);
     const payload = JSON.parse(stdout.trim());
     // Since @brika/sdk is not actually installed in the temp dir,
@@ -244,9 +337,15 @@ describe('resolveSdkVersion coverage via CLI', () => {
 
   test('handles plugin with @brika/sdk in peerDependencies', async () => {
     const pkg = validPlugin({
-      peerDependencies: { '@brika/sdk': `>=${SDK_VERSION}` },
+      peerDependencies: {
+        '@brika/sdk': `>=${SDK_VERSION}`,
+      },
     });
-    const { exitCode, stdout, stderr } = await runVerify(pkg, { extraArgs: ['--json'] });
+    const { exitCode, stdout, stderr } = await runVerify(pkg, {
+      extraArgs: [
+        '--json',
+      ],
+    });
     // readPluginSdkSpec reads both dependencies and peerDependencies
     const output = stdout.trim() || stderr.trim();
     expect(output.length).toBeGreaterThan(0);
@@ -271,11 +370,18 @@ describe('readPluginSdkSpec error handling via CLI', () => {
     const dir = await mkdtemp(join(tmpdir(), 'brika-vcli-badjson-'));
     try {
       await writeFile(join(dir, 'package.json'), '{ invalid json !!!');
-      const { exitCode, stderr } = await runCli(['bun', VERIFY_SCRIPT, dir]);
+      const { exitCode, stderr } = await runCli([
+        'bun',
+        VERIFY_SCRIPT,
+        dir,
+      ]);
       expect(exitCode).toBe(1);
       expect(stderr).toContain('Could not read');
     } finally {
-      await rm(dir, { recursive: true, force: true });
+      await rm(dir, {
+        recursive: true,
+        force: true,
+      });
     }
   });
 });
@@ -284,7 +390,12 @@ describe('readPluginSdkSpec error handling via CLI', () => {
 
 describe('verify CLI human-readable output formatting', () => {
   test('prints plugin name@version header', async () => {
-    const { stdout } = await runVerify(validPlugin({ name: 'format-test', version: '3.2.1' }));
+    const { stdout } = await runVerify(
+      validPlugin({
+        name: 'format-test',
+        version: '3.2.1',
+      })
+    );
     expect(stdout).toContain('Verifying');
     expect(stdout).toContain('format-test');
     expect(stdout).toContain('3.2.1');
@@ -294,10 +405,15 @@ describe('verify CLI human-readable output formatting', () => {
     const { stdout } = await runVerify(
       validPlugin({
         icon: './icon.svg',
-        files: ['src', 'icon.svg'],
+        files: [
+          'src',
+          'icon.svg',
+        ],
       }),
       {
-        files: { 'icon.svg': '<svg></svg>' },
+        files: {
+          'icon.svg': '<svg></svg>',
+        },
       }
     );
     expect(stdout).toContain('schema validation passed');
@@ -318,27 +434,49 @@ describe('verify CLI human-readable output formatting', () => {
   });
 
   test('does not show engines.brika passed when engines error exists', async () => {
-    const { stdout } = await runVerify(validPlugin({ engines: { brika: '^0.0.1' } }));
+    const { stdout } = await runVerify(
+      validPlugin({
+        engines: {
+          brika: '^0.0.1',
+        },
+      })
+    );
     expect(stdout).not.toContain('engines.brika "^0.0.1" covers SDK');
     expect(stdout).toContain('does not cover current SDK version');
   });
 
   test('does not show main entrypoint passed when main has schema error', async () => {
-    const { stdout } = await runVerify(validPlugin({ main: '' }), { createMainFile: false });
+    const { stdout } = await runVerify(
+      validPlugin({
+        main: '',
+      }),
+      {
+        createMainFile: false,
+      }
+    );
     expect(stdout).not.toContain('main entrypoint exists');
     expect(stdout).toContain('Schema: main:');
   });
 
   test('does not show main entrypoint passed when main path is missing on disk', async () => {
-    const { stdout } = await runVerify(validPlugin({ main: './missing.ts' }), {
-      createMainFile: false,
-    });
+    const { stdout } = await runVerify(
+      validPlugin({
+        main: './missing.ts',
+      }),
+      {
+        createMainFile: false,
+      }
+    );
     expect(stdout).not.toContain('main entrypoint exists');
     expect(stdout).toContain('main path "./missing.ts" is declared but missing on disk');
   });
 
   test('does not show $schema check when schema URL is not brika', async () => {
-    const { stdout } = await runVerify(validPlugin({ $schema: 'https://example.com/schema.json' }));
+    const { stdout } = await runVerify(
+      validPlugin({
+        $schema: 'https://example.com/schema.json',
+      })
+    );
     // The $schema success line should NOT appear since the URL is wrong
     expect(stdout).not.toContain('$schema https://example.com');
     // But a warning should appear
@@ -353,25 +491,47 @@ describe('verify CLI human-readable output formatting', () => {
   });
 
   test('does not show brika keyword check when brika keyword is missing', async () => {
-    const { stdout } = await runVerify(validPlugin({ keywords: ['something-else'] }));
+    const { stdout } = await runVerify(
+      validPlugin({
+        keywords: [
+          'something-else',
+        ],
+      })
+    );
     expect(stdout).not.toContain('keywords include brika\n');
     expect(stdout).toContain('keywords must include "brika"');
   });
 
   test('does not show brika-plugin keyword check when it is missing', async () => {
-    const { stdout } = await runVerify(validPlugin({ keywords: ['brika'] }));
+    const { stdout } = await runVerify(
+      validPlugin({
+        keywords: [
+          'brika',
+        ],
+      })
+    );
     expect(stdout).not.toContain('keywords include brika-plugin');
     expect(stdout).toContain('keywords should include "brika-plugin"');
   });
 
   test('prints warnings section with warning markers', async () => {
-    const pkg = validPlugin({ keywords: ['brika'] }); // missing brika-plugin => warning
+    const pkg = validPlugin({
+      keywords: [
+        'brika',
+      ],
+    }); // missing brika-plugin => warning
     const { stdout } = await runVerify(pkg);
     expect(stdout).toContain('keywords should include "brika-plugin"');
   });
 
   test('prints error count singular (1 error)', async () => {
-    const { stdout } = await runVerify(validPlugin({ engines: { brika: '^0.0.1' } }));
+    const { stdout } = await runVerify(
+      validPlugin({
+        engines: {
+          brika: '^0.0.1',
+        },
+      })
+    );
     expect(stdout).toContain('Verification failed');
     expect(stdout).toMatch(/1 error\b/);
   });
@@ -379,8 +539,12 @@ describe('verify CLI human-readable output formatting', () => {
   test('prints error count plural (multiple errors)', async () => {
     const { stdout } = await runVerify(
       validPlugin({
-        engines: { brika: '^0.0.1' },
-        keywords: ['something-else'],
+        engines: {
+          brika: '^0.0.1',
+        },
+        keywords: [
+          'something-else',
+        ],
       })
     );
     expect(stdout).toContain('Verification failed');
@@ -399,7 +563,11 @@ describe('readVersion edge cases via --json', () => {
   test('version field shown as "?" when version is missing (schema error path)', async () => {
     const pkg = validPlugin();
     delete pkg.version;
-    const { stdout } = await runVerify(pkg, { extraArgs: ['--json'] });
+    const { stdout } = await runVerify(pkg, {
+      extraArgs: [
+        '--json',
+      ],
+    });
     const payload = JSON.parse(stdout.trim());
     expect(payload.version).toBe('?');
     expect(payload.passed).toBe(false);
@@ -408,7 +576,11 @@ describe('readVersion edge cases via --json', () => {
   test('name field shown as "(unknown)" when name is missing (schema error path)', async () => {
     const pkg = validPlugin();
     delete pkg.name;
-    const { stdout } = await runVerify(pkg, { extraArgs: ['--json'] });
+    const { stdout } = await runVerify(pkg, {
+      extraArgs: [
+        '--json',
+      ],
+    });
     const payload = JSON.parse(stdout.trim());
     expect(payload.name).toBe('(unknown)');
   });
@@ -418,11 +590,22 @@ describe('readVersion edge cases via --json', () => {
 
 describe('verify CLI JSON vs human-readable parity', () => {
   test('JSON errors match human-readable errors for the same plugin', async () => {
-    const pkg = validPlugin({ engines: { brika: '^0.0.1' }, keywords: ['something-else'] });
+    const pkg = validPlugin({
+      engines: {
+        brika: '^0.0.1',
+      },
+      keywords: [
+        'something-else',
+      ],
+    });
 
     const [humanResult, jsonResult] = await Promise.all([
       runVerify(pkg),
-      runVerify(pkg, { extraArgs: ['--json'] }),
+      runVerify(pkg, {
+        extraArgs: [
+          '--json',
+        ],
+      }),
     ]);
 
     expect(humanResult.exitCode).toBe(1);

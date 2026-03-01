@@ -22,9 +22,15 @@ export interface BrickTypeSpec {
   /** Convention sizes for catalog display */
   families: BrickFamily[];
   /** Minimum grid size (default: { w: 1, h: 1 }) */
-  minSize?: { w: number; h: number };
+  minSize?: {
+    w: number;
+    h: number;
+  };
   /** Maximum grid size (default: { w: 12, h: 8 }) */
-  maxSize?: { w: number; h: number };
+  maxSize?: {
+    w: number;
+    h: number;
+  };
   config?: PreferenceDefinition[];
 }
 
@@ -83,5 +89,8 @@ export interface CompiledBrickType {
  * ```
  */
 export function defineBrick(spec: BrickTypeSpec, component: BrickComponent): CompiledBrickType {
-  return { spec, component };
+  return {
+    spec,
+    component,
+  };
 }

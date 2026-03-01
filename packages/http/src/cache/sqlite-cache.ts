@@ -72,9 +72,15 @@ export class SqliteCache implements CacheAdapter {
    * Get a value from cache
    */
   get<T = unknown>(key: string): T | null {
-    const stmt = this.#db.prepare<{ value: string; expires_at: number }, [string]>(
-      'SELECT value, expires_at FROM cache_entries WHERE key = ?'
-    );
+    const stmt = this.#db.prepare<
+      {
+        value: string;
+        expires_at: number;
+      },
+      [
+        string,
+      ]
+    >('SELECT value, expires_at FROM cache_entries WHERE key = ?');
 
     const row = stmt.get(key);
 
@@ -139,9 +145,14 @@ export class SqliteCache implements CacheAdapter {
    * Check if a key exists in cache (and is not expired)
    */
   has(key: string): boolean {
-    const stmt = this.#db.prepare<{ expires_at: number }, [string]>(
-      'SELECT expires_at FROM cache_entries WHERE key = ?'
-    );
+    const stmt = this.#db.prepare<
+      {
+        expires_at: number;
+      },
+      [
+        string,
+      ]
+    >('SELECT expires_at FROM cache_entries WHERE key = ?');
 
     const row = stmt.get(key);
 
@@ -181,7 +192,9 @@ export class SqliteCache implements CacheAdapter {
    * Invalidate cache entries by multiple tags
    */
   invalidateByTags(tags: string[]): void {
-    if (tags.length === 0) return;
+    if (tags.length === 0) {
+      return;
+    }
 
     const placeholders = tags.map(() => '?').join(', ');
     this.#db
@@ -205,17 +218,32 @@ export class SqliteCache implements CacheAdapter {
     const now = Date.now();
 
     const sizeRow = this.#db
-      .prepare<{ count: number }, []>('SELECT COUNT(*) as count FROM cache_entries')
+      .prepare<
+        {
+          count: number;
+        },
+        []
+      >('SELECT COUNT(*) as count FROM cache_entries')
       .get();
 
     const tagsRow = this.#db
-      .prepare<{ count: number }, []>('SELECT COUNT(DISTINCT tag) as count FROM cache_tags')
+      .prepare<
+        {
+          count: number;
+        },
+        []
+      >('SELECT COUNT(DISTINCT tag) as count FROM cache_tags')
       .get();
 
     const expiredRow = this.#db
-      .prepare<{ count: number }, [number]>(
-        'SELECT COUNT(*) as count FROM cache_entries WHERE expires_at < ?'
-      )
+      .prepare<
+        {
+          count: number;
+        },
+        [
+          number,
+        ]
+      >('SELECT COUNT(*) as count FROM cache_entries WHERE expires_at < ?')
       .get(now);
 
     // Get database file size
@@ -270,10 +298,24 @@ export class SqliteCache implements CacheAdapter {
   /**
    * Get all entries for a specific tag (useful for debugging)
    */
-  getByTag<T = unknown>(tag: string): Array<{ key: string; value: T }> {
+  getByTag<T = unknown>(
+    tag: string
+  ): Array<{
+    key: string;
+    value: T;
+  }> {
     const now = Date.now();
     const rows = this.#db
-      .prepare<{ key: string; value: string }, [string, number]>(
+      .prepare<
+        {
+          key: string;
+          value: string;
+        },
+        [
+          string,
+          number,
+        ]
+      >(
         `SELECT e.key, e.value FROM cache_entries e
          INNER JOIN cache_tags t ON e.key = t.key
          WHERE t.tag = ? AND e.expires_at > ?`
@@ -291,9 +333,17 @@ export class SqliteCache implements CacheAdapter {
    */
   getEntry(key: string): CacheEntry | null {
     const row = this.#db
-      .prepare<{ value: string; timestamp: number; ttl: number; expires_at: number }, [string]>(
-        'SELECT value, timestamp, ttl, expires_at FROM cache_entries WHERE key = ?'
-      )
+      .prepare<
+        {
+          value: string;
+          timestamp: number;
+          ttl: number;
+          expires_at: number;
+        },
+        [
+          string,
+        ]
+      >('SELECT value, timestamp, ttl, expires_at FROM cache_entries WHERE key = ?')
       .get(key);
 
     if (!row || Date.now() > row.expires_at) {
@@ -301,7 +351,14 @@ export class SqliteCache implements CacheAdapter {
     }
 
     const tags = this.#db
-      .prepare<{ tag: string }, [string]>('SELECT tag FROM cache_tags WHERE key = ?')
+      .prepare<
+        {
+          tag: string;
+        },
+        [
+          string,
+        ]
+      >('SELECT tag FROM cache_tags WHERE key = ?')
       .all(key)
       .map((r) => r.tag);
 

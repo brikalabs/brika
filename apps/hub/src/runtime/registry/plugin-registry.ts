@@ -28,7 +28,15 @@ export class PluginRegistry {
     if (!(await Bun.file(pkgPath).exists())) {
       await Bun.write(
         pkgPath,
-        JSON.stringify({ name: 'brika-plugins', private: true, dependencies: {} }, null, 2)
+        JSON.stringify(
+          {
+            name: 'brika-plugins',
+            private: true,
+            dependencies: {},
+          },
+          null,
+          2
+        )
       );
       this.logs.info('Plugin registry initialized', {
         directory: this.pluginsDir,
@@ -133,7 +141,9 @@ export class PluginRegistry {
 
   async checkUpdates(): Promise<UpdateInfo[]> {
     const pkgPath = join(this.pluginsDir, 'package.json');
-    if (!(await Bun.file(pkgPath).exists())) return [];
+    if (!(await Bun.file(pkgPath).exists())) {
+      return [];
+    }
 
     const pkg = await Bun.file(pkgPath).json();
     const updates: UpdateInfo[] = [];
@@ -159,7 +169,12 @@ export class PluginRegistry {
   // Sync
   // ─────────────────────────────────────────────────────────────────────────────
 
-  async syncToConfig(entries: Array<{ name: string; version: string }>): Promise<void> {
+  async syncToConfig(
+    entries: Array<{
+      name: string;
+      version: string;
+    }>
+  ): Promise<void> {
     const configNames = new Set(entries.map((e) => e.name));
     const installed = await this.list();
 
@@ -174,7 +189,9 @@ export class PluginRegistry {
             {
               packageName: pkg.name,
             },
-            { error }
+            {
+              error,
+            }
           );
         }
       }
@@ -193,7 +210,9 @@ export class PluginRegistry {
             {
               packageName: entry.name,
             },
-            { error }
+            {
+              error,
+            }
           );
         }
       }
@@ -211,7 +230,9 @@ export class PluginRegistry {
     if (isWorkspace) {
       const config = await this.configLoader.load();
       const entry = config.plugins.find((e) => e.name === name);
-      if (!entry) throw new Error('Plugin not found in config');
+      if (!entry) {
+        throw new Error('Plugin not found in config');
+      }
 
       const resolved = await this.configLoader.resolvePluginEntry(entry);
       await pm.load(resolved.rootDirectory);
@@ -233,7 +254,9 @@ export class PluginRegistry {
 
   async #listNpm(): Promise<InstalledPackage[]> {
     const pkgPath = join(this.pluginsDir, 'package.json');
-    if (!(await Bun.file(pkgPath).exists())) return [];
+    if (!(await Bun.file(pkgPath).exists())) {
+      return [];
+    }
 
     const pkg = await Bun.file(pkgPath).json();
     const packages: InstalledPackage[] = [];
@@ -264,10 +287,18 @@ export class PluginRegistry {
 
   async #getLatestVersion(name: string): Promise<string | null> {
     try {
-      const proc = Bun.spawn(['npm', 'view', name, 'version'], {
-        cwd: this.pluginsDir,
-        stdout: 'pipe',
-      });
+      const proc = Bun.spawn(
+        [
+          'npm',
+          'view',
+          name,
+          'version',
+        ],
+        {
+          cwd: this.pluginsDir,
+          stdout: 'pipe',
+        }
+      );
       const version = (await new Response(proc.stdout).text()).trim();
       await proc.exited;
       return version || null;

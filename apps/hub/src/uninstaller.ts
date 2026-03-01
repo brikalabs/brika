@@ -28,7 +28,8 @@ export async function selfUninstall(options?: { purge?: boolean }): Promise<void
   const purge = options?.purge ?? false;
   const brikaHome = resolve(process.env.BRIKA_HOME ?? '.brika');
 
-  console.log(`${pc.cyan('brika')} ${pc.dim('v' + hub.version)}`);
+  const versionLabel = pc.dim(`v${hub.version}`);
+  console.log(`${pc.cyan('brika')} ${versionLabel}`);
   console.log();
   console.log(`  ${pc.bold('This will remove:')} ${installDir}`);
   if (purge) {
@@ -49,36 +50,47 @@ export async function selfUninstall(options?: { purge?: boolean }): Promise<void
     console.log(`  ${pc.yellow('Note:')} The binary cannot be deleted while running on Windows.`);
     console.log('  Please use the PowerShell uninstaller instead:');
     console.log();
-    console.log(
-      `    ${pc.cyan('irm ' + HUB_REPO_URL + '/raw/master/scripts/uninstall.ps1 | iex')}`
-    );
+    const psCommand = pc.cyan(`irm ${HUB_REPO_URL}/raw/master/scripts/uninstall.ps1 | iex`);
+    console.log(`    ${psCommand}`);
     console.log();
     return;
   }
 
   // Remove the installation directory (safe on Unix — running process keeps its fd)
   console.log(`  ${pc.dim('Removing installation...')}`);
-  await rm(installDir, { recursive: true, force: true });
+  await rm(installDir, {
+    recursive: true,
+    force: true,
+  });
 
   // Remove completions (scripts + rc entries) — delegated to the completions module
   await uninstallCompletions();
 
   // Clean up PATH entries the installer added to shell rc files
   for (const rcFile of SHELL_RC_FILES) {
-    if (!existsSync(rcFile)) continue;
+    if (!existsSync(rcFile)) {
+      continue;
+    }
     try {
       const content = await readFile(rcFile, 'utf8');
-      if (!content.includes(installDir)) continue;
+      if (!content.includes(installDir)) {
+        continue;
+      }
 
       const lines = content.split('\n');
       const cleaned = lines.filter((line, i) => {
-        if (line.includes(installDir)) return false;
-        if (line === '# Brika' && lines[i + 1]?.includes(installDir)) return false;
+        if (line.includes(installDir)) {
+          return false;
+        }
+        if (line === '# Brika' && lines[i + 1]?.includes(installDir)) {
+          return false;
+        }
         return true;
       });
 
       await writeFile(rcFile, cleaned.join('\n'), 'utf8');
-      console.log(`  ${pc.dim('Cleaned ' + rcFile)}`);
+      const cleanedLabel = pc.dim(`Cleaned ${rcFile}`);
+      console.log(`  ${cleanedLabel}`);
     } catch {
       // Non-critical — leftover lines are harmless
     }
@@ -86,8 +98,12 @@ export async function selfUninstall(options?: { purge?: boolean }): Promise<void
 
   if (purge && existsSync(brikaHome)) {
     console.log(`  ${pc.dim('Removing workspace data...')}`);
-    await rm(brikaHome, { recursive: true, force: true });
-    console.log(`  ${pc.dim('Removed ' + brikaHome)}`);
+    await rm(brikaHome, {
+      recursive: true,
+      force: true,
+    });
+    const removedLabel = pc.dim(`Removed ${brikaHome}`);
+    console.log(`  ${removedLabel}`);
   }
 
   console.log();

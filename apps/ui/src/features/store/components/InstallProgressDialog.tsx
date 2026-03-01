@@ -45,9 +45,17 @@ export function InstallProgressDialog({
     stop,
   } = useProgressStream({
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: pluginsKeys.all });
-      queryClient.invalidateQueries({ queryKey: registryKeys.packages });
-      queryClient.invalidateQueries({ queryKey: ['store'] });
+      queryClient.invalidateQueries({
+        queryKey: pluginsKeys.all,
+      });
+      queryClient.invalidateQueries({
+        queryKey: registryKeys.packages,
+      });
+      queryClient.invalidateQueries({
+        queryKey: [
+          'store',
+        ],
+      });
     },
   });
 
@@ -56,10 +64,15 @@ export function InstallProgressDialog({
     if (open && packageName && !isProcessing && !success) {
       handleInstall();
     }
-  }, [open, packageName]);
+  }, [
+    open,
+    packageName,
+  ]);
 
   const handleClose = () => {
-    if (isProcessing) return;
+    if (isProcessing) {
+      return;
+    }
     reset();
     onOpenChange(false);
   };
@@ -77,7 +90,9 @@ export function InstallProgressDialog({
   };
 
   const getPhaseLabel = () => {
-    if (!progress) return t('store:install.starting');
+    if (!progress) {
+      return t('store:install.starting');
+    }
     switch (progress.phase) {
       case 'resolving':
         return t('store:install.resolving');

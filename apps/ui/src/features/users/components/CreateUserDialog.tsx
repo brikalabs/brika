@@ -19,7 +19,11 @@ import {
 import { useLocale } from '@/lib/use-locale';
 import { useUserMutations } from '../hooks';
 
-const ROLES = ['admin', 'user', 'guest'] as const;
+const ROLES = [
+  'admin',
+  'user',
+  'guest',
+] as const;
 
 interface CreateUserDialogProps {
   open: boolean;
@@ -45,7 +49,9 @@ export function CreateUserDialog({ open, onOpenChange }: Readonly<CreateUserDial
   };
 
   const handleOpenChange = (next: boolean) => {
-    if (!next) resetForm();
+    if (!next) {
+      resetForm();
+    }
     onOpenChange(next);
   };
 
@@ -54,14 +60,19 @@ export function CreateUserDialog({ open, onOpenChange }: Readonly<CreateUserDial
     setError('');
 
     create.mutate(
-      { email: email.trim(), name: name.trim(), role, password },
+      {
+        email: email.trim(),
+        name: name.trim(),
+        role,
+        password,
+      },
       {
         onSuccess: () => {
           resetForm();
           onOpenChange(false);
         },
         onError: (err) => setError(err.message),
-      },
+      }
     );
   };
 

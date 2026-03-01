@@ -10,7 +10,10 @@ export function useUsers() {
 
 export function useUserMutations() {
   const qc = useQueryClient();
-  const invalidate = () => qc.invalidateQueries({ queryKey: usersKeys.all });
+  const invalidate = () =>
+    qc.invalidateQueries({
+      queryKey: usersKeys.all,
+    });
 
   return {
     create: useMutation({
@@ -18,8 +21,16 @@ export function useUserMutations() {
       onSuccess: invalidate,
     }),
     update: useMutation({
-      mutationFn: ({ id, ...data }: { id: string; name?: string; role?: string; isActive?: boolean; scopes?: string[] }) =>
-        usersApi.update(id, data),
+      mutationFn: ({
+        id,
+        ...data
+      }: {
+        id: string;
+        name?: string;
+        role?: string;
+        isActive?: boolean;
+        scopes?: string[];
+      }) => usersApi.update(id, data),
       onSuccess: invalidate,
     }),
     delete: useMutation({

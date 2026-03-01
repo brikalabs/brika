@@ -6,7 +6,10 @@ import { SystemInfoSkeleton } from './skeleton';
 export function SystemInfo() {
   const { data: system, isLoading } = useSystem();
 
-  const View = useDataView({ data: system, isLoading });
+  const View = useDataView({
+    data: system,
+    isLoading,
+  });
 
   return (
     <View.Root>

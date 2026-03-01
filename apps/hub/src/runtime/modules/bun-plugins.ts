@@ -15,22 +15,36 @@ export function brikaExternalsPlugin(): BunPlugin {
   return {
     name: 'brika-externals',
     setup(build) {
-      build.onResolve({ filter: /^(react|@brika\/sdk|lucide-react)(\/.*)?$/ }, (args) => ({
-        path: args.path,
-        namespace: 'brika-ext',
-      }));
+      build.onResolve(
+        {
+          filter: /^(react|@brika\/sdk|lucide-react)(\/.*)?$/,
+        },
+        (args) => ({
+          path: args.path,
+          namespace: 'brika-ext',
+        })
+      );
 
-      build.onLoad({ namespace: 'brika-ext', filter: /.*/ }, (args) => {
-        if (args.path.includes('jsx-runtime') || args.path.includes('jsx-dev-runtime')) {
+      build.onLoad(
+        {
+          namespace: 'brika-ext',
+          filter: /.*/,
+        },
+        (args) => {
+          if (args.path.includes('jsx-runtime') || args.path.includes('jsx-dev-runtime')) {
+            return {
+              contents: `const J=globalThis.__brika.jsx;export const jsx=J.jsx;export const jsxs=J.jsxs;export const jsxDEV=J.jsxDEV||J.jsx;export const Fragment=J.Fragment;`,
+              loader: 'js',
+            };
+          }
+
+          const proxy = EXTERNALS[args.path];
           return {
-            contents: `const J=globalThis.__brika.jsx;export const jsx=J.jsx;export const jsxs=J.jsxs;export const jsxDEV=J.jsxDEV||J.jsx;export const Fragment=J.Fragment;`,
+            contents: proxy ?? '',
             loader: 'js',
           };
         }
-
-        const proxy = EXTERNALS[args.path];
-        return { contents: proxy ?? '', loader: 'js' };
-      });
+      );
     },
   };
 }
@@ -54,39 +68,66 @@ export function brikaActionsPlugin(actionsFilePath: string): BunPlugin {
     name: 'brika-actions',
     setup(build) {
       // Intercept relative imports that resolve to the actions file
-      build.onResolve({ filter: /\./ }, (args) => {
-        if (!args.importer || args.namespace !== 'file') return;
-        try {
-          const resolved = resolve(args.resolveDir, args.path);
-          // Check common extensions
-          for (const ext of ['', '.ts', '.tsx', '.js', '.jsx']) {
-            if (resolved + ext === normalizedActionsPath) {
-              return { path: args.path, namespace: 'brika-actions' };
-            }
+      build.onResolve(
+        {
+          filter: /\./,
+        },
+        (args) => {
+          if (!args.importer || args.namespace !== 'file') {
+            return;
           }
-        } catch {
-          // resolve failed — not our file
+          try {
+            const resolved = resolve(args.resolveDir, args.path);
+            // Check common extensions
+            for (const ext of [
+              '',
+              '.ts',
+              '.tsx',
+              '.js',
+              '.jsx',
+            ]) {
+              if (resolved + ext === normalizedActionsPath) {
+                return {
+                  path: args.path,
+                  namespace: 'brika-actions',
+                };
+              }
+            }
+          } catch {
+            // resolve failed — not our file
+          }
+          return undefined;
         }
-        return undefined;
-      });
+      );
 
-      build.onLoad({ namespace: 'brika-actions', filter: /.*/ }, async () => {
-        const source = await Bun.file(normalizedActionsPath).text();
-        const transpiler = new Bun.Transpiler({ loader: 'ts' });
-        const { exports: names } = transpiler.scan(source);
+      build.onLoad(
+        {
+          namespace: 'brika-actions',
+          filter: /.*/,
+        },
+        async () => {
+          const source = await Bun.file(normalizedActionsPath).text();
+          const transpiler = new Bun.Transpiler({
+            loader: 'ts',
+          });
+          const { exports: names } = transpiler.scan(source);
 
-        // scan() returns alphabetical — re-sort to source order so
-        // indices match the runtime's defineAction() execution order
-        names.sort(
-          (a, b) => source.indexOf(`export const ${a}`) - source.indexOf(`export const ${b}`)
-        );
+          // scan() returns alphabetical — re-sort to source order so
+          // indices match the runtime's defineAction() execution order
+          names.sort(
+            (a, b) => source.indexOf(`export const ${a}`) - source.indexOf(`export const ${b}`)
+          );
 
-        const lines = names.map(
-          (name, i) => `export const ${name} = { __actionId: '${actionId(i)}' };`
-        );
+          const lines = names.map(
+            (name, i) => `export const ${name} = { __actionId: '${actionId(i)}' };`
+          );
 
-        return { contents: lines.join('\n'), loader: 'js' };
-      });
+          return {
+            contents: lines.join('\n'),
+            loader: 'js',
+          };
+        }
+      );
     },
   };
 }

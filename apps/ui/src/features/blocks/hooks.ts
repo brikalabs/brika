@@ -11,7 +11,12 @@ export function useBlocks() {
 
   const getPlugin = (pluginId: string) => plugins.find((p) => p.name === pluginId);
 
-  return { blockTypes, plugins, isLoading, getPlugin };
+  return {
+    blockTypes,
+    plugins,
+    isLoading,
+    getPlugin,
+  };
 }
 
 export function useBlocksFilters(blockTypes: BlockDefinition[]) {
@@ -28,15 +33,30 @@ export function useBlocksFilters(blockTypes: BlockDefinition[]) {
       pIds.add(block.pluginId);
       cats.add(block.category || 'other');
     }
-    return { pluginIds: [...pIds], categories: [...cats].sort((a, b) => a.localeCompare(b)) };
-  }, [blockTypes]);
+    return {
+      pluginIds: [
+        ...pIds,
+      ],
+      categories: [
+        ...cats,
+      ].sort((a, b) => a.localeCompare(b)),
+    };
+  }, [
+    blockTypes,
+  ]);
 
   // Filter blocks
   const filteredBlocks = useMemo(() => {
     return blockTypes.filter((b) => {
-      if (pluginFilter !== 'all' && b.pluginId !== pluginFilter) return false;
-      if (categoryFilter !== 'all' && (b.category || 'other') !== categoryFilter) return false;
-      if (!search) return true;
+      if (pluginFilter !== 'all' && b.pluginId !== pluginFilter) {
+        return false;
+      }
+      if (categoryFilter !== 'all' && (b.category || 'other') !== categoryFilter) {
+        return false;
+      }
+      if (!search) {
+        return true;
+      }
 
       const searchLower = search.toLowerCase();
       const blockKey = b.id.split(':').pop() || b.id;
@@ -50,7 +70,13 @@ export function useBlocksFilters(blockTypes: BlockDefinition[]) {
         b.pluginId.toLowerCase().includes(searchLower)
       );
     });
-  }, [blockTypes, search, pluginFilter, categoryFilter, tp]);
+  }, [
+    blockTypes,
+    search,
+    pluginFilter,
+    categoryFilter,
+    tp,
+  ]);
 
   // Group by category
   const groupedBlocks = useMemo(() => {
@@ -63,7 +89,9 @@ export function useBlocksFilters(blockTypes: BlockDefinition[]) {
       },
       {} as Record<string, BlockDefinition[]>
     );
-  }, [filteredBlocks]);
+  }, [
+    filteredBlocks,
+  ]);
 
   const hasActiveFilters = pluginFilter !== 'all' || categoryFilter !== 'all' || search !== '';
 

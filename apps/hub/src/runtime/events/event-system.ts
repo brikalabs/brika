@@ -27,7 +27,9 @@ class RingBuffer<T> {
     const start = (this.#head - this.#len + this.#cap) % this.#cap;
     for (let i = 0; i < this.#len; i++) {
       const v = this.#buf[(start + i) % this.#cap];
-      if (v !== undefined) out.push(v);
+      if (v !== undefined) {
+        out.push(v);
+      }
     }
     return out;
   }
@@ -58,7 +60,11 @@ export class EventSystem extends BaseEventSystem {
 
       // Persist spark events to database
       if (action.type === 'spark.emit' && this.#sparkStore) {
-        const payload = action.payload as { type: string; source: string; payload: unknown };
+        const payload = action.payload as {
+          type: string;
+          source: string;
+          payload: unknown;
+        };
         this.#sparkStore.insert({
           ts: action.timestamp,
           type: payload.type,

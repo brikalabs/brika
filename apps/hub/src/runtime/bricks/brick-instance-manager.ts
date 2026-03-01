@@ -46,7 +46,9 @@ export class BrickInstanceManager {
     config: Record<string, unknown>
   ): void {
     if (this.#instances.has(instanceId)) {
-      this.logs.warn('Instance already mounted', { instanceId });
+      this.logs.warn('Instance already mounted', {
+        instanceId,
+      });
       return;
     }
 
@@ -60,12 +62,19 @@ export class BrickInstanceManager {
       body: [],
     });
 
-    this.logs.debug('Brick instance mounted', { instanceId, brickTypeId, w, h });
+    this.logs.debug('Brick instance mounted', {
+      instanceId,
+      brickTypeId,
+      w,
+      h,
+    });
   }
 
   resize(instanceId: string, w: number, h: number): boolean {
     const instance = this.#instances.get(instanceId);
-    if (!instance) return false;
+    if (!instance) {
+      return false;
+    }
     instance.w = w;
     instance.h = h;
     return true;
@@ -74,14 +83,18 @@ export class BrickInstanceManager {
   unmount(instanceId: string): boolean {
     const removed = this.#instances.delete(instanceId);
     if (removed) {
-      this.logs.debug('Brick instance unmounted', { instanceId });
+      this.logs.debug('Brick instance unmounted', {
+        instanceId,
+      });
     }
     return removed;
   }
 
   patchBody(instanceId: string, mutations: unknown[]): boolean {
     const instance = this.#instances.get(instanceId);
-    if (!instance) return false;
+    if (!instance) {
+      return false;
+    }
 
     instance.body = applyMutations(instance.body, mutations as Mutation[]);
     return true;
@@ -100,11 +113,15 @@ export class BrickInstanceManager {
   }
 
   list(): BrickInstance[] {
-    return [...this.#instances.values()];
+    return [
+      ...this.#instances.values(),
+    ];
   }
 
   listByType(brickTypeId: string): BrickInstance[] {
-    return [...this.#instances.values()].filter((i) => i.brickTypeId === brickTypeId);
+    return [
+      ...this.#instances.values(),
+    ].filter((i) => i.brickTypeId === brickTypeId);
   }
 
   /** Unmount all instances of a specific brick type. Returns removed instance IDs. */

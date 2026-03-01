@@ -1,6 +1,6 @@
-import { useRef, useState } from 'react';
-import { Camera, Check, Loader2, Trash2, UserPen } from 'lucide-react';
 import { useAuth } from '@brika/auth/react';
+import { Camera, Check, Loader2, Trash2, UserPen } from 'lucide-react';
+import { useRef, useState } from 'react';
 import {
   Avatar,
   AvatarFallback,
@@ -33,7 +33,9 @@ export function ProfilePage() {
   const [saved, setSaved] = useState(false);
   const [uploading, setUploading] = useState(false);
 
-  if (!user) return null;
+  if (!user) {
+    return null;
+  }
 
   const isDirty = name.trim() !== user.name;
   const initials = user.name
@@ -44,10 +46,14 @@ export function ProfilePage() {
     .slice(0, 2);
 
   const handleSave = async () => {
-    if (!isDirty) return;
+    if (!isDirty) {
+      return;
+    }
     setSaving(true);
     try {
-      await client.updateProfile({ name: name.trim() });
+      await client.updateProfile({
+        name: name.trim(),
+      });
       await refreshSession();
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
@@ -58,14 +64,18 @@ export function ProfilePage() {
 
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
+    if (!file) {
+      return;
+    }
     setUploading(true);
     try {
       await client.uploadAvatar(file);
       await refreshSession();
     } finally {
       setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -95,7 +105,9 @@ export function ProfilePage() {
           >
             <Avatar className="size-32 text-3xl">
               <AvatarImage
-                src={client.avatarUrl(user, { size: 256 })}
+                src={client.avatarUrl(user, {
+                  size: 256,
+                })}
                 alt={user.name}
               />
               <AvatarFallback className="text-3xl">{initials}</AvatarFallback>
@@ -119,13 +131,14 @@ export function ProfilePage() {
           {/* Info */}
           <div className="min-w-0 flex-1 pb-0.5">
             <h2 className="truncate font-semibold text-xl tracking-tight">{user.name}</h2>
-            <p className="truncate text-sm text-muted-foreground">{user.email}</p>
+            <p className="truncate text-muted-foreground text-sm">{user.email}</p>
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <Badge variant="secondary" className="capitalize">
                 {user.role}
               </Badge>
-              <span className="text-xs text-muted-foreground">
-                {t('auth:memberSince')} {user.createdAt ? formatDate(new Date(user.createdAt)) : '\u2014'}
+              <span className="text-muted-foreground text-xs">
+                {t('auth:memberSince')}{' '}
+                {user.createdAt ? formatDate(new Date(user.createdAt)) : '\u2014'}
               </span>
             </div>
           </div>
@@ -201,7 +214,7 @@ export function ProfilePage() {
               )}
             </Button>
             {saved && (
-              <span className="flex items-center gap-1.5 text-sm text-emerald-600 dark:text-emerald-400">
+              <span className="flex items-center gap-1.5 text-emerald-600 text-sm dark:text-emerald-400">
                 <Check className="size-3.5" />
                 {t('auth:saved')}
               </span>

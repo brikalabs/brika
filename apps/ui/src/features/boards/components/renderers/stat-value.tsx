@@ -12,7 +12,9 @@ defineRenderer('stat-value', ({ node }) => {
           <DynamicIcon
             name={node.icon as IconName}
             className="@xs:size-3.5 size-3 shrink-0"
-            style={{ color: resolveColor(node.color) ?? undefined }}
+            style={{
+              color: resolveColor(node.color) ?? undefined,
+            }}
           />
         )}
         <span className="truncate @xs:text-[11px] text-[10px] text-muted-foreground">

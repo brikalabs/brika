@@ -15,7 +15,10 @@ function createContext(cwd: string, scannedFiles: Set<string>): RuleContext {
     async *glob(pattern) {
       const isDir = pattern.endsWith('/') || (pattern.endsWith('*') && !pattern.includes('.'));
       const cleanPattern = pattern.endsWith('/') ? pattern.slice(0, -1) : pattern;
-      for await (const file of new Glob(cleanPattern).scan({ cwd, onlyFiles: !isDir })) {
+      for await (const file of new Glob(cleanPattern).scan({
+        cwd,
+        onlyFiles: !isDir,
+      })) {
         scannedFiles.add(file);
         yield file;
       }
@@ -33,7 +36,9 @@ function createContext(cwd: string, scannedFiles: Set<string>): RuleContext {
 async function collect<T>(iter: AsyncIterable<T> | Promise<T[]>): Promise<T[]> {
   if (Symbol.asyncIterator in iter) {
     const items: T[] = [];
-    for await (const item of iter) items.push(item);
+    for await (const item of iter) {
+      items.push(item);
+    }
     return items;
   }
   return iter;
@@ -47,7 +52,10 @@ export async function runArch(config: ArchConfig): Promise<ArchResult> {
   const start = performance.now();
   const scannedFiles = new Set<string>();
   const ctx = createContext(config.cwd ?? process.cwd(), scannedFiles);
-  const results: { rule: string; violations: Violation[] }[] = [];
+  const results: {
+    rule: string;
+    violations: Violation[];
+  }[] = [];
 
   const checks = await Promise.all(
     config.rules.map(async (rule) => ({
@@ -57,8 +65,13 @@ export async function runArch(config: ArchConfig): Promise<ArchResult> {
   );
 
   for (const { rule, violations } of checks) {
-    if (violations.length === 0) continue;
-    results.push({ rule: rule.name, violations });
+    if (violations.length === 0) {
+      continue;
+    }
+    results.push({
+      rule: rule.name,
+      violations,
+    });
   }
 
   return {
@@ -115,7 +128,9 @@ export function defineConfig(rules: RuleInput[]): RuleInput[] {
 
 export async function run(...inputs: RuleInput[]): Promise<void> {
   const rules = normalizeRules(inputs);
-  const result = await runArch({ rules });
+  const result = await runArch({
+    rules,
+  });
   printResult(result);
   process.exit(result.passed ? 0 : 1);
 }

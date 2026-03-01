@@ -8,7 +8,12 @@
     "url": "https://github.com/maxscharwath/brika.git",
     "directory": "packages/http"
   },
-  "keywords": ["brika", "http", "server", "routing"],
+  "keywords": [
+    "brika",
+    "http",
+    "server",
+    "routing"
+  ],
   "exports": {
     ".": "./src/index.ts",
     "./testing": "./src/testing/index.ts"
@@ -17,11 +22,10 @@
     "@brika/di": "workspace:*"
   },
   "devDependencies": {
-    "@types/bun": "latest",
-    "typescript": "^5.7.3"
+    "@types/bun": "latest"
   },
   "scripts": {
     "test": "bun test",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsgo --noEmit"
   }
 }

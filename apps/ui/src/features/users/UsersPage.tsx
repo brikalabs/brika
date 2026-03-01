@@ -2,8 +2,8 @@ import { Plus } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
-import { useUsers } from './hooks';
 import { CreateUserDialog, UsersTable } from './components';
+import { useUsers } from './hooks';
 
 export function UsersPage() {
   const { t } = useLocale();

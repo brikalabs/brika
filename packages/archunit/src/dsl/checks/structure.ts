@@ -19,7 +19,10 @@ registerCheck('exportClass', () => ({
   name: 'export class',
   check: (_, file, content) => {
     if (!/export\s+class\s+\w+/.test(content)) {
-      return { file, message: 'Missing exported class' };
+      return {
+        file,
+        message: 'Missing exported class',
+      };
     }
   },
 }));
@@ -28,7 +31,10 @@ registerCheck('exportFunction', () => ({
   name: 'export function',
   check: (_, file, content) => {
     if (!/export\s+(?:async\s+)?function\s+\w+/.test(content)) {
-      return { file, message: 'Missing exported function' };
+      return {
+        file,
+        message: 'Missing exported function',
+      };
     }
   },
 }));
@@ -40,11 +46,17 @@ registerCheck('haveClassNamed', (pattern: RegExp, description?: string) => {
     check: (_, file, content) => {
       const match = /class\s+(\w+)/.exec(content);
       if (!match?.[1]) {
-        return { file, message: 'No class found' };
+        return {
+          file,
+          message: 'No class found',
+        };
       }
       const className = match[1];
       if (!pattern.test(className)) {
-        return { file, message: `Class "${className}" doesn't match ${desc}` };
+        return {
+          file,
+          message: `Class "${className}" doesn't match ${desc}`,
+        };
       }
     },
   };
@@ -55,7 +67,10 @@ registerCheck('extendClass', (baseName: string) => ({
   check: (_, file, content) => {
     const pattern = new RegExp(String.raw`class\s+\w+\s+extends\s+${baseName}`);
     if (!pattern.test(content)) {
-      return { file, message: `Must extend ${baseName}` };
+      return {
+        file,
+        message: `Must extend ${baseName}`,
+      };
     }
   },
 }));
@@ -65,7 +80,10 @@ registerCheck('implementInterface', (interfaceName: string) => ({
   check: (_, file, content) => {
     const pattern = new RegExp(String.raw`class\s+\w+[^{]*implements[^{]*${interfaceName}`);
     if (!pattern.test(content)) {
-      return { file, message: `Must implement ${interfaceName}` };
+      return {
+        file,
+        message: `Must implement ${interfaceName}`,
+      };
     }
   },
 }));

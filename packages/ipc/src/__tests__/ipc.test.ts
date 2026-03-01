@@ -7,7 +7,12 @@ import { isRpcErrorWire, RpcError } from '../errors';
 
 describe('Define helpers', () => {
   it('should create a message definition', () => {
-    const myMsg = message('test', z.object({ foo: z.string() }));
+    const myMsg = message(
+      'test',
+      z.object({
+        foo: z.string(),
+      })
+    );
 
     expect(myMsg._tag).toBe('message');
     expect(myMsg.name).toBe('test');
@@ -16,7 +21,15 @@ describe('Define helpers', () => {
   });
 
   it('should create an RPC definition', () => {
-    const myRpc = rpc('doThing', z.object({ input: z.string() }), z.object({ output: z.number() }));
+    const myRpc = rpc(
+      'doThing',
+      z.object({
+        input: z.string(),
+      }),
+      z.object({
+        output: z.number(),
+      })
+    );
 
     expect(myRpc._tag).toBe('rpc');
     expect(myRpc.name).toBe('doThing');
@@ -32,7 +45,10 @@ describe('Contract definitions', () => {
 
     // Validate schema works
     const result = hello.schema.safeParse({
-      plugin: { id: 'test', version: '1.0' },
+      plugin: {
+        id: 'test',
+        version: '1.0',
+      },
     });
     expect(result.success).toBe(true);
   });
@@ -44,8 +60,13 @@ describe('Contract definitions', () => {
     // Validate input schema
     const inputResult = callTool.input.safeParse({
       tool: 'timer:set',
-      args: { duration: 5000 },
-      ctx: { traceId: 'abc', source: 'api' },
+      args: {
+        duration: 5000,
+      },
+      ctx: {
+        traceId: 'abc',
+        source: 'api',
+      },
     });
     expect(inputResult.success).toBe(true);
 
@@ -73,18 +94,29 @@ describe('Channel', () => {
   describe('send', () => {
     it('should send messages with correct wire format', () => {
       channel.send(hello, {
-        plugin: { id: '@brika/test', version: '1.0.0' },
+        plugin: {
+          id: '@brika/test',
+          version: '1.0.0',
+        },
       });
 
       expect(sent).toHaveLength(1);
       expect(sent[0]).toEqual({
         t: 'hello',
-        plugin: { id: '@brika/test', version: '1.0.0' },
+        plugin: {
+          id: '@brika/test',
+          version: '1.0.0',
+        },
       });
     });
 
     it('should send multiple messages', () => {
-      channel.send(hello, { plugin: { id: 'test', version: '1.0' } });
+      channel.send(hello, {
+        plugin: {
+          id: 'test',
+          version: '1.0',
+        },
+      });
       channel.send(ready, {});
 
       expect(sent).toHaveLength(2);
@@ -102,12 +134,18 @@ describe('Channel', () => {
 
       await channel.handle({
         t: 'hello',
-        plugin: { id: 'test', version: '1.0' },
+        plugin: {
+          id: 'test',
+          version: '1.0',
+        },
       });
 
       expect(handler).toHaveBeenCalledTimes(1);
       expect(handler).toHaveBeenCalledWith({
-        plugin: { id: 'test', version: '1.0' },
+        plugin: {
+          id: 'test',
+          version: '1.0',
+        },
       });
     });
 
@@ -117,9 +155,21 @@ describe('Channel', () => {
       });
       const unsub = channel.on(hello, handler);
 
-      await channel.handle({ t: 'hello', plugin: { id: 'a', version: '1' } });
+      await channel.handle({
+        t: 'hello',
+        plugin: {
+          id: 'a',
+          version: '1',
+        },
+      });
       unsub();
-      await channel.handle({ t: 'hello', plugin: { id: 'b', version: '1' } });
+      await channel.handle({
+        t: 'hello',
+        plugin: {
+          id: 'b',
+          version: '1',
+        },
+      });
 
       expect(handler).toHaveBeenCalledTimes(1);
     });
@@ -128,22 +178,33 @@ describe('Channel', () => {
   describe('implement + handle RPC', () => {
     it('should handle RPC requests and send response', async () => {
       channel.implement(callTool, ({ tool }) => {
-        return { ok: true, content: `Called ${tool}` };
+        return {
+          ok: true,
+          content: `Called ${tool}`,
+        };
       });
 
       await channel.handle({
         t: 'callTool',
         _id: 1,
         tool: 'timer:set',
-        args: { duration: 5000 },
-        ctx: { traceId: 'abc', source: 'api' },
+        args: {
+          duration: 5000,
+        },
+        ctx: {
+          traceId: 'abc',
+          source: 'api',
+        },
       });
 
       expect(sent).toHaveLength(1);
       expect(sent[0]).toEqual({
         t: 'callToolResult',
         _id: 1,
-        result: { ok: true, content: 'Called timer:set' },
+        result: {
+          ok: true,
+          content: 'Called timer:set',
+        },
       });
     });
 
@@ -157,12 +218,21 @@ describe('Channel', () => {
         _id: 1,
         tool: 'test',
         args: {},
-        ctx: { traceId: 'x', source: 'api' },
+        ctx: {
+          traceId: 'x',
+          source: 'api',
+        },
       });
 
       expect(sent).toHaveLength(1);
       expect(sent[0]?.t).toBe('callToolResult');
-      expect(((sent[0] as Record<string, unknown>)?.result as { ok: boolean })?.ok).toBe(false);
+      expect(
+        (
+          (sent[0] as Record<string, unknown>)?.result as {
+            ok: boolean;
+          }
+        )?.ok
+      ).toBe(false);
     });
 
     it('should serialize RpcError with code on the wire', async () => {
@@ -177,15 +247,36 @@ describe('Channel', () => {
         _id: 1,
         tool: 'test',
         args: {},
-        ctx: { traceId: 'x', source: 'api' },
+        ctx: {
+          traceId: 'x',
+          source: 'api',
+        },
       });
 
       expect(sent).toHaveLength(1);
       const result = (sent[0] as Record<string, unknown>)?.result;
       expect(isRpcErrorWire(result)).toBe(true);
-      expect((result as { code: string }).code).toBe('PERMISSION_DENIED');
-      expect((result as { message: string }).message).toBe('Permission required');
-      expect((result as { data: Record<string, unknown> }).data).toEqual({
+      expect(
+        (
+          result as {
+            code: string;
+          }
+        ).code
+      ).toBe('PERMISSION_DENIED');
+      expect(
+        (
+          result as {
+            message: string;
+          }
+        ).message
+      ).toBe('Permission required');
+      expect(
+        (
+          result as {
+            data: Record<string, unknown>;
+          }
+        ).data
+      ).toEqual({
         permission: 'location',
       });
     });
@@ -196,29 +287,46 @@ describe('Channel', () => {
       const promise = channel.call(callTool, {
         tool: 'test',
         args: {},
-        ctx: { traceId: 't', source: 'api' },
+        ctx: {
+          traceId: 't',
+          source: 'api',
+        },
       });
 
       // Verify request was sent
       expect(sent).toHaveLength(1);
       expect(sent[0]?.t).toBe('callTool');
-      expect((sent[0] as { _id?: number })?._id).toBe(1);
+      expect(
+        (
+          sent[0] as {
+            _id?: number;
+          }
+        )?._id
+      ).toBe(1);
 
       // Simulate response
       await channel.handle({
         t: 'callToolResult',
         _id: 1,
-        result: { ok: true, content: 'success' },
+        result: {
+          ok: true,
+          content: 'success',
+        },
       });
 
       const result = await promise;
-      expect(result).toEqual({ ok: true, content: 'success' });
+      expect(result).toEqual({
+        ok: true,
+        content: 'success',
+      });
     });
 
     it('should timeout if no response', () => {
       const promise = channel.call(
         ping,
-        { ts: Date.now() },
+        {
+          ts: Date.now(),
+        },
         10 // 10ms timeout
       );
 
@@ -229,7 +337,10 @@ describe('Channel', () => {
       const promise = channel.call(callTool, {
         tool: 'test',
         args: {},
-        ctx: { traceId: 't', source: 'api' },
+        ctx: {
+          traceId: 't',
+          source: 'api',
+        },
       });
 
       // Simulate an RpcError response from the server (with data)
@@ -240,7 +351,9 @@ describe('Channel', () => {
           _rpcError: true,
           code: 'PERMISSION_DENIED',
           message: 'Permission required',
-          data: { permission: 'location' },
+          data: {
+            permission: 'location',
+          },
         },
       });
 
@@ -251,7 +364,9 @@ describe('Channel', () => {
         expect(err).toBeInstanceOf(RpcError);
         expect((err as RpcError).code).toBe('PERMISSION_DENIED');
         expect((err as RpcError).message).toBe('Permission required');
-        expect((err as RpcError).data).toEqual({ permission: 'location' });
+        expect((err as RpcError).data).toEqual({
+          permission: 'location',
+        });
       }
     });
 
@@ -259,13 +374,20 @@ describe('Channel', () => {
       const promise = channel.call(callTool, {
         tool: 'test',
         args: {},
-        ctx: { traceId: 't', source: 'api' },
+        ctx: {
+          traceId: 't',
+          source: 'api',
+        },
       });
 
       await channel.handle({
         t: 'callToolResult',
         _id: 1,
-        result: { _rpcError: true, code: 'NOT_FOUND', message: 'Block xyz not found' },
+        result: {
+          _rpcError: true,
+          code: 'NOT_FOUND',
+          message: 'Block xyz not found',
+        },
       });
 
       try {
@@ -284,7 +406,10 @@ describe('Channel', () => {
       const promise = channel.call(callTool, {
         tool: 'test',
         args: {},
-        ctx: { traceId: 't', source: 'api' },
+        ctx: {
+          traceId: 't',
+          source: 'api',
+        },
       });
 
       channel.close(new Error('Test close'));
@@ -295,7 +420,12 @@ describe('Channel', () => {
 
     it('should not send after close', () => {
       channel.close();
-      channel.send(hello, { plugin: { id: 'x', version: '1' } });
+      channel.send(hello, {
+        plugin: {
+          id: 'x',
+          version: '1',
+        },
+      });
 
       expect(sent).toHaveLength(0);
     });
@@ -323,7 +453,11 @@ describe('RpcError', () => {
   });
 
   it('should reconstruct from wire format', () => {
-    const wire = { _rpcError: true as const, code: 'INTERNAL', message: 'oops' };
+    const wire = {
+      _rpcError: true as const,
+      code: 'INTERNAL',
+      message: 'oops',
+    };
     const err = RpcError.fromWire(wire);
     expect(err).toBeInstanceOf(RpcError);
     expect(err.code).toBe('INTERNAL');
@@ -334,17 +468,23 @@ describe('RpcError', () => {
     const err = new RpcError('PERMISSION_DENIED', 'Location permission required', {
       permission: 'location',
     });
-    expect(err.data).toEqual({ permission: 'location' });
+    expect(err.data).toEqual({
+      permission: 'location',
+    });
   });
 
   it('should serialize data to wire format', () => {
-    const err = new RpcError('NOT_FOUND', 'Block xyz', { blockId: 'timer:set' });
+    const err = new RpcError('NOT_FOUND', 'Block xyz', {
+      blockId: 'timer:set',
+    });
     const wire = err.toWire();
     expect(wire).toEqual({
       _rpcError: true,
       code: 'NOT_FOUND',
       message: 'Block xyz',
-      data: { blockId: 'timer:set' },
+      data: {
+        blockId: 'timer:set',
+      },
     });
   });
 
@@ -376,7 +516,13 @@ describe('RpcError', () => {
 
 describe('isRpcErrorWire', () => {
   it('should detect valid wire errors', () => {
-    expect(isRpcErrorWire({ _rpcError: true, code: 'X', message: 'Y' })).toBe(true);
+    expect(
+      isRpcErrorWire({
+        _rpcError: true,
+        code: 'X',
+        message: 'Y',
+      })
+    ).toBe(true);
   });
 
   it('should reject non-objects', () => {
@@ -387,31 +533,74 @@ describe('isRpcErrorWire', () => {
   });
 
   it('should reject objects without _rpcError flag', () => {
-    expect(isRpcErrorWire({ code: 'X', message: 'Y' })).toBe(false);
-    expect(isRpcErrorWire({ _rpcError: false, code: 'X', message: 'Y' })).toBe(false);
+    expect(
+      isRpcErrorWire({
+        code: 'X',
+        message: 'Y',
+      })
+    ).toBe(false);
+    expect(
+      isRpcErrorWire({
+        _rpcError: false,
+        code: 'X',
+        message: 'Y',
+      })
+    ).toBe(false);
   });
 
   it('should reject objects with missing fields', () => {
-    expect(isRpcErrorWire({ _rpcError: true, code: 'X' })).toBe(false);
-    expect(isRpcErrorWire({ _rpcError: true, message: 'Y' })).toBe(false);
+    expect(
+      isRpcErrorWire({
+        _rpcError: true,
+        code: 'X',
+      })
+    ).toBe(false);
+    expect(
+      isRpcErrorWire({
+        _rpcError: true,
+        message: 'Y',
+      })
+    ).toBe(false);
   });
 
   it('should reject objects with wrong field types', () => {
-    expect(isRpcErrorWire({ _rpcError: true, code: 123, message: 'Y' })).toBe(false);
-    expect(isRpcErrorWire({ _rpcError: true, code: 'X', message: 123 })).toBe(false);
+    expect(
+      isRpcErrorWire({
+        _rpcError: true,
+        code: 123,
+        message: 'Y',
+      })
+    ).toBe(false);
+    expect(
+      isRpcErrorWire({
+        _rpcError: true,
+        code: 'X',
+        message: 123,
+      })
+    ).toBe(false);
   });
 
   it('should not confuse regular { ok: false } errors with RpcError', () => {
-    expect(isRpcErrorWire({ ok: false, error: 'something failed' })).toBe(false);
+    expect(
+      isRpcErrorWire({
+        ok: false,
+        error: 'something failed',
+      })
+    ).toBe(false);
   });
 });
 
 describe('Schema validation', () => {
   it('should validate ToolResult', () => {
-    const valid = ToolResult.safeParse({ ok: true, content: 'done' });
+    const valid = ToolResult.safeParse({
+      ok: true,
+      content: 'done',
+    });
     expect(valid.success).toBe(true);
 
-    const invalid = ToolResult.safeParse({ ok: 'yes' });
+    const invalid = ToolResult.safeParse({
+      ok: 'yes',
+    });
     expect(invalid.success).toBe(false);
   });
 
@@ -419,7 +608,9 @@ describe('Schema validation', () => {
     const valid = PluginInfo.safeParse({
       id: '@brika/test',
       version: '1.0.0',
-      requires: { hub: '>=1.0.0' },
+      requires: {
+        hub: '>=1.0.0',
+      },
     });
     expect(valid.success).toBe(true);
 

@@ -57,7 +57,7 @@ export const useLogsStore = create<LogsStore>((set) => ({
 
   addNew: (log) =>
     set((s) => {
-      if (s.paused) return s;
+      if (s.paused) { return s; }
       // Prepend new logs (newest first), keep max 500 in memory
       const logs = [log, ...s.newLogs].slice(0, 500);
       return { newLogs: logs };

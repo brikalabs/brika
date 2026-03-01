@@ -7,12 +7,22 @@ type Build = (candidates: string[]) => string;
 function extractCandidates(js: string): string[] {
   const tokens = new Set<string>();
   for (const m of js.matchAll(/"([^"\\]*)"/g)) {
-    for (const t of m[1].split(/\s+/)) if (t) tokens.add(t);
+    for (const t of m[1].split(/\s+/)) {
+      if (t) {
+        tokens.add(t);
+      }
+    }
   }
   for (const m of js.matchAll(/'([^'\\]*)'/g)) {
-    for (const t of m[1].split(/\s+/)) if (t) tokens.add(t);
+    for (const t of m[1].split(/\s+/)) {
+      if (t) {
+        tokens.add(t);
+      }
+    }
   }
-  return [...tokens];
+  return [
+    ...tokens,
+  ];
 }
 
 /**
@@ -28,7 +38,9 @@ export class TailwindCompiler {
     const build = await this.#build;
 
     const candidates = extractCandidates(jsSource);
-    if (candidates.length === 0) return undefined;
+    if (candidates.length === 0) {
+      return undefined;
+    }
 
     const css = build(candidates);
     return css.length > 0 ? css : undefined;
@@ -37,7 +49,11 @@ export class TailwindCompiler {
   async #init(): Promise<Build> {
     const { compile } = await import('tailwindcss');
     const compiled = await compile(
-      [TW_DEFAULT_THEME, TW_CUSTOM_THEME, '@tailwind utilities;'].join('\n')
+      [
+        TW_DEFAULT_THEME,
+        TW_CUSTOM_THEME,
+        '@tailwind utilities;',
+      ].join('\n')
     );
     return (candidates) => compiled.build(candidates);
   }

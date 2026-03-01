@@ -9,7 +9,11 @@ import { HttpClient, MemoryCache } from '@brika/http';
 async function simpleGet() {
   const client = new HttpClient();
 
-  const response = await client.get<{ uuid: string }>('https://httpbin.org/uuid').send();
+  const response = await client
+    .get<{
+      uuid: string;
+    }>('https://httpbin.org/uuid')
+    .send();
 
   console.log('UUID:', response.data.uuid);
 }
@@ -23,8 +27,13 @@ async function cachedRequest() {
   // First call - hits the API
   const response1 = await client
     .get('https://registry.npmjs.org/-/v1/search')
-    .params({ text: 'brika', size: '5' })
-    .cache({ ttl: 60_000 }) // Cache for 1 minute
+    .params({
+      text: 'brika',
+      size: '5',
+    })
+    .cache({
+      ttl: 60_000,
+    }) // Cache for 1 minute
     .send();
 
   console.log('First call - cached:', response1.cached); // false
@@ -32,8 +41,13 @@ async function cachedRequest() {
   // Second call - returns cached result
   const response2 = await client
     .get('https://registry.npmjs.org/-/v1/search')
-    .params({ text: 'brika', size: '5' })
-    .cache({ ttl: 60_000 })
+    .params({
+      text: 'brika',
+      size: '5',
+    })
+    .cache({
+      ttl: 60_000,
+    })
     .send();
 
   console.log('Second call - cached:', response2.cached); // true
@@ -44,8 +58,13 @@ async function postRequest() {
   const client = new HttpClient();
 
   const response = await client
-    .post<{ json: unknown }>('https://httpbin.org/post')
-    .json({ name: 'John Doe', email: 'john@example.com' })
+    .post<{
+      json: unknown;
+    }>('https://httpbin.org/post')
+    .json({
+      name: 'John Doe',
+      email: 'john@example.com',
+    })
     .send();
 
   console.log('Posted data:', response.data.json);
@@ -58,13 +77,24 @@ class UserService {
 
   async getUser(id: string) {
     return this.#http
-      .get<{ id: string; name: string }>(`https://api.example.com/users/${id}`)
-      .cache({ ttl: 300_000 }) // Cache for 5 minutes
+      .get<{
+        id: string;
+        name: string;
+      }>(`https://api.example.com/users/${id}`)
+      .cache({
+        ttl: 300_000,
+      }) // Cache for 5 minutes
       .data(); // Returns only the data, not the full response
   }
 
   async createUser(name: string, email: string) {
-    return this.#http.post('https://api.example.com/users').json({ name, email }).data();
+    return this.#http
+      .post('https://api.example.com/users')
+      .json({
+        name,
+        email,
+      })
+      .data();
   }
 }
 
@@ -85,7 +115,15 @@ async function advancedConfig() {
   });
 
   // All requests will use the base URL and default headers
-  const response = await client.get('/users').params({ limit: '10' }).cache({ ttl: 60_000 }).send();
+  const response = await client
+    .get('/users')
+    .params({
+      limit: '10',
+    })
+    .cache({
+      ttl: 60_000,
+    })
+    .send();
 
   console.log('Users:', response.data);
 }

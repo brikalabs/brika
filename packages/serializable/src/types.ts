@@ -25,4 +25,6 @@ export type Serializable =
   | Map<Serializable, Serializable>
   | Set<Serializable>
   | Serializable[]
-  | { [key: string]: Serializable };
+  | {
+      [key: string]: Serializable;
+    };

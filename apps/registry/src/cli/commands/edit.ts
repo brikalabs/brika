@@ -127,19 +127,77 @@ export const edit: Command = {
     }
 
     let content = readRegistryRaw();
-    const path = ['plugins', pluginIdx] as const;
-    content = modifyRegistry(content, [...path, 'description'], answers.description);
-    content = modifyRegistry(content, [...path, 'tags'], tags);
-    content = modifyRegistry(content, [...path, 'category'], answers.category);
-    content = modifyRegistry(content, [...path, 'source'], answers.source);
-    content = modifyRegistry(content, [...path, 'featured'], answers.featured);
-    content = modifyRegistry(content, [...path, 'verifiedBy'], answers.verifiedBy);
+    const path = [
+      'plugins',
+      pluginIdx,
+    ] as const;
+    content = modifyRegistry(
+      content,
+      [
+        ...path,
+        'description',
+      ],
+      answers.description
+    );
+    content = modifyRegistry(
+      content,
+      [
+        ...path,
+        'tags',
+      ],
+      tags
+    );
+    content = modifyRegistry(
+      content,
+      [
+        ...path,
+        'category',
+      ],
+      answers.category
+    );
+    content = modifyRegistry(
+      content,
+      [
+        ...path,
+        'source',
+      ],
+      answers.source
+    );
+    content = modifyRegistry(
+      content,
+      [
+        ...path,
+        'featured',
+      ],
+      answers.featured
+    );
+    content = modifyRegistry(
+      content,
+      [
+        ...path,
+        'verifiedBy',
+      ],
+      answers.verifiedBy
+    );
 
     if (answers.minVersion) {
-      content = modifyRegistry(content, [...path, 'minVersion'], answers.minVersion);
+      content = modifyRegistry(
+        content,
+        [
+          ...path,
+          'minVersion',
+        ],
+        answers.minVersion
+      );
     }
 
-    content = modifyRegistry(content, ['lastUpdated'], new Date().toISOString());
+    content = modifyRegistry(
+      content,
+      [
+        'lastUpdated',
+      ],
+      new Date().toISOString()
+    );
     writeRegistryRaw(content);
 
     autoSign();

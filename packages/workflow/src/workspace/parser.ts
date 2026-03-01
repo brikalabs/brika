@@ -12,7 +12,15 @@ import { WorkspaceSchema } from './schema';
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type ParseResult = { ok: true; workflow: Workflow } | { ok: false; error: string };
+export type ParseResult =
+  | {
+      ok: true;
+      workflow: Workflow;
+    }
+  | {
+      ok: false;
+      error: string;
+    };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Parser
@@ -39,13 +47,22 @@ export function parseWorkspace(yamlContent: string): ParseResult {
           return path ? `${path}: ${issue.message}` : issue.message;
         })
         .join('; ');
-      return { ok: false, error: `Validation failed: ${errors}` };
+      return {
+        ok: false,
+        error: `Validation failed: ${errors}`,
+      };
     }
 
-    return { ok: true, workflow: result.data as Workflow };
+    return {
+      ok: true,
+      workflow: result.data as Workflow,
+    };
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
-    return { ok: false, error: `Parse error: ${message}` };
+    return {
+      ok: false,
+      error: `Parse error: ${message}`,
+    };
   }
 }
 
@@ -70,7 +87,10 @@ export async function parseWorkspaceFile(filePath: string): Promise<ParseResult>
     return parseWorkspace(content);
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
-    return { ok: false, error: `File read error: ${message}` };
+    return {
+      ok: false,
+      error: `File read error: ${message}`,
+    };
   }
 }
 

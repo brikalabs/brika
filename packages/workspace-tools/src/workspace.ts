@@ -46,14 +46,18 @@ export async function discoverPackages(root: string): Promise<WorkspacePackage[]
   for (const pattern of rootPkg.workspaces ?? []) {
     const dir = pattern.replace(/\/\*.*$/, '');
     const glob = new Bun.Glob('*/package.json');
-    for await (const rel of glob.scan({ cwd: join(root, dir) })) {
+    for await (const rel of glob.scan({
+      cwd: join(root, dir),
+    })) {
       const absPath = join(root, dir, rel);
       const pkg = (await Bun.file(absPath).json()) as {
         name?: string;
         version?: string;
         private?: boolean;
       };
-      if (!pkg.version) continue;
+      if (!pkg.version) {
+        continue;
+      }
       packages.push({
         name: pkg.name ?? rel.replace('/package.json', ''),
         version: pkg.version,
@@ -78,10 +82,14 @@ export function filterPackages(
   packages: WorkspacePackage[],
   patterns: string[]
 ): WorkspacePackage[] {
-  if (patterns.length === 0) return packages;
+  if (patterns.length === 0) {
+    return packages;
+  }
   return packages.filter((pkg) =>
     patterns.some((pattern) => {
-      if (pattern.includes('*')) return new Bun.Glob(pattern).match(pkg.name);
+      if (pattern.includes('*')) {
+        return new Bun.Glob(pattern).match(pkg.name);
+      }
       return pkg.name === pattern || pkg.name.includes(pattern);
     })
   );
@@ -92,7 +100,9 @@ export function filterPackages(
  */
 export async function writeVersion(pkgPath: string, nextVersion: string): Promise<void> {
   const content = await Bun.file(pkgPath).text();
-  const updated = updateJsonObject(content, { version: nextVersion });
+  const updated = updateJsonObject(content, {
+    version: nextVersion,
+  });
   await Bun.write(pkgPath, updated);
 }
 

@@ -2,9 +2,9 @@
 
 import { BookOpen } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { SiGithub } from 'react-icons/si';
 import { github, site } from '@/lib/config';
 import { cn } from '@/lib/utils';
-import { SiGithub } from 'react-icons/si';
 import { Button } from './ui/button';
 import { ThemeToggle } from './ui/theme-toggle';
 
@@ -16,7 +16,9 @@ export function Nav() {
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
-    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('scroll', onScroll, {
+      passive: true,
+    });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 

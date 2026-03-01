@@ -88,7 +88,9 @@ export function defineActions<
   for (const key in actions) {
     if (Object.hasOwn(actions, key)) {
       const schema = actions[key];
-      if (!schema) continue;
+      if (!schema) {
+        continue;
+      }
       const type = `${namespace}.${key}`;
       const id = Symbol(type);
 

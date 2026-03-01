@@ -22,7 +22,13 @@ defineRenderer('key-value', ({ node }) => {
                 <DynamicIcon
                   name={item.icon as IconName}
                   className="size-3 shrink-0"
-                  style={item.color ? { color: resolveColor(item.color) } : undefined}
+                  style={
+                    item.color
+                      ? {
+                          color: resolveColor(item.color),
+                        }
+                      : undefined
+                  }
                 />
               )}
               <span className="text-xs">{item.label}</span>
@@ -30,7 +36,13 @@ defineRenderer('key-value', ({ node }) => {
             <div className="flex items-center gap-1">
               <span
                 className={cn('font-medium text-sm', stacked && 'text-xs')}
-                style={item.color ? { color: resolveColor(item.color) } : undefined}
+                style={
+                  item.color
+                    ? {
+                        color: resolveColor(item.color),
+                      }
+                    : undefined
+                }
               >
                 {item.value}
               </span>

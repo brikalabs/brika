@@ -30,7 +30,9 @@ export class Context {
     this.#client = createClient();
 
     // Ping/pong for health checks
-    this.#client.implement(ping, ({ ts }) => ({ ts }));
+    this.#client.implement(ping, ({ ts }) => ({
+      ts,
+    }));
 
     // Build core and wire up all modules
     const core: ContextCore = {
@@ -43,23 +45,36 @@ export class Context {
 
     // Shutdown: modules stop in order, then user stop handlers
     this.#client.onStop(async () => {
-      for (const fn of stopFns) await fn();
+      for (const fn of stopFns) {
+        await fn();
+      }
     });
 
     // Auto-start on next tick if not started manually
     process.nextTick(() => {
-      if (!this.#started) this.start();
+      if (!this.#started) {
+        this.start();
+      }
     });
   }
 
   start(): void {
-    if (this.#started) return;
+    if (this.#started) {
+      return;
+    }
     this.#started = true;
-    this.#client.start({ id: this.#manifest.name, version: this.#manifest.version });
+    this.#client.start({
+      id: this.#manifest.name,
+      version: this.#manifest.version,
+    });
   }
 
   log(level: LogLevel, message: string, meta?: AnyObj): void {
-    this.#client.send(logMsg, { level, message, meta });
+    this.#client.send(logMsg, {
+      level,
+      message,
+      meta,
+    });
   }
 
   getPluginName(): string {

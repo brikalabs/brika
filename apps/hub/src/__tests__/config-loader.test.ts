@@ -11,7 +11,9 @@ import { BrikaInitializer } from '@/runtime/config/brika-initializer';
 import { ConfigLoader } from '@/runtime/config/config-loader';
 import { Logger } from '@/runtime/logs/log-router';
 
-useTestBed({ autoStub: false });
+useTestBed({
+  autoStub: false,
+});
 
 const TEST_DIR = join(import.meta.dir, '.test-config-loader');
 const BRIKA_DIR = join(TEST_DIR, '.brika');
@@ -20,8 +22,13 @@ describe('ConfigLoader', () => {
   let loader: ConfigLoader;
 
   beforeAll(async () => {
-    await rm(TEST_DIR, { recursive: true, force: true });
-    await mkdir(BRIKA_DIR, { recursive: true });
+    await rm(TEST_DIR, {
+      recursive: true,
+      force: true,
+    });
+    await mkdir(BRIKA_DIR, {
+      recursive: true,
+    });
   });
 
   beforeEach(() => {
@@ -37,14 +44,19 @@ describe('ConfigLoader', () => {
     reset();
     // Clean up config file between tests
     try {
-      await rm(join(BRIKA_DIR, 'brika.yml'), { force: true });
+      await rm(join(BRIKA_DIR, 'brika.yml'), {
+        force: true,
+      });
     } catch {
       // Ignore
     }
   });
 
   afterAll(async () => {
-    await rm(TEST_DIR, { recursive: true, force: true });
+    await rm(TEST_DIR, {
+      recursive: true,
+      force: true,
+    });
   });
 
   describe('load', () => {
@@ -167,7 +179,12 @@ schedules: []
             heartbeatTimeout: 15000,
           },
         },
-        plugins: [{ name: '@test/new-plugin', version: '1.0.0' }],
+        plugins: [
+          {
+            name: '@test/new-plugin',
+            version: '1.0.0',
+          },
+        ],
         rules: [],
         schedules: [],
       };
@@ -334,7 +351,9 @@ schedules: []
       );
 
       await loader.load();
-      await loader.setPluginConfig('@test/plugin', { key: 'value' });
+      await loader.setPluginConfig('@test/plugin', {
+        key: 'value',
+      });
 
       const config = loader.getPluginConfig('@test/plugin');
       expect(config?.key).toBe('value');
@@ -400,7 +419,10 @@ schedules: []
       const pluginDir = join(TEST_DIR, 'test-plugin-dir');
       await Bun.write(
         join(pluginDir, 'package.json'),
-        JSON.stringify({ name: '@test/workspace-plugin', version: '1.0.0' })
+        JSON.stringify({
+          name: '@test/workspace-plugin',
+          version: '1.0.0',
+        })
       );
 
       // workspace:./test-plugin-dir => resolves relative to workspace root
@@ -414,7 +436,10 @@ schedules: []
 
       // Cleanup
       const { rm: rmFs } = await import('node:fs/promises');
-      await rmFs(pluginDir, { recursive: true, force: true });
+      await rmFs(pluginDir, {
+        recursive: true,
+        force: true,
+      });
     });
 
     test('resolves workspace path without ./ prefix', async () => {
@@ -424,7 +449,10 @@ schedules: []
       const pluginDir = join(TEST_DIR, 'abs-plugin');
       await Bun.write(
         join(pluginDir, 'package.json'),
-        JSON.stringify({ name: '@test/abs-plugin', version: '1.0.0' })
+        JSON.stringify({
+          name: '@test/abs-plugin',
+          version: '1.0.0',
+        })
       );
 
       // workspace:abs-plugin => resolves relative to workspace root (without ./ prefix)
@@ -438,14 +466,22 @@ schedules: []
 
       // Cleanup
       const { rm: rmFs } = await import('node:fs/promises');
-      await rmFs(pluginDir, { recursive: true, force: true });
+      await rmFs(pluginDir, {
+        recursive: true,
+        force: true,
+      });
     });
 
     test('uses fallback name when package.json has no name', async () => {
       await loader.load();
 
       const pluginDir = join(TEST_DIR, 'nameless-plugin');
-      await Bun.write(join(pluginDir, 'package.json'), JSON.stringify({ version: '1.0.0' }));
+      await Bun.write(
+        join(pluginDir, 'package.json'),
+        JSON.stringify({
+          version: '1.0.0',
+        })
+      );
 
       const result = await loader.resolvePluginEntry({
         name: 'fallback-name',
@@ -457,7 +493,10 @@ schedules: []
 
       // Cleanup
       const { rm: rmFs } = await import('node:fs/promises');
-      await rmFs(pluginDir, { recursive: true, force: true });
+      await rmFs(pluginDir, {
+        recursive: true,
+        force: true,
+      });
     });
   });
 

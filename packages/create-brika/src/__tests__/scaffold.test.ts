@@ -3,8 +3,8 @@
  */
 
 import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from 'bun:test';
-import * as fs from 'fs/promises';
-import * as path from 'path';
+import * as fs from 'node:fs/promises';
+import * as path from 'node:path';
 import { parseCondition, render, resolveFilename } from '../render';
 import { createTemplateData, type ScaffoldOptions, scaffold } from '../scaffold';
 
@@ -16,7 +16,9 @@ const mockSpinner = {
 
 const mockCancel = mock(() => undefined);
 const mockNote = mock(() => undefined);
-const mockLog = { warn: mock(() => undefined) };
+const mockLog = {
+  warn: mock(() => undefined),
+};
 
 mock.module('@clack/prompts', () => ({
   spinner: () => mockSpinner,
@@ -44,37 +46,71 @@ mock.module('picocolors', () => ({
 
 describe('render', () => {
   test('interpolates variables', () => {
-    expect(render('Hello {{name}}!', { name: 'World' })).toBe('Hello World!');
+    expect(
+      render('Hello {{name}}!', {
+        name: 'World',
+      })
+    ).toBe('Hello World!');
   });
 
   test('removes false conditional blocks', () => {
     const tpl = 'before\n{{#show}}\nvisible\n{{/show}}\nafter\n';
-    expect(render(tpl, { show: false })).toBe('before\nafter\n');
+    expect(
+      render(tpl, {
+        show: false,
+      })
+    ).toBe('before\nafter\n');
   });
 
   test('keeps true conditional blocks', () => {
     const tpl = 'before\n{{#show}}\nvisible\n{{/show}}\nafter\n';
-    expect(render(tpl, { show: true })).toBe('before\nvisible\nafter\n');
+    expect(
+      render(tpl, {
+        show: true,
+      })
+    ).toBe('before\nvisible\nafter\n');
   });
 
   test('interpolates variables inside conditional blocks', () => {
     const tpl = '{{#show}}\nHello {{name}}\n{{/show}}\n';
-    expect(render(tpl, { name: 'World', show: true })).toBe('Hello World\n');
+    expect(
+      render(tpl, {
+        name: 'World',
+        show: true,
+      })
+    ).toBe('Hello World\n');
   });
 
   test('collapses triple+ blank lines', () => {
     const tpl = 'a\n\n{{#x}}\nremoved\n{{/x}}\n\n{{#y}}\nremoved\n{{/y}}\n\nb\n';
-    expect(render(tpl, { x: false, y: false })).toBe('a\n\nb\n');
+    expect(
+      render(tpl, {
+        x: false,
+        y: false,
+      })
+    ).toBe('a\n\nb\n');
   });
 
   test('treats non-empty strings as truthy in conditionals', () => {
     const tpl = '{{#name}}\nHello {{name}}\n{{/name}}\n';
-    expect(render(tpl, { name: 'World' })).toBe('Hello World\n');
-    expect(render(tpl, { name: '' })).toBe('');
+    expect(
+      render(tpl, {
+        name: 'World',
+      })
+    ).toBe('Hello World\n');
+    expect(
+      render(tpl, {
+        name: '',
+      })
+    ).toBe('');
   });
 
   test('ignores boolean values in interpolation', () => {
-    expect(render('value: {{flag}}', { flag: true })).toBe('value: ');
+    expect(
+      render('value: {{flag}}', {
+        flag: true,
+      })
+    ).toBe('value: ');
   });
 });
 
@@ -88,7 +124,11 @@ describe('resolveFilename', () => {
   });
 
   test('interpolates variables in filename', () => {
-    expect(resolveFilename('{{name}}-config.tpl', { name: 'app' })).toBe('app-config');
+    expect(
+      resolveFilename('{{name}}-config.tpl', {
+        name: 'app',
+      })
+    ).toBe('app-config');
   });
 
   test('renames _gitignore to .gitignore', () => {
@@ -102,11 +142,16 @@ describe('resolveFilename', () => {
 
 describe('parseCondition', () => {
   test('extracts [condition] prefix', () => {
-    expect(parseCondition('[bricks]bricks')).toEqual({ name: 'bricks', condition: 'bricks' });
+    expect(parseCondition('[bricks]bricks')).toEqual({
+      name: 'bricks',
+      condition: 'bricks',
+    });
   });
 
   test('returns name unchanged when no condition', () => {
-    expect(parseCondition('src')).toEqual({ name: 'src' });
+    expect(parseCondition('src')).toEqual({
+      name: 'src',
+    });
   });
 });
 
@@ -125,21 +170,33 @@ describe('scaffold', () => {
     mockLog.warn.mockClear();
 
     originalCwd = process.cwd();
-    await fs.mkdir(testDir, { recursive: true });
+    await fs.mkdir(testDir, {
+      recursive: true,
+    });
     process.chdir(testDir);
 
     fetchSpy = spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(JSON.stringify({ version: '1.0.0' }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      })
+      new Response(
+        JSON.stringify({
+          version: '1.0.0',
+        }),
+        {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      )
     );
   });
 
   afterEach(async () => {
     process.chdir(originalCwd);
     try {
-      await fs.rm(testDir, { recursive: true, force: true });
+      await fs.rm(testDir, {
+        recursive: true,
+        force: true,
+      });
     } catch {
       // Ignore cleanup errors
     }
@@ -149,7 +206,9 @@ describe('scaffold', () => {
   const defaultOptions: ScaffoldOptions = {
     name: 'test-plugin',
     description: 'A test plugin',
-    features: ['blocks'],
+    features: [
+      'blocks',
+    ],
     category: 'action',
     author: 'Test Author',
     git: false,
@@ -195,13 +254,19 @@ describe('scaffold', () => {
   });
 
   test('throws error when directory already exists', async () => {
-    await fs.mkdir(path.join(testDir, 'test-plugin'), { recursive: true });
+    await fs.mkdir(path.join(testDir, 'test-plugin'), {
+      recursive: true,
+    });
     await expect(scaffold(defaultOptions)).rejects.toThrow('cancelled');
     expect(mockCancel).toHaveBeenCalled();
   });
 
   test('handles npm fetch error', async () => {
-    fetchSpy.mockResolvedValueOnce(new Response('Not found', { status: 404 }));
+    fetchSpy.mockResolvedValueOnce(
+      new Response('Not found', {
+        status: 404,
+      })
+    );
     await expect(scaffold(defaultOptions)).rejects.toThrow(
       'Failed to fetch @brika/sdk version: 404'
     );
@@ -223,18 +288,27 @@ describe('scaffold', () => {
   // ─── Git / install options ────────────────────────────────────────
 
   test('initializes git repository when git option is true', async () => {
-    await scaffold({ ...defaultOptions, git: true });
+    await scaffold({
+      ...defaultOptions,
+      git: true,
+    });
     expect(mockSpinner.start).toHaveBeenCalledWith('Initializing git repository');
   });
 
   test('skips git init when git option is false', async () => {
-    await scaffold({ ...defaultOptions, git: false });
+    await scaffold({
+      ...defaultOptions,
+      git: false,
+    });
     const calls = (mockSpinner.start.mock.calls as unknown[][]).map((c) => c[0]);
     expect(calls).not.toContain('Initializing git repository');
   });
 
   test('uses correct template variables for plugin name with hyphens', async () => {
-    await scaffold({ ...defaultOptions, name: 'my-awesome-plugin' });
+    await scaffold({
+      ...defaultOptions,
+      name: 'my-awesome-plugin',
+    });
     const content = await fs.readFile(
       path.join(testDir, 'my-awesome-plugin', 'package.json'),
       'utf-8'
@@ -263,7 +337,9 @@ describe('scaffold', () => {
     await scaffold({
       ...defaultOptions,
       name: 'test-brick',
-      features: ['bricks'],
+      features: [
+        'bricks',
+      ],
       category: 'general',
     });
 
@@ -285,7 +361,9 @@ describe('scaffold', () => {
     await scaffold({
       ...defaultOptions,
       name: 'test-brick',
-      features: ['bricks'],
+      features: [
+        'bricks',
+      ],
       category: 'general',
     });
 
@@ -302,7 +380,11 @@ describe('scaffold', () => {
     await scaffold({
       ...defaultOptions,
       name: 'test-all',
-      features: ['blocks', 'bricks', 'sparks'],
+      features: [
+        'blocks',
+        'bricks',
+        'sparks',
+      ],
     });
 
     const pkg = JSON.parse(
@@ -318,7 +400,9 @@ describe('scaffold', () => {
     await scaffold({
       ...defaultOptions,
       name: 'test-spark',
-      features: ['sparks'],
+      features: [
+        'sparks',
+      ],
       category: 'general',
     });
 
@@ -332,7 +416,14 @@ describe('scaffold', () => {
   });
 
   test('entry file re-exports selected features', async () => {
-    await scaffold({ ...defaultOptions, name: 'test-combo', features: ['blocks', 'sparks'] });
+    await scaffold({
+      ...defaultOptions,
+      name: 'test-combo',
+      features: [
+        'blocks',
+        'sparks',
+      ],
+    });
 
     const content = await fs.readFile(path.join(testDir, 'test-combo', 'src', 'index.ts'), 'utf-8');
     expect(content).toContain("from './blocks/test-combo'");
@@ -355,7 +446,9 @@ describe('scaffold', () => {
     await scaffold({
       ...defaultOptions,
       name: 'test-spark',
-      features: ['sparks'],
+      features: [
+        'sparks',
+      ],
       category: 'general',
     });
 
@@ -368,7 +461,14 @@ describe('scaffold', () => {
   });
 
   test('blocks+bricks: no duplicate export names', async () => {
-    await scaffold({ ...defaultOptions, name: 'test-both', features: ['blocks', 'bricks'] });
+    await scaffold({
+      ...defaultOptions,
+      name: 'test-both',
+      features: [
+        'blocks',
+        'bricks',
+      ],
+    });
 
     const content = await fs.readFile(path.join(testDir, 'test-both', 'src', 'index.ts'), 'utf-8');
     expect(content).toContain('testBothBrick');
@@ -411,7 +511,11 @@ describe('scaffold', () => {
     await scaffold({
       ...defaultOptions,
       name: 'test-all',
-      features: ['blocks', 'bricks', 'sparks'],
+      features: [
+        'blocks',
+        'bricks',
+        'sparks',
+      ],
     });
 
     const pkg = JSON.parse(
@@ -448,7 +552,9 @@ describe('createTemplateData', () => {
       {
         name: 'my-plugin',
         description: 'My plugin',
-        features: ['blocks'],
+        features: [
+          'blocks',
+        ],
         category: 'trigger',
         author: 'John',
       },
@@ -476,7 +582,9 @@ describe('createTemplateData', () => {
       {
         name: 'my-awesome-plugin',
         description: 'Test',
-        features: ['blocks'],
+        features: [
+          'blocks',
+        ],
         category: 'action',
         author: 'A',
       },
@@ -491,7 +599,9 @@ describe('createTemplateData', () => {
       {
         name: 'timer',
         description: 'Timer',
-        features: ['blocks'],
+        features: [
+          'blocks',
+        ],
         category: 'trigger',
         author: 'A',
       },

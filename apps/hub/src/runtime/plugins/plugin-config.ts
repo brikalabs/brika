@@ -27,13 +27,17 @@ export class PluginConfigService {
 
     // Include schema-declared preferences (with defaults)
     for (const pref of schema) {
-      if (pref.type === 'link') continue;
+      if (pref.type === 'link') {
+        continue;
+      }
       merged[pref.name] = pref.name in userConfig ? userConfig[pref.name] : pref.default;
     }
 
     // Preserve internal SDK keys (e.g. __oauth_*_token) — not in schema but persisted
     for (const key of Object.keys(userConfig)) {
-      if (key.startsWith('__')) merged[key] = userConfig[key];
+      if (key.startsWith('__')) {
+        merged[key] = userConfig[key];
+      }
     }
 
     return merged;
@@ -57,7 +61,9 @@ export class PluginConfigService {
 
     for (const p of prefs) {
       // Link preferences are UI-only (buttons/links) — no value to validate
-      if (p.type === 'link') continue;
+      if (p.type === 'link') {
+        continue;
+      }
 
       const s = this.#zodFieldForPref(p);
       shape[p.name] = p.required ? s : s.optional();
@@ -73,14 +79,23 @@ export class PluginConfigService {
         return p.required ? z.string().min(1) : z.string();
       case 'number': {
         let num = z.number();
-        if (p.min !== undefined) num = num.min(p.min);
-        if (p.max !== undefined) num = num.max(p.max);
+        if (p.min !== undefined) {
+          num = num.min(p.min);
+        }
+        if (p.max !== undefined) {
+          num = num.max(p.max);
+        }
         return num;
       }
       case 'checkbox':
         return z.boolean();
       case 'dropdown':
-        return z.enum(p.options.map((o) => o.value) as [string, ...string[]]);
+        return z.enum(
+          p.options.map((o) => o.value) as [
+            string,
+            ...string[],
+          ]
+        );
       case 'dynamic-dropdown':
         return p.required ? z.string().min(1) : z.string();
       default:

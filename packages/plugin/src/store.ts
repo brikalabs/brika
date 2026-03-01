@@ -10,12 +10,23 @@ export interface StorePlugin {
   /** Version string to pass to the installer (e.g. 'workspace:*' for local plugins) */
   installVersion: string;
   description: string;
-  author: string | { name: string; email?: string };
+  author:
+    | string
+    | {
+        name: string;
+        email?: string;
+      };
   keywords: string[];
-  repository?: string | { url: string };
+  repository?:
+    | string
+    | {
+        url: string;
+      };
   homepage?: string;
   license?: string;
-  engines?: { brika?: string };
+  engines?: {
+    brika?: string;
+  };
   verified: boolean;
   verifiedAt?: string;
   featured: boolean;
@@ -36,12 +47,25 @@ export interface PluginPackageData {
   version: string;
   displayName?: string;
   description?: string;
-  author?: string | { name: string; email?: string };
+  author?:
+    | string
+    | {
+        name: string;
+        email?: string;
+      };
   keywords?: string[];
-  repository?: string | { type?: string; url: string; directory?: string };
+  repository?:
+    | string
+    | {
+        type?: string;
+        url: string;
+        directory?: string;
+      };
   homepage?: string;
   license?: string;
-  engines?: { brika?: string };
+  engines?: {
+    brika?: string;
+  };
   date?: string;
   links?: {
     npm?: string;

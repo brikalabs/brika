@@ -35,7 +35,7 @@
  */
 
 import { getContext } from '../context';
-import { defineRoute } from './routes';
+import { defineRoute, type RouteResponse } from './routes';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -120,10 +120,14 @@ function getStringPreference(key: string): string | undefined {
 
 /** Parse an OAuth token response into our OAuthToken shape. */
 function parseTokenResponse(json: unknown, existingRefreshToken?: string): OAuthToken | null {
-  if (!json || typeof json !== 'object') return null;
+  if (!json || typeof json !== 'object') {
+    return null;
+  }
   const data = json as Record<string, unknown>;
   const accessToken = data.access_token;
-  if (typeof accessToken !== 'string') return null;
+  if (typeof accessToken !== 'string') {
+    return null;
+  }
   return {
     access_token: accessToken,
     refresh_token:
@@ -136,7 +140,9 @@ function parseTokenResponse(json: unknown, existingRefreshToken?: string): OAuth
 
 /** Type guard: check if a stored value looks like an OAuthToken. */
 function isOAuthToken(value: unknown): value is OAuthToken {
-  if (!value || typeof value !== 'object') return false;
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
   const obj = value as Record<string, unknown>;
   return typeof obj.access_token === 'string' && typeof obj.expires_at === 'number';
 }
@@ -178,10 +184,14 @@ export function defineOAuth(config: OAuthProviderConfig): OAuthClient {
   }
 
   function getClientId(): string {
-    if (config.clientId) return config.clientId;
+    if (config.clientId) {
+      return config.clientId;
+    }
     if (config.clientIdPreference) {
       const id = getStringPreference(config.clientIdPreference);
-      if (id) return id;
+      if (id) {
+        return id;
+      }
     }
     throw new Error(
       'Missing client ID. Set "clientId" in defineOAuth config or provide a clientIdPreference.'
@@ -189,10 +199,14 @@ export function defineOAuth(config: OAuthProviderConfig): OAuthClient {
   }
 
   function getClientSecret(): string {
-    if (config.clientSecret) return config.clientSecret;
+    if (config.clientSecret) {
+      return config.clientSecret;
+    }
     if (config.clientSecretPreference) {
       const secret = getStringPreference(config.clientSecretPreference);
-      if (secret) return secret;
+      if (secret) {
+        return secret;
+      }
     }
     throw new Error(
       'Missing client secret. Set "clientSecret" in defineOAuth config or provide a clientSecretPreference.'
@@ -237,92 +251,129 @@ export function defineOAuth(config: OAuthProviderConfig): OAuthClient {
 
     return {
       status: 302,
-      headers: { Location: `${config.authorizeUrl}?${params}` },
+      headers: {
+        Location: `${config.authorizeUrl}?${params}`,
+      },
     };
   });
+
+  // ─── Callback helpers ───────────────────────────────────────────────────
+
+  /** Resolve the PKCE code verifier for the given state, cleaning up the pending map. */
+  function resolvePkceVerifier(state: string | undefined): string | null {
+    const verifier = state ? pendingVerifiers.get(state) : undefined;
+    if (!verifier) {
+      return null;
+    }
+    if (state) {
+      pendingVerifiers.delete(state);
+    }
+    return verifier;
+  }
+
+  /** Exchange an authorization code for tokens, returning an HTML RouteResponse. */
+  async function exchangeCodeForToken(
+    code: string,
+    state: string | undefined,
+    headers: Record<string, string>
+  ): Promise<RouteResponse> {
+    const clientId = getClientId();
+    const redirectUri = getRedirectUri(headers);
+
+    const body = new URLSearchParams({
+      grant_type: 'authorization_code',
+      code,
+      redirect_uri: redirectUri,
+      client_id: clientId,
+    });
+
+    if (usePkce) {
+      const verifier = resolvePkceVerifier(state);
+      if (!verifier) {
+        return {
+          status: 400,
+          headers: {
+            'Content-Type': 'text/html',
+          },
+          body: '<html><body><h2>Invalid state — PKCE verifier not found</h2><p>Try authorizing again.</p></body></html>',
+        };
+      }
+      body.set('code_verifier', verifier);
+    }
+
+    const response = await fetch(config.tokenUrl, {
+      method: 'POST',
+      headers: buildTokenHeaders(clientId),
+      body,
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      return {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/html',
+        },
+        body: `<html><body><h2>Token exchange failed</h2><pre>${text}</pre></body></html>`,
+      };
+    }
+
+    const token = parseTokenResponse(await response.json());
+    if (!token) {
+      return {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/html',
+        },
+        body: '<html><body><h2>Invalid token response</h2></body></html>',
+      };
+    }
+
+    ctx.updatePreference(tokenPrefKey, token);
+
+    return {
+      status: 200,
+      headers: {
+        'Content-Type': 'text/html',
+      },
+      body: '<html><body style="font-family:system-ui;text-align:center;padding:3rem"><h2>Connected!</h2><p>You can close this window.</p><script>setTimeout(()=>window.close(),2000)</script></body></html>',
+    };
+  }
 
   // ─── Callback route ─────────────────────────────────────────────────────
 
   defineRoute('GET', callbackPath, async (req) => {
-    const code = req.query.code;
-    const state = req.query.state;
     const error = req.query.error;
 
     if (error) {
       return {
         status: 200,
-        headers: { 'Content-Type': 'text/html' },
+        headers: {
+          'Content-Type': 'text/html',
+        },
         body: `<html><body><h2>Authorization failed</h2><p>${error}</p><script>setTimeout(()=>window.close(),3000)</script></body></html>`,
       };
     }
 
+    const code = req.query.code;
     if (!code) {
       return {
         status: 400,
-        headers: { 'Content-Type': 'text/html' },
+        headers: {
+          'Content-Type': 'text/html',
+        },
         body: '<html><body><h2>Missing authorization code</h2></body></html>',
       };
     }
 
     try {
-      const clientId = getClientId();
-      const redirectUri = getRedirectUri(req.headers);
-
-      const body = new URLSearchParams({
-        grant_type: 'authorization_code',
-        code,
-        redirect_uri: redirectUri,
-        client_id: clientId,
-      });
-
-      if (usePkce) {
-        const verifier = state ? pendingVerifiers.get(state) : undefined;
-        if (!verifier) {
-          return {
-            status: 400,
-            headers: { 'Content-Type': 'text/html' },
-            body: '<html><body><h2>Invalid state — PKCE verifier not found</h2><p>Try authorizing again.</p></body></html>',
-          };
-        }
-        body.set('code_verifier', verifier);
-        if (state) pendingVerifiers.delete(state);
-      }
-
-      const response = await fetch(config.tokenUrl, {
-        method: 'POST',
-        headers: buildTokenHeaders(clientId),
-        body,
-      });
-
-      if (!response.ok) {
-        const text = await response.text();
-        return {
-          status: 200,
-          headers: { 'Content-Type': 'text/html' },
-          body: `<html><body><h2>Token exchange failed</h2><pre>${text}</pre></body></html>`,
-        };
-      }
-
-      const token = parseTokenResponse(await response.json());
-      if (!token) {
-        return {
-          status: 200,
-          headers: { 'Content-Type': 'text/html' },
-          body: '<html><body><h2>Invalid token response</h2></body></html>',
-        };
-      }
-
-      ctx.updatePreference(tokenPrefKey, token);
-
-      return {
-        status: 200,
-        headers: { 'Content-Type': 'text/html' },
-        body: '<html><body style="font-family:system-ui;text-align:center;padding:3rem"><h2>Connected!</h2><p>You can close this window.</p><script>setTimeout(()=>window.close(),2000)</script></body></html>',
-      };
+      return await exchangeCodeForToken(code, req.query.state, req.headers);
     } catch (e) {
       return {
         status: 500,
-        headers: { 'Content-Type': 'text/html' },
+        headers: {
+          'Content-Type': 'text/html',
+        },
         body: `<html><body><h2>Error</h2><p>${e}</p></body></html>`,
       };
     }
@@ -331,7 +382,9 @@ export function defineOAuth(config: OAuthProviderConfig): OAuthClient {
   // ─── Token refresh ──────────────────────────────────────────────────────
 
   async function refreshToken(token: OAuthToken): Promise<OAuthToken | null> {
-    if (!token.refresh_token) return null;
+    if (!token.refresh_token) {
+      return null;
+    }
 
     try {
       const clientId = getClientId();
@@ -348,10 +401,14 @@ export function defineOAuth(config: OAuthProviderConfig): OAuthClient {
         body,
       });
 
-      if (!response.ok) return null;
+      if (!response.ok) {
+        return null;
+      }
 
       const newToken = parseTokenResponse(await response.json(), token.refresh_token);
-      if (!newToken) return null;
+      if (!newToken) {
+        return null;
+      }
 
       ctx.updatePreference(tokenPrefKey, newToken);
       return newToken;
@@ -374,7 +431,7 @@ export function defineOAuth(config: OAuthProviderConfig): OAuthClient {
 
     isAuthenticated() {
       const token = client.getToken();
-      return token?.access_token != null;
+      return token?.access_token !== null && token?.access_token !== undefined;
     },
 
     async fetch(url: string, init?: RequestInit) {
@@ -395,7 +452,10 @@ export function defineOAuth(config: OAuthProviderConfig): OAuthClient {
       const headers = new Headers(init?.headers);
       headers.set('Authorization', `${token.token_type} ${token.access_token}`);
 
-      return globalThis.fetch(url, { ...init, headers });
+      return globalThis.fetch(url, {
+        ...init,
+        headers,
+      });
     },
   };
 

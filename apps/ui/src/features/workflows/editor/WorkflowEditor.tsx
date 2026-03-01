@@ -3,7 +3,9 @@ import {
   Background,
   ConnectionLineType,
   Controls,
+  type Edge,
   MiniMap,
+  type Node,
   type NodeTypes,
   ReactFlow,
   ReactFlowProvider,
@@ -15,8 +17,8 @@ import { fetcher } from '@/lib/query';
 import { useLocale } from '@/lib/use-locale';
 import '@xyflow/react/dist/style.css';
 import type { Workflow } from '../api';
-import { useDebugStream } from '../debug';
-import { BlockNode, type BlockNodeData } from './BlockNode';
+import { type DebugEvent, useDebugStream } from '../debug';
+import { BlockNode } from './BlockNode';
 import { type BlockDefinition, BlockToolbar, type BlockTypeInfo } from './BlockToolbar';
 import { CollapsedTab, CollapsedTabsContainer, CollapsiblePanel } from './CollapsiblePanel';
 import { ConfigPanel } from './ConfigPanel';
@@ -36,6 +38,28 @@ interface RegisteredSpark {
   schema?: Record<string, unknown>;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Extract block color from node data for MiniMap, with fallback */
+function getBlockColor(node: Node): string {
+  const data: Record<string, unknown> = node.data;
+  if (typeof data?.color === 'string') {
+    return data.color;
+  }
+  return '#6b7280';
+}
+
+/** Extract BlockNodeData.type from a selected node */
+function getBlockType(node: Node): string {
+  const data: Record<string, unknown> = node.data;
+  if (typeof data?.type === 'string') {
+    return data.type;
+  }
+  return '';
+}
+
 // Simple ping animation using DOM manipulation
 function pingHandle(blockId: string, portId: string) {
   const selector = `.react-flow__node[data-id="${blockId}"] .react-flow__handle[data-handleid="${portId}"]`;
@@ -52,10 +76,40 @@ function pingHandle(blockId: string, portId: string) {
   }
 }
 
+// Process new debug events and ping the relevant port handles
+function processNewEvents(
+  events: DebugEvent[],
+  edges: Edge[],
+  lastProcessedTimestamp: React.RefObject<number>
+) {
+  const newEvents = events.filter((e) => e.timestamp > lastProcessedTimestamp.current);
+
+  if (newEvents.length > 0) {
+    lastProcessedTimestamp.current = Math.max(...newEvents.map((e) => e.timestamp));
+  }
+
+  for (const event of newEvents) {
+    if (event.type !== 'block.emit' || !event.blockId || !event.port) {
+      continue;
+    }
+    // Ping output port
+    pingHandle(event.blockId, event.port);
+
+    // Ping connected input ports
+    for (const edge of edges) {
+      if (edge.source === event.blockId && edge.sourceHandle === event.port) {
+        pingHandle(edge.target, edge.targetHandle || 'in');
+      }
+    }
+  }
+}
+
 // Fetch all block definitions with schemas
 async function fetchBlockDefinitions(): Promise<BlockDefinition[]> {
   const res = await fetch('/api/blocks');
-  if (!res.ok) return [];
+  if (!res.ok) {
+    return [];
+  }
   return res.json();
 }
 
@@ -63,6 +117,337 @@ async function fetchBlockDefinitions(): Promise<BlockDefinition[]> {
 const nodeTypes: NodeTypes = {
   block: BlockNode,
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Panel State Hook
+// ─────────────────────────────────────────────────────────────────────────────
+
+type PanelName = 'blocks' | 'config' | 'debug';
+
+interface PanelStates {
+  blocks: boolean;
+  config: boolean;
+  debug: boolean;
+}
+
+const DEFAULT_PANEL_STATES: PanelStates = {
+  blocks: true,
+  config: true,
+  debug: true,
+};
+
+function usePanelState() {
+  const [panelStates, setPanelStates] = useState<PanelStates>(() => {
+    try {
+      const saved = localStorage.getItem('workflow-editor-panels');
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch {
+      // Ignore localStorage errors
+    }
+    return DEFAULT_PANEL_STATES;
+  });
+
+  const togglePanel = useCallback((panel: PanelName) => {
+    setPanelStates((prev: PanelStates) => {
+      const next = {
+        ...prev,
+        [panel]: !prev[panel],
+      };
+      localStorage.setItem('workflow-editor-panels', JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  return {
+    panelStates,
+    togglePanel,
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Blocks Side Panel (left)
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface BlocksPanelProps {
+  isOpen: boolean;
+  onToggle: () => void;
+}
+
+function BlocksPanel({ isOpen, onToggle }: Readonly<BlocksPanelProps>) {
+  const { t } = useLocale();
+
+  return (
+    <CollapsiblePanel
+      side="left"
+      icon={<Blocks className="size-4" />}
+      title={t('workflows:editor.panels.blocks')}
+      isOpen={isOpen}
+      onToggle={onToggle}
+      width="w-56"
+    >
+      <BlockToolbar className="h-full w-full" onCollapse={onToggle} />
+    </CollapsiblePanel>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Config Side Panel (right)
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface ConfigSidePanelProps {
+  isOpen: boolean;
+  onToggle: () => void;
+  selectedNode: Node;
+  updateBlockConfig: (nodeId: string, config: Record<string, unknown>) => void;
+  availableVariables: Array<{
+    name: string;
+    source: string;
+    type: string;
+  }>;
+  blockSchema: BlockDefinition['schema'] | undefined;
+}
+
+function ConfigSidePanel({
+  isOpen,
+  onToggle,
+  selectedNode,
+  updateBlockConfig,
+  availableVariables,
+  blockSchema,
+}: Readonly<ConfigSidePanelProps>) {
+  const { t } = useLocale();
+
+  return (
+    <CollapsiblePanel
+      side="right"
+      icon={<Settings2 className="size-4" />}
+      title={t('workflows:editor.panels.config')}
+      isOpen={isOpen}
+      onToggle={onToggle}
+      width="w-80"
+    >
+      <ConfigPanel
+        node={selectedNode}
+        onUpdateBlock={updateBlockConfig}
+        availableVariables={availableVariables}
+        blockSchema={blockSchema}
+        className="h-full w-full"
+        onCollapse={onToggle}
+      />
+    </CollapsiblePanel>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Debug Side Panel (right)
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface DebugSidePanelProps {
+  isOpen: boolean;
+  onToggle: () => void;
+  workflow: Workflow;
+}
+
+function DebugSidePanel({ isOpen, onToggle, workflow }: Readonly<DebugSidePanelProps>) {
+  const { t } = useLocale();
+
+  return (
+    <CollapsiblePanel
+      side="right"
+      icon={<Zap className="size-4 text-yellow-500" />}
+      title={t('workflows:editor.panels.debug')}
+      isOpen={isOpen}
+      onToggle={onToggle}
+      width="w-72"
+    >
+      <DebugPanel workflow={workflow} className="h-full w-full" onCollapse={onToggle} />
+    </CollapsiblePanel>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Editor Canvas
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface EditorCanvasProps {
+  readonly: boolean;
+  nodes: Node[];
+  edges: Edge[];
+  onNodesChange: ReturnType<typeof useWorkflowEditor>['onNodesChange'];
+  onEdgesChange: ReturnType<typeof useWorkflowEditor>['onEdgesChange'];
+  onConnect: ReturnType<typeof useWorkflowEditor>['onConnect'];
+  isValidConnection: ReturnType<typeof useWorkflowEditor>['isValidConnection'];
+  onNodeClick: ReturnType<typeof useWorkflowEditor>['onNodeClick'];
+  onPaneClick: ReturnType<typeof useWorkflowEditor>['onPaneClick'];
+  onNodesDelete: ReturnType<typeof useWorkflowEditor>['onNodesDelete'];
+  onEdgesDelete: ReturnType<typeof useWorkflowEditor>['onEdgesDelete'];
+  onDragOver: ((event: React.DragEvent) => void) | undefined;
+  onDrop: ((event: React.DragEvent) => void) | undefined;
+  leftCollapsed: boolean;
+  configCollapsed: boolean;
+  debugCollapsed: boolean;
+  togglePanel: (panel: PanelName) => void;
+}
+
+function EditorCanvas({
+  readonly,
+  nodes,
+  edges,
+  onNodesChange,
+  onEdgesChange,
+  onConnect,
+  isValidConnection,
+  onNodeClick,
+  onPaneClick,
+  onNodesDelete,
+  onEdgesDelete,
+  onDragOver,
+  onDrop,
+  leftCollapsed,
+  configCollapsed,
+  debugCollapsed,
+  togglePanel,
+}: Readonly<EditorCanvasProps>) {
+  return (
+    <div className="relative flex flex-1 flex-col">
+      {/* Left collapsed tabs - absolute positioned */}
+      {leftCollapsed && <LeftCollapsedTabs togglePanel={togglePanel} />}
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={readonly ? undefined : onNodesChange}
+        onEdgesChange={readonly ? undefined : onEdgesChange}
+        onConnect={readonly ? undefined : onConnect}
+        isValidConnection={isValidConnection}
+        onNodeClick={onNodeClick}
+        onPaneClick={onPaneClick}
+        onNodesDelete={readonly ? undefined : onNodesDelete}
+        onEdgesDelete={readonly ? undefined : onEdgesDelete}
+        onDragOver={readonly ? undefined : onDragOver}
+        onDrop={readonly ? undefined : onDrop}
+        nodeTypes={nodeTypes}
+        connectionLineType={ConnectionLineType.SmoothStep}
+        fitView
+        fitViewOptions={{
+          padding: 0.2,
+        }}
+        nodesDraggable={!readonly}
+        nodesConnectable={!readonly}
+        elementsSelectable={true}
+        deleteKeyCode={readonly ? null : 'Backspace'}
+        proOptions={{
+          hideAttribution: true,
+        }}
+      >
+        <Background />
+        <Controls showInteractive={!readonly} />
+        <MiniMap nodeColor={getBlockColor} className="!bg-muted" />
+      </ReactFlow>
+
+      {/* Empty state overlay */}
+      {nodes.length === 0 && !readonly && <EmptyStateOverlay />}
+
+      {/* Right collapsed tabs - absolute positioned */}
+      {(configCollapsed || debugCollapsed) && (
+        <RightCollapsedTabs
+          configCollapsed={configCollapsed}
+          debugCollapsed={debugCollapsed}
+          togglePanel={togglePanel}
+        />
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Collapsed Tabs & Empty State
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface LeftCollapsedTabsProps {
+  togglePanel: (panel: PanelName) => void;
+}
+
+function LeftCollapsedTabs({ togglePanel }: Readonly<LeftCollapsedTabsProps>) {
+  const { t } = useLocale();
+
+  return (
+    <CollapsedTabsContainer side="left">
+      <CollapsedTab
+        side="left"
+        icon={<Blocks className="size-4" />}
+        title={t('workflows:editor.panels.blocks')}
+        onExpand={() => togglePanel('blocks')}
+      />
+    </CollapsedTabsContainer>
+  );
+}
+
+interface RightCollapsedTabsProps {
+  configCollapsed: boolean;
+  debugCollapsed: boolean;
+  togglePanel: (panel: PanelName) => void;
+}
+
+function RightCollapsedTabs({
+  configCollapsed,
+  debugCollapsed,
+  togglePanel,
+}: Readonly<RightCollapsedTabsProps>) {
+  const { t } = useLocale();
+
+  return (
+    <CollapsedTabsContainer side="right">
+      {configCollapsed && (
+        <CollapsedTab
+          side="right"
+          icon={<Settings2 className="size-4" />}
+          title={t('workflows:editor.panels.config')}
+          onExpand={() => togglePanel('config')}
+        />
+      )}
+      {debugCollapsed && (
+        <CollapsedTab
+          side="right"
+          icon={<Zap className="size-4 text-yellow-500" />}
+          title={t('workflows:editor.panels.debug')}
+          onExpand={() => togglePanel('debug')}
+        />
+      )}
+    </CollapsedTabsContainer>
+  );
+}
+
+function EmptyStateOverlay() {
+  const { t } = useLocale();
+
+  return (
+    <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+      <div className="flex flex-col items-center gap-4 rounded-xl border border-muted-foreground/30 border-dashed bg-background/80 p-8 text-center backdrop-blur-sm">
+        <div className="flex items-center gap-3">
+          <div className="flex size-12 items-center justify-center rounded-lg bg-primary/10">
+            <GripVertical className="size-6 text-primary" />
+          </div>
+          <MousePointerClick className="size-5 text-muted-foreground" />
+          <div className="flex size-12 items-center justify-center rounded-lg bg-muted">
+            <Blocks className="size-6 text-muted-foreground" />
+          </div>
+        </div>
+        <div>
+          <p className="font-medium">{t('workflows:editor.panels.dragToAdd')}</p>
+          <p className="mt-1 text-muted-foreground text-sm">
+            {t('workflows:editor.panels.blocksDescription')}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WorkflowEditorInner (loading gate)
+// ─────────────────────────────────────────────────────────────────────────────
 
 interface WorkflowEditorInnerProps {
   workflow: Workflow;
@@ -81,7 +466,9 @@ function WorkflowEditorInner({
 
   // Fetch block definitions for schemas - must load before editor initializes
   const { data: blockDefinitions, isLoading: isLoadingBlocks } = useQuery({
-    queryKey: ['blocks'],
+    queryKey: [
+      'blocks',
+    ],
     queryFn: fetchBlockDefinitions,
     staleTime: 60000,
   });
@@ -110,6 +497,10 @@ function WorkflowEditorInner({
   );
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// WorkflowEditorWithBlocks (main composition)
+// ─────────────────────────────────────────────────────────────────────────────
+
 interface WorkflowEditorWithBlocksProps extends WorkflowEditorInnerProps {
   blockDefinitions: BlockDefinition[];
 }
@@ -120,31 +511,14 @@ function WorkflowEditorWithBlocks({
   readonly = false,
   onChange,
 }: Readonly<WorkflowEditorWithBlocksProps>) {
-  const { t } = useLocale();
   const { screenToFlowPosition } = useReactFlow();
-
-  // Panel collapse state (persisted to localStorage)
-  const [panelStates, setPanelStates] = useState(() => {
-    try {
-      const saved = localStorage.getItem('workflow-editor-panels');
-      if (saved) return JSON.parse(saved);
-    } catch {
-      // Ignore localStorage errors
-    }
-    return { blocks: true, config: true, debug: true };
-  });
-
-  const togglePanel = useCallback((panel: 'blocks' | 'config' | 'debug') => {
-    setPanelStates((prev: Record<string, boolean>) => {
-      const next = { ...prev, [panel]: !prev[panel] };
-      localStorage.setItem('workflow-editor-panels', JSON.stringify(next));
-      return next;
-    });
-  }, []);
+  const { panelStates, togglePanel } = usePanelState();
 
   // Fetch sparks for type resolution
   const { data: sparks = [] } = useQuery({
-    queryKey: ['sparks'],
+    queryKey: [
+      'sparks',
+    ],
     queryFn: () => fetcher<RegisteredSpark[]>('/api/sparks'),
     staleTime: 30000,
   });
@@ -152,14 +526,20 @@ function WorkflowEditorWithBlocks({
   // Create type lookup function for resolvers
   const typeLookup = useCallback(
     <T,>(key: string): T | undefined => {
-      if (key === 'sparks') return sparks as T;
+      if (key === 'sparks') {
+        return sparks as T;
+      }
       return undefined;
     },
-    [sparks]
+    [
+      sparks,
+    ]
   );
 
   // Pass block definitions and type lookup to editor
-  const editor = useWorkflowEditor(initialWorkflow, blockDefinitions, onChange, { typeLookup });
+  const editor = useWorkflowEditor(initialWorkflow, blockDefinitions, onChange, {
+    typeLookup,
+  });
 
   // Create a map of block type -> definition for quick lookup
   const blockSchemaMap = useMemo(() => {
@@ -168,7 +548,9 @@ function WorkflowEditorWithBlocks({
       map[def.type || def.id] = def;
     }
     return map;
-  }, [blockDefinitions]);
+  }, [
+    blockDefinitions,
+  ]);
 
   const {
     nodes,
@@ -199,28 +581,11 @@ function WorkflowEditorWithBlocks({
 
   // Trigger port pings when emit events come in
   useEffect(() => {
-    // Find events newer than the last processed timestamp
-    const newEvents = events.filter((e) => e.timestamp > lastProcessedTimestamp.current);
-
-    if (newEvents.length > 0) {
-      // Update to the latest timestamp
-      lastProcessedTimestamp.current = Math.max(...newEvents.map((e) => e.timestamp));
-    }
-
-    for (const event of newEvents) {
-      if (event.type === 'block.emit' && event.blockId && event.port) {
-        // Ping output port
-        pingHandle(event.blockId, event.port);
-
-        // Ping connected input ports
-        for (const edge of edges) {
-          if (edge.source === event.blockId && edge.sourceHandle === event.port) {
-            pingHandle(edge.target, edge.targetHandle || 'in');
-          }
-        }
-      }
-    }
-  }, [events, edges]);
+    processNewEvents(events, edges, lastProcessedTimestamp);
+  }, [
+    events,
+    edges,
+  ]);
 
   // Handle drop from toolbar
   const onDragOver = useCallback((event: React.DragEvent) => {
@@ -233,7 +598,9 @@ function WorkflowEditorWithBlocks({
       event.preventDefault();
 
       const data = event.dataTransfer.getData('application/reactflow');
-      if (!data) return;
+      if (!data) {
+        return;
+      }
 
       const blockDef: BlockDefinition = JSON.parse(data);
 
@@ -251,13 +618,15 @@ function WorkflowEditorWithBlocks({
       const blockType: BlockTypeInfo = {
         ...blockDef,
         type: blockDef.type || blockDef.id,
-        category: blockDef.category as 'flow' | 'action' | 'data' | 'debug',
         defaultConfig: {},
       };
 
       addBlock(blockType, position);
     },
-    [addBlock, screenToFlowPosition]
+    [
+      addBlock,
+      screenToFlowPosition,
+    ]
   );
 
   // Get available variables for selected block
@@ -265,167 +634,76 @@ function WorkflowEditorWithBlocks({
 
   // Get block schema for selected node
   const selectedBlockSchema = useMemo(() => {
-    if (selectedNode?.type !== 'block') return undefined;
-    const blockData = selectedNode.data as unknown as BlockNodeData;
-    const blockType = blockData.type || '';
+    if (selectedNode?.type !== 'block') {
+      return undefined;
+    }
+    const blockType = getBlockType(selectedNode);
     return blockSchemaMap[blockType]?.schema;
-  }, [selectedNode, blockSchemaMap]);
+  }, [
+    selectedNode,
+    blockSchemaMap,
+  ]);
 
   // Check which panels are collapsed for stacking
   const leftCollapsed = !readonly && !panelStates.blocks;
-  const configCollapsed = !readonly && selectedNode && !panelStates.config;
+  const configCollapsed = !readonly && !!selectedNode && !panelStates.config;
   const debugCollapsed = !readonly && !panelStates.debug;
 
   return (
     <div className="flex h-full">
       {/* Block Toolbar (expanded) */}
       {!readonly && (
-        <CollapsiblePanel
-          side="left"
-          icon={<Blocks className="size-4" />}
-          title={t('workflows:editor.panels.blocks')}
-          isOpen={panelStates.blocks}
-          onToggle={() => togglePanel('blocks')}
-          width="w-56"
-        >
-          <BlockToolbar className="h-full w-full" onCollapse={() => togglePanel('blocks')} />
-        </CollapsiblePanel>
+        <BlocksPanel isOpen={panelStates.blocks} onToggle={() => togglePanel('blocks')} />
       )}
 
       {/* Canvas */}
-      <div className="relative flex flex-1 flex-col">
-        {/* Left collapsed tabs - absolute positioned */}
-        {leftCollapsed && (
-          <CollapsedTabsContainer side="left">
-            <CollapsedTab
-              side="left"
-              icon={<Blocks className="size-4" />}
-              title={t('workflows:editor.panels.blocks')}
-              onExpand={() => togglePanel('blocks')}
-            />
-          </CollapsedTabsContainer>
-        )}
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={readonly ? undefined : onNodesChange}
-          onEdgesChange={readonly ? undefined : onEdgesChange}
-          onConnect={readonly ? undefined : onConnect}
-          isValidConnection={isValidConnection}
-          onNodeClick={onNodeClick}
-          onPaneClick={onPaneClick}
-          onNodesDelete={readonly ? undefined : onNodesDelete}
-          onEdgesDelete={readonly ? undefined : onEdgesDelete}
-          onDragOver={readonly ? undefined : onDragOver}
-          onDrop={readonly ? undefined : onDrop}
-          nodeTypes={nodeTypes}
-          connectionLineType={ConnectionLineType.SmoothStep}
-          fitView
-          fitViewOptions={{ padding: 0.2 }}
-          nodesDraggable={!readonly}
-          nodesConnectable={!readonly}
-          elementsSelectable={true}
-          deleteKeyCode={readonly ? null : 'Backspace'}
-          proOptions={{ hideAttribution: true }}
-        >
-          <Background />
-          <Controls showInteractive={!readonly} />
-          <MiniMap
-            nodeColor={(node) => {
-              const blockData = node.data as BlockNodeData;
-              return blockData?.color || '#6b7280';
-            }}
-            className="!bg-muted"
-          />
-        </ReactFlow>
-
-        {/* Empty state overlay */}
-        {nodes.length === 0 && !readonly && (
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-            <div className="flex flex-col items-center gap-4 rounded-xl border border-muted-foreground/30 border-dashed bg-background/80 p-8 text-center backdrop-blur-sm">
-              <div className="flex items-center gap-3">
-                <div className="flex size-12 items-center justify-center rounded-lg bg-primary/10">
-                  <GripVertical className="size-6 text-primary" />
-                </div>
-                <MousePointerClick className="size-5 text-muted-foreground" />
-                <div className="flex size-12 items-center justify-center rounded-lg bg-muted">
-                  <Blocks className="size-6 text-muted-foreground" />
-                </div>
-              </div>
-              <div>
-                <p className="font-medium">{t('workflows:editor.panels.dragToAdd')}</p>
-                <p className="mt-1 text-muted-foreground text-sm">
-                  {t('workflows:editor.panels.blocksDescription')}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Right collapsed tabs - absolute positioned */}
-        {(configCollapsed || debugCollapsed) && (
-          <CollapsedTabsContainer side="right">
-            {configCollapsed && (
-              <CollapsedTab
-                side="right"
-                icon={<Settings2 className="size-4" />}
-                title={t('workflows:editor.panels.config')}
-                onExpand={() => togglePanel('config')}
-              />
-            )}
-            {debugCollapsed && (
-              <CollapsedTab
-                side="right"
-                icon={<Zap className="size-4 text-yellow-500" />}
-                title={t('workflows:editor.panels.debug')}
-                onExpand={() => togglePanel('debug')}
-              />
-            )}
-          </CollapsedTabsContainer>
-        )}
-      </div>
+      <EditorCanvas
+        readonly={readonly}
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onConnect={onConnect}
+        isValidConnection={isValidConnection}
+        onNodeClick={onNodeClick}
+        onPaneClick={onPaneClick}
+        onNodesDelete={onNodesDelete}
+        onEdgesDelete={onEdgesDelete}
+        onDragOver={readonly ? undefined : onDragOver}
+        onDrop={readonly ? undefined : onDrop}
+        leftCollapsed={leftCollapsed}
+        configCollapsed={configCollapsed}
+        debugCollapsed={debugCollapsed}
+        togglePanel={togglePanel}
+      />
 
       {/* Config Panel (expanded) */}
       {!readonly && selectedNode && (
-        <CollapsiblePanel
-          side="right"
-          icon={<Settings2 className="size-4" />}
-          title={t('workflows:editor.panels.config')}
+        <ConfigSidePanel
           isOpen={panelStates.config}
           onToggle={() => togglePanel('config')}
-          width="w-80"
-        >
-          <ConfigPanel
-            node={selectedNode}
-            onUpdateBlock={updateBlockConfig}
-            availableVariables={availableVariables}
-            blockSchema={selectedBlockSchema}
-            className="h-full w-full"
-            onCollapse={() => togglePanel('config')}
-          />
-        </CollapsiblePanel>
+          selectedNode={selectedNode}
+          updateBlockConfig={updateBlockConfig}
+          availableVariables={availableVariables}
+          blockSchema={selectedBlockSchema}
+        />
       )}
 
       {/* Debug Panel (expanded) */}
       {!readonly && (
-        <CollapsiblePanel
-          side="right"
-          icon={<Zap className="size-4 text-yellow-500" />}
-          title={t('workflows:editor.panels.debug')}
+        <DebugSidePanel
           isOpen={panelStates.debug}
           onToggle={() => togglePanel('debug')}
-          width="w-72"
-        >
-          <DebugPanel
-            workflow={workflow}
-            className="h-full w-full"
-            onCollapse={() => togglePanel('debug')}
-          />
-        </CollapsiblePanel>
+          workflow={workflow}
+        />
       )}
     </div>
   );
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Public Export
+// ─────────────────────────────────────────────────────────────────────────────
 
 // Wrapper with ReactFlowProvider
 export interface WorkflowEditorProps {

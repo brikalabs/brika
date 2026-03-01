@@ -3,7 +3,10 @@ import type { RawRegistryPlugin } from './sources/registry-source';
 import type { PluginSearchResult } from './types';
 
 interface PluginConfig {
-  plugins: ReadonlyArray<{ name: string; version: string }>;
+  plugins: ReadonlyArray<{
+    name: string;
+    version: string;
+  }>;
 }
 
 /**
@@ -11,7 +14,13 @@ interface PluginConfig {
  * Used by both list endpoints (via enrichPlugins) and the detail endpoint directly.
  */
 export function computeEnrichment(
-  pkg: { name: string; version: string; engines?: { brika?: string } },
+  pkg: {
+    name: string;
+    version: string;
+    engines?: {
+      brika?: string;
+    };
+  },
   config: PluginConfig
 ) {
   const entry = config.plugins.find((p) => p.name === pkg.name);
@@ -29,5 +38,8 @@ export function enrichPlugins(
   plugins: RawRegistryPlugin[],
   config: PluginConfig
 ): PluginSearchResult[] {
-  return plugins.map((plugin) => ({ ...plugin, ...computeEnrichment(plugin.package, config) }));
+  return plugins.map((plugin) => ({
+    ...plugin,
+    ...computeEnrichment(plugin.package, config),
+  }));
 }

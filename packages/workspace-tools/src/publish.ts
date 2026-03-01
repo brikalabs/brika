@@ -33,8 +33,14 @@ import { discoverPackages, filterPackages } from './workspace';
 
 const ROOT = process.cwd();
 
-const packageForms = { one: 'package', other: 'packages' };
-const pluginForms = { one: 'plugin', other: 'plugins' };
+const packageForms = {
+  one: 'package',
+  other: 'packages',
+};
+const pluginForms = {
+  one: 'plugin',
+  other: 'plugins',
+};
 
 const HELP = `
 ${pc.bold('workspace-tools')} — Interactive Workspace Publisher
@@ -66,10 +72,25 @@ const { values } = parseArgs({
   allowPositionals: false,
   strict: false,
   options: {
-    help: { type: 'boolean', short: 'h', default: false },
-    all: { type: 'boolean', short: 'a', default: false },
-    'dry-run': { type: 'boolean', default: false },
-    filter: { type: 'string', short: 'f', multiple: true },
+    help: {
+      type: 'boolean',
+      short: 'h',
+      default: false,
+    },
+    all: {
+      type: 'boolean',
+      short: 'a',
+      default: false,
+    },
+    'dry-run': {
+      type: 'boolean',
+      default: false,
+    },
+    filter: {
+      type: 'string',
+      short: 'f',
+      multiple: true,
+    },
   },
 });
 
@@ -130,9 +151,10 @@ try {
       message: `Select packages to publish ${available}\n${keyHints}`,
       options: candidates.map((pkg) => {
         const npmHint = formatNpmHint(npmVersionMap.get(pkg.name) ?? null);
+        const versionSuffix = pc.dim(`@${pkg.version}`);
         return {
           value: pkg,
-          label: `${pc.cyan(pkg.name)}${pc.dim('@' + pkg.version)}`,
+          label: `${pc.cyan(pkg.name)}${versionSuffix}`,
           hint: `${npmHint}  ${pkg.relativePath}`,
         };
       }),
@@ -188,7 +210,10 @@ try {
       details,
       privateWorkspacePackageNames
     );
-    const extraWarnings = [...pluginWarnings, ...privateDependencyWarnings];
+    const extraWarnings = [
+      ...pluginWarnings,
+      ...privateDependencyWarnings,
+    ];
     console.log(
       formatPackagePreview(pkg.name, pkg.version, details, publishedVersion, extraWarnings)
     );
@@ -236,7 +261,9 @@ try {
       }
       for (const { pkg, output } of verifyFailed) {
         p.log.error(`${pc.bold(pkg.name)}:`);
-        if (output) console.log(output);
+        if (output) {
+          console.log(output);
+        }
       }
       p.cancel('Fix plugin verification errors before publishing.');
       process.exit(1);
@@ -247,11 +274,17 @@ try {
   const installSpinner = p.spinner();
   installSpinner.start('Running bun install at workspace root…');
 
-  const installProc = Bun.spawn(['bun', 'install'], {
-    cwd: ROOT,
-    stdout: 'pipe',
-    stderr: 'pipe',
-  });
+  const installProc = Bun.spawn(
+    [
+      'bun',
+      'install',
+    ],
+    {
+      cwd: ROOT,
+      stdout: 'pipe',
+      stderr: 'pipe',
+    }
+  );
   const installExit = await installProc.exited;
 
   if (installExit !== 0) {

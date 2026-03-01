@@ -7,7 +7,9 @@ import * as api from './api';
 
 export function useTools() {
   return useQuery({
-    queryKey: ['tools'],
+    queryKey: [
+      'tools',
+    ],
     queryFn: api.fetchTools,
     staleTime: 30000,
   });
@@ -15,8 +17,12 @@ export function useTools() {
 
 export function useToolSchema(toolId: string | null) {
   return useQuery({
-    queryKey: ['tools', toolId, 'schema'],
-    queryFn: () => api.fetchToolSchema(toolId!),
+    queryKey: [
+      'tools',
+      toolId,
+      'schema',
+    ],
+    queryFn: () => api.fetchToolSchema(toolId ?? ''),
     enabled: !!toolId,
     staleTime: 60000,
   });
@@ -28,15 +34,25 @@ export function useToolSchema(toolId: string | null) {
 
 export function useWorkflows() {
   return useQuery({
-    queryKey: ['workflows'],
+    queryKey: [
+      'workflows',
+    ],
     queryFn: api.fetchWorkflows,
     refetchInterval: 5000,
   });
 }
 
-export function useWorkflow(id: string, options?: { enabled?: boolean }) {
+export function useWorkflow(
+  id: string,
+  options?: {
+    enabled?: boolean;
+  }
+) {
   return useQuery({
-    queryKey: ['workflows', id],
+    queryKey: [
+      'workflows',
+      id,
+    ],
     queryFn: () => api.fetchWorkflow(id),
     enabled: options?.enabled ?? !!id,
   });
@@ -44,7 +60,9 @@ export function useWorkflow(id: string, options?: { enabled?: boolean }) {
 
 export function useBlockTypes() {
   return useQuery({
-    queryKey: ['blocks'],
+    queryKey: [
+      'blocks',
+    ],
     queryFn: api.fetchBlockTypes,
     staleTime: 30000,
   });
@@ -52,7 +70,10 @@ export function useBlockTypes() {
 
 export function useWorkflowRuns() {
   return useQuery({
-    queryKey: ['workflows', 'runs'],
+    queryKey: [
+      'workflows',
+      'runs',
+    ],
     queryFn: api.fetchWorkflowRuns,
     refetchInterval: 2000,
   });
@@ -62,7 +83,12 @@ export function useEnableWorkflow() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: api.enableWorkflow,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['workflows'] }),
+    onSuccess: () =>
+      qc.invalidateQueries({
+        queryKey: [
+          'workflows',
+        ],
+      }),
   });
 }
 
@@ -70,7 +96,12 @@ export function useDisableWorkflow() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: api.disableWorkflow,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['workflows'] }),
+    onSuccess: () =>
+      qc.invalidateQueries({
+        queryKey: [
+          'workflows',
+        ],
+      }),
   });
 }
 
@@ -80,9 +111,18 @@ export function useSaveWorkflow() {
     mutationFn: api.saveWorkflow,
     onSuccess: (_data, workflow) => {
       // Invalidate all workflow queries to ensure fresh data
-      qc.invalidateQueries({ queryKey: ['workflows'] });
+      qc.invalidateQueries({
+        queryKey: [
+          'workflows',
+        ],
+      });
       // Also invalidate the specific workflow query
-      qc.invalidateQueries({ queryKey: ['workflows', workflow.id] });
+      qc.invalidateQueries({
+        queryKey: [
+          'workflows',
+          workflow.id,
+        ],
+      });
     },
   });
 }
@@ -91,6 +131,11 @@ export function useDeleteWorkflow() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: api.deleteWorkflow,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['workflows'] }),
+    onSuccess: () =>
+      qc.invalidateQueries({
+        queryKey: [
+          'workflows',
+        ],
+      }),
   });
 }

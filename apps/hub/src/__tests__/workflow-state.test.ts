@@ -15,7 +15,9 @@ import type { Workflow } from '@/runtime/workflows/types';
 import { WorkflowEngine } from '@/runtime/workflows/workflow-engine';
 import type { ExecutionEvent } from '@/runtime/workflows/workflow-executor';
 
-useTestBed({ autoStub: false });
+useTestBed({
+  autoStub: false,
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Test Fixtures
@@ -25,7 +27,12 @@ const createWorkflow = (id: string, enabled = false): Workflow => ({
   id,
   name: `Workflow ${id}`,
   enabled,
-  blocks: [{ id: 'block-1', type: 'timer' }],
+  blocks: [
+    {
+      id: 'block-1',
+      type: 'timer',
+    },
+  ],
   connections: [],
 });
 
@@ -45,12 +52,17 @@ describe('WorkflowEngine - State Management', () => {
         type,
         outputs: [],
         inputs: [],
-        schema: { type: 'object' as const, properties: {} },
+        schema: {
+          type: 'object' as const,
+          properties: {},
+        },
         pluginId: 'plugin',
       }),
       list: () => [],
       listByCategory: () => ({}),
-      validateConnections: () => ({ valid: true }),
+      validateConnections: () => ({
+        valid: true,
+      }),
     });
     provide(PluginManager, {});
     provide(PluginEventHandler, {});
@@ -64,7 +76,12 @@ describe('WorkflowEngine - State Management', () => {
       id: 'test-workflow',
       name: 'Test Workflow',
       enabled: false,
-      blocks: [{ id: 'block-1', type: 'timer' }],
+      blocks: [
+        {
+          id: 'block-1',
+          type: 'timer',
+        },
+      ],
       connections: [],
     };
 
@@ -89,7 +106,9 @@ describe('WorkflowEngine - State Management', () => {
       get: () => undefined,
       list: () => [],
       listByCategory: () => ({}),
-      validateConnections: () => ({ valid: true }),
+      validateConnections: () => ({
+        valid: true,
+      }),
     });
     provide(PluginManager, {});
     provide(PluginEventHandler, {});
@@ -102,8 +121,14 @@ describe('WorkflowEngine - State Management', () => {
       name: 'Test Workflow Error',
       enabled: false,
       blocks: [
-        { id: 'block-1', type: 'timer' },
-        { id: 'block-2', type: 'missing-block' },
+        {
+          id: 'block-1',
+          type: 'timer',
+        },
+        {
+          id: 'block-2',
+          type: 'missing-block',
+        },
       ],
       connections: [],
     };
@@ -128,7 +153,9 @@ describe('WorkflowEngine - State Management', () => {
       get: () => undefined,
       list: () => [],
       listByCategory: () => ({}),
-      validateConnections: () => ({ valid: true }),
+      validateConnections: () => ({
+        valid: true,
+      }),
     });
     provide(PluginManager, {});
     provide(PluginEventHandler, {});
@@ -140,7 +167,12 @@ describe('WorkflowEngine - State Management', () => {
       id: 'test-workflow-recovery',
       name: 'Test Workflow Recovery',
       enabled: false,
-      blocks: [{ id: 'block-1', type: 'timer' }],
+      blocks: [
+        {
+          id: 'block-1',
+          type: 'timer',
+        },
+      ],
       connections: [],
     };
 
@@ -161,12 +193,17 @@ describe('WorkflowEngine - State Management', () => {
         type: 'plugin:test',
         outputs: [],
         inputs: [],
-        schema: { type: 'object' as const, properties: {} },
+        schema: {
+          type: 'object' as const,
+          properties: {},
+        },
         pluginId: 'plugin',
       }),
       list: () => [],
       listByCategory: () => ({}),
-      validateConnections: () => ({ valid: true }),
+      validateConnections: () => ({
+        valid: true,
+      }),
     });
     provide(PluginManager, {});
     provide(PluginEventHandler, {});
@@ -264,14 +301,20 @@ describe('WorkflowEngine - Block Registry Passthrough', () => {
         type: 'plugin:timer',
         inputs: [],
         outputs: [],
-        schema: { type: 'object' as const, properties: {} },
+        schema: {
+          type: 'object' as const,
+          properties: {},
+        },
       },
       {
         id: 'logger',
         type: 'plugin:logger',
         inputs: [],
         outputs: [],
-        schema: { type: 'object' as const, properties: {} },
+        schema: {
+          type: 'object' as const,
+          properties: {},
+        },
       },
     ];
 
@@ -283,7 +326,21 @@ describe('WorkflowEngine - Block Registry Passthrough', () => {
     provide(BlockRegistry, {
       has: () => true,
       list: () => mockBlocks,
-      listByCategory: () => ({ input: [mockBlocks[0]!], output: [mockBlocks[1]!] }),
+      listByCategory: () => {
+        const input = mockBlocks[0];
+        const output = mockBlocks[1];
+        if (!input || !output) {
+          throw new Error('Expected mock blocks to be defined');
+        }
+        return {
+          input: [
+            input,
+          ],
+          output: [
+            output,
+          ],
+        };
+      },
     });
     provide(PluginManager, {});
     provide(PluginEventHandler, {});
@@ -319,7 +376,10 @@ describe('WorkflowEngine - Execution Control', () => {
       setBlockLogHandler: () => undefined,
       clearBlockEmitHandler: () => undefined,
       clearBlockLogHandler: () => undefined,
-      startBlock: () => Promise.resolve({ ok: true }),
+      startBlock: () =>
+        Promise.resolve({
+          ok: true,
+        }),
       stopBlockInstance: () => undefined,
       pushBlockInput: () => undefined,
     };
@@ -336,7 +396,10 @@ describe('WorkflowEngine - Execution Control', () => {
         type: 'plugin:test',
         outputs: [],
         inputs: [],
-        schema: { type: 'object' as const, properties: {} },
+        schema: {
+          type: 'object' as const,
+          properties: {},
+        },
         pluginId: 'plugin',
       }),
       list: () => [],
@@ -494,7 +557,10 @@ describe('WorkflowEngine - Global Listeners', () => {
         type: 'plugin:test',
         outputs: [],
         inputs: [],
-        schema: { type: 'object' as const, properties: {} },
+        schema: {
+          type: 'object' as const,
+          properties: {},
+        },
         pluginId: 'plugin',
       }),
       list: () => [],
@@ -505,7 +571,10 @@ describe('WorkflowEngine - Global Listeners', () => {
       setBlockLogHandler: () => undefined,
       clearBlockEmitHandler: () => undefined,
       clearBlockLogHandler: () => undefined,
-      startBlock: () => Promise.resolve({ ok: true }),
+      startBlock: () =>
+        Promise.resolve({
+          ok: true,
+        }),
       stopBlockInstance: () => undefined,
     });
     provide(PluginEventHandler, {});
@@ -588,7 +657,10 @@ describe('WorkflowEngine - Lifecycle', () => {
         type: 'plugin:test',
         outputs: [],
         inputs: [],
-        schema: { type: 'object' as const, properties: {} },
+        schema: {
+          type: 'object' as const,
+          properties: {},
+        },
         pluginId: 'plugin',
       }),
       list: () => [],
@@ -599,7 +671,10 @@ describe('WorkflowEngine - Lifecycle', () => {
       setBlockLogHandler: () => undefined,
       clearBlockEmitHandler: () => undefined,
       clearBlockLogHandler: () => undefined,
-      startBlock: () => Promise.resolve({ ok: true }),
+      startBlock: () =>
+        Promise.resolve({
+          ok: true,
+        }),
       stopBlockInstance: () => undefined,
     });
     provide(PluginEventHandler, {});

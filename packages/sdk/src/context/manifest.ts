@@ -28,8 +28,12 @@ export function loadManifest(): Manifest {
  * Populated during `loadManifest()`, which runs when the Context is created.
  */
 export function getPluginRootDirectory(): string {
-  if (cachedRootDir) return cachedRootDir;
+  if (cachedRootDir) {
+    return cachedRootDir;
+  }
   loadManifest();
-  if (!cachedRootDir) throw new Error('Could not resolve plugin root directory');
+  if (!cachedRootDir) {
+    throw new Error('Could not resolve plugin root directory');
+  }
   return cachedRootDir;
 }

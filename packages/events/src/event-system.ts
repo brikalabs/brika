@@ -70,9 +70,13 @@ export class EventSystem {
 
   #resolvePendingPromises(action: Action): void {
     for (const pending of this.pendingPromises) {
-      if (!matchesPatternSet(pending.patternSet, action)) continue;
+      if (!matchesPatternSet(pending.patternSet, action)) {
+        continue;
+      }
 
-      if (pending.timeout) clearTimeout(pending.timeout);
+      if (pending.timeout) {
+        clearTimeout(pending.timeout);
+      }
       this.pendingPromises.delete(pending);
       pending.resolve(action);
     }
@@ -129,17 +133,28 @@ export class EventSystem {
    */
   once<T extends ActionCreator>(
     pattern: T,
-    options?: { timeout?: number }
+    options?: {
+      timeout?: number;
+    }
   ): Promise<InferAction<T>>;
   once<T extends readonly ActionCreator[]>(
     pattern: T,
-    options?: { timeout?: number }
+    options?: {
+      timeout?: number;
+    }
   ): Promise<InferActions<T>>;
   once<T extends Record<string, ActionCreator>>(
     pattern: T,
-    options?: { timeout?: number }
+    options?: {
+      timeout?: number;
+    }
   ): Promise<InferActionsFromMap<T>>;
-  once(pattern: ActionPattern, options?: { timeout?: number }): Promise<Action> {
+  once(
+    pattern: ActionPattern,
+    options?: {
+      timeout?: number;
+    }
+  ): Promise<Action> {
     return new Promise<Action>((resolve, reject) => {
       const patternSet = createPatternSet(pattern);
 
@@ -173,13 +188,22 @@ export class EventSystem {
    */
   race<T extends readonly PatternItem[]>(
     patterns: T,
-    options?: { timeout?: number }
+    options?: {
+      timeout?: number;
+    }
   ): Promise<InferActions<T>>;
   race<T extends Record<string, PatternItem>>(
     patterns: T,
-    options?: { timeout?: number }
+    options?: {
+      timeout?: number;
+    }
   ): Promise<InferActionsFromMap<T>>;
-  race(patterns: ActionPattern, options?: { timeout?: number }): Promise<Action> {
+  race(
+    patterns: ActionPattern,
+    options?: {
+      timeout?: number;
+    }
+  ): Promise<Action> {
     return new Promise<Action>((resolve, reject) => {
       const patternSet = createPatternSet(patterns);
       let resolved = false;
@@ -234,7 +258,9 @@ export class EventSystem {
    */
   waitFor<T extends PatternItem>(
     pattern: T,
-    options?: { timeout?: number }
+    options?: {
+      timeout?: number;
+    }
   ): Promise<InferAction<T>> {
     return new Promise<InferAction<T>>((resolve, reject) => {
       const patternSet = createPatternSet(pattern);
@@ -291,7 +317,11 @@ export class EventSystem {
     patterns: string | string[],
     handler: (action: Action) => void | Promise<void>
   ): Unsubscribe {
-    const patternList = Array.isArray(patterns) ? patterns : [patterns];
+    const patternList = Array.isArray(patterns)
+      ? patterns
+      : [
+          patterns,
+        ];
     const regexes = patternList.map((p) => {
       const escaped = p.replaceAll('.', String.raw`\.`).replaceAll('*', '.*');
       return new RegExp(`^${escaped}$`);

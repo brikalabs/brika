@@ -11,7 +11,9 @@ import { setupI18n } from '../../context/i18n';
 import { createTestHarness } from './_test-utils';
 
 describe('setupI18n', () => {
-  const h = createTestHarness({ name: 'my-weather' });
+  const h = createTestHarness({
+    name: 'my-weather',
+  });
   let t: ReturnType<typeof setupI18n>['methods']['t'];
 
   beforeEach(() => {
@@ -34,23 +36,39 @@ describe('setupI18n', () => {
   });
 
   test('t() with params includes them in the ref', () => {
-    const ref = t('ui.dayForecast', { count: 7 });
+    const ref = t('ui.dayForecast', {
+      count: 7,
+    });
     expect(ref.key).toBe('ui.dayForecast');
-    expect(ref.params).toEqual({ count: 7 });
+    expect(ref.params).toEqual({
+      count: 7,
+    });
   });
 
   test('t() with string params works', () => {
-    const ref = t('stats.feelsLikeTemp', { temp: '25°C' });
-    expect(ref.params).toEqual({ temp: '25°C' });
+    const ref = t('stats.feelsLikeTemp', {
+      temp: '25°C',
+    });
+    expect(ref.params).toEqual({
+      temp: '25°C',
+    });
   });
 
   test('t() with mixed params works', () => {
-    const ref = t('ui.locationDayForecast', { name: 'Montreal', count: 5 });
-    expect(ref.params).toEqual({ name: 'Montreal', count: 5 });
+    const ref = t('ui.locationDayForecast', {
+      name: 'Montreal',
+      count: 5,
+    });
+    expect(ref.params).toEqual({
+      name: 'Montreal',
+      count: 5,
+    });
   });
 
   test('namespace is derived from manifest name', () => {
-    const customHarness = createTestHarness({ name: '@brika/plugin-timer' });
+    const customHarness = createTestHarness({
+      name: '@brika/plugin-timer',
+    });
     const result = setupI18n(customHarness.core);
     const ref = result.methods.t('label');
     expect(ref.ns).toBe('plugin:@brika/plugin-timer');

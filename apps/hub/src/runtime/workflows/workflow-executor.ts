@@ -103,7 +103,9 @@ export class WorkflowExecutor {
    * Stop the running workflow - cleans up all blocks.
    */
   stop(): void {
-    if (!this.#workflow) return;
+    if (!this.#workflow) {
+      return;
+    }
 
     const workflowId = this.#workflow.id;
 
@@ -125,7 +127,9 @@ export class WorkflowExecutor {
       workflowId,
     });
 
-    this.#logs.info('Workflow stopped successfully', { workflowId });
+    this.#logs.info('Workflow stopped successfully', {
+      workflowId,
+    });
   }
 
   /**
@@ -220,7 +224,9 @@ export class WorkflowExecutor {
             blockType: block.type,
             workflowId: workflow.id,
           },
-          { error: new Error(result.error || 'Unknown error') }
+          {
+            error: new Error(result.error || 'Unknown error'),
+          }
         );
       }
     } catch (e) {
@@ -237,7 +243,9 @@ export class WorkflowExecutor {
           blockType: block.type,
           workflowId: workflow.id,
         },
-        { error: e }
+        {
+          error: e,
+        }
       );
     }
   }
@@ -246,7 +254,9 @@ export class WorkflowExecutor {
    * Called when a block emits data on an output port.
    */
   #onBlockEmit(blockId: string, port: string, data: Json): void {
-    if (!this.#workflow) return;
+    if (!this.#workflow) {
+      return;
+    }
 
     // Update buffer
     const key = `${blockId}:${port}`;
@@ -277,7 +287,9 @@ export class WorkflowExecutor {
    */
   #onBlockLog(blockId: string, workflowId: string, level: string, message: string): void {
     // Only emit if this is from the current workflow
-    if (this.#workflow?.id !== workflowId) return;
+    if (this.#workflow?.id !== workflowId) {
+      return;
+    }
 
     this.#emit({
       type: 'block.log',
@@ -313,7 +325,9 @@ export class WorkflowExecutor {
    * Resolve a block type - supports short names and full qualified names.
    */
   #resolveBlockType(type: string): string {
-    if (type.includes(':')) return type;
+    if (type.includes(':')) {
+      return type;
+    }
 
     // Search for matching block by short name
     const allBlocks = this.#blocks.list();

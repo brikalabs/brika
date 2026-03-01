@@ -1,13 +1,15 @@
+import { Scope } from '@brika/auth';
+import { useAuth, useCanAccess } from '@brika/auth/react';
 import { Link, Outlet, useMatchRoute, useRouterState } from '@tanstack/react-router';
 import {
   Blocks,
   ChevronsUpDown,
+  CircleUserRound,
   FileText,
   LayoutDashboard,
   LayoutGrid,
   LogOut,
   type LucideIcon,
-  CircleUserRound,
   Package,
   Plug,
   Settings,
@@ -15,11 +17,6 @@ import {
   Workflow,
   Zap,
 } from 'lucide-react';
-import { useAuth, useCanAccess } from '@brika/auth/react';
-import { Scope } from '@brika/auth';
-import { LoginPage } from '@/features/auth';
-import { useAuthInterceptor } from '@/hooks/use-auth-interceptor';
-import { UserAvatar } from '@/components/user-avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,8 +40,11 @@ import {
   SidebarRail,
   useSidebar,
 } from '@/components/ui/sidebar';
+import { UserAvatar } from '@/components/user-avatar';
+import { LoginPage } from '@/features/auth';
 import { useHealth } from '@/features/dashboard/hooks';
 import { useUpdateCheck } from '@/features/updates';
+import { useAuthInterceptor } from '@/hooks/use-auth-interceptor';
 import { ThemeProvider } from '@/lib/theme-provider';
 import { useLocale } from '@/lib/use-locale';
 import { cn } from '@/lib/utils';
@@ -66,26 +66,67 @@ const NAV_GROUPS: NavGroup[] = [
   {
     labelKey: 'nav:groups.overview',
     items: [
-      { to: '/', labelKey: 'nav:dashboard', icon: LayoutDashboard },
-      { to: '/boards', labelKey: 'nav:boards', icon: LayoutGrid },
-      { to: '/workflows', labelKey: 'nav:workflows', icon: Workflow },
+      {
+        to: '/',
+        labelKey: 'nav:dashboard',
+        icon: LayoutDashboard,
+      },
+      {
+        to: '/boards',
+        labelKey: 'nav:boards',
+        icon: LayoutGrid,
+      },
+      {
+        to: '/workflows',
+        labelKey: 'nav:workflows',
+        icon: Workflow,
+      },
     ],
   },
   {
     labelKey: 'nav:groups.registry',
     items: [
-      { to: '/plugins', labelKey: 'nav:plugins', icon: Plug },
-      { to: '/sparks', labelKey: 'nav:sparks', icon: Zap },
-      { to: '/blocks', labelKey: 'nav:blocks', icon: Blocks },
+      {
+        to: '/plugins',
+        labelKey: 'nav:plugins',
+        icon: Plug,
+      },
+      {
+        to: '/sparks',
+        labelKey: 'nav:sparks',
+        icon: Zap,
+      },
+      {
+        to: '/blocks',
+        labelKey: 'nav:blocks',
+        icon: Blocks,
+      },
     ],
   },
   {
     labelKey: 'nav:groups.system',
     items: [
-      { to: '/store', labelKey: 'nav:store', icon: Package },
-      { to: '/logs', labelKey: 'nav:logs', icon: FileText },
-      { to: '/admin/users', labelKey: 'nav:users', icon: Users, adminOnly: true },
-      { to: '/settings', labelKey: 'nav:settings', icon: Settings },
+      {
+        to: '/store',
+        labelKey: 'nav:store',
+        icon: Package,
+      },
+      {
+        to: '/logs',
+        labelKey: 'nav:logs',
+        icon: FileText,
+      },
+      {
+        to: '/admin/users',
+        labelKey: 'nav:users',
+        icon: Users,
+        adminOnly: true,
+      },
+      {
+        to: '/settings',
+        labelKey: 'nav:settings',
+        icon: Settings,
+      },
     ],
   },
 ];
@@ -93,7 +134,15 @@ const NAV_GROUPS: NavGroup[] = [
 function NavLink({ to, labelKey, icon: Icon, suffix }: Readonly<NavItem>) {
   const match = useMatchRoute();
   const { t } = useLocale();
-  const isActive = to === '/' ? match({ to: '/' }) : match({ to, fuzzy: true });
+  const isActive =
+    to === '/'
+      ? match({
+          to: '/',
+        })
+      : match({
+          to,
+          fuzzy: true,
+        });
   const label = t(labelKey);
 
   return (
@@ -109,7 +158,11 @@ function NavLink({ to, labelKey, icon: Icon, suffix }: Readonly<NavItem>) {
   );
 }
 
-function NavGroupComponent({ group }: Readonly<{ group: NavGroup }>) {
+function NavGroupComponent({
+  group,
+}: Readonly<{
+  group: NavGroup;
+}>) {
   const { t } = useLocale();
 
   return (
@@ -147,11 +200,18 @@ function AppSidebarHeader() {
   );
 }
 
-function UserInfo({ user }: Readonly<{ user: { name: string; email: string } }>) {
+function UserInfo({
+  user,
+}: Readonly<{
+  user: {
+    name: string;
+    email: string;
+  };
+}>) {
   return (
     <div className="grid flex-1 text-left text-sm leading-tight">
       <span className="truncate font-semibold">{user.name}</span>
-      <span className="truncate text-xs text-muted-foreground">{user.email}</span>
+      <span className="truncate text-muted-foreground text-xs">{user.email}</span>
     </div>
   );
 }
@@ -161,7 +221,9 @@ function UserMenu() {
   const { t } = useLocale();
   const { isMobile } = useSidebar();
 
-  if (!user) return null;
+  if (!user) {
+    return null;
+  }
 
   const handleLogout = async () => {
     await client.logout();
@@ -173,10 +235,7 @@ function UserMenu() {
       <SidebarMenuItem>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <SidebarMenuButton
-              size="lg"
-              tooltip={user.name}
-            >
+            <SidebarMenuButton size="lg" tooltip={user.name}>
               <UserAvatar user={user} size="lg" />
               <UserInfo user={user} />
               <ChevronsUpDown className="ml-auto size-4" />
@@ -219,8 +278,7 @@ function AppSidebar() {
 
   const versionSuffix = health ? (
     <span className="ml-auto flex items-center gap-1 text-[10px] text-muted-foreground">
-      {hasUpdate && <span className="size-1.5 rounded-full bg-primary" />}
-      v{health.version}
+      {hasUpdate && <span className="size-1.5 rounded-full bg-primary" />}v{health.version}
     </span>
   ) : undefined;
 
@@ -229,7 +287,12 @@ function AppSidebar() {
     items: group.items
       .filter((item) => !item.adminOnly || isAdmin)
       .map((item) =>
-        item.to === '/settings' ? { ...item, suffix: versionSuffix } : item
+        item.to === '/settings'
+          ? {
+              ...item,
+              suffix: versionSuffix,
+            }
+          : item
       ),
   }));
 
@@ -250,7 +313,10 @@ function AppSidebar() {
 }
 
 // Routes that should have no padding (full-bleed layout)
-const FULL_BLEED_ROUTES = ['/workflows/new', '/workflows/$id/edit'];
+const FULL_BLEED_ROUTES = [
+  '/workflows/new',
+  '/workflows/$id/edit',
+];
 
 export function RootLayout() {
   const { isAuthenticated, isLoading } = useAuth();

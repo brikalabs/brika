@@ -6,7 +6,9 @@ import { PluginActions, SparkActions } from '@/runtime/events/actions';
 import { EventSystem } from '@/runtime/events/event-system';
 import { Logger } from '@/runtime/logs/log-router';
 
-useTestBed({ autoStub: false });
+useTestBed({
+  autoStub: false,
+});
 
 describe('EventSystem', () => {
   const errorSpy = mock();
@@ -15,7 +17,9 @@ describe('EventSystem', () => {
     errorSpy.mockReset();
     provide(HubConfig, new HubConfig());
     stub(Logger, {
-      withSource: () => ({ error: errorSpy }),
+      withSource: () => ({
+        error: errorSpy,
+      }),
     });
   });
 
@@ -25,7 +29,9 @@ describe('EventSystem', () => {
       {
         type: 'test.event',
         source: 'source',
-        payload: { data: 123 },
+        payload: {
+          data: 123,
+        },
       },
       'source'
     );
@@ -47,13 +53,34 @@ describe('EventSystem', () => {
     events.subscribe(SparkActions.emit, handler);
 
     events.dispatch(
-      SparkActions.emit.create({ type: 'test.one', source: 'src', payload: null }, 'src')
+      SparkActions.emit.create(
+        {
+          type: 'test.one',
+          source: 'src',
+          payload: null,
+        },
+        'src'
+      )
     );
     events.dispatch(
-      SparkActions.emit.create({ type: 'test.two', source: 'src', payload: null }, 'src')
+      SparkActions.emit.create(
+        {
+          type: 'test.two',
+          source: 'src',
+          payload: null,
+        },
+        'src'
+      )
     );
     events.dispatch(
-      SparkActions.emit.create({ type: 'other.event', source: 'src', payload: null }, 'src')
+      SparkActions.emit.create(
+        {
+          type: 'other.event',
+          source: 'src',
+          payload: null,
+        },
+        'src'
+      )
     );
 
     await new Promise((resolve) => setTimeout(resolve, 10));
@@ -70,18 +97,33 @@ describe('EventSystem', () => {
 
     events.dispatch(
       SparkActions.emit.create(
-        { type: 'motion.detected', source: 'sensor', payload: null },
+        {
+          type: 'motion.detected',
+          source: 'sensor',
+          payload: null,
+        },
         'sensor'
       )
     );
     events.dispatch(
       SparkActions.emit.create(
-        { type: 'motion.stopped', source: 'sensor', payload: null },
+        {
+          type: 'motion.stopped',
+          source: 'sensor',
+          payload: null,
+        },
         'sensor'
       )
     );
     events.dispatch(
-      SparkActions.emit.create({ type: 'light.on', source: 'switch', payload: null }, 'switch')
+      SparkActions.emit.create(
+        {
+          type: 'light.on',
+          source: 'switch',
+          payload: null,
+        },
+        'switch'
+      )
     );
 
     await new Promise((resolve) => setTimeout(resolve, 10));
@@ -96,7 +138,14 @@ describe('EventSystem', () => {
     const unsub = events.subscribe(SparkActions.emit, handler);
 
     events.dispatch(
-      SparkActions.emit.create({ type: 'test', source: 'src', payload: null }, 'src')
+      SparkActions.emit.create(
+        {
+          type: 'test',
+          source: 'src',
+          payload: null,
+        },
+        'src'
+      )
     );
     await new Promise((resolve) => setTimeout(resolve, 10));
     expect(handler.mock.calls.length).toBe(1);
@@ -104,7 +153,14 @@ describe('EventSystem', () => {
     unsub();
 
     events.dispatch(
-      SparkActions.emit.create({ type: 'test', source: 'src', payload: null }, 'src')
+      SparkActions.emit.create(
+        {
+          type: 'test',
+          source: 'src',
+          payload: null,
+        },
+        'src'
+      )
     );
     await new Promise((resolve) => setTimeout(resolve, 10));
     expect(handler.mock.calls.length).toBe(1); // Still 1, not called again
@@ -123,10 +179,24 @@ describe('EventSystem', () => {
     });
 
     events.dispatch(
-      SparkActions.emit.create({ type: 'specific', source: 'src', payload: null }, 'src')
+      SparkActions.emit.create(
+        {
+          type: 'specific',
+          source: 'src',
+          payload: null,
+        },
+        'src'
+      )
     );
     events.dispatch(
-      SparkActions.emit.create({ type: 'other', source: 'src', payload: null }, 'src')
+      SparkActions.emit.create(
+        {
+          type: 'other',
+          source: 'src',
+          payload: null,
+        },
+        'src'
+      )
     );
 
     await new Promise((resolve) => setTimeout(resolve, 10));
@@ -139,13 +209,40 @@ describe('EventSystem', () => {
     const events = get(EventSystem);
 
     events.dispatch(
-      SparkActions.emit.create({ type: 'event.1', source: 'src', payload: { n: 1 } }, 'src')
+      SparkActions.emit.create(
+        {
+          type: 'event.1',
+          source: 'src',
+          payload: {
+            n: 1,
+          },
+        },
+        'src'
+      )
     );
     events.dispatch(
-      SparkActions.emit.create({ type: 'event.2', source: 'src', payload: { n: 2 } }, 'src')
+      SparkActions.emit.create(
+        {
+          type: 'event.2',
+          source: 'src',
+          payload: {
+            n: 2,
+          },
+        },
+        'src'
+      )
     );
     events.dispatch(
-      SparkActions.emit.create({ type: 'event.3', source: 'src', payload: { n: 3 } }, 'src')
+      SparkActions.emit.create(
+        {
+          type: 'event.3',
+          source: 'src',
+          payload: {
+            n: 3,
+          },
+        },
+        'src'
+      )
     );
 
     await new Promise((resolve) => setTimeout(resolve, 10));
@@ -167,7 +264,14 @@ describe('EventSystem', () => {
     // Should not throw
     expect(() => {
       events.dispatch(
-        SparkActions.emit.create({ type: 'error.test', source: 'src', payload: null }, 'src')
+        SparkActions.emit.create(
+          {
+            type: 'error.test',
+            source: 'src',
+            payload: null,
+          },
+          'src'
+        )
       );
     }).not.toThrow();
 
@@ -180,13 +284,34 @@ describe('EventSystem', () => {
     const handler = mock();
 
     // Subscribe to multiple action types
-    events.subscribe([SparkActions.emit, PluginActions.loaded], handler);
+    events.subscribe(
+      [
+        SparkActions.emit,
+        PluginActions.loaded,
+      ],
+      handler
+    );
 
     events.dispatch(
-      SparkActions.emit.create({ type: 'test', source: 'src', payload: null }, 'src')
+      SparkActions.emit.create(
+        {
+          type: 'test',
+          source: 'src',
+          payload: null,
+        },
+        'src'
+      )
     );
     events.dispatch(
-      PluginActions.loaded.create({ uid: '123', name: 'test', version: '1.0.0', pid: 1234 }, 'hub')
+      PluginActions.loaded.create(
+        {
+          uid: '123',
+          name: 'test',
+          version: '1.0.0',
+          pid: 1234,
+        },
+        'hub'
+      )
     );
 
     await new Promise((resolve) => setTimeout(resolve, 10));

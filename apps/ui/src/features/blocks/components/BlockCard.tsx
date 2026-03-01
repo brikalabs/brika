@@ -4,7 +4,7 @@ import { Plug } from 'lucide-react';
 import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
 import { Avatar, AvatarFallback, AvatarImage, Badge, Card } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
-import { routes } from '@/routes';
+import { paths } from '@/routes/paths';
 import { pluginsApi } from '../../plugins/api';
 import type { BlockDefinition } from '../../workflows/api';
 
@@ -30,8 +30,19 @@ export function BlockCard({ block, plugin }: Readonly<BlockCardProps>) {
     <Card className="h-full p-5">
       <div className="flex h-full flex-col gap-4">
         <div className="flex items-center justify-between">
-          <Avatar className="size-10" style={{ backgroundColor: `${color}20`, color }}>
-            <AvatarFallback style={{ backgroundColor: `${color}20`, color }}>
+          <Avatar
+            className="size-10"
+            style={{
+              backgroundColor: `${color}20`,
+              color,
+            }}
+          >
+            <AvatarFallback
+              style={{
+                backgroundColor: `${color}20`,
+                color,
+              }}
+            >
               <DynamicIcon name={iconName} className="size-5" />
             </AvatarFallback>
           </Avatar>
@@ -53,7 +64,9 @@ export function BlockCard({ block, plugin }: Readonly<BlockCardProps>) {
 
         {plugin ? (
           <Link
-            to={routes.plugins.detail.to({ uid: plugin.uid })}
+            to={paths.plugins.detail.to({
+              uid: plugin.uid,
+            })}
             className="group/plugin -mx-2 -mb-2 flex items-center gap-2 rounded-lg p-2 transition-colors hover:bg-muted/50"
             onClick={(e) => e.stopPropagation()}
           >

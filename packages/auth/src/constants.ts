@@ -5,6 +5,6 @@
  * Canonical homes: scopes.ts, config.ts
  */
 
-export { SCOPES_REGISTRY } from './scopes';
-export { ROLE_SCOPES } from './roles';
 export { AUTH_DEFAULTS, getAuthConfig } from './config';
+export { ROLE_SCOPES } from './roles';
+export { SCOPES_REGISTRY } from './scopes';

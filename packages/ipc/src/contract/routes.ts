@@ -12,7 +12,12 @@ import { Json } from '../types';
 // Schemas
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const RouteMethod = z.enum(['GET', 'POST', 'PUT', 'DELETE']);
+export const RouteMethod = z.enum([
+  'GET',
+  'POST',
+  'PUT',
+  'DELETE',
+]);
 export type RouteMethod = z.infer<typeof RouteMethod>;
 
 export const RouteRequest = z.object({

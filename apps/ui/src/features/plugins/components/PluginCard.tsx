@@ -15,7 +15,7 @@ import {
 } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
 import { cn } from '@/lib/utils';
-import { routes } from '@/routes';
+import { paths } from '@/routes/paths';
 import { pluginsApi } from '../api';
 import type { UpdateInfo } from '../registry-api';
 import { PluginCardActions } from './PluginCardActions';
@@ -43,7 +43,10 @@ function getStatusStyle(status: PluginHealth): {
       };
     case 'crashed':
     case 'crash-loop':
-      return { variant: 'destructive', className: '' };
+      return {
+        variant: 'destructive',
+        className: '',
+      };
     case 'degraded':
     case 'incompatible':
       return {
@@ -58,13 +61,138 @@ function getStatusStyle(status: PluginHealth): {
         className: 'border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400',
       };
     default:
-      return { variant: 'secondary', className: '' };
+      return {
+        variant: 'secondary',
+        className: '',
+      };
   }
 }
 
 function isTransientStatus(status: PluginHealth) {
   return status === 'installing' || status === 'updating' || status === 'restarting';
 }
+
+/* ─── Extracted sub-components ──────────────────────────────────────────────── */
+
+function ActionButtonsOverlay({
+  hasUpdate,
+  updateInfo,
+  uid,
+  isBusy,
+  onUpdate,
+  onReload,
+  onDisable,
+  onKill,
+  t,
+}: Readonly<{
+  hasUpdate: boolean;
+  updateInfo: UpdateInfo | undefined;
+  uid: string;
+  isBusy: boolean;
+  onUpdate: () => void;
+  onReload: (uid: string) => void;
+  onDisable: (uid: string) => void;
+  onKill: (uid: string) => void;
+  t: (key: string) => string;
+}>) {
+  return (
+    <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+      {hasUpdate && updateInfo && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="size-7 text-blue-500 hover:bg-blue-500/10 hover:text-blue-600"
+              onClick={(e) => {
+                e.preventDefault();
+                onUpdate();
+              }}
+            >
+              <ArrowUp className="size-3.5" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{t('plugins:actions.update')}</TooltipContent>
+        </Tooltip>
+      )}
+      <PluginCardActions
+        uid={uid}
+        isBusy={isBusy}
+        onReload={onReload}
+        onDisable={onDisable}
+        onKill={onKill}
+      />
+    </div>
+  );
+}
+
+function CapabilityBadges({
+  plugin,
+  t,
+}: Readonly<{
+  plugin: Plugin;
+  t: (key: string, params?: Record<string, unknown>) => string;
+}>) {
+  return (
+    <div className="flex items-center gap-2">
+      {plugin.blocks.length > 0 && (
+        <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+          <Boxes className="size-3" />
+          <span>
+            {plugin.blocks.length} {t('workflows:blocks').toLowerCase()}
+          </span>
+        </div>
+      )}
+      {plugin.sparks.length > 0 && (
+        <div className="flex items-center gap-1 text-[11px] text-amber-600 dark:text-amber-400">
+          <Zap className="size-3" />
+          <span>
+            {plugin.sparks.length}{' '}
+            {t('common:items.spark', {
+              count: plugin.sparks.length,
+            }).toLowerCase()}
+          </span>
+        </div>
+      )}
+      {plugin.bricks.length > 0 && (
+        <div className="flex items-center gap-1 text-[11px] text-blue-600 dark:text-blue-400">
+          <LayoutDashboard className="size-3" />
+          <span>
+            {plugin.bricks.length}{' '}
+            {t('common:items.brick', {
+              count: plugin.bricks.length,
+            }).toLowerCase()}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PluginErrorDisplay({
+  error,
+  hasCapabilities,
+  t,
+}: Readonly<{
+  error: Plugin['lastError'];
+  hasCapabilities: boolean;
+  t: (key: string) => string;
+}>) {
+  if (!error) {
+    return null;
+  }
+
+  return (
+    <div className={cn('flex items-start gap-1.5', hasCapabilities && 'mt-2')}>
+      <AlertTriangle className="mt-px size-3 shrink-0 text-destructive" />
+      <span className="line-clamp-1 text-[11px] text-destructive leading-relaxed">
+        {formatPluginError(error, t)}
+      </span>
+    </div>
+  );
+}
+
+/* ─── Main component ────────────────────────────────────────────────────────── */
 
 export function PluginCard({
   plugin: p,
@@ -83,7 +211,11 @@ export function PluginCard({
 
   return (
     <>
-      <Link to={routes.plugins.detail.to({ uid: p.uid })}>
+      <Link
+        to={paths.plugins.detail.to({
+          uid: p.uid,
+        })}
+      >
         <Card interactive className="p-4">
           <div className="flex items-center gap-3">
             {/* Icon */}
@@ -136,76 +268,26 @@ export function PluginCard({
             </Badge>
 
             {/* Actions — visible on hover */}
-            <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-              {hasUpdate && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="size-7 text-blue-500 hover:bg-blue-500/10 hover:text-blue-600"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setUpdateDialogOpen(true);
-                      }}
-                    >
-                      <ArrowUp className="size-3.5" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>{t('plugins:actions.update')}</TooltipContent>
-                </Tooltip>
-              )}
-              <PluginCardActions
-                uid={p.uid}
-                isBusy={isBusy}
-                onReload={onReload}
-                onDisable={onDisable}
-                onKill={onKill}
-              />
-            </div>
+            <ActionButtonsOverlay
+              hasUpdate={hasUpdate}
+              updateInfo={updateInfo}
+              uid={p.uid}
+              isBusy={isBusy}
+              onUpdate={() => setUpdateDialogOpen(true)}
+              onReload={onReload}
+              onDisable={onDisable}
+              onKill={onKill}
+              t={t}
+            />
           </div>
 
           {/* Bottom row: capabilities + error */}
           {(hasCapabilities || (p.lastError && p.status !== 'incompatible')) && (
             <div className="mt-2.5 ml-13">
-              {hasCapabilities && (
-                <div className="flex items-center gap-2">
-                  {p.blocks.length > 0 && (
-                    <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                      <Boxes className="size-3" />
-                      <span>
-                        {p.blocks.length} {t('workflows:blocks').toLowerCase()}
-                      </span>
-                    </div>
-                  )}
-                  {p.sparks.length > 0 && (
-                    <div className="flex items-center gap-1 text-[11px] text-amber-600 dark:text-amber-400">
-                      <Zap className="size-3" />
-                      <span>
-                        {p.sparks.length}{' '}
-                        {t('common:items.spark', { count: p.sparks.length }).toLowerCase()}
-                      </span>
-                    </div>
-                  )}
-                  {p.bricks.length > 0 && (
-                    <div className="flex items-center gap-1 text-[11px] text-blue-600 dark:text-blue-400">
-                      <LayoutDashboard className="size-3" />
-                      <span>
-                        {p.bricks.length}{' '}
-                        {t('common:items.brick', { count: p.bricks.length }).toLowerCase()}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              )}
+              {hasCapabilities && <CapabilityBadges plugin={p} t={t} />}
 
-              {p.lastError && p.status !== 'incompatible' && (
-                <div className={cn('flex items-start gap-1.5', hasCapabilities && 'mt-2')}>
-                  <AlertTriangle className="mt-px size-3 shrink-0 text-destructive" />
-                  <span className="line-clamp-1 text-[11px] text-destructive leading-relaxed">
-                    {formatPluginError(p.lastError, t)}
-                  </span>
-                </div>
+              {p.status !== 'incompatible' && (
+                <PluginErrorDisplay error={p.lastError} hasCapabilities={hasCapabilities} t={t} />
               )}
             </div>
           )}

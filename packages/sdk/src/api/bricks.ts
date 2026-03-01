@@ -34,7 +34,10 @@ import { getContext } from '../context';
  * ```
  */
 export function defineBrick(spec: BrickTypeSpec, component: BrickComponent): CompiledBrickType {
-  const brick: CompiledBrickType = { spec, component };
+  const brick: CompiledBrickType = {
+    spec,
+    component,
+  };
 
   try {
     getContext().registerBrickType(brick);

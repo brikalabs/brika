@@ -40,13 +40,20 @@ export class BunMock {
   readonly #files = new Map<string, unknown>();
   readonly #directories = new Map<string, string[]>();
   readonly #resolves = new Map<string, string>();
-  #spawnConfig: SpawnConfig = { exitCode: 0 };
+  #spawnConfig: SpawnConfig = {
+    exitCode: 0,
+  };
   #fetchImpl: ((...args: Parameters<typeof fetch>) => ReturnType<typeof fetch>) | null = null;
   readonly #fetchDispatch = (...args: Parameters<typeof fetch>): ReturnType<typeof fetch> => {
-    if (!this.#fetchImpl) throw new Error('No fetch mock configured');
+    if (!this.#fetchImpl) {
+      throw new Error('No fetch mock configured');
+    }
     return this.#fetchImpl(...args);
   };
-  readonly #spawnCalls: Array<{ cmd: string[]; options?: unknown }> = [];
+  readonly #spawnCalls: Array<{
+    cmd: string[];
+    options?: unknown;
+  }> = [];
 
   #fileSpy: SpyInstance | null = null;
   #writeSpy: SpyInstance | null = null;
@@ -98,7 +105,7 @@ export class BunMock {
 
     // Third pass: infer parent directories from explicit directories
     for (const dirPath of explicitDirs.keys()) {
-      this.#inferDirectoriesFromPath(dirPath + '/_', explicitDirs);
+      this.#inferDirectoriesFromPath(`${dirPath}/_`, explicitDirs);
     }
 
     // Apply explicit directories (override inferred ones)
@@ -111,20 +118,23 @@ export class BunMock {
 
   #inferDirectoriesFromPath(path: string, explicitDirs: Map<string, string[]>): void {
     const parts = path.split('/').filter(Boolean);
-    const lastPart = parts.pop()!;
+    const lastPart = parts.pop() ?? '';
 
     // Build parent directories
     let currentPath = '';
     for (const part of parts) {
       const parentPath = currentPath;
-      currentPath = currentPath + '/' + part;
+      currentPath = `${currentPath}/${part}`;
 
       // Add this directory to its parent (if parent exists and not explicit)
       if (parentPath && !explicitDirs.has(parentPath)) {
-        const dirEntry = part + '/';
+        const dirEntry = `${part}/`;
         const existing = this.#directories.get(parentPath) ?? [];
         if (!existing.includes(dirEntry)) {
-          this.#directories.set(parentPath, [...existing, dirEntry]);
+          this.#directories.set(parentPath, [
+            ...existing,
+            dirEntry,
+          ]);
         }
       }
     }
@@ -133,7 +143,10 @@ export class BunMock {
     if (currentPath && !explicitDirs.has(currentPath) && !lastPart.startsWith('_')) {
       const existing = this.#directories.get(currentPath) ?? [];
       if (!existing.includes(lastPart)) {
-        this.#directories.set(currentPath, [...existing, lastPart]);
+        this.#directories.set(currentPath, [
+          ...existing,
+          lastPart,
+        ]);
       }
     }
   }
@@ -158,7 +171,10 @@ export class BunMock {
    * Configure spawn mock
    */
   spawn(config: SpawnConfig): this {
-    this.#spawnConfig = { ...this.#spawnConfig, ...config };
+    this.#spawnConfig = {
+      ...this.#spawnConfig,
+      ...config,
+    };
     return this;
   }
 
@@ -170,7 +186,9 @@ export class BunMock {
     this.#fetchImpl = impl;
     if (!this.#fetchSpy) {
       this.#fetchSpy = spyOn(globalThis, 'fetch').mockImplementation(
-        Object.assign(this.#fetchDispatch, { preconnect: this.#originalFetch.preconnect })
+        Object.assign(this.#fetchDispatch, {
+          preconnect: this.#originalFetch.preconnect,
+        })
       );
     }
     return this;
@@ -187,7 +205,10 @@ export class BunMock {
   /**
    * Get recorded spawn calls
    */
-  get spawnCalls(): ReadonlyArray<{ cmd: string[]; options?: unknown }> {
+  get spawnCalls(): ReadonlyArray<{
+    cmd: string[];
+    options?: unknown;
+  }> {
     return this.#spawnCalls;
   }
 
@@ -247,7 +268,9 @@ export class BunMock {
     this.#directories.clear();
     this.#resolves.clear();
     this.#spawnCalls.length = 0;
-    this.#spawnConfig = { exitCode: 0 };
+    this.#spawnConfig = {
+      exitCode: 0,
+    };
     this.#fetchImpl = null;
 
     return this;
@@ -261,11 +284,15 @@ export class BunMock {
       return {
         exists: () => Promise.resolve(files.has(p)),
         json: () => {
-          if (!files.has(p)) return Promise.reject(new Error(`ENOENT: ${p}`));
+          if (!files.has(p)) {
+            return Promise.reject(new Error(`ENOENT: ${p}`));
+          }
           return Promise.resolve(files.get(p));
         },
         text: () => {
-          if (!files.has(p)) return Promise.reject(new Error(`ENOENT: ${p}`));
+          if (!files.has(p)) {
+            return Promise.reject(new Error(`ENOENT: ${p}`));
+          }
           const content = files.get(p);
           return Promise.resolve(typeof content === 'string' ? content : JSON.stringify(content));
         },
@@ -293,8 +320,15 @@ export class BunMock {
     const spawnConfig = this.#spawnConfig;
 
     this.#spawnSpy = spyOn(Bun, 'spawn').mockImplementation(((cmd: unknown, options?: unknown) => {
-      const cmdArray = Array.isArray(cmd) ? cmd : [cmd];
-      spawnCalls.push({ cmd: cmdArray as string[], options });
+      const cmdArray = Array.isArray(cmd)
+        ? cmd
+        : [
+            cmd,
+          ];
+      spawnCalls.push({
+        cmd: cmdArray as string[],
+        options,
+      });
 
       return {
         pid: 12345,
@@ -324,7 +358,9 @@ export class BunMock {
 
     this.#resolveSyncSpy = spyOn(Bun, 'resolveSync').mockImplementation((pkg: string) => {
       const resolved = resolves.get(pkg);
-      if (resolved) return resolved;
+      if (resolved) {
+        return resolved;
+      }
       throw new Error(`Cannot resolve: ${pkg}`);
     });
   }
@@ -349,25 +385,37 @@ export class BunMock {
 
       *#iter(cwd: string) {
         for (const entry of directories.get(cwd) ?? []) {
-          if (this.#matches(entry)) yield entry;
+          if (this.#matches(entry)) {
+            yield entry;
+          }
         }
       }
 
       #matches(entry: string): boolean {
         const p = this.pattern;
-        if (p === '*/') return entry.endsWith('/');
-        if (p.startsWith('*.')) return entry.endsWith(p.slice(1));
-        if (p.includes('*')) return entry.includes(p.replaceAll('*', ''));
+        if (p === '*/') {
+          return entry.endsWith('/');
+        }
+        if (p.startsWith('*.')) {
+          return entry.endsWith(p.slice(1));
+        }
+        if (p.includes('*')) {
+          return entry.includes(p.replaceAll('*', ''));
+        }
         return entry === p;
       }
     } as unknown as typeof Bun.Glob;
   }
 
   #applyFetchMock(): void {
-    if (!this.#fetchImpl || this.#fetchSpy) return;
+    if (!this.#fetchImpl || this.#fetchSpy) {
+      return;
+    }
 
     this.#fetchSpy = spyOn(globalThis, 'fetch').mockImplementation(
-      Object.assign(this.#fetchDispatch, { preconnect: this.#originalFetch.preconnect })
+      Object.assign(this.#fetchDispatch, {
+        preconnect: this.#originalFetch.preconnect,
+      })
     );
   }
 }
@@ -375,7 +423,9 @@ export class BunMock {
 function createStream(content?: string): ReadableStream {
   return new ReadableStream({
     start(controller) {
-      if (content) controller.enqueue(new TextEncoder().encode(content));
+      if (content) {
+        controller.enqueue(new TextEncoder().encode(content));
+      }
       controller.close();
     },
   });

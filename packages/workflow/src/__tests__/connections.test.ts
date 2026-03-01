@@ -27,7 +27,10 @@ describe('isValidConnection', () => {
       const sourcePort = createInputPort('src', z.string());
       const targetPort = createInputPort('tgt', z.string());
 
-      const result = isValidConnection({ sourcePort, targetPort });
+      const result = isValidConnection({
+        sourcePort,
+        targetPort,
+      });
 
       expect(result.valid).toBe(false);
       if (!result.valid) {
@@ -39,7 +42,10 @@ describe('isValidConnection', () => {
       const sourcePort = createOutputPort('src', z.string());
       const targetPort = createOutputPort('tgt', z.string());
 
-      const result = isValidConnection({ sourcePort, targetPort });
+      const result = isValidConnection({
+        sourcePort,
+        targetPort,
+      });
 
       expect(result.valid).toBe(false);
       if (!result.valid) {
@@ -53,7 +59,10 @@ describe('isValidConnection', () => {
       const sourcePort = createOutputPort('src', z.string());
       const targetPort = createInputPort('tgt', z.string());
 
-      const result = isValidConnection({ sourcePort, targetPort });
+      const result = isValidConnection({
+        sourcePort,
+        targetPort,
+      });
 
       expect(result.valid).toBe(true);
     });
@@ -62,7 +71,10 @@ describe('isValidConnection', () => {
       const sourcePort = createOutputPort('src', z.number());
       const targetPort = createInputPort('tgt', z.number());
 
-      const result = isValidConnection({ sourcePort, targetPort });
+      const result = isValidConnection({
+        sourcePort,
+        targetPort,
+      });
 
       expect(result.valid).toBe(true);
     });
@@ -71,16 +83,34 @@ describe('isValidConnection', () => {
       const sourcePort = createOutputPort('src', z.boolean());
       const targetPort = createInputPort('tgt', z.boolean());
 
-      const result = isValidConnection({ sourcePort, targetPort });
+      const result = isValidConnection({
+        sourcePort,
+        targetPort,
+      });
 
       expect(result.valid).toBe(true);
     });
 
     test('accepts compatible object types', () => {
-      const sourcePort = createOutputPort('src', z.object({ name: z.string(), value: z.number() }));
-      const targetPort = createInputPort('tgt', z.object({ name: z.string(), value: z.number() }));
+      const sourcePort = createOutputPort(
+        'src',
+        z.object({
+          name: z.string(),
+          value: z.number(),
+        })
+      );
+      const targetPort = createInputPort(
+        'tgt',
+        z.object({
+          name: z.string(),
+          value: z.number(),
+        })
+      );
 
-      const result = isValidConnection({ sourcePort, targetPort });
+      const result = isValidConnection({
+        sourcePort,
+        targetPort,
+      });
 
       expect(result.valid).toBe(true);
     });
@@ -89,7 +119,10 @@ describe('isValidConnection', () => {
       const sourcePort = createOutputPort('src', z.array(z.string()));
       const targetPort = createInputPort('tgt', z.array(z.string()));
 
-      const result = isValidConnection({ sourcePort, targetPort });
+      const result = isValidConnection({
+        sourcePort,
+        targetPort,
+      });
 
       expect(result.valid).toBe(true);
     });
@@ -100,7 +133,10 @@ describe('isValidConnection', () => {
       const sourcePort = createOutputPort('src', z.string());
       const targetPort = createInputPort('tgt', z.number());
 
-      const result = isValidConnection({ sourcePort, targetPort });
+      const result = isValidConnection({
+        sourcePort,
+        targetPort,
+      });
 
       // The result depends on structural compatibility
       expect(typeof result.valid).toBe('boolean');
@@ -110,7 +146,10 @@ describe('isValidConnection', () => {
       const sourcePort = createOutputPort('src', z.unknown());
       const targetPort = createInputPort('tgt', z.string());
 
-      const result = isValidConnection({ sourcePort, targetPort });
+      const result = isValidConnection({
+        sourcePort,
+        targetPort,
+      });
 
       // unknown should be compatible with string (flexible typing)
       expect(result.valid).toBe(true);
@@ -122,7 +161,10 @@ describe('isValidConnection', () => {
       const sourcePort = createOutputPort('trigger', z.void());
       const targetPort = createInputPort('execute', z.void());
 
-      const result = isValidConnection({ sourcePort, targetPort });
+      const result = isValidConnection({
+        sourcePort,
+        targetPort,
+      });
 
       expect(result.valid).toBe(true);
     });

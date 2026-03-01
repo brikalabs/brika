@@ -48,33 +48,62 @@ describe('filterPackages', () => {
   });
 
   test('exact name match', () => {
-    const result = filterPackages(packages, ['@brika/sdk']);
-    expect(result.map((p) => p.name)).toEqual(['@brika/sdk']);
+    const result = filterPackages(packages, [
+      '@brika/sdk',
+    ]);
+    expect(result.map((p) => p.name)).toEqual([
+      '@brika/sdk',
+    ]);
   });
 
   test('substring match', () => {
-    const result = filterPackages(packages, ['hub']);
-    expect(result.map((p) => p.name)).toEqual(['@brika/hub']);
+    const result = filterPackages(packages, [
+      'hub',
+    ]);
+    expect(result.map((p) => p.name)).toEqual([
+      '@brika/hub',
+    ]);
   });
 
   test('glob match', () => {
-    const result = filterPackages(packages, ['@brika/*']);
-    expect(result.map((p) => p.name)).toEqual(['@brika/sdk', '@brika/hub', '@brika/ui']);
+    const result = filterPackages(packages, [
+      '@brika/*',
+    ]);
+    expect(result.map((p) => p.name)).toEqual([
+      '@brika/sdk',
+      '@brika/hub',
+      '@brika/ui',
+    ]);
   });
 
   test('multiple patterns are OR-ed', () => {
-    const result = filterPackages(packages, ['@brika/sdk', 'create-brika']);
-    expect(result.map((p) => p.name)).toEqual(['@brika/sdk', 'create-brika']);
+    const result = filterPackages(packages, [
+      '@brika/sdk',
+      'create-brika',
+    ]);
+    expect(result.map((p) => p.name)).toEqual([
+      '@brika/sdk',
+      'create-brika',
+    ]);
   });
 
   test('returns empty array when nothing matches', () => {
-    expect(filterPackages(packages, ['nonexistent'])).toEqual([]);
+    expect(
+      filterPackages(packages, [
+        'nonexistent',
+      ])
+    ).toEqual([]);
   });
 
   test('deduplicates when multiple patterns match same package', () => {
     // 'sdk' substring and '@brika/sdk' exact both match @brika/sdk
-    const result = filterPackages(packages, ['sdk', '@brika/sdk']);
-    expect(result.map((p) => p.name)).toEqual(['@brika/sdk']);
+    const result = filterPackages(packages, [
+      'sdk',
+      '@brika/sdk',
+    ]);
+    expect(result.map((p) => p.name)).toEqual([
+      '@brika/sdk',
+    ]);
   });
 });
 
@@ -90,32 +119,67 @@ describe('writeVersion', () => {
   });
 
   afterEach(async () => {
-    await rm(tmpDir, { recursive: true, force: true });
+    await rm(tmpDir, {
+      recursive: true,
+      force: true,
+    });
   });
 
   test('updates version field in package.json', async () => {
-    const pkgPath = await writePkg(tmpDir, { name: 'my-pkg', version: '1.0.0' });
+    const pkgPath = await writePkg(tmpDir, {
+      name: 'my-pkg',
+      version: '1.0.0',
+    });
     await writeVersion(pkgPath, '2.0.0');
-    const updated = (await Bun.file(pkgPath).json()) as { version: string };
+    const updated = (await Bun.file(pkgPath).json()) as {
+      version: string;
+    };
     expect(updated.version).toBe('2.0.0');
   });
 
   test('preserves other fields', async () => {
-    const pkgPath = await writePkg(tmpDir, { name: 'my-pkg', version: '1.0.0', private: true });
+    const pkgPath = await writePkg(tmpDir, {
+      name: 'my-pkg',
+      version: '1.0.0',
+      private: true,
+    });
     await writeVersion(pkgPath, '1.1.0');
-    const updated = (await Bun.file(pkgPath).json()) as { name: string; private: boolean };
+    const updated = (await Bun.file(pkgPath).json()) as {
+      name: string;
+      private: boolean;
+    };
     expect(updated.name).toBe('my-pkg');
     expect(updated.private).toBe(true);
   });
 
   test('handles patch, minor, and major bumps', async () => {
-    const pkgPath = await writePkg(tmpDir, { version: '0.1.2' });
+    const pkgPath = await writePkg(tmpDir, {
+      version: '0.1.2',
+    });
     await writeVersion(pkgPath, '0.1.3');
-    expect(((await Bun.file(pkgPath).json()) as { version: string }).version).toBe('0.1.3');
+    expect(
+      (
+        (await Bun.file(pkgPath).json()) as {
+          version: string;
+        }
+      ).version
+    ).toBe('0.1.3');
     await writeVersion(pkgPath, '0.2.0');
-    expect(((await Bun.file(pkgPath).json()) as { version: string }).version).toBe('0.2.0');
+    expect(
+      (
+        (await Bun.file(pkgPath).json()) as {
+          version: string;
+        }
+      ).version
+    ).toBe('0.2.0');
     await writeVersion(pkgPath, '1.0.0');
-    expect(((await Bun.file(pkgPath).json()) as { version: string }).version).toBe('1.0.0');
+    expect(
+      (
+        (await Bun.file(pkgPath).json()) as {
+          version: string;
+        }
+      ).version
+    ).toBe('1.0.0');
   });
 
   test('preserves existing spacing around version value', async () => {
@@ -142,47 +206,103 @@ describe('applyVersionToPackages', () => {
   });
 
   afterEach(async () => {
-    await rm(tmpDir, { recursive: true, force: true });
+    await rm(tmpDir, {
+      recursive: true,
+      force: true,
+    });
   });
 
   test('writes version when not dry-run', async () => {
-    const pkgPath = await writePkg(tmpDir, { name: 'a', version: '1.0.0' });
-    const pkg = makePackage('a', { path: pkgPath });
+    const pkgPath = await writePkg(tmpDir, {
+      name: 'a',
+      version: '1.0.0',
+    });
+    const pkg = makePackage('a', {
+      path: pkgPath,
+    });
 
-    await applyVersionToPackages([pkg], '2.0.0', false);
+    await applyVersionToPackages(
+      [
+        pkg,
+      ],
+      '2.0.0',
+      false
+    );
 
-    const updated = (await Bun.file(pkgPath).json()) as { version: string };
+    const updated = (await Bun.file(pkgPath).json()) as {
+      version: string;
+    };
     expect(updated.version).toBe('2.0.0');
   });
 
   test('does not write files in dry-run mode', async () => {
-    const pkgPath = await writePkg(tmpDir, { name: 'a', version: '1.0.0' });
-    const pkg = makePackage('a', { path: pkgPath });
+    const pkgPath = await writePkg(tmpDir, {
+      name: 'a',
+      version: '1.0.0',
+    });
+    const pkg = makePackage('a', {
+      path: pkgPath,
+    });
 
-    await applyVersionToPackages([pkg], '2.0.0', true);
+    await applyVersionToPackages(
+      [
+        pkg,
+      ],
+      '2.0.0',
+      true
+    );
 
-    const unchanged = (await Bun.file(pkgPath).json()) as { version: string };
+    const unchanged = (await Bun.file(pkgPath).json()) as {
+      version: string;
+    };
     expect(unchanged.version).toBe('1.0.0');
   });
 
   test('returns the input packages', async () => {
-    const pkgPath = await writePkg(tmpDir, { name: 'a', version: '1.0.0' });
-    const pkg = makePackage('a', { path: pkgPath });
+    const pkgPath = await writePkg(tmpDir, {
+      name: 'a',
+      version: '1.0.0',
+    });
+    const pkg = makePackage('a', {
+      path: pkgPath,
+    });
 
-    const result = await applyVersionToPackages([pkg], '2.0.0');
-    expect(result).toEqual([pkg]);
+    const result = await applyVersionToPackages(
+      [
+        pkg,
+      ],
+      '2.0.0'
+    );
+    expect(result).toEqual([
+      pkg,
+    ]);
   });
 
   test('applies version to multiple packages', async () => {
     const paths = await Promise.all(
-      ['a', 'b', 'c'].map((n) => writePkg(tmpDir, { name: n, version: '1.0.0' }))
+      [
+        'a',
+        'b',
+        'c',
+      ].map((n) =>
+        writePkg(tmpDir, {
+          name: n,
+          version: '1.0.0',
+        })
+      )
     );
-    const pkgs = paths.map((p, i) => makePackage(String.fromCharCode(97 + i), { path: p }));
+    const pkgs = paths.map((p, i) =>
+      makePackage(String.fromCharCode(97 + i), {
+        path: p,
+      })
+    );
 
     await applyVersionToPackages(pkgs, '3.0.0');
 
     for (const p of paths) {
-      const updated = (await Bun.file(p).json()) as { version: string };
+      const updated = (await Bun.file(p).json()) as {
+        version: string;
+      };
       expect(updated.version).toBe('3.0.0');
     }
   });
@@ -200,20 +320,32 @@ describe('discoverPackages', () => {
   });
 
   afterEach(async () => {
-    await rm(tmpDir, { recursive: true, force: true });
+    await rm(tmpDir, {
+      recursive: true,
+      force: true,
+    });
   });
 
   async function setup(root: object, workspacePackages: Record<string, object>): Promise<void> {
     await writePkg(tmpDir, root);
     for (const [rel, pkg] of Object.entries(workspacePackages)) {
       const dir = join(tmpDir, rel);
-      await mkdir(dir, { recursive: true });
+      await mkdir(dir, {
+        recursive: true,
+      });
       await writePkg(dir, pkg);
     }
   }
 
   test('includes root package when it has a version', async () => {
-    await setup({ name: 'my-root', version: '1.0.0', workspaces: [] }, {});
+    await setup(
+      {
+        name: 'my-root',
+        version: '1.0.0',
+        workspaces: [],
+      },
+      {}
+    );
     const pkgs = await discoverPackages(tmpDir);
     expect(pkgs[0]?.name).toBe('my-root');
     expect(pkgs[0]?.relativePath).toBe('package.json');
@@ -221,9 +353,17 @@ describe('discoverPackages', () => {
 
   test('omits root when it has no version', async () => {
     await setup(
-      { name: 'my-root', workspaces: ['packages/*'] },
       {
-        'packages/a': { name: '@scope/a', version: '0.1.0' },
+        name: 'my-root',
+        workspaces: [
+          'packages/*',
+        ],
+      },
+      {
+        'packages/a': {
+          name: '@scope/a',
+          version: '0.1.0',
+        },
       }
     );
     const pkgs = await discoverPackages(tmpDir);
@@ -232,10 +372,22 @@ describe('discoverPackages', () => {
 
   test('discovers workspace packages', async () => {
     await setup(
-      { name: 'root', version: '1.0.0', workspaces: ['packages/*'] },
       {
-        'packages/alpha': { name: '@scope/alpha', version: '0.1.0' },
-        'packages/beta': { name: '@scope/beta', version: '0.2.0' },
+        name: 'root',
+        version: '1.0.0',
+        workspaces: [
+          'packages/*',
+        ],
+      },
+      {
+        'packages/alpha': {
+          name: '@scope/alpha',
+          version: '0.1.0',
+        },
+        'packages/beta': {
+          name: '@scope/beta',
+          version: '0.2.0',
+        },
       }
     );
     const pkgs = await discoverPackages(tmpDir);
@@ -246,10 +398,21 @@ describe('discoverPackages', () => {
 
   test('skips workspace packages without a version', async () => {
     await setup(
-      { name: 'root', version: '1.0.0', workspaces: ['packages/*'] },
       {
-        'packages/no-ver': { name: 'no-version-pkg' },
-        'packages/has-ver': { name: 'has-version-pkg', version: '1.0.0' },
+        name: 'root',
+        version: '1.0.0',
+        workspaces: [
+          'packages/*',
+        ],
+      },
+      {
+        'packages/no-ver': {
+          name: 'no-version-pkg',
+        },
+        'packages/has-ver': {
+          name: 'has-version-pkg',
+          version: '1.0.0',
+        },
       }
     );
     const pkgs = await discoverPackages(tmpDir);
@@ -259,10 +422,24 @@ describe('discoverPackages', () => {
 
   test('sets isPrivate from private field', async () => {
     await setup(
-      { name: 'root', version: '1.0.0', workspaces: ['packages/*'] },
       {
-        'packages/pub': { name: 'pub', version: '1.0.0', private: false },
-        'packages/priv': { name: 'priv', version: '1.0.0', private: true },
+        name: 'root',
+        version: '1.0.0',
+        workspaces: [
+          'packages/*',
+        ],
+      },
+      {
+        'packages/pub': {
+          name: 'pub',
+          version: '1.0.0',
+          private: false,
+        },
+        'packages/priv': {
+          name: 'priv',
+          version: '1.0.0',
+          private: true,
+        },
       }
     );
     const pkgs = await discoverPackages(tmpDir);
@@ -272,8 +449,19 @@ describe('discoverPackages', () => {
 
   test('defaults isPrivate to false when field is absent', async () => {
     await setup(
-      { name: 'root', version: '1.0.0', workspaces: ['packages/*'] },
-      { 'packages/a': { name: 'a', version: '1.0.0' } }
+      {
+        name: 'root',
+        version: '1.0.0',
+        workspaces: [
+          'packages/*',
+        ],
+      },
+      {
+        'packages/a': {
+          name: 'a',
+          version: '1.0.0',
+        },
+      }
     );
     const pkgs = await discoverPackages(tmpDir);
     expect(pkgs.find((p) => p.name === 'a')?.isPrivate).toBe(false);

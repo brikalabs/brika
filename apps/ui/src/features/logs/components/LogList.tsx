@@ -21,7 +21,7 @@ export function LogList({ logs, isLoading, isFetchingMore, hasMore, onLoadMore }
 
   // Intersection observer for infinite scroll
   useEffect(() => {
-    if (!loadMoreRef.current || !onLoadMore || !hasMore) return;
+    if (!loadMoreRef.current || !onLoadMore || !hasMore) { return; }
 
     const observer = new IntersectionObserver(
       (entries) => {

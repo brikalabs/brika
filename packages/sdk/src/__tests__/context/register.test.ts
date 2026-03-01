@@ -25,7 +25,9 @@ describe('registerContextModule and initAllModules', () => {
     // Register a test module that provides methods
     const greetFn = () => 'hello';
     const setup: SetupFn = () => ({
-      methods: { greet: greetFn },
+      methods: {
+        greet: greetFn,
+      },
     });
     registerContextModule('test-greet', setup);
 
@@ -57,7 +59,7 @@ describe('registerContextModule and initAllModules', () => {
     expect(stopFns.length).toBeGreaterThan(0);
 
     // The last stop function should be ours
-    const lastStop = stopFns[stopFns.length - 1]!;
+    const lastStop = stopFns[stopFns.length - 1] ?? (() => {});
     lastStop();
     expect(stopFn).toHaveBeenCalledTimes(1);
   });
@@ -76,7 +78,9 @@ describe('registerContextModule and initAllModules', () => {
   test('methods are callable on the target', () => {
     const addFn = mock((a: number, b: number) => a + b);
     const setup: SetupFn = () => ({
-      methods: { add: addFn },
+      methods: {
+        add: addFn,
+      },
     });
     registerContextModule('test-add', setup);
 

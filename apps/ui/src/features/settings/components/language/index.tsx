@@ -21,7 +21,10 @@ export function LanguageSelector() {
   const { locale, changeLocale, getLanguageName, t } = useLocale();
   const { data: locales, isLoading } = useAvailableLocales();
 
-  const View = useDataView({ data: locales, isLoading });
+  const View = useDataView({
+    data: locales,
+    isLoading,
+  });
 
   return (
     <View.Root>

@@ -2,13 +2,13 @@
  * @brika/auth - AuthService Tests
  */
 
-import { describe, it, expect, beforeEach, vi } from 'bun:test';
-import { container } from '@brika/di';
+import { beforeEach, describe, expect, it, vi } from 'bun:test';
+import { provide, useTestBed } from '@brika/di/testing';
 import { AuthService } from '../services/AuthService';
-import { SessionService } from '../services/SessionService';
 import { ScopeService } from '../services/ScopeService';
+import { SessionService } from '../services/SessionService';
+import { UserService } from '../services/UserService';
 import { Role, Scope } from '../types';
-
 
 describe('AuthService', () => {
   let authService: AuthService;
@@ -28,17 +28,16 @@ describe('AuthService', () => {
     revokeSession: ReturnType<typeof vi.fn>;
     revokeAllUserSessions: ReturnType<typeof vi.fn>;
     listUserSessions: ReturnType<typeof vi.fn>;
+    cleanExpiredSessions: ReturnType<typeof vi.fn>;
     getSessionTTL: ReturnType<typeof vi.fn>;
   };
 
-  beforeEach(() => {
-    container.clearInstances();
-
+  useTestBed(() => {
     mockUserService = {
       createUser: vi.fn(),
       getUser: vi.fn(),
       getUserByEmail: vi.fn(),
-      listUsers: vi.fn().mockResolvedValue([]),
+      listUsers: vi.fn().mockReturnValue([]),
       deleteUser: vi.fn(),
       setPassword: vi.fn(),
       verifyPassword: vi.fn(),
@@ -51,18 +50,20 @@ describe('AuthService', () => {
       revokeSession: vi.fn(),
       revokeAllUserSessions: vi.fn(),
       listUserSessions: vi.fn().mockReturnValue([]),
+      cleanExpiredSessions: vi.fn().mockReturnValue(0),
       getSessionTTL: vi.fn().mockReturnValue(604800),
     };
 
-    container.register(SessionService, { useValue: mockSessionService });
-    container.register(ScopeService, { useClass: ScopeService });
+    provide(SessionService, mockSessionService);
+    provide(ScopeService, new ScopeService());
+    provide(UserService, mockUserService);
 
-    authService = new AuthService(mockUserService as never);
+    authService = new AuthService();
   });
 
   describe('login', () => {
     it('should login with valid credentials and return session token', async () => {
-      mockUserService.getUserByEmail.mockResolvedValueOnce({
+      mockUserService.getUserByEmail.mockReturnValueOnce({
         id: '1',
         email: 'test@example.com',
         name: 'Test User',
@@ -87,52 +88,52 @@ describe('AuthService', () => {
     });
 
     it('should reject invalid email', async () => {
-      mockUserService.getUserByEmail.mockResolvedValueOnce(null);
+      mockUserService.getUserByEmail.mockReturnValueOnce(null);
 
-      expect(authService.login('nonexistent@example.com', 'password')).rejects.toThrow(
+      await expect(authService.login('nonexistent@example.com', 'password')).rejects.toThrow(
         'Invalid credentials'
       );
     });
 
     it('should reject invalid password', async () => {
-      mockUserService.getUserByEmail.mockResolvedValueOnce({
+      mockUserService.getUserByEmail.mockReturnValueOnce({
         id: '1',
         email: 'test@example.com',
       });
 
       mockUserService.verifyPassword.mockResolvedValueOnce(false);
 
-      expect(authService.login('test@example.com', 'wrongpassword')).rejects.toThrow(
+      await expect(authService.login('test@example.com', 'wrongpassword')).rejects.toThrow(
         'Invalid credentials'
       );
     });
   });
 
   describe('logout', () => {
-    it('should revoke session by ID', async () => {
-      await authService.logout('session-123');
+    it('should revoke session by ID', () => {
+      authService.logout('session-123');
       expect(mockSessionService.revokeSession).toHaveBeenCalledWith('session-123');
     });
   });
 
   describe('getCurrentUser', () => {
-    it('should get user by ID', async () => {
-      mockUserService.getUser.mockResolvedValueOnce({
+    it('should get user by ID', () => {
+      mockUserService.getUser.mockReturnValueOnce({
         id: '1',
         email: 'test@example.com',
         name: 'Test User',
         role: Role.USER,
       });
 
-      const user = await authService.getCurrentUser('1');
+      const user = authService.getCurrentUser('1');
       expect(user?.email).toBe('test@example.com');
       expect(mockUserService.getUser).toHaveBeenCalledWith('1');
     });
 
-    it('should return null for unknown user', async () => {
-      mockUserService.getUser.mockResolvedValueOnce(null);
+    it('should return null for unknown user', () => {
+      mockUserService.getUser.mockReturnValueOnce(null);
 
-      const user = await authService.getCurrentUser('unknown');
+      const user = authService.getCurrentUser('unknown');
       expect(user).toBeNull();
     });
   });

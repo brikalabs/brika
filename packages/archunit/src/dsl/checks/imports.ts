@@ -20,7 +20,11 @@ registerCheck('notImportFrom', (pattern: RegExp, description?: string) => {
         const imported = match[1];
         if (imported && pattern.test(imported)) {
           const line = content.substring(0, match.index).split('\n').length;
-          return { file, line, message: `Forbidden import: ${imported}` };
+          return {
+            file,
+            line,
+            message: `Forbidden import: ${imported}`,
+          };
         }
       }
     },
@@ -36,7 +40,11 @@ registerCheck('onlyImportFrom', (pattern: RegExp, description?: string) => {
         const imported = match[1];
         if (imported && !pattern.test(imported)) {
           const line = content.substring(0, match.index).split('\n').length;
-          return { file, line, message: `Import not allowed: ${imported}` };
+          return {
+            file,
+            line,
+            message: `Import not allowed: ${imported}`,
+          };
         }
       }
     },
@@ -50,7 +58,10 @@ registerCheck('haveExportsMatching', (pattern: RegExp, description?: string) => 
     check: (_, file, content) => {
       for (const [, name] of content.matchAll(/export\s+(?:function|const|class)\s+(\w+)/g)) {
         if (name && !pattern.test(name)) {
-          return { file, message: `Export "${name}" doesn't match` };
+          return {
+            file,
+            message: `Export "${name}" doesn't match`,
+          };
         }
       }
     },

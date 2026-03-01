@@ -16,7 +16,7 @@ export function LogDateRangeFilter({
   const { t } = useLocale();
 
   const formatDateForInput = (date: Date | null): string => {
-    if (!date) return "";
+    if (!date) { return ""; }
     // Format as local datetime string for datetime-local input
     const offset = date.getTimezoneOffset();
     const local = new Date(date.getTime() - offset * 60 * 1000);

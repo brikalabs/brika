@@ -23,10 +23,16 @@ export interface AvatarNode extends BaseNode {
 }
 
 export function Avatar(
-  props: Omit<AvatarNode, 'type' | 'onPress'> & { onPress?: ActionHandler }
+  props: Omit<AvatarNode, 'type' | 'onPress'> & {
+    onPress?: ActionHandler;
+  }
 ): AvatarNode {
   const { onPress, ...rest } = props;
-  return { type: 'avatar', ...rest, onPress: onPress ? resolveAction(onPress) : undefined };
+  return {
+    type: 'avatar',
+    ...rest,
+    onPress: onPress ? resolveAction(onPress) : undefined,
+  };
 }
 
 declare module './_shared' {

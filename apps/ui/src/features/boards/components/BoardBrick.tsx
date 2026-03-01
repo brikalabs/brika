@@ -19,11 +19,20 @@ interface BrickErrorBoundaryState {
   error: Error | null;
 }
 
-class BrickErrorBoundary extends Component<{ children: ReactNode }, BrickErrorBoundaryState> {
-  state: BrickErrorBoundaryState = { error: null };
+class BrickErrorBoundary extends Component<
+  {
+    children: ReactNode;
+  },
+  BrickErrorBoundaryState
+> {
+  state: BrickErrorBoundaryState = {
+    error: null,
+  };
 
   static getDerivedStateFromError(error: Error) {
-    return { error };
+    return {
+      error,
+    };
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
@@ -89,16 +98,29 @@ export const BoardBrick = memo(function BoardBrick({ instanceId, brickTypeId }: 
 
   const handleAction = useCallback(
     (actionId: string, payload?: Record<string, unknown>) => {
-      sendAction({ instanceId, actionId, payload });
+      sendAction({
+        instanceId,
+        actionId,
+        payload,
+      });
     },
-    [instanceId, sendAction]
+    [
+      instanceId,
+      sendAction,
+    ]
   );
 
   return (
     <div className="group/brick relative flex h-full flex-col overflow-hidden rounded-2xl bg-card shadow-sm ring-1 ring-border/50 transition-shadow hover:shadow-md">
       {/* Header — drag handle + single action button */}
       <div className="drag-handle flex shrink-0 cursor-grab items-center gap-1.5 px-2.5 pt-2 pb-0 active:cursor-grabbing">
-        <DynamicIcon name={iconName} className="size-3.5 shrink-0" style={{ color }} />
+        <DynamicIcon
+          name={iconName}
+          className="size-3.5 shrink-0"
+          style={{
+            color,
+          }}
+        />
         <span className="min-w-0 flex-1 truncate font-semibold text-foreground/80 text-xs">
           {displayName}
         </span>

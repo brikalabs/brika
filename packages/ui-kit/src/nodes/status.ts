@@ -10,7 +10,10 @@ export interface StatusNode extends BaseNode {
 }
 
 export function Status(props: Omit<StatusNode, 'type'>): StatusNode {
-  return { type: 'status', ...props };
+  return {
+    type: 'status',
+    ...props,
+  };
 }
 
 declare module './_shared' {

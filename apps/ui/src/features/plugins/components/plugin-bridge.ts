@@ -26,5 +26,9 @@ globalThis.__brika ??= {
   jsx: jsxRuntime,
   ui: UIComponents,
   icons: LucideIcons,
-  hooks: { useLocale: usePluginLocale, useAction: usePluginAction, callAction: pluginCallAction },
+  hooks: {
+    useLocale: usePluginLocale,
+    useAction: usePluginAction,
+    callAction: pluginCallAction,
+  },
 };

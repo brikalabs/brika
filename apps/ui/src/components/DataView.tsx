@@ -70,36 +70,75 @@ export function createDataView<T>() {
 
   function Root({ data, isLoading, isEmpty: isEmptyFn, children }: Readonly<DataViewRootProps<T>>) {
     const isEmpty = useMemo(() => {
-      if (data === undefined) return true;
-      if (isEmptyFn) return isEmptyFn(data);
-      if (Array.isArray(data)) return data.length === 0;
+      if (data === undefined) {
+        return true;
+      }
+      if (isEmptyFn) {
+        return isEmptyFn(data);
+      }
+      if (Array.isArray(data)) {
+        return data.length === 0;
+      }
       return !data;
-    }, [data, isEmptyFn]);
+    }, [
+      data,
+      isEmptyFn,
+    ]);
 
-    const contextValue = useMemo(() => ({ data, isLoading, isEmpty }), [data, isLoading, isEmpty]);
+    const contextValue = useMemo(
+      () => ({
+        data,
+        isLoading,
+        isEmpty,
+      }),
+      [
+        data,
+        isLoading,
+        isEmpty,
+      ]
+    );
 
     return <Context.Provider value={contextValue}>{children}</Context.Provider>;
   }
 
-  function Skeleton({ children }: Readonly<{ children: ReactNode }>) {
+  function Skeleton({
+    children,
+  }: Readonly<{
+    children: ReactNode;
+  }>) {
     const { isLoading } = useDataViewContext();
-    if (!isLoading) return null;
+    if (!isLoading) {
+      return null;
+    }
     return <>{children}</>;
   }
 
-  function Empty({ children }: Readonly<{ children: ReactNode }>) {
+  function Empty({
+    children,
+  }: Readonly<{
+    children: ReactNode;
+  }>) {
     const { isLoading, isEmpty } = useDataViewContext();
-    if (isLoading || !isEmpty) return null;
+    if (isLoading || !isEmpty) {
+      return null;
+    }
     return <>{children}</>;
   }
 
   function Content({ children }: Readonly<DataViewContentProps<T>>) {
     const { data, isLoading, isEmpty } = useDataViewContext();
-    if (isLoading || isEmpty || data === undefined) return null;
+    if (isLoading || isEmpty || data === undefined) {
+      return null;
+    }
     return <>{children(data)}</>;
   }
 
-  return { Root, Skeleton, Empty, Content };
+  return {
+    Root,
+    Skeleton,
+    Empty,
+    Content,
+  };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -153,27 +192,58 @@ export function useDataView<T>({ data, isLoading, isEmpty: isEmptyFn }: UseDataV
     }
 
     // Simple components that use closure over the options
-    function Root({ children }: Readonly<{ children: ReactNode }>) {
+    function Root({
+      children,
+    }: Readonly<{
+      children: ReactNode;
+    }>) {
       return <>{children}</>;
     }
 
-    function Skeleton({ children }: Readonly<{ children: ReactNode }>) {
-      if (!isLoading) return null;
+    function Skeleton({
+      children,
+    }: Readonly<{
+      children: ReactNode;
+    }>) {
+      if (!isLoading) {
+        return null;
+      }
       return <>{children}</>;
     }
 
-    function Empty({ children }: Readonly<{ children: ReactNode }>) {
-      if (isLoading || !computedIsEmpty) return null;
+    function Empty({
+      children,
+    }: Readonly<{
+      children: ReactNode;
+    }>) {
+      if (isLoading || !computedIsEmpty) {
+        return null;
+      }
       return <>{children}</>;
     }
 
-    function Content({ children }: Readonly<{ children: (data: T) => ReactNode }>) {
-      if (isLoading || computedIsEmpty || data === undefined) return null;
+    function Content({
+      children,
+    }: Readonly<{
+      children: (data: T) => ReactNode;
+    }>) {
+      if (isLoading || computedIsEmpty || data === undefined) {
+        return null;
+      }
       return <>{children(data)}</>;
     }
 
-    return { Root, Skeleton, Empty, Content };
-  }, [data, isLoading, isEmptyFn]);
+    return {
+      Root,
+      Skeleton,
+      Empty,
+      Content,
+    };
+  }, [
+    data,
+    isLoading,
+    isEmptyFn,
+  ]);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

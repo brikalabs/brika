@@ -67,7 +67,9 @@ describe('PluginChannel', () => {
 
   describe('properties', () => {
     test('pid returns process pid', () => {
-      const proc = createMockProcess({ pid: 54321 });
+      const proc = createMockProcess({
+        pid: 54321,
+      });
       const channel = new PluginChannel(proc);
 
       expect(channel.pid).toBe(54321);
@@ -122,7 +124,10 @@ describe('PluginChannel', () => {
 
       await channel.channel.handle({
         t: 'hello',
-        plugin: { id: 'test', version: '1.0.0' },
+        plugin: {
+          id: 'test',
+          version: '1.0.0',
+        },
       } as WireMessage);
 
       expect(received).toHaveLength(1);
@@ -139,7 +144,10 @@ describe('PluginChannel', () => {
 
       await channel.channel.handle({
         t: 'hello',
-        plugin: { id: 'test', version: '1.0.0' },
+        plugin: {
+          id: 'test',
+          version: '1.0.0',
+        },
       } as WireMessage);
 
       expect(handler).toHaveBeenCalledTimes(1);
@@ -155,7 +163,10 @@ describe('PluginChannel', () => {
       // First message should trigger handler
       await channel.channel.handle({
         t: 'hello',
-        plugin: { id: 'test1', version: '1.0.0' },
+        plugin: {
+          id: 'test1',
+          version: '1.0.0',
+        },
       } as WireMessage);
 
       // Unsubscribe
@@ -164,7 +175,10 @@ describe('PluginChannel', () => {
       // Second message should not trigger handler
       await channel.channel.handle({
         t: 'hello',
-        plugin: { id: 'test2', version: '1.0.0' },
+        plugin: {
+          id: 'test2',
+          version: '1.0.0',
+        },
       } as WireMessage);
 
       expect(handler).toHaveBeenCalledTimes(1);
@@ -179,7 +193,9 @@ describe('PluginChannel', () => {
       });
       const channel = new PluginChannel(proc);
 
-      channel.implement(ping, ({ ts }) => ({ ts }));
+      channel.implement(ping, ({ ts }) => ({
+        ts,
+      }));
 
       await channel.channel.handle({
         t: 'ping',
@@ -230,7 +246,9 @@ describe('PluginChannel', () => {
     test('calls onDisconnect callback', () => {
       const proc = createMockProcess();
       const onDisconnect = mock(() => undefined);
-      const channel = new PluginChannel(proc, { onDisconnect });
+      const channel = new PluginChannel(proc, {
+        onDisconnect,
+      });
 
       channel.kill();
 
@@ -246,7 +264,9 @@ describe('PluginChannel', () => {
         exitCode: 1,
         exitDelay: 10,
       });
-      const channel = new PluginChannel(proc, { onDisconnect });
+      const channel = new PluginChannel(proc, {
+        onDisconnect,
+      });
 
       // Wait for process to "exit"
       await new Promise((resolve) => setTimeout(resolve, 50));
@@ -275,7 +295,9 @@ describe('PluginChannel', () => {
     test('disconnect is idempotent', () => {
       const proc = createMockProcess();
       const onDisconnect = mock(() => undefined);
-      const channel = new PluginChannel(proc, { onDisconnect });
+      const channel = new PluginChannel(proc, {
+        onDisconnect,
+      });
 
       channel.kill();
       channel.kill();
@@ -301,11 +323,17 @@ describe('PluginChannel', () => {
       expect(sentMessages[0]?.t).toBe('ping');
 
       // Simulate response
-      const requestId = (sentMessages[0] as { _id?: number })?._id;
+      const requestId = (
+        sentMessages[0] as {
+          _id?: number;
+        }
+      )?._id;
       channel.handle({
         t: 'pingResult',
         _id: requestId,
-        result: { ts: Date.now() },
+        result: {
+          ts: Date.now(),
+        },
       } as unknown as WireMessage);
 
       const latency = await pingPromise;
@@ -332,29 +360,49 @@ describe('PluginChannel', () => {
       const channel = new PluginChannel(proc);
 
       // Start call
-      const callPromise = channel.call(ping, { ts: Date.now() }, 50);
+      const callPromise = channel.call(
+        ping,
+        {
+          ts: Date.now(),
+        },
+        50
+      );
 
       // Verify call was sent
       expect(sentMessages.some((m) => m.t === 'ping')).toBeTrue();
 
       // Simulate response
       const requestMsg = sentMessages.find((m) => m.t === 'ping');
-      const requestId = (requestMsg as { _id?: number })?._id;
+      const requestId = (
+        requestMsg as {
+          _id?: number;
+        }
+      )?._id;
       channel.handle({
         t: 'pingResult',
         _id: requestId,
-        result: { ts: 123456 },
+        result: {
+          ts: 123456,
+        },
       } as unknown as WireMessage);
 
       const result = await callPromise;
-      expect(result).toMatchObject({ ts: 123456 });
+      expect(result).toMatchObject({
+        ts: 123456,
+      });
     });
 
     test('times out if no response', async () => {
       const proc = createMockProcess();
       const channel = new PluginChannel(proc);
 
-      const callPromise = channel.call(ping, { ts: Date.now() }, 10);
+      const callPromise = channel.call(
+        ping,
+        {
+          ts: Date.now(),
+        },
+        10
+      );
 
       await expect(callPromise).rejects.toThrow();
     });
@@ -369,7 +417,9 @@ describe('PluginChannel', () => {
       });
 
       const onDisconnect = mock(() => undefined);
-      const channel = new PluginChannel(proc, { onDisconnect });
+      const channel = new PluginChannel(proc, {
+        onDisconnect,
+      });
 
       // Try to send - should not throw
       expect(() => channel.send(ready, {})).not.toThrow();
@@ -400,7 +450,9 @@ describe('PluginChannel', () => {
         exitCode: 127,
         exitDelay: 10,
       });
-      const _channel = new PluginChannel(proc, { onDisconnect });
+      const _channel = new PluginChannel(proc, {
+        onDisconnect,
+      });
 
       // Wait for process to "exit"
       await new Promise((resolve) => setTimeout(resolve, 50));
@@ -437,7 +489,9 @@ describe('PluginChannel', () => {
         exited: new Promise<number>(() => {}),
       } as unknown as ReturnType<typeof Bun.spawn>;
 
-      const _channel = new PluginChannel(proc, { onStderr });
+      const _channel = new PluginChannel(proc, {
+        onStderr,
+      });
 
       // Wait for async stderr reading to complete
       await new Promise((resolve) => setTimeout(resolve, 50));
@@ -467,7 +521,9 @@ describe('PluginChannel', () => {
         exited: new Promise<number>((resolve) => setTimeout(() => resolve(1), 60)),
       } as unknown as ReturnType<typeof Bun.spawn>;
 
-      const _channel = new PluginChannel(proc, { onDisconnect });
+      const _channel = new PluginChannel(proc, {
+        onDisconnect,
+      });
 
       // Wait for stderr reading and process exit
       await new Promise((resolve) => setTimeout(resolve, 120));
@@ -502,7 +558,9 @@ describe('PluginChannel', () => {
         exited: new Promise<number>(() => {}),
       } as unknown as ReturnType<typeof Bun.spawn>;
 
-      const _channel = new PluginChannel(proc, { onStderr });
+      const _channel = new PluginChannel(proc, {
+        onStderr,
+      });
 
       await new Promise((resolve) => setTimeout(resolve, 50));
 
@@ -514,7 +572,12 @@ describe('PluginChannel', () => {
 
       // Send more than 20 lines
       const encoder = new TextEncoder();
-      const lines = Array.from({ length: 30 }, (_, i) => `line ${i + 1}`).join('\n') + '\n';
+      const lines = `${Array.from(
+        {
+          length: 30,
+        },
+        (_, i) => `line ${i + 1}`
+      ).join('\n')}\n`;
       const stderrStream = new ReadableStream<Uint8Array>({
         start(controller) {
           controller.enqueue(encoder.encode(lines));
@@ -533,7 +596,9 @@ describe('PluginChannel', () => {
         exited: new Promise<number>((resolve) => setTimeout(() => resolve(1), 60)),
       } as unknown as ReturnType<typeof Bun.spawn>;
 
-      const _channel = new PluginChannel(proc, { onDisconnect });
+      const _channel = new PluginChannel(proc, {
+        onDisconnect,
+      });
 
       // Wait for stderr and process exit
       await new Promise((resolve) => setTimeout(resolve, 120));
@@ -569,11 +634,16 @@ describe('PluginChannel', () => {
         exited: new Promise<number>(() => {}),
       } as unknown as ReturnType<typeof Bun.spawn>;
 
-      const _channel = new PluginChannel(proc, { onStderr });
+      const _channel = new PluginChannel(proc, {
+        onStderr,
+      });
 
       await new Promise((resolve) => setTimeout(resolve, 50));
 
-      expect(stderrLines).toEqual(['real line', 'another real line']);
+      expect(stderrLines).toEqual([
+        'real line',
+        'another real line',
+      ]);
     });
   });
 });

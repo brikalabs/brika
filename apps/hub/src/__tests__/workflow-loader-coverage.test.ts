@@ -33,7 +33,9 @@ import type { Workflow } from '@/runtime/workflows/types';
 import { WorkflowEngine } from '@/runtime/workflows/workflow-engine';
 import { WorkflowLoader } from '@/runtime/workflows/workflow-loader';
 
-useTestBed({ autoStub: false });
+useTestBed({
+  autoStub: false,
+});
 
 const TEST_DIR = join(import.meta.dir, '.test-workflow-loader-coverage');
 
@@ -50,7 +52,10 @@ function setupDI(): void {
       outputs: [],
       inputs: [],
       pluginId: 'test-plugin',
-      schema: { type: 'object' as const, properties: {} },
+      schema: {
+        type: 'object' as const,
+        properties: {},
+      },
     }),
     getPluginInfo: mockGetPluginInfo,
   });
@@ -61,7 +66,10 @@ function setupDI(): void {
 }
 
 beforeEach(async () => {
-  await rm(TEST_DIR, { recursive: true, force: true });
+  await rm(TEST_DIR, {
+    recursive: true,
+    force: true,
+  });
   mockRegister.mockClear();
   mockUnregister.mockClear();
   mockGetPluginInfo.mockReturnValue(null);
@@ -70,7 +78,10 @@ beforeEach(async () => {
 
 afterEach(async () => {
   reset();
-  await rm(TEST_DIR, { recursive: true, force: true });
+  await rm(TEST_DIR, {
+    recursive: true,
+    force: true,
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -101,7 +112,10 @@ blocks:
 
     expect(mockRegister).toHaveBeenCalledTimes(1);
     const registered = mockRegister.mock.calls[0][0] as Workflow;
-    expect(registered.blocks[0].position).toEqual({ x: 11, y: 20 });
+    expect(registered.blocks[0].position).toEqual({
+      x: 11,
+      y: 20,
+    });
   });
 });
 
@@ -290,7 +304,12 @@ describe('WorkflowLoader - toYAML edge cases', () => {
       id: 'no-plugins-wf',
       name: 'No Plugins',
       enabled: false,
-      blocks: [{ id: 'block-a', type: 'timer' }],
+      blocks: [
+        {
+          id: 'block-a',
+          type: 'timer',
+        },
+      ],
       connections: [],
     };
 
@@ -310,7 +329,12 @@ describe('WorkflowLoader - toYAML edge cases', () => {
       id: 'undef-plugins-wf',
       name: 'Undef Plugins',
       enabled: false,
-      blocks: [{ id: 'block-a', type: 'timer' }],
+      blocks: [
+        {
+          id: 'block-a',
+          type: 'timer',
+        },
+      ],
       connections: [],
     };
 
@@ -328,11 +352,21 @@ describe('WorkflowLoader - toYAML edge cases', () => {
       name: 'Missing FromPort',
       enabled: false,
       blocks: [
-        { id: 'block-a', type: 'timer' },
-        { id: 'block-b', type: 'logger' },
+        {
+          id: 'block-a',
+          type: 'timer',
+        },
+        {
+          id: 'block-b',
+          type: 'logger',
+        },
       ],
       connections: [
-        { from: 'block-a', to: 'block-b', toPort: 'input' }, // missing fromPort
+        {
+          from: 'block-a',
+          to: 'block-b',
+          toPort: 'input',
+        }, // missing fromPort
       ],
     };
 
@@ -353,11 +387,21 @@ describe('WorkflowLoader - toYAML edge cases', () => {
       name: 'Missing ToPort',
       enabled: false,
       blocks: [
-        { id: 'block-a', type: 'timer' },
-        { id: 'block-b', type: 'logger' },
+        {
+          id: 'block-a',
+          type: 'timer',
+        },
+        {
+          id: 'block-b',
+          type: 'logger',
+        },
       ],
       connections: [
-        { from: 'block-a', fromPort: 'tick', to: 'block-b' }, // missing toPort
+        {
+          from: 'block-a',
+          fromPort: 'tick',
+          to: 'block-b',
+        }, // missing toPort
       ],
     };
 
@@ -376,7 +420,12 @@ describe('WorkflowLoader - toYAML edge cases', () => {
       id: 'null-conn-wf',
       name: 'Null Connections',
       enabled: false,
-      blocks: [{ id: 'block-a', type: 'timer' }],
+      blocks: [
+        {
+          id: 'block-a',
+          type: 'timer',
+        },
+      ],
       connections: undefined as unknown as Workflow['connections'],
     };
 
@@ -394,14 +443,38 @@ describe('WorkflowLoader - toYAML edge cases', () => {
       name: 'Bidirectional',
       enabled: false,
       blocks: [
-        { id: 'a', type: 'timer' },
-        { id: 'b', type: 'logger' },
-        { id: 'c', type: 'processor' },
+        {
+          id: 'a',
+          type: 'timer',
+        },
+        {
+          id: 'b',
+          type: 'logger',
+        },
+        {
+          id: 'c',
+          type: 'processor',
+        },
       ],
       connections: [
-        { from: 'a', fromPort: 'out1', to: 'b', toPort: 'in1' },
-        { from: 'a', fromPort: 'out2', to: 'c', toPort: 'in1' },
-        { from: 'b', fromPort: 'out1', to: 'c', toPort: 'in2' },
+        {
+          from: 'a',
+          fromPort: 'out1',
+          to: 'b',
+          toPort: 'in1',
+        },
+        {
+          from: 'a',
+          fromPort: 'out2',
+          to: 'c',
+          toPort: 'in1',
+        },
+        {
+          from: 'b',
+          fromPort: 'out1',
+          to: 'c',
+          toPort: 'in2',
+        },
       ],
     };
 
@@ -427,7 +500,16 @@ describe('WorkflowLoader - toYAML edge cases', () => {
       id: 'round-pos-wf',
       name: 'Round Positions',
       enabled: false,
-      blocks: [{ id: 'block-a', type: 'timer', position: { x: 10.6, y: 20.4 } }],
+      blocks: [
+        {
+          id: 'block-a',
+          type: 'timer',
+          position: {
+            x: 10.6,
+            y: 20.4,
+          },
+        },
+      ],
       connections: [],
     };
 
@@ -642,7 +724,10 @@ blocks: []
 
 describe('WorkflowLoader - toYAML plugin dedup', () => {
   it('does not duplicate plugin entry for multiple blocks of the same plugin', async () => {
-    mockGetPluginInfo.mockReturnValue({ id: '@brika/core', version: '2.0.0' });
+    mockGetPluginInfo.mockReturnValue({
+      id: '@brika/core',
+      version: '2.0.0',
+    });
 
     const loader = get(WorkflowLoader);
     await loader.loadDir(TEST_DIR);
@@ -652,9 +737,18 @@ describe('WorkflowLoader - toYAML plugin dedup', () => {
       name: 'Multi Block',
       enabled: false,
       blocks: [
-        { id: 'a', type: 'timer' },
-        { id: 'b', type: 'counter' },
-        { id: 'c', type: 'logger' },
+        {
+          id: 'a',
+          type: 'timer',
+        },
+        {
+          id: 'b',
+          type: 'counter',
+        },
+        {
+          id: 'c',
+          type: 'logger',
+        },
       ],
       connections: [],
     };
@@ -673,7 +767,12 @@ describe('WorkflowLoader - toYAML plugin dedup', () => {
     let callCount = 0;
     mockGetPluginInfo.mockImplementation(() => {
       callCount++;
-      if (callCount === 1) return { id: '@brika/plugin-a', version: '1.0.0' };
+      if (callCount === 1) {
+        return {
+          id: '@brika/plugin-a',
+          version: '1.0.0',
+        };
+      }
       return null;
     });
 
@@ -685,8 +784,14 @@ describe('WorkflowLoader - toYAML plugin dedup', () => {
       name: 'Mixed Plugins',
       enabled: false,
       blocks: [
-        { id: 'a', type: 'known-type' },
-        { id: 'b', type: 'unknown-type' },
+        {
+          id: 'a',
+          type: 'known-type',
+        },
+        {
+          id: 'b',
+          type: 'unknown-type',
+        },
       ],
       connections: [],
     };
@@ -716,14 +821,23 @@ describe('WorkflowLoader - YAML block config serialization', () => {
         {
           id: 'block-a',
           type: 'timer',
-          position: { x: 50, y: 100 },
-          config: { interval: 5000, label: 'my-timer', nested: { deep: true } },
+          position: {
+            x: 50,
+            y: 100,
+          },
+          config: {
+            interval: 5000,
+            label: 'my-timer',
+            nested: {
+              deep: true,
+            },
+          },
         },
       ],
       connections: [],
     };
 
-    const filePath = await loader.saveWorkflow(workflow);
+    const _filePath = await loader.saveWorkflow(workflow);
     mockRegister.mockClear();
 
     // Create a fresh loader and reload the file
@@ -737,9 +851,14 @@ describe('WorkflowLoader - YAML block config serialization', () => {
     expect(reloaded.blocks[0].config).toEqual({
       interval: 5000,
       label: 'my-timer',
-      nested: { deep: true },
+      nested: {
+        deep: true,
+      },
     });
-    expect(reloaded.blocks[0].position).toEqual({ x: 50, y: 100 });
+    expect(reloaded.blocks[0].position).toEqual({
+      x: 50,
+      y: 100,
+    });
   });
 
   it('round-trips connections through save and reload', async () => {
@@ -751,17 +870,36 @@ describe('WorkflowLoader - YAML block config serialization', () => {
       name: 'Connection Round Trip',
       enabled: false,
       blocks: [
-        { id: 'a', type: 'timer' },
-        { id: 'b', type: 'processor' },
-        { id: 'c', type: 'logger' },
+        {
+          id: 'a',
+          type: 'timer',
+        },
+        {
+          id: 'b',
+          type: 'processor',
+        },
+        {
+          id: 'c',
+          type: 'logger',
+        },
       ],
       connections: [
-        { from: 'a', fromPort: 'tick', to: 'b', toPort: 'input' },
-        { from: 'b', fromPort: 'result', to: 'c', toPort: 'data' },
+        {
+          from: 'a',
+          fromPort: 'tick',
+          to: 'b',
+          toPort: 'input',
+        },
+        {
+          from: 'b',
+          fromPort: 'result',
+          to: 'c',
+          toPort: 'data',
+        },
       ],
     };
 
-    const filePath = await loader.saveWorkflow(workflow);
+    const _filePath = await loader.saveWorkflow(workflow);
     mockRegister.mockClear();
 
     // Reload
@@ -801,7 +939,12 @@ describe('WorkflowLoader - saveWorkflow with empty connections', () => {
       id: 'empty-conn-wf',
       name: 'Empty Connections',
       enabled: false,
-      blocks: [{ id: 'block-a', type: 'timer' }],
+      blocks: [
+        {
+          id: 'block-a',
+          type: 'timer',
+        },
+      ],
       connections: [],
     };
 
@@ -828,13 +971,32 @@ describe('WorkflowLoader - toYAML multiple connections per block', () => {
       name: 'Multi Outputs',
       enabled: false,
       blocks: [
-        { id: 'a', type: 'router' },
-        { id: 'b', type: 'logger' },
-        { id: 'c', type: 'logger' },
+        {
+          id: 'a',
+          type: 'router',
+        },
+        {
+          id: 'b',
+          type: 'logger',
+        },
+        {
+          id: 'c',
+          type: 'logger',
+        },
       ],
       connections: [
-        { from: 'a', fromPort: 'out1', to: 'b', toPort: 'in' },
-        { from: 'a', fromPort: 'out2', to: 'c', toPort: 'in' },
+        {
+          from: 'a',
+          fromPort: 'out1',
+          to: 'b',
+          toPort: 'in',
+        },
+        {
+          from: 'a',
+          fromPort: 'out2',
+          to: 'c',
+          toPort: 'in',
+        },
       ],
     };
 
@@ -855,13 +1017,32 @@ describe('WorkflowLoader - toYAML multiple connections per block', () => {
       name: 'Multi Inputs',
       enabled: false,
       blocks: [
-        { id: 'a', type: 'timer' },
-        { id: 'b', type: 'counter' },
-        { id: 'c', type: 'merger' },
+        {
+          id: 'a',
+          type: 'timer',
+        },
+        {
+          id: 'b',
+          type: 'counter',
+        },
+        {
+          id: 'c',
+          type: 'merger',
+        },
       ],
       connections: [
-        { from: 'a', fromPort: 'tick', to: 'c', toPort: 'in1' },
-        { from: 'b', fromPort: 'count', to: 'c', toPort: 'in2' },
+        {
+          from: 'a',
+          fromPort: 'tick',
+          to: 'c',
+          toPort: 'in1',
+        },
+        {
+          from: 'b',
+          fromPort: 'count',
+          to: 'c',
+          toPort: 'in2',
+        },
       ],
     };
 
@@ -962,8 +1143,12 @@ blocks:
     expect(registered.blocks).toHaveLength(3);
 
     // Verify blocks
-    expect(registered.blocks[0].config).toEqual({ interval: 1000 });
-    expect(registered.blocks[1].config).toEqual({ mode: 'fast' });
+    expect(registered.blocks[0].config).toEqual({
+      interval: 1000,
+    });
+    expect(registered.blocks[1].config).toEqual({
+      mode: 'fast',
+    });
     expect(registered.blocks[2].config).toBeUndefined();
 
     // Connections should be deduplicated

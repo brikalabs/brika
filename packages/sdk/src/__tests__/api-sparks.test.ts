@@ -25,8 +25,13 @@ describe('defineSpark', () => {
   });
 
   test('returns a CompiledSpark with correct id and schema', () => {
-    const schema = z.object({ value: z.number() });
-    const spark = defineSpark({ id: 'test-spark', schema });
+    const schema = z.object({
+      value: z.number(),
+    });
+    const spark = defineSpark({
+      id: 'test-spark',
+      schema,
+    });
 
     expect(spark.id).toBe('test-spark');
     expect(spark.schema).toBe(schema);
@@ -34,19 +39,38 @@ describe('defineSpark', () => {
   });
 
   test('emit calls context.emitSpark with correct arguments', () => {
-    const schema = z.object({ value: z.number() });
-    const spark = defineSpark({ id: 'counter', schema });
+    const schema = z.object({
+      value: z.number(),
+    });
+    const spark = defineSpark({
+      id: 'counter',
+      schema,
+    });
 
-    spark.emit({ value: 42 });
-    expect(mockEmitSpark).toHaveBeenCalledWith('counter', { value: 42 });
+    spark.emit({
+      value: 42,
+    });
+    expect(mockEmitSpark).toHaveBeenCalledWith('counter', {
+      value: 42,
+    });
   });
 
   test('registers spark schema with hub', () => {
-    const schema = z.object({ name: z.string() });
-    defineSpark({ id: 'named', schema });
+    const schema = z.object({
+      name: z.string(),
+    });
+    defineSpark({
+      id: 'named',
+      schema,
+    });
 
     expect(mockRegisterSpark).toHaveBeenCalledTimes(1);
-    const call = mockRegisterSpark.mock.calls[0] as unknown as [{ id: string; schema: unknown }];
+    const call = mockRegisterSpark.mock.calls[0] as unknown as [
+      {
+        id: string;
+        schema: unknown;
+      },
+    ];
     expect(call[0].id).toBe('named');
     expect(call[0].schema).toBeDefined();
   });
@@ -56,8 +80,13 @@ describe('defineSpark', () => {
       throw new Error('No context');
     });
 
-    const schema = z.object({ v: z.string() });
-    const spark = defineSpark({ id: 'fallback', schema });
+    const schema = z.object({
+      v: z.string(),
+    });
+    const spark = defineSpark({
+      id: 'fallback',
+      schema,
+    });
     expect(spark.id).toBe('fallback');
   });
 });

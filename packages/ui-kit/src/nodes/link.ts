@@ -15,7 +15,10 @@ export interface LinkNode extends BaseNode {
 }
 
 export function Link(props: Omit<LinkNode, 'type'>): LinkNode {
-  return { type: 'link', ...props };
+  return {
+    type: 'link',
+    ...props,
+  };
 }
 
 declare module './_shared' {

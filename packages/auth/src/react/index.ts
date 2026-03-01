@@ -33,19 +33,19 @@
  */
 
 export {
-  AuthProvider,
   AuthContext,
   type AuthContextValue,
+  AuthProvider,
   type AuthProviderProps,
 } from './AuthProvider';
 export {
   useAuth,
+  useAuthError,
+  useAuthLoading,
   useCanAccess,
   useCanAccessAll,
   useFeaturePermissions,
-  useAuthLoading,
-  useUser,
   useSession,
-  useAuthError,
+  useUser,
 } from './hooks';
-export { withScopeGuard, withOptionalScope, type WithScopeGuardOptions } from './withScopeGuard';
+export { type WithScopeGuardOptions, withOptionalScope, withScopeGuard } from './withScopeGuard';

@@ -19,7 +19,9 @@ const mockT = mock(
 );
 
 mock.module('../context', () => ({
-  getContext: () => ({ t: mockT }),
+  getContext: () => ({
+    t: mockT,
+  }),
 }));
 
 // Import after mocking
@@ -46,9 +48,15 @@ describe('useTranslation', () => {
 
   test('t() passes params to context.t()', () => {
     const { t } = useTranslation();
-    const ref = t('ui.dayForecast', { count: 7 });
-    expect(mockT).toHaveBeenCalledWith('ui.dayForecast', { count: 7 });
-    expect(ref.params).toEqual({ count: 7 });
+    const ref = t('ui.dayForecast', {
+      count: 7,
+    });
+    expect(mockT).toHaveBeenCalledWith('ui.dayForecast', {
+      count: 7,
+    });
+    expect(ref.params).toEqual({
+      count: 7,
+    });
   });
 
   test('t() returns I18nRef with correct namespace', () => {

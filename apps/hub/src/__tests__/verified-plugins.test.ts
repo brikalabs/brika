@@ -27,12 +27,20 @@ const createVerifiedList = (overrides: Partial<VerifiedPluginsList> = {}): Verif
 });
 
 // Mock fetch response
-let mockResponse: { ok: boolean; status: number; body: string } | null = null;
+let mockResponse: {
+  ok: boolean;
+  status: number;
+  body: string;
+} | null = null;
 let mockError: Error | null = null;
 let fetchSpy: ReturnType<typeof spyOn>;
 
 function setMockResponse(body: string, ok = true, status = 200): void {
-  mockResponse = { ok, status, body };
+  mockResponse = {
+    ok,
+    status,
+    body,
+  };
   mockError = null;
 }
 
@@ -56,13 +64,24 @@ describe('VerifiedPluginsService', () => {
 
     const originalFetch = globalThis.fetch;
     fetchSpy = spyOn(globalThis, 'fetch').mockImplementation(((input, init) => {
-      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+      let url: string;
+      if (typeof input === 'string') {
+        url = input;
+      } else if (input instanceof URL) {
+        url = input.href;
+      } else {
+        url = input.url;
+      }
       if (url.includes('verified-plugins.json')) {
-        if (mockError) return Promise.reject(mockError);
+        if (mockError) {
+          return Promise.reject(mockError);
+        }
         return Promise.resolve(
           new Response(mockResponse?.body ?? '', {
             status: mockResponse?.status ?? 200,
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+            },
           })
         );
       }
@@ -87,7 +106,11 @@ describe('VerifiedPluginsService', () => {
     test('should deduplicate concurrent init calls', async () => {
       setMockResponse(JSON.stringify(createVerifiedList()));
 
-      await Promise.all([service.init(), service.init(), service.init()]);
+      await Promise.all([
+        service.init(),
+        service.init(),
+        service.init(),
+      ]);
     });
   });
 
@@ -120,7 +143,11 @@ describe('VerifiedPluginsService', () => {
     });
 
     test('should return empty list on invalid response format', async () => {
-      setMockResponse(JSON.stringify({ invalid: 'data' }));
+      setMockResponse(
+        JSON.stringify({
+          invalid: 'data',
+        })
+      );
 
       const result = await service.getVerifiedList();
 

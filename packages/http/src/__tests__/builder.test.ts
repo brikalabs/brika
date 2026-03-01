@@ -10,7 +10,9 @@ describe('RequestBuilder', () => {
   const createMockExecutor = () => {
     return mock().mockImplementation(
       async (config: RequestConfig): Promise<HttpResponse> => ({
-        data: { success: true },
+        data: {
+          success: true,
+        },
         status: 200,
         statusText: 'OK',
         headers: new Headers(),
@@ -34,13 +36,17 @@ describe('RequestBuilder', () => {
     test('accepts base config', () => {
       const executor = createMockExecutor();
       const builder = new RequestBuilder('POST', '/api/users', executor, {
-        headers: { Authorization: 'Bearer token' },
+        headers: {
+          Authorization: 'Bearer token',
+        },
         timeout: 5000,
       });
 
       const config = builder.getConfig();
 
-      expect(config.headers).toEqual({ Authorization: 'Bearer token' });
+      expect(config.headers).toEqual({
+        Authorization: 'Bearer token',
+      });
       expect(config.timeout).toBe(5000);
     });
   });
@@ -50,29 +56,44 @@ describe('RequestBuilder', () => {
       const executor = createMockExecutor();
       const builder = new RequestBuilder('GET', '/api/users', executor);
 
-      builder.params({ page: 1, limit: 10 });
+      builder.params({
+        page: 1,
+        limit: 10,
+      });
 
       const config = builder.getConfig();
-      expect(config.params).toEqual({ page: 1, limit: 10 });
+      expect(config.params).toEqual({
+        page: 1,
+        limit: 10,
+      });
     });
 
     test('merges with existing params', () => {
       const executor = createMockExecutor();
       const builder = new RequestBuilder('GET', '/api/users', executor, {
-        params: { status: 'active' },
+        params: {
+          status: 'active',
+        },
       });
 
-      builder.params({ page: 1 });
+      builder.params({
+        page: 1,
+      });
 
       const config = builder.getConfig();
-      expect(config.params).toEqual({ status: 'active', page: 1 });
+      expect(config.params).toEqual({
+        status: 'active',
+        page: 1,
+      });
     });
 
     test('is chainable', () => {
       const executor = createMockExecutor();
       const builder = new RequestBuilder('GET', '/api/users', executor);
 
-      const result = builder.params({ page: 1 });
+      const result = builder.params({
+        page: 1,
+      });
 
       expect(result).toBe(builder);
     });
@@ -83,19 +104,27 @@ describe('RequestBuilder', () => {
       const executor = createMockExecutor();
       const builder = new RequestBuilder('GET', '/api/users', executor);
 
-      builder.headers({ 'X-Custom': 'value' });
+      builder.headers({
+        'X-Custom': 'value',
+      });
 
       const config = builder.getConfig();
-      expect(config.headers).toEqual({ 'X-Custom': 'value' });
+      expect(config.headers).toEqual({
+        'X-Custom': 'value',
+      });
     });
 
     test('merges with existing headers', () => {
       const executor = createMockExecutor();
       const builder = new RequestBuilder('GET', '/api/users', executor, {
-        headers: { Authorization: 'Bearer token' },
+        headers: {
+          Authorization: 'Bearer token',
+        },
       });
 
-      builder.headers({ 'X-Custom': 'value' });
+      builder.headers({
+        'X-Custom': 'value',
+      });
 
       const config = builder.getConfig();
       expect(config.headers).toEqual({
@@ -108,7 +137,9 @@ describe('RequestBuilder', () => {
       const executor = createMockExecutor();
       const builder = new RequestBuilder('GET', '/api/users', executor);
 
-      const result = builder.headers({ 'X-Custom': 'value' });
+      const result = builder.headers({
+        'X-Custom': 'value',
+      });
 
       expect(result).toBe(builder);
     });
@@ -140,17 +171,23 @@ describe('RequestBuilder', () => {
       const executor = createMockExecutor();
       const builder = new RequestBuilder('POST', '/api/users', executor);
 
-      builder.body({ name: 'John' });
+      builder.body({
+        name: 'John',
+      });
 
       const config = builder.getConfig();
-      expect(config.body).toEqual({ name: 'John' });
+      expect(config.body).toEqual({
+        name: 'John',
+      });
     });
 
     test('is chainable', () => {
       const executor = createMockExecutor();
       const builder = new RequestBuilder('POST', '/api/users', executor);
 
-      const result = builder.body({ name: 'John' });
+      const result = builder.body({
+        name: 'John',
+      });
 
       expect(result).toBe(builder);
     });
@@ -161,10 +198,14 @@ describe('RequestBuilder', () => {
       const executor = createMockExecutor();
       const builder = new RequestBuilder('POST', '/api/users', executor);
 
-      builder.json({ name: 'John' });
+      builder.json({
+        name: 'John',
+      });
 
       const config = builder.getConfig();
-      expect(config.body).toEqual({ name: 'John' });
+      expect(config.body).toEqual({
+        name: 'John',
+      });
       expect(config.headers?.['Content-Type']).toBe('application/json');
     });
 
@@ -172,7 +213,9 @@ describe('RequestBuilder', () => {
       const executor = createMockExecutor();
       const builder = new RequestBuilder('POST', '/api/users', executor);
 
-      const result = builder.json({ name: 'John' });
+      const result = builder.json({
+        name: 'John',
+      });
 
       expect(result).toBe(builder);
     });
@@ -204,10 +247,20 @@ describe('RequestBuilder', () => {
       const executor = createMockExecutor();
       const builder = new RequestBuilder('GET', '/api/users', executor);
 
-      builder.cache({ ttl: 60000, tags: ['users'] });
+      builder.cache({
+        ttl: 60000,
+        tags: [
+          'users',
+        ],
+      });
 
       const config = builder.getConfig();
-      expect(config.cache).toEqual({ ttl: 60000, tags: ['users'] });
+      expect(config.cache).toEqual({
+        ttl: 60000,
+        tags: [
+          'users',
+        ],
+      });
     });
 
     test('sets cache ttl as number', () => {
@@ -217,7 +270,9 @@ describe('RequestBuilder', () => {
       builder.cache(60000);
 
       const config = builder.getConfig();
-      expect(config.cache).toEqual({ ttl: 60000 });
+      expect(config.cache).toEqual({
+        ttl: 60000,
+      });
     });
 
     test('is chainable', () => {
@@ -235,17 +290,29 @@ describe('RequestBuilder', () => {
       const executor = createMockExecutor();
       const builder = new RequestBuilder('GET', '/api/users', executor);
 
-      builder.retry({ maxAttempts: 3, backoff: 'exponential', delay: 1000 });
+      builder.retry({
+        maxAttempts: 3,
+        backoff: 'exponential',
+        delay: 1000,
+      });
 
       const config = builder.getConfig();
-      expect(config.retry).toEqual({ maxAttempts: 3, backoff: 'exponential', delay: 1000 });
+      expect(config.retry).toEqual({
+        maxAttempts: 3,
+        backoff: 'exponential',
+        delay: 1000,
+      });
     });
 
     test('is chainable', () => {
       const executor = createMockExecutor();
       const builder = new RequestBuilder('GET', '/api/users', executor);
 
-      const result = builder.retry({ maxAttempts: 3, backoff: 'linear', delay: 1000 });
+      const result = builder.retry({
+        maxAttempts: 3,
+        backoff: 'linear',
+        delay: 1000,
+      });
 
       expect(result).toBe(builder);
     });
@@ -279,29 +346,44 @@ describe('RequestBuilder', () => {
       const executor = createMockExecutor();
       const builder = new RequestBuilder('GET', '/api/users', executor);
 
-      builder.fetchOptions({ credentials: 'include', mode: 'cors' });
+      builder.fetchOptions({
+        credentials: 'include',
+        mode: 'cors',
+      });
 
       const config = builder.getConfig();
-      expect(config.fetchOptions).toEqual({ credentials: 'include', mode: 'cors' });
+      expect(config.fetchOptions).toEqual({
+        credentials: 'include',
+        mode: 'cors',
+      });
     });
 
     test('merges with existing fetch options', () => {
       const executor = createMockExecutor();
       const builder = new RequestBuilder('GET', '/api/users', executor, {
-        fetchOptions: { credentials: 'include' },
+        fetchOptions: {
+          credentials: 'include',
+        },
       });
 
-      builder.fetchOptions({ mode: 'cors' });
+      builder.fetchOptions({
+        mode: 'cors',
+      });
 
       const config = builder.getConfig();
-      expect(config.fetchOptions).toEqual({ credentials: 'include', mode: 'cors' });
+      expect(config.fetchOptions).toEqual({
+        credentials: 'include',
+        mode: 'cors',
+      });
     });
 
     test('is chainable', () => {
       const executor = createMockExecutor();
       const builder = new RequestBuilder('GET', '/api/users', executor);
 
-      const result = builder.fetchOptions({ credentials: 'include' });
+      const result = builder.fetchOptions({
+        credentials: 'include',
+      });
 
       expect(result).toBe(builder);
     });
@@ -316,14 +398,20 @@ describe('RequestBuilder', () => {
 
       expect(executor).toHaveBeenCalledTimes(1);
       expect(response.status).toBe(200);
-      expect(response.data).toEqual({ success: true });
+      expect(response.data).toEqual({
+        success: true,
+      });
     });
 
     test('passes built config to executor', async () => {
       const executor = createMockExecutor();
       const builder = new RequestBuilder('POST', '/api/users', executor)
-        .headers({ 'X-Custom': 'value' })
-        .params({ test: 'true' })
+        .headers({
+          'X-Custom': 'value',
+        })
+        .params({
+          test: 'true',
+        })
         .timeout(5000);
 
       await builder.send();
@@ -331,8 +419,12 @@ describe('RequestBuilder', () => {
       const passedConfig = executor.mock.calls[0]?.[0];
       expect(passedConfig.method).toBe('POST');
       expect(passedConfig.url).toBe('/api/users');
-      expect(passedConfig.headers).toEqual({ 'X-Custom': 'value' });
-      expect(passedConfig.params).toEqual({ test: 'true' });
+      expect(passedConfig.headers).toEqual({
+        'X-Custom': 'value',
+      });
+      expect(passedConfig.params).toEqual({
+        test: 'true',
+      });
       expect(passedConfig.timeout).toBe(5000);
     });
   });
@@ -345,7 +437,9 @@ describe('RequestBuilder', () => {
       const data = await builder.data();
 
       expect(executor).toHaveBeenCalledTimes(1);
-      expect(data).toEqual({ success: true });
+      expect(data).toEqual({
+        success: true,
+      });
     });
   });
 
@@ -368,11 +462,18 @@ describe('RequestBuilder', () => {
       const builder = new RequestBuilder('POST', '/api/users', executor);
 
       const response = await builder
-        .headers({ Authorization: 'Bearer token' })
+        .headers({
+          Authorization: 'Bearer token',
+        })
         .header('X-Request-ID', '12345')
-        .json({ name: 'John', email: 'john@example.com' })
+        .json({
+          name: 'John',
+          email: 'john@example.com',
+        })
         .timeout(10000)
-        .params({ notify: true })
+        .params({
+          notify: true,
+        })
         .send();
 
       expect(response.status).toBe(200);
@@ -383,9 +484,14 @@ describe('RequestBuilder', () => {
         'X-Request-ID': '12345',
         'Content-Type': 'application/json',
       });
-      expect(passedConfig.body).toEqual({ name: 'John', email: 'john@example.com' });
+      expect(passedConfig.body).toEqual({
+        name: 'John',
+        email: 'john@example.com',
+      });
       expect(passedConfig.timeout).toBe(10000);
-      expect(passedConfig.params).toEqual({ notify: true });
+      expect(passedConfig.params).toEqual({
+        notify: true,
+      });
     });
   });
 });

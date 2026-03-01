@@ -12,7 +12,9 @@ interface StubState {
 }
 
 function createStubStateStore() {
-  const state: StubState = { permissions: {} };
+  const state: StubState = {
+    permissions: {},
+  };
 
   return {
     getGrantedPermissions(name: string): string[] {
@@ -58,7 +60,9 @@ function createPermissionService(stateStore: ReturnType<typeof createStubStateSt
         current.delete(permission);
       }
 
-      const updated = filterValidPermissions([...current]);
+      const updated = filterValidPermissions([
+        ...current,
+      ]);
       await stateStore.setGrantedPermissions(pluginName, updated);
       return updated;
     },
@@ -110,17 +114,28 @@ describe('PluginPermissionService', () => {
 
     test('returns granted permissions', async () => {
       await service.setPermission('weather', 'location', true);
-      expect(service.getGrantedPermissions('weather')).toEqual(['location']);
+      expect(service.getGrantedPermissions('weather')).toEqual([
+        'location',
+      ]);
     });
 
     test('filters out invalid permissions from state', () => {
       // Simulate state with stale/invalid permission values
-      store._state.permissions['bad-plugin'] = ['location', 'invalid', '__proto__'];
-      expect(service.getGrantedPermissions('bad-plugin')).toEqual(['location']);
+      store._state.permissions['bad-plugin'] = [
+        'location',
+        'invalid',
+        '__proto__',
+      ];
+      expect(service.getGrantedPermissions('bad-plugin')).toEqual([
+        'location',
+      ]);
     });
 
     test('returns empty array when all permissions are invalid', () => {
-      store._state.permissions['bad-plugin'] = ['foo', 'bar'];
+      store._state.permissions['bad-plugin'] = [
+        'foo',
+        'bar',
+      ];
       expect(service.getGrantedPermissions('bad-plugin')).toEqual([]);
     });
   });
@@ -130,8 +145,12 @@ describe('PluginPermissionService', () => {
   describe('setPermission', () => {
     test('grants a valid permission', async () => {
       const result = await service.setPermission('weather', 'location', true);
-      expect(result).toEqual(['location']);
-      expect(store._state.permissions['weather']).toEqual(['location']);
+      expect(result).toEqual([
+        'location',
+      ]);
+      expect(store._state.permissions['weather']).toEqual([
+        'location',
+      ]);
     });
 
     test('revokes a granted permission', async () => {
@@ -162,7 +181,9 @@ describe('PluginPermissionService', () => {
     test('granting same permission twice is idempotent', async () => {
       await service.setPermission('weather', 'location', true);
       const result = await service.setPermission('weather', 'location', true);
-      expect(result).toEqual(['location']);
+      expect(result).toEqual([
+        'location',
+      ]);
     });
 
     test('revoking non-granted permission is a no-op', async () => {
@@ -178,10 +199,14 @@ describe('PluginPermissionService', () => {
 
     test('filters invalid entries during set', () => {
       // Pre-populate with invalid data, then grant valid permission
-      store._state.permissions['weather'] = ['garbage'];
+      store._state.permissions['weather'] = [
+        'garbage',
+      ];
       return service.setPermission('weather', 'location', true).then((result) => {
         // 'garbage' should be filtered out, only 'location' remains
-        expect(result).toEqual(['location']);
+        expect(result).toEqual([
+          'location',
+        ]);
       });
     });
   });

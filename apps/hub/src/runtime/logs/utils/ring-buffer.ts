@@ -33,7 +33,7 @@ export class RingBuffer<T> {
     for (let i = 0; i < this.#len; i++) {
       const idx = (start + i) % this.#cap;
       const v = this.#buf[idx];
-      if (v !== undefined) out.push(v);
+      if (v !== undefined) { out.push(v); }
     }
     return out;
   }

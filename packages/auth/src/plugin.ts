@@ -19,15 +19,15 @@
  * ```
  */
 
+import type { Database } from 'bun:sqlite';
 import { join } from 'node:path';
-import type { Middleware, RouteDefinition } from '@brika/router';
 import { inject } from '@brika/di';
-import { openAuthDatabase, setupAuthServices } from './setup';
+import type { Middleware, RouteDefinition } from '@brika/router';
+import type { AuthConfig } from './config';
 import { verifyToken } from './middleware/verifyToken';
 import { allAuthRoutes as authRoutes } from './server/routes/index';
 import { SessionService } from './services/SessionService';
-import type { Database } from 'bun:sqlite';
-import type { AuthConfig } from './config';
+import { openAuthDatabase, setupAuthServices } from './setup';
 
 interface ApiServer {
   addMiddleware(mw: Middleware): void;
@@ -67,7 +67,7 @@ export function auth(options: AuthPluginOptions) {
       }
     },
 
-    async onStart() {
+    onStart() {
       const sessionService = inject(SessionService);
       // Initial cleanup on startup, then periodically
       sessionService.cleanExpiredSessions();

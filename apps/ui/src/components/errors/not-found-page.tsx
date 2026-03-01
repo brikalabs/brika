@@ -5,7 +5,11 @@ import { ErrorLayout } from './error-layout';
 /**
  * 404 — Page not found.
  */
-export function NotFoundPage({ variant }: Readonly<{ variant?: 'fullscreen' | 'inline' }>) {
+export function NotFoundPage({
+  variant,
+}: Readonly<{
+  variant?: 'fullscreen' | 'inline';
+}>) {
   const { t } = useTranslation();
 
   return (

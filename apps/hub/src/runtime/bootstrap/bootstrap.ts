@@ -48,7 +48,10 @@ export class Bootstrap {
       createBanner({
         title: 'BRIKA',
         subtitle: 'Build. Run. Integrate. Keep Automating.',
-        metadata: { Version: hub.version, Package: hub.name },
+        metadata: {
+          Version: hub.version,
+          Package: hub.name,
+        },
       })
     );
 
@@ -82,7 +85,9 @@ export class Bootstrap {
     plugins = this.plugins
   ): Promise<void> {
     for (const p of plugins) {
-      this.logs.info(`${label} bootstrap plugin`, { plugin: p.name });
+      this.logs.info(`${label} bootstrap plugin`, {
+        plugin: p.name,
+      });
       try {
         await fn(p);
       } catch (error) {

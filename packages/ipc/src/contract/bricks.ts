@@ -15,7 +15,11 @@ import { Json } from '../types';
 // Schemas
 // ─────────────────────────────────────────────────────────────────────────────
 
-const BrickFamilySchema = z.literal(['sm', 'md', 'lg']);
+const BrickFamilySchema = z.literal([
+  'sm',
+  'md',
+  'lg',
+]);
 
 export const BrickTypeDefinition = z.object({
   /** Local brick type ID (without plugin prefix) */
@@ -23,9 +27,19 @@ export const BrickTypeDefinition = z.object({
   /** Supported size families (metadata for catalog display) */
   families: z.array(BrickFamilySchema),
   /** Minimum grid size */
-  minSize: z.object({ w: z.number(), h: z.number() }).optional(),
+  minSize: z
+    .object({
+      w: z.number(),
+      h: z.number(),
+    })
+    .optional(),
   /** Maximum grid size */
-  maxSize: z.object({ w: z.number(), h: z.number() }).optional(),
+  maxSize: z
+    .object({
+      w: z.number(),
+      h: z.number(),
+    })
+    .optional(),
   /** Per-instance configuration schema (PreferenceDefinition[]) */
   config: z.array(z.unknown()).optional(),
 });

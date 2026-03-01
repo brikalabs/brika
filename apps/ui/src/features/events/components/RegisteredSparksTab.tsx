@@ -11,7 +11,9 @@ import { SparkSchemaViewer } from './SparkSchemaViewer';
 
 function useSparks() {
   return useQuery({
-    queryKey: ['sparks'],
+    queryKey: [
+      'sparks',
+    ],
     queryFn: () => fetcher<RegisteredSpark[]>('/api/sparks'),
     refetchInterval: 5000,
   });
@@ -97,17 +99,25 @@ export function RegisteredSparksTab() {
     const grouped = new Map<string, RegisteredSpark[]>();
     for (const spark of sparks) {
       const existing = grouped.get(spark.pluginId) || [];
-      grouped.set(spark.pluginId, [...existing, spark]);
+      grouped.set(spark.pluginId, [
+        ...existing,
+        spark,
+      ]);
     }
     return grouped;
-  }, [sparks]);
+  }, [
+    sparks,
+  ]);
 
   const handleSelectSpark = (spark: RegisteredSpark) => {
     setSelectedSpark(spark);
     setEmitDialogOpen(true);
   };
 
-  const View = useDataView({ data: sparks, isLoading });
+  const View = useDataView({
+    data: sparks,
+    isLoading,
+  });
 
   return (
     <>
@@ -130,7 +140,9 @@ export function RegisteredSparksTab() {
         <View.Content>
           {() => (
             <div className="space-y-6">
-              {[...sparksByPlugin.entries()].map(([pluginId, pluginSparks]) => (
+              {[
+                ...sparksByPlugin.entries(),
+              ].map(([pluginId, pluginSparks]) => (
                 <SparkPluginGroup
                   key={pluginId}
                   pluginId={pluginId}

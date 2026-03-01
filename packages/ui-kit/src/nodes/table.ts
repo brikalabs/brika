@@ -22,10 +22,16 @@ export interface TableNode extends BaseNode {
 }
 
 export function Table(
-  props: Omit<TableNode, 'type' | 'onRowPress'> & { onRowPress?: ActionHandler }
+  props: Omit<TableNode, 'type' | 'onRowPress'> & {
+    onRowPress?: ActionHandler;
+  }
 ): TableNode {
   const { onRowPress, ...rest } = props;
-  return { type: 'table', ...rest, onRowPress: onRowPress ? resolveAction(onRowPress) : undefined };
+  return {
+    type: 'table',
+    ...rest,
+    onRowPress: onRowPress ? resolveAction(onRowPress) : undefined,
+  };
 }
 
 declare module './_shared' {

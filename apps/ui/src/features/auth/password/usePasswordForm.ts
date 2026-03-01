@@ -1,5 +1,5 @@
-import { type SubmitEvent, useRef, useState } from 'react';
 import { useAuth } from '@brika/auth/react';
+import { type SubmitEvent, useRef, useState } from 'react';
 import { useLocale } from '@/lib/use-locale';
 
 export interface PasswordFormState {
@@ -42,9 +42,29 @@ export function usePasswordForm() {
     setSaved(false);
   };
 
+  const handlePasswordError = (err: unknown) => {
+    const message = err instanceof Error ? err.message : 'Failed';
+    const isCurrentPasswordError =
+      message.toLowerCase().includes('current password') ||
+      message.toLowerCase().includes('invalid');
+
+    setErrorField(isCurrentPasswordError ? 'current' : 'new');
+    setError(isCurrentPasswordError ? t('auth:password.wrongCurrent') : message);
+
+    // Auto-focus the relevant field
+    if (isCurrentPasswordError) {
+      setCurrentPassword('');
+      requestAnimationFrame(() => currentRef.current?.focus());
+    } else {
+      requestAnimationFrame(() => newRef.current?.focus());
+    }
+  };
+
   const handleSubmit = async (e: SubmitEvent) => {
     e.preventDefault();
-    if (!canSubmit) return;
+    if (!canSubmit) {
+      return;
+    }
 
     clearError();
     setSaving(true);
@@ -56,21 +76,7 @@ export function usePasswordForm() {
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed';
-      const isCurrentPasswordError =
-        message.toLowerCase().includes('current password') ||
-        message.toLowerCase().includes('invalid');
-
-      setErrorField(isCurrentPasswordError ? 'current' : 'new');
-      setError(isCurrentPasswordError ? t('auth:password.wrongCurrent') : message);
-
-      // Auto-focus the relevant field
-      if (isCurrentPasswordError) {
-        setCurrentPassword('');
-        requestAnimationFrame(() => currentRef.current?.focus());
-      } else {
-        requestAnimationFrame(() => newRef.current?.focus());
-      }
+      handlePasswordError(err);
     } finally {
       setSaving(false);
     }

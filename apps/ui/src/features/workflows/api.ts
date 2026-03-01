@@ -12,7 +12,10 @@ export interface WorkflowConnection {
 export interface WorkflowBlock {
   id: string;
   type: string;
-  position?: { x: number; y: number };
+  position?: {
+    x: number;
+    y: number;
+  };
   config?: Record<string, unknown>;
 
   [key: string]: unknown;
@@ -46,8 +49,16 @@ export interface BlockDefinition {
   icon: string;
   color: string;
   category: string;
-  inputs: Array<{ id: string; name: string; type?: string }>;
-  outputs: Array<{ id: string; name: string; type?: string }>;
+  inputs: Array<{
+    id: string;
+    name: string;
+    type?: string;
+  }>;
+  outputs: Array<{
+    id: string;
+    name: string;
+    type?: string;
+  }>;
   schema: {
     type: 'object';
     properties?: Record<string, unknown>;
@@ -68,46 +79,69 @@ export async function fetchWorkflow(id: string): Promise<Workflow> {
 
 export async function fetchBlockTypes(): Promise<BlockDefinition[]> {
   const res = await fetch(`${API_BASE}/blocks`);
-  if (!res.ok) throw new Error('Failed to fetch blocks');
+  if (!res.ok) {
+    throw new Error('Failed to fetch blocks');
+  }
   return res.json();
 }
 
 export async function fetchWorkflowRuns(): Promise<WorkflowRun[]> {
   const res = await fetch(`${API_BASE}/workflows/runs`);
-  if (!res.ok) return [];
+  if (!res.ok) {
+    return [];
+  }
   return res.json();
 }
 
-export async function saveWorkflow(workflow: Workflow): Promise<{ ok: boolean; id: string }> {
+export async function saveWorkflow(workflow: Workflow): Promise<{
+  ok: boolean;
+  id: string;
+}> {
   const res = await fetch(`${API_BASE}/workflows`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+    },
     body: JSON.stringify(workflow),
   });
   return res.json();
 }
 
-export async function deleteWorkflow(id: string): Promise<{ ok: boolean }> {
+export async function deleteWorkflow(id: string): Promise<{
+  ok: boolean;
+}> {
   const res = await fetch(`${API_BASE}/workflows/${id}`, {
     method: 'DELETE',
   });
   return res.json();
 }
 
-export async function enableWorkflow(id: string): Promise<{ ok: boolean }> {
+export async function enableWorkflow(id: string): Promise<{
+  ok: boolean;
+}> {
   const res = await fetch(`${API_BASE}/workflows/enable`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id }),
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      id,
+    }),
   });
   return res.json();
 }
 
-export async function disableWorkflow(id: string): Promise<{ ok: boolean }> {
+export async function disableWorkflow(id: string): Promise<{
+  ok: boolean;
+}> {
   const res = await fetch(`${API_BASE}/workflows/disable`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id }),
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      id,
+    }),
   });
   return res.json();
 }
@@ -153,12 +187,16 @@ export interface ToolSchema {
 
 export async function fetchTools(): Promise<ToolSummary[]> {
   const res = await fetch(`${API_BASE}/tools`);
-  if (!res.ok) throw new Error('Failed to fetch tools');
+  if (!res.ok) {
+    throw new Error('Failed to fetch tools');
+  }
   return res.json();
 }
 
 export async function fetchToolSchema(toolId: string): Promise<ToolSchema> {
   const res = await fetch(`${API_BASE}/tools/${encodeURIComponent(toolId)}/schema`);
-  if (!res.ok) throw new Error(`Failed to fetch tool schema: ${toolId}`);
+  if (!res.ok) {
+    throw new Error(`Failed to fetch tool schema: ${toolId}`);
+  }
   return res.json();
 }

@@ -16,7 +16,9 @@ export const settingsRoutes = group({
       path: '/location',
       handler: ({ inject }) => {
         const state = inject(StateStore);
-        return { location: state.getHubLocation() };
+        return {
+          location: state.getHubLocation(),
+        };
       },
     }),
 
@@ -27,7 +29,9 @@ export const settingsRoutes = group({
       handler: async ({ body, inject }) => {
         const state = inject(StateStore);
         await state.setHubLocation(body);
-        return { location: body };
+        return {
+          location: body,
+        };
       },
     }),
 
@@ -37,7 +41,9 @@ export const settingsRoutes = group({
       handler: async ({ inject }) => {
         const state = inject(StateStore);
         await state.setHubLocation(null);
-        return { ok: true };
+        return {
+          ok: true,
+        };
       },
     }),
   ],

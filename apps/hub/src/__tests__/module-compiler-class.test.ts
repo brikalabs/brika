@@ -21,11 +21,16 @@ const TEST_DIR = join(tmpdir(), `brika-test-mc-${Date.now()}`);
 const BRIKA_DIR = join(TEST_DIR, 'brika');
 
 beforeAll(async () => {
-  await mkdir(join(BRIKA_DIR, 'cache', 'modules'), { recursive: true });
+  await mkdir(join(BRIKA_DIR, 'cache', 'modules'), {
+    recursive: true,
+  });
 });
 
 afterAll(async () => {
-  await rm(TEST_DIR, { recursive: true, force: true });
+  await rm(TEST_DIR, {
+    recursive: true,
+    force: true,
+  });
 });
 
 // ─── get() ───────────────────────────────────────────────────────────────────
@@ -33,11 +38,18 @@ afterAll(async () => {
 describe('ModuleCompiler - get()', () => {
   let compiler: ModuleCompiler;
 
-  useTestBed({ autoStub: false }, () => {
-    stub(Logger);
-    provide(ConfigLoader, { brikaDir: BRIKA_DIR } as ConfigLoader);
-    compiler = get(ModuleCompiler);
-  });
+  useTestBed(
+    {
+      autoStub: false,
+    },
+    () => {
+      stub(Logger);
+      provide(ConfigLoader, {
+        brikaDir: BRIKA_DIR,
+      } as ConfigLoader);
+      compiler = get(ModuleCompiler);
+    }
+  );
 
   test('returns undefined for unknown key', () => {
     expect(compiler.get('nonexistent:module')).toBeUndefined();
@@ -58,11 +70,18 @@ describe('ModuleCompiler - get()', () => {
 describe('ModuleCompiler - getStyle()', () => {
   let compiler: ModuleCompiler;
 
-  useTestBed({ autoStub: false }, () => {
-    stub(Logger);
-    provide(ConfigLoader, { brikaDir: BRIKA_DIR } as ConfigLoader);
-    compiler = get(ModuleCompiler);
-  });
+  useTestBed(
+    {
+      autoStub: false,
+    },
+    () => {
+      stub(Logger);
+      provide(ConfigLoader, {
+        brikaDir: BRIKA_DIR,
+      } as ConfigLoader);
+      compiler = get(ModuleCompiler);
+    }
+  );
 
   test('returns undefined for unknown key', () => {
     expect(compiler.getStyle('nonexistent:module')).toBeUndefined();
@@ -78,11 +97,18 @@ describe('ModuleCompiler - getStyle()', () => {
 describe('ModuleCompiler - remove()', () => {
   let compiler: ModuleCompiler;
 
-  useTestBed({ autoStub: false }, () => {
-    stub(Logger);
-    provide(ConfigLoader, { brikaDir: BRIKA_DIR } as ConfigLoader);
-    compiler = get(ModuleCompiler);
-  });
+  useTestBed(
+    {
+      autoStub: false,
+    },
+    () => {
+      stub(Logger);
+      provide(ConfigLoader, {
+        brikaDir: BRIKA_DIR,
+      } as ConfigLoader);
+      compiler = get(ModuleCompiler);
+    }
+  );
 
   test('does not throw when removing unknown plugin', () => {
     expect(() => compiler.remove('nonexistent-plugin')).not.toThrow();
@@ -111,7 +137,9 @@ describe('ModuleCache - loadFromDisk', () => {
 
   beforeAll(async () => {
     const pluginDir = join(BRIKA_DIR, 'cache', 'modules', pluginName);
-    await mkdir(pluginDir, { recursive: true });
+    await mkdir(pluginDir, {
+      recursive: true,
+    });
     await Bun.write(join(pluginDir, `${moduleId}.${hash}.js`), jsContent);
     await Bun.write(join(pluginDir, `${moduleId}.${hash}.css`), cssContent);
   });
@@ -154,7 +182,9 @@ describe('ModuleCache - loadFromDisk', () => {
     // Create a module with only JS, no CSS
     const jsOnlyPlugin = 'js-only';
     const jsOnlyDir = join(BRIKA_DIR, 'cache', 'modules', jsOnlyPlugin);
-    await mkdir(jsOnlyDir, { recursive: true });
+    await mkdir(jsOnlyDir, {
+      recursive: true,
+    });
     await Bun.write(join(jsOnlyDir, `main.${hash}.js`), 'const x = 1;');
 
     const { ModuleCache } = await import('@/runtime/modules/module-cache');

@@ -19,8 +19,15 @@ function createSpawnMock(exitCode = 0) {
   const calls: SpawnCall[] = [];
 
   const spy = spyOn(Bun, 'spawn').mockImplementation(((cmd: unknown, options?: unknown) => {
-    const cmdArray = Array.isArray(cmd) ? (cmd as string[]) : [String(cmd)];
-    calls.push({ cmd: cmdArray, options });
+    const cmdArray = Array.isArray(cmd)
+      ? (cmd as string[])
+      : [
+          String(cmd),
+        ];
+    calls.push({
+      cmd: cmdArray,
+      options,
+    });
     return {
       pid: 12345,
       stdin: null,
@@ -37,7 +44,10 @@ function createSpawnMock(exitCode = 0) {
     } as unknown as ReturnType<typeof Bun.spawn>;
   }) as typeof Bun.spawn);
 
-  return { spy, calls };
+  return {
+    spy,
+    calls,
+  };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -73,7 +83,9 @@ describe('cli/utils/supervisor', () => {
       try {
         startBackground();
       } catch (e) {
-        if (!(e instanceof Error && e.message === '__EXIT__')) throw e;
+        if (!(e instanceof Error && e.message === '__EXIT__')) {
+          throw e;
+        }
       }
 
       expect(spawnCalls.length).toBeGreaterThanOrEqual(1);
@@ -89,7 +101,9 @@ describe('cli/utils/supervisor', () => {
       try {
         startBackground();
       } catch (e) {
-        if (!(e instanceof Error && e.message === '__EXIT__')) throw e;
+        if (!(e instanceof Error && e.message === '__EXIT__')) {
+          throw e;
+        }
       }
 
       expect(logSpy).toHaveBeenCalledTimes(2);
@@ -105,7 +119,9 @@ describe('cli/utils/supervisor', () => {
       try {
         startBackground(true);
       } catch (e) {
-        if (!(e instanceof Error && e.message === '__EXIT__')) throw e;
+        if (!(e instanceof Error && e.message === '__EXIT__')) {
+          throw e;
+        }
       }
 
       // First spawn is detached hub, second is browser open
@@ -120,7 +136,9 @@ describe('cli/utils/supervisor', () => {
       try {
         startBackground(false);
       } catch (e) {
-        if (!(e instanceof Error && e.message === '__EXIT__')) throw e;
+        if (!(e instanceof Error && e.message === '__EXIT__')) {
+          throw e;
+        }
       }
 
       // Only the detached hub spawn — no browser open
@@ -167,7 +185,9 @@ describe('cli/utils/supervisor', () => {
       try {
         await runSupervisor();
       } catch (e) {
-        if (!(e instanceof Error && e.message === '__EXIT__')) throw e;
+        if (!(e instanceof Error && e.message === '__EXIT__')) {
+          throw e;
+        }
       }
 
       expect(errorSpy).toHaveBeenCalled();

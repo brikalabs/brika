@@ -18,7 +18,9 @@ export function SystemInfoSkeleton() {
         <Skeleton className="mt-1 h-4 w-64" />
       </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {Array.from({ length: 12 }).map((_, i) => (
+        {Array.from({
+          length: 12,
+        }).map((_, i) => (
           <InfoItemSkeleton key={`info-skeleton-${i}`} />
         ))}
       </div>

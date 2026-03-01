@@ -59,12 +59,30 @@ export function ExpressionInput({
 
       // Add common properties/paths
       const commonProps = [
-        { name: 'trigger.type', desc: 'Event type' },
-        { name: 'trigger.payload', desc: 'Event payload object' },
-        { name: 'trigger.source', desc: 'Event source' },
-        { name: 'trigger.ts', desc: 'Event timestamp' },
-        { name: 'prev', desc: 'Previous block output' },
-        { name: 'vars', desc: 'Workflow variables' },
+        {
+          name: 'trigger.type',
+          desc: 'Event type',
+        },
+        {
+          name: 'trigger.payload',
+          desc: 'Event payload object',
+        },
+        {
+          name: 'trigger.source',
+          desc: 'Event source',
+        },
+        {
+          name: 'trigger.ts',
+          desc: 'Event timestamp',
+        },
+        {
+          name: 'prev',
+          desc: 'Previous block output',
+        },
+        {
+          name: 'vars',
+          desc: 'Workflow variables',
+        },
       ];
 
       commonProps.forEach((p) => {
@@ -82,7 +100,9 @@ export function ExpressionInput({
 
       return items.slice(0, 10);
     },
-    [variables]
+    [
+      variables,
+    ]
   );
 
   // Check for {{ trigger and show autocomplete
@@ -102,7 +122,9 @@ export function ExpressionInput({
         setShowAutocomplete(false);
       }
     },
-    [buildAutocompleteItems]
+    [
+      buildAutocompleteItems,
+    ]
   );
 
   // Handle input change
@@ -116,7 +138,9 @@ export function ExpressionInput({
 
   // Handle key navigation
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (!showAutocomplete) return;
+    if (!showAutocomplete) {
+      return;
+    }
 
     switch (e.key) {
       case 'ArrowDown':

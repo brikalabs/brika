@@ -6,17 +6,29 @@ import { pageRoutes } from '@/runtime/http/routes/pages';
 import { ModuleCompiler } from '@/runtime/modules';
 import { PluginManager } from '@/runtime/plugins/plugin-manager';
 
-const PLUGIN = { uid: 'plg-1', name: '@brika/plugin-timer' };
+const PLUGIN = {
+  uid: 'plg-1',
+  name: '@brika/plugin-timer',
+};
 
 describe('page routes', () => {
   let app: ReturnType<typeof TestApp.create>;
-  let mockManager: { get: ReturnType<typeof mock> };
-  let mockCompiler: { get: ReturnType<typeof mock> };
+  let mockManager: {
+    get: ReturnType<typeof mock>;
+  };
+  let mockCompiler: {
+    get: ReturnType<typeof mock>;
+  };
 
   useTestBed(() => {
-    mockManager = { get: mock().mockReturnValue(PLUGIN) };
+    mockManager = {
+      get: mock().mockReturnValue(PLUGIN),
+    };
     mockCompiler = {
-      get: mock().mockReturnValue({ content: 'console.log("hello")', etag: '"abc123"' }),
+      get: mock().mockReturnValue({
+        content: 'console.log("hello")',
+        etag: '"abc123"',
+      }),
     };
     stub(PluginManager, mockManager);
     stub(ModuleCompiler, mockCompiler);
@@ -34,7 +46,9 @@ describe('page routes', () => {
 
   test('GET /module.js returns 304 when ETag matches', async () => {
     const res = await app.get('/api/plugins/plg-1/pages/settings/module.js', {
-      headers: { 'If-None-Match': '"abc123"' },
+      headers: {
+        'If-None-Match': '"abc123"',
+      },
     });
 
     expect(res.status).toBe(304);

@@ -24,7 +24,14 @@ export interface ConnectionCheck {
 /**
  * Result of connection validation.
  */
-export type ConnectionResult = { valid: true } | { valid: false; reason: string };
+export type ConnectionResult =
+  | {
+      valid: true;
+    }
+  | {
+      valid: false;
+      reason: string;
+    };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Validation
@@ -70,5 +77,7 @@ export function isValidConnection(check: ConnectionCheck): ConnectionResult {
     };
   }
 
-  return { valid: true };
+  return {
+    valid: true,
+  };
 }

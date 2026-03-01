@@ -1,4 +1,12 @@
-import type { PreferenceDefinition } from '@brika/plugin';
+import type {
+  CheckboxPreference,
+  DropdownPreference,
+  LinkPreference,
+  NumberPreference,
+  PasswordPreference,
+  PreferenceDefinition,
+  TextPreference,
+} from '@brika/plugin';
 import { ExternalLink, RefreshCw } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import {
@@ -23,10 +31,169 @@ interface PreferenceFieldProps {
   tp: (ns: string, key: string, fallback?: string) => string;
 }
 
+interface SharedFieldProps {
+  label: string;
+  description: string;
+}
+
 function resolvePluginUrl(url: string, pluginUid: string): string {
-  if (url.startsWith('/api/')) return url;
-  if (url.startsWith('/')) return `/api/plugins/${encodeURIComponent(pluginUid)}/routes${url}`;
+  if (url.startsWith('/api/')) {
+    return url;
+  }
+  if (url.startsWith('/')) {
+    return `/api/plugins/${encodeURIComponent(pluginUid)}/routes${url}`;
+  }
   return url;
+}
+
+function FieldDescription({
+  description,
+}: Readonly<{
+  description: string;
+}>) {
+  if (!description) {
+    return null;
+  }
+  return <p className="text-muted-foreground text-xs">{description}</p>;
+}
+
+/* ─── Per-type field components ─────────────────────────────────────────────── */
+
+function TextOrPasswordField({
+  pref,
+  value,
+  onChange,
+  label,
+  description,
+}: Readonly<
+  SharedFieldProps & {
+    pref: TextPreference | PasswordPreference;
+    value: unknown;
+    onChange: (value: unknown) => void;
+  }
+>) {
+  return (
+    <div className="space-y-2">
+      <Label>
+        {label}
+        {pref.required && <span className="ml-1 text-destructive">*</span>}
+      </Label>
+      <Input
+        type={pref.type}
+        value={typeof value === 'string' ? value : ''}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={pref.default}
+      />
+      <FieldDescription description={description} />
+    </div>
+  );
+}
+
+function NumberField({
+  pref,
+  value,
+  onChange,
+  label,
+  description,
+}: Readonly<
+  SharedFieldProps & {
+    pref: NumberPreference;
+    value: unknown;
+    onChange: (value: unknown) => void;
+  }
+>) {
+  return (
+    <div className="space-y-2">
+      <Label>
+        {label}
+        {pref.required && <span className="ml-1 text-destructive">*</span>}
+      </Label>
+      <Input
+        type="number"
+        value={typeof value === 'number' ? value : (pref.default ?? '')}
+        onChange={(e) => onChange(e.target.valueAsNumber)}
+        min={pref.min}
+        max={pref.max}
+        step={pref.step}
+      />
+      <FieldDescription description={description} />
+    </div>
+  );
+}
+
+function CheckboxField({
+  pref,
+  value,
+  onChange,
+  label,
+  description,
+}: Readonly<
+  SharedFieldProps & {
+    pref: CheckboxPreference;
+    value: unknown;
+    onChange: (value: unknown) => void;
+  }
+>) {
+  return (
+    <div className="flex items-center justify-between">
+      <div>
+        <Label>{label}</Label>
+        {description && <p className="text-muted-foreground text-xs">{description}</p>}
+      </div>
+      <Switch
+        checked={typeof value === 'boolean' ? value : (pref.default ?? false)}
+        onCheckedChange={onChange}
+      />
+    </div>
+  );
+}
+
+function DropdownField({
+  pref,
+  value,
+  onChange,
+  pluginName,
+  label,
+  description,
+  tp,
+}: Readonly<
+  SharedFieldProps & {
+    pref: DropdownPreference;
+    value: unknown;
+    onChange: (value: unknown) => void;
+    pluginName: string;
+    tp: (ns: string, key: string, fallback?: string) => string;
+  }
+>) {
+  const options = pref.options ?? [];
+  return (
+    <div className="space-y-2">
+      <Label>
+        {label}
+        {pref.required && <span className="ml-1 text-destructive">*</span>}
+      </Label>
+      <Select
+        value={typeof value === 'string' ? value : (pref.default ?? '')}
+        onValueChange={onChange}
+      >
+        <SelectTrigger className="w-full">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((opt) => {
+            const optLabel =
+              'label' in opt && typeof opt.label === 'string' ? opt.label : opt.value;
+            return (
+              <SelectItem key={opt.value} value={opt.value}>
+                {tp(pluginName, `preferences.${pref.name}.options.${opt.value}`, optLabel)}
+              </SelectItem>
+            );
+          })}
+        </SelectContent>
+      </Select>
+      <FieldDescription description={description} />
+    </div>
+  );
 }
 
 function DynamicDropdown({
@@ -37,7 +204,12 @@ function DynamicDropdown({
   label,
   description,
 }: Readonly<{
-  pref: Extract<PreferenceDefinition, { type: 'dynamic-dropdown' }>;
+  pref: Extract<
+    PreferenceDefinition,
+    {
+      type: 'dynamic-dropdown';
+    }
+  >;
   value: unknown;
   onChange: (value: unknown) => void;
   pluginUid: string;
@@ -55,7 +227,10 @@ function DynamicDropdown({
     } finally {
       setIsRefreshing(false);
     }
-  }, [pluginUid, pref.name]);
+  }, [
+    pluginUid,
+    pref.name,
+  ]);
 
   return (
     <div className="space-y-2">
@@ -83,10 +258,38 @@ function DynamicDropdown({
           <RefreshCw className={`size-4 ${isRefreshing ? 'animate-spin' : ''}`} />
         </Button>
       </div>
-      {description && <p className="text-muted-foreground text-xs">{description}</p>}
+      <FieldDescription description={description} />
     </div>
   );
 }
+
+function LinkField({
+  pref,
+  pluginUid,
+  label,
+  description,
+}: Readonly<
+  SharedFieldProps & {
+    pref: LinkPreference;
+    pluginUid: string;
+  }
+>) {
+  return (
+    <div className="space-y-2">
+      <Button
+        variant="outline"
+        className="w-full justify-start"
+        onClick={() => window.open(resolvePluginUrl(pref.url, pluginUid), '_blank', 'noopener')}
+      >
+        <ExternalLink className="mr-2 size-4" />
+        {label}
+      </Button>
+      <FieldDescription description={description} />
+    </div>
+  );
+}
+
+/* ─── Main component ────────────────────────────────────────────────────────── */
 
 export function PreferenceField({
   pref,
@@ -107,85 +310,49 @@ export function PreferenceField({
     case 'text':
     case 'password':
       return (
-        <div className="space-y-2">
-          <Label>
-            {label}
-            {pref.required && <span className="ml-1 text-destructive">*</span>}
-          </Label>
-          <Input
-            type={pref.type}
-            value={typeof value === 'string' ? value : ''}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder={pref.default}
-          />
-          {description && <p className="text-muted-foreground text-xs">{description}</p>}
-        </div>
+        <TextOrPasswordField
+          pref={pref}
+          value={value}
+          onChange={onChange}
+          label={label}
+          description={description}
+        />
       );
 
     case 'number':
       return (
-        <div className="space-y-2">
-          <Label>
-            {label}
-            {pref.required && <span className="ml-1 text-destructive">*</span>}
-          </Label>
-          <Input
-            type="number"
-            value={typeof value === 'number' ? value : (pref.default ?? '')}
-            onChange={(e) => onChange(e.target.valueAsNumber)}
-            min={pref.min}
-            max={pref.max}
-            step={pref.step}
-          />
-          {description && <p className="text-muted-foreground text-xs">{description}</p>}
-        </div>
+        <NumberField
+          pref={pref}
+          value={value}
+          onChange={onChange}
+          label={label}
+          description={description}
+        />
       );
 
     case 'checkbox':
       return (
-        <div className="flex items-center justify-between">
-          <div>
-            <Label>{label}</Label>
-            {description && <p className="text-muted-foreground text-xs">{description}</p>}
-          </div>
-          <Switch
-            checked={typeof value === 'boolean' ? value : (pref.default ?? false)}
-            onCheckedChange={onChange}
-          />
-        </div>
+        <CheckboxField
+          pref={pref}
+          value={value}
+          onChange={onChange}
+          label={label}
+          description={description}
+        />
       );
 
-    case 'dropdown': {
-      const options = pref.options ?? [];
+    case 'dropdown':
       return (
-        <div className="space-y-2">
-          <Label>
-            {label}
-            {pref.required && <span className="ml-1 text-destructive">*</span>}
-          </Label>
-          <Select
-            value={typeof value === 'string' ? value : (pref.default ?? '')}
-            onValueChange={onChange}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {options.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {tp(
-                    pluginName,
-                    `preferences.${pref.name}.options.${opt.value}`,
-                    'label' in opt ? (opt.label as string) : opt.value
-                  )}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {description && <p className="text-muted-foreground text-xs">{description}</p>}
-        </div>
+        <DropdownField
+          pref={pref}
+          value={value}
+          onChange={onChange}
+          pluginName={pluginName}
+          label={label}
+          description={description}
+          tp={tp}
+        />
       );
-    }
 
     case 'dynamic-dropdown':
       return (
@@ -201,17 +368,7 @@ export function PreferenceField({
 
     case 'link':
       return (
-        <div className="space-y-2">
-          <Button
-            variant="outline"
-            className="w-full justify-start"
-            onClick={() => window.open(resolvePluginUrl(pref.url, pluginUid), '_blank', 'noopener')}
-          >
-            <ExternalLink className="mr-2 size-4" />
-            {label}
-          </Button>
-          {description && <p className="text-muted-foreground text-xs">{description}</p>}
-        </div>
+        <LinkField pref={pref} pluginUid={pluginUid} label={label} description={description} />
       );
   }
 }

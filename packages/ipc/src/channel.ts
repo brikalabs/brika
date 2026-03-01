@@ -117,8 +117,13 @@ export class Channel {
    * Send a message
    */
   send<T extends MessageDef>(def: T, payload: PayloadOf<T>): void {
-    if (this.#closed) return;
-    this.#send({ t: def.name, ...(payload as object) });
+    if (this.#closed) {
+      return;
+    }
+    this.#send({
+      t: def.name,
+      ...(payload as object),
+    });
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -188,7 +193,11 @@ export class Channel {
         timer,
       });
 
-      this.#send({ t: def.name, _id: id, ...(input as object) });
+      this.#send({
+        t: def.name,
+        _id: id,
+        ...(input as object),
+      });
     });
   }
 
@@ -196,7 +205,9 @@ export class Channel {
    * Handle an incoming wire message
    */
   async handle(raw: WireMessage): Promise<void> {
-    if (this.#closed) return;
+    if (this.#closed) {
+      return;
+    }
 
     const { t: type, _id: id, ...payload } = raw;
 
@@ -252,7 +263,11 @@ export class Channel {
     if (rpcHandler && id !== undefined) {
       try {
         const result = await rpcHandler(payload);
-        this.#send({ t: `${type}Result`, _id: id, result });
+        this.#send({
+          t: `${type}Result`,
+          _id: id,
+          result,
+        });
       } catch (e) {
         // Preserve typed error codes across the wire
         if (e instanceof RpcError) {
@@ -265,7 +280,10 @@ export class Channel {
           this.#send({
             t: `${type}Result`,
             _id: id,
-            result: { ok: false, error: String(e) },
+            result: {
+              ok: false,
+              error: String(e),
+            },
           });
         }
       }
@@ -297,7 +315,9 @@ export class Channel {
    * Close the channel
    */
   close(error?: Error): void {
-    if (this.#closed) return;
+    if (this.#closed) {
+      return;
+    }
     this.#closed = true;
 
     const err = error ?? new Error('Channel closed');

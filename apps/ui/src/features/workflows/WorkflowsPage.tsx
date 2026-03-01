@@ -10,7 +10,7 @@ import { useState } from 'react';
 import { useDataView } from '@/components/DataView';
 import { Button, Card, Input } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
-import { routes } from '@/routes';
+import { paths } from '@/routes/paths';
 import type { Workflow } from './api';
 import { DebugDialog, DeleteDialog, WorkflowsTable, WorkflowTableSkeleton } from './components';
 import { useDeleteWorkflow, useDisableWorkflow, useEnableWorkflow, useWorkflows } from './hooks';
@@ -59,7 +59,10 @@ export function WorkflowsPage() {
       w.name?.toLowerCase().includes(search.toLowerCase())
   );
 
-  const View = useDataView({ data: filteredWorkflows, isLoading: loadingWorkflows });
+  const View = useDataView({
+    data: filteredWorkflows,
+    isLoading: loadingWorkflows,
+  });
 
   return (
     <div className="space-y-6">
@@ -79,7 +82,13 @@ export function WorkflowsPage() {
               className="w-64 pl-9"
             />
           </div>
-          <Button onClick={() => navigate({ to: routes.workflows.new.path })}>
+          <Button
+            onClick={() =>
+              navigate({
+                to: paths.workflows.new.path,
+              })
+            }
+          >
             <Plus className="mr-2 size-4" />
             {t('workflows:actions.create')}
           </Button>
@@ -98,7 +107,13 @@ export function WorkflowsPage() {
               {search ? t('workflows:noResults') : t('workflows:empty')}
             </p>
             {!search && (
-              <Button onClick={() => navigate({ to: routes.workflows.new.path })}>
+              <Button
+                onClick={() =>
+                  navigate({
+                    to: paths.workflows.new.path,
+                  })
+                }
+              >
                 <Plus className="mr-2 size-4" />
                 {t('workflows:actions.create')}
               </Button>

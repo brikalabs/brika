@@ -10,7 +10,7 @@ import {
   registerRoute as registerRouteMsg,
   routeRequest as routeRequestMsg,
 } from '@brika/ipc/contract';
-import { type ContextCore, type MethodsOf, registerContextModule } from './register';
+import { type ContextCore, registerContextModule } from './register';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -39,12 +39,28 @@ export function setupRoutes(core: ContextCore) {
   client.implement(routeRequestMsg, async ({ routeId, method, path, query, headers, body }) => {
     const handler = handlers.get(routeId);
     if (!handler) {
-      return { status: 404, body: { error: 'Route handler not found' } };
+      return {
+        status: 404,
+        body: {
+          error: 'Route handler not found',
+        },
+      };
     }
     try {
-      return await handler({ method, path, query, headers, body });
+      return await handler({
+        method,
+        path,
+        query,
+        headers,
+        body,
+      });
     } catch (e) {
-      return { status: 500, body: { error: String(e) } };
+      return {
+        status: 500,
+        body: {
+          error: String(e),
+        },
+      };
     }
   });
 
@@ -57,16 +73,13 @@ export function setupRoutes(core: ContextCore) {
       ): void {
         const routeId = `${method}:${path}`;
         handlers.set(routeId, handler);
-        client.send(registerRouteMsg, { method, path });
+        client.send(registerRouteMsg, {
+          method,
+          path,
+        });
       },
     },
   };
-}
-
-// ─── Type Augmentation (inferred from setup) ─────────────────────────────────
-
-declare module '../context' {
-  interface Context extends MethodsOf<typeof setupRoutes> {}
 }
 
 registerContextModule('routes', setupRoutes);

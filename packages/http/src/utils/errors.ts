@@ -16,7 +16,10 @@ export async function createHttpError(
   try {
     const contentType = response.headers.get('content-type');
     if (contentType?.includes('application/json')) {
-      const errorData = (await response.json()) as { message?: string; error?: unknown };
+      const errorData = (await response.json()) as {
+        message?: string;
+        error?: unknown;
+      };
       if (errorData.message) {
         message = errorData.message;
       } else if (errorData.error) {

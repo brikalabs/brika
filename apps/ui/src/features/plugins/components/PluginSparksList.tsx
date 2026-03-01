@@ -20,7 +20,9 @@ export function PluginSparksList({ plugin }: Readonly<PluginSparksListProps>) {
   const { t, tp } = useLocale();
   const sparks = plugin.sparks ?? [];
 
-  if (sparks.length === 0) return null;
+  if (sparks.length === 0) {
+    return null;
+  }
 
   return (
     <Card>

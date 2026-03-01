@@ -3,11 +3,11 @@
  * Direct service tests against an in-memory SQLite database.
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
 import type { Database } from 'bun:sqlite';
-import { openAuthDatabase } from '../setup';
+import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { SessionService } from '../services/SessionService';
 import { UserService } from '../services/UserService';
+import { openAuthDatabase } from '../setup';
 import { Role } from '../types';
 
 let db: Database;
@@ -15,11 +15,11 @@ let sessionService: SessionService;
 let userService: UserService;
 let userId: string;
 
-beforeEach(async () => {
+beforeEach(() => {
   db = openAuthDatabase(':memory:');
   sessionService = new SessionService(db, 3600);
   userService = new UserService(db);
-  const user = await userService.createUser('test@test.com', 'Test', Role.USER);
+  const user = userService.createUser('test@test.com', 'Test', Role.USER);
   userId = user.id;
 });
 
@@ -34,9 +34,11 @@ describe('revokeSession', () => {
     const token = sessionService.createSession(userId);
     const session = sessionService.validateSession(token);
     expect(session).not.toBeNull();
+    if (session === null) {
+      return;
+    }
 
-    const sessionId = session!.id;
-    sessionService.revokeSession(sessionId);
+    sessionService.revokeSession(session.id);
 
     const result = sessionService.validateSession(token);
     expect(result).toBeNull();
@@ -54,8 +56,11 @@ describe('revokeSession', () => {
 
     const session1 = sessionService.validateSession(token1);
     expect(session1).not.toBeNull();
+    if (session1 === null) {
+      return;
+    }
 
-    sessionService.revokeSession(session1!.id);
+    sessionService.revokeSession(session1.id);
 
     expect(sessionService.validateSession(token1)).toBeNull();
     expect(sessionService.validateSession(token2)).not.toBeNull();
@@ -64,11 +69,14 @@ describe('revokeSession', () => {
   it('is idempotent — revoking an already-revoked session does not throw', () => {
     const token = sessionService.createSession(userId);
     const session = sessionService.validateSession(token);
-    const sessionId = session!.id;
+    expect(session).not.toBeNull();
+    if (session === null) {
+      return;
+    }
 
     expect(() => {
-      sessionService.revokeSession(sessionId);
-      sessionService.revokeSession(sessionId);
+      sessionService.revokeSession(session.id);
+      sessionService.revokeSession(session.id);
     }).not.toThrow();
   });
 });
@@ -88,8 +96,8 @@ describe('revokeAllUserSessions', () => {
     expect(sessionService.validateSession(token3)).toBeNull();
   });
 
-  it('does not affect sessions belonging to other users', async () => {
-    const otherUser = await userService.createUser('other@test.com', 'Other', Role.USER);
+  it('does not affect sessions belonging to other users', () => {
+    const otherUser = userService.createUser('other@test.com', 'Other', Role.USER);
     const otherToken = sessionService.createSession(otherUser.id);
 
     sessionService.createSession(userId);
@@ -132,11 +140,22 @@ describe('listUserSessions', () => {
     sessionService.createSession(userId);
 
     const session1 = sessionService.validateSession(token1);
-    sessionService.revokeSession(session1!.id);
+    expect(session1).not.toBeNull();
+    if (session1 === null) {
+      return;
+    }
+
+    sessionService.revokeSession(session1.id);
 
     const sessions = sessionService.listUserSessions(userId);
     expect(sessions).toHaveLength(1);
-    expect(sessions[0].id).not.toBe(session1!.id);
+
+    const remaining = sessions[0];
+    expect(remaining).toBeDefined();
+    if (remaining === undefined) {
+      return;
+    }
+    expect(remaining.id).not.toBe(session1.id);
   });
 
   it('orders results by last_seen_at DESC', () => {
@@ -156,18 +175,29 @@ describe('listUserSessions', () => {
 
     // Verify DESC ordering by comparing consecutive lastSeenAt values.
     for (let i = 0; i < sessions.length - 1; i++) {
-      expect(sessions[i].lastSeenAt).toBeGreaterThanOrEqual(sessions[i + 1].lastSeenAt);
+      const current = sessions[i];
+      const next = sessions[i + 1];
+      if (current === undefined || next === undefined) {
+        continue;
+      }
+      expect(current.lastSeenAt).toBeGreaterThanOrEqual(next.lastSeenAt);
     }
   });
 
-  it('does not include sessions belonging to other users', async () => {
-    const otherUser = await userService.createUser('other@test.com', 'Other', Role.USER);
+  it('does not include sessions belonging to other users', () => {
+    const otherUser = userService.createUser('other@test.com', 'Other', Role.USER);
     sessionService.createSession(otherUser.id);
     sessionService.createSession(userId);
 
     const sessions = sessionService.listUserSessions(userId);
     expect(sessions).toHaveLength(1);
-    expect(sessions[0].userId).toBe(userId);
+
+    const onlySession = sessions[0];
+    expect(onlySession).toBeDefined();
+    if (onlySession === undefined) {
+      return;
+    }
+    expect(onlySession.userId).toBe(userId);
   });
 
   it('returns SessionRecord objects with the expected shape', () => {
@@ -175,12 +205,19 @@ describe('listUserSessions', () => {
     // Validate so we get the session id back.
     const session = sessionService.validateSession(token, '127.0.0.1');
     expect(session).not.toBeNull();
+    if (session === null) {
+      return;
+    }
 
     const records = sessionService.listUserSessions(userId);
     expect(records).toHaveLength(1);
 
     const record = records[0];
-    expect(record.id).toBe(session!.id);
+    expect(record).toBeDefined();
+    if (record === undefined) {
+      return;
+    }
+    expect(record.id).toBe(session.id);
     expect(record.userId).toBe(userId);
     expect(typeof record.tokenHash).toBe('string');
     expect(record.ip).toBe('127.0.0.1');
@@ -240,7 +277,12 @@ describe('cleanExpiredSessions', () => {
     // Create and immediately revoke — created_at is now, so it should not be cleaned.
     const token = sessionService.createSession(userId);
     const session = sessionService.validateSession(token);
-    sessionService.revokeSession(session!.id);
+    expect(session).not.toBeNull();
+    if (session === null) {
+      return;
+    }
+
+    sessionService.revokeSession(session.id);
 
     const count = sessionService.cleanExpiredSessions();
     expect(count).toBe(0);
@@ -253,7 +295,14 @@ describe('cleanExpiredSessions', () => {
       db.query(
         `INSERT INTO sessions (id, user_id, token_hash, ip, user_agent, created_at, last_seen_at, expires_at)
          VALUES (?, ?, ?, NULL, NULL, ?, ?, ?)`
-      ).run(`old-${i}`, userId, `hash-${i}`, thirtyOneDaysAgo, thirtyOneDaysAgo, thirtyOneDaysAgo - 1);
+      ).run(
+        `old-${i}`,
+        userId,
+        `hash-${i}`,
+        thirtyOneDaysAgo,
+        thirtyOneDaysAgo,
+        thirtyOneDaysAgo - 1
+      );
     }
 
     const count = sessionService.cleanExpiredSessions();

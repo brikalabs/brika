@@ -14,7 +14,12 @@ interface NpmApiSearchResult {
       name: string;
       version: string;
       description?: string;
-      author?: string | { name: string; email?: string };
+      author?:
+        | string
+        | {
+            name: string;
+            email?: string;
+          };
       keywords?: string[];
       links?: {
         npm?: string;
@@ -45,7 +50,10 @@ interface NpmApiDownloads {
 
 interface NpmApiPackageResponse {
   name: string;
-  'dist-tags': { latest: string; [tag: string]: string };
+  'dist-tags': {
+    latest: string;
+    [tag: string]: string;
+  };
   versions: Record<
     string,
     {
@@ -53,12 +61,26 @@ interface NpmApiPackageResponse {
       version: string;
       displayName?: string;
       description?: string;
-      author?: string | { name: string; email?: string };
+      author?:
+        | string
+        | {
+            name: string;
+            email?: string;
+          };
       keywords?: string[];
-      repository?: string | { type?: string; url: string; directory?: string };
+      repository?:
+        | string
+        | {
+            type?: string;
+            url: string;
+            directory?: string;
+          };
       homepage?: string;
       license?: string;
-      engines?: { brika?: string; node?: string };
+      engines?: {
+        brika?: string;
+        node?: string;
+      };
     }
   >;
   time: Record<string, string>;
@@ -74,24 +96,48 @@ export class NpmRegistry implements RegistrySource {
     query?: string,
     limit = 20,
     offset = 0
-  ): Promise<{ plugins: RawRegistryPlugin[]; total: number }> {
+  ): Promise<{
+    plugins: RawRegistryPlugin[];
+    total: number;
+  }> {
     try {
       const searchQuery = query ? `keywords:brika ${query}` : 'keywords:brika';
       const fetchSize = Math.max(limit * 5, 50);
 
-      this.#log.info('Searching npm registry', { query: searchQuery, limit, offset });
+      this.#log.info('Searching npm registry', {
+        query: searchQuery,
+        limit,
+        offset,
+      });
 
       const data = await this.#http
         .get<NpmApiSearchResult>(NPM_SEARCH_URL)
-        .params({ text: searchQuery, size: String(fetchSize), from: String(offset) })
-        .cache({ ttl: 300_000, tags: ['npm-search'] }) // 5 minutes
+        .params({
+          text: searchQuery,
+          size: String(fetchSize),
+          from: String(offset),
+        })
+        .cache({
+          ttl: 300_000,
+          tags: [
+            'npm-search',
+          ],
+        }) // 5 minutes
         .data();
 
       const plugins = await this.#validateAndFetchDetails(data.objects, limit, query);
-      return { plugins, total: plugins.length };
+      return {
+        plugins,
+        total: plugins.length,
+      };
     } catch (error) {
-      this.#log.error('npm search failed', { error: String(error) });
-      return { plugins: [], total: 0 };
+      this.#log.error('npm search failed', {
+        error: String(error),
+      });
+      return {
+        plugins: [],
+        total: 0,
+      };
     }
   }
 
@@ -100,11 +146,18 @@ export class NpmRegistry implements RegistrySource {
     try {
       const data = await this.#http
         .get<NpmApiPackageResponse>(`${NPM_REGISTRY_URL}/${packageName}`)
-        .cache({ ttl: 600_000, tags: ['npm-package'] }) // 10 minutes
+        .cache({
+          ttl: 600_000,
+          tags: [
+            'npm-package',
+          ],
+        }) // 10 minutes
         .data();
 
       const latestVersion = data['dist-tags']?.latest || Object.keys(data.versions).pop();
-      if (!latestVersion) return null;
+      if (!latestVersion) {
+        return null;
+      }
 
       const v = data.versions[latestVersion];
       return {
@@ -140,19 +193,27 @@ export class NpmRegistry implements RegistrySource {
       const batchResults = await Promise.all(
         batch.map(async (obj) => {
           const pkg = await this.getPackageDetails(obj.package.name);
-          if (!pkg?.engines?.brika) return null;
+          if (!pkg?.engines?.brika) {
+            return null;
+          }
 
           if (queryLower) {
             const matches =
               pkg.name.toLowerCase().includes(queryLower) ||
               pkg.description?.toLowerCase().includes(queryLower) ||
               pkg.keywords?.some((k) => k.toLowerCase().includes(queryLower));
-            if (!matches) return null;
+            if (!matches) {
+              return null;
+            }
           }
 
           const downloadCount = await this.#getDownloadCount(obj.package.name);
           return {
-            package: { ...pkg, links: obj.package.links, score: obj.score },
+            package: {
+              ...pkg,
+              links: obj.package.links,
+              score: obj.score,
+            },
             downloadCount,
             source: 'npm',
             installVersion: pkg.version,
@@ -161,10 +222,14 @@ export class NpmRegistry implements RegistrySource {
       );
 
       for (const result of batchResults) {
-        if (result && results.length < limit) results.push(result);
+        if (result && results.length < limit) {
+          results.push(result);
+        }
       }
 
-      if (results.length >= limit) break;
+      if (results.length >= limit) {
+        break;
+      }
     }
 
     return results;
@@ -174,7 +239,12 @@ export class NpmRegistry implements RegistrySource {
     try {
       const data = await this.#http
         .get<NpmApiDownloads>(`${NPM_DOWNLOADS_URL}/last-week/${packageName}`)
-        .cache({ ttl: 3_600_000, tags: ['npm-downloads'] }) // 1 hour
+        .cache({
+          ttl: 3_600_000,
+          tags: [
+            'npm-downloads',
+          ],
+        }) // 1 hour
         .data();
       return data.downloads || 0;
     } catch {

@@ -16,10 +16,13 @@ registerCheck('bePascalCase', () => ({
   check: (_, file) => {
     const name = file
       .split('/')
-      .pop()!
-      .replace(/\.\w+$/, '');
+      .pop()
+      ?.replace(/\.\w+$/, '');
     if (!/^[A-Z][a-zA-Z0-9]*$/.test(name)) {
-      return { file, message: `"${name}" is not PascalCase` };
+      return {
+        file,
+        message: `"${name}" is not PascalCase`,
+      };
     }
   },
 }));
@@ -29,10 +32,13 @@ registerCheck('beCamelCase', () => ({
   check: (_, file) => {
     const name = file
       .split('/')
-      .pop()!
-      .replace(/\.\w+$/, '');
+      .pop()
+      ?.replace(/\.\w+$/, '');
     if (!/^[a-z][a-zA-Z0-9]*$/.test(name)) {
-      return { file, message: `"${name}" is not camelCase` };
+      return {
+        file,
+        message: `"${name}" is not camelCase`,
+      };
     }
   },
 }));
@@ -42,10 +48,13 @@ registerCheck('beKebabCase', () => ({
   check: (_, file) => {
     const name = file
       .split('/')
-      .pop()!
-      .replace(/\.\w+$/, '');
+      .pop()
+      ?.replace(/\.\w+$/, '');
     if (!/^[a-z][a-z0-9]*(-[a-z0-9]+)*$/.test(name)) {
-      return { file, message: `"${name}" is not kebab-case` };
+      return {
+        file,
+        message: `"${name}" is not kebab-case`,
+      };
     }
   },
 }));

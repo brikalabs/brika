@@ -50,7 +50,9 @@ export default function TimerBrick() {
             strokeDasharray={CIRCUMFERENCE}
             strokeDashoffset={offset}
             transform="rotate(-90 36 36)"
-            style={{ transition: 'stroke-dashoffset 1s linear' }}
+            style={{
+              transition: 'stroke-dashoffset 1s linear',
+            }}
           />
         </svg>
         <div className="absolute inset-0 flex items-center justify-center">

@@ -77,7 +77,12 @@ export function useDelayedLoading(
         clearTimeout(minDurationTimeoutRef.current);
       }
     };
-  }, [isLoading, delay, minDuration, showLoading]);
+  }, [
+    isLoading,
+    delay,
+    minDuration,
+    showLoading,
+  ]);
 
   return showLoading;
 }

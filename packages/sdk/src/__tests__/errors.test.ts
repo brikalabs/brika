@@ -115,7 +115,9 @@ describe('InternalError', () => {
 
 describe('rethrowRpcError', () => {
   test('maps PERMISSION_DENIED → PermissionDeniedError', () => {
-    const rpc = new RpcError('PERMISSION_DENIED', 'denied', { permission: 'location' });
+    const rpc = new RpcError('PERMISSION_DENIED', 'denied', {
+      permission: 'location',
+    });
     expect(() => rethrowRpcError(rpc)).toThrow(PermissionDeniedError);
     try {
       rethrowRpcError(rpc);
@@ -125,7 +127,9 @@ describe('rethrowRpcError', () => {
   });
 
   test('maps NOT_FOUND → NotFoundError', () => {
-    const rpc = new RpcError('NOT_FOUND', 'gone', { resource: 'timer:block' });
+    const rpc = new RpcError('NOT_FOUND', 'gone', {
+      resource: 'timer:block',
+    });
     expect(() => rethrowRpcError(rpc)).toThrow(NotFoundError);
     try {
       rethrowRpcError(rpc);
@@ -135,7 +139,9 @@ describe('rethrowRpcError', () => {
   });
 
   test('maps INVALID_INPUT → InvalidInputError', () => {
-    const rpc = new RpcError('INVALID_INPUT', 'bad', { field: 'email' });
+    const rpc = new RpcError('INVALID_INPUT', 'bad', {
+      field: 'email',
+    });
     expect(() => rethrowRpcError(rpc)).toThrow(InvalidInputError);
     try {
       rethrowRpcError(rpc);
@@ -222,6 +228,8 @@ describe('sdkErrors registry', () => {
 
     // Cleanup
     const idx = sdkErrors.indexOf(CustomError);
-    if (idx !== -1) sdkErrors.splice(idx, 1);
+    if (idx !== -1) {
+      sdkErrors.splice(idx, 1);
+    }
   });
 });

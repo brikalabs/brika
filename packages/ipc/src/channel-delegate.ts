@@ -20,8 +20,7 @@ export interface HasChannel {
  *
  * Adds: send, on, implement, call — all delegating to this.channel.
  */
-// biome-ignore lint/suspicious/noExplicitAny: mixin pattern needs flexible constructor signature
-export function applyChannelDelegate<T extends new (...args: any[]) => HasChannel>(
+export function applyChannelDelegate<T extends new (...args: never[]) => HasChannel>(
   target: T
 ): void {
   target.prototype.send = function <M extends MessageDef>(

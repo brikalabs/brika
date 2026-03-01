@@ -11,7 +11,9 @@ export const i18nRoutes = [
     path: '/api/i18n/locales',
     handler: ({ inject }) => {
       const i18n = inject(I18nService);
-      return { locales: i18n.listLocales() };
+      return {
+        locales: i18n.listLocales(),
+      };
     },
   }),
 
@@ -23,7 +25,9 @@ export const i18nRoutes = [
     path: '/api/i18n/namespaces',
     handler: ({ inject }) => {
       const i18n = inject(I18nService);
-      return { namespaces: i18n.listNamespaces() };
+      return {
+        namespaces: i18n.listNamespaces(),
+      };
     },
   }),
 
@@ -35,7 +39,9 @@ export const i18nRoutes = [
    */
   route.get({
     path: '/api/i18n/bundle/:locale',
-    params: z.object({ locale: z.string() }),
+    params: z.object({
+      locale: z.string(),
+    }),
     handler: ({ inject, params }) => {
       const i18n = inject(I18nService);
       const locale = params.locale || 'en';
@@ -54,7 +60,10 @@ export const i18nRoutes = [
    */
   route.get({
     path: '/api/i18n/:locale/:namespace{.+}',
-    params: z.object({ locale: z.string(), namespace: z.string() }),
+    params: z.object({
+      locale: z.string(),
+      namespace: z.string(),
+    }),
     handler: ({ inject, params }) => {
       const i18n = inject(I18nService);
       const locale = params.locale || 'en';

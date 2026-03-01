@@ -36,12 +36,20 @@ describe('setupLifecycle', () => {
     });
 
     test('returns uid after preferences arrive', () => {
-      h.onHandlers.get('preferences')!({ values: { __plugin_uid: 'uid-abc-123' } });
+      h.onHandlers.get('preferences')?.({
+        values: {
+          __plugin_uid: 'uid-abc-123',
+        },
+      });
       expect(methods.getPluginUid()).toBe('uid-abc-123');
     });
 
     test('returns undefined when __plugin_uid is not a string', () => {
-      h.onHandlers.get('preferences')!({ values: { __plugin_uid: 42 } });
+      h.onHandlers.get('preferences')?.({
+        values: {
+          __plugin_uid: 42,
+        },
+      });
       expect(methods.getPluginUid()).toBeUndefined();
     });
   });
@@ -57,7 +65,11 @@ describe('setupLifecycle', () => {
       });
       methods.onInit(handler);
 
-      h.onHandlers.get('preferences')!({ values: { theme: 'dark' } });
+      h.onHandlers.get('preferences')?.({
+        values: {
+          theme: 'dark',
+        },
+      });
       await new Promise((r) => setTimeout(r, 10));
 
       expect(handler).toHaveBeenCalledTimes(1);
@@ -65,7 +77,11 @@ describe('setupLifecycle', () => {
 
     test('runs immediately if already initialized', async () => {
       // Trigger first preferences to mark as initialized
-      h.onHandlers.get('preferences')!({ values: { a: 1 } });
+      h.onHandlers.get('preferences')?.({
+        values: {
+          a: 1,
+        },
+      });
       await new Promise((r) => setTimeout(r, 10));
 
       // Now register a handler — should run immediately
@@ -88,7 +104,11 @@ describe('setupLifecycle', () => {
       unsub();
 
       // Trigger init — handler should NOT be called since we unsubscribed
-      h.onHandlers.get('preferences')!({ values: { x: 1 } });
+      h.onHandlers.get('preferences')?.({
+        values: {
+          x: 1,
+        },
+      });
       await new Promise((r) => setTimeout(r, 10));
 
       expect(handler).not.toHaveBeenCalled();
@@ -101,13 +121,17 @@ describe('setupLifecycle', () => {
       methods.onInit(errorHandler);
 
       // Should not throw
-      h.onHandlers.get('preferences')!({ values: { x: 1 } });
+      h.onHandlers.get('preferences')?.({
+        values: {
+          x: 1,
+        },
+      });
       await new Promise((r) => setTimeout(r, 10));
 
       expect(errorHandler).toHaveBeenCalledTimes(1);
       const errorLog = h.logMessages.find((m) => m.message.includes('Init handler error'));
       expect(errorLog).toBeDefined();
-      expect(errorLog!.level).toBe('error');
+      expect(errorLog?.level).toBe('error');
     });
 
     test('only runs once', async () => {
@@ -117,11 +141,19 @@ describe('setupLifecycle', () => {
       methods.onInit(handler);
 
       // First preferences — triggers init
-      h.onHandlers.get('preferences')!({ values: { a: 1 } });
+      h.onHandlers.get('preferences')?.({
+        values: {
+          a: 1,
+        },
+      });
       await new Promise((r) => setTimeout(r, 10));
 
       // Second preferences — should NOT re-trigger init
-      h.onHandlers.get('preferences')!({ values: { a: 2 } });
+      h.onHandlers.get('preferences')?.({
+        values: {
+          a: 2,
+        },
+      });
       await new Promise((r) => setTimeout(r, 10));
 
       expect(handler).toHaveBeenCalledTimes(1);
@@ -129,7 +161,11 @@ describe('setupLifecycle', () => {
 
     test('handles async errors gracefully when already initialized', async () => {
       // Initialize first
-      h.onHandlers.get('preferences')!({ values: { a: 1 } });
+      h.onHandlers.get('preferences')?.({
+        values: {
+          a: 1,
+        },
+      });
       await new Promise((r) => setTimeout(r, 10));
 
       // Register handler that rejects — caught via Promise.resolve().catch()
@@ -182,7 +218,7 @@ describe('setupLifecycle', () => {
       });
       methods.onUninstall(handler);
 
-      await h.onHandlers.get('uninstall')!({});
+      await h.onHandlers.get('uninstall')?.({});
       await new Promise((r) => setTimeout(r, 10));
 
       expect(handler).toHaveBeenCalledTimes(1);
@@ -194,13 +230,13 @@ describe('setupLifecycle', () => {
       });
       methods.onUninstall(errorHandler);
 
-      await h.onHandlers.get('uninstall')!({});
+      await h.onHandlers.get('uninstall')?.({});
       await new Promise((r) => setTimeout(r, 10));
 
       expect(errorHandler).toHaveBeenCalledTimes(1);
       const errorLog = h.logMessages.find((m) => m.message.includes('Uninstall handler error'));
       expect(errorLog).toBeDefined();
-      expect(errorLog!.level).toBe('error');
+      expect(errorLog?.level).toBe('error');
     });
 
     test('unsubscribe works', async () => {
@@ -211,7 +247,7 @@ describe('setupLifecycle', () => {
 
       unsub();
 
-      await h.onHandlers.get('uninstall')!({});
+      await h.onHandlers.get('uninstall')?.({});
       await new Promise((r) => setTimeout(r, 10));
 
       expect(handler).not.toHaveBeenCalled();
@@ -224,8 +260,16 @@ describe('setupLifecycle', () => {
 
   describe('getPreferences', () => {
     test('returns current preferences after IPC message', () => {
-      h.onHandlers.get('preferences')!({ values: { theme: 'dark', lang: 'en' } });
-      expect(methods.getPreferences()).toEqual({ theme: 'dark', lang: 'en' });
+      h.onHandlers.get('preferences')?.({
+        values: {
+          theme: 'dark',
+          lang: 'en',
+        },
+      });
+      expect(methods.getPreferences()).toEqual({
+        theme: 'dark',
+        lang: 'en',
+      });
     });
 
     test('returns empty object before any preferences arrive', () => {
@@ -244,16 +288,26 @@ describe('setupLifecycle', () => {
       });
 
       // First preferences (triggers init, not change)
-      h.onHandlers.get('preferences')!({ values: { a: 1 } });
+      h.onHandlers.get('preferences')?.({
+        values: {
+          a: 1,
+        },
+      });
       await new Promise((r) => setTimeout(r, 10));
 
       methods.onPreferencesChange(handler);
 
       // Second preferences (triggers change handlers)
-      h.onHandlers.get('preferences')!({ values: { a: 2 } });
+      h.onHandlers.get('preferences')?.({
+        values: {
+          a: 2,
+        },
+      });
 
       expect(handler).toHaveBeenCalledTimes(1);
-      expect(handler).toHaveBeenCalledWith({ a: 2 });
+      expect(handler).toHaveBeenCalledWith({
+        a: 2,
+      });
     });
 
     test('does not fire on first preferences message', () => {
@@ -263,7 +317,11 @@ describe('setupLifecycle', () => {
       methods.onPreferencesChange(handler);
 
       // First preferences — triggers init path, not change path
-      h.onHandlers.get('preferences')!({ values: { a: 1 } });
+      h.onHandlers.get('preferences')?.({
+        values: {
+          a: 1,
+        },
+      });
 
       expect(handler).not.toHaveBeenCalled();
     });
@@ -274,13 +332,21 @@ describe('setupLifecycle', () => {
       });
 
       // First preferences
-      h.onHandlers.get('preferences')!({ values: { a: 1 } });
+      h.onHandlers.get('preferences')?.({
+        values: {
+          a: 1,
+        },
+      });
 
       const unsub = methods.onPreferencesChange(handler);
       unsub();
 
       // Second preferences — handler should NOT be called
-      h.onHandlers.get('preferences')!({ values: { a: 2 } });
+      h.onHandlers.get('preferences')?.({
+        values: {
+          a: 2,
+        },
+      });
 
       expect(handler).not.toHaveBeenCalled();
     });
@@ -296,18 +362,30 @@ describe('setupLifecycle', () => {
 
       const msg = h.sentMessages.find((m) => m.name === 'updatePreference');
       expect(msg).toBeDefined();
-      expect(msg!.payload).toEqual({ key: 'theme', value: 'light' });
+      expect(msg?.payload).toEqual({
+        key: 'theme',
+        value: 'light',
+      });
 
       // Local cache should reflect the update
-      expect(methods.getPreferences()).toEqual({ theme: 'light' });
+      expect(methods.getPreferences()).toEqual({
+        theme: 'light',
+      });
     });
 
     test('merges with existing preferences', () => {
-      h.onHandlers.get('preferences')!({ values: { lang: 'en' } });
+      h.onHandlers.get('preferences')?.({
+        values: {
+          lang: 'en',
+        },
+      });
 
       methods.updatePreference('theme', 'dark');
 
-      expect(methods.getPreferences()).toEqual({ lang: 'en', theme: 'dark' });
+      expect(methods.getPreferences()).toEqual({
+        lang: 'en',
+        theme: 'dark',
+      });
     });
   });
 
@@ -346,7 +424,11 @@ describe('setupLifecycle', () => {
 
       await stop();
 
-      expect(order).toEqual([1, 2, 3]);
+      expect(order).toEqual([
+        1,
+        2,
+        3,
+      ]);
     });
 
     test('does nothing when no stop handlers registered', async () => {

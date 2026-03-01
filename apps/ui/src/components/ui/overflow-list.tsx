@@ -8,6 +8,31 @@ import { cn } from '@/lib/utils';
 
 const ITEM_ATTR = 'data-overflow-item';
 
+// ─── Measurement helpers ──────────────────────────────────────────────────────
+
+/** Cache the measured width of each overflow item element. */
+function cacheItemWidths(els: NodeListOf<HTMLElement>, cache: Map<string, number>): void {
+  for (const el of els) {
+    const id = el.getAttribute(ITEM_ATTR);
+    if (id) {
+      cache.set(id, el.offsetWidth);
+    }
+  }
+}
+
+/** Count how many item elements fit before overflowing the container. */
+function countVisibleItems(els: NodeListOf<HTMLElement>, containerRight: number): number {
+  let visible = 0;
+  for (const el of els) {
+    if (el.getBoundingClientRect().right <= containerRight + 1) {
+      visible++;
+    } else {
+      break;
+    }
+  }
+  return visible;
+}
+
 // ─── useOverflowList ─────────────────────────────────────────────────────────
 
 interface UseOverflowListOptions<T> {
@@ -55,59 +80,80 @@ function useOverflowList<T>({
 
   // ── Measure visible items (runs before paint — no flash) ───────────────
   React.useLayoutEffect(() => {
-    if (pauseRef.current) return;
+    if (pauseRef.current) {
+      return;
+    }
     const container = containerRef.current;
-    if (!container || items.length === 0) return;
+    if (!container || items.length === 0) {
+      return;
+    }
 
     const containerRight = container.getBoundingClientRect().right;
     const els = container.querySelectorAll<HTMLElement>(`[${ITEM_ATTR}]`);
 
-    // Cache every measured width for ResizeObserver recomputation
-    for (const el of els) {
-      const id = el.getAttribute(ITEM_ATTR);
-      if (id) widthCache.current.set(id, el.offsetWidth);
-    }
-
-    let visible = 0;
-    for (const el of els) {
-      if (el.getBoundingClientRect().right <= containerRight + 1) {
-        visible++;
-      } else {
-        break;
-      }
-    }
+    cacheItemWidths(els, widthCache.current);
+    const visible = countVisibleItems(els, containerRight);
 
     setOverflowCount(Math.max(items.length - visible, 0));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items, overflowCount, activeKey, ...deps]);
+  }, [
+    items,
+    overflowCount,
+    activeKey,
+    ...deps,
+  ]);
 
   // ── Resize: recompute from cached widths (pure math, no DOM reads) ─────
   React.useEffect(() => {
     const container = containerRef.current;
-    if (!container) return;
+    if (!container) {
+      return;
+    }
+
+    /** Count how many items fit within the available width using cached widths. Returns -1 if a cache miss is found. */
+    function countFittingItems(
+      currentItems: T[],
+      key: (item: T) => string,
+      available: number,
+      gap: number
+    ): number {
+      let used = 0;
+      let fits = 0;
+      for (const item of currentItems) {
+        const w = widthCache.current.get(key(item));
+        if (w === undefined) {
+          return -1; // cache miss
+        }
+        if (fits > 0) {
+          used += gap;
+        }
+        used += w;
+        if (used > available) {
+          break;
+        }
+        fits++;
+      }
+      return fits;
+    }
 
     const ro = new ResizeObserver(() => {
-      if (pauseRef.current) return;
+      if (pauseRef.current) {
+        return;
+      }
       const currentItems = itemsRef.current;
       const key = getKeyRef.current;
-      if (currentItems.length === 0) return;
+      if (currentItems.length === 0) {
+        return;
+      }
 
       const gap = Number.parseFloat(getComputedStyle(container).gap) || 0;
       const available = container.clientWidth;
-      let used = 0;
-      let fits = 0;
+      const fits = countFittingItems(currentItems, key, available, gap);
 
-      for (const item of currentItems) {
-        const w = widthCache.current.get(key(item));
-        if (w == null) {
-          // Uncached item — show all so useLayoutEffect can measure
-          setOverflowCount(0);
-          return;
-        }
-        if (fits > 0) used += gap;
-        used += w;
-        if (used > available) break;
-        fits++;
+      if (fits < 0) {
+        // Uncached item — show all so useLayoutEffect can measure
+        setOverflowCount(0);
+        return;
       }
 
       setOverflowCount(Math.max(currentItems.length - fits, 0));
@@ -122,27 +168,40 @@ function useOverflowList<T>({
     const key = getKeyRef.current;
     const currentIds = new Set(items.map(key));
     for (const id of widthCache.current.keys()) {
-      if (!currentIds.has(id)) widthCache.current.delete(id);
+      if (!currentIds.has(id)) {
+        widthCache.current.delete(id);
+      }
     }
-  }, [items]);
+  }, [
+    items,
+  ]);
 
   // ── Derive visible / overflow split ────────────────────────────────────
   const visibleCount = items.length - overflowCount;
 
   const { visible, overflow } = React.useMemo(() => {
     if (overflowCount === 0) {
-      return { visible: items, overflow: [] as T[] };
+      return {
+        visible: items,
+        overflow: [] as T[],
+      };
     }
 
     const key = getKeyRef.current;
 
-    if (activeKey != null) {
+    if (activeKey !== null && activeKey !== undefined) {
       const activeIdx = items.findIndex((item) => key(item) === activeKey);
       if (activeIdx >= 0 && activeIdx >= visibleCount) {
-        const vis = [...items.slice(0, visibleCount - 1), items[activeIdx]];
+        const vis = [
+          ...items.slice(0, visibleCount - 1),
+          items[activeIdx],
+        ];
         const visKeys = new Set(vis.map(key));
         const ovf = items.filter((item) => !visKeys.has(key(item)));
-        return { visible: vis, overflow: ovf };
+        return {
+          visible: vis,
+          overflow: ovf,
+        };
       }
     }
 
@@ -150,7 +209,12 @@ function useOverflowList<T>({
       visible: items.slice(0, visibleCount),
       overflow: items.slice(visibleCount),
     };
-  }, [items, visibleCount, overflowCount, activeKey]);
+  }, [
+    items,
+    visibleCount,
+    overflowCount,
+    activeKey,
+  ]);
 
   return {
     containerRef,
@@ -190,11 +254,15 @@ function OverflowListItem({
   className,
   itemId,
   ...props
-}: React.ComponentProps<'div'> & { itemId: string }) {
+}: React.ComponentProps<'div'> & {
+  itemId: string;
+}) {
   return (
     <div
       data-slot="overflow-list-item"
-      {...{ [ITEM_ATTR]: itemId }}
+      {...{
+        [ITEM_ATTR]: itemId,
+      }}
       className={cn('shrink-0', className)}
       {...props}
     />
@@ -207,7 +275,9 @@ function OverflowListIndicator({
   className,
   active = false,
   ...props
-}: React.ComponentProps<'div'> & { active?: boolean }) {
+}: React.ComponentProps<'div'> & {
+  active?: boolean;
+}) {
   return (
     <div
       data-slot="overflow-list-indicator"

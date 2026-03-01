@@ -22,7 +22,9 @@ const REGISTRY_FIXTURE = JSON.stringify({
       verifiedAt: '2026-01-01T00:00:00Z',
       verifiedBy: 'maintainer',
       description: 'Plugin A',
-      tags: ['a'],
+      tags: [
+        'a',
+      ],
       featured: false,
       category: 'community',
       source: 'npm',
@@ -32,7 +34,9 @@ const REGISTRY_FIXTURE = JSON.stringify({
       verifiedAt: '2026-01-02T00:00:00Z',
       verifiedBy: 'maintainer',
       description: 'Plugin B',
-      tags: ['b'],
+      tags: [
+        'b',
+      ],
       featured: true,
       category: 'official',
       source: 'npm',
@@ -45,13 +49,18 @@ let registryPath: string;
 
 beforeEach(() => {
   tmpDir = join(tmpdir(), `brika-sign-test-${Date.now()}`);
-  mkdirSync(tmpDir, { recursive: true });
+  mkdirSync(tmpDir, {
+    recursive: true,
+  });
   registryPath = join(tmpDir, 'verified-plugins.json');
   writeFileSync(registryPath, REGISTRY_FIXTURE, 'utf-8');
 });
 
 afterEach(() => {
-  rmSync(tmpDir, { recursive: true, force: true });
+  rmSync(tmpDir, {
+    recursive: true,
+    force: true,
+  });
 });
 
 describe('signRegistryAtPath', () => {
@@ -66,17 +75,23 @@ describe('signRegistryAtPath', () => {
     // Every plugin must have a valid signature
     for (const plugin of registry.plugins) {
       expect(plugin.signature).toBeDefined();
+      if (!plugin.signature) {
+        continue;
+      }
       const payload = extractPluginSignablePayload(plugin);
-      expect(verifyWithRawKey(canonicalize(payload), plugin.signature!, keys.publicKeyBase64)).toBe(
+      expect(verifyWithRawKey(canonicalize(payload), plugin.signature, keys.publicKeyBase64)).toBe(
         true
       );
     }
 
     // Registry-level signature must be valid
     expect(registry.signature).toBeDefined();
+    if (!registry.signature) {
+      throw new Error('Expected registry signature to be defined');
+    }
     const regPayload = extractRegistrySignablePayload(registry);
     expect(
-      verifyWithRawKey(canonicalize(regPayload), registry.signature!, keys.publicKeyBase64)
+      verifyWithRawKey(canonicalize(regPayload), registry.signature, keys.publicKeyBase64)
     ).toBe(true);
   });
 
@@ -121,16 +136,22 @@ describe('signRegistryAtPath', () => {
 
     for (const plugin of registry.plugins) {
       expect(plugin.signature).toBeDefined();
+      if (!plugin.signature) {
+        continue;
+      }
       const payload = extractPluginSignablePayload(plugin);
       expect(
-        verifyWithRawKey(canonicalize(payload), plugin.signature!, oldKeys.publicKeyBase64)
+        verifyWithRawKey(canonicalize(payload), plugin.signature, oldKeys.publicKeyBase64)
       ).toBe(true);
     }
 
     expect(registry.signature).toBeDefined();
+    if (!registry.signature) {
+      throw new Error('Expected registry signature to be defined');
+    }
     const regPayload = extractRegistrySignablePayload(registry);
     expect(
-      verifyWithRawKey(canonicalize(regPayload), registry.signature!, oldKeys.publicKeyBase64)
+      verifyWithRawKey(canonicalize(regPayload), registry.signature, oldKeys.publicKeyBase64)
     ).toBe(true);
   });
 
@@ -144,10 +165,13 @@ describe('signRegistryAtPath', () => {
     );
 
     // Verify it's valid before tampering
+    if (!signed.signature) {
+      throw new Error('Expected signed signature to be defined');
+    }
     const regPayload = extractRegistrySignablePayload(signed);
-    expect(
-      verifyWithRawKey(canonicalize(regPayload), signed.signature!, keys.publicKeyBase64)
-    ).toBe(true);
+    expect(verifyWithRawKey(canonicalize(regPayload), signed.signature, keys.publicKeyBase64)).toBe(
+      true
+    );
 
     // Manually add a plugin without re-signing
     const stale = JSON.parse(require('node:fs').readFileSync(registryPath, 'utf-8'));
@@ -168,9 +192,12 @@ describe('signRegistryAtPath', () => {
     );
 
     // Registry signature is now invalid (covers old plugin list)
+    if (!tampered.signature) {
+      throw new Error('Expected tampered signature to be defined');
+    }
     const tamperedPayload = extractRegistrySignablePayload(tampered);
     expect(
-      verifyWithRawKey(canonicalize(tamperedPayload), tampered.signature!, keys.publicKeyBase64)
+      verifyWithRawKey(canonicalize(tamperedPayload), tampered.signature, keys.publicKeyBase64)
     ).toBe(false);
   });
 });

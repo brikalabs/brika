@@ -1,5 +1,5 @@
-import { combineRoutes, group } from '@brika/router';
 import { requireAuth } from '@brika/auth/server';
+import { combineRoutes, group } from '@brika/router';
 import { actionRoutes } from './action-routes';
 import { blocksRoutes } from './blocks';
 import { boardsRoutes } from './boards';
@@ -26,7 +26,9 @@ export const allRoutes = combineRoutes(
   healthRoute,
   i18nRoutes,
   group({
-    middleware: [requireAuth()],
+    middleware: [
+      requireAuth(),
+    ],
     routes: [
       systemRoute,
       actionRoutes,
@@ -46,5 +48,5 @@ export const allRoutes = combineRoutes(
       updateRoutes,
       systemRoutes,
     ],
-  }),
+  })
 );

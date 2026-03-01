@@ -93,6 +93,38 @@ function useCodeBlockContext(component: string) {
 
 // --- Utilities ---
 
+type HighlightResult = {
+  tokens: CodeToken[][];
+  foreground: string | null;
+};
+
+/** Load Shiki, verify language support, and tokenize the code. Returns null if
+ *  the language is not bundled or tokenization fails. */
+async function tokenizeWithShiki(
+  code: string,
+  language: string,
+  theme: string
+): Promise<HighlightResult | null> {
+  const shiki = await import('shiki/bundle/web');
+  const key = language.toLowerCase();
+  if (!(key in shiki.bundledLanguages)) {
+    return null;
+  }
+
+  try {
+    const result = await shiki.codeToTokens(code, {
+      lang: key as Parameters<typeof shiki.codeToTokens>[1]['lang'],
+      theme,
+    });
+    return {
+      tokens: result.tokens,
+      foreground: result.fg ?? null,
+    };
+  } catch {
+    return null;
+  }
+}
+
 function getTokenStyle(token: CodeToken): React.CSSProperties {
   return {
     color: token.color,
@@ -118,28 +150,63 @@ function CodeBlock({ className, variant, ...props }: Readonly<CodeBlockProps>) {
 
   const setCodeInfo = React.useCallback((code: string, lineCount: number) => {
     setState((prev) =>
-      prev.code === code && prev.lineCount === lineCount ? prev : { ...prev, code, lineCount }
+      prev.code === code && prev.lineCount === lineCount
+        ? prev
+        : {
+            ...prev,
+            code,
+            lineCount,
+          }
     );
   }, []);
 
   const setLanguage = React.useCallback((language: string | null) => {
-    setState((prev) => (prev.language === language ? prev : { ...prev, language }));
+    setState((prev) =>
+      prev.language === language
+        ? prev
+        : {
+            ...prev,
+            language,
+          }
+    );
   }, []);
 
   const setFilename = React.useCallback((filename: string | null) => {
-    setState((prev) => (prev.filename === filename ? prev : { ...prev, filename }));
+    setState((prev) =>
+      prev.filename === filename
+        ? prev
+        : {
+            ...prev,
+            filename,
+          }
+    );
   }, []);
 
   const contextValue = React.useMemo(
-    () => ({ ...state, setCodeInfo, setLanguage, setFilename }),
-    [state, setCodeInfo, setLanguage, setFilename]
+    () => ({
+      ...state,
+      setCodeInfo,
+      setLanguage,
+      setFilename,
+    }),
+    [
+      state,
+      setCodeInfo,
+      setLanguage,
+      setFilename,
+    ]
   );
 
   return (
     <CodeBlockContext.Provider value={contextValue}>
       <div
         data-slot="code-block"
-        className={cn(codeBlockVariants({ variant }), className)}
+        className={cn(
+          codeBlockVariants({
+            variant,
+          }),
+          className
+        )}
         {...props}
       />
     </CodeBlockContext.Provider>
@@ -154,7 +221,12 @@ function CodeBlockHeader({ className, variant, ...props }: Readonly<CodeBlockHea
   return (
     <div
       data-slot="code-block-header"
-      className={cn(codeBlockHeaderVariants({ variant }), className)}
+      className={cn(
+        codeBlockHeaderVariants({
+          variant,
+        }),
+        className
+      )}
       {...props}
     />
   );
@@ -176,7 +248,16 @@ function CodeBlockInfo({
   children: (data: CodeBlockInfoData) => React.ReactNode;
 }>) {
   const { code, lineCount, language, filename } = useCodeBlockContext('CodeBlockInfo');
-  return <>{children({ code, lineCount, language, filename })}</>;
+  return (
+    <>
+      {children({
+        code,
+        lineCount,
+        language,
+        filename,
+      })}
+    </>
+  );
 }
 
 /** Hook to access code block context data. */
@@ -220,18 +301,24 @@ function CodeBlockCopyButton({
 
   React.useEffect(() => {
     return () => {
-      if (timeoutRef.current) globalThis.clearTimeout(timeoutRef.current);
+      if (timeoutRef.current) {
+        globalThis.clearTimeout(timeoutRef.current);
+      }
     };
   }, []);
 
   const handleCopy = async (event: React.MouseEvent<HTMLButtonElement>) => {
     onClick?.(event);
-    if (event.defaultPrevented || !navigator?.clipboard || !copyValue) return;
+    if (event.defaultPrevented || !navigator?.clipboard || !copyValue) {
+      return;
+    }
 
     try {
       await navigator.clipboard.writeText(copyValue);
       setCopied(true);
-      if (timeoutRef.current) globalThis.clearTimeout(timeoutRef.current);
+      if (timeoutRef.current) {
+        globalThis.clearTimeout(timeoutRef.current);
+      }
       timeoutRef.current = globalThis.setTimeout(() => setCopied(false), resetDelayMs);
     } catch {
       // Ignore clipboard failures
@@ -287,24 +374,44 @@ function CodeBlockContent({
   const [foreground, setForeground] = React.useState<string | null>(null);
 
   const code = React.useMemo(() => {
-    if (typeof children === 'string') return children;
+    if (typeof children === 'string') {
+      return children;
+    }
     if (Array.isArray(children)) {
       return children.filter((child) => typeof child === 'string').join('');
     }
     return '';
-  }, [children]);
+  }, [
+    children,
+  ]);
 
-  const normalizedCode = React.useMemo(() => code.replace(/\n$/, ''), [code]);
-  const lines = React.useMemo(() => normalizedCode.split('\n'), [normalizedCode]);
+  const normalizedCode = React.useMemo(
+    () => code.replace(/\n$/, ''),
+    [
+      code,
+    ]
+  );
+  const lines = React.useMemo(
+    () => normalizedCode.split('\n'),
+    [
+      normalizedCode,
+    ]
+  );
 
   // Set language and filename in context
   React.useEffect(() => {
     setLanguage(languageProp ?? null);
-  }, [languageProp, setLanguage]);
+  }, [
+    languageProp,
+    setLanguage,
+  ]);
 
   React.useEffect(() => {
     setFilename(filenameProp ?? null);
-  }, [filenameProp, setFilename]);
+  }, [
+    filenameProp,
+    setFilename,
+  ]);
 
   React.useEffect(() => {
     if (!languageProp) {
@@ -315,39 +422,30 @@ function CodeBlockContent({
 
     let cancelled = false;
 
-    import('shiki/bundle/web').then(async (shiki) => {
-      if (cancelled) return;
-      const key = languageProp.toLowerCase();
-      if (!(key in shiki.bundledLanguages)) {
-        setHighlightTokens(null);
-        setForeground(null);
+    tokenizeWithShiki(normalizedCode, languageProp, theme).then((result) => {
+      if (cancelled) {
         return;
       }
-
-      try {
-        const result = await shiki.codeToTokens(normalizedCode, {
-          lang: key as Parameters<typeof shiki.codeToTokens>[1]['lang'],
-          theme,
-        });
-        if (cancelled) return;
-        setHighlightTokens(result.tokens);
-        setForeground(result.fg ?? null);
-      } catch {
-        if (!cancelled) {
-          setHighlightTokens(null);
-          setForeground(null);
-        }
-      }
+      setHighlightTokens(result?.tokens ?? null);
+      setForeground(result?.foreground ?? null);
     });
 
     return () => {
       cancelled = true;
     };
-  }, [languageProp, normalizedCode, theme]);
+  }, [
+    languageProp,
+    normalizedCode,
+    theme,
+  ]);
 
   React.useEffect(() => {
     setCodeInfo(normalizedCode, lines.length);
-  }, [lines.length, normalizedCode, setCodeInfo]);
+  }, [
+    lines.length,
+    normalizedCode,
+    setCodeInfo,
+  ]);
 
   const lineHeight = size === 'sm' ? 'h-5 leading-5' : 'h-6 leading-6';
 
@@ -362,7 +460,12 @@ function CodeBlockContent({
       {...props}
     >
       {showLineNumbers && (
-        <div className={codeBlockGutterVariants({ size })} aria-hidden="true">
+        <div
+          className={codeBlockGutterVariants({
+            size,
+          })}
+          aria-hidden="true"
+        >
           {lines.map((_, i) => (
             <div key={`ln-${lineNumberStart + i}`} className={cn('text-right', lineHeight)}>
               {lineNumberStart + i}
@@ -371,11 +474,17 @@ function CodeBlockContent({
         </div>
       )}
       <div className="min-w-0 overflow-x-auto">
-        <pre className={codeBlockContentVariants({ size })}>
+        <pre
+          className={codeBlockContentVariants({
+            size,
+          })}
+        >
           <code
             data-slot="code-block-code"
             className="block font-mono"
-            style={{ color: foreground ?? undefined }}
+            style={{
+              color: foreground ?? undefined,
+            }}
           >
             {lines.map((line, i) => {
               const tokens = highlightTokens?.[i];

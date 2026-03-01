@@ -108,7 +108,9 @@ export const sdkErrors: MappedSdkError[] = [
 export function rethrowRpcError(err: unknown): never {
   if (err instanceof RpcError) {
     const cls = sdkErrors.find((c) => c.rpcCode === err.code);
-    if (cls) throw cls.fromRpcError(err);
+    if (cls) {
+      throw cls.fromRpcError(err);
+    }
   }
   throw err;
 }

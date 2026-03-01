@@ -6,7 +6,11 @@ import type { Command, CommandOption } from './command';
 
 export type Shell = 'bash' | 'zsh' | 'fish';
 
-const SHELLS: Shell[] = ['bash', 'zsh', 'fish'];
+const SHELLS: Shell[] = [
+  'bash',
+  'zsh',
+  'fish',
+];
 const RC_MATCH = '.brika/completions/brika.';
 const RC_MARKER = '# Brika completions';
 
@@ -22,15 +26,21 @@ export function detectShell(): Shell | null {
 
 function rcFile(shell: Shell): string {
   const home = homedir();
-  if (shell === 'zsh') return join(home, '.zshrc');
-  if (shell === 'fish') return join(home, '.config', 'fish', 'config.fish');
+  if (shell === 'zsh') {
+    return join(home, '.zshrc');
+  }
+  if (shell === 'fish') {
+    return join(home, '.config', 'fish', 'config.fish');
+  }
   return existsSync(join(home, '.bash_profile'))
     ? join(home, '.bash_profile')
     : join(home, '.bashrc');
 }
 
 function scriptFile(shell: Shell): string {
-  if (shell === 'fish') return join(homedir(), '.config', 'fish', 'completions', 'brika.fish');
+  if (shell === 'fish') {
+    return join(homedir(), '.config', 'fish', 'completions', 'brika.fish');
+  }
   return join(homedir(), '.brika', 'completions', `brika.${shell}`);
 }
 
@@ -39,25 +49,47 @@ function scriptFile(shell: Shell): string {
 export async function installCompletions(
   shell: Shell,
   commands: Command[]
-): Promise<{ file: string; alreadyInstalled: boolean }> {
+): Promise<{
+  file: string;
+  alreadyInstalled: boolean;
+}> {
   const dest = scriptFile(shell);
-  await mkdir(dirname(dest), { recursive: true });
+  await mkdir(dirname(dest), {
+    recursive: true,
+  });
   await writeFile(dest, generateCompletions(commands, shell));
 
   // Fish auto-discovers ~/.config/fish/completions/ — no rc entry needed
-  if (shell === 'fish') return { file: dest, alreadyInstalled: false };
+  if (shell === 'fish') {
+    return {
+      file: dest,
+      alreadyInstalled: false,
+    };
+  }
 
   const rc = rcFile(shell);
   if (existsSync(rc) && (await readFile(rc, 'utf8')).includes(RC_MATCH)) {
-    return { file: dest, alreadyInstalled: true };
+    return {
+      file: dest,
+      alreadyInstalled: true,
+    };
   }
 
   const src = `~/.brika/completions/brika.${shell}`;
   await appendFile(rc, `\n${RC_MARKER}\n[ -f ${src} ] && source ${src}\n`);
-  return { file: rc, alreadyInstalled: false };
+  return {
+    file: rc,
+    alreadyInstalled: false,
+  };
 }
 
-const RC_PATHS = ['.zshrc', '.bashrc', '.bash_profile', '.profile', '.config/fish/config.fish'];
+const RC_PATHS = [
+  '.zshrc',
+  '.bashrc',
+  '.bash_profile',
+  '.profile',
+  '.config/fish/config.fish',
+];
 
 export async function uninstallCompletions(): Promise<string[]> {
   const cleaned: string[] = [];
@@ -65,21 +97,31 @@ export async function uninstallCompletions(): Promise<string[]> {
   for (const shell of SHELLS) {
     const file = scriptFile(shell);
     if (existsSync(file)) {
-      await rm(file, { force: true });
+      await rm(file, {
+        force: true,
+      });
       cleaned.push(file);
     }
   }
 
   for (const rel of RC_PATHS) {
     const file = join(homedir(), rel);
-    if (!existsSync(file)) continue;
+    if (!existsSync(file)) {
+      continue;
+    }
     try {
       const content = await readFile(file, 'utf8');
-      if (!content.includes(RC_MATCH)) continue;
+      if (!content.includes(RC_MATCH)) {
+        continue;
+      }
       const lines = content.split('\n');
       const filtered = lines.filter((line, i) => {
-        if (line.includes(RC_MATCH)) return false;
-        if (line === RC_MARKER && lines[i + 1]?.includes(RC_MATCH)) return false;
+        if (line.includes(RC_MATCH)) {
+          return false;
+        }
+        if (line === RC_MARKER && lines[i + 1]?.includes(RC_MATCH)) {
+          return false;
+        }
         return true;
       });
       await writeFile(file, filtered.join('\n'), 'utf8');
@@ -95,17 +137,34 @@ export async function uninstallCompletions(): Promise<string[]> {
 // ── script generation ────────────────────────────────────────────────────────
 
 export function generateCompletions(commands: Command[], shell: Shell): string {
-  return { bash: bashScript, zsh: zshScript, fish: fishScript }[shell](commands);
+  return {
+    bash: bashScript,
+    zsh: zshScript,
+    fish: fishScript,
+  }[shell](commands);
 }
 
 // ── shared ───────────────────────────────────────────────────────────────────
 
 const esc = (s: string) => s.replaceAll("'", String.raw`'\''`);
 const userCmds = (list: Command[]) => list.filter((c) => c.name !== 'help');
-const nameList = (list: Command[]) => [...userCmds(list).map((c) => c.name), 'help'].join(' ');
+const nameList = (list: Command[]) =>
+  [
+    ...userCmds(list).map((c) => c.name),
+    'help',
+  ].join(' ');
 const flags = (opts: Record<string, CommandOption>) =>
   Object.entries(opts)
-    .flatMap(([l, o]) => (o.short ? [`--${l}`, `-${o.short}`] : [`--${l}`]))
+    .flatMap(([l, o]) =>
+      o.short
+        ? [
+            `--${l}`,
+            `-${o.short}`,
+          ]
+        : [
+            `--${l}`,
+          ]
+    )
     .join(' ');
 
 // ── bash ─────────────────────────────────────────────────────────────────────
@@ -115,7 +174,9 @@ function bashScript(commands: Command[]): string {
     if (cmd.subcommands) {
       const subCases = userCmds(cmd.subcommands).flatMap((s) =>
         s.options
-          ? [`        ${s.name}) COMPREPLY=($(compgen -W "${flags(s.options)}" -- "$cur")) ;;`]
+          ? [
+              `        ${s.name}) COMPREPLY=($(compgen -W "${flags(s.options)}" -- "$cur")) ;;`,
+            ]
           : []
       );
       return [
@@ -130,7 +191,9 @@ function bashScript(commands: Command[]): string {
       ];
     }
     return cmd.options
-      ? [`    ${cmd.name}) COMPREPLY=($(compgen -W "${flags(cmd.options)}" -- "$cur")) ;;`]
+      ? [
+          `    ${cmd.name}) COMPREPLY=($(compgen -W "${flags(cmd.options)}" -- "$cur")) ;;`,
+        ]
       : [];
   });
 
@@ -175,7 +238,9 @@ function zshScript(commands: Command[]): string {
       const subList = subs.map((s) => `          '${s.name}:${esc(s.description)}'`).join('\n');
       const subArgs = subs.flatMap((s) =>
         s.options
-          ? [`          ${s.name}) _arguments \\\n${zshArgs(s.options, '            ')} ;;`]
+          ? [
+              `          ${s.name}) _arguments \\\n${zshArgs(s.options, '            ')} ;;`,
+            ]
           : []
       );
       return [
@@ -193,7 +258,9 @@ function zshScript(commands: Command[]): string {
       ];
     }
     return cmd.options
-      ? [`      ${cmd.name}) _arguments \\\n${zshArgs(cmd.options, '        ')} ;;`]
+      ? [
+          `      ${cmd.name}) _arguments \\\n${zshArgs(cmd.options, '        ')} ;;`,
+        ]
       : [];
   });
 
@@ -218,9 +285,15 @@ compdef _brika brika
 
 function fishOpt(cond: string, long: string, o: CommandOption): string {
   let s = `complete -c brika -n '${cond}' -l ${long}`;
-  if (o.short) s += ` -s ${o.short}`;
-  if (o.type === 'string') s += ' -r';
-  if (o.description) s += ` -d '${esc(o.description)}'`;
+  if (o.short) {
+    s += ` -s ${o.short}`;
+  }
+  if (o.type === 'string') {
+    s += ' -r';
+  }
+  if (o.description) {
+    s += ` -d '${esc(o.description)}'`;
+  }
   return s;
 }
 
@@ -229,7 +302,10 @@ function fishOpts(cond: string, opts: Record<string, CommandOption>): string[] {
 }
 
 function fishScript(commands: Command[]): string {
-  const lines = ['complete -c brika -f', ''];
+  const lines = [
+    'complete -c brika -f',
+    '',
+  ];
 
   for (const cmd of userCmds(commands)) {
     lines.push(

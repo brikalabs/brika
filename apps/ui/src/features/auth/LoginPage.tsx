@@ -1,7 +1,7 @@
+import { useAuth } from '@brika/auth/react';
 import { Mail } from 'lucide-react';
 import { type FormEvent, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '@brika/auth/react';
 import {
   Button,
   Card,
@@ -44,7 +44,7 @@ export function LoginPage() {
       <Card className="w-full max-w-sm">
         <CardHeader className="items-center text-center">
           <div className="mb-2 flex size-12 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <span className="text-lg font-bold">B</span>
+            <span className="font-bold text-lg">B</span>
           </div>
           <CardTitle className="text-2xl">{t('title')}</CardTitle>
           <CardDescription>{t('subtitle')}</CardDescription>
@@ -53,7 +53,7 @@ export function LoginPage() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
-              <div className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              <div className="rounded-md bg-destructive/10 px-3 py-2 text-destructive text-sm">
                 {error}
               </div>
             )}

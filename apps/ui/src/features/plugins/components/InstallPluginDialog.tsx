@@ -42,7 +42,9 @@ export function InstallPluginDialog({ open, onOpenChange }: Readonly<InstallPlug
     stop,
   } = useProgressStream({
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: pluginsKeys.all });
+      queryClient.invalidateQueries({
+        queryKey: pluginsKeys.all,
+      });
     },
   });
 
@@ -53,13 +55,17 @@ export function InstallPluginDialog({ open, onOpenChange }: Readonly<InstallPlug
   };
 
   const handleClose = () => {
-    if (isProcessing) return;
+    if (isProcessing) {
+      return;
+    }
     reset();
     onOpenChange(false);
   };
 
   const handleInstall = async () => {
-    if (!packageName.trim()) return;
+    if (!packageName.trim()) {
+      return;
+    }
 
     start();
 

@@ -25,7 +25,9 @@ export function useTilt3D(intensity = 10) {
       el.style.setProperty('--rx', `${(y - 0.5) * -intensity}`);
       el.style.setProperty('--ry', `${(x - 0.5) * intensity}`);
     },
-    [intensity],
+    [
+      intensity,
+    ]
   );
 
   const onMouseLeave = useCallback(() => {
@@ -35,5 +37,9 @@ export function useTilt3D(intensity = 10) {
     el.style.setProperty('--ry', '0');
   }, []);
 
-  return { ref, onMouseMove, onMouseLeave } as const;
+  return {
+    ref,
+    onMouseMove,
+    onMouseLeave,
+  } as const;
 }

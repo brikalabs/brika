@@ -17,7 +17,11 @@ export const PluginCategory = z.enum([
 export type PluginCategory = z.infer<typeof PluginCategory>;
 
 /** Plugin source — where the package is hosted */
-export const PluginSource = z.enum(['npm', 'github', 'url']);
+export const PluginSource = z.enum([
+  'npm',
+  'github',
+  'url',
+]);
 export type PluginSource = z.infer<typeof PluginSource>;
 
 /** A single verified plugin entry in the registry. */
@@ -62,7 +66,11 @@ export function extractPluginSignablePayload(
     verifiedBy: plugin.verifiedBy,
     description: plugin.description,
     tags: plugin.tags,
-    ...(plugin.minVersion === undefined ? {} : { minVersion: plugin.minVersion }),
+    ...(plugin.minVersion === undefined
+      ? {}
+      : {
+          minVersion: plugin.minVersion,
+        }),
     featured: plugin.featured,
     category: plugin.category,
     source: plugin.source,
@@ -79,7 +87,11 @@ export function extractRegistrySignablePayload(
   return {
     version: registry.version,
     lastUpdated: registry.lastUpdated,
-    ...(registry.publicKey === undefined ? {} : { publicKey: registry.publicKey }),
+    ...(registry.publicKey === undefined
+      ? {}
+      : {
+          publicKey: registry.publicKey,
+        }),
     plugins: registry.plugins,
   };
 }

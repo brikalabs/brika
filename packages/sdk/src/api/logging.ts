@@ -15,9 +15,14 @@ const STACK_REGEX_WITHOUT_PARENS = /at\s+(?=((?:[A-Za-z]:)?[^:\s]+))\1:(\d+):(\d
  * Parses a single stack trace line to extract file path and line number.
  * Exported for testing purposes.
  */
-export function parseStackLine(line: string): { sourceFile: string; sourceLine: number } | null {
+export function parseStackLine(line: string): {
+  sourceFile: string;
+  sourceLine: number;
+} | null {
   const match = STACK_REGEX_WITH_PARENS.exec(line) || STACK_REGEX_WITHOUT_PARENS.exec(line);
-  if (!match?.[1] || !match[2]) return null;
+  if (!match?.[1] || !match[2]) {
+    return null;
+  }
 
   return {
     sourceFile: match[1],
@@ -30,17 +35,26 @@ export function parseStackLine(line: string): { sourceFile: string; sourceLine: 
  * Returns file path and line number where the log was triggered.
  * @param depth - Stack depth to capture (default: 3 for direct log calls)
  */
-function captureCallSite(depth = 3): { sourceFile?: string; sourceLine?: number } {
+function captureCallSite(depth = 3): {
+  sourceFile?: string;
+  sourceLine?: number;
+} {
   const err = new Error('captureCallSite');
   const stack = err.stack;
-  if (!stack) return {};
+  if (!stack) {
+    return {};
+  }
 
   const lines = stack.split('\n');
   const callerLine = lines[depth];
-  if (!callerLine) return {};
+  if (!callerLine) {
+    return {};
+  }
 
   const result = parseStackLine(callerLine);
-  if (!result) return {};
+  if (!result) {
+    return {};
+  }
 
   return result;
 }
@@ -72,7 +86,10 @@ export const log: Logger = {
    */
   debug(message: string, meta?: AnyObj): void {
     const callSite = captureCallSite();
-    const enhancedMeta = { ...meta, ...callSite };
+    const enhancedMeta = {
+      ...meta,
+      ...callSite,
+    };
     getContext().log('debug', message, enhancedMeta);
   },
 
@@ -81,7 +98,10 @@ export const log: Logger = {
    */
   info(message: string, meta?: AnyObj): void {
     const callSite = captureCallSite();
-    const enhancedMeta = { ...meta, ...callSite };
+    const enhancedMeta = {
+      ...meta,
+      ...callSite,
+    };
     getContext().log('info', message, enhancedMeta);
   },
 
@@ -90,7 +110,10 @@ export const log: Logger = {
    */
   warn(message: string, meta?: AnyObj): void {
     const callSite = captureCallSite();
-    const enhancedMeta = { ...meta, ...callSite };
+    const enhancedMeta = {
+      ...meta,
+      ...callSite,
+    };
     getContext().log('warn', message, enhancedMeta);
   },
 
@@ -99,7 +122,10 @@ export const log: Logger = {
    */
   error(message: string, meta?: AnyObj): void {
     const callSite = captureCallSite();
-    const enhancedMeta: AnyObj = { ...meta, ...callSite };
+    const enhancedMeta: AnyObj = {
+      ...meta,
+      ...callSite,
+    };
 
     // Auto-capture error stack if an error object is provided
     if (meta?.error instanceof Error) {

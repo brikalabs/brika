@@ -11,14 +11,22 @@ import type { OAuthClient, OAuthProviderConfig, OAuthToken } from '../api/oauth'
 // ─── Mock Setup ────────────────────────────────────────────────────────────────
 
 const preferences: Record<string, unknown> = {};
-const registeredRoutes: Array<{ method: string; path: string; handler: Function }> = [];
+const registeredRoutes: Array<{
+  method: string;
+  path: string;
+  handler: Function;
+}> = [];
 
 const mockGetPreferences = mock(() => preferences);
 const mockUpdatePreference = mock((key: string, value: unknown) => {
   preferences[key] = value;
 });
 const mockRegisterRoute = mock((method: string, path: string, handler: Function) => {
-  registeredRoutes.push({ method, path, handler });
+  registeredRoutes.push({
+    method,
+    path,
+    handler,
+  });
 });
 const mockLog = mock(() => {});
 
@@ -41,7 +49,9 @@ function createConfig(overrides?: Partial<OAuthProviderConfig>): OAuthProviderCo
     id: 'test-provider',
     authorizeUrl: 'https://auth.example.com/authorize',
     tokenUrl: 'https://auth.example.com/token',
-    scopes: ['read'],
+    scopes: [
+      'read',
+    ],
     clientId: 'test-client-id',
     ...overrides,
   };
@@ -55,7 +65,10 @@ describe('OAuth types', () => {
       id: 'test',
       authorizeUrl: 'https://auth.example.com/authorize',
       tokenUrl: 'https://auth.example.com/token',
-      scopes: ['read', 'write'],
+      scopes: [
+        'read',
+        'write',
+      ],
       clientId: 'test-client-id',
     };
     expect(config.id).toBe('test');
@@ -79,7 +92,9 @@ describe('OAuth types', () => {
       id: 'google',
       authorizeUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
       tokenUrl: 'https://oauth2.googleapis.com/token',
-      scopes: ['profile'],
+      scopes: [
+        'profile',
+      ],
       clientIdPreference: 'clientId',
       clientSecretPreference: 'clientSecret',
       pkce: false,
@@ -91,7 +106,9 @@ describe('OAuth types', () => {
 
 describe('defineOAuth', () => {
   beforeEach(() => {
-    for (const key of Object.keys(preferences)) delete preferences[key];
+    for (const key of Object.keys(preferences)) {
+      delete preferences[key];
+    }
     registeredRoutes.length = 0;
     mockGetPreferences.mockClear();
     mockUpdatePreference.mockClear();
@@ -108,7 +125,11 @@ describe('defineOAuth', () => {
   });
 
   test('registers authorize and callback routes', () => {
-    defineOAuth(createConfig({ id: 'spotify' }));
+    defineOAuth(
+      createConfig({
+        id: 'spotify',
+      })
+    );
 
     // defineRoute calls registerRoute on the context
     expect(mockRegisterRoute).toHaveBeenCalledTimes(2);
@@ -119,17 +140,29 @@ describe('defineOAuth', () => {
   });
 
   test('getAuthUrl returns the correct API path', () => {
-    const client = defineOAuth(createConfig({ id: 'spotify' }));
+    const client = defineOAuth(
+      createConfig({
+        id: 'spotify',
+      })
+    );
     expect(client.getAuthUrl()).toBe('/api/oauth/spotify/authorize');
   });
 
   test('getToken returns null when no token is stored', () => {
-    const client = defineOAuth(createConfig({ id: 'empty' }));
+    const client = defineOAuth(
+      createConfig({
+        id: 'empty',
+      })
+    );
     expect(client.getToken()).toBeNull();
   });
 
   test('getToken returns stored token', () => {
-    const client = defineOAuth(createConfig({ id: 'stored' }));
+    const client = defineOAuth(
+      createConfig({
+        id: 'stored',
+      })
+    );
 
     preferences['__oauth_stored_token'] = {
       access_token: 'valid-token',
@@ -144,21 +177,35 @@ describe('defineOAuth', () => {
   });
 
   test('getToken returns null for invalid stored value', () => {
-    const client = defineOAuth(createConfig({ id: 'invalid' }));
+    const client = defineOAuth(
+      createConfig({
+        id: 'invalid',
+      })
+    );
 
     // Not a valid token shape (missing access_token)
-    preferences['__oauth_invalid_token'] = { foo: 'bar' };
+    preferences['__oauth_invalid_token'] = {
+      foo: 'bar',
+    };
 
     expect(client.getToken()).toBeNull();
   });
 
   test('isAuthenticated returns false when no token exists', () => {
-    const client = defineOAuth(createConfig({ id: 'noauth' }));
+    const client = defineOAuth(
+      createConfig({
+        id: 'noauth',
+      })
+    );
     expect(client.isAuthenticated()).toBe(false);
   });
 
   test('isAuthenticated returns true when valid token is stored', () => {
-    const client = defineOAuth(createConfig({ id: 'authed' }));
+    const client = defineOAuth(
+      createConfig({
+        id: 'authed',
+      })
+    );
 
     preferences['__oauth_authed_token'] = {
       access_token: 'valid-token',
@@ -170,13 +217,21 @@ describe('defineOAuth', () => {
   });
 
   test('fetch throws when not authenticated', () => {
-    const client = defineOAuth(createConfig({ id: 'unauthed' }));
+    const client = defineOAuth(
+      createConfig({
+        id: 'unauthed',
+      })
+    );
 
     expect(client.fetch('https://api.example.com/data')).rejects.toThrow('Not authenticated');
   });
 
   test('fetch throws descriptive message with auth URL', () => {
-    const client = defineOAuth(createConfig({ id: 'nope' }));
+    const client = defineOAuth(
+      createConfig({
+        id: 'nope',
+      })
+    );
 
     expect(client.fetch('https://api.example.com/data')).rejects.toThrow(
       '/api/oauth/nope/authorize'
@@ -184,15 +239,27 @@ describe('defineOAuth', () => {
   });
 
   test('getAuthUrl uses the config id in the path', () => {
-    const client1 = defineOAuth(createConfig({ id: 'github' }));
-    const client2 = defineOAuth(createConfig({ id: 'slack' }));
+    const client1 = defineOAuth(
+      createConfig({
+        id: 'github',
+      })
+    );
+    const client2 = defineOAuth(
+      createConfig({
+        id: 'slack',
+      })
+    );
 
     expect(client1.getAuthUrl()).toBe('/api/oauth/github/authorize');
     expect(client2.getAuthUrl()).toBe('/api/oauth/slack/authorize');
   });
 
   test('token preference key uses provider id', () => {
-    const client = defineOAuth(createConfig({ id: 'keyed' }));
+    const client = defineOAuth(
+      createConfig({
+        id: 'keyed',
+      })
+    );
 
     // No token stored under expected key
     expect(client.getToken()).toBeNull();
@@ -215,7 +282,11 @@ describe('defineOAuth', () => {
   });
 
   test('isAuthenticated returns false when token has no access_token', () => {
-    const client = defineOAuth(createConfig({ id: 'partial' }));
+    const client = defineOAuth(
+      createConfig({
+        id: 'partial',
+      })
+    );
 
     // Stored value has expires_at but no access_token — isOAuthToken returns false
     preferences['__oauth_partial_token'] = {
@@ -227,7 +298,11 @@ describe('defineOAuth', () => {
   });
 
   test('getToken returns token with optional refresh_token', () => {
-    const client = defineOAuth(createConfig({ id: 'refresh' }));
+    const client = defineOAuth(
+      createConfig({
+        id: 'refresh',
+      })
+    );
 
     preferences['__oauth_refresh_token'] = {
       access_token: 'at',

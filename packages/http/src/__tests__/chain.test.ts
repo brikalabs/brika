@@ -30,8 +30,12 @@ describe('InterceptorChain', () => {
     });
 
     test('adds multiple request interceptors', () => {
-      const interceptor1: RequestInterceptor = { onRequest: (c) => c };
-      const interceptor2: RequestInterceptor = { onRequest: (c) => c };
+      const interceptor1: RequestInterceptor = {
+        onRequest: (c) => c,
+      };
+      const interceptor2: RequestInterceptor = {
+        onRequest: (c) => c,
+      };
 
       chain.addRequestInterceptor(interceptor1);
       chain.addRequestInterceptor(interceptor2);
@@ -70,62 +74,108 @@ describe('InterceptorChain', () => {
       const interceptor1: RequestInterceptor = {
         onRequest: (config) => {
           calls.push(1);
-          return { ...config, headers: { ...config.headers, 'X-First': 'true' } };
+          return {
+            ...config,
+            headers: {
+              ...config.headers,
+              'X-First': 'true',
+            },
+          };
         },
       };
       const interceptor2: RequestInterceptor = {
         onRequest: (config) => {
           calls.push(2);
-          return { ...config, headers: { ...config.headers, 'X-Second': 'true' } };
+          return {
+            ...config,
+            headers: {
+              ...config.headers,
+              'X-Second': 'true',
+            },
+          };
         },
       };
 
       chain.addRequestInterceptor(interceptor1);
       chain.addRequestInterceptor(interceptor2);
 
-      const config: RequestConfig = { method: 'GET', url: 'https://example.com' };
+      const config: RequestConfig = {
+        method: 'GET',
+        url: 'https://example.com',
+      };
       const result = await chain.executeRequest(config);
 
-      expect(calls).toEqual([1, 2]);
+      expect(calls).toEqual([
+        1,
+        2,
+      ]);
       expect(result.headers?.['X-First']).toBe('true');
       expect(result.headers?.['X-Second']).toBe('true');
     });
 
     test('passes modified config through chain', async () => {
       const interceptor1: RequestInterceptor = {
-        onRequest: (config) => ({ ...config, params: { page: 1 } }),
+        onRequest: (config) => ({
+          ...config,
+          params: {
+            page: 1,
+          },
+        }),
       };
       const interceptor2: RequestInterceptor = {
-        onRequest: (config) => ({ ...config, params: { ...config.params, limit: 10 } }),
+        onRequest: (config) => ({
+          ...config,
+          params: {
+            ...config.params,
+            limit: 10,
+          },
+        }),
       };
 
       chain.addRequestInterceptor(interceptor1);
       chain.addRequestInterceptor(interceptor2);
 
-      const config: RequestConfig = { method: 'GET', url: 'https://example.com' };
+      const config: RequestConfig = {
+        method: 'GET',
+        url: 'https://example.com',
+      };
       const result = await chain.executeRequest(config);
 
-      expect(result.params).toEqual({ page: 1, limit: 10 });
+      expect(result.params).toEqual({
+        page: 1,
+        limit: 10,
+      });
     });
 
     test('handles async interceptors', async () => {
       const interceptor: RequestInterceptor = {
         onRequest: async (config) => {
           await new Promise((r) => setTimeout(r, 10));
-          return { ...config, headers: { 'X-Async': 'true' } };
+          return {
+            ...config,
+            headers: {
+              'X-Async': 'true',
+            },
+          };
         },
       };
 
       chain.addRequestInterceptor(interceptor);
 
-      const config: RequestConfig = { method: 'GET', url: 'https://example.com' };
+      const config: RequestConfig = {
+        method: 'GET',
+        url: 'https://example.com',
+      };
       const result = await chain.executeRequest(config);
 
       expect(result.headers?.['X-Async']).toBe('true');
     });
 
     test('returns original config when no interceptors', async () => {
-      const config: RequestConfig = { method: 'GET', url: 'https://example.com' };
+      const config: RequestConfig = {
+        method: 'GET',
+        url: 'https://example.com',
+      };
       const result = await chain.executeRequest(config);
 
       expect(result).toEqual(config);
@@ -156,44 +206,68 @@ describe('InterceptorChain', () => {
         status: 200,
         statusText: 'OK',
         headers: new Headers(),
-        config: { method: 'GET', url: 'https://example.com' },
+        config: {
+          method: 'GET',
+          url: 'https://example.com',
+        },
         cached: false,
       };
 
       await chain.executeResponse(response);
 
-      expect(calls).toEqual([1, 2]);
+      expect(calls).toEqual([
+        1,
+        2,
+      ]);
     });
 
     test('transforms response through chain', async () => {
       const interceptor: ResponseInterceptor = {
         onResponse: (response) => ({
           ...response,
-          data: { transformed: true, original: response.data },
+          data: {
+            transformed: true,
+            original: response.data,
+          },
         }),
       };
 
       chain.addResponseInterceptor(interceptor);
 
       const response: HttpResponse = {
-        data: { value: 1 },
+        data: {
+          value: 1,
+        },
         status: 200,
         statusText: 'OK',
         headers: new Headers(),
-        config: { method: 'GET', url: 'https://example.com' },
+        config: {
+          method: 'GET',
+          url: 'https://example.com',
+        },
         cached: false,
       };
 
       const result = await chain.executeResponse(response);
 
-      expect(result.data).toEqual({ transformed: true, original: { value: 1 } });
+      expect(result.data).toEqual({
+        transformed: true,
+        original: {
+          value: 1,
+        },
+      });
     });
 
     test('handles async interceptors', async () => {
       const interceptor: ResponseInterceptor = {
         onResponse: async (response) => {
           await new Promise((r) => setTimeout(r, 10));
-          return { ...response, data: { async: true } };
+          return {
+            ...response,
+            data: {
+              async: true,
+            },
+          };
         },
       };
 
@@ -204,13 +278,18 @@ describe('InterceptorChain', () => {
         status: 200,
         statusText: 'OK',
         headers: new Headers(),
-        config: { method: 'GET', url: 'https://example.com' },
+        config: {
+          method: 'GET',
+          url: 'https://example.com',
+        },
         cached: false,
       };
 
       const result = await chain.executeResponse(response);
 
-      expect(result.data).toEqual({ async: true });
+      expect(result.data).toEqual({
+        async: true,
+      });
     });
   });
 
@@ -225,18 +304,26 @@ describe('InterceptorChain', () => {
       chain.addErrorInterceptor(interceptor);
 
       const error = new HttpError('Test error', 500);
-      const config: RequestConfig = { method: 'GET', url: 'https://example.com' };
+      const config: RequestConfig = {
+        method: 'GET',
+        url: 'https://example.com',
+      };
 
       await expect(chain.executeError(error, config)).rejects.toThrow(error);
     });
 
     test('interceptor can recover from error', async () => {
       const recoveredResponse: HttpResponse = {
-        data: { recovered: true },
+        data: {
+          recovered: true,
+        },
         status: 200,
         statusText: 'OK',
         headers: new Headers(),
-        config: { method: 'GET', url: 'https://example.com' },
+        config: {
+          method: 'GET',
+          url: 'https://example.com',
+        },
         cached: false,
       };
 
@@ -247,11 +334,16 @@ describe('InterceptorChain', () => {
       chain.addErrorInterceptor(interceptor);
 
       const error = new HttpError('Test error', 500);
-      const config: RequestConfig = { method: 'GET', url: 'https://example.com' };
+      const config: RequestConfig = {
+        method: 'GET',
+        url: 'https://example.com',
+      };
 
       const result = await chain.executeError(error, config);
 
-      expect(result.data).toEqual({ recovered: true });
+      expect(result.data).toEqual({
+        recovered: true,
+      });
     });
 
     test('passes error to next interceptor if current throws', async () => {
@@ -261,11 +353,16 @@ describe('InterceptorChain', () => {
         },
       };
       const recoveredResponse: HttpResponse = {
-        data: { recovered: true },
+        data: {
+          recovered: true,
+        },
         status: 200,
         statusText: 'OK',
         headers: new Headers(),
-        config: { method: 'GET', url: 'https://example.com' },
+        config: {
+          method: 'GET',
+          url: 'https://example.com',
+        },
         cached: false,
       };
       const interceptor2: ErrorInterceptor = {
@@ -276,11 +373,16 @@ describe('InterceptorChain', () => {
       chain.addErrorInterceptor(interceptor2);
 
       const error = new HttpError('Original error', 500);
-      const config: RequestConfig = { method: 'GET', url: 'https://example.com' };
+      const config: RequestConfig = {
+        method: 'GET',
+        url: 'https://example.com',
+      };
 
       const result = await chain.executeError(error, config);
 
-      expect(result.data).toEqual({ recovered: true });
+      expect(result.data).toEqual({
+        recovered: true,
+      });
     });
 
     test('rethrows error if no interceptor handles it', async () => {
@@ -295,14 +397,20 @@ describe('InterceptorChain', () => {
       chain.addErrorInterceptor(interceptor2);
 
       const error = new HttpError('Test error', 500);
-      const config: RequestConfig = { method: 'GET', url: 'https://example.com' };
+      const config: RequestConfig = {
+        method: 'GET',
+        url: 'https://example.com',
+      };
 
       await expect(chain.executeError(error, config)).rejects.toThrow('Test error');
     });
 
     test('throws last error when no interceptors', async () => {
       const error = new HttpError('Test error', 500);
-      const config: RequestConfig = { method: 'GET', url: 'https://example.com' };
+      const config: RequestConfig = {
+        method: 'GET',
+        url: 'https://example.com',
+      };
 
       await expect(chain.executeError(error, config)).rejects.toThrow(error);
     });
@@ -321,7 +429,10 @@ describe('InterceptorChain', () => {
       chain.addErrorInterceptor(interceptor2);
 
       const error = new HttpError('Original error', 500);
-      const config: RequestConfig = { method: 'GET', url: 'https://example.com' };
+      const config: RequestConfig = {
+        method: 'GET',
+        url: 'https://example.com',
+      };
 
       // Should still throw the original error since string isn't an Error instance
       await expect(chain.executeError(error, config)).rejects.toThrow('Original error');
@@ -330,27 +441,51 @@ describe('InterceptorChain', () => {
 
   describe('clear', () => {
     test('removes all interceptors', () => {
-      chain.addRequestInterceptor({ onRequest: (c) => c });
-      chain.addResponseInterceptor({ onResponse: (r) => r });
-      chain.addErrorInterceptor({ onError: (e) => Promise.reject(e) });
+      chain.addRequestInterceptor({
+        onRequest: (c) => c,
+      });
+      chain.addResponseInterceptor({
+        onResponse: (r) => r,
+      });
+      chain.addErrorInterceptor({
+        onError: (e) => Promise.reject(e),
+      });
 
-      expect(chain.getCounts()).toEqual({ request: 1, response: 1, error: 1 });
+      expect(chain.getCounts()).toEqual({
+        request: 1,
+        response: 1,
+        error: 1,
+      });
 
       chain.clear();
 
-      expect(chain.getCounts()).toEqual({ request: 0, response: 0, error: 0 });
+      expect(chain.getCounts()).toEqual({
+        request: 0,
+        response: 0,
+        error: 0,
+      });
     });
   });
 
   describe('getCounts', () => {
     test('returns correct counts', () => {
-      chain.addRequestInterceptor({ onRequest: (c) => c });
-      chain.addRequestInterceptor({ onRequest: (c) => c });
-      chain.addResponseInterceptor({ onResponse: (r) => r });
+      chain.addRequestInterceptor({
+        onRequest: (c) => c,
+      });
+      chain.addRequestInterceptor({
+        onRequest: (c) => c,
+      });
+      chain.addResponseInterceptor({
+        onResponse: (r) => r,
+      });
 
       const counts = chain.getCounts();
 
-      expect(counts).toEqual({ request: 2, response: 1, error: 0 });
+      expect(counts).toEqual({
+        request: 2,
+        response: 1,
+        error: 0,
+      });
     });
   });
 });

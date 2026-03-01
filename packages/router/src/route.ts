@@ -25,14 +25,24 @@ type RouteConfig<
   query?: Q;
   body?: B;
   middleware?: Middleware[];
-  handler: (ctx: RouteContext<{ params: P; query: Q; body: B }>) => R | Promise<R>;
+  handler: (
+    ctx: RouteContext<{
+      params: P;
+      query: Q;
+      body: B;
+    }>
+  ) => R | Promise<R>;
 };
 
 type ConfigSchema<
   P extends ZodType | undefined,
   Q extends ZodType | undefined,
   B extends ZodType | undefined,
-> = { params: P; query: Q; body: B };
+> = {
+  params: P;
+  query: Q;
+  body: B;
+};
 
 function buildRoute<
   P extends ZodType | undefined,
@@ -44,14 +54,22 @@ function buildRoute<
   config: RouteConfig<P, Q, B, R>
 ): RouteDefinition<ConfigSchema<P, Q, B>, Awaited<R>> {
   const schema: Record<string, unknown> = {};
-  if (config.params) schema.params = config.params;
-  if (config.query) schema.query = config.query;
-  if (config.body) schema.body = config.body;
+  if (config.params) {
+    schema.params = config.params;
+  }
+  if (config.query) {
+    schema.query = config.query;
+  }
+  if (config.body) {
+    schema.body = config.body;
+  }
 
   return {
     method,
     path: config.path,
-    ...(Object.keys(schema).length > 0 && { schema: schema as ConfigSchema<P, Q, B> }),
+    ...(Object.keys(schema).length > 0 && {
+      schema: schema as ConfigSchema<P, Q, B>,
+    }),
     handler: config.handler as Handler<ConfigSchema<P, Q, B>, Awaited<R>>,
     middleware: config.middleware,
   };

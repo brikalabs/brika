@@ -5,12 +5,21 @@ import { hubFetchOk } from '../../utils/hub-client';
 import { streamSseEvents } from '../../utils/sse';
 
 /** Parse `@scope/name@version` or `name@version` into [name, version?]. */
-function parsePackageSpec(spec: string): [name: string, version: string | undefined] {
+function parsePackageSpec(spec: string): [
+  name: string,
+  version: string | undefined,
+] {
   const lastAt = spec.lastIndexOf('@');
   if (lastAt > 0 && spec[lastAt - 1] !== '/') {
-    return [spec.slice(0, lastAt), spec.slice(lastAt + 1)];
+    return [
+      spec.slice(0, lastAt),
+      spec.slice(lastAt + 1),
+    ];
   }
-  return [spec, undefined];
+  return [
+    spec,
+    undefined,
+  ];
 }
 
 interface Progress {
@@ -61,13 +70,20 @@ export default defineCommand({
 
     const res = await hubFetchOk('/api/registry/install', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ package: name, version }),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        package: name,
+        version,
+      }),
     });
 
     for await (const progress of streamSseEvents<Progress>(res)) {
       printProgress(progress);
-      if (progress.phase === 'complete') return;
+      if (progress.phase === 'complete') {
+        return;
+      }
     }
   },
 });

@@ -11,14 +11,18 @@
   "bugs": {
     "url": "https://github.com/maxscharwath/brika/issues"
   },
-  "workspaces": ["apps/*", "packages/*", "plugins/*"],
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "plugins/*"
+  ],
   "scripts": {
     "dev": "bun --filter @brika/hub --filter @brika/ui dev",
     "dev:hub": "bun --filter @brika/hub dev",
     "dev:ui": "bun --filter @brika/ui dev",
-    "test": "bash scripts/test.sh",
-    "test:coverage": "bun test --coverage --coverage-reporter=lcov --coverage-reporter=text",
-    "tsc": "bun --filter '*' tsc",
+    "test": "bun --filter '*' test",
+    "test:coverage": "bun test --coverage --coverage-reporter=lcov",
+    "typecheck": "bun --filter '*' typecheck",
     "build": "bun run --filter @brika/sdk build && bun run --filter create-brika build && bun run --filter @brika/ui build && bun run --filter @brika/hub build",
     "compile": "bun run --filter @brika/ui build && bun run --filter @brika/hub build --compile",
     "lint": "bunx biome check .",
@@ -32,11 +36,12 @@
     "bun": "1.3.9"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.4.4",
     "@brika/hub": "workspace:*",
     "@brika/testing": "workspace:*",
     "@brika/workspace-tools": "workspace:*",
-    "@biomejs/biome": "2.4.4",
     "@types/react": "^19.2.14",
+    "@typescript/native-preview": "latest",
     "bun-types": "^1.3.9",
     "lucide-react": "^0.575.0",
     "mitata": "^1.0.34",

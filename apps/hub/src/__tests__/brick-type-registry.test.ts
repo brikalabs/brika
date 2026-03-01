@@ -15,9 +15,18 @@ import { Logger } from '@/runtime/logs/log-router';
 
 const createBrickType = (id = 'thermostat') => ({
   id,
-  families: ['sm', 'md'] as BrickFamily[],
-  minSize: { w: 1, h: 1 },
-  maxSize: { w: 6, h: 4 },
+  families: [
+    'sm',
+    'md',
+  ] as BrickFamily[],
+  minSize: {
+    w: 1,
+    h: 1,
+  },
+  maxSize: {
+    w: 6,
+    h: 4,
+  },
 });
 
 const createManifest = (name = 'Thermostat') => ({
@@ -35,10 +44,15 @@ const createManifest = (name = 'Thermostat') => ({
 describe('BrickTypeRegistry', () => {
   let registry: BrickTypeRegistry;
 
-  useTestBed({ autoStub: false }, () => {
-    stub(Logger);
-    registry = get(BrickTypeRegistry);
-  });
+  useTestBed(
+    {
+      autoStub: false,
+    },
+    () => {
+      stub(Logger);
+      registry = get(BrickTypeRegistry);
+    }
+  );
 
   describe('register', () => {
     test('registers with full qualified ID', () => {
@@ -53,27 +67,47 @@ describe('BrickTypeRegistry', () => {
 
       const type = registry.get('plugin:thermostat');
       expect(type).toBeDefined();
-      expect(type!.name).toBe('My Brick');
-      expect(type!.description).toBe('Temperature display');
-      expect(type!.category).toBe('sensor');
-      expect(type!.icon).toBe('thermometer');
-      expect(type!.color).toBe('#ff6600');
+      expect(type?.name).toBe('My Brick');
+      expect(type?.description).toBe('Temperature display');
+      expect(type?.category).toBe('sensor');
+      expect(type?.icon).toBe('thermometer');
+      expect(type?.color).toBe('#ff6600');
     });
 
     test('stores families and size constraints', () => {
       registry.register(createBrickType(), 'plugin', createManifest());
 
-      const type = registry.get('plugin:thermostat')!;
-      expect(type.families).toEqual(['sm', 'md']);
-      expect(type.minSize).toEqual({ w: 1, h: 1 });
-      expect(type.maxSize).toEqual({ w: 6, h: 4 });
+      const type = registry.get('plugin:thermostat');
+      if (!type) {
+        throw new Error('Expected type to be defined');
+      }
+      expect(type.families).toEqual([
+        'sm',
+        'md',
+      ]);
+      expect(type.minSize).toEqual({
+        w: 1,
+        h: 1,
+      });
+      expect(type.maxSize).toEqual({
+        w: 6,
+        h: 4,
+      });
     });
 
     test('stores config schema', () => {
-      const brickType = { ...createBrickType(), config: [{ id: 'unit', type: 'text' }] };
+      const brickType = {
+        ...createBrickType(),
+        config: [
+          {
+            id: 'unit',
+            type: 'text',
+          },
+        ],
+      };
       registry.register(brickType, 'plugin', createManifest());
 
-      expect(registry.get('plugin:thermostat')!.config).toHaveLength(1);
+      expect(registry.get('plugin:thermostat')?.config).toHaveLength(1);
     });
 
     test('handles duplicate registration (overwrites)', () => {
@@ -81,7 +115,7 @@ describe('BrickTypeRegistry', () => {
       registry.register(createBrickType(), 'plugin', createManifest('V2'));
 
       expect(registry.size).toBe(1);
-      expect(registry.get('plugin:thermostat')!.name).toBe('V2');
+      expect(registry.get('plugin:thermostat')?.name).toBe('V2');
     });
 
     test('returns full ID', () => {
@@ -111,7 +145,10 @@ describe('BrickTypeRegistry', () => {
       registry.register(createBrickType('a-brick'), 'plugin');
 
       const ids = registry.list().map((t) => t.fullId);
-      expect(ids).toEqual(['plugin:a-brick', 'plugin:z-brick']);
+      expect(ids).toEqual([
+        'plugin:a-brick',
+        'plugin:z-brick',
+      ]);
     });
 
     test('returns empty array initially', () => {
@@ -127,7 +164,10 @@ describe('BrickTypeRegistry', () => {
 
       const result = registry.listByPlugin('p1');
       expect(result).toHaveLength(2);
-      expect(result.map((t) => t.localId).sort()).toEqual(['a', 'c']);
+      expect(result.map((t) => t.localId).sort()).toEqual([
+        'a',
+        'c',
+      ]);
     });
 
     test('returns empty for unknown plugin', () => {
@@ -143,7 +183,10 @@ describe('BrickTypeRegistry', () => {
 
       const removed = registry.unregisterPlugin('p1');
 
-      expect(removed.sort()).toEqual(['p1:a', 'p1:b']);
+      expect(removed.sort()).toEqual([
+        'p1:a',
+        'p1:b',
+      ]);
       expect(registry.size).toBe(1);
       expect(registry.has('p2:c')).toBe(true);
     });

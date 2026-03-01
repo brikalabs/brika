@@ -35,7 +35,9 @@ export function SparkSchemaViewer({ schema }: Readonly<SparkSchemaViewerProps>) 
             className="w-full cursor-default border-none bg-transparent p-0 text-left font-inherit"
             onClick={(e) => e.stopPropagation()}
             onKeyDown={(e) => {
-              if (e.key === 'Escape') setExpanded(false);
+              if (e.key === 'Escape') {
+                setExpanded(false);
+              }
             }}
           >
             <pre className="font-mono text-xs">{JSON.stringify(schema, null, 2)}</pre>

@@ -6,7 +6,9 @@ import type { BrickComponent, BrickTypeSpec } from '@brika/ui-kit';
 import { Text } from '@brika/ui-kit';
 import type { DeviceLocation } from '../api/location';
 
-const mockGetPreferences = mock(() => ({ apiKey: 'test-key' }));
+const mockGetPreferences = mock(() => ({
+  apiKey: 'test-key',
+}));
 const mockOnPreferencesChange = mock(() => () => {});
 const mockUpdatePreference = mock(() => {});
 const mockDefinePreferenceOptions = mock(() => {});
@@ -49,7 +51,9 @@ describe('preferences API', () => {
 
   test('getPreferences delegates to context', () => {
     const prefs = getPreferences();
-    expect(prefs).toEqual({ apiKey: 'test-key' });
+    expect(prefs).toEqual({
+      apiKey: 'test-key',
+    });
     expect(mockGetPreferences).toHaveBeenCalledTimes(1);
   });
 
@@ -66,7 +70,12 @@ describe('preferences API', () => {
   });
 
   test('definePreferenceOptions delegates to context', () => {
-    const provider = () => [{ value: 'a', label: 'A' }];
+    const provider = () => [
+      {
+        value: 'a',
+        label: 'A',
+      },
+    ];
     definePreferenceOptions('device', provider);
     expect(mockDefinePreferenceOptions).toHaveBeenCalledWith('device', provider);
   });
@@ -101,8 +110,17 @@ describe('lifecycle API', () => {
   });
 });
 
-const testSpec: BrickTypeSpec = { id: 'test', name: 'Test', families: ['sm'] };
-const testComponent: BrickComponent = () => Text({ content: 'test' });
+const testSpec: BrickTypeSpec = {
+  id: 'test',
+  name: 'Test',
+  families: [
+    'sm',
+  ],
+};
+const testComponent: BrickComponent = () =>
+  Text({
+    content: 'test',
+  });
 
 describe('bricks API', () => {
   beforeEach(() => {
@@ -135,13 +153,17 @@ describe('routes API', () => {
   });
 
   test('defineRoute normalizes path with leading slash', () => {
-    const handler = () => ({ status: 200 as const });
+    const handler = () => ({
+      status: 200 as const,
+    });
     defineRoute('GET', '/status', handler);
     expect(mockRegisterRoute).toHaveBeenCalledWith('GET', '/status', handler);
   });
 
   test('defineRoute adds leading slash if missing', () => {
-    const handler = () => ({ status: 200 as const });
+    const handler = () => ({
+      status: 200 as const,
+    });
     defineRoute('POST', 'data', handler);
     expect(mockRegisterRoute).toHaveBeenCalledWith('POST', '/data', handler);
   });

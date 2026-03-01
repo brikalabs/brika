@@ -15,7 +15,14 @@ describe('isSchemaCompatible', () => {
     test('unknown input accepts any output', () => {
       expect(isSchemaCompatible(z.string(), z.unknown())).toBe(true);
       expect(isSchemaCompatible(z.number(), z.unknown())).toBe(true);
-      expect(isSchemaCompatible(z.object({ a: z.string() }), z.unknown())).toBe(true);
+      expect(
+        isSchemaCompatible(
+          z.object({
+            a: z.string(),
+          }),
+          z.unknown()
+        )
+      ).toBe(true);
     });
 
     test('any input accepts any output', () => {
@@ -34,7 +41,10 @@ describe('isSchemaCompatible', () => {
 
   describe('object types', () => {
     test('same shape objects are compatible', () => {
-      const schema = z.object({ name: z.string(), value: z.number() });
+      const schema = z.object({
+        name: z.string(),
+        value: z.number(),
+      });
       expect(isSchemaCompatible(schema, schema)).toBe(true);
     });
   });
@@ -60,8 +70,19 @@ describe('validatePortData', () => {
   });
 
   test('includes field path in error for nested objects', () => {
-    const schema = z.object({ user: z.object({ name: z.string() }) });
-    const result = validatePortData({ user: { name: 123 } }, schema);
+    const schema = z.object({
+      user: z.object({
+        name: z.string(),
+      }),
+    });
+    const result = validatePortData(
+      {
+        user: {
+          name: 123,
+        },
+      },
+      schema
+    );
 
     expect(result.valid).toBe(false);
     if (!result.valid) {
@@ -79,13 +100,25 @@ describe('validatePortData', () => {
     });
 
     const validResult = validatePortData(
-      { name: 'test', settings: { enabled: true, value: 42 } },
+      {
+        name: 'test',
+        settings: {
+          enabled: true,
+          value: 42,
+        },
+      },
       schema
     );
     expect(validResult.valid).toBe(true);
 
     const invalidResult = validatePortData(
-      { name: 'test', settings: { enabled: 'yes', value: 42 } },
+      {
+        name: 'test',
+        settings: {
+          enabled: 'yes',
+          value: 42,
+        },
+      },
       schema
     );
     expect(invalidResult.valid).toBe(false);
@@ -138,12 +171,31 @@ describe('isSchemaCompatible - wrapper types', () => {
 
 describe('isSchemaCompatible - union types', () => {
   test('output compatible with union input (at least one match)', () => {
-    expect(isSchemaCompatible(z.string(), z.union([z.string(), z.number()]))).toBe(true);
-    expect(isSchemaCompatible(z.number(), z.union([z.string(), z.number()]))).toBe(true);
+    expect(
+      isSchemaCompatible(
+        z.string(),
+        z.union([
+          z.string(),
+          z.number(),
+        ])
+      )
+    ).toBe(true);
+    expect(
+      isSchemaCompatible(
+        z.number(),
+        z.union([
+          z.string(),
+          z.number(),
+        ])
+      )
+    ).toBe(true);
   });
 
   test('union output with any/unknown input is always compatible', () => {
-    const stringOrNumber = z.union([z.string(), z.number()]);
+    const stringOrNumber = z.union([
+      z.string(),
+      z.number(),
+    ]);
     // Any/unknown accepts everything
     expect(isSchemaCompatible(stringOrNumber, z.any())).toBe(true);
     expect(isSchemaCompatible(stringOrNumber, z.unknown())).toBe(true);
@@ -157,45 +209,77 @@ describe('isSchemaCompatible - array types', () => {
   });
 
   test('arrays with compatible nested objects', () => {
-    const outputArray = z.array(z.object({ name: z.string() }));
-    const inputArray = z.array(z.object({ name: z.string() }));
+    const outputArray = z.array(
+      z.object({
+        name: z.string(),
+      })
+    );
+    const inputArray = z.array(
+      z.object({
+        name: z.string(),
+      })
+    );
     expect(isSchemaCompatible(outputArray, inputArray)).toBe(true);
   });
 });
 
 describe('isSchemaCompatible - object types', () => {
   test('output object with more fields satisfies input with subset', () => {
-    const output = z.object({ name: z.string(), age: z.number() });
-    const input = z.object({ name: z.string() });
+    const output = z.object({
+      name: z.string(),
+      age: z.number(),
+    });
+    const input = z.object({
+      name: z.string(),
+    });
     // Output has all required fields of input
     expect(isSchemaCompatible(output, input)).toBe(true);
   });
 
   test('output object missing optional field is compatible', () => {
-    const output = z.object({ name: z.string() });
-    const input = z.object({ name: z.string(), age: z.number().optional() });
+    const output = z.object({
+      name: z.string(),
+    });
+    const input = z.object({
+      name: z.string(),
+      age: z.number().optional(),
+    });
     // 'age' is optional, so it's OK to be missing
     expect(isSchemaCompatible(output, input)).toBe(true);
   });
 
   test('output object missing required field is incompatible', () => {
-    const output = z.object({ name: z.string() });
-    const input = z.object({ name: z.string(), age: z.number() });
+    const output = z.object({
+      name: z.string(),
+    });
+    const input = z.object({
+      name: z.string(),
+      age: z.number(),
+    });
     expect(isSchemaCompatible(output, input)).toBe(false);
   });
 
   test('output object with incompatible field type is incompatible', () => {
-    const output = z.object({ name: z.number() });
-    const input = z.object({ name: z.string() });
+    const output = z.object({
+      name: z.number(),
+    });
+    const input = z.object({
+      name: z.string(),
+    });
     expect(isSchemaCompatible(output, input)).toBe(false);
   });
 
   test('nested objects are checked recursively', () => {
     const output = z.object({
-      user: z.object({ name: z.string(), email: z.string() }),
+      user: z.object({
+        name: z.string(),
+        email: z.string(),
+      }),
     });
     const input = z.object({
-      user: z.object({ name: z.string() }),
+      user: z.object({
+        name: z.string(),
+      }),
     });
     expect(isSchemaCompatible(output, input)).toBe(true);
   });
@@ -218,12 +302,18 @@ describe('isSchemaCompatible - incompatible types', () => {
   });
 
   test('union output where not all variants match input', () => {
-    const output = z.union([z.string(), z.number()]);
+    const output = z.union([
+      z.string(),
+      z.number(),
+    ]);
     expect(isSchemaCompatible(output, z.boolean())).toBe(false);
   });
 
   test('output incompatible with union input (no match)', () => {
-    const input = z.union([z.string(), z.number()]);
+    const input = z.union([
+      z.string(),
+      z.number(),
+    ]);
     expect(isSchemaCompatible(z.boolean(), input)).toBe(false);
   });
 });
@@ -237,7 +327,10 @@ describe('isSchemaCompatible - edge cases', () => {
 
   test('union output where all variants satisfy input', () => {
     // Both string and number can flow into any
-    const output = z.union([z.string(), z.number()]);
+    const output = z.union([
+      z.string(),
+      z.number(),
+    ]);
     expect(isSchemaCompatible(output, z.any())).toBe(true);
   });
 
@@ -254,7 +347,9 @@ describe('isSchemaCompatible - edge cases', () => {
   });
 
   test('handles schema with _def but no typeName', () => {
-    const mockSchema = { _def: {} } as z.ZodType;
+    const mockSchema = {
+      _def: {},
+    } as z.ZodType;
     expect(() => isSchemaCompatible(mockSchema, mockSchema)).not.toThrow();
   });
 });
@@ -274,7 +369,13 @@ describe('validatePortData - additional cases', () => {
       name: z.string(),
       age: z.number(),
     });
-    const result = validatePortData({ name: 123, age: 'not a number' }, schema);
+    const result = validatePortData(
+      {
+        name: 123,
+        age: 'not a number',
+      },
+      schema
+    );
     expect(result.valid).toBe(false);
     if (!result.valid) {
       expect(result.error).toContain('name');
@@ -294,7 +395,9 @@ describe('validatePortData - additional cases', () => {
 
 describe('getSchemaTypeName - additional cases', () => {
   test('returns object for ZodObject', () => {
-    const schema = z.object({ name: z.string() });
+    const schema = z.object({
+      name: z.string(),
+    });
     // Due to Zod version, this returns 'unknown', but we test it doesn't throw
     expect(() => getSchemaTypeName(schema)).not.toThrow();
   });
@@ -305,7 +408,11 @@ describe('getSchemaTypeName - additional cases', () => {
   });
 
   test('handles deeply nested schemas', () => {
-    const schema = z.array(z.object({ items: z.array(z.string()) }));
+    const schema = z.array(
+      z.object({
+        items: z.array(z.string()),
+      })
+    );
     expect(() => getSchemaTypeName(schema)).not.toThrow();
   });
 
@@ -332,20 +439,41 @@ describe('getSchemaTypeName - additional cases', () => {
 
 describe('isSchemaCompatible - structural compatibility', () => {
   test('object output satisfies object input with same shape', () => {
-    const output = z.object({ a: z.string(), b: z.number() });
-    const input = z.object({ a: z.string(), b: z.number() });
+    const output = z.object({
+      a: z.string(),
+      b: z.number(),
+    });
+    const input = z.object({
+      a: z.string(),
+      b: z.number(),
+    });
     expect(isSchemaCompatible(output, input)).toBe(true);
   });
 
   test('object output with extra fields satisfies subset input', () => {
-    const output = z.object({ a: z.string(), b: z.number(), c: z.boolean() });
-    const input = z.object({ a: z.string() });
+    const output = z.object({
+      a: z.string(),
+      b: z.number(),
+      c: z.boolean(),
+    });
+    const input = z.object({
+      a: z.string(),
+    });
     expect(isSchemaCompatible(output, input)).toBe(true);
   });
 
   test('array of objects compatibility', () => {
-    const output = z.array(z.object({ id: z.number(), name: z.string() }));
-    const input = z.array(z.object({ id: z.number() }));
+    const output = z.array(
+      z.object({
+        id: z.number(),
+        name: z.string(),
+      })
+    );
+    const input = z.array(
+      z.object({
+        id: z.number(),
+      })
+    );
     expect(isSchemaCompatible(output, input)).toBe(true);
   });
 
@@ -361,18 +489,33 @@ describe('isSchemaCompatible - structural compatibility', () => {
 
   test('union input matches single type output', () => {
     const output = z.string();
-    const input = z.union([z.string(), z.number(), z.boolean()]);
+    const input = z.union([
+      z.string(),
+      z.number(),
+      z.boolean(),
+    ]);
     expect(isSchemaCompatible(output, input)).toBe(true);
   });
 
   test('union output compatible with any', () => {
-    const output = z.union([z.string(), z.number()]);
+    const output = z.union([
+      z.string(),
+      z.number(),
+    ]);
     expect(isSchemaCompatible(output, z.any())).toBe(true);
   });
 
   test('array elements checked recursively', () => {
-    const output = z.array(z.object({ value: z.string() }));
-    const input = z.array(z.object({ value: z.string() }));
+    const output = z.array(
+      z.object({
+        value: z.string(),
+      })
+    );
+    const input = z.array(
+      z.object({
+        value: z.string(),
+      })
+    );
     expect(isSchemaCompatible(output, input)).toBe(true);
   });
 });

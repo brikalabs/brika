@@ -70,10 +70,18 @@ export class SparkStore {
     column: string,
     value?: string | string[]
   ): void {
-    if (!value) return;
+    if (!value) {
+      return;
+    }
 
-    const list = Array.isArray(value) ? value : [value];
-    if (list.length === 0) return;
+    const list = Array.isArray(value)
+      ? value
+      : [
+          value,
+        ];
+    if (list.length === 0) {
+      return;
+    }
 
     conditions.push(`${column} IN (${list.map(() => '?').join(', ')})`);
     values.push(...list);
@@ -94,17 +102,20 @@ export class SparkStore {
       values.push(params.pluginId);
     }
 
-    if (params.startTs != null) {
+    if (params.startTs !== null && params.startTs !== undefined) {
       conditions.push('ts >= ?');
       values.push(params.startTs);
     }
 
-    if (params.endTs != null) {
+    if (params.endTs !== null && params.endTs !== undefined) {
       conditions.push('ts <= ?');
       values.push(params.endTs);
     }
 
-    return { conditions, values };
+    return {
+      conditions,
+      values,
+    };
   }
 
   #appendCursorCondition(
@@ -113,7 +124,9 @@ export class SparkStore {
     cursor: number | undefined,
     order: 'asc' | 'desc'
   ): void {
-    if (cursor == null) return;
+    if (cursor === null || cursor === undefined) {
+      return;
+    }
 
     const operator = order === 'desc' ? '<' : '>';
     conditions.push(`id ${operator} ?`);
@@ -151,7 +164,10 @@ export class SparkStore {
     nextCursor: number | null;
   } {
     if (limit <= 0) {
-      return { rows: [], nextCursor: null };
+      return {
+        rows: [],
+        nextCursor: null,
+      };
     }
 
     const hasMore = rows.length > limit;
@@ -200,19 +216,26 @@ export class SparkStore {
   }
 
   insert(event: Omit<StoredSparkEvent, 'id'>): void {
-    if (!this.#insertStmt) return;
+    if (!this.#insertStmt) {
+      return;
+    }
 
     this.#insertStmt.run(
       event.ts,
       event.type,
       event.source,
       event.pluginId ?? null,
-      event.payload == null ? null : JSON.stringify(event.payload)
+      event.payload === null || event.payload === undefined ? null : JSON.stringify(event.payload)
     );
   }
 
   query(params: SparkQueryParams = {}): SparkQueryResult {
-    if (!this.#db) return { sparks: [], nextCursor: null };
+    if (!this.#db) {
+      return {
+        sparks: [],
+        nextCursor: null,
+      };
+    }
 
     const { conditions, values } = this.#buildFilterConditions(params);
 
@@ -243,7 +266,9 @@ export class SparkStore {
   }
 
   clear(params: Partial<SparkQueryParams> = {}): number {
-    if (!this.#db) return 0;
+    if (!this.#db) {
+      return 0;
+    }
 
     const { conditions, values } = this.#buildFilterConditions(params);
 
@@ -254,7 +279,9 @@ export class SparkStore {
   }
 
   getTypes(): string[] {
-    if (!this.#db) return [];
+    if (!this.#db) {
+      return [];
+    }
 
     const rows = this.#db.query('SELECT DISTINCT type FROM sparks ORDER BY type').all() as {
       type: string;
@@ -264,7 +291,9 @@ export class SparkStore {
   }
 
   count(): number {
-    if (!this.#db) return 0;
+    if (!this.#db) {
+      return 0;
+    }
 
     const row = this.#db.query('SELECT COUNT(*) as count FROM sparks').get() as {
       count: number;

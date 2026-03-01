@@ -34,8 +34,14 @@ export interface RestartState {
 }
 
 export type RestartDecision =
-  | { action: 'restart'; delayMs: number }
-  | { action: 'crash-loop'; reason: string };
+  | {
+      action: 'restart';
+      delayMs: number;
+    }
+  | {
+      action: 'crash-loop';
+      reason: string;
+    };
 
 const DEFAULT_CONFIG: RestartPolicyConfig = {
   baseDelayMs: 1000,
@@ -50,7 +56,10 @@ export class RestartPolicy {
   readonly #states = new Map<string, RestartState>();
 
   constructor(config: Partial<RestartPolicyConfig> = {}) {
-    this.config = { ...DEFAULT_CONFIG, ...config };
+    this.config = {
+      ...DEFAULT_CONFIG,
+      ...config,
+    };
   }
 
   /**
@@ -89,7 +98,10 @@ export class RestartPolicy {
     // Increase backoff for next time
     state.backoffLevel++;
 
-    return { action: 'restart', delayMs };
+    return {
+      action: 'restart',
+      delayMs,
+    };
   }
 
   /**
@@ -107,7 +119,9 @@ export class RestartPolicy {
    */
   checkStability(id: string): boolean {
     const state = this.#states.get(id);
-    if (!state?.lastStartAt) return false;
+    if (!state?.lastStartAt) {
+      return false;
+    }
 
     const runTime = Date.now() - state.lastStartAt;
     if (runTime >= this.config.stabilityThresholdMs) {

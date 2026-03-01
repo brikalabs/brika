@@ -26,7 +26,10 @@ defineRenderer('link', ({ node }) => (
     href={node.url}
     target="_blank"
     rel="noopener noreferrer"
-    className={linkVariants({ variant: node.variant, size: node.size })}
+    className={linkVariants({
+      variant: node.variant,
+      size: node.size,
+    })}
   >
     {node.icon && <DynamicIcon name={node.icon as IconName} className="size-3 shrink-0" />}
     {node.label}

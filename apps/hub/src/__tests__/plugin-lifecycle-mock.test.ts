@@ -113,10 +113,24 @@ const defaultResolverResult = {
     name: '@test/plugin',
     version: '1.0.0',
     main: 'index.js',
-    engines: { brika: '*' },
-    blocks: [{ id: 'test-block' }],
-    sparks: [{ id: 'test-spark' }],
-    bricks: [{ id: 'test-brick' }],
+    engines: {
+      brika: '*',
+    },
+    blocks: [
+      {
+        id: 'test-block',
+      },
+    ],
+    sparks: [
+      {
+        id: 'test-spark',
+      },
+    ],
+    bricks: [
+      {
+        id: 'test-brick',
+      },
+    ],
   },
 };
 
@@ -134,7 +148,9 @@ describe('PluginLifecycle (with mocked spawn)', () => {
   let mockMetrics: Record<string, ReturnType<typeof mock>>;
   let resolverSpy: ReturnType<typeof spyOn>;
 
-  useTestBed({ autoStub: false });
+  useTestBed({
+    autoStub: false,
+  });
 
   beforeEach(() => {
     // Mock PluginResolver.resolve via prototype spyOn (avoids mock.module bleed)
@@ -189,7 +205,9 @@ describe('PluginLifecycle (with mocked spawn)', () => {
     };
     mockPluginConfig = {
       getConfig: mock().mockReturnValue({}),
-      validate: mock().mockReturnValue({ success: true }),
+      validate: mock().mockReturnValue({
+        success: true,
+      }),
       setConfig: mock().mockResolvedValue(undefined),
     };
     mockMetrics = {
@@ -201,7 +219,9 @@ describe('PluginLifecycle (with mocked spawn)', () => {
     provide(PluginManagerConfig, mockConfig);
     provide(StateStore, mockState);
     provide(EventSystem, mockEvents);
-    provide(I18nService, { registerPluginTranslations: mock().mockResolvedValue([]) });
+    provide(I18nService, {
+      registerPluginTranslations: mock().mockResolvedValue([]),
+    });
     provide(PluginEventHandler, mockEventHandler);
     provide(PluginConfigService, mockPluginConfig);
     provide(MetricsStore, mockMetrics);
@@ -216,7 +236,10 @@ describe('PluginLifecycle (with mocked spawn)', () => {
   async function loadPlugin() {
     await lifecycle.load('/mock/path');
     expect(capturedCallbacks).not.toBeNull();
-    return capturedCallbacks!;
+    if (!capturedCallbacks) {
+      throw new Error('Expected capturedCallbacks to be defined');
+    }
+    return capturedCallbacks;
   }
 
   describe('load() and callbacks', () => {
@@ -249,7 +272,16 @@ describe('PluginLifecycle (with mocked spawn)', () => {
     test('onReady callback unloads plugin when config validation fails', async () => {
       mockPluginConfig.validate.mockReturnValue({
         success: false,
-        error: { issues: [{ path: ['key'], message: 'required' }] },
+        error: {
+          issues: [
+            {
+              path: [
+                'key',
+              ],
+              message: 'required',
+            },
+          ],
+        },
       });
 
       const callbacks = await loadPlugin();
@@ -263,28 +295,40 @@ describe('PluginLifecycle (with mocked spawn)', () => {
 
     test('onLog callback delegates to event handler', async () => {
       const callbacks = await loadPlugin();
-      callbacks.onLog('info', 'test message', { extra: 'data' });
+      callbacks.onLog('info', 'test message', {
+        extra: 'data',
+      });
       expect(mockEventHandler.onPluginLog).toHaveBeenCalledWith(
         '@test/plugin',
         'info',
         'test message',
-        { extra: 'data' }
+        {
+          extra: 'data',
+        }
       );
     });
 
     test('onBlock callback delegates to event handler', async () => {
       const callbacks = await loadPlugin();
-      callbacks.onBlock({ id: 'test-block' });
+      callbacks.onBlock({
+        id: 'test-block',
+      });
       expect(mockEventHandler.registerBlock).toHaveBeenCalledWith(
         '@test/plugin',
-        { id: 'test-block' },
-        expect.objectContaining({ name: '@test/plugin' })
+        {
+          id: 'test-block',
+        },
+        expect.objectContaining({
+          name: '@test/plugin',
+        })
       );
     });
 
     test('onBlockEmit callback delegates to event handler', async () => {
       const callbacks = await loadPlugin();
-      callbacks.onBlockEmit('instance-1', 'output', { value: 42 });
+      callbacks.onBlockEmit('instance-1', 'output', {
+        value: 42,
+      });
       expect(mockEventHandler.onBlockEmit).toHaveBeenCalledWith('instance-1', 'output', {
         value: 42,
       });
@@ -303,7 +347,9 @@ describe('PluginLifecycle (with mocked spawn)', () => {
 
     test('onSpark callback delegates to event handler', async () => {
       const callbacks = await loadPlugin();
-      callbacks.onSpark({ id: 'test-spark' });
+      callbacks.onSpark({
+        id: 'test-spark',
+      });
       expect(mockEventHandler.registerSpark).toHaveBeenCalledWith('@test/plugin', {
         id: 'test-spark',
       });
@@ -311,7 +357,9 @@ describe('PluginLifecycle (with mocked spawn)', () => {
 
     test('onSparkEmit callback delegates to event handler', async () => {
       const callbacks = await loadPlugin();
-      callbacks.onSparkEmit('my-spark', { data: 'payload' });
+      callbacks.onSparkEmit('my-spark', {
+        data: 'payload',
+      });
       expect(mockEventHandler.emitSpark).toHaveBeenCalledWith('@test/plugin', 'my-spark', {
         data: 'payload',
       });
@@ -329,19 +377,41 @@ describe('PluginLifecycle (with mocked spawn)', () => {
 
     test('onBrickType callback delegates to event handler with manifest', async () => {
       const callbacks = await loadPlugin();
-      callbacks.onBrickType({ id: 'test-brick', families: ['sm' as const] });
+      callbacks.onBrickType({
+        id: 'test-brick',
+        families: [
+          'sm' as const,
+        ],
+      });
       expect(mockEventHandler.registerBrickType).toHaveBeenCalledWith(
         '@test/plugin',
-        { id: 'test-brick', families: ['sm'] },
-        { id: 'test-brick' }
+        {
+          id: 'test-brick',
+          families: [
+            'sm',
+          ],
+        },
+        {
+          id: 'test-brick',
+        }
       );
     });
 
     test('onBrickInstancePatch callback delegates to event handler', async () => {
       const callbacks = await loadPlugin();
-      callbacks.onBrickInstancePatch('brick-1', [{ op: 'replace', path: '/text', value: 'hi' }]);
+      callbacks.onBrickInstancePatch('brick-1', [
+        {
+          op: 'replace',
+          path: '/text',
+          value: 'hi',
+        },
+      ]);
       expect(mockEventHandler.patchBrickInstance).toHaveBeenCalledWith('brick-1', [
-        { op: 'replace', path: '/text', value: 'hi' },
+        {
+          op: 'replace',
+          path: '/text',
+          value: 'hi',
+        },
       ]);
     });
 
@@ -356,7 +426,9 @@ describe('PluginLifecycle (with mocked spawn)', () => {
     });
 
     test('onUpdatePreference callback updates plugin config', async () => {
-      mockPluginConfig.getConfig.mockReturnValue({ existingKey: 'value' });
+      mockPluginConfig.getConfig.mockReturnValue({
+        existingKey: 'value',
+      });
       const callbacks = await loadPlugin();
       callbacks.onUpdatePreference('newKey', 'newValue');
       expect(mockPluginConfig.setConfig).toHaveBeenCalledWith('@test/plugin', {
@@ -368,7 +440,7 @@ describe('PluginLifecycle (with mocked spawn)', () => {
     test('onMetrics callback records metrics', async () => {
       const callbacks = await loadPlugin();
       const process = mockProcessInstance as unknown as PluginProcess;
-      callbacks.onMetrics!(process, 15.5, 1024000);
+      callbacks.onMetrics?.(process, 15.5, 1024000);
       expect(mockMetrics.record).toHaveBeenCalledWith('@test/plugin', {
         ts: expect.any(Number),
         cpu: 15.5,
@@ -381,7 +453,7 @@ describe('PluginLifecycle (with mocked spawn)', () => {
     test('onStderr captures plugin stderr output', async () => {
       await loadPlugin();
       expect(capturedSpawnStderr).not.toBeNull();
-      capturedSpawnStderr!('Some error output');
+      capturedSpawnStderr?.('Some error output');
     });
   });
 
@@ -393,7 +465,9 @@ describe('PluginLifecycle (with mocked spawn)', () => {
       expect(mockState.setHealth).toHaveBeenCalledWith(
         '@test/plugin',
         'crashed',
-        expect.objectContaining({ key: 'plugins:errors.heartbeatTimeout' })
+        expect.objectContaining({
+          key: 'plugins:errors.heartbeatTimeout',
+        })
       );
     });
   });
@@ -408,7 +482,9 @@ describe('PluginLifecycle (with mocked spawn)', () => {
         'crashed',
         expect.objectContaining({
           key: 'plugins:errors.crashed',
-          params: { reason: 'Connection lost' },
+          params: {
+            reason: 'Connection lost',
+          },
         })
       );
       expect(mockEvents.dispatch).toHaveBeenCalled();
@@ -423,7 +499,9 @@ describe('PluginLifecycle (with mocked spawn)', () => {
         'crashed',
         expect.objectContaining({
           key: 'plugins:errors.crashed',
-          params: { reason: 'disconnected' },
+          params: {
+            reason: 'disconnected',
+          },
         })
       );
     });
@@ -432,7 +510,7 @@ describe('PluginLifecycle (with mocked spawn)', () => {
       await loadPlugin();
       await lifecycle.unload('@test/plugin');
       expect(capturedSpawnDisconnect).not.toBeNull();
-      capturedSpawnDisconnect!(new Error('late disconnect'));
+      capturedSpawnDisconnect?.(new Error('late disconnect'));
     });
   });
 
@@ -458,7 +536,9 @@ describe('PluginLifecycle (with mocked spawn)', () => {
     });
 
     test('does not restart when plugin is disabled', async () => {
-      mockState.get.mockReturnValue({ enabled: false });
+      mockState.get.mockReturnValue({
+        enabled: false,
+      });
 
       const callbacks = await loadPlugin();
       const process = mockProcessInstance as unknown as PluginProcess;
@@ -477,7 +557,9 @@ describe('PluginLifecycle (with mocked spawn)', () => {
     });
 
     test('schedules restart when plugin is enabled', async () => {
-      mockState.get.mockReturnValue({ enabled: true });
+      mockState.get.mockReturnValue({
+        enabled: true,
+      });
 
       const callbacks = await loadPlugin();
       const process = mockProcessInstance as unknown as PluginProcess;
@@ -496,7 +578,9 @@ describe('PluginLifecycle (with mocked spawn)', () => {
     });
 
     test('detects crash loop after max crashes', async () => {
-      mockState.get.mockReturnValue({ enabled: true });
+      mockState.get.mockReturnValue({
+        enabled: true,
+      });
       // Note: PluginLifecycle is @singleton() so the instance from beforeEach is reused.
       // The RestartPolicy was constructed with default restartMaxCrashes (5), so we
       // need to exceed that threshold by crashing more than 5 times.
@@ -529,14 +613,21 @@ describe('PluginLifecycle (with mocked spawn)', () => {
       resolverSpy.mockResolvedValue({
         rootDirectory: '/mock/path',
         entryPoint: '/mock/path/index.js',
-        metadata: { name: '@test/no-engines', version: '1.0.0', main: 'index.js' },
+        metadata: {
+          name: '@test/no-engines',
+          version: '1.0.0',
+          main: 'index.js',
+        },
       } as never);
 
       lifecycle = get(PluginLifecycleMocked);
       await lifecycle.load('/mock/path');
 
       expect(mockState.registerPlugin).toHaveBeenCalledWith(
-        expect.objectContaining({ name: '@test/no-engines', enabled: false })
+        expect.objectContaining({
+          name: '@test/no-engines',
+          enabled: false,
+        })
       );
       expect(mockState.setHealth).toHaveBeenCalledWith(
         '@test/no-engines',
@@ -556,7 +647,9 @@ describe('PluginLifecycle (with mocked spawn)', () => {
           name: '@test/incompat',
           version: '1.0.0',
           main: 'index.js',
-          engines: { brika: '^99.0.0' },
+          engines: {
+            brika: '^99.0.0',
+          },
         },
       } as never);
 
@@ -564,14 +657,19 @@ describe('PluginLifecycle (with mocked spawn)', () => {
       await lifecycle.load('/mock/path');
 
       expect(mockState.registerPlugin).toHaveBeenCalledWith(
-        expect.objectContaining({ name: '@test/incompat', enabled: false })
+        expect.objectContaining({
+          name: '@test/incompat',
+          enabled: false,
+        })
       );
       expect(mockState.setHealth).toHaveBeenCalledWith(
         '@test/incompat',
         'incompatible',
         expect.objectContaining({
           key: 'plugins:errors.incompatibleVersion',
-          params: expect.objectContaining({ required: '^99.0.0' }),
+          params: expect.objectContaining({
+            required: '^99.0.0',
+          }),
         })
       );
     });

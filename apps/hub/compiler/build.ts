@@ -12,8 +12,13 @@ import { parseArgs } from 'node:util';
 const { values } = parseArgs({
   args: Bun.argv.slice(2),
   options: {
-    compile: { type: 'boolean', default: false },
-    target: { type: 'string' },
+    compile: {
+      type: 'boolean',
+      default: false,
+    },
+    target: {
+      type: 'string',
+    },
   },
   strict: false,
 });

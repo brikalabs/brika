@@ -34,7 +34,10 @@ export function BlocksPreview({ blocks }: Readonly<BlocksPreviewProps>) {
           <div
             key={block.id}
             className="flex size-7 items-center justify-center rounded-lg shadow-sm"
-            style={{ backgroundColor: `${color}15`, color }}
+            style={{
+              backgroundColor: `${color}15`,
+              color,
+            }}
             title={block.id}
           >
             <DynamicIcon name={iconName} className="size-3.5" />

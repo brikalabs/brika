@@ -2,16 +2,40 @@ import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
 import { cn } from '@/lib/utils';
 import { defineRenderer } from './registry';
 
-const statusConfig: Record<string, { bg: string; pulse: boolean }> = {
-  online: { bg: 'bg-emerald-500', pulse: true },
-  offline: { bg: 'bg-muted-foreground', pulse: false },
-  warning: { bg: 'bg-amber-500', pulse: true },
-  error: { bg: 'bg-red-500', pulse: true },
-  idle: { bg: 'bg-blue-500', pulse: false },
+const statusConfig: Record<
+  string,
+  {
+    bg: string;
+    pulse: boolean;
+  }
+> = {
+  online: {
+    bg: 'bg-emerald-500',
+    pulse: true,
+  },
+  offline: {
+    bg: 'bg-muted-foreground',
+    pulse: false,
+  },
+  warning: {
+    bg: 'bg-amber-500',
+    pulse: true,
+  },
+  error: {
+    bg: 'bg-red-500',
+    pulse: true,
+  },
+  idle: {
+    bg: 'bg-blue-500',
+    pulse: false,
+  },
 };
 
 defineRenderer('status', ({ node }) => {
-  const config = statusConfig[node.status] ?? { bg: 'bg-muted-foreground', pulse: false };
+  const config = statusConfig[node.status] ?? {
+    bg: 'bg-muted-foreground',
+    pulse: false,
+  };
 
   return (
     <div className="flex shrink-0 items-center @md:gap-2.5 gap-2 rounded-md bg-muted/40 @md:px-3 px-2.5 @md:py-2.5 py-2">

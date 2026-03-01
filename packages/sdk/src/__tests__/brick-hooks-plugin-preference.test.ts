@@ -19,7 +19,10 @@ describe('usePluginPreference', () => {
   });
 
   test('returns the preference value when key exists', () => {
-    prefs = { theme: 'dark', lang: 'en' };
+    prefs = {
+      theme: 'dark',
+      lang: 'en',
+    };
     const result = usePluginPreference('theme', 'light');
     expect(result).toBe('dark');
   });
@@ -31,13 +34,19 @@ describe('usePluginPreference', () => {
   });
 
   test('returns defaultValue when preference value is undefined', () => {
-    prefs = { key: undefined };
+    prefs = {
+      key: undefined,
+    };
     const result = usePluginPreference('key', 'default');
     expect(result).toBe('default');
   });
 
   test('returns preference value even when it is falsy (0, false, empty string)', () => {
-    prefs = { count: 0, enabled: false, name: '' };
+    prefs = {
+      count: 0,
+      enabled: false,
+      name: '',
+    };
 
     expect(usePluginPreference('count', 99)).toBe(0);
     expect(usePluginPreference('enabled', true)).toBe(false);
@@ -45,7 +54,9 @@ describe('usePluginPreference', () => {
   });
 
   test('returns null preference value instead of default', () => {
-    prefs = { value: null };
+    prefs = {
+      value: null,
+    };
     const result = usePluginPreference('value', 'default');
     expect(result).toBeNull();
   });

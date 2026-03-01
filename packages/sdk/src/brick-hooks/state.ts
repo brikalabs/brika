@@ -6,9 +6,20 @@ import { _setActionRegistrar, type ActionHandler } from '@brika/ui-kit';
 
 export interface BrickState {
   hooks: unknown[];
-  effects: Array<{ cleanup?: (() => void) | void; deps?: unknown[] }>;
-  actionRefs: Map<string, { current: ActionHandler }>;
-  brickSize: { width: number; height: number };
+  effects: Array<{
+    cleanup?: (() => void) | void;
+    deps?: unknown[];
+  }>;
+  actionRefs: Map<
+    string,
+    {
+      current: ActionHandler;
+    }
+  >;
+  brickSize: {
+    width: number;
+    height: number;
+  };
   config: Record<string, unknown>;
   configKeys: Set<string> | null;
   scheduleRender: () => void;
@@ -26,7 +37,9 @@ export function _beginRender(state: BrickState) {
 
   // Clear auto-registered actions from previous render
   for (const key of state.actionRefs.keys()) {
-    if (key.startsWith('__a')) state.actionRefs.delete(key);
+    if (key.startsWith('__a')) {
+      state.actionRefs.delete(key);
+    }
   }
 
   // Install the action registrar so builder functions can auto-register handlers
@@ -36,7 +49,9 @@ export function _beginRender(state: BrickState) {
     if (existing) {
       existing.current = handler;
     } else {
-      state.actionRefs.set(id, { current: handler });
+      state.actionRefs.set(id, {
+        current: handler,
+      });
     }
     return id;
   });
@@ -56,7 +71,9 @@ export function _flushEffects(_state: BrickState) {
 /** @internal — cleanup all effects on unmount */
 export function _cleanupEffects(state: BrickState) {
   for (const effect of state.effects) {
-    if (effect && typeof effect.cleanup === 'function') effect.cleanup();
+    if (effect && typeof effect.cleanup === 'function') {
+      effect.cleanup();
+    }
   }
   state.effects.length = 0;
 }
@@ -68,11 +85,16 @@ export function _createState(scheduleRender: () => void): BrickState {
     hooks: [],
     effects: [],
     actionRefs: new Map(),
-    brickSize: { width: 2, height: 2 },
+    brickSize: {
+      width: 2,
+      height: 2,
+    },
     config: {},
     configKeys: null,
     scheduleRender() {
-      if (pending) return;
+      if (pending) {
+        return;
+      }
       pending = true;
       queueMicrotask(() => {
         pending = false;
@@ -83,7 +105,9 @@ export function _createState(scheduleRender: () => void): BrickState {
 }
 
 export function getState(): BrickState {
-  if (!current) throw new Error('Hooks can only be called inside a brick component');
+  if (!current) {
+    throw new Error('Hooks can only be called inside a brick component');
+  }
   return current;
 }
 
@@ -92,7 +116,11 @@ export function nextHookIdx(): number {
 }
 
 export function depsChanged(prev?: unknown[], next?: unknown[]): boolean {
-  if (!prev || !next) return true;
-  if (prev.length !== next.length) return true;
+  if (!prev || !next) {
+    return true;
+  }
+  if (prev.length !== next.length) {
+    return true;
+  }
   return prev.some((v, i) => !Object.is(v, next[i]));
 }

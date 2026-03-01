@@ -4,13 +4,29 @@ import { isObjectRecord } from '../type-guards';
 describe('isObjectRecord', () => {
   test('returns true for plain objects', () => {
     expect(isObjectRecord({})).toBe(true);
-    expect(isObjectRecord({ a: 1 })).toBe(true);
-    expect(isObjectRecord({ nested: { deep: true } })).toBe(true);
+    expect(
+      isObjectRecord({
+        a: 1,
+      })
+    ).toBe(true);
+    expect(
+      isObjectRecord({
+        nested: {
+          deep: true,
+        },
+      })
+    ).toBe(true);
   });
 
   test('returns true for arrays (arrays are objects)', () => {
     expect(isObjectRecord([])).toBe(true);
-    expect(isObjectRecord([1, 2, 3])).toBe(true);
+    expect(
+      isObjectRecord([
+        1,
+        2,
+        3,
+      ])
+    ).toBe(true);
   });
 
   test('returns false for null', () => {

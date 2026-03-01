@@ -71,8 +71,16 @@ export function setPreference(key: string, value: unknown): void {
 export function definePreferenceOptions(
   name: string,
   provider: () =>
-    | Array<{ value: string; label: string }>
-    | Promise<Array<{ value: string; label: string }>>
+    | Array<{
+        value: string;
+        label: string;
+      }>
+    | Promise<
+        Array<{
+          value: string;
+          label: string;
+        }>
+      >
 ): void {
   getContext().definePreferenceOptions(name, provider);
 }

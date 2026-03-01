@@ -120,7 +120,9 @@ export class RpcError extends Error {
     super(message);
     this.name = 'RpcError';
     this.code = code;
-    if (data) this.data = data;
+    if (data) {
+      this.data = data;
+    }
   }
 
   /** Serialize to wire format */
@@ -131,7 +133,11 @@ export class RpcError extends Error {
       message: this.message,
     };
     if (this.data) {
-      (wire as { data: Record<string, unknown> }).data = this.data;
+      (
+        wire as {
+          data: Record<string, unknown>;
+        }
+      ).data = this.data;
     }
     return wire;
   }

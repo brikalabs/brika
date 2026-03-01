@@ -19,7 +19,9 @@ export const systemRoutes = group({
       path: '/restart',
       handler: () => {
         setTimeout(() => process.exit(RESTART_CODE), 100);
-        return { ok: true };
+        return {
+          ok: true,
+        };
       },
     }),
     /** POST /api/system/stop — shut down the hub and supervisor */
@@ -27,7 +29,9 @@ export const systemRoutes = group({
       path: '/stop',
       handler: () => {
         setTimeout(() => process.exit(0), 100);
-        return { ok: true };
+        return {
+          ok: true,
+        };
       },
     }),
   ],
@@ -59,11 +63,20 @@ export const updateRoutes = group({
      */
     route.post({
       path: '/apply',
-      query: z.object({ force: z.coerce.boolean().optional() }),
+      query: z.object({
+        force: z.coerce.boolean().optional(),
+      }),
       handler: ({ query }) => {
         return createSSEStream((send, close) => {
           const sendProgress = (phase: UpdatePhase, message: string, error?: string) => {
-            send({ phase, message, error }, 'progress');
+            send(
+              {
+                phase,
+                message,
+                error,
+              },
+              'progress'
+            );
           };
 
           (async () => {

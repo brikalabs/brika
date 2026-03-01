@@ -22,7 +22,10 @@ registerCheck('haveClassDecorator', (name: string) => {
         String.raw`@${decoratorName}\s*\([^)]*\)[\s\S]*?(?:export\s+)?class\s+\w+`
       );
       if (!pattern.test(content)) {
-        return { file, message: `Class missing @${decoratorName}() decorator` };
+        return {
+          file,
+          message: `Class missing @${decoratorName}() decorator`,
+        };
       }
     },
   };
@@ -37,7 +40,10 @@ registerCheck('haveMethodDecorator', (name: string) => {
         String.raw`@${decoratorName}\s*\([^)]*\)[\s\n]*(?:async\s+)?\w+\s*\(`
       );
       if (!pattern.test(content)) {
-        return { file, message: `No method with @${decoratorName}() decorator` };
+        return {
+          file,
+          message: `No method with @${decoratorName}() decorator`,
+        };
       }
     },
   };
@@ -54,7 +60,11 @@ registerCheck('notHaveClassDecorator', (name: string) => {
       const match = pattern.exec(content);
       if (match) {
         const line = content.substring(0, match.index).split('\n').length;
-        return { file, line, message: `Class has @${decoratorName}() decorator` };
+        return {
+          file,
+          line,
+          message: `Class has @${decoratorName}() decorator`,
+        };
       }
     },
   };

@@ -4,14 +4,18 @@
 
 import { describe, expect, test } from 'bun:test';
 import { stub, useTestBed } from '@brika/di/testing';
-import { TestApp } from '@brika/router/testing';
 import type { Middleware } from '@brika/router';
-import { Role, Scope, type Session, type User } from '../types';
+import { TestApp } from '@brika/router/testing';
+import { authProtectedRoutes, authPublicRoutes } from '../server/routes/auth';
 import { AuthService } from '../services/AuthService';
 import { UserService } from '../services/UserService';
-import { authPublicRoutes, authProtectedRoutes } from '../server/routes/auth';
+import { Role, Scope, type Session, type User } from '../types';
 
-const authRoutes = [...authPublicRoutes, ...authProtectedRoutes];
+const authRoutes = [
+  ...authPublicRoutes,
+  ...authProtectedRoutes,
+];
+
 import { getAuthConfig } from '../config';
 
 function withSession(session: Session): Middleware {
@@ -27,7 +31,9 @@ const adminSession: Session = {
   userEmail: 'admin@test.com',
   userName: 'Admin',
   userRole: Role.ADMIN,
-  scopes: [Scope.ADMIN_ALL],
+  scopes: [
+    Scope.ADMIN_ALL,
+  ],
 };
 
 const mockUser: User = {
@@ -59,10 +65,15 @@ describe('POST /login', () => {
   });
 
   test('returns 200 with Set-Cookie on success', async () => {
-    const res = await app.post('/login', { email: 'admin@test.com', password: 'secret' });
+    const res = await app.post('/login', {
+      email: 'admin@test.com',
+      password: 'secret',
+    });
     expect(res.status).toBe(200);
 
-    const body = res.body as { user: User };
+    const body = res.body as {
+      user: User;
+    };
     expect(body.user.email).toBe('admin@test.com');
 
     const cookie = res.headers.get('set-cookie') ?? '';
@@ -76,14 +87,27 @@ describe('POST /login', () => {
     stub(AuthService, {
       login: async (_email: string, _password: string, ip?: string) => {
         capturedIp = ip;
-        return { token: 'tok', user: mockUser, expiresIn: 604800 };
+        return {
+          token: 'tok',
+          user: mockUser,
+          expiresIn: 604800,
+        };
       },
     });
     app = TestApp.create(authRoutes);
 
-    await app.post('/login', { email: 'a@b.com', password: 'x' }, {
-      headers: { 'x-forwarded-for': '10.0.0.1' },
-    });
+    await app.post(
+      '/login',
+      {
+        email: 'a@b.com',
+        password: 'x',
+      },
+      {
+        headers: {
+          'x-forwarded-for': '10.0.0.1',
+        },
+      }
+    );
     expect(capturedIp).toBe('10.0.0.1');
   });
 
@@ -92,14 +116,27 @@ describe('POST /login', () => {
     stub(AuthService, {
       login: async (_email: string, _password: string, ip?: string) => {
         capturedIp = ip;
-        return { token: 'tok', user: mockUser, expiresIn: 604800 };
+        return {
+          token: 'tok',
+          user: mockUser,
+          expiresIn: 604800,
+        };
       },
     });
     app = TestApp.create(authRoutes);
 
-    await app.post('/login', { email: 'a@b.com', password: 'x' }, {
-      headers: { 'x-real-ip': '10.0.0.2' },
-    });
+    await app.post(
+      '/login',
+      {
+        email: 'a@b.com',
+        password: 'x',
+      },
+      {
+        headers: {
+          'x-real-ip': '10.0.0.2',
+        },
+      }
+    );
     expect(capturedIp).toBe('10.0.0.2');
   });
 
@@ -111,9 +148,14 @@ describe('POST /login', () => {
     });
     app = TestApp.create(authRoutes);
 
-    const res = await app.post('/login', { email: 'bad@test.com', password: 'wrong' });
+    const res = await app.post('/login', {
+      email: 'bad@test.com',
+      password: 'wrong',
+    });
     expect(res.status).toBe(401);
-    const body = res.body as { error: string };
+    const body = res.body as {
+      error: string;
+    };
     expect(body.error).toBe('Invalid credentials');
   });
 });
@@ -127,11 +169,13 @@ describe('POST /logout — with session', () => {
   useTestBed(() => {
     revokedId = undefined;
     stub(AuthService, {
-      logout: async (id: string) => {
+      logout: (id: string) => {
         revokedId = id;
       },
     });
-    app = TestApp.create(authRoutes, [withSession(adminSession)]);
+    app = TestApp.create(authRoutes, [
+      withSession(adminSession),
+    ]);
   });
 
   test('clears session cookie when logged in', async () => {
@@ -151,7 +195,7 @@ describe('POST /logout — without session', () => {
 
   useTestBed(() => {
     stub(AuthService, {
-      logout: async () => {},
+      logout: () => {},
     });
     // No session middleware — ctx.get('session') returns null
     app = TestApp.create(authRoutes);
@@ -161,7 +205,9 @@ describe('POST /logout — without session', () => {
     const res = await app.post('/logout');
 
     expect(res.status).toBe(200);
-    const body = res.body as { ok: boolean };
+    const body = res.body as {
+      ok: boolean;
+    };
     expect(body.ok).toBe(true);
 
     const cookie = res.headers.get('set-cookie') ?? '';
@@ -176,18 +222,25 @@ describe('GET /session — authenticated', () => {
 
   useTestBed(() => {
     stub(UserService, {
-      getUser: async () => mockUser,
+      getUser: () => mockUser,
     });
-    app = TestApp.create(authRoutes, [withSession(adminSession)]);
+    app = TestApp.create(authRoutes, [
+      withSession(adminSession),
+    ]);
   });
 
   test('returns user and scopes', async () => {
     const res = await app.get('/session');
     expect(res.status).toBe(200);
 
-    const body = res.body as { user: User; scopes: Scope[] };
+    const body = res.body as {
+      user: User;
+      scopes: Scope[];
+    };
     expect(body.user.email).toBe('admin@test.com');
-    expect(body.scopes).toEqual([Scope.ADMIN_ALL]);
+    expect(body.scopes).toEqual([
+      Scope.ADMIN_ALL,
+    ]);
   });
 });
 

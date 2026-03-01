@@ -53,13 +53,13 @@ function buildQueryString(params: LogQueryParams): string {
     const sources = Array.isArray(params.source) ? params.source : [params.source];
     searchParams.set("source", sources.join(","));
   }
-  if (params.pluginName) searchParams.set("pluginName", params.pluginName);
-  if (params.search) searchParams.set("search", params.search);
-  if (params.startTs) searchParams.set("startTs", String(params.startTs));
-  if (params.endTs) searchParams.set("endTs", String(params.endTs));
-  if (params.cursor) searchParams.set("cursor", String(params.cursor));
-  if (params.limit) searchParams.set("limit", String(params.limit));
-  if (params.order) searchParams.set("order", params.order);
+  if (params.pluginName) { searchParams.set("pluginName", params.pluginName); }
+  if (params.search) { searchParams.set("search", params.search); }
+  if (params.startTs) { searchParams.set("startTs", String(params.startTs)); }
+  if (params.endTs) { searchParams.set("endTs", String(params.endTs)); }
+  if (params.cursor) { searchParams.set("cursor", String(params.cursor)); }
+  if (params.limit) { searchParams.set("limit", String(params.limit)); }
+  if (params.order) { searchParams.set("order", params.order); }
 
   return searchParams.toString();
 }

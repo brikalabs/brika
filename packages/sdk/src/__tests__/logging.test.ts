@@ -99,7 +99,7 @@ describe('parseStackLine', () => {
 
   describe('ReDoS protection', () => {
     test('handles input with many colons efficiently', () => {
-      const maliciousInput = '(' + ':'.repeat(100) + '!)';
+      const maliciousInput = `(${':'.repeat(100)}!)`;
       const startTime = performance.now();
 
       const result = parseStackLine(maliciousInput);
@@ -110,7 +110,12 @@ describe('parseStackLine', () => {
     });
 
     test('handles repeated colon-digit patterns efficiently', () => {
-      const segments = Array.from({ length: 50 }, (_, i) => `:${i}`).join('');
+      const segments = Array.from(
+        {
+          length: 50,
+        },
+        (_, i) => `:${i}`
+      ).join('');
       const maliciousInput = `(${segments}!)`;
       const startTime = performance.now();
 
@@ -122,7 +127,7 @@ describe('parseStackLine', () => {
     });
 
     test('handles malicious input without parens efficiently', () => {
-      const maliciousInput = 'at ' + ':'.repeat(100) + '!';
+      const maliciousInput = `at ${':'.repeat(100)}!`;
       const startTime = performance.now();
 
       const result = parseStackLine(maliciousInput);

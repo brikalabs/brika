@@ -17,7 +17,10 @@ export interface CodeBlockNode extends BaseNode {
 }
 
 export function CodeBlock(props: Omit<CodeBlockNode, 'type'>): CodeBlockNode {
-  return { type: 'code-block', ...props };
+  return {
+    type: 'code-block',
+    ...props,
+  };
 }
 
 declare module './_shared' {

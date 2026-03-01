@@ -14,7 +14,12 @@ import { createTestHarness, type Handler } from './_test-utils';
 // ---------------------------------------------------------------------------
 
 const h = createTestHarness({
-  sparks: [{ id: 'test-spark', name: 'Test Spark' }],
+  sparks: [
+    {
+      id: 'test-spark',
+      name: 'Test Spark',
+    },
+  ],
 });
 
 // ---------------------------------------------------------------------------
@@ -39,42 +44,70 @@ describe('setupSparks', () => {
 
   describe('registerSpark', () => {
     test('sends IPC with correct payload', () => {
-      const result = methods.registerSpark({ id: 'test-spark' });
+      const result = methods.registerSpark({
+        id: 'test-spark',
+      });
 
-      expect(result).toEqual({ id: 'test-spark' });
+      expect(result).toEqual({
+        id: 'test-spark',
+      });
 
       const msg = h.sentMessages.find((m) => m.name === 'registerSpark');
       expect(msg).toBeDefined();
-      expect(msg!.payload).toEqual({
-        spark: { id: 'test-spark', schema: undefined },
+      expect(msg?.payload).toEqual({
+        spark: {
+          id: 'test-spark',
+          schema: undefined,
+        },
       });
     });
 
     test('sends IPC with schema when provided', () => {
-      const schema = { type: 'object', properties: { temp: { type: 'number' } } };
-      const result = methods.registerSpark({ id: 'test-spark', schema });
+      const schema = {
+        type: 'object',
+        properties: {
+          temp: {
+            type: 'number',
+          },
+        },
+      };
+      const result = methods.registerSpark({
+        id: 'test-spark',
+        schema,
+      });
 
-      expect(result).toEqual({ id: 'test-spark' });
+      expect(result).toEqual({
+        id: 'test-spark',
+      });
 
       const msg = h.sentMessages.find((m) => m.name === 'registerSpark');
       expect(msg).toBeDefined();
-      expect(msg!.payload).toEqual({
-        spark: { id: 'test-spark', schema },
+      expect(msg?.payload).toEqual({
+        spark: {
+          id: 'test-spark',
+          schema,
+        },
       });
     });
 
     test('throws for undeclared spark', () => {
-      expect(() => methods.registerSpark({ id: 'unknown-spark' })).toThrow(
-        'Spark "unknown-spark" not in package.json'
-      );
+      expect(() =>
+        methods.registerSpark({
+          id: 'unknown-spark',
+        })
+      ).toThrow('Spark "unknown-spark" not in package.json');
     });
 
     test('throws for duplicate registration', () => {
-      methods.registerSpark({ id: 'test-spark' });
+      methods.registerSpark({
+        id: 'test-spark',
+      });
 
-      expect(() => methods.registerSpark({ id: 'test-spark' })).toThrow(
-        'Spark "test-spark" already registered'
-      );
+      expect(() =>
+        methods.registerSpark({
+          id: 'test-spark',
+        })
+      ).toThrow('Spark "test-spark" already registered');
     });
   });
 
@@ -84,13 +117,17 @@ describe('setupSparks', () => {
 
   describe('emitSpark', () => {
     test('sends IPC with sparkId and payload', () => {
-      methods.emitSpark('test-spark', { temperature: 22.5 });
+      methods.emitSpark('test-spark', {
+        temperature: 22.5,
+      });
 
       const msg = h.sentMessages.find((m) => m.name === 'emitSpark');
       expect(msg).toBeDefined();
-      expect(msg!.payload).toEqual({
+      expect(msg?.payload).toEqual({
         sparkId: 'test-spark',
-        payload: { temperature: 22.5 },
+        payload: {
+          temperature: 22.5,
+        },
       });
     });
   });
@@ -110,7 +147,10 @@ describe('setupSparks', () => {
 
       const msg = h.sentMessages.find((m) => m.name === 'subscribeSpark');
       expect(msg).toBeDefined();
-      const payload = msg!.payload as { sparkType: string; subscriptionId: string };
+      const payload = msg?.payload as {
+        sparkType: string;
+        subscriptionId: string;
+      };
       expect(payload.sparkType).toBe('other-plugin:temperature');
       expect(payload.subscriptionId).toMatch(/^spark-sub-/);
     });
@@ -123,17 +163,26 @@ describe('setupSparks', () => {
 
       // Extract the subscription ID from the sent message
       const subMsg = h.sentMessages.find((m) => m.name === 'subscribeSpark');
-      const subId = (subMsg!.payload as { subscriptionId: string }).subscriptionId;
+      const subId = (
+        subMsg?.payload as {
+          subscriptionId: string;
+        }
+      ).subscriptionId;
 
       // Simulate hub delivering a spark event via the sparkEvent handler
       const event = {
         type: 'other-plugin:temperature',
-        payload: { temp: 22 },
+        payload: {
+          temp: 22,
+        },
         source: 'other-plugin',
         ts: Date.now(),
         id: 'evt-1',
       };
-      h.triggerOn('sparkEvent', { subscriptionId: subId, event });
+      h.triggerOn('sparkEvent', {
+        subscriptionId: subId,
+        event,
+      });
 
       expect(received).toHaveLength(1);
       expect(received[0]).toEqual(event);
@@ -147,7 +196,11 @@ describe('setupSparks', () => {
 
       // Get the subscription ID
       const subMsg = h.sentMessages.find((m) => m.name === 'subscribeSpark');
-      const subId = (subMsg!.payload as { subscriptionId: string }).subscriptionId;
+      const subId = (
+        subMsg?.payload as {
+          subscriptionId: string;
+        }
+      ).subscriptionId;
 
       // Unsubscribe
       unsub();
@@ -155,12 +208,20 @@ describe('setupSparks', () => {
       // Verify unsubscribe IPC was sent
       const unsubMsg = h.sentMessages.find((m) => m.name === 'unsubscribeSpark');
       expect(unsubMsg).toBeDefined();
-      expect(unsubMsg!.payload).toEqual({ subscriptionId: subId });
+      expect(unsubMsg?.payload).toEqual({
+        subscriptionId: subId,
+      });
 
       // Verify events are no longer delivered
       h.triggerOn('sparkEvent', {
         subscriptionId: subId,
-        event: { type: 'x', payload: null, source: 'x', ts: 0, id: 'x' },
+        event: {
+          type: 'x',
+          payload: null,
+          source: 'x',
+          ts: 0,
+          id: 'x',
+        },
       });
       expect(handler).not.toHaveBeenCalled();
     });
@@ -169,7 +230,13 @@ describe('setupSparks', () => {
       // Should not throw when sparkEvent arrives for a non-existent subscription
       h.triggerOn('sparkEvent', {
         subscriptionId: 'nonexistent-sub',
-        event: { type: 'x', payload: null, source: 'x', ts: 0, id: 'x' },
+        event: {
+          type: 'x',
+          payload: null,
+          source: 'x',
+          ts: 0,
+          id: 'x',
+        },
       });
     });
 
@@ -182,7 +249,14 @@ describe('setupSparks', () => {
       });
 
       const subMsgs = h.sentMessages.filter((m) => m.name === 'subscribeSpark');
-      const ids = subMsgs.map((m) => (m.payload as { subscriptionId: string }).subscriptionId);
+      const ids = subMsgs.map(
+        (m) =>
+          (
+            m.payload as {
+              subscriptionId: string;
+            }
+          ).subscriptionId
+      );
 
       expect(ids).toHaveLength(2);
       expect(ids[0]).not.toBe(ids[1]);
@@ -191,8 +265,8 @@ describe('setupSparks', () => {
       expect(ids[1]).toMatch(/^spark-sub-\d+$/);
 
       // Extract numeric suffixes and verify they increment
-      const num0 = Number.parseInt(ids[0]!.replace('spark-sub-', ''), 10);
-      const num1 = Number.parseInt(ids[1]!.replace('spark-sub-', ''), 10);
+      const num0 = Number.parseInt(ids[0]?.replace('spark-sub-', '') ?? '', 10);
+      const num1 = Number.parseInt(ids[1]?.replace('spark-sub-', '') ?? '', 10);
       expect(num1).toBe(num0 + 1);
     });
   });

@@ -7,7 +7,9 @@ import { beforeEach, describe, expect, test } from 'bun:test';
 import { get, useTestBed } from '@brika/di/testing';
 import { MetricsStore } from '@/runtime/metrics/metrics-store';
 
-useTestBed({ autoStub: false });
+useTestBed({
+  autoStub: false,
+});
 
 describe('MetricsStore', () => {
   let store: MetricsStore;
@@ -17,7 +19,11 @@ describe('MetricsStore', () => {
   });
 
   test('records metrics for a plugin', () => {
-    const sample = { ts: Date.now(), cpu: 10, memory: 1000 };
+    const sample = {
+      ts: Date.now(),
+      cpu: 10,
+      memory: 1000,
+    };
 
     store.record('@test/plugin', sample);
 
@@ -28,9 +34,21 @@ describe('MetricsStore', () => {
 
   test('stores multiple samples for same plugin', () => {
     const samples = [
-      { ts: 1000, cpu: 10, memory: 1000 },
-      { ts: 2000, cpu: 20, memory: 2000 },
-      { ts: 3000, cpu: 15, memory: 1500 },
+      {
+        ts: 1000,
+        cpu: 10,
+        memory: 1000,
+      },
+      {
+        ts: 2000,
+        cpu: 20,
+        memory: 2000,
+      },
+      {
+        ts: 3000,
+        cpu: 15,
+        memory: 1500,
+      },
     ];
 
     for (const s of samples) {
@@ -43,8 +61,16 @@ describe('MetricsStore', () => {
   });
 
   test('keeps samples for different plugins separate', () => {
-    store.record('plugin-a', { ts: 1000, cpu: 10, memory: 1000 });
-    store.record('plugin-b', { ts: 2000, cpu: 20, memory: 2000 });
+    store.record('plugin-a', {
+      ts: 1000,
+      cpu: 10,
+      memory: 1000,
+    });
+    store.record('plugin-b', {
+      ts: 2000,
+      cpu: 20,
+      memory: 2000,
+    });
 
     expect(store.get('plugin-a')).toHaveLength(1);
     expect(store.get('plugin-b')).toHaveLength(1);
@@ -57,8 +83,16 @@ describe('MetricsStore', () => {
   });
 
   test('clears metrics for specific plugin', () => {
-    store.record('plugin-a', { ts: 1000, cpu: 10, memory: 1000 });
-    store.record('plugin-b', { ts: 2000, cpu: 20, memory: 2000 });
+    store.record('plugin-a', {
+      ts: 1000,
+      cpu: 10,
+      memory: 1000,
+    });
+    store.record('plugin-b', {
+      ts: 2000,
+      cpu: 20,
+      memory: 2000,
+    });
 
     store.clear('plugin-a');
 
@@ -67,8 +101,16 @@ describe('MetricsStore', () => {
   });
 
   test('clears all metrics', () => {
-    store.record('plugin-a', { ts: 1000, cpu: 10, memory: 1000 });
-    store.record('plugin-b', { ts: 2000, cpu: 20, memory: 2000 });
+    store.record('plugin-a', {
+      ts: 1000,
+      cpu: 10,
+      memory: 1000,
+    });
+    store.record('plugin-b', {
+      ts: 2000,
+      cpu: 20,
+      memory: 2000,
+    });
 
     store.clearAll();
 
@@ -79,7 +121,11 @@ describe('MetricsStore', () => {
   test('limits samples per plugin (ring buffer behavior)', () => {
     // The store has a maxSamples of 60, but we can test the behavior
     for (let i = 0; i < 65; i++) {
-      store.record('@test/plugin', { ts: i * 1000, cpu: i, memory: i * 100 });
+      store.record('@test/plugin', {
+        ts: i * 1000,
+        cpu: i,
+        memory: i * 100,
+      });
     }
 
     const samples = store.get('@test/plugin');

@@ -43,13 +43,19 @@ export function UpdateAllButton({ updates, plugins }: Readonly<UpdateAllButtonPr
     stop,
   } = useProgressStream({
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: pluginsKeys.all });
-      queryClient.invalidateQueries({ queryKey: registryKeys.updates });
+      queryClient.invalidateQueries({
+        queryKey: pluginsKeys.all,
+      });
+      queryClient.invalidateQueries({
+        queryKey: registryKeys.updates,
+      });
     },
   });
 
   const handleClose = () => {
-    if (isProcessing) return;
+    if (isProcessing) {
+      return;
+    }
     reset();
     setDialogOpen(false);
   };
@@ -65,7 +71,9 @@ export function UpdateAllButton({ updates, plugins }: Readonly<UpdateAllButtonPr
     }
   };
 
-  if (updates.length === 0) return null;
+  if (updates.length === 0) {
+    return null;
+  }
 
   return (
     <>
@@ -82,7 +90,9 @@ export function UpdateAllButton({ updates, plugins }: Readonly<UpdateAllButtonPr
           <DialogHeader>
             <DialogTitle>{t('plugins:update.title')}</DialogTitle>
             <DialogDescription>
-              {t('plugins:update.updatesAvailable', { count: updates.length })}
+              {t('plugins:update.updatesAvailable', {
+                count: updates.length,
+              })}
             </DialogDescription>
           </DialogHeader>
 
@@ -121,7 +131,9 @@ export function UpdateAllButton({ updates, plugins }: Readonly<UpdateAllButtonPr
                   ) : (
                     <>
                       <ArrowUp className="size-4" />
-                      {t('plugins:update.updateCount', { count: updates.length })}
+                      {t('plugins:update.updateCount', {
+                        count: updates.length,
+                      })}
                     </>
                   )}
                 </Button>

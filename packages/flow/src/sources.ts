@@ -43,7 +43,10 @@ export function isSource<T>(value: unknown): value is Source<T> {
  * Sources can be passed to start() to create flows.
  */
 function createSource<T>(factory: Factory<T>): Source<T> {
-  return { __source: true, start: factory };
+  return {
+    __source: true,
+    start: factory,
+  };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

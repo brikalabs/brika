@@ -179,7 +179,9 @@ export class EventBus {
    * Get all port buffers (for UI state display).
    */
   getAllBuffers(): PortBuffer[] {
-    return [...this.#buffers.values()];
+    return [
+      ...this.#buffers.values(),
+    ];
   }
 
   /**
@@ -188,7 +190,9 @@ export class EventBus {
    */
   async retrigger(blockId: string, portId: string): Promise<boolean> {
     const buffer = this.#buffers.get(`${blockId}:${portId}`);
-    if (!buffer) return false;
+    if (!buffer) {
+      return false;
+    }
 
     await this.emit(blockId, portId, buffer.value);
     return true;
@@ -215,7 +219,9 @@ export class EventBus {
   get connectionCount(): number {
     let count = 0;
     for (const target of this.#connections.values()) {
-      if (target !== undefined) count++;
+      if (target !== undefined) {
+        count++;
+      }
     }
     return count;
   }

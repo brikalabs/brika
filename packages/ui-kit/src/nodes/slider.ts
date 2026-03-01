@@ -30,7 +30,11 @@ export function Slider(props: {
   disabled?: boolean;
 }): SliderNode {
   const { onChange, ...rest } = props;
-  return { type: 'slider', ...rest, onChange: resolveAction(onChange) };
+  return {
+    type: 'slider',
+    ...rest,
+    onChange: resolveAction(onChange),
+  };
 }
 
 declare module './_shared' {

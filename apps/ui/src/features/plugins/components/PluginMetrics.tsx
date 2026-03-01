@@ -24,7 +24,12 @@ export function PluginMetrics({ metrics }: Readonly<PluginMetricsProps>) {
           </div>
           <div className="mt-1 text-muted-foreground text-sm">{t('plugins:details.cpu')}</div>
           <MetricsChart
-            data={metrics?.history?.map((h) => ({ ts: h.ts, value: h.cpu })) ?? []}
+            data={
+              metrics?.history?.map((h) => ({
+                ts: h.ts,
+                value: h.cpu,
+              })) ?? []
+            }
             color="oklch(0.765 0.177 163.223)"
             formatValue={(v) => `${v.toFixed(1)}%`}
             className="mt-auto pt-3"
@@ -44,7 +49,12 @@ export function PluginMetrics({ metrics }: Readonly<PluginMetricsProps>) {
           </div>
           <div className="mt-1 text-muted-foreground text-sm">{t('plugins:details.memory')}</div>
           <MetricsChart
-            data={metrics?.history?.map((h) => ({ ts: h.ts, value: h.memory })) ?? []}
+            data={
+              metrics?.history?.map((h) => ({
+                ts: h.ts,
+                value: h.memory,
+              })) ?? []
+            }
             color="oklch(0.714 0.203 305.504)"
             formatValue={formatBytes}
             className="mt-auto pt-3"
@@ -56,8 +66,14 @@ export function PluginMetrics({ metrics }: Readonly<PluginMetricsProps>) {
 }
 
 function formatBytes(bytes: number) {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  if (bytes < 1024) {
+    return `${bytes} B`;
+  }
+  if (bytes < 1024 * 1024) {
+    return `${(bytes / 1024).toFixed(1)} KB`;
+  }
+  if (bytes < 1024 * 1024 * 1024) {
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }

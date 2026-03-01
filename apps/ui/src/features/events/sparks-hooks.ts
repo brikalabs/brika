@@ -52,7 +52,9 @@ export function useSparkStream() {
         // On error, still mark as initialized so SSE events work
         setHistory([]);
       });
-  }, [setHistory]);
+  }, [
+    setHistory,
+  ]);
 
   // SSE for live events
   useEffect(() => {
@@ -67,13 +69,19 @@ export function useSparkStream() {
       /* Connection error - auto-retry handled by EventSource */
     };
     return () => es.close();
-  }, [add]);
+  }, [
+    add,
+  ]);
 
   const sparkEvents = useMemo(() => {
     return events
       .filter((e) => e.type === 'spark.emit')
       .map((e): SparkEvent => {
-        const payload = e.payload as { type: string; source: string; payload: unknown };
+        const payload = e.payload as {
+          type: string;
+          source: string;
+          payload: unknown;
+        };
         return {
           id: e.id,
           type: payload.type, // The actual spark type
@@ -83,9 +91,17 @@ export function useSparkStream() {
         };
       })
       .reverse(); // Most recent first
-  }, [events]);
+  }, [
+    events,
+  ]);
 
-  return { events: sparkEvents, paused, clear, togglePaused, initialized };
+  return {
+    events: sparkEvents,
+    paused,
+    clear,
+    togglePaused,
+    initialized,
+  };
 }
 
 export function useEmitEvent() {
@@ -93,7 +109,10 @@ export function useEmitEvent() {
     mutationFn: ({ type, payload }: { type: string; payload: unknown }) =>
       fetcher<BrikaEvent>('/api/sparks/emit', {
         method: 'POST',
-        body: JSON.stringify({ type, payload }),
+        body: JSON.stringify({
+          type,
+          payload,
+        }),
       }),
   });
 }

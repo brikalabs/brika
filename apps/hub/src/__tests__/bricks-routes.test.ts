@@ -17,9 +17,21 @@ const BRICK_TYPE: RegisteredBrickType = {
   icon: 'clock',
   color: '#f59e0b',
   families: [],
-  minSize: { w: 2, h: 2 },
-  maxSize: { w: 6, h: 6 },
-  config: [{ name: 'tz', type: 'text', label: 'Timezone' }],
+  minSize: {
+    w: 2,
+    h: 2,
+  },
+  maxSize: {
+    w: 6,
+    h: 6,
+  },
+  config: [
+    {
+      name: 'tz',
+      type: 'text',
+      label: 'Timezone',
+    },
+  ],
 };
 
 const BRICK_INSTANCE = {
@@ -29,7 +41,14 @@ const BRICK_INSTANCE = {
   w: 3,
   h: 2,
   config: {},
-  body: [{ type: 'text', props: { value: '12:00' } }],
+  body: [
+    {
+      type: 'text',
+      props: {
+        value: '12:00',
+      },
+    },
+  ],
 };
 
 describe('bricks routes', () => {
@@ -48,11 +67,15 @@ describe('bricks routes', () => {
 
   useTestBed(() => {
     mockTypeRegistry = {
-      list: mock().mockReturnValue([BRICK_TYPE]),
+      list: mock().mockReturnValue([
+        BRICK_TYPE,
+      ]),
       get: mock().mockReturnValue(BRICK_TYPE),
     };
     mockInstanceManager = {
-      list: mock().mockReturnValue([BRICK_INSTANCE]),
+      list: mock().mockReturnValue([
+        BRICK_INSTANCE,
+      ]),
       get: mock().mockReturnValue(BRICK_INSTANCE),
     };
     mockLifecycle = {
@@ -67,7 +90,13 @@ describe('bricks routes', () => {
   // ─── Brick Types ──────────────────────────────────────────────────────────
 
   test('GET /api/bricks/types returns list', async () => {
-    const res = await app.get<Array<{ id: string; name: string }>>('/api/bricks/types');
+    const res =
+      await app.get<
+        Array<{
+          id: string;
+          name: string;
+        }>
+      >('/api/bricks/types');
 
     expect(res.status).toBe(200);
     expect(res.body).toHaveLength(1);
@@ -76,7 +105,9 @@ describe('bricks routes', () => {
   });
 
   test('GET /api/bricks/types/:id returns type', async () => {
-    const res = await app.get<{ id: string }>('/api/bricks/types/timer:clock');
+    const res = await app.get<{
+      id: string;
+    }>('/api/bricks/types/timer:clock');
 
     expect(res.status).toBe(200);
     expect(res.body.id).toBe('timer:clock');
@@ -91,23 +122,28 @@ describe('bricks routes', () => {
   });
 
   test('GET /api/bricks/types/:typeId/config/:name/options returns empty when no process', async () => {
-    const res = await app.get<{ options: unknown[] }>(
-      '/api/bricks/types/timer:clock/config/tz/options'
-    );
+    const res = await app.get<{
+      options: unknown[];
+    }>('/api/bricks/types/timer:clock/config/tz/options');
 
     expect(res.status).toBe(200);
     expect(res.body.options).toEqual([]);
   });
 
   test('GET /api/bricks/types/:typeId/config/:name/options fetches from process', async () => {
-    const opts = [{ label: 'UTC', value: 'UTC' }];
+    const opts = [
+      {
+        label: 'UTC',
+        value: 'UTC',
+      },
+    ];
     mockLifecycle.getProcess.mockReturnValue({
       fetchPreferenceOptions: mock().mockResolvedValue(opts),
     });
 
-    const res = await app.get<{ options: unknown[] }>(
-      '/api/bricks/types/timer:clock/config/tz/options'
-    );
+    const res = await app.get<{
+      options: unknown[];
+    }>('/api/bricks/types/timer:clock/config/tz/options');
 
     expect(res.status).toBe(200);
     expect(res.body.options).toEqual(opts);
@@ -116,7 +152,12 @@ describe('bricks routes', () => {
   // ─── Brick Instances ──────────────────────────────────────────────────────
 
   test('GET /api/bricks/instances returns list', async () => {
-    const res = await app.get<Array<{ instanceId: string }>>('/api/bricks/instances');
+    const res =
+      await app.get<
+        Array<{
+          instanceId: string;
+        }>
+      >('/api/bricks/instances');
 
     expect(res.status).toBe(200);
     expect(res.body).toHaveLength(1);
@@ -124,7 +165,9 @@ describe('bricks routes', () => {
   });
 
   test('GET /api/bricks/instances/:id returns instance', async () => {
-    const res = await app.get<{ instanceId: string }>('/api/bricks/instances/inst-1');
+    const res = await app.get<{
+      instanceId: string;
+    }>('/api/bricks/instances/inst-1');
 
     expect(res.status).toBe(200);
     expect(res.body.instanceId).toBe('inst-1');
@@ -142,11 +185,15 @@ describe('bricks routes', () => {
 
   test('POST /api/bricks/instances/:id/action dispatches action', async () => {
     const sendBrickInstanceAction = mock();
-    mockLifecycle.getProcess.mockReturnValue({ sendBrickInstanceAction });
+    mockLifecycle.getProcess.mockReturnValue({
+      sendBrickInstanceAction,
+    });
 
     const res = await app.post('/api/bricks/instances/inst-1/action', {
       actionId: 'toggle',
-      payload: { on: true },
+      payload: {
+        on: true,
+      },
     });
 
     expect(res.status).toBe(200);
@@ -158,13 +205,17 @@ describe('bricks routes', () => {
   test('POST /api/bricks/instances/:id/action returns 404 for missing instance', async () => {
     mockInstanceManager.get.mockReturnValue(undefined);
 
-    const res = await app.post('/api/bricks/instances/missing/action', { actionId: 'toggle' });
+    const res = await app.post('/api/bricks/instances/missing/action', {
+      actionId: 'toggle',
+    });
 
     expect(res.status).toBe(404);
   });
 
   test('POST /api/bricks/instances/:id/action returns 404 when plugin not running', async () => {
-    const res = await app.post('/api/bricks/instances/inst-1/action', { actionId: 'toggle' });
+    const res = await app.post('/api/bricks/instances/inst-1/action', {
+      actionId: 'toggle',
+    });
 
     expect(res.status).toBe(404);
   });

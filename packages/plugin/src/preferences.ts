@@ -48,14 +48,19 @@ export interface CheckboxPreference extends BasePreference {
 export interface DropdownPreference extends BasePreference {
   type: 'dropdown';
   default?: string;
-  options: Array<{ value: string }>;
+  options: Array<{
+    value: string;
+  }>;
 }
 
 export interface DynamicDropdownPreference extends BasePreference {
   type: 'dynamic-dropdown';
   default?: string;
   /** Options resolved server-side via plugin route GET /preferences/{name}. */
-  options?: Array<{ value: string; label: string }>;
+  options?: Array<{
+    value: string;
+    label: string;
+  }>;
 }
 
 export interface LinkPreference extends BasePreference {

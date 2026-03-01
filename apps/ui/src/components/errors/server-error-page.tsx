@@ -5,7 +5,11 @@ import { ErrorLayout } from './error-layout';
 /**
  * 500 — Server / unexpected error with a retry action.
  */
-export function ServerErrorPage({ variant, onRetry, error }: Readonly<{
+export function ServerErrorPage({
+  variant,
+  onRetry,
+  error,
+}: Readonly<{
   variant?: 'fullscreen' | 'inline';
   onRetry?: () => void;
   error?: Error | null;

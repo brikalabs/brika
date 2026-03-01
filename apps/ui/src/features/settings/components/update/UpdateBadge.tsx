@@ -17,14 +17,20 @@ export function UpdateBadge({
 }: Readonly<UpdateBadgeProps>) {
   const { t } = useLocale();
   let variant: 'default' | 'outline' | 'secondary' = 'secondary';
-  if (updateAvailable) variant = 'default';
-  else if (devBuild) variant = 'outline';
+  if (updateAvailable) {
+    variant = 'default';
+  } else if (devBuild) {
+    variant = 'outline';
+  }
 
   if (updateAvailable) {
     return (
       <Badge variant={variant}>
         <ArrowUpCircle className="size-3" />
-        {t('common:updates.versionChange', { from: currentVersion, to: latestVersion })}
+        {t('common:updates.versionChange', {
+          from: currentVersion,
+          to: latestVersion,
+        })}
       </Badge>
     );
   }

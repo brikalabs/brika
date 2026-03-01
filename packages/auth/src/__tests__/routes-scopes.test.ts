@@ -5,10 +5,10 @@
 import { describe, expect, test } from 'bun:test';
 import { provide, useTestBed } from '@brika/di/testing';
 import { TestApp } from '@brika/router/testing';
-import { Scope } from '../types';
-import { ScopeService } from '../services/ScopeService';
-import { scopeRoutes } from '../server/routes/scopes';
 import { SCOPES_REGISTRY } from '../constants';
+import { scopeRoutes } from '../server/routes/scopes';
+import { ScopeService } from '../services/ScopeService';
+import { Scope } from '../types';
 
 describe('GET /scopes', () => {
   let app: ReturnType<typeof TestApp.create>;
@@ -26,19 +26,37 @@ describe('GET /scopes', () => {
     expect(res.status).toBe(200);
 
     const body = res.body as {
-      scopes: Record<string, { description: string; category: string }>;
+      scopes: Record<
+        string,
+        {
+          description: string;
+          category: string;
+        }
+      >;
       categories: string[];
     };
 
-    expect(body.categories).toEqual(['admin', 'workflow', 'board', 'plugin', 'settings']);
-    expect(body.scopes[Scope.ADMIN_ALL]).toBeDefined();
-    expect(body.scopes[Scope.ADMIN_ALL].description).toBe('Full administrative access');
-    expect(body.scopes[Scope.ADMIN_ALL].category).toBe('admin');
+    expect(body.categories).toEqual([
+      'admin',
+      'workflow',
+      'board',
+      'plugin',
+      'settings',
+    ]);
+    const adminScope = body.scopes[Scope.ADMIN_ALL];
+    expect(adminScope).toBeDefined();
+    if (!adminScope) {
+      throw new Error('Expected admin scope to be defined');
+    }
+    expect(adminScope.description).toBe('Full administrative access');
+    expect(adminScope.category).toBe('admin');
   });
 
   test('includes all defined scopes', async () => {
     const res = await app.get('/scopes');
-    const body = res.body as { scopes: Record<string, unknown> };
+    const body = res.body as {
+      scopes: Record<string, unknown>;
+    };
 
     for (const scope of Object.values(Scope)) {
       expect(body.scopes[scope]).toBeDefined();

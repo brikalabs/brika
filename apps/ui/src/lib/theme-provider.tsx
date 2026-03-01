@@ -23,7 +23,11 @@ function useSystemTheme(): 'light' | 'dark' {
   );
 }
 
-export function ThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
+export function ThemeProvider({
+  children,
+}: Readonly<{
+  children: ReactNode;
+}>) {
   const systemTheme = useSystemTheme();
 
   const [theme, setThemeState] = useState<ThemeName>(() => {
@@ -35,14 +39,17 @@ export function ThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
       stored === 'sunset' ||
       stored === 'lavender' ||
       stored === 'ruby'
-    )
+    ) {
       return stored;
+    }
     return 'default';
   });
 
   const [mode, setModeState] = useState<ThemeMode>(() => {
     const stored = localStorage.getItem(MODE_STORAGE_KEY);
-    if (stored === 'light' || stored === 'dark' || stored === 'system') return stored;
+    if (stored === 'light' || stored === 'dark' || stored === 'system') {
+      return stored;
+    }
     return 'system';
   });
 
@@ -53,7 +60,10 @@ export function ThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
     html.dataset.theme = theme;
     html.classList.remove('light', 'dark');
     html.classList.add(resolvedMode);
-  }, [theme, resolvedMode]);
+  }, [
+    theme,
+    resolvedMode,
+  ]);
 
   const setTheme = useCallback((newTheme: ThemeName) => {
     setThemeState(newTheme);
@@ -66,8 +76,20 @@ export function ThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
   }, []);
 
   const value = useMemo(
-    () => ({ theme, mode, resolvedMode, setTheme, setMode }),
-    [theme, mode, resolvedMode, setTheme, setMode]
+    () => ({
+      theme,
+      mode,
+      resolvedMode,
+      setTheme,
+      setMode,
+    }),
+    [
+      theme,
+      mode,
+      resolvedMode,
+      setTheme,
+      setMode,
+    ]
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

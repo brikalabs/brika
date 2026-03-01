@@ -10,14 +10,19 @@ import { blockEmit, pushInput, registerBlock, startBlock, stopBlock } from '@bri
 import type { Serializable } from '@brika/serializable';
 import type { BlockInstance, CompiledReactiveBlock } from '../blocks/reactive-define';
 import type { BlockDefinition } from '../blocks/types';
-import { type ContextCore, type MethodsOf, registerContextModule } from './register';
+import { type ContextCore, registerContextModule } from './register';
 
 // ─── Setup ────────────────────────────────────────────────────────────────────
 
 export function setupBlocks(core: ContextCore) {
   const { client, manifest } = core;
   const declaredBlocks = new Set(manifest.blocks?.map((b) => b.id) ?? []);
-  const blockMeta = new Map(manifest.blocks?.map((b) => [b.id, b]));
+  const blockMeta = new Map(
+    manifest.blocks?.map((b) => [
+      b.id,
+      b,
+    ])
+  );
   const blocks = new Set<string>();
   const reactiveBlocks = new Map<string, CompiledReactiveBlock>();
   const blockInstances = new Map<string, BlockInstance>();
@@ -28,11 +33,17 @@ export function setupBlocks(core: ContextCore) {
     const block = reactiveBlocks.get(localBlockId);
 
     if (!block) {
-      return { ok: false, error: `Block not found: ${localBlockId}` };
+      return {
+        ok: false,
+        error: `Block not found: ${localBlockId}`,
+      };
     }
 
     if (blockInstances.has(instanceId)) {
-      return { ok: false, error: `Block instance already exists: ${instanceId}` };
+      return {
+        ok: false,
+        error: `Block instance already exists: ${instanceId}`,
+      };
     }
 
     try {
@@ -41,14 +52,23 @@ export function setupBlocks(core: ContextCore) {
         workflowId,
         config,
         emit: (port, data) => {
-          client.send(blockEmit, { instanceId, port, data: data as Json });
+          client.send(blockEmit, {
+            instanceId,
+            port,
+            data: data as Json,
+          });
         },
       });
 
       blockInstances.set(instanceId, instance);
-      return { ok: true };
+      return {
+        ok: true,
+      };
     } catch (e) {
-      return { ok: false, error: String(e) };
+      return {
+        ok: false,
+        error: String(e),
+      };
     }
   });
 
@@ -69,7 +89,11 @@ export function setupBlocks(core: ContextCore) {
 
   return {
     methods: {
-      registerBlock(block: BlockDefinition & { start?: CompiledReactiveBlock['start'] }): {
+      registerBlock(
+        block: BlockDefinition & {
+          start?: CompiledReactiveBlock['start'];
+        }
+      ): {
         id: string;
       } {
         const { id } = block;
@@ -78,7 +102,9 @@ export function setupBlocks(core: ContextCore) {
             `Block "${id}" not in package.json. Add: "blocks": [{"id": "${id}", "name": "...", "category": "..."}]`
           );
         }
-        if (blocks.has(id)) throw new Error(`Block "${id}" already registered`);
+        if (blocks.has(id)) {
+          throw new Error(`Block "${id}" already registered`);
+        }
 
         const meta = blockMeta.get(id);
         if (!meta) {
@@ -112,7 +138,9 @@ export function setupBlocks(core: ContextCore) {
             schema: block.schema as unknown as Record<string, Json>,
           },
         });
-        return { id };
+        return {
+          id,
+        };
       },
     },
 
@@ -123,12 +151,6 @@ export function setupBlocks(core: ContextCore) {
       blockInstances.clear();
     },
   };
-}
-
-// ─── Type Augmentation (inferred from setup) ─────────────────────────────────
-
-declare module '../context' {
-  interface Context extends MethodsOf<typeof setupBlocks> {}
 }
 
 registerContextModule('blocks', setupBlocks);

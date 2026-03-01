@@ -7,11 +7,15 @@
 
 import 'reflect-metadata';
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
-import { HttpClient } from '@brika/http';
-import type { SqliteCacheOptions } from '@brika/http';
 import { stub, useTestBed } from '@brika/di/testing';
+import type { SqliteCacheOptions } from '@brika/http';
+import { HttpClient } from '@brika/http';
+import {
+  type CachePluginOptions,
+  cache,
+  getCacheInstance,
+} from '@/runtime/bootstrap/plugins/cache';
 import { Logger } from '@/runtime/logs/log-router';
-import { cache, getCacheInstance } from '@/runtime/bootstrap/plugins/cache';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Mock helpers
@@ -19,7 +23,11 @@ import { cache, getCacheInstance } from '@/runtime/bootstrap/plugins/cache';
 
 const mockSetCache = mock();
 const mockDestroy = mock();
-const mockStats = mock().mockReturnValue({ size: 10, tags: 2, dbSizeBytes: 4096 });
+const mockStats = mock().mockReturnValue({
+  size: 10,
+  tags: 2,
+  dbSizeBytes: 4096,
+});
 
 let shouldThrow = false;
 
@@ -38,7 +46,9 @@ class FakeSqliteCache {
 // Test setup
 // ─────────────────────────────────────────────────────────────────────────────
 
-useTestBed({ autoStub: false });
+useTestBed({
+  autoStub: false,
+});
 
 const mockLogInfo = mock();
 const mockLogError = mock();
@@ -50,17 +60,29 @@ describe('cache bootstrap plugin', () => {
     mockSetCache.mockClear();
     mockDestroy.mockClear();
     mockStats.mockClear();
-    mockStats.mockReturnValue({ size: 10, tags: 2, dbSizeBytes: 4096 });
+    mockStats.mockReturnValue({
+      size: 10,
+      tags: 2,
+      dbSizeBytes: 4096,
+    });
     mockLogInfo.mockClear();
     mockLogError.mockClear();
     mockLogWarn.mockClear();
-    stub(Logger, { info: mockLogInfo, error: mockLogError, warn: mockLogWarn });
-    stub(HttpClient, { setCache: mockSetCache } as any);
+    stub(Logger, {
+      info: mockLogInfo,
+      error: mockLogError,
+      warn: mockLogWarn,
+    });
+    stub(HttpClient, {
+      setCache: mockSetCache,
+    } as Partial<HttpClient>);
   });
 
   /** Helper: create the plugin with the fake cache class. */
   function createPlugin() {
-    return cache({ CacheClass: FakeSqliteCache as any });
+    return cache({
+      CacheClass: FakeSqliteCache as unknown as CachePluginOptions['CacheClass'],
+    });
   }
 
   // ── Factory ──────────────────────────────────────────────────────────────
@@ -103,7 +125,11 @@ describe('cache bootstrap plugin', () => {
 
     const [secondMsg, secondMeta] = mockLogInfo.mock.calls[1];
     expect(secondMsg).toBe('SQLite cache initialized');
-    expect(secondMeta).toMatchObject({ entries: 10, tags: 2, dbSizeBytes: 4096 });
+    expect(secondMeta).toMatchObject({
+      entries: 10,
+      tags: 2,
+      dbSizeBytes: 4096,
+    });
   });
 
   // ── onInit: error path ───────────────────────────────────────────────────
@@ -116,7 +142,9 @@ describe('cache bootstrap plugin', () => {
     expect(mockLogError).toHaveBeenCalledTimes(1);
     const [msg, meta] = mockLogError.mock.calls[0];
     expect(msg).toContain('Failed to initialize SQLite cache');
-    expect(meta).toMatchObject({ error: expect.stringContaining('SQLite open failed') });
+    expect(meta).toMatchObject({
+      error: expect.stringContaining('SQLite open failed'),
+    });
   });
 
   test('onInit() does not call setCache when constructor throws', async () => {

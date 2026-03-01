@@ -34,7 +34,7 @@ ${pc.bold('Examples:')}
   ${pc.dim('$')} brika -C ~/.brika status    ${pc.dim('# use a specific data dir')}
   ${pc.dim('$')} brika help start            ${pc.dim('# show start command help')}
 
-${pc.dim('v' + hub.version + ' | ' + HUB_REPO_URL)}
+${pc.dim(`v${hub.version} | ${HUB_REPO_URL}`)}
 `.trim();
   }
 
@@ -74,7 +74,7 @@ function generateCommandHelp(cmd: Command, prefix: string): string {
   const details = cmd.details ? `\n\n${cmd.details}` : '';
 
   return `
-${pc.bold(pc.cyan(prefix + ' ' + cmd.name))}
+${pc.bold(pc.cyan(`${prefix} ${cmd.name}`))}
 
 ${cmd.description}${details}
 ${flagsSection}${examplesSection}

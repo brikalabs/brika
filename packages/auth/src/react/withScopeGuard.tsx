@@ -67,5 +67,7 @@ export function withOptionalScope<P extends object>(
   Component: React.ComponentType<P>,
   requiredScopes: Scope | Scope[] | null
 ): React.ComponentType<P> {
-  return withScopeGuard(Component, requiredScopes, { fallback: null });
+  return withScopeGuard(Component, requiredScopes, {
+    fallback: null,
+  });
 }

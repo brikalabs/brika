@@ -69,18 +69,26 @@ export class PluginLifecycle {
 
   getProcessByUid(uid: string): PluginProcess | undefined {
     for (const p of this.#processes.values()) {
-      if (p.uid === uid) return p;
+      if (p.uid === uid) {
+        return p;
+      }
     }
     return undefined;
   }
 
   listProcesses(): PluginProcess[] {
-    return [...this.#processes.values()];
+    return [
+      ...this.#processes.values(),
+    ];
   }
 
   getStatus(name: string): PluginHealth {
-    if (this.#processes.has(name)) return 'running';
-    if (this.#restartPolicy.getState(name)?.pendingTimer) return 'restarting';
+    if (this.#processes.has(name)) {
+      return 'running';
+    }
+    if (this.#restartPolicy.getState(name)?.pendingTimer) {
+      return 'restarting';
+    }
     return this.#state.get(name)?.health ?? 'stopped';
   }
 
@@ -90,7 +98,9 @@ export class PluginLifecycle {
 
   fromStored(stored: PluginStateWithMetadata): Plugin {
     const process = this.#processes.get(stored.name);
-    if (process) return this.toPlugin(process);
+    if (process) {
+      return this.toPlugin(process);
+    }
 
     const m = stored.metadata;
     return {
@@ -130,7 +140,9 @@ export class PluginLifecycle {
     const { rootDirectory, entryPoint, metadata } = await this.#resolver.resolve(moduleId, parent);
     const pluginName = metadata.name;
 
-    if (this.#processes.has(pluginName) && !force) return;
+    if (this.#processes.has(pluginName) && !force) {
+      return;
+    }
 
     if (force && this.#processes.has(pluginName)) {
       await this.unload(pluginName, true);
@@ -180,22 +192,33 @@ export class PluginLifecycle {
       uid,
     });
 
-    const channel = spawnPlugin(this.#bunRunner.bin, [entryPoint], {
-      cwd: rootDirectory,
-      env: this.#bunRunner.env({ BRIKA_PLUGIN_NAME: metadata.name, BRIKA_PLUGIN_UID: uid }),
-      processName: `brika:${metadata.name}`,
-      defaultTimeoutMs: this.#config.callTimeoutMs,
-      onDisconnect: (error) => this.#handleDisconnect(pluginName, error),
-      onStderr: (line) =>
-        this.#logs.error(
-          'Plugin error output received',
-          {
-            pluginName: pluginName,
-            message: line,
-          },
-          { source: 'stderr' }
-        ),
-    });
+    const channel = spawnPlugin(
+      this.#bunRunner.bin,
+      [
+        entryPoint,
+      ],
+      {
+        cwd: rootDirectory,
+        env: this.#bunRunner.env({
+          BRIKA_PLUGIN_NAME: metadata.name,
+          BRIKA_PLUGIN_UID: uid,
+        }),
+        processName: `brika:${metadata.name}`,
+        defaultTimeoutMs: this.#config.callTimeoutMs,
+        onDisconnect: (error) => this.#handleDisconnect(pluginName, error),
+        onStderr: (line) =>
+          this.#logs.error(
+            'Plugin error output received',
+            {
+              pluginName: pluginName,
+              message: line,
+            },
+            {
+              source: 'stderr',
+            }
+          ),
+      }
+    );
 
     const process = new PluginProcess(
       channel,
@@ -225,7 +248,14 @@ export class PluginLifecycle {
             });
             // Dispatch event so reload/enable can handle it
             this.#events.dispatch(
-              PluginActions.configInvalid.create({ uid: p.uid, name: p.name, errors }, 'hub')
+              PluginActions.configInvalid.create(
+                {
+                  uid: p.uid,
+                  name: p.name,
+                  errors,
+                },
+                'hub'
+              )
             );
             // Gracefully stop (not crash) - won't trigger auto-restart
             this.unload(p.name);
@@ -260,14 +290,21 @@ export class PluginLifecycle {
         onRoute: (method, path) => this.#eventHandler.registerRoute(metadata.name, method, path),
         onUpdatePreference: (key, value) => {
           const current = this.#pluginConfig.getConfig(metadata.name);
-          this.#pluginConfig.setConfig(metadata.name, { ...current, [key]: value });
+          this.#pluginConfig.setConfig(metadata.name, {
+            ...current,
+            [key]: value,
+          });
         },
         onGetHubLocation: () => this.#state.getHubLocation(),
         onGetGrantedPermissions: (name) => this.#state.getGrantedPermissions(name),
         onHeartbeatFailed: (p, silentMs) => this.#handleHeartbeatFailed(p, silentMs),
         onDisconnect: (p, error) => this.#handleDisconnect(p.name, error),
         onMetrics: (p, cpu, memory) => {
-          this.#metrics.record(p.name, { ts: Date.now(), cpu, memory });
+          this.#metrics.record(p.name, {
+            ts: Date.now(),
+            cpu,
+            memory,
+          });
         },
       }
     );
@@ -276,13 +313,20 @@ export class PluginLifecycle {
     this.#startStabilityCheck(process);
     this.#restartPolicy.onStart(pluginName);
 
-    await this.#state.registerPlugin({ name: pluginName, rootDirectory, entryPoint, uid });
+    await this.#state.registerPlugin({
+      name: pluginName,
+      rootDirectory,
+      entryPoint,
+      uid,
+    });
     await this.#state.setHealth(pluginName, 'restarting');
   }
 
   async unload(name: string, skipRestartReset = false): Promise<void> {
     const process = this.#processes.get(name);
-    if (!process) return;
+    if (!process) {
+      return;
+    }
 
     this.#processes.delete(name);
 
@@ -307,14 +351,24 @@ export class PluginLifecycle {
       this.#restartPolicy.reset(name);
     }
 
-    this.#logs.info('Plugin unloaded successfully', { pluginName: name });
+    this.#logs.info('Plugin unloaded successfully', {
+      pluginName: name,
+    });
     this.#events.dispatch(
-      PluginActions.unloaded.create({ uid: process.uid, name: process.name }, 'hub')
+      PluginActions.unloaded.create(
+        {
+          uid: process.uid,
+          name: process.name,
+        },
+        'hub'
+      )
     );
   }
 
   async stopAll(): Promise<void> {
-    const names = [...this.#processes.keys()];
+    const names = [
+      ...this.#processes.keys(),
+    ];
     await Promise.all(names.map((name) => this.unload(name)));
   }
 
@@ -340,7 +394,9 @@ export class PluginLifecycle {
             {
               pluginName: plugin.name,
             },
-            { error: e }
+            {
+              error: e,
+            }
           );
         }
       }
@@ -380,7 +436,9 @@ export class PluginLifecycle {
 
   #handleDisconnect(name: string, error?: Error): void {
     const process = this.#processes.get(name);
-    if (!process) return;
+    if (!process) {
+      return;
+    }
 
     const reason = error?.message ?? 'disconnected';
     this.#logs.error(
@@ -390,13 +448,22 @@ export class PluginLifecycle {
         pid: process.pid,
         reason,
       },
-      { error }
+      {
+        error,
+      }
     );
     this.#state.setHealth(name, 'crashed', PluginErrors.crashed(reason));
     this.#eventHandler.onPluginDisconnected(name);
 
     this.#events.dispatch(
-      PluginActions.error.create({ uid: process.uid, name: process.name, error: reason }, 'hub')
+      PluginActions.error.create(
+        {
+          uid: process.uid,
+          name: process.name,
+          error: reason,
+        },
+        'hub'
+      )
     );
 
     this.unload(name, true);
@@ -404,7 +471,9 @@ export class PluginLifecycle {
   }
 
   #attemptAutoRestart(name: string, reason: string): void {
-    if (!this.#config.autoRestartEnabled) return;
+    if (!this.#config.autoRestartEnabled) {
+      return;
+    }
 
     const pluginState = this.#state.get(name);
     if (!pluginState?.enabled) {
@@ -434,16 +503,22 @@ export class PluginLifecycle {
 
     this.#restartPolicy.scheduleRestart(name, decision.delayMs, async () => {
       try {
-        this.#logs.info('Attempting to restart plugin', { pluginName: name });
+        this.#logs.info('Attempting to restart plugin', {
+          pluginName: name,
+        });
         await this.load(name);
-        this.#logs.info('Plugin restarted successfully', { pluginName: name });
+        this.#logs.info('Plugin restarted successfully', {
+          pluginName: name,
+        });
       } catch (e) {
         this.#logs.error(
           'Failed to restart plugin',
           {
             pluginName: name,
           },
-          { error: e }
+          {
+            error: e,
+          }
         );
       }
     });
@@ -463,7 +538,12 @@ export class PluginLifecycle {
     this.#stabilityTimers.set(process.name, timer);
   }
 
-  #checkCompatibility(metadata: { name: string; engines?: { brika?: string } }): boolean {
+  #checkCompatibility(metadata: {
+    name: string;
+    engines?: {
+      brika?: string;
+    };
+  }): boolean {
     const required = metadata.engines?.brika;
     if (!required) {
       this.#logs.error('Plugin missing compatibility declaration', {

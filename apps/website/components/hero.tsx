@@ -1,10 +1,13 @@
 import { ArrowDown, Sparkles, Tag } from 'lucide-react';
-import { github } from '@/lib/config';
 import { SiGithub } from 'react-icons/si';
+import { github } from '@/lib/config';
 import { Button } from './ui/button';
 
 interface HeroProps {
-  release?: { version: string; url: string } | null;
+  release?: {
+    version: string;
+    url: string;
+  } | null;
 }
 
 export function Hero({ release }: Readonly<HeroProps>) {
@@ -14,15 +17,21 @@ export function Hero({ release }: Readonly<HeroProps>) {
       <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
         <div
           className="aurora-blob absolute top-[15%] left-[20%] size-[500px] bg-primary md:size-[700px]"
-          style={{ animation: 'aurora-drift-1 20s ease-in-out infinite' }}
+          style={{
+            animation: 'aurora-drift-1 20s ease-in-out infinite',
+          }}
         />
         <div
           className="aurora-blob absolute top-[40%] right-[15%] size-[400px] bg-accent md:size-[600px]"
-          style={{ animation: 'aurora-drift-2 25s ease-in-out infinite' }}
+          style={{
+            animation: 'aurora-drift-2 25s ease-in-out infinite',
+          }}
         />
         <div
           className="aurora-blob absolute bottom-[10%] left-[40%] size-[450px] bg-primary md:size-[650px]"
-          style={{ animation: 'aurora-drift-3 18s ease-in-out infinite' }}
+          style={{
+            animation: 'aurora-drift-3 18s ease-in-out infinite',
+          }}
         />
       </div>
 
@@ -33,7 +42,9 @@ export function Hero({ release }: Readonly<HeroProps>) {
         {/* Badges */}
         <div
           className="reveal-up mb-8 flex flex-wrap items-center justify-center gap-3"
-          style={{ animationDelay: '200ms' }}
+          style={{
+            animationDelay: '200ms',
+          }}
         >
           <div className="badge-glow inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-sm font-medium text-primary">
             <Sparkles className="size-3.5 shrink-0" />
@@ -54,18 +65,38 @@ export function Hero({ release }: Readonly<HeroProps>) {
 
         <h1 className="text-4xl leading-[1.1] font-extrabold tracking-tight sm:text-5xl md:text-7xl">
           <span className="block overflow-hidden pb-1">
-            <span className="text-reveal-word" style={{ animationDelay: '350ms' }}>
+            <span
+              className="text-reveal-word"
+              style={{
+                animationDelay: '350ms',
+              }}
+            >
               Build.
             </span>{' '}
-            <span className="text-reveal-word" style={{ animationDelay: '470ms' }}>
+            <span
+              className="text-reveal-word"
+              style={{
+                animationDelay: '470ms',
+              }}
+            >
               Run.
             </span>{' '}
-            <span className="text-reveal-word" style={{ animationDelay: '590ms' }}>
+            <span
+              className="text-reveal-word"
+              style={{
+                animationDelay: '590ms',
+              }}
+            >
               Integrate.
             </span>
           </span>
           <span className="block overflow-hidden pb-1">
-            <span className="hero-gradient text-reveal-word" style={{ animationDelay: '770ms' }}>
+            <span
+              className="hero-gradient text-reveal-word"
+              style={{
+                animationDelay: '770ms',
+              }}
+            >
               Keep Automating.
             </span>
           </span>
@@ -73,7 +104,9 @@ export function Hero({ release }: Readonly<HeroProps>) {
 
         <p
           className="reveal-up mx-auto mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground"
-          style={{ animationDelay: '950ms' }}
+          style={{
+            animationDelay: '950ms',
+          }}
         >
           A self-hosted automation hub that runs on your machine. One binary, no cloud, full
           control.
@@ -82,13 +115,21 @@ export function Hero({ release }: Readonly<HeroProps>) {
         {/* CTAs */}
         <div
           className="reveal-up mt-10 flex flex-wrap items-center justify-center gap-4"
-          style={{ animationDelay: '1100ms' }}
+          style={{
+            animationDelay: '1100ms',
+          }}
         >
           <Button href="#install" variant="filled" size="lg" className="group">
             Get started
             <ArrowDown className="size-4 transition-transform group-hover:translate-y-0.5" />
           </Button>
-          <Button href={github.url} target="_blank" rel="noopener noreferrer" variant="outline" size="lg">
+          <Button
+            href={github.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            variant="outline"
+            size="lg"
+          >
             <SiGithub className="size-4" />
             GitHub
           </Button>

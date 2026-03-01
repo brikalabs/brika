@@ -86,8 +86,14 @@ export interface BlockRegistration {
 export interface BrickTypeRegistration {
   id: string;
   families: BrickFamily[];
-  minSize?: { w: number; h: number };
-  maxSize?: { w: number; h: number };
+  minSize?: {
+    w: number;
+    h: number;
+  };
+  maxSize?: {
+    w: number;
+    h: number;
+  };
   config?: unknown[];
 }
 
@@ -182,39 +188,77 @@ export class PluginProcess {
     instanceId: string,
     workflowId: string,
     config: Record<string, Json>
-  ): Promise<{ ok: boolean; error?: string }> {
-    if (this.#stopped) return { ok: false, error: 'Plugin stopped' };
+  ): Promise<{
+    ok: boolean;
+    error?: string;
+  }> {
+    if (this.#stopped) {
+      return {
+        ok: false,
+        error: 'Plugin stopped',
+      };
+    }
     try {
-      return await this.#channel.call(startBlock, { blockType, instanceId, workflowId, config });
+      return await this.#channel.call(startBlock, {
+        blockType,
+        instanceId,
+        workflowId,
+        config,
+      });
     } catch (e) {
-      return { ok: false, error: String(e) };
+      return {
+        ok: false,
+        error: String(e),
+      };
     }
   }
 
   pushInput(instanceId: string, port: string, data: Json): void {
-    if (this.#stopped) return;
-    this.#channel.send(pushInput, { instanceId, port, data });
+    if (this.#stopped) {
+      return;
+    }
+    this.#channel.send(pushInput, {
+      instanceId,
+      port,
+      data,
+    });
   }
 
   stopBlockInstance(instanceId: string): void {
-    if (this.#stopped) return;
-    this.#channel.send(stopBlock, { instanceId });
+    if (this.#stopped) {
+      return;
+    }
+    this.#channel.send(stopBlock, {
+      instanceId,
+    });
   }
 
   /**
    * Send preferences to the plugin
    */
   sendPreferences(values: Record<string, unknown>): void {
-    if (this.#stopped) return;
-    this.#channel.send(preferences, { values: { ...values, __plugin_uid: this.uid } });
+    if (this.#stopped) {
+      return;
+    }
+    this.#channel.send(preferences, {
+      values: {
+        ...values,
+        __plugin_uid: this.uid,
+      },
+    });
   }
 
   /**
    * Send a spark event to the plugin for a specific subscription
    */
   sendSparkEvent(subscriptionId: string, event: SparkEventType): void {
-    if (this.#stopped) return;
-    this.#channel.send(sparkEvent, { subscriptionId, event });
+    if (this.#stopped) {
+      return;
+    }
+    this.#channel.send(sparkEvent, {
+      subscriptionId,
+      event,
+    });
   }
 
   /**
@@ -227,32 +271,55 @@ export class PluginProcess {
     h: number,
     config: Record<string, unknown>
   ): void {
-    if (this.#stopped) return;
-    this.#channel.send(mountBrickInstance, { instanceId, brickTypeId, w, h, config });
+    if (this.#stopped) {
+      return;
+    }
+    this.#channel.send(mountBrickInstance, {
+      instanceId,
+      brickTypeId,
+      w,
+      h,
+      config,
+    });
   }
 
   /**
    * Tell the plugin to resize a brick instance (no remount)
    */
   sendResizeBrickInstance(instanceId: string, w: number, h: number): void {
-    if (this.#stopped) return;
-    this.#channel.send(resizeBrickInstance, { instanceId, w, h });
+    if (this.#stopped) {
+      return;
+    }
+    this.#channel.send(resizeBrickInstance, {
+      instanceId,
+      w,
+      h,
+    });
   }
 
   /**
    * Push updated config to a running brick instance (no remount)
    */
   sendUpdateBrickConfig(instanceId: string, config: Record<string, unknown>): void {
-    if (this.#stopped) return;
-    this.#channel.send(updateBrickConfig, { instanceId, config });
+    if (this.#stopped) {
+      return;
+    }
+    this.#channel.send(updateBrickConfig, {
+      instanceId,
+      config,
+    });
   }
 
   /**
    * Tell the plugin to unmount a brick instance
    */
   sendUnmountBrickInstance(instanceId: string): void {
-    if (this.#stopped) return;
-    this.#channel.send(unmountBrickInstance, { instanceId });
+    if (this.#stopped) {
+      return;
+    }
+    this.#channel.send(unmountBrickInstance, {
+      instanceId,
+    });
   }
 
   /**
@@ -264,8 +331,15 @@ export class PluginProcess {
     actionId: string,
     payload?: Json
   ): void {
-    if (this.#stopped) return;
-    this.#channel.send(brickInstanceAction, { instanceId, brickTypeId, actionId, payload });
+    if (this.#stopped) {
+      return;
+    }
+    this.#channel.send(brickInstanceAction, {
+      instanceId,
+      brickTypeId,
+      actionId,
+      payload,
+    });
   }
 
   /**
@@ -280,7 +354,11 @@ export class PluginProcess {
     headers: Record<string, string>,
     body?: Json
   ): Promise<RouteResponseType> {
-    if (this.#stopped) return { status: 503 };
+    if (this.#stopped) {
+      return {
+        status: 503,
+      };
+    }
     try {
       return await this.#channel.call(routeRequest, {
         routeId,
@@ -292,7 +370,12 @@ export class PluginProcess {
       });
     } catch (e) {
       this.callbacks.onLog('error', `Route handler failed [${method} ${path}]: ${e}`);
-      return { status: 502, body: { error: 'Plugin route handler failed' } };
+      return {
+        status: 502,
+        body: {
+          error: 'Plugin route handler failed',
+        },
+      };
     }
   }
 
@@ -300,10 +383,19 @@ export class PluginProcess {
    * Fetch dynamic options for a preference from the plugin via IPC.
    * Returns empty array if the plugin is stopped or the RPC fails.
    */
-  async fetchPreferenceOptions(name: string): Promise<Array<{ value: string; label: string }>> {
-    if (this.#stopped) return [];
+  async fetchPreferenceOptions(name: string): Promise<
+    Array<{
+      value: string;
+      label: string;
+    }>
+  > {
+    if (this.#stopped) {
+      return [];
+    }
     try {
-      const result = await this.#channel.call(preferenceOptions, { name });
+      const result = await this.#channel.call(preferenceOptions, {
+        name,
+      });
       return result.options;
     } catch (e) {
       this.callbacks.onLog('warn', `Failed to fetch preference options for "${name}": ${e}`);
@@ -318,13 +410,32 @@ export class PluginProcess {
   async callPluginAction(
     actionId: string,
     input?: Json
-  ): Promise<{ ok: boolean; data?: Json; error?: string }> {
-    if (this.#stopped) return { ok: false, error: 'Plugin stopped' };
+  ): Promise<{
+    ok: boolean;
+    data?: Json;
+    error?: string;
+  }> {
+    if (this.#stopped) {
+      return {
+        ok: false,
+        error: 'Plugin stopped',
+      };
+    }
     try {
-      return await this.#channel.call(callAction, { actionId, input }, 0);
+      return await this.#channel.call(
+        callAction,
+        {
+          actionId,
+          input,
+        },
+        0
+      );
     } catch (e) {
       this.callbacks.onLog('error', `Action call failed [${actionId}]: ${e}`);
-      return { ok: false, error: 'Action call failed' };
+      return {
+        ok: false,
+        error: 'Action call failed',
+      };
     }
   }
 
@@ -333,7 +444,9 @@ export class PluginProcess {
   // ─────────────────────────────────────────────────────────────────────────
 
   stop(): void {
-    if (this.#stopped) return;
+    if (this.#stopped) {
+      return;
+    }
     this.#stopped = true;
 
     if (this.#heartbeat) {
@@ -409,7 +522,9 @@ export class PluginProcess {
 
     this.#channel.on(registerBlock, ({ block }) => {
       const declared = this.metadata.blocks?.find((b) => b.id === block.id);
-      if (!declared) return; // Undeclared blocks ignored
+      if (!declared) {
+        return; // Undeclared blocks ignored
+      }
 
       this.#blocks.add(`${this.name}:${block.id}`);
       this.callbacks.onBlock(block);
@@ -417,7 +532,9 @@ export class PluginProcess {
 
     this.#channel.on(registerSpark, ({ spark }) => {
       const declared = this.metadata.sparks?.find((s) => s.id === spark.id);
-      if (!declared) return; // Undeclared sparks ignored
+      if (!declared) {
+        return; // Undeclared sparks ignored
+      }
 
       this.#sparks.add(`${this.name}:${spark.id}`);
       this.callbacks.onSpark(spark);
@@ -451,7 +568,9 @@ export class PluginProcess {
 
     this.#channel.on(registerBrickType, ({ brickType }) => {
       const declared = this.metadata.bricks?.find((c) => c.id === brickType.id);
-      if (!declared) return; // Undeclared brick types ignored
+      if (!declared) {
+        return; // Undeclared brick types ignored
+      }
 
       this.#brickTypes.add(`${this.name}:${brickType.id}`);
       this.callbacks.onBrickType(brickType);
@@ -476,7 +595,9 @@ export class PluginProcess {
     // Permissions: hub location — requires 'location' grant
     this.#channel.implement(getHubLocation, () => {
       this.#requirePermission('location');
-      return { location: this.callbacks.onGetHubLocation() };
+      return {
+        location: this.callbacks.onGetHubLocation(),
+      };
     });
   }
 

@@ -60,7 +60,9 @@ export function DebugPanel({ workflow, onCollapse, className }: Readonly<DebugPa
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [filteredEvents]);
+  }, [
+    filteredEvents,
+  ]);
 
   return (
     <div className={cn('flex h-full flex-col border-l bg-card/50 backdrop-blur-sm', className)}>

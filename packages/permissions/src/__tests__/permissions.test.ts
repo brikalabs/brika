@@ -23,11 +23,24 @@ describe('isValidPermission', () => {
 
 describe('filterValidPermissions', () => {
   test('keeps valid permissions, drops invalid', () => {
-    expect(filterValidPermissions(['location', 'network', 'bogus'])).toEqual(['location']);
+    expect(
+      filterValidPermissions([
+        'location',
+        'network',
+        'bogus',
+      ])
+    ).toEqual([
+      'location',
+    ]);
   });
 
   test('returns empty for all invalid', () => {
-    expect(filterValidPermissions(['x', 'y'])).toEqual([]);
+    expect(
+      filterValidPermissions([
+        'x',
+        'y',
+      ])
+    ).toEqual([]);
   });
 
   test('returns empty for empty input', () => {

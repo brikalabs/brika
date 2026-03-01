@@ -13,7 +13,9 @@ interface UpdateProgressSectionProps {
 }
 
 function getProgressValue(progress: OperationProgress | null) {
-  if (!progress) return 0;
+  if (!progress) {
+    return 0;
+  }
   switch (progress.phase) {
     case 'resolving':
       return 20;
@@ -32,7 +34,9 @@ function getPhaseLabel(
   progress: OperationProgress | null,
   t: (key: string, options?: Record<string, unknown>) => string
 ) {
-  if (!progress) return '';
+  if (!progress) {
+    return '';
+  }
   switch (progress.phase) {
     case 'resolving':
       return t('plugins:progress.resolving');
@@ -41,9 +45,13 @@ function getPhaseLabel(
     case 'linking':
       return t('plugins:progress.linking');
     case 'complete':
-      return t('plugins:progress.complete', { action: t('plugins:actions.update') });
+      return t('plugins:progress.complete', {
+        action: t('plugins:actions.update'),
+      });
     case 'error':
-      return t('plugins:progress.failed', { action: t('plugins:actions.update') });
+      return t('plugins:progress.failed', {
+        action: t('plugins:actions.update'),
+      });
     default:
       return '';
   }
@@ -63,7 +71,9 @@ export function UpdateProgressSection({
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [logs]);
+  }, [
+    logs,
+  ]);
 
   return (
     <div className="space-y-3">

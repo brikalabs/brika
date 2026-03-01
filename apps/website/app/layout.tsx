@@ -19,7 +19,12 @@ export const metadata: Metadata = {
     'IoT',
     'dashboard',
   ],
-  authors: [{ name: github.owner, url: github.url }],
+  authors: [
+    {
+      name: github.owner,
+      url: github.url,
+    },
+  ],
   creator: github.owner,
   metadataBase: new URL(site.url),
   alternates: {
@@ -88,10 +93,16 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: themeScript,
+          }}
+        />
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(jsonLd),
+          }}
         />
       </head>
       <body className="min-h-screen font-sans">{children}</body>

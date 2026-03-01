@@ -27,30 +27,55 @@ const origBunMain = Bun.main;
 
 beforeAll(() => {
   if (!existsSync(fixtureDir)) {
-    mkdirSync(fixtureDir, { recursive: true });
+    mkdirSync(fixtureDir, {
+      recursive: true,
+    });
   }
   if (!existsSync(`${fixtureDir}/src`)) {
-    mkdirSync(`${fixtureDir}/src`, { recursive: true });
+    mkdirSync(`${fixtureDir}/src`, {
+      recursive: true,
+    });
   }
   writeFileSync(
     fixturePackageJson,
-    JSON.stringify({ name: 'test-storage-plugin', version: '1.0.0' }, null, 2)
+    JSON.stringify(
+      {
+        name: 'test-storage-plugin',
+        version: '1.0.0',
+      },
+      null,
+      2
+    )
   );
-  (Bun as { main: string }).main = `${fixtureDir}/src/index.ts`;
+  (
+    Bun as {
+      main: string;
+    }
+  ).main = `${fixtureDir}/src/index.ts`;
 });
 
 afterEach(() => {
   // Clean up data dir between tests
   const dataDir = `${fixtureDir}/data`;
   if (existsSync(dataDir)) {
-    rmSync(dataDir, { recursive: true, force: true });
+    rmSync(dataDir, {
+      recursive: true,
+      force: true,
+    });
   }
 });
 
 afterAll(() => {
-  (Bun as { main: string }).main = origBunMain;
+  (
+    Bun as {
+      main: string;
+    }
+  ).main = origBunMain;
   if (existsSync(fixtureDir)) {
-    rmSync(fixtureDir, { recursive: true, force: true });
+    rmSync(fixtureDir, {
+      recursive: true,
+      force: true,
+    });
   }
 });
 
@@ -71,23 +96,43 @@ describe('getDataDir', () => {
 
 describe('writeJSON + readJSON', () => {
   test('round-trips a JSON value', async () => {
-    const data = { version: 1, nodes: ['a', 'b'] };
+    const data = {
+      version: 1,
+      nodes: [
+        'a',
+        'b',
+      ],
+    };
     await writeJSON('config', data);
     const result = await readJSON<typeof data>('config');
     expect(result).toEqual(data);
   });
 
   test('supports nested keys', async () => {
-    await writeJSON('matter/fabric', { fabricId: 'abc' });
-    const result = await readJSON<{ fabricId: string }>('matter/fabric');
-    expect(result).toEqual({ fabricId: 'abc' });
+    await writeJSON('matter/fabric', {
+      fabricId: 'abc',
+    });
+    const result = await readJSON<{
+      fabricId: string;
+    }>('matter/fabric');
+    expect(result).toEqual({
+      fabricId: 'abc',
+    });
   });
 
   test('overwrites existing value', async () => {
-    await writeJSON('config', { v: 1 });
-    await writeJSON('config', { v: 2 });
-    const result = await readJSON<{ v: number }>('config');
-    expect(result).toEqual({ v: 2 });
+    await writeJSON('config', {
+      v: 1,
+    });
+    await writeJSON('config', {
+      v: 2,
+    });
+    const result = await readJSON<{
+      v: number;
+    }>('config');
+    expect(result).toEqual({
+      v: 2,
+    });
   });
 });
 
@@ -100,7 +145,9 @@ describe('readJSON', () => {
 
 describe('deleteJSON', () => {
   test('removes the file', async () => {
-    await writeJSON('to-delete', { x: 1 });
+    await writeJSON('to-delete', {
+      x: 1,
+    });
     expect(await exists('to-delete')).toBe(true);
     await deleteJSON('to-delete');
     expect(await exists('to-delete')).toBe(false);
@@ -134,60 +181,127 @@ describe('clearAllData', () => {
 
 describe('updateJSON', () => {
   test('creates value from default when key missing', async () => {
-    const result = await updateJSON<string[]>('items', (items) => [...items, 'a'], []);
-    expect(result).toEqual(['a']);
-    expect(await readJSON<string[]>('items')).toEqual(['a']);
+    const result = await updateJSON<string[]>(
+      'items',
+      (items) => [
+        ...items,
+        'a',
+      ],
+      []
+    );
+    expect(result).toEqual([
+      'a',
+    ]);
+    expect(await readJSON<string[]>('items')).toEqual([
+      'a',
+    ]);
   });
 
   test('updates existing value', async () => {
-    await writeJSON('counter', { n: 5 });
-    const result = await updateJSON<{ n: number }>('counter', (c) => ({ n: c.n + 1 }), { n: 0 });
-    expect(result).toEqual({ n: 6 });
+    await writeJSON('counter', {
+      n: 5,
+    });
+    const result = await updateJSON<{
+      n: number;
+    }>(
+      'counter',
+      (c) => ({
+        n: c.n + 1,
+      }),
+      {
+        n: 0,
+      }
+    );
+    expect(result).toEqual({
+      n: 6,
+    });
   });
 });
 
 describe('defineStore', () => {
   test('load reads persisted data', async () => {
-    await writeJSON('my-store', { count: 42 });
-    const store = defineStore('my-store', { count: 0 });
+    await writeJSON('my-store', {
+      count: 42,
+    });
+    const store = defineStore('my-store', {
+      count: 0,
+    });
     await store.load();
-    expect(store.get()).toEqual({ count: 42 });
+    expect(store.get()).toEqual({
+      count: 42,
+    });
   });
 
   test('load uses default when no data exists', async () => {
-    const store = defineStore('empty-store', { items: [] as string[] });
+    const store = defineStore('empty-store', {
+      items: [] as string[],
+    });
     await store.load();
-    expect(store.get()).toEqual({ items: [] });
+    expect(store.get()).toEqual({
+      items: [],
+    });
   });
 
   test('get throws before load', () => {
-    const store = defineStore('not-loaded', { x: 1 });
+    const store = defineStore('not-loaded', {
+      x: 1,
+    });
     expect(() => store.get()).toThrow('not loaded');
   });
 
   test('set persists to disk', async () => {
-    const store = defineStore('set-test', { v: 0 });
+    const store = defineStore('set-test', {
+      v: 0,
+    });
     await store.load();
-    await store.set({ v: 99 });
-    expect(store.get()).toEqual({ v: 99 });
+    await store.set({
+      v: 99,
+    });
+    expect(store.get()).toEqual({
+      v: 99,
+    });
     // Verify it was actually written to disk
-    expect(await readJSON<{ v: number }>('set-test')).toEqual({ v: 99 });
+    expect(
+      await readJSON<{
+        v: number;
+      }>('set-test')
+    ).toEqual({
+      v: 99,
+    });
   });
 
   test('update applies function and persists', async () => {
-    const store = defineStore('update-test', { n: 10 });
+    const store = defineStore('update-test', {
+      n: 10,
+    });
     await store.load();
-    await store.update((s) => ({ n: s.n * 2 }));
-    expect(store.get()).toEqual({ n: 20 });
-    expect(await readJSON<{ n: number }>('update-test')).toEqual({ n: 20 });
+    await store.update((s) => ({
+      n: s.n * 2,
+    }));
+    expect(store.get()).toEqual({
+      n: 20,
+    });
+    expect(
+      await readJSON<{
+        n: number;
+      }>('update-test')
+    ).toEqual({
+      n: 20,
+    });
   });
 
   test('clear resets to default and deletes file', async () => {
-    const store = defineStore('clear-test', { x: 'default' });
+    const store = defineStore('clear-test', {
+      x: 'default',
+    });
     await store.load();
-    await store.set({ x: 'modified' });
+    await store.set({
+      x: 'modified',
+    });
     await store.clear();
-    expect(store.get()).toEqual({ x: 'default' });
+    expect(store.get()).toEqual({
+      x: 'default',
+    });
     expect(await exists('clear-test')).toBe(false);
   });
 });

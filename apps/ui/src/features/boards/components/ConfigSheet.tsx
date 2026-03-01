@@ -42,13 +42,19 @@ import { useBoardStore } from '../store';
 
 /** Extract the default value from any preference variant (not all have one). */
 function getDefault(field: PreferenceDefinition): unknown {
-  if ('default' in field) return field.default;
+  if ('default' in field) {
+    return field.default;
+  }
   return undefined;
 }
 
 function toStr(value: unknown): string {
-  if (value === undefined || value === null) return '';
-  if (typeof value === 'object') return JSON.stringify(value);
+  if (value === undefined || value === null) {
+    return '';
+  }
+  if (typeof value === 'object') {
+    return JSON.stringify(value);
+  }
   return String(value);
 }
 
@@ -73,7 +79,9 @@ function TextField({ field, value, onChange }: Readonly<FieldProps>) {
 }
 
 function NumberField({ field, value, onChange }: Readonly<FieldProps>) {
-  if (field.type !== 'number') return null;
+  if (field.type !== 'number') {
+    return null;
+  }
   return (
     <Input
       id={field.name}
@@ -105,9 +113,12 @@ function DropdownField({
   const { tp } = useLocale();
   const isDynamic = field.type === 'dynamic-dropdown';
 
-  const [dynamicOptions, setDynamicOptions] = useState<Array<{ value: string; label?: string }>>(
-    isDynamic ? (field.options ?? []) : []
-  );
+  const [dynamicOptions, setDynamicOptions] = useState<
+    Array<{
+      value: string;
+      label?: string;
+    }>
+  >(isDynamic ? (field.options ?? []) : []);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const refresh = useCallback(async () => {
@@ -118,9 +129,14 @@ function DropdownField({
     } finally {
       setIsRefreshing(false);
     }
-  }, [brickTypeId, field.name]);
+  }, [
+    brickTypeId,
+    field.name,
+  ]);
 
-  if (field.type !== 'dropdown' && !isDynamic) return null;
+  if (field.type !== 'dropdown' && !isDynamic) {
+    return null;
+  }
 
   const options = isDynamic ? dynamicOptions : field.options;
   const optionLabel = (opt: { value: string; label?: string }) =>
@@ -183,7 +199,10 @@ export function ConfigSheet() {
 
   const placement = useMemo(
     () => activeBoard?.bricks.find((c) => c.instanceId === configBrickId),
-    [activeBoard, configBrickId]
+    [
+      activeBoard,
+      configBrickId,
+    ]
   );
   const brickType = placement ? brickTypes.get(placement.brickTypeId) : null;
 
@@ -194,10 +213,14 @@ export function ConfigSheet() {
   const open = !!configBrickId;
   useEffect(() => {
     if (placement) {
-      setLocalConfig({ ...placement.config });
+      setLocalConfig({
+        ...placement.config,
+      });
       setLocalLabel(placement.label ?? '');
     }
-  }, [placement]);
+  }, [
+    placement,
+  ]);
 
   const handleClose = useCallback(
     (isOpen: boolean) => {
@@ -207,28 +230,40 @@ export function ConfigSheet() {
         setLocalLabel('');
       }
     },
-    [setConfigBrickId]
+    [
+      setConfigBrickId,
+    ]
   );
 
   const handleFieldChange = useCallback((name: string, value: Json) => {
-    setLocalConfig((c) => ({ ...c, [name]: value }));
+    setLocalConfig((c) => ({
+      ...c,
+      [name]: value,
+    }));
   }, []);
 
   const handleSave = useCallback(async () => {
-    if (!activeBoard || !configBrickId) return;
+    if (!activeBoard || !configBrickId) {
+      return;
+    }
     setSaving(true);
 
     // Save label if changed
     const trimmedLabel = localLabel.trim();
     const oldLabel = placement?.label ?? '';
     if (trimmedLabel !== oldLabel) {
-      renameBrick({ instanceId: configBrickId, label: trimmedLabel || undefined });
+      renameBrick({
+        instanceId: configBrickId,
+        label: trimmedLabel || undefined,
+      });
     }
 
     // Save config if there are config fields
     const configSchema = brickType?.config;
     if (configSchema && configSchema.length > 0) {
-      await boardsApi.updateBrick(activeBoard.id, configBrickId, { config: localConfig });
+      await boardsApi.updateBrick(activeBoard.id, configBrickId, {
+        config: localConfig,
+      });
       useBoardStore.getState().updateBrickConfig(configBrickId, localConfig);
     }
 
@@ -248,11 +283,17 @@ export function ConfigSheet() {
   ]);
 
   const handleDelete = useCallback(() => {
-    if (!configBrickId) return;
+    if (!configBrickId) {
+      return;
+    }
     removeBrick(configBrickId);
     setDeleteOpen(false);
     setConfigBrickId(null);
-  }, [configBrickId, removeBrick, setConfigBrickId]);
+  }, [
+    configBrickId,
+    removeBrick,
+    setConfigBrickId,
+  ]);
 
   const configSchema = brickType?.config;
   const hasConfig = Array.isArray(configSchema) && configSchema.length > 0;
@@ -273,10 +314,18 @@ export function ConfigSheet() {
         <SheetContent side="right" className="w-full sm:max-w-sm">
           <SheetHeader>
             <SheetTitle className="flex items-center gap-2">
-              <Avatar className="size-6 rounded-md" style={{ backgroundColor: `${color}20` }}>
+              <Avatar
+                className="size-6 rounded-md"
+                style={{
+                  backgroundColor: `${color}20`,
+                }}
+              >
                 <AvatarFallback
                   className="rounded-md text-[10px]"
-                  style={{ backgroundColor: `${color}20`, color }}
+                  style={{
+                    backgroundColor: `${color}20`,
+                    color,
+                  }}
                 >
                   <DynamicIcon name={iconName} className="size-3" />
                 </AvatarFallback>

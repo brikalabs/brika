@@ -17,13 +17,15 @@ import { resolve } from 'node:path';
  * ```
  */
 export function safePath(baseDir: string, relativePath: string): string | null {
-  if (!relativePath) return null;
+  if (!relativePath) {
+    return null;
+  }
 
   const base = resolve(baseDir);
   const full = resolve(base, relativePath);
 
   // The resolved path must be strictly inside the base directory
-  if (!full.startsWith(base + '/')) {
+  if (!full.startsWith(`${base}/`)) {
     return null;
   }
 

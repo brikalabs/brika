@@ -33,7 +33,9 @@ export function BlocksPage() {
           {!isLoading && (
             <span className="ml-2 font-medium">
               · {filters.filteredBlocks.length}{' '}
-              {t('common:items.block', { count: filters.filteredBlocks.length }).toLowerCase()}
+              {t('common:items.block', {
+                count: filters.filteredBlocks.length,
+              }).toLowerCase()}
             </span>
           )}
         </p>

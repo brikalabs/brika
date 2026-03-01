@@ -70,7 +70,10 @@ export class HttpClient {
    * Apply configuration to the client
    */
   #applyConfig(config: Partial<HttpClientConfig>): void {
-    this.#config = { ...this.#config, ...config };
+    this.#config = {
+      ...this.#config,
+      ...config,
+    };
     if (config.cache !== undefined) {
       this.#cache = config.cache ?? undefined;
     }
@@ -425,19 +428,25 @@ export class HttpClient {
     // Add custom interceptors
     if (this.#config.interceptors?.request) {
       for (const interceptor of this.#config.interceptors.request) {
-        this.#interceptorChain.addRequestInterceptor({ onRequest: interceptor });
+        this.#interceptorChain.addRequestInterceptor({
+          onRequest: interceptor,
+        });
       }
     }
 
     if (this.#config.interceptors?.response) {
       for (const interceptor of this.#config.interceptors.response) {
-        this.#interceptorChain.addResponseInterceptor({ onResponse: interceptor });
+        this.#interceptorChain.addResponseInterceptor({
+          onResponse: interceptor,
+        });
       }
     }
 
     if (this.#config.interceptors?.error) {
       for (const interceptor of this.#config.interceptors.error) {
-        this.#interceptorChain.addErrorInterceptor({ onError: interceptor });
+        this.#interceptorChain.addErrorInterceptor({
+          onError: interceptor,
+        });
       }
     }
   }

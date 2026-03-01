@@ -52,7 +52,10 @@ function isSerializedCustom(value: unknown): value is SerializedCustom {
 }
 
 function wrapSerialized<S>(name: string, data: S): SerializedCustom<S> {
-  return { [TYPE_MARKER]: name, data };
+  return {
+    [TYPE_MARKER]: name,
+    data,
+  };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -126,9 +129,15 @@ export class TransformerRegistry {
 
     // Handle Map
     if (value instanceof Map) {
-      const entries: [unknown, unknown][] = [];
+      const entries: [
+        unknown,
+        unknown,
+      ][] = [];
       for (const [k, v] of value) {
-        entries.push([await this.serialize(k), await this.serialize(v)]);
+        entries.push([
+          await this.serialize(k),
+          await this.serialize(v),
+        ]);
       }
       return wrapSerialized('Map', entries);
     }
@@ -198,7 +207,10 @@ export class TransformerRegistry {
     }
 
     if (typeName === 'Map') {
-      const entries = value.data as [unknown, unknown][];
+      const entries = value.data as [
+        unknown,
+        unknown,
+      ][];
       const map = new Map();
       for (const [k, v] of entries) {
         map.set(await this.deserialize(k), await this.deserialize(v));
@@ -225,6 +237,34 @@ export class TransformerRegistry {
     return value;
   }
 
+  /** Serialize a built-in collection type synchronously. Returns undefined if not a built-in. */
+  private serializeSyncBuiltIn(value: unknown): unknown {
+    if (value instanceof Date) {
+      return wrapSerialized('Date', value.toISOString());
+    }
+    if (value instanceof Map) {
+      const entries: [
+        unknown,
+        unknown,
+      ][] = [];
+      for (const [k, v] of value) {
+        entries.push([
+          this.serializeSync(k),
+          this.serializeSync(v),
+        ]);
+      }
+      return wrapSerialized('Map', entries);
+    }
+    if (value instanceof Set) {
+      const items: unknown[] = [];
+      for (const item of value) {
+        items.push(this.serializeSync(item));
+      }
+      return wrapSerialized('Set', items);
+    }
+    return undefined;
+  }
+
   /**
    * Sync serialize (only works if no async transformers match).
    */
@@ -244,27 +284,10 @@ export class TransformerRegistry {
       return wrapSerialized(transformer.name, serialized);
     }
 
-    // Handle Date
-    if (value instanceof Date) {
-      return wrapSerialized('Date', value.toISOString());
-    }
-
-    // Handle Map
-    if (value instanceof Map) {
-      const entries: [unknown, unknown][] = [];
-      for (const [k, v] of value) {
-        entries.push([this.serializeSync(k), this.serializeSync(v)]);
-      }
-      return wrapSerialized('Map', entries);
-    }
-
-    // Handle Set
-    if (value instanceof Set) {
-      const items: unknown[] = [];
-      for (const item of value) {
-        items.push(this.serializeSync(item));
-      }
-      return wrapSerialized('Set', items);
+    // Handle built-in types (Date, Map, Set)
+    const builtIn = this.serializeSyncBuiltIn(value);
+    if (builtIn !== undefined) {
+      return builtIn;
     }
 
     // Handle Array
@@ -323,7 +346,10 @@ export class TransformerRegistry {
     }
 
     if (typeName === 'Map') {
-      const entries = value.data as [unknown, unknown][];
+      const entries = value.data as [
+        unknown,
+        unknown,
+      ][];
       const map = new Map();
       for (const [k, v] of entries) {
         map.set(this.deserializeSync(k), this.deserializeSync(v));
@@ -375,7 +401,13 @@ export const BufferTransformer: Transformer<Buffer, string> = {
 };
 
 /** Blob transformer (async) */
-export const BlobTransformer: Transformer<Blob, { data: string; type: string }> = {
+export const BlobTransformer: Transformer<
+  Blob,
+  {
+    data: string;
+    type: string;
+  }
+> = {
   name: 'Blob',
   isAsync: true,
   isApplicable: (v): v is Blob => v instanceof Blob,
@@ -388,7 +420,14 @@ export const BlobTransformer: Transformer<Blob, { data: string; type: string }> 
   },
   deserialize: (data) => {
     const buffer = Buffer.from(data.data, 'base64');
-    return new Blob([buffer], { type: data.type });
+    return new Blob(
+      [
+        buffer,
+      ],
+      {
+        type: data.type,
+      }
+    );
   },
 };
 

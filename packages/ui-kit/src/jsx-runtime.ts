@@ -42,8 +42,14 @@ export function Fragment(props: {
   children?: NodeOrNodes | (NodeOrNodes | false | null | undefined)[];
 }): ComponentNode[] {
   const { children } = props;
-  if (!children && children !== 0) return [];
-  if (!Array.isArray(children)) return [children as ComponentNode];
+  if (!children && children !== 0) {
+    return [];
+  }
+  if (!Array.isArray(children)) {
+    return [
+      children as ComponentNode,
+    ];
+  }
   return (children as unknown[]).flat(Infinity).filter(Boolean) as ComponentNode[];
 }
 

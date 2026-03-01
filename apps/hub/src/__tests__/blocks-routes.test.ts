@@ -9,7 +9,10 @@ describe('blocks routes', () => {
   let app: ReturnType<typeof TestApp.create>;
 
   useTestBed(() => {
-    stub(BlockRegistry, { list: () => [], listByCategory: () => ({}) });
+    stub(BlockRegistry, {
+      list: () => [],
+      listByCategory: () => ({}),
+    });
     app = TestApp.create(blocksRoutes);
   });
 

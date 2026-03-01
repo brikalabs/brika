@@ -4,10 +4,17 @@ import type { Env } from './types';
 import { getRegistryData } from './utils';
 
 export function createRoutes() {
-  const app = new Hono<{ Bindings: Env }>();
+  const app = new Hono<{
+    Bindings: Env;
+  }>();
 
   // Enable CORS for all routes
-  app.use('*', cors({ origin: '*' }));
+  app.use(
+    '*',
+    cors({
+      origin: '*',
+    })
+  );
 
   // Health check endpoint
   app.get('/health', (c) => {
@@ -24,7 +31,12 @@ export function createRoutes() {
   app.get('/public-key', (c) => {
     const data = getRegistryData();
     if (!data.publicKey) {
-      return c.json({ error: 'No public key configured' }, 404);
+      return c.json(
+        {
+          error: 'No public key configured',
+        },
+        404
+      );
     }
     return c.json({
       publicKey: data.publicKey,
@@ -42,9 +54,17 @@ export function createRoutes() {
       headers.set('Access-Control-Allow-Origin', '*');
       headers.set('Cache-Control', `public, max-age=${c.env.CACHE_MAX_AGE}`);
 
-      return c.json(data, { headers });
+      return c.json(data, {
+        headers,
+      });
     } catch (err) {
-      return c.json({ error: 'Failed to load registry', message: String(err) }, 500);
+      return c.json(
+        {
+          error: 'Failed to load registry',
+          message: String(err),
+        },
+        500
+      );
     }
   });
 
@@ -55,7 +75,12 @@ export function createRoutes() {
 
   // 404 handler
   app.notFound((c) => {
-    return c.json({ error: 'Not found' }, 404);
+    return c.json(
+      {
+        error: 'Not found',
+      },
+      404
+    );
   });
 
   return app;

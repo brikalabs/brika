@@ -14,7 +14,10 @@ export function usePreference<T extends Record<string, unknown>>(): T;
 export function usePreference<T>(
   name: string,
   defaultValue: T
-): [T, (value: T | ((prev: T) => T)) => void];
+): [
+  T,
+  (value: T | ((prev: T) => T)) => void,
+];
 export function usePreference<T>(name?: string, defaultValue?: T) {
   const state = getState();
   const { config, configKeys } = state;
@@ -28,7 +31,11 @@ export function usePreference<T>(name?: string, defaultValue?: T) {
   if (configKeys && !configKeys.has(name) && !warned.has(name)) {
     warned.add(name);
     console.warn(
-      `[usePreference] "${name}" is not declared in this brick's config schema. Available keys: ${[...configKeys].join(', ') || '(none)'}`
+      `[usePreference] "${name}" is not declared in this brick's config schema. Available keys: ${
+        [
+          ...configKeys,
+        ].join(', ') || '(none)'
+      }`
     );
   }
 
@@ -45,5 +52,8 @@ export function usePreference<T>(name?: string, defaultValue?: T) {
     }
   };
 
-  return [current, setter];
+  return [
+    current,
+    setter,
+  ];
 }

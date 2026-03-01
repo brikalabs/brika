@@ -48,8 +48,17 @@ function FlexRenderer({
   const dimStyle: React.CSSProperties | undefined =
     node.width || node.height
       ? {
-          ...(node.width ? { width: node.width, flexShrink: 0 } : undefined),
-          ...(node.height ? { height: node.height } : undefined),
+          ...(node.width
+            ? {
+                width: node.width,
+                flexShrink: 0,
+              }
+            : undefined),
+          ...(node.height
+            ? {
+                height: node.height,
+              }
+            : undefined),
         }
       : undefined;
 

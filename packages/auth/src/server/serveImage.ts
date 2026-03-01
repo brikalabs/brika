@@ -12,8 +12,8 @@
  * All output as webp. Cache-Control + ETag for caching. 304 on match.
  */
 
-import { z } from 'zod';
 import { photon } from '@brika/photon';
+import { z } from 'zod';
 
 const MAX_PX = 2048;
 const dim = z.coerce.number().int().min(1).max(MAX_PX).optional();
@@ -33,11 +33,16 @@ interface ServeImageOptions {
 
 export function serveImage(
   data: Buffer | null,
-  ctx: { req: Request; query: ImageQuery },
+  ctx: {
+    req: Request;
+    query: ImageQuery;
+  },
   options?: ServeImageOptions
 ): Response {
   if (!data) {
-    return new Response(null, { status: 204 });
+    return new Response(null, {
+      status: 204,
+    });
   }
 
   const maxAge = options?.maxAge ?? 31536000;
@@ -49,15 +54,24 @@ export function serveImage(
   if (width ?? height) {
     const fit = width && height ? 'cover' : 'contain';
     output = photon(data)
-    .resize({ width, height, fit })
-    .webp()
-    .toBuffer();
+      .resize({
+        width,
+        height,
+        fit,
+      })
+      .webp()
+      .toBuffer();
   }
 
   const etag = `"${Bun.hash(output).toString(36)}"`;
 
   if (ctx.req.headers.get('if-none-match') === etag) {
-    return new Response(null, { status: 304, headers: { ETag: etag } });
+    return new Response(null, {
+      status: 304,
+      headers: {
+        ETag: etag,
+      },
+    });
   }
 
   const useImmutable = options?.immutable ?? maxAge > 0;

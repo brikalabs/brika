@@ -1,5 +1,5 @@
 import { inject } from '@brika/di';
-import { Hono, type Context } from 'hono';
+import { type Context, Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { ZodError, z } from 'zod';
 import { HttpException } from './exceptions';
@@ -12,8 +12,18 @@ import type { Middleware, RouteContext, RouteDefinition, Schema } from './types'
  */
 const CORS_CONFIG = {
   origin: (origin: string) => origin,
-  allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowHeaders: ['Content-Type', 'Authorization'],
+  allowMethods: [
+    'GET',
+    'POST',
+    'PUT',
+    'PATCH',
+    'DELETE',
+    'OPTIONS',
+  ],
+  allowHeaders: [
+    'Content-Type',
+    'Authorization',
+  ],
   credentials: true,
 };
 
@@ -71,17 +81,39 @@ function formatZodError(error: ZodError) {
 /**
  * Handle errors and return appropriate JSON response.
  */
-function handleError(error: Error, c: { json: (data: unknown, status: number) => Response }) {
+function handleError(
+  error: Error,
+  c: {
+    json: (data: unknown, status: number) => Response;
+  }
+) {
   if (error instanceof HttpException) {
-    return c.json({ error: error.message, ...error.data }, error.status);
+    return c.json(
+      {
+        error: error.message,
+        ...error.data,
+      },
+      error.status
+    );
   }
 
   if (error instanceof ZodError) {
-    return c.json({ error: 'Validation failed', ...formatZodError(error) }, 400);
+    return c.json(
+      {
+        error: 'Validation failed',
+        ...formatZodError(error),
+      },
+      400
+    );
   }
 
   console.error('[router] Unhandled error:', error);
-  return c.json({ error: 'Internal server error' }, 500);
+  return c.json(
+    {
+      error: 'Internal server error',
+    },
+    500
+  );
 }
 
 export type HonoContext = Context;
@@ -92,7 +124,10 @@ export type { Middleware } from './types';
  */
 function createHandler(routeDef: RouteDefinition) {
   return async (c: {
-    req: { raw: Request; param: () => Record<string, string> };
+    req: {
+      raw: Request;
+      param: () => Record<string, string>;
+    };
     json: (data: unknown) => Response;
     get(key: string): unknown;
   }) => {

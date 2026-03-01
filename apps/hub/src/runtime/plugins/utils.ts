@@ -39,7 +39,9 @@ export async function ensurePluginTsconfig(rootDirectory: string): Promise<void>
 
     if (await file.exists()) {
       const raw = await file.json();
-      if (raw?.compilerOptions?.jsxImportSource) return;
+      if (raw?.compilerOptions?.jsxImportSource) {
+        return;
+      }
 
       // Bun ignores extends — inline the critical JSX settings
       raw.compilerOptions = raw.compilerOptions ?? {};
@@ -54,7 +56,10 @@ export async function ensurePluginTsconfig(rootDirectory: string): Promise<void>
       JSON.stringify(
         {
           extends: '@brika/sdk/tsconfig.plugin.json',
-          compilerOptions: { jsx: 'react-jsx', jsxImportSource: '@brika/sdk' },
+          compilerOptions: {
+            jsx: 'react-jsx',
+            jsxImportSource: '@brika/sdk',
+          },
         },
         null,
         2

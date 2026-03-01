@@ -2,7 +2,6 @@
  * Testing Types
  */
 
-// biome-ignore lint/suspicious/noExplicitAny: Required for generic constructors
 export type Constructor<T = unknown> = new (...args: any[]) => T;
 
 /**

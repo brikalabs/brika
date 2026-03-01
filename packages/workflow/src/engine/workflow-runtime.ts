@@ -126,7 +126,10 @@ export class WorkflowRuntime {
 
     // If paused, buffer the event
     if (state.state === 'paused') {
-      state.buffer.push({ portId, data });
+      state.buffer.push({
+        portId,
+        data,
+      });
       return;
     }
 
@@ -155,13 +158,17 @@ export class WorkflowRuntime {
    * Start the workflow.
    */
   start(): void {
-    if (this.#running) return;
+    if (this.#running) {
+      return;
+    }
     this.#running = true;
 
     // Start all blocks
     for (const [blockId, state] of this.#blocks) {
       const blockType = this.#blockTypes.get(blockId);
-      if (!blockType) continue;
+      if (!blockType) {
+        continue;
+      }
 
       // Create runtime context
       const ctx = {
@@ -169,7 +176,9 @@ export class WorkflowRuntime {
         workflowId: this.#workflow.workspace.id,
         config: state.config,
         emit: (portId: string, data: Serializable) => {
-          if (!this.#running || state.state !== 'running') return;
+          if (!this.#running || state.state !== 'running') {
+            return;
+          }
           this.#eventBus.emit(blockId, portId, data);
         },
         log: (level: 'debug' | 'info' | 'warn' | 'error', message: string) => {
@@ -193,7 +202,9 @@ export class WorkflowRuntime {
    * Stop the workflow.
    */
   stop(): void {
-    if (!this.#running) return;
+    if (!this.#running) {
+      return;
+    }
     this.#running = false;
 
     for (const state of this.#blocks.values()) {
@@ -223,7 +234,9 @@ export class WorkflowRuntime {
    */
   resumeBlock(blockId: string): void {
     const state = this.#blocks.get(blockId);
-    if (state?.state !== 'paused' || !state.instance) return;
+    if (state?.state !== 'paused' || !state.instance) {
+      return;
+    }
 
     this.#setBlockState(blockId, 'running');
 
@@ -241,7 +254,9 @@ export class WorkflowRuntime {
    */
   stopBlock(blockId: string): void {
     const state = this.#blocks.get(blockId);
-    if (!state) return;
+    if (!state) {
+      return;
+    }
 
     this.#setBlockState(blockId, 'stopped');
 
