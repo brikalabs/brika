@@ -1,6 +1,7 @@
 import { ArrowDown, Sparkles, Tag } from 'lucide-react';
 import { SiGithub } from 'react-icons/si';
 import { github } from '@/lib/config';
+import { BrikaLogo } from './ui/brika-logo';
 import { Button } from './ui/button';
 
 interface HeroProps {
@@ -39,6 +40,18 @@ export function Hero({ release }: Readonly<HeroProps>) {
       <div className="bg-grid pointer-events-none absolute inset-0 -z-10 opacity-[0.04]" />
 
       <div className="max-w-4xl text-center">
+        {/* Hero logo */}
+        <div
+          className="reveal-up mb-10 flex justify-center"
+          style={{ animationDelay: '50ms' }}
+        >
+          <div className="hero-icon p-0.5 rounded-full corner-squircle">
+            <div className="relative z-10 flex size-20 items-center justify-center rounded-full corner-squircle bg-black sm:size-24">
+              <BrikaLogo className="size-16 text-white sm:size-20" />
+            </div>
+          </div>
+        </div>
+
         {/* Badges */}
         <div
           className="reveal-up mb-8 flex flex-wrap items-center justify-center gap-3"

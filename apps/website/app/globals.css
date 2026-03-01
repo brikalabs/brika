@@ -470,6 +470,38 @@
   .terminal-glow:hover {
     box-shadow: 0 0 64px -12px var(--glow-hover);
   }
+
+  /* ── Hero icon (rotating border like buttons) ── */
+  .hero-icon {
+    position: relative;
+    z-index: 0;
+    overflow: hidden;
+    box-shadow: 0 8px 40px -8px oklch(0 0 0 / 0.15);
+  }
+
+  .hero-icon::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    top: 50%;
+    left: 50%;
+    width: max(200%, 10rem);
+    aspect-ratio: 1;
+    translate: -50% -50%;
+    background: conic-gradient(
+      var(--primary),
+      var(--accent) 20%,
+      color-mix(in oklch, var(--accent) 20%, transparent) 35%,
+      color-mix(in oklch, var(--accent) 20%, transparent) 65%,
+      var(--accent) 80%,
+      var(--primary)
+    );
+    animation: border-rotate 6s linear infinite;
+  }
+
+  .dark .hero-icon {
+    box-shadow: 0 8px 48px -8px oklch(from var(--primary) l c h / 0.25);
+  }
 }
 
 /* ── Brick grid (react-grid-layout) — outside @layer to beat library specificity ── */
@@ -501,6 +533,7 @@
 @media (prefers-reduced-motion: reduce) {
   .aurora-blob,
   .btn-rotate::before,
+  .hero-icon::before,
   .marquee-track,
   .terminal-cursor,
   .scroll-hint {

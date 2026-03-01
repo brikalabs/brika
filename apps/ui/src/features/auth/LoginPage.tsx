@@ -15,6 +15,7 @@ import {
   Label,
   PasswordInput,
 } from '@/components/ui';
+import { BrikaLogo } from '@/components/ui/brika-logo';
 
 export function LoginPage() {
   const { client, refreshSession } = useAuth();
@@ -40,11 +41,12 @@ export function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4">
+    <div className="flex min-h-screen flex-col items-center bg-background p-4">
+      <div className="flex flex-1 items-center" />
       <Card className="w-full max-w-sm">
         <CardHeader className="items-center text-center">
-          <div className="mb-2 flex size-12 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <span className="font-bold text-lg">B</span>
+          <div className="mb-2 flex size-12 items-center justify-center rounded-lg bg-primary">
+            <BrikaLogo className="size-8 text-white" />
           </div>
           <CardTitle className="text-2xl">{t('title')}</CardTitle>
           <CardDescription>{t('subtitle')}</CardDescription>
@@ -95,6 +97,12 @@ export function LoginPage() {
           </form>
         </CardContent>
       </Card>
+
+      <div className="flex flex-1" />
+      <footer className="flex items-center gap-2 pt-8 text-sm text-muted-foreground">
+        <BrikaLogo className="size-4" />
+        <span>&copy; {new Date().getFullYear()} Brika Labs</span>
+      </footer>
     </div>
   );
 }

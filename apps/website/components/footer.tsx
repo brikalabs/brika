@@ -1,4 +1,5 @@
 import { github, site } from '@/lib/config';
+import { BrikaLogo } from './ui/brika-logo';
 
 export function Footer() {
   return (
@@ -9,9 +10,7 @@ export function Footer() {
       />
       <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-4 px-6 sm:flex-row">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <div className="flex size-5 items-center justify-center rounded-md corner-squircle bg-primary text-[8px] font-black text-primary-foreground">
-            B
-          </div>
+          <BrikaLogo className="size-5" />
           <span>&copy; {new Date().getFullYear()} Brika Labs</span>
         </div>
         <div className="flex items-center gap-6 text-sm text-muted-foreground">

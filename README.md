@@ -1,6 +1,12 @@
-# BRIKA
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/7239873c-b9f8-4b7b-97e8-d3e6d2dcd642">
+    <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/0b551246-0b02-40ab-aef4-9ded18583a33">
+    <img alt="BRIKA" src="https://github.com/user-attachments/assets/0b551246-0b02-40ab-aef4-9ded18583a33" width="250">
+  </picture>
+</p>
 
-**Build. Run. Integrate. Keep Automating.**
+<p align="center"><strong>Build. Run. Integrate. Keep Automating.</strong></p>
 
 [![Docker](https://img.shields.io/badge/Docker-maxscharwath%2Fbrika-blue?logo=docker)](https://hub.docker.com/r/maxscharwath/brika)
 
@@ -15,25 +21,25 @@ A self-hosted automation hub that runs locally on your machine. Manage plugins, 
 
 ## Installation
 
-### Linux / macOS
+### macOS / Linux
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/maxscharwath/brika/master/scripts/install.sh | sh
+curl -fsSL https://brika.dev/install.sh | bash
 ```
 
 ### Windows (PowerShell)
 
 ```powershell
-irm https://raw.githubusercontent.com/maxscharwath/brika/master/scripts/install.ps1 | iex
+iwr -useb https://brika.dev/install.ps1 | iex
+```
+
+### Docker
+
+```sh
+docker run -d -p 3001:3001 --name brika maxscharwath/brika
 ```
 
 The installer downloads the binary for your platform, places it in `~/.brika/bin/` (or `%LOCALAPPDATA%\brika\bin\` on Windows), and adds it to your shell PATH. A bundled Bun runtime is included — no separate Node.js or Bun install needed.
-
-To install a specific version set `BRIKA_VERSION` before running:
-
-```sh
-BRIKA_VERSION=0.2.1 curl -fsSL https://raw.githubusercontent.com/maxscharwath/brika/master/scripts/install.sh | sh
-```
 
 ---
 

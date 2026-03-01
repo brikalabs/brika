@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { SiGithub } from 'react-icons/si';
 import { github, site } from '@/lib/config';
 import { cn } from '@/lib/utils';
+import { BrikaLogo } from './ui/brika-logo';
 import { Button } from './ui/button';
 import { ThemeToggle } from './ui/theme-toggle';
 
@@ -32,10 +33,8 @@ export function Nav() {
       )}
     >
       <nav className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-        <a href="#top" className="group flex items-center gap-2">
-          <div className="flex size-7 items-center justify-center rounded-lg corner-squircle bg-primary text-[10px] font-black text-primary-foreground">
-            B
-          </div>
+        <a href="#top" className="group flex items-center gap-1">
+          <BrikaLogo className="size-7" />
           <span className="text-lg font-extrabold tracking-tight">BRIKA</span>
         </a>
 

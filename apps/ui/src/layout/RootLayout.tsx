@@ -40,6 +40,7 @@ import {
   SidebarRail,
   useSidebar,
 } from '@/components/ui/sidebar';
+import { BrikaLogo } from '@/components/ui/brika-logo';
 import { UserAvatar } from '@/components/user-avatar';
 import { LoginPage } from '@/features/auth';
 import { useHealth } from '@/features/dashboard/hooks';
@@ -187,10 +188,10 @@ function AppSidebarHeader() {
       <SidebarMenu>
         <SidebarMenuItem>
           <SidebarMenuButton size="lg" onClick={toggleSidebar} tooltip="BRIKA">
-            <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-              <span className="font-bold text-sm">B</span>
+            <div className="flex aspect-square size-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary">
+              <BrikaLogo className="size-5 text-white" />
             </div>
-            <div className="grid flex-1 text-left text-sm leading-tight">
+            <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
               <span className="truncate font-semibold">BRIKA</span>
             </div>
           </SidebarMenuButton>
