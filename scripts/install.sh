@@ -2,7 +2,7 @@
 # BRIKA Installer for Linux and macOS
 #
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/maxscharwath/brika/master/scripts/install.sh | sh
+#   curl -fsSL https://raw.githubusercontent.com/maxscharwath/brika/main/scripts/install.sh | sh
 #
 # Environment variables:
 #   BRIKA_INSTALL_DIR  - Installation directory (default: ~/.brika)

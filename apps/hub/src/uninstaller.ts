@@ -50,7 +50,7 @@ export async function selfUninstall(options?: { purge?: boolean }): Promise<void
     console.log(`  ${pc.yellow('Note:')} The binary cannot be deleted while running on Windows.`);
     console.log('  Please use the PowerShell uninstaller instead:');
     console.log();
-    const psCommand = pc.cyan(`irm ${HUB_REPO_URL}/raw/master/scripts/uninstall.ps1 | iex`);
+    const psCommand = pc.cyan(`irm ${HUB_REPO_URL}/raw/main/scripts/uninstall.ps1 | iex`);
     console.log(`    ${psCommand}`);
     console.log();
     return;

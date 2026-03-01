@@ -15,10 +15,10 @@ export const github = {
     return `https://github.com/${this.owner}/${this.repo}`;
   },
   get licenseUrl() {
-    return `${this.url}/blob/master/LICENSE`;
+    return `${this.url}/blob/main/LICENSE`;
   },
   get rawUrl() {
-    return `https://raw.githubusercontent.com/${this.owner}/${this.repo}/master`;
+    return `https://raw.githubusercontent.com/${this.owner}/${this.repo}/main`;
   },
 } as const;
 

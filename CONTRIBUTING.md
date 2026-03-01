@@ -68,7 +68,7 @@ bun run typecheck
 
 ### Branching
 
-- Create a feature branch from `master`:
+- Create a feature branch from `main`:
   ```bash
   git checkout -b feat/your-feature
   ```

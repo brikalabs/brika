@@ -59,7 +59,7 @@ function createGitHubReleaseFetch(tagName: string, options?: MockReleaseOptions)
 
   const releaseJson = JSON.stringify({
     tag_name: tagName,
-    target_commitish: 'master',
+    target_commitish: 'main',
     published_at: options?.publishedAt ?? '2026-01-01T00:00:00Z',
     html_url: options?.htmlUrl ?? `https://github.com/maxscharwath/brika/releases/tag/${tagName}`,
     body: options?.body === undefined ? 'Release notes' : options.body,
@@ -70,7 +70,7 @@ function createGitHubReleaseFetch(tagName: string, options?: MockReleaseOptions)
     ? JSON.stringify({
         version: tagName.replace(/^v/, ''),
         commit,
-        branch: 'master',
+        branch: 'main',
         date: '2026-01-01T00:00:00Z',
         bun: '1.3.9',
         checksums: options?.checksums ?? {},
@@ -462,7 +462,7 @@ describe('fetchLatestRelease (indirect)', () => {
         new Response(
           JSON.stringify({
             tag_name: 'v99.0.0',
-            target_commitish: 'master',
+            target_commitish: 'main',
             published_at: '2026-01-01T00:00:00Z',
             html_url: 'https://github.com/test/releases/v99.0.0',
             body: 'Notes',
@@ -791,7 +791,7 @@ describe('checkForUpdate', () => {
         new Response(
           JSON.stringify({
             tag_name: 'v99.0.0',
-            target_commitish: 'master',
+            target_commitish: 'main',
             published_at: '2026-01-01T00:00:00Z',
             html_url: 'https://github.com/maxscharwath/brika/releases/tag/v99.0.0',
             body: null,

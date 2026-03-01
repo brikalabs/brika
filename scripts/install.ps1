@@ -1,7 +1,7 @@
 # BRIKA Installer for Windows
 #
 # Usage:
-#   irm https://raw.githubusercontent.com/maxscharwath/brika/master/scripts/install.ps1 | iex
+#   irm https://raw.githubusercontent.com/maxscharwath/brika/main/scripts/install.ps1 | iex
 #
 # Environment variables:
 #   BRIKA_INSTALL_DIR  - Installation directory (default: %LOCALAPPDATA%\brika\bin)

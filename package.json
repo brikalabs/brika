@@ -40,10 +40,8 @@
     "@brika/hub": "workspace:*",
     "@brika/testing": "workspace:*",
     "@brika/workspace-tools": "workspace:*",
-    "@types/react": "^19.2.14",
     "@typescript/native-preview": "latest",
     "bun-types": "^1.3.9",
-    "lucide-react": "^0.575.0",
     "mitata": "^1.0.34",
     "typescript": "^5.9.3"
   }

@@ -64,7 +64,7 @@ const jsonLd = {
   url: site.url,
   applicationCategory: 'DeveloperApplication',
   operatingSystem: 'macOS, Linux, Windows, Docker',
-  license: `https://github.com/${github.owner}/${github.repo}/blob/master/LICENSE`,
+  license: `https://github.com/${github.owner}/${github.repo}/blob/main/LICENSE`,
   offers: {
     '@type': 'Offer',
     price: '0',
