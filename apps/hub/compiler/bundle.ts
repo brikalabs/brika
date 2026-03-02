@@ -1,5 +1,5 @@
 /**
- * Bundle mode — outputs dist/main.js for dev and Docker
+ * Bundle mode — outputs dist/server.[hash].js for dev and Docker
  */
 import { join } from 'node:path';
 import pc from 'picocolors';
@@ -16,9 +16,9 @@ export async function bundle(): Promise<void> {
   const result = await Bun.build({
     entrypoints: [join(import.meta.dir, '../src/main.ts')],
     outdir: distDir,
+    naming: 'server.[hash].[ext]',
     target: 'bun',
     minify: true,
-    sourcemap: 'linked',
     plugins: [folderTarPlugin()],
   });
 

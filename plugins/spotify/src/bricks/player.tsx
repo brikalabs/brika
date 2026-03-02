@@ -1,194 +1,176 @@
-import { Badge, Box, Button, Column, defineBrick, Icon, Image, Row, Spacer, Text, useBrickSize, useEffect, usePluginPreference, usePreference, useRef, useState } from '@brika/sdk/bricks';
-import { spotify } from '../index';
-import {
-  acquirePolling,
-  next,
-  pause,
-  play,
-  previous,
-  seek,
-  setVolume,
-  startPlayback,
-  usePlayerStore,
-} from '../playback-store';
-import type { PlaybackState } from '../spotify-api';
-import { Controls, type PlayerActions, ProgressBar, TrackInfo, VolumeSlider } from './components';
+/**
+ * Spotify Player — client-rendered brick.
+ *
+ * Design: full-bleed album art, gradient overlay with scrolling track info,
+ * pointer-draggable progress bar, and minimal transport controls.
+ * Compact layout (≤2×2) shows cover art with overlay buttons.
+ */
 
-// ─── Common layout props ─────────────────────────────────────────────────────
+import { useBrickConfig, useBrickData, useBrickSize } from '@brika/sdk/brick-views';
+import { useCallAction, useLocale } from '@brika/sdk/ui-kit/hooks';
+import { LogIn, Music, SkipBack, SkipForward } from 'lucide-react';
+import { useCallback } from 'react';
+import { doNext, doPause, doPlay, doPrevious } from '../actions';
+import type { PlaybackState, RecentTrack } from '../spotify-api';
+import { AlbumCover, PlayPauseButton, ScrollText, TransportButton } from './components';
+import { useProgress } from './use-progress';
 
-interface TrackDisplay {
-  trackName: string;
-  artistName: string;
-  albumArt: string | null;
-}
+// ─── Types ───────────────────────────────────────────────────────────────────
 
-interface LayoutProps {
-  track: TrackDisplay;
+interface SpotifyPlayerData {
   playback: PlaybackState | null;
-  actions: PlayerActions;
+  recentTrack: RecentTrack | null;
+  isAuthed: boolean;
+  loaded: boolean;
+  anchor: { progressMs: number; timestamp: number };
+  authUrl: string;
 }
 
-// ─── Layout: Small (1-2 cols) ───────────────────────────────────────────────
+function formatMs(ms: number) {
+  const totalSec = Math.floor(ms / 1000);
+  const m = Math.floor(totalSec / 60);
+  return `${m}:${String(totalSec % 60).padStart(2, '0')}`;
+}
 
-function SmallPlayer({ track, playback, width, actions }: Readonly<LayoutProps & { width: number }>) {
+// ─── Main Component ──────────────────────────────────────────────────────────
+
+export default function SpotifyPlayer() {
+  const { width, height } = useBrickSize();
+  const config = useBrickConfig();
+  const data = useBrickData<SpotifyPlayerData>();
+  const { t } = useLocale();
+  const callAction = useCallAction();
+
+  const deviceId = typeof config.device === 'string' && config.device ? config.device : undefined;
+  const playback = data?.playback ?? null;
+  const recentTrack = data?.recentTrack ?? null;
+  const isAuthed = data?.isAuthed ?? false;
+  const anchor = data?.anchor ?? { progressMs: 0, timestamp: Date.now() };
+  const authUrl = data?.authUrl ?? '';
+
+  const track = playback ?? recentTrack;
   const isPlaying = playback?.isPlaying ?? false;
+  const durationMs = playback?.durationMs ?? 0;
+
+  const progress = useProgress(anchor, isPlaying, durationMs, callAction);
+
+  const onToggle = useCallback(() => {
+    callAction(isPlaying ? doPause : doPlay, { deviceId });
+  }, [callAction, isPlaying, deviceId]);
+  const onNext = useCallback(() => { callAction(doNext); }, [callAction]);
+  const onPrev = useCallback(() => { callAction(doPrevious); }, [callAction]);
+
+  // ─── Loading ──────────────────────────────────────────────────────
+
+  if (!data?.loaded) {
+    return (
+      <div className="flex flex-1 items-center justify-center">
+        <div className="size-5 animate-spin rounded-full border-2 border-white/20 border-t-white/80" />
+      </div>
+    );
+  }
+
+  // ─── Auth required ────────────────────────────────────────────────
+
+  if (!isAuthed) {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center gap-3 p-4">
+        <Music className="size-8 text-[#1DB954]" />
+        <span className="font-semibold text-foreground">{t('player.title')}</span>
+        <a
+          href={authUrl}
+          className="mt-2 flex items-center gap-2 rounded-full bg-[#1DB954] px-4 py-2 font-medium text-sm text-white transition-colors hover:bg-[#1ed760]"
+        >
+          <LogIn className="size-4" />
+          {t('player.login')}
+        </a>
+      </div>
+    );
+  }
+
+  // ─── No track — idle play button ──────────────────────────────────
+
+  if (!track) {
+    return (
+      <div className="flex flex-1 items-center justify-center">
+        <PlayPauseButton isPlaying={false} onToggle={onToggle} variant="idle" />
+      </div>
+    );
+  }
+
+  // ─── Compact layout (≤2×2) ────────────────────────────────────────
+
+  if (width <= 2 && height <= 2) {
+    return (
+      <div className="relative flex h-full items-center justify-center overflow-hidden rounded-lg">
+        <AlbumCover trackName={track.trackName} artistName={track.artistName} albumArt={track.albumArt} />
+        <div className="absolute inset-0 bg-radial from-black/10 to-black/50" />
+        <div className="relative flex items-center gap-2">
+          <TransportButton onClick={onPrev} icon={SkipBack} size="md" />
+          <PlayPauseButton isPlaying={isPlaying} onToggle={onToggle} variant="compact" />
+          <TransportButton onClick={onNext} icon={SkipForward} size="md" />
+        </div>
+      </div>
+    );
+  }
+
+  // ─── Default layout ───────────────────────────────────────────────
+
   return (
-    <Box backgroundImage={track.albumArt ?? undefined} backgroundFit="cover" rounded="lg" grow>
-      <Box background="rgba(0,0,0,0.3)" grow>
-        <Column justify="center" align="center" gap="sm">
-          <Spacer />
-          {width >= 2
-            ? <Controls isPlaying={isPlaying} onPlay={actions.onPlay} onPause={actions.onPause} onPrev={actions.onPrev} onNext={actions.onNext} />
-            : <Button onPress={isPlaying ? actions.onPause : actions.onPlay} icon={isPlaying ? 'pause' : 'play'} color="rgba(0,0,0,0.4)" />}
-          <Spacer />
-        </Column>
-      </Box>
-    </Box>
+    <div className="flex h-full flex-col overflow-hidden rounded-lg">
+      <style>{`@keyframes spotify-scroll{0%,15%{transform:translateX(0)}85%,100%{transform:translateX(var(--scroll-dist))}}`}</style>
+
+      {/* Album cover + track info */}
+      <div className="relative flex-1 overflow-hidden">
+        <AlbumCover trackName={track.trackName} artistName={track.artistName} albumArt={track.albumArt} />
+        <div className="absolute inset-0 bg-linear-to-t from-black/85 via-black/15 to-black/25" />
+        <div className="absolute inset-x-0 bottom-0 px-3 pb-2">
+          <ScrollText text={track.trackName} className="text-sm font-bold text-white [text-shadow:0_1px_4px_rgba(0,0,0,0.8)]" />
+          <ScrollText text={track.artistName} className="mt-0.5 text-[11px] text-[rgba(255,255,255,0.8)] [text-shadow:0_1px_3px_rgba(0,0,0,0.6)]" />
+        </div>
+      </div>
+
+      {/* Controls */}
+      <div className="space-y-1.5 px-3 pb-3 pt-2">
+        {/* Progress bar */}
+        <div>
+          <div
+            ref={progress.barRef}
+            className="group/bar relative h-1 cursor-pointer rounded-full bg-muted touch-none"
+            onPointerDown={progress.onPointerDown}
+            onPointerMove={progress.onPointerMove}
+            onPointerUp={progress.onPointerUp}
+            role="slider"
+            aria-valuenow={progress.localProgressMs}
+            aria-valuemin={0}
+            aria-valuemax={durationMs}
+            tabIndex={0}
+          >
+            <div
+              className="h-full rounded-full bg-primary"
+              style={{
+                width: `${progress.pct}%`,
+                transition: progress.dragging ? 'none' : 'width 0.3s ease',
+              }}
+            />
+            <div
+              className="absolute top-1/2 -translate-y-1/2 size-2.5 rounded-full bg-primary shadow-sm opacity-0 transition-opacity group-hover/bar:opacity-100"
+              style={{ left: `calc(${progress.pct}% - 5px)` }}
+            />
+          </div>
+          <div className="mt-0.5 flex justify-between text-[9px] text-muted-foreground tabular-nums">
+            <span>{formatMs(progress.localProgressMs)}</span>
+            <span>{formatMs(durationMs)}</span>
+          </div>
+        </div>
+
+        {/* Transport */}
+        <div className="flex items-center justify-center gap-4">
+          <TransportButton onClick={onPrev} icon={SkipBack} />
+          <PlayPauseButton isPlaying={isPlaying} onToggle={onToggle} />
+          <TransportButton onClick={onNext} icon={SkipForward} />
+        </div>
+      </div>
+    </div>
   );
 }
-
-// ─── Layout: Medium (3-4 cols) ──────────────────────────────────────────────
-
-function MediumPlayer({ track, playback, height, localProgressMs, actions }: Readonly<LayoutProps & { height: number; localProgressMs: number }>) {
-  const isPlaying = playback?.isPlaying ?? false;
-  return (
-    <Box backgroundImage={track.albumArt ?? undefined} backgroundFit="cover" rounded="lg" grow padding="sm">
-      <Column grow justify={height >= 2 ? 'end' : 'start'}>
-        <Box background="rgba(0,0,0,0.7)" blur="lg" padding="md" grow={height < 2} rounded={height < 2 ? 'lg' : 'md'}>
-          <Column gap="sm">
-            <TrackInfo trackName={track.trackName} artistName={track.artistName} />
-            <Controls isPlaying={isPlaying} onPlay={actions.onPlay} onPause={actions.onPause} onPrev={actions.onPrev} onNext={actions.onNext} />
-            {playback && <ProgressBar localProgressMs={localProgressMs} durationMs={playback.durationMs} onSeek={actions.onSeek} />}
-            {playback && height >= 4 && <VolumeSlider volume={playback.volume} onVolume={actions.onVolume} />}
-          </Column>
-        </Box>
-      </Column>
-    </Box>
-  );
-}
-
-// ─── Layout: Large (5+ cols) ────────────────────────────────────────────────
-
-function LargePlayer({ track, playback, height, localProgressMs, actions }: Readonly<LayoutProps & { height: number; localProgressMs: number }>) {
-  const isPlaying = playback?.isPlaying ?? false;
-  return (
-    <Box backgroundImage={track.albumArt ?? undefined} backgroundFit="cover" rounded="lg" blur="sm">
-      <Box background="rgba(0,0,0,0.7)" blur="lg" padding="lg" rounded="lg" grow>
-        <Row gap="lg">
-          {track.albumArt == null
-            ? <Box padding="none" />
-            : <Image src={track.albumArt} alt={playback?.albumName ?? track.trackName} fit="cover" rounded aspectRatio="1/1" />}
-          <Box grow padding="none">
-            <Column gap="sm" justify="center">
-              <TrackInfo trackName={track.trackName} artistName={track.artistName} />
-              <Controls isPlaying={isPlaying} onPlay={actions.onPlay} onPause={actions.onPause} onPrev={actions.onPrev} onNext={actions.onNext} />
-              {playback && <ProgressBar localProgressMs={localProgressMs} durationMs={playback.durationMs} onSeek={actions.onSeek} />}
-              {playback && height >= 4 && <VolumeSlider volume={playback.volume} onVolume={actions.onVolume} />}
-              {playback && height >= 5 && <Badge label={playback.deviceName} icon="speaker" variant="secondary" color="rgba(255,255,255,0.6)" />}
-            </Column>
-          </Box>
-        </Row>
-      </Box>
-    </Box>
-  );
-}
-
-// ─── Brick ──────────────────────────────────────────────────────────────────
-
-export const playerBrick = defineBrick(
-  {
-    id: 'player',
-    families: ['sm', 'md', 'lg'],
-    minSize: { w: 1, h: 1 },
-    maxSize: { w: 12, h: 8 },
-  },
-  () => {
-    const { width, height } = useBrickSize();
-    const { playback, recentTrack, devices, isAuthed, anchor } = usePlayerStore();
-    const [instanceDeviceId] = usePreference<string>('device', '');
-    const pluginDeviceId = usePluginPreference<string>('defaultDevice', '');
-    const preferredId = instanceDeviceId || pluginDeviceId || undefined;
-    const targetId = preferredId ?? devices[0]?.id;
-    const [localProgressMs, setLocalProgressMs] = useState(anchor.progressMs);
-    const anchorRef = useRef(anchor);
-
-    // Start/stop shared polling
-    useEffect(() => acquirePolling(), []);
-
-    // Keep anchor ref in sync and snap localProgressMs immediately
-    useEffect(() => {
-      anchorRef.current = anchor;
-      setLocalProgressMs(anchor.progressMs);
-    }, [anchor]);
-
-    // ─── Local progress interpolation (1s tick) ─────────────────────────
-
-    useEffect(() => {
-      if (!playback?.isPlaying) return;
-      const id = setInterval(() => {
-        const elapsed = Date.now() - anchorRef.current.timestamp;
-        const interpolated = Math.min(
-          anchorRef.current.progressMs + elapsed,
-          playback.durationMs,
-        );
-        setLocalProgressMs(interpolated);
-      }, 1000);
-      return () => clearInterval(id);
-    }, [playback?.isPlaying, playback?.durationMs]);
-
-    // ─── Actions ────────────────────────────────────────────────────────
-
-    const actions: PlayerActions = {
-      onPlay() {
-        if (playback) play(targetId);
-        else startPlayback(targetId);
-      },
-      onPause() { pause(targetId); },
-      onNext() { next(); },
-      onPrev() { previous(); },
-      onSeek(payload) {
-        if (typeof payload?.value === 'number' && playback) {
-          const positionMs = Math.round((payload.value / 100) * playback.durationMs);
-          seek(positionMs);
-          setLocalProgressMs(positionMs);
-        }
-      },
-      onVolume(payload) {
-        if (typeof payload?.value === 'number') setVolume(payload.value);
-      },
-    };
-
-    // ─── Render ─────────────────────────────────────────────────────────
-
-    if (!isAuthed) {
-      return (
-        <Box background="rgba(0,0,0,0.4)" blur="md" padding="lg" rounded="lg">
-          <Column gap="md" align="center" justify="center" grow>
-            <Icon name="music" size="lg" color="#1DB954" />
-            <Text content="Spotify" variant="heading" color="rgba(255,255,255,0.95)" />
-            <Spacer size="sm" />
-            <Button label="Login with Spotify" url={spotify.getAuthUrl()} icon="log-in" color="#1DB954" />
-          </Column>
-        </Box>
-      );
-    }
-
-    const track = playback ?? recentTrack;
-
-    if (!track) {
-      return (
-        <Box background="rgba(0,0,0,0.3)" blur="sm" padding="md" rounded="lg">
-          <Column align="center" justify="center" grow>
-            <Button icon="play" color="#1DB954" onPress={actions.onPlay} />
-          </Column>
-        </Box>
-      );
-    }
-
-    const layoutProps = { track, playback, actions };
-
-    if (width <= 2) return <SmallPlayer {...layoutProps} width={width} />;
-    if (width <= 4) return <MediumPlayer {...layoutProps} height={height} localProgressMs={localProgressMs} />;
-    return <LargePlayer {...layoutProps} height={height} localProgressMs={localProgressMs} />;
-  },
-);

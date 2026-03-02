@@ -1,34 +1,54 @@
-import * as LucideIcons from 'lucide-react';
+/**
+ * Plugin Bridge — exposes host modules to plugin brick modules via globalThis.__brika.
+ * Heavy deps (icons, ui, cva, clsx) are lazy-loaded with top-level await.
+ */
+
 import * as React from 'react';
 import * as jsxRuntime from 'react/jsx-runtime';
-import * as UIComponents from '@/components/ui';
-import { pluginCallAction, usePluginAction, usePluginLocale } from './plugin-hooks';
+import {
+  useCallBrickAction,
+  useBrickConfig,
+  useBrickData,
+  useBrickSize,
+} from '@/features/boards/brick-view-hooks';
+import {
+  useCallAction,
+  usePluginAction as useAction,
+  usePluginLocale as useLocale,
+} from './plugin-hooks';
+
+const [icons, ui, cva, { clsx: clsxFn }] = await Promise.all([
+  import('lucide-react'),
+  import('@/components/ui'),
+  import('class-variance-authority'),
+  import('clsx'),
+]);
+
+// Wrap clsx without mutating the original module export
+const clsxWrapper = Object.assign(
+  (...args: Parameters<typeof clsxFn>) => clsxFn(...args),
+  { clsx: clsxFn },
+);
+
+const bridge = {
+  React,
+  jsx: {
+    ...jsxRuntime,
+    jsxDEV(type: React.ElementType, props: object, key: React.Key | undefined, isStatic: boolean) {
+      return isStatic ? jsxRuntime.jsxs(type, props, key) : jsxRuntime.jsx(type, props, key);
+    },
+  },
+  hooks: { useLocale, useAction, useCallAction },
+  brickHooks: { useBrickData, useBrickConfig, useBrickSize, useCallBrickAction },
+  icons,
+  ui,
+  cva,
+  clsx: clsxWrapper,
+};
 
 declare global {
   // eslint-disable-next-line no-var
-  var __brika:
-    | {
-        React: typeof React;
-        jsx: typeof jsxRuntime;
-        ui: typeof UIComponents;
-        icons: typeof LucideIcons;
-        hooks: {
-          useLocale: typeof usePluginLocale;
-          useAction: typeof usePluginAction;
-          callAction: typeof pluginCallAction;
-        };
-      }
-    | undefined;
+  var __brika: Record<string, unknown> | undefined;
 }
 
-globalThis.__brika ??= {
-  React,
-  jsx: jsxRuntime,
-  ui: UIComponents,
-  icons: LucideIcons,
-  hooks: {
-    useLocale: usePluginLocale,
-    useAction: usePluginAction,
-    callAction: pluginCallAction,
-  },
-};
+globalThis.__brika ??= bridge;

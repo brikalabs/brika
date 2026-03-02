@@ -2,13 +2,13 @@
  * Board Service
  *
  * High-level operations for managing boards and their brick placements.
- * Bridges between BoardLoader (YAML persistence), BrickTypeRegistry
- * (type validation), and BrickInstanceManager (instance lifecycle).
+ * Bridges between BoardLoader (YAML persistence) and BrickTypeRegistry
+ * (type validation).
  */
 
 import { inject, singleton } from '@brika/di';
-import { BrickInstanceManager, BrickTypeRegistry } from '@/runtime/bricks';
-import { BoardActions, BrickActions } from '@/runtime/events/actions';
+import { BrickTypeRegistry } from '@/runtime/bricks';
+import { BoardActions } from '@/runtime/events/actions';
 import { EventSystem } from '@/runtime/events/event-system';
 import { Logger } from '@/runtime/logs/log-router';
 import { PluginLifecycle } from '@/runtime/plugins/plugin-lifecycle';
@@ -31,7 +31,6 @@ export class BoardService {
   private readonly logs = inject(Logger).withSource('state');
   private readonly loader = inject(BoardLoader);
   private readonly brickTypes = inject(BrickTypeRegistry);
-  private readonly instances = inject(BrickInstanceManager);
   private readonly lifecycle = inject(PluginLifecycle);
   private readonly events = inject(EventSystem);
 
@@ -40,22 +39,12 @@ export class BoardService {
   viewerConnected(boardId: string): void {
     const count = (this.#activeViewers.get(boardId) ?? 0) + 1;
     this.#activeViewers.set(boardId, count);
-    if (count === 1) {
-      const board = this.loader.get(boardId);
-      if (board) {
-        this.mountBoard(board);
-      }
-    }
   }
 
   viewerDisconnected(boardId: string): void {
     const count = (this.#activeViewers.get(boardId) ?? 1) - 1;
     if (count <= 0) {
       this.#activeViewers.delete(boardId);
-      const board = this.loader.get(boardId);
-      if (board) {
-        this.unmountBoard(board);
-      }
     } else {
       this.#activeViewers.set(boardId, count);
     }
@@ -63,38 +52,6 @@ export class BoardService {
 
   hasActiveViewers(boardId: string): boolean {
     return (this.#activeViewers.get(boardId) ?? 0) > 0;
-  }
-
-  mountBoard(board: Board): void {
-    for (const brick of board.bricks) {
-      this.#mountPlacement(brick);
-    }
-  }
-
-  /**
-   * Mount any pending placements that reference a newly registered brick type.
-   * Solves the startup race where boards load before plugins register types.
-   */
-  mountPendingForType(brickTypeId: string): void {
-    for (const board of this.loader.list()) {
-      if (!this.hasActiveViewers(board.id)) {
-        continue;
-      }
-      for (const brick of board.bricks) {
-        if (brick.brickTypeId === brickTypeId && !this.instances.has(brick.instanceId)) {
-          this.#mountPlacement(brick);
-        }
-      }
-    }
-  }
-
-  /**
-   * Unmount all brick instances for a board.
-   */
-  unmountBoard(board: Board): void {
-    for (const brick of board.bricks) {
-      this.#unmountPlacement(brick);
-    }
   }
 
   /**
@@ -133,9 +90,6 @@ export class BoardService {
 
     board.bricks.push(placement);
     await this.loader.saveBoard(board);
-    if (this.hasActiveViewers(boardId)) {
-      this.#mountPlacement(placement);
-    }
 
     this.events.dispatch(
       BoardActions.brickAdded.create(
@@ -165,9 +119,8 @@ export class BoardService {
       return false;
     }
 
-    const [placement] = board.bricks.splice(idx, 1);
+    board.bricks.splice(idx, 1);
     await this.loader.saveBoard(board);
-    this.#unmountPlacement(placement);
 
     this.events.dispatch(
       BoardActions.brickRemoved.create(
@@ -183,8 +136,8 @@ export class BoardService {
   }
 
   /**
-   * Update a brick's config — pushes new config to the running instance
-   * without unmount/remount so hook state (timers, effects) is preserved.
+   * Update a brick's config — pushes new config to the running plugin
+   * so hook state (timers, effects) is preserved.
    */
   async updateBrickConfig(
     boardId: string,
@@ -198,12 +151,6 @@ export class BoardService {
 
     const { board, brick } = found;
     brick.config = config;
-
-    // Update config on the hub-side manager
-    const instance = this.instances.get(instanceId);
-    if (instance) {
-      instance.config = config;
-    }
 
     // Push config to the plugin process (no remount)
     const brickType = this.brickTypes.get(brick.brickTypeId);
@@ -262,7 +209,7 @@ export class BoardService {
   }
 
   /**
-   * Move/resize a brick. Sends resize IPC to the plugin (no remount).
+   * Move/resize a brick on a board.
    */
   async moveBrick(
     boardId: string,
@@ -282,13 +229,8 @@ export class BoardService {
     }
 
     const { board, brick } = found;
-    const sizeChanged = brick.size.w !== size.w || brick.size.h !== size.h;
     brick.position = position;
     brick.size = size;
-
-    if (sizeChanged) {
-      this.#resizePlacement(brick);
-    }
 
     await this.loader.saveBoard(board);
     return true;
@@ -296,7 +238,6 @@ export class BoardService {
 
   /**
    * Batch update layout positions after drag-and-drop.
-   * Sends resize IPC for bricks whose size changed (no remount).
    */
   async batchUpdateLayout(
     boardId: string,
@@ -313,7 +254,6 @@ export class BoardService {
       return false;
     }
 
-    const resizedBricks: BoardBrickPlacement[] = [];
     const brickMap = new Map(board.bricks.map((c) => [c.instanceId, c]));
 
     for (const layout of layouts) {
@@ -322,7 +262,6 @@ export class BoardService {
         continue;
       }
 
-      const sizeChanged = brick.size.w !== layout.w || brick.size.h !== layout.h;
       brick.position = {
         x: layout.x,
         y: layout.y,
@@ -331,18 +270,9 @@ export class BoardService {
         w: layout.w,
         h: layout.h,
       };
-
-      if (sizeChanged) {
-        resizedBricks.push(brick);
-      }
     }
 
     await this.loader.saveBoard(board);
-
-    // Send resize IPC for bricks whose size changed (no remount needed)
-    for (const brick of resizedBricks) {
-      this.#resizePlacement(brick);
-    }
 
     this.events.dispatch(
       BoardActions.layoutChanged.create(
@@ -376,96 +306,6 @@ export class BoardService {
       board,
       brick,
     };
-  }
-
-  #mountPlacement(placement: BoardBrickPlacement): void {
-    const brickType = this.brickTypes.get(placement.brickTypeId);
-    if (!brickType) {
-      this.logs.warn('Cannot mount brick: type not found', {
-        instanceId: placement.instanceId,
-        brickTypeId: placement.brickTypeId,
-      });
-      return;
-    }
-
-    // Skip if already mounted (prevents duplicate mount events from file watcher)
-    if (this.instances.has(placement.instanceId)) {
-      return;
-    }
-
-    // Register instance in the manager
-    this.instances.mount(
-      placement.instanceId,
-      placement.brickTypeId,
-      brickType.pluginName,
-      placement.size.w,
-      placement.size.h,
-      placement.config
-    );
-
-    // Tell the plugin to mount
-    const process = this.lifecycle.getProcess(brickType.pluginName);
-    if (process) {
-      process.sendMountBrickInstance(
-        placement.instanceId,
-        placement.brickTypeId,
-        placement.size.w,
-        placement.size.h,
-        placement.config
-      );
-    }
-
-    this.events.dispatch(
-      BrickActions.instanceMounted.create(
-        {
-          instanceId: placement.instanceId,
-          brickTypeId: placement.brickTypeId,
-        },
-        'hub'
-      )
-    );
-  }
-
-  #resizePlacement(placement: BoardBrickPlacement): void {
-    const instance = this.instances.get(placement.instanceId);
-    if (!instance) {
-      return;
-    }
-
-    // Update stored dimensions
-    this.instances.resize(placement.instanceId, placement.size.w, placement.size.h);
-
-    // Tell the plugin to resize (no remount)
-    const brickType = this.brickTypes.get(placement.brickTypeId);
-    if (brickType) {
-      const process = this.lifecycle.getProcess(brickType.pluginName);
-      if (process) {
-        process.sendResizeBrickInstance(placement.instanceId, placement.size.w, placement.size.h);
-      }
-    }
-  }
-
-  #unmountPlacement(placement: BoardBrickPlacement): void {
-    const brickType = this.brickTypes.get(placement.brickTypeId);
-
-    // Tell the plugin to unmount
-    if (brickType) {
-      const process = this.lifecycle.getProcess(brickType.pluginName);
-      if (process) {
-        process.sendUnmountBrickInstance(placement.instanceId);
-      }
-    }
-
-    this.instances.unmount(placement.instanceId);
-
-    this.events.dispatch(
-      BrickActions.instanceUnmounted.create(
-        {
-          instanceId: placement.instanceId,
-        },
-        'hub'
-      )
-    );
   }
 
   #findNextPosition(board: Board): {

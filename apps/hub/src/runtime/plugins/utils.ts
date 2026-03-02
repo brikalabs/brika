@@ -46,7 +46,7 @@ export async function ensurePluginTsconfig(rootDirectory: string): Promise<void>
       // Bun ignores extends — inline the critical JSX settings
       raw.compilerOptions = raw.compilerOptions ?? {};
       raw.compilerOptions.jsx = 'react-jsx';
-      raw.compilerOptions.jsxImportSource = '@brika/sdk';
+      raw.compilerOptions.jsxImportSource = 'react';
       await Bun.write(tsconfigPath, JSON.stringify(raw, null, 2));
       return;
     }

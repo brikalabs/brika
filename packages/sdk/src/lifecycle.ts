@@ -4,6 +4,9 @@
  * Plugin lifecycle hooks, preferences, and logging.
  */
 
+// Brick config
+export type { BrickConfigChangeHandler } from './api/brick-config';
+export { onBrickConfigChange } from './api/brick-config';
 // Lifecycle
 export type { InitHandler, StopHandler, UninstallHandler } from './api/lifecycle';
 export { onInit, onStop, onUninstall } from './api/lifecycle';

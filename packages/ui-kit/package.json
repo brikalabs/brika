@@ -17,9 +17,7 @@
   "keywords": ["brika", "ui", "bricks", "board", "descriptors"],
   "exports": {
     ".": "./src/index.ts",
-    "./tailwind-theme.css": "./tailwind-theme.css",
-    "./jsx-runtime": "./src/jsx-runtime.ts",
-    "./jsx-dev-runtime": "./src/jsx-dev-runtime.ts"
+    "./tailwind-theme.css": "./tailwind-theme.css"
   },
   "files": ["src", "tailwind-theme.css"],
   "scripts": {

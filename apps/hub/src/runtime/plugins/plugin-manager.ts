@@ -45,7 +45,7 @@ export class PluginManager {
 
   getByName(name: string): Plugin | null {
     // Try to find by name in running processes
-    const process = this.#lifecycle.getProcessByName(name);
+    const process = this.#lifecycle.getProcess(name);
     if (process) {
       return this.#lifecycle.toPlugin(process);
     }
@@ -79,7 +79,7 @@ export class PluginManager {
   }
 
   resolve(name: string): string | null {
-    const process = this.#lifecycle.getProcessByName(name);
+    const process = this.#lifecycle.getProcess(name);
     if (process) {
       return process.uid;
     }
@@ -144,7 +144,7 @@ export class PluginManager {
     await this.#lifecycle.unload(name);
 
     // Verify process is actually gone
-    if (this.#lifecycle.hasProcessByName(name)) {
+    if (this.#lifecycle.hasProcess(name)) {
       throw new Error(`Plugin ${uid} is still running after unload`);
     }
 
@@ -175,7 +175,7 @@ export class PluginManager {
     }
 
     // Verify process was actually created
-    if (!this.#lifecycle.hasProcessByName(name)) {
+    if (!this.#lifecycle.hasProcess(name)) {
       throw new Error(`Plugin ${uid} failed to start after load`);
     }
 
@@ -203,7 +203,7 @@ export class PluginManager {
       throw new Error(`Plugin not found: ${uid}`);
     }
 
-    const process = this.#lifecycle.getProcessByName(name);
+    const process = this.#lifecycle.getProcess(name);
     if (!process) {
       return;
     }
@@ -223,10 +223,12 @@ export class PluginManager {
 
   /** Unload a plugin and remove it from the state store (full uninstall). */
   async remove(name: string): Promise<void> {
-    const process = this.#lifecycle.getProcessByName(name);
-    if (process) {
+    const rootDirectory = this.#lifecycle.getProcess(name)?.rootDirectory
+      ?? this.#state.get(name)?.rootDirectory;
+    if (this.#lifecycle.hasProcess(name)) {
       await this.#lifecycle.unload(name);
     }
+    this.#lifecycle.removeModules(name, rootDirectory);
     await this.#state.remove(name);
   }
 
@@ -281,7 +283,7 @@ export class PluginManager {
       });
     }
 
-    const process = this.#lifecycle.getProcessByName(pluginName);
+    const process = this.#lifecycle.getProcess(pluginName);
     if (!process) {
       return Promise.resolve({
         ok: false,

@@ -1,8 +1,10 @@
 {
   "extends": "@brika/sdk/tsconfig.plugin.json",
+  "exclude": [
+    "src/pages"
+  ],
   "compilerOptions": {
     "jsx": "react-jsx",
-    "jsxImportSource": "@brika/sdk"
-  },
-  "exclude": ["src/pages"]
+    "jsxImportSource": "react"
+  }
 }

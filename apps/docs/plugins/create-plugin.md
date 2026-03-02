@@ -157,19 +157,15 @@ log.info("Plugin loaded");
 
 ### Step 4: Create tsconfig.json
 
+Extend the SDK base config. This sets up both server-side and client-side compilation:
+
 ```json
 {
+  "extends": "@brika/sdk/tsconfig.plugin.json",
   "compilerOptions": {
-    "target": "ESNext",
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "noEmit": true,
-    "types": ["bun-types"]
-  },
-  "include": ["src"]
+    "jsx": "react-jsx",
+    "jsxImportSource": "react"
+  }
 }
 ```
 
@@ -290,8 +286,66 @@ onStop(() => log.info("Plugin stopping"));
 log.info("My plugin loaded with 3 blocks");
 ```
 
+## Adding Bricks
+
+Bricks are client-rendered dashboard components. To add bricks to your plugin:
+
+### 1. Declare in package.json
+
+```json
+{
+  "bricks": [
+    {
+      "id": "status",
+      "name": "Status",
+      "icon": "activity",
+      "color": "#10b981"
+    }
+  ]
+}
+```
+
+### 2. Create the client component
+
+Create `src/bricks/status.tsx` (filename must match the brick `id`):
+
+```tsx
+import { useBrickData } from '@brika/sdk/brick-views';
+
+interface StatusData {
+  label: string;
+  online: boolean;
+}
+
+export default function Status() {
+  const data = useBrickData<StatusData>();
+  if (!data) return <div className="p-4 text-muted-foreground">Loading...</div>;
+
+  return (
+    <div className="flex items-center gap-2 p-3">
+      <span className={data.online ? "text-green-500" : "text-red-500"}>●</span>
+      <span>{data.label}</span>
+    </div>
+  );
+}
+```
+
+### 3. Push data from the entry point
+
+```tsx
+// src/index.tsx
+import { setBrickData, onInit } from '@brika/sdk';
+
+onInit(() => {
+  setBrickData('status', { label: 'My Service', online: true });
+});
+```
+
+See [Bricks](bricks.md) for the complete guide including responsive design, actions, shared stores, and per-instance config.
+
 ## Next Steps
 
 * [Reactive Blocks](reactive-blocks.md) — Learn about block inputs, outputs, and operators
+* [Bricks](bricks.md) — Build client-rendered dashboard components
 * [Lifecycle Hooks](lifecycle-hooks.md) — Handle startup, shutdown, and events
 * [SDK Reference](../api-reference/sdk.md) — Full API documentation

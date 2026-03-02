@@ -1,5 +1,4 @@
-import type { PreferenceDefinition } from '@brika/plugin';
-import type { BrickFamily, ComponentNode } from '@brika/ui-kit';
+import type { BrickFamily, PreferenceDefinition } from '@brika/plugin';
 import { fetcher } from '@/lib/query';
 import type { Json } from '@/types';
 
@@ -9,6 +8,7 @@ export interface BrickType {
   id: string;
   localId: string;
   pluginName: string;
+  pluginUid?: string;
   name?: string;
   description?: string;
   category?: string;
@@ -24,18 +24,7 @@ export interface BrickType {
     h: number;
   };
   config?: PreferenceDefinition[];
-}
-
-// ─── Brick Instances (placed on boards) ──────────────────────────────────────
-
-export interface BrickInstance {
-  instanceId: string;
-  brickTypeId: string;
-  pluginName: string;
-  w: number;
-  h: number;
-  config: Record<string, unknown>;
-  body: ComponentNode[];
+  moduleUrl?: string;
 }
 
 // ─── Board ────────────────────────────────────────────────────────────────
@@ -88,7 +77,6 @@ export const brickTypesApi = {
 };
 
 export const brickInstancesApi = {
-  get: (id: string) => fetcher<BrickInstance>(`/api/bricks/instances/${encodeURIComponent(id)}`),
   action: (instanceId: string, actionId: string, payload?: unknown) =>
     fetcher<{
       ok: boolean;
@@ -212,5 +200,4 @@ export const boardKeys = {
   all: ['boards'] as const,
   detail: (id: string) => ['boards', id] as const,
   brickTypes: ['brickTypes'] as const,
-  instances: ['brickInstances'] as const,
 };

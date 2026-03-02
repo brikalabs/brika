@@ -203,16 +203,21 @@ export function ConfigSheet() {
   const [localConfig, setLocalConfig] = useState<Record<string, Json>>({});
   const [localLabel, setLocalLabel] = useState('');
 
-  // Sync state when opening
+  // Sync form state only when a different brick config sheet opens.
+  // Reading from the store inside the effect (instead of depending on
+  // `placement`) prevents unrelated board mutations (layout drags,
+  // SSE echo-backs, other brick changes) from resetting unsaved edits.
   const open = !!configBrickId;
   useEffect(() => {
-    if (placement) {
-      setLocalConfig({
-        ...placement.config,
-      });
-      setLocalLabel(placement.label ?? '');
+    if (!configBrickId) return;
+    const p = useBoardStore
+      .getState()
+      .activeBoard?.bricks.find((b) => b.instanceId === configBrickId);
+    if (p) {
+      setLocalConfig({ ...p.config });
+      setLocalLabel(p.label ?? '');
     }
-  }, [placement]);
+  }, [configBrickId]);
 
   const handleClose = useCallback(
     (isOpen: boolean) => {
@@ -238,29 +243,42 @@ export function ConfigSheet() {
     }
     setSaving(true);
 
-    // Save label if changed
-    const trimmedLabel = localLabel.trim();
-    const oldLabel = placement?.label ?? '';
-    if (trimmedLabel !== oldLabel) {
-      renameBrick({
-        instanceId: configBrickId,
-        label: trimmedLabel || undefined,
-      });
-    }
+    try {
+      // Save label if changed
+      const trimmedLabel = localLabel.trim();
+      const oldLabel = placement?.label ?? '';
+      if (trimmedLabel !== oldLabel) {
+        renameBrick({
+          instanceId: configBrickId,
+          label: trimmedLabel || undefined,
+        });
+      }
 
-    // Save config if there are config fields
-    const configSchema = brickType?.config;
-    if (configSchema && configSchema.length > 0) {
-      await boardsApi.updateBrick(activeBoard.id, configBrickId, {
-        config: localConfig,
-      });
-      useBoardStore.getState().updateBrickConfig(configBrickId, localConfig);
-    }
+      // Save config if there are config fields
+      const configSchema = brickType?.config;
+      if (configSchema && configSchema.length > 0) {
+        // Optimistic update for immediate feedback; SSE echo-back is
+        // deduplicated by the store's shallow equality check.
+        useBoardStore.getState().updateBrickConfig(configBrickId, localConfig);
+        await boardsApi.updateBrick(activeBoard.id, configBrickId, {
+          config: localConfig,
+        });
+      }
 
-    setSaving(false);
-    setConfigBrickId(null);
-    setLocalConfig({});
-    setLocalLabel('');
+      setConfigBrickId(null);
+      setLocalConfig({});
+      setLocalLabel('');
+    } catch {
+      // Revert the optimistic update on failure
+      const serverPlacement = useBoardStore
+        .getState()
+        .activeBoard?.bricks.find((b) => b.instanceId === configBrickId);
+      if (serverPlacement) {
+        setLocalConfig({ ...serverPlacement.config });
+      }
+    } finally {
+      setSaving(false);
+    }
   }, [
     activeBoard,
     configBrickId,

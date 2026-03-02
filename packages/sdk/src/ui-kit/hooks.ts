@@ -54,10 +54,9 @@ export function useAction<T>(_ref: ActionRef<void, T>): ActionResult<T> {
 }
 
 /**
- * Imperatively call a server-side action.
- *
- * Use for mutations (scan, commission, remove, etc.).
+ * Returns a stable callback to call a server-side action.
+ * Reads the plugin UID from React context — works in both pages and bricks.
  */
-export function callAction<I, O>(_ref: ActionRef<I, O>, _input?: I): Promise<O> {
-  throw new Error('callAction() is only available in plugin pages');
+export function useCallAction(): <I, O>(ref: ActionRef<I, O>, input?: I) => Promise<O> {
+  throw new Error('useCallAction() is only available in plugin pages/bricks');
 }

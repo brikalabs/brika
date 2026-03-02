@@ -55,20 +55,14 @@ export const BrickActions = defineActions('brick', {
   typeUnregistered: z.object({
     brickTypeId: z.string(),
   }),
-  instanceMounted: z.object({
-    instanceId: z.string(),
+  dataUpdated: z.object({
     brickTypeId: z.string(),
+    data: z.unknown(),
   }),
-  instancePatched: z.object({
-    instanceId: z.string(),
-    mutations: z.array(z.unknown()),
-  }),
-  instanceUnmounted: z.object({
-    instanceId: z.string(),
-  }),
-  pluginDisconnected: z.object({
+  moduleRecompiled: z.object({
     pluginName: z.string(),
-    instanceIds: z.array(z.string()),
+    brickTypeId: z.string(),
+    moduleUrl: z.string(),
   }),
 });
 

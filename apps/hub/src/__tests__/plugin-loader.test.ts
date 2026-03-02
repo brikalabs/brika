@@ -7,7 +7,6 @@ import { beforeEach, describe, expect, mock, test } from 'bun:test';
 import { get, stub, useTestBed } from '@brika/di/testing';
 import { PluginLoader } from '@/runtime/bootstrap/plugin-loader';
 import type { BrikaConfig } from '@/runtime/config';
-import { ConfigLoader } from '@/runtime/config';
 import { Logger } from '@/runtime/logs/log-router';
 import { PluginManager } from '@/runtime/plugins/plugin-manager';
 import { PluginRegistry } from '@/runtime/registry';
@@ -46,7 +45,6 @@ describe('PluginLoader', () => {
   let registryInitMock: ReturnType<typeof mock>;
   let syncToConfigMock: ReturnType<typeof mock>;
   let stateSyncMock: ReturnType<typeof mock>;
-  let resolvePluginMock: ReturnType<typeof mock>;
   let pmLoadMock: ReturnType<typeof mock>;
   let pmStopAllMock: ReturnType<typeof mock>;
 
@@ -55,7 +53,6 @@ describe('PluginLoader', () => {
     registryInitMock = mock().mockResolvedValue(undefined);
     syncToConfigMock = mock().mockResolvedValue(undefined);
     stateSyncMock = mock().mockResolvedValue(undefined);
-    resolvePluginMock = mock();
     pmLoadMock = mock().mockResolvedValue(undefined);
     pmStopAllMock = mock().mockResolvedValue(undefined);
 
@@ -67,9 +64,7 @@ describe('PluginLoader', () => {
     stub(PluginRegistry, {
       init: registryInitMock,
       syncToConfig: syncToConfigMock,
-    });
-    stub(ConfigLoader, {
-      resolvePluginEntry: resolvePluginMock,
+      pluginsDir: '/mock/plugins-dir',
     });
     stub(PluginManager, {
       load: pmLoadMock,
@@ -122,10 +117,6 @@ describe('PluginLoader', () => {
       ];
       const config = createMockConfig(plugins);
 
-      resolvePluginMock.mockResolvedValue({
-        rootDirectory: '/path/to/plugin',
-      });
-
       await loader.load(config);
 
       expect(syncToConfigMock).toHaveBeenCalledWith(plugins);
@@ -143,10 +134,6 @@ describe('PluginLoader', () => {
         },
       ];
       const config = createMockConfig(plugins);
-
-      resolvePluginMock.mockResolvedValue({
-        rootDirectory: '/path/to/plugin',
-      });
 
       await loader.load(config);
 
@@ -166,19 +153,11 @@ describe('PluginLoader', () => {
       ];
       const config = createMockConfig(plugins);
 
-      resolvePluginMock
-        .mockResolvedValueOnce({
-          rootDirectory: '/path/to/plugin-a',
-        })
-        .mockResolvedValueOnce({
-          rootDirectory: '/path/to/plugin-b',
-        });
-
       await loader.load(config);
 
       expect(pmLoadMock).toHaveBeenCalledTimes(2);
-      expect(pmLoadMock).toHaveBeenCalledWith('/path/to/plugin-a');
-      expect(pmLoadMock).toHaveBeenCalledWith('/path/to/plugin-b');
+      expect(pmLoadMock).toHaveBeenCalledWith('@test/plugin-a', '/mock/plugins-dir');
+      expect(pmLoadMock).toHaveBeenCalledWith('@test/plugin-b', '/mock/plugins-dir');
     });
 
     test('handles empty plugin list', async () => {
@@ -204,17 +183,15 @@ describe('PluginLoader', () => {
       ];
       const config = createMockConfig(plugins);
 
-      resolvePluginMock
-        .mockRejectedValueOnce(new Error('Failed to resolve'))
-        .mockResolvedValueOnce({
-          rootDirectory: '/path/to/plugin-b',
-        });
+      pmLoadMock
+        .mockRejectedValueOnce(new Error('Failed to load'))
+        .mockResolvedValueOnce(undefined);
 
       await loader.load(config);
 
       // Should still try to load plugin-b
-      expect(pmLoadMock).toHaveBeenCalledTimes(1);
-      expect(pmLoadMock).toHaveBeenCalledWith('/path/to/plugin-b');
+      expect(pmLoadMock).toHaveBeenCalledTimes(2);
+      expect(pmLoadMock).toHaveBeenCalledWith('@test/plugin-b', '/mock/plugins-dir');
     });
 
     test('handles plugin load failure gracefully', async () => {
@@ -226,9 +203,6 @@ describe('PluginLoader', () => {
       ];
       const config = createMockConfig(plugins);
 
-      resolvePluginMock.mockResolvedValue({
-        rootDirectory: '/path/to/plugin',
-      });
       pmLoadMock.mockRejectedValue(new Error('Load failed'));
 
       // Should not throw

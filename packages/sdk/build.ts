@@ -12,7 +12,8 @@ function assertBuild(result: Awaited<ReturnType<typeof Bun.build>>): void {
 const result = await Bun.build({
   entrypoints: [
     './src/index.ts',
-    './src/bricks.ts',
+    './src/actions.ts',
+    './src/brick-views.ts',
     './src/sparks.ts',
     './src/lifecycle.ts',
     './src/storage.ts',
@@ -20,8 +21,6 @@ const result = await Bun.build({
     './src/ui-kit/index.ts',
     './src/ui-kit/icons.ts',
     './src/ui-kit/hooks.ts',
-    './src/jsx-runtime.ts',
-    './src/jsx-dev-runtime.ts',
   ],
   outdir: './dist',
   root: './src',

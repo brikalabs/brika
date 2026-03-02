@@ -1,14 +1,16 @@
 /**
  * Plugin Actions API
  *
- * Define server-side actions that plugin pages can call transparently.
- * The module compiler transforms action imports into lightweight refs
- * at build time — no manual endpoint registration needed.
+ * Define server-side actions that plugin pages and bricks can call.
+ * Action IDs are auto-generated at build time from `hash(filePath:exportName)`
+ * — deterministic, order-independent, and collision-resistant.
+ *
+ * The build system injects IDs automatically. Developers never type or see the ID.
  *
  * @example
  * ```ts
  * // actions.ts (plugin process)
- * import { defineAction } from '@brika/sdk';
+ * import { defineAction } from '@brika/sdk/actions';
  *
  * export const getDevices = defineAction(async () => {
  *   return controller.getDevices();
@@ -21,10 +23,11 @@
  *
  * ```tsx
  * // pages/devices.tsx (browser — compiled by Bun.build)
- * import { useAction, callAction } from '@brika/sdk/ui-kit/hooks';
+ * import { useAction, useCallAction } from '@brika/sdk/ui-kit/hooks';
  * import { getDevices, scan } from '../actions';
  *
  * export default function DevicesPage() {
+ *   const callAction = useCallAction();
  *   const { data, loading, refetch } = useAction(getDevices);
  *   return <button onClick={() => callAction(scan).then(refetch)}>Scan</button>;
  * }
@@ -50,27 +53,19 @@ export interface ActionRef<TInput = void, TOutput = unknown> {
   };
 }
 
-// ─── Internals ───────────────────────────────────────────────────────────────
+// ─── Internal tracking for deferred action refs ──────────────────────────────
 
-let counter = 0;
+type ActionHandler<TInput, TOutput> = (input: TInput) => TOutput | Promise<TOutput>;
 
-/**
- * Multiplicative hash → base36.
- * Matches the compiler's `actionId()` — both use source-order index.
- */
-function actionId(index: number): string {
-  return (Math.imul(index + 1, 0x9e3779b9) >>> 0).toString(36);
-}
+const pendingHandlers = new WeakMap<object, (input?: unknown) => unknown>();
 
 // ─── API ─────────────────────────────────────────────────────────────────────
 
 /**
  * Define a server-side action.
  *
- * The action ID is auto-generated from source order — the module compiler
- * produces matching IDs using the same hash on `Bun.Transpiler.scan()` exports.
- *
- * Actions files should only export `defineAction()` results.
+ * The build system auto-injects the action ID via `__finalizeActions` at
+ * module evaluation time. The developer just writes `defineAction(handler)`.
  *
  * @example
  * ```ts
@@ -78,11 +73,46 @@ function actionId(index: number): string {
  * ```
  */
 export function defineAction<TInput = void, TOutput = unknown>(
-  handler: (input: TInput) => TOutput | Promise<TOutput>
+  handlerOrId: string | ActionHandler<TInput, TOutput>,
+  handler?: ActionHandler<TInput, TOutput>,
 ): ActionRef<TInput, TOutput> {
-  const id = actionId(counter++);
-  getContext().registerAction(id, handler as (input?: unknown) => unknown);
-  return {
-    __actionId: id,
-  } as ActionRef<TInput, TOutput>;
+  if (typeof handlerOrId === 'string') {
+    // Explicit ID — injected by build system or used in tests
+    const id = handlerOrId;
+    if (typeof handler !== 'function') {
+      throw new TypeError(`defineAction('${id}') requires a handler function as the second argument`);
+    }
+    getContext().registerAction(id, handler as (input?: unknown) => unknown);
+    return { __actionId: id } as ActionRef<TInput, TOutput>;
+  }
+
+  // Deferred: create ref now, finalization assigns the ID later
+  const ref = { __actionId: '' } as ActionRef<TInput, TOutput>;
+  pendingHandlers.set(ref, handlerOrId as (input?: unknown) => unknown);
+  return ref;
+}
+
+// ─── Build-time finalization ─────────────────────────────────────────────────
+
+/**
+ * Finalize deferred action refs by assigning precomputed IDs and registering handlers.
+ *
+ * Called automatically by the server build plugin at the end of each action module.
+ * NOT part of the public API — the `__` prefix signals internal use.
+ *
+ * @param ids - Map of `{ exportName: precomputedActionId }` from the build plugin
+ * @param exports - Object of `{ exportName: actionRef }` from the module
+ */
+export function __finalizeActions(ids: Record<string, string>, exports: Record<string, unknown>): void {
+  for (const [name, ref] of Object.entries(exports)) {
+    if (!ref || typeof ref !== 'object') continue;
+    const handler = pendingHandlers.get(ref);
+    if (!handler) continue;
+
+    const id = ids[name];
+    if (!id) continue;
+    (ref as { __actionId: string }).__actionId = id;
+    getContext().registerAction(id, handler);
+    pendingHandlers.delete(ref);
+  }
 }

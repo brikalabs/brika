@@ -72,4 +72,13 @@ export const PluginErrors = {
       message: 'Plugin was forcefully terminated',
     };
   },
+
+  buildFailed(errors: string[]): PluginError {
+    const message = errors.join('; ');
+    return {
+      key: 'plugins:errors.buildFailed',
+      params: { errors: message },
+      message: `Build failed: ${message}`,
+    };
+  },
 } as const;

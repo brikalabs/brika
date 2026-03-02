@@ -1,6 +1,6 @@
 import { useParams } from '@tanstack/react-router';
 import { LayoutGrid, Plus } from 'lucide-react';
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect } from 'react';
 import { Button, Skeleton } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
 import { BoardGrid } from './components/BoardGrid';
@@ -24,26 +24,14 @@ export function BoardContent() {
   });
 
   // Sync route param → store (for mutations that read activeBoardId).
-  // Also clear per-instance data when the board changes.
-  const prevIdRef = useRef(boardId);
   useEffect(() => {
     if (!boardId) {
       return;
     }
 
-    const changed = prevIdRef.current !== boardId;
-    prevIdRef.current = boardId;
-
     useBoardStore.setState({
       activeBoardId: boardId,
     });
-
-    if (changed) {
-      useBoardStore.setState({
-        bodies: new Map(),
-        disconnectedInstances: new Set(),
-      });
-    }
   }, [boardId]);
 
   // Per-board data loading and SSE

@@ -1,24 +1,24 @@
 {
   "name": "Brika Matter",
-  "description": "Integration des appareils Matter pour la maison connectee",
+  "description": "Intégration des appareils Matter pour la maison connectée",
   "pages": {
     "devices": {
       "name": "Appareils",
-      "description": "Gerer vos appareils Matter"
+      "description": "Gérer vos appareils Matter"
     }
   },
   "bricks": {
     "devices": {
       "name": "Appareils Matter",
-      "description": "Voir et gerer les appareils Matter sur votre reseau"
+      "description": "Voir et gérer les appareils Matter sur votre réseau"
     },
     "device": {
       "name": "Appareil Matter",
-      "description": "Controler un appareil Matter",
+      "description": "Contrôler un appareil Matter",
       "config": {
         "deviceId": {
           "label": "Appareil",
-          "description": "Selectionner un appareil Matter connecte"
+          "description": "Sélectionner un appareil Matter connecté"
         }
       }
     }
@@ -26,53 +26,79 @@
   "blocks": {
     "command": {
       "name": "Commande Matter",
-      "description": "Envoyer une commande a un appareil Matter"
+      "description": "Envoyer une commande à un appareil Matter"
     }
   },
   "sparks": {
     "device-state-changed": {
-      "name": "Etat de l'appareil modifie",
-      "description": "Emis lorsqu'un appareil Matter change d'etat"
+      "name": "État de l'appareil modifié",
+      "description": "Émis lorsqu'un appareil Matter change d'état"
     },
     "device-discovered": {
-      "name": "Appareil decouvert",
-      "description": "Emis lorsqu'un nouvel appareil Matter est detecte sur le reseau"
+      "name": "Appareil découvert",
+      "description": "Émis lorsqu'un nouvel appareil Matter est détecté sur le réseau"
     }
   },
+  "device": {
+    "online": "En ligne",
+    "offline": "Hors ligne",
+    "on": "Allumé",
+    "off": "Éteint",
+    "locked": "Verrouillé",
+    "unlocked": "Déverrouillé",
+    "types": {
+      "light": "Lumière",
+      "lock": "Verrou",
+      "cover": "Volet",
+      "thermostat": "Thermostat",
+      "switch": "Interrupteur",
+      "sensor": "Capteur",
+      "bridge": "Pont",
+      "unknown": "Appareil"
+    },
+    "controls": {
+      "brightness": "Luminosité",
+      "position": "Position",
+      "setpoint": "Consigne",
+      "current": "Actuel",
+      "humidity": "Humidité",
+      "open": "Ouvrir",
+      "stop": "Stop",
+      "close": "Fermer"
+    },
+    "noDeviceSelected": "Aucun appareil sélectionné",
+    "deviceNotFound": "Appareil introuvable",
+    "noDevicesCommissioned": "Aucun appareil connecté",
+    "matterDevices": "Appareils Matter"
+  },
   "devicesPage": {
-    "scanNetwork": "Scanner le reseau",
+    "scanNetwork": "Scanner le réseau",
     "scanning": "Scan en cours...",
     "commissionTitle": "Connecter un nouvel appareil",
-    "commissionDescription": "Entrez le code d'appairage a 11 chiffres ou la chaine QR (MT:...) de votre appareil Matter.",
+    "commissionDescription": "Entrez le code d'appairage à 11 chiffres ou la chaîne QR (MT:...) de votre appareil Matter.",
     "commissionPlaceholder": "12345678901 ou MT:Y3.13OTB...",
     "commission": "Connecter",
     "commissioning": "Connexion...",
     "deviceCount": "{{count}} appareil",
     "deviceCount_other": "{{count}} appareils",
     "onlineCount": "{{count}} en ligne",
-    "online": "En ligne",
-    "offline": "Hors ligne",
-    "on": "Allume",
-    "off": "Eteint",
     "toggling": "Basculement...",
     "remove": "Supprimer",
     "removing": "Suppression...",
-    "emptyTitle": "Aucun appareil connecte.",
-    "emptyDescription": "Scannez votre reseau ou connectez un appareil pour commencer.",
+    "emptyTitle": "Aucun appareil connecté.",
+    "emptyDescription": "Scannez votre réseau ou connectez un appareil pour commencer.",
     "vendor": "Fabricant",
     "product": "Produit",
-    "serial": "Serie",
+    "serial": "Série",
     "software": "Logiciel",
-    "locked": "Verrouille",
-    "unlocked": "Deverrouille",
     "brightness": "{{value}}%",
     "position": "Pos : {{value}}%",
     "temperature": "{{value}}°C",
     "viaBridge": "via {{bridge}}",
-    "connectedDevices": "{{count}} appareil connecte",
-    "connectedDevices_other": "{{count}} appareils connectes",
-    "deviceTypes": {
-      "light": "Lumieres",
+    "connectedDevices": "{{count}} appareil connecté",
+    "connectedDevices_other": "{{count}} appareils connectés",
+    "typesPlural": {
+      "light": "Lumières",
       "lock": "Verrous",
       "cover": "Volets",
       "thermostat": "Thermostats",
@@ -85,7 +111,7 @@
   "preferences": {
     "autoCommission": {
       "label": "Commission automatique",
-      "description": "Commissionnement automatique des appareils decouverts"
+      "description": "Commissionnement automatique des appareils découverts"
     }
   }
 }

@@ -1,60 +1,66 @@
-import { Avatar, Box, Column, defineBrick, Icon, Row, Text, useLocale } from '@brika/sdk/bricks';
-import { useWeather } from '../use-weather';
-import { formatTempWithUnit, getWeatherVisuals } from '../utils';
-import { CITY_UNIT_CONFIG, WeatherError, WeatherLoading } from './shared';
+/**
+ * Compact weather brick — client-side rendered.
+ *
+ * This brick runs in the browser as a real React component.
+ * Weather data is pushed from the plugin process via setBrickData().
+ * Imports are resolved by the bridge (globalThis.__brika) at build time.
+ */
 
-// ─── Brick Definition ──────────────────────────────────────────────────────
+import { useBrickConfig, useBrickData } from '@brika/sdk/brick-views';
+import { useLocale } from '@brika/sdk/ui-kit/hooks';
+import { MapPin, Thermometer } from 'lucide-react';
+import { CityError, formatTempWithUnit, LoadingSpinner, resolveCity, resolveUnit } from './shared';
 
-export const compactBrick = defineBrick(
-  {
-    id: 'compact',
-    families: ['sm'],
-    minSize: { w: 1, h: 1 },
-    maxSize: { w: 3, h: 3 },
-    config: CITY_UNIT_CONFIG,
-  },
-  () => {
-    const { t } = useLocale();
-    const { weather, unit } = useWeather();
+// ─── Types (inlined — can't import from plugin runtime code) ────────────────
 
-    if (weather.loading && !weather.current) return <WeatherLoading variant="compact" />;
-    if (weather.error && !weather.current) return <WeatherError message={t('ui.noData')} />;
-    if (!weather.current || !weather.location) return <WeatherLoading variant="compact" />;
+interface CompactCityData {
+  temperature: number;
+  apparentTemperature: number;
+  conditionKey: string;
+  city: string;
+  gradient: string;
+}
 
-    const { meta, color, gradient } = getWeatherVisuals(weather.current.weatherCode);
-    const temp = formatTempWithUnit(weather.current.temperature, unit);
+interface CompactWeatherData {
+  defaultCity: string;
+  unit: string;
+  cities: Record<string, CompactCityData>;
+  cityErrors?: Record<string, string>;
+}
 
-    return (
-      <Box background={gradient} rounded="sm" padding="md" grow>
-        <Column gap="sm" justify="center" grow>
-          <Row gap="sm" align="center">
-            <Avatar icon={meta.icon} color={color} size="md" />
-            <Column gap="sm" grow>
-              <Text content={temp} variant="heading" weight="bold" color="#ffffff" maxLines={1} />
-              <Text content={t(meta.labelKey)} variant="caption" color="rgba(255,255,255,0.65)" maxLines={1} />
-            </Column>
-          </Row>
-          <Row gap="sm" align="center">
-            <Icon name="map-pin" size="sm" color="rgba(255,255,255,0.5)" />
-            <Text
-              content={weather.location.name}
-              variant="caption"
-              weight="semibold"
-              color="rgba(255,255,255,0.85)"
-              maxLines={1}
-            />
-          </Row>
-          <Row gap="sm" align="center">
-            <Icon name="thermometer" size="sm" color="rgba(255,255,255,0.5)" />
-            <Text
-              content={t('stats.feelsLikeTemp', { temp: formatTempWithUnit(weather.current.apparentTemperature, unit) })}
-              variant="caption"
-              color="rgba(255,255,255,0.6)"
-              maxLines={1}
-            />
-          </Row>
-        </Column>
-      </Box>
-    );
-  },
-);
+// ─── Component ──────────────────────────────────────────────────────────────
+
+export default function CompactWeather() {
+  const data = useBrickData<CompactWeatherData>();
+  const config = useBrickConfig();
+  const { t } = useLocale();
+
+  if (!data) return <LoadingSpinner />;
+
+  const cityKey = resolveCity(config, data.defaultCity);
+  const cityData = data.cities[cityKey];
+
+  if (!cityData) return <CityError error={data.cityErrors?.[cityKey]} />;
+
+  const unit = resolveUnit(config, data.unit);
+
+  return (
+    <div
+      className="flex h-full flex-col justify-center gap-2 rounded-lg p-3"
+      style={{ background: cityData.gradient }}
+    >
+      <div className="flex items-center gap-2">
+        <span className="text-2xl font-bold text-white">{formatTempWithUnit(cityData.temperature, unit)}</span>
+        <span className="text-sm text-white/70">{t(`conditions.${cityData.conditionKey}`)}</span>
+      </div>
+      <div className="flex items-center gap-1 text-xs text-white/60">
+        <MapPin className="size-3" />
+        <span className="truncate">{cityData.city}</span>
+      </div>
+      <div className="flex items-center gap-1 text-xs text-white/50">
+        <Thermometer className="size-3" />
+        <span>{t('stats.feelsLike')} {formatTempWithUnit(cityData.apparentTemperature, unit)}</span>
+      </div>
+    </div>
+  );
+}

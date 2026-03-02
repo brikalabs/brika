@@ -20,6 +20,8 @@ export interface RegisteredBrickType {
   localId: string;
   /** Owning plugin */
   pluginName: string;
+  /** Plugin process UID (stable per load) */
+  pluginUid?: string;
   /** Display name */
   name?: string;
   /** Description */
@@ -82,20 +84,17 @@ export class BrickTypeRegistry {
       icon?: string;
       color?: string;
       config?: unknown[];
-    }
-  ): string {
+    },
+    pluginUid?: string
+  ): { fullId: string; isNew: boolean } {
     const fullId = `${pluginName}:${brickType.id}`;
-
-    if (this.#types.has(fullId)) {
-      this.logs.warn('Duplicate brick type registration', {
-        brickTypeId: fullId,
-      });
-    }
+    const isNew = !this.#types.has(fullId);
 
     this.#types.set(fullId, {
       fullId,
       localId: brickType.id,
       pluginName,
+      pluginUid,
       name: manifest?.name,
       description: manifest?.description,
       category: manifest?.category,
@@ -111,7 +110,7 @@ export class BrickTypeRegistry {
       brickTypeId: fullId,
       pluginName,
     });
-    return fullId;
+    return { fullId, isNew };
   }
 
   unregisterPlugin(pluginName: string): string[] {

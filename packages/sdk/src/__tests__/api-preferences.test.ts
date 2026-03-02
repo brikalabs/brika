@@ -2,8 +2,6 @@
  * Tests for SDK preferences, lifecycle, bricks, routes, and location APIs
  */
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
-import type { BrickComponent, BrickTypeSpec } from '@brika/ui-kit';
-import { Text } from '@brika/ui-kit';
 import type { DeviceLocation } from '../api/location';
 
 const mockGetPreferences = mock(() => ({
@@ -37,7 +35,6 @@ mock.module('../context', () => ({
 const { getPreferences, onPreferencesChange, setPreference, definePreferenceOptions } =
   await import('../api/preferences');
 const { onInit, onStop, onUninstall } = await import('../api/lifecycle');
-const { defineBrick } = await import('../api/bricks');
 const { defineRoute } = await import('../api/routes');
 const { getDeviceLocation } = await import('../api/location');
 
@@ -107,41 +104,6 @@ describe('lifecycle API', () => {
     const unsub = onUninstall(fn);
     expect(mockOnUninstall).toHaveBeenCalledWith(fn);
     expect(typeof unsub).toBe('function');
-  });
-});
-
-const testSpec: BrickTypeSpec = {
-  id: 'test',
-  name: 'Test',
-  families: ['sm'],
-};
-const testComponent: BrickComponent = () =>
-  Text({
-    content: 'test',
-  });
-
-describe('bricks API', () => {
-  beforeEach(() => {
-    mockRegisterBrickType.mockClear();
-  });
-
-  test('defineBrick returns compiled brick type', () => {
-    const result = defineBrick(testSpec, testComponent);
-    expect(result.spec).toBe(testSpec);
-    expect(result.component).toBe(testComponent);
-  });
-
-  test('defineBrick tries to register with context', () => {
-    defineBrick(testSpec, testComponent);
-    expect(mockRegisterBrickType).toHaveBeenCalledTimes(1);
-  });
-
-  test('defineBrick handles context not available', () => {
-    mockRegisterBrickType.mockImplementationOnce(() => {
-      throw new Error('No context');
-    });
-    const result = defineBrick(testSpec, testComponent);
-    expect(result.spec).toBe(testSpec);
   });
 });
 

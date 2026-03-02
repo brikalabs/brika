@@ -1,345 +1,227 @@
-import {
-  Box,
-  Button,
-  defineBrick,
-  Row,
-  Slider,
-  Stat,
-  Status,
-  Toggle,
-  useBrickSize,
-  useEffect,
-  usePreference,
-  useState,
-} from '@brika/sdk/bricks';
-import { type DeviceType, getMatterController, type MatterDevice } from '../matter-controller';
+/**
+ * Matter Device — client-rendered brick.
+ *
+ * Adaptive layouts by size:
+ *   1×1  — micro: centered icon + state label, tappable for toggleable devices
+ *   N×1  — strip: horizontal row with icon, name, state label, tappable
+ *   1×N  — narrow: vertical icon + name + controls with tight padding
+ *   else — full: header + divider + controls, compact styling at ≤2×2
+ *
+ * Data is pushed from the plugin process via setBrickData('device', ...).
+ * Commands are sent via callAction(doDeviceCommand, ...).
+ */
 
-// ─── Icon / color per device type ───────────────────────────────────────────
+import { useBrickConfig, useBrickData, useBrickSize } from '@brika/sdk/brick-views';
+import { useLocale } from '@brika/sdk/ui-kit/hooks';
+import clsx from 'clsx';
+import { Loader2, Settings } from 'lucide-react';
+import { useCallback } from 'react';
+import { AmbientGlow, DeviceIcon, StatusBadge } from './components';
+import { DeviceControls } from './controls';
+import { useSendCommand } from './controls/send-command';
+import { getDeviceTheme } from './theme';
+import type { DeviceData, DeviceState } from './types';
 
-const DEVICE_META: Record<DeviceType, { icon: string; color: string; label: string }> = {
-  light:      { icon: 'lightbulb',    color: '#f59e0b', label: 'Light' },
-  lock:       { icon: 'lock',         color: '#6366f1', label: 'Lock' },
-  cover:      { icon: 'blinds',       color: '#0ea5e9', label: 'Cover' },
-  thermostat: { icon: 'thermometer',  color: '#ef4444', label: 'Thermostat' },
-  switch:     { icon: 'toggle-right', color: '#22c55e', label: 'Switch' },
-  sensor:     { icon: 'eye',          color: '#8b5cf6', label: 'Sensor' },
-  bridge:     { icon: 'network',      color: '#64748b', label: 'Bridge' },
-  unknown:    { icon: 'cpu',          color: '#64748b', label: 'Device' },
-};
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function meta(type: DeviceType) {
-  return DEVICE_META[type] ?? DEVICE_META.unknown;
-}
-
-// ─── Helpers ────────────────────────────────────────────────────────────────
-
-/** Convert HSV (h 0-360, s 0-100, v 0-100) → CSS hex color */
-function hsvToHex(h: number, s: number, v: number): string {
-  const sn = s / 100;
-  const vn = v / 100;
-  const c = vn * sn;
-  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
-  const m = vn - c;
-  let r = 0, g = 0, b = 0;
-  if (h < 60)       { r = c; g = x; }
-  else if (h < 120) { r = x; g = c; }
-  else if (h < 180) { g = c; b = x; }
-  else if (h < 240) { g = x; b = c; }
-  else if (h < 300) { r = x; b = c; }
-  else              { r = c; b = x; }
-  const toHex = (n: number) => Math.round((n + m) * 255).toString(16).padStart(2, '0');
-  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-}
-
-/** Convert color temperature in mireds → approximate CSS hex color */
-function miredsToHex(mireds: number): string {
-  // Kelvin = 1,000,000 / mireds. Map warm (500 mireds / 2000K) → cool (153 mireds / 6500K)
-  const kelvin = Math.round(1_000_000 / Math.max(mireds, 100));
-  // Simplified Kelvin → RGB (Tanner Helland algorithm)
-  const t = kelvin / 100;
-  let r: number, g: number, b: number;
-  if (t <= 66) {
-    r = 255;
-    g = Math.min(255, Math.max(0, 99.47 * Math.log(t) - 161.12));
-    b = t <= 19 ? 0 : Math.min(255, Math.max(0, 138.52 * Math.log(t - 10) - 305.04));
-  } else {
-    r = Math.min(255, Math.max(0, 329.7 * ((t - 60) ** -0.1332)));
-    g = Math.min(255, Math.max(0, 288.12 * ((t - 60) ** -0.0755)));
-    b = 255;
-  }
-  const toHex = (n: number) => Math.round(n).toString(16).padStart(2, '0');
-  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-}
-
-// ─── Device-type specific controls ──────────────────────────────────────────
-
-function LightControls({ device, height }: Readonly<{ device: MatterDevice; height: number }>) {
-  const isOn = Boolean(device.state.on);
-  const brightness = device.state.brightness == null ? null : Number(device.state.brightness);
-  const hue = device.state.hue == null ? null : Number(device.state.hue);
-  const saturation = device.state.saturation == null ? null : Number(device.state.saturation);
-  const colorTempMireds = device.state.colorTempMireds == null ? null : Number(device.state.colorTempMireds);
-  const hasColor = hue != null && saturation != null;
-  const hasColorTemp = colorTempMireds != null;
-
-  // Compute a preview color from current state
-  let previewColor = '#f59e0b';
-  if (hasColor) previewColor = hsvToHex(hue, saturation, brightness ?? 100);
-  else if (hasColorTemp) previewColor = miredsToHex(colorTempMireds);
-
-  const handleToggle = () => {
-    getMatterController().sendCommand(device.nodeId, 'toggle');
-  };
-
-  const handleBrightness = (payload?: Record<string, unknown>) => {
-    const value = Number(payload?.value ?? 100);
-    const level = Math.round((value / 100) * 254);
-    getMatterController().sendCommand(device.nodeId, 'setBrightness', { level: String(level) });
-  };
-
-  const handleHue = (payload?: Record<string, unknown>) => {
-    const deg = Number(payload?.value ?? 0);
-    // degrees 0-360 → Matter hue 0-254
-    const matterHue = Math.round((deg / 360) * 254);
-    const matterSat = saturation == null ? 254 : Math.round((saturation / 100) * 254);
-    getMatterController().sendCommand(device.nodeId, 'setHueSaturation', {
-      hue: String(matterHue),
-      saturation: String(matterSat),
-    });
-  };
-
-  const handleSaturation = (payload?: Record<string, unknown>) => {
-    const pct = Number(payload?.value ?? 100);
-    const matterHue = hue == null ? 0 : Math.round((hue / 360) * 254);
-    const matterSat = Math.round((pct / 100) * 254);
-    getMatterController().sendCommand(device.nodeId, 'setHueSaturation', {
-      hue: String(matterHue),
-      saturation: String(matterSat),
-    });
-  };
-
-  const handleColorTemp = (payload?: Record<string, unknown>) => {
-    const mireds = Number(payload?.value ?? 370);
-    getMatterController().sendCommand(device.nodeId, 'setColorTemp', { mireds: String(mireds) });
-  };
-
-  return (
-    <>
-      <Row>
-        <Toggle label="Power" checked={isOn} onToggle={handleToggle} icon="power" color={previewColor} />
-        <Box background={previewColor} rounded="full" width="24px" height="24px" />
-      </Row>
-      {height >= 3 && brightness != null && (
-        <Slider
-          label="Brightness"
-          value={brightness}
-          min={0}
-          max={100}
-          step={5}
-          unit="%"
-          onChange={handleBrightness}
-          icon="sun"
-          color={previewColor}
-        />
-      )}
-      {height >= 4 && hasColor && (
-        <Slider
-          label="Hue"
-          value={hue}
-          min={0}
-          max={360}
-          step={5}
-          unit="°"
-          onChange={handleHue}
-          icon="palette"
-          color={hsvToHex(hue, 100, 100)}
-        />
-      )}
-      {height >= 4 && hasColor && (
-        <Slider
-          label="Saturation"
-          value={saturation}
-          min={0}
-          max={100}
-          step={5}
-          unit="%"
-          onChange={handleSaturation}
-          icon="droplets"
-          color={previewColor}
-        />
-      )}
-      {height >= 3 && hasColorTemp && !hasColor && (
-        <Slider
-          label="Temperature"
-          value={colorTempMireds}
-          min={153}
-          max={500}
-          step={10}
-          onChange={handleColorTemp}
-          icon="thermometer"
-          color={miredsToHex(colorTempMireds)}
-        />
-      )}
-    </>
-  );
-}
-
-function LockControls({ device }: Readonly<{ device: MatterDevice }>) {
-  const isLocked = Boolean(device.state.locked);
-
-  const handleToggle = () => {
-    getMatterController().sendCommand(device.nodeId, isLocked ? 'unlock' : 'lock');
-  };
-
-  return (
-    <Toggle
-      label={isLocked ? 'Locked' : 'Unlocked'}
-      checked={isLocked}
-      onToggle={handleToggle}
-      icon={isLocked ? 'lock' : 'lock-open'}
-      color={isLocked ? '#22c55e' : '#ef4444'}
-    />
-  );
-}
-
-function CoverControls({ device }: Readonly<{ device: MatterDevice }>) {
-  const position = Number(device.state.coverPosition);
-
-  const handleOpen = () => getMatterController().sendCommand(device.nodeId, 'coverOpen');
-  const handleClose = () => getMatterController().sendCommand(device.nodeId, 'coverClose');
-  const handleStop = () => getMatterController().sendCommand(device.nodeId, 'coverStop');
-
-  return (
-    <>
-      {position != null && (
-        <Stat label="Position" value={`${position}%`} icon="blinds" color="#0ea5e9" />
-      )}
-      <Row>
-        <Button label="Open" icon="chevron-up" onPress={handleOpen} variant="outline" size="sm" />
-        <Button label="Stop" icon="square" onPress={handleStop} variant="outline" size="sm" />
-        <Button label="Close" icon="chevron-down" onPress={handleClose} variant="outline" size="sm" />
-      </Row>
-    </>
-  );
-}
-
-function ThermostatControls({ device }: Readonly<{ device: MatterDevice }>) {
-  const temp = device.state.temperature;
-  const modeName = device.state.systemModeName;
-
-  return (
-    <>
-      {temp != null && (
-        <Stat label="Temperature" value={`${Number(temp)}`} unit="°C" icon="thermometer" color="#ef4444" />
-      )}
-      {typeof modeName === 'string' && (
-        <Stat label="Mode" value={modeName} icon="gauge" />
-      )}
-    </>
-  );
-}
-
-function SwitchControls({ device }: Readonly<{ device: MatterDevice }>) {
-  const isOn = Boolean(device.state.on);
-
-  const handleToggle = () => {
-    getMatterController().sendCommand(device.nodeId, 'toggle');
-  };
-
-  return <Toggle label="Power" checked={isOn} onToggle={handleToggle} icon="power" />;
-}
-
-function SensorControls({ device }: Readonly<{ device: MatterDevice }>) {
-  const entries = Object.entries(device.state);
-  if (entries.length === 0) {
-    return <Stat label="Sensor" value="No data" icon="eye" />;
-  }
-  // Show first two sensor values
-  return (
-    <>
-      {entries.slice(0, 2).map(([sensorKey, value]) => (
-        <Stat label={sensorKey} value={String(value)} icon="activity" />
-      ))}
-    </>
-  );
-}
-
-function DeviceControls({ device, height }: Readonly<{ device: MatterDevice; height: number }>) {
+/** Short state label for micro / strip layouts */
+function stateLabel(device: DeviceState): string {
   switch (device.deviceType) {
-    case 'light':      return <LightControls device={device} height={height} />;
-    case 'lock':       return <LockControls device={device} />;
-    case 'cover':      return <CoverControls device={device} />;
-    case 'thermostat': return <ThermostatControls device={device} />;
-    case 'switch':     return <SwitchControls device={device} />;
-    case 'sensor':     return <SensorControls device={device} />;
-    default:           return <Stat label={meta(device.deviceType).label} value={device.name} icon={meta(device.deviceType).icon} />;
+    case 'light':
+    case 'switch':
+      return device.state.on ? 'On' : 'Off';
+    case 'lock':
+      return device.state.locked ? 'Locked' : 'Unlocked';
+    case 'cover': {
+      const pos = device.state.coverPosition;
+      return pos == null ? 'Cover' : `${Number(pos)}%`;
+    }
+    case 'thermostat': {
+      const temp = device.state.temperature;
+      return temp == null ? '—' : `${Number(temp)}°`;
+    }
+    default:
+      return device.online ? 'Online' : 'Offline';
   }
 }
 
-// ─── Brick definition ───────────────────────────────────────────────────────
+const TAPPABLE_TYPES: ReadonlySet<string> = new Set(['light', 'switch', 'lock']);
 
-export const deviceBrick = defineBrick(
-  {
-    id: 'device',
-    name: 'Matter Device',
-    description: 'Control any Matter device — adapts to lights, locks, covers, thermostats and more',
-    icon: 'cpu',
-    color: '#6366f1',
-    families: ['sm', 'md'],
-    category: 'control',
-    minSize: { w: 1, h: 1 },
-    maxSize: { w: 6, h: 6 },
-    config: [
-      {
-        type: 'dynamic-dropdown',
-        name: 'deviceId',
-        label: 'Device',
-        description: 'Select a commissioned Matter device',
-      },
-    ],
-  },
-  () => {
-    const { height } = useBrickSize();
-    const [deviceId] = usePreference<string>('deviceId', '');
-    const [device, setDevice] = useState<MatterDevice | null>(null);
+interface DeviceLayoutProps {
+  device: DeviceState;
+  theme: { gradient: string; glow: string };
+  isActive: boolean;
+  typeLabel: string;
+  onTap: () => void;
+}
 
-    useEffect(() => {
-      if (!deviceId) {
-        setDevice(null);
-        return;
-      }
-
-      const controller = getMatterController();
-      const dev = controller.getDevice(deviceId);
-      if (dev) setDevice(dev);
-
-      const unsub = controller.onDeviceStateChanged((updated) => {
-        if (updated.nodeId === deviceId) setDevice(updated);
-      });
-
-      return unsub;
-    }, [deviceId]);
-
-    if (!deviceId) {
-      return <Stat label="Matter Device" value="No device" icon="cpu" />;
-    }
-
-    if (!device) {
-      return <Stat label="Matter Device" value="Not found" icon="cpu" />;
-    }
-
-    const { icon, color } = meta(device.deviceType);
-
+function MicroLayout({ device, theme, isActive, onTap }: Readonly<DeviceLayoutProps>) {
+  const tappable = TAPPABLE_TYPES.has(device.deviceType);
+  const base = 'relative flex h-full flex-col items-center justify-center gap-1.5 overflow-hidden rounded-lg';
+  const children = (
+    <>
+      <AmbientGlow color={theme.glow} active={isActive} />
+      <DeviceIcon type={device.deviceType} />
+      <span className="relative text-xs font-medium text-white/70">{stateLabel(device)}</span>
+    </>
+  );
+  if (tappable) {
     return (
-      <>
-        <Status
-          label={device.name}
-          status={device.online ? 'online' : 'offline'}
-          icon={icon}
-          color={color}
-        />
-        <DeviceControls device={device} height={height} />
-      </>
+      <button
+        type="button"
+        className={`${base} cursor-pointer transition-transform duration-150 active:scale-[0.95]`}
+        style={{ background: theme.gradient }}
+        onClick={onTap}
+      >
+        {children}
+      </button>
     );
-  },
-);
+  }
+  return (
+    <div className={base} style={{ background: theme.gradient }}>
+      {children}
+    </div>
+  );
+}
+
+function StripLayout({ device, theme, isActive, typeLabel, onTap }: Readonly<DeviceLayoutProps>) {
+  const tappable = TAPPABLE_TYPES.has(device.deviceType);
+  const base = 'relative flex h-full items-center gap-2.5 overflow-hidden rounded-lg px-3';
+  const children = (
+    <>
+      <AmbientGlow color={theme.glow} active={isActive} />
+      <DeviceIcon type={device.deviceType} size="sm" />
+      <div className="relative flex flex-1 flex-col overflow-hidden">
+        <span className="truncate text-sm font-semibold text-white">{device.name}</span>
+        <span className="text-[10px] text-white/50">{typeLabel}</span>
+      </div>
+      <span className="relative text-xs font-medium text-white/60">{stateLabel(device)}</span>
+    </>
+  );
+  if (tappable) {
+    return (
+      <button
+        type="button"
+        className={`${base} cursor-pointer transition-transform duration-150 active:scale-[0.97]`}
+        style={{ background: theme.gradient }}
+        onClick={onTap}
+      >
+        {children}
+      </button>
+    );
+  }
+  return (
+    <div className={base} style={{ background: theme.gradient }}>
+      {children}
+    </div>
+  );
+}
+
+// ─── Component ───────────────────────────────────────────────────────────────
+
+export default function DeviceBrick() {
+  const { width, height } = useBrickSize();
+  const config = useBrickConfig();
+  const data = useBrickData<DeviceData>();
+  const { t } = useLocale();
+  const sendCommand = useSendCommand();
+
+  const deviceId =
+    typeof config.deviceId === 'string' && config.deviceId ? config.deviceId : undefined;
+
+  // ─── Loading ─────────────────────────────────────────────────────────
+
+  if (!data) {
+    return (
+      <div className="flex flex-1 items-center justify-center">
+        <Loader2 className="size-5 animate-spin text-white/50" />
+      </div>
+    );
+  }
+
+  // ─── No device configured ────────────────────────────────────────────
+
+  if (!deviceId) {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center gap-2 p-3">
+        <Settings className="size-6 text-muted-foreground/50" />
+        <span className="text-xs text-muted-foreground">{t('device.noDeviceSelected')}</span>
+      </div>
+    );
+  }
+
+  // ─── Device not found ────────────────────────────────────────────────
+
+  const device = data.deviceMap[deviceId];
+
+  if (!device) {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center gap-2 p-3">
+        <Settings className="size-6 text-muted-foreground/50" />
+        <span className="text-xs text-muted-foreground">{t('device.deviceNotFound')}</span>
+      </div>
+    );
+  }
+
+  const theme = getDeviceTheme(device.deviceType);
+  const isActive = device.online && Boolean(device.state.on ?? device.state.locked ?? true);
+  const typeLabel = t(`device.types.${device.deviceType}`);
+
+  // ─── Tap handler for micro/strip tappable devices ────────────────────
+
+  const handleTap = useCallback(() => {
+    if (device.deviceType === 'lock') {
+      sendCommand(device.nodeId, device.state.locked ? 'unlock' : 'lock');
+    } else {
+      sendCommand(device.nodeId, 'toggle');
+    }
+  }, [sendCommand, device.nodeId, device.deviceType, device.state.locked]);
+
+  // ─── Micro layout (1×1) ──────────────────────────────────────────────
+
+  if (width <= 1 && height <= 1) {
+    return <MicroLayout device={device} theme={theme} isActive={isActive} typeLabel={typeLabel} onTap={handleTap} />;
+  }
+
+  // ─── Strip layout (height ≤ 1) ───────────────────────────────────────
+
+  if (height <= 1) {
+    return <StripLayout device={device} theme={theme} isActive={isActive} typeLabel={typeLabel} onTap={handleTap} />;
+  }
+
+  // ─── Main layout ─────────────────────────────────────────────────────
+
+  const compact = width <= 2 && height <= 2;
+
+  return (
+    <div
+      className={clsx(
+        'relative flex h-full flex-col overflow-hidden rounded-lg',
+        compact ? 'gap-2 p-3' : 'gap-3 p-4',
+      )}
+      style={{ background: theme.gradient }}
+    >
+      <AmbientGlow color={theme.glow} active={isActive} />
+
+      {/* Header */}
+      <div className="relative flex items-center gap-2">
+        <DeviceIcon type={device.deviceType} size={compact ? 'sm' : 'md'} />
+        <div className="flex flex-1 flex-col overflow-hidden">
+          <span className={clsx('truncate font-bold text-white', compact && 'text-sm')}>
+            {device.name}
+          </span>
+          <span className="text-[10px] text-white/50">{typeLabel}</span>
+        </div>
+        <StatusBadge online={device.online} />
+      </div>
+
+      {/* Divider */}
+      {!compact && <div className="h-px bg-white/10" />}
+
+      {/* Controls */}
+      <div className="relative flex flex-1 flex-col">
+        <DeviceControls device={device} height={height} />
+      </div>
+    </div>
+  );
+}

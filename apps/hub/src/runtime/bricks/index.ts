@@ -1,4 +1,3 @@
-export type { BrickInstance } from './brick-instance-manager';
-export { BrickInstanceManager } from './brick-instance-manager';
+export { BrickDataStore } from './brick-data-store';
 export type { RegisteredBrickType } from './brick-type-registry';
 export { BrickTypeRegistry } from './brick-type-registry';

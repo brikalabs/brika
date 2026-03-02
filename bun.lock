@@ -24,6 +24,7 @@
       "dependencies": {
         "@brika/auth": "workspace:*",
         "@brika/banner": "workspace:*",
+        "@brika/compiler": "workspace:*",
         "@brika/di": "workspace:*",
         "@brika/events": "workspace:*",
         "@brika/http": "workspace:*",
@@ -208,6 +209,13 @@
       },
       "devDependencies": {
         "@types/bun": "^1.3.5",
+      },
+    },
+    "packages/compiler": {
+      "name": "@brika/compiler",
+      "version": "0.3.0",
+      "devDependencies": {
+        "@types/bun": "^1.3.9",
       },
     },
     "packages/create-brika": {
@@ -429,6 +437,8 @@
       },
       "devDependencies": {
         "bun-types": "^1.3.5",
+        "class-variance-authority": "^0.7.1",
+        "clsx": "^2.1.1",
       },
     },
     "plugins/spotify": {
@@ -436,6 +446,10 @@
       "version": "0.3.0",
       "dependencies": {
         "@brika/sdk": "workspace:*",
+      },
+      "devDependencies": {
+        "class-variance-authority": "^0.7.1",
+        "clsx": "^2.1.1",
       },
     },
     "plugins/timer": {
@@ -446,6 +460,8 @@
       },
       "devDependencies": {
         "bun-types": "^1.3.5",
+        "class-variance-authority": "^0.7.1",
+        "clsx": "^2.1.1",
       },
     },
     "plugins/weather": {
@@ -453,6 +469,10 @@
       "version": "0.3.0",
       "dependencies": {
         "@brika/sdk": "workspace:*",
+      },
+      "devDependencies": {
+        "class-variance-authority": "^0.7.1",
+        "clsx": "^2.1.1",
       },
     },
   },
@@ -524,6 +544,8 @@
     "@brika/banner": ["@brika/banner@workspace:packages/banner"],
 
     "@brika/blocks-builtin": ["@brika/blocks-builtin@workspace:plugins/blocks-builtin"],
+
+    "@brika/compiler": ["@brika/compiler@workspace:packages/compiler"],
 
     "@brika/di": ["@brika/di@workspace:packages/di"],
 

@@ -28,11 +28,8 @@ export type { BrickTypeDefinition as BrickTypeDefinitionType } from './bricks';
 export {
   BrickTypeDefinition,
   brickInstanceAction,
-  mountBrickInstance,
-  patchBrickInstance,
+  pushBrickData,
   registerBrickType,
-  resizeBrickInstance,
-  unmountBrickInstance,
   updateBrickConfig,
 } from './bricks';
 export type { LogLevel as LogLevelType } from './events';

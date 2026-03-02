@@ -7,6 +7,7 @@ Plugins are the building blocks of BRIKA. Each plugin runs in an isolated proces
 A plugin is a Bun/Node.js package that:
 
 * Defines **reactive blocks** for use in workflows
+* Provides **bricks** — client-rendered dashboard UI components
 * Runs in a **separate process** (isolated from the hub)
 * Communicates via **binary IPC** (Inter-Process Communication)
 * Has access to the **event bus** for pub/sub messaging
@@ -60,9 +61,13 @@ Blocks use reactive programming:
 
 ```
 plugins/my-plugin/
-├── package.json       # Plugin manifest with blocks metadata
+├── package.json       # Plugin manifest with blocks and bricks metadata
 ├── src/
-│   └── index.ts       # Entry point with block definitions
+│   ├── index.tsx      # Entry point (server-side logic, data pushing)
+│   ├── actions.ts     # Server-side actions (optional)
+│   └── bricks/        # Client-rendered brick components (optional)
+│       ├── compact.tsx
+│       └── detail.tsx
 ├── locales/           # Translations (en + fr)
 │   ├── en/
 │   │   └── plugin.json
@@ -80,9 +85,11 @@ BRIKA uses a consistent ID format:
 |------|--------|---------|
 | Plugin ID | Package name | `@brika/plugin-timer` |
 | Block ID | `pluginId:blockId` | `@brika/plugin-timer:countdown` |
+| Brick ID | Local ID | `compact` |
 
 ## Next Steps
 
 * [Create a Plugin](create-plugin.md) — Build your first plugin
 * [Reactive Blocks](reactive-blocks.md) — Define blocks with inputs and outputs
+* [Bricks](bricks.md) — Build client-rendered dashboard components
 * [Lifecycle Hooks](lifecycle-hooks.md) — Handle plugin startup and shutdown

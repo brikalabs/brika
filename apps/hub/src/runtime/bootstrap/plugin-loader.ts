@@ -1,6 +1,5 @@
 import { inject, singleton } from '@brika/di';
 import type { BrikaConfig } from '@/runtime/config';
-import { ConfigLoader } from '@/runtime/config';
 import { Logger } from '@/runtime/logs/log-router';
 import { PluginManager } from '@/runtime/plugins/plugin-manager';
 import { PluginRegistry } from '@/runtime/registry';
@@ -12,7 +11,6 @@ export class PluginLoader implements Loader {
   readonly name = 'plugins';
 
   private readonly logs = inject(Logger);
-  private readonly configLoader = inject(ConfigLoader);
   private readonly pm = inject(PluginManager);
   private readonly registry = inject(PluginRegistry);
   private readonly state = inject(StateStore);
@@ -27,18 +25,17 @@ export class PluginLoader implements Loader {
       pluginCount: config.plugins.length,
     });
 
-    // Sync registry and state
+    // Sync registry — creates symlinks for workspace plugins, installs npm plugins
     await this.registry.syncToConfig(config.plugins);
     const validNames = new Set(config.plugins.map((e) => e.name));
     await this.state.syncToConfig(validNames);
 
     this.logs.info('Plugin synchronization completed successfully');
 
-    // Load configured plugins
+    // Load all plugins via registry (all plugins are in pluginsDir/node_modules/)
     for (const entry of config.plugins) {
       try {
-        const resolved = await this.configLoader.resolvePluginEntry(entry);
-        await this.pm.load(resolved.rootDirectory);
+        await this.pm.load(entry.name, this.registry.pluginsDir);
       } catch (err) {
         this.logs.error(
           'Failed to load plugin',

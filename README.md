@@ -8,14 +8,20 @@
 
 <p align="center"><strong>Build. Run. Integrate. Keep Automating.</strong></p>
 
-[![Docker](https://img.shields.io/badge/Docker-maxscharwath%2Fbrika-blue?logo=docker)](https://hub.docker.com/r/maxscharwath/brika)
+<p align="center">
+  <a href="https://hub.docker.com/r/maxscharwath/brika"><img alt="Docker" src="https://img.shields.io/badge/Docker-maxscharwath%2Fbrika-blue?logo=docker"></a>
+  <a href="https://docs.brika.dev"><img alt="Docs" src="https://img.shields.io/badge/Docs-docs.brika.dev-blue?logo=gitbook&logoColor=white"></a>
+  <a href="https://bun.sh"><img alt="Bun" src="https://img.shields.io/badge/Runtime-Bun-f472b6?logo=bun&logoColor=white"></a>
+  <a href="#license"><img alt="License" src="https://img.shields.io/badge/License-MIT-green"></a>
+</p>
 
-A self-hosted automation hub that runs locally on your machine. Manage plugins, build reactive workflows, and control everything through a web UI — all in a single self-contained binary.
+A self-hosted automation hub that runs locally on your machine. Write type-safe plugins, build reactive workflows, design live dashboards, and control everything through a web UI — all in a single self-contained binary.
 
-- **Reactive Blocks** — Type-safe workflow blocks with Zod schemas and reactive streams
-- **Isolated Plugins** — Each plugin runs in a separate process with binary IPC
-- **Visual Editor** — Block-based automation builder with React Flow
-- **Event-driven** — Pub/sub event bus with glob pattern matching
+- **Reactive Blocks** — Type-safe workflow nodes with Zod schemas and composable stream operators
+- **Client-Rendered Bricks** — Dashboard components written as real React, compiled to browser ESM with scoped Tailwind
+- **Isolated Plugins** — Each plugin runs in a separate Bun process with binary IPC — crash one, the rest keep running
+- **Visual Editor** — Drag-and-drop workflow builder powered by React Flow
+- **Typed Actions** — Define server-side functions, call them from the browser — IDs auto-generated at build time
 
 ---
 
@@ -66,16 +72,18 @@ On first start BRIKA creates a `.brika/` directory in the current working direct
 | Command              | Description                                                              |
 |----------------------|--------------------------------------------------------------------------|
 | `brika start`        | Start the hub (detaches by default)                                      |
-| `brika stop`         | Stop a running hub in the current directory                              |
+| `brika stop`         | Stop a running hub                                                       |
+| `brika restart`      | Restart the running hub                                                  |
 | `brika status`       | Show whether the hub is running                                          |
 | `brika open`         | Open the web UI in the default browser                                   |
 | `brika log`          | Show and search application logs                                         |
+| `brika auth`         | Manage authentication and tokens                                         |
 | `brika plugin`       | Manage plugins (install, uninstall, list)                                |
 | `brika version`      | Show version and platform info                                           |
-| `brika update`       | Update to the latest release in-place                                    |
+| `brika update`       | Update to the latest version                                             |
 | `brika uninstall`    | Remove BRIKA from this machine (`--purge` to also delete `.brika/` data) |
-| `brika completions`  | Install shell tab-completion (bash, zsh, fish)                           |
-| `brika help`         | Show help                                                                |
+| `brika completions`  | Set up shell tab-completion (bash, zsh, fish)                            |
+| `brika help`         | Show help for a command                                                  |
 
 ### Start Flags
 
@@ -100,11 +108,12 @@ On first start BRIKA creates a `.brika/` directory in the current working direct
 
 ### Global Flags
 
-| Flag             | Description              |
-|------------------|--------------------------|
-| `-v, --version`  | Print version number     |
-| `-h, --help`     | Show help                |
-| `--no-color`     | Disable colored output   |
+| Flag                 | Description                      |
+|----------------------|----------------------------------|
+| `-C, --cwd <path>`  | Set the `.brika` data directory  |
+| `-v, --version`      | Print version number             |
+| `-h, --help`         | Show help                        |
+| `--no-color`         | Disable colored output           |
 
 ```sh
 brika start --open             # Start and open the UI
@@ -129,6 +138,17 @@ brika plugin install @brika/plugin-timer@1.0.0     # Install a specific version
 brika plugin uninstall @brika/plugin-timer          # Uninstall a plugin
 brika plugin list                                   # List installed plugins
 brika plugin help                                   # Show plugin subcommand help
+```
+
+### Authentication
+
+Manage users and access tokens.
+
+```sh
+brika auth user add          # Create a new user
+brika auth user edit         # Edit an existing user
+brika auth user list         # List all users
+brika auth user delete       # Delete a user
 ```
 
 ---
@@ -231,42 +251,65 @@ docker compose up -d
 
 ## Creating a Plugin
 
+Plugins provide **blocks** (workflow nodes) and **bricks** (dashboard components). Scaffold one instantly:
+
+```sh
+bun create brika my-plugin
+```
+
+### Blocks — server-side workflow logic
+
 ```typescript
-// plugins/my-plugin/src/main.ts
+// src/index.ts — runs in an isolated Bun process
 import { defineReactiveBlock, input, output, log, onStop, z } from "@brika/sdk";
+import { setBrickData, onInit } from "@brika/sdk";
 
 export const greet = defineReactiveBlock(
   {
     id: "greet",
-    inputs: {
-      trigger: input(z.generic(), { name: "Trigger" }),
-    },
-    outputs: {
-      message: output(z.string(), { name: "Message" }),
-    },
-    config: z.object({
-      name: z.string().default("World"),
-    }),
+    inputs: { trigger: input(z.generic(), { name: "Trigger" }) },
+    outputs: { message: output(z.string(), { name: "Message" }) },
+    config: z.object({ name: z.string().default("World") }),
   },
   ({ inputs, outputs, config }) => {
     inputs.trigger.on(() => {
-      log.info(`Greeting ${config.name}`);
       outputs.message.emit(`Hello, ${config.name}!`);
     });
   }
 );
 
+// Push data to client-rendered bricks
+onInit(() => setBrickData("status", { greeting: "Hello!" }));
+
 onStop(() => log.info("Stopping"));
 log.info("Plugin loaded");
+```
+
+### Bricks — client-rendered dashboard UI
+
+```tsx
+// src/bricks/status.tsx — real React, runs in the browser
+import { useBrickData } from "@brika/sdk/brick-views";
+
+interface StatusData { greeting: string; }
+
+export default function Status() {
+  const data = useBrickData<StatusData>();
+  if (!data) return <div className="p-4 text-muted-foreground">Loading...</div>;
+  return <div className="p-4 text-2xl font-bold">{data.greeting}</div>;
+}
 ```
 
 ```json
 {
   "name": "@brika/plugin-my-plugin",
   "version": "0.1.0",
-  "main": "./src/main.ts",
+  "main": "./src/index.ts",
   "blocks": [
     { "id": "greet", "name": "Greet", "category": "action", "icon": "hand", "color": "#3b82f6" }
+  ],
+  "bricks": [
+    { "id": "status", "name": "Status" }
   ],
   "dependencies": { "@brika/sdk": "workspace:*" }
 }
@@ -300,7 +343,8 @@ apps/
   hub/              Hub server (Bun, TypeScript)
   ui/               Web UI (React, Vite)
 packages/
-  sdk/              Plugin SDK
+  sdk/              Plugin SDK (blocks, bricks, actions, stores)
+  compiler/         Build-time tooling (brick ESM, action IDs, Tailwind)
   di/               Dependency injection
   router/           HTTP router
   events/           Event system
@@ -309,7 +353,9 @@ packages/
 plugins/
   blocks-builtin/   Core blocks (condition, delay, log, …)
   timer/            Timer & countdown blocks
-  example-echo/     Example plugin
+  weather/          Weather dashboard bricks
+  matter/           Matter/Thread smart home
+  spotify/          Spotify integration
 scripts/
   install.sh        Linux/macOS installer
   install.ps1       Windows installer
@@ -321,11 +367,17 @@ scripts/
 
 ## Tech Stack
 
-| Layer    | Stack                              |
-|----------|------------------------------------|
-| Runtime  | Bun, TypeScript, Zod               |
-| Frontend | React, Vite, TanStack, React Flow  |
-| UI       | shadcn/ui, Tailwind CSS v4         |
+| Layer    | Stack                                          |
+|----------|------------------------------------------------|
+| Runtime  | Bun, TypeScript, Zod v4                        |
+| Frontend | React, Vite, TanStack Router/Query, React Flow |
+| UI       | shadcn/ui, Tailwind CSS v4                     |
+| Compiler | @brika/compiler (Bun.build)                    |
+| IPC      | Custom binary protocol                         |
+
+## Documentation
+
+Full docs at **[docs.brika.dev](https://docs.brika.dev)** — architecture, SDK reference, plugin guides, and more.
 
 ## License
 

@@ -63,17 +63,20 @@ React-based frontend with:
 
 ### Plugins
 
-Isolated processes that provide blocks:
+Isolated processes that provide blocks and bricks:
 
 * Run in separate Bun processes
 * Communicate via binary IPC
 * Define reactive blocks for workflows
+* Provide client-rendered bricks for dashboards
 * Access event bus for messaging
 
 **Key files:**
 
 * `packages/sdk/src/index.ts` — SDK exports
-* `plugins/*/src/main.ts` — Plugin entry points
+* `packages/compiler/src/index.ts` — Build-time compilation
+* `plugins/*/src/index.tsx` — Plugin entry points
+* `plugins/*/src/bricks/*.tsx` — Client-rendered brick components
 
 ## Data Flow
 
@@ -114,6 +117,31 @@ flowchart TD
     E --> F[Subscribers handle event]
 ```
 
+### 4. Brick Rendering
+
+Bricks are client-rendered — plugin processes push data, and the browser renders React components.
+
+```mermaid
+flowchart TD
+    A[Plugin process] -->|setBrickData| B[Hub BrickDataStore]
+    B -->|SSE push| C[Browser]
+    C --> D[ClientBrickView loads ESM module]
+    D --> E[useBrickData reads pushed data]
+    E --> F[React renders brick component]
+    G[User edits config] --> H[Hub notifies plugin]
+    H -->|onBrickConfigChange| A
+```
+
+**Build pipeline:**
+
+```mermaid
+flowchart LR
+    A[src/bricks/*.tsx] -->|Bun.build| B[ESM module]
+    B -->|externals plugin| C[Shared deps via globalThis.__brika]
+    B -->|actions plugin| D[Action stubs with __actionId]
+    C & D --> E[/api/bricks/id/module.js?hash=...]
+```
+
 ## Communication Protocols
 
 ### HTTP API
@@ -152,6 +180,7 @@ Efficient communication between hub and plugins:
 | Frontend | React, Vite, TanStack |
 | UI Components | shadcn/ui, Tailwind CSS |
 | Workflow Editor | React Flow |
+| Brick Compiler | @brika/compiler (Bun.build) |
 | IPC | Custom binary protocol |
 
 ## Scalability

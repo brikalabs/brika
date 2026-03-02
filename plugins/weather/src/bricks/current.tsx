@@ -1,15 +1,66 @@
-import { Avatar, Box, Column, Divider, defineBrick, Grid, type I18nRef, Icon, Row, Spacer, Text, useLocale } from '@brika/sdk/bricks';
-import { useWeather } from '../use-weather';
+/**
+ * Current weather brick — client-side rendered.
+ *
+ * Displays live weather conditions with temperature, feels-like,
+ * humidity, wind, pressure, and a gradient background matching the condition.
+ * Data is pushed from the plugin process via setBrickData().
+ */
+
+import { useBrickConfig, useBrickData, useBrickSize } from '@brika/sdk/brick-views';
+import { useLocale } from '@brika/sdk/ui-kit/hooks';
 import {
+  Droplets,
+  Gauge,
+  MapPin,
+  Thermometer,
+  Wind,
+} from 'lucide-react';
+import type { ComponentType } from 'react';
+import {
+  CityError,
   formatTemp,
   formatTempWithUnit,
-  getWeatherVisuals,
+  LoadingSpinner,
+  resolveCity,
+  resolveUnit,
   tempUnit,
-  windDirectionLabel,
-} from '../utils';
-import { CITY_UNIT_CONFIG, WeatherError, WeatherLoading } from './shared';
+  WeatherIcon,
+} from './shared';
 
-// ─── Inline stat (icon + label + value + suffix) ────────────────────────────
+// ─── Types (inlined — can't import from plugin runtime code) ────────────────
+
+interface CurrentCityData {
+  temperature: number;
+  apparentTemperature: number;
+  humidity: number;
+  weatherCode: number;
+  windSpeed: number;
+  windDirection: number;
+  pressure: number;
+  conditionKey: string;
+  icon: string;
+  gradient: string;
+  color: string;
+  city: string;
+  lastUpdated: number | null;
+}
+
+interface CurrentWeatherData {
+  defaultCity: string;
+  unit: string;
+  cities: Record<string, CurrentCityData>;
+  cityErrors?: Record<string, string>;
+}
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+function windDirectionLabel(degrees: number): string {
+  const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'] as const;
+  const index = Math.round(degrees / 45) % 8;
+  return dirs[index];
+}
+
+// ─── Stat row ────────────────────────────────────────────────────────────────
 
 function WeatherStat({
   icon,
@@ -17,117 +68,134 @@ function WeatherStat({
   value,
   suffix,
 }: Readonly<{
-  icon: string;
-  label: string | I18nRef;
+  icon: ComponentType<{ className?: string }>;
+  label: string;
   value: string;
   suffix?: string;
 }>) {
+  const StatIcon = icon;
   return (
-    <Column gap="sm" grow>
-      <Row gap="sm" align="center">
-        <Icon name={icon} size="sm" color="rgba(255,255,255,0.5)" />
-        <Text content={label} variant="caption" size="xs" color="rgba(255,255,255,0.6)" maxLines={1} />
-      </Row>
-      <Row gap="sm" align="end">
-        <Text content={value} variant="heading" weight="bold" color="#ffffff" maxLines={1} />
-        {suffix ? (
-          <Text content={suffix} variant="caption" size="xs" color="rgba(255,255,255,0.5)" maxLines={1} />
-        ) : null}
-      </Row>
-    </Column>
+    <div className="flex flex-1 flex-col gap-1">
+      <div className="flex items-center gap-1.5">
+        <StatIcon className="size-3 shrink-0 text-white/50" />
+        <span className="truncate text-[10px] text-white/60">{label}</span>
+      </div>
+      <div className="flex items-baseline gap-1">
+        <span className="font-bold text-white">{value}</span>
+        {suffix ? <span className="text-[10px] text-white/50">{suffix}</span> : null}
+      </div>
+    </div>
   );
 }
 
-// ─── Brick Definition ──────────────────────────────────────────────────────
+// ─── Component ──────────────────────────────────────────────────────────────
 
-export const currentBrick = defineBrick(
-  {
-    id: 'current',
-    families: ['sm', 'md', 'lg'],
-    minSize: { w: 1, h: 1 },
-    maxSize: { w: 12, h: 8 },
-    config: CITY_UNIT_CONFIG,
-  },
-  () => {
-    const { t } = useLocale();
-    const { weather, unit } = useWeather();
+export default function CurrentWeather() {
+  const data = useBrickData<CurrentWeatherData>();
+  const config = useBrickConfig();
+  const { width, height } = useBrickSize();
+  const { t } = useLocale();
 
-    if (weather.loading && !weather.current) return <WeatherLoading />;
-    if (weather.error && !weather.current) return <WeatherError message={weather.error} />;
-    if (!weather.current || !weather.location) return <WeatherLoading />;
+  if (!data) return <LoadingSpinner />;
 
-    const { meta, color, gradient } = getWeatherVisuals(weather.current.weatherCode);
+  const cityKey = resolveCity(config, data.defaultCity);
+  const d = data.cities[cityKey];
 
+  if (!d) return <CityError error={data.cityErrors?.[cityKey]} />;
+
+  const unit = resolveUnit(config, data.unit);
+  const isCompact = width <= 2 && height <= 1;
+
+  // ─── Compact layout ─────────────────────────────────────────────
+
+  if (isCompact) {
     return (
-      <Box background={gradient} rounded="sm" padding="lg" grow>
-        <Column gap="md" grow justify="between">
-          {/* Header: location + condition label */}
-          <Row gap="sm" align="center">
-            <Icon name="map-pin" size="sm" color="rgba(255,255,255,0.5)" />
-            <Text content={weather.location.name} variant="body" weight="bold" color="#ffffff" maxLines={1} />
-            <Spacer />
-            <Text content={t(meta.labelKey)} variant="caption" color="rgba(255,255,255,0.6)" maxLines={1} />
-          </Row>
-
-          {/* Main: avatar + temp + feels like */}
-          <Row gap="md" align="center">
-            <Avatar icon={meta.icon} color={color} size="lg" />
-            <Column gap="sm" grow>
-              <Text
-                content={formatTempWithUnit(weather.current.temperature, unit)}
-                variant="heading"
-                size="xl"
-                weight="bold"
-                color="#ffffff"
-                maxLines={1}
-              />
-              <Text
-                content={t('stats.feelsLikeTemp', { temp: formatTempWithUnit(weather.current.apparentTemperature, unit) })}
-                variant="caption"
-                color="rgba(255,255,255,0.6)"
-                maxLines={1}
-              />
-            </Column>
-          </Row>
-
-          {/* Stats: auto-fit grid wraps to available width */}
-          <Divider color="rgba(255,255,255,0.12)" />
-          <Grid autoFit minColumnWidth={90} gap="md">
-            <WeatherStat
-              icon="thermometer"
-              label={t('stats.feelsLike')}
-              value={formatTemp(weather.current.apparentTemperature, unit)}
-              suffix={tempUnit(unit)}
-            />
-            <WeatherStat
-              icon="droplets"
-              label={t('stats.humidity')}
-              value={`${weather.current.humidity}`}
-              suffix="%"
-            />
-            <WeatherStat
-              icon="wind"
-              label={t('stats.wind')}
-              value={`${Math.round(weather.current.windSpeed)}`}
-              suffix={`km/h ${windDirectionLabel(weather.current.windDirection)}`}
-            />
-            <WeatherStat
-              icon="gauge"
-              label={t('stats.pressure')}
-              value={`${Math.round(weather.current.pressure)}`}
-              suffix="hPa"
-            />
-          </Grid>
-
-          {/* Updated timestamp */}
-          <Text
-            content={t('ui.updated', { time: weather.lastUpdated === null ? '' : new Date(weather.lastUpdated).toLocaleTimeString() })}
-            variant="caption"
-            color="rgba(255,255,255,0.35)"
-            maxLines={1}
-          />
-        </Column>
-      </Box>
+      <div
+        className="flex h-full flex-col justify-center gap-1.5 rounded-lg p-3"
+        style={{ background: d.gradient }}
+      >
+        <div className="flex items-center gap-2">
+          <WeatherIcon name={d.icon} className="size-5 text-white/80" />
+          <span className="text-xl font-bold text-white">
+            {formatTempWithUnit(d.temperature, unit)}
+          </span>
+        </div>
+        <div className="flex items-center gap-1 text-xs text-white/60">
+          <MapPin className="size-3 shrink-0" />
+          <span className="truncate">{d.city}</span>
+        </div>
+      </div>
     );
-  },
-);
+  }
+
+  // ─── Default layout ─────────────────────────────────────────────
+
+  return (
+    <div
+      className="flex h-full flex-col gap-3 rounded-lg p-4"
+      style={{ background: d.gradient }}
+    >
+      {/* Header: location + condition label */}
+      <div className="flex items-center gap-1.5">
+        <MapPin className="size-3.5 shrink-0 text-white/50" />
+        <span className="truncate font-bold text-white">{d.city}</span>
+        <span className="ml-auto shrink-0 text-xs text-white/60">{t(`conditions.${d.conditionKey}`)}</span>
+      </div>
+
+      {/* Main: icon + temp + feels like */}
+      <div className="flex flex-1 items-center gap-3">
+        <div className="flex size-12 items-center justify-center rounded-full" style={{ backgroundColor: `${d.color}33` }}>
+          <WeatherIcon name={d.icon} className="size-7" color={d.color} />
+        </div>
+        <div className="flex flex-col gap-0.5">
+          <span className="text-3xl font-bold leading-none text-white">
+            {formatTempWithUnit(d.temperature, unit)}
+          </span>
+          <span className="text-xs text-white/60">
+            {t('stats.feelsLike')} {formatTempWithUnit(d.apparentTemperature, unit)}
+          </span>
+        </div>
+      </div>
+
+      {/* Divider */}
+      <div className="h-px bg-white/12" />
+
+      {/* Stats grid */}
+      <div className="grid auto-cols-fr grid-flow-col gap-3">
+        <WeatherStat
+          icon={Thermometer}
+          label={t('stats.feelsLike')}
+          value={formatTemp(d.apparentTemperature, unit)}
+          suffix={tempUnit(unit)}
+        />
+        <WeatherStat
+          icon={Droplets}
+          label={t('stats.humidity')}
+          value={`${d.humidity}`}
+          suffix="%"
+        />
+        <WeatherStat
+          icon={Wind}
+          label={t('stats.wind')}
+          value={`${Math.round(d.windSpeed)}`}
+          suffix={`km/h ${windDirectionLabel(d.windDirection)}`}
+        />
+        {width >= 3 ? (
+          <WeatherStat
+            icon={Gauge}
+            label={t('stats.pressure')}
+            value={`${Math.round(d.pressure)}`}
+            suffix="hPa"
+          />
+        ) : null}
+      </div>
+
+      {/* Updated timestamp */}
+      {d.lastUpdated ? (
+        <span className="text-[10px] text-white/35">
+          {t('ui.updated', { time: new Date(d.lastUpdated).toLocaleTimeString() })}
+        </span>
+      ) : null}
+    </div>
+  );
+}

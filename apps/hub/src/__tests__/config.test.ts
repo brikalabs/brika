@@ -3,6 +3,7 @@
  */
 
 import 'reflect-metadata';
+import { join } from 'node:path';
 import { afterEach, describe, expect, test } from 'bun:test';
 import { get, provide, useTestBed } from '@brika/di/testing';
 import { HubConfig, PluginManagerConfig } from '@/runtime/config/config';
@@ -26,7 +27,7 @@ describe('HubConfig', () => {
 
     expect(config.host).toBe('127.0.0.1');
     expect(config.port).toBe(3001);
-    expect(config.homeDir).toBe('.brika');
+    expect(config.homeDir).toBe(join(process.cwd(), '.brika'));
     expect(config.staticDir).toBe('');
   });
 

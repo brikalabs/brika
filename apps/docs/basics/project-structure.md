@@ -13,6 +13,7 @@ brika/
 │   └── schema-cdn/       # Schema CDN (Cloudflare Worker)
 ├── packages/
 │   ├── sdk/              # Plugin SDK
+│   ├── compiler/         # Build-time brick/action compilation
 │   ├── flow/             # Reactive streams library
 │   ├── events/           # Event system
 │   ├── ipc/              # Binary IPC protocol
@@ -63,8 +64,21 @@ The plugin development kit providing:
 
 * `defineReactiveBlock` for creating blocks
 * Reactive operators (map, filter, delay, etc.)
+* Brick data APIs (`setBrickData`, `onBrickConfigChange`)
+* Client-side brick hooks (`useBrickData`, `useBrickConfig`, `useBrickSize`)
+* Actions (`defineAction`)
+* Shared stores (`defineSharedStore`)
 * Logging and event APIs
 * Lifecycle hooks
+
+### Compiler (`packages/compiler/`)
+
+Build-time compilation for plugin bricks and actions:
+
+* Compiles brick `.tsx` files to browser ESM via `Bun.build()`
+* Replaces shared dependencies with `globalThis.__brika` proxies
+* Auto-generates deterministic action IDs from `hash(filePath + exportName)`
+* Validates declared bricks/pages have matching source files
 
 ### Flow (`packages/flow/`)
 
@@ -115,5 +129,8 @@ Example plugin demonstrating SDK usage.
 | `workflows/*.yml` | Workflow definitions |
 | `apps/hub/src/main.ts` | Hub entry point |
 | `apps/ui/src/main.tsx` | UI entry point |
-| `plugins/*/src/index.ts` | Plugin entry points |
+| `plugins/*/src/index.tsx` | Plugin entry points |
+| `plugins/*/src/bricks/*.tsx` | Client-rendered brick components |
+| `plugins/*/src/actions.ts` | Server-side actions |
 | `packages/sdk/src/index.ts` | SDK exports |
+| `packages/compiler/src/index.ts` | Compiler exports |

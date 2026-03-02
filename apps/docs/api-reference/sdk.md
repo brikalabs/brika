@@ -772,6 +772,213 @@ function onPreferencesChange<T>(handler: (prefs: T) => void): () => void
 
 ---
 
+## Brick Data
+
+Server-side APIs for pushing data to client-rendered bricks.
+
+### setBrickData
+
+Push data to all client-rendered instances of a brick type. Data becomes available in the browser via `useBrickData<T>()`.
+
+```typescript
+import { setBrickData } from "@brika/sdk";
+
+setBrickData("compact", { temperature: 21, city: "Zurich" });
+```
+
+**Signature:**
+
+```typescript
+function setBrickData(brickTypeId: string, data: unknown): void
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `brickTypeId` | `string` | Brick type ID (matches `package.json` brick entry) |
+| `data` | `unknown` | Arbitrary serializable data — available via `useBrickData()` |
+
+### onBrickConfigChange
+
+Register a handler called when a brick instance's config changes (e.g., user edits settings in the config sheet).
+
+```typescript
+import { onBrickConfigChange } from "@brika/sdk";
+
+onBrickConfigChange((instanceId, config) => {
+  if (typeof config.city === "string") {
+    ensurePolling(config.city);
+  }
+});
+```
+
+**Signature:**
+
+```typescript
+function onBrickConfigChange(
+  handler: (instanceId: string, config: Record<string, unknown>) => void
+): () => void
+```
+
+Returns an unsubscribe function.
+
+---
+
+## Brick Views (Client-Side)
+
+Hooks available in client-rendered brick components. Import from `@brika/sdk/brick-views`.
+
+### useBrickData
+
+Subscribe to data pushed from the plugin process via `setBrickData()`.
+
+```typescript
+import { useBrickData } from "@brika/sdk/brick-views";
+
+const data = useBrickData<MyDataType>();
+```
+
+**Signature:**
+
+```typescript
+function useBrickData<T>(): T | undefined
+```
+
+Returns `undefined` until data arrives.
+
+### useBrickConfig
+
+Read the per-instance config for this brick.
+
+```typescript
+import { useBrickConfig } from "@brika/sdk/brick-views";
+
+const config = useBrickConfig();
+```
+
+**Signature:**
+
+```typescript
+function useBrickConfig(): Record<string, unknown>
+```
+
+### useBrickSize
+
+Read the current grid size of this brick instance.
+
+```typescript
+import { useBrickSize } from "@brika/sdk/brick-views";
+
+const { width, height } = useBrickSize();
+```
+
+**Signature:**
+
+```typescript
+function useBrickSize(): { width: number; height: number }
+```
+
+### useCallBrickAction
+
+Returns a stable callback to send an action to the plugin process for the current brick instance.
+
+```typescript
+import { useCallBrickAction } from "@brika/sdk/brick-views";
+
+const callAction = useCallBrickAction();
+await callAction("toggle", { deviceId: "light-1" });
+```
+
+**Signature:**
+
+```typescript
+function useCallBrickAction(): (actionId: string, payload?: unknown) => Promise<void>
+```
+
+---
+
+## Shared Store
+
+### defineSharedStore
+
+Zustand-style reactive store shared across the plugin process.
+
+```typescript
+import { defineSharedStore } from "@brika/sdk";
+
+const counterStore = defineSharedStore({ count: 0 });
+
+// Read
+counterStore.get().count;
+
+// Write (notifies all subscribers)
+counterStore.set(prev => ({ ...prev, count: prev.count + 1 }));
+
+// Subscribe
+const unsub = counterStore.subscribe(() => console.log(counterStore.get()));
+```
+
+**Signature:**
+
+```typescript
+function defineSharedStore<T>(initial: T): SharedStore<T>
+```
+
+**SharedStore interface:**
+
+```typescript
+interface SharedStore<T> {
+  get(): T;
+  set(value: T | ((prev: T) => T)): void;
+  subscribe(listener: () => void): () => void;
+}
+```
+
+| Method | Description |
+|--------|-------------|
+| `get()` | Read current state synchronously |
+| `set(value)` | Update state, notify all subscribers (`Object.is` comparison) |
+| `subscribe(fn)` | Subscribe to changes. Returns unsubscribe function |
+
+---
+
+## Actions
+
+### defineAction
+
+Define a server-side action that pages and bricks can call. Action IDs are auto-generated at build time from `hash(filePath + exportName)` — deterministic and collision-resistant.
+
+```typescript
+import { defineAction } from "@brika/sdk/actions";
+
+export const getDevices = defineAction(async () => {
+  return controller.getDevices();
+});
+
+export const toggleDevice = defineAction(async (input: { id: string }) => {
+  return controller.toggle(input.id);
+});
+```
+
+**Signature:**
+
+```typescript
+function defineAction<TInput = void, TOutput = unknown>(
+  handler: (input: TInput) => TOutput | Promise<TOutput>
+): ActionRef<TInput, TOutput>
+```
+
+**ActionRef:**
+
+```typescript
+interface ActionRef<TInput = void, TOutput = unknown> {
+  readonly __actionId: string;
+}
+```
+
+Action files must be separate modules (e.g., `src/actions.ts`) that import from `@brika/sdk/actions`. The build system detects them automatically and injects IDs.
+
+---
+
 ## Types
 
 ### Exported Types
@@ -808,7 +1015,14 @@ import type {
   StopHandler,
   UninstallHandler,
   PreferencesChangeHandler,
-  
+  BrickConfigChangeHandler,
+
+  // Action types
+  ActionRef,
+
+  // Store types
+  SharedStore,
+
   // Flow types
   Flow,
   Emitter,

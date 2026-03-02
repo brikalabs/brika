@@ -64,7 +64,7 @@ export type {
 } from './nodes';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Component Builders (PascalCase — used with custom jsx-runtime)
+// Component Builders (PascalCase)
 // ─────────────────────────────────────────────────────────────────────────────
 
 export {
@@ -109,29 +109,7 @@ export {
 // Descriptors
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type { ActionNode, BrickDescriptor, Mutation } from './descriptors';
-export { MUT } from './descriptors';
-
-// ─────────────────────────────────────────────────────────────────────────────
-// defineBrick
-// ─────────────────────────────────────────────────────────────────────────────
-
-export type {
-  BrickActionHandler,
-  BrickComponent,
-  BrickFamily,
-  BrickInstanceContext,
-  BrickTypeSpec,
-  CompiledBrickType,
-} from './define-brick';
-
-export { defineBrick } from './define-brick';
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Mutation Applicator (shared between Hub and UI)
-// ─────────────────────────────────────────────────────────────────────────────
-
-export { applyMutations } from './mutations';
+export type { ActionNode, BrickDescriptor } from './descriptors';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Theme-aware color tokens

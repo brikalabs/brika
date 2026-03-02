@@ -2,7 +2,8 @@ import { inject, singleton } from '@brika/di';
 import type { Json } from '@brika/ipc';
 import type { BlockDefinition } from '@brika/sdk';
 import { BlockRegistry } from '@/runtime/blocks';
-import { BrickInstanceManager, BrickTypeRegistry } from '@/runtime/bricks';
+import { BoardLoader } from '@/runtime/boards/board-loader';
+import { BrickDataStore, BrickTypeRegistry } from '@/runtime/bricks';
 import { BrickActions, PluginActions, SparkActions } from '@/runtime/events/actions';
 import { EventSystem } from '@/runtime/events/event-system';
 import { Logger } from '@/runtime/logs/log-router';
@@ -24,8 +25,9 @@ export class PluginEventHandler {
   readonly #blocks = inject(BlockRegistry);
   readonly #sparks = inject(SparkRegistry);
   readonly #brickTypes = inject(BrickTypeRegistry);
-  readonly #brickInstances = inject(BrickInstanceManager);
+  readonly #brickDataStore = inject(BrickDataStore);
   readonly #pluginRoutes = inject(PluginRouteRegistry);
+  readonly #boardLoader = inject(BoardLoader);
 
   /** Block emit callback - set by PluginManager */
   #onBlockEmit: ((instanceId: string, port: string, data: Json) => void) | null = null;
@@ -79,6 +81,26 @@ export class PluginEventHandler {
         'hub'
       )
     );
+
+    // Send existing brick instance configs so the plugin can hydrate
+    // per-instance state (e.g. start polling for a configured city).
+    this.#sendInitialBrickConfigs(process);
+  }
+
+  /**
+   * Deliver existing brick configs to a freshly-started plugin.
+   * Without this, `onBrickConfigChange` only fires on explicit saves,
+   * leaving bricks with per-instance config stuck in loading state.
+   */
+  #sendInitialBrickConfigs(process: PluginProcess): void {
+    const prefix = `${process.name}:`;
+    for (const board of this.#boardLoader.list()) {
+      for (const brick of board.bricks) {
+        if (brick.brickTypeId.startsWith(prefix) && Object.keys(brick.config).length > 0) {
+          process.sendUpdateBrickConfig(brick.instanceId, brick.config);
+        }
+      }
+    }
   }
 
   onPluginLog(name: string, level: LogLevel, message: string, meta?: Record<string, Json>): void {
@@ -220,23 +242,27 @@ export class PluginEventHandler {
       icon?: string;
       color?: string;
       config?: unknown[];
-    }
+    },
+    pluginUid?: string
   ): void {
-    const fullId = this.#brickTypes.register(brickType, pluginName, manifest);
+    const { fullId, isNew } = this.#brickTypes.register(brickType, pluginName, manifest, pluginUid);
     this.#logs.debug('Brick type registered from plugin', {
       pluginName,
       brickTypeId: brickType.id,
     });
-    this.#events.dispatch(
-      BrickActions.typeRegistered.create(
-        {
-          pluginName,
-          brickTypeId: fullId,
-          descriptor: this.#brickTypes.get(fullId),
-        },
-        pluginName
-      )
-    );
+    // Only dispatch event on first registration to avoid duplicate UI updates
+    if (isNew) {
+      this.#events.dispatch(
+        BrickActions.typeRegistered.create(
+          {
+            pluginName,
+            brickTypeId: fullId,
+            descriptor: this.#brickTypes.get(fullId),
+          },
+          pluginName
+        )
+      );
+    }
   }
 
   registerRoute(pluginName: string, method: string, path: string): void {
@@ -249,32 +275,14 @@ export class PluginEventHandler {
   }
 
   onPluginDisconnected(pluginName: string): void {
-    const removedBricks = this.#brickInstances.unmountByPlugin(pluginName);
-    if (removedBricks.length > 0) {
-      this.#events.dispatch(
-        BrickActions.pluginDisconnected.create(
-          {
-            pluginName,
-            instanceIds: removedBricks,
-          },
-          'hub'
-        )
-      );
-    }
+    this.#brickDataStore.removeByPlugin(pluginName);
   }
 
-  patchBrickInstance(instanceId: string, mutations: unknown[]): void {
-    const patched = this.#brickInstances.patchBody(instanceId, mutations);
-    if (patched) {
-      this.#events.dispatch(
-        BrickActions.instancePatched.create(
-          {
-            instanceId,
-            mutations,
-          },
-          'hub'
-        )
-      );
-    }
+  pushBrickData(pluginName: string, brickTypeId: string, data: unknown): void {
+    const fullId = `${pluginName}:${brickTypeId}`;
+    this.#brickDataStore.set(fullId, data);
+    this.#events.dispatch(
+      BrickActions.dataUpdated.create({ brickTypeId: fullId, data }, pluginName)
+    );
   }
 }

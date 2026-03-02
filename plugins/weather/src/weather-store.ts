@@ -12,8 +12,7 @@
  * ```
  */
 
-import { log } from '@brika/sdk';
-import { defineSharedStore } from '@brika/sdk/bricks';
+import { defineSharedStore, log } from '@brika/sdk';
 import { fetchWeather, geocodeCity } from './api';
 import type { GeoLocation, WeatherState } from './types';
 

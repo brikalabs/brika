@@ -1,4 +1,5 @@
 import { inject, singleton } from '@brika/di';
+import { dataDir } from '@/cli/utils/runtime';
 import { ConfigLoader } from './config-loader';
 
 @singleton()
@@ -22,8 +23,7 @@ export class HubConfig {
       // Config not loaded yet, use env/defaults
       this.host = process.env.BRIKA_HOST ?? '127.0.0.1';
       this.port = Number(process.env.BRIKA_PORT ?? '3001');
-      // Fallback to relative path
-      this.homeDir = process.env.BRIKA_HOME ?? '.brika';
+      this.homeDir = process.env.BRIKA_HOME ?? dataDir;
     }
     // Static file serving directory (empty = disabled, used in production Docker)
     this.staticDir = process.env.BRIKA_STATIC_DIR ?? '';

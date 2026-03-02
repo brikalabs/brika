@@ -4,6 +4,7 @@ import { stub, useTestBed } from '@brika/di/testing';
 import { TestApp } from '@brika/router/testing';
 import { pluginsRoutes } from '@/runtime/http/routes/plugins';
 import { MetricsStore } from '@/runtime/metrics';
+import { ModuleCompiler } from '@/runtime/modules';
 import { PluginConfigService } from '@/runtime/plugins/plugin-config';
 import { PluginLifecycle } from '@/runtime/plugins/plugin-lifecycle';
 import { PluginManager } from '@/runtime/plugins/plugin-manager';
@@ -18,6 +19,7 @@ const PLUGIN = {
   icon: null,
   rootDirectory: '/tmp/plugins/timer',
   pid: 1234,
+  pages: [],
 };
 
 describe('plugins routes', () => {
@@ -44,6 +46,9 @@ describe('plugins routes', () => {
     setPermission: ReturnType<typeof mock>;
   };
   let mockMetrics: {
+    get: ReturnType<typeof mock>;
+  };
+  let mockCompiler: {
     get: ReturnType<typeof mock>;
   };
 
@@ -86,6 +91,10 @@ describe('plugins routes', () => {
     stub(StateStore, {
       remove: mock().mockResolvedValue(undefined),
     });
+    mockCompiler = {
+      get: mock().mockReturnValue(null),
+    };
+    stub(ModuleCompiler, mockCompiler);
     app = TestApp.create(pluginsRoutes);
   });
 
@@ -103,6 +112,21 @@ describe('plugins routes', () => {
 
     expect(res.status).toBe(200);
     expect(mockManager.get).toHaveBeenCalledWith('plg-1');
+  });
+
+  test('GET /api/plugins/:uid enriches pages with moduleUrl', async () => {
+    mockManager.get.mockReturnValue({
+      ...PLUGIN,
+      pages: [{ id: 'settings', path: '/settings', title: 'Settings' }],
+    });
+    mockCompiler.get.mockReturnValue({ hash: 'abc123', content: '' });
+
+    const res = await app.get<{
+      pages: Array<{ id: string; moduleUrl?: string }>;
+    }>('/api/plugins/plg-1');
+
+    expect(res.status).toBe(200);
+    expect(res.body.pages[0].moduleUrl).toBe('/api/plugins/plg-1/pages/settings.abc123.js');
   });
 
   test('GET /api/plugins/:uid returns 404 for unknown plugin', async () => {

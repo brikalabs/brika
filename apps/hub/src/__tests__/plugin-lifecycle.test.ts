@@ -12,6 +12,7 @@ import { EventSystem } from '@/runtime/events/event-system';
 import { I18nService } from '@/runtime/i18n';
 import { Logger } from '@/runtime/logs/log-router';
 import { MetricsStore } from '@/runtime/metrics';
+import { ModuleCompiler } from '@/runtime/modules';
 import { PluginConfigService } from '@/runtime/plugins/plugin-config';
 import { PluginEventHandler } from '@/runtime/plugins/plugin-events';
 import { PluginLifecycle } from '@/runtime/plugins/plugin-lifecycle';
@@ -64,7 +65,6 @@ describe('PluginLifecycle', () => {
     emitSpark: ReturnType<typeof mock>;
     subscribeToSparks: ReturnType<typeof mock>;
     registerBrickType: ReturnType<typeof mock>;
-    patchBrickInstance: ReturnType<typeof mock>;
     registerRoute: ReturnType<typeof mock>;
   };
   let mockPluginConfig: {
@@ -75,6 +75,12 @@ describe('PluginLifecycle', () => {
   let mockMetrics: {
     record: ReturnType<typeof mock>;
     clear: ReturnType<typeof mock>;
+  };
+  let mockModuleCompiler: {
+    compile: ReturnType<typeof mock>;
+    get: ReturnType<typeof mock>;
+    prune: ReturnType<typeof mock>;
+    remove: ReturnType<typeof mock>;
   };
 
   const createMockProcess = (name: string, uid: string): Partial<PluginProcess> => ({
@@ -137,7 +143,6 @@ describe('PluginLifecycle', () => {
       emitSpark: mock(),
       subscribeToSparks: mock().mockReturnValue(() => undefined),
       registerBrickType: mock(),
-      patchBrickInstance: mock(),
       registerRoute: mock(),
     };
     mockPluginConfig = {
@@ -151,6 +156,12 @@ describe('PluginLifecycle', () => {
       record: mock(),
       clear: mock(),
     };
+    mockModuleCompiler = {
+      compile: mock().mockResolvedValue(undefined),
+      get: mock().mockReturnValue(undefined),
+      prune: mock(),
+      remove: mock(),
+    };
 
     stub(Logger);
     provide(PluginManagerConfig, mockConfig);
@@ -160,6 +171,7 @@ describe('PluginLifecycle', () => {
     provide(PluginEventHandler, mockEventHandler);
     provide(PluginConfigService, mockPluginConfig);
     provide(MetricsStore, mockMetrics);
+    provide(ModuleCompiler, mockModuleCompiler);
 
     lifecycle = get(PluginLifecycle);
   });
@@ -171,14 +183,8 @@ describe('PluginLifecycle', () => {
       expect(result).toBeUndefined();
     });
 
-    test('getProcessByName returns undefined when no process exists', () => {
-      const result = lifecycle.getProcessByName('@test/plugin');
-
-      expect(result).toBeUndefined();
-    });
-
-    test('hasProcessByName returns false when no process exists', () => {
-      const result = lifecycle.hasProcessByName('@test/plugin');
+    test('hasProcess returns false when no process exists', () => {
+      const result = lifecycle.hasProcess('@test/plugin');
 
       expect(result).toBe(false);
     });
@@ -193,6 +199,24 @@ describe('PluginLifecycle', () => {
       const result = lifecycle.listProcesses();
 
       expect(result).toEqual([]);
+    });
+  });
+
+  describe('resolvePluginNameByUid', () => {
+    test('returns undefined when no process and no state matches uid', () => {
+      mockState.getByUid.mockReturnValue(undefined);
+
+      const result = lifecycle.resolvePluginNameByUid('unknown-uid');
+
+      expect(result).toBeUndefined();
+    });
+
+    test('returns name from state when no process matches uid', () => {
+      mockState.getByUid.mockReturnValue({ name: '@test/stored' });
+
+      const result = lifecycle.resolvePluginNameByUid('uid-stored');
+
+      expect(result).toBe('@test/stored');
     });
   });
 
@@ -557,6 +581,75 @@ describe('PluginLifecycle', () => {
       expect(mockState.remove).toHaveBeenCalledTimes(2);
       expect(mockState.remove).toHaveBeenCalledWith('@test/stale-1');
       expect(mockState.remove).toHaveBeenCalledWith('@test/stale-2');
+    });
+
+    test('removes compiled modules for stale plugins', async () => {
+      mockState.listInstalled.mockReturnValue([
+        {
+          name: '@test/stale-plugin',
+          rootDirectory: '/nonexistent/path',
+        },
+      ]);
+
+      await lifecycle.cleanupStale();
+
+      expect(mockModuleCompiler.remove).toHaveBeenCalledWith(
+        '@test/stale-plugin',
+        '/nonexistent/path'
+      );
+    });
+  });
+
+  describe('removeModules', () => {
+    test('delegates to module compiler remove', () => {
+      lifecycle.removeModules('@test/plugin', '/path/to/plugin');
+
+      expect(mockModuleCompiler.remove).toHaveBeenCalledWith(
+        '@test/plugin',
+        '/path/to/plugin'
+      );
+    });
+
+    test('calls remove without rootDirectory', () => {
+      lifecycle.removeModules('@test/plugin');
+
+      expect(mockModuleCompiler.remove).toHaveBeenCalledWith(
+        '@test/plugin',
+        undefined
+      );
+    });
+  });
+
+  describe('fromStored (additional coverage)', () => {
+    test('includes pages and granted permissions from stored state', () => {
+      const stored = {
+        uid: 'uid-pages',
+        name: '@test/paged',
+        version: '1.0.0',
+        rootDirectory: '/path/to/plugin',
+        entryPoint: '/path/to/plugin/index.js',
+        enabled: true,
+        health: 'stopped' as PluginHealth,
+        lastError: null,
+        updatedAt: Date.now(),
+        grantedPermissions: ['network', 'storage'],
+        metadata: {
+          name: '@test/paged',
+          version: '1.0.0',
+          main: './index.js',
+          engines: { brika: '^0.1.0' },
+          pages: [{ id: 'settings', path: '/settings' }],
+          bricks: [{ id: 'widget' }],
+          permissions: ['network'],
+        },
+      };
+
+      const result = lifecycle.fromStored(stored);
+
+      expect(result.pages).toEqual([{ id: 'settings', path: '/settings' }]);
+      expect(result.bricks).toEqual([{ id: 'widget' }]);
+      expect(result.grantedPermissions).toEqual(['network', 'storage']);
+      expect(result.permissions).toEqual(['network']);
     });
   });
 });

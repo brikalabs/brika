@@ -28,6 +28,21 @@ let capturedSpawnDisconnect: ((error?: Error) => void) | null = null;
 let capturedSpawnStderr: ((line: string) => void) | null = null;
 let mockProcessInstance: Record<string, unknown> | null = null;
 
+// Mock @brika/compiler to avoid real Bun.build calls against /mock/path
+mock.module('@brika/compiler', () => ({
+  compileServerEntry: mock().mockResolvedValue({
+    success: true,
+    entryPath: '/mock/path/node_modules/.cache/brika-server/index.js',
+  }),
+  compileClientModule: mock().mockResolvedValue({
+    success: true,
+    js: 'export default {}',
+  }),
+  hashPluginSources: mock().mockResolvedValue('mockhash12345678'),
+  brikaExternalsPlugin: mock().mockReturnValue({ name: 'mock-externals', setup: () => {} }),
+  brikaActionsPlugin: mock().mockReturnValue({ name: 'mock-actions', setup: () => {} }),
+}));
+
 // Mock spawnPlugin to avoid actually spawning processes
 mock.module('@brika/ipc', () => ({
   spawnPlugin: mock((_cmd: string, _args: string[], opts?: Record<string, unknown>) => {
@@ -199,7 +214,6 @@ describe('PluginLifecycle (with mocked spawn)', () => {
       emitSpark: mock(),
       subscribeToSparks: mock().mockReturnValue(() => undefined),
       registerBrickType: mock(),
-      patchBrickInstance: mock(),
       registerRoute: mock(),
       onPluginDisconnected: mock(),
     };
@@ -387,26 +401,9 @@ describe('PluginLifecycle (with mocked spawn)', () => {
         },
         {
           id: 'test-brick',
-        }
+        },
+        expect.any(String)
       );
-    });
-
-    test('onBrickInstancePatch callback delegates to event handler', async () => {
-      const callbacks = await loadPlugin();
-      callbacks.onBrickInstancePatch('brick-1', [
-        {
-          op: 'replace',
-          path: '/text',
-          value: 'hi',
-        },
-      ]);
-      expect(mockEventHandler.patchBrickInstance).toHaveBeenCalledWith('brick-1', [
-        {
-          op: 'replace',
-          path: '/text',
-          value: 'hi',
-        },
-      ]);
     });
 
     test('onRoute callback delegates to event handler', async () => {

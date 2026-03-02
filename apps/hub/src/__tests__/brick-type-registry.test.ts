@@ -53,9 +53,9 @@ describe('BrickTypeRegistry', () => {
 
   describe('register', () => {
     test('registers with full qualified ID', () => {
-      const fullId = registry.register(createBrickType(), 'plugin-thermo', createManifest());
+      const result = registry.register(createBrickType(), 'plugin-thermo', createManifest());
 
-      expect(fullId).toBe('plugin-thermo:thermostat');
+      expect(result).toEqual({ fullId: 'plugin-thermo:thermostat', isNew: true });
       expect(registry.has('plugin-thermo:thermostat')).toBe(true);
     });
 
@@ -112,9 +112,9 @@ describe('BrickTypeRegistry', () => {
       expect(registry.get('plugin:thermostat')?.name).toBe('V2');
     });
 
-    test('returns full ID', () => {
-      const id = registry.register(createBrickType('gauge'), 'sensor-plugin');
-      expect(id).toBe('sensor-plugin:gauge');
+    test('returns full ID and isNew flag', () => {
+      const result = registry.register(createBrickType('gauge'), 'sensor-plugin');
+      expect(result).toEqual({ fullId: 'sensor-plugin:gauge', isNew: true });
     });
   });
 

@@ -8,8 +8,7 @@ import { get, stub, useTestBed } from '@brika/di/testing';
 import { BoardLoader } from '@/runtime/boards/board-loader';
 import { BoardService } from '@/runtime/boards/board-service';
 import type { Board, BoardBrickPlacement } from '@/runtime/boards/types';
-import { BrickInstanceManager, BrickTypeRegistry } from '@/runtime/bricks';
-import type { BrickInstance } from '@/runtime/bricks/brick-instance-manager';
+import { BrickTypeRegistry } from '@/runtime/bricks';
 import type { RegisteredBrickType } from '@/runtime/bricks/brick-type-registry';
 import { EventSystem } from '@/runtime/events/event-system';
 import { Logger } from '@/runtime/logs/log-router';
@@ -59,12 +58,8 @@ describe('BoardService', () => {
   let service: BoardService;
   let boards: Map<string, Board>;
   let brickTypes: Map<string, RegisteredBrickType>;
-  let mountedInstances: Map<string, BrickInstance>;
   let mockProcess: Record<string, ReturnType<typeof mock>>;
   let mockDispatch: ReturnType<typeof mock>;
-  let mockMount: ReturnType<typeof mock>;
-  let mockUnmount: ReturnType<typeof mock>;
-  let mockResize: ReturnType<typeof mock>;
   let mockSave: ReturnType<typeof mock>;
 
   useTestBed(
@@ -76,40 +71,14 @@ describe('BoardService', () => {
 
       boards = new Map();
       brickTypes = new Map();
-      mountedInstances = new Map();
 
       mockProcess = {
-        sendMountBrickInstance: mock(),
-        sendUnmountBrickInstance: mock(),
-        sendResizeBrickInstance: mock(),
         sendUpdateBrickConfig: mock(),
         sendBrickInstanceAction: mock(),
       };
 
       mockSave = mock().mockResolvedValue('/fake/path');
       mockDispatch = mock();
-      mockMount = mock(
-        (
-          id: string,
-          typeId: string,
-          plugin: string,
-          w: number,
-          h: number,
-          config: Record<string, unknown>
-        ) => {
-          mountedInstances.set(id, {
-            instanceId: id,
-            brickTypeId: typeId,
-            pluginName: plugin,
-            w,
-            h,
-            config,
-            body: [],
-          });
-        }
-      );
-      mockUnmount = mock((id: string) => mountedInstances.delete(id));
-      mockResize = mock();
 
       stub(BoardLoader, {
         get: (id: string) => boards.get(id),
@@ -119,14 +88,6 @@ describe('BoardService', () => {
 
       stub(BrickTypeRegistry, {
         get: (id: string) => brickTypes.get(id),
-      });
-
-      stub(BrickInstanceManager, {
-        mount: mockMount,
-        unmount: mockUnmount,
-        has: (id: string) => mountedInstances.has(id),
-        get: (id: string) => mountedInstances.get(id),
-        resize: mockResize,
       });
 
       stub(PluginLifecycle, {
@@ -141,100 +102,15 @@ describe('BoardService', () => {
     }
   );
 
-  // ─── mountBoard ──────────────────────────────────────────────────────
-
-  describe('mountBoard', () => {
-    test('mounts all placements', () => {
-      const type = createBrickType();
-      brickTypes.set(type.fullId, type);
-
-      const board = createBoard('d1', [
-        createPlacement('inst-1', 'plugin:brick'),
-        createPlacement('inst-2', 'plugin:brick'),
-      ]);
-
-      service.mountBoard(board);
-
-      expect(mockMount).toHaveBeenCalledTimes(2);
-      expect(mockProcess.sendMountBrickInstance).toHaveBeenCalledTimes(2);
-    });
-
-    test('dispatches instanceMounted events', () => {
-      const type = createBrickType();
-      brickTypes.set(type.fullId, type);
-
-      const board = createBoard('d1', [createPlacement('inst-1')]);
-      service.mountBoard(board);
-
-      expect(mockDispatch).toHaveBeenCalled();
-    });
-
-    test('skips already-mounted instances', () => {
-      const type = createBrickType();
-      brickTypes.set(type.fullId, type);
-
-      // Pre-mount one instance
-      mountedInstances.set('inst-1', {
-        instanceId: 'inst-1',
-        brickTypeId: 'plugin:brick',
-        pluginName: 'plugin',
-        w: 2,
-        h: 2,
-        config: {},
-        body: [],
-      });
-
-      const board = createBoard('d1', [createPlacement('inst-1')]);
-      service.mountBoard(board);
-
-      expect(mockMount).not.toHaveBeenCalled();
-    });
-
-    test('skips placements with unknown brick type', () => {
-      // No brick type registered
-      const board = createBoard('d1', [createPlacement('inst-1')]);
-      service.mountBoard(board);
-
-      expect(mockMount).not.toHaveBeenCalled();
-    });
-  });
-
-  // ─── unmountBoard ────────────────────────────────────────────────────
-
-  describe('unmountBoard', () => {
-    test('unmounts all placements and sends IPC', () => {
-      const type = createBrickType();
-      brickTypes.set(type.fullId, type);
-
-      const board = createBoard('d1', [createPlacement('inst-1'), createPlacement('inst-2')]);
-
-      service.unmountBoard(board);
-
-      expect(mockUnmount).toHaveBeenCalledTimes(2);
-      expect(mockProcess.sendUnmountBrickInstance).toHaveBeenCalledTimes(2);
-    });
-
-    test('dispatches instanceUnmounted events', () => {
-      const type = createBrickType();
-      brickTypes.set(type.fullId, type);
-
-      const board = createBoard('d1', [createPlacement('inst-1')]);
-      service.unmountBoard(board);
-
-      expect(mockDispatch).toHaveBeenCalled();
-    });
-  });
-
   // ─── addBrick ────────────────────────────────────────────────────────
 
   describe('addBrick', () => {
-    test('creates placement, saves, mounts, and returns it', async () => {
+    test('creates placement, saves, and returns it', async () => {
       const type = createBrickType();
       brickTypes.set(type.fullId, type);
 
       const board = createBoard('d1');
       boards.set('d1', board);
-      service.viewerConnected('d1'); // mark board as actively viewed
 
       const result = await service.addBrick('d1', 'plugin:brick', {
         key: 'val',
@@ -247,7 +123,6 @@ describe('BoardService', () => {
       });
       expect(result?.instanceId).toMatch(/^inst-/);
       expect(mockSave).toHaveBeenCalledTimes(1);
-      expect(mockMount).toHaveBeenCalledTimes(1);
       expect(board.bricks).toHaveLength(1);
     });
 
@@ -289,7 +164,7 @@ describe('BoardService', () => {
   // ─── removeBrick ─────────────────────────────────────────────────────
 
   describe('removeBrick', () => {
-    test('removes placement, saves, unmounts, returns true', async () => {
+    test('removes placement, saves, returns true', async () => {
       const type = createBrickType();
       brickTypes.set(type.fullId, type);
 
@@ -301,7 +176,6 @@ describe('BoardService', () => {
       expect(result).toBe(true);
       expect(board.bricks).toHaveLength(0);
       expect(mockSave).toHaveBeenCalledTimes(1);
-      expect(mockUnmount).toHaveBeenCalledTimes(1);
     });
 
     test('dispatches brickRemoved event', async () => {
@@ -327,24 +201,13 @@ describe('BoardService', () => {
   // ─── updateBrickConfig ───────────────────────────────────────────────
 
   describe('updateBrickConfig', () => {
-    test('updates config on placement, instance, and IPC', async () => {
+    test('updates config on placement and sends IPC', async () => {
       const type = createBrickType();
       brickTypes.set(type.fullId, type);
 
       const placement = createPlacement('inst-1');
       const board = createBoard('d1', [placement]);
       boards.set('d1', board);
-
-      // Pre-mount instance
-      mountedInstances.set('inst-1', {
-        instanceId: 'inst-1',
-        brickTypeId: 'plugin:brick',
-        pluginName: 'plugin',
-        w: 2,
-        h: 2,
-        config: {},
-        body: [],
-      });
 
       const newConfig = {
         unit: 'celsius',
@@ -386,15 +249,6 @@ describe('BoardService', () => {
 
       const placement = createPlacement('inst-1');
       boards.set('d1', createBoard('d1', [placement]));
-      mountedInstances.set('inst-1', {
-        instanceId: 'inst-1',
-        brickTypeId: 'plugin:brick',
-        pluginName: 'plugin',
-        w: 2,
-        h: 2,
-        config: {},
-        body: [],
-      });
 
       const result = await service.moveBrick(
         'd1',
@@ -419,55 +273,6 @@ describe('BoardService', () => {
         h: 3,
       });
       expect(mockSave).toHaveBeenCalledTimes(1);
-    });
-
-    test('sends resize IPC only when size changed', async () => {
-      const type = createBrickType();
-      brickTypes.set(type.fullId, type);
-
-      const placement = createPlacement('inst-1');
-      boards.set('d1', createBoard('d1', [placement]));
-      mountedInstances.set('inst-1', {
-        instanceId: 'inst-1',
-        brickTypeId: 'plugin:brick',
-        pluginName: 'plugin',
-        w: 2,
-        h: 2,
-        config: {},
-        body: [],
-      });
-
-      // Same size, different position — no resize IPC
-      await service.moveBrick(
-        'd1',
-        'inst-1',
-        {
-          x: 5,
-          y: 5,
-        },
-        {
-          w: 2,
-          h: 2,
-        }
-      );
-      expect(mockResize).not.toHaveBeenCalled();
-      expect(mockProcess.sendResizeBrickInstance).not.toHaveBeenCalled();
-
-      // Different size — resize IPC sent
-      await service.moveBrick(
-        'd1',
-        'inst-1',
-        {
-          x: 5,
-          y: 5,
-        },
-        {
-          w: 4,
-          h: 3,
-        }
-      );
-      expect(mockResize).toHaveBeenCalled();
-      expect(mockProcess.sendResizeBrickInstance).toHaveBeenCalled();
     });
 
     test('returns false if board not found', async () => {
@@ -550,54 +355,6 @@ describe('BoardService', () => {
       expect(mockSave).toHaveBeenCalledTimes(1);
     });
 
-    test('sends resize IPC only for bricks whose size changed', async () => {
-      const type = createBrickType();
-      brickTypes.set(type.fullId, type);
-
-      const p1 = createPlacement('inst-1'); // size 2x2
-      const p2 = createPlacement('inst-2'); // size 2x2
-      boards.set('d1', createBoard('d1', [p1, p2]));
-      mountedInstances.set('inst-1', {
-        instanceId: 'inst-1',
-        brickTypeId: 'plugin:brick',
-        pluginName: 'plugin',
-        w: 2,
-        h: 2,
-        config: {},
-        body: [],
-      });
-      mountedInstances.set('inst-2', {
-        instanceId: 'inst-2',
-        brickTypeId: 'plugin:brick',
-        pluginName: 'plugin',
-        w: 2,
-        h: 2,
-        config: {},
-        body: [],
-      });
-
-      await service.batchUpdateLayout('d1', [
-        {
-          instanceId: 'inst-1',
-          x: 0,
-          y: 0,
-          w: 2,
-          h: 2,
-        }, // same size
-        {
-          instanceId: 'inst-2',
-          x: 3,
-          y: 0,
-          w: 4,
-          h: 4,
-        }, // size changed
-      ]);
-
-      // Only inst-2 should trigger resize
-      expect(mockResize).toHaveBeenCalledTimes(1);
-      expect(mockProcess.sendResizeBrickInstance).toHaveBeenCalledTimes(1);
-    });
-
     test('dispatches layoutChanged event', async () => {
       boards.set('d1', createBoard('d1'));
 
@@ -611,52 +368,25 @@ describe('BoardService', () => {
     });
   });
 
-  // ─── mountPendingForType ─────────────────────────────────────────────
+  // ─── viewerConnected / viewerDisconnected ─────────────────────────────
 
-  describe('mountPendingForType', () => {
-    test('mounts unmounted placements matching the type', () => {
-      const type = createBrickType('plugin:brick', 'plugin');
-      brickTypes.set(type.fullId, type);
-
-      boards.set(
-        'd1',
-        createBoard('d1', [
-          createPlacement('inst-1', 'plugin:brick'),
-          createPlacement('inst-2', 'plugin:other'), // different type
-        ])
-      );
-
-      // Register active viewer — mountBoard will mount inst-1 (plugin:other not registered so inst-2 skips)
+  describe('viewerConnected / viewerDisconnected', () => {
+    test('tracks viewer count', () => {
+      expect(service.hasActiveViewers('d1')).toBe(false);
       service.viewerConnected('d1');
-      // Clear the mount from viewerConnected so we can test mountPendingForType in isolation
-      mountedInstances.clear();
-      mockMount.mockClear();
-
-      service.mountPendingForType('plugin:brick');
-
-      // Only inst-1 matches and is unmounted
-      expect(mockMount).toHaveBeenCalledTimes(1);
+      expect(service.hasActiveViewers('d1')).toBe(true);
+      service.viewerDisconnected('d1');
+      expect(service.hasActiveViewers('d1')).toBe(false);
     });
 
-    test('skips already-mounted instances', () => {
-      const type = createBrickType();
-      brickTypes.set(type.fullId, type);
-
-      mountedInstances.set('inst-1', {
-        instanceId: 'inst-1',
-        brickTypeId: 'plugin:brick',
-        pluginName: 'plugin',
-        w: 2,
-        h: 2,
-        config: {},
-        body: [],
-      });
-
-      boards.set('d1', createBoard('d1', [createPlacement('inst-1')]));
-
-      service.mountPendingForType('plugin:brick');
-
-      expect(mockMount).not.toHaveBeenCalled();
+    test('handles multiple viewers', () => {
+      service.viewerConnected('d1');
+      service.viewerConnected('d1');
+      expect(service.hasActiveViewers('d1')).toBe(true);
+      service.viewerDisconnected('d1');
+      expect(service.hasActiveViewers('d1')).toBe(true);
+      service.viewerDisconnected('d1');
+      expect(service.hasActiveViewers('d1')).toBe(false);
     });
   });
 });

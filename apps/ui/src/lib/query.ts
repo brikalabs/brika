@@ -4,15 +4,11 @@
 import { QueryClient } from '@tanstack/react-query';
 
 /**
- * Get API base URL - in dev, connect directly to hub to avoid Vite proxy SSE issues
- */
-export const API_BASE = import.meta.env.DEV ? 'http://127.0.0.1:3001' : '';
-
-/**
- * Get SSE stream URL (bypasses Vite proxy in dev mode)
+ * Get SSE stream URL — uses relative paths so requests go through the Vite
+ * proxy in dev (preserving auth cookies) and work as-is in production.
  */
 export function getStreamUrl(path: string): string {
-  return `${API_BASE}${path}`;
+  return path;
 }
 
 export const queryClient = new QueryClient({

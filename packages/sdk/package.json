@@ -20,9 +20,9 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
-    "./bricks": {
-      "types": "./dist/bricks.d.ts",
-      "default": "./dist/bricks.js"
+    "./brick-views": {
+      "types": "./dist/brick-views.d.ts",
+      "default": "./dist/brick-views.js"
     },
     "./sparks": {
       "types": "./dist/sparks.d.ts",
@@ -52,13 +52,9 @@
       "types": "./dist/ui-kit/hooks.d.ts",
       "default": "./dist/ui-kit/hooks.js"
     },
-    "./jsx-runtime": {
-      "types": "./dist/jsx-runtime.d.ts",
-      "default": "./dist/jsx-runtime.js"
-    },
-    "./jsx-dev-runtime": {
-      "types": "./dist/jsx-dev-runtime.d.ts",
-      "default": "./dist/jsx-dev-runtime.js"
+    "./actions": {
+      "types": "./dist/actions.d.ts",
+      "default": "./dist/actions.js"
     },
     "./tsconfig.plugin.json": "./tsconfig.plugin.json"
   },

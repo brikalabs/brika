@@ -12,12 +12,18 @@ export function PluginPageTab() {
     return null;
   }
 
+  const pageId = params.tab ?? '';
+  const page = plugin.pages.find((p) => p.id === pageId) as
+    | { id: string; moduleUrl?: string }
+    | undefined;
+
   return (
     <PluginPageContent
       pluginUid={plugin.uid}
       pluginName={plugin.name}
       pluginStatus={plugin.status}
-      pageId={params.tab ?? ''}
+      pageId={pageId}
+      moduleUrl={page?.moduleUrl}
     />
   );
 }

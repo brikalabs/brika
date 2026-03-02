@@ -1,22 +1,34 @@
-import { join, resolve } from 'node:path';
+import { mkdir, readlink, symlink, unlink } from 'node:fs/promises';
+import { dirname, join, resolve } from 'node:path';
 import { inject, singleton } from '@brika/di';
 import { BunRunner, ConfigLoader, HubConfig } from '@/runtime/config';
 import { Logger } from '@/runtime/logs/log-router';
 import { PackageManager } from './package-manager';
 import type { InstalledPackage, OperationProgress, UpdateInfo } from './types';
 
+function normalizeVersion(version?: string): string | undefined {
+  // Bare absolute paths → file: specifier
+  if (version?.startsWith('/')) return `file:${version}`;
+  return version;
+}
+
+function isLocalVersion(version?: string): version is string {
+  return version?.startsWith('workspace:') === true || version?.startsWith('file:') === true;
+}
+
 @singleton()
 export class PluginRegistry {
   private readonly hubConfig = inject(HubConfig);
   private readonly logs = inject(Logger).withSource('registry');
   private readonly configLoader = inject(ConfigLoader);
-  private readonly pluginsDir: string;
+  private readonly bunRunner = inject(BunRunner);
+  readonly pluginsDir: string;
   readonly #pm: PackageManager;
 
   constructor() {
     // Use absolute path for Bun.resolveSync compatibility
     this.pluginsDir = resolve(this.hubConfig.homeDir, 'plugins');
-    this.#pm = new PackageManager(inject(BunRunner), this.pluginsDir);
+    this.#pm = new PackageManager(this.bunRunner, this.pluginsDir);
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -49,19 +61,22 @@ export class PluginRegistry {
   // ─────────────────────────────────────────────────────────────────────────────
 
   async *install(name: string, version?: string): AsyncGenerator<OperationProgress> {
-    const isWorkspace = version?.startsWith('workspace:') || version?.startsWith('file:');
+    version = normalizeVersion(version);
 
     try {
       yield this.#msg('resolving', 'install', name, version);
 
-      if (!isWorkspace) {
+      let rootDirectory: string | undefined;
+      if (isLocalVersion(version)) {
+        rootDirectory = await this.#linkLocalPlugin(name, version);
+      } else {
         yield* this.#pm.install(name, version);
       }
 
       await this.configLoader.addPlugin(name, version ?? 'latest');
 
       yield this.#msg('linking', 'install', name, version, 'Loading plugin...');
-      await this.#loadPlugin(name, !!isWorkspace);
+      await this.#loadPlugin(rootDirectory ?? name);
 
       yield this.#msg('complete', 'install', name, version, 'Installed successfully');
     } catch (error) {
@@ -73,8 +88,15 @@ export class PluginRegistry {
     await this.#unloadPlugin(name);
     await this.configLoader.removePlugin(name);
 
-    const npmPath = join(this.pluginsDir, 'node_modules', name, 'package.json');
-    if (await Bun.file(npmPath).exists()) {
+    const linkPath = join(this.pluginsDir, 'node_modules', name);
+    const isSymlink = await readlink(linkPath).then(() => true, () => false);
+
+    if (isSymlink) {
+      // Workspace plugin — remove symlink and package.json entry
+      await unlink(linkPath).catch(() => undefined);
+      await this.#removeDependency(name);
+    } else if (await Bun.file(join(linkPath, 'package.json')).exists()) {
+      // NPM plugin — use package manager
       await this.#pm.remove(name);
     }
 
@@ -178,42 +200,36 @@ export class PluginRegistry {
     const configNames = new Set(entries.map((e) => e.name));
     const installed = await this.list();
 
-    // Uninstall removed
+    await this.#removeStalePlugins(installed, configNames);
+    await this.#ensureSyncedPlugins(entries);
+  }
+
+  async #removeStalePlugins(installed: InstalledPackage[], configNames: Set<string>): Promise<void> {
     for (const pkg of installed) {
-      if (!configNames.has(pkg.name)) {
-        try {
-          await this.uninstall(pkg.name);
-        } catch (error) {
-          this.logs.error(
-            'Failed to uninstall plugin during sync',
-            {
-              packageName: pkg.name,
-            },
-            {
-              error,
-            }
-          );
-        }
+      if (configNames.has(pkg.name)) continue;
+      try {
+        await this.uninstall(pkg.name);
+      } catch (error) {
+        this.logs.error('Failed to uninstall plugin during sync', { packageName: pkg.name }, { error });
       }
     }
+  }
 
-    // Install missing
+  async #ensureSyncedPlugins(entries: Array<{ name: string; version: string }>): Promise<void> {
     for (const entry of entries) {
-      if (!(await this.has(entry.name))) {
+      if (isLocalVersion(entry.version)) {
+        try {
+          await this.#linkLocalPlugin(entry.name, entry.version);
+        } catch (error) {
+          this.logs.error('Failed to link local plugin', { packageName: entry.name }, { error });
+        }
+      } else if (!(await this.has(entry.name))) {
         try {
           for await (const _ of this.install(entry.name, entry.version)) {
             // Consume progress
           }
         } catch (error) {
-          this.logs.error(
-            'Failed to install plugin during sync',
-            {
-              packageName: entry.name,
-            },
-            {
-              error,
-            }
-          );
+          this.logs.error('Failed to install plugin during sync', { packageName: entry.name }, { error });
         }
       }
     }
@@ -223,22 +239,91 @@ export class PluginRegistry {
   // Private Helpers
   // ─────────────────────────────────────────────────────────────────────────────
 
-  async #loadPlugin(name: string, isWorkspace: boolean): Promise<void> {
+  async #loadPlugin(name: string): Promise<void> {
     const { PluginManager } = await import('@/runtime/plugins/plugin-manager');
     const pm = inject(PluginManager);
+    // All plugins (npm + workspace) are in pluginsDir/node_modules/
+    await pm.load(name, this.pluginsDir);
+  }
 
-    if (isWorkspace) {
-      const config = await this.configLoader.load();
-      const entry = config.plugins.find((e) => e.name === name);
-      if (!entry) {
-        throw new Error('Plugin not found in config');
+  /**
+   * Link a local plugin: validate, install dependencies in its source directory,
+   * and create a symlink in pluginsDir/node_modules/.
+   * Returns the resolved absolute root directory of the plugin.
+   */
+  async #linkLocalPlugin(name: string, version: string): Promise<string> {
+    const { rootDirectory } = await this.configLoader.resolvePluginEntry({ name, version });
+
+    // Validate the target directory contains a package.json
+    if (!(await Bun.file(join(rootDirectory, 'package.json')).exists())) {
+      throw new Error(`No package.json found at "${rootDirectory}"`);
+    }
+
+    // Install dependencies in the plugin's source directory.
+    // For monorepo workspace plugins this is a no-op (already installed).
+    // For standalone plugins this installs missing deps.
+    await this.#installDepsInSource(name, rootDirectory);
+
+    // Create symlink: pluginsDir/node_modules/<name> → rootDirectory
+    await this.#ensureSymlink(name, rootDirectory);
+
+    await this.#addDependency(name, version);
+    return rootDirectory;
+  }
+
+  async #installDepsInSource(name: string, rootDirectory: string): Promise<void> {
+    try {
+      const code = await this.bunRunner
+        .spawn(['install', '--frozen-lockfile'], { cwd: rootDirectory, stdout: 'ignore', stderr: 'ignore' })
+        .exited;
+      if (code !== 0) {
+        this.logs.warn('Dependency install returned non-zero exit code, plugin may still work if part of a workspace', {
+          pluginName: name,
+          exitCode: code,
+        });
       }
+    } catch (error) {
+      this.logs.warn('Failed to install plugin dependencies', { pluginName: name }, { error });
+    }
+  }
 
-      const resolved = await this.configLoader.resolvePluginEntry(entry);
-      await pm.load(resolved.rootDirectory);
-    } else {
-      // For npm packages, pass pluginsDir so Bun.resolveSync looks in the right node_modules
-      await pm.load(name, this.pluginsDir);
+  async #ensureSymlink(name: string, rootDirectory: string): Promise<void> {
+    const linkPath = join(this.pluginsDir, 'node_modules', name);
+    const nodeModulesDir = join(this.pluginsDir, 'node_modules');
+
+    // Guard against path traversal (e.g. name = "../../../etc")
+    if (!resolve(linkPath).startsWith(resolve(nodeModulesDir) + '/')) {
+      throw new Error(`Invalid plugin name: "${name}" resolves outside node_modules`);
+    }
+
+    await mkdir(dirname(linkPath), { recursive: true });
+
+    // Update or create symlink (remove stale if target changed)
+    try {
+      const existing = await readlink(linkPath);
+      if (existing !== rootDirectory) {
+        await unlink(linkPath);
+        await symlink(rootDirectory, linkPath);
+      }
+    } catch {
+      await symlink(rootDirectory, linkPath);
+    }
+  }
+
+  async #addDependency(name: string, version: string): Promise<void> {
+    const pkgPath = join(this.pluginsDir, 'package.json');
+    const pkg = await Bun.file(pkgPath).json();
+    pkg.dependencies ??= {};
+    pkg.dependencies[name] = version;
+    await Bun.write(pkgPath, JSON.stringify(pkg, null, 2));
+  }
+
+  async #removeDependency(name: string): Promise<void> {
+    const pkgPath = join(this.pluginsDir, 'package.json');
+    const pkg = await Bun.file(pkgPath).json();
+    if (pkg.dependencies) {
+      delete pkg.dependencies[name];
+      await Bun.write(pkgPath, JSON.stringify(pkg, null, 2));
     }
   }
 

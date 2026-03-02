@@ -133,6 +133,21 @@ export type { ActionRef } from './api/actions';
 export { defineAction } from './api/actions';
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Brick Data (push to client-rendered bricks)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type { BrickConfigChangeHandler } from './api/brick-config';
+export { onBrickConfigChange } from './api/brick-config';
+export { setBrickData } from './api/push-brick-data';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Shared Store (reactive pub/sub state for plugin processes)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type { SharedStore } from './api/shared-store';
+export { defineSharedStore } from './api/shared-store';
+
+// ─────────────────────────────────────────────────────────────────────────────
 // OAuth
 // ─────────────────────────────────────────────────────────────────────────────
 

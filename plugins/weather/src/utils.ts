@@ -140,7 +140,7 @@ export function windDirectionLabel(degrees: number): string {
 
 // ─── Day Name Formatting ───────────────────────────────────────────────────
 
-import type { I18nRef } from '@brika/sdk/bricks';
+import type { I18nRef } from '@brika/sdk/ui-kit';
 
 export type TranslateFn = (key: string, params?: Record<string, string | number>) => I18nRef;
 

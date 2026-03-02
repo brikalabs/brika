@@ -1,4 +1,3 @@
-import type { ComponentNode, Mutation } from '@brika/ui-kit';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect } from 'react';
 import { getStreamUrl } from '@/lib/query';
@@ -185,27 +184,12 @@ export function useAddBrick() {
     },
     onSuccess: (placement) => {
       useBoardStore.getState().addBrickPlacement(placement);
-      useBoardStore.getState().setInstanceBody(placement.instanceId, []);
       // Only invalidate the board list (for brickCount), not the detail query.
       // The detail is already updated optimistically via addBrickPlacement.
       qc.invalidateQueries({
         queryKey: boardKeys.all,
         exact: true,
       });
-
-      // Safety net: fetch the body from API after plugin has had time to render.
-      setTimeout(() => {
-        brickInstancesApi
-          .get(placement.instanceId)
-          .then((inst) => {
-            if (inst.body.length > 0) {
-              useBoardStore.getState().setInstanceBody(inst.instanceId, inst.body);
-            }
-          })
-          .catch(() => {
-            // Ignore delayed body refresh errors.
-          });
-      }, 500);
     },
   });
 }
@@ -224,7 +208,6 @@ export function useRemoveBrick() {
     },
     onSuccess: (instanceId) => {
       useBoardStore.getState().removeBrickPlacement(instanceId);
-      useBoardStore.getState().removeInstanceBody(instanceId);
       // Only invalidate the board list (for brickCount), not the detail query.
       qc.invalidateQueries({
         queryKey: boardKeys.all,
@@ -303,29 +286,31 @@ export function useBoardSSE(boardId: string | undefined) {
       const store = useBoardStore.getState();
 
       switch (event.type) {
-        case 'brick.snapshot': {
-          const instances = event.payload.instances as Array<{
-            instanceId: string;
-            body: ComponentNode[];
-          }>;
-          store.setBodiesBatch(instances.map((i) => [i.instanceId, i.body]));
+        case 'brick.dataSnapshot': {
+          const entries = event.payload.entries as Array<[string, unknown]>;
+          store.setBrickDataBatch(entries);
           break;
         }
-        case 'brick.instancePatched': {
-          const instanceId = event.payload.instanceId as string;
-          const mutations = event.payload.mutations as Mutation[];
-          store.clearDisconnected(instanceId);
-          store.patchInstance(instanceId, mutations);
+        case 'brick.dataUpdated': {
+          const { brickTypeId, data } = event.payload as {
+            brickTypeId: string;
+            data: unknown;
+          };
+          store.setBrickData(brickTypeId, data);
           break;
         }
-        case 'brick.instanceMounted': {
-          const instanceId = event.payload.instanceId as string;
-          store.setInstanceBody(instanceId, []);
-          break;
-        }
-        case 'brick.pluginDisconnected': {
-          const instanceIds = event.payload.instanceIds as string[];
-          store.markDisconnected(instanceIds);
+        case 'brick.moduleRecompiled': {
+          const { brickTypeId, moduleUrl } = event.payload as {
+            brickTypeId: string;
+            moduleUrl: string;
+          };
+          // Remove old injected <style> so the new module can inject fresh CSS
+          const bt = store.brickTypes.get(brickTypeId);
+          if (bt) {
+            const cssKey = `${bt.pluginName}:bricks/${bt.localId}`;
+            document.querySelector(`style[data-brika-css="${cssKey}"]`)?.remove();
+          }
+          store.updateBrickTypeModuleUrl(brickTypeId, moduleUrl);
           break;
         }
         case 'board.brickAdded':

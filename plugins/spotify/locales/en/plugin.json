@@ -34,6 +34,10 @@
       }
     }
   },
+  "player": {
+    "title": "Spotify",
+    "login": "Login with Spotify"
+  },
   "blocks": {
     "play": {
       "name": "Play Spotify",

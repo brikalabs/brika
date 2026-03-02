@@ -1,61 +1,44 @@
 /**
- * {{pascal}} Board Brick
+ * {{pascal}} Brick — client-rendered dashboard component.
+ *
+ * This runs in the browser as a real React component.
+ * Data is pushed from the plugin process via setBrickData().
  */
 
-import { defineBrick, useBrickSize, useState, useEffect, Grid, Section, Stat, Stack, Toggle } from '@brika/sdk/bricks';
+import { useBrickData, useBrickSize } from '@brika/sdk/brick-views';
 
-export const {{camel}}Brick = defineBrick(
-  {
-    id: '{{id}}',
-    name: '{{pascal}}',
-    families: ['sm', 'md', 'lg'],
-  },
-  () => {
-    const { width } = useBrickSize();
-    const [active, setActive] = useState(true);
-    const [value, setValue] = useState(0);
+interface {{pascal}}Data {
+  count: number;
+  active: boolean;
+}
 
-    useEffect(() => {
-      if (!active) return;
-      const id = setInterval(() => setValue((v) => v + 1), 1000);
-      return () => clearInterval(id);
-    }, []);
+export default function {{pascal}}() {
+  const data = useBrickData<{{pascal}}Data>();
+  const { width } = useBrickSize();
 
-    // Small (1-2 cols)
-    if (width <= 2) {
-      return <Stat label="Count" value={value} icon="hash" />;
-    }
+  if (!data) {
+    return <div className="flex h-full items-center justify-center text-muted-foreground">Loading...</div>;
+  }
 
-    // Medium (3-4 cols)
-    if (width <= 4) {
-      return (
-        <>
-          <Stat label="Count" value={value} icon="hash" color="#3b82f6" />
-          <Toggle
-            label="Active"
-            checked={active}
-            onToggle={(p) => setActive(typeof p?.checked === 'boolean' ? p.checked : !active)}
-          />
-        </>
-      );
-    }
-
-    // Large (5+ cols)
+  // Small (1-2 cols) — compact view
+  if (width <= 2) {
     return (
-      <Section title="{{pascal}}">
-        <Grid columns={2} gap="sm">
-          <Stat label="Count" value={value} icon="hash" color="#3b82f6" />
-          <Stat label="Status" value={active ? 'Running' : 'Paused'} icon="activity" />
-        </Grid>
-        <Stack direction="horizontal" gap="sm">
-          <Toggle
-            label="Active"
-            checked={active}
-            onToggle={(p) => setActive(typeof p?.checked === 'boolean' ? p.checked : !active)}
-            icon="power"
-          />
-        </Stack>
-      </Section>
+      <div className="flex h-full items-center justify-center p-3">
+        <span className="text-2xl font-bold">{data.count}</span>
+      </div>
     );
-  },
-);
+  }
+
+  // Medium+ — full view
+  return (
+    <div className="flex h-full flex-col gap-3 p-4">
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-medium text-muted-foreground">Count</span>
+        <span className={`text-xs ${data.active ? 'text-green-500' : 'text-muted-foreground'}`}>
+          {data.active ? 'Running' : 'Paused'}
+        </span>
+      </div>
+      <span className="text-3xl font-bold">{data.count}</span>
+    </div>
+  );
+}

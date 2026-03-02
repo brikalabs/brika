@@ -306,7 +306,6 @@ export const PluginPackageSchema = BasePackageJson.extend({
   pages: z.optional(
     z.array(PageSchema).describe('Custom pages shown as tabs on the plugin detail view')
   ),
-  actions: z.optional(z.string().describe('Path to actions file, e.g. "src/actions.ts"')),
   icon: z.optional(z.string().describe('Path to plugin icon (PNG/SVG, relative to package root)')),
   preferences: z.optional(
     z.array(PreferenceSchema).describe('Plugin preferences/configuration schema')

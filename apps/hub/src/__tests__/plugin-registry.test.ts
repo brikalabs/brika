@@ -3,10 +3,13 @@
  */
 
 import 'reflect-metadata';
-import { beforeEach, describe, expect, mock, test } from 'bun:test';
+import { mkdir, mkdtemp, readlink, realpath, rm, symlink, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 import { get, provide, stub, useTestBed } from '@brika/di/testing';
 import { useBunMock } from '@brika/testing';
-import { ConfigLoader, HubConfig } from '@/runtime/config';
+import { BunRunner, ConfigLoader, HubConfig } from '@/runtime/config';
 import { Logger } from '@/runtime/logs/log-router';
 import { PluginManager } from '@/runtime/plugins/plugin-manager';
 import { PluginRegistry } from '@/runtime/registry/plugin-registry';
@@ -518,6 +521,49 @@ describe('PluginRegistry', () => {
 
       expect(result).toEqual([]);
     });
+
+    test('returns update info when dependencies exist', async () => {
+      bun
+        .fs({
+          '/test/home/plugins/package.json': {
+            dependencies: { '@test/plugin': '^1.0.0' },
+          },
+          '/test/home/plugins/node_modules/@test/plugin/package.json': {
+            version: '1.0.0',
+          },
+        })
+        .spawn({ exitCode: 0, stdout: '2.0.0\n' })
+        .apply();
+
+      const result = await registry.checkUpdates();
+
+      expect(result).toHaveLength(1);
+      expect(result[0]).toMatchObject({
+        name: '@test/plugin',
+        currentVersion: '1.0.0',
+        latestVersion: '2.0.0',
+        updateAvailable: true,
+      });
+    });
+
+    test('reports no update when versions match', async () => {
+      bun
+        .fs({
+          '/test/home/plugins/package.json': {
+            dependencies: { '@test/plugin': '^1.0.0' },
+          },
+          '/test/home/plugins/node_modules/@test/plugin/package.json': {
+            version: '1.0.0',
+          },
+        })
+        .spawn({ exitCode: 0, stdout: '1.0.0\n' })
+        .apply();
+
+      const result = await registry.checkUpdates();
+
+      expect(result).toHaveLength(1);
+      expect(result[0]?.updateAvailable).toBe(false);
+    });
   });
 
   describe('syncToConfig', () => {
@@ -648,5 +694,226 @@ describe('PluginRegistry', () => {
 
       expect(phases.some((p) => p.phase === 'linking')).toBe(true);
     });
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Local/workspace plugin tests — uses real temp directories for fs operations
+// (mkdir, symlink, readlink, unlink) to avoid mock.module pollution.
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('PluginRegistry — local plugins', () => {
+  let tmpHome: string;
+  let pluginsDir: string;
+  let registry: PluginRegistry;
+  let mockConfigLoader: {
+    get: ReturnType<typeof mock>;
+    load: ReturnType<typeof mock>;
+    addPlugin: ReturnType<typeof mock>;
+    removePlugin: ReturnType<typeof mock>;
+    resolvePluginEntry: ReturnType<typeof mock>;
+  };
+  let spawnExitCode: number;
+
+  beforeEach(async () => {
+    spawnExitCode = 0;
+    tmpHome = await realpath(await mkdtemp(join(tmpdir(), 'brika-registry-test-')));
+    pluginsDir = join(tmpHome, 'plugins');
+    await mkdir(join(pluginsDir, 'node_modules'), { recursive: true });
+    // Create the initial plugins package.json
+    await writeFile(
+      join(pluginsDir, 'package.json'),
+      JSON.stringify({ name: 'brika-plugins', private: true, dependencies: {} }, null, 2),
+    );
+
+    mockConfigLoader = {
+      get: mock().mockReturnValue({ plugins: [] }),
+      load: mock().mockResolvedValue({ plugins: [] }),
+      addPlugin: mock().mockResolvedValue(undefined),
+      removePlugin: mock().mockResolvedValue(undefined),
+      resolvePluginEntry: mock().mockResolvedValue({ rootDirectory: '/dev/null' }),
+    };
+
+    stub(Logger);
+    provide(HubConfig, { homeDir: tmpHome });
+    provide(ConfigLoader, mockConfigLoader);
+    // Provide a mock BunRunner that doesn't actually spawn processes
+    provide(BunRunner, {
+      bin: process.execPath,
+      env: (extra?: Record<string, string | undefined>) => ({ ...process.env, ...extra }),
+      spawn: mock((_args: string[], _opts?: unknown) => ({
+        exited: Promise.resolve(spawnExitCode),
+        pid: 99999,
+        stdout: null,
+        stderr: null,
+        kill: () => {},
+      })),
+    } as unknown as BunRunner);
+    provide(PluginManager, {
+      load: mock().mockResolvedValue(undefined),
+      remove: mock().mockResolvedValue(undefined),
+      unload: mock().mockResolvedValue(undefined),
+      list: mock().mockReturnValue([]),
+    });
+
+    registry = get(PluginRegistry);
+  });
+
+  afterEach(async () => {
+    await rm(tmpHome, { recursive: true, force: true });
+  });
+
+  test('workspace install links local plugin, creates symlink and adds dependency', async () => {
+    // Create a real plugin directory
+    const pluginSrc = join(tmpHome, 'workspace-plugin');
+    await mkdir(pluginSrc, { recursive: true });
+    await writeFile(join(pluginSrc, 'package.json'), JSON.stringify({ name: '@test/ws-plugin' }));
+
+    mockConfigLoader.resolvePluginEntry.mockResolvedValue({
+      rootDirectory: pluginSrc,
+    });
+
+    const phases: OperationProgress['phase'][] = [];
+    for await (const progress of registry.install('@test/ws-plugin', 'workspace:*')) {
+      phases.push(progress.phase);
+    }
+
+    expect(phases).toContain('complete');
+    expect(mockConfigLoader.addPlugin).toHaveBeenCalledWith('@test/ws-plugin', 'workspace:*');
+
+    // Symlink should exist
+    const linkTarget = await readlink(join(pluginsDir, 'node_modules', '@test/ws-plugin'));
+    expect(linkTarget).toBe(pluginSrc);
+
+    // package.json should have the dependency
+    const pkg = await Bun.file(join(pluginsDir, 'package.json')).json();
+    expect(pkg.dependencies['@test/ws-plugin']).toBe('workspace:*');
+  });
+
+  test('normalizes bare absolute path to file: specifier', async () => {
+    const pluginSrc = join(tmpHome, 'abs-plugin');
+    await mkdir(pluginSrc, { recursive: true });
+    await writeFile(join(pluginSrc, 'package.json'), JSON.stringify({ name: '@test/abs' }));
+
+    mockConfigLoader.resolvePluginEntry.mockResolvedValue({
+      rootDirectory: pluginSrc,
+    });
+
+    const phases: OperationProgress['phase'][] = [];
+    for await (const progress of registry.install('@test/abs', pluginSrc)) {
+      phases.push(progress.phase);
+    }
+
+    expect(phases).toContain('complete');
+    // normalizeVersion turns '/path' into 'file:/path'
+    expect(mockConfigLoader.addPlugin).toHaveBeenCalledWith('@test/abs', `file:${pluginSrc}`);
+  });
+
+  test('workspace install yields error when no package.json found', async () => {
+    const emptyDir = join(tmpHome, 'empty-plugin');
+    await mkdir(emptyDir, { recursive: true });
+
+    mockConfigLoader.resolvePluginEntry.mockResolvedValue({
+      rootDirectory: emptyDir,
+    });
+
+    const phases: OperationProgress[] = [];
+    for await (const progress of registry.install('@test/broken', 'workspace:*')) {
+      phases.push(progress);
+    }
+
+    const errorProgress = phases.find((p) => p.phase === 'error');
+    expect(errorProgress).toBeDefined();
+    expect(errorProgress?.error).toContain('No package.json');
+  });
+
+  test('workspace install continues when dependency install returns non-zero', async () => {
+    const pluginSrc = join(tmpHome, 'failing-deps');
+    await mkdir(pluginSrc, { recursive: true });
+    await writeFile(join(pluginSrc, 'package.json'), JSON.stringify({ name: '@test/failing' }));
+
+    mockConfigLoader.resolvePluginEntry.mockResolvedValue({
+      rootDirectory: pluginSrc,
+    });
+    // Non-zero exit code for bun install --frozen-lockfile
+    spawnExitCode = 1;
+
+    const phases: OperationProgress['phase'][] = [];
+    for await (const progress of registry.install('@test/failing', 'workspace:*')) {
+      phases.push(progress.phase);
+    }
+
+    expect(phases).toContain('complete');
+  });
+
+  test('re-linking updates symlink when target changes', async () => {
+    const pluginSrcV1 = join(tmpHome, 'plugin-v1');
+    const pluginSrcV2 = join(tmpHome, 'plugin-v2');
+    await mkdir(pluginSrcV1, { recursive: true });
+    await mkdir(pluginSrcV2, { recursive: true });
+    await writeFile(join(pluginSrcV1, 'package.json'), JSON.stringify({ name: '@test/relink' }));
+    await writeFile(join(pluginSrcV2, 'package.json'), JSON.stringify({ name: '@test/relink' }));
+
+    // First link
+    mockConfigLoader.resolvePluginEntry.mockResolvedValue({ rootDirectory: pluginSrcV1 });
+    for await (const _ of registry.install('@test/relink', 'workspace:*')) {
+      // consume
+    }
+
+    // Second link to different target
+    mockConfigLoader.resolvePluginEntry.mockResolvedValue({ rootDirectory: pluginSrcV2 });
+    for await (const _ of registry.install('@test/relink', 'workspace:*')) {
+      // consume
+    }
+
+    const linkTarget = await readlink(join(pluginsDir, 'node_modules', '@test/relink'));
+    expect(linkTarget).toBe(pluginSrcV2);
+  });
+
+  test('uninstall removes symlink for workspace plugin', async () => {
+    // Create a symlink manually
+    const pluginSrc = join(tmpHome, 'ws-to-remove');
+    await mkdir(pluginSrc, { recursive: true });
+    await writeFile(join(pluginSrc, 'package.json'), JSON.stringify({ name: '@test/ws-rm' }));
+
+    const linkDir = join(pluginsDir, 'node_modules', '@test');
+    await mkdir(linkDir, { recursive: true });
+    await symlink(pluginSrc, join(linkDir, 'ws-rm'));
+
+    // Update package.json with the dependency
+    await writeFile(
+      join(pluginsDir, 'package.json'),
+      JSON.stringify({ name: 'brika-plugins', private: true, dependencies: { '@test/ws-rm': 'workspace:*' } }),
+    );
+
+    await registry.uninstall('@test/ws-rm');
+
+    expect(mockConfigLoader.removePlugin).toHaveBeenCalledWith('@test/ws-rm');
+    // Symlink should be removed
+    await expect(readlink(join(linkDir, 'ws-rm'))).rejects.toThrow();
+    // Dependency should be removed from package.json
+    const pkg = await Bun.file(join(pluginsDir, 'package.json')).json();
+    expect(pkg.dependencies['@test/ws-rm']).toBeUndefined();
+  });
+
+  test('syncToConfig links local plugin entries', async () => {
+    const pluginSrc = join(tmpHome, 'sync-local');
+    await mkdir(pluginSrc, { recursive: true });
+    await writeFile(join(pluginSrc, 'package.json'), JSON.stringify({ name: '@test/sync' }));
+
+    mockConfigLoader.resolvePluginEntry.mockResolvedValue({ rootDirectory: pluginSrc });
+
+    await registry.syncToConfig([{ name: '@test/sync', version: 'workspace:*' }]);
+
+    // Should have linked the plugin
+    const linkTarget = await readlink(join(pluginsDir, 'node_modules', '@test/sync'));
+    expect(linkTarget).toBe(pluginSrc);
+  });
+
+  test('syncToConfig handles errors during local plugin linking gracefully', async () => {
+    mockConfigLoader.resolvePluginEntry.mockRejectedValue(new Error('Resolve failed'));
+
+    // Should not throw
+    await registry.syncToConfig([{ name: '@test/broken', version: 'workspace:*' }]);
   });
 });

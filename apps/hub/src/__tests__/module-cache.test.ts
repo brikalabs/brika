@@ -1,233 +1,266 @@
 /**
- * Tests for ModuleCache — in-memory map operations (getJs, getCss, set, remove)
- * and the etag helper function.
+ * Tests for ModuleCache — metadata-only in-memory map (get, store, remove)
+ * and the content hash helper function.
  *
- * Disk operations (loadFromDisk, writeToDisk) are not tested here because they
- * require real filesystem I/O. This file focuses on pure in-memory logic.
+ * JS content is stored on disk only; in-memory entries hold just the
+ * content hash (for URL cache-busting) and the file path (for serving).
+ *
+ * Disk integration (loadFromDisk, store) uses a real temp directory.
  */
 
-import { describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { mkdir, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { ModuleCache } from '@/runtime/modules/module-cache';
 
-// ─── In-memory cache operations ──────────────────────────────────────────────
+const TEST_DIR = join(tmpdir(), `brika-test-mc-${Date.now()}`);
 
-describe('ModuleCache - set and getJs', () => {
+beforeAll(async () => {
+  await mkdir(TEST_DIR, { recursive: true });
+});
+
+afterAll(async () => {
+  await rm(TEST_DIR, { recursive: true, force: true });
+});
+
+// ─── store and get ───────────────────────────────────────────────────────────
+
+describe('ModuleCache - store and get', () => {
   test('returns undefined for unknown key', () => {
-    const cache = new ModuleCache('/tmp/test-cache');
-    expect(cache.getJs('unknown:key')).toBeUndefined();
+    const cache = new ModuleCache();
+    expect(cache.get('unknown:key')).toBeUndefined();
   });
 
-  test('stores and retrieves JS entry', () => {
-    const cache = new ModuleCache('/tmp/test-cache');
-    cache.set('plugin:module', 'console.log("hello")');
+  test('stores metadata and writes JS to disk', async () => {
+    const cache = new ModuleCache();
+    const dir = join(TEST_DIR, 'store-basic');
 
-    const entry = cache.getJs('plugin:module');
+    await cache.store('plugin:module', dir, 'module', 'h1', 'console.log("hello")');
+
+    const entry = cache.get('plugin:module');
     expect(entry).toBeDefined();
-    expect(entry?.content).toBe('console.log("hello")');
+    expect(entry?.filePath).toBe(join(dir, 'module.h1.js'));
+    expect(await Bun.file(entry?.filePath ?? '').text()).toBe('console.log("hello")');
   });
 
-  test('generates an etag for JS content', () => {
-    const cache = new ModuleCache('/tmp/test-cache');
-    cache.set('plugin:module', 'const x = 1;');
+  test('generates a content hash', async () => {
+    const cache = new ModuleCache();
+    const dir = join(TEST_DIR, 'store-hash');
 
-    const entry = cache.getJs('plugin:module');
-    expect(entry?.etag).toBeDefined();
-    expect(entry?.etag).toMatch(/^"[0-9a-z]+"$/);
+    await cache.store('plugin:module', dir, 'module', 'h1', 'const x = 1;');
+
+    const entry = cache.get('plugin:module');
+    expect(entry?.hash).toBeDefined();
+    expect(entry?.hash).toMatch(/^[0-9a-z]+$/);
   });
 
-  test('different content produces different etags', () => {
-    const cache = new ModuleCache('/tmp/test-cache');
-    cache.set('plugin:a', 'const a = 1;');
-    cache.set('plugin:b', 'const b = 2;');
+  test('different content produces different hashes', async () => {
+    const cache = new ModuleCache();
+    const dir = join(TEST_DIR, 'store-diff');
 
-    const etagA = cache.getJs('plugin:a')?.etag;
-    const etagB = cache.getJs('plugin:b')?.etag;
+    await cache.store('plugin:a', dir, 'a', 'h1', 'const a = 1;');
+    await cache.store('plugin:b', dir, 'b', 'h2', 'const b = 2;');
 
-    expect(etagA).not.toBe(etagB);
+    const hashA = cache.get('plugin:a')?.hash;
+    const hashB = cache.get('plugin:b')?.hash;
+
+    expect(hashA).not.toBe(hashB);
   });
 
-  test('same content produces same etag', () => {
-    const cache = new ModuleCache('/tmp/test-cache');
+  test('same content produces same hash', async () => {
+    const cache = new ModuleCache();
+    const dir = join(TEST_DIR, 'store-same');
     const content = 'export default function() {}';
-    cache.set('plugin:a', content);
-    cache.set('plugin:b', content);
 
-    expect(cache.getJs('plugin:a')?.etag).toBe(cache.getJs('plugin:b')?.etag);
+    await cache.store('plugin:a', dir, 'a', 'h1', content);
+    await cache.store('plugin:b', dir, 'b', 'h2', content);
+
+    expect(cache.get('plugin:a')?.hash).toBe(cache.get('plugin:b')?.hash);
   });
 
-  test('overwrites existing entry with set()', () => {
-    const cache = new ModuleCache('/tmp/test-cache');
-    cache.set('plugin:module', 'const old = true;');
-    cache.set('plugin:module', 'const new_ = true;');
+  test('overwrites existing entry with store()', async () => {
+    const cache = new ModuleCache();
+    const dir = join(TEST_DIR, 'store-overwrite');
 
-    expect(cache.getJs('plugin:module')?.content).toBe('const new_ = true;');
-  });
-});
+    await cache.store('plugin:module', dir, 'module', 'h1', 'const old = true;');
+    await cache.store('plugin:module', dir, 'module', 'h2', 'const new_ = true;');
 
-describe('ModuleCache - set and getCss', () => {
-  test('returns undefined when no CSS was stored', () => {
-    const cache = new ModuleCache('/tmp/test-cache');
-    cache.set('plugin:module', 'js content');
-
-    expect(cache.getCss('plugin:module')).toBeUndefined();
-  });
-
-  test('returns undefined for unknown key', () => {
-    const cache = new ModuleCache('/tmp/test-cache');
-    expect(cache.getCss('unknown:key')).toBeUndefined();
-  });
-
-  test('stores and retrieves CSS entry when provided', () => {
-    const cache = new ModuleCache('/tmp/test-cache');
-    cache.set('plugin:module', 'js content', '.container { display: flex; }');
-
-    const css = cache.getCss('plugin:module');
-    expect(css).toBeDefined();
-    expect(css?.content).toBe('.container { display: flex; }');
-  });
-
-  test('generates an etag for CSS content', () => {
-    const cache = new ModuleCache('/tmp/test-cache');
-    cache.set('plugin:module', 'js', '.foo { color: red; }');
-
-    const css = cache.getCss('plugin:module');
-    expect(css?.etag).toBeDefined();
-    expect(css?.etag).toMatch(/^"[0-9a-z]+"$/);
-  });
-
-  test('CSS etag differs from JS etag when content differs', () => {
-    const cache = new ModuleCache('/tmp/test-cache');
-    cache.set('plugin:module', 'js content', 'css content');
-
-    const jsEtag = cache.getJs('plugin:module')?.etag;
-    const cssEtag = cache.getCss('plugin:module')?.etag;
-
-    expect(jsEtag).not.toBe(cssEtag);
-  });
-
-  test('overwriting with no CSS clears previous CSS', () => {
-    const cache = new ModuleCache('/tmp/test-cache');
-    cache.set('plugin:module', 'js', '.foo {}');
-    expect(cache.getCss('plugin:module')).toBeDefined();
-
-    cache.set('plugin:module', 'js updated');
-    expect(cache.getCss('plugin:module')).toBeUndefined();
+    const entry = cache.get('plugin:module');
+    expect(await Bun.file(entry?.filePath ?? '').text()).toBe('const new_ = true;');
   });
 });
+
+// ─── remove ──────────────────────────────────────────────────────────────────
 
 describe('ModuleCache - remove', () => {
-  test('removes all entries for a plugin prefix', () => {
-    const cache = new ModuleCache('/tmp/test-cache');
-    cache.set('my-plugin:page1', 'js1', 'css1');
-    cache.set('my-plugin:page2', 'js2');
-    cache.set('other-plugin:page1', 'js3');
+  test('removes all entries for a plugin prefix', async () => {
+    const cache = new ModuleCache();
+    const dir = join(TEST_DIR, 'remove-prefix');
+
+    await cache.store('my-plugin:page1', dir, 'page1', 'h1', 'js1');
+    await cache.store('my-plugin:page2', dir, 'page2', 'h2', 'js2');
+    await cache.store('other-plugin:page1', dir, 'page3', 'h3', 'js3');
 
     cache.remove('my-plugin');
 
-    expect(cache.getJs('my-plugin:page1')).toBeUndefined();
-    expect(cache.getJs('my-plugin:page2')).toBeUndefined();
-    expect(cache.getCss('my-plugin:page1')).toBeUndefined();
+    expect(cache.get('my-plugin:page1')).toBeUndefined();
+    expect(cache.get('my-plugin:page2')).toBeUndefined();
   });
 
-  test('does not affect entries from other plugins', () => {
-    const cache = new ModuleCache('/tmp/test-cache');
-    cache.set('plugin-a:module', 'js-a');
-    cache.set('plugin-b:module', 'js-b');
+  test('does not affect entries from other plugins', async () => {
+    const cache = new ModuleCache();
+    const dir = join(TEST_DIR, 'remove-other');
+
+    await cache.store('plugin-a:module', dir, 'a', 'h1', 'js-a');
+    await cache.store('plugin-b:module', dir, 'b', 'h2', 'js-b');
 
     cache.remove('plugin-a');
 
-    expect(cache.getJs('plugin-a:module')).toBeUndefined();
-    expect(cache.getJs('plugin-b:module')?.content).toBe('js-b');
+    expect(cache.get('plugin-a:module')).toBeUndefined();
+    expect(cache.get('plugin-b:module')).toBeDefined();
   });
 
   test('handles removing a plugin with no cached entries', () => {
-    const cache = new ModuleCache('/tmp/test-cache');
-    // Should not throw
+    const cache = new ModuleCache();
     cache.remove('nonexistent-plugin');
   });
 
-  test('removes entries even when plugin name is a prefix of another', () => {
-    const cache = new ModuleCache('/tmp/test-cache');
-    cache.set('timer:page', 'js1');
-    cache.set('timer-pro:page', 'js2');
+  test('removes entries even when plugin name is a prefix of another', async () => {
+    const cache = new ModuleCache();
+    const dir = join(TEST_DIR, 'remove-prefix-safe');
+
+    await cache.store('timer:page', dir, 'page', 'h1', 'js1');
+    await cache.store('timer-pro:page', dir, 'page-pro', 'h2', 'js2');
 
     cache.remove('timer');
 
-    // "timer:" entries removed, but "timer-pro:" entries should remain
-    expect(cache.getJs('timer:page')).toBeUndefined();
-    expect(cache.getJs('timer-pro:page')?.content).toBe('js2');
+    expect(cache.get('timer:page')).toBeUndefined();
+    expect(cache.get('timer-pro:page')).toBeDefined();
   });
 
-  test('can re-add entries after remove', () => {
-    const cache = new ModuleCache('/tmp/test-cache');
-    cache.set('plugin:module', 'js-old');
+  test('can re-add entries after remove', async () => {
+    const cache = new ModuleCache();
+    const dir = join(TEST_DIR, 'remove-readd');
+
+    await cache.store('plugin:module', dir, 'module', 'h1', 'js-old');
     cache.remove('plugin');
 
-    expect(cache.getJs('plugin:module')).toBeUndefined();
+    expect(cache.get('plugin:module')).toBeUndefined();
 
-    cache.set('plugin:module', 'js-new');
-    expect(cache.getJs('plugin:module')?.content).toBe('js-new');
+    await cache.store('plugin:module', dir, 'module', 'h2', 'js-new');
+    const entry = cache.get('plugin:module');
+    expect(await Bun.file(entry?.filePath ?? '').text()).toBe('js-new');
   });
 });
+
+// ─── multiple modules per plugin ─────────────────────────────────────────────
 
 describe('ModuleCache - multiple modules per plugin', () => {
-  test('stores multiple modules independently', () => {
-    const cache = new ModuleCache('/tmp/test-cache');
-    cache.set('plugin:settings', 'settings js', 'settings css');
-    cache.set('plugin:dashboard', 'dashboard js', 'dashboard css');
+  test('stores multiple modules independently', async () => {
+    const cache = new ModuleCache();
+    const dir = join(TEST_DIR, 'multi-mod');
 
-    expect(cache.getJs('plugin:settings')?.content).toBe('settings js');
-    expect(cache.getJs('plugin:dashboard')?.content).toBe('dashboard js');
-    expect(cache.getCss('plugin:settings')?.content).toBe('settings css');
-    expect(cache.getCss('plugin:dashboard')?.content).toBe('dashboard css');
+    await cache.store('plugin:settings', dir, 'settings', 'h1', 'settings js');
+    await cache.store('plugin:dashboard', dir, 'dashboard', 'h2', 'dashboard js');
+
+    const settingsEntry = cache.get('plugin:settings');
+    const dashboardEntry = cache.get('plugin:dashboard');
+    expect(await Bun.file(settingsEntry?.filePath ?? '').text()).toBe('settings js');
+    expect(await Bun.file(dashboardEntry?.filePath ?? '').text()).toBe('dashboard js');
   });
 
-  test('updating one module does not affect another', () => {
-    const cache = new ModuleCache('/tmp/test-cache');
-    cache.set('plugin:a', 'js-a');
-    cache.set('plugin:b', 'js-b');
+  test('updating one module does not affect another', async () => {
+    const cache = new ModuleCache();
+    const dir = join(TEST_DIR, 'multi-update');
 
-    cache.set('plugin:a', 'js-a-updated');
+    await cache.store('plugin:a', dir, 'a', 'h1', 'js-a');
+    await cache.store('plugin:b', dir, 'b', 'h2', 'js-b');
+    await cache.store('plugin:a', dir, 'a', 'h3', 'js-a-updated');
 
-    expect(cache.getJs('plugin:a')?.content).toBe('js-a-updated');
-    expect(cache.getJs('plugin:b')?.content).toBe('js-b');
+    const entryA = cache.get('plugin:a');
+    const entryB = cache.get('plugin:b');
+    expect(await Bun.file(entryA?.filePath ?? '').text()).toBe('js-a-updated');
+    expect(await Bun.file(entryB?.filePath ?? '').text()).toBe('js-b');
   });
 });
 
+// ─── edge cases ──────────────────────────────────────────────────────────────
+
 describe('ModuleCache - edge cases', () => {
-  test('handles empty string JS content', () => {
-    const cache = new ModuleCache('/tmp/test-cache');
-    cache.set('plugin:empty', '');
+  test('handles empty string content', async () => {
+    const cache = new ModuleCache();
+    const dir = join(TEST_DIR, 'edge-empty');
 
-    expect(cache.getJs('plugin:empty')?.content).toBe('');
-    expect(cache.getJs('plugin:empty')?.etag).toBeDefined();
+    await cache.store('plugin:empty', dir, 'empty', 'h1', '');
+
+    const entry = cache.get('plugin:empty');
+    expect(entry?.hash).toBeDefined();
+    expect(await Bun.file(entry?.filePath ?? '').text()).toBe('');
   });
 
-  test('empty string CSS is treated as no CSS (falsy)', () => {
-    const cache = new ModuleCache('/tmp/test-cache');
-    cache.set('plugin:empty-css', 'js content', '');
+  test('handles scoped package names in keys', async () => {
+    const cache = new ModuleCache();
+    const dir = join(TEST_DIR, 'edge-scoped');
 
-    // Empty string is falsy, so CSS is not stored
-    expect(cache.getCss('plugin:empty-css')).toBeUndefined();
+    await cache.store('@brika/weather:settings', dir, 'settings', 'h1', 'scoped js');
+
+    const entry = cache.get('@brika/weather:settings');
+    expect(await Bun.file(entry?.filePath ?? '').text()).toBe('scoped js');
   });
 
-  test('handles scoped package names in keys', () => {
-    const cache = new ModuleCache('/tmp/test-cache');
-    cache.set('@brika/weather:settings', 'scoped js');
+  test('remove works with scoped package names', async () => {
+    const cache = new ModuleCache();
+    const dir = join(TEST_DIR, 'edge-scoped-remove');
 
-    expect(cache.getJs('@brika/weather:settings')?.content).toBe('scoped js');
-  });
-
-  test('remove works with scoped package names', () => {
-    const cache = new ModuleCache('/tmp/test-cache');
-    cache.set('@brika/weather:settings', 'js1');
-    cache.set('@brika/weather:dashboard', 'js2');
-    cache.set('@brika/timer:settings', 'js3');
+    await cache.store('@brika/weather:settings', dir, 'settings', 'h1', 'js1');
+    await cache.store('@brika/weather:dashboard', dir, 'dashboard', 'h2', 'js2');
+    await cache.store('@brika/timer:settings', dir, 'timer-settings', 'h3', 'js3');
 
     cache.remove('@brika/weather');
 
-    expect(cache.getJs('@brika/weather:settings')).toBeUndefined();
-    expect(cache.getJs('@brika/weather:dashboard')).toBeUndefined();
-    expect(cache.getJs('@brika/timer:settings')?.content).toBe('js3');
+    expect(cache.get('@brika/weather:settings')).toBeUndefined();
+    expect(cache.get('@brika/weather:dashboard')).toBeUndefined();
+    expect(cache.get('@brika/timer:settings')).toBeDefined();
+  });
+});
+
+// ─── loadFromDisk ────────────────────────────────────────────────────────────
+
+describe('ModuleCache - loadFromDisk', () => {
+  const moduleId = 'page';
+  const hash = 'abc12345';
+  const jsContent = 'export default 42;';
+  const diskDir = join(TEST_DIR, 'load-disk-test');
+
+  beforeAll(async () => {
+    await mkdir(diskDir, { recursive: true });
+    await Bun.write(join(diskDir, `${moduleId}.${hash}.js`), jsContent);
+  });
+
+  test('returns true on cache hit and populates in-memory metadata', async () => {
+    const cache = new ModuleCache();
+
+    const hit = await cache.loadFromDisk(diskDir, 'test:page', moduleId, hash);
+    expect(hit).toBe(true);
+
+    const entry = cache.get('test:page');
+    expect(entry).toBeDefined();
+    expect(entry?.hash).toMatch(/^[0-9a-z]+$/);
+    expect(entry?.filePath).toBe(join(diskDir, `${moduleId}.${hash}.js`));
+  });
+
+  test('returns false when hash does not match', async () => {
+    const cache = new ModuleCache();
+
+    const hit = await cache.loadFromDisk(diskDir, 'test:page', moduleId, 'wronghash');
+    expect(hit).toBe(false);
+  });
+
+  test('returns false when plugin does not exist', async () => {
+    const cache = new ModuleCache();
+
+    const hit = await cache.loadFromDisk('/nonexistent', 'test:no', 'no-module', 'deadbeef');
+    expect(hit).toBe(false);
   });
 });

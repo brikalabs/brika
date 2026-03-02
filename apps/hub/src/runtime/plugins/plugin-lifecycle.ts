@@ -1,10 +1,12 @@
 import { join } from 'node:path';
+import { compileServerEntry } from '@brika/compiler';
 import { inject, singleton } from '@brika/di';
 import { spawnPlugin } from '@brika/ipc';
 import type { LogLevelType } from '@brika/ipc/contract';
 import type { Plugin, PluginHealth } from '@brika/plugin';
+import type { PluginPackageSchema } from '@brika/schema';
 import { BunRunner, PluginManagerConfig } from '@/runtime/config';
-import { PluginActions } from '@/runtime/events/actions';
+import { BrickActions, PluginActions } from '@/runtime/events/actions';
 import { EventSystem } from '@/runtime/events/event-system';
 import { I18nService } from '@/runtime/i18n';
 import { Logger } from '@/runtime/logs/log-router';
@@ -16,6 +18,7 @@ import { PluginErrors } from './plugin-errors';
 import { PluginEventHandler } from './plugin-events';
 import { PluginProcess } from './plugin-process';
 import { PluginResolver } from './plugin-resolver';
+import { PluginWatcher } from './plugin-watcher';
 import { RestartPolicy } from './restart-policy';
 import { ensurePluginTsconfig, generateUid, HUB_VERSION, satisfiesVersion } from './utils';
 
@@ -40,6 +43,7 @@ export class PluginLifecycle {
   readonly #processes = new Map<string, PluginProcess>();
   readonly #stabilityTimers = new Map<string, Timer>();
   readonly #restartPolicy: RestartPolicy;
+  readonly #watcher = inject(PluginWatcher);
 
   constructor() {
     this.#restartPolicy = new RestartPolicy({
@@ -48,6 +52,24 @@ export class PluginLifecycle {
       maxCrashes: this.#config.restartMaxCrashes,
       crashWindowMs: this.#config.restartCrashWindowMs,
       stabilityThresholdMs: this.#config.restartStabilityMs,
+    });
+
+    this.#watcher.setReloadHandler((pluginName) => {
+      const process = this.#processes.get(pluginName);
+      if (!process) {
+        return;
+      }
+      const rootDir = process.rootDirectory;
+      const uid = process.uid;
+      this.load(rootDir, true)
+        .then(() => {
+          this.#events.dispatch(PluginActions.reloaded.create({ uid, name: pluginName }, 'hub'));
+          // Notify UI about recompiled client-side brick modules
+          this.#emitModuleRecompiled(pluginName);
+        })
+        .catch((e) => {
+          this.#logs.error('Hot reload failed', { pluginName }, { error: e });
+        });
     });
   }
 
@@ -59,11 +81,7 @@ export class PluginLifecycle {
     return this.#processes.get(name);
   }
 
-  getProcessByName(name: string): PluginProcess | undefined {
-    return this.#processes.get(name);
-  }
-
-  hasProcessByName(name: string): boolean {
+  hasProcess(name: string): boolean {
     return this.#processes.has(name);
   }
 
@@ -74,6 +92,15 @@ export class PluginLifecycle {
       }
     }
     return undefined;
+  }
+
+  /** Resolve a plugin UID to its name, falling back to persisted state. */
+  resolvePluginNameByUid(uid: string): string | undefined {
+    const process = this.getProcessByUid(uid);
+    if (process) {
+      return process.name;
+    }
+    return this.#state.getByUid(uid)?.name;
   }
 
   listProcesses(): PluginProcess[] {
@@ -150,23 +177,7 @@ export class PluginLifecycle {
     }
 
     if (!this.#checkCompatibility(metadata)) {
-      // Persist the plugin in state so the UI can display it
-      const existingUid = this.#state.get(pluginName)?.uid ?? generateUid(metadata.name);
-      await this.#state.registerPlugin({
-        name: pluginName,
-        rootDirectory,
-        entryPoint,
-        uid: existingUid,
-        enabled: false,
-      });
-      // Register translations so the UI can display the plugin name/description
-      await this.#i18n.registerPluginTranslations(metadata.name, rootDirectory);
-      const required = metadata.engines?.brika;
-      await this.#state.setHealth(
-        pluginName,
-        'incompatible',
-        required ? PluginErrors.incompatibleVersion(required) : PluginErrors.incompatibleUnknown()
-      );
+      await this.#registerIncompatible(pluginName, rootDirectory, entryPoint, metadata);
       return;
     }
 
@@ -174,15 +185,7 @@ export class PluginLifecycle {
     const uid = existingState?.uid ?? generateUid(metadata.name);
     const locales = await this.#i18n.registerPluginTranslations(metadata.name, rootDirectory);
 
-    // Compile plugin modules (TSX → browser ESM) before spawning
-    if (metadata.pages?.length) {
-      const actionsFile = metadata.actions ? join(rootDirectory, metadata.actions) : undefined;
-      await this.#moduleCompiler.compile(metadata.name, rootDirectory, metadata.pages, actionsFile);
-    }
-
-    // Ensure a tsconfig.json exists so Bun resolves jsxImportSource correctly.
-    // Published plugins may omit it, causing Bun to default to "react".
-    await ensurePluginTsconfig(rootDirectory);
+    await this.#compilePluginModules(metadata, rootDirectory);
 
     this.#logs.info('Starting plugin', {
       pluginName: pluginName,
@@ -190,7 +193,31 @@ export class PluginLifecycle {
       uid,
     });
 
-    const channel = spawnPlugin(this.#bunRunner.bin, [entryPoint], {
+    // Build the server-side entry — action IDs are injected at compile time
+    const outdir = join(rootDirectory, 'node_modules', '.cache', 'brika', 'server');
+    const serverExternals = computeServerExternals(metadata);
+    const buildResult = await compileServerEntry({
+      entrypoint: entryPoint,
+      pluginRoot: rootDirectory,
+      outdir,
+      external: serverExternals,
+    });
+
+    if (buildResult.success) {
+      this.#logs.debug(buildResult.cached ? 'Server build cached' : 'Server build compiled', {
+        pluginName,
+      });
+    }
+
+    if (!buildResult.success) {
+      this.#logs.error('Server build failed', { pluginName, errors: buildResult.errors.join('; ') });
+      // Persist plugin state before setting health so it can be restored later
+      await this.#state.registerPlugin({ name: pluginName, rootDirectory, entryPoint, uid });
+      await this.#state.setHealth(pluginName, 'crashed', PluginErrors.buildFailed(buildResult.errors));
+      return;
+    }
+
+    const channel = spawnPlugin(this.#bunRunner.bin, [buildResult.entryPath], {
       cwd: rootDirectory,
       env: this.#bunRunner.env({
         BRIKA_PLUGIN_NAME: metadata.name,
@@ -275,10 +302,10 @@ export class PluginLifecycle {
         },
         onBrickType: (brickType) => {
           const manifest = metadata.bricks?.find((c) => c.id === brickType.id);
-          this.#eventHandler.registerBrickType(metadata.name, brickType, manifest);
+          this.#eventHandler.registerBrickType(metadata.name, brickType, manifest, uid);
         },
-        onBrickInstancePatch: (instanceId, mutations) =>
-          this.#eventHandler.patchBrickInstance(instanceId, mutations),
+        onBrickDataPush: (brickTypeId, data) =>
+          this.#eventHandler.pushBrickData(metadata.name, brickTypeId, data),
         onRoute: (method, path) => this.#eventHandler.registerRoute(metadata.name, method, path),
         onUpdatePreference: (key, value) => {
           const current = this.#pluginConfig.getConfig(metadata.name);
@@ -302,6 +329,19 @@ export class PluginLifecycle {
     );
 
     this.#processes.set(pluginName, process);
+
+    // Register brick types from manifest with the uid baked in,
+    // so the UI can build module URLs without a process lookup.
+    const bricks = metadata.bricks ?? [];
+    for (const brick of bricks) {
+      this.#eventHandler.registerBrickType(
+        metadata.name,
+        { id: brick.id, families: brick.families ?? ['sm', 'md', 'lg'] },
+        brick,
+        uid
+      );
+    }
+
     this.#startStabilityCheck(process);
     this.#restartPolicy.onStart(pluginName);
 
@@ -312,6 +352,8 @@ export class PluginLifecycle {
       uid,
     });
     await this.#state.setHealth(pluginName, 'restarting');
+
+    this.#watcher.watch(pluginName, rootDirectory);
   }
 
   async unload(name: string, skipRestartReset = false): Promise<void> {
@@ -321,6 +363,7 @@ export class PluginLifecycle {
     }
 
     this.#processes.delete(name);
+    this.#watcher.unwatch(name);
 
     const timer = this.#stabilityTimers.get(name);
     if (timer) {
@@ -332,8 +375,7 @@ export class PluginLifecycle {
     await new Promise((r) => setTimeout(r, 50));
     process.kill();
 
-    // Clear compiled modules and metrics
-    this.#moduleCompiler.remove(name);
+    // Clear runtime metrics (compiled modules are preserved for client-side bricks)
     this.#metrics.clear(name);
 
     const restartState = this.#restartPolicy.getState(name);
@@ -357,7 +399,39 @@ export class PluginLifecycle {
     );
   }
 
+  /** Remove compiled modules from cache (in-memory + disk). */
+  removeModules(name: string, rootDirectory?: string): void {
+    this.#moduleCompiler.remove(name, rootDirectory);
+  }
+
+  /** Dispatch moduleRecompiled events for bricks of a plugin. */
+  #emitModuleRecompiled(pluginName: string): void {
+    const process = this.#processes.get(pluginName);
+    if (!process) {
+      return;
+    }
+    const bricks = process.metadata.bricks ?? [];
+    for (const brick of bricks) {
+      const fullId = `${pluginName}:${brick.id}`;
+      const entry = this.#moduleCompiler.get(`${pluginName}:bricks/${brick.id}`);
+      if (entry) {
+        const moduleUrl = `/api/bricks/modules/${encodeURIComponent(process.uid)}/${brick.id}.${entry.hash}.js`;
+        this.#events.dispatch(
+          BrickActions.moduleRecompiled.create(
+            {
+              pluginName,
+              brickTypeId: fullId,
+              moduleUrl,
+            },
+            'hub'
+          )
+        );
+      }
+    }
+  }
+
   async stopAll(): Promise<void> {
+    this.#watcher.stopAll();
     const names = [...this.#processes.keys()];
     await Promise.all(names.map((name) => this.unload(name)));
   }
@@ -400,6 +474,7 @@ export class PluginLifecycle {
           pluginName: state.name,
           reason: 'package.json not found',
         });
+        this.#moduleCompiler.remove(state.name, state.rootDirectory);
         await this.#state.remove(state.name);
       }
     }
@@ -554,4 +629,58 @@ export class PluginLifecycle {
 
     return true;
   }
+
+  async #registerIncompatible(
+    pluginName: string,
+    rootDirectory: string,
+    entryPoint: string,
+    metadata: { name: string; engines?: { brika?: string } }
+  ): Promise<void> {
+    const existingUid = this.#state.get(pluginName)?.uid ?? generateUid(metadata.name);
+    await this.#state.registerPlugin({
+      name: pluginName,
+      rootDirectory,
+      entryPoint,
+      uid: existingUid,
+      enabled: false,
+    });
+    await this.#i18n.registerPluginTranslations(metadata.name, rootDirectory);
+    const required = metadata.engines?.brika;
+    await this.#state.setHealth(
+      pluginName,
+      'incompatible',
+      required ? PluginErrors.incompatibleVersion(required) : PluginErrors.incompatibleUnknown()
+    );
+  }
+
+  async #compilePluginModules(metadata: PluginPackageSchema, rootDirectory: string): Promise<void> {
+    const pages = metadata.pages ?? [];
+    const bricks = metadata.bricks ?? [];
+
+    // Evict cached modules that are no longer in the manifest
+    const currentKeys = new Set([
+      ...pages.map((p) => `pages/${p.id}`),
+      ...bricks.map((b) => `bricks/${b.id}`),
+    ]);
+    this.#moduleCompiler.prune(metadata.name, currentKeys, rootDirectory);
+
+    await this.#moduleCompiler.compile(metadata.name, rootDirectory, {
+      pages,
+      bricks,
+    });
+
+    await ensurePluginTsconfig(rootDirectory);
+  }
+}
+
+/** Compute the list of packages to mark as external in the server build. */
+function computeServerExternals(metadata: PluginPackageSchema): string[] {
+  const externals: string[] = ['@brika/*'];
+  for (const dep of Object.keys(metadata.dependencies ?? {})) {
+    if (!dep.startsWith('@brika/')) externals.push(dep);
+  }
+  for (const dep of Object.keys(metadata.peerDependencies ?? {})) {
+    externals.push(dep);
+  }
+  return externals;
 }

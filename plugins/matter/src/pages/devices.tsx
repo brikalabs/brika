@@ -21,7 +21,7 @@ import {
   Separator,
   Skeleton,
 } from '@brika/sdk/ui-kit';
-import { callAction, useAction, useLocale } from '@brika/sdk/ui-kit/hooks';
+import { useAction, useCallAction, useLocale } from '@brika/sdk/ui-kit/hooks';
 import {
   Blinds,
   ChevronRight,
@@ -107,13 +107,13 @@ function getRootNodeId(nodeId: string): string {
 function buildStateParts(device: MatterDevice, t: TFn): StatePart[] {
   const parts: StatePart[] = [];
   if (device.state.on != null)
-    parts.push({ icon: Power, label: device.state.on ? t('devicesPage.on') : t('devicesPage.off') });
+    parts.push({ icon: Power, label: device.state.on ? t('device.on') : t('device.off') });
   if (device.state.brightness != null)
     parts.push({ icon: Sun, label: t('devicesPage.brightness', { value: device.state.brightness }) });
   if (device.state.locked != null)
     parts.push({
       icon: device.state.locked ? Lock : LockOpen,
-      label: device.state.locked ? t('devicesPage.locked') : t('devicesPage.unlocked'),
+      label: device.state.locked ? t('device.locked') : t('device.unlocked'),
     });
   if (device.state.temperature != null)
     parts.push({ icon: Thermometer, label: t('devicesPage.temperature', { value: device.state.temperature }) });
@@ -278,7 +278,7 @@ function DeviceTypeGroup({ type, devices, allDevices, onRemove, onInfo, removing
             <Icon className="size-4" />
           </div>
           <span className="flex-1 truncate font-semibold text-sm">
-            {t(`devicesPage.deviceTypes.${type}`)}
+            {t(`devicesPage.typesPlural.${type}`)}
           </span>
           <Badge variant="secondary" className="gap-1.5 text-xs">
             <span className={`size-2 rounded-full ${onlineCount > 0 ? 'bg-success' : 'bg-muted-foreground'}`} />
@@ -353,7 +353,7 @@ function DeviceInfoDialog({ device, allDevices, onClose, t }: Readonly<{
               <div className="mt-1 flex items-center gap-1.5">
                 <span className={`size-2 rounded-full ${device.online ? 'bg-success' : 'bg-muted-foreground'}`} />
                 <span className="text-xs text-muted-foreground">
-                  {device.online ? t('devicesPage.online') : t('devicesPage.offline')}
+                  {device.online ? t('device.online') : t('device.offline')}
                 </span>
               </div>
             </div>
@@ -427,6 +427,7 @@ function DeviceInfoDialog({ device, allDevices, onClose, t }: Readonly<{
 
 export default function DevicesPage() {
   const { t } = useLocale();
+  const callAction = useCallAction();
   const { data, loading, refetch } = useAction(getDevices);
   const [scanning, setScanning] = useState(false);
   const [commissioning, setCommissioning] = useState(false);

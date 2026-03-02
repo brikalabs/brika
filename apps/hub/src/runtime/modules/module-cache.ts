@@ -1,121 +1,118 @@
-import { mkdir, rm } from 'node:fs/promises';
-import { join } from 'node:path';
+import { mkdir, readdir, rm, unlink } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
 
 export interface CacheEntry {
-  content: string;
-  etag: string;
-}
-
-interface CachedModule {
-  js: CacheEntry;
-  css?: CacheEntry;
-}
-
-/** Content hash of a source file — used for disk cache invalidation. */
-export async function hashSource(path: string): Promise<string> {
-  const hasher = new Bun.CryptoHasher('blake2b256');
-  hasher.update(await Bun.file(path).arrayBuffer());
-  return hasher.digest('hex').slice(0, 8);
+  /** Short content hash used for cache-busting URLs (not an HTTP ETag). */
+  hash: string;
+  /** Absolute path to the JS file on disk. */
+  filePath: string;
 }
 
 /**
- * Two-level module cache: in-memory for fast lookups, disk for persistence.
- * Disk files encode the content hash in the filename (`<id>.<hash>.js`)
+ * Module cache: metadata in memory, JS content on disk only.
+ *
+ * In-memory entries store only the content hash (for URL generation) and
+ * the file path (for serving). Actual JS is never held in memory.
+ *
+ * Disk files encode the source hash in the filename (`<type>/<id>.<hash>.js`)
  * so cache validation is a single file-exists check.
  */
 export class ModuleCache {
-  readonly #mem = new Map<string, CachedModule>();
+  readonly #mem = new Map<string, CacheEntry>();
 
-  constructor(private readonly cacheDir: string) {}
+  // ── Metadata lookup ──────────────────────────────────────────────────
 
-  // ── In-memory ──────────────────────────────────────────────────────
-
-  getJs(key: string): CacheEntry | undefined {
-    return this.#mem.get(key)?.js;
+  get(key: string): CacheEntry | undefined {
+    return this.#mem.get(key);
   }
 
-  getCss(key: string): CacheEntry | undefined {
-    return this.#mem.get(key)?.css;
+  // ── Store (disk + metadata) ──────────────────────────────────────────
+
+  /**
+   * Write JS to disk and store metadata in memory.
+   * The JS content is NOT kept in memory — only the hash and file path.
+   */
+  async store(memKey: string, cacheDir: string, moduleId: string, sourceHash: string, js: string): Promise<void> {
+    const dir = join(cacheDir, dirname(moduleId));
+    const base = moduleId.split('/').pop() ?? moduleId;
+    const target = `${base}.${sourceHash}.js`;
+    const filePath = join(dir, target);
+
+    await mkdir(dir, { recursive: true });
+    await Bun.write(filePath, js);
+
+    // Clean up stale hash variants (best-effort)
+    const prefix = `${base}.`;
+    readdir(dir)
+      .then((entries) =>
+        Promise.all(
+          entries
+            .filter((f) => f.startsWith(prefix) && f.endsWith('.js') && f !== target)
+            .map((f) => unlink(join(dir, f)))
+        )
+      )
+      .catch(() => undefined);
+
+    this.#mem.set(memKey, { hash: contentHash(js), filePath });
   }
 
-  set(key: string, js: string, css?: string): void {
-    this.#mem.set(key, {
-      js: {
-        content: js,
-        etag: etag(js),
-      },
-      css: css
-        ? {
-            content: css,
-            etag: etag(css),
-          }
-        : undefined,
-    });
-  }
+  /**
+   * Try to load module metadata from disk cache. Returns true on cache hit.
+   * Reads the file temporarily to compute the content hash, then discards
+   * the content — only metadata is stored in memory.
+   */
+  async loadFromDisk(cacheDir: string, memKey: string, moduleId: string, sourceHash: string): Promise<boolean> {
+    const filePath = join(cacheDir, `${moduleId}.${sourceHash}.js`);
+    const file = Bun.file(filePath);
 
-  // ── Disk (hash-in-filename) ────────────────────────────────────────
-
-  /** Try to load a module from disk cache. Returns true on cache hit. */
-  async loadFromDisk(pluginName: string, moduleId: string, hash: string): Promise<boolean> {
-    const dir = join(this.cacheDir, pluginName);
-    const jsFile = Bun.file(join(dir, `${moduleId}.${hash}.js`));
-
-    if (!(await jsFile.exists())) {
+    if (!(await file.exists())) {
       return false;
     }
 
-    const jsText = await jsFile.text();
-    const cssFile = Bun.file(join(dir, `${moduleId}.${hash}.css`));
-    const cssText = (await cssFile.exists()) ? await cssFile.text() : undefined;
-
-    this.#mem.set(`${pluginName}:${moduleId}`, {
-      js: {
-        content: jsText,
-        etag: etag(jsText),
-      },
-      css: cssText
-        ? {
-            content: cssText,
-            etag: etag(cssText),
-          }
-        : undefined,
-    });
+    const content = await file.text();
+    this.#mem.set(memKey, { hash: contentHash(content), filePath });
     return true;
   }
 
-  /** Persist a compiled module to disk. */
-  async writeToDisk(
-    pluginName: string,
-    moduleId: string,
-    hash: string,
-    js: string,
-    css?: string
-  ): Promise<void> {
-    const dir = join(this.cacheDir, pluginName);
-    await mkdir(dir, {
-      recursive: true,
-    });
+  /**
+   * Remove in-memory entries for a plugin that are NOT in the given set of
+   * current module keys. Matching stale disk files are deleted as well.
+   */
+  prune(pluginName: string, currentKeys: Set<string>, cacheDir: string): void {
+    const prefix = `${pluginName}:`;
+    for (const key of this.#mem.keys()) {
+      if (key.startsWith(prefix) && !currentKeys.has(key.slice(prefix.length))) {
+        const moduleId = key.slice(prefix.length);
+        const dir = join(cacheDir, dirname(moduleId));
+        const base = moduleId.split('/').pop() ?? moduleId;
+        readdir(dir)
+          .then((entries) =>
+            Promise.all(
+              entries
+                .filter((f) => f.startsWith(`${base}.`) && f.endsWith('.js'))
+                .map((f) => unlink(join(dir, f)))
+            )
+          )
+          .catch(() => undefined);
 
-    await Promise.all([
-      Bun.write(join(dir, `${moduleId}.${hash}.js`), js),
-      css ? Bun.write(join(dir, `${moduleId}.${hash}.css`), css) : Promise.resolve(),
-    ]);
+        this.#mem.delete(key);
+      }
+    }
   }
 
   /** Remove all cached data for a plugin (in-memory + disk). */
-  remove(pluginName: string): void {
+  remove(pluginName: string, cacheDir?: string): void {
     for (const key of this.#mem.keys()) {
       if (key.startsWith(`${pluginName}:`)) {
         this.#mem.delete(key);
       }
     }
-    rm(join(this.cacheDir, pluginName), {
-      recursive: true,
-      force: true,
-    }).catch(() => undefined);
+    if (cacheDir) {
+      rm(cacheDir, { recursive: true, force: true }).catch(() => undefined);
+    }
   }
 }
 
-function etag(content: string): string {
-  return `"${Bun.hash(content).toString(36)}"`;
+function contentHash(content: string): string {
+  return Bun.hash(content).toString(36);
 }

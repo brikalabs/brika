@@ -39,6 +39,38 @@
       "description": "Emitted when a new Matter device is found on the network"
     }
   },
+  "device": {
+    "online": "Online",
+    "offline": "Offline",
+    "on": "On",
+    "off": "Off",
+    "locked": "Locked",
+    "unlocked": "Unlocked",
+    "types": {
+      "light": "Light",
+      "lock": "Lock",
+      "cover": "Cover",
+      "thermostat": "Thermostat",
+      "switch": "Switch",
+      "sensor": "Sensor",
+      "bridge": "Bridge",
+      "unknown": "Device"
+    },
+    "controls": {
+      "brightness": "Brightness",
+      "position": "Position",
+      "setpoint": "Setpoint",
+      "current": "Current",
+      "humidity": "Humidity",
+      "open": "Open",
+      "stop": "Stop",
+      "close": "Close"
+    },
+    "noDeviceSelected": "No device selected",
+    "deviceNotFound": "Device not found",
+    "noDevicesCommissioned": "No devices commissioned",
+    "matterDevices": "Matter Devices"
+  },
   "devicesPage": {
     "scanNetwork": "Scan Network",
     "scanning": "Scanning...",
@@ -50,10 +82,6 @@
     "deviceCount": "{{count}} device",
     "deviceCount_other": "{{count}} devices",
     "onlineCount": "{{count}} online",
-    "online": "Online",
-    "offline": "Offline",
-    "on": "On",
-    "off": "Off",
     "toggling": "Toggling...",
     "remove": "Remove",
     "removing": "Removing...",
@@ -63,15 +91,13 @@
     "product": "Product",
     "serial": "Serial",
     "software": "Software",
-    "locked": "Locked",
-    "unlocked": "Unlocked",
     "brightness": "{{value}}%",
     "position": "Pos: {{value}}%",
     "temperature": "{{value}}°C",
     "viaBridge": "via {{bridge}}",
     "connectedDevices": "{{count}} connected device",
     "connectedDevices_other": "{{count}} connected devices",
-    "deviceTypes": {
+    "typesPlural": {
       "light": "Lights",
       "lock": "Locks",
       "cover": "Covers",

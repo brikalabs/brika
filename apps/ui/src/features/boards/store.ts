@@ -1,8 +1,14 @@
-import type { ComponentNode, Mutation } from '@brika/ui-kit';
-import { applyMutations } from '@brika/ui-kit';
 import { create } from 'zustand';
 import type { Json } from '@/types';
 import type { Board, BoardBrickPlacement, BoardSummary, BrickType } from './api';
+
+/** Shallow-compare two config objects (string-keyed, flat values). */
+function shallowEqual(a: Record<string, Json>, b: Record<string, Json>): boolean {
+  const keysA = Object.keys(a);
+  const keysB = Object.keys(b);
+  if (keysA.length !== keysB.length) return false;
+  return keysA.every((k) => Object.is(a[k], b[k]));
+}
 
 interface BoardStore {
   // ─── Board list ────────────────────────────────────────────────────────
@@ -13,9 +19,8 @@ interface BoardStore {
   // ─── Brick type catalog ─────────────────────────────────────────────────
   brickTypes: Map<string, BrickType>;
 
-  // ─── Instance bodies (live from SSE) ───────────────────────────────────
-  bodies: Map<string, ComponentNode[]>;
-  disconnectedInstances: Set<string>;
+  // ─── Brick data (client-rendered bricks) ──────────────────────────────
+  brickData: Map<string, unknown>;
 
   // ─── Sheet state ───────────────────────────────────────────────────────────
   addBrickOpen: boolean;
@@ -28,13 +33,12 @@ interface BoardStore {
   setAddBrickOpen(open: boolean): void;
   setConfigBrickId(id: string | null): void;
 
-  // Instance body mutations
-  patchInstance(instanceId: string, mutations: Mutation[]): void;
-  setInstanceBody(instanceId: string, body: ComponentNode[]): void;
-  setBodiesBatch(entries: Array<[string, ComponentNode[]]>): void;
-  removeInstanceBody(instanceId: string): void;
-  markDisconnected(instanceIds: string[]): void;
-  clearDisconnected(instanceId: string): void;
+  // Brick type updates (hot reload)
+  updateBrickTypeModuleUrl(brickTypeId: string, moduleUrl: string): void;
+
+  // Brick data mutations (client-rendered bricks)
+  setBrickData(brickTypeId: string, data: unknown): void;
+  setBrickDataBatch(entries: Array<[string, unknown]>): void;
 
   // Optimistic board mutations
   addBrickPlacement(placement: BoardBrickPlacement): void;
@@ -57,8 +61,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
   activeBoardId: null,
   activeBoard: null,
   brickTypes: new Map(),
-  bodies: new Map(),
-  disconnectedInstances: new Set(),
+  brickData: new Map(),
   addBrickOpen: false,
   configBrickId: null,
 
@@ -88,6 +91,16 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
     });
   },
 
+  updateBrickTypeModuleUrl(brickTypeId, moduleUrl) {
+    const existing = get().brickTypes.get(brickTypeId);
+    if (!existing || existing.moduleUrl === moduleUrl) {
+      return;
+    }
+    const brickTypes = new Map(get().brickTypes);
+    brickTypes.set(brickTypeId, { ...existing, moduleUrl });
+    set({ brickTypes });
+  },
+
   setAddBrickOpen(open) {
     set({
       addBrickOpen: open,
@@ -100,75 +113,21 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
     });
   },
 
-  patchInstance(instanceId, mutations) {
-    const currentBody = get().bodies.get(instanceId) ?? [];
-    const newBody = applyMutations(currentBody, mutations);
-    if (newBody === currentBody) {
-      return;
-    }
-    const bodies = new Map(get().bodies);
-    bodies.set(instanceId, newBody);
-    set({
-      bodies,
-    });
+  setBrickData(brickTypeId, data) {
+    const brickData = new Map(get().brickData);
+    brickData.set(brickTypeId, data);
+    set({ brickData });
   },
 
-  setInstanceBody(instanceId, body) {
-    if (get().bodies.get(instanceId) === body) {
-      return;
-    }
-    const bodies = new Map(get().bodies);
-    bodies.set(instanceId, body);
-    set({
-      bodies,
-    });
-  },
-
-  setBodiesBatch(entries) {
+  setBrickDataBatch(entries) {
     if (entries.length === 0) {
       return;
     }
-    const bodies = new Map(get().bodies);
-    for (const [id, body] of entries) {
-      bodies.set(id, body);
+    const brickData = new Map(get().brickData);
+    for (const [id, data] of entries) {
+      brickData.set(id, data);
     }
-    set({
-      bodies,
-    });
-  },
-
-  removeInstanceBody(instanceId) {
-    const bodies = new Map(get().bodies);
-    bodies.delete(instanceId);
-    set({
-      bodies,
-    });
-  },
-
-  markDisconnected(instanceIds) {
-    const current = get().disconnectedInstances;
-    if (instanceIds.every((id) => current.has(id))) {
-      return;
-    }
-    const next = new Set(current);
-    for (const id of instanceIds) {
-      next.add(id);
-    }
-    set({
-      disconnectedInstances: next,
-    });
-  },
-
-  clearDisconnected(instanceId) {
-    const current = get().disconnectedInstances;
-    if (!current.has(instanceId)) {
-      return;
-    }
-    const next = new Set(current);
-    next.delete(instanceId);
-    set({
-      disconnectedInstances: next,
-    });
+    set({ brickData });
   },
 
   addBrickPlacement(placement) {
@@ -240,6 +199,12 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
     if (!board) {
       return;
     }
+    // Skip if config values haven't actually changed (deduplicates
+    // optimistic updates followed by the SSE echo-back).
+    const existing = board.bricks.find((b) => b.instanceId === instanceId);
+    if (existing && shallowEqual(existing.config, config)) {
+      return;
+    }
     const bricks = board.bricks.map((b) =>
       b.instanceId === instanceId
         ? {
@@ -281,8 +246,5 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
 // Selective subscriptions
 export const useActiveBoard = () => useBoardStore((s) => s.activeBoard);
 export const useBrickTypes = () => useBoardStore((s) => s.brickTypes);
-export const useInstanceBody = (id: string) => useBoardStore((s) => s.bodies.get(id));
-export const useIsInstanceDisconnected = (id: string) =>
-  useBoardStore((s) => s.disconnectedInstances.has(id));
 export const useBrickPlacement = (id: string) =>
   useBoardStore((s) => s.activeBoard?.bricks.find((b) => b.instanceId === id));

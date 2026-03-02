@@ -3,11 +3,11 @@
  */
 import 'reflect-metadata';
 import { describe, expect, mock, test } from 'bun:test';
-import { get, stub, useTestBed } from '@brika/di/testing';
+import { stub, useTestBed } from '@brika/di/testing';
 import { TestApp } from '@brika/router/testing';
 import type { Board, BoardBrickPlacement } from '@/runtime/boards';
 import { BoardLoader, BoardService } from '@/runtime/boards';
-import { BrickInstanceManager } from '@/runtime/bricks';
+import { BrickDataStore } from '@/runtime/bricks';
 import { EventSystem } from '@/runtime/events/event-system';
 import { boardsRoutes } from '@/runtime/http/routes/boards';
 
@@ -55,13 +55,11 @@ describe('boards routes', () => {
     updateBrickConfig: ReturnType<typeof mock>;
     moveBrick: ReturnType<typeof mock>;
     batchUpdateLayout: ReturnType<typeof mock>;
-    unmountBoard: ReturnType<typeof mock>;
     viewerConnected: ReturnType<typeof mock>;
     viewerDisconnected: ReturnType<typeof mock>;
   };
-  let mockInstances: {
+  let mockBrickDataStore: {
     get: ReturnType<typeof mock>;
-    list: ReturnType<typeof mock>;
   };
   let mockEvents: {
     subscribe: ReturnType<typeof mock>;
@@ -86,13 +84,11 @@ describe('boards routes', () => {
       updateBrickConfig: mock().mockResolvedValue(undefined),
       moveBrick: mock().mockResolvedValue(undefined),
       batchUpdateLayout: mock().mockResolvedValue(true),
-      unmountBoard: mock(),
       viewerConnected: mock(),
       viewerDisconnected: mock(),
     };
-    mockInstances = {
-      get: mock().mockReturnValue(null),
-      list: mock().mockReturnValue([]),
+    mockBrickDataStore = {
+      get: mock().mockReturnValue(undefined),
     };
     mockEvents = {
       subscribe: mock().mockReturnValue(() => {}),
@@ -100,7 +96,7 @@ describe('boards routes', () => {
     stub(BoardLoader, mockLoader);
     stub(BoardService, mockService);
     stub(EventSystem, mockEvents);
-    stub(BrickInstanceManager, mockInstances);
+    stub(BrickDataStore, mockBrickDataStore);
     app = TestApp.create(boardsRoutes);
   });
 
@@ -252,7 +248,6 @@ describe('boards routes', () => {
     const res = await app.delete('/api/boards/board-1');
 
     expect(res.status).toBe(200);
-    expect(mockService.unmountBoard).toHaveBeenCalled();
     expect(mockLoader.deleteBoard).toHaveBeenCalledWith('board-1');
   });
 
@@ -468,11 +463,12 @@ describe('boards routes', () => {
     expect(text).toBe('Not found');
   });
 
-  test('GET /api/boards/:id/sse returns SSE stream with snapshot', async () => {
+  test('GET /api/boards/:id/sse returns SSE stream with data snapshot', async () => {
     const board = makeBoard({
       bricks: [
         makePlacement({
           instanceId: 'inst-1',
+          brickTypeId: 'timer:clock',
         }),
         makePlacement({
           instanceId: 'inst-2',
@@ -482,23 +478,12 @@ describe('boards routes', () => {
     });
     mockLoader.get.mockReturnValue(board);
 
-    // Return real instance data for inst-1, null for inst-2
-    mockInstances.get.mockImplementation((id: string) => {
-      if (id === 'inst-1') {
-        return {
-          instanceId: 'inst-1',
-          brickTypeId: 'timer:clock',
-          body: [
-            {
-              type: 'text',
-              props: {
-                value: 'Hello',
-              },
-            },
-          ],
-        };
+    // Return brick data for timer:clock, nothing for weather:card
+    mockBrickDataStore.get.mockImplementation((typeId: string) => {
+      if (typeId === 'timer:clock') {
+        return { time: '12:00' };
       }
-      return null;
+      return undefined;
     });
 
     const raw = await app.hono.fetch(new Request('http://test/api/boards/board-1/sse'));
@@ -515,10 +500,10 @@ describe('boards routes', () => {
     await reader.cancel();
 
     const text = new TextDecoder().decode(value);
-    // Snapshot event should contain the instance that was found
+    // Data snapshot event should contain the brick data
     expect(text).toContain('event: board');
-    expect(text).toContain('brick.snapshot');
-    expect(text).toContain('inst-1');
+    expect(text).toContain('brick.dataSnapshot');
+    expect(text).toContain('timer:clock');
 
     // viewerConnected should be called
     expect(mockService.viewerConnected).toHaveBeenCalledWith('board-1');
@@ -526,9 +511,17 @@ describe('boards routes', () => {
 
   test('GET /api/boards/:id/sse calls viewerDisconnected on stream cancel', async () => {
     const board = makeBoard({
-      bricks: [],
+      bricks: [
+        makePlacement({
+          instanceId: 'inst-1',
+          brickTypeId: 'timer:clock',
+        }),
+      ],
     });
     mockLoader.get.mockReturnValue(board);
+
+    // Provide brick data so a snapshot is emitted (something to read)
+    mockBrickDataStore.get.mockReturnValue({ time: '12:00' });
 
     const raw = await app.hono.fetch(new Request('http://test/api/boards/board-1/sse'));
 
@@ -538,7 +531,7 @@ describe('boards routes', () => {
     if (!reader) {
       throw new Error('unreachable');
     }
-    // Read the snapshot event
+    // Read the initial snapshot
     await reader.read();
     // Cancel the stream to trigger cleanup
     await reader.cancel();
@@ -559,30 +552,27 @@ describe('boards routes', () => {
     const raw = await app.hono.fetch(new Request('http://test/api/boards/board-1/sse'));
     expect(raw.status).toBe(200);
 
-    // EventSystem.subscribe should have been called for each event type
-    // BrickActions: instancePatched, instanceMounted, pluginDisconnected
+    // EventSystem.subscribe should have been called for each event type:
+    // BrickActions: dataUpdated, moduleRecompiled
     // BoardActions: brickAdded, brickRemoved, layoutChanged, brickLabelChanged, brickConfigChanged
-    expect(mockEvents.subscribe.mock.calls.length).toBe(8);
+    expect(mockEvents.subscribe.mock.calls.length).toBe(7);
 
+    // Clean up the stream
     const reader = raw.body?.getReader();
-    if (!reader) {
-      throw new Error('unreachable');
-    }
-    await reader.read();
-    await reader.cancel();
+    await reader?.cancel();
   });
 
-  test('GET /api/boards/:id/sse forwards matching instancePatched events', async () => {
+  test('GET /api/boards/:id/sse forwards dataUpdated for matching brick types', async () => {
     const board = makeBoard({
       bricks: [
         makePlacement({
           instanceId: 'inst-1',
+          brickTypeId: 'timer:clock',
         }),
       ],
     });
     mockLoader.get.mockReturnValue(board);
 
-    // Capture subscription callbacks
     const subscriptions = new Map<string, (action: unknown) => void>();
     mockEvents.subscribe.mockImplementation(
       (
@@ -603,34 +593,32 @@ describe('boards routes', () => {
     if (!reader) {
       throw new Error('unreachable');
     }
-    // Read the snapshot
-    await reader.read();
 
-    // Trigger a matching instancePatched event
-    const patchedHandler = subscriptions.get('brick.instancePatched');
-    expect(patchedHandler).toBeDefined();
-    patchedHandler?.({
-      type: 'brick.instancePatched',
+    // Trigger a matching dataUpdated event
+    const dataHandler = subscriptions.get('brick.dataUpdated');
+    expect(dataHandler).toBeDefined();
+    dataHandler?.({
+      type: 'brick.dataUpdated',
       payload: {
-        instanceId: 'inst-1',
-        mutations: [],
+        brickTypeId: 'timer:clock',
+        data: { time: '13:00' },
       },
     });
 
-    // Read the forwarded event
     const { value } = await reader.read();
     const text = new TextDecoder().decode(value);
-    expect(text).toContain('brick.instancePatched');
-    expect(text).toContain('inst-1');
+    expect(text).toContain('brick.dataUpdated');
+    expect(text).toContain('timer:clock');
 
     await reader.cancel();
   });
 
-  test('GET /api/boards/:id/sse does not forward events for other instances', async () => {
+  test('GET /api/boards/:id/sse does not forward dataUpdated for other brick types', async () => {
     const board = makeBoard({
       bricks: [
         makePlacement({
           instanceId: 'inst-1',
+          brickTypeId: 'timer:clock',
         }),
       ],
     });
@@ -654,156 +642,31 @@ describe('boards routes', () => {
     if (!reader) {
       throw new Error('unreachable');
     }
-    // Read snapshot
-    await reader.read();
 
-    // Trigger instancePatched for a different instance (should be filtered)
-    const patchedHandler = subscriptions.get('brick.instancePatched');
-    patchedHandler?.({
-      type: 'brick.instancePatched',
+    // Trigger dataUpdated for a different brick type (should be filtered)
+    const dataHandler = subscriptions.get('brick.dataUpdated');
+    dataHandler?.({
+      type: 'brick.dataUpdated',
       payload: {
-        instanceId: 'other-inst',
-        mutations: [],
+        brickTypeId: 'weather:card',
+        data: { temp: 22 },
       },
     });
 
-    // Trigger instanceMounted for a different instance
-    const mountedHandler = subscriptions.get('brick.instanceMounted');
-    expect(mountedHandler).toBeDefined();
-    mountedHandler?.({
-      type: 'brick.instanceMounted',
+    // Send a matching event so we know the stream is still alive
+    dataHandler?.({
+      type: 'brick.dataUpdated',
       payload: {
-        instanceId: 'other-inst',
-        brickTypeId: 'x:y',
-      },
-    });
-
-    // Now send a matching event so we know the stream is still alive
-    patchedHandler?.({
-      type: 'brick.instancePatched',
-      payload: {
-        instanceId: 'inst-1',
-        mutations: [],
+        brickTypeId: 'timer:clock',
+        data: { time: '14:00' },
       },
     });
 
     const { value } = await reader.read();
     const text = new TextDecoder().decode(value);
-    // Should only contain the matching event, not the filtered ones
-    expect(text).toContain('inst-1');
-    expect(text).not.toContain('other-inst');
-
-    await reader.cancel();
-  });
-
-  test('GET /api/boards/:id/sse forwards pluginDisconnected with filtered instanceIds', async () => {
-    const board = makeBoard({
-      bricks: [
-        makePlacement({
-          instanceId: 'inst-1',
-        }),
-        makePlacement({
-          instanceId: 'inst-2',
-        }),
-      ],
-    });
-    mockLoader.get.mockReturnValue(board);
-
-    const subscriptions = new Map<string, (action: unknown) => void>();
-    mockEvents.subscribe.mockImplementation(
-      (
-        actionDef: {
-          type: string;
-        },
-        handler: (action: unknown) => void
-      ) => {
-        subscriptions.set(actionDef.type, handler);
-        return () => {};
-      }
-    );
-
-    const raw = await app.hono.fetch(new Request('http://test/api/boards/board-1/sse'));
-    const reader = raw.body?.getReader();
-    if (!reader) {
-      throw new Error('unreachable');
-    }
-    await reader.read();
-
-    // Trigger pluginDisconnected with mixed instance IDs
-    const disconnectedHandler = subscriptions.get('brick.pluginDisconnected');
-    expect(disconnectedHandler).toBeDefined();
-    disconnectedHandler?.({
-      type: 'brick.pluginDisconnected',
-      payload: {
-        pluginName: 'timer',
-        instanceIds: ['inst-1', 'other-inst', 'inst-2'],
-      },
-    });
-
-    const { value } = await reader.read();
-    const text = new TextDecoder().decode(value);
-    expect(text).toContain('brick.pluginDisconnected');
-    expect(text).toContain('inst-1');
-    expect(text).toContain('inst-2');
-
-    await reader.cancel();
-  });
-
-  test('GET /api/boards/:id/sse does not forward pluginDisconnected when no matching IDs', async () => {
-    const board = makeBoard({
-      bricks: [
-        makePlacement({
-          instanceId: 'inst-1',
-        }),
-      ],
-    });
-    mockLoader.get.mockReturnValue(board);
-
-    const subscriptions = new Map<string, (action: unknown) => void>();
-    mockEvents.subscribe.mockImplementation(
-      (
-        actionDef: {
-          type: string;
-        },
-        handler: (action: unknown) => void
-      ) => {
-        subscriptions.set(actionDef.type, handler);
-        return () => {};
-      }
-    );
-
-    const raw = await app.hono.fetch(new Request('http://test/api/boards/board-1/sse'));
-    const reader = raw.body?.getReader();
-    if (!reader) {
-      throw new Error('unreachable');
-    }
-    await reader.read();
-
-    // pluginDisconnected with no matching IDs — should NOT forward
-    const disconnectedHandler = subscriptions.get('brick.pluginDisconnected');
-    disconnectedHandler?.({
-      type: 'brick.pluginDisconnected',
-      payload: {
-        pluginName: 'timer',
-        instanceIds: ['other-inst'],
-      },
-    });
-
-    // Send a known matching event to verify stream is alive
-    const patchedHandler = subscriptions.get('brick.instancePatched');
-    patchedHandler?.({
-      type: 'brick.instancePatched',
-      payload: {
-        instanceId: 'inst-1',
-        mutations: [],
-      },
-    });
-
-    const { value } = await reader.read();
-    const text = new TextDecoder().decode(value);
-    // Should only contain the patched event, not pluginDisconnected
-    expect(text).toContain('brick.instancePatched');
-    expect(text).not.toContain('brick.pluginDisconnected');
+    // Should only contain the matching event, not the filtered one
+    expect(text).toContain('timer:clock');
+    expect(text).not.toContain('weather:card');
 
     await reader.cancel();
   });
@@ -836,7 +699,6 @@ describe('boards routes', () => {
     if (!reader) {
       throw new Error('unreachable');
     }
-    await reader.read();
 
     // Simulate a brick being added to this board
     const addedHandler = subscriptions.get('board.brickAdded');
@@ -855,20 +717,6 @@ describe('boards routes', () => {
     expect(text).toContain('board.brickAdded');
     expect(text).toContain('new-inst');
 
-    // Now the new instance should be tracked — send an instancePatched for it
-    const patchedHandler = subscriptions.get('brick.instancePatched');
-    patchedHandler?.({
-      type: 'brick.instancePatched',
-      payload: {
-        instanceId: 'new-inst',
-        mutations: [],
-      },
-    });
-
-    const { value: v2 } = await reader.read();
-    const text2 = new TextDecoder().decode(v2);
-    expect(text2).toContain('new-inst');
-
     await reader.cancel();
   });
 
@@ -877,6 +725,7 @@ describe('boards routes', () => {
       bricks: [
         makePlacement({
           instanceId: 'inst-1',
+          brickTypeId: 'timer:clock',
         }),
       ],
     });
@@ -900,7 +749,6 @@ describe('boards routes', () => {
     if (!reader) {
       throw new Error('unreachable');
     }
-    await reader.read();
 
     // brickAdded for a different board — should be ignored
     const addedHandler = subscriptions.get('board.brickAdded');
@@ -914,12 +762,12 @@ describe('boards routes', () => {
     });
 
     // Verify by sending a matching event
-    const patchedHandler = subscriptions.get('brick.instancePatched');
-    patchedHandler?.({
-      type: 'brick.instancePatched',
+    const dataHandler = subscriptions.get('brick.dataUpdated');
+    dataHandler?.({
+      type: 'brick.dataUpdated',
       payload: {
-        instanceId: 'inst-1',
-        mutations: [],
+        brickTypeId: 'timer:clock',
+        data: { time: '15:00' },
       },
     });
 
@@ -958,7 +806,6 @@ describe('boards routes', () => {
     if (!reader) {
       throw new Error('unreachable');
     }
-    await reader.read();
 
     // Remove inst-1 from this board
     const removedHandler = subscriptions.get('board.brickRemoved');
@@ -983,6 +830,7 @@ describe('boards routes', () => {
       bricks: [
         makePlacement({
           instanceId: 'inst-1',
+          brickTypeId: 'timer:clock',
         }),
       ],
     });
@@ -1006,7 +854,6 @@ describe('boards routes', () => {
     if (!reader) {
       throw new Error('unreachable');
     }
-    await reader.read();
 
     // brickRemoved for a different board
     const removedHandler = subscriptions.get('board.brickRemoved');
@@ -1019,12 +866,12 @@ describe('boards routes', () => {
     });
 
     // Verify by sending a matching event
-    const patchedHandler = subscriptions.get('brick.instancePatched');
-    patchedHandler?.({
-      type: 'brick.instancePatched',
+    const dataHandler = subscriptions.get('brick.dataUpdated');
+    dataHandler?.({
+      type: 'brick.dataUpdated',
       payload: {
-        instanceId: 'inst-1',
-        mutations: [],
+        brickTypeId: 'timer:clock',
+        data: { time: '16:00' },
       },
     });
 
@@ -1063,7 +910,6 @@ describe('boards routes', () => {
     if (!reader) {
       throw new Error('unreachable');
     }
-    await reader.read();
 
     const layoutHandler = subscriptions.get('board.layoutChanged');
     expect(layoutHandler).toBeDefined();
@@ -1087,6 +933,7 @@ describe('boards routes', () => {
       bricks: [
         makePlacement({
           instanceId: 'inst-1',
+          brickTypeId: 'timer:clock',
         }),
       ],
     });
@@ -1110,7 +957,6 @@ describe('boards routes', () => {
     if (!reader) {
       throw new Error('unreachable');
     }
-    await reader.read();
 
     const layoutHandler = subscriptions.get('board.layoutChanged');
     layoutHandler?.({
@@ -1122,12 +968,12 @@ describe('boards routes', () => {
     });
 
     // Verify stream is alive with a matching event
-    const patchedHandler = subscriptions.get('brick.instancePatched');
-    patchedHandler?.({
-      type: 'brick.instancePatched',
+    const dataHandler = subscriptions.get('brick.dataUpdated');
+    dataHandler?.({
+      type: 'brick.dataUpdated',
       payload: {
-        instanceId: 'inst-1',
-        mutations: [],
+        brickTypeId: 'timer:clock',
+        data: { time: '17:00' },
       },
     });
 
@@ -1166,7 +1012,6 @@ describe('boards routes', () => {
     if (!reader) {
       throw new Error('unreachable');
     }
-    await reader.read();
 
     const labelHandler = subscriptions.get('board.brickLabelChanged');
     expect(labelHandler).toBeDefined();
@@ -1191,6 +1036,7 @@ describe('boards routes', () => {
       bricks: [
         makePlacement({
           instanceId: 'inst-1',
+          brickTypeId: 'timer:clock',
         }),
       ],
     });
@@ -1214,7 +1060,6 @@ describe('boards routes', () => {
     if (!reader) {
       throw new Error('unreachable');
     }
-    await reader.read();
 
     const labelHandler = subscriptions.get('board.brickLabelChanged');
     labelHandler?.({
@@ -1227,12 +1072,12 @@ describe('boards routes', () => {
     });
 
     // Verify alive
-    const patchedHandler = subscriptions.get('brick.instancePatched');
-    patchedHandler?.({
-      type: 'brick.instancePatched',
+    const dataHandler = subscriptions.get('brick.dataUpdated');
+    dataHandler?.({
+      type: 'brick.dataUpdated',
       payload: {
-        instanceId: 'inst-1',
-        mutations: [],
+        brickTypeId: 'timer:clock',
+        data: { time: '18:00' },
       },
     });
 
@@ -1271,7 +1116,6 @@ describe('boards routes', () => {
     if (!reader) {
       throw new Error('unreachable');
     }
-    await reader.read();
 
     const configHandler = subscriptions.get('board.brickConfigChanged');
     expect(configHandler).toBeDefined();
@@ -1298,6 +1142,7 @@ describe('boards routes', () => {
       bricks: [
         makePlacement({
           instanceId: 'inst-1',
+          brickTypeId: 'timer:clock',
         }),
       ],
     });
@@ -1321,7 +1166,6 @@ describe('boards routes', () => {
     if (!reader) {
       throw new Error('unreachable');
     }
-    await reader.read();
 
     const configHandler = subscriptions.get('board.brickConfigChanged');
     configHandler?.({
@@ -1334,12 +1178,12 @@ describe('boards routes', () => {
     });
 
     // Verify alive
-    const patchedHandler = subscriptions.get('brick.instancePatched');
-    patchedHandler?.({
-      type: 'brick.instancePatched',
+    const dataHandler = subscriptions.get('brick.dataUpdated');
+    dataHandler?.({
+      type: 'brick.dataUpdated',
       payload: {
-        instanceId: 'inst-1',
-        mutations: [],
+        brickTypeId: 'timer:clock',
+        data: { time: '19:00' },
       },
     });
 
@@ -1350,17 +1194,17 @@ describe('boards routes', () => {
     await reader.cancel();
   });
 
-  test('GET /api/boards/:id/sse snapshot with no mounted instances sends empty array', async () => {
+  test('GET /api/boards/:id/sse sends dataSnapshot when brick data exists', async () => {
     const board = makeBoard({
       bricks: [
         makePlacement({
           instanceId: 'inst-1',
+          brickTypeId: 'timer:clock',
         }),
       ],
     });
     mockLoader.get.mockReturnValue(board);
-    // instances.get returns null for all
-    mockInstances.get.mockReturnValue(null);
+    mockBrickDataStore.get.mockReturnValue({ time: '12:00' });
 
     const raw = await app.hono.fetch(new Request('http://test/api/boards/board-1/sse'));
 
@@ -1368,32 +1212,13 @@ describe('boards routes', () => {
     if (!reader) {
       throw new Error('unreachable');
     }
+
     const { value } = await reader.read();
     await reader.cancel();
 
     const text = new TextDecoder().decode(value);
-    expect(text).toContain('brick.snapshot');
-    expect(text).toContain('"instances":[]');
-  });
-
-  test('GET /api/boards/:id/sse snapshot on board with no bricks', async () => {
-    const board = makeBoard({
-      bricks: [],
-    });
-    mockLoader.get.mockReturnValue(board);
-
-    const raw = await app.hono.fetch(new Request('http://test/api/boards/board-1/sse'));
-
-    const reader = raw.body?.getReader();
-    if (!reader) {
-      throw new Error('unreachable');
-    }
-    const { value } = await reader.read();
-    await reader.cancel();
-
-    const text = new TextDecoder().decode(value);
-    expect(text).toContain('brick.snapshot');
-    expect(text).toContain('"instances":[]');
+    expect(text).toContain('brick.dataSnapshot');
+    expect(text).toContain('timer:clock');
   });
 
   test('GET /api/boards/:id/sse unsubscribes from all events on cancel', async () => {
@@ -1401,14 +1226,18 @@ describe('boards routes', () => {
       bricks: [
         makePlacement({
           instanceId: 'inst-1',
+          brickTypeId: 'timer:clock',
         }),
       ],
     });
     mockLoader.get.mockReturnValue(board);
 
+    // Provide brick data so a snapshot is emitted (something to read before cancel)
+    mockBrickDataStore.get.mockReturnValue({ time: '12:00' });
+
     const unsubs = Array.from(
       {
-        length: 8,
+        length: 7,
       },
       () => mock()
     );
@@ -1422,7 +1251,7 @@ describe('boards routes', () => {
     await reader?.read();
     await reader?.cancel();
 
-    // All 8 unsubscribe callbacks should have been called
+    // All 7 unsubscribe callbacks should have been called
     for (const unsub of unsubs) {
       expect(unsub).toHaveBeenCalledTimes(1);
     }

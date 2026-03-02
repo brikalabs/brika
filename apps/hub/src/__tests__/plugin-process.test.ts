@@ -11,7 +11,6 @@ import {
   getHubLocation,
   hello,
   log,
-  patchBrickInstance,
   ready,
   registerAction,
   registerBlock,
@@ -113,7 +112,7 @@ describe('PluginProcess', () => {
       }),
       onSparkUnsubscribe: mock(),
       onBrickType: mock(),
-      onBrickInstancePatch: mock(),
+      onBrickDataPush: mock(),
       onGetHubLocation: mock().mockReturnValue(null),
       onGetGrantedPermissions: mock().mockReturnValue([]),
       onHeartbeatFailed: mock(),
@@ -344,42 +343,6 @@ describe('PluginProcess', () => {
       });
     });
 
-    describe('sendMountBrickInstance', () => {
-      test('sends mount brick instance to channel', () => {
-        process.sendMountBrickInstance('inst-1', 'plugin:brick', 4, 3, {
-          key: 'val',
-        });
-
-        expect(mockChannel.send).toHaveBeenCalled();
-      });
-
-      test('does nothing when stopped', () => {
-        process.stop();
-        mockChannel.send.mockClear();
-
-        process.sendMountBrickInstance('inst-1', 'plugin:brick', 4, 3, {});
-
-        expect(mockChannel.send).not.toHaveBeenCalled();
-      });
-    });
-
-    describe('sendResizeBrickInstance', () => {
-      test('sends resize brick instance to channel', () => {
-        process.sendResizeBrickInstance('inst-1', 6, 4);
-
-        expect(mockChannel.send).toHaveBeenCalled();
-      });
-
-      test('does nothing when stopped', () => {
-        process.stop();
-        mockChannel.send.mockClear();
-
-        process.sendResizeBrickInstance('inst-1', 6, 4);
-
-        expect(mockChannel.send).not.toHaveBeenCalled();
-      });
-    });
-
     describe('sendUpdateBrickConfig', () => {
       test('sends update brick config to channel', () => {
         process.sendUpdateBrickConfig('inst-1', {
@@ -396,23 +359,6 @@ describe('PluginProcess', () => {
         process.sendUpdateBrickConfig('inst-1', {
           color: 'red',
         });
-
-        expect(mockChannel.send).not.toHaveBeenCalled();
-      });
-    });
-
-    describe('sendUnmountBrickInstance', () => {
-      test('sends unmount brick instance to channel', () => {
-        process.sendUnmountBrickInstance('inst-1');
-
-        expect(mockChannel.send).toHaveBeenCalled();
-      });
-
-      test('does nothing when stopped', () => {
-        process.stop();
-        mockChannel.send.mockClear();
-
-        process.sendUnmountBrickInstance('inst-1');
 
         expect(mockChannel.send).not.toHaveBeenCalled();
       });
@@ -1148,23 +1094,6 @@ describe('PluginProcess', () => {
         expect(process.brickTypes.size).toBe(0);
         expect(callbacks.onBrickType).not.toHaveBeenCalled();
       });
-    });
-
-    test('patchBrickInstance handler calls onBrickInstancePatch', () => {
-      const mutations = [
-        {
-          op: 'replace',
-          path: '/text',
-          value: 'hello',
-        },
-      ];
-
-      triggerHandler(patchBrickInstance, {
-        instanceId: 'inst-1',
-        mutations,
-      });
-
-      expect(callbacks.onBrickInstancePatch).toHaveBeenCalledWith('inst-1', mutations);
     });
 
     test('registerAction handler adds action id to the actions set', () => {

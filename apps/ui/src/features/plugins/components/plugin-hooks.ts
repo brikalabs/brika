@@ -46,6 +46,7 @@ export function usePluginAction<T>(ref: ActionRef): {
 
     fetch(`/api/plugins/${uid}/actions/${ref.__actionId}`, {
       method: 'POST',
+      credentials: 'include',
     })
       .then((r) => {
         if (!r.ok) {
@@ -79,29 +80,30 @@ export function usePluginAction<T>(ref: ActionRef): {
   };
 }
 
-// ── Imperative action caller (non-hook) ──────────────────────────────────────
+// ── Action caller hook ───────────────────────────────────────────────────────
 
-let activePluginUid = '';
+/** Returns a stable callback to call a plugin action imperatively. */
+export function useCallAction() {
+  const { uid } = useContext(PluginContext);
 
-export function setActivePluginUid(uid: string) {
-  activePluginUid = uid;
-}
-
-export async function pluginCallAction<O>(ref: ActionRef, input?: unknown): Promise<O> {
-  const res = await fetch(`/api/plugins/${activePluginUid}/actions/${ref.__actionId}`, {
-    method: 'POST',
-    headers:
-      input === undefined
-        ? {}
-        : {
-            'Content-Type': 'application/json',
-          },
-    body: input === undefined ? undefined : JSON.stringify(input),
-  });
-  if (res.ok) {
-    const json = await res.json();
-    return json.data;
-  }
-  const body = await res.json().catch(() => ({}));
-  throw new Error(body.error ?? `Action failed (${res.status})`);
+  return useCallback(
+    async <O>(ref: ActionRef, input?: unknown): Promise<O> => {
+      const res = await fetch(`/api/plugins/${uid}/actions/${ref.__actionId}`, {
+        method: 'POST',
+        credentials: 'include',
+        headers:
+          input === undefined
+            ? {}
+            : { 'Content-Type': 'application/json' },
+        body: input === undefined ? undefined : JSON.stringify(input),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        return json.data;
+      }
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error ?? `Action failed (${res.status})`);
+    },
+    [uid]
+  );
 }

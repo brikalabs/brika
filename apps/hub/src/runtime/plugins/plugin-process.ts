@@ -8,10 +8,9 @@ import {
   getHubLocation,
   hello,
   log,
-  mountBrickInstance,
-  patchBrickInstance,
   preferenceOptions,
   preferences,
+  pushBrickData,
   pushInput,
   type RouteResponseType,
   ready,
@@ -20,14 +19,12 @@ import {
   registerBrickType,
   registerRoute,
   registerSpark,
-  resizeBrickInstance,
   routeRequest,
   type SparkEvent as SparkEventType,
   sparkEvent,
   startBlock,
   stopBlock,
   subscribeSpark,
-  unmountBrickInstance,
   unsubscribeSpark,
   updateBrickConfig,
   updatePreference,
@@ -68,7 +65,7 @@ export interface PluginProcessCallbacks {
   ) => () => void;
   onSparkUnsubscribe: (subscriptionId: string) => void;
   onBrickType: (brickType: BrickTypeRegistration) => void;
-  onBrickInstancePatch: (instanceId: string, mutations: unknown[]) => void;
+  onBrickDataPush: (brickTypeId: string, data: unknown) => void;
   onRoute: (method: string, path: string) => void;
   onUpdatePreference: (key: string, value: unknown) => void;
   onGetHubLocation: () => HubLocation | null;
@@ -262,42 +259,6 @@ export class PluginProcess {
   }
 
   /**
-   * Tell the plugin to mount a brick instance
-   */
-  sendMountBrickInstance(
-    instanceId: string,
-    brickTypeId: string,
-    w: number,
-    h: number,
-    config: Record<string, unknown>
-  ): void {
-    if (this.#stopped) {
-      return;
-    }
-    this.#channel.send(mountBrickInstance, {
-      instanceId,
-      brickTypeId,
-      w,
-      h,
-      config,
-    });
-  }
-
-  /**
-   * Tell the plugin to resize a brick instance (no remount)
-   */
-  sendResizeBrickInstance(instanceId: string, w: number, h: number): void {
-    if (this.#stopped) {
-      return;
-    }
-    this.#channel.send(resizeBrickInstance, {
-      instanceId,
-      w,
-      h,
-    });
-  }
-
-  /**
    * Push updated config to a running brick instance (no remount)
    */
   sendUpdateBrickConfig(instanceId: string, config: Record<string, unknown>): void {
@@ -307,18 +268,6 @@ export class PluginProcess {
     this.#channel.send(updateBrickConfig, {
       instanceId,
       config,
-    });
-  }
-
-  /**
-   * Tell the plugin to unmount a brick instance
-   */
-  sendUnmountBrickInstance(instanceId: string): void {
-    if (this.#stopped) {
-      return;
-    }
-    this.#channel.send(unmountBrickInstance, {
-      instanceId,
     });
   }
 
@@ -576,8 +525,8 @@ export class PluginProcess {
       this.callbacks.onBrickType(brickType);
     });
 
-    this.#channel.on(patchBrickInstance, ({ instanceId, mutations }) => {
-      this.callbacks.onBrickInstancePatch(instanceId, mutations);
+    this.#channel.on(pushBrickData, ({ brickTypeId, data }) => {
+      this.callbacks.onBrickDataPush(brickTypeId, data);
     });
 
     this.#channel.on(registerAction, ({ id }) => {

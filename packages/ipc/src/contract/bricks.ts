@@ -1,10 +1,10 @@
 /**
  * Bricks Contract
  *
- * Brick type registration, instance lifecycle, and action dispatch.
+ * Brick type registration, data push, config updates, and action dispatch.
  *
- * Plugins register brick **types**. The hub manages brick **instances** —
- * mounting/unmounting them as boards are loaded.
+ * All bricks are client-rendered. Plugins register brick **types** and push
+ * data; the hub manages brick **instances** on boards.
  */
 
 import { z } from 'zod';
@@ -53,14 +53,12 @@ export const registerBrickType = message(
   })
 );
 
-/** Plugin sends incremental mutations to an instance's body */
-export const patchBrickInstance = message(
-  'patchBrickInstance',
+/** Plugin pushes arbitrary data for a brick type (client-rendered bricks) */
+export const pushBrickData = message(
+  'pushBrickData',
   z.object({
-    /** Instance ID assigned by the hub */
-    instanceId: z.string(),
-    /** Reconciler mutations (create/update/remove) */
-    mutations: z.array(z.unknown()),
+    brickTypeId: z.string(),
+    data: z.unknown(),
   })
 );
 
@@ -68,42 +66,12 @@ export const patchBrickInstance = message(
 // Hub → Plugin
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Hub tells plugin to render a new instance of a brick type */
-export const mountBrickInstance = message(
-  'mountBrickInstance',
-  z.object({
-    instanceId: z.string(),
-    brickTypeId: z.string(),
-    w: z.number(),
-    h: z.number(),
-    config: z.record(z.string(), z.unknown()),
-  })
-);
-
-/** Hub tells plugin to resize an existing instance (no remount) */
-export const resizeBrickInstance = message(
-  'resizeBrickInstance',
-  z.object({
-    instanceId: z.string(),
-    w: z.number(),
-    h: z.number(),
-  })
-);
-
-/** Hub pushes updated config to a running instance (no remount) */
+/** Hub pushes updated config to a running instance */
 export const updateBrickConfig = message(
   'updateBrickConfig',
   z.object({
     instanceId: z.string(),
     config: z.record(z.string(), z.unknown()),
-  })
-);
-
-/** Hub tells plugin to stop rendering an instance */
-export const unmountBrickInstance = message(
-  'unmountBrickInstance',
-  z.object({
-    instanceId: z.string(),
   })
 );
 

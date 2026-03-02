@@ -183,18 +183,23 @@ export class MyService {
 ### Plugin Entry Point
 
 ```typescript
+// src/index.tsx — server-side (runs in Bun)
 import { defineReactiveBlock, input, output, log, onStop, z } from "@brika/sdk";
+import { setBrickData, onInit, onBrickConfigChange } from "@brika/sdk";
 
-// Define blocks
+// Define blocks (for workflows)
 export const myBlock = defineReactiveBlock(
   { /* spec */ },
   ({ inputs, outputs, config }) => { /* executor */ }
 );
 
+// Push data to client-rendered bricks
+onInit(() => {
+  setBrickData('my-brick', { value: 42 });
+});
+
 // Lifecycle hooks
 onStop(() => log.info('Plugin stopping'));
-
-// Startup log
 log.info('Plugin loaded');
 ```
 
@@ -214,13 +219,42 @@ export const myBlock = defineReactiveBlock(
       value: z.string().default("default"),
     }),
   },
-  ({ inputs, outputs, config, log }) => {
+  ({ inputs, outputs, config }) => {
     inputs.trigger.on(() => {
       log.info('Block triggered');
       outputs.result.emit(config.value);
     });
   }
 );
+```
+
+### Brick Component
+
+```tsx
+// src/bricks/my-brick.tsx — client-side (runs in browser)
+import { useBrickData, useBrickConfig, useBrickSize } from '@brika/sdk/brick-views';
+
+interface MyData { value: number; }
+
+export default function MyBrick() {
+  const data = useBrickData<MyData>();
+  const config = useBrickConfig();
+  const { width } = useBrickSize();
+
+  if (!data) return <div className="p-4 text-muted-foreground">Loading...</div>;
+  return <div className="p-4 text-2xl font-bold">{data.value}</div>;
+}
+```
+
+### Actions
+
+```typescript
+// src/actions.ts — server-side functions callable from browser
+import { defineAction } from '@brika/sdk/actions';
+
+export const refresh = defineAction(async () => {
+  return fetchLatestData();
+});
 ```
 
 ## UI Components

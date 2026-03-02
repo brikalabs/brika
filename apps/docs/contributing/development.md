@@ -56,6 +56,7 @@ This starts both the Hub and UI in watch mode.
 ### Packages
 
 * `packages/sdk/` — Plugin SDK
+* `packages/compiler/` — Build-time brick/action compilation
 * `packages/flow/` — Reactive streams
 * `packages/events/` — Event system
 * `packages/ipc/` — Binary IPC protocol
@@ -64,7 +65,10 @@ This starts both the Hub and UI in watch mode.
 ### Plugins
 
 * `plugins/blocks-builtin/` — Core workflow blocks
-* `plugins/timer/` — Timer blocks
+* `plugins/timer/` — Timer blocks + camera/photo bricks
+* `plugins/weather/` — Weather bricks (compact, current, forecast)
+* `plugins/spotify/` — Spotify player brick
+* `plugins/matter/` — Matter/smart home device bricks
 * `plugins/example-echo/` — Example plugin
 
 ## Adding Features
@@ -138,6 +142,13 @@ See [Create a Plugin](../plugins/create-plugin.md).
 1. Create block in plugin: `plugins/<name>/src/blocks/my-block.ts`
 2. Export from plugin entry point
 3. Add to `package.json` blocks array
+
+### New Brick
+
+1. Declare in plugin `package.json` `"bricks"` array
+2. Create `src/bricks/<id>.tsx` — client-rendered React component
+3. Push data from entry point via `setBrickData()`
+4. The compiler validates that each declared brick has a matching `.tsx` file
 
 ## Testing
 

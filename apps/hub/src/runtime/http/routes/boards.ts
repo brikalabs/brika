@@ -1,7 +1,7 @@
 import { createSSEStream, group, NotFound, route } from '@brika/router';
 import { z } from 'zod';
 import { BoardLoader, BoardService } from '@/runtime/boards';
-import { BrickInstanceManager } from '@/runtime/bricks';
+import { BrickDataStore } from '@/runtime/bricks';
 import { BoardActions, BrickActions } from '@/runtime/events/actions';
 import { EventSystem } from '@/runtime/events/event-system';
 import type { Json } from '@/types';
@@ -21,6 +21,25 @@ const brickPlacementFields = {
     })
     .optional(),
 };
+
+/** Collect the latest brick data for each unique brick type on a board. */
+function collectBrickDataEntries(
+  bricks: ReadonlyArray<{ brickTypeId: string }>,
+  store: BrickDataStore
+): Array<[string, unknown]> {
+  const entries: Array<[string, unknown]> = [];
+  const seen = new Set<string>();
+  for (const b of bricks) {
+    if (!seen.has(b.brickTypeId)) {
+      seen.add(b.brickTypeId);
+      const data = store.get(b.brickTypeId);
+      if (data !== undefined) {
+        entries.push([b.brickTypeId, data]);
+      }
+    }
+  }
+  return entries;
+}
 
 export const boardsRoutes = group({
   prefix: '/api/boards',
@@ -144,16 +163,12 @@ export const boardsRoutes = group({
         id: z.string(),
       }),
       handler: async ({ params, inject }) => {
-        const service = inject(BoardService);
         const loader = inject(BoardLoader);
 
         const board = loader.get(params.id);
         if (!board) {
           throw new NotFound('Board not found');
         }
-
-        // Unmount all brick instances
-        service.unmountBoard(board);
 
         const deleted = await loader.deleteBoard(params.id);
         if (!deleted) {
@@ -279,8 +294,7 @@ export const boardsRoutes = group({
 
     /**
      * SSE: Per-board event stream.
-     * Mounts brick instances on connect, unmounts on disconnect.
-     * Sends snapshot + incremental brick and board events.
+     * Tracks viewer connections and streams brick data + board layout events.
      */
     route.get({
       path: '/:id/sse',
@@ -290,8 +304,8 @@ export const boardsRoutes = group({
       handler: ({ params, inject }) => {
         const service = inject(BoardService);
         const events = inject(EventSystem);
-        const instances = inject(BrickInstanceManager);
         const loader = inject(BoardLoader);
+        const brickDataStore = inject(BrickDataStore);
 
         const board = loader.get(params.id);
         if (!board) {
@@ -303,34 +317,14 @@ export const boardsRoutes = group({
         return createSSEStream((send) => {
           service.viewerConnected(params.id);
 
-          // Track which instances belong to this board
-          const instanceIds = new Set(board.bricks.map((b) => b.instanceId));
-
-          // Send snapshot of current bodies for this board's instances
-          const snapshot: Array<{
-            instanceId: string;
-            brickTypeId: string;
-            body: unknown[];
-          }> = [];
-          for (const id of instanceIds) {
-            const inst = instances.get(id);
-            if (inst) {
-              snapshot.push({
-                instanceId: inst.instanceId,
-                brickTypeId: inst.brickTypeId,
-                body: inst.body,
-              });
-            }
+          // Send initial brick data snapshot
+          const dataEntries = collectBrickDataEntries(board.bricks, brickDataStore);
+          if (dataEntries.length > 0) {
+            send({ type: 'brick.dataSnapshot', payload: { entries: dataEntries } }, 'board');
           }
-          send(
-            {
-              type: 'brick.snapshot',
-              payload: {
-                instances: snapshot,
-              },
-            },
-            'board'
-          );
+
+          /** Re-read the board so SSE callbacks see bricks added/removed after connect. */
+          const currentBoard = () => loader.get(params.id);
 
           const forward = (type: string, payload: Json) =>
             send(
@@ -342,42 +336,31 @@ export const boardsRoutes = group({
               'board'
             );
 
-          // Typed brick event subscriptions (O(1) matching instead of glob regex)
+          // Typed brick event subscriptions
           const unsubs = [
-            events.subscribe(BrickActions.instancePatched, (action) => {
-              if (instanceIds.has(action.payload.instanceId)) {
+            events.subscribe(BrickActions.dataUpdated, (action) => {
+              // Check if any board brick uses this type
+              const brickTypeId = action.payload.brickTypeId;
+              if (currentBoard()?.bricks.some((b) => b.brickTypeId === brickTypeId)) {
                 forward(action.type, action.payload as unknown as Json);
               }
             }),
-            events.subscribe(BrickActions.instanceMounted, (action) => {
-              if (instanceIds.has(action.payload.instanceId)) {
+            events.subscribe(BrickActions.moduleRecompiled, (action) => {
+              if (currentBoard()?.bricks.some((b) => b.brickTypeId === action.payload.brickTypeId)) {
                 forward(action.type, action.payload as unknown as Json);
-              }
-            }),
-            events.subscribe(BrickActions.pluginDisconnected, (action) => {
-              const matching = action.payload.instanceIds.filter((id) => instanceIds.has(id));
-              if (matching.length > 0) {
-                forward(action.type, {
-                  ...action.payload,
-                  instanceIds: matching,
-                } as unknown as Json);
               }
             }),
 
             // Board events filtered by ID
             events.subscribe(BoardActions.brickAdded, (action) => {
-              if (action.payload.boardId !== params.id) {
-                return;
+              if (action.payload.boardId === params.id) {
+                forward(action.type, action.payload as unknown as Json);
               }
-              instanceIds.add(action.payload.instanceId);
-              forward(action.type, action.payload as unknown as Json);
             }),
             events.subscribe(BoardActions.brickRemoved, (action) => {
-              if (action.payload.boardId !== params.id) {
-                return;
+              if (action.payload.boardId === params.id) {
+                forward(action.type, action.payload as unknown as Json);
               }
-              instanceIds.delete(action.payload.instanceId);
-              forward(action.type, action.payload as unknown as Json);
             }),
             events.subscribe(BoardActions.layoutChanged, (action) => {
               if (action.payload.boardId === params.id) {

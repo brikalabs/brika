@@ -1,8 +1,8 @@
 # Bricks
 
-Bricks are dashboard UI components provided by plugins. Each brick renders as a resizable card on the dashboard, adapts to its grid size, and manages its own state through a lightweight hook system.
+Bricks are dashboard UI components provided by plugins. Each brick renders as a resizable card on the dashboard, adapts to its grid size, and reacts to data pushed from the plugin process.
 
-Bricks don't produce DOM elements. They return **descriptor nodes** — plain objects like `{ type: 'text', content: 'Hello' }` — that the hub renders natively. The SDK diffs these descriptors and sends only mutations over IPC, keeping communication minimal.
+Bricks are **client-rendered** — they run as real React components in the browser. The plugin process fetches data and pushes it to all connected clients via `setBrickData()`. The browser receives the data through `useBrickData()` and renders standard React JSX.
 
 ## Quick Start
 
@@ -18,306 +18,123 @@ Three steps to create a brick:
 }
 ```
 
-**2. Define the component**
+**2. Create the client component**
 
 ```tsx
 // src/bricks/hello.tsx
-import { defineBrick, useState, Stat, Toggle, defineSharedStore } from '@brika/sdk/bricks';
+import { useBrickData, useBrickConfig, useBrickSize } from '@brika/sdk/brick-views';
 
-export const helloBrick = defineBrick(
-  { id: 'hello', name: 'Hello', families: ['sm', 'md'] },
-  () => {
-    const [on, setOn] = useState(false);
-    return (
-      <>
-        <Stat label="Status" value={on ? 'Active' : 'Idle'} icon="zap" />
-        <Toggle label="Power" checked={on} onToggle={(p) => setOn(p?.checked as boolean ?? !on)} />
-      </>
-    );
-  },
-);
+interface HelloData {
+  message: string;
+  count: number;
+}
+
+export default function Hello() {
+  const data = useBrickData<HelloData>();
+  const config = useBrickConfig();
+  const { width } = useBrickSize();
+
+  if (!data) return <div className="p-4 text-muted-foreground">Loading...</div>;
+
+  return (
+    <div className="flex flex-col gap-2 p-3">
+      <span className="text-lg font-bold">{data.message}</span>
+      <span className="text-sm text-muted-foreground">Count: {data.count}</span>
+    </div>
+  );
+}
 ```
 
-**3. Export from entry**
+**3. Push data from the plugin process**
 
 ```tsx
 // src/index.tsx
-export { helloBrick } from './bricks/hello';
-```
+import { setBrickData, onInit, onStop, log } from '@brika/sdk';
 
-`defineBrick()` auto-registers with the hub at import time.
+let count = 0;
+let timer: Timer | null = null;
+
+onInit(() => {
+  timer = setInterval(() => {
+    count++;
+    setBrickData('hello', { message: 'Hello!', count });
+  }, 1000);
+});
+
+onStop(() => {
+  if (timer) clearInterval(timer);
+});
+
+log.info('Plugin loaded');
+```
 
 ## How It Works
 
-Each brick type has:
-- **Spec** — static metadata: id, icon, families, config schema
-- **Component** — a function using hooks that returns descriptor nodes
-- **Instances** — each dashboard placement gets isolated state and config
+The brick system has two halves:
 
-Placing the same brick type twice creates two fully independent instances with their own hooks state.
+- **Plugin process** (server) — Fetches data, manages state, pushes updates via `setBrickData()`
+- **Brick component** (browser) — Real React component that reads data via `useBrickData()`
+
+```
+Plugin Process           Hub              Browser
+      |                   |                  |
+ setBrickData() ───> BrickDataStore ───> useBrickData()
+                         |
+                         |
+           onBrickConfigChange() <─── user edits config
+```
+
+Each brick type has:
+- **Manifest entry** — static metadata in `package.json` (id, icon, config schema)
+- **Client component** — a `.tsx` file in `src/bricks/` that renders in the browser
+- **Server logic** — code in the plugin entry point that pushes data to clients
+
+Placing the same brick type twice creates two instances that share the same pushed data but have independent per-instance config.
 
 ### JSX Setup
 
-Bricks use a custom JSX runtime from `@brika/ui-kit` (not React). Add to `tsconfig.json`:
+Bricks use standard React JSX. Set `jsxImportSource` to `react` in your `tsconfig.json`:
 
 ```json
 {
+  "extends": "@brika/sdk/tsconfig.plugin.json",
   "compilerOptions": {
     "jsx": "react-jsx",
-    "jsxImportSource": "@brika/ui-kit"
+    "jsxImportSource": "react"
   }
 }
 ```
 
-Files must use `.tsx` extension. Fragments (`<>...</>`) flatten children into arrays. Components can also be called as plain functions: `Stat({ label: 'Temp', value: 21 })`.
+Brick `.tsx` files are compiled to browser ESM by `@brika/compiler`. Shared dependencies (React, lucide-react, class-variance-authority, clsx) are provided by the host app via `globalThis.__brika` — don't bundle them yourself.
 
-## Brick Type Spec
+## Brick Manifest
 
-| Property | Type | Required | Description |
-|----------|------|----------|-------------|
-| `id` | `string` | Yes | Must match `package.json` entry |
-| `name` | `string` | No | Display name |
-| `icon` | `string` | No | Lucide icon name |
-| `color` | `string` | No | Accent color (hex) |
-| `families` | `('sm' \| 'md' \| 'lg')[]` | Yes | Supported catalog sizes |
-| `minSize` / `maxSize` | `{ w, h }` | No | Grid size constraints |
-| `config` | `PreferenceDefinition[]` | No | Per-instance config schema |
-
-## Hooks
-
-Import from `@brika/sdk/bricks`. React-like semantics, custom implementation.
-
-### useState
-
-```tsx
-const [count, setCount] = useState(0);
-setCount(count + 1);          // direct
-setCount((prev) => prev + 1); // functional update
-```
-
-Triggers re-render on change (`Object.is` comparison).
-
-### useEffect
-
-```tsx
-useEffect(() => {
-  const id = setInterval(() => setCount((c) => c + 1), 1000);
-  return () => clearInterval(id); // cleanup on unmount or re-run
-}, []);
-```
-
-Deferred via `queueMicrotask`. Always return cleanup functions to prevent leaks.
-
-### useMemo / useCallback
-
-```tsx
-const formatted = useMemo(() => formatDuration(seconds), [seconds]);
-const handler = useCallback(() => doSomething(), [dep]);
-```
-
-### useRef
-
-```tsx
-const timerRef = useRef<Timer | null>(null);
-```
-
-Persistent mutable ref — survives re-renders without triggering them.
-
-### useBrickSize
-
-```tsx
-const { width, height } = useBrickSize();
-```
-
-Returns current grid dimensions. Updates on resize without unmounting.
-
-### usePreference
-
-```tsx
-// Read a single config value
-const [unit] = usePreference<string>('unit', 'celsius');
-
-// Full config object
-const config = usePreference<{ unit: string; interval: number }>();
-```
-
-Reads per-instance configuration (set by user in the config sheet).
-
-### usePluginPreference
-
-```tsx
-const apiKey = usePluginPreference<string>('apiKey', '');
-```
-
-Read a plugin-level (global) preference. Read-only within bricks.
-
-### Actions (auto-registered)
-
-Pass handler functions directly to interactive props — no manual registration needed:
-
-```tsx
-<Toggle label="Power" checked={on} onToggle={(p) => setOn(p?.checked as boolean ?? !on)} />
-<Slider label="Vol" value={vol} min={0} max={100} onChange={(p) => setVol(p?.value as number)} />
-<Button label="Refresh" onPress={() => fetchData()} />
-```
-
-Payloads: Toggle → `{ checked }`, Slider → `{ value }`, Button → `undefined`.
-
-## Components
-
-Import from `@brika/sdk/bricks`.
-
-### Data Display
-
-| Component | Key Props | Description |
-|-----------|-----------|-------------|
-| **Stat** | `label`, `value`, `unit?`, `icon?`, `trend?`, `color?` | Key metric |
-| **Status** | `label`, `status`, `icon?`, `color?` | Online/offline indicator |
-| **Text** | `content`, `variant?` (`body`/`caption`/`heading`), `color?` | Text content |
-| **Badge** | `label`, `variant?` (`default`/`success`/`warning`/`destructive`), `icon?` | Inline tag |
-| **Icon** | `name`, `size?` (`sm`/`md`/`lg`), `color?` | Standalone Lucide icon |
-| **Progress** | `value` (0-100), `label?`, `color?`, `showValue?` | Progress bar |
-
-### Interactive
-
-| Component | Key Props | Description |
-|-----------|-----------|-------------|
-| **Button** | `label`, `onPress`, `icon?`, `variant?` | Clickable button |
-| **Toggle** | `label`, `checked`, `onToggle`, `icon?` | Switch control |
-| **Slider** | `label`, `value`, `min`, `max`, `onChange`, `step?`, `unit?` | Range input |
-
-### Media
-
-| Component | Key Props | Description |
-|-----------|-----------|-------------|
-| **Image** | `src`, `alt?`, `fit?`, `rounded?`, `aspectRatio?`, `caption?` | Image display |
-| **Video** | `src`, `format` (`hls`/`mjpeg`), `poster?`, `muted?` | Video/stream player |
-| **Chart** | `variant` (`line`/`area`/`bar`), `data`, `color?`, `label?` | Data visualization |
-
-### Layout
-
-| Component | Key Props | Description |
-|-----------|-----------|-------------|
-| **Stack** | `direction`, `gap?`, `align?`, `justify?`, `wrap?`, `grow?` | Flex container |
-| **Grid** | `columns?`, `gap?` | Grid container |
-| **Section** | `title` | Titled section wrapper |
-| **Box** | `background?`, `blur?`, `padding?`, `rounded?`, `grow?` | Styled container |
-| **Divider** | `direction?`, `color?` | Separator line |
-| **Spacer** | `size?` | Fixed or flexible spacing |
-
-## Responsive Design
-
-Use `useBrickSize()` to adapt layout based on grid dimensions:
-
-```tsx
-const { width, height } = useBrickSize();
-
-if (width <= 2) {
-  return <Stat label="Temp" value="21°C" icon="thermometer" />;
-}
-
-if (width <= 4) {
-  return (
-    <Grid columns={2} gap="sm">
-      <Stat label="Temp" value="21°C" />
-      <Stat label="Humidity" value="45%" />
-    </Grid>
-  );
-}
-
-return (
-  <Section title="Environment">
-    <Grid columns={3} gap="sm">
-      <Stat label="Temp" value="21°C" />
-      <Stat label="Humidity" value="45%" />
-      <Stat label="Wind" value="12 km/h" />
-    </Grid>
-    {height >= 4 && <Chart variant="area" data={history} />}
-  </Section>
-);
-```
-
-Gate content by both width and height. Charts need `height >= 4`, extra controls need `height >= 3`.
-
-## Shared Store (`defineSharedStore`)
-
-When multiple instances need shared state (e.g., a music player polling once for all instances), use `defineSharedStore` — a Zustand-style reactive store:
-
-```tsx
-
-// Define at module level (shared across all instances)
-const usePlayerStore = defineSharedStore<PlayerState>({
-  playback: null,
-  isAuthed: false,
-  loaded: false,
-});
-```
-
-### Usage
-
-```tsx
-// Inside a brick — reactive subscription
-const { playback, loaded } = usePlayerStore();
-
-// Outside a brick — write
-usePlayerStore.set({ playback: data, loaded: true });
-usePlayerStore.set((prev) => ({ ...prev, loaded: true }));
-
-// Synchronous read (no subscription)
-const current = usePlayerStore.get();
-```
-
-| Method | Description |
-|--------|-------------|
-| `store()` | Hook — read state reactively, subscribes the instance |
-| `store.get()` | Read current state synchronously |
-| `store.set(value)` | Update state, notify subscribers (`Object.is` comparison) |
-
-### Pattern: Single Poller, Many Consumers
-
-```tsx
-const useData = defineSharedStore<Data | null>(null);
-let subs = 0;
-let timer: Timer | null = null;
-
-function acquire() {
-  if (++subs === 1) {
-    timer = setInterval(async () => useData.set(await fetchData()), 5000);
-  }
-}
-
-function release() {
-  if (--subs === 0 && timer) { clearInterval(timer); timer = null; }
-}
-
-export const myBrick = defineBrick({ ... }, () => {
-  const data = useData();
-  useEffect(() => { acquire(); return release; }, []);
-
-  if (!data) return <Text content="Loading..." variant="caption" />;
-  return <Stat label="Value" value={data.value} />;
-});
-```
-
-One polling loop regardless of instance count. First instance starts it, last one stops it.
-
-## Instance Configuration
-
-Declare config in `package.json`:
+Declare bricks in `package.json`:
 
 ```json
 {
-  "bricks": [{
-    "id": "my-brick",
-    "config": [
-      { "type": "text", "name": "title", "default": "Untitled" },
-      { "type": "number", "name": "interval", "default": 5000, "min": 1000 },
-      { "type": "checkbox", "name": "autoRefresh", "default": true },
-      { "type": "dropdown", "name": "unit", "options": [{"value": "celsius"}, {"value": "fahrenheit"}] }
-    ]
-  }]
+  "bricks": [
+    {
+      "id": "my-brick",
+      "name": "My Brick",
+      "description": "A brief description",
+      "category": "info",
+      "icon": "thermometer",
+      "color": "#ef4444",
+      "config": [
+        { "type": "text", "name": "city", "label": "City" },
+        { "type": "number", "name": "interval", "default": 5000, "min": 1000 },
+        { "type": "checkbox", "name": "autoRefresh", "default": true },
+        { "type": "dropdown", "name": "unit", "options": [{"value": "celsius"}, {"value": "fahrenheit"}] }
+      ]
+    }
+  ]
 }
 ```
+
+The `id` must match the filename in `src/bricks/` — a brick with `"id": "compact"` expects `src/bricks/compact.tsx`.
+
+### Config Types
 
 | Type | Value type | Extra props |
 |------|-----------|-------------|
@@ -326,54 +143,279 @@ Declare config in `package.json`:
 | `checkbox` | `boolean` | `default?` |
 | `dropdown` | `string` | `default?`, `options` |
 
-Read in the component:
+## Client-Side Hooks
+
+Import from `@brika/sdk/brick-views`. These hooks are only available in client-rendered brick components.
+
+### useBrickData
+
+Subscribe to data pushed from the plugin process via `setBrickData()`. Returns `undefined` until data arrives.
 
 ```tsx
-const [unit] = usePreference<string>('unit', 'celsius');
-const [interval] = usePreference<number>('interval', 5000);
+const data = useBrickData<MyDataType>();
+
+if (!data) return <LoadingSpinner />;
+return <div>{data.value}</div>;
 ```
 
-## Pitfalls
+### useBrickConfig
 
-### Conditional Children Before Siblings
-
-The reconciler tracks nodes by index. `{cond && <X/>}` before siblings shifts all indices when the condition changes:
+Read the per-instance configuration for this brick (set by user in the config sheet).
 
 ```tsx
-// BAD — shifts sibling indices
-<>
-  {show && <Spacer />}
-  <Text content="hello" />
-</>
-
-// GOOD — ternary keeps stable count
-<>
-  {show ? <Spacer /> : <Box padding="none" />}
-  <Text content="hello" />
-</>
-
-// GOOD — use layout props instead
-<Stack direction="vertical" justify={show ? 'end' : 'start'}>
-  <Text content="hello" />
-</Stack>
-
-// OK — trailing conditionals are fine
-<>
-  <Text content="hello" />
-  {show && <Chart variant="line" data={data} />}
-</>
+const config = useBrickConfig();
+const city = typeof config.city === 'string' ? config.city : 'Default';
 ```
 
-### Effect Cleanup
+Returns `Record<string, unknown>` — narrow field types yourself.
 
-Always return cleanup functions from `useEffect`. Forgetting cleanup causes interval/timer leaks across re-renders:
+### useBrickSize
+
+Returns the current grid dimensions. Updates on resize without unmounting.
 
 ```tsx
-useEffect(() => {
-  const id = setInterval(poll, 5000);
-  return () => clearInterval(id); // required
-}, []);
+const { width, height } = useBrickSize();
 ```
+
+### useCallBrickAction
+
+Returns a stable callback to send an action to the plugin process for the current brick instance.
+
+```tsx
+const callAction = useCallBrickAction();
+
+<button onClick={() => callAction('refresh')}>Refresh</button>
+```
+
+## Server-Side APIs
+
+Import from `@brika/sdk` or `@brika/sdk/lifecycle`. These run in the plugin process (Bun).
+
+### setBrickData
+
+Push data to all client-rendered instances of a brick type.
+
+```tsx
+import { setBrickData } from '@brika/sdk';
+
+setBrickData('compact', { temperature: 21, city: 'Zurich' });
+```
+
+Data becomes available in the browser via `useBrickData<T>()`. Call this whenever your data changes — all connected clients update automatically.
+
+### onBrickConfigChange
+
+React to per-instance config changes. Called when a user edits a brick instance's settings on the board.
+
+```tsx
+import { onBrickConfigChange } from '@brika/sdk';
+
+onBrickConfigChange((instanceId, config) => {
+  if (typeof config.city === 'string') {
+    ensurePolling(config.city);
+  }
+});
+```
+
+### defineSharedStore
+
+Zustand-style reactive store for sharing state within the plugin process:
+
+```tsx
+import { defineSharedStore } from '@brika/sdk';
+
+const weatherStore = defineSharedStore<WeatherData | null>(null);
+
+// Read
+const current = weatherStore.get();
+
+// Write (notifies all subscribers)
+weatherStore.set({ temperature: 21 });
+weatherStore.set(prev => ({ ...prev, temperature: 22 }));
+
+// Subscribe to changes
+const unsub = weatherStore.subscribe(() => {
+  const data = weatherStore.get();
+  setBrickData('compact', formatForCompact(data));
+});
+```
+
+| Method | Description |
+|--------|-------------|
+| `store.get()` | Read current state synchronously |
+| `store.set(value)` | Update state, notify subscribers (`Object.is` comparison) |
+| `store.subscribe(fn)` | Subscribe to changes. Returns unsubscribe function |
+
+## Responsive Design
+
+Use `useBrickSize()` to adapt layout based on grid dimensions:
+
+```tsx
+import { useBrickData, useBrickSize } from '@brika/sdk/brick-views';
+
+export default function MyBrick() {
+  const data = useBrickData<MyData>();
+  const { width, height } = useBrickSize();
+
+  if (!data) return <div>Loading...</div>;
+
+  if (width <= 2) {
+    return <CompactView data={data} />;
+  }
+
+  return (
+    <div className="flex flex-col gap-4 p-4">
+      <Header data={data} />
+      {height >= 4 && <DetailChart data={data.history} />}
+    </div>
+  );
+}
+```
+
+Gate content by both width and height. Detailed views need larger sizes — keep compact variants for small grid slots.
+
+## Actions
+
+Actions let brick components call server-side functions in the plugin process. Action IDs are auto-generated at build time — developers never type or see the ID.
+
+### Define actions (server-side)
+
+```ts
+// src/actions.ts
+import { defineAction } from '@brika/sdk/actions';
+
+export const refresh = defineAction(async () => {
+  return fetchLatestData();
+});
+
+export const toggle = defineAction(async (input: { deviceId: string }) => {
+  return toggleDevice(input.deviceId);
+});
+```
+
+### Call actions from pages (browser)
+
+```tsx
+// src/pages/devices.tsx
+import { useAction, useCallAction } from '@brika/sdk/ui-kit/hooks';
+import { getDevices, scan } from '../actions';
+
+export default function DevicesPage() {
+  const callAction = useCallAction();
+  const { data, loading, refetch } = useAction(getDevices);
+
+  return <button onClick={() => callAction(scan).then(refetch)}>Scan</button>;
+}
+```
+
+### Call actions from bricks (browser)
+
+Bricks use `useCallBrickAction()` to send actions scoped to their instance:
+
+```tsx
+import { useBrickData, useCallBrickAction } from '@brika/sdk/brick-views';
+
+export default function DeviceBrick() {
+  const data = useBrickData<DeviceData>();
+  const callAction = useCallBrickAction();
+
+  return (
+    <button onClick={() => callAction('toggle', { deviceId: data?.id })}>
+      Toggle
+    </button>
+  );
+}
+```
+
+## Pattern: Single Poller, Many Consumers
+
+When multiple brick instances share the same data source, poll once and push to all:
+
+```tsx
+// src/index.tsx
+import { defineSharedStore, setBrickData, onInit, onStop } from '@brika/sdk';
+
+const useData = defineSharedStore<Data | null>(null);
+let timer: Timer | null = null;
+
+onInit(() => {
+  timer = setInterval(async () => {
+    useData.set(await fetchData());
+  }, 5000);
+});
+
+// Push to all client bricks whenever data changes
+useData.subscribe(() => {
+  const data = useData.get();
+  if (data) {
+    setBrickData('my-brick', formatData(data));
+  }
+});
+
+onStop(() => {
+  if (timer) clearInterval(timer);
+});
+```
+
+## Pattern: Per-Instance Config
+
+When each brick instance has its own configuration (e.g., a different city for a weather brick):
+
+```tsx
+// src/index.tsx
+import { setBrickData, onBrickConfigChange } from '@brika/sdk';
+
+const instanceConfigs = new Map<string, string>();
+
+onBrickConfigChange((instanceId, config) => {
+  const city = typeof config.city === 'string' ? config.city : 'Default';
+  instanceConfigs.set(instanceId, city);
+  ensurePolling(city);
+});
+```
+
+All instances of a brick type receive the same data from `setBrickData()`. The client component reads `useBrickConfig()` to select the relevant slice:
+
+```tsx
+// src/bricks/weather.tsx
+import { useBrickData, useBrickConfig } from '@brika/sdk/brick-views';
+
+export default function WeatherBrick() {
+  const data = useBrickData<{ cities: Record<string, CityData> }>();
+  const config = useBrickConfig();
+  const city = typeof config.city === 'string' ? config.city : 'Default';
+
+  if (!data) return <div>Loading...</div>;
+  const cityData = data.cities[city];
+  if (!cityData) return <div>No data for {city}</div>;
+
+  return <div>{cityData.temperature}°C</div>;
+}
+```
+
+## Build Pipeline
+
+Brick `.tsx` files are compiled by `@brika/compiler` using `Bun.build()`:
+
+1. **Externals plugin** — Replaces shared imports (React, lucide-react, UI kit) with `globalThis.__brika` proxies
+2. **Actions plugin** — Replaces action imports with `{ __actionId }` stubs for browser use
+3. **Tailwind compilation** — Extracts class names from the compiled JS and generates scoped CSS
+4. **Output** — ESM module served at `/api/bricks/{brickTypeId}/module.js?hash=...`
+5. **Caching** — Content hash in filename means cache hit check is instant
+
+The compiler validates at build time that every brick declared in `package.json` has a matching `src/bricks/{id}.tsx` file.
+
+### Tailwind CSS
+
+Brick components use Tailwind CSS classes (e.g., `className="flex gap-2 p-3"`). The hub compiles these at build time using Tailwind v4's programmatic API:
+
+1. **Candidate extraction** — The compiled JS is scanned for string literals to find Tailwind class candidates
+2. **CSS generation** — Tailwind's `compile()` + `build()` produces the matching utility CSS
+3. **Theme stripping** — `:root` variables and `@layer properties` are removed since the host app already provides them
+4. **Scoping** — CSS is wrapped in `@scope ([data-brika-scope="<id>"])` so rules only apply inside that brick's container
+5. **Output** — Minified CSS served alongside the ESM module
+
+This means brick components get full Tailwind support without shipping duplicate theme variables or conflicting with the host app's styles. The custom theme from `@brika/ui-kit/tailwind-theme.css` is included, so brick components can use the same design tokens as the rest of the UI.
 
 ## Next Steps
 

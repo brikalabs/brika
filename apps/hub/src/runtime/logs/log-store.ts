@@ -58,6 +58,8 @@ interface LogRow {
 export class LogStore {
   #db: Database | null = null;
   #insertStmt: ReturnType<Database["prepare"]> | null = null;
+  #insertErrors = 0;
+  static readonly #MAX_INSERT_ERRORS = 5;
 
   async init(): Promise<void> {
     const configLoader = inject(ConfigLoader);
@@ -122,18 +124,28 @@ export class LogStore {
   insert(event: LogEvent): void {
     if (!this.#insertStmt) { return; }
 
-    this.#insertStmt.run(
-      event.ts,
-      event.level,
-      event.source,
-      event.pluginName ?? null,
-      event.message,
-      event.meta ? JSON.stringify(event.meta) : null,
-      event.error?.name ?? null,
-      event.error?.message ?? null,
-      event.error?.stack ?? null,
-      event.error?.cause ?? null,
-    );
+    try {
+      this.#insertStmt.run(
+        event.ts,
+        event.level,
+        event.source,
+        event.pluginName ?? null,
+        event.message,
+        event.meta ? JSON.stringify(event.meta) : null,
+        event.error?.name ?? null,
+        event.error?.message ?? null,
+        event.error?.stack ?? null,
+        event.error?.cause ?? null,
+      );
+      this.#insertErrors = 0;
+    } catch {
+      // Silently drop — log persistence must never crash the request pipeline.
+      // Only disable after repeated failures to tolerate transient I/O errors.
+      this.#insertErrors++;
+      if (this.#insertErrors >= LogStore.#MAX_INSERT_ERRORS) {
+        this.#insertStmt = null;
+      }
+    }
   }
 
   query(params: LogQueryParams = {}): LogQueryResult {

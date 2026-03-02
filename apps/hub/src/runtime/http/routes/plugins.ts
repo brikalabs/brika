@@ -1,6 +1,8 @@
+import type { Plugin } from '@brika/plugin';
 import { group, route, UnprocessableEntity } from '@brika/router';
 import { z } from 'zod';
 import { getProcessMetrics, MetricsStore } from '@/runtime/metrics';
+import { ModuleCompiler } from '@/runtime/modules';
 import { PluginConfigService } from '@/runtime/plugins/plugin-config';
 import { PluginLifecycle } from '@/runtime/plugins/plugin-lifecycle';
 import { PluginManager } from '@/runtime/plugins/plugin-manager';
@@ -9,6 +11,24 @@ import { PluginRegistry } from '@/runtime/registry';
 import { StateStore } from '@/runtime/state/state-store';
 import { getOrThrow } from '../utils/resource-helpers';
 import { safePath } from '../utils/safe-path';
+
+/** Enrich plugin pages with pre-built moduleUrl for cache-busting. */
+function enrichPages(plugin: Plugin, compiler: ModuleCompiler) {
+  if (!plugin.pages.length) {
+    return plugin.pages;
+  }
+  return plugin.pages.map((page) => {
+    const entry = compiler.get(`${plugin.name}:pages/${page.id}`);
+    return {
+      ...page,
+      moduleUrl: entry ? `/api/plugins/${plugin.uid}/pages/${page.id}.${entry.hash}.js` : undefined,
+    };
+  });
+}
+
+function enrichPlugin(plugin: Plugin, compiler: ModuleCompiler) {
+  return { ...plugin, pages: enrichPages(plugin, compiler) };
+}
 
 /**
  * Create a generic plugin action handler
@@ -36,7 +56,10 @@ export const pluginsRoutes = group({
     route.get({
       path: '/',
       handler: ({ inject }) => {
-        return inject(PluginManager).list();
+        const compiler = inject(ModuleCompiler);
+        return inject(PluginManager)
+          .list()
+          .map((p) => enrichPlugin(p, compiler));
       },
     }),
 
@@ -62,7 +85,7 @@ export const pluginsRoutes = group({
       }),
       handler: ({ params, inject }) => {
         const plugin = getOrThrow(inject(PluginManager).get(params.uid), 'Plugin not found');
-        return plugin;
+        return enrichPlugin(plugin, inject(ModuleCompiler));
       },
     }),
 

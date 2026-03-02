@@ -23,8 +23,8 @@ describe('PluginManager', () => {
   let manager: PluginManager;
   let mockLifecycle: {
     getProcessByUid: ReturnType<typeof mock>;
-    getProcessByName: ReturnType<typeof mock>;
-    hasProcessByName: ReturnType<typeof mock>;
+    getProcess: ReturnType<typeof mock>;
+    hasProcess: ReturnType<typeof mock>;
     listProcesses: ReturnType<typeof mock>;
     toPlugin: ReturnType<typeof mock>;
     fromStored: ReturnType<typeof mock>;
@@ -33,6 +33,7 @@ describe('PluginManager', () => {
     stopAll: ReturnType<typeof mock>;
     restoreEnabled: ReturnType<typeof mock>;
     cleanupStale: ReturnType<typeof mock>;
+    removeModules: ReturnType<typeof mock>;
   };
   let mockState: {
     get: ReturnType<typeof mock>;
@@ -42,6 +43,7 @@ describe('PluginManager', () => {
     listInstalledWithMetadata: ReturnType<typeof mock>;
     setEnabled: ReturnType<typeof mock>;
     setHealth: ReturnType<typeof mock>;
+    remove: ReturnType<typeof mock>;
   };
   let mockEvents: {
     dispatch: ReturnType<typeof mock>;
@@ -62,6 +64,7 @@ describe('PluginManager', () => {
     uid,
     version: '1.0.0',
     pid: 12345,
+    rootDirectory: '/mock/path',
     kill: mock(),
     startBlock: mock().mockResolvedValue({
       ok: true,
@@ -83,8 +86,8 @@ describe('PluginManager', () => {
   beforeEach(() => {
     mockLifecycle = {
       getProcessByUid: mock(),
-      getProcessByName: mock(),
-      hasProcessByName: mock(),
+      getProcess: mock(),
+      hasProcess: mock(),
       listProcesses: mock().mockReturnValue([]),
       toPlugin: mock(),
       fromStored: mock(),
@@ -93,6 +96,7 @@ describe('PluginManager', () => {
       stopAll: mock().mockResolvedValue(undefined),
       restoreEnabled: mock().mockResolvedValue(undefined),
       cleanupStale: mock().mockResolvedValue(undefined),
+      removeModules: mock(),
     };
     mockState = {
       get: mock(),
@@ -102,6 +106,7 @@ describe('PluginManager', () => {
       listInstalledWithMetadata: mock().mockReturnValue([]),
       setEnabled: mock().mockResolvedValue(undefined),
       setHealth: mock().mockResolvedValue(undefined),
+      remove: mock().mockResolvedValue(undefined),
     };
     mockEvents = {
       dispatch: mock().mockResolvedValue(undefined),
@@ -178,13 +183,13 @@ describe('PluginManager', () => {
       test('returns plugin from running process', () => {
         const process = createMockProcess('@test/plugin', 'uid-123');
         const plugin = createMockPlugin('@test/plugin', 'uid-123');
-        mockLifecycle.getProcessByName.mockReturnValue(process);
+        mockLifecycle.getProcess.mockReturnValue(process);
         mockLifecycle.toPlugin.mockReturnValue(plugin);
 
         const result = manager.getByName('@test/plugin');
 
         expect(result).toEqual(plugin);
-        expect(mockLifecycle.getProcessByName).toHaveBeenCalledWith('@test/plugin');
+        expect(mockLifecycle.getProcess).toHaveBeenCalledWith('@test/plugin');
       });
 
       test('returns plugin from stored state when not running', () => {
@@ -194,7 +199,7 @@ describe('PluginManager', () => {
           rootDirectory: '/path',
         };
         const plugin = createMockPlugin('@test/plugin', 'uid-123');
-        mockLifecycle.getProcessByName.mockReturnValue(null);
+        mockLifecycle.getProcess.mockReturnValue(null);
         mockState.getWithMetadata.mockReturnValue(storedData);
         mockLifecycle.fromStored.mockReturnValue(plugin);
 
@@ -205,7 +210,7 @@ describe('PluginManager', () => {
       });
 
       test('returns null when plugin not found', () => {
-        mockLifecycle.getProcessByName.mockReturnValue(null);
+        mockLifecycle.getProcess.mockReturnValue(null);
         mockState.getWithMetadata.mockReturnValue(null);
 
         const result = manager.getByName('unknown-plugin');
@@ -266,7 +271,7 @@ describe('PluginManager', () => {
     describe('resolve', () => {
       test('returns uid from running process', () => {
         const process = createMockProcess('@test/plugin', 'uid-123');
-        mockLifecycle.getProcessByName.mockReturnValue(process);
+        mockLifecycle.getProcess.mockReturnValue(process);
 
         const result = manager.resolve('@test/plugin');
 
@@ -274,7 +279,7 @@ describe('PluginManager', () => {
       });
 
       test('returns uid from stored state when not running', () => {
-        mockLifecycle.getProcessByName.mockReturnValue(null);
+        mockLifecycle.getProcess.mockReturnValue(null);
         mockState.get.mockReturnValue({
           uid: 'uid-456',
         });
@@ -285,7 +290,7 @@ describe('PluginManager', () => {
       });
 
       test('returns null when plugin not found', () => {
-        mockLifecycle.getProcessByName.mockReturnValue(null);
+        mockLifecycle.getProcess.mockReturnValue(null);
         mockState.get.mockReturnValue(null);
 
         const result = manager.resolve('unknown');
@@ -374,7 +379,7 @@ describe('PluginManager', () => {
         };
         mockLifecycle.getProcessByUid.mockReturnValue(process);
         mockState.get.mockReturnValue(storedData);
-        mockLifecycle.hasProcessByName
+        mockLifecycle.hasProcess
           .mockReturnValueOnce(false) // After unload
           .mockReturnValueOnce(true); // After load
         mockEvents.race.mockResolvedValue({
@@ -402,7 +407,7 @@ describe('PluginManager', () => {
       test('throws when plugin still running after unload', async () => {
         const process = createMockProcess('@test/plugin', 'uid-123');
         mockLifecycle.getProcessByUid.mockReturnValue(process);
-        mockLifecycle.hasProcessByName.mockReturnValue(true);
+        mockLifecycle.hasProcess.mockReturnValue(true);
 
         await expect(manager.reload('uid-123')).rejects.toThrow('still running after unload');
       });
@@ -415,7 +420,7 @@ describe('PluginManager', () => {
         };
         mockLifecycle.getProcessByUid.mockReturnValue(process);
         mockState.get.mockReturnValue(storedData);
-        mockLifecycle.hasProcessByName.mockReturnValue(false); // Always false
+        mockLifecycle.hasProcess.mockReturnValue(false); // Always false
 
         await expect(manager.reload('uid-123')).rejects.toThrow('failed to start');
       });
@@ -425,7 +430,7 @@ describe('PluginManager', () => {
       test('kills a running plugin', async () => {
         const process = createMockProcess('@test/plugin', 'uid-123');
         mockLifecycle.getProcessByUid.mockReturnValue(process);
-        mockLifecycle.getProcessByName.mockReturnValue(process);
+        mockLifecycle.getProcess.mockReturnValue(process);
 
         await manager.kill('uid-123');
 
@@ -443,7 +448,7 @@ describe('PluginManager', () => {
       test('does nothing when plugin not running', async () => {
         const process = createMockProcess('@test/plugin', 'uid-123');
         mockLifecycle.getProcessByUid.mockReturnValue(process);
-        mockLifecycle.getProcessByName.mockReturnValue(null);
+        mockLifecycle.getProcess.mockReturnValue(null);
 
         await manager.kill('uid-123');
 
@@ -480,6 +485,32 @@ describe('PluginManager', () => {
         await manager.cleanupStaleState();
 
         expect(mockLifecycle.cleanupStale).toHaveBeenCalled();
+      });
+    });
+
+    describe('remove', () => {
+      test('unloads, removes modules, and removes state', async () => {
+        const process = createMockProcess('@test/plugin', 'uid-123');
+        mockLifecycle.getProcess.mockReturnValue(process);
+        mockLifecycle.hasProcess.mockReturnValue(true);
+
+        await manager.remove('@test/plugin');
+
+        expect(mockLifecycle.unload).toHaveBeenCalledWith('@test/plugin');
+        expect(mockLifecycle.removeModules).toHaveBeenCalledWith('@test/plugin', '/mock/path');
+        expect(mockState.remove).toHaveBeenCalledWith('@test/plugin');
+      });
+
+      test('skips unload when plugin is not running', async () => {
+        mockLifecycle.getProcess.mockReturnValue(null);
+        mockLifecycle.hasProcess.mockReturnValue(false);
+        mockState.get.mockReturnValue({ rootDirectory: '/stored/path' });
+
+        await manager.remove('@test/plugin');
+
+        expect(mockLifecycle.unload).not.toHaveBeenCalled();
+        expect(mockLifecycle.removeModules).toHaveBeenCalledWith('@test/plugin', '/stored/path');
+        expect(mockState.remove).toHaveBeenCalledWith('@test/plugin');
       });
     });
   });
@@ -519,7 +550,7 @@ describe('PluginManager', () => {
       test('starts block on correct plugin', async () => {
         const process = createMockProcess('@test/plugin', 'uid-123');
         mockBlocks.getProvider.mockReturnValue('@test/plugin');
-        mockLifecycle.getProcessByName.mockReturnValue(process);
+        mockLifecycle.getProcess.mockReturnValue(process);
 
         const result = await manager.startBlock('my-block', 'instance-1', 'workflow-1', {
           key: 'value',
@@ -542,7 +573,7 @@ describe('PluginManager', () => {
 
       test('returns error when plugin not loaded', async () => {
         mockBlocks.getProvider.mockReturnValue('@test/plugin');
-        mockLifecycle.getProcessByName.mockReturnValue(null);
+        mockLifecycle.getProcess.mockReturnValue(null);
 
         const result = await manager.startBlock('my-block', 'instance-1', 'workflow-1', {});
 

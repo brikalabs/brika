@@ -6,7 +6,8 @@ import 'reflect-metadata';
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
 import { get, provide, stub, useTestBed } from '@brika/di/testing';
 import { BlockRegistry } from '@/runtime/blocks';
-import { BrickInstanceManager, BrickTypeRegistry } from '@/runtime/bricks';
+import { BrickTypeRegistry } from '@/runtime/bricks';
+import { BrickDataStore } from '@/runtime/bricks/brick-data-store';
 import { EventSystem } from '@/runtime/events/event-system';
 import { Logger } from '@/runtime/logs/log-router';
 import { PluginEventHandler } from '@/runtime/plugins/plugin-events';
@@ -39,8 +40,9 @@ describe('PluginEventHandler', () => {
     register: ReturnType<typeof mock>;
     get: ReturnType<typeof mock>;
   };
-  let mockBrickInstanceManager: {
-    patchBody: ReturnType<typeof mock>;
+  let mockBrickDataStore: {
+    set: ReturnType<typeof mock>;
+    removeByPlugin: ReturnType<typeof mock>;
   };
   let mockPluginRouteRegistry: {
     register: ReturnType<typeof mock>;
@@ -62,15 +64,16 @@ describe('PluginEventHandler', () => {
       subscribe: mock().mockReturnValue(() => undefined),
     };
     mockBrickTypeRegistry = {
-      register: mock().mockReturnValue('plugin:brick'),
+      register: mock().mockReturnValue({ fullId: 'plugin:brick', isNew: true }),
       get: mock().mockReturnValue({
         fullId: 'plugin:brick',
         localId: 'brick',
         pluginName: 'plugin',
       }),
     };
-    mockBrickInstanceManager = {
-      patchBody: mock().mockReturnValue(true),
+    mockBrickDataStore = {
+      set: mock(),
+      removeByPlugin: mock(),
     };
     mockPluginRouteRegistry = {
       register: mock(),
@@ -82,7 +85,7 @@ describe('PluginEventHandler', () => {
     provide(StateStore, mockStateStore);
     provide(EventSystem, mockEventSystem);
     provide(BrickTypeRegistry, mockBrickTypeRegistry);
-    provide(BrickInstanceManager, mockBrickInstanceManager);
+    provide(BrickDataStore, mockBrickDataStore);
     provide(PluginRouteRegistry, mockPluginRouteRegistry);
 
     handler = get(PluginEventHandler);
@@ -400,7 +403,8 @@ describe('PluginEventHandler', () => {
       expect(mockBrickTypeRegistry.register).toHaveBeenCalledWith(
         brickType,
         '@test/plugin',
-        manifest
+        manifest,
+        undefined
       );
     });
 
@@ -415,6 +419,7 @@ describe('PluginEventHandler', () => {
       expect(mockBrickTypeRegistry.register).toHaveBeenCalledWith(
         brickType,
         '@test/plugin',
+        undefined,
         undefined
       );
     });
@@ -439,46 +444,19 @@ describe('PluginEventHandler', () => {
     });
   });
 
-  describe('patchBrickInstance', () => {
-    test('patches brick instance and dispatches event', () => {
-      mockBrickInstanceManager.patchBody.mockReturnValue(true);
+  describe('onPluginDisconnected', () => {
+    test('clears brick data for disconnected plugin', () => {
+      handler.onPluginDisconnected('@test/plugin');
 
-      const mutations = [
-        {
-          op: 'replace',
-          path: '/text',
-          value: 'Hello',
-        },
-      ];
-      handler.patchBrickInstance('inst-1', mutations);
+      expect(mockBrickDataStore.removeByPlugin).toHaveBeenCalledWith('@test/plugin');
+    });
+  });
 
-      expect(mockBrickInstanceManager.patchBody).toHaveBeenCalledWith('inst-1', mutations);
+  describe('pushBrickData', () => {
+    test('dispatches dataUpdated event', () => {
+      handler.pushBrickData('@test/plugin', 'my-brick', { temp: 22 });
+
       expect(mockEventSystem.dispatch).toHaveBeenCalled();
-    });
-
-    test('does not dispatch event if patchBody returns false', () => {
-      mockBrickInstanceManager.patchBody.mockReturnValue(false);
-      mockEventSystem.dispatch.mockClear();
-
-      const mutations = [
-        {
-          op: 'replace',
-          path: '/text',
-          value: 'Hello',
-        },
-      ];
-      handler.patchBrickInstance('inst-1', mutations);
-
-      expect(mockBrickInstanceManager.patchBody).toHaveBeenCalledWith('inst-1', mutations);
-      expect(mockEventSystem.dispatch).not.toHaveBeenCalled();
-    });
-
-    test('handles empty mutations array', () => {
-      mockBrickInstanceManager.patchBody.mockReturnValue(true);
-
-      handler.patchBrickInstance('inst-1', []);
-
-      expect(mockBrickInstanceManager.patchBody).toHaveBeenCalledWith('inst-1', []);
     });
   });
 });

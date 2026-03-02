@@ -1,4 +1,4 @@
-import { API_BASE, fetcher } from "@/lib/query";
+import { fetcher } from "@/lib/query";
 import type { LogEvent, LogLevel, LogSource } from "./types";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -68,19 +68,19 @@ export const logsApi = {
   query: (params: LogQueryParams) => {
     const qs = buildQueryString(params);
     const queryString = qs ? `?${qs}` : "";
-    return fetcher<LogQueryResult>(`${API_BASE}/api/logs${queryString}`);
+    return fetcher<LogQueryResult>(`/api/logs${queryString}`);
   },
 
-  getPlugins: () => fetcher<{ plugins: PluginInfo[] }>(`${API_BASE}/api/logs/plugins`),
+  getPlugins: () => fetcher<{ plugins: PluginInfo[] }>(`/api/logs/plugins`),
 
-  getStats: () => fetcher<LogStats>(`${API_BASE}/api/logs/stats`),
+  getStats: () => fetcher<LogStats>(`/api/logs/stats`),
 
-  getSources: () => fetcher<{ all: LogSource[]; used: LogSource[] }>(`${API_BASE}/api/logs/sources`),
+  getSources: () => fetcher<{ all: LogSource[]; used: LogSource[] }>(`/api/logs/sources`),
 
-  getLevels: () => fetcher<{ all: LogLevel[] }>(`${API_BASE}/api/logs/levels`),
+  getLevels: () => fetcher<{ all: LogLevel[] }>(`/api/logs/levels`),
 
   clear: (params?: Partial<LogQueryParams>) =>
-    fetcher<{ ok: boolean; deleted: number }>(`${API_BASE}/api/logs`, {
+    fetcher<{ ok: boolean; deleted: number }>(`/api/logs`, {
       method: "DELETE",
       body: JSON.stringify(params ?? {}),
     }),

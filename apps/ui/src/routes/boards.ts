@@ -7,11 +7,12 @@ export const boardRoutes = {
     load: () => import('@/features/boards'),
     select: (m) => m.BoardsLayout,
     scopes: Scope.WORKFLOW_READ,
-  }),
-  detail: page({
-    path: '/boards/$boardId',
-    load: () => import('@/features/boards'),
-    select: (m) => m.BoardContent,
-    scopes: Scope.WORKFLOW_READ,
+    children: {
+      detail: page({
+        path: '$boardId',
+        load: () => import('@/features/boards'),
+        select: (m) => m.BoardContent,
+      }),
+    },
   }),
 };

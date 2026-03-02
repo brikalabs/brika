@@ -23,6 +23,7 @@
   "dependencies": {
     "@brika/auth": "workspace:*",
     "@brika/banner": "workspace:*",
+    "@brika/compiler": "workspace:*",
     "@brika/di": "workspace:*",
     "@brika/events": "workspace:*",
     "@brika/http": "workspace:*",

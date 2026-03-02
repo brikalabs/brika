@@ -1,4 +1,4 @@
-import { defineOAuth, definePreferenceOptions } from '@brika/sdk';
+import { defineOAuth, definePreferenceOptions, setBrickData } from '@brika/sdk';
 import { log, onStop } from '@brika/sdk/lifecycle';
 
 // ─── OAuth ────────────────────────────────────────────────────────────────────
@@ -36,13 +36,39 @@ export { trackChanged } from './sparks';
 
 export { playBlock } from './blocks/play';
 
+// ─── Actions (registers defineAction handlers for client-side brick) ─────────
+
+import './actions';
+
 // ─── Bricks ───────────────────────────────────────────────────────────────────
 
-export { playerBrick } from './bricks/player';
+// Player brick is client-rendered — no server-side defineBrick export needed.
+// Brick type is registered from package.json metadata.
+
+// ─── Client-side data push ───────────────────────────────────────────────────
+
+import { acquirePolling, usePlayerStore } from './playback-store';
+
+// Start polling immediately so data is ready when the brick mounts
+const releasePolling = acquirePolling();
+
+// Push player state to client bricks whenever the store changes
+usePlayerStore.subscribe(() => {
+  const state = usePlayerStore.get();
+  setBrickData('player', {
+    playback: state.playback,
+    recentTrack: state.recentTrack,
+    isAuthed: state.isAuthed,
+    loaded: state.loaded,
+    anchor: state.anchor,
+    authUrl: spotify.getAuthUrl(),
+  });
+});
 
 // ─── Lifecycle ────────────────────────────────────────────────────────────────
 
 onStop(() => {
+  releasePolling();
   log.info('Spotify plugin stopping');
 });
 

@@ -62,6 +62,10 @@ flowchart TB
 | `result` | Plugin → Hub | Method result |
 | `event` | Both | Event notification |
 | `log` | Plugin → Hub | Log entry |
+| `registerBrickType` | Plugin → Hub | Declare a brick type |
+| `pushBrickData` | Plugin → Hub | Push data to client bricks |
+| `updateBrickConfig` | Hub → Plugin | Per-instance config changed |
+| `brickInstanceAction` | Hub → Plugin | Client sent an action |
 
 ### Binary Format
 
@@ -94,9 +98,10 @@ sequenceDiagram
 
 1. Hub spawns Bun process for plugin
 2. Plugin initializes SDK
-3. Plugin registers blocks
+3. Plugin registers blocks and brick types
 4. Plugin sends `ready` message
-5. Hub marks plugin as active
+5. Hub compiles brick modules (server + client)
+6. Hub marks plugin as active
 
 ### Plugin Shutdown
 
@@ -138,6 +143,29 @@ const sensorReading = defineSpark({
 sensorReading.emit({ temperature: 23.5 });
 
 // Hub receives, persists to SQLite, and routes to subscribers
+```
+
+### Brick Data Push
+
+```typescript
+// Plugin pushes data to all client-rendered brick instances
+setBrickData("compact", { temperature: 21 });
+
+// Hub relays to connected UI clients via SSE
+// Browser renders brick using useBrickData()
+```
+
+```mermaid
+sequenceDiagram
+    participant Plugin
+    participant Hub
+    participant Browser
+
+    Plugin->>Hub: pushBrickData(brickTypeId, data)
+    Hub->>Browser: SSE: brick data update
+    Browser->>Browser: useBrickData() re-renders
+    Browser->>Hub: brickInstanceAction(actionId, payload)
+    Hub->>Plugin: brickInstanceAction callback
 ```
 
 ### Log Streaming

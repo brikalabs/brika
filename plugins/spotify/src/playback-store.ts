@@ -5,8 +5,7 @@
  * `usePlayerStore()` automatically re-renders when the state changes.
  */
 
-import { log } from '@brika/sdk';
-import { defineSharedStore } from '@brika/sdk/bricks';
+import { defineSharedStore, log } from '@brika/sdk';
 import { spotify } from './index';
 import { getApi } from './shared';
 import { trackChanged } from './sparks';

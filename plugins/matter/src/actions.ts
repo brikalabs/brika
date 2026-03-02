@@ -1,10 +1,11 @@
 /**
  * Matter Plugin Actions
  *
- * Server-side actions callable from plugin pages via useAction/callAction.
+ * Server-side actions callable from plugin pages and client-rendered bricks.
+ * The module compiler transforms action imports into lightweight refs at build time.
  */
 
-import { defineAction } from '@brika/sdk';
+import { defineAction } from '@brika/sdk/actions';
 import { getMatterController, type MatterCommand } from './matter-controller';
 import { serializeDevice } from './serialize';
 
@@ -45,5 +46,15 @@ export const remove = defineAction(async (input: { nodeId: string }) => {
   const controller = getMatterController();
   const ok = await controller.removeDevice(input.nodeId);
   if (!ok) throw new Error('Device not found');
+  return { ok };
+});
+
+// ─── Brick Actions (called from client-rendered bricks via callAction) ──────
+
+/** Send a command to a Matter device from a client brick */
+export const doDeviceCommand = defineAction(async (input: { nodeId: string; command: string; args?: Record<string, string> }) => {
+  const controller = getMatterController();
+  const ok = await controller.sendCommand(input.nodeId, input.command as MatterCommand, input.args);
+  if (!ok) throw new Error(`Command "${input.command}" failed on device ${input.nodeId}`);
   return { ok };
 });

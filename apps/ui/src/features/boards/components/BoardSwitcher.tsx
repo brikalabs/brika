@@ -300,7 +300,7 @@ export function BoardSwitcher({ onEdit }: Readonly<BoardSwitcherProps>) {
               <DropdownMenuContent align="start">
                 {overflow.map((d) => (
                   <DropdownMenuItem
-                    key={d.id}
+                    key={`overflow-${d.id}`}
                     className="group/item flex items-center justify-between gap-3"
                     onClick={() =>
                       navigate({

@@ -1,49 +1,90 @@
-import { type BrickTypeSpec, Column, Icon, Skeleton, Text, type TextContent } from '@brika/sdk/bricks';
+/**
+ * Shared weather brick utilities — temperature formatting, icon map,
+ * city resolution, and loading/error states.
+ */
 
-// ─── Shared brick config (city + unit dropdown) ─────────────────────────────
+import {
+  Cloud,
+  CloudDrizzle,
+  CloudFog,
+  CloudLightning,
+  CloudRain,
+  CloudRainWind,
+  CloudSun,
+  Loader2,
+  MapPin,
+  Snowflake,
+  Sun,
+} from 'lucide-react';
+import type { ComponentType } from 'react';
 
-export const CITY_UNIT_CONFIG: NonNullable<BrickTypeSpec['config']> = [
-  { type: 'text', name: 'city' },
-  {
-    type: 'dropdown',
-    name: 'unit',
-    options: [{ value: 'default' }, { value: 'celsius' }, { value: 'fahrenheit' }],
-    default: 'default',
-  },
-];
+// ─── Temperature helpers ──────────────────────────────────────────────────────
 
-// ─── Shared Loading / Error states ──────────────────────────────────────────
+export function formatTemp(celsius: number, unit: string): string {
+  if (unit === 'fahrenheit') return `${Math.round(celsius * 9 / 5 + 32)}`;
+  return `${Math.round(celsius)}`;
+}
 
-export function WeatherLoading({ variant = 'default' }: Readonly<{ variant?: 'compact' | 'default' | 'forecast' }>) {
-  if (variant === 'compact') {
-    return (
-      <Column gap="sm" align="center" justify="center" grow>
-        <Skeleton variant="circle" width="32px" height="32px" />
-        <Skeleton variant="text" width="60%" />
-      </Column>
-    );
-  }
-  if (variant === 'forecast') {
-    return (
-      <Column gap="md" align="center" justify="center" grow>
-        <Skeleton variant="text" width="40%" />
-        <Skeleton variant="rect" width="100%" height="80px" />
-      </Column>
-    );
-  }
+export function tempUnit(unit: string): string {
+  return unit === 'fahrenheit' ? '\u00b0F' : '\u00b0C';
+}
+
+export function formatTempWithUnit(celsius: number, unit: string): string {
+  return `${formatTemp(celsius, unit)}${tempUnit(unit)}`;
+}
+
+// ─── Icon map ─────────────────────────────────────────────────────────────────
+
+export const ICON_MAP: Record<string, ComponentType<{ className?: string; style?: React.CSSProperties }>> = {
+  'sun': Sun,
+  'cloud-sun': CloudSun,
+  'cloud': Cloud,
+  'cloud-fog': CloudFog,
+  'cloud-drizzle': CloudDrizzle,
+  'cloud-rain': CloudRain,
+  'snowflake': Snowflake,
+  'cloud-rain-wind': CloudRainWind,
+  'cloud-lightning': CloudLightning,
+};
+
+export function WeatherIcon({ name, className, color }: Readonly<{ name: string; className?: string; color?: string }>) {
+  const IconComponent = ICON_MAP[name] ?? Cloud;
+  return <IconComponent className={className} style={color ? { color } : undefined} />;
+}
+
+// ─── City + unit resolution ───────────────────────────────────────────────────
+
+export function resolveCity(config: Record<string, unknown>, defaultCity: string): string {
+  const raw = typeof config.city === 'string' ? config.city.trim() : '';
+  return raw || defaultCity;
+}
+
+export function resolveUnit(config: Record<string, unknown>, dataUnit: string): string {
+  const raw = typeof config.unit === 'string' ? config.unit : '';
+  return raw && raw !== 'default' ? raw : dataUnit;
+}
+
+// ─── Loading / error states ──────────────────────────────────────────────────
+
+export function LoadingSpinner() {
   return (
-    <Column gap="md" align="center" justify="center" grow>
-      <Skeleton variant="circle" width="48px" height="48px" />
-      <Skeleton variant="text" width="60%" lines={2} />
-    </Column>
+    <div className="flex h-full items-center justify-center">
+      <Loader2 className="size-5 animate-spin text-white/50" />
+    </div>
   );
 }
 
-export function WeatherError({ message }: Readonly<{ message: TextContent }>) {
+export function CityError({ error }: Readonly<{ error?: string }>) {
   return (
-    <Column gap="sm" align="center" justify="center" grow>
-      <Icon name="cloud-off" size="lg" color="muted" />
-      <Text content={message} variant="caption" color="muted" align="center" />
-    </Column>
+    <div className="flex h-full flex-col items-center justify-center gap-2 p-4 text-center">
+      {error ? (
+        <>
+          <MapPin className="size-5 text-white/40" />
+          <span className="text-sm text-white/60">{error}</span>
+        </>
+      ) : (
+        <Loader2 className="size-5 animate-spin text-white/50" />
+      )}
+    </div>
   );
 }
