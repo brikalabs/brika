@@ -347,6 +347,13 @@
   opacity: 1;
 }
 
+/* View transition (theme circle wipe) */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
 /* Handle ping animation for data flow visualization */
 .react-flow__handle.handle-ping {
   position: relative;

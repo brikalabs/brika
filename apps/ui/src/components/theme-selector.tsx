@@ -13,22 +13,10 @@ import { cn } from '@/lib/utils';
 
 const THEME_KEYS = ['default', 'ocean', 'forest', 'sunset', 'lavender', 'ruby'] as const;
 
-const MODE_OPTIONS: {
-  value: ThemeMode;
-  icon: typeof Sun;
-}[] = [
-  {
-    value: 'light',
-    icon: Sun,
-  },
-  {
-    value: 'dark',
-    icon: Moon,
-  },
-  {
-    value: 'system',
-    icon: Monitor,
-  },
+const MODE_OPTIONS: { value: ThemeMode; icon: typeof Sun }[] = [
+  { value: 'light', icon: Sun },
+  { value: 'dark', icon: Moon },
+  { value: 'system', icon: Monitor },
 ];
 
 export function ThemeSelector() {
@@ -56,7 +44,7 @@ export function ThemeSelector() {
             key={value}
             variant="ghost"
             size="sm"
-            onClick={() => setMode(value)}
+            onClick={(e) => setMode(value, e)}
             aria-label={t(`settings:modes.${value}`)}
             className={cn('h-7 px-2.5', mode === value && 'bg-accent')}
           >

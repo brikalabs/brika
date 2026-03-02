@@ -529,6 +529,13 @@
   }
 }
 
+/* ── View transition (theme circle wipe) ── */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
 /* ── Reduced motion ── */
 @media (prefers-reduced-motion: reduce) {
   .aurora-blob,

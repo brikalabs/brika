@@ -1,7 +1,9 @@
 'use client';
 
 import { Moon, Sun } from 'lucide-react';
+import type { MouseEvent } from 'react';
 import { useEffect, useState } from 'react';
+import { withCircleWipe } from '@/lib/view-transition';
 
 export function ThemeToggle() {
   const [dark, setDark] = useState(true);
@@ -15,11 +17,13 @@ export function ThemeToggle() {
     document.documentElement.classList.toggle('dark', prefersDark);
   }, []);
 
-  const toggle = () => {
+  const toggle = (e: MouseEvent<HTMLButtonElement>) => {
     const next = !dark;
     setDark(next);
-    document.documentElement.classList.toggle('dark', next);
-    localStorage.setItem('theme', next ? 'dark' : 'light');
+    withCircleWipe(() => {
+      document.documentElement.classList.toggle('dark', next);
+      localStorage.setItem('theme', next ? 'dark' : 'light');
+    }, e.currentTarget);
   };
 
   return (

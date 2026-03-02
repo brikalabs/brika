@@ -1,3 +1,4 @@
+import type { MouseEvent } from 'react';
 import { createContext, useContext } from 'react';
 
 export type ThemeName = 'default' | 'ocean' | 'forest' | 'sunset' | 'lavender' | 'ruby';
@@ -7,8 +8,8 @@ export interface ThemeContextValue {
   theme: ThemeName;
   mode: ThemeMode;
   resolvedMode: 'light' | 'dark';
-  setTheme: (theme: ThemeName) => void;
-  setMode: (mode: ThemeMode) => void;
+  setTheme: (theme: ThemeName, origin?: Element | null) => void;
+  setMode: (mode: ThemeMode, event?: MouseEvent<HTMLElement>) => void;
 }
 
 export const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
