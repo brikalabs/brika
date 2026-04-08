@@ -91,6 +91,7 @@ describe('PluginLifecycle', () => {
     startedAt: Date.now(),
     kill: mock(),
     stop: mock(),
+    exited: Promise.resolve(0),
     sendPreferences: mock(),
     toPlugin: mock().mockReturnValue({
       uid,
@@ -113,6 +114,7 @@ describe('PluginLifecycle', () => {
       heartbeatEveryMs: 1000,
       heartbeatTimeoutMs: 5000,
       autoRestartEnabled: true,
+      killTimeoutMs: 0,
     };
     mockState = {
       get: mock(),

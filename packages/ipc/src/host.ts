@@ -168,6 +168,14 @@ export class PluginChannel {
   }
 
   /**
+   * Promise that resolves when the underlying process exits.
+   * Resolves with the exit code.
+   */
+  get exited(): Promise<number> {
+    return this.#proc.exited;
+  }
+
+  /**
    * Kill the plugin process
    */
   kill(signal?: number): void {

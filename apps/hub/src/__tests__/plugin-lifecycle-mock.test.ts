@@ -56,6 +56,7 @@ mock.module('@brika/ipc', () => ({
       implement: mock(),
       stop: mock(),
       kill: mock(),
+      exited: Promise.resolve(0),
       ping: mock().mockResolvedValue(1),
     };
   }),
@@ -104,6 +105,7 @@ mock.module('@/runtime/plugins/plugin-process', () => ({
 
     stop = mock();
     kill = mock();
+    exited = Promise.resolve(0);
     sendPreferences = mock();
     sendSparkEvent = mock();
     toPlugin = mock().mockReturnValue({
@@ -187,6 +189,7 @@ describe('PluginLifecycle (with mocked spawn)', () => {
       heartbeatEveryMs: 60000,
       heartbeatTimeoutMs: 5000,
       autoRestartEnabled: true,
+      killTimeoutMs: 0,
     };
     mockState = {
       get: mock(),
@@ -270,6 +273,27 @@ describe('PluginLifecycle (with mocked spawn)', () => {
 
       await lifecycle.load('/mock/path');
       expect(mockState.registerPlugin).not.toHaveBeenCalled();
+    });
+
+    test('getProcessByUid returns process by uid after load', async () => {
+      await loadPlugin();
+
+      const process = lifecycle.getProcess('@test/plugin');
+      expect(process).not.toBeUndefined();
+
+      const found = lifecycle.getProcessByUid(process!.uid);
+      expect(found).toBe(process);
+    });
+
+    test('getProcessByUid returns undefined after unload', async () => {
+      await loadPlugin();
+
+      const process = lifecycle.getProcess('@test/plugin');
+      if (!process) throw new Error('expected process to be defined after load');
+      const uid = process.uid;
+      await lifecycle.unload('@test/plugin');
+
+      expect(lifecycle.getProcessByUid(uid)).toBeUndefined();
     });
 
     test('onReady callback sends preferences when validation succeeds', async () => {

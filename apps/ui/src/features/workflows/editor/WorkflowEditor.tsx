@@ -71,8 +71,10 @@ function pingHandle(blockId: string, portId: string) {
     // Force reflow to restart animation
     handle.getClientRects();
     handle.classList.add('handle-ping');
-    // Remove after animation completes (1s)
-    setTimeout(() => handle.classList.remove('handle-ping'), 1000);
+    // Self-cleaning via animationend — no dangling setTimeout
+    handle.addEventListener('animationend', () => handle.classList.remove('handle-ping'), {
+      once: true,
+    });
   }
 }
 
@@ -136,12 +138,28 @@ const DEFAULT_PANEL_STATES: PanelStates = {
   debug: true,
 };
 
+function isValidPanelStates(value: unknown): value is PanelStates {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'blocks' in value &&
+    'config' in value &&
+    'debug' in value &&
+    typeof (value as PanelStates).blocks === 'boolean' &&
+    typeof (value as PanelStates).config === 'boolean' &&
+    typeof (value as PanelStates).debug === 'boolean'
+  );
+}
+
 function usePanelState() {
   const [panelStates, setPanelStates] = useState<PanelStates>(() => {
     try {
       const saved = localStorage.getItem('workflow-editor-panels');
       if (saved) {
-        return JSON.parse(saved);
+        const parsed: unknown = JSON.parse(saved);
+        if (isValidPanelStates(parsed)) {
+          return parsed;
+        }
       }
     } catch {
       // Ignore localStorage errors

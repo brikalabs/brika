@@ -27,7 +27,7 @@ const HttpResponseSchema = z.object({
   status: z.number(),
   statusText: z.string(),
   headers: z.record(z.string(), z.string()),
-  body: z.any(),
+  body: z.unknown(),
 });
 
 export const httpRequest = defineReactiveBlock(
@@ -50,16 +50,20 @@ export const httpRequest = defineReactiveBlock(
       method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']).optional().describe('HTTP method'),
       headers: z.record(z.string(), z.string()).optional().describe('Request headers'),
       body: z.string().optional().describe('Request body (for POST/PUT/PATCH)'),
+      timeoutMs: z.number().optional().default(30000).describe('Request timeout in milliseconds'),
     }),
   },
   ({ inputs, outputs, config }) => {
     inputs.trigger.on(async () => {
       log.debug(`HTTP ${config.method ?? 'GET'} ${config.url}`);
+      const ac = new AbortController();
+      const timer = setTimeout(() => ac.abort(), config.timeoutMs ?? 30000);
       try {
         const res = await fetch(config.url, {
           method: config.method ?? 'GET',
           headers: config.headers,
           body: config.body,
+          signal: ac.signal,
         });
 
         // Read body as text first, then try to parse as JSON
@@ -80,6 +84,8 @@ export const httpRequest = defineReactiveBlock(
       } catch (err) {
         log.error(`HTTP request failed: ${err instanceof Error ? err.message : String(err)}`);
         outputs.error.emit({ message: String(err) });
+      } finally {
+        clearTimeout(timer);
       }
     });
   }

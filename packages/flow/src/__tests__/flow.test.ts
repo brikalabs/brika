@@ -2,7 +2,7 @@
  * Tests for FlowImpl and CleanupRegistry
  */
 
-import { beforeEach, describe, expect, mock, test } from 'bun:test';
+import { beforeEach, describe, expect, mock, spyOn, test } from 'bun:test';
 import { CleanupRegistry, createFlow, FlowImpl } from '../flow';
 import { filter, map } from '../operators';
 import { createMockEmitter, createTestFlow, createValueCollector } from './fixtures';
@@ -62,6 +62,7 @@ describe('CleanupRegistry', () => {
 
     test('ignores errors in cleanup functions', () => {
       const registry = new CleanupRegistry();
+      const warnSpy = spyOn(console, 'warn').mockImplementation(() => undefined);
       const errorCleanup = mock(() => {
         throw new Error('Cleanup error');
       });
@@ -73,6 +74,7 @@ describe('CleanupRegistry', () => {
       expect(() => registry.cleanup()).not.toThrow();
       expect(errorCleanup).toHaveBeenCalledTimes(1);
       expect(goodCleanup).toHaveBeenCalledTimes(1);
+      warnSpy.mockRestore();
     });
 
     test('handles empty registry', () => {
@@ -80,6 +82,20 @@ describe('CleanupRegistry', () => {
 
       expect(() => registry.cleanup()).not.toThrow();
       expect(registry.count).toBe(0);
+    });
+
+    test('warns via console.warn in non-production mode when cleanup function throws', () => {
+      const registry = new CleanupRegistry();
+      const err = new Error('cleanup error');
+      const warnSpy = spyOn(console, 'warn').mockImplementation(() => undefined);
+
+      registry.register(() => {
+        throw err;
+      });
+      registry.cleanup();
+
+      expect(warnSpy).toHaveBeenCalledWith('[flow] cleanup error', err);
+      warnSpy.mockRestore();
     });
   });
 

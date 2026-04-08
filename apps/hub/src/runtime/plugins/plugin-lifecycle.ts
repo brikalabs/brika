@@ -41,6 +41,7 @@ export class PluginLifecycle {
   readonly #resolver = new PluginResolver();
 
   readonly #processes = new Map<string, PluginProcess>();
+  readonly #uidIndex = new Map<string, string>(); // uid → plugin name
   readonly #stabilityTimers = new Map<string, Timer>();
   readonly #restartPolicy: RestartPolicy;
   readonly #watcher = inject(PluginWatcher);
@@ -86,12 +87,8 @@ export class PluginLifecycle {
   }
 
   getProcessByUid(uid: string): PluginProcess | undefined {
-    for (const p of this.#processes.values()) {
-      if (p.uid === uid) {
-        return p;
-      }
-    }
-    return undefined;
+    const name = this.#uidIndex.get(uid);
+    return name ? this.#processes.get(name) : undefined;
   }
 
   /** Resolve a plugin UID to its name, falling back to persisted state. */
@@ -329,6 +326,7 @@ export class PluginLifecycle {
     );
 
     this.#processes.set(pluginName, process);
+    this.#uidIndex.set(uid, pluginName);
 
     // Register brick types from manifest with the uid baked in,
     // so the UI can build module URLs without a process lookup.
@@ -363,6 +361,7 @@ export class PluginLifecycle {
     }
 
     this.#processes.delete(name);
+    this.#uidIndex.delete(process.uid);
     this.#watcher.unwatch(name);
 
     const timer = this.#stabilityTimers.get(name);
@@ -372,8 +371,14 @@ export class PluginLifecycle {
     }
 
     process.stop();
-    await new Promise((r) => setTimeout(r, 50));
-    process.kill();
+    // Wait for the process to exit gracefully; force-kill if it doesn't within the timeout.
+    const exited = await Promise.race([
+      process.exited.then(() => true),
+      new Promise<false>((r) => setTimeout(() => r(false), this.#config.killTimeoutMs)),
+    ]);
+    if (!exited) {
+      process.kill();
+    }
 
     // Clear runtime metrics (compiled modules are preserved for client-side bricks)
     this.#metrics.clear(name);

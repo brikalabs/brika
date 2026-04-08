@@ -24,8 +24,10 @@ export class CleanupRegistry {
     for (const fn of this.#cleanups) {
       try {
         fn();
-      } catch {
-        /* ignore cleanup errors */
+      } catch (err) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn('[flow] cleanup error', err);
+        }
       }
     }
     this.#cleanups.length = 0;

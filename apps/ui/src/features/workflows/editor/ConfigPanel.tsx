@@ -66,6 +66,17 @@ type TypeMarker =
   | 'json'
   | 'spark';
 
+const TYPE_MARKERS: TypeMarker[] = [
+  'expression',
+  'duration',
+  'color',
+  'code',
+  'secret',
+  'url',
+  'json',
+  'spark',
+];
+
 function getTypeMarker(description?: string): {
   marker: TypeMarker | null;
   extra?: string;
@@ -76,17 +87,7 @@ function getTypeMarker(description?: string): {
     };
   }
 
-  const markers: TypeMarker[] = [
-    'expression',
-    'duration',
-    'color',
-    'code',
-    'secret',
-    'url',
-    'json',
-    'spark',
-  ];
-  for (const marker of markers) {
+  for (const marker of TYPE_MARKERS) {
     if (description.includes(`$type:${marker}`)) {
       // Extract extra info after colon (e.g., $type:code:javascript)
       const match = new RegExp(String.raw`\$type:${marker}:?(\w+)?`).exec(description);

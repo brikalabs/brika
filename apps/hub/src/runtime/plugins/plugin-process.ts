@@ -412,6 +412,11 @@ export class PluginProcess {
     this.#channel.stop();
   }
 
+  /** Promise that resolves when the underlying process exits. */
+  get exited(): Promise<number> {
+    return this.#channel.exited;
+  }
+
   kill(signal = 9): void {
     this.stop();
     this.#channel.kill(signal);
