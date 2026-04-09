@@ -137,7 +137,7 @@ describe('AuthClient', () => {
       const client = new AuthClient({
         apiUrl: 'http://test',
       });
-      await expect(client.login('bad@example.com', 'wrong')).rejects.toThrow('Unauthorized');
+      await expect(client.login('bad@example.com', 'wrong')).rejects.toThrow('Invalid credentials');
     });
 
     it('should throw on failed login with non-ok response', async () => {
