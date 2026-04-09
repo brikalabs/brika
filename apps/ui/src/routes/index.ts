@@ -10,6 +10,7 @@ import { dashboardRoutes } from './dashboard';
 import { logRoutes } from './logs';
 import { pluginRoutes } from './plugins';
 import { settingRoutes } from './settings';
+import { setupRoutes } from './setup';
 import { sparkRoutes } from './sparks';
 import { storeRoutes } from './store';
 import { workflowRoutes } from './workflows';
@@ -32,6 +33,7 @@ export const { routes, routeTree } = createProtectedRoutes(
     settings: settingRoutes,
     admin: adminRoutes,
     auth: authRoutes,
+    setup: setupRoutes,
   },
   {
     defaultForbiddenComponent: ForbiddenPage,

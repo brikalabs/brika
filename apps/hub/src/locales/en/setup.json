@@ -1,0 +1,72 @@
+{
+  "welcome": {
+    "title": "Welcome to Brika",
+    "description": "Let's get your Brika instance ready in just a few steps.",
+    "getStarted": "Get started"
+  },
+  "language": {
+    "title": "Choose your language",
+    "description": "Select your preferred language for Brika."
+  },
+  "account": {
+    "title": "Create admin account",
+    "description": "This will be the primary administrator for your Brika instance.",
+    "name": "Full name",
+    "namePlaceholder": "John Doe",
+    "email": "Email",
+    "emailPlaceholder": "admin@example.com",
+    "password": "Password",
+    "passwordPlaceholder": "Choose a strong password",
+    "confirmPassword": "Confirm password",
+    "confirmPlaceholder": "Re-enter your password",
+    "mismatch": "Passwords do not match",
+    "create": "Create account",
+    "creating": "Creating account...",
+    "editTitle": "Edit your account",
+    "editDescription": "Update your name or password before continuing.",
+    "currentPassword": "Current password",
+    "currentPasswordPlaceholder": "Enter your current password",
+    "newPassword": "New password",
+    "newPasswordPlaceholder": "Enter a new password",
+    "saveChanges": "Save changes",
+    "saved": "Saved"
+  },
+  "avatar": {
+    "title": "Add a profile picture",
+    "description": "Upload a photo for your admin account.",
+    "hint": "Click to upload a photo",
+    "uploadFailed": "Failed to upload photo. Please try again."
+  },
+  "location": {
+    "title": "Set your hub location",
+    "description": "Search for an address or detect your location automatically.",
+    "detect": "Detect my location",
+    "detecting": "Detecting...",
+    "or": "or",
+    "unknownCity": "Location detected",
+    "emptyHint": "Search for an address or detect your location to get started.",
+    "editDetails": "Edit details",
+    "street": "Street",
+    "city": "City",
+    "state": "State / Region",
+    "postalCode": "Postal Code",
+    "country": "Country",
+    "timezone": "Timezone",
+    "latitude": "Latitude",
+    "longitude": "Longitude",
+    "saved": "Saved",
+    "save": "Save location"
+  },
+  "complete": {
+    "title": "You're all set!",
+    "description": "Your instance is ready. Redirecting to the dashboard..."
+  },
+  "nav": {
+    "back": "Back",
+    "continue": "Continue",
+    "skip": "Skip"
+  },
+  "errors": {
+    "failed": "Setup failed. Please try again."
+  }
+}

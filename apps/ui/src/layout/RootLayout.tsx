@@ -1,6 +1,6 @@
 import { Scope } from '@brika/auth';
 import { useAuth, useCanAccess } from '@brika/auth/react';
-import { Link, Outlet, useMatchRoute, useRouterState } from '@tanstack/react-router';
+import { Link, Navigate, Outlet, useMatchRoute, useRouterState } from '@tanstack/react-router';
 import {
   Blocks,
   ChevronsUpDown,
@@ -317,11 +317,14 @@ function AppSidebar() {
 const FULL_BLEED_ROUTES = ['/workflows/new', '/workflows/$id/edit'];
 
 export function RootLayout() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, needsSetup } = useAuth();
   const routerState = useRouterState();
   useAuthInterceptor();
 
-  // Auth gate: loading → spinner, not authenticated → login page
+  const currentPath = routerState.location.pathname;
+  const isSetupRoute = currentPath.startsWith('/setup');
+
+  // Auth gate: loading → spinner, setup → setup routes, not authenticated → login page
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -330,12 +333,24 @@ export function RootLayout() {
     );
   }
 
+  // Setup routes: let the setup layout handle its own chrome
+  if (isSetupRoute) {
+    if (!needsSetup) {
+      return <Navigate to="/" />;
+    }
+    return <Outlet />;
+  }
+
+  // Redirect to setup if needed
+  if (needsSetup) {
+    return <Navigate to="/setup/welcome" />;
+  }
+
   if (!isAuthenticated) {
     return <LoginPage />;
   }
 
   // Check if current route should be full-bleed
-  const currentPath = routerState.location.pathname;
   const isFullBleed = FULL_BLEED_ROUTES.some((route) => {
     // Convert route pattern to regex (handle $param patterns)
     const pattern = route.replaceAll(/\$\w+/g, '[^/]+');

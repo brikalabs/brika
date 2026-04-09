@@ -1,0 +1,72 @@
+{
+  "welcome": {
+    "title": "Bienvenue sur Brika",
+    "description": "Configurons votre instance Brika en quelques étapes.",
+    "getStarted": "Commencer"
+  },
+  "language": {
+    "title": "Choisissez votre langue",
+    "description": "Sélectionnez votre langue préférée pour Brika."
+  },
+  "account": {
+    "title": "Créer le compte administrateur",
+    "description": "Ce sera l'administrateur principal de votre instance Brika.",
+    "name": "Nom complet",
+    "namePlaceholder": "Jean Dupont",
+    "email": "Email",
+    "emailPlaceholder": "admin@exemple.com",
+    "password": "Mot de passe",
+    "passwordPlaceholder": "Choisissez un mot de passe fort",
+    "confirmPassword": "Confirmer le mot de passe",
+    "confirmPlaceholder": "Saisissez à nouveau votre mot de passe",
+    "mismatch": "Les mots de passe ne correspondent pas",
+    "create": "Créer le compte",
+    "creating": "Création du compte...",
+    "editTitle": "Modifier votre compte",
+    "editDescription": "Modifiez votre nom ou mot de passe avant de continuer.",
+    "currentPassword": "Mot de passe actuel",
+    "currentPasswordPlaceholder": "Saisissez votre mot de passe actuel",
+    "newPassword": "Nouveau mot de passe",
+    "newPasswordPlaceholder": "Saisissez un nouveau mot de passe",
+    "saveChanges": "Enregistrer les modifications",
+    "saved": "Enregistré"
+  },
+  "avatar": {
+    "title": "Ajoutez une photo de profil",
+    "description": "Choisissez une photo pour votre compte administrateur.",
+    "hint": "Cliquez pour ajouter une photo",
+    "uploadFailed": "Échec du téléchargement de la photo. Veuillez réessayer."
+  },
+  "location": {
+    "title": "Définissez l'emplacement du hub",
+    "description": "Recherchez une adresse ou détectez votre position automatiquement.",
+    "detect": "Détecter ma position",
+    "detecting": "Détection...",
+    "or": "ou",
+    "unknownCity": "Position détectée",
+    "emptyHint": "Recherchez une adresse ou détectez votre position pour commencer.",
+    "editDetails": "Modifier les détails",
+    "street": "Rue",
+    "city": "Ville",
+    "state": "État / Région",
+    "postalCode": "Code postal",
+    "country": "Pays",
+    "timezone": "Fuseau horaire",
+    "latitude": "Latitude",
+    "longitude": "Longitude",
+    "saved": "Enregistré",
+    "save": "Enregistrer la position"
+  },
+  "complete": {
+    "title": "Tout est prêt !",
+    "description": "Votre instance est configurée. Redirection vers le tableau de bord..."
+  },
+  "nav": {
+    "back": "Retour",
+    "continue": "Continuer",
+    "skip": "Passer"
+  },
+  "errors": {
+    "failed": "La configuration a échoué. Veuillez réessayer."
+  }
+}

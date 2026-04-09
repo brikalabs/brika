@@ -288,6 +288,16 @@
       "calt" 1;
   }
 
+  /* 1Password cannot parse oklch() from getComputedStyle() and defaults to
+     light-mode autofill styling. Force an rgb text color on form controls so
+     its luminance check works correctly.
+     Bug: https://1password.community/discussion/161487 */
+  .dark input,
+  .dark select,
+  .dark textarea {
+    color: #f0f1f5;
+  }
+
   /* Custom scrollbar */
   ::-webkit-scrollbar {
     width: 8px;

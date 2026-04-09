@@ -86,6 +86,12 @@ export const CreateUserSchema = z.object({
   password: PasswordSchema.optional(),
 });
 
+export const SetupSchema = z.object({
+  email: EmailSchema,
+  name: NameSchema,
+  password: PasswordSchema,
+});
+
 export const CreateApiTokenSchema = z.object({
   name: z.string().min(1).max(255),
   scopes: z.array(ScopeSchema),

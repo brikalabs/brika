@@ -10,6 +10,15 @@
  *   await auth.logout()
  */
 
+export class AuthError extends Error {
+  constructor(
+    message: string,
+    readonly status: number
+  ) {
+    super(message);
+  }
+}
+
 export interface AuthClientConfig {
   apiUrl?: string;
 }
@@ -232,6 +241,44 @@ export class AuthClient {
   }
 
   /**
+   * Check if initial setup is needed (no admin or setup not completed).
+   * Uses the hub-level endpoint that combines auth + hub state checks.
+   */
+  async checkSetupStatus(): Promise<{ needsSetup: boolean }> {
+    try {
+      return await this.request<{ needsSetup: boolean }>('/api/setup/status');
+    } catch {
+      return { needsSetup: false };
+    }
+  }
+
+  /**
+   * Mark the onboarding wizard as fully completed.
+   * Called at the final step after all setup screens are done.
+   */
+  async completeSetup(): Promise<void> {
+    await this.request('/api/setup/complete', { method: 'POST' });
+  }
+
+  /**
+   * Create the first admin user during initial setup.
+   * Server sets session cookie automatically.
+   */
+  async setup(data: { email: string; name: string; password: string }): Promise<Session> {
+    await this.request('/api/auth/setup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+
+    const session = await this.getSession();
+    if (!session) {
+      throw new Error('Setup failed');
+    }
+    return session;
+  }
+
+  /**
    * Make authenticated request (cookie sent automatically).
    */
   async request<T>(url: string, options: RequestInit = {}): Promise<T> {
@@ -240,13 +287,12 @@ export class AuthClient {
       credentials: 'include',
     });
 
-    if (response.status === 401) {
-      throw new Error('Unauthorized');
-    }
-
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Request failed');
+      const body = await response.json().catch(() => null);
+      throw new AuthError(
+        body?.error ?? (response.status === 401 ? 'Unauthorized' : 'Request failed'),
+        response.status
+      );
     }
 
     return await response.json();

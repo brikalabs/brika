@@ -18,6 +18,7 @@ function applyThemeToDOM(theme: ThemeName, resolvedMode: 'light' | 'dark') {
   html.dataset.theme = theme;
   html.classList.remove('light', 'dark');
   html.classList.add(resolvedMode);
+  html.style.colorScheme = resolvedMode;
 }
 
 function useSystemTheme(): 'light' | 'dark' {

@@ -90,18 +90,10 @@ export function LocationSettings() {
               </CollapsibleTrigger>
               <CollapsibleContent>
                 <div className="grid grid-cols-2 gap-3 pt-3">
-                  {(
-                    [
-                      ['street', 'street'],
-                      ['city', 'city'],
-                      ['postalCode', 'postalCode'],
-                      ['state', 'state'],
-                      ['country', 'country'],
-                      ['timezone', 'timezone'],
-                    ] as const
-                  ).map(([field, labelKey]) => (
+                  {(['street', 'city', 'postalCode', 'state', 'country', 'timezone'] as const).map(
+                    (field) => (
                     <div key={field}>
-                      <Label className="text-xs">{t(`settings:location.${labelKey}`)}</Label>
+                      <Label className="text-xs">{t(`settings:location.${field}`)}</Label>
                       <Input
                         value={draft[field]}
                         onChange={(e) => handleFieldChange(field, e.target.value)}

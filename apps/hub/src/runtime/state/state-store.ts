@@ -52,6 +52,7 @@ export interface HubLocation {
 type StateFile = {
   plugins: Record<string, InstalledPluginState>;
   hubLocation?: HubLocation | null;
+  setupCompleted?: boolean;
 };
 
 @singleton()
@@ -84,6 +85,7 @@ export class StateStore {
     this.#state = {
       plugins: parsed.plugins ?? {},
       hubLocation: parsed.hubLocation ?? null,
+      setupCompleted: parsed.setupCompleted ?? false,
     };
   }
 
@@ -167,6 +169,19 @@ export class StateStore {
 
   async setHubLocation(location: HubLocation | null): Promise<void> {
     this.#state.hubLocation = location;
+    await this.#flush();
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Setup
+  // ─────────────────────────────────────────────────────────────────────────
+
+  isSetupCompleted(): boolean {
+    return this.#state.setupCompleted ?? false;
+  }
+
+  async setSetupCompleted(completed: boolean): Promise<void> {
+    this.#state.setupCompleted = completed;
     await this.#flush();
   }
 

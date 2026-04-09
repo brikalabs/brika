@@ -12,6 +12,7 @@ import { pluginRoutesHandler } from './plugin-routes';
 import { pluginsRoutes } from './plugins';
 import { registryRoutes } from './registry';
 import { settingsRoutes } from './settings';
+import { hubSetupProtectedRoutes, hubSetupPublicRoutes } from './setup';
 import { sparksRoutes } from './sparks';
 import { healthRoute, systemRoute } from './status';
 import { streamsRoutes } from './streams';
@@ -25,9 +26,11 @@ import { workflowsRoutes } from './workflows';
 export const allRoutes = combineRoutes(
   healthRoute,
   i18nRoutes,
+  hubSetupPublicRoutes,
   group({
     middleware: [requireAuth()],
     routes: [
+      hubSetupProtectedRoutes,
       systemRoute,
       actionRoutes,
       blocksRoutes,

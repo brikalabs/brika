@@ -11,12 +11,17 @@ import { authProtectedRoutes, authPublicRoutes } from './auth';
 import { profileRoutes } from './profile';
 import { scopeRoutes } from './scopes';
 import { sessionRoutes } from './sessions';
+import { setupRoutes } from './setup';
 import { userRoutes } from './users';
 
 export const allAuthRoutes = combineRoutes(
   group({
     prefix: '/api/auth',
     routes: [authPublicRoutes, scopeRoutes],
+  }),
+  group({
+    prefix: '/api/auth/setup',
+    routes: [setupRoutes],
   }),
   group({
     prefix: '/api/auth',

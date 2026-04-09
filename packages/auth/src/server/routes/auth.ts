@@ -4,17 +4,12 @@
 
 import { inject } from '@brika/di';
 import { rateLimit, route } from '@brika/router';
-import { getAuthConfig } from '../../config';
 import { LoginSchema } from '../../schemas';
 import { AuthService } from '../../services/AuthService';
 import { UserService } from '../../services/UserService';
 import type { Session } from '../../types';
 import { requireSession } from '../requireSession';
-
-function sessionCookie(token: string, maxAge: number): string {
-  const name = getAuthConfig().session.cookieName;
-  return `${name}=${token}; HttpOnly; Secure; Path=/api; Max-Age=${maxAge}; SameSite=Lax`;
-}
+import { sessionCookie } from './cookie';
 
 /** POST /login — Login with email and password */
 const login = route.post({
