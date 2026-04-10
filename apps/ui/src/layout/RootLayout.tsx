@@ -151,7 +151,7 @@ function NavLink({ to, labelKey, icon: Icon, suffix }: Readonly<NavItem>) {
       <SidebarMenuButton asChild isActive={!!isActive} tooltip={label}>
         <Link to={to}>
           <Icon />
-          <span>{label}</span>
+          <span className="group-data-[collapsible=icon]:hidden">{label}</span>
           {suffix}
         </Link>
       </SidebarMenuButton>
@@ -237,7 +237,7 @@ function UserMenu() {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton size="lg" tooltip={user.name}>
-              <UserAvatar user={user} size="lg" />
+              <UserAvatar user={user} />
               <UserInfo user={user} />
               <ChevronsUpDown className="ml-auto size-4" />
             </SidebarMenuButton>
@@ -278,7 +278,7 @@ function AppSidebar() {
   const isAdmin = useCanAccess(Scope.ADMIN_ALL);
 
   const versionSuffix = health ? (
-    <span className="ml-auto flex items-center gap-1 text-[10px] text-muted-foreground">
+    <span className="ml-auto flex items-center gap-1 text-[10px] text-muted-foreground group-data-[collapsible=icon]:hidden">
       {hasUpdate && <span className="size-1.5 rounded-full bg-primary" />}v{health.version}
     </span>
   ) : undefined;
