@@ -131,6 +131,7 @@ export function parseTypeName(typeName?: string): TypeDescriptor {
   if (typeName === 'number' || typeName === 'integer') return T.number;
   if (typeName === 'boolean') return T.boolean;
   if (typeName === 'null') return T.null;
+  if (typeName === 'array') return T.array(T.unknown);
   if (typeName.endsWith('[]')) return T.array(parseTypeName(typeName.slice(0, -2)));
 
   return T.unknown;
