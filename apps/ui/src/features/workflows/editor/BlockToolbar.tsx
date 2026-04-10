@@ -9,7 +9,7 @@ import {
   X,
 } from 'lucide-react';
 import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
-import { type DragEvent, useState } from 'react';
+import { type DragEvent, useMemo, useState } from 'react';
 import {
   Avatar,
   AvatarFallback,
@@ -43,11 +43,13 @@ export interface BlockDefinition {
     id: string;
     name: string;
     typeName?: string;
+    type?: Record<string, unknown>;
   }>;
   outputs: Array<{
     id: string;
     name: string;
     typeName?: string;
+    type?: Record<string, unknown>;
   }>;
   schema: {
     type: 'object';
@@ -274,24 +276,28 @@ export function BlockToolbar({ onDragStart, onCollapse, className }: Readonly<Bl
     onDragStart?.(e, block);
   };
 
-  const filteredBlocks = search
-    ? blocks.filter(
-        (b) =>
-          b.name.toLowerCase().includes(search.toLowerCase()) ||
-          (b.type || b.id).toLowerCase().includes(search.toLowerCase()) ||
-          b.description.toLowerCase().includes(search.toLowerCase())
-      )
-    : blocks;
+  const filteredBlocks = useMemo(() => {
+    if (!search) return blocks;
+    const lowerSearch = search.toLowerCase();
+    return blocks.filter(
+      (b) =>
+        b.name.toLowerCase().includes(lowerSearch) ||
+        (b.type || b.id).toLowerCase().includes(lowerSearch) ||
+        b.description.toLowerCase().includes(lowerSearch)
+    );
+  }, [search, blocks]);
 
   // Group by category
-  const categories = [...new Set(filteredBlocks.map((b) => b.category))].sort((a, b) =>
-    a.localeCompare(b)
-  );
-  const groupedBlocks = categories.map((cat) => ({
-    id: cat,
-    label: cat.charAt(0).toUpperCase() + cat.slice(1),
-    blocks: filteredBlocks.filter((b) => b.category === cat),
-  }));
+  const groupedBlocks = useMemo(() => {
+    const categories = [...new Set(filteredBlocks.map((b) => b.category))].sort((a, b) =>
+      a.localeCompare(b)
+    );
+    return categories.map((cat) => ({
+      id: cat,
+      label: cat.charAt(0).toUpperCase() + cat.slice(1),
+      blocks: filteredBlocks.filter((b) => b.category === cat),
+    }));
+  }, [filteredBlocks]);
 
   return (
     <div className={cn('flex h-full flex-col border-r bg-card/50 backdrop-blur-sm', className)}>
@@ -339,7 +345,7 @@ export function BlockToolbar({ onDragStart, onCollapse, className }: Readonly<Bl
         </div>
       </div>
 
-      <ScrollArea className="flex-1">
+      <ScrollArea className="min-h-0 flex-1 overflow-hidden">
         <div className="space-y-4 p-3">
           {isLoading && (
             <div className="space-y-2">

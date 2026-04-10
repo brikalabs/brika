@@ -2,17 +2,30 @@ import { useQuery } from '@tanstack/react-query';
 import {
   Background,
   ConnectionLineType,
-  Controls,
   type Edge,
-  MiniMap,
   type Node,
   type NodeTypes,
+  Panel,
   ReactFlow,
   ReactFlowProvider,
   useReactFlow,
+  useStoreApi,
 } from '@xyflow/react';
-import { Blocks, GripVertical, Loader2, MousePointerClick, Settings2, Zap } from 'lucide-react';
+import {
+  Blocks,
+  GripVertical,
+  Loader2,
+  Lock,
+  Maximize2,
+  Minus,
+  MousePointerClick,
+  Plus,
+  Settings2,
+  Unlock,
+  Zap,
+} from 'lucide-react';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Button } from '@/components/ui';
 import { fetcher } from '@/lib/query';
 import { useLocale } from '@/lib/use-locale';
 import '@xyflow/react/dist/style.css';
@@ -24,31 +37,15 @@ import { CollapsedTab, CollapsedTabsContainer, CollapsiblePanel } from './Collap
 import { ConfigPanel } from './ConfigPanel';
 import { DebugPanel } from './DebugPanel';
 import { useWorkflowEditor } from './useWorkflowEditor';
+import { WorkflowTypeContext } from './WorkflowTypeContext';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Spark Schema Interface
-// ─────────────────────────────────────────────────────────────────────────────
-
-interface RegisteredSpark {
+export interface RegisteredSpark {
   type: string;
   id: string;
   pluginId: string;
   name?: string;
   description?: string;
   schema?: Record<string, unknown>;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────────────────────────────────────
-
-/** Extract block color from node data for MiniMap, with fallback */
-function getBlockColor(node: Node): string {
-  const data: Record<string, unknown> = node.data;
-  if (typeof data?.color === 'string') {
-    return data.color;
-  }
-  return '#6b7280';
 }
 
 /** Extract BlockNodeData.type from a selected node */
@@ -120,10 +117,6 @@ const nodeTypes: NodeTypes = {
   block: BlockNode,
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Panel State Hook
-// ─────────────────────────────────────────────────────────────────────────────
-
 type PanelName = 'blocks' | 'config' | 'debug';
 
 interface PanelStates {
@@ -184,10 +177,6 @@ function usePanelState() {
   };
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Blocks Side Panel (left)
-// ─────────────────────────────────────────────────────────────────────────────
-
 interface BlocksPanelProps {
   isOpen: boolean;
   onToggle: () => void;
@@ -209,10 +198,6 @@ function BlocksPanel({ isOpen, onToggle }: Readonly<BlocksPanelProps>) {
     </CollapsiblePanel>
   );
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Config Side Panel (right)
-// ─────────────────────────────────────────────────────────────────────────────
 
 interface ConfigSidePanelProps {
   isOpen: boolean;
@@ -258,10 +243,6 @@ function ConfigSidePanel({
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Debug Side Panel (right)
-// ─────────────────────────────────────────────────────────────────────────────
-
 interface DebugSidePanelProps {
   isOpen: boolean;
   onToggle: () => void;
@@ -285,9 +266,64 @@ function DebugSidePanel({ isOpen, onToggle, workflow }: Readonly<DebugSidePanelP
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Editor Canvas
-// ─────────────────────────────────────────────────────────────────────────────
+function EditorControls({ showInteractive }: { showInteractive: boolean }) {
+  const { zoomIn, zoomOut, fitView } = useReactFlow();
+  const store = useStoreApi();
+  const [locked, setLocked] = useState(false);
+
+  const toggleLock = useCallback(() => {
+    setLocked((prev) => {
+      const next = !prev;
+      store.setState({
+        nodesDraggable: !next,
+        nodesConnectable: !next,
+        elementsSelectable: !next,
+      });
+      return next;
+    });
+  }, [store]);
+
+  return (
+    <Panel position="bottom-left">
+      <div className="flex flex-col rounded-md border bg-background shadow-sm">
+        <Button
+          size="icon"
+          variant="ghost"
+          className="size-7 rounded-none rounded-t-md"
+          onClick={() => zoomIn()}
+        >
+          <Plus className="size-3.5" />
+        </Button>
+        <Button
+          size="icon"
+          variant="ghost"
+          className="size-7 rounded-none"
+          onClick={() => zoomOut()}
+        >
+          <Minus className="size-3.5" />
+        </Button>
+        <Button
+          size="icon"
+          variant="ghost"
+          className="size-7 rounded-none"
+          onClick={() => fitView()}
+        >
+          <Maximize2 className="size-3.5" />
+        </Button>
+        {showInteractive && (
+          <Button
+            size="icon"
+            variant="ghost"
+            className="size-7 rounded-none rounded-b-md"
+            onClick={toggleLock}
+          >
+            {locked ? <Lock className="size-3.5" /> : <Unlock className="size-3.5" />}
+          </Button>
+        )}
+      </div>
+    </Panel>
+  );
+}
 
 interface EditorCanvasProps {
   readonly: boolean;
@@ -330,7 +366,6 @@ function EditorCanvas({
 }: Readonly<EditorCanvasProps>) {
   return (
     <div className="relative flex flex-1 flex-col">
-      {/* Left collapsed tabs - absolute positioned */}
       {leftCollapsed && <LeftCollapsedTabs togglePanel={togglePanel} />}
       <ReactFlow
         nodes={nodes}
@@ -360,14 +395,11 @@ function EditorCanvas({
         }}
       >
         <Background />
-        <Controls showInteractive={!readonly} />
-        <MiniMap nodeColor={getBlockColor} className="!bg-muted" />
+        <EditorControls showInteractive={!readonly} />
       </ReactFlow>
 
-      {/* Empty state overlay */}
       {nodes.length === 0 && !readonly && <EmptyStateOverlay />}
 
-      {/* Right collapsed tabs - absolute positioned */}
       {(configCollapsed || debugCollapsed) && (
         <RightCollapsedTabs
           configCollapsed={configCollapsed}
@@ -378,10 +410,6 @@ function EditorCanvas({
     </div>
   );
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Collapsed Tabs & Empty State
-// ─────────────────────────────────────────────────────────────────────────────
 
 interface LeftCollapsedTabsProps {
   togglePanel: (panel: PanelName) => void;
@@ -463,10 +491,6 @@ function EmptyStateOverlay() {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// WorkflowEditorInner (loading gate)
-// ─────────────────────────────────────────────────────────────────────────────
-
 interface WorkflowEditorInnerProps {
   workflow: Workflow;
   readonly?: boolean;
@@ -513,10 +537,6 @@ function WorkflowEditorInner({
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// WorkflowEditorWithBlocks (main composition)
-// ─────────────────────────────────────────────────────────────────────────────
-
 interface WorkflowEditorWithBlocksProps extends WorkflowEditorInnerProps {
   blockDefinitions: BlockDefinition[];
 }
@@ -537,30 +557,20 @@ function WorkflowEditorWithBlocks({
     staleTime: 30000,
   });
 
-  // Create type lookup function for resolvers
-  const typeLookup = useCallback(
-    <T,>(key: string): T | undefined => {
-      if (key === 'sparks') {
-        return sparks as T;
-      }
-      return undefined;
-    },
-    [sparks]
-  );
+  // Stable type lookup — ref keeps identity stable across spark refetches
+  const sparksRef = useRef(sparks);
+  sparksRef.current = sparks;
+  const typeLookup = useCallback(<T,>(key: string): T | undefined => {
+    if (key === 'sparks') {
+      return sparksRef.current as T;
+    }
+    return undefined;
+  }, []);
 
   // Pass block definitions and type lookup to editor
   const editor = useWorkflowEditor(initialWorkflow, blockDefinitions, onChange, {
     typeLookup,
   });
-
-  // Create a map of block type -> definition for quick lookup
-  const blockSchemaMap = useMemo(() => {
-    const map: Record<string, BlockDefinition> = {};
-    for (const def of blockDefinitions) {
-      map[def.type || def.id] = def;
-    }
-    return map;
-  }, [blockDefinitions]);
 
   const {
     nodes,
@@ -578,6 +588,8 @@ function WorkflowEditorWithBlocks({
     addBlock,
     updateBlockConfig,
     getAvailableVariables,
+    portTypeMap,
+    blockSchemaMap,
   } = editor;
 
   // Connect to debug stream for port ping animations
@@ -651,62 +663,55 @@ function WorkflowEditorWithBlocks({
   const debugCollapsed = !readonly && !panelStates.debug;
 
   return (
-    <div className="flex h-full">
-      {/* Block Toolbar (expanded) */}
-      {!readonly && (
-        <BlocksPanel isOpen={panelStates.blocks} onToggle={() => togglePanel('blocks')} />
-      )}
+    <WorkflowTypeContext value={portTypeMap}>
+      <div className="flex h-full">
+        {!readonly && (
+          <BlocksPanel isOpen={panelStates.blocks} onToggle={() => togglePanel('blocks')} />
+        )}
 
-      {/* Canvas */}
-      <EditorCanvas
-        readonly={readonly}
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
-        isValidConnection={isValidConnection}
-        onNodeClick={onNodeClick}
-        onPaneClick={onPaneClick}
-        onNodesDelete={onNodesDelete}
-        onEdgesDelete={onEdgesDelete}
-        onDragOver={readonly ? undefined : onDragOver}
-        onDrop={readonly ? undefined : onDrop}
-        leftCollapsed={leftCollapsed}
-        configCollapsed={configCollapsed}
-        debugCollapsed={debugCollapsed}
-        togglePanel={togglePanel}
-      />
-
-      {/* Config Panel (expanded) */}
-      {!readonly && selectedNode && (
-        <ConfigSidePanel
-          isOpen={panelStates.config}
-          onToggle={() => togglePanel('config')}
-          selectedNode={selectedNode}
-          updateBlockConfig={updateBlockConfig}
-          availableVariables={availableVariables}
-          blockSchema={selectedBlockSchema}
+        <EditorCanvas
+          readonly={readonly}
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onConnect={onConnect}
+          isValidConnection={isValidConnection}
+          onNodeClick={onNodeClick}
+          onPaneClick={onPaneClick}
+          onNodesDelete={onNodesDelete}
+          onEdgesDelete={onEdgesDelete}
+          onDragOver={readonly ? undefined : onDragOver}
+          onDrop={readonly ? undefined : onDrop}
+          leftCollapsed={leftCollapsed}
+          configCollapsed={configCollapsed}
+          debugCollapsed={debugCollapsed}
+          togglePanel={togglePanel}
         />
-      )}
 
-      {/* Debug Panel (expanded) */}
-      {!readonly && (
-        <DebugSidePanel
-          isOpen={panelStates.debug}
-          onToggle={() => togglePanel('debug')}
-          workflow={workflow}
-        />
-      )}
-    </div>
+        {!readonly && selectedNode && (
+          <ConfigSidePanel
+            isOpen={panelStates.config}
+            onToggle={() => togglePanel('config')}
+            selectedNode={selectedNode}
+            updateBlockConfig={updateBlockConfig}
+            availableVariables={availableVariables}
+            blockSchema={selectedBlockSchema}
+          />
+        )}
+
+        {!readonly && (
+          <DebugSidePanel
+            isOpen={panelStates.debug}
+            onToggle={() => togglePanel('debug')}
+            workflow={workflow}
+          />
+        )}
+      </div>
+    </WorkflowTypeContext>
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Public Export
-// ─────────────────────────────────────────────────────────────────────────────
-
-// Wrapper with ReactFlowProvider
 export interface WorkflowEditorProps {
   workflow: Workflow;
   readonly?: boolean;

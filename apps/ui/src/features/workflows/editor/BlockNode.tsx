@@ -4,10 +4,10 @@
  * Dynamic block node with clear multi-input/multi-output visualization.
  */
 
-import { Handle, type NodeProps, Position } from '@xyflow/react';
+import { Handle, type NodeProps, Position, useNodeId } from '@xyflow/react';
 import { CheckCircle, Loader2, XCircle } from 'lucide-react';
 import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
-import React from 'react';
+import React, { memo } from 'react';
 import {
   BaseNode,
   BaseNodeContent,
@@ -18,6 +18,7 @@ import { Badge } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
 import { cn } from '@/lib/utils';
 import type { BlockStatus } from './useWorkflowEditor';
+import { usePortTypeName } from './WorkflowTypeContext';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -28,6 +29,8 @@ export interface BlockPort {
   name: string;
   /** Type name: "string", "number", "object", "generic", etc. */
   typeName?: string;
+  /** Structural type descriptor (JSON, from @brika/type-system) */
+  type?: Record<string, unknown>;
 }
 
 // Note: Colors now use CSS variables from theme system
@@ -59,7 +62,7 @@ export interface BlockNodeData {
 // Status Indicator
 // ─────────────────────────────────────────────────────────────────────────────
 
-function StatusIndicator({
+const StatusIndicator = memo(function StatusIndicator({
   status,
 }: Readonly<{
   status?: BlockStatus;
@@ -78,6 +81,23 @@ function StatusIndicator({
     return <XCircle className="size-4 text-status-error" />;
   }
   return null;
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Port Type Colors
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Map a resolved type kind to a port handle color */
+function portColor(resolvedType: string | undefined, fallbackTypeName: string | undefined): string {
+  const type = resolvedType ?? fallbackTypeName ?? '';
+  if (type.startsWith('generic') || type === '') return '#8b5cf6'; // violet — unresolved generic
+  if (type === 'string') return '#22c55e'; // green
+  if (type === 'number') return '#3b82f6'; // blue
+  if (type === 'boolean') return '#f59e0b'; // amber
+  if (type.startsWith('{')) return '#ec4899'; // pink — object
+  if (type.endsWith('[]')) return '#06b6d4'; // cyan — array
+  if (type.includes('|')) return '#a855f7'; // purple — union
+  return '#6b7280'; // gray — fallback
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -90,22 +110,31 @@ interface OutputPortProps {
   total: number;
 }
 
-function OutputPort({ port, index, total }: Readonly<OutputPortProps>) {
+const OutputPort = memo(function OutputPort({ port, index, total }: Readonly<OutputPortProps>) {
+  const nodeId = useNodeId() ?? '';
+  const resolvedType = usePortTypeName(nodeId, port.id);
   const offset = total > 1 ? ((index + 1) / (total + 1)) * 100 : 50;
+  const color = portColor(resolvedType, port.typeName);
 
   return (
-    <Handle
-      type="source"
-      position={Position.Bottom}
-      id={port.id}
-      className="!absolute !-bottom-1 !h-3 !w-3 !rounded-full !border-2 !border-background !bg-orange-500"
-      style={{
-        left: `${offset}%`,
-        transform: 'translateX(-50%)',
-      }}
-    />
+    <>
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        id={port.id}
+        className="absolute! -bottom-1! h-3! w-3! rounded-full! border-2! border-background!"
+        style={{ backgroundColor: color, left: `${offset}%`, transform: 'translateX(-50%)' }}
+      />
+      <span
+        className="pointer-events-none absolute max-w-20 truncate text-center font-mono text-[9px] leading-tight"
+        style={{ color, left: `${offset}%`, transform: 'translateX(-50%)', bottom: '-1.1rem' }}
+        title={`${port.name}: ${resolvedType ?? port.typeName ?? 'generic<T>'}`}
+      >
+        {resolvedType ?? port.typeName ?? 'T'}
+      </span>
+    </>
   );
-}
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Input Port Component
@@ -117,26 +146,31 @@ interface InputPortProps {
   total: number;
 }
 
-function InputPort({ port, index, total }: Readonly<InputPortProps>) {
+const InputPort = memo(function InputPort({ port, index, total }: Readonly<InputPortProps>) {
+  const nodeId = useNodeId() ?? '';
+  const resolvedType = usePortTypeName(nodeId, port.id);
   const offset = total > 1 ? ((index + 1) / (total + 1)) * 100 : 50;
+  const color = portColor(resolvedType, port.typeName);
 
   return (
-    <Handle
-      type="target"
-      position={Position.Top}
-      id={port.id}
-      className="!absolute !-top-1 !h-3 !w-3 !rounded-full !border-2 !border-background !bg-blue-500"
-      style={{
-        left: `${offset}%`,
-        transform: 'translateX(-50%)',
-      }}
-    />
+    <>
+      <Handle
+        type="target"
+        position={Position.Top}
+        id={port.id}
+        className="absolute! -top-1! h-3! w-3! rounded-full! border-2! border-background!"
+        style={{ backgroundColor: color, left: `${offset}%`, transform: 'translateX(-50%)' }}
+      />
+      <span
+        className="pointer-events-none absolute max-w-20 truncate text-center font-mono text-[9px] leading-tight"
+        style={{ color, left: `${offset}%`, transform: 'translateX(-50%)', top: '-1.1rem' }}
+        title={`${port.name}: ${resolvedType ?? port.typeName ?? 'generic<T>'}`}
+      >
+        {resolvedType ?? port.typeName ?? 'T'}
+      </span>
+    </>
   );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Config Summary
-// ─────────────────────────────────────────────────────────────────────────────
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Config Summary
@@ -214,7 +248,10 @@ interface ExecutionResultProps {
 }
 
 /** Render execution output or error for a completed/errored block. */
-function ExecutionResult({ status, output }: Readonly<ExecutionResultProps>) {
+const ExecutionResult = memo(function ExecutionResult({
+  status,
+  output,
+}: Readonly<ExecutionResultProps>) {
   if (status === 'completed' && output !== undefined) {
     return (
       <div className="truncate rounded-lg border border-success/20 bg-success/10 p-2 text-success text-xs">
@@ -230,13 +267,16 @@ function ExecutionResult({ status, output }: Readonly<ExecutionResultProps>) {
     );
   }
   return null;
-}
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Block Node
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function BlockNode(props: NodeProps) {
+const DEFAULT_INPUTS: BlockPort[] = [{ id: 'in', name: 'Input' }];
+const DEFAULT_OUTPUTS: BlockPort[] = [{ id: 'out', name: 'Output' }];
+
+export const BlockNode = memo(function BlockNode(props: NodeProps) {
   const { tp } = useLocale();
   const data = props.data as unknown as BlockNodeData;
   const selected = props.selected;
@@ -253,19 +293,9 @@ export function BlockNode(props: NodeProps) {
     ? tp(data.pluginId, `blocks.${blockKey}.name`, data.label)
     : data.label;
 
-  // Default ports if not specified
-  const inputs: BlockPort[] = data.inputs ?? [
-    {
-      id: 'in',
-      name: 'Input',
-    },
-  ];
-  const outputs: BlockPort[] = data.outputs ?? [
-    {
-      id: 'out',
-      name: 'Output',
-    },
-  ];
+  // Default ports if not specified (DEFAULT_* are stable module-level refs)
+  const inputs = data.inputs ?? DEFAULT_INPUTS;
+  const outputs = data.outputs ?? DEFAULT_OUTPUTS;
 
   const statusStyles: Record<string, string> = {
     idle: '',
@@ -331,4 +361,4 @@ export function BlockNode(props: NodeProps) {
       ))}
     </BaseNode>
   );
-}
+});

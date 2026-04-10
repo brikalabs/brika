@@ -23,6 +23,16 @@ useTestBed({
 // Test Fixtures
 // ─────────────────────────────────────────────────────────────────────────────
 
+/** Base BlockRegistry mock — spread and override per test */
+const baseBlockMock = {
+  has: () => true,
+  get: () => undefined,
+  list: () => [],
+  listByCategory: () => ({}),
+  resolve: (t: string) => t,
+  onBlockRegistered: () => () => {},
+};
+
 const createWorkflow = (id: string, enabled = false): Workflow => ({
   id,
   name: `Workflow ${id}`,
@@ -46,23 +56,17 @@ describe('WorkflowEngine - State Management', () => {
       subscribeAll: () => () => undefined,
     });
     provide(BlockRegistry, {
-      has: (type: string) => true,
+      ...baseBlockMock,
+      has: () => true,
       get: (type: string) => ({
         id: 'test',
         type,
         outputs: [],
         inputs: [],
-        schema: {
-          type: 'object' as const,
-          properties: {},
-        },
+        schema: { type: 'object' as const, properties: {} },
         pluginId: 'plugin',
       }),
-      list: () => [],
-      listByCategory: () => ({}),
-      validateConnections: () => ({
-        valid: true,
-      }),
+      validateConnections: () => ({ valid: true }),
     });
     provide(PluginManager, {});
     provide(PluginEventHandler, {});
@@ -102,13 +106,9 @@ describe('WorkflowEngine - State Management', () => {
       subscribeAll: () => () => undefined,
     });
     provide(BlockRegistry, {
+      ...baseBlockMock,
       has: (type: string) => type !== 'missing-block',
-      get: () => undefined,
-      list: () => [],
-      listByCategory: () => ({}),
-      validateConnections: () => ({
-        valid: true,
-      }),
+      validateConnections: () => ({ valid: true }),
     });
     provide(PluginManager, {});
     provide(PluginEventHandler, {});
@@ -149,13 +149,9 @@ describe('WorkflowEngine - State Management', () => {
       subscribeAll: () => () => undefined,
     });
     provide(BlockRegistry, {
-      has: (type: string) => false, // All blocks missing
-      get: () => undefined,
-      list: () => [],
-      listByCategory: () => ({}),
-      validateConnections: () => ({
-        valid: true,
-      }),
+      ...baseBlockMock,
+      has: () => false,
+      validateConnections: () => ({ valid: true }),
     });
     provide(PluginManager, {});
     provide(PluginEventHandler, {});
@@ -187,23 +183,17 @@ describe('WorkflowEngine - State Management', () => {
       subscribeAll: () => () => undefined,
     });
     provide(BlockRegistry, {
-      has: () => true, // All blocks available now
+      ...baseBlockMock,
+      has: () => true,
       get: () => ({
         id: 'test',
         type: 'plugin:test',
         outputs: [],
         inputs: [],
-        schema: {
-          type: 'object' as const,
-          properties: {},
-        },
+        schema: { type: 'object' as const, properties: {} },
         pluginId: 'plugin',
       }),
-      list: () => [],
-      listByCategory: () => ({}),
-      validateConnections: () => ({
-        valid: true,
-      }),
+      validateConnections: () => ({ valid: true }),
     });
     provide(PluginManager, {});
     provide(PluginEventHandler, {});
@@ -324,6 +314,7 @@ describe('WorkflowEngine - Block Registry Passthrough', () => {
       subscribeAll: () => () => undefined,
     });
     provide(BlockRegistry, {
+      ...baseBlockMock,
       has: () => true,
       list: () => mockBlocks,
       listByCategory: () => {
@@ -332,10 +323,7 @@ describe('WorkflowEngine - Block Registry Passthrough', () => {
         if (!input || !output) {
           throw new Error('Expected mock blocks to be defined');
         }
-        return {
-          input: [input],
-          output: [output],
-        };
+        return { input: [input], output: [output] };
       },
     });
     provide(PluginManager, {});
@@ -386,20 +374,16 @@ describe('WorkflowEngine - Execution Control', () => {
       subscribeAll: () => () => undefined,
     });
     provide(BlockRegistry, {
+      ...baseBlockMock,
       has: () => true,
       get: () => ({
         id: 'test',
         type: 'plugin:test',
         outputs: [],
         inputs: [],
-        schema: {
-          type: 'object' as const,
-          properties: {},
-        },
+        schema: { type: 'object' as const, properties: {} },
         pluginId: 'plugin',
       }),
-      list: () => [],
-      listByCategory: () => ({}),
     });
     provide(PluginManager, mockPluginManager);
     provide(PluginEventHandler, {});
@@ -486,11 +470,7 @@ describe('WorkflowEngine - Execution Control', () => {
       dispatch: async <T>(action: T) => action,
       subscribeAll: () => () => undefined,
     });
-    provide(BlockRegistry, {
-      has: () => false, // All blocks missing
-      list: () => [],
-      listByCategory: () => ({}),
-    });
+    provide(BlockRegistry, { ...baseBlockMock, has: () => false });
     provide(PluginManager, mockPluginManager);
     provide(PluginEventHandler, {});
 
@@ -514,11 +494,7 @@ describe('WorkflowEngine - Execution Control', () => {
       dispatch: async <T>(action: T) => action,
       subscribeAll: () => () => undefined,
     });
-    provide(BlockRegistry, {
-      has: () => false, // Blocks missing
-      list: () => [],
-      listByCategory: () => ({}),
-    });
+    provide(BlockRegistry, { ...baseBlockMock, has: () => false });
     provide(PluginManager, mockPluginManager);
     provide(PluginEventHandler, {});
 
@@ -547,30 +523,23 @@ describe('WorkflowEngine - Global Listeners', () => {
       subscribeAll: () => () => undefined,
     });
     provide(BlockRegistry, {
+      ...baseBlockMock,
       has: () => true,
       get: () => ({
         id: 'test',
         type: 'plugin:test',
         outputs: [],
         inputs: [],
-        schema: {
-          type: 'object' as const,
-          properties: {},
-        },
+        schema: { type: 'object' as const, properties: {} },
         pluginId: 'plugin',
       }),
-      list: () => [],
-      listByCategory: () => ({}),
     });
     provide(PluginManager, {
       setBlockEmitHandler: () => undefined,
       setBlockLogHandler: () => undefined,
       clearBlockEmitHandler: () => undefined,
       clearBlockLogHandler: () => undefined,
-      startBlock: () =>
-        Promise.resolve({
-          ok: true,
-        }),
+      startBlock: () => Promise.resolve({ ok: true }),
       stopBlockInstance: () => undefined,
     });
     provide(PluginEventHandler, {});
@@ -647,30 +616,23 @@ describe('WorkflowEngine - Lifecycle', () => {
       subscribeAll: () => () => undefined,
     });
     provide(BlockRegistry, {
+      ...baseBlockMock,
       has: () => true,
       get: () => ({
         id: 'test',
         type: 'plugin:test',
         outputs: [],
         inputs: [],
-        schema: {
-          type: 'object' as const,
-          properties: {},
-        },
+        schema: { type: 'object' as const, properties: {} },
         pluginId: 'plugin',
       }),
-      list: () => [],
-      listByCategory: () => ({}),
     });
     provide(PluginManager, {
       setBlockEmitHandler: () => undefined,
       setBlockLogHandler: () => undefined,
       clearBlockEmitHandler: () => undefined,
       clearBlockLogHandler: () => undefined,
-      startBlock: () =>
-        Promise.resolve({
-          ok: true,
-        }),
+      startBlock: () => Promise.resolve({ ok: true }),
       stopBlockInstance: () => undefined,
     });
     provide(PluginEventHandler, {});

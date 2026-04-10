@@ -97,10 +97,7 @@ describe('createEmitter', () => {
     expect(emitFn).toHaveBeenCalledWith('out', 3);
   });
 
-  test('validates output in development mode', () => {
-    const originalEnv = process.env.NODE_ENV;
-    process.env.NODE_ENV = 'development';
-
+  test('drops invalid output data and warns', () => {
     const warnSpy = mock();
     const originalWarn = console.warn;
     console.warn = warnSpy;
@@ -112,11 +109,10 @@ describe('createEmitter', () => {
       const wrongType: unknown = 123;
       emitter.emit(wrongType as never);
 
-      // Should still emit but warn
-      expect(emitFn).toHaveBeenCalled();
+      // Invalid data should be dropped, not emitted
+      expect(emitFn).not.toHaveBeenCalled();
       expect(warnSpy).toHaveBeenCalled();
     } finally {
-      process.env.NODE_ENV = originalEnv;
       console.warn = originalWarn;
     }
   });

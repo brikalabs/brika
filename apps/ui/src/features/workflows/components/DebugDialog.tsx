@@ -1,9 +1,3 @@
-/**
- * DebugDialog Component
- *
- * Real-time debug event viewer for running workflows.
- */
-
 import { Bug } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -94,7 +88,7 @@ export function DebugDialog({
         </DialogHeader>
 
         <div className="rounded-lg border bg-muted/50 p-2">
-          <ScrollArea className="h-[400px]" ref={scrollRef}>
+          <ScrollArea className="h-100" ref={scrollRef}>
             {filteredEvents.length === 0 ? (
               <div className="flex h-full items-center justify-center text-muted-foreground text-sm">
                 {t('workflows:debug.waiting')}

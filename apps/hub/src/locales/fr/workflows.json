@@ -11,6 +11,10 @@
   "noResults": "Aucun workflow ne correspond à votre recherche",
   "count_one": "{{count}} workflow",
   "count_other": "{{count}} workflows",
+  "connections_one": "{{count}} connexion",
+  "connections_other": "{{count}} connexions",
+  "errors_one": "{{count}} erreur",
+  "errors_other": "{{count}} erreurs",
   "runs": {
     "title": "Exécutions",
     "empty": "Aucune exécution pour le moment. Déclenchez un workflow pour voir l'historique."

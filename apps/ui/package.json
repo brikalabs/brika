@@ -19,6 +19,7 @@
     "@brika/auth": "workspace:*",
     "@brika/permissions": "workspace:*",
     "@brika/plugin": "workspace:*",
+    "@brika/type-system": "workspace:*",
     "@brika/registry": "workspace:*",
     "@brika/ui-kit": "workspace:*",
     "@dnd-kit/core": "^6.3.1",

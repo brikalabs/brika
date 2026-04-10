@@ -127,7 +127,7 @@ describe('WorkflowExecutor - Lifecycle', () => {
         outputs: [],
         inputs: [],
       }),
-      list: () => [],
+      resolve: (t: string) => t,
     });
 
     executor = new WorkflowExecutor();
@@ -230,7 +230,7 @@ describe('WorkflowExecutor - Connection Map Building', () => {
         outputs: [],
         inputs: [],
       }),
-      list: () => [],
+      resolve: (t: string) => t,
     });
 
     executor = new WorkflowExecutor();
@@ -359,7 +359,7 @@ describe('WorkflowExecutor - Data Injection', () => {
         outputs: [],
         inputs: [],
       }),
-      list: () => [],
+      resolve: (t: string) => t,
     });
 
     executor = new WorkflowExecutor();
@@ -461,7 +461,7 @@ describe('WorkflowExecutor - Event Listeners', () => {
         outputs: [],
         inputs: [],
       }),
-      list: () => [],
+      resolve: (t: string) => t,
     });
 
     executor = new WorkflowExecutor();
@@ -593,7 +593,7 @@ describe('WorkflowExecutor - Block Emit and Data Flow', () => {
         outputs: [],
         inputs: [],
       }),
-      list: () => [],
+      resolve: (t: string) => t,
     });
 
     executor = new WorkflowExecutor();
@@ -771,7 +771,7 @@ describe('WorkflowExecutor - Block Start Error Handling', () => {
         outputs: [],
         inputs: [],
       }),
-      list: () => [],
+      resolve: (t: string) => t,
     });
 
     executor = new WorkflowExecutor();
@@ -817,7 +817,7 @@ describe('WorkflowExecutor - Block Start Error Handling', () => {
         outputs: [],
         inputs: [],
       }),
-      list: () => [],
+      resolve: (t: string) => t,
     });
 
     executor = new WorkflowExecutor();
@@ -855,6 +855,11 @@ describe('WorkflowExecutor - Block Type Resolution', () => {
       pushBlockInput: () => undefined,
     });
 
+    const shortNames: Record<string, string> = {
+      interval: '@brika/timer:interval',
+      request: '@brika/http:request',
+    };
+
     stub(BlockRegistry, {
       has: () => true,
       get: () => ({
@@ -862,26 +867,10 @@ describe('WorkflowExecutor - Block Type Resolution', () => {
         outputs: [],
         inputs: [],
       }),
-      list: () => [
-        {
-          id: 'interval',
-          type: '@brika/timer:interval',
-          inputs: [],
-          outputs: [],
-          schema: {
-            type: 'object',
-          },
-        },
-        {
-          id: 'request',
-          type: '@brika/http:request',
-          inputs: [],
-          outputs: [],
-          schema: {
-            type: 'object',
-          },
-        },
-      ],
+      resolve: (type: string) => {
+        if (type.includes(':')) return type;
+        return shortNames[type] ?? type;
+      },
     });
 
     executor = new WorkflowExecutor();
@@ -899,17 +888,11 @@ describe('WorkflowExecutor - Block Type Resolution', () => {
       id: 'test',
       name: 'Test',
       enabled: true,
-      blocks: [
-        {
-          id: 'block-1',
-          type: '@brika/timer:interval',
-        },
-      ],
+      blocks: [{ id: 'block-1', type: '@brika/timer:interval' }],
       connections: [],
     };
 
     await executor.start(workflow);
-
     expect(startedTypes[0]).toBe('@brika/timer:interval');
   });
 
@@ -919,17 +902,11 @@ describe('WorkflowExecutor - Block Type Resolution', () => {
       id: 'test',
       name: 'Test',
       enabled: true,
-      blocks: [
-        {
-          id: 'block-1',
-          type: 'interval',
-        },
-      ],
+      blocks: [{ id: 'block-1', type: 'interval' }],
       connections: [],
     };
 
     await executor.start(workflow);
-
     expect(startedTypes[0]).toBe('@brika/timer:interval');
   });
 
@@ -939,17 +916,11 @@ describe('WorkflowExecutor - Block Type Resolution', () => {
       id: 'test',
       name: 'Test',
       enabled: true,
-      blocks: [
-        {
-          id: 'block-1',
-          type: 'unknown-type',
-        },
-      ],
+      blocks: [{ id: 'block-1', type: 'unknown-type' }],
       connections: [],
     };
 
     await executor.start(workflow);
-
     expect(startedTypes[0]).toBe('unknown-type');
   });
 });
@@ -978,7 +949,7 @@ describe('WorkflowExecutor - Complex Workflows', () => {
         outputs: [],
         inputs: [],
       }),
-      list: () => [],
+      resolve: (t: string) => t,
     });
 
     executor = new WorkflowExecutor();

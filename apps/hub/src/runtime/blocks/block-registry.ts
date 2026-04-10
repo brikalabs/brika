@@ -5,7 +5,8 @@
  */
 
 import { inject, singleton } from '@brika/di';
-import { arePortTypesCompatible } from '@brika/plugin';
+import type { TypeDescriptor } from '@brika/type-system';
+import { isCompatible, parsePortType } from '@brika/type-system';
 import type { BlockDefinition } from '@brika/sdk';
 
 /** Runtime block info (includes ports from running plugin) */
@@ -74,6 +75,7 @@ type ValidationResult = {
 export class BlockRegistry {
   private readonly logs = inject(Logger).withSource('registry');
   readonly #blocks = new Map<string, RegisteredBlock>();
+  readonly #shortNames = new Map<string, string>(); // shortId → full type
   readonly #plugins = new Map<string, PluginInfo>();
   readonly #listeners = new Set<(type: string) => void>();
 
@@ -102,6 +104,7 @@ export class BlockRegistry {
       type,
       pluginId: plugin.id,
     });
+    this.#shortNames.set(block.id, type);
 
     this.logs.info('Block registered', {
       type,
@@ -116,6 +119,7 @@ export class BlockRegistry {
     for (const [type, block] of this.#blocks) {
       if (block.pluginId === pluginId) {
         this.#blocks.delete(type);
+        this.#shortNames.delete(block.id);
         count++;
       }
     }
@@ -133,16 +137,26 @@ export class BlockRegistry {
     return this.#blocks.get(type);
   }
 
+  /** Resolve a possibly-short block name to its full qualified type. */
+  resolve(type: string): string {
+    if (type.includes(':')) return type;
+    return this.#shortNames.get(type) ?? type;
+  }
+
   has(type: string): boolean {
     return this.#blocks.has(type);
   }
 
   list(): BlockDefinition[] {
-    return [...this.#blocks.values()].sort((a, b) => a.id.localeCompare(b.id));
+    return Array.from(this.#blocks.values()).sort((a, b) => a.id.localeCompare(b.id));
   }
 
   listByPlugin(pluginId: string): BlockDefinition[] {
-    return [...this.#blocks.values()].filter((b) => b.pluginId === pluginId);
+    const result: BlockDefinition[] = [];
+    for (const b of this.#blocks.values()) {
+      if (b.pluginId === pluginId) result.push(b);
+    }
+    return result;
   }
 
   listByOwner(pluginId: string): BlockSummary[] {
@@ -303,7 +317,9 @@ export class BlockRegistry {
       return;
     }
 
-    if (!arePortTypesCompatible(fromPort.typeName, toPort.typeName)) {
+    const fromType = parsePortType(fromPort);
+    const toType = parsePortType(toPort);
+    if (!isCompatible(fromType, toType)) {
       errors.push(
         `Type mismatch: ${fromBlock.id}.${fromPortId} (${fromPort.typeName}) → ${toBlock.id}.${toPortId} (${toPort.typeName})`
       );
@@ -345,3 +361,4 @@ export class BlockRegistry {
     }
   }
 }
+

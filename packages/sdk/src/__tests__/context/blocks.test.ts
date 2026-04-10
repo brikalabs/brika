@@ -103,6 +103,8 @@ describe('setupBlocks', () => {
           id: 'in',
           name: 'in',
           typeName: 'number',
+          type: undefined,
+          jsonSchema: undefined,
         },
       ]);
       expect(payload.block.outputs).toEqual([
@@ -110,6 +112,8 @@ describe('setupBlocks', () => {
           id: 'out',
           name: 'out',
           typeName: 'string',
+          type: undefined,
+          jsonSchema: undefined,
         },
       ]);
     });
@@ -130,6 +134,40 @@ describe('setupBlocks', () => {
       expect(() => methods.registerBlock(makeBlockDef())).toThrow(
         'Block "test-block" already registered'
       );
+    });
+
+    test('sends type descriptor and jsonSchema in IPC message', () => {
+      methods.registerBlock(
+        makeBlockDef({
+          inputs: [
+            {
+              id: 'in',
+              name: 'Input',
+              direction: 'input' as const,
+              typeName: 'generic<T>',
+              type: { kind: 'generic', typeVar: 'T' },
+            },
+          ],
+          outputs: [
+            {
+              id: 'out',
+              name: 'Output',
+              direction: 'output' as const,
+              typeName: '__passthrough:in',
+              type: { kind: 'passthrough', sourcePortId: 'in' },
+              jsonSchema: undefined,
+            },
+          ],
+        })
+      );
+
+      const msg = h.sentMessages.find((m) => m.name === 'registerBlock');
+      const payload = msg?.payload as { block: Record<string, unknown> };
+      const inputs = payload.block.inputs as Array<Record<string, unknown>>;
+      const outputs = payload.block.outputs as Array<Record<string, unknown>>;
+
+      expect(inputs[0]?.type).toEqual({ kind: 'generic', typeVar: 'T' });
+      expect(outputs[0]?.type).toEqual({ kind: 'passthrough', sourcePortId: 'in' });
     });
 
     test('registers block with start function (reactive block)', () => {

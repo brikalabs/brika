@@ -150,6 +150,24 @@ export function defineReactiveBlock<
     return zodToTypeName(schema);
   };
 
+  // Get structural TypeDescriptor from schema/ref (for @brika/type-system)
+  // Produces a JSON-serializable TypeDescriptor without importing the type-system package.
+  const getTypeDescriptor = (schema: OutputDefSchema): Record<string, unknown> => {
+    // Handle marker refs
+    if (schema && typeof schema === 'object' && '__type' in schema) {
+      if (schema.__type === 'generic') return { kind: 'generic', typeVar: schema.__generic ?? 'T' };
+      if (schema.__type === 'passthrough') return { kind: 'passthrough', sourcePortId: schema.__passthrough ?? '' };
+      if (schema.__type === 'resolved') return { kind: 'resolved', source: schema.__source ?? '', configField: schema.__configField ?? '' };
+    }
+    // Convert Zod schema via JSON Schema intermediary
+    try {
+      const jsonSchema = zodToJsonSchema(schema);
+      return jsonSchemaToTypeDescriptor(jsonSchema);
+    } catch {
+      return { kind: 'unknown' };
+    }
+  };
+
   // Get JSON Schema from Zod schema (returns undefined for generic/passthrough/resolved)
   const getJsonSchema = (schema: OutputDefSchema): Record<string, unknown> | undefined => {
     if (schema && typeof schema === 'object' && '__type' in schema) {
@@ -175,12 +193,14 @@ export function defineReactiveBlock<
     string,
     {
       typeName: string;
+      type: Record<string, unknown>;
       jsonSchema?: Record<string, unknown>;
     }
   >();
   for (const [id, def] of Object.entries(spec.inputs)) {
     inputMap.set(id, {
       typeName: getBaseTypeName(def.schema),
+      type: getTypeDescriptor(def.schema),
       jsonSchema: getJsonSchema(def.schema),
     });
   }
@@ -191,25 +211,36 @@ export function defineReactiveBlock<
     name: def.meta.name,
     direction: 'input' as const,
     typeName: getBaseTypeName(def.schema),
+    type: getTypeDescriptor(def.schema),
     jsonSchema: getJsonSchema(def.schema),
   }));
 
   // Convert output definitions to BlockPort[] - resolve passthrough to input type
   const outputs: BlockPort[] = Object.entries(spec.outputs).map(([id, def]) => {
     const baseTypeName = getBaseTypeName(def.schema);
+    const typeDesc = getTypeDescriptor(def.schema);
 
-    // If it's a passthrough, resolve to the linked input's type
+    // If it's a passthrough, resolve to the linked input's concrete type.
+    // If the linked input is generic/unresolved, keep the passthrough descriptor
+    // so the UI inference engine can resolve it dynamically at connection time.
     if (baseTypeName.startsWith('__passthrough:')) {
       const inputId = baseTypeName.replace('__passthrough:', '');
       const linkedInput = inputMap.get(inputId);
       if (linkedInput) {
-        return {
-          id,
-          name: def.meta.name,
-          direction: 'output' as const,
-          typeName: linkedInput.typeName,
-          jsonSchema: linkedInput.jsonSchema,
-        };
+        const linkedKind = (linkedInput.type as Record<string, unknown>).kind;
+        const isResolvable = linkedKind === 'generic' || linkedKind === 'passthrough' || linkedKind === 'resolved';
+        if (!isResolvable) {
+          // Linked input is concrete — resolve statically
+          return {
+            id,
+            name: def.meta.name,
+            direction: 'output' as const,
+            typeName: linkedInput.typeName,
+            type: linkedInput.type,
+            jsonSchema: linkedInput.jsonSchema,
+          };
+        }
+        // Linked input is generic/unresolved — preserve passthrough for dynamic inference
       }
     }
 
@@ -218,6 +249,7 @@ export function defineReactiveBlock<
       name: def.meta.name,
       direction: 'output' as const,
       typeName: baseTypeName,
+      type: typeDesc,
       jsonSchema: getJsonSchema(def.schema),
     };
   });
@@ -287,15 +319,14 @@ export function defineReactiveBlock<
       // Return instance handle
       return {
         pushInput(portId: string, data: Serializable): void {
-          // Validate in dev mode
-          if (process.env.NODE_ENV !== 'production') {
-            const inputDef = spec.inputs[portId];
-            if (inputDef) {
-              const runtimeSchema = getRuntimeSchema(inputDef.schema);
-              const result = runtimeSchema.safeParse(data);
-              if (!result.success) {
-                log.warn(`Input validation failed for "${portId}": ${result.error.message}`);
-              }
+          // Always validate input data
+          const inputDef = spec.inputs[portId];
+          if (inputDef) {
+            const runtimeSchema = getRuntimeSchema(inputDef.schema);
+            const result = runtimeSchema.safeParse(data);
+            if (!result.success) {
+              log.warn(`Input validation failed for "${portId}": ${result.error.message}`);
+              return; // Drop invalid data
             }
           }
 
@@ -352,6 +383,49 @@ export function isCompiledReactiveBlock(value: unknown): value is CompiledReacti
 // ─────────────────────────────────────────────────────────────────────────────
 // Helper
 // ─────────────────────────────────────────────────────────────────────────────
+
+/** Convert JSON Schema to a TypeDescriptor-shaped plain object */
+function jsonSchemaToTypeDescriptor(schema: Record<string, unknown>): Record<string, unknown> {
+  const type = schema.type as string | undefined;
+
+  if (schema.anyOf) {
+    const variants = (schema.anyOf as Record<string, unknown>[]).map(jsonSchemaToTypeDescriptor);
+    return variants.length === 1 && variants[0] ? variants[0] : { kind: 'union', variants };
+  }
+  if (schema.oneOf) {
+    const variants = (schema.oneOf as Record<string, unknown>[]).map(jsonSchemaToTypeDescriptor);
+    return variants.length === 1 && variants[0] ? variants[0] : { kind: 'union', variants };
+  }
+  if (schema.enum) return { kind: 'enum', values: schema.enum };
+  if ('const' in schema) return { kind: 'literal', value: schema.const };
+
+  switch (type) {
+    case 'string': return { kind: 'primitive', type: 'string' };
+    case 'number': case 'integer': return { kind: 'primitive', type: 'number' };
+    case 'boolean': return { kind: 'primitive', type: 'boolean' };
+    case 'null': return { kind: 'primitive', type: 'null' };
+    case 'array': {
+      if (schema.items) return { kind: 'array', element: jsonSchemaToTypeDescriptor(schema.items as Record<string, unknown>) };
+      if (schema.prefixItems) return { kind: 'tuple', elements: (schema.prefixItems as Record<string, unknown>[]).map(jsonSchemaToTypeDescriptor) };
+      return { kind: 'array', element: { kind: 'unknown' } };
+    }
+    case 'object': {
+      const properties = schema.properties as Record<string, Record<string, unknown>> | undefined;
+      if (!properties) {
+        if (schema.additionalProperties && typeof schema.additionalProperties === 'object')
+          return { kind: 'record', value: jsonSchemaToTypeDescriptor(schema.additionalProperties as Record<string, unknown>) };
+        return { kind: 'record', value: { kind: 'unknown' } };
+      }
+      const required = new Set((schema.required as string[] | undefined) ?? []);
+      const fields: Record<string, { type: Record<string, unknown>; optional: boolean }> = {};
+      for (const [key, propSchema] of Object.entries(properties)) {
+        fields[key] = { type: jsonSchemaToTypeDescriptor(propSchema), optional: !required.has(key) };
+      }
+      return { kind: 'object', fields };
+    }
+    default: return { kind: 'unknown' };
+  }
+}
 
 function zodToBlockSchema(schema: z.ZodObject<z.ZodRawShape>): BlockSchema {
   const json = z.toJSONSchema(schema, {

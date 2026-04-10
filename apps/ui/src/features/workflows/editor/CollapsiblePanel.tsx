@@ -151,6 +151,14 @@ export function CollapsiblePanel({
 
   // Expanded state - show full panel with content
   return (
-    <div className={cn('shrink-0 transition-all duration-200', width, className)}>{children}</div>
+    <div
+      className={cn(
+        'h-full shrink-0 overflow-hidden transition-all duration-200',
+        width,
+        className
+      )}
+    >
+      {children}
+    </div>
   );
 }

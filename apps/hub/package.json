@@ -35,6 +35,7 @@
     "@brika/schema": "workspace:*",
     "@brika/sdk": "workspace:*",
     "@brika/ui-kit": "workspace:*",
+    "@brika/type-system": "workspace:*",
     "@brika/workflow": "workspace:*",
     "@clack/prompts": "^1.0.1",
     "bcryptjs": "^2.4.3",

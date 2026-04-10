@@ -127,7 +127,7 @@ export function DebugPanel({ workflow, onCollapse, className }: Readonly<DebugPa
       </div>
 
       {/* Events */}
-      <ScrollArea className="flex-1" ref={scrollRef}>
+      <ScrollArea className="min-h-0 flex-1 overflow-hidden" ref={scrollRef}>
         {filteredEvents.length === 0 ? (
           <div className="flex h-full items-center justify-center py-12">
             <div className="text-center">

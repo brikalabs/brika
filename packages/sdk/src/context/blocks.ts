@@ -112,6 +112,14 @@ export function setupBlocks(core: ContextCore) {
           reactiveBlocks.set(id, block as CompiledReactiveBlock);
         }
 
+        const mapPort = (p: (typeof block.inputs)[number]) => ({
+          id: p.id,
+          name: p.id,
+          typeName: p.typeName,
+          type: p.type,
+          jsonSchema: p.jsonSchema,
+        });
+
         client.send(registerBlock, {
           block: {
             id,
@@ -120,16 +128,8 @@ export function setupBlocks(core: ContextCore) {
             category: meta.category,
             icon: meta.icon,
             color: meta.color,
-            inputs: block.inputs.map((p) => ({
-              id: p.id,
-              name: p.id,
-              typeName: p.typeName,
-            })),
-            outputs: block.outputs.map((p) => ({
-              id: p.id,
-              name: p.id,
-              typeName: p.typeName,
-            })),
+            inputs: block.inputs.map(mapPort),
+            outputs: block.outputs.map(mapPort),
             schema: block.schema as unknown as Record<string, Json>,
           },
         });

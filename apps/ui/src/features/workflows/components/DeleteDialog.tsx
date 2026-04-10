@@ -1,9 +1,3 @@
-/**
- * DeleteDialog Component
- *
- * Confirmation dialog for workflow deletion.
- */
-
 import {
   Button,
   Dialog,

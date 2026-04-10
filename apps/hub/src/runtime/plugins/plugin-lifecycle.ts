@@ -499,9 +499,9 @@ export class PluginLifecycle {
 
     this.#state.setHealth(process.name, 'crashed', PluginErrors.heartbeatTimeout());
     this.#eventHandler.onPluginDisconnected(process.name);
-    this.unload(process.name, true).then(() => {
-      this.#attemptAutoRestart(process.name, 'heartbeat timeout');
-    });
+    this.unload(process.name, true)
+      .then(() => this.#attemptAutoRestart(process.name, 'heartbeat timeout'))
+      .catch((e) => this.#logs.error('Failed to unload after heartbeat timeout', { pluginName: process.name }, { error: e }));
   }
 
   #handleDisconnect(name: string, error?: Error): void {
@@ -536,8 +536,9 @@ export class PluginLifecycle {
       )
     );
 
-    this.unload(name, true);
-    this.#attemptAutoRestart(name, reason);
+    this.unload(name, true)
+      .then(() => this.#attemptAutoRestart(name, reason))
+      .catch((e) => this.#logs.error('Failed to unload crashed plugin', { pluginName: name }, { error: e }));
   }
 
   #attemptAutoRestart(name: string, reason: string): void {
@@ -571,12 +572,13 @@ export class PluginLifecycle {
     });
     this.#state.setHealth(name, 'restarting', PluginErrors.restarting(decision.delayMs));
 
+    const rootDirectory = pluginState.rootDirectory;
     this.#restartPolicy.scheduleRestart(name, decision.delayMs, async () => {
       try {
         this.#logs.info('Attempting to restart plugin', {
           pluginName: name,
         });
-        await this.load(name);
+        await this.load(rootDirectory);
         this.#logs.info('Plugin restarted successfully', {
           pluginName: name,
         });
@@ -595,6 +597,10 @@ export class PluginLifecycle {
   }
 
   #startStabilityCheck(process: PluginProcess): void {
+    // Clear any existing timer to prevent leaks on rapid restarts
+    const existing = this.#stabilityTimers.get(process.name);
+    if (existing) clearInterval(existing);
+
     const timer = setInterval(() => {
       if (this.#restartPolicy.checkStability(process.name)) {
         this.#logs.debug('Plugin reached stability threshold', {

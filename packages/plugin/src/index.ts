@@ -12,6 +12,7 @@ export * from './manifests';
 export * from './preferences';
 export * from './store';
 
+import { type TypeDescriptor, T, isCompatible } from '@brika/type-system';
 import type { BlockManifest, BrickManifest, PageManifest, SparkManifest } from './manifests';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -129,47 +130,30 @@ export interface Plugin {
 // Port Type Compatibility
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Check if type is generic (accepts any type) */
-function isGenericType(t?: string): boolean {
-  return !t || t.startsWith('generic') || t === 'unknown' || t === 'any';
-}
-
 /**
  * Check if two port types are compatible for connection.
  * Returns true if source type can flow into target type.
+ *
+ * @deprecated Use `isCompatible()` from `@brika/type-system` instead.
+ * This function delegates to the structural type checker.
  */
 export function arePortTypesCompatible(sourceType?: string, targetType?: string): boolean {
-  if (isGenericType(sourceType) || isGenericType(targetType)) {
-    return true;
-  }
+  return isCompatible(parseTypeName(sourceType), parseTypeName(targetType));
+}
 
-  const normalizeType = (t: string) => t.toLowerCase().trim();
-  const src = normalizeType(sourceType ?? '');
-  const tgt = normalizeType(targetType ?? '');
+// Re-export for consumers migrating to @brika/type-system
+export { isCompatible } from '@brika/type-system';
 
-  if (src === tgt) {
-    return true;
-  }
-
-  const numberTypes = new Set(['number', 'integer', 'float', 'double']);
-  if (numberTypes.has(src) && numberTypes.has(tgt)) {
-    return true;
-  }
-
-  if (tgt === 'string' && new Set(['number', 'integer', 'boolean']).has(src)) {
-    return true;
-  }
-
-  const objectTypes = new Set(['object', 'json', 'record', 'any']);
-  if (objectTypes.has(src) && objectTypes.has(tgt)) {
-    return true;
-  }
-
-  if (src.endsWith('[]') && tgt.endsWith('[]')) {
-    const srcBase = src.slice(0, -2);
-    const tgtBase = tgt.slice(0, -2);
-    return arePortTypesCompatible(srcBase, tgtBase);
-  }
-
-  return false;
+/** Parse a typeName string to a TypeDescriptor for backward compatibility */
+function parseTypeName(typeName?: string): TypeDescriptor {
+  if (!typeName) return T.generic();
+  if (typeName.startsWith('generic') || typeName === 'unknown' || typeName === 'any') return T.generic();
+  const lower = typeName.toLowerCase().trim();
+  if (lower === 'string') return T.string;
+  if (['number', 'integer', 'float', 'double'].includes(lower)) return T.number;
+  if (lower === 'boolean') return T.boolean;
+  if (lower === 'null') return T.null;
+  if (['object', 'json', 'record'].includes(lower)) return T.record(T.unknown);
+  if (lower.endsWith('[]')) return T.array(parseTypeName(lower.slice(0, -2)));
+  return T.unknown;
 }

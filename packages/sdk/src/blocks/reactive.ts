@@ -205,13 +205,12 @@ class EmitterImpl<T> implements Emitter<T> {
   }
 
   emit(value: T): void {
-    if (process.env.NODE_ENV !== 'production') {
-      const result = this.#schema.safeParse(value);
-      if (!result.success) {
-        console.warn(`Output validation failed for port "${this.#portId}":`, result.error.message);
-      }
+    const result = this.#schema.safeParse(value);
+    if (!result.success) {
+      console.warn(`Output validation failed for port "${this.#portId}":`, result.error.message);
+      return; // Drop invalid data — don't propagate type mismatches
     }
-    this.#emit(this.#portId, value as SerializableType);
+    this.#emit(this.#portId, result.data as SerializableType);
   }
 
   emitAll(values: T[]): void {

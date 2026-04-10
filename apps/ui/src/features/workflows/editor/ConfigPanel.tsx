@@ -51,6 +51,7 @@ import { fetcher } from '@/lib/query';
 import { useLocale } from '@/lib/use-locale';
 import { cn } from '@/lib/utils';
 import type { BlockNodeData, BlockPort } from './BlockNode';
+import { usePortTypeName } from './WorkflowTypeContext';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Type Markers
@@ -936,6 +937,7 @@ function toBlockData(data: Record<string, unknown>): BlockNodeData {
 
 interface PortListProps {
   ports: BlockPort[];
+  nodeId: string;
   icon: ReactNode;
   label: string;
   colorClasses: {
@@ -946,7 +948,34 @@ interface PortListProps {
   };
 }
 
-function PortList({ ports, icon, label, colorClasses }: Readonly<PortListProps>) {
+function PortTypeBadge({
+  nodeId,
+  port,
+  colorClasses,
+}: Readonly<{
+  nodeId: string;
+  port: BlockPort;
+  colorClasses: PortListProps['colorClasses'];
+}>) {
+  const resolvedType = usePortTypeName(nodeId, port.id);
+  const displayType = resolvedType ?? port.typeName ?? 'any';
+  return (
+    <Badge
+      variant="outline"
+      className={cn(
+        'h-5 max-w-28 truncate font-mono text-[10px]',
+        colorClasses.badgeBorder,
+        colorClasses.badgeBg,
+        colorClasses.badgeText
+      )}
+      title={displayType}
+    >
+      {displayType}
+    </Badge>
+  );
+}
+
+function PortList({ ports, nodeId, icon, label, colorClasses }: Readonly<PortListProps>) {
   if (ports.length === 0) {
     return null;
   }
@@ -963,17 +992,7 @@ function PortList({ ports, icon, label, colorClasses }: Readonly<PortListProps>)
             className="flex items-center justify-between rounded-md bg-background/60 px-2.5 py-1.5"
           >
             <span className="font-medium text-foreground text-xs">{p.name}</span>
-            <Badge
-              variant="outline"
-              className={cn(
-                'h-5 font-mono text-[10px]',
-                colorClasses.badgeBorder,
-                colorClasses.badgeBg,
-                colorClasses.badgeText
-              )}
-            >
-              {p.typeName ?? 'any'}
-            </Badge>
+            <PortTypeBadge nodeId={nodeId} port={p} colorClasses={colorClasses} />
           </div>
         ))}
       </div>
@@ -982,11 +1001,12 @@ function PortList({ ports, icon, label, colorClasses }: Readonly<PortListProps>)
 }
 
 interface IOTypesSectionProps {
+  nodeId: string;
   inputs: BlockPort[];
   outputs: BlockPort[];
 }
 
-function IOTypesSection({ inputs, outputs }: Readonly<IOTypesSectionProps>) {
+function IOTypesSection({ nodeId, inputs, outputs }: Readonly<IOTypesSectionProps>) {
   const hasInputs = inputs.length > 0;
   const hasOutputs = outputs.length > 0;
 
@@ -998,6 +1018,7 @@ function IOTypesSection({ inputs, outputs }: Readonly<IOTypesSectionProps>) {
     <div className="mt-3 grid gap-2 border-t pt-3">
       <PortList
         ports={inputs}
+        nodeId={nodeId}
         icon={<ArrowDownToLine className="size-3.5 text-blue-500" />}
         label="Inputs"
         colorClasses={{
@@ -1009,6 +1030,7 @@ function IOTypesSection({ inputs, outputs }: Readonly<IOTypesSectionProps>) {
       />
       <PortList
         ports={outputs}
+        nodeId={nodeId}
         icon={<ArrowUpFromLine className="size-3.5 text-orange-500" />}
         label="Outputs"
         colorClasses={{
@@ -1023,12 +1045,14 @@ function IOTypesSection({ inputs, outputs }: Readonly<IOTypesSectionProps>) {
 }
 
 interface ConfigPanelHeaderProps {
+  nodeId: string;
   blockData: BlockNodeData;
   displayLabel: string;
   onCollapse?: () => void;
 }
 
 function ConfigPanelHeader({
+  nodeId,
   blockData,
   displayLabel,
   onCollapse,
@@ -1080,7 +1104,11 @@ function ConfigPanelHeader({
         )}
       </div>
 
-      <IOTypesSection inputs={blockData.inputs ?? []} outputs={blockData.outputs ?? []} />
+      <IOTypesSection
+        nodeId={nodeId}
+        inputs={blockData.inputs ?? []}
+        outputs={blockData.outputs ?? []}
+      />
     </div>
   );
 }
@@ -1149,12 +1177,13 @@ export function ConfigPanel({
   return (
     <div className={cn('flex h-full flex-col border-l bg-card/50 backdrop-blur-sm', className)}>
       <ConfigPanelHeader
+        nodeId={node.id}
         blockData={blockData}
         displayLabel={displayLabel}
         onCollapse={onCollapse}
       />
 
-      <ScrollArea className="flex-1">
+      <ScrollArea className="min-h-0 flex-1 overflow-hidden">
         <div className="p-4">
           <BlockConfig
             data={blockData}

@@ -125,7 +125,7 @@ export function WorkflowEditorPage() {
   // Loading state
   if (!isNew && isLoading) {
     return (
-      <div className="flex h-screen items-center justify-center">
+      <div className="flex h-full items-center justify-center">
         <Loader2 className="size-8 animate-spin text-muted-foreground" />
       </div>
     );
@@ -134,7 +134,7 @@ export function WorkflowEditorPage() {
   // Not found state
   if (!isNew && !isLoading && !currentWorkflow) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center gap-4">
+      <div className="flex h-full flex-col items-center justify-center gap-4">
         <p className="text-muted-foreground">{t('workflows:notFound')}</p>
         <Button
           variant="outline"
@@ -152,7 +152,7 @@ export function WorkflowEditorPage() {
   }
 
   return (
-    <div className="flex h-screen flex-col">
+    <div className="flex h-full flex-col">
       {/* Header */}
       <div className="flex shrink-0 items-center justify-between border-b bg-background px-6 py-3.5 shadow-sm">
         <div className="flex items-center gap-4">

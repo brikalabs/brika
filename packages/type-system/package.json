@@ -1,0 +1,23 @@
+{
+  "name": "@brika/type-system",
+  "version": "0.1.0",
+  "description": "Unified type system for BRIKA workflow port types",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/maxscharwath/brika.git",
+    "directory": "packages/type-system"
+  },
+  "keywords": ["brika", "types", "workflow", "type-system"],
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsgo --noEmit",
+    "test": "bun test"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}

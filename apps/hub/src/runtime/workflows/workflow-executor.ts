@@ -7,6 +7,7 @@
  */
 
 import { inject } from '@brika/di';
+import { type TypeDescriptor, inferType, isCompatible } from '@brika/type-system';
 import { BlockRegistry } from '@/runtime/blocks';
 import { Logger } from '@/runtime/logs/log-router';
 import { PluginManager } from '@/runtime/plugins/plugin-manager';
@@ -51,6 +52,7 @@ export class WorkflowExecutor {
   readonly #instanceIds = new Set<string>(); // Block instance IDs
   #connections = new Map<string, BlockConnection[]>(); // "blockId.port" -> targets
   readonly #buffers = new Map<string, PortBuffer>(); // "blockId:port" -> last value
+  readonly #blockDefCache = new Map<string, { block: WorkflowBlock; def: import('@brika/sdk').BlockDefinition } | null>(); // blockId -> cached lookup
 
   // ─────────────────────────────────────────────────────────────────────────────
   // Lifecycle
@@ -69,6 +71,8 @@ export class WorkflowExecutor {
     this.#workflow = workflow;
     this.#connections = this.#buildConnectionMap(workflow);
     this.#buffers.clear();
+    this.#blockDefCache.clear();
+    this.#buildBlockDefCache(workflow);
 
     // Set up the block emit handler
     this.#plugins.setBlockEmitHandler((instanceId: string, port: string, data: Json) => {
@@ -116,6 +120,8 @@ export class WorkflowExecutor {
 
     this.#instanceIds.clear();
     this.#connections.clear();
+    this.#buffers.clear();
+    this.#blockDefCache.clear();
     this.#workflow = null;
 
     // Clear the block emit handler
@@ -302,36 +308,90 @@ export class WorkflowExecutor {
 
   /**
    * Dispatch data to downstream blocks based on connections.
+   * Validates data against target port types before delivery.
    */
   #dispatch(blockId: string, port: string, data: Json): void {
     const key = `${blockId}.${port}`;
     const targets = this.#connections.get(key) ?? [];
 
     for (const conn of targets) {
-      if (this.#instanceIds.has(conn.to)) {
-        const targetPort = conn.toPort ?? 'in';
-        this.#plugins.pushBlockInput(conn.to, targetPort, data);
+      if (!this.#instanceIds.has(conn.to)) continue;
+
+      const targetPort = conn.toPort ?? 'in';
+
+      // Validate data against target port type
+      if (!this.#validatePortData(conn.to, targetPort, data)) {
+        continue; // Skip this target — don't crash the workflow
       }
+
+      this.#plugins.pushBlockInput(conn.to, targetPort, data);
+    }
+  }
+
+  /**
+   * Validate data against a target port's declared type.
+   * Returns true if valid (or if type info unavailable), false if invalid.
+   */
+  #validatePortData(blockId: string, portId: string, data: Json): boolean {
+    if (!this.#workflow) return true;
+
+    // Use cached block def lookup (O(1) instead of O(n))
+    const cached = this.#blockDefCache.get(blockId);
+    if (!cached) return true;
+
+    const portDef = cached.def.inputs.find((p) => p.id === portId);
+    if (!portDef) return true;
+
+    // Use structural TypeDescriptor if available, otherwise skip validation
+    const portType = portDef.type as TypeDescriptor | undefined;
+    if (!portType || portType.kind === 'any' || portType.kind === 'unknown' || portType.kind === 'generic') {
+      return true; // No type constraint or wildcard — allow anything
+    }
+
+    // Validate that the data's runtime type is compatible
+    const dataType = inferType(data);
+    if (!isCompatible(dataType, portType)) {
+      this.#logs.warn('Input validation failed, dropping data', {
+        workflowId: this.#workflow.id,
+        blockId,
+        port: portId,
+        expected: portType.kind,
+        actual: dataType.kind,
+      });
+      this.#emit({
+        type: 'block.error',
+        workflowId: this.#workflow.id,
+        blockId,
+        error: `Input validation failed on port "${portId}": expected ${portType.kind}, got ${dataType.kind}`,
+      });
+      return false;
+    }
+
+    return true;
+  }
+
+  /** Build a cache of blockId → (block, blockDef) for O(1) validation lookups. */
+  #buildBlockDefCache(workflow: Workflow): void {
+    for (const block of workflow.blocks) {
+      const resolvedType = this.#resolveBlockType(block.type);
+      const def = this.#blocks.get(resolvedType);
+      this.#blockDefCache.set(block.id, def ? { block, def } : null);
     }
   }
 
   #emit(event: ExecutionEvent): void {
     for (const listener of this.#listeners) {
-      listener(event);
+      try {
+        listener(event);
+      } catch (e) {
+        this.#logs.error('Execution listener threw', {}, { error: e });
+      }
     }
   }
 
-  /**
-   * Resolve a block type - supports short names and full qualified names.
-   */
+  /** Resolve a block type - uses registry's O(1) short-name index. */
   #resolveBlockType(type: string): string {
-    if (type.includes(':')) {
-      return type;
-    }
-
-    // Search for matching block by short name
-    const allBlocks = this.#blocks.list();
-    const match = allBlocks.find((b) => b.type?.endsWith(`:${type}`));
-    return match?.type ?? type;
+    return this.#blocks.resolve(type);
   }
 }
+

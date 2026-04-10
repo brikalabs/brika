@@ -27,7 +27,7 @@ const HttpResponseSchema = z.object({
   status: z.number(),
   statusText: z.string(),
   headers: z.record(z.string(), z.string()),
-  body: z.unknown(),
+  body: z.any(),
 });
 
 export const httpRequest = defineReactiveBlock(
@@ -120,7 +120,7 @@ export const condition = defineReactiveBlock(
   },
   ({ inputs, outputs, config }) => {
     inputs.in.on((data) => {
-      const fieldValue = getFieldValue(data, config.field);
+      const fieldValue = resolveFieldValue(data, config.field);
       const result = evaluate(fieldValue, config.operator, config.value);
       log.debug(`Condition: ${config.field} ${config.operator} ${JSON.stringify(config.value)} = ${result}`);
 
@@ -143,6 +143,18 @@ function getFieldValue(data: unknown, path: string): unknown {
     current = (current as Record<string, unknown>)[part];
   }
   return current;
+}
+
+/**
+ * Resolve a field value from data, supporting:
+ * - Plain dot paths: "count", "data.status"
+ * - Expression syntax: "{{ inputs.in.count }}" → resolves "count" on data
+ */
+function resolveFieldValue(data: unknown, field: string): unknown {
+  // Strip {{ }} expression wrapper and resolve the path
+  const match = field.trim().match(/^\{\{\s*inputs\.\w+\.(.+?)\s*\}\}$/);
+  const path = match ? match[1] : field;
+  return getFieldValue(data, path);
 }
 
 function evaluate(fieldValue: unknown, operator: string, compareValue: unknown): boolean {
@@ -198,7 +210,7 @@ export const switchBlock = defineReactiveBlock(
   },
   ({ inputs, outputs, config }) => {
     inputs.in.on((data) => {
-      const value = getFieldValue(data, config.field);
+      const value = resolveFieldValue(data, config.field);
       log.debug(`Switch value: ${JSON.stringify(value)}`);
 
       if (value === config.case1) {

@@ -19,7 +19,10 @@ export const BlockPort = z.object({
   id: z.string(),
   name: z.string(),
   description: z.string().optional(),
+  /** @deprecated Use `type` (TypeDescriptor) instead */
   typeName: z.string().optional(),
+  /** Structural type descriptor (JSON-serialized TypeDescriptor from @brika/type-system) */
+  type: Json.optional(),
 });
 export type BlockPort = z.infer<typeof BlockPort>;
 

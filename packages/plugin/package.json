@@ -17,6 +17,9 @@
     "typecheck": "tsgo --noEmit",
     "test": "bun test"
   },
+  "dependencies": {
+    "@brika/type-system": "workspace:*"
+  },
   "devDependencies": {
     "@types/bun": "^1.3.9"
   }

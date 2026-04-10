@@ -35,6 +35,7 @@
         "@brika/router": "workspace:*",
         "@brika/schema": "workspace:*",
         "@brika/sdk": "workspace:*",
+        "@brika/type-system": "workspace:*",
         "@brika/ui-kit": "workspace:*",
         "@brika/workflow": "workspace:*",
         "@clack/prompts": "^1.0.1",
@@ -86,6 +87,7 @@
         "@brika/permissions": "workspace:*",
         "@brika/plugin": "workspace:*",
         "@brika/registry": "workspace:*",
+        "@brika/type-system": "workspace:*",
         "@brika/ui-kit": "workspace:*",
         "@dnd-kit/core": "^6.3.1",
         "@dnd-kit/sortable": "^10.0.0",
@@ -296,6 +298,9 @@
     "packages/plugin": {
       "name": "@brika/plugin",
       "version": "0.3.0",
+      "dependencies": {
+        "@brika/type-system": "workspace:*",
+      },
       "devDependencies": {
         "@types/bun": "^1.3.9",
       },
@@ -340,6 +345,7 @@
         "@brika/ipc": "workspace:*",
         "@brika/schema": "workspace:*",
         "@brika/serializable": "workspace:*",
+        "@brika/type-system": "workspace:*",
         "@brika/ui-kit": "workspace:*",
         "@types/bun": "^1.3.5",
         "picocolors": "^1.1.1",
@@ -364,6 +370,13 @@
       "version": "0.3.0",
       "peerDependencies": {
         "bun-types": "^1.0.0",
+      },
+    },
+    "packages/type-system": {
+      "name": "@brika/type-system",
+      "version": "0.1.0",
+      "devDependencies": {
+        "@types/bun": "latest",
       },
     },
     "packages/ui-kit": {
@@ -592,6 +605,8 @@
     "@brika/serializable": ["@brika/serializable@workspace:packages/serializable"],
 
     "@brika/testing": ["@brika/testing@workspace:packages/testing"],
+
+    "@brika/type-system": ["@brika/type-system@workspace:packages/type-system"],
 
     "@brika/ui": ["@brika/ui@workspace:apps/ui"],
 

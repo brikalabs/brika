@@ -902,11 +902,11 @@ describe('defineReactiveBlock', () => {
       () => undefined
     );
 
-    // Passthrough should resolve to the generic type
+    // Passthrough with generic input stays as passthrough for dynamic inference
     expect(block.inputs).toHaveLength(1);
     expect(block.outputs).toHaveLength(1);
     expect(block.inputs[0]?.typeName).toBe('generic<T>');
-    expect(block.outputs[0]?.typeName).toBe('generic<T>');
+    expect(block.outputs[0]?.typeName).toBe('__passthrough:in');
   });
 
   test('handles block with no inputs or outputs', () => {
