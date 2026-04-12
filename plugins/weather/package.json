@@ -2,7 +2,7 @@
   "$schema": "https://schema.brika.dev/plugin.schema.json",
   "name": "@brika/plugin-weather",
   "displayName": "Weather",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Beautiful weather display with current conditions, forecast, and compact widget",
   "author": "BRIKA Team",
   "license": "MIT",

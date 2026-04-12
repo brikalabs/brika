@@ -1,6 +1,6 @@
 {
   "name": "@brika/ipc",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Type-safe IPC communication layer for BRIKA plugins using Bun's native IPC",
   "type": "module",
   "license": "MIT",

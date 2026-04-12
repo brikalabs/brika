@@ -2,7 +2,7 @@
   "$schema": "https://schema.brika.dev/plugin.schema.json",
   "name": "@brika/blocks-builtin",
   "displayName": "Core Blocks",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Core workflow blocks for BRIKA automations",
   "author": "BRIKA Team",
   "license": "MIT",

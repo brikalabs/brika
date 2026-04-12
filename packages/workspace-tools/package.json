@@ -1,6 +1,6 @@
 {
   "name": "@brika/workspace-tools",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Interactive CLI tools for the Brika monorepo",
   "type": "module",
   "private": true,

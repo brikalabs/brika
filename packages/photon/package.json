@@ -1,6 +1,6 @@
 {
   "name": "@brika/photon",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Sharp-like image processing wrapper for @cf-wasm/photon (Rust WASM)",
   "type": "module",
   "license": "MIT",

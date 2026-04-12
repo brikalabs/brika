@@ -116,8 +116,8 @@ export function setupBlocks(core: ContextCore) {
           id: p.id,
           name: p.id,
           typeName: p.typeName,
-          type: p.type,
-          jsonSchema: p.jsonSchema,
+          type: p.type as Json | undefined,
+          jsonSchema: p.jsonSchema as Json | undefined,
         });
 
         client.send(registerBlock, {

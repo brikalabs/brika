@@ -2,7 +2,7 @@
   "$schema": "https://schema.brika.dev/plugin.schema.json",
   "name": "@brika/plugin-matter",
   "displayName": "Brika Matter",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Matter smart home device integration for BRIKA",
   "author": "BRIKA Team",
   "license": "MIT",

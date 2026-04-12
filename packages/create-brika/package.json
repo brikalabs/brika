@@ -1,6 +1,6 @@
 {
   "name": "create-brika",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Create a new BRIKA plugin with a single command",
   "type": "module",
   "license": "MIT",

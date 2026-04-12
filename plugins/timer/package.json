@@ -2,7 +2,7 @@
   "$schema": "https://schema.brika.dev/plugin.schema.json",
   "name": "@brika/plugin-timer",
   "displayName": "Timer",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Timer and countdown blocks for BRIKA workflows",
   "author": "BRIKA Team",
   "license": "MIT",
