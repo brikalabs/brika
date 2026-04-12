@@ -58,9 +58,9 @@ function Divider() {
 export default async function Home() {
   const [release, h] = await Promise.all([fetchLatestRelease(), headers()]);
 
-  const lat = h.get('x-vercel-ip-latitude');
-  const lon = h.get('x-vercel-ip-longitude');
-  const city = h.get('x-vercel-ip-city');
+  const lat = h.get('x-geo-latitude');
+  const lon = h.get('x-geo-longitude');
+  const city = h.get('x-geo-city');
   const weather = lat && lon && city ? await fetchWeatherData(lat, lon, city) : null;
 
   return (

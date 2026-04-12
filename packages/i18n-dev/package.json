@@ -6,7 +6,7 @@
   "description": "i18n developer tools — Vite plugin + React overlay for translation validation",
   "repository": {
     "type": "git",
-    "url": "https://github.com/maxscharwath/brika.git",
+    "url": "https://github.com/brikalabs/brika.git",
     "directory": "packages/i18n-dev"
   },
   "keywords": ["brika", "i18n", "vite-plugin", "devtools", "translations"],

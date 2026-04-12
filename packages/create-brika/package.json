@@ -7,7 +7,7 @@
   "author": "BRIKA Team",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/maxscharwath/brika.git",
+    "url": "git+https://github.com/brikalabs/brika.git",
     "directory": "packages/create-brika"
   },
   "keywords": ["brika", "plugin", "scaffold", "cli", "create"],

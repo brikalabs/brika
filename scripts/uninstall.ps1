@@ -2,7 +2,7 @@
 #
 # Usage:
 #   brika uninstall
-#   irm https://raw.githubusercontent.com/maxscharwath/brika/main/scripts/uninstall.ps1 | iex
+#   irm https://raw.githubusercontent.com/brikalabs/brika/main/scripts/uninstall.ps1 | iex
 #
 # Environment variables:
 #   BRIKA_INSTALL_DIR  - Installation directory (default: %LOCALAPPDATA%\brika\bin)

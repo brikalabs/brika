@@ -6,7 +6,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/maxscharwath/brika.git",
+    "url": "git+https://github.com/brikalabs/brika.git",
     "directory": "packages/schema"
   },
   "keywords": ["brika", "schema", "zod", "validation"],

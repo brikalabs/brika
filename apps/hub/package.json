@@ -3,10 +3,10 @@
   "version": "0.3.0",
   "private": true,
   "type": "module",
-  "homepage": "https://github.com/maxscharwath/brika",
+  "homepage": "https://github.com/brikalabs/brika",
   "repository": {
     "type": "git",
-    "url": "https://github.com/maxscharwath/brika.git",
+    "url": "https://github.com/brikalabs/brika.git",
     "directory": "apps/hub"
   },
   "bin": {

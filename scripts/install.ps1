@@ -1,11 +1,12 @@
 # BRIKA Installer for Windows
 #
 # Usage:
-#   irm https://raw.githubusercontent.com/maxscharwath/brika/main/scripts/install.ps1 | iex
+#   irm https://raw.githubusercontent.com/brikalabs/brika/main/scripts/install.ps1 | iex
 #
 # Environment variables:
 #   BRIKA_INSTALL_DIR  - Installation directory (default: %LOCALAPPDATA%\brika\bin)
 #   BRIKA_VERSION      - Specific version to install (default: latest)
+#                        Use "next" for the latest development build
 
 $ErrorActionPreference = "Stop"
 
@@ -13,7 +14,7 @@ $ErrorActionPreference = "Stop"
 # Configuration
 # ─────────────────────────────────────────────────────────────────────────────
 
-$GitHubRepo = "maxscharwath/brika"
+$GitHubRepo = "brikalabs/brika"
 $InstallDir = if ($env:BRIKA_INSTALL_DIR) { $env:BRIKA_INSTALL_DIR } else { "$env:LOCALAPPDATA\brika\bin" }
 $BinaryPath = Join-Path $InstallDir "brika.exe"
 
@@ -50,10 +51,16 @@ try {
     # ─────────────────────────────────────────────────────────────────────────────
 
     $Version = $env:BRIKA_VERSION
-    if ($Version) {
+    if ($Version -eq "next") {
+        Write-Info "Using next (development) channel..."
+        $ReleaseTag = "next"
+        $MetaUrl = "https://github.com/$GitHubRepo/releases/download/next/release-meta.json"
+    } elseif ($Version) {
+        $ReleaseTag = "v$Version"
         $MetaUrl = "https://github.com/$GitHubRepo/releases/download/v$Version/release-meta.json"
     } else {
         Write-Info "Checking latest version..."
+        $ReleaseTag = "latest"
         $MetaUrl = "https://github.com/$GitHubRepo/releases/latest/download/release-meta.json"
     }
 
@@ -99,7 +106,11 @@ try {
     # ─────────────────────────────────────────────────────────────────────────────
 
     $AssetName   = "brika-$Platform.zip"
-    $DownloadUrl = "https://github.com/$GitHubRepo/releases/download/v$Version/$AssetName"
+    if ($ReleaseTag -eq "latest") {
+        $DownloadUrl = "https://github.com/$GitHubRepo/releases/latest/download/$AssetName"
+    } else {
+        $DownloadUrl = "https://github.com/$GitHubRepo/releases/download/$ReleaseTag/$AssetName"
+    }
 
     if ($ExistingVersion) {
         Write-Info "Upgrading brika $ExistingVersion → v$Version ($CommitShort) for $Platform..."

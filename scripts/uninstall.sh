@@ -3,7 +3,7 @@
 #
 # Usage:
 #   brika uninstall
-#   curl -fsSL https://raw.githubusercontent.com/maxscharwath/brika/main/scripts/uninstall.sh | sh
+#   curl -fsSL https://raw.githubusercontent.com/brikalabs/brika/main/scripts/uninstall.sh | sh
 #
 # Environment variables:
 #   BRIKA_INSTALL_DIR  - Installation directory (default: ~/.brika)

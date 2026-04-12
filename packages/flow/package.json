@@ -5,13 +5,13 @@
   "type": "module",
   "license": "MIT",
   "author": "BRIKA Team",
-  "homepage": "https://github.com/maxscharwath/brika/tree/main/packages/flow#readme",
+  "homepage": "https://github.com/brikalabs/brika/tree/main/packages/flow#readme",
   "bugs": {
-    "url": "https://github.com/maxscharwath/brika/issues"
+    "url": "https://github.com/brikalabs/brika/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/maxscharwath/brika.git",
+    "url": "git+https://github.com/brikalabs/brika.git",
     "directory": "packages/flow"
   },
   "keywords": ["brika", "reactive", "streams", "flow"],

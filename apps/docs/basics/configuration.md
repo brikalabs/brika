@@ -107,5 +107,5 @@ docker run -d \
   -v ./brika.yml:/app/brika.yml \
   -v ./workflows:/app/workflows \
   -v ./data:/app/.brika \
-  maxscharwath/brika:latest
+  ghcr.io/brikalabs/brika:latest
 ```

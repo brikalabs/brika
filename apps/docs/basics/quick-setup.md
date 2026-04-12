@@ -7,7 +7,7 @@ Fast-track checklist for getting BRIKA running.
 ### 1. Clone and Install
 
 ```bash
-git clone https://github.com/maxscharwath/brika.git
+git clone https://github.com/brikalabs/brika.git
 cd brika
 bun install
 ```

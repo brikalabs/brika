@@ -13,7 +13,7 @@ This guide will help you set up BRIKA for local development.
 ### Clone the Repository
 
 ```bash
-git clone https://github.com/maxscharwath/brika.git
+git clone https://github.com/brikalabs/brika.git
 cd brika
 ```
 
@@ -55,7 +55,7 @@ docker run -d \
   --name brika \
   -p 3001:3001 \
   -v ./config:/app/.brika \
-  maxscharwath/brika:latest
+  ghcr.io/brikalabs/brika:latest
 ```
 
 ### Docker Compose
@@ -63,7 +63,7 @@ docker run -d \
 ```yaml
 services:
   brika:
-    image: maxscharwath/brika:latest
+    image: ghcr.io/brikalabs/brika:latest
     container_name: brika
     restart: unless-stopped
     ports:

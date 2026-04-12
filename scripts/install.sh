@@ -2,11 +2,12 @@
 # BRIKA Installer for Linux and macOS
 #
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/maxscharwath/brika/main/scripts/install.sh | sh
+#   curl -fsSL https://raw.githubusercontent.com/brikalabs/brika/main/scripts/install.sh | sh
 #
 # Environment variables:
 #   BRIKA_INSTALL_DIR  - Installation directory (default: ~/.brika)
 #   BRIKA_VERSION      - Specific version to install (default: latest)
+#                        Use "next" for the latest development build
 
 set -e
 
@@ -14,7 +15,7 @@ set -e
 # Configuration
 # ─────────────────────────────────────────────────────────────────────────────
 
-GITHUB_REPO="maxscharwath/brika"
+GITHUB_REPO="brikalabs/brika"
 INSTALL_DIR="${BRIKA_INSTALL_DIR:-$HOME/.brika}"
 BIN_DIR="$INSTALL_DIR/bin"
 VERSION="${BRIKA_VERSION:-}"
@@ -112,10 +113,16 @@ resolve_version() {
 
   META_FILE="$TMP_DIR/release-meta.json"
 
-  if [ -n "$VERSION" ]; then
+  if [ "$VERSION" = "next" ]; then
+    info "Using next (development) channel..."
+    RELEASE_TAG="next"
+    META_URL="https://github.com/$GITHUB_REPO/releases/download/next/release-meta.json"
+  elif [ -n "$VERSION" ]; then
+    RELEASE_TAG="v${VERSION}"
     META_URL="https://github.com/$GITHUB_REPO/releases/download/v${VERSION}/release-meta.json"
   else
     info "Checking latest version..."
+    RELEASE_TAG="latest"
     META_URL="https://github.com/$GITHUB_REPO/releases/latest/download/release-meta.json"
   fi
 
@@ -161,7 +168,11 @@ detect_existing() {
 
 install_brika() {
   ASSET_NAME="brika-${PLATFORM}.tar.gz"
-  DOWNLOAD_URL="https://github.com/$GITHUB_REPO/releases/download/v${VERSION}/${ASSET_NAME}"
+  if [ "$RELEASE_TAG" = "latest" ]; then
+    DOWNLOAD_URL="https://github.com/$GITHUB_REPO/releases/latest/download/${ASSET_NAME}"
+  else
+    DOWNLOAD_URL="https://github.com/$GITHUB_REPO/releases/download/${RELEASE_TAG}/${ASSET_NAME}"
+  fi
 
   if [ -n "$EXISTING_VERSION" ]; then
     info "Upgrading brika ${EXISTING_VERSION} → v${VERSION} (${COMMIT_SHORT}) for ${PLATFORM}..."

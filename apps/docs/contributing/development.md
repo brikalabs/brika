@@ -14,7 +14,7 @@ This guide covers contributing to BRIKA.
 ### Clone the Repository
 
 ```bash
-git clone https://github.com/maxscharwath/brika.git
+git clone https://github.com/brikalabs/brika.git
 cd brika
 ```
 

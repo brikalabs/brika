@@ -6,7 +6,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/maxscharwath/brika",
+    "url": "https://github.com/brikalabs/brika",
     "directory": "packages/auth"
   },
   "exports": {

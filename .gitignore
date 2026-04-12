@@ -27,5 +27,8 @@ coverage/
 .next/
 next-env.d.ts
 
+# OpenNext (Cloudflare)
+.open-next/
+
 # Biome reports
 biome-report.json

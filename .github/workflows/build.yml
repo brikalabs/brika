@@ -1,0 +1,282 @@
+name: Build & Release
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version tag (leave empty for package.json version)"
+        required: false
+        type: string
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  # ───────────────────────────────────────────────────────────────────────
+  # Determine version, tags, and build mode (release vs next)
+  # ───────────────────────────────────────────────────────────────────────
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      is_release: ${{ steps.meta.outputs.is_release }}
+      docker_tags: ${{ steps.meta.outputs.docker_tags }}
+      bun_version: ${{ steps.meta.outputs.bun_version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Determine build metadata
+        id: meta
+        run: |
+          PKG_VERSION=$(jq -r '.version // "0.0.0"' package.json)
+          BUN_VERSION=$(jq -r '.engines.bun' package.json)
+          IMAGE="${REGISTRY}/${GITHUB_REPOSITORY,,}"
+
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+            IS_RELEASE=true
+          elif [[ -n "${{ inputs.version }}" ]]; then
+            VERSION="${{ inputs.version }}"
+            IS_RELEASE=true
+          else
+            VERSION="next"
+            IS_RELEASE=false
+          fi
+
+          if [[ "$IS_RELEASE" == "true" ]]; then
+            DOCKER_TAGS="${IMAGE}:${VERSION},${IMAGE}:latest"
+          else
+            DOCKER_TAGS="${IMAGE}:next"
+          fi
+
+          echo "version=$VERSION"       >> $GITHUB_OUTPUT
+          echo "is_release=$IS_RELEASE" >> $GITHUB_OUTPUT
+          echo "docker_tags=$DOCKER_TAGS" >> $GITHUB_OUTPUT
+          echo "bun_version=$BUN_VERSION" >> $GITHUB_OUTPUT
+
+          echo "### Build Info" >> $GITHUB_STEP_SUMMARY
+          echo "| Key | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Version | \`$VERSION\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Release | $IS_RELEASE |" >> $GITHUB_STEP_SUMMARY
+          echo "| Docker | \`$DOCKER_TAGS\` |" >> $GITHUB_STEP_SUMMARY
+
+  # ───────────────────────────────────────────────────────────────────────
+  # Build Docker image (self-contained — Dockerfile builds UI + Hub)
+  # ───────────────────────────────────────────────────────────────────────
+  docker:
+    needs: setup
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ needs.setup.outputs.docker_tags }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ needs.setup.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ───────────────────────────────────────────────────────────────────────
+  # Build UI (shared artifact for binary compilation)
+  # ───────────────────────────────────────────────────────────────────────
+  build-ui:
+    needs: setup
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ needs.setup.outputs.bun_version }}
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build UI
+        run: bun run --filter @brika/ui build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ui-dist
+          path: apps/ui/dist/
+          retention-days: 1
+
+  # ───────────────────────────────────────────────────────────────────────
+  # Cross-compile standalone binaries
+  # ───────────────────────────────────────────────────────────────────────
+  binaries:
+    needs: [setup, build-ui]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: bun-linux-x64
+            artifact: brika-linux-x64
+            os: ubuntu-latest
+            ext: tar.gz
+
+          - target: bun-linux-arm64
+            artifact: brika-linux-arm64
+            os: ubuntu-latest
+            ext: tar.gz
+
+          - target: bun-darwin-x64
+            artifact: brika-darwin-x64
+            os: macos-latest
+            ext: tar.gz
+
+          - target: bun-darwin-arm64
+            artifact: brika-darwin-arm64
+            os: macos-latest
+            ext: tar.gz
+
+          - target: bun-windows-x64
+            artifact: brika-windows-x64
+            os: ubuntu-latest
+            ext: zip
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ needs.setup.outputs.bun_version }}
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: ui-dist
+          path: apps/ui/dist/
+
+      - name: Compile binary
+        working-directory: apps/hub
+        run: bun run build --compile --target=${{ matrix.target }}
+
+      - name: Package archive
+        run: |
+          STAGING="/tmp/brika-staging"
+          mkdir -p "$STAGING"
+          if [ "${{ matrix.ext }}" = "zip" ]; then
+            cp apps/hub/dist/brika.exe "$STAGING/"
+            cp -r apps/ui/dist         "$STAGING/ui"
+            cd "$STAGING" && zip -qr "/tmp/${{ matrix.artifact }}.zip" .
+          else
+            cp apps/hub/dist/brika  "$STAGING/"
+            cp -r apps/ui/dist      "$STAGING/ui"
+            cd "$STAGING" && tar czf "/tmp/${{ matrix.artifact }}.tar.gz" .
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: /tmp/${{ matrix.artifact }}.${{ matrix.ext }}
+          retention-days: 1
+
+  # ───────────────────────────────────────────────────────────────────────
+  # Create GitHub Release (versioned or rolling "next")
+  # ───────────────────────────────────────────────────────────────────────
+  release:
+    needs: [setup, docker, binaries]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: brika-*
+          path: artifacts/
+          merge-multiple: true
+
+      - name: Generate release metadata
+        env:
+          VERSION: ${{ needs.setup.outputs.version }}
+          BUN_VERSION: ${{ needs.setup.outputs.bun_version }}
+        run: |
+          cd artifacts
+          CHECKSUMS=$(for f in brika-*; do
+            printf '%s %s\n' "$(sha256sum "$f" | cut -d' ' -f1)" "$f"
+          done | jq -Rn '[inputs | split(" ") | {(.[1]): .[0]}] | add')
+
+          jq -n \
+            --arg version "$VERSION" \
+            --arg commit "$(git rev-parse HEAD)" \
+            --arg branch "$(git rev-parse --abbrev-ref HEAD)" \
+            --arg date "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg bun "$BUN_VERSION" \
+            --argjson checksums "$CHECKSUMS" \
+            '{version: $version, commit: $commit, branch: $branch, date: $date, bun: $bun, checksums: $checksums}' \
+            > release-meta.json
+          cat release-meta.json
+
+      - name: Create versioned release
+        if: needs.setup.outputs.is_release == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.setup.outputs.version }}
+        run: |
+          gh release create "v${VERSION}" \
+            --title "Brika v${VERSION}" \
+            --generate-notes \
+            --latest \
+            artifacts/*
+
+      - name: Update next release
+        if: needs.setup.outputs.is_release == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete next --yes --cleanup-tag 2>/dev/null || true
+
+          SHORT_SHA="${{ github.sha }}"
+          SHORT_SHA="${SHORT_SHA:0:7}"
+
+          gh release create next \
+            --title "Brika next (${SHORT_SHA})" \
+            --notes "$(cat <<'NOTES'
+          Rolling development build from `main`.
+
+          **Commit:** ${{ github.sha }}
+          **Date:** $(date -u +%Y-%m-%dT%H:%M:%SZ)
+          **Docker:** `docker pull ghcr.io/${{ github.repository }}:next`
+
+          > ⚠ Unstable pre-release — use `latest` for production.
+          NOTES
+          )" \
+            --prerelease \
+            artifacts/*

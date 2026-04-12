@@ -9,13 +9,13 @@ The `brika` command-line tool manages the hub, plugins, and browser access.
 #### Linux / macOS
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/maxscharwath/brika/main/scripts/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/brikalabs/brika/main/scripts/install.sh | sh
 ```
 
 #### Windows (PowerShell)
 
 ```powershell
-irm https://raw.githubusercontent.com/maxscharwath/brika/main/scripts/install.ps1 | iex
+irm https://raw.githubusercontent.com/brikalabs/brika/main/scripts/install.ps1 | iex
 ```
 
 The installer downloads the binary for your platform, places it in `~/.brika/bin/`, and adds it to your shell PATH. A bundled Bun runtime is included.

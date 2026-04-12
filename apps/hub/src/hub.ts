@@ -23,14 +23,14 @@ export const HUB_VERSION = hub.version;
 export const HUB_NAME = hub.name;
 
 /**
- * GitHub repository slug (e.g. "maxscharwath/brika"), derived from package.json.
+ * GitHub repository slug (e.g. "brikalabs/brika"), derived from package.json.
  */
 export const HUB_REPO = hub.repository.url
   .replace(/^https?:\/\/github\.com\//, '')
   .replace(/\.git$/, '');
 
 /**
- * GitHub repository URL (e.g. "https://github.com/maxscharwath/brika").
+ * GitHub repository URL (e.g. "https://github.com/brikalabs/brika").
  */
 export const HUB_REPO_URL = `https://github.com/${HUB_REPO}`;
 

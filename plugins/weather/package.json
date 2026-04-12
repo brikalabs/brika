@@ -8,7 +8,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/maxscharwath/brika.git",
+    "url": "https://github.com/brikalabs/brika.git",
     "directory": "plugins/weather"
   },
   "icon": "./icon.svg",

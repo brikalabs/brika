@@ -9,7 +9,7 @@ export const site = {
 } as const;
 
 export const github = {
-  owner: 'maxscharwath',
+  owner: 'brikalabs',
   repo: 'brika',
   get url() {
     return `https://github.com/${this.owner}/${this.repo}`;
@@ -23,7 +23,7 @@ export const github = {
 } as const;
 
 export const docker = {
-  image: 'maxscharwath/brika',
+  image: 'ghcr.io/brikalabs/brika',
   port: 3001,
 } as const;
 

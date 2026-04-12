@@ -117,7 +117,7 @@ fix(ui): correct dashboard layout overflow
 
 ## Reporting Issues
 
-- Use the [GitHub issue tracker](https://github.com/maxscharwath/brika/issues)
+- Use the [GitHub issue tracker](https://github.com/brikalabs/brika/issues)
 - Search existing issues before creating a new one
 - Use the provided issue templates when possible
 - Include reproduction steps for bug reports

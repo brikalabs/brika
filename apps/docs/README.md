@@ -58,7 +58,7 @@ export default function CurrentWeather() {
 
 ```bash
 # Clone and install
-git clone https://github.com/maxscharwath/brika.git
+git clone https://github.com/brikalabs/brika.git
 cd brika
 bun install
 
@@ -84,7 +84,7 @@ docker run -d \
   --name brika \
   -p 3001:3001 \
   -v ./config:/app/.brika \
-  maxscharwath/brika:latest
+  ghcr.io/brikalabs/brika:latest
 ```
 
 UI and API available at http://localhost:3001.
@@ -120,5 +120,5 @@ UI and API available at http://localhost:3001.
 ## Links
 
 * [Documentation](https://docs.brika.dev)
-* [GitHub](https://github.com/maxscharwath/brika)
-* [Docker Hub](https://hub.docker.com/r/maxscharwath/brika)
+* [GitHub](https://github.com/brikalabs/brika)
+* [Docker Image](https://github.com/brikalabs/brika/pkgs/container/brika)

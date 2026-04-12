@@ -9,7 +9,7 @@
 <p align="center"><strong>Build. Run. Integrate. Keep Automating.</strong></p>
 
 <p align="center">
-  <a href="https://hub.docker.com/r/maxscharwath/brika"><img alt="Docker" src="https://img.shields.io/badge/Docker-maxscharwath%2Fbrika-blue?logo=docker"></a>
+  <a href="https://github.com/brikalabs/brika/pkgs/container/brika"><img alt="Docker" src="https://img.shields.io/badge/GHCR-brikalabs%2Fbrika-blue?logo=github"></a>
   <a href="https://docs.brika.dev"><img alt="Docs" src="https://img.shields.io/badge/Docs-docs.brika.dev-blue?logo=gitbook&logoColor=white"></a>
   <a href="https://bun.sh"><img alt="Bun" src="https://img.shields.io/badge/Runtime-Bun-f472b6?logo=bun&logoColor=white"></a>
   <a href="#license"><img alt="License" src="https://img.shields.io/badge/License-MIT-green"></a>
@@ -42,7 +42,7 @@ iwr -useb https://brika.dev/install.ps1 | iex
 ### Docker
 
 ```sh
-docker run -d -p 3001:3001 --name brika maxscharwath/brika
+docker run -d -p 3001:3001 --name brika ghcr.io/brikalabs/brika
 ```
 
 The installer downloads the binary for your platform, places it in `~/.brika/bin/` (or `%LOCALAPPDATA%\brika\bin\` on Windows), and adds it to your shell PATH. A bundled Bun runtime is included — no separate Node.js or Bun install needed.
@@ -226,7 +226,7 @@ docker run -d \
   --name brika \
   -p 3001:3001 \
   -v ./config:/app/.brika \
-  maxscharwath/brika:latest
+  ghcr.io/brikalabs/brika:latest
 ```
 
 ### Docker Compose
@@ -234,7 +234,7 @@ docker run -d \
 ```yaml
 services:
   brika:
-    image: maxscharwath/brika:latest
+    image: ghcr.io/brikalabs/brika:latest
     container_name: brika
     restart: unless-stopped
     ports:

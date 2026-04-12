@@ -61,7 +61,7 @@ function createGitHubReleaseFetch(tagName: string, options?: MockReleaseOptions)
     tag_name: tagName,
     target_commitish: 'main',
     published_at: options?.publishedAt ?? '2026-01-01T00:00:00Z',
-    html_url: options?.htmlUrl ?? `https://github.com/maxscharwath/brika/releases/tag/${tagName}`,
+    html_url: options?.htmlUrl ?? `https://github.com/brikalabs/brika/releases/tag/${tagName}`,
     body: options?.body === undefined ? 'Release notes' : options.body,
     assets,
   });
@@ -793,7 +793,7 @@ describe('checkForUpdate', () => {
             tag_name: 'v99.0.0',
             target_commitish: 'main',
             published_at: '2026-01-01T00:00:00Z',
-            html_url: 'https://github.com/maxscharwath/brika/releases/tag/v99.0.0',
+            html_url: 'https://github.com/brikalabs/brika/releases/tag/v99.0.0',
             body: null,
             assets: [],
           }),
@@ -814,7 +814,7 @@ describe('checkForUpdate', () => {
 
   test('passes through publishedAt and releaseUrl', async () => {
     const publishedAt = '2026-06-15T12:30:00Z';
-    const htmlUrl = 'https://github.com/maxscharwath/brika/releases/tag/v99.0.0';
+    const htmlUrl = 'https://github.com/brikalabs/brika/releases/tag/v99.0.0';
 
     mockFetch.mockImplementation(
       createGitHubReleaseFetch('v99.0.0', {
