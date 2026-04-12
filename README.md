@@ -1,8 +1,8 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/7239873c-b9f8-4b7b-97e8-d3e6d2dcd642">
-    <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/0b551246-0b02-40ab-aef4-9ded18583a33">
-    <img alt="BRIKA" src="https://github.com/user-attachments/assets/0b551246-0b02-40ab-aef4-9ded18583a33" width="250">
+    <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/34c07ea1-9b24-45c2-b7ba-ebba71a156b0">
+    <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/bea7ea02-e5fa-4a05-b995-a6f0c2b636e4">
+    <img alt="BRIKA" src="https://github.com/user-attachments/assets/bea7ea02-e5fa-4a05-b995-a6f0c2b636e4" width="250">
   </picture>
 </p>
 
