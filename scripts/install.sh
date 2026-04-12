@@ -2,7 +2,8 @@
 # BRIKA Installer for Linux and macOS
 #
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/brikalabs/brika/main/scripts/install.sh | sh
+#   curl -fsSL https://brika.dev/install.sh | sh
+#   curl -fsSL https://brika.dev/install.sh | sh -s -- next
 #
 # Environment variables:
 #   BRIKA_INSTALL_DIR  - Installation directory (default: ~/.brika)
@@ -18,7 +19,7 @@ set -e
 GITHUB_REPO="brikalabs/brika"
 INSTALL_DIR="${BRIKA_INSTALL_DIR:-$HOME/.brika}"
 BIN_DIR="$INSTALL_DIR/bin"
-VERSION="${BRIKA_VERSION:-}"
+VERSION="${BRIKA_VERSION:-${1:-}}"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Colors (only if terminal supports it)

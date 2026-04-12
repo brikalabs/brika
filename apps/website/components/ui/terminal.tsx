@@ -29,9 +29,9 @@ export function Terminal({
         className
       )}
     >
-      <div className="flex items-center border-b border-code-border px-3 py-2.5 sm:px-4">
+      <div className="flex flex-wrap items-center gap-2 border-b border-code-border px-3 py-2.5 sm:px-4">
         <TrafficLights />
-        {actions && <div className="ml-auto flex items-center">{actions}</div>}
+        {actions && <div className="ml-auto flex flex-wrap items-center gap-2">{actions}</div>}
       </div>
       <div className="overflow-x-auto px-4 py-4 font-mono text-sm leading-relaxed sm:px-5 sm:py-5">
         {children}

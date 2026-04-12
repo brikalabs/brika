@@ -6,9 +6,7 @@ export async function GET() {
   const res = await fetch(SCRIPT_URL);
 
   if (!res.ok) {
-    return new Response('Script not found', {
-      status: 502,
-    });
+    return new Response('Script not found', { status: 502 });
   }
 
   return new Response(res.body, {

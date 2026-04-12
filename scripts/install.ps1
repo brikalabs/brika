@@ -1,7 +1,8 @@
 # BRIKA Installer for Windows
 #
 # Usage:
-#   irm https://raw.githubusercontent.com/brikalabs/brika/main/scripts/install.ps1 | iex
+#   iwr -useb https://brika.dev/install.ps1 | iex
+#   & ([scriptblock]::Create((irm https://brika.dev/install.ps1))) next
 #
 # Environment variables:
 #   BRIKA_INSTALL_DIR  - Installation directory (default: %LOCALAPPDATA%\brika\bin)
@@ -50,7 +51,7 @@ try {
     # Resolve version and fetch release metadata
     # ─────────────────────────────────────────────────────────────────────────────
 
-    $Version = $env:BRIKA_VERSION
+    $Version = if ($env:BRIKA_VERSION) { $env:BRIKA_VERSION } elseif ($args.Count -gt 0) { $args[0] } else { $null }
     if ($Version -eq "next") {
         Write-Info "Using next (development) channel..."
         $ReleaseTag = "next"
