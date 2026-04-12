@@ -9,6 +9,7 @@
  * - Plugins: "plugin:@brika/plugin-timer", "plugin:@brika/blocks-builtin", etc.
  */
 
+import { watch } from 'node:fs';
 import { inject, singleton } from '@brika/di';
 import { ConfigLoader } from '@/runtime/config/config-loader';
 import { Logger } from '@/runtime/logs/log-router';
@@ -34,6 +35,27 @@ interface PluginTranslations {
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Count leaf keys in a nested translation object.
+ * Used to compare translation completeness across locales.
+ */
+function countLeafKeys(obj: TranslationData, visited = new WeakSet<object>()): number {
+  if (visited.has(obj)) {
+    return 0;
+  }
+  visited.add(obj);
+
+  let count = 0;
+  for (const value of Object.values(obj)) {
+    if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+      count += countLeafKeys(value as TranslationData, visited);
+    } else {
+      count++;
+    }
+  }
+  return count;
+}
 
 /**
  * Deep merge two objects, with source values overriding target values.
@@ -85,6 +107,8 @@ export class I18nService {
   /** Root directory for hub locales */
   #localesDir = '';
 
+  #reloadTimer: ReturnType<typeof setTimeout> | null = null;
+
   // ─────────────────────────────────────────────────────────────────────────
   // Initialization
   // ─────────────────────────────────────────────────────────────────────────
@@ -95,6 +119,7 @@ export class I18nService {
     this.#localesDir = `${rootDir}/locales`;
 
     await this.#loadCoreTranslations();
+    this.#watchLocales();
     this.#logs.info('I18n system initialized', {
       availableLocales: [...this.#availableLocales],
       namespaceCount: this.listNamespaces().length,
@@ -229,6 +254,8 @@ export class I18nService {
           pluginId: pluginId,
           locales: detectedLocales,
         });
+
+        this.#validatePluginTranslations(pluginId, detectedLocales);
       }
     } catch {
       // No locales folder or error reading - that's fine
@@ -255,6 +282,17 @@ export class I18nService {
   }
 
   /**
+   * Reload core translations from disk.
+   * Called in dev mode when locale JSON files change.
+   */
+  async reloadCoreTranslations(): Promise<void> {
+    this.#coreTranslations.clear();
+    this.#availableLocales.clear();
+    await this.#loadCoreTranslations();
+    this.#logs.info('Core translations reloaded from disk');
+  }
+
+  /**
    * Unregister translations for a plugin.
    * Called by PluginManager when unloading a plugin.
    */
@@ -269,6 +307,30 @@ export class I18nService {
   // ─────────────────────────────────────────────────────────────────────────
   // Private Methods
   // ─────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Watch the locales directory for JSON file changes and auto-reload.
+   * Uses debounce to batch rapid changes into a single reload.
+   */
+  #watchLocales(): void {
+    try {
+      watch(this.#localesDir, { recursive: true }, (_event, filename) => {
+        if (!filename || !String(filename).endsWith('.json')) {
+          return;
+        }
+        if (this.#reloadTimer) {
+          clearTimeout(this.#reloadTimer);
+        }
+        this.#reloadTimer = setTimeout(() => {
+          this.#reloadTimer = null;
+          this.reloadCoreTranslations();
+        }, 300);
+      });
+      this.#logs.debug('Watching locales directory', { directory: this.#localesDir });
+    } catch {
+      // Directory may not exist (embedded/production mode)
+    }
+  }
 
   /**
    * Load all core translations — from the embedded archive when the
@@ -457,5 +519,43 @@ export class I18nService {
     }
 
     return chain;
+  }
+
+  /**
+   * Validate a plugin's translations after registration.
+   * Logs warnings for missing locales or key count mismatches.
+   */
+  #validatePluginTranslations(pluginId: string, detectedLocales: string[]): void {
+    // Warn about core locales the plugin doesn't cover
+    const missingLocales = [...this.#availableLocales].filter(
+      (loc) => !detectedLocales.includes(loc)
+    );
+    if (missingLocales.length > 0) {
+      this.#logs.warn('Plugin missing translations for locales', {
+        pluginId,
+        missingLocales,
+      });
+    }
+
+    // Warn about key count mismatches between locales
+    const plugin = this.#pluginTranslations.get(pluginId);
+    if (plugin && plugin.locales.size > 1) {
+      const counts = [...plugin.locales.entries()].map(([loc, data]) => ({
+        loc,
+        keys: countLeafKeys(data),
+      }));
+
+      const reference = counts[0];
+      for (const other of counts.slice(1)) {
+        if (other.keys !== reference.keys) {
+          this.#logs.warn('Plugin translation key count mismatch', {
+            pluginId,
+            [reference.loc]: reference.keys,
+            [other.loc]: other.keys,
+          });
+          break;
+        }
+      }
+    }
   }
 }

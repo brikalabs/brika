@@ -1,0 +1,81 @@
+/* Standalone Tailwind build for the i18n-devtools overlay.
+   Runs inside a Shadow DOM — styles are fully isolated from the host app.
+   Only scans the overlay directory — the consumer's app is unaffected. */
+@import "tailwindcss";
+@source "./overlay";
+
+/* ─── Theme tokens ────────────────────────────────────────────────────────── */
+/* Register design tokens so utilities like bg-dt-bg, text-dt-text, etc. work.
+   @theme inline avoids polluting :root — values resolve through our own vars. */
+
+@theme inline {
+  --color-dt-bg: var(--dt-bg);
+  --color-dt-bg-subtle: var(--dt-bg-subtle);
+  --color-dt-bg-raised: var(--dt-bg-raised);
+  --color-dt-bg-hover: var(--dt-bg-hover);
+  --color-dt-bg-badge: var(--dt-bg-badge);
+  --color-dt-border: var(--dt-border);
+  --color-dt-border-dim: var(--dt-border-dim);
+  --color-dt-text: var(--dt-text);
+  --color-dt-text-2: var(--dt-text-2);
+  --color-dt-text-3: var(--dt-text-3);
+  --color-dt-text-4: var(--dt-text-4);
+  --color-dt-progress-bg: var(--dt-progress-bg);
+  --shadow-dt: var(--dt-shadow);
+}
+
+/* ─── Light mode (default) ────────────────────────────────────────────────── */
+
+#i18n-dev-root {
+  --dt-bg: #ffffff;
+  --dt-bg-subtle: #fafafa;
+  --dt-bg-raised: rgba(244, 244, 245, 0.6);
+  --dt-bg-hover: rgba(244, 244, 245, 0.5);
+  --dt-bg-badge: #e4e4e7;
+  --dt-border: #e4e4e7;
+  --dt-border-dim: rgba(228, 228, 231, 0.6);
+  --dt-text: #18181b;
+  --dt-text-2: #3f3f46;
+  --dt-text-3: #a1a1aa;
+  --dt-text-4: #a1a1aa;
+  --dt-shadow: 0 8px 40px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.06);
+  --dt-progress-bg: #e4e4e7;
+}
+
+/* ─── Dark mode ──────────────────────────────────────────────────────────── */
+/* data-theme is synced from the host page by JS (shadow DOM can't see
+   ancestor .dark classes). System preference is handled via @media. */
+
+#i18n-dev-root[data-theme="dark"] {
+  --dt-bg: #09090b;
+  --dt-bg-subtle: rgba(24, 24, 27, 0.8);
+  --dt-bg-raised: rgba(39, 39, 42, 0.6);
+  --dt-bg-hover: rgba(39, 39, 42, 0.3);
+  --dt-bg-badge: #27272a;
+  --dt-border: rgba(39, 39, 42, 0.6);
+  --dt-border-dim: rgba(39, 39, 42, 0.3);
+  --dt-text: #f4f4f5;
+  --dt-text-2: #d4d4d8;
+  --dt-text-3: #71717a;
+  --dt-text-4: #52525b;
+  --dt-shadow: 0 8px 40px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.03);
+  --dt-progress-bg: #27272a;
+}
+
+@media (prefers-color-scheme: dark) {
+  #i18n-dev-root:not([data-theme="light"]) {
+    --dt-bg: #09090b;
+    --dt-bg-subtle: rgba(24, 24, 27, 0.8);
+    --dt-bg-raised: rgba(39, 39, 42, 0.6);
+    --dt-bg-hover: rgba(39, 39, 42, 0.3);
+    --dt-bg-badge: #27272a;
+    --dt-border: rgba(39, 39, 42, 0.6);
+    --dt-border-dim: rgba(39, 39, 42, 0.3);
+    --dt-text: #f4f4f5;
+    --dt-text-2: #d4d4d8;
+    --dt-text-3: #71717a;
+    --dt-text-4: #52525b;
+    --dt-shadow: 0 8px 40px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.03);
+    --dt-progress-bg: #27272a;
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "name": "@brika/i18n-devtools",
+  "version": "0.1.0",
+  "type": "module",
+  "license": "MIT",
+  "description": "i18n developer tools — Vite plugin + React overlay for translation validation",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/maxscharwath/brika.git",
+    "directory": "packages/i18n-dev"
+  },
+  "keywords": ["brika", "i18n", "vite-plugin", "devtools", "translations"],
+  "exports": {
+    ".": "./src/index.ts",
+    "./vite": "./src/vite.ts",
+    "./overlay": "./src/overlay/index.tsx"
+  },
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsgo --noEmit",
+    "check": "bun src/check.ts",
+    "generate-types": "bun src/generate-types.ts"
+  },
+  "peerDependencies": {
+    "i18next": ">=23.0.0",
+    "lucide-react": ">=0.400.0",
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0",
+    "tailwindcss": ">=4.0.0",
+    "vite": ">=5.0.0"
+  },
+  "peerDependenciesMeta": {
+    "i18next": { "optional": true },
+    "lucide-react": { "optional": true },
+    "react": { "optional": true },
+    "react-dom": { "optional": true },
+    "tailwindcss": { "optional": true },
+    "vite": { "optional": true }
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "i18next": "^25.8.13",
+    "lucide-react": "^0.575.0",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "tailwindcss": "^4.1.0",
+    "vite": "^7.3.0"
+  }
+}

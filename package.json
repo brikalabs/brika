@@ -24,6 +24,8 @@
     "lint": "bunx biome check .",
     "lint:strict": "bunx biome check . --error-on-warnings",
     "lint:fix": "bunx biome check --write .",
+    "i18n:types": "bun --filter @brika/i18n-devtools generate-types",
+    "i18n:check": "bun --filter @brika/i18n-devtools check",
     "bump": "bump-version",
     "publish-packages": "publish-packages",
     "local-install": "local-install"
@@ -34,6 +36,7 @@
   "devDependencies": {
     "@biomejs/biome": "2.4.10",
     "@brika/hub": "workspace:*",
+    "@brika/i18n-devtools": "workspace:*",
     "@brika/testing": "workspace:*",
     "@brika/workspace-tools": "workspace:*",
     "@typescript/native-preview": "7.0.0-dev.20260408.1",
