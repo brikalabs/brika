@@ -2,12 +2,12 @@
 #
 # Usage:
 #   iwr -useb https://brika.dev/install.ps1 | iex
-#   & ([scriptblock]::Create((irm https://brika.dev/install.ps1))) next
+#   & ([scriptblock]::Create((irm https://brika.dev/install.ps1))) canary
 #
 # Environment variables:
 #   BRIKA_INSTALL_DIR  - Installation directory (default: %LOCALAPPDATA%\brika\bin)
 #   BRIKA_VERSION      - Specific version to install (default: latest)
-#                        Use "next" for the latest development build
+#                        Use "canary" for the latest development build
 
 $ErrorActionPreference = "Stop"
 
@@ -52,10 +52,10 @@ try {
     # ─────────────────────────────────────────────────────────────────────────────
 
     $Version = if ($env:BRIKA_VERSION) { $env:BRIKA_VERSION } elseif ($args.Count -gt 0) { $args[0] } else { $null }
-    if ($Version -eq "next") {
-        Write-Info "Using next (development) channel..."
-        $ReleaseTag = "next"
-        $MetaUrl = "https://github.com/$GitHubRepo/releases/download/next/release-meta.json"
+    if ($Version -eq "canary") {
+        Write-Info "Using canary (development) channel..."
+        $ReleaseTag = "canary"
+        $MetaUrl = "https://github.com/$GitHubRepo/releases/download/canary/release-meta.json"
     } elseif ($Version) {
         $ReleaseTag = "v$Version"
         $MetaUrl = "https://github.com/$GitHubRepo/releases/download/v$Version/release-meta.json"

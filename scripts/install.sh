@@ -3,12 +3,12 @@
 #
 # Usage:
 #   curl -fsSL https://brika.dev/install.sh | sh
-#   curl -fsSL https://brika.dev/install.sh | sh -s -- next
+#   curl -fsSL https://brika.dev/install.sh | sh -s -- canary
 #
 # Environment variables:
 #   BRIKA_INSTALL_DIR  - Installation directory (default: ~/.brika)
 #   BRIKA_VERSION      - Specific version to install (default: latest)
-#                        Use "next" for the latest development build
+#                        Use "canary" for the latest development build
 
 set -e
 
@@ -114,10 +114,10 @@ resolve_version() {
 
   META_FILE="$TMP_DIR/release-meta.json"
 
-  if [ "$VERSION" = "next" ]; then
-    info "Using next (development) channel..."
-    RELEASE_TAG="next"
-    META_URL="https://github.com/$GITHUB_REPO/releases/download/next/release-meta.json"
+  if [ "$VERSION" = "canary" ]; then
+    info "Using canary (development) channel..."
+    RELEASE_TAG="canary"
+    META_URL="https://github.com/$GITHUB_REPO/releases/download/canary/release-meta.json"
   elif [ -n "$VERSION" ]; then
     RELEASE_TAG="v${VERSION}"
     META_URL="https://github.com/$GITHUB_REPO/releases/download/v${VERSION}/release-meta.json"

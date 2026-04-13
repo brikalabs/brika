@@ -20,7 +20,7 @@ env:
 
 jobs:
   # ───────────────────────────────────────────────────────────────────────
-  # Determine version, tags, and build mode (release vs next)
+  # Determine version, tags, and build mode (release vs canary)
   # ───────────────────────────────────────────────────────────────────────
   setup:
     runs-on: ubuntu-latest
@@ -46,14 +46,14 @@ jobs:
             VERSION="${{ inputs.version }}"
             IS_RELEASE=true
           else
-            VERSION="next"
+            VERSION="canary"
             IS_RELEASE=false
           fi
 
           if [[ "$IS_RELEASE" == "true" ]]; then
             DOCKER_TAGS="${IMAGE}:${VERSION},${IMAGE}:latest"
           else
-            DOCKER_TAGS="${IMAGE}:next"
+            DOCKER_TAGS="${IMAGE}:canary"
           fi
 
           echo "version=$VERSION"       >> $GITHUB_OUTPUT
@@ -207,7 +207,7 @@ jobs:
           retention-days: 1
 
   # ───────────────────────────────────────────────────────────────────────
-  # Create GitHub Release (versioned or rolling "next")
+  # Create GitHub Release (versioned or rolling "canary")
   # ───────────────────────────────────────────────────────────────────────
   release:
     needs: [setup, docker, binaries]
@@ -256,24 +256,24 @@ jobs:
             --latest \
             artifacts/*
 
-      - name: Update next release
+      - name: Update canary release
         if: needs.setup.outputs.is_release == 'false'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release delete next --yes --cleanup-tag 2>/dev/null || true
+          gh release delete canary --yes --cleanup-tag 2>/dev/null || true
 
           SHORT_SHA="${{ github.sha }}"
           SHORT_SHA="${SHORT_SHA:0:7}"
 
-          gh release create next \
-            --title "Brika next (${SHORT_SHA})" \
+          gh release create canary \
+            --title "Brika canary (${SHORT_SHA})" \
             --notes "$(cat <<'NOTES'
           Rolling development build from `main`.
 
           **Commit:** ${{ github.sha }}
           **Date:** $(date -u +%Y-%m-%dT%H:%M:%SZ)
-          **Docker:** `docker pull ghcr.io/${{ github.repository }}:next`
+          **Docker:** `docker pull ghcr.io/${{ github.repository }}:canary`
 
           > ⚠ Unstable pre-release — use `latest` for production.
           NOTES
