@@ -124,7 +124,7 @@ try {
     Invoke-WebRequest -Uri $DownloadUrl -OutFile $ArchivePath -UseBasicParsing
 
     # Verify checksum
-    $Expected = $Meta.$AssetName
+    $Expected = $Meta.checksums.$AssetName
     if ($Expected) {
         $Actual = (Get-FileHash -Path $ArchivePath -Algorithm SHA256).Hash.ToLower()
         if ($Actual -ne $Expected) {

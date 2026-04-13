@@ -279,4 +279,5 @@ jobs:
           NOTES
           )" \
             --prerelease \
+            --draft=false \
             artifacts/*
