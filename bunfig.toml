@@ -12,7 +12,6 @@ preload = ["./apps/hub/src/plugins/preload.ts"]
 coverageSkipSourceFiles = [
   "apps/ui/**/*",
   "apps/docs/**/*",
-  "apps/registry/**/*",
   "apps/schema-cdn/**/*",
   "**/node_modules/**/*",
   "**/*.d.ts"
