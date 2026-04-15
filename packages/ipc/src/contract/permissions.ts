@@ -5,7 +5,7 @@
  */
 
 import { z } from 'zod';
-import { rpc } from '../define';
+import { message, rpc } from '../define';
 
 // ─── Schemas ─────────────────────────────────────────────────────────────────
 
@@ -19,7 +19,6 @@ export const HubLocation = z.object({
   country: z.string(),
   countryCode: z.string(),
   formattedAddress: z.string(),
-  timezone: z.string(),
 });
 export type HubLocation = z.infer<typeof HubLocation>;
 
@@ -35,5 +34,24 @@ export const getHubLocation = rpc(
   z.object({}),
   z.object({
     location: HubLocation.nullable(),
+  })
+);
+
+/** Plugin requests the hub's configured timezone (no permission required). */
+export const getHubTimezone = rpc(
+  'getHubTimezone',
+  z.object({}),
+  z.object({
+    timezone: z.string().nullable(),
+  })
+);
+
+// ─── Messages (hub → plugin) ───────────────────────────────────────────────
+
+/** Hub broadcasts timezone change to all running plugins. */
+export const setTimezone = message(
+  'setTimezone',
+  z.object({
+    timezone: z.string().nullable(),
   })
 );

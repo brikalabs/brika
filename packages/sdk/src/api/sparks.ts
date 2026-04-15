@@ -5,9 +5,8 @@
  */
 
 import type { Source } from '@brika/flow';
-import type { Json } from '@brika/ipc';
-import type { SparkEvent } from '@brika/ipc/contract';
 import type { z } from 'zod';
+import type { Json, SparkEvent } from '../types';
 import { zodToJsonSchema } from '../blocks/reactive';
 import { getContext } from '../context';
 

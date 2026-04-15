@@ -1,11 +1,13 @@
 /**
  * Shared test utilities for context module tests.
  *
- * Provides a mock IPC client, ContextCore factory, and helper functions
- * to avoid duplicating mock infrastructure across every test file.
+ * Provides a mock prelude bridge and ContextCore factory.
+ * All modules delegate to the bridge; the test harness installs
+ * a mock bridge on globalThis.__brika_ipc.
  */
 
 import { mock } from 'bun:test';
+import { PRELUDE_BRAND, type PreludeBridge } from '../../bridge';
 import type { ContextCore, Manifest } from '../../context/register';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -25,149 +27,189 @@ export const noopMock = (): ReturnType<typeof mock<(...args: unknown[]) => unkno
 export interface TestHarness {
   /** The ContextCore to pass to setup functions. */
   core: ContextCore;
-  /** Mock client methods (send, on, implement, onStop, start). */
-  client: {
-    send: ReturnType<typeof mock>;
-    on: ReturnType<typeof mock>;
-    implement: ReturnType<typeof mock>;
-    onStop: ReturnType<typeof mock>;
-    start: ReturnType<typeof mock>;
-  };
-  /** Handlers registered via client.on(), keyed by message name. */
-  onHandlers: Map<string, Handler>;
-  /** RPC handlers registered via client.implement(), keyed by RPC name. */
-  implHandlers: Map<string, Handler>;
-  /** All messages sent via client.send(). */
-  sentMessages: Array<{
-    name: string;
-    payload: unknown;
-  }>;
+  /** The mock bridge installed on globalThis.__brika_ipc. */
+  bridge: MockBridge;
   /** Log messages captured from core.log(). */
-  logMessages: Array<{
-    level: string;
-    message: string;
-  }>;
-  /** Clear all mocks and captured state — call in beforeEach. */
+  logMessages: Array<{ level: string; message: string }>;
+
+  /** Clear all mocks and captured state. */
   reset(): void;
-  /** Trigger a handler registered via client.on(). */
-  triggerOn(name: string, payload: unknown): unknown;
-  /** Call an RPC handler registered via client.implement(). */
-  callImpl(name: string, input: unknown): unknown;
+}
+
+// ─── Mock Bridge ─────────────────────────────────────────────────────────────
+
+export interface MockBridge {
+  readonly [PRELUDE_BRAND]: true;
+
+  // System
+  start: ReturnType<typeof mock>;
+  onStop: ReturnType<typeof mock>;
+  log: ReturnType<typeof mock>;
+
+  // Manifest
+  getManifest: ReturnType<typeof mock>;
+  getPluginRootDirectory: ReturnType<typeof mock>;
+  getPluginUid: ReturnType<typeof mock>;
+
+  // Lifecycle
+  onInit: ReturnType<typeof mock>;
+  onUninstall: ReturnType<typeof mock>;
+  getPreferences: ReturnType<typeof mock>;
+  onPreferencesChange: ReturnType<typeof mock>;
+  updatePreference: ReturnType<typeof mock>;
+  definePreferenceOptions: ReturnType<typeof mock>;
+
+  // Actions
+  registerAction: ReturnType<typeof mock>;
+
+  // Routes
+  registerRoute: ReturnType<typeof mock>;
+
+  // Blocks
+  registerBlock: ReturnType<typeof mock>;
+
+  // Sparks
+  registerSpark: ReturnType<typeof mock>;
+  emitSpark: ReturnType<typeof mock>;
+  subscribeSpark: ReturnType<typeof mock>;
+
+  // Bricks
+  registerBrickType: ReturnType<typeof mock>;
+  setBrickData: ReturnType<typeof mock>;
+  onBrickConfigChange: ReturnType<typeof mock>;
+
+  // Location
+  getLocation: ReturnType<typeof mock>;
+  getTimezone: ReturnType<typeof mock>;
+}
+
+function createMockBridge(manifest: Partial<Manifest>): MockBridge {
+  const fullManifest = { name: 'test-plugin', version: '1.0.0', ...manifest };
+  return {
+    [PRELUDE_BRAND]: true as const,
+
+    // System
+    start: noopMock(),
+    onStop: mock((_fn: unknown) => () => {
+      /* noop */
+    }),
+    log: noopMock(),
+
+    // Manifest
+    getManifest: mock(() => fullManifest),
+    getPluginRootDirectory: mock(() => '/test/plugin'),
+    getPluginUid: mock(() => undefined),
+
+    // Lifecycle
+    onInit: mock((_fn: unknown) => () => {
+      /* noop */
+    }),
+    onUninstall: mock((_fn: unknown) => () => {
+      /* noop */
+    }),
+    getPreferences: mock(() => ({})),
+    onPreferencesChange: mock((_handler: unknown) => () => {
+      /* noop */
+    }),
+    updatePreference: noopMock(),
+    definePreferenceOptions: noopMock(),
+
+    // Actions
+    registerAction: noopMock(),
+
+    // Routes
+    registerRoute: noopMock(),
+
+    // Blocks
+    registerBlock: mock((_block: unknown) => ({ id: 'test-block' })),
+
+    // Sparks
+    registerSpark: noopMock(),
+    emitSpark: noopMock(),
+    subscribeSpark: mock((_type: unknown, _handler: unknown) => () => {
+      /* noop */
+    }),
+
+    // Bricks
+    registerBrickType: noopMock(),
+    setBrickData: noopMock(),
+    onBrickConfigChange: mock((_handler: unknown) => () => {
+      /* noop */
+    }),
+
+    // Location
+    getLocation: mock(async () => null),
+    getTimezone: mock(async () => null),
+  };
 }
 
 /**
  * Create a complete test harness for a context module.
  *
- * @example
- * ```ts
- * const h = createTestHarness({ sparks: [{ id: 'test-spark', name: 'Test' }] });
- * beforeEach(() => h.reset());
- * ```
+ * Installs a mock bridge on globalThis.__brika_ipc and provides a
+ * ContextCore for module setup functions.
  */
 export function createTestHarness(manifest?: Partial<Manifest>): TestHarness {
-  const onHandlers = new Map<string, Handler>();
-  const implHandlers = new Map<string, Handler>();
-  const sentMessages: Array<{
-    name: string;
-    payload: unknown;
-  }> = [];
-  const logMessages: Array<{
-    level: string;
-    message: string;
-  }> = [];
+  const logMessages: Array<{ level: string; message: string }> = [];
+  const bridge = createMockBridge(manifest ?? {});
 
-  const client = {
-    send: mock(
-      (
-        def: {
-          name: string;
-        },
-        payload: unknown
-      ) => {
-        sentMessages.push({
-          name: def.name,
-          payload,
-        });
-      }
-    ),
-    on: mock(
-      (
-        def: {
-          name: string;
-        },
-        handler: Handler
-      ) => {
-        onHandlers.set(def.name, handler);
-        return () => onHandlers.delete(def.name);
-      }
-    ),
-    implement: mock(
-      (
-        def: {
-          name: string;
-        },
-        handler: Handler
-      ) => {
-        implHandlers.set(def.name, handler);
-      }
-    ),
-    onStop: noopMock(),
-    start: noopMock(),
-  };
+  // Install on global
+  globalThis.__brika_ipc = bridge as unknown as PreludeBridge;
 
   const core: ContextCore = {
-    client: client as unknown as ContextCore['client'],
     manifest: {
       name: 'test-plugin',
       version: '1.0.0',
       ...manifest,
     },
     log: mock((level: string, message: string) => {
-      logMessages.push({
-        level,
-        message,
-      });
+      logMessages.push({ level, message });
     }) as unknown as ContextCore['log'],
   };
 
   function reset() {
-    client.send.mockClear();
-    client.on.mockClear();
-    client.implement.mockClear();
-    client.onStop.mockClear();
-    client.start.mockClear();
-    (core.log as ReturnType<typeof mock>).mockClear();
-    onHandlers.clear();
-    implHandlers.clear();
-    sentMessages.length = 0;
+    // Clear all bridge mocks in-place (keep same object reference)
+    for (const value of Object.values(bridge)) {
+      if (typeof value === 'function' && 'mockClear' in value) {
+        (value as ReturnType<typeof mock>).mockClear();
+      }
+    }
+    // Re-install defaults for mocks that return values
+    bridge.getManifest.mockImplementation(() => core.manifest);
+    bridge.getPluginRootDirectory.mockImplementation(() => '/test/plugin');
+    bridge.getPluginUid.mockImplementation(() => undefined);
+    bridge.onInit.mockImplementation((_fn: unknown) => () => {
+      /* noop */
+    });
+    bridge.onUninstall.mockImplementation((_fn: unknown) => () => {
+      /* noop */
+    });
+    bridge.onStop.mockImplementation((_fn: unknown) => () => {
+      /* noop */
+    });
+    bridge.getPreferences.mockImplementation(() => ({}));
+    bridge.onPreferencesChange.mockImplementation((_handler: unknown) => () => {
+      /* noop */
+    });
+    bridge.subscribeSpark.mockImplementation((_type: unknown, _handler: unknown) => () => {
+      /* noop */
+    });
+    bridge.registerBlock.mockImplementation((_block: unknown) => ({ id: 'test-block' }));
+    bridge.onBrickConfigChange.mockImplementation((_handler: unknown) => () => {
+      /* noop */
+    });
+    bridge.getLocation.mockImplementation(async () => null);
+    bridge.getTimezone.mockImplementation(async () => null);
+
+    globalThis.__brika_ipc = bridge as unknown as PreludeBridge;
     logMessages.length = 0;
-  }
-
-  function triggerOn(name: string, payload: unknown) {
-    const handler = onHandlers.get(name);
-    if (!handler) {
-      throw new Error(`No handler registered for "${name}"`);
-    }
-    return handler(payload);
-  }
-
-  function callImpl(name: string, input: unknown) {
-    const handler = implHandlers.get(name);
-    if (!handler) {
-      throw new Error(`No implementation registered for "${name}"`);
-    }
-    return handler(input);
+    (core.log as ReturnType<typeof mock>).mockClear();
   }
 
   return {
     core,
-    client,
-    onHandlers,
-    implHandlers,
-    sentMessages,
+    bridge,
     logMessages,
     reset,
-    triggerOn,
-    callImpl,
   };
 }

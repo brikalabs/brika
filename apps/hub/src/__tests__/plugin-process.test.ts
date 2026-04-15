@@ -9,6 +9,7 @@ import {
   blockLog,
   emitSpark,
   getHubLocation,
+  getHubTimezone,
   hello,
   log,
   ready,
@@ -114,6 +115,7 @@ describe('PluginProcess', () => {
       onBrickType: mock(),
       onBrickDataPush: mock(),
       onGetHubLocation: mock().mockReturnValue(null),
+      onGetHubTimezone: mock().mockReturnValue(null),
       onGetGrantedPermissions: mock().mockReturnValue([]),
       onHeartbeatFailed: mock(),
       onDisconnect: mock(),
@@ -1187,6 +1189,30 @@ describe('PluginProcess', () => {
             permission: 'location',
           });
         }
+      });
+    });
+
+    describe('getHubTimezone (implement)', () => {
+      test('returns timezone without requiring permission', () => {
+        (callbacks.onGetGrantedPermissions as ReturnType<typeof mock>).mockReturnValue([]);
+        (callbacks.onGetHubTimezone as ReturnType<typeof mock>).mockReturnValue('Europe/Paris');
+
+        const result = triggerImplement(getHubTimezone, {});
+
+        expect(result).toEqual({
+          timezone: 'Europe/Paris',
+        });
+        expect(callbacks.onGetHubTimezone).toHaveBeenCalled();
+      });
+
+      test('returns null when no timezone configured', () => {
+        (callbacks.onGetHubTimezone as ReturnType<typeof mock>).mockReturnValue(null);
+
+        const result = triggerImplement(getHubTimezone, {});
+
+        expect(result).toEqual({
+          timezone: null,
+        });
       });
     });
   });

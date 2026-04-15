@@ -37,6 +37,12 @@
     "hint": "Click to upload a photo",
     "uploadFailed": "Failed to upload photo. Please try again."
   },
+  "timezone": {
+    "title": "Set your timezone",
+    "description": "Choose the timezone for your Brika instance.",
+    "select": "Select a timezone",
+    "detected": "Auto-detected from your browser"
+  },
   "location": {
     "title": "Set your hub location",
     "description": "Search for an address or detect your location automatically.",
@@ -51,7 +57,6 @@
     "state": "State / Region",
     "postalCode": "Postal Code",
     "country": "Country",
-    "timezone": "Timezone",
     "latitude": "Latitude",
     "longitude": "Longitude",
     "saved": "Saved",

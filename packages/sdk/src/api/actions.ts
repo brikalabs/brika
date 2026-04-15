@@ -57,7 +57,7 @@ export interface ActionRef<TInput = void, TOutput = unknown> {
 
 type ActionHandler<TInput, TOutput> = (input: TInput) => TOutput | Promise<TOutput>;
 
-const pendingHandlers = new WeakMap<object, (input?: unknown) => unknown>();
+const pendingHandlers = new WeakMap<object, (...args: unknown[]) => unknown>();
 
 // ─── API ─────────────────────────────────────────────────────────────────────
 
@@ -74,21 +74,25 @@ const pendingHandlers = new WeakMap<object, (input?: unknown) => unknown>();
  */
 export function defineAction<TInput = void, TOutput = unknown>(
   handlerOrId: string | ActionHandler<TInput, TOutput>,
-  handler?: ActionHandler<TInput, TOutput>,
+  handler?: ActionHandler<TInput, TOutput>
 ): ActionRef<TInput, TOutput> {
   if (typeof handlerOrId === 'string') {
     // Explicit ID — injected by build system or used in tests
     const id = handlerOrId;
     if (typeof handler !== 'function') {
-      throw new TypeError(`defineAction('${id}') requires a handler function as the second argument`);
+      throw new TypeError(
+        `defineAction('${id}') requires a handler function as the second argument`
+      );
     }
-    getContext().registerAction(id, handler as (input?: unknown) => unknown);
+    // @ts-expect-error -- generic handler erased to concrete Json type at IPC boundary
+    getContext().registerAction(id, handler);
     return { __actionId: id } as ActionRef<TInput, TOutput>;
   }
 
   // Deferred: create ref now, finalization assigns the ID later
   const ref = { __actionId: '' } as ActionRef<TInput, TOutput>;
-  pendingHandlers.set(ref, handlerOrId as (input?: unknown) => unknown);
+  // @ts-expect-error -- generic handler erased to unknown at WeakMap boundary
+  pendingHandlers.set(ref, handlerOrId);
   return ref;
 }
 
@@ -103,7 +107,10 @@ export function defineAction<TInput = void, TOutput = unknown>(
  * @param ids - Map of `{ exportName: precomputedActionId }` from the build plugin
  * @param exports - Object of `{ exportName: actionRef }` from the module
  */
-export function __finalizeActions(ids: Record<string, string>, exports: Record<string, unknown>): void {
+export function __finalizeActions(
+  ids: Record<string, string>,
+  exports: Record<string, unknown>
+): void {
   for (const [name, ref] of Object.entries(exports)) {
     if (!ref || typeof ref !== 'object') continue;
     const handler = pendingHandlers.get(ref);
@@ -112,6 +119,7 @@ export function __finalizeActions(ids: Record<string, string>, exports: Record<s
     const id = ids[name];
     if (!id) continue;
     (ref as { __actionId: string }).__actionId = id;
+    // @ts-expect-error -- generic handler erased to concrete Json type at IPC boundary
     getContext().registerAction(id, handler);
     pendingHandlers.delete(ref);
   }

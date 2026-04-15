@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { useCallBrickAction, useBrickConfig, useBrickData, useBrickSize } from '../brick-views';
+import { useBrickConfig, useBrickData, useBrickSize, useCallBrickAction } from '../brick-views';
 
 describe('brick-views (outside client context)', () => {
   test('useBrickData() throws', () => {

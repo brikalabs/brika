@@ -72,11 +72,14 @@ describe('defineAction', () => {
   test('__finalizeActions skips non-action exports', async () => {
     const { __finalizeActions } = await import('../api/actions');
 
-    __finalizeActions({ notAnAction: 'id1', alsoNot: 'id2', nullValue: 'id3' }, {
-      notAnAction: 'just a string',
-      alsoNot: 42,
-      nullValue: null,
-    });
+    __finalizeActions(
+      { notAnAction: 'id1', alsoNot: 'id2', nullValue: 'id3' },
+      {
+        notAnAction: 'just a string',
+        alsoNot: 42,
+        nullValue: null,
+      }
+    );
 
     expect(mockRegisterAction).not.toHaveBeenCalled();
   });

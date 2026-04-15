@@ -1,9 +1,8 @@
 /**
- * Tests for SDK Error Types and Self-Registering RPC Error Mapping
+ * Tests for SDK Error Types and RPC Error Mapping
  */
 
 import { describe, expect, test } from 'bun:test';
-import { RpcError } from '@brika/ipc';
 import {
   InternalError,
   InvalidInputError,
@@ -12,6 +11,11 @@ import {
   rethrowRpcError,
   sdkErrors,
 } from '../errors';
+
+/** Create an error with a `code` and optional `data`, mimicking IPC's RpcError. */
+function codedError(code: string, message: string, data?: Record<string, unknown>): Error {
+  return Object.assign(new Error(message), { code, ...(data ? { data } : {}) });
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PermissionDeniedError
@@ -114,67 +118,61 @@ describe('InternalError', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('rethrowRpcError', () => {
-  test('maps PERMISSION_DENIED → PermissionDeniedError', () => {
-    const rpc = new RpcError('PERMISSION_DENIED', 'denied', {
-      permission: 'location',
-    });
-    expect(() => rethrowRpcError(rpc)).toThrow(PermissionDeniedError);
+  test('maps PERMISSION_DENIED to PermissionDeniedError', () => {
+    const err = codedError('PERMISSION_DENIED', 'denied', { permission: 'location' });
+    expect(() => rethrowRpcError(err)).toThrow(PermissionDeniedError);
     try {
-      rethrowRpcError(rpc);
+      rethrowRpcError(err);
     } catch (err) {
       expect((err as PermissionDeniedError).permission).toBe('location');
     }
   });
 
-  test('maps NOT_FOUND → NotFoundError', () => {
-    const rpc = new RpcError('NOT_FOUND', 'gone', {
-      resource: 'timer:block',
-    });
-    expect(() => rethrowRpcError(rpc)).toThrow(NotFoundError);
+  test('maps NOT_FOUND to NotFoundError', () => {
+    const err = codedError('NOT_FOUND', 'gone', { resource: 'timer:block' });
+    expect(() => rethrowRpcError(err)).toThrow(NotFoundError);
     try {
-      rethrowRpcError(rpc);
+      rethrowRpcError(err);
     } catch (err) {
       expect((err as NotFoundError).resource).toBe('timer:block');
     }
   });
 
-  test('maps INVALID_INPUT → InvalidInputError', () => {
-    const rpc = new RpcError('INVALID_INPUT', 'bad', {
-      field: 'email',
-    });
-    expect(() => rethrowRpcError(rpc)).toThrow(InvalidInputError);
+  test('maps INVALID_INPUT to InvalidInputError', () => {
+    const err = codedError('INVALID_INPUT', 'bad', { field: 'email' });
+    expect(() => rethrowRpcError(err)).toThrow(InvalidInputError);
     try {
-      rethrowRpcError(rpc);
+      rethrowRpcError(err);
     } catch (err) {
       expect((err as InvalidInputError).field).toBe('email');
     }
   });
 
-  test('maps INTERNAL → InternalError', () => {
-    const rpc = new RpcError('INTERNAL', 'boom');
-    expect(() => rethrowRpcError(rpc)).toThrow(InternalError);
+  test('maps INTERNAL to InternalError', () => {
+    const err = codedError('INTERNAL', 'boom');
+    expect(() => rethrowRpcError(err)).toThrow(InternalError);
   });
 
   test('falls back to "unknown" when data has no permission field', () => {
-    const rpc = new RpcError('PERMISSION_DENIED', 'msg');
+    const err = codedError('PERMISSION_DENIED', 'msg');
     try {
-      rethrowRpcError(rpc);
+      rethrowRpcError(err);
     } catch (err) {
       expect((err as PermissionDeniedError).permission).toBe('unknown');
     }
   });
 
-  test('rethrows unknown RpcError codes as-is', () => {
-    const rpc = new RpcError('SOME_FUTURE_CODE', 'something');
+  test('rethrows unknown codes as-is', () => {
+    const err = codedError('SOME_FUTURE_CODE', 'something');
     try {
-      rethrowRpcError(rpc);
+      rethrowRpcError(err);
     } catch (err) {
-      expect(err).toBeInstanceOf(RpcError);
-      expect((err as RpcError).code).toBe('SOME_FUTURE_CODE');
+      expect(err).toBe(err);
+      expect((err as Record<string, unknown>).code).toBe('SOME_FUTURE_CODE');
     }
   });
 
-  test('rethrows non-RpcError errors as-is', () => {
+  test('rethrows non-coded errors as-is', () => {
     const plain = new Error('plain error');
     try {
       rethrowRpcError(plain);
@@ -212,15 +210,15 @@ describe('sdkErrors registry', () => {
   test('dynamically registered error class is picked up', () => {
     class CustomError extends Error {
       static readonly rpcCode = 'CUSTOM_TEST';
-      static fromRpcError(err: RpcError) {
+      static fromCodedError(err: { message: string }) {
         return new CustomError(err.message);
       }
     }
     sdkErrors.push(CustomError);
 
-    const rpc = new RpcError('CUSTOM_TEST', 'custom msg');
+    const err = codedError('CUSTOM_TEST', 'custom msg');
     try {
-      rethrowRpcError(rpc);
+      rethrowRpcError(err);
     } catch (err) {
       expect(err).toBeInstanceOf(CustomError);
       expect((err as CustomError).message).toBe('custom msg');

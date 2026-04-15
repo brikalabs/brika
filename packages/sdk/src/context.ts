@@ -1,20 +1,23 @@
 /**
- * Plugin Context — Thin Loader
+ * Plugin Context -- Thin Loader
  *
  * Constructs the singleton Context, delegates domain logic to
  * self-registering modules under ./context/.
  */
 
-import { createClient } from '@brika/ipc';
-import { log as logMsg, ping } from '@brika/ipc/contract';
-
+import type { PreludeBridge } from './bridge';
 import type { AnyObj } from './types';
 
 // Trigger all module registrations (sparks, routes, blocks, bricks, lifecycle)
 import './context/index';
 
-import { loadManifest } from './context/manifest';
-import { type ContextCore, initAllModules, type LogLevel, type Manifest } from './context/register';
+import {
+  type ContextCore,
+  initAllModules,
+  type LogLevel,
+  type Manifest,
+  requireBridge,
+} from './context/register';
 
 // ─── Context ──────────────────────────────────────────────────────────────────
 
@@ -22,33 +25,20 @@ export type StopHandler = () => void | Promise<void>;
 
 export class Context {
   readonly #manifest: Manifest;
-  readonly #client: ReturnType<typeof createClient>;
+  readonly #bridge: PreludeBridge;
   #started = false;
 
   constructor() {
-    this.#manifest = loadManifest();
-    this.#client = createClient();
-
-    // Ping/pong for health checks
-    this.#client.implement(ping, ({ ts }) => ({
-      ts,
-    }));
+    this.#bridge = requireBridge();
+    this.#manifest = this.#bridge.getManifest();
 
     // Build core and wire up all modules
     const core: ContextCore = {
-      client: this.#client,
       manifest: this.#manifest,
       log: (level, message, meta) => this.log(level, message, meta),
     };
 
-    const stopFns = initAllModules(core, this);
-
-    // Shutdown: modules stop in order, then user stop handlers
-    this.#client.onStop(async () => {
-      for (const fn of stopFns) {
-        await fn();
-      }
-    });
+    initAllModules(core, this);
 
     // Auto-start on next tick if not started manually
     process.nextTick(() => {
@@ -63,18 +53,11 @@ export class Context {
       return;
     }
     this.#started = true;
-    this.#client.start({
-      id: this.#manifest.name,
-      version: this.#manifest.version,
-    });
+    this.#bridge.start();
   }
 
   log(level: LogLevel, message: string, meta?: AnyObj): void {
-    this.#client.send(logMsg, {
-      level,
-      message,
-      meta,
-    });
+    this.#bridge.log(level, message, meta);
   }
 
   getPluginName(): string {

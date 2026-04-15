@@ -18,14 +18,22 @@ import {
   updateJSON,
   writeJSON,
 } from '../api/storage';
+import { PRELUDE_BRAND, type PreludeBridge } from '../bridge';
 
 // ─── Fixture Setup ───────────────────────────────────────────────────────────
 
 const fixtureDir = '/tmp/brika-test-storage-plugin';
 const fixturePackageJson = `${fixtureDir}/package.json`;
-const origBunMain = Bun.main;
 
 beforeAll(() => {
+  // Install minimal bridge mock for getPluginRootDirectory
+  globalThis.__brika_ipc = {
+    [PRELUDE_BRAND]: true,
+    start: () => {},
+    getPluginRootDirectory: () => fixtureDir,
+    getManifest: () => ({ name: 'test-storage-plugin', version: '1.0.0' }),
+  } as unknown as PreludeBridge;
+
   if (!existsSync(fixtureDir)) {
     mkdirSync(fixtureDir, {
       recursive: true,
@@ -47,11 +55,6 @@ beforeAll(() => {
       2
     )
   );
-  (
-    Bun as {
-      main: string;
-    }
-  ).main = `${fixtureDir}/src/index.ts`;
 });
 
 afterEach(() => {
@@ -66,11 +69,7 @@ afterEach(() => {
 });
 
 afterAll(() => {
-  (
-    Bun as {
-      main: string;
-    }
-  ).main = origBunMain;
+  globalThis.__brika_ipc = undefined;
   if (existsSync(fixtureDir)) {
     rmSync(fixtureDir, {
       recursive: true,

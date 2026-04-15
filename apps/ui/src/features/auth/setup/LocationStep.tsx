@@ -16,7 +16,7 @@ import { useLocationSettings } from '@/features/settings/components/location/hoo
 import { StaticMap } from '@/features/settings/components/location/StaticMap';
 import { StepBody, StepHeader, StepNav } from './shared';
 
-const TEXT_FIELDS = ['street', 'city', 'postalCode', 'state', 'country', 'timezone'] as const;
+const TEXT_FIELDS = ['street', 'city', 'postalCode', 'state', 'country'] as const;
 const NUM_FIELDS = ['latitude', 'longitude'] as const;
 
 export function LocationStep() {
@@ -76,7 +76,7 @@ export function LocationStep() {
           </div>
         )}
 
-        <StepNav back="/setup/avatar" next="/setup/complete" showSkip={!hasLocation} />
+        <StepNav back="/setup/timezone" next="/setup/complete" showSkip={!hasLocation} />
       </StepBody>
     </>
   );

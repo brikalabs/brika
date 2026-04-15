@@ -13,6 +13,7 @@ const result = await Bun.build({
   entrypoints: [
     './src/index.ts',
     './src/actions.ts',
+    './src/bridge.ts',
     './src/brick-views.ts',
     './src/sparks.ts',
     './src/lifecycle.ts',

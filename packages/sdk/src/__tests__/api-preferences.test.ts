@@ -150,7 +150,6 @@ describe('location API', () => {
       country: 'Switzerland',
       countryCode: 'CH',
       formattedAddress: '1 Rue du Port, 1000 Lausanne, Switzerland',
-      timezone: 'Europe/Zurich',
     };
     mockGetLocation.mockResolvedValueOnce(location);
     const result = await getDeviceLocation();

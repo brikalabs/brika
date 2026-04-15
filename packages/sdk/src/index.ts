@@ -122,8 +122,9 @@ export {
 // Routes
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type { RouteHandler, RouteMethod, RouteRequest, RouteResponse } from './api/routes';
+export type { RouteHandler } from './api/routes';
 export { defineRoute } from './api/routes';
+// RouteMethod, RouteRequest, RouteResponse exported via `export * from './types'`
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Actions
@@ -188,7 +189,14 @@ export * from './types';
 
 export type { DeviceLocation } from './api/location';
 export { getDeviceLocation } from './api/location';
-export type { HubLocationData } from './context/location';
+export type { HubLocation as HubLocationData } from './types';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Bridge (prelude contract)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export { PRELUDE_BRAND } from './bridge';
+export type { PluginManifest, PreludeBridge } from './bridge';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Errors
@@ -207,5 +215,5 @@ export {
 // Utilities
 // ─────────────────────────────────────────────────────────────────────────────
 
-export { Json, JsonRecord } from '@brika/ipc';
-export type { PluginInfo, ToolCallContext, ToolResult } from '@brika/ipc/contract';
+// Json, JsonRecord, LogLevel, PluginInfo, SparkEvent, ToolCallContext, ToolResult
+// are all exported via `export * from './types'` above.

@@ -52,6 +52,10 @@
       "types": "./dist/ui-kit/hooks.d.ts",
       "default": "./dist/ui-kit/hooks.js"
     },
+    "./bridge": {
+      "types": "./dist/bridge.d.ts",
+      "default": "./dist/bridge.js"
+    },
     "./actions": {
       "types": "./dist/actions.d.ts",
       "default": "./dist/actions.js"
@@ -82,7 +86,7 @@
   },
   "devDependencies": {
     "@brika/flow": "workspace:*",
-    "@brika/ipc": "workspace:*",
+
     "@brika/schema": "workspace:*",
     "@brika/serializable": "workspace:*",
     "@brika/ui-kit": "workspace:*",

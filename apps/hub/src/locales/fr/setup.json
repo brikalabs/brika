@@ -37,6 +37,12 @@
     "hint": "Cliquez pour ajouter une photo",
     "uploadFailed": "Échec du téléchargement de la photo. Veuillez réessayer."
   },
+  "timezone": {
+    "title": "Définissez votre fuseau horaire",
+    "description": "Choisissez le fuseau horaire de votre instance Brika.",
+    "select": "Sélectionnez un fuseau horaire",
+    "detected": "Détecté automatiquement depuis votre navigateur"
+  },
   "location": {
     "title": "Définissez l'emplacement du hub",
     "description": "Recherchez une adresse ou détectez votre position automatiquement.",
@@ -51,7 +57,6 @@
     "state": "État / Région",
     "postalCode": "Code postal",
     "country": "Pays",
-    "timezone": "Fuseau horaire",
     "latitude": "Latitude",
     "longitude": "Longitude",
     "saved": "Enregistré",

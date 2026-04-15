@@ -38,6 +38,11 @@
     "sparks": "Sparks",
     "bricks": "Bricks"
   },
+  "timezone": {
+    "title": "Timezone",
+    "description": "Set the timezone for your Brika instance. This affects all time-related operations.",
+    "select": "Select a timezone"
+  },
   "location": {
     "title": "Hub Location",
     "description": "Set the physical location of your hub. Plugins with location permission will use this data.",
@@ -51,7 +56,6 @@
     "country": "Country",
     "latitude": "Latitude",
     "longitude": "Longitude",
-    "timezone": "Timezone",
     "notConfigured": "No location configured",
     "noResults": "No results found",
     "emptyHint": "Search for an address or detect your location to get started.",

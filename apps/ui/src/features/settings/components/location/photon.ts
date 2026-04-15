@@ -49,7 +49,7 @@ export function formatAddress(p: PhotonFeature['properties']): string {
   return parts.join(', ');
 }
 
-export function featureToLocation(f: PhotonFeature, tz: string): HubLocation {
+export function featureToLocation(f: PhotonFeature): HubLocation {
   const p = f.properties;
   const [lng, lat] = f.geometry.coordinates;
   const street = p.housenumber ? `${p.street ?? ''} ${p.housenumber}` : (p.street ?? p.name ?? '');
@@ -63,7 +63,6 @@ export function featureToLocation(f: PhotonFeature, tz: string): HubLocation {
     country: p.country ?? '',
     countryCode: (p.countrycode ?? '').toUpperCase(),
     formattedAddress: formatAddress(p),
-    timezone: tz,
   };
 }
 
@@ -94,8 +93,7 @@ export async function reverseGeocode(
     if (!feature) {
       return null;
     }
-    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    return featureToLocation(feature, tz);
+    return featureToLocation(feature);
   } catch {
     return null;
   }

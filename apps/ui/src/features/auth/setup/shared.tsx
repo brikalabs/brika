@@ -37,6 +37,7 @@ type SetupPath =
   | '/setup/language'
   | '/setup/account'
   | '/setup/avatar'
+  | '/setup/timezone'
   | '/setup/location'
   | '/setup/complete';
 
