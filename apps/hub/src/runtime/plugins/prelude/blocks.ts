@@ -155,7 +155,7 @@ export function setupBlocks(
           color: meta.color,
           inputs: block.inputs.map(mapPort),
           outputs: block.outputs.map(mapPort),
-          schema: block.schema as unknown as Record<string, Json>,
+          schema: block.schema as Record<string, Json>,
         },
       });
 

@@ -63,7 +63,9 @@ export function TimezonePicker({ value, onChange, placeholder }: Readonly<Timezo
   const [query, setQuery] = useState('');
 
   const filtered = useMemo(() => {
-    if (!query) return ALL_TIMEZONES;
+    if (!query) {
+      return ALL_TIMEZONES;
+    }
     const lower = query.toLowerCase();
     return ALL_TIMEZONES.filter((tz) => tz.toLowerCase().includes(lower));
   }, [query]);
@@ -78,9 +80,7 @@ export function TimezonePicker({ value, onChange, placeholder }: Readonly<Timezo
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button variant="outline" className="w-64 justify-between font-normal">
-          <span className={value ? '' : 'text-muted-foreground'}>
-            {value ?? placeholder}
-          </span>
+          <span className={value ? '' : 'text-muted-foreground'}>{value ?? placeholder}</span>
           <Clock className="ml-2 size-4 shrink-0 text-muted-foreground" />
         </Button>
       </PopoverTrigger>
@@ -91,7 +91,7 @@ export function TimezonePicker({ value, onChange, placeholder }: Readonly<Timezo
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search..."
-            className="pl-8 h-8 text-sm"
+            className="h-8 pl-8 text-sm"
             autoFocus
           />
         </div>
@@ -113,7 +113,7 @@ export function TimezonePicker({ value, onChange, placeholder }: Readonly<Timezo
               ) : (
                 <span className="size-3.5 shrink-0" />
               )}
-              <span className="truncate">{tz.replace(/_/g, ' ')}</span>
+              <span className="truncate">{tz.replaceAll('_', ' ')}</span>
             </button>
           ))}
         </div>

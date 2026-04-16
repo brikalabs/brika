@@ -1,7 +1,6 @@
 import { Check, Clock, Loader2 } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button } from '@/components/ui';
 import { TimezonePicker } from '@/features/settings/components/timezone';
 import {
   useHubTimezone,
@@ -48,7 +47,7 @@ export function TimezoneStep() {
                 <Clock className="size-4 text-primary" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="font-medium text-sm">{current.replace(/_/g, ' ')}</p>
+                <p className="font-medium text-sm">{current.replaceAll('_', ' ')}</p>
                 <p className="text-muted-foreground text-xs">{t('timezone.detected')}</p>
               </div>
               {mutation.isPending ? (

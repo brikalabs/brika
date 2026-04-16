@@ -100,4 +100,22 @@ describe('settings routes', () => {
     expect(res.status).toBe(200);
     expect(mockState.setHubTimezone).toHaveBeenCalledWith(null);
   });
+
+  test('PUT /api/settings/timezone skips when timezone unchanged', async () => {
+    const res = await app.put('/api/settings/timezone', { timezone: 'America/Montreal' });
+
+    expect(res.status).toBe(200);
+    expect(mockState.setHubTimezone).not.toHaveBeenCalled();
+    expect(mockPm.broadcastTimezone).not.toHaveBeenCalled();
+  });
+
+  test('DELETE /api/settings/timezone skips when already null', async () => {
+    (mockState.getHubTimezone as ReturnType<typeof mock>).mockReturnValue(null);
+
+    const res = await app.delete('/api/settings/timezone');
+
+    expect(res.status).toBe(200);
+    expect(mockState.setHubTimezone).not.toHaveBeenCalled();
+    expect(mockPm.broadcastTimezone).not.toHaveBeenCalled();
+  });
 });

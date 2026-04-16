@@ -10,7 +10,7 @@
 import { PRELUDE_BRAND, type PreludeBridge } from '../bridge';
 import type { AnyObj, LogLevel } from '../types';
 
-export type { LogLevel };
+export type { LogLevel } from '../types';
 
 /** Get the prelude bridge or throw if not loaded. */
 export function requireBridge(): PreludeBridge {
