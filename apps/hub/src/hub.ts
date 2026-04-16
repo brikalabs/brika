@@ -35,6 +35,11 @@ export const HUB_REPO = hub.repository.url
 export const HUB_REPO_URL = `https://github.com/${HUB_REPO}`;
 
 /**
- * GitHub API URL for the latest release.
+ * GitHub API URL for the latest stable release.
  */
 export const HUB_GITHUB_RELEASES_API = `https://api.github.com/repos/${HUB_REPO}/releases/latest`;
+
+/**
+ * GitHub API URL for listing all releases (used for canary/pre-release channels).
+ */
+export const HUB_GITHUB_RELEASES_LIST_API = `https://api.github.com/repos/${HUB_REPO}/releases`;

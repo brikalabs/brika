@@ -12,6 +12,7 @@ import {
 import { UpdateDialog, useUpdateCheck } from '@/features/updates';
 import { useDelayedLoading } from '@/hooks/use-delayed-loading';
 import { useLocale } from '@/lib/use-locale';
+import { ChannelSelector } from './ChannelSelector';
 import { useLastCheckedLabel } from './hooks';
 import { UpdateBadge } from './UpdateBadge';
 
@@ -62,6 +63,8 @@ export function UpdateSection() {
       </SectionHeader>
 
       <SectionContent className="space-y-3">
+        <ChannelSelector />
+
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={handleCheck} disabled={showLoading}>
             <RefreshCw className={showLoading ? 'animate-spin' : ''} />

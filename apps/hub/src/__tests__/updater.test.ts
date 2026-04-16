@@ -954,6 +954,7 @@ describe('checkForUpdate', () => {
       currentCommit: buildInfo.commitFull,
       assetName,
       assetSize: 1024 * 1024 * 10,
+      channel: 'stable',
     });
   });
 });

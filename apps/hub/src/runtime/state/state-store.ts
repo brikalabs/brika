@@ -3,6 +3,11 @@ import type { PluginError, PluginHealth } from '@brika/plugin';
 import { PluginPackageSchema } from '@brika/schema';
 import { HubConfig } from '@/runtime/config';
 import { Logger } from '@/runtime/logs/log-router';
+import {
+  DEFAULT_CHANNEL_ID,
+  UPDATE_CHANNEL_IDS,
+  type UpdateChannelId,
+} from '@/runtime/updates/channels';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -53,6 +58,7 @@ type StateFile = {
   hubLocation?: HubLocation | null;
   hubTimezone?: string | null;
   setupCompleted?: boolean;
+  updateChannel?: UpdateChannelId;
 };
 
 @singleton()
@@ -87,6 +93,9 @@ export class StateStore {
       hubLocation: parsed.hubLocation ?? null,
       hubTimezone: parsed.hubTimezone ?? null,
       setupCompleted: parsed.setupCompleted ?? false,
+      updateChannel: UPDATE_CHANNEL_IDS.includes(parsed.updateChannel as UpdateChannelId)
+        ? (parsed.updateChannel as UpdateChannelId)
+        : DEFAULT_CHANNEL_ID,
     };
   }
 
@@ -170,6 +179,19 @@ export class StateStore {
 
   async setHubLocation(location: HubLocation | null): Promise<void> {
     this.#state.hubLocation = location;
+    await this.#flush();
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Update Channel
+  // ─────────────────────────────────────────────────────────────────────────
+
+  getUpdateChannel(): UpdateChannelId {
+    return this.#state.updateChannel ?? DEFAULT_CHANNEL_ID;
+  }
+
+  async setUpdateChannel(channel: UpdateChannelId): Promise<void> {
+    this.#state.updateChannel = channel;
     await this.#flush();
   }
 

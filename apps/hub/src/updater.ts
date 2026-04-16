@@ -20,8 +20,13 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import pc from 'picocolors';
 import { CliError } from '@/cli/errors';
-import { HUB_GITHUB_RELEASES_API, hub } from '@/hub';
+import { HUB_GITHUB_RELEASES_API, HUB_GITHUB_RELEASES_LIST_API, hub } from '@/hub';
 import { buildInfo } from '@/runtime/http/routes/status';
+import {
+  DEFAULT_CHANNEL_ID,
+  resolveChannel,
+  type UpdateChannelId,
+} from '@/runtime/updates/channels';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -33,6 +38,7 @@ interface GitHubRelease {
   published_at: string;
   html_url: string;
   body: string;
+  prerelease: boolean;
   assets: Array<{
     name: string;
     browser_download_url: string;
@@ -63,6 +69,7 @@ export interface UpdateInfo {
   currentCommit: string;
   assetName: string | null;
   assetSize: number | null;
+  channel: UpdateChannelId;
 }
 
 export type UpdatePhase =
@@ -76,7 +83,7 @@ export type UpdatePhase =
   | 'error';
 
 /** Returns a safe default UpdateInfo when no check has succeeded yet. */
-export function noUpdateInfo(): UpdateInfo {
+export function noUpdateInfo(channel: UpdateChannelId = DEFAULT_CHANNEL_ID): UpdateInfo {
   return {
     currentVersion: hub.version,
     latestVersion: hub.version,
@@ -89,6 +96,7 @@ export function noUpdateInfo(): UpdateInfo {
     currentCommit: buildInfo.commitFull,
     assetName: null,
     assetSize: null,
+    channel,
   };
 }
 
@@ -146,28 +154,34 @@ async function fetchReleaseMeta(release: GitHubRelease): Promise<ReleaseMeta | n
   }
 }
 
-/** Fetch latest release info from GitHub API */
-async function fetchLatestRelease(): Promise<{
-  release: GitHubRelease;
-  meta: ReleaseMeta | null;
-}> {
-  const response = await fetch(HUB_GITHUB_RELEASES_API, {
-    headers: {
-      Accept: 'application/vnd.github+json',
-    },
-  });
+/** Fetch latest release info from GitHub API for the given channel */
+async function fetchLatestRelease(
+  channel: UpdateChannelId
+): Promise<{ release: GitHubRelease; meta: ReleaseMeta | null }> {
+  if (channel === 'stable') {
+    const response = await fetch(HUB_GITHUB_RELEASES_API, {
+      headers: { Accept: 'application/vnd.github+json' },
+    });
+    if (!response.ok) {
+      throw new Error(`GitHub API returned ${response.status}: ${response.statusText}`);
+    }
+    const release = (await response.json()) as GitHubRelease;
+    return { release, meta: await fetchReleaseMeta(release) };
+  }
 
+  // canary: list releases, pick the most recent pre-release
+  const response = await fetch(`${HUB_GITHUB_RELEASES_LIST_API}?per_page=10`, {
+    headers: { Accept: 'application/vnd.github+json' },
+  });
   if (!response.ok) {
     throw new Error(`GitHub API returned ${response.status}: ${response.statusText}`);
   }
-
-  const release = (await response.json()) as GitHubRelease;
-  const meta = await fetchReleaseMeta(release);
-
-  return {
-    release,
-    meta,
-  };
+  const releases = (await response.json()) as GitHubRelease[];
+  const prerelease = releases.find((r) => r.prerelease);
+  if (!prerelease) {
+    throw new Error('No canary release found');
+  }
+  return { release: prerelease, meta: await fetchReleaseMeta(prerelease) };
 }
 
 interface ReleaseComparison {
@@ -213,8 +227,10 @@ function compareRelease(release: GitHubRelease, meta: ReleaseMeta | null): Relea
  * Check for updates without applying them.
  * Safe to call from background tasks or API.
  */
-export async function checkForUpdate(): Promise<UpdateInfo> {
-  const { release, meta } = await fetchLatestRelease();
+export async function checkForUpdate(
+  channel: UpdateChannelId = DEFAULT_CHANNEL_ID
+): Promise<UpdateInfo> {
+  const { release, meta } = await fetchLatestRelease(channel);
   const cmp = compareRelease(release, meta);
 
   return {
@@ -229,11 +245,13 @@ export async function checkForUpdate(): Promise<UpdateInfo> {
     currentCommit: buildInfo.commitFull,
     assetName: cmp.asset?.name ?? null,
     assetSize: cmp.asset?.size ?? null,
+    channel,
   };
 }
 
 export interface ApplyUpdateOptions {
   force?: boolean;
+  channel?: UpdateChannelId;
   onProgress?: (phase: UpdatePhase, detail: string) => void;
 }
 
@@ -249,10 +267,10 @@ export async function applyUpdate(options?: ApplyUpdateOptions): Promise<{
   newVersion: string;
   newCommit: string;
 }> {
-  const { force, onProgress } = options ?? {};
+  const { force, channel = DEFAULT_CHANNEL_ID, onProgress } = options ?? {};
 
   onProgress?.('checking', 'Checking for updates...');
-  const { release, meta } = await fetchLatestRelease();
+  const { release, meta } = await fetchLatestRelease(channel);
   const cmp = compareRelease(release, meta);
 
   if (!force && !cmp.versionBump && !cmp.devBuild) {
@@ -533,15 +551,36 @@ async function replaceDir(newDir: string, currentDir: string): Promise<void> {
 // CLI entry point (interactive with terminal output)
 // ─────────────────────────────────────────────────────────────────────────────
 
-export async function selfUpdate(options?: { force?: boolean }): Promise<void> {
+/** Read the persisted update channel from state.json without the DI container */
+async function readChannelFromState(): Promise<UpdateChannelId> {
+  const home = process.env.BRIKA_HOME ?? join(process.cwd(), '.brika');
+  try {
+    const file = Bun.file(`${home}/state.json`);
+    if (!(await file.exists())) {
+      return DEFAULT_CHANNEL_ID;
+    }
+    const parsed = JSON.parse(await file.text()) as { updateChannel?: string };
+    return resolveChannel(parsed.updateChannel).id;
+  } catch {
+    return DEFAULT_CHANNEL_ID;
+  }
+}
+
+export async function selfUpdate(options?: {
+  force?: boolean;
+  channel?: UpdateChannelId;
+}): Promise<void> {
   const currentCommitLabel = pc.dim(`(${buildInfo.commit})`);
   const versionLabel = pc.dim(`v${hub.version}`);
   console.log(`${pc.cyan('brika')} ${versionLabel} ${currentCommitLabel}`);
   console.log();
 
+  const channel = options?.channel ?? (await readChannelFromState());
+
   try {
     const result = await applyUpdate({
       force: options?.force,
+      channel,
       onProgress(phase, detail) {
         if (phase !== 'complete') {
           console.log(`  ${pc.dim(detail)}`);

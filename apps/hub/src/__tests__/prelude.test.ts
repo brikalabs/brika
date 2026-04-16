@@ -5,7 +5,11 @@
  * script works end-to-end: IPC message handling, timezone propagation, etc.
  */
 
-import { afterEach, describe, expect, test } from 'bun:test';
+import { afterEach, describe, expect, setDefaultTimeout, test } from 'bun:test';
+
+// Subprocess tests are slow under parallel load — allow up to 30s per test
+setDefaultTimeout(30_000);
+
 import { join } from 'node:path';
 
 const BUN = process.execPath;
@@ -51,7 +55,7 @@ function spawnWithPrelude() {
         const timer = setTimeout(() => {
           handlers.delete(id);
           reject(new Error(`IPC call "${type}" timed out (id=${id})`));
-        }, 5_000);
+        }, 15_000);
 
         handlers.set(id, (msg) => {
           clearTimeout(timer);

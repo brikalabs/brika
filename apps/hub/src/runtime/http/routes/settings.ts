@@ -4,11 +4,12 @@
  * Hub-level configuration endpoints (location, etc.).
  */
 
-import { z } from 'zod';
 import { HubLocation as HubLocationSchema } from '@brika/ipc/contract';
 import { group, route } from '@brika/router';
+import { z } from 'zod';
 import { PluginManager } from '@/runtime/plugins/plugin-manager';
 import { StateStore } from '@/runtime/state/state-store';
+import { UPDATE_CHANNEL_IDS } from '@/runtime/updates/channels';
 
 export const settingsRoutes = group({
   prefix: '/api/settings',
@@ -92,6 +93,24 @@ export const settingsRoutes = group({
         return {
           ok: true,
         };
+      },
+    }),
+
+    /** Get the configured update channel */
+    route.get({
+      path: '/update-channel',
+      handler: ({ inject }) => {
+        return { channel: inject(StateStore).getUpdateChannel() };
+      },
+    }),
+
+    /** Set the update channel */
+    route.put({
+      path: '/update-channel',
+      body: z.object({ channel: z.enum(UPDATE_CHANNEL_IDS) }),
+      handler: async ({ body, inject }) => {
+        await inject(StateStore).setUpdateChannel(body.channel);
+        return { channel: body.channel };
       },
     }),
   ],

@@ -5,6 +5,20 @@ import { fetchProgressStream, type ProgressStream } from '@/lib/sse-stream';
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
 
+// Mirrors apps/hub/src/runtime/updates/channels.ts — extend both when adding channels
+export type UpdateChannelId = 'stable' | 'canary';
+
+export interface UpdateChannel {
+  readonly id: UpdateChannelId;
+  readonly label: string;
+  readonly description: string;
+}
+
+export const UPDATE_CHANNELS: readonly UpdateChannel[] = [
+  { id: 'stable', label: 'Stable', description: 'Tested releases, recommended for most users.' },
+  { id: 'canary', label: 'Canary', description: 'Latest pre-releases. May be unstable.' },
+] as const;
+
 export interface HubUpdateInfo {
   currentVersion: string;
   latestVersion: string;
@@ -18,6 +32,7 @@ export interface HubUpdateInfo {
   assetName: string | null;
   assetSize: number | null;
   lastCheckedAt: number;
+  channel: UpdateChannelId;
 }
 
 export interface UpdateProgress {
@@ -53,4 +68,17 @@ export const updateApi = {
 
 export const updateKeys = {
   check: ['system', 'update'] as const,
+};
+
+export const channelKeys = {
+  all: ['settings', 'update-channel'] as const,
+};
+
+export const channelApi = {
+  get: () => fetcher<{ channel: UpdateChannelId }>('/api/settings/update-channel'),
+  set: (channel: UpdateChannelId) =>
+    fetcher<{ channel: UpdateChannelId }>('/api/settings/update-channel', {
+      method: 'PUT',
+      body: JSON.stringify({ channel }),
+    }),
 };
