@@ -46,12 +46,12 @@ export interface HubLocation {
   country: string;
   countryCode: string;
   formattedAddress: string;
-  timezone: string;
 }
 
 type StateFile = {
   plugins: Record<string, InstalledPluginState>;
   hubLocation?: HubLocation | null;
+  hubTimezone?: string | null;
   setupCompleted?: boolean;
 };
 
@@ -85,6 +85,7 @@ export class StateStore {
     this.#state = {
       plugins: parsed.plugins ?? {},
       hubLocation: parsed.hubLocation ?? null,
+      hubTimezone: parsed.hubTimezone ?? null,
       setupCompleted: parsed.setupCompleted ?? false,
     };
   }
@@ -170,6 +171,33 @@ export class StateStore {
   async setHubLocation(location: HubLocation | null): Promise<void> {
     this.#state.hubLocation = location;
     await this.#flush();
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Hub Timezone
+  // ─────────────────────────────────────────────────────────────────────────
+
+  getHubTimezone(): string | null {
+    return this.#state.hubTimezone ?? null;
+  }
+
+  async setHubTimezone(timezone: string | null): Promise<void> {
+    this.#state.hubTimezone = timezone;
+    await this.#flush();
+  }
+
+  /**
+   * Apply the stored timezone to the process environment.
+   * Should be called at startup and whenever the timezone setting changes.
+   */
+  applyTimezone(): void {
+    const tz = this.#state.hubTimezone;
+    if (tz) {
+      process.env.TZ = tz;
+      this.logs.info('Timezone applied', { timezone: tz });
+    } else {
+      delete process.env.TZ;
+    }
   }
 
   // ─────────────────────────────────────────────────────────────────────────

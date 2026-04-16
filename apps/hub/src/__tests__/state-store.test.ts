@@ -458,6 +458,77 @@ describe('StateStore', () => {
     });
   });
 
+  describe('hubTimezone', () => {
+    test('returns null when no timezone configured', async () => {
+      await store.init();
+
+      expect(store.getHubTimezone()).toBeNull();
+    });
+
+    test('sets and gets timezone', async () => {
+      await store.init();
+      await store.setHubTimezone('Europe/Zurich');
+
+      expect(store.getHubTimezone()).toBe('Europe/Zurich');
+    });
+
+    test('clears timezone with null', async () => {
+      await store.init();
+      await store.setHubTimezone('Asia/Tokyo');
+      await store.setHubTimezone(null);
+
+      expect(store.getHubTimezone()).toBeNull();
+    });
+
+    test('applyTimezone sets process.env.TZ', async () => {
+      const originalTZ = process.env.TZ;
+      try {
+        await store.init();
+        await store.setHubTimezone('Pacific/Auckland');
+        store.applyTimezone();
+
+        expect(process.env.TZ).toBe('Pacific/Auckland');
+      } finally {
+        if (originalTZ) {
+          process.env.TZ = originalTZ;
+        } else {
+          delete process.env.TZ;
+        }
+      }
+    });
+
+    test('applyTimezone deletes TZ when no timezone', async () => {
+      const originalTZ = process.env.TZ;
+      try {
+        process.env.TZ = 'US/Pacific';
+        await store.init();
+        store.applyTimezone();
+
+        expect(process.env.TZ).toBeUndefined();
+      } finally {
+        if (originalTZ) {
+          process.env.TZ = originalTZ;
+        } else {
+          delete process.env.TZ;
+        }
+      }
+    });
+
+    test('persists timezone across init', async () => {
+      await store.init();
+      await store.setHubTimezone('America/New_York');
+
+      // Re-create store and re-init
+      reset();
+      provide(HubConfig, { homeDir: TEST_DIR });
+      stub(Logger);
+      store = get(StateStore);
+      await store.init();
+
+      expect(store.getHubTimezone()).toBe('America/New_York');
+    });
+  });
+
   describe('getByUidWithMetadata', () => {
     test('returns plugin with metadata when found by uid', async () => {
       await store.init();

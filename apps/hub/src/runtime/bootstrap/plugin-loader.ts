@@ -17,6 +17,7 @@ export class PluginLoader implements Loader {
 
   async init(): Promise<void> {
     await this.state.init();
+    this.state.applyTimezone();
     await this.registry.init();
   }
 

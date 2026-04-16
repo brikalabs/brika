@@ -27,6 +27,11 @@ export const setupRoutes = {
         load: () => import('@/features/auth/setup'),
         select: (m) => m.AvatarStep,
       }),
+      timezone: page({
+        path: 'timezone',
+        load: () => import('@/features/auth/setup'),
+        select: (m) => m.TimezoneStep,
+      }),
       location: page({
         path: 'location',
         load: () => import('@/features/auth/setup'),

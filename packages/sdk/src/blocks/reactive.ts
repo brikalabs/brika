@@ -6,6 +6,7 @@
  */
 
 import { z } from 'zod';
+import type { Json } from '../types';
 import type { GenericRef, PassthroughRef, ResolvedRef } from './schema-types';
 
 // Re-export everything from @brika/flow
@@ -265,10 +266,10 @@ export function createFlowFromInput<T>(
 /**
  * Convert a Zod schema to JSON Schema for API.
  */
-export function zodToJsonSchema(schema: z.ZodType): Record<string, unknown> {
+export function zodToJsonSchema(schema: z.ZodType): Record<string, Json> {
   return z.toJSONSchema(schema, {
     unrepresentable: 'any',
-  }) as Record<string, unknown>;
+  }) as Record<string, Json>;
 }
 
 /** Convert Zod schema to TypeScript-like type string */

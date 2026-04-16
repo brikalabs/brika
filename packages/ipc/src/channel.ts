@@ -37,6 +37,27 @@ interface PendingRequest<T> {
   timer?: Timer;
 }
 
+/** Minimal schema interface for runtime validation (duck-typed from Zod). */
+interface ParseableSchema {
+  safeParse(data: unknown):
+    | { success: true; data: unknown }
+    | { success: false; error: { message: string } };
+}
+
+type ParseResult =
+  | { ok: true; data: unknown }
+  | { ok: false; error: string };
+
+function validatePayload(
+  schema: ParseableSchema | undefined,
+  payload: unknown,
+): ParseResult | undefined {
+  if (!schema) return undefined;
+  const result = schema.safeParse(payload);
+  if (result.success) return { ok: true, data: result.data };
+  return { ok: false, error: result.error.message };
+}
+
 /** Channel options */
 export interface ChannelOptions {
   /** Send function */
@@ -81,7 +102,9 @@ export class Channel {
   readonly #onClose?: () => void;
 
   readonly #messageHandlers = new Map<string, Set<(payload: unknown) => void | Promise<void>>>();
+  readonly #messageSchemas = new Map<string, ParseableSchema>();
   readonly #rpcHandlers = new Map<string, (input: unknown) => unknown>();
+  readonly #rpcSchemas = new Map<string, ParseableSchema>();
   readonly #pending = new Map<number, PendingRequest<unknown>>();
 
   #nextId = 1;
@@ -138,6 +161,7 @@ export class Channel {
     if (!handlers) {
       handlers = new Set();
       this.#messageHandlers.set(def.name, handlers);
+      this.#messageSchemas.set(def.name, def.schema);
     }
     handlers.add(handler as (payload: unknown) => void | Promise<void>);
 
@@ -145,6 +169,7 @@ export class Channel {
       handlers?.delete(handler as (payload: unknown) => void | Promise<void>);
       if (handlers?.size === 0) {
         this.#messageHandlers.delete(def.name);
+        this.#messageSchemas.delete(def.name);
       }
     };
   }
@@ -161,6 +186,7 @@ export class Channel {
       throw new Error(`RPC already implemented: ${def.name}`);
     }
     this.#rpcHandlers.set(def.name, handler as (input: unknown) => unknown);
+    this.#rpcSchemas.set(def.name, def.input);
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -261,8 +287,18 @@ export class Channel {
   ): Promise<boolean> {
     const rpcHandler = this.#rpcHandlers.get(type);
     if (rpcHandler && id !== undefined) {
+      const parsed = validatePayload(this.#rpcSchemas.get(type), payload);
+      if (parsed && !parsed.ok) {
+        this.#send({
+          t: `${type}Result`,
+          _id: id,
+          result: new RpcError('INVALID_INPUT', parsed.error).toWire(),
+        });
+        return true;
+      }
+
       try {
-        const result = await rpcHandler(payload);
+        const result = await rpcHandler(parsed ? parsed.data : payload);
         this.#send({
           t: `${type}Result`,
           _id: id,
@@ -301,9 +337,16 @@ export class Channel {
   ): Promise<void> {
     const handlers = this.#messageHandlers.get(type);
     if (handlers) {
+      const parsed = validatePayload(this.#messageSchemas.get(type), payload);
+      if (parsed && !parsed.ok) {
+        console.error(`[ipc] Invalid payload for "${type}": ${parsed.error}`);
+        return;
+      }
+      const data = parsed ? parsed.data : payload;
+
       for (const handler of handlers) {
         try {
-          await handler(payload);
+          await handler(data);
         } catch (e) {
           console.error(`Handler error for ${type}:`, e);
         }
@@ -327,7 +370,9 @@ export class Channel {
     }
     this.#pending.clear();
     this.#messageHandlers.clear();
+    this.#messageSchemas.clear();
     this.#rpcHandlers.clear();
+    this.#rpcSchemas.clear();
     this.#onClose?.();
   }
 }

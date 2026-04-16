@@ -54,8 +54,7 @@ export function AddressSearch({ onSelect }: Readonly<AddressSearchProps>) {
   }, [query, search]);
 
   function handleSelect(feature: PhotonFeature) {
-    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    const location = featureToLocation(feature, tz);
+    const location = featureToLocation(feature);
     setQuery(location.formattedAddress);
     setOpen(false);
     onSelect(location);

@@ -31,7 +31,6 @@ export interface DeviceLocation {
   country: string;
   countryCode: string;
   formattedAddress: string;
-  timezone: string;
 }
 
 /**

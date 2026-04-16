@@ -103,7 +103,7 @@ export function AvatarStep() {
           </div>
         )}
 
-        <StepNav back="/setup/account" next="/setup/location" showSkip={!previewUrl} />
+        <StepNav back="/setup/account" next="/setup/timezone" showSkip={!previewUrl} />
       </StepBody>
     </>
   );

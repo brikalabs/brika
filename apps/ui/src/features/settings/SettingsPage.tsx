@@ -23,6 +23,7 @@ import {
   LanguageSelector,
   LocationSettings,
   SystemInfo,
+  TimezoneSettings,
   UpdateSection,
 } from './components';
 
@@ -64,6 +65,11 @@ export function SettingsPage() {
       {/* Admin-only sections */}
       {isAdmin && (
         <>
+          {/* Timezone */}
+          <Section id="timezone" className="scroll-mt-4">
+            <TimezoneSettings />
+          </Section>
+
           {/* Hub Location */}
           <Section id="location" className="scroll-mt-4">
             <LocationSettings />

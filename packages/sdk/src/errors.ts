@@ -1,7 +1,9 @@
 /**
  * SDK Error Types
  *
- * Typed error classes that map from IPC `RpcError` codes.
+ * Typed error classes that map from RPC error codes.
+ * Uses duck-typing on the error shape (code + data fields) so the SDK
+ * does not depend on @brika/ipc's RpcError class.
  *
  * @example Catching SDK errors in a plugin
  * ```typescript
@@ -17,13 +19,27 @@
  * ```
  */
 
-import { RpcError } from '@brika/ipc';
+// ─── RPC-like error shape ──────────────────────────────────────────────────
+
+/** Shape of an error with a machine-readable code (as thrown by IPC RpcError). */
+interface CodedError extends Error {
+  readonly code: string;
+  readonly data?: Record<string, unknown>;
+}
+
+function isCodedError(err: unknown): err is CodedError {
+  return (
+    err instanceof Error &&
+    'code' in err &&
+    typeof (err as Record<string, unknown>).code === 'string'
+  );
+}
 
 // ─── Error Classes ──────────────────────────────────────────────────────────
 
 export class PermissionDeniedError extends Error {
   static readonly rpcCode = 'PERMISSION_DENIED';
-  static fromRpcError(err: RpcError) {
+  static fromCodedError(err: CodedError) {
     return new PermissionDeniedError((err.data?.permission as string) ?? 'unknown');
   }
 
@@ -41,7 +57,7 @@ export class PermissionDeniedError extends Error {
 
 export class NotFoundError extends Error {
   static readonly rpcCode = 'NOT_FOUND';
-  static fromRpcError(err: RpcError) {
+  static fromCodedError(err: CodedError) {
     return new NotFoundError((err.data?.resource as string) ?? 'unknown', err.message);
   }
 
@@ -56,7 +72,7 @@ export class NotFoundError extends Error {
 
 export class InvalidInputError extends Error {
   static readonly rpcCode = 'INVALID_INPUT';
-  static fromRpcError(err: RpcError) {
+  static fromCodedError(err: CodedError) {
     return new InvalidInputError(err.message, (err.data?.field as string) ?? undefined);
   }
 
@@ -72,7 +88,7 @@ export class InvalidInputError extends Error {
 
 export class InternalError extends Error {
   static readonly rpcCode = 'INTERNAL';
-  static fromRpcError(err: RpcError) {
+  static fromCodedError(err: CodedError) {
     return new InternalError(err.message);
   }
 
@@ -82,11 +98,11 @@ export class InternalError extends Error {
   }
 }
 
-// ─── RPC Error Mapping ──────────────────────────────────────────────────────
+// ─── Error Mapping ─────────────────────────────────────────────────────────
 
-export interface MappedSdkError {
+interface MappedSdkError {
   readonly rpcCode: string;
-  fromRpcError(err: RpcError): Error;
+  fromCodedError(err: CodedError): Error;
 }
 
 /** All SDK error classes that map from RPC codes. */
@@ -98,18 +114,18 @@ export const sdkErrors: MappedSdkError[] = [
 ];
 
 /**
- * Map an `RpcError` to the matching SDK error class, or rethrow as-is.
+ * Map an error with a `code` field to the matching SDK error class, or rethrow as-is.
  *
  * Use as a `.catch()` handler:
  * ```ts
- * const result = await client.call(someRpc, {}).catch(rethrowRpcError);
+ * const result = await bridge.getLocation().catch(rethrowRpcError);
  * ```
  */
 export function rethrowRpcError(err: unknown): never {
-  if (err instanceof RpcError) {
+  if (isCodedError(err)) {
     const cls = sdkErrors.find((c) => c.rpcCode === err.code);
     if (cls) {
-      throw cls.fromRpcError(err);
+      throw cls.fromCodedError(err);
     }
   }
   throw err;

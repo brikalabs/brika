@@ -6,6 +6,8 @@ import {
   callAction,
   emitSpark,
   getHubLocation,
+  getHubTimezone,
+  setTimezone,
   hello,
   log,
   preferenceOptions,
@@ -69,6 +71,7 @@ export interface PluginProcessCallbacks {
   onRoute: (method: string, path: string) => void;
   onUpdatePreference: (key: string, value: unknown) => void;
   onGetHubLocation: () => HubLocation | null;
+  onGetHubTimezone: () => string | null;
   onGetGrantedPermissions: (name: string) => string[];
   onHeartbeatFailed: (process: PluginProcess, silentMs: number) => void;
   onDisconnect: (process: PluginProcess, error?: Error) => void;
@@ -289,6 +292,13 @@ export class PluginProcess {
       actionId,
       payload,
     });
+  }
+
+  sendTimezone(timezone: string | null): void {
+    if (this.#stopped) {
+      return;
+    }
+    this.#channel.send(setTimezone, { timezone });
   }
 
   /**
@@ -546,11 +556,16 @@ export class PluginProcess {
       this.callbacks.onUpdatePreference(key, value);
     });
 
-    // Permissions: hub location — requires 'location' grant
     this.#channel.implement(getHubLocation, () => {
       this.#requirePermission('location');
       return {
         location: this.callbacks.onGetHubLocation(),
+      };
+    });
+
+    this.#channel.implement(getHubTimezone, () => {
+      return {
+        timezone: this.callbacks.onGetHubTimezone(),
       };
     });
   }

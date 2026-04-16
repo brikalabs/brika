@@ -7,12 +7,21 @@
  * all registered setups and applies their methods to the Context instance.
  */
 
-import type { Client } from '@brika/ipc';
-import type { AnyObj } from '../types';
+import { PRELUDE_BRAND, type PreludeBridge } from '../bridge';
+import type { AnyObj, LogLevel } from '../types';
+
+export type { LogLevel } from '../types';
+
+/** Get the prelude bridge or throw if not loaded. */
+export function requireBridge(): PreludeBridge {
+  const bridge = globalThis.__brika_ipc;
+  if (!bridge || !(PRELUDE_BRAND in bridge)) {
+    throw new Error('Prelude bridge not found. SDK requires the hub prelude to be loaded.');
+  }
+  return bridge;
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-
-export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
 export interface BlockDecl {
   id: string;
@@ -54,7 +63,6 @@ export interface Manifest {
 
 /** Shared core passed to every module setup function. */
 export interface ContextCore {
-  readonly client: Client;
   readonly manifest: Manifest;
   log(level: LogLevel, message: string, meta?: AnyObj): void;
 }
@@ -65,8 +73,6 @@ type AnyFn = (...args: never[]) => unknown;
 export interface ModuleResult {
   /** Methods to add to the Context instance. */
   methods?: Record<string, AnyFn>;
-  /** Cleanup function called on plugin shutdown. */
-  stop?: () => void | Promise<void>;
 }
 
 export type SetupFn = (core: ContextCore) => ModuleResult;
@@ -94,14 +100,9 @@ export function registerContextModule(name: string, setup: SetupFn): void {
 }
 
 /**
- * Initialize all registered modules, apply their methods to the target,
- * and return an array of stop functions for shutdown.
+ * Initialize all registered modules and apply their methods to the target.
  */
-export function initAllModules(
-  core: ContextCore,
-  target: object
-): Array<() => void | Promise<void>> {
-  const stopFns: Array<() => void | Promise<void>> = [];
+export function initAllModules(core: ContextCore, target: object): void {
   for (const { setup } of registry) {
     const result = setup(core);
     if (result.methods) {
@@ -109,9 +110,5 @@ export function initAllModules(
         (target as Record<string, unknown>)[key] = fn;
       }
     }
-    if (result.stop) {
-      stopFns.push(result.stop);
-    }
   }
-  return stopFns;
 }

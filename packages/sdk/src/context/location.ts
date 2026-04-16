@@ -1,36 +1,21 @@
 /**
  * Location Module
  *
- * Provides hub location data to plugins via IPC RPC.
- * Requires "location" permission in plugin package.json.
+ * Thin typed wrapper over the prelude's location/timezone caching.
+ * The prelude handles the RPC calls and caching; the SDK adds
+ * typed error mapping for PermissionDeniedError.
  */
 
-import { getHubLocation } from '@brika/ipc/contract';
 import { rethrowRpcError } from '../errors';
-import type { ContextCore } from './register';
-import { registerContextModule } from './register';
+import type { HubLocation } from '../types';
+import { type ContextCore, registerContextModule, requireBridge } from './register';
 
-// ─── Types ───────────────────────────────────────────────────────────────────
-
-export interface HubLocationData {
-  latitude: number;
-  longitude: number;
-  street: string;
-  city: string;
-  state: string;
-  postalCode: string;
-  country: string;
-  countryCode: string;
-  formattedAddress: string;
-  timezone: string;
-}
+export type { HubLocation as HubLocationData } from '../types';
 
 // ─── Setup ───────────────────────────────────────────────────────────────────
 
-export function setupLocation(core: ContextCore) {
-  const { client } = core;
-  let cached: HubLocationData | null = null;
-  let fetched = false;
+export function setupLocation(_core: ContextCore) {
+  const bridge = requireBridge();
 
   return {
     methods: {
@@ -42,14 +27,18 @@ export function setupLocation(core: ContextCore) {
        *
        * @throws {PermissionDeniedError} if the "location" permission is not granted
        */
-      async getLocation(): Promise<HubLocationData | null> {
-        if (fetched) {
-          return cached;
-        }
-        const result = await client.call(getHubLocation, {}).catch(rethrowRpcError);
-        cached = result.location;
-        fetched = true;
-        return cached;
+      async getLocation(): Promise<HubLocation | null> {
+        return bridge.getLocation().catch(rethrowRpcError);
+      },
+
+      /**
+       * Get the hub's configured timezone (IANA identifier, e.g. "Europe/Zurich").
+       *
+       * Returns cached result on subsequent calls.
+       * Returns `null` if timezone is not configured on the hub.
+       */
+      async getTimezone(): Promise<string | null> {
+        return bridge.getTimezone().catch(rethrowRpcError);
       },
     },
   };

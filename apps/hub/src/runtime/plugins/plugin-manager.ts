@@ -294,6 +294,12 @@ export class PluginManager {
     return process.startBlock(blockType, instanceId, workflowId, config);
   }
 
+  broadcastTimezone(timezone: string | null): void {
+    for (const process of this.#lifecycle.listProcesses()) {
+      process.sendTimezone(timezone);
+    }
+  }
+
   pushBlockInput(instanceId: string, port: string, data: Json): void {
     // Find the process that owns this block instance
     // For now, broadcast to all processes (they'll ignore if instance not found)

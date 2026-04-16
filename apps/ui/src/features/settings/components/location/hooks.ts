@@ -13,7 +13,6 @@ export interface HubLocation {
   country: string;
   countryCode: string;
   formattedAddress: string;
-  timezone: string;
 }
 
 interface HubLocationResponse {
@@ -101,7 +100,6 @@ export function useLocationSettings() {
             country: '',
             countryCode: '',
             formattedAddress: '',
-            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
           }
         );
         setIsDirty(true);

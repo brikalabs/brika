@@ -74,15 +74,10 @@ describe('setupI18n', () => {
     expect(ref.ns).toBe('plugin:@brika/plugin-timer');
   });
 
-  test('stop() is a no-op and does not throw', () => {
-    const result = setupI18n(h.core);
-    expect(() => result.stop()).not.toThrow();
-  });
-
-  test('does not register any IPC handlers', () => {
+  test('does not use the bridge', () => {
     setupI18n(h.core);
-    expect(h.client.on).not.toHaveBeenCalled();
-    expect(h.client.implement).not.toHaveBeenCalled();
-    expect(h.client.send).not.toHaveBeenCalled();
+    expect(h.bridge.registerSpark).not.toHaveBeenCalled();
+    expect(h.bridge.registerAction).not.toHaveBeenCalled();
+    expect(h.bridge.registerRoute).not.toHaveBeenCalled();
   });
 });

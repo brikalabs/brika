@@ -35,7 +35,8 @@
  */
 
 import { getContext } from '../context';
-import { defineRoute, type RouteResponse } from './routes';
+import type { RouteResponse } from '../types';
+import { defineRoute } from './routes';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types

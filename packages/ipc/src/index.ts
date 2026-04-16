@@ -67,5 +67,8 @@ export { isRpcErrorWire, RpcError } from './errors';
 export type { PluginChannelOptions, SpawnPluginOptions } from './host';
 export { PluginChannel, spawnPlugin } from './host';
 
+// ─── Global ───
+export type { IpcGlobal } from './global';
+
 // ─── Core Types ───
 export { Json, JsonRecord } from './types';

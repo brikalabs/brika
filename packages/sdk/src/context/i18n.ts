@@ -36,10 +36,6 @@ export function setupI18n(core: ContextCore) {
         return i18nRef(ns, key, params);
       },
     },
-
-    stop() {
-      // Nothing to clean up
-    },
   };
 }
 

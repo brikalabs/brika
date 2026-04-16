@@ -41,30 +41,7 @@ describe('registerContextModule and initAllModules', () => {
     expect((target.greet as () => string)()).toBe('hello');
   });
 
-  test('initAllModules collects stop functions', () => {
-    const stopFn = mock(() => {
-      /* noop */
-    });
-    const setup: SetupFn = () => ({
-      stop: stopFn,
-    });
-    registerContextModule('test-stop', setup);
-
-    const core = h.core;
-    const target: Record<string, unknown> = {};
-
-    const stopFns = initAllModules(core, target);
-
-    // At least one stop function should be collected (from our module)
-    expect(stopFns.length).toBeGreaterThan(0);
-
-    // The last stop function should be ours
-    const lastStop = stopFns[stopFns.length - 1] ?? (() => {});
-    lastStop();
-    expect(stopFn).toHaveBeenCalledTimes(1);
-  });
-
-  test('module without methods or stop is handled gracefully', () => {
+  test('module without methods is handled gracefully', () => {
     const setup: SetupFn = () => ({});
     registerContextModule('test-empty', setup);
 

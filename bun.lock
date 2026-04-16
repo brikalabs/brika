@@ -55,24 +55,6 @@
         "@types/bun": "^1.3.5",
       },
     },
-    "apps/registry": {
-      "name": "@brika/registry-cdn",
-      "version": "0.3.0",
-      "bin": {
-        "registry-cli": "./cli.ts",
-      },
-      "dependencies": {
-        "@brika/registry": "workspace:*",
-        "@clack/prompts": "^1.0.1",
-        "hono": "^4.12.2",
-        "jsonc-parser": "^3.3.1",
-        "picocolors": "^1.1.1",
-        "zod": "^4.3.6",
-      },
-      "devDependencies": {
-        "@types/bun": "^1.3.9",
-      },
-    },
     "apps/schema-cdn": {
       "name": "@brika/schema-cdn",
       "version": "0.3.0",
@@ -350,7 +332,6 @@
       },
       "devDependencies": {
         "@brika/flow": "workspace:*",
-        "@brika/ipc": "workspace:*",
         "@brika/schema": "workspace:*",
         "@brika/serializable": "workspace:*",
         "@brika/ui-kit": "workspace:*",
@@ -598,8 +579,6 @@
     "@brika/plugin-weather": ["@brika/plugin-weather@workspace:plugins/weather"],
 
     "@brika/registry": ["@brika/registry@workspace:packages/registry"],
-
-    "@brika/registry-cdn": ["@brika/registry-cdn@workspace:apps/registry"],
 
     "@brika/router": ["@brika/router@workspace:packages/router"],
 

@@ -2,7 +2,7 @@ import { Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
 import { useEffect } from 'react';
 import { AuthLayout } from '../AuthLayout';
 
-const STEPS = ['welcome', 'language', 'account', 'avatar', 'location', 'complete'] as const;
+const STEPS = ['welcome', 'language', 'account', 'avatar', 'timezone', 'location', 'complete'] as const;
 const PROGRESS_STEPS = STEPS.filter((s) => s !== 'welcome' && s !== 'complete');
 
 function stepWidth(i: number, activeIdx: number): string {

@@ -156,8 +156,14 @@ export function defineReactiveBlock<
     // Handle marker refs
     if (schema && typeof schema === 'object' && '__type' in schema) {
       if (schema.__type === 'generic') return { kind: 'generic', typeVar: schema.__generic ?? 'T' };
-      if (schema.__type === 'passthrough') return { kind: 'passthrough', sourcePortId: schema.__passthrough ?? '' };
-      if (schema.__type === 'resolved') return { kind: 'resolved', source: schema.__source ?? '', configField: schema.__configField ?? '' };
+      if (schema.__type === 'passthrough')
+        return { kind: 'passthrough', sourcePortId: schema.__passthrough ?? '' };
+      if (schema.__type === 'resolved')
+        return {
+          kind: 'resolved',
+          source: schema.__source ?? '',
+          configField: schema.__configField ?? '',
+        };
     }
     // Convert Zod schema via JSON Schema intermediary
     try {
@@ -228,7 +234,8 @@ export function defineReactiveBlock<
       const linkedInput = inputMap.get(inputId);
       if (linkedInput) {
         const linkedKind = (linkedInput.type as Record<string, unknown>).kind;
-        const isResolvable = linkedKind === 'generic' || linkedKind === 'passthrough' || linkedKind === 'resolved';
+        const isResolvable =
+          linkedKind === 'generic' || linkedKind === 'passthrough' || linkedKind === 'resolved';
         if (!isResolvable) {
           // Linked input is concrete — resolve statically
           return {
@@ -400,30 +407,54 @@ function jsonSchemaToTypeDescriptor(schema: Record<string, unknown>): Record<str
   if ('const' in schema) return { kind: 'literal', value: schema.const };
 
   switch (type) {
-    case 'string': return { kind: 'primitive', type: 'string' };
-    case 'number': case 'integer': return { kind: 'primitive', type: 'number' };
-    case 'boolean': return { kind: 'primitive', type: 'boolean' };
-    case 'null': return { kind: 'primitive', type: 'null' };
+    case 'string':
+      return { kind: 'primitive', type: 'string' };
+    case 'number':
+    case 'integer':
+      return { kind: 'primitive', type: 'number' };
+    case 'boolean':
+      return { kind: 'primitive', type: 'boolean' };
+    case 'null':
+      return { kind: 'primitive', type: 'null' };
     case 'array': {
-      if (schema.items) return { kind: 'array', element: jsonSchemaToTypeDescriptor(schema.items as Record<string, unknown>) };
-      if (schema.prefixItems) return { kind: 'tuple', elements: (schema.prefixItems as Record<string, unknown>[]).map(jsonSchemaToTypeDescriptor) };
+      if (schema.items)
+        return {
+          kind: 'array',
+          element: jsonSchemaToTypeDescriptor(schema.items as Record<string, unknown>),
+        };
+      if (schema.prefixItems)
+        return {
+          kind: 'tuple',
+          elements: (schema.prefixItems as Record<string, unknown>[]).map(
+            jsonSchemaToTypeDescriptor
+          ),
+        };
       return { kind: 'array', element: { kind: 'unknown' } };
     }
     case 'object': {
       const properties = schema.properties as Record<string, Record<string, unknown>> | undefined;
       if (!properties) {
         if (schema.additionalProperties && typeof schema.additionalProperties === 'object')
-          return { kind: 'record', value: jsonSchemaToTypeDescriptor(schema.additionalProperties as Record<string, unknown>) };
+          return {
+            kind: 'record',
+            value: jsonSchemaToTypeDescriptor(
+              schema.additionalProperties as Record<string, unknown>
+            ),
+          };
         return { kind: 'record', value: { kind: 'unknown' } };
       }
       const required = new Set((schema.required as string[] | undefined) ?? []);
       const fields: Record<string, { type: Record<string, unknown>; optional: boolean }> = {};
       for (const [key, propSchema] of Object.entries(properties)) {
-        fields[key] = { type: jsonSchemaToTypeDescriptor(propSchema), optional: !required.has(key) };
+        fields[key] = {
+          type: jsonSchemaToTypeDescriptor(propSchema),
+          optional: !required.has(key),
+        };
       }
       return { kind: 'object', fields };
     }
-    default: return { kind: 'unknown' };
+    default:
+      return { kind: 'unknown' };
   }
 }
 

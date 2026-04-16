@@ -9,7 +9,49 @@ export type Json =
     }
   | undefined;
 
+export type JsonRecord = Record<string, Json>;
+
 export type AnyObj = Record<string, Json>;
+
+// ─── IPC-free domain types ──────────────────────────────────────────────────
+
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+
+export type RouteMethod = 'GET' | 'POST' | 'PUT' | 'DELETE';
+
+export interface RouteRequest {
+  method: string;
+  path: string;
+  query: Record<string, string>;
+  headers: Record<string, string>;
+  body?: unknown;
+}
+
+export interface RouteResponse {
+  status: number;
+  headers?: Record<string, string>;
+  body?: Json;
+}
+
+export interface SparkEvent {
+  type: string;
+  payload: Json;
+  source: string;
+  ts: number;
+  id: string;
+}
+
+export interface HubLocation {
+  latitude: number;
+  longitude: number;
+  street: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+  countryCode: string;
+  formattedAddress: string;
+}
 
 /** JSON Schema for tool input validation and UI generation */
 export interface ToolInputSchema {

@@ -5,24 +5,8 @@
  * Routes are accessible at: /api/plugins/:uid/routes/<path>
  */
 
-import type { Json } from '@brika/ipc';
 import { getContext } from '../context';
-
-export type RouteMethod = 'GET' | 'POST' | 'PUT' | 'DELETE';
-
-export interface RouteRequest {
-  method: string;
-  path: string;
-  query: Record<string, string>;
-  headers: Record<string, string>;
-  body?: unknown;
-}
-
-export interface RouteResponse {
-  status: number;
-  headers?: Record<string, string>;
-  body?: Json;
-}
+import type { RouteMethod, RouteRequest, RouteResponse } from '../types';
 
 export type RouteHandler = (req: RouteRequest) => RouteResponse | Promise<RouteResponse>;
 

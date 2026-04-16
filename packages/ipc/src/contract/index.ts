@@ -54,7 +54,7 @@ export {
 } from './lifecycle';
 export type { HubLocation as HubLocationType } from './permissions';
 // ─── Permissions ───
-export { getHubLocation, HubLocation } from './permissions';
+export { getHubLocation, getHubTimezone, HubLocation, setTimezone } from './permissions';
 export type {
   RouteMethod as RouteMethodType,
   RouteRequest as RouteRequestType,

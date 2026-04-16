@@ -22,6 +22,8 @@ import { PluginWatcher } from './plugin-watcher';
 import { RestartPolicy } from './restart-policy';
 import { ensurePluginTsconfig, generateUid, HUB_VERSION, satisfiesVersion } from './utils';
 
+const PRELUDE_PATH = join(import.meta.dir, 'prelude', 'index.ts');
+
 /**
  * Manages plugin lifecycle: loading, unloading, and restart handling.
  * Simplified by delegating to focused helper classes.
@@ -214,7 +216,7 @@ export class PluginLifecycle {
       return;
     }
 
-    const channel = spawnPlugin(this.#bunRunner.bin, [buildResult.entryPath], {
+    const channel = spawnPlugin(this.#bunRunner.bin, [`--preload=${PRELUDE_PATH}`, buildResult.entryPath], {
       cwd: rootDirectory,
       env: this.#bunRunner.env({
         BRIKA_PLUGIN_NAME: metadata.name,
@@ -312,6 +314,7 @@ export class PluginLifecycle {
           });
         },
         onGetHubLocation: () => this.#state.getHubLocation(),
+        onGetHubTimezone: () => this.#state.getHubTimezone(),
         onGetGrantedPermissions: (name) => this.#state.getGrantedPermissions(name),
         onHeartbeatFailed: (p, silentMs) => this.#handleHeartbeatFailed(p, silentMs),
         onDisconnect: (p, error) => this.#handleDisconnect(p.name, error),

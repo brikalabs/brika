@@ -38,6 +38,11 @@
     "sparks": "Sparks",
     "bricks": "Briques"
   },
+  "timezone": {
+    "title": "Fuseau horaire",
+    "description": "Définissez le fuseau horaire de votre instance Brika. Cela affecte toutes les opérations liées au temps.",
+    "select": "Sélectionnez un fuseau horaire"
+  },
   "location": {
     "title": "Emplacement du hub",
     "description": "Définissez l'emplacement physique de votre hub. Les plugins avec la permission de localisation utiliseront ces données.",
@@ -51,7 +56,6 @@
     "country": "Pays",
     "latitude": "Latitude",
     "longitude": "Longitude",
-    "timezone": "Fuseau horaire",
     "notConfigured": "Aucun emplacement configuré",
     "noResults": "Aucun résultat trouvé",
     "emptyHint": "Recherchez une adresse ou détectez votre emplacement pour commencer.",
