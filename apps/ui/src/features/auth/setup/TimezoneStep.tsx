@@ -17,13 +17,14 @@ export function TimezoneStep() {
   const autoDetected = useRef(false);
 
   // Auto-detect browser timezone on first visit if not yet configured
+  const { mutate } = mutation;
   useEffect(() => {
     if (data && !data.timezone && !autoDetected.current) {
       autoDetected.current = true;
       const browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      mutation.mutate(browserTz);
+      mutate(browserTz);
     }
-  }, [data, mutation]);
+  }, [data, mutate]);
 
   return (
     <>
