@@ -18,16 +18,40 @@ jobs:
         with:
           fetch-depth: 0  # Shallow clones should be disabled for better analysis
 
+      - name: Read Bun version
+        id: bun-version
+        run: echo "version=$(jq -r '.engines.bun' package.json)" >> "$GITHUB_OUTPUT"
+
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version: ${{ steps.bun-version.outputs.version }}
 
       - name: Install dependencies
-        run: bun install
+        run: bun install --frozen-lockfile
+
+      - name: Build packages
+        run: bun run build
 
       - name: Run tests with coverage
-        run: bun test --coverage --coverage-reporter=lcov
+        run: |
+          # Run per-workspace to avoid Bun mock.module() bleed (oven-sh/bun#12823)
+          for dir in packages/* apps/* plugins/*; do
+            [ -f "$dir/package.json" ] || continue
+            test_cmd=$(jq -r '.scripts.test // empty' "$dir/package.json")
+            [ -n "$test_cmd" ] || continue
+            name=$(jq -r .name "$dir/package.json")
+            echo "::group::Testing $name"
+            if [ "$test_cmd" = "bun test" ]; then
+              (cd "$dir" && bun test --coverage --coverage-reporter=lcov) || true
+            else
+              (cd "$dir" && bun run test) || true
+            fi
+            echo "::endgroup::"
+          done
+          # Merge per-workspace lcov reports
+          mkdir -p coverage
+          find . -path '*/coverage/lcov.info' ! -path './coverage/*' -exec cat {} + > coverage/lcov.info 2>/dev/null || true
         continue-on-error: true
 
       - name: SonarQube Scan

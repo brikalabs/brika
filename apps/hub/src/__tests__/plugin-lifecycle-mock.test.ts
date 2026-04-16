@@ -1,8 +1,9 @@
 /**
  * Tests for PluginLifecycle internal callbacks (mock.module-based)
  *
- * IMPORTANT: This file uses mock.module() which bleeds across files in Bun (#12823).
- * It MUST be in its own file so the worker isolation prevents bleed to other tests.
+ * Mocks @/runtime/plugins/lifecycle-deps (re-export layer) instead of
+ * @brika/compiler, @brika/ipc, or @/runtime/plugins/plugin-process
+ * directly, preventing Bun's mock.module() bleed (oven-sh/bun#12823).
  */
 
 import 'reflect-metadata';
@@ -13,6 +14,7 @@ import { EventSystem } from '@/runtime/events/event-system';
 import { I18nService } from '@/runtime/i18n';
 import { Logger } from '@/runtime/logs/log-router';
 import { MetricsStore } from '@/runtime/metrics';
+import { ModuleCompiler } from '@/runtime/modules';
 import { PluginConfigService } from '@/runtime/plugins/plugin-config';
 import { PluginEventHandler } from '@/runtime/plugins/plugin-events';
 import type { PluginProcess, PluginProcessCallbacks } from '@/runtime/plugins/plugin-process';
@@ -28,23 +30,12 @@ let capturedSpawnDisconnect: ((error?: Error) => void) | null = null;
 let capturedSpawnStderr: ((line: string) => void) | null = null;
 let mockProcessInstance: Record<string, unknown> | null = null;
 
-// Mock @brika/compiler to avoid real Bun.build calls against /mock/path
-mock.module('@brika/compiler', () => ({
+// Mock the lifecycle-deps re-export layer (never mock the originals directly)
+mock.module('@/runtime/plugins/lifecycle-deps', () => ({
   compileServerEntry: mock().mockResolvedValue({
     success: true,
     entryPath: '/mock/path/node_modules/.cache/brika-server/index.js',
   }),
-  compileClientModule: mock().mockResolvedValue({
-    success: true,
-    js: 'export default {}',
-  }),
-  hashPluginSources: mock().mockResolvedValue('mockhash12345678'),
-  brikaExternalsPlugin: mock().mockReturnValue({ name: 'mock-externals', setup: () => {} }),
-  brikaActionsPlugin: mock().mockReturnValue({ name: 'mock-actions', setup: () => {} }),
-}));
-
-// Mock spawnPlugin to avoid actually spawning processes
-mock.module('@brika/ipc', () => ({
   spawnPlugin: mock((_cmd: string, _args: string[], opts?: Record<string, unknown>) => {
     capturedSpawnDisconnect = (opts?.onDisconnect as (error?: Error) => void) ?? null;
     capturedSpawnStderr = (opts?.onStderr as (line: string) => void) ?? null;
@@ -60,10 +51,6 @@ mock.module('@brika/ipc', () => ({
       ping: mock().mockResolvedValue(1),
     };
   }),
-}));
-
-// Mock PluginProcess to capture the callbacks and avoid side effects
-mock.module('@/runtime/plugins/plugin-process', () => ({
   PluginProcess: class MockPluginProcess {
     name: string;
     uid: string;
@@ -233,6 +220,7 @@ describe('PluginLifecycle (with mocked spawn)', () => {
     };
 
     stub(Logger);
+    stub(ModuleCompiler);
     provide(PluginManagerConfig, mockConfig);
     provide(StateStore, mockState);
     provide(EventSystem, mockEvents);

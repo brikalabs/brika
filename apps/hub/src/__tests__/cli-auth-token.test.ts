@@ -1,9 +1,8 @@
 /**
  * Tests for CLI auth token-create command
  *
- * Uses mock.module() to intercept external dependencies.
- * Due to Bun bug #12823 (process-wide module mock bleed), this file must
- * be run individually: `bun test src/__tests__/cli-auth-token.test.ts`
+ * Mocks @/cli/commands/auth/prompts (re-export layer) instead of @clack/prompts
+ * to avoid Bun's process-wide mock.module() bleed (oven-sh/bun#12823).
  */
 
 import { afterEach, beforeEach, describe, expect, mock, test, vi } from 'bun:test';
@@ -11,7 +10,7 @@ import { afterEach, beforeEach, describe, expect, mock, test, vi } from 'bun:tes
 // ── Mock all dependencies BEFORE imports ──
 
 const mockHubFetchOk = vi.fn();
-mock.module('@/cli/utils/hub-client', () => ({
+mock.module('@/cli/commands/auth/hub-client', () => ({
   hubFetchOk: mockHubFetchOk,
 }));
 
@@ -22,53 +21,20 @@ class MockCliError extends Error {
     this.name = 'CliError';
   }
 }
-mock.module('@/cli/errors', () => ({
+mock.module('@/cli/commands/auth/errors', () => ({
   CliError: MockCliError,
 }));
 
-// Mock @clack/prompts (include all prompt types to avoid bleed into other test files)
-const mockIntro = vi.fn();
-const mockText = vi.fn();
-const mockMultiselect = vi.fn();
-const mockSelect = vi.fn();
-const mockConfirm = vi.fn();
-const mockCancel = vi.fn();
-const mockPassword = vi.fn();
-const mockIsCancel = vi.fn().mockReturnValue(false);
-const mockGroup = vi.fn();
-mock.module('@clack/prompts', () => ({
-  intro: mockIntro,
-  text: mockText,
-  select: mockSelect,
-  multiselect: mockMultiselect,
-  password: mockPassword,
-  confirm: mockConfirm,
-  cancel: mockCancel,
-  isCancel: mockIsCancel,
-  group: mockGroup,
-}));
-
-// Mock auth-prompts
+// Mock prompt helpers (re-export layer only, never mock @/cli/clack directly)
+const mockPromptEmail = vi.fn();
+const mockPromptCreateToken = vi.fn();
 const mockShowSuccess = vi.fn();
 const mockShowError = vi.fn();
-mock.module('@/cli/auth-prompts', () => ({
+mock.module('@/cli/commands/auth/prompts', () => ({
+  promptEmail: mockPromptEmail,
+  promptCreateToken: mockPromptCreateToken,
   showSuccess: mockShowSuccess,
   showError: mockShowError,
-}));
-
-// Mock picocolors — pass through strings (include all used colors to avoid bleed)
-mock.module('picocolors', () => ({
-  default: {
-    bgCyan: (s: string) => s,
-    bgRed: (s: string) => s,
-    black: (s: string) => s,
-    bold: (s: string) => s,
-    green: (s: string) => s,
-    red: (s: string) => s,
-    dim: (s: string) => s,
-    cyan: (s: string) => s,
-    yellow: (s: string) => s,
-  },
 }));
 
 // Import command AFTER mocks are set up
@@ -111,14 +77,13 @@ describe('cli/commands/auth/token-create', () => {
   test('successfully creates token with all prompts', async () => {
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
-    // Mock prompt responses in order
-    mockText
-      .mockResolvedValueOnce('alice@test.com') // userEmail
-      .mockResolvedValueOnce('my-integration'); // tokenName
-    mockMultiselect.mockResolvedValue(['workflow:read', 'workflow:write']);
-    mockSelect.mockResolvedValue((30 * 24 * 60 * 60).toString());
+    mockPromptEmail.mockResolvedValue('alice@test.com');
+    mockPromptCreateToken.mockResolvedValue({
+      name: 'my-integration',
+      scopes: ['workflow:read', 'workflow:write'],
+      expiresIn: 30 * 24 * 60 * 60,
+    });
 
-    // Mock API response
     const tokenResponse = {
       token: {
         id: 'tok_123',
@@ -136,10 +101,13 @@ describe('cli/commands/auth/token-create', () => {
     await tokenCreateCmd.handler(handlerArgs);
 
     // Verify prompts were called
-    expect(mockIntro).toHaveBeenCalled();
-    expect(mockText).toHaveBeenCalledTimes(2);
-    expect(mockMultiselect).toHaveBeenCalledTimes(1);
-    expect(mockSelect).toHaveBeenCalledTimes(1);
+    expect(mockPromptEmail).toHaveBeenCalledWith('User email address');
+    expect(mockPromptCreateToken).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({ value: 'workflow:read' }),
+        expect.objectContaining({ value: 'user:write' }),
+      ])
+    );
 
     // Verify fetch was called with correct body
     expect(mockHubFetchOk).toHaveBeenCalledWith('/api/auth/tokens', {
@@ -173,9 +141,12 @@ describe('cli/commands/auth/token-create', () => {
   test('shows "Never" for tokens without expiration', async () => {
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
-    mockText.mockResolvedValueOnce('alice@test.com').mockResolvedValueOnce('permanent-token');
-    mockMultiselect.mockResolvedValue(['workflow:read']);
-    mockSelect.mockResolvedValue('0');
+    mockPromptEmail.mockResolvedValue('alice@test.com');
+    mockPromptCreateToken.mockResolvedValue({
+      name: 'permanent-token',
+      scopes: ['workflow:read'],
+      expiresIn: 0,
+    });
 
     const tokenResponse = {
       token: {
@@ -206,11 +177,14 @@ describe('cli/commands/auth/token-create', () => {
   test('handles CliError from hubFetchOk', async () => {
     vi.spyOn(console, 'log').mockImplementation(() => {});
 
-    mockText.mockResolvedValueOnce('alice@test.com').mockResolvedValueOnce('my-token');
-    mockMultiselect.mockResolvedValue(['workflow:read']);
-    mockSelect.mockResolvedValue('0');
+    mockPromptEmail.mockResolvedValue('alice@test.com');
+    mockPromptCreateToken.mockResolvedValue({
+      name: 'my-token',
+      scopes: ['workflow:read'],
+      expiresIn: 0,
+    });
 
-    mockHubFetchOk.mockRejectedValue(new MockCliError('Hub returned 401 — Unauthorized'));
+    mockHubFetchOk.mockRejectedValue(new MockCliError('Hub returned 401'));
 
     try {
       await tokenCreateCmd.handler(handlerArgs);
@@ -218,7 +192,7 @@ describe('cli/commands/auth/token-create', () => {
       expect(e).toBeInstanceOf(ExitError);
     }
 
-    expect(mockShowError).toHaveBeenCalledWith('Hub returned 401 — Unauthorized');
+    expect(mockShowError).toHaveBeenCalledWith('Hub returned 401');
     expect(mockExit).toHaveBeenCalledWith(1);
 
     vi.restoreAllMocks();
@@ -227,9 +201,12 @@ describe('cli/commands/auth/token-create', () => {
   test('handles generic Error', async () => {
     vi.spyOn(console, 'log').mockImplementation(() => {});
 
-    mockText.mockResolvedValueOnce('alice@test.com').mockResolvedValueOnce('my-token');
-    mockMultiselect.mockResolvedValue(['workflow:read']);
-    mockSelect.mockResolvedValue('0');
+    mockPromptEmail.mockResolvedValue('alice@test.com');
+    mockPromptCreateToken.mockResolvedValue({
+      name: 'my-token',
+      scopes: ['workflow:read'],
+      expiresIn: 0,
+    });
 
     mockHubFetchOk.mockRejectedValue(new Error('Network error'));
 
@@ -246,21 +223,27 @@ describe('cli/commands/auth/token-create', () => {
   });
 
   test('rethrows non-Error values', async () => {
-    mockText.mockResolvedValueOnce('alice@test.com').mockResolvedValueOnce('my-token');
-    mockMultiselect.mockResolvedValue(['workflow:read']);
-    mockSelect.mockResolvedValue('0');
+    mockPromptEmail.mockResolvedValue('alice@test.com');
+    mockPromptCreateToken.mockResolvedValue({
+      name: 'my-token',
+      scopes: ['workflow:read'],
+      expiresIn: 0,
+    });
 
     mockHubFetchOk.mockRejectedValue('string-error');
 
     await expect(tokenCreateCmd.handler(handlerArgs)).rejects.toBe('string-error');
   });
 
-  test('passes correct scope options to multiselect', async () => {
+  test('passes all 7 scope options to promptCreateToken', async () => {
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
-    mockText.mockResolvedValueOnce('alice@test.com').mockResolvedValueOnce('my-token');
-    mockMultiselect.mockResolvedValue(['workflow:read']);
-    mockSelect.mockResolvedValue('0');
+    mockPromptEmail.mockResolvedValue('alice@test.com');
+    mockPromptCreateToken.mockResolvedValue({
+      name: 'my-token',
+      scopes: ['workflow:read'],
+      expiresIn: 0,
+    });
 
     mockHubFetchOk.mockResolvedValue({
       json: vi.fn().mockResolvedValue({
@@ -277,9 +260,9 @@ describe('cli/commands/auth/token-create', () => {
 
     await tokenCreateCmd.handler(handlerArgs);
 
-    const multiselectOpts = mockMultiselect.mock.calls[0][0];
-    expect(multiselectOpts.options).toHaveLength(7);
-    const scopeValues = multiselectOpts.options.map((o: Record<string, unknown>) => o.value);
+    const scopeArg = mockPromptCreateToken.mock.calls[0][0];
+    expect(scopeArg).toHaveLength(7);
+    const scopeValues = scopeArg.map((o: Record<string, unknown>) => o.value);
     expect(scopeValues).toContain('workflow:read');
     expect(scopeValues).toContain('workflow:write');
     expect(scopeValues).toContain('workflow:execute');
@@ -287,69 +270,6 @@ describe('cli/commands/auth/token-create', () => {
     expect(scopeValues).toContain('plugin:install');
     expect(scopeValues).toContain('user:read');
     expect(scopeValues).toContain('user:write');
-
-    logSpy.mockRestore();
-  });
-
-  test('passes correct expiration options to select', async () => {
-    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-
-    mockText.mockResolvedValueOnce('alice@test.com').mockResolvedValueOnce('my-token');
-    mockMultiselect.mockResolvedValue(['workflow:read']);
-    mockSelect.mockResolvedValue('0');
-
-    mockHubFetchOk.mockResolvedValue({
-      json: vi.fn().mockResolvedValue({
-        token: {
-          id: 'tok_1',
-          name: 'my-token',
-          token: 'bk_xxx',
-          scopes: ['workflow:read'],
-          createdAt: '2026-01-01',
-          expiresAt: null,
-        },
-      }),
-    });
-
-    await tokenCreateCmd.handler(handlerArgs);
-
-    const selectOpts = mockSelect.mock.calls[0][0];
-    expect(selectOpts.options).toHaveLength(5);
-    const expirationValues = selectOpts.options.map((o: Record<string, unknown>) => o.value);
-    expect(expirationValues).toContain('0');
-    expect(expirationValues).toContain((7 * 24 * 60 * 60).toString());
-    expect(expirationValues).toContain((30 * 24 * 60 * 60).toString());
-    expect(expirationValues).toContain((90 * 24 * 60 * 60).toString());
-    expect(expirationValues).toContain((365 * 24 * 60 * 60).toString());
-
-    logSpy.mockRestore();
-  });
-
-  test('parses expiresIn string to integer', async () => {
-    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-
-    mockText.mockResolvedValueOnce('alice@test.com').mockResolvedValueOnce('my-token');
-    mockMultiselect.mockResolvedValue(['workflow:read']);
-    mockSelect.mockResolvedValue('604800'); // 7 days in seconds
-
-    mockHubFetchOk.mockResolvedValue({
-      json: vi.fn().mockResolvedValue({
-        token: {
-          id: 'tok_1',
-          name: 'my-token',
-          token: 'bk_xxx',
-          scopes: ['workflow:read'],
-          createdAt: '2026-01-01',
-          expiresAt: '2026-01-08',
-        },
-      }),
-    });
-
-    await tokenCreateCmd.handler(handlerArgs);
-
-    const fetchBody = JSON.parse(mockHubFetchOk.mock.calls[0][1].body);
-    expect(fetchBody.expiresIn).toBe(604800);
-    expect(typeof fetchBody.expiresIn).toBe('number');
 
     logSpy.mockRestore();
   });

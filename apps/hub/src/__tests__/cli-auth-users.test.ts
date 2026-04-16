@@ -1,9 +1,8 @@
 /**
  * Tests for CLI auth user commands (user-list, user-add, user-edit, user-delete)
  *
- * Uses mock.module() to intercept external dependencies.
- * IMPORTANT: Does NOT mock @brika/di or @brika/router — those bleed process-wide
- * (Bun bug #12823) and break all subsequent test files.
+ * Mocks @/cli/commands/auth/prompts (re-export layer) instead of @clack/prompts
+ * to avoid Bun's process-wide mock.module() bleed (oven-sh/bun#12823).
  */
 
 import { afterEach, beforeEach, describe, expect, mock, test, vi } from 'bun:test';
@@ -16,17 +15,12 @@ const mockBootstrapCLI = vi.fn().mockResolvedValue({
   stop: mockStop,
 });
 const mockPrintDatabaseInfo = vi.fn();
-mock.module('@/cli/bootstrap', () => ({
+mock.module('@/cli/commands/auth/bootstrap', () => ({
   bootstrapCLI: mockBootstrapCLI,
   printDatabaseInfo: mockPrintDatabaseInfo,
 }));
 
-// Mock the runtime util so dataDir doesn't cause side effects
-mock.module('@/cli/utils/runtime', () => ({
-  dataDir: '/tmp/test-brika',
-}));
-
-// Mock @brika/auth/server — define the token class outside so we can register it in the DI container
+// Mock auth-server re-export layer (never mock @brika/auth/server directly)
 const mockUserService = {
   listUsers: vi.fn(),
   createUser: vi.fn(),
@@ -37,13 +31,10 @@ const mockUserService = {
   verifyPassword: vi.fn(),
 };
 class MockUserService {}
-mock.module('@brika/auth/server', () => ({
+mock.module('@/cli/commands/auth/auth-server', () => ({
   auth: vi.fn().mockReturnValue({}),
   UserService: MockUserService,
 }));
-
-// NOTE: @brika/auth is NOT mocked — it only exports pure schemas/types with no side effects.
-// Mocking it with mock.module() would bleed process-wide (Bun bug #12823).
 
 // Mock CliError
 class MockCliError extends Error {
@@ -52,64 +43,30 @@ class MockCliError extends Error {
     this.name = 'CliError';
   }
 }
-mock.module('@/cli/errors', () => ({
+mock.module('@/cli/commands/auth/errors', () => ({
   CliError: MockCliError,
 }));
 
-// Mock auth-prompts
+// Mock prompt helpers (re-export layer only, never mock @/cli/clack directly)
 const mockPromptAddUser = vi.fn();
 const mockPromptSelectUser = vi.fn();
 const mockPromptEditUser = vi.fn();
 const mockPromptDeleteUser = vi.fn();
+const mockPromptEmail = vi.fn();
 const mockShowSuccess = vi.fn();
 const mockShowError = vi.fn();
 const mockValidators = {
   email: vi.fn(),
 };
-mock.module('@/cli/auth-prompts', () => ({
+mock.module('@/cli/commands/auth/prompts', () => ({
   promptAddUser: mockPromptAddUser,
   promptSelectUser: mockPromptSelectUser,
   promptEditUser: mockPromptEditUser,
   promptDeleteUser: mockPromptDeleteUser,
+  promptEmail: mockPromptEmail,
   showSuccess: mockShowSuccess,
   showError: mockShowError,
   validators: mockValidators,
-}));
-
-// Mock @clack/prompts (include all prompt types to avoid bleed into other test files)
-const mockIntro = vi.fn();
-const mockText = vi.fn();
-const mockConfirm = vi.fn();
-const mockCancel = vi.fn();
-const mockSelect = vi.fn();
-const mockMultiselect = vi.fn();
-const mockPassword = vi.fn();
-const mockIsCancel = vi.fn().mockReturnValue(false);
-const mockGroup = vi.fn();
-mock.module('@clack/prompts', () => ({
-  intro: mockIntro,
-  text: mockText,
-  select: mockSelect,
-  multiselect: mockMultiselect,
-  password: mockPassword,
-  confirm: mockConfirm,
-  cancel: mockCancel,
-  isCancel: mockIsCancel,
-  group: mockGroup,
-}));
-
-// Mock picocolors — pass through strings
-mock.module('picocolors', () => ({
-  default: {
-    bgCyan: (s: string) => s,
-    bgRed: (s: string) => s,
-    black: (s: string) => s,
-    bold: (s: string) => s,
-    green: (s: string) => s,
-    red: (s: string) => s,
-    dim: (s: string) => s,
-    cyan: (s: string) => s,
-  },
 }));
 
 // Register mock UserService in the real DI container so inject(UserService) works
@@ -584,14 +541,14 @@ describe('cli/commands/auth/user-delete', () => {
 
   test('prompts for email and confirmation, then deletes user', async () => {
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-    mockText.mockResolvedValue('alice@test.com');
-    mockConfirm.mockResolvedValue(true);
+    mockPromptEmail.mockResolvedValue('alice@test.com');
+    mockPromptDeleteUser.mockResolvedValue(true);
     mockUserService.deleteUser.mockReturnValue(undefined);
 
     await userDeleteCmd.handler(handlerArgs);
 
-    expect(mockText).toHaveBeenCalled();
-    expect(mockConfirm).toHaveBeenCalled();
+    expect(mockPromptEmail).toHaveBeenCalledWith('User email address');
+    expect(mockPromptDeleteUser).toHaveBeenCalledWith('alice@test.com');
     expect(mockUserService.deleteUser).toHaveBeenCalledWith('alice@test.com');
     const output = logSpy.mock.calls.map((c) => String(c[0])).join('\n');
     expect(output).toContain('User deleted successfully');
@@ -601,19 +558,18 @@ describe('cli/commands/auth/user-delete', () => {
   });
 
   test('returns early when user declines confirmation', async () => {
-    mockText.mockResolvedValue('alice@test.com');
-    mockConfirm.mockResolvedValue(false);
+    mockPromptEmail.mockResolvedValue('alice@test.com');
+    mockPromptDeleteUser.mockResolvedValue(false);
 
     await userDeleteCmd.handler(handlerArgs);
 
-    expect(mockCancel).toHaveBeenCalledWith('Operation cancelled');
     expect(mockUserService.deleteUser).not.toHaveBeenCalled();
     expect(mockBootstrapCLI).not.toHaveBeenCalled();
   });
 
   test('handles "not found" error from deleteUser', async () => {
-    mockText.mockResolvedValue('nobody@test.com');
-    mockConfirm.mockResolvedValue(true);
+    mockPromptEmail.mockResolvedValue('nobody@test.com');
+    mockPromptDeleteUser.mockResolvedValue(true);
     mockUserService.deleteUser.mockImplementation(() => {
       throw new Error('User not found in database');
     });
@@ -629,8 +585,8 @@ describe('cli/commands/auth/user-delete', () => {
   });
 
   test('handles generic Error', async () => {
-    mockText.mockResolvedValue('alice@test.com');
-    mockConfirm.mockResolvedValue(true);
+    mockPromptEmail.mockResolvedValue('alice@test.com');
+    mockPromptDeleteUser.mockResolvedValue(true);
     mockUserService.deleteUser.mockImplementation(() => {
       throw new Error('DB connection lost');
     });
@@ -646,8 +602,8 @@ describe('cli/commands/auth/user-delete', () => {
   });
 
   test('handles CliError', async () => {
-    mockText.mockResolvedValue('alice@test.com');
-    mockConfirm.mockResolvedValue(true);
+    mockPromptEmail.mockResolvedValue('alice@test.com');
+    mockPromptDeleteUser.mockResolvedValue(true);
     mockUserService.deleteUser.mockImplementation(() => {
       throw new MockCliError('CLI problem');
     });
@@ -663,8 +619,8 @@ describe('cli/commands/auth/user-delete', () => {
   });
 
   test('rethrows non-Error values', async () => {
-    mockText.mockResolvedValue('alice@test.com');
-    mockConfirm.mockResolvedValue(true);
+    mockPromptEmail.mockResolvedValue('alice@test.com');
+    mockPromptDeleteUser.mockResolvedValue(true);
     mockUserService.deleteUser.mockImplementation(() => {
       throw 'string-err';
     });
@@ -673,8 +629,8 @@ describe('cli/commands/auth/user-delete', () => {
   });
 
   test('always calls cli.stop() after bootstrap', async () => {
-    mockText.mockResolvedValue('alice@test.com');
-    mockConfirm.mockResolvedValue(true);
+    mockPromptEmail.mockResolvedValue('alice@test.com');
+    mockPromptDeleteUser.mockResolvedValue(true);
     mockUserService.deleteUser.mockReturnValue(undefined);
 
     await userDeleteCmd.handler(handlerArgs);
@@ -683,8 +639,8 @@ describe('cli/commands/auth/user-delete', () => {
   });
 
   test('calls cli.stop() even on error after bootstrap', async () => {
-    mockText.mockResolvedValue('alice@test.com');
-    mockConfirm.mockResolvedValue(true);
+    mockPromptEmail.mockResolvedValue('alice@test.com');
+    mockPromptDeleteUser.mockResolvedValue(true);
     mockUserService.deleteUser.mockImplementation(() => {
       throw new Error('fail');
     });

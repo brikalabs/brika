@@ -1,7 +1,7 @@
-import { auth, UserService } from '@brika/auth/server';
 import { inject } from '@brika/di';
+import { auth, UserService } from './auth-server';
 import pc from 'picocolors';
-import { bootstrapCLI, printDatabaseInfo } from '../../bootstrap';
+import { bootstrapCLI, printDatabaseInfo } from './bootstrap';
 import { defineCommand } from '../../command';
 import { dataDir } from '../../utils/runtime';
 

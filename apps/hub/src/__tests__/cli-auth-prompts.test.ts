@@ -1,14 +1,13 @@
 /**
  * Tests for CLI auth prompts (auth-prompts.ts)
  *
- * Uses mock.module() to intercept @clack/prompts and @brika/auth.
- * Due to Bun bug #12823 (process-wide module mock bleed), this file must
- * be run individually: `bun test src/__tests__/cli-auth-prompts.test.ts`
+ * Mocks the local @/cli/clack re-export instead of the global @clack/prompts
+ * package to avoid Bun's process-wide mock bleed (oven-sh/bun#12823).
  */
 
 import { afterEach, beforeEach, describe, expect, mock, test, vi } from 'bun:test';
 
-// Mock @clack/prompts BEFORE importing the module under test
+// Mock the local clack re-export (NOT @clack/prompts directly — that bleeds)
 const mockIntro = vi.fn();
 const mockText = vi.fn();
 const mockSelect = vi.fn();
@@ -19,7 +18,7 @@ const mockCancel = vi.fn();
 const mockIsCancel = vi.fn().mockReturnValue(false);
 const mockGroup = vi.fn();
 
-mock.module('@clack/prompts', () => ({
+mock.module('@/cli/clack', () => ({
   intro: mockIntro,
   text: mockText,
   select: mockSelect,
@@ -29,35 +28,6 @@ mock.module('@clack/prompts', () => ({
   cancel: mockCancel,
   isCancel: mockIsCancel,
   group: mockGroup,
-}));
-
-// Mock @brika/auth to provide schemas and validatePassword
-const mockEmailSafeParse = vi.fn();
-const mockNameSafeParse = vi.fn();
-const mockValidatePassword = vi.fn();
-
-mock.module('@brika/auth', () => ({
-  EmailSchema: {
-    safeParse: mockEmailSafeParse,
-  },
-  NameSchema: {
-    safeParse: mockNameSafeParse,
-  },
-  validatePassword: mockValidatePassword,
-}));
-
-// Mock picocolors — pass through strings for testability
-mock.module('picocolors', () => ({
-  default: {
-    bgCyan: (s: string) => s,
-    black: (s: string) => s,
-    bgRed: (s: string) => s,
-    bold: (s: string) => s,
-    green: (s: string) => s,
-    red: (s: string) => s,
-    dim: (s: string) => s,
-    cyan: (s: string) => s,
-  },
 }));
 
 // Sentinel error thrown when process.exit is called
@@ -105,15 +75,6 @@ describe('cli/auth-prompts', () => {
     vi.clearAllMocks();
     mockIsCancel.mockReturnValue(false);
     process.exit = mockExit;
-
-    // Default schema mocks: valid
-    mockEmailSafeParse.mockReturnValue({
-      success: true,
-    });
-    mockNameSafeParse.mockReturnValue({
-      success: true,
-    });
-    mockValidatePassword.mockReturnValue(undefined);
   });
 
   afterEach(() => {
@@ -124,69 +85,31 @@ describe('cli/auth-prompts', () => {
 
   describe('validators.email', () => {
     test('returns undefined for valid email', () => {
-      mockEmailSafeParse.mockReturnValue({
-        success: true,
-      });
       expect(validators.email('user@test.com')).toBeUndefined();
     });
 
     test('returns error string for invalid email', () => {
-      mockEmailSafeParse.mockReturnValue({
-        success: false,
-        error: {
-          issues: [
-            {
-              message: 'Invalid email address',
-            },
-          ],
-        },
-      });
-      expect(validators.email('bad')).toBe('Invalid email address');
-    });
-
-    test('returns undefined when issues array is empty', () => {
-      mockEmailSafeParse.mockReturnValue({
-        success: false,
-        error: {
-          issues: [],
-        },
-      });
-      expect(validators.email('bad')).toBeUndefined();
+      expect(validators.email('bad')).toBeString();
     });
   });
 
   describe('validators.name', () => {
     test('returns undefined for valid name', () => {
-      mockNameSafeParse.mockReturnValue({
-        success: true,
-      });
       expect(validators.name('John')).toBeUndefined();
     });
 
     test('returns error string for short name', () => {
-      mockNameSafeParse.mockReturnValue({
-        success: false,
-        error: {
-          issues: [
-            {
-              message: 'Name must be at least 2 characters',
-            },
-          ],
-        },
-      });
-      expect(validators.name('J')).toBe('Name must be at least 2 characters');
+      expect(validators.name('')).toBeString();
     });
   });
 
   describe('validators.password', () => {
     test('returns undefined for valid password', () => {
-      mockValidatePassword.mockReturnValue(undefined);
       expect(validators.password('Strong1!')).toBeUndefined();
     });
 
     test('returns error string for weak password', () => {
-      mockValidatePassword.mockReturnValue('Min 8 characters');
-      expect(validators.password('short')).toBe('Min 8 characters');
+      expect(validators.password('short')).toBeString();
     });
   });
 

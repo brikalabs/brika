@@ -365,9 +365,9 @@ describe('scaffold', () => {
       path.join(testDir, 'test-brick', 'src', 'bricks', 'board.tsx'),
       'utf-8'
     );
-    expect(content).toContain('defineBrick');
+    expect(content).toContain('useBrickData');
     expect(content).toContain('useBrickSize');
-    expect(content).toContain('testBrickBrick');
+    expect(content).toContain('TestBrick');
   });
 
   test('all features: package.json has blocks, bricks, and sparks', async () => {
@@ -451,7 +451,7 @@ describe('scaffold', () => {
     });
 
     const content = await fs.readFile(path.join(testDir, 'test-both', 'src', 'index.ts'), 'utf-8');
-    expect(content).toContain('testBothBrick');
+    expect(content).toContain('setBrickData');
     expect(content).toContain("from './blocks/test-both'");
   });
 

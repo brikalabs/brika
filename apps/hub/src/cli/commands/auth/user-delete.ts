@@ -1,11 +1,10 @@
-import { auth, UserService } from '@brika/auth/server';
 import { inject } from '@brika/di';
-import * as p from '@clack/prompts';
+import { auth, UserService } from './auth-server';
 import pc from 'picocolors';
-import { showError, validators } from '../../auth-prompts';
-import { bootstrapCLI, printDatabaseInfo } from '../../bootstrap';
+import { promptDeleteUser, promptEmail, showError } from './prompts';
+import { bootstrapCLI, printDatabaseInfo } from './bootstrap';
 import { defineCommand } from '../../command';
-import { CliError } from '../../errors';
+import { CliError } from './errors';
 import { dataDir } from '../../utils/runtime';
 
 export default defineCommand({
@@ -13,23 +12,10 @@ export default defineCommand({
   description: 'Delete a user',
   examples: ['brika auth user delete'],
   async handler() {
-    p.intro(pc.bgRed(pc.black(' Delete User ')));
+    const email = await promptEmail('User email address');
+    const confirmed = await promptDeleteUser(email);
 
-    const email = (await p.text({
-      message: 'User email address',
-      placeholder: 'user@example.com',
-      validate: validators.email,
-    })) as string;
-
-    const confirmed = await p.confirm({
-      message: `Delete user ${pc.bold(email)}? This cannot be undone.`,
-      initialValue: false,
-    });
-
-    if (confirmed === false) {
-      p.cancel('Operation cancelled');
-      return;
-    }
+    if (!confirmed) return;
 
     const cli = await bootstrapCLI(
       auth({
