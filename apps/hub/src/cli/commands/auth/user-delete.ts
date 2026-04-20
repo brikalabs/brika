@@ -6,7 +6,6 @@ import { bootstrapCLI, printDatabaseInfo } from './bootstrap';
 import { CliError } from './errors';
 import { promptDeleteUser, promptEmail, showError } from './prompts';
 
-
 export default defineCommand({
   name: 'delete',
   description: 'Delete a user',

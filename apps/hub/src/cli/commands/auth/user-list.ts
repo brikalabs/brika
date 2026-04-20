@@ -4,7 +4,6 @@ import { defineCommand } from '../../command';
 import { auth, UserService } from './auth-server';
 import { bootstrapCLI, printDatabaseInfo } from './bootstrap';
 
-
 export default defineCommand({
   name: 'list',
   description: 'List all users',

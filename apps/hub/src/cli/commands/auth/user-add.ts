@@ -6,7 +6,6 @@ import { auth, UserService } from './auth-server';
 import { bootstrapCLI, printDatabaseInfo } from './bootstrap';
 import { promptAddUser, showError, showSuccess } from './prompts';
 
-
 export default defineCommand({
   name: 'add',
   description: 'Add a new user',
