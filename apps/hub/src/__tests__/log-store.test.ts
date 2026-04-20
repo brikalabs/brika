@@ -3,6 +3,7 @@
  * Testing SQLite-based log storage
  */
 import 'reflect-metadata';
+import { Database } from 'bun:sqlite';
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -56,44 +57,37 @@ describe('LogStore', () => {
 
   describe('init', () => {
     test('creates database file', async () => {
-      const dbExists = await Bun.file(`${tempDir}/.brika/logs.db`).exists();
-      expect(dbExists).toBe(true);
+      expect(await Bun.file(join(tempDir, 'db', 'logs.db')).exists()).toBe(true);
     });
 
     test('creates logs table with correct schema', () => {
-      const db = new Database(`${tempDir}/.brika/logs.db`);
-      const columns = db.query('PRAGMA table_info(logs)').all() as {
-        name: string;
-      }[];
-      const columnNames = columns.map((c) => c.name);
+      const db = new Database(join(tempDir, 'db', 'logs.db'));
+      const columns = db.query('PRAGMA table_info(logs)').all() as { name: string }[];
+      const names = columns.map((c) => c.name);
 
-      expect(columnNames).toContain('id');
-      expect(columnNames).toContain('ts');
-      expect(columnNames).toContain('level');
-      expect(columnNames).toContain('source');
-      expect(columnNames).toContain('plugin_name');
-      expect(columnNames).toContain('message');
-      expect(columnNames).toContain('meta');
-      expect(columnNames).toContain('error_name');
-      expect(columnNames).toContain('error_message');
-      expect(columnNames).toContain('error_stack');
-      expect(columnNames).toContain('error_cause');
-
+      expect(names).toContain('id');
+      expect(names).toContain('ts');
+      expect(names).toContain('level');
+      expect(names).toContain('source');
+      expect(names).toContain('plugin_name');
+      expect(names).toContain('message');
+      expect(names).toContain('meta');
+      expect(names).toContain('error_name');
+      expect(names).toContain('error_message');
+      expect(names).toContain('error_stack');
+      expect(names).toContain('error_cause');
       db.close();
     });
 
     test('creates indexes for efficient queries', () => {
-      const db = new Database(`${tempDir}/.brika/logs.db`);
-      const indexes = db.query("SELECT name FROM sqlite_master WHERE type='index'").all() as {
-        name: string;
-      }[];
-      const indexNames = indexes.map((i) => i.name);
+      const db = new Database(join(tempDir, 'db', 'logs.db'));
+      const indexes = db.query("SELECT name FROM sqlite_master WHERE type='index'").all() as { name: string }[];
+      const names = indexes.map((i) => i.name);
 
-      expect(indexNames).toContain('idx_logs_ts');
-      expect(indexNames).toContain('idx_logs_level');
-      expect(indexNames).toContain('idx_logs_source');
-      expect(indexNames).toContain('idx_logs_plugin');
-
+      expect(names).toContain('idx_logs_ts');
+      expect(names).toContain('idx_logs_level');
+      expect(names).toContain('idx_logs_source');
+      expect(names).toContain('idx_logs_plugin');
       db.close();
     });
   });

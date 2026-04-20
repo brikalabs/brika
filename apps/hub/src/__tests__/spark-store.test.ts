@@ -5,7 +5,7 @@ import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { configureDatabases } from '@brika/db';
-import { get, reset, stub, useTestBed } from '@brika/di/testing';
+import { get, reset, useTestBed } from '@brika/di/testing';
 import { SparkStore, type StoredSparkEvent } from '@/runtime/sparks/spark-store';
 
 useTestBed({
@@ -660,48 +660,25 @@ describe('SparkStore', () => {
 
   describe('uninitialized store', () => {
     test('should handle insert gracefully when not initialized', () => {
-      reset();
-      stub(ConfigLoader);
-      const uninitializedStore = get(SparkStore);
-
+      const uninitializedStore = new SparkStore();
       expect(() => uninitializedStore.insert(createTestEvent())).not.toThrow();
     });
 
     test('should return empty result when not initialized', () => {
-      reset();
-      stub(ConfigLoader);
-      const uninitializedStore = get(SparkStore);
-
-      const result = uninitializedStore.query();
-
-      expect(result).toEqual({
-        sparks: [],
-        nextCursor: null,
-      });
+      const uninitializedStore = new SparkStore();
+      expect(uninitializedStore.query()).toEqual({ sparks: [], nextCursor: null });
     });
 
     test('should return 0 for count when not initialized', () => {
-      reset();
-      stub(ConfigLoader);
-      const uninitializedStore = get(SparkStore);
-
-      expect(uninitializedStore.count()).toBe(0);
+      expect(new SparkStore().count()).toBe(0);
     });
 
     test('should return empty array for getTypes when not initialized', () => {
-      reset();
-      stub(ConfigLoader);
-      const uninitializedStore = get(SparkStore);
-
-      expect(uninitializedStore.getTypes()).toEqual([]);
+      expect(new SparkStore().getTypes()).toEqual([]);
     });
 
     test('should return 0 for clear when not initialized', () => {
-      reset();
-      stub(ConfigLoader);
-      const uninitializedStore = get(SparkStore);
-
-      expect(uninitializedStore.clear()).toBe(0);
+      expect(new SparkStore().clear()).toBe(0);
     });
   });
 });

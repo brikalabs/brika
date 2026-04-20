@@ -53,6 +53,7 @@ describe('Bootstrap', () => {
     stub(LogStore);
     stub(BrikaInitializer);
     stub(ConfigLoader, {
+      getRootDir: () => '/tmp/bootstrap-test',
       load: () => Promise.resolve(mockConfig),
     });
   });
@@ -61,22 +62,22 @@ describe('Bootstrap', () => {
     expect(bootstrap()).toBeInstanceOf(Bootstrap);
   });
 
-  test('use() calls setup and supports chaining', () => {
+  test('use() calls setup and supports chaining', async () => {
     const b = get(Bootstrap);
     const setup1 = mock();
     const setup2 = mock();
 
     const result = b
-      .use({
-        name: 'p1',
-        setup: setup1,
-      })
-      .use({
-        name: 'p2',
-        setup: setup2,
-      });
+      .use({ name: 'p1', setup: setup1 })
+      .use({ name: 'p2', setup: setup2 });
 
     expect(result).toBe(b);
+    // setup is deferred to start() so configureDatabases() runs first
+    expect(setup1).not.toHaveBeenCalled();
+    expect(setup2).not.toHaveBeenCalled();
+
+    await b.start();
+
     expect(setup1).toHaveBeenCalledWith(b);
     expect(setup2).toHaveBeenCalledWith(b);
   });
