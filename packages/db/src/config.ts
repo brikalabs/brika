@@ -13,7 +13,7 @@ export function resolveDatabasePath(path: string): string {
 
   if (!globalDir) {
     throw new Error(
-      `Cannot resolve database path "${path}": call configureDatabases() before opening databases.`,
+      `Cannot resolve database path "${path}": call configureDatabases() before opening databases.`
     );
   }
 

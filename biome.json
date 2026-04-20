@@ -210,7 +210,8 @@
     {
       "includes": [
         "**/__tests__/**/*.{ts,tsx,mts,cts,js,jsx}",
-        "**/testing/**/*.{ts,tsx,mts,cts,js,jsx}"
+        "**/testing/**/*.{ts,tsx,mts,cts,js,jsx}",
+        "**/*.test.{ts,tsx,mts,cts,js,jsx}"
       ],
       "linter": {
         "rules": {

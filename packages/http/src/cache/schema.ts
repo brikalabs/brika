@@ -9,14 +9,16 @@ export const cacheEntries = sqliteTable(
     ttl: integer('ttl').notNull(),
     expiresAt: integer('expires_at').notNull(),
   },
-  (table) => [
-    index('idx_cache_expires').on(table.expiresAt),
-  ],
+  (table) => [index('idx_cache_expires').on(table.expiresAt)]
 );
 
-export const cacheTags = sqliteTable('cache_tags', {
-  key: text('key').notNull().references(() => cacheEntries.key, { onDelete: 'cascade' }),
-  tag: text('tag').notNull(),
-}, (table) => [
-  index('idx_cache_tags_tag').on(table.tag),
-]);
+export const cacheTags = sqliteTable(
+  'cache_tags',
+  {
+    key: text('key')
+      .notNull()
+      .references(() => cacheEntries.key, { onDelete: 'cascade' }),
+    tag: text('tag').notNull(),
+  },
+  (table) => [index('idx_cache_tags_tag').on(table.tag)]
+);

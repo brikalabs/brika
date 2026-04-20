@@ -17,7 +17,9 @@ const dbOption = {
 } as const;
 
 function requireSchema(schema: string | undefined): { schema: string; out: string } {
-  if (!schema) { throw new CliError('--schema is required. Run brika-db help for usage.'); }
+  if (!schema) {
+    throw new CliError('--schema is required. Run brika-db help for usage.');
+  }
   const resolved = resolve(schema);
   return { schema: resolved, out: join(dirname(resolved), 'migrations') };
 }
@@ -49,12 +51,12 @@ const migrate = defineCommand({
   name: 'migrate',
   description: 'Apply pending migrations to a database',
   options: { schema: schemaOption, db: dbOption },
-  examples: [
-    'brika-db migrate --schema packages/auth/src/schema.ts --db ~/.brika/db/auth.db',
-  ],
+  examples: ['brika-db migrate --schema packages/auth/src/schema.ts --db ~/.brika/db/auth.db'],
   async handler({ values }) {
     const { schema, out } = requireSchema(values.schema);
-    await Bun.$`bunx drizzle-kit migrate --config=${SHARED_CONFIG}`.env(buildEnv(schema, out, values.db));
+    await Bun.$`bunx drizzle-kit migrate --config=${SHARED_CONFIG}`.env(
+      buildEnv(schema, out, values.db)
+    );
   },
 });
 
@@ -62,12 +64,12 @@ const studio = defineCommand({
   name: 'studio',
   description: 'Open a database browser UI',
   options: { schema: schemaOption, db: dbOption },
-  examples: [
-    'brika-db studio --schema packages/auth/src/schema.ts --db ~/.brika/db/auth.db',
-  ],
+  examples: ['brika-db studio --schema packages/auth/src/schema.ts --db ~/.brika/db/auth.db'],
   async handler({ values }) {
     const { schema, out } = requireSchema(values.schema);
-    await Bun.$`bunx drizzle-kit studio --config=${SHARED_CONFIG}`.env(buildEnv(schema, out, values.db));
+    await Bun.$`bunx drizzle-kit studio --config=${SHARED_CONFIG}`.env(
+      buildEnv(schema, out, values.db)
+    );
   },
 });
 
@@ -75,9 +77,7 @@ const status = defineCommand({
   name: 'status',
   description: 'Show applied / pending migrations',
   options: { schema: schemaOption, db: dbOption },
-  examples: [
-    'brika-db status --schema packages/auth/src/schema.ts --db ~/.brika/db/auth.db',
-  ],
+  examples: ['brika-db status --schema packages/auth/src/schema.ts --db ~/.brika/db/auth.db'],
   async handler({ values }) {
     const { schema, out } = requireSchema(values.schema);
     const journalPath = join(out, 'meta/_journal.json');
@@ -95,8 +95,14 @@ const status = defineCommand({
 
     if (!dbReady) {
       console.log(`Schema: ${schema}\nMigrations:`);
-      for (const entry of journal.entries) { console.log(`  ○ ${entry.tag}`); }
-      console.log(resolvedDb ? `\nDatabase not found at: ${resolvedDb}` : '\nTip: pass --db <path> to show applied status.');
+      for (const entry of journal.entries) {
+        console.log(`  ○ ${entry.tag}`);
+      }
+      console.log(
+        resolvedDb
+          ? `\nDatabase not found at: ${resolvedDb}`
+          : '\nTip: pass --db <path> to show applied status.'
+      );
       return;
     }
 
@@ -105,7 +111,9 @@ const status = defineCommand({
     let appliedCount = 0;
 
     try {
-      const row = sqlite.query<{ count: number }, []>('SELECT COUNT(*) as count FROM __drizzle_migrations').get();
+      const row = sqlite
+        .query<{ count: number }, []>('SELECT COUNT(*) as count FROM __drizzle_migrations')
+        .get();
       appliedCount = row?.count ?? 0;
     } catch {
       // Table doesn't exist — no migrations applied yet.

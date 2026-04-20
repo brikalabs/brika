@@ -58,7 +58,9 @@ export class Bootstrap {
     configureDatabases(`${this.configLoader.getRootDir()}/.brika`);
     this.logStore.init();
     this.logs.setStore(this.logStore);
-    for (const p of this.plugins) { p.setup?.(this); }
+    for (const p of this.plugins) {
+      p.setup?.(this);
+    }
     await this.initializer.init();
     const config = await this.configLoader.load();
 

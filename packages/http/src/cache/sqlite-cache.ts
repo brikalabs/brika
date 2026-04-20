@@ -1,6 +1,4 @@
-import {
-  and, type BrikaDatabase, eq, gt, inArray, lt, sql,
-} from '@brika/db';
+import { and, type BrikaDatabase, eq, gt, inArray, lt, sql } from '@brika/db';
 import type { CacheAdapter, CacheEntry } from './cache-adapter';
 import { cacheDb } from './database';
 import { cacheEntries, cacheTags } from './schema';
@@ -32,7 +30,9 @@ export class SqliteCache implements CacheAdapter {
       .where(eq(cacheEntries.key, key))
       .get();
 
-    if (!row) { return null; }
+    if (!row) {
+      return null;
+    }
 
     if (Date.now() > row.expiresAt) {
       this.delete(key);
@@ -57,7 +57,9 @@ export class SqliteCache implements CacheAdapter {
       tx.insert(cacheEntries).values({ key, value: serialized, timestamp, ttl, expiresAt }).run();
 
       if (tags && tags.length > 0) {
-        tx.insert(cacheTags).values(tags.map((tag) => ({ key, tag }))).run();
+        tx.insert(cacheTags)
+          .values(tags.map((tag) => ({ key, tag })))
+          .run();
       }
     });
   }
@@ -73,7 +75,9 @@ export class SqliteCache implements CacheAdapter {
       .where(eq(cacheEntries.key, key))
       .get();
 
-    if (!row) { return false; }
+    if (!row) {
+      return false;
+    }
 
     if (Date.now() > row.expiresAt) {
       this.delete(key);
@@ -92,7 +96,9 @@ export class SqliteCache implements CacheAdapter {
   }
 
   invalidateByTags(tags: string[]): void {
-    if (tags.length === 0) { return; }
+    if (tags.length === 0) {
+      return;
+    }
 
     const keys = this.db
       .selectDistinct({ key: cacheTags.key })
@@ -109,24 +115,28 @@ export class SqliteCache implements CacheAdapter {
   stats(): { size: number; tags: number; expired: number; dbSizeBytes: number } {
     const now = Date.now();
 
-    const size = this.db
-      .select({ count: sql<number>`count(*)` })
-      .from(cacheEntries)
-      .get()?.count ?? 0;
+    const size =
+      this.db.select({ count: sql<number>`count(*)` }).from(cacheEntries).get()?.count ?? 0;
 
-    const tags = this.db
-      .select({ count: sql<number>`count(distinct ${cacheTags.tag})` })
-      .from(cacheTags)
-      .get()?.count ?? 0;
+    const tags =
+      this.db
+        .select({ count: sql<number>`count(distinct ${cacheTags.tag})` })
+        .from(cacheTags)
+        .get()?.count ?? 0;
 
-    const expired = this.db
-      .select({ count: sql<number>`count(*)` })
-      .from(cacheEntries)
-      .where(lt(cacheEntries.expiresAt, now))
-      .get()?.count ?? 0;
+    const expired =
+      this.db
+        .select({ count: sql<number>`count(*)` })
+        .from(cacheEntries)
+        .where(lt(cacheEntries.expiresAt, now))
+        .get()?.count ?? 0;
 
     let dbSizeBytes = 0;
-    try { dbSizeBytes = Bun.file(this.options.path).size; } catch { /* in-memory */ }
+    try {
+      dbSizeBytes = Bun.file(this.options.path).size;
+    } catch {
+      /* in-memory */
+    }
 
     return { size, tags, expired, dbSizeBytes };
   }
@@ -148,13 +158,11 @@ export class SqliteCache implements CacheAdapter {
   }
 
   getEntry(key: string): CacheEntry | null {
-    const row = this.db
-      .select()
-      .from(cacheEntries)
-      .where(eq(cacheEntries.key, key))
-      .get();
+    const row = this.db.select().from(cacheEntries).where(eq(cacheEntries.key, key)).get();
 
-    if (!row || Date.now() > row.expiresAt) { return null; }
+    if (!row || Date.now() > row.expiresAt) {
+      return null;
+    }
 
     const tags = this.db
       .select({ tag: cacheTags.tag })
@@ -180,7 +188,9 @@ export class SqliteCache implements CacheAdapter {
   }
 
   #startCleanup(intervalMs: number): void {
-    this.#cleanupInterval = setInterval(() => { this.cleanup(); }, intervalMs);
+    this.#cleanupInterval = setInterval(() => {
+      this.cleanup();
+    }, intervalMs);
     this.#cleanupInterval.unref();
   }
 }

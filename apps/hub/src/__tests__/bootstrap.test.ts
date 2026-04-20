@@ -67,9 +67,7 @@ describe('Bootstrap', () => {
     const setup1 = mock();
     const setup2 = mock();
 
-    const result = b
-      .use({ name: 'p1', setup: setup1 })
-      .use({ name: 'p2', setup: setup2 });
+    const result = b.use({ name: 'p1', setup: setup1 }).use({ name: 'p2', setup: setup2 });
 
     expect(result).toBe(b);
     // setup is deferred to start() so configureDatabases() runs first

@@ -12,7 +12,11 @@ export function openAuthDatabase(path = 'auth.db') {
 
   // Restrict file to owner-only access (contains password hashes and session tokens)
   if (resolved !== ':memory:') {
-    try { chmodSync(resolved, 0o600); } catch { /* may fail on some platforms */ }
+    try {
+      chmodSync(resolved, 0o600);
+    } catch {
+      /* may fail on some platforms */
+    }
   }
 
   return { sqlite };
@@ -20,7 +24,7 @@ export function openAuthDatabase(path = 'auth.db') {
 
 export function setupAuthServices(
   database: ReturnType<typeof openAuthDatabase>,
-  config?: AuthConfig,
+  config?: AuthConfig
 ): void {
   const resolved = initAuthConfig(config);
   container.register(SessionService, {

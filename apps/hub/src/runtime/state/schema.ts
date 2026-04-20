@@ -7,7 +7,10 @@ export const plugins = sqliteTable('plugins', {
   entryPoint: text('entry_point').notNull(),
   uid: text('uid').notNull().unique(),
   enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
-  health: text('health').$type<PluginHealth>().notNull().default('restarting' satisfies PluginHealth),
+  health: text('health')
+    .$type<PluginHealth>()
+    .notNull()
+    .default('restarting' satisfies PluginHealth),
   lastError: text('last_error'),
   updatedAt: integer('updated_at').notNull(),
   grantedPermissions: text('granted_permissions'),

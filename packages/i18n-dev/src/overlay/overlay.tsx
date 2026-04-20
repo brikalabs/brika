@@ -74,6 +74,81 @@ export function toolbarHint(highlight: boolean, isCiMode: boolean, showMissing: 
   return parts.join(' + ');
 }
 
+function InspectButton({ active, onClick }: Readonly<{ active: boolean; onClick: () => void }>) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={
+        active
+          ? 'Stop inspecting translations'
+          : 'Inspect translations \u2014 hover to see keys, click to navigate'
+      }
+      className={`flex cursor-pointer items-center gap-1.5 rounded-md border px-2.5 py-1 font-medium text-[10px] transition-all ${
+        active
+          ? 'border-indigo-400/40 bg-indigo-500/15 text-indigo-300 shadow-[0_0_12px_rgba(99,102,241,.15)]'
+          : 'border-dt-border bg-dt-bg-raised text-dt-text-3 hover:border-dt-border hover:text-dt-text-2'
+      }`}
+    >
+      <MousePointerClick className={`size-3.5 ${active ? 'text-indigo-400' : ''}`} />
+      {active ? 'Inspecting' : 'Inspect'}
+      {active && <span className="size-1.5 animate-pulse rounded-full bg-indigo-400" />}
+    </button>
+  );
+}
+
+function CiModeButton({ active, onClick }: Readonly<{ active: boolean; onClick: () => void }>) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={
+        active ? 'Switch back to translated text' : 'Show raw translation keys in the app (cimode)'
+      }
+      className={`flex cursor-pointer items-center gap-1 rounded-md border px-2 py-1 font-mono font-semibold text-[10px] transition-all ${
+        active
+          ? 'border-amber-400/40 bg-amber-500/15 text-amber-300'
+          : 'border-dt-border bg-dt-bg-raised text-dt-text-3 hover:border-dt-border hover:text-dt-text-2'
+      }`}
+    >
+      CI
+      {active && <span className="size-1.5 animate-pulse rounded-full bg-amber-400" />}
+    </button>
+  );
+}
+
+function MissingButton({
+  active,
+  runtimeCount,
+  onClick,
+}: Readonly<{ active: boolean; runtimeCount: number; onClick: () => void }>) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={
+        active
+          ? 'Hide missing key markers on page'
+          : 'Show missing translation keys directly on the page'
+      }
+      className={`flex cursor-pointer items-center gap-1 rounded-md border px-2 py-1 font-medium text-[10px] transition-all ${
+        active
+          ? 'border-red-400/40 bg-red-500/15 text-red-300'
+          : 'border-dt-border bg-dt-bg-raised text-dt-text-3 hover:border-dt-border hover:text-dt-text-2'
+      }`}
+    >
+      <AlertTriangle className={`size-3 ${active ? 'text-red-400' : ''}`} />
+      Missing
+      {runtimeCount > 0 && !active && (
+        <span className="rounded-full bg-red-500/20 px-1 py-px font-semibold text-[8px] text-red-400">
+          {runtimeCount}
+        </span>
+      )}
+      {active && <span className="size-1.5 animate-pulse rounded-full bg-red-400" />}
+    </button>
+  );
+}
+
 export function PanelHeader({
   currentLang,
   locales,
@@ -97,9 +172,10 @@ export function PanelHeader({
   onToggleMissing: () => void;
   onClose: () => void;
 }>) {
+  const hintVisible = highlight || isCiMode || showMissing;
+  const localeOptions = locales.length > 0 ? locales : [currentLang];
   return (
     <div className="border-dt-border border-b">
-      {/* Top row: title + controls */}
       <div className="flex items-center justify-between bg-dt-bg-subtle px-3.5 py-2">
         <div className="flex items-center gap-2">
           <Globe className="size-4 text-indigo-400" />
@@ -112,7 +188,7 @@ export function PanelHeader({
             onChange={(e) => i18next.changeLanguage(e.target.value)}
             disabled={isCiMode}
           >
-            {(locales.length > 0 ? locales : [currentLang]).map((l) => (
+            {localeOptions.map((l) => (
               <option key={l} value={l}>
                 {l.toUpperCase()}
               </option>
@@ -128,67 +204,11 @@ export function PanelHeader({
           </button>
         </div>
       </div>
-      {/* Toolbar row: inspect + cimode */}
       <div className="flex items-center gap-2 bg-dt-bg-subtle px-3.5 py-1.5">
-        <button
-          type="button"
-          onClick={onToggleHighlight}
-          title={
-            highlight
-              ? 'Stop inspecting translations'
-              : 'Inspect translations \u2014 hover to see keys, click to navigate'
-          }
-          className={`flex cursor-pointer items-center gap-1.5 rounded-md border px-2.5 py-1 font-medium text-[10px] transition-all ${
-            highlight
-              ? 'border-indigo-400/40 bg-indigo-500/15 text-indigo-300 shadow-[0_0_12px_rgba(99,102,241,.15)]'
-              : 'border-dt-border bg-dt-bg-raised text-dt-text-3 hover:border-dt-border hover:text-dt-text-2'
-          }`}
-        >
-          <MousePointerClick className={`size-3.5 ${highlight ? 'text-indigo-400' : ''}`} />
-          {highlight ? 'Inspecting' : 'Inspect'}
-          {highlight && <span className="size-1.5 animate-pulse rounded-full bg-indigo-400" />}
-        </button>
-        <button
-          type="button"
-          onClick={onToggleCiMode}
-          title={
-            isCiMode
-              ? 'Switch back to translated text'
-              : 'Show raw translation keys in the app (cimode)'
-          }
-          className={`flex cursor-pointer items-center gap-1 rounded-md border px-2 py-1 font-mono font-semibold text-[10px] transition-all ${
-            isCiMode
-              ? 'border-amber-400/40 bg-amber-500/15 text-amber-300'
-              : 'border-dt-border bg-dt-bg-raised text-dt-text-3 hover:border-dt-border hover:text-dt-text-2'
-          }`}
-        >
-          CI
-          {isCiMode && <span className="size-1.5 animate-pulse rounded-full bg-amber-400" />}
-        </button>
-        <button
-          type="button"
-          onClick={onToggleMissing}
-          title={
-            showMissing
-              ? 'Hide missing key markers on page'
-              : 'Show missing translation keys directly on the page'
-          }
-          className={`flex cursor-pointer items-center gap-1 rounded-md border px-2 py-1 font-medium text-[10px] transition-all ${
-            showMissing
-              ? 'border-red-400/40 bg-red-500/15 text-red-300'
-              : 'border-dt-border bg-dt-bg-raised text-dt-text-3 hover:border-dt-border hover:text-dt-text-2'
-          }`}
-        >
-          <AlertTriangle className={`size-3 ${showMissing ? 'text-red-400' : ''}`} />
-          Missing
-          {runtimeCount > 0 && !showMissing && (
-            <span className="rounded-full bg-red-500/20 px-1 py-px font-semibold text-[8px] text-red-400">
-              {runtimeCount}
-            </span>
-          )}
-          {showMissing && <span className="size-1.5 animate-pulse rounded-full bg-red-400" />}
-        </button>
-        {(highlight || isCiMode || showMissing) && (
+        <InspectButton active={highlight} onClick={onToggleHighlight} />
+        <CiModeButton active={isCiMode} onClick={onToggleCiMode} />
+        <MissingButton active={showMissing} runtimeCount={runtimeCount} onClick={onToggleMissing} />
+        {hintVisible && (
           <span className="ml-auto text-[9px] text-dt-text-4">
             {toolbarHint(highlight, isCiMode, showMissing)}
           </span>

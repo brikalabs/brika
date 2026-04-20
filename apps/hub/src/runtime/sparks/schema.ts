@@ -16,5 +16,5 @@ export const sparks = sqliteTable(
     index('idx_sparks_source').on(table.source),
     index('idx_sparks_plugin').on(table.pluginId),
     index('idx_sparks_ts_type').on(table.ts, table.type),
-  ],
+  ]
 );

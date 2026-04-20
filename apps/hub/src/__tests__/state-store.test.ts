@@ -423,7 +423,11 @@ describe('StateStore', () => {
         store.applyTimezone();
         expect(process.env.TZ).toBe('Pacific/Auckland');
       } finally {
-        if (originalTZ) { process.env.TZ = originalTZ; } else { delete process.env.TZ; }
+        if (originalTZ) {
+          process.env.TZ = originalTZ;
+        } else {
+          delete process.env.TZ;
+        }
       }
     });
 
@@ -435,7 +439,11 @@ describe('StateStore', () => {
         store.applyTimezone();
         expect(process.env.TZ).toBeUndefined();
       } finally {
-        if (originalTZ) { process.env.TZ = originalTZ; } else { delete process.env.TZ; }
+        if (originalTZ) {
+          process.env.TZ = originalTZ;
+        } else {
+          delete process.env.TZ;
+        }
       }
     });
 

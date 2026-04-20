@@ -79,6 +79,55 @@ function edgesToGraphEdges(edges: Edge[]): GraphEdge[] {
 
 export type BlockStatus = 'idle' | 'running' | 'completed' | 'error';
 
+interface AvailableVariable {
+  name: string;
+  source: string;
+  type: string;
+}
+
+function collectInputVariables(
+  edge: Edge,
+  blockNodes: Node[],
+  portTypeMap: PortTypeMap
+): AvailableVariable[] {
+  const sourceNode = blockNodes.find((n) => n.id === edge.source);
+  if (!sourceNode) {
+    return [];
+  }
+  const sourcePortId = edge.sourceHandle || 'out';
+  const targetPortId = edge.targetHandle || 'in';
+  const resolvedType = portTypeMap.get(portKey(sourceNode.id, sourcePortId));
+
+  if (resolvedType) {
+    return getCompletions(resolvedType, `inputs.${targetPortId}`, 3).map((item) => ({
+      name: item.path,
+      source: `from ${sourceNode.id}`,
+      type: item.type,
+    }));
+  }
+
+  const sourceData = sourceNode.data as BlockNodeData;
+  const outputPort = sourceData.outputs?.find((p) => p.id === sourcePortId);
+  return [
+    {
+      name: `inputs.${targetPortId}`,
+      source: `from ${sourceNode.id}`,
+      type: outputPort?.typeName ?? 'generic',
+    },
+  ];
+}
+
+function collectConfigVariables(data: BlockNodeData): AvailableVariable[] {
+  if (!data.config || Object.keys(data.config).length === 0) {
+    return [];
+  }
+  return Object.keys(data.config).map((key) => ({
+    name: `config.${key}`,
+    source: 'block config',
+    type: typeof data.config?.[key],
+  }));
+}
+
 export interface EditorState {
   workflow: Workflow;
   selectedNodeId: string | null;
@@ -591,70 +640,18 @@ export function useWorkflowEditor(
     setIsDirty(false);
   }, []);
 
-  // Get available variables at a given block position with deep autocompletion.
-  // Uses resolved types from the inference engine to offer property completions.
   const getAvailableVariables = useCallback(
     (blockId: string) => {
-      const variables: Array<{
-        name: string;
-        source: string;
-        type: string;
-      }> = [];
-
       const blockNodes = nodes.filter((n) => n.type === 'block');
       const targetNode = blockNodes.find((n) => n.id === blockId);
       const incomingEdges = edges.filter((e) => e.target === blockId);
 
-      // Add input variables for each connected input port with deep completions
-      for (const edge of incomingEdges) {
-        const sourceNode = blockNodes.find((n) => n.id === edge.source);
-        if (!sourceNode) {
-          continue;
-        }
+      const inputVars = incomingEdges.flatMap((edge) =>
+        collectInputVariables(edge, blockNodes, portTypeMap)
+      );
+      const configVars = targetNode ? collectConfigVariables(targetNode.data as BlockNodeData) : [];
 
-        const sourcePortId = edge.sourceHandle || 'out';
-        const targetPortId = edge.targetHandle || 'in';
-
-        // Use resolved type from inference engine
-        const resolvedType = portTypeMap.get(portKey(sourceNode.id, sourcePortId));
-
-        if (resolvedType) {
-          // Deep autocompletion: expand object fields, array elements, etc.
-          const completions = getCompletions(resolvedType, `inputs.${targetPortId}`, 3);
-          for (const item of completions) {
-            variables.push({
-              name: item.path,
-              source: `from ${sourceNode.id}`,
-              type: item.type,
-            });
-          }
-        } else {
-          // Fallback: basic variable without deep completion
-          const sourceData = sourceNode.data as BlockNodeData;
-          const outputPort = sourceData.outputs?.find((p) => p.id === sourcePortId);
-          variables.push({
-            name: `inputs.${targetPortId}`,
-            source: `from ${sourceNode.id}`,
-            type: outputPort?.typeName ?? 'generic',
-          });
-        }
-      }
-
-      // Add config variables if the block has config
-      if (targetNode) {
-        const targetData = targetNode.data as BlockNodeData;
-        if (targetData.config && Object.keys(targetData.config).length > 0) {
-          for (const key of Object.keys(targetData.config)) {
-            variables.push({
-              name: `config.${key}`,
-              source: 'block config',
-              type: typeof targetData.config[key],
-            });
-          }
-        }
-      }
-
-      return variables;
+      return [...inputVars, ...configVars];
     },
     [nodes, edges, portTypeMap]
   );

@@ -81,7 +81,9 @@ describe('LogStore', () => {
 
     test('creates indexes for efficient queries', () => {
       const db = new Database(join(tempDir, 'db', 'logs.db'));
-      const indexes = db.query("SELECT name FROM sqlite_master WHERE type='index'").all() as { name: string }[];
+      const indexes = db.query("SELECT name FROM sqlite_master WHERE type='index'").all() as {
+        name: string;
+      }[];
       const names = indexes.map((i) => i.name);
 
       expect(names).toContain('idx_logs_ts');

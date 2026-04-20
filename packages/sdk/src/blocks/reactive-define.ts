@@ -153,26 +153,11 @@ export function defineReactiveBlock<
   // Get structural TypeDescriptor from schema/ref (for @brika/type-system)
   // Produces a JSON-serializable TypeDescriptor without importing the type-system package.
   const getTypeDescriptor = (schema: OutputDefSchema): Record<string, unknown> => {
-    // Handle marker refs
     if (schema && typeof schema === 'object' && '__type' in schema) {
-      if (schema.__type === 'generic') {
-        return { kind: 'generic', typeVar: schema.__generic ?? 'T' };
-      }
-      if (schema.__type === 'passthrough') {
-        return { kind: 'passthrough', sourcePortId: schema.__passthrough ?? '' };
-      }
-      if (schema.__type === 'resolved') {
-        return {
-          kind: 'resolved',
-          source: schema.__source ?? '',
-          configField: schema.__configField ?? '',
-        };
-      }
+      return markerRefToDescriptor(schema) ?? { kind: 'unknown' };
     }
-    // Convert Zod schema via JSON Schema intermediary
     try {
-      const jsonSchema = zodToJsonSchema(schema);
-      return jsonSchemaToTypeDescriptor(jsonSchema);
+      return jsonSchemaToTypeDescriptor(zodToJsonSchema(schema));
     } catch {
       return { kind: 'unknown' };
     }
@@ -395,10 +380,54 @@ export function isCompiledReactiveBlock(value: unknown): value is CompiledReacti
 // Helper
 // ─────────────────────────────────────────────────────────────────────────────
 
+/** Convert a marker ref (generic/passthrough/resolved) to a TypeDescriptor-shaped object */
+function markerRefToDescriptor(
+  schema: PassthroughRef | GenericRef<string> | ResolvedRef
+): Record<string, unknown> | null {
+  if (schema.__type === 'generic') {
+    return { kind: 'generic', typeVar: schema.__generic ?? 'T' };
+  }
+  if (schema.__type === 'passthrough') {
+    return { kind: 'passthrough', sourcePortId: schema.__passthrough ?? '' };
+  }
+  if (schema.__type === 'resolved') {
+    return {
+      kind: 'resolved',
+      source: schema.__source ?? '',
+      configField: schema.__configField ?? '',
+    };
+  }
+  return null;
+}
+
 /** Convert JSON Schema to a TypeDescriptor-shaped plain object */
 function jsonSchemaToTypeDescriptor(schema: Record<string, unknown>): Record<string, unknown> {
-  const type = schema.type as string | undefined;
+  const composite = jsonSchemaComposite(schema);
+  if (composite) {
+    return composite;
+  }
 
+  const type = schema.type as string | undefined;
+  switch (type) {
+    case 'string':
+      return { kind: 'primitive', type: 'string' };
+    case 'number':
+    case 'integer':
+      return { kind: 'primitive', type: 'number' };
+    case 'boolean':
+      return { kind: 'primitive', type: 'boolean' };
+    case 'null':
+      return { kind: 'primitive', type: 'null' };
+    case 'array':
+      return jsonSchemaArray(schema);
+    case 'object':
+      return jsonSchemaObject(schema);
+    default:
+      return { kind: 'unknown' };
+  }
+}
+
+function jsonSchemaComposite(schema: Record<string, unknown>): Record<string, unknown> | null {
   if (schema.anyOf) {
     const variants = (schema.anyOf as Record<string, unknown>[]).map(jsonSchemaToTypeDescriptor);
     return variants.length === 1 && variants[0] ? variants[0] : { kind: 'union', variants };
@@ -413,60 +442,45 @@ function jsonSchemaToTypeDescriptor(schema: Record<string, unknown>): Record<str
   if ('const' in schema) {
     return { kind: 'literal', value: schema.const };
   }
+  return null;
+}
 
-  switch (type) {
-    case 'string':
-      return { kind: 'primitive', type: 'string' };
-    case 'number':
-    case 'integer':
-      return { kind: 'primitive', type: 'number' };
-    case 'boolean':
-      return { kind: 'primitive', type: 'boolean' };
-    case 'null':
-      return { kind: 'primitive', type: 'null' };
-    case 'array': {
-      if (schema.items) {
-        return {
-          kind: 'array',
-          element: jsonSchemaToTypeDescriptor(schema.items as Record<string, unknown>),
-        };
-      }
-      if (schema.prefixItems) {
-        return {
-          kind: 'tuple',
-          elements: (schema.prefixItems as Record<string, unknown>[]).map(
-            jsonSchemaToTypeDescriptor
-          ),
-        };
-      }
-      return { kind: 'array', element: { kind: 'unknown' } };
-    }
-    case 'object': {
-      const properties = schema.properties as Record<string, Record<string, unknown>> | undefined;
-      if (!properties) {
-        if (schema.additionalProperties && typeof schema.additionalProperties === 'object') {
-          return {
-            kind: 'record',
-            value: jsonSchemaToTypeDescriptor(
-              schema.additionalProperties as Record<string, unknown>
-            ),
-          };
-        }
-        return { kind: 'record', value: { kind: 'unknown' } };
-      }
-      const required = new Set((schema.required as string[] | undefined) ?? []);
-      const fields: Record<string, { type: Record<string, unknown>; optional: boolean }> = {};
-      for (const [key, propSchema] of Object.entries(properties)) {
-        fields[key] = {
-          type: jsonSchemaToTypeDescriptor(propSchema),
-          optional: !required.has(key),
-        };
-      }
-      return { kind: 'object', fields };
-    }
-    default:
-      return { kind: 'unknown' };
+function jsonSchemaArray(schema: Record<string, unknown>): Record<string, unknown> {
+  if (schema.items) {
+    return {
+      kind: 'array',
+      element: jsonSchemaToTypeDescriptor(schema.items as Record<string, unknown>),
+    };
   }
+  if (schema.prefixItems) {
+    return {
+      kind: 'tuple',
+      elements: (schema.prefixItems as Record<string, unknown>[]).map(jsonSchemaToTypeDescriptor),
+    };
+  }
+  return { kind: 'array', element: { kind: 'unknown' } };
+}
+
+function jsonSchemaObject(schema: Record<string, unknown>): Record<string, unknown> {
+  const properties = schema.properties as Record<string, Record<string, unknown>> | undefined;
+  if (!properties) {
+    if (schema.additionalProperties && typeof schema.additionalProperties === 'object') {
+      return {
+        kind: 'record',
+        value: jsonSchemaToTypeDescriptor(schema.additionalProperties as Record<string, unknown>),
+      };
+    }
+    return { kind: 'record', value: { kind: 'unknown' } };
+  }
+  const required = new Set((schema.required as string[] | undefined) ?? []);
+  const fields: Record<string, { type: Record<string, unknown>; optional: boolean }> = {};
+  for (const [key, propSchema] of Object.entries(properties)) {
+    fields[key] = {
+      type: jsonSchemaToTypeDescriptor(propSchema),
+      optional: !required.has(key),
+    };
+  }
+  return { kind: 'object', fields };
 }
 
 function zodToBlockSchema(schema: z.ZodObject<z.ZodRawShape>): BlockSchema {

@@ -16,16 +16,16 @@ export const users = sqliteTable(
     createdAt: integer('created_at').notNull(),
     updatedAt: integer('updated_at').notNull(),
   },
-  (table) => [
-    index('idx_users_email').on(table.email),
-  ],
+  (table) => [index('idx_users_email').on(table.email)]
 );
 
 export const sessions = sqliteTable(
   'sessions',
   {
     id: text('id').primaryKey(),
-    userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
     tokenHash: text('token_hash').notNull().unique(),
     ip: text('ip'),
     userAgent: text('user_agent'),
@@ -37,5 +37,5 @@ export const sessions = sqliteTable(
   (table) => [
     index('idx_sessions_token_hash').on(table.tokenHash),
     index('idx_sessions_user_id').on(table.userId),
-  ],
+  ]
 );

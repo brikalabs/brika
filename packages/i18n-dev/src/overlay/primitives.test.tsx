@@ -83,12 +83,7 @@ describe('pctColor', () => {
 describe('FilterPill', () => {
   test('renders active state', () => {
     const html = renderToString(
-      <FilterPill
-        active={true}
-        onClick={() => {
-          /* noop */
-        }}
-      >
+      <FilterPill active={true} onClick={() => {}}>
         All
       </FilterPill>
     );
@@ -98,12 +93,7 @@ describe('FilterPill', () => {
 
   test('renders inactive state', () => {
     const html = renderToString(
-      <FilterPill
-        active={false}
-        onClick={() => {
-          /* noop */
-        }}
-      >
+      <FilterPill active={false} onClick={() => {}}>
         All
       </FilterPill>
     );
@@ -112,13 +102,7 @@ describe('FilterPill', () => {
 
   test('renders error variant', () => {
     const html = renderToString(
-      <FilterPill
-        active={true}
-        onClick={() => {
-          /* noop */
-        }}
-        variant="error"
-      >
+      <FilterPill active={true} onClick={() => {}} variant="error">
         Errors
       </FilterPill>
     );
@@ -128,13 +112,7 @@ describe('FilterPill', () => {
 
   test('renders warning variant', () => {
     const html = renderToString(
-      <FilterPill
-        active={true}
-        onClick={() => {
-          /* noop */
-        }}
-        variant="warning"
-      >
+      <FilterPill active={true} onClick={() => {}} variant="warning">
         Warnings
       </FilterPill>
     );
@@ -191,14 +169,7 @@ describe('StatCard', () => {
 describe('NamespaceGroup', () => {
   test('renders expanded with children', () => {
     const html = renderToString(
-      <NamespaceGroup
-        ns="common"
-        count={5}
-        isCollapsed={false}
-        onToggle={() => {
-          /* noop */
-        }}
-      >
+      <NamespaceGroup ns="common" count={5} isCollapsed={false} onToggle={() => {}}>
         <div>child content</div>
       </NamespaceGroup>
     );
@@ -210,14 +181,7 @@ describe('NamespaceGroup', () => {
 
   test('renders collapsed without children', () => {
     const html = renderToString(
-      <NamespaceGroup
-        ns="auth"
-        count={2}
-        isCollapsed={true}
-        onToggle={() => {
-          /* noop */
-        }}
-      >
+      <NamespaceGroup ns="auth" count={2} isCollapsed={true} onToggle={() => {}}>
         <div>hidden content</div>
       </NamespaceGroup>
     );

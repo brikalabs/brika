@@ -54,7 +54,9 @@ export class StateStore {
   readonly #metadataCache = new Map<string, PluginPackageSchema>();
 
   private get db() {
-    if (!this.#database) { throw new Error('StateStore not initialized — call init() first'); }
+    if (!this.#database) {
+      throw new Error('StateStore not initialized — call init() first');
+    }
     return this.#database.db;
   }
 
@@ -67,7 +69,9 @@ export class StateStore {
   // ─────────────────────────────────────────────────────────────────────────
 
   async loadMetadataCache(): Promise<void> {
-    await Promise.all(this.listInstalled().map((p) => this.refreshMetadata(p.name, p.rootDirectory)));
+    await Promise.all(
+      this.listInstalled().map((p) => this.refreshMetadata(p.name, p.rootDirectory))
+    );
   }
 
   async refreshMetadata(name: string, rootDirectory: string): Promise<PluginPackageSchema> {
@@ -124,25 +128,33 @@ export class StateStore {
 
   upsert(p: InstalledPluginState): void {
     const row = this.#pluginToRow(p);
-    this.db.insert(pluginsTable).values(row).onConflictDoUpdate({
-      target: pluginsTable.name,
-      set: row,
-    }).run();
+    this.db
+      .insert(pluginsTable)
+      .values(row)
+      .onConflictDoUpdate({
+        target: pluginsTable.name,
+        set: row,
+      })
+      .run();
   }
 
   setEnabled(name: string, enabled: boolean): void {
-    this.db.update(pluginsTable)
+    this.db
+      .update(pluginsTable)
       .set({ enabled, updatedAt: Date.now() })
       .where(eq(pluginsTable.name, name))
       .run();
   }
 
   setHealth(name: string, health: PluginHealth, lastError?: PluginError | null): void {
-    this.db.update(pluginsTable)
+    this.db
+      .update(pluginsTable)
       .set({
         health,
         updatedAt: Date.now(),
-        ...(lastError === undefined ? {} : { lastError: lastError ? JSON.stringify(lastError) : null }),
+        ...(lastError === undefined
+          ? {}
+          : { lastError: lastError ? JSON.stringify(lastError) : null }),
       })
       .where(eq(pluginsTable.name, name))
       .run();
@@ -157,7 +169,9 @@ export class StateStore {
   }): Promise<void> {
     const cur = this.get(info.name);
     const metadata = await this.refreshMetadata(info.name, info.rootDirectory);
-    const grantedPermissions = JSON.stringify(cur?.grantedPermissions ?? metadata.permissions ?? []);
+    const grantedPermissions = JSON.stringify(
+      cur?.grantedPermissions ?? metadata.permissions ?? []
+    );
 
     const updateFields = {
       rootDirectory: info.rootDirectory,
@@ -170,7 +184,8 @@ export class StateStore {
       grantedPermissions,
     };
 
-    this.db.insert(pluginsTable)
+    this.db
+      .insert(pluginsTable)
       .values({ name: info.name, ...updateFields })
       .onConflictDoUpdate({ target: pluginsTable.name, set: updateFields })
       .run();
@@ -179,7 +194,11 @@ export class StateStore {
   syncToConfig(validNames: Set<string>): void {
     const names = [...validNames];
     const condition = names.length > 0 ? notInArray(pluginsTable.name, names) : undefined;
-    const removed = this.db.delete(pluginsTable).where(condition).returning({ name: pluginsTable.name }).all();
+    const removed = this.db
+      .delete(pluginsTable)
+      .where(condition)
+      .returning({ name: pluginsTable.name })
+      .all();
     for (const { name } of removed) {
       this.logs.info('Removing plugin state (not in config)', { pluginName: name });
     }
@@ -195,11 +214,12 @@ export class StateStore {
       .from(pluginsTable)
       .where(eq(pluginsTable.name, name))
       .get();
-    return row?.grantedPermissions ? JSON.parse(row.grantedPermissions) as string[] : [];
+    return row?.grantedPermissions ? (JSON.parse(row.grantedPermissions) as string[]) : [];
   }
 
   setGrantedPermissions(name: string, permissions: string[]): void {
-    this.db.update(pluginsTable)
+    this.db
+      .update(pluginsTable)
       .set({ grantedPermissions: JSON.stringify(permissions), updatedAt: Date.now() })
       .where(eq(pluginsTable.name, name))
       .run();
@@ -260,13 +280,20 @@ export class StateStore {
 
   #getSetting<T>(key: string, fallback: T): T {
     const row = this.db.select().from(settingsTable).where(eq(settingsTable.key, key)).get();
-    if (!row) { return fallback; }
-    try { return JSON.parse(row.value) as T; } catch { return fallback; }
+    if (!row) {
+      return fallback;
+    }
+    try {
+      return JSON.parse(row.value) as T;
+    } catch {
+      return fallback;
+    }
   }
 
   #setSetting(key: string, value: unknown): void {
     const serialized = JSON.stringify(value);
-    this.db.insert(settingsTable)
+    this.db
+      .insert(settingsTable)
       .values({ key, value: serialized })
       .onConflictDoUpdate({ target: settingsTable.key, set: { value: serialized } })
       .run();
@@ -280,9 +307,11 @@ export class StateStore {
       uid: row.uid,
       enabled: row.enabled,
       health: row.health,
-      lastError: row.lastError ? JSON.parse(row.lastError) as PluginError : null,
+      lastError: row.lastError ? (JSON.parse(row.lastError) as PluginError) : null,
       updatedAt: row.updatedAt,
-      grantedPermissions: row.grantedPermissions ? JSON.parse(row.grantedPermissions) as string[] : [],
+      grantedPermissions: row.grantedPermissions
+        ? (JSON.parse(row.grantedPermissions) as string[])
+        : [],
     };
   }
 

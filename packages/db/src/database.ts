@@ -1,6 +1,6 @@
+import { Database } from 'bun:sqlite';
 import { mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { Database } from 'bun:sqlite';
 import { drizzle } from 'drizzle-orm/bun-sqlite';
 import { migrate } from 'drizzle-orm/bun-sqlite/migrator';
 import { resolveDatabasePath } from './config';
@@ -16,7 +16,7 @@ export interface DatabaseDefinition<TSchema extends Record<string, unknown>> {
 export function defineDatabase<TSchema extends Record<string, unknown>>(
   name: string,
   schema: TSchema,
-  meta: ImportMeta,
+  meta: ImportMeta
 ): DatabaseDefinition<TSchema> {
   const migrationsFolder = join(meta.dir, 'migrations');
   return {
@@ -27,7 +27,7 @@ export function defineDatabase<TSchema extends Record<string, unknown>>(
 function openDatabase<TSchema extends Record<string, unknown>>(
   path: string,
   schema: TSchema,
-  migrationsFolder: string,
+  migrationsFolder: string
 ) {
   const resolved = resolveDatabasePath(path);
   if (resolved !== ':memory:') {

@@ -118,12 +118,41 @@ export function needsResolution(desc: TypeDescriptor): boolean {
 // Parsing — convert legacy typeName strings to TypeDescriptor
 // ─────────────────────────────────────────────────────────────────────────────
 
+const SIMPLE_TYPE_MAP: Record<string, TypeDescriptor> = {
+  unknown: T.unknown,
+  any: T.unknown,
+  string: T.string,
+  number: T.number,
+  integer: T.number,
+  boolean: T.boolean,
+  null: T.null,
+  array: T.array(T.unknown),
+};
+
 /** Parse a legacy typeName string (e.g. "string", "generic<T>", "passthrough(in)") into a TypeDescriptor */
 export function parseTypeName(typeName?: string): TypeDescriptor {
   if (!typeName) {
     return T.generic();
   }
 
+  const prefixed = parsePrefixedTypeName(typeName);
+  if (prefixed) {
+    return prefixed;
+  }
+
+  const simple = SIMPLE_TYPE_MAP[typeName];
+  if (simple) {
+    return simple;
+  }
+
+  if (typeName.endsWith('[]')) {
+    return T.array(parseTypeName(typeName.slice(0, -2)));
+  }
+
+  return T.unknown;
+}
+
+function parsePrefixedTypeName(typeName: string): TypeDescriptor | null {
   if (typeName.startsWith('generic')) {
     return T.generic(typeName.match(/<(\w+)>/)?.[1] ?? 'T');
   }
@@ -137,29 +166,7 @@ export function parseTypeName(typeName?: string): TypeDescriptor {
     const parts = typeName.slice('$resolve:'.length).split(':');
     return T.resolved(parts[0] ?? '', parts[1] ?? '');
   }
-  if (typeName === 'unknown' || typeName === 'any') {
-    return T.unknown;
-  }
-  if (typeName === 'string') {
-    return T.string;
-  }
-  if (typeName === 'number' || typeName === 'integer') {
-    return T.number;
-  }
-  if (typeName === 'boolean') {
-    return T.boolean;
-  }
-  if (typeName === 'null') {
-    return T.null;
-  }
-  if (typeName === 'array') {
-    return T.array(T.unknown);
-  }
-  if (typeName.endsWith('[]')) {
-    return T.array(parseTypeName(typeName.slice(0, -2)));
-  }
-
-  return T.unknown;
+  return null;
 }
 
 /** Extract a TypeDescriptor from a port, preferring the structured `type` field over `typeName` */
