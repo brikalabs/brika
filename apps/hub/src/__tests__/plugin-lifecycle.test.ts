@@ -115,6 +115,7 @@ describe('PluginLifecycle', () => {
       heartbeatEveryMs: 1000,
       heartbeatTimeoutMs: 5000,
       autoRestartEnabled: true,
+      killTimeoutMs: 0,
     };
     mockState = {
       get: mock(),
