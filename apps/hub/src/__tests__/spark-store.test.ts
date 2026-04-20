@@ -4,9 +4,8 @@ import { rmSync } from 'node:fs';
 import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { container } from '@brika/di';
-import { get, provide, reset, stub, useTestBed } from '@brika/di/testing';
-import { ConfigLoader } from '@/runtime/config/config-loader';
+import { configureDatabases } from '@brika/db';
+import { get, reset, stub, useTestBed } from '@brika/di/testing';
 import { SparkStore, type StoredSparkEvent } from '@/runtime/sparks/spark-store';
 
 useTestBed({
@@ -34,13 +33,10 @@ describe('SparkStore', () => {
     reset();
 
     tempDir = await mkdtemp(join(tmpdir(), 'spark-store-test-'));
-
-    stub(ConfigLoader, {
-      getRootDir: () => tempDir,
-    });
+    configureDatabases(tempDir);
 
     store = get(SparkStore);
-    await store.init();
+    store.init();
   });
 
   afterEach(() => {

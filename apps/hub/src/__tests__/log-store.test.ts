@@ -3,13 +3,12 @@
  * Testing SQLite-based log storage
  */
 import 'reflect-metadata';
-import { Database } from 'bun:sqlite';
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { get, provide, reset, stub, useTestBed } from '@brika/di/testing';
-import { ConfigLoader } from '@/runtime/config';
+import { configureDatabases } from '@brika/db';
+import { get, reset, useTestBed } from '@brika/di/testing';
 import { type LogQueryParams, LogStore } from '@/runtime/logs/log-store';
 import type { LogEvent } from '@/runtime/logs/types';
 
@@ -38,15 +37,11 @@ describe('LogStore', () => {
   let tempDir: string;
 
   beforeEach(async () => {
-    // Create temp directory for test database
     tempDir = await mkdtemp(join(tmpdir(), 'brika-log-test-'));
-
-    stub(ConfigLoader, {
-      getRootDir: () => tempDir,
-    });
+    configureDatabases(tempDir);
 
     store = get(LogStore);
-    await store.init();
+    store.init();
   });
 
   afterEach(async () => {
