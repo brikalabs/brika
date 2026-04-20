@@ -35,6 +35,7 @@ describe('PluginLifecycle', () => {
     heartbeatEveryMs: number;
     heartbeatTimeoutMs: number;
     autoRestartEnabled: boolean;
+    killTimeoutMs: number;
   };
   let mockState: {
     get: ReturnType<typeof mock>;
@@ -634,7 +635,7 @@ describe('PluginLifecycle', () => {
           version: '1.0.0',
           main: './index.js',
           engines: { brika: '^0.1.0' },
-          pages: [{ id: 'settings', path: '/settings' }],
+          pages: [{ id: 'settings' }],
           bricks: [{ id: 'widget' }],
           permissions: ['network'],
         },
@@ -642,7 +643,7 @@ describe('PluginLifecycle', () => {
 
       const result = lifecycle.fromStored(stored);
 
-      expect(result.pages).toEqual([{ id: 'settings', path: '/settings' }]);
+      expect(result.pages).toEqual([{ id: 'settings' }]);
       expect(result.bricks).toEqual([{ id: 'widget' }]);
       expect(result.grantedPermissions).toEqual(['network', 'storage']);
       expect(result.permissions).toEqual(['network']);

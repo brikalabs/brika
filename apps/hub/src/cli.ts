@@ -29,3 +29,5 @@ if (cwd) {
 await import('reflect-metadata');
 const { cli } = await import('./cli/commands');
 cli.run();
+
+export {};

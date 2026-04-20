@@ -267,9 +267,11 @@ describe('PluginLifecycle (with mocked spawn)', () => {
       await loadPlugin();
 
       const process = lifecycle.getProcess('@test/plugin');
-      expect(process).not.toBeUndefined();
+      if (!process) {
+        throw new Error('expected process to be defined');
+      }
 
-      const found = lifecycle.getProcessByUid(process?.uid);
+      const found = lifecycle.getProcessByUid(process.uid);
       expect(found).toBe(process);
     });
 
