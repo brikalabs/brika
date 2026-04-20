@@ -1,6 +1,6 @@
+import type { Command } from '@brika/cli';
 import pc from 'picocolors';
 import { HUB_REPO_URL, hub } from '@/hub';
-import type { Command } from './command';
 
 /**
  * Generate help text from command metadata.

@@ -7,20 +7,16 @@
  * @example Hub
  * ```ts
  * await bootstrap()
- *   .use(auth({ dataDir, server: inject(ApiServer) }))
+ *   .use(auth({ server: inject(ApiServer) }))
  *   .start();
  * ```
  *
  * @example CLI
  * ```ts
- * await bootstrapCLI()
- *   .use(auth({ dataDir }))
- *   .start();
+ * await bootstrapCLI(auth()).start();
  * ```
  */
 
-import type { Database } from 'bun:sqlite';
-import { join } from 'node:path';
 import { inject } from '@brika/di';
 import type { Middleware, RouteDefinition } from '@brika/router';
 import type { AuthConfig } from './config';
@@ -35,8 +31,6 @@ interface ApiServer {
 }
 
 export interface AuthPluginOptions {
-  /** Root data directory (e.g. ~/.brika or .brika) */
-  dataDir: string;
   /** API server — pass to enable HTTP middleware + routes (hub mode) */
   server?: ApiServer;
   /** Auth configuration overrides (session TTL, password policy, etc.) */
@@ -46,9 +40,9 @@ export interface AuthPluginOptions {
 /**
  * Auth bootstrap plugin.
  */
-export function auth(options: AuthPluginOptions) {
-  const { dataDir, server, config } = options;
-  let db: Database;
+export function auth(options: AuthPluginOptions = {}) {
+  const { server, config } = options;
+  let database: ReturnType<typeof openAuthDatabase> | undefined;
   let cleanupTimer: ReturnType<typeof setInterval> | null = null;
 
   /** Run expired session cleanup every 6 hours */
@@ -58,8 +52,8 @@ export function auth(options: AuthPluginOptions) {
     name: 'auth',
 
     setup() {
-      db = openAuthDatabase(join(dataDir, 'auth.db'));
-      setupAuthServices(db, config);
+      database = openAuthDatabase();
+      setupAuthServices(database, config);
 
       if (server) {
         server.addMiddleware(verifyToken());
@@ -80,7 +74,7 @@ export function auth(options: AuthPluginOptions) {
         clearInterval(cleanupTimer);
         cleanupTimer = null;
       }
-      db?.close();
+      database?.sqlite.close();
     },
   };
 }

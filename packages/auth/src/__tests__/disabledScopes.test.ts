@@ -14,7 +14,7 @@ describe('Per-user scopes (allow-list)', () => {
   let sessionService: SessionService;
 
   beforeEach(() => {
-    const db = openAuthDatabase(':memory:');
+    const { sqlite: db } = openAuthDatabase(':memory:');
     userService = new UserService(db);
     sessionService = new SessionService(db, 3600);
   });

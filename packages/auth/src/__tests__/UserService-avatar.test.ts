@@ -117,7 +117,7 @@ describe('UserService — avatar & deleteUser', () => {
   let service: UserService;
 
   beforeEach(() => {
-    db = openAuthDatabase(':memory:');
+    db = openAuthDatabase(':memory:').sqlite;
     service = new UserService(db);
   });
 

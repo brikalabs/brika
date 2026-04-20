@@ -3,7 +3,6 @@ import 'reflect-metadata';
 
 import { auth } from '@brika/auth/server';
 import { inject } from '@brika/di';
-import { dataDir } from '@/cli/utils/runtime';
 import {
   BoardsLoader,
   bootstrap,
@@ -31,7 +30,6 @@ await bootstrap()
   .use(cache())
   .use(
     auth({
-      dataDir,
       server: inject(ApiServer),
     })
   )

@@ -1,4 +1,5 @@
 import { createBanner } from '@brika/banner';
+import { configureDatabases } from '@brika/db';
 import { inject } from '@brika/di';
 import { hub } from '@/hub';
 import { BrikaInitializer, ConfigLoader } from '@/runtime/config';
@@ -34,7 +35,6 @@ export class Bootstrap {
 
   use(plugin: BootstrapPlugin): this {
     this.plugins.push(plugin);
-    plugin.setup?.(this);
     return this;
   }
 
@@ -55,8 +55,10 @@ export class Bootstrap {
       })
     );
 
-    await this.logStore.init();
+    configureDatabases(`${this.configLoader.getRootDir()}/.brika`);
+    this.logStore.init();
     this.logs.setStore(this.logStore);
+    for (const p of this.plugins) { p.setup?.(this); }
     await this.initializer.init();
     const config = await this.configLoader.load();
 

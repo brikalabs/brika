@@ -1,41 +1,32 @@
+import { type BrikaDatabase, eq, notInArray } from '@brika/db';
 import { inject, singleton } from '@brika/di';
 import type { PluginError, PluginHealth } from '@brika/plugin';
 import { PluginPackageSchema } from '@brika/schema';
-import { HubConfig } from '@/runtime/config';
 import { Logger } from '@/runtime/logs/log-router';
 import {
   DEFAULT_CHANNEL_ID,
   UPDATE_CHANNEL_IDS,
   type UpdateChannelId,
 } from '@/runtime/updates/channels';
+import { stateDb } from './database';
+import { plugins as pluginsTable, settings as settingsTable } from './schema';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Persisted plugin state - only runtime state, no metadata duplication.
- * Metadata is loaded from package.json and cached in memory.
- */
 export interface InstalledPluginState {
-  /** Plugin name from package.json (primary identifier) */
   name: string;
-  /** Plugin root directory */
   rootDirectory: string;
-  /** Entry point file path */
   entryPoint: string;
-  /** Short unique ID (stable across restarts) */
   uid: string;
   enabled: boolean;
   health: PluginHealth;
   lastError: PluginError | null;
   updatedAt: number;
-  grantedPermissions?: string[];
+  grantedPermissions: string[];
 }
 
-/**
- * Plugin state combined with cached metadata for API responses.
- */
 export interface PluginStateWithMetadata extends InstalledPluginState {
   version: string;
   metadata: PluginPackageSchema;
@@ -53,167 +44,200 @@ export interface HubLocation {
   formattedAddress: string;
 }
 
-type StateFile = {
-  plugins: Record<string, InstalledPluginState>;
-  hubLocation?: HubLocation | null;
-  hubTimezone?: string | null;
-  setupCompleted?: boolean;
-  updateChannel?: UpdateChannelId;
-};
+type StateSchema = { plugins: typeof pluginsTable; settings: typeof settingsTable };
 
 @singleton()
 export class StateStore {
-  private readonly config = inject(HubConfig);
   private readonly logs = inject(Logger).withSource('state');
-  readonly #homeDir: string;
-  readonly #file: string;
-  #state: StateFile = {
-    plugins: {},
-  };
+  #database: BrikaDatabase<StateSchema> | null = null;
 
-  /** In-memory cache of plugin metadata loaded from package.json files */
   readonly #metadataCache = new Map<string, PluginPackageSchema>();
 
-  constructor() {
-    this.#homeDir = this.config.homeDir;
-    this.#file = `${this.#homeDir}/state.json`;
+  private get db() {
+    if (!this.#database) { throw new Error('StateStore not initialized — call init() first'); }
+    return this.#database.db;
   }
 
-  async init(): Promise<void> {
-    await Bun.write(Bun.file(`${this.#homeDir}/.keep`), '');
-    const file = Bun.file(this.#file);
-    if (!(await file.exists())) {
-      await this.#flush();
-      return;
-    }
-    const parsed = JSON.parse(await file.text()) as Partial<StateFile>;
-
-    this.#state = {
-      plugins: parsed.plugins ?? {},
-      hubLocation: parsed.hubLocation ?? null,
-      hubTimezone: parsed.hubTimezone ?? null,
-      setupCompleted: parsed.setupCompleted ?? false,
-      updateChannel: UPDATE_CHANNEL_IDS.includes(parsed.updateChannel as UpdateChannelId)
-        ? (parsed.updateChannel as UpdateChannelId)
-        : DEFAULT_CHANNEL_ID,
-    };
+  init(): void {
+    this.#database = stateDb.open();
   }
 
-  /**
-   * Load metadata cache for all installed plugins.
-   * Should be called once at startup before accessing plugins.
-   */
+  // ─────────────────────────────────────────────────────────────────────────
+  // Metadata cache
+  // ─────────────────────────────────────────────────────────────────────────
+
   async loadMetadataCache(): Promise<void> {
-    for (const p of Object.values(this.#state.plugins)) {
-      await this.refreshMetadata(p.name, p.rootDirectory);
-    }
+    await Promise.all(this.listInstalled().map((p) => this.refreshMetadata(p.name, p.rootDirectory)));
   }
 
-  /**
-   * Refresh metadata for a specific plugin from its package.json.
-   */
   async refreshMetadata(name: string, rootDirectory: string): Promise<PluginPackageSchema> {
     const metadata = await this.#readPackageJson(rootDirectory);
     this.#metadataCache.set(name, metadata);
     return metadata;
   }
 
-  /**
-   * Get cached metadata for a plugin.
-   */
   getMetadata(name: string): PluginPackageSchema | undefined {
     return this.#metadataCache.get(name);
   }
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // Plugin queries
+  // ─────────────────────────────────────────────────────────────────────────
+
   listInstalled(): InstalledPluginState[] {
-    return Object.values(this.#state.plugins);
+    return this.db.select().from(pluginsTable).all().map(this.#rowToPlugin);
   }
 
-  /**
-   * List all installed plugins with their cached metadata.
-   */
   listInstalledWithMetadata(): PluginStateWithMetadata[] {
-    return Object.values(this.#state.plugins)
+    return this.listInstalled()
       .map((p) => this.#withMetadata(p))
       .filter((p): p is PluginStateWithMetadata => p !== null);
   }
 
   get(name: string): InstalledPluginState | undefined {
-    return this.#state.plugins[name];
+    const row = this.db.select().from(pluginsTable).where(eq(pluginsTable.name, name)).get();
+    return row ? this.#rowToPlugin(row) : undefined;
   }
 
-  /**
-   * Get plugin state with cached metadata.
-   */
   getWithMetadata(name: string): PluginStateWithMetadata | undefined {
-    const p = this.#state.plugins[name];
-    if (!p) {
-      return undefined;
-    }
-    return this.#withMetadata(p) ?? undefined;
+    const p = this.get(name);
+    return p ? (this.#withMetadata(p) ?? undefined) : undefined;
   }
 
-  /** Get plugin by UID */
   getByUid(uid: string): InstalledPluginState | undefined {
-    return Object.values(this.#state.plugins).find((p) => p.uid === uid);
+    const row = this.db.select().from(pluginsTable).where(eq(pluginsTable.uid, uid)).get();
+    return row ? this.#rowToPlugin(row) : undefined;
   }
 
-  /**
-   * Get plugin by UID with cached metadata.
-   */
   getByUidWithMetadata(uid: string): PluginStateWithMetadata | undefined {
-    const p = Object.values(this.#state.plugins).find((p) => p.uid === uid);
-    if (!p) {
-      return undefined;
-    }
-    return this.#withMetadata(p) ?? undefined;
+    const p = this.getByUid(uid);
+    return p ? (this.#withMetadata(p) ?? undefined) : undefined;
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Hub Location
+  // Plugin mutations
+  // ─────────────────────────────────────────────────────────────────────────
+
+  remove(name: string): void {
+    this.db.delete(pluginsTable).where(eq(pluginsTable.name, name)).run();
+  }
+
+  upsert(p: InstalledPluginState): void {
+    const row = this.#pluginToRow(p);
+    this.db.insert(pluginsTable).values(row).onConflictDoUpdate({
+      target: pluginsTable.name,
+      set: row,
+    }).run();
+  }
+
+  setEnabled(name: string, enabled: boolean): void {
+    this.db.update(pluginsTable)
+      .set({ enabled, updatedAt: Date.now() })
+      .where(eq(pluginsTable.name, name))
+      .run();
+  }
+
+  setHealth(name: string, health: PluginHealth, lastError?: PluginError | null): void {
+    this.db.update(pluginsTable)
+      .set({
+        health,
+        updatedAt: Date.now(),
+        ...(lastError === undefined ? {} : { lastError: lastError ? JSON.stringify(lastError) : null }),
+      })
+      .where(eq(pluginsTable.name, name))
+      .run();
+  }
+
+  async registerPlugin(info: {
+    name: string;
+    rootDirectory: string;
+    entryPoint: string;
+    uid: string;
+    enabled?: boolean;
+  }): Promise<void> {
+    const cur = this.get(info.name);
+    const metadata = await this.refreshMetadata(info.name, info.rootDirectory);
+    const grantedPermissions = JSON.stringify(cur?.grantedPermissions ?? metadata.permissions ?? []);
+
+    const updateFields = {
+      rootDirectory: info.rootDirectory,
+      entryPoint: info.entryPoint,
+      uid: info.uid,
+      enabled: info.enabled ?? cur?.enabled ?? true,
+      health: 'restarting',
+      lastError: null,
+      updatedAt: Date.now(),
+      grantedPermissions,
+    };
+
+    this.db.insert(pluginsTable)
+      .values({ name: info.name, ...updateFields })
+      .onConflictDoUpdate({ target: pluginsTable.name, set: updateFields })
+      .run();
+  }
+
+  syncToConfig(validNames: Set<string>): void {
+    const names = [...validNames];
+    const condition = names.length > 0 ? notInArray(pluginsTable.name, names) : undefined;
+    const removed = this.db.delete(pluginsTable).where(condition).returning({ name: pluginsTable.name }).all();
+    for (const { name } of removed) {
+      this.logs.info('Removing plugin state (not in config)', { pluginName: name });
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Plugin permissions
+  // ─────────────────────────────────────────────────────────────────────────
+
+  getGrantedPermissions(name: string): string[] {
+    const row = this.db
+      .select({ grantedPermissions: pluginsTable.grantedPermissions })
+      .from(pluginsTable)
+      .where(eq(pluginsTable.name, name))
+      .get();
+    return row?.grantedPermissions ? JSON.parse(row.grantedPermissions) as string[] : [];
+  }
+
+  setGrantedPermissions(name: string, permissions: string[]): void {
+    this.db.update(pluginsTable)
+      .set({ grantedPermissions: JSON.stringify(permissions), updatedAt: Date.now() })
+      .where(eq(pluginsTable.name, name))
+      .run();
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Hub settings
   // ─────────────────────────────────────────────────────────────────────────
 
   getHubLocation(): HubLocation | null {
-    return this.#state.hubLocation ?? null;
+    return this.#getSetting<HubLocation | null>('hubLocation', null);
   }
 
-  async setHubLocation(location: HubLocation | null): Promise<void> {
-    this.#state.hubLocation = location;
-    await this.#flush();
+  setHubLocation(location: HubLocation | null): void {
+    this.#setSetting('hubLocation', location);
   }
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Update Channel
-  // ─────────────────────────────────────────────────────────────────────────
 
   getUpdateChannel(): UpdateChannelId {
-    return this.#state.updateChannel ?? DEFAULT_CHANNEL_ID;
+    const raw = this.#getSetting<string>('updateChannel', DEFAULT_CHANNEL_ID);
+    return UPDATE_CHANNEL_IDS.includes(raw as UpdateChannelId)
+      ? (raw as UpdateChannelId)
+      : DEFAULT_CHANNEL_ID;
   }
 
-  async setUpdateChannel(channel: UpdateChannelId): Promise<void> {
-    this.#state.updateChannel = channel;
-    await this.#flush();
+  setUpdateChannel(channel: UpdateChannelId): void {
+    this.#setSetting('updateChannel', channel);
   }
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Hub Timezone
-  // ─────────────────────────────────────────────────────────────────────────
 
   getHubTimezone(): string | null {
-    return this.#state.hubTimezone ?? null;
+    return this.#getSetting<string | null>('hubTimezone', null);
   }
 
-  async setHubTimezone(timezone: string | null): Promise<void> {
-    this.#state.hubTimezone = timezone;
-    await this.#flush();
+  setHubTimezone(timezone: string | null): void {
+    this.#setSetting('hubTimezone', timezone);
   }
 
-  /**
-   * Apply the stored timezone to the process environment.
-   * Should be called at startup and whenever the timezone setting changes.
-   */
   applyTimezone(): void {
-    const tz = this.#state.hubTimezone;
+    const tz = this.getHubTimezone();
     if (tz) {
       process.env.TZ = tz;
       this.logs.info('Timezone applied', { timezone: tz });
@@ -222,162 +246,72 @@ export class StateStore {
     }
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Setup
-  // ─────────────────────────────────────────────────────────────────────────
-
   isSetupCompleted(): boolean {
-    return this.#state.setupCompleted ?? false;
+    return this.#getSetting<boolean>('setupCompleted', false);
   }
 
-  async setSetupCompleted(completed: boolean): Promise<void> {
-    this.#state.setupCompleted = completed;
-    await this.#flush();
-  }
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // Plugin Permissions
-  // ─────────────────────────────────────────────────────────────────────────
-
-  getGrantedPermissions(name: string): string[] {
-    return this.#state.plugins[name]?.grantedPermissions ?? [];
-  }
-
-  async setGrantedPermissions(name: string, permissions: string[]): Promise<void> {
-    const cur = this.#state.plugins[name];
-    if (!cur) {
-      return;
-    }
-    cur.grantedPermissions = permissions;
-    cur.updatedAt = Date.now();
-    await this.#flush();
+  setSetupCompleted(completed: boolean): void {
+    this.#setSetting('setupCompleted', completed);
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Plugin State
+  // Private helpers
   // ─────────────────────────────────────────────────────────────────────────
 
-  /** Remove a plugin entry from state (used to clean up stale entries) */
-  async remove(name: string): Promise<void> {
-    delete this.#state.plugins[name];
-    await this.#flush();
+  #getSetting<T>(key: string, fallback: T): T {
+    const row = this.db.select().from(settingsTable).where(eq(settingsTable.key, key)).get();
+    if (!row) { return fallback; }
+    try { return JSON.parse(row.value) as T; } catch { return fallback; }
   }
 
-  async upsert(p: InstalledPluginState): Promise<void> {
-    this.#state.plugins[p.name] = p;
-    await this.#flush();
+  #setSetting(key: string, value: unknown): void {
+    const serialized = JSON.stringify(value);
+    this.db.insert(settingsTable)
+      .values({ key, value: serialized })
+      .onConflictDoUpdate({ target: settingsTable.key, set: { value: serialized } })
+      .run();
   }
 
-  async setEnabled(name: string, enabled: boolean): Promise<void> {
-    const cur = this.#state.plugins[name];
-    if (!cur) {
-      return; // Plugin must be registered first
-    }
-    cur.enabled = enabled;
-    cur.updatedAt = Date.now();
-    this.#state.plugins[name] = cur;
-    await this.#flush();
-  }
-
-  async setHealth(
-    name: string,
-    health: PluginHealth,
-    lastError?: PluginError | null
-  ): Promise<void> {
-    const cur = this.#state.plugins[name];
-    if (!cur) {
-      return; // Plugin must be registered first
-    }
-    cur.health = health;
-    cur.lastError = lastError ?? cur.lastError ?? null;
-    cur.updatedAt = Date.now();
-    this.#state.plugins[name] = cur;
-    await this.#flush();
-  }
-
-  /**
-   * Register or update a plugin.
-   * Only stores runtime state - metadata is cached separately.
-   */
-  async registerPlugin(info: {
-    name: string;
-    rootDirectory: string;
-    entryPoint: string;
-    uid: string;
-    enabled?: boolean;
-  }): Promise<void> {
-    const cur = this.#state.plugins[info.name];
-
-    // Load metadata into cache first (needed for auto-granting permissions)
-    const metadata = await this.refreshMetadata(info.name, info.rootDirectory);
-
-    // Auto-grant declared permissions on first install, preserve existing grants on update
-    const grantedPermissions = cur?.grantedPermissions ?? metadata.permissions ?? [];
-
-    this.#state.plugins[info.name] = {
-      name: info.name,
-      rootDirectory: info.rootDirectory,
-      entryPoint: info.entryPoint,
-      uid: info.uid,
-      enabled: info.enabled ?? cur?.enabled ?? true,
-      health: 'restarting', // Will be set to 'running' when plugin sends hello
-      lastError: null,
-      updatedAt: Date.now(),
-      grantedPermissions,
+  #rowToPlugin(row: typeof pluginsTable.$inferSelect): InstalledPluginState {
+    return {
+      name: row.name,
+      rootDirectory: row.rootDirectory,
+      entryPoint: row.entryPoint,
+      uid: row.uid,
+      enabled: row.enabled,
+      health: row.health,
+      lastError: row.lastError ? JSON.parse(row.lastError) as PluginError : null,
+      updatedAt: row.updatedAt,
+      grantedPermissions: row.grantedPermissions ? JSON.parse(row.grantedPermissions) as string[] : [],
     };
-    await this.#flush();
   }
 
-  /**
-   * Sync state to match config entries.
-   * Removes state entries for plugins not in config.
-   */
-  async syncToConfig(validNames: Set<string>): Promise<void> {
-    const toRemove: string[] = [];
-
-    for (const plugin of this.listInstalled()) {
-      if (!validNames.has(plugin.name)) {
-        this.logs.info('Removing plugin state (not in config)', {
-          pluginName: plugin.name,
-        });
-        toRemove.push(plugin.name);
-      }
-    }
-
-    for (const name of toRemove) {
-      await this.remove(name);
-    }
+  #pluginToRow(p: InstalledPluginState) {
+    return {
+      name: p.name,
+      rootDirectory: p.rootDirectory,
+      entryPoint: p.entryPoint,
+      uid: p.uid,
+      enabled: p.enabled,
+      health: p.health,
+      lastError: p.lastError ? JSON.stringify(p.lastError) : null,
+      updatedAt: p.updatedAt,
+      grantedPermissions: JSON.stringify(p.grantedPermissions),
+    };
   }
 
   #withMetadata(p: InstalledPluginState): PluginStateWithMetadata | null {
     const metadata = this.#metadataCache.get(p.name);
     if (!metadata) {
-      this.logs.warn('Plugin metadata not found in cache', {
-        pluginName: p.name,
-      });
+      this.logs.warn('Plugin metadata not found in cache', { pluginName: p.name });
       return null;
     }
-    return {
-      ...p,
-      version: metadata.version,
-      metadata,
-    };
+    return { ...p, version: metadata.version, metadata };
   }
 
-  async #flush(): Promise<void> {
-    await Bun.write(this.#file, JSON.stringify(this.#state, null, 2));
-  }
-
-  /**
-   * Read and validate plugin metadata from package.json.
-   */
   async #readPackageJson(pluginDir: string): Promise<PluginPackageSchema> {
     return PluginPackageSchema.parse(
-      await import(`${pluginDir}/package.json`, {
-        with: {
-          type: 'json',
-        },
-      })
+      await import(`${pluginDir}/package.json`, { with: { type: 'json' } })
     );
   }
 }

@@ -58,21 +58,21 @@ describe('openAuthDatabase', () => {
   });
 
   it('should create users table', () => {
-    const db = openAuthDatabase(':memory:');
+    const { sqlite: db } = openAuthDatabase(':memory:');
     const tables = getTableNames(db);
     expect(tables).toContain('users');
     db.close();
   });
 
   it('should create sessions table', () => {
-    const db = openAuthDatabase(':memory:');
+    const { sqlite: db } = openAuthDatabase(':memory:');
     const tables = getTableNames(db);
     expect(tables).toContain('sessions');
     db.close();
   });
 
   it('should create users table with expected columns', () => {
-    const db = openAuthDatabase(':memory:');
+    const { sqlite: db } = openAuthDatabase(':memory:');
     const columns = getColumns(db, 'users');
     expect(columns).toContain('id');
     expect(columns).toContain('email');
@@ -86,7 +86,7 @@ describe('openAuthDatabase', () => {
   });
 
   it('should create sessions table with expected columns', () => {
-    const db = openAuthDatabase(':memory:');
+    const { sqlite: db } = openAuthDatabase(':memory:');
     const columns = getColumns(db, 'sessions');
     expect(columns).toContain('id');
     expect(columns).toContain('user_id');
@@ -101,7 +101,7 @@ describe('openAuthDatabase', () => {
   });
 
   it('should create indices', () => {
-    const db = openAuthDatabase(':memory:');
+    const { sqlite: db } = openAuthDatabase(':memory:');
     const indices = getIndexNames(db);
     expect(indices).toContain('idx_users_email');
     expect(indices).toContain('idx_sessions_token_hash');
@@ -110,7 +110,7 @@ describe('openAuthDatabase', () => {
   });
 
   it('should have avatar and scopes columns', () => {
-    const db = openAuthDatabase(':memory:');
+    const { sqlite: db } = openAuthDatabase(':memory:');
     const columns = getColumns(db, 'users');
     expect(columns).toContain('avatar_data');
     expect(columns).toContain('avatar_mime');
@@ -122,7 +122,7 @@ describe('openAuthDatabase', () => {
   it('should attempt to set WAL journal mode', () => {
     // In-memory databases don't support WAL (they report "memory"),
     // but the code still runs the PRAGMA without error.
-    const db = openAuthDatabase(':memory:');
+    const { sqlite: db } = openAuthDatabase(':memory:');
     const result = db.query('PRAGMA journal_mode').get() as {
       journal_mode: string;
     };
@@ -132,7 +132,7 @@ describe('openAuthDatabase', () => {
   });
 
   it('should be idempotent (calling twice does not error)', () => {
-    const db = openAuthDatabase(':memory:');
+    const { sqlite: db } = openAuthDatabase(':memory:');
     // Simulate running the migrations again on an already-migrated database
     // by closing and re-opening (not possible with :memory:, but we can just
     // verify the ALTER TABLE catch blocks work by calling the function logic).
@@ -145,7 +145,7 @@ describe('openAuthDatabase', () => {
   });
 
   it('should create email unique constraint on users', () => {
-    const db = openAuthDatabase(':memory:');
+    const { sqlite: db } = openAuthDatabase(':memory:');
     const now = Date.now();
     db.run(
       "INSERT INTO users (id, email, name, role, is_active, created_at, updated_at) VALUES ('u1', 'a@b.com', 'A', 'user', 1, ?, ?)",
@@ -162,7 +162,7 @@ describe('openAuthDatabase', () => {
   });
 
   it('should create foreign key from sessions to users', () => {
-    const db = openAuthDatabase(':memory:');
+    const { sqlite: db } = openAuthDatabase(':memory:');
     const now = Date.now();
     // Insert a user first
     db.run(
@@ -190,48 +190,48 @@ describe('setupAuthServices', () => {
   });
 
   it('should register SessionService in the container', () => {
-    const db = openAuthDatabase(':memory:');
-    setupAuthServices(db);
+    const database = openAuthDatabase(':memory:');
+    setupAuthServices(database);
 
     const service = inject(SessionService);
     expect(service).toBeDefined();
     expect(service).toBeInstanceOf(SessionService);
-    db.close();
+    database.sqlite.close();
   });
 
   it('should register UserService in the container', () => {
-    const db = openAuthDatabase(':memory:');
-    setupAuthServices(db);
+    const database = openAuthDatabase(':memory:');
+    setupAuthServices(database);
 
     const service = inject(UserService);
     expect(service).toBeDefined();
     expect(service).toBeInstanceOf(UserService);
-    db.close();
+    database.sqlite.close();
   });
 
   it('should register ScopeService in the container', () => {
-    const db = openAuthDatabase(':memory:');
-    setupAuthServices(db);
+    const database = openAuthDatabase(':memory:');
+    setupAuthServices(database);
 
     const service = inject(ScopeService);
     expect(service).toBeDefined();
     expect(service).toBeInstanceOf(ScopeService);
-    db.close();
+    database.sqlite.close();
   });
 
   it('should register AuthService in the container', () => {
-    const db = openAuthDatabase(':memory:');
-    setupAuthServices(db);
+    const database = openAuthDatabase(':memory:');
+    setupAuthServices(database);
 
     const service = inject(AuthService);
     expect(service).toBeDefined();
     expect(service).toBeInstanceOf(AuthService);
-    db.close();
+    database.sqlite.close();
   });
 
   it('should accept custom session TTL', () => {
-    const db = openAuthDatabase(':memory:');
-    setupAuthServices(db, {
+    const database = openAuthDatabase(':memory:');
+    setupAuthServices(database, {
       session: {
         ttl: 3600,
       },
@@ -241,22 +241,22 @@ describe('setupAuthServices', () => {
     expect(sessionService).toBeDefined();
     // SessionService should have been constructed with the custom TTL
     expect(sessionService.getSessionTTL()).toBe(3600);
-    db.close();
+    database.sqlite.close();
   });
 
   it('should use default session TTL when not provided', () => {
-    const db = openAuthDatabase(':memory:');
-    setupAuthServices(db);
+    const database = openAuthDatabase(':memory:');
+    setupAuthServices(database);
 
     const sessionService = inject(SessionService);
     // Default TTL is 604800 (7 days)
     expect(sessionService.getSessionTTL()).toBe(604800);
-    db.close();
+    database.sqlite.close();
   });
 
   it('should allow full auth flow after setup (inject AuthService)', () => {
-    const db = openAuthDatabase(':memory:');
-    setupAuthServices(db);
+    const database = openAuthDatabase(':memory:');
+    setupAuthServices(database);
 
     // The AuthService should be resolvable and its dependencies should be wired
     const authService = inject(AuthService);
@@ -265,6 +265,6 @@ describe('setupAuthServices', () => {
 
     // getCurrentUser should return null for unknown user (verifies the chain works)
     expect(authService.getCurrentUser('nonexistent')).toBeNull();
-    db.close();
+    database.sqlite.close();
   });
 });

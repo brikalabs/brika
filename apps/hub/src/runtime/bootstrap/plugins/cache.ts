@@ -6,10 +6,8 @@
  * stored at .brika/cache.db
  */
 
-import { join } from 'node:path';
 import { inject } from '@brika/di';
 import { HttpClient, SqliteCache, type SqliteCacheOptions } from '@brika/http';
-import { dataDir } from '@/cli/utils/runtime';
 import { Logger } from '@/runtime/logs/log-router';
 import type { BootstrapPlugin } from '../plugin';
 
@@ -43,17 +41,12 @@ export function cache(options?: CachePluginOptions): BootstrapPlugin {
     name: 'cache',
 
     onInit() {
-      const cachePath = join(dataDir, 'cache.db');
-
-      logger.info('Initializing SQLite cache', {
-        path: cachePath,
-      });
+      logger.info('Initializing SQLite cache');
 
       try {
         cacheInstance = new CacheImpl({
-          path: cachePath,
-          cleanupIntervalMs: 300_000, // Clean up expired entries every 5 minutes
-          walMode: true, // Better concurrent performance
+          path: 'cache.db',
+          cleanupIntervalMs: 300_000,
         });
 
         // Replace the default MemoryCache with SqliteCache
