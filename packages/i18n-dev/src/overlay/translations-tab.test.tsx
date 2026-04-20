@@ -59,7 +59,9 @@ describe('buildMultiLocaleKeys', () => {
 // ─── TranslationLocaleValue ────────────────────────────────────────────────
 
 describe('TranslationLocaleValue', () => {
-  const noop = () => {};
+  const noop = () => {
+    /* noop */
+  };
   const ref = createRef<HTMLInputElement>();
 
   test('renders value as clickable button', () => {

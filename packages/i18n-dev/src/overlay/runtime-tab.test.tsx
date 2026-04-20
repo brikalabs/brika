@@ -11,20 +11,40 @@ const sampleEntries: RuntimeEntry[] = [
 
 describe('RuntimeContent', () => {
   test('renders empty state with no entries', () => {
-    const html = renderToString(<RuntimeContent entries={[]} filter="" onClear={() => {}} />);
+    const html = renderToString(
+      <RuntimeContent
+        entries={[]}
+        filter=""
+        onClear={() => {
+          /* noop */
+        }}
+      />
+    );
     expect(html).toContain('No missing keys detected');
   });
 
   test('renders empty state with filter', () => {
     const html = renderToString(
-      <RuntimeContent entries={sampleEntries} filter="zzz_no_match" onClear={() => {}} />
+      <RuntimeContent
+        entries={sampleEntries}
+        filter="zzz_no_match"
+        onClear={() => {
+          /* noop */
+        }}
+      />
     );
     expect(html).toContain('No matching keys');
   });
 
   test('renders entry list', () => {
     const html = renderToString(
-      <RuntimeContent entries={sampleEntries} filter="" onClear={() => {}} />
+      <RuntimeContent
+        entries={sampleEntries}
+        filter=""
+        onClear={() => {
+          /* noop */
+        }}
+      />
     );
     expect(html).toContain('common');
     expect(html).toContain('hello');
@@ -35,7 +55,13 @@ describe('RuntimeContent', () => {
 
   test('shows count badge for count > 1', () => {
     const html = renderToString(
-      <RuntimeContent entries={sampleEntries} filter="" onClear={() => {}} />
+      <RuntimeContent
+        entries={sampleEntries}
+        filter=""
+        onClear={() => {
+          /* noop */
+        }}
+      />
     );
     // bye has count: 3, should show "3×"
     expect(html).toContain('3');
@@ -43,7 +69,13 @@ describe('RuntimeContent', () => {
 
   test('shows locale badge', () => {
     const html = renderToString(
-      <RuntimeContent entries={sampleEntries} filter="" onClear={() => {}} />
+      <RuntimeContent
+        entries={sampleEntries}
+        filter=""
+        onClear={() => {
+          /* noop */
+        }}
+      />
     );
     expect(html).toContain('fr');
     expect(html).toContain('de');
@@ -51,14 +83,26 @@ describe('RuntimeContent', () => {
 
   test('renders clear button', () => {
     const html = renderToString(
-      <RuntimeContent entries={sampleEntries} filter="" onClear={() => {}} />
+      <RuntimeContent
+        entries={sampleEntries}
+        filter=""
+        onClear={() => {
+          /* noop */
+        }}
+      />
     );
     expect(html).toContain('Clear');
   });
 
   test('shows entry count', () => {
     const html = renderToString(
-      <RuntimeContent entries={sampleEntries} filter="" onClear={() => {}} />
+      <RuntimeContent
+        entries={sampleEntries}
+        filter=""
+        onClear={() => {
+          /* noop */
+        }}
+      />
     );
     // React inserts <!-- --> between JSX expressions, so check fragments
     expect(html).toContain('missing key');
@@ -67,7 +111,13 @@ describe('RuntimeContent', () => {
 
   test('filters entries by key', () => {
     const html = renderToString(
-      <RuntimeContent entries={sampleEntries} filter="hello" onClear={() => {}} />
+      <RuntimeContent
+        entries={sampleEntries}
+        filter="hello"
+        onClear={() => {
+          /* noop */
+        }}
+      />
     );
     expect(html).toContain('hello');
     expect(html).not.toContain('submit');
@@ -75,7 +125,13 @@ describe('RuntimeContent', () => {
 
   test('filters entries by namespace', () => {
     const html = renderToString(
-      <RuntimeContent entries={sampleEntries} filter="auth" onClear={() => {}} />
+      <RuntimeContent
+        entries={sampleEntries}
+        filter="auth"
+        onClear={() => {
+          /* noop */
+        }}
+      />
     );
     expect(html).toContain('submit');
     expect(html).not.toContain('hello');
@@ -83,7 +139,15 @@ describe('RuntimeContent', () => {
 
   test('singular missing key text', () => {
     const single: RuntimeEntry[] = [{ key: 'k', namespace: 'ns', locale: 'en', count: 1 }];
-    const html = renderToString(<RuntimeContent entries={single} filter="" onClear={() => {}} />);
+    const html = renderToString(
+      <RuntimeContent
+        entries={single}
+        filter=""
+        onClear={() => {
+          /* noop */
+        }}
+      />
+    );
     // No trailing 's' for singular
     expect(html).toContain('missing key');
     expect(html).not.toContain('missing keys');
