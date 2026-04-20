@@ -86,16 +86,28 @@ describe('bootstrapCLI', () => {
 
     const p1: BootstrapPlugin = {
       name: 'p1',
-      setup: () => { order.push('p1-setup'); },
-      onInit: () => { order.push('p1-init'); },
-      onStart: () => { order.push('p1-start'); },
+      setup: () => {
+        order.push('p1-setup');
+      },
+      onInit: () => {
+        order.push('p1-init');
+      },
+      onStart: () => {
+        order.push('p1-start');
+      },
     };
 
     const p2: BootstrapPlugin = {
       name: 'p2',
-      setup: () => { order.push('p2-setup'); },
-      onInit: () => { order.push('p2-init'); },
-      onStart: () => { order.push('p2-start'); },
+      setup: () => {
+        order.push('p2-setup');
+      },
+      onInit: () => {
+        order.push('p2-init');
+      },
+      onStart: () => {
+        order.push('p2-start');
+      },
     };
 
     await bootstrapCLI(p1, p2);
@@ -108,12 +120,16 @@ describe('bootstrapCLI', () => {
 
     const p1: BootstrapPlugin = {
       name: 'p1',
-      onStop: () => { order.push('p1'); },
+      onStop: () => {
+        order.push('p1');
+      },
     };
 
     const p2: BootstrapPlugin = {
       name: 'p2',
-      onStop: () => { order.push('p2'); },
+      onStop: () => {
+        order.push('p2');
+      },
     };
 
     const { stop } = await bootstrapCLI(p1, p2);

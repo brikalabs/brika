@@ -5,11 +5,11 @@
 import { describe, expect, test } from 'bun:test';
 import { stub, useTestBed } from '@brika/di/testing';
 import { TestApp } from '@brika/router/testing';
+import { getAuthConfig } from '../config';
 import { setupRoutes } from '../server/routes/setup';
 import { AuthService } from '../services/AuthService';
 import { UserService } from '../services/UserService';
 import { Role, type User } from '../types';
-import { getAuthConfig } from '../config';
 
 const mockUser: User = {
   id: 'user-admin',
