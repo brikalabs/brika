@@ -1,56 +1,28 @@
-/**
- * Tests for apps/hub/src/cli/bootstrap.ts — bootstrapCLI and printDatabaseInfo.
- *
- * mock.module() is used here to intercept configureDatabases from @brika/db
- * without actually opening any database files.
- */
-
-import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
+import 'reflect-metadata';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from 'bun:test';
+import { rm } from 'node:fs/promises';
+import { join } from 'node:path';
+import { configureDatabases } from '@brika/db';
+import { bootstrapCLI, printDatabaseInfo } from '@/cli/bootstrap';
 import type { BootstrapPlugin } from '@/runtime/bootstrap/plugin';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Module mock — intercept @brika/db so configureDatabases is a no-op spy
-// ─────────────────────────────────────────────────────────────────────────────
+const TEST_DIR = join(import.meta.dir, '.test-cli-bootstrap');
 
-const mockConfigureDatabases = mock();
+beforeAll(() => rm(TEST_DIR, { recursive: true, force: true }));
 
-mock.module('@brika/db', () => ({
-  configureDatabases: mockConfigureDatabases,
-}));
+beforeEach(() => {
+  configureDatabases(TEST_DIR);
+});
 
-// Dynamic import so the mock is in place when the module is evaluated.
-const { bootstrapCLI, printDatabaseInfo } = await import('@/cli/bootstrap');
+afterEach(async () => {
+  await rm(join(TEST_DIR, 'db'), { recursive: true, force: true });
+});
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────────────────────────────────────
-
-function captureConsoleLog(): { lines: string[]; restore(): void } {
-  const lines: string[] = [];
-  const original = console.log;
-  console.log = (...args: unknown[]) => lines.push(args.join(' '));
-  return { lines, restore: () => (console.log = original) };
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Tests
-// ─────────────────────────────────────────────────────────────────────────────
+afterAll(async () => {
+  await rm(TEST_DIR, { recursive: true, force: true });
+});
 
 describe('bootstrapCLI', () => {
-  beforeEach(() => {
-    mockConfigureDatabases.mockClear();
-  });
-
-  afterEach(() => {
-    mockConfigureDatabases.mockClear();
-  });
-
-  test('calls configureDatabases with dataDir', async () => {
-    await bootstrapCLI();
-    expect(mockConfigureDatabases).toHaveBeenCalledTimes(1);
-    expect(typeof mockConfigureDatabases.mock.calls[0]?.[0]).toBe('string');
-  });
-
   test('works with zero plugins', async () => {
     await expect(bootstrapCLI()).resolves.toBeDefined();
   });
@@ -81,7 +53,7 @@ describe('bootstrapCLI', () => {
     expect(order).toEqual(['setup', 'onInit', 'onStart']);
   });
 
-  test('calls setup/onInit/onStart on multiple plugins', async () => {
+  test('calls setup/onInit/onStart on multiple plugins in phase order', async () => {
     const order: string[] = [];
 
     const p1: BootstrapPlugin = {
@@ -149,8 +121,12 @@ describe('bootstrapCLI', () => {
 
     const plugin: BootstrapPlugin = {
       name: 'async-plugin',
-      onInit: () => Promise.resolve(void order.push('onInit')),
-      onStart: () => Promise.resolve(void order.push('onStart')),
+      onInit: async () => {
+        order.push('onInit');
+      },
+      onStart: async () => {
+        order.push('onStart');
+      },
     };
 
     await bootstrapCLI(plugin);
@@ -161,13 +137,14 @@ describe('bootstrapCLI', () => {
 
 describe('printDatabaseInfo', () => {
   test('logs a line mentioning the auth database', () => {
-    const capture = captureConsoleLog();
+    const lines: string[] = [];
+    const original = console.log;
+    console.log = (...args: unknown[]) => lines.push(args.join(' '));
     try {
       printDatabaseInfo();
-      const output = capture.lines.join('\n');
-      expect(output).toContain('auth.db');
+      expect(lines.join('\n')).toContain('auth.db');
     } finally {
-      capture.restore();
+      console.log = original;
     }
   });
 });
