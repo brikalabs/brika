@@ -69,7 +69,9 @@ const messageQueue: WireMessage[] = [];
 let draining = false;
 
 async function drain(): Promise<void> {
-  if (draining) return;
+  if (draining) {
+    return;
+  }
   draining = true;
   try {
     let msg = messageQueue.shift();
@@ -147,7 +149,9 @@ const bridge = {
     stopHandlers.push(handler);
     return () => {
       const idx = stopHandlers.indexOf(handler);
-      if (idx >= 0) stopHandlers.splice(idx, 1);
+      if (idx >= 0) {
+        stopHandlers.splice(idx, 1);
+      }
     };
   },
   log,

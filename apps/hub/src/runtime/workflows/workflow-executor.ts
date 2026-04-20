@@ -7,7 +7,7 @@
  */
 
 import { inject } from '@brika/di';
-import { type TypeDescriptor, inferType, isCompatible } from '@brika/type-system';
+import { inferType, isCompatible, type TypeDescriptor } from '@brika/type-system';
 import { BlockRegistry } from '@/runtime/blocks';
 import { Logger } from '@/runtime/logs/log-router';
 import { PluginManager } from '@/runtime/plugins/plugin-manager';
@@ -52,7 +52,10 @@ export class WorkflowExecutor {
   readonly #instanceIds = new Set<string>(); // Block instance IDs
   #connections = new Map<string, BlockConnection[]>(); // "blockId.port" -> targets
   readonly #buffers = new Map<string, PortBuffer>(); // "blockId:port" -> last value
-  readonly #blockDefCache = new Map<string, { block: WorkflowBlock; def: import('@brika/sdk').BlockDefinition } | null>(); // blockId -> cached lookup
+  readonly #blockDefCache = new Map<
+    string,
+    { block: WorkflowBlock; def: import('@brika/sdk').BlockDefinition } | null
+  >(); // blockId -> cached lookup
 
   // ─────────────────────────────────────────────────────────────────────────────
   // Lifecycle
@@ -315,7 +318,9 @@ export class WorkflowExecutor {
     const targets = this.#connections.get(key) ?? [];
 
     for (const conn of targets) {
-      if (!this.#instanceIds.has(conn.to)) continue;
+      if (!this.#instanceIds.has(conn.to)) {
+        continue;
+      }
 
       const targetPort = conn.toPort ?? 'in';
 
@@ -333,18 +338,29 @@ export class WorkflowExecutor {
    * Returns true if valid (or if type info unavailable), false if invalid.
    */
   #validatePortData(blockId: string, portId: string, data: Json): boolean {
-    if (!this.#workflow) return true;
+    if (!this.#workflow) {
+      return true;
+    }
 
     // Use cached block def lookup (O(1) instead of O(n))
     const cached = this.#blockDefCache.get(blockId);
-    if (!cached) return true;
+    if (!cached) {
+      return true;
+    }
 
     const portDef = cached.def.inputs.find((p) => p.id === portId);
-    if (!portDef) return true;
+    if (!portDef) {
+      return true;
+    }
 
     // Use structural TypeDescriptor if available, otherwise skip validation
     const portType = portDef.type as TypeDescriptor | undefined;
-    if (!portType || portType.kind === 'any' || portType.kind === 'unknown' || portType.kind === 'generic') {
+    if (
+      !portType ||
+      portType.kind === 'any' ||
+      portType.kind === 'unknown' ||
+      portType.kind === 'generic'
+    ) {
       return true; // No type constraint or wildcard — allow anything
     }
 
@@ -394,4 +410,3 @@ export class WorkflowExecutor {
     return this.#blocks.resolve(type);
   }
 }
-

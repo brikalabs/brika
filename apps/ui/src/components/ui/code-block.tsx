@@ -486,7 +486,7 @@ export {
   CodeBlockCopyButton,
   CodeBlockHeader,
   CodeBlockInfo,
+  type CodeBlockInfoData,
   codeBlockVariants,
   useCodeBlock,
-  type CodeBlockInfoData,
 };

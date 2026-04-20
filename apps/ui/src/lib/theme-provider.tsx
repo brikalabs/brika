@@ -29,7 +29,7 @@ function useSystemTheme(): 'light' | 'dark' {
       return () => mq.removeEventListener('change', cb);
     },
     () => (globalThis.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'),
-    () => 'light',
+    () => 'light'
   );
 }
 
@@ -38,14 +38,24 @@ export function ThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
 
   const [theme, setThemeState] = useState<ThemeName>(() => {
     const s = localStorage.getItem(THEME_STORAGE_KEY);
-    if (s === 'default' || s === 'ocean' || s === 'forest' || s === 'sunset' || s === 'lavender' || s === 'ruby')
+    if (
+      s === 'default' ||
+      s === 'ocean' ||
+      s === 'forest' ||
+      s === 'sunset' ||
+      s === 'lavender' ||
+      s === 'ruby'
+    ) {
       return s;
+    }
     return 'default';
   });
 
   const [mode, setModeState] = useState<ThemeMode>(() => {
     const s = localStorage.getItem(MODE_STORAGE_KEY);
-    if (s === 'light' || s === 'dark' || s === 'system') return s;
+    if (s === 'light' || s === 'dark' || s === 'system') {
+      return s;
+    }
     return 'system';
   });
 
@@ -64,7 +74,7 @@ export function ThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
         setThemeState(newTheme);
       }, origin);
     },
-    [resolvedMode],
+    [resolvedMode]
   );
 
   const setMode = useCallback(
@@ -76,12 +86,12 @@ export function ThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
         setModeState(newMode);
       }, event?.currentTarget);
     },
-    [systemTheme, theme],
+    [systemTheme, theme]
   );
 
   const value = useMemo(
     () => ({ theme, mode, resolvedMode, setTheme, setMode }),
-    [theme, mode, resolvedMode, setTheme, setMode],
+    [theme, mode, resolvedMode, setTheme, setMode]
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

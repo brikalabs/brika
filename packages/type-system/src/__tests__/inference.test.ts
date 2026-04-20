@@ -1,10 +1,19 @@
 import { describe, expect, it } from 'bun:test';
 import { T } from '../descriptor';
-import { type GraphEdge, type GraphNode, type TypeResolver, inferTypes, portKey } from '../inference';
+import {
+  type GraphEdge,
+  type GraphNode,
+  inferTypes,
+  portKey,
+  type TypeResolver,
+} from '../inference';
 
 function makeNode(
   id: string,
-  ports: Record<string, { direction: 'input' | 'output'; type: import('../descriptor').TypeDescriptor }>
+  ports: Record<
+    string,
+    { direction: 'input' | 'output'; type: import('../descriptor').TypeDescriptor }
+  >
 ): GraphNode {
   return { id, ports };
 }

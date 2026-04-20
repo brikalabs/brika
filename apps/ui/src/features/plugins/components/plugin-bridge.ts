@@ -6,14 +6,14 @@
 import * as React from 'react';
 import * as jsxRuntime from 'react/jsx-runtime';
 import {
-  useCallBrickAction,
   useBrickConfig,
   useBrickData,
   useBrickSize,
+  useCallBrickAction,
 } from '@/features/boards/brick-view-hooks';
 import {
-  useCallAction,
   usePluginAction as useAction,
+  useCallAction,
   usePluginLocale as useLocale,
 } from './plugin-hooks';
 
@@ -25,10 +25,9 @@ const [icons, ui, cva, { clsx: clsxFn }] = await Promise.all([
 ]);
 
 // Wrap clsx without mutating the original module export
-const clsxWrapper = Object.assign(
-  (...args: Parameters<typeof clsxFn>) => clsxFn(...args),
-  { clsx: clsxFn },
-);
+const clsxWrapper = Object.assign((...args: Parameters<typeof clsxFn>) => clsxFn(...args), {
+  clsx: clsxFn,
+});
 
 const bridge = {
   React,

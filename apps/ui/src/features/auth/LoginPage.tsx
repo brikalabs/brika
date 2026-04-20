@@ -33,7 +33,7 @@ export function LoginPage() {
     try {
       await client.login(email, password);
       await refreshSession();
-    } catch (err) {
+    } catch (_err) {
       setError(t('loginFailed'));
     } finally {
       setLoading(false);

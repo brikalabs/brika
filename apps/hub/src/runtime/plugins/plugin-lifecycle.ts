@@ -207,34 +207,45 @@ export class PluginLifecycle {
     }
 
     if (!buildResult.success) {
-      this.#logs.error('Server build failed', { pluginName, errors: buildResult.errors.join('; ') });
+      this.#logs.error('Server build failed', {
+        pluginName,
+        errors: buildResult.errors.join('; '),
+      });
       // Persist plugin state before setting health so it can be restored later
       await this.#state.registerPlugin({ name: pluginName, rootDirectory, entryPoint, uid });
-      await this.#state.setHealth(pluginName, 'crashed', PluginErrors.buildFailed(buildResult.errors));
+      await this.#state.setHealth(
+        pluginName,
+        'crashed',
+        PluginErrors.buildFailed(buildResult.errors)
+      );
       return;
     }
 
-    const channel = spawnPlugin(this.#bunRunner.bin, [`--preload=${PRELUDE_PATH}`, buildResult.entryPath], {
-      cwd: rootDirectory,
-      env: this.#bunRunner.env({
-        BRIKA_PLUGIN_NAME: metadata.name,
-        BRIKA_PLUGIN_UID: uid,
-      }),
-      processName: `brika:${metadata.name}`,
-      defaultTimeoutMs: this.#config.callTimeoutMs,
-      onDisconnect: (error) => this.#handleDisconnect(pluginName, error),
-      onStderr: (line) =>
-        this.#logs.error(
-          'Plugin error output received',
-          {
-            pluginName: pluginName,
-            message: line,
-          },
-          {
-            source: 'stderr',
-          }
-        ),
-    });
+    const channel = spawnPlugin(
+      this.#bunRunner.bin,
+      [`--preload=${PRELUDE_PATH}`, buildResult.entryPath],
+      {
+        cwd: rootDirectory,
+        env: this.#bunRunner.env({
+          BRIKA_PLUGIN_NAME: metadata.name,
+          BRIKA_PLUGIN_UID: uid,
+        }),
+        processName: `brika:${metadata.name}`,
+        defaultTimeoutMs: this.#config.callTimeoutMs,
+        onDisconnect: (error) => this.#handleDisconnect(pluginName, error),
+        onStderr: (line) =>
+          this.#logs.error(
+            'Plugin error output received',
+            {
+              pluginName: pluginName,
+              message: line,
+            },
+            {
+              source: 'stderr',
+            }
+          ),
+      }
+    );
 
     const process = new PluginProcess(
       channel,
@@ -502,7 +513,13 @@ export class PluginLifecycle {
     this.#eventHandler.onPluginDisconnected(process.name);
     this.unload(process.name, true)
       .then(() => this.#attemptAutoRestart(process.name, 'heartbeat timeout'))
-      .catch((e) => this.#logs.error('Failed to unload after heartbeat timeout', { pluginName: process.name }, { error: e }));
+      .catch((e) =>
+        this.#logs.error(
+          'Failed to unload after heartbeat timeout',
+          { pluginName: process.name },
+          { error: e }
+        )
+      );
   }
 
   #handleDisconnect(name: string, error?: Error): void {
@@ -539,7 +556,9 @@ export class PluginLifecycle {
 
     this.unload(name, true)
       .then(() => this.#attemptAutoRestart(name, reason))
-      .catch((e) => this.#logs.error('Failed to unload crashed plugin', { pluginName: name }, { error: e }));
+      .catch((e) =>
+        this.#logs.error('Failed to unload crashed plugin', { pluginName: name }, { error: e })
+      );
   }
 
   #attemptAutoRestart(name: string, reason: string): void {
@@ -600,7 +619,9 @@ export class PluginLifecycle {
   #startStabilityCheck(process: PluginProcess): void {
     // Clear any existing timer to prevent leaks on rapid restarts
     const existing = this.#stabilityTimers.get(process.name);
-    if (existing) clearInterval(existing);
+    if (existing) {
+      clearInterval(existing);
+    }
 
     const timer = setInterval(() => {
       if (this.#restartPolicy.checkStability(process.name)) {
@@ -689,7 +710,9 @@ export class PluginLifecycle {
 function computeServerExternals(metadata: PluginPackageSchema): string[] {
   const externals: string[] = ['@brika/*'];
   for (const dep of Object.keys(metadata.dependencies ?? {})) {
-    if (!dep.startsWith('@brika/')) externals.push(dep);
+    if (!dep.startsWith('@brika/')) {
+      externals.push(dep);
+    }
   }
   for (const dep of Object.keys(metadata.peerDependencies ?? {})) {
     externals.push(dep);

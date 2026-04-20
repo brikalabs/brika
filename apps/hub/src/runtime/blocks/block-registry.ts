@@ -5,9 +5,9 @@
  */
 
 import { inject, singleton } from '@brika/di';
+import type { BlockDefinition } from '@brika/sdk';
 import type { TypeDescriptor } from '@brika/type-system';
 import { isCompatible, parsePortType } from '@brika/type-system';
-import type { BlockDefinition } from '@brika/sdk';
 
 /** Runtime block info (includes ports from running plugin) */
 export interface BlockSummary {
@@ -139,7 +139,9 @@ export class BlockRegistry {
 
   /** Resolve a possibly-short block name to its full qualified type. */
   resolve(type: string): string {
-    if (type.includes(':')) return type;
+    if (type.includes(':')) {
+      return type;
+    }
     return this.#shortNames.get(type) ?? type;
   }
 
@@ -154,7 +156,9 @@ export class BlockRegistry {
   listByPlugin(pluginId: string): BlockDefinition[] {
     const result: BlockDefinition[] = [];
     for (const b of this.#blocks.values()) {
-      if (b.pluginId === pluginId) result.push(b);
+      if (b.pluginId === pluginId) {
+        result.push(b);
+      }
     }
     return result;
   }
@@ -361,4 +365,3 @@ export class BlockRegistry {
     }
   }
 }
-

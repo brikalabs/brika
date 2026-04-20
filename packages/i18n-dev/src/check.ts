@@ -11,7 +11,12 @@
 
 import { join, resolve } from 'node:path';
 import { cliFlag } from './cli-utils';
-import { discoverPluginRoots, findWorkspaceRoot, scanLocaleDirectory, scanPluginLocales } from './scan';
+import {
+  discoverPluginRoots,
+  findWorkspaceRoot,
+  scanLocaleDirectory,
+  scanPluginLocales,
+} from './scan';
 import type { ValidationIssue } from './types';
 import { extractKeys, validateLocales } from './validate';
 
@@ -47,7 +52,9 @@ function reportIssues(label: string, issues: ValidationIssue[], keyCount: number
   const missing = issues.filter((i) => i.type === 'missing-key');
   const extra = issues.filter((i) => i.type === 'extra-key');
   if (missing.length > 0) {
-    error(`${label}: ${missing.length} key(s) missing in FR: ${missing.map((i) => i.key).join(', ')}`);
+    error(
+      `${label}: ${missing.length} key(s) missing in FR: ${missing.map((i) => i.key).join(', ')}`
+    );
   }
   if (extra.length > 0) {
     warn(`${label}: ${extra.length} extra key(s) in FR: ${extra.map((i) => i.key).join(', ')}`);
@@ -116,14 +123,18 @@ console.log('\u2550'.repeat(40));
 await checkCoreNamespaces();
 await checkPluginNamespaces();
 
-console.log('\n' + '\u2500'.repeat(40));
+console.log(`\n${'\u2500'.repeat(40)}`);
 if (errors === 0 && warnings === 0) {
   console.log('\x1b[32mAll checks passed.\x1b[0m\n');
 } else {
   const parts: string[] = [];
-  if (errors > 0) parts.push(`\x1b[31m${errors} error(s)\x1b[0m`);
-  if (warnings > 0) parts.push(`\x1b[33m${warnings} warning(s)\x1b[0m`);
-  console.log(parts.join(', ') + '\n');
+  if (errors > 0) {
+    parts.push(`\x1b[31m${errors} error(s)\x1b[0m`);
+  }
+  if (warnings > 0) {
+    parts.push(`\x1b[33m${warnings} warning(s)\x1b[0m`);
+  }
+  console.log(`${parts.join(', ')}\n`);
 }
 
 process.exit(errors > 0 ? 1 : 0);

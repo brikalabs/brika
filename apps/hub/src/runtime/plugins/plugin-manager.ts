@@ -223,8 +223,8 @@ export class PluginManager {
 
   /** Unload a plugin and remove it from the state store (full uninstall). */
   async remove(name: string): Promise<void> {
-    const rootDirectory = this.#lifecycle.getProcess(name)?.rootDirectory
-      ?? this.#state.get(name)?.rootDirectory;
+    const rootDirectory =
+      this.#lifecycle.getProcess(name)?.rootDirectory ?? this.#state.get(name)?.rootDirectory;
     if (this.#lifecycle.hasProcess(name)) {
       await this.#lifecycle.unload(name);
     }

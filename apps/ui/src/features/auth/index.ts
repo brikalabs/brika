@@ -1,11 +1,11 @@
 export { LoginPage } from './LoginPage';
 export { ProfilePage } from './ProfilePage';
 export {
-  SetupLayout,
-  WelcomeStep,
-  LanguageStep,
   AccountStep,
   AvatarStep,
-  LocationStep,
   CompleteStep,
+  LanguageStep,
+  LocationStep,
+  SetupLayout,
+  WelcomeStep,
 } from './setup';

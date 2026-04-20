@@ -1,7 +1,14 @@
 import { beforeAll, describe, expect, test } from 'bun:test';
 import i18next from 'i18next';
 import { renderToString } from 'react-dom/server';
-import { FloatingBadge, I18nDevOverlay, PanelHeader, StatusBar, TabBar, toolbarHint } from './overlay';
+import {
+  FloatingBadge,
+  I18nDevOverlay,
+  PanelHeader,
+  StatusBar,
+  TabBar,
+  toolbarHint,
+} from './overlay';
 
 beforeAll(async () => {
   if (!i18next.isInitialized) {
@@ -119,7 +126,11 @@ describe('StatusBar', () => {
 // ─── TabBar ────────────────────────────────────────────────────────────────
 
 describe('TabBar', () => {
-  const tabs: { id: 'issues' | 'runtime' | 'coverage' | 'translations'; label: string; count?: number }[] = [
+  const tabs: {
+    id: 'issues' | 'runtime' | 'coverage' | 'translations';
+    label: string;
+    count?: number;
+  }[] = [
     { id: 'issues', label: 'Issues', count: 5 },
     { id: 'runtime', label: 'Runtime', count: 2 },
     { id: 'coverage', label: 'Coverage' },
@@ -162,7 +173,14 @@ describe('TabBar', () => {
 describe('FloatingBadge', () => {
   test('renders OK when no issues', () => {
     const html = renderToString(
-      <FloatingBadge totalIssues={0} errorCount={0} warnCount={0} runtimeCount={0} currentLang="en" onOpen={() => {}} />
+      <FloatingBadge
+        totalIssues={0}
+        errorCount={0}
+        warnCount={0}
+        runtimeCount={0}
+        currentLang="en"
+        onOpen={() => {}}
+      />
     );
     expect(html).toContain('OK');
     expect(html).toContain('emerald');
@@ -170,7 +188,14 @@ describe('FloatingBadge', () => {
 
   test('renders total count when issues exist', () => {
     const html = renderToString(
-      <FloatingBadge totalIssues={7} errorCount={5} warnCount={1} runtimeCount={1} currentLang="en" onOpen={() => {}} />
+      <FloatingBadge
+        totalIssues={7}
+        errorCount={5}
+        warnCount={1}
+        runtimeCount={1}
+        currentLang="en"
+        onOpen={() => {}}
+      />
     );
     expect(html).toContain('>7<');
     expect(html).toContain('red');
@@ -178,21 +203,42 @@ describe('FloatingBadge', () => {
 
   test('renders locale badge', () => {
     const html = renderToString(
-      <FloatingBadge totalIssues={0} errorCount={0} warnCount={0} runtimeCount={0} currentLang="fr" onOpen={() => {}} />
+      <FloatingBadge
+        totalIssues={0}
+        errorCount={0}
+        warnCount={0}
+        runtimeCount={0}
+        currentLang="fr"
+        onOpen={() => {}}
+      />
     );
     expect(html).toContain('>fr<');
   });
 
   test('renders globe icon (SVG)', () => {
     const html = renderToString(
-      <FloatingBadge totalIssues={0} errorCount={0} warnCount={0} runtimeCount={0} currentLang="en" onOpen={() => {}} />
+      <FloatingBadge
+        totalIssues={0}
+        errorCount={0}
+        warnCount={0}
+        runtimeCount={0}
+        currentLang="en"
+        onOpen={() => {}}
+      />
     );
     expect(html).toContain('svg');
   });
 
   test('renders title with issue counts', () => {
     const html = renderToString(
-      <FloatingBadge totalIssues={3} errorCount={2} warnCount={1} runtimeCount={0} currentLang="en" onOpen={() => {}} />
+      <FloatingBadge
+        totalIssues={3}
+        errorCount={2}
+        warnCount={1}
+        runtimeCount={0}
+        currentLang="en"
+        onOpen={() => {}}
+      />
     );
     expect(html).toContain('2 errors');
     expect(html).toContain('1 warnings');
@@ -200,7 +246,14 @@ describe('FloatingBadge', () => {
 
   test('renders as a button', () => {
     const html = renderToString(
-      <FloatingBadge totalIssues={0} errorCount={0} warnCount={0} runtimeCount={0} currentLang="en" onOpen={() => {}} />
+      <FloatingBadge
+        totalIssues={0}
+        errorCount={0}
+        warnCount={0}
+        runtimeCount={0}
+        currentLang="en"
+        onOpen={() => {}}
+      />
     );
     expect(html).toContain('button');
   });

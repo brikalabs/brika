@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test';
-import { T } from '../descriptor';
 import { isCompatible } from '../compatibility';
+import { T } from '../descriptor';
 
 describe('isCompatible', () => {
   // ─────────────────────────────────────────────────────────────────────────
@@ -179,9 +179,7 @@ describe('isCompatible', () => {
 
   describe('tuples', () => {
     it('same tuple is compatible', () => {
-      expect(isCompatible(T.tuple([T.string, T.number]), T.tuple([T.string, T.number]))).toBe(
-        true
-      );
+      expect(isCompatible(T.tuple([T.string, T.number]), T.tuple([T.string, T.number]))).toBe(true);
     });
 
     it('different length tuples are incompatible', () => {
@@ -205,9 +203,7 @@ describe('isCompatible', () => {
       expect(isCompatible(T.union([T.string, T.number]), T.string)).toBe(true);
 
       // string | object → string (object does NOT widen to string)
-      expect(
-        isCompatible(T.union([T.string, T.obj({ x: T.number })]), T.string)
-      ).toBe(false);
+      expect(isCompatible(T.union([T.string, T.obj({ x: T.number })]), T.string)).toBe(false);
     });
 
     it('input union: output must satisfy at least one variant', () => {
@@ -219,9 +215,7 @@ describe('isCompatible', () => {
     });
 
     it('union to union: all output variants satisfy at least one input variant', () => {
-      expect(
-        isCompatible(T.union([T.string, T.number]), T.union([T.string, T.number]))
-      ).toBe(true);
+      expect(isCompatible(T.union([T.string, T.number]), T.union([T.string, T.number]))).toBe(true);
     });
   });
 

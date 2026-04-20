@@ -1,9 +1,9 @@
 import { inject } from '@brika/di';
-import { auth, UserService } from './auth-server';
 import pc from 'picocolors';
-import { bootstrapCLI, printDatabaseInfo } from './bootstrap';
 import { defineCommand } from '../../command';
 import { dataDir } from '../../utils/runtime';
+import { auth, UserService } from './auth-server';
+import { bootstrapCLI, printDatabaseInfo } from './bootstrap';
 
 export default defineCommand({
   name: 'list',

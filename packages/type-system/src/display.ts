@@ -24,7 +24,9 @@ export function displayType(desc: TypeDescriptor): string {
 
     case 'object': {
       const entries = Object.entries(desc.fields);
-      if (entries.length === 0) return '{}';
+      if (entries.length === 0) {
+        return '{}';
+      }
       const fields = entries
         .map(([k, v]) => `${k}${v.optional ? '?' : ''}: ${displayType(v.type)}`)
         .join(', ');

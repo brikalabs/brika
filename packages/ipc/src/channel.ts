@@ -39,22 +39,24 @@ interface PendingRequest<T> {
 
 /** Minimal schema interface for runtime validation (duck-typed from Zod). */
 interface ParseableSchema {
-  safeParse(data: unknown):
-    | { success: true; data: unknown }
-    | { success: false; error: { message: string } };
+  safeParse(
+    data: unknown
+  ): { success: true; data: unknown } | { success: false; error: { message: string } };
 }
 
-type ParseResult =
-  | { ok: true; data: unknown }
-  | { ok: false; error: string };
+type ParseResult = { ok: true; data: unknown } | { ok: false; error: string };
 
 function validatePayload(
   schema: ParseableSchema | undefined,
-  payload: unknown,
+  payload: unknown
 ): ParseResult | undefined {
-  if (!schema) return undefined;
+  if (!schema) {
+    return undefined;
+  }
   const result = schema.safeParse(payload);
-  if (result.success) return { ok: true, data: result.data };
+  if (result.success) {
+    return { ok: true, data: result.data };
+  }
   return { ok: false, error: result.error.message };
 }
 

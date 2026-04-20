@@ -24,11 +24,15 @@ export function toJsonSchema(desc: TypeDescriptor): Record<string, unknown> {
 
       for (const [key, field] of Object.entries(desc.fields)) {
         properties[key] = toJsonSchema(field.type);
-        if (!field.optional) required.push(key);
+        if (!field.optional) {
+          required.push(key);
+        }
       }
 
       const schema: Record<string, unknown> = { type: 'object', properties };
-      if (required.length > 0) schema.required = required;
+      if (required.length > 0) {
+        schema.required = required;
+      }
       return schema;
     }
 

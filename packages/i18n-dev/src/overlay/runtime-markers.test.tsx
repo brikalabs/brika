@@ -4,7 +4,19 @@ import type { RuntimeMarker } from './runtime-markers';
 import { RuntimeMarkersOverlay } from './runtime-markers';
 
 function mockRect(x: number, y: number, w: number, h: number): DOMRect {
-  return { x, y, width: w, height: h, top: y, left: x, right: x + w, bottom: y + h, toJSON() { return this; } } as DOMRect;
+  return {
+    x,
+    y,
+    width: w,
+    height: h,
+    top: y,
+    left: x,
+    right: x + w,
+    bottom: y + h,
+    toJSON() {
+      return this;
+    },
+  } as DOMRect;
 }
 
 const sampleMarkers: RuntimeMarker[] = [

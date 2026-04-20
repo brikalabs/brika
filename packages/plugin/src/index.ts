@@ -12,7 +12,7 @@ export * from './manifests';
 export * from './preferences';
 export * from './store';
 
-import { type TypeDescriptor, T, isCompatible } from '@brika/type-system';
+import { isCompatible, T, type TypeDescriptor } from '@brika/type-system';
 import type { BlockManifest, BrickManifest, PageManifest, SparkManifest } from './manifests';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -146,14 +146,30 @@ export { isCompatible } from '@brika/type-system';
 
 /** Parse a typeName string to a TypeDescriptor for backward compatibility */
 function parseTypeName(typeName?: string): TypeDescriptor {
-  if (!typeName) return T.generic();
-  if (typeName.startsWith('generic') || typeName === 'unknown' || typeName === 'any') return T.generic();
+  if (!typeName) {
+    return T.generic();
+  }
+  if (typeName.startsWith('generic') || typeName === 'unknown' || typeName === 'any') {
+    return T.generic();
+  }
   const lower = typeName.toLowerCase().trim();
-  if (lower === 'string') return T.string;
-  if (['number', 'integer', 'float', 'double'].includes(lower)) return T.number;
-  if (lower === 'boolean') return T.boolean;
-  if (lower === 'null') return T.null;
-  if (['object', 'json', 'record'].includes(lower)) return T.record(T.unknown);
-  if (lower.endsWith('[]')) return T.array(parseTypeName(lower.slice(0, -2)));
+  if (lower === 'string') {
+    return T.string;
+  }
+  if (['number', 'integer', 'float', 'double'].includes(lower)) {
+    return T.number;
+  }
+  if (lower === 'boolean') {
+    return T.boolean;
+  }
+  if (lower === 'null') {
+    return T.null;
+  }
+  if (['object', 'json', 'record'].includes(lower)) {
+    return T.record(T.unknown);
+  }
+  if (lower.endsWith('[]')) {
+    return T.array(parseTypeName(lower.slice(0, -2)));
+  }
   return T.unknown;
 }

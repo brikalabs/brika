@@ -29,8 +29,12 @@ export function isCompatible(output: TypeDescriptor, input: TypeDescriptor): boo
   }
 
   // Passthrough/resolved are treated as wildcards (they need resolution first)
-  if (input.kind === 'passthrough' || input.kind === 'resolved') return true;
-  if (output.kind === 'passthrough' || output.kind === 'resolved') return true;
+  if (input.kind === 'passthrough' || input.kind === 'resolved') {
+    return true;
+  }
+  if (output.kind === 'passthrough' || output.kind === 'resolved') {
+    return true;
+  }
 
   // Exact same kind — dispatch to specific checker
   if (output.kind === input.kind) {
@@ -110,7 +114,9 @@ function checkSameKind(output: TypeDescriptor, input: TypeDescriptor): boolean {
 
     case 'tuple': {
       const inputTuple = input as Extract<TypeDescriptor, { kind: 'tuple' }>;
-      if (output.elements.length !== inputTuple.elements.length) return false;
+      if (output.elements.length !== inputTuple.elements.length) {
+        return false;
+      }
       return output.elements.every((el, i) => {
         const inputEl = inputTuple.elements[i];
         return inputEl !== undefined && isCompatible(el, inputEl);
@@ -142,10 +148,14 @@ function checkSameKind(output: TypeDescriptor, input: TypeDescriptor): boolean {
 }
 
 function isPrimitiveCompatible(outputType: string, inputType: string): boolean {
-  if (outputType === inputType) return true;
+  if (outputType === inputType) {
+    return true;
+  }
 
   // Numeric equivalence
-  if (NUMERIC_TYPES.has(outputType) && NUMERIC_TYPES.has(inputType)) return true;
+  if (NUMERIC_TYPES.has(outputType) && NUMERIC_TYPES.has(inputType)) {
+    return true;
+  }
 
   // Widening: number/boolean → string
   if (inputType === 'string' && (NUMERIC_TYPES.has(outputType) || outputType === 'boolean')) {
@@ -165,12 +175,16 @@ function isObjectCompatible(
 
     if (!outputField) {
       // Output doesn't have this field
-      if (!inputField.optional) return false;
+      if (!inputField.optional) {
+        return false;
+      }
       continue;
     }
 
     // Check field type compatibility
-    if (!isCompatible(outputField.type, inputField.type)) return false;
+    if (!isCompatible(outputField.type, inputField.type)) {
+      return false;
+    }
   }
 
   return true;
@@ -193,8 +207,14 @@ function isLiteralCompatibleWithPrimitive(
   value: string | number | boolean,
   primitiveType: string
 ): boolean {
-  if (primitiveType === 'string') return true; // any literal can be stringified
-  if (primitiveType === 'boolean') return typeof value === 'boolean';
-  if (NUMERIC_TYPES.has(primitiveType)) return typeof value === 'number';
+  if (primitiveType === 'string') {
+    return true; // any literal can be stringified
+  }
+  if (primitiveType === 'boolean') {
+    return typeof value === 'boolean';
+  }
+  if (NUMERIC_TYPES.has(primitiveType)) {
+    return typeof value === 'number';
+  }
   return false;
 }

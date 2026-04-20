@@ -15,7 +15,12 @@ import {
   HMR_USAGE,
 } from './hmr-events';
 import { deleteNestedValue, setNestedValue } from './nested-path';
-import { discoverPluginRoots, findWorkspaceRoot, scanLocaleDirectory, scanPluginLocales } from './scan';
+import {
+  discoverPluginRoots,
+  findWorkspaceRoot,
+  scanLocaleDirectory,
+  scanPluginLocales,
+} from './scan';
 import type { KeyUsageMap } from './scan-usage';
 import { SOURCE_EXTENSIONS, scanKeyUsages } from './scan-usage';
 import type { FixEntry, I18nDevPluginOptions, ValidationResult } from './types';
@@ -159,7 +164,10 @@ export function i18nDevtools(options: I18nDevPluginOptions): Plugin {
     await mkdir(cacheDir, { recursive: true });
     await Promise.all([
       writeFile(join(cacheDir, 'i18n-resources.d.ts'), generateResourceTypes(namespaces)),
-      writeFile(join(cacheDir, 'i18n-namespaces.ts'), generateNamespaceList(namespaces.map((n) => n.name))),
+      writeFile(
+        join(cacheDir, 'i18n-namespaces.ts'),
+        generateNamespaceList(namespaces.map((n) => n.name))
+      ),
     ]);
   }
 
@@ -200,10 +208,10 @@ export function i18nDevtools(options: I18nDevPluginOptions): Plugin {
             return;
           }
           const filePath = resolve(rootDir, file);
-          const editor = process.env.LAUNCH_EDITOR ?? process.env.VISUAL ?? process.env.EDITOR ?? 'code';
-          const args = (editor === 'code' || editor.endsWith('/code'))
-            ? ['--goto', filePath]
-            : [filePath];
+          const editor =
+            process.env.LAUNCH_EDITOR ?? process.env.VISUAL ?? process.env.EDITOR ?? 'code';
+          const args =
+            editor === 'code' || editor.endsWith('/code') ? ['--goto', filePath] : [filePath];
           execFile(editor, args, (err) => {
             if (err) {
               server.config.logger.warn(`[i18n-dev] Failed to open editor: ${err.message}`);

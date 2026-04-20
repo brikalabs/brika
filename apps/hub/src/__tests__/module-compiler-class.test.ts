@@ -32,13 +32,10 @@ afterAll(async () => {
 describe('ModuleCompiler - get()', () => {
   let compiler: ModuleCompiler;
 
-  useTestBed(
-    { autoStub: false },
-    () => {
-      stub(Logger);
-      compiler = get(ModuleCompiler);
-    }
-  );
+  useTestBed({ autoStub: false }, () => {
+    stub(Logger);
+    compiler = get(ModuleCompiler);
+  });
 
   test('returns undefined for unknown key', () => {
     expect(compiler.get('nonexistent:module')).toBeUndefined();
@@ -59,13 +56,10 @@ describe('ModuleCompiler - get()', () => {
 describe('ModuleCompiler - remove()', () => {
   let compiler: ModuleCompiler;
 
-  useTestBed(
-    { autoStub: false },
-    () => {
-      stub(Logger);
-      compiler = get(ModuleCompiler);
-    }
-  );
+  useTestBed({ autoStub: false }, () => {
+    stub(Logger);
+    compiler = get(ModuleCompiler);
+  });
 
   test('does not throw when removing unknown plugin', () => {
     expect(() => compiler.remove('nonexistent-plugin')).not.toThrow();
@@ -121,7 +115,12 @@ describe('ModuleCache - loadFromDisk', () => {
     const { ModuleCache } = await import('@/runtime/modules/module-cache');
     const cache = new ModuleCache();
 
-    const hit = await cache.loadFromDisk('/nonexistent/path', 'test:no-module', 'no-module', 'deadbeef');
+    const hit = await cache.loadFromDisk(
+      '/nonexistent/path',
+      'test:no-module',
+      'no-module',
+      'deadbeef'
+    );
     expect(hit).toBe(false);
   });
 });

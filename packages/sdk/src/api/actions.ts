@@ -112,12 +112,18 @@ export function __finalizeActions(
   exports: Record<string, unknown>
 ): void {
   for (const [name, ref] of Object.entries(exports)) {
-    if (!ref || typeof ref !== 'object') continue;
+    if (!ref || typeof ref !== 'object') {
+      continue;
+    }
     const handler = pendingHandlers.get(ref);
-    if (!handler) continue;
+    if (!handler) {
+      continue;
+    }
 
     const id = ids[name];
-    if (!id) continue;
+    if (!id) {
+      continue;
+    }
     (ref as { __actionId: string }).__actionId = id;
     // @ts-expect-error -- generic handler erased to concrete Json type at IPC boundary
     getContext().registerAction(id, handler);

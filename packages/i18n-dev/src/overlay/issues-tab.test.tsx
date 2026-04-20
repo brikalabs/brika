@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { renderToString } from 'react-dom/server';
 import type { ValidationIssue } from '../types';
-import { IssueRow, IssuesContent, emptyIssuesTitle, fixLabel, issueLabel } from './issues-tab';
+import { emptyIssuesTitle, fixLabel, IssueRow, IssuesContent, issueLabel } from './issues-tab';
 
 // ─── Pure functions ────────────────────────────────────────────────────────
 
@@ -294,7 +294,14 @@ describe('IssuesContent', () => {
 
   test('renders with only errors', () => {
     const errorsOnly: ValidationIssue[] = [
-      { type: 'missing-key', severity: 'error', namespace: 'ns', locale: 'fr', key: 'k', referenceLocale: 'en' },
+      {
+        type: 'missing-key',
+        severity: 'error',
+        namespace: 'ns',
+        locale: 'fr',
+        key: 'k',
+        referenceLocale: 'en',
+      },
     ];
     const html = renderToString(<IssuesContent issues={errorsOnly} filter="" />);
     expect(html).toContain('missing key');
@@ -302,7 +309,14 @@ describe('IssuesContent', () => {
 
   test('renders fix button for extra-key', () => {
     const extraOnly: ValidationIssue[] = [
-      { type: 'extra-key', severity: 'warning', namespace: 'ns', locale: 'fr', key: 'k', referenceLocale: 'en' },
+      {
+        type: 'extra-key',
+        severity: 'warning',
+        namespace: 'ns',
+        locale: 'fr',
+        key: 'k',
+        referenceLocale: 'en',
+      },
     ];
     const html = renderToString(<IssuesContent issues={extraOnly} filter="" />);
     expect(html).toContain('Remove');

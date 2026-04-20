@@ -33,7 +33,9 @@ describe('defineAction', () => {
 
     expect(mockRegisterAction).toHaveBeenCalledTimes(1);
     const call = mockRegisterAction.mock.calls[0];
-    if (!call) throw new Error('Expected mock to have been called');
+    if (!call) {
+      throw new Error('Expected mock to have been called');
+    }
     const [id, registeredHandler] = call;
     expect(id).toBe('my-action-id');
     expect(typeof registeredHandler).toBe('function');

@@ -346,7 +346,9 @@ export const boardsRoutes = group({
               }
             }),
             events.subscribe(BrickActions.moduleRecompiled, (action) => {
-              if (currentBoard()?.bricks.some((b) => b.brickTypeId === action.payload.brickTypeId)) {
+              if (
+                currentBoard()?.bricks.some((b) => b.brickTypeId === action.payload.brickTypeId)
+              ) {
                 forward(action.type, action.payload as unknown as Json);
               }
             }),

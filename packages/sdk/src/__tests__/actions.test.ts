@@ -18,7 +18,7 @@ import { describe, expect, test } from 'bun:test';
  */
 function computeActionId(relativePath: string, exportName: string): string {
   const hasher = new Bun.CryptoHasher('sha256');
-  hasher.update(relativePath + ':' + exportName);
+  hasher.update(`${relativePath}:${exportName}`);
   return hasher.digest('hex').slice(0, 12);
 }
 

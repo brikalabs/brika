@@ -51,7 +51,7 @@ describe('brikaServerActionsPlugin', () => {
         "import { defineAction } from '@brika/sdk/actions';",
         'export const scan = defineAction();',
         'export const play = defineAction();',
-      ].join('\n'),
+      ].join('\n')
     );
 
     expect(output).toContain('__finalizeActions');
@@ -63,9 +63,7 @@ describe('brikaServerActionsPlugin', () => {
   // ── 2. File NOT importing @brika/sdk/actions passes through ────────
 
   test('file not importing @brika/sdk/actions has no finalization', async () => {
-    const output = await buildWith(
-      "export function hello() { return 'world'; }\n",
-    );
+    const output = await buildWith("export function hello() { return 'world'; }\n");
 
     expect(output).not.toContain('__finalizeActions');
   });
@@ -80,7 +78,7 @@ describe('brikaServerActionsPlugin', () => {
       [
         "import { defineAction } from '@brika/sdk/actions';",
         'export const scan = defineAction();',
-      ].join('\n'),
+      ].join('\n')
     );
 
     const result = await Bun.build({
@@ -109,9 +107,9 @@ describe('brikaServerActionsPlugin', () => {
     const output = await buildWith(
       [
         "import { defineAction } from '@brika/sdk/actions';",
-        "const internal = defineAction();",
-        "console.log(internal);",
-      ].join('\n'),
+        'const internal = defineAction();',
+        'console.log(internal);',
+      ].join('\n')
     );
 
     expect(output).not.toContain('__finalizeActions');
@@ -126,7 +124,7 @@ describe('brikaServerActionsPlugin', () => {
         'export const refresh = defineAction();',
         'export function Component() { return <div>hello</div>; }',
       ].join('\n'),
-      'actions.tsx',
+      'actions.tsx'
     );
 
     expect(output).toContain('__finalizeActions');

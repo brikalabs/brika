@@ -1,15 +1,15 @@
-import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
-import { tmpdir } from 'node:os';
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import type { FixEntry } from './types';
 import {
-  applyFixToJson,
   applyFixes,
   applyFixesToFile,
+  applyFixToJson,
   detectIndent,
   resolveTranslationFile,
 } from './vite';
-import type { FixEntry } from './types';
 
 // ─── detectIndent ──────────────────────────────────────────────────────────
 
@@ -107,9 +107,9 @@ describe('resolveTranslationFile', () => {
   });
 
   test('throws for unknown plugin package', () => {
-    expect(() =>
-      resolveTranslationFile('en', 'plugin:unknown-pkg', '/locales', new Map())
-    ).toThrow('Unknown plugin package: unknown-pkg');
+    expect(() => resolveTranslationFile('en', 'plugin:unknown-pkg', '/locales', new Map())).toThrow(
+      'Unknown plugin package: unknown-pkg'
+    );
   });
 });
 
@@ -128,7 +128,7 @@ afterEach(async () => {
 describe('applyFixesToFile', () => {
   test('applies set fix and preserves indent', async () => {
     const fp = join(tempDir, 'test.json');
-    await writeFile(fp, JSON.stringify({ hello: 'Hello' }, null, 2) + '\n');
+    await writeFile(fp, `${JSON.stringify({ hello: 'Hello' }, null, 2)}\n`);
 
     const applied = await applyFixesToFile(fp, [
       { type: 'set', locale: 'fr', namespace: 'common', key: 'hello', value: 'Bonjour' },
@@ -144,7 +144,7 @@ describe('applyFixesToFile', () => {
 
   test('applies delete fix', async () => {
     const fp = join(tempDir, 'test.json');
-    await writeFile(fp, JSON.stringify({ hello: 'Hello', extra: 'Extra' }, null, 2) + '\n');
+    await writeFile(fp, `${JSON.stringify({ hello: 'Hello', extra: 'Extra' }, null, 2)}\n`);
 
     const applied = await applyFixesToFile(fp, [
       { type: 'delete', locale: 'fr', namespace: 'common', key: 'extra' },
@@ -159,7 +159,7 @@ describe('applyFixesToFile', () => {
 
   test('applies multiple fixes', async () => {
     const fp = join(tempDir, 'test.json');
-    await writeFile(fp, JSON.stringify({ a: '1', b: '2', c: '3' }, null, 2) + '\n');
+    await writeFile(fp, `${JSON.stringify({ a: '1', b: '2', c: '3' }, null, 2)}\n`);
 
     const applied = await applyFixesToFile(fp, [
       { type: 'set', locale: 'en', namespace: 'ns', key: 'a', value: 'updated' },
@@ -182,7 +182,7 @@ describe('applyFixes', () => {
     await mkdir(join(localesDir, 'fr'), { recursive: true });
     await writeFile(
       join(localesDir, 'fr', 'common.json'),
-      JSON.stringify({ hello: 'Bonjour' }, null, 2) + '\n'
+      `${JSON.stringify({ hello: 'Bonjour' }, null, 2)}\n`
     );
 
     const fixes: FixEntry[] = [
@@ -212,12 +212,18 @@ describe('applyFixes', () => {
     await mkdir(join(pluginRoot, 'locales', 'en'), { recursive: true });
     await writeFile(
       join(pluginRoot, 'locales', 'en', 'plugin.json'),
-      JSON.stringify({ name: 'My Plugin' }, null, 2) + '\n'
+      `${JSON.stringify({ name: 'My Plugin' }, null, 2)}\n`
     );
 
     const pathMap = new Map([['my-plugin', pluginRoot]]);
     const fixes: FixEntry[] = [
-      { type: 'set', locale: 'en', namespace: 'plugin:my-plugin', key: 'desc', value: 'Description' },
+      {
+        type: 'set',
+        locale: 'en',
+        namespace: 'plugin:my-plugin',
+        key: 'desc',
+        value: 'Description',
+      },
     ];
 
     const result = await applyFixes(fixes, tempDir, pathMap);

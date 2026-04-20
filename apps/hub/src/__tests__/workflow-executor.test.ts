@@ -868,7 +868,9 @@ describe('WorkflowExecutor - Block Type Resolution', () => {
         inputs: [],
       }),
       resolve: (type: string) => {
-        if (type.includes(':')) return type;
+        if (type.includes(':')) {
+          return type;
+        }
         return shortNames[type] ?? type;
       },
     });

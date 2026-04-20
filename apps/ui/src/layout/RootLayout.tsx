@@ -362,7 +362,9 @@ export function RootLayout() {
       <SidebarProvider className="h-svh max-h-svh">
         <AppSidebar />
         <SidebarInset className="min-w-0 overflow-hidden">
-          <main className={cn('min-w-0 flex-1', isFullBleed ? 'overflow-hidden' : 'overflow-auto p-8')}>
+          <main
+            className={cn('min-w-0 flex-1', isFullBleed ? 'overflow-hidden' : 'overflow-auto p-8')}
+          >
             <Outlet />
           </main>
         </SidebarInset>

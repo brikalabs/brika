@@ -3,10 +3,10 @@
  */
 
 import 'reflect-metadata';
+import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 import { mkdir, mkdtemp, readlink, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 import { get, provide, stub, useTestBed } from '@brika/di/testing';
 import { useBunMock } from '@brika/testing';
 import { BunRunner, ConfigLoader, HubConfig } from '@/runtime/config';
@@ -723,7 +723,7 @@ describe('PluginRegistry — local plugins', () => {
     // Create the initial plugins package.json
     await writeFile(
       join(pluginsDir, 'package.json'),
-      JSON.stringify({ name: 'brika-plugins', private: true, dependencies: {} }, null, 2),
+      JSON.stringify({ name: 'brika-plugins', private: true, dependencies: {} }, null, 2)
     );
 
     mockConfigLoader = {
@@ -883,7 +883,11 @@ describe('PluginRegistry — local plugins', () => {
     // Update package.json with the dependency
     await writeFile(
       join(pluginsDir, 'package.json'),
-      JSON.stringify({ name: 'brika-plugins', private: true, dependencies: { '@test/ws-rm': 'workspace:*' } }),
+      JSON.stringify({
+        name: 'brika-plugins',
+        private: true,
+        dependencies: { '@test/ws-rm': 'workspace:*' },
+      })
     );
 
     await registry.uninstall('@test/ws-rm');

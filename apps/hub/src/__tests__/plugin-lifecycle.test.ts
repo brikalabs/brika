@@ -606,19 +606,13 @@ describe('PluginLifecycle', () => {
     test('delegates to module compiler remove', () => {
       lifecycle.removeModules('@test/plugin', '/path/to/plugin');
 
-      expect(mockModuleCompiler.remove).toHaveBeenCalledWith(
-        '@test/plugin',
-        '/path/to/plugin'
-      );
+      expect(mockModuleCompiler.remove).toHaveBeenCalledWith('@test/plugin', '/path/to/plugin');
     });
 
     test('calls remove without rootDirectory', () => {
       lifecycle.removeModules('@test/plugin');
 
-      expect(mockModuleCompiler.remove).toHaveBeenCalledWith(
-        '@test/plugin',
-        undefined
-      );
+      expect(mockModuleCompiler.remove).toHaveBeenCalledWith('@test/plugin', undefined);
     });
   });
 

@@ -71,7 +71,9 @@ function collectFields(
   depth: number,
   items: CompletionItem[]
 ): void {
-  if (depth <= 0) return;
+  if (depth <= 0) {
+    return;
+  }
 
   switch (desc.kind) {
     case 'object': {

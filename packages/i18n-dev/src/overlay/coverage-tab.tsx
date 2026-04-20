@@ -2,7 +2,7 @@ import { BarChart3, ChevronRight } from 'lucide-react';
 import { useMemo } from 'react';
 import type { CoverageEntry } from '../types';
 import { useToggleSet } from './hooks';
-import { EmptyState, StatCard, coverageColor, pctColor } from './primitives';
+import { coverageColor, EmptyState, pctColor, StatCard } from './primitives';
 
 function CoverageStats({ coverage }: Readonly<{ coverage: CoverageEntry[] }>) {
   const stats = useMemo(() => {

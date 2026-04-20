@@ -1,6 +1,12 @@
 import i18next from 'i18next';
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { HMR_EVENT, HMR_REQUEST, HMR_SAVE_RESULT, HMR_TRANSLATIONS, HMR_USAGE } from '../hmr-events';
+import {
+  HMR_EVENT,
+  HMR_REQUEST,
+  HMR_SAVE_RESULT,
+  HMR_TRANSLATIONS,
+  HMR_USAGE,
+} from '../hmr-events';
 import type { KeyUsage, KeyUsageMap } from '../scan-usage';
 import type { ValidationResult } from '../types';
 import {
@@ -26,22 +32,23 @@ export interface RuntimeEntry {
 export function useToggleSet() {
   const [set, setSet] = useState<Set<string>>(new Set());
 
-  const update = useCallback(
-    (key: string, op: 'toggle' | 'add' | 'delete') => {
-      setSet((prev) => {
-        if (op === 'add' && prev.has(key)) return prev;
-        if (op === 'delete' && !prev.has(key)) return prev;
-        const next = new Set(prev);
-        if (op === 'toggle') {
-          next.has(key) ? next.delete(key) : next.add(key);
-        } else {
-          next[op](key);
-        }
-        return next;
-      });
-    },
-    []
-  );
+  const update = useCallback((key: string, op: 'toggle' | 'add' | 'delete') => {
+    setSet((prev) => {
+      if (op === 'add' && prev.has(key)) {
+        return prev;
+      }
+      if (op === 'delete' && !prev.has(key)) {
+        return prev;
+      }
+      const next = new Set(prev);
+      if (op === 'toggle') {
+        next.has(key) ? next.delete(key) : next.add(key);
+      } else {
+        next[op](key);
+      }
+      return next;
+    });
+  }, []);
 
   const toggle = useCallback((key: string) => update(key, 'toggle'), [update]);
   const add = useCallback((key: string) => update(key, 'add'), [update]);

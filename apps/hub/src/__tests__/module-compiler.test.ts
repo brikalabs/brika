@@ -10,14 +10,7 @@
  */
 
 import 'reflect-metadata';
-import {
-  afterAll,
-  beforeAll,
-  describe,
-  expect,
-  spyOn,
-  test,
-} from 'bun:test';
+import { afterAll, beforeAll, describe, expect, spyOn, test } from 'bun:test';
 import { mkdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -72,13 +65,10 @@ function makeBuildFailure(messages: string[]) {
 describe('ModuleCompiler - get()', () => {
   let compiler: ModuleCompiler;
 
-  useTestBed(
-    { autoStub: false },
-    () => {
-      stub(Logger);
-      compiler = get(ModuleCompiler);
-    }
-  );
+  useTestBed({ autoStub: false }, () => {
+    stub(Logger);
+    compiler = get(ModuleCompiler);
+  });
 
   test('returns undefined for unknown key', () => {
     expect(compiler.get('nonexistent:module')).toBeUndefined();
@@ -101,13 +91,10 @@ describe('ModuleCompiler - get()', () => {
 describe('ModuleCompiler - remove()', () => {
   let compiler: ModuleCompiler;
 
-  useTestBed(
-    { autoStub: false },
-    () => {
-      stub(Logger);
-      compiler = get(ModuleCompiler);
-    }
-  );
+  useTestBed({ autoStub: false }, () => {
+    stub(Logger);
+    compiler = get(ModuleCompiler);
+  });
 
   test('does not throw when removing unknown plugin', () => {
     expect(() => compiler.remove('nonexistent-plugin')).not.toThrow();
@@ -132,13 +119,10 @@ describe('ModuleCompiler - remove()', () => {
 describe('ModuleCompiler - compile()', () => {
   let compiler: ModuleCompiler;
 
-  useTestBed(
-    { autoStub: false },
-    () => {
-      stub(Logger);
-      compiler = get(ModuleCompiler);
-    }
-  );
+  useTestBed({ autoStub: false }, () => {
+    stub(Logger);
+    compiler = get(ModuleCompiler);
+  });
 
   // ── entrypoint not found ─────────────────────────────────────────────────
 
@@ -184,7 +168,10 @@ describe('ModuleCompiler - compile()', () => {
   test('compiles module and populates cache on successful build', async () => {
     const root = join(TEST_DIR, 'project');
     await mkdir(join(root, 'src', 'pages'), { recursive: true });
-    await Bun.write(join(root, 'src', 'pages', 'home.tsx'), 'export default () => <div>Home</div>;');
+    await Bun.write(
+      join(root, 'src', 'pages', 'home.tsx'),
+      'export default () => <div>Home</div>;'
+    );
 
     const compiledJs = 'var e=()=>"Home";export default e;';
     const buildSpy = spyOn(Bun, 'build').mockResolvedValue(makeBuildSuccess(compiledJs));
@@ -234,7 +221,10 @@ describe('ModuleCompiler - compile()', () => {
     const srcDir = join(projDir, 'src');
     await mkdir(join(srcDir, 'pages'), { recursive: true });
     await Bun.write(join(srcDir, 'pages', 'main.tsx'), 'export default () => null;');
-    await Bun.write(join(srcDir, 'actions.ts'), 'export const play = defineAction(async () => {});');
+    await Bun.write(
+      join(srcDir, 'actions.ts'),
+      'export const play = defineAction(async () => {});'
+    );
 
     const buildSpy = spyOn(Bun, 'build').mockResolvedValue(makeBuildSuccess('built;'));
 
@@ -318,7 +308,9 @@ describe('ModuleCompiler - compile()', () => {
       });
 
       expect(compiler.get('mixed:pages/good')).toBeDefined();
-      expect(await Bun.file(compiler.get('mixed:pages/good')?.filePath ?? '').text()).toBe('good-output');
+      expect(await Bun.file(compiler.get('mixed:pages/good')?.filePath ?? '').text()).toBe(
+        'good-output'
+      );
       expect(compiler.get('mixed:pages/bad')).toBeUndefined();
     } finally {
       buildSpy.mockRestore();
@@ -396,13 +388,10 @@ describe('ModuleCompiler - compile()', () => {
 describe('ModuleCompiler - compile() cache hit', () => {
   let compiler: ModuleCompiler;
 
-  useTestBed(
-    { autoStub: false },
-    () => {
-      stub(Logger);
-      compiler = get(ModuleCompiler);
-    }
-  );
+  useTestBed({ autoStub: false }, () => {
+    stub(Logger);
+    compiler = get(ModuleCompiler);
+  });
 
   test('skips build when module is loaded from disk cache', async () => {
     const pluginName = 'cache-hit-plugin';

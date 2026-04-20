@@ -8,7 +8,9 @@ import type { InstalledPackage, OperationProgress, UpdateInfo } from './types';
 
 function normalizeVersion(version?: string): string | undefined {
   // Bare absolute paths → file: specifier
-  if (version?.startsWith('/')) return `file:${version}`;
+  if (version?.startsWith('/')) {
+    return `file:${version}`;
+  }
   return version;
 }
 
@@ -89,7 +91,10 @@ export class PluginRegistry {
     await this.configLoader.removePlugin(name);
 
     const linkPath = join(this.pluginsDir, 'node_modules', name);
-    const isSymlink = await readlink(linkPath).then(() => true, () => false);
+    const isSymlink = await readlink(linkPath).then(
+      () => true,
+      () => false
+    );
 
     if (isSymlink) {
       // Workspace plugin — remove symlink and package.json entry
@@ -204,13 +209,22 @@ export class PluginRegistry {
     await this.#ensureSyncedPlugins(entries);
   }
 
-  async #removeStalePlugins(installed: InstalledPackage[], configNames: Set<string>): Promise<void> {
+  async #removeStalePlugins(
+    installed: InstalledPackage[],
+    configNames: Set<string>
+  ): Promise<void> {
     for (const pkg of installed) {
-      if (configNames.has(pkg.name)) continue;
+      if (configNames.has(pkg.name)) {
+        continue;
+      }
       try {
         await this.uninstall(pkg.name);
       } catch (error) {
-        this.logs.error('Failed to uninstall plugin during sync', { packageName: pkg.name }, { error });
+        this.logs.error(
+          'Failed to uninstall plugin during sync',
+          { packageName: pkg.name },
+          { error }
+        );
       }
     }
   }
@@ -229,7 +243,11 @@ export class PluginRegistry {
             // Consume progress
           }
         } catch (error) {
-          this.logs.error('Failed to install plugin during sync', { packageName: entry.name }, { error });
+          this.logs.error(
+            'Failed to install plugin during sync',
+            { packageName: entry.name },
+            { error }
+          );
         }
       }
     }
@@ -273,14 +291,19 @@ export class PluginRegistry {
 
   async #installDepsInSource(name: string, rootDirectory: string): Promise<void> {
     try {
-      const code = await this.bunRunner
-        .spawn(['install', '--frozen-lockfile'], { cwd: rootDirectory, stdout: 'ignore', stderr: 'ignore' })
-        .exited;
+      const code = await this.bunRunner.spawn(['install', '--frozen-lockfile'], {
+        cwd: rootDirectory,
+        stdout: 'ignore',
+        stderr: 'ignore',
+      }).exited;
       if (code !== 0) {
-        this.logs.warn('Dependency install returned non-zero exit code, plugin may still work if part of a workspace', {
-          pluginName: name,
-          exitCode: code,
-        });
+        this.logs.warn(
+          'Dependency install returned non-zero exit code, plugin may still work if part of a workspace',
+          {
+            pluginName: name,
+            exitCode: code,
+          }
+        );
       }
     } catch (error) {
       this.logs.warn('Failed to install plugin dependencies', { pluginName: name }, { error });
@@ -292,7 +315,7 @@ export class PluginRegistry {
     const nodeModulesDir = join(this.pluginsDir, 'node_modules');
 
     // Guard against path traversal (e.g. name = "../../../etc")
-    if (!resolve(linkPath).startsWith(resolve(nodeModulesDir) + '/')) {
+    if (!resolve(linkPath).startsWith(`${resolve(nodeModulesDir)}/`)) {
       throw new Error(`Invalid plugin name: "${name}" resolves outside node_modules`);
     }
 

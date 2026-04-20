@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, test } from 'bun:test';
 import i18next from 'i18next';
+import type { ValidationIssue } from '../types';
 import {
-  REFERENCE_LOCALE,
   applyKeyUsage,
   applyTranslationBundle,
   buildFix,
@@ -12,13 +12,13 @@ import {
   getNestedStoreValue,
   getStoreData,
   getTranslations,
+  REFERENCE_LOCALE,
   sendFixes,
   subscribeKeyUsage,
   subscribeStore,
   trackedTranslations,
   walkStoreEntries,
 } from './store';
-import type { ValidationIssue } from '../types';
 
 beforeAll(async () => {
   await i18next.init({
@@ -52,9 +52,8 @@ describe('REFERENCE_LOCALE', () => {
 describe('walkStoreEntries', () => {
   test('walks flat entries', () => {
     const entries: [string, string, string][] = [];
-    walkStoreEntries(
-      { ns: { a: 'one', b: 'two' } },
-      (ns, key, value) => entries.push([ns, key, value])
+    walkStoreEntries({ ns: { a: 'one', b: 'two' } }, (ns, key, value) =>
+      entries.push([ns, key, value])
     );
     expect(entries).toEqual([
       ['ns', 'a', 'one'],
@@ -64,9 +63,8 @@ describe('walkStoreEntries', () => {
 
   test('walks nested entries with dot-separated keys', () => {
     const entries: [string, string, string][] = [];
-    walkStoreEntries(
-      { ns: { parent: { child: 'val' } } },
-      (ns, key, value) => entries.push([ns, key, value])
+    walkStoreEntries({ ns: { parent: { child: 'val' } } }, (ns, key, value) =>
+      entries.push([ns, key, value])
     );
     expect(entries).toEqual([['ns', 'parent.child', 'val']]);
   });
@@ -82,9 +80,8 @@ describe('walkStoreEntries', () => {
 
   test('handles multiple namespaces', () => {
     const entries: [string, string][] = [];
-    walkStoreEntries(
-      { a: { key: 'val1' }, b: { key: 'val2' } },
-      (ns, key) => entries.push([ns, key])
+    walkStoreEntries({ a: { key: 'val1' }, b: { key: 'val2' } }, (ns, key) =>
+      entries.push([ns, key])
     );
     expect(entries).toEqual([
       ['a', 'key'],
@@ -94,9 +91,8 @@ describe('walkStoreEntries', () => {
 
   test('skips null namespace data', () => {
     const entries: string[] = [];
-    walkStoreEntries(
-      { ns: null } as unknown as Record<string, Record<string, unknown>>,
-      (ns) => entries.push(ns)
+    walkStoreEntries({ ns: null } as unknown as Record<string, Record<string, unknown>>, (ns) =>
+      entries.push(ns)
     );
     expect(entries).toEqual([]);
   });
@@ -364,8 +360,21 @@ describe('fixIssue', () => {
 describe('fixAllIssues', () => {
   test('does not throw with mixed issues', () => {
     const issues: ValidationIssue[] = [
-      { type: 'extra-key', severity: 'warning', namespace: 'common', locale: 'fr', key: 'x', referenceLocale: 'en' },
-      { type: 'missing-namespace', severity: 'error', namespace: 'common', locale: 'fr', referenceLocale: 'en' },
+      {
+        type: 'extra-key',
+        severity: 'warning',
+        namespace: 'common',
+        locale: 'fr',
+        key: 'x',
+        referenceLocale: 'en',
+      },
+      {
+        type: 'missing-namespace',
+        severity: 'error',
+        namespace: 'common',
+        locale: 'fr',
+        referenceLocale: 'en',
+      },
     ];
     expect(() => fixAllIssues(issues)).not.toThrow();
   });

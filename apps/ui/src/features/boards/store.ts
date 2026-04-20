@@ -6,7 +6,9 @@ import type { Board, BoardBrickPlacement, BoardSummary, BrickType } from './api'
 function shallowEqual(a: Record<string, Json>, b: Record<string, Json>): boolean {
   const keysA = Object.keys(a);
   const keysB = Object.keys(b);
-  if (keysA.length !== keysB.length) return false;
+  if (keysA.length !== keysB.length) {
+    return false;
+  }
   return keysA.every((k) => Object.is(a[k], b[k]));
 }
 

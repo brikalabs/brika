@@ -63,12 +63,11 @@ export { isMessage, isRpc, message, rpc } from './define';
 // ─── Errors ───
 export type { RpcErrorCode, RpcErrorWire } from './errors';
 export { isRpcErrorWire, RpcError } from './errors';
+// ─── Global ───
+export type { IpcGlobal } from './global';
 // ─── Host ───
 export type { PluginChannelOptions, SpawnPluginOptions } from './host';
 export { PluginChannel, spawnPlugin } from './host';
-
-// ─── Global ───
-export type { IpcGlobal } from './global';
 
 // ─── Core Types ───
 export { Json, JsonRecord } from './types';

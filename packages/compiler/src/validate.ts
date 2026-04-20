@@ -26,12 +26,15 @@ async function checkDeclaredSources(
   pluginRoot: string,
   items: Array<{ id: string }>,
   kind: 'bricks' | 'pages',
-  diagnostics: ValidationDiagnostic[],
+  diagnostics: ValidationDiagnostic[]
 ): Promise<void> {
   const label = kind === 'bricks' ? 'Brick' : 'Page';
   for (const item of items) {
     if (!isSafeId(item.id)) {
-      diagnostics.push({ level: 'error', message: `${label} ID "${item.id}" contains unsafe characters` });
+      diagnostics.push({
+        level: 'error',
+        message: `${label} ID "${item.id}" contains unsafe characters`,
+      });
       continue;
     }
     const path = join(pluginRoot, 'src', kind, `${item.id}.tsx`);
@@ -50,7 +53,7 @@ async function checkUndeclaredFiles(
   pluginRoot: string,
   declaredIds: ReadonlySet<string>,
   kind: 'bricks' | 'pages',
-  diagnostics: ValidationDiagnostic[],
+  diagnostics: ValidationDiagnostic[]
 ): Promise<void> {
   try {
     const glob = new Bun.Glob(`src/${kind}/*.tsx`);
@@ -75,7 +78,7 @@ async function checkUndeclaredFiles(
  */
 export async function validatePlugin(
   pluginRoot: string,
-  metadata: PluginMetadata,
+  metadata: PluginMetadata
 ): Promise<ValidationResult> {
   const diagnostics: ValidationDiagnostic[] = [];
 

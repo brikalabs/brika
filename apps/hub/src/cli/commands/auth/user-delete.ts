@@ -1,11 +1,11 @@
 import { inject } from '@brika/di';
-import { auth, UserService } from './auth-server';
 import pc from 'picocolors';
-import { promptDeleteUser, promptEmail, showError } from './prompts';
-import { bootstrapCLI, printDatabaseInfo } from './bootstrap';
 import { defineCommand } from '../../command';
-import { CliError } from './errors';
 import { dataDir } from '../../utils/runtime';
+import { auth, UserService } from './auth-server';
+import { bootstrapCLI, printDatabaseInfo } from './bootstrap';
+import { CliError } from './errors';
+import { promptDeleteUser, promptEmail, showError } from './prompts';
 
 export default defineCommand({
   name: 'delete',
@@ -15,7 +15,9 @@ export default defineCommand({
     const email = await promptEmail('User email address');
     const confirmed = await promptDeleteUser(email);
 
-    if (!confirmed) return;
+    if (!confirmed) {
+      return;
+    }
 
     const cli = await bootstrapCLI(
       auth({
