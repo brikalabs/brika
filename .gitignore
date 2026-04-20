@@ -32,3 +32,6 @@ next-env.d.ts
 
 # Biome reports
 biome-report.json
+
+# Claude Code local state
+.claude/
