@@ -32,7 +32,7 @@ describe('workflows routes', () => {
       list: mock().mockReturnValue([]),
       get: mock().mockReturnValue(undefined),
       getBlockTypes: mock().mockReturnValue([]),
-      setEnabled: mock().mockResolvedValue(true),
+      setEnabled: mock().mockReturnValue(true),
       addGlobalListener: mock().mockReturnValue(() => undefined),
     };
     mockLoader = {
