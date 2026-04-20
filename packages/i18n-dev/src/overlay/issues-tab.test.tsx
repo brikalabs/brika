@@ -169,7 +169,14 @@ describe('IssueRow', () => {
       key: 'old',
       referenceLocale: 'en',
     };
-    const html = renderToString(<IssueRow issue={issue} onFix={() => {}} />);
+    const html = renderToString(
+      <IssueRow
+        issue={issue}
+        onFix={() => {
+          /* noop */
+        }}
+      />
+    );
     expect(html).toContain('Remove');
     expect(html).toContain('svg');
   });

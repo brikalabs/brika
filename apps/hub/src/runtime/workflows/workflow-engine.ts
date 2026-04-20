@@ -110,7 +110,9 @@ export class WorkflowEngine {
     this.#updateWorkflowState(workflow, 'stopped');
 
     if (workflow.enabled) {
-      this.#startWorkflowInternal(workflow.id).catch(() => {});
+      this.#startWorkflowInternal(workflow.id).catch((err) => {
+        this.logs.error('Failed to start workflow', { workflowId: workflow.id, error: err });
+      });
     }
   }
 
@@ -265,7 +267,7 @@ export class WorkflowEngine {
       .sort((a, b) => (a.name ?? a.id).localeCompare(b.name ?? b.id));
   }
 
-  async setEnabled(id: string, enabled: boolean): Promise<boolean> {
+  setEnabled(id: string, enabled: boolean): boolean {
     const workflow = this.#workflows.get(id);
     if (!workflow) {
       return false;

@@ -27,7 +27,7 @@ export function setupLocation(_core: ContextCore) {
        *
        * @throws {PermissionDeniedError} if the "location" permission is not granted
        */
-      async getLocation(): Promise<HubLocation | null> {
+      getLocation(): Promise<HubLocation | null> {
         return bridge.getLocation().catch(rethrowRpcError);
       },
 
@@ -37,7 +37,7 @@ export function setupLocation(_core: ContextCore) {
        * Returns cached result on subsequent calls.
        * Returns `null` if timezone is not configured on the hub.
        */
-      async getTimezone(): Promise<string | null> {
+      getTimezone(): Promise<string | null> {
         return bridge.getTimezone().catch(rethrowRpcError);
       },
     },

@@ -247,7 +247,9 @@ export function i18nDevtools(options: I18nDevPluginOptions): Plugin {
         server.hot.send(HMR_TRANSLATIONS, lastTranslations);
 
         // Regenerate types in background
-        generateTypes(scan.coreTranslations).catch(() => {});
+        generateTypes(scan.coreTranslations).catch(() => {
+          // Type generation is best-effort; HMR has already updated the client.
+        });
 
         const errors = lastResult.issues.filter((i) => i.severity === 'error').length;
         const warnings = lastResult.issues.filter((i) => i.severity === 'warning').length;
