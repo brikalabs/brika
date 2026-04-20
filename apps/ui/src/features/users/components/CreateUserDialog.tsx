@@ -51,7 +51,7 @@ export function CreateUserDialog({ open, onOpenChange }: Readonly<CreateUserDial
     onOpenChange(next);
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
 
