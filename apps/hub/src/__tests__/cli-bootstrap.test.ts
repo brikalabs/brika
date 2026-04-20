@@ -108,12 +108,12 @@ describe('bootstrapCLI', () => {
 
     const p1: BootstrapPlugin = {
       name: 'p1',
-      onStop: () => order.push('p1'),
+      onStop: () => { order.push('p1'); },
     };
 
     const p2: BootstrapPlugin = {
       name: 'p2',
-      onStop: () => order.push('p2'),
+      onStop: () => { order.push('p2'); },
     };
 
     const { stop } = await bootstrapCLI(p1, p2);
