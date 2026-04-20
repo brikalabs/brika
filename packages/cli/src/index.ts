@@ -3,4 +3,4 @@ export { createCli } from './cli';
 export type { Command, CommandContext, CommandOption, HandlerArgs, Middleware } from './command';
 export { defineCommand } from './command';
 export { CliError } from './errors';
-export { generateHelp } from './help';
+export { generateCommandHelp, generateHelp } from './help';

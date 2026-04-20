@@ -154,13 +154,13 @@ export function parseTypeName(typeName?: string): TypeDescriptor {
 
 function parsePrefixedTypeName(typeName: string): TypeDescriptor | null {
   if (typeName.startsWith('generic')) {
-    return T.generic(typeName.match(/<(\w+)>/)?.[1] ?? 'T');
+    return T.generic(/<(\w+)>/.exec(typeName)?.[1] ?? 'T');
   }
   if (typeName.startsWith('__passthrough:')) {
     return T.passthrough(typeName.slice('__passthrough:'.length));
   }
   if (typeName.startsWith('passthrough')) {
-    return T.passthrough(typeName.match(/\((\w+)\)/)?.[1] ?? 'in');
+    return T.passthrough(/\((\w+)\)/.exec(typeName)?.[1] ?? 'in');
   }
   if (typeName.startsWith('$resolve:')) {
     const parts = typeName.slice('$resolve:'.length).split(':');

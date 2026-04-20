@@ -1,4 +1,4 @@
-import { UPDATE_CHANNELS, type UpdateChannelId } from '@/features/updates/api';
+import { UPDATE_CHANNELS } from '@/features/updates/api';
 import { useSetUpdateChannel, useUpdateChannel } from './channel-hooks';
 
 export function ChannelSelector() {
@@ -15,7 +15,7 @@ export function ChannelSelector() {
             key={ch.id}
             type="button"
             disabled={isPending || active}
-            onClick={() => mutate(ch.id as UpdateChannelId)}
+            onClick={() => mutate(ch.id)}
             className={
               active
                 ? 'rounded-md border border-primary bg-primary/10 px-3 py-1.5 font-medium text-primary text-sm'

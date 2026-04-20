@@ -21,7 +21,7 @@ ${commandsSection}
 `.trim();
 }
 
-function generateCommandHelp(cmd: Command, prefix: string): string {
+export function generateCommandHelp(cmd: Command, prefix: string): string {
   let flagsSection = '';
   if (cmd.options) {
     const flags = Object.entries(cmd.options)
