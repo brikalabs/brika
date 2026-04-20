@@ -80,13 +80,13 @@ function invokeBlock(configInput: Record<string, unknown>) {
 
   const responseEmit = mock();
   const errorEmit = mock();
-  let triggerHandler: (() => Promise<void>) | null = null;
+  const handlerRef: { current: (() => Promise<void>) | null } = { current: null };
 
   const ctx = {
     inputs: {
       trigger: {
         on(cb: () => Promise<void>) {
-          triggerHandler = cb;
+          handlerRef.current = cb;
         },
       },
     },
@@ -99,6 +99,7 @@ function invokeBlock(configInput: Record<string, unknown>) {
 
   capturedSetup(ctx);
 
+  const triggerHandler = handlerRef.current;
   if (!triggerHandler) {
     throw new Error('trigger.on was not called during setup');
   }
@@ -109,6 +110,16 @@ function invokeBlock(configInput: Record<string, unknown>) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Tests
 // ─────────────────────────────────────────────────────────────────────────────
+
+// Bun's fetch type requires a `preconnect` property on the function itself.
+// Test mocks don't need it, so we wrap the implementation and suppress the
+// single structural-compatibility error here instead of leaking `as` casts.
+function mockFetchImpl(
+  impl: (url: URL | RequestInfo, opts?: RequestInit) => Promise<Response>
+): typeof fetch {
+  // @ts-expect-error test mocks don't provide fetch.preconnect
+  return impl;
+}
 
 describe('http-request block', () => {
   let fetchSpy: ReturnType<typeof spyOn<typeof globalThis, 'fetch'>>;
@@ -121,10 +132,10 @@ describe('http-request block', () => {
     test('passes an AbortSignal to fetch', async () => {
       let capturedSignal: AbortSignal | undefined;
 
-      fetchSpy = spyOn(globalThis, 'fetch').mockImplementation(async (_url, opts) => {
+      fetchSpy = spyOn(globalThis, 'fetch').mockImplementation(mockFetchImpl(async (_url, opts) => {
         capturedSignal = opts?.signal as AbortSignal;
         return new Response(JSON.stringify({}), { status: 200 });
-      });
+      }));
 
       const { triggerHandler } = invokeBlock({ url: 'https://example.com' });
       await triggerHandler();
@@ -135,10 +146,10 @@ describe('http-request block', () => {
     test('signal is not yet aborted on a fast response', async () => {
       let capturedSignal: AbortSignal | undefined;
 
-      fetchSpy = spyOn(globalThis, 'fetch').mockImplementation(async (_url, opts) => {
+      fetchSpy = spyOn(globalThis, 'fetch').mockImplementation(mockFetchImpl(async (_url, opts) => {
         capturedSignal = opts?.signal as AbortSignal;
         return new Response('ok', { status: 200 });
-      });
+      }));
 
       const { triggerHandler } = invokeBlock({ url: 'https://example.com', timeoutMs: 5000 });
       await triggerHandler();
@@ -147,7 +158,7 @@ describe('http-request block', () => {
     });
 
     test('aborts fetch and emits error when timeoutMs elapses', async () => {
-      fetchSpy = spyOn(globalThis, 'fetch').mockImplementation(async (_url, opts) => {
+      fetchSpy = spyOn(globalThis, 'fetch').mockImplementation(mockFetchImpl(async (_url, opts) => {
         const signal = opts?.signal as AbortSignal;
         // Simulate a hanging fetch that respects the abort signal
         await new Promise<void>((_, reject) => {
@@ -160,7 +171,7 @@ describe('http-request block', () => {
           });
         });
         return new Response();
-      });
+      }));
 
       const { triggerHandler, errorEmit, responseEmit } = invokeBlock({
         url: 'https://example.com',
@@ -240,10 +251,10 @@ describe('http-request block', () => {
     test('uses GET method by default', async () => {
       let capturedMethod: string | undefined;
 
-      fetchSpy = spyOn(globalThis, 'fetch').mockImplementation(async (_url, opts) => {
+      fetchSpy = spyOn(globalThis, 'fetch').mockImplementation(mockFetchImpl(async (_url, opts) => {
         capturedMethod = opts?.method as string;
         return new Response('ok', { status: 200 });
-      });
+      }));
 
       const { triggerHandler } = invokeBlock({ url: 'https://example.com' });
       await triggerHandler();

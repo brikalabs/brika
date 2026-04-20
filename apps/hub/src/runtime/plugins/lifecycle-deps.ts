@@ -15,3 +15,4 @@ import * as pp from './plugin-process';
 export const { compileServerEntry } = compiler;
 export const { spawnPlugin } = ipc;
 export const { PluginProcess } = pp;
+export type PluginProcess = pp.PluginProcess;
