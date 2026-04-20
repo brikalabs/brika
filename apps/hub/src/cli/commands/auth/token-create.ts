@@ -1,8 +1,8 @@
 import pc from 'picocolors';
-import { promptCreateToken, promptEmail, showError, showSuccess } from './prompts';
 import { defineCommand } from '../../command';
 import { CliError } from './errors';
 import { hubFetchOk } from './hub-client';
+import { promptCreateToken, promptEmail, showError, showSuccess } from './prompts';
 
 const TOKEN_SCOPES = [
   { value: 'workflow:read', label: 'Workflow Read', hint: 'Read workflows' },

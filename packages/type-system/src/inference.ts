@@ -12,7 +12,7 @@
  * 5. Iterate until stable (max 10 passes)
  */
 
-import { type TypeDescriptor, isConcrete, needsResolution } from './descriptor';
+import { isConcrete, needsResolution, type TypeDescriptor } from './descriptor';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Graph Types
@@ -85,16 +85,24 @@ export function inferTypes(
 
     for (const node of nodes) {
       // Forward propagation: concrete output → connected generic input
-      if (propagateForward(node, incoming, nodeMap, result)) changed = true;
+      if (propagateForward(node, incoming, nodeMap, result)) {
+        changed = true;
+      }
 
       // Passthrough resolution
-      if (resolvePassthrough(node, result)) changed = true;
+      if (resolvePassthrough(node, result)) {
+        changed = true;
+      }
 
       // Backward propagation: concrete input → connected generic output
-      if (propagateBackward(node, outgoing, nodeMap, result)) changed = true;
+      if (propagateBackward(node, outgoing, nodeMap, result)) {
+        changed = true;
+      }
     }
 
-    if (!changed) break;
+    if (!changed) {
+      break;
+    }
   }
 
   return result;
@@ -118,7 +126,9 @@ type OutgoingMap = Map<string, Map<string, EdgeTarget[]>>;
 function buildIncomingMap(edges: GraphEdge[]): IncomingMap {
   const map: IncomingMap = new Map();
   for (const e of edges) {
-    if (!map.has(e.targetNode)) map.set(e.targetNode, new Map());
+    if (!map.has(e.targetNode)) {
+      map.set(e.targetNode, new Map());
+    }
     map.get(e.targetNode)?.set(e.targetPort, { node: e.sourceNode, port: e.sourcePort });
   }
   return map;
@@ -127,10 +137,14 @@ function buildIncomingMap(edges: GraphEdge[]): IncomingMap {
 function buildOutgoingMap(edges: GraphEdge[]): OutgoingMap {
   const map: OutgoingMap = new Map();
   for (const e of edges) {
-    if (!map.has(e.sourceNode)) map.set(e.sourceNode, new Map());
+    if (!map.has(e.sourceNode)) {
+      map.set(e.sourceNode, new Map());
+    }
     const portMap = map.get(e.sourceNode);
     if (portMap) {
-      if (!portMap.has(e.sourcePort)) portMap.set(e.sourcePort, []);
+      if (!portMap.has(e.sourcePort)) {
+        portMap.set(e.sourcePort, []);
+      }
       portMap.get(e.sourcePort)?.push({ node: e.targetNode, port: e.targetPort });
     }
   }
@@ -148,10 +162,14 @@ function resolveExternalTypes(
 ): void {
   for (const node of nodes) {
     for (const [portId, port] of Object.entries(node.ports)) {
-      if (port.type.kind !== 'resolved') continue;
+      if (port.type.kind !== 'resolved') {
+        continue;
+      }
 
       const configValue = node.config?.[port.type.configField] as string | undefined;
-      if (!configValue) continue;
+      if (!configValue) {
+        continue;
+      }
 
       const resolved = resolver.resolve(port.type.source, configValue);
       if (resolved && isConcrete(resolved)) {
@@ -173,16 +191,24 @@ function propagateForward(
 ): boolean {
   let changed = false;
   const nodeIncoming = incoming.get(node.id);
-  if (!nodeIncoming) return false;
+  if (!nodeIncoming) {
+    return false;
+  }
 
   for (const [inputPortId, port] of Object.entries(node.ports)) {
-    if (port.direction !== 'input') continue;
+    if (port.direction !== 'input') {
+      continue;
+    }
 
     const key = portKey(node.id, inputPortId);
-    if (result.has(key)) continue; // already resolved
+    if (result.has(key)) {
+      continue; // already resolved
+    }
 
     const source = nodeIncoming.get(inputPortId);
-    if (!source) continue;
+    if (!source) {
+      continue;
+    }
 
     // Check if the source's declared type or its inferred type is concrete
     const sourceKey = portKey(source.node, source.port);
@@ -205,10 +231,14 @@ function resolvePassthrough(node: GraphNode, result: PortTypeMap): boolean {
   let changed = false;
 
   for (const [portId, port] of Object.entries(node.ports)) {
-    if (port.type.kind !== 'passthrough') continue;
+    if (port.type.kind !== 'passthrough') {
+      continue;
+    }
 
     const key = portKey(node.id, portId);
-    if (result.has(key)) continue;
+    if (result.has(key)) {
+      continue;
+    }
 
     // Look up the referenced input port on the same node
     const sourceInputKey = portKey(node.id, port.type.sourcePortId);
@@ -235,18 +265,28 @@ function propagateBackward(
 ): boolean {
   let changed = false;
   const nodeOutgoing = outgoing.get(node.id);
-  if (!nodeOutgoing) return false;
+  if (!nodeOutgoing) {
+    return false;
+  }
 
   for (const [outputPortId, port] of Object.entries(node.ports)) {
-    if (port.direction !== 'output') continue;
+    if (port.direction !== 'output') {
+      continue;
+    }
 
     const key = portKey(node.id, outputPortId);
-    if (result.has(key)) continue; // already resolved
+    if (result.has(key)) {
+      continue; // already resolved
+    }
 
-    if (!needsResolution(port.type)) continue;
+    if (!needsResolution(port.type)) {
+      continue;
+    }
 
     const targets = nodeOutgoing.get(outputPortId);
-    if (!targets) continue;
+    if (!targets) {
+      continue;
+    }
 
     // If any connected input has a concrete type, use it
     for (const target of targets) {

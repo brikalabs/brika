@@ -4,11 +4,11 @@ import { createRef } from 'react';
 import { renderToString } from 'react-dom/server';
 import { applyKeyUsage } from './store';
 import {
+  buildMultiLocaleKeys,
   KeyUsageBadge,
   KeyUsageList,
   TranslationLocaleValue,
   TranslationsContent,
-  buildMultiLocaleKeys,
 } from './translations-tab';
 
 beforeAll(async () => {

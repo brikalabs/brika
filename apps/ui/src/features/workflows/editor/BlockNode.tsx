@@ -90,13 +90,27 @@ const StatusIndicator = memo(function StatusIndicator({
 /** Map a resolved type kind to a port handle color */
 function portColor(resolvedType: string | undefined, fallbackTypeName: string | undefined): string {
   const type = resolvedType ?? fallbackTypeName ?? '';
-  if (type.startsWith('generic') || type === '') return '#8b5cf6'; // violet — unresolved generic
-  if (type === 'string') return '#22c55e'; // green
-  if (type === 'number') return '#3b82f6'; // blue
-  if (type === 'boolean') return '#f59e0b'; // amber
-  if (type.startsWith('{')) return '#ec4899'; // pink — object
-  if (type.endsWith('[]')) return '#06b6d4'; // cyan — array
-  if (type.includes('|')) return '#a855f7'; // purple — union
+  if (type.startsWith('generic') || type === '') {
+    return '#8b5cf6'; // violet — unresolved generic
+  }
+  if (type === 'string') {
+    return '#22c55e'; // green
+  }
+  if (type === 'number') {
+    return '#3b82f6'; // blue
+  }
+  if (type === 'boolean') {
+    return '#f59e0b'; // amber
+  }
+  if (type.startsWith('{')) {
+    return '#ec4899'; // pink — object
+  }
+  if (type.endsWith('[]')) {
+    return '#06b6d4'; // cyan — array
+  }
+  if (type.includes('|')) {
+    return '#a855f7'; // purple — union
+  }
   return '#6b7280'; // gray — fallback
 }
 

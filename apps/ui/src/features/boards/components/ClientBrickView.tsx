@@ -39,10 +39,7 @@ export function ClientBrickView({
     [placement?.config]
   );
 
-  const size = useMemo(
-    () => ({ w: configW, h: configH }),
-    [configW, configH]
-  );
+  const size = useMemo(() => ({ w: configW, h: configH }), [configW, configH]);
 
   const contextValue = useMemo<BrickViewContextValue>(
     () => ({

@@ -32,9 +32,9 @@ export { defineSpark, subscribeSpark } from './sparks';
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
 
+export type { RouteMethod, RouteRequest, RouteResponse } from '../types';
 export type { RouteHandler } from './routes';
 export { defineRoute } from './routes';
-export type { RouteMethod, RouteRequest, RouteResponse } from '../types';
 
 // ─── Actions ─────────────────────────────────────────────────────────────────
 

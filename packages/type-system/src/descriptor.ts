@@ -17,7 +17,10 @@ export type TypeDescriptor =
   | { readonly kind: 'literal'; readonly value: string | number | boolean }
   | {
       readonly kind: 'object';
-      readonly fields: Record<string, { readonly type: TypeDescriptor; readonly optional: boolean }>;
+      readonly fields: Record<
+        string,
+        { readonly type: TypeDescriptor; readonly optional: boolean }
+      >;
     }
   | { readonly kind: 'array'; readonly element: TypeDescriptor }
   | { readonly kind: 'tuple'; readonly elements: readonly TypeDescriptor[] }
@@ -117,28 +120,53 @@ export function needsResolution(desc: TypeDescriptor): boolean {
 
 /** Parse a legacy typeName string (e.g. "string", "generic<T>", "passthrough(in)") into a TypeDescriptor */
 export function parseTypeName(typeName?: string): TypeDescriptor {
-  if (!typeName) return T.generic();
+  if (!typeName) {
+    return T.generic();
+  }
 
-  if (typeName.startsWith('generic')) return T.generic(typeName.match(/<(\w+)>/)?.[1] ?? 'T');
-  if (typeName.startsWith('__passthrough:')) return T.passthrough(typeName.slice('__passthrough:'.length));
-  if (typeName.startsWith('passthrough')) return T.passthrough(typeName.match(/\((\w+)\)/)?.[1] ?? 'in');
+  if (typeName.startsWith('generic')) {
+    return T.generic(typeName.match(/<(\w+)>/)?.[1] ?? 'T');
+  }
+  if (typeName.startsWith('__passthrough:')) {
+    return T.passthrough(typeName.slice('__passthrough:'.length));
+  }
+  if (typeName.startsWith('passthrough')) {
+    return T.passthrough(typeName.match(/\((\w+)\)/)?.[1] ?? 'in');
+  }
   if (typeName.startsWith('$resolve:')) {
     const parts = typeName.slice('$resolve:'.length).split(':');
     return T.resolved(parts[0] ?? '', parts[1] ?? '');
   }
-  if (typeName === 'unknown' || typeName === 'any') return T.unknown;
-  if (typeName === 'string') return T.string;
-  if (typeName === 'number' || typeName === 'integer') return T.number;
-  if (typeName === 'boolean') return T.boolean;
-  if (typeName === 'null') return T.null;
-  if (typeName === 'array') return T.array(T.unknown);
-  if (typeName.endsWith('[]')) return T.array(parseTypeName(typeName.slice(0, -2)));
+  if (typeName === 'unknown' || typeName === 'any') {
+    return T.unknown;
+  }
+  if (typeName === 'string') {
+    return T.string;
+  }
+  if (typeName === 'number' || typeName === 'integer') {
+    return T.number;
+  }
+  if (typeName === 'boolean') {
+    return T.boolean;
+  }
+  if (typeName === 'null') {
+    return T.null;
+  }
+  if (typeName === 'array') {
+    return T.array(T.unknown);
+  }
+  if (typeName.endsWith('[]')) {
+    return T.array(parseTypeName(typeName.slice(0, -2)));
+  }
 
   return T.unknown;
 }
 
 /** Extract a TypeDescriptor from a port, preferring the structured `type` field over `typeName` */
-export function parsePortType(port: { typeName?: string; type?: Record<string, unknown> }): TypeDescriptor {
+export function parsePortType(port: {
+  typeName?: string;
+  type?: Record<string, unknown>;
+}): TypeDescriptor {
   if (port.type && typeof port.type === 'object' && 'kind' in port.type) {
     return port.type as unknown as TypeDescriptor;
   }
@@ -147,11 +175,23 @@ export function parsePortType(port: { typeName?: string; type?: Record<string, u
 
 /** Infer a TypeDescriptor from a runtime JSON value */
 export function inferType(data: unknown): TypeDescriptor {
-  if (data === null) return T.null;
-  if (typeof data === 'string') return T.string;
-  if (typeof data === 'number') return T.number;
-  if (typeof data === 'boolean') return T.boolean;
-  if (Array.isArray(data)) return T.array(T.unknown);
-  if (typeof data === 'object') return T.record(T.unknown);
+  if (data === null) {
+    return T.null;
+  }
+  if (typeof data === 'string') {
+    return T.string;
+  }
+  if (typeof data === 'number') {
+    return T.number;
+  }
+  if (typeof data === 'boolean') {
+    return T.boolean;
+  }
+  if (Array.isArray(data)) {
+    return T.array(T.unknown);
+  }
+  if (typeof data === 'object') {
+    return T.record(T.unknown);
+  }
   return T.unknown;
 }

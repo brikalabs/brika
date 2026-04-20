@@ -269,7 +269,7 @@ describe('PluginLifecycle (with mocked spawn)', () => {
       const process = lifecycle.getProcess('@test/plugin');
       expect(process).not.toBeUndefined();
 
-      const found = lifecycle.getProcessByUid(process!.uid);
+      const found = lifecycle.getProcessByUid(process?.uid);
       expect(found).toBe(process);
     });
 
@@ -277,7 +277,9 @@ describe('PluginLifecycle (with mocked spawn)', () => {
       await loadPlugin();
 
       const process = lifecycle.getProcess('@test/plugin');
-      if (!process) throw new Error('expected process to be defined after load');
+      if (!process) {
+        throw new Error('expected process to be defined after load');
+      }
       const uid = process.uid;
       await lifecycle.unload('@test/plugin');
 

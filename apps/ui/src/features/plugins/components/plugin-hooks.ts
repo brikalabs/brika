@@ -91,10 +91,7 @@ export function useCallAction() {
       const res = await fetch(`/api/plugins/${uid}/actions/${ref.__actionId}`, {
         method: 'POST',
         credentials: 'include',
-        headers:
-          input === undefined
-            ? {}
-            : { 'Content-Type': 'application/json' },
+        headers: input === undefined ? {} : { 'Content-Type': 'application/json' },
         body: input === undefined ? undefined : JSON.stringify(input),
       });
       if (res.ok) {

@@ -4,8 +4,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { HMR_SAVE } from '../hmr-events';
 import { VariableHighlight } from './highlight';
 import { useKeyUsage, useToggleSet } from './hooks';
-import { CopyButton, EmptyState, FilterPill, NamespaceGroup, groupBy, openInEditor } from './primitives';
-import { REFERENCE_LOCALE, getTranslations, updateI18nextStore } from './store';
+import {
+  CopyButton,
+  EmptyState,
+  FilterPill,
+  groupBy,
+  NamespaceGroup,
+  openInEditor,
+} from './primitives';
+import { getTranslations, REFERENCE_LOCALE, updateI18nextStore } from './store';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -133,9 +140,8 @@ export function TranslationLocaleValue({
 export function KeyUsageList({ qualifiedKey }: Readonly<{ qualifiedKey: string }>) {
   const usages = useKeyUsage(qualifiedKey);
   const plural = usages.length === 1 ? '' : 's';
-  const usageLabel = usages.length > 0
-    ? `Used in ${usages.length} file${plural}`
-    : 'Not found in source';
+  const usageLabel =
+    usages.length > 0 ? `Used in ${usages.length} file${plural}` : 'Not found in source';
   return (
     <div className="mt-1 border-dt-border-dim border-t pt-1">
       <div className="mb-0.5 flex items-center gap-1 text-[10px] text-dt-text-4">

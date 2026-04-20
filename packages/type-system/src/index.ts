@@ -13,19 +13,22 @@
  * - toJsonSchema: TypeDescriptor → JSON Schema conversion
  */
 
-export type { PrimitiveType, TypeDescriptor } from './descriptor';
-export { T, isConcrete, isWildcard, needsResolution, parseTypeName, parsePortType, inferType } from './descriptor';
-
-export { displayType } from './display';
-
-export { isCompatible } from './compatibility';
-
 export type { CompletionItem } from './autocomplete';
 export { getCompletions } from './autocomplete';
-
+export { isCompatible } from './compatibility';
+export type { PrimitiveType, TypeDescriptor } from './descriptor';
+export {
+  inferType,
+  isConcrete,
+  isWildcard,
+  needsResolution,
+  parsePortType,
+  parseTypeName,
+  T,
+} from './descriptor';
+export { displayType } from './display';
+export { fromJsonSchema, zodToDescriptor } from './from-zod';
 export type { GraphEdge, GraphNode, PortTypeMap, TypeResolver } from './inference';
 export { inferTypes, portKey } from './inference';
-
-export { fromJsonSchema, zodToDescriptor } from './from-zod';
 
 export { toJsonSchema } from './to-json-schema';

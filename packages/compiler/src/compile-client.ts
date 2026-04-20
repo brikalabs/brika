@@ -23,11 +23,10 @@ export type ClientCompileResult =
  * no pre-scanning needed. Files importing `@brika/sdk/actions` are
  * replaced with `{ __actionId }` stubs.
  */
-export async function compileClientModule(opts: ClientCompileOptions): Promise<ClientCompileResult> {
-  const plugins: BunPlugin[] = [
-    brikaExternalsPlugin(),
-    brikaActionsPlugin(opts.pluginRoot),
-  ];
+export async function compileClientModule(
+  opts: ClientCompileOptions
+): Promise<ClientCompileResult> {
+  const plugins: BunPlugin[] = [brikaExternalsPlugin(), brikaActionsPlugin(opts.pluginRoot)];
   if (opts.extraPlugins) {
     plugins.push(...opts.extraPlugins);
   }

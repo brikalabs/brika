@@ -230,4 +230,4 @@ export const TestApp = {
   create,
   call,
 };
-export type { TestAppInstance, TestResponse, RequestOptions };
+export type { RequestOptions, TestAppInstance, TestResponse };

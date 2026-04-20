@@ -1,4 +1,4 @@
-import { readFile, readdir, stat } from 'node:fs/promises';
+import { readdir, readFile, stat } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 
 /** A single usage of a translation key in a source file. */
@@ -48,11 +48,7 @@ const JSON_QUALIFIED_KEY_RE = /"([a-zA-Z][\w-]*:[a-zA-Z][\w.-]*)"/g;
 
 // ─── File walker ───────────────────────────────────────────────────────────
 
-async function walkSourceFiles(
-  dir: string,
-  files: string[],
-  skipDirs: Set<string>
-): Promise<void> {
+async function walkSourceFiles(dir: string, files: string[], skipDirs: Set<string>): Promise<void> {
   let entries: string[];
   try {
     entries = await readdir(dir);
@@ -111,11 +107,7 @@ function addUsage(
   }
 }
 
-function scanSourceFile(
-  content: string,
-  relPath: string,
-  usageMap: KeyUsageMap
-) {
+function scanSourceFile(content: string, relPath: string, usageMap: KeyUsageMap) {
   const lines = content.split('\n');
 
   // Detect default namespace from useTranslation('ns')
@@ -140,11 +132,7 @@ function scanSourceFile(
   }
 }
 
-function scanJsonFile(
-  content: string,
-  relPath: string,
-  usageMap: KeyUsageMap
-) {
+function scanJsonFile(content: string, relPath: string, usageMap: KeyUsageMap) {
   const lines = content.split('\n');
 
   for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
@@ -172,10 +160,7 @@ function scanJsonFile(
  * Returns a map of `namespace:key` → list of `{ file, line }` usages.
  * The `rootDir` is used to produce relative file paths in the output.
  */
-export async function scanKeyUsages(
-  rootDir: string,
-  srcDirs: string[]
-): Promise<KeyUsageMap> {
+export async function scanKeyUsages(rootDir: string, srcDirs: string[]): Promise<KeyUsageMap> {
   const skipDirs = new Set(['node_modules', 'dist', 'build', '.git', 'locales']);
   const files: string[] = [];
 

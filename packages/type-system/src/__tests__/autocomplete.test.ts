@@ -1,20 +1,15 @@
 import { describe, expect, it } from 'bun:test';
-import { T } from '../descriptor';
 import { getCompletions } from '../autocomplete';
+import { T } from '../descriptor';
 
 describe('getCompletions', () => {
   it('returns root item for primitive', () => {
     const items = getCompletions(T.string, 'inputs.in');
-    expect(items).toEqual([
-      { label: 'in', type: 'string', path: 'inputs.in', hasChildren: false },
-    ]);
+    expect(items).toEqual([{ label: 'in', type: 'string', path: 'inputs.in', hasChildren: false }]);
   });
 
   it('returns fields for object type', () => {
-    const items = getCompletions(
-      T.obj({ name: T.string, age: T.number }),
-      'inputs.in'
-    );
+    const items = getCompletions(T.obj({ name: T.string, age: T.number }), 'inputs.in');
 
     expect(items).toEqual([
       { label: 'in', type: '{name: string, age: number}', path: 'inputs.in', hasChildren: true },
@@ -24,10 +19,7 @@ describe('getCompletions', () => {
   });
 
   it('recurses into nested objects', () => {
-    const items = getCompletions(
-      T.obj({ user: T.obj({ name: T.string }) }),
-      'inputs.in'
-    );
+    const items = getCompletions(T.obj({ user: T.obj({ name: T.string }) }), 'inputs.in');
 
     expect(items).toContainEqual({
       label: 'user',
@@ -57,10 +49,7 @@ describe('getCompletions', () => {
   });
 
   it('handles array element access', () => {
-    const items = getCompletions(
-      T.array(T.obj({ id: T.string })),
-      'inputs.list'
-    );
+    const items = getCompletions(T.array(T.obj({ id: T.string })), 'inputs.list');
 
     expect(items).toContainEqual({
       label: '[n]',
@@ -89,10 +78,7 @@ describe('getCompletions', () => {
 
   it('handles union of objects (common fields)', () => {
     const items = getCompletions(
-      T.union([
-        T.obj({ id: T.string, name: T.string }),
-        T.obj({ id: T.string, age: T.number }),
-      ]),
+      T.union([T.obj({ id: T.string, name: T.string }), T.obj({ id: T.string, age: T.number })]),
       'inputs.in'
     );
 
@@ -112,9 +98,7 @@ describe('getCompletions', () => {
 
   it('returns only root for unknown type', () => {
     const items = getCompletions(T.unknown, 'data');
-    expect(items).toEqual([
-      { label: 'data', type: 'unknown', path: 'data', hasChildren: false },
-    ]);
+    expect(items).toEqual([{ label: 'data', type: 'unknown', path: 'data', hasChildren: false }]);
   });
 
   it('returns only root for generic type', () => {

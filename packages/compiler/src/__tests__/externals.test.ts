@@ -42,22 +42,14 @@ describe('brikaExternalsPlugin', () => {
   // ── 1. Known externals are replaced with globalThis.__brika proxies ──
 
   test('react is replaced with globalThis.__brika.React', async () => {
-    const output = await buildEntry(
-      [
-        "import React from 'react';",
-        'export { React };',
-      ].join('\n'),
-    );
+    const output = await buildEntry(["import React from 'react';", 'export { React };'].join('\n'));
 
     expect(output).toContain('globalThis.__brika.React');
   });
 
   test('clsx is replaced with globalThis.__brika.clsx', async () => {
     const output = await buildEntry(
-      [
-        "import { clsx } from 'clsx';",
-        'export { clsx };',
-      ].join('\n'),
+      ["import { clsx } from 'clsx';", 'export { clsx };'].join('\n')
     );
 
     expect(output).toContain('globalThis.__brika.clsx');
@@ -65,10 +57,7 @@ describe('brikaExternalsPlugin', () => {
 
   test('lucide-react is replaced with globalThis.__brika.icons', async () => {
     const output = await buildEntry(
-      [
-        "import { Sun } from 'lucide-react';",
-        'export { Sun };',
-      ].join('\n'),
+      ["import { Sun } from 'lucide-react';", 'export { Sun };'].join('\n')
     );
 
     expect(output).toContain('globalThis.__brika.icons');
@@ -76,10 +65,7 @@ describe('brikaExternalsPlugin', () => {
 
   test('class-variance-authority is replaced with globalThis.__brika.cva', async () => {
     const output = await buildEntry(
-      [
-        "import { cva } from 'class-variance-authority';",
-        'export { cva };',
-      ].join('\n'),
+      ["import { cva } from 'class-variance-authority';", 'export { cva };'].join('\n')
     );
 
     expect(output).toContain('globalThis.__brika.cva');
@@ -87,10 +73,7 @@ describe('brikaExternalsPlugin', () => {
 
   test('@brika/sdk/ui-kit is replaced with globalThis.__brika.ui', async () => {
     const output = await buildEntry(
-      [
-        "import { Button } from '@brika/sdk/ui-kit';",
-        'export { Button };',
-      ].join('\n'),
+      ["import { Button } from '@brika/sdk/ui-kit';", 'export { Button };'].join('\n')
     );
 
     expect(output).toContain('globalThis.__brika.ui');
@@ -98,10 +81,7 @@ describe('brikaExternalsPlugin', () => {
 
   test('@brika/sdk/ui-kit/icons is replaced with globalThis.__brika.icons', async () => {
     const output = await buildEntry(
-      [
-        "import { Icon } from '@brika/sdk/ui-kit/icons';",
-        'export { Icon };',
-      ].join('\n'),
+      ["import { Icon } from '@brika/sdk/ui-kit/icons';", 'export { Icon };'].join('\n')
     );
 
     expect(output).toContain('globalThis.__brika.icons');
@@ -109,10 +89,7 @@ describe('brikaExternalsPlugin', () => {
 
   test('@brika/sdk/ui-kit/hooks is replaced with globalThis.__brika.hooks', async () => {
     const output = await buildEntry(
-      [
-        "import { useTheme } from '@brika/sdk/ui-kit/hooks';",
-        'export { useTheme };',
-      ].join('\n'),
+      ["import { useTheme } from '@brika/sdk/ui-kit/hooks';", 'export { useTheme };'].join('\n')
     );
 
     expect(output).toContain('globalThis.__brika.hooks');
@@ -120,10 +97,7 @@ describe('brikaExternalsPlugin', () => {
 
   test('@brika/sdk/brick-views is replaced with globalThis.__brika.brickHooks', async () => {
     const output = await buildEntry(
-      [
-        "import { useBrick } from '@brika/sdk/brick-views';",
-        'export { useBrick };',
-      ].join('\n'),
+      ["import { useBrick } from '@brika/sdk/brick-views';", 'export { useBrick };'].join('\n')
     );
 
     expect(output).toContain('globalThis.__brika.brickHooks');
@@ -131,10 +105,7 @@ describe('brikaExternalsPlugin', () => {
 
   test('react/jsx-runtime is replaced with globalThis.__brika.jsx', async () => {
     const output = await buildEntry(
-      [
-        "import { jsx } from 'react/jsx-runtime';",
-        'export { jsx };',
-      ].join('\n'),
+      ["import { jsx } from 'react/jsx-runtime';", 'export { jsx };'].join('\n')
     );
 
     expect(output).toContain('globalThis.__brika.jsx');
@@ -146,10 +117,7 @@ describe('brikaExternalsPlugin', () => {
     const entryPath = join(tmpDir, 'entry.ts');
     await writeFile(
       entryPath,
-      [
-        "import { something } from 'lodash';",
-        'export { something };',
-      ].join('\n'),
+      ["import { something } from 'lodash';", 'export { something };'].join('\n')
     );
 
     // Mark lodash as external so Bun.build does not try to resolve it from node_modules
@@ -177,13 +145,10 @@ describe('brikaExternalsPlugin', () => {
 
   test('relative imports are not intercepted', async () => {
     const helperPath = join(tmpDir, 'helper.ts');
-    await writeFile(helperPath, "export function helper() { return 42; }\n");
+    await writeFile(helperPath, 'export function helper() { return 42; }\n');
 
     const output = await buildEntry(
-      [
-        "import { helper } from './helper';",
-        'export { helper };',
-      ].join('\n'),
+      ["import { helper } from './helper';", 'export { helper };'].join('\n')
     );
 
     expect(output).not.toContain('globalThis.__brika');
@@ -199,7 +164,7 @@ describe('brikaExternalsPlugin', () => {
         "import { clsx } from 'clsx';",
         "import { Sun } from 'lucide-react';",
         'export { React, clsx, Sun };',
-      ].join('\n'),
+      ].join('\n')
     );
 
     expect(output).toContain('globalThis.__brika.React');

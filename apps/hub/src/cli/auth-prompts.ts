@@ -4,8 +4,8 @@
  */
 
 import { EmailSchema, NameSchema, validatePassword } from '@brika/auth';
-import * as p from './clack';
 import pc from 'picocolors';
+import * as p from './clack';
 
 /** Zod-based validators for @clack/prompts */
 export const validators = {

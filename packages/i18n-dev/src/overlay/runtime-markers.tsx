@@ -32,9 +32,7 @@ function getFiber(element: Element): FiberLike | null {
   return (element as unknown as Record<string, unknown>)[key] as FiberLike;
 }
 
-function getReactComponentInfo(
-  element: Element
-): { name: string; source: string | null } | null {
+function getReactComponentInfo(element: Element): { name: string; source: string | null } | null {
   let fiber = getFiber(element);
   const seen = new Set<unknown>();
   while (fiber && !seen.has(fiber)) {
@@ -156,10 +154,7 @@ function scanForMissingKeys(entries: RuntimeEntry[]): RuntimeMarker[] {
 
 // ─── Hook ───────────────────────────────────────────────────────────────────
 
-export function useRuntimeMarkers(
-  entries: RuntimeEntry[],
-  enabled: boolean
-): RuntimeMarker[] {
+export function useRuntimeMarkers(entries: RuntimeEntry[], enabled: boolean): RuntimeMarker[] {
   const [markers, setMarkers] = useState<RuntimeMarker[]>([]);
 
   useEffect(() => {
@@ -235,9 +230,7 @@ function MarkerBadge({ marker }: Readonly<{ marker: RuntimeMarker }>) {
             {'>'}
           </span>
         )}
-        {marker.source && (
-          <span className="truncate text-[8px] opacity-70">{marker.source}</span>
-        )}
+        {marker.source && <span className="truncate text-[8px] opacity-70">{marker.source}</span>}
       </button>
     </div>
   );

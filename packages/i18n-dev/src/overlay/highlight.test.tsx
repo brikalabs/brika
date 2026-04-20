@@ -1,10 +1,22 @@
 import { describe, expect, test } from 'bun:test';
 import { renderToString } from 'react-dom/server';
-import { HighlightOverlay, HighlightTooltip, VariableHighlight } from './highlight';
 import type { HighlightHover } from './highlight';
+import { HighlightOverlay, HighlightTooltip, VariableHighlight } from './highlight';
 
 function mockRect(x: number, y: number, w: number, h: number): DOMRect {
-  return { x, y, width: w, height: h, top: y, left: x, right: x + w, bottom: y + h, toJSON() { return this; } } as DOMRect;
+  return {
+    x,
+    y,
+    width: w,
+    height: h,
+    top: y,
+    left: x,
+    right: x + w,
+    bottom: y + h,
+    toJSON() {
+      return this;
+    },
+  } as DOMRect;
 }
 
 // ─── VariableHighlight ─────────────────────────────────────────────────────

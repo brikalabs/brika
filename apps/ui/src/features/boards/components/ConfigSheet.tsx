@@ -209,7 +209,9 @@ export function ConfigSheet() {
   // SSE echo-backs, other brick changes) from resetting unsaved edits.
   const open = !!configBrickId;
   useEffect(() => {
-    if (!configBrickId) return;
+    if (!configBrickId) {
+      return;
+    }
     const p = useBoardStore
       .getState()
       .activeBoard?.bricks.find((b) => b.instanceId === configBrickId);

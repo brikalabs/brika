@@ -1,11 +1,11 @@
 import { Role } from '@brika/auth';
 import { inject } from '@brika/di';
-import { auth, UserService } from './auth-server';
 import pc from 'picocolors';
-import { promptAddUser, showError, showSuccess } from './prompts';
-import { bootstrapCLI, printDatabaseInfo } from './bootstrap';
 import { defineCommand } from '../../command';
 import { dataDir } from '../../utils/runtime';
+import { auth, UserService } from './auth-server';
+import { bootstrapCLI, printDatabaseInfo } from './bootstrap';
+import { promptAddUser, showError, showSuccess } from './prompts';
 
 export default defineCommand({
   name: 'add',

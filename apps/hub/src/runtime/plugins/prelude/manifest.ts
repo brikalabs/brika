@@ -24,7 +24,9 @@ export interface PluginManifest {
 let cached: { manifest: PluginManifest; rootDir: string } | null = null;
 
 export function loadManifest(): { manifest: PluginManifest; rootDir: string } {
-  if (cached) return cached;
+  if (cached) {
+    return cached;
+  }
 
   let dir = Bun.main.substring(0, Bun.main.lastIndexOf('/'));
   while (dir) {

@@ -52,7 +52,12 @@ export function generateResourceTypes(
     lines.push(`\texport interface ${toTypeName(name)} ${toTypeString(content, 1)}`, '');
   }
 
-  lines.push('}', '', '/** All core i18n resources keyed by namespace name. */', 'type I18nResourceMap = {');
+  lines.push(
+    '}',
+    '',
+    '/** All core i18n resources keyed by namespace name. */',
+    'type I18nResourceMap = {'
+  );
 
   for (const { name } of namespaces) {
     lines.push(`\t${safeKey(name)}: I18nResources.${toTypeName(name)};`);

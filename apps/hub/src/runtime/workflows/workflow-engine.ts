@@ -41,7 +41,9 @@ export class WorkflowEngine {
       this.blocks.onBlockRegistered(() => {
         for (const id of this.#pendingBlocks) {
           const workflow = this.#workflows.get(id);
-          if (workflow) this.#tryStart(workflow);
+          if (workflow) {
+            this.#tryStart(workflow);
+          }
         }
       })
     );
@@ -73,7 +75,7 @@ export class WorkflowEngine {
   #updateWorkflowState(
     workflow: Workflow,
     status: 'stopped' | 'running' | 'error',
-    error?: string,
+    error?: string
   ): void {
     workflow.status = status;
     workflow.error = error;
@@ -265,7 +267,9 @@ export class WorkflowEngine {
 
   async setEnabled(id: string, enabled: boolean): Promise<boolean> {
     const workflow = this.#workflows.get(id);
-    if (!workflow) return false;
+    if (!workflow) {
+      return false;
+    }
 
     workflow.enabled = enabled;
 

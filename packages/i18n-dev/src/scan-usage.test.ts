@@ -1,8 +1,8 @@
-import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
-import { tmpdir } from 'node:os';
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { scanKeyUsages, SOURCE_EXTENSIONS } from './scan-usage';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { SOURCE_EXTENSIONS, scanKeyUsages } from './scan-usage';
 
 let tempDir: string;
 
@@ -44,13 +44,16 @@ describe('scanKeyUsages', () => {
     expect(result).toEqual({});
   });
 
-  test('t(\'key\') single-quote calls are detected with correct file and line', async () => {
-    await writeSource('src/app.ts', [
-      'import { useTranslation } from "react-i18next";',
-      '',
-      "const label = t('greeting');",
-      "const other = t('farewell');",
-    ].join('\n'));
+  test("t('key') single-quote calls are detected with correct file and line", async () => {
+    await writeSource(
+      'src/app.ts',
+      [
+        'import { useTranslation } from "react-i18next";',
+        '',
+        "const label = t('greeting');",
+        "const other = t('farewell');",
+      ].join('\n')
+    );
 
     const result = await scanKeyUsages(tempDir, [join(tempDir, 'src')]);
 
@@ -64,11 +67,10 @@ describe('scanKeyUsages', () => {
   });
 
   test('t("key") double-quote calls work', async () => {
-    await writeSource('src/comp.tsx', [
-      'function Comp() {',
-      '  return <p>{t("hello.world")}</p>;',
-      '}',
-    ].join('\n'));
+    await writeSource(
+      'src/comp.tsx',
+      ['function Comp() {', '  return <p>{t("hello.world")}</p>;', '}'].join('\n')
+    );
 
     const result = await scanKeyUsages(tempDir, [join(tempDir, 'src')]);
 
@@ -78,10 +80,10 @@ describe('scanKeyUsages', () => {
   });
 
   test('t(`key`) template literal calls work', async () => {
-    await writeSource('src/tpl.ts', [
-      'const a = t(`static.key`);',
-      'const b = t(`another`);',
-    ].join('\n'));
+    await writeSource(
+      'src/tpl.ts',
+      ['const a = t(`static.key`);', 'const b = t(`another`);'].join('\n')
+    );
 
     const result = await scanKeyUsages(tempDir, [join(tempDir, 'src')]);
 
@@ -93,10 +95,10 @@ describe('scanKeyUsages', () => {
   });
 
   test('t(`key`) skips dynamic template literals with interpolation', async () => {
-    await writeSource('src/dynamic.ts', [
-      'const a = t(`prefix.${variable}`);',
-      'const b = t(`static.only`);',
-    ].join('\n'));
+    await writeSource(
+      'src/dynamic.ts',
+      ['const a = t(`prefix.${variable}`);', 'const b = t(`static.only`);'].join('\n')
+    );
 
     const result = await scanKeyUsages(tempDir, [join(tempDir, 'src')]);
 
@@ -106,15 +108,18 @@ describe('scanKeyUsages', () => {
     expect(result['static.only']).toBeDefined();
   });
 
-  test('useTranslation(\'ns\') sets default namespace for bare keys', async () => {
-    await writeSource('src/page.tsx', [
-      'import { useTranslation } from "react-i18next";',
-      '',
-      'function Page() {',
-      '  const { t } = useTranslation(\'dashboard\');',
-      '  return <p>{t(\'title\')}</p>;',
-      '}',
-    ].join('\n'));
+  test("useTranslation('ns') sets default namespace for bare keys", async () => {
+    await writeSource(
+      'src/page.tsx',
+      [
+        'import { useTranslation } from "react-i18next";',
+        '',
+        'function Page() {',
+        "  const { t } = useTranslation('dashboard');",
+        "  return <p>{t('title')}</p>;",
+        '}',
+      ].join('\n')
+    );
 
     const result = await scanKeyUsages(tempDir, [join(tempDir, 'src')]);
 
@@ -125,11 +130,14 @@ describe('scanKeyUsages', () => {
   });
 
   test('qualified keys (ns:key) bypass the default namespace', async () => {
-    await writeSource('src/mixed.tsx', [
-      'const { t } = useTranslation(\'dashboard\');',
-      't(\'bare.key\');',
-      't(\'other:qualified.key\');',
-    ].join('\n'));
+    await writeSource(
+      'src/mixed.tsx',
+      [
+        "const { t } = useTranslation('dashboard');",
+        "t('bare.key');",
+        "t('other:qualified.key');",
+      ].join('\n')
+    );
 
     const result = await scanKeyUsages(tempDir, [join(tempDir, 'src')]);
 
@@ -143,11 +151,18 @@ describe('scanKeyUsages', () => {
   });
 
   test('JSON $t(ns:key) cross-references detected', async () => {
-    await writeSource('src/locales/en/common.json', JSON.stringify({
-      greeting: 'Hello',
-      ref: '$t(dashboard:stats.count)',
-      multi: 'See $t(auth:login) and $t(auth:register)',
-    }, null, 2));
+    await writeSource(
+      'src/locales/en/common.json',
+      JSON.stringify(
+        {
+          greeting: 'Hello',
+          ref: '$t(dashboard:stats.count)',
+          multi: 'See $t(auth:login) and $t(auth:register)',
+        },
+        null,
+        2
+      )
+    );
 
     const result = await scanKeyUsages(tempDir, [join(tempDir, 'src/locales')]);
 
@@ -160,10 +175,17 @@ describe('scanKeyUsages', () => {
   });
 
   test('JSON "ns:dotted.key" qualified strings detected', async () => {
-    await writeSource('src/config.json', JSON.stringify({
-      fallback: 'common:errors.notFound',
-      reference: 'dashboard:stats.total',
-    }, null, 2));
+    await writeSource(
+      'src/config.json',
+      JSON.stringify(
+        {
+          fallback: 'common:errors.notFound',
+          reference: 'dashboard:stats.total',
+        },
+        null,
+        2
+      )
+    );
 
     const result = await scanKeyUsages(tempDir, [join(tempDir, 'src')]);
 
@@ -209,11 +231,10 @@ describe('scanKeyUsages', () => {
   });
 
   test('same key on different lines produces multiple usages', async () => {
-    await writeSource('src/multi.ts', [
-      "t('repeated');",
-      "// comment",
-      "t('repeated');",
-    ].join('\n'));
+    await writeSource(
+      'src/multi.ts',
+      ["t('repeated');", '// comment', "t('repeated');"].join('\n')
+    );
 
     const result = await scanKeyUsages(tempDir, [join(tempDir, 'src')]);
 
@@ -276,11 +297,10 @@ describe('scanKeyUsages', () => {
   });
 
   test('t call with whitespace variations', async () => {
-    await writeSource('src/whitespace.ts', [
-      "t( 'spaced' );",
-      "t(  \"double.spaced\"  );",
-      "t(`tpl.spaced`);",
-    ].join('\n'));
+    await writeSource(
+      'src/whitespace.ts',
+      ["t( 'spaced' );", 't(  "double.spaced"  );', 't(`tpl.spaced`);'].join('\n')
+    );
 
     const result = await scanKeyUsages(tempDir, [join(tempDir, 'src')]);
 

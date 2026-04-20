@@ -1,4 +1,9 @@
-export { discoverPluginRoots, findWorkspaceRoot, scanLocaleDirectory, scanPluginLocales } from './scan';
+export {
+  discoverPluginRoots,
+  findWorkspaceRoot,
+  scanLocaleDirectory,
+  scanPluginLocales,
+} from './scan';
 export type {
   CoverageEntry,
   FixEntry,

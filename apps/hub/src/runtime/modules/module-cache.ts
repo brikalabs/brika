@@ -32,7 +32,13 @@ export class ModuleCache {
    * Write JS to disk and store metadata in memory.
    * The JS content is NOT kept in memory — only the hash and file path.
    */
-  async store(memKey: string, cacheDir: string, moduleId: string, sourceHash: string, js: string): Promise<void> {
+  async store(
+    memKey: string,
+    cacheDir: string,
+    moduleId: string,
+    sourceHash: string,
+    js: string
+  ): Promise<void> {
     const dir = join(cacheDir, dirname(moduleId));
     const base = moduleId.split('/').pop() ?? moduleId;
     const target = `${base}.${sourceHash}.js`;
@@ -61,7 +67,12 @@ export class ModuleCache {
    * Reads the file temporarily to compute the content hash, then discards
    * the content — only metadata is stored in memory.
    */
-  async loadFromDisk(cacheDir: string, memKey: string, moduleId: string, sourceHash: string): Promise<boolean> {
+  async loadFromDisk(
+    cacheDir: string,
+    memKey: string,
+    moduleId: string,
+    sourceHash: string
+  ): Promise<boolean> {
     const filePath = join(cacheDir, `${moduleId}.${sourceHash}.js`);
     const file = Bun.file(filePath);
 

@@ -84,7 +84,7 @@ export const settingsRoutes = group({
       path: '/timezone',
       handler: async ({ inject }) => {
         const state = inject(StateStore);
-        if (state.getHubTimezone() == null) {
+        if (state.getHubTimezone() === null) {
           return { ok: true };
         }
         await state.setHubTimezone(null);

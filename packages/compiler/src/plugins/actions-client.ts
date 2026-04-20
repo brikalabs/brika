@@ -22,28 +22,34 @@ async function resolveSource(dir: string, specifier: string): Promise<string | n
   // Try extensions
   for (const ext of ['.ts', '.tsx', '.js', '.jsx']) {
     const p = base + ext;
-    if (await Bun.file(p).exists()) return p;
+    if (await Bun.file(p).exists()) {
+      return p;
+    }
   }
   // Try index files
   for (const name of ['/index.ts', '/index.tsx']) {
     const p = base + name;
-    if (await Bun.file(p).exists()) return p;
+    if (await Bun.file(p).exists()) {
+      return p;
+    }
   }
   return null;
 }
 
 export function brikaActionsPlugin(pluginRoot: string): BunPlugin {
-  const srcPrefix = join(pluginRoot, 'src') + '/';
+  const srcPrefix = `${join(pluginRoot, 'src')}/`;
   const actionFileCache = new Map<string, boolean>();
 
   async function checkActionFile(absPath: string): Promise<boolean> {
     const cached = actionFileCache.get(absPath);
-    if (cached !== undefined) return cached;
+    if (cached !== undefined) {
+      return cached;
+    }
     try {
       const content = await Bun.file(absPath).text();
       const loader = absPath.endsWith('.tsx') ? 'tsx' : 'ts';
       const { imports } = new Bun.Transpiler({ loader }).scan(content);
-      const result = imports.some(i => i.path === ACTION_IMPORT);
+      const result = imports.some((i) => i.path === ACTION_IMPORT);
       actionFileCache.set(absPath, result);
       return result;
     } catch {
@@ -56,9 +62,13 @@ export function brikaActionsPlugin(pluginRoot: string): BunPlugin {
     name: 'brika-actions',
     setup(build) {
       build.onResolve({ filter: /^\./ }, async (args) => {
-        if (!args.importer || args.namespace !== 'file') return;
+        if (!args.importer || args.namespace !== 'file') {
+          return;
+        }
         const resolved = await resolveSource(args.resolveDir, args.path);
-        if (!resolved?.startsWith(srcPrefix)) return;
+        if (!resolved?.startsWith(srcPrefix)) {
+          return;
+        }
         if (await checkActionFile(resolved)) {
           return { path: resolved, namespace: 'brika-actions' };
         }
@@ -72,7 +82,10 @@ export function brikaActionsPlugin(pluginRoot: string): BunPlugin {
 
         return {
           contents: names
-            .map((name) => `export const ${name} = { __actionId: ${JSON.stringify(computeActionId(rel, name))} };`)
+            .map(
+              (name) =>
+                `export const ${name} = { __actionId: ${JSON.stringify(computeActionId(rel, name))} };`
+            )
             .join('\n'),
           loader: 'js',
         };

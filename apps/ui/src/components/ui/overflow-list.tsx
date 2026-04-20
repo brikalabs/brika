@@ -273,6 +273,7 @@ function OverflowListIndicator({
   );
 }
 
+export type { UseOverflowListOptions, UseOverflowListReturn };
 export {
   OverflowList,
   OverflowListContent,
@@ -280,5 +281,3 @@ export {
   OverflowListItem,
   useOverflowList,
 };
-
-export type { UseOverflowListOptions, UseOverflowListReturn };

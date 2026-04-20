@@ -277,7 +277,9 @@ export function BlockToolbar({ onDragStart, onCollapse, className }: Readonly<Bl
   };
 
   const filteredBlocks = useMemo(() => {
-    if (!search) return blocks;
+    if (!search) {
+      return blocks;
+    }
     const lowerSearch = search.toLowerCase();
     return blocks.filter(
       (b) =>

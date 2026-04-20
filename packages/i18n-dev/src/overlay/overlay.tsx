@@ -1,6 +1,7 @@
 import i18next from 'i18next';
 import { AlertTriangle, Globe, MousePointerClick, Search, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { CoverageContent } from './coverage-tab';
 import { HighlightOverlay, HighlightTooltip, useHighlightMode } from './highlight';
 import {
   useCurrentLocale,
@@ -10,12 +11,11 @@ import {
   useRuntimeMissing,
   useToggleShortcut,
 } from './hooks';
+import { IssuesContent } from './issues-tab';
 import { KbdGroup } from './primitives';
 import { RuntimeMarkersOverlay, useRuntimeMarkers } from './runtime-markers';
-import { REFERENCE_LOCALE, installTranslationTracker } from './store';
-import { CoverageContent } from './coverage-tab';
-import { IssuesContent } from './issues-tab';
 import { RuntimeContent } from './runtime-tab';
+import { installTranslationTracker, REFERENCE_LOCALE } from './store';
 import { TranslationsContent } from './translations-tab';
 
 type Tab = 'issues' | 'runtime' | 'coverage' | 'translations';
@@ -103,7 +103,7 @@ export function PanelHeader({
       <div className="flex items-center justify-between bg-dt-bg-subtle px-3.5 py-2">
         <div className="flex items-center gap-2">
           <Globe className="size-4 text-indigo-400" />
-          <span className="font-bold text-sm text-dt-text">i18n DevTools</span>
+          <span className="font-bold text-dt-text text-sm">i18n DevTools</span>
         </div>
         <div className="flex items-center gap-1.5">
           <select
@@ -222,10 +222,12 @@ export function TabBar({
         >
           <span className="flex items-center gap-1.5">
             {t.label}
-            {t.count != null && (
+            {t.count !== null && (
               <span
                 className={`rounded-full px-1.5 py-px font-semibold text-[9px] ${
-                  active === t.id ? 'bg-indigo-500/20 text-indigo-400' : 'bg-dt-bg-badge text-dt-text-3'
+                  active === t.id
+                    ? 'bg-indigo-500/20 text-indigo-400'
+                    : 'bg-dt-bg-badge text-dt-text-3'
                 }`}
               >
                 {t.count}
@@ -321,8 +323,11 @@ export function I18nDevOverlay() {
     let errors = 0;
     let warnings = 0;
     for (const i of issues) {
-      if (i.severity === 'error') errors++;
-      else warnings++;
+      if (i.severity === 'error') {
+        errors++;
+      } else {
+        warnings++;
+      }
     }
     return { errorCount: errors, warnCount: warnings };
   }, [issues]);
@@ -351,7 +356,7 @@ export function I18nDevOverlay() {
       {highlightHover && <HighlightTooltip hover={highlightHover} />}
       <RuntimeMarkersOverlay markers={runtimeMarkers} />
       {isOpen ? (
-        <div className="fixed right-4 bottom-4 z-[2147483647] flex max-h-[600px] w-[520px] flex-col overflow-hidden rounded-xl border border-dt-border bg-dt-bg font-sans text-xs text-dt-text shadow-dt">
+        <div className="fixed right-4 bottom-4 z-[2147483647] flex max-h-[600px] w-[520px] flex-col overflow-hidden rounded-xl border border-dt-border bg-dt-bg font-sans text-dt-text text-xs shadow-dt">
           <PanelHeader
             currentLang={currentLang}
             locales={locales}

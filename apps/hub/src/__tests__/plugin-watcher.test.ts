@@ -3,10 +3,10 @@
  */
 
 import 'reflect-metadata';
+import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 import { get, provide, stub, useTestBed } from '@brika/di/testing';
 import { Logger } from '@/runtime/logs/log-router';
 import { PluginWatcher } from '@/runtime/plugins/plugin-watcher';
@@ -93,11 +93,11 @@ describe('PluginWatcher', () => {
     realWatcher.watch('@test/trigger', tmpRoot);
 
     // Allow FS watcher to fully register before modifying
-    await new Promise(r => setTimeout(r, 200));
+    await new Promise((r) => setTimeout(r, 200));
     await writeFile(join(srcDir, 'index.ts'), 'export const a = 2;');
 
     // Wait for debounce (DEBOUNCE_MS = 500) + buffer
-    await new Promise(r => setTimeout(r, 1000));
+    await new Promise((r) => setTimeout(r, 1000));
 
     expect(handler).toHaveBeenCalledWith('@test/trigger');
 
@@ -118,10 +118,10 @@ describe('PluginWatcher', () => {
 
     realWatcher.watch('@test/no-trigger', tmpRoot);
 
-    await new Promise(r => setTimeout(r, 200));
+    await new Promise((r) => setTimeout(r, 200));
     await writeFile(join(srcDir, 'data.json'), '{"a":1}');
 
-    await new Promise(r => setTimeout(r, 1000));
+    await new Promise((r) => setTimeout(r, 1000));
 
     expect(handler).not.toHaveBeenCalled();
 
@@ -143,16 +143,16 @@ describe('PluginWatcher', () => {
 
     realWatcher.watch('@test/debounce', tmpRoot);
 
-    await new Promise(r => setTimeout(r, 200));
+    await new Promise((r) => setTimeout(r, 200));
     // Multiple rapid writes
     await writeFile(join(srcDir, 'index.ts'), 'export const a = 2;');
-    await new Promise(r => setTimeout(r, 50));
+    await new Promise((r) => setTimeout(r, 50));
     await writeFile(join(srcDir, 'index.ts'), 'export const a = 3;');
-    await new Promise(r => setTimeout(r, 50));
+    await new Promise((r) => setTimeout(r, 50));
     await writeFile(join(srcDir, 'index.ts'), 'export const a = 4;');
 
     // Wait for debounce
-    await new Promise(r => setTimeout(r, 1000));
+    await new Promise((r) => setTimeout(r, 1000));
 
     // Should only fire once due to debounce
     expect(handler).toHaveBeenCalledTimes(1);
@@ -175,15 +175,15 @@ describe('PluginWatcher', () => {
 
     realWatcher.watch('@test/cancel', tmpRoot);
 
-    await new Promise(r => setTimeout(r, 200));
+    await new Promise((r) => setTimeout(r, 200));
     await writeFile(join(srcDir, 'index.ts'), 'export const a = 2;');
 
     // Unwatch before debounce fires (within 500ms window)
-    await new Promise(r => setTimeout(r, 200));
+    await new Promise((r) => setTimeout(r, 200));
     realWatcher.unwatch('@test/cancel');
 
     // Wait past debounce period
-    await new Promise(r => setTimeout(r, 1000));
+    await new Promise((r) => setTimeout(r, 1000));
 
     expect(handler).not.toHaveBeenCalled();
 
@@ -203,10 +203,10 @@ describe('PluginWatcher', () => {
 
     realWatcher.watch('@test/css', tmpRoot);
 
-    await new Promise(r => setTimeout(r, 200));
+    await new Promise((r) => setTimeout(r, 200));
     await writeFile(join(srcDir, 'styles.css'), 'body { color: red; }');
 
-    await new Promise(r => setTimeout(r, 1000));
+    await new Promise((r) => setTimeout(r, 1000));
 
     expect(handler).toHaveBeenCalledWith('@test/css');
 

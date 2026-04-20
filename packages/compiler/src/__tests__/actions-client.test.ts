@@ -17,7 +17,7 @@ beforeAll(async () => {
   // Action file — imports @brika/sdk/actions with one export
   await writeFile(
     join(pluginRoot, 'src', 'actions.ts'),
-    `import { defineAction } from '@brika/sdk/actions';\nexport const myAction = defineAction(() => 42);\n`,
+    `import { defineAction } from '@brika/sdk/actions';\nexport const myAction = defineAction(() => 42);\n`
   );
 
   // Action file with multiple exports
@@ -29,31 +29,31 @@ beforeAll(async () => {
       `export const beta = defineAction(() => 'b');`,
       `export const gamma = defineAction(() => 'c');`,
       '',
-    ].join('\n'),
+    ].join('\n')
   );
 
   // Non-action file — no @brika/sdk/actions import
   await writeFile(
     join(pluginRoot, 'src', 'utils.ts'),
-    `export function add(a: number, b: number) { return a + b; }\n`,
+    `export function add(a: number, b: number) { return a + b; }\n`
   );
 
   // TSX action file (uses .tsx extension but no actual JSX needed for the test)
   await writeFile(
     join(pluginRoot, 'src', 'actions-tsx.tsx'),
-    `import { defineAction } from '@brika/sdk/actions';\nexport const tsxAction = defineAction(() => 'tsx');\n`,
+    `import { defineAction } from '@brika/sdk/actions';\nexport const tsxAction = defineAction(() => 'tsx');\n`
   );
 
   // Index file for directory import resolution
   await writeFile(
     join(pluginRoot, 'src', 'features', 'index.ts'),
-    `import { defineAction } from '@brika/sdk/actions';\nexport const featureAction = defineAction(() => 'feat');\n`,
+    `import { defineAction } from '@brika/sdk/actions';\nexport const featureAction = defineAction(() => 'feat');\n`
   );
 
   // File outside src/ — should NOT be intercepted
   await writeFile(
     join(pluginRoot, 'lib', 'external.ts'),
-    `import { defineAction } from '@brika/sdk/actions';\nexport const libAction = defineAction(() => 'lib');\n`,
+    `import { defineAction } from '@brika/sdk/actions';\nexport const libAction = defineAction(() => 'lib');\n`
   );
 });
 
@@ -64,7 +64,7 @@ afterAll(async () => {
 async function build(
   entryContent: string,
   entryName = 'entry.ts',
-  extra: Partial<Parameters<typeof Bun.build>[0]> = {},
+  extra: Partial<Parameters<typeof Bun.build>[0]> = {}
 ) {
   const entryPath = join(pluginRoot, 'src', entryName);
   await writeFile(entryPath, entryContent);
@@ -89,9 +89,7 @@ async function build(
 
 describe('brikaActionsPlugin', () => {
   test('replaces action file import with __actionId stub', async () => {
-    const code = await build(
-      `import { myAction } from './actions';\nexport { myAction };\n`,
-    );
+    const code = await build(`import { myAction } from './actions';\nexport { myAction };\n`);
     const expectedId = computeActionId('src/actions.ts', 'myAction');
     expect(code).toContain('__actionId');
     expect(code).toContain(expectedId);
@@ -100,9 +98,7 @@ describe('brikaActionsPlugin', () => {
   });
 
   test('non-action file passes through unchanged', async () => {
-    const code = await build(
-      `import { add } from './utils';\nexport { add };\n`,
-    );
+    const code = await build(`import { add } from './utils';\nexport { add };\n`);
     expect(code).not.toContain('__actionId');
     expect(code).toContain('return a + b');
   });
@@ -110,7 +106,7 @@ describe('brikaActionsPlugin', () => {
   test('file outside src/ prefix is not intercepted', async () => {
     const code = await build(
       `import { libAction } from '../lib/external';\nexport { libAction };\n`,
-      'entry-lib.ts',
+      'entry-lib.ts'
     );
     expect(code).not.toContain('__actionId');
     expect(code).toContain('defineAction');
@@ -118,7 +114,7 @@ describe('brikaActionsPlugin', () => {
 
   test('multiple exports each get their own __actionId stub', async () => {
     const code = await build(
-      `import { alpha, beta, gamma } from './multi';\nexport { alpha, beta, gamma };\n`,
+      `import { alpha, beta, gamma } from './multi';\nexport { alpha, beta, gamma };\n`
     );
     const idAlpha = computeActionId('src/multi.ts', 'alpha');
     const idBeta = computeActionId('src/multi.ts', 'beta');
@@ -130,17 +126,13 @@ describe('brikaActionsPlugin', () => {
   });
 
   test('action IDs match computeActionId(relativePath, exportName)', async () => {
-    const code = await build(
-      `import { myAction } from './actions';\nexport { myAction };\n`,
-    );
+    const code = await build(`import { myAction } from './actions';\nexport { myAction };\n`);
     const expectedId = computeActionId('src/actions.ts', 'myAction');
     expect(code).toContain(`"${expectedId}"`);
   });
 
   test('.tsx action files work the same as .ts', async () => {
-    const code = await build(
-      `import { tsxAction } from './actions-tsx';\nexport { tsxAction };\n`,
-    );
+    const code = await build(`import { tsxAction } from './actions-tsx';\nexport { tsxAction };\n`);
     const expectedId = computeActionId('src/actions-tsx.tsx', 'tsxAction');
     expect(code).toContain(expectedId);
     expect(code).not.toContain('defineAction');
@@ -148,24 +140,20 @@ describe('brikaActionsPlugin', () => {
 
   describe('import resolution', () => {
     test('specifier with explicit .ts extension', async () => {
-      const code = await build(
-        `import { myAction } from './actions.ts';\nexport { myAction };\n`,
-      );
+      const code = await build(`import { myAction } from './actions.ts';\nexport { myAction };\n`);
       expect(code).toContain('__actionId');
       expect(code).toContain(computeActionId('src/actions.ts', 'myAction'));
     });
 
     test('specifier without extension resolves to .ts', async () => {
-      const code = await build(
-        `import { myAction } from './actions';\nexport { myAction };\n`,
-      );
+      const code = await build(`import { myAction } from './actions';\nexport { myAction };\n`);
       expect(code).toContain('__actionId');
       expect(code).toContain(computeActionId('src/actions.ts', 'myAction'));
     });
 
     test('specifier without extension resolves to .tsx', async () => {
       const code = await build(
-        `import { tsxAction } from './actions-tsx';\nexport { tsxAction };\n`,
+        `import { tsxAction } from './actions-tsx';\nexport { tsxAction };\n`
       );
       expect(code).toContain('__actionId');
       expect(code).toContain(computeActionId('src/actions-tsx.tsx', 'tsxAction'));
@@ -173,7 +161,7 @@ describe('brikaActionsPlugin', () => {
 
     test('directory import resolves to index.ts', async () => {
       const code = await build(
-        `import { featureAction } from './features';\nexport { featureAction };\n`,
+        `import { featureAction } from './features';\nexport { featureAction };\n`
       );
       const expectedId = computeActionId('src/features/index.ts', 'featureAction');
       expect(code).toContain('__actionId');
@@ -186,11 +174,11 @@ describe('brikaActionsPlugin', () => {
       await mkdir(subDir, { recursive: true });
       await writeFile(
         join(subDir, 'index.tsx'),
-        "import { defineAction } from '@brika/sdk/actions';\nexport const widgetAction = defineAction(() => 'widget');\n",
+        "import { defineAction } from '@brika/sdk/actions';\nexport const widgetAction = defineAction(() => 'widget');\n"
       );
 
       const code = await build(
-        "import { widgetAction } from './widgets';\nexport { widgetAction };\n",
+        "import { widgetAction } from './widgets';\nexport { widgetAction };\n"
       );
       const expectedId = computeActionId('src/widgets/index.tsx', 'widgetAction');
       expect(code).toContain('__actionId');
@@ -201,10 +189,7 @@ describe('brikaActionsPlugin', () => {
   test('cached result: second build reuses detection cache', async () => {
     const plugin = brikaActionsPlugin(pluginRoot);
     const entryPath = join(pluginRoot, 'src', 'entry-cache.ts');
-    await writeFile(
-      entryPath,
-      `import { myAction } from './actions';\nexport { myAction };\n`,
-    );
+    await writeFile(entryPath, `import { myAction } from './actions';\nexport { myAction };\n`);
 
     const opts = {
       entrypoints: [entryPath],

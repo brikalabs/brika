@@ -155,15 +155,19 @@ export function defineReactiveBlock<
   const getTypeDescriptor = (schema: OutputDefSchema): Record<string, unknown> => {
     // Handle marker refs
     if (schema && typeof schema === 'object' && '__type' in schema) {
-      if (schema.__type === 'generic') return { kind: 'generic', typeVar: schema.__generic ?? 'T' };
-      if (schema.__type === 'passthrough')
+      if (schema.__type === 'generic') {
+        return { kind: 'generic', typeVar: schema.__generic ?? 'T' };
+      }
+      if (schema.__type === 'passthrough') {
         return { kind: 'passthrough', sourcePortId: schema.__passthrough ?? '' };
-      if (schema.__type === 'resolved')
+      }
+      if (schema.__type === 'resolved') {
         return {
           kind: 'resolved',
           source: schema.__source ?? '',
           configField: schema.__configField ?? '',
         };
+      }
     }
     // Convert Zod schema via JSON Schema intermediary
     try {
@@ -403,8 +407,12 @@ function jsonSchemaToTypeDescriptor(schema: Record<string, unknown>): Record<str
     const variants = (schema.oneOf as Record<string, unknown>[]).map(jsonSchemaToTypeDescriptor);
     return variants.length === 1 && variants[0] ? variants[0] : { kind: 'union', variants };
   }
-  if (schema.enum) return { kind: 'enum', values: schema.enum };
-  if ('const' in schema) return { kind: 'literal', value: schema.const };
+  if (schema.enum) {
+    return { kind: 'enum', values: schema.enum };
+  }
+  if ('const' in schema) {
+    return { kind: 'literal', value: schema.const };
+  }
 
   switch (type) {
     case 'string':
@@ -417,30 +425,33 @@ function jsonSchemaToTypeDescriptor(schema: Record<string, unknown>): Record<str
     case 'null':
       return { kind: 'primitive', type: 'null' };
     case 'array': {
-      if (schema.items)
+      if (schema.items) {
         return {
           kind: 'array',
           element: jsonSchemaToTypeDescriptor(schema.items as Record<string, unknown>),
         };
-      if (schema.prefixItems)
+      }
+      if (schema.prefixItems) {
         return {
           kind: 'tuple',
           elements: (schema.prefixItems as Record<string, unknown>[]).map(
             jsonSchemaToTypeDescriptor
           ),
         };
+      }
       return { kind: 'array', element: { kind: 'unknown' } };
     }
     case 'object': {
       const properties = schema.properties as Record<string, Record<string, unknown>> | undefined;
       if (!properties) {
-        if (schema.additionalProperties && typeof schema.additionalProperties === 'object')
+        if (schema.additionalProperties && typeof schema.additionalProperties === 'object') {
           return {
             kind: 'record',
             value: jsonSchemaToTypeDescriptor(
               schema.additionalProperties as Record<string, unknown>
             ),
           };
+        }
         return { kind: 'record', value: { kind: 'unknown' } };
       }
       const required = new Set((schema.required as string[] | undefined) ?? []);

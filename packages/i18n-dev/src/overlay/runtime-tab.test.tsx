@@ -83,9 +83,7 @@ describe('RuntimeContent', () => {
 
   test('singular missing key text', () => {
     const single: RuntimeEntry[] = [{ key: 'k', namespace: 'ns', locale: 'en', count: 1 }];
-    const html = renderToString(
-      <RuntimeContent entries={single} filter="" onClear={() => {}} />
-    );
+    const html = renderToString(<RuntimeContent entries={single} filter="" onClear={() => {}} />);
     // No trailing 's' for singular
     expect(html).toContain('missing key');
     expect(html).not.toContain('missing keys');

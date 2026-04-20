@@ -2,15 +2,15 @@ import { describe, expect, test } from 'bun:test';
 import { renderToString } from 'react-dom/server';
 import {
   CopyButton,
+  coverageColor,
   EmptyState,
   FilterPill,
+  groupBy,
   Kbd,
   KbdGroup,
   NamespaceGroup,
-  StatCard,
-  coverageColor,
-  groupBy,
   pctColor,
+  StatCard,
 } from './primitives';
 
 // ─── groupBy ───────────────────────────────────────────────────────────────
@@ -82,19 +82,29 @@ describe('pctColor', () => {
 
 describe('FilterPill', () => {
   test('renders active state', () => {
-    const html = renderToString(<FilterPill active={true} onClick={() => {}}>All</FilterPill>);
+    const html = renderToString(
+      <FilterPill active={true} onClick={() => {}}>
+        All
+      </FilterPill>
+    );
     expect(html).toContain('All');
     expect(html).toContain('button');
   });
 
   test('renders inactive state', () => {
-    const html = renderToString(<FilterPill active={false} onClick={() => {}}>All</FilterPill>);
+    const html = renderToString(
+      <FilterPill active={false} onClick={() => {}}>
+        All
+      </FilterPill>
+    );
     expect(html).toContain('All');
   });
 
   test('renders error variant', () => {
     const html = renderToString(
-      <FilterPill active={true} onClick={() => {}} variant="error">Errors</FilterPill>
+      <FilterPill active={true} onClick={() => {}} variant="error">
+        Errors
+      </FilterPill>
     );
     expect(html).toContain('Errors');
     expect(html).toContain('red');
@@ -102,7 +112,9 @@ describe('FilterPill', () => {
 
   test('renders warning variant', () => {
     const html = renderToString(
-      <FilterPill active={true} onClick={() => {}} variant="warning">Warnings</FilterPill>
+      <FilterPill active={true} onClick={() => {}} variant="warning">
+        Warnings
+      </FilterPill>
     );
     expect(html).toContain('Warnings');
     expect(html).toContain('amber');

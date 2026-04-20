@@ -1,6 +1,6 @@
 import { join } from 'node:path';
-import { inject, singleton } from '@brika/di';
 import { compileClientModule, hashPluginSources } from '@brika/compiler';
+import { inject, singleton } from '@brika/di';
 import { Logger } from '@/runtime/logs/log-router';
 import { type CacheEntry, ModuleCache } from './module-cache';
 import { TailwindCompiler } from './tailwind';

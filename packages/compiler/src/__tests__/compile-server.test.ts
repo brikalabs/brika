@@ -16,12 +16,9 @@ describe('compileServerEntry', () => {
     await mkdir(join(pluginRoot, 'src'), { recursive: true });
     await writeFile(
       join(pluginRoot, 'src', 'index.ts'),
-      "export function hello() { return 'world'; }\n",
+      "export function hello() { return 'world'; }\n"
     );
-    await writeFile(
-      join(pluginRoot, 'package.json'),
-      JSON.stringify({ name: 'test-plugin' }),
-    );
+    await writeFile(join(pluginRoot, 'package.json'), JSON.stringify({ name: 'test-plugin' }));
   });
 
   afterEach(async () => {
@@ -44,7 +41,9 @@ describe('compileServerEntry', () => {
     const result = await compileServerEntry(opts());
 
     expect(result.success).toBe(true);
-    if (!result.success) return;
+    if (!result.success) {
+      return;
+    }
 
     expect(result.cached).toBe(false);
     // Entry path should include source hash: index.<hash>.js
@@ -59,12 +58,16 @@ describe('compileServerEntry', () => {
   test('second compile with unchanged sources returns cached: true', async () => {
     const first = await compileServerEntry(opts());
     expect(first.success).toBe(true);
-    if (!first.success) return;
+    if (!first.success) {
+      return;
+    }
     expect(first.cached).toBe(false);
 
     const second = await compileServerEntry(opts());
     expect(second.success).toBe(true);
-    if (!second.success) return;
+    if (!second.success) {
+      return;
+    }
     expect(second.cached).toBe(true);
     expect(second.entryPath).toBe(first.entryPath);
   });
@@ -74,18 +77,22 @@ describe('compileServerEntry', () => {
   test('cache miss when source changes returns cached: false with new path', async () => {
     const first = await compileServerEntry(opts());
     expect(first.success).toBe(true);
-    if (!first.success) return;
+    if (!first.success) {
+      return;
+    }
     expect(first.cached).toBe(false);
 
     // Modify the source file
     await writeFile(
       join(pluginRoot, 'src', 'index.ts'),
-      "export function hello() { return 'changed'; }\n",
+      "export function hello() { return 'changed'; }\n"
     );
 
     const second = await compileServerEntry(opts());
     expect(second.success).toBe(true);
-    if (!second.success) return;
+    if (!second.success) {
+      return;
+    }
     expect(second.cached).toBe(false);
     // Hash changed → different entry path
     expect(second.entryPath).not.toBe(first.entryPath);
@@ -98,7 +105,7 @@ describe('compileServerEntry', () => {
     // compileServerEntry propagates this error to the caller.
     await writeFile(
       join(pluginRoot, 'src', 'index.ts'),
-      "import { missing } from './does-not-exist';\nexport { missing };\n",
+      "import { missing } from './does-not-exist';\nexport { missing };\n"
     );
 
     await expect(compileServerEntry(opts())).rejects.toThrow();
@@ -110,7 +117,9 @@ describe('compileServerEntry', () => {
     // First build creates output
     const first = await compileServerEntry(opts());
     expect(first.success).toBe(true);
-    if (!first.success) return;
+    if (!first.success) {
+      return;
+    }
 
     // Create a stale file in the output directory
     const staleFile = join(outdir, 'stale.js');
@@ -120,12 +129,14 @@ describe('compileServerEntry', () => {
     // Modify source to trigger a fresh build (not cache hit)
     await writeFile(
       join(pluginRoot, 'src', 'index.ts'),
-      "export function hello() { return 'rebuilt'; }\n",
+      "export function hello() { return 'rebuilt'; }\n"
     );
 
     const second = await compileServerEntry(opts());
     expect(second.success).toBe(true);
-    if (!second.success) return;
+    if (!second.success) {
+      return;
+    }
 
     // Stale file should be cleaned up
     expect(await Bun.file(staleFile).exists()).toBe(false);
@@ -137,7 +148,9 @@ describe('compileServerEntry', () => {
     const result = await compileServerEntry(opts({ splitting: false }));
 
     expect(result.success).toBe(true);
-    if (!result.success) return;
+    if (!result.success) {
+      return;
+    }
     expect(result.cached).toBe(false);
     expect(await Bun.file(result.entryPath).exists()).toBe(true);
   });

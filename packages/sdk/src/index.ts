@@ -195,8 +195,8 @@ export type { HubLocation as HubLocationData } from './types';
 // Bridge (prelude contract)
 // ─────────────────────────────────────────────────────────────────────────────
 
-export { PRELUDE_BRAND } from './bridge';
 export type { PluginManifest, PreludeBridge } from './bridge';
+export { PRELUDE_BRAND } from './bridge';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Errors

@@ -18,14 +18,14 @@ export function withCircleWipe(apply: () => void, origin?: Element | null) {
 
   const radius = Math.hypot(
     Math.max(x, window.innerWidth - x),
-    Math.max(y, window.innerHeight - y),
+    Math.max(y, window.innerHeight - y)
   );
 
   const t = document.startViewTransition(apply);
   t.ready.then(() => {
     document.documentElement.animate(
       { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${radius}px at ${x}px ${y}px)`] },
-      { duration: 500, easing: 'ease-in-out', pseudoElement: '::view-transition-new(root)' },
+      { duration: 500, easing: 'ease-in-out', pseudoElement: '::view-transition-new(root)' }
     );
   });
 }

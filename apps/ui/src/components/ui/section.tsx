@@ -90,10 +90,10 @@ function SectionContent({ className, ...props }: React.ComponentProps<'div'>) {
 
 export {
   Section,
-  SectionHeader,
-  SectionInfo,
-  SectionIcon,
-  SectionTitle,
-  SectionDescription,
   SectionContent,
+  SectionDescription,
+  SectionHeader,
+  SectionIcon,
+  SectionInfo,
+  SectionTitle,
 };

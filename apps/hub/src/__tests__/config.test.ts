@@ -3,8 +3,8 @@
  */
 
 import 'reflect-metadata';
-import { join } from 'node:path';
 import { afterEach, describe, expect, test } from 'bun:test';
+import { join } from 'node:path';
 import { get, provide, useTestBed } from '@brika/di/testing';
 import { HubConfig, PluginManagerConfig } from '@/runtime/config/config';
 import { ConfigLoader } from '@/runtime/config/config-loader';

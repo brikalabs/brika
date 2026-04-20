@@ -90,8 +90,7 @@ export function LocationSettings() {
               </CollapsibleTrigger>
               <CollapsibleContent>
                 <div className="grid grid-cols-2 gap-3 pt-3">
-                  {(['street', 'city', 'postalCode', 'state', 'country'] as const).map(
-                    (field) => (
+                  {(['street', 'city', 'postalCode', 'state', 'country'] as const).map((field) => (
                     <div key={field}>
                       <Label className="text-xs">{t(`settings:location.${field}`)}</Label>
                       <Input

@@ -2,7 +2,7 @@ import { AlertTriangle, CheckCircle2, Wand2, XCircle } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { ValidationIssue } from '../types';
 import { useToggleSet } from './hooks';
-import { CopyButton, EmptyState, FilterPill, NamespaceGroup, groupBy } from './primitives';
+import { CopyButton, EmptyState, FilterPill, groupBy, NamespaceGroup } from './primitives';
 import { buildFix, fixAllIssues, fixIssue } from './store';
 
 export function emptyIssuesTitle(filter: string, severity: string): string {
@@ -35,7 +35,10 @@ export function fixLabel(issue: ValidationIssue): string | null {
   }
 }
 
-export function IssueRow({ issue, onFix }: Readonly<{ issue: ValidationIssue; onFix?: () => void }>) {
+export function IssueRow({
+  issue,
+  onFix,
+}: Readonly<{ issue: ValidationIssue; onFix?: () => void }>) {
   const isError = issue.severity === 'error';
   return (
     <div
@@ -78,7 +81,10 @@ export function IssueRow({ issue, onFix }: Readonly<{ issue: ValidationIssue; on
   );
 }
 
-export function IssuesContent({ issues, filter }: Readonly<{ issues: ValidationIssue[]; filter: string }>) {
+export function IssuesContent({
+  issues,
+  filter,
+}: Readonly<{ issues: ValidationIssue[]; filter: string }>) {
   const { set: collapsed, toggle } = useToggleSet();
   const [severity, setSeverity] = useState<'all' | 'error' | 'warning'>('all');
 
@@ -86,8 +92,11 @@ export function IssuesContent({ issues, filter }: Readonly<{ issues: ValidationI
     let e = 0;
     let w = 0;
     for (const i of issues) {
-      if (i.severity === 'error') e++;
-      else w++;
+      if (i.severity === 'error') {
+        e++;
+      } else {
+        w++;
+      }
     }
     return { errorCount: e, warningCount: w };
   }, [issues]);
