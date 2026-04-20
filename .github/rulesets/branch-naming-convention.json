@@ -1,0 +1,40 @@
+{
+  "name": "brika-branch-naming",
+  "target": "branch",
+  "enforcement": "active",
+  "conditions": {
+    "ref_name": {
+      "include": ["~ALL"],
+      "exclude": [
+        "~DEFAULT_BRANCH",
+        "refs/heads/feat/**",
+        "refs/heads/fix/**",
+        "refs/heads/hotfix/**",
+        "refs/heads/chore/**",
+        "refs/heads/docs/**",
+        "refs/heads/refactor/**",
+        "refs/heads/test/**",
+        "refs/heads/perf/**",
+        "refs/heads/ci/**",
+        "refs/heads/build/**",
+        "refs/heads/style/**",
+        "refs/heads/release/**",
+        "refs/heads/revert/**",
+        "refs/heads/dependabot/**",
+        "refs/heads/renovate/**",
+        "refs/heads/gh-readonly-queue/**"
+      ]
+    }
+  },
+  "rules": [
+    { "type": "creation" },
+    { "type": "update" }
+  ],
+  "bypass_actors": [
+    {
+      "actor_id": 5,
+      "actor_type": "RepositoryRole",
+      "bypass_mode": "always"
+    }
+  ]
+}
