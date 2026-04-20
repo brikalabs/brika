@@ -22,6 +22,7 @@
     "test:watch": "bun test --watch"
   },
   "dependencies": {
+    "@brika/db": "workspace:*",
     "@brika/di": "workspace:*",
     "@brika/photon": "workspace:*",
     "@brika/router": "workspace:*",

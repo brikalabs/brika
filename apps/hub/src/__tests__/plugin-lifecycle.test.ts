@@ -285,6 +285,7 @@ describe('PluginLifecycle', () => {
         health: 'stopped' as PluginHealth,
         lastError: null,
         updatedAt: Date.now(),
+        grantedPermissions: [],
         metadata: {
           name: '@test/plugin',
           version: '1.0.0',
@@ -342,6 +343,7 @@ describe('PluginLifecycle', () => {
           message: 'previous error',
         },
         updatedAt: Date.now(),
+        grantedPermissions: [],
         metadata: {
           name: '@test/plugin',
           version: '1.0.0',
@@ -380,6 +382,7 @@ describe('PluginLifecycle', () => {
         health: 'running' as PluginHealth,
         lastError: null,
         updatedAt: Date.now(),
+        grantedPermissions: [],
         metadata: {
           name: '@test/not-running',
           version: '1.0.0',

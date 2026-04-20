@@ -268,7 +268,7 @@ describe('PluginLifecycle (with mocked spawn)', () => {
 
       const process = lifecycle.getProcess('@test/plugin');
       if (!process) {
-        throw new Error('expected process to be defined');
+        throw new Error('expected process to be defined after load');
       }
 
       const found = lifecycle.getProcessByUid(process.uid);

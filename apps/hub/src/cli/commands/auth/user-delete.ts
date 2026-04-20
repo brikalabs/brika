@@ -1,7 +1,6 @@
 import { inject } from '@brika/di';
 import pc from 'picocolors';
 import { defineCommand } from '../../command';
-import { dataDir } from '../../utils/runtime';
 import { auth, UserService } from './auth-server';
 import { bootstrapCLI, printDatabaseInfo } from './bootstrap';
 import { CliError } from './errors';
@@ -19,11 +18,7 @@ export default defineCommand({
       return;
     }
 
-    const cli = await bootstrapCLI(
-      auth({
-        dataDir,
-      })
-    );
+    const cli = await bootstrapCLI(auth());
 
     try {
       const userService = inject(UserService);

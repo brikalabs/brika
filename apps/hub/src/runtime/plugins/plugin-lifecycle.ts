@@ -20,6 +20,8 @@ import { PluginWatcher } from './plugin-watcher';
 import { RestartPolicy } from './restart-policy';
 import { ensurePluginTsconfig, generateUid, HUB_VERSION, satisfiesVersion } from './utils';
 
+type PluginProcessInstance = InstanceType<typeof PluginProcess>;
+
 const PRELUDE_PATH = join(import.meta.dir, 'prelude', 'index.ts');
 
 /**
@@ -40,7 +42,7 @@ export class PluginLifecycle {
   readonly #moduleCompiler = inject(ModuleCompiler);
   readonly #resolver = new PluginResolver();
 
-  readonly #processes = new Map<string, PluginProcess>();
+  readonly #processes = new Map<string, PluginProcessInstance>();
   readonly #uidIndex = new Map<string, string>(); // uid → plugin name
   readonly #stabilityTimers = new Map<string, Timer>();
   readonly #restartPolicy: RestartPolicy;
@@ -78,7 +80,7 @@ export class PluginLifecycle {
   // Public API
   // ───────────────────────────────────────────────────────────────────────
 
-  getProcess(name: string): PluginProcess | undefined {
+  getProcess(name: string): PluginProcessInstance | undefined {
     return this.#processes.get(name);
   }
 
@@ -86,7 +88,7 @@ export class PluginLifecycle {
     return this.#processes.has(name);
   }
 
-  getProcessByUid(uid: string): PluginProcess | undefined {
+  getProcessByUid(uid: string): PluginProcessInstance | undefined {
     const name = this.#uidIndex.get(uid);
     return name ? this.#processes.get(name) : undefined;
   }
@@ -100,7 +102,7 @@ export class PluginLifecycle {
     return this.#state.getByUid(uid)?.name;
   }
 
-  listProcesses(): PluginProcess[] {
+  listProcesses(): PluginProcessInstance[] {
     return [...this.#processes.values()];
   }
 
@@ -114,7 +116,7 @@ export class PluginLifecycle {
     return this.#state.get(name)?.health ?? 'stopped';
   }
 
-  toPlugin(process: PluginProcess): Plugin {
+  toPlugin(process: PluginProcessInstance): Plugin {
     return process.toPlugin('running');
   }
 
@@ -501,7 +503,7 @@ export class PluginLifecycle {
   // Private - Restart & Error Handling
   // ───────────────────────────────────────────────────────────────────────
 
-  #handleHeartbeatFailed(process: PluginProcess, silentMs: number): void {
+  #handleHeartbeatFailed(process: PluginProcessInstance, silentMs: number): void {
     this.#logs.error('Plugin heartbeat timeout', {
       pluginName: process.name,
       pid: process.pid,
@@ -616,7 +618,7 @@ export class PluginLifecycle {
     });
   }
 
-  #startStabilityCheck(process: PluginProcess): void {
+  #startStabilityCheck(process: PluginProcessInstance): void {
     // Clear any existing timer to prevent leaks on rapid restarts
     const existing = this.#stabilityTimers.get(process.name);
     if (existing) {

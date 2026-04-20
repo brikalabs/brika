@@ -239,56 +239,60 @@ export function ConfigSheet() {
     }));
   }, []);
 
+  const saveLabelIfChanged = useCallback(
+    (instanceId: string) => {
+      const trimmedLabel = localLabel.trim();
+      const oldLabel = placement?.label ?? '';
+      if (trimmedLabel !== oldLabel) {
+        renameBrick({ instanceId, label: trimmedLabel || undefined });
+      }
+    },
+    [localLabel, placement, renameBrick]
+  );
+
+  const saveConfigIfPresent = useCallback(
+    async (boardId: string, instanceId: string) => {
+      const configSchema = brickType?.config;
+      if (!configSchema || configSchema.length === 0) {
+        return;
+      }
+      useBoardStore.getState().updateBrickConfig(instanceId, localConfig);
+      await boardsApi.updateBrick(boardId, instanceId, { config: localConfig });
+    },
+    [brickType, localConfig]
+  );
+
+  const revertOptimisticConfig = useCallback((instanceId: string) => {
+    const serverPlacement = useBoardStore
+      .getState()
+      .activeBoard?.bricks.find((b) => b.instanceId === instanceId);
+    if (serverPlacement) {
+      setLocalConfig({ ...serverPlacement.config });
+    }
+  }, []);
+
   const handleSave = useCallback(async () => {
     if (!activeBoard || !configBrickId) {
       return;
     }
     setSaving(true);
-
     try {
-      // Save label if changed
-      const trimmedLabel = localLabel.trim();
-      const oldLabel = placement?.label ?? '';
-      if (trimmedLabel !== oldLabel) {
-        renameBrick({
-          instanceId: configBrickId,
-          label: trimmedLabel || undefined,
-        });
-      }
-
-      // Save config if there are config fields
-      const configSchema = brickType?.config;
-      if (configSchema && configSchema.length > 0) {
-        // Optimistic update for immediate feedback; SSE echo-back is
-        // deduplicated by the store's shallow equality check.
-        useBoardStore.getState().updateBrickConfig(configBrickId, localConfig);
-        await boardsApi.updateBrick(activeBoard.id, configBrickId, {
-          config: localConfig,
-        });
-      }
-
+      saveLabelIfChanged(configBrickId);
+      await saveConfigIfPresent(activeBoard.id, configBrickId);
       setConfigBrickId(null);
       setLocalConfig({});
       setLocalLabel('');
     } catch {
-      // Revert the optimistic update on failure
-      const serverPlacement = useBoardStore
-        .getState()
-        .activeBoard?.bricks.find((b) => b.instanceId === configBrickId);
-      if (serverPlacement) {
-        setLocalConfig({ ...serverPlacement.config });
-      }
+      revertOptimisticConfig(configBrickId);
     } finally {
       setSaving(false);
     }
   }, [
     activeBoard,
     configBrickId,
-    localConfig,
-    localLabel,
-    placement,
-    brickType,
-    renameBrick,
+    saveLabelIfChanged,
+    saveConfigIfPresent,
+    revertOptimisticConfig,
     setConfigBrickId,
   ]);
 

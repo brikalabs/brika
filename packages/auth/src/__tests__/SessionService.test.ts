@@ -16,7 +16,7 @@ let userService: UserService;
 let userId: string;
 
 beforeEach(() => {
-  db = openAuthDatabase(':memory:');
+  db = openAuthDatabase(':memory:').sqlite;
   sessionService = new SessionService(db, 3600);
   userService = new UserService(db);
   const user = userService.createUser('test@test.com', 'Test', Role.USER);

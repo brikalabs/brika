@@ -1,14 +1,11 @@
-/**
- * SQLite-based Log Storage
- *
- * Persists logs to disk for historical queries with filtering and pagination.
- */
-
-import { Database, SQLQueryBindings } from 'bun:sqlite'
-import { mkdir } from 'node:fs/promises';
-import { inject, singleton } from "@brika/di";
-import { ConfigLoader } from "@/runtime/config/config-loader";
+import {
+  and, asc, type BrikaDatabase, count, cursorFilter, desc, endTsFilter,
+  eq, isNotNull, like, oneOrMany, startTsFilter,
+} from "@brika/db";
+import { singleton } from "@brika/di";
 import type { Json } from "@/types";
+import { logsDb } from "./database";
+import { logs as logsTable } from "./schema";
 import type { LogEvent, LogLevel, LogSource } from "./types";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -36,20 +33,6 @@ export interface StoredLogEvent extends LogEvent {
   id: number;
 }
 
-interface LogRow {
-  id: number;
-  ts: number;
-  level: string;
-  source: string;
-  plugin_name: string | null;
-  message: string;
-  meta: string | null;
-  error_name: string | null;
-  error_message: string | null;
-  error_stack: string | null;
-  error_cause: string | null;
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Log Store Service
 // ─────────────────────────────────────────────────────────────────────────────
@@ -58,261 +41,159 @@ const MAX_INSERT_ERRORS = 5;
 
 @singleton()
 export class LogStore {
-  #db: Database | null = null;
-  #insertStmt: ReturnType<Database["prepare"]> | null = null;
+  #database: BrikaDatabase<{ logs: typeof logsTable }> | null = null;
+  #insertDisabled = false;
   #insertErrors = 0;
 
-  async init(): Promise<void> {
-    const configLoader = inject(ConfigLoader);
-    const rootDir = configLoader.getRootDir();
-    const dbPath = `${rootDir}/.brika/logs.db`;
+  init(): void {
+    this.#database = logsDb.open();
+  }
 
-    // Ensure .brika directory exists
-    const brikaDir = `${rootDir}/.brika`;
-    await mkdir(brikaDir, { recursive: true });
-
-    this.#db = new Database(dbPath);
-
-    // Create table
-    this.#db.run(`
-        CREATE TABLE IF NOT EXISTS logs
-        (
-            id           INTEGER PRIMARY KEY AUTOINCREMENT,
-            ts           INTEGER NOT NULL,
-            level        TEXT    NOT NULL,
-            source       TEXT    NOT NULL,
-            plugin_name  TEXT,
-            message      TEXT    NOT NULL,
-            meta         TEXT,
-            error_name   TEXT,
-            error_message TEXT,
-            error_stack  TEXT,
-            error_cause  TEXT
-        )
-    `);
-
-    // Migrate existing schema to add error columns if they don't exist
-    const columns = this.#db.query("PRAGMA table_info(logs)").all() as { name: string }[];
-    const columnNames = new Set(columns.map((c) => c.name));
-
-    if (!columnNames.has("error_name")) {
-      this.#db.run("ALTER TABLE logs ADD COLUMN error_name TEXT");
-    }
-    if (!columnNames.has("error_message")) {
-      this.#db.run("ALTER TABLE logs ADD COLUMN error_message TEXT");
-    }
-    if (!columnNames.has("error_stack")) {
-      this.#db.run("ALTER TABLE logs ADD COLUMN error_stack TEXT");
-    }
-    if (!columnNames.has("error_cause")) {
-      this.#db.run("ALTER TABLE logs ADD COLUMN error_cause TEXT");
-    }
-
-    // Create indexes for efficient queries
-    this.#db.run("CREATE INDEX IF NOT EXISTS idx_logs_ts ON logs(ts DESC)");
-    this.#db.run("CREATE INDEX IF NOT EXISTS idx_logs_level ON logs(level)");
-    this.#db.run("CREATE INDEX IF NOT EXISTS idx_logs_source ON logs(source)");
-    this.#db.run("CREATE INDEX IF NOT EXISTS idx_logs_plugin ON logs(plugin_name)");
-    this.#db.run("CREATE INDEX IF NOT EXISTS idx_logs_ts_level ON logs(ts DESC, level)");
-    this.#db.run("CREATE INDEX IF NOT EXISTS idx_logs_ts_source ON logs (ts DESC, source)");
-
-    // Prepare insert statement for performance
-    this.#insertStmt = this.#db.prepare(
-      "INSERT INTO logs (ts, level, source, plugin_name, message, meta, error_name, error_message, error_stack, error_cause) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-    );
+  private get db() {
+    return this.#database?.db ?? null;
   }
 
   insert(event: LogEvent): void {
-    if (!this.#insertStmt) { return; }
+    if (!this.db || this.#insertDisabled) { return; }
 
     try {
-      this.#insertStmt.run(
-        event.ts,
-        event.level,
-        event.source,
-        event.pluginName ?? null,
-        event.message,
-        event.meta ? JSON.stringify(event.meta) : null,
-        event.error?.name ?? null,
-        event.error?.message ?? null,
-        event.error?.stack ?? null,
-        event.error?.cause ?? null,
-      );
+      this.db.insert(logsTable).values({
+        ts: event.ts,
+        level: event.level,
+        source: event.source,
+        pluginName: event.pluginName ?? null,
+        message: event.message,
+        meta: event.meta ? JSON.stringify(event.meta) : null,
+        errorName: event.error?.name ?? null,
+        errorMessage: event.error?.message ?? null,
+        errorStack: event.error?.stack ?? null,
+        errorCause: event.error?.cause ?? null,
+      }).run();
       this.#insertErrors = 0;
     } catch {
       // Silently drop — log persistence must never crash the request pipeline.
       // Only disable after repeated failures to tolerate transient I/O errors.
       this.#insertErrors++;
       if (this.#insertErrors >= MAX_INSERT_ERRORS) {
-        this.#insertStmt = null;
+        this.#insertDisabled = true;
       }
     }
   }
 
   query(params: LogQueryParams = {}): LogQueryResult {
-    if (!this.#db) { return { logs: [], nextCursor: null }; }
+    if (!this.db) { return { logs: [], nextCursor: null }; }
 
-    const { conditions, values } = this.buildWhereConditions(params);
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+    const { level, source, pluginName, search, startTs, endTs, cursor } = params;
     const limit = Math.min(params.limit ?? 100, 1000);
     const order = params.order ?? "desc";
 
-    // Query one extra to determine if there's a next page
-    const sql = `
-        SELECT id, ts, level, source, plugin_name, message, meta, error_name, error_message, error_stack, error_cause
-        FROM logs ${whereClause}
-        ORDER BY id ${order === "desc" ? "DESC" : "ASC"}
-        LIMIT ?
-    `;
-
-    const rows = this.#db.query(sql).all(...values, limit + 1) as LogRow[];
+    const rows = this.db
+      .select()
+      .from(logsTable)
+      .where(and(
+        oneOrMany(logsTable.level, level),
+        oneOrMany(logsTable.source, source),
+        pluginName ? eq(logsTable.pluginName, pluginName) : undefined,
+        search ? like(logsTable.message, `%${search}%`) : undefined,
+        startTsFilter(logsTable.ts, startTs),
+        endTsFilter(logsTable.ts, endTs),
+        cursorFilter(logsTable.id, cursor, order),
+      ))
+      .orderBy(order === "asc" ? asc(logsTable.id) : desc(logsTable.id))
+      .limit(limit + 1)
+      .all();
 
     const hasMore = rows.length > limit;
     const resultRows = hasMore ? rows.slice(0, limit) : rows;
-    const logs = resultRows.map((row) => this.mapRowToLogEvent(row));
 
     return {
-      logs,
+      logs: resultRows.map(mapRowToStoredEvent),
       nextCursor: hasMore ? resultRows.at(-1)?.id ?? null : null,
     };
   }
 
-  /**
-   * Build common filter conditions for level, source, pluginName, time range
-   */
-  private buildFilterConditions(params: Partial<LogQueryParams>): {
-    conditions: string[];
-    values: SQLQueryBindings[];
-  } {
-    const conditions: string[] = [];
-    const values: SQLQueryBindings[] = [];
-
-    if (params.level) {
-      const levels = Array.isArray(params.level) ? params.level : [params.level];
-      conditions.push(`level IN (${levels.map(() => "?").join(", ")})`);
-      values.push(...levels);
-    }
-
-    if (params.source) {
-      const sources = Array.isArray(params.source) ? params.source : [params.source];
-      conditions.push(`source IN (${sources.map(() => "?").join(", ")})`);
-      values.push(...sources);
-    }
-
-    if (params.pluginName) {
-      conditions.push("plugin_name = ?");
-      values.push(params.pluginName);
-    }
-
-    if (params.startTs) {
-      conditions.push("ts >= ?");
-      values.push(params.startTs);
-    }
-
-    if (params.endTs) {
-      conditions.push("ts <= ?");
-      values.push(params.endTs);
-    }
-
-    return { conditions, values };
-  }
-
-  /**
-   * Build WHERE clause conditions and values from query params (includes search + cursor)
-   */
-  private buildWhereConditions(params: LogQueryParams): {
-    conditions: string[];
-    values: SQLQueryBindings[];
-  } {
-    const { conditions, values } = this.buildFilterConditions(params);
-
-    if (params.search) {
-      conditions.push("message LIKE ?");
-      values.push(`%${params.search}%`);
-    }
-
-    // Cursor-based pagination
-    const order = params.order ?? "desc";
-    if (params.cursor) {
-      conditions.push(order === "desc" ? "id < ?" : "id > ?");
-      values.push(params.cursor);
-    }
-
-    return { conditions, values };
-  }
-
-  /**
-   * Map database row to StoredLogEvent
-   */
-  private mapRowToLogEvent(row: LogRow): StoredLogEvent {
-    const event: StoredLogEvent = {
-      id: row.id,
-      ts: row.ts,
-      level: row.level as LogLevel,
-      source: row.source as LogSource,
-      pluginName: row.plugin_name ?? undefined,
-      message: row.message,
-      meta: row.meta ? (JSON.parse(row.meta) as Record<string, Json>) : undefined,
-    };
-
-    // Reconstruct error object if error data exists
-    if (row.error_name || row.error_message) {
-      event.error = {
-        name: row.error_name ?? "Error",
-        message: row.error_message ?? "",
-        stack: row.error_stack ?? undefined,
-        cause: row.error_cause ?? undefined,
-      };
-    }
-
-    return event;
-  }
-
   clear(params: Partial<LogQueryParams> = {}): number {
-    if (!this.#db) { return 0; }
+    if (!this.db) { return 0; }
 
-    const { conditions, values } = this.buildFilterConditions(params);
+    const { level, source, pluginName, startTs, endTs } = params;
 
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
-    const result = this.#db.run(
-      `DELETE FROM logs ${whereClause}`,
-      values,
-    );
+    const deleted = this.db
+      .delete(logsTable)
+      .where(and(
+        oneOrMany(logsTable.level, level),
+        oneOrMany(logsTable.source, source),
+        pluginName ? eq(logsTable.pluginName, pluginName) : undefined,
+        startTsFilter(logsTable.ts, startTs),
+        endTsFilter(logsTable.ts, endTs),
+      ))
+      .returning({ id: logsTable.id })
+      .all();
 
-    return result.changes;
+    return deleted.length;
   }
 
   getPluginNames(): string[] {
-    if (!this.#db) { return []; }
+    if (!this.db) { return []; }
 
-    const rows = this.#db
-      .query("SELECT DISTINCT plugin_name FROM logs WHERE plugin_name IS NOT NULL ORDER BY plugin_name")
-      .all() as { plugin_name: string }[];
-
-    return rows.map((r) => r.plugin_name);
+    return this.db
+      .selectDistinct({ pluginName: logsTable.pluginName })
+      .from(logsTable)
+      .where(isNotNull(logsTable.pluginName))
+      .orderBy(asc(logsTable.pluginName))
+      .all()
+      .map((r) => r.pluginName as string);
   }
 
   getSources(): LogSource[] {
-    if (!this.#db) { return []; }
+    if (!this.db) { return []; }
 
-    const rows = this.#db
-      .query("SELECT DISTINCT source FROM logs ORDER BY source")
-      .all() as { source: string }[];
-
-    return rows.map((r) => r.source as LogSource);
+    return this.db
+      .selectDistinct({ source: logsTable.source })
+      .from(logsTable)
+      .orderBy(asc(logsTable.source))
+      .all()
+      .map((r) => r.source as LogSource);
   }
 
   count(): number {
-    if (!this.#db) { return 0; }
+    if (!this.db) { return 0; }
 
-    const row = this.#db
-      .query("SELECT COUNT(*) as count FROM logs")
-      .get() as { count: number } | null;
-
-    return row?.count ?? 0;
+    return this.db
+      .select({ value: count() })
+      .from(logsTable)
+      .get()?.value ?? 0;
   }
 
-  close () {
-    this.#db?.close();
+  close(): void {
+    this.#database?.sqlite.close();
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Row → StoredLogEvent mapping
+// ─────────────────────────────────────────────────────────────────────────────
+
+type LogRow = typeof logsTable.$inferSelect;
+
+function mapRowToStoredEvent(row: LogRow): StoredLogEvent {
+  const event: StoredLogEvent = {
+    id: row.id,
+    ts: row.ts,
+    level: row.level as LogLevel,
+    source: row.source as LogSource,
+    pluginName: row.pluginName ?? undefined,
+    message: row.message,
+    meta: row.meta ? (JSON.parse(row.meta) as Record<string, Json>) : undefined,
+  };
+
+  if (row.errorName || row.errorMessage) {
+    event.error = {
+      name: row.errorName ?? "Error",
+      message: row.errorMessage ?? "",
+      stack: row.errorStack ?? undefined,
+      cause: row.errorCause ?? undefined,
+    };
+  }
+
+  return event;
 }

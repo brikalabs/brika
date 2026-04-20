@@ -5,10 +5,12 @@
 import { beforeEach, describe, expect, it } from 'bun:test';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { configureDatabases } from '@brika/db';
 import { container } from '@brika/di';
 import { auth } from '../plugin';
 
 const testDataDir = join(tmpdir(), `brika-test-${Date.now()}`);
+configureDatabases(testDataDir);
 
 /** Stub server that records middleware and routes */
 function createMockServer() {
@@ -32,9 +34,7 @@ describe('Auth Plugin', () => {
   });
 
   it('should create a bootstrap plugin', () => {
-    const plugin = auth({
-      dataDir: testDataDir,
-    });
+    const plugin = auth();
 
     expect(plugin.name).toBe('auth');
     expect(typeof plugin.setup).toBe('function');
@@ -45,7 +45,6 @@ describe('Auth Plugin', () => {
   it('should register services and middleware when server is provided', () => {
     const server = createMockServer();
     const plugin = auth({
-      dataDir: testDataDir,
       server,
     });
 
@@ -58,21 +57,17 @@ describe('Auth Plugin', () => {
   });
 
   it('should work without server (CLI mode)', () => {
-    const plugin = auth({
-      dataDir: testDataDir,
-    });
+    const plugin = auth();
 
     plugin.setup?.();
     plugin.onStop?.();
   });
 
   it('should go through full lifecycle', async () => {
-    const plugin = auth({
-      dataDir: testDataDir,
-    });
+    const plugin = auth();
 
     plugin.setup?.();
-    await plugin.onStart?.();
+    plugin.onStart?.();
     plugin.onStop?.();
   });
 });

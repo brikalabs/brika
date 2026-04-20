@@ -13,7 +13,7 @@ describe('UserService', () => {
   let db: Database;
 
   beforeEach(() => {
-    db = openAuthDatabase(':memory:');
+    db = openAuthDatabase(':memory:').sqlite;
     service = new UserService(db);
   });
 

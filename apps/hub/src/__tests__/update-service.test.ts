@@ -7,6 +7,7 @@ import { get, stub, useTestBed } from '@brika/di/testing';
 import { useBunMock } from '@brika/testing';
 import { buildInfo } from '@/runtime/http/routes/status';
 import { Logger } from '@/runtime/logs/log-router';
+import { StateStore } from '@/runtime/state/state-store';
 import { UpdateService } from '@/runtime/updates/update-service';
 
 function mockGitHub(
@@ -49,6 +50,7 @@ describe('UpdateService', () => {
     },
     () => {
       stub(Logger);
+      stub(StateStore, { getUpdateChannel: () => 'stable' });
       service = get(UpdateService);
     }
   );

@@ -114,31 +114,12 @@ function getZodModule(
  * This is the primary conversion path and handles the full JSON Schema spec subset we use.
  */
 export function fromJsonSchema(schema: Record<string, unknown>): TypeDescriptor {
+  const composite = fromCompositeSchema(schema);
+  if (composite) {
+    return composite;
+  }
+
   const type = schema.type as string | undefined;
-
-  // anyOf → union
-  if (schema.anyOf) {
-    const variants = (schema.anyOf as Record<string, unknown>[]).map(fromJsonSchema);
-    return variants.length === 1 && variants[0] ? variants[0] : { kind: 'union', variants };
-  }
-
-  // oneOf → union
-  if (schema.oneOf) {
-    const variants = (schema.oneOf as Record<string, unknown>[]).map(fromJsonSchema);
-    return variants.length === 1 && variants[0] ? variants[0] : { kind: 'union', variants };
-  }
-
-  // enum
-  if (schema.enum) {
-    const values = schema.enum as (string | number)[];
-    return { kind: 'enum', values };
-  }
-
-  // const → literal
-  if ('const' in schema) {
-    return { kind: 'literal', value: schema.const as string | number | boolean };
-  }
-
   switch (type) {
     case 'string':
       return { kind: 'primitive', type: 'string' };
@@ -149,128 +130,149 @@ export function fromJsonSchema(schema: Record<string, unknown>): TypeDescriptor 
       return { kind: 'primitive', type: 'boolean' };
     case 'null':
       return { kind: 'primitive', type: 'null' };
-
-    case 'array': {
-      if (schema.items) {
-        return { kind: 'array', element: fromJsonSchema(schema.items as Record<string, unknown>) };
-      }
-      if (schema.prefixItems) {
-        const elements = (schema.prefixItems as Record<string, unknown>[]).map(fromJsonSchema);
-        return { kind: 'tuple', elements };
-      }
-      return { kind: 'array', element: { kind: 'unknown' } };
-    }
-
-    case 'object': {
-      const properties = schema.properties as Record<string, Record<string, unknown>> | undefined;
-      if (!properties) {
-        // Bare object or Record type
-        if (schema.additionalProperties && typeof schema.additionalProperties === 'object') {
-          return {
-            kind: 'record',
-            value: fromJsonSchema(schema.additionalProperties as Record<string, unknown>),
-          };
-        }
-        return { kind: 'record', value: { kind: 'unknown' } };
-      }
-
-      const required = new Set((schema.required as string[] | undefined) ?? []);
-      const fields: Record<string, { type: TypeDescriptor; optional: boolean }> = {};
-
-      for (const [key, propSchema] of Object.entries(properties)) {
-        fields[key] = {
-          type: fromJsonSchema(propSchema),
-          optional: !required.has(key),
-        };
-      }
-
-      return { kind: 'object', fields };
-    }
-
+    case 'array':
+      return fromArraySchema(schema);
+    case 'object':
+      return fromObjectSchema(schema);
     default:
-      // Unknown or mixed type
       return { kind: 'unknown' };
   }
+}
+
+function fromCompositeSchema(schema: Record<string, unknown>): TypeDescriptor | null {
+  if (schema.anyOf) {
+    const variants = (schema.anyOf as Record<string, unknown>[]).map(fromJsonSchema);
+    return variants.length === 1 && variants[0] ? variants[0] : { kind: 'union', variants };
+  }
+  if (schema.oneOf) {
+    const variants = (schema.oneOf as Record<string, unknown>[]).map(fromJsonSchema);
+    return variants.length === 1 && variants[0] ? variants[0] : { kind: 'union', variants };
+  }
+  if (schema.enum) {
+    return { kind: 'enum', values: schema.enum as (string | number)[] };
+  }
+  if ('const' in schema) {
+    return { kind: 'literal', value: schema.const as string | number | boolean };
+  }
+  return null;
+}
+
+function fromArraySchema(schema: Record<string, unknown>): TypeDescriptor {
+  if (schema.items) {
+    return { kind: 'array', element: fromJsonSchema(schema.items as Record<string, unknown>) };
+  }
+  if (schema.prefixItems) {
+    const elements = (schema.prefixItems as Record<string, unknown>[]).map(fromJsonSchema);
+    return { kind: 'tuple', elements };
+  }
+  return { kind: 'array', element: { kind: 'unknown' } };
+}
+
+function fromObjectSchema(schema: Record<string, unknown>): TypeDescriptor {
+  const properties = schema.properties as Record<string, Record<string, unknown>> | undefined;
+  if (!properties) {
+    if (schema.additionalProperties && typeof schema.additionalProperties === 'object') {
+      return {
+        kind: 'record',
+        value: fromJsonSchema(schema.additionalProperties as Record<string, unknown>),
+      };
+    }
+    return { kind: 'record', value: { kind: 'unknown' } };
+  }
+
+  const required = new Set((schema.required as string[] | undefined) ?? []);
+  const fields: Record<string, { type: TypeDescriptor; optional: boolean }> = {};
+  for (const [key, propSchema] of Object.entries(properties)) {
+    fields[key] = {
+      type: fromJsonSchema(propSchema),
+      optional: !required.has(key),
+    };
+  }
+  return { kind: 'object', fields };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Fallback: Constructor-based detection
 // ─────────────────────────────────────────────────────────────────────────────
 
+const ZOD_PRIMITIVE_MAP: Record<string, TypeDescriptor> = {
+  string: { kind: 'primitive', type: 'string' },
+  number: { kind: 'primitive', type: 'number' },
+  boolean: { kind: 'primitive', type: 'boolean' },
+  null: { kind: 'primitive', type: 'null' },
+  any: { kind: 'any' },
+  unknown: { kind: 'unknown' },
+  undefined: { kind: 'unknown' },
+  record: { kind: 'record', value: { kind: 'unknown' } },
+};
+
 function fromZodConstructor(schema: unknown): TypeDescriptor {
   const name = getZodTypeName(schema);
 
+  const primitive = ZOD_PRIMITIVE_MAP[name];
+  if (primitive) {
+    return primitive;
+  }
+
   switch (name) {
-    case 'string':
-      return { kind: 'primitive', type: 'string' };
-    case 'number':
-      return { kind: 'primitive', type: 'number' };
-    case 'boolean':
-      return { kind: 'primitive', type: 'boolean' };
-    case 'null':
-      return { kind: 'primitive', type: 'null' };
-    case 'any':
-      return { kind: 'any' };
-    case 'unknown':
-      return { kind: 'unknown' };
-    case 'undefined':
-      return { kind: 'unknown' };
-
-    case 'array': {
-      const def = getDef(schema);
-      const element = def?.element ?? def?.type;
-      return {
-        kind: 'array',
-        element: element ? fromZodConstructor(element) : { kind: 'unknown' },
-      };
-    }
-
-    case 'object': {
-      const def = getDef(schema);
-      const shape = def?.shape;
-      if (!shape || typeof shape !== 'object') {
-        return { kind: 'record', value: { kind: 'unknown' } };
-      }
-
-      const fields: Record<string, { type: TypeDescriptor; optional: boolean }> = {};
-      for (const [key, fieldSchema] of Object.entries(shape as Record<string, unknown>)) {
-        const fieldName = getZodTypeName(fieldSchema);
-        fields[key] = {
-          type: fromZodConstructor(fieldName === 'optional' ? getInner(fieldSchema) : fieldSchema),
-          optional: fieldName === 'optional',
-        };
-      }
-      return { kind: 'object', fields };
-    }
-
+    case 'array':
+      return fromZodArray(schema);
+    case 'object':
+      return fromZodObject(schema);
     case 'optional':
     case 'nullable':
       return fromZodConstructor(getInner(schema));
-
-    case 'union': {
-      const def = getDef(schema);
-      const options = def?.options as unknown[] | undefined;
-      if (options) {
-        return { kind: 'union', variants: options.map(fromZodConstructor) };
-      }
-      return { kind: 'unknown' };
-    }
-
-    case 'enum': {
-      const def = getDef(schema);
-      const values = def?.entries ?? def?.values;
-      if (Array.isArray(values)) {
-        return { kind: 'enum', values: values as (string | number)[] };
-      }
-      return { kind: 'unknown' };
-    }
-
-    case 'record':
-      return { kind: 'record', value: { kind: 'unknown' } };
-
+    case 'union':
+      return fromZodUnion(schema);
+    case 'enum':
+      return fromZodEnum(schema);
     default:
       return { kind: 'unknown' };
   }
+}
+
+function fromZodArray(schema: unknown): TypeDescriptor {
+  const def = getDef(schema);
+  const element = def?.element ?? def?.type;
+  return {
+    kind: 'array',
+    element: element ? fromZodConstructor(element) : { kind: 'unknown' },
+  };
+}
+
+function fromZodObject(schema: unknown): TypeDescriptor {
+  const def = getDef(schema);
+  const shape = def?.shape;
+  if (!shape || typeof shape !== 'object') {
+    return { kind: 'record', value: { kind: 'unknown' } };
+  }
+
+  const fields: Record<string, { type: TypeDescriptor; optional: boolean }> = {};
+  for (const [key, fieldSchema] of Object.entries(shape as Record<string, unknown>)) {
+    const fieldName = getZodTypeName(fieldSchema);
+    fields[key] = {
+      type: fromZodConstructor(fieldName === 'optional' ? getInner(fieldSchema) : fieldSchema),
+      optional: fieldName === 'optional',
+    };
+  }
+  return { kind: 'object', fields };
+}
+
+function fromZodUnion(schema: unknown): TypeDescriptor {
+  const options = getDef(schema)?.options as unknown[] | undefined;
+  if (options) {
+    return { kind: 'union', variants: options.map(fromZodConstructor) };
+  }
+  return { kind: 'unknown' };
+}
+
+function fromZodEnum(schema: unknown): TypeDescriptor {
+  const def = getDef(schema);
+  const values = def?.entries ?? def?.values;
+  if (Array.isArray(values)) {
+    return { kind: 'enum', values: values as (string | number)[] };
+  }
+  return { kind: 'unknown' };
 }
 
 function getZodTypeName(schema: unknown): string {

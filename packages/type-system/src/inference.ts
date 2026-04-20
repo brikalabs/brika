@@ -81,31 +81,34 @@ export function inferTypes(
 
   // Phase 2-4: Iterate until stable
   for (let iter = 0; iter < MAX_ITERATIONS; iter++) {
-    let changed = false;
-
-    for (const node of nodes) {
-      // Forward propagation: concrete output → connected generic input
-      if (propagateForward(node, incoming, nodeMap, result)) {
-        changed = true;
-      }
-
-      // Passthrough resolution
-      if (resolvePassthrough(node, result)) {
-        changed = true;
-      }
-
-      // Backward propagation: concrete input → connected generic output
-      if (propagateBackward(node, outgoing, nodeMap, result)) {
-        changed = true;
-      }
-    }
-
-    if (!changed) {
+    if (!runInferencePass(nodes, incoming, outgoing, nodeMap, result)) {
       break;
     }
   }
 
   return result;
+}
+
+function runInferencePass(
+  nodes: GraphNode[],
+  incoming: IncomingMap,
+  outgoing: OutgoingMap,
+  nodeMap: Map<string, GraphNode>,
+  result: PortTypeMap
+): boolean {
+  let changed = false;
+  for (const node of nodes) {
+    if (propagateForward(node, incoming, nodeMap, result)) {
+      changed = true;
+    }
+    if (resolvePassthrough(node, result)) {
+      changed = true;
+    }
+    if (propagateBackward(node, outgoing, nodeMap, result)) {
+      changed = true;
+    }
+  }
+  return changed;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -263,45 +266,46 @@ function propagateBackward(
   nodeMap: Map<string, GraphNode>,
   result: PortTypeMap
 ): boolean {
-  let changed = false;
   const nodeOutgoing = outgoing.get(node.id);
   if (!nodeOutgoing) {
     return false;
   }
 
+  let changed = false;
   for (const [outputPortId, port] of Object.entries(node.ports)) {
-    if (port.direction !== 'output') {
-      continue;
-    }
-
-    const key = portKey(node.id, outputPortId);
-    if (result.has(key)) {
-      continue; // already resolved
-    }
-
-    if (!needsResolution(port.type)) {
-      continue;
-    }
-
-    const targets = nodeOutgoing.get(outputPortId);
-    if (!targets) {
-      continue;
-    }
-
-    // If any connected input has a concrete type, use it
-    for (const target of targets) {
-      const targetKey = portKey(target.node, target.port);
-      const targetType = result.get(targetKey);
-
-      if (targetType && isConcrete(targetType)) {
-        result.set(key, targetType);
-        changed = true;
-        break;
-      }
+    if (tryBackwardResolve(node.id, outputPortId, port, nodeOutgoing, result)) {
+      changed = true;
     }
   }
-
   return changed;
+}
+
+function tryBackwardResolve(
+  nodeId: string,
+  outputPortId: string,
+  port: GraphNode['ports'][string],
+  nodeOutgoing: Map<string, EdgeTarget[]>,
+  result: PortTypeMap
+): boolean {
+  if (port.direction !== 'output') {
+    return false;
+  }
+  const key = portKey(nodeId, outputPortId);
+  if (result.has(key) || !needsResolution(port.type)) {
+    return false;
+  }
+  const targets = nodeOutgoing.get(outputPortId);
+  if (!targets) {
+    return false;
+  }
+  for (const target of targets) {
+    const targetType = result.get(portKey(target.node, target.port));
+    if (targetType && isConcrete(targetType)) {
+      result.set(key, targetType);
+      return true;
+    }
+  }
+  return false;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

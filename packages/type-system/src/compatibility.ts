@@ -43,14 +43,16 @@ export function isCompatible(output: TypeDescriptor, input: TypeDescriptor): boo
 
   // Union handling
   if (input.kind === 'union') {
-    // Output must satisfy at least one variant
     return input.variants.some((variant) => isCompatible(output, variant));
   }
   if (output.kind === 'union') {
-    // All output variants must satisfy input
     return output.variants.every((variant) => isCompatible(variant, input));
   }
 
+  return checkCrossKind(output, input);
+}
+
+function checkCrossKind(output: TypeDescriptor, input: TypeDescriptor): boolean {
   // Enum → primitive widening
   if (output.kind === 'enum' && input.kind === 'primitive') {
     return isEnumCompatibleWithPrimitive(output.values, input.type);

@@ -5,11 +5,13 @@
 
 import 'reflect-metadata';
 import { join } from 'node:path';
+import { configureDatabases } from '@brika/db';
 import pc from 'picocolors';
 import type { BootstrapPlugin } from '@/runtime/bootstrap/plugin';
 import { dataDir } from './utils/runtime';
 
 export async function bootstrapCLI(...plugins: BootstrapPlugin[]) {
+  configureDatabases(dataDir);
   for (const p of plugins) {
     p.setup?.({} as never);
   }

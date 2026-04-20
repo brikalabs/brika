@@ -88,9 +88,9 @@ export const workflowsRoutes = group({
       body: z.object({
         id: z.string(),
       }),
-      handler: async ({ body, inject }) => {
+      handler: ({ body, inject }) => {
         return {
-          ok: await inject(WorkflowEngine).setEnabled(body.id, true),
+          ok: inject(WorkflowEngine).setEnabled(body.id, true),
         };
       },
     }),
@@ -100,9 +100,9 @@ export const workflowsRoutes = group({
       body: z.object({
         id: z.string(),
       }),
-      handler: async ({ body, inject }) => {
+      handler: ({ body, inject }) => {
         return {
-          ok: await inject(WorkflowEngine).setEnabled(body.id, false),
+          ok: inject(WorkflowEngine).setEnabled(body.id, false),
         };
       },
     }),

@@ -29,25 +29,33 @@ export interface RuntimeEntry {
 
 // ─── Hooks ──────────────────────────────────────────────────────────────────
 
+type ToggleOp = 'toggle' | 'add' | 'delete';
+
+function applyToggleOp(prev: Set<string>, key: string, op: ToggleOp): Set<string> {
+  if (op === 'add' && prev.has(key)) {
+    return prev;
+  }
+  if (op === 'delete' && !prev.has(key)) {
+    return prev;
+  }
+  const next = new Set(prev);
+  if (op === 'toggle') {
+    if (next.has(key)) {
+      next.delete(key);
+    } else {
+      next.add(key);
+    }
+  } else {
+    next[op](key);
+  }
+  return next;
+}
+
 export function useToggleSet() {
   const [set, setSet] = useState<Set<string>>(new Set());
 
-  const update = useCallback((key: string, op: 'toggle' | 'add' | 'delete') => {
-    setSet((prev) => {
-      if (op === 'add' && prev.has(key)) {
-        return prev;
-      }
-      if (op === 'delete' && !prev.has(key)) {
-        return prev;
-      }
-      const next = new Set(prev);
-      if (op === 'toggle') {
-        next.has(key) ? next.delete(key) : next.add(key);
-      } else {
-        next[op](key);
-      }
-      return next;
-    });
+  const update = useCallback((key: string, op: ToggleOp) => {
+    setSet((prev) => applyToggleOp(prev, key, op));
   }, []);
 
   const toggle = useCallback((key: string) => update(key, 'toggle'), [update]);

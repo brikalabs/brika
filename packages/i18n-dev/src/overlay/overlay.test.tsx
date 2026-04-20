@@ -138,15 +138,7 @@ describe('TabBar', () => {
   ];
 
   test('renders all tab labels', () => {
-    const html = renderToString(
-      <TabBar
-        tabs={tabs}
-        active="issues"
-        onSelect={() => {
-          /* noop */
-        }}
-      />
-    );
+    const html = renderToString(<TabBar tabs={tabs} active="issues" onSelect={() => {}} />);
     expect(html).toContain('Issues');
     expect(html).toContain('Runtime');
     expect(html).toContain('Coverage');
@@ -154,56 +146,24 @@ describe('TabBar', () => {
   });
 
   test('renders count badges', () => {
-    const html = renderToString(
-      <TabBar
-        tabs={tabs}
-        active="issues"
-        onSelect={() => {
-          /* noop */
-        }}
-      />
-    );
+    const html = renderToString(<TabBar tabs={tabs} active="issues" onSelect={() => {}} />);
     expect(html).toContain('>5<');
     expect(html).toContain('>2<');
   });
 
   test('active tab has indicator', () => {
-    const html = renderToString(
-      <TabBar
-        tabs={tabs}
-        active="issues"
-        onSelect={() => {
-          /* noop */
-        }}
-      />
-    );
+    const html = renderToString(<TabBar tabs={tabs} active="issues" onSelect={() => {}} />);
     expect(html).toContain('indigo');
   });
 
   test('renders tab buttons', () => {
-    const html = renderToString(
-      <TabBar
-        tabs={tabs}
-        active="runtime"
-        onSelect={() => {
-          /* noop */
-        }}
-      />
-    );
+    const html = renderToString(<TabBar tabs={tabs} active="runtime" onSelect={() => {}} />);
     expect(html).toContain('button');
   });
 
   test('renders without count badges when undefined', () => {
     const noCounts: typeof tabs = [{ id: 'coverage', label: 'Coverage' }];
-    const html = renderToString(
-      <TabBar
-        tabs={noCounts}
-        active="coverage"
-        onSelect={() => {
-          /* noop */
-        }}
-      />
-    );
+    const html = renderToString(<TabBar tabs={noCounts} active="coverage" onSelect={() => {}} />);
     expect(html).toContain('Coverage');
   });
 });
@@ -219,9 +179,7 @@ describe('FloatingBadge', () => {
         warnCount={0}
         runtimeCount={0}
         currentLang="en"
-        onOpen={() => {
-          /* noop */
-        }}
+        onOpen={() => {}}
       />
     );
     expect(html).toContain('OK');
@@ -236,9 +194,7 @@ describe('FloatingBadge', () => {
         warnCount={1}
         runtimeCount={1}
         currentLang="en"
-        onOpen={() => {
-          /* noop */
-        }}
+        onOpen={() => {}}
       />
     );
     expect(html).toContain('>7<');
@@ -253,9 +209,7 @@ describe('FloatingBadge', () => {
         warnCount={0}
         runtimeCount={0}
         currentLang="fr"
-        onOpen={() => {
-          /* noop */
-        }}
+        onOpen={() => {}}
       />
     );
     expect(html).toContain('>fr<');
@@ -269,9 +223,7 @@ describe('FloatingBadge', () => {
         warnCount={0}
         runtimeCount={0}
         currentLang="en"
-        onOpen={() => {
-          /* noop */
-        }}
+        onOpen={() => {}}
       />
     );
     expect(html).toContain('svg');
@@ -285,9 +237,7 @@ describe('FloatingBadge', () => {
         warnCount={1}
         runtimeCount={0}
         currentLang="en"
-        onOpen={() => {
-          /* noop */
-        }}
+        onOpen={() => {}}
       />
     );
     expect(html).toContain('2 errors');
@@ -302,9 +252,7 @@ describe('FloatingBadge', () => {
         warnCount={0}
         runtimeCount={0}
         currentLang="en"
-        onOpen={() => {
-          /* noop */
-        }}
+        onOpen={() => {}}
       />
     );
     expect(html).toContain('button');
@@ -314,9 +262,7 @@ describe('FloatingBadge', () => {
 // ─── PanelHeader ───────────────────────────────────────────────────────────
 
 describe('PanelHeader', () => {
-  const noop = () => {
-    /* noop */
-  };
+  const noop = () => {};
 
   test('renders i18n DevTools title', () => {
     const html = renderToString(

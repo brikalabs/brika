@@ -2,7 +2,6 @@ import { Role } from '@brika/auth';
 import { inject } from '@brika/di';
 import pc from 'picocolors';
 import { defineCommand } from '../../command';
-import { dataDir } from '../../utils/runtime';
 import { auth, UserService } from './auth-server';
 import { bootstrapCLI, printDatabaseInfo } from './bootstrap';
 import { promptAddUser, showError, showSuccess } from './prompts';
@@ -12,11 +11,7 @@ export default defineCommand({
   description: 'Add a new user',
   examples: ['brika auth user add'],
   async handler() {
-    const cli = await bootstrapCLI(
-      auth({
-        dataDir,
-      })
-    );
+    const cli = await bootstrapCLI(auth());
 
     try {
       const userService = inject(UserService);

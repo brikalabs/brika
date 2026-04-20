@@ -10,6 +10,7 @@
     "noEmit": true,
     "esModuleInterop": true,
     "isolatedModules": true,
+    "moduleDetection": "force",
     "verbatimModuleSyntax": false,
     "declaration": true,
     "declarationMap": true,

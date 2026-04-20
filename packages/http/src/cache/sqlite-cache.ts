@@ -1,93 +1,40 @@
-/**
- * SQLite-based cache adapter implementation using Bun's native sqlite
- * Provides persistent caching with TTL and tag-based invalidation
- */
-
-import { Database } from 'bun:sqlite';
+import { and, type BrikaDatabase, eq, gt, inArray, lt, sql } from '@brika/db';
 import type { CacheAdapter, CacheEntry } from './cache-adapter';
+import { cacheDb } from './database';
+import { cacheEntries, cacheTags } from './schema';
 
 export interface SqliteCacheOptions {
-  /** Path to the SQLite database file. Use ':memory:' for in-memory database */
   path: string;
-  /** Cleanup interval in milliseconds (default: 5 minutes) */
   cleanupIntervalMs?: number;
-  /** Enable WAL mode for better concurrent performance (default: true) */
-  walMode?: boolean;
 }
 
-/**
- * SQLite cache adapter with TTL support and tag-based invalidation
- * Uses Bun's native bun:sqlite for zero-dependency persistent caching
- */
+type CacheSchema = { cacheEntries: typeof cacheEntries; cacheTags: typeof cacheTags };
+
 export class SqliteCache implements CacheAdapter {
-  readonly #db: Database;
+  readonly #database: BrikaDatabase<CacheSchema>;
   #cleanupInterval?: Timer;
 
   constructor(private readonly options: SqliteCacheOptions) {
-    this.#db = new Database(options.path);
-
-    // Enable foreign key constraints (required for CASCADE to work)
-    this.#db.run('PRAGMA foreign_keys = ON');
-
-    // Enable WAL mode for better performance (unless explicitly disabled)
-    if (options.walMode !== false) {
-      this.#db.run('PRAGMA journal_mode = WAL');
-    }
-
-    // Optimize for performance
-    this.#db.run('PRAGMA synchronous = NORMAL');
-    this.#db.run('PRAGMA cache_size = 10000');
-    this.#db.run('PRAGMA temp_store = MEMORY');
-
-    this.#initSchema();
+    this.#database = cacheDb.open(options.path);
     this.#startCleanup(options.cleanupIntervalMs ?? 300_000);
   }
 
-  /**
-   * Initialize database schema
-   */
-  #initSchema(): void {
-    this.#db.run(`
-      CREATE TABLE IF NOT EXISTS cache_entries (
-        key TEXT PRIMARY KEY,
-        value TEXT NOT NULL,
-        timestamp INTEGER NOT NULL,
-        ttl INTEGER NOT NULL,
-        expires_at INTEGER NOT NULL
-      );
-
-      CREATE TABLE IF NOT EXISTS cache_tags (
-        key TEXT NOT NULL,
-        tag TEXT NOT NULL,
-        PRIMARY KEY (key, tag),
-        FOREIGN KEY (key) REFERENCES cache_entries(key) ON DELETE CASCADE
-      );
-
-      CREATE INDEX IF NOT EXISTS idx_cache_expires ON cache_entries(expires_at);
-      CREATE INDEX IF NOT EXISTS idx_cache_tags_tag ON cache_tags(tag);
-    `);
+  private get db() {
+    return this.#database.db;
   }
 
-  /**
-   * Get a value from cache
-   */
   get<T = unknown>(key: string): T | null {
-    const stmt = this.#db.prepare<
-      {
-        value: string;
-        expires_at: number;
-      },
-      [string]
-    >('SELECT value, expires_at FROM cache_entries WHERE key = ?');
-
-    const row = stmt.get(key);
+    const row = this.db
+      .select({ value: cacheEntries.value, expiresAt: cacheEntries.expiresAt })
+      .from(cacheEntries)
+      .where(eq(cacheEntries.key, key))
+      .get();
 
     if (!row) {
       return null;
     }
 
-    // Check if entry has expired
-    if (Date.now() > row.expires_at) {
+    if (Date.now() > row.expiresAt) {
       this.delete(key);
       return null;
     }
@@ -95,68 +42,44 @@ export class SqliteCache implements CacheAdapter {
     try {
       return JSON.parse(row.value) as T;
     } catch {
-      // Corrupted entry, delete it
       this.delete(key);
       return null;
     }
   }
 
-  /**
-   * Set a value in cache
-   */
   set<T = unknown>(key: string, value: T, ttl: number, tags?: string[]): void {
     const timestamp = Date.now();
     const expiresAt = timestamp + ttl;
     const serialized = JSON.stringify(value);
 
-    // Use a transaction for atomicity
-    this.#db.transaction(() => {
-      // Delete existing entry and its tags
-      this.#db.prepare('DELETE FROM cache_entries WHERE key = ?').run(key);
+    this.db.transaction((tx) => {
+      tx.delete(cacheEntries).where(eq(cacheEntries.key, key)).run();
+      tx.insert(cacheEntries).values({ key, value: serialized, timestamp, ttl, expiresAt }).run();
 
-      // Insert new entry
-      this.#db
-        .prepare(
-          'INSERT INTO cache_entries (key, value, timestamp, ttl, expires_at) VALUES (?, ?, ?, ?, ?)'
-        )
-        .run(key, serialized, timestamp, ttl, expiresAt);
-
-      // Insert tags
       if (tags && tags.length > 0) {
-        const tagStmt = this.#db.prepare('INSERT INTO cache_tags (key, tag) VALUES (?, ?)');
-        for (const tag of tags) {
-          tagStmt.run(key, tag);
-        }
+        tx.insert(cacheTags)
+          .values(tags.map((tag) => ({ key, tag })))
+          .run();
       }
-    })();
+    });
   }
 
-  /**
-   * Delete a value from cache
-   */
   delete(key: string): void {
-    // Tags are automatically deleted due to CASCADE
-    this.#db.prepare('DELETE FROM cache_entries WHERE key = ?').run(key);
+    this.db.delete(cacheEntries).where(eq(cacheEntries.key, key)).run();
   }
 
-  /**
-   * Check if a key exists in cache (and is not expired)
-   */
   has(key: string): boolean {
-    const stmt = this.#db.prepare<
-      {
-        expires_at: number;
-      },
-      [string]
-    >('SELECT expires_at FROM cache_entries WHERE key = ?');
-
-    const row = stmt.get(key);
+    const row = this.db
+      .select({ expiresAt: cacheEntries.expiresAt })
+      .from(cacheEntries)
+      .where(eq(cacheEntries.key, key))
+      .get();
 
     if (!row) {
       return false;
     }
 
-    if (Date.now() > row.expires_at) {
+    if (Date.now() > row.expiresAt) {
       this.delete(key);
       return false;
     }
@@ -164,189 +87,88 @@ export class SqliteCache implements CacheAdapter {
     return true;
   }
 
-  /**
-   * Clear all cache entries
-   */
   clear(): void {
-    this.#db.run('DELETE FROM cache_entries');
+    this.db.delete(cacheEntries).run();
   }
 
-  /**
-   * Invalidate cache entries by tag
-   */
   invalidateByTag(tag: string): void {
-    this.#db
-      .prepare(
-        `DELETE FROM cache_entries WHERE key IN (
-        SELECT key FROM cache_tags WHERE tag = ?
-      )`
-      )
-      .run(tag);
+    this.invalidateByTags([tag]);
   }
 
-  /**
-   * Invalidate cache entries by multiple tags
-   */
   invalidateByTags(tags: string[]): void {
     if (tags.length === 0) {
       return;
     }
 
-    const placeholders = tags.map(() => '?').join(', ');
-    this.#db
-      .prepare(
-        `DELETE FROM cache_entries WHERE key IN (
-        SELECT key FROM cache_tags WHERE tag IN (${placeholders})
-      )`
-      )
-      .run(...tags);
+    const keys = this.db
+      .selectDistinct({ key: cacheTags.key })
+      .from(cacheTags)
+      .where(inArray(cacheTags.tag, tags))
+      .all()
+      .map((r) => r.key);
+
+    if (keys.length > 0) {
+      this.db.delete(cacheEntries).where(inArray(cacheEntries.key, keys)).run();
+    }
   }
 
-  /**
-   * Get cache statistics
-   */
-  stats(): {
-    size: number;
-    tags: number;
-    expired: number;
-    dbSizeBytes: number;
-  } {
+  stats(): { size: number; tags: number; expired: number; dbSizeBytes: number } {
     const now = Date.now();
 
-    const sizeRow = this.#db
-      .prepare<
-        {
-          count: number;
-        },
-        []
-      >('SELECT COUNT(*) as count FROM cache_entries')
-      .get();
+    const size =
+      this.db.select({ count: sql<number>`count(*)` }).from(cacheEntries).get()?.count ?? 0;
 
-    const tagsRow = this.#db
-      .prepare<
-        {
-          count: number;
-        },
-        []
-      >('SELECT COUNT(DISTINCT tag) as count FROM cache_tags')
-      .get();
+    const tags =
+      this.db
+        .select({ count: sql<number>`count(distinct ${cacheTags.tag})` })
+        .from(cacheTags)
+        .get()?.count ?? 0;
 
-    const expiredRow = this.#db
-      .prepare<
-        {
-          count: number;
-        },
-        [number]
-      >('SELECT COUNT(*) as count FROM cache_entries WHERE expires_at < ?')
-      .get(now);
+    const expired =
+      this.db
+        .select({ count: sql<number>`count(*)` })
+        .from(cacheEntries)
+        .where(lt(cacheEntries.expiresAt, now))
+        .get()?.count ?? 0;
 
-    // Get database file size
     let dbSizeBytes = 0;
     try {
-      const file = Bun.file(this.options.path);
-      dbSizeBytes = file.size;
+      dbSizeBytes = Bun.file(this.options.path).size;
     } catch {
-      // In-memory database or file doesn't exist yet
+      /* in-memory */
     }
 
-    return {
-      size: sizeRow?.count ?? 0,
-      tags: tagsRow?.count ?? 0,
-      expired: expiredRow?.count ?? 0,
-      dbSizeBytes,
-    };
+    return { size, tags, expired, dbSizeBytes };
   }
 
-  /**
-   * Manually trigger cleanup of expired entries
-   */
   cleanup(): void {
-    this.#db.prepare('DELETE FROM cache_entries WHERE expires_at < ?').run(Date.now());
+    this.db.delete(cacheEntries).where(lt(cacheEntries.expiresAt, Date.now())).run();
   }
 
-  /**
-   * Start automatic cleanup of expired entries
-   */
-  #startCleanup(intervalMs: number): void {
-    this.#cleanupInterval = setInterval(() => {
-      this.cleanup();
-    }, intervalMs);
-
-    // Don't keep the process alive
-    if (typeof this.#cleanupInterval === 'object' && 'unref' in this.#cleanupInterval) {
-      this.#cleanupInterval.unref();
-    }
-  }
-
-  /**
-   * Close the database connection and stop cleanup
-   */
-  destroy(): void {
-    if (this.#cleanupInterval) {
-      clearInterval(this.#cleanupInterval);
-      this.#cleanupInterval = undefined;
-    }
-    this.#db.close();
-  }
-
-  /**
-   * Get all entries for a specific tag (useful for debugging)
-   */
-  getByTag<T = unknown>(
-    tag: string
-  ): Array<{
-    key: string;
-    value: T;
-  }> {
+  getByTag<T = unknown>(tag: string): Array<{ key: string; value: T }> {
     const now = Date.now();
-    const rows = this.#db
-      .prepare<
-        {
-          key: string;
-          value: string;
-        },
-        [string, number]
-      >(
-        `SELECT e.key, e.value FROM cache_entries e
-         INNER JOIN cache_tags t ON e.key = t.key
-         WHERE t.tag = ? AND e.expires_at > ?`
-      )
-      .all(tag, now);
 
-    return rows.map((row) => ({
-      key: row.key,
-      value: JSON.parse(row.value) as T,
-    }));
+    return this.db
+      .select({ key: cacheEntries.key, value: cacheEntries.value })
+      .from(cacheEntries)
+      .innerJoin(cacheTags, eq(cacheEntries.key, cacheTags.key))
+      .where(and(eq(cacheTags.tag, tag), gt(cacheEntries.expiresAt, now)))
+      .all()
+      .map((row) => ({ key: row.key, value: JSON.parse(row.value) as T }));
   }
 
-  /**
-   * Get metadata for a cache entry
-   */
   getEntry(key: string): CacheEntry | null {
-    const row = this.#db
-      .prepare<
-        {
-          value: string;
-          timestamp: number;
-          ttl: number;
-          expires_at: number;
-        },
-        [string]
-      >('SELECT value, timestamp, ttl, expires_at FROM cache_entries WHERE key = ?')
-      .get(key);
+    const row = this.db.select().from(cacheEntries).where(eq(cacheEntries.key, key)).get();
 
-    if (!row || Date.now() > row.expires_at) {
+    if (!row || Date.now() > row.expiresAt) {
       return null;
     }
 
-    const tags = this.#db
-      .prepare<
-        {
-          tag: string;
-        },
-        [string]
-      >('SELECT tag FROM cache_tags WHERE key = ?')
-      .all(key)
+    const tags = this.db
+      .select({ tag: cacheTags.tag })
+      .from(cacheTags)
+      .where(eq(cacheTags.key, key))
+      .all()
       .map((r) => r.tag);
 
     return {
@@ -355,5 +177,20 @@ export class SqliteCache implements CacheAdapter {
       ttl: row.ttl,
       tags: tags.length > 0 ? tags : undefined,
     };
+  }
+
+  destroy(): void {
+    if (this.#cleanupInterval) {
+      clearInterval(this.#cleanupInterval);
+      this.#cleanupInterval = undefined;
+    }
+    this.#database.sqlite.close();
+  }
+
+  #startCleanup(intervalMs: number): void {
+    this.#cleanupInterval = setInterval(() => {
+      this.cleanup();
+    }, intervalMs);
+    this.#cleanupInterval.unref();
   }
 }

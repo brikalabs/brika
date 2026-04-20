@@ -93,6 +93,29 @@ export function i18nDevtools(options: I18nDevPluginOptions): Plugin {
     coreTranslations: Map<string, Map<string, Record<string, unknown>>>;
   }
 
+  function collectPluginEntry(
+    entry: Awaited<ReturnType<typeof scanPluginLocales>>[number],
+    issues: ValidationResult['issues'],
+    coverage: ValidationResult['coverage'],
+    translations: Record<string, Record<string, Record<string, unknown>>>
+  ): void {
+    const qualifiedNs = `plugin:${entry.packageName}`;
+    const plugin = validateLocales(entry.locales, referenceLocale);
+
+    for (const issue of plugin.issues) {
+      issues.push({ ...issue, namespace: qualifiedNs });
+    }
+    for (const coverageEntry of plugin.coverage) {
+      coverage.push({ ...coverageEntry, namespace: qualifiedNs });
+    }
+    for (const [locale, nsMap] of entry.locales) {
+      translations[locale] ??= {};
+      for (const data of nsMap.values()) {
+        translations[locale][qualifiedNs] = data;
+      }
+    }
+  }
+
   async function scanPlugins(
     issues: ValidationResult['issues'],
     coverage: ValidationResult['coverage'],
@@ -104,23 +127,9 @@ export function i18nDevtools(options: I18nDevPluginOptions): Plugin {
     const entries = await scanPluginLocales(pluginRoots);
     const pathMap = new Map<string, string>();
 
-    for (const { packageName, rootDir: pluginRoot, locales } of entries) {
-      pathMap.set(packageName, pluginRoot);
-      const qualifiedNs = `plugin:${packageName}`;
-      const plugin = validateLocales(locales, referenceLocale);
-
-      for (const issue of plugin.issues) {
-        issues.push({ ...issue, namespace: qualifiedNs });
-      }
-      for (const entry of plugin.coverage) {
-        coverage.push({ ...entry, namespace: qualifiedNs });
-      }
-      for (const [locale, nsMap] of locales) {
-        translations[locale] ??= {};
-        for (const data of nsMap.values()) {
-          translations[locale][qualifiedNs] = data;
-        }
-      }
+    for (const entry of entries) {
+      pathMap.set(entry.packageName, entry.rootDir);
+      collectPluginEntry(entry, issues, coverage, translations);
     }
 
     pluginPathMap = pathMap;
@@ -248,7 +257,7 @@ export function i18nDevtools(options: I18nDevPluginOptions): Plugin {
 
         // Regenerate types in background
         generateTypes(scan.coreTranslations).catch(() => {
-          // Type generation is best-effort; HMR has already updated the client.
+          // Type generation runs in background; failures are non-fatal here.
         });
 
         const errors = lastResult.issues.filter((i) => i.severity === 'error').length;
