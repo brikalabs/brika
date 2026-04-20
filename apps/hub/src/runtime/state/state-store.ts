@@ -164,7 +164,7 @@ export class StateStore {
       entryPoint: info.entryPoint,
       uid: info.uid,
       enabled: info.enabled ?? cur?.enabled ?? true,
-      health: 'restarting',
+      health: 'restarting' as const,
       lastError: null,
       updatedAt: Date.now(),
       grantedPermissions,
