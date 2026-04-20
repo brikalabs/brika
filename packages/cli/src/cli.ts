@@ -110,10 +110,11 @@ function applyCoercionAndDefaults(
 function stripFlag(argv: string[], ...names: string[]): string[] {
   const out: string[] = [];
   for (let i = 0; i < argv.length; i++) {
-    if (names.includes(argv[i]) && argv[i + 1]) {
+    const arg = argv[i];
+    if (arg !== undefined && names.includes(arg) && argv[i + 1]) {
       i++; // skip the value
-    } else {
-      out.push(argv[i]);
+    } else if (arg !== undefined) {
+      out.push(arg);
     }
   }
   return out;
