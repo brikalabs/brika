@@ -4,12 +4,13 @@ Interactive CLI tools for managing the Brika monorepo — version bumping and np
 
 ## Commands
 
-Both commands are available from the **workspace root**:
+These commands are available from the **workspace root**:
 
 | Command | Description |
 |---|---|
 | `bun run bump` | Bump package versions |
 | `bun run publish-packages` | Publish packages to npm |
+| `bun run deadcode` | Find unused files, exports, and dependencies (knip) |
 
 ---
 
@@ -95,6 +96,48 @@ If your npm account requires 2FA, the terminal is kept open during each publish 
 ### Which packages are published?
 
 Any workspace package **without** `"private": true` in its `package.json` is considered publishable. Private packages (`@brika/hub`, `@brika/ui`, `@brika/workspace-tools`, etc.) are never shown.
+
+---
+
+## `bun run deadcode` — Dead-code finder
+
+Scans the workspace for unused files, exports, types, and dependencies using [knip](https://knip.dev). **Zero config** — the knip config is generated on each run from the repo's own conventions (see [`src/knip-config.ts`](./src/knip-config.ts)):
+
+- `bin` / `main` / `exports` fields → entry points. For library packages where `exports` targets `./dist/x.js`, the generator maps back to `./src/x.ts`.
+- Plugin workspaces → `src/{bricks,blocks,pages}/**` added as entries (dynamically loaded by the hub).
+- `apps/hub` → `src/runtime/plugins/prelude/**` added as entries.
+- `apps/ui` → `src/components/ui/**` ignored (shadcn scaffolding).
+- `@brika/sdk` subpath imports resolve to source via generated `paths` mappings.
+
+### Usage
+
+```sh
+bun run deadcode                              # full report
+bun run deadcode --filter "@brika/*"          # restrict scope
+bun run deadcode --filter @brika/hub          # single workspace
+bun run deadcode --production                 # skip dev/test entries
+bun run deadcode --fix                        # apply safe auto-fixes
+bun run deadcode --json > deadcode.json       # machine-readable output
+bun run deadcode --eject                      # dump the generated config to deadcode.config.json
+```
+
+### Flags
+
+| Flag | Short | Description |
+|---|---|---|
+| `--filter <pattern>` | `-f` | Workspace name (glob, exact, or substring). Repeatable. |
+| `--production` | | Limit analysis to production code paths |
+| `--fix` | | Apply safe auto-fixes (removes unused exports/files) |
+| `--json` | | Emit JSON to stdout |
+| `--strict` | | Stricter analysis — treat all deps as production |
+| `--eject` | | Write the generated config to `./deadcode.config.json` and exit (for hand-tuning) |
+| `--help` | `-h` | Show help |
+
+Exits non-zero when findings are reported, so the command is safe to wire into CI.
+
+### When to use `--eject`
+
+If the generator's output isn't quite right (e.g. a one-off workspace needs an extra entry pattern), run `bun run deadcode --eject` to freeze the current generated config into a real `deadcode.config.json`. You can then hand-edit it and commit. As soon as `deadcode.config.json` exists in the repo root, the wrapper stops regenerating and uses the committed file instead — delete `deadcode.config.json` to fall back to auto-config.
 
 ---
 
