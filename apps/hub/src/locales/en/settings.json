@@ -81,7 +81,10 @@
     "forest": "Forest",
     "sunset": "Sunset",
     "lavender": "Lavender",
-    "ruby": "Ruby"
+    "ruby": "Ruby",
+    "builtIn": "Built-in",
+    "custom": "Custom",
+    "customize": "Customize"
   },
   "modes": {
     "light": "Light",

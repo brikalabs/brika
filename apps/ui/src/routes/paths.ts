@@ -54,4 +54,8 @@ export const paths = {
     list: route('/store'),
     detail: route('/store/$source/$'),
   },
+  settings: {
+    index: route('/settings'),
+    themes: route('/settings/themes'),
+  },
 };

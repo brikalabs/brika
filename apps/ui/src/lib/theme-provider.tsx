@@ -7,8 +7,12 @@ import {
   useState,
   useSyncExternalStore,
 } from 'react';
+import { injectAllCustomThemes } from '@/features/theme-builder/runtime';
+import { customThemeStorage } from '@/features/theme-builder/storage';
 import { ThemeContext, type ThemeMode, type ThemeName } from './theme-context';
 import { withCircleWipe } from './view-transition';
+
+export { customThemeSelector } from '@/features/theme-builder/runtime';
 
 const THEME_STORAGE_KEY = 'brika-theme';
 const MODE_STORAGE_KEY = 'brika-mode';
@@ -33,23 +37,23 @@ function useSystemTheme(): 'light' | 'dark' {
   );
 }
 
+function resolveInitialTheme(): ThemeName {
+  const stored = localStorage.getItem(THEME_STORAGE_KEY);
+  if (!stored) {
+    return 'default';
+  }
+  // Custom themes are prefixed with `custom-`; validate it still exists.
+  if (stored.startsWith('custom-')) {
+    const id = stored.slice('custom-'.length);
+    return customThemeStorage.get(id) ? stored : 'default';
+  }
+  return stored;
+}
+
 export function ThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
   const systemTheme = useSystemTheme();
 
-  const [theme, setThemeState] = useState<ThemeName>(() => {
-    const s = localStorage.getItem(THEME_STORAGE_KEY);
-    if (
-      s === 'default' ||
-      s === 'ocean' ||
-      s === 'forest' ||
-      s === 'sunset' ||
-      s === 'lavender' ||
-      s === 'ruby'
-    ) {
-      return s;
-    }
-    return 'default';
-  });
+  const [theme, setThemeState] = useState<ThemeName>(resolveInitialTheme);
 
   const [mode, setModeState] = useState<ThemeMode>(() => {
     const s = localStorage.getItem(MODE_STORAGE_KEY);
@@ -61,7 +65,14 @@ export function ThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
 
   const resolvedMode = mode === 'system' ? systemTheme : mode;
 
-  // Fallback for system-preference changes and initial mount.
+  // Re-inject all custom themes whenever storage changes so newly created
+  // or edited themes become selectable without a reload.
+  useEffect(() => {
+    const sync = () => injectAllCustomThemes(customThemeStorage.list());
+    sync();
+    return customThemeStorage.subscribe(sync);
+  }, []);
+
   useEffect(() => {
     applyThemeToDOM(theme, resolvedMode);
   }, [theme, resolvedMode]);

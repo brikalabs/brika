@@ -81,7 +81,10 @@
     "forest": "Forêt",
     "sunset": "Coucher de soleil",
     "lavender": "Lavande",
-    "ruby": "Rubis"
+    "ruby": "Rubis",
+    "builtIn": "Intégrés",
+    "custom": "Personnalisés",
+    "customize": "Personnaliser"
   },
   "modes": {
     "light": "Clair",

@@ -1,17 +1,22 @@
-import { Monitor, Moon, Sun } from 'lucide-react';
+import { Link } from '@tanstack/react-router';
+import { Monitor, Moon, Palette, Sparkles, Sun } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { type ThemeMode, useTheme } from '@/lib/theme-context';
+import { useCustomThemes } from '@/features/theme-builder/hooks';
+import { customThemeSelector } from '@/features/theme-builder/runtime';
+import { BUILT_IN_THEMES, type ThemeMode, useTheme } from '@/lib/theme-context';
 import { useLocale } from '@/lib/use-locale';
 import { cn } from '@/lib/utils';
-
-const THEME_KEYS = ['default', 'ocean', 'forest', 'sunset', 'lavender', 'ruby'] as const;
+import { paths } from '@/routes/paths';
 
 const MODE_OPTIONS: { value: ThemeMode; icon: typeof Sun }[] = [
   { value: 'light', icon: Sun },
@@ -22,21 +27,49 @@ const MODE_OPTIONS: { value: ThemeMode; icon: typeof Sun }[] = [
 export function ThemeSelector() {
   const { theme, mode, setTheme, setMode } = useTheme();
   const { t } = useLocale();
+  const customThemes = useCustomThemes();
 
   return (
     <div className="flex items-center gap-3">
       <Select value={theme} onValueChange={setTheme}>
-        <SelectTrigger className="w-36">
+        <SelectTrigger className="w-48">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          {THEME_KEYS.map((key) => (
-            <SelectItem key={key} value={key}>
-              {t(`settings:themes.${key}`)}
-            </SelectItem>
-          ))}
+          <SelectGroup>
+            <SelectLabel>{t('settings:themes.builtIn', { defaultValue: 'Built-in' })}</SelectLabel>
+            {BUILT_IN_THEMES.map((key) => (
+              <SelectItem key={key} value={key}>
+                {t(`settings:themes.${key}`)}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+
+          {customThemes.length > 0 && (
+            <>
+              <SelectSeparator />
+              <SelectGroup>
+                <SelectLabel className="flex items-center gap-1">
+                  <Sparkles className="size-3" />
+                  {t('settings:themes.custom', { defaultValue: 'Custom' })}
+                </SelectLabel>
+                {customThemes.map((ct) => (
+                  <SelectItem key={ct.id} value={customThemeSelector(ct.id)}>
+                    {ct.name}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </>
+          )}
         </SelectContent>
       </Select>
+
+      <Button asChild size="sm" variant="outline">
+        <Link to={paths.settings.themes.path}>
+          <Palette />
+          {t('settings:themes.customize', { defaultValue: 'Customize' })}
+        </Link>
+      </Button>
 
       <div className="flex gap-1 rounded-lg border p-1">
         {MODE_OPTIONS.map(({ value, icon: Icon }) => (
