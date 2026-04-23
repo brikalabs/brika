@@ -10,11 +10,10 @@ import { collectDarkPaletteOverrides, collectTokens, tokensToCssText } from './t
 import { THEME_CONFIG_VERSION, type ThemeColors, type ThemeConfig } from './types';
 
 function slugify(input: string): string {
-  return input
-    .toLowerCase()
-    .replaceAll(/[^a-z0-9]+/g, '-')
-    .replaceAll(/^-+|-+$/g, '')
-    .slice(0, 40);
+  const compacted = input.toLowerCase().replaceAll(/[^a-z0-9]+/g, '-');
+  const start = compacted.startsWith('-') ? 1 : 0;
+  const end = compacted.endsWith('-') ? compacted.length - 1 : compacted.length;
+  return compacted.slice(start, Math.max(start, end)).slice(0, 40);
 }
 
 export function exportThemeToFile(theme: ThemeConfig): void {
