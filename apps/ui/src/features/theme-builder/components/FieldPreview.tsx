@@ -36,7 +36,7 @@ export function FieldPreview({
   return (
     <div className={cn('overflow-hidden rounded-md border bg-muted/20', className)} style={style}>
       {(label || caption) && (
-        <div className="flex items-center gap-2 border-b bg-card/60 px-2.5 py-1">
+        <div className="flex items-center gap-2 border-b bg-card/60 px-safe-md py-1">
           {label && (
             <span className="font-medium text-[10px] text-foreground uppercase tracking-wider">
               {label}

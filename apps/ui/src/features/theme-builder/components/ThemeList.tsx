@@ -50,7 +50,7 @@ export function ThemeList({
   if (collapsed) {
     return (
       <div className="flex h-full min-h-0 w-10 shrink-0 flex-col items-center border-r bg-card">
-        <div className="flex w-full shrink-0 justify-center border-b p-1">
+        <div className="flex w-full shrink-0 justify-center border-b px-1 pt-safe pb-1">
           <Button
             size="icon-sm"
             variant="ghost"
@@ -93,7 +93,7 @@ export function ThemeList({
             );
           })}
         </div>
-        <div className="w-full shrink-0 border-t p-1">
+        <div className="flex w-full shrink-0 justify-center border-t px-1 pt-1 pb-safe">
           <Button
             size="icon-sm"
             variant="ghost"
@@ -110,7 +110,7 @@ export function ThemeList({
 
   return (
     <div className="flex h-full min-h-0 w-52 shrink-0 flex-col border-r bg-card">
-      <div className="flex shrink-0 items-center justify-between gap-1 border-b px-3 py-2">
+      <div className="flex shrink-0 items-center justify-between gap-1 border-b py-2 pr-2 pl-safe">
         <div className="flex items-center gap-1.5 font-medium text-sm">
           <Palette className="size-3.5" />
           My themes
@@ -184,7 +184,7 @@ export function ThemeList({
       </div>
 
       {themes.length > 0 && (
-        <div className="flex shrink-0 items-center justify-between border-t px-3 py-1.5 text-[10px] text-muted-foreground">
+        <div className="flex shrink-0 items-center justify-between border-t pr-3 py-1.5 pb-safe pl-safe text-[10px] text-muted-foreground">
           <span>{themes.length === 1 ? '1 theme' : `${themes.length} themes`}</span>
         </div>
       )}

@@ -42,6 +42,50 @@ export type ElevationStyle = (typeof ELEVATION_STYLES)[number];
 export const MOTION_STYLES = ['snappy', 'smooth', 'stately'] as const;
 export type MotionStyle = (typeof MOTION_STYLES)[number];
 
+/**
+ * Component-scope token keys. Each identifies a component whose tokens
+ * can be overridden under `ThemeConfig.componentTokens`. Present keys
+ * emit CSS custom properties (`--<key>-radius`, `--<key>-corner-shape`,
+ * …); absent keys fall through to the theme-level default via the
+ * var-fallback chain in tailwind-theme.css.
+ *
+ * The name keeps `_RADIUS_` for back-compat; new token kinds are
+ * additive under `ComponentTokens` below.
+ */
+export const COMPONENT_RADIUS_KEYS = [
+  'button',
+  'card',
+  'dialog',
+  'popover',
+  'tooltip',
+  'input',
+  'select',
+  'menu',
+  'menu-item',
+  'checkbox',
+  'badge',
+  'tabs',
+  'alert',
+  'toast',
+  'avatar',
+  'switch',
+  'switch-thumb',
+] as const;
+export type ComponentRadiusKey = (typeof COMPONENT_RADIUS_KEYS)[number];
+
+/**
+ * Per-component token overrides. Additive: adding a new optional field
+ * (shadow profile, border width, state opacity, …) here extends what the
+ * builder can expose for each component without changing the wire
+ * format shape.
+ */
+export interface ComponentTokens {
+  /** Border radius in rem. Emits `--<key>-radius`. */
+  radius?: number;
+  /** Corner geometry keyword. Emits `--<key>-corner-shape`. */
+  corners?: CornerStyle;
+}
+
 export interface ThemeColors {
   /* Surface */
   background: string;
@@ -87,6 +131,52 @@ export interface ThemeColors {
   'data-6': string;
   'data-7': string;
   'data-8': string;
+
+  /* Material-inspired additions — all optional. When a preset omits
+     these, the CSS layer derives a sensible value via color-mix(). */
+  'surface-tint'?: string;
+  'surface-dim'?: string;
+  'surface-bright'?: string;
+  'surface-container-lowest'?: string;
+  'surface-container-low'?: string;
+  'surface-container'?: string;
+  'surface-container-high'?: string;
+  'surface-container-highest'?: string;
+  'outline-variant'?: string;
+
+  /* Role container pairs — optional overrides. */
+  'primary-container'?: string;
+  'on-primary-container'?: string;
+  'secondary-container'?: string;
+  'on-secondary-container'?: string;
+  'accent-container'?: string;
+  'on-accent-container'?: string;
+  'success-container'?: string;
+  'on-success-container'?: string;
+  'warning-container'?: string;
+  'on-warning-container'?: string;
+  'info-container'?: string;
+  'on-info-container'?: string;
+  'destructive-container'?: string;
+  'on-destructive-container'?: string;
+
+  /* Component-scope overrides — optional. Let a theme recolor one
+     component without moving the system role it defaults to. */
+  'button-filled-container'?: string;
+  'button-filled-label'?: string;
+  'button-outline-border'?: string;
+  'button-outline-label'?: string;
+  'card-container'?: string;
+  'card-label'?: string;
+  'dialog-container'?: string;
+  'dialog-label'?: string;
+  'input-container'?: string;
+  'input-label'?: string;
+  'input-border'?: string;
+  'input-placeholder'?: string;
+  icon?: string;
+  'icon-muted'?: string;
+  'icon-primary'?: string;
 }
 
 export type ColorToken = keyof ThemeColors;
@@ -123,6 +213,30 @@ export interface ThemeConfig {
   ringOffset?: number;
   /** Motion feel — controls transition duration/easing */
   motion?: MotionStyle;
+  /** Base text size in rem (default 1). Scales the whole typography
+   *  system — display / headline / title / body / label levels
+   *  derive from this via `calc()` in CSS. */
+  textBase?: number;
+  /** Material-style state-layer opacities, 0..1. The CSS layer uses
+   *  these via `--opacity-state-*` (hover / focus / pressed / selected
+   *  / disabled). Theme can tune feel without touching per-component
+   *  styles. */
+  stateOpacity?: {
+    hover?: number;
+    focus?: number;
+    pressed?: number;
+    selected?: number;
+    disabled?: number;
+  };
+  /** Per-component token overrides, grouped by component. Each entry
+   *  writes `--<key>-<prop>` CSS custom properties consumed by the
+   *  component's utilities (`rounded-<key>`, etc.). Absent keys and
+   *  absent properties inherit the theme-level defaults. */
+  componentTokens?: Partial<Record<ComponentRadiusKey, ComponentTokens>>;
+  /** @deprecated Use `componentTokens[key].radius` instead. Retained on
+   *  the wire so older exports keep loading; migrated into
+   *  `componentTokens` at load time and dropped on save. */
+  componentRadii?: Partial<Record<ComponentRadiusKey, number>>;
   /** CSS font-family strings */
   fonts: {
     sans: string;

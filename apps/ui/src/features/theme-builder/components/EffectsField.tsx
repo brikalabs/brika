@@ -8,10 +8,12 @@
 
 import { Switch } from '@/components/ui';
 import { cn } from '@/lib/utils';
-import { elevationsFor, shadowScaleFor } from '../effects-css';
+import { shadowScaleFor } from '../theme-css';
 import { ELEVATION_STYLES, type ElevationStyle } from '../types';
 import { FieldPreview } from './FieldPreview';
 import { nearlyEquals, type Preset, PresetChips, SemanticTile } from './primitives';
+
+type NumericShadowKey = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 
 interface ElevationPickerProps {
   value: ElevationStyle;
@@ -27,13 +29,18 @@ const ELEVATION_LABELS: Record<ElevationStyle, string> = {
   dramatic: 'Dramatic',
 };
 
-const SEMANTIC_LEVELS = [
-  { key: 'surface', label: 'Surface', hint: 'inline cards' },
-  { key: 'raised', label: 'Raised', hint: 'cards, buttons' },
-  { key: 'overlay', label: 'Overlay', hint: 'popovers, menus' },
-  { key: 'modal', label: 'Modal', hint: 'dialogs, sheets' },
-  { key: 'spotlight', label: 'Spotlight', hint: 'toasts' },
-] as const;
+const SEMANTIC_LEVELS: readonly {
+  key: string;
+  label: string;
+  hint: string;
+  scale: NumericShadowKey;
+}[] = [
+  { key: 'surface', label: 'Surface', hint: 'inline cards', scale: 'xs' },
+  { key: 'raised', label: 'Raised', hint: 'cards, buttons', scale: 'sm' },
+  { key: 'overlay', label: 'Overlay', hint: 'popovers, menus', scale: 'md' },
+  { key: 'modal', label: 'Modal', hint: 'dialogs, sheets', scale: 'lg' },
+  { key: 'spotlight', label: 'Spotlight', hint: 'toasts', scale: 'xl' },
+];
 
 /** Strip the --shadow-rgb fallback so the field-local preview works
  *  without being inside a themed scope. */
@@ -47,14 +54,14 @@ export function ElevationField({
   tint,
   onTintChange,
 }: Readonly<ElevationPickerProps>) {
-  const elevation = elevationsFor(value);
+  const activeScale = shadowScaleFor(value);
 
   return (
     <div className="space-y-2">
       {/* Profile picker — 4 chips with shadow samples */}
       <div className="grid grid-cols-4 gap-1.5">
         {ELEVATION_STYLES.map((style) => {
-          const scale = shadowScaleFor(style);
+          const chipScale = shadowScaleFor(style);
           const active = style === value;
           return (
             <button
@@ -71,7 +78,7 @@ export function ElevationField({
             >
               <div
                 className="size-8 rounded-control border bg-background"
-                style={{ boxShadow: inertShadow(scale.md) }}
+                style={{ boxShadow: inertShadow(chipScale.md) }}
               />
               <span className="font-medium">{ELEVATION_LABELS[style]}</span>
             </button>
@@ -86,11 +93,11 @@ export function ElevationField({
 
       <FieldPreview label="Semantic levels" caption="by UI purpose">
         <div className="grid w-full grid-cols-5 gap-2">
-          {SEMANTIC_LEVELS.map(({ key, label, hint }) => (
+          {SEMANTIC_LEVELS.map(({ key, label, hint, scale }) => (
             <SemanticTile key={key} label={label} hint={hint}>
               <div
                 className="size-10 rounded-control border bg-background"
-                style={{ boxShadow: inertShadow(elevation[key]) }}
+                style={{ boxShadow: inertShadow(activeScale[scale]) }}
                 aria-hidden
               />
             </SemanticTile>

@@ -4,7 +4,7 @@
  * users see the typeface without leaving the panel.
  */
 
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
+import { Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
 import type { FontChoice } from '../tokens';
 
 interface FontFieldProps {
@@ -47,12 +47,12 @@ export function FontField({ label, value, onChange, choices, sample }: Readonly<
           <SelectItem value={CUSTOM_VALUE}>Custom…</SelectItem>
         </SelectContent>
       </Select>
-      <input
+      <Input
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         spellCheck={false}
-        className="w-full rounded-md border bg-background px-2 py-1 font-mono text-[10px] outline-none focus:ring-2 focus:ring-ring"
+        className="h-auto px-2 py-1 font-mono text-[10px]"
       />
       <div
         className="truncate rounded-md bg-muted/30 px-2 py-1.5 text-xs"

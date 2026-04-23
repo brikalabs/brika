@@ -21,6 +21,7 @@ import {
   XCircle,
   Zap,
 } from 'lucide-react';
+import { memo } from 'react';
 import {
   Avatar,
   AvatarFallback,
@@ -53,7 +54,7 @@ import {
 /* ─────────────────────────────────────────────────────────────
    Scene: Components — broad palette of primitives
    ───────────────────────────────────────────────────────────── */
-export function ComponentsScene() {
+function ComponentsSceneImpl() {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <section className="space-y-2">
@@ -235,7 +236,7 @@ const STATUS_MAP = {
   idle: { icon: Clock, className: 'text-muted-foreground', label: 'Idle' },
 } as const;
 
-export function DashboardScene() {
+function DashboardSceneImpl() {
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <div className="flex items-start justify-between gap-4">
@@ -343,7 +344,7 @@ export function DashboardScene() {
 /* ─────────────────────────────────────────────────────────────
    Scene: Form — auth/signup composition
    ───────────────────────────────────────────────────────────── */
-export function FormScene() {
+function FormSceneImpl() {
   return (
     <div className="mx-auto max-w-md space-y-4">
       <Card>
@@ -434,7 +435,7 @@ export function FormScene() {
 /* ─────────────────────────────────────────────────────────────
    Scene: Marketing — landing-style hero + feature row
    ───────────────────────────────────────────────────────────── */
-export function MarketingScene() {
+function MarketingSceneImpl() {
   return (
     <div className="mx-auto max-w-4xl space-y-8">
       <div className="space-y-4 rounded-xl border bg-card p-8 shadow-sm">
@@ -514,3 +515,8 @@ export function MarketingScene() {
     </div>
   );
 }
+
+export const ComponentsScene = memo(ComponentsSceneImpl);
+export const DashboardScene = memo(DashboardSceneImpl);
+export const FormScene = memo(FormSceneImpl);
+export const MarketingScene = memo(MarketingSceneImpl);

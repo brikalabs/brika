@@ -4,6 +4,7 @@
  * the defaults seed a new theme.
  */
 
+import { findPreset } from './load-presets';
 import type { ColorToken, ThemeColors, ThemeConfig } from './types';
 import { THEME_CONFIG_VERSION } from './types';
 
@@ -13,7 +14,9 @@ export interface TokenGroup {
   tokens: readonly ColorToken[];
 }
 
-/** Rendering order of color groups in the editor panel. */
+/** Rendering order of color groups in the editor panel.
+ *  Groups marked `optional` render their tokens dimmed with a hint that
+ *  leaving them blank falls back to a CSS-derived default. */
 export const TOKEN_GROUPS: readonly TokenGroup[] = [
   {
     key: 'surface',
@@ -63,203 +66,60 @@ export const TOKEN_GROUPS: readonly TokenGroup[] = [
     labelKey: 'themeBuilder:groups.data',
     tokens: ['data-1', 'data-2', 'data-3', 'data-4', 'data-5', 'data-6', 'data-7', 'data-8'],
   },
+  {
+    key: 'surface-tonal',
+    labelKey: 'themeBuilder:groups.surfaceTonal',
+    tokens: [
+      'surface-tint',
+      'surface-dim',
+      'surface-bright',
+      'surface-container-lowest',
+      'surface-container-low',
+      'surface-container',
+      'surface-container-high',
+      'surface-container-highest',
+      'outline-variant',
+    ],
+  },
+  {
+    key: 'role-containers',
+    labelKey: 'themeBuilder:groups.roleContainers',
+    tokens: [
+      'primary-container',
+      'on-primary-container',
+      'secondary-container',
+      'on-secondary-container',
+      'accent-container',
+      'on-accent-container',
+      'success-container',
+      'on-success-container',
+      'warning-container',
+      'on-warning-container',
+      'info-container',
+      'on-info-container',
+      'destructive-container',
+      'on-destructive-container',
+    ],
+  },
 ] as const;
 
-/**
- * Positional palette tuple: 33 hex strings in the canonical token order
- * (surface · brand · neutral · feedback · data). See `palette()`.
- */
-export type PaletteTuple = readonly [
-  // surface (6)
-  string,
-  string,
-  string,
-  string,
-  string,
-  string,
-  // brand (6)
-  string,
-  string,
-  string,
-  string,
-  string,
-  string,
-  // neutral (5: muted, muted-fg, border, input, ring)
-  string,
-  string,
-  string,
-  string,
-  string,
-  // feedback (8)
-  string,
-  string,
-  string,
-  string,
-  string,
-  string,
-  string,
-  string,
-  // data viz (8)
-  string,
-  string,
-  string,
-  string,
-  string,
-  string,
-  string,
-  string,
-];
+const DEFAULT_PRESET_ID = 'default';
 
-/**
- * Build a `ThemeColors` from a positional tuple. Keeps palette definitions
- * terse so each preset doesn't repeat every token key.
- */
-export function palette(values: PaletteTuple): ThemeColors {
-  const [
-    background,
-    foreground,
-    card,
-    cardFg,
-    popover,
-    popoverFg,
-    primary,
-    primaryFg,
-    secondary,
-    secondaryFg,
-    accent,
-    accentFg,
-    muted,
-    mutedFg,
-    border,
-    input,
-    ring,
-    success,
-    successFg,
-    warning,
-    warningFg,
-    info,
-    infoFg,
-    destructive,
-    destructiveFg,
-    data1,
-    data2,
-    data3,
-    data4,
-    data5,
-    data6,
-    data7,
-    data8,
-  ] = values;
-  return {
-    background,
-    foreground,
-    card,
-    'card-foreground': cardFg,
-    popover,
-    'popover-foreground': popoverFg,
-    primary,
-    'primary-foreground': primaryFg,
-    secondary,
-    'secondary-foreground': secondaryFg,
-    accent,
-    'accent-foreground': accentFg,
-    muted,
-    'muted-foreground': mutedFg,
-    border,
-    input,
-    ring,
-    success,
-    'success-foreground': successFg,
-    warning,
-    'warning-foreground': warningFg,
-    info,
-    'info-foreground': infoFg,
-    destructive,
-    'destructive-foreground': destructiveFg,
-    'data-1': data1,
-    'data-2': data2,
-    'data-3': data3,
-    'data-4': data4,
-    'data-5': data5,
-    'data-6': data6,
-    'data-7': data7,
-    'data-8': data8,
-  };
+function defaultPalette(mode: 'light' | 'dark'): ThemeColors {
+  const preset = findPreset(DEFAULT_PRESET_ID);
+  if (!preset) {
+    throw new Error(
+      `Missing required preset '${DEFAULT_PRESET_ID}.json' - see apps/ui/src/features/theme-builder/presets/`
+    );
+  }
+  return { ...preset.colors[mode] };
 }
 
-/** Default light palette — mirrors the built-in `default` theme. */
-export const DEFAULT_LIGHT: ThemeColors = palette([
-  '#fcfcfc',
-  '#17181d',
-  '#ffffff',
-  '#17181d',
-  '#ffffff',
-  '#17181d',
-  '#4a63d1',
-  '#fcfcfc',
-  '#ececef',
-  '#17181d',
-  '#e3e4e8',
-  '#17181d',
-  '#eeeff2',
-  '#71747e',
-  '#e0e1e5',
-  '#e0e1e5',
-  '#4a63d1',
-  '#35924a',
-  '#fcfcfc',
-  '#c78a2b',
-  '#17181d',
-  '#2f68c4',
-  '#fcfcfc',
-  '#c4422d',
-  '#fcfcfc',
-  '#4a63d1',
-  '#d17d2e',
-  '#35924a',
-  '#c4422d',
-  '#8c42c4',
-  '#c78a2b',
-  '#2e9fa1',
-  '#c44289',
-]);
+/** Default light palette - mirrors the built-in `default` theme. */
+export const DEFAULT_LIGHT: ThemeColors = defaultPalette('light');
 
-/** Default dark palette — mirrors the built-in `default` theme dark mode. */
-export const DEFAULT_DARK: ThemeColors = palette([
-  '#131419',
-  '#f2f3f5',
-  '#1a1b21',
-  '#f2f3f5',
-  '#1a1b21',
-  '#f2f3f5',
-  '#8d9ee8',
-  '#131419',
-  '#23252c',
-  '#f2f3f5',
-  '#2a2c34',
-  '#f2f3f5',
-  '#202128',
-  '#9497a1',
-  '#2a2c34',
-  '#2a2c34',
-  '#8d9ee8',
-  '#63c77e',
-  '#131419',
-  '#e8b65e',
-  '#131419',
-  '#72a5dd',
-  '#131419',
-  '#e06a55',
-  '#f2f3f5',
-  '#8d9ee8',
-  '#e5a365',
-  '#63c77e',
-  '#e06a55',
-  '#b38ce0',
-  '#e8b65e',
-  '#5dc2c4',
-  '#e074ac',
-]);
+/** Default dark palette - mirrors the built-in `default` theme dark mode. */
+export const DEFAULT_DARK: ThemeColors = defaultPalette('dark');
 
 /** Factory: a fresh ThemeConfig seeded from the default palette. */
 export function createDefaultThemeConfig(overrides?: Partial<ThemeConfig>): ThemeConfig {

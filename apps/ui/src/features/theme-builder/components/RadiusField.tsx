@@ -6,10 +6,10 @@
  * users see the whole scale ripple as they drag.
  */
 
-import { radiiFor } from '../effects-css';
+import { Slider } from '@/components/ui';
 import { RADIUS_PRESETS } from '../radius-presets';
 import { FieldPreview } from './FieldPreview';
-import { cssVars, nearlyEquals, PresetChips, SemanticTile, SliderInput } from './primitives';
+import { cssVars, nearlyEquals, PresetChips, SemanticTile } from './primitives';
 
 interface RadiusFieldProps {
   value: number;
@@ -17,21 +17,25 @@ interface RadiusFieldProps {
 }
 
 const SEMANTIC_SAMPLES = [
-  { key: 'pill', label: 'Pill', hint: 'chips' },
-  { key: 'control', label: 'Control', hint: 'buttons' },
-  { key: 'container', label: 'Container', hint: 'cards' },
-  { key: 'surface', label: 'Surface', hint: 'dialogs' },
+  { key: 'pill', label: 'Pill', hint: 'chips', offset: -0.375 },
+  { key: 'control', label: 'Control', hint: 'buttons', offset: -0.25 },
+  { key: 'container', label: 'Container', hint: 'cards', offset: 0 },
+  { key: 'surface', label: 'Surface', hint: 'dialogs', offset: 0.25 },
 ] as const;
 
 const RADIUS_EQUALS = nearlyEquals(0.001);
+const RADIUS_TICKS = RADIUS_PRESETS.map((p) => p.value);
+
+function remFor(base: number, offset: number): string {
+  return `${Math.max(0, base + offset).toFixed(3)}rem`;
+}
 
 export function RadiusField({ value, onChange }: Readonly<RadiusFieldProps>) {
-  const radii = radiiFor(value);
   const scopedVars = cssVars({ '--radius': `${value}rem` });
 
   return (
     <div className="space-y-2.5">
-      <SliderInput
+      <Slider
         value={value}
         onChange={onChange}
         min={0}
@@ -39,6 +43,7 @@ export function RadiusField({ value, onChange }: Readonly<RadiusFieldProps>) {
         step={0.125}
         unit="rem"
         numericWidth="w-8"
+        ticks={RADIUS_TICKS}
       />
 
       <PresetChips
@@ -55,8 +60,8 @@ export function RadiusField({ value, onChange }: Readonly<RadiusFieldProps>) {
         style={scopedVars}
       >
         <div className="grid w-full grid-cols-4 gap-2">
-          {SEMANTIC_SAMPLES.map(({ key, label, hint }) => {
-            const r = radii[key];
+          {SEMANTIC_SAMPLES.map(({ key, label, hint, offset }) => {
+            const r = remFor(value, offset);
             return (
               <SemanticTile key={key} label={label} hint={hint} value={r}>
                 <div

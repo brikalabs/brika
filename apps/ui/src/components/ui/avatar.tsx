@@ -15,7 +15,7 @@ function Avatar({
       data-slot="avatar"
       data-size={size}
       className={cn(
-        'group/avatar corner-squircle relative flex size-8 shrink-0 select-none overflow-hidden rounded-full data-[size=lg]:size-10 data-[size=sm]:size-6',
+        'group/avatar corner-avatar relative flex size-8 shrink-0 select-none overflow-hidden rounded-avatar data-[size=lg]:size-10 data-[size=sm]:size-6',
         className
       )}
       {...props}
@@ -41,7 +41,7 @@ function AvatarFallback({
     <AvatarPrimitive.Fallback
       data-slot="avatar-fallback"
       className={cn(
-        'corner-squircle flex size-full items-center justify-center rounded-full bg-muted text-muted-foreground text-sm group-data-[size=sm]/avatar:text-xs',
+        'corner-avatar flex size-full items-center justify-center rounded-avatar bg-muted text-muted-foreground text-sm group-data-[size=sm]/avatar:text-xs',
         className
       )}
       {...props}

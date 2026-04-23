@@ -4,6 +4,7 @@
  * can read them synchronously during theme-provider bootstrap.
  */
 
+import { migrateThemeConfig } from './migrate';
 import type { ThemeConfig } from './types';
 import { THEME_CONFIG_VERSION } from './types';
 
@@ -34,16 +35,18 @@ function parseFromStorage(): ThemeConfig[] {
     if (!Array.isArray(parsed)) {
       return [];
     }
-    return parsed.filter(
-      (t): t is ThemeConfig =>
-        typeof t === 'object' &&
-        t !== null &&
-        'id' in t &&
-        'name' in t &&
-        'colors' in t &&
-        'version' in t &&
-        (t as { version: unknown }).version === THEME_CONFIG_VERSION
-    );
+    return parsed
+      .filter(
+        (t): t is ThemeConfig =>
+          typeof t === 'object' &&
+          t !== null &&
+          'id' in t &&
+          'name' in t &&
+          'colors' in t &&
+          'version' in t &&
+          (t as { version: unknown }).version === THEME_CONFIG_VERSION
+      )
+      .map(migrateThemeConfig);
   } catch {
     return [];
   }

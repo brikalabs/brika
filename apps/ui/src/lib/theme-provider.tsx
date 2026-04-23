@@ -7,7 +7,10 @@ import {
   useState,
   useSyncExternalStore,
 } from 'react';
-import { injectAllCustomThemes } from '@/features/theme-builder/runtime';
+import {
+  injectActiveCustomTheme,
+  injectAllCustomThemes,
+} from '@/features/theme-builder/runtime';
 import { customThemeStorage } from '@/features/theme-builder/storage';
 import { ThemeContext, type ThemeMode, type ThemeName } from './theme-context';
 import { withCircleWipe } from './view-transition';
@@ -65,13 +68,31 @@ export function ThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
 
   const resolvedMode = mode === 'system' ? systemTheme : mode;
 
-  // Re-inject all custom themes whenever storage changes so newly created
-  // or edited themes become selectable without a reload.
+  // Inject only the active custom theme at boot — a user who isn't
+  // currently using one shouldn't pay for every theme they've ever saved.
+  // The builder page owns `injectAllCustomThemes` for its thumbnail row.
   useEffect(() => {
-    const sync = () => injectAllCustomThemes(customThemeStorage.list());
-    sync();
+    if (theme.startsWith('custom-')) {
+      injectActiveCustomTheme(theme.slice('custom-'.length));
+    }
+  }, [theme]);
+
+  // Keep the active theme's <style> tag in sync with external edits
+  // (e.g., another tab). The builder refreshes all tags itself; here we
+  // only need to refresh the one that's currently applied.
+  useEffect(() => {
+    const sync = () => {
+      if (theme.startsWith('custom-')) {
+        injectActiveCustomTheme(theme.slice('custom-'.length));
+      } else {
+        // Non-custom theme active — a save in another tab might still
+        // affect the builder's thumbnail list. Re-inject everything so
+        // the builder's list stays live.
+        injectAllCustomThemes(customThemeStorage.list());
+      }
+    };
     return customThemeStorage.subscribe(sync);
-  }, []);
+  }, [theme]);
 
   useEffect(() => {
     applyThemeToDOM(theme, resolvedMode);

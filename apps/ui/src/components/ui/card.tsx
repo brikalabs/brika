@@ -3,7 +3,7 @@ import * as React from 'react';
 import { cn } from '@/lib/utils';
 
 const cardVariants = cva(
-  'relative rounded-container border bg-card text-card-foreground shadow-raised transition-color duration-200',
+  'corner-card relative rounded-card border bg-card-container text-card-label shadow-card transition-color duration-200',
   {
     variants: {
       accent: {
@@ -69,7 +69,7 @@ function Card({ className, accent, interactive, children, ...props }: Readonly<C
       {hasAccent && (
         <div
           className={cn(
-            'pointer-events-none absolute inset-0 rounded-container bg-(--accent-bg) transition-colors',
+            'pointer-events-none absolute inset-0 corner-card rounded-card bg-(--accent-bg) transition-colors',
             interactive && 'group-hover:bg-(--accent-bg-hover)'
           )}
         />
@@ -83,7 +83,7 @@ function CardHeader({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
       data-slot="card-header"
-      className={cn('flex flex-col gap-1.5 p-6', className)}
+      className={cn('flex flex-col gap-1.5 p-safe', className)}
       {...props}
     />
   );
@@ -113,14 +113,14 @@ function CardDescription({ className, ...props }: React.ComponentProps<'p'>) {
 }
 
 function CardContent({ className, ...props }: React.ComponentProps<'div'>) {
-  return <div data-slot="card-content" className={cn('p-6 pt-0', className)} {...props} />;
+  return <div data-slot="card-content" className={cn('p-safe pt-0', className)} {...props} />;
 }
 
 function CardFooter({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
       data-slot="card-footer"
-      className={cn('flex items-center p-6 pt-0', className)}
+      className={cn('flex items-center p-safe pt-0', className)}
       {...props}
     />
   );

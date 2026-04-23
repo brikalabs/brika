@@ -1,150 +1,289 @@
 /**
- * theme-css — single source of truth for the tokens a theme emits.
+ * theme-css — everything that turns a `ThemeConfig` into CSS primitives.
  *
- * All three consumers go through the same token list:
+ * Structure:
+ *   1. Shadow recipes (elevation profiles)       — qualitative, can't be pure calc()
+ *   2. Motion recipes (duration + easing)        — base timing per profile
+ *   3. Corner helpers (keyword + clip-path)      — for browsers without corner-shape
+ *   4. Shadow tint helper                        — hex → "r g b"
+ *   5. Flat emitter (`themeToVars` / `darkOverrideVars` / `varsToCssText`)
  *
- *   • `runtime.ts`            — injects a <style> block per custom theme
- *   • `components/PreviewCanvas.tsx` — inlines tokens for live preview
- *   • `import-export.ts`      — exports a CSS snippet for users to paste
+ * The emitter is the single hot path: `themeToVars(theme, mode)` returns a
+ * flat dict of CSS variables. Runtime injects it, PreviewCanvas spreads it
+ * onto the container, import-export formats it as CSS text. No grouping or
+ * per-consumer reshaping happens here.
  *
- * Adding or renaming a token happens in one place (`collectTokens`) and
- * all three call sites pick it up automatically.
+ * Everything that can be pure CSS math lives in
+ * `packages/ui-kit/tailwind-theme.css` — semantic radius scale from
+ * `--radius`, motion channels from `--motion-duration`, semantic elevation
+ * aliases from `--shadow-*`. JS only emits primitives.
  */
 
-import type { CSSProperties } from 'react';
-import { cornerClipPath, cornerShapeKeyword } from './corner-css';
-import { elevationsFor, motionsFor, radiiFor, shadowScaleFor, shadowTintRgb } from './effects-css';
-import type { ColorToken, ThemeColors, ThemeConfig } from './types';
+import type { CornerStyle, ElevationStyle, MotionStyle, ThemeColors, ThemeConfig } from './types';
 
-/** `['--primary', '#4a63d1']` etc. — a single CSS custom-property assignment. */
-export type TokenEntry = readonly [name: string, value: string];
+/* ─── Shadow recipes ─────────────────────────────────────────── */
 
-/** Grouped so exports can print pretty comment headers. */
-export interface TokenGroup {
-  heading: string;
-  entries: TokenEntry[];
+export interface ShadowScale {
+  xs: string;
+  sm: string;
+  md: string;
+  lg: string;
+  xl: string;
 }
+
+const SHADOW_RECIPES: Record<ElevationStyle, ShadowScale> = {
+  flat: {
+    xs: '0 0 0 1px rgb(0 0 0 / 0.04)',
+    sm: '0 0 0 1px rgb(0 0 0 / 0.06)',
+    md: '0 0 0 1px rgb(0 0 0 / 0.08)',
+    lg: '0 0 0 1px rgb(0 0 0 / 0.1)',
+    xl: '0 0 0 1px rgb(0 0 0 / 0.12)',
+  },
+  soft: {
+    xs: '0 1px 2px rgb(var(--shadow-rgb, 0 0 0) / 0.05)',
+    sm: '0 1px 3px rgb(var(--shadow-rgb, 0 0 0) / 0.08), 0 1px 2px rgb(var(--shadow-rgb, 0 0 0) / 0.05)',
+    md: '0 4px 10px rgb(var(--shadow-rgb, 0 0 0) / 0.08), 0 1px 3px rgb(var(--shadow-rgb, 0 0 0) / 0.06)',
+    lg: '0 10px 24px rgb(var(--shadow-rgb, 0 0 0) / 0.1), 0 4px 8px rgb(var(--shadow-rgb, 0 0 0) / 0.06)',
+    xl: '0 22px 44px rgb(var(--shadow-rgb, 0 0 0) / 0.14), 0 8px 16px rgb(var(--shadow-rgb, 0 0 0) / 0.08)',
+  },
+  crisp: {
+    xs: '0 1px 0 rgb(var(--shadow-rgb, 0 0 0) / 0.08)',
+    sm: '0 2px 0 rgb(var(--shadow-rgb, 0 0 0) / 0.1), 0 1px 2px rgb(var(--shadow-rgb, 0 0 0) / 0.12)',
+    md: '0 3px 0 rgb(var(--shadow-rgb, 0 0 0) / 0.14), 0 3px 6px rgb(var(--shadow-rgb, 0 0 0) / 0.1)',
+    lg: '0 6px 0 rgb(var(--shadow-rgb, 0 0 0) / 0.12), 0 8px 16px rgb(var(--shadow-rgb, 0 0 0) / 0.12)',
+    xl: '0 10px 0 rgb(var(--shadow-rgb, 0 0 0) / 0.12), 0 18px 32px rgb(var(--shadow-rgb, 0 0 0) / 0.16)',
+  },
+  dramatic: {
+    xs: '0 2px 4px rgb(var(--shadow-rgb, 0 0 0) / 0.12)',
+    sm: '0 4px 10px rgb(var(--shadow-rgb, 0 0 0) / 0.18)',
+    md: '0 10px 24px rgb(var(--shadow-rgb, 0 0 0) / 0.22), 0 4px 8px rgb(var(--shadow-rgb, 0 0 0) / 0.12)',
+    lg: '0 24px 40px rgb(var(--shadow-rgb, 0 0 0) / 0.28), 0 10px 16px rgb(var(--shadow-rgb, 0 0 0) / 0.16)',
+    xl: '0 36px 64px rgb(var(--shadow-rgb, 0 0 0) / 0.34), 0 16px 24px rgb(var(--shadow-rgb, 0 0 0) / 0.18)',
+  },
+};
+
+export function shadowScaleFor(style: ElevationStyle | undefined): ShadowScale {
+  return SHADOW_RECIPES[style ?? 'soft'];
+}
+
+/* ─── Motion recipes ─────────────────────────────────────────── */
+
+export interface MotionRecipe {
+  duration: string;
+  easing: string;
+}
+
+const MOTION_RECIPES: Record<MotionStyle, MotionRecipe> = {
+  snappy: { duration: '120ms', easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' },
+  smooth: { duration: '220ms', easing: 'cubic-bezier(0.16, 1, 0.3, 1)' },
+  stately: { duration: '360ms', easing: 'cubic-bezier(0.22, 0.61, 0.36, 1)' },
+};
+
+export function motionRecipeFor(style: MotionStyle | undefined): MotionRecipe {
+  return MOTION_RECIPES[style ?? 'smooth'];
+}
+
+/* ─── Corner helpers ─────────────────────────────────────────── */
+
+/** Map our corner-style id to the CSS `corner-shape` keyword. */
+export function cornerShapeKeyword(style: CornerStyle | undefined): string {
+  switch (style) {
+    case 'squircle':
+      return 'squircle';
+    case 'bevel':
+      return 'bevel';
+    case 'scoop':
+      return 'scoop';
+    case 'notch':
+      return 'notch';
+    default:
+      return 'round';
+  }
+}
+
+/**
+ * Return a `clip-path` that approximates the corner style for browsers
+ * without native `corner-shape`. Returns null for plain round corners
+ * where `border-radius` already does the job.
+ */
+export function cornerClipPath(style: CornerStyle | undefined, radius: number): string | null {
+  if (!style || style === 'round') {
+    return null;
+  }
+  const r = `${Math.max(radius, 0)}rem`;
+
+  if (style === 'bevel') {
+    return `polygon(
+      ${r} 0,
+      calc(100% - ${r}) 0,
+      100% ${r},
+      100% calc(100% - ${r}),
+      calc(100% - ${r}) 100%,
+      ${r} 100%,
+      0 calc(100% - ${r}),
+      0 ${r}
+    )`;
+  }
+
+  if (style === 'notch') {
+    return `polygon(
+      ${r} 0,
+      100% 0,
+      100% calc(100% - ${r}),
+      calc(100% - ${r}) calc(100% - ${r}),
+      calc(100% - ${r}) 100%,
+      0 100%,
+      0 ${r},
+      ${r} ${r}
+    )`;
+  }
+
+  // squircle + scoop don't map cleanly to a polygon; leave to native
+  // `corner-shape`. `none` keeps older browsers on plain border-radius.
+  return 'none';
+}
+
+/* ─── Shadow tint ────────────────────────────────────────────── */
+
+function hexToRgbString(hex: string): string | null {
+  const match = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(hex.trim());
+  if (!match) {
+    return null;
+  }
+  let h = match[1];
+  if (h.length === 3) {
+    h = h
+      .split('')
+      .map((c) => c + c)
+      .join('');
+  }
+  const r = Number.parseInt(h.slice(0, 2), 16);
+  const g = Number.parseInt(h.slice(2, 4), 16);
+  const b = Number.parseInt(h.slice(4, 6), 16);
+  return `${r} ${g} ${b}`;
+}
+
+export function shadowTintRgb(primary: string): string | null {
+  return hexToRgbString(primary);
+}
+
+/* ─── Flat emitter ───────────────────────────────────────────── */
+
+/** Dict of CSS custom properties. Keys are always `--…` for strict assignability. */
+export type ThemeVars = Record<`--${string}`, string>;
 
 const DEFAULT_SHADOW_RGB = '0 0 0';
 
-function colorEntries(colors: ThemeColors): TokenEntry[] {
-  const entries: TokenEntry[] = [];
-  for (const key of Object.keys(colors) as ColorToken[]) {
-    entries.push([`--${key}`, colors[key]]);
+function colorsInto(out: ThemeVars, colors: ThemeColors): void {
+  for (const [key, value] of Object.entries(colors)) {
+    if (typeof value === 'string' && value.length > 0) {
+      out[`--${key}`] = value;
+    }
   }
-  return entries;
 }
 
-/** Return every token group a theme should emit, in stable order. */
-export function collectTokens(theme: ThemeConfig, mode: 'light' | 'dark'): TokenGroup[] {
+function tintFor(theme: ThemeConfig, palette: ThemeColors): string {
+  if (!theme.elevationTint) {
+    return DEFAULT_SHADOW_RGB;
+  }
+  return shadowTintRgb(palette.primary) ?? DEFAULT_SHADOW_RGB;
+}
+
+function stateOpacityInto(out: ThemeVars, theme: ThemeConfig): void {
+  const state = theme.stateOpacity;
+  if (!state) {
+    return;
+  }
+  if (state.hover !== undefined) {
+    out['--state-hover-opacity'] = String(state.hover);
+  }
+  if (state.focus !== undefined) {
+    out['--state-focus-opacity'] = String(state.focus);
+  }
+  if (state.pressed !== undefined) {
+    out['--state-pressed-opacity'] = String(state.pressed);
+  }
+  if (state.selected !== undefined) {
+    out['--state-selected-opacity'] = String(state.selected);
+  }
+  if (state.disabled !== undefined) {
+    out['--state-disabled-opacity'] = String(state.disabled);
+  }
+}
+
+/**
+ * Emit `--<key>-<prop>` variables for every per-component override the
+ * theme sets. Today that's `radius` and `corner-shape`; new optional
+ * properties on `ComponentTokens` extend this emitter without changing
+ * the consumer side of the CSS pipeline.
+ */
+function componentTokensInto(out: ThemeVars, theme: ThemeConfig): void {
+  const tokens = theme.componentTokens;
+  if (!tokens) {
+    return;
+  }
+  for (const [key, entry] of Object.entries(tokens)) {
+    if (!entry) {
+      continue;
+    }
+    if (typeof entry.radius === 'number' && Number.isFinite(entry.radius)) {
+      out[`--${key}-radius`] = `${entry.radius}rem`;
+    }
+    if (entry.corners) {
+      out[`--${key}-corner-shape`] = cornerShapeKeyword(entry.corners);
+    }
+  }
+}
+
+/** Flat dict of every CSS variable a theme writes for the given mode. */
+export function themeToVars(theme: ThemeConfig, mode: 'light' | 'dark'): ThemeVars {
   const palette = theme.colors[mode];
-  const shape = cornerShapeKeyword(theme.corners);
+  const shadow = shadowScaleFor(theme.elevation);
+  const motion = motionRecipeFor(theme.motion);
   const clip = cornerClipPath(theme.corners, theme.radius);
-  const scale = shadowScaleFor(theme.elevation);
-  const elevation = elevationsFor(theme.elevation);
-  const radii = radiiFor(theme.radius);
-  const motion = motionsFor(theme.motion);
-  const tint = theme.elevationTint
-    ? (shadowTintRgb(palette.primary) ?? DEFAULT_SHADOW_RGB)
-    : DEFAULT_SHADOW_RGB;
 
-  const base: TokenEntry[] = [
-    ['--radius', `${theme.radius}rem`],
-    ['--spacing', `${theme.spacing ?? 0.25}rem`],
-    ['--border-width', `${theme.borderWidth ?? 1}px`],
-    ['--corner-shape', shape],
-    ['--font-sans', theme.fonts.sans],
-    ['--font-mono', theme.fonts.mono],
-  ];
-  if (clip) {
-    base.push(['--corner-clip-path', clip]);
-  }
-
-  const semanticRadius: TokenEntry[] = [
-    ['--radius-tight', radii.tight],
-    ['--radius-pill', radii.pill],
-    ['--radius-control', radii.control],
-    ['--radius-container', radii.container],
-    ['--radius-surface', radii.surface],
-  ];
-
-  const semanticElevation: TokenEntry[] = [
-    ['--shadow-rgb', tint],
-    ['--elevation-surface', elevation.surface],
-    ['--elevation-raised', elevation.raised],
-    ['--elevation-overlay', elevation.overlay],
-    ['--elevation-modal', elevation.modal],
-    ['--elevation-spotlight', elevation.spotlight],
-  ];
-
-  const numericShadow: TokenEntry[] = [
-    ['--shadow-xs', scale.xs],
-    ['--shadow-sm', scale.sm],
-    ['--shadow-md', scale.md],
-    ['--shadow-lg', scale.lg],
-    ['--shadow-xl', scale.xl],
-  ];
-
-  const atmosphere: TokenEntry[] = [
-    ['--backdrop-blur', `${theme.backdropBlur ?? 8}px`],
-    ['--ring-width', `${theme.ringWidth ?? 2}px`],
-    ['--ring-offset', `${theme.ringOffset ?? 2}px`],
-  ];
-
-  const semanticMotion: TokenEntry[] = [
-    ['--motion-instant-duration', motion.instant.duration],
-    ['--motion-instant-easing', motion.instant.easing],
-    ['--motion-standard-duration', motion.standard.duration],
-    ['--motion-standard-easing', motion.standard.easing],
-    ['--motion-considered-duration', motion.considered.duration],
-    ['--motion-considered-easing', motion.considered.easing],
-    ['--motion-duration', motion.standard.duration],
-    ['--motion-easing', motion.standard.easing],
-  ];
-
-  return [
-    { heading: 'Base tokens', entries: base },
-    { heading: 'Semantic radius — by UI purpose', entries: semanticRadius },
-    { heading: 'Semantic elevation — by UI purpose', entries: semanticElevation },
-    { heading: 'Numeric shadow scale (Tailwind compat)', entries: numericShadow },
-    { heading: 'Atmosphere', entries: atmosphere },
-    { heading: 'Semantic motion — by intent', entries: semanticMotion },
-    { heading: `Color palette (${mode})`, entries: colorEntries(palette) },
-  ];
-}
-
-/** Tokens for the dark palette, for selectors that only flip colors. */
-export function collectDarkPaletteOverrides(theme: ThemeConfig): TokenGroup {
-  const palette = theme.colors.dark;
-  const tint = theme.elevationTint
-    ? (shadowTintRgb(palette.primary) ?? DEFAULT_SHADOW_RGB)
-    : DEFAULT_SHADOW_RGB;
-  return {
-    heading: 'Color palette (dark)',
-    entries: [['--shadow-rgb', tint], ...colorEntries(palette)],
+  const vars: ThemeVars = {
+    '--radius': `${theme.radius}rem`,
+    '--spacing': `${theme.spacing ?? 0.25}rem`,
+    '--border-width': `${theme.borderWidth ?? 1}px`,
+    '--backdrop-blur': `${theme.backdropBlur ?? 8}px`,
+    '--ring-width': `${theme.ringWidth ?? 2}px`,
+    '--ring-offset': `${theme.ringOffset ?? 2}px`,
+    '--text-base': `${theme.textBase ?? 1}rem`,
+    '--motion-duration': motion.duration,
+    '--motion-easing': motion.easing,
+    '--corner-shape': cornerShapeKeyword(theme.corners),
+    '--font-sans': theme.fonts.sans,
+    '--font-mono': theme.fonts.mono,
+    '--shadow-rgb': tintFor(theme, palette),
+    '--shadow-xs': shadow.xs,
+    '--shadow-sm': shadow.sm,
+    '--shadow-md': shadow.md,
+    '--shadow-lg': shadow.lg,
+    '--shadow-xl': shadow.xl,
   };
-}
-
-/** Convert token groups into a React inline style object. */
-export function tokensToCssProperties(groups: TokenGroup[]): CSSProperties {
-  const style: Record<string, string> = {};
-  for (const group of groups) {
-    for (const [name, value] of group.entries) {
-      style[name] = value;
-    }
+  if (clip) {
+    vars['--corner-clip-path'] = clip;
   }
-  return style;
+  stateOpacityInto(vars, theme);
+  componentTokensInto(vars, theme);
+  colorsInto(vars, palette);
+  return vars;
 }
 
-/** Convert a single group into a CSS declaration block (without the braces). */
-export function tokensToCssText(groups: TokenGroup[], indent = '  '): string {
+/** Dark-mode delta: colors + shadow tint only. Everything else is light-invariant. */
+export function darkOverrideVars(theme: ThemeConfig): ThemeVars {
+  const palette = theme.colors.dark;
+  const vars: ThemeVars = { '--shadow-rgb': tintFor(theme, palette) };
+  colorsInto(vars, palette);
+  return vars;
+}
+
+/** Format a flat var dict as the body of a CSS declaration block. */
+export function varsToCssText(vars: ThemeVars, indent = '  '): string {
   const lines: string[] = [];
-  for (const group of groups) {
-    lines.push(`${indent}/* ${group.heading} */`);
-    for (const [name, value] of group.entries) {
-      lines.push(`${indent}${name}: ${value};`);
-    }
-    lines.push('');
+  for (const [name, value] of Object.entries(vars)) {
+    lines.push(`${indent}${name}: ${value};`);
   }
   return lines.join('\n');
 }

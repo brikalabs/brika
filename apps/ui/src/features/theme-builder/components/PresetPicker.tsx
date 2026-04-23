@@ -5,7 +5,7 @@
  */
 
 import { Sparkles } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import {
   Button,
   Dialog,
@@ -14,11 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  Tabs,
-  TabsList,
-  TabsTrigger,
 } from '@/components/ui';
-import { cn } from '@/lib/utils';
 import { THEME_PRESETS, type ThemePreset } from '../presets';
 
 interface PresetPickerProps {
@@ -91,19 +87,7 @@ function PresetCard({ preset, onPick }: Readonly<PresetCardProps>) {
       </div>
 
       <div className="space-y-1 border-t p-3">
-        <div className="flex items-center justify-between gap-2">
-          <span className="truncate font-medium text-sm">{preset.name}</span>
-          <span
-            className={cn(
-              'shrink-0 rounded-full border px-1.5 py-0.5 text-[9px] uppercase tracking-wider',
-              preset.category === 'built-in'
-                ? 'border-primary/30 text-primary'
-                : 'border-border text-muted-foreground'
-            )}
-          >
-            {preset.category}
-          </span>
-        </div>
+        <div className="truncate font-medium text-sm">{preset.name}</div>
         <div className="line-clamp-2 text-muted-foreground text-xs">{preset.description}</div>
       </div>
     </button>
@@ -112,12 +96,6 @@ function PresetCard({ preset, onPick }: Readonly<PresetCardProps>) {
 
 export function PresetPicker({ onPick, trigger }: Readonly<PresetPickerProps>) {
   const [open, setOpen] = useState(false);
-  const [filter, setFilter] = useState<'all' | 'built-in' | 'curated'>('all');
-
-  const filtered = useMemo(
-    () => (filter === 'all' ? THEME_PRESETS : THEME_PRESETS.filter((p) => p.category === filter)),
-    [filter]
-  );
 
   const handlePick = (preset: ThemePreset) => {
     onPick(preset);
@@ -134,38 +112,16 @@ export function PresetPicker({ onPick, trigger }: Readonly<PresetPickerProps>) {
         )}
       </DialogTrigger>
       <DialogContent className="flex max-h-[90vh] w-[95vw] max-w-350 flex-col overflow-hidden p-0 sm:max-w-350">
-        <DialogHeader className="shrink-0 space-y-3 border-b p-5">
-          <div className="space-y-1">
-            <DialogTitle>Start from a preset</DialogTitle>
-            <DialogDescription>
-              Pick a palette to seed a new theme. Everything is editable afterwards.
-            </DialogDescription>
-          </div>
-          <Tabs value={filter} onValueChange={(v) => setFilter(v as typeof filter)}>
-            <TabsList className="h-8">
-              <TabsTrigger value="all" className="text-xs">
-                All
-                <span className="ml-1 text-muted-foreground">{THEME_PRESETS.length}</span>
-              </TabsTrigger>
-              <TabsTrigger value="built-in" className="text-xs">
-                Built-in
-                <span className="ml-1 text-muted-foreground">
-                  {THEME_PRESETS.filter((p) => p.category === 'built-in').length}
-                </span>
-              </TabsTrigger>
-              <TabsTrigger value="curated" className="text-xs">
-                Curated
-                <span className="ml-1 text-muted-foreground">
-                  {THEME_PRESETS.filter((p) => p.category === 'curated').length}
-                </span>
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+        <DialogHeader className="shrink-0 space-y-1 border-b p-5">
+          <DialogTitle>Start from a preset</DialogTitle>
+          <DialogDescription>
+            Pick a palette to seed a new theme. Everything is editable afterwards.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="min-h-0 flex-1 overflow-auto p-5">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {filtered.map((preset) => (
+            {THEME_PRESETS.map((preset) => (
               <PresetCard key={preset.id} preset={preset} onPick={() => handlePick(preset)} />
             ))}
           </div>

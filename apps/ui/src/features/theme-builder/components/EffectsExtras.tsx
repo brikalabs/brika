@@ -4,12 +4,12 @@
  * plus the shared FieldPreview / SliderInput / PresetChips primitives.
  */
 
-import { Button, Card } from '@/components/ui';
+import { Button, Card, Slider } from '@/components/ui';
 import { cn } from '@/lib/utils';
-import { motionRecipeFor } from '../effects-css';
+import { motionRecipeFor } from '../theme-css';
 import { MOTION_STYLES, type MotionStyle } from '../types';
 import { FieldPreview } from './FieldPreview';
-import { cssVars, type Preset, PresetChips, SliderInput } from './primitives';
+import { cssVars, type Preset, PresetChips } from './primitives';
 
 /* ─── Backdrop blur ─────────────────────────────────────────── */
 
@@ -26,10 +26,12 @@ const BLUR_PRESETS: readonly Preset<number>[] = [
   { label: 'Heavy', value: 32 },
 ];
 
+const BLUR_TICKS = BLUR_PRESETS.map((p) => p.value);
+
 export function BlurField({ value, onChange }: Readonly<BlurFieldProps>) {
   return (
     <div className="space-y-2">
-      <SliderInput
+      <Slider
         value={value}
         onChange={onChange}
         min={0}
@@ -37,6 +39,7 @@ export function BlurField({ value, onChange }: Readonly<BlurFieldProps>) {
         step={1}
         unit="px"
         numericWidth="w-7"
+        ticks={BLUR_TICKS}
       />
       <PresetChips presets={BLUR_PRESETS} value={value} onChange={onChange} columns="grid-cols-5" />
       <FieldPreview label="Live preview" caption={`blur(${value}px)`}>
@@ -150,7 +153,7 @@ export function MotionField({ value, onChange }: Readonly<MotionFieldProps>) {
             type="button"
             onClick={() => onChange(style)}
             className={cn(
-              'group flex flex-col items-stretch gap-1.5 rounded-control border bg-card px-2 py-2 text-left transition-colors',
+              'group flex flex-col items-stretch gap-1.5 rounded-control border bg-card p-safe-md text-left transition-colors',
               active
                 ? 'border-primary text-foreground'
                 : 'border-border text-muted-foreground hover:border-primary/40 hover:text-foreground'

@@ -10,6 +10,7 @@
  */
 
 import type { ChangeEvent } from 'react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { contrastRatio, gradeContrast } from '../color-utils';
 
@@ -19,6 +20,12 @@ interface ColorFieldProps {
   onChange: (next: string) => void;
   pairWith?: string;
   pairLabel?: string;
+  /** Optional human description shown in a tooltip on the label. */
+  description?: string;
+  /** Optional code snippet ("bg-primary text-primary-foreground") shown below the description. */
+  example?: string;
+  /** Optional CSS custom-property name ("--primary") shown after the label. */
+  cssVar?: string;
   className?: string;
 }
 
@@ -67,12 +74,47 @@ function ContrastBadge({ pair, value, pairLabel }: Readonly<ContrastBadgeProps>)
   );
 }
 
+interface TokenLabelTooltipProps {
+  cssVar?: string;
+  description?: string;
+  example?: string;
+  children: React.ReactNode;
+}
+
+function TokenLabelTooltip({
+  cssVar,
+  description,
+  example,
+  children,
+}: Readonly<TokenLabelTooltipProps>) {
+  if (!description && !cssVar && !example) {
+    return <>{children}</>;
+  }
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipContent side="top" className="max-w-65 space-y-1 px-3 py-2 text-left">
+        {cssVar && (
+          <div className="font-mono text-[10px] opacity-70">{cssVar}</div>
+        )}
+        {description && <p className="text-[11px] leading-snug">{description}</p>}
+        {example && (
+          <code className="block font-mono text-[10px] opacity-80">{example}</code>
+        )}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
 export function ColorField({
   label,
   value,
   onChange,
   pairWith,
   pairLabel,
+  description,
+  example,
+  cssVar,
   className,
 }: Readonly<ColorFieldProps>) {
   const handlePicker = (e: ChangeEvent<HTMLInputElement>) => onChange(e.target.value);
@@ -96,19 +138,21 @@ export function ColorField({
           aria-label={`Pick ${label}`}
         />
       </div>
-      <label
-        className="min-w-0 flex-1 cursor-pointer truncate font-mono text-[11px] text-foreground/90"
-        htmlFor={`color-${label}`}
-      >
-        {label}
-      </label>
+      <TokenLabelTooltip cssVar={cssVar} description={description} example={example}>
+        <label
+          className="min-w-0 flex-1 cursor-pointer truncate font-mono text-[11px] text-foreground/90"
+          htmlFor={`color-${label}`}
+        >
+          {label}
+        </label>
+      </TokenLabelTooltip>
       {pairWith && <ContrastBadge pair={pairWith} value={value} pairLabel={pairLabel} />}
       <input
         type="text"
         value={value}
         onChange={handleText}
         spellCheck={false}
-        className="w-20 rounded border bg-background px-1.5 py-0.5 font-mono text-[10px] outline-none focus:ring-1 focus:ring-ring"
+        className="w-20 rounded border border-input-border bg-input-container px-1.5 py-0.5 font-mono text-[10px] text-input-label outline-none transition-[color,box-shadow] placeholder:text-input-placeholder focus-visible:ring-themed"
       />
     </div>
   );

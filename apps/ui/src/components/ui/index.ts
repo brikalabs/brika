@@ -122,6 +122,7 @@ export {
 } from './select';
 export { Separator } from './separator';
 export { Skeleton } from './skeleton';
+export { Slider } from './slider';
 export { Switch } from './switch';
 export {
   Table,
