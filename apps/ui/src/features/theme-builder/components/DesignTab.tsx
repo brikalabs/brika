@@ -9,6 +9,7 @@
 
 import { Blocks, Layers, type LucideIcon, Ruler, Shapes, Type, Wind } from 'lucide-react';
 import { type ReactNode, useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import { MONO_FONT_CHOICES, SANS_FONT_CHOICES } from '../tokens';
@@ -36,17 +37,15 @@ type SectionId = 'typography' | 'geometry' | 'components' | 'spacing' | 'effects
 interface SectionMeta {
   id: SectionId;
   icon: LucideIcon;
-  label: string;
-  hint: string;
 }
 
 const SECTIONS: readonly SectionMeta[] = [
-  { id: 'typography', icon: Type, label: 'Typography', hint: 'Font families and text size' },
-  { id: 'geometry', icon: Shapes, label: 'Geometry', hint: 'Radius and corner shape' },
-  { id: 'components', icon: Blocks, label: 'Components', hint: 'Tune each component' },
-  { id: 'spacing', icon: Ruler, label: 'Spacing', hint: 'Overall density' },
-  { id: 'effects', icon: Layers, label: 'Effects', hint: 'Shadows and borders' },
-  { id: 'atmosphere', icon: Wind, label: 'Atmosphere', hint: 'Blur, focus, motion' },
+  { id: 'typography', icon: Type },
+  { id: 'geometry', icon: Shapes },
+  { id: 'components', icon: Blocks },
+  { id: 'spacing', icon: Ruler },
+  { id: 'effects', icon: Layers },
+  { id: 'atmosphere', icon: Wind },
 ];
 
 const STORAGE_KEY = 'brika.theme-builder.design-section';
@@ -90,6 +89,7 @@ export function DesignTab({
   onFontSansChange,
   onFontMonoChange,
 }: Readonly<DesignTabProps>) {
+  const { t } = useTranslation('themeBuilder');
   const [active, setActive] = useState<SectionId>(() => readActiveSection());
 
   const selectSection = useCallback((id: SectionId) => {
@@ -102,7 +102,11 @@ export function DesignTab({
   return (
     <>
       <div className="sticky top-0 z-10 border-b bg-background/95 px-3 py-2 backdrop-blur-sm">
-        <div className="flex items-center gap-1" role="tablist" aria-label="Design sections">
+        <div
+          className="flex items-center gap-1"
+          role="tablist"
+          aria-label={t('design.sectionsLabel')}
+        >
           {SECTIONS.map((section) => (
             <SectionTab
               key={section.id}
@@ -113,8 +117,12 @@ export function DesignTab({
           ))}
         </div>
         <div className="mt-2 flex items-baseline justify-between gap-2 px-1">
-          <span className="font-semibold text-sm">{activeMeta.label}</span>
-          <span className="truncate text-[10px] text-muted-foreground">{activeMeta.hint}</span>
+          <span className="font-semibold text-sm">
+            {t(`design.sections.${activeMeta.id}.label`)}
+          </span>
+          <span className="truncate text-[10px] text-muted-foreground">
+            {t(`design.sections.${activeMeta.id}.hint`)}
+          </span>
         </div>
       </div>
 
@@ -139,7 +147,9 @@ interface SectionTabProps {
 }
 
 function SectionTab({ section, active, onSelect }: Readonly<SectionTabProps>) {
+  const { t } = useTranslation('themeBuilder');
   const Icon = section.icon;
+  const label = t(`design.sections.${section.id}.label`);
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -147,7 +157,7 @@ function SectionTab({ section, active, onSelect }: Readonly<SectionTabProps>) {
           type="button"
           role="tab"
           aria-selected={active}
-          aria-label={section.label}
+          aria-label={label}
           onClick={() => onSelect(section.id)}
           className={cn(
             'flex size-9 flex-1 items-center justify-center rounded-control transition-colors',
@@ -160,7 +170,7 @@ function SectionTab({ section, active, onSelect }: Readonly<SectionTabProps>) {
         </button>
       </TooltipTrigger>
       <TooltipContent side="bottom" sideOffset={6}>
-        {section.label}
+        {label}
       </TooltipContent>
     </Tooltip>
   );
@@ -183,26 +193,27 @@ function SectionBody({
   onFontSansChange,
   onFontMonoChange,
 }: Readonly<SectionBodyProps>): ReactNode {
+  const { t } = useTranslation('themeBuilder');
   switch (id) {
     case 'typography':
       return (
         <>
           <FontField
-            label="Sans"
+            label={t('design.fonts.sans')}
             value={draft.fonts.sans}
             onChange={onFontSansChange}
             choices={SANS_FONT_CHOICES}
-            sample="The quick brown fox jumps over the lazy dog"
+            sample={t('design.fonts.sampleSans')}
           />
           <FontField
-            label="Mono"
+            label={t('design.fonts.mono')}
             value={draft.fonts.mono}
             onChange={onFontMonoChange}
             choices={MONO_FONT_CHOICES}
-            sample="const answer = 42;"
+            sample={t('design.fonts.sampleMono')}
           />
           <div className="space-y-2 pt-1">
-            <TokenLabel cssVar="--text-base">Base size</TokenLabel>
+            <TokenLabel cssVar="--text-base">{t('design.baseSize')}</TokenLabel>
             <TextSizeField value={draft.textBase ?? 1} onChange={(v) => patch('textBase', v)} />
           </div>
         </>
@@ -211,7 +222,7 @@ function SectionBody({
       return (
         <>
           <div className="space-y-2">
-            <TokenLabel cssVar="--radius">Radius</TokenLabel>
+            <TokenLabel cssVar="--radius">{t('design.radius')}</TokenLabel>
             <RadiusField value={draft.radius} onChange={(v) => patch('radius', v)} />
           </div>
           <CornerField
@@ -226,14 +237,14 @@ function SectionBody({
     case 'spacing':
       return (
         <>
-          <TokenLabel cssVar="--spacing">Base unit</TokenLabel>
+          <TokenLabel cssVar="--spacing">{t('design.baseUnit')}</TokenLabel>
           <SpacingField value={draft.spacing ?? 0.25} onChange={(v) => patch('spacing', v)} />
         </>
       );
     case 'effects':
       return (
         <>
-          <TokenLabel cssVar="--shadow-*">Elevation</TokenLabel>
+          <TokenLabel cssVar="--shadow-*">{t('design.elevation')}</TokenLabel>
           <ElevationField
             value={draft.elevation ?? 'soft'}
             onChange={(v: ElevationStyle) => patch('elevation', v)}
@@ -241,7 +252,7 @@ function SectionBody({
             onTintChange={(v) => patch('elevationTint', v)}
           />
           <div className="pt-1">
-            <TokenLabel cssVar="--border-width">Border width</TokenLabel>
+            <TokenLabel cssVar="--border-width">{t('design.borderWidth')}</TokenLabel>
           </div>
           <BorderWidthField
             value={draft.borderWidth ?? 1}
@@ -252,11 +263,11 @@ function SectionBody({
     case 'atmosphere':
       return (
         <>
-          <TokenLabel cssVar="--backdrop-blur">Backdrop blur</TokenLabel>
+          <TokenLabel cssVar="--backdrop-blur">{t('design.backdropBlur')}</TokenLabel>
           <BlurField value={draft.backdropBlur ?? 8} onChange={(v) => patch('backdropBlur', v)} />
 
           <div className="pt-1">
-            <TokenLabel cssVar="--ring-*">Focus ring</TokenLabel>
+            <TokenLabel cssVar="--ring-*">{t('design.focusRing')}</TokenLabel>
           </div>
           <FocusRingField
             width={draft.ringWidth ?? 2}
@@ -266,7 +277,7 @@ function SectionBody({
           />
 
           <div className="pt-1">
-            <TokenLabel hint="hover to feel it">Motion</TokenLabel>
+            <TokenLabel hint={t('design.motionHint')}>{t('design.motion')}</TokenLabel>
           </div>
           <MotionField
             value={draft.motion ?? 'smooth'}

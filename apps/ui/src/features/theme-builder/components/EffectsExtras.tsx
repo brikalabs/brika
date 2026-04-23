@@ -4,6 +4,8 @@
  * plus the shared FieldPreview / SliderInput / PresetChips primitives.
  */
 
+import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button, Card, Slider } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import { motionRecipeFor } from '../theme-css';
@@ -18,17 +20,28 @@ interface BlurFieldProps {
   onChange: (next: number) => void;
 }
 
-const BLUR_PRESETS: readonly Preset<number>[] = [
-  { label: 'None', value: 0 },
-  { label: 'Subtle', value: 4 },
-  { label: 'Glass', value: 10 },
-  { label: 'Frosted', value: 20 },
-  { label: 'Heavy', value: 32 },
+const BLUR_DEFS: readonly { id: string; value: number }[] = [
+  { id: 'none', value: 0 },
+  { id: 'subtle', value: 4 },
+  { id: 'glass', value: 10 },
+  { id: 'frosted', value: 20 },
+  { id: 'heavy', value: 32 },
 ];
 
-const BLUR_TICKS = BLUR_PRESETS.map((p) => p.value);
+const BLUR_TICKS = BLUR_DEFS.map((p) => p.value);
 
 export function BlurField({ value, onChange }: Readonly<BlurFieldProps>) {
+  const { t } = useTranslation('themeBuilder');
+
+  const presets = useMemo<Preset<number>[]>(
+    () =>
+      BLUR_DEFS.map((p) => ({
+        value: p.value,
+        label: t(`fields.effects.blur.presets.${p.id}`),
+      })),
+    [t]
+  );
+
   return (
     <div className="space-y-2">
       <Slider
@@ -41,8 +54,11 @@ export function BlurField({ value, onChange }: Readonly<BlurFieldProps>) {
         numericWidth="w-7"
         ticks={BLUR_TICKS}
       />
-      <PresetChips presets={BLUR_PRESETS} value={value} onChange={onChange} columns="grid-cols-5" />
-      <FieldPreview label="Live preview" caption={`blur(${value}px)`}>
+      <PresetChips presets={presets} value={value} onChange={onChange} columns="grid-cols-5" />
+      <FieldPreview
+        label={t('fields.effects.blur.livePreview')}
+        caption={t('fields.effects.blur.caption', { value })}
+      >
         <div
           className="relative h-24 w-full overflow-hidden rounded-container"
           style={{
@@ -106,13 +122,21 @@ export function FocusRingField({
   onWidthChange,
   onOffsetChange,
 }: Readonly<FocusRingFieldProps>) {
+  const { t } = useTranslation('themeBuilder');
   return (
     <div className="space-y-2">
       <div className="grid grid-cols-2 gap-2">
-        <RingSlider label="Width" value={width} onChange={onWidthChange} />
-        <RingSlider label="Offset" value={offset} onChange={onOffsetChange} />
+        <RingSlider label={t('fields.effects.ring.width')} value={width} onChange={onWidthChange} />
+        <RingSlider
+          label={t('fields.effects.ring.offset')}
+          value={offset}
+          onChange={onOffsetChange}
+        />
       </div>
-      <FieldPreview label="Live preview" caption={`${width}px · offset ${offset}px`}>
+      <FieldPreview
+        label={t('fields.effects.ring.livePreview')}
+        caption={t('fields.effects.ring.caption', { width, offset })}
+      >
         <Button
           size="sm"
           tabIndex={-1}
@@ -121,7 +145,7 @@ export function FocusRingField({
             outlineOffset: `${offset}px`,
           }}
         >
-          Focused action
+          {t('fields.effects.ring.focused')}
         </Button>
       </FieldPreview>
     </div>
@@ -135,13 +159,8 @@ interface MotionFieldProps {
   onChange: (next: MotionStyle) => void;
 }
 
-const MOTION_LABELS: Record<MotionStyle, string> = {
-  snappy: 'Snappy',
-  smooth: 'Smooth',
-  stately: 'Stately',
-};
-
 export function MotionField({ value, onChange }: Readonly<MotionFieldProps>) {
+  const { t } = useTranslation('themeBuilder');
   return (
     <div className="grid grid-cols-3 gap-1.5">
       {MOTION_STYLES.map((style) => {
@@ -173,7 +192,7 @@ export function MotionField({ value, onChange }: Readonly<MotionFieldProps>) {
               />
             </div>
             <div className="flex items-baseline justify-between">
-              <span className="font-medium text-[11px]">{MOTION_LABELS[style]}</span>
+              <span className="font-medium text-[11px]">{t(`fields.effects.motion.${style}`)}</span>
               <span className="font-mono text-[9px] opacity-60">{recipe.duration}</span>
             </div>
           </button>

@@ -2,12 +2,7 @@
   "id": "lavender",
   "name": "Lavender",
   "description": "Soft purples and violets.",
-  "accentSwatches": [
-    "#8055d4",
-    "#a77be0",
-    "#6d6ae0",
-    "#c48ae0"
-  ],
+  "accentSwatches": ["#8055d4", "#a77be0", "#6d6ae0", "#c48ae0"],
   "colors": {
     "light": {
       "background": "#fcfcfc",

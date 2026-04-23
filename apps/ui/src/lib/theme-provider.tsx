@@ -4,21 +4,35 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   useSyncExternalStore,
 } from 'react';
+import { injectActiveCustomTheme, injectAllCustomThemes } from '@/features/theme-builder/runtime';
 import {
-  injectActiveCustomTheme,
-  injectAllCustomThemes,
-} from '@/features/theme-builder/runtime';
-import { customThemeStorage } from '@/features/theme-builder/storage';
+  customThemeStorage,
+  hydrateCustomThemes,
+  migrateLegacyThemes,
+} from '@/features/theme-builder/storage';
+import { fetcher } from '@/lib/query';
 import { ThemeContext, type ThemeMode, type ThemeName } from './theme-context';
 import { withCircleWipe } from './view-transition';
 
 export { customThemeSelector } from '@/features/theme-builder/runtime';
 
-const THEME_STORAGE_KEY = 'brika-theme';
-const MODE_STORAGE_KEY = 'brika-mode';
+// Shadow cache keys — persist the last-known-good selection so the first
+// render after a reload paints the correct theme before the hub responds.
+const THEME_CACHE_KEY = 'brika-theme-cache';
+const MODE_CACHE_KEY = 'brika-mode-cache';
+
+// Legacy keys, only read during a one-time migration to the shadow.
+const LEGACY_THEME_KEY = 'brika-theme';
+const LEGACY_MODE_KEY = 'brika-mode';
+
+interface ApiTheme {
+  theme: string | null;
+  mode: ThemeMode;
+}
 
 function applyThemeToDOM(theme: ThemeName, resolvedMode: 'light' | 'dark') {
   const html = document.documentElement;
@@ -40,12 +54,18 @@ function useSystemTheme(): 'light' | 'dark' {
   );
 }
 
+function readShadowString(key: string, legacyKey: string): string | null {
+  if (typeof localStorage === 'undefined') {
+    return null;
+  }
+  return localStorage.getItem(key) ?? localStorage.getItem(legacyKey);
+}
+
 function resolveInitialTheme(): ThemeName {
-  const stored = localStorage.getItem(THEME_STORAGE_KEY);
+  const stored = readShadowString(THEME_CACHE_KEY, LEGACY_THEME_KEY);
   if (!stored) {
     return 'default';
   }
-  // Custom themes are prefixed with `custom-`; validate it still exists.
   if (stored.startsWith('custom-')) {
     const id = stored.slice('custom-'.length);
     return customThemeStorage.get(id) ? stored : 'default';
@@ -53,18 +73,51 @@ function resolveInitialTheme(): ThemeName {
   return stored;
 }
 
+function resolveInitialMode(): ThemeMode {
+  const s = readShadowString(MODE_CACHE_KEY, LEGACY_MODE_KEY);
+  if (s === 'light' || s === 'dark' || s === 'system') {
+    return s;
+  }
+  return 'system';
+}
+
+function cacheTheme(theme: ThemeName) {
+  if (typeof localStorage !== 'undefined') {
+    localStorage.setItem(THEME_CACHE_KEY, theme);
+  }
+}
+
+function cacheMode(mode: ThemeMode) {
+  if (typeof localStorage !== 'undefined') {
+    localStorage.setItem(MODE_CACHE_KEY, mode);
+  }
+}
+
+function clearLegacyKeys() {
+  if (typeof localStorage === 'undefined') {
+    return;
+  }
+  localStorage.removeItem(LEGACY_THEME_KEY);
+  localStorage.removeItem(LEGACY_MODE_KEY);
+}
+
+async function pushThemeToHub(patch: Partial<ApiTheme>): Promise<void> {
+  try {
+    await fetcher('/api/settings/theme', {
+      method: 'PUT',
+      body: JSON.stringify(patch),
+    });
+  } catch (err) {
+    console.warn('[theme] Failed to persist theme preference to hub', err);
+  }
+}
+
 export function ThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
   const systemTheme = useSystemTheme();
 
   const [theme, setThemeState] = useState<ThemeName>(resolveInitialTheme);
-
-  const [mode, setModeState] = useState<ThemeMode>(() => {
-    const s = localStorage.getItem(MODE_STORAGE_KEY);
-    if (s === 'light' || s === 'dark' || s === 'system') {
-      return s;
-    }
-    return 'system';
-  });
+  const [mode, setModeState] = useState<ThemeMode>(resolveInitialMode);
+  const bootstrappedRef = useRef(false);
 
   const resolvedMode = mode === 'system' ? systemTheme : mode;
 
@@ -85,9 +138,6 @@ export function ThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
       if (theme.startsWith('custom-')) {
         injectActiveCustomTheme(theme.slice('custom-'.length));
       } else {
-        // Non-custom theme active — a save in another tab might still
-        // affect the builder's thumbnail list. Re-inject everything so
-        // the builder's list stays live.
         injectAllCustomThemes(customThemeStorage.list());
       }
     };
@@ -98,13 +148,79 @@ export function ThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
     applyThemeToDOM(theme, resolvedMode);
   }, [theme, resolvedMode]);
 
+  // Bootstrap: hydrate custom themes, pull active selection from hub,
+  // reconcile with shadow cache, migrate legacy keys. Runs once.
+  useEffect(() => {
+    if (bootstrappedRef.current) {
+      return;
+    }
+    bootstrappedRef.current = true;
+
+    let cancelled = false;
+    (async () => {
+      await hydrateCustomThemes();
+      void migrateLegacyThemes();
+
+      try {
+        const remote = await fetcher<ApiTheme>('/api/settings/theme');
+        if (cancelled) {
+          return;
+        }
+        if (remote.theme && remote.theme !== theme) {
+          cacheTheme(remote.theme as ThemeName);
+          setThemeState(remote.theme as ThemeName);
+        }
+        if (remote.mode && remote.mode !== mode) {
+          cacheMode(remote.mode);
+          setModeState(remote.mode);
+        }
+        // If the hub has no preference yet, push the current shadow as the
+        // seed. Covers the "fresh login, existing localStorage" case.
+        if (!remote.theme) {
+          void pushThemeToHub({ theme, mode });
+        }
+      } catch {
+        /* swallowed — cached values already applied */
+      } finally {
+        clearLegacyKeys();
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [mode, theme]);
+
+  // Listen for custom-theme invalidations broadcast by other tabs /
+  // devices. Reusing `/api/stream/events` avoids spinning up a dedicated
+  // channel for a single event type.
+  useEffect(() => {
+    const source = new EventSource('/api/stream/events', { withCredentials: true });
+    const handler = (event: MessageEvent<string>) => {
+      try {
+        const parsed = JSON.parse(event.data) as { type?: string };
+        if (parsed.type?.startsWith('theme.')) {
+          void hydrateCustomThemes();
+        }
+      } catch {
+        /* ignore malformed frames */
+      }
+    };
+    source.addEventListener('event', handler);
+    return () => {
+      source.removeEventListener('event', handler);
+      source.close();
+    };
+  }, []);
+
   const setTheme = useCallback(
     (newTheme: ThemeName, origin?: Element | null) => {
-      localStorage.setItem(THEME_STORAGE_KEY, newTheme);
+      cacheTheme(newTheme);
       withCircleWipe(() => {
         applyThemeToDOM(newTheme, resolvedMode);
         setThemeState(newTheme);
       }, origin);
+      void pushThemeToHub({ theme: newTheme });
     },
     [resolvedMode]
   );
@@ -112,11 +228,12 @@ export function ThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
   const setMode = useCallback(
     (newMode: ThemeMode, event?: MouseEvent<HTMLElement>) => {
       const next = newMode === 'system' ? systemTheme : newMode;
-      localStorage.setItem(MODE_STORAGE_KEY, newMode);
+      cacheMode(newMode);
       withCircleWipe(() => {
         applyThemeToDOM(theme, next);
         setModeState(newMode);
       }, event?.currentTarget);
+      void pushThemeToHub({ mode: newMode });
     },
     [systemTheme, theme]
   );

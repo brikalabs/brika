@@ -6,6 +6,7 @@
 
 import { ArrowLeftRight, Search, Sparkles, SunMoon } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Button,
   DropdownMenu,
@@ -19,23 +20,23 @@ import {
   TabsTrigger,
 } from '@/components/ui';
 import { invertLightness, mix, parseHex, shiftLightness } from '../color-utils';
-import { metaFor } from '../tokens-meta';
 import { TOKEN_GROUPS } from '../tokens';
+import { metaFor } from '../tokens-meta';
 import type { ColorToken, ThemeColors, ThemeConfig } from '../types';
 import { ColorField } from './ColorField';
 
-const FOREGROUND_PAIRS: Partial<Record<ColorToken, { token: ColorToken; label: string }>> = {
-  foreground: { token: 'background', label: 'on background' },
-  'card-foreground': { token: 'card', label: 'on card' },
-  'popover-foreground': { token: 'popover', label: 'on popover' },
-  'primary-foreground': { token: 'primary', label: 'on primary' },
-  'secondary-foreground': { token: 'secondary', label: 'on secondary' },
-  'accent-foreground': { token: 'accent', label: 'on accent' },
-  'muted-foreground': { token: 'muted', label: 'on muted' },
-  'success-foreground': { token: 'success', label: 'on success' },
-  'warning-foreground': { token: 'warning', label: 'on warning' },
-  'info-foreground': { token: 'info', label: 'on info' },
-  'destructive-foreground': { token: 'destructive', label: 'on destructive' },
+const FOREGROUND_PAIRS: Partial<Record<ColorToken, { token: ColorToken; labelKey: string }>> = {
+  foreground: { token: 'background', labelKey: 'foregroundPairs.onBackground' },
+  'card-foreground': { token: 'card', labelKey: 'foregroundPairs.onCard' },
+  'popover-foreground': { token: 'popover', labelKey: 'foregroundPairs.onPopover' },
+  'primary-foreground': { token: 'primary', labelKey: 'foregroundPairs.onPrimary' },
+  'secondary-foreground': { token: 'secondary', labelKey: 'foregroundPairs.onSecondary' },
+  'accent-foreground': { token: 'accent', labelKey: 'foregroundPairs.onAccent' },
+  'muted-foreground': { token: 'muted', labelKey: 'foregroundPairs.onMuted' },
+  'success-foreground': { token: 'success', labelKey: 'foregroundPairs.onSuccess' },
+  'warning-foreground': { token: 'warning', labelKey: 'foregroundPairs.onWarning' },
+  'info-foreground': { token: 'info', labelKey: 'foregroundPairs.onInfo' },
+  'destructive-foreground': { token: 'destructive', labelKey: 'foregroundPairs.onDestructive' },
 };
 
 interface PaletteTabProps {
@@ -64,6 +65,7 @@ function generateFromPrimary(colors: ThemeColors, mode: 'light' | 'dark'): Theme
 }
 
 export function PaletteTab({ draft, onChange }: Readonly<PaletteTabProps>) {
+  const { t } = useTranslation('themeBuilder');
   const [editingMode, setEditingMode] = useState<'light' | 'dark'>('light');
   const [query, setQuery] = useState('');
 
@@ -131,17 +133,17 @@ export function PaletteTab({ draft, onChange }: Readonly<PaletteTabProps>) {
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Filter tokens"
+              placeholder={t('palette.filterPlaceholder')}
               className="h-7 py-1 pr-2 pl-7 text-[11px]"
             />
           </div>
           <Tabs value={editingMode} onValueChange={(v) => setEditingMode(v as 'light' | 'dark')}>
             <TabsList className="h-7">
               <TabsTrigger value="light" className="h-6 px-2 text-[10px]">
-                Light
+                {t('palette.modeLight')}
               </TabsTrigger>
               <TabsTrigger value="dark" className="h-6 px-2 text-[10px]">
-                Dark
+                {t('palette.modeDark')}
               </TabsTrigger>
             </TabsList>
           </Tabs>
@@ -151,26 +153,26 @@ export function PaletteTab({ draft, onChange }: Readonly<PaletteTabProps>) {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button size="sm" variant="outline" className="h-6 gap-1 px-1.5 text-[10px]">
-                <SunMoon className="size-3" /> Sync
+                <SunMoon className="size-3" /> {t('palette.sync')}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="text-xs">
               <DropdownMenuItem onSelect={() => copyMode('light')}>
                 <ArrowLeftRight className="size-3" />
-                Copy light → dark
+                {t('palette.copyLightToDark')}
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => copyMode('dark')}>
                 <ArrowLeftRight className="size-3" />
-                Copy dark → light
+                {t('palette.copyDarkToLight')}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onSelect={() => autoInvertTo('dark')}>
                 <SunMoon className="size-3" />
-                Auto-invert to dark
+                {t('palette.autoInvertToDark')}
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => autoInvertTo('light')}>
                 <SunMoon className="size-3" />
-                Auto-invert to light
+                {t('palette.autoInvertToLight')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -178,11 +180,11 @@ export function PaletteTab({ draft, onChange }: Readonly<PaletteTabProps>) {
             size="sm"
             variant="outline"
             onClick={generateNeutrals}
-            title="Derive accent/secondary/muted shades from the current primary"
+            title={t('palette.tintFromPrimaryTooltip')}
             className="h-6 gap-1 px-1.5 text-[10px]"
           >
             <Sparkles className="size-3" />
-            Tint from primary
+            {t('palette.tintFromPrimary')}
           </Button>
         </div>
       </div>
@@ -190,18 +192,21 @@ export function PaletteTab({ draft, onChange }: Readonly<PaletteTabProps>) {
       <div className="min-h-0 flex-1 space-y-3 overflow-auto p-3">
         {filteredGroups.length === 0 && (
           <div className="px-2 py-6 text-center text-muted-foreground text-xs">
-            No tokens match "{query}".
+            {t('palette.emptyFilter', { query })}
           </div>
         )}
         {filteredGroups.map((group) => (
           <div key={group.key} className="space-y-1.5">
             <div className="font-medium text-[10px] text-muted-foreground uppercase tracking-wider">
-              {group.key}
+              {t(`groups.${group.key}`, { defaultValue: group.key })}
             </div>
             <div className="space-y-1">
               {group.tokens.map((token) => {
                 const pair = FOREGROUND_PAIRS[token];
                 const meta = metaFor(token);
+                const description = t(`tokens.${token}.purpose`, {
+                  defaultValue: meta?.purpose ?? '',
+                });
                 return (
                   <ColorField
                     key={token}
@@ -209,8 +214,8 @@ export function PaletteTab({ draft, onChange }: Readonly<PaletteTabProps>) {
                     value={palette[token] ?? ''}
                     onChange={(v) => updateColor(token, v)}
                     pairWith={pair ? palette[pair.token] : undefined}
-                    pairLabel={pair?.label}
-                    description={meta?.purpose}
+                    pairLabel={pair ? t(pair.labelKey) : undefined}
+                    description={description || undefined}
                     example={meta?.example}
                     cssVar={meta?.cssVar}
                   />

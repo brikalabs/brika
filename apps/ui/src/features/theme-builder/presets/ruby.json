@@ -2,12 +2,7 @@
   "id": "ruby",
   "name": "Ruby",
   "description": "Bold reds, crimson accents.",
-  "accentSwatches": [
-    "#c93458",
-    "#d05a6a",
-    "#c4422d",
-    "#d6698a"
-  ],
+  "accentSwatches": ["#c93458", "#d05a6a", "#c4422d", "#d6698a"],
   "colors": {
     "light": {
       "background": "#fcfcfc",

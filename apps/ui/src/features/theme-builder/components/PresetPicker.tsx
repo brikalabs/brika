@@ -6,6 +6,7 @@
 
 import { Sparkles } from 'lucide-react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Button,
   Dialog,
@@ -28,7 +29,11 @@ interface PresetCardProps {
 }
 
 function PresetCard({ preset, onPick }: Readonly<PresetCardProps>) {
+  const { t } = useTranslation('themeBuilder');
   const { light, dark } = preset.colors;
+  const description = t(`presets.items.${preset.id}.description`, {
+    defaultValue: preset.description,
+  });
   return (
     <button
       type="button"
@@ -88,13 +93,14 @@ function PresetCard({ preset, onPick }: Readonly<PresetCardProps>) {
 
       <div className="space-y-1 border-t p-3">
         <div className="truncate font-medium text-sm">{preset.name}</div>
-        <div className="line-clamp-2 text-muted-foreground text-xs">{preset.description}</div>
+        <div className="line-clamp-2 text-muted-foreground text-xs">{description}</div>
       </div>
     </button>
   );
 }
 
 export function PresetPicker({ onPick, trigger }: Readonly<PresetPickerProps>) {
+  const { t } = useTranslation('themeBuilder');
   const [open, setOpen] = useState(false);
 
   const handlePick = (preset: ThemePreset) => {
@@ -107,16 +113,14 @@ export function PresetPicker({ onPick, trigger }: Readonly<PresetPickerProps>) {
       <DialogTrigger asChild>
         {trigger ?? (
           <Button size="sm" variant="outline" className="w-full justify-start gap-2">
-            <Sparkles /> Start from preset
+            <Sparkles /> {t('presets.trigger')}
           </Button>
         )}
       </DialogTrigger>
       <DialogContent className="flex max-h-[90vh] w-[95vw] max-w-350 flex-col overflow-hidden p-0 sm:max-w-350">
         <DialogHeader className="shrink-0 space-y-1 border-b p-5">
-          <DialogTitle>Start from a preset</DialogTitle>
-          <DialogDescription>
-            Pick a palette to seed a new theme. Everything is editable afterwards.
-          </DialogDescription>
+          <DialogTitle>{t('presets.dialogTitle')}</DialogTitle>
+          <DialogDescription>{t('presets.dialogDescription')}</DialogDescription>
         </DialogHeader>
 
         <div className="min-h-0 flex-1 overflow-auto p-5">

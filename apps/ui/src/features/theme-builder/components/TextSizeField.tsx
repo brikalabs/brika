@@ -5,6 +5,8 @@
  * scale feels at the chosen base size.
  */
 
+import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Slider } from '@/components/ui';
 import { cssVars, nearlyEquals, type Preset, PresetChips } from './primitives';
 
@@ -13,18 +15,29 @@ interface TextSizeFieldProps {
   onChange: (next: number) => void;
 }
 
-const TEXT_PRESETS: readonly Preset<number>[] = [
-  { label: 'Compact', value: 0.9, hint: 'Denser, reads like a tool' },
-  { label: 'Default', value: 1, hint: 'Standard base size' },
-  { label: 'Comfortable', value: 1.075, hint: 'Easier to read at a distance' },
-  { label: 'Large', value: 1.15, hint: 'Extra-readable' },
+const TEXT_DEFINITIONS: readonly { id: string; value: number }[] = [
+  { id: 'compact', value: 0.9 },
+  { id: 'default', value: 1 },
+  { id: 'comfortable', value: 1.075 },
+  { id: 'large', value: 1.15 },
 ];
 
-const TEXT_TICKS = TEXT_PRESETS.map((p) => p.value);
+const TEXT_TICKS = TEXT_DEFINITIONS.map((p) => p.value);
 const TEXT_EQUALS = nearlyEquals(0.005);
 
 export function TextSizeField({ value, onChange }: Readonly<TextSizeFieldProps>) {
+  const { t } = useTranslation('themeBuilder');
   const scopedVars = cssVars({ '--text-base': `${value}rem` });
+
+  const presets = useMemo<Preset<number>[]>(
+    () =>
+      TEXT_DEFINITIONS.map((p) => ({
+        value: p.value,
+        label: t(`fields.textSize.presets.${p.id}.label`),
+        hint: t(`fields.textSize.presets.${p.id}.hint`),
+      })),
+    [t]
+  );
 
   return (
     <div className="space-y-2">
@@ -40,22 +53,19 @@ export function TextSizeField({ value, onChange }: Readonly<TextSizeFieldProps>)
         ticks={TEXT_TICKS}
       />
       <PresetChips
-        presets={TEXT_PRESETS}
+        presets={presets}
         value={value}
         onChange={onChange}
         columns="grid-cols-4"
         isActive={TEXT_EQUALS}
       />
-      <div
-        className="space-y-1 rounded-container border bg-muted/20 p-safe-md"
-        style={scopedVars}
-      >
-        <div className="font-semibold text-title-lg leading-tight">Title</div>
-        <div className="text-body-md text-foreground/80">
-          Body text renders at the chosen base size. Every level scales from one scalar.
+      <div className="space-y-1 rounded-container border bg-muted/20 p-safe-md" style={scopedVars}>
+        <div className="font-semibold text-title-lg leading-tight">
+          {t('fields.textSize.preview.title')}
         </div>
+        <div className="text-body-md text-foreground/80">{t('fields.textSize.preview.body')}</div>
         <div className="font-medium text-label-sm text-muted-foreground uppercase tracking-wider">
-          Label
+          {t('fields.textSize.preview.label')}
         </div>
       </div>
     </div>

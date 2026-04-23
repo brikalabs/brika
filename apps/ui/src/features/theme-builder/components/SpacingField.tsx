@@ -4,6 +4,8 @@
  * right; this field only exposes the raw scale.
  */
 
+import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Slider } from '@/components/ui';
 import { nearlyEquals, type Preset, PresetChips } from './primitives';
 
@@ -12,17 +14,29 @@ interface SpacingFieldProps {
   onChange: (next: number) => void;
 }
 
-const DENSITY_PRESETS: readonly Preset<number>[] = [
-  { label: 'Compact', value: 0.2, hint: 'Tight padding, dense UI' },
-  { label: 'Cozy', value: 0.225, hint: 'Slightly tighter than default' },
-  { label: 'Default', value: 0.25, hint: 'Standard density' },
-  { label: 'Roomy', value: 0.3, hint: 'Extra breathing room' },
+const DENSITY_DEFINITIONS: readonly { id: string; value: number }[] = [
+  { id: 'compact', value: 0.2 },
+  { id: 'cozy', value: 0.225 },
+  { id: 'default', value: 0.25 },
+  { id: 'roomy', value: 0.3 },
 ];
 
-const DENSITY_TICKS = DENSITY_PRESETS.map((p) => p.value);
+const DENSITY_TICKS = DENSITY_DEFINITIONS.map((p) => p.value);
 const DENSITY_EQUALS = nearlyEquals(0.003);
 
 export function SpacingField({ value, onChange }: Readonly<SpacingFieldProps>) {
+  const { t } = useTranslation('themeBuilder');
+
+  const presets = useMemo<Preset<number>[]>(
+    () =>
+      DENSITY_DEFINITIONS.map((p) => ({
+        value: p.value,
+        label: t(`fields.spacing.presets.${p.id}.label`),
+        hint: t(`fields.spacing.presets.${p.id}.hint`),
+      })),
+    [t]
+  );
+
   return (
     <div className="space-y-2.5">
       <Slider
@@ -37,7 +51,7 @@ export function SpacingField({ value, onChange }: Readonly<SpacingFieldProps>) {
       />
 
       <PresetChips
-        presets={DENSITY_PRESETS}
+        presets={presets}
         value={value}
         onChange={onChange}
         columns="grid-cols-4"

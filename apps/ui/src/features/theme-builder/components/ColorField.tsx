@@ -10,6 +10,7 @@
  */
 
 import type { ChangeEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { contrastRatio, gradeContrast } from '../color-utils';
@@ -94,13 +95,9 @@ function TokenLabelTooltip({
     <Tooltip>
       <TooltipTrigger asChild>{children}</TooltipTrigger>
       <TooltipContent side="top" className="max-w-65 space-y-1 px-3 py-2 text-left">
-        {cssVar && (
-          <div className="font-mono text-[10px] opacity-70">{cssVar}</div>
-        )}
+        {cssVar && <div className="font-mono text-[10px] opacity-70">{cssVar}</div>}
         {description && <p className="text-[11px] leading-snug">{description}</p>}
-        {example && (
-          <code className="block font-mono text-[10px] opacity-80">{example}</code>
-        )}
+        {example && <code className="block font-mono text-[10px] opacity-80">{example}</code>}
       </TooltipContent>
     </Tooltip>
   );
@@ -117,6 +114,7 @@ export function ColorField({
   cssVar,
   className,
 }: Readonly<ColorFieldProps>) {
+  const { t } = useTranslation('themeBuilder');
   const handlePicker = (e: ChangeEvent<HTMLInputElement>) => onChange(e.target.value);
   const handleText = (e: ChangeEvent<HTMLInputElement>) => onChange(e.target.value);
 
@@ -135,7 +133,7 @@ export function ColorField({
           value={isHex(value) ? value : '#000000'}
           onChange={handlePicker}
           className="absolute inset-0 size-full cursor-pointer opacity-0"
-          aria-label={`Pick ${label}`}
+          aria-label={t('fields.color.pickAria', { label })}
         />
       </div>
       <TokenLabelTooltip cssVar={cssVar} description={description} example={example}>

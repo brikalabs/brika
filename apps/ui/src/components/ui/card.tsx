@@ -69,7 +69,7 @@ function Card({ className, accent, interactive, children, ...props }: Readonly<C
       {hasAccent && (
         <div
           className={cn(
-            'pointer-events-none absolute inset-0 corner-card rounded-card bg-(--accent-bg) transition-colors',
+            'corner-card pointer-events-none absolute inset-0 rounded-card bg-(--accent-bg) transition-colors',
             interactive && 'group-hover:bg-(--accent-bg-hover)'
           )}
         />

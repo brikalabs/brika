@@ -1,0 +1,471 @@
+{
+  "page": {
+    "defaultName": "Thème sans titre",
+    "defaultDescription": "Modifiez couleurs, coins, rayons, typographie et effets. L'aperçu se met à jour en direct."
+  },
+  "toolbar": {
+    "status": {
+      "draft": "Brouillon",
+      "saved": "Enregistré",
+      "unsavedChanges": "Modifications non enregistrées",
+      "active": "Actif"
+    },
+    "actions": {
+      "save": "Enregistrer",
+      "create": "Créer",
+      "saveTooltip": "Enregistrer (⌘S)",
+      "apply": "Appliquer",
+      "duplicate": "Dupliquer",
+      "delete": "Supprimer",
+      "import": "Importer",
+      "export": "Exporter",
+      "exportJson": "Télécharger JSON",
+      "exportCss": "Télécharger CSS",
+      "copyCss": "Copier le CSS dans le presse-papiers",
+      "undo": "Annuler",
+      "undoTooltip": "Annuler (⌘Z)",
+      "redo": "Rétablir",
+      "redoTooltip": "Rétablir (⌘⇧Z)"
+    },
+    "meta": {
+      "id": "ID",
+      "updated": "Mis à jour",
+      "draftId": "BROUILLON"
+    }
+  },
+  "list": {
+    "title": "Mes thèmes",
+    "newThemeLabel": "Nouveau thème",
+    "newThemeTooltip": "Nouveau thème",
+    "blankThemeTooltip": "Thème vierge",
+    "collapseLabel": "Réduire la liste des thèmes",
+    "collapseTooltip": "Réduire",
+    "expandLabel": "Développer la liste des thèmes",
+    "expandTooltip": "Développer la liste des thèmes",
+    "empty": "Aucun thème pour le moment. Partez d'un préréglage ou cliquez sur + pour un thème vierge.",
+    "count_one": "{{count}} thème",
+    "count_other": "{{count}} thèmes"
+  },
+  "meta": {
+    "namePlaceholder": "Nom du thème",
+    "descriptionPlaceholder": "Courte description (facultatif)"
+  },
+  "tabs": {
+    "design": "Design",
+    "palette": "Palette"
+  },
+  "design": {
+    "sectionsLabel": "Sections de design",
+    "sections": {
+      "typography": { "label": "Typographie", "hint": "Polices et taille de texte" },
+      "geometry": { "label": "Géométrie", "hint": "Rayon et forme des coins" },
+      "components": { "label": "Composants", "hint": "Ajuster chaque composant" },
+      "spacing": { "label": "Espacement", "hint": "Densité générale" },
+      "effects": { "label": "Effets", "hint": "Ombres et bordures" },
+      "atmosphere": { "label": "Atmosphère", "hint": "Flou, focus, mouvement" }
+    },
+    "fonts": {
+      "sans": "Sans",
+      "mono": "Mono",
+      "sampleSans": "Portez ce vieux whisky au juge blond qui fume",
+      "sampleMono": "const reponse = 42;"
+    },
+    "baseSize": "Taille de base",
+    "radius": "Rayon",
+    "baseUnit": "Unité de base",
+    "elevation": "Élévation",
+    "borderWidth": "Épaisseur de bordure",
+    "backdropBlur": "Flou d'arrière-plan",
+    "focusRing": "Anneau de focus",
+    "motion": "Mouvement",
+    "motionHint": "survolez pour ressentir"
+  },
+  "palette": {
+    "filterPlaceholder": "Filtrer les tokens",
+    "modeLight": "Clair",
+    "modeDark": "Sombre",
+    "sync": "Synchroniser",
+    "copyLightToDark": "Copier clair → sombre",
+    "copyDarkToLight": "Copier sombre → clair",
+    "autoInvertToDark": "Inverser vers sombre",
+    "autoInvertToLight": "Inverser vers clair",
+    "tintFromPrimary": "Teinter depuis primaire",
+    "tintFromPrimaryTooltip": "Dériver accent/secondaire/atténué depuis la couleur primaire actuelle",
+    "emptyFilter": "Aucun token ne correspond à « {{query}} »."
+  },
+  "groups": {
+    "surface": "Surface",
+    "brand": "Marque",
+    "neutral": "Neutre",
+    "feedback": "Feedback",
+    "data": "Données",
+    "surfaceTonal": "Surfaces tonales",
+    "roleContainers": "Conteneurs de rôle"
+  },
+  "foregroundPairs": {
+    "onBackground": "sur fond",
+    "onCard": "sur carte",
+    "onPopover": "sur popover",
+    "onPrimary": "sur primaire",
+    "onSecondary": "sur secondaire",
+    "onAccent": "sur accent",
+    "onMuted": "sur atténué",
+    "onSuccess": "sur succès",
+    "onWarning": "sur avertissement",
+    "onInfo": "sur info",
+    "onDestructive": "sur destructif"
+  },
+  "presets": {
+    "trigger": "Partir d'un préréglage",
+    "dialogTitle": "Partir d'un préréglage",
+    "dialogDescription": "Choisissez une palette pour amorcer un nouveau thème. Tout reste modifiable ensuite.",
+    "items": {
+      "default": { "description": "Brika classique — bleu équilibré, gris neutres." },
+      "ocean": { "description": "Teals frais sur un marine profond. Ambiance océanique." },
+      "forest": { "description": "Verts mousseux et kaki chaleureux. Calme et ancré." },
+      "sunset": { "description": "Magenta chaud et pêche. Ambiance crépuscule." },
+      "lavender": { "description": "Violet doux et accents pastel. Doux et lisible." },
+      "ruby": { "description": "Cramoisi saturé et prune profonde. Audacieux et théâtral." },
+      "nord": { "description": "Gris inspirés de Nord et bleus glacés." },
+      "dracula": { "description": "Palette sombre à fort contraste avec pastels vifs." },
+      "solarized": { "description": "Palette classique d'Ethan Schoonover, contraste réduit." },
+      "candy": { "description": "Rose sucré, menthe et turquoise. Ludique." },
+      "mono": { "description": "Gris quasi monochromes avec un seul accent." }
+    }
+  },
+  "components": {
+    "groups": {
+      "controls": "Contrôles",
+      "surfaces": "Surfaces",
+      "overlays": "Superpositions"
+    },
+    "items": {
+      "button": {
+        "label": "Bouton",
+        "description": "Surface d'action principale. Variantes pleine et contour."
+      },
+      "input": {
+        "label": "Champ de saisie",
+        "description": "Saisie de texte. Pilote aussi Textarea et le déclencheur Select."
+      },
+      "select": {
+        "label": "Select",
+        "description": "Déclencheur de menu déroulant. Hérite des couleurs de champ."
+      },
+      "checkbox": {
+        "label": "Case à cocher",
+        "description": "Basculeur binaire. Presque toujours carré."
+      },
+      "tabs": {
+        "label": "Onglets",
+        "description": "Navigation segmentée. Les pilules dans le rail."
+      },
+      "badge": { "label": "Badge", "description": "Petit chip de statut. Souvent en pilule." },
+      "switch": {
+        "label": "Interrupteur",
+        "description": "Basculeur binaire, en forme de pilule par défaut."
+      },
+      "card": { "label": "Carte", "description": "Conteneur au repos pour les blocs de contenu." },
+      "alert": {
+        "label": "Alerte",
+        "description": "Bannière en ligne pour les messages de statut."
+      },
+      "toast": {
+        "label": "Toast",
+        "description": "Notification transitoire, flotte au-dessus du contenu."
+      },
+      "avatar": {
+        "label": "Avatar",
+        "description": "Surface de portrait utilisateur, circulaire par défaut."
+      },
+      "dialog": {
+        "label": "Dialogue",
+        "description": "Surface modale. Posée sur l'arrière-plan spotlight."
+      },
+      "popover": {
+        "label": "Popover",
+        "description": "Surface flottante ancrée à un déclencheur."
+      },
+      "menu": { "label": "Menu", "description": "Conteneur de menu pour les éléments." },
+      "menu-item": { "label": "Élément de menu", "description": "Ligne individuelle d'un menu." },
+      "tooltip": { "label": "Infobulle", "description": "Petite bulle au survol avec un libellé." }
+    },
+    "colorTokens": {
+      "button-filled-container": { "label": "Fond plein" },
+      "button-filled-label": { "label": "Libellé plein" },
+      "button-outline-border": { "label": "Bordure contour" },
+      "button-outline-label": { "label": "Libellé contour" },
+      "input-container": { "label": "Fond" },
+      "input-label": { "label": "Texte" },
+      "input-border": { "label": "Bordure" },
+      "input-placeholder": { "label": "Espace réservé" },
+      "card-container": { "label": "Fond" },
+      "card-label": { "label": "Texte" },
+      "dialog-container": { "label": "Fond" },
+      "dialog-label": { "label": "Texte" }
+    },
+    "fallbackLabels": {
+      "primary": "Primaire",
+      "primary-foreground": "Primaire (texte)",
+      "border": "Bordure",
+      "foreground": "Texte",
+      "background": "Fond",
+      "input": "Champ",
+      "muted-foreground": "Atténué (texte)",
+      "card": "Carte",
+      "card-foreground": "Carte (texte)",
+      "popover": "Popover",
+      "popover-foreground": "Popover (texte)"
+    },
+    "pairLabels": {
+      "label": "libellé",
+      "container": "conteneur",
+      "surface": "surface",
+      "text": "texte",
+      "bg": "fond"
+    },
+    "listHint": "Choisissez un composant pour ajuster ses tokens",
+    "allDefaults": "Toutes valeurs par défaut",
+    "customized_one": "{{count}} personnalisé",
+    "customized_other": "{{count}} personnalisés",
+    "customization_one": "{{count}} personnalisation",
+    "customization_other": "{{count}} personnalisations",
+    "backLabel": "Retour aux composants",
+    "backShort": "Composants",
+    "resetAll": "Tout réinitialiser",
+    "resetCount_one": "Réinitialiser {{count}} surcharge",
+    "resetCount_other": "Réinitialiser {{count}} surcharges",
+    "noColorOverrides": "Aucune surcharge de couleur pour ce composant. Le rayon reste entièrement ajustable ci-dessus.",
+    "preview": "Aperçu",
+    "modeLight": "Clair",
+    "modeDark": "Sombre",
+    "shape": "Forme",
+    "radius": "Rayon",
+    "corners": "Coins",
+    "cornersCustom": "Personnalisé",
+    "cornersTheme": "Par défaut du thème",
+    "colors": "Couleurs",
+    "colorsHint": "Par mode quand séparé",
+    "perMode": "Par mode",
+    "shared": "Partagé",
+    "themeFallback": "Thème · {{label}}",
+    "useOneValue": "Utiliser une seule valeur pour les deux modes",
+    "setDifferentValues": "Valeurs différentes pour clair et sombre",
+    "customizedLabel": "Personnalisé",
+    "resetAria": "Réinitialiser {{field}} à la valeur du thème",
+    "resetTitle": "Réinitialiser à la valeur du thème",
+    "matchesTheme": "Correspond au thème",
+    "resetModeAria": "Réinitialiser la surcharge {{mode}}",
+    "resetModeTitle": "Réinitialiser la surcharge {{mode}}",
+    "noOverride": "Aucune surcharge"
+  },
+  "fields": {
+    "color": {
+      "pickAria": "Choisir {{label}}"
+    },
+    "corner": {
+      "label": "Style de coin",
+      "fallback": "Style de coin inconnu ; retour à arrondi.",
+      "options": {
+        "round": { "label": "Arrondi", "hint": "Arc circulaire classique" },
+        "squircle": { "label": "Squircle", "hint": "Coin doux façon iOS" },
+        "bevel": { "label": "Biseau", "hint": "Chanfrein à 45°" },
+        "scoop": { "label": "Cuillère", "hint": "Découpe concave" },
+        "notch": { "label": "Encoche", "hint": "Marche à angle droit" }
+      }
+    },
+    "radius": {
+      "semanticLabel": "Rayon sémantique",
+      "caption": "{{value}}rem de base",
+      "samples": {
+        "pill": { "label": "Pilule", "hint": "chips" },
+        "control": { "label": "Contrôle", "hint": "boutons" },
+        "container": { "label": "Conteneur", "hint": "cartes" },
+        "surface": { "label": "Surface", "hint": "dialogues" }
+      },
+      "presets": {
+        "sharp": { "label": "Net", "hint": "Brutaliste, angle droit" },
+        "subtle": { "label": "Subtil", "hint": "À peine arrondi" },
+        "default": { "label": "Défaut", "hint": "Sensation web classique" },
+        "soft": { "label": "Doux", "hint": "Défaut Brika" },
+        "pillowy": { "label": "Moelleux", "hint": "Très arrondi" },
+        "pill": { "label": "Pilule", "hint": "Complètement arrondi" }
+      }
+    },
+    "spacing": {
+      "presets": {
+        "compact": { "label": "Compact", "hint": "Remplissage serré, UI dense" },
+        "cozy": { "label": "Douillet", "hint": "Légèrement plus serré que le défaut" },
+        "default": { "label": "Défaut", "hint": "Densité standard" },
+        "roomy": { "label": "Spacieux", "hint": "Plus d'espace respiratoire" }
+      }
+    },
+    "textSize": {
+      "presets": {
+        "compact": { "label": "Compact", "hint": "Plus dense, lit comme un outil" },
+        "default": { "label": "Défaut", "hint": "Taille de base standard" },
+        "comfortable": { "label": "Confortable", "hint": "Lisible à distance" },
+        "large": { "label": "Grand", "hint": "Très lisible" }
+      },
+      "preview": {
+        "title": "Titre",
+        "body": "Le texte du corps utilise la taille de base choisie. Tous les niveaux sont dérivés d'un seul scalaire.",
+        "label": "Étiquette"
+      }
+    },
+    "font": {
+      "custom": "Personnalisé…"
+    },
+    "effects": {
+      "elevation": {
+        "flat": "Plat",
+        "soft": "Doux",
+        "crisp": "Net",
+        "dramatic": "Dramatique",
+        "tintWithPrimary": "Teinter avec la primaire",
+        "semanticLevels": "Niveaux sémantiques",
+        "byPurpose": "par usage UI",
+        "levels": {
+          "surface": { "label": "Surface", "hint": "cartes en ligne" },
+          "raised": { "label": "Surélevé", "hint": "cartes, boutons" },
+          "overlay": { "label": "Superposé", "hint": "popovers, menus" },
+          "modal": { "label": "Modal", "hint": "dialogues, feuilles" },
+          "spotlight": { "label": "Spotlight", "hint": "toasts" }
+        }
+      },
+      "border": {
+        "preview": "Aperçu",
+        "presets": {
+          "hairline": { "label": "Cheveu", "hint": "0,5px" },
+          "regular": { "label": "Régulier", "hint": "1px" },
+          "medium": { "label": "Moyen", "hint": "1,5px" },
+          "bold": { "label": "Gras", "hint": "2px" }
+        }
+      },
+      "blur": {
+        "presets": {
+          "none": "Aucun",
+          "subtle": "Subtil",
+          "glass": "Verre",
+          "frosted": "Givré",
+          "heavy": "Fort"
+        },
+        "livePreview": "Aperçu en direct",
+        "caption": "blur({{value}}px)"
+      },
+      "ring": {
+        "width": "Épaisseur",
+        "offset": "Décalage",
+        "livePreview": "Aperçu en direct",
+        "caption": "{{width}}px · décalage {{offset}}px",
+        "focused": "Action ciblée"
+      },
+      "motion": {
+        "snappy": "Vif",
+        "smooth": "Fluide",
+        "stately": "Posé"
+      }
+    }
+  },
+  "preview": {
+    "scenes": {
+      "library": "Bibliothèque",
+      "app": "Application"
+    },
+    "modeLight": "Clair",
+    "modeDark": "Sombre",
+    "library": {
+      "typography": "Typographie",
+      "display": "Des thèmes qui vous ressemblent.",
+      "body": "Le texte du corps utilise votre pile sans-serif. Ajustez la taille de base dans l'onglet Design pour mettre à l'échelle tous les niveaux — display, titre, corps et étiquette — depuis un seul scalaire.",
+      "buttons": "Boutons",
+      "primary": "Primaire",
+      "secondary": "Secondaire",
+      "outline": "Contour",
+      "ghost": "Ghost",
+      "destructive": "Destructif",
+      "withIcon": "Avec icône",
+      "badges": "Badges",
+      "badgeDefault": "Défaut",
+      "success": "Succès",
+      "warning": "Avertissement",
+      "info": "Info",
+      "formControls": "Contrôles de formulaire",
+      "searchPlaceholder": "Rechercher…",
+      "disabled": "Désactivé",
+      "enableFeature": "Activer les exécutions nocturnes",
+      "dataPalette": "Palette de données",
+      "emptyState": "État vide",
+      "emptyTitle": "Rien de connecté pour l'instant",
+      "emptyDescription": "Ajoutez votre premier spark pour voir les événements circuler."
+    },
+    "app": {
+      "brand": "Brika",
+      "nav": {
+        "home": "Accueil",
+        "activity": "Activité",
+        "inbox": "Boîte de réception",
+        "settings": "Paramètres"
+      },
+      "searchPlaceholder": "Rechercher workflows, sparks, blocks…",
+      "notifications": "Notifications",
+      "headline": "Bon retour",
+      "subheadline": "Voici ce qu'il se passe dans votre espace.",
+      "cardTitle": "Exécution nocturne terminée",
+      "cardDescription": "3 des 5 étapes planifiées se sont terminées ces 4 dernières heures.",
+      "progressLabel": "{{percent}}% terminé",
+      "formTitle": "Détails de l'espace",
+      "formDescription": "Visibles par votre équipe.",
+      "workspaceName": "Nom de l'espace",
+      "note": "Description",
+      "notePlaceholder": "À quoi sert cet espace ?",
+      "cancel": "Annuler",
+      "save": "Enregistrer",
+      "emptyTitle": "Aucune automatisation",
+      "emptyDescription": "Connectez un déclencheur et une action pour créer votre premier workflow.",
+      "emptyCta": "Créer un workflow"
+    }
+  },
+  "confirm": {
+    "deleteTheme": "Supprimer le thème « {{name}} » ? Action irréversible."
+  },
+  "errors": {
+    "importFailed": "Échec de l'import du thème",
+    "copyCssFailed": "Impossible de copier le CSS dans le presse-papiers."
+  },
+  "tokens": {
+    "background": { "purpose": "Surface au niveau page. Tout repose dessus." },
+    "foreground": { "purpose": "Couleur de texte lisible par défaut sur le fond." },
+    "card": { "purpose": "Surface au repos pour cartes et panneaux." },
+    "card-foreground": { "purpose": "Couleur de texte à l'intérieur d'une carte." },
+    "popover": { "purpose": "Surface pour superpositions flottantes (menus, listes déroulantes)." },
+    "popover-foreground": { "purpose": "Couleur de texte dans les popovers et menus." },
+    "primary": { "purpose": "Couleur de marque principale. CTA, états actifs, liens." },
+    "primary-foreground": { "purpose": "Se lit sur la primaire. Le contraste compte ici." },
+    "secondary": { "purpose": "Alternative plus douce à la primaire. Boutons secondaires, tags." },
+    "secondary-foreground": { "purpose": "Se lit sur la secondaire." },
+    "accent": { "purpose": "Survol/focus pour lignes et chips interactifs." },
+    "accent-foreground": { "purpose": "Couleur de texte affichée par-dessus l'accent." },
+    "muted": { "purpose": "Surface à faible emphase pour zones neutres/désactivées." },
+    "muted-foreground": { "purpose": "Couleur de texte secondaire pour légendes et indices." },
+    "border": { "purpose": "Couleur de bordure par défaut entre surfaces et sections." },
+    "input": { "purpose": "Couleur de bordure sur champs, selects et textareas." },
+    "ring": { "purpose": "Couleur de l'anneau de focus. Reflète généralement la primaire." },
+    "success": { "purpose": "Couleur de succès. Actions confirmées, états sains." },
+    "success-foreground": { "purpose": "Se lit sur succès." },
+    "warning": { "purpose": "Couleur d'avertissement. Problèmes non bloquants." },
+    "warning-foreground": { "purpose": "Se lit sur avertissement." },
+    "info": { "purpose": "Couleur informative neutre. Astuces, bannières d'aide." },
+    "info-foreground": { "purpose": "Se lit sur info." },
+    "destructive": { "purpose": "Couleur de danger/erreur. Actions destructives, échecs." },
+    "destructive-foreground": { "purpose": "Se lit sur destructive." },
+    "data-1": { "purpose": "Couleur de graphique 1. Cycler 1..8 pour séries distinctes." },
+    "data-2": { "purpose": "Couleur de graphique 2." },
+    "data-3": { "purpose": "Couleur de graphique 3." },
+    "data-4": { "purpose": "Couleur de graphique 4." },
+    "data-5": { "purpose": "Couleur de graphique 5." },
+    "data-6": { "purpose": "Couleur de graphique 6." },
+    "data-7": { "purpose": "Couleur de graphique 7." },
+    "data-8": { "purpose": "Couleur de graphique 8." }
+  }
+}

@@ -2,12 +2,7 @@
   "id": "mono",
   "name": "Mono",
   "description": "Pure greyscale, bevelled corners.",
-  "accentSwatches": [
-    "#111111",
-    "#444444",
-    "#888888",
-    "#cccccc"
-  ],
+  "accentSwatches": ["#111111", "#444444", "#888888", "#cccccc"],
   "radius": 0.25,
   "corners": "bevel",
   "colors": {

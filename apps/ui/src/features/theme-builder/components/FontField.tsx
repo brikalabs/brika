@@ -4,7 +4,15 @@
  * users see the typeface without leaving the panel.
  */
 
-import { Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui';
+import { useTranslation } from 'react-i18next';
+import {
+  Input,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui';
 import type { FontChoice } from '../tokens';
 
 interface FontFieldProps {
@@ -18,6 +26,7 @@ interface FontFieldProps {
 const CUSTOM_VALUE = '__custom__';
 
 export function FontField({ label, value, onChange, choices, sample }: Readonly<FontFieldProps>) {
+  const { t } = useTranslation('themeBuilder');
   const matched = choices.find((c) => c.stack === value);
   const selectValue = matched ? matched.stack : CUSTOM_VALUE;
 
@@ -44,7 +53,7 @@ export function FontField({ label, value, onChange, choices, sample }: Readonly<
               <span style={{ fontFamily: c.stack }}>{c.label}</span>
             </SelectItem>
           ))}
-          <SelectItem value={CUSTOM_VALUE}>Custom…</SelectItem>
+          <SelectItem value={CUSTOM_VALUE}>{t('fields.font.custom')}</SelectItem>
         </SelectContent>
       </Select>
       <Input

@@ -2,12 +2,7 @@
   "id": "sunset",
   "name": "Sunset",
   "description": "Warm oranges, corals, amber highlights.",
-  "accentSwatches": [
-    "#d87327",
-    "#db9149",
-    "#c44f3a",
-    "#c78a2b"
-  ],
+  "accentSwatches": ["#d87327", "#db9149", "#c44f3a", "#c78a2b"],
   "colors": {
     "light": {
       "background": "#fcfcfc",

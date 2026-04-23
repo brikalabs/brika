@@ -6,10 +6,12 @@
  * users see the whole scale ripple as they drag.
  */
 
+import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Slider } from '@/components/ui';
 import { RADIUS_PRESETS } from '../radius-presets';
 import { FieldPreview } from './FieldPreview';
-import { cssVars, nearlyEquals, PresetChips, SemanticTile } from './primitives';
+import { cssVars, nearlyEquals, type Preset, PresetChips, SemanticTile } from './primitives';
 
 interface RadiusFieldProps {
   value: number;
@@ -17,10 +19,10 @@ interface RadiusFieldProps {
 }
 
 const SEMANTIC_SAMPLES = [
-  { key: 'pill', label: 'Pill', hint: 'chips', offset: -0.375 },
-  { key: 'control', label: 'Control', hint: 'buttons', offset: -0.25 },
-  { key: 'container', label: 'Container', hint: 'cards', offset: 0 },
-  { key: 'surface', label: 'Surface', hint: 'dialogs', offset: 0.25 },
+  { key: 'pill', offset: -0.375 },
+  { key: 'control', offset: -0.25 },
+  { key: 'container', offset: 0 },
+  { key: 'surface', offset: 0.25 },
 ] as const;
 
 const RADIUS_EQUALS = nearlyEquals(0.001);
@@ -31,7 +33,18 @@ function remFor(base: number, offset: number): string {
 }
 
 export function RadiusField({ value, onChange }: Readonly<RadiusFieldProps>) {
+  const { t } = useTranslation('themeBuilder');
   const scopedVars = cssVars({ '--radius': `${value}rem` });
+
+  const localizedPresets = useMemo<Preset<number>[]>(
+    () =>
+      RADIUS_PRESETS.map((p) => ({
+        label: t(`fields.radius.presets.${p.label.toLowerCase()}.label`, { defaultValue: p.label }),
+        value: p.value,
+        hint: t(`fields.radius.presets.${p.label.toLowerCase()}.hint`, { defaultValue: p.hint }),
+      })),
+    [t]
+  );
 
   return (
     <div className="space-y-2.5">
@@ -47,7 +60,7 @@ export function RadiusField({ value, onChange }: Readonly<RadiusFieldProps>) {
       />
 
       <PresetChips
-        presets={RADIUS_PRESETS}
+        presets={localizedPresets}
         value={value}
         onChange={onChange}
         columns="grid-cols-3"
@@ -55,15 +68,20 @@ export function RadiusField({ value, onChange }: Readonly<RadiusFieldProps>) {
       />
 
       <FieldPreview
-        label="Semantic radius"
-        caption={`${value.toFixed(3)}rem base`}
+        label={t('fields.radius.semanticLabel')}
+        caption={t('fields.radius.caption', { value: value.toFixed(3) })}
         style={scopedVars}
       >
         <div className="grid w-full grid-cols-4 gap-2">
-          {SEMANTIC_SAMPLES.map(({ key, label, hint, offset }) => {
+          {SEMANTIC_SAMPLES.map(({ key, offset }) => {
             const r = remFor(value, offset);
             return (
-              <SemanticTile key={key} label={label} hint={hint} value={r}>
+              <SemanticTile
+                key={key}
+                label={t(`fields.radius.samples.${key}.label`)}
+                hint={t(`fields.radius.samples.${key}.hint`)}
+                value={r}
+              >
                 <div
                   className="size-10 border-2 border-primary/40 bg-primary/10"
                   style={{ borderRadius: r }}

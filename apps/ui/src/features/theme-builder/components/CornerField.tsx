@@ -4,6 +4,7 @@
  * SVG or a CSS approximation so the user can see the shape inline.
  */
 
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { CORNER_STYLES, type CornerStyle } from '../types';
 
@@ -14,29 +15,15 @@ interface CornerFieldProps {
   radius: number;
 }
 
-interface CornerOption {
-  id: CornerStyle;
-  label: string;
-  hint: string;
-}
+const OPTION_IDS: readonly CornerStyle[] = ['round', 'squircle', 'bevel', 'scoop', 'notch'];
 
-const OPTIONS: readonly CornerOption[] = [
-  { id: 'round', label: 'Round', hint: 'Classic circular arc' },
-  { id: 'squircle', label: 'Squircle', hint: 'iOS-style smooth corner' },
-  { id: 'bevel', label: 'Bevel', hint: '45° chamfer' },
-  { id: 'scoop', label: 'Scoop', hint: 'Concave cut-out' },
-  { id: 'notch', label: 'Notch', hint: 'Right-angle step' },
-];
-
-function CornerPreview({
-  style,
-  size = 44,
-  radius,
-}: {
+interface CornerPreviewProps {
   style: CornerStyle;
   size?: number;
   radius: number;
-}) {
+}
+
+function CornerPreview({ style, size = 44, radius }: Readonly<CornerPreviewProps>) {
   // Clamp radius to a sensible screen value.
   const r = Math.min(Math.max(radius * 10, 4), size / 2);
   const stroke = 'var(--primary)';
@@ -152,21 +139,22 @@ function CornerPreview({
 }
 
 export function CornerField({ value, onChange, radius }: Readonly<CornerFieldProps>) {
+  const { t } = useTranslation('themeBuilder');
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <span className="font-medium text-sm">Corner style</span>
+        <span className="font-medium text-sm">{t('fields.corner.label')}</span>
         <span className="font-mono text-muted-foreground text-xs">--corner-shape</span>
       </div>
       <div className="grid grid-cols-5 gap-1.5">
-        {OPTIONS.map((opt) => {
-          const active = value === opt.id;
+        {OPTION_IDS.map((id) => {
+          const active = value === id;
           return (
             <button
-              key={opt.id}
+              key={id}
               type="button"
-              onClick={() => onChange(opt.id)}
-              title={opt.hint}
+              onClick={() => onChange(id)}
+              title={t(`fields.corner.options.${id}.hint`)}
               className={cn(
                 'flex flex-col items-center gap-1.5 rounded-md border px-2 py-2 text-[10px] transition-colors',
                 active
@@ -174,16 +162,14 @@ export function CornerField({ value, onChange, radius }: Readonly<CornerFieldPro
                   : 'border-border text-muted-foreground hover:border-primary/40 hover:text-foreground'
               )}
             >
-              <CornerPreview style={opt.id} radius={radius} />
-              <span className="font-medium">{opt.label}</span>
+              <CornerPreview style={id} radius={radius} />
+              <span className="font-medium">{t(`fields.corner.options.${id}.label`)}</span>
             </button>
           );
         })}
       </div>
       {!CORNER_STYLES.includes(value) && (
-        <p className="text-muted-foreground text-xs">
-          Unknown corner style; falling back to round.
-        </p>
+        <p className="text-muted-foreground text-xs">{t('fields.corner.fallback')}</p>
       )}
     </div>
   );

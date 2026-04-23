@@ -2,12 +2,7 @@
   "id": "candy",
   "name": "Candy",
   "description": "Playful pastels, squircle corners.",
-  "accentSwatches": [
-    "#ff8fb1",
-    "#b59bff",
-    "#7ad0f4",
-    "#ffd166"
-  ],
+  "accentSwatches": ["#ff8fb1", "#b59bff", "#7ad0f4", "#ffd166"],
   "radius": 1.25,
   "corners": "squircle",
   "colors": {

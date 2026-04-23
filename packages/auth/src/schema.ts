@@ -39,3 +39,12 @@ export const sessions = sqliteTable(
     index('idx_sessions_user_id').on(table.userId),
   ]
 );
+
+export const userPreferences = sqliteTable('user_preferences', {
+  userId: text('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  activeTheme: text('active_theme'),
+  colorMode: text('color_mode'),
+  updatedAt: integer('updated_at').notNull(),
+});

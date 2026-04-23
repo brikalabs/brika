@@ -5,6 +5,7 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '@/lib/theme-context';
 import { useCustomThemes } from './hooks';
 import {
@@ -49,6 +50,7 @@ function initialSavedIdFor(activeThemeName: string): string | null {
 }
 
 export function useThemeBuilder() {
+  const { t } = useTranslation('themeBuilder');
   const themes = useCustomThemes();
   const { theme: activeThemeName, setTheme } = useTheme();
 
@@ -146,7 +148,7 @@ export function useThemeBuilder() {
     if (!savedId) {
       return;
     }
-    if (!confirm(`Delete theme "${draft.name}"? This cannot be undone.`)) {
+    if (!confirm(t('confirm.deleteTheme', { name: draft.name }))) {
       return;
     }
     customThemeStorage.remove(savedId);
@@ -154,7 +156,7 @@ export function useThemeBuilder() {
       setTheme('default');
     }
     handleNew();
-  }, [activeThemeName, draft.name, handleNew, savedId, setTheme]);
+  }, [activeThemeName, draft.name, handleNew, savedId, setTheme, t]);
 
   const handleApply = useCallback(() => {
     if (!savedId) {
@@ -169,9 +171,9 @@ export function useThemeBuilder() {
     try {
       await copyThemeCssToClipboard(draft);
     } catch {
-      alert('Could not copy CSS to clipboard.');
+      alert(t('errors.copyCssFailed'));
     }
-  }, [draft]);
+  }, [draft, t]);
 
   const handleImport = useCallback(
     async (file: File) => {
@@ -182,10 +184,10 @@ export function useThemeBuilder() {
         setSavedId(imported.id);
         setLastSavedMs(Date.now());
       } catch (err) {
-        alert(err instanceof Error ? err.message : 'Failed to import theme');
+        alert(err instanceof Error ? err.message : t('errors.importFailed'));
       }
     },
-    [history]
+    [history, t]
   );
 
   const handleChange = useCallback((next: ThemeConfig) => history.set(next), [history]);

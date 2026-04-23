@@ -1,0 +1,447 @@
+{
+  "page": {
+    "defaultName": "Untitled theme",
+    "defaultDescription": "Edit colors, corners, radius, typography, and effects. Preview updates live."
+  },
+  "toolbar": {
+    "status": {
+      "draft": "Draft",
+      "saved": "Saved",
+      "unsavedChanges": "Unsaved changes",
+      "active": "Active"
+    },
+    "actions": {
+      "save": "Save",
+      "create": "Create",
+      "saveTooltip": "Save (⌘S)",
+      "apply": "Apply",
+      "duplicate": "Duplicate",
+      "delete": "Delete",
+      "import": "Import",
+      "export": "Export",
+      "exportJson": "Download JSON",
+      "exportCss": "Download CSS",
+      "copyCss": "Copy CSS to clipboard",
+      "undo": "Undo",
+      "undoTooltip": "Undo (⌘Z)",
+      "redo": "Redo",
+      "redoTooltip": "Redo (⌘⇧Z)"
+    },
+    "meta": {
+      "id": "ID",
+      "updated": "Updated",
+      "draftId": "DRAFT"
+    }
+  },
+  "list": {
+    "title": "My themes",
+    "newThemeLabel": "New theme",
+    "newThemeTooltip": "New theme",
+    "blankThemeTooltip": "Blank theme",
+    "collapseLabel": "Collapse theme list",
+    "collapseTooltip": "Collapse",
+    "expandLabel": "Expand theme list",
+    "expandTooltip": "Expand theme list",
+    "empty": "No themes yet. Start from a preset or click + for a blank one.",
+    "count_one": "{{count}} theme",
+    "count_other": "{{count}} themes"
+  },
+  "meta": {
+    "namePlaceholder": "Theme name",
+    "descriptionPlaceholder": "Short description (optional)"
+  },
+  "tabs": {
+    "design": "Design",
+    "palette": "Palette"
+  },
+  "design": {
+    "sectionsLabel": "Design sections",
+    "sections": {
+      "typography": { "label": "Typography", "hint": "Font families and text size" },
+      "geometry": { "label": "Geometry", "hint": "Radius and corner shape" },
+      "components": { "label": "Components", "hint": "Tune each component" },
+      "spacing": { "label": "Spacing", "hint": "Overall density" },
+      "effects": { "label": "Effects", "hint": "Shadows and borders" },
+      "atmosphere": { "label": "Atmosphere", "hint": "Blur, focus, motion" }
+    },
+    "fonts": {
+      "sans": "Sans",
+      "mono": "Mono",
+      "sampleSans": "The quick brown fox jumps over the lazy dog",
+      "sampleMono": "const answer = 42;"
+    },
+    "baseSize": "Base size",
+    "radius": "Radius",
+    "baseUnit": "Base unit",
+    "elevation": "Elevation",
+    "borderWidth": "Border width",
+    "backdropBlur": "Backdrop blur",
+    "focusRing": "Focus ring",
+    "motion": "Motion",
+    "motionHint": "hover to feel it"
+  },
+  "palette": {
+    "filterPlaceholder": "Filter tokens",
+    "modeLight": "Light",
+    "modeDark": "Dark",
+    "sync": "Sync",
+    "copyLightToDark": "Copy light → dark",
+    "copyDarkToLight": "Copy dark → light",
+    "autoInvertToDark": "Auto-invert to dark",
+    "autoInvertToLight": "Auto-invert to light",
+    "tintFromPrimary": "Tint from primary",
+    "tintFromPrimaryTooltip": "Derive accent/secondary/muted shades from the current primary",
+    "emptyFilter": "No tokens match \"{{query}}\"."
+  },
+  "groups": {
+    "surface": "Surface",
+    "brand": "Brand",
+    "neutral": "Neutral",
+    "feedback": "Feedback",
+    "data": "Data",
+    "surfaceTonal": "Surface tonal",
+    "roleContainers": "Role containers"
+  },
+  "foregroundPairs": {
+    "onBackground": "on background",
+    "onCard": "on card",
+    "onPopover": "on popover",
+    "onPrimary": "on primary",
+    "onSecondary": "on secondary",
+    "onAccent": "on accent",
+    "onMuted": "on muted",
+    "onSuccess": "on success",
+    "onWarning": "on warning",
+    "onInfo": "on info",
+    "onDestructive": "on destructive"
+  },
+  "presets": {
+    "trigger": "Start from preset",
+    "dialogTitle": "Start from a preset",
+    "dialogDescription": "Pick a palette to seed a new theme. Everything is editable afterwards.",
+    "items": {
+      "default": { "description": "Brika classic — balanced blue, neutral greys." },
+      "ocean": { "description": "Cool teals over deep navy. Oceanic feel." },
+      "forest": { "description": "Mossy greens and warm khaki. Calm and grounded." },
+      "sunset": { "description": "Warm magenta and peach. Dusk mood." },
+      "lavender": { "description": "Soft violet and pastel accents. Gentle and readable." },
+      "ruby": { "description": "Saturated crimson and deep plum. Bold and theatrical." },
+      "nord": { "description": "Icy Nord-inspired greys and frost blues." },
+      "dracula": { "description": "High-contrast dark palette with vivid pastels." },
+      "solarized": { "description": "Ethan Schoonover's classic reduced-contrast palette." },
+      "candy": { "description": "Sugary pink, mint, and teal. Playful." },
+      "mono": { "description": "Near-monochrome greys with a single accent." }
+    }
+  },
+  "components": {
+    "groups": {
+      "controls": "Controls",
+      "surfaces": "Surfaces",
+      "overlays": "Overlays"
+    },
+    "items": {
+      "button": {
+        "label": "Button",
+        "description": "Primary action surface. Filled and outline variants."
+      },
+      "input": {
+        "label": "Input",
+        "description": "Text entry. Also drives Textarea and Select trigger."
+      },
+      "select": { "label": "Select", "description": "Dropdown trigger. Inherits input colors." },
+      "checkbox": { "label": "Checkbox", "description": "Binary toggle. Usually nearly square." },
+      "tabs": { "label": "Tabs", "description": "Segmented nav. The pills inside the rail." },
+      "badge": { "label": "Badge", "description": "Small status chip. Often a pill." },
+      "switch": { "label": "Switch", "description": "Binary toggle, pill-shaped by default." },
+      "card": { "label": "Card", "description": "Resting container for content blocks." },
+      "alert": { "label": "Alert", "description": "Inline banner for status messages." },
+      "toast": { "label": "Toast", "description": "Transient notification, floats above content." },
+      "avatar": { "label": "Avatar", "description": "User portrait surface, circular by default." },
+      "dialog": {
+        "label": "Dialog",
+        "description": "Modal surface. Sits on the spotlight backdrop."
+      },
+      "popover": { "label": "Popover", "description": "Floating surface anchored to a trigger." },
+      "menu": { "label": "Menu", "description": "Dropdown container for menu items." },
+      "menu-item": { "label": "Menu item", "description": "Individual row inside a menu." },
+      "tooltip": { "label": "Tooltip", "description": "Small hover bubble with a label." }
+    },
+    "colorTokens": {
+      "button-filled-container": { "label": "Filled background" },
+      "button-filled-label": { "label": "Filled label" },
+      "button-outline-border": { "label": "Outline border" },
+      "button-outline-label": { "label": "Outline label" },
+      "input-container": { "label": "Background" },
+      "input-label": { "label": "Text" },
+      "input-border": { "label": "Border" },
+      "input-placeholder": { "label": "Placeholder" },
+      "card-container": { "label": "Background" },
+      "card-label": { "label": "Foreground" },
+      "dialog-container": { "label": "Background" },
+      "dialog-label": { "label": "Foreground" }
+    },
+    "fallbackLabels": {
+      "primary": "Primary",
+      "primary-foreground": "Primary foreground",
+      "border": "Border",
+      "foreground": "Foreground",
+      "background": "Background",
+      "input": "Input",
+      "muted-foreground": "Muted foreground",
+      "card": "Card",
+      "card-foreground": "Card foreground",
+      "popover": "Popover",
+      "popover-foreground": "Popover foreground"
+    },
+    "pairLabels": {
+      "label": "label",
+      "container": "container",
+      "surface": "surface",
+      "text": "text",
+      "bg": "bg"
+    },
+    "listHint": "Pick a component to tune its tokens",
+    "allDefaults": "All defaults",
+    "customized_one": "{{count}} customized",
+    "customized_other": "{{count}} customized",
+    "customization_one": "{{count}} customization",
+    "customization_other": "{{count}} customizations",
+    "backLabel": "Back to components",
+    "backShort": "Components",
+    "resetAll": "Reset all",
+    "resetCount_one": "Reset {{count}} override",
+    "resetCount_other": "Reset {{count}} overrides",
+    "noColorOverrides": "No color overrides yet for this component. Radius is fully tunable above.",
+    "preview": "Preview",
+    "modeLight": "Light",
+    "modeDark": "Dark",
+    "shape": "Shape",
+    "radius": "Radius",
+    "corners": "Corners",
+    "cornersCustom": "Custom",
+    "cornersTheme": "Theme default",
+    "colors": "Colors",
+    "colorsHint": "Per-mode when split",
+    "perMode": "Per-mode",
+    "shared": "Shared",
+    "themeFallback": "Theme · {{label}}",
+    "useOneValue": "Use one value for both modes",
+    "setDifferentValues": "Set different values for light and dark",
+    "customizedLabel": "Customized",
+    "resetAria": "Reset {{field}} to theme default",
+    "resetTitle": "Reset to theme default",
+    "matchesTheme": "Matches theme",
+    "resetModeAria": "Reset {{mode}} override",
+    "resetModeTitle": "Reset {{mode}} override",
+    "noOverride": "No override"
+  },
+  "fields": {
+    "color": {
+      "pickAria": "Pick {{label}}"
+    },
+    "corner": {
+      "label": "Corner style",
+      "fallback": "Unknown corner style; falling back to round.",
+      "options": {
+        "round": { "label": "Round", "hint": "Classic circular arc" },
+        "squircle": { "label": "Squircle", "hint": "iOS-style smooth corner" },
+        "bevel": { "label": "Bevel", "hint": "45° chamfer" },
+        "scoop": { "label": "Scoop", "hint": "Concave cut-out" },
+        "notch": { "label": "Notch", "hint": "Right-angle step" }
+      }
+    },
+    "radius": {
+      "semanticLabel": "Semantic radius",
+      "caption": "{{value}}rem base",
+      "samples": {
+        "pill": { "label": "Pill", "hint": "chips" },
+        "control": { "label": "Control", "hint": "buttons" },
+        "container": { "label": "Container", "hint": "cards" },
+        "surface": { "label": "Surface", "hint": "dialogs" }
+      },
+      "presets": {
+        "sharp": { "label": "Sharp", "hint": "Brutalist, right-angle" },
+        "subtle": { "label": "Subtle", "hint": "Barely rounded" },
+        "default": { "label": "Default", "hint": "Classic web feel" },
+        "soft": { "label": "Soft", "hint": "Brika default" },
+        "pillowy": { "label": "Pillowy", "hint": "Very rounded" },
+        "pill": { "label": "Pill", "hint": "Fully rounded" }
+      }
+    },
+    "spacing": {
+      "presets": {
+        "compact": { "label": "Compact", "hint": "Tight padding, dense UI" },
+        "cozy": { "label": "Cozy", "hint": "Slightly tighter than default" },
+        "default": { "label": "Default", "hint": "Standard density" },
+        "roomy": { "label": "Roomy", "hint": "Extra breathing room" }
+      }
+    },
+    "textSize": {
+      "presets": {
+        "compact": { "label": "Compact", "hint": "Denser, reads like a tool" },
+        "default": { "label": "Default", "hint": "Standard base size" },
+        "comfortable": { "label": "Comfortable", "hint": "Easier to read at a distance" },
+        "large": { "label": "Large", "hint": "Extra-readable" }
+      },
+      "preview": {
+        "title": "Title",
+        "body": "Body text renders at the chosen base size. Every level scales from one scalar.",
+        "label": "Label"
+      }
+    },
+    "font": {
+      "custom": "Custom…"
+    },
+    "effects": {
+      "elevation": {
+        "flat": "Flat",
+        "soft": "Soft",
+        "crisp": "Crisp",
+        "dramatic": "Dramatic",
+        "tintWithPrimary": "Tint with primary",
+        "semanticLevels": "Semantic levels",
+        "byPurpose": "by UI purpose",
+        "levels": {
+          "surface": { "label": "Surface", "hint": "inline cards" },
+          "raised": { "label": "Raised", "hint": "cards, buttons" },
+          "overlay": { "label": "Overlay", "hint": "popovers, menus" },
+          "modal": { "label": "Modal", "hint": "dialogs, sheets" },
+          "spotlight": { "label": "Spotlight", "hint": "toasts" }
+        }
+      },
+      "border": {
+        "preview": "Preview",
+        "presets": {
+          "hairline": { "label": "Hairline", "hint": "0.5px" },
+          "regular": { "label": "Regular", "hint": "1px" },
+          "medium": { "label": "Medium", "hint": "1.5px" },
+          "bold": { "label": "Bold", "hint": "2px" }
+        }
+      },
+      "blur": {
+        "presets": {
+          "none": "None",
+          "subtle": "Subtle",
+          "glass": "Glass",
+          "frosted": "Frosted",
+          "heavy": "Heavy"
+        },
+        "livePreview": "Live preview",
+        "caption": "blur({{value}}px)"
+      },
+      "ring": {
+        "width": "Width",
+        "offset": "Offset",
+        "livePreview": "Live preview",
+        "caption": "{{width}}px · offset {{offset}}px",
+        "focused": "Focused action"
+      },
+      "motion": {
+        "snappy": "Snappy",
+        "smooth": "Smooth",
+        "stately": "Stately"
+      }
+    }
+  },
+  "preview": {
+    "scenes": {
+      "library": "Library",
+      "app": "App"
+    },
+    "modeLight": "Light",
+    "modeDark": "Dark",
+    "library": {
+      "typography": "Typography",
+      "display": "Themes that feel like yours.",
+      "body": "Body text uses your sans stack. Adjust Base size in the Design tab to scale every level — display, title, body, and label — from a single scalar.",
+      "buttons": "Buttons",
+      "primary": "Primary",
+      "secondary": "Secondary",
+      "outline": "Outline",
+      "ghost": "Ghost",
+      "destructive": "Destructive",
+      "withIcon": "With icon",
+      "badges": "Badges",
+      "badgeDefault": "Default",
+      "success": "Success",
+      "warning": "Warning",
+      "info": "Info",
+      "formControls": "Form controls",
+      "searchPlaceholder": "Search…",
+      "disabled": "Disabled",
+      "enableFeature": "Enable nightly runs",
+      "dataPalette": "Data palette",
+      "emptyState": "Empty state",
+      "emptyTitle": "Nothing connected yet",
+      "emptyDescription": "Add your first spark to start seeing events flow."
+    },
+    "app": {
+      "brand": "Brika",
+      "nav": {
+        "home": "Home",
+        "activity": "Activity",
+        "inbox": "Inbox",
+        "settings": "Settings"
+      },
+      "searchPlaceholder": "Search workflows, sparks, blocks…",
+      "notifications": "Notifications",
+      "headline": "Welcome back",
+      "subheadline": "Here is what is happening with your workspace.",
+      "cardTitle": "Nightly run completed",
+      "cardDescription": "3 of 5 scheduled steps finished in the last 4 hours.",
+      "progressLabel": "{{percent}}% complete",
+      "formTitle": "Workspace details",
+      "formDescription": "These are visible to your team.",
+      "workspaceName": "Workspace name",
+      "note": "Description",
+      "notePlaceholder": "What is this workspace for?",
+      "cancel": "Cancel",
+      "save": "Save changes",
+      "emptyTitle": "No automations yet",
+      "emptyDescription": "Connect a trigger and an action to build your first workflow.",
+      "emptyCta": "Create workflow"
+    }
+  },
+  "confirm": {
+    "deleteTheme": "Delete theme \"{{name}}\"? This cannot be undone."
+  },
+  "errors": {
+    "importFailed": "Failed to import theme",
+    "copyCssFailed": "Could not copy CSS to clipboard."
+  },
+  "tokens": {
+    "background": { "purpose": "Page-level surface. Everything sits on top of this." },
+    "foreground": { "purpose": "Default readable text color on background." },
+    "card": { "purpose": "Resting surface for cards and panels." },
+    "card-foreground": { "purpose": "Text color inside a card." },
+    "popover": { "purpose": "Surface for floating overlays (menus, dropdowns)." },
+    "popover-foreground": { "purpose": "Text color inside popovers and menus." },
+    "primary": { "purpose": "Main brand color. CTAs, active states, links." },
+    "primary-foreground": { "purpose": "Reads on top of primary. Contrast matters here." },
+    "secondary": { "purpose": "Softer alternative to primary. Secondary buttons, tags." },
+    "secondary-foreground": { "purpose": "Reads on top of secondary." },
+    "accent": { "purpose": "Hover/focus highlight for interactive rows and chips." },
+    "accent-foreground": { "purpose": "Text color shown on top of accent." },
+    "muted": { "purpose": "Low-emphasis surface for disabled/neutral regions." },
+    "muted-foreground": { "purpose": "Secondary text color for captions and hints." },
+    "border": { "purpose": "Default border color between surfaces and sections." },
+    "input": { "purpose": "Border color on inputs, selects, and textareas." },
+    "ring": { "purpose": "Focus ring color. Usually echoes primary." },
+    "success": { "purpose": "Positive status color. Confirmed actions, healthy states." },
+    "success-foreground": { "purpose": "Reads on top of success." },
+    "warning": { "purpose": "Cautionary status color. Non-fatal issues." },
+    "warning-foreground": { "purpose": "Reads on top of warning." },
+    "info": { "purpose": "Neutral informational color. Tips, help banners." },
+    "info-foreground": { "purpose": "Reads on top of info." },
+    "destructive": { "purpose": "Danger/error color. Destructive actions, failures." },
+    "destructive-foreground": { "purpose": "Reads on top of destructive." },
+    "data-1": { "purpose": "Chart color 1. Cycle through 1..8 for distinct series." },
+    "data-2": { "purpose": "Chart color 2." },
+    "data-3": { "purpose": "Chart color 3." },
+    "data-4": { "purpose": "Chart color 4." },
+    "data-5": { "purpose": "Chart color 5." },
+    "data-6": { "purpose": "Chart color 6." },
+    "data-7": { "purpose": "Chart color 7." },
+    "data-8": { "purpose": "Chart color 8." }
+  }
+}

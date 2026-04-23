@@ -2,12 +2,7 @@
   "id": "solarized",
   "name": "Solarized",
   "description": "Precision colors for machines and people.",
-  "accentSwatches": [
-    "#268bd2",
-    "#2aa198",
-    "#859900",
-    "#cb4b16"
-  ],
+  "accentSwatches": ["#268bd2", "#2aa198", "#859900", "#cb4b16"],
   "colors": {
     "light": {
       "background": "#fdf6e3",

@@ -14,8 +14,8 @@ import type { ThemePreset } from './load-presets';
 import type { ThemeConfig } from './types';
 import { THEME_CONFIG_VERSION } from './types';
 
-export { findPreset, THEME_PRESETS } from './load-presets';
 export type { ThemePreset } from './load-presets';
+export { findPreset, THEME_PRESETS } from './load-presets';
 
 /** Build a fresh ThemeConfig from a preset. Generates new id + timestamps. */
 export function createThemeFromPreset(

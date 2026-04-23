@@ -138,10 +138,7 @@
     --surface-dim,
     color-mix(in oklch, var(--background) 88%, var(--surface-tint, var(--primary)))
   );
-  --color-surface-bright: var(
-    --surface-bright,
-    color-mix(in oklch, var(--background) 96%, white)
-  );
+  --color-surface-bright: var(--surface-bright, color-mix(in oklch, var(--background) 96%, white));
   --color-surface-container-lowest: var(
     --surface-container-lowest,
     color-mix(in oklch, var(--background) 96%, var(--surface-tint, var(--primary)))

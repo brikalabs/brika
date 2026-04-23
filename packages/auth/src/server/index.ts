@@ -34,6 +34,11 @@ export { auth } from '../plugin';
 export { AuthService } from '../services/AuthService';
 export { ScopeService } from '../services/ScopeService';
 export { SessionService } from '../services/SessionService';
+export {
+  type ColorMode,
+  type UserPreferences,
+  UserPreferencesService,
+} from '../services/UserPreferencesService';
 export { UserService } from '../services/UserService';
 // 🎯 Setup & Plugin
 export { openAuthDatabase, setupAuthServices } from '../setup';

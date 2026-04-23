@@ -1,5 +1,6 @@
-import { type BrikaDatabase, eq, notInArray } from '@brika/db';
+import { asc, type BrikaDatabase, eq, notInArray } from '@brika/db';
 import { inject, singleton } from '@brika/di';
+import { ThemeConfig, type ThemeConfigType } from '@brika/ipc/contract';
 import type { PluginError, PluginHealth } from '@brika/plugin';
 import { PluginPackageSchema } from '@brika/schema';
 import { Logger } from '@/runtime/logs/log-router';
@@ -9,7 +10,11 @@ import {
   type UpdateChannelId,
 } from '@/runtime/updates/channels';
 import { stateDb } from './database';
-import { plugins as pluginsTable, settings as settingsTable } from './schema';
+import {
+  customThemes as customThemesTable,
+  plugins as pluginsTable,
+  settings as settingsTable,
+} from './schema';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -44,7 +49,11 @@ export interface HubLocation {
   formattedAddress: string;
 }
 
-type StateSchema = { plugins: typeof pluginsTable; settings: typeof settingsTable };
+type StateSchema = {
+  plugins: typeof pluginsTable;
+  settings: typeof settingsTable;
+  customThemes: typeof customThemesTable;
+};
 
 @singleton()
 export class StateStore {
@@ -272,6 +281,70 @@ export class StateStore {
 
   setSetupCompleted(completed: boolean): void {
     this.#setSetting('setupCompleted', completed);
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Custom themes (hub-global)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  listCustomThemes(): ThemeConfigType[] {
+    const rows = this.db
+      .select()
+      .from(customThemesTable)
+      .orderBy(asc(customThemesTable.updatedAt))
+      .all();
+    const themes: ThemeConfigType[] = [];
+    for (const row of rows) {
+      const parsed = this.#parseThemeRow(row.id, row.config);
+      if (parsed) {
+        themes.push(parsed);
+      }
+    }
+    return themes;
+  }
+
+  getCustomTheme(id: string): ThemeConfigType | null {
+    const row = this.db.select().from(customThemesTable).where(eq(customThemesTable.id, id)).get();
+    if (!row) {
+      return null;
+    }
+    return this.#parseThemeRow(row.id, row.config);
+  }
+
+  upsertCustomTheme(theme: ThemeConfigType): ThemeConfigType {
+    const next: ThemeConfigType = { ...theme, updatedAt: Date.now() };
+    const serialised = JSON.stringify(next);
+    this.db
+      .insert(customThemesTable)
+      .values({ id: next.id, config: serialised, updatedAt: next.updatedAt })
+      .onConflictDoUpdate({
+        target: customThemesTable.id,
+        set: { config: serialised, updatedAt: next.updatedAt },
+      })
+      .run();
+    return next;
+  }
+
+  removeCustomTheme(id: string): boolean {
+    const result = this.db
+      .delete(customThemesTable)
+      .where(eq(customThemesTable.id, id))
+      .returning({ id: customThemesTable.id })
+      .all();
+    return result.length > 0;
+  }
+
+  #parseThemeRow(id: string, raw: string): ThemeConfigType | null {
+    try {
+      const parsed = ThemeConfig.safeParse(JSON.parse(raw));
+      if (parsed.success) {
+        return parsed.data;
+      }
+      this.logs.warn('Invalid custom theme in database', { themeId: id });
+    } catch {
+      this.logs.warn('Failed to parse custom theme row', { themeId: id });
+    }
+    return null;
   }
 
   // ─────────────────────────────────────────────────────────────────────────

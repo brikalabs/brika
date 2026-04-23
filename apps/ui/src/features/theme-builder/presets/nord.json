@@ -2,12 +2,7 @@
   "id": "nord",
   "name": "Nord",
   "description": "Arctic, north-bluish palette.",
-  "accentSwatches": [
-    "#5e81ac",
-    "#88c0d0",
-    "#a3be8c",
-    "#ebcb8b"
-  ],
+  "accentSwatches": ["#5e81ac", "#88c0d0", "#a3be8c", "#ebcb8b"],
   "colors": {
     "light": {
       "background": "#eceff4",

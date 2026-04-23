@@ -1,46 +1,26 @@
 /**
- * PreviewCanvas — renders sample scenes inside a scoped container
- * with the pending theme's CSS variables inlined. Changes are visible
- * immediately without affecting the rest of the app.
+ * PreviewCanvas — renders the selected scene inside a `ThemedSurface`
+ * so the preview pane reads the draft theme without polluting the rest
+ * of the app.
  */
 
-import { Layout, LayoutDashboard, Moon, Sparkles, SquarePen, Sun } from 'lucide-react';
-import { type CSSProperties, useMemo, useState } from 'react';
+import { Layout, LayoutDashboard, Moon, Sun } from 'lucide-react';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui';
-import { cn } from '@/lib/utils';
-import { type ThemeVars, themeToVars } from '../theme-css';
 import type { ThemeConfig } from '../types';
-import { ComponentsScene, DashboardScene, FormScene, MarketingScene } from './preview-scenes';
+import { AppScene, LibraryScene } from './preview-scenes';
+import { ThemedSurface } from './ThemedSurface';
 
-type SceneId = 'components' | 'dashboard' | 'form' | 'marketing';
+type SceneId = 'library' | 'app';
 
-const SCENES: { id: SceneId; label: string; icon: typeof Sun }[] = [
-  { id: 'components', label: 'Components', icon: Layout },
-  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'form', label: 'Form', icon: SquarePen },
-  { id: 'marketing', label: 'Marketing', icon: Sparkles },
+const SCENES: { id: SceneId; icon: typeof Sun }[] = [
+  { id: 'library', icon: Layout },
+  { id: 'app', icon: LayoutDashboard },
 ];
 
-// React's CSSProperties doesn't declare CSS custom properties (`--foo`),
-// but they're valid in the `style` prop. Intersect so extra vars pass the
-// type check without any assertion.
-type StyleWithVars = CSSProperties & ThemeVars;
-
-function themeToStyle(theme: ThemeConfig, mode: 'light' | 'dark'): StyleWithVars {
-  return { ...themeToVars(theme, mode), fontFamily: 'var(--font-sans)' };
-}
-
 function SceneContent({ scene }: Readonly<{ scene: SceneId }>) {
-  switch (scene) {
-    case 'dashboard':
-      return <DashboardScene />;
-    case 'form':
-      return <FormScene />;
-    case 'marketing':
-      return <MarketingScene />;
-    default:
-      return <ComponentsScene />;
-  }
+  return scene === 'app' ? <AppScene /> : <LibraryScene />;
 }
 
 interface PreviewCanvasProps {
@@ -48,19 +28,19 @@ interface PreviewCanvasProps {
 }
 
 export function PreviewCanvas({ theme }: Readonly<PreviewCanvasProps>) {
+  const { t } = useTranslation('themeBuilder');
   const [mode, setMode] = useState<'light' | 'dark'>('light');
-  const [scene, setScene] = useState<SceneId>('components');
-  const style = useMemo(() => themeToStyle(theme, mode), [theme, mode]);
+  const [scene, setScene] = useState<SceneId>('library');
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex shrink-0 items-center justify-between gap-2 border-b py-2 pl-3 pr-safe">
+      <div className="flex shrink-0 items-center justify-between gap-2 border-b py-2 pr-safe pl-3">
         <Tabs value={scene} onValueChange={(v) => setScene(v as SceneId)}>
           <TabsList className="h-8">
-            {SCENES.map(({ id, label, icon: Icon }) => (
+            {SCENES.map(({ id, icon: Icon }) => (
               <TabsTrigger key={id} value={id} className="h-7 gap-1 px-2 text-xs">
                 <Icon className="size-3.5" />
-                <span className="hidden sm:inline">{label}</span>
+                <span className="hidden sm:inline">{t(`preview.scenes.${id}`)}</span>
               </TabsTrigger>
             ))}
           </TabsList>
@@ -69,25 +49,23 @@ export function PreviewCanvas({ theme }: Readonly<PreviewCanvasProps>) {
         <Tabs value={mode} onValueChange={(v) => setMode(v === 'dark' ? 'dark' : 'light')}>
           <TabsList className="h-8">
             <TabsTrigger value="light" className="h-7 gap-1 px-2 text-xs">
-              <Sun className="size-3" /> Light
+              <Sun className="size-3" /> {t('preview.modeLight')}
             </TabsTrigger>
             <TabsTrigger value="dark" className="h-7 gap-1 px-2 text-xs">
-              <Moon className="size-3" /> Dark
+              <Moon className="size-3" /> {t('preview.modeDark')}
             </TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
 
-      <div
-        data-preview="true"
-        className={cn(
-          'min-h-0 flex-1 overflow-auto bg-background p-safe text-foreground',
-          mode === 'dark' && 'dark'
-        )}
-        style={style}
+      <ThemedSurface
+        theme={theme}
+        mode={mode}
+        variant="canvas"
+        className="min-h-0 flex-1 overflow-auto p-safe"
       >
         <SceneContent scene={scene} />
-      </div>
+      </ThemedSurface>
     </div>
   );
 }

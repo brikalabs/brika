@@ -2,12 +2,7 @@
   "id": "ocean",
   "name": "Ocean",
   "description": "Cool blues and teals, calm surfaces.",
-  "accentSwatches": [
-    "#1f6fd6",
-    "#2f8fa8",
-    "#2b9d8e",
-    "#3ea0b3"
-  ],
+  "accentSwatches": ["#1f6fd6", "#2f8fa8", "#2b9d8e", "#3ea0b3"],
   "colors": {
     "light": {
       "background": "#fcfcfc",

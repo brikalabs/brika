@@ -6,6 +6,8 @@
  * spotlight). Border-width renders four chips with live samples.
  */
 
+import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Switch } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import { shadowScaleFor } from '../theme-css';
@@ -22,24 +24,12 @@ interface ElevationPickerProps {
   onTintChange: (next: boolean) => void;
 }
 
-const ELEVATION_LABELS: Record<ElevationStyle, string> = {
-  flat: 'Flat',
-  soft: 'Soft',
-  crisp: 'Crisp',
-  dramatic: 'Dramatic',
-};
-
-const SEMANTIC_LEVELS: readonly {
-  key: string;
-  label: string;
-  hint: string;
-  scale: NumericShadowKey;
-}[] = [
-  { key: 'surface', label: 'Surface', hint: 'inline cards', scale: 'xs' },
-  { key: 'raised', label: 'Raised', hint: 'cards, buttons', scale: 'sm' },
-  { key: 'overlay', label: 'Overlay', hint: 'popovers, menus', scale: 'md' },
-  { key: 'modal', label: 'Modal', hint: 'dialogs, sheets', scale: 'lg' },
-  { key: 'spotlight', label: 'Spotlight', hint: 'toasts', scale: 'xl' },
+const SEMANTIC_LEVELS: readonly { key: string; scale: NumericShadowKey }[] = [
+  { key: 'surface', scale: 'xs' },
+  { key: 'raised', scale: 'sm' },
+  { key: 'overlay', scale: 'md' },
+  { key: 'modal', scale: 'lg' },
+  { key: 'spotlight', scale: 'xl' },
 ];
 
 /** Strip the --shadow-rgb fallback so the field-local preview works
@@ -54,6 +44,7 @@ export function ElevationField({
   tint,
   onTintChange,
 }: Readonly<ElevationPickerProps>) {
+  const { t } = useTranslation('themeBuilder');
   const activeScale = shadowScaleFor(value);
 
   return (
@@ -80,21 +71,28 @@ export function ElevationField({
                 className="size-8 rounded-control border bg-background"
                 style={{ boxShadow: inertShadow(chipScale.md) }}
               />
-              <span className="font-medium">{ELEVATION_LABELS[style]}</span>
+              <span className="font-medium">{t(`fields.effects.elevation.${style}`)}</span>
             </button>
           );
         })}
       </div>
 
       <label className="flex items-center justify-between rounded-control border bg-muted/20 px-2.5 py-1.5 text-xs">
-        <span>Tint with primary</span>
+        <span>{t('fields.effects.elevation.tintWithPrimary')}</span>
         <Switch checked={tint} onCheckedChange={onTintChange} />
       </label>
 
-      <FieldPreview label="Semantic levels" caption="by UI purpose">
+      <FieldPreview
+        label={t('fields.effects.elevation.semanticLevels')}
+        caption={t('fields.effects.elevation.byPurpose')}
+      >
         <div className="grid w-full grid-cols-5 gap-2">
-          {SEMANTIC_LEVELS.map(({ key, label, hint, scale }) => (
-            <SemanticTile key={key} label={label} hint={hint}>
+          {SEMANTIC_LEVELS.map(({ key, scale }) => (
+            <SemanticTile
+              key={key}
+              label={t(`fields.effects.elevation.levels.${key}.label`)}
+              hint={t(`fields.effects.elevation.levels.${key}.hint`)}
+            >
               <div
                 className="size-10 rounded-control border bg-background"
                 style={{ boxShadow: inertShadow(activeScale[scale]) }}
@@ -115,28 +113,40 @@ interface BorderWidthFieldProps {
   onChange: (next: number) => void;
 }
 
-const BORDER_PRESETS: readonly Preset<number>[] = [
-  { label: 'Hairline', value: 0.5, hint: '0.5px' },
-  { label: 'Regular', value: 1, hint: '1px' },
-  { label: 'Medium', value: 1.5, hint: '1.5px' },
-  { label: 'Bold', value: 2, hint: '2px' },
+const BORDER_DEFS: readonly { id: string; value: number; hint: string }[] = [
+  { id: 'hairline', value: 0.5, hint: '0.5px' },
+  { id: 'regular', value: 1, hint: '1px' },
+  { id: 'medium', value: 1.5, hint: '1.5px' },
+  { id: 'bold', value: 2, hint: '2px' },
 ];
 
 const BORDER_EQUALS = nearlyEquals(0.01);
 
 export function BorderWidthField({ value, onChange }: Readonly<BorderWidthFieldProps>) {
+  const { t } = useTranslation('themeBuilder');
+
+  const presets = useMemo<Preset<number>[]>(
+    () =>
+      BORDER_DEFS.map((p) => ({
+        value: p.value,
+        label: t(`fields.effects.border.presets.${p.id}.label`),
+        hint: t(`fields.effects.border.presets.${p.id}.hint`, { defaultValue: p.hint }),
+      })),
+    [t]
+  );
+
   return (
     <div className="space-y-2">
       <PresetChips
-        presets={BORDER_PRESETS}
+        presets={presets}
         value={value}
         onChange={onChange}
         columns="grid-cols-4"
         isActive={BORDER_EQUALS}
       />
-      <FieldPreview label="Preview" caption={`${value}px`}>
+      <FieldPreview label={t('fields.effects.border.preview')} caption={`${value}px`}>
         <div className="grid w-full grid-cols-4 gap-2">
-          {BORDER_PRESETS.map((p) => (
+          {presets.map((p) => (
             <SemanticTile key={p.label} label={p.label} value={<span>{p.value}px</span>}>
               <div
                 className="h-6 w-full rounded-control bg-background"

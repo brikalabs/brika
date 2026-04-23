@@ -1,27 +1,32 @@
 /**
- * Preview scenes — sample compositions rendered inside PreviewCanvas.
- * Each scene is a self-contained block; the canvas owns the theming
- * wrapper and mode toggle, so scenes only describe *what* to render.
+ * Preview scenes — two curated compositions rendered inside PreviewCanvas.
+ *
+ * `Library`  — a dense component gallery + typography row; the
+ *              reference sheet for every token the builder exposes.
+ * `App`      — one curated product-shaped layout (sidebar · card · form
+ *              · empty state) so users can evaluate the theme on
+ *              realistic chrome without wading through four separate
+ *              scenes.
+ *
+ * Every textual label flows through i18n. `SectionHeader` pins
+ * each section's heading so readers never lose their place when
+ * scrolling a tall preview pane.
  */
 
 import {
-  Activity,
   AlertTriangle,
-  ArrowDown,
-  ArrowUp,
-  Check,
+  Bell,
   CheckCircle2,
-  Clock,
+  Home,
   Info,
   Mail,
   Search,
+  Settings,
   Sparkles,
-  TrendingUp,
-  User,
-  XCircle,
   Zap,
 } from 'lucide-react';
-import { memo } from 'react';
+import { memo, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Avatar,
   AvatarFallback,
@@ -42,101 +47,93 @@ import {
   SectionLabel,
   Separator,
   Switch,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
   Textarea,
 } from '@/components/ui';
 
 /* ─────────────────────────────────────────────────────────────
-   Scene: Components — broad palette of primitives
+   Primitives
    ───────────────────────────────────────────────────────────── */
-function ComponentsSceneImpl() {
-  return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      <section className="space-y-2">
-        <h1 className="font-semibold text-2xl tracking-tight">Typography</h1>
-        <p className="text-muted-foreground text-sm">
-          The quick brown fox jumps over the lazy dog. 0123456789.
-        </p>
-        <code className="inline-block rounded-md bg-muted px-2 py-1 font-mono text-xs">
-          const brika = () =&gt; &#123; theme: &apos;custom&apos; &#125;;
-        </code>
-      </section>
 
-      <section className="space-y-3">
-        <SectionLabel>Buttons</SectionLabel>
+interface SectionProps {
+  label: ReactNode;
+  children: ReactNode;
+}
+
+function Section({ label, children }: Readonly<SectionProps>) {
+  return (
+    <section className="space-y-3">
+      <div className="sticky top-0 z-10 border-b bg-background/85 py-1 backdrop-blur-sm">
+        <SectionLabel>{label}</SectionLabel>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Scene: Library — a clean reference gallery
+   ───────────────────────────────────────────────────────────── */
+
+function LibrarySceneImpl() {
+  const { t } = useTranslation('themeBuilder');
+  return (
+    <div className="mx-auto max-w-3xl space-y-8">
+      {/* Typography — folded in from the old Marketing scene */}
+      <Section label={t('preview.library.typography')}>
+        <div className="space-y-2">
+          <h1 className="font-semibold text-4xl tracking-tight">{t('preview.library.display')}</h1>
+          <p className="max-w-xl text-muted-foreground text-sm leading-relaxed">
+            {t('preview.library.body')}
+          </p>
+          <code className="inline-block rounded-md bg-muted px-2 py-1 font-mono text-xs">
+            const brika = () =&gt; &#123; theme: &apos;custom&apos; &#125;;
+          </code>
+        </div>
+      </Section>
+
+      <Section label={t('preview.library.buttons')}>
         <div className="flex flex-wrap gap-2">
-          <Button>Primary</Button>
-          <Button variant="secondary">Secondary</Button>
-          <Button variant="outline">Outline</Button>
-          <Button variant="ghost">Ghost</Button>
-          <Button variant="destructive">Destructive</Button>
+          <Button>{t('preview.library.primary')}</Button>
+          <Button variant="secondary">{t('preview.library.secondary')}</Button>
+          <Button variant="outline">{t('preview.library.outline')}</Button>
+          <Button variant="ghost">{t('preview.library.ghost')}</Button>
+          <Button variant="destructive">{t('preview.library.destructive')}</Button>
           <Button size="sm">
-            <Sparkles /> With icon
+            <Sparkles /> {t('preview.library.withIcon')}
           </Button>
         </div>
-      </section>
+      </Section>
 
-      <section className="space-y-3">
-        <SectionLabel>Badges</SectionLabel>
+      <Section label={t('preview.library.badges')}>
         <div className="flex flex-wrap gap-2">
-          <Badge>Default</Badge>
-          <Badge variant="secondary">Secondary</Badge>
-          <Badge variant="outline">Outline</Badge>
-          <Badge variant="destructive">Destructive</Badge>
+          <Badge>{t('preview.library.badgeDefault')}</Badge>
+          <Badge variant="secondary">{t('preview.library.secondary')}</Badge>
+          <Badge variant="outline">{t('preview.library.outline')}</Badge>
+          <Badge variant="destructive">{t('preview.library.destructive')}</Badge>
           <Badge className="gap-1 border-success/30 bg-success/10 text-success">
-            <CheckCircle2 className="size-3" /> Success
+            <CheckCircle2 className="size-3" /> {t('preview.library.success')}
           </Badge>
           <Badge className="gap-1 border-warning/30 bg-warning/10 text-warning">
-            <AlertTriangle className="size-3" /> Warning
+            <AlertTriangle className="size-3" /> {t('preview.library.warning')}
           </Badge>
           <Badge className="gap-1 border-info/30 bg-info/10 text-info">
-            <Info className="size-3" /> Info
+            <Info className="size-3" /> {t('preview.library.info')}
           </Badge>
         </div>
-      </section>
+      </Section>
 
-      <section className="space-y-3">
-        <SectionLabel>Card</SectionLabel>
-        <Card>
-          <CardHeader>
-            <CardTitle>Workflow just failed</CardTitle>
-            <CardDescription>The nightly ingest job errored out after 4 retries.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center gap-2 text-destructive text-sm">
-              <XCircle className="size-4" />
-              Connection refused at 23:07:11
-            </div>
-            <Progress value={62} />
-            <div className="flex gap-2">
-              <Button size="sm">Retry</Button>
-              <Button size="sm" variant="outline">
-                Details
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </section>
-
-      <section className="space-y-3">
-        <SectionLabel>Form controls</SectionLabel>
+      <Section label={t('preview.library.formControls')}>
         <div className="grid grid-cols-2 gap-3">
-          <Input placeholder="Search workflows…" />
-          <Input placeholder="Disabled" disabled />
+          <Input placeholder={t('preview.library.searchPlaceholder')} />
+          <Input placeholder={t('preview.library.disabled')} disabled />
         </div>
         <div className="flex items-center gap-4 rounded-md border p-3">
           <Switch defaultChecked />
-          <Label className="text-sm">Enable nightly runs</Label>
+          <Label className="text-sm">{t('preview.library.enableFeature')}</Label>
         </div>
-      </section>
+      </Section>
 
-      <section className="space-y-3">
-        <SectionLabel>Data palette</SectionLabel>
+      <Section label={t('preview.library.dataPalette')}>
         <div className="grid grid-cols-8 gap-2">
           {(
             [
@@ -149,374 +146,166 @@ function ComponentsSceneImpl() {
               'data-7',
               'data-8',
             ] as const
-          ).map((t) => (
-            <div key={t} className="space-y-1">
+          ).map((token) => (
+            <div key={token} className="space-y-1">
               <div
                 className="h-10 w-full rounded-md border"
-                style={{ backgroundColor: `var(--${t})` }}
+                style={{ backgroundColor: `var(--${token})` }}
               />
               <div className="text-center font-mono text-[10px] text-muted-foreground">
-                {t.replace('data-', '')}
+                {token.replace('data-', '')}
               </div>
             </div>
           ))}
         </div>
-      </section>
+      </Section>
 
-      <section className="space-y-3">
-        <SectionLabel>Empty state</SectionLabel>
+      <Section label={t('preview.library.emptyState')}>
         <EmptyState>
           <EmptyStateIcon>
             <Zap />
           </EmptyStateIcon>
-          <EmptyStateTitle>Nothing connected yet</EmptyStateTitle>
-          <EmptyStateDescription>
-            Add your first spark to start seeing events flow.
-          </EmptyStateDescription>
+          <EmptyStateTitle>{t('preview.library.emptyTitle')}</EmptyStateTitle>
+          <EmptyStateDescription>{t('preview.library.emptyDescription')}</EmptyStateDescription>
         </EmptyState>
-      </section>
+      </Section>
     </div>
   );
 }
 
 /* ─────────────────────────────────────────────────────────────
-   Scene: Dashboard — cards, metrics, a table
+   Scene: App — one realistic product layout
    ───────────────────────────────────────────────────────────── */
-interface MetricProps {
+
+interface NavItemProps {
+  icon: typeof Home;
   label: string;
-  value: string;
-  delta: number;
-  hint: string;
+  active?: boolean;
 }
 
-function Metric({ label, value, delta, hint }: Readonly<MetricProps>) {
-  const up = delta >= 0;
+function NavItem({ icon: Icon, label, active }: Readonly<NavItemProps>) {
   return (
-    <Card>
-      <CardContent className="space-y-1 py-4">
-        <div className="font-medium text-muted-foreground text-xs uppercase tracking-wider">
-          {label}
-        </div>
-        <div className="font-semibold text-2xl tabular-nums tracking-tight">{value}</div>
-        <div className="flex items-center gap-1 text-xs">
-          <span
-            className={
-              up
-                ? 'inline-flex items-center gap-0.5 text-success'
-                : 'inline-flex items-center gap-0.5 text-destructive'
-            }
-          >
-            {up ? <ArrowUp className="size-3" /> : <ArrowDown className="size-3" />}
-            {Math.abs(delta)}%
-          </span>
-          <span className="text-muted-foreground">{hint}</span>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-const RUNS = [
-  {
-    name: 'etl.nightly',
-    status: 'success' as const,
-    duration: '2m 11s',
-    trigger: 'schedule',
-  },
-  { name: 'analytics.warm', status: 'running' as const, duration: '—', trigger: 'webhook' },
-  { name: 'ingest.retry', status: 'failed' as const, duration: '43s', trigger: 'manual' },
-  { name: 'notify.digest', status: 'success' as const, duration: '8s', trigger: 'schedule' },
-  { name: 'billing.sync', status: 'idle' as const, duration: '—', trigger: 'schedule' },
-];
-
-const STATUS_MAP = {
-  success: { icon: CheckCircle2, className: 'text-success', label: 'Succeeded' },
-  running: { icon: Activity, className: 'text-primary', label: 'Running' },
-  failed: { icon: XCircle, className: 'text-destructive', label: 'Failed' },
-  idle: { icon: Clock, className: 'text-muted-foreground', label: 'Idle' },
-} as const;
-
-function DashboardSceneImpl() {
-  return (
-    <div className="mx-auto max-w-4xl space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="font-semibold text-2xl tracking-tight">Overview</h1>
-          <p className="text-muted-foreground text-sm">Last 24h of workflow activity.</p>
-        </div>
-        <Button size="sm">
-          <Zap /> New workflow
-        </Button>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Metric label="Runs" value="1,284" delta={12} hint="vs yesterday" />
-        <Metric label="Success" value="98.2%" delta={1} hint="rolling" />
-        <Metric label="Avg. duration" value="1m 44s" delta={-3} hint="faster" />
-        <Metric label="Incidents" value="2" delta={-50} hint="this week" />
-      </div>
-
-      <Card>
-        <CardHeader className="flex-row items-center justify-between space-y-0">
-          <div>
-            <CardTitle>Recent runs</CardTitle>
-            <CardDescription>Sorted by last execution time.</CardDescription>
-          </div>
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="gap-1">
-              <TrendingUp className="size-3" /> +12%
-            </Badge>
-            <Button size="sm" variant="outline">
-              View all
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Workflow</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Duration</TableHead>
-                <TableHead>Trigger</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {RUNS.map((r) => {
-                const meta = STATUS_MAP[r.status];
-                const Icon = meta.icon;
-                return (
-                  <TableRow key={r.name}>
-                    <TableCell className="font-mono text-xs">{r.name}</TableCell>
-                    <TableCell>
-                      <span
-                        className={`inline-flex items-center gap-1.5 text-xs ${meta.className}`}
-                      >
-                        <Icon className="size-3.5" /> {meta.label}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-xs tabular-nums">
-                      {r.duration}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary" className="font-normal text-[10px]">
-                        {r.trigger}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Storage</CardTitle>
-            <CardDescription>42 GB of 100 GB used</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Progress value={42} />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Queue health</CardTitle>
-            <CardDescription>Items processed last hour</CardDescription>
-          </CardHeader>
-          <CardContent className="flex items-end gap-1">
-            {[40, 65, 55, 80, 72, 90, 75, 88, 60, 95, 70, 82].map((v, i) => (
-              <div
-                key={`${v}-${i}`}
-                className="w-full rounded-sm bg-primary/70"
-                style={{ height: `${v * 0.6}px` }}
-              />
-            ))}
-          </CardContent>
-        </Card>
-      </div>
+    <div
+      className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-sm ${
+        active
+          ? 'bg-accent font-medium text-accent-foreground'
+          : 'text-muted-foreground hover:bg-accent/40'
+      }`}
+    >
+      <Icon className="size-4" />
+      <span className="truncate">{label}</span>
     </div>
   );
 }
 
-/* ─────────────────────────────────────────────────────────────
-   Scene: Form — auth/signup composition
-   ───────────────────────────────────────────────────────────── */
-function FormSceneImpl() {
-  return (
-    <div className="mx-auto max-w-md space-y-4">
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <div className="grid size-9 place-items-center rounded-lg bg-primary text-primary-foreground">
-              <Sparkles className="size-4" />
-            </div>
-            <div>
-              <CardTitle>Create your workspace</CardTitle>
-              <CardDescription>Start shipping in less than two minutes.</CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="preview-name">Workspace name</Label>
-            <Input id="preview-name" defaultValue="Acme Labs" />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="preview-email">Work email</Label>
-            <div className="relative">
-              <Mail className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input id="preview-email" type="email" placeholder="you@acme.com" className="pl-8" />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="preview-role">Describe your role</Label>
-            <Textarea
-              id="preview-role"
-              placeholder="What are you trying to build with Brika?"
-              rows={3}
-            />
-          </div>
-          <Separator />
-          <div className="flex items-center justify-between rounded-md border p-3">
-            <div className="flex items-center gap-2">
-              <User className="size-4 text-muted-foreground" />
-              <div className="text-sm">Invite teammates later</div>
-            </div>
-            <Switch defaultChecked />
-          </div>
-          <Button className="w-full">
-            <Check /> Create workspace
-          </Button>
-          <p className="text-center text-muted-foreground text-xs">
-            By continuing you agree to our{' '}
-            <span className="cursor-pointer text-primary underline-offset-2 hover:underline">
-              Terms of Service
-            </span>
-            .
-          </p>
-        </CardContent>
-      </Card>
+function AppSceneImpl() {
+  const { t } = useTranslation('themeBuilder');
 
-      <Card>
-        <CardContent className="space-y-3 py-4">
-          <SectionLabel>People on this workspace</SectionLabel>
-          {[
-            { name: 'Maxime Scharwath', email: 'max@acme.com', status: 'Owner' },
-            { name: 'Jamie Rivera', email: 'jamie@acme.com', status: 'Admin' },
-            { name: 'Liu Chen', email: 'liu@acme.com', status: 'Member' },
-          ].map((p) => (
-            <div key={p.email} className="flex items-center gap-3">
-              <Avatar className="size-8">
-                <AvatarFallback className="bg-accent text-accent-foreground text-xs">
-                  {p.name
-                    .split(' ')
-                    .map((n) => n[0])
-                    .join('')}
-                </AvatarFallback>
-              </Avatar>
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-sm">{p.name}</div>
-                <div className="truncate text-muted-foreground text-xs">{p.email}</div>
-              </div>
-              <Badge variant="outline" className="text-[10px]">
-                {p.status}
-              </Badge>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-/* ─────────────────────────────────────────────────────────────
-   Scene: Marketing — landing-style hero + feature row
-   ───────────────────────────────────────────────────────────── */
-function MarketingSceneImpl() {
   return (
-    <div className="mx-auto max-w-4xl space-y-8">
-      <div className="space-y-4 rounded-xl border bg-card p-8 shadow-sm">
+    <div className="mx-auto grid max-w-5xl grid-cols-[12rem_1fr] gap-4">
+      {/* Sidebar */}
+      <aside className="space-y-4 rounded-lg border bg-card p-3">
         <div className="flex items-center gap-2">
-          <Badge variant="outline" className="gap-1 border-primary/30 bg-primary/5 text-primary">
-            <Sparkles className="size-3" /> New · v2.0
-          </Badge>
-          <Badge variant="secondary" className="text-[10px]">
-            Beta
-          </Badge>
-        </div>
-        <h1 className="max-w-2xl font-semibold text-4xl tracking-tight">
-          Ship workflows your team actually understands.
-        </h1>
-        <p className="max-w-xl text-muted-foreground">
-          Visual pipelines, typed events, and a sturdy SDK — wrapped in a Hub you can self-host.
-        </p>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button size="lg">
-            Get started <ArrowUp className="rotate-45" />
-          </Button>
-          <Button size="lg" variant="outline">
-            Book a demo
-          </Button>
-          <div className="flex items-center gap-2 pl-2 text-muted-foreground text-xs">
-            <Check className="size-3.5 text-success" /> No credit card
+          <div className="grid size-7 place-items-center rounded-md bg-primary text-primary-foreground">
+            <Sparkles className="size-3.5" />
           </div>
+          <span className="font-semibold text-sm">{t('preview.app.brand')}</span>
         </div>
-        <div className="flex items-center gap-3 pt-2">
-          <div className="flex -space-x-1.5">
-            {['JR', 'LC', 'MA', 'KP'].map((i) => (
-              <Avatar key={i} className="size-6 border-2 border-card">
-                <AvatarFallback className="bg-accent text-[9px] text-accent-foreground">
-                  {i}
-                </AvatarFallback>
-              </Avatar>
-            ))}
-          </div>
-          <span className="text-muted-foreground text-xs">Trusted by 1.2k builders</span>
-        </div>
-      </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        {[
-          {
-            icon: Zap,
-            title: 'Fast by default',
-            body: 'Bun-backed runtime. Cold starts under 60ms.',
-            color: 'text-primary',
-          },
-          {
-            icon: Search,
-            title: 'Explorable',
-            body: 'Every event is indexed and queryable live.',
-            color: 'text-success',
-          },
-          {
-            icon: Activity,
-            title: 'Observable',
-            body: 'Logs, metrics, and traces — all in one pane.',
-            color: 'text-info',
-          },
-        ].map((f) => (
-          <Card key={f.title}>
-            <CardContent className="space-y-2 py-5">
-              <div
-                className={`inline-flex size-8 items-center justify-center rounded-md bg-muted ${f.color}`}
-              >
-                <f.icon className="size-4" />
-              </div>
-              <div className="font-medium text-sm">{f.title}</div>
-              <div className="text-muted-foreground text-xs">{f.body}</div>
-            </CardContent>
-          </Card>
-        ))}
+        <div className="space-y-0.5">
+          <NavItem icon={Home} label={t('preview.app.nav.home')} active />
+          <NavItem icon={Bell} label={t('preview.app.nav.activity')} />
+          <NavItem icon={Mail} label={t('preview.app.nav.inbox')} />
+          <NavItem icon={Settings} label={t('preview.app.nav.settings')} />
+        </div>
+      </aside>
+
+      {/* Main column */}
+      <div className="min-w-0 space-y-4">
+        {/* Header / search */}
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input placeholder={t('preview.app.searchPlaceholder')} className="pl-8" />
+          </div>
+          <Button size="sm" variant="outline">
+            <Bell /> {t('preview.app.notifications')}
+          </Button>
+          <Avatar className="size-8">
+            <AvatarFallback className="bg-accent text-accent-foreground text-xs">MS</AvatarFallback>
+          </Avatar>
+        </div>
+
+        {/* Headline */}
+        <div>
+          <h1 className="font-semibold text-2xl tracking-tight">{t('preview.app.headline')}</h1>
+          <p className="text-muted-foreground text-sm">{t('preview.app.subheadline')}</p>
+        </div>
+
+        {/* Status + action card */}
+        <Card>
+          <CardHeader className="flex-row items-start justify-between space-y-0">
+            <div>
+              <CardTitle>{t('preview.app.cardTitle')}</CardTitle>
+              <CardDescription>{t('preview.app.cardDescription')}</CardDescription>
+            </div>
+            <Badge variant="outline" className="gap-1 border-success/30 text-success">
+              <CheckCircle2 className="size-3" /> {t('preview.library.success')}
+            </Badge>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Progress value={72} />
+            <div className="flex items-center justify-between text-muted-foreground text-xs">
+              <span>{t('preview.app.progressLabel', { percent: 72 })}</span>
+              <span className="tabular-nums">3 / 5</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Form snippet */}
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('preview.app.formTitle')}</CardTitle>
+            <CardDescription>{t('preview.app.formDescription')}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="preview-name">{t('preview.app.workspaceName')}</Label>
+              <Input id="preview-name" defaultValue="Acme Labs" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="preview-note">{t('preview.app.note')}</Label>
+              <Textarea id="preview-note" rows={2} placeholder={t('preview.app.notePlaceholder')} />
+            </div>
+            <Separator />
+            <div className="flex items-center justify-end gap-2">
+              <Button variant="ghost" size="sm">
+                {t('preview.app.cancel')}
+              </Button>
+              <Button size="sm">{t('preview.app.save')}</Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Empty-state tile */}
+        <Card>
+          <CardContent className="py-6">
+            <EmptyState>
+              <EmptyStateIcon>
+                <Zap />
+              </EmptyStateIcon>
+              <EmptyStateTitle>{t('preview.app.emptyTitle')}</EmptyStateTitle>
+              <EmptyStateDescription>{t('preview.app.emptyDescription')}</EmptyStateDescription>
+              <Button size="sm" className="mt-3">
+                <Sparkles /> {t('preview.app.emptyCta')}
+              </Button>
+            </EmptyState>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
 }
 
-export const ComponentsScene = memo(ComponentsSceneImpl);
-export const DashboardScene = memo(DashboardSceneImpl);
-export const FormScene = memo(FormSceneImpl);
-export const MarketingScene = memo(MarketingSceneImpl);
+export const LibraryScene = memo(LibrarySceneImpl);
+export const AppScene = memo(AppSceneImpl);

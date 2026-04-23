@@ -121,3 +121,13 @@ export const UpdateActions = defineActions('update', {
 });
 
 export type UpdateAction = ActionsUnion<typeof UpdateActions>;
+
+// Theme actions — broadcast custom-theme mutations so other tabs can refetch.
+export const ThemeActions = defineActions('theme', {
+  invalidate: z.object({
+    themeId: z.string().optional(),
+    reason: z.enum(['upsert', 'remove']),
+  }),
+});
+
+export type ThemeAction = ActionsUnion<typeof ThemeActions>;

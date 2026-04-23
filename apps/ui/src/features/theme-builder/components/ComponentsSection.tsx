@@ -10,19 +10,35 @@
  */
 
 import {
+  AlertCircle,
   ArrowLeft,
+  BellRing,
   ChevronRight,
+  ChevronsUpDown,
+  Info,
+  LayoutPanelTop,
   Link2,
+  List,
   type LucideIcon,
+  Menu,
   Moon,
+  MousePointerClick,
+  PanelTop,
+  RectangleHorizontal,
   RotateCcw,
+  SquareCheck,
+  SquareStack,
   Sun,
+  Tag,
+  TextCursor,
+  ToggleRight,
   Unlink2,
+  UserCircle,
 } from 'lucide-react';
-import { type CSSProperties, type ReactNode, useCallback, useMemo, useState } from 'react';
-import { Slider } from '@/components/ui';
+import { type ReactNode, useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Button, Slider } from '@/components/ui';
 import { cn } from '@/lib/utils';
-import { type ThemeVars, themeToVars } from '../theme-css';
 import type {
   ColorToken,
   ComponentRadiusKey,
@@ -33,8 +49,26 @@ import type {
 } from '../types';
 import { ColorField } from './ColorField';
 import { CornerField } from './CornerField';
+import {
+  AlertPreview,
+  AvatarPreview,
+  BadgePreview,
+  ButtonPreview,
+  CardPreview,
+  CheckboxPreview,
+  DialogPreview,
+  InputPreview,
+  MenuItemPreview,
+  MenuPreview,
+  PopoverPreview,
+  SelectPreview,
+  SwitchPreview,
+  TabsPreview,
+  ToastPreview,
+  TooltipPreview,
+} from './components-previews';
+import { ThemedSurface } from './ThemedSurface';
 
-type StyleWithVars = CSSProperties & ThemeVars;
 type PreviewMode = 'light' | 'dark';
 
 /**
@@ -62,19 +96,16 @@ type ComponentTokenSetter = <F extends keyof ComponentTokens>(
 interface ColorTokenMeta {
   /** Component-scope token key on `ThemeColors`. */
   key: ColorToken;
-  label: string;
   /** System role this token falls back to when unset. */
   fallbackKey: ColorToken;
-  fallbackLabel: string;
   /** Optional pair for the WCAG contrast badge. */
   pairKey?: ColorToken;
-  pairLabel?: string;
+  /** i18n key into `components.pairLabels.*` */
+  pairLabelKey?: string;
 }
 
 interface ComponentMeta {
   key: ComponentRadiusKey;
-  label: string;
-  description: string;
   /** rem offset from `theme.radius` matching the system default. */
   seedOffset: number;
   colorTokens: readonly ColorTokenMeta[];
@@ -84,185 +115,7 @@ interface ComponentMeta {
 
 interface ComponentGroup {
   id: string;
-  label: string;
   items: readonly ComponentMeta[];
-}
-
-/* ─── Previews ───────────────────────────────────────────── */
-
-function ButtonPreview() {
-  return (
-    <div className="flex items-center gap-2">
-      <div className="inline-flex items-center justify-center rounded-button bg-button-filled-container px-3 py-1.5 font-medium text-button-filled-label text-xs shadow-button">
-        Primary
-      </div>
-      <div className="inline-flex items-center justify-center rounded-button border border-button-outline-border bg-transparent px-3 py-1.5 font-medium text-button-outline-label text-xs">
-        Outline
-      </div>
-    </div>
-  );
-}
-
-function InputPreview() {
-  return (
-    <div className="rounded-input border border-input-border bg-input-container px-2.5 py-1.5 text-input-label text-xs">
-      <span className="text-input-placeholder">Username</span>
-    </div>
-  );
-}
-
-function SelectPreview() {
-  return (
-    <div className="flex items-center justify-between rounded-select border border-input-border bg-input-container px-2.5 py-1.5 text-input-label text-xs">
-      <span>Option A</span>
-      <span className="text-muted-foreground">▾</span>
-    </div>
-  );
-}
-
-function CheckboxPreview() {
-  return (
-    <div className="flex items-center gap-2">
-      <div className="flex size-4 items-center justify-center rounded-checkbox border border-primary bg-primary text-[10px] text-primary-foreground">
-        ✓
-      </div>
-      <div className="size-4 rounded-checkbox border border-input" />
-    </div>
-  );
-}
-
-function TabsPreview() {
-  return (
-    <div className="inline-flex items-center gap-1 rounded-tabs bg-muted p-1">
-      <div className="rounded-tabs bg-background px-2.5 py-1 font-medium text-foreground text-xs shadow-sm">
-        Active
-      </div>
-      <div className="rounded-tabs px-2.5 py-1 text-muted-foreground text-xs">Idle</div>
-    </div>
-  );
-}
-
-function BadgePreview() {
-  return (
-    <div className="flex items-center gap-2">
-      <div className="inline-flex items-center rounded-badge bg-primary px-2 py-0.5 font-medium text-[10px] text-primary-foreground">
-        New
-      </div>
-      <div className="inline-flex items-center rounded-badge border border-border px-2 py-0.5 font-medium text-[10px] text-foreground">
-        Beta
-      </div>
-    </div>
-  );
-}
-
-function CardPreview() {
-  return (
-    <div className="rounded-card border bg-card-container p-3 text-card-label shadow-card">
-      <div className="font-semibold text-xs">Card title</div>
-      <div className="mt-1 text-[10px] text-muted-foreground">Lorem ipsum dolor sit amet.</div>
-    </div>
-  );
-}
-
-function AlertPreview() {
-  return (
-    <div className="rounded-alert border bg-background p-2.5 text-foreground">
-      <div className="flex items-start gap-2">
-        <div className="mt-0.5 size-2 shrink-0 rounded-full bg-info" />
-        <div className="min-w-0 flex-1">
-          <div className="font-semibold text-xs">Heads up</div>
-          <div className="text-[10px] text-muted-foreground">This is an informational alert.</div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ToastPreview() {
-  return (
-    <div className="rounded-toast border bg-background p-2.5 shadow-toast">
-      <div className="font-semibold text-xs">Saved</div>
-      <div className="text-[10px] text-muted-foreground">Your changes were persisted.</div>
-    </div>
-  );
-}
-
-function DialogPreview() {
-  return (
-    <div className="rounded-dialog border bg-dialog-container p-3 text-dialog-label shadow-dialog">
-      <div className="font-semibold text-xs">Confirm action</div>
-      <div className="mt-1 text-[10px] text-muted-foreground">Proceed with changes?</div>
-    </div>
-  );
-}
-
-function PopoverPreview() {
-  return (
-    <div className="rounded-popover border bg-popover p-2.5 text-popover-foreground shadow-popover">
-      <div className="font-semibold text-xs">Popover</div>
-      <div className="mt-1 text-[10px] text-muted-foreground">Floating content.</div>
-    </div>
-  );
-}
-
-function MenuPreview() {
-  return (
-    <div className="rounded-menu border bg-popover p-1 text-popover-foreground shadow-menu">
-      <div className="rounded-menu-item bg-accent px-2 py-1 text-accent-foreground text-xs">
-        Selected
-      </div>
-      <div className="rounded-menu-item px-2 py-1 text-xs">Another item</div>
-      <div className="rounded-menu-item px-2 py-1 text-xs">Third</div>
-    </div>
-  );
-}
-
-function MenuItemPreview() {
-  return (
-    <div className="space-y-1 rounded-menu border bg-popover p-1 shadow-menu">
-      <div className="rounded-menu-item bg-accent px-2 py-1 text-accent-foreground text-xs">
-        Hovered
-      </div>
-      <div className="rounded-menu-item px-2 py-1 text-popover-foreground text-xs">Idle</div>
-    </div>
-  );
-}
-
-function TooltipPreview() {
-  return (
-    <div className="inline-flex items-center rounded-tooltip bg-foreground px-2 py-1 text-[10px] text-background shadow-tooltip">
-      Tooltip text
-    </div>
-  );
-}
-
-function AvatarPreview() {
-  return (
-    <div className="flex items-center gap-2">
-      <div className="flex size-9 items-center justify-center rounded-avatar bg-primary font-semibold text-primary-foreground text-sm">
-        MS
-      </div>
-      <div className="flex size-9 items-center justify-center rounded-avatar bg-muted font-semibold text-muted-foreground text-sm">
-        JD
-      </div>
-      <div className="flex size-9 items-center justify-center rounded-avatar bg-accent font-semibold text-accent-foreground text-sm">
-        AR
-      </div>
-    </div>
-  );
-}
-
-function SwitchPreview() {
-  return (
-    <div className="flex items-center gap-3">
-      <div className="inline-flex h-5 w-9 items-center rounded-switch bg-primary px-0.5">
-        <div className="ml-auto size-4 rounded-switch-thumb bg-primary-foreground shadow-xs" />
-      </div>
-      <div className="inline-flex h-5 w-9 items-center rounded-switch bg-input px-0.5">
-        <div className="size-4 rounded-switch-thumb bg-background shadow-xs" />
-      </div>
-    </div>
-  );
 }
 
 /* ─── Metadata ───────────────────────────────────────────── */
@@ -270,122 +123,116 @@ function SwitchPreview() {
 const GROUPS: readonly ComponentGroup[] = [
   {
     id: 'controls',
-    label: 'Controls',
     items: [
       {
         key: 'button',
-        label: 'Button',
-        description: 'Primary action surface. Filled and outline variants.',
         seedOffset: -0.25,
         colorTokens: [
           {
             key: 'button-filled-container',
-            label: 'Filled background',
             fallbackKey: 'primary',
-            fallbackLabel: 'Primary',
             pairKey: 'button-filled-label',
-            pairLabel: 'label',
+            pairLabelKey: 'components.pairLabels.label',
           },
           {
             key: 'button-filled-label',
-            label: 'Filled label',
             fallbackKey: 'primary-foreground',
-            fallbackLabel: 'Primary foreground',
             pairKey: 'button-filled-container',
-            pairLabel: 'container',
+            pairLabelKey: 'components.pairLabels.container',
           },
           {
             key: 'button-outline-border',
-            label: 'Outline border',
             fallbackKey: 'border',
-            fallbackLabel: 'Border',
           },
           {
             key: 'button-outline-label',
-            label: 'Outline label',
             fallbackKey: 'foreground',
-            fallbackLabel: 'Foreground',
             pairKey: 'background',
-            pairLabel: 'surface',
+            pairLabelKey: 'components.pairLabels.surface',
           },
         ],
         Preview: ButtonPreview,
       },
       {
         key: 'input',
-        label: 'Input',
-        description: 'Text entry. Also drives Textarea and Select trigger.',
         seedOffset: -0.25,
         colorTokens: [
           {
             key: 'input-container',
-            label: 'Background',
             fallbackKey: 'background',
-            fallbackLabel: 'Background',
             pairKey: 'input-label',
-            pairLabel: 'text',
+            pairLabelKey: 'components.pairLabels.text',
           },
           {
             key: 'input-label',
-            label: 'Text',
             fallbackKey: 'foreground',
-            fallbackLabel: 'Foreground',
             pairKey: 'input-container',
-            pairLabel: 'bg',
+            pairLabelKey: 'components.pairLabels.bg',
           },
           {
             key: 'input-border',
-            label: 'Border',
             fallbackKey: 'input',
-            fallbackLabel: 'Input',
           },
           {
             key: 'input-placeholder',
-            label: 'Placeholder',
             fallbackKey: 'muted-foreground',
-            fallbackLabel: 'Muted foreground',
             pairKey: 'input-container',
-            pairLabel: 'bg',
+            pairLabelKey: 'components.pairLabels.bg',
           },
         ],
         Preview: InputPreview,
       },
       {
         key: 'select',
-        label: 'Select',
-        description: 'Dropdown trigger. Inherits input colors.',
         seedOffset: -0.25,
-        colorTokens: [],
+        // Shares the `input-*` token family — editing either component's
+        // colour here changes both. The description in locale reflects this.
+        colorTokens: [
+          {
+            key: 'input-container',
+            fallbackKey: 'background',
+            pairKey: 'input-label',
+            pairLabelKey: 'components.pairLabels.text',
+          },
+          {
+            key: 'input-label',
+            fallbackKey: 'foreground',
+            pairKey: 'input-container',
+            pairLabelKey: 'components.pairLabels.bg',
+          },
+          {
+            key: 'input-border',
+            fallbackKey: 'input',
+          },
+          {
+            key: 'input-placeholder',
+            fallbackKey: 'muted-foreground',
+            pairKey: 'input-container',
+            pairLabelKey: 'components.pairLabels.bg',
+          },
+        ],
         Preview: SelectPreview,
       },
       {
         key: 'checkbox',
-        label: 'Checkbox',
-        description: 'Binary toggle. Usually nearly square.',
         seedOffset: -0.625,
         colorTokens: [],
         Preview: CheckboxPreview,
       },
       {
         key: 'tabs',
-        label: 'Tabs',
-        description: 'Segmented nav. The pills inside the rail.',
         seedOffset: -0.25,
         colorTokens: [],
         Preview: TabsPreview,
       },
       {
         key: 'badge',
-        label: 'Badge',
-        description: 'Small status chip. Often a pill.',
         seedOffset: -0.375,
         colorTokens: [],
         Preview: BadgePreview,
       },
       {
         key: 'switch',
-        label: 'Switch',
-        description: 'Binary toggle, pill-shaped by default.',
         seedOffset: 9999,
         colorTokens: [],
         Preview: SwitchPreview,
@@ -394,53 +241,40 @@ const GROUPS: readonly ComponentGroup[] = [
   },
   {
     id: 'surfaces',
-    label: 'Surfaces',
     items: [
       {
         key: 'card',
-        label: 'Card',
-        description: 'Resting container for content blocks.',
         seedOffset: 0,
         colorTokens: [
           {
             key: 'card-container',
-            label: 'Background',
             fallbackKey: 'card',
-            fallbackLabel: 'Card',
             pairKey: 'card-label',
-            pairLabel: 'label',
+            pairLabelKey: 'components.pairLabels.label',
           },
           {
             key: 'card-label',
-            label: 'Foreground',
             fallbackKey: 'card-foreground',
-            fallbackLabel: 'Card foreground',
             pairKey: 'card-container',
-            pairLabel: 'bg',
+            pairLabelKey: 'components.pairLabels.bg',
           },
         ],
         Preview: CardPreview,
       },
       {
         key: 'alert',
-        label: 'Alert',
-        description: 'Inline banner for status messages.',
         seedOffset: 0,
         colorTokens: [],
         Preview: AlertPreview,
       },
       {
         key: 'toast',
-        label: 'Toast',
-        description: 'Transient notification, floats above content.',
         seedOffset: 0,
         colorTokens: [],
         Preview: ToastPreview,
       },
       {
         key: 'avatar',
-        label: 'Avatar',
-        description: 'User portrait surface, circular by default.',
         seedOffset: 9999,
         colorTokens: [],
         Preview: AvatarPreview,
@@ -449,61 +283,46 @@ const GROUPS: readonly ComponentGroup[] = [
   },
   {
     id: 'overlays',
-    label: 'Overlays',
     items: [
       {
         key: 'dialog',
-        label: 'Dialog',
-        description: 'Modal surface. Sits on the spotlight backdrop.',
         seedOffset: 0.25,
         colorTokens: [
           {
             key: 'dialog-container',
-            label: 'Background',
             fallbackKey: 'popover',
-            fallbackLabel: 'Popover',
             pairKey: 'dialog-label',
-            pairLabel: 'label',
+            pairLabelKey: 'components.pairLabels.label',
           },
           {
             key: 'dialog-label',
-            label: 'Foreground',
             fallbackKey: 'popover-foreground',
-            fallbackLabel: 'Popover foreground',
             pairKey: 'dialog-container',
-            pairLabel: 'bg',
+            pairLabelKey: 'components.pairLabels.bg',
           },
         ],
         Preview: DialogPreview,
       },
       {
         key: 'popover',
-        label: 'Popover',
-        description: 'Floating surface anchored to a trigger.',
         seedOffset: 0.25,
         colorTokens: [],
         Preview: PopoverPreview,
       },
       {
         key: 'menu',
-        label: 'Menu',
-        description: 'Dropdown container for menu items.',
         seedOffset: 0.25,
         colorTokens: [],
         Preview: MenuPreview,
       },
       {
         key: 'menu-item',
-        label: 'Menu item',
-        description: 'Individual row inside a menu.',
         seedOffset: -0.25,
         colorTokens: [],
         Preview: MenuItemPreview,
       },
       {
         key: 'tooltip',
-        label: 'Tooltip',
-        description: 'Small hover bubble with a label.',
         seedOffset: -0.25,
         colorTokens: [],
         Preview: TooltipPreview,
@@ -513,6 +332,31 @@ const GROUPS: readonly ComponentGroup[] = [
 ];
 
 const ALL_COMPONENTS: readonly ComponentMeta[] = GROUPS.flatMap((g) => g.items);
+
+/**
+ * Visual identifier for each component in the list. Replaces the abstract
+ * radius-swatch that confused people — a Lucide icon maps to a concept
+ * much faster than "square with corner hint does X".
+ */
+const COMPONENT_ICONS: Record<ComponentRadiusKey, LucideIcon> = {
+  button: MousePointerClick,
+  input: TextCursor,
+  select: ChevronsUpDown,
+  checkbox: SquareCheck,
+  tabs: LayoutPanelTop,
+  badge: Tag,
+  switch: ToggleRight,
+  'switch-thumb': ToggleRight,
+  card: RectangleHorizontal,
+  alert: AlertCircle,
+  toast: BellRing,
+  avatar: UserCircle,
+  dialog: SquareStack,
+  popover: PanelTop,
+  menu: Menu,
+  'menu-item': List,
+  tooltip: Info,
+};
 
 /* ─── Helpers ────────────────────────────────────────────── */
 
@@ -553,6 +397,7 @@ interface ComponentsSectionProps {
 }
 
 export function ComponentsSection({ draft, onChange }: Readonly<ComponentsSectionProps>) {
+  const { t } = useTranslation('themeBuilder');
   const [selected, setSelected] = useState<ComponentRadiusKey | null>(null);
 
   const setComponentToken = useCallback<ComponentTokenSetter>(
@@ -643,18 +488,17 @@ export function ComponentsSection({ draft, onChange }: Readonly<ComponentsSectio
   const totalOverrides = ALL_COMPONENTS.reduce((sum, meta) => sum + countOverrides(draft, meta), 0);
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-        <span>Pick a component to tune its tokens</span>
-        <span className="tabular-nums">
-          {totalOverrides > 0 ? `${totalOverrides} customized` : 'All defaults'}
-        </span>
-      </div>
+    <div className="space-y-4">
+      <p className="px-1 text-[10px] text-muted-foreground">
+        {totalOverrides > 0
+          ? t('components.customized', { count: totalOverrides })
+          : t('components.listHint')}
+      </p>
       {GROUPS.map((group) => (
-        <div key={group.id} className="space-y-1.5">
-          <div className="px-1 font-medium text-[10px] text-muted-foreground uppercase tracking-wider">
-            {group.label}
-          </div>
+        <section key={group.id} className="space-y-2">
+          <h3 className="px-1 font-semibold text-[11px] text-foreground tracking-wide">
+            {t(`components.groups.${group.id}`)}
+          </h3>
           <div className="divide-y overflow-hidden rounded-container border">
             {group.items.map((meta) => (
               <ComponentRow
@@ -665,7 +509,7 @@ export function ComponentsSection({ draft, onChange }: Readonly<ComponentsSectio
               />
             ))}
           </div>
-        </div>
+        </section>
       ))}
     </div>
   );
@@ -679,40 +523,42 @@ interface ComponentRowProps {
   onSelect: () => void;
 }
 
-function pluralize(n: number, singular: string): string {
-  return `${n} ${singular}${n === 1 ? '' : 's'}`;
-}
-
 function ComponentRow({ meta, draft, onSelect }: Readonly<ComponentRowProps>) {
+  const { t } = useTranslation('themeBuilder');
   const overrides = countOverrides(draft, meta);
   const customized = overrides > 0;
-  const radius =
-    draft.componentTokens?.[meta.key]?.radius ?? seedFor(draft.radius, meta.seedOffset);
-  const subtitle = customized ? pluralize(overrides, 'customization') : meta.description;
+  const Icon = COMPONENT_ICONS[meta.key];
   return (
     <button
       type="button"
       onClick={onSelect}
-      className="flex w-full items-center gap-3 px-2 py-2 text-left transition-colors hover:bg-muted/50"
+      className="group flex w-full items-center gap-3 px-2.5 py-2 text-left transition-colors hover:bg-muted/60"
     >
-      <div
+      <span
         aria-hidden
         className={cn(
-          'size-7 shrink-0 border-2 transition-colors',
-          customized ? 'border-primary/60 bg-primary/15' : 'border-muted-foreground/30 bg-muted/40'
+          'flex size-8 shrink-0 items-center justify-center rounded-control border transition-colors',
+          customized
+            ? 'border-primary/40 bg-primary/10 text-primary'
+            : 'border-border bg-muted/40 text-muted-foreground group-hover:text-foreground'
         )}
-        style={{ borderRadius: `${radius}rem` }}
-      />
+      >
+        <Icon className="size-4" />
+      </span>
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-1.5">
-          <span className="truncate font-medium text-xs">{meta.label}</span>
-          {customized && (
-            <span aria-label="Customized" className="size-1.5 shrink-0 rounded-full bg-primary" />
-          )}
+        <div className="truncate font-medium text-xs">
+          {t(`components.items.${meta.key}.label`)}
         </div>
-        <div className="truncate text-[10px] text-muted-foreground">{subtitle}</div>
+        <div className="truncate text-[10px] text-muted-foreground">
+          {t(`components.items.${meta.key}.description`)}
+        </div>
       </div>
-      <ChevronRight className="size-3.5 shrink-0 text-muted-foreground" />
+      {customized && (
+        <span className="shrink-0 rounded-full border border-primary/30 bg-primary/10 px-1.5 py-0.5 font-medium font-mono text-[9px] text-primary tabular-nums">
+          {overrides}
+        </span>
+      )}
+      <ChevronRight className="size-3.5 shrink-0 text-muted-foreground/60 transition-transform group-hover:translate-x-0.5 group-hover:text-muted-foreground" />
     </button>
   );
 }
@@ -736,6 +582,7 @@ function ComponentDetail({
   onColorChange,
   onResetAll,
 }: Readonly<ComponentDetailProps>) {
+  const { t } = useTranslation('themeBuilder');
   const [mode, setMode] = useState<PreviewMode>('light');
   const entry = draft.componentTokens?.[meta.key];
   const radiusValue = entry?.radius;
@@ -748,43 +595,64 @@ function ComponentDetail({
   const hasColorTokens = meta.colorTokens.length > 0;
   const { Preview } = meta;
 
+  // Esc returns to the list. Only active while the detail view is open.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onBack();
+      }
+    };
+    globalThis.addEventListener('keydown', onKey);
+    return () => globalThis.removeEventListener('keydown', onKey);
+  }, [onBack]);
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
+      <header className="space-y-3">
         <button
           type="button"
           onClick={onBack}
-          className="flex size-6 shrink-0 items-center justify-center rounded-control text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          aria-label="Back to components"
+          className="-mx-1 flex items-center gap-1.5 rounded-control px-1 py-0.5 font-medium text-[10px] text-muted-foreground uppercase tracking-wider transition-colors hover:text-foreground"
+          aria-label={t('components.backLabel')}
         >
-          <ArrowLeft className="size-3.5" />
+          <ArrowLeft className="size-3" />
+          <span>{t('components.backShort', { defaultValue: t('components.backLabel') })}</span>
         </button>
-        <div className="min-w-0 flex-1">
-          <div className="truncate font-semibold text-sm">{meta.label}</div>
-          <div className="truncate text-[10px] text-muted-foreground">{meta.description}</div>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1 space-y-0.5">
+            <h2 className="truncate font-semibold text-base">
+              {t(`components.items.${meta.key}.label`)}
+            </h2>
+            <p className="text-[11px] text-muted-foreground leading-snug">
+              {t(`components.items.${meta.key}.description`)}
+            </p>
+          </div>
+          <Button
+            size="xs"
+            variant="outline"
+            onClick={onResetAll}
+            disabled={totalOverrides === 0}
+            className="shrink-0"
+          >
+            <RotateCcw />
+            {totalOverrides > 0
+              ? t('components.resetCount', {
+                  count: totalOverrides,
+                  defaultValue: t('components.resetAll'),
+                })
+              : t('components.resetAll')}
+          </Button>
         </div>
-        <button
-          type="button"
-          onClick={onResetAll}
-          disabled={totalOverrides === 0}
-          className={cn(
-            'text-[10px] transition-colors',
-            totalOverrides > 0
-              ? 'text-muted-foreground hover:text-foreground'
-              : 'pointer-events-none opacity-0'
-          )}
-        >
-          Reset all
-        </button>
-      </div>
+      </header>
 
       <PreviewStage draft={draft} mode={mode} onModeChange={setMode}>
         <Preview />
       </PreviewStage>
 
-      <DetailGroup label="Shape">
+      <DetailGroup label={t('components.shape')}>
         <Field
-          label="Radius"
+          label={t('components.radius')}
           hint="rem"
           overridden={radiusOverridden}
           onReset={() => onTokenChange(meta.key, 'radius', undefined)}
@@ -801,8 +669,8 @@ function ComponentDetail({
           />
         </Field>
         <Field
-          label="Corners"
-          hint={cornersOverridden ? 'Custom' : 'Theme default'}
+          label={t('components.corners')}
+          hint={cornersOverridden ? t('components.cornersCustom') : t('components.cornersTheme')}
           overridden={cornersOverridden}
           onReset={() => onTokenChange(meta.key, 'corners', undefined)}
         >
@@ -815,7 +683,7 @@ function ComponentDetail({
       </DetailGroup>
 
       {hasColorTokens && (
-        <DetailGroup label="Colors" hint="Per-mode when split">
+        <DetailGroup label={t('components.colors')} hint={t('components.colorsHint')}>
           {meta.colorTokens.map((token) => (
             <ColorTokenField
               key={token.key}
@@ -830,7 +698,7 @@ function ComponentDetail({
 
       {!hasColorTokens && (
         <div className="rounded-container border border-dashed px-3 py-4 text-center text-[10px] text-muted-foreground">
-          No color overrides yet for this component. Radius is fully tunable above.
+          {t('components.noColorOverrides')}
         </div>
       )}
     </div>
@@ -847,35 +715,38 @@ interface PreviewStageProps {
 }
 
 function PreviewStage({ draft, mode, onModeChange, children }: Readonly<PreviewStageProps>) {
-  const style = useMemo<StyleWithVars>(
-    () => ({ ...themeToVars(draft, mode), fontFamily: 'var(--font-sans)' }),
-    [draft, mode]
-  );
+  const { t } = useTranslation('themeBuilder');
   return (
     <div className="overflow-hidden rounded-container border">
       <div className="flex items-center justify-between border-b bg-muted/40 px-2 py-1">
         <span className="font-medium text-[10px] text-muted-foreground uppercase tracking-wider">
-          Preview
+          {t('components.preview')}
         </span>
         <div className="flex items-center rounded-control bg-background p-0.5 shadow-xs">
-          <ModeButton label="Light" active={mode === 'light'} onClick={() => onModeChange('light')}>
+          <ModeButton
+            label={t('components.modeLight')}
+            active={mode === 'light'}
+            onClick={() => onModeChange('light')}
+          >
             <Sun className="size-3" />
           </ModeButton>
-          <ModeButton label="Dark" active={mode === 'dark'} onClick={() => onModeChange('dark')}>
+          <ModeButton
+            label={t('components.modeDark')}
+            active={mode === 'dark'}
+            onClick={() => onModeChange('dark')}
+          >
             <Moon className="size-3" />
           </ModeButton>
         </div>
       </div>
-      <div
-        data-preview="component"
-        className={cn(
-          'flex min-h-24 items-center justify-center bg-background px-4 py-5 text-foreground',
-          mode === 'dark' && 'dark'
-        )}
-        style={style}
+      <ThemedSurface
+        theme={draft}
+        mode={mode}
+        variant="component"
+        className="flex min-h-24 items-center justify-center px-4 py-5"
       >
         {children}
-      </div>
+      </ThemedSurface>
     </div>
   );
 }
@@ -929,21 +800,28 @@ interface FieldProps {
   hint?: string;
   overridden: boolean;
   onReset: () => void;
+  /** Optional slot rendered between the label and the reset button (e.g. link/unlink toggle). */
+  headerExtra?: ReactNode;
   children: ReactNode;
 }
 
-function Field({ label, hint, overridden, onReset, children }: Readonly<FieldProps>) {
+function Field({ label, hint, overridden, onReset, headerExtra, children }: Readonly<FieldProps>) {
+  const { t } = useTranslation('themeBuilder');
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5">
-          <span className="font-medium text-xs">{label}</span>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-1.5">
+          <span className="truncate font-medium text-xs">{label}</span>
           {overridden && (
-            <span aria-label="Customized" className="size-1.5 rounded-full bg-primary" />
+            <span
+              aria-label={t('components.customizedLabel')}
+              className="size-1.5 shrink-0 rounded-full bg-primary"
+            />
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1.5">
           {hint && <span className="text-[10px] text-muted-foreground">{hint}</span>}
+          {headerExtra}
           <ResetButton label={label} overridden={overridden} onReset={onReset} />
         </div>
       </div>
@@ -959,18 +837,19 @@ interface ResetButtonProps {
 }
 
 function ResetButton({ label, overridden, onReset }: Readonly<ResetButtonProps>) {
+  const { t } = useTranslation('themeBuilder');
   return (
     <button
       type="button"
       onClick={onReset}
       disabled={!overridden}
-      aria-label={`Reset ${label.toLowerCase()} to theme default`}
-      title={overridden ? 'Reset to theme default' : 'Matches theme'}
+      aria-label={t('components.resetAria', { field: label.toLowerCase() })}
+      title={overridden ? t('components.resetTitle') : t('components.matchesTheme')}
       className={cn(
-        'flex size-5 shrink-0 items-center justify-center rounded-control transition-opacity',
+        'flex size-5 shrink-0 items-center justify-center rounded-control transition-[opacity,background-color,color]',
         overridden
           ? 'text-muted-foreground opacity-100 hover:bg-muted hover:text-foreground'
-          : 'pointer-events-none opacity-0'
+          : 'pointer-events-none text-muted-foreground/40'
       )}
     >
       <RotateCcw className="size-3" />
@@ -994,6 +873,7 @@ interface ColorTokenFieldProps {
  * "Set different values…" affordance below the unified picker.
  */
 function ColorTokenField({ token, draft, mode, onChange }: Readonly<ColorTokenFieldProps>) {
+  const { t } = useTranslation('themeBuilder');
   const lightValue = draft.colors.light[token.key];
   const darkValue = draft.colors.dark[token.key];
   const hasLight = lightValue !== undefined;
@@ -1002,6 +882,12 @@ function ColorTokenField({ token, draft, mode, onChange }: Readonly<ColorTokenFi
   const naturallySplit = hasLight && hasDark && lightValue !== darkValue;
   const [userExpanded, setUserExpanded] = useState(false);
   const split = naturallySplit || userExpanded;
+
+  const label = t(`components.colorTokens.${token.key}.label`, { defaultValue: token.key });
+  const fallbackLabel = t(`components.fallbackLabels.${token.fallbackKey}`, {
+    defaultValue: token.fallbackKey,
+  });
+  const pairLabel = token.pairLabelKey ? t(token.pairLabelKey) : undefined;
 
   const resetAll = useCallback(() => {
     onChange(token.key, 'both', undefined);
@@ -1016,6 +902,19 @@ function ColorTokenField({ token, draft, mode, onChange }: Readonly<ColorTokenFi
     setUserExpanded(false);
   }, [onChange, token.key, lightValue, darkValue]);
 
+  const splitToggle = (
+    <SplitToggle
+      split={split}
+      onToggle={() => {
+        if (split) {
+          unify();
+        } else {
+          setUserExpanded(true);
+        }
+      }}
+    />
+  );
+
   if (split) {
     const lightEff = lightValue ?? resolveColor(draft.colors.light, token.fallbackKey);
     const darkEff = darkValue ?? resolveColor(draft.colors.dark, token.fallbackKey);
@@ -1026,41 +925,44 @@ function ColorTokenField({ token, draft, mode, onChange }: Readonly<ColorTokenFi
       ? (draft.colors.dark[token.pairKey] ?? resolveColor(draft.colors.dark, token.pairKey))
       : undefined;
     return (
-      <Field label={token.label} hint="Per-mode" overridden={overridden} onReset={resetAll}>
+      <Field
+        label={label}
+        hint={t('components.perMode')}
+        overridden={overridden}
+        onReset={resetAll}
+        headerExtra={splitToggle}
+      >
         <div className="space-y-2">
           <ModeColorRow
             icon={Sun}
-            modeLabel="Light"
+            modeLabel={t('components.modeLight')}
             active={mode === 'light'}
             overridden={hasLight}
             onReset={() => onChange(token.key, 'light', undefined)}
           >
             <ColorField
-              label={`${token.label} (light)`}
+              label={`${label} (${t('components.modeLight')})`}
               value={lightEff}
               onChange={(v) => onChange(token.key, 'light', v)}
               pairWith={pairLight}
-              pairLabel={token.pairLabel}
+              pairLabel={pairLabel}
             />
           </ModeColorRow>
           <ModeColorRow
             icon={Moon}
-            modeLabel="Dark"
+            modeLabel={t('components.modeDark')}
             active={mode === 'dark'}
             overridden={hasDark}
             onReset={() => onChange(token.key, 'dark', undefined)}
           >
             <ColorField
-              label={`${token.label} (dark)`}
+              label={`${label} (${t('components.modeDark')})`}
               value={darkEff}
               onChange={(v) => onChange(token.key, 'dark', v)}
               pairWith={pairDark}
-              pairLabel={token.pairLabel}
+              pairLabel={pairLabel}
             />
           </ModeColorRow>
-          <InlineActionButton icon={Link2} onClick={unify}>
-            Use one value for both modes
-          </InlineActionButton>
         </div>
       </Field>
     );
@@ -1072,28 +974,53 @@ function ColorTokenField({ token, draft, mode, onChange }: Readonly<ColorTokenFi
     ? (paletteForMode[token.pairKey] ?? resolveColor(paletteForMode, token.pairKey))
     : undefined;
 
-  let hint: string;
-  if (overridden) {
-    hint = 'Shared';
-  } else {
-    hint = `Theme · ${token.fallbackLabel}`;
-  }
+  const hint = overridden
+    ? t('components.shared')
+    : t('components.themeFallback', { label: fallbackLabel });
 
   return (
-    <Field label={token.label} hint={hint} overridden={overridden} onReset={resetAll}>
-      <div className="space-y-2">
-        <ColorField
-          label={token.label}
-          value={currentValue}
-          onChange={(v) => onChange(token.key, 'both', v)}
-          pairWith={pairForMode}
-          pairLabel={token.pairLabel}
-        />
-        <InlineActionButton icon={Unlink2} onClick={() => setUserExpanded(true)}>
-          Set different values for light and dark
-        </InlineActionButton>
-      </div>
+    <Field
+      label={label}
+      hint={hint}
+      overridden={overridden}
+      onReset={resetAll}
+      headerExtra={splitToggle}
+    >
+      <ColorField
+        label={label}
+        value={currentValue}
+        onChange={(v) => onChange(token.key, 'both', v)}
+        pairWith={pairForMode}
+        pairLabel={pairLabel}
+      />
     </Field>
+  );
+}
+
+/**
+ * Small icon toggle to switch between "one colour shared across light & dark"
+ * and "two separate per-mode values". Sits next to the reset button in the
+ * field header — no full-width action rows needed.
+ */
+interface SplitToggleProps {
+  split: boolean;
+  onToggle: () => void;
+}
+
+function SplitToggle({ split, onToggle }: Readonly<SplitToggleProps>) {
+  const { t } = useTranslation('themeBuilder');
+  const Icon = split ? Link2 : Unlink2;
+  const title = split ? t('components.useOneValue') : t('components.setDifferentValues');
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-label={title}
+      title={title}
+      className="flex size-5 shrink-0 items-center justify-center rounded-control text-muted-foreground transition-[color,background-color] hover:bg-muted hover:text-foreground"
+    >
+      <Icon className="size-3" />
+    </button>
   );
 }
 
@@ -1116,6 +1043,7 @@ function ModeColorRow({
   onReset,
   children,
 }: Readonly<ModeColorRowProps>) {
+  const { t } = useTranslation('themeBuilder');
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between">
@@ -1130,20 +1058,27 @@ function ModeColorRow({
             {modeLabel}
           </span>
           {overridden && (
-            <span aria-label="Customized" className="size-1 rounded-full bg-primary" />
+            <span
+              aria-label={t('components.customizedLabel')}
+              className="size-1 rounded-full bg-primary"
+            />
           )}
         </div>
         <button
           type="button"
           onClick={onReset}
           disabled={!overridden}
-          aria-label={`Reset ${modeLabel.toLowerCase()} override`}
-          title={overridden ? `Reset ${modeLabel.toLowerCase()} override` : 'No override'}
+          aria-label={t('components.resetModeAria', { mode: modeLabel.toLowerCase() })}
+          title={
+            overridden
+              ? t('components.resetModeTitle', { mode: modeLabel.toLowerCase() })
+              : t('components.noOverride')
+          }
           className={cn(
-            'flex size-4 shrink-0 items-center justify-center rounded-control transition-opacity',
+            'flex size-4 shrink-0 items-center justify-center rounded-control transition-[opacity,background-color,color]',
             overridden
               ? 'text-muted-foreground opacity-100 hover:bg-muted hover:text-foreground'
-              : 'pointer-events-none opacity-0'
+              : 'pointer-events-none text-muted-foreground/40'
           )}
         >
           <RotateCcw className="size-2.5" />
@@ -1151,24 +1086,5 @@ function ModeColorRow({
       </div>
       {children}
     </div>
-  );
-}
-
-interface InlineActionButtonProps {
-  icon: LucideIcon;
-  onClick: () => void;
-  children: ReactNode;
-}
-
-function InlineActionButton({ icon: Icon, onClick, children }: Readonly<InlineActionButtonProps>) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex w-full items-center justify-center gap-1.5 rounded-control border border-dashed py-1 text-[10px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-    >
-      <Icon className="size-3" />
-      {children}
-    </button>
   );
 }

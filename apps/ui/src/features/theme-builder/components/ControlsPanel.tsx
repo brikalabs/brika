@@ -8,6 +8,7 @@
 
 import { Palette as PaletteIcon, Sliders } from 'lucide-react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui';
 import type { ThemeConfig } from '../types';
 import { DesignTab } from './DesignTab';
@@ -20,6 +21,7 @@ interface ControlsPanelProps {
 }
 
 export function ControlsPanel({ draft, onChange }: Readonly<ControlsPanelProps>) {
+  const { t } = useTranslation('themeBuilder');
   const [tab, setTab] = useState<'design' | 'palette'>('design');
 
   const patch = <K extends keyof ThemeConfig>(key: K, value: ThemeConfig[K]) =>
@@ -42,11 +44,11 @@ export function ControlsPanel({ draft, onChange }: Readonly<ControlsPanelProps>)
         <TabsList className="mx-3 mt-2 grid shrink-0 grid-cols-2">
           <TabsTrigger value="design" className="gap-1.5 text-xs">
             <Sliders className="size-3.5" />
-            Design
+            {t('tabs.design')}
           </TabsTrigger>
           <TabsTrigger value="palette" className="gap-1.5 text-xs">
             <PaletteIcon className="size-3.5" />
-            Palette
+            {t('tabs.palette')}
           </TabsTrigger>
         </TabsList>
 

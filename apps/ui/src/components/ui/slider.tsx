@@ -65,7 +65,7 @@ export function Slider({
           <span
             key={t}
             aria-hidden
-            className="-translate-x-1/2 -translate-y-1/2 pointer-events-none absolute top-1/2 size-1 rounded-full bg-foreground/35"
+            className="pointer-events-none absolute top-1/2 size-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-foreground/35"
             style={{ left: `${pct(t, min, max)}%` }}
           />
         ))}
@@ -93,7 +93,7 @@ export function Slider({
           step={step}
           className={cn(
             numericWidth,
-            '[&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none bg-transparent text-right outline-none [-moz-appearance:textfield]'
+            'bg-transparent text-right outline-none [-moz-appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none'
           )}
         />
         {unit && <span className="text-muted-foreground">{unit}</span>}

@@ -8,6 +8,7 @@
 
 import { ChevronLeft, ChevronRight, Palette, Plus } from 'lucide-react';
 import { type ReactNode, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import type { ThemeConfig } from '../types';
@@ -31,6 +32,7 @@ export function ThemeList({
   onNew,
   presetTrigger,
 }: Readonly<ThemeListProps>) {
+  const { t } = useTranslation('themeBuilder');
   const [collapsed, setCollapsed] = useState<boolean>(() => {
     try {
       return globalThis.sessionStorage?.getItem(COLLAPSED_KEY) === '1';
@@ -55,8 +57,8 @@ export function ThemeList({
             size="icon-sm"
             variant="ghost"
             onClick={() => setCollapsed(false)}
-            aria-label="Expand theme list"
-            title="Expand theme list"
+            aria-label={t('list.expandLabel')}
+            title={t('list.expandTooltip')}
           >
             <ChevronRight />
           </Button>
@@ -98,8 +100,8 @@ export function ThemeList({
             size="icon-sm"
             variant="ghost"
             onClick={onNew}
-            aria-label="New theme"
-            title="New theme"
+            aria-label={t('list.newThemeLabel')}
+            title={t('list.newThemeTooltip')}
           >
             <Plus />
           </Button>
@@ -113,15 +115,15 @@ export function ThemeList({
       <div className="flex shrink-0 items-center justify-between gap-1 border-b py-2 pr-2 pl-safe">
         <div className="flex items-center gap-1.5 font-medium text-sm">
           <Palette className="size-3.5" />
-          My themes
+          {t('list.title')}
         </div>
         <div className="flex items-center gap-0.5">
           <Button
             size="icon-sm"
             variant="ghost"
             onClick={onNew}
-            aria-label="New theme"
-            title="Blank theme"
+            aria-label={t('list.newThemeLabel')}
+            title={t('list.blankThemeTooltip')}
           >
             <Plus />
           </Button>
@@ -129,8 +131,8 @@ export function ThemeList({
             size="icon-sm"
             variant="ghost"
             onClick={() => setCollapsed(true)}
-            aria-label="Collapse theme list"
-            title="Collapse"
+            aria-label={t('list.collapseLabel')}
+            title={t('list.collapseTooltip')}
           >
             <ChevronLeft />
           </Button>
@@ -142,7 +144,7 @@ export function ThemeList({
       <div className="min-h-0 flex-1 overflow-auto p-1.5">
         {themes.length === 0 ? (
           <div className="px-2 py-6 text-center text-muted-foreground text-xs">
-            No themes yet. Start from a preset or click + for a blank one.
+            {t('list.empty')}
           </div>
         ) : (
           <ol className="space-y-0.5">
@@ -184,8 +186,8 @@ export function ThemeList({
       </div>
 
       {themes.length > 0 && (
-        <div className="flex shrink-0 items-center justify-between border-t pr-3 py-1.5 pb-safe pl-safe text-[10px] text-muted-foreground">
-          <span>{themes.length === 1 ? '1 theme' : `${themes.length} themes`}</span>
+        <div className="flex shrink-0 items-center justify-between border-t py-1.5 pr-3 pb-safe pl-safe text-[10px] text-muted-foreground">
+          <span>{t('list.count', { count: themes.length })}</span>
         </div>
       )}
     </div>

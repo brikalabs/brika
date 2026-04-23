@@ -2,12 +2,7 @@
   "id": "forest",
   "name": "Forest",
   "description": "Deep greens with warm earth accents.",
-  "accentSwatches": [
-    "#2f7a3f",
-    "#4a8c5a",
-    "#9c7a4a",
-    "#c78a2b"
-  ],
+  "accentSwatches": ["#2f7a3f", "#4a8c5a", "#9c7a4a", "#c78a2b"],
   "colors": {
     "light": {
       "background": "#fcfcfc",

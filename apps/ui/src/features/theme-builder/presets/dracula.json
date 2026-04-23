@@ -2,12 +2,7 @@
   "id": "dracula",
   "name": "Dracula",
   "description": "Vibrant dark palette, neon accents.",
-  "accentSwatches": [
-    "#bd93f9",
-    "#ff79c6",
-    "#50fa7b",
-    "#ffb86c"
-  ],
+  "accentSwatches": ["#bd93f9", "#ff79c6", "#50fa7b", "#ffb86c"],
   "colors": {
     "light": {
       "background": "#f8f8f2",

@@ -5,6 +5,7 @@ import { authDb } from './database';
 import { AuthService } from './services/AuthService';
 import { ScopeService } from './services/ScopeService';
 import { SessionService } from './services/SessionService';
+import { UserPreferencesService } from './services/UserPreferencesService';
 import { UserService } from './services/UserService';
 
 export function openAuthDatabase(path = 'auth.db') {
@@ -32,6 +33,9 @@ export function setupAuthServices(
   });
   container.register(UserService, {
     useValue: new UserService(database.sqlite),
+  });
+  container.register(UserPreferencesService, {
+    useValue: new UserPreferencesService(database.sqlite),
   });
   container.register(ScopeService, { useClass: ScopeService });
   container.register(AuthService, { useClass: AuthService });

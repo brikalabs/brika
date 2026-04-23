@@ -25,6 +25,7 @@ import {
   Upload,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Badge,
   Button,
@@ -94,6 +95,7 @@ export function ThemeBuilderToolbar({
   onCopyCss,
   onImport,
 }: Readonly<ThemeBuilderToolbarProps>) {
+  const { t } = useTranslation('themeBuilder');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const justSaved = useJustSaved(lastSavedMs);
 
@@ -110,23 +112,23 @@ export function ThemeBuilderToolbar({
     if (justSaved) {
       return (
         <Badge variant="outline" className="gap-1 border-success/30 text-success">
-          <Check className="size-3" /> Saved
+          <Check className="size-3" /> {t('toolbar.status.saved')}
         </Badge>
       );
     }
     if (!savedId) {
-      return <Badge variant="outline">Draft</Badge>;
+      return <Badge variant="outline">{t('toolbar.status.draft')}</Badge>;
     }
     if (isDirty) {
       return (
         <Badge variant="outline" className="gap-1 border-warning/30 text-warning">
-          Unsaved changes
+          {t('toolbar.status.unsavedChanges')}
         </Badge>
       );
     }
     return (
       <Badge variant="outline" className="gap-1 border-success/30 text-success">
-        <Check className="size-3" /> Saved
+        <Check className="size-3" /> {t('toolbar.status.saved')}
       </Badge>
     );
   };
@@ -136,7 +138,7 @@ export function ThemeBuilderToolbar({
         .replace(/^custom-/, '')
         .toUpperCase()
         .slice(0, 8)
-    : 'DRAFT';
+    : t('toolbar.meta.draftId');
   const dateString = new Intl.DateTimeFormat(undefined, {
     month: 'short',
     day: '2-digit',
@@ -148,17 +150,16 @@ export function ThemeBuilderToolbar({
       <PageHeader>
         <PageHeaderInfo>
           <div className="flex items-center gap-3">
-            <PageHeaderTitle>{draft.name || 'Untitled theme'}</PageHeaderTitle>
+            <PageHeaderTitle>{draft.name || t('page.defaultName')}</PageHeaderTitle>
             {renderStatusBadge()}
             {isActive && (
               <Badge variant="default" className="gap-1">
-                <Eye className="size-3" /> Active
+                <Eye className="size-3" /> {t('toolbar.status.active')}
               </Badge>
             )}
           </div>
           <PageHeaderDescription>
-            {draft.description ||
-              'Edit colors, corners, radius, typography, and effects. Preview updates live.'}
+            {draft.description || t('page.defaultDescription')}
           </PageHeaderDescription>
         </PageHeaderInfo>
         <PageHeaderActions>
@@ -173,36 +174,37 @@ export function ThemeBuilderToolbar({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm">
-                <Download /> Export <ChevronDown className="size-3 opacity-60" />
+                <Download /> {t('toolbar.actions.export')}{' '}
+                <ChevronDown className="size-3 opacity-60" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onSelect={onExport}>
                 <FileJson className="size-4" />
-                Download JSON
+                {t('toolbar.actions.exportJson')}
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={onExportCss}>
                 <FileType2 className="size-4" />
-                Download CSS
+                {t('toolbar.actions.exportCss')}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onSelect={() => void onCopyCss()}>
                 <Clipboard className="size-4" />
-                Copy CSS to clipboard
+                {t('toolbar.actions.copyCss')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
           <Button variant="outline" size="sm" onClick={onApply} disabled={isDirty || !savedId}>
-            <Eye /> Apply
+            <Eye /> {t('toolbar.actions.apply')}
           </Button>
           <Button
             size="sm"
             onClick={onSave}
             disabled={!isDirty && Boolean(savedId)}
-            title="Save (⌘S)"
+            title={t('toolbar.actions.saveTooltip')}
           >
-            <Save /> {savedId ? 'Save' : 'Create'}
+            <Save /> {savedId ? t('toolbar.actions.save') : t('toolbar.actions.create')}
           </Button>
         </PageHeaderActions>
       </PageHeader>
@@ -210,11 +212,11 @@ export function ThemeBuilderToolbar({
       {/* Meta band — id, date, quick utilities */}
       <div className="flex items-center gap-3 rounded-md border bg-muted/30 px-3 py-1.5 text-xs">
         <span className="font-mono text-[10px] text-muted-foreground tracking-wider">
-          ID · {idLabel}
+          {t('toolbar.meta.id')} · {idLabel}
         </span>
         <span className="h-3 w-px bg-border" />
         <span className="font-mono text-[10px] text-muted-foreground tracking-wider">
-          Updated · {dateString}
+          {t('toolbar.meta.updated')} · {dateString}
         </span>
 
         <div className="ml-auto flex items-center gap-1">
@@ -224,8 +226,8 @@ export function ThemeBuilderToolbar({
               size="icon-sm"
               onClick={onUndo}
               disabled={!canUndo}
-              title="Undo (⌘Z)"
-              aria-label="Undo"
+              title={t('toolbar.actions.undoTooltip')}
+              aria-label={t('toolbar.actions.undo')}
               className="size-6"
             >
               <Undo2 />
@@ -235,8 +237,8 @@ export function ThemeBuilderToolbar({
               size="icon-sm"
               onClick={onRedo}
               disabled={!canRedo}
-              title="Redo (⌘⇧Z)"
-              aria-label="Redo"
+              title={t('toolbar.actions.redoTooltip')}
+              aria-label={t('toolbar.actions.redo')}
               className="size-6"
             >
               <Redo2 />
@@ -244,11 +246,11 @@ export function ThemeBuilderToolbar({
           </div>
 
           <Button variant="ghost" size="sm" onClick={handleImportClick} className="h-7 gap-1">
-            <Upload className="size-3.5" /> Import
+            <Upload className="size-3.5" /> {t('toolbar.actions.import')}
           </Button>
           {savedId && (
             <Button variant="ghost" size="sm" onClick={onDuplicate} className="h-7 gap-1">
-              <Copy className="size-3.5" /> Duplicate
+              <Copy className="size-3.5" /> {t('toolbar.actions.duplicate')}
             </Button>
           )}
           {savedId && (
@@ -258,7 +260,7 @@ export function ThemeBuilderToolbar({
               onClick={onDelete}
               className="h-7 gap-1 text-destructive hover:text-destructive"
             >
-              <Trash2 className="size-3.5" /> Delete
+              <Trash2 className="size-3.5" /> {t('toolbar.actions.delete')}
             </Button>
           )}
         </div>
