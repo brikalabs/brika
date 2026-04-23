@@ -17,7 +17,7 @@ function ChartTooltipContent({
 }>) {
   if (active && payload?.[0]?.value !== null && payload?.[0]?.value !== undefined) {
     return (
-      <div className="rounded-md border bg-popover px-2 py-1 text-sm shadow-md">
+      <div className="rounded-control border bg-popover px-2 py-1 text-sm shadow-overlay">
         {formatValue(Number(payload[0].value))}
       </div>
     );

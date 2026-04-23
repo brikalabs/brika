@@ -16,13 +16,44 @@
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
 
-  /* Radius scale derived from --radius (single scalar per theme) */
+  /* Radius — numeric scale derived from the --radius scalar.
+     Kept for Tailwind utility compatibility (`rounded-sm`, `rounded-lg`, …). */
   --radius-sm: calc(var(--radius) - 0.375rem);
   --radius-md: calc(var(--radius) - 0.25rem);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 0.25rem);
   --radius-2xl: calc(var(--radius) + 0.5rem);
   --radius-3xl: calc(var(--radius) + 1rem);
+
+  /* Radius — semantic tokens by UI purpose.
+       tight      — tag dots, micro shapes
+       pill       — chips, tags, badges
+       control    — buttons, inputs, switches
+       container  — cards, panels, sidebars
+       surface    — dialogs, sheets, popovers
+     Utilities: `rounded-tight`, `rounded-pill`, `rounded-control`,
+                `rounded-container`, `rounded-surface`. */
+  --radius-tight: max(0rem, calc(var(--radius) - 0.625rem));
+  --radius-pill: max(0rem, calc(var(--radius) - 0.375rem));
+  --radius-control: max(0rem, calc(var(--radius) - 0.25rem));
+  --radius-container: var(--radius);
+  --radius-surface: calc(var(--radius) + 0.25rem);
+
+  /* Shadow — semantic elevation tokens by UI purpose.
+       surface    — subtle resting content (inline cards, quiet chrome)
+       raised     — cards / buttons at rest or hovered
+       overlay    — popovers, dropdowns, tooltips
+       modal      — dialogs, sheets
+       spotlight  — toasts, command palettes
+     Utilities: `shadow-surface`, `shadow-raised`, `shadow-overlay`,
+                `shadow-modal`, `shadow-spotlight`.
+     These are provided by the theme at runtime — fall back to the
+     numeric scale so the app still renders without a custom theme. */
+  --shadow-surface: var(--elevation-surface, var(--shadow-xs));
+  --shadow-raised: var(--elevation-raised, var(--shadow-sm));
+  --shadow-overlay: var(--elevation-overlay, var(--shadow-md));
+  --shadow-modal: var(--elevation-modal, var(--shadow-lg));
+  --shadow-spotlight: var(--elevation-spotlight, var(--shadow-xl));
 
   /* Core semantic colors */
   --color-background: var(--background);

@@ -3,7 +3,7 @@ import * as React from 'react';
 import { cn } from '@/lib/utils';
 
 const cardVariants = cva(
-  'relative rounded-xl border bg-card text-card-foreground shadow-sm transition-color duration-200',
+  'relative rounded-container border bg-card text-card-foreground shadow-raised transition-color duration-200',
   {
     variants: {
       accent: {
@@ -30,7 +30,7 @@ const cardVariants = cva(
       {
         accent: 'none',
         interactive: true,
-        className: 'border-foreground/10 hover:border-foreground/20 hover:shadow-md',
+        className: 'border-foreground/10 hover:border-foreground/20 hover:shadow-overlay',
       },
       {
         accent: ['blue', 'emerald', 'violet', 'orange', 'purple', 'amber'],
@@ -39,7 +39,7 @@ const cardVariants = cva(
       {
         accent: ['blue', 'emerald', 'violet', 'orange', 'purple', 'amber'],
         interactive: true,
-        className: 'hover:border-[var(--accent-border)] hover:shadow-lg',
+        className: 'hover:border-[var(--accent-border)] hover:shadow-modal',
       },
     ],
     defaultVariants: {
@@ -69,7 +69,7 @@ function Card({ className, accent, interactive, children, ...props }: Readonly<C
       {hasAccent && (
         <div
           className={cn(
-            'pointer-events-none absolute inset-0 rounded-xl bg-(--accent-bg) transition-colors',
+            'pointer-events-none absolute inset-0 rounded-container bg-(--accent-bg) transition-colors',
             interactive && 'group-hover:bg-(--accent-bg-hover)'
           )}
         />

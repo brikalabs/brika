@@ -4,36 +4,56 @@
  * Layout:
  *   [ ThemeList ] │ [ ControlsPanel ] │ [ PreviewCanvas ]
  *
- * The page holds a single `draft` in local state. Every edit mutates
- * the draft and the preview re-renders immediately via inlined CSS
- * variables. Saving writes to localStorage, Apply switches the active
- * theme to this one, Export/Import move themes as JSON files.
+ * The page holds a single `draft` managed by a small undo/redo history.
+ * Every edit mutates the draft and the preview re-renders immediately
+ * via inlined CSS variables. Saving writes to localStorage, Apply
+ * switches the active theme to this one, Export/Import move themes as
+ * JSON files (or CSS for download).
+ *
+ * Keyboard:
+ *   Cmd/Ctrl+Z       Undo
+ *   Cmd/Ctrl+Shift+Z Redo
+ *   Cmd/Ctrl+S       Save
  */
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTheme } from '@/lib/theme-context';
 import { ControlsPanel } from './components/ControlsPanel';
+import { PresetPicker } from './components/PresetPicker';
 import { PreviewCanvas } from './components/PreviewCanvas';
 import { ThemeBuilderToolbar } from './components/ThemeBuilderToolbar';
 import { ThemeList } from './components/ThemeList';
 import { useCustomThemes } from './hooks';
-import { exportThemeToFile, importThemeFromFile } from './import-export';
+import {
+  copyThemeCssToClipboard,
+  exportThemeAsCss,
+  exportThemeToFile,
+  importThemeFromFile,
+} from './import-export';
+import { createThemeFromPreset, type ThemePreset } from './presets';
 import { customThemeSelector } from './runtime';
 import { customThemeStorage } from './storage';
 import { createDefaultThemeConfig } from './tokens';
 import type { ThemeConfig } from './types';
+import { useHistory } from './use-history';
 
 function isEqualTheme(a: ThemeConfig, b: ThemeConfig): boolean {
-  // Ignore updatedAt — it drifts on save and isn't part of "content".
   return JSON.stringify({ ...a, updatedAt: 0 }) === JSON.stringify({ ...b, updatedAt: 0 });
+}
+
+function isEditableTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+  const tag = target.tagName;
+  return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable;
 }
 
 export function ThemeBuilderPage() {
   const themes = useCustomThemes();
   const { theme: activeThemeName, setTheme } = useTheme();
 
-  const [draft, setDraft] = useState<ThemeConfig>(() => {
-    // Open the currently active custom theme if any, otherwise a fresh one.
+  const initialDraft = (): ThemeConfig => {
     if (activeThemeName.startsWith('custom-')) {
       const id = activeThemeName.slice('custom-'.length);
       const found = customThemeStorage.get(id);
@@ -42,7 +62,10 @@ export function ThemeBuilderPage() {
       }
     }
     return createDefaultThemeConfig();
-  });
+  };
+
+  const history = useHistory<ThemeConfig>(initialDraft());
+  const draft = history.value;
 
   const [savedId, setSavedId] = useState<string | null>(() => {
     if (activeThemeName.startsWith('custom-')) {
@@ -51,24 +74,56 @@ export function ThemeBuilderPage() {
     }
     return null;
   });
+  const [lastSavedMs, setLastSavedMs] = useState<number | null>(null);
 
   const savedVersion = savedId ? themes.find((t) => t.id === savedId) : undefined;
   const isDirty = savedVersion ? !isEqualTheme(savedVersion, draft) : true;
   const isActive = savedId !== null && activeThemeName === customThemeSelector(savedId);
 
+  const handleSave = useCallback(() => {
+    customThemeStorage.save(draft);
+    setSavedId(draft.id);
+    setLastSavedMs(Date.now());
+  }, [draft]);
+
   // If the saved version is externally updated (another tab), surface it.
   useEffect(() => {
     if (savedId && savedVersion && !isDirty) {
-      setDraft(savedVersion);
+      history.replace(savedVersion);
     }
-    // Only when the saved record changes, not on every keystroke.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [savedVersion?.updatedAt]);
 
-  const handleSave = () => {
-    customThemeStorage.save(draft);
-    setSavedId(draft.id);
-  };
+  // Keyboard shortcuts — Cmd/Ctrl+Z, Cmd/Ctrl+Shift+Z, Cmd/Ctrl+S.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const mod = e.metaKey || e.ctrlKey;
+      if (!mod) {
+        return;
+      }
+      // Always allow Cmd+S even when focused in an input.
+      if (e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        if (isDirty) {
+          handleSave();
+        }
+        return;
+      }
+      // Don't hijack undo when the user is editing text.
+      if (isEditableTarget(e.target)) {
+        return;
+      }
+      if (e.key.toLowerCase() === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        history.undo();
+      } else if ((e.key.toLowerCase() === 'z' && e.shiftKey) || e.key.toLowerCase() === 'y') {
+        e.preventDefault();
+        history.redo();
+      }
+    };
+    globalThis.addEventListener('keydown', onKey);
+    return () => globalThis.removeEventListener('keydown', onKey);
+  }, [handleSave, history, isDirty]);
 
   const handleDuplicate = () => {
     const now = Date.now();
@@ -80,19 +135,27 @@ export function ThemeBuilderPage() {
       updatedAt: now,
     };
     customThemeStorage.save(copy);
-    setDraft(copy);
+    history.reset(copy);
     setSavedId(copy.id);
+    setLastSavedMs(now);
   };
 
   const handleNew = () => {
-    const fresh = createDefaultThemeConfig();
-    setDraft(fresh);
+    history.reset(createDefaultThemeConfig());
     setSavedId(null);
+    setLastSavedMs(null);
+  };
+
+  const handlePickPreset = (preset: ThemePreset) => {
+    history.reset(createThemeFromPreset(preset));
+    setSavedId(null);
+    setLastSavedMs(null);
   };
 
   const handleSelect = (theme: ThemeConfig) => {
-    setDraft(theme);
+    history.reset(theme);
     setSavedId(theme.id);
+    setLastSavedMs(null);
   };
 
   const handleDelete = () => {
@@ -103,7 +166,6 @@ export function ThemeBuilderPage() {
       return;
     }
     customThemeStorage.remove(savedId);
-    // If the deleted theme was active, fall back to default.
     if (activeThemeName === customThemeSelector(savedId)) {
       setTheme('default');
     }
@@ -118,17 +180,28 @@ export function ThemeBuilderPage() {
   };
 
   const handleExport = () => exportThemeToFile(draft);
+  const handleExportCss = () => exportThemeAsCss(draft);
+  const handleCopyCss = async () => {
+    try {
+      await copyThemeCssToClipboard(draft);
+    } catch {
+      alert('Could not copy CSS to clipboard.');
+    }
+  };
 
   const handleImport = async (file: File) => {
     try {
       const imported = await importThemeFromFile(file);
       customThemeStorage.save(imported);
-      setDraft(imported);
+      history.reset(imported);
       setSavedId(imported.id);
+      setLastSavedMs(Date.now());
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to import theme');
     }
   };
+
+  const handleChange = (next: ThemeConfig) => history.set(next);
 
   return (
     <div className="flex h-[calc(100svh-4rem)] flex-col gap-4">
@@ -137,11 +210,18 @@ export function ThemeBuilderPage() {
         savedId={savedId}
         isDirty={isDirty}
         isActive={isActive}
+        canUndo={history.canUndo}
+        canRedo={history.canRedo}
+        lastSavedMs={lastSavedMs}
+        onUndo={history.undo}
+        onRedo={history.redo}
         onSave={handleSave}
         onDuplicate={handleDuplicate}
         onApply={handleApply}
         onDelete={handleDelete}
         onExport={handleExport}
+        onExportCss={handleExportCss}
+        onCopyCss={handleCopyCss}
         onImport={handleImport}
       />
 
@@ -152,9 +232,10 @@ export function ThemeBuilderPage() {
           activeThemeName={activeThemeName}
           onSelect={handleSelect}
           onNew={handleNew}
+          presetTrigger={<PresetPicker onPick={handlePickPreset} />}
         />
-        <div className="w-80 shrink-0 border-r">
-          <ControlsPanel draft={draft} onChange={setDraft} />
+        <div className="w-96 shrink-0 border-r">
+          <ControlsPanel draft={draft} onChange={handleChange} />
         </div>
         <div className="min-w-0 flex-1">
           <PreviewCanvas theme={draft} />

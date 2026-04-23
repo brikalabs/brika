@@ -1,17 +1,14 @@
 /**
  * Runtime theme injection.
  *
- * A custom theme is applied by emitting a <style> element into <head>
- * that defines the theme's CSS custom properties under a unique selector.
- * Setting `<html data-theme="custom-{id}">` then activates it — the same
- * mechanism the built-in themes use in `index.css`.
- *
- * Keeping one <style> per custom theme (vs a single rotating sheet) lets
- * multiple themes coexist (e.g. for live preview of a theme that isn't
- * currently active).
+ * Emits the custom theme as a scoped <style> block keyed by
+ * `[data-theme="custom-{id}"]`. All token groups come from
+ * `theme-css.ts` so adding a new token only requires editing one file.
  */
 
-import type { ColorToken, ThemeColors, ThemeConfig } from './types';
+import { cornerShapeKeyword } from './corner-css';
+import { collectDarkPaletteOverrides, collectTokens, tokensToCssText } from './theme-css';
+import type { ThemeConfig } from './types';
 
 const STYLE_ID_PREFIX = 'brika-theme-';
 
@@ -19,26 +16,18 @@ export function customThemeSelector(id: string): string {
   return `custom-${id}`;
 }
 
-function toCssVars(colors: ThemeColors): string {
-  const entries = Object.entries(colors) as Array<[ColorToken, string]>;
-  return entries.map(([k, v]) => `--${k}: ${v};`).join(' ');
-}
-
 function buildStylesheet(theme: ThemeConfig): string {
   const themeName = customThemeSelector(theme.id);
-  const { light, dark } = theme.colors;
+  const shape = cornerShapeKeyword(theme.corners);
+  const lightGroups = collectTokens(theme, 'light');
+  const darkOverrides = collectDarkPaletteOverrides(theme);
 
-  return `
-[data-theme="${themeName}"] {
-  --radius: ${theme.radius}rem;
-  --font-sans: ${theme.fonts.sans};
-  --font-mono: ${theme.fonts.mono};
-  ${toCssVars(light)}
-}
+  return `[data-theme="${themeName}"] {
+  corner-shape: ${shape};
+${tokensToCssText(lightGroups)}}
+
 .dark[data-theme="${themeName}"] {
-  ${toCssVars(dark)}
-}
-`.trim();
+${tokensToCssText([darkOverrides])}}`;
 }
 
 /** Inject or replace the <style> element for a theme. */

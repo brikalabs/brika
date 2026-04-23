@@ -1,75 +1,74 @@
 /**
- * RadiusField — slider + numeric input for the --radius scalar (rem).
- * Live previews the resulting rounded-* scale with 3 pill samples.
+ * RadiusField — slider + preset chips + semantic preview.
+ *
+ * The live preview shows the four semantic radius tokens (pill,
+ * control, container, surface) derived from the chosen base radius so
+ * users see the whole scale ripple as they drag.
  */
 
-import type { ChangeEvent } from 'react';
+import { radiiFor } from '../effects-css';
+import { RADIUS_PRESETS } from '../radius-presets';
+import { FieldPreview } from './FieldPreview';
+import { cssVars, nearlyEquals, PresetChips, SemanticTile, SliderInput } from './primitives';
 
 interface RadiusFieldProps {
   value: number;
   onChange: (next: number) => void;
-  min?: number;
-  max?: number;
-  step?: number;
 }
 
-export function RadiusField({
-  value,
-  onChange,
-  min = 0,
-  max = 2,
-  step = 0.125,
-}: Readonly<RadiusFieldProps>) {
-  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const next = Number(e.target.value);
-    if (!Number.isNaN(next)) {
-      onChange(next);
-    }
-  };
+const SEMANTIC_SAMPLES = [
+  { key: 'pill', label: 'Pill', hint: 'chips' },
+  { key: 'control', label: 'Control', hint: 'buttons' },
+  { key: 'container', label: 'Container', hint: 'cards' },
+  { key: 'surface', label: 'Surface', hint: 'dialogs' },
+] as const;
+
+const RADIUS_EQUALS = nearlyEquals(0.001);
+
+export function RadiusField({ value, onChange }: Readonly<RadiusFieldProps>) {
+  const radii = radiiFor(value);
+  const scopedVars = cssVars({ '--radius': `${value}rem` });
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-3">
-        <input
-          type="range"
-          value={value}
-          onChange={handleChange}
-          min={min}
-          max={max}
-          step={step}
-          className="h-1 flex-1 cursor-pointer appearance-none rounded-full bg-muted accent-primary"
-        />
-        <div className="flex items-center gap-1 rounded-md border bg-background px-2 py-1 font-mono text-xs">
-          <input
-            type="number"
-            value={value}
-            onChange={handleChange}
-            min={min}
-            max={max}
-            step={step}
-            className="w-12 bg-transparent text-right outline-none"
-          />
-          <span className="text-muted-foreground">rem</span>
+    <div className="space-y-2.5">
+      <SliderInput
+        value={value}
+        onChange={onChange}
+        min={0}
+        max={2}
+        step={0.125}
+        unit="rem"
+        numericWidth="w-8"
+      />
+
+      <PresetChips
+        presets={RADIUS_PRESETS}
+        value={value}
+        onChange={onChange}
+        columns="grid-cols-3"
+        isActive={RADIUS_EQUALS}
+      />
+
+      <FieldPreview
+        label="Semantic radius"
+        caption={`${value.toFixed(3)}rem base`}
+        style={scopedVars}
+      >
+        <div className="grid w-full grid-cols-4 gap-2">
+          {SEMANTIC_SAMPLES.map(({ key, label, hint }) => {
+            const r = radii[key];
+            return (
+              <SemanticTile key={key} label={label} hint={hint} value={r}>
+                <div
+                  className="size-10 border-2 border-primary/40 bg-primary/10"
+                  style={{ borderRadius: r }}
+                  aria-hidden
+                />
+              </SemanticTile>
+            );
+          })}
         </div>
-      </div>
-      <div className="flex items-center gap-2">
-        {[
-          { size: 'size-10', label: 'sm', calc: `calc(${value}rem - 0.375rem)` },
-          { size: 'size-10', label: 'lg', calc: `${value}rem` },
-          { size: 'size-10', label: 'xl', calc: `calc(${value}rem + 0.25rem)` },
-        ].map((sample) => (
-          <div
-            key={sample.label}
-            className="flex flex-col items-center gap-1 text-[10px] text-muted-foreground"
-          >
-            <div
-              className={`${sample.size} border bg-muted`}
-              style={{ borderRadius: sample.calc }}
-            />
-            <span>{sample.label}</span>
-          </div>
-        ))}
-      </div>
+      </FieldPreview>
     </div>
   );
 }
