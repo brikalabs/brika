@@ -111,18 +111,10 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
-/* ─────────────────────────────────────────────────────────────
-   DEFAULT RUNTIME VALUES
-   The consumer app must also define these at :root (and per theme)
-   if it wants to vary them. These are safe fallbacks.
-   ───────────────────────────────────────────────────────────── */
-@layer base {
-  :root {
-    --radius: 0.75rem;
-    --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-    --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
-  }
-}
+/* Consumers (apps/ui index.css, hub plugin ModuleCompiler) are expected
+   to define the runtime tokens (--radius, --font-sans, --font-mono, …)
+   at `:root` themselves. This file registers Tailwind utilities only so
+   compiling a file with no matching classes produces no CSS rules. */
 
 /* ─────────────────────────────────────────────────────────────
    CORNER SHAPE UTILITIES
