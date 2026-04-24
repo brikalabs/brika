@@ -1,0 +1,48 @@
+{
+  "name": "@brika/clay",
+  "version": "0.0.0",
+  "description": "Clay — Brika's React component library and first-party themes",
+  "type": "module",
+  "private": true,
+  "license": "MIT",
+  "author": "BRIKA Team",
+  "homepage": "https://github.com/brikalabs/brika/tree/main/packages/clay#readme",
+  "bugs": {
+    "url": "https://github.com/brikalabs/brika/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/brikalabs/brika.git",
+    "directory": "packages/clay"
+  },
+  "keywords": ["brika", "clay", "react", "components", "design-system", "tailwind"],
+  "exports": {
+    ".": "./src/index.ts",
+    "./primitives": "./src/primitives/index.ts",
+    "./tailwind-preset": "./src/tailwind-preset.ts"
+  },
+  "files": ["src"],
+  "scripts": {
+    "typecheck": "tsgo --noEmit",
+    "test": "bun test",
+    "story": "ladle serve",
+    "story:build": "ladle build"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "dependencies": {
+    "@radix-ui/react-slot": "^1.2.4",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "radix-ui": "^1.4.3",
+    "tailwind-merge": "^3.4.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3"
+  }
+}

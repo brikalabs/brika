@@ -1,3 +1,16 @@
+export type { ButtonProps, CardProps, InputProps } from '@brika/clay';
+export {
+  Button,
+  buttonVariants,
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+  cardVariants,
+  Input,
+} from '@brika/clay';
 export {
   AlertDialog,
   AlertDialogAction,
@@ -22,17 +35,7 @@ export {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from './breadcrumb';
-export { Button } from './button';
 export { ButtonGroup } from './button-group';
-export {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-  cardVariants,
-} from './card';
 export {
   CodeBlock,
   CodeBlockActions,
@@ -64,7 +67,6 @@ export {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from './dropdown-menu';
-export { Input } from './input';
 export {
   InputGroup,
   InputGroupAddon,
