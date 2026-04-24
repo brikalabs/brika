@@ -33,7 +33,7 @@ each is a thin wrapper around a native element with tokenised spacing.
 
 ## Tokens
 
-Consumes `card-container`, `card-label`. See [Card.tokens.ts](./Card.tokens.ts).
+Consumes `card-container`, `card-label`. See [card.tokens.ts](./card.tokens.ts).
 
 ## Accessibility
 

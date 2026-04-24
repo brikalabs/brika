@@ -29,7 +29,7 @@ system (CVA) and optional `asChild` slot projection.
 ## Tokens
 
 Consumes the `primary`, `primary-foreground`, `destructive`, and `secondary`
-colour tokens. See [Button.tokens.ts](./Button.tokens.ts).
+colour tokens. See [button.tokens.ts](./button.tokens.ts).
 
 ## Accessibility
 

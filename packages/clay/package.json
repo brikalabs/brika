@@ -24,9 +24,7 @@
   "files": ["src"],
   "scripts": {
     "typecheck": "tsgo --noEmit",
-    "test": "bun test",
-    "story": "ladle serve",
-    "story:build": "ladle build"
+    "test": "bun test"
   },
   "peerDependencies": {
     "react": "^19.0.0",

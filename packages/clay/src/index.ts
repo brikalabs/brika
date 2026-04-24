@@ -8,9 +8,9 @@
  * individual component folders.
  */
 
-export type { ButtonProps, ButtonTokenKey } from './components/Button';
-export { Button, buttonTokens, buttonVariants } from './components/Button';
-export type { CardProps, CardTokenKey } from './components/Card';
+export type { ButtonProps, ButtonTokenKey } from './components/button';
+export { Button, buttonTokens, buttonVariants } from './components/button';
+export type { CardProps, CardTokenKey } from './components/card';
 export {
   Card,
   CardContent,
@@ -20,8 +20,8 @@ export {
   CardTitle,
   cardTokens,
   cardVariants,
-} from './components/Card';
-export type { InputProps, InputTokenKey } from './components/Input';
-export { Input, inputTokens } from './components/Input';
+} from './components/card';
+export type { InputProps, InputTokenKey } from './components/input';
+export { Input, inputTokens } from './components/input';
 export { cn } from './primitives/cn';
 export { cssVars } from './primitives/cssVars';

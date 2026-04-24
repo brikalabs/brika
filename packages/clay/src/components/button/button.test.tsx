@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 
-import { Button, buttonVariants } from './Button';
+import { Button, buttonVariants } from './button';
 
 describe('Button', () => {
   test('exports the component and its cva helper', () => {

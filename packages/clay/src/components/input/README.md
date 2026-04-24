@@ -23,7 +23,7 @@ All native `<input>` attributes pass through. No custom props.
 ## Tokens
 
 Consumes `input-container`, `input-label`, `input-placeholder`, `input-border`.
-See [Input.tokens.ts](./Input.tokens.ts).
+See [input.tokens.ts](./input.tokens.ts).
 
 ## Accessibility
 

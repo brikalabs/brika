@@ -8,7 +8,7 @@ import {
   CardHeader,
   CardTitle,
   cardVariants,
-} from './Card';
+} from './card';
 
 describe('Card', () => {
   test('exports all subcomponents and cva helper', () => {
