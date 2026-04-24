@@ -1,0 +1,30 @@
+---
+import { ThemeToggle } from './ThemeToggle.tsx';
+
+declare const __CLAY_VERSION__: string;
+
+const clayVersion = typeof __CLAY_VERSION__ === 'string' ? __CLAY_VERSION__ : 'dev';
+---
+
+<header
+  class="sticky top-0 z-20 hidden h-12 border-clay-hairline border-b bg-clay-canvas md:flex"
+>
+  <div
+    class="flex min-w-0 flex-1 items-center justify-end border-clay-hairline border-r px-4"
+  >
+    <a
+      href="https://github.com/brikalabs/brika"
+      target="_blank"
+      rel="noopener noreferrer"
+      class="font-mono text-clay-subtle text-sm transition-colors hover:text-clay-default"
+    >
+      @brika/clay
+      <span class="ml-1 rounded bg-clay-control px-1.5 py-0.5 text-xs">
+        v{clayVersion}
+      </span>
+    </a>
+  </div>
+  <div class="flex w-12 shrink-0 items-center justify-center">
+    <ThemeToggle client:only="react" />
+  </div>
+</header>

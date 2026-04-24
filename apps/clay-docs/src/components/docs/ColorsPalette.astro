@@ -1,0 +1,37 @@
+---
+interface PaletteToken {
+  readonly name: string;
+  readonly cssVar: string;
+  readonly description: string;
+  readonly text?: boolean;
+}
+
+interface Props {
+  readonly tokens: readonly PaletteToken[];
+}
+
+const { tokens } = Astro.props;
+---
+
+<div class="not-prose my-6 grid grid-cols-1 gap-px overflow-hidden rounded-lg border border-clay-hairline bg-clay-hairline sm:grid-cols-2">
+  {
+    tokens.map((token) => (
+      <div class="flex items-stretch gap-3 bg-clay-elevated p-3">
+        <div
+          class="flex h-12 w-12 shrink-0 items-center justify-center rounded border border-clay-hairline font-mono text-xs"
+          style={
+            token.text
+              ? `background-color: var(--color-clay-base); color: var(${token.cssVar});`
+              : `background-color: var(${token.cssVar});`
+          }
+        >
+          {token.text ? 'Aa' : ''}
+        </div>
+        <div class="flex min-w-0 flex-1 flex-col justify-center">
+          <code class="font-mono text-clay-default text-sm">{token.name}</code>
+          <p class="text-clay-subtle text-xs leading-snug">{token.description}</p>
+        </div>
+      </div>
+    ))
+  }
+</div>

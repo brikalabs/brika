@@ -1,0 +1,56 @@
+---
+layout: ~/layouts/MdxDocLayout.astro
+title: "Installation"
+description: "Add Clay to your project and render your first component."
+---
+
+## Install the package
+
+```bash
+bun add @brika/clay
+```
+
+Works with npm / pnpm / yarn if you're not on Bun — the package is a plain ES module with React as a peer dependency.
+
+## Peer dependencies
+
+Clay ships as a thin layer over React, Radix, and Tailwind v4. Install these alongside it if your app doesn't already have them:
+
+```bash
+bun add react react-dom tailwindcss
+```
+
+React 19 is required. Older React majors are not supported.
+
+## Load the styles
+
+Clay depends on a set of CSS custom-property tokens (`--primary`, `--border`, `--ring`, …). Import the stylesheet once at the root of your app:
+
+```ts
+import "@brika/clay/styles";
+```
+
+> Token source-of-truth migration lands in a follow-up PR. Until then, the docs site ships its own copy of these tokens in [apps/clay-docs/src/styles/global.css](https://github.com/brikalabs/brika/blob/main/apps/clay-docs/src/styles/global.css). Copy that `@theme { … }` block into your own Tailwind v4 entry file to render Clay components correctly.
+
+## Use a component
+
+Import each component from its granular entry point for the smallest bundle:
+
+```tsx
+import { Button } from "@brika/clay/components/button";
+
+export function Save() {
+  return <Button onClick={save}>Save</Button>;
+}
+```
+
+The barrel import (`import { Button } from "@brika/clay"`) also works — pick whichever style your bundler handles most cleanly. Both route to the same ES module.
+
+## Tailwind setup
+
+Clay's classes are scanned by your app's Tailwind config automatically as long as Tailwind can see the imported components. If you're using Tailwind v4 via `@tailwindcss/vite`, no extra configuration is needed — the `@source` directive picks up `node_modules/@brika/clay/dist/**`.
+
+## Next steps
+
+- Browse [components](/components/button) to see every primitive in action.
+- Read the [colors reference](/colors) to understand the token scale.

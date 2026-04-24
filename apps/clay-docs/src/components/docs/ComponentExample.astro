@@ -1,0 +1,61 @@
+---
+/**
+ * Renders a live demo above a code block.
+ *
+ * Usage:
+ *   <ComponentExample code={`<Button>Save</Button>`}>
+ *     <ButtonPrimaryDemo client:load />
+ *   </ComponentExample>
+ *
+ * PR E replaces the hand-passed `code` prop with automatic extraction from
+ * `demos/*.tsx` via a TypeScript compiler-API walker. Until then, pass the
+ * snippet directly.
+ */
+
+interface Props {
+  readonly code: string;
+  readonly lang?: 'tsx' | 'ts' | 'jsx' | 'js' | 'bash' | 'css';
+}
+
+const { code, lang = 'tsx' } = Astro.props;
+---
+
+<div class="not-prose my-6 overflow-hidden rounded-lg border border-clay-hairline">
+  <div
+    class="flex min-h-[180px] items-center justify-center bg-clay-elevated p-8"
+  >
+    <slot />
+  </div>
+  <div class="code-block relative border-clay-hairline border-t bg-clay-base">
+    <pre
+      class="overflow-x-auto p-4 font-mono text-clay-default text-sm"><code set:html={code} data-lang={lang}></code></pre>
+    <button
+      type="button"
+      class="copy-button"
+      data-copy-target
+      data-copy-text={code}
+      aria-label="Copy code to clipboard"
+    >
+      Copy
+    </button>
+  </div>
+</div>
+
+<script>
+  // Minimal copy-to-clipboard wiring — upgrades to a proper React island in PR F.
+  for (const btn of document.querySelectorAll<HTMLButtonElement>('[data-copy-target]')) {
+    btn.addEventListener('click', async () => {
+      const text = btn.dataset.copyText ?? '';
+      try {
+        await navigator.clipboard.writeText(text);
+        const original = btn.textContent;
+        btn.textContent = 'Copied';
+        setTimeout(() => {
+          btn.textContent = original;
+        }, 1200);
+      } catch {
+        // Clipboard blocked — fall through silently.
+      }
+    });
+  }
+</script>

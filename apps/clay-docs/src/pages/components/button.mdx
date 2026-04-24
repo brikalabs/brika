@@ -5,6 +5,7 @@ description: "The default action affordance — a themed wrapper over the native
 sourceFile: "components/button"
 ---
 
+import ComponentExample from "~/components/docs/ComponentExample.astro";
 import {
   ButtonPrimaryDemo,
   ButtonOutlineDemo,
@@ -14,72 +15,57 @@ import {
 
 ## Primary
 
-<div className="not-prose my-6 flex items-center justify-center rounded-lg border border-slate-200 bg-white p-10 dark:border-slate-800 dark:bg-slate-900">
+Solid fill. Use for the main call-to-action on a page or dialog.
+
+<ComponentExample code={`<Button>Save changes</Button>`}>
   <ButtonPrimaryDemo client:load />
-</div>
-
-```tsx
-import { Button } from "@brika/clay/components/button";
-
-<Button>Save changes</Button>
-```
+</ComponentExample>
 
 ## Outline
 
-<div className="not-prose my-6 flex items-center justify-center rounded-lg border border-slate-200 bg-white p-10 dark:border-slate-800 dark:bg-slate-900">
-  <ButtonOutlineDemo client:load />
-</div>
+Lower-emphasis secondary action that still needs clear affordance.
 
-```tsx
-<Button variant="outline">Cancel</Button>
-```
+<ComponentExample code={`<Button variant="outline">Cancel</Button>`}>
+  <ButtonOutlineDemo client:load />
+</ComponentExample>
 
 ## Destructive
 
-<div className="not-prose my-6 flex items-center justify-center rounded-lg border border-slate-200 bg-white p-10 dark:border-slate-800 dark:bg-slate-900">
+Irreversible actions. Always pair with a confirm step.
+
+<ComponentExample code={`<Button variant="destructive">Delete permanently</Button>`}>
   <ButtonDestructiveDemo client:load />
-</div>
+</ComponentExample>
 
-```tsx
-<Button variant="destructive">Delete permanently</Button>
-```
+## Icon
 
-## Icon-only
+Icon-only buttons **require** an `aria-label`.
 
-Icon-only buttons must carry an accessible label via `aria-label`.
-
-<div className="not-prose my-6 flex items-center justify-center rounded-lg border border-slate-200 bg-white p-10 dark:border-slate-800 dark:bg-slate-900">
-  <ButtonIconDemo client:load />
-</div>
-
-```tsx
-<Button size="icon" aria-label="Settings">
+<ComponentExample
+  code={`<Button size="icon" aria-label="Settings">
   <SettingsIcon />
-</Button>
-```
+</Button>`}
+>
+  <ButtonIconDemo client:load />
+</ComponentExample>
 
-## Variants
+## Props
 
-| Variant        | When to use                                                |
-| -------------- | ---------------------------------------------------------- |
-| `default`      | Primary call-to-action.                                    |
-| `outline`      | Secondary action next to a primary one.                    |
-| `secondary`    | Mid-emphasis actions, grouped toolbars.                    |
-| `ghost`        | Low-emphasis actions in dense UIs.                         |
-| `link`         | Actions that look like links but behave like buttons.      |
-| `destructive`  | Irreversible actions — always pair with a confirm dialog.  |
-
-## Sizes
-
-`xs`, `sm`, `default`, `lg` for text buttons. `icon-xs`, `icon-sm`, `icon`,
-`icon-lg` for square icon-only variants.
+| Prop      | Type                                                                  | Default   |
+| --------- | --------------------------------------------------------------------- | --------- |
+| `variant` | `default \| destructive \| outline \| secondary \| ghost \| link`     | `default` |
+| `size`    | `default \| xs \| sm \| lg \| icon \| icon-xs \| icon-sm \| icon-lg`  | `default` |
+| `asChild` | `boolean` — project props onto the first child via Radix `Slot.Root`  | `false`   |
+| ...native | All native `<button>` attributes (`onClick`, `type`, `disabled`, …)   | —         |
 
 ## Accessibility
 
 - Focus-visible rings use the `--ring` token for WCAG contrast.
 - `disabled` reduces opacity and blocks pointer events.
 - Icon-only buttons REQUIRE an `aria-label`.
+- `asChild` lets you apply button styles to a link without nesting — keeps the native element semantic.
 
-> Code snippets are hand-copied in this PR. PR E replaces them with a
-> `<ComponentExample demo="ButtonPrimaryDemo" />` pattern that extracts the
-> source directly from the demo file.
+## Tokens consumed
+
+`primary`, `primary-foreground`, `destructive`, `secondary`, `accent`,
+`background`, `ring`, `border`. See [button.tokens.ts](https://github.com/brikalabs/brika/blob/main/packages/clay/src/components/button/button.tokens.ts).

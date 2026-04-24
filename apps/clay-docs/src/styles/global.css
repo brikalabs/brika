@@ -1,17 +1,260 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
-@layer base {
+@custom-variant dark (&:where([data-mode="dark"], [data-mode="dark"] *));
+
+@theme {
+  --font-sans:
+    "Inter", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji",
+    "Segoe UI Symbol", "Noto Color Emoji";
+  --font-mono:
+    "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
+
+  /* ==================================================
+     Clay chrome tokens — site surface, borders, text
+     ================================================== */
+  --color-clay-canvas: light-dark(oklch(98.75% 0 0), oklch(10% 0 0));
+  --color-clay-elevated: light-dark(oklch(100% 0 0), oklch(14% 0 0));
+  --color-clay-base: light-dark(oklch(97% 0 0), oklch(17% 0 0));
+  --color-clay-control: light-dark(oklch(95% 0 0), oklch(20% 0 0));
+  --color-clay-hairline: light-dark(oklch(91% 0 0), oklch(24% 0 0));
+  --color-clay-brand: light-dark(oklch(63% 0.17 45), oklch(72% 0.17 45));
+
+  --text-color-clay-default: light-dark(oklch(22% 0 0), oklch(94% 0 0));
+  --text-color-clay-strong: light-dark(oklch(10% 0 0), oklch(100% 0 0));
+  --text-color-clay-subtle: light-dark(oklch(48% 0 0), oklch(66% 0 0));
+  --text-color-clay-inactive: light-dark(oklch(66% 0 0), oklch(48% 0 0));
+  --text-color-clay-link: light-dark(oklch(45% 0.2 250), oklch(72% 0.16 250));
+  --text-color-clay-brand: light-dark(oklch(56% 0.18 45), oklch(72% 0.17 45));
+
+  /* ==================================================
+     shadcn-style component tokens — so Clay Button /
+     Input / Card render correctly inside the docs.
+     These live here temporarily; twinkly-wave Phase 2
+     (tokens-as-TS) will move them into @brika/clay.
+     ================================================== */
+  --color-background: light-dark(oklch(100% 0 0), oklch(14% 0 0));
+  --color-foreground: light-dark(oklch(15% 0 0), oklch(98% 0 0));
+  --color-primary: light-dark(oklch(22% 0 0), oklch(96% 0 0));
+  --color-primary-foreground: light-dark(oklch(98% 0 0), oklch(20% 0 0));
+  --color-secondary: light-dark(oklch(96% 0 0), oklch(22% 0 0));
+  --color-secondary-foreground: light-dark(oklch(15% 0 0), oklch(98% 0 0));
+  --color-destructive: light-dark(oklch(60% 0.23 27), oklch(65% 0.21 27));
+  --color-accent: light-dark(oklch(96% 0 0), oklch(22% 0 0));
+  --color-accent-foreground: light-dark(oklch(15% 0 0), oklch(98% 0 0));
+  --color-muted: light-dark(oklch(96% 0 0), oklch(22% 0 0));
+  --color-muted-foreground: light-dark(oklch(45% 0 0), oklch(65% 0 0));
+  --color-border: light-dark(oklch(90% 0 0), oklch(26% 0 0));
+  --color-input: light-dark(oklch(90% 0 0), oklch(26% 0 0));
+  --color-ring: light-dark(oklch(55% 0 0), oklch(55% 0 0));
+  --color-card: light-dark(oklch(100% 0 0), oklch(16% 0 0));
+  --color-card-foreground: light-dark(oklch(15% 0 0), oklch(98% 0 0));
+  --color-popover: light-dark(oklch(100% 0 0), oklch(16% 0 0));
+  --color-popover-foreground: light-dark(oklch(15% 0 0), oklch(98% 0 0));
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html {
+  color-scheme: light dark;
+  font-family: var(--font-sans);
+  scroll-behavior: smooth;
+  letter-spacing: -0.01em;
+  line-height: 1.5;
+  font-feature-settings: "cv02", "cv03", "cv04", "calt";
+  background-color: var(--color-clay-canvas);
+  color: var(--text-color-clay-default);
+}
+
+html[data-mode="light"] {
+  color-scheme: light;
+}
+html[data-mode="dark"] {
+  color-scheme: dark;
+}
+
+@media (prefers-reduced-motion: reduce) {
   html {
-    color-scheme: light dark;
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    scroll-behavior: auto;
   }
+}
 
-  body {
-    @apply bg-white text-slate-900 antialiased;
-  }
+body {
+  min-height: 100vh;
+  background-color: var(--color-clay-canvas);
+  color: var(--text-color-clay-default);
+}
 
-  html.dark body {
-    @apply bg-slate-950 text-slate-100;
-  }
+pre,
+code,
+kbd,
+.font-mono {
+  letter-spacing: normal;
+  font-family: var(--font-mono);
+}
+
+/* ==================================================
+   Clay prose — tuned for MDX doc pages
+   ================================================== */
+.clay-prose {
+  --tw-prose-body: var(--text-color-clay-default);
+  --tw-prose-headings: var(--text-color-clay-strong);
+  --tw-prose-lead: var(--text-color-clay-subtle);
+  --tw-prose-links: var(--text-color-clay-link);
+  --tw-prose-bold: var(--text-color-clay-strong);
+  --tw-prose-counters: var(--text-color-clay-subtle);
+  --tw-prose-bullets: var(--text-color-clay-subtle);
+  --tw-prose-hr: var(--color-clay-hairline);
+  --tw-prose-quotes: var(--text-color-clay-default);
+  --tw-prose-quote-borders: var(--color-clay-brand);
+  --tw-prose-captions: var(--text-color-clay-subtle);
+  --tw-prose-kbd: var(--text-color-clay-default);
+  --tw-prose-kbd-shadows: transparent;
+  --tw-prose-code: var(--text-color-clay-default);
+  --tw-prose-pre-code: var(--text-color-clay-default);
+  --tw-prose-pre-bg: var(--color-clay-base);
+  --tw-prose-th-borders: var(--color-clay-hairline);
+  --tw-prose-td-borders: var(--color-clay-hairline);
+  --tw-prose-invert-body: var(--text-color-clay-default);
+  --tw-prose-invert-headings: var(--text-color-clay-strong);
+  --tw-prose-invert-lead: var(--text-color-clay-subtle);
+  --tw-prose-invert-links: var(--text-color-clay-link);
+  --tw-prose-invert-bold: var(--text-color-clay-strong);
+  --tw-prose-invert-counters: var(--text-color-clay-subtle);
+  --tw-prose-invert-bullets: var(--text-color-clay-subtle);
+  --tw-prose-invert-hr: var(--color-clay-hairline);
+  --tw-prose-invert-quotes: var(--text-color-clay-default);
+  --tw-prose-invert-quote-borders: var(--color-clay-brand);
+  --tw-prose-invert-captions: var(--text-color-clay-subtle);
+  --tw-prose-invert-kbd: var(--text-color-clay-default);
+  --tw-prose-invert-kbd-shadows: transparent;
+  --tw-prose-invert-code: var(--text-color-clay-default);
+  --tw-prose-invert-pre-code: var(--text-color-clay-default);
+  --tw-prose-invert-pre-bg: var(--color-clay-base);
+  --tw-prose-invert-th-borders: var(--color-clay-hairline);
+  --tw-prose-invert-td-borders: var(--color-clay-hairline);
+}
+
+.clay-prose :where(code):not(:where(pre code)) {
+  font-weight: 500;
+  font-size: 0.875em;
+  background-color: var(--color-clay-base);
+  border: 1px solid var(--color-clay-hairline);
+  border-radius: 0.25rem;
+  padding: 0.125rem 0.375rem;
+  font-family: var(--font-mono);
+  letter-spacing: normal;
+}
+
+.clay-prose :where(code):not(:where(pre code))::before,
+.clay-prose :where(code):not(:where(pre code))::after {
+  content: none;
+}
+
+.clay-prose :where(a):not(:where(.not-prose, .not-prose *)) {
+  text-decoration: none;
+}
+
+.clay-prose :where(a):not(:where(.not-prose, .not-prose *)):hover {
+  text-decoration: underline;
+}
+
+.clay-prose :where(h1, h2, h3, h4):not(:where(.not-prose, .not-prose *)) {
+  letter-spacing: -0.02em;
+  scroll-margin-top: 6rem;
+  font-weight: 600;
+}
+
+.clay-prose :where(h1):not(:where(.not-prose, .not-prose *)) {
+  font-size: 2.25rem;
+  line-height: 1.15;
+  margin-bottom: 0.5rem;
+}
+
+.clay-prose :where(.lead) {
+  color: var(--text-color-clay-subtle);
+  font-size: 1.125rem;
+  line-height: 1.5;
+  margin-bottom: 2rem;
+}
+
+.clay-prose :where(table) {
+  width: 100%;
+  font-size: 0.875rem;
+}
+
+.clay-prose :where(thead) {
+  border-bottom: 1px solid var(--color-clay-hairline);
+}
+
+.clay-prose :where(thead th) {
+  color: var(--text-color-clay-strong);
+  font-weight: 600;
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+}
+
+.clay-prose :where(tbody td) {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--color-clay-hairline);
+}
+
+/* ==================================================
+   Shiki code blocks (.astro-code auto-generated by
+   Astro/Shiki for fenced code in markdown).
+   Toggle between light and dark themes via CSS vars.
+   ================================================== */
+.clay-prose .astro-code,
+.astro-code {
+  background-color: var(--color-clay-base) !important;
+  border: 1px solid var(--color-clay-hairline);
+  border-radius: 0.5rem;
+  padding: 0.875rem 1rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  letter-spacing: normal;
+  overflow-x: auto;
+}
+
+html[data-mode="dark"] .astro-code,
+html[data-mode="dark"] .astro-code span {
+  color: var(--shiki-dark) !important;
+  background-color: var(--color-clay-base) !important;
+  font-style: var(--shiki-dark-font-style) !important;
+  font-weight: var(--shiki-dark-font-weight) !important;
+  text-decoration: var(--shiki-dark-text-decoration) !important;
+}
+
+/* Copy-button wrapper */
+.code-block {
+  position: relative;
+}
+
+.code-block .copy-button {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  color: var(--text-color-clay-subtle);
+  background-color: var(--color-clay-elevated);
+  border: 1px solid var(--color-clay-hairline);
+  border-radius: 0.25rem;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.code-block:hover .copy-button {
+  opacity: 1;
+}
+
+.code-block .copy-button:hover {
+  color: var(--text-color-clay-default);
 }

@@ -1,4 +1,6 @@
 ---
+import Header from '~/components/Header.astro';
+import { SidebarNav } from '~/components/SidebarNav.tsx';
 import BaseLayout from './BaseLayout.astro';
 
 interface Props {
@@ -7,28 +9,36 @@ interface Props {
 }
 
 const { title, description } = Astro.props;
+const currentPath = Astro.url.pathname;
 ---
 
 <BaseLayout title={title} description={description}>
-  <header class="border-b border-slate-200 dark:border-slate-800">
-    <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-      <a href="/" class="font-semibold text-lg tracking-tight">Clay</a>
-      <nav class="flex gap-6 text-sm">
-        <a href="/components/button" class="hover:underline">Components</a>
-        <a
-          href="https://github.com/brikalabs/brika"
-          class="hover:underline"
-          rel="noreferrer"
-        >
-          GitHub
-        </a>
-      </nav>
+  <div class="isolate">
+    <SidebarNav currentPath={currentPath} client:load />
+    <div
+      id="main-content"
+      class="main-content mt-0 transition-[margin] duration-300"
+    >
+      <Header />
+      <main class="flex grow flex-col">
+        <slot />
+      </main>
     </div>
-  </header>
-  <main class="mx-auto max-w-6xl px-6 py-10">
-    <slot />
-  </main>
-  <footer class="mt-24 border-t border-slate-200 py-8 text-center text-slate-500 text-sm dark:border-slate-800">
-    Built with Brika · Clay is pressable raw material.
-  </footer>
+  </div>
 </BaseLayout>
+
+<style is:global>
+  @media (min-width: 768px) {
+    body:has(aside[data-sidebar-open="true"]) .main-content {
+      margin-left: 304px; /* 48px rail + 256px panel */
+    }
+    body:has(aside[data-sidebar-open="false"]) .main-content {
+      margin-left: 48px;
+    }
+  }
+  @media (max-width: 767px) {
+    .main-content {
+      margin-left: 48px;
+    }
+  }
+</style>

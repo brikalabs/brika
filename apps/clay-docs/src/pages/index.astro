@@ -1,5 +1,5 @@
 ---
-import { ButtonPrimaryDemo } from '~/components/demos/button.tsx';
+import { HomeGrid } from '~/components/demos/HomeGrid.tsx';
 import MainLayout from '~/layouts/MainLayout.astro';
 ---
 
@@ -7,38 +7,75 @@ import MainLayout from '~/layouts/MainLayout.astro';
   title="Clay — Brika's React component library"
   description="Pressable raw material for every Brika surface. Tokens, components, themes — one package."
 >
-  <section class="py-12 text-center">
-    <h1 class="font-bold text-5xl tracking-tight">Clay</h1>
-    <p class="mx-auto mt-4 max-w-xl text-slate-600 text-lg dark:text-slate-400">
-      Brika's React component library and first-party themes. Built on Radix,
-      CVA, and Tailwind v4.
-    </p>
-    <div class="mt-8 flex items-center justify-center gap-4">
-      <a
-        href="/components/button"
-        class="rounded-md bg-slate-900 px-4 py-2 font-medium text-sm text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
-      >
-        Browse components
-      </a>
-      <a
-        href="https://github.com/brikalabs/brika"
-        class="rounded-md border border-slate-300 px-4 py-2 font-medium text-sm hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
-        rel="noreferrer"
-      >
-        GitHub
-      </a>
+  <section class="border-clay-hairline border-b px-6 py-20 md:px-12">
+    <div class="mx-auto max-w-3xl">
+      <p class="mb-4 font-mono text-clay-subtle text-xs uppercase tracking-wider">
+        Design system · v0
+      </p>
+      <h1 class="font-semibold text-4xl text-clay-strong tracking-tighter md:text-5xl">
+        Clay — the raw material bricks are pressed from.
+      </h1>
+      <p class="mt-6 max-w-xl text-clay-subtle text-lg leading-relaxed">
+        Brika's React component library. Built on Radix, CVA, and Tailwind v4.
+        Tokenised, themeable, and consumable by any Brika app without pulling in
+        hub or feature code.
+      </p>
+      <div class="mt-8 flex flex-wrap items-center gap-3">
+        <a
+          href="/components/button"
+          class="inline-flex h-9 items-center rounded border border-clay-hairline bg-clay-strong px-4 font-medium text-canvas text-sm transition-colors hover:bg-clay-default"
+          style="background-color: var(--text-color-clay-strong); color: var(--color-clay-canvas);"
+        >
+          Browse components
+        </a>
+        <a
+          href="/installation"
+          class="inline-flex h-9 items-center rounded border border-clay-hairline bg-clay-elevated px-4 font-medium text-clay-default text-sm transition-colors hover:bg-clay-control"
+        >
+          Installation
+        </a>
+        <code
+          class="inline-flex h-9 items-center rounded border border-clay-hairline bg-clay-base px-3 font-mono text-clay-subtle text-sm"
+        >
+          bun add @brika/clay
+        </code>
+      </div>
     </div>
   </section>
 
-  <section class="py-12">
-    <h2 class="mb-6 font-semibold text-xl tracking-tight">Install</h2>
-    <pre class="overflow-x-auto rounded-lg bg-slate-900 p-4 text-slate-100 text-sm"><code>bun add @brika/clay</code></pre>
+  <section>
+    <HomeGrid client:only="react" />
   </section>
 
-  <section class="py-12">
-    <h2 class="mb-6 font-semibold text-xl tracking-tight">A taste</h2>
-    <div class="flex items-center justify-center rounded-lg border border-slate-200 bg-white p-10 dark:border-slate-800 dark:bg-slate-900">
-      <ButtonPrimaryDemo client:load />
+  <section class="border-clay-hairline border-t px-6 py-12 md:px-12">
+    <div class="mx-auto grid max-w-4xl grid-cols-1 gap-8 md:grid-cols-3">
+      <div>
+        <h3 class="mb-2 font-medium font-mono text-clay-subtle text-xs uppercase tracking-wider">
+          Tokenised
+        </h3>
+        <p class="text-clay-default text-sm">
+          Every colour, radius, and spacing value routes through CSS custom
+          properties. Swap the token layer, swap the look.
+        </p>
+      </div>
+      <div>
+        <h3 class="mb-2 font-medium font-mono text-clay-subtle text-xs uppercase tracking-wider">
+          Accessible
+        </h3>
+        <p class="text-clay-default text-sm">
+          Radix primitives under the hood — focus rings, ARIA attributes, and
+          keyboard navigation are first-class.
+        </p>
+      </div>
+      <div>
+        <h3 class="mb-2 font-medium font-mono text-clay-subtle text-xs uppercase tracking-wider">
+          Portable
+        </h3>
+        <p class="text-clay-default text-sm">
+          Zero coupling to Brika's hub or auth. A docs site, a plugin UI, or a
+          fresh SPA can all consume it cleanly.
+        </p>
+      </div>
     </div>
   </section>
 </MainLayout>
