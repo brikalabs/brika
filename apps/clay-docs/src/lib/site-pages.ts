@@ -23,6 +23,12 @@ export const sitePages: readonly SitePage[] = [
   },
   { label: 'Colors', href: '/colors', group: 'Pages', keywords: ['palette', 'tokens', 'theme'] },
   {
+    label: 'Themes',
+    href: '/themes',
+    group: 'Pages',
+    keywords: ['preset', 'nord', 'dracula', 'dark', 'light', 'ocean'],
+  },
+  {
     label: 'Button',
     href: '/components/button',
     group: 'Components',

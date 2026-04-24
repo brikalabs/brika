@@ -1,0 +1,52 @@
+---
+layout: ~/layouts/MdxDocLayout.astro
+title: "Themes"
+description: "Eleven first-party presets ship with Clay. Pick any one to theme the whole docs site, or click a card to compare them side by side."
+---
+
+import { ThemesGallery } from "~/components/demos/ThemesGallery.tsx";
+
+## Pick a theme
+
+<ThemesGallery client:only="react" />
+
+## How it works
+
+Every preset is a `ThemeConfig` object with `colors.light` and `colors.dark` maps from token name to hex. `applyTheme(theme, mode)` writes those hexes onto `document.documentElement` as CSS custom properties — every Clay component and every docs-site surface reads the new values immediately, with no re-render.
+
+```tsx
+import { nord, applyTheme } from "@brika/clay/themes";
+
+applyTheme(nord, "dark"); // globally
+```
+
+For scoped previews (like the cards above), `themeToCssVars(theme, mode)` returns a `CSSProperties` object you can spread onto any element's `style` prop. The theme applies only to that subtree.
+
+```tsx
+import { ocean, themeToCssVars } from "@brika/clay/themes";
+
+<div style={themeToCssVars(ocean, "light")}>
+  <Button>Ocean button</Button>
+</div>
+```
+
+## Theme shape
+
+```ts
+interface ThemeConfig {
+  id: string;
+  name: string;
+  description: string;
+  accentSwatches: readonly string[];
+  colors: {
+    light: Readonly<Record<string, string>>;
+    dark: Readonly<Record<string, string>>;
+  };
+}
+```
+
+The registry is exported as `BUILT_IN_THEMES` (ordered), `BUILT_IN_THEMES_BY_ID` (for lookups), plus each theme by name: `nord`, `ocean`, `forest`, `sunset`, `lavender`, `ruby`, `solarized`, `candy`, `dracula`, `mono`, `default_` (reserved-word rename).
+
+## URL sharing
+
+The active theme syncs to the URL as `?theme=<id>`. Share `https://clay.brika.dev/components/button?theme=nord` and the recipient opens the page pre-themed. On first visit without a URL parameter, Clay restores the theme from `localStorage`, falling back to the default.

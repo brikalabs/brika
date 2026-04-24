@@ -52,6 +52,26 @@
   --color-card-foreground: light-dark(oklch(15% 0 0), oklch(98% 0 0));
   --color-popover: light-dark(oklch(100% 0 0), oklch(16% 0 0));
   --color-popover-foreground: light-dark(oklch(15% 0 0), oklch(98% 0 0));
+
+  /* Accent scale — keyed to Brika classic. Themes override both the
+     --color-data-N and the bare --data-N alias (Clay's Card component
+     currently references the bare form). */
+  --color-data-1: light-dark(#4a63d1, #8d9ee8);
+  --color-data-2: light-dark(#d17d2e, #e5a365);
+  --color-data-3: light-dark(#35924a, #63c77e);
+  --color-data-4: light-dark(#c4422d, #e06a55);
+  --color-data-5: light-dark(#8c42c4, #b38ce0);
+  --color-data-6: light-dark(#c78a2b, #e8b65e);
+  --color-data-7: light-dark(#2e9fa1, #5dc2c4);
+  --color-data-8: light-dark(#c44289, #e074ac);
+  --data-1: light-dark(#4a63d1, #8d9ee8);
+  --data-2: light-dark(#d17d2e, #e5a365);
+  --data-3: light-dark(#35924a, #63c77e);
+  --data-4: light-dark(#c4422d, #e06a55);
+  --data-5: light-dark(#8c42c4, #b38ce0);
+  --data-6: light-dark(#c78a2b, #e8b65e);
+  --data-7: light-dark(#2e9fa1, #5dc2c4);
+  --data-8: light-dark(#c44289, #e074ac);
 }
 
 * {

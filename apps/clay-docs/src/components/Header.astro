@@ -1,4 +1,5 @@
 ---
+import { ThemePicker } from './ThemePicker.tsx';
 import { ThemeToggle } from './ThemeToggle.tsx';
 
 declare const __CLAY_VERSION__: string;
@@ -10,7 +11,7 @@ const clayVersion = typeof __CLAY_VERSION__ === 'string' ? __CLAY_VERSION__ : 'd
   class="sticky top-0 z-20 hidden h-12 border-clay-hairline border-b bg-clay-canvas md:flex"
 >
   <div
-    class="flex min-w-0 flex-1 items-center justify-end border-clay-hairline border-r px-4"
+    class="flex min-w-0 flex-1 items-center justify-end gap-2 border-clay-hairline border-r px-4"
   >
     <a
       href="https://github.com/brikalabs/brika"
@@ -23,6 +24,7 @@ const clayVersion = typeof __CLAY_VERSION__ === 'string' ? __CLAY_VERSION__ : 'd
         v{clayVersion}
       </span>
     </a>
+    <ThemePicker client:only="react" />
   </div>
   <div class="flex w-12 shrink-0 items-center justify-center">
     <ThemeToggle client:only="react" />
