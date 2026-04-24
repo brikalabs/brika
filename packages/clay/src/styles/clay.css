@@ -1,0 +1,15 @@
+/**
+ * Clay's Tailwind entry point.
+ *
+ * Consumers import this once (`@import "@brika/clay/styles";`) and every
+ * utility class used inside Clay's components is guaranteed to be emitted.
+ * Paths here are resolved by Tailwind v4 relative to THIS file, so they
+ * stay correct no matter where or how the stylesheet is imported.
+ *
+ * Token definitions and per-theme colour vars live upstream of this file
+ * (currently in the consumer app; twinkly-wave Phase 2 moves them in).
+ */
+
+@source "../components/**/*.{ts,tsx}";
+@source "../primitives/**/*.{ts,tsx}";
+@source "../themes/**/*.{ts,tsx}";

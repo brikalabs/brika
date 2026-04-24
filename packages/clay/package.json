@@ -21,6 +21,7 @@
     "./components/*": "./src/components/*/index.ts",
     "./primitives": "./src/primitives/index.ts",
     "./primitives/*": "./src/primitives/*.ts",
+    "./styles": "./src/styles/clay.css",
     "./tailwind-preset": "./src/tailwind-preset.ts",
     "./themes": "./src/themes/index.ts"
   },
