@@ -53,6 +53,9 @@ const comingSoonEntries: readonly string[] = [
   'Popover',
   'Select',
   'Switch',
+  'Alert',
+  'Progress',
+  'Skeleton',
 ];
 
 export function HomeGrid() {

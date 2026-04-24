@@ -29,16 +29,32 @@ export const sitePages: readonly SitePage[] = [
     keywords: ['preset', 'nord', 'dracula', 'dark', 'light', 'ocean'],
   },
   {
+    label: 'All components',
+    href: '/components',
+    group: 'Components',
+    keywords: ['index', 'gallery', 'list'],
+  },
+  {
     label: 'Button',
     href: '/components/button',
     group: 'Components',
     keywords: ['action', 'cta', 'cva'],
   },
+  {
+    label: 'Input',
+    href: '/components/input',
+    group: 'Components',
+    keywords: ['text', 'field', 'form'],
+  },
+  {
+    label: 'Card',
+    href: '/components/card',
+    group: 'Components',
+    keywords: ['surface', 'container', 'tile'],
+  },
 ];
 
 export const comingSoonComponents: readonly string[] = [
-  'Input',
-  'Card',
   'Label',
   'Badge',
   'Separator',
@@ -48,4 +64,7 @@ export const comingSoonComponents: readonly string[] = [
   'Popover',
   'Select',
   'Switch',
+  'Alert',
+  'Progress',
+  'Skeleton',
 ];

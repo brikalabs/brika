@@ -15,15 +15,11 @@ function normalise(pathname: string): string {
 }
 
 function isActive(activePath: string, href: string): boolean {
-  const normalised = normalise(href);
-  if (normalised === '/') {
-    return activePath === '/';
-  }
-  return activePath === normalised || activePath.startsWith(`${normalised}/`);
+  return activePath === normalise(href);
 }
 
 function openPalette() {
-  window.dispatchEvent(new Event(OPEN_PALETTE_EVENT));
+  globalThis.dispatchEvent(new Event(OPEN_PALETTE_EVENT));
 }
 
 export function SidebarNav({ currentPath }: { readonly currentPath: string }) {
@@ -36,7 +32,7 @@ export function SidebarNav({ currentPath }: { readonly currentPath: string }) {
     if (stored === 'false') {
       setOpen(false);
     }
-    const isMac = /mac|iphone|ipad|ipod/i.test(navigator.platform);
+    const isMac = /mac|iphone|ipad|ipod/i.test(navigator.userAgent);
     setShortcutLabel(isMac ? '⌘ K' : 'Ctrl K');
   }, []);
 

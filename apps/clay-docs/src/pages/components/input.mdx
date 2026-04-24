@@ -1,0 +1,63 @@
+---
+layout: ~/layouts/MdxDocLayout.astro
+title: "Input"
+description: "A themed single-line text input. Thin wrapper over the native input with tokenised styling, focus ring, and aria-invalid handling."
+sourceFile: "components/input"
+---
+
+import ComponentExample from "~/components/docs/ComponentExample.astro";
+import {
+  InputDefaultDemo,
+  InputInvalidDemo,
+  InputDisabledDemo,
+  InputEmailDemo,
+} from "~/components/demos/input.tsx";
+
+## Default
+
+Pair with a `<Label>` for accessibility, or supply `aria-label`.
+
+<ComponentExample code={`<Input placeholder="Type something…" />`}>
+  <InputDefaultDemo client:load />
+</ComponentExample>
+
+## Typed
+
+Every native `type` attribute passes through — `email`, `number`, `tel`, `search`, `url`, `password`, `file`, etc.
+
+<ComponentExample code={`<Input type="email" placeholder="you@example.com" />`}>
+  <InputEmailDemo client:load />
+</ComponentExample>
+
+## Invalid
+
+Set `aria-invalid="true"` to surface a validation error. The border flips to the `--destructive` token and the focus ring follows.
+
+<ComponentExample code={`<Input aria-invalid="true" defaultValue="not a valid value" />`}>
+  <InputInvalidDemo client:load />
+</ComponentExample>
+
+## Disabled
+
+The standard `disabled` attribute. Reduces opacity, blocks pointer events, and disables keyboard entry.
+
+<ComponentExample code={`<Input disabled placeholder="Disabled" />`}>
+  <InputDisabledDemo client:load />
+</ComponentExample>
+
+## Props
+
+All native `<input>` attributes pass through. There are no custom props — Clay's Input is intentionally a thin pass-through with tokenised styling.
+
+## Accessibility
+
+- Focus-visible ring uses the `--ring` token for WCAG contrast.
+- `aria-invalid="true"` flips the border to `--destructive` and adds a matching ring so validation errors are visually obvious and programmatically detectable.
+- Always pair with `<Label>` (once shipped) or supply `aria-label` on the Input directly.
+- File inputs get their own button styling via `file:` Tailwind pseudo-classes.
+
+## Tokens consumed
+
+`input` (border), `background`, `foreground`, `muted-foreground` (placeholder),
+`primary` (selection), `ring` (focus), `destructive`. See
+[input.tokens.ts](https://github.com/brikalabs/brika/blob/main/packages/clay/src/components/input/input.tokens.ts).

@@ -1,0 +1,109 @@
+---
+layout: ~/layouts/MdxDocLayout.astro
+title: "Card"
+description: "A surface container that groups related content and actions. Exposes header, title, description, content, and footer subcomponents for flexible composition."
+sourceFile: "components/card"
+---
+
+import ComponentExample from "~/components/docs/ComponentExample.astro";
+import {
+  CardDefaultDemo,
+  CardAccentDemo,
+  CardInteractiveDemo,
+} from "~/components/demos/card.tsx";
+
+## Default
+
+The base surface. No accent, no interaction — just a bordered container with tokenised padding.
+
+<ComponentExample
+  code={`<Card>
+  <CardHeader>
+    <CardTitle>Welcome to Clay</CardTitle>
+    <CardDescription>Pressable raw material.</CardDescription>
+  </CardHeader>
+  <CardContent>Build UI with tokens that travel between apps.</CardContent>
+</Card>`}
+>
+  <CardDefaultDemo client:load />
+</ComponentExample>
+
+## Accent colours
+
+Set `accent` to key the card against one of the theme's `--data-*` colours — `blue`, `emerald`, `violet`, `orange`, `purple`, `amber`. The border adopts a tint of the colour and the interior gains a subtle wash.
+
+<ComponentExample
+  code={`<Card accent="emerald">
+  <CardHeader>
+    <CardTitle>3 plugins updated</CardTitle>
+    <CardDescription>Restart the hub to apply.</CardDescription>
+  </CardHeader>
+</Card>`}
+>
+  <CardAccentDemo client:load />
+</ComponentExample>
+
+Use accents sparingly — if every card has one, none of them stand out.
+
+## Interactive
+
+Pass `interactive` to lift the surface on hover and add `cursor-pointer`. Does **not** add `role="button"` or any keyboard handler — wrap the Card in an `<a>` or attach your own click + Enter handlers if you need a fully interactive affordance.
+
+<ComponentExample
+  code={`<Card interactive>
+  <CardHeader>
+    <CardTitle>Hover me</CardTitle>
+    <CardDescription>Interactive cards respond on hover.</CardDescription>
+  </CardHeader>
+</Card>`}
+>
+  <CardInteractiveDemo client:load />
+</ComponentExample>
+
+## Composition
+
+Cards are composed of five subcomponents. Use whichever subset you need.
+
+```tsx
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from "@brika/clay/components/card";
+
+<Card>
+  <CardHeader>
+    <CardTitle>Title</CardTitle>
+    <CardDescription>Supporting text.</CardDescription>
+  </CardHeader>
+  <CardContent>Main body.</CardContent>
+  <CardFooter>Actions or metadata.</CardFooter>
+</Card>
+```
+
+## Props
+
+### `<Card>`
+
+| Prop          | Type                                                              | Default  |
+| ------------- | ----------------------------------------------------------------- | -------- |
+| `accent`      | `none \| blue \| emerald \| violet \| orange \| purple \| amber`  | `none`   |
+| `interactive` | `boolean` — adds hover treatment and `cursor-pointer`             | `false`  |
+
+### Subcomponents
+
+`<CardHeader>`, `<CardTitle>`, `<CardDescription>`, `<CardContent>`, `<CardFooter>` — each is a thin wrapper around a native element with tokenised spacing. All native attributes pass through.
+
+## Accessibility
+
+- `CardTitle` auto-derives `aria-label` from string children unless one is supplied explicitly.
+- `interactive` applies **visual** affordance only. Add `role="button"` + a keyboard handler if you need full interactivity; or (better) wrap the card in an `<a>` tag for link behaviour.
+
+## Tokens consumed
+
+`card` (surface), `card-foreground` (text), `border`, plus `data-1` through
+`data-8` via the accent variants. See
+[card.tokens.ts](https://github.com/brikalabs/brika/blob/main/packages/clay/src/components/card/card.tokens.ts).
