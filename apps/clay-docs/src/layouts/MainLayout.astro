@@ -1,4 +1,5 @@
 ---
+import { CommandPalette } from '~/components/CommandPalette.tsx';
 import Header from '~/components/Header.astro';
 import { SidebarNav } from '~/components/SidebarNav.tsx';
 import BaseLayout from './BaseLayout.astro';
@@ -24,6 +25,7 @@ const currentPath = Astro.url.pathname;
         <slot />
       </main>
     </div>
+    <CommandPalette client:only="react" />
   </div>
 </BaseLayout>
 

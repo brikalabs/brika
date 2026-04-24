@@ -1,32 +1,10 @@
 import { ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { comingSoonComponents, sitePages } from '~/lib/site-pages';
 import { ClayMenuIcon } from './ClayMenuIcon';
 
-interface NavItem {
-  readonly label: string;
-  readonly href: string;
-}
-
-const staticPages: readonly NavItem[] = [
-  { label: 'Home', href: '/' },
-  { label: 'Installation', href: '/installation' },
-  { label: 'Colors', href: '/colors' },
-];
-
-const components: readonly NavItem[] = [{ label: 'Button', href: '/components/button' }];
-
-const comingSoonComponents: readonly string[] = [
-  'Input',
-  'Card',
-  'Label',
-  'Badge',
-  'Separator',
-  'Dialog',
-  'Tooltip',
-  'Tabs',
-];
-
 const STORAGE_KEY = 'clay-sidebar-open';
+const OPEN_PALETTE_EVENT = 'clay-open-palette';
 
 function normalise(pathname: string): string {
   if (pathname.length === 0) {
@@ -44,15 +22,22 @@ function isActive(activePath: string, href: string): boolean {
   return activePath === normalised || activePath.startsWith(`${normalised}/`);
 }
 
+function openPalette() {
+  window.dispatchEvent(new Event(OPEN_PALETTE_EVENT));
+}
+
 export function SidebarNav({ currentPath }: { readonly currentPath: string }) {
   const active = normalise(currentPath);
   const [open, setOpen] = useState(true);
+  const [shortcutLabel, setShortcutLabel] = useState('Ctrl K');
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored === 'false') {
       setOpen(false);
     }
+    const isMac = /mac|iphone|ipad|ipod/i.test(navigator.platform);
+    setShortcutLabel(isMac ? '⌘ K' : 'Ctrl K');
   }, []);
 
   const toggle = () => {
@@ -60,6 +45,9 @@ export function SidebarNav({ currentPath }: { readonly currentPath: string }) {
     setOpen(next);
     localStorage.setItem(STORAGE_KEY, next ? 'true' : 'false');
   };
+
+  const pages = sitePages.filter((page) => page.group === 'Pages');
+  const components = sitePages.filter((page) => page.group === 'Components');
 
   return (
     <aside
@@ -96,20 +84,20 @@ export function SidebarNav({ currentPath }: { readonly currentPath: string }) {
           <div className="border-clay-hairline border-b px-4 py-3">
             <button
               type="button"
-              className="inline-flex w-full items-center gap-2 rounded border border-clay-hairline bg-clay-base px-2.5 py-1.5 text-clay-subtle text-sm transition-colors hover:bg-clay-control"
-              aria-label="Search components (coming soon)"
-              disabled
+              onClick={openPalette}
+              className="inline-flex w-full items-center gap-2 rounded border border-clay-hairline bg-clay-base px-2.5 py-1.5 text-clay-subtle text-sm transition-colors hover:bg-clay-control hover:text-clay-default"
+              aria-label="Open command palette"
             >
               <Search size={14} aria-hidden="true" />
               <span>Search…</span>
               <kbd className="ml-auto rounded border border-clay-hairline bg-clay-canvas px-1 py-0.5 font-mono text-[0.625rem]">
-                ⌘K
+                {shortcutLabel}
               </kbd>
             </button>
           </div>
           <nav className="flex-1 overflow-y-auto px-2 py-3">
             <ul className="space-y-0.5">
-              {staticPages.map((item) => (
+              {pages.map((item) => (
                 <li key={item.href}>
                   <a
                     href={item.href}
