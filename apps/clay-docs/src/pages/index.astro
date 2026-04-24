@@ -1,5 +1,6 @@
 ---
 import { HomeGrid } from '~/components/demos/HomeGrid.tsx';
+import { PackageManager } from '~/components/docs/PackageManager.tsx';
 import MainLayout from '~/layouts/MainLayout.astro';
 ---
 
@@ -23,7 +24,7 @@ import MainLayout from '~/layouts/MainLayout.astro';
       <div class="mt-8 flex flex-wrap items-center gap-3">
         <a
           href="/components/button"
-          class="inline-flex h-9 items-center rounded border border-clay-hairline bg-clay-strong px-4 font-medium text-canvas text-sm transition-colors hover:bg-clay-default"
+          class="inline-flex h-9 items-center rounded border border-clay-hairline px-4 font-medium text-sm transition-colors"
           style="background-color: var(--text-color-clay-strong); color: var(--color-clay-canvas);"
         >
           Browse components
@@ -34,11 +35,9 @@ import MainLayout from '~/layouts/MainLayout.astro';
         >
           Installation
         </a>
-        <code
-          class="inline-flex h-9 items-center rounded border border-clay-hairline bg-clay-base px-3 font-mono text-clay-subtle text-sm"
-        >
-          bun add @brika/clay
-        </code>
+      </div>
+      <div class="mt-6 max-w-xl">
+        <PackageManager package="@brika/clay" client:load />
       </div>
     </div>
   </section>

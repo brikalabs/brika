@@ -4,21 +4,19 @@ title: "Installation"
 description: "Add Clay to your project and render your first component."
 ---
 
+import { PackageManager } from "~/components/docs/PackageManager.tsx";
+
 ## Install the package
 
-```bash
-bun add @brika/clay
-```
+<PackageManager package="@brika/clay" client:load />
 
-Works with npm / pnpm / yarn if you're not on Bun — the package is a plain ES module with React as a peer dependency.
+Every code block on this site shares a package-manager setting — pick your preferred one once and every other install block on the docs site follows.
 
 ## Peer dependencies
 
-Clay ships as a thin layer over React, Radix, and Tailwind v4. Install these alongside it if your app doesn't already have them:
+Clay ships as a thin layer over React and Tailwind v4. Install these alongside it if your app doesn't already have them:
 
-```bash
-bun add react react-dom tailwindcss
-```
+<PackageManager package="react react-dom tailwindcss" client:load />
 
 React 19 is required. Older React majors are not supported.
 
