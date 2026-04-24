@@ -1,0 +1,17 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+@layer base {
+  html {
+    color-scheme: light dark;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+
+  body {
+    @apply bg-white text-slate-900 antialiased;
+  }
+
+  html.dark body {
+    @apply bg-slate-950 text-slate-100;
+  }
+}

@@ -1,0 +1,19 @@
+---
+import DocLayout from './DocLayout.astro';
+
+interface Props {
+  readonly frontmatter: {
+    readonly title: string;
+    readonly description?: string;
+    readonly sourceFile?: string;
+  };
+}
+
+const { frontmatter } = Astro.props;
+---
+
+<DocLayout title={frontmatter.title} description={frontmatter.description}>
+  <h1>{frontmatter.title}</h1>
+  {frontmatter.description && <p class="lead">{frontmatter.description}</p>}
+  <slot />
+</DocLayout>

@@ -1,0 +1,32 @@
+---
+import BaseLayout from './BaseLayout.astro';
+
+interface Props {
+  readonly title: string;
+  readonly description?: string;
+}
+
+const { title, description } = Astro.props;
+---
+
+<BaseLayout title={title} description={description}>
+  <div class="mx-auto grid max-w-6xl grid-cols-1 gap-8 px-6 py-10 md:grid-cols-[14rem_1fr]">
+    <aside class="hidden md:block">
+      <nav class="sticky top-6 text-sm">
+        <p class="mb-2 font-semibold text-slate-500 text-xs uppercase tracking-wide">
+          Components
+        </p>
+        <ul class="space-y-1">
+          <li>
+            <a class="block rounded px-2 py-1 hover:bg-slate-100 dark:hover:bg-slate-800" href="/components/button">
+              Button
+            </a>
+          </li>
+        </ul>
+      </nav>
+    </aside>
+    <article class="prose prose-slate max-w-none dark:prose-invert">
+      <slot />
+    </article>
+  </div>
+</BaseLayout>

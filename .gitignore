@@ -23,6 +23,9 @@ plugins/*/data/
 .sonar/
 coverage/
 
+# Astro
+**/.astro/
+
 # Next.js
 .next/
 next-env.d.ts

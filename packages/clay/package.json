@@ -18,7 +18,9 @@
   "keywords": ["brika", "clay", "react", "components", "design-system", "tailwind"],
   "exports": {
     ".": "./src/index.ts",
+    "./components/*": "./src/components/*/index.ts",
     "./primitives": "./src/primitives/index.ts",
+    "./primitives/*": "./src/primitives/*.ts",
     "./tailwind-preset": "./src/tailwind-preset.ts"
   },
   "files": ["src"],
