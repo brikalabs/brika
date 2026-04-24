@@ -1,6 +1,11 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
+/* Tailwind v4 scans the current project by default; @source pulls in
+   @brika/clay's component source so utilities like bg-primary, rounded-md,
+   and the Card accent selectors emit to the generated stylesheet. */
+@source "../../../../packages/clay/src/**/*.{ts,tsx}";
+
 @custom-variant dark (&:where([data-mode="dark"], [data-mode="dark"] *));
 
 @theme {
