@@ -1,2 +1,1 @@
-export type { InputProps } from '@brika/clay';
-export { Input } from '@brika/clay';
+export * from '@brika/clay/components/input';

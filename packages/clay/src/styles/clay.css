@@ -3,13 +3,845 @@
  *
  * Consumers import this once (`@import "@brika/clay/styles";`) and every
  * utility class used inside Clay's components is guaranteed to be emitted.
- * Paths here are resolved by Tailwind v4 relative to THIS file, so they
- * stay correct no matter where or how the stylesheet is imported.
+ * Paths in `@source` are resolved by Tailwind v4 relative to THIS file,
+ * so they stay correct no matter where or how the stylesheet is imported.
  *
- * Token definitions and per-theme colour vars live upstream of this file
- * (currently in the consumer app; twinkly-wave Phase 2 moves them in).
+ * Includes the full token system — the same `--primary`, `--radius`,
+ * `--shadow-*`, `--font-*` scale the rest of Brika consumes. Components
+ * in this package use utilities like `rounded-button`, `corner-card`,
+ * `ring-themed`, and `bg-button-filled-container` that are defined below.
  */
 
 @source "../components/**/*.{ts,tsx}";
 @source "../primitives/**/*.{ts,tsx}";
 @source "../themes/**/*.{ts,tsx}";
+
+/* Shared Tailwind v4 theme tokens — imported by both the Vite frontend build
+   and the hub's ModuleCompiler (plugin page CSS).  Single source of truth. */
+
+@custom-variant dark (&:is(.dark *));
+
+/* ─────────────────────────────────────────────────────────────
+   SEMANTIC VARIABLES → TAILWIND UTILITIES
+   Makes them available as utilities: bg-primary, text-success, etc.
+
+   All tokens below reference runtime CSS custom properties defined
+   in the consumer app (e.g. `:root` / `[data-theme="ocean"]`), so
+   themes can swap colors, radii, fonts, and spacing at runtime.
+   ───────────────────────────────────────────────────────────── */
+@theme inline {
+  /* Typography — themes can override --font-sans / --font-mono per skin */
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+
+  /* Radius — numeric scale derived from the --radius scalar.
+     Kept for Tailwind utility compatibility (`rounded-sm`, `rounded-lg`, …). */
+  --radius-sm: calc(var(--radius) - 0.375rem);
+  --radius-md: calc(var(--radius) - 0.25rem);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 0.25rem);
+  --radius-2xl: calc(var(--radius) + 0.5rem);
+  --radius-3xl: calc(var(--radius) + 1rem);
+
+  /* Radius — semantic tokens by UI purpose.
+       tight      — tag dots, micro shapes
+       pill       — chips, tags, badges
+       control    — buttons, inputs, switches
+       container  — cards, panels, sidebars
+       surface    — dialogs, sheets, popovers
+     Utilities: `rounded-tight`, `rounded-pill`, `rounded-control`,
+                `rounded-container`, `rounded-surface`. */
+  --radius-tight: max(0rem, calc(var(--radius) - 0.625rem));
+  --radius-pill: max(0rem, calc(var(--radius) - 0.375rem));
+  --radius-control: max(0rem, calc(var(--radius) - 0.25rem));
+  --radius-container: var(--radius);
+  --radius-surface: calc(var(--radius) + 0.25rem);
+
+  /* Shadow — semantic elevation tokens by UI purpose.
+       surface    — subtle resting content (inline cards, quiet chrome)
+       raised     — cards / buttons at rest or hovered
+       overlay    — popovers, dropdowns, tooltips
+       modal      — dialogs, sheets
+       spotlight  — toasts, command palettes
+     Utilities: `shadow-surface`, `shadow-raised`, `shadow-overlay`,
+                `shadow-modal`, `shadow-spotlight`.
+     The numeric `--shadow-xs..xl` scale is the source of truth (Tailwind
+     default, overridden by the theme runtime). Semantic names are aliases. */
+  --shadow-surface: var(--shadow-xs);
+  --shadow-raised: var(--shadow-sm);
+  --shadow-overlay: var(--shadow-md);
+  --shadow-modal: var(--shadow-lg);
+  --shadow-spotlight: var(--shadow-xl);
+
+  /* Motion — semantic channels by intent. One base `--motion-duration` and
+     `--motion-easing` drive everything. `instant` is for fast UI feedback
+     (hover/focus), `standard` for most state transitions (tab switch,
+     dropdown open), `considered` for emphasized reveals (sheet, accordion).
+     Utilities: `duration-instant`, `duration-standard`, `duration-considered`,
+                `ease-standard`. */
+  --motion-instant-duration: max(80ms, calc(var(--motion-duration, 220ms) * 0.45));
+  --motion-standard-duration: var(--motion-duration, 220ms);
+  --motion-considered-duration: calc(var(--motion-duration, 220ms) * 1.8);
+  --motion-instant-easing: var(--motion-easing, cubic-bezier(0.16, 1, 0.3, 1));
+  --motion-standard-easing: var(--motion-easing, cubic-bezier(0.16, 1, 0.3, 1));
+  --motion-considered-easing: var(--motion-easing, cubic-bezier(0.16, 1, 0.3, 1));
+
+  /* Core semantic colors */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Semantic feedback colors */
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+
+  /* Status colors for workflows */
+  --color-status-idle: var(--status-idle);
+  --color-status-running: var(--status-running);
+  --color-status-completed: var(--status-completed);
+  --color-status-error: var(--status-error);
+
+  /* Data visualization colors */
+  --color-data-1: var(--data-1);
+  --color-data-2: var(--data-2);
+  --color-data-3: var(--data-3);
+  --color-data-4: var(--data-4);
+  --color-data-5: var(--data-5);
+  --color-data-6: var(--data-6);
+  --color-data-7: var(--data-7);
+  --color-data-8: var(--data-8);
+
+  /* Sidebar colors */
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* ─────────────────────────────────────────────────────────────
+     SURFACE TONAL SCALE (Material-inspired)
+     A family of background tones tinted toward `--surface-tint`
+     (primary by default). Use to differentiate container depth
+     without opaque elevation: surface-dim sits behind, the
+     container-* scale layers cards/panels, surface-bright is for
+     highlights. Utilities: `bg-surface-dim`, `bg-surface-container`,
+     `bg-surface-container-high`, etc.
+     Presets only need to set `--surface-tint`; the rest fall out via
+     color-mix() unless the theme overrides them explicitly.
+     ───────────────────────────────────────────────────────────── */
+  --color-surface-dim: var(
+    --surface-dim,
+    color-mix(in oklch, var(--background) 88%, var(--surface-tint, var(--primary)))
+  );
+  --color-surface-bright: var(--surface-bright, color-mix(in oklch, var(--background) 96%, white));
+  --color-surface-container-lowest: var(
+    --surface-container-lowest,
+    color-mix(in oklch, var(--background) 96%, var(--surface-tint, var(--primary)))
+  );
+  --color-surface-container-low: var(
+    --surface-container-low,
+    color-mix(in oklch, var(--background) 93%, var(--surface-tint, var(--primary)))
+  );
+  --color-surface-container: var(
+    --surface-container,
+    color-mix(in oklch, var(--background) 90%, var(--surface-tint, var(--primary)))
+  );
+  --color-surface-container-high: var(
+    --surface-container-high,
+    color-mix(in oklch, var(--background) 86%, var(--surface-tint, var(--primary)))
+  );
+  --color-surface-container-highest: var(
+    --surface-container-highest,
+    color-mix(in oklch, var(--background) 82%, var(--surface-tint, var(--primary)))
+  );
+
+  /* Outline variants. `outline` is the default border (alias of
+     `--border`); `outline-variant` is softer (dividers, inactive rails). */
+  --color-outline: var(--outline, var(--border));
+  --color-outline-variant: var(
+    --outline-variant,
+    color-mix(in oklch, var(--border) 60%, transparent)
+  );
+
+  /* ─────────────────────────────────────────────────────────────
+     ROLE CONTAINER PAIRS (Material-inspired)
+     Low-tonal tint that pairs with a role color, plus the foreground
+     that reads on top of it. Utilities: `bg-primary-container`,
+     `text-on-primary-container`, `bg-success-container`, etc.
+     Defaults via color-mix() so presets only override when needed.
+     ───────────────────────────────────────────────────────────── */
+  --color-primary-container: var(
+    --primary-container,
+    color-mix(in oklch, var(--primary) 18%, var(--background))
+  );
+  --color-on-primary-container: var(
+    --on-primary-container,
+    color-mix(in oklch, var(--primary) 85%, var(--foreground))
+  );
+  --color-secondary-container: var(
+    --secondary-container,
+    color-mix(in oklch, var(--secondary) 70%, var(--background))
+  );
+  --color-on-secondary-container: var(
+    --on-secondary-container,
+    color-mix(in oklch, var(--secondary-foreground) 90%, var(--foreground))
+  );
+  --color-accent-container: var(
+    --accent-container,
+    color-mix(in oklch, var(--accent) 70%, var(--background))
+  );
+  --color-on-accent-container: var(
+    --on-accent-container,
+    color-mix(in oklch, var(--accent-foreground) 90%, var(--foreground))
+  );
+  --color-success-container: var(
+    --success-container,
+    color-mix(in oklch, var(--success) 18%, var(--background))
+  );
+  --color-on-success-container: var(
+    --on-success-container,
+    color-mix(in oklch, var(--success) 85%, var(--foreground))
+  );
+  --color-warning-container: var(
+    --warning-container,
+    color-mix(in oklch, var(--warning) 18%, var(--background))
+  );
+  --color-on-warning-container: var(
+    --on-warning-container,
+    color-mix(in oklch, var(--warning) 85%, var(--foreground))
+  );
+  --color-info-container: var(
+    --info-container,
+    color-mix(in oklch, var(--info) 18%, var(--background))
+  );
+  --color-on-info-container: var(
+    --on-info-container,
+    color-mix(in oklch, var(--info) 85%, var(--foreground))
+  );
+  --color-destructive-container: var(
+    --destructive-container,
+    color-mix(in oklch, var(--destructive) 18%, var(--background))
+  );
+  --color-on-destructive-container: var(
+    --on-destructive-container,
+    color-mix(in oklch, var(--destructive) 85%, var(--foreground))
+  );
+
+  /* ─────────────────────────────────────────────────────────────
+     STATE LAYER OPACITIES
+     Material-style interaction state overlays. Register under the
+     Tailwind v4 `--opacity-*` namespace so they become first-class
+     modifier utilities: `bg-primary/state-hover`, `bg-primary/state-pressed`.
+     ───────────────────────────────────────────────────────────── */
+  --opacity-state-hover: var(--state-hover-opacity, 0.08);
+  --opacity-state-focus: var(--state-focus-opacity, 0.12);
+  --opacity-state-pressed: var(--state-pressed-opacity, 0.16);
+  --opacity-state-selected: var(--state-selected-opacity, 0.12);
+  --opacity-state-disabled: var(--state-disabled-opacity, 0.38);
+
+  /* ─────────────────────────────────────────────────────────────
+     TYPOGRAPHY SCALE (Material-inspired)
+     Five intent levels x three sizes, all derived from `--text-base`
+     (default 1rem). Changing --text-base rescales the whole system.
+     Utilities: `text-display-lg`, `text-headline-md`, `text-title-sm`,
+     `text-body-md`, `text-label-lg`, etc. Each emits -size and
+     -line-height together (Tailwind v4 --text-* namespace).
+     ───────────────────────────────────────────────────────────── */
+  --text-display-lg: calc(var(--text-base, 1rem) * 3.5625);
+  --text-display-lg--line-height: calc(var(--text-base, 1rem) * 4);
+  --text-display-md: calc(var(--text-base, 1rem) * 2.8125);
+  --text-display-md--line-height: calc(var(--text-base, 1rem) * 3.25);
+  --text-display-sm: calc(var(--text-base, 1rem) * 2.25);
+  --text-display-sm--line-height: calc(var(--text-base, 1rem) * 2.75);
+  --text-headline-lg: calc(var(--text-base, 1rem) * 2);
+  --text-headline-lg--line-height: calc(var(--text-base, 1rem) * 2.5);
+  --text-headline-md: calc(var(--text-base, 1rem) * 1.75);
+  --text-headline-md--line-height: calc(var(--text-base, 1rem) * 2.25);
+  --text-headline-sm: calc(var(--text-base, 1rem) * 1.5);
+  --text-headline-sm--line-height: calc(var(--text-base, 1rem) * 2);
+  --text-title-lg: calc(var(--text-base, 1rem) * 1.375);
+  --text-title-lg--line-height: calc(var(--text-base, 1rem) * 1.75);
+  --text-title-md: calc(var(--text-base, 1rem) * 1);
+  --text-title-md--line-height: calc(var(--text-base, 1rem) * 1.5);
+  --text-title-sm: calc(var(--text-base, 1rem) * 0.875);
+  --text-title-sm--line-height: calc(var(--text-base, 1rem) * 1.25);
+  --text-body-lg: calc(var(--text-base, 1rem) * 1);
+  --text-body-lg--line-height: calc(var(--text-base, 1rem) * 1.5);
+  --text-body-md: calc(var(--text-base, 1rem) * 0.875);
+  --text-body-md--line-height: calc(var(--text-base, 1rem) * 1.25);
+  --text-body-sm: calc(var(--text-base, 1rem) * 0.75);
+  --text-body-sm--line-height: calc(var(--text-base, 1rem) * 1.125);
+  --text-label-lg: calc(var(--text-base, 1rem) * 0.875);
+  --text-label-lg--line-height: calc(var(--text-base, 1rem) * 1.25);
+  --text-label-md: calc(var(--text-base, 1rem) * 0.75);
+  --text-label-md--line-height: calc(var(--text-base, 1rem) * 1.125);
+  --text-label-sm: calc(var(--text-base, 1rem) * 0.6875);
+  --text-label-sm--line-height: calc(var(--text-base, 1rem) * 1);
+
+  /* ─────────────────────────────────────────────────────────────
+     RUNTIME PRIMITIVES → TAILWIND DEFAULTS
+     Wire theme-level scalars (emitted by the theme builder) into the
+     utilities that would otherwise hardcode values. A plain `border`
+     class now honors `--border-width`; `backdrop-blur-theme` honors
+     `--backdrop-blur`; the `ring-themed` utility below honors
+     `--ring-width` / `--ring-offset`.
+     ───────────────────────────────────────────────────────────── */
+  --default-border-width: var(--border-width, 1px);
+  --blur-theme: var(--backdrop-blur, 8px);
+
+  /* ─────────────────────────────────────────────────────────────
+     COMPONENT-SCOPE TOKENS
+
+     Every component reads a component-scoped variable that falls back
+     to a system role. Theme authors override the component variable
+     (e.g. `--button-radius: 0.25rem`) to retune one component without
+     moving the system token.
+
+     Canonical pattern:
+         --<ns>-<component>[-<slot>]: var(
+             --<component>[-<slot>]-<property?>,
+             var(--<system-fallback>)
+         );
+
+     Namespaces used here, and the utilities they expose:
+         --color-*  → bg-<c>-<slot>, text-<c>-<slot>, border-<c>-<slot>
+         --radius-* → rounded-<c>
+         --shadow-* → shadow-<c>
+
+     Override from a theme:
+         [data-theme="mine"] { --button-radius: 0.25rem; }
+         [data-theme="mine"] { --card-shadow: var(--shadow-lg); }
+     ───────────────────────────────────────────────────────────── */
+
+  /* ─── Color ─────────────────────────────────────────────────── */
+
+  /* Button */
+  --color-button-filled-container: var(--button-filled-container, var(--primary));
+  --color-button-filled-label: var(--button-filled-label, var(--primary-foreground));
+  --color-button-outline-border: var(--button-outline-border, var(--border));
+  --color-button-outline-label: var(--button-outline-label, var(--foreground));
+
+  /* Card */
+  --color-card-container: var(--card-container, var(--card));
+  --color-card-label: var(--card-label, var(--card-foreground));
+
+  /* Dialog */
+  --color-dialog-container: var(--dialog-container, var(--popover));
+  --color-dialog-label: var(--dialog-label, var(--popover-foreground));
+
+  /* Input — covers Input, Textarea, Select trigger */
+  --color-input-container: var(--input-container, var(--background));
+  --color-input-label: var(--input-label, var(--foreground));
+  --color-input-border: var(--input-border, var(--input));
+  --color-input-placeholder: var(--input-placeholder, var(--muted-foreground));
+
+  /* Icon — three levels. Components apply these via `text-icon` /
+     `text-icon-muted` / `text-icon-primary` on the parent of an SVG
+     (icons inherit currentColor). */
+  --color-icon: var(--icon, var(--foreground));
+  --color-icon-muted: var(--icon-muted, var(--muted-foreground));
+  --color-icon-primary: var(--icon-primary, var(--primary));
+
+  /* ─── Radius ────────────────────────────────────────────────── */
+
+  --radius-button: var(--button-radius, var(--radius-control));
+  --radius-card: var(--card-radius, var(--radius-container));
+  --radius-dialog: var(--dialog-radius, var(--radius-surface));
+  --radius-popover: var(--popover-radius, var(--radius-surface));
+  --radius-tooltip: var(--tooltip-radius, var(--radius-control));
+  --radius-input: var(--input-radius, var(--radius-control));
+  --radius-select: var(--select-radius, var(--radius-control));
+  --radius-menu: var(--menu-radius, var(--radius-surface));
+  --radius-menu-item: var(--menu-item-radius, var(--radius-control));
+  --radius-checkbox: var(--checkbox-radius, var(--radius-tight));
+  --radius-badge: var(--badge-radius, var(--radius-pill));
+  --radius-tabs: var(--tabs-radius, var(--radius-control));
+  --radius-alert: var(--alert-radius, var(--radius-container));
+  --radius-toast: var(--toast-radius, var(--radius-container));
+  --radius-avatar: var(--avatar-radius, 9999px);
+  --radius-switch: var(--switch-radius, 9999px);
+  --radius-switch-thumb: var(--switch-thumb-radius, 9999px);
+
+  /* ─── Shadow ────────────────────────────────────────────────── */
+
+  --shadow-button: var(--button-shadow, var(--shadow-surface));
+  --shadow-card: var(--card-shadow, var(--shadow-raised));
+  --shadow-popover: var(--popover-shadow, var(--shadow-overlay));
+  --shadow-menu: var(--menu-shadow, var(--shadow-overlay));
+  --shadow-dialog: var(--dialog-shadow, var(--shadow-modal));
+  --shadow-tooltip: var(--tooltip-shadow, var(--shadow-overlay));
+  --shadow-toast: var(--toast-shadow, var(--shadow-spotlight));
+}
+
+/* ─────────────────────────────────────────────────────────────
+   FOCUS RING UTILITY
+   `ring-themed` applies the theme's focus ring (width + offset + color)
+   in one class. Used with focus-visible: `focus-visible:ring-themed`.
+   Outline-based (v4 `ring-*` utilities use box-shadow which doesn't
+   compose with `clip-path` corner shapes).
+   ───────────────────────────────────────────────────────────── */
+@utility ring-themed {
+  outline: var(--ring-width, 2px) solid var(--ring);
+  outline-offset: var(--ring-offset, 2px);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   SAFE-AREA PADDING
+   Scales with both `--spacing` (density) and `--radius` (corner arc)
+   so containers feel right on any theme and text never hugs a curve.
+   Formula: `max(spacing*N, radius*K)` — the spacing term mirrors the
+   classic Tailwind step (p-6 for `p-safe`, p-2 for `-md`, p-1 for
+   `-sm`), the radius term takes over once corners get large enough to
+   bite into content.
+   ───────────────────────────────────────────────────────────── */
+@utility p-safe {
+  padding: max(calc(var(--spacing, 0.25rem) * 6), calc(var(--radius, 0.5rem) + 0.5rem));
+}
+
+/* Compact counterpart for tight rounded surfaces (dropdowns, popovers,
+   tooltips). `p-1` floor at default density; grows with radius so items
+   don't crowd the curve. */
+@utility p-safe-sm {
+  padding: max(calc(var(--spacing, 0.25rem) * 1), calc(var(--radius, 0.5rem) * 0.3));
+}
+
+/* Mid-floor safe padding — for small tiles and preview headers that sit
+   inside a rounded surface. `p-2` floor at default density. */
+@utility p-safe-md {
+  padding: max(calc(var(--spacing, 0.25rem) * 2), calc(var(--radius, 0.5rem) * 0.6));
+}
+@utility px-safe-md {
+  padding-inline: max(calc(var(--spacing, 0.25rem) * 2), calc(var(--radius, 0.5rem) * 0.6));
+}
+@utility py-safe-md {
+  padding-block: max(calc(var(--spacing, 0.25rem) * 2), calc(var(--radius, 0.5rem) * 0.6));
+}
+
+/* Directional corner-strip padding. For slim rows that sit at a corner
+   of a rounded parent (Card header/footer). `p-3` floor at default
+   density; grows on the corner side when radius is high. */
+@utility pl-safe {
+  padding-left: max(calc(var(--spacing, 0.25rem) * 3), calc(var(--radius, 0.5rem) * 0.75));
+}
+@utility pr-safe {
+  padding-right: max(calc(var(--spacing, 0.25rem) * 3), calc(var(--radius, 0.5rem) * 0.75));
+}
+@utility pt-safe {
+  padding-top: max(calc(var(--spacing, 0.25rem) * 3), calc(var(--radius, 0.5rem) * 0.75));
+}
+@utility pb-safe {
+  padding-bottom: max(calc(var(--spacing, 0.25rem) * 3), calc(var(--radius, 0.5rem) * 0.75));
+}
+
+/* Consumers (apps/ui index.css, hub plugin ModuleCompiler) are expected
+   to define the runtime tokens (--radius, --font-sans, --font-mono, …)
+   at `:root` themselves. This file registers Tailwind utilities only so
+   compiling a file with no matching classes produces no CSS rules. */
+
+/* ─────────────────────────────────────────────────────────────
+   CORNER SHAPE UTILITIES
+   CSS corner-shape property for squircle and other corner styles
+   Requires border-radius to have effect
+   https://developer.mozilla.org/en-US/docs/Web/CSS/corner-shape
+   ───────────────────────────────────────────────────────────── */
+
+/* Static keyword utilities */
+@utility corner-round {
+  corner-shape: round;
+}
+
+@utility corner-square {
+  corner-shape: square;
+}
+
+@utility corner-bevel {
+  corner-shape: bevel;
+}
+
+@utility corner-scoop {
+  corner-shape: scoop;
+}
+
+@utility corner-notch {
+  corner-shape: notch;
+}
+
+@utility corner-squircle {
+  corner-shape: squircle;
+}
+
+/* Functional utility for superellipse with custom values */
+@utility corner-superellipse-* {
+  corner-shape: superellipse(--value(number));
+}
+
+/* ─────────────────────────────────────────────────────────────
+   COMPONENT-SCOPE CORNER SHAPE UTILITIES
+   Mirror of the `rounded-<component>` pattern. Each component-
+   scoped utility reads `--<key>-corner-shape` (per-component
+   override) and falls back to `--corner-shape` (theme-level)
+   and finally `round`. Theme authors override the per-component
+   variable to bend one component's corners without retuning the
+   whole theme.
+   ───────────────────────────────────────────────────────────── */
+@utility corner-button {
+  corner-shape: var(--button-corner-shape, var(--corner-shape, round));
+}
+@utility corner-card {
+  corner-shape: var(--card-corner-shape, var(--corner-shape, round));
+}
+@utility corner-dialog {
+  corner-shape: var(--dialog-corner-shape, var(--corner-shape, round));
+}
+@utility corner-popover {
+  corner-shape: var(--popover-corner-shape, var(--corner-shape, round));
+}
+@utility corner-tooltip {
+  corner-shape: var(--tooltip-corner-shape, var(--corner-shape, round));
+}
+@utility corner-input {
+  corner-shape: var(--input-corner-shape, var(--corner-shape, round));
+}
+@utility corner-select {
+  corner-shape: var(--select-corner-shape, var(--corner-shape, round));
+}
+@utility corner-menu {
+  corner-shape: var(--menu-corner-shape, var(--corner-shape, round));
+}
+@utility corner-menu-item {
+  corner-shape: var(--menu-item-corner-shape, var(--corner-shape, round));
+}
+@utility corner-checkbox {
+  corner-shape: var(--checkbox-corner-shape, var(--corner-shape, round));
+}
+@utility corner-badge {
+  corner-shape: var(--badge-corner-shape, var(--corner-shape, round));
+}
+@utility corner-tabs {
+  corner-shape: var(--tabs-corner-shape, var(--corner-shape, round));
+}
+@utility corner-alert {
+  corner-shape: var(--alert-corner-shape, var(--corner-shape, round));
+}
+@utility corner-toast {
+  corner-shape: var(--toast-corner-shape, var(--corner-shape, round));
+}
+@utility corner-avatar {
+  corner-shape: var(--avatar-corner-shape, var(--corner-shape, round));
+}
+@utility corner-switch {
+  corner-shape: var(--switch-corner-shape, var(--corner-shape, round));
+}
+@utility corner-switch-thumb {
+  corner-shape: var(--switch-thumb-corner-shape, var(--corner-shape, round));
+}
+/* ─────────────────────────────────────────────────────────────
+   DEFINE THEME VARIABLES
+   Using @layer theme for proper organization
+   ───────────────────────────────────────────────────────────── */
+@layer theme {
+  /* ═══════════════════════════════════════════════════════════
+     DEFAULT THEME - Light Mode
+     ═══════════════════════════════════════════════════════════ */
+  :root,
+  [data-theme="default"] {
+    /* Geometry — themes can override these to change the entire feel */
+    --radius: 0.75rem;
+    --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+    /* Surface colors */
+    --background: oklch(0.99 0 0);
+    --foreground: oklch(0.15 0.01 260);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.15 0.01 260);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.15 0.01 260);
+
+    /* Interactive colors */
+    --primary: oklch(0.55 0.18 265);
+    --primary-foreground: oklch(0.99 0 0);
+    --secondary: oklch(0.94 0.005 260);
+    --secondary-foreground: oklch(0.15 0.01 260);
+    --muted: oklch(0.95 0.005 260);
+    --muted-foreground: oklch(0.5 0.01 260);
+    --accent: oklch(0.92 0.01 260);
+    --accent-foreground: oklch(0.15 0.01 260);
+
+    /* UI elements */
+    --border: oklch(0.9 0.01 260);
+    --input: oklch(0.9 0.01 260);
+    --ring: oklch(0.55 0.18 265);
+
+    /* Semantic colors */
+    --success: oklch(0.55 0.16 145);
+    --success-foreground: oklch(0.99 0 0);
+    --warning: oklch(0.65 0.14 85);
+    --warning-foreground: oklch(0.15 0.01 260);
+    --info: oklch(0.5 0.18 230);
+    --info-foreground: oklch(0.99 0 0);
+    --destructive: oklch(0.55 0.22 25);
+    --destructive-foreground: oklch(0.99 0 0);
+
+    /* Status colors */
+    --status-idle: oklch(0.7 0.02 260);
+    --status-running: oklch(0.55 0.18 265);
+    --status-completed: oklch(0.55 0.16 145);
+    --status-error: oklch(0.55 0.22 25);
+
+    /* Data visualization - sequential colors */
+    --data-1: oklch(0.55 0.18 265); /* Blue */
+    --data-2: oklch(0.6 0.18 45); /* Orange */
+    --data-3: oklch(0.55 0.16 145); /* Green */
+    --data-4: oklch(0.55 0.22 25); /* Red */
+    --data-5: oklch(0.55 0.18 300); /* Purple */
+    --data-6: oklch(0.65 0.14 85); /* Yellow */
+    --data-7: oklch(0.55 0.15 200); /* Cyan */
+    --data-8: oklch(0.6 0.18 340); /* Pink */
+
+    /* Sidebar */
+    --sidebar: var(--card);
+    --sidebar-foreground: var(--card-foreground);
+    --sidebar-primary: var(--primary);
+    --sidebar-primary-foreground: var(--primary-foreground);
+    --sidebar-accent: var(--secondary);
+    --sidebar-accent-foreground: var(--secondary-foreground);
+    --sidebar-border: var(--border);
+    --sidebar-ring: var(--ring);
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     DEFAULT THEME - Dark Mode
+     ═══════════════════════════════════════════════════════════ */
+  .dark:root,
+  .dark[data-theme="default"] {
+    /* Surface colors */
+    --background: oklch(0.14 0.02 260);
+    --foreground: oklch(0.96 0.01 260);
+    --card: oklch(0.17 0.02 260);
+    --card-foreground: oklch(0.96 0.01 260);
+    --popover: oklch(0.17 0.02 260);
+    --popover-foreground: oklch(0.96 0.01 260);
+
+    /* Interactive colors */
+    --primary: oklch(0.7 0.16 265);
+    --primary-foreground: oklch(0.14 0.02 260);
+    --secondary: oklch(0.22 0.02 260);
+    --secondary-foreground: oklch(0.96 0.01 260);
+    --muted: oklch(0.2 0.02 260);
+    --muted-foreground: oklch(0.65 0.02 260);
+    --accent: oklch(0.25 0.02 260);
+    --accent-foreground: oklch(0.96 0.01 260);
+
+    /* UI elements */
+    --border: oklch(0.25 0.02 260);
+    --input: oklch(0.25 0.02 260);
+    --ring: oklch(0.7 0.16 265);
+
+    /* Semantic colors */
+    --success: oklch(0.72 0.15 145);
+    --success-foreground: oklch(0.14 0.02 260);
+    --warning: oklch(0.8 0.15 85);
+    --warning-foreground: oklch(0.14 0.02 260);
+    --info: oklch(0.72 0.12 230);
+    --info-foreground: oklch(0.14 0.02 260);
+    --destructive: oklch(0.65 0.2 25);
+    --destructive-foreground: oklch(0.96 0.01 260);
+
+    /* Status colors */
+    --status-idle: oklch(0.5 0.02 260);
+    --status-running: oklch(0.7 0.16 265);
+    --status-completed: oklch(0.72 0.15 145);
+    --status-error: oklch(0.65 0.2 25);
+
+    /* Data visualization */
+    --data-1: oklch(0.7 0.16 265); /* Blue */
+    --data-2: oklch(0.72 0.18 45); /* Orange */
+    --data-3: oklch(0.72 0.15 145); /* Green */
+    --data-4: oklch(0.65 0.2 25); /* Red */
+    --data-5: oklch(0.7 0.16 300); /* Purple */
+    --data-6: oklch(0.8 0.15 85); /* Yellow */
+    --data-7: oklch(0.72 0.14 200); /* Cyan */
+    --data-8: oklch(0.72 0.16 340); /* Pink */
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     OCEAN THEME - Light Mode (Blues & Teals)
+     ═══════════════════════════════════════════════════════════ */
+  [data-theme="ocean"] {
+    --primary: oklch(0.55 0.18 230); /* Deep blue */
+    --primary-foreground: oklch(0.99 0 0);
+    --accent: oklch(0.7 0.12 200); /* Teal */
+    --accent-foreground: oklch(0.15 0.01 260);
+    --success: oklch(0.55 0.16 180); /* Aqua */
+    --success-foreground: oklch(0.99 0 0);
+    --data-1: oklch(0.55 0.18 230);
+    --data-2: oklch(0.6 0.15 200);
+    --data-7: oklch(0.55 0.16 180);
+  }
+
+  .dark[data-theme="ocean"] {
+    --primary: oklch(0.7 0.16 230);
+    --primary-foreground: oklch(0.14 0.02 260);
+    --accent: oklch(0.72 0.12 200);
+    --accent-foreground: oklch(0.96 0.01 260);
+    --success: oklch(0.72 0.15 180);
+    --success-foreground: oklch(0.14 0.02 260);
+    --data-1: oklch(0.7 0.16 230);
+    --data-2: oklch(0.72 0.15 200);
+    --data-7: oklch(0.72 0.16 180);
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     FOREST THEME - Light Mode (Greens & Earth Tones)
+     ═══════════════════════════════════════════════════════════ */
+  [data-theme="forest"] {
+    --primary: oklch(0.55 0.16 145); /* Forest green */
+    --primary-foreground: oklch(0.99 0 0);
+    --accent: oklch(0.6 0.14 130); /* Moss */
+    --accent-foreground: oklch(0.15 0.01 260);
+    --success: oklch(0.55 0.16 160); /* Emerald */
+    --success-foreground: oklch(0.99 0 0);
+    --data-1: oklch(0.55 0.16 145);
+    --data-3: oklch(0.6 0.14 130);
+    --status-running: oklch(0.55 0.16 145);
+    --status-completed: oklch(0.55 0.16 160);
+  }
+
+  .dark[data-theme="forest"] {
+    --primary: oklch(0.72 0.15 145);
+    --primary-foreground: oklch(0.14 0.02 260);
+    --accent: oklch(0.72 0.14 130);
+    --accent-foreground: oklch(0.96 0.01 260);
+    --success: oklch(0.72 0.15 160);
+    --success-foreground: oklch(0.14 0.02 260);
+    --data-1: oklch(0.72 0.15 145);
+    --data-3: oklch(0.72 0.14 130);
+    --status-running: oklch(0.72 0.15 145);
+    --status-completed: oklch(0.72 0.15 160);
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     SUNSET THEME - Light Mode (Oranges & Warm Tones)
+     ═══════════════════════════════════════════════════════════ */
+  [data-theme="sunset"] {
+    --primary: oklch(0.6 0.18 45); /* Vibrant orange */
+    --primary-foreground: oklch(0.99 0 0);
+    --accent: oklch(0.65 0.16 60); /* Coral */
+    --accent-foreground: oklch(0.15 0.01 260);
+    --warning: oklch(0.65 0.18 35); /* Warm orange */
+    --warning-foreground: oklch(0.15 0.01 260);
+    --data-2: oklch(0.6 0.18 45);
+    --data-6: oklch(0.65 0.16 60);
+    --status-running: oklch(0.6 0.18 45);
+  }
+
+  .dark[data-theme="sunset"] {
+    --primary: oklch(0.72 0.18 45);
+    --primary-foreground: oklch(0.14 0.02 260);
+    --accent: oklch(0.75 0.16 60);
+    --accent-foreground: oklch(0.14 0.02 260);
+    --warning: oklch(0.75 0.18 35);
+    --warning-foreground: oklch(0.14 0.02 260);
+    --data-2: oklch(0.72 0.18 45);
+    --data-6: oklch(0.75 0.16 60);
+    --status-running: oklch(0.72 0.18 45);
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     LAVENDER THEME - Light Mode (Purples & Soft Tones)
+     ═══════════════════════════════════════════════════════════ */
+  [data-theme="lavender"] {
+    --primary: oklch(0.55 0.18 300); /* Deep purple */
+    --primary-foreground: oklch(0.99 0 0);
+    --accent: oklch(0.6 0.16 285); /* Lavender */
+    --accent-foreground: oklch(0.15 0.01 260);
+    --info: oklch(0.55 0.16 280); /* Violet */
+    --info-foreground: oklch(0.99 0 0);
+    --data-5: oklch(0.55 0.18 300);
+    --data-8: oklch(0.6 0.16 320);
+    --status-running: oklch(0.55 0.18 300);
+  }
+
+  .dark[data-theme="lavender"] {
+    --primary: oklch(0.7 0.16 300);
+    --primary-foreground: oklch(0.14 0.02 260);
+    --accent: oklch(0.72 0.16 285);
+    --accent-foreground: oklch(0.96 0.01 260);
+    --info: oklch(0.7 0.16 280);
+    --info-foreground: oklch(0.14 0.02 260);
+    --data-5: oklch(0.7 0.16 300);
+    --data-8: oklch(0.72 0.16 320);
+    --status-running: oklch(0.7 0.16 300);
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     RUBY THEME - Light Mode (Reds & Warm Tones)
+     ═══════════════════════════════════════════════════════════ */
+  [data-theme="ruby"] {
+    --primary: oklch(0.55 0.22 15); /* Ruby red */
+    --primary-foreground: oklch(0.99 0 0);
+    --accent: oklch(0.6 0.18 340); /* Rose */
+    --accent-foreground: oklch(0.15 0.01 260);
+    --destructive: oklch(0.55 0.24 25); /* Bright red */
+    --destructive-foreground: oklch(0.99 0 0);
+    --data-4: oklch(0.55 0.22 15);
+    --data-8: oklch(0.6 0.18 340);
+    --status-error: oklch(0.55 0.24 25);
+  }
+
+  .dark[data-theme="ruby"] {
+    --primary: oklch(0.65 0.2 15);
+    --primary-foreground: oklch(0.96 0.01 260);
+    --accent: oklch(0.72 0.16 340);
+    --accent-foreground: oklch(0.96 0.01 260);
+    --destructive: oklch(0.65 0.22 25);
+    --destructive-foreground: oklch(0.96 0.01 260);
+    --data-4: oklch(0.65 0.2 15);
+    --data-8: oklch(0.72 0.16 340);
+    --status-error: oklch(0.65 0.22 25);
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     GEOMETRY-ONLY THEMES — demonstrate radius/font overrides.
+     These can be layered with any color theme via classList.
+     ═══════════════════════════════════════════════════════════ */
+
+  /* Sharp, brutalist — no rounded corners. */
+  [data-radius="sharp"] {
+    --radius: 0rem;
+  }
+
+  /* Default — matches the `:root` baseline. */
+  [data-radius="default"] {
+    --radius: 0.75rem;
+  }
+
+  /* Soft, pill-ish surfaces. */
+  [data-radius="soft"] {
+    --radius: 1.25rem;
+  }
+}

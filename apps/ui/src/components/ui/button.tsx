@@ -1,2 +1,1 @@
-export type { ButtonProps } from '@brika/clay';
-export { Button, buttonVariants } from '@brika/clay';
+export * from '@brika/clay/components/button';

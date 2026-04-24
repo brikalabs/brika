@@ -5,15 +5,10 @@
 @custom-variant dark (&:where([data-mode="dark"], [data-mode="dark"] *));
 
 @theme {
-  --font-sans:
-    "Inter", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji",
-    "Segoe UI Symbol", "Noto Color Emoji";
-  --font-mono:
-    "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
-    "Courier New", monospace;
-
   /* ==================================================
-     Clay chrome tokens — site surface, borders, text
+     Clay docs-site chrome tokens — sidebar/header/body
+     surfaces, borders, text. Component + theme tokens
+     come from @brika/clay/styles above.
      ================================================== */
   --color-clay-canvas: light-dark(oklch(98.75% 0 0), oklch(10% 0 0));
   --color-clay-elevated: light-dark(oklch(100% 0 0), oklch(14% 0 0));
@@ -28,51 +23,6 @@
   --text-color-clay-inactive: light-dark(oklch(66% 0 0), oklch(48% 0 0));
   --text-color-clay-link: light-dark(oklch(45% 0.2 250), oklch(72% 0.16 250));
   --text-color-clay-brand: light-dark(oklch(56% 0.18 45), oklch(72% 0.17 45));
-
-  /* ==================================================
-     shadcn-style component tokens — so Clay Button /
-     Input / Card render correctly inside the docs.
-     These live here temporarily; twinkly-wave Phase 2
-     (tokens-as-TS) will move them into @brika/clay.
-     ================================================== */
-  --color-background: light-dark(oklch(100% 0 0), oklch(14% 0 0));
-  --color-foreground: light-dark(oklch(15% 0 0), oklch(98% 0 0));
-  --color-primary: light-dark(oklch(22% 0 0), oklch(96% 0 0));
-  --color-primary-foreground: light-dark(oklch(98% 0 0), oklch(20% 0 0));
-  --color-secondary: light-dark(oklch(96% 0 0), oklch(22% 0 0));
-  --color-secondary-foreground: light-dark(oklch(15% 0 0), oklch(98% 0 0));
-  --color-destructive: light-dark(oklch(60% 0.23 27), oklch(65% 0.21 27));
-  --color-accent: light-dark(oklch(96% 0 0), oklch(22% 0 0));
-  --color-accent-foreground: light-dark(oklch(15% 0 0), oklch(98% 0 0));
-  --color-muted: light-dark(oklch(96% 0 0), oklch(22% 0 0));
-  --color-muted-foreground: light-dark(oklch(45% 0 0), oklch(65% 0 0));
-  --color-border: light-dark(oklch(90% 0 0), oklch(26% 0 0));
-  --color-input: light-dark(oklch(90% 0 0), oklch(26% 0 0));
-  --color-ring: light-dark(oklch(55% 0 0), oklch(55% 0 0));
-  --color-card: light-dark(oklch(100% 0 0), oklch(16% 0 0));
-  --color-card-foreground: light-dark(oklch(15% 0 0), oklch(98% 0 0));
-  --color-popover: light-dark(oklch(100% 0 0), oklch(16% 0 0));
-  --color-popover-foreground: light-dark(oklch(15% 0 0), oklch(98% 0 0));
-
-  /* Accent scale — keyed to Brika classic. Themes override both the
-     --color-data-N and the bare --data-N alias (Clay's Card component
-     currently references the bare form). */
-  --color-data-1: light-dark(#4a63d1, #8d9ee8);
-  --color-data-2: light-dark(#d17d2e, #e5a365);
-  --color-data-3: light-dark(#35924a, #63c77e);
-  --color-data-4: light-dark(#c4422d, #e06a55);
-  --color-data-5: light-dark(#8c42c4, #b38ce0);
-  --color-data-6: light-dark(#c78a2b, #e8b65e);
-  --color-data-7: light-dark(#2e9fa1, #5dc2c4);
-  --color-data-8: light-dark(#c44289, #e074ac);
-  --data-1: light-dark(#4a63d1, #8d9ee8);
-  --data-2: light-dark(#d17d2e, #e5a365);
-  --data-3: light-dark(#35924a, #63c77e);
-  --data-4: light-dark(#c4422d, #e06a55);
-  --data-5: light-dark(#8c42c4, #b38ce0);
-  --data-6: light-dark(#c78a2b, #e8b65e);
-  --data-7: light-dark(#2e9fa1, #5dc2c4);
-  --data-8: light-dark(#c44289, #e074ac);
 }
 
 * {
