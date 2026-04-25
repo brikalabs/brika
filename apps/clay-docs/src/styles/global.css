@@ -361,21 +361,32 @@ html[data-mode="dark"] .astro-code span {
 }
 
 /* Drafting-paper grid used on the hero + a few accent surfaces.
-   Pure CSS, scales with zoom, no extra DOM. */
+   The grid sits at ~40% of the hairline colour so it stays clearly
+   subordinate to actual `.hairline` rules and section borders — no
+   visual clash where a divider crosses a grid line. */
 .drafting-grid {
+  --drafting-grid-tint: color-mix(in srgb, var(--color-clay-hairline) 38%, transparent);
   background-image:
-    linear-gradient(var(--color-clay-hairline) 1px, transparent 1px),
-    linear-gradient(90deg, var(--color-clay-hairline) 1px, transparent 1px);
+    linear-gradient(var(--drafting-grid-tint) 1px, transparent 1px),
+    linear-gradient(90deg, var(--drafting-grid-tint) 1px, transparent 1px);
   background-size: 56px 56px;
   background-position: -1px -1px;
   position: relative;
 }
 
+/* Vignette that fades the grid out under the headline + CTA cluster.
+   Centred a touch left of middle so the right-hand rail still gets
+   some texture, then opaque enough at the edges to keep the page feel. */
 .drafting-grid::after {
   content: "";
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse at 30% 40%, transparent 0%, var(--color-clay-canvas) 75%);
+  background: radial-gradient(
+    ellipse 70% 60% at 38% 50%,
+    var(--color-clay-canvas) 0%,
+    color-mix(in srgb, var(--color-clay-canvas) 80%, transparent) 55%,
+    transparent 100%
+  );
   pointer-events: none;
 }
 
