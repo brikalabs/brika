@@ -1,0 +1,115 @@
+---
+import { DemoRenderer } from '~/components/DemoRenderer.tsx';
+import ComponentExample from '~/components/docs/ComponentExample.astro';
+import MdxDocLayout from '~/layouts/MdxDocLayout.astro';
+import { adjacentComponents, COMPONENTS, type ComponentEntry } from '~/lib/component-registry';
+
+interface Props {
+  readonly component: ComponentEntry;
+}
+
+export function getStaticPaths() {
+  return COMPONENTS.map((component) => ({
+    params: { slug: component.slug },
+    props: { component },
+  }));
+}
+
+const { component } = Astro.props;
+const { previous, next } = adjacentComponents(component.slug);
+---
+
+<MdxDocLayout
+  frontmatter={{
+    title: component.name,
+    description: component.description,
+    sourceFile: `components/${component.slug}`,
+  }}
+>
+  <p class="mb-8 inline-flex items-center gap-2 font-medium font-mono text-clay-subtle text-xs uppercase tracking-wider">
+    {component.group}
+  </p>
+
+  {
+    component.demos.map((demo) => (
+      <section class="mb-12 scroll-mt-24" id={demo.title.toLowerCase().replace(/\s+/g, '-')}>
+        <h2 class="mb-2 font-semibold text-2xl text-clay-strong tracking-tight">{demo.title}</h2>
+        {demo.description && (
+          <p class="mb-4 text-clay-default text-sm leading-relaxed">{demo.description}</p>
+        )}
+        <ComponentExample code={demo.code}>
+          <DemoRenderer slug={component.slug} demoName={demo.name} client:load />
+        </ComponentExample>
+      </section>
+    ))
+  }
+
+  {
+    component.accessibility && component.accessibility.length > 0 && (
+      <section class="mb-12 scroll-mt-24" id="accessibility">
+        <h2 class="mb-3 font-semibold text-2xl text-clay-strong tracking-tight">Accessibility</h2>
+        <ul class="space-y-2 text-clay-default text-sm">
+          {component.accessibility.map((item) => (
+            <li class="flex gap-2">
+              <span aria-hidden="true" class="text-clay-subtle">
+                ·
+              </span>
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )
+  }
+
+  {
+    component.tokens && component.tokens.length > 0 && (
+      <section class="mb-12 scroll-mt-24" id="tokens">
+        <h2 class="mb-3 font-semibold text-2xl text-clay-strong tracking-tight">Tokens</h2>
+        <p class="mb-3 text-clay-default text-sm">
+          This component reads the following theme tokens:
+        </p>
+        <div class="flex flex-wrap gap-1.5">
+          {component.tokens.map((token) => (
+            <code class="rounded border border-clay-hairline bg-clay-base px-2 py-0.5 font-mono text-clay-default text-xs">
+              {token}
+            </code>
+          ))}
+        </div>
+      </section>
+    )
+  }
+
+  <nav class="not-prose mt-16 flex items-stretch gap-4 border-clay-hairline border-t pt-6">
+    {
+      previous ? (
+        <a
+          href={`/components/${previous.slug}`}
+          class="group flex flex-1 flex-col items-start gap-1 rounded-lg border border-clay-hairline bg-clay-elevated px-4 py-3 transition-colors hover:bg-clay-control"
+        >
+          <span class="font-mono text-[0.625rem] text-clay-subtle uppercase tracking-wider">
+            ← Previous
+          </span>
+          <span class="font-medium text-clay-strong text-sm">{previous.name}</span>
+        </a>
+      ) : (
+        <span class="flex-1" />
+      )
+    }
+    {
+      next ? (
+        <a
+          href={`/components/${next.slug}`}
+          class="group flex flex-1 flex-col items-end gap-1 rounded-lg border border-clay-hairline bg-clay-elevated px-4 py-3 transition-colors hover:bg-clay-control"
+        >
+          <span class="font-mono text-[0.625rem] text-clay-subtle uppercase tracking-wider">
+            Next →
+          </span>
+          <span class="font-medium text-clay-strong text-sm">{next.name}</span>
+        </a>
+      ) : (
+        <span class="flex-1" />
+      )
+    }
+  </nav>
+</MdxDocLayout>

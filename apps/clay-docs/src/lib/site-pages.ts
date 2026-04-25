@@ -1,10 +1,12 @@
 /**
- * Central registry of navigable pages on the Clay docs site.
+ * Site-wide page index, used by SidebarNav and CommandPalette.
  *
- * Shared by SidebarNav and CommandPalette so adding a new page in one place
- * surfaces it in both. Keep `live` pages ordered by how they appear in the
- * sidebar; `comingSoon` entries render greyed-out and don't link anywhere.
+ * Static pages are hand-listed; component pages are derived from the
+ * component registry so adding a component automatically surfaces it
+ * in nav and search.
  */
+
+import { COMPONENTS } from './component-registry';
 
 export interface SitePage {
   readonly label: string;
@@ -13,7 +15,7 @@ export interface SitePage {
   readonly keywords?: readonly string[];
 }
 
-export const sitePages: readonly SitePage[] = [
+const staticPages: readonly SitePage[] = [
   { label: 'Home', href: '/', group: 'Pages', keywords: ['landing', 'start'] },
   {
     label: 'Installation',
@@ -34,37 +36,13 @@ export const sitePages: readonly SitePage[] = [
     group: 'Components',
     keywords: ['index', 'gallery', 'list'],
   },
-  {
-    label: 'Button',
-    href: '/components/button',
-    group: 'Components',
-    keywords: ['action', 'cta', 'cva'],
-  },
-  {
-    label: 'Input',
-    href: '/components/input',
-    group: 'Components',
-    keywords: ['text', 'field', 'form'],
-  },
-  {
-    label: 'Card',
-    href: '/components/card',
-    group: 'Components',
-    keywords: ['surface', 'container', 'tile'],
-  },
 ];
 
-export const comingSoonComponents: readonly string[] = [
-  'Label',
-  'Badge',
-  'Separator',
-  'Dialog',
-  'Tooltip',
-  'Tabs',
-  'Popover',
-  'Select',
-  'Switch',
-  'Alert',
-  'Progress',
-  'Skeleton',
-];
+const componentPages: readonly SitePage[] = COMPONENTS.map((component) => ({
+  label: component.name,
+  href: `/components/${component.slug}`,
+  group: 'Components',
+  keywords: [component.group.toLowerCase(), component.slug],
+}));
+
+export const sitePages: readonly SitePage[] = [...staticPages, ...componentPages];

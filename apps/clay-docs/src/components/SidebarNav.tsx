@@ -1,6 +1,12 @@
 import { ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { comingSoonComponents, sitePages } from '~/lib/site-pages';
+import {
+  COMPONENT_GROUPS,
+  COMPONENTS,
+  type ComponentEntry,
+  type ComponentGroup,
+} from '~/lib/component-registry';
+import { sitePages } from '~/lib/site-pages';
 import { ClayMenuIcon } from './ClayMenuIcon';
 
 const STORAGE_KEY = 'clay-sidebar-open';
@@ -21,6 +27,10 @@ function isActive(activePath: string, href: string): boolean {
 function openPalette() {
   globalThis.dispatchEvent(new Event(OPEN_PALETTE_EVENT));
 }
+
+const groupedComponents: ReadonlyMap<ComponentGroup, readonly ComponentEntry[]> = new Map(
+  COMPONENT_GROUPS.map((group) => [group, COMPONENTS.filter((c) => c.group === group)])
+);
 
 export function SidebarNav({ currentPath }: { readonly currentPath: string }) {
   const active = normalise(currentPath);
@@ -43,7 +53,12 @@ export function SidebarNav({ currentPath }: { readonly currentPath: string }) {
   };
 
   const pages = sitePages.filter((page) => page.group === 'Pages');
-  const components = sitePages.filter((page) => page.group === 'Components');
+  const allComponentsHref = '/components';
+
+  const navItemClass = (href: string) =>
+    isActive(active, href)
+      ? 'block rounded bg-clay-control px-2 py-1 font-medium text-clay-strong text-sm'
+      : 'block rounded px-2 py-1 text-clay-default text-sm transition-colors hover:bg-clay-control';
 
   return (
     <aside
@@ -95,47 +110,54 @@ export function SidebarNav({ currentPath }: { readonly currentPath: string }) {
             <ul className="space-y-0.5">
               {pages.map((item) => (
                 <li key={item.href}>
-                  <a
-                    href={item.href}
-                    className={
-                      isActive(active, item.href)
-                        ? 'block rounded bg-clay-control px-2 py-1 font-medium text-clay-strong text-sm'
-                        : 'block rounded px-2 py-1 text-clay-default text-sm transition-colors hover:bg-clay-control'
-                    }
-                  >
+                  <a href={item.href} className={navItemClass(item.href)}>
                     {item.label}
                   </a>
                 </li>
               ))}
             </ul>
 
-            <p className="mt-6 mb-2 px-2 font-medium font-mono text-[0.6875rem] text-clay-subtle uppercase tracking-wider">
-              Components
-            </p>
-            <ul className="space-y-0.5">
-              {components.map((item) => (
-                <li key={item.href}>
-                  <a
-                    href={item.href}
-                    className={
-                      isActive(active, item.href)
-                        ? 'block rounded bg-clay-control px-2 py-1 font-medium text-clay-strong text-sm'
-                        : 'block rounded px-2 py-1 text-clay-default text-sm transition-colors hover:bg-clay-control'
-                    }
-                  >
-                    {item.label}
-                  </a>
-                </li>
-              ))}
-              {comingSoonComponents.map((label) => (
-                <li key={label}>
-                  <span className="block cursor-not-allowed rounded px-2 py-1 text-clay-inactive text-sm">
-                    {label}
-                    <span className="ml-2 font-mono text-[0.625rem] text-clay-inactive">soon</span>
-                  </span>
-                </li>
-              ))}
-            </ul>
+            <div className="mt-6 mb-2 flex items-baseline justify-between px-2">
+              <p className="font-medium font-mono text-[0.6875rem] text-clay-subtle uppercase tracking-wider">
+                Components
+              </p>
+              <a
+                href={allComponentsHref}
+                className={
+                  isActive(active, allComponentsHref)
+                    ? 'font-medium text-clay-strong text-xs'
+                    : 'text-clay-subtle text-xs transition-colors hover:text-clay-default'
+                }
+              >
+                all
+              </a>
+            </div>
+
+            {COMPONENT_GROUPS.map((group) => {
+              const items = groupedComponents.get(group) ?? [];
+              if (items.length === 0) {
+                return null;
+              }
+              return (
+                <div key={group} className="mb-3">
+                  <p className="mb-1 px-2 font-medium font-mono text-[0.625rem] text-clay-inactive uppercase tracking-wider">
+                    {group}
+                  </p>
+                  <ul className="space-y-0.5">
+                    {items.map((component) => (
+                      <li key={component.slug}>
+                        <a
+                          href={`/components/${component.slug}`}
+                          className={navItemClass(`/components/${component.slug}`)}
+                        >
+                          {component.name}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })}
           </nav>
         </div>
       )}

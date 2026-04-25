@@ -6,7 +6,7 @@ import {
   CardTitle,
 } from '@brika/clay/components/card';
 
-/** A plain summary card — the default accent-less variant. */
+/** Plain card. */
 export function CardDefaultDemo() {
   return (
     <Card className="w-72">
@@ -19,19 +19,23 @@ export function CardDefaultDemo() {
   );
 }
 
-/** A card with an accent colour keyed to the theme's `--data-*` scale. */
+/** Accent variants — keyed to the theme's --data-* scale. */
 export function CardAccentDemo() {
   return (
-    <Card accent="emerald" className="w-72">
-      <CardHeader>
-        <CardTitle>3 plugins updated</CardTitle>
-        <CardDescription>Restart the hub to apply.</CardDescription>
-      </CardHeader>
-    </Card>
+    <div className="flex flex-wrap gap-3">
+      {(['blue', 'emerald', 'orange'] as const).map((accent) => (
+        <Card key={accent} accent={accent} className="w-44">
+          <CardHeader>
+            <CardTitle className="capitalize">{accent}</CardTitle>
+            <CardDescription>Accent {accent}</CardDescription>
+          </CardHeader>
+        </Card>
+      ))}
+    </div>
   );
 }
 
-/** Interactive card — hover lifts the surface and highlights the border. */
+/** Interactive — hover lift. */
 export function CardInteractiveDemo() {
   return (
     <Card interactive className="w-72">
