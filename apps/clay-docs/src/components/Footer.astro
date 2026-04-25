@@ -1,0 +1,58 @@
+---
+declare const __CLAY_VERSION__: string;
+declare const __BUILD_COMMIT__: string;
+
+const clayVersion = typeof __CLAY_VERSION__ === 'string' ? __CLAY_VERSION__ : 'dev';
+const buildCommit = typeof __BUILD_COMMIT__ === 'string' ? __BUILD_COMMIT__ : 'dev';
+---
+
+<footer class="mt-16 border-clay-hairline border-t bg-clay-canvas">
+  <div class="mx-auto flex max-w-6xl flex-col gap-6 px-6 py-10 md:flex-row md:items-start md:justify-between md:px-10">
+    <div>
+      <p class="font-medium font-mono text-clay-strong text-sm">@brika/clay</p>
+      <p class="mt-1 max-w-sm text-clay-subtle text-xs leading-relaxed">
+        Pressable raw material. Brika's React component library — tokens, themes, and primitives in one place.
+      </p>
+      <p class="mt-3 font-mono text-clay-inactive text-[0.625rem]">
+        v{clayVersion} · {buildCommit}
+      </p>
+    </div>
+
+    <div class="grid grid-cols-2 gap-x-10 gap-y-1.5 text-sm md:grid-cols-3">
+      <p class="col-span-full font-medium font-mono text-[0.625rem] text-clay-subtle uppercase tracking-wider">
+        Navigate
+      </p>
+      <a href="/installation" class="text-clay-default transition-colors hover:text-clay-strong">
+        Installation
+      </a>
+      <a href="/components" class="text-clay-default transition-colors hover:text-clay-strong">
+        Components
+      </a>
+      <a href="/colors" class="text-clay-default transition-colors hover:text-clay-strong">
+        Colors
+      </a>
+      <a href="/themes" class="text-clay-default transition-colors hover:text-clay-strong">
+        Themes
+      </a>
+      <a
+        href="https://github.com/brikalabs/brika"
+        rel="noopener noreferrer"
+        class="text-clay-default transition-colors hover:text-clay-strong"
+      >
+        GitHub
+      </a>
+      <a
+        href="https://github.com/brikalabs/brika/issues"
+        rel="noopener noreferrer"
+        class="text-clay-default transition-colors hover:text-clay-strong"
+      >
+        Issues
+      </a>
+    </div>
+  </div>
+  <div class="border-clay-hairline border-t">
+    <div class="mx-auto max-w-6xl px-6 py-3 font-mono text-clay-inactive text-[0.6875rem] md:px-10">
+      Built with Brika · MIT licensed
+    </div>
+  </div>
+</footer>

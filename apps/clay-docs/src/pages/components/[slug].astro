@@ -1,6 +1,6 @@
 ---
 import { DemoRenderer } from '~/components/DemoRenderer.tsx';
-import { CodeSource } from '~/components/docs/CodeSource.tsx';
+import CodeSource from '~/components/docs/CodeSource.astro';
 import ComponentExample from '~/components/docs/ComponentExample.astro';
 import MdxDocLayout from '~/layouts/MdxDocLayout.astro';
 import { adjacentComponents, COMPONENTS, type ComponentEntry } from '~/lib/component-registry';
@@ -61,8 +61,8 @@ const subHeadingClass = 'mb-2 scroll-mt-24 font-medium text-clay-strong text-lg 
       Pull {component.name} from the barrel for everyday use, or the granular path when you want a
       tighter bundle.
     </p>
-    <CodeSource code={barrelImport} lang="tsx" filename="Barrel" client:load />
-    <CodeSource code={granularImport} lang="tsx" filename="Granular" client:load />
+    <CodeSource code={barrelImport} lang="tsx" filename="Barrel" />
+    <CodeSource code={granularImport} lang="tsx" filename="Granular" />
   </section>
 
   {
@@ -72,7 +72,7 @@ const subHeadingClass = 'mb-2 scroll-mt-24 font-medium text-clay-strong text-lg 
           Usage
         </h2>
         <p class="mb-4 text-clay-default text-sm leading-relaxed">A minimal example to copy.</p>
-        <CodeSource code={heroDemo.code} lang="tsx" filename={`${component.name}.tsx`} client:load />
+        <CodeSource code={heroDemo.code} lang="tsx" filename={`${component.name}.tsx`} />
       </section>
     )
   }
@@ -155,17 +155,25 @@ const subHeadingClass = 'mb-2 scroll-mt-24 font-medium text-clay-strong text-lg 
     </p>
   </section>
 
-  <nav class="not-prose mt-16 flex items-stretch gap-4 border-clay-hairline border-t pt-6">
+  <nav class="not-prose mt-20 flex items-stretch gap-3 border-clay-hairline border-t pt-8">
     {
       previous ? (
         <a
           href={`/components/${previous.slug}`}
-          class="group flex flex-1 flex-col items-start gap-1 rounded-lg border border-clay-hairline bg-clay-elevated px-4 py-3 transition-colors hover:bg-clay-control"
+          class="group flex flex-1 items-center gap-3 rounded-lg border border-clay-hairline bg-clay-elevated px-4 py-3 transition-all hover:border-clay-brand/60 hover:bg-clay-base"
         >
-          <span class="font-mono text-[0.625rem] text-clay-subtle uppercase tracking-wider">
-            ← Previous
+          <span
+            aria-hidden="true"
+            class="font-mono text-clay-inactive text-base transition-colors group-hover:text-clay-brand"
+          >
+            ←
           </span>
-          <span class="font-medium text-clay-strong text-sm">{previous.name}</span>
+          <span class="flex flex-col items-start gap-0.5">
+            <span class="font-mono text-[0.625rem] text-clay-subtle uppercase tracking-wider">
+              Previous
+            </span>
+            <span class="font-medium text-clay-strong text-sm">{previous.name}</span>
+          </span>
         </a>
       ) : (
         <span class="flex-1" />
@@ -175,12 +183,20 @@ const subHeadingClass = 'mb-2 scroll-mt-24 font-medium text-clay-strong text-lg 
       next ? (
         <a
           href={`/components/${next.slug}`}
-          class="group flex flex-1 flex-col items-end gap-1 rounded-lg border border-clay-hairline bg-clay-elevated px-4 py-3 transition-colors hover:bg-clay-control"
+          class="group flex flex-1 items-center justify-end gap-3 rounded-lg border border-clay-hairline bg-clay-elevated px-4 py-3 transition-all hover:border-clay-brand/60 hover:bg-clay-base"
         >
-          <span class="font-mono text-[0.625rem] text-clay-subtle uppercase tracking-wider">
-            Next →
+          <span class="flex flex-col items-end gap-0.5">
+            <span class="font-mono text-[0.625rem] text-clay-subtle uppercase tracking-wider">
+              Next
+            </span>
+            <span class="font-medium text-clay-strong text-sm">{next.name}</span>
           </span>
-          <span class="font-medium text-clay-strong text-sm">{next.name}</span>
+          <span
+            aria-hidden="true"
+            class="font-mono text-clay-inactive text-base transition-colors group-hover:text-clay-brand"
+          >
+            →
+          </span>
         </a>
       ) : (
         <span class="flex-1" />

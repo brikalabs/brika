@@ -58,20 +58,25 @@ export function OnThisPage() {
 
   return (
     <nav aria-label="On this page" className="text-sm">
-      <p className="mb-3 font-medium font-mono text-[0.6875rem] text-clay-subtle uppercase tracking-wider">
-        On this page
-      </p>
-      <ul className="space-y-1.5">
+      <div className="mb-3 flex items-center gap-2">
+        <span aria-hidden="true" className="h-px flex-1 bg-clay-hairline" />
+        <p className="font-medium font-mono text-[0.625rem] text-clay-subtle uppercase tracking-[0.12em]">
+          On this page
+        </p>
+        <span aria-hidden="true" className="h-px flex-1 bg-clay-hairline" />
+      </div>
+      <ul className="space-y-1">
         {headings.map((heading) => {
           const active = heading.id === activeId;
+          const indent = heading.level === 3 ? 'pl-5' : 'pl-2';
           return (
-            <li key={heading.id} className={heading.level === 3 ? 'pl-3' : ''}>
+            <li key={heading.id}>
               <a
                 href={`#${heading.id}`}
                 className={
                   active
-                    ? 'block border-clay-brand border-l-2 pl-2 font-medium text-clay-strong leading-snug'
-                    : 'block border-transparent border-l-2 pl-2 text-clay-subtle leading-snug transition-colors hover:text-clay-default'
+                    ? `block border-clay-brand border-l-2 py-0.5 ${indent} font-medium text-clay-strong text-xs leading-snug`
+                    : `block border-transparent border-l-2 py-0.5 ${indent} text-clay-subtle text-xs leading-snug transition-colors hover:text-clay-default`
                 }
               >
                 {heading.text}

@@ -1,0 +1,159 @@
+---
+import { Code } from 'astro:components';
+
+/**
+ * Single source-of-truth code block for the docs site.
+ *
+ * Renders Astro's bundled Shiki via `<Code>`. Crucially, this component
+ * uses only `--color-clay-*` chrome tokens (never the theme-aware
+ * `--color-primary` etc.) so the code-block visuals stay constant when
+ * the reader picks a Clay theme — only demo previews should change.
+ *
+ * `variant="compact"` drops the header (used inside ComponentExample where
+ * the demo above already provides visual context).
+ */
+
+interface Props {
+  readonly code: string;
+  readonly lang?: 'tsx' | 'ts' | 'jsx' | 'js' | 'bash' | 'css' | 'html' | 'json';
+  readonly filename?: string;
+  readonly variant?: 'default' | 'compact';
+}
+
+const { code, lang = 'tsx', filename, variant = 'default' } = Astro.props;
+const showHeader = variant === 'default';
+const lineCount = code
+  .split('\n')
+  .filter((_, index, arr) => index < arr.length - 1 || arr[index].length > 0).length;
+---
+
+<div class="clay-code-source not-prose group relative my-4 overflow-hidden rounded-lg border border-clay-hairline bg-clay-base">
+  {
+    showHeader && (
+      <div class="flex items-center justify-between border-clay-hairline border-b bg-clay-elevated px-3 py-1.5">
+        <div class="flex min-w-0 flex-1 items-center gap-2 font-mono text-xs">
+          <span class="rounded bg-clay-control px-1.5 py-0.5 text-[0.625rem] text-clay-subtle uppercase tracking-wider">
+            {lang}
+          </span>
+          {filename && (
+            <span class="min-w-0 truncate text-clay-default">{filename}</span>
+          )}
+          <span class="text-clay-inactive text-[0.625rem]">
+            {lineCount} {lineCount === 1 ? 'line' : 'lines'}
+          </span>
+        </div>
+        <button
+          type="button"
+          class="copy-button inline-flex size-7 items-center justify-center rounded text-clay-subtle transition-colors hover:bg-clay-control hover:text-clay-default"
+          data-copy-text={code}
+          aria-label="Copy code to clipboard"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="14"
+            height="14"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.75"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="copy-icon"
+            aria-hidden="true"
+          >
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+          </svg>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            width="14"
+            height="14"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="check-icon hidden text-clay-brand"
+            aria-hidden="true"
+          >
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+        </button>
+      </div>
+    )
+  }
+  <div class={`overflow-x-auto font-mono text-sm ${showHeader ? 'p-4' : 'p-3 pr-12'}`}>
+    <Code
+      code={code}
+      lang={lang}
+      themes={{ light: 'github-light', dark: 'vesper' }}
+      defaultColor={false}
+    />
+  </div>
+  {
+    !showHeader && (
+      <button
+        type="button"
+        class="copy-button absolute top-2 right-2 inline-flex size-7 items-center justify-center rounded border border-clay-hairline bg-clay-elevated text-clay-subtle opacity-0 transition-all hover:bg-clay-control hover:text-clay-default group-hover:opacity-100"
+        data-copy-text={code}
+        aria-label="Copy code to clipboard"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          width="14"
+          height="14"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.75"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          class="copy-icon"
+          aria-hidden="true"
+        >
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+        </svg>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          width="14"
+          height="14"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          class="check-icon hidden text-clay-brand"
+          aria-hidden="true"
+        >
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
+      </button>
+    )
+  }
+</div>
+
+<script>
+  for (const btn of document.querySelectorAll<HTMLButtonElement>('.copy-button[data-copy-text]')) {
+    btn.addEventListener('click', async () => {
+      const text = btn.dataset.copyText ?? '';
+      const copy = btn.querySelector<SVGElement>('.copy-icon');
+      const check = btn.querySelector<SVGElement>('.check-icon');
+      try {
+        await navigator.clipboard.writeText(text);
+        if (copy && check) {
+          copy.classList.add('hidden');
+          check.classList.remove('hidden');
+          setTimeout(() => {
+            copy.classList.remove('hidden');
+            check.classList.add('hidden');
+          }, 1400);
+        }
+      } catch {
+        // Clipboard blocked — keep button state.
+      }
+    });
+  }
+</script>

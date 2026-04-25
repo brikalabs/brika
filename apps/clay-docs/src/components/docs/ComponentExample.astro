@@ -1,10 +1,13 @@
 ---
-import { CodeSource } from './CodeSource.tsx';
+import CodeSource from './CodeSource.astro';
 
 /**
  * Renders a live demo above a syntax-highlighted code block. Delegates to
- * `<CodeSource variant="compact">` (which wraps Clay's CodeBlock primitive)
- * so docs and runtime markdown render identically.
+ * `<CodeSource variant="compact">` so docs surfaces share styling and stay
+ * docs-themed (not pulled along when the reader picks a Clay theme).
+ *
+ * The preview surface uses `--color-clay-elevated` (chrome token) and
+ * gets a subtle dotted grid so demo components have visual weight.
  */
 
 interface Props {
@@ -15,11 +18,37 @@ interface Props {
 const { code, lang = 'tsx' } = Astro.props;
 ---
 
-<div class="not-prose my-6 overflow-hidden rounded-lg border border-clay-hairline">
-  <div class="flex min-h-45 items-center justify-center bg-clay-elevated p-8">
-    <slot />
+<div class="not-prose my-6 overflow-hidden rounded-lg border border-clay-hairline shadow-sm">
+  <div class="component-preview-surface relative flex min-h-60 items-center justify-center p-10">
+    <div class="relative z-10">
+      <slot />
+    </div>
   </div>
   <div class="border-clay-hairline border-t bg-clay-base">
-    <CodeSource code={code} lang={lang} variant="compact" client:load />
+    <CodeSource code={code} lang={lang} variant="compact" />
   </div>
 </div>
+
+<style is:global>
+  .component-preview-surface {
+    background-color: var(--color-clay-elevated);
+    background-image:
+      linear-gradient(var(--color-clay-hairline) 1px, transparent 1px),
+      linear-gradient(90deg, var(--color-clay-hairline) 1px, transparent 1px);
+    background-size: 24px 24px;
+    background-position: -1px -1px;
+  }
+
+  .component-preview-surface::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      to bottom,
+      transparent 0%,
+      var(--color-clay-elevated) 100%
+    );
+    opacity: 0.55;
+    pointer-events: none;
+  }
+</style>
