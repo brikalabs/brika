@@ -167,8 +167,8 @@ export function ThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
           return;
         }
         if (remote.theme && remote.theme !== theme) {
-          cacheTheme(remote.theme as ThemeName);
-          setThemeState(remote.theme as ThemeName);
+          cacheTheme(remote.theme);
+          setThemeState(remote.theme);
         }
         if (remote.mode && remote.mode !== mode) {
           cacheMode(remote.mode);

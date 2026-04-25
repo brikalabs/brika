@@ -76,7 +76,10 @@ export function useHistory<T>(initial: T, options: Options = {}): HistoryApi<T> 
       if (prev.past.length === 0) {
         return prev;
       }
-      const previous = prev.past[prev.past.length - 1];
+      const previous = prev.past.at(-1);
+      if (previous === undefined) {
+        return prev;
+      }
       return {
         past: prev.past.slice(0, -1),
         present: previous,

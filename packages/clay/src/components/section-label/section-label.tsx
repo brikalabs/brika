@@ -37,7 +37,13 @@ interface SectionLabelProps
   icon?: LucideIcon;
 }
 
-function SectionLabel({ className, tone, icon: Icon, children, ...props }: SectionLabelProps) {
+function SectionLabel({
+  className,
+  tone,
+  icon: Icon,
+  children,
+  ...props
+}: Readonly<SectionLabelProps>) {
   return (
     <div
       data-slot="section-label"

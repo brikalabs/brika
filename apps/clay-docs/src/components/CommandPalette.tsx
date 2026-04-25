@@ -24,6 +24,22 @@ export function CommandPalette() {
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const dialogRef = useRef<HTMLDialogElement | null>(null);
+
+  // Drive the native <dialog>'s open state imperatively. `showModal()`
+  // wires up Escape-to-close + focus trap; the `close` event syncs back
+  // to React state when the user dismisses with Escape or close().
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) {
+      return;
+    }
+    if (open && !dialog.open) {
+      dialog.showModal();
+    } else if (!open && dialog.open) {
+      dialog.close();
+    }
+  }, [open]);
 
   const filtered = useMemo(() => sitePages.filter((page) => matches(query, page)), [query]);
 
@@ -40,11 +56,11 @@ export function CommandPalette() {
       }
     };
     const onOpenEvent = () => setOpen(true);
-    window.addEventListener('keydown', onKeydown);
-    window.addEventListener(OPEN_EVENT, onOpenEvent);
+    globalThis.addEventListener('keydown', onKeydown);
+    globalThis.addEventListener(OPEN_EVENT, onOpenEvent);
     return () => {
-      window.removeEventListener('keydown', onKeydown);
-      window.removeEventListener(OPEN_EVENT, onOpenEvent);
+      globalThis.removeEventListener('keydown', onKeydown);
+      globalThis.removeEventListener(OPEN_EVENT, onOpenEvent);
     };
   }, [open]);
 
@@ -68,7 +84,7 @@ export function CommandPalette() {
 
   const navigate = (href: string) => {
     setOpen(false);
-    window.location.href = href;
+    globalThis.location.href = href;
   };
 
   const onInputKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
@@ -91,10 +107,6 @@ export function CommandPalette() {
     }
   };
 
-  if (!open) {
-    return null;
-  }
-
   const groups = new Map<string, typeof sitePages>();
   for (const page of filtered) {
     const bucket = groups.get(page.group);
@@ -108,18 +120,23 @@ export function CommandPalette() {
   let visualIndex = -1;
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
+    <dialog
+      ref={dialogRef}
       aria-label="Command palette"
-      className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 px-4 pt-[15vh] backdrop-blur-sm"
-      onClick={(event) => {
-        if (event.target === event.currentTarget) {
-          setOpen(false);
-        }
-      }}
+      onClose={() => setOpen(false)}
+      className="m-0 max-h-none max-w-none rounded-none border-0 bg-transparent p-0 backdrop:bg-black/40 backdrop:backdrop-blur-sm open:fixed open:inset-0 open:z-50 open:flex open:items-start open:justify-center open:px-4 open:pt-[15vh]"
     >
-      <div className="w-full max-w-lg overflow-hidden rounded-lg border border-clay-hairline bg-clay-elevated shadow-2xl">
+      {/* Backdrop close — a real <button> filling the dialog so click-
+          outside dismisses without putting a click handler on the
+          (lint-considered-non-interactive) <dialog> itself. */}
+      <button
+        type="button"
+        aria-label="Close command palette"
+        onClick={() => setOpen(false)}
+        className="fixed inset-0 -z-10 cursor-default"
+        tabIndex={-1}
+      />
+      <div className="relative w-full max-w-lg overflow-hidden rounded-lg border border-clay-hairline bg-clay-elevated shadow-2xl">
         <div className="flex items-center gap-3 border-clay-hairline border-b px-4 py-3">
           <Search size={16} className="text-clay-subtle" aria-hidden="true" />
           <input
@@ -181,16 +198,16 @@ export function CommandPalette() {
         </div>
         <div className="flex items-center justify-between border-clay-hairline border-t bg-clay-base px-4 py-2 font-mono text-[0.625rem] text-clay-subtle">
           <span>
-            <kbd className="mr-1 rounded border border-clay-hairline bg-clay-elevated px-1">↑</kbd>
-            <kbd className="mr-1 rounded border border-clay-hairline bg-clay-elevated px-1">↓</kbd>
+            <kbd className="mr-1 rounded border border-clay-hairline bg-clay-elevated px-1">↑</kbd>{' '}
+            <kbd className="mr-1 rounded border border-clay-hairline bg-clay-elevated px-1">↓</kbd>{' '}
             to navigate
           </span>
           <span>
-            <kbd className="mr-1 rounded border border-clay-hairline bg-clay-elevated px-1">↵</kbd>
+            <kbd className="mr-1 rounded border border-clay-hairline bg-clay-elevated px-1">↵</kbd>{' '}
             to open
           </span>
         </div>
       </div>
-    </div>
+    </dialog>
   );
 }

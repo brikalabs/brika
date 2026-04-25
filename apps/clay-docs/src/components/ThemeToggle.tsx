@@ -9,8 +9,7 @@ function readInitialMode(): Mode {
   if (typeof document === 'undefined') {
     return 'light';
   }
-  const attr = document.documentElement.getAttribute('data-mode');
-  return attr === 'dark' ? 'dark' : 'light';
+  return document.documentElement.dataset.mode === 'dark' ? 'dark' : 'light';
 }
 
 /**
@@ -27,14 +26,15 @@ export function ThemeToggle() {
     setMounted(true);
   }, []);
 
+  const next: Mode = mode === 'light' ? 'dark' : 'light';
+
   const toggle = () => {
-    const next: Mode = mode === 'light' ? 'dark' : 'light';
     setMode(next);
-    document.documentElement.setAttribute('data-mode', next);
+    document.documentElement.dataset.mode = next;
     localStorage.setItem(STORAGE_KEY, next);
   };
 
-  const label = mounted ? `Switch to ${mode === 'light' ? 'dark' : 'light'} mode` : 'Toggle theme';
+  const label = mounted ? `Switch to ${next} mode` : 'Toggle theme';
 
   return (
     <button

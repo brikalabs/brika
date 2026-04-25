@@ -19,35 +19,41 @@ function readInitial(): Manager {
   return isManager(stored) ? stored : 'bun';
 }
 
+interface ManagerSpec {
+  readonly install: string;
+  readonly devFlag: string;
+  /** When `null`, global installs use a separate `${install} global add` form. */
+  readonly globalFlag: string | null;
+}
+
+const SPECS: Readonly<Record<Manager, ManagerSpec>> = {
+  npm: { install: 'npm install', devFlag: '-D', globalFlag: '-g' },
+  pnpm: { install: 'pnpm add', devFlag: '-D', globalFlag: '-g' },
+  bun: { install: 'bun add', devFlag: '-d', globalFlag: '-g' },
+  yarn: { install: 'yarn add', devFlag: '-D', globalFlag: null },
+};
+
 /**
  * Build the install command for the chosen package manager.
  *
  * Handles flag differences between managers:
- * - npm / pnpm / bun: `-D` for dev, `-g` for global.
+ * - npm / pnpm / bun: `-D` (`-d` for bun) for dev, `-g` for global.
  * - yarn: `-D` for dev, but `yarn global add` for global (no `-g` flag).
  */
 function buildCommand(manager: Manager, pkg: string, dev: boolean, isGlobal: boolean): string {
+  const spec = SPECS[manager];
   const target = pkg.trim();
-  switch (manager) {
-    case 'npm': {
-      const flags = [isGlobal ? '-g' : '', dev ? '-D' : ''].filter(Boolean);
-      return ['npm install', ...flags, target].filter(Boolean).join(' ');
-    }
-    case 'pnpm': {
-      const flags = [isGlobal ? '-g' : '', dev ? '-D' : ''].filter(Boolean);
-      return ['pnpm add', ...flags, target].filter(Boolean).join(' ');
-    }
-    case 'yarn': {
-      if (isGlobal) {
-        return `yarn global add ${target}`;
-      }
-      return ['yarn add', dev ? '-D' : '', target].filter(Boolean).join(' ');
-    }
-    case 'bun': {
-      const flags = [isGlobal ? '-g' : '', dev ? '-d' : ''].filter(Boolean);
-      return ['bun add', ...flags, target].filter(Boolean).join(' ');
-    }
+  if (isGlobal && spec.globalFlag === null) {
+    return `${spec.install.split(' ')[0]} global add ${target}`;
   }
+  const flags: string[] = [];
+  if (isGlobal && spec.globalFlag) {
+    flags.push(spec.globalFlag);
+  }
+  if (dev) {
+    flags.push(spec.devFlag);
+  }
+  return [spec.install, ...flags, target].join(' ');
 }
 
 interface PackageManagerProps {
@@ -80,8 +86,8 @@ export function PackageManager(props: PackageManagerProps) {
         setManager(event.detail);
       }
     };
-    window.addEventListener(SYNC_EVENT, handler);
-    return () => window.removeEventListener(SYNC_EVENT, handler);
+    globalThis.addEventListener(SYNC_EVENT, handler);
+    return () => globalThis.removeEventListener(SYNC_EVENT, handler);
   }, []);
 
   const select = (next: Manager) => {
@@ -94,7 +100,7 @@ export function PackageManager(props: PackageManagerProps) {
     } catch {
       // Storage unavailable — keep the in-memory selection.
     }
-    window.dispatchEvent(new CustomEvent(SYNC_EVENT, { detail: next }));
+    globalThis.dispatchEvent(new CustomEvent(SYNC_EVENT, { detail: next }));
   };
 
   const command = buildCommand(manager, pkg, dev, isGlobal);

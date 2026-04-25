@@ -56,7 +56,7 @@ export function ProgressDisplay({
             <div className="text-muted-foreground">{emptyLogsMessage}</div>
           )}
           {logs.map((log, i) => (
-            <div key={`log-${i}`} className="text-muted-foreground">
+            <div key={`log-${i}-${log.slice(0, 24)}`} className="text-muted-foreground">
               {log}
             </div>
           ))}

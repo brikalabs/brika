@@ -46,11 +46,11 @@ export function CopyPageMenu({ pathname, sourcePath }: CopyPageMenuProps) {
         setOpen(false);
       }
     };
-    window.addEventListener('mousedown', onDocumentClick);
-    window.addEventListener('keydown', onKeydown);
+    globalThis.addEventListener('mousedown', onDocumentClick);
+    globalThis.addEventListener('keydown', onKeydown);
     return () => {
-      window.removeEventListener('mousedown', onDocumentClick);
-      window.removeEventListener('keydown', onKeydown);
+      globalThis.removeEventListener('mousedown', onDocumentClick);
+      globalThis.removeEventListener('keydown', onKeydown);
     };
   }, [open]);
 
