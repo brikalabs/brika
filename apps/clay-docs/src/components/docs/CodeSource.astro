@@ -4,13 +4,17 @@ import { Code } from 'astro:components';
 /**
  * Single source-of-truth code block for the docs site.
  *
- * Renders Astro's bundled Shiki via `<Code>`. Crucially, this component
- * uses only `--color-clay-*` chrome tokens (never the theme-aware
- * `--color-primary` etc.) so the code-block visuals stay constant when
- * the reader picks a Clay theme — only demo previews should change.
+ * Renders Astro's bundled Shiki via `<Code>`. Uses only `--color-clay-*`
+ * chrome tokens (never theme-aware `--color-primary` etc.), so code
+ * blocks stay consistent when the reader picks a Clay theme — only
+ * demo previews recolour.
  *
- * `variant="compact"` drops the header (used inside ComponentExample where
- * the demo above already provides visual context).
+ * Two variants:
+ *  - `default` (stand-alone) wraps in a rounded card with a header
+ *    showing language + filename + copy button.
+ *  - `compact` is meant to slot inside another card (e.g. ComponentExample).
+ *    No outer rounding, no border, no margin. Copy button floats over
+ *    the top-right corner on hover.
  */
 
 interface Props {
@@ -21,24 +25,22 @@ interface Props {
 }
 
 const { code, lang = 'tsx', filename, variant = 'default' } = Astro.props;
-const showHeader = variant === 'default';
+const isDefault = variant === 'default';
 const lineCount = code
   .split('\n')
-  .filter((_, index, arr) => index < arr.length - 1 || arr[index].length > 0).length;
+  .filter((line, index, arr) => index < arr.length - 1 || line.length > 0).length;
 ---
 
-<div class="clay-code-source not-prose group relative my-4 overflow-hidden rounded-lg border border-clay-hairline bg-clay-base">
-  {
-    showHeader && (
+{
+  isDefault ? (
+    <div class="clay-code-source not-prose group relative my-4 overflow-hidden rounded-lg border border-clay-hairline bg-clay-base">
       <div class="flex items-center justify-between border-clay-hairline border-b bg-clay-elevated px-3 py-1.5">
         <div class="flex min-w-0 flex-1 items-center gap-2 font-mono text-xs">
           <span class="rounded bg-clay-control px-1.5 py-0.5 text-[0.625rem] text-clay-subtle uppercase tracking-wider">
             {lang}
           </span>
-          {filename && (
-            <span class="min-w-0 truncate text-clay-default">{filename}</span>
-          )}
-          <span class="text-clay-inactive text-[0.625rem]">
+          {filename && <span class="min-w-0 truncate text-clay-default">{filename}</span>}
+          <span class="text-[0.625rem] text-clay-inactive">
             {lineCount} {lineCount === 1 ? 'line' : 'lines'}
           </span>
         </div>
@@ -81,21 +83,28 @@ const lineCount = code
           </svg>
         </button>
       </div>
-    )
-  }
-  <div class={`overflow-x-auto font-mono text-sm ${showHeader ? 'p-4' : 'p-3 pr-12'}`}>
-    <Code
-      code={code}
-      lang={lang}
-      themes={{ light: 'github-light', dark: 'vesper' }}
-      defaultColor={false}
-    />
-  </div>
-  {
-    !showHeader && (
+      <div class="overflow-x-auto p-4 font-mono text-sm">
+        <Code
+          code={code}
+          lang={lang}
+          themes={{ light: 'github-light', dark: 'vesper' }}
+          defaultColor={false}
+        />
+      </div>
+    </div>
+  ) : (
+    <div class="clay-code-source group relative bg-clay-base">
+      <div class="overflow-x-auto p-4 pr-12 font-mono text-sm">
+        <Code
+          code={code}
+          lang={lang}
+          themes={{ light: 'github-light', dark: 'vesper' }}
+          defaultColor={false}
+        />
+      </div>
       <button
         type="button"
-        class="copy-button absolute top-2 right-2 inline-flex size-7 items-center justify-center rounded border border-clay-hairline bg-clay-elevated text-clay-subtle opacity-0 transition-all hover:bg-clay-control hover:text-clay-default group-hover:opacity-100"
+        class="copy-button absolute top-2 right-2 inline-flex size-7 items-center justify-center rounded text-clay-subtle opacity-0 transition-all hover:bg-clay-control hover:text-clay-default group-hover:opacity-100"
         data-copy-text={code}
         aria-label="Copy code to clipboard"
       >
@@ -131,9 +140,9 @@ const lineCount = code
           <polyline points="20 6 9 17 4 12" />
         </svg>
       </button>
-    )
-  }
-</div>
+    </div>
+  )
+}
 
 <script>
   for (const btn of document.querySelectorAll<HTMLButtonElement>('.copy-button[data-copy-text]')) {

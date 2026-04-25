@@ -2,12 +2,9 @@
 import CodeSource from './CodeSource.astro';
 
 /**
- * Renders a live demo above a syntax-highlighted code block. Delegates to
- * `<CodeSource variant="compact">` so docs surfaces share styling and stay
- * docs-themed (not pulled along when the reader picks a Clay theme).
- *
- * The preview surface uses `--color-clay-elevated` (chrome token) and
- * gets a subtle dotted grid so demo components have visual weight.
+ * Renders a live demo above a syntax-highlighted code block in a single
+ * unified card: rounded outer border, preview on top, code flush below
+ * separated only by a hairline. No nested rounding, no inner panels.
  */
 
 interface Props {
@@ -18,37 +15,22 @@ interface Props {
 const { code, lang = 'tsx' } = Astro.props;
 ---
 
-<div class="not-prose my-6 overflow-hidden rounded-lg border border-clay-hairline shadow-sm">
-  <div class="component-preview-surface relative flex min-h-60 items-center justify-center p-10">
-    <div class="relative z-10">
-      <slot />
-    </div>
+<div class="component-example not-prose my-6 overflow-hidden rounded-lg border border-clay-hairline bg-clay-elevated">
+  <div class="component-example-preview relative flex min-h-50 items-center justify-center px-6 py-10">
+    <slot />
   </div>
-  <div class="border-clay-hairline border-t bg-clay-base">
+  <div class="border-clay-hairline border-t">
     <CodeSource code={code} lang={lang} variant="compact" />
   </div>
 </div>
 
 <style is:global>
-  .component-preview-surface {
-    background-color: var(--color-clay-elevated);
-    background-image:
-      linear-gradient(var(--color-clay-hairline) 1px, transparent 1px),
-      linear-gradient(90deg, var(--color-clay-hairline) 1px, transparent 1px);
-    background-size: 24px 24px;
-    background-position: -1px -1px;
-  }
-
-  .component-preview-surface::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(
-      to bottom,
-      transparent 0%,
-      var(--color-clay-elevated) 100%
+  .component-example-preview {
+    background-image: radial-gradient(
+      circle at 1px 1px,
+      var(--color-clay-hairline) 1px,
+      transparent 0
     );
-    opacity: 0.55;
-    pointer-events: none;
+    background-size: 18px 18px;
   }
 </style>
