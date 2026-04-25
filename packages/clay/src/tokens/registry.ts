@@ -14,6 +14,7 @@
 import {
   borderTokens,
   controlSurfaceTokens,
+  defineComponentTokens,
   focusTokens,
   geometryTokens,
   meta,
@@ -669,574 +670,273 @@ const SEMANTIC_ROLES: readonly TokenSpec[] = [
 // resolves to a Layer 1 role when the theme leaves the override blank.
 // ─────────────────────────────────────────────────────────────
 const COMPONENT_TOKENS: readonly TokenSpec[] = [
-  // Button
-  {
-    name: 'button-radius',
-    layer: 'component',
-    category: 'geometry',
-    appliesTo: 'button',
-    defaultLight: 'var(--radius-control)',
-    description: 'Button corner radius. Falls back to `radius-control`.',
-    themePath: 'components.button.radius',
-    tailwindNamespace: 'radius',
-    utilityAlias: 'button',
-  },
-  {
-    name: 'button-shadow',
-    layer: 'component',
-    category: 'elevation',
-    appliesTo: 'button',
-    defaultLight: 'var(--shadow-surface)',
-    description: 'Resting elevation under a button.',
-    themePath: 'components.button.shadow',
-    tailwindNamespace: 'shadow',
-    utilityAlias: 'button',
-  },
-  {
-    name: 'button-corner-shape',
-    layer: 'component',
-    category: 'geometry',
-    appliesTo: 'button',
-    defaultLight: 'var(--corner-shape, round)',
-    description: 'Corner geometry (round / bevel / squircle / scoop / notch).',
-    themePath: 'components.button.cornerShape',
-  },
-  {
-    name: 'button-filled-container',
-    layer: 'component',
-    category: 'color',
-    appliesTo: 'button',
-    defaultLight: 'var(--primary)',
-    description: 'Background of the filled button variant.',
-    themePath: 'components.button.filledContainer',
-    tailwindNamespace: 'color',
-  },
-  {
-    name: 'button-filled-label',
-    layer: 'component',
-    category: 'color',
-    appliesTo: 'button',
-    defaultLight: 'var(--primary-foreground)',
-    description: 'Label color of the filled button variant.',
-    themePath: 'components.button.filledLabel',
-    tailwindNamespace: 'color',
-  },
-  {
-    name: 'button-outline-border',
-    layer: 'component',
-    category: 'color',
-    appliesTo: 'button',
-    defaultLight: 'var(--border)',
-    description: 'Border color of the outline button variant.',
-    themePath: 'components.button.outlineBorder',
-    tailwindNamespace: 'color',
-  },
-  {
-    name: 'button-outline-label',
-    layer: 'component',
-    category: 'color',
-    appliesTo: 'button',
-    defaultLight: 'var(--foreground)',
-    description: 'Label color of the outline button variant.',
-    themePath: 'components.button.outlineLabel',
-    tailwindNamespace: 'color',
-  },
-
-  // Card
-  {
-    name: 'card-radius',
-    layer: 'component',
-    category: 'geometry',
-    appliesTo: 'card',
-    defaultLight: 'var(--radius-container)',
-    description: 'Card corner radius.',
-    themePath: 'components.card.radius',
-    tailwindNamespace: 'radius',
-    utilityAlias: 'card',
-  },
-  {
-    name: 'card-shadow',
-    layer: 'component',
-    category: 'elevation',
-    appliesTo: 'card',
-    defaultLight: 'var(--shadow-raised)',
-    description: 'Card elevation.',
-    themePath: 'components.card.shadow',
-    tailwindNamespace: 'shadow',
-    utilityAlias: 'card',
-  },
-  {
-    name: 'card-corner-shape',
-    layer: 'component',
-    category: 'geometry',
-    appliesTo: 'card',
-    defaultLight: 'var(--corner-shape, round)',
-    description: 'Card corner geometry.',
-    themePath: 'components.card.cornerShape',
-  },
-  {
-    name: 'card-container',
-    layer: 'component',
-    category: 'color',
-    appliesTo: 'card',
-    defaultLight: 'var(--card)',
-    description: 'Card background.',
-    themePath: 'components.card.container',
-    tailwindNamespace: 'color',
-  },
-  {
-    name: 'card-label',
-    layer: 'component',
-    category: 'color',
-    appliesTo: 'card',
-    defaultLight: 'var(--card-foreground)',
-    description: 'Card text color.',
-    themePath: 'components.card.label',
-    tailwindNamespace: 'color',
-  },
-
-  // Dialog
-  {
-    name: 'dialog-radius',
-    layer: 'component',
-    category: 'geometry',
-    appliesTo: 'dialog',
-    defaultLight: 'var(--radius-surface)',
-    description: 'Dialog corner radius.',
-    themePath: 'components.dialog.radius',
-    tailwindNamespace: 'radius',
-    utilityAlias: 'dialog',
-  },
-  {
-    name: 'dialog-shadow',
-    layer: 'component',
-    category: 'elevation',
-    appliesTo: 'dialog',
-    defaultLight: 'var(--shadow-modal)',
-    description: 'Dialog elevation.',
-    themePath: 'components.dialog.shadow',
-    tailwindNamespace: 'shadow',
-    utilityAlias: 'dialog',
-  },
-  {
-    name: 'dialog-corner-shape',
-    layer: 'component',
-    category: 'geometry',
-    appliesTo: 'dialog',
-    defaultLight: 'var(--corner-shape, round)',
-    description: 'Dialog corner geometry.',
-    themePath: 'components.dialog.cornerShape',
-  },
-  {
-    name: 'dialog-container',
-    layer: 'component',
-    category: 'color',
-    appliesTo: 'dialog',
-    defaultLight: 'var(--popover)',
-    description: 'Dialog background.',
-    themePath: 'components.dialog.container',
-    tailwindNamespace: 'color',
-  },
-  {
-    name: 'dialog-label',
-    layer: 'component',
-    category: 'color',
-    appliesTo: 'dialog',
-    defaultLight: 'var(--popover-foreground)',
-    description: 'Dialog text color.',
-    themePath: 'components.dialog.label',
-    tailwindNamespace: 'color',
-  },
-
-  // Popover
-  {
-    name: 'popover-radius',
-    layer: 'component',
-    category: 'geometry',
-    appliesTo: 'popover',
-    defaultLight: 'var(--radius-surface)',
-    description: 'Popover corner radius.',
-    themePath: 'components.popover.radius',
-    tailwindNamespace: 'radius',
-    utilityAlias: 'popover',
-  },
-  {
-    name: 'popover-shadow',
-    layer: 'component',
-    category: 'elevation',
-    appliesTo: 'popover',
-    defaultLight: 'var(--shadow-overlay)',
-    description: 'Popover elevation.',
-    themePath: 'components.popover.shadow',
-    tailwindNamespace: 'shadow',
-    utilityAlias: 'popover',
-  },
-  {
-    name: 'popover-corner-shape',
-    layer: 'component',
-    category: 'geometry',
-    appliesTo: 'popover',
-    defaultLight: 'var(--corner-shape, round)',
-    description: 'Popover corner geometry.',
-    themePath: 'components.popover.cornerShape',
-  },
-
-  // Tooltip
-  {
-    name: 'tooltip-radius',
-    layer: 'component',
-    category: 'geometry',
-    appliesTo: 'tooltip',
-    defaultLight: 'var(--radius-control)',
-    description: 'Tooltip corner radius.',
-    themePath: 'components.tooltip.radius',
-    tailwindNamespace: 'radius',
-    utilityAlias: 'tooltip',
-  },
-  {
-    name: 'tooltip-shadow',
-    layer: 'component',
-    category: 'elevation',
-    appliesTo: 'tooltip',
-    defaultLight: 'var(--shadow-overlay)',
-    description: 'Tooltip elevation.',
-    themePath: 'components.tooltip.shadow',
-    tailwindNamespace: 'shadow',
-    utilityAlias: 'tooltip',
-  },
-  {
-    name: 'tooltip-corner-shape',
-    layer: 'component',
-    category: 'geometry',
-    appliesTo: 'tooltip',
-    defaultLight: 'var(--corner-shape, round)',
-    description: 'Tooltip corner geometry.',
-    themePath: 'components.tooltip.cornerShape',
-  },
-
-  // Input — covers Input, Textarea, Select trigger, PasswordInput
-  {
-    name: 'input-radius',
-    layer: 'component',
-    category: 'geometry',
-    appliesTo: 'input',
-    defaultLight: 'var(--radius-control)',
-    description: 'Input corner radius.',
-    themePath: 'components.input.radius',
-    tailwindNamespace: 'radius',
-    utilityAlias: 'input',
-  },
-  {
-    name: 'input-corner-shape',
-    layer: 'component',
-    category: 'geometry',
-    appliesTo: 'input',
-    defaultLight: 'var(--corner-shape, round)',
-    description: 'Input corner geometry.',
-    themePath: 'components.input.cornerShape',
-  },
-  {
-    name: 'input-container',
-    layer: 'component',
-    category: 'color',
-    appliesTo: 'input',
-    defaultLight: 'var(--background)',
-    description: 'Input background.',
-    themePath: 'components.input.container',
-    tailwindNamespace: 'color',
-  },
-  {
-    name: 'input-label',
-    layer: 'component',
-    category: 'color',
-    appliesTo: 'input',
-    defaultLight: 'var(--foreground)',
-    description: 'Input text color.',
-    themePath: 'components.input.label',
-    tailwindNamespace: 'color',
-  },
-  {
-    name: 'input-border',
-    layer: 'component',
-    category: 'color',
-    appliesTo: 'input',
-    defaultLight: 'var(--input)',
-    description: 'Input border color.',
-    themePath: 'components.input.border',
-    tailwindNamespace: 'color',
-  },
-  {
-    name: 'input-placeholder',
-    layer: 'component',
-    category: 'color',
-    appliesTo: 'input',
-    defaultLight: 'var(--muted-foreground)',
-    description: 'Input placeholder text color.',
-    themePath: 'components.input.placeholder',
-    tailwindNamespace: 'color',
-  },
-
-  // Select
-  {
-    name: 'select-radius',
-    layer: 'component',
-    category: 'geometry',
-    appliesTo: 'select',
-    defaultLight: 'var(--radius-control)',
-    description: 'Select trigger corner radius.',
-    themePath: 'components.select.radius',
-    tailwindNamespace: 'radius',
-    utilityAlias: 'select',
-  },
-  {
-    name: 'select-corner-shape',
-    layer: 'component',
-    category: 'geometry',
-    appliesTo: 'select',
-    defaultLight: 'var(--corner-shape, round)',
-    description: 'Select corner geometry.',
-    themePath: 'components.select.cornerShape',
-  },
-
-  // Menu (dropdown-menu, context-menu surfaces)
-  {
-    name: 'menu-radius',
-    layer: 'component',
-    category: 'geometry',
-    appliesTo: 'menu',
-    defaultLight: 'var(--radius-surface)',
-    description: 'Menu surface corner radius.',
-    themePath: 'components.menu.radius',
-    tailwindNamespace: 'radius',
-    utilityAlias: 'menu',
-  },
-  {
-    name: 'menu-shadow',
-    layer: 'component',
-    category: 'elevation',
-    appliesTo: 'menu',
-    defaultLight: 'var(--shadow-overlay)',
-    description: 'Menu surface elevation.',
-    themePath: 'components.menu.shadow',
-    tailwindNamespace: 'shadow',
-    utilityAlias: 'menu',
-  },
-  {
-    name: 'menu-corner-shape',
-    layer: 'component',
-    category: 'geometry',
-    appliesTo: 'menu',
-    defaultLight: 'var(--corner-shape, round)',
-    description: 'Menu surface corner geometry.',
-    themePath: 'components.menu.cornerShape',
-  },
-  {
-    name: 'menu-item-radius',
-    layer: 'component',
-    category: 'geometry',
-    appliesTo: 'menu-item',
-    defaultLight: 'var(--radius-control)',
-    description: 'Menu-item corner radius.',
-    themePath: 'components.menuItem.radius',
-    tailwindNamespace: 'radius',
-    utilityAlias: 'menu-item',
-  },
-  {
-    name: 'menu-item-corner-shape',
-    layer: 'component',
-    category: 'geometry',
-    appliesTo: 'menu-item',
-    defaultLight: 'var(--corner-shape, round)',
-    description: 'Menu-item corner geometry.',
-    themePath: 'components.menuItem.cornerShape',
-  },
-
-  // Checkbox
-  {
-    name: 'checkbox-radius',
-    layer: 'component',
-    category: 'geometry',
-    appliesTo: 'checkbox',
-    defaultLight: 'var(--radius-tight)',
-    description: 'Checkbox corner radius.',
-    themePath: 'components.checkbox.radius',
-    tailwindNamespace: 'radius',
-    utilityAlias: 'checkbox',
-  },
-  {
-    name: 'checkbox-corner-shape',
-    layer: 'component',
-    category: 'geometry',
-    appliesTo: 'checkbox',
-    defaultLight: 'var(--corner-shape, round)',
-    description: 'Checkbox corner geometry.',
-    themePath: 'components.checkbox.cornerShape',
-  },
-
-  // Badge
-  {
-    name: 'badge-radius',
-    layer: 'component',
-    category: 'geometry',
-    appliesTo: 'badge',
-    defaultLight: 'var(--radius-pill)',
-    description: 'Badge corner radius.',
-    themePath: 'components.badge.radius',
-    tailwindNamespace: 'radius',
-    utilityAlias: 'badge',
-  },
-  {
-    name: 'badge-corner-shape',
-    layer: 'component',
-    category: 'geometry',
-    appliesTo: 'badge',
-    defaultLight: 'var(--corner-shape, round)',
-    description: 'Badge corner geometry.',
-    themePath: 'components.badge.cornerShape',
-  },
-
-  // Tabs
-  {
-    name: 'tabs-radius',
-    layer: 'component',
-    category: 'geometry',
-    appliesTo: 'tabs',
-    defaultLight: 'var(--radius-control)',
-    description: 'Tabs corner radius.',
-    themePath: 'components.tabs.radius',
-    tailwindNamespace: 'radius',
-    utilityAlias: 'tabs',
-  },
-  {
-    name: 'tabs-corner-shape',
-    layer: 'component',
-    category: 'geometry',
-    appliesTo: 'tabs',
-    defaultLight: 'var(--corner-shape, round)',
-    description: 'Tabs corner geometry.',
-    themePath: 'components.tabs.cornerShape',
-  },
-
   // Alert
-  {
-    name: 'alert-radius',
-    layer: 'component',
-    category: 'geometry',
-    appliesTo: 'alert',
-    defaultLight: 'var(--radius-container)',
-    description: 'Alert corner radius.',
-    themePath: 'components.alert.radius',
-    tailwindNamespace: 'radius',
-    utilityAlias: 'alert',
-  },
-  {
-    name: 'alert-corner-shape',
-    layer: 'component',
-    category: 'geometry',
-    appliesTo: 'alert',
-    defaultLight: 'var(--corner-shape, round)',
-    description: 'Alert corner geometry.',
-    themePath: 'components.alert.cornerShape',
-  },
-
-  // Toast
-  {
-    name: 'toast-radius',
-    layer: 'component',
-    category: 'geometry',
-    appliesTo: 'toast',
-    defaultLight: 'var(--radius-container)',
-    description: 'Toast corner radius.',
-    themePath: 'components.toast.radius',
-    tailwindNamespace: 'radius',
-    utilityAlias: 'toast',
-  },
-  {
-    name: 'toast-shadow',
-    layer: 'component',
-    category: 'elevation',
-    appliesTo: 'toast',
-    defaultLight: 'var(--shadow-spotlight)',
-    description: 'Toast elevation.',
-    themePath: 'components.toast.shadow',
-    tailwindNamespace: 'shadow',
-    utilityAlias: 'toast',
-  },
-  {
-    name: 'toast-corner-shape',
-    layer: 'component',
-    category: 'geometry',
-    appliesTo: 'toast',
-    defaultLight: 'var(--corner-shape, round)',
-    description: 'Toast corner geometry.',
-    themePath: 'components.toast.cornerShape',
-  },
+  ...defineComponentTokens(meta('alert'), {
+    radius: {
+      default: 'var(--radius-container)',
+      description: 'Alert corner radius.',
+      alias: 'alert',
+    },
+    'corner-shape': {
+      default: 'var(--corner-shape, round)',
+      description: 'Alert corner geometry.',
+    },
+  }),
 
   // Avatar
-  {
-    name: 'avatar-radius',
-    layer: 'component',
-    category: 'geometry',
-    appliesTo: 'avatar',
-    defaultLight: '9999px',
-    description: 'Avatar corner radius. Default is fully circular.',
-    themePath: 'components.avatar.radius',
-    tailwindNamespace: 'radius',
-    utilityAlias: 'avatar',
-  },
-  {
-    name: 'avatar-corner-shape',
-    layer: 'component',
-    category: 'geometry',
-    appliesTo: 'avatar',
-    defaultLight: 'var(--corner-shape, round)',
-    description: 'Avatar corner geometry.',
-    themePath: 'components.avatar.cornerShape',
-  },
+  ...defineComponentTokens(meta('avatar'), {
+    radius: {
+      default: '9999px',
+      description: 'Avatar corner radius. Default is fully circular.',
+      alias: 'avatar',
+    },
+    'corner-shape': {
+      default: 'var(--corner-shape, round)',
+      description: 'Avatar corner geometry.',
+    },
+  }),
+
+  // Badge
+  ...defineComponentTokens(meta('badge'), {
+    radius: { default: 'var(--radius-pill)', description: 'Badge corner radius.', alias: 'badge' },
+    'corner-shape': {
+      default: 'var(--corner-shape, round)',
+      description: 'Badge corner geometry.',
+    },
+  }),
+
+  // Button
+  ...defineComponentTokens(meta('button'), {
+    radius: {
+      default: 'var(--radius-control)',
+      description: 'Button corner radius. Falls back to `radius-control`.',
+      alias: 'button',
+    },
+    shadow: {
+      default: 'var(--shadow-surface)',
+      description: 'Resting elevation under a button.',
+      alias: 'button',
+    },
+    'corner-shape': {
+      default: 'var(--corner-shape, round)',
+      description: 'Corner geometry (round / bevel / squircle / scoop / notch).',
+    },
+    'filled-container': {
+      default: 'var(--primary)',
+      description: 'Background of the filled button variant.',
+    },
+    'filled-label': {
+      default: 'var(--primary-foreground)',
+      description: 'Label color of the filled button variant.',
+    },
+    'outline-border': {
+      default: 'var(--border)',
+      description: 'Border color of the outline button variant.',
+    },
+    'outline-label': {
+      default: 'var(--foreground)',
+      description: 'Label color of the outline button variant.',
+    },
+  }),
+
+  // Card
+  ...defineComponentTokens(meta('card'), {
+    radius: {
+      default: 'var(--radius-container)',
+      description: 'Card corner radius.',
+      alias: 'card',
+    },
+    shadow: { default: 'var(--shadow-raised)', description: 'Card elevation.', alias: 'card' },
+    'corner-shape': { default: 'var(--corner-shape, round)', description: 'Card corner geometry.' },
+    container: { default: 'var(--card)', description: 'Card background.' },
+    label: { default: 'var(--card-foreground)', description: 'Card text color.' },
+  }),
+
+  // Checkbox
+  ...defineComponentTokens(meta('checkbox'), {
+    radius: {
+      default: 'var(--radius-tight)',
+      description: 'Checkbox corner radius.',
+      alias: 'checkbox',
+    },
+    'corner-shape': {
+      default: 'var(--corner-shape, round)',
+      description: 'Checkbox corner geometry.',
+    },
+  }),
+
+  // Dialog
+  ...defineComponentTokens(meta('dialog'), {
+    radius: {
+      default: 'var(--radius-surface)',
+      description: 'Dialog corner radius.',
+      alias: 'dialog',
+    },
+    shadow: { default: 'var(--shadow-modal)', description: 'Dialog elevation.', alias: 'dialog' },
+    'corner-shape': {
+      default: 'var(--corner-shape, round)',
+      description: 'Dialog corner geometry.',
+    },
+    container: { default: 'var(--popover)', description: 'Dialog background.' },
+    label: { default: 'var(--popover-foreground)', description: 'Dialog text color.' },
+  }),
+
+  // Icon
+  ...defineComponentTokens(meta('icon'), {
+    muted: { default: 'var(--muted-foreground)', description: 'Muted icon color.' },
+    primary: {
+      default: 'var(--primary)',
+      description: 'Primary icon color (interactive accents).',
+    },
+  }),
+
+  // Input
+  ...defineComponentTokens(meta('input'), {
+    radius: {
+      default: 'var(--radius-control)',
+      description: 'Input corner radius.',
+      alias: 'input',
+    },
+    'corner-shape': {
+      default: 'var(--corner-shape, round)',
+      description: 'Input corner geometry.',
+    },
+    container: { default: 'var(--background)', description: 'Input background.' },
+    label: { default: 'var(--foreground)', description: 'Input text color.' },
+    border: { default: 'var(--input)', description: 'Input border color.' },
+    placeholder: {
+      default: 'var(--muted-foreground)',
+      description: 'Input placeholder text color.',
+    },
+  }),
+
+  // Menu
+  ...defineComponentTokens(meta('menu'), {
+    radius: {
+      default: 'var(--radius-surface)',
+      description: 'Menu surface corner radius.',
+      alias: 'menu',
+    },
+    shadow: {
+      default: 'var(--shadow-overlay)',
+      description: 'Menu surface elevation.',
+      alias: 'menu',
+    },
+    'corner-shape': {
+      default: 'var(--corner-shape, round)',
+      description: 'Menu surface corner geometry.',
+    },
+  }),
+
+  // Menu-item
+  ...defineComponentTokens(meta('menu-item'), {
+    radius: {
+      default: 'var(--radius-control)',
+      description: 'Menu-item corner radius.',
+      alias: 'menu-item',
+    },
+    'corner-shape': {
+      default: 'var(--corner-shape, round)',
+      description: 'Menu-item corner geometry.',
+    },
+  }),
+
+  // Popover
+  ...defineComponentTokens(meta('popover'), {
+    radius: {
+      default: 'var(--radius-surface)',
+      description: 'Popover corner radius.',
+      alias: 'popover',
+    },
+    shadow: {
+      default: 'var(--shadow-overlay)',
+      description: 'Popover elevation.',
+      alias: 'popover',
+    },
+    'corner-shape': {
+      default: 'var(--corner-shape, round)',
+      description: 'Popover corner geometry.',
+    },
+  }),
+
+  // Select
+  ...defineComponentTokens(meta('select'), {
+    radius: {
+      default: 'var(--radius-control)',
+      description: 'Select trigger corner radius.',
+      alias: 'select',
+    },
+    'corner-shape': {
+      default: 'var(--corner-shape, round)',
+      description: 'Select corner geometry.',
+    },
+  }),
 
   // Switch
-  {
-    name: 'switch-radius',
-    layer: 'component',
-    category: 'geometry',
-    appliesTo: 'switch',
-    defaultLight: '9999px',
-    description: 'Switch track corner radius. Default is fully rounded.',
-    themePath: 'components.switch.radius',
-    tailwindNamespace: 'radius',
-    utilityAlias: 'switch',
-  },
-  {
-    name: 'switch-corner-shape',
-    layer: 'component',
-    category: 'geometry',
-    appliesTo: 'switch',
-    defaultLight: 'var(--corner-shape, round)',
-    description: 'Switch track corner geometry.',
-    themePath: 'components.switch.cornerShape',
-  },
-  {
-    name: 'switch-thumb-radius',
-    layer: 'component',
-    category: 'geometry',
-    appliesTo: 'switch-thumb',
-    defaultLight: '9999px',
-    description: 'Switch thumb corner radius.',
-    themePath: 'components.switchThumb.radius',
-    tailwindNamespace: 'radius',
-    utilityAlias: 'switch-thumb',
-  },
-  {
-    name: 'switch-thumb-corner-shape',
-    layer: 'component',
-    category: 'geometry',
-    appliesTo: 'switch-thumb',
-    defaultLight: 'var(--corner-shape, round)',
-    description: 'Switch thumb corner geometry.',
-    themePath: 'components.switchThumb.cornerShape',
-  },
+  ...defineComponentTokens(meta('switch'), {
+    radius: {
+      default: '9999px',
+      description: 'Switch track corner radius. Default is fully rounded.',
+      alias: 'switch',
+    },
+    'corner-shape': {
+      default: 'var(--corner-shape, round)',
+      description: 'Switch track corner geometry.',
+    },
+  }),
 
-  // Icon — three foreground levels
+  // Switch-thumb
+  ...defineComponentTokens(meta('switch-thumb'), {
+    radius: {
+      default: '9999px',
+      description: 'Switch thumb corner radius.',
+      alias: 'switch-thumb',
+    },
+    'corner-shape': {
+      default: 'var(--corner-shape, round)',
+      description: 'Switch thumb corner geometry.',
+    },
+  }),
+
+  // Tabs
+  ...defineComponentTokens(meta('tabs'), {
+    radius: { default: 'var(--radius-control)', description: 'Tabs corner radius.', alias: 'tabs' },
+    'corner-shape': { default: 'var(--corner-shape, round)', description: 'Tabs corner geometry.' },
+  }),
+
+  // Toast
+  ...defineComponentTokens(meta('toast'), {
+    radius: {
+      default: 'var(--radius-container)',
+      description: 'Toast corner radius.',
+      alias: 'toast',
+    },
+    shadow: { default: 'var(--shadow-spotlight)', description: 'Toast elevation.', alias: 'toast' },
+    'corner-shape': {
+      default: 'var(--corner-shape, round)',
+      description: 'Toast corner geometry.',
+    },
+  }),
+
+  // Tooltip
+  ...defineComponentTokens(meta('tooltip'), {
+    radius: {
+      default: 'var(--radius-control)',
+      description: 'Tooltip corner radius.',
+      alias: 'tooltip',
+    },
+    shadow: {
+      default: 'var(--shadow-overlay)',
+      description: 'Tooltip elevation.',
+      alias: 'tooltip',
+    },
+    'corner-shape': {
+      default: 'var(--corner-shape, round)',
+      description: 'Tooltip corner geometry.',
+    },
+  }),
+
+  // Irregular blocks not migrated.
   {
     name: 'icon',
     layer: 'component',
@@ -1245,26 +945,6 @@ const COMPONENT_TOKENS: readonly TokenSpec[] = [
     defaultLight: 'var(--foreground)',
     description: 'Default icon color.',
     themePath: 'components.icon.default',
-    tailwindNamespace: 'color',
-  },
-  {
-    name: 'icon-muted',
-    layer: 'component',
-    category: 'color',
-    appliesTo: 'icon',
-    defaultLight: 'var(--muted-foreground)',
-    description: 'Muted icon color.',
-    themePath: 'components.icon.muted',
-    tailwindNamespace: 'color',
-  },
-  {
-    name: 'icon-primary',
-    layer: 'component',
-    category: 'color',
-    appliesTo: 'icon',
-    defaultLight: 'var(--primary)',
-    description: 'Primary icon color (interactive accents).',
-    themePath: 'components.icon.primary',
     tailwindNamespace: 'color',
   },
 ];
@@ -1276,587 +956,198 @@ const COMPONENT_TOKENS: readonly TokenSpec[] = [
 // existing Tailwind class numbers (h-9 = 2.25rem, px-4 = 1rem, etc.).
 // ─────────────────────────────────────────────────────────────
 
-const SPACING_1 = 'calc(var(--spacing) * 1)';
-const SPACING_1_5 = 'calc(var(--spacing) * 1.5)';
-const SPACING_2 = 'calc(var(--spacing) * 2)';
-const SPACING_3 = 'calc(var(--spacing) * 3)';
-const SPACING_4 = 'calc(var(--spacing) * 4)';
-const SPACING_6 = 'calc(var(--spacing) * 6)';
-
 const COMPONENT_EXPANSIONS: readonly TokenSpec[] = [
-  // Button — full interactive control surface
-  ...controlSurfaceTokens(
-    meta('button'),
-    { height: '2.25rem', paddingX: SPACING_4, paddingY: SPACING_2, gap: SPACING_2 },
-    { fontWeight: '500', fontSize: 'var(--text-body-md)' }
-  ),
-
-  // Input / Textarea / PasswordInput — always-bordered (1px) by default.
-  ...controlSurfaceTokens(
-    meta('input'),
-    { height: '2.25rem', paddingX: SPACING_3, paddingY: SPACING_2, gap: SPACING_2 },
-    { fontSize: 'var(--text-body-md)' },
-    '1px'
-  ),
-  ...controlSurfaceTokens(
-    meta('textarea'),
-    { paddingX: SPACING_3, paddingY: SPACING_2, gap: SPACING_2 },
-    { fontSize: 'var(--text-body-md)' },
-    '1px'
-  ),
-  {
-    name: 'textarea-radius',
-    layer: 'component',
-    category: 'geometry',
-    appliesTo: 'textarea',
-    defaultLight: 'var(--radius-control)',
-    description: 'Textarea corner radius.',
-    themePath: 'components.textarea.radius',
-    tailwindNamespace: 'radius',
-    utilityAlias: 'textarea',
-  },
-  ...controlSurfaceTokens(
-    meta('password-input', 'passwordInput'),
-    { height: '2.25rem', paddingX: SPACING_3, paddingY: SPACING_2 },
-    {},
-    '1px'
-  ),
-
-  // Select trigger — always-bordered.
-  ...controlSurfaceTokens(
-    meta('select'),
-    { height: '2.25rem', paddingX: SPACING_3, paddingY: SPACING_2, gap: SPACING_2 },
-    {},
-    '1px'
-  ),
-
-  // Card — surface, no padding height (those are layout-driven)
-  ...borderTokens(meta('card'), '1px'),
-  ...motionTokens(meta('card')),
-  ...typographyTokens(meta('card'), { fontSize: 'var(--text-body-md)' }),
-  ...geometryTokens(meta('card'), { paddingX: SPACING_6, paddingY: SPACING_6, gap: SPACING_4 }),
-  {
-    name: 'card-backdrop-blur',
-    layer: 'component',
-    category: 'elevation',
-    appliesTo: 'card',
-    defaultLight: '0px',
-    description: 'Backdrop blur applied behind a translucent card. Set non-zero for glass.',
-    themePath: 'components.card.backdropBlur',
-  },
-
-  // Dialog — overlay surface
-  ...borderTokens(meta('dialog'), '1px'),
-  ...focusTokens(meta('dialog')),
-  ...motionTokens(meta('dialog')),
-  ...geometryTokens(meta('dialog'), { paddingX: SPACING_6, paddingY: SPACING_6, gap: SPACING_4 }),
-  {
-    name: 'dialog-backdrop-blur',
-    layer: 'component',
-    category: 'elevation',
-    appliesTo: 'dialog',
-    defaultLight: '0px',
-    description: 'Backdrop blur applied behind a translucent dialog.',
-    themePath: 'components.dialog.backdropBlur',
-  },
-
-  // Sheet — slide-in surface
-  {
-    name: 'sheet-radius',
-    layer: 'component',
-    category: 'geometry',
-    appliesTo: 'sheet',
-    defaultLight: 'var(--radius-surface)',
-    description: 'Sheet corner radius.',
-    themePath: 'components.sheet.radius',
-    tailwindNamespace: 'radius',
-    utilityAlias: 'sheet',
-  },
-  {
-    name: 'sheet-shadow',
-    layer: 'component',
-    category: 'elevation',
-    appliesTo: 'sheet',
-    defaultLight: 'var(--shadow-modal)',
-    description: 'Sheet elevation.',
-    themePath: 'components.sheet.shadow',
-    tailwindNamespace: 'shadow',
-    utilityAlias: 'sheet',
-  },
-  ...borderTokens(meta('sheet'), '1px'),
-  ...motionTokens(meta('sheet')),
-  ...geometryTokens(meta('sheet'), { paddingX: SPACING_6, paddingY: SPACING_6, gap: SPACING_4 }),
-  {
-    name: 'sheet-backdrop-blur',
-    layer: 'component',
-    category: 'elevation',
-    appliesTo: 'sheet',
-    defaultLight: '0px',
-    description: 'Backdrop blur applied behind a translucent sheet.',
-    themePath: 'components.sheet.backdropBlur',
-  },
-
-  // Popover — overlay surface
-  ...borderTokens(meta('popover'), '1px'),
-  ...motionTokens(meta('popover')),
-  ...geometryTokens(meta('popover'), { paddingX: SPACING_3, paddingY: SPACING_3, gap: SPACING_2 }),
-  {
-    name: 'popover-backdrop-blur',
-    layer: 'component',
-    category: 'elevation',
-    appliesTo: 'popover',
-    defaultLight: '0px',
-    description: 'Backdrop blur applied behind a translucent popover.',
-    themePath: 'components.popover.backdropBlur',
-  },
-
-  // Tooltip — overlay surface
-  ...borderTokens(meta('tooltip')),
-  ...motionTokens(meta('tooltip')),
-  ...typographyTokens(meta('tooltip'), { fontSize: 'var(--text-label-md)', fontWeight: '500' }),
-  ...geometryTokens(meta('tooltip'), { paddingX: SPACING_2, paddingY: SPACING_1 }),
-
-  // Menu (dropdown surface)
-  ...borderTokens(meta('menu'), '1px'),
-  ...motionTokens(meta('menu')),
-  ...geometryTokens(meta('menu'), { paddingX: SPACING_1, paddingY: SPACING_1, gap: '0.125rem' }),
-  {
-    name: 'menu-backdrop-blur',
-    layer: 'component',
-    category: 'elevation',
-    appliesTo: 'menu',
-    defaultLight: '0px',
-    description: 'Backdrop blur applied behind a translucent dropdown menu.',
-    themePath: 'components.menu.backdropBlur',
-  },
-
-  // Menu item
-  ...controlSurfaceTokens(
-    meta('menu-item', 'menuItem'),
-    { paddingX: SPACING_2, paddingY: SPACING_1_5, gap: SPACING_2 },
-    { fontSize: 'var(--text-body-md)' }
-  ),
-
-  // Badge
-  ...controlSurfaceTokens(
-    meta('badge'),
-    { height: '1.5rem', paddingX: SPACING_2, paddingY: '0.125rem', gap: SPACING_1 },
-    { fontSize: 'var(--text-label-md)', fontWeight: '500' }
-  ),
-
-  // Tabs
-  ...borderTokens(meta('tabs'), '1px'),
-  ...motionTokens(meta('tabs')),
-  ...geometryTokens(meta('tabs'), { gap: SPACING_1 }),
-  {
-    name: 'tabs-trigger-padding-x',
-    layer: 'component',
-    category: 'geometry',
-    appliesTo: 'tabs',
-    defaultLight: SPACING_3,
-    description: 'Inline padding inside a tab trigger.',
-    themePath: 'components.tabs.triggerPaddingX',
-  },
-  {
-    name: 'tabs-trigger-padding-y',
-    layer: 'component',
-    category: 'geometry',
-    appliesTo: 'tabs',
-    defaultLight: SPACING_1_5,
-    description: 'Block padding inside a tab trigger.',
-    themePath: 'components.tabs.triggerPaddingY',
-  },
-  ...focusTokens(meta('tabs')),
-  ...typographyTokens(meta('tabs'), { fontSize: 'var(--text-body-md)' }),
-
-  // Switch
-  ...borderTokens(meta('switch'), '1px'),
-  ...focusTokens(meta('switch')),
-  ...motionTokens(meta('switch')),
-  ...stateTokens(meta('switch')),
-  // Track sizing leaves room for the thumb plus the 1px transparent border
-  // that holds layout when focus draws a coloured border. Track width fits
-  // 2× the thumb (one parked, one full travel) plus padding.
-  {
-    name: 'switch-track-width',
-    layer: 'component',
-    category: 'geometry',
-    type: 'size',
-    appliesTo: 'switch',
-    defaultLight: '2.5rem',
-    description: 'Switch track width. Fits two thumb diameters + padding + border.',
-    themePath: 'components.switch.trackWidth',
-  },
-  {
-    name: 'switch-track-height',
-    layer: 'component',
-    category: 'geometry',
-    appliesTo: 'switch',
-    defaultLight: '1.5rem',
-    description: 'Switch track height. Leaves room for thumb + padding + border.',
-    themePath: 'components.switch.trackHeight',
-  },
-  {
-    name: 'switch-thumb-size',
-    layer: 'component',
-    category: 'geometry',
-    appliesTo: 'switch-thumb',
-    defaultLight: '1rem',
-    description: 'Switch thumb diameter at the default size.',
-    themePath: 'components.switchThumb.size',
-  },
-
-  // Checkbox
-  ...borderTokens(meta('checkbox'), '1px'),
-  ...focusTokens(meta('checkbox')),
-  ...motionTokens(meta('checkbox')),
-  {
-    name: 'checkbox-size',
-    layer: 'component',
-    category: 'geometry',
-    appliesTo: 'checkbox',
-    defaultLight: '1rem',
-    description: 'Checkbox box edge length.',
-    themePath: 'components.checkbox.size',
-  },
-
-  // Slider
-  ...focusTokens(meta('slider')),
-  ...motionTokens(meta('slider')),
-  {
-    name: 'slider-track-height',
-    layer: 'component',
-    category: 'geometry',
-    appliesTo: 'slider',
-    defaultLight: '0.25rem',
-    description: 'Slider track thickness.',
-    themePath: 'components.slider.trackHeight',
-  },
-  {
-    name: 'slider-thumb-size',
-    layer: 'component',
-    category: 'geometry',
-    appliesTo: 'slider',
-    defaultLight: '1rem',
-    description: 'Slider thumb diameter.',
-    themePath: 'components.slider.thumbSize',
-  },
-  {
-    name: 'slider-radius',
-    layer: 'component',
-    category: 'geometry',
-    appliesTo: 'slider',
-    defaultLight: '9999px',
-    description: 'Track corner radius. Set lower for square / brutalist looks.',
-    themePath: 'components.slider.radius',
-    tailwindNamespace: 'radius',
-    utilityAlias: 'slider',
-  },
-  {
-    name: 'slider-thumb-radius',
-    layer: 'component',
-    category: 'geometry',
-    appliesTo: 'slider',
-    defaultLight: '9999px',
-    description: 'Thumb corner radius. Lower for square thumbs.',
-    themePath: 'components.slider.thumbRadius',
-    tailwindNamespace: 'radius',
-    utilityAlias: 'slider-thumb',
-  },
-  {
-    name: 'slider-tick-size',
-    layer: 'component',
-    category: 'geometry',
-    appliesTo: 'slider',
-    defaultLight: '0.25rem',
-    description: 'Tick dot diameter on the track.',
-    themePath: 'components.slider.tickSize',
-  },
-  {
-    name: 'slider-thumb-border-width',
-    layer: 'component',
-    category: 'border',
-    appliesTo: 'slider',
-    defaultLight: '2px',
-    description: 'Thumb border width — the contrast halo between the thumb and the track.',
-    themePath: 'components.slider.thumbBorderWidth',
-  },
-  {
-    name: 'slider-thumb-shadow',
-    layer: 'component',
-    category: 'elevation',
-    appliesTo: 'slider',
-    defaultLight: 'var(--shadow-raised)',
-    description: 'Thumb drop shadow. Falls back to the global `--shadow-raised`.',
-    themePath: 'components.slider.thumbShadow',
-    tailwindNamespace: 'shadow',
-    utilityAlias: 'slider-thumb',
-  },
-  {
-    name: 'slider-track',
-    layer: 'component',
-    category: 'color',
-    appliesTo: 'slider',
-    defaultLight: 'var(--muted)',
-    description: 'Unfilled portion of the track.',
-    themePath: 'components.slider.track',
-    tailwindNamespace: 'color',
-  },
-  {
-    name: 'slider-fill',
-    layer: 'component',
-    category: 'color',
-    appliesTo: 'slider',
-    defaultLight: 'var(--primary)',
-    description: 'Filled portion of the track (left of the thumb).',
-    themePath: 'components.slider.fill',
-    tailwindNamespace: 'color',
-  },
-  {
-    name: 'slider-thumb',
-    layer: 'component',
-    category: 'color',
-    appliesTo: 'slider',
-    defaultLight: 'var(--primary)',
-    description: 'Thumb fill color.',
-    themePath: 'components.slider.thumb',
-    tailwindNamespace: 'color',
-  },
-  {
-    name: 'slider-thumb-border',
-    layer: 'component',
-    category: 'color',
-    appliesTo: 'slider',
-    defaultLight: 'var(--background)',
-    description: 'Thumb border (the halo separating thumb from track).',
-    themePath: 'components.slider.thumbBorder',
-    tailwindNamespace: 'color',
-  },
-  {
-    name: 'slider-tick',
-    layer: 'component',
-    category: 'color',
-    appliesTo: 'slider',
-    defaultLight: 'var(--foreground)',
-    description: 'Inactive tick dot color (over the unfilled track). Used with reduced opacity.',
-    themePath: 'components.slider.tick',
-    tailwindNamespace: 'color',
-  },
-  {
-    name: 'slider-tick-active',
-    layer: 'component',
-    category: 'color',
-    appliesTo: 'slider',
-    defaultLight: 'var(--primary-foreground)',
-    description: 'Active tick dot color (over the filled track). Used with reduced opacity.',
-    themePath: 'components.slider.tickActive',
-    tailwindNamespace: 'color',
-  },
-  {
-    name: 'slider-label',
-    layer: 'component',
-    category: 'color',
-    appliesTo: 'slider',
-    defaultLight: 'var(--muted-foreground)',
-    description: 'Tick label text color.',
-    themePath: 'components.slider.label',
-    tailwindNamespace: 'color',
-  },
-  {
-    name: 'slider-label-active',
-    layer: 'component',
-    category: 'color',
-    appliesTo: 'slider',
-    defaultLight: 'var(--foreground)',
-    description: 'Tick label color when its value matches the current slider value.',
-    themePath: 'components.slider.labelActive',
-    tailwindNamespace: 'color',
-  },
-
   // Avatar
-  ...borderTokens(meta('avatar')),
-  {
-    name: 'avatar-size',
-    layer: 'component',
-    category: 'geometry',
-    appliesTo: 'avatar',
-    defaultLight: '2rem',
-    description: 'Avatar diameter at the default size.',
-    themePath: 'components.avatar.size',
-  },
-
-  // Toast
-  ...borderTokens(meta('toast'), '1px'),
-  ...motionTokens(meta('toast')),
-  ...geometryTokens(meta('toast'), { paddingX: SPACING_4, paddingY: SPACING_3, gap: SPACING_2 }),
-
-  // Alert (alert-dialog inline alert)
-  ...borderTokens(meta('alert'), '1px'),
-  ...geometryTokens(meta('alert'), { paddingX: SPACING_4, paddingY: SPACING_3, gap: SPACING_2 }),
-
-  // Sidebar
-  ...borderTokens(meta('sidebar'), '1px'),
-  ...geometryTokens(meta('sidebar'), { paddingX: SPACING_3, paddingY: SPACING_3, gap: SPACING_2 }),
-  {
-    name: 'sidebar-width',
-    layer: 'component',
-    category: 'geometry',
-    type: 'size',
-    appliesTo: 'sidebar',
-    defaultLight: '16rem',
-    description: 'Sidebar width when expanded.',
-    themePath: 'components.sidebar.width',
-  },
-  {
-    name: 'sidebar-width-icon',
-    layer: 'component',
-    category: 'geometry',
-    type: 'size',
-    appliesTo: 'sidebar',
-    defaultLight: '3rem',
-    description: 'Sidebar width when collapsed to icon-only mode.',
-    themePath: 'components.sidebar.widthIcon',
-  },
-  {
-    name: 'sidebar-width-mobile',
-    layer: 'component',
-    category: 'geometry',
-    type: 'size',
-    appliesTo: 'sidebar',
-    defaultLight: '18rem',
-    description: 'Sidebar width when shown as a mobile sheet.',
-    themePath: 'components.sidebar.widthMobile',
-  },
-
-  // Separator
-  {
-    name: 'separator-color',
-    layer: 'component',
-    category: 'color',
-    appliesTo: 'separator',
-    defaultLight: 'var(--border)',
-    description: 'Separator line color.',
-    themePath: 'components.separator.color',
-    tailwindNamespace: 'color',
-  },
-  {
-    name: 'separator-width',
-    layer: 'component',
-    category: 'border',
-    type: 'border-width',
-    appliesTo: 'separator',
-    defaultLight: '1px',
-    description: 'Separator line thickness.',
-    themePath: 'components.separator.width',
-  },
-  {
-    name: 'separator-style',
-    layer: 'component',
-    category: 'border',
-    appliesTo: 'separator',
-    defaultLight: 'solid',
-    description: 'Separator line style (`solid`, `dashed`, `double`).',
-    themePath: 'components.separator.style',
-  },
-
-  // Progress
-  {
-    name: 'progress-track-color',
-    layer: 'component',
-    category: 'color',
-    appliesTo: 'progress',
-    defaultLight: 'var(--secondary)',
-    description: 'Background of the progress track.',
-    themePath: 'components.progress.trackColor',
-    tailwindNamespace: 'color',
-  },
-  {
-    name: 'progress-indicator-color',
-    layer: 'component',
-    category: 'color',
-    appliesTo: 'progress',
-    defaultLight: 'var(--primary)',
-    description: 'Foreground of the progress indicator.',
-    themePath: 'components.progress.indicatorColor',
-    tailwindNamespace: 'color',
-  },
-  {
-    name: 'progress-track-height',
-    layer: 'component',
-    category: 'geometry',
-    appliesTo: 'progress',
-    defaultLight: '0.5rem',
-    description: 'Progress track thickness.',
-    themePath: 'components.progress.trackHeight',
-  },
-
-  // Tables
-  {
-    name: 'table-header-bg',
-    layer: 'component',
-    category: 'color',
-    appliesTo: 'table',
-    defaultLight: 'var(--muted)',
-    description: 'Background for table header rows.',
-    themePath: 'components.table.headerBg',
-    tailwindNamespace: 'color',
-  },
-  {
-    name: 'table-row-bg',
-    layer: 'component',
-    category: 'color',
-    appliesTo: 'table',
-    defaultLight: 'var(--background)',
-    description: 'Background for table body rows.',
-    themePath: 'components.table.rowBg',
-    tailwindNamespace: 'color',
-  },
-  {
-    name: 'table-row-hover-bg',
-    layer: 'component',
-    category: 'color',
-    appliesTo: 'table',
-    defaultLight: 'var(--accent)',
-    description: 'Background for hovered table rows.',
-    themePath: 'components.table.rowHoverBg',
-    tailwindNamespace: 'color',
-  },
-  ...borderTokens(meta('table'), '1px'),
-  ...geometryTokens(meta('table'), { paddingX: SPACING_3, paddingY: SPACING_2 }),
-
-  // Code Block
-  {
-    name: 'code-block-bg',
-    layer: 'component',
-    category: 'color',
-    appliesTo: 'code-block',
-    defaultLight: 'var(--muted)',
-    description: 'Code block background.',
-    themePath: 'components.codeBlock.bg',
-    tailwindNamespace: 'color',
-  },
-  {
-    name: 'code-block-radius',
-    layer: 'component',
-    category: 'geometry',
-    appliesTo: 'code-block',
-    defaultLight: 'var(--radius-control)',
-    description: 'Code block corner radius.',
-    themePath: 'components.codeBlock.radius',
-    tailwindNamespace: 'radius',
-    utilityAlias: 'code-block',
-  },
-  ...borderTokens(meta('code-block', 'codeBlock'), '1px'),
-  ...geometryTokens(meta('code-block', 'codeBlock'), { paddingX: SPACING_4, paddingY: SPACING_3 }),
-  ...typographyTokens(meta('code-block', 'codeBlock'), {
-    fontFamily: 'var(--font-mono)',
-    fontSize: 'var(--text-body-sm)',
+  ...defineComponentTokens(meta('avatar'), {
+    size: { default: '2rem', description: 'Avatar diameter at the default size.' },
   }),
 
-  // Label
-  ...typographyTokens(meta('label'), {
-    fontSize: 'var(--text-label-md)',
-    fontWeight: '500',
+  // Card
+  ...defineComponentTokens(meta('card'), {
+    'backdrop-blur': {
+      default: '0px',
+      description: 'Backdrop blur applied behind a translucent card. Set non-zero for glass.',
+    },
+  }),
+
+  // Checkbox
+  ...defineComponentTokens(meta('checkbox'), {
+    size: { default: '1rem', description: 'Checkbox box edge length.' },
+  }),
+
+  // Code-block
+  ...defineComponentTokens(meta('code-block'), {
+    bg: { default: 'var(--muted)', description: 'Code block background.' },
+    radius: {
+      default: 'var(--radius-control)',
+      description: 'Code block corner radius.',
+      alias: 'code-block',
+    },
+  }),
+
+  // Dialog
+  ...defineComponentTokens(meta('dialog'), {
+    'backdrop-blur': {
+      default: '0px',
+      description: 'Backdrop blur applied behind a translucent dialog.',
+    },
+  }),
+
+  // Menu
+  ...defineComponentTokens(meta('menu'), {
+    'backdrop-blur': {
+      default: '0px',
+      description: 'Backdrop blur applied behind a translucent dropdown menu.',
+    },
+  }),
+
+  // Popover
+  ...defineComponentTokens(meta('popover'), {
+    'backdrop-blur': {
+      default: '0px',
+      description: 'Backdrop blur applied behind a translucent popover.',
+    },
+  }),
+
+  // Progress
+  ...defineComponentTokens(meta('progress'), {
+    'track-color': {
+      default: 'var(--secondary)',
+      description: 'Background of the progress track.',
+    },
+    'indicator-color': {
+      default: 'var(--primary)',
+      description: 'Foreground of the progress indicator.',
+    },
+    'track-height': { default: '0.5rem', description: 'Progress track thickness.' },
+  }),
+
+  // Separator
+  ...defineComponentTokens(meta('separator'), {
+    color: { default: 'var(--border)', description: 'Separator line color.' },
+    width: { default: '1px', description: 'Separator line thickness.' },
+    style: { default: 'solid', description: 'Separator line style (`solid`, `dashed`, `double`).' },
+  }),
+
+  // Sheet
+  ...defineComponentTokens(meta('sheet'), {
+    radius: {
+      default: 'var(--radius-surface)',
+      description: 'Sheet corner radius.',
+      alias: 'sheet',
+    },
+    shadow: { default: 'var(--shadow-modal)', description: 'Sheet elevation.', alias: 'sheet' },
+    'backdrop-blur': {
+      default: '0px',
+      description: 'Backdrop blur applied behind a translucent sheet.',
+    },
+  }),
+
+  // Sidebar
+  ...defineComponentTokens(meta('sidebar'), {
+    width: { default: '16rem', description: 'Sidebar width when expanded.' },
+    'width-icon': {
+      default: '3rem',
+      description: 'Sidebar width when collapsed to icon-only mode.',
+    },
+    'width-mobile': {
+      default: '18rem',
+      description: 'Sidebar width when shown as a mobile sheet.',
+    },
+  }),
+
+  // Slider
+  ...defineComponentTokens(meta('slider'), {
+    'track-height': { default: '0.25rem', description: 'Slider track thickness.' },
+    'thumb-size': { default: '1rem', description: 'Slider thumb diameter.' },
+    radius: {
+      default: '9999px',
+      description: 'Track corner radius. Set lower for square / brutalist looks.',
+      alias: 'slider',
+    },
+    'thumb-radius': {
+      default: '9999px',
+      description: 'Thumb corner radius. Lower for square thumbs.',
+      alias: 'slider-thumb',
+    },
+    'tick-size': { default: '0.25rem', description: 'Tick dot diameter on the track.' },
+    'thumb-border-width': {
+      default: '2px',
+      description: 'Thumb border width — the contrast halo between the thumb and the track.',
+    },
+    'thumb-shadow': {
+      default: 'var(--shadow-raised)',
+      description: 'Thumb drop shadow. Falls back to the global `--shadow-raised`.',
+      alias: 'slider-thumb',
+    },
+    track: { default: 'var(--muted)', description: 'Unfilled portion of the track.' },
+    fill: {
+      default: 'var(--primary)',
+      description: 'Filled portion of the track (left of the thumb).',
+    },
+    thumb: { default: 'var(--primary)', description: 'Thumb fill color.' },
+    'thumb-border': {
+      default: 'var(--background)',
+      description: 'Thumb border (the halo separating thumb from track).',
+    },
+    tick: {
+      default: 'var(--foreground)',
+      description: 'Inactive tick dot color (over the unfilled track). Used with reduced opacity.',
+    },
+    'tick-active': {
+      default: 'var(--primary-foreground)',
+      description: 'Active tick dot color (over the filled track). Used with reduced opacity.',
+    },
+    label: { default: 'var(--muted-foreground)', description: 'Tick label text color.' },
+    'label-active': {
+      default: 'var(--foreground)',
+      description: 'Tick label color when its value matches the current slider value.',
+    },
+  }),
+
+  // Switch
+  ...defineComponentTokens(meta('switch'), {
+    'track-width': {
+      default: '2.5rem',
+      description: 'Switch track width. Fits two thumb diameters + padding + border.',
+    },
+    'track-height': {
+      default: '1.5rem',
+      description: 'Switch track height. Leaves room for thumb + padding + border.',
+    },
+  }),
+
+  // Switch-thumb
+  ...defineComponentTokens(meta('switch-thumb'), {
+    size: { default: '1rem', description: 'Switch thumb diameter at the default size.' },
+  }),
+
+  // Table
+  ...defineComponentTokens(meta('table'), {
+    'header-bg': { default: 'var(--muted)', description: 'Background for table header rows.' },
+    'row-bg': { default: 'var(--background)', description: 'Background for table body rows.' },
+    'row-hover-bg': { default: 'var(--accent)', description: 'Background for hovered table rows.' },
+  }),
+
+  // Tabs
+  ...defineComponentTokens(meta('tabs'), {
+    'trigger-padding-x': {
+      default: 'calc(var(--spacing) * 3)',
+      description: 'Inline padding inside a tab trigger.',
+    },
+    'trigger-padding-y': {
+      default: 'calc(var(--spacing) * 1.5)',
+      description: 'Block padding inside a tab trigger.',
+    },
+  }),
+
+  // Textarea
+  ...defineComponentTokens(meta('textarea'), {
+    radius: {
+      default: 'var(--radius-control)',
+      description: 'Textarea corner radius.',
+      alias: 'textarea',
+    },
   }),
 ];
 

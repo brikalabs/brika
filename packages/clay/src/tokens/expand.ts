@@ -17,7 +17,8 @@
  * setting every entry.
  */
 
-import type { TokenSpec } from './types';
+import { inferTokenType } from './infer';
+import type { TailwindNamespace, TokenCategory, TokenSpec, TokenType } from './types';
 
 interface ComponentMeta {
   /** Component name as it appears in the registry (kebab-case, matches CSS). */
@@ -319,3 +320,86 @@ export function controlSurfaceTokens(
 }
 
 export { meta };
+
+const TYPE_TO_CATEGORY: Readonly<Record<TokenType, TokenCategory>> = {
+  color: 'color',
+  size: 'geometry',
+  radius: 'geometry',
+  'border-width': 'border',
+  'border-style': 'border',
+  shadow: 'elevation',
+  duration: 'motion',
+  easing: 'motion',
+  'font-family': 'typography',
+  'font-size': 'typography',
+  'font-weight': 'typography',
+  'line-height': 'typography',
+  'letter-spacing': 'typography',
+  'text-transform': 'typography',
+  'corner-shape': 'geometry',
+  opacity: 'state',
+  blur: 'elevation',
+};
+
+const TYPE_TO_NAMESPACE: Partial<Record<TokenType, TailwindNamespace>> = {
+  color: 'color',
+  radius: 'radius',
+  shadow: 'shadow',
+};
+
+/**
+ * Compact authoring shape for a single component-layer token.
+ *
+ *   default      — required CSS expression for `defaultLight`.
+ *   description  — required one-sentence prose.
+ *   defaultDark  — set when the dark-mode value differs.
+ *   type         — override name-suffix inference.
+ *   category     — override the type-derived category.
+ *   namespace    — Tailwind namespace; auto-set for color/radius/shadow,
+ *                  pass `'none'` (or omit) to suppress.
+ *   alias        — utility alias when it differs from the var name.
+ */
+export interface ComponentTokenInput {
+  readonly default: string;
+  readonly description: string;
+  readonly defaultDark?: string;
+  readonly type?: TokenType;
+  readonly category?: TokenCategory;
+  readonly namespace?: TailwindNamespace;
+  readonly alias?: string;
+}
+
+/**
+ * Author component-layer tokens compactly. Each entry expands to a full
+ * `TokenSpec` with `name`, `layer`, `appliesTo`, `type`, `category`,
+ * `themePath`, and `tailwindNamespace` derived automatically.
+ *
+ * Replaces ~9 lines of structural boilerplate per token with a single
+ * `key: { default, description }` line. The result is identical to a
+ * hand-authored entry — just much less repetitive in the source.
+ */
+export function defineComponentTokens(
+  m: ComponentMeta,
+  entries: Readonly<Record<string, ComponentTokenInput>>
+): TokenSpec[] {
+  return Object.entries(entries).map(([key, input]) => {
+    const name = `${m.name}-${key}`;
+    const type = input.type ?? inferTokenType(name);
+    const category = input.category ?? TYPE_TO_CATEGORY[type];
+    const namespace = input.namespace ?? TYPE_TO_NAMESPACE[type];
+    const themeProp = key.replaceAll(/-([a-z0-9])/g, (_, c: string) => c.toUpperCase());
+    return {
+      name,
+      layer: 'component',
+      appliesTo: m.name,
+      type,
+      category,
+      defaultLight: input.default,
+      defaultDark: input.defaultDark,
+      description: input.description,
+      themePath: `components.${m.themeKey}.${themeProp}`,
+      tailwindNamespace: namespace,
+      utilityAlias: input.alias,
+    };
+  });
+}

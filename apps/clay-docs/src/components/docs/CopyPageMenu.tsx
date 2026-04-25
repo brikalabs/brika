@@ -1,5 +1,6 @@
 import { Check, ChevronDown, Copy, ExternalLink, FileText, Sparkles } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
+import { useDismiss } from '~/lib/use-dismiss';
 
 const SITE_ORIGIN = 'https://clay.brika.dev';
 const GITHUB_REPO = 'https://github.com/brikalabs/brika';
@@ -32,27 +33,7 @@ export function CopyPageMenu({ pathname, sourcePath }: CopyPageMenuProps) {
   const claudeUrl = `https://claude.ai/new?q=${encodeURIComponent(buildLlmPrompt(pageUrl))}`;
   const chatgptUrl = `https://chatgpt.com/?q=${encodeURIComponent(buildLlmPrompt(pageUrl))}`;
 
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-    const onDocumentClick = (event: MouseEvent) => {
-      if (rootRef.current && !rootRef.current.contains(event.target as Node)) {
-        setOpen(false);
-      }
-    };
-    const onKeydown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setOpen(false);
-      }
-    };
-    globalThis.addEventListener('mousedown', onDocumentClick);
-    globalThis.addEventListener('keydown', onKeydown);
-    return () => {
-      globalThis.removeEventListener('mousedown', onDocumentClick);
-      globalThis.removeEventListener('keydown', onKeydown);
-    };
-  }, [open]);
+  useDismiss(open, rootRef, () => setOpen(false));
 
   const copyLink = async () => {
     try {

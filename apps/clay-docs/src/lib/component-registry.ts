@@ -53,6 +53,11 @@ export interface ComponentEntry extends ComponentMeta, ComponentDocs {
   readonly name: string;
 }
 
+/** Compact form for the common case: one demo named "Default". */
+function singleDefault(demoName: string, code: string): ComponentDocs {
+  return { demos: [{ name: demoName, title: 'Default', code }] };
+}
+
 const DOCS_DATA: Readonly<Record<string, ComponentDocs>> = {
   button: {
     demos: [
@@ -155,16 +160,11 @@ const DOCS_DATA: Readonly<Record<string, ComponentDocs>> = {
     ],
     tokens: ['card', 'card-foreground', 'border', 'data-1', 'data-2', 'data-3'],
   },
-  label: {
-    demos: [
-      {
-        name: 'LabelDefaultDemo',
-        title: 'Default',
-        code: `<Label htmlFor="email">Email</Label>
-<Input id="email" type="email" />`,
-      },
-    ],
-  },
+  label: singleDefault(
+    'LabelDefaultDemo',
+    `<Label htmlFor="email">Email</Label>
+<Input id="email" type="email" />`
+  ),
   badge: {
     demos: [
       {
@@ -259,42 +259,16 @@ const DOCS_DATA: Readonly<Record<string, ComponentDocs>> = {
       },
     ],
   },
-  progress: {
-    demos: [
-      {
-        name: 'ProgressDefaultDemo',
-        title: 'Default',
-        code: '<Progress value={66} />',
-      },
-    ],
-  },
-  'progress-display': {
-    demos: [
-      {
-        name: 'ProgressDisplayDefaultDemo',
-        title: 'Default',
-        code: '<ProgressDisplay label="Uploading" value={66} />',
-      },
-    ],
-  },
-  textarea: {
-    demos: [
-      {
-        name: 'TextareaDefaultDemo',
-        title: 'Default',
-        code: '<Textarea placeholder="Tell us more…" />',
-      },
-    ],
-  },
-  'password-input': {
-    demos: [
-      {
-        name: 'PasswordInputDefaultDemo',
-        title: 'Default',
-        code: '<PasswordInput placeholder="Enter password" />',
-      },
-    ],
-  },
+  progress: singleDefault('ProgressDefaultDemo', '<Progress value={66} />'),
+  'progress-display': singleDefault(
+    'ProgressDisplayDefaultDemo',
+    '<ProgressDisplay label="Uploading" value={66} />'
+  ),
+  textarea: singleDefault('TextareaDefaultDemo', '<Textarea placeholder="Tell us more…" />'),
+  'password-input': singleDefault(
+    'PasswordInputDefaultDemo',
+    '<PasswordInput placeholder="Enter password" />'
+  ),
   slider: {
     demos: [
       {
@@ -351,43 +325,30 @@ const DOCS_DATA: Readonly<Record<string, ComponentDocs>> = {
       'slider-thumb-radius',
     ],
   },
-  select: {
-    demos: [
-      {
-        name: 'SelectDefaultDemo',
-        title: 'Default',
-        code: `<Select>
+  select: singleDefault(
+    'SelectDefaultDemo',
+    `<Select>
   <SelectTrigger><SelectValue placeholder="Pick one" /></SelectTrigger>
   <SelectContent>
     <SelectItem value="a">Option A</SelectItem>
     <SelectItem value="b">Option B</SelectItem>
   </SelectContent>
-</Select>`,
-      },
-    ],
-  },
-  tabs: {
-    demos: [
-      {
-        name: 'TabsDefaultDemo',
-        title: 'Default',
-        code: `<Tabs defaultValue="overview">
+</Select>`
+  ),
+  tabs: singleDefault(
+    'TabsDefaultDemo',
+    `<Tabs defaultValue="overview">
   <TabsList>
     <TabsTrigger value="overview">Overview</TabsTrigger>
     <TabsTrigger value="activity">Activity</TabsTrigger>
   </TabsList>
   <TabsContent value="overview">…</TabsContent>
   <TabsContent value="activity">…</TabsContent>
-</Tabs>`,
-      },
-    ],
-  },
-  breadcrumb: {
-    demos: [
-      {
-        name: 'BreadcrumbDefaultDemo',
-        title: 'Default',
-        code: `<Breadcrumb>
+</Tabs>`
+  ),
+  breadcrumb: singleDefault(
+    'BreadcrumbDefaultDemo',
+    `<Breadcrumb>
   <BreadcrumbList>
     <BreadcrumbItem>
       <BreadcrumbLink href="/">Home</BreadcrumbLink>
@@ -397,16 +358,11 @@ const DOCS_DATA: Readonly<Record<string, ComponentDocs>> = {
       <BreadcrumbPage>Settings</BreadcrumbPage>
     </BreadcrumbItem>
   </BreadcrumbList>
-</Breadcrumb>`,
-      },
-    ],
-  },
-  dialog: {
-    demos: [
-      {
-        name: 'DialogDefaultDemo',
-        title: 'Default',
-        code: `<Dialog>
+</Breadcrumb>`
+  ),
+  dialog: singleDefault(
+    'DialogDefaultDemo',
+    `<Dialog>
   <DialogTrigger asChild><Button>Open</Button></DialogTrigger>
   <DialogContent>
     <DialogHeader>
@@ -414,16 +370,11 @@ const DOCS_DATA: Readonly<Record<string, ComponentDocs>> = {
       <DialogDescription>This cannot be undone.</DialogDescription>
     </DialogHeader>
   </DialogContent>
-</Dialog>`,
-      },
-    ],
-  },
-  'alert-dialog': {
-    demos: [
-      {
-        name: 'AlertDialogDefaultDemo',
-        title: 'Default',
-        code: `<AlertDialog>
+</Dialog>`
+  ),
+  'alert-dialog': singleDefault(
+    'AlertDialogDefaultDemo',
+    `<AlertDialog>
   <AlertDialogTrigger asChild>
     <Button variant="destructive">Delete</Button>
   </AlertDialogTrigger>
@@ -437,54 +388,34 @@ const DOCS_DATA: Readonly<Record<string, ComponentDocs>> = {
       <AlertDialogAction>Delete</AlertDialogAction>
     </AlertDialogFooter>
   </AlertDialogContent>
-</AlertDialog>`,
-      },
-    ],
-  },
-  sheet: {
-    demos: [
-      {
-        name: 'SheetDefaultDemo',
-        title: 'Default',
-        code: `<Sheet>
+</AlertDialog>`
+  ),
+  sheet: singleDefault(
+    'SheetDefaultDemo',
+    `<Sheet>
   <SheetTrigger asChild><Button>Open</Button></SheetTrigger>
   <SheetContent>…</SheetContent>
-</Sheet>`,
-      },
-    ],
-  },
-  popover: {
-    demos: [
-      {
-        name: 'PopoverDefaultDemo',
-        title: 'Default',
-        code: `<Popover>
+</Sheet>`
+  ),
+  popover: singleDefault(
+    'PopoverDefaultDemo',
+    `<Popover>
   <PopoverTrigger asChild><Button>Open</Button></PopoverTrigger>
   <PopoverContent>Popover content</PopoverContent>
-</Popover>`,
-      },
-    ],
-  },
-  tooltip: {
-    demos: [
-      {
-        name: 'TooltipDefaultDemo',
-        title: 'Default',
-        code: `<TooltipProvider>
+</Popover>`
+  ),
+  tooltip: singleDefault(
+    'TooltipDefaultDemo',
+    `<TooltipProvider>
   <Tooltip>
     <TooltipTrigger asChild><Button>Hover</Button></TooltipTrigger>
     <TooltipContent>Helpful hint</TooltipContent>
   </Tooltip>
-</TooltipProvider>`,
-      },
-    ],
-  },
-  'dropdown-menu': {
-    demos: [
-      {
-        name: 'DropdownMenuDefaultDemo',
-        title: 'Default',
-        code: `<DropdownMenu>
+</TooltipProvider>`
+  ),
+  'dropdown-menu': singleDefault(
+    'DropdownMenuDefaultDemo',
+    `<DropdownMenu>
   <DropdownMenuTrigger asChild><Button>Open</Button></DropdownMenuTrigger>
   <DropdownMenuContent>
     <DropdownMenuItem>Profile</DropdownMenuItem>
@@ -492,37 +423,22 @@ const DOCS_DATA: Readonly<Record<string, ComponentDocs>> = {
     <DropdownMenuSeparator />
     <DropdownMenuItem>Log out</DropdownMenuItem>
   </DropdownMenuContent>
-</DropdownMenu>`,
-      },
-    ],
-  },
-  collapsible: {
-    demos: [
-      {
-        name: 'CollapsibleDefaultDemo',
-        title: 'Default',
-        code: `<Collapsible>
+</DropdownMenu>`
+  ),
+  collapsible: singleDefault(
+    'CollapsibleDefaultDemo',
+    `<Collapsible>
   <CollapsibleTrigger>Toggle</CollapsibleTrigger>
   <CollapsibleContent>Hidden content</CollapsibleContent>
-</Collapsible>`,
-      },
-    ],
-  },
-  'scroll-area': {
-    demos: [
-      {
-        name: 'ScrollAreaDefaultDemo',
-        title: 'Default',
-        code: '<ScrollArea className="h-48 w-64">…</ScrollArea>',
-      },
-    ],
-  },
-  table: {
-    demos: [
-      {
-        name: 'TableDefaultDemo',
-        title: 'Default',
-        code: `<Table>
+</Collapsible>`
+  ),
+  'scroll-area': singleDefault(
+    'ScrollAreaDefaultDemo',
+    '<ScrollArea className="h-48 w-64">…</ScrollArea>'
+  ),
+  table: singleDefault(
+    'TableDefaultDemo',
+    `<Table>
   <TableHeader>
     <TableRow>
       <TableHead>Name</TableHead>
@@ -535,75 +451,42 @@ const DOCS_DATA: Readonly<Record<string, ComponentDocs>> = {
       <TableCell>jane@example.com</TableCell>
     </TableRow>
   </TableBody>
-</Table>`,
-      },
-    ],
-  },
-  chart: {
-    demos: [
-      {
-        name: 'ChartDefaultDemo',
-        title: 'Default',
-        code: '<Chart data={…} />',
-      },
-    ],
-  },
-  'code-block': {
-    demos: [
-      {
-        name: 'CodeBlockDefaultDemo',
-        title: 'Default',
-        code: `<CodeBlock language="tsx" code="<Button>Hello</Button>">
+</Table>`
+  ),
+  chart: singleDefault('ChartDefaultDemo', '<Chart data={…} />'),
+  'code-block': singleDefault(
+    'CodeBlockDefaultDemo',
+    `<CodeBlock language="tsx" code="<Button>Hello</Button>">
   <CodeBlockHeader />
   <CodeBlockContent />
-</CodeBlock>`,
-      },
-    ],
-  },
-  'input-group': {
-    demos: [
-      {
-        name: 'InputGroupDefaultDemo',
-        title: 'Default',
-        code: `<InputGroup>
+</CodeBlock>`
+  ),
+  'input-group': singleDefault(
+    'InputGroupDefaultDemo',
+    `<InputGroup>
   <InputGroupAddon>$</InputGroupAddon>
   <InputGroupInput placeholder="0.00" />
-</InputGroup>`,
-      },
-    ],
-  },
-  'button-group': {
-    demos: [
-      {
-        name: 'ButtonGroupDefaultDemo',
-        title: 'Default',
-        code: `<ButtonGroup>
+</InputGroup>`
+  ),
+  'button-group': singleDefault(
+    'ButtonGroupDefaultDemo',
+    `<ButtonGroup>
   <Button>Bold</Button>
   <Button>Italic</Button>
   <Button>Underline</Button>
-</ButtonGroup>`,
-      },
-    ],
-  },
-  'empty-state': {
-    demos: [
-      {
-        name: 'EmptyStateDefaultDemo',
-        title: 'Default',
-        code: `<EmptyState>
+</ButtonGroup>`
+  ),
+  'empty-state': singleDefault(
+    'EmptyStateDefaultDemo',
+    `<EmptyState>
   <EmptyStateIcon><InboxIcon /></EmptyStateIcon>
   <EmptyStateTitle>No messages</EmptyStateTitle>
   <EmptyStateDescription>You're all caught up.</EmptyStateDescription>
-</EmptyState>`,
-      },
-    ],
-  },
-  'page-header': {
-    demos: [
-      {
-        name: 'PageHeaderDefaultDemo',
-        title: 'Default',
-        code: `<PageHeader>
+</EmptyState>`
+  ),
+  'page-header': singleDefault(
+    'PageHeaderDefaultDemo',
+    `<PageHeader>
   <PageHeaderInfo>
     <PageHeaderTitle>Dashboards</PageHeaderTitle>
     <PageHeaderDescription>All your monitoring views in one place.</PageHeaderDescription>
@@ -611,67 +494,37 @@ const DOCS_DATA: Readonly<Record<string, ComponentDocs>> = {
   <PageHeaderActions>
     <Button>New dashboard</Button>
   </PageHeaderActions>
-</PageHeader>`,
-      },
-    ],
-  },
-  section: {
-    demos: [
-      {
-        name: 'SectionDefaultDemo',
-        title: 'Default',
-        code: `<Section>
+</PageHeader>`
+  ),
+  section: singleDefault(
+    'SectionDefaultDemo',
+    `<Section>
   <SectionHeader>
     <SectionTitle>Connected services</SectionTitle>
     <SectionDescription>Manage integrations and API keys.</SectionDescription>
   </SectionHeader>
   <SectionContent>…</SectionContent>
-</Section>`,
-      },
-    ],
-  },
-  'section-label': {
-    demos: [
-      {
-        name: 'SectionLabelDefaultDemo',
-        title: 'Default',
-        code: '<SectionLabel>Recent activity</SectionLabel>',
-      },
-    ],
-  },
-  sidebar: {
-    demos: [
-      {
-        name: 'SidebarDefaultDemo',
-        title: 'Default',
-        code: `<SidebarProvider>
+</Section>`
+  ),
+  'section-label': singleDefault(
+    'SectionLabelDefaultDemo',
+    '<SectionLabel>Recent activity</SectionLabel>'
+  ),
+  sidebar: singleDefault(
+    'SidebarDefaultDemo',
+    `<SidebarProvider>
   <Sidebar>...</Sidebar>
   <SidebarTrigger />
-</SidebarProvider>`,
-      },
-    ],
-  },
-  'overflow-list': {
-    demos: [
-      {
-        name: 'OverflowListDefaultDemo',
-        title: 'Default',
-        code: `<OverflowList>
+</SidebarProvider>`
+  ),
+  'overflow-list': singleDefault(
+    'OverflowListDefaultDemo',
+    `<OverflowList>
   <OverflowListContent>...</OverflowListContent>
   <OverflowListIndicator />
-</OverflowList>`,
-      },
-    ],
-  },
-  'brika-logo': {
-    demos: [
-      {
-        name: 'BrikaLogoDefaultDemo',
-        title: 'Default',
-        code: '<BrikaLogo />',
-      },
-    ],
-  },
+</OverflowList>`
+  ),
+  'brika-logo': singleDefault('BrikaLogoDefaultDemo', '<BrikaLogo />'),
 };
 
 const FALLBACK_DOCS: ComponentDocs = { demos: [] };

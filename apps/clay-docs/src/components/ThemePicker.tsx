@@ -7,6 +7,7 @@ import {
 } from '@brika/clay/themes';
 import { ChevronDown } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { useDismiss } from '~/lib/use-dismiss';
 
 const STORAGE_KEY = 'clay-theme';
 const THEME_EVENT = 'clay:theme-change';
@@ -107,27 +108,7 @@ export function ThemePicker() {
     };
   }, []);
 
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-    const onDocumentClick = (event: MouseEvent) => {
-      if (rootRef.current && !rootRef.current.contains(event.target as Node)) {
-        setOpen(false);
-      }
-    };
-    const onKeydown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setOpen(false);
-      }
-    };
-    globalThis.addEventListener('mousedown', onDocumentClick);
-    globalThis.addEventListener('keydown', onKeydown);
-    return () => {
-      globalThis.removeEventListener('mousedown', onDocumentClick);
-      globalThis.removeEventListener('keydown', onKeydown);
-    };
-  }, [open]);
+  useDismiss(open, rootRef, () => setOpen(false));
 
   const select = (theme: ThemeConfig) => {
     setThemeId(theme.id);
