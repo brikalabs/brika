@@ -1,5 +1,4 @@
 import { Button } from '@brika/clay/components/button';
-import { Input } from '@brika/clay/components/input';
 import type { ThemeConfig, ThemeMode } from '@brika/clay/themes';
 import { BUILT_IN_THEMES, themeToCssVars } from '@brika/clay/themes';
 import { useEffect, useState } from 'react';
@@ -35,134 +34,135 @@ interface ThemeCardProps {
 }
 
 /**
- * One specimen card. Internal layout is a fixed CSS grid (header / title /
- * description / preview / swatches / footer) with rigid row sizes so every
- * card in the gallery aligns regardless of how its description wraps.
+ * One theme card — a single themed pane (theme.background fills the body)
+ * with the theme's own typography colors. Active state is communicated by
+ * an outer ring drawn outside the themed surface in chrome colors so it
+ * stays legible regardless of palette.
+ *
+ * The internal layout is a rigid CSS grid. Every row except the body
+ * specimen has a fixed size, the body row is `1fr`, and the parent grid
+ * uses `auto-rows-fr` — so every card in a row aligns exactly.
  */
 function ThemeCard({ theme, index, active, mode, onSelect }: ThemeCardProps) {
   const scope = themeToCssVars(theme, mode);
   const palette = theme.colors[mode];
-  const swatchCount = theme.accentSwatches.length;
-  const cardClass = active
-    ? 'group relative grid w-full grid-rows-[auto_auto_auto_1fr_auto_auto] overflow-hidden rounded-lg border border-clay-strong bg-clay-elevated text-left shadow-sm transition-all'
-    : 'group relative grid w-full grid-rows-[auto_auto_auto_1fr_auto_auto] overflow-hidden rounded-lg border border-clay-hairline bg-clay-elevated text-left transition-all hover:border-clay-default hover:shadow-sm';
+  const wrapperClass = active
+    ? 'group relative h-full rounded-lg ring-1 ring-clay-strong ring-offset-2 ring-offset-clay-canvas transition-all'
+    : 'group relative h-full rounded-lg ring-1 ring-clay-hairline transition-all hover:ring-clay-default';
 
   return (
     <button
       type="button"
       onClick={() => onSelect(theme)}
       aria-pressed={active}
-      className={cardClass}
+      className={wrapperClass}
     >
-      {/* Active marker — a hairline-thin vertical accent on the left rail */}
-      {active && (
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute top-0 bottom-0 left-0 w-px bg-clay-strong"
-        />
-      )}
-
-      {/* Row 1: drafting metadata strip */}
-      <div className="flex h-9 items-center gap-2 border-clay-hairline border-b bg-clay-canvas/40 px-3 font-medium font-mono text-[0.625rem] uppercase tracking-[0.12em]">
-        <span className="text-clay-strong">{pad(index + 1)}</span>
-        <span className="block h-px w-3 bg-clay-hairline" />
-        <span className="truncate text-clay-default">{theme.id}</span>
-        <span className="block h-px flex-1 bg-clay-hairline" />
-        <span
-          className={
-            active
-              ? 'text-clay-strong'
-              : 'text-clay-inactive transition-colors group-hover:text-clay-default'
-          }
-        >
-          {active ? 'Active' : 'Apply'}
-        </span>
-      </div>
-
-      {/* Row 2: serif specimen title — fixed line-height keeps height stable */}
-      <div className="flex items-baseline justify-between gap-3 px-5 pt-5">
-        <span
-          className="block text-3xl text-clay-strong leading-none"
-          style={{ fontFamily: SERIF, fontStyle: 'italic', letterSpacing: '-0.02em' }}
-        >
-          {theme.name}
-        </span>
-        <span className="shrink-0 font-mono text-[0.625rem] text-clay-inactive uppercase tracking-[0.12em]">
-          {pad(swatchCount)}
-        </span>
-      </div>
-
-      {/* Row 3: description — always reserves two lines so cards align */}
-      <p className="line-clamp-2 min-h-[2lh] px-5 pt-2 pb-4 font-mono text-[0.6875rem] text-clay-subtle leading-snug">
-        {theme.description}
-      </p>
-
-      {/* Row 4: themed preview — flex column with bottom-aligned controls */}
-      <div className="px-5">
+      <div
+        style={{
+          ...scope,
+          backgroundColor: palette.background,
+          color: palette.foreground,
+          borderColor: palette.border,
+        }}
+        className="grid h-full w-full grid-rows-[auto_1fr_auto_auto] gap-0 overflow-hidden rounded-lg border text-left"
+      >
+        {/* Row 1 — drafting strip in theme's muted tone */}
         <div
-          style={{ ...scope, backgroundColor: palette.background, color: palette.foreground }}
-          className="grid h-full grid-rows-[auto_1fr_auto] gap-3 rounded-md border p-4"
+          className="flex h-9 items-center gap-2 border-b px-4 font-medium font-mono text-[0.625rem] uppercase tracking-[0.14em]"
+          style={{ borderColor: palette.border, color: palette['muted-foreground'] }}
         >
-          <div className="flex items-center gap-2">
+          <span>№ {pad(index + 1)}</span>
+          <span
+            aria-hidden="true"
+            className="block h-px w-3"
+            style={{ backgroundColor: palette.border }}
+          />
+          <span className="truncate">{theme.id}</span>
+          <span
+            aria-hidden="true"
+            className="block h-px flex-1"
+            style={{ backgroundColor: palette.border }}
+          />
+          <span style={{ color: active ? palette.foreground : palette['muted-foreground'] }}>
+            {active ? 'Active' : 'Apply'}
+          </span>
+        </div>
+
+        {/* Row 2 — specimen body. Big italic name + description + accent line */}
+        <div className="flex flex-col justify-between gap-6 px-6 pt-6 pb-5">
+          <div>
+            <h3
+              className="block text-5xl leading-none"
+              style={{
+                fontFamily: SERIF,
+                fontStyle: 'italic',
+                letterSpacing: '-0.022em',
+                color: palette.foreground,
+              }}
+            >
+              {theme.name}
+            </h3>
+            <p
+              className="mt-3 line-clamp-2 min-h-[2lh] text-[0.8125rem] leading-snug"
+              style={{ color: palette['muted-foreground'] }}
+            >
+              {theme.description}
+            </p>
+          </div>
+
+          {/* A single Button + a hairline accent — minimal, theme-aware */}
+          <div className="flex items-center gap-3">
+            <Button size="sm">Sample</Button>
             <span
               aria-hidden="true"
-              className="block size-2 rounded-full"
-              style={{ backgroundColor: palette.primary }}
+              className="block h-px flex-1"
+              style={{ backgroundColor: palette.border }}
             />
             <span
               className="font-mono text-[0.625rem] uppercase tracking-[0.14em]"
               style={{ color: palette['muted-foreground'] }}
             >
-              Specimen
+              {mode}
             </span>
           </div>
-          <p
-            className="text-lg leading-[1.15]"
-            style={{ fontFamily: SERIF, fontStyle: 'italic', letterSpacing: '-0.018em' }}
-          >
-            The quick brown fox jumps over the lazy dog.
-          </p>
-          <div className="grid grid-cols-[auto_auto_1fr] items-center gap-2">
-            <Button size="sm">Save</Button>
-            <Button size="sm" variant="outline">
-              Cancel
-            </Button>
-            <Input className="h-8 w-full text-xs" placeholder="Type…" />
-          </div>
         </div>
-      </div>
 
-      {/* Row 5: swatch strip — fixed height */}
-      <div className="mt-4 flex h-7 items-stretch gap-px border-clay-hairline border-t bg-clay-canvas/40 px-1 py-1">
-        {theme.accentSwatches.map((swatch, swatchIndex) => (
-          <span
-            key={`${theme.id}-${swatchIndex}-${swatch}`}
-            className="block flex-1 rounded-sm"
-            style={{ backgroundColor: swatch }}
-            aria-hidden="true"
-          />
-        ))}
-      </div>
+        {/* Row 3 — accent swatch strip, edge to edge */}
+        <div className="flex h-2.5">
+          {theme.accentSwatches.map((swatch, swatchIndex) => (
+            <span
+              key={`${theme.id}-${swatchIndex}-${swatch}`}
+              className="block flex-1"
+              style={{ backgroundColor: swatch }}
+              aria-hidden="true"
+            />
+          ))}
+        </div>
 
-      {/* Row 6: footer meta */}
-      <div className="grid h-9 grid-cols-3 items-center border-clay-hairline border-t px-3 font-medium font-mono text-[0.625rem] uppercase tracking-[0.12em]">
-        <span className="justify-self-start text-clay-subtle">{theme.accentSwatches[0]}</span>
-        <span className="justify-self-center text-clay-inactive">/</span>
-        <span className="justify-self-end text-clay-subtle">{mode}</span>
+        {/* Row 4 — footer with hex codes (mono) */}
+        <div
+          className="flex h-9 items-center justify-between border-t px-4 font-medium font-mono text-[0.625rem] uppercase tracking-[0.14em]"
+          style={{ borderColor: palette.border, color: palette['muted-foreground'] }}
+        >
+          <span>{theme.accentSwatches[0]}</span>
+          <span aria-hidden="true">·</span>
+          <span>
+            {theme.accentSwatches.length} {theme.accentSwatches.length === 1 ? 'color' : 'colors'}
+          </span>
+        </div>
       </div>
     </button>
   );
 }
 
 /**
- * Grid of theme cards. Each card applies its theme to a scoped preview
- * (typographic specimen + Button + Input rendered inside a `<div
- * style={themeToCssVars(...)}>`) so readers can compare themes side-by-side
- * without switching the whole site.
+ * Grid of theme cards. Each card is a single themed pane that uses its
+ * own palette for background/foreground/border — readers can compare
+ * eleven first-party themes side by side.
  *
- * Clicking a card activates that theme site-wide via the same localStorage
- * key + custom event the header ThemePicker uses, so the rest of the docs
- * follows immediately — no page reload.
+ * Clicking a card activates that theme site-wide via localStorage + a
+ * same-tab CustomEvent the header ThemePicker also listens to, so the
+ * rest of the docs follows immediately — no page reload.
  */
 export function ThemesGallery() {
   const [activeId, setActiveId] = useState<string>('default');
@@ -206,7 +206,7 @@ export function ThemesGallery() {
   };
 
   return (
-    <div className="not-prose grid auto-rows-fr grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="not-prose grid auto-rows-fr grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
       {BUILT_IN_THEMES.map((theme, index) => (
         <ThemeCard
           key={theme.id}
