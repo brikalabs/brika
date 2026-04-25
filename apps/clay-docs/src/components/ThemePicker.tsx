@@ -67,37 +67,25 @@ export function ThemePicker() {
     const initialId = readInitialThemeId();
     setThemeId(initialId);
     setMounted(true);
-
-    const chosen = BUILT_IN_THEMES_BY_ID[initialId];
-    if (chosen && initialId !== 'default') {
-      applyTheme(chosen);
-    }
   }, []);
 
   useEffect(() => {
     if (!mounted) {
       return;
     }
-    // Mirror the BaseLayout's inline-script attribute, then swap the
-    // lazy-loaded `<link id="clay-theme-link">` to the new preset's CSS.
-    // `applyTheme` is deliberately omitted: the static per-theme file
-    // already covers every variable, with no JavaScript flatten on the
-    // hot path. (Custom runtime themes still go through `applyTheme`.)
+    // The plugin only bakes the default theme into CSS. Built-in
+    // presets and user-authored themes share one runtime path:
+    // `applyTheme(themeJson)` injects a `<style>` tag with the var
+    // overrides; switching back to default just clears it.
     document.documentElement.dataset.theme = themeId;
-    const existing = document.getElementById('clay-theme-link');
-    if (existing instanceof HTMLLinkElement) {
-      existing.remove();
+    if (themeId === 'default') {
+      resetThemeVars();
+      return;
     }
-    if (themeId !== 'default') {
-      const link = document.createElement('link');
-      link.rel = 'stylesheet';
-      link.href = `/_clay-themes/${themeId}.css`;
-      link.id = 'clay-theme-link';
-      link.dataset.themeId = themeId;
-      document.head.appendChild(link);
+    const chosen = BUILT_IN_THEMES_BY_ID[themeId];
+    if (chosen) {
+      applyTheme(chosen);
     }
-    // Drop any stale runtime injection from a previous custom-theme call.
-    resetThemeVars();
   }, [themeId, mounted]);
 
   useEffect(() => {

@@ -1,9 +1,9 @@
 import {
+  type ResolvedTokenSpec,
   TOKEN_REGISTRY,
   TOKEN_TYPE_HINT,
   type TokenCategory,
   type TokenLayer,
-  type TokenSpec,
   type TokenType,
 } from '@brika/clay/tokens';
 import { Check, Copy, Search } from 'lucide-react';
@@ -61,7 +61,7 @@ const CATEGORY_HINT: Readonly<Record<TokenCategory, string>> = {
 
 const SEARCH_THRESHOLD = 8;
 
-function filterTokens(props: TokenTableProps): TokenSpec[] {
+function filterTokens(props: TokenTableProps): ResolvedTokenSpec[] {
   return TOKEN_REGISTRY.filter((token) => {
     if (props.layer && token.layer !== props.layer) {
       return false;
@@ -76,7 +76,7 @@ function filterTokens(props: TokenTableProps): TokenSpec[] {
   });
 }
 
-function applySearch(tokens: readonly TokenSpec[], query: string): TokenSpec[] {
+function applySearch(tokens: readonly ResolvedTokenSpec[], query: string): ResolvedTokenSpec[] {
   const q = query.trim().toLowerCase();
   if (!q) {
     return [...tokens];
@@ -89,8 +89,10 @@ function applySearch(tokens: readonly TokenSpec[], query: string): TokenSpec[] {
   );
 }
 
-function groupByCategory(tokens: readonly TokenSpec[]): Map<TokenCategory, TokenSpec[]> {
-  const groups = new Map<TokenCategory, TokenSpec[]>();
+function groupByCategory(
+  tokens: readonly ResolvedTokenSpec[]
+): Map<TokenCategory, ResolvedTokenSpec[]> {
+  const groups = new Map<TokenCategory, ResolvedTokenSpec[]>();
   for (const category of CATEGORY_ORDER) {
     const matching = tokens.filter((t) => t.category === category);
     if (matching.length > 0) {
@@ -178,7 +180,7 @@ function TokenTypeChip({ type }: { readonly type: TokenType }) {
 }
 
 interface TokenPreviewProps {
-  readonly token: TokenSpec;
+  readonly token: ResolvedTokenSpec;
 }
 
 const PREVIEW_BOX =
@@ -361,7 +363,7 @@ function TokenPreview({ token }: TokenPreviewProps) {
   }
 }
 
-function TokenCard({ token }: { readonly token: TokenSpec }) {
+function TokenCard({ token }: { readonly token: ResolvedTokenSpec }) {
   const cssVar = `--${token.name}`;
 
   return (

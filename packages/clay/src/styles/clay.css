@@ -6,19 +6,17 @@
  * Paths in `@source` are resolved by Tailwind v4 relative to THIS file,
  * so they stay correct no matter where or how the stylesheet is imported.
  *
- * Token system layout:
- *   tokens-roles.css       — Layer 0 (scalars) + Layer 1 (roles).  GENERATED.
- *   tokens-components.css  — Layer 2 per-component fallback chains. GENERATED.
- *   clay.css (this file)   — entry point + utilities + tokens not yet
- *                            owned by the registry.
- *
- * Edit `src/tokens/registry.ts` and rerun `pnpm --filter @brika/clay
- * build:tokens` to regenerate the two CSS files; never hand-edit them.
+ * Tokens & themes are contributed by `../tailwind.ts` (a Tailwind v4
+ * plugin). The plugin reads `src/tokens/registry.ts` and `src/themes/`
+ * at compile time and emits `:root` defaults, dark-mode overrides,
+ * `[data-theme="X"]` blocks for every preset, and the `theme.extend`
+ * config that turns `bg-slider-fill`, `rounded-slider`, etc. into real
+ * utilities. There are no generated CSS files — the TypeScript registry
+ * is the only source of truth.
  */
 
-@import './tokens-roles.css';
-@import './tokens-components.css';
-@import './components.css';
+@plugin "../tailwind";
+@import "./components.css";
 
 @source "../components/**/*.{ts,tsx}";
 @source "../primitives/**/*.{ts,tsx}";

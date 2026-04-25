@@ -22,7 +22,7 @@
     "./primitives": "./src/primitives/index.ts",
     "./primitives/*": "./src/primitives/*.ts",
     "./styles": "./src/styles/clay.css",
-    "./styles/themes-static.css": "./src/styles/themes-static.css",
+    "./tailwind": "./src/tailwind.ts",
     "./tailwind-preset": "./src/tailwind-preset.ts",
     "./themes": "./src/themes/index.ts",
     "./tokens": "./src/tokens/index.ts"
@@ -30,13 +30,12 @@
   "files": ["src"],
   "scripts": {
     "typecheck": "tsgo --noEmit",
-    "test": "bun test",
-    "build:tokens": "bun run scripts/build-tokens.ts",
-    "build:themes": "bun run scripts/build-themes.ts"
+    "test": "bun test"
   },
   "peerDependencies": {
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "tailwindcss": "^4.0.0"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.4",
@@ -53,6 +52,7 @@
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "react": "^19.2.3",
-    "react-dom": "^19.2.3"
+    "react-dom": "^19.2.3",
+    "tailwindcss": "^4.0.0"
   }
 }

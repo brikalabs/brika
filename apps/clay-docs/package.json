@@ -10,16 +10,13 @@
     "directory": "apps/clay-docs"
   },
   "scripts": {
-    "predev": "bun run scripts/build-theme-files.ts",
     "dev": "astro dev",
-    "prebuild": "bun run scripts/build-theme-files.ts",
     "build": "astro build",
     "preview": "astro preview",
     "check": "astro check",
     "typecheck": "astro check --minimumSeverity error",
     "lint": "bunx --bun biome check .",
     "check:arch": "archunit",
-    "build:themes": "bun run scripts/build-theme-files.ts",
     "deploy": "astro build && wrangler deploy",
     "deploy:preview": "astro build && wrangler versions upload"
   },

@@ -80,8 +80,8 @@ export { default as skeuomorph } from './presets/skeuomorph.json' with { type: '
 export { default as solarized } from './presets/solarized.json' with { type: 'json' };
 export { default as sunset } from './presets/sunset.json' with { type: 'json' };
 export { default as terminal } from './presets/terminal.json' with { type: 'json' };
-export { ThemeScope } from './ThemeScope';
 export type { ThemeScopeProps } from './ThemeScope';
+export { ThemeScope } from './ThemeScope';
 export type {
   ComponentTokenMap,
   ThemeBorders,

@@ -54,9 +54,10 @@ const hasRegistryTokens = registryTokens.length > 0;
 // First example override pulled from a per-component prop so the JSON
 // snippet always references a real, theme-overridable knob. Falls back
 // to a generic radius override.
-const overrideExample = registryTokens.find((token) => token.themePath?.includes('.padding'))
-  ?? registryTokens.find((token) => token.themePath?.includes('.radius'))
-  ?? registryTokens[0];
+const overrideExample =
+  registryTokens.find((token) => token.themePath?.includes('.padding')) ??
+  registryTokens.find((token) => token.themePath?.includes('.radius')) ??
+  registryTokens[0];
 const themePathSegments = overrideExample?.themePath?.split('.') ?? [];
 const overrideComponentKey = themePathSegments[1] ?? component.slug;
 const overrideProp = themePathSegments[2] ?? 'radius';

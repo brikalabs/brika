@@ -33,33 +33,6 @@ export interface ThemeScopeProps {
   readonly children: ReactNode;
 }
 
-/**
- * Built-in preset ids that have CSS rules in
- * `@brika/clay/styles/themes-static.css`. When a `<ThemeScope>` matches
- * one of these, no `<style>` tag is rendered: the wrapper just carries
- * `data-theme="<id>"`, and the static rule already loaded by the app
- * does the work.
- */
-const BUILT_IN_IDS: ReadonlySet<string> = new Set([
-  'default',
-  'ocean',
-  'forest',
-  'sunset',
-  'lavender',
-  'ruby',
-  'nord',
-  'solarized',
-  'candy',
-  'dracula',
-  'mono',
-  'brutalist',
-  'editorial',
-  'terminal',
-  'skeuomorph',
-  'glass',
-  'comic',
-]);
-
 function buildScopeCss(theme: ThemeConfig, scopeId: string): string {
   // Complete flatten — registry defaults + theme overrides — so that the
   // emitted rule fully replaces every token a globally-applied theme
@@ -108,20 +81,12 @@ function buildScopeCss(theme: ThemeConfig, scopeId: string): string {
  * </ThemeScope>
  * ```
  *
- * **No inline styles.** The wrapper carries only `data-theme="<id>"` +
- * `data-mode="<mode>"`. CSS variable rules live elsewhere:
- *
- * - **Built-in themes** (the 16 first-party presets) match selectors in
- *   `@brika/clay/styles/themes-static.css`. Import that file once at app
- *   startup and every `ThemeScope` for those themes pays just the cost
- *   of a couple of attributes — even if the same theme appears 100
- *   times on the page (lists, galleries, side-by-side previews).
- *
- * - **Custom themes** render a single `<style>` tag via React 19's
- *   stylesheet hoisting. The `href` prop dedupes by content, so
- *   identical themes used many times share one tag in the document
- *   `<head>`. The wrapper itself stays a few bytes regardless of how
- *   many tokens the theme overrides.
+ * **One <style> per distinct theme, no matter how many scopes.** Both
+ * built-in and custom themes hoist a single `<style>` tag via React 19's
+ * `href`-keyed stylesheet dedup — 50 ThemeScopes of `dracula` share one
+ * tag in `<head>`. The scope CSS uses `flattenThemeComplete`, which
+ * pins every registry token, so the subtree is leak-resistant even
+ * when a different theme is applied globally via `applyTheme`.
  *
  * To follow the document's `data-mode` instead of pinning the scope to
  * a specific mode, read `documentElement.dataset.mode` on mount and
@@ -136,8 +101,6 @@ export function ThemeScope({
   style,
   children,
 }: ThemeScopeProps) {
-  const isBuiltIn = BUILT_IN_IDS.has(theme.id);
-
   let wrapperStyle: CSSProperties | undefined;
   if (asChild) {
     wrapperStyle = style;
@@ -163,13 +126,11 @@ export function ThemeScope({
     </div>
   );
 
-  if (isBuiltIn) {
-    return wrapped;
-  }
-
-  // Custom theme — emit one `<style>` whose `href` lets React 19 dedupe
-  // by content across the tree. Multiple `ThemeScope`s using the same
-  // custom theme share a single hoisted tag in `<head>`.
+  // Always emit the scope CSS — built-in or custom alike. React 19
+  // dedupes by `href`, so N scopes of the same theme produce ONE
+  // `<style>` in `<head>`. `flattenThemeComplete` pins every registry
+  // token in the rule, so a globally-applied theme can't leak in
+  // through tokens this scope's theme didn't explicitly override.
   return (
     <>
       <style href={`clay-scope-${theme.id}`} precedence="default">

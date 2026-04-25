@@ -1,12 +1,13 @@
 import { Button } from '@brika/clay/components/button';
 import type { ThemeConfig, ThemeMode } from '@brika/clay/themes';
 import { BUILT_IN_THEMES, ThemeScope } from '@brika/clay/themes';
-// Load every built-in theme's CSS rules once so the 16 cards below can
-// paint via just `data-theme="<id>"` on their `<ThemeScope>` wrappers —
-// no inline-style payload duplicated per card.
-import '@brika/clay/styles/themes-static.css';
 import { Check } from 'lucide-react';
 import { useEffect, useState } from 'react';
+
+// `[data-theme="<id>"]` blocks for every built-in preset are emitted by
+// the `@brika/clay/tailwind` plugin (pulled in via `@brika/clay/styles`),
+// so the cards below can paint via just `data-theme="<id>"` on their
+// `<ThemeScope>` wrappers — no inline-style payload duplicated per card.
 
 const STORAGE_KEY = 'clay-theme';
 const THEME_EVENT = 'clay:theme-change';
@@ -190,8 +191,7 @@ function ThemeCard({ theme, index, active, mode, onSelect }: ThemeCardProps) {
               ·
             </span>
             <span className="shrink-0">
-              {theme.accentSwatches.length}{' '}
-              {theme.accentSwatches.length === 1 ? 'color' : 'colors'}
+              {theme.accentSwatches.length} {theme.accentSwatches.length === 1 ? 'color' : 'colors'}
             </span>
           </div>
         </div>

@@ -218,9 +218,7 @@ export function renderThemeStyleSheet(theme: ThemeConfig): string {
     sections.push(`:root {\n${renderVarBlock(rootVars)}\n}`);
   }
   if (Object.keys(darkVars).length > 0) {
-    sections.push(
-      `:is(.dark, [data-mode="dark"]):root {\n${renderVarBlock(darkVars)}\n}`
-    );
+    sections.push(`:is(.dark, [data-mode="dark"]):root {\n${renderVarBlock(darkVars)}\n}`);
   }
   return sections.join('\n\n');
 }
