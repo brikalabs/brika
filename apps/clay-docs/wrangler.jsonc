@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json.schemastore.org/wrangler.json",
+  /**
+   * Cloudflare Pages config for the Clay docs site.
+   *
+   * Build pipeline:
+   *   1. `bun run --cwd apps/clay-docs build` produces static output in
+   *      `apps/clay-docs/dist/`.
+   *   2. `wrangler pages deploy ./dist` (run from this directory) uploads
+   *      the static output to Cloudflare Pages under the project name
+   *      `clay-brika-dev`.
+   *
+   * Custom domain wiring (one-time, run from this directory):
+   *   bunx wrangler pages project create clay-brika-dev \
+   *     --production-branch main
+   *   bunx wrangler pages domain add clay.brika.dev \
+   *     --project-name clay-brika-dev
+   *
+   * After the domain is added in Cloudflare, set a CNAME record
+   *   clay  → clay-brika-dev.pages.dev
+   * on the brika.dev zone (or let Cloudflare manage it directly if the
+   * zone lives on the same account).
+   *
+   * Day-to-day deploys then run as `bun run clay:deploy` from the repo
+   * root, which invokes the production deploy.
+   */
+  "name": "clay-brika-dev",
+  "compatibility_date": "2025-04-01",
+  "pages_build_output_dir": "./dist"
+}

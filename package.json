@@ -19,6 +19,8 @@
     "clay:dev": "bun run --cwd apps/clay-docs dev",
     "clay:build": "bun run --cwd apps/clay-docs build",
     "clay:preview": "bun run --cwd apps/clay-docs preview",
+    "clay:deploy": "bun run --cwd apps/clay-docs deploy",
+    "clay:deploy:preview": "bun run --cwd apps/clay-docs deploy:preview",
     "test": "bun --filter '*' test",
     "test:coverage": "bun --filter '*' test",
     "typecheck": "bun --filter '*' typecheck",

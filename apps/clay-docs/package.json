@@ -16,7 +16,9 @@
     "check": "astro check",
     "typecheck": "astro check --minimumSeverity error",
     "lint": "bunx --bun biome check .",
-    "check:arch": "archunit"
+    "check:arch": "archunit",
+    "deploy": "astro build && wrangler pages deploy ./dist --project-name clay-brika-dev --branch main",
+    "deploy:preview": "astro build && wrangler pages deploy ./dist --project-name clay-brika-dev --branch preview"
   },
   "dependencies": {
     "@astrojs/mdx": "^4.0.0",
@@ -38,6 +40,7 @@
     "@brika/archunit": "workspace:*",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
-    "typescript": "^6.0.2"
+    "typescript": "^6.0.2",
+    "wrangler": "^4.0.0"
   }
 }
