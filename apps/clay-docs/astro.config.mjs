@@ -33,7 +33,7 @@ export default defineConfig({
   integrations: [mdx(), react()],
   markdown: {
     shikiConfig: {
-      themes: { light: 'github-light', dark: 'vesper' },
+      themes: { light: 'catppuccin-latte', dark: 'catppuccin-mocha' },
       defaultColor: false,
     },
   },

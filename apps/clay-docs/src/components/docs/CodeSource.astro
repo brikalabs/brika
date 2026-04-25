@@ -33,7 +33,7 @@ const lineCount = code
 
 {
   isDefault ? (
-    <div class="clay-code-source not-prose group relative my-4 overflow-hidden rounded-lg border border-clay-hairline bg-clay-base">
+    <div class="clay-code-source not-prose group relative my-4 overflow-hidden rounded-lg border border-clay-hairline">
       <div class="flex items-center justify-between border-clay-hairline border-b bg-clay-elevated px-3 py-1.5">
         <div class="flex min-w-0 flex-1 items-center gap-2 font-mono text-xs">
           <span class="rounded bg-clay-control px-1.5 py-0.5 text-[0.625rem] text-clay-subtle uppercase tracking-wider">
@@ -83,22 +83,22 @@ const lineCount = code
           </svg>
         </button>
       </div>
-      <div class="overflow-x-auto p-4 font-mono text-sm">
+      <div class="overflow-x-auto font-mono">
         <Code
           code={code}
           lang={lang}
-          themes={{ light: 'github-light', dark: 'vesper' }}
+          themes={{ light: 'catppuccin-latte', dark: 'catppuccin-mocha' }}
           defaultColor={false}
         />
       </div>
     </div>
   ) : (
-    <div class="clay-code-source group relative bg-clay-base">
-      <div class="overflow-x-auto p-4 pr-12 font-mono text-sm">
+    <div class="clay-code-source group relative">
+      <div class="overflow-x-auto font-mono">
         <Code
           code={code}
           lang={lang}
-          themes={{ light: 'github-light', dark: 'vesper' }}
+          themes={{ light: 'catppuccin-latte', dark: 'catppuccin-mocha' }}
           defaultColor={false}
         />
       </div>
