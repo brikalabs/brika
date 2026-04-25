@@ -19,7 +19,14 @@ const clayVersion = typeof __CLAY_VERSION__ === 'string' ? __CLAY_VERSION__ : 'd
       class="font-mono text-clay-subtle text-sm transition-colors hover:text-clay-default"
     >
       @brika/clay
-      <span class="ml-1 rounded bg-clay-control px-1.5 py-0.5 text-xs">
+      {/*
+        The version pill uses the theme's `secondary` / `secondary-foreground`
+        pair so foreground/background are guaranteed legible across every
+        preset — `bg-clay-control` alone (which aliases `--accent`) clashed
+        on themes whose accent matches the foreground (e.g. Terminal: both
+        are green, the version becomes invisible).
+      */}
+      <span class="ml-1 rounded bg-secondary px-1.5 py-0.5 text-secondary-foreground text-xs">
         v{clayVersion}
       </span>
     </a>

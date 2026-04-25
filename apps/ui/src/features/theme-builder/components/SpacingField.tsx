@@ -6,7 +6,7 @@
 
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Slider } from '@/components/ui';
+import { Slider, SliderValue } from '@/components/ui';
 import { nearlyEquals, type Preset, PresetChips } from './primitives';
 
 interface SpacingFieldProps {
@@ -39,16 +39,26 @@ export function SpacingField({ value, onChange }: Readonly<SpacingFieldProps>) {
 
   return (
     <div className="space-y-2.5">
-      <Slider
-        value={value}
-        onChange={onChange}
-        min={0.15}
-        max={0.35}
-        step={0.005}
-        unit="rem"
-        numericWidth="w-12"
-        ticks={DENSITY_TICKS}
-      />
+      <div className="flex items-center gap-2">
+        <Slider
+          value={value}
+          onChange={onChange}
+          min={0.15}
+          max={0.35}
+          step={0.005}
+          ticks={DENSITY_TICKS}
+          className="flex-1"
+        />
+        <SliderValue
+          value={value}
+          onChange={onChange}
+          min={0.15}
+          max={0.35}
+          step={0.005}
+          unit="rem"
+          width="w-12"
+        />
+      </div>
 
       <PresetChips
         presets={presets}

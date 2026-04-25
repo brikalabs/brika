@@ -4,10 +4,10 @@ import { Code } from 'astro:components';
 /**
  * Single source-of-truth code block for the docs site.
  *
- * Renders Astro's bundled Shiki via `<Code>`. Uses only `--color-clay-*`
- * chrome tokens (never theme-aware `--color-primary` etc.), so code
- * blocks stay consistent when the reader picks a Clay theme — only
- * demo previews recolour.
+ * Renders Astro's bundled Shiki via `<Code>`. The wrapper owns the
+ * background, border, and radius so the header strip and code body
+ * share one continuous surface — no double-box effect when Shiki's own
+ * background colour differs from the docs chrome.
  *
  * Two variants:
  *  - `default` (stand-alone) wraps in a rounded card with a header
@@ -33,10 +33,10 @@ const lineCount = code
 
 {
   isDefault ? (
-    <div class="clay-code-source not-prose group relative my-4 overflow-hidden rounded-lg border border-clay-hairline">
-      <div class="flex items-center justify-between border-clay-hairline border-b bg-clay-elevated px-3 py-1.5">
-        <div class="flex min-w-0 flex-1 items-center gap-2 font-mono text-xs">
-          <span class="rounded bg-clay-control px-1.5 py-0.5 text-[0.625rem] text-clay-subtle uppercase tracking-wider">
+    <div class="clay-code-source not-prose group relative my-3 overflow-hidden rounded-lg border border-clay-hairline bg-clay-elevated">
+      <div class="flex items-center justify-between gap-3 border-clay-hairline border-b px-3 py-1.5 font-mono text-xs">
+        <div class="flex min-w-0 flex-1 items-center gap-2">
+          <span class="rounded bg-secondary px-1.5 py-0.5 font-medium text-[0.625rem] text-secondary-foreground uppercase tracking-wider">
             {lang}
           </span>
           {filename && <span class="min-w-0 truncate text-clay-default">{filename}</span>}
@@ -46,15 +46,15 @@ const lineCount = code
         </div>
         <button
           type="button"
-          class="copy-button inline-flex size-7 items-center justify-center rounded text-clay-subtle transition-colors hover:bg-clay-control hover:text-clay-default"
+          class="copy-button inline-flex size-6 shrink-0 items-center justify-center rounded text-clay-subtle transition-colors hover:bg-clay-control hover:text-clay-default"
           data-copy-text={code}
           aria-label="Copy code to clipboard"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 24 24"
-            width="14"
-            height="14"
+            width="13"
+            height="13"
             fill="none"
             stroke="currentColor"
             stroke-width="1.75"
@@ -69,8 +69,8 @@ const lineCount = code
           <svg
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 24 24"
-            width="14"
-            height="14"
+            width="13"
+            height="13"
             fill="none"
             stroke="currentColor"
             stroke-width="2"
@@ -83,7 +83,7 @@ const lineCount = code
           </svg>
         </button>
       </div>
-      <div class="overflow-x-auto font-mono">
+      <div class="overflow-x-auto">
         <Code
           code={code}
           lang={lang}
@@ -93,8 +93,8 @@ const lineCount = code
       </div>
     </div>
   ) : (
-    <div class="clay-code-source group relative">
-      <div class="overflow-x-auto font-mono">
+    <div class="clay-code-source group relative bg-clay-elevated">
+      <div class="overflow-x-auto">
         <Code
           code={code}
           lang={lang}
@@ -104,15 +104,15 @@ const lineCount = code
       </div>
       <button
         type="button"
-        class="copy-button absolute top-2 right-2 inline-flex size-7 items-center justify-center rounded text-clay-subtle opacity-0 transition-all hover:bg-clay-control hover:text-clay-default group-hover:opacity-100"
+        class="copy-button absolute top-1.5 right-1.5 inline-flex size-6 shrink-0 items-center justify-center rounded bg-clay-elevated text-clay-subtle opacity-0 transition-all hover:bg-clay-control hover:text-clay-default group-hover:opacity-100"
         data-copy-text={code}
         aria-label="Copy code to clipboard"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 24 24"
-          width="14"
-          height="14"
+          width="13"
+          height="13"
           fill="none"
           stroke="currentColor"
           stroke-width="1.75"
@@ -127,8 +127,8 @@ const lineCount = code
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 24 24"
-          width="14"
-          height="14"
+          width="13"
+          height="13"
           fill="none"
           stroke="currentColor"
           stroke-width="2"

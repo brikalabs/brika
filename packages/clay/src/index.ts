@@ -6,6 +6,7 @@
  * everything in one place.
  */
 
+export type { ComponentGroup, ComponentMeta } from './components/_registry';
 export * from './components/alert-dialog';
 export * from './components/avatar';
 export * from './components/badge';

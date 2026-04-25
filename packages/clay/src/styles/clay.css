@@ -6,18 +6,23 @@
  * Paths in `@source` are resolved by Tailwind v4 relative to THIS file,
  * so they stay correct no matter where or how the stylesheet is imported.
  *
- * Includes the full token system — the same `--primary`, `--radius`,
- * `--shadow-*`, `--font-*` scale the rest of Brika consumes. Components
- * in this package use utilities like `rounded-button`, `corner-card`,
- * `ring-themed`, and `bg-button-filled-container` that are defined below.
+ * Token system layout:
+ *   tokens-roles.css       — Layer 0 (scalars) + Layer 1 (roles).  GENERATED.
+ *   tokens-components.css  — Layer 2 per-component fallback chains. GENERATED.
+ *   clay.css (this file)   — entry point + utilities + tokens not yet
+ *                            owned by the registry.
+ *
+ * Edit `src/tokens/registry.ts` and rerun `pnpm --filter @brika/clay
+ * build:tokens` to regenerate the two CSS files; never hand-edit them.
  */
+
+@import './tokens-roles.css';
+@import './tokens-components.css';
+@import './components.css';
 
 @source "../components/**/*.{ts,tsx}";
 @source "../primitives/**/*.{ts,tsx}";
 @source "../themes/**/*.{ts,tsx}";
-
-/* Shared Tailwind v4 theme tokens — imported by both the Vite frontend build
-   and the hub's ModuleCompiler (plugin page CSS).  Single source of truth. */
 
 /* Dark variant: works whether the consumer toggles via `class="dark"` (legacy)
    or `data-mode="dark"` (current docs convention). Either selector activates
@@ -25,18 +30,11 @@
 @custom-variant dark (&:is(.dark, .dark *, [data-mode="dark"], [data-mode="dark"] *));
 
 /* ─────────────────────────────────────────────────────────────
-   SEMANTIC VARIABLES → TAILWIND UTILITIES
-   Makes them available as utilities: bg-primary, text-success, etc.
-
-   All tokens below reference runtime CSS custom properties defined
-   in the consumer app (e.g. `:root` / `[data-theme="ocean"]`), so
-   themes can swap colors, radii, fonts, and spacing at runtime.
+   TOKENS NOT YET IN THE REGISTRY
+   These will move into the codegen during step 4 of the rollout.
+   Until then they live here.
    ───────────────────────────────────────────────────────────── */
 @theme inline {
-  /* Typography — themes can override --font-sans / --font-mono per skin */
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-mono);
-
   /* Radius — numeric scale derived from the --radius scalar.
      Kept for Tailwind utility compatibility (`rounded-sm`, `rounded-lg`, …). */
   --radius-sm: calc(var(--radius) - 0.375rem);
@@ -45,78 +43,6 @@
   --radius-xl: calc(var(--radius) + 0.25rem);
   --radius-2xl: calc(var(--radius) + 0.5rem);
   --radius-3xl: calc(var(--radius) + 1rem);
-
-  /* Radius — semantic tokens by UI purpose.
-       tight      — tag dots, micro shapes
-       pill       — chips, tags, badges
-       control    — buttons, inputs, switches
-       container  — cards, panels, sidebars
-       surface    — dialogs, sheets, popovers
-     Utilities: `rounded-tight`, `rounded-pill`, `rounded-control`,
-                `rounded-container`, `rounded-surface`. */
-  --radius-tight: max(0rem, calc(var(--radius) - 0.625rem));
-  --radius-pill: max(0rem, calc(var(--radius) - 0.375rem));
-  --radius-control: max(0rem, calc(var(--radius) - 0.25rem));
-  --radius-container: var(--radius);
-  --radius-surface: calc(var(--radius) + 0.25rem);
-
-  /* Shadow — semantic elevation tokens by UI purpose.
-       surface    — subtle resting content (inline cards, quiet chrome)
-       raised     — cards / buttons at rest or hovered
-       overlay    — popovers, dropdowns, tooltips
-       modal      — dialogs, sheets
-       spotlight  — toasts, command palettes
-     Utilities: `shadow-surface`, `shadow-raised`, `shadow-overlay`,
-                `shadow-modal`, `shadow-spotlight`.
-     The numeric `--shadow-xs..xl` scale is the source of truth (Tailwind
-     default, overridden by the theme runtime). Semantic names are aliases. */
-  --shadow-surface: var(--shadow-xs);
-  --shadow-raised: var(--shadow-sm);
-  --shadow-overlay: var(--shadow-md);
-  --shadow-modal: var(--shadow-lg);
-  --shadow-spotlight: var(--shadow-xl);
-
-  /* Motion — semantic channels by intent. One base `--motion-duration` and
-     `--motion-easing` drive everything. `instant` is for fast UI feedback
-     (hover/focus), `standard` for most state transitions (tab switch,
-     dropdown open), `considered` for emphasized reveals (sheet, accordion).
-     Utilities: `duration-instant`, `duration-standard`, `duration-considered`,
-                `ease-standard`. */
-  --motion-instant-duration: max(80ms, calc(var(--motion-duration, 220ms) * 0.45));
-  --motion-standard-duration: var(--motion-duration, 220ms);
-  --motion-considered-duration: calc(var(--motion-duration, 220ms) * 1.8);
-  --motion-instant-easing: var(--motion-easing, cubic-bezier(0.16, 1, 0.3, 1));
-  --motion-standard-easing: var(--motion-easing, cubic-bezier(0.16, 1, 0.3, 1));
-  --motion-considered-easing: var(--motion-easing, cubic-bezier(0.16, 1, 0.3, 1));
-
-  /* Core semantic colors */
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
-
-  /* Semantic feedback colors */
-  --color-success: var(--success);
-  --color-success-foreground: var(--success-foreground);
-  --color-warning: var(--warning);
-  --color-warning-foreground: var(--warning-foreground);
-  --color-info: var(--info);
-  --color-info-foreground: var(--info-foreground);
-  --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
 
   /* Status colors for workflows */
   --color-status-idle: var(--status-idle);
@@ -144,17 +70,7 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  /* ─────────────────────────────────────────────────────────────
-     SURFACE TONAL SCALE (Material-inspired)
-     A family of background tones tinted toward `--surface-tint`
-     (primary by default). Use to differentiate container depth
-     without opaque elevation: surface-dim sits behind, the
-     container-* scale layers cards/panels, surface-bright is for
-     highlights. Utilities: `bg-surface-dim`, `bg-surface-container`,
-     `bg-surface-container-high`, etc.
-     Presets only need to set `--surface-tint`; the rest fall out via
-     color-mix() unless the theme overrides them explicitly.
-     ───────────────────────────────────────────────────────────── */
+  /* ─── Surface tonal scale (Material-inspired) ──────────────── */
   --color-surface-dim: var(
     --surface-dim,
     color-mix(in oklch, var(--background) 88%, var(--surface-tint, var(--primary)))
@@ -189,13 +105,7 @@
     color-mix(in oklch, var(--border) 60%, transparent)
   );
 
-  /* ─────────────────────────────────────────────────────────────
-     ROLE CONTAINER PAIRS (Material-inspired)
-     Low-tonal tint that pairs with a role color, plus the foreground
-     that reads on top of it. Utilities: `bg-primary-container`,
-     `text-on-primary-container`, `bg-success-container`, etc.
-     Defaults via color-mix() so presets only override when needed.
-     ───────────────────────────────────────────────────────────── */
+  /* ─── Role container pairs (Material-inspired) ─────────────── */
   --color-primary-container: var(
     --primary-container,
     color-mix(in oklch, var(--primary) 18%, var(--background))
@@ -253,26 +163,7 @@
     color-mix(in oklch, var(--destructive) 85%, var(--foreground))
   );
 
-  /* ─────────────────────────────────────────────────────────────
-     STATE LAYER OPACITIES
-     Material-style interaction state overlays. Register under the
-     Tailwind v4 `--opacity-*` namespace so they become first-class
-     modifier utilities: `bg-primary/state-hover`, `bg-primary/state-pressed`.
-     ───────────────────────────────────────────────────────────── */
-  --opacity-state-hover: var(--state-hover-opacity, 0.08);
-  --opacity-state-focus: var(--state-focus-opacity, 0.12);
-  --opacity-state-pressed: var(--state-pressed-opacity, 0.16);
-  --opacity-state-selected: var(--state-selected-opacity, 0.12);
-  --opacity-state-disabled: var(--state-disabled-opacity, 0.38);
-
-  /* ─────────────────────────────────────────────────────────────
-     TYPOGRAPHY SCALE (Material-inspired)
-     Five intent levels x three sizes, all derived from `--text-base`
-     (default 1rem). Changing --text-base rescales the whole system.
-     Utilities: `text-display-lg`, `text-headline-md`, `text-title-sm`,
-     `text-body-md`, `text-label-lg`, etc. Each emits -size and
-     -line-height together (Tailwind v4 --text-* namespace).
-     ───────────────────────────────────────────────────────────── */
+  /* ─── Typography scale (Material-inspired) ─────────────────── */
   --text-display-lg: calc(var(--text-base, 1rem) * 3.5625);
   --text-display-lg--line-height: calc(var(--text-base, 1rem) * 4);
   --text-display-md: calc(var(--text-base, 1rem) * 2.8125);
@@ -303,100 +194,6 @@
   --text-label-md--line-height: calc(var(--text-base, 1rem) * 1.125);
   --text-label-sm: calc(var(--text-base, 1rem) * 0.6875);
   --text-label-sm--line-height: calc(var(--text-base, 1rem) * 1);
-
-  /* ─────────────────────────────────────────────────────────────
-     RUNTIME PRIMITIVES → TAILWIND DEFAULTS
-     Wire theme-level scalars (emitted by the theme builder) into the
-     utilities that would otherwise hardcode values. A plain `border`
-     class now honors `--border-width`; `backdrop-blur-theme` honors
-     `--backdrop-blur`; the `ring-themed` utility below honors
-     `--ring-width` / `--ring-offset`.
-     ───────────────────────────────────────────────────────────── */
-  --default-border-width: var(--border-width, 1px);
-  --blur-theme: var(--backdrop-blur, 8px);
-
-  /* ─────────────────────────────────────────────────────────────
-     COMPONENT-SCOPE TOKENS
-
-     Every component reads a component-scoped variable that falls back
-     to a system role. Theme authors override the component variable
-     (e.g. `--button-radius: 0.25rem`) to retune one component without
-     moving the system token.
-
-     Canonical pattern:
-         --<ns>-<component>[-<slot>]: var(
-             --<component>[-<slot>]-<property?>,
-             var(--<system-fallback>)
-         );
-
-     Namespaces used here, and the utilities they expose:
-         --color-*  → bg-<c>-<slot>, text-<c>-<slot>, border-<c>-<slot>
-         --radius-* → rounded-<c>
-         --shadow-* → shadow-<c>
-
-     Override from a theme:
-         [data-theme="mine"] { --button-radius: 0.25rem; }
-         [data-theme="mine"] { --card-shadow: var(--shadow-lg); }
-     ───────────────────────────────────────────────────────────── */
-
-  /* ─── Color ─────────────────────────────────────────────────── */
-
-  /* Button */
-  --color-button-filled-container: var(--button-filled-container, var(--primary));
-  --color-button-filled-label: var(--button-filled-label, var(--primary-foreground));
-  --color-button-outline-border: var(--button-outline-border, var(--border));
-  --color-button-outline-label: var(--button-outline-label, var(--foreground));
-
-  /* Card */
-  --color-card-container: var(--card-container, var(--card));
-  --color-card-label: var(--card-label, var(--card-foreground));
-
-  /* Dialog */
-  --color-dialog-container: var(--dialog-container, var(--popover));
-  --color-dialog-label: var(--dialog-label, var(--popover-foreground));
-
-  /* Input — covers Input, Textarea, Select trigger */
-  --color-input-container: var(--input-container, var(--background));
-  --color-input-label: var(--input-label, var(--foreground));
-  --color-input-border: var(--input-border, var(--input));
-  --color-input-placeholder: var(--input-placeholder, var(--muted-foreground));
-
-  /* Icon — three levels. Components apply these via `text-icon` /
-     `text-icon-muted` / `text-icon-primary` on the parent of an SVG
-     (icons inherit currentColor). */
-  --color-icon: var(--icon, var(--foreground));
-  --color-icon-muted: var(--icon-muted, var(--muted-foreground));
-  --color-icon-primary: var(--icon-primary, var(--primary));
-
-  /* ─── Radius ────────────────────────────────────────────────── */
-
-  --radius-button: var(--button-radius, var(--radius-control));
-  --radius-card: var(--card-radius, var(--radius-container));
-  --radius-dialog: var(--dialog-radius, var(--radius-surface));
-  --radius-popover: var(--popover-radius, var(--radius-surface));
-  --radius-tooltip: var(--tooltip-radius, var(--radius-control));
-  --radius-input: var(--input-radius, var(--radius-control));
-  --radius-select: var(--select-radius, var(--radius-control));
-  --radius-menu: var(--menu-radius, var(--radius-surface));
-  --radius-menu-item: var(--menu-item-radius, var(--radius-control));
-  --radius-checkbox: var(--checkbox-radius, var(--radius-tight));
-  --radius-badge: var(--badge-radius, var(--radius-pill));
-  --radius-tabs: var(--tabs-radius, var(--radius-control));
-  --radius-alert: var(--alert-radius, var(--radius-container));
-  --radius-toast: var(--toast-radius, var(--radius-container));
-  --radius-avatar: var(--avatar-radius, 9999px);
-  --radius-switch: var(--switch-radius, 9999px);
-  --radius-switch-thumb: var(--switch-thumb-radius, 9999px);
-
-  /* ─── Shadow ────────────────────────────────────────────────── */
-
-  --shadow-button: var(--button-shadow, var(--shadow-surface));
-  --shadow-card: var(--card-shadow, var(--shadow-raised));
-  --shadow-popover: var(--popover-shadow, var(--shadow-overlay));
-  --shadow-menu: var(--menu-shadow, var(--shadow-overlay));
-  --shadow-dialog: var(--dialog-shadow, var(--shadow-modal));
-  --shadow-tooltip: var(--tooltip-shadow, var(--shadow-overlay));
-  --shadow-toast: var(--toast-shadow, var(--shadow-spotlight));
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -459,11 +256,6 @@
   padding-bottom: max(calc(var(--spacing, 0.25rem) * 3), calc(var(--radius, 0.5rem) * 0.75));
 }
 
-/* Consumers (apps/ui index.css, hub plugin ModuleCompiler) are expected
-   to define the runtime tokens (--radius, --font-sans, --font-mono, …)
-   at `:root` themselves. This file registers Tailwind utilities only so
-   compiling a file with no matching classes produces no CSS rules. */
-
 /* ─────────────────────────────────────────────────────────────
    CORNER SHAPE UTILITIES
    CSS corner-shape property for squircle and other corner styles
@@ -506,9 +298,7 @@
    Mirror of the `rounded-<component>` pattern. Each component-
    scoped utility reads `--<key>-corner-shape` (per-component
    override) and falls back to `--corner-shape` (theme-level)
-   and finally `round`. Theme authors override the per-component
-   variable to bend one component's corners without retuning the
-   whole theme.
+   and finally `round`.
    ───────────────────────────────────────────────────────────── */
 @utility corner-button {
   corner-shape: var(--button-corner-shape, var(--corner-shape, round));
@@ -561,54 +351,17 @@
 @utility corner-switch-thumb {
   corner-shape: var(--switch-thumb-corner-shape, var(--corner-shape, round));
 }
+
 /* ─────────────────────────────────────────────────────────────
-   DEFINE THEME VARIABLES
-   Using @layer theme for proper organization
+   THEME EXTENSIONS
+   Tokens not yet in the registry: status colors, data-viz, sidebar.
+   Default theme override blocks for the alt themes (ocean, forest, …).
+   These will collapse into the registry + theme JSON during step 4.
    ───────────────────────────────────────────────────────────── */
 @layer theme {
-  /* ═══════════════════════════════════════════════════════════
-     DEFAULT THEME - Light Mode
-     ═══════════════════════════════════════════════════════════ */
+  /* Default theme — light-mode tokens not yet codegenned. */
   :root,
   [data-theme="default"] {
-    /* Geometry — themes can override these to change the entire feel */
-    --radius: 0.75rem;
-    --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-    --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
-
-    /* Surface colors */
-    --background: oklch(0.99 0 0);
-    --foreground: oklch(0.15 0.01 260);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.15 0.01 260);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.15 0.01 260);
-
-    /* Interactive colors */
-    --primary: oklch(0.55 0.18 265);
-    --primary-foreground: oklch(0.99 0 0);
-    --secondary: oklch(0.94 0.005 260);
-    --secondary-foreground: oklch(0.15 0.01 260);
-    --muted: oklch(0.95 0.005 260);
-    --muted-foreground: oklch(0.5 0.01 260);
-    --accent: oklch(0.92 0.01 260);
-    --accent-foreground: oklch(0.15 0.01 260);
-
-    /* UI elements */
-    --border: oklch(0.9 0.01 260);
-    --input: oklch(0.9 0.01 260);
-    --ring: oklch(0.55 0.18 265);
-
-    /* Semantic colors */
-    --success: oklch(0.55 0.16 145);
-    --success-foreground: oklch(0.99 0 0);
-    --warning: oklch(0.65 0.14 85);
-    --warning-foreground: oklch(0.15 0.01 260);
-    --info: oklch(0.5 0.18 230);
-    --info-foreground: oklch(0.99 0 0);
-    --destructive: oklch(0.55 0.22 25);
-    --destructive-foreground: oklch(0.99 0 0);
-
     /* Status colors */
     --status-idle: oklch(0.7 0.02 260);
     --status-running: oklch(0.55 0.18 265);
@@ -616,14 +369,14 @@
     --status-error: oklch(0.55 0.22 25);
 
     /* Data visualization - sequential colors */
-    --data-1: oklch(0.55 0.18 265); /* Blue */
-    --data-2: oklch(0.6 0.18 45); /* Orange */
-    --data-3: oklch(0.55 0.16 145); /* Green */
-    --data-4: oklch(0.55 0.22 25); /* Red */
-    --data-5: oklch(0.55 0.18 300); /* Purple */
-    --data-6: oklch(0.65 0.14 85); /* Yellow */
-    --data-7: oklch(0.55 0.15 200); /* Cyan */
-    --data-8: oklch(0.6 0.18 340); /* Pink */
+    --data-1: oklch(0.55 0.18 265);
+    --data-2: oklch(0.6 0.18 45);
+    --data-3: oklch(0.55 0.16 145);
+    --data-4: oklch(0.55 0.22 25);
+    --data-5: oklch(0.55 0.18 300);
+    --data-6: oklch(0.65 0.14 85);
+    --data-7: oklch(0.55 0.15 200);
+    --data-8: oklch(0.6 0.18 340);
 
     /* Sidebar */
     --sidebar: var(--card);
@@ -636,44 +389,9 @@
     --sidebar-ring: var(--ring);
   }
 
-  /* ═══════════════════════════════════════════════════════════
-     DEFAULT THEME - Dark Mode
-     ═══════════════════════════════════════════════════════════ */
+  /* Default theme — dark-mode tokens not yet codegenned. */
   .dark:root,
   .dark[data-theme="default"] {
-    /* Surface colors */
-    --background: oklch(0.14 0.02 260);
-    --foreground: oklch(0.96 0.01 260);
-    --card: oklch(0.17 0.02 260);
-    --card-foreground: oklch(0.96 0.01 260);
-    --popover: oklch(0.17 0.02 260);
-    --popover-foreground: oklch(0.96 0.01 260);
-
-    /* Interactive colors */
-    --primary: oklch(0.7 0.16 265);
-    --primary-foreground: oklch(0.14 0.02 260);
-    --secondary: oklch(0.22 0.02 260);
-    --secondary-foreground: oklch(0.96 0.01 260);
-    --muted: oklch(0.2 0.02 260);
-    --muted-foreground: oklch(0.65 0.02 260);
-    --accent: oklch(0.25 0.02 260);
-    --accent-foreground: oklch(0.96 0.01 260);
-
-    /* UI elements */
-    --border: oklch(0.25 0.02 260);
-    --input: oklch(0.25 0.02 260);
-    --ring: oklch(0.7 0.16 265);
-
-    /* Semantic colors */
-    --success: oklch(0.72 0.15 145);
-    --success-foreground: oklch(0.14 0.02 260);
-    --warning: oklch(0.8 0.15 85);
-    --warning-foreground: oklch(0.14 0.02 260);
-    --info: oklch(0.72 0.12 230);
-    --info-foreground: oklch(0.14 0.02 260);
-    --destructive: oklch(0.65 0.2 25);
-    --destructive-foreground: oklch(0.96 0.01 260);
-
     /* Status colors */
     --status-idle: oklch(0.5 0.02 260);
     --status-running: oklch(0.7 0.16 265);
@@ -681,152 +399,22 @@
     --status-error: oklch(0.65 0.2 25);
 
     /* Data visualization */
-    --data-1: oklch(0.7 0.16 265); /* Blue */
-    --data-2: oklch(0.72 0.18 45); /* Orange */
-    --data-3: oklch(0.72 0.15 145); /* Green */
-    --data-4: oklch(0.65 0.2 25); /* Red */
-    --data-5: oklch(0.7 0.16 300); /* Purple */
-    --data-6: oklch(0.8 0.15 85); /* Yellow */
-    --data-7: oklch(0.72 0.14 200); /* Cyan */
-    --data-8: oklch(0.72 0.16 340); /* Pink */
-  }
-
-  /* ═══════════════════════════════════════════════════════════
-     OCEAN THEME - Light Mode (Blues & Teals)
-     ═══════════════════════════════════════════════════════════ */
-  [data-theme="ocean"] {
-    --primary: oklch(0.55 0.18 230); /* Deep blue */
-    --primary-foreground: oklch(0.99 0 0);
-    --accent: oklch(0.7 0.12 200); /* Teal */
-    --accent-foreground: oklch(0.15 0.01 260);
-    --success: oklch(0.55 0.16 180); /* Aqua */
-    --success-foreground: oklch(0.99 0 0);
-    --data-1: oklch(0.55 0.18 230);
-    --data-2: oklch(0.6 0.15 200);
-    --data-7: oklch(0.55 0.16 180);
-  }
-
-  .dark[data-theme="ocean"] {
-    --primary: oklch(0.7 0.16 230);
-    --primary-foreground: oklch(0.14 0.02 260);
-    --accent: oklch(0.72 0.12 200);
-    --accent-foreground: oklch(0.96 0.01 260);
-    --success: oklch(0.72 0.15 180);
-    --success-foreground: oklch(0.14 0.02 260);
-    --data-1: oklch(0.7 0.16 230);
-    --data-2: oklch(0.72 0.15 200);
-    --data-7: oklch(0.72 0.16 180);
-  }
-
-  /* ═══════════════════════════════════════════════════════════
-     FOREST THEME - Light Mode (Greens & Earth Tones)
-     ═══════════════════════════════════════════════════════════ */
-  [data-theme="forest"] {
-    --primary: oklch(0.55 0.16 145); /* Forest green */
-    --primary-foreground: oklch(0.99 0 0);
-    --accent: oklch(0.6 0.14 130); /* Moss */
-    --accent-foreground: oklch(0.15 0.01 260);
-    --success: oklch(0.55 0.16 160); /* Emerald */
-    --success-foreground: oklch(0.99 0 0);
-    --data-1: oklch(0.55 0.16 145);
-    --data-3: oklch(0.6 0.14 130);
-    --status-running: oklch(0.55 0.16 145);
-    --status-completed: oklch(0.55 0.16 160);
-  }
-
-  .dark[data-theme="forest"] {
-    --primary: oklch(0.72 0.15 145);
-    --primary-foreground: oklch(0.14 0.02 260);
-    --accent: oklch(0.72 0.14 130);
-    --accent-foreground: oklch(0.96 0.01 260);
-    --success: oklch(0.72 0.15 160);
-    --success-foreground: oklch(0.14 0.02 260);
-    --data-1: oklch(0.72 0.15 145);
-    --data-3: oklch(0.72 0.14 130);
-    --status-running: oklch(0.72 0.15 145);
-    --status-completed: oklch(0.72 0.15 160);
-  }
-
-  /* ═══════════════════════════════════════════════════════════
-     SUNSET THEME - Light Mode (Oranges & Warm Tones)
-     ═══════════════════════════════════════════════════════════ */
-  [data-theme="sunset"] {
-    --primary: oklch(0.6 0.18 45); /* Vibrant orange */
-    --primary-foreground: oklch(0.99 0 0);
-    --accent: oklch(0.65 0.16 60); /* Coral */
-    --accent-foreground: oklch(0.15 0.01 260);
-    --warning: oklch(0.65 0.18 35); /* Warm orange */
-    --warning-foreground: oklch(0.15 0.01 260);
-    --data-2: oklch(0.6 0.18 45);
-    --data-6: oklch(0.65 0.16 60);
-    --status-running: oklch(0.6 0.18 45);
-  }
-
-  .dark[data-theme="sunset"] {
-    --primary: oklch(0.72 0.18 45);
-    --primary-foreground: oklch(0.14 0.02 260);
-    --accent: oklch(0.75 0.16 60);
-    --accent-foreground: oklch(0.14 0.02 260);
-    --warning: oklch(0.75 0.18 35);
-    --warning-foreground: oklch(0.14 0.02 260);
+    --data-1: oklch(0.7 0.16 265);
     --data-2: oklch(0.72 0.18 45);
-    --data-6: oklch(0.75 0.16 60);
-    --status-running: oklch(0.72 0.18 45);
-  }
-
-  /* ═══════════════════════════════════════════════════════════
-     LAVENDER THEME - Light Mode (Purples & Soft Tones)
-     ═══════════════════════════════════════════════════════════ */
-  [data-theme="lavender"] {
-    --primary: oklch(0.55 0.18 300); /* Deep purple */
-    --primary-foreground: oklch(0.99 0 0);
-    --accent: oklch(0.6 0.16 285); /* Lavender */
-    --accent-foreground: oklch(0.15 0.01 260);
-    --info: oklch(0.55 0.16 280); /* Violet */
-    --info-foreground: oklch(0.99 0 0);
-    --data-5: oklch(0.55 0.18 300);
-    --data-8: oklch(0.6 0.16 320);
-    --status-running: oklch(0.55 0.18 300);
-  }
-
-  .dark[data-theme="lavender"] {
-    --primary: oklch(0.7 0.16 300);
-    --primary-foreground: oklch(0.14 0.02 260);
-    --accent: oklch(0.72 0.16 285);
-    --accent-foreground: oklch(0.96 0.01 260);
-    --info: oklch(0.7 0.16 280);
-    --info-foreground: oklch(0.14 0.02 260);
+    --data-3: oklch(0.72 0.15 145);
+    --data-4: oklch(0.65 0.2 25);
     --data-5: oklch(0.7 0.16 300);
-    --data-8: oklch(0.72 0.16 320);
-    --status-running: oklch(0.7 0.16 300);
+    --data-6: oklch(0.8 0.15 85);
+    --data-7: oklch(0.72 0.14 200);
+    --data-8: oklch(0.72 0.16 340);
   }
 
   /* ═══════════════════════════════════════════════════════════
-     RUBY THEME - Light Mode (Reds & Warm Tones)
+     ALL 16 BUILT-IN THEMES are now scoped under `[data-theme="<id>"]`
+     in `themes-static.css` (generated). Set `data-theme` on `<html>`
+     synchronously in <head> to avoid FOUC; `applyTheme()` stays useful
+     for runtime / custom themes.
      ═══════════════════════════════════════════════════════════ */
-  [data-theme="ruby"] {
-    --primary: oklch(0.55 0.22 15); /* Ruby red */
-    --primary-foreground: oklch(0.99 0 0);
-    --accent: oklch(0.6 0.18 340); /* Rose */
-    --accent-foreground: oklch(0.15 0.01 260);
-    --destructive: oklch(0.55 0.24 25); /* Bright red */
-    --destructive-foreground: oklch(0.99 0 0);
-    --data-4: oklch(0.55 0.22 15);
-    --data-8: oklch(0.6 0.18 340);
-    --status-error: oklch(0.55 0.24 25);
-  }
-
-  .dark[data-theme="ruby"] {
-    --primary: oklch(0.65 0.2 15);
-    --primary-foreground: oklch(0.96 0.01 260);
-    --accent: oklch(0.72 0.16 340);
-    --accent-foreground: oklch(0.96 0.01 260);
-    --destructive: oklch(0.65 0.22 25);
-    --destructive-foreground: oklch(0.96 0.01 260);
-    --data-4: oklch(0.65 0.2 15);
-    --data-8: oklch(0.72 0.16 340);
-    --status-error: oklch(0.65 0.22 25);
-  }
 
   /* ═══════════════════════════════════════════════════════════
      GEOMETRY-ONLY THEMES — demonstrate radius/font overrides.

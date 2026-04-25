@@ -8,7 +8,7 @@
 
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Slider } from '@/components/ui';
+import { Slider, SliderValue } from '@/components/ui';
 import { RADIUS_PRESETS } from '../radius-presets';
 import { FieldPreview } from './FieldPreview';
 import { cssVars, nearlyEquals, type Preset, PresetChips, SemanticTile } from './primitives';
@@ -48,16 +48,26 @@ export function RadiusField({ value, onChange }: Readonly<RadiusFieldProps>) {
 
   return (
     <div className="space-y-2.5">
-      <Slider
-        value={value}
-        onChange={onChange}
-        min={0}
-        max={2}
-        step={0.125}
-        unit="rem"
-        numericWidth="w-8"
-        ticks={RADIUS_TICKS}
-      />
+      <div className="flex items-center gap-2">
+        <Slider
+          value={value}
+          onChange={onChange}
+          min={0}
+          max={2}
+          step={0.125}
+          ticks={RADIUS_TICKS}
+          className="flex-1"
+        />
+        <SliderValue
+          value={value}
+          onChange={onChange}
+          min={0}
+          max={2}
+          step={0.125}
+          unit="rem"
+          width="w-8"
+        />
+      </div>
 
       <PresetChips
         presets={localizedPresets}

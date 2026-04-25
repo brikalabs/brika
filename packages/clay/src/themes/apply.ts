@@ -1,78 +1,95 @@
 import type { CSSProperties } from 'react';
+
+import { flattenTheme, getRegistryDefaults, renderThemeStyleSheet } from './flatten';
 import type { ThemeConfig, ThemeMode } from './types';
 
-type CssVarKey = `--${string}`;
+const STYLE_TAG_ID = 'clay-theme';
+const NOOP = (): void => undefined;
+
+type CssVarMap = Record<`--${string}`, string>;
 
 /**
- * Convert a `ThemeConfig` + mode into a React `CSSProperties` object of CSS
- * custom properties ready to spread onto an element's `style` prop.
+ * Build a React `style`-prop object containing every CSS variable needed
+ * to render `theme` in the given `mode`, fully resolved.
  *
  *   <div style={themeToCssVars(nord, 'dark')}>…</div>
  *
- * Every token gets written in TWO forms:
- *   --primary             (the bare token used by @theme inline mappings)
- *   --color-primary       (the Tailwind-prefixed token referenced by `bg-primary` etc.)
+ * The returned object includes:
+ *   1. Every registry-default token (so the scope is *complete* and resists
+ *      a globally-applied theme leaking through the cascade).
+ *   2. The theme's `colors.light` overrides — and, when `mode === 'dark'`,
+ *      its `colors.dark` overrides on top.
+ *   3. The theme's `geometry`, `borders`, `motion`, `focus`, and per-component
+ *      sections.
  *
- * Both are required because Clay's tailwind-theme.css declares
- *   --color-button-filled-container: var(--button-filled-container, var(--primary));
- * — the fallback chain ends at `--primary` (bare), so an override that only
- * touched `--color-primary` would leave optional component-scoped tokens
- * like `--color-button-filled-container` resolving to the default.
+ * This is the right tool for scoped previews — gallery cards, side-by-side
+ * theme comparisons. The wider document still inherits whatever
+ * `applyTheme` last injected at `:root`; the scoped subtree pins every
+ * Clay token explicitly so it can't drift.
  */
 export function themeToCssVars(theme: ThemeConfig, mode: ThemeMode): CSSProperties {
-  const colors = theme.colors[mode];
-  const style: Record<CssVarKey, string> = {};
-  for (const [token, value] of Object.entries(colors)) {
-    style[`--${token}`] = value;
-    style[`--color-${token}`] = value;
+  const defaults = getRegistryDefaults();
+  const { rootVars, darkVars } = flattenTheme(theme);
+
+  const merged: CssVarMap = {};
+  Object.assign(merged, defaults.light);
+  if (mode === 'dark') {
+    Object.assign(merged, defaults.dark);
   }
-  return style;
+  Object.assign(merged, rootVars);
+  if (mode === 'dark') {
+    Object.assign(merged, darkVars);
+  }
+  return merged;
 }
-
-const TOKEN_NAMES_CACHE: string[] = [];
-
-function collectTokenNames(theme: ThemeConfig): readonly string[] {
-  if (TOKEN_NAMES_CACHE.length > 0) {
-    return TOKEN_NAMES_CACHE;
-  }
-  for (const key of Object.keys(theme.colors.light)) {
-    TOKEN_NAMES_CACHE.push(key);
-  }
-  return TOKEN_NAMES_CACHE;
-}
-
-const NOOP = (): void => undefined;
 
 /**
- * Write a theme's colours onto `document.documentElement` as CSS custom
- * properties. Sets both bare (`--primary`) and prefixed (`--color-primary`)
- * forms so every code path through @theme inline mappings resolves
- * correctly.
+ * Apply a theme document-wide by injecting a `<style id="clay-theme">` tag
+ * containing both the `:root` block and the dark-mode block.
+ *
+ * Toggling between light and dark afterwards costs nothing — the dark block
+ * activates via the `:is(.dark, [data-mode="dark"])` selector at CSS level,
+ * no JS re-run needed. Set `data-mode="dark"` on `<html>` (or add the
+ * `dark` class) to switch.
+ *
+ * Returns a cleanup function that removes the injected tag, restoring the
+ * stylesheet defaults.
+ *
+ * SSR-safe: a no-op cleanup is returned when `document` is undefined. To
+ * render the same CSS server-side, call `renderThemeStyleSheet(theme)` and
+ * embed the result in a `<style>` tag during HTML generation.
  */
-export function applyTheme(theme: ThemeConfig, mode: ThemeMode): () => void {
+export function applyTheme(theme: ThemeConfig): () => void {
   if (typeof document === 'undefined') {
     return NOOP;
   }
-  const root = document.documentElement;
-  const colors = theme.colors[mode];
-  for (const [token, value] of Object.entries(colors)) {
-    root.style.setProperty(`--${token}`, value);
-    root.style.setProperty(`--color-${token}`, value);
+  const css = renderThemeStyleSheet(theme);
+  if (css.length === 0) {
+    return NOOP;
   }
-  return () => resetThemeVars(theme);
+  const existing = document.getElementById(STYLE_TAG_ID);
+  const tag = existing instanceof HTMLStyleElement ? existing : document.createElement('style');
+  tag.id = STYLE_TAG_ID;
+  tag.textContent = css;
+  if (!existing) {
+    document.head.appendChild(tag);
+  }
+  return () => {
+    tag.remove();
+  };
 }
 
 /**
- * Remove any theme-applied CSS custom properties from
- * `document.documentElement`, falling back to the stylesheet defaults.
+ * Remove any injected theme stylesheet from the document. Idempotent.
+ *
+ * Backwards-compat shim for callers that previously consumed
+ * `resetThemeVars(theme)`. The current implementation no longer needs the
+ * theme reference (one global tag, one removal), but the parameter is
+ * retained for source compatibility.
  */
-export function resetThemeVars(theme: ThemeConfig): void {
+export function resetThemeVars(_theme?: ThemeConfig): void {
   if (typeof document === 'undefined') {
     return;
   }
-  const root = document.documentElement;
-  for (const token of collectTokenNames(theme)) {
-    root.style.removeProperty(`--${token}`);
-    root.style.removeProperty(`--color-${token}`);
-  }
+  document.getElementById(STYLE_TAG_ID)?.remove();
 }

@@ -25,10 +25,22 @@ const staticPages: readonly SitePage[] = [
   },
   { label: 'Colors', href: '/colors', group: 'Pages', keywords: ['palette', 'tokens', 'theme'] },
   {
+    label: 'Tokens',
+    href: '/tokens',
+    group: 'Pages',
+    keywords: ['variables', 'css', 'css custom property', 'registry', 'token', 'design tokens'],
+  },
+  {
     label: 'Themes',
     href: '/themes',
     group: 'Pages',
-    keywords: ['preset', 'nord', 'dracula', 'dark', 'light', 'ocean'],
+    keywords: ['preset', 'nord', 'dracula', 'dark', 'light', 'ocean', 'brutalist', 'editorial', 'terminal', 'skeuomorph'],
+  },
+  {
+    label: 'Theming',
+    href: '/theming',
+    group: 'Pages',
+    keywords: ['guide', 'apply theme', 'theme config', 'authoring'],
   },
   {
     label: 'All components',

@@ -7,17 +7,20 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '../tooltip';
 
 // --- Variants ---
 
-const codeBlockVariants = cva('overflow-hidden rounded-lg border border-border bg-muted/50', {
-  variants: {
-    variant: {
-      default: '',
-      subtle: 'border-transparent bg-muted/30',
+const codeBlockVariants = cva(
+  'overflow-hidden rounded-code-block border border-border bg-code-block-bg',
+  {
+    variants: {
+      variant: {
+        default: '',
+        subtle: 'border-transparent bg-muted/30',
+      },
     },
-  },
-  defaultVariants: {
-    variant: 'default',
-  },
-});
+    defaultVariants: {
+      variant: 'default',
+    },
+  }
+);
 
 const codeBlockHeaderVariants = cva(
   'flex items-center gap-2 border-border border-b bg-muted/60 px-3 py-2',

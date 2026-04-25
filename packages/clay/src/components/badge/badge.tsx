@@ -5,7 +5,7 @@ import * as React from 'react';
 import { cn } from '../../primitives/cn';
 
 const badgeVariants = cva(
-  'corner-badge inline-flex w-fit shrink-0 items-center justify-center gap-1 overflow-hidden whitespace-nowrap rounded-full border border-transparent px-2 py-0.5 font-medium text-xs transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&>svg]:pointer-events-none [&>svg]:size-3',
+  'corner-badge inline-flex h-[var(--badge-height)] w-fit shrink-0 items-center justify-center gap-[var(--badge-gap)] overflow-hidden whitespace-nowrap rounded-badge border border-transparent px-[var(--badge-padding-x)] py-[var(--badge-padding-y)] font-[var(--badge-font-weight)] text-xs transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&>svg]:pointer-events-none [&>svg]:size-3',
   {
     variants: {
       variant: {

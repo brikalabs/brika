@@ -37,7 +37,7 @@ import {
 } from 'lucide-react';
 import { type ReactNode, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, Slider } from '@/components/ui';
+import { Button, Slider, SliderValue } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import type {
   ColorToken,
@@ -657,16 +657,26 @@ function ComponentDetail({
           overridden={radiusOverridden}
           onReset={() => onTokenChange(meta.key, 'radius', undefined)}
         >
-          <Slider
-            value={effectiveRadius}
-            onChange={(v) => onTokenChange(meta.key, 'radius', v)}
-            min={0}
-            max={RADIUS_SLIDER_MAX}
-            step={0.125}
-            unit="rem"
-            numericWidth="w-14"
-            decimals={3}
-          />
+          <div className="flex items-center gap-2">
+            <Slider
+              value={effectiveRadius}
+              onChange={(v) => onTokenChange(meta.key, 'radius', v)}
+              min={0}
+              max={RADIUS_SLIDER_MAX}
+              step={0.125}
+              className="flex-1"
+            />
+            <SliderValue
+              value={effectiveRadius}
+              onChange={(v) => onTokenChange(meta.key, 'radius', v)}
+              min={0}
+              max={RADIUS_SLIDER_MAX}
+              step={0.125}
+              unit="rem"
+              width="w-14"
+              decimals={3}
+            />
+          </div>
         </Field>
         <Field
           label={t('components.corners')}

@@ -7,14 +7,24 @@ import { Button } from '../button';
 import { Input } from '../input';
 import { Textarea } from '../textarea';
 
+/**
+ * Wrapper for compound input controls (PasswordInput, search bars, fields
+ * with prefix/suffix addons). Mirrors the standalone Input's token surface
+ * exactly — `rounded-input`, `h-[var(--input-height)]`, `bg-input-container`,
+ * `border-input-border`, `shadow-surface` — and carries `data-slot="input"`
+ * on the wrapper so the same `components.css` rules (border-width,
+ * border-style, transition) apply. Themes that tune `--input-*` retune
+ * PasswordInput to match without any extra theming work.
+ */
 function InputGroup({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
-      data-slot="input-group"
+      data-slot="input"
+      data-input-variant="group"
       role="group"
       className={cn(
-        'group/input-group relative flex w-full items-center rounded-control border border-input shadow-surface outline-none transition-[color,box-shadow] dark:bg-input/30',
-        'h-9 min-w-0 has-[>textarea]:h-auto',
+        'group/input-group corner-input relative flex w-full items-center rounded-input border border-input-border bg-input-container text-input-label shadow-surface outline-none transition-[color,box-shadow]',
+        'h-[var(--input-height)] min-w-0 has-[>textarea]:h-auto',
 
         // Variants based on alignment.
         'has-[>[data-align=inline-start]]:[&>input]:pl-2',
@@ -138,12 +148,20 @@ function InputGroupText({ className, ...props }: React.ComponentProps<'span'>) {
   );
 }
 
+/**
+ * The inner control inside an `InputGroup`. Strips border, radius,
+ * background, and shadow — those live on the wrapper. Uses `h-full` so
+ * the wrapper's `--input-height` (minus the wrapper's border) drives the
+ * rendered height; without that, theming `--input-border-width` to a
+ * thicker value would push the inner control past the wrapper's content
+ * area.
+ */
 function InputGroupInput({ className, ...props }: React.ComponentProps<'input'>) {
   return (
     <Input
       data-slot="input-group-control"
       className={cn(
-        'flex-1 rounded-none border-0 bg-transparent shadow-none focus-visible:ring-0 dark:bg-transparent',
+        'h-full flex-1 rounded-none border-0 bg-transparent shadow-none focus-visible:ring-0',
         className
       )}
       {...props}
@@ -156,7 +174,7 @@ function InputGroupTextarea({ className, ...props }: React.ComponentProps<'texta
     <Textarea
       data-slot="input-group-control"
       className={cn(
-        'flex-1 resize-none rounded-none border-0 bg-transparent py-3 shadow-none focus-visible:ring-0 dark:bg-transparent',
+        'flex-1 resize-none rounded-none border-0 bg-transparent py-3 shadow-none focus-visible:ring-0',
         className
       )}
       {...props}

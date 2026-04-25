@@ -6,7 +6,7 @@
 
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, Card, Slider } from '@/components/ui';
+import { Button, Card, Slider, SliderValue } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import { motionRecipeFor } from '../theme-css';
 import { MOTION_STYLES, type MotionStyle } from '../types';
@@ -44,16 +44,26 @@ export function BlurField({ value, onChange }: Readonly<BlurFieldProps>) {
 
   return (
     <div className="space-y-2">
-      <Slider
-        value={value}
-        onChange={onChange}
-        min={0}
-        max={40}
-        step={1}
-        unit="px"
-        numericWidth="w-7"
-        ticks={BLUR_TICKS}
-      />
+      <div className="flex items-center gap-2">
+        <Slider
+          value={value}
+          onChange={onChange}
+          min={0}
+          max={40}
+          step={1}
+          ticks={BLUR_TICKS}
+          className="flex-1"
+        />
+        <SliderValue
+          value={value}
+          onChange={onChange}
+          min={0}
+          max={40}
+          step={1}
+          unit="px"
+          width="w-7"
+        />
+      </div>
       <PresetChips presets={presets} value={value} onChange={onChange} columns="grid-cols-5" />
       <FieldPreview
         label={t('fields.effects.blur.livePreview')}

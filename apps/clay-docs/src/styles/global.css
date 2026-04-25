@@ -4,23 +4,43 @@
 
 @theme {
   /* ==================================================
-     Clay docs-site chrome tokens — sidebar/header/body
-     surfaces, borders, text. Component + theme tokens
-     come from @brika/clay/styles above.
-     ================================================== */
-  --color-clay-canvas: light-dark(oklch(98.75% 0 0), oklch(10% 0 0));
-  --color-clay-elevated: light-dark(oklch(100% 0 0), oklch(14% 0 0));
-  --color-clay-base: light-dark(oklch(97% 0 0), oklch(17% 0 0));
-  --color-clay-control: light-dark(oklch(95% 0 0), oklch(20% 0 0));
-  --color-clay-hairline: light-dark(oklch(91% 0 0), oklch(24% 0 0));
-  --color-clay-brand: light-dark(oklch(63% 0.17 45), oklch(72% 0.17 45));
+     Clay docs-site chrome tokens.
+     Each one aliases a Clay theme token so the entire
+     site re-skins when `applyTheme(...)` swaps the
+     palette. The chrome name carries the *intent* (canvas
+     = page surface, hairline = separator, etc.); the
+     theme owns the *value*. The grayscale defaults remain
+     in `--background`/`--card`/`--border` defaults under
+     `@brika/clay/styles`, so even with no theme applied
+     the chrome resolves.
 
-  --text-color-clay-default: light-dark(oklch(22% 0 0), oklch(94% 0 0));
-  --text-color-clay-strong: light-dark(oklch(10% 0 0), oklch(100% 0 0));
-  --text-color-clay-subtle: light-dark(oklch(48% 0 0), oklch(66% 0 0));
-  --text-color-clay-inactive: light-dark(oklch(66% 0 0), oklch(48% 0 0));
-  --text-color-clay-link: light-dark(oklch(45% 0.2 250), oklch(72% 0.16 250));
-  --text-color-clay-brand: light-dark(oklch(56% 0.18 45), oklch(72% 0.17 45));
+     Plain `@theme` (not `@theme inline`) so the chrome
+     CSS variables are emitted to `:root` and available to
+     direct CSS rules (html, body, .clay-prose, …) — not
+     just Tailwind utilities.
+     ================================================== */
+  --color-clay-canvas: var(--background);
+  --color-clay-elevated: var(--card);
+  /*
+   * `clay-base` and `clay-control` are *subtle* off-canvas surfaces used
+   * by docs chrome (kbd chips, hovered rows, version pill). They derive
+   * from the foreground/background contrast pair — not the theme's
+   * saturated `--secondary` / `--accent` — so chrome stays legible on
+   * every theme, including ones whose accent matches the foreground
+   * (Terminal: both are green). `color-mix` preserves the theme's
+   * tonality while guaranteeing contrast with `--foreground` text.
+   */
+  --color-clay-base: color-mix(in oklch, var(--foreground) 4%, var(--background));
+  --color-clay-control: color-mix(in oklch, var(--foreground) 8%, var(--background));
+  --color-clay-hairline: var(--border);
+  --color-clay-brand: var(--primary);
+
+  --text-color-clay-default: var(--foreground);
+  --text-color-clay-strong: var(--foreground);
+  --text-color-clay-subtle: var(--muted-foreground);
+  --text-color-clay-inactive: var(--muted-foreground);
+  --text-color-clay-link: var(--primary);
+  --text-color-clay-brand: var(--primary);
 
   /* Display font — editorial serif for hero & page titles. The body
      stays Inter (set by @brika/clay/styles); JetBrains Mono is reserved
@@ -182,23 +202,19 @@ kbd,
    Shiki code blocks (.astro-code).
    With defaultColor: false, Shiki emits per-token
    CSS variables; we map them to the active mode.
-   The background is owned by the theme so syntax
-   colours sit on the palette they were tuned for —
-   wrapping container does not force its own bg.
+   The background is owned by the wrapping
+   `.clay-code-source` (a single unified surface) so the
+   header strip and the code body share one background —
+   no double-box effect. The pre itself stays transparent
+   and contributes only padding.
    ================================================== */
 .astro-code {
-  background-color: var(--shiki-light-bg, transparent);
+  background-color: transparent;
   font-size: 0.8125rem;
-  line-height: 1.65;
+  line-height: 1.6;
   letter-spacing: normal;
-  padding: 1rem;
+  padding: 0.75rem 1rem;
   margin: 0;
-}
-
-/* Compact variant inside ComponentExample — tighter padding so the demo
-   stays the visual focus. */
-.clay-code-source.group .astro-code {
-  padding: 0.875rem 1rem;
 }
 
 .astro-code,
@@ -207,10 +223,6 @@ kbd,
   font-style: var(--shiki-light-font-style);
   font-weight: var(--shiki-light-font-weight);
   text-decoration: var(--shiki-light-text-decoration);
-}
-
-html[data-mode="dark"] .astro-code {
-  background-color: var(--shiki-dark-bg, transparent);
 }
 
 html[data-mode="dark"] .astro-code,
@@ -223,12 +235,21 @@ html[data-mode="dark"] .astro-code span {
 
 /* Inline code inside prose (.clay-prose) wraps a styled box
    around the Shiki output. */
+/* Bare `.astro-code` inside prose (no `.clay-code-source` wrapper) — give
+   it its own subtle frame so it doesn't blend into the page bg. The
+   `.clay-code-source` variant overrides this in the wrapper. */
 .clay-prose .astro-code {
-  background-color: var(--color-clay-base) !important;
+  background-color: var(--color-clay-base);
   border: 1px solid var(--color-clay-hairline);
   border-radius: 0.5rem;
-  padding: 0.875rem 1rem;
+  padding: 0.75rem 1rem;
   overflow-x: auto;
+}
+
+.clay-code-source .astro-code {
+  border: 0;
+  border-radius: 0;
+  background-color: transparent;
 }
 
 /* Copy-button wrapper */

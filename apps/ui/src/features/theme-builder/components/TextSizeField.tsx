@@ -7,7 +7,7 @@
 
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Slider } from '@/components/ui';
+import { Slider, SliderValue } from '@/components/ui';
 import { cssVars, nearlyEquals, type Preset, PresetChips } from './primitives';
 
 interface TextSizeFieldProps {
@@ -41,17 +41,27 @@ export function TextSizeField({ value, onChange }: Readonly<TextSizeFieldProps>)
 
   return (
     <div className="space-y-2">
-      <Slider
-        value={value}
-        onChange={onChange}
-        min={0.8}
-        max={1.25}
-        step={0.025}
-        unit="rem"
-        numericWidth="w-10"
-        decimals={3}
-        ticks={TEXT_TICKS}
-      />
+      <div className="flex items-center gap-2">
+        <Slider
+          value={value}
+          onChange={onChange}
+          min={0.8}
+          max={1.25}
+          step={0.025}
+          ticks={TEXT_TICKS}
+          className="flex-1"
+        />
+        <SliderValue
+          value={value}
+          onChange={onChange}
+          min={0.8}
+          max={1.25}
+          step={0.025}
+          unit="rem"
+          width="w-10"
+          decimals={3}
+        />
+      </div>
       <PresetChips
         presets={presets}
         value={value}

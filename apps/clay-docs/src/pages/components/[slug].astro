@@ -1,8 +1,10 @@
 ---
+import { TOKEN_REGISTRY } from '@brika/clay/tokens';
 import { DemoRenderer } from '~/components/DemoRenderer.tsx';
 import CodeSource from '~/components/docs/CodeSource.astro';
 import ComponentExample from '~/components/docs/ComponentExample.astro';
 import InlineMarkdown from '~/components/docs/InlineMarkdown.astro';
+import { TokenTable } from '~/components/docs/TokenTable.tsx';
 import MdxDocLayout from '~/layouts/MdxDocLayout.astro';
 import { adjacentComponents, COMPONENTS, type ComponentEntry } from '~/lib/component-registry';
 
@@ -43,12 +45,29 @@ function nextSection(): string {
   return pad(sectionIndex);
 }
 
+// Pull the tokens scoped to this component from the registry. They power
+// the Tokens section below — every CSS variable, default value, and
+// theme-config path a consumer needs to personalize this component.
+const registryTokens = TOKEN_REGISTRY.filter((token) => token.appliesTo === component.slug);
+const hasRegistryTokens = registryTokens.length > 0;
+
+// First example override pulled from a per-component prop so the JSON
+// snippet always references a real, theme-overridable knob. Falls back
+// to a generic radius override.
+const overrideExample = registryTokens.find((token) => token.themePath?.includes('.padding'))
+  ?? registryTokens.find((token) => token.themePath?.includes('.radius'))
+  ?? registryTokens[0];
+const themePathSegments = overrideExample?.themePath?.split('.') ?? [];
+const overrideComponentKey = themePathSegments[1] ?? component.slug;
+const overrideProp = themePathSegments[2] ?? 'radius';
+const overrideExampleValue = overrideExample?.defaultLight ?? '0.5rem';
+
 const installNum = nextSection();
 const usageNum = heroDemo ? nextSection() : null;
 const examplesNum = moreDemos.length > 0 ? nextSection() : null;
 const accessibilityNum =
   component.accessibility && component.accessibility.length > 0 ? nextSection() : null;
-const tokensNum = component.tokens && component.tokens.length > 0 ? nextSection() : null;
+const tokensNum = hasRegistryTokens ? nextSection() : null;
 const apiNum = nextSection();
 ---
 
@@ -181,29 +200,62 @@ const apiNum = nextSection();
   }
 
   {
-    component.tokens && component.tokens.length > 0 && tokensNum && (
+    hasRegistryTokens && tokensNum && (
       <section class="mb-16">
         <div class="numbered-rule mb-6">
           <span class="num">{tokensNum}</span>
           <span class="label">Tokens</span>
           <span class="spacer hairline" />
+          <span class="text-clay-inactive">
+            {registryTokens.length} theme-overridable
+          </span>
         </div>
         <h2
           id="tokens"
           class="mb-3 scroll-mt-24 font-display text-3xl text-clay-strong leading-[1.1]"
         >
-          Theme tokens consumed
+          Theme tokens
         </h2>
-        <p class="mb-4 max-w-2xl text-clay-default text-sm leading-relaxed">
-          {component.name} reads the following CSS custom properties from the active theme.
+        <p class="mb-6 max-w-2xl text-clay-default text-sm leading-relaxed">
+          Every CSS variable {component.name} reads, with its default and the
+          dotted path you'd write in a <code class="font-mono text-xs">ThemeConfig</code> JSON
+          to override it. Set any of these in your theme to retune {component.name}
+          without touching component code.
         </p>
-        <div class="flex flex-wrap gap-1.5">
-          {component.tokens.map((token) => (
-            <code class="rounded border border-clay-hairline bg-clay-base px-2 py-0.5 font-mono text-clay-default text-xs">
-              {token}
-            </code>
-          ))}
-        </div>
+
+        <TokenTable component={component.slug} title={`${component.name} tokens`} client:load />
+
+        <h3 class="mt-10 mb-3 font-display text-clay-strong text-xl leading-tight">
+          Override in a theme
+        </h3>
+        <p class="mb-4 max-w-2xl text-clay-default text-sm leading-relaxed">
+          Authoring a theme is plain JSON. Drop overrides under
+          <code class="font-mono text-xs">components.{overrideComponentKey}</code> — the names
+          are camelCase versions of the variable suffix.
+        </p>
+
+        <CodeSource
+          lang="json"
+          filename={`my-theme.json`}
+          code={`{
+  "id": "my-theme",
+  "name": "My Theme",
+  "description": "...",
+  "accentSwatches": ["#000"],
+
+  "components": {
+    "${overrideComponentKey}": {
+      "${overrideProp}": "${overrideExampleValue}"
+    }
+  }
+}`}
+        />
+
+        <p class="mt-4 max-w-2xl text-clay-default text-sm leading-relaxed">
+          Then apply with <code class="font-mono text-xs">applyTheme(myTheme)</code>{' '}
+          (see the <a href="/theming" class="text-clay-link underline-offset-2 hover:underline">theming guide</a>)
+          or scope it to a subtree with <code class="font-mono text-xs">themeToCssVars(myTheme, mode)</code>.
+        </p>
       </section>
     )
   }

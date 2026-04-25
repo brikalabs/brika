@@ -1,4 +1,4 @@
-import type { ThemeConfig, ThemeMode } from '@brika/clay/themes';
+import type { ThemeConfig } from '@brika/clay/themes';
 import {
   applyTheme,
   BUILT_IN_THEMES,
@@ -9,13 +9,10 @@ import { ChevronDown } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 const STORAGE_KEY = 'clay-theme';
-const MODE_STORAGE_KEY = 'clay-mode';
 const THEME_EVENT = 'clay:theme-change';
 
-type ClayMode = 'light' | 'dark';
-
 function readInitialThemeId(): string {
-  if (typeof window === 'undefined') {
+  if (globalThis.window === undefined) {
     return 'default';
   }
   const stored = localStorage.getItem(STORAGE_KEY);
@@ -23,17 +20,6 @@ function readInitialThemeId(): string {
     return stored;
   }
   return 'default';
-}
-
-function readInitialMode(): ClayMode {
-  if (typeof document === 'undefined') {
-    return 'light';
-  }
-  return document.documentElement.getAttribute('data-mode') === 'dark' ? 'dark' : 'light';
-}
-
-function toThemeMode(mode: ClayMode): ThemeMode {
-  return mode;
 }
 
 const SERIF = '"Instrument Serif", "Iowan Old Style", Georgia, "Times New Roman", serif';
@@ -73,21 +59,18 @@ function SwatchStrip({ theme, count = 4, height = 14 }: SwatchStripProps) {
  */
 export function ThemePicker() {
   const [themeId, setThemeId] = useState<string>('default');
-  const [mode, setMode] = useState<ClayMode>('light');
   const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const initialId = readInitialThemeId();
-    const initialMode = readInitialMode();
     setThemeId(initialId);
-    setMode(initialMode);
     setMounted(true);
 
     const chosen = BUILT_IN_THEMES_BY_ID[initialId];
     if (chosen && initialId !== 'default') {
-      applyTheme(chosen, toThemeMode(initialMode));
+      applyTheme(chosen);
     }
   }, []);
 
@@ -95,30 +78,31 @@ export function ThemePicker() {
     if (!mounted) {
       return;
     }
-    const chosen = BUILT_IN_THEMES_BY_ID[themeId];
-    if (!chosen) {
-      return;
+    // Mirror the BaseLayout's inline-script attribute, then swap the
+    // lazy-loaded `<link id="clay-theme-link">` to the new preset's CSS.
+    // `applyTheme` is deliberately omitted: the static per-theme file
+    // already covers every variable, with no JavaScript flatten on the
+    // hot path. (Custom runtime themes still go through `applyTheme`.)
+    document.documentElement.dataset.theme = themeId;
+    const existing = document.getElementById('clay-theme-link');
+    if (existing instanceof HTMLLinkElement) {
+      existing.remove();
     }
-    if (themeId === 'default') {
-      resetThemeVars(chosen);
-      return;
+    if (themeId !== 'default') {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = `/_clay-themes/${themeId}.css`;
+      link.id = 'clay-theme-link';
+      link.dataset.themeId = themeId;
+      document.head.appendChild(link);
     }
-    applyTheme(chosen, toThemeMode(mode));
-  }, [themeId, mode, mounted]);
+    // Drop any stale runtime injection from a previous custom-theme call.
+    resetThemeVars();
+  }, [themeId, mounted]);
 
   useEffect(() => {
-    const onModeChange = () => {
-      setMode(document.documentElement.getAttribute('data-mode') === 'dark' ? 'dark' : 'light');
-    };
-    const observer = new MutationObserver(onModeChange);
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ['data-mode'],
-    });
     const onStorage = (event: StorageEvent) => {
-      if (event.key === MODE_STORAGE_KEY) {
-        onModeChange();
-      } else if (event.key === STORAGE_KEY && event.newValue) {
+      if (event.key === STORAGE_KEY && event.newValue) {
         setThemeId(event.newValue);
       }
     };
@@ -130,7 +114,6 @@ export function ThemePicker() {
     globalThis.addEventListener('storage', onStorage);
     globalThis.addEventListener(THEME_EVENT, onThemeChange);
     return () => {
-      observer.disconnect();
       globalThis.removeEventListener('storage', onStorage);
       globalThis.removeEventListener(THEME_EVENT, onThemeChange);
     };
@@ -150,11 +133,11 @@ export function ThemePicker() {
         setOpen(false);
       }
     };
-    window.addEventListener('mousedown', onDocumentClick);
-    window.addEventListener('keydown', onKeydown);
+    globalThis.addEventListener('mousedown', onDocumentClick);
+    globalThis.addEventListener('keydown', onKeydown);
     return () => {
-      window.removeEventListener('mousedown', onDocumentClick);
-      window.removeEventListener('keydown', onKeydown);
+      globalThis.removeEventListener('mousedown', onDocumentClick);
+      globalThis.removeEventListener('keydown', onKeydown);
     };
   }, [open]);
 

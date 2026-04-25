@@ -1,27 +1,31 @@
 ---
 layout: ~/layouts/MdxDocLayout.astro
 title: "Themes"
-description: "Eleven first-party presets ship with Clay. Pick any one to theme the whole docs site, or click a card to compare them side by side."
+description: "Sixteen first-party presets ship with Clay — eleven palette themes plus five showcase themes that retune geometry, borders, typography, motion, and translucency."
 group: "Library"
 ---
 
 import { ThemesGallery } from "~/components/demos/ThemesGallery.tsx";
 import CodeSource from "~/components/docs/CodeSource.astro";
+import ScopeTabs from "~/components/docs/ScopeTabs.astro";
 
 <section class="mb-16">
   <div class="numbered-rule mb-6">
     <span class="num">01</span>
     <span class="label">Gallery</span>
     <span class="spacer hairline"></span>
-    <span class="text-clay-inactive">11 presets</span>
+    <span class="text-clay-inactive">16 presets</span>
   </div>
   <h2 id="gallery" class="mb-4 scroll-mt-24 font-display text-3xl text-clay-strong leading-[1.1]">
     Pick a theme
   </h2>
   <p class="mb-8 max-w-2xl text-clay-default text-sm leading-relaxed">
-    Each card renders Button, Input, and Card under that theme's CSS vars — a side-by-side
-    visual diff. Click a card to apply that theme site-wide; the choice persists across
-    visits via <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">localStorage</code>.
+    Each card renders under its own theme — a side-by-side visual diff. Click a card to apply
+    that theme site-wide; the choice persists across visits via
+    <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">localStorage</code>.
+    The four <em>showcase</em> themes — Brutalist, Editorial, Terminal, Skeuomorph, plus the new
+    Glass — go beyond colour: zero-radius mono brutalism, frosted translucent layers, full
+    monospace, heavy shadows, the works.
   </p>
   <ThemesGallery client:only="react" />
 </section>
@@ -36,14 +40,22 @@ import CodeSource from "~/components/docs/CodeSource.astro";
     Theme the whole app
   </h2>
   <p class="mb-5 max-w-2xl text-clay-default text-sm leading-relaxed">
-    <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">applyTheme(theme, mode)</code> writes every colour onto <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">document.documentElement</code> as a CSS custom property. Every Clay component on the page reads the new values immediately — no re-render, no React state.
+    <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">applyTheme(theme)</code> injects a <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">{`<style id="clay-theme">`}</code> tag into the head with both <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">:root</code> and dark-mode blocks. Toggling
+    <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">data-mode="dark"</code> on
+    <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">{`<html>`}</code> flips between them via CSS — no re-render, no JS re-run.
   </p>
   <CodeSource
-    code={`import { nord, applyTheme } from "@brika/clay/themes";
+    code={`import { applyTheme, nord } from "@brika/clay/themes";
 
-applyTheme(nord, "dark");`}
+const cleanup = applyTheme(nord);
+
+// Toggle dark mode without re-applying:
+document.documentElement.dataset.mode = "dark";
+
+// Or restore the stylesheet defaults:
+cleanup();`}
     lang="tsx"
-    filename="globally"
+    filename="globally.tsx"
   />
 </section>
 
@@ -57,17 +69,21 @@ applyTheme(nord, "dark");`}
     Or scope it to a subtree
   </h2>
   <p class="mb-5 max-w-2xl text-clay-default text-sm leading-relaxed">
-    <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">themeToCssVars(theme, mode)</code> returns a <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">CSSProperties</code> object you can spread onto any element's style prop. The theme applies only to that subtree — useful for side-by-side comparisons like the gallery above.
+    Three idioms, each one sharper than the last. <strong>Default</strong> wraps in a
+    <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">display: contents</code> div (no layout box).
+    <strong>asChild</strong> merges the scope onto an existing child via Radix Slot
+    (no extra DOM at all).
+    <strong>Manual</strong> spreads the raw <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">themeToCssVars(...)</code> object onto any element you control.
   </p>
-  <CodeSource
-    code={`import { ocean, themeToCssVars } from "@brika/clay/themes";
 
-<div style={themeToCssVars(ocean, "light")}>
-  <Button>Ocean button</Button>
-</div>`}
-    lang="tsx"
-    filename="scoped"
-  />
+  <ScopeTabs />
+
+  <p class="mt-6 max-w-2xl text-clay-default text-sm leading-relaxed">
+    All three return a <em>complete</em> CSS-variable map (registry defaults + theme
+    overrides), so a globally-applied theme can never bleed into the scope through
+    a token your theme didn't override. This is why the gallery above can show 16 cards
+    side-by-side, each isolated.
+  </p>
 </section>
 
 <section class="mb-16">
@@ -80,7 +96,9 @@ applyTheme(nord, "dark");`}
     ThemeConfig
   </h2>
   <p class="mb-5 max-w-2xl text-clay-default text-sm leading-relaxed">
-    Every preset is a typed object. The registry exports <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">BUILT_IN_THEMES</code> (ordered), <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">BUILT_IN_THEMES_BY_ID</code> (lookup map), and each theme by name — <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">nord</code>, <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">ocean</code>, <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">forest</code>, <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">sunset</code>, <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">lavender</code>, <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">ruby</code>, <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">solarized</code>, <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">candy</code>, <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">dracula</code>, <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">mono</code>, plus <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">default_</code> as the reserved-word rename.
+    Every preset is plain JSON. The minimum is the four identity fields; every section
+    below them is optional, so a colour-only theme stays small while a showcase theme
+    can retune geometry, borders, motion, focus, and per-component tokens.
   </p>
   <CodeSource
     code={`interface ThemeConfig {
@@ -88,14 +106,44 @@ applyTheme(nord, "dark");`}
   name: string;
   description: string;
   accentSwatches: readonly string[];
-  colors: {
-    light: Readonly<Record<string, string>>;
-    dark: Readonly<Record<string, string>>;
+
+  // All sections optional.
+  colors?: {
+    light?: Readonly<Record<string, string>>;
+    dark?:  Readonly<Record<string, string>>;
   };
+  geometry?: { radius?, spacing?, fontSans?, fontMono?, … };
+  borders?:  { width?, style? };
+  motion?:   { duration?, easing? };
+  focus?:    { width?, offset? };
+
+  components?: Partial<Record<ComponentName, Record<string, string>>>;
 }`}
     lang="ts"
     filename="types.ts"
   />
+  <p class="mt-5 max-w-2xl text-clay-default text-sm leading-relaxed">
+    The registry exports
+    <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">BUILT_IN_THEMES</code> (ordered),
+    <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">BUILT_IN_THEMES_BY_ID</code> (lookup map),
+    and each theme by name — eleven palette themes
+    (<code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">nord</code>,
+    <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">ocean</code>,
+    <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">forest</code>,
+    <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">sunset</code>,
+    <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">lavender</code>,
+    <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">ruby</code>,
+    <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">solarized</code>,
+    <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">candy</code>,
+    <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">dracula</code>,
+    <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">mono</code>,
+    <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">default_</code>) plus five showcase themes
+    (<code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">brutalist</code>,
+    <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">editorial</code>,
+    <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">terminal</code>,
+    <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">skeuomorph</code>,
+    <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">glass</code>).
+  </p>
 </section>
 
 <section class="mb-16">

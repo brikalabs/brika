@@ -1,20 +1,31 @@
 /**
- * The full Clay component registry.
+ * Docs-side composition of the component catalogue.
  *
- * One entry per component. The dynamic /components/[slug] page renders from
- * this registry; the sidebar, command palette, /components index, and home
- * grid all read from it too. Adding a component = appending one entry here
- * + dropping a `<slug>.tsx` demo file into src/components/demos/.
+ * Discovery is pure runtime: Vite resolves `import.meta.glob` at build
+ * time against Clay's source tree (the workspace path resolves through
+ * because `@brika/clay`'s `exports` map points at raw TS). Every
+ * component folder ships a `meta.ts`; this file globs them in and
+ * composes them with docs-only data (demos, accessibility, tokens) keyed
+ * by slug. Adding a new component is zero edits here — only adding
+ * demos / accessibility / tokens needs an entry below.
  */
 
-export type ComponentGroup =
-  | 'Primitives'
-  | 'Forms'
-  | 'Overlays'
-  | 'Navigation'
-  | 'Feedback'
-  | 'Layout'
-  | 'Data';
+import type { ComponentGroup, ComponentMeta } from '@brika/clay';
+
+export type { ComponentGroup } from '@brika/clay';
+
+interface MetaModule {
+  readonly meta: ComponentMeta;
+}
+
+const metaModules = import.meta.glob<MetaModule>(
+  '../../../../packages/clay/src/components/*/meta.ts',
+  { eager: true }
+);
+
+const CLAY_COMPONENTS: readonly ComponentMeta[] = Object.values(metaModules)
+  .map((m) => m.meta)
+  .sort((a, b) => a.name.localeCompare(b.name));
 
 export interface ComponentDemo {
   /** Exported function name from the demo file (must end in `Demo`). */
@@ -27,11 +38,7 @@ export interface ComponentDemo {
   readonly code: string;
 }
 
-export interface ComponentEntry {
-  readonly slug: string;
-  readonly name: string;
-  readonly description: string;
-  readonly group: ComponentGroup;
+export interface ComponentDocs {
   readonly demos: readonly ComponentDemo[];
   /** Optional accessibility callouts rendered as bullets. */
   readonly accessibility?: readonly string[];
@@ -39,13 +46,15 @@ export interface ComponentEntry {
   readonly tokens?: readonly string[];
 }
 
-export const COMPONENTS: readonly ComponentEntry[] = [
-  {
-    slug: 'button',
-    name: 'Button',
-    description:
-      'The default action affordance — a themed wrapper over the native button with CVA variants and asChild slot projection.',
-    group: 'Primitives',
+export interface ComponentEntry extends ComponentMeta, ComponentDocs {
+  /** Folder slug — kept as a separate key for the dynamic route. */
+  readonly slug: string;
+  /** Alias kept for templates that read `name` (was `displayName` upstream). */
+  readonly name: string;
+}
+
+const DOCS_DATA: Readonly<Record<string, ComponentDocs>> = {
+  button: {
     demos: [
       {
         name: 'ButtonDefaultDemo',
@@ -67,7 +76,7 @@ export const COMPONENTS: readonly ComponentEntry[] = [
       {
         name: 'ButtonSizesDemo',
         title: 'Sizes',
-        description: '`xs`, `sm`, `default`, `lg` for text; matching `icon-*` for icon-only.',
+        description: `\`xs\`, \`sm\`, \`default\`, \`lg\` for text; matching \`icon-*\` for icon-only.`,
         code: `<Button size="xs">XS</Button>
 <Button size="sm">Small</Button>
 <Button size="default">Default</Button>
@@ -76,25 +85,20 @@ export const COMPONENTS: readonly ComponentEntry[] = [
       {
         name: 'ButtonIconDemo',
         title: 'Icon-only',
-        description: 'Always supply an `aria-label` for screen readers.',
+        description: `Always supply an \`aria-label\` for screen readers.`,
         code: `<Button size="icon" aria-label="Settings">
   <SettingsIcon />
 </Button>`,
       },
     ],
     accessibility: [
-      'Focus-visible ring uses the `--ring` token for WCAG contrast.',
-      '`disabled` reduces opacity and blocks pointer events.',
-      'Icon-only buttons REQUIRE an `aria-label`.',
+      `Focus-visible ring uses the \`--ring\` token for WCAG contrast.`,
+      `\`disabled\` reduces opacity and blocks pointer events.`,
+      `Icon-only buttons REQUIRE an \`aria-label\`.`,
     ],
     tokens: ['primary', 'primary-foreground', 'destructive', 'secondary', 'accent', 'ring'],
   },
-  {
-    slug: 'input',
-    name: 'Input',
-    description:
-      'A themed single-line text input. Thin wrapper over the native input with tokenised styling, focus ring, and aria-invalid handling.',
-    group: 'Forms',
+  input: {
     demos: [
       {
         name: 'InputDefaultDemo',
@@ -104,7 +108,7 @@ export const COMPONENTS: readonly ComponentEntry[] = [
       {
         name: 'InputTypesDemo',
         title: 'Types',
-        description: 'Every native `type` passes through.',
+        description: `Every native \`type\` passes through.`,
         code: `<Input type="email" placeholder="you@example.com" />
 <Input type="number" placeholder="42" />
 <Input type="search" placeholder="Search…" />`,
@@ -112,7 +116,7 @@ export const COMPONENTS: readonly ComponentEntry[] = [
       {
         name: 'InputInvalidDemo',
         title: 'Invalid',
-        description: 'Set `aria-invalid="true"` to surface a validation error.',
+        description: `Set \`aria-invalid="true"\` to surface a validation error.`,
         code: '<Input aria-invalid="true" defaultValue="not a valid value" />',
       },
       {
@@ -123,12 +127,7 @@ export const COMPONENTS: readonly ComponentEntry[] = [
     ],
     tokens: ['input', 'background', 'foreground', 'muted-foreground', 'ring', 'destructive'],
   },
-  {
-    slug: 'card',
-    name: 'Card',
-    description:
-      'A surface container that groups related content and actions. Header / title / description / content / footer subcomponents.',
-    group: 'Layout',
+  card: {
     demos: [
       {
         name: 'CardDefaultDemo',
@@ -144,24 +143,19 @@ export const COMPONENTS: readonly ComponentEntry[] = [
       {
         name: 'CardAccentDemo',
         title: 'Accent colours',
-        description: 'Six accents keyed to the theme `--data-*` scale.',
+        description: `Six accents keyed to the theme \`--data-*\` scale.`,
         code: '<Card accent="emerald">…</Card>',
       },
       {
         name: 'CardInteractiveDemo',
         title: 'Interactive',
-        description:
-          'Hover lift. Add your own `role="button"` or wrap in `<a>` for full interactivity.',
+        description: `Hover lift. Add your own \`role="button"\` or wrap in \`<a>\` for full interactivity.`,
         code: '<Card interactive>…</Card>',
       },
     ],
     tokens: ['card', 'card-foreground', 'border', 'data-1', 'data-2', 'data-3'],
   },
-  {
-    slug: 'label',
-    name: 'Label',
-    description: 'Accessible form label. Wraps Radix Label primitive with tokenised typography.',
-    group: 'Forms',
+  label: {
     demos: [
       {
         name: 'LabelDefaultDemo',
@@ -171,11 +165,7 @@ export const COMPONENTS: readonly ComponentEntry[] = [
       },
     ],
   },
-  {
-    slug: 'badge',
-    name: 'Badge',
-    description: 'Small status descriptor. Use for tags, counts, and inline status.',
-    group: 'Feedback',
+  badge: {
     demos: [
       {
         name: 'BadgeDefaultDemo',
@@ -192,11 +182,7 @@ export const COMPONENTS: readonly ComponentEntry[] = [
       },
     ],
   },
-  {
-    slug: 'separator',
-    name: 'Separator',
-    description: 'Visual or semantic divider between content sections.',
-    group: 'Layout',
+  separator: {
     demos: [
       {
         name: 'SeparatorDefaultDemo',
@@ -210,11 +196,7 @@ export const COMPONENTS: readonly ComponentEntry[] = [
       },
     ],
   },
-  {
-    slug: 'avatar',
-    name: 'Avatar',
-    description: 'User avatar with image, fallback initials, and status badge.',
-    group: 'Data',
+  avatar: {
     demos: [
       {
         name: 'AvatarDefaultDemo',
@@ -243,12 +225,7 @@ export const COMPONENTS: readonly ComponentEntry[] = [
       },
     ],
   },
-  {
-    slug: 'switch',
-    name: 'Switch',
-    description:
-      'Two-state toggle. Use for on/off settings; prefer Checkbox for multi-select forms.',
-    group: 'Forms',
+  switch: {
     demos: [
       {
         name: 'SwitchDefaultDemo',
@@ -262,12 +239,7 @@ export const COMPONENTS: readonly ComponentEntry[] = [
       },
     ],
   },
-  {
-    slug: 'skeleton',
-    name: 'Skeleton',
-    description:
-      'Loading placeholder with subtle shimmer. Match the rough size of incoming content.',
-    group: 'Feedback',
+  skeleton: {
     demos: [
       {
         name: 'SkeletonDefaultDemo',
@@ -287,11 +259,7 @@ export const COMPONENTS: readonly ComponentEntry[] = [
       },
     ],
   },
-  {
-    slug: 'progress',
-    name: 'Progress',
-    description: 'Linear determinate progress bar. Pass `value` 0–100.',
-    group: 'Feedback',
+  progress: {
     demos: [
       {
         name: 'ProgressDefaultDemo',
@@ -300,11 +268,7 @@ export const COMPONENTS: readonly ComponentEntry[] = [
       },
     ],
   },
-  {
-    slug: 'progress-display',
-    name: 'ProgressDisplay',
-    description: 'Composite progress affordance with label, percentage, and bar.',
-    group: 'Feedback',
+  'progress-display': {
     demos: [
       {
         name: 'ProgressDisplayDefaultDemo',
@@ -313,11 +277,7 @@ export const COMPONENTS: readonly ComponentEntry[] = [
       },
     ],
   },
-  {
-    slug: 'textarea',
-    name: 'Textarea',
-    description: 'Multi-line text input. Auto-resizes if you let it, or clamp via `rows`.',
-    group: 'Forms',
+  textarea: {
     demos: [
       {
         name: 'TextareaDefaultDemo',
@@ -326,11 +286,7 @@ export const COMPONENTS: readonly ComponentEntry[] = [
       },
     ],
   },
-  {
-    slug: 'password-input',
-    name: 'PasswordInput',
-    description: 'Input variant for password entry with an eye toggle to reveal characters.',
-    group: 'Forms',
+  'password-input': {
     demos: [
       {
         name: 'PasswordInputDefaultDemo',
@@ -339,24 +295,63 @@ export const COMPONENTS: readonly ComponentEntry[] = [
       },
     ],
   },
-  {
-    slug: 'slider',
-    name: 'Slider',
-    description: 'Single-thumb range slider. Pass `value` (controlled) or `defaultValue`.',
-    group: 'Forms',
+  slider: {
     demos: [
       {
         name: 'SliderDefaultDemo',
         title: 'Default',
-        code: '<Slider defaultValue={[50]} max={100} step={1} />',
+        description: `Slider is just the track. Compose it with \`SliderValue\` when you want a boxed numeric readout — both bind to the same \`value\` / \`onChange\`.`,
+        code: `<div className="flex items-center gap-2">
+  <Slider value={value} onChange={setValue} min={0} max={100} step={1} className="flex-1" />
+  <SliderValue value={value} onChange={setValue} min={0} max={100} step={1} unit="%" />
+</div>`,
+      },
+      {
+        name: 'SliderStepDotsDemo',
+        title: 'Step dots',
+        description: `\`ticks\` set to \`true\` renders one dot per \`step\` between min and max; \`tickLabels\` shows the value below each dot. Endpoints are skipped so they don't collide with the thumb.`,
+        code: '<Slider value={value} onChange={setValue} min={0} max={10} step={1} ticks tickLabels />',
+      },
+      {
+        name: 'SliderStepIntervalDemo',
+        title: 'Custom interval',
+        description: `Pass a number to space dots independently of \`step\`. Here \`step={1}\` still controls keyboard increments while dots appear every 2 units.`,
+        code: '<Slider value={value} onChange={setValue} min={0} max={20} step={1} ticks={2} tickLabels />',
+      },
+      {
+        name: 'SliderCustomTicksDemo',
+        title: 'Preset positions',
+        description: `An explicit array marks arbitrary anchor values — useful for plan tiers, durations, or non-uniform presets. Pass a function to \`tickLabels\` for custom formatting.`,
+        code: `<Slider
+  value={value}
+  onChange={setValue}
+  min={0}
+  max={12}
+  step={1}
+  ticks={[1, 3, 6, 12]}
+  tickLabels={(t) => \`\${t}mo\`}
+/>`,
       },
     ],
+    tokens: [
+      'slider-track',
+      'slider-fill',
+      'slider-thumb',
+      'slider-thumb-border',
+      'slider-thumb-border-width',
+      'slider-thumb-shadow',
+      'slider-tick',
+      'slider-tick-active',
+      'slider-label',
+      'slider-label-active',
+      'slider-track-height',
+      'slider-thumb-size',
+      'slider-tick-size',
+      'slider-radius',
+      'slider-thumb-radius',
+    ],
   },
-  {
-    slug: 'select',
-    name: 'Select',
-    description: 'Dropdown selection menu. Wraps Radix Select with tokenised styling.',
-    group: 'Forms',
+  select: {
     demos: [
       {
         name: 'SelectDefaultDemo',
@@ -371,11 +366,7 @@ export const COMPONENTS: readonly ComponentEntry[] = [
       },
     ],
   },
-  {
-    slug: 'tabs',
-    name: 'Tabs',
-    description: 'Tabbed navigation between related views.',
-    group: 'Navigation',
+  tabs: {
     demos: [
       {
         name: 'TabsDefaultDemo',
@@ -391,11 +382,7 @@ export const COMPONENTS: readonly ComponentEntry[] = [
       },
     ],
   },
-  {
-    slug: 'breadcrumb',
-    name: 'Breadcrumb',
-    description: 'Hierarchical location indicator with separators.',
-    group: 'Navigation',
+  breadcrumb: {
     demos: [
       {
         name: 'BreadcrumbDefaultDemo',
@@ -414,11 +401,7 @@ export const COMPONENTS: readonly ComponentEntry[] = [
       },
     ],
   },
-  {
-    slug: 'dialog',
-    name: 'Dialog',
-    description: 'Modal dialog. Use for confirmations, forms, and focused tasks.',
-    group: 'Overlays',
+  dialog: {
     demos: [
       {
         name: 'DialogDefaultDemo',
@@ -435,11 +418,7 @@ export const COMPONENTS: readonly ComponentEntry[] = [
       },
     ],
   },
-  {
-    slug: 'alert-dialog',
-    name: 'AlertDialog',
-    description: 'Confirmation dialog with destructive intent. Blocks interaction until resolved.',
-    group: 'Overlays',
+  'alert-dialog': {
     demos: [
       {
         name: 'AlertDialogDefaultDemo',
@@ -462,11 +441,7 @@ export const COMPONENTS: readonly ComponentEntry[] = [
       },
     ],
   },
-  {
-    slug: 'sheet',
-    name: 'Sheet',
-    description: 'Side-anchored panel. Use for navigation, filters, or lightweight detail views.',
-    group: 'Overlays',
+  sheet: {
     demos: [
       {
         name: 'SheetDefaultDemo',
@@ -478,11 +453,7 @@ export const COMPONENTS: readonly ComponentEntry[] = [
       },
     ],
   },
-  {
-    slug: 'popover',
-    name: 'Popover',
-    description: 'Floating panel anchored to a trigger. Use for menus, info panels, mini-forms.',
-    group: 'Overlays',
+  popover: {
     demos: [
       {
         name: 'PopoverDefaultDemo',
@@ -494,11 +465,7 @@ export const COMPONENTS: readonly ComponentEntry[] = [
       },
     ],
   },
-  {
-    slug: 'tooltip',
-    name: 'Tooltip',
-    description: 'Hovered or focused text overlay. Wrap roots in `<TooltipProvider>`.',
-    group: 'Overlays',
+  tooltip: {
     demos: [
       {
         name: 'TooltipDefaultDemo',
@@ -512,11 +479,7 @@ export const COMPONENTS: readonly ComponentEntry[] = [
       },
     ],
   },
-  {
-    slug: 'dropdown-menu',
-    name: 'DropdownMenu',
-    description: 'Floating menu attached to a button trigger.',
-    group: 'Overlays',
+  'dropdown-menu': {
     demos: [
       {
         name: 'DropdownMenuDefaultDemo',
@@ -533,11 +496,7 @@ export const COMPONENTS: readonly ComponentEntry[] = [
       },
     ],
   },
-  {
-    slug: 'collapsible',
-    name: 'Collapsible',
-    description: 'Two-state container that hides or reveals content. Use for FAQs, accordions.',
-    group: 'Layout',
+  collapsible: {
     demos: [
       {
         name: 'CollapsibleDefaultDemo',
@@ -549,11 +508,7 @@ export const COMPONENTS: readonly ComponentEntry[] = [
       },
     ],
   },
-  {
-    slug: 'scroll-area',
-    name: 'ScrollArea',
-    description: 'Container with custom scrollbars. Use to constrain a tall list inside a card.',
-    group: 'Layout',
+  'scroll-area': {
     demos: [
       {
         name: 'ScrollAreaDefaultDemo',
@@ -562,12 +517,7 @@ export const COMPONENTS: readonly ComponentEntry[] = [
       },
     ],
   },
-  {
-    slug: 'table',
-    name: 'Table',
-    description:
-      'Structured tabular data. Compose with TableHeader, TableBody, TableRow, TableCell.',
-    group: 'Data',
+  table: {
     demos: [
       {
         name: 'TableDefaultDemo',
@@ -589,11 +539,7 @@ export const COMPONENTS: readonly ComponentEntry[] = [
       },
     ],
   },
-  {
-    slug: 'chart',
-    name: 'Chart',
-    description: 'Recharts wrapper that consumes the theme `--data-*` palette.',
-    group: 'Data',
+  chart: {
     demos: [
       {
         name: 'ChartDefaultDemo',
@@ -602,11 +548,7 @@ export const COMPONENTS: readonly ComponentEntry[] = [
       },
     ],
   },
-  {
-    slug: 'code-block',
-    name: 'CodeBlock',
-    description: 'Syntax-highlighted code with copy button. Powered by Shiki.',
-    group: 'Data',
+  'code-block': {
     demos: [
       {
         name: 'CodeBlockDefaultDemo',
@@ -618,11 +560,7 @@ export const COMPONENTS: readonly ComponentEntry[] = [
       },
     ],
   },
-  {
-    slug: 'input-group',
-    name: 'InputGroup',
-    description: 'Compose an Input with adornments — addon icons, trailing buttons, prefix labels.',
-    group: 'Forms',
+  'input-group': {
     demos: [
       {
         name: 'InputGroupDefaultDemo',
@@ -634,11 +572,7 @@ export const COMPONENTS: readonly ComponentEntry[] = [
       },
     ],
   },
-  {
-    slug: 'button-group',
-    name: 'ButtonGroup',
-    description: 'Visually-joined cluster of buttons sharing borders.',
-    group: 'Primitives',
+  'button-group': {
     demos: [
       {
         name: 'ButtonGroupDefaultDemo',
@@ -651,11 +585,7 @@ export const COMPONENTS: readonly ComponentEntry[] = [
       },
     ],
   },
-  {
-    slug: 'empty-state',
-    name: 'EmptyState',
-    description: 'Friendly placeholder for empty lists or zero-results states.',
-    group: 'Feedback',
+  'empty-state': {
     demos: [
       {
         name: 'EmptyStateDefaultDemo',
@@ -668,11 +598,7 @@ export const COMPONENTS: readonly ComponentEntry[] = [
       },
     ],
   },
-  {
-    slug: 'page-header',
-    name: 'PageHeader',
-    description: 'Standard page title block with optional description, count, and action slots.',
-    group: 'Layout',
+  'page-header': {
     demos: [
       {
         name: 'PageHeaderDefaultDemo',
@@ -689,11 +615,7 @@ export const COMPONENTS: readonly ComponentEntry[] = [
       },
     ],
   },
-  {
-    slug: 'section',
-    name: 'Section',
-    description: 'Standard section block — heading, description, and content area.',
-    group: 'Layout',
+  section: {
     demos: [
       {
         name: 'SectionDefaultDemo',
@@ -708,11 +630,7 @@ export const COMPONENTS: readonly ComponentEntry[] = [
       },
     ],
   },
-  {
-    slug: 'section-label',
-    name: 'SectionLabel',
-    description: 'Small uppercase label that introduces a content block.',
-    group: 'Layout',
+  'section-label': {
     demos: [
       {
         name: 'SectionLabelDefaultDemo',
@@ -721,11 +639,7 @@ export const COMPONENTS: readonly ComponentEntry[] = [
       },
     ],
   },
-  {
-    slug: 'sidebar',
-    name: 'Sidebar',
-    description: 'App shell sidebar with collapse-to-rail behaviour. Composable navigation.',
-    group: 'Navigation',
+  sidebar: {
     demos: [
       {
         name: 'SidebarDefaultDemo',
@@ -737,12 +651,7 @@ export const COMPONENTS: readonly ComponentEntry[] = [
       },
     ],
   },
-  {
-    slug: 'overflow-list',
-    name: 'OverflowList',
-    description:
-      'List that adapts to available width by collapsing overflow into a "+N more" indicator.',
-    group: 'Data',
+  'overflow-list': {
     demos: [
       {
         name: 'OverflowListDefaultDemo',
@@ -754,11 +663,7 @@ export const COMPONENTS: readonly ComponentEntry[] = [
       },
     ],
   },
-  {
-    slug: 'brika-logo',
-    name: 'BrikaLogo',
-    description: 'Brika brand mark — three stacked bricks. Uses currentColor.',
-    group: 'Primitives',
+  'brika-logo': {
     demos: [
       {
         name: 'BrikaLogoDefaultDemo',
@@ -767,7 +672,25 @@ export const COMPONENTS: readonly ComponentEntry[] = [
       },
     ],
   },
-] as const;
+};
+
+const FALLBACK_DOCS: ComponentDocs = { demos: [] };
+
+const ENTRIES: readonly ComponentEntry[] = CLAY_COMPONENTS.map((meta) => {
+  const docs = DOCS_DATA[meta.name] ?? FALLBACK_DOCS;
+  return {
+    slug: meta.name,
+    name: meta.displayName,
+    displayName: meta.displayName,
+    description: meta.description,
+    group: meta.group,
+    demos: docs.demos,
+    accessibility: docs.accessibility,
+    tokens: docs.tokens,
+  };
+});
+
+export const COMPONENTS: readonly ComponentEntry[] = ENTRIES;
 
 export const COMPONENTS_BY_SLUG: Readonly<Record<string, ComponentEntry>> = Object.fromEntries(
   COMPONENTS.map((c) => [c.slug, c])

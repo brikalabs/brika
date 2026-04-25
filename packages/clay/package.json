@@ -22,13 +22,17 @@
     "./primitives": "./src/primitives/index.ts",
     "./primitives/*": "./src/primitives/*.ts",
     "./styles": "./src/styles/clay.css",
+    "./styles/themes-static.css": "./src/styles/themes-static.css",
     "./tailwind-preset": "./src/tailwind-preset.ts",
-    "./themes": "./src/themes/index.ts"
+    "./themes": "./src/themes/index.ts",
+    "./tokens": "./src/tokens/index.ts"
   },
   "files": ["src"],
   "scripts": {
     "typecheck": "tsgo --noEmit",
-    "test": "bun test"
+    "test": "bun test",
+    "build:tokens": "bun run scripts/build-tokens.ts",
+    "build:themes": "bun run scripts/build-themes.ts"
   },
   "peerDependencies": {
     "react": "^19.0.0",

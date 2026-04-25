@@ -1,6 +1,11 @@
 import { Button } from '@brika/clay/components/button';
 import type { ThemeConfig, ThemeMode } from '@brika/clay/themes';
-import { BUILT_IN_THEMES, themeToCssVars } from '@brika/clay/themes';
+import { BUILT_IN_THEMES, ThemeScope } from '@brika/clay/themes';
+// Load every built-in theme's CSS rules once so the 16 cards below can
+// paint via just `data-theme="<id>"` on their `<ThemeScope>` wrappers —
+// no inline-style payload duplicated per card.
+import '@brika/clay/styles/themes-static.css';
+import { Check } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 const STORAGE_KEY = 'clay-theme';
@@ -18,7 +23,7 @@ function readActiveMode(): ThemeMode {
   if (typeof document === 'undefined') {
     return 'light';
   }
-  return document.documentElement.getAttribute('data-mode') === 'dark' ? 'dark' : 'light';
+  return document.documentElement.dataset.mode === 'dark' ? 'dark' : 'light';
 }
 
 function pad(n: number): string {
@@ -34,123 +39,163 @@ interface ThemeCardProps {
 }
 
 /**
- * One theme card — a single themed pane (theme.background fills the body)
- * with the theme's own typography colors. Active state is communicated by
- * an outer ring drawn outside the themed surface in chrome colors so it
- * stays legible regardless of palette.
+ * One theme card. The themed inner `<div>` carries the only border (no
+ * outer ring chasing a different radius). `ThemeScope` with `asChild`
+ * spreads the theme's CSS variables onto that single div without adding
+ * a wrapper to the layout tree.
  *
- * The internal layout is a rigid CSS grid. Every row except the body
- * specimen has a fixed size, the body row is `1fr`, and the parent grid
- * uses `auto-rows-fr` — so every card in a row aligns exactly.
+ * Interaction:
+ *   - Hover: card lifts (-translate-y-1) and gains an outer halo that
+ *     traces the *theme's* radius via box-shadow.
+ *   - Active: card stays lifted, halo strengthens, the "Apply" tag in the
+ *     header strip flips to a filled "Active" pill with a check.
+ *   - Press: brief scale-down for tactile click feedback.
+ *
+ * Headline auto-fits via `clamp()` on container-query units — long names
+ * (Skeuomorph, Brutalist) shrink, short names (Mono) stay large.
  */
 function ThemeCard({ theme, index, active, mode, onSelect }: ThemeCardProps) {
-  const scope = themeToCssVars(theme, mode);
-  const palette = theme.colors[mode];
-  const wrapperClass = active
-    ? 'group relative h-full rounded-lg ring-1 ring-clay-strong ring-offset-2 ring-offset-clay-canvas transition-all'
-    : 'group relative h-full rounded-lg ring-1 ring-clay-hairline transition-all hover:ring-clay-default';
+  const palette = theme.colors?.[mode] ?? {};
 
   return (
     <button
       type="button"
       onClick={() => onSelect(theme)}
       aria-pressed={active}
-      className={wrapperClass}
+      data-active={active ? 'true' : undefined}
+      className="group/card relative h-full min-w-0 rounded-card text-left outline-none transition-transform duration-200 ease-out hover:-translate-y-1 focus-visible:ring-2 focus-visible:ring-clay-strong focus-visible:ring-offset-2 focus-visible:ring-offset-clay-canvas active:scale-[0.99] active:duration-75 data-[active=true]:-translate-y-1"
+      style={{ containerType: 'inline-size' }}
     >
-      <div
-        style={{
-          ...scope,
-          backgroundColor: palette.background,
-          color: palette.foreground,
-          borderColor: palette.border,
-        }}
-        className="grid h-full w-full grid-rows-[auto_1fr_auto_auto] gap-0 overflow-hidden rounded-lg border text-left"
-      >
-        {/* Row 1 — drafting strip in theme's muted tone */}
+      {/* Default-mode `ThemeScope` (no `asChild`) wraps everything in a
+          `display: contents` div, so both the halo span and the themed
+          card body inherit the scoped theme via CSS-variable cascade.
+          That makes `rounded-card` resolve to the *theme's* radius on
+          BOTH elements — sharp on Brutalist/Terminal, plump on Skeuomorph
+          — and the halo never out-rounds the card behind it. */}
+      <ThemeScope theme={theme} mode={mode}>
+        {/* Halo — sits behind the card, traces the same theme radius. */}
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute -inset-1 rounded-card opacity-0 shadow-2xl transition-opacity duration-200 group-hover/card:opacity-100 group-data-[active=true]/card:opacity-100"
+        />
         <div
-          className="flex h-9 items-center gap-2 border-b px-4 font-medium font-mono text-[0.625rem] uppercase tracking-[0.14em]"
-          style={{ borderColor: palette.border, color: palette['muted-foreground'] }}
+          className="relative grid h-full w-full grid-rows-[auto_1fr_auto_auto] gap-0 overflow-hidden rounded-card border text-left transition-[border-color] duration-200 group-hover/card:border-[color-mix(in_oklch,currentColor_25%,transparent)] group-data-[active=true]/card:border-[color-mix(in_oklch,currentColor_45%,transparent)]"
+          style={{
+            backgroundColor: palette.background,
+            color: palette.foreground,
+            borderColor: palette.border,
+          }}
         >
-          <span>№ {pad(index + 1)}</span>
-          <span
-            aria-hidden="true"
-            className="block h-px w-3"
-            style={{ backgroundColor: palette.border }}
-          />
-          <span className="truncate">{theme.id}</span>
-          <span
-            aria-hidden="true"
-            className="block h-px flex-1"
-            style={{ backgroundColor: palette.border }}
-          />
-          <span style={{ color: active ? palette.foreground : palette['muted-foreground'] }}>
-            {active ? 'Active' : 'Apply'}
-          </span>
-        </div>
-
-        {/* Row 2 — specimen body. Big italic name + description + accent line */}
-        <div className="flex flex-col justify-between gap-6 px-6 pt-6 pb-5">
-          <div>
-            <h3
-              className="block text-5xl leading-none"
-              style={{
-                fontFamily: SERIF,
-                fontStyle: 'italic',
-                letterSpacing: '-0.022em',
-                color: palette.foreground,
-              }}
-            >
-              {theme.name}
-            </h3>
-            <p
-              className="mt-3 line-clamp-2 min-h-[2lh] text-[0.8125rem] leading-snug"
-              style={{ color: palette['muted-foreground'] }}
-            >
-              {theme.description}
-            </p>
-          </div>
-
-          {/* A single Button + a hairline accent — minimal, theme-aware */}
-          <div className="flex items-center gap-3">
-            <Button size="sm">Sample</Button>
+          {/* Row 1 — drafting strip in theme's muted tone */}
+          <div
+            className="flex h-9 min-w-0 items-center gap-2 border-b px-4 font-medium font-mono text-[0.625rem] uppercase tracking-[0.14em]"
+            style={{ borderColor: palette.border, color: palette['muted-foreground'] }}
+          >
+            <span className="shrink-0">№ {pad(index + 1)}</span>
+            <span
+              aria-hidden="true"
+              className="block h-px w-3 shrink-0"
+              style={{ backgroundColor: palette.border }}
+            />
+            <span className="min-w-0 truncate">{theme.id}</span>
             <span
               aria-hidden="true"
               className="block h-px flex-1"
               style={{ backgroundColor: palette.border }}
             />
-            <span
-              className="font-mono text-[0.625rem] uppercase tracking-[0.14em]"
-              style={{ color: palette['muted-foreground'] }}
-            >
-              {mode}
+            {active ? (
+              <span
+                className="-mr-1 inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5"
+                style={{ backgroundColor: palette.primary, color: palette['primary-foreground'] }}
+              >
+                <Check size={10} aria-hidden="true" strokeWidth={3} />
+                <span>Active</span>
+              </span>
+            ) : (
+              <span
+                className="shrink-0 transition-colors group-hover/card:text-(--apply-hover)"
+                style={
+                  {
+                    color: palette['muted-foreground'],
+                    '--apply-hover': palette.foreground,
+                  } as React.CSSProperties
+                }
+              >
+                Apply
+              </span>
+            )}
+          </div>
+
+          {/* Row 2 — specimen body. Big italic name + description + accent line */}
+          <div className="flex min-w-0 flex-col justify-between gap-6 px-6 pt-6 pb-5">
+            <div className="min-w-0">
+              <h3
+                className="block min-w-0 leading-none"
+                style={{
+                  fontFamily: SERIF,
+                  fontStyle: 'italic',
+                  letterSpacing: '-0.022em',
+                  color: palette.foreground,
+                  fontSize: 'clamp(1.75rem, 14cqi, 3rem)',
+                }}
+              >
+                {theme.name}
+              </h3>
+              <p
+                className="mt-3 line-clamp-2 min-h-[2lh] text-[0.8125rem] leading-snug"
+                style={{ color: palette['muted-foreground'] }}
+              >
+                {theme.description}
+              </p>
+            </div>
+
+            {/* A single Button + a hairline accent — minimal, theme-aware */}
+            <div className="flex min-w-0 items-center gap-3">
+              <Button size="sm" tabIndex={-1}>
+                Sample
+              </Button>
+              <span
+                aria-hidden="true"
+                className="block h-px flex-1"
+                style={{ backgroundColor: palette.border }}
+              />
+              <span
+                className="shrink-0 font-mono text-[0.625rem] uppercase tracking-[0.14em]"
+                style={{ color: palette['muted-foreground'] }}
+              >
+                {mode}
+              </span>
+            </div>
+          </div>
+
+          {/* Row 3 — accent swatch strip, edge to edge */}
+          <div className="flex h-2.5">
+            {theme.accentSwatches.map((swatch, swatchIndex) => (
+              <span
+                key={`${theme.id}-${swatchIndex}-${swatch}`}
+                className="block flex-1"
+                style={{ backgroundColor: swatch }}
+                aria-hidden="true"
+              />
+            ))}
+          </div>
+
+          {/* Row 4 — footer with hex codes (mono) */}
+          <div
+            className="flex h-9 min-w-0 items-center justify-between gap-2 border-t px-4 font-medium font-mono text-[0.625rem] uppercase tracking-[0.14em]"
+            style={{ borderColor: palette.border, color: palette['muted-foreground'] }}
+          >
+            <span className="min-w-0 truncate">{theme.accentSwatches[0]}</span>
+            <span aria-hidden="true" className="shrink-0">
+              ·
+            </span>
+            <span className="shrink-0">
+              {theme.accentSwatches.length}{' '}
+              {theme.accentSwatches.length === 1 ? 'color' : 'colors'}
             </span>
           </div>
         </div>
-
-        {/* Row 3 — accent swatch strip, edge to edge */}
-        <div className="flex h-2.5">
-          {theme.accentSwatches.map((swatch, swatchIndex) => (
-            <span
-              key={`${theme.id}-${swatchIndex}-${swatch}`}
-              className="block flex-1"
-              style={{ backgroundColor: swatch }}
-              aria-hidden="true"
-            />
-          ))}
-        </div>
-
-        {/* Row 4 — footer with hex codes (mono) */}
-        <div
-          className="flex h-9 items-center justify-between border-t px-4 font-medium font-mono text-[0.625rem] uppercase tracking-[0.14em]"
-          style={{ borderColor: palette.border, color: palette['muted-foreground'] }}
-        >
-          <span>{theme.accentSwatches[0]}</span>
-          <span aria-hidden="true">·</span>
-          <span>
-            {theme.accentSwatches.length} {theme.accentSwatches.length === 1 ? 'color' : 'colors'}
-          </span>
-        </div>
-      </div>
+      </ThemeScope>
     </button>
   );
 }

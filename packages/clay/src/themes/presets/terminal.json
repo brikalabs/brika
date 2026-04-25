@@ -1,0 +1,116 @@
+{
+  "id": "terminal",
+  "name": "Terminal",
+  "description": "Full monospace, zero radius, neon accents, dashed dividers. CRT energy for power users.",
+  "accentSwatches": ["#00ff88", "#00d9ff", "#ff5f87", "#ffaf00"],
+  "colors": {
+    "light": {
+      "background": "#f4f6f4",
+      "foreground": "#0a1f0a",
+      "card": "#ffffff",
+      "card-foreground": "#0a1f0a",
+      "popover": "#ffffff",
+      "popover-foreground": "#0a1f0a",
+      "primary": "#0a7a3f",
+      "primary-foreground": "#ffffff",
+      "secondary": "#e6f2ea",
+      "secondary-foreground": "#0a1f0a",
+      "muted": "#e6f2ea",
+      "muted-foreground": "#3d6b4a",
+      "accent": "#0a7a3f",
+      "accent-foreground": "#ffffff",
+      "border": "#0a7a3f",
+      "input": "#0a7a3f",
+      "ring": "#0a7a3f",
+      "success": "#0a7a3f",
+      "success-foreground": "#ffffff",
+      "warning": "#a85a00",
+      "warning-foreground": "#ffffff",
+      "info": "#005a87",
+      "info-foreground": "#ffffff",
+      "destructive": "#a51a1a",
+      "destructive-foreground": "#ffffff"
+    },
+    "dark": {
+      "background": "#0a0f0a",
+      "foreground": "#00ff88",
+      "card": "#0f1a0f",
+      "card-foreground": "#00ff88",
+      "popover": "#0f1a0f",
+      "popover-foreground": "#00ff88",
+      "primary": "#00ff88",
+      "primary-foreground": "#0a0f0a",
+      "secondary": "#142214",
+      "secondary-foreground": "#00ff88",
+      "muted": "#142214",
+      "muted-foreground": "#5fbf7f",
+      "accent": "#00d9ff",
+      "accent-foreground": "#0a0f0a",
+      "border": "#00ff88",
+      "input": "#00ff88",
+      "ring": "#00ff88",
+      "success": "#00ff88",
+      "success-foreground": "#0a0f0a",
+      "warning": "#ffaf00",
+      "warning-foreground": "#0a0f0a",
+      "info": "#00d9ff",
+      "info-foreground": "#0a0f0a",
+      "destructive": "#ff5f87",
+      "destructive-foreground": "#0a0f0a"
+    }
+  },
+  "geometry": {
+    "radius": "0px",
+    "fontSans": "\"JetBrains Mono\", \"Fira Code\", ui-monospace, SFMono-Regular, monospace",
+    "fontMono": "\"JetBrains Mono\", \"Fira Code\", ui-monospace, SFMono-Regular, monospace"
+  },
+  "borders": {
+    "width": "1px",
+    "style": "solid"
+  },
+  "motion": {
+    "duration": "80ms",
+    "easing": "steps(4, end)"
+  },
+  "focus": {
+    "width": "1px",
+    "offset": "0px"
+  },
+  "components": {
+    "button": {
+      "letterSpacing": "0.04em",
+      "textTransform": "uppercase",
+      "fontWeight": "500"
+    },
+    "card": {
+      "shadow": "none",
+      "borderWidth": "1px",
+      "borderStyle": "dashed"
+    },
+    "dialog": {
+      "shadow": "none",
+      "borderStyle": "solid"
+    },
+    "separator": {
+      "style": "dashed",
+      "width": "1px"
+    },
+    "input": {
+      "borderStyle": "solid"
+    },
+    "tooltip": {
+      "letterSpacing": "0.05em",
+      "textTransform": "uppercase"
+    },
+    "badge": {
+      "letterSpacing": "0.06em",
+      "textTransform": "uppercase",
+      "fontWeight": "500"
+    },
+    "label": {
+      "letterSpacing": "0.04em",
+      "textTransform": "uppercase",
+      "fontWeight": "500"
+    }
+  }
+}

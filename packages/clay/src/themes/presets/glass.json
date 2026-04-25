@@ -1,0 +1,102 @@
+{
+  "id": "glass",
+  "name": "Glass",
+  "description": "Tinted-glass surfaces, generous radii, gentle motion. Translucent fills + heavy backdrop blur for an iOS-style frosted feel.",
+  "accentSwatches": ["#7dd3fc", "#a5f3fc", "#bae6fd", "#fafafa"],
+  "colors": {
+    "light": {
+      "background": "#eef2f7",
+      "foreground": "#0b1220",
+      "card": "rgba(255, 255, 255, 0.55)",
+      "card-foreground": "#0b1220",
+      "popover": "rgba(255, 255, 255, 0.7)",
+      "popover-foreground": "#0b1220",
+      "primary": "#0ea5e9",
+      "primary-foreground": "#ffffff",
+      "secondary": "rgba(255, 255, 255, 0.6)",
+      "secondary-foreground": "#0b1220",
+      "muted": "rgba(255, 255, 255, 0.5)",
+      "muted-foreground": "#3f4960",
+      "accent": "rgba(125, 211, 252, 0.35)",
+      "accent-foreground": "#0b1220",
+      "border": "rgba(255, 255, 255, 0.6)",
+      "input": "rgba(255, 255, 255, 0.4)",
+      "ring": "#7dd3fc",
+      "success": "#10b981",
+      "success-foreground": "#ffffff",
+      "warning": "#f59e0b",
+      "warning-foreground": "#0b1220",
+      "info": "#0284c7",
+      "info-foreground": "#ffffff",
+      "destructive": "#e11d48",
+      "destructive-foreground": "#ffffff"
+    },
+    "dark": {
+      "background": "#070b14",
+      "foreground": "#e6edf7",
+      "card": "rgba(20, 28, 48, 0.55)",
+      "card-foreground": "#e6edf7",
+      "popover": "rgba(20, 28, 48, 0.72)",
+      "popover-foreground": "#e6edf7",
+      "primary": "#7dd3fc",
+      "primary-foreground": "#070b14",
+      "secondary": "rgba(40, 50, 75, 0.55)",
+      "secondary-foreground": "#e6edf7",
+      "muted": "rgba(40, 50, 75, 0.4)",
+      "muted-foreground": "#90a0c0",
+      "accent": "rgba(125, 211, 252, 0.25)",
+      "accent-foreground": "#e6edf7",
+      "border": "rgba(255, 255, 255, 0.18)",
+      "input": "rgba(20, 28, 48, 0.45)",
+      "ring": "#7dd3fc",
+      "success": "#34d399",
+      "success-foreground": "#070b14",
+      "warning": "#fbbf24",
+      "warning-foreground": "#070b14",
+      "info": "#7dd3fc",
+      "info-foreground": "#070b14",
+      "destructive": "#fb7185",
+      "destructive-foreground": "#070b14"
+    }
+  },
+  "geometry": {
+    "radius": "1.25rem",
+    "backdropBlur": "16px"
+  },
+  "borders": {
+    "width": "1px",
+    "style": "solid"
+  },
+  "motion": {
+    "duration": "260ms",
+    "easing": "cubic-bezier(0.22, 1, 0.36, 1)"
+  },
+  "focus": {
+    "width": "2px",
+    "offset": "2px"
+  },
+  "components": {
+    "card": {
+      "backdropBlur": "20px",
+      "borderWidth": "1px",
+      "shadow": "var(--shadow-overlay)"
+    },
+    "dialog": {
+      "backdropBlur": "24px",
+      "shadow": "var(--shadow-modal)"
+    },
+    "popover": {
+      "backdropBlur": "16px",
+      "shadow": "var(--shadow-overlay)"
+    },
+    "menu": {
+      "backdropBlur": "16px"
+    },
+    "sheet": {
+      "backdropBlur": "24px"
+    },
+    "tooltip": {
+      "shadow": "var(--shadow-overlay)"
+    }
+  }
+}

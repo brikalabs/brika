@@ -55,9 +55,15 @@ function assertThemeColors(
 }
 
 function toPreset(theme: ThemeConfig): ThemePreset | null {
+  const light = theme.colors?.light;
+  const dark = theme.colors?.dark;
+  if (!light || !dark) {
+    console.warn(`[theme-builder] Skipping Clay preset without light+dark colors: ${theme.id}`);
+    return null;
+  }
   try {
-    assertThemeColors(theme.colors.light);
-    assertThemeColors(theme.colors.dark);
+    assertThemeColors(light);
+    assertThemeColors(dark);
   } catch (error) {
     console.warn(`[theme-builder] Skipping invalid Clay preset: ${theme.id}`, error);
     return null;
@@ -67,10 +73,7 @@ function toPreset(theme: ThemeConfig): ThemePreset | null {
     name: theme.name,
     description: theme.description,
     accentSwatches: theme.accentSwatches,
-    colors: {
-      light: theme.colors.light,
-      dark: theme.colors.dark,
-    },
+    colors: { light, dark },
   };
 }
 
