@@ -2,9 +2,22 @@
 import CodeSource from './CodeSource.astro';
 
 /**
- * Renders a live demo above a syntax-highlighted code block in a single
- * unified card: rounded outer border, preview on top, code flush below
- * separated only by a hairline. No nested rounding, no inner panels.
+ * Renders a live demo above a syntax-highlighted code block.
+ *
+ *   ┌── 01 ────────────────────────────── PREVIEW ┐
+ *   │  ⌐                                       ¬ │
+ *   │  preview (preview-grid surface)            │
+ *   │  └                                       ┘ │
+ *   │ ────────────────────────────────────────── │ ← hairline separator
+ *   │                                            │
+ *   │   ┌──────────────────────────────────────┐ │
+ *   │   │ code block (own rounded edge)        │ │
+ *   │   └──────────────────────────────────────┘ │
+ *   └────────────────────────────────────────────┘
+ *
+ * The "01 — PREVIEW" tag in the top-left mirrors the drafting-studio
+ * label vocabulary used elsewhere on the site (numbered sections, mono
+ * metadata, hairline rules).
  */
 
 interface Props {
@@ -16,21 +29,16 @@ const { code, lang = 'tsx' } = Astro.props;
 ---
 
 <div class="component-example not-prose my-6 overflow-hidden rounded-lg border border-clay-hairline bg-clay-elevated">
-  <div class="component-example-preview relative flex min-h-50 items-center justify-center px-6 py-10">
+  <div class="flex items-center gap-3 border-clay-hairline border-b bg-clay-canvas/40 px-4 py-2 mono-tag-tight">
+    <span class="text-clay-default">Preview</span>
+    <span class="hairline flex-1"></span>
+  </div>
+  <div class="preview-grid relative flex min-h-50 items-center justify-center px-6 py-10">
     <slot />
   </div>
-  <div class="border-clay-hairline border-t">
-    <CodeSource code={code} lang={lang} variant="compact" />
+  <div class="border-clay-hairline border-t p-3">
+    <div class="overflow-hidden rounded-md border border-clay-hairline">
+      <CodeSource code={code} lang={lang} variant="compact" />
+    </div>
   </div>
 </div>
-
-<style is:global>
-  .component-example-preview {
-    background-image: radial-gradient(
-      circle at 1px 1px,
-      var(--color-clay-hairline) 1px,
-      transparent 0
-    );
-    background-size: 18px 18px;
-  }
-</style>

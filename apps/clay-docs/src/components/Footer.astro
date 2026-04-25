@@ -1,58 +1,144 @@
 ---
 declare const __CLAY_VERSION__: string;
 declare const __BUILD_COMMIT__: string;
+declare const __BUILD_DATE__: string;
 
 const clayVersion = typeof __CLAY_VERSION__ === 'string' ? __CLAY_VERSION__ : 'dev';
 const buildCommit = typeof __BUILD_COMMIT__ === 'string' ? __BUILD_COMMIT__ : 'dev';
+const buildDate = typeof __BUILD_DATE__ === 'string' ? __BUILD_DATE__ : '';
+const formattedDate = buildDate ? new Date(buildDate).toISOString().slice(0, 10) : '';
 ---
 
-<footer class="mt-16 border-clay-hairline border-t bg-clay-canvas">
-  <div class="mx-auto flex max-w-6xl flex-col gap-6 px-6 py-10 md:flex-row md:items-start md:justify-between md:px-10">
-    <div>
-      <p class="font-medium font-mono text-clay-strong text-sm">@brika/clay</p>
-      <p class="mt-1 max-w-sm text-clay-subtle text-xs leading-relaxed">
-        Pressable raw material. Brika's React component library — tokens, themes, and primitives in one place.
-      </p>
-      <p class="mt-3 font-mono text-clay-inactive text-[0.625rem]">
-        v{clayVersion} · {buildCommit}
-      </p>
-    </div>
+<footer class="relative mt-24 border-clay-hairline border-t">
+  <div class="mx-auto max-w-6xl px-6 pt-16 pb-10 md:px-12">
+    <div class="grid grid-cols-1 gap-12 md:grid-cols-12 md:gap-8">
+      <div class="md:col-span-5">
+        <p class="mono-tag-tight mb-3 inline-flex items-center gap-2">
+          <span class="hairline w-6"></span>
+          Colophon
+        </p>
+        <p class="font-display text-6xl text-clay-strong leading-[0.9] md:text-7xl">
+          Clay.
+        </p>
+        <p class="mt-6 max-w-xs text-clay-subtle text-sm leading-relaxed">
+          Pressable raw material for every Brika surface — pressed, fired, and
+          set to cool with care.
+        </p>
+      </div>
 
-    <div class="grid grid-cols-2 gap-x-10 gap-y-1.5 text-sm md:grid-cols-3">
-      <p class="col-span-full font-medium font-mono text-[0.625rem] text-clay-subtle uppercase tracking-wider">
-        Navigate
-      </p>
-      <a href="/installation" class="text-clay-default transition-colors hover:text-clay-strong">
-        Installation
-      </a>
-      <a href="/components" class="text-clay-default transition-colors hover:text-clay-strong">
-        Components
-      </a>
-      <a href="/colors" class="text-clay-default transition-colors hover:text-clay-strong">
-        Colors
-      </a>
-      <a href="/themes" class="text-clay-default transition-colors hover:text-clay-strong">
-        Themes
-      </a>
-      <a
-        href="https://github.com/brikalabs/brika"
-        rel="noopener noreferrer"
-        class="text-clay-default transition-colors hover:text-clay-strong"
-      >
-        GitHub
-      </a>
-      <a
-        href="https://github.com/brikalabs/brika/issues"
-        rel="noopener noreferrer"
-        class="text-clay-default transition-colors hover:text-clay-strong"
-      >
-        Issues
-      </a>
+      <div class="space-y-3 md:col-span-2 md:col-start-7">
+        <p class="mono-tag-tight">— Library</p>
+        <ul class="space-y-1.5 text-sm">
+          <li>
+            <a
+              href="/installation"
+              class="text-clay-default transition-colors hover:text-clay-strong"
+            >
+              Installation
+            </a>
+          </li>
+          <li>
+            <a
+              href="/components"
+              class="text-clay-default transition-colors hover:text-clay-strong"
+            >
+              Components
+            </a>
+          </li>
+          <li>
+            <a href="/colors" class="text-clay-default transition-colors hover:text-clay-strong">
+              Colors
+            </a>
+          </li>
+          <li>
+            <a href="/themes" class="text-clay-default transition-colors hover:text-clay-strong">
+              Themes
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <div class="space-y-3 md:col-span-2">
+        <p class="mono-tag-tight">— Source</p>
+        <ul class="space-y-1.5 text-sm">
+          <li>
+            <a
+              href="https://github.com/brikalabs/brika"
+              rel="noopener noreferrer"
+              class="text-clay-default transition-colors hover:text-clay-strong"
+            >
+              GitHub
+            </a>
+          </li>
+          <li>
+            <a
+              href="https://github.com/brikalabs/brika/issues"
+              rel="noopener noreferrer"
+              class="text-clay-default transition-colors hover:text-clay-strong"
+            >
+              Issues
+            </a>
+          </li>
+          <li>
+            <a
+              href="https://github.com/brikalabs/brika/tree/main/packages/clay"
+              rel="noopener noreferrer"
+              class="text-clay-default transition-colors hover:text-clay-strong"
+            >
+              packages/clay
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <div class="space-y-3 md:col-span-2">
+        <p class="mono-tag-tight">— Brika</p>
+        <ul class="space-y-1.5 text-sm">
+          <li>
+            <a
+              href="https://brika.dev"
+              rel="noopener noreferrer"
+              class="text-clay-default transition-colors hover:text-clay-strong"
+            >
+              brika.dev
+            </a>
+          </li>
+          <li>
+            <a
+              href="https://github.com/brikalabs/brika/tree/main/apps/docs"
+              rel="noopener noreferrer"
+              class="text-clay-default transition-colors hover:text-clay-strong"
+            >
+              Platform docs
+            </a>
+          </li>
+        </ul>
+      </div>
     </div>
   </div>
-  <div class="border-clay-hairline border-t">
-    <div class="mx-auto max-w-6xl px-6 py-3 font-mono text-clay-inactive text-[0.6875rem] md:px-10">
-      Built with Brika · MIT licensed
+
+  <div class="border-clay-hairline border-t bg-clay-canvas/50">
+    <div
+      class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-6 py-3 md:px-12"
+    >
+      <div class="flex flex-wrap items-center gap-3 mono-tag-tight">
+        <span>Built with Brika</span>
+        <span class="hairline w-4"></span>
+        <span>MIT licence</span>
+      </div>
+      <div class="flex flex-wrap items-center gap-3 mono-tag-tight">
+        <span>v{clayVersion}</span>
+        <span class="hairline w-4"></span>
+        <span>{buildCommit}</span>
+        {
+          formattedDate && (
+            <>
+              <span class="hidden w-4 sm:block hairline" />
+              <span class="hidden sm:inline">{formattedDate}</span>
+            </>
+          )
+        }
+      </div>
     </div>
   </div>
 </footer>

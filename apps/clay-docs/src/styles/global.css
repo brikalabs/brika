@@ -21,6 +21,11 @@
   --text-color-clay-inactive: light-dark(oklch(66% 0 0), oklch(48% 0 0));
   --text-color-clay-link: light-dark(oklch(45% 0.2 250), oklch(72% 0.16 250));
   --text-color-clay-brand: light-dark(oklch(56% 0.18 45), oklch(72% 0.17 45));
+
+  /* Display font — editorial serif for hero & page titles. The body
+     stays Inter (set by @brika/clay/styles); JetBrains Mono is reserved
+     for code, metadata labels, and "drafting tag" treatments. */
+  --font-display: "Instrument Serif", "Iowan Old Style", Georgia, "Times New Roman", serif;
 }
 
 * {
@@ -253,4 +258,195 @@ html[data-mode="dark"] .astro-code span {
 
 .code-block .copy-button:hover {
   color: var(--text-color-clay-default);
+}
+
+/* ==================================================
+   Drafting-studio typography utilities.
+   `font-display`  — editorial serif for hero / H1.
+   `mono-tag`      — small monospace label (sections,
+                     metadata, "drafting tag" pills).
+   `hairline`      — 1px rule in the chrome border colour.
+   `numbered-rule` — hairline rule with a mono digit
+                     embedded on the left, used as a
+                     section divider.
+   ================================================== */
+.font-display {
+  font-family: var(--font-display);
+  font-feature-settings: "ss01", "liga";
+  letter-spacing: -0.022em;
+  font-weight: 400;
+}
+
+.font-display-italic {
+  font-family: var(--font-display);
+  font-style: italic;
+  letter-spacing: -0.022em;
+  font-weight: 400;
+}
+
+.mono-tag {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-color-clay-subtle);
+}
+
+.mono-tag-tight {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-color-clay-subtle);
+}
+
+.hairline {
+  height: 1px;
+  background-color: var(--color-clay-hairline);
+}
+
+/* Section header that combines a numbered tag, a hairline rule, and an
+   optional kicker on the right.
+
+     01 ──────────────────────────────  optional ›
+   */
+.numbered-rule {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--color-clay-hairline);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-color-clay-subtle);
+}
+
+.numbered-rule .num {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-color-clay-strong);
+}
+
+.numbered-rule .label {
+  flex-shrink: 0;
+}
+
+.numbered-rule .spacer {
+  flex: 1;
+}
+
+/* Drafting-paper grid used on the hero + a few accent surfaces.
+   Pure CSS, scales with zoom, no extra DOM. */
+.drafting-grid {
+  background-image:
+    linear-gradient(var(--color-clay-hairline) 1px, transparent 1px),
+    linear-gradient(90deg, var(--color-clay-hairline) 1px, transparent 1px);
+  background-size: 56px 56px;
+  background-position: -1px -1px;
+  position: relative;
+}
+
+.drafting-grid::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 30% 40%, transparent 0%, var(--color-clay-canvas) 75%);
+  pointer-events: none;
+}
+
+/* Subtle blueprint hatch for component-preview surfaces — finer than
+   the drafting grid, doesn't compete with the demo content. */
+.preview-grid {
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    var(--color-clay-hairline) 1px,
+    transparent 0
+  );
+  background-size: 18px 18px;
+}
+
+/* Decorative corner hairlines used on the hero card — small +
+   marks at the four corners of an element, in the drafting style. */
+.corner-marks::before,
+.corner-marks::after,
+.corner-marks > .corner-bl,
+.corner-marks > .corner-br {
+  content: "";
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-color: var(--color-clay-hairline);
+  pointer-events: none;
+}
+
+.corner-marks {
+  position: relative;
+}
+
+.corner-marks::before {
+  top: -1px;
+  left: -1px;
+  border-top: 1px solid;
+  border-left: 1px solid;
+  border-color: var(--color-clay-default, var(--text-color-clay-default));
+}
+
+.corner-marks::after {
+  top: -1px;
+  right: -1px;
+  border-top: 1px solid;
+  border-right: 1px solid;
+  border-color: var(--color-clay-default, var(--text-color-clay-default));
+}
+
+.corner-marks > .corner-bl {
+  bottom: -1px;
+  left: -1px;
+  border-bottom: 1px solid;
+  border-left: 1px solid;
+  border-color: var(--color-clay-default, var(--text-color-clay-default));
+}
+
+.corner-marks > .corner-br {
+  bottom: -1px;
+  right: -1px;
+  border-bottom: 1px solid;
+  border-right: 1px solid;
+  border-color: var(--color-clay-default, var(--text-color-clay-default));
+}
+
+/* Reveal animation used on the hero — staggered via animation-delay
+   on individual elements so the eye walks from headline down through
+   metadata and into the install block. */
+@keyframes clay-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.clay-rise {
+  animation: clay-rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .clay-rise {
+    animation: none;
+  }
+}
+
+/* Display-headline tweak inside .clay-prose so MDX H1s render in
+   the serif display face when the surrounding layout opts into it. */
+.clay-prose :where(.use-display) {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: -0.022em;
 }

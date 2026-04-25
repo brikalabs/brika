@@ -2,6 +2,7 @@
 import { DemoRenderer } from '~/components/DemoRenderer.tsx';
 import CodeSource from '~/components/docs/CodeSource.astro';
 import ComponentExample from '~/components/docs/ComponentExample.astro';
+import InlineMarkdown from '~/components/docs/InlineMarkdown.astro';
 import MdxDocLayout from '~/layouts/MdxDocLayout.astro';
 import { adjacentComponents, COMPONENTS, type ComponentEntry } from '~/lib/component-registry';
 
@@ -28,10 +29,27 @@ function slugifyTitle(title: string): string {
   return title.toLowerCase().replace(/\s+/g, '-');
 }
 
+function pad(n: number): string {
+  return n.toString().padStart(2, '0');
+}
+
 const githubBase = `https://github.com/brikalabs/brika/tree/main/packages/clay/src/components/${component.slug}`;
 
-const headingClass = 'mb-3 scroll-mt-24 font-semibold text-2xl text-clay-strong tracking-tight';
-const subHeadingClass = 'mb-2 scroll-mt-24 font-medium text-clay-strong text-lg tracking-tight';
+// Build the section ribbon as we walk the page so the numbering matches
+// what's actually rendered (Accessibility / Tokens are conditional).
+let sectionIndex = 0;
+function nextSection(): string {
+  sectionIndex += 1;
+  return pad(sectionIndex);
+}
+
+const installNum = nextSection();
+const usageNum = heroDemo ? nextSection() : null;
+const examplesNum = moreDemos.length > 0 ? nextSection() : null;
+const accessibilityNum =
+  component.accessibility && component.accessibility.length > 0 ? nextSection() : null;
+const tokensNum = component.tokens && component.tokens.length > 0 ? nextSection() : null;
+const apiNum = nextSection();
 ---
 
 <MdxDocLayout
@@ -39,15 +57,12 @@ const subHeadingClass = 'mb-2 scroll-mt-24 font-medium text-clay-strong text-lg 
     title: component.name,
     description: component.description,
     sourceFile: `components/${component.slug}`,
+    group: component.group,
   }}
 >
-  <p class="mb-10 inline-flex items-center gap-2 font-medium font-mono text-clay-subtle text-xs uppercase tracking-wider">
-    {component.group}
-  </p>
-
   {
     heroDemo && (
-      <section class="mb-14">
+      <section class="mb-16">
         <ComponentExample code={heroDemo.code}>
           <DemoRenderer slug={component.slug} demoName={heroDemo.name} client:only="react" />
         </ComponentExample>
@@ -55,9 +70,16 @@ const subHeadingClass = 'mb-2 scroll-mt-24 font-medium text-clay-strong text-lg 
     )
   }
 
-  <section class="mb-14">
-    <h2 id="installation" class={headingClass}>Installation</h2>
-    <p class="mb-4 text-clay-default text-sm leading-relaxed">
+  <section class="mb-16">
+    <div class="numbered-rule mb-6">
+      <span class="num">{installNum}</span>
+      <span class="label">Installation</span>
+      <span class="spacer hairline"></span>
+    </div>
+    <h2 id="installation" class="mb-3 scroll-mt-24 font-display text-3xl text-clay-strong leading-[1.1]">
+      Install
+    </h2>
+    <p class="mb-5 max-w-2xl text-clay-default text-sm leading-relaxed">
       Pull {component.name} from the barrel for everyday use, or the granular path when you want a
       tighter bundle.
     </p>
@@ -66,30 +88,58 @@ const subHeadingClass = 'mb-2 scroll-mt-24 font-medium text-clay-strong text-lg 
   </section>
 
   {
-    heroDemo && (
-      <section class="mb-14">
-        <h2 id="usage" class={headingClass}>
-          Usage
+    heroDemo && usageNum && (
+      <section class="mb-16">
+        <div class="numbered-rule mb-6">
+          <span class="num">{usageNum}</span>
+          <span class="label">Usage</span>
+          <span class="spacer hairline" />
+        </div>
+        <h2
+          id="usage"
+          class="mb-3 scroll-mt-24 font-display text-3xl text-clay-strong leading-[1.1]"
+        >
+          A minimal example
         </h2>
-        <p class="mb-4 text-clay-default text-sm leading-relaxed">A minimal example to copy.</p>
+        <p class="mb-5 max-w-2xl text-clay-default text-sm leading-relaxed">
+          Drop this into a page. Native HTML attributes pass through to the underlying primitive.
+        </p>
         <CodeSource code={heroDemo.code} lang="tsx" filename={`${component.name}.tsx`} />
       </section>
     )
   }
 
   {
-    moreDemos.length > 0 && (
-      <section class="mb-14">
-        <h2 id="examples" class={`${headingClass} mb-6`}>
-          Examples
+    moreDemos.length > 0 && examplesNum && (
+      <section class="mb-16">
+        <div class="numbered-rule mb-6">
+          <span class="num">{examplesNum}</span>
+          <span class="label">Examples</span>
+          <span class="spacer hairline" />
+        </div>
+        <h2
+          id="examples"
+          class="mb-8 scroll-mt-24 font-display text-3xl text-clay-strong leading-[1.1]"
+        >
+          {component.name}, every way
         </h2>
-        {moreDemos.map((demo) => (
-          <section class="mb-10">
-            <h3 id={slugifyTitle(demo.title)} class={subHeadingClass}>
+        {moreDemos.map((demo, index) => (
+          <section class="mb-12">
+            <div class="mb-3 flex items-baseline gap-3 mono-tag-tight">
+              <span class="text-clay-strong">{pad(index + 1)}</span>
+              <span class="hairline w-8" />
+              <span>{demo.title}</span>
+            </div>
+            <h3
+              id={slugifyTitle(demo.title)}
+              class="mb-3 scroll-mt-24 font-display text-clay-strong text-xl leading-[1.15]"
+            >
               {demo.title}
             </h3>
             {demo.description && (
-              <p class="mb-4 text-clay-default text-sm leading-relaxed">{demo.description}</p>
+              <p class="mb-4 max-w-2xl text-clay-default text-sm leading-relaxed">
+                {demo.description}
+              </p>
             )}
             <ComponentExample code={demo.code}>
               <DemoRenderer slug={component.slug} demoName={demo.name} client:only="react" />
@@ -101,18 +151,28 @@ const subHeadingClass = 'mb-2 scroll-mt-24 font-medium text-clay-strong text-lg 
   }
 
   {
-    component.accessibility && component.accessibility.length > 0 && (
-      <section class="mb-14">
-        <h2 id="accessibility" class={headingClass}>
+    component.accessibility && component.accessibility.length > 0 && accessibilityNum && (
+      <section class="mb-16">
+        <div class="numbered-rule mb-6">
+          <span class="num">{accessibilityNum}</span>
+          <span class="label">Accessibility</span>
+          <span class="spacer hairline" />
+        </div>
+        <h2
+          id="accessibility"
+          class="mb-4 scroll-mt-24 font-display text-3xl text-clay-strong leading-[1.1]"
+        >
           Accessibility
         </h2>
-        <ul class="space-y-2 text-clay-default text-sm leading-relaxed">
+        <ul class="space-y-3 text-clay-default text-sm leading-relaxed">
           {component.accessibility.map((item) => (
-            <li class="flex gap-2">
-              <span aria-hidden="true" class="text-clay-subtle">
-                ·
+            <li class="flex gap-3">
+              <span aria-hidden="true" class="text-clay-inactive font-mono">
+                ›
               </span>
-              <span>{item}</span>
+              <span class="flex-1">
+                <InlineMarkdown text={item} />
+              </span>
             </li>
           ))}
         </ul>
@@ -121,13 +181,21 @@ const subHeadingClass = 'mb-2 scroll-mt-24 font-medium text-clay-strong text-lg 
   }
 
   {
-    component.tokens && component.tokens.length > 0 && (
-      <section class="mb-14">
-        <h2 id="tokens" class={headingClass}>
-          Tokens
+    component.tokens && component.tokens.length > 0 && tokensNum && (
+      <section class="mb-16">
+        <div class="numbered-rule mb-6">
+          <span class="num">{tokensNum}</span>
+          <span class="label">Tokens</span>
+          <span class="spacer hairline" />
+        </div>
+        <h2
+          id="tokens"
+          class="mb-3 scroll-mt-24 font-display text-3xl text-clay-strong leading-[1.1]"
+        >
+          Theme tokens consumed
         </h2>
-        <p class="mb-3 text-clay-default text-sm leading-relaxed">
-          {component.name} reads the following theme tokens:
+        <p class="mb-4 max-w-2xl text-clay-default text-sm leading-relaxed">
+          {component.name} reads the following CSS custom properties from the active theme.
         </p>
         <div class="flex flex-wrap gap-1.5">
           {component.tokens.map((token) => (
@@ -140,9 +208,16 @@ const subHeadingClass = 'mb-2 scroll-mt-24 font-medium text-clay-strong text-lg 
     )
   }
 
-  <section class="mb-14">
-    <h2 id="api-reference" class={headingClass}>API reference</h2>
-    <p class="text-clay-default text-sm leading-relaxed">
+  <section class="mb-16">
+    <div class="numbered-rule mb-6">
+      <span class="num">{apiNum}</span>
+      <span class="label">API reference</span>
+      <span class="spacer hairline"></span>
+    </div>
+    <h2 id="api-reference" class="mb-3 scroll-mt-24 font-display text-3xl text-clay-strong leading-[1.1]">
+      API reference
+    </h2>
+    <p class="max-w-2xl text-clay-default text-sm leading-relaxed">
       {component.name} is a thin React wrapper. Native HTML attributes pass through; for the full
       type signature, see the
       <a
@@ -155,51 +230,49 @@ const subHeadingClass = 'mb-2 scroll-mt-24 font-medium text-clay-strong text-lg 
     </p>
   </section>
 
-  <nav class="not-prose mt-20 flex items-stretch gap-3 border-clay-hairline border-t pt-8">
+  <nav class="not-prose mt-20 grid grid-cols-1 gap-3 border-clay-hairline border-t pt-10 sm:grid-cols-2">
     {
       previous ? (
         <a
           href={`/components/${previous.slug}`}
-          class="group flex flex-1 items-center gap-3 rounded-lg border border-clay-hairline bg-clay-elevated px-4 py-3 transition-all hover:border-clay-brand/60 hover:bg-clay-base"
+          class="group flex items-center gap-3 rounded-lg border border-clay-hairline bg-clay-elevated px-4 py-3 transition-all hover:border-clay-strong hover:bg-clay-base"
         >
           <span
             aria-hidden="true"
-            class="font-mono text-clay-inactive text-base transition-colors group-hover:text-clay-brand"
+            class="font-mono text-clay-inactive text-base transition-colors group-hover:text-clay-strong"
           >
             ←
           </span>
           <span class="flex flex-col items-start gap-0.5">
-            <span class="font-mono text-[0.625rem] text-clay-subtle uppercase tracking-wider">
-              Previous
+            <span class="mono-tag-tight">Previous</span>
+            <span class="font-display text-clay-strong text-lg leading-tight">
+              {previous.name}
             </span>
-            <span class="font-medium text-clay-strong text-sm">{previous.name}</span>
           </span>
         </a>
       ) : (
-        <span class="flex-1" />
+        <span class="hidden sm:block" />
       )
     }
     {
       next ? (
         <a
           href={`/components/${next.slug}`}
-          class="group flex flex-1 items-center justify-end gap-3 rounded-lg border border-clay-hairline bg-clay-elevated px-4 py-3 transition-all hover:border-clay-brand/60 hover:bg-clay-base"
+          class="group flex items-center justify-end gap-3 rounded-lg border border-clay-hairline bg-clay-elevated px-4 py-3 transition-all hover:border-clay-strong hover:bg-clay-base"
         >
           <span class="flex flex-col items-end gap-0.5">
-            <span class="font-mono text-[0.625rem] text-clay-subtle uppercase tracking-wider">
-              Next
-            </span>
-            <span class="font-medium text-clay-strong text-sm">{next.name}</span>
+            <span class="mono-tag-tight">Next</span>
+            <span class="font-display text-clay-strong text-lg leading-tight">{next.name}</span>
           </span>
           <span
             aria-hidden="true"
-            class="font-mono text-clay-inactive text-base transition-colors group-hover:text-clay-brand"
+            class="font-mono text-clay-inactive text-base transition-colors group-hover:text-clay-strong"
           >
             →
           </span>
         </a>
       ) : (
-        <span class="flex-1" />
+        <span class="hidden sm:block" />
       )
     }
   </nav>

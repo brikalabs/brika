@@ -18,13 +18,20 @@ const { title, description } = Astro.props;
     <title>{title}</title>
     {description && <meta name="description" content={description} />}
     <link rel="preconnect" href="https://rsms.me/" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    />
     <script is:inline>
       (() => {
         const KEY = 'clay-mode';
         const stored = localStorage.getItem(KEY);
         const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        const mode = stored === 'light' || stored === 'dark' ? stored : prefersDark ? 'dark' : 'light';
+        const mode =
+          stored === 'light' || stored === 'dark' ? stored : prefersDark ? 'dark' : 'light';
         document.documentElement.setAttribute('data-mode', mode);
       })();
     </script>
