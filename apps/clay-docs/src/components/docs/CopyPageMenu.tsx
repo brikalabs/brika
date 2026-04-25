@@ -107,7 +107,6 @@ export function CopyPageMenu({ pathname, sourcePath }: CopyPageMenuProps) {
           <a
             role="menuitem"
             href={rawMdxUrl}
-            target="_blank"
             rel="noopener noreferrer"
             onClick={() => setOpen(false)}
             className="flex items-center gap-2.5 px-3 py-2 text-clay-default text-sm transition-colors hover:bg-clay-control"
@@ -119,7 +118,6 @@ export function CopyPageMenu({ pathname, sourcePath }: CopyPageMenuProps) {
           <a
             role="menuitem"
             href={claudeUrl}
-            target="_blank"
             rel="noopener noreferrer"
             onClick={() => setOpen(false)}
             className="flex items-center gap-2.5 px-3 py-2 text-clay-default text-sm transition-colors hover:bg-clay-control"
@@ -131,7 +129,6 @@ export function CopyPageMenu({ pathname, sourcePath }: CopyPageMenuProps) {
           <a
             role="menuitem"
             href={chatgptUrl}
-            target="_blank"
             rel="noopener noreferrer"
             onClick={() => setOpen(false)}
             className="flex items-center gap-2.5 px-3 py-2 text-clay-default text-sm transition-colors hover:bg-clay-control"

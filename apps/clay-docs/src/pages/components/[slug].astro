@@ -1,5 +1,6 @@
 ---
 import { DemoRenderer } from '~/components/DemoRenderer.tsx';
+import { CodeSource } from '~/components/docs/CodeSource.tsx';
 import ComponentExample from '~/components/docs/ComponentExample.astro';
 import MdxDocLayout from '~/layouts/MdxDocLayout.astro';
 import { adjacentComponents, COMPONENTS, type ComponentEntry } from '~/lib/component-registry';
@@ -17,6 +18,20 @@ export function getStaticPaths() {
 
 const { component } = Astro.props;
 const { previous, next } = adjacentComponents(component.slug);
+
+const barrelImport = `import { ${component.name} } from "@brika/clay";`;
+const granularImport = `import { ${component.name} } from "@brika/clay/components/${component.slug}";`;
+
+const [heroDemo, ...moreDemos] = component.demos;
+
+function slugifyTitle(title: string): string {
+  return title.toLowerCase().replace(/\s+/g, '-');
+}
+
+const githubBase = `https://github.com/brikalabs/brika/tree/main/packages/clay/src/components/${component.slug}`;
+
+const headingClass = 'mb-3 scroll-mt-24 font-semibold text-2xl text-clay-strong tracking-tight';
+const subHeadingClass = 'mb-2 scroll-mt-24 font-medium text-clay-strong text-lg tracking-tight';
 ---
 
 <MdxDocLayout
@@ -26,29 +41,72 @@ const { previous, next } = adjacentComponents(component.slug);
     sourceFile: `components/${component.slug}`,
   }}
 >
-  <p class="mb-8 inline-flex items-center gap-2 font-medium font-mono text-clay-subtle text-xs uppercase tracking-wider">
+  <p class="mb-10 inline-flex items-center gap-2 font-medium font-mono text-clay-subtle text-xs uppercase tracking-wider">
     {component.group}
   </p>
 
   {
-    component.demos.map((demo) => (
-      <section class="mb-12 scroll-mt-24" id={demo.title.toLowerCase().replace(/\s+/g, '-')}>
-        <h2 class="mb-2 font-semibold text-2xl text-clay-strong tracking-tight">{demo.title}</h2>
-        {demo.description && (
-          <p class="mb-4 text-clay-default text-sm leading-relaxed">{demo.description}</p>
-        )}
-        <ComponentExample code={demo.code}>
-          <DemoRenderer slug={component.slug} demoName={demo.name} client:load />
+    heroDemo && (
+      <section class="mb-14">
+        <ComponentExample code={heroDemo.code}>
+          <DemoRenderer slug={component.slug} demoName={heroDemo.name} client:only="react" />
         </ComponentExample>
       </section>
-    ))
+    )
+  }
+
+  <section class="mb-14">
+    <h2 id="installation" class={headingClass}>Installation</h2>
+    <p class="mb-4 text-clay-default text-sm leading-relaxed">
+      Pull {component.name} from the barrel for everyday use, or the granular path when you want a
+      tighter bundle.
+    </p>
+    <CodeSource code={barrelImport} lang="tsx" filename="Barrel" client:load />
+    <CodeSource code={granularImport} lang="tsx" filename="Granular" client:load />
+  </section>
+
+  {
+    heroDemo && (
+      <section class="mb-14">
+        <h2 id="usage" class={headingClass}>
+          Usage
+        </h2>
+        <p class="mb-4 text-clay-default text-sm leading-relaxed">A minimal example to copy.</p>
+        <CodeSource code={heroDemo.code} lang="tsx" filename={`${component.name}.tsx`} client:load />
+      </section>
+    )
+  }
+
+  {
+    moreDemos.length > 0 && (
+      <section class="mb-14">
+        <h2 id="examples" class={`${headingClass} mb-6`}>
+          Examples
+        </h2>
+        {moreDemos.map((demo) => (
+          <section class="mb-10">
+            <h3 id={slugifyTitle(demo.title)} class={subHeadingClass}>
+              {demo.title}
+            </h3>
+            {demo.description && (
+              <p class="mb-4 text-clay-default text-sm leading-relaxed">{demo.description}</p>
+            )}
+            <ComponentExample code={demo.code}>
+              <DemoRenderer slug={component.slug} demoName={demo.name} client:only="react" />
+            </ComponentExample>
+          </section>
+        ))}
+      </section>
+    )
   }
 
   {
     component.accessibility && component.accessibility.length > 0 && (
-      <section class="mb-12 scroll-mt-24" id="accessibility">
-        <h2 class="mb-3 font-semibold text-2xl text-clay-strong tracking-tight">Accessibility</h2>
-        <ul class="space-y-2 text-clay-default text-sm">
+      <section class="mb-14">
+        <h2 id="accessibility" class={headingClass}>
+          Accessibility
+        </h2>
+        <ul class="space-y-2 text-clay-default text-sm leading-relaxed">
           {component.accessibility.map((item) => (
             <li class="flex gap-2">
               <span aria-hidden="true" class="text-clay-subtle">
@@ -64,10 +122,12 @@ const { previous, next } = adjacentComponents(component.slug);
 
   {
     component.tokens && component.tokens.length > 0 && (
-      <section class="mb-12 scroll-mt-24" id="tokens">
-        <h2 class="mb-3 font-semibold text-2xl text-clay-strong tracking-tight">Tokens</h2>
-        <p class="mb-3 text-clay-default text-sm">
-          This component reads the following theme tokens:
+      <section class="mb-14">
+        <h2 id="tokens" class={headingClass}>
+          Tokens
+        </h2>
+        <p class="mb-3 text-clay-default text-sm leading-relaxed">
+          {component.name} reads the following theme tokens:
         </p>
         <div class="flex flex-wrap gap-1.5">
           {component.tokens.map((token) => (
@@ -79,6 +139,21 @@ const { previous, next } = adjacentComponents(component.slug);
       </section>
     )
   }
+
+  <section class="mb-14">
+    <h2 id="api-reference" class={headingClass}>API reference</h2>
+    <p class="text-clay-default text-sm leading-relaxed">
+      {component.name} is a thin React wrapper. Native HTML attributes pass through; for the full
+      type signature, see the
+      <a
+        href={githubBase}
+        rel="noopener noreferrer"
+        class="text-clay-link underline-offset-2 hover:underline"
+      >
+        component source on GitHub
+      </a>.
+    </p>
+  </section>
 
   <nav class="not-prose mt-16 flex items-stretch gap-4 border-clay-hairline border-t pt-6">
     {

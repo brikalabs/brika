@@ -9,19 +9,22 @@ type CssVarKey = `--${string}`;
  *
  *   <div style={themeToCssVars(nord, 'dark')}>…</div>
  *
- * Every colour token in the preset becomes `--color-<token>`; `data-*`
- * accent slots also get bare `--data-N` aliases because Clay's Card
- * component references those directly (legacy; will be normalised in a
- * follow-up PR).
+ * Every token gets written in TWO forms:
+ *   --primary             (the bare token used by @theme inline mappings)
+ *   --color-primary       (the Tailwind-prefixed token referenced by `bg-primary` etc.)
+ *
+ * Both are required because Clay's tailwind-theme.css declares
+ *   --color-button-filled-container: var(--button-filled-container, var(--primary));
+ * — the fallback chain ends at `--primary` (bare), so an override that only
+ * touched `--color-primary` would leave optional component-scoped tokens
+ * like `--color-button-filled-container` resolving to the default.
  */
 export function themeToCssVars(theme: ThemeConfig, mode: ThemeMode): CSSProperties {
   const colors = theme.colors[mode];
   const style: Record<CssVarKey, string> = {};
   for (const [token, value] of Object.entries(colors)) {
+    style[`--${token}`] = value;
     style[`--color-${token}`] = value;
-    if (token.startsWith('data-')) {
-      style[`--${token}`] = value;
-    }
   }
   return style;
 }
@@ -38,16 +41,14 @@ function collectTokenNames(theme: ThemeConfig): readonly string[] {
   return TOKEN_NAMES_CACHE;
 }
 
-/**
- * Write a theme's colours onto `document.documentElement` as CSS custom
- * properties. Use this when you want the theme to apply globally (site
- * chrome + every component), rather than scoping it to a single element
- * via `themeToCssVars`. Returns a `reset` function that removes the
- * properties again — call it when switching themes, or skip it and just
- * call `applyTheme` with the new choice; overwrites are fine.
- */
 const NOOP = (): void => undefined;
 
+/**
+ * Write a theme's colours onto `document.documentElement` as CSS custom
+ * properties. Sets both bare (`--primary`) and prefixed (`--color-primary`)
+ * forms so every code path through @theme inline mappings resolves
+ * correctly.
+ */
 export function applyTheme(theme: ThemeConfig, mode: ThemeMode): () => void {
   if (typeof document === 'undefined') {
     return NOOP;
@@ -55,10 +56,8 @@ export function applyTheme(theme: ThemeConfig, mode: ThemeMode): () => void {
   const root = document.documentElement;
   const colors = theme.colors[mode];
   for (const [token, value] of Object.entries(colors)) {
+    root.style.setProperty(`--${token}`, value);
     root.style.setProperty(`--color-${token}`, value);
-    if (token.startsWith('data-')) {
-      root.style.setProperty(`--${token}`, value);
-    }
   }
   return () => resetThemeVars(theme);
 }
@@ -73,9 +72,7 @@ export function resetThemeVars(theme: ThemeConfig): void {
   }
   const root = document.documentElement;
   for (const token of collectTokenNames(theme)) {
+    root.style.removeProperty(`--${token}`);
     root.style.removeProperty(`--color-${token}`);
-    if (token.startsWith('data-')) {
-      root.style.removeProperty(`--${token}`);
-    }
   }
 }

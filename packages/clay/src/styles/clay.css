@@ -19,7 +19,10 @@
 /* Shared Tailwind v4 theme tokens — imported by both the Vite frontend build
    and the hub's ModuleCompiler (plugin page CSS).  Single source of truth. */
 
-@custom-variant dark (&:is(.dark *));
+/* Dark variant: works whether the consumer toggles via `class="dark"` (legacy)
+   or `data-mode="dark"` (current docs convention). Either selector activates
+   `dark:`-prefixed utilities. */
+@custom-variant dark (&:is(.dark, .dark *, [data-mode="dark"], [data-mode="dark"] *));
 
 /* ─────────────────────────────────────────────────────────────
    SEMANTIC VARIABLES → TAILWIND UTILITIES

@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import {
   COMPONENT_GROUPS,
@@ -10,6 +10,7 @@ import { sitePages } from '~/lib/site-pages';
 import { ClayMenuIcon } from './ClayMenuIcon';
 
 const STORAGE_KEY = 'clay-sidebar-open';
+const COLLAPSED_GROUPS_KEY = 'clay-sidebar-collapsed-groups';
 const OPEN_PALETTE_EVENT = 'clay-open-palette';
 
 function normalise(pathname: string): string {
@@ -32,10 +33,38 @@ const groupedComponents: ReadonlyMap<ComponentGroup, readonly ComponentEntry[]> 
   COMPONENT_GROUPS.map((group) => [group, COMPONENTS.filter((c) => c.group === group)])
 );
 
+function readCollapsedGroups(): ReadonlySet<ComponentGroup> {
+  if (typeof localStorage === 'undefined') {
+    return new Set();
+  }
+  try {
+    const raw = localStorage.getItem(COLLAPSED_GROUPS_KEY);
+    if (!raw) {
+      return new Set();
+    }
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) {
+      return new Set();
+    }
+    const valid = new Set<ComponentGroup>();
+    for (const entry of parsed) {
+      if (typeof entry === 'string' && (COMPONENT_GROUPS as readonly string[]).includes(entry)) {
+        valid.add(entry as ComponentGroup);
+      }
+    }
+    return valid;
+  } catch {
+    return new Set();
+  }
+}
+
 export function SidebarNav({ currentPath }: { readonly currentPath: string }) {
   const active = normalise(currentPath);
   const [open, setOpen] = useState(true);
   const [shortcutLabel, setShortcutLabel] = useState('Ctrl K');
+  const [collapsedGroups, setCollapsedGroups] = useState<ReadonlySet<ComponentGroup>>(
+    () => new Set()
+  );
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -44,12 +73,28 @@ export function SidebarNav({ currentPath }: { readonly currentPath: string }) {
     }
     const isMac = /mac|iphone|ipad|ipod/i.test(navigator.userAgent);
     setShortcutLabel(isMac ? '⌘ K' : 'Ctrl K');
+    setCollapsedGroups(readCollapsedGroups());
   }, []);
 
   const toggle = () => {
     const next = !open;
     setOpen(next);
     localStorage.setItem(STORAGE_KEY, next ? 'true' : 'false');
+  };
+
+  const toggleGroup = (group: ComponentGroup) => {
+    const next = new Set(collapsedGroups);
+    if (next.has(group)) {
+      next.delete(group);
+    } else {
+      next.add(group);
+    }
+    setCollapsedGroups(next);
+    try {
+      localStorage.setItem(COLLAPSED_GROUPS_KEY, JSON.stringify([...next]));
+    } catch {
+      // Storage unavailable — keep in-memory only.
+    }
   };
 
   const pages = sitePages.filter((page) => page.group === 'Pages');
@@ -138,23 +183,36 @@ export function SidebarNav({ currentPath }: { readonly currentPath: string }) {
               if (items.length === 0) {
                 return null;
               }
+              const collapsed = collapsedGroups.has(group);
               return (
-                <div key={group} className="mb-3">
-                  <p className="mb-1 px-2 font-medium font-mono text-[0.625rem] text-clay-inactive uppercase tracking-wider">
-                    {group}
-                  </p>
-                  <ul className="space-y-0.5">
-                    {items.map((component) => (
-                      <li key={component.slug}>
-                        <a
-                          href={`/components/${component.slug}`}
-                          className={navItemClass(`/components/${component.slug}`)}
-                        >
-                          {component.name}
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
+                <div key={group} className="mb-2">
+                  <button
+                    type="button"
+                    onClick={() => toggleGroup(group)}
+                    aria-expanded={!collapsed}
+                    className="flex w-full items-center justify-between rounded px-2 py-1 font-medium font-mono text-[0.625rem] text-clay-inactive uppercase tracking-wider transition-colors hover:bg-clay-control hover:text-clay-subtle"
+                  >
+                    <span>{group}</span>
+                    <ChevronDown
+                      size={11}
+                      className={`transition-transform ${collapsed ? '-rotate-90' : ''}`}
+                      aria-hidden="true"
+                    />
+                  </button>
+                  {!collapsed && (
+                    <ul className="mt-1 space-y-0.5">
+                      {items.map((component) => (
+                        <li key={component.slug}>
+                          <a
+                            href={`/components/${component.slug}`}
+                            className={navItemClass(`/components/${component.slug}`)}
+                          >
+                            {component.name}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               );
             })}
