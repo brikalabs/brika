@@ -25,9 +25,42 @@
  * which in turn pulls this plugin in.
  */
 
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import plugin from 'tailwindcss/plugin';
 import { TOKEN_REGISTRY } from './tokens/registry';
 import type { ResolvedTokenSpec, TailwindNamespace } from './tokens/types';
+
+/**
+ * Tokens whose `defaultLight` is a literal (not `var(...)`) get a
+ * concrete `:root` value — that's their whole job. Tokens whose default
+ * is a `var()` chain only need to be in `:root` if some hand-authored
+ * CSS reads them directly (`var(--button-duration)` in
+ * `components.css`); otherwise the same fallback chain is reachable
+ * through the Tailwind utility (`theme.extend.transitionDuration`),
+ * and emitting them in `:root` is dead weight.
+ *
+ * We resolve "directly referenced" by reading `components.css` at
+ * plugin compile time. The set is small (~16 tokens) but explicit.
+ */
+function readDirectVarReferences(): ReadonlySet<string> {
+  try {
+    const here = dirname(fileURLToPath(import.meta.url));
+    const css = readFileSync(join(here, 'styles', 'components.css'), 'utf8');
+    const found = new Set<string>();
+    for (const match of css.matchAll(/var\(--([a-z][a-z0-9-]*)/g)) {
+      found.add(match[1]);
+    }
+    return found;
+  } catch {
+    // Fail-safe: if the file can't be read, behave as if every token is
+    // referenced — bigger CSS but never a missing-var bug.
+    return new Set(TOKEN_REGISTRY.map((t) => t.name));
+  }
+}
+
+const COMPONENTS_CSS_REFS = readDirectVarReferences();
 
 const DARK_SELECTOR =
   ':is(.dark, [data-mode="dark"]):root, :is(.dark, [data-mode="dark"])[data-theme="default"]';
@@ -55,7 +88,20 @@ function utilityValue(token: ResolvedTokenSpec): string {
 function rootDefaults(): Record<string, string> {
   const out: Record<string, string> = {};
   for (const token of TOKEN_REGISTRY) {
-    out[`--${token.name}`] = token.defaultLight;
+    // Layer 0/1 always get a `:root` value — they're concrete and Layer 2
+    // chains fall back through them. Layer 2 tokens with a literal default
+    // also need `:root` for components that read raw `var(--X)`. Tokens
+    // whose default is just a `var()` chain only land here when some
+    // hand-authored CSS reads them directly; otherwise the Tailwind
+    // utility's fallback covers the same ground.
+    if (token.layer !== 'component') {
+      out[`--${token.name}`] = token.defaultLight;
+      continue;
+    }
+    const isVarChain = token.defaultLight.startsWith('var(');
+    if (!isVarChain || COMPONENTS_CSS_REFS.has(token.name)) {
+      out[`--${token.name}`] = token.defaultLight;
+    }
   }
   return out;
 }
