@@ -9,18 +9,14 @@ import { ChevronDown } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 const STORAGE_KEY = 'clay-theme';
-const URL_PARAM = 'theme';
 const MODE_STORAGE_KEY = 'clay-mode';
+const THEME_EVENT = 'clay:theme-change';
 
 type ClayMode = 'light' | 'dark';
 
 function readInitialThemeId(): string {
   if (typeof window === 'undefined') {
     return 'default';
-  }
-  const fromUrl = new URL(window.location.href).searchParams.get(URL_PARAM);
-  if (fromUrl && BUILT_IN_THEMES_BY_ID[fromUrl]) {
-    return fromUrl;
   }
   const stored = localStorage.getItem(STORAGE_KEY);
   if (stored && BUILT_IN_THEMES_BY_ID[stored]) {
@@ -68,9 +64,8 @@ function SwatchStrip({ theme, count = 4, height = 14 }: SwatchStripProps) {
 
 /**
  * Header dropdown that applies one of Clay's first-party themes site-wide
- * (writes CSS vars onto `<html>`), persists the choice to localStorage, and
- * syncs to the URL query string so shared links like `?theme=nord` open
- * with the same palette. Also follows the data-mode attribute toggle.
+ * (writes CSS vars onto `<html>`) and persists the choice to localStorage.
+ * Also follows the data-mode attribute toggle.
  *
  * Trigger: a horizontal swatch strip + serif italic theme name + caret.
  * Dropdown rows: a wide swatch strip on top, serif italic theme name with
@@ -123,12 +118,21 @@ export function ThemePicker() {
     const onStorage = (event: StorageEvent) => {
       if (event.key === MODE_STORAGE_KEY) {
         onModeChange();
+      } else if (event.key === STORAGE_KEY && event.newValue) {
+        setThemeId(event.newValue);
       }
     };
-    window.addEventListener('storage', onStorage);
+    const onThemeChange = (event: Event) => {
+      if (event instanceof CustomEvent && typeof event.detail === 'string') {
+        setThemeId(event.detail);
+      }
+    };
+    globalThis.addEventListener('storage', onStorage);
+    globalThis.addEventListener(THEME_EVENT, onThemeChange);
     return () => {
       observer.disconnect();
-      window.removeEventListener('storage', onStorage);
+      globalThis.removeEventListener('storage', onStorage);
+      globalThis.removeEventListener(THEME_EVENT, onThemeChange);
     };
   }, []);
 
@@ -162,13 +166,7 @@ export function ThemePicker() {
     } catch {
       // Storage unavailable — in-memory only.
     }
-    const url = new URL(window.location.href);
-    if (theme.id === 'default') {
-      url.searchParams.delete(URL_PARAM);
-    } else {
-      url.searchParams.set(URL_PARAM, theme.id);
-    }
-    window.history.replaceState({}, '', url.toString());
+    globalThis.dispatchEvent(new CustomEvent(THEME_EVENT, { detail: theme.id }));
   };
 
   const activeTheme = BUILT_IN_THEMES_BY_ID[themeId] ?? BUILT_IN_THEMES[0];

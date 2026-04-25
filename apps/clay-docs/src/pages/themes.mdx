@@ -20,11 +20,8 @@ import CodeSource from "~/components/docs/CodeSource.astro";
   </h2>
   <p class="mb-8 max-w-2xl text-clay-default text-sm leading-relaxed">
     Each card renders Button, Input, and Card under that theme's CSS vars — a side-by-side
-    visual diff. Click a card to apply that theme site-wide; the URL syncs to{" "}
-    <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">
-      ?theme=…
-    </code>{" "}
-    so you can share a specific look.
+    visual diff. Click a card to apply that theme site-wide; the choice persists across
+    visits via <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">localStorage</code>.
   </p>
   <ThemesGallery client:only="react" />
 </section>
@@ -39,9 +36,7 @@ import CodeSource from "~/components/docs/CodeSource.astro";
     Theme the whole app
   </h2>
   <p class="mb-5 max-w-2xl text-clay-default text-sm leading-relaxed">
-    `applyTheme(theme, mode)` writes every colour onto `document.documentElement` as a CSS
-    custom property. Every Clay component on the page reads the new values immediately — no
-    re-render, no React state.
+    <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">applyTheme(theme, mode)</code> writes every colour onto <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">document.documentElement</code> as a CSS custom property. Every Clay component on the page reads the new values immediately — no re-render, no React state.
   </p>
   <CodeSource
     code={`import { nord, applyTheme } from "@brika/clay/themes";
@@ -62,9 +57,7 @@ applyTheme(nord, "dark");`}
     Or scope it to a subtree
   </h2>
   <p class="mb-5 max-w-2xl text-clay-default text-sm leading-relaxed">
-    `themeToCssVars(theme, mode)` returns a `CSSProperties` object you can spread onto any
-    element's style prop. The theme applies only to that subtree — useful for side-by-side
-    comparisons like the gallery above.
+    <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">themeToCssVars(theme, mode)</code> returns a <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">CSSProperties</code> object you can spread onto any element's style prop. The theme applies only to that subtree — useful for side-by-side comparisons like the gallery above.
   </p>
   <CodeSource
     code={`import { ocean, themeToCssVars } from "@brika/clay/themes";
@@ -87,9 +80,7 @@ applyTheme(nord, "dark");`}
     ThemeConfig
   </h2>
   <p class="mb-5 max-w-2xl text-clay-default text-sm leading-relaxed">
-    Every preset is a typed object. The registry exports BUILT_IN_THEMES (ordered),
-    BUILT_IN_THEMES_BY_ID (lookup map), and each theme by name — nord, ocean, forest, sunset,
-    lavender, ruby, solarized, candy, dracula, mono, plus default_ as the reserved-word rename.
+    Every preset is a typed object. The registry exports <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">BUILT_IN_THEMES</code> (ordered), <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">BUILT_IN_THEMES_BY_ID</code> (lookup map), and each theme by name — <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">nord</code>, <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">ocean</code>, <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">forest</code>, <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">sunset</code>, <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">lavender</code>, <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">ruby</code>, <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">solarized</code>, <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">candy</code>, <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">dracula</code>, <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">mono</code>, plus <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">default_</code> as the reserved-word rename.
   </p>
   <CodeSource
     code={`interface ThemeConfig {
@@ -110,16 +101,13 @@ applyTheme(nord, "dark");`}
 <section class="mb-16">
   <div class="numbered-rule mb-6">
     <span class="num">05</span>
-    <span class="label">URL</span>
+    <span class="label">Persist</span>
     <span class="spacer hairline"></span>
   </div>
-  <h2 id="url" class="mb-3 scroll-mt-24 font-display text-3xl text-clay-strong leading-[1.1]">
-    Sharing a theme via URL
+  <h2 id="persist" class="mb-3 scroll-mt-24 font-display text-3xl text-clay-strong leading-[1.1]">
+    Remembering the choice
   </h2>
   <p class="max-w-2xl text-clay-default text-sm leading-relaxed">
-    The active theme syncs to the URL as ?theme=&lt;id&gt;. Share
-    clay.brika.dev/components/button?theme=nord and the recipient lands pre-themed. On first
-    visit without a parameter, Clay restores the last choice from localStorage, falling back
-    to the default.
+    Clay stores the active theme id under the <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">clay-theme</code> key in <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">localStorage</code>. The picker reads it on mount and re-applies the selection. If storage is unavailable, the theme falls back to <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">default</code> for the session.
   </p>
 </section>

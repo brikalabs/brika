@@ -22,13 +22,14 @@ React 19 is required. Older React majors are not supported.
 
 ## Load the styles
 
-Clay depends on a set of CSS custom-property tokens (`--primary`, `--border`, `--ring`, …). Import the stylesheet once at the root of your app:
+Clay ships a Tailwind v4 entry point that wires up every token (`--primary`, `--radius`, `--font-sans`, the full theme scale) and registers `@source` directives for Clay's own components. Import it once from your Tailwind entry file:
 
-```ts
-import "@brika/clay/styles";
+```css
+@import "tailwindcss";
+@import "@brika/clay/styles";
 ```
 
-> Token source-of-truth migration lands in a follow-up PR. Until then, the docs site ships its own copy of these tokens in [apps/clay-docs/src/styles/global.css](https://github.com/brikalabs/brika/blob/main/apps/clay-docs/src/styles/global.css). Copy that `@theme { … }` block into your own Tailwind v4 entry file to render Clay components correctly.
+That single import is enough — no extra `@source` glob, no token copy-paste. Apply a theme at runtime with [`applyTheme`](/themes) to swap the palette anywhere in the page.
 
 ## Use a component
 
@@ -46,9 +47,10 @@ The barrel import (`import { Button } from "@brika/clay"`) also works — pick w
 
 ## Tailwind setup
 
-Clay's classes are scanned by your app's Tailwind config automatically as long as Tailwind can see the imported components. If you're using Tailwind v4 via `@tailwindcss/vite`, no extra configuration is needed — the `@source` directive picks up `node_modules/@brika/clay/dist/**`.
+Clay targets Tailwind v4 and is built around CSS-first theming. The `@import "@brika/clay/styles"` line you added above pulls in every utility Clay's components use — Tailwind's `@source` directives are resolved relative to the imported stylesheet, so they keep working no matter where in your bundle the file lives. No extra configuration is needed when using `@tailwindcss/vite`.
 
 ## Next steps
 
 - Browse [components](/components/button) to see every primitive in action.
 - Read the [colors reference](/colors) to understand the token scale.
+- Pick a [theme](/themes) and ship it with one call to `applyTheme`.
