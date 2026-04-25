@@ -2,38 +2,97 @@
 layout: ~/layouts/MdxDocLayout.astro
 title: "Themes"
 description: "Eleven first-party presets ship with Clay. Pick any one to theme the whole docs site, or click a card to compare them side by side."
+group: "Library"
 ---
 
 import { ThemesGallery } from "~/components/demos/ThemesGallery.tsx";
+import CodeSource from "~/components/docs/CodeSource.astro";
 
-## Pick a theme
+<section class="mb-16">
+  <div class="numbered-rule mb-6">
+    <span class="num">01</span>
+    <span class="label">Gallery</span>
+    <span class="spacer hairline"></span>
+    <span class="text-clay-inactive">11 presets</span>
+  </div>
+  <h2 id="gallery" class="mb-4 scroll-mt-24 font-display text-3xl text-clay-strong leading-[1.1]">
+    Pick a theme
+  </h2>
+  <p class="mb-8 max-w-2xl text-clay-default text-sm leading-relaxed">
+    Each card renders Button, Input, and Card under that theme's CSS vars — a side-by-side
+    visual diff. Click a card to apply that theme site-wide; the URL syncs to{" "}
+    <code class="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">
+      ?theme=…
+    </code>{" "}
+    so you can share a specific look.
+  </p>
+  <ThemesGallery client:only="react" />
+</section>
 
-<ThemesGallery client:only="react" />
+<section class="mb-16">
+  <div class="numbered-rule mb-6">
+    <span class="num">02</span>
+    <span class="label">Apply</span>
+    <span class="spacer hairline"></span>
+  </div>
+  <h2 id="apply" class="mb-3 scroll-mt-24 font-display text-3xl text-clay-strong leading-[1.1]">
+    Theme the whole app
+  </h2>
+  <p class="mb-5 max-w-2xl text-clay-default text-sm leading-relaxed">
+    `applyTheme(theme, mode)` writes every colour onto `document.documentElement` as a CSS
+    custom property. Every Clay component on the page reads the new values immediately — no
+    re-render, no React state.
+  </p>
+  <CodeSource
+    code={`import { nord, applyTheme } from "@brika/clay/themes";
 
-## How it works
+applyTheme(nord, "dark");`}
+    lang="tsx"
+    filename="globally"
+  />
+</section>
 
-Every preset is a `ThemeConfig` object with `colors.light` and `colors.dark` maps from token name to hex. `applyTheme(theme, mode)` writes those hexes onto `document.documentElement` as CSS custom properties — every Clay component and every docs-site surface reads the new values immediately, with no re-render.
-
-```tsx
-import { nord, applyTheme } from "@brika/clay/themes";
-
-applyTheme(nord, "dark"); // globally
-```
-
-For scoped previews (like the cards above), `themeToCssVars(theme, mode)` returns a `CSSProperties` object you can spread onto any element's `style` prop. The theme applies only to that subtree.
-
-```tsx
-import { ocean, themeToCssVars } from "@brika/clay/themes";
+<section class="mb-16">
+  <div class="numbered-rule mb-6">
+    <span class="num">03</span>
+    <span class="label">Scope</span>
+    <span class="spacer hairline"></span>
+  </div>
+  <h2 id="scope" class="mb-3 scroll-mt-24 font-display text-3xl text-clay-strong leading-[1.1]">
+    Or scope it to a subtree
+  </h2>
+  <p class="mb-5 max-w-2xl text-clay-default text-sm leading-relaxed">
+    `themeToCssVars(theme, mode)` returns a `CSSProperties` object you can spread onto any
+    element's style prop. The theme applies only to that subtree — useful for side-by-side
+    comparisons like the gallery above.
+  </p>
+  <CodeSource
+    code={`import { ocean, themeToCssVars } from "@brika/clay/themes";
 
 <div style={themeToCssVars(ocean, "light")}>
   <Button>Ocean button</Button>
-</div>
-```
+</div>`}
+    lang="tsx"
+    filename="scoped"
+  />
+</section>
 
-## Theme shape
-
-```ts
-interface ThemeConfig {
+<section class="mb-16">
+  <div class="numbered-rule mb-6">
+    <span class="num">04</span>
+    <span class="label">Shape</span>
+    <span class="spacer hairline"></span>
+  </div>
+  <h2 id="shape" class="mb-3 scroll-mt-24 font-display text-3xl text-clay-strong leading-[1.1]">
+    ThemeConfig
+  </h2>
+  <p class="mb-5 max-w-2xl text-clay-default text-sm leading-relaxed">
+    Every preset is a typed object. The registry exports BUILT_IN_THEMES (ordered),
+    BUILT_IN_THEMES_BY_ID (lookup map), and each theme by name — nord, ocean, forest, sunset,
+    lavender, ruby, solarized, candy, dracula, mono, plus default_ as the reserved-word rename.
+  </p>
+  <CodeSource
+    code={`interface ThemeConfig {
   id: string;
   name: string;
   description: string;
@@ -42,11 +101,25 @@ interface ThemeConfig {
     light: Readonly<Record<string, string>>;
     dark: Readonly<Record<string, string>>;
   };
-}
-```
+}`}
+    lang="ts"
+    filename="types.ts"
+  />
+</section>
 
-The registry is exported as `BUILT_IN_THEMES` (ordered), `BUILT_IN_THEMES_BY_ID` (for lookups), plus each theme by name: `nord`, `ocean`, `forest`, `sunset`, `lavender`, `ruby`, `solarized`, `candy`, `dracula`, `mono`, `default_` (reserved-word rename).
-
-## URL sharing
-
-The active theme syncs to the URL as `?theme=<id>`. Share `https://clay.brika.dev/components/button?theme=nord` and the recipient opens the page pre-themed. On first visit without a URL parameter, Clay restores the theme from `localStorage`, falling back to the default.
+<section class="mb-16">
+  <div class="numbered-rule mb-6">
+    <span class="num">05</span>
+    <span class="label">URL</span>
+    <span class="spacer hairline"></span>
+  </div>
+  <h2 id="url" class="mb-3 scroll-mt-24 font-display text-3xl text-clay-strong leading-[1.1]">
+    Sharing a theme via URL
+  </h2>
+  <p class="max-w-2xl text-clay-default text-sm leading-relaxed">
+    The active theme syncs to the URL as ?theme=&lt;id&gt;. Share
+    clay.brika.dev/components/button?theme=nord and the recipient lands pre-themed. On first
+    visit without a parameter, Clay restores the last choice from localStorage, falling back
+    to the default.
+  </p>
+</section>

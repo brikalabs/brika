@@ -1,49 +1,95 @@
 ---
 import MainLayout from '~/layouts/MainLayout.astro';
 import { COMPONENT_GROUPS, COMPONENTS, componentsInGroup } from '~/lib/component-registry';
+
+function pad(n: number): string {
+  return n.toString().padStart(2, '0');
+}
+
+let runningIndex = 0;
 ---
 
 <MainLayout
   title="Components — Clay"
   description="Every Clay component in one place. Click through to full docs and live demos."
 >
-  <div class="mx-auto max-w-5xl px-6 py-10 md:px-10">
-    <header class="mb-10">
-      <p class="mb-2 font-medium font-mono text-clay-subtle text-xs uppercase tracking-wider">
-        Components · {COMPONENTS.length}
-      </p>
-      <h1 class="font-semibold text-4xl text-clay-strong tracking-tighter md:text-5xl">
-        Every Clay component
+  <!-- HERO -->
+  <section class="border-clay-hairline border-b">
+    <div class="mx-auto max-w-6xl px-6 pt-20 pb-12 md:px-12">
+      <div class="mb-6 flex items-center gap-3 mono-tag-tight">
+        <span class="hairline w-8"></span>
+        <span class="text-clay-strong">Library</span>
+        <span class="hairline flex-1"></span>
+        <span class="text-clay-inactive">{COMPONENTS.length} primitives</span>
+      </div>
+      <h1 class="font-display text-clay-strong text-6xl leading-[1.02] md:text-7xl">
+        Every Clay <span class="font-display-italic text-clay-subtle">component.</span>
       </h1>
-      <p class="mt-3 max-w-2xl text-clay-subtle text-lg leading-relaxed">
-        {COMPONENTS.length} primitives, grouped by intent. Each page renders live demos against the active theme.
+      <p class="mt-6 max-w-xl text-clay-default text-lg leading-relaxed">
+        Thirty-seven primitives, grouped by intent. Each page renders live demos against the
+        active theme — pick a theme above and the gallery follows.
       </p>
-    </header>
+    </div>
+  </section>
 
+  <!-- GROUP SECTIONS -->
+  <div class="mx-auto max-w-6xl px-6 py-12 md:px-12">
     {
-      COMPONENT_GROUPS.map((group) => {
+      COMPONENT_GROUPS.map((group, groupIndex) => {
         const items = componentsInGroup(group);
         if (items.length === 0) return null;
         return (
-          <section class="mb-12">
-            <div class="mb-4 flex items-baseline justify-between border-clay-hairline border-b pb-2">
-              <h2 class="font-semibold text-clay-strong text-lg tracking-tight">{group}</h2>
-              <span class="font-mono text-clay-subtle text-xs">{items.length}</span>
+          <section class="mb-16 last:mb-0">
+            <div class="numbered-rule mb-8">
+              <span class="num">{pad(groupIndex + 1)}</span>
+              <span class="label">{group}</span>
+              <span class="spacer hairline" />
+              <span class="text-clay-inactive">
+                {pad(items.length)} {items.length === 1 ? 'component' : 'components'}
+              </span>
             </div>
+
             <div class="grid grid-cols-1 gap-px overflow-hidden rounded-lg border border-clay-hairline bg-clay-hairline sm:grid-cols-2 lg:grid-cols-3">
-              {items.map((component) => (
-                <a
-                  href={`/components/${component.slug}`}
-                  class="group flex flex-col gap-2 bg-clay-elevated p-4 transition-colors hover:bg-clay-base"
-                >
-                  <p class="font-medium text-clay-strong text-sm transition-colors group-hover:text-clay-strong">
-                    {component.name}
-                  </p>
-                  <p class="line-clamp-2 text-clay-subtle text-xs leading-snug">
-                    {component.description}
-                  </p>
-                </a>
-              ))}
+              {items.map((component) => {
+                runningIndex += 1;
+                const num = pad(runningIndex);
+                return (
+                  <a
+                    href={`/components/${component.slug}`}
+                    class="group relative flex flex-col gap-3 bg-clay-elevated p-5 transition-colors hover:bg-clay-base"
+                  >
+                    <div class="flex items-center gap-2">
+                      <span class="font-medium font-mono text-[0.625rem] text-clay-inactive uppercase tracking-[0.12em]">
+                        {num}
+                      </span>
+                      <span class="block h-px w-6 bg-clay-hairline" />
+                      <span class="font-mono text-[0.625rem] text-clay-inactive uppercase tracking-[0.12em]">
+                        {component.slug}
+                      </span>
+                    </div>
+                    <p
+                      class="text-clay-strong text-2xl leading-tight"
+                      style={{
+                        fontFamily:
+                          '"Instrument Serif", "Iowan Old Style", Georgia, serif',
+                        fontStyle: 'italic',
+                        letterSpacing: '-0.022em',
+                      }}
+                    >
+                      {component.name}
+                    </p>
+                    <p class="line-clamp-3 text-clay-subtle text-xs leading-snug">
+                      {component.description}
+                    </p>
+                    <span
+                      aria-hidden="true"
+                      class="absolute right-4 bottom-4 font-mono text-clay-inactive text-sm opacity-0 transition-opacity group-hover:opacity-100"
+                    >
+                      →
+                    </span>
+                  </a>
+                );
+              })}
             </div>
           </section>
         );

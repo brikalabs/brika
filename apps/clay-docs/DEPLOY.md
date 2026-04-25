@@ -1,6 +1,8 @@
 # Deploying clay-docs to clay.brika.dev
 
-The site deploys to Cloudflare Pages via Wrangler.
+The site deploys to Cloudflare Workers (Static Assets) via Wrangler.
+Astro builds a static `./dist`, which the Worker serves directly — no
+server-side script required.
 
 ## One-time setup
 
@@ -13,25 +15,21 @@ Run from `apps/clay-docs/` (or via `bun run --cwd apps/clay-docs <cmd>`).
    bunx wrangler login
    ```
 
-2. **Create the Pages project:**
+2. **First deploy creates the Worker:**
 
    ```bash
-   bunx wrangler pages project create clay-brika-dev --production-branch main
+   bun run deploy
    ```
 
-3. **Attach the custom domain:**
+   The Worker is named `clay-brika-dev` (from [wrangler.jsonc](./wrangler.jsonc)).
 
-   ```bash
-   bunx wrangler pages domain add clay.brika.dev --project-name clay-brika-dev
-   ```
+3. **Attach the custom domain** in the Cloudflare dashboard:
+
+   Workers & Pages → `clay-brika-dev` → Settings → Domains & Routes →
+   Add → Custom Domain → `clay.brika.dev`.
 
    Cloudflare will provision the DNS record automatically if `brika.dev`
-   lives on the same account. If it lives elsewhere, add a CNAME record
-   on the DNS host:
-
-   ```
-   clay  CNAME  clay-brika-dev.pages.dev
-   ```
+   lives on the same account.
 
 ## Day-to-day deploys
 
@@ -39,15 +37,15 @@ From the repo root:
 
 ```bash
 bun run clay:deploy           # production push to clay.brika.dev
-bun run clay:deploy:preview   # preview branch (won't go live)
+bun run clay:deploy:preview   # uploads a preview version (not promoted)
 ```
 
-Each command runs `astro build` then `wrangler pages deploy ./dist
---project-name clay-brika-dev`.
+`deploy` runs `astro build` then `wrangler deploy` (promotes immediately).
+`deploy:preview` runs `wrangler versions upload`, which returns a
+preview URL without affecting production.
 
 ## CI
 
-A future CI step can run the same `clay:deploy` script on each merge
-to `main`, scoped via `CLOUDFLARE_API_TOKEN` and
-`CLOUDFLARE_ACCOUNT_ID` secrets. See
+A future CI step can run `clay:deploy` on each merge to `main`, scoped
+via `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` secrets. See
 [wrangler.jsonc](./wrangler.jsonc) for the project configuration.

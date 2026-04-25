@@ -17,8 +17,8 @@
     "typecheck": "astro check --minimumSeverity error",
     "lint": "bunx --bun biome check .",
     "check:arch": "archunit",
-    "deploy": "astro build && wrangler pages deploy ./dist --project-name clay-brika-dev --branch main",
-    "deploy:preview": "astro build && wrangler pages deploy ./dist --project-name clay-brika-dev --branch preview"
+    "deploy": "astro build && wrangler deploy",
+    "deploy:preview": "astro build && wrangler versions upload"
   },
   "dependencies": {
     "@astrojs/mdx": "^4.0.0",
