@@ -23,7 +23,6 @@
     "./primitives/*": "./src/primitives/*.ts",
     "./styles": "./src/styles/clay.css",
     "./tailwind": "./src/tailwind.ts",
-    "./tailwind-preset": "./src/tailwind-preset.ts",
     "./themes": "./src/themes/index.ts",
     "./tokens": "./src/tokens/index.ts"
   },

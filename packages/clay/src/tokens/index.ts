@@ -1,7 +1,8 @@
 /**
- * Public surface of the token registry. Imported by the build script that
- * generates the CSS files, by the docs site, and (in step 4) by `themes/`
- * to type the `ThemeConfig` JSON.
+ * Public surface of the token registry. Imported by the Tailwind plugin
+ * (`../tailwind.ts`) that contributes CSS at compile time, by the docs
+ * site to render the token table, and by `themes/` to type / flatten
+ * theme JSON at runtime.
  */
 export { inferTokenType, inferTokenTypeStrict, TOKEN_TYPE_HINT } from './infer';
 export { TOKEN_REGISTRY, TOKENS_BY_NAME, tokensByType } from './registry';

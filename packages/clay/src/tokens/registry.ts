@@ -2,13 +2,16 @@
  * Clay's token registry — single source of truth for every CSS custom
  * property that participates in theming.
  *
- * Step 1 covers the ~100 tokens that exist in `clay.css` today (Layer 0
- * scalars, Layer 1 roles, Layer 2 component overrides for color / radius /
- * shadow / corner-shape). Step 4 of the rollout expands Layer 2 to cover
- * border / typography / focus / motion / state for every component.
+ * Three layers, all covered:
+ *   - Layer 0 scalars (`--radius`, `--spacing`, font + motion roots, …)
+ *   - Layer 1 roles (semantic colors, shadow / radius scales)
+ *   - Layer 2 component overrides — color, geometry, border, typography,
+ *     focus, motion, state — emitted via `defineComponentTokens` and the
+ *     helper-spread surface in `./expand.ts`.
  *
- * Hand-edit only this file. The two CSS files in `src/styles/tokens-*.css`
- * are generated; rerun `pnpm --filter @brika/clay build:tokens`.
+ * Hand-edit only this file. CSS is contributed at compile time by
+ * `../tailwind.ts` (the Tailwind v4 plugin) — no generated files,
+ * nothing to run.
  */
 
 import {
@@ -661,10 +664,7 @@ const SEMANTIC_ROLES: readonly TokenSpec[] = [
 ];
 
 // ─────────────────────────────────────────────────────────────
-// Layer 2 — Per-component overrides (existing surface)
-// Step 1 covers the tokens that already exist in clay.css. Step 4
-// expands these to border / typography / focus / motion / state for
-// every component.
+// Layer 2 — Per-component overrides
 //
 // `defaultLight` for component tokens is the fallback expression that
 // resolves to a Layer 1 role when the theme leaves the override blank.

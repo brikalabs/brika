@@ -60,10 +60,11 @@ export interface ThemeFocus {
 }
 
 /**
- * Per-component override map. Open-ended on prop names because the registry
- * is the authoritative list and we don't want a TS literal-union update for
- * every new property. Stricter typing arrives in step 4 when the registry
- * is the source of truth for the prop union.
+ * Per-component override map. Open-ended on prop names — the registry is
+ * the authoritative list of valid keys; expressing that as a TS literal
+ * union would force a type-update on every new component token, with
+ * little real safety win. Theme JSON is validated at runtime by the
+ * flatten / apply pipeline, which silently skips unknown keys.
  */
 export type ComponentTokenMap = Readonly<Record<string, string>>;
 
