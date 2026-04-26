@@ -1,0 +1,113 @@
+/**
+ * Layer 0 — Scalars
+ * One knob per concern. Themes set these; everything downstream cascades.
+ */
+
+import type { TokenSpec } from './types';
+
+export const SCALARS: readonly TokenSpec[] = [
+  {
+    name: 'radius',
+    layer: 'scalar',
+    category: 'geometry',
+    defaultLight: '0.75rem',
+    description: 'Base corner radius. Drives the entire semantic radius scale.',
+    themePath: 'geometry.radius',
+  },
+  {
+    name: 'spacing',
+    layer: 'scalar',
+    category: 'geometry',
+    defaultLight: '0.25rem',
+    description: 'Base spacing step. Drives Tailwind p-/m-/gap-/size-* utilities.',
+    themePath: 'geometry.spacing',
+  },
+  {
+    name: 'text-base',
+    layer: 'scalar',
+    category: 'typography',
+    defaultLight: '1rem',
+    description: 'Reference font size. Rescales the entire typography scale.',
+    themePath: 'geometry.textBase',
+  },
+  {
+    name: 'font-sans',
+    layer: 'scalar',
+    category: 'typography',
+    defaultLight: '"Inter", ui-sans-serif, system-ui, sans-serif',
+    description: 'Default UI typeface for body and controls.',
+    themePath: 'geometry.fontSans',
+    tailwindNamespace: 'font',
+    utilityAlias: 'sans',
+  },
+  {
+    name: 'font-mono',
+    layer: 'scalar',
+    category: 'typography',
+    defaultLight: '"JetBrains Mono", ui-monospace, SFMono-Regular, monospace',
+    description: 'Monospace typeface for code and tabular content.',
+    themePath: 'geometry.fontMono',
+    tailwindNamespace: 'font',
+    utilityAlias: 'mono',
+  },
+  {
+    name: 'border-width',
+    layer: 'scalar',
+    category: 'border',
+    defaultLight: '1px',
+    description: 'Default border width. Honored by the bare `border` utility.',
+    themePath: 'borders.width',
+    tailwindNamespace: 'default',
+    utilityAlias: 'border-width',
+  },
+  {
+    name: 'ring-width',
+    layer: 'scalar',
+    category: 'focus',
+    defaultLight: '2px',
+    description: 'Default focus ring width. Used by the `ring-themed` utility.',
+    themePath: 'focus.width',
+  },
+  {
+    name: 'ring-offset',
+    layer: 'scalar',
+    category: 'focus',
+    defaultLight: '2px',
+    description: 'Default focus ring offset. Used by `ring-themed`.',
+    themePath: 'focus.offset',
+  },
+  {
+    name: 'motion-duration',
+    layer: 'scalar',
+    category: 'motion',
+    defaultLight: '220ms',
+    description: 'Base transition duration. Derived motion channels scale from this.',
+    themePath: 'motion.duration',
+  },
+  {
+    name: 'motion-easing',
+    layer: 'scalar',
+    category: 'motion',
+    defaultLight: 'cubic-bezier(0.16, 1, 0.3, 1)',
+    description: 'Base transition easing. Used by the `ease-standard` utility.',
+    themePath: 'motion.easing',
+  },
+  {
+    name: 'backdrop-blur',
+    layer: 'scalar',
+    category: 'elevation',
+    defaultLight: '8px',
+    description: 'Default backdrop blur. Honored by `backdrop-blur-theme`.',
+    themePath: 'geometry.backdropBlur',
+    tailwindNamespace: 'blur',
+    utilityAlias: 'theme',
+  },
+  {
+    name: 'glass-tint',
+    layer: 'scalar',
+    category: 'color',
+    defaultLight: 'transparent',
+    description: 'Tint colour layered above blurred surfaces. Use rgba/oklch with alpha.',
+    themePath: 'glass.tint',
+  },
+];
