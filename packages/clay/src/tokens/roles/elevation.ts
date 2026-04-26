@@ -8,111 +8,94 @@
  *     (Skeuomorph) without touching Tailwind.
  *   - Semantic aliases (`shadow-surface/raised/overlay/modal/spotlight`)
  *     point at the numeric scale by default.
+ *
+ * Tabular `[name, value, description, alias]` form expanded by a
+ * builder so per-token boilerplate stays in one place.
  */
 
 import type { TokenSpec } from '../types';
 
-export const ELEVATION_ROLES: readonly TokenSpec[] = [
-  // Numeric shadow scale
-  {
-    name: 'shadow-xs',
-    layer: 'role',
-    category: 'elevation',
-    defaultLight: '0 1px rgb(0 0 0 / 0.05)',
-    description: 'Smallest numeric shadow. Underpins `shadow-surface`.',
-    tailwindNamespace: 'shadow',
-    utilityAlias: 'xs',
-  },
-  {
-    name: 'shadow-sm',
-    layer: 'role',
-    category: 'elevation',
-    defaultLight: '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
-    description: 'Small numeric shadow. Underpins `shadow-raised`.',
-    tailwindNamespace: 'shadow',
-    utilityAlias: 'sm',
-  },
-  {
-    name: 'shadow-md',
-    layer: 'role',
-    category: 'elevation',
-    defaultLight: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
-    description: 'Medium numeric shadow. Underpins `shadow-overlay`.',
-    tailwindNamespace: 'shadow',
-    utilityAlias: 'md',
-  },
-  {
-    name: 'shadow-lg',
-    layer: 'role',
-    category: 'elevation',
-    defaultLight: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)',
-    description: 'Large numeric shadow. Underpins `shadow-modal`.',
-    tailwindNamespace: 'shadow',
-    utilityAlias: 'lg',
-  },
-  {
-    name: 'shadow-xl',
-    layer: 'role',
-    category: 'elevation',
-    defaultLight: '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)',
-    description: 'Extra-large numeric shadow. Underpins `shadow-spotlight`.',
-    tailwindNamespace: 'shadow',
-    utilityAlias: 'xl',
-  },
-  {
-    name: 'shadow-2xl',
-    layer: 'role',
-    category: 'elevation',
-    defaultLight: '0 25px 50px -12px rgb(0 0 0 / 0.25)',
-    description: 'Heaviest numeric shadow. Skeuomorph-style elevation.',
-    tailwindNamespace: 'shadow',
-    utilityAlias: '2xl',
-  },
-
-  // Semantic shadow aliases
-  {
-    name: 'shadow-surface',
-    layer: 'role',
-    category: 'elevation',
-    defaultLight: 'var(--shadow-xs)',
-    description: 'Subtle resting elevation (inline cards, quiet chrome).',
-    tailwindNamespace: 'shadow',
-    utilityAlias: 'surface',
-  },
-  {
-    name: 'shadow-raised',
-    layer: 'role',
-    category: 'elevation',
-    defaultLight: 'var(--shadow-sm)',
-    description: 'Cards and buttons at rest or hover.',
-    tailwindNamespace: 'shadow',
-    utilityAlias: 'raised',
-  },
-  {
-    name: 'shadow-overlay',
-    layer: 'role',
-    category: 'elevation',
-    defaultLight: 'var(--shadow-md)',
-    description: 'Popovers, dropdowns, tooltips — anything floating.',
-    tailwindNamespace: 'shadow',
-    utilityAlias: 'overlay',
-  },
-  {
-    name: 'shadow-modal',
-    layer: 'role',
-    category: 'elevation',
-    defaultLight: 'var(--shadow-lg)',
-    description: 'Dialogs and sheets that command focus.',
-    tailwindNamespace: 'shadow',
-    utilityAlias: 'modal',
-  },
-  {
-    name: 'shadow-spotlight',
-    layer: 'role',
-    category: 'elevation',
-    defaultLight: 'var(--shadow-xl)',
-    description: 'Toasts and command palettes — most-elevated transient surfaces.',
-    tailwindNamespace: 'shadow',
-    utilityAlias: 'spotlight',
-  },
+type ShadowEntry = readonly [
+  name: string,
+  defaultLight: string,
+  description: string,
+  alias: string,
 ];
+
+function toShadowRole([name, defaultLight, description, utilityAlias]: ShadowEntry): TokenSpec {
+  return {
+    name,
+    layer: 'role',
+    category: 'elevation',
+    defaultLight,
+    description,
+    tailwindNamespace: 'shadow',
+    utilityAlias,
+  };
+}
+
+const NUMERIC_DEFS: readonly ShadowEntry[] = [
+  [
+    'shadow-xs',
+    '0 1px rgb(0 0 0 / 0.05)',
+    'Smallest numeric shadow. Underpins `shadow-surface`.',
+    'xs',
+  ],
+  [
+    'shadow-sm',
+    '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
+    'Small numeric shadow. Underpins `shadow-raised`.',
+    'sm',
+  ],
+  [
+    'shadow-md',
+    '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+    'Medium numeric shadow. Underpins `shadow-overlay`.',
+    'md',
+  ],
+  [
+    'shadow-lg',
+    '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)',
+    'Large numeric shadow. Underpins `shadow-modal`.',
+    'lg',
+  ],
+  [
+    'shadow-xl',
+    '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)',
+    'Extra-large numeric shadow. Underpins `shadow-spotlight`.',
+    'xl',
+  ],
+  [
+    'shadow-2xl',
+    '0 25px 50px -12px rgb(0 0 0 / 0.25)',
+    'Heaviest numeric shadow. Skeuomorph-style elevation.',
+    '2xl',
+  ],
+];
+
+const SEMANTIC_DEFS: readonly ShadowEntry[] = [
+  [
+    'shadow-surface',
+    'var(--shadow-xs)',
+    'Subtle resting elevation (inline cards, quiet chrome).',
+    'surface',
+  ],
+  ['shadow-raised', 'var(--shadow-sm)', 'Cards and buttons at rest or hover.', 'raised'],
+  [
+    'shadow-overlay',
+    'var(--shadow-md)',
+    'Popovers, dropdowns, tooltips — anything floating.',
+    'overlay',
+  ],
+  ['shadow-modal', 'var(--shadow-lg)', 'Dialogs and sheets that command focus.', 'modal'],
+  [
+    'shadow-spotlight',
+    'var(--shadow-xl)',
+    'Toasts and command palettes — most-elevated transient surfaces.',
+    'spotlight',
+  ],
+];
+
+export const ELEVATION_ROLES: readonly TokenSpec[] = [...NUMERIC_DEFS, ...SEMANTIC_DEFS].map(
+  toShadowRole
+);

@@ -3,7 +3,6 @@ import {
   inferTypes,
   isCompatible,
   type PortTypeMap,
-  parsePortType,
   parseTypeName,
   portKey,
   type TypeDescriptor,
