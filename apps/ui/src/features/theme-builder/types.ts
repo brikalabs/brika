@@ -9,7 +9,7 @@
  * built-in color-mix() calls in oklch still convert hex transparently).
  */
 
-export const THEME_CONFIG_VERSION = 1 as const;
+export const THEME_CONFIG_VERSION = 2 as const;
 
 /**
  * Corner geometry for surfaces. Maps to the CSS `corner-shape` property
@@ -52,38 +52,71 @@ export type MotionStyle = (typeof MOTION_STYLES)[number];
  * The name keeps `_RADIUS_` for back-compat; new token kinds are
  * additive under `ComponentTokens` below.
  */
+/**
+ * Component identifiers the builder can edit. Mirrors clay's Layer-2
+ * component-token namespaces exactly, so any clay component automatically
+ * becomes editable. The union type is kept for TS narrowing in legacy code
+ * paths; new code derives names from clay's TOKEN_REGISTRY at runtime via
+ * `clay-tokens.ts`.
+ */
 export const COMPONENT_RADIUS_KEYS = [
+  'alert',
+  'avatar',
+  'badge',
   'button',
   'card',
+  'checkbox',
+  'code-block',
   'dialog',
-  'popover',
-  'tooltip',
+  'icon',
   'input',
-  'select',
   'menu',
   'menu-item',
-  'checkbox',
-  'badge',
-  'tabs',
-  'alert',
-  'toast',
-  'avatar',
+  'password-input',
+  'popover',
+  'progress',
+  'select',
+  'separator',
+  'sheet',
+  'sidebar',
+  'slider',
   'switch',
   'switch-thumb',
+  'table',
+  'tabs',
+  'textarea',
+  'toast',
+  'tooltip',
 ] as const;
 export type ComponentRadiusKey = (typeof COMPONENT_RADIUS_KEYS)[number];
 
 /**
- * Per-component token overrides. Additive: adding a new optional field
- * (shadow profile, border width, state opacity, …) here extends what the
- * builder can expose for each component without changing the wire
- * format shape.
+ * Per-component token overrides — generic map keyed by clay's Layer-2
+ * token suffix. e.g. for the `button` component:
+ *
+ *   {
+ *     radius: '0.5rem',
+ *     'corner-shape': 'bevel',
+ *     shadow: 'var(--shadow-overlay)',
+ *     'padding-x': '1rem',
+ *     'hover-bg': 'rgba(0,0,0,.05)',
+ *   }
+ *
+ * Values are CSS strings ready to be emitted as `--<component>-<suffix>:
+ * <value>`. Numeric inputs (e.g. radius) are formatted with units before
+ * storing.
+ *
+ * `radius?: number` and `corners?: CornerStyle` are kept on the type for
+ * back-compat with v1 themes; `migrate.ts` rewrites them into the generic
+ * map on load.
  */
 export interface ComponentTokens {
-  /** Border radius in rem. Emits `--<key>-radius`. */
-  radius?: number;
-  /** Corner geometry keyword. Emits `--<key>-corner-shape`. */
+  /** @deprecated v1 only. Migrated to `radius: '<n>rem'` (string) on load. */
+  radius?: number | string;
+  /** @deprecated v1 only. Migrated to `'corner-shape': '<value>'` on load. */
   corners?: CornerStyle;
+  /** Generic Layer-2 overrides — clay token suffix → CSS string. */
+  [suffix: string]: string | number | undefined;
 }
 
 export interface ThemeColors {
@@ -177,9 +210,23 @@ export interface ThemeColors {
   icon?: string;
   'icon-muted'?: string;
   'icon-primary'?: string;
+
+  /**
+   * Open extension — any other clay color token by full name (e.g.
+   * `tooltip-container`, `progress-track-color`). The builder reads
+   * clay's TOKEN_REGISTRY at runtime to know which keys are valid.
+   */
+  [key: string]: string | undefined;
 }
 
-export type ColorToken = keyof ThemeColors;
+/**
+ * A color token name. The known Layer-1 roles + Layer-2 component slots
+ * have explicit fields on `ThemeColors`; the index signature opens the
+ * type to any other clay color token by name. We alias to `string` so
+ * downstream code can treat it as such, while the `ThemeColors` shape
+ * still gives auto-complete on the well-known keys.
+ */
+export type ColorToken = string;
 
 export interface ThemeConfig {
   version: typeof THEME_CONFIG_VERSION;
@@ -231,8 +278,10 @@ export interface ThemeConfig {
   /** Per-component token overrides, grouped by component. Each entry
    *  writes `--<key>-<prop>` CSS custom properties consumed by the
    *  component's utilities (`rounded-<key>`, etc.). Absent keys and
-   *  absent properties inherit the theme-level defaults. */
-  componentTokens?: Partial<Record<ComponentRadiusKey, ComponentTokens>>;
+   *  absent properties inherit the theme-level defaults. Keys are
+   *  clay component names (kebab-case); the builder reads
+   *  `COMPONENT_TOKEN_INDEX` from clay-tokens.ts to know which are valid. */
+  componentTokens?: Record<string, ComponentTokens>;
   /** @deprecated Use `componentTokens[key].radius` instead. Retained on
    *  the wire so older exports keep loading; migrated into
    *  `componentTokens` at load time and dropped on save. */

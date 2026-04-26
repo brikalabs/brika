@@ -1,7 +1,3 @@
-import type { PreferenceDefinition } from '@brika/plugin';
-import { RefreshCw, Trash2, X } from 'lucide-react';
-import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
-import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
   Switch,
-} from '@/components/ui';
+} from '@brika/clay';
 import {
   Sheet,
   SheetContent,
@@ -31,7 +27,11 @@ import {
   SheetFooter,
   SheetHeader,
   SheetTitle,
-} from '@/components/ui/sheet';
+} from '@brika/clay/components/sheet';
+import type { PreferenceDefinition } from '@brika/plugin';
+import { RefreshCw, Trash2, X } from 'lucide-react';
+import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocale } from '@/lib/use-locale';
 import type { Json } from '@/types';
 import { boardsApi, brickTypesApi } from '../api';

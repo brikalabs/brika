@@ -1,7 +1,3 @@
-import type { Plugin, PluginHealth } from '@brika/plugin';
-import { Link } from '@tanstack/react-router';
-import { AlertTriangle, ArrowUp, Boxes, LayoutDashboard, Loader2, Plug, Zap } from 'lucide-react';
-import React from 'react';
 import {
   Avatar,
   AvatarFallback,
@@ -9,12 +5,16 @@ import {
   Badge,
   Button,
   Card,
+  cn,
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from '@/components/ui';
+} from '@brika/clay';
+import type { Plugin, PluginHealth } from '@brika/plugin';
+import { Link } from '@tanstack/react-router';
+import { AlertTriangle, ArrowUp, Boxes, LayoutDashboard, Loader2, Plug, Zap } from 'lucide-react';
+import React from 'react';
 import { useLocale } from '@/lib/use-locale';
-import { cn } from '@/lib/utils';
 import { paths } from '@/routes/paths';
 import { pluginsApi } from '../api';
 import type { UpdateInfo } from '../registry-api';

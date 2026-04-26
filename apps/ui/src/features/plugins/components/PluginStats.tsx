@@ -1,6 +1,6 @@
+import { Avatar, AvatarFallback, Card } from '@brika/clay';
 import { Boxes, Clock, Hash } from 'lucide-react';
 import { Uptime } from '@/components/Uptime';
-import { Avatar, AvatarFallback, Card } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
 import type { Plugin } from '../api';
 

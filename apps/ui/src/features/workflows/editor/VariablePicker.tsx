@@ -1,3 +1,4 @@
+import { Badge, cn, Input, ScrollArea } from '@brika/clay';
 import {
   Braces,
   Check,
@@ -10,8 +11,6 @@ import {
   Zap,
 } from 'lucide-react';
 import React, { useState } from 'react';
-import { Badge, Input, ScrollArea } from '@/components/ui';
-import { cn } from '@/lib/utils';
 
 interface VariableInfo {
   name: string;

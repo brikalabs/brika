@@ -4,9 +4,6 @@
  * Pantone-style swatch strip of the data palette.
  */
 
-import { Sparkles } from 'lucide-react';
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import {
   Button,
   Dialog,
@@ -15,7 +12,10 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui';
+} from '@brika/clay';
+import { Sparkles } from 'lucide-react';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { THEME_PRESETS, type ThemePreset } from '../presets';
 
 interface PresetPickerProps {

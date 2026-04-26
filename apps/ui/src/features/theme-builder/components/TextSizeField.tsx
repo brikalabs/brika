@@ -5,9 +5,9 @@
  * scale feels at the chosen base size.
  */
 
+import { Slider, SliderValue } from '@brika/clay';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Slider, SliderValue } from '@/components/ui';
 import { cssVars, nearlyEquals, type Preset, PresetChips } from './primitives';
 
 interface TextSizeFieldProps {

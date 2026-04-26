@@ -7,11 +7,10 @@
  * across tab switches.
  */
 
+import { cn, Tooltip, TooltipContent, TooltipTrigger } from '@brika/clay';
 import { Blocks, Layers, type LucideIcon, Ruler, Shapes, Type, Wind } from 'lucide-react';
 import { type ReactNode, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui';
-import { cn } from '@/lib/utils';
 import { MONO_FONT_CHOICES, SANS_FONT_CHOICES } from '../tokens';
 import type { CornerStyle, ElevationStyle, MotionStyle, ThemeConfig } from '../types';
 import { ComponentsSection } from './ComponentsSection';

@@ -1,6 +1,5 @@
-import { Link } from '@tanstack/react-router';
-import { Monitor, Moon, Palette, Sparkles, Sun } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { cn } from '@brika/clay';
+import { Button } from '@brika/clay/components/button';
 import {
   Select,
   SelectContent,
@@ -10,12 +9,13 @@ import {
   SelectSeparator,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@brika/clay/components/select';
+import { Link } from '@tanstack/react-router';
+import { Monitor, Moon, Palette, Sparkles, Sun } from 'lucide-react';
 import { useCustomThemes } from '@/features/theme-builder/hooks';
 import { customThemeSelector } from '@/features/theme-builder/runtime';
 import { BUILT_IN_THEMES, type ThemeMode, useTheme } from '@/lib/theme-context';
 import { useLocale } from '@/lib/use-locale';
-import { cn } from '@/lib/utils';
 import { paths } from '@/routes/paths';
 
 const MODE_OPTIONS: { value: ThemeMode; icon: typeof Sun }[] = [

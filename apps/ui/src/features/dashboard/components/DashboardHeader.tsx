@@ -1,7 +1,6 @@
+import { Badge, cn } from '@brika/clay';
 import { Activity } from 'lucide-react';
-import { Badge } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
-import { cn } from '@/lib/utils';
 
 export interface DashboardHeaderProps {
   health?: {

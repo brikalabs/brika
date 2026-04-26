@@ -59,7 +59,11 @@ function readShadow(): ThemeConfig[] {
           'name' in t &&
           'colors' in t &&
           'version' in t &&
-          (t as { version: unknown }).version === THEME_CONFIG_VERSION
+          // Accept v1 OR v2 — `migrateThemeConfig` upgrades v1 to v2
+          // before the theme reaches consumers. Rejecting older versions
+          // here would silently drop themes the user already saved.
+          typeof (t as { version: unknown }).version === 'number' &&
+          (t as { version: number }).version <= THEME_CONFIG_VERSION
       )
       .map(migrateThemeConfig);
   } catch {

@@ -1,3 +1,4 @@
+import { applyTheme, BUILT_IN_THEMES_BY_ID, resetThemeVars } from '@brika/clay/themes';
 import {
   type MouseEvent,
   type ReactNode,
@@ -36,6 +37,23 @@ interface ApiTheme {
 
 function applyThemeToDOM(theme: ThemeName, resolvedMode: 'light' | 'dark') {
   const html = document.documentElement;
+  // Custom themes inject their own `[data-theme="custom-{id}"]` block via
+  // the theme-builder runtime; built-in themes route through clay's
+  // `<style id="clay-theme">` tag.
+  if (theme.startsWith('custom-')) {
+    resetThemeVars();
+  } else {
+    const preset = BUILT_IN_THEMES_BY_ID[theme];
+    if (preset) {
+      applyTheme(preset);
+    } else {
+      resetThemeVars();
+    }
+  }
+  // The `data-theme` attribute is still required for custom themes (their
+  // CSS is scoped by `[data-theme="custom-{id}"]`). Built-in themes don't
+  // key off it but harmless to keep, and useful for any debugging that
+  // reads `documentElement.dataset.theme`.
   html.dataset.theme = theme;
   html.classList.remove('light', 'dark');
   html.classList.add(resolvedMode);

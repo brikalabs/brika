@@ -6,11 +6,10 @@
  * per session so the shape is remembered.
  */
 
+import { Button, cn } from '@brika/clay';
 import { ChevronLeft, ChevronRight, Palette, Plus } from 'lucide-react';
 import { type ReactNode, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button } from '@/components/ui';
-import { cn } from '@/lib/utils';
 import type { ThemeConfig } from '../types';
 
 interface ThemeListProps {

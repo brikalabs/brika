@@ -11,25 +11,10 @@
  * - $type:code:language → Code editor
  */
 
-import { useQuery } from '@tanstack/react-query';
-import type { Node } from '@xyflow/react';
-import {
-  ArrowDownToLine,
-  ArrowUpFromLine,
-  Check,
-  ChevronRight,
-  Copy,
-  HelpCircle,
-  Plus,
-  Sparkles,
-  Trash2,
-  Zap,
-} from 'lucide-react';
-import type { ReactNode } from 'react';
-import { useMemo, useState } from 'react';
 import {
   Badge,
   Button,
+  cn,
   Input,
   Label,
   ScrollArea,
@@ -46,10 +31,25 @@ import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from '@/components/ui';
+} from '@brika/clay';
+import { useQuery } from '@tanstack/react-query';
+import type { Node } from '@xyflow/react';
+import {
+  ArrowDownToLine,
+  ArrowUpFromLine,
+  Check,
+  ChevronRight,
+  Copy,
+  HelpCircle,
+  Plus,
+  Sparkles,
+  Trash2,
+  Zap,
+} from 'lucide-react';
+import type { ReactNode } from 'react';
+import { useMemo, useState } from 'react';
 import { fetcher } from '@/lib/query';
 import { useLocale } from '@/lib/use-locale';
-import { cn } from '@/lib/utils';
 import type { BlockNodeData, BlockPort } from './BlockNode';
 import { usePortTypeName } from './WorkflowTypeContext';
 

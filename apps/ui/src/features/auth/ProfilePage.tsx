@@ -1,6 +1,4 @@
 import { useAuth } from '@brika/auth/react';
-import { Camera, Check, Loader2, Trash2, UserPen } from 'lucide-react';
-import { useRef, useState } from 'react';
 import {
   Avatar,
   AvatarFallback,
@@ -18,7 +16,9 @@ import {
   SectionInfo,
   SectionTitle,
   Separator,
-} from '@/components/ui';
+} from '@brika/clay';
+import { Camera, Check, Loader2, Trash2, UserPen } from 'lucide-react';
+import { useRef, useState } from 'react';
 import { useLocale } from '@/lib/use-locale';
 import { PasswordSection } from './password';
 import { SessionsSection } from './SessionsSection';

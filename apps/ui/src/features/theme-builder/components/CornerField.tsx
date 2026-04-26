@@ -4,8 +4,8 @@
  * SVG or a CSS approximation so the user can see the shape inline.
  */
 
+import { cn } from '@brika/clay';
 import { useTranslation } from 'react-i18next';
-import { cn } from '@/lib/utils';
 import { CORNER_STYLES, type CornerStyle } from '../types';
 
 interface CornerFieldProps {

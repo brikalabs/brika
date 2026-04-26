@@ -1,0 +1,372 @@
+{
+  "page": {
+    "defaultName": "Untitled theme",
+    "defaultDescription": "A custom theme."
+  },
+  "meta": {
+    "namePlaceholder": "Theme name",
+    "descriptionPlaceholder": "Add a short description…",
+    "id": "ID",
+    "updated": "Updated"
+  },
+  "toolbar": {
+    "actions": {
+      "save": "Save",
+      "saveTooltip": "Save changes",
+      "apply": "Apply",
+      "create": "Create theme",
+      "import": "Import",
+      "export": "Export",
+      "exportJson": "Export JSON",
+      "exportCss": "Export CSS",
+      "copyCss": "Copy CSS",
+      "duplicate": "Duplicate",
+      "delete": "Delete",
+      "undo": "Undo",
+      "undoTooltip": "Undo last change",
+      "redo": "Redo",
+      "redoTooltip": "Redo"
+    },
+    "status": {
+      "saved": "Saved",
+      "active": "Active",
+      "draft": "Draft",
+      "unsavedChanges": "Unsaved changes"
+    },
+    "meta": {
+      "id": "ID",
+      "draftId": "Draft",
+      "updated": "Updated"
+    }
+  },
+  "list": {
+    "title": "Themes",
+    "count": "{{count}} themes",
+    "count_one": "{{count}} theme",
+    "empty": "No custom themes yet.",
+    "newThemeLabel": "New theme",
+    "newThemeTooltip": "Create a new custom theme",
+    "blankThemeTooltip": "Start from a blank theme",
+    "collapseLabel": "Collapse",
+    "collapseTooltip": "Collapse the theme list",
+    "expandLabel": "Expand",
+    "expandTooltip": "Expand the theme list"
+  },
+  "presets": {
+    "trigger": "Pick a preset",
+    "dialogTitle": "Theme presets",
+    "dialogDescription": "Start from one of Clay's built-in themes.",
+    "items": {
+      "default": { "description": "Brika's classic palette." },
+      "ocean": { "description": "Cool blues and teals." },
+      "forest": { "description": "Greens and earth tones." },
+      "sunset": { "description": "Warm oranges and corals." },
+      "lavender": { "description": "Soft purples and violets." },
+      "ruby": { "description": "Bold reds and roses." },
+      "nord": { "description": "Frosty Nordic palette." },
+      "solarized": { "description": "Solarized colour palette." },
+      "candy": { "description": "Vivid pop colours." },
+      "dracula": { "description": "Dark editor classic." },
+      "mono": { "description": "Pure greyscale." },
+      "brutalist": { "description": "Sharp corners, heavy borders." },
+      "editorial": { "description": "Long-form reading layout." },
+      "terminal": { "description": "Monospace hacker aesthetic." },
+      "skeuomorph": { "description": "Glossy faux-real surfaces." },
+      "glass": { "description": "Translucent frosted layers." },
+      "comic": { "description": "Loud comic-book style." }
+    }
+  },
+  "tabs": {
+    "design": "Design",
+    "palette": "Palette"
+  },
+  "design": {
+    "sectionsLabel": "Sections",
+    "sections": {
+      "typography": { "label": "Typography", "hint": "Fonts and sizes" },
+      "geometry": { "label": "Geometry", "hint": "Radius and corners" },
+      "components": { "label": "Components", "hint": "Per-component tokens" },
+      "spacing": { "label": "Spacing", "hint": "Density and rhythm" },
+      "effects": { "label": "Effects", "hint": "Elevation, motion, focus" },
+      "atmosphere": { "label": "Atmosphere", "hint": "Backdrop and translucency" }
+    },
+    "radius": "Radius",
+    "baseUnit": "Base unit",
+    "baseSize": "Base size",
+    "borderWidth": "Border width",
+    "elevation": "Elevation",
+    "focusRing": "Focus ring",
+    "motion": "Motion",
+    "motionHint": "Affects all transitions across the system",
+    "backdropBlur": "Backdrop blur",
+    "fonts": {
+      "sans": "Sans",
+      "mono": "Mono",
+      "sampleSans": "The quick brown fox jumps over the lazy dog.",
+      "sampleMono": "const brika = () => ({ theme: 'custom' });"
+    }
+  },
+  "fields": {
+    "color": {
+      "pickAria": "Pick a colour for {{label}}"
+    },
+    "font": {
+      "custom": "Custom"
+    },
+    "corner": {
+      "label": "Corner shape",
+      "fallback": "Inherits theme",
+      "options": {
+        "round": { "label": "Round", "hint": "Standard border-radius" },
+        "squircle": { "label": "Squircle", "hint": "iOS-style smooth curve" },
+        "bevel": { "label": "Bevel", "hint": "45° chamfered corner" },
+        "scoop": { "label": "Scoop", "hint": "Concave arc cut-out" },
+        "notch": { "label": "Notch", "hint": "Right-angle step cut" }
+      }
+    },
+    "radius": {
+      "caption": "Drag to set the base radius",
+      "semanticLabel": "Semantic scale",
+      "presets": {
+        "sharp": { "label": "Sharp", "hint": "Brutalist, right-angle" },
+        "subtle": { "label": "Subtle", "hint": "Barely rounded" },
+        "default": { "label": "Default", "hint": "Classic web feel" },
+        "soft": { "label": "Soft", "hint": "Brika default" },
+        "pillowy": { "label": "Pillowy", "hint": "Very rounded" },
+        "pill": { "label": "Pill", "hint": "Fully rounded" }
+      },
+      "samples": {
+        "pill": { "label": "Pill", "hint": "Chips, badges" },
+        "control": { "label": "Control", "hint": "Buttons, inputs" },
+        "container": { "label": "Container", "hint": "Cards, panels" },
+        "surface": { "label": "Surface", "hint": "Dialogs, sheets" }
+      }
+    },
+    "spacing": {
+      "presets": {
+        "compact": { "label": "Compact", "hint": "Dense layouts" },
+        "cozy": { "label": "Cozy", "hint": "Slightly tighter" },
+        "default": { "label": "Default", "hint": "Brika baseline" },
+        "roomy": { "label": "Roomy", "hint": "Spacious feel" }
+      }
+    },
+    "textSize": {
+      "presets": {
+        "compact": { "label": "Compact", "hint": "Smaller text" },
+        "default": { "label": "Default", "hint": "Brika baseline" },
+        "comfortable": { "label": "Comfortable", "hint": "Slightly larger" },
+        "large": { "label": "Large", "hint": "More legible" }
+      },
+      "preview": {
+        "title": "Title",
+        "body": "Body copy preview — adjust the base size to see every text scale ripple together.",
+        "label": "Label"
+      }
+    },
+    "effects": {
+      "elevation": {
+        "flat": "Flat",
+        "soft": "Soft",
+        "crisp": "Crisp",
+        "dramatic": "Dramatic",
+        "byPurpose": "By purpose",
+        "semanticLevels": "Semantic levels",
+        "tintWithPrimary": "Tint shadow with primary",
+        "levels": {
+          "surface": { "label": "Surface", "hint": "Resting cards" },
+          "raised": { "label": "Raised", "hint": "Hover or active" },
+          "overlay": { "label": "Overlay", "hint": "Popovers, dropdowns" },
+          "modal": { "label": "Modal", "hint": "Dialogs and sheets" },
+          "spotlight": { "label": "Spotlight", "hint": "Toasts, palettes" },
+          "xs": { "label": "Extra small", "hint": "" },
+          "sm": { "label": "Small", "hint": "" },
+          "md": { "label": "Medium", "hint": "" },
+          "lg": { "label": "Large", "hint": "" },
+          "xl": { "label": "Extra large", "hint": "" }
+        }
+      },
+      "motion": {
+        "snappy": "Snappy",
+        "smooth": "Smooth",
+        "stately": "Stately"
+      },
+      "blur": {
+        "caption": "Backdrop blur radius",
+        "livePreview": "Live preview",
+        "presets": {
+          "none": "None",
+          "subtle": "Subtle",
+          "glass": "Glass",
+          "frosted": "Frosted",
+          "heavy": "Heavy"
+        }
+      },
+      "border": {
+        "preview": "Preview",
+        "presets": {
+          "hairline": { "label": "Hairline", "hint": "0.5px" },
+          "regular": { "label": "Regular", "hint": "1px" },
+          "medium": { "label": "Medium", "hint": "1.5px" },
+          "bold": { "label": "Bold", "hint": "2px" }
+        }
+      },
+      "ring": {
+        "caption": "Focus ring",
+        "width": "Width",
+        "offset": "Offset",
+        "focused": "Focused",
+        "livePreview": "Live preview"
+      }
+    }
+  },
+  "palette": {
+    "filterPlaceholder": "Filter tokens…",
+    "emptyFilter": "No tokens match.",
+    "modeLight": "Light",
+    "modeDark": "Dark",
+    "sync": "Sync",
+    "copyLightToDark": "Copy light → dark",
+    "copyDarkToLight": "Copy dark → light",
+    "autoInvertToDark": "Auto-invert to dark",
+    "autoInvertToLight": "Auto-invert to light",
+    "tintFromPrimary": "Tint from primary",
+    "tintFromPrimaryTooltip": "Recolor neutral surfaces with a hint of the primary hue."
+  },
+  "groups": {
+    "surface": "Surface",
+    "brand": "Brand",
+    "neutral": "Neutral",
+    "feedback": "Feedback",
+    "data": "Data viz",
+    "surface-tonal": "Surface tonal",
+    "role-containers": "Role containers"
+  },
+  "preview": {
+    "modeLight": "Light",
+    "modeDark": "Dark",
+    "scenes": {
+      "library": "Library",
+      "app": "App"
+    },
+    "library": {
+      "typography": "Typography",
+      "display": "Display",
+      "body": "Body copy preview — every text scale derives from the base size.",
+      "buttons": "Buttons",
+      "primary": "Primary",
+      "secondary": "Secondary",
+      "outline": "Outline",
+      "ghost": "Ghost",
+      "destructive": "Destructive",
+      "withIcon": "With icon",
+      "badges": "Badges",
+      "badgeDefault": "Default",
+      "success": "Success",
+      "warning": "Warning",
+      "info": "Info",
+      "formControls": "Form controls",
+      "searchPlaceholder": "Search…",
+      "disabled": "Disabled",
+      "enableFeature": "Enable feature",
+      "emptyState": "Empty state",
+      "emptyTitle": "Nothing here yet",
+      "emptyDescription": "Add your first item to get started.",
+      "dataPalette": "Data palette"
+    },
+    "app": {
+      "brand": "Brika",
+      "workspaceName": "My workspace",
+      "headline": "Welcome back",
+      "subheadline": "Here's what's happening today.",
+      "searchPlaceholder": "Search…",
+      "notifications": "Notifications",
+      "save": "Save",
+      "cancel": "Cancel",
+      "cardTitle": "Recent activity",
+      "cardDescription": "A snapshot of the last few hours.",
+      "formTitle": "Quick action",
+      "formDescription": "Fill in the details to get started.",
+      "note": "Note",
+      "notePlaceholder": "Type a note…",
+      "progressLabel": "Progress",
+      "emptyTitle": "All caught up",
+      "emptyDescription": "Nothing requires your attention right now.",
+      "emptyCta": "Browse plugins",
+      "nav": {
+        "home": "Home",
+        "inbox": "Inbox",
+        "activity": "Activity",
+        "settings": "Settings"
+      }
+    }
+  },
+  "components": {
+    "preview": "Preview",
+    "modeLight": "Light",
+    "modeDark": "Dark",
+    "backLabel": "Back to component list",
+    "backShort": "Back",
+    "listHint": "Pick a component to override its tokens.",
+    "customized": "{{count}} overrides",
+    "customized_one": "{{count}} override",
+    "noPreview": "Preview unavailable for this component",
+    "tokenCount": "{{count}} tokens",
+    "tokenCount_one": "{{count}} token",
+    "resetAll": "Reset",
+    "resetCount": "Reset ({{count}})",
+    "groups": {
+      "controls": "Controls",
+      "surfaces": "Surfaces",
+      "overlays": "Overlays",
+      "layout": "Layout",
+      "other": "Other"
+    },
+    "categories": {
+      "color": "Colors",
+      "geometry": "Geometry",
+      "border": "Border",
+      "typography": "Typography",
+      "elevation": "Elevation",
+      "focus": "Focus",
+      "motion": "Motion",
+      "state": "State"
+    },
+    "items": {
+      "alert": { "label": "Alert", "description": "Inline notice with status colour." },
+      "avatar": { "label": "Avatar", "description": "User or workspace identity." },
+      "badge": { "label": "Badge", "description": "Compact label or counter." },
+      "button": { "label": "Button", "description": "Primary action affordance." },
+      "card": { "label": "Card", "description": "Resting surface for grouped content." },
+      "checkbox": { "label": "Checkbox", "description": "Boolean form control." },
+      "code-block": { "label": "Code block", "description": "Pre-formatted code surface." },
+      "dialog": { "label": "Dialog", "description": "Modal that commands focus." },
+      "icon": { "label": "Icon", "description": "Inline pictogram." },
+      "input": { "label": "Input", "description": "Single-line text field." },
+      "menu": { "label": "Menu", "description": "Floating action surface." },
+      "menu-item": { "label": "Menu item", "description": "Single row in a menu." },
+      "password-input": { "label": "Password input", "description": "Masked text field." },
+      "popover": { "label": "Popover", "description": "Anchored floating surface." },
+      "progress": { "label": "Progress", "description": "Determinate progress bar." },
+      "select": { "label": "Select", "description": "Dropdown picker." },
+      "separator": { "label": "Separator", "description": "Inline divider." },
+      "sheet": { "label": "Sheet", "description": "Edge-anchored modal panel." },
+      "sidebar": { "label": "Sidebar", "description": "App navigation rail." },
+      "slider": { "label": "Slider", "description": "Numeric range input." },
+      "switch": { "label": "Switch", "description": "Boolean on/off toggle." },
+      "switch-thumb": { "label": "Switch thumb", "description": "The moving thumb on a switch." },
+      "table": { "label": "Table", "description": "Tabular data layout." },
+      "tabs": { "label": "Tabs", "description": "Switch between sibling views." },
+      "textarea": { "label": "Textarea", "description": "Multi-line text field." },
+      "toast": { "label": "Toast", "description": "Transient notification." },
+      "tooltip": { "label": "Tooltip", "description": "Hover help text." }
+    }
+  },
+  "tokens": {},
+  "errors": {
+    "copyCssFailed": "Failed to copy CSS to the clipboard.",
+    "importFailed": "That doesn't look like a valid theme file."
+  },
+  "confirm": {
+    "deleteTheme": "Delete this theme? This cannot be undone."
+  }
+}

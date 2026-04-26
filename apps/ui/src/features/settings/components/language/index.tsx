@@ -1,5 +1,3 @@
-import { Languages } from 'lucide-react';
-import { useDataView } from '@/components/DataView';
 import {
   SectionContent,
   SectionDescription,
@@ -12,7 +10,9 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui';
+} from '@brika/clay';
+import { Languages } from 'lucide-react';
+import { useDataView } from '@/components/DataView';
 import { useLocale } from '@/lib/use-locale';
 import { useAvailableLocales } from './hooks';
 import { LanguageSelectorSkeleton } from './skeleton';

@@ -1,11 +1,10 @@
+import { Badge, cn, Input, Label } from '@brika/clay';
 import uFuzzy from '@leeoniya/ufuzzy';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { LayoutDashboard, Search, SearchX, X } from 'lucide-react';
 import { DynamicIcon, type IconName, iconNames } from 'lucide-react/dynamic';
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
-import { Badge, Input, Label } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
-import { cn } from '@/lib/utils';
 
 const COLS = 9;
 const CELL_SIZE = 36; // size-9

@@ -1,6 +1,4 @@
 import { useAuth } from '@brika/auth/react';
-import { Clock, Globe, Info, Loader2, LogOut, MapPin, Monitor, Trash2 } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,6 +10,7 @@ import {
   AlertDialogTitle,
   Badge,
   Button,
+  cn,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -26,9 +25,10 @@ import {
   SectionTitle,
   Separator,
   Skeleton,
-} from '@/components/ui';
+} from '@brika/clay';
+import { Clock, Globe, Info, Loader2, LogOut, MapPin, Monitor, Trash2 } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
 import { useLocale } from '@/lib/use-locale';
-import { cn } from '@/lib/utils';
 
 interface SessionInfo {
   id: string;

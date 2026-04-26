@@ -2,7 +2,7 @@
  * Per-component live previews used inside the Components editor.
  *
  * Inline primitives (Button, Input, Select trigger, Tabs, Badge, Switch,
- * Card, Avatar) render the **real** `@/components/ui` components — so
+ * Card, Avatar) render the **real** `@brika/clay` components — so
  * hover/focus/disabled states and any kit evolution show up
  * automatically.
  *
@@ -16,7 +16,6 @@
  * rippling through.
  */
 
-import { Bell, Check, Settings, Sparkles, User } from 'lucide-react';
 import {
   Avatar,
   AvatarFallback,
@@ -27,22 +26,46 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CodeBlock,
+  CodeBlockContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
   Input,
   Label,
+  PasswordInput,
+  Progress,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Separator,
+  Slider,
   Switch,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
   Tabs,
   TabsList,
   TabsTrigger,
-} from '@/components/ui';
+  Textarea,
+} from '@brika/clay';
+import {
+  Bell,
+  Check,
+  Inbox,
+  LayoutDashboard,
+  Search,
+  Settings,
+  Sparkles,
+  User,
+} from 'lucide-react';
+import { useState } from 'react';
 
 /* ─── Inline components (real UI kit) ──────────────────────────── */
 
@@ -246,6 +269,153 @@ export function TooltipPreview() {
   return (
     <div className="corner-tooltip inline-flex items-center rounded-tooltip bg-foreground px-3 py-1.5 text-background text-xs shadow-tooltip">
       Tooltip text
+    </div>
+  );
+}
+
+/* ─── Form controls ──────────────────────────────────────────── */
+
+export function TextareaPreview() {
+  return <Textarea placeholder="Type a message…" className="h-16 w-56 text-xs" />;
+}
+
+export function PasswordInputPreview() {
+  return <PasswordInput placeholder="••••••••" className="h-8 w-48 text-xs" />;
+}
+
+export function SliderPreview() {
+  const [value, setValue] = useState(0.5);
+  return (
+    <div className="w-56">
+      <Slider value={value} onChange={setValue} min={0} max={1} step={0.01} />
+    </div>
+  );
+}
+
+export function SwitchThumbPreview() {
+  return <Switch defaultChecked />;
+}
+
+/* ─── Surfaces & data ────────────────────────────────────────── */
+
+export function ProgressPreview() {
+  return (
+    <div className="w-56 space-y-1">
+      <div className="flex items-center justify-between">
+        <Label className="text-[11px] text-muted-foreground">Uploading</Label>
+        <span className="font-mono text-[10px] text-muted-foreground tabular-nums">62%</span>
+      </div>
+      <Progress value={62} />
+    </div>
+  );
+}
+
+export function SeparatorPreview() {
+  return (
+    <div className="flex w-56 flex-col gap-1">
+      <span className="text-[11px] text-foreground">Section A</span>
+      <Separator />
+      <span className="text-[11px] text-muted-foreground">Section B</span>
+    </div>
+  );
+}
+
+export function CodeBlockPreview() {
+  return (
+    <CodeBlock className="w-72 text-[10px]">
+      <CodeBlockContent language="ts">{`const brika = () => ({\n  theme: 'custom',\n});`}</CodeBlockContent>
+    </CodeBlock>
+  );
+}
+
+export function TablePreview() {
+  return (
+    <Table className="w-72 text-[11px]">
+      <TableHeader>
+        <TableRow>
+          <TableHead>Plugin</TableHead>
+          <TableHead className="text-right">Version</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        <TableRow>
+          <TableCell>weather</TableCell>
+          <TableCell className="text-right font-mono">1.4.0</TableCell>
+        </TableRow>
+        <TableRow>
+          <TableCell>spotify</TableCell>
+          <TableCell className="text-right font-mono">0.9.2</TableCell>
+        </TableRow>
+        <TableRow>
+          <TableCell>timer</TableCell>
+          <TableCell className="text-right font-mono">2.0.1</TableCell>
+        </TableRow>
+      </TableBody>
+    </Table>
+  );
+}
+
+/* ─── Sheet (open-state surface only, like DialogPreview) ────── */
+
+export function SheetPreview() {
+  return (
+    <div className="flex w-72 flex-col gap-3 rounded-sheet border bg-popover p-4 text-popover-foreground shadow-sheet">
+      <div className="space-y-0.5">
+        <div className="font-semibold text-xs">Notifications</div>
+        <div className="text-[10px] text-muted-foreground">
+          Recent activity from your workspace.
+        </div>
+      </div>
+      <Separator />
+      <div className="flex items-start gap-2 text-[10px]">
+        <Bell className="size-3.5 text-info" />
+        <div>
+          <div className="text-foreground">New plugin available</div>
+          <div className="text-muted-foreground">2 minutes ago</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Sidebar (mini app rail) ────────────────────────────────── */
+
+export function SidebarPreview() {
+  return (
+    <div className="flex w-44 flex-col gap-1 rounded-container border bg-sidebar p-2 text-sidebar-foreground">
+      <div className="px-1.5 py-1 font-semibold text-[10px] text-sidebar-foreground/70 uppercase tracking-wider">
+        Workspace
+      </div>
+      <div className="flex items-center gap-2 rounded-control bg-sidebar-accent px-2 py-1 text-[11px] text-sidebar-accent-foreground">
+        <LayoutDashboard className="size-3.5" /> Dashboard
+      </div>
+      <div className="flex items-center gap-2 rounded-control px-2 py-1 text-[11px]">
+        <Inbox className="size-3.5" /> Inbox
+      </div>
+      <div className="flex items-center gap-2 rounded-control px-2 py-1 text-[11px]">
+        <Settings className="size-3.5" /> Settings
+      </div>
+    </div>
+  );
+}
+
+/* ─── Icon palette (one swatch per --icon-* slot) ────────────── */
+
+export function IconPreview() {
+  return (
+    <div className="flex items-center gap-4">
+      <div className="flex flex-col items-center gap-1">
+        <Search className="size-4 text-icon" />
+        <span className="text-[9px] text-muted-foreground">default</span>
+      </div>
+      <div className="flex flex-col items-center gap-1">
+        <Search className="size-4 text-icon-muted" />
+        <span className="text-[9px] text-muted-foreground">muted</span>
+      </div>
+      <div className="flex flex-col items-center gap-1">
+        <Search className="size-4 text-icon-primary" />
+        <span className="text-[9px] text-muted-foreground">primary</span>
+      </div>
     </div>
   );
 }

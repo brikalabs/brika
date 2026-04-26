@@ -1,6 +1,3 @@
-import { Check, ChevronDown, Loader2, MapPin, Navigation } from 'lucide-react';
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import {
   Button,
   Collapsible,
@@ -9,7 +6,10 @@ import {
   Input,
   Label,
   Separator,
-} from '@/components/ui';
+} from '@brika/clay';
+import { Check, ChevronDown, Loader2, MapPin, Navigation } from 'lucide-react';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { AddressSearch } from '@/features/settings/components/location/AddressSearch';
 import type { HubLocation } from '@/features/settings/components/location/hooks';
 import { useLocationSettings } from '@/features/settings/components/location/hooks';

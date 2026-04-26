@@ -1,8 +1,8 @@
+import { Button, Input } from '@brika/clay';
 import { useNavigate } from '@tanstack/react-router';
 import { AlertTriangle, Plus, Search } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useDataView } from '@/components/DataView';
-import { Button, Input } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
 import { paths } from '@/routes/paths';
 import type { BlockDefinition, Workflow } from './api';

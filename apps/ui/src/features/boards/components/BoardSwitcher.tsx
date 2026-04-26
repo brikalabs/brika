@@ -1,4 +1,27 @@
 import {
+  Button,
+  cn,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  OverflowList,
+  OverflowListContent,
+  OverflowListIndicator,
+  OverflowListItem,
+  Separator,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+  useOverflowList,
+} from '@brika/clay';
+import {
   closestCenter,
   DndContext,
   type DragEndEvent,
@@ -19,30 +42,7 @@ import { Link, useNavigate, useParams } from '@tanstack/react-router';
 import { ChevronDown, LayoutDashboard, Pencil, Plus } from 'lucide-react';
 import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
 import { useState } from 'react';
-import {
-  Button,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  OverflowList,
-  OverflowListContent,
-  OverflowListIndicator,
-  OverflowListItem,
-  Separator,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-  useOverflowList,
-} from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
-import { cn } from '@/lib/utils';
 import { paths } from '@/routes/paths';
 import type { BoardSummary } from '../api';
 import { useBoards, useCreateBoard, useReorderBoards } from '../hooks';

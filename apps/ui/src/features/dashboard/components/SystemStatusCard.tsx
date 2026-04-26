@@ -1,7 +1,6 @@
+import { Badge, Card, CardContent, CardHeader, CardTitle, cn } from '@brika/clay';
 import { Server } from 'lucide-react';
-import { Badge, Card, CardContent, CardHeader, CardTitle } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
-import { cn } from '@/lib/utils';
 
 export interface SystemStatusCardProps {
   health?: {

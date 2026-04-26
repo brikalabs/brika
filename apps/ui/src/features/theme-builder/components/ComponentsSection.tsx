@@ -1,54 +1,62 @@
 /**
  * ComponentsSection — per-component token editor.
  *
- * List view groups components by role (Controls / Surfaces / Overlays)
- * and shows which ones have active overrides. Selecting a row opens a
- * detail view with a live preview and every token the component
- * exposes: radius today, plus any per-component color tokens defined
- * in `ThemeColors`. Adding a new token type (shadow, border, etc.)
- * means a new `Field` row and a new entry in `ComponentMeta`.
+ * The list view groups components by role (Controls / Surfaces / Overlays /
+ * …). Selecting a row opens a detail view that lists EVERY clay Layer-2
+ * token the component exposes, grouped by category (color, geometry,
+ * border, typography, elevation, focus, motion, state).
+ *
+ * The component list and the per-component token surface are derived from
+ * `@brika/clay`'s TOKEN_REGISTRY (via `clay-tokens.ts`) — there's no
+ * hand-curated list to keep in sync.
  */
 
+import { Button, cn } from '@brika/clay';
+import type { ResolvedTokenSpec, TokenCategory } from '@brika/clay/tokens';
 import {
   AlertCircle,
   ArrowLeft,
   BellRing,
+  Box,
   ChevronRight,
   ChevronsUpDown,
+  Code2,
+  Image,
   Info,
+  Key,
+  LayoutPanelLeft,
   LayoutPanelTop,
-  Link2,
-  List,
   type LucideIcon,
   Menu,
+  Minus,
   Moon,
   MousePointerClick,
+  PanelLeft,
   PanelTop,
   RectangleHorizontal,
   RotateCcw,
+  Rows3,
+  Shapes,
+  SlidersHorizontal,
   SquareCheck,
   SquareStack,
   Sun,
   Tag,
   TextCursor,
   ToggleRight,
-  Unlink2,
+  Type,
   UserCircle,
 } from 'lucide-react';
 import { type ReactNode, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, Slider, SliderValue } from '@/components/ui';
-import { cn } from '@/lib/utils';
+import { CATEGORY_ORDER, COMPONENT_TOKEN_INDEX, tokensByCategoryFor } from '../clay-tokens';
 import type {
   ColorToken,
   ComponentRadiusKey,
   ComponentTokens,
-  CornerStyle,
   ThemeColors,
   ThemeConfig,
 } from '../types';
-import { ColorField } from './ColorField';
-import { CornerField } from './CornerField';
 import {
   AlertPreview,
   AvatarPreview,
@@ -56,340 +64,164 @@ import {
   ButtonPreview,
   CardPreview,
   CheckboxPreview,
+  CodeBlockPreview,
   DialogPreview,
+  IconPreview,
   InputPreview,
   MenuItemPreview,
   MenuPreview,
+  PasswordInputPreview,
   PopoverPreview,
+  ProgressPreview,
   SelectPreview,
+  SeparatorPreview,
+  SheetPreview,
+  SidebarPreview,
+  SliderPreview,
   SwitchPreview,
+  SwitchThumbPreview,
+  TablePreview,
   TabsPreview,
+  TextareaPreview,
   ToastPreview,
   TooltipPreview,
 } from './components-previews';
 import { ThemedSurface } from './ThemedSurface';
+import { TokenField } from './TokenField';
 
 type PreviewMode = 'light' | 'dark';
 
-/**
- * Which palettes an override touches.
- *   'both'  — write (or clear) the same value on light and dark
- *   'light' — touch only the light palette
- *   'dark'  — touch only the dark palette
- */
 type ColorSlot = 'light' | 'dark' | 'both';
 type ColorSetter = (token: ColorToken, slot: ColorSlot, value: string | undefined) => void;
+type ComponentTokenSetter = (component: string, suffix: string, value: string | undefined) => void;
 
-/**
- * Writes a single field under `componentTokens[key]`. Passing
- * `undefined` clears that field; the key itself is pruned when no
- * fields remain.
- */
-type ComponentTokenSetter = <F extends keyof ComponentTokens>(
-  key: ComponentRadiusKey,
-  field: F,
-  value: ComponentTokens[F] | undefined
-) => void;
+/* ─── Per-component identity (icon + group + preview) ────────── */
 
-/* ─── Registry ───────────────────────────────────────────── */
-
-interface ColorTokenMeta {
-  /** Component-scope token key on `ThemeColors`. */
-  key: ColorToken;
-  /** System role this token falls back to when unset. */
-  fallbackKey: ColorToken;
-  /** Optional pair for the WCAG contrast badge. */
-  pairKey?: ColorToken;
-  /** i18n key into `components.pairLabels.*` */
-  pairLabelKey?: string;
+interface ComponentIdentity {
+  key: string;
+  icon: LucideIcon;
+  Preview?: () => ReactNode;
 }
 
-interface ComponentMeta {
-  key: ComponentRadiusKey;
-  /** rem offset from `theme.radius` matching the system default. */
-  seedOffset: number;
-  colorTokens: readonly ColorTokenMeta[];
-  /** Render a live preview using the component's utility classes. */
-  Preview: () => ReactNode;
+const IDENTITY: Record<string, Omit<ComponentIdentity, 'key'>> = {
+  alert: { icon: AlertCircle, Preview: AlertPreview },
+  avatar: { icon: UserCircle, Preview: AvatarPreview },
+  badge: { icon: Tag, Preview: BadgePreview },
+  button: { icon: MousePointerClick, Preview: ButtonPreview },
+  card: { icon: RectangleHorizontal, Preview: CardPreview },
+  checkbox: { icon: SquareCheck, Preview: CheckboxPreview },
+  'code-block': { icon: Code2, Preview: CodeBlockPreview },
+  dialog: { icon: SquareStack, Preview: DialogPreview },
+  icon: { icon: Image, Preview: IconPreview },
+  input: { icon: TextCursor, Preview: InputPreview },
+  menu: { icon: Menu, Preview: MenuPreview },
+  'menu-item': { icon: Rows3, Preview: MenuItemPreview },
+  'password-input': { icon: Key, Preview: PasswordInputPreview },
+  popover: { icon: PanelTop, Preview: PopoverPreview },
+  progress: { icon: SlidersHorizontal, Preview: ProgressPreview },
+  select: { icon: ChevronsUpDown, Preview: SelectPreview },
+  separator: { icon: Minus, Preview: SeparatorPreview },
+  sheet: { icon: LayoutPanelLeft, Preview: SheetPreview },
+  sidebar: { icon: PanelLeft, Preview: SidebarPreview },
+  slider: { icon: SlidersHorizontal, Preview: SliderPreview },
+  switch: { icon: ToggleRight, Preview: SwitchPreview },
+  'switch-thumb': { icon: ToggleRight, Preview: SwitchThumbPreview },
+  table: { icon: Rows3, Preview: TablePreview },
+  tabs: { icon: LayoutPanelTop, Preview: TabsPreview },
+  textarea: { icon: TextCursor, Preview: TextareaPreview },
+  toast: { icon: BellRing, Preview: ToastPreview },
+  tooltip: { icon: Info, Preview: TooltipPreview },
+};
+
+const FALLBACK_IDENTITY: Omit<ComponentIdentity, 'key'> = { icon: Box };
+
+function identityFor(component: string): ComponentIdentity {
+  const m = IDENTITY[component] ?? FALLBACK_IDENTITY;
+  return { key: component, ...m };
 }
 
-interface ComponentGroup {
-  id: string;
-  items: readonly ComponentMeta[];
-}
+/* ─── Group layout (curated for UX) ──────────────────────────── */
 
-/* ─── Metadata ───────────────────────────────────────────── */
-
-const GROUPS: readonly ComponentGroup[] = [
+const GROUP_ORDER: readonly { id: string; members: readonly string[] }[] = [
   {
     id: 'controls',
-    items: [
-      {
-        key: 'button',
-        seedOffset: -0.25,
-        colorTokens: [
-          {
-            key: 'button-filled-container',
-            fallbackKey: 'primary',
-            pairKey: 'button-filled-label',
-            pairLabelKey: 'components.pairLabels.label',
-          },
-          {
-            key: 'button-filled-label',
-            fallbackKey: 'primary-foreground',
-            pairKey: 'button-filled-container',
-            pairLabelKey: 'components.pairLabels.container',
-          },
-          {
-            key: 'button-outline-border',
-            fallbackKey: 'border',
-          },
-          {
-            key: 'button-outline-label',
-            fallbackKey: 'foreground',
-            pairKey: 'background',
-            pairLabelKey: 'components.pairLabels.surface',
-          },
-        ],
-        Preview: ButtonPreview,
-      },
-      {
-        key: 'input',
-        seedOffset: -0.25,
-        colorTokens: [
-          {
-            key: 'input-container',
-            fallbackKey: 'background',
-            pairKey: 'input-label',
-            pairLabelKey: 'components.pairLabels.text',
-          },
-          {
-            key: 'input-label',
-            fallbackKey: 'foreground',
-            pairKey: 'input-container',
-            pairLabelKey: 'components.pairLabels.bg',
-          },
-          {
-            key: 'input-border',
-            fallbackKey: 'input',
-          },
-          {
-            key: 'input-placeholder',
-            fallbackKey: 'muted-foreground',
-            pairKey: 'input-container',
-            pairLabelKey: 'components.pairLabels.bg',
-          },
-        ],
-        Preview: InputPreview,
-      },
-      {
-        key: 'select',
-        seedOffset: -0.25,
-        // Shares the `input-*` token family — editing either component's
-        // colour here changes both. The description in locale reflects this.
-        colorTokens: [
-          {
-            key: 'input-container',
-            fallbackKey: 'background',
-            pairKey: 'input-label',
-            pairLabelKey: 'components.pairLabels.text',
-          },
-          {
-            key: 'input-label',
-            fallbackKey: 'foreground',
-            pairKey: 'input-container',
-            pairLabelKey: 'components.pairLabels.bg',
-          },
-          {
-            key: 'input-border',
-            fallbackKey: 'input',
-          },
-          {
-            key: 'input-placeholder',
-            fallbackKey: 'muted-foreground',
-            pairKey: 'input-container',
-            pairLabelKey: 'components.pairLabels.bg',
-          },
-        ],
-        Preview: SelectPreview,
-      },
-      {
-        key: 'checkbox',
-        seedOffset: -0.625,
-        colorTokens: [],
-        Preview: CheckboxPreview,
-      },
-      {
-        key: 'tabs',
-        seedOffset: -0.25,
-        colorTokens: [],
-        Preview: TabsPreview,
-      },
-      {
-        key: 'badge',
-        seedOffset: -0.375,
-        colorTokens: [],
-        Preview: BadgePreview,
-      },
-      {
-        key: 'switch',
-        seedOffset: 9999,
-        colorTokens: [],
-        Preview: SwitchPreview,
-      },
+    members: [
+      'button',
+      'input',
+      'textarea',
+      'password-input',
+      'select',
+      'checkbox',
+      'switch',
+      'switch-thumb',
+      'tabs',
+      'badge',
+      'slider',
     ],
   },
   {
     id: 'surfaces',
-    items: [
-      {
-        key: 'card',
-        seedOffset: 0,
-        colorTokens: [
-          {
-            key: 'card-container',
-            fallbackKey: 'card',
-            pairKey: 'card-label',
-            pairLabelKey: 'components.pairLabels.label',
-          },
-          {
-            key: 'card-label',
-            fallbackKey: 'card-foreground',
-            pairKey: 'card-container',
-            pairLabelKey: 'components.pairLabels.bg',
-          },
-        ],
-        Preview: CardPreview,
-      },
-      {
-        key: 'alert',
-        seedOffset: 0,
-        colorTokens: [],
-        Preview: AlertPreview,
-      },
-      {
-        key: 'toast',
-        seedOffset: 0,
-        colorTokens: [],
-        Preview: ToastPreview,
-      },
-      {
-        key: 'avatar',
-        seedOffset: 9999,
-        colorTokens: [],
-        Preview: AvatarPreview,
-      },
-    ],
+    members: ['card', 'alert', 'toast', 'avatar', 'separator', 'progress', 'code-block', 'icon'],
   },
   {
     id: 'overlays',
-    items: [
-      {
-        key: 'dialog',
-        seedOffset: 0.25,
-        colorTokens: [
-          {
-            key: 'dialog-container',
-            fallbackKey: 'popover',
-            pairKey: 'dialog-label',
-            pairLabelKey: 'components.pairLabels.label',
-          },
-          {
-            key: 'dialog-label',
-            fallbackKey: 'popover-foreground',
-            pairKey: 'dialog-container',
-            pairLabelKey: 'components.pairLabels.bg',
-          },
-        ],
-        Preview: DialogPreview,
-      },
-      {
-        key: 'popover',
-        seedOffset: 0.25,
-        colorTokens: [],
-        Preview: PopoverPreview,
-      },
-      {
-        key: 'menu',
-        seedOffset: 0.25,
-        colorTokens: [],
-        Preview: MenuPreview,
-      },
-      {
-        key: 'menu-item',
-        seedOffset: -0.25,
-        colorTokens: [],
-        Preview: MenuItemPreview,
-      },
-      {
-        key: 'tooltip',
-        seedOffset: -0.25,
-        colorTokens: [],
-        Preview: TooltipPreview,
-      },
-    ],
+    members: ['dialog', 'sheet', 'popover', 'menu', 'menu-item', 'tooltip'],
+  },
+  {
+    id: 'layout',
+    members: ['sidebar', 'table'],
   },
 ];
 
-const ALL_COMPONENTS: readonly ComponentMeta[] = GROUPS.flatMap((g) => g.items);
-
-/**
- * Visual identifier for each component in the list. Replaces the abstract
- * radius-swatch that confused people — a Lucide icon maps to a concept
- * much faster than "square with corner hint does X".
- */
-const COMPONENT_ICONS: Record<ComponentRadiusKey, LucideIcon> = {
-  button: MousePointerClick,
-  input: TextCursor,
-  select: ChevronsUpDown,
-  checkbox: SquareCheck,
-  tabs: LayoutPanelTop,
-  badge: Tag,
-  switch: ToggleRight,
-  'switch-thumb': ToggleRight,
-  card: RectangleHorizontal,
-  alert: AlertCircle,
-  toast: BellRing,
-  avatar: UserCircle,
-  dialog: SquareStack,
-  popover: PanelTop,
-  menu: Menu,
-  'menu-item': List,
-  tooltip: Info,
-};
-
-/* ─── Helpers ────────────────────────────────────────────── */
-
-const RADIUS_SLIDER_MAX = 2;
-
-function seedFor(baseRadius: number, offset: number): number {
-  return Math.max(0, Math.min(RADIUS_SLIDER_MAX, +(baseRadius + offset).toFixed(3)));
+function buildGroups(): readonly { id: string; items: readonly ComponentIdentity[] }[] {
+  const seen = new Set<string>();
+  const out: { id: string; items: ComponentIdentity[] }[] = [];
+  for (const g of GROUP_ORDER) {
+    const items: ComponentIdentity[] = [];
+    for (const name of g.members) {
+      if (COMPONENT_TOKEN_INDEX[name]) {
+        items.push(identityFor(name));
+        seen.add(name);
+      }
+    }
+    if (items.length > 0) {
+      out.push({ id: g.id, items });
+    }
+  }
+  // Anything clay defines that the curated groups missed: bucket under "other".
+  const leftover = Object.keys(COMPONENT_TOKEN_INDEX).filter((n) => !seen.has(n));
+  if (leftover.length > 0) {
+    out.push({ id: 'other', items: leftover.sort().map(identityFor) });
+  }
+  return out;
 }
 
-function countOverrides(draft: ThemeConfig, meta: ComponentMeta): number {
+const GROUPS = buildGroups();
+
+/* ─── Override counting ─────────────────────────────────────── */
+
+function countOverrides(draft: ThemeConfig, component: string): number {
+  const tokens = COMPONENT_TOKEN_INDEX[component] ?? [];
   let count = 0;
-  const entry = draft.componentTokens?.[meta.key];
-  if (entry?.radius !== undefined) {
-    count += 1;
-  }
-  if (entry?.corners !== undefined) {
-    count += 1;
-  }
-  for (const token of meta.colorTokens) {
-    const hasLight = draft.colors.light[token.key] !== undefined;
-    const hasDark = draft.colors.dark[token.key] !== undefined;
-    if (hasLight || hasDark) {
-      count += 1;
+  for (const spec of tokens) {
+    if (spec.type === 'color') {
+      if (
+        draft.colors.light[spec.name] !== undefined ||
+        draft.colors.dark[spec.name] !== undefined
+      ) {
+        count += 1;
+      }
+    } else {
+      const suffix = spec.name.replace(`${component}-`, '');
+      if (draft.componentTokens?.[component]?.[suffix] !== undefined) {
+        count += 1;
+      }
     }
   }
   return count;
 }
 
-function resolveColor(colors: ThemeColors, key: ColorToken): string {
-  return colors[key] ?? '#000000';
-}
-
-/* ─── Section ────────────────────────────────────────────── */
+/* ─── Section ────────────────────────────────────────────────── */
 
 interface ComponentsSectionProps {
   draft: ThemeConfig;
@@ -398,27 +230,28 @@ interface ComponentsSectionProps {
 
 export function ComponentsSection({ draft, onChange }: Readonly<ComponentsSectionProps>) {
   const { t } = useTranslation('themeBuilder');
-  const [selected, setSelected] = useState<ComponentRadiusKey | null>(null);
+  const [selected, setSelected] = useState<string | null>(null);
 
   const setComponentToken = useCallback<ComponentTokenSetter>(
-    (key, field, value) => {
-      const nextTokens: Partial<Record<ComponentRadiusKey, ComponentTokens>> = {
-        ...draft.componentTokens,
-      };
-      const current: ComponentTokens = { ...nextTokens[key] };
+    (component, suffix, value) => {
+      const nextTokens: Record<string, ComponentTokens> = { ...draft.componentTokens };
+      const current: ComponentTokens = { ...nextTokens[component] };
       if (value === undefined) {
-        delete current[field];
+        delete current[suffix];
       } else {
-        current[field] = value;
+        current[suffix] = value;
       }
-      if (current.radius === undefined && current.corners === undefined) {
-        delete nextTokens[key];
+      if (Object.keys(current).length === 0) {
+        delete nextTokens[component];
       } else {
-        nextTokens[key] = current;
+        nextTokens[component] = current;
       }
       onChange({
         ...draft,
-        componentTokens: Object.keys(nextTokens).length === 0 ? undefined : nextTokens,
+        componentTokens:
+          Object.keys(nextTokens).length === 0
+            ? undefined
+            : (nextTokens as Record<ComponentRadiusKey, ComponentTokens>),
       });
     },
     [draft, onChange]
@@ -432,60 +265,64 @@ export function ComponentsSection({ draft, onChange }: Readonly<ComponentsSectio
         if (value === undefined) {
           delete light[token];
         } else {
-          light[token] = value;
+          (light as Record<string, string>)[token] = value;
         }
       }
       if (slot === 'dark' || slot === 'both') {
         if (value === undefined) {
           delete dark[token];
         } else {
-          dark[token] = value;
+          (dark as Record<string, string>)[token] = value;
         }
       }
-      onChange({ ...draft, colors: { light, dark } });
+      onChange({ ...draft, colors: { light: light as ThemeColors, dark: dark as ThemeColors } });
     },
     [draft, onChange]
   );
 
   const resetComponent = useCallback(
-    (meta: ComponentMeta) => {
-      const nextTokens: Partial<Record<ComponentRadiusKey, ComponentTokens>> = {
-        ...draft.componentTokens,
-      };
-      delete nextTokens[meta.key];
-
+    (component: string) => {
+      const tokens = COMPONENT_TOKEN_INDEX[component] ?? [];
+      const nextTokens = { ...draft.componentTokens };
+      delete nextTokens[component];
       const light = { ...draft.colors.light };
       const dark = { ...draft.colors.dark };
-      for (const token of meta.colorTokens) {
-        delete light[token.key];
-        delete dark[token.key];
+      for (const spec of tokens) {
+        if (spec.type === 'color') {
+          delete light[spec.name];
+          delete dark[spec.name];
+        }
       }
-
       onChange({
         ...draft,
-        componentTokens: Object.keys(nextTokens).length === 0 ? undefined : nextTokens,
-        colors: { light, dark },
+        componentTokens:
+          Object.keys(nextTokens).length === 0
+            ? undefined
+            : (nextTokens as Record<ComponentRadiusKey, ComponentTokens>),
+        colors: { light: light as ThemeColors, dark: dark as ThemeColors },
       });
     },
     [draft, onChange]
   );
 
-  const selectedMeta = selected ? ALL_COMPONENTS.find((c) => c.key === selected) : undefined;
-
-  if (selectedMeta) {
+  if (selected) {
     return (
       <ComponentDetail
-        meta={selectedMeta}
+        component={selected}
         draft={draft}
         onBack={() => setSelected(null)}
-        onTokenChange={setComponentToken}
         onColorChange={setColor}
-        onResetAll={() => resetComponent(selectedMeta)}
+        onTokenChange={setComponentToken}
+        onResetAll={() => resetComponent(selected)}
       />
     );
   }
 
-  const totalOverrides = ALL_COMPONENTS.reduce((sum, meta) => sum + countOverrides(draft, meta), 0);
+  const totalOverrides = GROUPS.reduce(
+    (sum, group) =>
+      sum + group.items.reduce((acc, item) => acc + countOverrides(draft, item.key), 0),
+    0
+  );
 
   return (
     <div className="space-y-4">
@@ -497,7 +334,7 @@ export function ComponentsSection({ draft, onChange }: Readonly<ComponentsSectio
       {GROUPS.map((group) => (
         <section key={group.id} className="space-y-2">
           <h3 className="px-1 font-semibold text-[11px] text-foreground tracking-wide">
-            {t(`components.groups.${group.id}`)}
+            {t(`components.groups.${group.id}`, { defaultValue: group.id })}
           </h3>
           <div className="divide-y overflow-hidden rounded-container border">
             {group.items.map((meta) => (
@@ -515,19 +352,19 @@ export function ComponentsSection({ draft, onChange }: Readonly<ComponentsSectio
   );
 }
 
-/* ─── Row ────────────────────────────────────────────────── */
+/* ─── Row ────────────────────────────────────────────────────── */
 
 interface ComponentRowProps {
-  meta: ComponentMeta;
+  meta: ComponentIdentity;
   draft: ThemeConfig;
   onSelect: () => void;
 }
 
 function ComponentRow({ meta, draft, onSelect }: Readonly<ComponentRowProps>) {
   const { t } = useTranslation('themeBuilder');
-  const overrides = countOverrides(draft, meta);
+  const overrides = countOverrides(draft, meta.key);
   const customized = overrides > 0;
-  const Icon = COMPONENT_ICONS[meta.key];
+  const Icon = meta.icon;
   return (
     <button
       type="button"
@@ -547,10 +384,15 @@ function ComponentRow({ meta, draft, onSelect }: Readonly<ComponentRowProps>) {
       </span>
       <div className="min-w-0 flex-1">
         <div className="truncate font-medium text-xs">
-          {t(`components.items.${meta.key}.label`)}
+          {t(`components.items.${meta.key}.label`, { defaultValue: meta.key })}
         </div>
         <div className="truncate text-[10px] text-muted-foreground">
-          {t(`components.items.${meta.key}.description`)}
+          {t(`components.items.${meta.key}.description`, {
+            defaultValue: t('components.tokenCount', {
+              count: COMPONENT_TOKEN_INDEX[meta.key]?.length ?? 0,
+              defaultValue: `${COMPONENT_TOKEN_INDEX[meta.key]?.length ?? 0} tokens`,
+            }),
+          })}
         </div>
       </div>
       {customized && (
@@ -563,37 +405,42 @@ function ComponentRow({ meta, draft, onSelect }: Readonly<ComponentRowProps>) {
   );
 }
 
-/* ─── Detail ─────────────────────────────────────────────── */
+/* ─── Detail ─────────────────────────────────────────────────── */
 
 interface ComponentDetailProps {
-  meta: ComponentMeta;
+  component: string;
   draft: ThemeConfig;
   onBack: () => void;
-  onTokenChange: ComponentTokenSetter;
   onColorChange: ColorSetter;
+  onTokenChange: ComponentTokenSetter;
   onResetAll: () => void;
 }
 
+const CATEGORY_ICONS: Record<TokenCategory, LucideIcon> = {
+  color: Shapes,
+  geometry: Box,
+  border: RectangleHorizontal,
+  typography: Type,
+  elevation: SquareStack,
+  focus: AlertCircle,
+  motion: SlidersHorizontal,
+  state: ToggleRight,
+};
+
 function ComponentDetail({
-  meta,
+  component,
   draft,
   onBack,
-  onTokenChange,
   onColorChange,
+  onTokenChange,
   onResetAll,
 }: Readonly<ComponentDetailProps>) {
   const { t } = useTranslation('themeBuilder');
   const [mode, setMode] = useState<PreviewMode>('light');
-  const entry = draft.componentTokens?.[meta.key];
-  const radiusValue = entry?.radius;
-  const radiusOverridden = radiusValue !== undefined;
-  const effectiveRadius = radiusValue ?? seedFor(draft.radius, meta.seedOffset);
-  const cornersValue = entry?.corners;
-  const cornersOverridden = cornersValue !== undefined;
-  const effectiveCorners: CornerStyle = cornersValue ?? draft.corners ?? 'round';
-  const totalOverrides = countOverrides(draft, meta);
-  const hasColorTokens = meta.colorTokens.length > 0;
-  const { Preview } = meta;
+  const totalOverrides = countOverrides(draft, component);
+  const grouped = tokensByCategoryFor(component);
+  const meta = identityFor(component);
+  const Preview = meta.Preview;
 
   // Esc returns to the list. Only active while the detail view is open.
   useEffect(() => {
@@ -622,10 +469,15 @@ function ComponentDetail({
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1 space-y-0.5">
             <h2 className="truncate font-semibold text-base">
-              {t(`components.items.${meta.key}.label`)}
+              {t(`components.items.${component}.label`, { defaultValue: component })}
             </h2>
             <p className="text-[11px] text-muted-foreground leading-snug">
-              {t(`components.items.${meta.key}.description`)}
+              {t(`components.items.${component}.description`, {
+                defaultValue: t('components.tokenCount', {
+                  count: COMPONENT_TOKEN_INDEX[component]?.length ?? 0,
+                  defaultValue: `${COMPONENT_TOKEN_INDEX[component]?.length ?? 0} tokens`,
+                }),
+              })}
             </p>
           </div>
           <Button
@@ -647,75 +499,134 @@ function ComponentDetail({
       </header>
 
       <PreviewStage draft={draft} mode={mode} onModeChange={setMode}>
-        <Preview />
+        {Preview ? <Preview /> : <PreviewPlaceholder />}
       </PreviewStage>
 
-      <DetailGroup label={t('components.shape')}>
-        <Field
-          label={t('components.radius')}
-          hint="rem"
-          overridden={radiusOverridden}
-          onReset={() => onTokenChange(meta.key, 'radius', undefined)}
-        >
-          <div className="flex items-center gap-2">
-            <Slider
-              value={effectiveRadius}
-              onChange={(v) => onTokenChange(meta.key, 'radius', v)}
-              min={0}
-              max={RADIUS_SLIDER_MAX}
-              step={0.125}
-              className="flex-1"
-            />
-            <SliderValue
-              value={effectiveRadius}
-              onChange={(v) => onTokenChange(meta.key, 'radius', v)}
-              min={0}
-              max={RADIUS_SLIDER_MAX}
-              step={0.125}
-              unit="rem"
-              width="w-14"
-              decimals={3}
-            />
-          </div>
-        </Field>
-        <Field
-          label={t('components.corners')}
-          hint={cornersOverridden ? t('components.cornersCustom') : t('components.cornersTheme')}
-          overridden={cornersOverridden}
-          onReset={() => onTokenChange(meta.key, 'corners', undefined)}
-        >
-          <CornerField
-            value={effectiveCorners}
-            onChange={(v) => onTokenChange(meta.key, 'corners', v)}
-            radius={effectiveRadius}
-          />
-        </Field>
-      </DetailGroup>
-
-      {hasColorTokens && (
-        <DetailGroup label={t('components.colors')} hint={t('components.colorsHint')}>
-          {meta.colorTokens.map((token) => (
-            <ColorTokenField
-              key={token.key}
-              token={token}
-              draft={draft}
-              mode={mode}
-              onChange={onColorChange}
-            />
-          ))}
-        </DetailGroup>
-      )}
-
-      {!hasColorTokens && (
-        <div className="rounded-container border border-dashed px-3 py-4 text-center text-[10px] text-muted-foreground">
-          {t('components.noColorOverrides')}
-        </div>
-      )}
+      {CATEGORY_ORDER.map((category) => {
+        const tokens = grouped[category];
+        if (!tokens || tokens.length === 0) {
+          return null;
+        }
+        return (
+          <CategorySection key={category} category={category}>
+            {tokens.map((spec) => (
+              <TokenRow
+                key={spec.name}
+                spec={spec}
+                draft={draft}
+                mode={mode}
+                onColorChange={onColorChange}
+                onTokenChange={onTokenChange}
+              />
+            ))}
+          </CategorySection>
+        );
+      })}
     </div>
   );
 }
 
-/* ─── Preview stage ──────────────────────────────────────── */
+function PreviewPlaceholder() {
+  const { t } = useTranslation('themeBuilder');
+  return (
+    <div className="text-center text-[10px] text-muted-foreground">
+      {t('components.noPreview', { defaultValue: 'Preview unavailable for this component' })}
+    </div>
+  );
+}
+
+/* ─── Category section ───────────────────────────────────────── */
+
+interface CategorySectionProps {
+  category: TokenCategory;
+  children: ReactNode;
+}
+
+function CategorySection({ category, children }: Readonly<CategorySectionProps>) {
+  const { t } = useTranslation('themeBuilder');
+  const Icon = CATEGORY_ICONS[category];
+  return (
+    <section className="space-y-2">
+      <div className="flex items-center gap-2 px-1">
+        <Icon className="size-3 text-muted-foreground" />
+        <span className="font-semibold text-[11px] uppercase tracking-wider">
+          {t(`components.categories.${category}`, { defaultValue: category })}
+        </span>
+      </div>
+      <div className="space-y-3 rounded-container border p-3">{children}</div>
+    </section>
+  );
+}
+
+/* ─── Token row ──────────────────────────────────────────────── */
+
+interface TokenRowProps {
+  spec: ResolvedTokenSpec;
+  draft: ThemeConfig;
+  mode: PreviewMode;
+  onColorChange: ColorSetter;
+  onTokenChange: ComponentTokenSetter;
+}
+
+function TokenRow({ spec, draft, mode, onColorChange, onTokenChange }: Readonly<TokenRowProps>) {
+  const overridden = isOverridden(spec, draft);
+  const reset = useCallback(() => {
+    if (spec.type === 'color') {
+      onColorChange(spec.name, 'both', undefined);
+    } else if (spec.appliesTo) {
+      const suffix = spec.name.replace(`${spec.appliesTo}-`, '');
+      onTokenChange(spec.appliesTo, suffix, undefined);
+    }
+  }, [spec, onColorChange, onTokenChange]);
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-1.5">
+          <code className="truncate font-mono text-[10px] text-muted-foreground">{spec.name}</code>
+          {overridden && <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-primary" />}
+        </div>
+        <button
+          type="button"
+          onClick={reset}
+          disabled={!overridden}
+          aria-label="Reset"
+          className={cn(
+            'flex size-5 shrink-0 items-center justify-center rounded-control transition-[opacity,background-color,color]',
+            overridden
+              ? 'text-muted-foreground hover:bg-muted hover:text-foreground'
+              : 'pointer-events-none text-muted-foreground/40'
+          )}
+        >
+          <RotateCcw className="size-3" />
+        </button>
+      </div>
+      <p className="text-[10px] text-muted-foreground leading-snug">{spec.description}</p>
+      <TokenField
+        spec={spec}
+        draft={draft}
+        mode={mode}
+        onColorChange={onColorChange}
+        onTokenChange={onTokenChange}
+      />
+    </div>
+  );
+}
+
+function isOverridden(spec: ResolvedTokenSpec, draft: ThemeConfig): boolean {
+  if (spec.type === 'color') {
+    return (
+      draft.colors.light[spec.name] !== undefined || draft.colors.dark[spec.name] !== undefined
+    );
+  }
+  if (!spec.appliesTo) {
+    return false;
+  }
+  const suffix = spec.name.replace(`${spec.appliesTo}-`, '');
+  return draft.componentTokens?.[spec.appliesTo]?.[suffix] !== undefined;
+}
+
+/* ─── Preview stage ──────────────────────────────────────────── */
 
 interface PreviewStageProps {
   draft: ThemeConfig;
@@ -782,319 +693,5 @@ function ModeButton({ label, active, onClick, children }: Readonly<ModeButtonPro
     >
       {children}
     </button>
-  );
-}
-
-/* ─── Group / field primitives ───────────────────────────── */
-
-interface DetailGroupProps {
-  label: string;
-  hint?: string;
-  children: ReactNode;
-}
-
-function DetailGroup({ label, hint, children }: Readonly<DetailGroupProps>) {
-  return (
-    <section className="space-y-2">
-      <div className="flex items-baseline justify-between px-1">
-        <span className="font-semibold text-[11px] uppercase tracking-wider">{label}</span>
-        {hint && <span className="text-[10px] text-muted-foreground">{hint}</span>}
-      </div>
-      <div className="space-y-3">{children}</div>
-    </section>
-  );
-}
-
-interface FieldProps {
-  label: string;
-  hint?: string;
-  overridden: boolean;
-  onReset: () => void;
-  /** Optional slot rendered between the label and the reset button (e.g. link/unlink toggle). */
-  headerExtra?: ReactNode;
-  children: ReactNode;
-}
-
-function Field({ label, hint, overridden, onReset, headerExtra, children }: Readonly<FieldProps>) {
-  const { t } = useTranslation('themeBuilder');
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-1.5">
-          <span className="truncate font-medium text-xs">{label}</span>
-          {overridden && (
-            <span
-              aria-label={t('components.customizedLabel')}
-              className="size-1.5 shrink-0 rounded-full bg-primary"
-            />
-          )}
-        </div>
-        <div className="flex shrink-0 items-center gap-1.5">
-          {hint && <span className="text-[10px] text-muted-foreground">{hint}</span>}
-          {headerExtra}
-          <ResetButton label={label} overridden={overridden} onReset={onReset} />
-        </div>
-      </div>
-      {children}
-    </div>
-  );
-}
-
-interface ResetButtonProps {
-  label: string;
-  overridden: boolean;
-  onReset: () => void;
-}
-
-function ResetButton({ label, overridden, onReset }: Readonly<ResetButtonProps>) {
-  const { t } = useTranslation('themeBuilder');
-  return (
-    <button
-      type="button"
-      onClick={onReset}
-      disabled={!overridden}
-      aria-label={t('components.resetAria', { field: label.toLowerCase() })}
-      title={overridden ? t('components.resetTitle') : t('components.matchesTheme')}
-      className={cn(
-        'flex size-5 shrink-0 items-center justify-center rounded-control transition-[opacity,background-color,color]',
-        overridden
-          ? 'text-muted-foreground opacity-100 hover:bg-muted hover:text-foreground'
-          : 'pointer-events-none text-muted-foreground/40'
-      )}
-    >
-      <RotateCcw className="size-3" />
-    </button>
-  );
-}
-
-/* ─── Color token field ──────────────────────────────────── */
-
-interface ColorTokenFieldProps {
-  token: ColorTokenMeta;
-  draft: ThemeConfig;
-  mode: PreviewMode;
-  onChange: ColorSetter;
-}
-
-/**
- * A color override can be unified (same value across light + dark) or
- * split (different value per mode). The component detects a natural
- * split from the draft; users can also opt-in explicitly via the
- * "Set different values…" affordance below the unified picker.
- */
-function ColorTokenField({ token, draft, mode, onChange }: Readonly<ColorTokenFieldProps>) {
-  const { t } = useTranslation('themeBuilder');
-  const lightValue = draft.colors.light[token.key];
-  const darkValue = draft.colors.dark[token.key];
-  const hasLight = lightValue !== undefined;
-  const hasDark = darkValue !== undefined;
-  const overridden = hasLight || hasDark;
-  const naturallySplit = hasLight && hasDark && lightValue !== darkValue;
-  const [userExpanded, setUserExpanded] = useState(false);
-  const split = naturallySplit || userExpanded;
-
-  const label = t(`components.colorTokens.${token.key}.label`, { defaultValue: token.key });
-  const fallbackLabel = t(`components.fallbackLabels.${token.fallbackKey}`, {
-    defaultValue: token.fallbackKey,
-  });
-  const pairLabel = token.pairLabelKey ? t(token.pairLabelKey) : undefined;
-
-  const resetAll = useCallback(() => {
-    onChange(token.key, 'both', undefined);
-    setUserExpanded(false);
-  }, [onChange, token.key]);
-
-  const unify = useCallback(() => {
-    const winning = lightValue ?? darkValue;
-    if (winning !== undefined) {
-      onChange(token.key, 'both', winning);
-    }
-    setUserExpanded(false);
-  }, [onChange, token.key, lightValue, darkValue]);
-
-  const splitToggle = (
-    <SplitToggle
-      split={split}
-      onToggle={() => {
-        if (split) {
-          unify();
-        } else {
-          setUserExpanded(true);
-        }
-      }}
-    />
-  );
-
-  if (split) {
-    const lightEff = lightValue ?? resolveColor(draft.colors.light, token.fallbackKey);
-    const darkEff = darkValue ?? resolveColor(draft.colors.dark, token.fallbackKey);
-    const pairLight = token.pairKey
-      ? (draft.colors.light[token.pairKey] ?? resolveColor(draft.colors.light, token.pairKey))
-      : undefined;
-    const pairDark = token.pairKey
-      ? (draft.colors.dark[token.pairKey] ?? resolveColor(draft.colors.dark, token.pairKey))
-      : undefined;
-    return (
-      <Field
-        label={label}
-        hint={t('components.perMode')}
-        overridden={overridden}
-        onReset={resetAll}
-        headerExtra={splitToggle}
-      >
-        <div className="space-y-2">
-          <ModeColorRow
-            icon={Sun}
-            modeLabel={t('components.modeLight')}
-            active={mode === 'light'}
-            overridden={hasLight}
-            onReset={() => onChange(token.key, 'light', undefined)}
-          >
-            <ColorField
-              label={`${label} (${t('components.modeLight')})`}
-              value={lightEff}
-              onChange={(v) => onChange(token.key, 'light', v)}
-              pairWith={pairLight}
-              pairLabel={pairLabel}
-            />
-          </ModeColorRow>
-          <ModeColorRow
-            icon={Moon}
-            modeLabel={t('components.modeDark')}
-            active={mode === 'dark'}
-            overridden={hasDark}
-            onReset={() => onChange(token.key, 'dark', undefined)}
-          >
-            <ColorField
-              label={`${label} (${t('components.modeDark')})`}
-              value={darkEff}
-              onChange={(v) => onChange(token.key, 'dark', v)}
-              pairWith={pairDark}
-              pairLabel={pairLabel}
-            />
-          </ModeColorRow>
-        </div>
-      </Field>
-    );
-  }
-
-  const paletteForMode = mode === 'light' ? draft.colors.light : draft.colors.dark;
-  const currentValue = paletteForMode[token.key] ?? resolveColor(paletteForMode, token.fallbackKey);
-  const pairForMode = token.pairKey
-    ? (paletteForMode[token.pairKey] ?? resolveColor(paletteForMode, token.pairKey))
-    : undefined;
-
-  const hint = overridden
-    ? t('components.shared')
-    : t('components.themeFallback', { label: fallbackLabel });
-
-  return (
-    <Field
-      label={label}
-      hint={hint}
-      overridden={overridden}
-      onReset={resetAll}
-      headerExtra={splitToggle}
-    >
-      <ColorField
-        label={label}
-        value={currentValue}
-        onChange={(v) => onChange(token.key, 'both', v)}
-        pairWith={pairForMode}
-        pairLabel={pairLabel}
-      />
-    </Field>
-  );
-}
-
-/**
- * Small icon toggle to switch between "one colour shared across light & dark"
- * and "two separate per-mode values". Sits next to the reset button in the
- * field header — no full-width action rows needed.
- */
-interface SplitToggleProps {
-  split: boolean;
-  onToggle: () => void;
-}
-
-function SplitToggle({ split, onToggle }: Readonly<SplitToggleProps>) {
-  const { t } = useTranslation('themeBuilder');
-  const Icon = split ? Link2 : Unlink2;
-  const title = split ? t('components.useOneValue') : t('components.setDifferentValues');
-  return (
-    <button
-      type="button"
-      onClick={onToggle}
-      aria-label={title}
-      title={title}
-      className="flex size-5 shrink-0 items-center justify-center rounded-control text-muted-foreground transition-[color,background-color] hover:bg-muted hover:text-foreground"
-    >
-      <Icon className="size-3" />
-    </button>
-  );
-}
-
-/* ─── Split-mode primitives ──────────────────────────────── */
-
-interface ModeColorRowProps {
-  icon: LucideIcon;
-  modeLabel: string;
-  active: boolean;
-  overridden: boolean;
-  onReset: () => void;
-  children: ReactNode;
-}
-
-function ModeColorRow({
-  icon: Icon,
-  modeLabel,
-  active,
-  overridden,
-  onReset,
-  children,
-}: Readonly<ModeColorRowProps>) {
-  const { t } = useTranslation('themeBuilder');
-  return (
-    <div className="space-y-1">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5">
-          <Icon className={cn('size-3', active ? 'text-foreground' : 'text-muted-foreground')} />
-          <span
-            className={cn(
-              'font-medium text-[10px] uppercase tracking-wider',
-              active ? 'text-foreground' : 'text-muted-foreground'
-            )}
-          >
-            {modeLabel}
-          </span>
-          {overridden && (
-            <span
-              aria-label={t('components.customizedLabel')}
-              className="size-1 rounded-full bg-primary"
-            />
-          )}
-        </div>
-        <button
-          type="button"
-          onClick={onReset}
-          disabled={!overridden}
-          aria-label={t('components.resetModeAria', { mode: modeLabel.toLowerCase() })}
-          title={
-            overridden
-              ? t('components.resetModeTitle', { mode: modeLabel.toLowerCase() })
-              : t('components.noOverride')
-          }
-          className={cn(
-            'flex size-4 shrink-0 items-center justify-center rounded-control transition-[opacity,background-color,color]',
-            overridden
-              ? 'text-muted-foreground opacity-100 hover:bg-muted hover:text-foreground'
-              : 'pointer-events-none text-muted-foreground/40'
-          )}
-        >
-          <RotateCcw className="size-2.5" />
-        </button>
-      </div>
-      {children}
-    </div>
   );
 }

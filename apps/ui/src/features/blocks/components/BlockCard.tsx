@@ -1,8 +1,8 @@
+import { Avatar, AvatarFallback, AvatarImage, Badge, Card } from '@brika/clay';
 import type { Plugin } from '@brika/plugin';
 import { Link } from '@tanstack/react-router';
 import { Plug } from 'lucide-react';
 import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
-import { Avatar, AvatarFallback, AvatarImage, Badge, Card } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
 import { paths } from '@/routes/paths';
 import { pluginsApi } from '../../plugins/api';

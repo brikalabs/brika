@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import {
   Button,
   Dialog,
@@ -9,7 +8,8 @@ import {
   DialogTitle,
   Label,
   PasswordInput,
-} from '@/components/ui';
+} from '@brika/clay';
+import { useState } from 'react';
 import { useLocale } from '@/lib/use-locale';
 import { useUserMutations } from '../hooks';
 

@@ -1,5 +1,5 @@
+import { Badge } from '@brika/clay';
 import { ArrowUpCircle, CheckCircle2, Code2 } from 'lucide-react';
-import { Badge } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
 
 interface UpdateBadgeProps {

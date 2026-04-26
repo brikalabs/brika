@@ -1,7 +1,3 @@
-import type { Plugin } from '@brika/plugin';
-import { useQueryClient } from '@tanstack/react-query';
-import { ArrowUp, Loader2 } from 'lucide-react';
-import React from 'react';
 import {
   Button,
   Dialog,
@@ -11,7 +7,11 @@ import {
   DialogHeader,
   DialogTitle,
   ProgressDisplay,
-} from '@/components/ui';
+} from '@brika/clay';
+import type { Plugin } from '@brika/plugin';
+import { useQueryClient } from '@tanstack/react-query';
+import { ArrowUp, Loader2 } from 'lucide-react';
+import React from 'react';
 import { getProgressValue, useProgressStream } from '@/hooks/use-progress-stream';
 import { useLocale } from '@/lib/use-locale';
 import { pluginsKeys } from '../api';

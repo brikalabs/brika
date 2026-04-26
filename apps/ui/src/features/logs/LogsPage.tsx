@@ -1,6 +1,6 @@
+import { Badge, Button, Card, CardContent } from "@brika/clay";
 import { Download, Pause, Play, Radio, RefreshCw, Trash2 } from "lucide-react";
 import React from "react";
-import { Badge, Button, Card, CardContent } from "@/components/ui";
 import { useLocale } from "@/lib/use-locale";
 import { LogFilterBar } from "./components/LogFilterBar";
 import { LogList } from "./components/LogList";

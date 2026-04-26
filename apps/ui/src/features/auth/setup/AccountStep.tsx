@@ -1,17 +1,4 @@
 import { useAuth } from '@brika/auth/react';
-import { useNavigate } from '@tanstack/react-router';
-import {
-  AlertCircle,
-  ArrowLeft,
-  ArrowRight,
-  Check,
-  Loader2,
-  Mail,
-  ShieldCheck,
-  User,
-} from 'lucide-react';
-import { type FormEvent, useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import {
   Button,
   CardContent,
@@ -25,8 +12,21 @@ import {
   Label,
   PasswordInput,
   Separator,
-} from '@/components/ui';
-import { BrikaLogo } from '@/components/ui/brika-logo';
+} from '@brika/clay';
+import { BrikaLogo } from '@brika/clay/components/brika-logo';
+import { useNavigate } from '@tanstack/react-router';
+import {
+  AlertCircle,
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  Loader2,
+  Mail,
+  ShieldCheck,
+  User,
+} from 'lucide-react';
+import { type FormEvent, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { PasswordStrength } from '../password/PasswordStrength';
 
 export function AccountStep() {

@@ -1,6 +1,4 @@
 import { useAuth } from '@brika/auth/react';
-import { KeyRound, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
-import { useState } from 'react';
 import {
   Badge,
   Button,
@@ -18,7 +16,9 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui';
+} from '@brika/clay';
+import { KeyRound, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { useState } from 'react';
 import { UserAvatar } from '@/components/user-avatar';
 import { useLocale } from '@/lib/use-locale';
 import type { UserRecord } from '../api';

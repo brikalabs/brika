@@ -4,10 +4,9 @@
  * plus the shared FieldPreview / SliderInput / PresetChips primitives.
  */
 
+import { Button, Card, cn, Slider, SliderValue } from '@brika/clay';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, Card, Slider, SliderValue } from '@/components/ui';
-import { cn } from '@/lib/utils';
 import { motionRecipeFor } from '../theme-css';
 import { MOTION_STYLES, type MotionStyle } from '../types';
 import { FieldPreview } from './FieldPreview';

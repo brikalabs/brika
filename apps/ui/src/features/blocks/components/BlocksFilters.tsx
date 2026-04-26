@@ -1,5 +1,3 @@
-import type { Plugin } from '@brika/plugin';
-import { Filter, Plug, Search, X } from 'lucide-react';
 import {
   Avatar,
   AvatarFallback,
@@ -11,7 +9,9 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui';
+} from '@brika/clay';
+import type { Plugin } from '@brika/plugin';
+import { Filter, Plug, Search, X } from 'lucide-react';
 import { useLocale } from '@/lib/use-locale';
 import { pluginsApi } from '../../plugins/api';
 

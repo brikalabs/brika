@@ -1,5 +1,3 @@
-import { Check, Clock, Search } from 'lucide-react';
-import { useMemo, useState } from 'react';
 import {
   Button,
   Input,
@@ -12,7 +10,9 @@ import {
   SectionIcon,
   SectionInfo,
   SectionTitle,
-} from '@/components/ui';
+} from '@brika/clay';
+import { Check, Clock, Search } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import { useLocale } from '@/lib/use-locale';
 import { useHubTimezone, useUpdateHubTimezone } from './hooks';
 

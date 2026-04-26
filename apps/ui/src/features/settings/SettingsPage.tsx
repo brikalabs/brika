@@ -6,8 +6,6 @@
 
 import { Scope } from '@brika/auth';
 import { useCanAccess } from '@brika/auth/react';
-import { Palette } from 'lucide-react';
-import { ThemeSelector } from '@/components/theme-selector';
 import {
   Section,
   SectionContent,
@@ -16,7 +14,9 @@ import {
   SectionIcon,
   SectionInfo,
   SectionTitle,
-} from '@/components/ui';
+} from '@brika/clay';
+import { Palette } from 'lucide-react';
+import { ThemeSelector } from '@/components/theme-selector';
 import { useLocale } from '@/lib/use-locale';
 import {
   HubControlSection,

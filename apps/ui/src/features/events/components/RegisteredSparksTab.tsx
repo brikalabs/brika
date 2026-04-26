@@ -1,8 +1,8 @@
+import { Avatar, AvatarFallback, Badge, Card } from '@brika/clay';
 import { useQuery } from '@tanstack/react-query';
 import { Plug, Zap } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useDataView } from '@/components/DataView';
-import { Avatar, AvatarFallback, Badge, Card } from '@/components/ui';
 import { fetcher } from '@/lib/query';
 import { useLocale } from '@/lib/use-locale';
 import { EmitSparkDialog, type RegisteredSpark } from './EmitSparkDialog';

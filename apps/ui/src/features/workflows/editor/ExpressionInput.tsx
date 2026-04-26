@@ -1,7 +1,6 @@
+import { cn, Input, ScrollArea, Textarea } from '@brika/clay';
 import { Braces, Variable } from 'lucide-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Input, ScrollArea, Textarea } from '@/components/ui';
-import { cn } from '@/lib/utils';
 
 interface VariableInfo {
   name: string;

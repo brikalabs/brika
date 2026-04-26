@@ -10,6 +10,20 @@
  */
 
 import {
+  Badge,
+  Button,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  PageHeader,
+  PageHeaderActions,
+  PageHeaderDescription,
+  PageHeaderInfo,
+  PageHeaderTitle,
+} from '@brika/clay';
+import {
   Check,
   ChevronDown,
   Clipboard,
@@ -26,20 +40,6 @@ import {
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  Badge,
-  Button,
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-  PageHeader,
-  PageHeaderActions,
-  PageHeaderDescription,
-  PageHeaderInfo,
-  PageHeaderTitle,
-} from '@/components/ui';
 import type { ThemeConfig } from '../types';
 
 interface ThemeBuilderToolbarProps {

@@ -1,6 +1,6 @@
+import { Badge } from '@brika/clay';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowUp } from 'lucide-react';
-import { Badge } from '@/components/ui';
 import { registryApi, registryKeys } from '../registry-api';
 
 interface PluginUpdateBadgeProps {

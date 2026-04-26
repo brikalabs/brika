@@ -1,15 +1,15 @@
-import { Link } from '@tanstack/react-router';
-import type { LucideIcon } from 'lucide-react';
-import { ChevronDown, RefreshCw } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
 import {
   Button,
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
+  cn,
   Separator,
-} from '@/components/ui';
-import { cn } from '@/lib/utils';
+} from '@brika/clay';
+import { Link } from '@tanstack/react-router';
+import type { LucideIcon } from 'lucide-react';
+import { ChevronDown, RefreshCw } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface ErrorLayoutProps {
   icon: LucideIcon;

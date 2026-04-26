@@ -1,6 +1,6 @@
+import { Card, CardContent } from '@brika/clay';
 import { Link } from '@tanstack/react-router';
 import { ArrowLeft, Package } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
 import { paths } from '@/routes/paths';
 

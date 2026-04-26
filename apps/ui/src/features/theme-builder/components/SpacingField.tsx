@@ -4,9 +4,9 @@
  * right; this field only exposes the raw scale.
  */
 
+import { Slider, SliderValue } from '@brika/clay';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Slider, SliderValue } from '@/components/ui';
 import { nearlyEquals, type Preset, PresetChips } from './primitives';
 
 interface SpacingFieldProps {

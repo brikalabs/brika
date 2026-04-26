@@ -1,7 +1,7 @@
+import { cn } from '@brika/clay';
 import { type HandleProps } from '@xyflow/react';
 import React, { type ComponentProps } from 'react';
 import { BaseHandle } from '@/components/base-handle';
-import { cn } from '@/lib/utils';
 
 const flexDirections = {
   top: 'flex-col',

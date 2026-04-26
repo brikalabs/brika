@@ -1,3 +1,4 @@
+import { Button } from '@brika/clay';
 import { useQuery } from '@tanstack/react-query';
 import {
   Background,
@@ -25,7 +26,6 @@ import {
   Zap,
 } from 'lucide-react';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Button } from '@/components/ui';
 import { fetcher } from '@/lib/query';
 import { useLocale } from '@/lib/use-locale';
 import '@xyflow/react/dist/style.css';

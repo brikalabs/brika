@@ -4,10 +4,10 @@
  * of the app.
  */
 
+import { Tabs, TabsList, TabsTrigger } from '@brika/clay';
 import { Layout, LayoutDashboard, Moon, Sun } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui';
 import type { ThemeConfig } from '../types';
 import { AppScene, LibraryScene } from './preview-scenes';
 import { ThemedSurface } from './ThemedSurface';

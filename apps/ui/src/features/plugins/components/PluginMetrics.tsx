@@ -1,6 +1,6 @@
+import { Avatar, AvatarFallback, Card } from '@brika/clay';
+import { MetricsChart } from '@brika/clay/components/chart';
 import { Cpu, MemoryStick } from 'lucide-react';
-import { Avatar, AvatarFallback, Card } from '@/components/ui';
-import { MetricsChart } from '@/components/ui/chart';
 import { useLocale } from '@/lib/use-locale';
 import type { PluginMetrics as PluginMetricsType } from '../api';
 

@@ -9,10 +9,10 @@
  * pairings stay honest.
  */
 
+import { cn } from '@brika/clay';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@brika/clay/components/tooltip';
 import type { ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { cn } from '@/lib/utils';
 import { contrastRatio, gradeContrast } from '../color-utils';
 
 interface ColorFieldProps {

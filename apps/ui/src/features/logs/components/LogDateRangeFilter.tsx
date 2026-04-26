@@ -1,5 +1,5 @@
+import { Input } from "@brika/clay";
 import { Calendar } from "lucide-react";
-import { Input } from "@/components/ui";
 import { useLocale } from "@/lib/use-locale";
 
 interface LogDateRangeFilterProps {

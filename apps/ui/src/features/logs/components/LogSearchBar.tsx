@@ -1,5 +1,3 @@
-import { Search, X } from "lucide-react";
-import { useState } from "react";
 import {
   Button,
   Input,
@@ -8,7 +6,9 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui";
+} from "@brika/clay";
+import { Search, X } from "lucide-react";
+import { useState } from "react";
 import { useLocale } from "@/lib/use-locale";
 import type { PluginInfo } from "../api";
 

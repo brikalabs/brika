@@ -1,8 +1,8 @@
 import { AuthProvider } from '@brika/auth/react';
+import { TooltipProvider } from '@brika/clay';
 import { QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { TooltipProvider } from '@/components/ui';
 import { queryClient } from '@/lib/query';
 import { RouteProvider } from '@/router';
 

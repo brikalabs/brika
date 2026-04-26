@@ -1,6 +1,6 @@
+import { Avatar, AvatarFallback, Input, Label } from '@brika/clay';
 import { LayoutDashboard } from 'lucide-react';
 import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
-import { Avatar, AvatarFallback, Input, Label } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
 
 interface BoardFormFieldsProps {

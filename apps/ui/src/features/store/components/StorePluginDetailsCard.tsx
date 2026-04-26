@@ -1,4 +1,4 @@
-import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui';
+import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@brika/clay';
 import { useLocale } from '@/lib/use-locale';
 import type { StorePlugin } from '../types';
 

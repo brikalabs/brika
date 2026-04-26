@@ -1,5 +1,3 @@
-import { Trash2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,7 +15,9 @@ import {
   DialogHeader,
   DialogTitle,
   Separator,
-} from '@/components/ui';
+} from '@brika/clay';
+import { Trash2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useLocale } from '@/lib/use-locale';
 import type { BoardSummary } from '../api';
 import { useDeleteBoard, useUpdateBoard } from '../hooks';

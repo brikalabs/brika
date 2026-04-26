@@ -7,7 +7,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui';
+} from '@brika/clay';
 import { useLocale } from '@/lib/use-locale';
 import { useUserMutations } from '../hooks';
 

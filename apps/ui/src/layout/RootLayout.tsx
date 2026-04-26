@@ -1,5 +1,30 @@
 import { Scope } from '@brika/auth';
 import { useAuth, useCanAccess } from '@brika/auth/react';
+import { cn } from '@brika/clay';
+import { BrikaLogo } from '@brika/clay/components/brika-logo';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@brika/clay/components/dropdown-menu';
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarRail,
+  useSidebar,
+} from '@brika/clay/components/sidebar';
 import { Link, Navigate, Outlet, useMatchRoute, useRouterState } from '@tanstack/react-router';
 import {
   Blocks,
@@ -17,30 +42,6 @@ import {
   Workflow,
   Zap,
 } from 'lucide-react';
-import { BrikaLogo } from '@/components/ui/brika-logo';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarHeader,
-  SidebarInset,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarProvider,
-  SidebarRail,
-  useSidebar,
-} from '@/components/ui/sidebar';
 import { UserAvatar } from '@/components/user-avatar';
 import { LoginPage } from '@/features/auth';
 import { useHealth } from '@/features/dashboard/hooks';
@@ -48,7 +49,6 @@ import { useUpdateCheck } from '@/features/updates';
 import { useAuthInterceptor } from '@/hooks/use-auth-interceptor';
 import { ThemeProvider } from '@/lib/theme-provider';
 import { useLocale } from '@/lib/use-locale';
-import { cn } from '@/lib/utils';
 
 interface NavItem {
   to: string;

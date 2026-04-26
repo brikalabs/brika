@@ -13,7 +13,7 @@
  *   Cmd/Ctrl+S       Save
  */
 
-import { Card } from '@/components/ui';
+import { Card } from '@brika/clay';
 import { ControlsPanel } from './components/ControlsPanel';
 import { PresetPicker } from './components/PresetPicker';
 import { PreviewCanvas } from './components/PreviewCanvas';

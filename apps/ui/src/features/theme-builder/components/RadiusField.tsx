@@ -6,9 +6,9 @@
  * users see the whole scale ripple as they drag.
  */
 
+import { Slider, SliderValue } from '@brika/clay';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Slider, SliderValue } from '@/components/ui';
 import { RADIUS_PRESETS } from '../radius-presets';
 import { FieldPreview } from './FieldPreview';
 import { cssVars, nearlyEquals, type Preset, PresetChips, SemanticTile } from './primitives';

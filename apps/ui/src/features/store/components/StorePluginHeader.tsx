@@ -1,6 +1,6 @@
+import { Avatar, AvatarFallback, AvatarImage, Badge, Button } from '@brika/clay';
 import { Link } from '@tanstack/react-router';
 import { ArrowLeft, Code2, Download, ExternalLink, Home, Package, Tag, User } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage, Badge, Button } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
 import { paths } from '@/routes/paths';
 import type { StorePlugin } from '../types';

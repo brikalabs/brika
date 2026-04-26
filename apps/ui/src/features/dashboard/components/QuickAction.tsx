@@ -1,7 +1,7 @@
+import { Avatar, AvatarFallback, Card } from '@brika/clay';
 import { Link } from '@tanstack/react-router';
 import { ArrowRight } from 'lucide-react';
 import type React from 'react';
-import { Avatar, AvatarFallback, Card } from '@/components/ui';
 import type { Accent } from './StatCard';
 
 export interface QuickActionProps {

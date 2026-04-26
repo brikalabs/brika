@@ -9,8 +9,8 @@
  * the chosen value.
  */
 
+import { cn } from '@brika/clay';
 import type { CSSProperties, ReactNode } from 'react';
-import { cn } from '@/lib/utils';
 
 interface FieldPreviewProps {
   /** Short left-aligned label, e.g. "Live preview". */

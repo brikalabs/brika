@@ -1,6 +1,6 @@
+import { Badge, Button, Card, CardContent, ScrollArea } from '@brika/clay';
 import { Clock, Pause, Play, Send, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import { Badge, Button, Card, CardContent, ScrollArea } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
 import { useEmitEvent, useSparkStream } from '../sparks-hooks';
 import { CustomEmitDialog } from './CustomEmitDialog';

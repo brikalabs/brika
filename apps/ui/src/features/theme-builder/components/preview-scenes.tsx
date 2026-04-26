@@ -14,20 +14,6 @@
  */
 
 import {
-  AlertTriangle,
-  Bell,
-  CheckCircle2,
-  Home,
-  Info,
-  Mail,
-  Search,
-  Settings,
-  Sparkles,
-  Zap,
-} from 'lucide-react';
-import { memo, type ReactNode } from 'react';
-import { useTranslation } from 'react-i18next';
-import {
   Avatar,
   AvatarFallback,
   Badge,
@@ -48,7 +34,21 @@ import {
   Separator,
   Switch,
   Textarea,
-} from '@/components/ui';
+} from '@brika/clay';
+import {
+  AlertTriangle,
+  Bell,
+  CheckCircle2,
+  Home,
+  Info,
+  Mail,
+  Search,
+  Settings,
+  Sparkles,
+  Zap,
+} from 'lucide-react';
+import { memo, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 
 /* ─────────────────────────────────────────────────────────────
    Primitives

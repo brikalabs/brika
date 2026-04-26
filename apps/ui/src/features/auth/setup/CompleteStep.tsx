@@ -1,8 +1,8 @@
 import { useAuth } from '@brika/auth/react';
+import { BrikaLogo } from '@brika/clay/components/brika-logo';
 import { Check } from 'lucide-react';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { BrikaLogo } from '@/components/ui/brika-logo';
 
 export function CompleteStep() {
   const { t } = useTranslation('setup');

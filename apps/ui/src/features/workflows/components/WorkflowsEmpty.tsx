@@ -1,6 +1,6 @@
+import { Button, Card } from '@brika/clay';
 import { useNavigate } from '@tanstack/react-router';
 import { Plus, Search, Workflow } from 'lucide-react';
-import { Button, Card } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
 import { paths } from '@/routes/paths';
 

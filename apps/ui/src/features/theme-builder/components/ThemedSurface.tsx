@@ -12,9 +12,9 @@
  * (e.g. viewport sizing, split-mode) a single-file change.
  */
 
+import { cn } from '@brika/clay';
 import type { CSSProperties, ReactNode } from 'react';
 import { useMemo } from 'react';
-import { cn } from '@/lib/utils';
 import { type ThemeVars, themeToVars } from '../theme-css';
 import type { ThemeConfig } from '../types';
 

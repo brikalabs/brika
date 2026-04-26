@@ -1,5 +1,3 @@
-import { Loader2 } from 'lucide-react';
-import { useState } from 'react';
 import {
   Button,
   Dialog,
@@ -11,7 +9,9 @@ import {
   Input,
   Label,
   Textarea,
-} from '@/components/ui';
+} from '@brika/clay';
+import { Loader2 } from 'lucide-react';
+import { useState } from 'react';
 import { useLocale } from '@/lib/use-locale';
 import { useEmitEvent } from '../sparks-hooks';
 

@@ -1,12 +1,12 @@
-import { Search } from 'lucide-react';
-import { Input } from '@/components/ui/input';
+import { Input } from '@brika/clay/components/input';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@brika/clay/components/select';
+import { Search } from 'lucide-react';
 import { useLocale } from '@/lib/use-locale';
 
 export type FilterValue = 'all' | 'verified' | 'compatible' | 'installed';

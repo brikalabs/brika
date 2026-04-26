@@ -1,8 +1,8 @@
+import { Card, CardContent } from '@brika/clay';
 import type { Plugin } from '@brika/plugin';
 import { AlertTriangle, Plug } from 'lucide-react';
 import { useMemo } from 'react';
 import { useDataView } from '@/components/DataView';
-import { Card, CardContent } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
 import { PluginCard, PluginCardSkeleton, PluginsPageHeader } from './components';
 import { usePluginMutations, usePlugins, usePluginUpdates } from './hooks';

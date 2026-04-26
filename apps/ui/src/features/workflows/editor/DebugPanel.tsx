@@ -5,18 +5,18 @@
  * Auto-connects to the global debug endpoint and filters by workflow ID.
  */
 
-import { ChevronRight, Radio, Trash2, Zap } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
 import {
   Badge,
   Button,
+  cn,
   ScrollArea,
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from '@/components/ui';
+} from '@brika/clay';
+import { ChevronRight, Radio, Trash2, Zap } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { useLocale } from '@/lib/use-locale';
-import { cn } from '@/lib/utils';
 import type { Workflow } from '../api';
 import {
   type DebugFilter,

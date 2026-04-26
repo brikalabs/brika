@@ -4,15 +4,8 @@
  * users see the typeface without leaving the panel.
  */
 
+import { Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@brika/clay';
 import { useTranslation } from 'react-i18next';
-import {
-  Input,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui';
 import type { FontChoice } from '../tokens';
 
 interface FontFieldProps {

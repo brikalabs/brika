@@ -1,7 +1,7 @@
+import { cn } from '@brika/clay';
 import type { LucideIcon } from 'lucide-react';
 import { Check, Copy } from 'lucide-react';
 import { useState } from 'react';
-import { cn } from '@/lib/utils';
 
 export interface InfoItemProps {
   icon: LucideIcon;

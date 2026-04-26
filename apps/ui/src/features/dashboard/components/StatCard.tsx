@@ -1,8 +1,8 @@
+import { Avatar, AvatarFallback, Card, cardVariants } from '@brika/clay';
 import { Link } from '@tanstack/react-router';
 import type { VariantProps } from 'class-variance-authority';
 import { ArrowRight } from 'lucide-react';
 import type React from 'react';
-import { Avatar, AvatarFallback, Card, cardVariants } from '@/components/ui';
 
 export type Accent = VariantProps<typeof cardVariants>['accent'];
 

@@ -1,6 +1,6 @@
+import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@brika/clay';
 import { Settings } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
 import { usePluginConfig, usePluginConfigMutation } from '../hooks';
 import { PreferenceField } from './PreferenceField';

@@ -1,6 +1,6 @@
+import { Badge } from '@brika/clay/components/badge';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@brika/clay/components/tooltip';
 import { AlertCircle, CheckCircle } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useLocale } from '@/lib/use-locale';
 
 interface CompatibilityBadgeProps {

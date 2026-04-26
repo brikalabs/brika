@@ -1,5 +1,3 @@
-import { useQueryClient } from '@tanstack/react-query';
-import { ArrowUpCircle, RotateCcw } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -7,7 +5,9 @@ import {
   DialogHeader,
   DialogTitle,
   ProgressDisplay,
-} from '@/components/ui';
+} from '@brika/clay';
+import { useQueryClient } from '@tanstack/react-query';
+import { ArrowUpCircle, RotateCcw } from 'lucide-react';
 import { getProgressValue, useProgressStream } from '@/hooks/use-progress-stream';
 import { useLocale } from '@/lib/use-locale';
 import { pluginsKeys } from '../api';

@@ -1,4 +1,3 @@
-import { Zap } from 'lucide-react';
 import {
   Avatar,
   AvatarFallback,
@@ -8,7 +7,8 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui';
+} from '@brika/clay';
+import { Zap } from 'lucide-react';
 import { useLocale } from '@/lib/use-locale';
 import type { Plugin } from '../api';
 

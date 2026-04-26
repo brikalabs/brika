@@ -6,10 +6,9 @@
  * spotlight). Border-width renders four chips with live samples.
  */
 
+import { cn, Switch } from '@brika/clay';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Switch } from '@/components/ui';
-import { cn } from '@/lib/utils';
 import { shadowScaleFor } from '../theme-css';
 import { ELEVATION_STYLES, type ElevationStyle } from '../types';
 import { FieldPreview } from './FieldPreview';

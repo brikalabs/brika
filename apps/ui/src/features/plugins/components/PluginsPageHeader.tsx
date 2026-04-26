@@ -1,9 +1,8 @@
+import { Button, cn } from '@brika/clay';
 import type { Plugin } from '@brika/plugin';
 import { Plus, RefreshCw } from 'lucide-react';
 import React from 'react';
-import { Button } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
-import { cn } from '@/lib/utils';
 import type { UpdateInfo } from '../registry-api';
 import { InstallPluginDialog } from './InstallPluginDialog';
 import { UpdateAllButton } from './UpdateAllButton';

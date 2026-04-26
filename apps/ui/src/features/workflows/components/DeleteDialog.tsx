@@ -6,7 +6,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui';
+} from '@brika/clay';
 import { useLocale } from '@/lib/use-locale';
 
 interface DeleteDialogProps {

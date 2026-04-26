@@ -1,7 +1,7 @@
+import { Button } from '@brika/clay';
 import { Bug, Ellipsis, PackageX } from 'lucide-react';
 import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
 import { Component, type ErrorInfo, memo, type ReactNode } from 'react';
-import { Button } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
 import { useBoardStore, useBrickPlacement } from '../store';
 import { ClientBrickView } from './ClientBrickView';

@@ -1,15 +1,13 @@
+import { BUILT_IN_THEMES as CLAY_THEMES } from '@brika/clay/themes';
 import type { MouseEvent } from 'react';
 import { createContext, useContext } from 'react';
 
-export const BUILT_IN_THEMES = [
-  'default',
-  'ocean',
-  'forest',
-  'sunset',
-  'lavender',
-  'ruby',
-] as const;
-export type BuiltInThemeName = (typeof BUILT_IN_THEMES)[number];
+/**
+ * Every theme id Clay ships, in registry order. Pulled directly from
+ * `@brika/clay/themes` so adding a new theme to Clay automatically
+ * surfaces it in the Brika theme selector — no second list to maintain.
+ */
+export const BUILT_IN_THEMES: readonly string[] = CLAY_THEMES.map((t) => t.id);
 
 /**
  * Theme name: a built-in name, or `custom-{id}` for a user-created theme
@@ -39,6 +37,6 @@ export function useTheme() {
   return context;
 }
 
-export function isBuiltInTheme(name: string): name is BuiltInThemeName {
-  return (BUILT_IN_THEMES as readonly string[]).includes(name);
+export function isBuiltInTheme(name: string): boolean {
+  return BUILT_IN_THEMES.includes(name);
 }

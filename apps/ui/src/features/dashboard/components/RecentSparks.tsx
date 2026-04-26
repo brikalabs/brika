@@ -1,4 +1,3 @@
-import { Zap } from 'lucide-react';
 import {
   Avatar,
   AvatarFallback,
@@ -9,7 +8,8 @@ import {
   CardHeader,
   CardTitle,
   ScrollArea,
-} from '@/components/ui';
+} from '@brika/clay';
+import { Zap } from 'lucide-react';
 import type { useSparkStream } from '@/features/events';
 import { useLocale } from '@/lib/use-locale';
 

@@ -4,9 +4,6 @@
  * layout wiring.
  */
 
-import { ArrowLeftRight, Search, Sparkles, SunMoon } from 'lucide-react';
-import { useMemo, useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import {
   Button,
   DropdownMenu,
@@ -18,7 +15,10 @@ import {
   Tabs,
   TabsList,
   TabsTrigger,
-} from '@/components/ui';
+} from '@brika/clay';
+import { ArrowLeftRight, Search, Sparkles, SunMoon } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { invertLightness, mix, parseHex, shiftLightness } from '../color-utils';
 import { TOKEN_GROUPS } from '../tokens';
 import { metaFor } from '../tokens-meta';

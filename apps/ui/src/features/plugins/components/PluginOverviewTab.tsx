@@ -1,6 +1,6 @@
+import { Badge, Card, CardContent, CardHeader, CardTitle } from '@brika/clay';
 import { useParams } from '@tanstack/react-router';
 import { FileText } from 'lucide-react';
-import { Badge, Card, CardContent, CardHeader, CardTitle } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
 import { usePlugin, usePluginMetrics, usePluginReadme } from '../hooks';
 import { Markdown } from './Markdown';

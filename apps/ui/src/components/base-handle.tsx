@@ -1,7 +1,6 @@
+import { cn } from '@brika/clay';
 import { Handle, type HandleProps } from '@xyflow/react';
 import type { ComponentProps } from 'react';
-
-import { cn } from '@/lib/utils';
 
 export type BaseHandleProps = HandleProps;
 

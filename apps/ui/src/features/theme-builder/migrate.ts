@@ -5,6 +5,13 @@
  * hydration, file import) and returns a ThemeConfig shaped to the
  * current in-memory contract. Keep migrations pure so they can be
  * reused in tests without side effects.
+ *
+ * Versions:
+ *   v1 — `componentTokens[c].{radius: number, corners: CornerStyle}`,
+ *        plus a deprecated top-level `componentRadii` map.
+ *   v2 — `componentTokens[c]` is a generic map keyed by clay's token
+ *        suffix (e.g. `radius: '0.5rem'`, `'corner-shape': 'bevel'`,
+ *        `shadow: 'var(--shadow-overlay)'`, `'padding-x': '1rem'`).
  */
 
 import {
@@ -15,17 +22,24 @@ import {
 } from './types';
 
 /**
- * Fold the legacy `componentRadii` field into `componentTokens[key].radius`
- * and drop the legacy field. Idempotent: running this on a migrated
- * theme is a no-op.
+ * Fold legacy fields into the canonical shape, idempotently.
+ *
+ *   - `componentRadii[c]` → `componentTokens[c].radius` (legacy).
+ *   - v1 numeric `componentTokens[c].radius` → string `'<n>rem'`.
+ *   - v1 `componentTokens[c].corners` → `componentTokens[c]['corner-shape']`.
+ *   - bumps `version` to the current `THEME_CONFIG_VERSION`.
  */
 export function migrateThemeConfig(theme: ThemeConfig): ThemeConfig {
+  const merged = absorbLegacyComponentRadii(theme);
+  const upgraded = upgradeComponentTokensToV2(merged);
+  return upgraded;
+}
+
+function absorbLegacyComponentRadii(theme: ThemeConfig): ThemeConfig {
   const legacy = theme.componentRadii;
-  const hasLegacy = legacy !== undefined && Object.keys(legacy).length > 0;
-  if (!hasLegacy) {
+  if (!legacy || Object.keys(legacy).length === 0) {
     return theme;
   }
-
   const componentTokens: Partial<Record<ComponentRadiusKey, ComponentTokens>> = {
     ...theme.componentTokens,
   };
@@ -36,8 +50,47 @@ export function migrateThemeConfig(theme: ThemeConfig): ThemeConfig {
     }
     componentTokens[key] = { ...componentTokens[key], radius };
   }
-
   const next: ThemeConfig = { ...theme, componentTokens };
   next.componentRadii = undefined;
   return next;
+}
+
+function upgradeComponentTokensToV2(theme: ThemeConfig): ThemeConfig {
+  const tokens = theme.componentTokens;
+  if (!tokens) {
+    return { ...theme, version: 2 };
+  }
+  const next: Record<string, ComponentTokens> = {};
+  for (const [component, entry] of Object.entries(tokens)) {
+    if (!entry) {
+      continue;
+    }
+    next[component] = upgradeEntry(entry);
+  }
+  return {
+    ...theme,
+    version: 2,
+    componentTokens: next as Record<ComponentRadiusKey, ComponentTokens>,
+  };
+}
+
+function upgradeEntry(entry: ComponentTokens): ComponentTokens {
+  const out: ComponentTokens = {};
+  for (const [suffix, value] of Object.entries(entry)) {
+    if (value === undefined || value === null || value === '') {
+      continue;
+    }
+    // v1 → v2: numeric radius becomes a string with a `rem` unit.
+    if (suffix === 'radius' && typeof value === 'number' && Number.isFinite(value)) {
+      out.radius = `${value}rem`;
+      continue;
+    }
+    // v1 → v2: `corners` is renamed to `corner-shape` to match clay's suffix.
+    if (suffix === 'corners' && typeof value === 'string') {
+      out['corner-shape'] = value;
+      continue;
+    }
+    out[suffix] = value;
+  }
+  return out;
 }

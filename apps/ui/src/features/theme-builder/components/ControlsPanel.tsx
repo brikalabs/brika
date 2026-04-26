@@ -6,10 +6,10 @@
  *   • Palette tab — the color tokens with search + sync utilities
  */
 
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@brika/clay';
 import { Palette as PaletteIcon, Sliders } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui';
 import type { ThemeConfig } from '../types';
 import { DesignTab } from './DesignTab';
 import { MetaHeader } from './MetaHeader';

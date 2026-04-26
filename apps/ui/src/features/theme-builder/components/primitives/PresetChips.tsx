@@ -6,7 +6,7 @@
  * callers can use whatever equality they need (exact match, epsilon, etc.).
  */
 
-import { cn } from '@/lib/utils';
+import { cn } from '@brika/clay';
 
 export interface Preset<T> {
   label: string;
