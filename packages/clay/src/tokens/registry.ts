@@ -956,7 +956,105 @@ const COMPONENT_TOKENS: readonly TokenSpec[] = [
 // existing Tailwind class numbers (h-9 = 2.25rem, px-4 = 1rem, etc.).
 // ─────────────────────────────────────────────────────────────
 
+// Padding / gap shorthands shared by the helper spreads below.
+const SPACING_1 = 'calc(var(--spacing) * 1)';
+const SPACING_1_5 = 'calc(var(--spacing) * 1.5)';
+const SPACING_2 = 'calc(var(--spacing) * 2)';
+const SPACING_3 = 'calc(var(--spacing) * 3)';
+const SPACING_4 = 'calc(var(--spacing) * 4)';
+const SPACING_6 = 'calc(var(--spacing) * 6)';
+
 const COMPONENT_EXPANSIONS: readonly TokenSpec[] = [
+  // ─── Helper-driven control / surface tokens ────────────────────
+  // These spreads emit the regular geometry / border / focus / motion /
+  // typography / state tokens per component (height, padding-x/y, gap,
+  // border-width/style, ring-*, duration/easing, font-*, hover/pressed/
+  // disabled overlays). Hand-authored irregular tokens live in
+  // `defineComponentTokens` calls further down.
+
+  ...controlSurfaceTokens(
+    meta('button'),
+    { height: '2.25rem', paddingX: SPACING_4, paddingY: SPACING_2, gap: SPACING_2 },
+    { fontWeight: '500', fontSize: 'var(--text-body-md)' }
+  ),
+
+  ...controlSurfaceTokens(
+    meta('input'),
+    { height: '2.25rem', paddingX: SPACING_3, paddingY: SPACING_2, gap: SPACING_2 },
+    { fontSize: 'var(--text-body-md)' },
+    '1px'
+  ),
+
+  ...controlSurfaceTokens(
+    meta('textarea'),
+    { paddingX: SPACING_3, paddingY: SPACING_2, gap: SPACING_2 },
+    { fontSize: 'var(--text-body-md)' },
+    '1px'
+  ),
+
+  ...controlSurfaceTokens(
+    meta('password-input', 'passwordInput'),
+    { height: '2.25rem', paddingX: SPACING_3, paddingY: SPACING_2 },
+    { fontSize: 'var(--text-body-md)' },
+    '1px'
+  ),
+
+  ...controlSurfaceTokens(
+    meta('select'),
+    { height: '2.25rem', paddingX: SPACING_3, paddingY: SPACING_2, gap: SPACING_2 },
+    { fontSize: 'var(--text-body-md)' },
+    '1px'
+  ),
+
+  ...borderTokens(meta('card'), '1px'),
+  ...motionTokens(meta('card')),
+  ...typographyTokens(meta('card'), { fontSize: 'var(--text-body-md)' }),
+  ...geometryTokens(meta('card'), { paddingX: SPACING_6, paddingY: SPACING_6, gap: SPACING_4 }),
+
+  ...borderTokens(meta('dialog'), '1px'),
+  ...focusTokens(meta('dialog')),
+  ...motionTokens(meta('dialog')),
+  ...geometryTokens(meta('dialog'), { paddingX: SPACING_6, paddingY: SPACING_6, gap: SPACING_4 }),
+
+  ...borderTokens(meta('sheet'), '1px'),
+  ...motionTokens(meta('sheet')),
+  ...geometryTokens(meta('sheet'), { paddingX: SPACING_6, paddingY: SPACING_6, gap: SPACING_4 }),
+
+  ...borderTokens(meta('popover'), '1px'),
+  ...motionTokens(meta('popover')),
+  ...geometryTokens(meta('popover'), { paddingX: SPACING_3, paddingY: SPACING_3, gap: SPACING_2 }),
+
+  ...borderTokens(meta('tooltip')),
+  ...motionTokens(meta('tooltip')),
+  ...typographyTokens(meta('tooltip'), { fontSize: 'var(--text-label-md)', fontWeight: '500' }),
+  ...geometryTokens(meta('tooltip'), { paddingX: SPACING_2, paddingY: SPACING_1 }),
+
+  ...borderTokens(meta('menu'), '1px'),
+  ...motionTokens(meta('menu')),
+  ...geometryTokens(meta('menu'), { paddingX: SPACING_1, paddingY: SPACING_1, gap: '0.125rem' }),
+
+  ...controlSurfaceTokens(
+    meta('menu-item', 'menuItem'),
+    { paddingX: SPACING_2, paddingY: SPACING_1_5, gap: SPACING_2 },
+    { fontSize: 'var(--text-body-md)' }
+  ),
+
+  ...controlSurfaceTokens(
+    meta('badge'),
+    { height: '1.5rem', paddingX: SPACING_2, paddingY: '0.125rem', gap: SPACING_1 },
+    { fontSize: 'var(--text-label-md)' }
+  ),
+
+  ...borderTokens(meta('tabs'), '1px'),
+  ...motionTokens(meta('tabs')),
+  ...focusTokens(meta('tabs')),
+  ...stateTokens(meta('tabs')),
+  ...typographyTokens(meta('tabs'), { fontSize: 'var(--text-label-lg)', fontWeight: '500' }),
+
+  ...controlSurfaceTokens(meta('switch'), {}, {}, '0px'),
+
+  ...controlSurfaceTokens(meta('checkbox'), {}, {}, '1px'),
+
   // Avatar
   ...defineComponentTokens(meta('avatar'), {
     size: { default: '2rem', description: 'Avatar diameter at the default size.' },
