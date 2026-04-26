@@ -1,6 +1,12 @@
 import { describe, expect, test } from 'bun:test';
 
-import { camelToKebab, flattenTheme, renderThemeStyleSheet } from '../flatten';
+import {
+  camelToKebab,
+  flattenTheme,
+  flattenThemeComplete,
+  getRegistryDefaults,
+  renderThemeStyleSheet,
+} from '../flatten';
 import type { ThemeConfig } from '../types';
 
 const baseTheme: ThemeConfig = {
@@ -126,6 +132,63 @@ describe('flattenTheme - components', () => {
       },
     });
     expect(flat.rootVars['--switch-thumb-radius']).toBe('8px');
+  });
+});
+
+describe('getRegistryDefaults', () => {
+  test('returns a complete token map for both modes', () => {
+    const defaults = getRegistryDefaults();
+    // Layer-1 colour role
+    expect(typeof defaults.light['--background']).toBe('string');
+    expect(typeof defaults.light['--primary']).toBe('string');
+    // Tailwind namespace duplicates: color tokens also appear under --color-*
+    expect(defaults.light['--color-primary']).toBe(defaults.light['--primary']);
+    // Dark map should contain the dark variant for tokens that differ in dark
+    expect(typeof defaults.dark['--background']).toBe('string');
+    expect(defaults.dark['--background']).not.toBe(defaults.light['--background']);
+  });
+
+  test('skips dark entries that match light (no spurious duplicate)', () => {
+    const defaults = getRegistryDefaults();
+    // `radius` is mode-invariant (no defaultDark), so it should NOT appear in dark.
+    expect(defaults.dark['--radius']).toBeUndefined();
+    // But a colour token that DOES vary in dark mode must appear there.
+    expect(defaults.dark['--primary']).toBeDefined();
+  });
+
+  test('is memoized — repeated calls return the same object reference', () => {
+    expect(getRegistryDefaults()).toBe(getRegistryDefaults());
+  });
+});
+
+describe('flattenThemeComplete', () => {
+  const baseTheme: ThemeConfig = {
+    id: 'complete-test',
+    name: 'Complete Test',
+    description: '',
+    accentSwatches: [],
+    colors: { light: { primary: '#abc' }, dark: { primary: '#def' } },
+  };
+
+  test('layers theme overrides on top of every registry default', () => {
+    const flat = flattenThemeComplete(baseTheme);
+    // Override is applied
+    expect(flat.rootVars['--primary']).toBe('#abc');
+    // A registry default unrelated to the override is still present
+    expect(typeof flat.rootVars['--background']).toBe('string');
+    // Dark override applied on top of dark defaults
+    expect(flat.darkVars['--primary']).toBe('#def');
+  });
+
+  test('darkVars covers tokens with no theme override but with a dark default', () => {
+    const flat = flattenThemeComplete({
+      id: 'd',
+      name: 'Dark only registry',
+      description: '',
+      accentSwatches: [],
+    });
+    // Token has no theme override but the registry has a dark default
+    expect(typeof flat.darkVars['--background']).toBe('string');
   });
 });
 
