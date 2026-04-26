@@ -124,7 +124,7 @@ export function CommandPalette() {
       ref={dialogRef}
       aria-label="Command palette"
       onClose={() => setOpen(false)}
-      className="fixed inset-0 z-50 m-0 flex max-h-none min-h-screen w-screen min-w-full max-w-none items-start justify-center rounded-none border-0 bg-transparent p-0 px-4 pt-[15vh] backdrop:bg-black/40 backdrop:backdrop-blur-sm"
+      className="hidden backdrop:bg-black/40 backdrop:backdrop-blur-sm open:fixed open:inset-0 open:z-50 open:m-0 open:flex open:max-h-none open:min-h-screen open:w-screen open:min-w-full open:max-w-none open:items-start open:justify-center open:rounded-none open:border-0 open:bg-transparent open:p-0 open:px-4 open:pt-[15vh]"
     >
       {/* Backdrop close — a real <button> filling the dialog so click-
           outside dismisses without putting a click handler on the
