@@ -13,7 +13,7 @@ import { Slider, SliderValue } from '@brika/clay';
 import type { ResolvedTokenSpec, TokenType } from '@brika/clay/tokens';
 import { type ReactNode, useCallback } from 'react';
 import { tokenSuffix } from '../clay-tokens';
-import type { ColorToken, CornerStyle, ThemeConfig } from '../types';
+import type { CornerStyle, ThemeConfig } from '../types';
 import { ColorField } from './ColorField';
 import { CornerField } from './CornerField';
 
@@ -42,7 +42,7 @@ interface TokenFieldProps {
   draft: ThemeConfig;
   mode: 'light' | 'dark';
   onColorChange: (
-    token: ColorToken,
+    token: string,
     slot: 'light' | 'dark' | 'both',
     value: string | undefined
   ) => void;
@@ -69,7 +69,7 @@ interface ColorTokenWidgetProps {
   draft: ThemeConfig;
   mode: 'light' | 'dark';
   onColorChange: (
-    token: ColorToken,
+    token: string,
     slot: 'light' | 'dark' | 'both',
     value: string | undefined
   ) => void;

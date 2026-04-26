@@ -212,36 +212,10 @@ function stateOpacityInto(out: ThemeVars, theme: ThemeConfig): void {
 }
 
 /**
- * Emit a single `--<component>-<suffix>: <value>` pair, normalizing v1
- * shapes (`radius: number` → rem, `corners: keyword` → corner-shape).
- * Returns `null` when the value should be skipped entirely.
- */
-function componentTokenEntry(
-  component: string,
-  suffix: string,
-  value: string | number | undefined
-): readonly [`--${string}`, string] | null {
-  if (value === undefined || value === '') {
-    return null;
-  }
-  if (suffix === 'radius' && typeof value === 'number') {
-    return Number.isFinite(value) ? [`--${component}-radius`, `${value}rem`] : null;
-  }
-  if (suffix === 'corners' && typeof value === 'string') {
-    return [`--${component}-corner-shape`, cornerShapeKeyword(value as CornerStyle)];
-  }
-  if (typeof value === 'string') {
-    return [`--${component}-${suffix}`, value];
-  }
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return [`--${component}-${suffix}`, String(value)];
-  }
-  return null;
-}
-
-/**
  * Emit `--<component>-<suffix>: <value>` for every per-component override
- * the theme sets. Generic over clay's Layer-2 token surface.
+ * the theme sets. Values are CSS strings ready to be written verbatim;
+ * the builder UI is responsible for formatting (rem, px, ms, …) before
+ * storing.
  */
 function componentTokensInto(out: ThemeVars, theme: ThemeConfig): void {
   const tokens = theme.componentTokens;
@@ -253,9 +227,8 @@ function componentTokensInto(out: ThemeVars, theme: ThemeConfig): void {
       continue;
     }
     for (const [suffix, value] of Object.entries(entry)) {
-      const pair = componentTokenEntry(component, suffix, value);
-      if (pair) {
-        out[pair[0]] = pair[1];
+      if (typeof value === 'string' && value !== '') {
+        out[`--${component}-${suffix}`] = value;
       }
     }
   }

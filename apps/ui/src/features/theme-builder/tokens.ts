@@ -5,13 +5,13 @@
  */
 
 import { findPreset } from './load-presets';
-import type { ColorToken, ThemeColors, ThemeConfig } from './types';
+import type { ThemeColors, ThemeConfig } from './types';
 import { THEME_CONFIG_VERSION } from './types';
 
 export interface TokenGroup {
   key: string;
   labelKey: string;
-  tokens: readonly ColorToken[];
+  tokens: readonly string[];
 }
 
 /** Rendering order of color groups in the editor panel.

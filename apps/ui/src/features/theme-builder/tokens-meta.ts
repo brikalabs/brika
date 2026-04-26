@@ -8,8 +8,6 @@
  * width to work with.
  */
 
-import type { ColorToken } from './types';
-
 export interface TokenMeta {
   /** The actual CSS custom property emitted at runtime. */
   cssVar: string;
@@ -19,7 +17,7 @@ export interface TokenMeta {
   example?: string;
 }
 
-export const COLOR_TOKEN_META: Partial<Record<ColorToken, TokenMeta>> = {
+export const COLOR_TOKEN_META: Readonly<Record<string, TokenMeta>> = {
   background: {
     cssVar: '--background',
     purpose: 'Page-level surface. Everything sits on top of this.',
@@ -291,6 +289,6 @@ export const COLOR_TOKEN_META: Partial<Record<ColorToken, TokenMeta>> = {
   },
 };
 
-export function metaFor(token: ColorToken): TokenMeta | undefined {
+export function metaFor(token: string): TokenMeta | undefined {
   return COLOR_TOKEN_META[token];
 }

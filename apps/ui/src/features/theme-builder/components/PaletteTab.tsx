@@ -22,10 +22,10 @@ import { useTranslation } from 'react-i18next';
 import { invertLightness, mix, parseHex, shiftLightness } from '../color-utils';
 import { TOKEN_GROUPS } from '../tokens';
 import { metaFor } from '../tokens-meta';
-import type { ColorToken, ThemeColors, ThemeConfig } from '../types';
+import type { ThemeColors, ThemeConfig } from '../types';
 import { ColorField } from './ColorField';
 
-const FOREGROUND_PAIRS: Partial<Record<ColorToken, { token: ColorToken; labelKey: string }>> = {
+const FOREGROUND_PAIRS: Readonly<Record<string, { token: string; labelKey: string }>> = {
   foreground: { token: 'background', labelKey: 'foregroundPairs.onBackground' },
   'card-foreground': { token: 'card', labelKey: 'foregroundPairs.onCard' },
   'popover-foreground': { token: 'popover', labelKey: 'foregroundPairs.onPopover' },
@@ -71,7 +71,7 @@ export function PaletteTab({ draft, onChange }: Readonly<PaletteTabProps>) {
 
   const palette = draft.colors[editingMode];
 
-  const updateColor = (token: ColorToken, value: string) => {
+  const updateColor = (token: string, value: string) => {
     const next: ThemeColors = { ...palette, [token]: value };
     onChange({
       ...draft,

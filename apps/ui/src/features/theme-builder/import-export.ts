@@ -5,7 +5,6 @@
  * with a fresh id (so re-importing doesn't overwrite the original).
  */
 
-import { migrateThemeConfig } from './migrate';
 import { cornerShapeKeyword, darkOverrideVars, themeToVars, varsToCssText } from './theme-css';
 import { THEME_CONFIG_VERSION, type ThemeColors, type ThemeConfig } from './types';
 
@@ -109,10 +108,10 @@ export async function importThemeFromFile(file: File): Promise<ThemeConfig> {
     );
   }
   const now = Date.now();
-  return migrateThemeConfig({
+  return {
     ...parsed,
     id: `custom-${now.toString(36)}`,
     createdAt: now,
     updatedAt: now,
-  });
+  };
 }

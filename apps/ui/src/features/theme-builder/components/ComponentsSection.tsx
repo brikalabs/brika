@@ -50,13 +50,7 @@ import {
 import { type ReactNode, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CATEGORY_ORDER, COMPONENT_TOKEN_INDEX, tokensByCategoryFor } from '../clay-tokens';
-import type {
-  ColorToken,
-  ComponentRadiusKey,
-  ComponentTokens,
-  ThemeColors,
-  ThemeConfig,
-} from '../types';
+import type { ComponentRadiusKey, ComponentTokens, ThemeColors, ThemeConfig } from '../types';
 import {
   AlertPreview,
   AvatarPreview,
@@ -92,7 +86,7 @@ import { TokenField } from './TokenField';
 type PreviewMode = 'light' | 'dark';
 
 type ColorSlot = 'light' | 'dark' | 'both';
-type ColorSetter = (token: ColorToken, slot: ColorSlot, value: string | undefined) => void;
+type ColorSetter = (token: string, slot: ColorSlot, value: string | undefined) => void;
 type ComponentTokenSetter = (component: string, suffix: string, value: string | undefined) => void;
 
 /* ─── Per-component identity (icon + group + preview) ────────── */
@@ -191,7 +185,10 @@ function buildGroups(): readonly { id: string; items: readonly ComponentIdentity
   // Anything clay defines that the curated groups missed: bucket under "other".
   const leftover = Object.keys(COMPONENT_TOKEN_INDEX).filter((n) => !seen.has(n));
   if (leftover.length > 0) {
-    out.push({ id: 'other', items: leftover.sort().map(identityFor) });
+    out.push({
+      id: 'other',
+      items: leftover.toSorted((a, b) => a.localeCompare(b)).map(identityFor),
+    });
   }
   return out;
 }

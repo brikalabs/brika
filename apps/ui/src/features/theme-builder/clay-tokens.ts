@@ -26,13 +26,17 @@ export const COMPONENT_TOKEN_INDEX: Readonly<Record<string, readonly ResolvedTok
       if (spec.layer !== 'component' || !spec.appliesTo) {
         continue;
       }
-      (map[spec.appliesTo] ??= []).push(spec);
+      const list = map[spec.appliesTo] ?? [];
+      list.push(spec);
+      map[spec.appliesTo] = list;
     }
     return map;
   })();
 
 /** Sorted list of every component name that has at least one Layer-2 token. */
-export const COMPONENT_NAMES: readonly string[] = Object.keys(COMPONENT_TOKEN_INDEX).sort();
+export const COMPONENT_NAMES: readonly string[] = Object.keys(COMPONENT_TOKEN_INDEX).toSorted(
+  (a, b) => a.localeCompare(b)
+);
 
 /**
  * Tokens for a component, grouped by category. Categories empty for the
@@ -44,7 +48,9 @@ export function tokensByCategoryFor(
   const tokens = COMPONENT_TOKEN_INDEX[component] ?? [];
   const out: Partial<Record<TokenCategory, ResolvedTokenSpec[]>> = {};
   for (const spec of tokens) {
-    (out[spec.category] ??= []).push(spec);
+    const list = out[spec.category] ?? [];
+    list.push(spec);
+    out[spec.category] = list;
   }
   return out;
 }

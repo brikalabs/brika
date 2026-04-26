@@ -14,7 +14,6 @@
  */
 
 import { fetcher } from '@/lib/query';
-import { migrateThemeConfig } from './migrate';
 import type { ThemeConfig } from './types';
 import { THEME_CONFIG_VERSION } from './types';
 
@@ -50,22 +49,16 @@ function readShadow(): ThemeConfig[] {
     if (!Array.isArray(parsed)) {
       return [];
     }
-    return parsed
-      .filter(
-        (t): t is ThemeConfig =>
-          typeof t === 'object' &&
-          t !== null &&
-          'id' in t &&
-          'name' in t &&
-          'colors' in t &&
-          'version' in t &&
-          // Accept v1 OR v2 — `migrateThemeConfig` upgrades v1 to v2
-          // before the theme reaches consumers. Rejecting older versions
-          // here would silently drop themes the user already saved.
-          typeof (t as { version: unknown }).version === 'number' &&
-          (t as { version: number }).version <= THEME_CONFIG_VERSION
-      )
-      .map(migrateThemeConfig);
+    return parsed.filter(
+      (t): t is ThemeConfig =>
+        typeof t === 'object' &&
+        t !== null &&
+        'id' in t &&
+        'name' in t &&
+        'colors' in t &&
+        'version' in t &&
+        (t as { version: unknown }).version === THEME_CONFIG_VERSION
+    );
   } catch {
     return [];
   }
@@ -89,7 +82,7 @@ function writeShadow(themes: ThemeConfig[]) {
 export async function hydrateCustomThemes(): Promise<ThemeConfig[]> {
   try {
     const data = await fetcher<{ themes: ThemeConfig[] }>('/api/settings/custom-themes');
-    const themes = (data.themes ?? []).map(migrateThemeConfig);
+    const themes = data.themes ?? [];
     writeShadow(themes);
     return themes;
   } catch {
@@ -123,7 +116,7 @@ export async function migrateLegacyThemes(): Promise<void> {
       return;
     }
     for (const raw of parsed) {
-      const t = migrateThemeConfig(raw as ThemeConfig);
+      const t = raw as ThemeConfig;
       await fetcher(`/api/settings/custom-themes/${encodeURIComponent(t.id)}`, {
         method: 'PUT',
         body: JSON.stringify(t),

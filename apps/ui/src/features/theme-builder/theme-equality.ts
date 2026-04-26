@@ -45,7 +45,9 @@ function isEqualOptionalRecord(
   return true;
 }
 
-/** Per-component tokens compared field-by-field (radius + corners today). */
+/** Per-component tokens compared field-by-field. Uses `isEqualOptionalRecord`
+ *  on each entry so any clay token suffix (radius, shadow, corner-shape, …)
+ *  is detected without listing them here. */
 function isEqualComponentTokens(
   a: ThemeConfig['componentTokens'],
   b: ThemeConfig['componentTokens']
@@ -57,11 +59,7 @@ function isEqualComponentTokens(
   }
   const bMap = new Map<string, ComponentTokens | undefined>(bEntries);
   for (const [key, av] of aEntries) {
-    const bv = bMap.get(key);
-    if (av?.radius !== bv?.radius) {
-      return false;
-    }
-    if (av?.corners !== bv?.corners) {
+    if (!isEqualOptionalRecord(av, bMap.get(key))) {
       return false;
     }
   }
