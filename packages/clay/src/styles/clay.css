@@ -18,9 +18,13 @@
 @plugin "../tailwind";
 @import "./components.css";
 
-@source "../components/**/*.{ts,tsx}";
-@source "../primitives/**/*.{ts,tsx}";
-@source "../themes/**/*.{ts,tsx}";
+/* `..` resolves to `src/` when this file is consumed from the workspace
+   source (`@import "@brika/clay/styles"` → `src/styles/clay.css`) and to
+   `dist/` when consumed from the published package (`dist/styles/clay.css`).
+   The recursive glob covers components, primitives, themes, AND tsup's
+   shared chunks at the dist root (`dist/chunk-*.js`) where the actual
+   className strings live after bundling. */
+@source "../**/*.{ts,tsx,js}";
 
 /* Dark variant: works whether the consumer toggles via `class="dark"` (legacy)
    or `data-mode="dark"` (current docs convention). Either selector activates
