@@ -1,0 +1,9 @@
+/**
+ * Label — weight + typographic bridges from per-component tokens.
+ */
+
+[data-slot="label"] {
+  font-weight: var(--label-font-weight);
+  letter-spacing: var(--label-letter-spacing);
+  text-transform: var(--label-text-transform);
+}

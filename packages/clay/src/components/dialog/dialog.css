@@ -1,0 +1,15 @@
+/**
+ * Dialog — border / backdrop / motion bridges from per-component tokens.
+ */
+
+[data-slot="dialog-content"] {
+  border-width: var(--dialog-border-width, var(--border-width));
+  border-style: var(--dialog-border-style, solid);
+  backdrop-filter: blur(var(--dialog-backdrop-blur, 0px));
+  transition-duration: var(--dialog-duration);
+  transition-timing-function: var(--dialog-easing);
+}
+
+@utility corner-dialog {
+  corner-shape: var(--dialog-corner-shape, var(--corner-shape, round));
+}

@@ -1,142 +1,46 @@
 /**
- * Hand-authored bridges between per-component tokens and CSS properties
- * that Tailwind utility classes don't naturally control.
+ * Manifest of per-component CSS files.
  *
- * Each rule selects a `[data-slot="<name>"]` element and sets one or more
- * properties from `--<name>-*` tokens. Themes override the tokens; these
- * rules carry the change to the rendered element without requiring any
- * change in the React component.
+ * Each component owns its CSS the way it owns its tokens — co-located
+ * inside `src/components/<name>/<name>.css`. Adding a new component is
+ * one new file in that folder plus one `@import` line below; no edits
+ * to `clay.css`, `tailwind.ts`, or `tsup.config.ts`.
  *
- * Why a hand-authored file:
- *   - Tailwind utilities cover height/padding/colors well; arbitrary
- *     `class="text-[var(...)]"` syntax fights with the class sorter and
- *     React's CSSProperties typing in inline-style escape hatches.
- *   - Adding `text-transform: var(--button-text-transform)` here applies
- *     to every Button without touching the JSX.
+ * Source-order: `clay.css` `@import`s this AFTER the Tailwind plugin
+ * has emitted `:root` token defaults, so the bridge rules see the
+ * latest values. Tailwind's own utility layer is generated at build
+ * time and beats these rules for properties it controls (so
+ * `<Button className="px-2">` still wins on padding). Each component
+ * file only sets properties no Tailwind utility supplies.
  *
- * Source-order note: `clay.css` `@import`s this AFTER `tokens-*.css` so
- * the `@theme inline` mappings see the component tokens. Tailwind's own
- * utility layer is generated at build time and beats these rules for
- * properties it controls (so `<Button className="px-2">` still wins on
- * padding). We only set properties no Tailwind utility supplies.
- *
- * One rule per selector — the CSS linter rejects duplicate selectors so
- * each component's properties are gathered into a single block.
+ * Order is alphabetical for grep-ability. Inter-component selector
+ * collisions are tracked by source-order within a single file (one
+ * rule per selector inside each component CSS).
  */
 
-[data-slot="button"] {
-  letter-spacing: var(--button-letter-spacing);
-  text-transform: var(--button-text-transform);
-  transition-duration: var(--button-duration);
-  transition-timing-function: var(--button-easing);
-}
-
-/*
- * Outline-style buttons opt into theme-driven border tokens. The base
- * `border` Tailwind class supplies a 1px solid border honoring the
- * `--border-width` scalar; this rule lifts that to the per-component
- * tokens so Brutalist's `--button-border-width: 2px` wins on outline
- * buttons without affecting filled / ghost / link variants.
- */
-[data-slot="button"][data-variant="outline"] {
-  border-width: var(--button-border-width);
-  border-style: var(--button-border-style);
-}
-
-[data-slot="input"],
-[data-slot="textarea"] {
-  border-width: var(--input-border-width, var(--border-width));
-  border-style: var(--input-border-style, solid);
-  transition-duration: var(--input-duration);
-  transition-timing-function: var(--input-easing);
-}
-
-[data-slot="select-trigger"] {
-  border-width: var(--select-border-width, var(--border-width));
-  border-style: var(--select-border-style, solid);
-  transition-duration: var(--input-duration);
-  transition-timing-function: var(--input-easing);
-}
-
-[data-slot="card"] {
-  border-width: var(--card-border-width, var(--border-width));
-  border-style: var(--card-border-style, solid);
-  backdrop-filter: blur(var(--card-backdrop-blur, 0px));
-  transition-duration: var(--card-duration);
-  transition-timing-function: var(--card-easing);
-}
-
-[data-slot="dialog-content"] {
-  border-width: var(--dialog-border-width, var(--border-width));
-  border-style: var(--dialog-border-style, solid);
-  backdrop-filter: blur(var(--dialog-backdrop-blur, 0px));
-  transition-duration: var(--dialog-duration);
-  transition-timing-function: var(--dialog-easing);
-}
-
-[data-slot="popover-content"] {
-  border-width: var(--popover-border-width, var(--border-width));
-  border-style: var(--popover-border-style, solid);
-  backdrop-filter: blur(var(--popover-backdrop-blur, 0px));
-  transition-duration: var(--popover-duration);
-  transition-timing-function: var(--popover-easing);
-}
-
-[data-slot="dropdown-menu-content"],
-[data-slot="select-content"] {
-  backdrop-filter: blur(var(--menu-backdrop-blur, 0px));
-}
-
-[data-slot="sheet-content"] {
-  backdrop-filter: blur(var(--sheet-backdrop-blur, 0px));
-}
-
-[data-slot="tooltip-content"] {
-  letter-spacing: var(--tooltip-letter-spacing);
-  text-transform: var(--tooltip-text-transform);
-  transition-duration: var(--tooltip-duration);
-  transition-timing-function: var(--tooltip-easing);
-}
-
-[data-slot="badge"] {
-  letter-spacing: var(--badge-letter-spacing);
-  text-transform: var(--badge-text-transform);
-  transition-duration: var(--badge-duration);
-  transition-timing-function: var(--badge-easing);
-}
-
-[data-slot="separator"],
-[data-slot="separator-root"] {
-  border-color: var(--separator-color);
-  border-style: var(--separator-style);
-}
-
-[data-slot="separator"][data-orientation="horizontal"],
-[data-slot="separator-root"][data-orientation="horizontal"] {
-  border-top-width: var(--separator-width);
-}
-
-[data-slot="separator"][data-orientation="vertical"],
-[data-slot="separator-root"][data-orientation="vertical"] {
-  border-left-width: var(--separator-width);
-}
-
-[data-slot="label"] {
-  font-weight: var(--label-font-weight);
-  letter-spacing: var(--label-letter-spacing);
-  text-transform: var(--label-text-transform);
-}
-
-[data-slot="code-block"],
-[data-slot="code-block-pre"] {
-  font-family: var(--code-block-font-family);
-  letter-spacing: var(--code-block-letter-spacing);
-}
+@import "../components/avatar/avatar.css";
+@import "../components/badge/badge.css";
+@import "../components/button/button.css";
+@import "../components/card/card.css";
+@import "../components/code-block/code-block.css";
+@import "../components/dialog/dialog.css";
+@import "../components/dropdown-menu/dropdown-menu.css";
+@import "../components/input/input.css";
+@import "../components/label/label.css";
+@import "../components/popover/popover.css";
+@import "../components/select/select.css";
+@import "../components/separator/separator.css";
+@import "../components/sheet/sheet.css";
+@import "../components/switch/switch.css";
+@import "../components/tabs/tabs.css";
+@import "../components/textarea/textarea.css";
+@import "../components/tooltip/tooltip.css";
+@import "./orphan-components.css";
 
 /*
  * Inherited-property re-assertion at every theme scope.
  *
- * `font-family` (and `color`) are inherited as their *computed* value —
+ * `font-family` (and `color`) are inherited as their *computed* value:
  * once `body` declares `font-family: var(--font-sans)`, the resolved
  * font cascades down even into descendants whose `--font-sans` was
  * redefined by a nested `<ThemeScope>`. Re-declaring the property at

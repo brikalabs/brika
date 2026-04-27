@@ -1,0 +1,20 @@
+/**
+ * Select — trigger borders, content backdrop, corner shape. The content
+ * surface reuses `--menu-backdrop-blur` because select dropdowns share
+ * dropdown-menu's surface treatment.
+ */
+
+[data-slot="select-trigger"] {
+  border-width: var(--select-border-width, var(--border-width));
+  border-style: var(--select-border-style, solid);
+  transition-duration: var(--input-duration);
+  transition-timing-function: var(--input-easing);
+}
+
+[data-slot="select-content"] {
+  backdrop-filter: blur(var(--menu-backdrop-blur, 0px));
+}
+
+@utility corner-select {
+  corner-shape: var(--select-corner-shape, var(--corner-shape, round));
+}

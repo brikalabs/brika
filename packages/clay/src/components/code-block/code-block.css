@@ -1,0 +1,10 @@
+/**
+ * Code block — monospace family + tracking for both the wrapper and the
+ * inner <pre>.
+ */
+
+[data-slot="code-block"],
+[data-slot="code-block-pre"] {
+  font-family: var(--code-block-font-family);
+  letter-spacing: var(--code-block-letter-spacing);
+}

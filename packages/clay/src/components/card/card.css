@@ -1,0 +1,15 @@
+/**
+ * Card — border / backdrop / motion bridges from per-component tokens.
+ */
+
+[data-slot="card"] {
+  border-width: var(--card-border-width, var(--border-width));
+  border-style: var(--card-border-style, solid);
+  backdrop-filter: blur(var(--card-backdrop-blur, 0px));
+  transition-duration: var(--card-duration);
+  transition-timing-function: var(--card-easing);
+}
+
+@utility corner-card {
+  corner-shape: var(--card-corner-shape, var(--corner-shape, round));
+}

@@ -12,9 +12,13 @@
 import type { TokenSpec } from '../types';
 import COLOR_DEFS from './colors.data.json' with { type: 'json' };
 
-/** Convert kebab-case to camelCase for theme paths. */
+/**
+ * Convert kebab-case to camelCase for theme paths. Handles numeric
+ * boundaries too (`data-1` → `data1`) so any segment ends up matching
+ * `^[a-z][a-zA-Z0-9]*$` (the registry-test convention).
+ */
 function camel(name: string): string {
-  return name.replaceAll(/-([a-z])/g, (_, c: string) => c.toUpperCase());
+  return name.replaceAll(/-([a-z0-9])/g, (_, c: string) => c.toUpperCase());
 }
 
 function toColorRole(entry: string[]): TokenSpec {

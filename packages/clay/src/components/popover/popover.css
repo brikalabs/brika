@@ -1,0 +1,15 @@
+/**
+ * Popover — border / backdrop / motion bridges from per-component tokens.
+ */
+
+[data-slot="popover-content"] {
+  border-width: var(--popover-border-width, var(--border-width));
+  border-style: var(--popover-border-style, solid);
+  backdrop-filter: blur(var(--popover-backdrop-blur, 0px));
+  transition-duration: var(--popover-duration);
+  transition-timing-function: var(--popover-easing);
+}
+
+@utility corner-popover {
+  corner-shape: var(--popover-corner-shape, var(--corner-shape, round));
+}

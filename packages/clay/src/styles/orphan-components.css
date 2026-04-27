@@ -1,0 +1,18 @@
+/**
+ * CSS for components that don't yet have a `src/components/<name>/`
+ * folder of their own. Mirrors `tokens/orphan-components.ts`. When a
+ * component graduates to a folder, move its block into that folder's
+ * `<name>.css` and delete the corresponding entry here.
+ */
+
+@utility corner-checkbox {
+  corner-shape: var(--checkbox-corner-shape, var(--corner-shape, round));
+}
+
+@utility corner-alert {
+  corner-shape: var(--alert-corner-shape, var(--corner-shape, round));
+}
+
+@utility corner-toast {
+  corner-shape: var(--toast-corner-shape, var(--corner-shape, round));
+}

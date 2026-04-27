@@ -2,15 +2,17 @@
  * Shape of Clay's token registry.
  *
  * The registry at `./registry.ts` is the single source of truth for every CSS
- * custom property that participates in Clay's theming system. From it the
- * build script `scripts/build-tokens.ts` emits:
+ * custom property that participates in Clay's theming system. The Tailwind v4
+ * plugin in `../tailwind.ts` reads it at compile time and emits, in one pass:
  *
- *   1. `src/styles/tokens-roles.css` — Layer 0 (scalars) + Layer 1 (roles),
- *      with `@theme inline` mappings and `:root` / dark-mode defaults.
- *   2. `src/styles/tokens-components.css` — Layer 2 component-scoped overrides
- *      and their `@theme inline` fallback chains.
- *   3. The `ComponentTokenMap` type used by `ThemeConfig` so theme JSON is
- *      type-checked end-to-end.
+ *   1. `:root { --token: default; … }` for every Layer 0 (scalars) and
+ *      Layer 1 (roles) entry, plus any Layer 2 entry whose default is a
+ *      literal or that hand-authored CSS reads directly via `var(--token)`.
+ *   2. A dark-mode override block for tokens with a distinct `defaultDark`.
+ *   3. `theme.extend` mappings (colors, borderRadius, boxShadow, fontFamily,
+ *      fontSize, opacity, blur, transitionDuration, transitionTimingFunction)
+ *      so utilities like `bg-slider-fill`, `rounded-card`, `shadow-button`
+ *      resolve through namespaced tokens.
  *
  * The registry has three layers; see `TokenLayer`.
  */
@@ -144,6 +146,12 @@ export type BorderStyle = 'solid' | 'dashed' | 'double' | 'none';
  *                    `name`. Set when the utility name differs from the var
  *                    name (e.g. `--motion-instant-duration` →
  *                    `duration-instant`).
+ *
+ *   lineHeight     — companion line-height for `text-*` size tokens.
+ *                    When set, the plugin emits a paired
+ *                    `--<name>--line-height` declaration alongside the
+ *                    size so Tailwind v4's `text-*` utility resolves
+ *                    both font-size AND line-height in one class.
  */
 export interface TokenSpec {
   readonly name: string;
@@ -157,6 +165,7 @@ export interface TokenSpec {
   readonly themePath?: string;
   readonly tailwindNamespace?: TailwindNamespace;
   readonly utilityAlias?: string;
+  readonly lineHeight?: string;
 }
 
 /**
