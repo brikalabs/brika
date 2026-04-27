@@ -1,0 +1,94 @@
+[
+  {
+    "name": "radius",
+    "category": "geometry",
+    "defaultLight": "0.75rem",
+    "description": "Base corner radius. Drives the entire semantic radius scale.",
+    "themePath": "geometry.radius"
+  },
+  {
+    "name": "spacing",
+    "category": "geometry",
+    "defaultLight": "0.25rem",
+    "description": "Base spacing step. Drives Tailwind p-/m-/gap-/size-* utilities.",
+    "themePath": "geometry.spacing"
+  },
+  {
+    "name": "text-base",
+    "category": "typography",
+    "defaultLight": "1rem",
+    "description": "Reference font size. Rescales the entire typography scale.",
+    "themePath": "geometry.textBase"
+  },
+  {
+    "name": "font-sans",
+    "category": "typography",
+    "defaultLight": "\"Inter\", ui-sans-serif, system-ui, sans-serif",
+    "description": "Default UI typeface for body and controls.",
+    "themePath": "geometry.fontSans",
+    "tailwindNamespace": "font",
+    "utilityAlias": "sans"
+  },
+  {
+    "name": "font-mono",
+    "category": "typography",
+    "defaultLight": "\"JetBrains Mono\", ui-monospace, SFMono-Regular, monospace",
+    "description": "Monospace typeface for code and tabular content.",
+    "themePath": "geometry.fontMono",
+    "tailwindNamespace": "font",
+    "utilityAlias": "mono"
+  },
+  {
+    "name": "border-width",
+    "category": "border",
+    "defaultLight": "1px",
+    "description": "Default border width. Honored by the bare `border` utility.",
+    "themePath": "borders.width",
+    "tailwindNamespace": "default",
+    "utilityAlias": "border-width"
+  },
+  {
+    "name": "ring-width",
+    "category": "focus",
+    "defaultLight": "2px",
+    "description": "Default focus ring width. Used by the `ring-themed` utility.",
+    "themePath": "focus.width"
+  },
+  {
+    "name": "ring-offset",
+    "category": "focus",
+    "defaultLight": "2px",
+    "description": "Default focus ring offset. Used by `ring-themed`.",
+    "themePath": "focus.offset"
+  },
+  {
+    "name": "motion-duration",
+    "category": "motion",
+    "defaultLight": "220ms",
+    "description": "Base transition duration. Derived motion channels scale from this.",
+    "themePath": "motion.duration"
+  },
+  {
+    "name": "motion-easing",
+    "category": "motion",
+    "defaultLight": "cubic-bezier(0.16, 1, 0.3, 1)",
+    "description": "Base transition easing. Used by the `ease-standard` utility.",
+    "themePath": "motion.easing"
+  },
+  {
+    "name": "backdrop-blur",
+    "category": "elevation",
+    "defaultLight": "8px",
+    "description": "Default backdrop blur. Honored by `backdrop-blur-theme`.",
+    "themePath": "geometry.backdropBlur",
+    "tailwindNamespace": "blur",
+    "utilityAlias": "theme"
+  },
+  {
+    "name": "glass-tint",
+    "category": "color",
+    "defaultLight": "transparent",
+    "description": "Tint colour layered above blurred surfaces. Use rgba/oklch with alpha.",
+    "themePath": "glass.tint"
+  }
+]
