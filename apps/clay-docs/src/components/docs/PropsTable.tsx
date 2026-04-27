@@ -1,4 +1,35 @@
+import ReactMarkdown, { type Components } from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import docgen from 'virtual:clay-docgen';
+
+/**
+ * Markdown overrides for prop descriptions. Keeps Clay's typography by
+ * routing each tag through the same Tailwind classes the rest of the
+ * docs site uses (mono code spans, link styles, list spacing).
+ *
+ * Headings are intentionally downgraded — a prop blurb shouldn't outrank
+ * the page's section headings, so any `#` becomes a bold span.
+ */
+const propMarkdownComponents: Components = {
+  p: ({ children }) => <span>{children}</span>,
+  code: ({ children }) => (
+    <code className="rounded border border-clay-hairline bg-clay-base px-1 py-px font-mono text-[0.8125rem] text-clay-default">
+      {children}
+    </code>
+  ),
+  a: ({ href, children }) => (
+    <a
+      href={href}
+      className="text-clay-link underline-offset-2 hover:underline"
+      rel={href?.startsWith('http') ? 'noopener noreferrer' : undefined}
+      target={href?.startsWith('http') ? '_blank' : undefined}
+    >
+      {children}
+    </a>
+  ),
+  strong: ({ children }) => <strong className="font-semibold text-clay-strong">{children}</strong>,
+  em: ({ children }) => <em className="italic">{children}</em>,
+};
 
 interface PropsTableProps {
   /** displayName as exported by the component (e.g. "Button", "ProgressDisplay"). */
@@ -110,7 +141,9 @@ export function PropsTable({ displayName }: PropsTableProps) {
               </div>
               {prop.description ? (
                 <p className="max-w-[68ch] text-clay-default text-sm leading-relaxed">
-                  {prop.description}
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} components={propMarkdownComponents}>
+                    {prop.description}
+                  </ReactMarkdown>
                 </p>
               ) : (
                 <p className="max-w-[68ch] text-clay-inactive italic text-sm leading-relaxed">

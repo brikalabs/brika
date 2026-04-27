@@ -159,7 +159,58 @@ export interface ComponentDefinition {
   readonly slots?: Readonly<Record<string, SlotInput>>;
 }
 
-const BACKDROP_BLUR_KEY = 'backdrop-blur';
+type ComponentMeta = ReturnType<typeof buildMeta>;
+
+/**
+ * Merge the conventional single-slot tokens (`radius`, `shadow`,
+ * `backdropBlur`) with the arbitrary `slots` record so they all flow
+ * through a single `defineComponentTokens` call and share validation +
+ * Tailwind-namespace inference.
+ */
+function collectSlotInputs(def: ComponentDefinition): Record<string, ComponentTokenInput> {
+  const merged: Record<string, ComponentTokenInput> = { ...def.slots };
+  if (def.radius) merged.radius = def.radius;
+  if (def.shadow) merged.shadow = def.shadow;
+  if (def.backdropBlur) merged['backdrop-blur'] = def.backdropBlur;
+  return merged;
+}
+
+/**
+ * Coerce the `border` opt-in into a concrete width string, or `null`
+ * if the opt-in is absent:
+ *
+ *   `'1px'`              → `'1px'`
+ *   `true`               → `'0px'`
+ *   `false` / `undefined`→ `null`
+ */
+function resolveBorderWidth(value: boolean | string | undefined): string | null {
+  if (value === undefined || value === false) return null;
+  return typeof value === 'string' ? value : '0px';
+}
+
+/**
+ * Resolve the interactive-bundle opt-ins (`surface` shortcut, plus the
+ * granular `border` / `focus` / `motion` / `state` flags) into the
+ * matching token sets. `surface` wins over the granular flags.
+ */
+function bundleTokens(m: ComponentMeta, def: ComponentDefinition): TokenSpec[] {
+  if (def.surface) {
+    const surfaceWidth = typeof def.surface === 'object' ? def.surface.borderWidth : '0px';
+    return [
+      ...borderTokens(m, surfaceWidth),
+      ...focusTokens(m),
+      ...motionTokens(m),
+      ...stateTokens(m),
+    ];
+  }
+  const out: TokenSpec[] = [];
+  const borderWidth = resolveBorderWidth(def.border);
+  if (borderWidth !== null) out.push(...borderTokens(m, borderWidth));
+  if (def.focus) out.push(...focusTokens(m));
+  if (def.motion) out.push(...motionTokens(m));
+  if (def.state) out.push(...stateTokens(m));
+  return out;
+}
 
 /**
  * Register every Layer-2 CSS-variable token a component needs, in one
@@ -173,51 +224,20 @@ const BACKDROP_BLUR_KEY = 'backdrop-blur';
  * @param name  Kebab-case component name. Becomes the prefix on every
  *              emitted CSS variable (`--<name>-radius`, …).
  * @param def   See `ComponentDefinition` for the full option list.
- * @returns     Frozen array of the `TokenSpec`s that were registered.
+ * @returns     Array of the `TokenSpec`s that were registered.
  */
 export function defineComponent(
   name: string,
   def: ComponentDefinition
 ): readonly TokenSpec[] {
   const m = buildMeta(name, def.themeKey);
-  const tokens: TokenSpec[] = [];
-
-  // 1. Single-slot conventional tokens + arbitrary slots all flow into
-  //    one defineComponentTokens call so they share validation + Tailwind
-  //    namespace inference.
-  const merged: Record<string, ComponentTokenInput> = { ...def.slots };
-  if (def.radius) merged.radius = def.radius;
-  if (def.shadow) merged.shadow = def.shadow;
-  if (def.backdropBlur) merged[BACKDROP_BLUR_KEY] = def.backdropBlur;
-  if (Object.keys(merged).length > 0) {
-    tokens.push(...defineComponentTokens(m, merged));
-  }
-
-  // 2. Surface bundle = border + focus + motion + state. When set, the
-  //    individual flags below are ignored to keep the mental model clean
-  //    (you opted into the bundle).
-  if (def.surface) {
-    const borderWidth = typeof def.surface === 'object' ? def.surface.borderWidth : '0px';
-    tokens.push(
-      ...borderTokens(m, borderWidth),
-      ...focusTokens(m),
-      ...motionTokens(m),
-      ...stateTokens(m)
-    );
-  } else {
-    if (def.border !== undefined && def.border !== false) {
-      const borderWidth = typeof def.border === 'string' ? def.border : '0px';
-      tokens.push(...borderTokens(m, borderWidth));
-    }
-    if (def.focus) tokens.push(...focusTokens(m));
-    if (def.motion) tokens.push(...motionTokens(m));
-    if (def.state) tokens.push(...stateTokens(m));
-  }
-
-  // 3. Sizing + typography opt-ins.
-  if (def.geometry) tokens.push(...geometryTokens(m, def.geometry));
-  if (def.typography) tokens.push(...typographyTokens(m, def.typography));
-
+  const slots = collectSlotInputs(def);
+  const tokens: TokenSpec[] = [
+    ...(Object.keys(slots).length > 0 ? defineComponentTokens(m, slots) : []),
+    ...bundleTokens(m, def),
+    ...(def.geometry ? geometryTokens(m, def.geometry) : []),
+    ...(def.typography ? typographyTokens(m, def.typography) : []),
+  ];
   registerTokens(tokens);
   return tokens;
 }
