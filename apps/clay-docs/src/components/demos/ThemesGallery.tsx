@@ -1,6 +1,7 @@
 import { Button } from '@brika/clay/components/button';
 import type { ThemeConfig, ThemeMode } from '@brika/clay/themes';
-import { BUILT_IN_THEMES, ThemeScope } from '@brika/clay/themes';
+import { ThemeScope } from '@brika/clay/themes';
+import { builtInThemes } from '@brika/clay/themes/registry';
 import { Check } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
@@ -252,7 +253,7 @@ export function ThemesGallery() {
 
   return (
     <div className="not-prose grid auto-rows-fr grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-      {BUILT_IN_THEMES.map((theme, index) => (
+      {builtInThemes.map((theme, index) => (
         <ThemeCard
           key={theme.id}
           theme={theme}

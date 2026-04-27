@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="512" height="512">
+  
+  <defs>
+    <filter id="ds" x="-30%" y="-10%" width="160%" height="160%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="3"></feGaussianBlur>
+      <feOffset dy="4"></feOffset>
+      <feComponentTransfer><feFuncA type="linear" slope="0.5"></feFuncA></feComponentTransfer>
+      <feMerge><feMergeNode></feMergeNode><feMergeNode in="SourceGraphic"></feMergeNode></feMerge>
+    </filter>
+    <linearGradient id="tile" x1="0" y1="0" x2="0.6" y2="1">
+      <stop offset="0%" stop-color="#3A3A3A"></stop>
+      <stop offset="55%" stop-color="#2B2B2B"></stop>
+      <stop offset="100%" stop-color="#1F1F1F"></stop>
+    </linearGradient>
+    <linearGradient id="rim" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="rgba(255,255,255,0.35)"></stop>
+      <stop offset="20%" stop-color="rgba(255,255,255,0)"></stop>
+    </linearGradient>
+    <filter id="grain">
+      <feTurbulence type="fractalNoise" baseFrequency="1.4" numOctaves="2" seed="3"></feTurbulence>
+      <feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.08 0"></feColorMatrix>
+      <feComposite in2="SourceGraphic" operator="in"></feComposite>
+    </filter>
+    <filter id="innerSh" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="1.6"></feGaussianBlur>
+      <feOffset dx="0.7" dy="0.9"></feOffset>
+    </filter>
+    <filter id="innerHi" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="1.2"></feGaussianBlur>
+      <feOffset dx="-0.4" dy="-0.7"></feOffset>
+    </filter>
+    <clipPath id="cL"><rect x="24" y="22" width="18.7" height="56" rx="4"></rect></clipPath>
+    <clipPath id="cTR"><rect x="48.7" y="22" width="27.3" height="25" rx="4"></rect></clipPath>
+    <clipPath id="cBR"><rect x="48.7" y="53" width="27.3" height="25" rx="4"></rect></clipPath>
+  </defs>
+
+  <g filter="url(#ds)">
+    <rect x="4" y="4" width="92" height="92" rx="22" fill="url(#tile)"></rect>
+  </g>
+  <rect x="4" y="4" width="92" height="92" rx="22" fill="url(#rim)" opacity="0.75"></rect>
+  <rect x="4" y="4" width="92" height="92" rx="22" filter="url(#grain)" fill="white"></rect>
+
+  <g>
+    <rect x="24" y="22" width="18.7" height="56" rx="4" fill="#A89F90"></rect>
+    <g clip-path="url(#cL)">
+      <rect x="23.5" y="21.5" width="19.7" height="57" rx="4.5" fill="none" stroke="#7A7165" stroke-width="2.6" filter="url(#innerSh)" opacity="0.9"></rect>
+      <rect x="24.3" y="22.5" width="18.1" height="55" rx="4" fill="none" stroke="#C9C0B2" stroke-width="1.6" filter="url(#innerHi)" opacity="0.7"></rect>
+    </g>
+  </g>
+  <g>
+    <rect x="48.7" y="22" width="27.3" height="25" rx="4" fill="#A89F90"></rect>
+    <g clip-path="url(#cTR)">
+      <rect x="48.2" y="21.5" width="28.3" height="26" rx="4.5" fill="none" stroke="#7A7165" stroke-width="2.6" filter="url(#innerSh)" opacity="0.9"></rect>
+      <rect x="49" y="22.5" width="26.7" height="24" rx="4" fill="none" stroke="#C9C0B2" stroke-width="1.6" filter="url(#innerHi)" opacity="0.7"></rect>
+    </g>
+  </g>
+  <g>
+    <rect x="48.7" y="53" width="27.3" height="25" rx="4" fill="#A89F90"></rect>
+    <g clip-path="url(#cBR)">
+      <rect x="48.2" y="52.5" width="28.3" height="26" rx="4.5" fill="none" stroke="#7A7165" stroke-width="2.6" filter="url(#innerSh)" opacity="0.9"></rect>
+      <rect x="49" y="53.5" width="26.7" height="24" rx="4" fill="none" stroke="#C9C0B2" stroke-width="1.6" filter="url(#innerHi)" opacity="0.7"></rect>
+    </g>
+  </g>
+</svg>

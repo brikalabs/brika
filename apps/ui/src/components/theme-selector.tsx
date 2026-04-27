@@ -14,7 +14,7 @@ import { Link } from '@tanstack/react-router';
 import { Monitor, Moon, Palette, Sparkles, Sun } from 'lucide-react';
 import { useCustomThemes } from '@/features/theme-builder/hooks';
 import { customThemeSelector } from '@/features/theme-builder/runtime';
-import { BUILT_IN_THEMES, type ThemeMode, useTheme } from '@/lib/theme-context';
+import { builtInThemes, type ThemeMode, useTheme } from '@/lib/theme-context';
 import { useLocale } from '@/lib/use-locale';
 import { paths } from '@/routes/paths';
 
@@ -38,7 +38,7 @@ export function ThemeSelector() {
         <SelectContent>
           <SelectGroup>
             <SelectLabel>{t('settings:themes.builtIn', { defaultValue: 'Built-in' })}</SelectLabel>
-            {BUILT_IN_THEMES.map((key) => (
+            {builtInThemes.map((key) => (
               <SelectItem key={key} value={key}>
                 {t(`settings:themes.${key}`)}
               </SelectItem>

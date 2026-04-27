@@ -111,5 +111,6 @@
     "label": {
       "fontWeight": "700"
     }
-  }
+  },
+  "effects": ["halftone"]
 }

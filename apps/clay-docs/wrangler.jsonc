@@ -3,7 +3,7 @@
   // Cloudflare Workers (Static Assets) config for the Clay docs site.
   // `astro build` writes static output to `./dist`, which Workers serves.
   // Day-to-day deploys: `bun run clay:deploy` from the repo root.
-  "name": "clay-brika-dev",
+  "name": "brika-clay",
   "compatibility_date": "2025-04-01",
   "assets": {
     "directory": "./dist"

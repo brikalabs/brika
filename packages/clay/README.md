@@ -1,3 +1,10 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/brikalabs/brika/main/packages/clay/src/assets/clay-ui-depth.svg">
+    <img src="https://raw.githubusercontent.com/brikalabs/brika/main/packages/clay/src/assets/clay-ui-depth-dark.svg" alt="Clay" width="120" />
+  </picture>
+</p>
+
 # @brika/clay
 
 Brika's React component library, token system, and first-party themes.
@@ -6,8 +13,6 @@ Clay provides the pressable raw material for every Brika surface:
 primitives, components, tokens, and a curated set of built-in themes.
 The package depends only on React 19 and Tailwind v4 — no other Brika
 packages, no monorepo glue.
-
-**Full docs and live demos:** <https://clay.brika.dev>
 
 ## Installation
 
@@ -89,9 +94,8 @@ the single source of truth.
   fall back to a Layer 1 role. Themes override one component without
   touching the rest by writing to these.
 
-The full reference is published at
-[clay.brika.dev/tokens](https://clay.brika.dev/tokens) and exported as
-TypeScript at `@brika/clay/tokens` (`TOKEN_REGISTRY`, `TokenSpec`).
+The full reference is exported as TypeScript at `@brika/clay/tokens`
+(`TOKEN_REGISTRY`, `TokenSpec`).
 
 ## Themes
 

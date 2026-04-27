@@ -92,5 +92,6 @@
       "letterSpacing": "0.01em",
       "textTransform": "none"
     }
-  }
+  },
+  "effects": ["paper"]
 }

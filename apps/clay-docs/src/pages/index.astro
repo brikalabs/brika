@@ -1,4 +1,5 @@
 ---
+import { ClayLogo } from '@brika/clay/components/clay-logo';
 import { HomeGrid } from '~/components/demos/HomeGrid.tsx';
 import CodeSource from '~/components/docs/CodeSource.astro';
 import MainLayout from '~/layouts/MainLayout.astro';
@@ -41,6 +42,15 @@ const componentCount = COMPONENTS.length;
     <div class="relative z-10 mx-auto grid max-w-6xl grid-cols-12 gap-6 px-6 py-20 md:px-12 md:py-28">
       <!-- Big editorial display headline, anchored left, asymmetric -->
       <div class="col-span-12 lg:col-span-8 clay-rise" style="animation-delay: 0.05s;">
+        <div class="mb-6 flex items-center gap-3">
+          <ClayLogo variant="badge" className="size-16 text-clay-brand" />
+          <span
+            class="text-5xl text-clay-strong leading-none"
+            style="font-family: 'Instrument Serif', 'Iowan Old Style', Georgia, serif; font-style: italic; letter-spacing: -0.022em;"
+          >
+            Clay
+          </span>
+        </div>
         <p class="mono-tag-tight mb-6 inline-flex items-center gap-2">
           <span class="hairline w-8"></span>
           Design system · 2026
@@ -111,9 +121,9 @@ const componentCount = COMPONENTS.length;
           <span class="font-display-italic text-clay-subtle">stocked.</span>
         </h2>
         <p class="hidden max-w-md text-clay-subtle text-sm leading-relaxed md:block">
-          Thirty-seven primitives, grouped by intent. Every demo here is the live
-          component rendering against the active theme — pick one above and watch
-          the gallery follow.
+          {componentCount} primitives, grouped by intent. Every demo here is the live
+          component rendering against the active theme — switch themes from the
+          header and the gallery follows.
         </p>
       </div>
     </div>

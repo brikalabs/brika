@@ -247,3 +247,174 @@ cleanup();`} />
     no flash of unstyled content.
   </div>
 </section>
+
+<section class="mb-16">
+  <div class="numbered-rule mb-6">
+    <span class="num">06</span>
+    <span class="label">Bundle</span>
+    <span class="spacer hairline"></span>
+    <span class="text-clay-inactive">Per-theme vs. registry</span>
+  </div>
+
+  <h2 id="bundle" class="mb-4 scroll-mt-24 font-display text-3xl text-clay-strong leading-[1.1]">
+    Loading only what you need
+  </h2>
+
+  <div class="clay-prose mb-6">
+    `@brika/clay/themes` re-exports each preset by name. Importing one
+    pulls just that JSON into your bundle — every other preset is dropped
+    by tree-shaking:
+
+    ```ts
+    import { ocean, applyTheme } from '@brika/clay/themes';
+    applyTheme(ocean);
+    ```
+
+    Pickers, galleries, and SSR pre-rendering need the *full* ordered
+    list. That lives behind a separate, opt-in entry so a one-theme app
+    never pays for the other seventeen JSON files:
+
+    ```ts
+    import { builtInThemes, builtInThemesById } from '@brika/clay/themes/registry';
+    ```
+
+    Same `ThemeConfig` shape, same narrative order — just isolated to a
+    chunk you only load when you actually need to enumerate themes.
+  </div>
+</section>
+
+<section class="mb-16">
+  <div class="numbered-rule mb-6">
+    <span class="num">07</span>
+    <span class="label">Persist</span>
+    <span class="spacer hairline"></span>
+    <span class="text-clay-inactive">App-side responsibility</span>
+  </div>
+
+  <h2 id="persist" class="mb-4 scroll-mt-24 font-display text-3xl text-clay-strong leading-[1.1]">
+    Remembering the choice
+  </h2>
+
+  <div class="clay-prose mb-6">
+    Clay never touches `localStorage`, cookies, or any other persistence
+    layer. Storage policy belongs to the app — your auth context, your
+    user-prefs API, your SSR cookies, your privacy stance. Clay just
+    exposes `applyTheme` and `builtInThemesById` and leaves the rest
+    to you.
+
+    Below is the canonical React pattern: a provider that reads the
+    saved id on mount, calls `applyTheme` on every change, and writes
+    back to your storage of choice. Drop it in once at the top of your
+    tree and `useClayTheme()` is available everywhere underneath.
+  </div>
+
+  <CodeSource lang="tsx" filename="theme-provider.tsx" code={`import { applyTheme } from '@brika/clay/themes';
+import { builtInThemesById } from '@brika/clay/themes/registry';
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
+
+const STORAGE_KEY = 'app-theme';
+const DEFAULT_ID = 'default';
+
+interface ClayThemeContextValue {
+  themeId: string;
+  setThemeId: (id: string) => void;
+}
+
+const ClayThemeContext = createContext<ClayThemeContextValue | null>(null);
+
+function readStoredId(): string {
+  if (typeof localStorage === 'undefined') {
+    return DEFAULT_ID;
+  }
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    return stored && builtInThemesById[stored] ? stored : DEFAULT_ID;
+  } catch {
+    return DEFAULT_ID;
+  }
+}
+
+export function ClayThemeProvider({ children }: { children: ReactNode }) {
+  const [themeId, setThemeIdState] = useState<string>(DEFAULT_ID);
+
+  // Read once on mount — keeps SSR output deterministic.
+  useEffect(() => {
+    setThemeIdState(readStoredId());
+  }, []);
+
+  // Apply (and re-apply on change). applyTheme returns a cleanup that
+  // removes the <style> tag, so swapping themes never leaves residue.
+  useEffect(() => {
+    const theme = builtInThemesById[themeId];
+    if (!theme) return;
+    return applyTheme(theme);
+  }, [themeId]);
+
+  const setThemeId = useCallback((id: string) => {
+    setThemeIdState(id);
+    try {
+      localStorage.setItem(STORAGE_KEY, id);
+    } catch {
+      /* storage unavailable — in-memory only */
+    }
+  }, []);
+
+  return (
+    <ClayThemeContext.Provider value={{ themeId, setThemeId }}>
+      {children}
+    </ClayThemeContext.Provider>
+  );
+}
+
+export function useClayTheme() {
+  const ctx = useContext(ClayThemeContext);
+  if (!ctx) throw new Error('useClayTheme must be used inside ClayThemeProvider');
+  return ctx;
+}`} />
+
+  <div class="clay-prose mt-6 mb-6">
+    **Avoiding the flash on first paint.** The provider above runs after
+    hydration, so a returning visitor sees Clay's default for one frame
+    before their saved theme paints. To fix that, pre-render every
+    theme's CSS at SSR and emit a tiny synchronous boot script in
+    `<head>` that picks the right one before first paint:
+  </div>
+
+  <CodeSource lang="tsx" filename="boot-script.tsx" code={`// 1. SSR: serialise every theme's CSS and inline it in <head>.
+import { renderThemeStyleSheet } from '@brika/clay/themes';
+import { builtInThemes } from '@brika/clay/themes/registry';
+
+const THEME_CSS_JSON = JSON.stringify(
+  Object.fromEntries(builtInThemes.map((t) => [t.id, renderThemeStyleSheet(t)]))
+);
+
+// 2. Browser: synchronous boot script — runs before paint.
+//    Pick the right CSS, append a <style id="clay-theme"> tag.
+//    On hydration, applyTheme finds the existing tag and updates it
+//    idempotently — no flash, no double <style>.
+const boot = \`
+  (() => {
+    try {
+      const map = JSON.parse(\${JSON.stringify(THEME_CSS_JSON)});
+      const id = localStorage.getItem('app-theme') || 'default';
+      const css = map[id];
+      if (!css) return;
+      document.documentElement.dataset.theme = id;
+      const tag = document.createElement('style');
+      tag.id = 'clay-theme';
+      tag.textContent = css;
+      document.head.appendChild(tag);
+    } catch {}
+  })();
+\`;`} />
+
+  <div class="clay-prose mt-6 mb-6">
+    The script is ~30 lines, runs synchronously, and only ships the
+    theme JSONs you choose to inline — skip the showcase themes if your
+    app only ships palette themes, or only inline the user's last two
+    choices, whatever fits. On hydration, the provider's `applyTheme`
+    call finds the existing `<style id="clay-theme">` and updates it
+    idempotently, so there's no double-tag and no flash.
+  </div>
+</section>

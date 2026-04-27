@@ -1,6 +1,7 @@
 ---
 import { CopyPageMenu } from '~/components/docs/CopyPageMenu.tsx';
 import { OnThisPage } from '~/components/OnThisPage.tsx';
+import { repoTreeUrl } from '~/lib/github';
 import DocLayout from './DocLayout.astro';
 
 interface Props {
@@ -14,17 +15,15 @@ interface Props {
 
 const { frontmatter } = Astro.props;
 
-const GITHUB_REPO = 'https://github.com/brikalabs/brika';
-const GITHUB_BRANCH = 'main';
-
+if (!Astro.site) {
+  throw new Error('astro.config.site must be set for MdxDocLayout');
+}
 const pathname = Astro.url.pathname.replace(/\/+$/, '') || '/';
-const mdxPath =
-  pathname === '/'
-    ? 'apps/clay-docs/src/pages/index.astro'
-    : `apps/clay-docs/src/pages${pathname}.mdx`;
+const pageUrl = new URL(pathname, Astro.site).href;
+const markdownUrl = `${pathname}.md`;
 
 const componentSourceUrl = frontmatter.sourceFile
-  ? `${GITHUB_REPO}/tree/${GITHUB_BRANCH}/packages/clay/src/${frontmatter.sourceFile}`
+  ? repoTreeUrl(`packages/clay/src/${frontmatter.sourceFile}`)
   : undefined;
 ---
 
@@ -73,7 +72,7 @@ const componentSourceUrl = frontmatter.sourceFile
         }
       </div>
       <div class="shrink-0 pt-1">
-        <CopyPageMenu pathname={pathname} sourcePath={mdxPath} client:load />
+        <CopyPageMenu pageUrl={pageUrl} markdownUrl={markdownUrl} client:load />
       </div>
     </div>
   </header>

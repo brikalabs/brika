@@ -112,3 +112,47 @@
 @utility corner-superellipse-* {
   corner-shape: superellipse(--value(number));
 }
+
+/* ─────────────────────────────────────────────────────────────
+   THEMED SCROLLBARS
+   Native scrollbars track the active theme via the standardized
+   `scrollbar-color` / `scrollbar-width` properties (Firefox, Chrome
+   121+, Safari 18.2+) and the older `::-webkit-scrollbar` pseudo
+   for fine-grained control on WebKit/Chromium.
+
+   Themes can override either layer via the four `--scrollbar-*`
+   tokens below; defaults inherit from `--muted-foreground` so
+   scrollbars stay quiet on every preset without per-theme work.
+   Radix `<ScrollArea>` paints its own portal divs and is unaffected.
+   ───────────────────────────────────────────────────────────── */
+
+:root {
+  --scrollbar-thumb: var(--muted-foreground);
+  --scrollbar-thumb-hover: var(--foreground);
+  --scrollbar-track: transparent;
+  --scrollbar-size: 10px;
+}
+
+* {
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  scrollbar-width: thin;
+}
+
+::-webkit-scrollbar {
+  width: var(--scrollbar-size);
+  height: var(--scrollbar-size);
+}
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: var(--radius, 0.5rem);
+  border: 2px solid var(--background);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+::-webkit-scrollbar-corner {
+  background: var(--scrollbar-track);
+}

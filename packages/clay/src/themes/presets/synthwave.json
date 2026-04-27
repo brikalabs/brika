@@ -1,0 +1,116 @@
+{
+  "id": "synthwave",
+  "name": "Synthwave",
+  "description": "Hot magenta on midnight purple. Glowing headlines, sharp edges — Miami Vice / Outrun energy.",
+  "accentSwatches": ["#ff2e9a", "#00f5ff", "#9d4edd", "#fcbf49"],
+  "colors": {
+    "light": {
+      "background": "#f3e8ff",
+      "foreground": "#1a0a2e",
+      "card": "#ffffff",
+      "card-foreground": "#1a0a2e",
+      "popover": "#ffffff",
+      "popover-foreground": "#1a0a2e",
+      "primary": "#d61f7f",
+      "primary-foreground": "#fff5fb",
+      "secondary": "#e6d8f5",
+      "secondary-foreground": "#1a0a2e",
+      "accent": "#7c3aed",
+      "accent-foreground": "#fff5fb",
+      "muted": "#ece0f9",
+      "muted-foreground": "#5e4585",
+      "border": "#c8b3e8",
+      "input": "#c8b3e8",
+      "ring": "#d61f7f",
+      "success": "#0a8a72",
+      "success-foreground": "#fff5fb",
+      "warning": "#b86e00",
+      "warning-foreground": "#fff5fb",
+      "info": "#0070b5",
+      "info-foreground": "#fff5fb",
+      "destructive": "#c1283a",
+      "destructive-foreground": "#fff5fb",
+      "data-1": "#d61f7f",
+      "data-2": "#7c3aed",
+      "data-3": "#0070b5",
+      "data-4": "#b86e00",
+      "data-5": "#0a8a72",
+      "data-6": "#c1283a",
+      "data-7": "#1d8db8",
+      "data-8": "#a02060"
+    },
+    "dark": {
+      "background": "#0a0420",
+      "foreground": "#f5e6ff",
+      "card": "#100838",
+      "card-foreground": "#f5e6ff",
+      "popover": "#100838",
+      "popover-foreground": "#f5e6ff",
+      "primary": "#ff2e9a",
+      "primary-foreground": "#0a0420",
+      "secondary": "#1a0e3d",
+      "secondary-foreground": "#f5e6ff",
+      "accent": "#00f5ff",
+      "accent-foreground": "#0a0420",
+      "muted": "#160a30",
+      "muted-foreground": "#a08bc8",
+      "border": "#3d1c5e",
+      "input": "#3d1c5e",
+      "ring": "#ff2e9a",
+      "success": "#00f5d4",
+      "success-foreground": "#0a0420",
+      "warning": "#fcbf49",
+      "warning-foreground": "#0a0420",
+      "info": "#00bbf9",
+      "info-foreground": "#0a0420",
+      "destructive": "#ff5e5b",
+      "destructive-foreground": "#0a0420",
+      "data-1": "#ff2e9a",
+      "data-2": "#00f5ff",
+      "data-3": "#9d4edd",
+      "data-4": "#fcbf49",
+      "data-5": "#00f5d4",
+      "data-6": "#ff5e5b",
+      "data-7": "#48cae4",
+      "data-8": "#ffd60a"
+    }
+  },
+  "geometry": {
+    "radius": "0.125rem",
+    "fontSans": "\"ITC Avant Garde Gothic\", Futura, \"Trebuchet MS\", ui-sans-serif, system-ui, sans-serif"
+  },
+  "borders": {
+    "width": "1px",
+    "style": "solid"
+  },
+  "motion": {
+    "duration": "180ms",
+    "easing": "cubic-bezier(0.5, 0, 0.5, 1)"
+  },
+  "focus": {
+    "width": "2px",
+    "offset": "2px"
+  },
+  "components": {
+    "button": {
+      "letterSpacing": "0.1em",
+      "textTransform": "uppercase",
+      "fontWeight": "700"
+    },
+    "badge": {
+      "letterSpacing": "0.08em",
+      "textTransform": "uppercase",
+      "fontWeight": "600"
+    },
+    "label": {
+      "letterSpacing": "0.08em",
+      "textTransform": "uppercase",
+      "fontWeight": "600"
+    },
+    "tooltip": {
+      "letterSpacing": "0.06em",
+      "textTransform": "uppercase"
+    }
+  },
+  "effects": ["glow"]
+}

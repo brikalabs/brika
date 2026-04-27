@@ -262,7 +262,15 @@ const DOCS_DATA: Readonly<Record<string, ComponentDocs>> = {
   progress: singleDefault('ProgressDefaultDemo', '<Progress value={66} />'),
   'progress-display': singleDefault(
     'ProgressDisplayDefaultDemo',
-    '<ProgressDisplay label="Uploading" value={66} />'
+    `<ProgressDisplay
+  progressValue={66}
+  phaseLabel="Uploading…"
+  logs={['Connecting', 'Streaming chunks (33/50)']}
+  scrollRef={scrollRef}
+  error={null}
+  success={false}
+  isProcessing
+/>`
   ),
   textarea: singleDefault('TextareaDefaultDemo', '<Textarea placeholder="Tell us more…" />'),
   'password-input': singleDefault(
@@ -525,6 +533,22 @@ const DOCS_DATA: Readonly<Record<string, ComponentDocs>> = {
 </OverflowList>`
   ),
   'brika-logo': singleDefault('BrikaLogoDefaultDemo', '<BrikaLogo />'),
+  'clay-logo': {
+    demos: [
+      {
+        name: 'ClayLogoDefaultDemo',
+        title: 'Default',
+        description: `Badge wrapping the three tiles. Tiles use \`currentColor\` so \`text-clay-brand\` paints them in the terracotta accent. The badge bg auto-flips light/dark via \`light-dark()\`.`,
+        code: '<ClayLogo variant="badge" className="size-16 text-clay-brand" />',
+      },
+      {
+        name: 'ClayLogoGlyphDemo',
+        title: 'Glyph',
+        description: 'Tiles only — drop the rounded-rect frame for inline use.',
+        code: '<ClayLogo variant="glyph" className="size-12 text-clay-brand" />',
+      },
+    ],
+  },
   alert: {
     demos: [
       {

@@ -1,4 +1,7 @@
 ---
+import { BrikaLogo } from '@brika/clay/components/brika-logo';
+import { ClayLogo } from '@brika/clay/components/clay-logo';
+
 declare const __CLAY_VERSION__: string;
 declare const __BUILD_COMMIT__: string;
 declare const __BUILD_DATE__: string;
@@ -17,9 +20,12 @@ const formattedDate = buildDate ? new Date(buildDate).toISOString().slice(0, 10)
           <span class="hairline w-6"></span>
           Colophon
         </p>
-        <p class="font-display text-6xl text-clay-strong leading-[0.9] md:text-7xl">
-          Clay.
-        </p>
+        <div class="flex items-center gap-4">
+          <ClayLogo variant="badge" className="size-20 text-clay-brand" />
+          <p class="font-display text-6xl text-clay-strong leading-[0.9] md:text-7xl">
+            Clay.
+          </p>
+        </div>
         <p class="mt-6 max-w-xs text-clay-subtle text-sm leading-relaxed">
           Pressable raw material for every Brika surface — pressed, fired, and
           set to cool with care.
@@ -122,7 +128,10 @@ const formattedDate = buildDate ? new Date(buildDate).toISOString().slice(0, 10)
       class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-6 py-3 md:px-12"
     >
       <div class="flex flex-wrap items-center gap-3 mono-tag-tight">
-        <span>Built by the Brika Labs team</span>
+        <span class="inline-flex items-center gap-1.5">
+          <BrikaLogo className="size-3.5 text-clay-strong" />
+          Built by the Brika Labs team
+        </span>
         <span class="hairline w-4"></span>
         <span>MIT licence</span>
       </div>
