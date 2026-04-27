@@ -1,6 +1,6 @@
+import docgen from 'virtual:clay-docgen';
 import ReactMarkdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import docgen from 'virtual:clay-docgen';
 
 /**
  * Markdown overrides for prop descriptions. Keeps Clay's typography by
@@ -101,9 +101,9 @@ export function PropsTable({ displayName }: PropsTableProps) {
           <span className="font-semibold text-clay-default">{displayName}</span> exposes no
           wrapper-specific props.
         </p>
-        <p className="mt-1 max-w-xl mx-auto text-[0.75rem] text-clay-inactive leading-relaxed">
-          All props pass through to the underlying HTML / Radix primitive — see the component
-          source linked above for the full type signature.
+        <p className="mx-auto mt-1 max-w-xl text-[0.75rem] text-clay-inactive leading-relaxed">
+          All props pass through to the underlying HTML / Radix primitive — see the component source
+          linked above for the full type signature.
         </p>
       </div>
     );
@@ -120,7 +120,7 @@ export function PropsTable({ displayName }: PropsTableProps) {
               <div className="mb-1 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
                 <a
                   href={`#${slug}`}
-                  className="font-mono font-semibold text-[0.9375rem] text-clay-strong hover:underline underline-offset-4"
+                  className="font-mono font-semibold text-[0.9375rem] text-clay-strong underline-offset-4 hover:underline"
                 >
                   {prop.name}
                   {prop.required && (
@@ -131,12 +131,11 @@ export function PropsTable({ displayName }: PropsTableProps) {
                 </a>
                 {prop.defaultValue !== null && (
                   <span className="font-mono text-[0.75rem] text-clay-inactive">
-                    default{' '}
-                    <span className="text-clay-default">{prop.defaultValue}</span>
+                    default <span className="text-clay-default">{prop.defaultValue}</span>
                   </span>
                 )}
               </div>
-              <div className="mb-2 font-mono text-[0.8125rem] leading-6 wrap-break-word">
+              <div className="wrap-break-word mb-2 font-mono text-[0.8125rem] leading-6">
                 <TypeSignature {...parsed} />
               </div>
               {prop.description ? (
@@ -146,7 +145,7 @@ export function PropsTable({ displayName }: PropsTableProps) {
                   </ReactMarkdown>
                 </p>
               ) : (
-                <p className="max-w-[68ch] text-clay-inactive italic text-sm leading-relaxed">
+                <p className="max-w-[68ch] text-clay-inactive text-sm italic leading-relaxed">
                   No description yet.
                 </p>
               )}

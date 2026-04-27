@@ -5,7 +5,7 @@ import * as React from 'react';
 import { cn } from '../../primitives/cn';
 
 const badgeVariants = cva(
-  'corner-themed inline-flex h-(--badge-height) w-fit shrink-0 items-center justify-center gap-(--badge-gap) overflow-hidden whitespace-nowrap rounded-badge border border-transparent px-(--badge-padding-x) py-(--badge-padding-y) font-(--badge-font-weight) tracking-(--badge-letter-spacing) [text-transform:var(--badge-text-transform)] text-xs transition-[color,box-shadow] duration-(--badge-duration) ease-(--badge-easing) focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&>svg]:pointer-events-none [&>svg]:size-3',
+  'corner-themed inline-flex h-(--badge-height) w-fit shrink-0 items-center justify-center gap-(--badge-gap) overflow-hidden whitespace-nowrap rounded-badge border border-transparent px-(--badge-padding-x) py-(--badge-padding-y) font-(--badge-font-weight) text-xs tracking-(--badge-letter-spacing) transition-[color,box-shadow] duration-(--badge-duration) ease-(--badge-easing) [text-transform:var(--badge-text-transform)] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&>svg]:pointer-events-none [&>svg]:size-3',
   {
     variants: {
       variant: {

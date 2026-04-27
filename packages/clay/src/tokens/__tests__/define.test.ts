@@ -133,10 +133,7 @@ describe('defineComponent', () => {
   describe('granular bundles', () => {
     test('`border: "1px"` registers border-width + border-style', () => {
       const tokens = defineComponent('test-border', { border: '1px' });
-      expect(names(tokens)).toEqual([
-        'test-border-border-width',
-        'test-border-border-style',
-      ]);
+      expect(names(tokens)).toEqual(['test-border-border-width', 'test-border-border-style']);
       expect(find(tokens, 'test-border-border-width')?.defaultLight).toBe('1px');
     });
 
@@ -186,10 +183,7 @@ describe('defineComponent', () => {
       const tokens = defineComponent('test-geometry', {
         geometry: { paddingX: '1rem', paddingY: '0.5rem' },
       });
-      expect(names(tokens)).toEqual([
-        'test-geometry-padding-x',
-        'test-geometry-padding-y',
-      ]);
+      expect(names(tokens)).toEqual(['test-geometry-padding-x', 'test-geometry-padding-y']);
     });
 
     test('all four fields produce all four tokens', () => {
@@ -256,9 +250,7 @@ describe('defineComponent', () => {
         themeKey: 'customAlias',
         radius: { default: '0.5rem', description: 'r' },
       });
-      expect(find(tokens, 'test-aliased-radius')?.themePath).toBe(
-        'components.customAlias.radius'
-      );
+      expect(find(tokens, 'test-aliased-radius')?.themePath).toBe('components.customAlias.radius');
     });
   });
 

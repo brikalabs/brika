@@ -4,8 +4,8 @@
  * component's own `tokens.ts` and delete the corresponding entry here.
  */
 
-import { defineComponent } from './define';
 import { registerTokens } from './component-registry';
+import { defineComponent } from './define';
 
 defineComponent('alert', {
   radius: {

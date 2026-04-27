@@ -60,11 +60,11 @@
 import { registerTokens } from './component-registry';
 import {
   borderTokens,
+  meta as buildMeta,
   type ComponentTokenInput,
   defineComponentTokens,
   focusTokens,
   geometryTokens,
-  meta as buildMeta,
   motionTokens,
   stateTokens,
   typographyTokens,
@@ -169,9 +169,15 @@ type ComponentMeta = ReturnType<typeof buildMeta>;
  */
 function collectSlotInputs(def: ComponentDefinition): Record<string, ComponentTokenInput> {
   const merged: Record<string, ComponentTokenInput> = { ...def.slots };
-  if (def.radius) merged.radius = def.radius;
-  if (def.shadow) merged.shadow = def.shadow;
-  if (def.backdropBlur) merged['backdrop-blur'] = def.backdropBlur;
+  if (def.radius) {
+    merged.radius = def.radius;
+  }
+  if (def.shadow) {
+    merged.shadow = def.shadow;
+  }
+  if (def.backdropBlur) {
+    merged['backdrop-blur'] = def.backdropBlur;
+  }
   return merged;
 }
 
@@ -184,7 +190,9 @@ function collectSlotInputs(def: ComponentDefinition): Record<string, ComponentTo
  *   `false` / `undefined`→ `null`
  */
 function resolveBorderWidth(value: boolean | string | undefined): string | null {
-  if (value === undefined || value === false) return null;
+  if (value === undefined || value === false) {
+    return null;
+  }
   return typeof value === 'string' ? value : '0px';
 }
 
@@ -205,10 +213,18 @@ function bundleTokens(m: ComponentMeta, def: ComponentDefinition): TokenSpec[] {
   }
   const out: TokenSpec[] = [];
   const borderWidth = resolveBorderWidth(def.border);
-  if (borderWidth !== null) out.push(...borderTokens(m, borderWidth));
-  if (def.focus) out.push(...focusTokens(m));
-  if (def.motion) out.push(...motionTokens(m));
-  if (def.state) out.push(...stateTokens(m));
+  if (borderWidth !== null) {
+    out.push(...borderTokens(m, borderWidth));
+  }
+  if (def.focus) {
+    out.push(...focusTokens(m));
+  }
+  if (def.motion) {
+    out.push(...motionTokens(m));
+  }
+  if (def.state) {
+    out.push(...stateTokens(m));
+  }
   return out;
 }
 
@@ -226,10 +242,7 @@ function bundleTokens(m: ComponentMeta, def: ComponentDefinition): TokenSpec[] {
  * @param def   See `ComponentDefinition` for the full option list.
  * @returns     Array of the `TokenSpec`s that were registered.
  */
-export function defineComponent(
-  name: string,
-  def: ComponentDefinition
-): readonly TokenSpec[] {
+export function defineComponent(name: string, def: ComponentDefinition): readonly TokenSpec[] {
   const m = buildMeta(name, def.themeKey);
   const slots = collectSlotInputs(def);
   const tokens: TokenSpec[] = [
