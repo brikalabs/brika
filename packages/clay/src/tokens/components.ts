@@ -2,12 +2,13 @@
  * Layer-2 component-token aggregator.
  *
  * Each component owns its tokens via a co-located `tokens.ts` that
- * calls `registerTokens(...)` on import. This file imports those
- * modules for their side effects, then exports the accumulated list
- * via `getRegisteredTokens()`.
+ * calls `defineComponent(...)` (see [`./define.ts`](./define.ts)) on
+ * import. This file imports those modules for their side effects, then
+ * exports the accumulated list via `getRegisteredTokens()`.
  *
- * To onboard a new component: drop `tokens.ts` next to its `meta.ts`
- * and have it call `registerTokens([...])`. Add one bare import below.
+ * To onboard a new component: drop `tokens.ts` next to its `meta.ts`,
+ * have it call `defineComponent('<name>', { ... })`, and add one bare
+ * import below.
  *
  * Tokens for components that don't yet have their own folder live in
  * `./orphan-components.ts`.

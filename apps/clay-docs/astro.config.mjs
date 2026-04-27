@@ -44,10 +44,6 @@ export default defineConfig({
       __BUILD_COMMIT__: JSON.stringify(buildCommit),
       __BUILD_DATE__: JSON.stringify(buildDate),
     },
-    plugins: [
-      clayHmrPlugin({ dev: isDev }),
-      clayDocgenPlugin({ dev: isDev }),
-      tailwindcss(),
-    ],
+    plugins: [clayHmrPlugin({ dev: isDev }), clayDocgenPlugin({ dev: isDev }), tailwindcss()],
   },
 });

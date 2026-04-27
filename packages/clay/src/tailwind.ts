@@ -36,18 +36,19 @@ import type { ResolvedTokenSpec, TailwindNamespace, TokenType } from './tokens/t
  * Tokens whose `defaultLight` is a literal (not `var(...)`) get a
  * concrete `:root` value — that's their whole job. Tokens whose default
  * is a `var()` chain only need to be in `:root` if some hand-authored
- * CSS reads them directly (e.g. `var(--button-duration)` in
- * `components/button/button.css`); otherwise the same fallback chain
- * is reachable through the Tailwind utility
- * (`theme.extend.transitionDuration`), and emitting them in `:root` is
- * dead weight.
+ * code reads them directly; otherwise the same fallback chain is
+ * reachable through the Tailwind utility (`theme.extend.transitionDuration`),
+ * and emitting them in `:root` is dead weight.
  *
- * Hand-authored CSS lives in two places now: `styles/*.css` (manifest
- * + cross-cutting orphan utilities + the `[data-clay-theme-scope]`
- * reset) and per-component `components/<name>/<name>.css` files. We
- * scan both at plugin compile time and union the `var(--...)` matches.
+ * Hand-authored references live in two places now:
+ *   - `styles/*.css` — cross-cutting utilities + theme-scope reset
+ *   - `components/<name>/<name>.tsx` — Tailwind v4 arbitrary classes
+ *     using the `(--name)` shorthand or `var(--name)` directly
+ *
+ * The scanner walks both and unions `var(--…)`, the `(--…)` shorthand,
+ * and the type-hinted `(length:--…)` / `(family-name:--…)` shorthands.
  */
-function readSourceCss(here: string): string {
+function readSourceCode(here: string): string {
   const parts: string[] = [];
   const stylesDir = join(here, 'styles');
   try {
@@ -69,9 +70,9 @@ function readSourceCss(here: string): string {
         continue;
       }
       try {
-        parts.push(readFileSync(join(folder, `${name}.css`), 'utf8'));
+        parts.push(readFileSync(join(folder, `${name}.tsx`), 'utf8'));
       } catch {
-        // No `<name>.css` in this component folder — skip silently.
+        // No `<name>.tsx` in this component folder — skip silently.
       }
     }
   } catch {
@@ -83,9 +84,12 @@ function readSourceCss(here: string): string {
 function readDirectVarReferences(): ReadonlySet<string> {
   try {
     const here = dirname(fileURLToPath(import.meta.url));
-    const css = readSourceCss(here);
+    const src = readSourceCode(here);
     const found = new Set<string>();
-    for (const match of css.matchAll(/var\(--([a-z][a-z0-9-]*)/g)) {
+    // Match `var(--name)`, `(--name)`, and `(<hint>:--name)` — covers
+    // hand-authored CSS plus Tailwind v4 arbitrary-value shorthand
+    // (`gap-(--button-gap)`, `border-(length:--button-border-width)`).
+    for (const match of src.matchAll(/\((?:[a-z][\w-]*\s*:\s*)?--([a-z][a-z0-9-]*)/g)) {
       found.add(match[1]);
     }
     return found;

@@ -24,7 +24,7 @@ function PopoverContent({
         align={align}
         sideOffset={sideOffset}
         className={cn(
-          'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 corner-popover z-50 w-72 origin-(--radix-popover-content-transform-origin) rounded-popover border bg-popover px-[var(--popover-padding-x)] py-[var(--popover-padding-y)] text-popover-foreground shadow-popover outline-hidden data-[state=closed]:animate-out data-[state=open]:animate-in',
+          'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 corner-themed z-50 w-72 origin-(--radix-popover-content-transform-origin) rounded-popover border-(length:--popover-border-width) [border-style:var(--popover-border-style)] [backdrop-filter:blur(var(--popover-backdrop-blur,0px))] bg-popover px-(--popover-padding-x) py-(--popover-padding-y) text-popover-foreground shadow-popover outline-hidden duration-(--popover-duration) ease-(--popover-easing) data-[state=closed]:animate-out data-[state=open]:animate-in',
           className
         )}
         {...props}

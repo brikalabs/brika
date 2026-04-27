@@ -1,4 +1,4 @@
-import { MetricsChart } from '@brika/clay/components/chart';
+import { Chart } from '@brika/clay/components/chart';
 
 const now = Date.now();
 const data = Array.from({ length: 24 }, (_, index) => ({
@@ -9,7 +9,7 @@ const data = Array.from({ length: 24 }, (_, index) => ({
 export function ChartDefaultDemo() {
   return (
     <div style={{ height: 176, width: 360 }}>
-      <MetricsChart data={data} />
+      <Chart data={data} />
     </div>
   );
 }

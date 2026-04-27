@@ -1,7 +1,0 @@
-/**
- * Avatar — corner shape utility. No data-slot bridge rules today.
- */
-
-@utility corner-avatar {
-  corner-shape: var(--avatar-corner-shape, var(--corner-shape, round));
-}

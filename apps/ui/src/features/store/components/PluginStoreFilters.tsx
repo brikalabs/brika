@@ -9,8 +9,19 @@ import {
 import { Search } from 'lucide-react';
 import { useLocale } from '@/lib/use-locale';
 
-export type FilterValue = 'all' | 'verified' | 'compatible' | 'installed';
-export type SortValue = 'downloads' | 'recent' | 'name';
+const FILTER_VALUES = ['all', 'verified', 'compatible', 'installed'] as const;
+const SORT_VALUES = ['downloads', 'recent', 'name'] as const;
+
+export type FilterValue = (typeof FILTER_VALUES)[number];
+export type SortValue = (typeof SORT_VALUES)[number];
+
+function isFilterValue(value: string): value is FilterValue {
+  return (FILTER_VALUES as readonly string[]).includes(value);
+}
+
+function isSortValue(value: string): value is SortValue {
+  return (SORT_VALUES as readonly string[]).includes(value);
+}
 
 interface PluginStoreFiltersProps {
   onSearchChange: (value: string) => void;
@@ -42,7 +53,14 @@ export function PluginStoreFilters({
       </div>
 
       {/* Filter */}
-      <Select value={filter} onValueChange={onFilterChange}>
+      <Select
+        value={filter}
+        onValueChange={(value) => {
+          if (isFilterValue(value)) {
+            onFilterChange(value);
+          }
+        }}
+      >
         <SelectTrigger className="w-full sm:w-[180px]">
           <SelectValue placeholder="Filter" />
         </SelectTrigger>
@@ -55,7 +73,14 @@ export function PluginStoreFilters({
       </Select>
 
       {/* Sort */}
-      <Select value={sort} onValueChange={onSortChange}>
+      <Select
+        value={sort}
+        onValueChange={(value) => {
+          if (isSortValue(value)) {
+            onSortChange(value);
+          }
+        }}
+      >
         <SelectTrigger className="w-full sm:w-[180px]">
           <SelectValue placeholder="Sort by" />
         </SelectTrigger>

@@ -38,6 +38,7 @@ interface SliderProps {
   ticks?: SliderTicks;
   /** Render labels below each tick. Pairs with `ticks`. See {@link SliderTickLabels}. */
   tickLabels?: SliderTickLabels;
+  /** Extra Tailwind classes appended to the slider wrapper. */
   className?: string;
 }
 
@@ -58,6 +59,7 @@ interface SliderValueProps {
   width?: string;
   /** Round displayed numeric value to this many decimals. */
   decimals?: number;
+  /** Extra Tailwind classes appended to the value-input wrapper. */
   className?: string;
 }
 

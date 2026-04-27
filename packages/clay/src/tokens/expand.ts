@@ -294,27 +294,41 @@ export function stateTokens(m: ComponentMeta): TokenSpec[] {
 }
 
 /**
- * Convenience for the eight components below that share an identical
- * "interactive control" surface — Button, Badge, Tabs trigger, Select
- * trigger, Input, Textarea, etc. Combines border / focus / motion /
- * typography / state.
+ * Bundle the token families an interactive control surface needs.
  *
- * `borderWidth` defaults to `'0px'` so non-bordered controls (filled
- * Buttons, Badges) don't grow a border by accident; pass `'1px'` for
- * always-bordered controls like Input.
+ * Always emitted: border, focus, motion, state — every focusable control
+ * has these. Opt-in: `geometry` for controls with padding/gap/height,
+ * `typography` for controls that contain a text label.
+ *
+ * @example  Labeled control (Button, Input, Select trigger):
+ *   controlSurfaceTokens(input, {
+ *     geometry: { height: '2.25rem', paddingX: SPACING_3, paddingY: SPACING_2 },
+ *     typography: { fontSize: 'var(--text-body-md)' },
+ *     borderWidth: '1px',
+ *   })
+ *
+ * @example  Toggle without a text label (Switch, Checkbox):
+ *   controlSurfaceTokens(track)
  */
+export interface ControlSurfaceOptions {
+  /** Geometry defaults — height, padding-x, padding-y, gap. Omit to skip every geometry token. */
+  readonly geometry?: Parameters<typeof geometryTokens>[1];
+  /** Typography defaults — font-family, font-size, font-weight, line-height, letter-spacing, text-transform. Omit to skip every typography token (e.g. Switch, Checkbox). */
+  readonly typography?: Parameters<typeof typographyTokens>[1];
+  /** Border width. Defaults to `'0px'` for unbordered controls; pass `'1px'` for always-bordered ones (Input, Select). */
+  readonly borderWidth?: string;
+}
+
 export function controlSurfaceTokens(
   m: ComponentMeta,
-  geometryDefaults: Parameters<typeof geometryTokens>[1] = {},
-  typographyDefaults: Parameters<typeof typographyTokens>[1] = {},
-  borderWidth = '0px'
+  { geometry, typography, borderWidth = '0px' }: ControlSurfaceOptions = {}
 ): TokenSpec[] {
   return [
-    ...geometryTokens(m, geometryDefaults),
+    ...geometryTokens(m, geometry),
     ...borderTokens(m, borderWidth),
     ...focusTokens(m),
     ...motionTokens(m),
-    ...typographyTokens(m, typographyDefaults),
+    ...(typography ? typographyTokens(m, typography) : []),
     ...stateTokens(m),
   ];
 }

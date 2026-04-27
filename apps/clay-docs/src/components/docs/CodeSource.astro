@@ -41,7 +41,7 @@ const lineCount = code
           </span>
           {filename && <span class="min-w-0 truncate text-clay-default">{filename}</span>}
           <span class="text-[0.625rem] text-clay-inactive">
-            {lineCount} {lineCount === 1 ? 'line' : 'lines'}
+            {`${lineCount} ${lineCount === 1 ? 'line' : 'lines'}`}
           </span>
         </div>
         <button

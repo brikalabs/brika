@@ -14,9 +14,10 @@
  * utilities. There are no generated CSS files — the TypeScript registry
  * is the only source of truth.
  *
- * Per-component bridge rules and `corner-<name>` utilities live in
- * `../components/<name>/<name>.css`. Cross-cutting utilities and the
- * `[data-radius]` geometry overlays live in `./utilities.css`.
+ * Components no longer ship per-file CSS — every token-driven property
+ * is composed inline in each `.tsx` via Tailwind v4 arbitrary-class
+ * syntax (`(--token)`, `(length:--token)`, `[prop:var(--token)]`).
+ * Cross-cutting utilities live in `./utilities.css`.
  */
 
 @plugin "../tailwind";

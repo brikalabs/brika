@@ -53,7 +53,7 @@ function DialogContent({
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 corner-dialog fixed top-[50%] left-[50%] z-50 flex max-h-[85vh] w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] flex-col gap-4 rounded-dialog border bg-dialog-container p-safe text-dialog-label shadow-dialog outline-none duration-200 data-[state=closed]:animate-out data-[state=open]:animate-in sm:max-w-lg',
+          'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 corner-themed fixed top-[50%] left-[50%] z-50 flex max-h-[85vh] w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] flex-col gap-4 rounded-dialog border-(length:--dialog-border-width) [border-style:var(--dialog-border-style)] [backdrop-filter:blur(var(--dialog-backdrop-blur,0px))] bg-dialog-container p-safe text-dialog-label shadow-dialog outline-none duration-(--dialog-duration) ease-(--dialog-easing) data-[state=closed]:animate-out data-[state=open]:animate-in sm:max-w-lg',
           className
         )}
         {...props}

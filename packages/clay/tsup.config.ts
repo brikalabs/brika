@@ -83,31 +83,12 @@ export default defineConfig({
   },
   onSuccess: async () => {
     // 1. Copy hand-authored CSS so `@brika/clay/styles` resolves and the
-    //    plugin's `readFileSync` walk over `dist/styles/` and
-    //    `dist/components/<name>/<name>.css` finds files at the same
-    //    relative paths they had under `src/`.
+    //    plugin's `readFileSync` walk over `dist/styles/` finds files at
+    //    the same relative paths they had under `src/`. Per-component
+    //    CSS no longer exists — every token-driven property is composed
+    //    inline in each `.tsx` via Tailwind v4 arbitrary-class syntax.
     mkdirSync(join(DIST, 'styles'), { recursive: true });
     cpSync(join(SRC, 'styles'), join(DIST, 'styles'), { recursive: true });
-    // 2. Copy each per-component CSS file next to its bundled `index.js`
-    //    (the folder already exists thanks to the entry config above) so
-    //    the relative `@import "../components/<name>/<name>.css"` from
-    //    `dist/styles/components.css` resolves identically to the src
-    //    layout.
-    let componentCss = 0;
-    for (const name of readdirSync(join(SRC, 'components'))) {
-      const folder = join(SRC, 'components', name);
-      if (!statSync(folder).isDirectory()) continue;
-      const cssSrc = join(folder, `${name}.css`);
-      try {
-        statSync(cssSrc);
-      } catch {
-        continue;
-      }
-      const distFolder = join(DIST, 'components', name);
-      mkdirSync(distFolder, { recursive: true });
-      cpSync(cssSrc, join(distFolder, `${name}.css`));
-      componentCss += 1;
-    }
     // 3. Copy theme preset JSON next to the bundled `themes.js` so the
     //    `with { type: 'json' }` static imports keep resolving for any
     //    consumer that prefers the source path (the json is also inlined
@@ -117,8 +98,6 @@ export default defineConfig({
       recursive: true,
     });
     // Sanity log: how many component entries shipped.
-    console.log(
-      `[clay] copied styles + ${componentCss} per-component CSS + ${COMPONENT_ENTRY_NAMES.size} components`
-    );
+    console.log(`[clay] copied styles + ${COMPONENT_ENTRY_NAMES.size} components`);
   },
 });

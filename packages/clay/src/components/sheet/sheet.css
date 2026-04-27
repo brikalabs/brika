@@ -1,7 +1,0 @@
-/**
- * Sheet — backdrop blur on the slide-out surface.
- */
-
-[data-slot="sheet-content"] {
-  backdrop-filter: blur(var(--sheet-backdrop-blur, 0px));
-}

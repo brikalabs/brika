@@ -4,51 +4,43 @@
  * component's own `tokens.ts` and delete the corresponding entry here.
  */
 
+import { defineComponent } from './define';
 import { registerTokens } from './component-registry';
-import { meta as buildMeta, controlSurfaceTokens, defineComponentTokens } from './expand';
 
-const alert = buildMeta('alert');
-const checkbox = buildMeta('checkbox');
-const icon = buildMeta('icon');
-const toast = buildMeta('toast');
+defineComponent('alert', {
+  radius: {
+    default: 'var(--radius-container)',
+    description: 'Alert corner radius.',
+    alias: 'alert',
+  },
+});
 
-registerTokens([
-  // Alert
-  ...defineComponentTokens(alert, {
-    radius: {
-      default: 'var(--radius-container)',
-      description: 'Alert corner radius.',
-      alias: 'alert',
-    },
-    'corner-shape': {
-      default: 'var(--corner-shape, round)',
-      description: 'Alert corner geometry.',
-    },
-  }),
-
-  // Checkbox
-  ...defineComponentTokens(checkbox, {
-    radius: {
-      default: 'var(--radius-tight)',
-      description: 'Checkbox corner radius.',
-      alias: 'checkbox',
-    },
-    'corner-shape': {
-      default: 'var(--corner-shape, round)',
-      description: 'Checkbox corner geometry.',
-    },
+defineComponent('checkbox', {
+  radius: {
+    default: 'var(--radius-tight)',
+    description: 'Checkbox corner radius.',
+    alias: 'checkbox',
+  },
+  surface: { borderWidth: '1px' },
+  slots: {
     size: { default: '1rem', description: 'Checkbox box edge length.' },
-  }),
-  ...controlSurfaceTokens(checkbox, {}, {}, '1px'),
+  },
+});
 
-  // Icon — both the per-variant slots and the standalone `--icon` color.
-  ...defineComponentTokens(icon, {
+defineComponent('icon', {
+  slots: {
     muted: { default: 'var(--muted-foreground)', description: 'Muted icon color.' },
     primary: {
       default: 'var(--primary)',
       description: 'Primary icon color (interactive accents).',
     },
-  }),
+  },
+});
+
+// `--icon` (no suffix) — bare token for the default icon color. Doesn't
+// fit the `<name>-<slot>` convention, so register it directly instead of
+// going through `defineComponent`.
+registerTokens([
   {
     name: 'icon',
     layer: 'component',
@@ -59,22 +51,17 @@ registerTokens([
     themePath: 'components.icon.default',
     tailwindNamespace: 'color',
   },
-
-  // Toast
-  ...defineComponentTokens(toast, {
-    radius: {
-      default: 'var(--radius-container)',
-      description: 'Toast corner radius.',
-      alias: 'toast',
-    },
-    shadow: {
-      default: 'var(--shadow-spotlight)',
-      description: 'Toast elevation.',
-      alias: 'toast',
-    },
-    'corner-shape': {
-      default: 'var(--corner-shape, round)',
-      description: 'Toast corner geometry.',
-    },
-  }),
 ]);
+
+defineComponent('toast', {
+  radius: {
+    default: 'var(--radius-container)',
+    description: 'Toast corner radius.',
+    alias: 'toast',
+  },
+  shadow: {
+    default: 'var(--shadow-spotlight)',
+    description: 'Toast elevation.',
+    alias: 'toast',
+  },
+});

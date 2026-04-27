@@ -25,7 +25,7 @@ function ChartTooltipContent({
   return null;
 }
 
-interface MetricsChartProps {
+interface ChartProps {
   /** Array of `{ts, value}` points plotted on the area chart. */
   data: Array<{
     ts: number;
@@ -35,15 +35,16 @@ interface MetricsChartProps {
   color?: string;
   /** Formatter for the y-axis and tooltip readout. */
   formatValue?: (value: number) => string;
+  /** Extra Tailwind classes appended to the chart wrapper. */
   className?: string;
 }
 
-export function MetricsChart({
+export function Chart({
   data,
   color = 'var(--color-primary)',
   formatValue = (v) => v.toFixed(1),
   className,
-}: Readonly<MetricsChartProps>) {
+}: Readonly<ChartProps>) {
   const gradientId = `gradient-${color.replaceAll(/[^a-zA-Z0-9]/g, '')}`;
   const hasData = data.length > 0;
   const renderTooltip = useCallback(

@@ -1,41 +1,11 @@
 /**
- * Manifest of per-component CSS files.
- *
- * Each component owns its CSS the way it owns its tokens — co-located
- * inside `src/components/<name>/<name>.css`. Adding a new component is
- * one new file in that folder plus one `@import` line below; no edits
- * to `clay.css`, `tailwind.ts`, or `tsup.config.ts`.
- *
- * Source-order: `clay.css` `@import`s this AFTER the Tailwind plugin
- * has emitted `:root` token defaults, so the bridge rules see the
- * latest values. Tailwind's own utility layer is generated at build
- * time and beats these rules for properties it controls (so
- * `<Button className="px-2">` still wins on padding). Each component
- * file only sets properties no Tailwind utility supplies.
- *
- * Order is alphabetical for grep-ability. Inter-component selector
- * collisions are tracked by source-order within a single file (one
- * rule per selector inside each component CSS).
+ * Cross-cutting hand-authored rules. Per-component bridge CSS no longer
+ * exists — every component composes its token-driven properties inline
+ * via Tailwind v4 arbitrary classes (`(--token)`, `(length:--token)`,
+ * `[prop:var(--token)]`, `[corner-shape:var(--<name>-corner-shape,…)]`),
+ * so the only CSS that lives outside the Tailwind plugin is the
+ * theme-scope reset below and the utilities in `./utilities.css`.
  */
-
-@import "../components/avatar/avatar.css";
-@import "../components/badge/badge.css";
-@import "../components/button/button.css";
-@import "../components/card/card.css";
-@import "../components/code-block/code-block.css";
-@import "../components/dialog/dialog.css";
-@import "../components/dropdown-menu/dropdown-menu.css";
-@import "../components/input/input.css";
-@import "../components/label/label.css";
-@import "../components/popover/popover.css";
-@import "../components/select/select.css";
-@import "../components/separator/separator.css";
-@import "../components/sheet/sheet.css";
-@import "../components/switch/switch.css";
-@import "../components/tabs/tabs.css";
-@import "../components/textarea/textarea.css";
-@import "../components/tooltip/tooltip.css";
-@import "./orphan-components.css";
 
 /*
  * Inherited-property re-assertion at every theme scope.

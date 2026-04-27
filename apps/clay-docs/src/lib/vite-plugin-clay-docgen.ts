@@ -165,9 +165,7 @@ export function clayDocgenPlugin(_options: ClayDocgenPluginOptions): ClayDocgenP
   }
 
   function getDocs(): Record<string, ClayComponentDoc> {
-    if (cache === null) {
-      cache = generate();
-    }
+    cache ??= generate();
     return cache;
   }
 

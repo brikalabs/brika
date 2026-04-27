@@ -134,7 +134,7 @@ kbd,
   --tw-prose-invert-td-borders: var(--color-clay-hairline);
 }
 
-.clay-prose :where(code):not(:where(pre code)) {
+.clay-prose :where(code):not(:where(pre code, .not-prose, .not-prose *)) {
   font-weight: 500;
   font-size: 0.875em;
   background-color: var(--color-clay-base);
@@ -145,8 +145,8 @@ kbd,
   letter-spacing: normal;
 }
 
-.clay-prose :where(code):not(:where(pre code))::before,
-.clay-prose :where(code):not(:where(pre code))::after {
+.clay-prose :where(code):not(:where(pre code, .not-prose, .not-prose *))::before,
+.clay-prose :where(code):not(:where(pre code, .not-prose, .not-prose *))::after {
   content: none;
 }
 

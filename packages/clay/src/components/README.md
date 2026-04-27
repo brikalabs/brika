@@ -1,42 +1,69 @@
 # Adding a new component to Clay
 
 A Clay component is a folder under `src/components/<name>/` that owns its
-React code, design tokens, CSS bridge rules, and metadata. Tokens land
-in the registry (where the Tailwind plugin reads them at compile time),
-CSS lands in the per-component file, the manifest picks them up, and
-the docs site indexes the component automatically via `meta.ts`.
+React code, design tokens, and metadata. Tokens land in the registry
+(where the Tailwind plugin reads them at compile time) and the docs
+site indexes the component automatically via `meta.ts`. Components no
+longer ship per-file CSS — every token-driven property is composed
+inline in the `.tsx` via Tailwind v4 arbitrary-class syntax.
 
 ## Checklist
 
-For a component named `<name>` (kebab-case, matches the CSS prefix):
+For a component named `<name>` (kebab-case, matches the token prefix):
 
 1. Create folder `src/components/<name>/`
 2. Files inside the folder:
-   - `<name>.tsx` -- React component, sets `data-slot="<name>"` on the root
-   - `tokens.ts` -- Layer-2 tokens, registered via `registerTokens([...])`
-   - `<name>.css` -- bridge rules keyed by `[data-slot="<name>"]` and any `corner-<name>` utility
+   - `<name>.tsx` -- React component, sets `data-slot="<name>"` on the root for devtools / test selectors
+   - `tokens.ts` -- Layer-2 tokens, registered via `registerTokens(...)`
    - `meta.ts` -- `name`, `displayName`, `group`, `description` for the docs site
    - `index.ts` -- one-line barrel re-export
-3. Register the component in two manifests:
-   - Add `import '../components/<name>/tokens';` to [`src/tokens/components.ts`](../tokens/components.ts)
-   - Add `@import "../components/<name>/<name>.css";` to [`src/styles/components.css`](../styles/components.css)
+3. Add `import '../components/<name>/tokens';` to [`src/tokens/components.ts`](../tokens/components.ts)
 4. Re-export from [`src/index.ts`](../index.ts) if the component is part of the public API
 
 That's it. No edits to `clay.css`, `tailwind.ts`, `tsup.config.ts`, or
-the registry files. The Tailwind plugin scans the per-component CSS for
-`var(--…)` references; tsup's `onSuccess` copies each `<name>.css` to
-its dist folder.
+any CSS manifest. The Tailwind plugin scans every `<name>.tsx` for
+`var(--…)` and Tailwind-v4 `(--…)` shorthand references and emits the
+matching `:root` defaults.
+
+## Composing token-driven properties in `.tsx`
+
+There are three syntactic forms, picked by what Tailwind exposes for
+the property:
+
+1. **Ergonomic shorthand** — `gap-(--button-gap)`, `px-(--button-padding-x)`,
+   `tracking-(--button-letter-spacing)`, `duration-(--button-duration)`,
+   `ease-(--button-easing)`, `font-(--button-font-weight)`. Use this when
+   the Tailwind utility unambiguously maps to one CSS property.
+2. **Type-hinted shorthand** — `border-(length:--button-border-width)`,
+   `font-(family-name:--code-block-font-family)`. Use this when the
+   utility is overloaded (`border-` could be width or color, `font-`
+   could be family or weight) so Tailwind needs the data-type hint.
+3. **Arbitrary property** — `[corner-shape:var(--button-corner-shape,var(--corner-shape,round))]`,
+   `[backdrop-filter:blur(var(--card-backdrop-blur,0px))]`,
+   `[border-style:var(--input-border-style)]`,
+   `[text-transform:var(--button-text-transform)]`. Use this when there
+   is no Tailwind utility for the property at all (`corner-shape`,
+   `backdrop-filter`, `border-style` with a CSS variable, `text-transform`
+   with a CSS variable).
+
+Every rounded surface in Clay adds the shared `corner-themed` utility,
+which expands to `corner-shape: var(--corner-shape, round)`. That picks
+up whatever Houdini corner geometry the active theme sets globally
+(`round`, `bevel`, `scoop`, `notch`, `squircle`, `superellipse(N)`).
+For a one-off per-component shape, use a Tailwind v4 arbitrary
+property: `[corner-shape:bevel]`.
 
 ## Files in detail
 
 ### `<name>.tsx`
 
-The React component. Set `data-slot="<name>"` on the rendered root so
-the bridge rules in `<name>.css` apply. Use `cva()` for variants that
-need to be data-attribute-discoverable (`data-variant`, `data-size`).
-Read tokens via Tailwind utilities (`bg-card-container`, `rounded-card`,
-`shadow-card`, etc.) and arbitrary-value classes (`px-[var(--card-padding-x)]`)
-where a token has no namespaced utility.
+The React component. Set `data-slot="<name>"` on the rendered root as a
+devtools / test selector (no CSS reads it). Use `cva()` for variants;
+expose them as `data-variant` / `data-size` attributes alongside any
+className contribution. Read tokens via Tailwind utilities
+(`bg-card-container`, `rounded-card`, `shadow-card`) where the token
+has a namespaced utility, and via the three arbitrary forms above for
+everything else.
 
 ```tsx
 import * as React from 'react';
@@ -47,7 +74,7 @@ function MyComponent({ className, ...props }: React.ComponentProps<'div'>) {
     <div
       data-slot="my-component"
       className={cn(
-        'corner-my-component rounded-my-component bg-my-component-container text-my-component-label shadow-my-component',
+        'corner-themed rounded-my-component bg-my-component-container text-my-component-label shadow-my-component border-(length:--my-component-border-width) [border-style:var(--my-component-border-style)] duration-(--my-component-duration) ease-(--my-component-easing)',
         className,
       )}
       {...props}
@@ -60,80 +87,50 @@ export { MyComponent };
 
 ### `tokens.ts`
 
-Layer-2 component tokens, registered via `registerTokens([...])`.
-Helpers in [`../../tokens/expand.ts`](../tokens/expand.ts) collapse the
-common token families:
-
-- `defineComponentTokens(meta, { … })` -- arbitrary named slots (radius, shadow, container, label, etc.)
-- `controlSurfaceTokens(meta, geometry, typography, borderWidth?)` -- height/padding/gap + font-weight/size + border for interactive controls
-- `borderTokens(meta, defaultWidth)` -- border-width / border-style
-- `geometryTokens(meta, { paddingX, paddingY, gap })` -- bare geometry without surface assumptions
-- `motionTokens(meta)` -- duration + easing
-- `typographyTokens(meta, { fontSize, fontWeight, letterSpacing, textTransform })` -- text properties
-- `focusTokens(meta)` -- ring width / offset / color
-
-Mix them. See [`button/tokens.ts`](./button/tokens.ts) for a control,
-[`card/tokens.ts`](./card/tokens.ts) for a surface, [`dialog/tokens.ts`](./dialog/tokens.ts)
-for a focusable surface.
+Layer-2 component tokens, registered via the single
+[`defineComponent`](../tokens/define.ts) entry point. Every option is a
+named key — TypeScript autocompletes everything you can pass.
 
 ```ts
-import { registerTokens } from '../../tokens/component-registry';
-import {
-  borderTokens,
-  meta as buildMeta,
-  defineComponentTokens,
-  motionTokens,
-} from '../../tokens/expand';
+import { defineComponent } from '../../tokens/define';
+import { SPACING_4, SPACING_6 } from '../../tokens/spacing';
 import { meta } from './meta';
 
-const m = buildMeta(meta.name);
-
-registerTokens([
-  ...defineComponentTokens(m, {
-    radius: { default: 'var(--radius-container)', description: 'Corner radius.', alias: 'my-component' },
-    shadow: { default: 'var(--shadow-surface)', description: 'Resting elevation.', alias: 'my-component' },
-    'corner-shape': { default: 'var(--corner-shape, round)', description: 'Corner geometry.' },
+defineComponent(meta.name, {
+  radius: { default: 'var(--radius-container)', description: 'Corner radius.', alias: 'my-component' },
+  shadow: { default: 'var(--shadow-surface)', description: 'Resting elevation.', alias: 'my-component' },
+  border: '1px',
+  motion: true,
+  geometry:   { paddingX: SPACING_6, paddingY: SPACING_6, gap: SPACING_4 },
+  typography: { fontSize: 'var(--text-body-md)' },
+  slots: {
     container: { default: 'var(--card)', description: 'Surface background.' },
-    label: { default: 'var(--card-foreground)', description: 'Label color.' },
-  }),
-  ...borderTokens(m, '1px'),
-  ...motionTokens(m),
-]);
+    label:     { default: 'var(--card-foreground)', description: 'Label color.' },
+  },
+});
 ```
 
-The `alias` field above sets the Tailwind utility name (so `rounded-my-component`
-exists; without it the utility would be `rounded-my-component-radius`).
+**What each top-level key does:**
 
-### `<name>.css`
+| Key | Effect |
+|---|---|
+| `radius`, `shadow`, `backdropBlur` | Single conventional tokens (`--<name>-radius`, etc.). The `alias` field controls the Tailwind utility name (`rounded-<alias>`). |
+| `surface: true` | The interactive bundle: `border + focus + motion + state`. Pass `{ borderWidth: '1px' }` to set the resting border width. |
+| `border`, `focus`, `motion`, `state` | Granular opt-in for non-interactive surfaces (e.g. Card uses `border: '1px'` + `motion: true` but no focus/state). |
+| `geometry: {...}` | Sizing tokens (`height`, `paddingX`, `paddingY`, `gap`) — only the keys you pass become tokens. |
+| `typography: {...}` | Text tokens (`fontFamily`, `fontSize`, `fontWeight`, `lineHeight`, `letterSpacing`, `textTransform`). Omit entirely to skip every typography token (e.g. Switch). |
+| `slots: {...}` | Arbitrary named tokens — semantic colors (`filled-container`), custom sizes (`track-width`), anything component-specific. |
+| `themeKey?` | Override the camelCase theme key when it differs from the kebab-case name (e.g. `'switchThumb'` for `'switch-thumb'`). |
 
-Two kinds of rule belong here:
+**Multi-namespace components** (e.g. Switch + SwitchThumb,
+DropdownMenu + DropdownMenuItem) are just two `defineComponent` calls in
+the same file — see [`switch/tokens.ts`](./switch/tokens.ts) and
+[`dropdown-menu/tokens.ts`](./dropdown-menu/tokens.ts).
 
-1. **Bridge rules** keyed by `[data-slot="<name>"]` for properties that
-   Tailwind utilities don't naturally control (letter-spacing, text-transform,
-   transition-duration, transition-timing-function, border-width, backdrop-filter).
-   Use CSS nesting for variants and orientations.
-2. **Corner utility** `@utility corner-<name>` reading `--<name>-corner-shape`
-   with a fallback chain to `--corner-shape, round`.
-
-```css
-/**
- * MyComponent -- properties Tailwind utilities don't naturally control.
- */
-
-[data-slot="my-component"] {
-  border-width: var(--my-component-border-width, var(--border-width));
-  border-style: var(--my-component-border-style, solid);
-  transition-duration: var(--my-component-duration);
-  transition-timing-function: var(--my-component-easing);
-}
-
-@utility corner-my-component {
-  corner-shape: var(--my-component-corner-shape, var(--corner-shape, round));
-}
-```
-
-Skip this file entirely if your component needs no bridge rules and no
-corner utility. Most do.
+See [`button/tokens.ts`](./button/tokens.ts) for an interactive control,
+[`card/tokens.ts`](./card/tokens.ts) for a non-interactive surface,
+[`dialog/tokens.ts`](./dialog/tokens.ts) for a focusable surface, and
+[`tabs/tokens.ts`](./tabs/tokens.ts) for granular bundle opt-ins.
 
 ### `meta.ts`
 
@@ -159,30 +156,14 @@ export const meta: ComponentMeta = {
 export * from './my-component';
 ```
 
-## Manifest edits
-
-The two central edits are mechanical -- one line each, alphabetically sorted:
-
-**`src/tokens/components.ts`:**
-```ts
-import '../components/my-component/tokens';
-```
-
-**`src/styles/components.css`:**
-```css
-@import "../components/my-component/my-component.css";
-```
-
-That's the only place anywhere in the package that needs to know your
-component exists. `clay.css`, `tailwind.ts`, `tsup.config.ts`, and the
-registry never need to be touched.
-
 ## What you don't need to do
 
-- Add anything to `tailwind.ts`. The plugin's source-CSS scanner
-  globs `src/components/*/*.css` automatically.
-- Add anything to `tsup.config.ts`. The build step copies every
-  per-component `<name>.css` into its dist folder.
+- Write a `<name>.css` file. They no longer exist; properties Tailwind
+  utilities can't express are composed inline as arbitrary-property classes.
+- Edit any CSS manifest. There is no per-component CSS to import.
+- Add anything to `tailwind.ts`. The plugin scans every `<name>.tsx`
+  for `var(--…)` and `(--…)` references automatically.
+- Add anything to `tsup.config.ts`. There is no per-component CSS to copy.
 - Hand-write `:root` variables. The plugin emits them from the registry
   (and types them via `@property` where the type allows).
 - Touch theme JSON unless your tokens need theme-specific overrides.
@@ -190,30 +171,26 @@ registry never need to be touched.
 
 ## Common gotchas
 
-- **`data-slot` vs class names.** The bridge rules key off `data-slot`,
-  not className. `data-slot` survives className overrides; a class
-  doesn't. Always set it on the rendered root.
-- **Utility name vs token name.** `alias: 'my-component'` makes the
-  utility `rounded-my-component`. Without an alias, the utility is
-  `rounded-my-component-radius` (the full token name). Use `alias`
-  for the public-facing utility short form.
 - **Token naming convention.** All Layer-2 tokens are prefixed with
   the component name: `--my-component-radius`, `--my-component-padding-x`,
   etc. The infer rules in [`../../tokens/infer.ts`](../tokens/infer.ts)
   map suffixes to types, so `*-radius` is a `radius` token,
   `*-duration` is a `duration` token, etc. Stick to the convention so
-  the registry's `type` field is auto-inferred and `@property`
-  emission picks the right CSS syntax.
+  the registry's `type` field is auto-inferred and `@property` emission
+  picks the right CSS syntax.
+- **Utility name vs token name.** `alias: 'my-component'` makes the
+  utility `rounded-my-component`. Without an alias, the utility is
+  `rounded-my-component-radius` (the full token name). Use `alias`
+  for the public-facing utility short form.
+- **Multi-slot components.** Dialog has a `dialog-content`, dropdown-menu
+  has `dropdown-menu-content` and `dropdown-menu-item`, etc. Each slot
+  sets its own `data-slot` and composes its own classes inline in the
+  `.tsx` — no CSS bridge selector ties them together.
 - **Orphan components.** Components without a folder yet (alert,
-  checkbox, icon, toast at time of writing) live in
-  [`../tokens/orphan-components.ts`](../tokens/orphan-components.ts)
-  and [`../styles/orphan-components.css`](../styles/orphan-components.css).
-  When you graduate one to a folder, move both blocks into the new
-  folder's `tokens.ts` and `<name>.css`, and delete the orphan
-  entries.
-- **Multi-slot components.** Dialog has `dialog-content`, dropdown-menu
-  has `dropdown-menu-content` and `menu-item`, etc. Put all sibling
-  `[data-slot="<name>-…"]` rules in the parent component's `<name>.css`.
+  checkbox, icon, toast at time of writing) keep their tokens in
+  [`../tokens/orphan-components.ts`](../tokens/orphan-components.ts).
+  When you graduate one to a folder, move its block into the new
+  folder's `tokens.ts` and delete the orphan entry.
 
 ## Verifying
 

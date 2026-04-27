@@ -1,7 +1,0 @@
-/**
- * Tabs — corner shape utility. No data-slot bridge rules today.
- */
-
-@utility corner-tabs {
-  corner-shape: var(--tabs-corner-shape, var(--corner-shape, round));
-}

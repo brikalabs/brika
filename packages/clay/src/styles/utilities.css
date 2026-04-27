@@ -1,10 +1,8 @@
 /**
- * Cross-cutting utilities and geometry overlays.
- *
- * These are not per-component bridges (those live in
- * `components/<name>/<name>.css`). They are utility classes that any
- * component can reach for, plus the `[data-radius]` overlays that
- * scope the `--radius` scalar without committing to a full theme.
+ * Cross-cutting utilities — focus ring, safe-area padding, and the
+ * static `corner-*` keyword utilities. Per-component CSS no longer
+ * exists; component-specific properties are composed inline in each
+ * component's `.tsx` via Tailwind v4 arbitrary-class syntax.
  */
 
 /* ─────────────────────────────────────────────────────────────
@@ -17,6 +15,17 @@
 @utility ring-themed {
   outline: var(--ring-width, 2px) solid var(--ring);
   outline-offset: var(--ring-offset, 2px);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   CORNER SHAPE — THEMED
+   `corner-themed` reads the theme's global `--corner-shape` (with a
+   `round` fallback) and is set on every Clay surface that wants to
+   pick up the active geometry. Pair with `rounded-*` so the property
+   has a non-zero radius to shape.
+   ───────────────────────────────────────────────────────────── */
+@utility corner-themed {
+  corner-shape: var(--corner-shape, round);
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -102,26 +111,4 @@
 /* Functional utility for superellipse with custom values */
 @utility corner-superellipse-* {
   corner-shape: superellipse(--value(number));
-}
-
-/* ─────────────────────────────────────────────────────────────
-   GEOMETRY-ONLY THEME OVERLAYS
-   Scalar overrides on a wrapper element. Layer with any color theme
-   via classList — set `data-radius` on a parent and every child reads
-   the new `--radius` scalar.
-   ───────────────────────────────────────────────────────────── */
-
-/* Sharp, brutalist — no rounded corners. */
-[data-radius="sharp"] {
-  --radius: 0rem;
-}
-
-/* Default — matches the `:root` baseline. */
-[data-radius="default"] {
-  --radius: 0.75rem;
-}
-
-/* Soft, pill-ish surfaces. */
-[data-radius="soft"] {
-  --radius: 1.25rem;
 }

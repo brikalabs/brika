@@ -2,21 +2,18 @@
  * Layer-2 tokens for Slider.
  */
 
-import { registerTokens } from '../../tokens/component-registry';
-import { meta as buildMeta, defineComponentTokens } from '../../tokens/expand';
+import { defineComponent } from '../../tokens/define';
 import { meta } from './meta';
 
-const m = buildMeta(meta.name);
-
-registerTokens([
-  ...defineComponentTokens(m, {
+defineComponent(meta.name, {
+  radius: {
+    default: '9999px',
+    description: 'Track corner radius. Set lower for square / brutalist looks.',
+    alias: 'slider',
+  },
+  slots: {
     'track-height': { default: '0.25rem', description: 'Slider track thickness.' },
     'thumb-size': { default: '1rem', description: 'Slider thumb diameter.' },
-    radius: {
-      default: '9999px',
-      description: 'Track corner radius. Set lower for square / brutalist looks.',
-      alias: 'slider',
-    },
     'thumb-radius': {
       default: '9999px',
       description: 'Thumb corner radius. Lower for square thumbs.',
@@ -55,5 +52,5 @@ registerTokens([
       default: 'var(--foreground)',
       description: 'Tick label color when its value matches the current slider value.',
     },
-  }),
-]);
+  },
+});

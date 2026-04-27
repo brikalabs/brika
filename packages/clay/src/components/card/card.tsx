@@ -3,7 +3,7 @@ import * as React from 'react';
 import { cn } from '../../primitives/cn';
 
 const cardVariants = cva(
-  'corner-card relative rounded-card border bg-card-container text-card-label shadow-card transition-color duration-200',
+  'corner-themed relative rounded-card border-(length:--card-border-width) [border-style:var(--card-border-style)] [backdrop-filter:blur(var(--card-backdrop-blur,0px))] bg-card-container text-card-label shadow-card transition-color duration-(--card-duration) ease-(--card-easing)',
   {
     variants: {
       accent: {
@@ -74,7 +74,7 @@ function Card({ className, accent, interactive, children, ...props }: Readonly<C
       {hasAccent && (
         <div
           className={cn(
-            'corner-card pointer-events-none absolute inset-0 rounded-card bg-(--accent-bg) transition-colors',
+            'corner-themed pointer-events-none absolute inset-0 rounded-card bg-(--accent-bg) transition-colors',
             interactive && 'group-hover:bg-(--accent-bg-hover)'
           )}
         />
