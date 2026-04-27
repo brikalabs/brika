@@ -49,7 +49,12 @@ const cardVariants = cva(
   }
 );
 
-interface CardProps extends React.ComponentProps<'div'>, VariantProps<typeof cardVariants> {}
+interface CardProps extends React.ComponentProps<'div'>, VariantProps<typeof cardVariants> {
+  /** Which preset accent color stripe to render along the card edge. */
+  accent?: VariantProps<typeof cardVariants>['accent'];
+  /** Enables the hover-lift affordance for clickable cards. */
+  interactive?: VariantProps<typeof cardVariants>['interactive'];
+}
 
 function Card({ className, accent, interactive, children, ...props }: Readonly<CardProps>) {
   const hasAccent = accent && accent !== 'none';

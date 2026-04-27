@@ -26,11 +26,14 @@ function ChartTooltipContent({
 }
 
 interface MetricsChartProps {
+  /** Array of `{ts, value}` points plotted on the area chart. */
   data: Array<{
     ts: number;
     value: number;
   }>;
+  /** Line and gradient color; defaults to `var(--color-primary)`. */
   color?: string;
+  /** Formatter for the y-axis and tooltip readout. */
   formatValue?: (value: number) => string;
   className?: string;
 }

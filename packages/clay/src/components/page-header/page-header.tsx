@@ -59,7 +59,10 @@ function PageHeaderCount({
   value,
   className,
   ...props
-}: { value: number | string } & React.ComponentProps<'span'>) {
+}: {
+  /** Number or label rendered in the count chip. */
+  value: number | string;
+} & React.ComponentProps<'span'>) {
   return (
     <span
       data-slot="page-header-count"

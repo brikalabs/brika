@@ -52,7 +52,9 @@ function DropdownMenuItem({
   variant = 'default',
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Item> & {
+  /** Extra leading padding to align with items that have icons. */
   inset?: boolean;
+  /** "default" or "destructive" treatment. */
   variant?: 'default' | 'destructive';
 }) {
   return (
@@ -130,6 +132,7 @@ function DropdownMenuLabel({
   inset,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Label> & {
+  /** Extra leading padding to align with items that have icons. */
   inset?: boolean;
 }) {
   return (
@@ -177,6 +180,7 @@ function DropdownMenuSubTrigger({
   children,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.SubTrigger> & {
+  /** Extra leading padding to align with items that have icons. */
   inset?: boolean;
 }) {
   return (

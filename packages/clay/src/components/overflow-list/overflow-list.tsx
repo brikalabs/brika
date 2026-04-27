@@ -240,6 +240,7 @@ function OverflowListItem({
   itemId,
   ...props
 }: React.ComponentProps<'div'> & {
+  /** Stable identifier matching one of the items passed to `useOverflowList`. */
   itemId: string;
 }) {
   return (
@@ -261,6 +262,7 @@ function OverflowListIndicator({
   active = false,
   ...props
 }: React.ComponentProps<'div'> & {
+  /** Whether to render in the active overflow state. */
   active?: boolean;
 }) {
   return (

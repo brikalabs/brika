@@ -4,6 +4,7 @@ import { cn } from '../../primitives/cn';
 type BrikaLogoVariant = 'mark' | 'full';
 
 interface BrikaLogoProps extends SVGProps<SVGSVGElement> {
+  /** Which logo lockup to render: "mark" for icon only, "full" for the boxed brand mark. */
   variant?: BrikaLogoVariant;
 }
 

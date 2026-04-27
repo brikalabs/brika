@@ -33,6 +33,8 @@ function Badge({
 }: React.ComponentProps<'span'> &
   VariantProps<typeof badgeVariants> & {
     asChild?: boolean;
+    /** Visual treatment matching the Button variants (default, secondary, destructive, outline, etc.). */
+    variant?: VariantProps<typeof badgeVariants>['variant'];
   }) {
   const Comp = asChild ? Slot.Root : 'span';
 

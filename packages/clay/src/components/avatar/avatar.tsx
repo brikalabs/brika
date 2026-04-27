@@ -8,6 +8,7 @@ function Avatar({
   size = 'default',
   ...props
 }: React.ComponentProps<typeof AvatarPrimitive.Root> & {
+  /** Preset diameter. */
   size?: 'default' | 'sm' | 'lg';
 }) {
   return (

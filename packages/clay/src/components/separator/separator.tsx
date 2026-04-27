@@ -9,7 +9,7 @@ import { cn } from '../../primitives/cn';
  * Separator. Border-driven so themes can override `--separator-width` to
  * make it thicker and `--separator-style` to make it dashed/double — the
  * line color comes from `--separator-color` (defaults to `--border`).
- * The wired-up width/style/color come from `components.css`; the rectangle
+ * The wired-up width/style/color come from `./separator.css`; the rectangle
  * itself has zero block-size on horizontal and zero inline-size on
  * vertical so the rendered weight is purely the border.
  */

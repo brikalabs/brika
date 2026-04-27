@@ -43,6 +43,7 @@ function DialogContent({
   ...props
 }: Readonly<
   React.ComponentProps<typeof DialogPrimitive.Content> & {
+    /** Render the built-in close X. */
     showCloseButton?: boolean;
   }
 >) {
@@ -88,6 +89,7 @@ function DialogFooter({
   children,
   ...props
 }: React.ComponentProps<'div'> & {
+  /** Render a "Close" button in the footer. */
   showCloseButton?: boolean;
 }) {
   return (

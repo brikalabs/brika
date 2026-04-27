@@ -5,14 +5,23 @@ import { Progress } from '../progress';
 import { ScrollArea } from '../scroll-area';
 
 interface ProgressDisplayProps {
+  /** Progress percentage from 0 to 100. Drives the bar fill width. */
   progressValue: number;
+  /** Short label rendered above the bar (e.g. "Uploading…"). */
   phaseLabel: string;
+  /** Lines rendered in the log scroll area, oldest first. */
   logs: string[];
+  /** Ref attached to the inner log container so callers can auto-scroll. */
   scrollRef: RefObject<HTMLDivElement | null>;
+  /** Error message; when set, the bar turns destructive and an error block is shown. */
   error: string | null;
+  /** Marks the run as finished successfully; turns the bar green and shows a check. */
   success: boolean;
+  /** Whether work is in flight; controls the spinner and empty-state copy. */
   isProcessing: boolean;
+  /** Copy shown when `logs` is empty and `isProcessing` is true. */
   emptyLogsMessage?: string;
+  /** Copy shown in the success block when `success` is true. */
   successMessage?: string;
 }
 
@@ -50,8 +59,8 @@ export function ProgressDisplay({
       </div>
 
       {/* Log output */}
-      <ScrollArea className="h-40 rounded-md border bg-muted/30 p-3">
-        <div ref={scrollRef} className="space-y-1 font-mono text-xs">
+      <ScrollArea className="h-40 rounded-md border bg-muted/30">
+        <div ref={scrollRef} className="space-y-1 break-words p-3 font-mono text-xs">
           {logs.length === 0 && isProcessing && emptyLogsMessage && (
             <div className="text-muted-foreground">{emptyLogsMessage}</div>
           )}

@@ -24,10 +24,15 @@ type SliderTicks = boolean | number | readonly number[];
 type SliderTickLabels = boolean | ((value: number) => ReactNode);
 
 interface SliderProps {
+  /** Current numeric value (controlled). */
   value: number;
+  /** Called with the next value as the user drags or types. */
   onChange: (next: number) => void;
+  /** Lower numeric bound. */
   min: number;
+  /** Upper numeric bound. */
   max: number;
+  /** Increment for keyboard arrows and value snapping. */
   step: number;
   /** Render tick dots on the track. See {@link SliderTicks}. */
   ticks?: SliderTicks;
@@ -37,11 +42,17 @@ interface SliderProps {
 }
 
 interface SliderValueProps {
+  /** Current numeric value (controlled). */
   value: number;
+  /** Called with the next value as the user drags or types. */
   onChange: (next: number) => void;
+  /** Lower numeric bound. */
   min: number;
+  /** Upper numeric bound. */
   max: number;
+  /** Increment for keyboard arrows and value snapping. */
   step: number;
+  /** Suffix appended to the displayed value (e.g. "%", "px"). */
   unit?: string;
   /** Tailwind width class for the numeric input. Defaults to `w-10`. */
   width?: string;

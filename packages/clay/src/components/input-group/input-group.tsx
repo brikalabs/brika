@@ -12,7 +12,7 @@ import { Textarea } from '../textarea';
  * with prefix/suffix addons). Mirrors the standalone Input's token surface
  * exactly — `rounded-input`, `h-[var(--input-height)]`, `bg-input-container`,
  * `border-input-border`, `shadow-surface` — and carries `data-slot="input"`
- * on the wrapper so the same `components.css` rules (border-width,
+ * on the wrapper so the same `../input/input.css` rules (border-width,
  * border-style, transition) apply. Themes that tune `--input-*` retune
  * PasswordInput to match without any extra theming work.
  */
@@ -68,7 +68,11 @@ function InputGroupAddon({
   className,
   align = 'inline-start',
   ...props
-}: React.ComponentProps<'div'> & VariantProps<typeof inputGroupAddonVariants>) {
+}: React.ComponentProps<'div'> &
+  VariantProps<typeof inputGroupAddonVariants> & {
+    /** Which edge the addon docks against. */
+    align?: VariantProps<typeof inputGroupAddonVariants>['align'];
+  }) {
   return (
     <div
       role="group"
@@ -119,7 +123,12 @@ function InputGroupButton({
   size = 'xs',
   ...props
 }: Omit<React.ComponentProps<typeof Button>, 'size'> &
-  VariantProps<typeof inputGroupButtonVariants>) {
+  VariantProps<typeof inputGroupButtonVariants> & {
+    /** Visual preset for the addon button. */
+    variant?: React.ComponentProps<typeof Button>['variant'];
+    /** Size preset for the addon button. */
+    size?: VariantProps<typeof inputGroupButtonVariants>['size'];
+  }) {
   return (
     <Button
       type={type}
@@ -161,7 +170,11 @@ function InputGroupInput({ className, ...props }: React.ComponentProps<'input'>)
     <Input
       data-slot="input-group-control"
       className={cn(
-        'h-full flex-1 rounded-none border-0 bg-transparent shadow-none focus-visible:ring-0',
+        'h-full flex-1 rounded-none border-0 bg-transparent shadow-none',
+        // Suppress the standalone `ring-themed` outline on the inner control.
+        // The wrapper paints the focus ring (via `has-[…:focus-visible]:ring-…`),
+        // so the inner field only needs to clear its own outline.
+        'focus-visible:[outline:none]',
         className
       )}
       {...props}
@@ -174,7 +187,8 @@ function InputGroupTextarea({ className, ...props }: React.ComponentProps<'texta
     <Textarea
       data-slot="input-group-control"
       className={cn(
-        'flex-1 resize-none rounded-none border-0 bg-transparent py-3 shadow-none focus-visible:ring-0',
+        'flex-1 resize-none rounded-none border-0 bg-transparent py-3 shadow-none',
+        'focus-visible:[outline:none]',
         className
       )}
       {...props}

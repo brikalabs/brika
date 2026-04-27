@@ -4,6 +4,7 @@ import { DemoRenderer } from '~/components/DemoRenderer.tsx';
 import CodeSource from '~/components/docs/CodeSource.astro';
 import ComponentExample from '~/components/docs/ComponentExample.astro';
 import InlineMarkdown from '~/components/docs/InlineMarkdown.astro';
+import { PropsTable } from '~/components/docs/PropsTable.tsx';
 import { TokenTable } from '~/components/docs/TokenTable.tsx';
 import MdxDocLayout from '~/layouts/MdxDocLayout.astro';
 import { adjacentComponents, COMPONENTS, type ComponentEntry } from '~/lib/component-registry';
@@ -270,17 +271,19 @@ const apiNum = nextSection();
     <h2 id="api-reference" class="mb-3 scroll-mt-24 font-display text-3xl text-clay-strong leading-[1.1]">
       API reference
     </h2>
-    <p class="max-w-2xl text-clay-default text-sm leading-relaxed">
-      {component.name} is a thin React wrapper. Native HTML attributes pass through; for the full
-      type signature, see the
+    <p class="mb-6 max-w-2xl text-clay-default text-sm leading-relaxed">
+      Props specific to {component.name}. Native HTML attributes pass through to the
+      underlying primitive — see the
       <a
         href={githubBase}
         rel="noopener noreferrer"
         class="text-clay-link underline-offset-2 hover:underline"
       >
         component source on GitHub
-      </a>.
+      </a>{' '}
+      for the full type signature.
     </p>
+    <PropsTable displayName={component.name} client:load />
   </section>
 
   <nav class="not-prose mt-20 grid grid-cols-1 gap-3 border-clay-hairline border-t pt-10 sm:grid-cols-2">

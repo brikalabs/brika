@@ -41,7 +41,11 @@ function TabsList({
   className,
   variant = 'default',
   ...props
-}: React.ComponentProps<typeof TabsPrimitive.List> & VariantProps<typeof tabsListVariants>) {
+}: React.ComponentProps<typeof TabsPrimitive.List> &
+  VariantProps<typeof tabsListVariants> & {
+    /** "default" pill-style or "line" underline-style. */
+    variant?: VariantProps<typeof tabsListVariants>['variant'];
+  }) {
   return (
     <TabsPrimitive.List
       data-slot="tabs-list"

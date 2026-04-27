@@ -4,7 +4,16 @@ import * as React from 'react';
 
 import { cn } from '../../primitives/cn';
 
-function Select({ ...props }: React.ComponentProps<typeof SelectPrimitive.Root>) {
+interface SelectProps extends React.ComponentProps<typeof SelectPrimitive.Root> {
+  /** Controlled selected value; pair with `onValueChange`. */
+  value?: string;
+  /** Initial selected value for uncontrolled mode. */
+  defaultValue?: string;
+  /** Called with the next value whenever the user selects an option. */
+  onValueChange?: (value: string) => void;
+}
+
+function Select({ ...props }: Readonly<SelectProps>) {
   return <SelectPrimitive.Root data-slot="select" {...props} />;
 }
 
@@ -22,6 +31,7 @@ function SelectTrigger({
   children,
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Trigger> & {
+  /** Trigger size preset. */
   size?: 'sm' | 'default';
 }) {
   return (

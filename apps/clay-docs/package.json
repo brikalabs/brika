@@ -21,12 +21,12 @@
     "deploy:preview": "astro build && wrangler versions upload"
   },
   "dependencies": {
-    "@astrojs/mdx": "^4.0.0",
-    "@astrojs/react": "^4.0.0",
+    "@astrojs/mdx": "5.0.4",
+    "@astrojs/react": "5.0.4",
     "@brika/clay": "workspace:*",
     "@tailwindcss/typography": "^0.5.15",
     "@tailwindcss/vite": "4.2.1",
-    "astro": "^5.0.0",
+    "astro": "6.1.9",
     "clsx": "^2.1.1",
     "lucide-react": "^0.575.0",
     "react": "^19.2.3",
@@ -36,10 +36,11 @@
     "tailwindcss": "4.2.1"
   },
   "devDependencies": {
-    "@astrojs/check": "^0.9.4",
+    "@astrojs/check": "0.9.8",
     "@brika/archunit": "workspace:*",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
+    "react-docgen-typescript": "^2.4.0",
     "typescript": "^6.0.2",
     "wrangler": "^4.0.0"
   }

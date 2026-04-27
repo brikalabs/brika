@@ -6,6 +6,7 @@ import mdx from '@astrojs/mdx';
 import react from '@astrojs/react';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'astro/config';
+import { clayDocgenPlugin } from './src/lib/vite-plugin-clay-docgen.ts';
 import { clayHmrPlugin } from './src/lib/vite-plugin-clay-hmr.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -43,6 +44,10 @@ export default defineConfig({
       __BUILD_COMMIT__: JSON.stringify(buildCommit),
       __BUILD_DATE__: JSON.stringify(buildDate),
     },
-    plugins: [clayHmrPlugin({ dev: isDev }), tailwindcss()],
+    plugins: [
+      clayHmrPlugin({ dev: isDev }),
+      clayDocgenPlugin({ dev: isDev }),
+      tailwindcss(),
+    ],
   },
 });

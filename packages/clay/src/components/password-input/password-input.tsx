@@ -3,7 +3,9 @@ import { useState } from 'react';
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '../input-group';
 
 interface PasswordInputProps extends Omit<React.ComponentProps<'input'>, 'type'> {
+  /** aria-label for the show-password toggle. */
   showLabel?: string;
+  /** aria-label for the hide-password toggle. */
   hideLabel?: string;
 }
 

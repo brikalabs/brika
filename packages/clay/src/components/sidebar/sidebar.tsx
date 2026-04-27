@@ -45,8 +45,11 @@ function SidebarProvider({
   children,
   ...props
 }: React.ComponentProps<'div'> & {
+  /** Initial open state for uncontrolled mode. */
   defaultOpen?: boolean;
+  /** Controlled open state; pair with `onOpenChange`. */
   open?: boolean;
+  /** Called when the open state should change; required for controlled mode. */
   onOpenChange?: (open: boolean) => void;
 }) {
   const isMobile = useIsMobile();
@@ -133,8 +136,11 @@ function Sidebar({
   children,
   ...props
 }: React.ComponentProps<'div'> & {
+  /** Which screen edge the sidebar docks against. */
   side?: 'left' | 'right';
+  /** Visual style; "sidebar" (default), "floating", or "inset". */
   variant?: 'sidebar' | 'floating' | 'inset';
+  /** How the sidebar collapses; "offcanvas", "icon", or "none". */
   collapsible?: 'offcanvas' | 'icon' | 'none';
 }) {
   const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
@@ -465,9 +471,15 @@ function SidebarMenuButton({
   ...props
 }: React.ComponentProps<'button'> & {
   asChild?: boolean;
+  /** Marks the button as the current selection. */
   isActive?: boolean;
+  /** Tooltip shown when the sidebar is collapsed to icons. */
   tooltip?: string | React.ComponentProps<typeof TooltipContent>;
-} & VariantProps<typeof sidebarMenuButtonVariants>) {
+  /** Visual preset matching the Button component. */
+  variant?: VariantProps<typeof sidebarMenuButtonVariants>['variant'];
+  /** Size preset matching the Button component. */
+  size?: VariantProps<typeof sidebarMenuButtonVariants>['size'];
+}) {
   const Comp = asChild ? Slot.Root : 'button';
   const { isMobile, state } = useSidebar();
 
@@ -518,6 +530,7 @@ function SidebarMenuAction({
   ...props
 }: React.ComponentProps<'button'> & {
   asChild?: boolean;
+  /** Hide the action until the row is hovered or focused. */
   showOnHover?: boolean;
 }) {
   const Comp = asChild ? Slot.Root : 'button';
@@ -567,6 +580,7 @@ function SidebarMenuSkeleton({
   showIcon = false,
   ...props
 }: React.ComponentProps<'div'> & {
+  /** Include a placeholder icon in the skeleton row. */
   showIcon?: boolean;
 }) {
   // Random width between 50 to 90%.

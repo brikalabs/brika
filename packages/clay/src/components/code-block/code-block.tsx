@@ -141,7 +141,10 @@ function getTokenStyle(token: CodeToken): React.CSSProperties {
 
 interface CodeBlockProps
   extends React.ComponentProps<'div'>,
-    VariantProps<typeof codeBlockVariants> {}
+    VariantProps<typeof codeBlockVariants> {
+  /** Visual treatment; "subtle" drops the surrounding chrome. */
+  variant?: VariantProps<typeof codeBlockVariants>['variant'];
+}
 
 function CodeBlock({ className, variant, ...props }: Readonly<CodeBlockProps>) {
   const [state, setState] = React.useState({
@@ -213,7 +216,10 @@ function CodeBlock({ className, variant, ...props }: Readonly<CodeBlockProps>) {
 
 interface CodeBlockHeaderProps
   extends React.ComponentProps<'div'>,
-    VariantProps<typeof codeBlockHeaderVariants> {}
+    VariantProps<typeof codeBlockHeaderVariants> {
+  /** Header treatment; "flat" removes the divider. */
+  variant?: VariantProps<typeof codeBlockHeaderVariants>['variant'];
+}
 
 function CodeBlockHeader({ className, variant, ...props }: Readonly<CodeBlockHeaderProps>) {
   return (
@@ -275,9 +281,13 @@ function CodeBlockActions({ className, ...props }: React.ComponentProps<'div'>) 
 }
 
 interface CodeBlockCopyButtonProps extends React.ComponentProps<typeof Button> {
+  /** The literal string copied to the clipboard. Falls back to the parent CodeBlock's code. */
   value?: string;
+  /** Label flashed after a successful copy. */
   copiedLabel?: string;
+  /** Label shown in the resting state. */
   copyLabel?: string;
+  /** How long the "copied" state persists before reverting, in milliseconds. */
   resetDelayMs?: number;
 }
 
@@ -349,11 +359,18 @@ function CodeBlockCopyButton({
 interface CodeBlockContentProps
   extends React.ComponentProps<'div'>,
     VariantProps<typeof codeBlockContentVariants> {
+  /** Shiki language identifier (e.g. "tsx", "bash"). */
   language?: string | null;
+  /** Optional filename label rendered in the header. */
   filename?: string | null;
+  /** Shiki theme name; defaults to "catppuccin-mocha". */
   theme?: string;
+  /** Toggles the line-number gutter. */
   showLineNumbers?: boolean;
+  /** Starting number when line numbers are shown. */
   lineNumberStart?: number;
+  /** Density preset; "default" or "sm". */
+  size?: VariantProps<typeof codeBlockContentVariants>['size'];
 }
 
 function CodeBlockContent({

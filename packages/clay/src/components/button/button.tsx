@@ -50,6 +50,10 @@ function Button({
 }: React.ComponentProps<'button'> &
   VariantProps<typeof buttonVariants> & {
     asChild?: boolean;
+    /** Emphasis tier for the button. */
+    variant?: VariantProps<typeof buttonVariants>['variant'];
+    /** Text or icon-only sizing preset. */
+    size?: VariantProps<typeof buttonVariants>['size'];
   }) {
   const Comp = asChild ? Slot.Root : 'button';
 

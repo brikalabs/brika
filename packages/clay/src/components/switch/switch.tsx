@@ -10,7 +10,7 @@ import { cn } from '../../primitives/cn';
  * `--switch-thumb-size`. The unfocused border is a fixed 1px transparent
  * line so theming the global `--border-width` doesn't eat into the
  * track's content area; themes that need a thicker switch border should
- * override `--switch-border-width` (wired in `components.css`) and bump
+ * override `--switch-border-width` (consumed via the `border-[var(--switch-border-width)]` utility in this component) and bump
  * the track tokens to match.
  */
 function Switch({
@@ -18,6 +18,7 @@ function Switch({
   size = 'default',
   ...props
 }: React.ComponentProps<typeof SwitchPrimitive.Root> & {
+  /** Preset size for the switch track and thumb. */
   size?: 'sm' | 'default';
 }) {
   return (

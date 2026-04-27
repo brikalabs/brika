@@ -44,6 +44,7 @@ function AlertDialogContent({
   size = 'default',
   ...props
 }: React.ComponentProps<typeof AlertDialogPrimitive.Content> & {
+  /** Dialog max-width preset. */
   size?: 'default' | 'sm';
 }) {
   return (

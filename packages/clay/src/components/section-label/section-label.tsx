@@ -34,7 +34,10 @@ const sectionLabelIconVariants = cva('size-3.5', {
 interface SectionLabelProps
   extends React.ComponentProps<'div'>,
     VariantProps<typeof sectionLabelIconVariants> {
+  /** Optional Lucide icon component rendered to the left of the label. */
   icon?: LucideIcon;
+  /** Semantic tint ("default", "destructive", "warning", "success", "info"). */
+  tone?: VariantProps<typeof sectionLabelIconVariants>['tone'];
 }
 
 function SectionLabel({

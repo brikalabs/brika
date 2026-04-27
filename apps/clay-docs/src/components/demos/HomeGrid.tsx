@@ -38,22 +38,29 @@ export function HomeGrid() {
           </a>
         );
       })}
-      {remaining.map((component) => (
-        <a
-          key={component.slug}
-          href={`/components/${component.slug}`}
-          className="group flex min-h-65 flex-col border-clay-hairline border-t border-r transition-colors hover:bg-clay-base"
-        >
-          <div className="flex flex-1 items-center justify-center p-6">
-            <span className="font-mono text-clay-subtle text-xs uppercase tracking-wider transition-colors group-hover:text-clay-default">
-              {component.group}
-            </span>
-          </div>
-          <div className="border-clay-hairline border-t px-4 py-2 font-mono text-clay-subtle text-xs transition-colors group-hover:text-clay-default">
-            {component.name}
-          </div>
-        </a>
-      ))}
+      {remaining.map((component) => {
+        const demoName = component.demos[0]?.name;
+        return (
+          <a
+            key={component.slug}
+            href={`/components/${component.slug}`}
+            className="group flex min-h-65 flex-col border-clay-hairline border-t border-r transition-colors hover:bg-clay-base"
+          >
+            <div className="flex flex-1 items-center justify-center p-6">
+              {demoName ? (
+                <DemoRenderer slug={component.slug} demoName={demoName} />
+              ) : (
+                <span className="font-mono text-clay-subtle text-xs uppercase tracking-wider transition-colors group-hover:text-clay-default">
+                  {component.group}
+                </span>
+              )}
+            </div>
+            <div className="border-clay-hairline border-t px-4 py-2 font-mono text-clay-subtle text-xs transition-colors group-hover:text-clay-default">
+              {component.name}
+            </div>
+          </a>
+        );
+      })}
     </div>
   );
 }

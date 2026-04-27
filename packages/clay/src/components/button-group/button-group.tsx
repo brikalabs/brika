@@ -61,7 +61,11 @@ function ButtonGroup({
   className,
   orientation,
   ...props
-}: React.ComponentProps<'div'> & VariantProps<typeof buttonGroupVariants>) {
+}: React.ComponentProps<'div'> &
+  VariantProps<typeof buttonGroupVariants> & {
+    /** Lay buttons out horizontally or vertically. */
+    orientation?: VariantProps<typeof buttonGroupVariants>['orientation'];
+  }) {
   return (
     <div
       role="group"

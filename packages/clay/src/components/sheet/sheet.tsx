@@ -43,7 +43,9 @@ function SheetContent({
   showCloseButton = true,
   ...props
 }: React.ComponentProps<typeof SheetPrimitive.Content> & {
+  /** Which edge the sheet slides in from. */
   side?: 'top' | 'right' | 'bottom' | 'left';
+  /** Render the built-in close X. */
   showCloseButton?: boolean;
 }) {
   return (
