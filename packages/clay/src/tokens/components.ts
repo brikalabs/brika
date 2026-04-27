@@ -9,18 +9,18 @@
  * To onboard a new component: drop `tokens.ts` next to its `meta.ts`,
  * have it call `defineComponent('<name>', { ... })`, and add one bare
  * import below.
- *
- * Tokens for components that don't yet have their own folder live in
- * `./orphan-components.ts`.
  */
 
+import '../components/alert/tokens';
 import '../components/avatar/tokens';
 import '../components/badge/tokens';
 import '../components/button/tokens';
 import '../components/card/tokens';
+import '../components/checkbox/tokens';
 import '../components/code-block/tokens';
 import '../components/dialog/tokens';
 import '../components/dropdown-menu/tokens';
+import '../components/icon/tokens';
 import '../components/input/tokens';
 import '../components/password-input/tokens';
 import '../components/popover/tokens';
@@ -34,8 +34,8 @@ import '../components/switch/tokens';
 import '../components/table/tokens';
 import '../components/tabs/tokens';
 import '../components/textarea/tokens';
+import '../components/toast/tokens';
 import '../components/tooltip/tokens';
-import './orphan-components';
 
 import { getRegisteredTokens } from './component-registry';
 import type { TokenSpec } from './types';

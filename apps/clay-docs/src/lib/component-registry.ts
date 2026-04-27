@@ -525,6 +525,140 @@ const DOCS_DATA: Readonly<Record<string, ComponentDocs>> = {
 </OverflowList>`
   ),
   'brika-logo': singleDefault('BrikaLogoDefaultDemo', '<BrikaLogo />'),
+  alert: {
+    demos: [
+      {
+        name: 'AlertDefaultDemo',
+        title: 'Default',
+        code: `<Alert>
+  <AlertTitle>Heads up</AlertTitle>
+  <AlertDescription>You can add components to your app using the CLI.</AlertDescription>
+</Alert>`,
+      },
+      {
+        name: 'AlertVariantsDemo',
+        title: 'Variants',
+        description: 'Five variants — `default`, `destructive`, `info`, `warning`, `success`.',
+        code: `<Alert variant="info">…</Alert>
+<Alert variant="warning">…</Alert>
+<Alert variant="success">…</Alert>
+<Alert variant="destructive">…</Alert>`,
+      },
+      {
+        name: 'AlertWithIconDemo',
+        title: 'With icon',
+        description: 'Pair with `<AlertIcon>` to introduce a leading glyph.',
+        code: `<Alert variant="destructive">
+  <AlertIcon><AlertCircle /></AlertIcon>
+  <div>
+    <AlertTitle>Could not save</AlertTitle>
+    <AlertDescription>Check your connection and try again.</AlertDescription>
+  </div>
+</Alert>`,
+      },
+    ],
+    accessibility: [
+      'Root carries `role="alert"` so screen readers announce the message.',
+      'Title and description are siblings so AT can read them as one block.',
+      'When using `<AlertIcon>`, mark it `aria-hidden` (the wrapper does this for you).',
+    ],
+  },
+  checkbox: {
+    demos: [
+      {
+        name: 'CheckboxDefaultDemo',
+        title: 'Default',
+        code: `<label className="inline-flex items-center gap-2">
+  <Checkbox /> Subscribe to updates
+</label>`,
+      },
+      {
+        name: 'CheckboxSizesDemo',
+        title: 'Sizes',
+        description: '`sm`, `default`, `lg` — pair with `<Label>` for click affordance.',
+        code: `<Checkbox size="sm" defaultChecked />
+<Checkbox defaultChecked />
+<Checkbox size="lg" defaultChecked />`,
+      },
+      {
+        name: 'CheckboxIndeterminateDemo',
+        title: 'Indeterminate',
+        description: 'Tri-state — pass `checked="indeterminate"` to render the dash glyph.',
+        code: `<Checkbox checked="indeterminate" onCheckedChange={setValue} />`,
+      },
+    ],
+    accessibility: [
+      'Built on Radix Checkbox, so keyboard / focus / aria-state come for free.',
+      'Indeterminate state surfaces via `checked="indeterminate"`; AT announces "mixed".',
+      'Always pair with a visible label (wrap in `<label>` or use `htmlFor`).',
+    ],
+  },
+  icon: {
+    demos: [
+      {
+        name: 'IconDefaultDemo',
+        title: 'Default',
+        code: `<Icon as={Bell} aria-label="Notifications" />`,
+      },
+      {
+        name: 'IconTonesDemo',
+        title: 'Tones',
+        description:
+          '`default` → `--icon`, `muted` → `--icon-muted`, `primary` → `--icon-primary`.',
+        code: `<Icon as={Bell} tone="default" />
+<Icon as={Bell} tone="muted" />
+<Icon as={Bell} tone="primary" />`,
+      },
+      {
+        name: 'IconSizesDemo',
+        title: 'Sizes',
+        code: `<Icon as={Bell} size="xs" />
+<Icon as={Bell} size="sm" />
+<Icon as={Bell} size="default" />
+<Icon as={Bell} size="lg" />`,
+      },
+    ],
+    accessibility: [
+      'Decorative by default — when no `aria-label` is supplied, the wrapper sets `aria-hidden="true"` so AT skips it.',
+      'For meaningful icons, pass `aria-label` explicitly; the wrapper preserves it.',
+    ],
+  },
+  toast: {
+    demos: [
+      {
+        name: 'ToastDefaultDemo',
+        title: 'Default',
+        description:
+          'Wrap your app in `<ToastProvider>` and place `<Toaster />` near the root. Trigger toasts on demand.',
+        code: `<ToastProvider>
+  <Button onClick={() => setOpen(true)}>Show toast</Button>
+  <Toast open={open} onOpenChange={setOpen}>
+    <ToastTitle>Saved</ToastTitle>
+    <ToastDescription>Changes synced to the server.</ToastDescription>
+    <ToastClose />
+  </Toast>
+  <Toaster />
+</ToastProvider>`,
+      },
+      {
+        name: 'ToastVariantsDemo',
+        title: 'Variants',
+        description:
+          '`default` and `destructive`. Pair `<ToastAction>` with the appropriate intent.',
+        code: `<Toast variant="destructive">
+  <ToastTitle>Could not save</ToastTitle>
+  <ToastDescription>Network error.</ToastDescription>
+  <ToastAction altText="Retry">Retry</ToastAction>
+  <ToastClose />
+</Toast>`,
+      },
+    ],
+    accessibility: [
+      'Built on Radix Toast: announces via `aria-live`, supports keyboard dismissal (F8 to focus the viewport, Esc to close).',
+      '`<ToastAction>` requires `altText` so AT users can act on the toast even if they miss the timeout.',
+      'Auto-dismiss duration defaults to 5s; pair with `<ToastProvider duration={...}>` to override.',
+    ],
+  },
 };
 
 const FALLBACK_DOCS: ComponentDocs = { demos: [] };

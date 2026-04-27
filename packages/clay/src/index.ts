@@ -7,6 +7,7 @@
  */
 
 export type { ComponentGroup, ComponentMeta } from './components/_registry';
+export * from './components/alert';
 export * from './components/alert-dialog';
 export * from './components/avatar';
 export * from './components/badge';
@@ -16,11 +17,13 @@ export * from './components/button';
 export * from './components/button-group';
 export * from './components/card';
 export * from './components/chart';
+export * from './components/checkbox';
 export * from './components/code-block';
 export * from './components/collapsible';
 export * from './components/dialog';
 export * from './components/dropdown-menu';
 export * from './components/empty-state';
+export * from './components/icon';
 export * from './components/input';
 export * from './components/input-group';
 export * from './components/label';
@@ -43,6 +46,7 @@ export * from './components/switch';
 export * from './components/table';
 export * from './components/tabs';
 export * from './components/textarea';
+export * from './components/toast';
 export * from './components/tooltip';
 export { cn } from './primitives/cn';
 export { cssVars } from './primitives/cssVars';
