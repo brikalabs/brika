@@ -1,0 +1,96 @@
+{
+  "id": "editorial",
+  "name": "Editorial",
+  "description": "Display serif headlines, generous spacing, soft pills, quiet colors. A long-read magazine for product UI.",
+  "accentSwatches": ["#1a1a1a", "#c1923f", "#7d2c1f", "#fffaf0"],
+  "colors": {
+    "light": {
+      "background": "#fdfaf3",
+      "foreground": "#1a1a1a",
+      "card": "#ffffff",
+      "card-foreground": "#1a1a1a",
+      "popover": "#ffffff",
+      "popover-foreground": "#1a1a1a",
+      "primary": "#1a1a1a",
+      "primary-foreground": "#fdfaf3",
+      "secondary": "#f0e9d8",
+      "secondary-foreground": "#1a1a1a",
+      "muted": "#efe8d6",
+      "muted-foreground": "#6f6553",
+      "accent": "#c1923f",
+      "accent-foreground": "#1a1a1a",
+      "border": "#e0d5b8",
+      "input": "#d6c89d",
+      "ring": "#c1923f",
+      "success": "#5a7d2c",
+      "success-foreground": "#ffffff",
+      "warning": "#c1923f",
+      "warning-foreground": "#1a1a1a",
+      "info": "#385d8a",
+      "info-foreground": "#ffffff",
+      "destructive": "#7d2c1f",
+      "destructive-foreground": "#ffffff"
+    },
+    "dark": {
+      "background": "#1c1814",
+      "foreground": "#f4ebd6",
+      "card": "#231e18",
+      "card-foreground": "#f4ebd6",
+      "popover": "#231e18",
+      "popover-foreground": "#f4ebd6",
+      "primary": "#e8d496",
+      "primary-foreground": "#1c1814",
+      "secondary": "#2a241d",
+      "secondary-foreground": "#f4ebd6",
+      "muted": "#26211b",
+      "muted-foreground": "#a89b7a",
+      "accent": "#d4a85a",
+      "accent-foreground": "#1c1814",
+      "border": "#3a3128",
+      "input": "#3a3128",
+      "ring": "#d4a85a",
+      "success": "#9bb858",
+      "success-foreground": "#1c1814",
+      "warning": "#d4a85a",
+      "warning-foreground": "#1c1814",
+      "info": "#7ea2c4",
+      "info-foreground": "#1c1814",
+      "destructive": "#c46656",
+      "destructive-foreground": "#1c1814"
+    }
+  },
+  "geometry": {
+    "radius": "1.25rem",
+    "fontSans": "\"Inter\", ui-sans-serif, system-ui, sans-serif",
+    "fontMono": "\"Iowan Old Style\", ui-monospace, SFMono-Regular, monospace"
+  },
+  "borders": {
+    "width": "1px",
+    "style": "solid"
+  },
+  "motion": {
+    "duration": "320ms",
+    "easing": "cubic-bezier(0.22, 1, 0.36, 1)"
+  },
+  "focus": {
+    "width": "2px",
+    "offset": "3px"
+  },
+  "components": {
+    "button": {
+      "fontFamily": "\"Inter\", ui-sans-serif, system-ui, sans-serif",
+      "fontWeight": "500",
+      "letterSpacing": "0.01em",
+      "textTransform": "none"
+    },
+    "card": {
+      "shadow": "var(--shadow-overlay)"
+    },
+    "label": {
+      "fontFamily": "\"Instrument Serif\", \"Iowan Old Style\", Georgia, serif",
+      "fontWeight": "400",
+      "letterSpacing": "0.01em",
+      "textTransform": "none"
+    }
+  }
+}

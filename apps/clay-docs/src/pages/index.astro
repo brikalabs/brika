@@ -1,0 +1,168 @@
+---
+import { HomeGrid } from '~/components/demos/HomeGrid.tsx';
+import CodeSource from '~/components/docs/CodeSource.astro';
+import MainLayout from '~/layouts/MainLayout.astro';
+import { COMPONENTS } from '~/lib/component-registry';
+
+declare const __CLAY_VERSION__: string;
+declare const __BUILD_COMMIT__: string;
+
+const clayVersion = typeof __CLAY_VERSION__ === 'string' ? __CLAY_VERSION__ : 'dev';
+const buildCommit = typeof __BUILD_COMMIT__ === 'string' ? __BUILD_COMMIT__ : 'dev';
+const componentCount = COMPONENTS.length;
+---
+
+<MainLayout
+  title="Clay — Brika's React component library"
+  description="Pressable raw material for every Brika surface. Tokens, components, themes — one package."
+>
+  <!-- HERO -->
+  <section class="drafting-grid relative overflow-hidden border-clay-hairline border-b">
+    <!-- Top metadata strip: drafting-paper title block -->
+    <div
+      class="relative z-10 flex flex-wrap items-center justify-between gap-3 border-clay-hairline border-b bg-clay-canvas/60 px-6 py-3 backdrop-blur md:px-12"
+    >
+      <div class="flex items-center gap-4 mono-tag-tight">
+        <span class="text-clay-strong">@brika/clay</span>
+        <span class="hairline w-6"></span>
+        <span>v{clayVersion}</span>
+        <span class="hairline w-6 hidden sm:block"></span>
+        <span class="hidden sm:inline">{buildCommit}</span>
+      </div>
+      <div class="flex items-center gap-4 mono-tag-tight">
+        <span>{componentCount} components</span>
+        <span class="hairline w-6"></span>
+        <span>11 themes</span>
+        <span class="hairline w-6 hidden sm:block"></span>
+        <span class="hidden sm:inline">MIT</span>
+      </div>
+    </div>
+
+    <div class="relative z-10 mx-auto grid max-w-6xl grid-cols-12 gap-6 px-6 py-20 md:px-12 md:py-28">
+      <!-- Big editorial display headline, anchored left, asymmetric -->
+      <div class="col-span-12 lg:col-span-8 clay-rise" style="animation-delay: 0.05s;">
+        <p class="mono-tag-tight mb-6 inline-flex items-center gap-2">
+          <span class="hairline w-8"></span>
+          Design system · 2026
+        </p>
+        <h1 class="font-display text-5xl text-clay-strong leading-[1.02] md:text-7xl lg:text-[5.5rem]">
+          Pressable raw<br />
+          material for every<br />
+          <span class="font-display-italic text-clay-brand">Brika surface.</span>
+        </h1>
+      </div>
+
+      <!-- Right rail: tagline + actions, drops below on mobile -->
+      <div
+        class="col-span-12 flex flex-col justify-end gap-6 lg:col-span-4 clay-rise"
+        style="animation-delay: 0.18s;"
+      >
+        <p class="text-clay-default text-lg leading-relaxed">
+          A React component library built on Radix, CVA, and Tailwind v4. Tokenised,
+          themeable, and consumable by any Brika app — without pulling in hub or
+          feature code.
+        </p>
+        <div class="flex flex-wrap items-center gap-2">
+          <a
+            href="/components/button"
+            class="inline-flex h-10 items-center gap-2 rounded-md px-4 font-medium text-sm transition-colors"
+            style="background-color: var(--text-color-clay-strong); color: var(--color-clay-canvas);"
+          >
+            Browse components
+            <span aria-hidden="true" class="font-mono">→</span>
+          </a>
+          <a
+            href="/installation"
+            class="inline-flex h-10 items-center gap-2 rounded-md border border-clay-hairline bg-clay-elevated px-4 font-medium text-clay-default text-sm transition-colors hover:border-clay-strong hover:bg-clay-control"
+          >
+            Installation
+          </a>
+        </div>
+      </div>
+
+      <!-- Install block under the headline, full bleed -->
+      <div class="col-span-12 lg:col-span-7 clay-rise" style="animation-delay: 0.32s;">
+        <div class="mb-3 flex items-center gap-2 mono-tag-tight">
+          <span>Install</span>
+          <span class="hairline flex-1"></span>
+        </div>
+        <CodeSource code="bun add @brika/clay" lang="bash" filename="terminal" />
+      </div>
+    </div>
+  </section>
+
+  <!-- COMPONENTS GALLERY -->
+  <section class="border-clay-hairline border-b">
+    <div class="mx-auto max-w-6xl px-6 pt-16 pb-2 md:px-12">
+      <div class="numbered-rule mb-8">
+        <span class="num">01</span>
+        <span class="label">Components</span>
+        <span class="spacer hairline"></span>
+        <a
+          href="/components"
+          class="text-clay-default transition-colors hover:text-clay-strong"
+        >
+          View all →
+        </a>
+      </div>
+      <div class="mb-8 flex items-end justify-between gap-6">
+        <h2 class="font-display text-4xl text-clay-strong leading-[1.05] md:text-5xl">
+          A workshop, fully<br />
+          <span class="font-display-italic text-clay-subtle">stocked.</span>
+        </h2>
+        <p class="hidden max-w-md text-clay-subtle text-sm leading-relaxed md:block">
+          Thirty-seven primitives, grouped by intent. Every demo here is the live
+          component rendering against the active theme — pick one above and watch
+          the gallery follow.
+        </p>
+      </div>
+    </div>
+    <HomeGrid client:only="react" />
+  </section>
+
+  <!-- POSITIONING -->
+  <section class="border-clay-hairline border-b">
+    <div class="mx-auto max-w-6xl px-6 py-20 md:px-12">
+      <div class="numbered-rule mb-12">
+        <span class="num">02</span>
+        <span class="label">Principles</span>
+        <span class="spacer hairline"></span>
+      </div>
+      <div class="grid grid-cols-1 gap-12 md:grid-cols-3 md:gap-8">
+        <div class="space-y-3">
+          <p class="mono-tag">— Tokenised</p>
+          <h3 class="font-display text-3xl text-clay-strong leading-[1.1]">
+            Every value <span class="font-display-italic text-clay-subtle">routes</span> through
+            a token.
+          </h3>
+          <p class="text-clay-default text-sm leading-relaxed">
+            Colour, radius, spacing — all CSS custom properties. Swap the layer,
+            swap the look. No re-export, no rebuild.
+          </p>
+        </div>
+        <div class="space-y-3">
+          <p class="mono-tag">— Accessible</p>
+          <h3 class="font-display text-3xl text-clay-strong leading-[1.1]">
+            Radix under,<br />
+            <span class="font-display-italic text-clay-subtle">keyboard ready.</span>
+          </h3>
+          <p class="text-clay-default text-sm leading-relaxed">
+            Focus rings, ARIA, keyboard nav, screen-reader semantics — first
+            class, never bolted on at the end.
+          </p>
+        </div>
+        <div class="space-y-3">
+          <p class="mono-tag">— Portable</p>
+          <h3 class="font-display text-3xl text-clay-strong leading-[1.1]">
+            Zero coupling<br />
+            to <span class="font-display-italic text-clay-subtle">hub or auth.</span>
+          </h3>
+          <p class="text-clay-default text-sm leading-relaxed">
+            A docs site, a plugin UI, a fresh SPA — anything that can render React
+            can consume Clay cleanly.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+</MainLayout>

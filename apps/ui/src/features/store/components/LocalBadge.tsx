@@ -1,6 +1,6 @@
+import { Badge } from '@brika/clay';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@brika/clay/components/tooltip';
 import { HardDrive } from 'lucide-react';
-import { Badge } from '@/components/ui';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useLocale } from '@/lib/use-locale';
 
 export function LocalBadge() {

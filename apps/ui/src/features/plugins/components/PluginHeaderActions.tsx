@@ -1,5 +1,3 @@
-import { ArrowUp, EllipsisVertical, Power, RotateCcw, Skull, Trash2 } from 'lucide-react';
-import { useState } from 'react';
 import {
   Badge,
   Button,
@@ -8,7 +6,9 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui';
+} from '@brika/clay';
+import { ArrowUp, EllipsisVertical, Power, RotateCcw, Skull, Trash2 } from 'lucide-react';
+import { useState } from 'react';
 import { useLocale } from '@/lib/use-locale';
 import { UninstallDialog } from './UninstallDialog';
 

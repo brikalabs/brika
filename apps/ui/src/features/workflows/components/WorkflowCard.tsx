@@ -1,10 +1,8 @@
-import { useNavigate } from '@tanstack/react-router';
-import { AlertCircle, Bug, MoreVertical, Play, Square, Trash2, Workflow } from 'lucide-react';
-import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
 import {
   Badge,
   Button,
   Card,
+  cn,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -14,9 +12,11 @@ import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from '@/components/ui';
+} from '@brika/clay';
+import { useNavigate } from '@tanstack/react-router';
+import { AlertCircle, Bug, MoreVertical, Play, Square, Trash2, Workflow } from 'lucide-react';
+import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
 import { useLocale } from '@/lib/use-locale';
-import { cn } from '@/lib/utils';
 import { paths } from '@/routes/paths';
 import type { BlockDefinition, Workflow as WorkflowType } from '../api';
 

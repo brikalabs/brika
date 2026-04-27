@@ -1,5 +1,5 @@
+import { Avatar, AvatarFallback, Button } from '@brika/clay';
 import { Loader2, RotateCcw, Zap } from 'lucide-react';
-import { Avatar, AvatarFallback, Button } from '@/components/ui';
 import type { SparkEvent } from '../sparks-hooks';
 
 interface EventRowProps {

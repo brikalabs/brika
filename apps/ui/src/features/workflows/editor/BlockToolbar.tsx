@@ -1,3 +1,21 @@
+import {
+  Avatar,
+  AvatarFallback,
+  Badge,
+  Button,
+  cn,
+  Input,
+  ScrollArea,
+  Skeleton,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@brika/clay';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@brika/clay/components/collapsible';
 import { useQuery } from '@tanstack/react-query';
 import {
   ArrowDownToLine,
@@ -10,21 +28,7 @@ import {
 } from 'lucide-react';
 import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
 import { type DragEvent, useMemo, useState } from 'react';
-import {
-  Avatar,
-  AvatarFallback,
-  Badge,
-  Button,
-  Input,
-  ScrollArea,
-  Skeleton,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useLocale } from '@/lib/use-locale';
-import { cn } from '@/lib/utils';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types

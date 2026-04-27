@@ -5,9 +5,9 @@
  * Only renders when the plugin declares at least one permission.
  */
 
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, Switch } from '@brika/clay';
 import { isValidPermission, PERMISSIONS, type Permission } from '@brika/permissions';
 import { type LucideIcon, MapPin, Shield } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, Switch } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
 import type { Plugin } from '../api';
 import { useTogglePermission } from '../hooks';

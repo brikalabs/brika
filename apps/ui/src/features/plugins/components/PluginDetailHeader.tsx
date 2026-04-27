@@ -1,6 +1,6 @@
+import { Avatar, AvatarFallback, AvatarImage, Badge } from '@brika/clay';
 import { Link } from '@tanstack/react-router';
 import { ArrowLeft, Code2, ExternalLink, Plug, User } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage, Badge } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
 import { paths } from '@/routes/paths';
 import type { Plugin } from '../api';

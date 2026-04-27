@@ -1,0 +1,27 @@
+/**
+ * Cross-cutting hand-authored rules. Per-component bridge CSS no longer
+ * exists — every component composes its token-driven properties inline
+ * via Tailwind v4 arbitrary classes (`(--token)`, `(length:--token)`,
+ * `[prop:var(--token)]`, `[corner-shape:var(--<name>-corner-shape,…)]`),
+ * so the only CSS that lives outside the Tailwind plugin is the
+ * theme-scope reset below and the utilities in `./utilities.css`.
+ */
+
+/*
+ * Inherited-property re-assertion at every theme scope.
+ *
+ * `font-family` (and `color`) are inherited as their *computed* value:
+ * once `body` declares `font-family: var(--font-sans)`, the resolved
+ * font cascades down even into descendants whose `--font-sans` was
+ * redefined by a nested `<ThemeScope>`. Re-declaring the property at
+ * every `[data-clay-theme-scope]` element forces re-resolution against
+ * that scope's CSS variables.
+ *
+ * Works on `display: contents` wrappers too: inheritance flows through
+ * the DOM tree, not the box tree, so a wrapper that creates no layout
+ * box still passes its inherited typography down.
+ */
+[data-clay-theme-scope] {
+  font-family: var(--font-sans);
+  color: var(--foreground);
+}

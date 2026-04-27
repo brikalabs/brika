@@ -1,4 +1,4 @@
-import { Badge } from "@/components/ui";
+import { Badge } from "@brika/clay";
 import { useLocale } from "@/lib/use-locale";
 import type { LogLevel } from "../types";
 import { LEVEL_COLORS } from "./log-level-config";

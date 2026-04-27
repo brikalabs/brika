@@ -1,0 +1,484 @@
+@import "tailwindcss";
+@import "@brika/clay/styles";
+@plugin "@tailwindcss/typography";
+
+@theme {
+  /* ==================================================
+     Clay docs-site chrome tokens.
+     Each one aliases a Clay theme token so the entire
+     site re-skins when `applyTheme(...)` swaps the
+     palette. The chrome name carries the *intent* (canvas
+     = page surface, hairline = separator, etc.); the
+     theme owns the *value*. The grayscale defaults remain
+     in `--background`/`--card`/`--border` defaults under
+     `@brika/clay/styles`, so even with no theme applied
+     the chrome resolves.
+
+     Plain `@theme` (not `@theme inline`) so the chrome
+     CSS variables are emitted to `:root` and available to
+     direct CSS rules (html, body, .clay-prose, …) — not
+     just Tailwind utilities.
+     ================================================== */
+  --color-clay-canvas: var(--background);
+  --color-clay-elevated: var(--card);
+  /*
+   * `clay-base` and `clay-control` are *subtle* off-canvas surfaces used
+   * by docs chrome (kbd chips, hovered rows, version pill). They derive
+   * from the foreground/background contrast pair — not the theme's
+   * saturated `--secondary` / `--accent` — so chrome stays legible on
+   * every theme, including ones whose accent matches the foreground
+   * (Terminal: both are green). `color-mix` preserves the theme's
+   * tonality while guaranteeing contrast with `--foreground` text.
+   */
+  --color-clay-base: color-mix(in oklch, var(--foreground) 4%, var(--background));
+  --color-clay-control: color-mix(in oklch, var(--foreground) 8%, var(--background));
+  --color-clay-hairline: var(--border);
+  --color-clay-brand: var(--primary);
+
+  --text-color-clay-default: var(--foreground);
+  --text-color-clay-strong: var(--foreground);
+  --text-color-clay-subtle: var(--muted-foreground);
+  --text-color-clay-inactive: var(--muted-foreground);
+  --text-color-clay-link: var(--primary);
+  --text-color-clay-brand: var(--primary);
+
+  /* Display font — editorial serif for hero & page titles. The body
+     stays Inter (set by @brika/clay/styles); JetBrains Mono is reserved
+     for code, metadata labels, and "drafting tag" treatments. */
+  --font-display: "Instrument Serif", "Iowan Old Style", Georgia, "Times New Roman", serif;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html {
+  color-scheme: light dark;
+  font-family: var(--font-sans);
+  scroll-behavior: smooth;
+  letter-spacing: -0.01em;
+  line-height: 1.5;
+  font-feature-settings: "cv02", "cv03", "cv04", "calt";
+  background-color: var(--color-clay-canvas);
+  color: var(--text-color-clay-default);
+}
+
+html[data-mode="light"] {
+  color-scheme: light;
+}
+html[data-mode="dark"] {
+  color-scheme: dark;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+body {
+  min-height: 100vh;
+  background-color: var(--color-clay-canvas);
+  color: var(--text-color-clay-default);
+}
+
+pre,
+code,
+kbd,
+.font-mono {
+  letter-spacing: normal;
+  font-family: var(--font-mono);
+}
+
+/* ==================================================
+   Clay prose — tuned for MDX doc pages
+   ================================================== */
+.clay-prose {
+  --tw-prose-body: var(--text-color-clay-default);
+  --tw-prose-headings: var(--text-color-clay-strong);
+  --tw-prose-lead: var(--text-color-clay-subtle);
+  --tw-prose-links: var(--text-color-clay-link);
+  --tw-prose-bold: var(--text-color-clay-strong);
+  --tw-prose-counters: var(--text-color-clay-subtle);
+  --tw-prose-bullets: var(--text-color-clay-subtle);
+  --tw-prose-hr: var(--color-clay-hairline);
+  --tw-prose-quotes: var(--text-color-clay-default);
+  --tw-prose-quote-borders: var(--color-clay-brand);
+  --tw-prose-captions: var(--text-color-clay-subtle);
+  --tw-prose-kbd: var(--text-color-clay-default);
+  --tw-prose-kbd-shadows: transparent;
+  --tw-prose-code: var(--text-color-clay-default);
+  --tw-prose-pre-code: var(--text-color-clay-default);
+  --tw-prose-pre-bg: var(--color-clay-base);
+  --tw-prose-th-borders: var(--color-clay-hairline);
+  --tw-prose-td-borders: var(--color-clay-hairline);
+  --tw-prose-invert-body: var(--text-color-clay-default);
+  --tw-prose-invert-headings: var(--text-color-clay-strong);
+  --tw-prose-invert-lead: var(--text-color-clay-subtle);
+  --tw-prose-invert-links: var(--text-color-clay-link);
+  --tw-prose-invert-bold: var(--text-color-clay-strong);
+  --tw-prose-invert-counters: var(--text-color-clay-subtle);
+  --tw-prose-invert-bullets: var(--text-color-clay-subtle);
+  --tw-prose-invert-hr: var(--color-clay-hairline);
+  --tw-prose-invert-quotes: var(--text-color-clay-default);
+  --tw-prose-invert-quote-borders: var(--color-clay-brand);
+  --tw-prose-invert-captions: var(--text-color-clay-subtle);
+  --tw-prose-invert-kbd: var(--text-color-clay-default);
+  --tw-prose-invert-kbd-shadows: transparent;
+  --tw-prose-invert-code: var(--text-color-clay-default);
+  --tw-prose-invert-pre-code: var(--text-color-clay-default);
+  --tw-prose-invert-pre-bg: var(--color-clay-base);
+  --tw-prose-invert-th-borders: var(--color-clay-hairline);
+  --tw-prose-invert-td-borders: var(--color-clay-hairline);
+}
+
+.clay-prose :where(code):not(:where(pre code, .not-prose, .not-prose *)) {
+  font-weight: 500;
+  font-size: 0.875em;
+  background-color: var(--color-clay-base);
+  border: 1px solid var(--color-clay-hairline);
+  border-radius: 0.25rem;
+  padding: 0.125rem 0.375rem;
+  font-family: var(--font-mono);
+  letter-spacing: normal;
+}
+
+.clay-prose :where(code):not(:where(pre code, .not-prose, .not-prose *))::before,
+.clay-prose :where(code):not(:where(pre code, .not-prose, .not-prose *))::after {
+  content: none;
+}
+
+.clay-prose :where(a):not(:where(.not-prose, .not-prose *)) {
+  text-decoration: none;
+}
+
+.clay-prose :where(a):not(:where(.not-prose, .not-prose *)):hover {
+  text-decoration: underline;
+}
+
+.clay-prose :where(h1, h2, h3, h4):not(:where(.not-prose, .not-prose *)) {
+  letter-spacing: -0.02em;
+  scroll-margin-top: 6rem;
+  font-weight: 600;
+}
+
+.clay-prose :where(h1):not(:where(.not-prose, .not-prose *)) {
+  font-size: 2.25rem;
+  line-height: 1.15;
+  margin-bottom: 0.5rem;
+}
+
+.clay-prose :where(.lead) {
+  color: var(--text-color-clay-subtle);
+  font-size: 1.125rem;
+  line-height: 1.5;
+  margin-bottom: 2rem;
+}
+
+.clay-prose :where(table) {
+  width: 100%;
+  font-size: 0.875rem;
+}
+
+.clay-prose :where(thead) {
+  border-bottom: 1px solid var(--color-clay-hairline);
+}
+
+.clay-prose :where(thead th) {
+  color: var(--text-color-clay-strong);
+  font-weight: 600;
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+}
+
+.clay-prose :where(tbody td) {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--color-clay-hairline);
+}
+
+/* ==================================================
+   Shiki code blocks (.astro-code).
+   With defaultColor: false, Shiki emits per-token
+   CSS variables; we map them to the active mode.
+   The background is owned by the wrapping
+   `.clay-code-source` (a single unified surface) so the
+   header strip and the code body share one background —
+   no double-box effect. The pre itself stays transparent
+   and contributes only padding.
+   ================================================== */
+.astro-code {
+  background-color: transparent;
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  letter-spacing: normal;
+  padding: 0.75rem 1rem;
+  margin: 0;
+}
+
+.astro-code,
+.astro-code span {
+  color: var(--shiki-light);
+  font-style: var(--shiki-light-font-style);
+  font-weight: var(--shiki-light-font-weight);
+  text-decoration: var(--shiki-light-text-decoration);
+}
+
+html[data-mode="dark"] .astro-code,
+html[data-mode="dark"] .astro-code span {
+  color: var(--shiki-dark);
+  font-style: var(--shiki-dark-font-style);
+  font-weight: var(--shiki-dark-font-weight);
+  text-decoration: var(--shiki-dark-text-decoration);
+}
+
+/* Inline code inside prose (.clay-prose) wraps a styled box
+   around the Shiki output. */
+/* Bare `.astro-code` inside prose (no `.clay-code-source` wrapper) — give
+   it its own subtle frame so it doesn't blend into the page bg. The
+   `.clay-code-source` variant overrides this in the wrapper. */
+.clay-prose .astro-code {
+  background-color: var(--color-clay-base);
+  border: 1px solid var(--color-clay-hairline);
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  overflow-x: auto;
+}
+
+.clay-code-source .astro-code {
+  border: 0;
+  border-radius: 0;
+  background-color: transparent;
+}
+
+/* Copy-button wrapper */
+.code-block {
+  position: relative;
+}
+
+.code-block .copy-button {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  color: var(--text-color-clay-subtle);
+  background-color: var(--color-clay-elevated);
+  border: 1px solid var(--color-clay-hairline);
+  border-radius: 0.25rem;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.code-block:hover .copy-button {
+  opacity: 1;
+}
+
+.code-block .copy-button:hover {
+  color: var(--text-color-clay-default);
+}
+
+/* ==================================================
+   Drafting-studio typography utilities.
+   `font-display`  — editorial serif for hero / H1.
+   `mono-tag`      — small monospace label (sections,
+                     metadata, "drafting tag" pills).
+   `hairline`      — 1px rule in the chrome border colour.
+   `numbered-rule` — hairline rule with a mono digit
+                     embedded on the left, used as a
+                     section divider.
+   ================================================== */
+.font-display {
+  font-family: var(--font-display);
+  font-feature-settings: "ss01", "liga";
+  letter-spacing: -0.022em;
+  font-weight: 400;
+}
+
+.font-display-italic {
+  font-family: var(--font-display);
+  font-style: italic;
+  letter-spacing: -0.022em;
+  font-weight: 400;
+}
+
+.mono-tag {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-color-clay-subtle);
+}
+
+.mono-tag-tight {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-color-clay-subtle);
+}
+
+.hairline {
+  height: 1px;
+  background-color: var(--color-clay-hairline);
+}
+
+/* Section header that combines a numbered tag, a hairline rule, and an
+   optional kicker on the right.
+
+     01 ──────────────────────────────  optional ›
+   */
+.numbered-rule {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--color-clay-hairline);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-color-clay-subtle);
+}
+
+.numbered-rule .num {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-color-clay-strong);
+}
+
+.numbered-rule .label {
+  flex-shrink: 0;
+}
+
+.numbered-rule .spacer {
+  flex: 1;
+}
+
+/* Drafting-paper grid used on the hero + a few accent surfaces.
+   The grid sits at ~40% of the hairline colour so it stays clearly
+   subordinate to actual `.hairline` rules and section borders — no
+   visual clash where a divider crosses a grid line. */
+.drafting-grid {
+  --drafting-grid-tint: color-mix(in srgb, var(--color-clay-hairline) 38%, transparent);
+  background-image:
+    linear-gradient(var(--drafting-grid-tint) 1px, transparent 1px),
+    linear-gradient(90deg, var(--drafting-grid-tint) 1px, transparent 1px);
+  background-size: 56px 56px;
+  background-position: -1px -1px;
+  position: relative;
+}
+
+/* Vignette that fades the grid out under the headline + CTA cluster.
+   Centred a touch left of middle so the right-hand rail still gets
+   some texture, then opaque enough at the edges to keep the page feel. */
+.drafting-grid::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse 70% 60% at 38% 50%,
+    var(--color-clay-canvas) 0%,
+    color-mix(in srgb, var(--color-clay-canvas) 80%, transparent) 55%,
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
+/* Subtle blueprint hatch for component-preview surfaces — finer than
+   the drafting grid, doesn't compete with the demo content. */
+.preview-grid {
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    var(--color-clay-hairline) 1px,
+    transparent 0
+  );
+  background-size: 18px 18px;
+}
+
+/* Decorative corner hairlines used on the hero card — small +
+   marks at the four corners of an element, in the drafting style. */
+.corner-marks::before,
+.corner-marks::after,
+.corner-marks > .corner-bl,
+.corner-marks > .corner-br {
+  content: "";
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-color: var(--color-clay-hairline);
+  pointer-events: none;
+}
+
+.corner-marks {
+  position: relative;
+}
+
+.corner-marks::before {
+  top: -1px;
+  left: -1px;
+  border-top: 1px solid;
+  border-left: 1px solid;
+  border-color: var(--color-clay-default, var(--text-color-clay-default));
+}
+
+.corner-marks::after {
+  top: -1px;
+  right: -1px;
+  border-top: 1px solid;
+  border-right: 1px solid;
+  border-color: var(--color-clay-default, var(--text-color-clay-default));
+}
+
+.corner-marks > .corner-bl {
+  bottom: -1px;
+  left: -1px;
+  border-bottom: 1px solid;
+  border-left: 1px solid;
+  border-color: var(--color-clay-default, var(--text-color-clay-default));
+}
+
+.corner-marks > .corner-br {
+  bottom: -1px;
+  right: -1px;
+  border-bottom: 1px solid;
+  border-right: 1px solid;
+  border-color: var(--color-clay-default, var(--text-color-clay-default));
+}
+
+/* Reveal animation used on the hero — staggered via animation-delay
+   on individual elements so the eye walks from headline down through
+   metadata and into the install block. */
+@keyframes clay-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.clay-rise {
+  animation: clay-rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .clay-rise {
+    animation: none;
+  }
+}
+
+/* Display-headline tweak inside .clay-prose so MDX H1s render in
+   the serif display face when the surrounding layout opts into it. */
+.clay-prose :where(.use-display) {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: -0.022em;
+}

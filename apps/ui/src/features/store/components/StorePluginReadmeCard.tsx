@@ -1,5 +1,5 @@
+import { Badge, Card, CardContent, CardHeader, CardTitle } from '@brika/clay';
 import { FileText } from 'lucide-react';
-import { Badge, Card, CardContent, CardHeader, CardTitle } from '@/components/ui';
 import { Markdown } from '@/features/plugins/components/Markdown';
 import { useLocale } from '@/lib/use-locale';
 

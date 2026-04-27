@@ -1,6 +1,6 @@
+import { Button, DialogFooter } from '@brika/clay';
 import type { LucideIcon } from 'lucide-react';
 import { Loader2 } from 'lucide-react';
-import { Button, DialogFooter } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
 
 interface UpdatePluginDialogFooterProps {

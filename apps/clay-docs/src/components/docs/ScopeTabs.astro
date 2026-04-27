@@ -1,0 +1,182 @@
+---
+import CodeSource from './CodeSource.astro';
+
+/**
+ * CSS-only tab strip for the three scoping idioms on `/themes`.
+ *
+ * Radio inputs hidden off-screen, labels styled as tab triggers.
+ * `:checked ~` sibling combinators reveal the matching panel — no
+ * JavaScript, no React hydration, works inside any Astro / MDX page.
+ */
+
+const DEFAULT_CODE = `import { ocean, ThemeScope } from "@brika/clay/themes";
+
+<ThemeScope theme={ocean} mode="light">
+  <Button>Ocean button</Button>
+  <Card>Ocean card</Card>
+</ThemeScope>`;
+
+const ASCHILD_CODE = `import { ocean, ThemeScope } from "@brika/clay/themes";
+
+<ThemeScope theme={ocean} asChild>
+  <article className="prose">
+    Theme variables merge onto this article — no extra wrapper at all.
+  </article>
+</ThemeScope>`;
+
+const MANUAL_CODE = `import { ocean, themeToCssVars } from "@brika/clay/themes";
+
+<div style={themeToCssVars(ocean, "light")}>
+  <Button>Ocean button</Button>
+</div>`;
+---
+
+<div class="not-prose scope-tabs">
+  <input
+    type="radio"
+    name="scope-tabs"
+    id="scope-default"
+    class="scope-tabs__radio"
+    checked
+  />
+  <input
+    type="radio"
+    name="scope-tabs"
+    id="scope-aschild"
+    class="scope-tabs__radio"
+  />
+  <input
+    type="radio"
+    name="scope-tabs"
+    id="scope-manual"
+    class="scope-tabs__radio"
+  />
+
+  <div class="scope-tabs__list" role="tablist" aria-label="Scope idioms">
+    <label for="scope-default" class="scope-tabs__tab" role="tab">
+      <span class="scope-tabs__tab-num">01</span>
+      Default
+      <span class="scope-tabs__tab-meta">display: contents</span>
+    </label>
+    <label for="scope-aschild" class="scope-tabs__tab" role="tab">
+      <span class="scope-tabs__tab-num">02</span>
+      <code>asChild</code>
+      <span class="scope-tabs__tab-meta">zero DOM</span>
+    </label>
+    <label for="scope-manual" class="scope-tabs__tab" role="tab">
+      <span class="scope-tabs__tab-num">03</span>
+      Manual
+      <span class="scope-tabs__tab-meta">themeToCssVars</span>
+    </label>
+  </div>
+
+  <div class="scope-tabs__panel" data-tab="default">
+    <CodeSource code={DEFAULT_CODE} lang="tsx" filename="scoped.tsx" />
+  </div>
+  <div class="scope-tabs__panel" data-tab="aschild">
+    <CodeSource code={ASCHILD_CODE} lang="tsx" filename="scoped-aschild.tsx" />
+  </div>
+  <div class="scope-tabs__panel" data-tab="manual">
+    <CodeSource code={MANUAL_CODE} lang="tsx" filename="scoped-manual.tsx" />
+  </div>
+</div>
+
+<style>
+  .scope-tabs {
+    display: contents;
+  }
+
+  /* Hide the radios but keep them in tab order for keyboard nav. */
+  .scope-tabs__radio {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .scope-tabs__list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0;
+    margin-bottom: 0.75rem;
+    border-bottom: 1px solid var(--color-clay-hairline);
+  }
+
+  .scope-tabs__tab {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    padding: 0.625rem 0.9rem;
+    margin-bottom: -1px;
+    cursor: pointer;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--text-color-clay-subtle);
+    border-bottom: 2px solid transparent;
+    transition:
+      color 0.15s ease,
+      border-color 0.15s ease;
+  }
+
+  .scope-tabs__tab code {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+
+  .scope-tabs__tab:hover {
+    color: var(--text-color-clay-default);
+  }
+
+  .scope-tabs__tab-num {
+    font-family: var(--font-mono);
+    font-size: 0.625rem;
+    color: var(--text-color-clay-inactive);
+    letter-spacing: 0.12em;
+  }
+
+  .scope-tabs__tab-meta {
+    margin-left: auto;
+    font-family: var(--font-mono);
+    font-size: 0.625rem;
+    color: var(--text-color-clay-inactive);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+  }
+
+  /* Focus ring on the keyboard-focused tab. */
+  .scope-tabs__radio:focus-visible + .scope-tabs__list .scope-tabs__tab,
+  .scope-tabs__radio:nth-of-type(2):focus-visible
+    ~ .scope-tabs__list
+    .scope-tabs__tab[for='scope-aschild'],
+  .scope-tabs__radio:nth-of-type(3):focus-visible
+    ~ .scope-tabs__list
+    .scope-tabs__tab[for='scope-manual'] {
+    outline: 2px solid var(--color-clay-strong);
+    outline-offset: 2px;
+  }
+
+  /* Hide all panels by default; the matching one is revealed below. */
+  .scope-tabs__panel {
+    display: none;
+  }
+
+  /* Active tab styling + matching panel reveal. */
+  #scope-default:checked ~ .scope-tabs__list .scope-tabs__tab[for='scope-default'],
+  #scope-aschild:checked ~ .scope-tabs__list .scope-tabs__tab[for='scope-aschild'],
+  #scope-manual:checked ~ .scope-tabs__list .scope-tabs__tab[for='scope-manual'] {
+    color: var(--text-color-clay-strong);
+    border-bottom-color: var(--color-clay-strong);
+  }
+
+  #scope-default:checked ~ .scope-tabs__panel[data-tab='default'],
+  #scope-aschild:checked ~ .scope-tabs__panel[data-tab='aschild'],
+  #scope-manual:checked ~ .scope-tabs__panel[data-tab='manual'] {
+    display: block;
+  }
+</style>

@@ -1,4 +1,3 @@
-import { Fragment, type ReactElement } from 'react';
 import {
   CodeBlock,
   CodeBlockActions,
@@ -6,7 +5,8 @@ import {
   CodeBlockCopyButton,
   CodeBlockHeader,
   CodeBlockInfo,
-} from '@/components/ui';
+} from '@brika/clay';
+import { Fragment, type ReactElement } from 'react';
 import { useLocale } from '@/lib/use-locale';
 
 interface MarkdownCodeBlockProps {

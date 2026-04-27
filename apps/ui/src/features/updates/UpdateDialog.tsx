@@ -1,6 +1,4 @@
-import { ArrowDownToLine, ArrowRight, ExternalLink, Loader2, RefreshCw, Tag } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@brika/clay/components/button';
 import {
   Dialog,
   DialogContent,
@@ -8,9 +6,11 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { ProgressDisplay } from '@/components/ui/progress-display';
-import { Separator } from '@/components/ui/separator';
+} from '@brika/clay/components/dialog';
+import { ProgressDisplay } from '@brika/clay/components/progress-display';
+import { Separator } from '@brika/clay/components/separator';
+import { ArrowDownToLine, ArrowRight, ExternalLink, Loader2, RefreshCw, Tag } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Markdown } from '@/features/plugins/components/Markdown';
 import { useWaitForHub } from '@/hooks/use-wait-for-hub';
 import type { LocaleUtils } from '@/lib/use-locale';

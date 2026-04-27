@@ -1,5 +1,3 @@
-import { Boxes } from 'lucide-react';
-import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
 import {
   Avatar,
   AvatarFallback,
@@ -9,7 +7,9 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui';
+} from '@brika/clay';
+import { Boxes } from 'lucide-react';
+import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
 import { useLocale } from '@/lib/use-locale';
 import type { Plugin } from '../api';
 

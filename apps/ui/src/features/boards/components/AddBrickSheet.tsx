@@ -1,13 +1,13 @@
-import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
-import { useMemo } from 'react';
-import { Avatar, AvatarFallback } from '@/components/ui';
+import { Avatar, AvatarFallback } from '@brika/clay';
 import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
-} from '@/components/ui/sheet';
+} from '@brika/clay/components/sheet';
+import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
+import { useMemo } from 'react';
 import { useLocale } from '@/lib/use-locale';
 import type { BrickType } from '../api';
 import { useAddBrick } from '../hooks';

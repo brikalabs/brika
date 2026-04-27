@@ -1,0 +1,129 @@
+{
+  "id": "brutalist",
+  "name": "Brutalist",
+  "description": "Sharp corners, thick borders, monospace UI, no shadows. Geometry & typography as the loudest signal.",
+  "accentSwatches": ["#000000", "#ffd400", "#ff5252", "#ffffff"],
+  "colors": {
+    "light": {
+      "background": "#fafafa",
+      "foreground": "#0a0a0a",
+      "card": "#ffffff",
+      "card-foreground": "#0a0a0a",
+      "popover": "#ffffff",
+      "popover-foreground": "#0a0a0a",
+      "primary": "#0a0a0a",
+      "primary-foreground": "#ffffff",
+      "secondary": "#f0f0f0",
+      "secondary-foreground": "#0a0a0a",
+      "muted": "#ededed",
+      "muted-foreground": "#525252",
+      "accent": "#ffd400",
+      "accent-foreground": "#0a0a0a",
+      "border": "#0a0a0a",
+      "input": "#0a0a0a",
+      "ring": "#0a0a0a",
+      "success": "#1f7a1f",
+      "success-foreground": "#ffffff",
+      "warning": "#ffd400",
+      "warning-foreground": "#0a0a0a",
+      "info": "#0033cc",
+      "info-foreground": "#ffffff",
+      "destructive": "#ff5252",
+      "destructive-foreground": "#ffffff"
+    },
+    "dark": {
+      "background": "#0a0a0a",
+      "foreground": "#fafafa",
+      "card": "#141414",
+      "card-foreground": "#fafafa",
+      "popover": "#141414",
+      "popover-foreground": "#fafafa",
+      "primary": "#fafafa",
+      "primary-foreground": "#0a0a0a",
+      "secondary": "#1f1f1f",
+      "secondary-foreground": "#fafafa",
+      "muted": "#1a1a1a",
+      "muted-foreground": "#a8a8a8",
+      "accent": "#ffd400",
+      "accent-foreground": "#0a0a0a",
+      "border": "#fafafa",
+      "input": "#fafafa",
+      "ring": "#fafafa",
+      "success": "#5cce5c",
+      "success-foreground": "#0a0a0a",
+      "warning": "#ffd400",
+      "warning-foreground": "#0a0a0a",
+      "info": "#6699ff",
+      "info-foreground": "#0a0a0a",
+      "destructive": "#ff7878",
+      "destructive-foreground": "#0a0a0a"
+    }
+  },
+  "geometry": {
+    "radius": "0px",
+    "fontSans": "\"JetBrains Mono\", ui-monospace, SFMono-Regular, monospace",
+    "fontMono": "\"JetBrains Mono\", ui-monospace, SFMono-Regular, monospace"
+  },
+  "borders": {
+    "width": "2px",
+    "style": "solid"
+  },
+  "motion": {
+    "duration": "0ms",
+    "easing": "linear"
+  },
+  "focus": {
+    "width": "3px",
+    "offset": "3px"
+  },
+  "components": {
+    "button": {
+      "letterSpacing": "0.08em",
+      "textTransform": "uppercase",
+      "fontWeight": "600",
+      "borderWidth": "2px",
+      "borderStyle": "solid",
+      "shadow": "none",
+      "duration": "0ms"
+    },
+    "card": {
+      "shadow": "none",
+      "borderWidth": "2px",
+      "borderStyle": "solid"
+    },
+    "dialog": {
+      "shadow": "none",
+      "borderWidth": "2px"
+    },
+    "input": {
+      "borderWidth": "2px",
+      "borderStyle": "solid"
+    },
+    "badge": {
+      "letterSpacing": "0.08em",
+      "textTransform": "uppercase",
+      "borderWidth": "2px"
+    },
+    "separator": {
+      "width": "2px",
+      "style": "solid"
+    },
+    "label": {
+      "letterSpacing": "0.06em",
+      "textTransform": "uppercase",
+      "fontWeight": "600"
+    },
+    "tooltip": {
+      "letterSpacing": "0.06em",
+      "textTransform": "uppercase"
+    },
+    "slider": {
+      "radius": "0px",
+      "thumbRadius": "0px",
+      "thumbBorderWidth": "2px",
+      "thumbShadow": "none",
+      "trackHeight": "0.5rem",
+      "thumbSize": "1.25rem"
+    }
+  }
+}

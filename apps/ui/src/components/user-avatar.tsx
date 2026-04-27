@@ -1,5 +1,5 @@
 import { useAuth } from '@brika/auth/react';
-import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@brika/clay/components/avatar';
 
 interface UserAvatarProps {
   user: {

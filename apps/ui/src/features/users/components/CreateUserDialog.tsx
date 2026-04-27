@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import {
   Button,
   Dialog,
@@ -15,7 +14,8 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui';
+} from '@brika/clay';
+import { useState } from 'react';
 import { useLocale } from '@/lib/use-locale';
 import { useUserMutations } from '../hooks';
 

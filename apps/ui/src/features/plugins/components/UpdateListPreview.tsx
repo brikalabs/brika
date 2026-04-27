@@ -1,6 +1,6 @@
+import { Avatar, AvatarFallback, AvatarImage } from '@brika/clay';
 import type { Plugin } from '@brika/plugin';
 import { ArrowRight, Plug } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
 import { pluginsApi } from '../api';
 import type { UpdateInfo } from '../registry-api';

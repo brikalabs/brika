@@ -1,6 +1,3 @@
-import { useQueryClient } from '@tanstack/react-query';
-import { Package } from 'lucide-react';
-import { useEffect } from 'react';
 import {
   Button,
   Dialog,
@@ -10,7 +7,10 @@ import {
   DialogHeader,
   DialogTitle,
   ProgressDisplay,
-} from '@/components/ui';
+} from '@brika/clay';
+import { useQueryClient } from '@tanstack/react-query';
+import { Package } from 'lucide-react';
+import { useEffect } from 'react';
 import { pluginsKeys } from '@/features/plugins/api';
 import { registryApi, registryKeys } from '@/features/plugins/registry-api';
 import { getProgressValue, useProgressStream } from '@/hooks/use-progress-stream';

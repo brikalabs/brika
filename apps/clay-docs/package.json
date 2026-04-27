@@ -1,0 +1,49 @@
+{
+  "name": "@brika/clay-docs",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Public docs site for @brika/clay — clay.brika.dev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/brikalabs/brika.git",
+    "directory": "apps/clay-docs"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "check": "astro check",
+    "typecheck": "astro check --minimumSeverity error",
+    "lint": "bunx --bun biome check .",
+    "check:arch": "archunit",
+    "deploy": "astro build && wrangler deploy",
+    "deploy:preview": "astro build && wrangler versions upload"
+  },
+  "dependencies": {
+    "@astrojs/mdx": "5.0.4",
+    "@astrojs/react": "5.0.4",
+    "@brika/clay": "workspace:*",
+    "@tailwindcss/typography": "^0.5.15",
+    "@tailwindcss/vite": "4.2.1",
+    "astro": "6.1.9",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.575.0",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
+    "shiki": "^3.23.0",
+    "tailwind-merge": "^3.4.0",
+    "tailwindcss": "4.2.1"
+  },
+  "devDependencies": {
+    "@astrojs/check": "0.9.8",
+    "@brika/archunit": "workspace:*",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "react-docgen-typescript": "^2.4.0",
+    "typescript": "^6.0.2",
+    "wrangler": "^4.0.0"
+  }
+}

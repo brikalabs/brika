@@ -1,7 +1,7 @@
+import { Button, Skeleton } from '@brika/clay';
 import { useParams } from '@tanstack/react-router';
 import { LayoutGrid, Plus } from 'lucide-react';
 import { useCallback, useEffect } from 'react';
-import { Button, Skeleton } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
 import { BoardGrid } from './components/BoardGrid';
 import { useBoardSSE, useLoadBoard, useSaveLayout } from './hooks';

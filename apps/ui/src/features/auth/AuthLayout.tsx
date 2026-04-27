@@ -1,7 +1,6 @@
+import { Card, cn } from '@brika/clay';
+import { BrikaLogo } from '@brika/clay/components/brika-logo';
 import type { ReactNode } from 'react';
-import { Card } from '@/components/ui';
-import { BrikaLogo } from '@/components/ui/brika-logo';
-import { cn } from '@/lib/utils';
 
 /** Centered card layout shared by LoginPage and setup wizard. */
 export function AuthLayout({

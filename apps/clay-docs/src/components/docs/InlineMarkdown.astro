@@ -1,0 +1,47 @@
+---
+/**
+ * Renders a string with backtick-wrapped segments turned into <code> spans
+ * — a one-feature subset of inline markdown. Used inside doc-page bullet
+ * lists where full MDX would be overkill but plain text loses meaning.
+ */
+
+interface Props {
+  readonly text: string;
+}
+
+const { text } = Astro.props;
+
+type Segment =
+  | { readonly kind: 'text'; readonly value: string }
+  | { readonly kind: 'code'; readonly value: string };
+
+function tokenise(input: string): readonly Segment[] {
+  const segments: Segment[] = [];
+  const parts = input.split(/(`[^`]+`)/g);
+  for (const part of parts) {
+    if (part.length === 0) {
+      continue;
+    }
+    if (part.startsWith('`') && part.endsWith('`') && part.length > 2) {
+      segments.push({ kind: 'code', value: part.slice(1, -1) });
+    } else {
+      segments.push({ kind: 'text', value: part });
+    }
+  }
+  return segments;
+}
+
+const segments = tokenise(text);
+---
+
+{
+  segments.map((segment) =>
+    segment.kind === 'code' ? (
+      <code class="rounded border border-clay-hairline bg-clay-base px-1.5 py-0.5 font-mono text-[0.8125rem] text-clay-default">
+        {segment.value}
+      </code>
+    ) : (
+      <span>{segment.value}</span>
+    )
+  )
+}

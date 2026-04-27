@@ -1,8 +1,8 @@
+import { Button } from '@brika/clay';
+import { BrikaLogo } from '@brika/clay/components/brika-logo';
 import { useNavigate } from '@tanstack/react-router';
 import { ArrowRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Button } from '@/components/ui';
-import { BrikaLogo } from '@/components/ui/brika-logo';
 
 export function WelcomeStep() {
   const { t } = useTranslation('setup');

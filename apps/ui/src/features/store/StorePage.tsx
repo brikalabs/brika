@@ -1,7 +1,7 @@
+import { Card, CardContent } from '@brika/clay';
 import { Package } from 'lucide-react';
 import React from 'react';
 import { useDataView } from '@/components/DataView';
-import { Card, CardContent } from '@/components/ui';
 import { useDebouncedState } from '@/hooks/use-debounce';
 import { useLocale } from '@/lib/use-locale';
 import type { FilterValue, SortValue } from './components';

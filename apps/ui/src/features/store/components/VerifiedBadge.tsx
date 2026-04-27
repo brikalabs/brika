@@ -1,5 +1,5 @@
+import { Tooltip, TooltipContent, TooltipTrigger } from '@brika/clay/components/tooltip';
 import { BadgeCheck } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useLocale } from '@/lib/use-locale';
 
 export function VerifiedBadge() {

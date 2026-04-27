@@ -1,6 +1,6 @@
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@brika/clay';
 import { useNavigate, useParams } from '@tanstack/react-router';
 import { Clock, Zap } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
 import { paths } from '@/routes/paths';
 import { EventStreamTab, RegisteredSparksTab } from './components';

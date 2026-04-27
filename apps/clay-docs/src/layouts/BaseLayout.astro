@@ -1,0 +1,85 @@
+---
+import { BUILT_IN_THEMES, renderThemeStyleSheet } from '@brika/clay/themes';
+import '~/styles/global.css';
+
+interface Props {
+  readonly title: string;
+  readonly description?: string;
+}
+
+const { title, description } = Astro.props;
+
+// Pre-render every non-default theme's CSS at SSR time. The map gets
+// inlined in `<head>` so the synchronous boot script below can pick
+// the saved theme out of localStorage and emit the matching <style>
+// tag BEFORE first paint — no flash, no extra fetch. ~30 KB total
+// across the 16 presets (deltas only, not every-token snapshots).
+const THEME_CSS = Object.fromEntries(
+  BUILT_IN_THEMES.filter((t) => t.id !== 'default').map((t) => [t.id, renderThemeStyleSheet(t)])
+);
+const THEME_CSS_JSON = JSON.stringify(THEME_CSS);
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="generator" content={Astro.generator} />
+    <title>{title}</title>
+    {description && <meta name="description" content={description} />}
+    <link rel="preconnect" href="https://rsms.me/" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    />
+    <script is:inline define:vars={{ THEME_CSS_JSON }}>
+      (() => {
+        // Boot script — runs synchronously in <head> before first paint.
+        // 1. Reads `data-mode` (light/dark) from localStorage / OS pref.
+        // 2. Reads `data-theme` (preset id) from localStorage and, if
+        //    non-default, injects the pre-rendered `<style id="clay-theme">`
+        //    so the page paints with the chosen theme on first frame —
+        //    no flash, no extra network round trip.
+        try {
+          const root = document.documentElement;
+
+          const MODE_KEY = 'clay-mode';
+          const storedMode = localStorage.getItem(MODE_KEY);
+          const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          const mode =
+            storedMode === 'light' || storedMode === 'dark'
+              ? storedMode
+              : prefersDark
+                ? 'dark'
+                : 'light';
+          root.dataset.mode = mode;
+
+          const THEME_KEY = 'clay-theme';
+          const storedTheme = localStorage.getItem(THEME_KEY);
+          if (!storedTheme) {
+            return;
+          }
+          const themeCssMap = JSON.parse(THEME_CSS_JSON);
+          const css = themeCssMap[storedTheme];
+          if (!css) {
+            return;
+          }
+          root.dataset.theme = storedTheme;
+          const tag = document.createElement('style');
+          tag.id = 'clay-theme';
+          tag.textContent = css;
+          document.head.appendChild(tag);
+        } catch {
+          /* localStorage / matchMedia unavailable — let CSS defaults render. */
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>

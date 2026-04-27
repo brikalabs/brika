@@ -1,0 +1,249 @@
+---
+layout: ~/layouts/MdxDocLayout.astro
+title: "Theming"
+description: "How themes are authored, how applyTheme injects them, and the rules that keep light/dark coexisting."
+group: "Library"
+---
+
+import CodeSource from "~/components/docs/CodeSource.astro";
+
+<section class="mb-16">
+  <div class="numbered-rule mb-6">
+    <span class="num">01</span>
+    <span class="label">Anatomy</span>
+    <span class="spacer hairline"></span>
+    <span class="text-clay-inactive">JSON shape</span>
+  </div>
+
+  <h2 id="anatomy" class="mb-4 scroll-mt-24 font-display text-3xl text-clay-strong leading-[1.1]">
+    A theme is plain data
+  </h2>
+
+  <div class="clay-prose mb-6">
+    Every Clay theme is a JSON file with a stable shape: identification
+    fields plus optional sections for each token category. The smallest
+    valid theme provides only `id`, `name`, `description`, and
+    `accentSwatches`. Real themes opt into colors, geometry, borders,
+    motion, focus, and per-component overrides as they need.
+  </div>
+
+  <CodeSource lang="json" filename="presets/brutalist.json" code={`{
+  "id": "brutalist",
+  "name": "Brutalist",
+  "description": "Sharp corners, thick borders, monospace UI, no shadows.",
+  "accentSwatches": ["#000000", "#ffd400"],
+
+  "colors": {
+    "light": { "background": "#fafafa", "foreground": "#0a0a0a" },
+    "dark":  { "background": "#0a0a0a", "foreground": "#fafafa" }
+  },
+
+  "geometry":  { "radius": "0px", "fontSans": "JetBrains Mono, monospace" },
+  "borders":   { "width": "2px", "style": "solid" },
+  "motion":    { "duration": "0ms" },
+  "focus":     { "width": "3px", "offset": "3px" },
+
+  "components": {
+    "button": {
+      "letterSpacing": "0.08em",
+      "textTransform": "uppercase",
+      "borderWidth": "2px"
+    },
+    "card": {
+      "shadow": "none",
+      "borderWidth": "2px"
+    }
+  }
+}`} />
+</section>
+
+<section class="mb-16">
+  <div class="numbered-rule mb-6">
+    <span class="num">02</span>
+    <span class="label">Path → Var</span>
+    <span class="spacer hairline"></span>
+    <span class="text-clay-inactive">Naming convention</span>
+  </div>
+
+  <h2 id="naming" class="mb-4 scroll-mt-24 font-display text-3xl text-clay-strong leading-[1.1]">
+    Path-to-variable mapping
+  </h2>
+
+  <div class="clay-prose mb-6">
+    Every section in a `ThemeConfig` maps onto CSS custom properties via a
+    small set of rules. The `/tokens` reference shows the exact path → var
+    mapping for each entry, but the rules are:
+
+    - `colors.light.<name>` and `colors.dark.<name>` — `<name>` is a
+      kebab-case CSS var. Both `--<name>` and `--color-<name>` are emitted.
+    - `geometry.<prop>` — looks up a static map (`fontSans` →
+      `--font-sans`, `radius` → `--radius`, etc.).
+    - `borders.<prop>` — `--border-width`, `--border-style`.
+    - `motion.<prop>` — `--motion-duration`, `--motion-easing`.
+    - `focus.<prop>` — note the rename: `focus.width` →
+      `--ring-width`, `focus.offset` → `--ring-offset`.
+    - `components.<name>.<prop>` — `<name>` is kebab-case (`switch-thumb`),
+      `<prop>` is camelCase (`outlineLabel` → `outline-label`).
+      The walker emits `--<name>-<kebab(prop)>`.
+  </div>
+</section>
+
+<section class="mb-16">
+  <div class="numbered-rule mb-6">
+    <span class="num">03</span>
+    <span class="label">Runtime</span>
+    <span class="spacer hairline"></span>
+    <span class="text-clay-inactive">applyTheme</span>
+  </div>
+
+  <h2 id="runtime" class="mb-4 scroll-mt-24 font-display text-3xl text-clay-strong leading-[1.1]">
+    Apply at runtime
+  </h2>
+
+  <div class="clay-prose mb-6">
+    `applyTheme(theme)` injects a single `<style id="clay-theme">` tag
+    into `document.head` containing both the `:root` light defaults and a
+    `:is(.dark, [data-mode="dark"]):root` block for dark overrides.
+    Toggling `data-mode` afterwards costs nothing — the dark block
+    activates via CSS, no JS re-run. SSR-safe: returns a no-op cleanup
+    when `document` is undefined.
+  </div>
+
+  <CodeSource lang="tsx" filename="apply-a-theme.tsx" code={`import { applyTheme, brutalist } from '@brika/clay/themes';
+
+// Document-wide. Returns a cleanup function that removes the style tag.
+const cleanup = applyTheme(brutalist);
+
+// Toggle dark mode without re-applying:
+document.documentElement.setAttribute('data-mode', 'dark');
+
+// Restore the stylesheet defaults:
+cleanup();`} />
+
+  <div class="clay-prose mt-6 mb-6">
+    For a scoped preview without affecting the rest of the document, use
+    `themeToCssVars(theme, mode)` — it returns a React `style`-prop object
+    you can spread on a single subtree.
+  </div>
+
+  <div class="clay-prose mt-6 mb-6">
+    The cleanest way to scope a theme is the `<ThemeScope>` component —
+    no hand-rolled `<div style={...}>`, and by default no extra layout
+    box (it uses `display: contents` so the wrapper never affects the
+    layout tree).
+  </div>
+
+  <CodeSource lang="tsx" filename="scoped-preview.tsx" code={`import { ocean, ThemeScope } from '@brika/clay/themes';
+
+<ThemeScope theme={ocean} mode="light">
+  <Button>Ocean button</Button>
+  <Card>Ocean card</Card>
+</ThemeScope>`} />
+
+  <div class="clay-prose mt-6 mb-6">
+    For *zero-DOM* theming — when you don't even want the
+    `display: contents` wrapper — pass `asChild` and a single child
+    element. The theme's CSS variables are merged onto the child via
+    Radix Slot, so the rendered tree is exactly the child you wrote.
+  </div>
+
+  <CodeSource lang="tsx" filename="scoped-aschild.tsx" code={`<ThemeScope theme={ocean} asChild>
+  <article className="prose">…</article>
+</ThemeScope>`} />
+
+  <div class="clay-prose mt-6 mb-6">
+    The same effect, written by hand: spread `themeToCssVars(theme, mode)`
+    onto any element you control. Useful when you need finer control over
+    the wrapper element.
+  </div>
+
+  <CodeSource lang="tsx" filename="scoped-manual.tsx" code={`import { themeToCssVars, terminal } from '@brika/clay/themes';
+
+<div style={themeToCssVars(terminal, 'dark')}>
+  <Button>Looks Terminal-y inside this div only.</Button>
+</div>`} />
+
+  <div class="clay-prose mt-6 mb-6">
+    <strong>Scope leak resistance.</strong> Both `<ThemeScope>` and
+    `themeToCssVars` produce a *complete* CSS-variable map — every
+    registry default plus the theme's overrides. So a scoped preview
+    never inherits a token from a globally-applied theme, even if
+    `applyTheme` redefined the same token at `:root`. This is what lets
+    the gallery on `/themes` show 16 cards side-by-side, each isolated in
+    its own theme.
+  </div>
+</section>
+
+<section class="mb-16">
+  <div class="numbered-rule mb-6">
+    <span class="num">04</span>
+    <span class="label">Glass</span>
+    <span class="spacer hairline"></span>
+    <span class="text-clay-inactive">Translucency + blur</span>
+  </div>
+
+  <h2 id="glass" class="mb-4 scroll-mt-24 font-display text-3xl text-clay-strong leading-[1.1]">
+    Glass &amp; tinted-glass effects
+  </h2>
+
+  <div class="clay-prose mb-6">
+    Glass surfaces combine three things: a translucent fill colour,
+    `backdrop-filter: blur()`, and a saturated border. Clay exposes a
+    `--<component>-backdrop-blur` token on every floating surface (card,
+    dialog, popover, sheet, dropdown, select content). The `glass.tint`
+    scalar layers a soft colour wash above the blur for the iOS-style
+    "tinted glass" look. The shipped `glass` theme demonstrates the
+    pattern.
+  </div>
+
+  <CodeSource lang="json" filename="my-glass.json" code={`{
+  "id": "my-glass",
+  "name": "My Glass",
+  "description": "...",
+  "accentSwatches": ["#7dd3fc"],
+
+  "colors": {
+    "light": {
+      "card":   "rgba(255, 255, 255, 0.55)",
+      "border": "rgba(255, 255, 255, 0.6)"
+    }
+  },
+
+  "geometry": { "radius": "1.25rem", "backdropBlur": "16px" },
+
+  "components": {
+    "card":   { "backdropBlur": "20px" },
+    "dialog": { "backdropBlur": "24px" },
+    "popover":{ "backdropBlur": "16px" }
+  }
+}`} />
+
+  <div class="clay-prose mt-6 mb-6">
+    Set `colors.light.card` (and `popover`, `secondary`, …) to an
+    `rgba(...)` or `oklch(... / 0.55)` value to make the surface
+    translucent. The matching `--<component>-backdrop-blur` does the
+    frosting. Border tokens stay on the same components, so a 1px white
+    `rgba(255, 255, 255, 0.6)` rim reads as the seam in the glass.
+  </div>
+</section>
+
+<section class="mb-16">
+  <div class="numbered-rule mb-6">
+    <span class="num">05</span>
+    <span class="label">SSR</span>
+    <span class="spacer hairline"></span>
+    <span class="text-clay-inactive">No FOUC</span>
+  </div>
+
+  <h2 id="ssr" class="mb-4 scroll-mt-24 font-display text-3xl text-clay-strong leading-[1.1]">
+    Server-side rendering
+  </h2>
+
+  <div class="clay-prose mb-6">
+    Render the same stylesheet during HTML generation with
+    `renderThemeStyleSheet(theme)` and embed it in a `<style>` tag in the
+    document `<head>`. The client then mounts and calls `applyTheme`,
+    which finds the existing tag and updates its content idempotently —
+    no flash of unstyled content.
+  </div>
+</section>

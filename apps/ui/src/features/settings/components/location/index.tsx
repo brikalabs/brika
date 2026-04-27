@@ -1,5 +1,3 @@
-import { Check, ChevronDown, MapPin, Navigation } from 'lucide-react';
-import { useState } from 'react';
 import {
   Button,
   Collapsible,
@@ -13,7 +11,9 @@ import {
   SectionIcon,
   SectionInfo,
   SectionTitle,
-} from '@/components/ui';
+} from '@brika/clay';
+import { Check, ChevronDown, MapPin, Navigation } from 'lucide-react';
+import { useState } from 'react';
 import { useLocale } from '@/lib/use-locale';
 import { AddressSearch } from './AddressSearch';
 import { useLocationSettings } from './hooks';

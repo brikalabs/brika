@@ -1,7 +1,7 @@
+import { Button } from '@brika/clay';
 import { Outlet, useNavigate, useParams } from '@tanstack/react-router';
 import { Plus } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
-import { Button } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
 import { paths } from '@/routes/paths';
 import type { BoardSummary } from './api';

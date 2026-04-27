@@ -1,0 +1,375 @@
+{
+  "page": {
+    "defaultName": "Thème sans nom",
+    "defaultDescription": "Un thème personnalisé."
+  },
+  "meta": {
+    "namePlaceholder": "Nom du thème",
+    "descriptionPlaceholder": "Ajouter une courte description…",
+    "id": "ID",
+    "updated": "Mis à jour"
+  },
+  "toolbar": {
+    "actions": {
+      "save": "Enregistrer",
+      "saveTooltip": "Enregistrer les modifications",
+      "apply": "Appliquer",
+      "create": "Créer un thème",
+      "import": "Importer",
+      "export": "Exporter",
+      "exportJson": "Exporter en JSON",
+      "exportCss": "Exporter en CSS",
+      "copyCss": "Copier le CSS",
+      "duplicate": "Dupliquer",
+      "delete": "Supprimer",
+      "undo": "Annuler",
+      "undoTooltip": "Annuler la dernière modification",
+      "redo": "Rétablir",
+      "redoTooltip": "Rétablir"
+    },
+    "status": {
+      "saved": "Enregistré",
+      "active": "Actif",
+      "draft": "Brouillon",
+      "unsavedChanges": "Modifications non enregistrées"
+    },
+    "meta": {
+      "id": "ID",
+      "draftId": "Brouillon",
+      "updated": "Mis à jour"
+    }
+  },
+  "list": {
+    "title": "Thèmes",
+    "count": "{{count}} thèmes",
+    "count_one": "{{count}} thème",
+    "empty": "Aucun thème personnalisé.",
+    "newThemeLabel": "Nouveau thème",
+    "newThemeTooltip": "Créer un nouveau thème personnalisé",
+    "blankThemeTooltip": "Démarrer à partir d'un thème vierge",
+    "collapseLabel": "Réduire",
+    "collapseTooltip": "Réduire la liste des thèmes",
+    "expandLabel": "Développer",
+    "expandTooltip": "Développer la liste des thèmes"
+  },
+  "presets": {
+    "trigger": "Choisir un préréglage",
+    "dialogTitle": "Préréglages de thème",
+    "dialogDescription": "Démarrez à partir de l'un des thèmes intégrés de Clay.",
+    "items": {
+      "default": { "description": "La palette classique de Brika." },
+      "ocean": { "description": "Bleus et turquoises frais." },
+      "forest": { "description": "Verts et tons terreux." },
+      "sunset": { "description": "Oranges chaleureux et corail." },
+      "lavender": { "description": "Violets doux et lavande." },
+      "ruby": { "description": "Rouges intenses et rose." },
+      "nord": { "description": "Palette nordique givrée." },
+      "solarized": { "description": "Palette Solarized." },
+      "candy": { "description": "Couleurs pop vives." },
+      "dracula": { "description": "Classique sombre des éditeurs." },
+      "mono": { "description": "Niveaux de gris purs." },
+      "brutalist": { "description": "Angles vifs, bordures épaisses." },
+      "editorial": { "description": "Mise en page de lecture longue." },
+      "terminal": { "description": "Esthétique hacker monospace." },
+      "skeuomorph": { "description": "Surfaces brillantes faux-réelles." },
+      "glass": { "description": "Couches translucides givrées." },
+      "comic": { "description": "Style bande dessinée." }
+    }
+  },
+  "tabs": {
+    "design": "Design",
+    "palette": "Palette"
+  },
+  "design": {
+    "sectionsLabel": "Sections",
+    "sections": {
+      "typography": { "label": "Typographie", "hint": "Polices et tailles" },
+      "geometry": { "label": "Géométrie", "hint": "Rayon et coins" },
+      "components": { "label": "Composants", "hint": "Tokens par composant" },
+      "spacing": { "label": "Espacement", "hint": "Densité et rythme" },
+      "effects": { "label": "Effets", "hint": "Élévation, mouvement, focus" },
+      "atmosphere": { "label": "Atmosphère", "hint": "Arrière-plan et translucidité" }
+    },
+    "radius": "Rayon",
+    "baseUnit": "Unité de base",
+    "baseSize": "Taille de base",
+    "borderWidth": "Épaisseur de bordure",
+    "elevation": "Élévation",
+    "focusRing": "Indicateur de focus",
+    "motion": "Mouvement",
+    "motionHint": "Affecte toutes les transitions du système",
+    "backdropBlur": "Flou d'arrière-plan",
+    "fonts": {
+      "sans": "Sans-serif",
+      "mono": "Monospace",
+      "sampleSans": "Portez ce vieux whisky au juge blond qui fume.",
+      "sampleMono": "const brika = () => ({ theme: 'custom' });"
+    }
+  },
+  "fields": {
+    "color": {
+      "pickAria": "Choisir une couleur pour {{label}}"
+    },
+    "font": {
+      "custom": "Personnalisée"
+    },
+    "corner": {
+      "label": "Forme des coins",
+      "fallback": "Hérite du thème",
+      "options": {
+        "round": { "label": "Arrondi", "hint": "border-radius standard" },
+        "squircle": { "label": "Squircle", "hint": "Courbe douce style iOS" },
+        "bevel": { "label": "Biseau", "hint": "Coin chanfreiné à 45°" },
+        "scoop": { "label": "Concave", "hint": "Découpe en arc" },
+        "notch": { "label": "Encoche", "hint": "Découpe à angle droit" }
+      }
+    },
+    "radius": {
+      "caption": "Glisser pour régler le rayon de base",
+      "semanticLabel": "Échelle sémantique",
+      "presets": {
+        "sharp": { "label": "Net", "hint": "Brutaliste, angle droit" },
+        "subtle": { "label": "Subtil", "hint": "À peine arrondi" },
+        "default": { "label": "Défaut", "hint": "Aspect web classique" },
+        "soft": { "label": "Doux", "hint": "Défaut Brika" },
+        "pillowy": { "label": "Moelleux", "hint": "Très arrondi" },
+        "pill": { "label": "Pilule", "hint": "Entièrement arrondi" }
+      },
+      "samples": {
+        "pill": { "label": "Pilule", "hint": "Puces, badges" },
+        "control": { "label": "Contrôle", "hint": "Boutons, champs" },
+        "container": { "label": "Conteneur", "hint": "Cartes, panneaux" },
+        "surface": { "label": "Surface", "hint": "Dialogues, panneaux" }
+      }
+    },
+    "spacing": {
+      "presets": {
+        "compact": { "label": "Compact", "hint": "Mises en page denses" },
+        "cozy": { "label": "Confortable", "hint": "Légèrement resserré" },
+        "default": { "label": "Défaut", "hint": "Référence Brika" },
+        "roomy": { "label": "Aéré", "hint": "Sensation spacieuse" }
+      }
+    },
+    "textSize": {
+      "presets": {
+        "compact": { "label": "Compact", "hint": "Texte plus petit" },
+        "default": { "label": "Défaut", "hint": "Référence Brika" },
+        "comfortable": { "label": "Confortable", "hint": "Légèrement plus grand" },
+        "large": { "label": "Grand", "hint": "Plus lisible" }
+      },
+      "preview": {
+        "title": "Titre",
+        "body": "Aperçu du corps de texte — ajustez la taille de base pour faire bouger toutes les échelles à la fois.",
+        "label": "Étiquette"
+      }
+    },
+    "effects": {
+      "elevation": {
+        "flat": "Plat",
+        "soft": "Doux",
+        "crisp": "Net",
+        "dramatic": "Spectaculaire",
+        "byPurpose": "Par usage",
+        "semanticLevels": "Niveaux sémantiques",
+        "tintWithPrimary": "Teinter l'ombre avec la couleur primaire",
+        "levels": {
+          "surface": { "label": "Surface", "hint": "Cartes au repos" },
+          "raised": { "label": "Surélevé", "hint": "Survol ou actif" },
+          "overlay": { "label": "Surcouche", "hint": "Popovers, menus déroulants" },
+          "modal": { "label": "Modal", "hint": "Dialogues et panneaux" },
+          "spotlight": { "label": "Projecteur", "hint": "Toasts, palettes" },
+          "xs": { "label": "Très petit", "hint": "" },
+          "sm": { "label": "Petit", "hint": "" },
+          "md": { "label": "Moyen", "hint": "" },
+          "lg": { "label": "Grand", "hint": "" },
+          "xl": { "label": "Très grand", "hint": "" }
+        }
+      },
+      "motion": {
+        "snappy": "Vif",
+        "smooth": "Fluide",
+        "stately": "Posé"
+      },
+      "blur": {
+        "caption": "Rayon de flou d'arrière-plan",
+        "livePreview": "Aperçu en direct",
+        "presets": {
+          "none": "Aucun",
+          "subtle": "Subtil",
+          "glass": "Verre",
+          "frosted": "Givré",
+          "heavy": "Fort"
+        }
+      },
+      "border": {
+        "preview": "Aperçu",
+        "presets": {
+          "hairline": { "label": "Cheveu", "hint": "0.5px" },
+          "regular": { "label": "Standard", "hint": "1px" },
+          "medium": { "label": "Moyen", "hint": "1.5px" },
+          "bold": { "label": "Épais", "hint": "2px" }
+        }
+      },
+      "ring": {
+        "caption": "Indicateur de focus",
+        "width": "Épaisseur",
+        "offset": "Décalage",
+        "focused": "Focalisé",
+        "livePreview": "Aperçu en direct"
+      }
+    }
+  },
+  "palette": {
+    "filterPlaceholder": "Filtrer les tokens…",
+    "emptyFilter": "Aucun token correspondant.",
+    "modeLight": "Clair",
+    "modeDark": "Sombre",
+    "sync": "Synchroniser",
+    "copyLightToDark": "Copier clair → sombre",
+    "copyDarkToLight": "Copier sombre → clair",
+    "autoInvertToDark": "Inverser automatiquement vers sombre",
+    "autoInvertToLight": "Inverser automatiquement vers clair",
+    "tintFromPrimary": "Teinter à partir de la couleur primaire",
+    "tintFromPrimaryTooltip": "Recolore les surfaces neutres avec une touche de la teinte primaire."
+  },
+  "groups": {
+    "surface": "Surface",
+    "brand": "Marque",
+    "neutral": "Neutre",
+    "feedback": "Retour",
+    "data": "Visualisation de données",
+    "surface-tonal": "Tonalités de surface",
+    "role-containers": "Conteneurs de rôle"
+  },
+  "preview": {
+    "modeLight": "Clair",
+    "modeDark": "Sombre",
+    "scenes": {
+      "library": "Bibliothèque",
+      "app": "Application"
+    },
+    "library": {
+      "typography": "Typographie",
+      "display": "Display",
+      "body": "Aperçu du corps de texte — toutes les échelles dérivent de la taille de base.",
+      "buttons": "Boutons",
+      "primary": "Primaire",
+      "secondary": "Secondaire",
+      "outline": "Contour",
+      "ghost": "Fantôme",
+      "destructive": "Destructif",
+      "withIcon": "Avec icône",
+      "badges": "Badges",
+      "badgeDefault": "Défaut",
+      "success": "Succès",
+      "warning": "Avertissement",
+      "info": "Info",
+      "formControls": "Contrôles de formulaire",
+      "searchPlaceholder": "Rechercher…",
+      "disabled": "Désactivé",
+      "enableFeature": "Activer la fonction",
+      "emptyState": "État vide",
+      "emptyTitle": "Rien ici pour l'instant",
+      "emptyDescription": "Ajoutez votre premier élément pour commencer.",
+      "dataPalette": "Palette de données"
+    },
+    "app": {
+      "brand": "Brika",
+      "workspaceName": "Mon espace",
+      "headline": "Bon retour",
+      "subheadline": "Voici ce qui se passe aujourd'hui.",
+      "searchPlaceholder": "Rechercher…",
+      "notifications": "Notifications",
+      "save": "Enregistrer",
+      "cancel": "Annuler",
+      "cardTitle": "Activité récente",
+      "cardDescription": "Aperçu des dernières heures.",
+      "formTitle": "Action rapide",
+      "formDescription": "Remplissez les détails pour commencer.",
+      "note": "Note",
+      "notePlaceholder": "Saisir une note…",
+      "progressLabel": "Progression",
+      "emptyTitle": "Tout est à jour",
+      "emptyDescription": "Rien ne nécessite votre attention pour l'instant.",
+      "emptyCta": "Parcourir les plugins",
+      "nav": {
+        "home": "Accueil",
+        "inbox": "Boîte",
+        "activity": "Activité",
+        "settings": "Réglages"
+      }
+    }
+  },
+  "components": {
+    "preview": "Aperçu",
+    "modeLight": "Clair",
+    "modeDark": "Sombre",
+    "backLabel": "Retour à la liste des composants",
+    "backShort": "Retour",
+    "listHint": "Sélectionnez un composant pour surcharger ses tokens.",
+    "customized": "{{count}} surcharges",
+    "customized_one": "{{count}} surcharge",
+    "noPreview": "Aperçu indisponible pour ce composant",
+    "tokenCount": "{{count}} tokens",
+    "tokenCount_one": "{{count}} token",
+    "resetAll": "Réinitialiser",
+    "resetCount": "Réinitialiser ({{count}})",
+    "groups": {
+      "controls": "Contrôles",
+      "surfaces": "Surfaces",
+      "overlays": "Surcouches",
+      "layout": "Mise en page",
+      "other": "Autres"
+    },
+    "categories": {
+      "color": "Couleurs",
+      "geometry": "Géométrie",
+      "border": "Bordure",
+      "typography": "Typographie",
+      "elevation": "Élévation",
+      "focus": "Focus",
+      "motion": "Mouvement",
+      "state": "État"
+    },
+    "items": {
+      "alert": { "label": "Alerte", "description": "Message en ligne avec couleur de statut." },
+      "avatar": { "label": "Avatar", "description": "Identité d'utilisateur ou d'espace." },
+      "badge": { "label": "Badge", "description": "Étiquette ou compteur compact." },
+      "button": { "label": "Bouton", "description": "Action principale." },
+      "card": { "label": "Carte", "description": "Surface au repos pour du contenu groupé." },
+      "checkbox": { "label": "Case à cocher", "description": "Contrôle booléen." },
+      "code-block": { "label": "Bloc de code", "description": "Surface pour code préformaté." },
+      "dialog": { "label": "Dialogue", "description": "Modal qui capte le focus." },
+      "icon": { "label": "Icône", "description": "Pictogramme en ligne." },
+      "input": { "label": "Champ", "description": "Champ texte sur une ligne." },
+      "menu": { "label": "Menu", "description": "Surface d'actions flottante." },
+      "menu-item": { "label": "Élément de menu", "description": "Une ligne d'un menu." },
+      "password-input": { "label": "Champ mot de passe", "description": "Champ texte masqué." },
+      "popover": { "label": "Popover", "description": "Surface flottante ancrée." },
+      "progress": { "label": "Progression", "description": "Barre de progression déterminée." },
+      "select": { "label": "Sélection", "description": "Liste déroulante." },
+      "separator": { "label": "Séparateur", "description": "Diviseur en ligne." },
+      "sheet": { "label": "Panneau", "description": "Modal ancré au bord." },
+      "sidebar": { "label": "Barre latérale", "description": "Barre de navigation." },
+      "slider": { "label": "Curseur", "description": "Saisie d'une valeur numérique." },
+      "switch": { "label": "Interrupteur", "description": "Bascule on/off." },
+      "switch-thumb": {
+        "label": "Pouce d'interrupteur",
+        "description": "Le pouce mobile d'un interrupteur."
+      },
+      "table": { "label": "Tableau", "description": "Mise en page tabulaire." },
+      "tabs": { "label": "Onglets", "description": "Basculer entre vues." },
+      "textarea": { "label": "Zone de texte", "description": "Champ texte multi-ligne." },
+      "toast": { "label": "Toast", "description": "Notification éphémère." },
+      "tooltip": { "label": "Infobulle", "description": "Aide au survol." }
+    }
+  },
+  "tokens": {},
+  "errors": {
+    "copyCssFailed": "Échec de la copie du CSS dans le presse-papiers.",
+    "importFailed": "Ce fichier ne ressemble pas à un thème valide."
+  },
+  "confirm": {
+    "deleteTheme": "Supprimer ce thème ? Cette action est irréversible."
+  }
+}

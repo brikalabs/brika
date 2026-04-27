@@ -1,5 +1,5 @@
+import { Button, Tooltip, TooltipContent, TooltipTrigger } from '@brika/clay';
 import { Power, RotateCcw, Skull } from 'lucide-react';
-import { Button, Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
 
 interface PluginCardActionsProps {

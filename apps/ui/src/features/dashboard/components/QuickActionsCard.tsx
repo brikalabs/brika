@@ -1,5 +1,5 @@
+import { Card, CardContent, CardHeader, CardTitle } from '@brika/clay';
 import { LayoutDashboard, Play, Plug, Workflow, Zap } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
 import { paths } from '@/routes/paths';
 import { QuickAction } from './QuickAction';

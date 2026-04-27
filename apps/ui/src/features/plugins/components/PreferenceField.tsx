@@ -1,3 +1,14 @@
+import {
+  Button,
+  Input,
+  Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Switch,
+} from '@brika/clay';
 import type {
   CheckboxPreference,
   DropdownPreference,
@@ -9,17 +20,6 @@ import type {
 } from '@brika/plugin';
 import { ExternalLink, RefreshCw } from 'lucide-react';
 import { useCallback, useState } from 'react';
-import {
-  Button,
-  Input,
-  Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Switch,
-} from '@/components/ui';
 import { pluginsApi } from '../api';
 
 interface PreferenceFieldProps {

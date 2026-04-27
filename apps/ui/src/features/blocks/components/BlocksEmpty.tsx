@@ -1,5 +1,5 @@
+import { Card } from '@brika/clay';
 import { Search } from 'lucide-react';
-import { Card } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
 
 interface BlocksEmptyProps {

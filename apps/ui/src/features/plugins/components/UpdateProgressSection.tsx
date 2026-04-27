@@ -1,8 +1,7 @@
+import { cn, Progress, ScrollArea } from '@brika/clay';
 import { CheckCircle2, XCircle } from 'lucide-react';
 import React from 'react';
-import { Progress, ScrollArea } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
-import { cn } from '@/lib/utils';
 import type { OperationProgress } from '../registry-api';
 
 interface UpdateProgressSectionProps {

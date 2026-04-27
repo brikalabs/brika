@@ -1,8 +1,8 @@
+import { Button } from '@brika/clay/components/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@brika/clay/components/tooltip';
 import { useQueryClient } from '@tanstack/react-query';
 import { Check, Download, Loader2, Trash2 } from 'lucide-react';
 import React from 'react';
-import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { pluginsKeys } from '@/features/plugins/api';
 import { registryApi, registryKeys } from '@/features/plugins/registry-api';
 import { useLocale } from '@/lib/use-locale';

@@ -1,4 +1,4 @@
-import { Input, Label } from '@/components/ui';
+import { Input, Label } from '@brika/clay';
 import { useLocale } from '@/lib/use-locale';
 
 interface InstallPluginFormFieldsProps {

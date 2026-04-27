@@ -1,4 +1,3 @@
-import { type SubmitEventHandler, useEffect, useState } from 'react';
 import {
   Button,
   Dialog,
@@ -15,7 +14,8 @@ import {
   SelectTrigger,
   SelectValue,
   Switch,
-} from '@/components/ui';
+} from '@brika/clay';
+import { type SubmitEventHandler, useEffect, useState } from 'react';
 import { useLocale } from '@/lib/use-locale';
 import type { UserRecord } from '../api';
 import { useUserMutations } from '../hooks';

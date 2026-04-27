@@ -1,5 +1,5 @@
+import { Badge } from '@brika/clay';
 import type { Plugin } from '@brika/plugin';
-import { Badge } from '@/components/ui';
 import type { BlockDefinition } from '../../workflows/api';
 import { BlockCard } from './BlockCard';
 

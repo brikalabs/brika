@@ -1,6 +1,6 @@
+import { ScrollArea, Skeleton } from "@brika/clay";
 import { useEffect, useRef } from "react";
 import { useDataView } from "@/components/DataView";
-import { ScrollArea, Skeleton } from "@/components/ui";
 import { useLocale } from "@/lib/use-locale";
 import type { StoredLogEvent } from "../api";
 import { LogRow } from "./LogRow";

@@ -1,0 +1,107 @@
+{
+  "id": "skeuomorph",
+  "name": "Skeuomorph",
+  "description": "Heavy elevation, generous radii, slow motion. A nostalgic look back at depth-first interfaces.",
+  "accentSwatches": ["#3b82f6", "#94c5ff", "#0a3c8c", "#f0f6ff"],
+  "colors": {
+    "light": {
+      "background": "#eef3fb",
+      "foreground": "#0a1428",
+      "card": "#ffffff",
+      "card-foreground": "#0a1428",
+      "popover": "#ffffff",
+      "popover-foreground": "#0a1428",
+      "primary": "#3b82f6",
+      "primary-foreground": "#ffffff",
+      "secondary": "#dbe8fb",
+      "secondary-foreground": "#0a1428",
+      "muted": "#dbe8fb",
+      "muted-foreground": "#4a5d7a",
+      "accent": "#94c5ff",
+      "accent-foreground": "#0a1428",
+      "border": "#b8d1f0",
+      "input": "#b8d1f0",
+      "ring": "#3b82f6",
+      "success": "#22a560",
+      "success-foreground": "#ffffff",
+      "warning": "#d99526",
+      "warning-foreground": "#0a1428",
+      "info": "#2772d4",
+      "info-foreground": "#ffffff",
+      "destructive": "#dc4444",
+      "destructive-foreground": "#ffffff"
+    },
+    "dark": {
+      "background": "#0a1428",
+      "foreground": "#e8eef9",
+      "card": "#16243f",
+      "card-foreground": "#e8eef9",
+      "popover": "#16243f",
+      "popover-foreground": "#e8eef9",
+      "primary": "#6ea7e8",
+      "primary-foreground": "#0a1428",
+      "secondary": "#1e2f4f",
+      "secondary-foreground": "#e8eef9",
+      "muted": "#1e2f4f",
+      "muted-foreground": "#8ea3c4",
+      "accent": "#94c5ff",
+      "accent-foreground": "#0a1428",
+      "border": "#2a3d5f",
+      "input": "#2a3d5f",
+      "ring": "#6ea7e8",
+      "success": "#5fce93",
+      "success-foreground": "#0a1428",
+      "warning": "#e8b568",
+      "warning-foreground": "#0a1428",
+      "info": "#7ea7e0",
+      "info-foreground": "#0a1428",
+      "destructive": "#e87878",
+      "destructive-foreground": "#0a1428"
+    }
+  },
+  "geometry": {
+    "radius": "1rem",
+    "spacing": "0.3125rem"
+  },
+  "borders": {
+    "width": "1px",
+    "style": "solid"
+  },
+  "motion": {
+    "duration": "320ms",
+    "easing": "cubic-bezier(0.34, 1.56, 0.64, 1)"
+  },
+  "focus": {
+    "width": "3px",
+    "offset": "2px"
+  },
+  "components": {
+    "button": {
+      "shadow": "var(--shadow-spotlight)",
+      "fontWeight": "600",
+      "duration": "260ms"
+    },
+    "card": {
+      "shadow": "var(--shadow-modal)",
+      "borderWidth": "1px"
+    },
+    "dialog": {
+      "shadow": "var(--shadow-spotlight)"
+    },
+    "popover": {
+      "shadow": "var(--shadow-spotlight)"
+    },
+    "tooltip": {
+      "shadow": "var(--shadow-overlay)"
+    },
+    "input": {
+      "shadow": "var(--shadow-surface)"
+    },
+    "badge": {
+      "shadow": "var(--shadow-surface)"
+    },
+    "toast": {
+      "shadow": "var(--shadow-spotlight)"
+    }
+  }
+}

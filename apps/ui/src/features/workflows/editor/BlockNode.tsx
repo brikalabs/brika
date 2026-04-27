@@ -4,6 +4,7 @@
  * Dynamic block node with clear multi-input/multi-output visualization.
  */
 
+import { Badge, cn } from '@brika/clay';
 import { Handle, type NodeProps, Position, useNodeId } from '@xyflow/react';
 import { CheckCircle, Loader2, XCircle } from 'lucide-react';
 import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
@@ -14,9 +15,7 @@ import {
   BaseNodeHeader,
   BaseNodeHeaderTitle,
 } from '@/components/base-node';
-import { Badge } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
-import { cn } from '@/lib/utils';
 import type { BlockStatus } from './useWorkflowEditor';
 import { usePortTypeName } from './WorkflowTypeContext';
 

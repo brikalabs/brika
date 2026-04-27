@@ -1,6 +1,6 @@
+import { cn } from '@brika/clay';
 import { Check, X } from 'lucide-react';
 import { useLocale } from '@/lib/use-locale';
-import { cn } from '@/lib/utils';
 
 interface Rule {
   key: string;

@@ -49,9 +49,35 @@ jobs:
             fi
             echo "::endgroup::"
           done
-          # Merge per-workspace lcov reports
+
+          # Merge per-workspace lcov reports — each workspace's lcov uses
+          # paths relative to ITS root (`SF:src/...`, `SF:../../packages/...`),
+          # so a plain `cat` produces paths Sonar can't resolve against the
+          # repo. Rewrite every `SF:` line by prefixing the workspace dir
+          # and collapsing any leading `..` segments so the merged report
+          # is fully repo-relative.
           mkdir -p coverage
-          find . -path '*/coverage/lcov.info' ! -path './coverage/*' -exec cat {} + > coverage/lcov.info 2>/dev/null || true
+          : > coverage/lcov.info
+          find . -path '*/coverage/lcov.info' ! -path './coverage/*' -print0 \
+            | while IFS= read -r -d '' lcov; do
+                ws=$(dirname "$(dirname "$lcov")")
+                ws="${ws#./}"
+                awk -v ws="$ws" '
+                  function normpath(p,    parts, n, i, m, out, result) {
+                    n = split(p, parts, "/")
+                    m = 0
+                    for (i = 1; i <= n; i++) {
+                      if (parts[i] == "..")        { if (m > 0) m-- }
+                      else if (parts[i] != "" && parts[i] != ".") { out[++m] = parts[i] }
+                    }
+                    result = ""
+                    for (i = 1; i <= m; i++) result = result (i==1 ? "" : "/") out[i]
+                    return result
+                  }
+                  /^SF:/ { print "SF:" normpath(ws "/" substr($0, 4)); next }
+                  { print }
+                ' "$lcov" >> coverage/lcov.info
+              done
         continue-on-error: true
 
       - name: SonarQube Scan

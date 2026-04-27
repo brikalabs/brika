@@ -1,5 +1,3 @@
-import { Bug } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
 import {
   Badge,
   Button,
@@ -10,7 +8,9 @@ import {
   DialogHeader,
   DialogTitle,
   ScrollArea,
-} from '@/components/ui';
+} from '@brika/clay';
+import { Bug } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { useLocale } from '@/lib/use-locale';
 import {
   DebugEventEntry,

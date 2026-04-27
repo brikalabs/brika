@@ -81,7 +81,18 @@
     "forest": "Forest",
     "sunset": "Sunset",
     "lavender": "Lavender",
-    "ruby": "Ruby"
+    "ruby": "Ruby",
+    "nord": "Nord",
+    "solarized": "Solarized",
+    "candy": "Candy",
+    "dracula": "Dracula",
+    "mono": "Mono",
+    "brutalist": "Brutalist",
+    "editorial": "Editorial",
+    "terminal": "Terminal",
+    "skeuomorph": "Skeuomorph",
+    "glass": "Glass",
+    "comic": "Comic"
   },
   "modes": {
     "light": "Light",

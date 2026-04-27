@@ -1,4 +1,4 @@
-import { Card, Skeleton } from '@/components/ui';
+import { Card, Skeleton } from '@brika/clay';
 
 export function BlockCardSkeleton() {
   return (

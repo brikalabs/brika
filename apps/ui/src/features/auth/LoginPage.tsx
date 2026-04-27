@@ -1,7 +1,4 @@
 import { useAuth } from '@brika/auth/react';
-import { Mail } from 'lucide-react';
-import { type FormEvent, useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import {
   Button,
   CardContent,
@@ -13,8 +10,11 @@ import {
   InputGroupInput,
   Label,
   PasswordInput,
-} from '@/components/ui';
-import { BrikaLogo } from '@/components/ui/brika-logo';
+} from '@brika/clay';
+import { BrikaLogo } from '@brika/clay/components/brika-logo';
+import { Mail } from 'lucide-react';
+import { type FormEvent, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { AuthLayout } from './AuthLayout';
 
 export function LoginPage() {

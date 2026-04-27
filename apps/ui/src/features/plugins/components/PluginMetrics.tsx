@@ -1,6 +1,6 @@
+import { Avatar, AvatarFallback, Card } from '@brika/clay';
+import { Chart } from '@brika/clay/components/chart';
 import { Cpu, MemoryStick } from 'lucide-react';
-import { Avatar, AvatarFallback, Card } from '@/components/ui';
-import { MetricsChart } from '@/components/ui/chart';
 import { useLocale } from '@/lib/use-locale';
 import type { PluginMetrics as PluginMetricsType } from '../api';
 
@@ -23,7 +23,7 @@ export function PluginMetrics({ metrics }: Readonly<PluginMetricsProps>) {
             {metrics?.current?.cpu.toFixed(1) ?? '-'}%
           </div>
           <div className="mt-1 text-muted-foreground text-sm">{t('plugins:details.cpu')}</div>
-          <MetricsChart
+          <Chart
             data={
               metrics?.history?.map((h) => ({
                 ts: h.ts,
@@ -48,7 +48,7 @@ export function PluginMetrics({ metrics }: Readonly<PluginMetricsProps>) {
             {metrics?.current ? formatBytes(metrics.current.memory) : '-'}
           </div>
           <div className="mt-1 text-muted-foreground text-sm">{t('plugins:details.memory')}</div>
-          <MetricsChart
+          <Chart
             data={
               metrics?.history?.map((h) => ({
                 ts: h.ts,

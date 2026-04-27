@@ -1,4 +1,3 @@
-import { AlertCircle, Check, KeyRound, Loader2 } from 'lucide-react';
 import {
   Button,
   Label,
@@ -10,8 +9,9 @@ import {
   SectionInfo,
   SectionTitle,
   Separator,
-} from '@/components/ui';
-import { PasswordInput } from '@/components/ui/password-input';
+} from '@brika/clay';
+import { PasswordInput } from '@brika/clay/components/password-input';
+import { AlertCircle, Check, KeyRound, Loader2 } from 'lucide-react';
 import { useLocale } from '@/lib/use-locale';
 import { PasswordStrength } from './PasswordStrength';
 import { usePasswordForm } from './usePasswordForm';

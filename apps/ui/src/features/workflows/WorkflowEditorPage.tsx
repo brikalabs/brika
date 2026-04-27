@@ -5,11 +5,11 @@
  * Routes: /workflows/new, /workflows/:id/edit
  */
 
+import { Button, Input } from '@brika/clay';
 import { useNavigate, useParams } from '@tanstack/react-router';
 import { ReactFlowProvider } from '@xyflow/react';
 import { ArrowLeft, Loader2, Save } from 'lucide-react';
 import { useCallback, useRef, useState } from 'react';
-import { Button, Input } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
 import { paths } from '@/routes/paths';
 import type { Workflow } from './api';

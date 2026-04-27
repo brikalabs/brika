@@ -19,7 +19,7 @@ import {
 
 const [icons, ui, cva, { clsx: clsxFn }] = await Promise.all([
   import('lucide-react'),
-  import('@/components/ui'),
+  import('@brika/clay'),
   import('class-variance-authority'),
   import('clsx'),
 ]);

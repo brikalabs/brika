@@ -1,4 +1,12 @@
 import {
+  SectionContent,
+  SectionDescription,
+  SectionHeader,
+  SectionIcon,
+  SectionInfo,
+  SectionTitle,
+} from '@brika/clay';
+import {
   Calendar,
   Clock,
   Code2,
@@ -12,14 +20,6 @@ import {
   Tag,
 } from 'lucide-react';
 import { Uptime } from '@/components/Uptime';
-import {
-  SectionContent,
-  SectionDescription,
-  SectionHeader,
-  SectionIcon,
-  SectionInfo,
-  SectionTitle,
-} from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
 import { InfoItem } from './InfoItem';
 import { Stats } from './Stats';

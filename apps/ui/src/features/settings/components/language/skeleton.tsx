@@ -1,4 +1,4 @@
-import { Skeleton } from '@/components/ui';
+import { Skeleton } from '@brika/clay';
 
 export function LanguageSelectorSkeleton() {
   return (

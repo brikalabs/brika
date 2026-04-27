@@ -1,4 +1,3 @@
-import { Info } from 'lucide-react';
 import {
   Badge,
   Card,
@@ -9,7 +8,8 @@ import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from '@/components/ui';
+} from '@brika/clay';
+import { Info } from 'lucide-react';
 import { useLocale } from '@/lib/use-locale';
 import type { Plugin } from '../api';
 

@@ -1,4 +1,4 @@
-import { Badge } from '@/components/ui';
+import { Badge } from '@brika/clay';
 import { useLocale } from '@/lib/use-locale';
 
 const ROLE_VARIANT: Record<string, 'default' | 'secondary' | 'outline'> = {

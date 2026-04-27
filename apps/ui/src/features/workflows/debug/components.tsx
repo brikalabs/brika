@@ -4,10 +4,9 @@
  * Shared components for displaying debug events.
  */
 
+import { Badge, cn } from '@brika/clay';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { useState } from 'react';
-import { Badge } from '@/components/ui';
-import { cn } from '@/lib/utils';
 import type { DebugEvent } from './types';
 
 // ─────────────────────────────────────────────────────────────────────────────

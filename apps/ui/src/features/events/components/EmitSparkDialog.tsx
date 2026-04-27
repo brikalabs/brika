@@ -1,5 +1,3 @@
-import { Loader2, Send, Zap } from 'lucide-react';
-import { useEffect, useState } from 'react';
 import {
   Button,
   Dialog,
@@ -10,7 +8,9 @@ import {
   DialogTitle,
   Label,
   Textarea,
-} from '@/components/ui';
+} from '@brika/clay';
+import { Loader2, Send, Zap } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useLocale } from '@/lib/use-locale';
 import { useEmitEvent } from '../sparks-hooks';
 import { SparkSchemaViewer } from './SparkSchemaViewer';

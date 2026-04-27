@@ -1,0 +1,115 @@
+{
+  "id": "comic",
+  "name": "Comic",
+  "description": "Comic Sans, candy palette, bouncy motion, plump radii. The theme your design lead never approved.",
+  "accentSwatches": ["#ff6ec7", "#ffe14a", "#5fd1ff", "#9affb1"],
+  "colors": {
+    "light": {
+      "background": "#fff8f0",
+      "foreground": "#2b1d3a",
+      "card": "#ffffff",
+      "card-foreground": "#2b1d3a",
+      "popover": "#ffffff",
+      "popover-foreground": "#2b1d3a",
+      "primary": "#ff6ec7",
+      "primary-foreground": "#2b1d3a",
+      "secondary": "#fff0d4",
+      "secondary-foreground": "#2b1d3a",
+      "muted": "#fff0d4",
+      "muted-foreground": "#7a6b8c",
+      "accent": "#5fd1ff",
+      "accent-foreground": "#2b1d3a",
+      "border": "#2b1d3a",
+      "input": "#2b1d3a",
+      "ring": "#ff6ec7",
+      "success": "#9affb1",
+      "success-foreground": "#1a3a1a",
+      "warning": "#ffe14a",
+      "warning-foreground": "#2b1d3a",
+      "info": "#5fd1ff",
+      "info-foreground": "#2b1d3a",
+      "destructive": "#ff5a7a",
+      "destructive-foreground": "#ffffff"
+    },
+    "dark": {
+      "background": "#1f1530",
+      "foreground": "#fff0e8",
+      "card": "#2b1f42",
+      "card-foreground": "#fff0e8",
+      "popover": "#2b1f42",
+      "popover-foreground": "#fff0e8",
+      "primary": "#ff8fd6",
+      "primary-foreground": "#1f1530",
+      "secondary": "#3a2956",
+      "secondary-foreground": "#fff0e8",
+      "muted": "#3a2956",
+      "muted-foreground": "#c0a8d9",
+      "accent": "#7ddfff",
+      "accent-foreground": "#1f1530",
+      "border": "#fff0e8",
+      "input": "#5a4078",
+      "ring": "#ff8fd6",
+      "success": "#9affb1",
+      "success-foreground": "#1a3a1a",
+      "warning": "#ffe14a",
+      "warning-foreground": "#1f1530",
+      "info": "#7ddfff",
+      "info-foreground": "#1f1530",
+      "destructive": "#ff7a8c",
+      "destructive-foreground": "#1f1530"
+    }
+  },
+  "geometry": {
+    "radius": "1.5rem",
+    "fontSans": "\"Comic Sans MS\", \"Chalkboard SE\", \"Comic Neue\", system-ui, cursive",
+    "fontMono": "\"Comic Mono\", \"Comic Sans MS\", monospace"
+  },
+  "borders": {
+    "width": "2px",
+    "style": "solid"
+  },
+  "motion": {
+    "duration": "320ms",
+    "easing": "cubic-bezier(0.34, 1.56, 0.64, 1)"
+  },
+  "focus": {
+    "width": "3px",
+    "offset": "3px"
+  },
+  "components": {
+    "button": {
+      "borderWidth": "2px",
+      "borderStyle": "solid",
+      "fontWeight": "700",
+      "letterSpacing": "0.01em",
+      "shadow": "0 4px 0 0 var(--foreground)",
+      "duration": "180ms"
+    },
+    "card": {
+      "borderWidth": "2px",
+      "shadow": "0 6px 0 0 var(--foreground)"
+    },
+    "dialog": {
+      "borderWidth": "3px",
+      "shadow": "0 8px 0 0 var(--foreground)"
+    },
+    "popover": {
+      "borderWidth": "2px",
+      "shadow": "0 4px 0 0 var(--foreground)"
+    },
+    "tooltip": {
+      "borderWidth": "2px",
+      "fontWeight": "700"
+    },
+    "input": {
+      "borderWidth": "2px"
+    },
+    "badge": {
+      "fontWeight": "700",
+      "letterSpacing": "0.02em"
+    },
+    "label": {
+      "fontWeight": "700"
+    }
+  }
+}

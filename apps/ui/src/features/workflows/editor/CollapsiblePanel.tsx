@@ -8,11 +8,11 @@
  * in a single container using CollapsedTabsContainer.
  */
 
+import { cn } from '@brika/clay';
+import { Button } from '@brika/clay/components/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@brika/clay/components/tooltip';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { cn } from '@/lib/utils';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types

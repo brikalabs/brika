@@ -83,6 +83,36 @@ export {
   unsubscribeSpark,
 } from './sparks';
 export type {
+  ActiveTheme as ActiveThemeType,
+  ActiveThemeUpdate as ActiveThemeUpdateType,
+  ColorMode as ColorModeType,
+  ComponentRadiusKey as ComponentRadiusKeyType,
+  ComponentTokens as ComponentTokensType,
+  CornerStyle as CornerStyleType,
+  ElevationStyle as ElevationStyleType,
+  MotionStyle as MotionStyleType,
+  ThemeColors as ThemeColorsType,
+  ThemeConfig as ThemeConfigType,
+} from './theme';
+// ─── Theme ───
+export {
+  ActiveTheme,
+  ActiveThemeUpdate,
+  COMPONENT_RADIUS_KEYS,
+  CORNER_STYLES,
+  ColorMode,
+  ComponentRadiusKey,
+  ComponentTokens,
+  CornerStyle,
+  ELEVATION_STYLES,
+  ElevationStyle,
+  MOTION_STYLES,
+  MotionStyle,
+  THEME_CONFIG_VERSION,
+  ThemeColors,
+  ThemeConfig,
+} from './theme';
+export type {
   ToolCallContext as ToolCallContextType,
   ToolCallSource as ToolCallSourceType,
   ToolDefinition as ToolDefinitionType,

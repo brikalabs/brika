@@ -1,0 +1,114 @@
+/**
+ * Cross-cutting utilities — focus ring, safe-area padding, and the
+ * static `corner-*` keyword utilities. Per-component CSS no longer
+ * exists; component-specific properties are composed inline in each
+ * component's `.tsx` via Tailwind v4 arbitrary-class syntax.
+ */
+
+/* ─────────────────────────────────────────────────────────────
+   FOCUS RING UTILITY
+   `ring-themed` applies the theme's focus ring (width + offset + color)
+   in one class. Used with focus-visible: `focus-visible:ring-themed`.
+   Outline-based (v4 `ring-*` utilities use box-shadow which doesn't
+   compose with `clip-path` corner shapes).
+   ───────────────────────────────────────────────────────────── */
+@utility ring-themed {
+  outline: var(--ring-width, 2px) solid var(--ring);
+  outline-offset: var(--ring-offset, 2px);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   CORNER SHAPE — THEMED
+   `corner-themed` reads the theme's global `--corner-shape` (with a
+   `round` fallback) and is set on every Clay surface that wants to
+   pick up the active geometry. Pair with `rounded-*` so the property
+   has a non-zero radius to shape.
+   ───────────────────────────────────────────────────────────── */
+@utility corner-themed {
+  corner-shape: var(--corner-shape, round);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   SAFE-AREA PADDING
+   Scales with both `--spacing` (density) and `--radius` (corner arc)
+   so containers feel right on any theme and text never hugs a curve.
+   Formula: `max(spacing*N, radius*K)` — the spacing term mirrors the
+   classic Tailwind step (p-6 for `p-safe`, p-2 for `-md`, p-1 for
+   `-sm`), the radius term takes over once corners get large enough to
+   bite into content.
+   ───────────────────────────────────────────────────────────── */
+@utility p-safe {
+  padding: max(calc(var(--spacing, 0.25rem) * 6), calc(var(--radius, 0.5rem) + 0.5rem));
+}
+
+/* Compact counterpart for tight rounded surfaces (dropdowns, popovers,
+   tooltips). `p-1` floor at default density; grows with radius so items
+   don't crowd the curve. */
+@utility p-safe-sm {
+  padding: max(calc(var(--spacing, 0.25rem) * 1), calc(var(--radius, 0.5rem) * 0.3));
+}
+
+/* Mid-floor safe padding — for small tiles and preview headers that sit
+   inside a rounded surface. `p-2` floor at default density. */
+@utility p-safe-md {
+  padding: max(calc(var(--spacing, 0.25rem) * 2), calc(var(--radius, 0.5rem) * 0.6));
+}
+@utility px-safe-md {
+  padding-inline: max(calc(var(--spacing, 0.25rem) * 2), calc(var(--radius, 0.5rem) * 0.6));
+}
+@utility py-safe-md {
+  padding-block: max(calc(var(--spacing, 0.25rem) * 2), calc(var(--radius, 0.5rem) * 0.6));
+}
+
+/* Directional corner-strip padding. For slim rows that sit at a corner
+   of a rounded parent (Card header/footer). `p-3` floor at default
+   density; grows on the corner side when radius is high. */
+@utility pl-safe {
+  padding-left: max(calc(var(--spacing, 0.25rem) * 3), calc(var(--radius, 0.5rem) * 0.75));
+}
+@utility pr-safe {
+  padding-right: max(calc(var(--spacing, 0.25rem) * 3), calc(var(--radius, 0.5rem) * 0.75));
+}
+@utility pt-safe {
+  padding-top: max(calc(var(--spacing, 0.25rem) * 3), calc(var(--radius, 0.5rem) * 0.75));
+}
+@utility pb-safe {
+  padding-bottom: max(calc(var(--spacing, 0.25rem) * 3), calc(var(--radius, 0.5rem) * 0.75));
+}
+
+/* ─────────────────────────────────────────────────────────────
+   CORNER SHAPE UTILITIES
+   CSS corner-shape property for squircle and other corner styles.
+   Requires border-radius to have effect.
+   https://developer.mozilla.org/en-US/docs/Web/CSS/corner-shape
+   ───────────────────────────────────────────────────────────── */
+
+/* Static keyword utilities */
+@utility corner-round {
+  corner-shape: round;
+}
+
+@utility corner-square {
+  corner-shape: square;
+}
+
+@utility corner-bevel {
+  corner-shape: bevel;
+}
+
+@utility corner-scoop {
+  corner-shape: scoop;
+}
+
+@utility corner-notch {
+  corner-shape: notch;
+}
+
+@utility corner-squircle {
+  corner-shape: squircle;
+}
+
+/* Functional utility for superellipse with custom values */
+@utility corner-superellipse-* {
+  corner-shape: superellipse(--value(number));
+}

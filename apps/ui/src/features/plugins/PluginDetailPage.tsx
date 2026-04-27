@@ -1,12 +1,11 @@
+import { Badge, Card, CardContent, cn, Skeleton } from '@brika/clay';
 import { useQuery } from '@tanstack/react-query';
 import { Link, Outlet, useNavigate, useParams } from '@tanstack/react-router';
 import { ArrowLeft, Info, Plug, Tag } from 'lucide-react';
 import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
 import { useState } from 'react';
 import { useDataView } from '@/components/DataView';
-import { Badge, Card, CardContent, Skeleton } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
-import { cn } from '@/lib/utils';
 import { paths } from '@/routes/paths';
 import { PluginDetailHeader } from './components';
 import { formatPluginError } from './components/plugin-utils';

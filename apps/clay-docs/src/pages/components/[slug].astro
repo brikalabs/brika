@@ -1,0 +1,335 @@
+---
+import { TOKEN_REGISTRY } from '@brika/clay/tokens';
+import { DemoRenderer } from '~/components/DemoRenderer.tsx';
+import CodeSource from '~/components/docs/CodeSource.astro';
+import ComponentExample from '~/components/docs/ComponentExample.astro';
+import InlineMarkdown from '~/components/docs/InlineMarkdown.astro';
+import { PropsTable } from '~/components/docs/PropsTable.tsx';
+import { TokenTable } from '~/components/docs/TokenTable.tsx';
+import MdxDocLayout from '~/layouts/MdxDocLayout.astro';
+import { adjacentComponents, COMPONENTS, type ComponentEntry } from '~/lib/component-registry';
+
+interface Props {
+  readonly component: ComponentEntry;
+}
+
+export function getStaticPaths() {
+  return COMPONENTS.map((component) => ({
+    params: { slug: component.slug },
+    props: { component },
+  }));
+}
+
+const { component } = Astro.props;
+const { previous, next } = adjacentComponents(component.slug);
+
+const barrelImport = `import { ${component.name} } from "@brika/clay";`;
+const granularImport = `import { ${component.name} } from "@brika/clay/components/${component.slug}";`;
+
+const [heroDemo, ...moreDemos] = component.demos;
+
+function slugifyTitle(title: string): string {
+  return title.toLowerCase().replace(/\s+/g, '-');
+}
+
+function pad(n: number): string {
+  return n.toString().padStart(2, '0');
+}
+
+const githubBase = `https://github.com/brikalabs/brika/tree/main/packages/clay/src/components/${component.slug}`;
+
+// Build the section ribbon as we walk the page so the numbering matches
+// what's actually rendered (Accessibility / Tokens are conditional).
+let sectionIndex = 0;
+function nextSection(): string {
+  sectionIndex += 1;
+  return pad(sectionIndex);
+}
+
+// Pull the tokens scoped to this component from the registry. They power
+// the Tokens section below — every CSS variable, default value, and
+// theme-config path a consumer needs to personalize this component.
+const registryTokens = TOKEN_REGISTRY.filter((token) => token.appliesTo === component.slug);
+const hasRegistryTokens = registryTokens.length > 0;
+
+// First example override pulled from a per-component prop so the JSON
+// snippet always references a real, theme-overridable knob. Falls back
+// to a generic radius override.
+const overrideExample =
+  registryTokens.find((token) => token.themePath?.includes('.padding')) ??
+  registryTokens.find((token) => token.themePath?.includes('.radius')) ??
+  registryTokens[0];
+const themePathSegments = overrideExample?.themePath?.split('.') ?? [];
+const overrideComponentKey = themePathSegments[1] ?? component.slug;
+const overrideProp = themePathSegments[2] ?? 'radius';
+const overrideExampleValue = overrideExample?.defaultLight ?? '0.5rem';
+
+const installNum = nextSection();
+const usageNum = heroDemo ? nextSection() : null;
+const examplesNum = moreDemos.length > 0 ? nextSection() : null;
+const accessibilityNum =
+  component.accessibility && component.accessibility.length > 0 ? nextSection() : null;
+const tokensNum = hasRegistryTokens ? nextSection() : null;
+const apiNum = nextSection();
+---
+
+<MdxDocLayout
+  frontmatter={{
+    title: component.name,
+    description: component.description,
+    sourceFile: `components/${component.slug}`,
+    group: component.group,
+  }}
+>
+  {
+    heroDemo && (
+      <section class="mb-16">
+        <ComponentExample code={heroDemo.code}>
+          <DemoRenderer slug={component.slug} demoName={heroDemo.name} client:only="react" />
+        </ComponentExample>
+      </section>
+    )
+  }
+
+  <section class="mb-16">
+    <div class="numbered-rule mb-6">
+      <span class="num">{installNum}</span>
+      <span class="label">Installation</span>
+      <span class="spacer hairline"></span>
+    </div>
+    <h2 id="installation" class="mb-3 scroll-mt-24 font-display text-3xl text-clay-strong leading-[1.1]">
+      Install
+    </h2>
+    <p class="mb-5 max-w-2xl text-clay-default text-sm leading-relaxed">
+      Pull {component.name} from the barrel for everyday use, or the granular path when you want a
+      tighter bundle.
+    </p>
+    <CodeSource code={barrelImport} lang="tsx" filename="Barrel" />
+    <CodeSource code={granularImport} lang="tsx" filename="Granular" />
+  </section>
+
+  {
+    heroDemo && usageNum && (
+      <section class="mb-16">
+        <div class="numbered-rule mb-6">
+          <span class="num">{usageNum}</span>
+          <span class="label">Usage</span>
+          <span class="spacer hairline" />
+        </div>
+        <h2
+          id="usage"
+          class="mb-3 scroll-mt-24 font-display text-3xl text-clay-strong leading-[1.1]"
+        >
+          A minimal example
+        </h2>
+        <p class="mb-5 max-w-2xl text-clay-default text-sm leading-relaxed">
+          Drop this into a page. Native HTML attributes pass through to the underlying primitive.
+        </p>
+        <CodeSource code={heroDemo.code} lang="tsx" filename={`${component.name}.tsx`} />
+      </section>
+    )
+  }
+
+  {
+    moreDemos.length > 0 && examplesNum && (
+      <section class="mb-16">
+        <div class="numbered-rule mb-6">
+          <span class="num">{examplesNum}</span>
+          <span class="label">Examples</span>
+          <span class="spacer hairline" />
+        </div>
+        <h2
+          id="examples"
+          class="mb-8 scroll-mt-24 font-display text-3xl text-clay-strong leading-[1.1]"
+        >
+          {component.name}, every way
+        </h2>
+        {moreDemos.map((demo, index) => (
+          <section class="mb-12">
+            <div class="mb-3 flex items-baseline gap-3 mono-tag-tight">
+              <span class="text-clay-strong">{pad(index + 1)}</span>
+              <span class="hairline w-8" />
+              <span>{demo.title}</span>
+            </div>
+            <h3
+              id={slugifyTitle(demo.title)}
+              class="mb-3 scroll-mt-24 font-display text-clay-strong text-xl leading-[1.15]"
+            >
+              {demo.title}
+            </h3>
+            {demo.description && (
+              <p class="mb-4 max-w-2xl text-clay-default text-sm leading-relaxed">
+                {demo.description}
+              </p>
+            )}
+            <ComponentExample code={demo.code}>
+              <DemoRenderer slug={component.slug} demoName={demo.name} client:only="react" />
+            </ComponentExample>
+          </section>
+        ))}
+      </section>
+    )
+  }
+
+  {
+    component.accessibility && component.accessibility.length > 0 && accessibilityNum && (
+      <section class="mb-16">
+        <div class="numbered-rule mb-6">
+          <span class="num">{accessibilityNum}</span>
+          <span class="label">Accessibility</span>
+          <span class="spacer hairline" />
+        </div>
+        <h2
+          id="accessibility"
+          class="mb-4 scroll-mt-24 font-display text-3xl text-clay-strong leading-[1.1]"
+        >
+          Accessibility
+        </h2>
+        <ul class="space-y-3 text-clay-default text-sm leading-relaxed">
+          {component.accessibility.map((item) => (
+            <li class="flex gap-3">
+              <span aria-hidden="true" class="text-clay-inactive font-mono">
+                ›
+              </span>
+              <span class="flex-1">
+                <InlineMarkdown text={item} />
+              </span>
+            </li>
+          ))}
+        </ul>
+      </section>
+    )
+  }
+
+  {
+    hasRegistryTokens && tokensNum && (
+      <section class="mb-16">
+        <div class="numbered-rule mb-6">
+          <span class="num">{tokensNum}</span>
+          <span class="label">Tokens</span>
+          <span class="spacer hairline" />
+          <span class="text-clay-inactive">
+            {registryTokens.length} theme-overridable
+          </span>
+        </div>
+        <h2
+          id="tokens"
+          class="mb-3 scroll-mt-24 font-display text-3xl text-clay-strong leading-[1.1]"
+        >
+          Theme tokens
+        </h2>
+        <p class="mb-6 max-w-2xl text-clay-default text-sm leading-relaxed">
+          Every CSS variable {component.name} reads, with its default and the
+          dotted path you'd write in a <code class="font-mono text-xs">ThemeConfig</code> JSON
+          to override it. Set any of these in your theme to retune {component.name}
+          without touching component code.
+        </p>
+
+        <TokenTable component={component.slug} title={`${component.name} tokens`} client:load />
+
+        <h3 class="mt-10 mb-3 font-display text-clay-strong text-xl leading-tight">
+          Override in a theme
+        </h3>
+        <p class="mb-4 max-w-2xl text-clay-default text-sm leading-relaxed">
+          Authoring a theme is plain JSON. Drop overrides under
+          <code class="font-mono text-xs">components.{overrideComponentKey}</code> — the names
+          are camelCase versions of the variable suffix.
+        </p>
+
+        <CodeSource
+          lang="json"
+          filename={`my-theme.json`}
+          code={`{
+  "id": "my-theme",
+  "name": "My Theme",
+  "description": "...",
+  "accentSwatches": ["#000"],
+
+  "components": {
+    "${overrideComponentKey}": {
+      "${overrideProp}": "${overrideExampleValue}"
+    }
+  }
+}`}
+        />
+
+        <p class="mt-4 max-w-2xl text-clay-default text-sm leading-relaxed">
+          Then apply with <code class="font-mono text-xs">applyTheme(myTheme)</code>{' '}
+          (see the <a href="/theming" class="text-clay-link underline-offset-2 hover:underline">theming guide</a>)
+          or scope it to a subtree with <code class="font-mono text-xs">themeToCssVars(myTheme, mode)</code>.
+        </p>
+      </section>
+    )
+  }
+
+  <section class="mb-16">
+    <div class="numbered-rule mb-6">
+      <span class="num">{apiNum}</span>
+      <span class="label">API reference</span>
+      <span class="spacer hairline"></span>
+    </div>
+    <h2 id="api-reference" class="mb-3 scroll-mt-24 font-display text-3xl text-clay-strong leading-[1.1]">
+      API reference
+    </h2>
+    <p class="mb-6 max-w-2xl text-clay-default text-sm leading-relaxed">
+      Props specific to {component.name}. Native HTML attributes pass through to the
+      underlying primitive — see the
+      <a
+        href={githubBase}
+        rel="noopener noreferrer"
+        class="text-clay-link underline-offset-2 hover:underline"
+      >
+        component source on GitHub
+      </a>{' '}
+      for the full type signature.
+    </p>
+    <PropsTable displayName={component.name} client:load />
+  </section>
+
+  <nav class="not-prose mt-20 grid grid-cols-1 gap-3 border-clay-hairline border-t pt-10 sm:grid-cols-2">
+    {
+      previous ? (
+        <a
+          href={`/components/${previous.slug}`}
+          class="group flex items-center gap-3 rounded-lg border border-clay-hairline bg-clay-elevated px-4 py-3 transition-all hover:border-clay-strong hover:bg-clay-base"
+        >
+          <span
+            aria-hidden="true"
+            class="font-mono text-clay-inactive text-base transition-colors group-hover:text-clay-strong"
+          >
+            ←
+          </span>
+          <span class="flex flex-col items-start gap-0.5">
+            <span class="mono-tag-tight">Previous</span>
+            <span class="font-display text-clay-strong text-lg leading-tight">
+              {previous.name}
+            </span>
+          </span>
+        </a>
+      ) : (
+        <span class="hidden sm:block" />
+      )
+    }
+    {
+      next ? (
+        <a
+          href={`/components/${next.slug}`}
+          class="group flex items-center justify-end gap-3 rounded-lg border border-clay-hairline bg-clay-elevated px-4 py-3 transition-all hover:border-clay-strong hover:bg-clay-base"
+        >
+          <span class="flex flex-col items-end gap-0.5">
+            <span class="mono-tag-tight">Next</span>
+            <span class="font-display text-clay-strong text-lg leading-tight">{next.name}</span>
+          </span>
+          <span
+            aria-hidden="true"
+            class="font-mono text-clay-inactive text-base transition-colors group-hover:text-clay-strong"
+          >
+            →
+          </span>
+        </a>
+      ) : (
+        <span class="hidden sm:block" />
+      )
+    }
+  </nav>
+</MdxDocLayout>

@@ -1,5 +1,5 @@
+import { Label, Skeleton } from '@brika/clay';
 import { lazy, Suspense } from 'react';
-import { Label, Skeleton } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
 
 const IconPickerGrid = lazy(() => import('./IconPickerGrid'));

@@ -1,5 +1,3 @@
-import { ArrowDownToLine, Download, RefreshCw } from 'lucide-react';
-import { useCallback, useState } from 'react';
 import {
   Button,
   SectionContent,
@@ -8,7 +6,9 @@ import {
   SectionIcon,
   SectionInfo,
   SectionTitle,
-} from '@/components/ui';
+} from '@brika/clay';
+import { ArrowDownToLine, Download, RefreshCw } from 'lucide-react';
+import { useCallback, useState } from 'react';
 import { UpdateDialog, useUpdateCheck } from '@/features/updates';
 import { useDelayedLoading } from '@/hooks/use-delayed-loading';
 import { useLocale } from '@/lib/use-locale';

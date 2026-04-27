@@ -1,8 +1,8 @@
+import { Button, CardContent, CardDescription, CardHeader, CardTitle } from '@brika/clay';
 import { useNavigate } from '@tanstack/react-router';
 import { ArrowLeft, ArrowRight, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui';
 
 // ─── Step header ────────────────────────────────────────────────────────────
 

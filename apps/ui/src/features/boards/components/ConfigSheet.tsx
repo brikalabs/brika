@@ -1,7 +1,9 @@
-import type { PreferenceDefinition } from '@brika/plugin';
-import { RefreshCw, Trash2, X } from 'lucide-react';
-import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+/**
+ * ConfigSheet — side sheet for editing a brick's label and configured
+ * preferences. Field rendering lives in `./config-sheet/field-renderers`,
+ * state machine in `./config-sheet/use-config-sheet-state`.
+ */
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,13 +19,7 @@ import {
   ButtonGroup,
   Input,
   Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Switch,
-} from '@/components/ui';
+} from '@brika/clay';
 import {
   Sheet,
   SheetContent,
@@ -31,279 +27,31 @@ import {
   SheetFooter,
   SheetHeader,
   SheetTitle,
-} from '@/components/ui/sheet';
+} from '@brika/clay/components/sheet';
+import { Trash2, X } from 'lucide-react';
+import { DynamicIcon, type IconName } from 'lucide-react/dynamic';
 import { useLocale } from '@/lib/use-locale';
-import type { Json } from '@/types';
-import { boardsApi, brickTypesApi } from '../api';
-import { useRemoveBrick, useRenameBrick } from '../hooks';
-import { useBoardStore } from '../store';
-
-// ─── Field Renderers ──────────────────────────────────────────────────────────
-
-/** Extract the default value from any preference variant (not all have one). */
-function getDefault(field: PreferenceDefinition): unknown {
-  if ('default' in field) {
-    return field.default;
-  }
-  return undefined;
-}
-
-function toStr(value: unknown): string {
-  if (value === undefined || value === null) {
-    return '';
-  }
-  if (typeof value === 'object') {
-    return JSON.stringify(value);
-  }
-  return String(value);
-}
-
-interface FieldProps {
-  field: PreferenceDefinition;
-  value: Json;
-  onChange: (name: string, value: Json) => void;
-  pluginName: string;
-  brickLocalId: string;
-  brickTypeId: string;
-}
-
-function TextField({ field, value, onChange }: Readonly<FieldProps>) {
-  return (
-    <Input
-      id={field.name}
-      type={field.type === 'password' ? 'password' : 'text'}
-      value={toStr(value ?? getDefault(field))}
-      onChange={(e) => onChange(field.name, e.target.value)}
-    />
-  );
-}
-
-function NumberField({ field, value, onChange }: Readonly<FieldProps>) {
-  if (field.type !== 'number') {
-    return null;
-  }
-  return (
-    <Input
-      id={field.name}
-      type="number"
-      min={field.min}
-      max={field.max}
-      step={field.step}
-      value={toStr(value ?? getDefault(field))}
-      onChange={(e) => onChange(field.name, Number(e.target.value))}
-    />
-  );
-}
-
-function CheckboxField({ field, value, onChange }: Readonly<FieldProps>) {
-  const checked = Boolean(value ?? getDefault(field) ?? false);
-  return (
-    <Switch id={field.name} checked={checked} onCheckedChange={(v) => onChange(field.name, v)} />
-  );
-}
-
-function DropdownField({
-  field,
-  value,
-  onChange,
-  pluginName,
-  brickLocalId,
-  brickTypeId,
-}: Readonly<FieldProps>) {
-  const { tp } = useLocale();
-  const isDynamic = field.type === 'dynamic-dropdown';
-
-  const [dynamicOptions, setDynamicOptions] = useState<
-    Array<{
-      value: string;
-      label?: string;
-    }>
-  >(isDynamic ? (field.options ?? []) : []);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-
-  const refresh = useCallback(async () => {
-    setIsRefreshing(true);
-    try {
-      const data = await brickTypesApi.getConfigOptions(brickTypeId, field.name);
-      setDynamicOptions(data.options);
-    } finally {
-      setIsRefreshing(false);
-    }
-  }, [brickTypeId, field.name]);
-
-  if (field.type !== 'dropdown' && !isDynamic) {
-    return null;
-  }
-
-  const options = isDynamic ? dynamicOptions : field.options;
-  const optionLabel = (opt: { value: string; label?: string }) =>
-    opt.label ??
-    tp(pluginName, `bricks.${brickLocalId}.config.${field.name}.options.${opt.value}`, opt.value);
-
-  return (
-    <div className="flex items-center gap-2">
-      <Select
-        value={toStr(value ?? getDefault(field))}
-        onValueChange={(v) => onChange(field.name, v)}
-      >
-        <SelectTrigger id={field.name} className="min-w-0 flex-1">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent position="popper">
-          {options.map((opt) => (
-            <SelectItem key={opt.value} value={opt.value}>
-              {optionLabel(opt)}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      {isDynamic && (
-        <Button variant="ghost" size="icon" onClick={refresh} disabled={isRefreshing}>
-          <RefreshCw className={`size-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-        </Button>
-      )}
-    </div>
-  );
-}
-
-function ConfigField(props: Readonly<FieldProps>) {
-  switch (props.field.type) {
-    case 'dropdown':
-    case 'dynamic-dropdown':
-      return <DropdownField {...props} />;
-    case 'number':
-      return <NumberField {...props} />;
-    case 'checkbox':
-      return <CheckboxField {...props} />;
-    case 'text':
-    case 'password':
-      return <TextField {...props} />;
-  }
-}
-
-// ─── ConfigSheet ──────────────────────────────────────────────────────────────
+import { ConfigField } from './config-sheet/field-renderers';
+import { useConfigSheetState } from './config-sheet/use-config-sheet-state';
 
 export function ConfigSheet() {
   const { t, tp } = useLocale();
-  const configBrickId = useBoardStore((s) => s.configBrickId);
-  const setConfigBrickId = useBoardStore((s) => s.setConfigBrickId);
-  const activeBoard = useBoardStore((s) => s.activeBoard);
-  const brickTypes = useBoardStore((s) => s.brickTypes);
-  const [saving, setSaving] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const { mutate: removeBrick } = useRemoveBrick();
-  const { mutate: renameBrick } = useRenameBrick();
-
-  const placement = useMemo(
-    () => activeBoard?.bricks.find((c) => c.instanceId === configBrickId),
-    [activeBoard, configBrickId]
-  );
-  const brickType = placement ? brickTypes.get(placement.brickTypeId) : null;
-
-  const [localConfig, setLocalConfig] = useState<Record<string, Json>>({});
-  const [localLabel, setLocalLabel] = useState('');
-
-  // Sync form state only when a different brick config sheet opens.
-  // Reading from the store inside the effect (instead of depending on
-  // `placement`) prevents unrelated board mutations (layout drags,
-  // SSE echo-backs, other brick changes) from resetting unsaved edits.
-  const open = !!configBrickId;
-  useEffect(() => {
-    if (!configBrickId) {
-      return;
-    }
-    const p = useBoardStore
-      .getState()
-      .activeBoard?.bricks.find((b) => b.instanceId === configBrickId);
-    if (p) {
-      setLocalConfig({ ...p.config });
-      setLocalLabel(p.label ?? '');
-    }
-  }, [configBrickId]);
-
-  const handleClose = useCallback(
-    (isOpen: boolean) => {
-      if (!isOpen) {
-        setConfigBrickId(null);
-        setLocalConfig({});
-        setLocalLabel('');
-      }
-    },
-    [setConfigBrickId]
-  );
-
-  const handleFieldChange = useCallback((name: string, value: Json) => {
-    setLocalConfig((c) => ({
-      ...c,
-      [name]: value,
-    }));
-  }, []);
-
-  const saveLabelIfChanged = useCallback(
-    (instanceId: string) => {
-      const trimmedLabel = localLabel.trim();
-      const oldLabel = placement?.label ?? '';
-      if (trimmedLabel !== oldLabel) {
-        renameBrick({ instanceId, label: trimmedLabel || undefined });
-      }
-    },
-    [localLabel, placement, renameBrick]
-  );
-
-  const saveConfigIfPresent = useCallback(
-    async (boardId: string, instanceId: string) => {
-      const configSchema = brickType?.config;
-      if (!configSchema || configSchema.length === 0) {
-        return;
-      }
-      useBoardStore.getState().updateBrickConfig(instanceId, localConfig);
-      await boardsApi.updateBrick(boardId, instanceId, { config: localConfig });
-    },
-    [brickType, localConfig]
-  );
-
-  const revertOptimisticConfig = useCallback((instanceId: string) => {
-    const serverPlacement = useBoardStore
-      .getState()
-      .activeBoard?.bricks.find((b) => b.instanceId === instanceId);
-    if (serverPlacement) {
-      setLocalConfig({ ...serverPlacement.config });
-    }
-  }, []);
-
-  const handleSave = useCallback(async () => {
-    if (!activeBoard || !configBrickId) {
-      return;
-    }
-    setSaving(true);
-    try {
-      saveLabelIfChanged(configBrickId);
-      await saveConfigIfPresent(activeBoard.id, configBrickId);
-      setConfigBrickId(null);
-      setLocalConfig({});
-      setLocalLabel('');
-    } catch {
-      revertOptimisticConfig(configBrickId);
-    } finally {
-      setSaving(false);
-    }
-  }, [
-    activeBoard,
+  const {
+    open,
     configBrickId,
-    saveLabelIfChanged,
-    saveConfigIfPresent,
-    revertOptimisticConfig,
-    setConfigBrickId,
-  ]);
-
-  const handleDelete = useCallback(() => {
-    if (!configBrickId) {
-      return;
-    }
-    removeBrick(configBrickId);
-    setDeleteOpen(false);
-    setConfigBrickId(null);
-  }, [configBrickId, removeBrick, setConfigBrickId]);
+    placement,
+    brickType,
+    localConfig,
+    localLabel,
+    setLocalLabel,
+    saving,
+    deleteOpen,
+    setDeleteOpen,
+    handleClose,
+    handleFieldChange,
+    handleSave,
+    handleDelete,
+  } = useConfigSheetState();
 
   const configSchema = brickType?.config;
   const hasConfig = Array.isArray(configSchema) && configSchema.length > 0;
@@ -324,18 +72,10 @@ export function ConfigSheet() {
         <SheetContent side="right" className="w-full sm:max-w-sm">
           <SheetHeader>
             <SheetTitle className="flex items-center gap-2">
-              <Avatar
-                className="size-6 rounded-md"
-                style={{
-                  backgroundColor: `${color}20`,
-                }}
-              >
+              <Avatar className="size-6 rounded-md" style={{ backgroundColor: `${color}20` }}>
                 <AvatarFallback
                   className="rounded-md text-[10px]"
-                  style={{
-                    backgroundColor: `${color}20`,
-                    color,
-                  }}
+                  style={{ backgroundColor: `${color}20`, color }}
                 >
                   <DynamicIcon name={iconName} className="size-3" />
                 </AvatarFallback>

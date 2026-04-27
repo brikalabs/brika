@@ -1,4 +1,3 @@
-import { Loader2, Power, RefreshCw, Terminal } from 'lucide-react';
 import {
   Badge,
   Button,
@@ -9,7 +8,8 @@ import {
   SectionIcon,
   SectionInfo,
   SectionTitle,
-} from '@/components/ui';
+} from '@brika/clay';
+import { Loader2, Power, RefreshCw, Terminal } from 'lucide-react';
 import { useLocale } from '@/lib/use-locale';
 import { useSystem } from '../../hooks';
 import { useHubControl } from './hooks';

@@ -3,7 +3,7 @@
 
 @import "tailwindcss";
 @import "tw-animate-css";
-@import "@brika/ui-kit/tailwind-theme.css";
+@import "@brika/clay/styles";
 
 /* Plugin-page color safelist — always compiled so runtime-loaded plugin
    pages can use the theme's data-visualization palette (data-1 … data-8).
@@ -11,55 +11,24 @@
 @source inline("text-data-1 text-data-2 text-data-3 text-data-4 text-data-5 text-data-6 text-data-7 text-data-8 bg-data-1 bg-data-2 bg-data-3 bg-data-4 bg-data-5 bg-data-6 bg-data-7 bg-data-8 bg-data-1/15 bg-data-2/15 bg-data-3/15 bg-data-4/15 bg-data-5/15 bg-data-6/15 bg-data-7/15 bg-data-8/15 bg-success ring-card");
 
 /* ─────────────────────────────────────────────────────────────
-   DEFINE THEME VARIABLES
-   Using @layer theme for proper organization
+   APP-ONLY TOKENS
+   Clay's Tailwind plugin owns the design system tokens (colors,
+   radii, shadows, motion, …) at `:root` and via its `<style id="clay-theme">`
+   tag. Below are app-level concerns clay doesn't define:
+     - Status colors      (alias clay roles so they follow the theme)
+     - Data-visualization palette
+     - Sidebar color slots (Tailwind utilities `bg-sidebar`, `text-sidebar-foreground`)
+     - `[data-radius="…"]` modifiers — combinable with any theme
    ───────────────────────────────────────────────────────────── */
 @layer theme {
-  /* ═══════════════════════════════════════════════════════════
-     DEFAULT THEME - Light Mode
-     ═══════════════════════════════════════════════════════════ */
-  :root,
-  [data-theme="default"] {
-    /* Surface colors */
-    --background: oklch(0.99 0 0);
-    --foreground: oklch(0.15 0.01 260);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.15 0.01 260);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.15 0.01 260);
+  :root {
+    /* Status colors — alias clay roles so they shift with the active theme */
+    --status-idle: var(--muted-foreground);
+    --status-running: var(--primary);
+    --status-completed: var(--success);
+    --status-error: var(--destructive);
 
-    /* Interactive colors */
-    --primary: oklch(0.55 0.18 265);
-    --primary-foreground: oklch(0.99 0 0);
-    --secondary: oklch(0.94 0.005 260);
-    --secondary-foreground: oklch(0.15 0.01 260);
-    --muted: oklch(0.95 0.005 260);
-    --muted-foreground: oklch(0.5 0.01 260);
-    --accent: oklch(0.92 0.01 260);
-    --accent-foreground: oklch(0.15 0.01 260);
-
-    /* UI elements */
-    --border: oklch(0.9 0.01 260);
-    --input: oklch(0.9 0.01 260);
-    --ring: oklch(0.55 0.18 265);
-
-    /* Semantic colors */
-    --success: oklch(0.55 0.16 145);
-    --success-foreground: oklch(0.99 0 0);
-    --warning: oklch(0.65 0.14 85);
-    --warning-foreground: oklch(0.15 0.01 260);
-    --info: oklch(0.5 0.18 230);
-    --info-foreground: oklch(0.99 0 0);
-    --destructive: oklch(0.55 0.22 25);
-    --destructive-foreground: oklch(0.99 0 0);
-
-    /* Status colors */
-    --status-idle: oklch(0.7 0.02 260);
-    --status-running: oklch(0.55 0.18 265);
-    --status-completed: oklch(0.55 0.16 145);
-    --status-error: oklch(0.55 0.22 25);
-
-    /* Data visualization - sequential colors */
+    /* Data visualization — sequential palette (light) */
     --data-1: oklch(0.55 0.18 265); /* Blue */
     --data-2: oklch(0.6 0.18 45); /* Orange */
     --data-3: oklch(0.55 0.16 145); /* Green */
@@ -69,7 +38,7 @@
     --data-7: oklch(0.55 0.15 200); /* Cyan */
     --data-8: oklch(0.6 0.18 340); /* Pink */
 
-    /* Sidebar */
+    /* Sidebar — alias clay roles */
     --sidebar: var(--card);
     --sidebar-foreground: var(--card-foreground);
     --sidebar-primary: var(--primary);
@@ -80,201 +49,34 @@
     --sidebar-ring: var(--ring);
   }
 
-  /* ═══════════════════════════════════════════════════════════
-     DEFAULT THEME - Dark Mode
-     ═══════════════════════════════════════════════════════════ */
-  .dark:root,
-  .dark[data-theme="default"] {
-    /* Surface colors */
-    --background: oklch(0.14 0.02 260);
-    --foreground: oklch(0.96 0.01 260);
-    --card: oklch(0.17 0.02 260);
-    --card-foreground: oklch(0.96 0.01 260);
-    --popover: oklch(0.17 0.02 260);
-    --popover-foreground: oklch(0.96 0.01 260);
-
-    /* Interactive colors */
-    --primary: oklch(0.7 0.16 265);
-    --primary-foreground: oklch(0.14 0.02 260);
-    --secondary: oklch(0.22 0.02 260);
-    --secondary-foreground: oklch(0.96 0.01 260);
-    --muted: oklch(0.2 0.02 260);
-    --muted-foreground: oklch(0.65 0.02 260);
-    --accent: oklch(0.25 0.02 260);
-    --accent-foreground: oklch(0.96 0.01 260);
-
-    /* UI elements */
-    --border: oklch(0.25 0.02 260);
-    --input: oklch(0.25 0.02 260);
-    --ring: oklch(0.7 0.16 265);
-
-    /* Semantic colors */
-    --success: oklch(0.72 0.15 145);
-    --success-foreground: oklch(0.14 0.02 260);
-    --warning: oklch(0.8 0.15 85);
-    --warning-foreground: oklch(0.14 0.02 260);
-    --info: oklch(0.72 0.12 230);
-    --info-foreground: oklch(0.14 0.02 260);
-    --destructive: oklch(0.65 0.2 25);
-    --destructive-foreground: oklch(0.96 0.01 260);
-
-    /* Status colors */
-    --status-idle: oklch(0.5 0.02 260);
-    --status-running: oklch(0.7 0.16 265);
-    --status-completed: oklch(0.72 0.15 145);
-    --status-error: oklch(0.65 0.2 25);
-
-    /* Data visualization */
-    --data-1: oklch(0.7 0.16 265); /* Blue */
-    --data-2: oklch(0.72 0.18 45); /* Orange */
-    --data-3: oklch(0.72 0.15 145); /* Green */
-    --data-4: oklch(0.65 0.2 25); /* Red */
-    --data-5: oklch(0.7 0.16 300); /* Purple */
-    --data-6: oklch(0.8 0.15 85); /* Yellow */
-    --data-7: oklch(0.72 0.14 200); /* Cyan */
-    --data-8: oklch(0.72 0.16 340); /* Pink */
-  }
-
-  /* ═══════════════════════════════════════════════════════════
-     OCEAN THEME - Light Mode (Blues & Teals)
-     ═══════════════════════════════════════════════════════════ */
-  [data-theme="ocean"] {
-    --primary: oklch(0.55 0.18 230); /* Deep blue */
-    --primary-foreground: oklch(0.99 0 0);
-    --accent: oklch(0.7 0.12 200); /* Teal */
-    --accent-foreground: oklch(0.15 0.01 260);
-    --success: oklch(0.55 0.16 180); /* Aqua */
-    --success-foreground: oklch(0.99 0 0);
-    --data-1: oklch(0.55 0.18 230);
-    --data-2: oklch(0.6 0.15 200);
-    --data-7: oklch(0.55 0.16 180);
-  }
-
-  .dark[data-theme="ocean"] {
-    --primary: oklch(0.7 0.16 230);
-    --primary-foreground: oklch(0.14 0.02 260);
-    --accent: oklch(0.72 0.12 200);
-    --accent-foreground: oklch(0.96 0.01 260);
-    --success: oklch(0.72 0.15 180);
-    --success-foreground: oklch(0.14 0.02 260);
-    --data-1: oklch(0.7 0.16 230);
-    --data-2: oklch(0.72 0.15 200);
-    --data-7: oklch(0.72 0.16 180);
-  }
-
-  /* ═══════════════════════════════════════════════════════════
-     FOREST THEME - Light Mode (Greens & Earth Tones)
-     ═══════════════════════════════════════════════════════════ */
-  [data-theme="forest"] {
-    --primary: oklch(0.55 0.16 145); /* Forest green */
-    --primary-foreground: oklch(0.99 0 0);
-    --accent: oklch(0.6 0.14 130); /* Moss */
-    --accent-foreground: oklch(0.15 0.01 260);
-    --success: oklch(0.55 0.16 160); /* Emerald */
-    --success-foreground: oklch(0.99 0 0);
-    --data-1: oklch(0.55 0.16 145);
-    --data-3: oklch(0.6 0.14 130);
-    --status-running: oklch(0.55 0.16 145);
-    --status-completed: oklch(0.55 0.16 160);
-  }
-
-  .dark[data-theme="forest"] {
-    --primary: oklch(0.72 0.15 145);
-    --primary-foreground: oklch(0.14 0.02 260);
-    --accent: oklch(0.72 0.14 130);
-    --accent-foreground: oklch(0.96 0.01 260);
-    --success: oklch(0.72 0.15 160);
-    --success-foreground: oklch(0.14 0.02 260);
-    --data-1: oklch(0.72 0.15 145);
-    --data-3: oklch(0.72 0.14 130);
-    --status-running: oklch(0.72 0.15 145);
-    --status-completed: oklch(0.72 0.15 160);
-  }
-
-  /* ═══════════════════════════════════════════════════════════
-     SUNSET THEME - Light Mode (Oranges & Warm Tones)
-     ═══════════════════════════════════════════════════════════ */
-  [data-theme="sunset"] {
-    --primary: oklch(0.6 0.18 45); /* Vibrant orange */
-    --primary-foreground: oklch(0.99 0 0);
-    --accent: oklch(0.65 0.16 60); /* Coral */
-    --accent-foreground: oklch(0.15 0.01 260);
-    --warning: oklch(0.65 0.18 35); /* Warm orange */
-    --warning-foreground: oklch(0.15 0.01 260);
-    --data-2: oklch(0.6 0.18 45);
-    --data-6: oklch(0.65 0.16 60);
-    --status-running: oklch(0.6 0.18 45);
-  }
-
-  .dark[data-theme="sunset"] {
-    --primary: oklch(0.72 0.18 45);
-    --primary-foreground: oklch(0.14 0.02 260);
-    --accent: oklch(0.75 0.16 60);
-    --accent-foreground: oklch(0.14 0.02 260);
-    --warning: oklch(0.75 0.18 35);
-    --warning-foreground: oklch(0.14 0.02 260);
+  .dark:root {
+    /* Data visualization — sequential palette (dark) */
+    --data-1: oklch(0.7 0.16 265);
     --data-2: oklch(0.72 0.18 45);
-    --data-6: oklch(0.75 0.16 60);
-    --status-running: oklch(0.72 0.18 45);
-  }
-
-  /* ═══════════════════════════════════════════════════════════
-     LAVENDER THEME - Light Mode (Purples & Soft Tones)
-     ═══════════════════════════════════════════════════════════ */
-  [data-theme="lavender"] {
-    --primary: oklch(0.55 0.18 300); /* Deep purple */
-    --primary-foreground: oklch(0.99 0 0);
-    --accent: oklch(0.6 0.16 285); /* Lavender */
-    --accent-foreground: oklch(0.15 0.01 260);
-    --info: oklch(0.55 0.16 280); /* Violet */
-    --info-foreground: oklch(0.99 0 0);
-    --data-5: oklch(0.55 0.18 300);
-    --data-8: oklch(0.6 0.16 320);
-    --status-running: oklch(0.55 0.18 300);
-  }
-
-  .dark[data-theme="lavender"] {
-    --primary: oklch(0.7 0.16 300);
-    --primary-foreground: oklch(0.14 0.02 260);
-    --accent: oklch(0.72 0.16 285);
-    --accent-foreground: oklch(0.96 0.01 260);
-    --info: oklch(0.7 0.16 280);
-    --info-foreground: oklch(0.14 0.02 260);
+    --data-3: oklch(0.72 0.15 145);
+    --data-4: oklch(0.65 0.2 25);
     --data-5: oklch(0.7 0.16 300);
-    --data-8: oklch(0.72 0.16 320);
-    --status-running: oklch(0.7 0.16 300);
-  }
-
-  /* ═══════════════════════════════════════════════════════════
-     RUBY THEME - Light Mode (Reds & Warm Tones)
-     ═══════════════════════════════════════════════════════════ */
-  [data-theme="ruby"] {
-    --primary: oklch(0.55 0.22 15); /* Ruby red */
-    --primary-foreground: oklch(0.99 0 0);
-    --accent: oklch(0.6 0.18 340); /* Rose */
-    --accent-foreground: oklch(0.15 0.01 260);
-    --destructive: oklch(0.55 0.24 25); /* Bright red */
-    --destructive-foreground: oklch(0.99 0 0);
-    --data-4: oklch(0.55 0.22 15);
-    --data-8: oklch(0.6 0.18 340);
-    --status-error: oklch(0.55 0.24 25);
-  }
-
-  .dark[data-theme="ruby"] {
-    --primary: oklch(0.65 0.2 15);
-    --primary-foreground: oklch(0.96 0.01 260);
-    --accent: oklch(0.72 0.16 340);
-    --accent-foreground: oklch(0.96 0.01 260);
-    --destructive: oklch(0.65 0.22 25);
-    --destructive-foreground: oklch(0.96 0.01 260);
-    --data-4: oklch(0.65 0.2 15);
+    --data-6: oklch(0.8 0.15 85);
+    --data-7: oklch(0.72 0.14 200);
     --data-8: oklch(0.72 0.16 340);
-    --status-error: oklch(0.65 0.22 25);
+  }
+
+  /* Geometry-only modifiers — layer on top of any active theme. */
+  [data-radius="sharp"] {
+    --radius: 0rem;
+  }
+
+  [data-radius="default"] {
+    --radius: 0.75rem;
+  }
+
+  [data-radius="soft"] {
+    --radius: 1.25rem;
   }
 }
 
 /* ─────────────────────────────────────────────────────────────
-   4. BASE STYLES
+   BASE STYLES
    ───────────────────────────────────────────────────────────── */
 @layer base {
   * {

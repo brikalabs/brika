@@ -1,6 +1,6 @@
+import { Button } from '@brika/clay';
 import { Plus } from 'lucide-react';
 import { useState } from 'react';
-import { Button } from '@/components/ui';
 import { useLocale } from '@/lib/use-locale';
 import { CreateUserDialog, UsersTable } from './components';
 import { useUsers } from './hooks';

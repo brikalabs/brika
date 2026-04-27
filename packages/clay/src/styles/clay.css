@@ -1,0 +1,38 @@
+/**
+ * Clay's Tailwind entry point.
+ *
+ * Consumers import this once (`@import "@brika/clay/styles";`) and every
+ * utility class used inside Clay's components is guaranteed to be emitted.
+ * Paths in `@source` are resolved by Tailwind v4 relative to THIS file,
+ * so they stay correct no matter where or how the stylesheet is imported.
+ *
+ * Tokens & themes are contributed by `../tailwind.ts` (a Tailwind v4
+ * plugin). The plugin reads `src/tokens/registry.ts` and `src/themes/`
+ * at compile time and emits `:root` defaults, dark-mode overrides,
+ * `[data-theme="X"]` blocks for every preset, and the `theme.extend`
+ * config that turns `bg-slider-fill`, `rounded-slider`, etc. into real
+ * utilities. There are no generated CSS files — the TypeScript registry
+ * is the only source of truth.
+ *
+ * Components no longer ship per-file CSS — every token-driven property
+ * is composed inline in each `.tsx` via Tailwind v4 arbitrary-class
+ * syntax (`(--token)`, `(length:--token)`, `[prop:var(--token)]`).
+ * Cross-cutting utilities live in `./utilities.css`.
+ */
+
+@plugin "../tailwind";
+@import "./utilities.css";
+@import "./components.css";
+
+/* `..` resolves to `src/` when this file is consumed from the workspace
+   source (`@import "@brika/clay/styles"` → `src/styles/clay.css`) and to
+   `dist/` when consumed from the published package (`dist/styles/clay.css`).
+   The recursive glob covers components, primitives, themes, AND tsup's
+   shared chunks at the dist root (`dist/chunk-*.js`) where the actual
+   className strings live after bundling. */
+@source "../**/*.{ts,tsx,js}";
+
+/* Dark variant: works whether the consumer toggles via `class="dark"` (legacy)
+   or `data-mode="dark"` (current docs convention). Either selector activates
+   `dark:`-prefixed utilities. */
+@custom-variant dark (&:is(.dark, .dark *, [data-mode="dark"], [data-mode="dark"] *));
