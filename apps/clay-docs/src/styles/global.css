@@ -199,7 +199,9 @@ kbd,
 }
 
 /* ==================================================
-   Shiki code blocks (.astro-code).
+   Shiki code blocks (.shiki — emitted by Astro 6 / Shiki 3
+   with `themes: { light, dark }`. Older Astro versions used
+   `.astro-code`; both are matched for forward-compat).
    With defaultColor: false, Shiki emits per-token
    CSS variables; we map them to the active mode.
    The background is owned by the wrapping
@@ -208,6 +210,7 @@ kbd,
    no double-box effect. The pre itself stays transparent
    and contributes only padding.
    ================================================== */
+.shiki,
 .astro-code {
   background-color: transparent;
   font-size: 0.8125rem;
@@ -217,6 +220,8 @@ kbd,
   margin: 0;
 }
 
+.shiki,
+.shiki span,
 .astro-code,
 .astro-code span {
   color: var(--shiki-light);
@@ -225,6 +230,8 @@ kbd,
   text-decoration: var(--shiki-light-text-decoration);
 }
 
+html[data-mode="dark"] .shiki,
+html[data-mode="dark"] .shiki span,
 html[data-mode="dark"] .astro-code,
 html[data-mode="dark"] .astro-code span {
   color: var(--shiki-dark);
@@ -235,9 +242,10 @@ html[data-mode="dark"] .astro-code span {
 
 /* Inline code inside prose (.clay-prose) wraps a styled box
    around the Shiki output. */
-/* Bare `.astro-code` inside prose (no `.clay-code-source` wrapper) — give
+/* Bare `.shiki` inside prose (no `.clay-code-source` wrapper) — give
    it its own subtle frame so it doesn't blend into the page bg. The
    `.clay-code-source` variant overrides this in the wrapper. */
+.clay-prose .shiki,
 .clay-prose .astro-code {
   background-color: var(--color-clay-base);
   border: 1px solid var(--color-clay-hairline);
@@ -246,6 +254,7 @@ html[data-mode="dark"] .astro-code span {
   overflow-x: auto;
 }
 
+.clay-code-source .shiki,
 .clay-code-source .astro-code {
   border: 0;
   border-radius: 0;

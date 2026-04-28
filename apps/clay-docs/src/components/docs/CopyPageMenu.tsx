@@ -2,19 +2,15 @@ import { Check, ChevronDown, Copy, ExternalLink, FileText, Sparkles } from 'luci
 import { useRef, useState } from 'react';
 import { useDismiss } from '~/lib/use-dismiss';
 
-const SITE_ORIGIN = 'https://clay.brika.dev';
-const GITHUB_REPO = 'https://github.com/brikalabs/brika';
-const GITHUB_BRANCH = 'main';
-
 interface CopyPageMenuProps {
-  /** Path of the current page (e.g. `/components/button`). */
-  readonly pathname: string;
-  /** Repo-relative path of the MDX source (e.g. `apps/clay-docs/src/pages/components/button.mdx`). */
-  readonly sourcePath: string;
+  /** Absolute URL of the current page. */
+  readonly pageUrl: string;
+  /** Path that serves the page as plain Markdown (e.g. `/components/button.md`). */
+  readonly markdownUrl: string;
 }
 
-function buildLlmPrompt(pageUrl: string): string {
-  return `I'm reading ${pageUrl} from the Clay component library. Help me understand and use the component on this page.`;
+function buildLlmPrompt(markdownUrl: string): string {
+  return `Read ${markdownUrl} — it's the Markdown source for a page from the Clay component library. Help me understand and use what it documents.`;
 }
 
 /**
@@ -23,15 +19,17 @@ function buildLlmPrompt(pageUrl: string): string {
  * to dump the page into an AI a one-click path instead of fiddling with
  * select + copy + context-switch.
  */
-export function CopyPageMenu({ pathname, sourcePath }: CopyPageMenuProps) {
+export function CopyPageMenu({ pageUrl, markdownUrl }: CopyPageMenuProps) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
 
-  const pageUrl = `${SITE_ORIGIN}${pathname}`;
-  const rawMdxUrl = `${GITHUB_REPO}/blob/${GITHUB_BRANCH}/${sourcePath}?plain=1`;
-  const claudeUrl = `https://claude.ai/new?q=${encodeURIComponent(buildLlmPrompt(pageUrl))}`;
-  const chatgptUrl = `https://chatgpt.com/?q=${encodeURIComponent(buildLlmPrompt(pageUrl))}`;
+  const absoluteMarkdownUrl = new URL(markdownUrl, pageUrl).href;
+  const promptQuery = encodeURIComponent(buildLlmPrompt(absoluteMarkdownUrl));
+  const llmHandoffs = [
+    { label: 'Open in Claude', href: `https://claude.ai/new?q=${promptQuery}` },
+    { label: 'Open in ChatGPT', href: `https://chatgpt.com/?q=${promptQuery}` },
+  ];
 
   useDismiss(open, rootRef, () => setOpen(false));
 
@@ -87,7 +85,8 @@ export function CopyPageMenu({ pathname, sourcePath }: CopyPageMenuProps) {
           </button>
           <a
             role="menuitem"
-            href={rawMdxUrl}
+            href={markdownUrl}
+            target="_blank"
             rel="noopener noreferrer"
             onClick={() => setOpen(false)}
             className="flex items-center gap-2.5 px-3 py-2 text-clay-default text-sm transition-colors hover:bg-clay-control"
@@ -96,28 +95,20 @@ export function CopyPageMenu({ pathname, sourcePath }: CopyPageMenuProps) {
             <span>View page as Markdown</span>
             <ExternalLink size={11} className="ml-auto text-clay-inactive" aria-hidden="true" />
           </a>
-          <a
-            role="menuitem"
-            href={claudeUrl}
-            rel="noopener noreferrer"
-            onClick={() => setOpen(false)}
-            className="flex items-center gap-2.5 px-3 py-2 text-clay-default text-sm transition-colors hover:bg-clay-control"
-          >
-            <Sparkles size={14} className="shrink-0 text-clay-subtle" aria-hidden="true" />
-            <span>Open in Claude</span>
-            <ExternalLink size={11} className="ml-auto text-clay-inactive" aria-hidden="true" />
-          </a>
-          <a
-            role="menuitem"
-            href={chatgptUrl}
-            rel="noopener noreferrer"
-            onClick={() => setOpen(false)}
-            className="flex items-center gap-2.5 px-3 py-2 text-clay-default text-sm transition-colors hover:bg-clay-control"
-          >
-            <Sparkles size={14} className="shrink-0 text-clay-subtle" aria-hidden="true" />
-            <span>Open in ChatGPT</span>
-            <ExternalLink size={11} className="ml-auto text-clay-inactive" aria-hidden="true" />
-          </a>
+          {llmHandoffs.map((handoff) => (
+            <a
+              key={handoff.label}
+              role="menuitem"
+              href={handoff.href}
+              rel="noopener noreferrer"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2.5 px-3 py-2 text-clay-default text-sm transition-colors hover:bg-clay-control"
+            >
+              <Sparkles size={14} className="shrink-0 text-clay-subtle" aria-hidden="true" />
+              <span>{handoff.label}</span>
+              <ExternalLink size={11} className="ml-auto text-clay-inactive" aria-hidden="true" />
+            </a>
+          ))}
         </div>
       )}
     </div>

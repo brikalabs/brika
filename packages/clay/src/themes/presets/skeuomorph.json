@@ -103,5 +103,6 @@
     "toast": {
       "shadow": "var(--shadow-spotlight)"
     }
-  }
+  },
+  "effects": ["noise"]
 }

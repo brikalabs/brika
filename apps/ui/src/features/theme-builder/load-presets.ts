@@ -9,7 +9,8 @@
  * else falls through to alphabetical by name.
  */
 
-import { BUILT_IN_THEMES, type ThemeConfig } from '@brika/clay/themes';
+import type { ThemeConfig } from '@brika/clay/themes';
+import { builtInThemes } from '@brika/clay/themes/registry';
 import type { CornerStyle, ThemeColors } from './types';
 
 export interface ThemePreset {
@@ -91,7 +92,7 @@ function sortPresets(presets: readonly ThemePreset[]): ThemePreset[] {
 
 function loadAll(): ThemePreset[] {
   const valid: ThemePreset[] = [];
-  for (const theme of BUILT_IN_THEMES) {
+  for (const theme of builtInThemes) {
     const preset = toPreset(theme);
     if (preset) {
       valid.push(preset);

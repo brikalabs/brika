@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Public docs site for @brika/clay — clay.brika.dev",
+  "description": "Public docs site for @brika/clay.",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/brikalabs/brika.git",

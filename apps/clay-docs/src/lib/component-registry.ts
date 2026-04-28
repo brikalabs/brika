@@ -262,7 +262,15 @@ const DOCS_DATA: Readonly<Record<string, ComponentDocs>> = {
   progress: singleDefault('ProgressDefaultDemo', '<Progress value={66} />'),
   'progress-display': singleDefault(
     'ProgressDisplayDefaultDemo',
-    '<ProgressDisplay label="Uploading" value={66} />'
+    `<ProgressDisplay
+  progressValue={66}
+  phaseLabel="Uploading…"
+  logs={['Connecting', 'Streaming chunks (33/50)']}
+  scrollRef={scrollRef}
+  error={null}
+  success={false}
+  isProcessing
+/>`
   ),
   textarea: singleDefault('TextareaDefaultDemo', '<Textarea placeholder="Tell us more…" />'),
   'password-input': singleDefault(
@@ -525,6 +533,22 @@ const DOCS_DATA: Readonly<Record<string, ComponentDocs>> = {
 </OverflowList>`
   ),
   'brika-logo': singleDefault('BrikaLogoDefaultDemo', '<BrikaLogo />'),
+  'clay-logo': {
+    demos: [
+      {
+        name: 'ClayLogoDefaultDemo',
+        title: 'Default',
+        description: `Badge wrapping the three tiles. Tiles use \`currentColor\` so \`text-clay-brand\` paints them in the terracotta accent. The badge bg auto-flips light/dark via \`light-dark()\`.`,
+        code: '<ClayLogo variant="badge" className="size-16 text-clay-brand" />',
+      },
+      {
+        name: 'ClayLogoGlyphDemo',
+        title: 'Glyph',
+        description: 'Tiles only — drop the rounded-rect frame for inline use.',
+        code: '<ClayLogo variant="glyph" className="size-12 text-clay-brand" />',
+      },
+    ],
+  },
   alert: {
     demos: [
       {
@@ -629,34 +653,40 @@ const DOCS_DATA: Readonly<Record<string, ComponentDocs>> = {
         name: 'ToastDefaultDemo',
         title: 'Default',
         description:
-          'Wrap your app in `<ToastProvider>` and place `<Toaster />` near the root. Trigger toasts on demand.',
-        code: `<ToastProvider>
-  <Button onClick={() => setOpen(true)}>Show toast</Button>
-  <Toast open={open} onOpenChange={setOpen}>
-    <ToastTitle>Saved</ToastTitle>
-    <ToastDescription>Changes synced to the server.</ToastDescription>
-    <ToastClose />
-  </Toast>
-  <Toaster />
-</ToastProvider>`,
+          'Mount `<Toaster />` once near the app root, then push notifications anywhere with the `toast()` function.',
+        code: `// app root
+<Toaster />
+
+// anywhere
+<Button onClick={() => toast('Scheduled', {
+  description: 'Friday, March 8 at 5:57 PM',
+})}>
+  Show toast
+</Button>`,
       },
       {
         name: 'ToastVariantsDemo',
         title: 'Variants',
         description:
-          '`default` and `destructive`. Pair `<ToastAction>` with the appropriate intent.',
-        code: `<Toast variant="destructive">
-  <ToastTitle>Could not save</ToastTitle>
-  <ToastDescription>Network error.</ToastDescription>
-  <ToastAction altText="Retry">Retry</ToastAction>
-  <ToastClose />
-</Toast>`,
+          'Use `toast.error`, `toast.success`, `toast.warning`, or `toast.info` for intent. Pass an `action` to add a button.',
+        code: `<Button onClick={() => toast('Update available', {
+  description: 'A new version of the app is ready.',
+  action: { label: 'Reload', onClick: () => location.reload() },
+})}>
+  Show with action
+</Button>
+
+<Button onClick={() => toast.error('Something went wrong', {
+  description: 'Your changes could not be saved.',
+})}>
+  Show destructive
+</Button>`,
       },
     ],
     accessibility: [
-      'Built on Radix Toast: announces via `aria-live`, supports keyboard dismissal (F8 to focus the viewport, Esc to close).',
-      '`<ToastAction>` requires `altText` so AT users can act on the toast even if they miss the timeout.',
-      'Auto-dismiss duration defaults to 5s; pair with `<ToastProvider duration={...}>` to override.',
+      'Built on Sonner: announces via `aria-live`, supports keyboard dismissal, and respects `prefers-reduced-motion`.',
+      'Pass an `action` with a clear `label` so AT users can act on the toast even if they miss the timeout.',
+      'Auto-dismiss duration defaults to 4s; override per call (`toast(msg, { duration: 8000 })`) or globally on `<Toaster duration={...}>`.',
     ],
   },
 };

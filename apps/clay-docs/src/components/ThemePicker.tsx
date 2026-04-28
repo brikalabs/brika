@@ -1,10 +1,6 @@
 import type { ThemeConfig } from '@brika/clay/themes';
-import {
-  applyTheme,
-  BUILT_IN_THEMES,
-  BUILT_IN_THEMES_BY_ID,
-  resetThemeVars,
-} from '@brika/clay/themes';
+import { applyTheme } from '@brika/clay/themes';
+import { builtInThemes, builtInThemesById } from '@brika/clay/themes/registry';
 import { ChevronDown } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useDismiss } from '~/lib/use-dismiss';
@@ -17,7 +13,7 @@ function readInitialThemeId(): string {
     return 'default';
   }
   const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored && BUILT_IN_THEMES_BY_ID[stored]) {
+  if (stored && builtInThemesById[stored]) {
     return stored;
   }
   return 'default';
@@ -74,16 +70,12 @@ export function ThemePicker() {
     if (!mounted) {
       return;
     }
-    // The plugin only bakes the default theme into CSS. Built-in
-    // presets and user-authored themes share one runtime path:
-    // `applyTheme(themeJson)` injects a `<style>` tag with the var
-    // overrides; switching back to default just clears it.
+    // Every theme — including `default` — is a real preset that injects
+    // its own CSS var overrides via `applyTheme`. The boot script in
+    // `BaseLayout.astro` paints the same `<style id="clay-theme">` tag
+    // before first paint to avoid a flash on hydration.
     document.documentElement.dataset.theme = themeId;
-    if (themeId === 'default') {
-      resetThemeVars();
-      return;
-    }
-    const chosen = BUILT_IN_THEMES_BY_ID[themeId];
+    const chosen = builtInThemesById[themeId];
     if (chosen) {
       applyTheme(chosen);
     }
@@ -121,7 +113,7 @@ export function ThemePicker() {
     globalThis.dispatchEvent(new CustomEvent(THEME_EVENT, { detail: theme.id }));
   };
 
-  const activeTheme = BUILT_IN_THEMES_BY_ID[themeId] ?? BUILT_IN_THEMES[0];
+  const activeTheme = builtInThemesById[themeId] ?? builtInThemes[0];
   const activeLabel = mounted && activeTheme ? activeTheme.name : 'Theme';
 
   return (
@@ -163,11 +155,11 @@ export function ThemePicker() {
             </span>
             <span className="block h-px flex-1 bg-clay-hairline" />
             <span className="font-mono text-[0.625rem] text-clay-inactive">
-              {BUILT_IN_THEMES.length} presets
+              {builtInThemes.length} presets
             </span>
           </div>
           <div className="max-h-[70vh] overflow-y-auto py-1.5">
-            {BUILT_IN_THEMES.map((theme) => {
+            {builtInThemes.map((theme) => {
               const active = theme.id === themeId;
               return (
                 <button

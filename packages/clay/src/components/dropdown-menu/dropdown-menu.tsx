@@ -3,24 +3,11 @@ import { DropdownMenu as DropdownMenuPrimitive } from 'radix-ui';
 import * as React from 'react';
 
 import { cn } from '../../primitives/cn';
+import { withSlot } from '../../primitives/with-slot';
 
-function DropdownMenu({
-  ...props
-}: Readonly<React.ComponentProps<typeof DropdownMenuPrimitive.Root>>) {
-  return <DropdownMenuPrimitive.Root data-slot="dropdown-menu" {...props} />;
-}
-
-function DropdownMenuPortal({
-  ...props
-}: Readonly<React.ComponentProps<typeof DropdownMenuPrimitive.Portal>>) {
-  return <DropdownMenuPrimitive.Portal data-slot="dropdown-menu-portal" {...props} />;
-}
-
-function DropdownMenuTrigger({
-  ...props
-}: React.ComponentProps<typeof DropdownMenuPrimitive.Trigger>) {
-  return <DropdownMenuPrimitive.Trigger data-slot="dropdown-menu-trigger" {...props} />;
-}
+const DropdownMenu = withSlot(DropdownMenuPrimitive.Root, 'dropdown-menu');
+const DropdownMenuPortal = withSlot(DropdownMenuPrimitive.Portal, 'dropdown-menu-portal');
+const DropdownMenuTrigger = withSlot(DropdownMenuPrimitive.Trigger, 'dropdown-menu-trigger');
 
 function DropdownMenuContent({
   className,
@@ -42,9 +29,7 @@ function DropdownMenuContent({
   );
 }
 
-function DropdownMenuGroup({ ...props }: React.ComponentProps<typeof DropdownMenuPrimitive.Group>) {
-  return <DropdownMenuPrimitive.Group data-slot="dropdown-menu-group" {...props} />;
-}
+const DropdownMenuGroup = withSlot(DropdownMenuPrimitive.Group, 'dropdown-menu-group');
 
 function DropdownMenuItem({
   className,
@@ -97,11 +82,10 @@ function DropdownMenuCheckboxItem({
   );
 }
 
-function DropdownMenuRadioGroup({
-  ...props
-}: React.ComponentProps<typeof DropdownMenuPrimitive.RadioGroup>) {
-  return <DropdownMenuPrimitive.RadioGroup data-slot="dropdown-menu-radio-group" {...props} />;
-}
+const DropdownMenuRadioGroup = withSlot(
+  DropdownMenuPrimitive.RadioGroup,
+  'dropdown-menu-radio-group'
+);
 
 function DropdownMenuRadioItem({
   className,
@@ -168,11 +152,7 @@ function DropdownMenuShortcut({ className, ...props }: React.ComponentProps<'spa
   );
 }
 
-function DropdownMenuSub({
-  ...props
-}: Readonly<React.ComponentProps<typeof DropdownMenuPrimitive.Sub>>) {
-  return <DropdownMenuPrimitive.Sub data-slot="dropdown-menu-sub" {...props} />;
-}
+const DropdownMenuSub = withSlot(DropdownMenuPrimitive.Sub, 'dropdown-menu-sub');
 
 function DropdownMenuSubTrigger({
   className,

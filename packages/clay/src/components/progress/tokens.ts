@@ -5,7 +5,7 @@
 import { defineComponent } from '../../tokens/define';
 import { meta } from './meta';
 
-defineComponent(meta.name, {
+export const tokens = defineComponent(meta.name, {
   slots: {
     'track-color': {
       default: 'var(--secondary)',

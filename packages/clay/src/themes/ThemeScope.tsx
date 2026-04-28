@@ -1,7 +1,7 @@
 import { Slot } from 'radix-ui';
 import type { CSSProperties, ReactNode } from 'react';
 
-import { flattenThemeComplete } from './flatten';
+import { flattenThemeComplete, renderVarBlock } from './flatten';
 import type { ThemeConfig, ThemeMode } from './types';
 
 export interface ThemeScopeProps {
@@ -39,23 +39,17 @@ function buildScopeCss(theme: ThemeConfig, scopeId: string): string {
   // might have set on `<html>`. Without this, a nested scope inherits
   // through any token the inner theme didn't explicitly override.
   const { rootVars, darkVars } = flattenThemeComplete(theme);
-  const lines: string[] = [];
+  const sections: string[] = [];
 
   if (Object.keys(rootVars).length > 0) {
-    lines.push(`[data-theme="${scopeId}"] {`);
-    for (const [name, value] of Object.entries(rootVars)) {
-      lines.push(`  ${name}: ${value};`);
-    }
-    lines.push('}');
+    sections.push(`[data-theme="${scopeId}"] {\n${renderVarBlock(rootVars)}\n}`);
   }
   if (Object.keys(darkVars).length > 0) {
-    lines.push(`:is(.dark, [data-mode="dark"])[data-theme="${scopeId}"] {`);
-    for (const [name, value] of Object.entries(darkVars)) {
-      lines.push(`  ${name}: ${value};`);
-    }
-    lines.push('}');
+    sections.push(
+      `:is(.dark, [data-mode="dark"])[data-theme="${scopeId}"] {\n${renderVarBlock(darkVars)}\n}`
+    );
   }
-  return lines.join('\n');
+  return sections.join('\n');
 }
 
 /**

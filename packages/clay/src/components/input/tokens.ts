@@ -6,7 +6,7 @@ import { defineComponent } from '../../tokens/define';
 import { SPACING_2, SPACING_3 } from '../../tokens/spacing';
 import { meta } from './meta';
 
-defineComponent(meta.name, {
+export const tokens = defineComponent(meta.name, {
   radius: {
     default: 'var(--radius-control)',
     description: 'Input corner radius.',

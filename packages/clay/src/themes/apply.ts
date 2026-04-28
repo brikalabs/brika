@@ -74,22 +74,36 @@ export function applyTheme(theme: ThemeConfig): () => void {
   if (!existing) {
     document.head.appendChild(tag);
   }
+
+  // Effects are toggled via `fx-<name>` classes on `<html>` consumed by
+  // the `@utility fx-*` blocks in `@brika/clay/styles`. We strip every
+  // `fx-` class first so switching themes guarantees the previous theme's
+  // effects don't leak through.
+  applyEffectClasses(document.documentElement, theme.effects ?? []);
+
   return () => {
     tag.remove();
+    applyEffectClasses(document.documentElement, []);
   };
+}
+
+function applyEffectClasses(root: HTMLElement, effects: readonly string[]): void {
+  const stale = Array.from(root.classList).filter((cls) => cls.startsWith('fx-'));
+  for (const cls of stale) {
+    root.classList.remove(cls);
+  }
+  for (const name of effects) {
+    root.classList.add(`fx-${name}`);
+  }
 }
 
 /**
  * Remove any injected theme stylesheet from the document. Idempotent.
- *
- * Backwards-compat shim for callers that previously consumed
- * `resetThemeVars(theme)`. The current implementation no longer needs the
- * theme reference (one global tag, one removal), but the parameter is
- * retained for source compatibility.
  */
-export function resetThemeVars(_theme?: ThemeConfig): void {
+export function resetThemeVars(): void {
   if (typeof document === 'undefined') {
     return;
   }
   document.getElementById(STYLE_TAG_ID)?.remove();
+  applyEffectClasses(document.documentElement, []);
 }

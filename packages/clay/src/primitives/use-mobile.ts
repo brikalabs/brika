@@ -12,12 +12,10 @@ export function useIsMobile(): boolean {
 
   useEffect(() => {
     const mql = globalThis.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
-    const onChange = () => {
-      setIsMobile(globalThis.innerWidth < MOBILE_BREAKPOINT);
-    };
-    mql.addEventListener('change', onChange);
-    setIsMobile(globalThis.innerWidth < MOBILE_BREAKPOINT);
-    return () => mql.removeEventListener('change', onChange);
+    const sync = () => setIsMobile(mql.matches);
+    sync();
+    mql.addEventListener('change', sync);
+    return () => mql.removeEventListener('change', sync);
   }, []);
 
   return isMobile;

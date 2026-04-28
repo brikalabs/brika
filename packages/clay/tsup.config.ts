@@ -48,6 +48,7 @@ export default defineConfig({
     index: join(SRC, 'index.ts'),
     tailwind: join(SRC, 'tailwind.ts'),
     'themes/index': join(SRC, 'themes/index.ts'),
+    'themes/registry': join(SRC, 'themes/registry.ts'),
     'tokens/index': join(SRC, 'tokens/index.ts'),
     ...primitiveEntries(),
     ...componentEntries(),
@@ -97,6 +98,10 @@ export default defineConfig({
     cpSync(join(SRC, 'themes', 'presets'), join(DIST, 'themes', 'presets'), {
       recursive: true,
     });
+    // 4. Copy brand SVG assets so `@brika/clay/assets/<name>.svg` resolves
+    //    for downstream consumers (favicon, README, marketing surfaces).
+    mkdirSync(join(DIST, 'assets'), { recursive: true });
+    cpSync(join(SRC, 'assets'), join(DIST, 'assets'), { recursive: true });
     // Sanity log: how many component entries shipped.
     console.log(`[clay] copied styles + ${COMPONENT_ENTRY_NAMES.size} components`);
   },

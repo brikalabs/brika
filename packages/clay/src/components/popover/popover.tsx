@@ -2,14 +2,10 @@ import { Popover as PopoverPrimitive } from 'radix-ui';
 import * as React from 'react';
 
 import { cn } from '../../primitives/cn';
+import { withSlot } from '../../primitives/with-slot';
 
-function Popover({ ...props }: Readonly<React.ComponentProps<typeof PopoverPrimitive.Root>>) {
-  return <PopoverPrimitive.Root data-slot="popover" {...props} />;
-}
-
-function PopoverTrigger({ ...props }: React.ComponentProps<typeof PopoverPrimitive.Trigger>) {
-  return <PopoverPrimitive.Trigger data-slot="popover-trigger" {...props} />;
-}
+const Popover = withSlot(PopoverPrimitive.Root, 'popover');
+const PopoverTrigger = withSlot(PopoverPrimitive.Trigger, 'popover-trigger');
 
 function PopoverContent({
   className,
@@ -33,9 +29,7 @@ function PopoverContent({
   );
 }
 
-function PopoverAnchor({ ...props }: React.ComponentProps<typeof PopoverPrimitive.Anchor>) {
-  return <PopoverPrimitive.Anchor data-slot="popover-anchor" {...props} />;
-}
+const PopoverAnchor = withSlot(PopoverPrimitive.Anchor, 'popover-anchor');
 
 function PopoverHeader({ className, ...props }: React.ComponentProps<'div'>) {
   return (

@@ -68,6 +68,27 @@ export interface ThemeFocus {
  */
 export type ComponentTokenMap = Readonly<Record<string, string>>;
 
+/**
+ * Visual flourishes a theme can opt into. Each is a CSS-only effect wired
+ * up by `@brika/clay/styles` via `html[data-effects~="<name>"]` selectors.
+ *
+ * - `scanlines` — repeating horizontal CRT-style lines, blended over the page
+ * - `glow`      — soft `text-shadow` on headings and primary buttons
+ * - `noise`     — SVG turbulence grain overlay (heavier)
+ * - `paper`     — subtle parchment grain (lighter than `noise`)
+ * - `halftone`  — radial-gradient dot pattern overlay
+ * - `vignette`  — corner-darkening radial gradient
+ * - `flicker`   — slow opacity flicker, auto-disabled by `prefers-reduced-motion`
+ */
+export type ThemeEffect =
+  | 'scanlines'
+  | 'glow'
+  | 'noise'
+  | 'paper'
+  | 'halftone'
+  | 'vignette'
+  | 'flicker';
+
 export interface ThemeConfig {
   readonly id: string;
   readonly name: string;
@@ -81,6 +102,12 @@ export interface ThemeConfig {
   readonly focus?: ThemeFocus;
 
   readonly components?: Readonly<Record<string, ComponentTokenMap>>;
+  /**
+   * See {@link ThemeEffect} for the recognised values. Stays typed as
+   * `string[]` so JSON-imported preset arrays remain assignable; the CSS
+   * silently no-ops on unknown effect names.
+   */
+  readonly effects?: readonly string[];
 }
 
 export type ThemeMode = 'light' | 'dark';

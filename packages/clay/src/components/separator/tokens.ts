@@ -5,7 +5,7 @@
 import { defineComponent } from '../../tokens/define';
 import { meta } from './meta';
 
-defineComponent(meta.name, {
+export const tokens = defineComponent(meta.name, {
   slots: {
     color: { default: 'var(--border)', description: 'Separator line color.' },
     width: { default: '1px', description: 'Separator line thickness.' },

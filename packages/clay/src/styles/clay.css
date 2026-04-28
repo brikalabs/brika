@@ -23,6 +23,7 @@
 @plugin "../tailwind";
 @import "./utilities.css";
 @import "./components.css";
+@import "./effects.css";
 
 /* `..` resolves to `src/` when this file is consumed from the workspace
    source (`@import "@brika/clay/styles"` → `src/styles/clay.css`) and to

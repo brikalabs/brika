@@ -1,0 +1,198 @@
+/**
+ * Theme effects — CSS-only flourishes a theme opts into via its `effects`
+ * field. Each effect is a `@utility fx-<name>` so they compose like any
+ * other Tailwind v4 utility, including the `dark:` variant. The applied
+ * theme writes the matching `fx-<name>` classes onto `<html>`; switching
+ * themes clears the previous classes in one pass.
+ *
+ * Every effect respects `prefers-reduced-motion` / `prefers-reduced-transparency`
+ * where relevant. Pseudo-element overlays are `pointer-events: none`.
+ *
+ * Authoring a custom effect:
+ *
+ *   @utility fx-mything {
+ *     &::after { … }
+ *     @variant dark { &::after { … } }
+ *   }
+ *
+ * then put `mything` in your theme JSON's `effects` array AND add `fx-mything`
+ * to the `@source inline` line below — Tailwind v4 only emits utilities
+ * whose class names are referenced in source it scans, and these classes
+ * are added at runtime by `applyTheme` so they need to be safelisted.
+ */
+
+@source inline("fx-scanlines fx-glow fx-noise fx-paper fx-halftone fx-vignette fx-flicker");
+
+/* ─────────────────────────────────────────────────────────────
+   SCANLINES — repeating 1px CRT lines, blended over everything
+   ───────────────────────────────────────────────────────────── */
+@utility fx-scanlines {
+  &::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9999;
+    background-image: repeating-linear-gradient(
+      0deg,
+      rgba(0, 0, 0, 0.06) 0,
+      rgba(0, 0, 0, 0.06) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+    mix-blend-mode: multiply;
+  }
+
+  @variant dark {
+    &::after {
+      background-image: repeating-linear-gradient(
+        0deg,
+        rgba(255, 255, 255, 0.05) 0,
+        rgba(255, 255, 255, 0.05) 1px,
+        transparent 1px,
+        transparent 3px
+      );
+      mix-blend-mode: screen;
+    }
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   GLOW — soft text-shadow on headings + primary surfaces
+   ───────────────────────────────────────────────────────────── */
+@utility fx-glow {
+  & :is(h1, h2, h3, h4) {
+    text-shadow:
+      0 0 4px color-mix(in oklch, currentColor 50%, transparent),
+      0 0 12px color-mix(in oklch, currentColor 25%, transparent);
+  }
+
+  & [data-slot="button"]:is([data-variant="default"], [data-variant="destructive"]) {
+    box-shadow:
+      0 0 0 1px color-mix(in oklch, currentColor 30%, transparent),
+      0 0 12px color-mix(in oklch, currentColor 35%, transparent);
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   NOISE — SVG turbulence grain (heavier — for skeuomorph etc.)
+   ───────────────────────────────────────────────────────────── */
+@utility fx-noise {
+  &::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9998;
+    opacity: 0.08;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' seed='3'/><feColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.6 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+    mix-blend-mode: multiply;
+  }
+
+  @variant dark {
+    &::before {
+      opacity: 0.12;
+      mix-blend-mode: overlay;
+    }
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   PAPER — lighter parchment grain (editorial / brutalist)
+   ───────────────────────────────────────────────────────────── */
+@utility fx-paper {
+  &::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9998;
+    opacity: 0.04;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='p'><feTurbulence type='fractalNoise' baseFrequency='1.6' numOctaves='1' seed='5'/></filter><rect width='100%' height='100%' filter='url(%23p)'/></svg>");
+    mix-blend-mode: multiply;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   HALFTONE — radial dot pattern overlay (comic / editorial)
+   ───────────────────────────────────────────────────────────── */
+@utility fx-halftone {
+  &::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9998;
+    opacity: 0.06;
+    background-image: radial-gradient(circle, currentColor 1px, transparent 1.5px);
+    background-size: 8px 8px;
+    color: var(--foreground);
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   VIGNETTE — corner-darkening radial gradient
+   ───────────────────────────────────────────────────────────── */
+@utility fx-vignette {
+  &::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9997;
+    background: radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, 0.18) 100%);
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   FLICKER — subtle whole-page opacity wobble (CRT)
+   Disabled under `prefers-reduced-motion` — animation purely cosmetic.
+   ───────────────────────────────────────────────────────────── */
+@keyframes clay-flicker {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  47% {
+    opacity: 1;
+  }
+  48% {
+    opacity: 0.96;
+  }
+  49% {
+    opacity: 1;
+  }
+  73% {
+    opacity: 1;
+  }
+  74% {
+    opacity: 0.94;
+  }
+  75% {
+    opacity: 1;
+  }
+}
+
+@utility fx-flicker {
+  & body {
+    animation: clay-flicker 6s linear infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    & body {
+      animation: none;
+    }
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   A11Y — collapse all overlay-based effects when the user has
+   asked for reduced transparency. `glow` and `flicker` stay
+   (text shadows and motion are governed by `prefers-reduced-motion`).
+   ───────────────────────────────────────────────────────────── */
+@media (prefers-reduced-transparency: reduce) {
+  :is(.fx-scanlines, .fx-vignette)::after,
+  :is(.fx-noise, .fx-paper, .fx-halftone)::before {
+    display: none;
+  }
+}

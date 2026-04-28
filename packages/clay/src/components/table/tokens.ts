@@ -5,7 +5,7 @@
 import { defineComponent } from '../../tokens/define';
 import { meta } from './meta';
 
-defineComponent(meta.name, {
+export const tokens = defineComponent(meta.name, {
   slots: {
     'header-bg': { default: 'var(--muted)', description: 'Background for table header rows.' },
     'row-bg': { default: 'var(--background)', description: 'Background for table body rows.' },

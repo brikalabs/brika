@@ -2,6 +2,7 @@ import { Tooltip as TooltipPrimitive } from 'radix-ui';
 import * as React from 'react';
 
 import { cn } from '../../primitives/cn';
+import { withSlot } from '../../primitives/with-slot';
 
 function TooltipProvider({
   delayDuration = 0,
@@ -16,13 +17,8 @@ function TooltipProvider({
   );
 }
 
-function Tooltip({ ...props }: Readonly<React.ComponentProps<typeof TooltipPrimitive.Root>>) {
-  return <TooltipPrimitive.Root data-slot="tooltip" {...props} />;
-}
-
-function TooltipTrigger({ ...props }: React.ComponentProps<typeof TooltipPrimitive.Trigger>) {
-  return <TooltipPrimitive.Trigger data-slot="tooltip-trigger" {...props} />;
-}
+const Tooltip = withSlot(TooltipPrimitive.Root, 'tooltip');
+const TooltipTrigger = withSlot(TooltipPrimitive.Trigger, 'tooltip-trigger');
 
 function TooltipContent({
   className,

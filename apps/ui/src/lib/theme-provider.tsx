@@ -1,4 +1,5 @@
-import { applyTheme, BUILT_IN_THEMES_BY_ID, resetThemeVars } from '@brika/clay/themes';
+import { applyTheme, resetThemeVars } from '@brika/clay/themes';
+import { builtInThemesById } from '@brika/clay/themes/registry';
 import {
   type MouseEvent,
   type ReactNode,
@@ -43,7 +44,7 @@ function applyThemeToDOM(theme: ThemeName, resolvedMode: 'light' | 'dark') {
   if (theme.startsWith('custom-')) {
     resetThemeVars();
   } else {
-    const preset = BUILT_IN_THEMES_BY_ID[theme];
+    const preset = builtInThemesById[theme];
     if (preset) {
       applyTheme(preset);
     } else {

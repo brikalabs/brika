@@ -9,6 +9,6 @@
       "~/*": ["./src/*"]
     }
   },
-  "include": [".astro/types.d.ts", "**/*", "astro.config.mjs"],
-  "exclude": ["dist"]
+  "include": [".astro/types.d.ts", "**/*"],
+  "exclude": ["dist", "astro.config.ts"]
 }
