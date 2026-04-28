@@ -1,9 +1,4 @@
-import {
-  CodeBlock,
-  CodeBlockContent,
-  CodeBlockHeader,
-  CodeBlockInfo,
-} from '@brika/clay';
+import { CodeBlock, CodeBlockContent, CodeBlockHeader, CodeBlockInfo } from '@brika/clay';
 
 const SAMPLE = `import { Button } from "@brika/clay/components/button";
 

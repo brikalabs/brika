@@ -1,4 +1,4 @@
-import { createElement, type ComponentProps, type ElementType, type FC } from 'react';
+import { type ComponentProps, createElement, type ElementType, type FC } from 'react';
 
 /**
  * Wrap a component (or HTML tag) with a fixed `data-slot` attribute, returning

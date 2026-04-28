@@ -118,31 +118,88 @@ interface GeometryDefaults {
 function geometryTokens(m: ComponentMeta, defaults: GeometryDefaults = {}): TokenSpec[] {
   const out: TokenSpec[] = [];
   if (defaults.height !== undefined) {
-    out.push(token(m, 'geometry', 'height', 'height', defaults.height, `Default ${m.name} height.`));
+    out.push(
+      token(m, 'geometry', 'height', 'height', defaults.height, `Default ${m.name} height.`)
+    );
   }
   if (defaults.paddingX !== undefined) {
-    out.push(token(m, 'geometry', 'padding-x', 'paddingX', defaults.paddingX, `Inline padding inside the ${m.name}.`));
+    out.push(
+      token(
+        m,
+        'geometry',
+        'padding-x',
+        'paddingX',
+        defaults.paddingX,
+        `Inline padding inside the ${m.name}.`
+      )
+    );
   }
   if (defaults.paddingY !== undefined) {
-    out.push(token(m, 'geometry', 'padding-y', 'paddingY', defaults.paddingY, `Block padding inside the ${m.name}.`));
+    out.push(
+      token(
+        m,
+        'geometry',
+        'padding-y',
+        'paddingY',
+        defaults.paddingY,
+        `Block padding inside the ${m.name}.`
+      )
+    );
   }
   if (defaults.gap !== undefined) {
-    out.push(token(m, 'geometry', 'gap', 'gap', defaults.gap, `Gap between adjacent children inside the ${m.name}.`));
+    out.push(
+      token(
+        m,
+        'geometry',
+        'gap',
+        'gap',
+        defaults.gap,
+        `Gap between adjacent children inside the ${m.name}.`
+      )
+    );
   }
   return out;
 }
 
 function borderTokens(m: ComponentMeta, width = '0px'): TokenSpec[] {
   return [
-    token(m, 'border', 'border-width', 'borderWidth', width, `Border width on the ${m.name}. Set non-zero for outline-style variants.`),
-    token(m, 'border', 'border-style', 'borderStyle', 'solid', `Border style on the ${m.name} (\`solid\`, \`dashed\`, \`double\`, \`none\`).`),
+    token(
+      m,
+      'border',
+      'border-width',
+      'borderWidth',
+      width,
+      `Border width on the ${m.name}. Set non-zero for outline-style variants.`
+    ),
+    token(
+      m,
+      'border',
+      'border-style',
+      'borderStyle',
+      'solid',
+      `Border style on the ${m.name} (\`solid\`, \`dashed\`, \`double\`, \`none\`).`
+    ),
   ];
 }
 
 function motionTokens(m: ComponentMeta): TokenSpec[] {
   return [
-    token(m, 'motion', 'duration', 'duration', 'var(--motion-standard-duration)', `Transition duration for ${m.name} state changes.`),
-    token(m, 'motion', 'easing', 'easing', 'var(--motion-standard-easing)', `Transition easing for ${m.name} state changes.`),
+    token(
+      m,
+      'motion',
+      'duration',
+      'duration',
+      'var(--motion-standard-duration)',
+      `Transition duration for ${m.name} state changes.`
+    ),
+    token(
+      m,
+      'motion',
+      'easing',
+      'easing',
+      'var(--motion-standard-easing)',
+      `Transition easing for ${m.name} state changes.`
+    ),
   ];
 }
 
@@ -161,17 +218,55 @@ const TYPOGRAPHY_FIELDS: ReadonlyArray<{
   readonly fallback: string;
   readonly describe: (name: string) => string;
 }> = [
-  { suffix: 'font-family', key: 'fontFamily', fallback: 'var(--font-sans)', describe: (n) => `Typeface for ${n}.` },
-  { suffix: 'font-size', key: 'fontSize', fallback: 'var(--text-body-md)', describe: (n) => `Font size for ${n}.` },
-  { suffix: 'font-weight', key: 'fontWeight', fallback: '500', describe: (n) => `Font weight for ${n}.` },
-  { suffix: 'line-height', key: 'lineHeight', fallback: '1.25', describe: (n) => `Line height for ${n}.` },
-  { suffix: 'letter-spacing', key: 'letterSpacing', fallback: '0', describe: (n) => `Letter spacing for ${n}. Useful for caps labels.` },
-  { suffix: 'text-transform', key: 'textTransform', fallback: 'none', describe: (n) => `Text transform for ${n} (\`uppercase\`, \`lowercase\`, \`capitalize\`, \`none\`).` },
+  {
+    suffix: 'font-family',
+    key: 'fontFamily',
+    fallback: 'var(--font-sans)',
+    describe: (n) => `Typeface for ${n}.`,
+  },
+  {
+    suffix: 'font-size',
+    key: 'fontSize',
+    fallback: 'var(--text-body-md)',
+    describe: (n) => `Font size for ${n}.`,
+  },
+  {
+    suffix: 'font-weight',
+    key: 'fontWeight',
+    fallback: '500',
+    describe: (n) => `Font weight for ${n}.`,
+  },
+  {
+    suffix: 'line-height',
+    key: 'lineHeight',
+    fallback: '1.25',
+    describe: (n) => `Line height for ${n}.`,
+  },
+  {
+    suffix: 'letter-spacing',
+    key: 'letterSpacing',
+    fallback: '0',
+    describe: (n) => `Letter spacing for ${n}. Useful for caps labels.`,
+  },
+  {
+    suffix: 'text-transform',
+    key: 'textTransform',
+    fallback: 'none',
+    describe: (n) =>
+      `Text transform for ${n} (\`uppercase\`, \`lowercase\`, \`capitalize\`, \`none\`).`,
+  },
 ];
 
 function typographyTokens(m: ComponentMeta, defaults: TypographyDefaults = {}): TokenSpec[] {
   return TYPOGRAPHY_FIELDS.map((field) =>
-    token(m, 'typography', field.suffix, field.key, defaults[field.key] ?? field.fallback, field.describe(m.name))
+    token(
+      m,
+      'typography',
+      field.suffix,
+      field.key,
+      defaults[field.key] ?? field.fallback,
+      field.describe(m.name)
+    )
   );
 }
 
