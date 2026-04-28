@@ -14,10 +14,10 @@ For a component named `<name>` (kebab-case, matches the token prefix):
 1. Create folder `src/components/<name>/`
 2. Files inside the folder:
    - `<name>.tsx` -- React component, sets `data-slot="<name>"` on the root for devtools / test selectors
-   - `tokens.ts` -- Layer-2 tokens, registered via `registerTokens(...)`
+   - `tokens.ts` -- Layer-2 tokens, exports a `tokens` array built via `defineComponent(...)`
    - `meta.ts` -- `name`, `displayName`, `group`, `description` for the docs site
    - `index.ts` -- one-line barrel re-export
-3. Add `import '../components/<name>/tokens';` to [`src/tokens/components.ts`](../tokens/components.ts)
+3. Add a named import of `tokens` and a spread into the array in [`src/tokens/components.ts`](../tokens/components.ts)
 4. Re-export from [`src/index.ts`](../index.ts) if the component is part of the public API
 
 That's it. No edits to `clay.css`, `tailwind.ts`, `tsup.config.ts`, or
@@ -87,16 +87,17 @@ export { MyComponent };
 
 ### `tokens.ts`
 
-Layer-2 component tokens, registered via the single
-[`defineComponent`](../tokens/define.ts) entry point. Every option is a
-named key — TypeScript autocompletes everything you can pass.
+Layer-2 component tokens, built via the single
+[`defineComponent`](../tokens/define.ts) entry point and exported as a
+`tokens` array. Every option is a named key — TypeScript autocompletes
+everything you can pass.
 
 ```ts
 import { defineComponent } from '../../tokens/define';
 import { SPACING_4, SPACING_6 } from '../../tokens/spacing';
 import { meta } from './meta';
 
-defineComponent(meta.name, {
+export const tokens = defineComponent(meta.name, {
   radius: { default: 'var(--radius-container)', description: 'Corner radius.', alias: 'my-component' },
   shadow: { default: 'var(--shadow-surface)', description: 'Resting elevation.', alias: 'my-component' },
   border: '1px',
@@ -115,22 +116,22 @@ defineComponent(meta.name, {
 | Key | Effect |
 |---|---|
 | `radius`, `shadow`, `backdropBlur` | Single conventional tokens (`--<name>-radius`, etc.). The `alias` field controls the Tailwind utility name (`rounded-<alias>`). |
-| `surface: true` | The interactive bundle: `border + focus + motion + state`. Pass `{ borderWidth: '1px' }` to set the resting border width. |
-| `border`, `focus`, `motion`, `state` | Granular opt-in for non-interactive surfaces (e.g. Card uses `border: '1px'` + `motion: true` but no focus/state). |
+| `surface: true` | Bundle for interactive surfaces: `border + motion`. Pass `{ borderWidth: '1px' }` to set the resting border width. |
+| `border`, `motion` | Granular opt-in when only one is needed (e.g. Card uses `border: '1px'` + `motion: true`). |
 | `geometry: {...}` | Sizing tokens (`height`, `paddingX`, `paddingY`, `gap`) — only the keys you pass become tokens. |
 | `typography: {...}` | Text tokens (`fontFamily`, `fontSize`, `fontWeight`, `lineHeight`, `letterSpacing`, `textTransform`). Omit entirely to skip every typography token (e.g. Switch). |
 | `slots: {...}` | Arbitrary named tokens — semantic colors (`filled-container`), custom sizes (`track-width`), anything component-specific. |
 | `themeKey?` | Override the camelCase theme key when it differs from the kebab-case name (e.g. `'switchThumb'` for `'switch-thumb'`). |
 
 **Multi-namespace components** (e.g. Switch + SwitchThumb,
-DropdownMenu + DropdownMenuItem) are just two `defineComponent` calls in
-the same file — see [`switch/tokens.ts`](./switch/tokens.ts) and
+DropdownMenu + DropdownMenuItem) export a `tokens` array that spreads
+two `defineComponent` results — see
+[`switch/tokens.ts`](./switch/tokens.ts) and
 [`dropdown-menu/tokens.ts`](./dropdown-menu/tokens.ts).
 
 See [`button/tokens.ts`](./button/tokens.ts) for an interactive control,
-[`card/tokens.ts`](./card/tokens.ts) for a non-interactive surface,
-[`dialog/tokens.ts`](./dialog/tokens.ts) for a focusable surface, and
-[`tabs/tokens.ts`](./tabs/tokens.ts) for granular bundle opt-ins.
+[`card/tokens.ts`](./card/tokens.ts) for a non-interactive surface, and
+[`dialog/tokens.ts`](./dialog/tokens.ts) for a translucent floating surface.
 
 ### `meta.ts`
 
@@ -186,11 +187,10 @@ export * from './my-component';
   has `dropdown-menu-content` and `dropdown-menu-item`, etc. Each slot
   sets its own `data-slot` and composes its own classes inline in the
   `.tsx` — no CSS bridge selector ties them together.
-- **Orphan components.** Components without a folder yet (alert,
-  checkbox, icon, toast at time of writing) keep their tokens in
-  [`../tokens/orphan-components.ts`](../tokens/orphan-components.ts).
-  When you graduate one to a folder, move its block into the new
-  folder's `tokens.ts` and delete the orphan entry.
+- **Bare tokens.** Tokens that don't follow the `<name>-<slot>`
+  convention (e.g. `--icon` with no slot suffix) can be appended to the
+  exported `tokens` array as plain `TokenSpec` literals — see
+  [`icon/tokens.ts`](./icon/tokens.ts).
 
 ## Verifying
 

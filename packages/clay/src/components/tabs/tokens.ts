@@ -5,12 +5,10 @@
 import { defineComponent } from '../../tokens/define';
 import { meta } from './meta';
 
-defineComponent(meta.name, {
+export const tokens = defineComponent(meta.name, {
   radius: { default: 'var(--radius-control)', description: 'Tabs corner radius.', alias: 'tabs' },
   border: '1px',
   motion: true,
-  focus: true,
-  state: true,
   typography: { fontSize: 'var(--text-label-lg)', fontWeight: '500' },
   slots: {
     'trigger-padding-x': {

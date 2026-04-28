@@ -4,7 +4,7 @@
 
 import { defineComponent } from '../../tokens/define';
 
-defineComponent('checkbox', {
+export const tokens = defineComponent('checkbox', {
   radius: {
     default: 'var(--radius-tight)',
     description: 'Checkbox corner radius.',

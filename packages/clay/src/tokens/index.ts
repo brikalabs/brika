@@ -7,7 +7,6 @@
 export { inferTokenType, inferTokenTypeStrict, TOKEN_TYPE_HINT } from './infer';
 export { TOKEN_REGISTRY, TOKENS_BY_NAME, tokensByType } from './registry';
 export type {
-  BorderStyle,
   ResolvedTokenSpec,
   TailwindNamespace,
   TokenCategory,

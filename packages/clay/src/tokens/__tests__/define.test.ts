@@ -79,20 +79,13 @@ describe('defineComponent', () => {
   });
 
   describe('surface bundle', () => {
-    test('`surface: true` registers border + focus + motion + state', () => {
+    test('`surface: true` registers border + motion', () => {
       const tokens = defineComponent('test-surface', { surface: true });
       const expected = [
         'test-surface-border-width',
         'test-surface-border-style',
-        'test-surface-ring-width',
-        'test-surface-ring-offset',
-        'test-surface-ring-color',
-        'test-surface-ring-style',
         'test-surface-duration',
         'test-surface-easing',
-        'test-surface-hover-bg',
-        'test-surface-pressed-bg',
-        'test-surface-disabled-opacity',
       ];
       expect(names(tokens)).toEqual(expect.arrayContaining(expected));
       expect(tokens.length).toBe(expected.length);
@@ -111,22 +104,19 @@ describe('defineComponent', () => {
     });
 
     test('granular flags are ignored when `surface` is set', () => {
-      // `surface: true` already registers border + focus + motion + state,
-      // so passing the granular flags shouldn't double-register anything.
+      // `surface: true` already registers border + motion, so passing the
+      // granular flags shouldn't double-register anything.
       const tokens = defineComponent('test-surface-no-double', {
         surface: true,
         border: '5px',
-        focus: true,
         motion: true,
-        state: true,
       });
       // Border-width should still be 0px (the surface default), not 5px.
       expect(find(tokens, 'test-surface-no-double-border-width')?.defaultLight).toBe('0px');
-      // No duplicate ring-width, etc.
-      const ringWidthCount = tokens.filter(
-        (t) => t.name === 'test-surface-no-double-ring-width'
+      const durationCount = tokens.filter(
+        (t) => t.name === 'test-surface-no-double-duration'
       ).length;
-      expect(ringWidthCount).toBe(1);
+      expect(durationCount).toBe(1);
     });
   });
 
@@ -142,39 +132,18 @@ describe('defineComponent', () => {
       expect(find(tokens, 'test-border-true-border-width')?.defaultLight).toBe('0px');
     });
 
-    test('`focus: true` registers four ring tokens', () => {
-      const tokens = defineComponent('test-focus', { focus: true });
-      expect(names(tokens)).toEqual([
-        'test-focus-ring-width',
-        'test-focus-ring-offset',
-        'test-focus-ring-color',
-        'test-focus-ring-style',
-      ]);
-    });
-
     test('`motion: true` registers duration + easing', () => {
       const tokens = defineComponent('test-motion', { motion: true });
       expect(names(tokens)).toEqual(['test-motion-duration', 'test-motion-easing']);
     });
 
-    test('`state: true` registers hover + pressed + disabled', () => {
-      const tokens = defineComponent('test-state', { state: true });
-      expect(names(tokens)).toEqual([
-        'test-state-hover-bg',
-        'test-state-pressed-bg',
-        'test-state-disabled-opacity',
-      ]);
-    });
-
     test('combining granular bundles registers each set exactly once', () => {
       const tokens = defineComponent('test-granular-combo', {
         border: '1px',
-        focus: true,
         motion: true,
-        state: true,
       });
-      // 2 border + 4 focus + 2 motion + 3 state = 11 tokens total.
-      expect(tokens.length).toBe(11);
+      // 2 border + 2 motion = 4 tokens total.
+      expect(tokens.length).toBe(4);
     });
   });
 

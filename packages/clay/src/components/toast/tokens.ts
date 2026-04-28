@@ -4,7 +4,7 @@
 
 import { defineComponent } from '../../tokens/define';
 
-defineComponent('toast', {
+export const tokens = defineComponent('toast', {
   radius: {
     default: 'var(--radius-container)',
     description: 'Toast corner radius.',

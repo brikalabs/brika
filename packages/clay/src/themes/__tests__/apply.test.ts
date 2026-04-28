@@ -95,12 +95,6 @@ describe('resetThemeVars', () => {
     resetThemeVars();
     expect(document.getElementById(STYLE_TAG_ID)).toBeNull();
   });
-
-  test('accepts an optional theme arg for back-compat', () => {
-    applyTheme(baseTheme);
-    resetThemeVars(baseTheme);
-    expect(document.getElementById(STYLE_TAG_ID)).toBeNull();
-  });
 });
 
 describe('themeToCssVars', () => {

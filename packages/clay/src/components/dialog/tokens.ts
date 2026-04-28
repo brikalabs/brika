@@ -6,7 +6,7 @@ import { defineComponent } from '../../tokens/define';
 import { SPACING_4, SPACING_6 } from '../../tokens/spacing';
 import { meta } from './meta';
 
-defineComponent(meta.name, {
+export const tokens = defineComponent(meta.name, {
   radius: {
     default: 'var(--radius-surface)',
     description: 'Dialog corner radius.',
@@ -14,7 +14,6 @@ defineComponent(meta.name, {
   },
   shadow: { default: 'var(--shadow-modal)', description: 'Dialog elevation.', alias: 'dialog' },
   border: '1px',
-  focus: true,
   motion: true,
   backdropBlur: {
     default: '0px',

@@ -1,17 +1,18 @@
 /**
  * Single declarative entry point for registering a Clay component's
- * Layer-2 tokens. Replaces the old `buildMeta` + `registerTokens` +
- * stack-of-helpers pattern with one self-documenting function call.
- *
- * Behind the scenes `defineComponent` still composes the per-family
- * helpers in `./expand.ts` (`borderTokens`, `focusTokens`, etc.) — those
- * remain the source of truth for what each token category looks like.
- * `defineComponent` is just the ergonomic facade.
+ * Layer-2 tokens. Component-author API is the `defineComponent` function
+ * at the bottom; everything above it is the per-token-family expansion
+ * machinery it composes from.
  *
  * Token names follow the `<name>-<slot>` convention. The `name` argument
  * becomes the kebab-case prefix on every emitted CSS variable
  * (`--<name>-radius`, `--<name>-padding-x`, …) and on the Tailwind theme
  * key (`components.<themeKey>.radius` in theme JSON).
+ *
+ * Default values are usually `var(...)` references that fall back through
+ * Layer 1 roles (e.g. `--button-padding-x` falls back to
+ * `calc(var(--spacing) * 4)`), so a theme that leaves a token blank gets
+ * sensible behaviour without setting every entry.
  *
  * @example  Labeled interactive control (Button):
  *   defineComponent('button', {
@@ -57,34 +58,197 @@
  *   });
  */
 
-import { registerTokens } from './component-registry';
-import {
-  borderTokens,
-  meta as buildMeta,
-  type ComponentTokenInput,
-  defineComponentTokens,
-  focusTokens,
-  geometryTokens,
-  motionTokens,
-  stateTokens,
-  typographyTokens,
-} from './expand';
-import type { TokenSpec } from './types';
+import { inferTokenType } from './infer';
+import type { TailwindNamespace, TokenCategory, TokenSpec, TokenType } from './types';
+
+// ─── Component meta ──────────────────────────────────────────────────────────
+
+interface ComponentMeta {
+  /** Component name as it appears in the registry (kebab-case, matches CSS). */
+  readonly name: string;
+  /** camelCase identifier used in `themePath` (`switchThumb` for `switch-thumb`). */
+  readonly themeKey: string;
+}
+
+function meta(name: string, themeKey?: string): ComponentMeta {
+  return {
+    name,
+    themeKey: themeKey ?? name.replaceAll(/-([a-z])/g, (_, c: string) => c.toUpperCase()),
+  };
+}
+
+// ─── Token builder ───────────────────────────────────────────────────────────
 
 /**
- * Shape of every named token slot.
+ * Build a single component-layer `TokenSpec`. `themeProp` is the camelCase
+ * entry under `components.<themeKey>` in `ThemeConfig` JSON; `suffix` is the
+ * kebab-case tail of the CSS-var name (e.g. `'padding-x'` → `--<comp>-padding-x`).
+ */
+function token(
+  m: ComponentMeta,
+  category: TokenCategory,
+  suffix: string,
+  themeProp: string,
+  defaultLight: string,
+  description: string
+): TokenSpec {
+  return {
+    name: `${m.name}-${suffix}`,
+    layer: 'component',
+    category,
+    appliesTo: m.name,
+    defaultLight,
+    description,
+    themePath: `components.${m.themeKey}.${themeProp}`,
+  };
+}
+
+// ─── Token families ──────────────────────────────────────────────────────────
+//
+// Each helper returns an array of `TokenSpec`s for a coherent slice of the
+// component surface. `defineComponent` (below) opts in/out per family.
+
+interface GeometryDefaults {
+  readonly height?: string;
+  readonly paddingX?: string;
+  readonly paddingY?: string;
+  readonly gap?: string;
+}
+
+function geometryTokens(m: ComponentMeta, defaults: GeometryDefaults = {}): TokenSpec[] {
+  const out: TokenSpec[] = [];
+  if (defaults.height !== undefined) {
+    out.push(token(m, 'geometry', 'height', 'height', defaults.height, `Default ${m.name} height.`));
+  }
+  if (defaults.paddingX !== undefined) {
+    out.push(token(m, 'geometry', 'padding-x', 'paddingX', defaults.paddingX, `Inline padding inside the ${m.name}.`));
+  }
+  if (defaults.paddingY !== undefined) {
+    out.push(token(m, 'geometry', 'padding-y', 'paddingY', defaults.paddingY, `Block padding inside the ${m.name}.`));
+  }
+  if (defaults.gap !== undefined) {
+    out.push(token(m, 'geometry', 'gap', 'gap', defaults.gap, `Gap between adjacent children inside the ${m.name}.`));
+  }
+  return out;
+}
+
+function borderTokens(m: ComponentMeta, width = '0px'): TokenSpec[] {
+  return [
+    token(m, 'border', 'border-width', 'borderWidth', width, `Border width on the ${m.name}. Set non-zero for outline-style variants.`),
+    token(m, 'border', 'border-style', 'borderStyle', 'solid', `Border style on the ${m.name} (\`solid\`, \`dashed\`, \`double\`, \`none\`).`),
+  ];
+}
+
+function motionTokens(m: ComponentMeta): TokenSpec[] {
+  return [
+    token(m, 'motion', 'duration', 'duration', 'var(--motion-standard-duration)', `Transition duration for ${m.name} state changes.`),
+    token(m, 'motion', 'easing', 'easing', 'var(--motion-standard-easing)', `Transition easing for ${m.name} state changes.`),
+  ];
+}
+
+interface TypographyDefaults {
+  readonly fontFamily?: string;
+  readonly fontSize?: string;
+  readonly fontWeight?: string;
+  readonly lineHeight?: string;
+  readonly letterSpacing?: string;
+  readonly textTransform?: string;
+}
+
+const TYPOGRAPHY_FIELDS: ReadonlyArray<{
+  readonly suffix: string;
+  readonly key: keyof TypographyDefaults;
+  readonly fallback: string;
+  readonly describe: (name: string) => string;
+}> = [
+  { suffix: 'font-family', key: 'fontFamily', fallback: 'var(--font-sans)', describe: (n) => `Typeface for ${n}.` },
+  { suffix: 'font-size', key: 'fontSize', fallback: 'var(--text-body-md)', describe: (n) => `Font size for ${n}.` },
+  { suffix: 'font-weight', key: 'fontWeight', fallback: '500', describe: (n) => `Font weight for ${n}.` },
+  { suffix: 'line-height', key: 'lineHeight', fallback: '1.25', describe: (n) => `Line height for ${n}.` },
+  { suffix: 'letter-spacing', key: 'letterSpacing', fallback: '0', describe: (n) => `Letter spacing for ${n}. Useful for caps labels.` },
+  { suffix: 'text-transform', key: 'textTransform', fallback: 'none', describe: (n) => `Text transform for ${n} (\`uppercase\`, \`lowercase\`, \`capitalize\`, \`none\`).` },
+];
+
+function typographyTokens(m: ComponentMeta, defaults: TypographyDefaults = {}): TokenSpec[] {
+  return TYPOGRAPHY_FIELDS.map((field) =>
+    token(m, 'typography', field.suffix, field.key, defaults[field.key] ?? field.fallback, field.describe(m.name))
+  );
+}
+
+// ─── Slot tokens (radius / shadow / backdrop-blur / arbitrary slots) ────────
+
+const TYPE_TO_CATEGORY: Readonly<Record<TokenType, TokenCategory>> = {
+  color: 'color',
+  size: 'geometry',
+  radius: 'geometry',
+  'border-width': 'border',
+  'border-style': 'border',
+  shadow: 'elevation',
+  duration: 'motion',
+  easing: 'motion',
+  'font-family': 'typography',
+  'font-size': 'typography',
+  'font-weight': 'typography',
+  'line-height': 'typography',
+  'letter-spacing': 'typography',
+  'text-transform': 'typography',
+  'corner-shape': 'geometry',
+  opacity: 'state',
+  blur: 'elevation',
+};
+
+const TYPE_TO_NAMESPACE: Partial<Record<TokenType, TailwindNamespace>> = {
+  color: 'color',
+  radius: 'radius',
+  shadow: 'shadow',
+};
+
+/**
+ * Compact authoring shape for a single component-layer token slot.
  *
  *   default      — required CSS expression for `defaultLight`.
  *   description  — required one-sentence prose, surfaced in the docs site.
  *   defaultDark  — set when the dark-mode value differs.
  *   type         — override the name-suffix-based type inference.
- *   category     — override the type-derived category (e.g. group `ring-*`
- *                  tokens under `focus` instead of `border`).
+ *   category     — override the type-derived category.
  *   namespace    — Tailwind namespace; auto-set for color/radius/shadow,
  *                  pass `'none'` (or omit) to suppress.
  *   alias        — Tailwind utility short name (`rounded-<alias>` etc.).
  */
-export type SlotInput = ComponentTokenInput;
+export interface SlotInput {
+  readonly default: string;
+  readonly description: string;
+  readonly defaultDark?: string;
+  readonly type?: TokenType;
+  readonly category?: TokenCategory;
+  readonly namespace?: TailwindNamespace;
+  readonly alias?: string;
+}
+
+function slotTokens(m: ComponentMeta, entries: Readonly<Record<string, SlotInput>>): TokenSpec[] {
+  return Object.entries(entries).map(([key, input]) => {
+    const name = `${m.name}-${key}`;
+    const type = input.type ?? inferTokenType(name);
+    const category = input.category ?? TYPE_TO_CATEGORY[type];
+    const namespace = input.namespace ?? TYPE_TO_NAMESPACE[type];
+    const themeProp = key.replaceAll(/-([a-z0-9])/g, (_, c: string) => c.toUpperCase());
+    return {
+      name,
+      layer: 'component',
+      appliesTo: m.name,
+      type,
+      category,
+      defaultLight: input.default,
+      defaultDark: input.defaultDark,
+      description: input.description,
+      themePath: `components.${m.themeKey}.${themeProp}`,
+      tailwindNamespace: namespace,
+      utilityAlias: input.alias,
+    };
+  });
+}
+
+// ─── Public authoring API ───────────────────────────────────────────────────
 
 /**
  * Declarative description of a single Clay component's tokens.
@@ -101,11 +265,7 @@ export interface ComponentDefinition {
   readonly themeKey?: string;
 
   // ─── Single-slot conventional tokens ─────────────────────────────
-  /**
-   * Corner radius. Pair with the matching `rounded-<alias>` Tailwind
-   * utility (`alias` defaults to the full token name; pass an explicit
-   * one to shorten it).
-   */
+  /** Corner radius. Pair with the matching `rounded-<alias>` Tailwind utility. */
   readonly radius?: SlotInput;
   /** Resting drop shadow / elevation. */
   readonly shadow?: SlotInput;
@@ -114,12 +274,10 @@ export interface ComponentDefinition {
 
   // ─── Multi-token bundles ────────────────────────────────────────
   /**
-   * Shortcut for `border + focus + motion + state` — every focusable
-   * interactive control gets these. Pass `true` for a 0px resting border,
-   * or `{ borderWidth: '1px' }` to opt into a visible border on rest.
-   *
-   * When set, the individual `border` / `focus` / `motion` / `state`
-   * flags below are ignored.
+   * Shortcut for `border + motion` — every interactive control surface
+   * needs these. Pass `true` for a 0px resting border, or
+   * `{ borderWidth: '1px' }` for a visible border on rest. When set,
+   * the individual `border` / `motion` flags below are ignored.
    */
   readonly surface?: boolean | { readonly borderWidth: string };
 
@@ -129,26 +287,19 @@ export interface ComponentDefinition {
    * width or a string to set it explicitly.
    */
   readonly border?: boolean | string;
-  /** Adds `--<name>-ring-{width,offset,color,style}`. */
-  readonly focus?: boolean;
   /** Adds `--<name>-{duration,easing}`. */
   readonly motion?: boolean;
-  /** Adds `--<name>-{hover-bg,pressed-bg,disabled-opacity}`. */
-  readonly state?: boolean;
 
   // ─── Sizing / typography (opt-in field-by-field) ────────────────
-  /**
-   * Sizing tokens — `height`, `paddingX`, `paddingY`, `gap`. Only the
-   * fields you pass become tokens; omit a field to skip it.
-   */
-  readonly geometry?: Parameters<typeof geometryTokens>[1];
+  /** Sizing tokens — `height`, `paddingX`, `paddingY`, `gap`. Only set fields become tokens. */
+  readonly geometry?: GeometryDefaults;
   /**
    * Text tokens — `fontFamily`, `fontSize`, `fontWeight`, `lineHeight`,
    * `letterSpacing`, `textTransform`. Pass an object (even an empty one)
    * to opt into the full typography family; omit to skip every typography
    * token (e.g. Switch and Checkbox have no text inside).
    */
-  readonly typography?: Parameters<typeof typographyTokens>[1];
+  readonly typography?: TypographyDefaults;
 
   // ─── Arbitrary named slots ──────────────────────────────────────
   /**
@@ -159,16 +310,8 @@ export interface ComponentDefinition {
   readonly slots?: Readonly<Record<string, SlotInput>>;
 }
 
-type ComponentMeta = ReturnType<typeof buildMeta>;
-
-/**
- * Merge the conventional single-slot tokens (`radius`, `shadow`,
- * `backdropBlur`) with the arbitrary `slots` record so they all flow
- * through a single `defineComponentTokens` call and share validation +
- * Tailwind-namespace inference.
- */
-function collectSlotInputs(def: ComponentDefinition): Record<string, ComponentTokenInput> {
-  const merged: Record<string, ComponentTokenInput> = { ...def.slots };
+function collectSlots(def: ComponentDefinition): Record<string, SlotInput> {
+  const merged: Record<string, SlotInput> = { ...def.slots };
   if (def.radius) {
     merged.radius = def.radius;
   }
@@ -182,12 +325,8 @@ function collectSlotInputs(def: ComponentDefinition): Record<string, ComponentTo
 }
 
 /**
- * Coerce the `border` opt-in into a concrete width string, or `null`
- * if the opt-in is absent:
- *
- *   `'1px'`              → `'1px'`
- *   `true`               → `'0px'`
- *   `false` / `undefined`→ `null`
+ * Resolve `border` opt-in into a width string, or `null` if absent:
+ *   `'1px'` → `'1px'` · `true` → `'0px'` · `false`/`undefined` → `null`
  */
 function resolveBorderWidth(value: boolean | string | undefined): string | null {
   if (value === undefined || value === false) {
@@ -197,60 +336,38 @@ function resolveBorderWidth(value: boolean | string | undefined): string | null 
 }
 
 /**
- * Resolve the interactive-bundle opt-ins (`surface` shortcut, plus the
- * granular `border` / `focus` / `motion` / `state` flags) into the
- * matching token sets. `surface` wins over the granular flags.
+ * Resolve the surface bundle (`surface` shortcut, plus the granular
+ * `border` / `motion` flags) into the matching token sets.
+ * `surface` wins over the granular flags.
  */
 function bundleTokens(m: ComponentMeta, def: ComponentDefinition): TokenSpec[] {
   if (def.surface) {
     const surfaceWidth = typeof def.surface === 'object' ? def.surface.borderWidth : '0px';
-    return [
-      ...borderTokens(m, surfaceWidth),
-      ...focusTokens(m),
-      ...motionTokens(m),
-      ...stateTokens(m),
-    ];
+    return [...borderTokens(m, surfaceWidth), ...motionTokens(m)];
   }
   const out: TokenSpec[] = [];
   const borderWidth = resolveBorderWidth(def.border);
   if (borderWidth !== null) {
     out.push(...borderTokens(m, borderWidth));
   }
-  if (def.focus) {
-    out.push(...focusTokens(m));
-  }
   if (def.motion) {
     out.push(...motionTokens(m));
-  }
-  if (def.state) {
-    out.push(...stateTokens(m));
   }
   return out;
 }
 
 /**
- * Register every Layer-2 CSS-variable token a component needs, in one
- * declarative call.
- *
- * Side effects: pushes the produced tokens into the module-level registry
- * exposed via `getRegisteredTokens()`. Returns the same array so callers
- * (and tests) can inspect what was registered without going through the
- * global registry.
- *
- * @param name  Kebab-case component name. Becomes the prefix on every
- *              emitted CSS variable (`--<name>-radius`, …).
- * @param def   See `ComponentDefinition` for the full option list.
- * @returns     Array of the `TokenSpec`s that were registered.
+ * Build every Layer-2 CSS-variable token a component needs, in one
+ * declarative call. Pure — no side effects. The component's `tokens.ts`
+ * exports the result; `tokens/components.ts` aggregates them.
  */
 export function defineComponent(name: string, def: ComponentDefinition): readonly TokenSpec[] {
-  const m = buildMeta(name, def.themeKey);
-  const slots = collectSlotInputs(def);
-  const tokens: TokenSpec[] = [
-    ...(Object.keys(slots).length > 0 ? defineComponentTokens(m, slots) : []),
+  const m = meta(name, def.themeKey);
+  const slots = collectSlots(def);
+  return [
+    ...(Object.keys(slots).length > 0 ? slotTokens(m, slots) : []),
     ...bundleTokens(m, def),
     ...(def.geometry ? geometryTokens(m, def.geometry) : []),
     ...(def.typography ? typographyTokens(m, def.typography) : []),
   ];
-  registerTokens(tokens);
-  return tokens;
 }

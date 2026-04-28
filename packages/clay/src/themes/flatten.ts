@@ -56,20 +56,29 @@ export function camelToKebab(value: string): string {
   return value.replaceAll(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
 }
 
-function writeColorEntries(
-  out: Record<string, string>,
-  source: Readonly<Record<string, string>> | undefined
+/** Iterate an object, calling `fn` only for non-empty string values. */
+function eachStringEntry(
+  source: object | undefined,
+  fn: (prop: string, value: string) => void
 ): void {
   if (!source) {
     return;
   }
-  for (const [name, value] of Object.entries(source)) {
-    if (typeof value !== 'string' || value.length === 0) {
-      continue;
+  for (const [prop, value] of Object.entries(source)) {
+    if (typeof value === 'string' && value.length > 0) {
+      fn(prop, value);
     }
+  }
+}
+
+function writeColorEntries(
+  out: Record<string, string>,
+  source: Readonly<Record<string, string>> | undefined
+): void {
+  eachStringEntry(source, (name, value) => {
     out[`--${name}`] = value;
     out[`--color-${name}`] = value;
-  }
+  });
 }
 
 function writeSectionEntries(
@@ -77,19 +86,12 @@ function writeSectionEntries(
   section: string,
   values: object | undefined
 ): void {
-  if (!values) {
-    return;
-  }
-  for (const [prop, value] of Object.entries(values)) {
-    if (typeof value !== 'string' || value.length === 0) {
-      continue;
-    }
-    const path = `${section}.${prop}`;
-    const cssVar = SECTION_VAR_MAP[path];
+  eachStringEntry(values, (prop, value) => {
+    const cssVar = SECTION_VAR_MAP[`${section}.${prop}`];
     if (cssVar) {
       out[cssVar] = value;
     }
-  }
+  });
 }
 
 function writeComponentEntries(
@@ -100,15 +102,9 @@ function writeComponentEntries(
     return;
   }
   for (const [componentName, props] of Object.entries(components)) {
-    if (!props) {
-      continue;
-    }
-    for (const [prop, value] of Object.entries(props)) {
-      if (typeof value !== 'string' || value.length === 0) {
-        continue;
-      }
+    eachStringEntry(props, (prop, value) => {
       out[`--${componentName}-${camelToKebab(prop)}`] = value;
-    }
+    });
   }
 }
 

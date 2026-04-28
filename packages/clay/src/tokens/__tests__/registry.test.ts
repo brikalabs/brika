@@ -44,15 +44,7 @@ const CATEGORY_PURPOSE_OVERRIDES: ReadonlySet<string> = new Set([
   'ring-offset',
 ]);
 function categoryOverridden(name: string): boolean {
-  return (
-    CATEGORY_PURPOSE_OVERRIDES.has(name) ||
-    name.endsWith('-ring-width') ||
-    name.endsWith('-ring-offset') ||
-    name.endsWith('-ring-color') ||
-    name.endsWith('-ring-style') ||
-    name.endsWith('-hover-bg') ||
-    name.endsWith('-pressed-bg')
-  );
+  return CATEGORY_PURPOSE_OVERRIDES.has(name);
 }
 
 const VAR_NAME_RE = /^[a-z][a-z0-9-]*$/;

@@ -3,25 +3,12 @@
 import { AlertDialog as AlertDialogPrimitive } from 'radix-ui';
 import * as React from 'react';
 import { cn } from '../../primitives/cn';
+import { withSlot } from '../../primitives/with-slot';
 import { Button } from '../button';
 
-function AlertDialog({
-  ...props
-}: Readonly<React.ComponentProps<typeof AlertDialogPrimitive.Root>>) {
-  return <AlertDialogPrimitive.Root data-slot="alert-dialog" {...props} />;
-}
-
-function AlertDialogTrigger({
-  ...props
-}: React.ComponentProps<typeof AlertDialogPrimitive.Trigger>) {
-  return <AlertDialogPrimitive.Trigger data-slot="alert-dialog-trigger" {...props} />;
-}
-
-function AlertDialogPortal({
-  ...props
-}: Readonly<React.ComponentProps<typeof AlertDialogPrimitive.Portal>>) {
-  return <AlertDialogPrimitive.Portal data-slot="alert-dialog-portal" {...props} />;
-}
+const AlertDialog = withSlot(AlertDialogPrimitive.Root, 'alert-dialog');
+const AlertDialogTrigger = withSlot(AlertDialogPrimitive.Trigger, 'alert-dialog-trigger');
+const AlertDialogPortal = withSlot(AlertDialogPrimitive.Portal, 'alert-dialog-portal');
 
 function AlertDialogOverlay({
   className,

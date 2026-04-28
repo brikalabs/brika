@@ -3,6 +3,7 @@ import { Select as SelectPrimitive } from 'radix-ui';
 import * as React from 'react';
 
 import { cn } from '../../primitives/cn';
+import { withSlot } from '../../primitives/with-slot';
 
 interface SelectProps extends React.ComponentProps<typeof SelectPrimitive.Root> {
   /** Controlled selected value; pair with `onValueChange`. */
@@ -17,13 +18,8 @@ function Select({ ...props }: Readonly<SelectProps>) {
   return <SelectPrimitive.Root data-slot="select" {...props} />;
 }
 
-function SelectGroup({ ...props }: React.ComponentProps<typeof SelectPrimitive.Group>) {
-  return <SelectPrimitive.Group data-slot="select-group" {...props} />;
-}
-
-function SelectValue({ ...props }: React.ComponentProps<typeof SelectPrimitive.Value>) {
-  return <SelectPrimitive.Value data-slot="select-value" {...props} />;
-}
+const SelectGroup = withSlot(SelectPrimitive.Group, 'select-group');
+const SelectValue = withSlot(SelectPrimitive.Value, 'select-value');
 
 function SelectTrigger({
   className,

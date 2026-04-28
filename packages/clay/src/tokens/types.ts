@@ -102,13 +102,6 @@ export type TailwindNamespace =
   | 'none';
 
 /**
- * Border-style values a theme is allowed to set. CSS accepts more, but Clay
- * only commits to these three because every component has been visually
- * checked under each. Adding a new style means QA across the matrix.
- */
-export type BorderStyle = 'solid' | 'dashed' | 'double' | 'none';
-
-/**
  * One token in the registry, as authored.
  *
  *   name           — CSS custom property minus the leading `--`.

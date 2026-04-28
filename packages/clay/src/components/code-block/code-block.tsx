@@ -72,6 +72,30 @@ type CodeToken = {
   fontStyle?: number;
 };
 
+interface CodeBlockThemes {
+  readonly light: string;
+  readonly dark: string;
+}
+
+const DEFAULT_THEMES: CodeBlockThemes = {
+  light: 'catppuccin-latte',
+  dark: 'catppuccin-mocha',
+};
+
+type Mode = 'light' | 'dark';
+
+/** Read the page's current mode from `<html data-mode="...">` or the legacy `.dark` class. */
+function readMode(): Mode {
+  if (typeof document === 'undefined') {
+    return 'light';
+  }
+  const root = document.documentElement;
+  if (root.dataset.mode === 'dark' || root.classList.contains('dark')) {
+    return 'dark';
+  }
+  return 'light';
+}
+
 type CodeBlockContextValue = {
   code: string;
   lineCount: number;
@@ -101,8 +125,9 @@ type HighlightResult = {
   foreground: string | null;
 };
 
-/** Load Shiki, verify language support, and tokenize the code. Returns null if
- *  the language is not bundled or tokenization fails. */
+/** Load Shiki, verify language support, and tokenize the code with the theme
+ *  matching the page's current mode. Returns null if the language is not
+ *  bundled or tokenization fails. */
 async function tokenizeWithShiki(
   code: string,
   language: string,
@@ -137,6 +162,18 @@ function getTokenStyle(token: CodeToken): React.CSSProperties {
   };
 }
 
+/** Subscribe to changes in the page's mode (data-mode / .dark on <html>). */
+function useMode(): Mode {
+  const [mode, setMode] = React.useState<Mode>(readMode);
+  React.useEffect(() => {
+    const root = document.documentElement;
+    const observer = new MutationObserver(() => setMode(readMode()));
+    observer.observe(root, { attributes: true, attributeFilter: ['data-mode', 'class'] });
+    return () => observer.disconnect();
+  }, []);
+  return mode;
+}
+
 // --- Components ---
 
 interface CodeBlockProps
@@ -154,47 +191,21 @@ function CodeBlock({ className, variant, ...props }: Readonly<CodeBlockProps>) {
     filename: null as string | null,
   });
 
-  const setCodeInfo = React.useCallback((code: string, lineCount: number) => {
-    setState((prev) =>
-      prev.code === code && prev.lineCount === lineCount
-        ? prev
-        : {
-            ...prev,
-            code,
-            lineCount,
-          }
-    );
-  }, []);
+  const setCodeInfo = React.useCallback(
+    (code: string, lineCount: number) => setState((prev) => ({ ...prev, code, lineCount })),
+    []
+  );
+  const setLanguage = React.useCallback(
+    (language: string | null) => setState((prev) => ({ ...prev, language })),
+    []
+  );
+  const setFilename = React.useCallback(
+    (filename: string | null) => setState((prev) => ({ ...prev, filename })),
+    []
+  );
 
-  const setLanguage = React.useCallback((language: string | null) => {
-    setState((prev) =>
-      prev.language === language
-        ? prev
-        : {
-            ...prev,
-            language,
-          }
-    );
-  }, []);
-
-  const setFilename = React.useCallback((filename: string | null) => {
-    setState((prev) =>
-      prev.filename === filename
-        ? prev
-        : {
-            ...prev,
-            filename,
-          }
-    );
-  }, []);
-
-  const contextValue = React.useMemo(
-    () => ({
-      ...state,
-      setCodeInfo,
-      setLanguage,
-      setFilename,
-    }),
+  const contextValue = React.useMemo<CodeBlockContextValue>(
+    () => ({ ...state, setCodeInfo, setLanguage, setFilename }),
     [state, setCodeInfo, setLanguage, setFilename]
   );
 
@@ -363,8 +374,12 @@ interface CodeBlockContentProps
   language?: string | null;
   /** Optional filename label rendered in the header. */
   filename?: string | null;
-  /** Shiki theme name; defaults to "catppuccin-mocha". */
-  theme?: string;
+  /**
+   * Shiki theme pair. The light entry is used when the page is in light mode,
+   * the dark entry under `data-mode="dark"` / `.dark`. Defaults to the
+   * Catppuccin pair (`catppuccin-latte` / `catppuccin-mocha`).
+   */
+  themes?: CodeBlockThemes;
   /** Toggles the line-number gutter. */
   showLineNumbers?: boolean;
   /** Starting number when line numbers are shown. */
@@ -378,7 +393,7 @@ function CodeBlockContent({
   size,
   language: languageProp,
   filename: filenameProp,
-  theme = 'catppuccin-mocha',
+  themes = DEFAULT_THEMES,
   showLineNumbers = true,
   lineNumberStart = 1,
   children,
@@ -387,6 +402,8 @@ function CodeBlockContent({
   const { setCodeInfo, setLanguage, setFilename } = useCodeBlockContext('CodeBlockContent');
   const [highlightTokens, setHighlightTokens] = React.useState<CodeToken[][] | null>(null);
   const [foreground, setForeground] = React.useState<string | null>(null);
+  const mode = useMode();
+  const activeTheme = mode === 'dark' ? themes.dark : themes.light;
 
   const code = React.useMemo(() => {
     if (typeof children === 'string') {
@@ -419,7 +436,7 @@ function CodeBlockContent({
 
     let cancelled = false;
 
-    tokenizeWithShiki(normalizedCode, languageProp, theme).then((result) => {
+    tokenizeWithShiki(normalizedCode, languageProp, activeTheme).then((result) => {
       if (cancelled) {
         return;
       }
@@ -430,7 +447,7 @@ function CodeBlockContent({
     return () => {
       cancelled = true;
     };
-  }, [languageProp, normalizedCode, theme]);
+  }, [languageProp, normalizedCode, activeTheme]);
 
   React.useEffect(() => {
     setCodeInfo(normalizedCode, lines.length);
@@ -471,9 +488,7 @@ function CodeBlockContent({
           <code
             data-slot="code-block-code"
             className="block font-mono"
-            style={{
-              color: foreground ?? undefined,
-            }}
+            style={{ color: foreground ?? undefined }}
           >
             {lines.map((line, i) => {
               const tokens = highlightTokens?.[i];

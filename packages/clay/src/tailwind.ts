@@ -227,6 +227,21 @@ function buildPropertyBlocks(): Record<string, Record<string, string>> {
 type ThemeExtend = Record<string, Record<string, string>>;
 
 /**
+ * Tailwind namespace → `theme.extend.<bucket>` for the simple cases
+ * where the namespace maps cleanly to one bucket. `motion` and `default`
+ * have suffix/name-dependent rules and aren't here.
+ */
+const NS_TO_BUCKET: Partial<Record<TailwindNamespace, string>> = {
+  color: 'colors',
+  radius: 'borderRadius',
+  shadow: 'boxShadow',
+  font: 'fontFamily',
+  text: 'fontSize',
+  opacity: 'opacity',
+  blur: 'blur',
+};
+
+/**
  * Map a namespaced token to its `theme.extend` bucket. `motion` splits
  * by suffix because durations and easings live in separate buckets;
  * `default` covers the bare-utility case Tailwind exposes via
@@ -236,20 +251,11 @@ type ThemeExtend = Record<string, Record<string, string>>;
 function themeExtendBucket(
   token: ResolvedTokenSpec
 ): { readonly bucket: string; readonly key: string } | null {
-  const ns: TailwindNamespace | undefined = token.tailwindNamespace;
+  const ns = token.tailwindNamespace;
   if (!ns || ns === 'none') {
     return null;
   }
   const key = utilityName(token);
-  const NS_TO_BUCKET: Partial<Record<TailwindNamespace, string>> = {
-    color: 'colors',
-    radius: 'borderRadius',
-    shadow: 'boxShadow',
-    font: 'fontFamily',
-    text: 'fontSize',
-    opacity: 'opacity',
-    blur: 'blur',
-  };
   const bucket = NS_TO_BUCKET[ns];
   if (bucket) {
     return { bucket, key };

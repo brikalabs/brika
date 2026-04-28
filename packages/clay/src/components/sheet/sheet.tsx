@@ -3,22 +3,12 @@ import { Dialog as SheetPrimitive } from 'radix-ui';
 import * as React from 'react';
 
 import { cn } from '../../primitives/cn';
+import { withSlot } from '../../primitives/with-slot';
 
-function Sheet({ ...props }: Readonly<React.ComponentProps<typeof SheetPrimitive.Root>>) {
-  return <SheetPrimitive.Root data-slot="sheet" {...props} />;
-}
-
-function SheetTrigger({ ...props }: React.ComponentProps<typeof SheetPrimitive.Trigger>) {
-  return <SheetPrimitive.Trigger data-slot="sheet-trigger" {...props} />;
-}
-
-function SheetClose({ ...props }: React.ComponentProps<typeof SheetPrimitive.Close>) {
-  return <SheetPrimitive.Close data-slot="sheet-close" {...props} />;
-}
-
-function SheetPortal({ ...props }: Readonly<React.ComponentProps<typeof SheetPrimitive.Portal>>) {
-  return <SheetPrimitive.Portal data-slot="sheet-portal" {...props} />;
-}
+const Sheet = withSlot(SheetPrimitive.Root, 'sheet');
+const SheetTrigger = withSlot(SheetPrimitive.Trigger, 'sheet-trigger');
+const SheetClose = withSlot(SheetPrimitive.Close, 'sheet-close');
+const SheetPortal = withSlot(SheetPrimitive.Portal, 'sheet-portal');
 
 function SheetOverlay({
   className,

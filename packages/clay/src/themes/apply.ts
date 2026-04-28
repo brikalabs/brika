@@ -99,13 +99,8 @@ function applyEffectClasses(root: HTMLElement, effects: readonly string[]): void
 
 /**
  * Remove any injected theme stylesheet from the document. Idempotent.
- *
- * Backwards-compat shim for callers that previously consumed
- * `resetThemeVars(theme)`. The current implementation no longer needs the
- * theme reference (one global tag, one removal), but the parameter is
- * retained for source compatibility.
  */
-export function resetThemeVars(_theme?: ThemeConfig): void {
+export function resetThemeVars(): void {
   if (typeof document === 'undefined') {
     return;
   }
