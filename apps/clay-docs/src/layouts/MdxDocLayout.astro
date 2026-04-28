@@ -1,4 +1,5 @@
 ---
+import { Toaster } from '@brika/clay/components/toast';
 import { CopyPageMenu } from '~/components/docs/CopyPageMenu.tsx';
 import { OnThisPage } from '~/components/OnThisPage.tsx';
 import { repoTreeUrl } from '~/lib/github';
@@ -80,4 +81,5 @@ const componentSourceUrl = frontmatter.sourceFile
   <slot />
 
   <OnThisPage slot="rail" client:only="react" />
+  <Toaster client:only="react" />
 </DocLayout>
