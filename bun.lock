@@ -477,6 +477,7 @@
         "bump-version": "./src/index.ts",
         "publish-packages": "./src/publish.ts",
         "local-install": "./src/local-install.ts",
+        "find-deadcode": "./src/find-deadcode.ts",
       },
       "dependencies": {
         "@clack/prompts": "^1.0.1",
