@@ -52,7 +52,6 @@
       "apps/**/src/**/*.{html,vue,svelte,astro,mdx}",
       "packages/**/src/**/*.{html,vue,svelte,astro,mdx}",
       "!**/template/**",
-      "!apps/clay-docs/**/*.{astro,mdx}"
     ],
     "rules": {
       "recommended": false,
