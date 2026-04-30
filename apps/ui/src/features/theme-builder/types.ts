@@ -144,15 +144,15 @@ export interface ThemeColors {
   destructive: string;
   'destructive-foreground': string;
 
-  /* Data viz */
-  'data-1': string;
-  'data-2': string;
-  'data-3': string;
-  'data-4': string;
-  'data-5': string;
-  'data-6': string;
-  'data-7': string;
-  'data-8': string;
+  /* Data viz — optional; themes that omit these fall back to CSS defaults */
+  'data-1'?: string;
+  'data-2'?: string;
+  'data-3'?: string;
+  'data-4'?: string;
+  'data-5'?: string;
+  'data-6'?: string;
+  'data-7'?: string;
+  'data-8'?: string;
 
   /* Material-inspired additions — all optional. When a preset omits
      these, the CSS layer derives a sensible value via color-mix(). */

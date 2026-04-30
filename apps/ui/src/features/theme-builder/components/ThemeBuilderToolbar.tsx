@@ -108,30 +108,23 @@ export function ThemeBuilderToolbar({
     e.target.value = '';
   };
 
-  const renderStatusBadge = () => {
-    if (justSaved) {
+  function statusBadge() {
+    if (justSaved || (Boolean(savedId) && !isDirty)) {
       return (
         <Badge variant="outline" className="gap-1 border-success/30 text-success">
           <Check className="size-3" /> {t('toolbar.status.saved')}
         </Badge>
       );
     }
-    if (!savedId) {
-      return <Badge variant="outline">{t('toolbar.status.draft')}</Badge>;
-    }
-    if (isDirty) {
+    if (savedId) {
       return (
         <Badge variant="outline" className="gap-1 border-warning/30 text-warning">
           {t('toolbar.status.unsavedChanges')}
         </Badge>
       );
     }
-    return (
-      <Badge variant="outline" className="gap-1 border-success/30 text-success">
-        <Check className="size-3" /> {t('toolbar.status.saved')}
-      </Badge>
-    );
-  };
+    return <Badge variant="outline">{t('toolbar.status.draft')}</Badge>;
+  }
 
   const idLabel = savedId
     ? savedId
@@ -151,7 +144,7 @@ export function ThemeBuilderToolbar({
         <PageHeaderInfo>
           <div className="flex items-center gap-3">
             <PageHeaderTitle>{draft.name || t('page.defaultName')}</PageHeaderTitle>
-            {renderStatusBadge()}
+            {statusBadge()}
             {isActive && (
               <Badge variant="default" className="gap-1">
                 <Eye className="size-3" /> {t('toolbar.status.active')}
@@ -221,28 +214,37 @@ export function ThemeBuilderToolbar({
 
         <div className="ml-auto flex items-center gap-1">
           <div className="flex gap-0.5 rounded-md border bg-background p-0.5">
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={onUndo}
-              disabled={!canUndo}
-              title={t('toolbar.actions.undoTooltip')}
-              aria-label={t('toolbar.actions.undo')}
-              className="size-6"
-            >
-              <Undo2 />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={onRedo}
-              disabled={!canRedo}
-              title={t('toolbar.actions.redoTooltip')}
-              aria-label={t('toolbar.actions.redo')}
-              className="size-6"
-            >
-              <Redo2 />
-            </Button>
+            {(
+              [
+                {
+                  icon: Undo2,
+                  onClick: onUndo,
+                  disabled: !canUndo,
+                  title: t('toolbar.actions.undoTooltip'),
+                  label: t('toolbar.actions.undo'),
+                },
+                {
+                  icon: Redo2,
+                  onClick: onRedo,
+                  disabled: !canRedo,
+                  title: t('toolbar.actions.redoTooltip'),
+                  label: t('toolbar.actions.redo'),
+                },
+              ] as const
+            ).map(({ icon: Icon, onClick, disabled, title, label }) => (
+              <Button
+                key={label}
+                variant="ghost"
+                size="icon-sm"
+                onClick={onClick}
+                disabled={disabled}
+                title={title}
+                aria-label={label}
+                className="size-6"
+              >
+                <Icon />
+              </Button>
+            ))}
           </div>
 
           <Button variant="ghost" size="sm" onClick={handleImportClick} className="h-7 gap-1">

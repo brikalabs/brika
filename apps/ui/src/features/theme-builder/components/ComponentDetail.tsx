@@ -55,15 +55,16 @@ export function ComponentDetail({
   return (
     <div className="space-y-4">
       <header className="space-y-3">
-        <button
-          type="button"
+        <Button
+          variant="ghost"
+          size="xs"
           onClick={onBack}
-          className="-mx-1 flex items-center gap-1.5 rounded-control px-1 py-0.5 font-medium text-[10px] text-muted-foreground uppercase tracking-wider transition-colors hover:text-foreground"
+          className="-mx-1 font-medium text-[10px] text-muted-foreground uppercase tracking-wider hover:text-foreground"
           aria-label={t('components.backLabel')}
         >
           <ArrowLeft className="size-3" />
-          <span>{t('components.backShort', { defaultValue: t('components.backLabel') })}</span>
-        </button>
+          {t('components.backShort', { defaultValue: t('components.backLabel') })}
+        </Button>
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1 space-y-0.5">
             <h2 className="truncate font-semibold text-base">

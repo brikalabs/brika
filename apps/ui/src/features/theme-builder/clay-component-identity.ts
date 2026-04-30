@@ -11,23 +11,34 @@
 import type { TokenCategory } from '@brika/clay/tokens';
 import {
   AlertCircle,
+  BarChart2,
   BellRing,
   Box,
+  BracketsIcon,
+  ChevronDown,
+  ChevronsRight,
   ChevronsUpDown,
   Code2,
+  Combine,
+  Expand,
+  GalleryHorizontalEnd,
+  Gauge,
   Image,
   Info,
   Key,
   LayoutPanelLeft,
   LayoutPanelTop,
+  LayoutTemplate,
   type LucideIcon,
   Menu,
   Minus,
+  MoreHorizontal,
   MousePointerClick,
   PanelLeft,
   PanelTop,
   RectangleHorizontal,
   Rows3,
+  ScrollText,
   Shapes,
   SlidersHorizontal,
   SquareCheck,
@@ -41,25 +52,40 @@ import {
 import type { ReactNode } from 'react';
 import { COMPONENT_TOKEN_INDEX } from './clay-tokens';
 import {
+  AlertDialogPreview,
   AlertPreview,
   AvatarPreview,
   BadgePreview,
+  BreadcrumbPreview,
+  ButtonGroupPreview,
   ButtonPreview,
   CardPreview,
+  ChartPreview,
   CheckboxPreview,
   CodeBlockPreview,
+  CollapsiblePreview,
   DialogPreview,
+  EmptyStatePreview,
   IconPreview,
+  InputGroupPreview,
   InputPreview,
+  LabelPreview,
   MenuItemPreview,
   MenuPreview,
+  OverflowListPreview,
+  PageHeaderPreview,
   PasswordInputPreview,
   PopoverPreview,
+  ProgressDisplayPreview,
   ProgressPreview,
+  ScrollAreaPreview,
+  SectionLabelPreview,
+  SectionPreview,
   SelectPreview,
   SeparatorPreview,
   SheetPreview,
   SidebarPreview,
+  SkeletonPreview,
   SliderPreview,
   SwitchPreview,
   SwitchThumbPreview,
@@ -106,6 +132,21 @@ const IDENTITY: Record<string, Omit<ComponentIdentity, 'key'>> = {
   textarea: { icon: TextCursor, Preview: TextareaPreview },
   toast: { icon: BellRing, Preview: ToastPreview },
   tooltip: { icon: Info, Preview: TooltipPreview },
+  'alert-dialog': { icon: SquareStack, Preview: AlertDialogPreview },
+  breadcrumb: { icon: ChevronsRight, Preview: BreadcrumbPreview },
+  'button-group': { icon: GalleryHorizontalEnd, Preview: ButtonGroupPreview },
+  chart: { icon: BarChart2, Preview: ChartPreview },
+  collapsible: { icon: ChevronDown, Preview: CollapsiblePreview },
+  'empty-state': { icon: Expand, Preview: EmptyStatePreview },
+  'input-group': { icon: Combine, Preview: InputGroupPreview },
+  label: { icon: Type, Preview: LabelPreview },
+  'overflow-list': { icon: MoreHorizontal, Preview: OverflowListPreview },
+  'page-header': { icon: LayoutTemplate, Preview: PageHeaderPreview },
+  'progress-display': { icon: Gauge, Preview: ProgressDisplayPreview },
+  'scroll-area': { icon: ScrollText, Preview: ScrollAreaPreview },
+  section: { icon: BracketsIcon, Preview: SectionPreview },
+  'section-label': { icon: Shapes, Preview: SectionLabelPreview },
+  skeleton: { icon: Box, Preview: SkeletonPreview },
 };
 
 const FALLBACK_IDENTITY: Omit<ComponentIdentity, 'key'> = { icon: Box };
@@ -122,29 +163,48 @@ const GROUP_ORDER: readonly { id: string; members: readonly string[] }[] = [
     id: 'controls',
     members: [
       'button',
+      'button-group',
       'input',
+      'input-group',
       'textarea',
       'password-input',
       'select',
       'checkbox',
       'switch',
       'switch-thumb',
+      'collapsible',
       'tabs',
       'badge',
+      'label',
       'slider',
     ],
   },
   {
     id: 'surfaces',
-    members: ['card', 'alert', 'toast', 'avatar', 'separator', 'progress', 'code-block', 'icon'],
+    members: [
+      'card',
+      'section',
+      'section-label',
+      'alert',
+      'empty-state',
+      'toast',
+      'avatar',
+      'separator',
+      'progress',
+      'progress-display',
+      'skeleton',
+      'chart',
+      'code-block',
+      'icon',
+    ],
   },
   {
     id: 'overlays',
-    members: ['dialog', 'sheet', 'popover', 'menu', 'menu-item', 'tooltip'],
+    members: ['dialog', 'alert-dialog', 'sheet', 'popover', 'menu', 'menu-item', 'tooltip'],
   },
   {
     id: 'layout',
-    members: ['sidebar', 'table'],
+    members: ['sidebar', 'table', 'page-header', 'breadcrumb', 'scroll-area', 'overflow-list'],
   },
 ];
 
@@ -159,16 +219,14 @@ function buildGroups(): readonly ComponentGroup[] {
   for (const g of GROUP_ORDER) {
     const items: ComponentIdentity[] = [];
     for (const name of g.members) {
-      if (COMPONENT_TOKEN_INDEX[name]) {
-        items.push(identityFor(name));
-        seen.add(name);
-      }
+      items.push(identityFor(name));
+      seen.add(name);
     }
     if (items.length > 0) {
       out.push({ id: g.id, items });
     }
   }
-  // Anything clay defines that the curated groups missed: bucket under "other".
+  // Any token-bearing component not in the curated groups: bucket under "other".
   const leftover = Object.keys(COMPONENT_TOKEN_INDEX).filter((n) => !seen.has(n));
   if (leftover.length > 0) {
     out.push({

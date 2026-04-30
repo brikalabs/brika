@@ -82,14 +82,25 @@ function PresetCard({ preset, onPick }: Readonly<PresetCardProps>) {
         </div>
       </div>
 
-      {/* Data swatch strip */}
-      <div className="flex h-2">
-        {(
-          ['data-1', 'data-2', 'data-3', 'data-4', 'data-5', 'data-6', 'data-7', 'data-8'] as const
-        ).map((k) => (
-          <span key={k} className="flex-1" style={{ backgroundColor: light[k] }} />
-        ))}
-      </div>
+      {/* Data swatch strip — only rendered when the preset defines data colors */}
+      {light['data-1'] && (
+        <div className="flex h-2">
+          {(
+            [
+              'data-1',
+              'data-2',
+              'data-3',
+              'data-4',
+              'data-5',
+              'data-6',
+              'data-7',
+              'data-8',
+            ] as const
+          ).map((k) => (
+            <span key={k} className="flex-1" style={{ backgroundColor: light[k] }} />
+          ))}
+        </div>
+      )}
 
       <div className="space-y-1 border-t p-3">
         <div className="truncate font-medium text-sm">{preset.name}</div>

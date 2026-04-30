@@ -13,10 +13,13 @@
  */
 
 import { cn } from '@brika/clay';
+import { getRegistryDefaults } from '@brika/clay/themes';
 import type { CSSProperties, ReactNode } from 'react';
 import { useMemo } from 'react';
 import { type ThemeVars, themeToVars } from '../theme-css';
 import type { ThemeConfig } from '../types';
+
+const REGISTRY_DEFAULTS = getRegistryDefaults();
 
 // React's CSSProperties doesn't declare CSS custom properties (`--foo`),
 // but they're valid in the `style` prop. Intersect so extra vars pass the
@@ -44,18 +47,19 @@ export function ThemedSurface({
 }: Readonly<ThemedSurfaceProps>) {
   const themedStyle = useMemo<StyleWithVars>(
     () => ({
+      ...REGISTRY_DEFAULTS.light,
+      ...(mode === 'dark' ? REGISTRY_DEFAULTS.dark : {}),
       ...themeToVars(theme, mode),
       fontFamily: 'var(--font-sans)',
-      ...style,
     }),
-    [theme, mode, style]
+    [theme, mode]
   );
 
   return (
     <div
       data-preview={variant}
       className={cn('bg-background text-foreground', mode === 'dark' && 'dark', className)}
-      style={themedStyle}
+      style={{ ...themedStyle, ...style }}
     >
       {children}
     </div>

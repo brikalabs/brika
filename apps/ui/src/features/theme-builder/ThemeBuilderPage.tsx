@@ -18,6 +18,7 @@ import { ControlsPanel } from './components/ControlsPanel';
 import { PresetPicker } from './components/PresetPicker';
 import { PreviewCanvas } from './components/PreviewCanvas';
 import { ThemeBuilderToolbar } from './components/ThemeBuilderToolbar';
+import { ThemeGenerator } from './components/ThemeGenerator';
 import { ThemeList } from './components/ThemeList';
 import { useThemeBuilder } from './use-theme-builder';
 
@@ -53,7 +54,12 @@ export function ThemeBuilderPage() {
           activeThemeName={tb.activeThemeName}
           onSelect={tb.handleSelect}
           onNew={tb.handleNew}
-          presetTrigger={<PresetPicker onPick={tb.handlePickPreset} />}
+          presetTrigger={
+            <div className="space-y-1.5">
+              <PresetPicker onPick={tb.handlePickPreset} />
+              <ThemeGenerator onGenerate={tb.handleGenerate} />
+            </div>
+          }
         />
         <div className="w-96 shrink-0 border-r">
           <ControlsPanel draft={tb.draft} onChange={tb.handleChange} />

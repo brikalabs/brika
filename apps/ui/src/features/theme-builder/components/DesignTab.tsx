@@ -50,15 +50,9 @@ const SECTIONS: readonly SectionMeta[] = [
 const STORAGE_KEY = 'brika.theme-builder.design-section';
 const DEFAULT_SECTION: SectionId = 'typography';
 
+const SECTION_ID_SET = new Set<string>(SECTIONS.map((s) => s.id));
 function isSectionId(value: unknown): value is SectionId {
-  return (
-    value === 'typography' ||
-    value === 'geometry' ||
-    value === 'components' ||
-    value === 'spacing' ||
-    value === 'effects' ||
-    value === 'atmosphere'
-  );
+  return typeof value === 'string' && SECTION_ID_SET.has(value);
 }
 
 function readActiveSection(): SectionId {

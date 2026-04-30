@@ -76,7 +76,11 @@
     "stopped": "Le hub a été arrêté."
   },
   "themes": {
+    "builtIn": "Intégrés",
+    "custom": "Personnalisés",
+    "customize": "Personnaliser",
     "default": "Par défaut",
+    "brika": "Brika",
     "ocean": "Océan",
     "forest": "Forêt",
     "sunset": "Coucher de soleil",
@@ -86,6 +90,7 @@
     "solarized": "Solarized",
     "candy": "Bonbon",
     "dracula": "Dracula",
+    "synthwave": "Synthwave",
     "mono": "Mono",
     "brutalist": "Brutaliste",
     "editorial": "Éditorial",
