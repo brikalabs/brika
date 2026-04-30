@@ -76,7 +76,11 @@
     "stopped": "Hub has been stopped."
   },
   "themes": {
+    "builtIn": "Built-in",
+    "custom": "Custom",
+    "customize": "Customize",
     "default": "Default",
+    "brika": "Brika",
     "ocean": "Ocean",
     "forest": "Forest",
     "sunset": "Sunset",
@@ -86,6 +90,7 @@
     "solarized": "Solarized",
     "candy": "Candy",
     "dracula": "Dracula",
+    "synthwave": "Synthwave",
     "mono": "Mono",
     "brutalist": "Brutalist",
     "editorial": "Editorial",

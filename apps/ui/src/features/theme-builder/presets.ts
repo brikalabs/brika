@@ -33,6 +33,13 @@ export function createThemeFromPreset(
     updatedAt: now,
     radius: preset.radius ?? 0.75,
     corners: preset.corners ?? 'round',
+    spacing: preset.spacing,
+    textBase: preset.textBase,
+    borderWidth: preset.borderWidth,
+    backdropBlur: preset.backdropBlur,
+    ringWidth: preset.ringWidth,
+    ringOffset: preset.ringOffset,
+    motion: preset.motion,
     fonts: {
       sans: preset.fonts?.sans ?? sansFont ?? 'Inter, ui-sans-serif, system-ui, sans-serif',
       mono:
@@ -44,5 +51,10 @@ export function createThemeFromPreset(
       light: { ...preset.colors.light },
       dark: { ...preset.colors.dark },
     },
+    componentTokens: preset.componentTokens
+      ? Object.fromEntries(
+          Object.entries(preset.componentTokens).map(([k, v]) => [k, { ...v }])
+        )
+      : undefined,
   };
 }

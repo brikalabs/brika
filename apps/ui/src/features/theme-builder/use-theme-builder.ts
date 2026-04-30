@@ -135,6 +135,15 @@ export function useThemeBuilder() {
     [history]
   );
 
+  const handleGenerate = useCallback(
+    (theme: ThemeConfig) => {
+      history.reset(theme);
+      setSavedId(null);
+      setLastSavedMs(null);
+    },
+    [history]
+  );
+
   const handleSelect = useCallback(
     (theme: ThemeConfig) => {
       history.reset(theme);
@@ -208,6 +217,7 @@ export function useThemeBuilder() {
     handleDuplicate,
     handleNew,
     handlePickPreset,
+    handleGenerate,
     handleSelect,
     handleDelete,
     handleApply,

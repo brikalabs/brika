@@ -4,7 +4,7 @@
  * to `TokenField` for the actual value editor.
  */
 
-import { cn } from '@brika/clay';
+import { Button, cn } from '@brika/clay';
 import type { ResolvedTokenSpec } from '@brika/clay/tokens';
 import { RotateCcw } from 'lucide-react';
 import { useCallback } from 'react';
@@ -52,20 +52,19 @@ export function TokenRow({
           <code className="truncate font-mono text-[10px] text-muted-foreground">{spec.name}</code>
           {overridden && <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-primary" />}
         </div>
-        <button
-          type="button"
+        <Button
+          variant="ghost"
+          size="icon-sm"
           onClick={reset}
           disabled={!overridden}
           aria-label="Reset"
           className={cn(
-            'flex size-5 shrink-0 items-center justify-center rounded-control transition-[opacity,background-color,color]',
-            overridden
-              ? 'text-muted-foreground hover:bg-muted hover:text-foreground'
-              : 'pointer-events-none text-muted-foreground/40'
+            'size-5 text-muted-foreground',
+            !overridden && 'pointer-events-none opacity-40'
           )}
         >
           <RotateCcw className="size-3" />
-        </button>
+        </Button>
       </div>
       <p className="text-[10px] text-muted-foreground leading-snug">{spec.description}</p>
       <TokenField

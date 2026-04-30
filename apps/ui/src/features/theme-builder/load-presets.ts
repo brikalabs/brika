@@ -11,17 +11,32 @@
 
 import type { ThemeConfig } from '@brika/clay/themes';
 import { builtInThemes } from '@brika/clay/themes/registry';
-import type { CornerStyle, ThemeColors } from './types';
+import type { CornerStyle, MotionStyle, ThemeColors } from './types';
 
 export interface ThemePreset {
   id: string;
   name: string;
   description: string;
+  accentSwatches: readonly string[];
+  colors: { light: ThemeColors; dark: ThemeColors };
+  /** Base border-radius in rem */
   radius?: number;
   corners?: CornerStyle;
+  /** Base spacing unit in rem */
+  spacing?: number;
+  /** Base text size in rem */
+  textBase?: number;
+  /** Border width in px */
+  borderWidth?: number;
+  /** Backdrop blur in px */
+  backdropBlur?: number;
+  /** Focus ring width in px */
+  ringWidth?: number;
+  /** Focus ring offset in px */
+  ringOffset?: number;
+  motion?: MotionStyle;
   fonts?: { sans?: string; mono?: string };
-  colors: { light: ThemeColors; dark: ThemeColors };
-  accentSwatches: readonly string[];
+  componentTokens?: Record<string, Record<string, string>>;
 }
 
 const REQUIRED_COLOR_KEYS: readonly (keyof ThemeColors)[] = [
@@ -35,14 +50,6 @@ const REQUIRED_COLOR_KEYS: readonly (keyof ThemeColors)[] = [
   'input',
   'ring',
   'destructive',
-  'data-1',
-  'data-2',
-  'data-3',
-  'data-4',
-  'data-5',
-  'data-6',
-  'data-7',
-  'data-8',
 ];
 
 function assertThemeColors(
@@ -53,6 +60,31 @@ function assertThemeColors(
       throw new TypeError(`[theme-builder] preset missing required color key: ${key}`);
     }
   }
+}
+
+/** Convert camelCase to kebab-case ("borderWidth" → "border-width"). */
+function camelToKebab(str: string): string {
+  return str.replaceAll(/([A-Z])/g, (ch) => `-${ch.toLowerCase()}`);
+}
+
+/** Parse a CSS length string (e.g. "0.5rem", "2px") to a plain number. */
+function parseLength(value: string | undefined): number | undefined {
+  if (!value) return undefined;
+  const n = Number.parseFloat(value);
+  return Number.isNaN(n) ? undefined : n;
+}
+
+/**
+ * Map a raw CSS duration string to the nearest MotionStyle bucket.
+ * Thresholds are the midpoints between each recipe's canonical duration:
+ *   snappy=120ms · smooth=220ms · stately=360ms
+ */
+function guessMotion(duration: string | undefined): MotionStyle | undefined {
+  const ms = parseLength(duration);
+  if (ms === undefined) return undefined;
+  if (ms <= 150) return 'snappy';
+  if (ms <= 290) return 'smooth';
+  return 'stately';
 }
 
 function toPreset(theme: ThemeConfig): ThemePreset | null {
@@ -69,23 +101,43 @@ function toPreset(theme: ThemeConfig): ThemePreset | null {
     console.warn(`[theme-builder] Skipping invalid Clay preset: ${theme.id}`, error);
     return null;
   }
+
+  const geo = theme.geometry;
+  const componentTokens = theme.components
+    ? Object.fromEntries(
+        Object.entries(theme.components).map(([component, tokens]) => [
+          component,
+          Object.fromEntries(Object.entries(tokens).map(([k, v]) => [camelToKebab(k), v])),
+        ])
+      )
+    : undefined;
+
   return {
     id: theme.id,
     name: theme.name,
     description: theme.description,
     accentSwatches: theme.accentSwatches,
     colors: { light, dark },
+    radius: parseLength(geo?.radius),
+    spacing: parseLength(geo?.spacing),
+    textBase: parseLength(geo?.textBase),
+    backdropBlur: parseLength(geo?.backdropBlur),
+    fonts:
+      geo?.fontSans || geo?.fontMono
+        ? { sans: geo.fontSans, mono: geo.fontMono }
+        : undefined,
+    borderWidth: parseLength(theme.borders?.width),
+    motion: guessMotion(theme.motion?.duration),
+    ringWidth: parseLength(theme.focus?.width),
+    ringOffset: parseLength(theme.focus?.offset),
+    componentTokens,
   };
 }
 
 function sortPresets(presets: readonly ThemePreset[]): ThemePreset[] {
   return [...presets].sort((a, b) => {
-    if (a.id === 'default') {
-      return -1;
-    }
-    if (b.id === 'default') {
-      return 1;
-    }
+    if (a.id === 'default') return -1;
+    if (b.id === 'default') return 1;
     return a.name.localeCompare(b.name);
   });
 }

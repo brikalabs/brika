@@ -110,16 +110,8 @@ function RingSlider({
         {label}
       </span>
       <div className="flex items-center gap-2">
-        <input
-          type="range"
-          value={value}
-          onChange={(e) => onChange(Number(e.target.value))}
-          min={0}
-          max={6}
-          step={0.5}
-          className="h-1 flex-1 cursor-pointer appearance-none rounded-full bg-muted accent-primary"
-        />
-        <span className="w-9 text-right font-mono text-[10px] tabular-nums">{value}px</span>
+        <Slider value={value} onChange={onChange} min={0} max={6} step={0.5} className="flex-1" />
+        <SliderValue value={value} onChange={onChange} min={0} max={6} step={0.5} unit="px" width="w-9" />
       </div>
     </label>
   );
