@@ -364,20 +364,53 @@
       "textarea": { "label": "Zone de texte", "description": "Champ texte multi-ligne." },
       "toast": { "label": "Toast", "description": "Notification éphémère." },
       "tooltip": { "label": "Infobulle", "description": "Aide au survol." },
-      "alert-dialog": { "label": "Dialogue d'alerte", "description": "Modal de confirmation bloquant." },
+      "alert-dialog": {
+        "label": "Dialogue d'alerte",
+        "description": "Modal de confirmation bloquant."
+      },
       "breadcrumb": { "label": "Fil d'Ariane", "description": "Trace hiérarchique de navigation." },
-      "button-group": { "label": "Groupe de boutons", "description": "Boutons accolés partageant une bordure." },
-      "chart": { "label": "Graphique", "description": "Graphique en aire pour métriques temporelles." },
+      "button-group": {
+        "label": "Groupe de boutons",
+        "description": "Boutons accolés partageant une bordure."
+      },
+      "chart": {
+        "label": "Graphique",
+        "description": "Graphique en aire pour métriques temporelles."
+      },
       "collapsible": { "label": "Réductible", "description": "Section expansible et réductible." },
-      "empty-state": { "label": "État vide", "description": "Placeholder pour les vues sans données." },
-      "input-group": { "label": "Groupe de champ", "description": "Champ avec addon avant ou après." },
-      "label": { "label": "Étiquette", "description": "Étiquette de champ de formulaire accessible." },
-      "overflow-list": { "label": "Liste débordante", "description": "Liste qui masque les éléments en excès." },
-      "page-header": { "label": "En-tête de page", "description": "Titre et description d'une page." },
-      "progress-display": { "label": "Affichage de progression", "description": "Progression par étapes avec journal." },
-      "scroll-area": { "label": "Zone de défilement", "description": "Conteneur défilable avec style personnalisé." },
+      "empty-state": {
+        "label": "État vide",
+        "description": "Placeholder pour les vues sans données."
+      },
+      "input-group": {
+        "label": "Groupe de champ",
+        "description": "Champ avec addon avant ou après."
+      },
+      "label": {
+        "label": "Étiquette",
+        "description": "Étiquette de champ de formulaire accessible."
+      },
+      "overflow-list": {
+        "label": "Liste débordante",
+        "description": "Liste qui masque les éléments en excès."
+      },
+      "page-header": {
+        "label": "En-tête de page",
+        "description": "Titre et description d'une page."
+      },
+      "progress-display": {
+        "label": "Affichage de progression",
+        "description": "Progression par étapes avec journal."
+      },
+      "scroll-area": {
+        "label": "Zone de défilement",
+        "description": "Conteneur défilable avec style personnalisé."
+      },
       "section": { "label": "Section", "description": "Section sémantique avec en-tête." },
-      "section-label": { "label": "Étiquette de section", "description": "Séparateur de groupe en petites majuscules." },
+      "section-label": {
+        "label": "Étiquette de section",
+        "description": "Séparateur de groupe en petites majuscules."
+      },
       "skeleton": { "label": "Squelette", "description": "Placeholder de chargement animé." }
     }
   },
