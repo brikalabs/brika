@@ -52,9 +52,7 @@ export function createThemeFromPreset(
       dark: { ...preset.colors.dark },
     },
     componentTokens: preset.componentTokens
-      ? Object.fromEntries(
-          Object.entries(preset.componentTokens).map(([k, v]) => [k, { ...v }])
-        )
+      ? Object.fromEntries(Object.entries(preset.componentTokens).map(([k, v]) => [k, { ...v }]))
       : undefined,
   };
 }

@@ -1,4 +1,13 @@
-import { Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Slider, SliderValue } from '@brika/clay';
+import {
+  Input,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Slider,
+  SliderValue,
+} from '@brika/clay';
 import type { ReactNode } from 'react';
 import { useCallback } from 'react';
 import type { CornerStyle } from '../types';
@@ -29,8 +38,24 @@ export function NumericWidget({ cfg, value, onChange }: Readonly<NumericWidgetPr
   );
   return (
     <div className="flex items-center gap-2">
-      <Slider value={parsed} onChange={handleChange} min={cfg.min} max={cfg.max} step={cfg.step} className="flex-1" />
-      <SliderValue value={parsed} onChange={handleChange} min={cfg.min} max={cfg.max} step={cfg.step} unit={cfg.unit || undefined} width="w-16" decimals={cfg.decimals} />
+      <Slider
+        value={parsed}
+        onChange={handleChange}
+        min={cfg.min}
+        max={cfg.max}
+        step={cfg.step}
+        className="flex-1"
+      />
+      <SliderValue
+        value={parsed}
+        onChange={handleChange}
+        min={cfg.min}
+        max={cfg.max}
+        step={cfg.step}
+        unit={cfg.unit || undefined}
+        width="w-16"
+        decimals={cfg.decimals}
+      />
     </div>
   );
 }
@@ -74,10 +99,14 @@ interface SelectWidgetProps {
 export function SelectWidget({ value, options, onChange }: Readonly<SelectWidgetProps>): ReactNode {
   return (
     <Select value={options.includes(value) ? value : options[0]} onValueChange={onChange}>
-      <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+      <SelectTrigger className="h-7 text-xs">
+        <SelectValue />
+      </SelectTrigger>
       <SelectContent>
         {options.map((opt) => (
-          <SelectItem key={opt} value={opt} className="text-xs">{opt}</SelectItem>
+          <SelectItem key={opt} value={opt} className="text-xs">
+            {opt}
+          </SelectItem>
         ))}
       </SelectContent>
     </Select>
@@ -95,7 +124,10 @@ export function TextWidget({ value, placeholder, onChange }: Readonly<TextWidget
     <Input
       value={value}
       placeholder={placeholder}
-      onChange={(e) => { const v = e.currentTarget.value; onChange(v === '' ? undefined : v); }}
+      onChange={(e) => {
+        const v = e.currentTarget.value;
+        onChange(v === '' ? undefined : v);
+      }}
       className="h-7 font-mono text-[11px]"
     />
   );

@@ -72,8 +72,12 @@ export function AlertDialogPreview() {
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter className="gap-2">
-        <Button size="xs" variant="ghost">Cancel</Button>
-        <Button size="xs" variant="destructive">Delete</Button>
+        <Button size="xs" variant="ghost">
+          Cancel
+        </Button>
+        <Button size="xs" variant="destructive">
+          Delete
+        </Button>
       </AlertDialogFooter>
     </div>
   );

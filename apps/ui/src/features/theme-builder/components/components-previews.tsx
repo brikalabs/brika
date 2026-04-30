@@ -1,3 +1,3 @@
 export * from './previews-controls';
-export * from './previews-overlays';
 export * from './previews-display';
+export * from './previews-overlays';

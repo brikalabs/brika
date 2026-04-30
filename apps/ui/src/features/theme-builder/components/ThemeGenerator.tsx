@@ -13,6 +13,7 @@
 
 import {
   Button,
+  cn,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -21,19 +22,23 @@ import {
   DialogTrigger,
   Input,
   Label,
-  cn,
 } from '@brika/clay';
 import { Wand2 } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { accentSwatchesFor, generateTheme, type GenerateOptions, type GenerateStyle } from '../generate-theme';
 import { parseHex } from '../color-utils';
+import {
+  accentSwatchesFor,
+  type GenerateOptions,
+  type GenerateStyle,
+  generateTheme,
+} from '../generate-theme';
 import type { ThemeConfig } from '../types';
 
 const STYLE_OPTIONS: { id: GenerateStyle; label: string; hint: string }[] = [
   { id: 'balanced', label: 'Balanced', hint: 'Subtle tint on surfaces' },
-  { id: 'vibrant',  label: 'Vibrant',  hint: 'Stronger hue presence' },
-  { id: 'tinted',   label: 'Tinted',   hint: 'Full-surface color wash' },
+  { id: 'vibrant', label: 'Vibrant', hint: 'Stronger hue presence' },
+  { id: 'tinted', label: 'Tinted', hint: 'Full-surface color wash' },
 ];
 
 const RADIUS_PRESETS = [
@@ -83,7 +88,10 @@ function ColorInput({ value, onChange }: Readonly<ColorInputProps>) {
   return (
     <div className="flex items-center gap-2">
       <div className="relative size-8 shrink-0 overflow-hidden rounded-control border shadow-sm">
-        <div className="absolute inset-0" style={{ backgroundColor: hexOk ? value : DEFAULT_PRIMARY }} />
+        <div
+          className="absolute inset-0"
+          style={{ backgroundColor: hexOk ? value : DEFAULT_PRIMARY }}
+        />
         <input
           type="color"
           value={hexOk ? value : DEFAULT_PRIMARY}
@@ -151,14 +159,17 @@ export function ThemeGenerator({ onGenerate, trigger }: Readonly<ThemeGeneratorP
         <DialogHeader className="border-b p-5">
           <DialogTitle>{t('generator.title', { defaultValue: 'Generate a theme' })}</DialogTitle>
           <DialogDescription>
-            {t('generator.description', { defaultValue: 'Pick a primary color and a style — all tokens are derived automatically from Clay\'s token registry.' })}
+            {t('generator.description', {
+              defaultValue:
+                "Pick a primary color and a style — all tokens are derived automatically from Clay's token registry.",
+            })}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-5 p-5">
           {/* Primary color */}
           <div className="space-y-2">
-            <Label className="text-xs font-medium">
+            <Label className="font-medium text-xs">
               {t('generator.primaryLabel', { defaultValue: 'Primary color' })}
             </Label>
             <ColorInput value={primary} onChange={setPrimary} />
@@ -167,7 +178,7 @@ export function ThemeGenerator({ onGenerate, trigger }: Readonly<ThemeGeneratorP
 
           {/* Style */}
           <div className="space-y-2">
-            <Label className="text-xs font-medium">
+            <Label className="font-medium text-xs">
               {t('generator.styleLabel', { defaultValue: 'Surface tint' })}
             </Label>
             <div className="grid grid-cols-3 gap-1.5">
@@ -193,7 +204,7 @@ export function ThemeGenerator({ onGenerate, trigger }: Readonly<ThemeGeneratorP
           {/* Radius */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label className="text-xs font-medium">
+              <Label className="font-medium text-xs">
                 {t('generator.radiusLabel', { defaultValue: 'Corner radius' })}
               </Label>
               <span className="font-mono text-[10px] text-muted-foreground">
@@ -221,7 +232,7 @@ export function ThemeGenerator({ onGenerate, trigger }: Readonly<ThemeGeneratorP
 
           {/* Name */}
           <div className="space-y-2">
-            <Label className="text-xs font-medium">
+            <Label className="font-medium text-xs">
               {t('generator.nameLabel', { defaultValue: 'Theme name' })}
             </Label>
             <Input

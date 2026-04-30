@@ -127,9 +127,15 @@ export function SliderPreview() {
 export function ButtonGroupPreview() {
   return (
     <ButtonGroup>
-      <Button variant="outline" size="sm">Day</Button>
-      <Button variant="outline" size="sm">Week</Button>
-      <Button variant="outline" size="sm">Month</Button>
+      <Button variant="outline" size="sm">
+        Day
+      </Button>
+      <Button variant="outline" size="sm">
+        Week
+      </Button>
+      <Button variant="outline" size="sm">
+        Month
+      </Button>
     </ButtonGroup>
   );
 }
@@ -137,7 +143,9 @@ export function ButtonGroupPreview() {
 export function InputGroupPreview() {
   return (
     <InputGroup className="w-52">
-      <InputGroupAddon><Search className="size-3.5" /></InputGroupAddon>
+      <InputGroupAddon>
+        <Search className="size-3.5" />
+      </InputGroupAddon>
       <InputGroupInput placeholder="Search…" className="h-8 text-xs" />
     </InputGroup>
   );
@@ -146,8 +154,15 @@ export function InputGroupPreview() {
 export function LabelPreview() {
   return (
     <div className="w-48 space-y-1.5">
-      <Label htmlFor="preview-label" className="text-xs">Email address</Label>
-      <Input id="preview-label" type="email" placeholder="you@example.com" className="h-8 text-xs" />
+      <Label htmlFor="preview-label" className="text-xs">
+        Email address
+      </Label>
+      <Input
+        id="preview-label"
+        type="email"
+        placeholder="you@example.com"
+        className="h-8 text-xs"
+      />
     </div>
   );
 }

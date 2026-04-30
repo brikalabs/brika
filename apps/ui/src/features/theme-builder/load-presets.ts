@@ -122,10 +122,7 @@ function toPreset(theme: ThemeConfig): ThemePreset | null {
     spacing: parseLength(geo?.spacing),
     textBase: parseLength(geo?.textBase),
     backdropBlur: parseLength(geo?.backdropBlur),
-    fonts:
-      geo?.fontSans || geo?.fontMono
-        ? { sans: geo.fontSans, mono: geo.fontMono }
-        : undefined,
+    fonts: geo?.fontSans || geo?.fontMono ? { sans: geo.fontSans, mono: geo.fontMono } : undefined,
     borderWidth: parseLength(theme.borders?.width),
     motion: guessMotion(theme.motion?.duration),
     ringWidth: parseLength(theme.focus?.width),

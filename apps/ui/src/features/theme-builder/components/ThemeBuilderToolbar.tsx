@@ -216,11 +216,32 @@ export function ThemeBuilderToolbar({
           <div className="flex gap-0.5 rounded-md border bg-background p-0.5">
             {(
               [
-                { icon: Undo2, onClick: onUndo, disabled: !canUndo, title: t('toolbar.actions.undoTooltip'), label: t('toolbar.actions.undo') },
-                { icon: Redo2, onClick: onRedo, disabled: !canRedo, title: t('toolbar.actions.redoTooltip'), label: t('toolbar.actions.redo') },
+                {
+                  icon: Undo2,
+                  onClick: onUndo,
+                  disabled: !canUndo,
+                  title: t('toolbar.actions.undoTooltip'),
+                  label: t('toolbar.actions.undo'),
+                },
+                {
+                  icon: Redo2,
+                  onClick: onRedo,
+                  disabled: !canRedo,
+                  title: t('toolbar.actions.redoTooltip'),
+                  label: t('toolbar.actions.redo'),
+                },
               ] as const
             ).map(({ icon: Icon, onClick, disabled, title, label }) => (
-              <Button key={label} variant="ghost" size="icon-sm" onClick={onClick} disabled={disabled} title={title} aria-label={label} className="size-6">
+              <Button
+                key={label}
+                variant="ghost"
+                size="icon-sm"
+                onClick={onClick}
+                disabled={disabled}
+                title={title}
+                aria-label={label}
+                className="size-6"
+              >
                 <Icon />
               </Button>
             ))}

@@ -53,14 +53,7 @@ import {
   TableHeader,
   TableRow,
 } from '@brika/clay';
-import {
-  AlertTriangle,
-  ChevronDown,
-  Inbox,
-  LayoutDashboard,
-  Search,
-  Settings,
-} from 'lucide-react';
+import { AlertTriangle, ChevronDown, Inbox, LayoutDashboard, Search, Settings } from 'lucide-react';
 
 export function CardPreview() {
   return (
@@ -223,7 +216,7 @@ export function ProgressDisplayPreview() {
     <div className="w-56 space-y-2">
       <div className="flex items-center justify-between text-xs">
         <span className="text-muted-foreground">Installing…</span>
-        <span className="font-medium tabular-nums text-primary">65%</span>
+        <span className="font-medium text-primary tabular-nums">65%</span>
       </div>
       <Progress value={65} className="h-1.5" />
       <div className="max-h-12 overflow-auto rounded border bg-muted/40 p-1.5 font-mono text-[9px] text-muted-foreground">
@@ -240,7 +233,9 @@ export function ScrollAreaPreview() {
     <ScrollArea className="h-20 w-40 rounded-control border">
       <div className="p-2">
         {items.map((item) => (
-          <div key={item} className="py-1 text-xs">{item}</div>
+          <div key={item} className="py-1 text-xs">
+            {item}
+          </div>
         ))}
       </div>
     </ScrollArea>
@@ -250,7 +245,9 @@ export function ScrollAreaPreview() {
 export function EmptyStatePreview() {
   return (
     <EmptyState className="w-52">
-      <EmptyStateIcon><Inbox className="size-5" /></EmptyStateIcon>
+      <EmptyStateIcon>
+        <Inbox className="size-5" />
+      </EmptyStateIcon>
       <EmptyStateTitle className="text-sm">Nothing here</EmptyStateTitle>
       <EmptyStateDescription className="text-xs">No items found.</EmptyStateDescription>
     </EmptyState>
@@ -261,11 +258,17 @@ export function BreadcrumbPreview() {
   return (
     <Breadcrumb>
       <BreadcrumbList>
-        <BreadcrumbItem><BreadcrumbLink href="#">Home</BreadcrumbLink></BreadcrumbItem>
+        <BreadcrumbItem>
+          <BreadcrumbLink href="#">Home</BreadcrumbLink>
+        </BreadcrumbItem>
         <BreadcrumbSeparator />
-        <BreadcrumbItem><BreadcrumbLink href="#">Settings</BreadcrumbLink></BreadcrumbItem>
+        <BreadcrumbItem>
+          <BreadcrumbLink href="#">Settings</BreadcrumbLink>
+        </BreadcrumbItem>
         <BreadcrumbSeparator />
-        <BreadcrumbItem><BreadcrumbPage>Themes</BreadcrumbPage></BreadcrumbItem>
+        <BreadcrumbItem>
+          <BreadcrumbPage>Themes</BreadcrumbPage>
+        </BreadcrumbItem>
       </BreadcrumbList>
     </Breadcrumb>
   );
@@ -274,7 +277,7 @@ export function BreadcrumbPreview() {
 export function CollapsiblePreview() {
   return (
     <Collapsible defaultOpen className="w-52 rounded-control border">
-      <CollapsibleTrigger className="flex w-full items-center justify-between px-3 py-2 text-xs font-medium">
+      <CollapsibleTrigger className="flex w-full items-center justify-between px-3 py-2 font-medium text-xs">
         Advanced options
         <ChevronDown className="size-3 text-muted-foreground" />
       </CollapsibleTrigger>
@@ -319,7 +322,9 @@ export function SectionLabelPreview() {
     <div className="w-52 space-y-3">
       <SectionLabel>Installed</SectionLabel>
       <div className="h-px rounded bg-border" />
-      <SectionLabel tone="warning" icon={AlertTriangle}>Needs attention</SectionLabel>
+      <SectionLabel tone="warning" icon={AlertTriangle}>
+        Needs attention
+      </SectionLabel>
     </div>
   );
 }
