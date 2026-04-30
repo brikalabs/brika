@@ -89,12 +89,16 @@ function NonColorWidget({ spec, component, draft, onTokenChange }: Readonly<NonC
   const stored = draft.componentTokens?.[component]?.[suffix];
   const effective = (stored !== undefined ? String(stored) : undefined) ?? spec.defaultLight;
 
-  if (spec.type === 'corner-shape')
+  if (spec.type === 'corner-shape') {
     return <CornerShapeWidget value={effective} onChange={setValue} />;
+  }
   const selectOpts = SELECT_OPTIONS[spec.type];
-  if (selectOpts)
+  if (selectOpts) {
     return <SelectWidget value={effective} options={selectOpts} onChange={setValue} />;
+  }
   const numeric = NUMERIC_BY_TYPE[spec.type];
-  if (numeric) return <NumericWidget cfg={numeric} value={effective} onChange={setValue} />;
+  if (numeric) {
+    return <NumericWidget cfg={numeric} value={effective} onChange={setValue} />;
+  }
   return <TextWidget value={effective} placeholder={spec.defaultLight} onChange={setValue} />;
 }

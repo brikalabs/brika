@@ -57,7 +57,9 @@ interface SwatchStripProps {
 
 function SwatchStrip({ primary }: Readonly<SwatchStripProps>) {
   const swatches = useMemo(() => accentSwatchesFor(primary), [primary]);
-  if (swatches.length === 0) return null;
+  if (swatches.length === 0) {
+    return null;
+  }
   return (
     <div className="flex h-6 overflow-hidden rounded-control">
       {swatches.map((color) => (
@@ -134,7 +136,9 @@ export function ThemeGenerator({ onGenerate, trigger }: Readonly<ThemeGeneratorP
   const valid = parseHex(primary) !== null;
 
   const handleGenerate = useCallback(() => {
-    if (!valid) return;
+    if (!valid) {
+      return;
+    }
     const options: GenerateOptions = {
       primary,
       radius,

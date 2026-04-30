@@ -62,7 +62,9 @@ export function NumericWidget({ cfg, value, onChange }: Readonly<NumericWidgetPr
 
 function parseNumeric(value: string, unit: string): number {
   const trimmed = value.trim();
-  if (!unit) return Number.parseFloat(trimmed) || 0;
+  if (!unit) {
+    return Number.parseFloat(trimmed) || 0;
+  }
   const stripped = trimmed.endsWith(unit) ? trimmed.slice(0, -unit.length) : trimmed;
   return Number.parseFloat(stripped) || 0;
 }
@@ -85,7 +87,9 @@ export function CornerShapeWidget({ value, onChange }: Readonly<CornerShapeWidge
 function parseCornerKeyword(value: string): CornerStyle {
   const allowed: readonly CornerStyle[] = ['round', 'squircle', 'bevel', 'scoop', 'notch'];
   for (const k of allowed) {
-    if (value === k || value.includes(`, ${k}`) || value.endsWith(`,${k})`)) return k;
+    if (value === k || value.includes(`, ${k}`) || value.endsWith(`,${k})`)) {
+      return k;
+    }
   }
   return 'round';
 }

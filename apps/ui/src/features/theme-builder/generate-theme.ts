@@ -312,8 +312,12 @@ function derivePalette(p: HSL, style: GenerateStyle, cfg: ModeConfig): ThemeColo
 function fillRegistryDefaults(colors: ThemeColors, mode: 'light' | 'dark'): ThemeColors {
   const out: ThemeColors = { ...colors };
   for (const token of TOKEN_REGISTRY) {
-    if (token.type !== 'color' || token.layer !== 'role') continue;
-    if (out[token.name] !== undefined) continue;
+    if (token.type !== 'color' || token.layer !== 'role') {
+      continue;
+    }
+    if (out[token.name] !== undefined) {
+      continue;
+    }
     const fallback = mode === 'dark' && token.defaultDark ? token.defaultDark : token.defaultLight;
     if (fallback && !fallback.startsWith('var(')) {
       out[token.name] = fallback;
@@ -356,7 +360,9 @@ export function generateTheme(options: GenerateOptions): ThemeConfig {
 /** Accent swatches for the generator preview (8 data-viz colors). */
 export function accentSwatchesFor(primary: string): readonly string[] {
   const rgb = parseHex(primary);
-  if (!rgb) return [];
+  if (!rgb) {
+    return [];
+  }
   const { h } = rgbToHsl(rgb);
   return Array.from({ length: 8 }, (_, i) => {
     const offset = (i * 45) % 360;

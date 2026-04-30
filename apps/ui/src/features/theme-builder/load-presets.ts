@@ -69,7 +69,9 @@ function camelToKebab(str: string): string {
 
 /** Parse a CSS length string (e.g. "0.5rem", "2px") to a plain number. */
 function parseLength(value: string | undefined): number | undefined {
-  if (!value) return undefined;
+  if (!value) {
+    return undefined;
+  }
   const n = Number.parseFloat(value);
   return Number.isNaN(n) ? undefined : n;
 }
@@ -81,9 +83,15 @@ function parseLength(value: string | undefined): number | undefined {
  */
 function guessMotion(duration: string | undefined): MotionStyle | undefined {
   const ms = parseLength(duration);
-  if (ms === undefined) return undefined;
-  if (ms <= 150) return 'snappy';
-  if (ms <= 290) return 'smooth';
+  if (ms === undefined) {
+    return undefined;
+  }
+  if (ms <= 150) {
+    return 'snappy';
+  }
+  if (ms <= 290) {
+    return 'smooth';
+  }
   return 'stately';
 }
 
@@ -133,8 +141,12 @@ function toPreset(theme: ThemeConfig): ThemePreset | null {
 
 function sortPresets(presets: readonly ThemePreset[]): ThemePreset[] {
   return [...presets].sort((a, b) => {
-    if (a.id === 'default') return -1;
-    if (b.id === 'default') return 1;
+    if (a.id === 'default') {
+      return -1;
+    }
+    if (b.id === 'default') {
+      return 1;
+    }
     return a.name.localeCompare(b.name);
   });
 }
