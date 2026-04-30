@@ -51,7 +51,7 @@
       "scripts/**/*.{ts,tsx,js,jsx,mts,cts}",
       "apps/**/src/**/*.{html,vue,svelte,astro,mdx}",
       "packages/**/src/**/*.{html,vue,svelte,astro,mdx}",
-      "!**/template/**",
+      "!**/template/**"
     ],
     "rules": {
       "recommended": false,
