@@ -12,5 +12,6 @@ import './blocks';
 import './i18n';
 import './bricks';
 import './location';
+import './secrets';
 import './actions';
 import './lifecycle';

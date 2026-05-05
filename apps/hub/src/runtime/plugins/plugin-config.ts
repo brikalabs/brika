@@ -1,17 +1,29 @@
 /**
  * Plugin Config Service - Manages plugin preferences with Zod validation.
+ *
+ * Secret-typed values (password preferences, SDK __secret_* keys) are stored
+ * in the OS keychain via SecretStore — never written to brika.yml. The YAML
+ * keeps a `null` sentinel for each __secret_* key as a presence index so
+ * getConfig knows which keys to resolve from the keychain.
  */
 
 import { inject, singleton } from '@brika/di';
 import type { PreferenceDefinition } from '@brika/plugin';
 import { z } from 'zod';
 import { ConfigLoader } from '@/runtime/config';
+import { SecretStore } from '@/runtime/secrets/secret-store';
 import { StateStore } from '@/runtime/state/state-store';
+
+const SECRET_PREFIX = '__secret_';
+const SECRET_PLACEHOLDER = '***';
+
+type ValuedPreference = Exclude<PreferenceDefinition, { type: 'link' }>;
 
 @singleton()
 export class PluginConfigService {
   readonly #configLoader = inject(ConfigLoader);
   readonly #state = inject(StateStore);
+  readonly #secrets = inject(SecretStore);
 
   getSchema(pluginName: string): PreferenceDefinition[] {
     const metadata = this.#state.getMetadata(pluginName);
@@ -19,28 +31,57 @@ export class PluginConfigService {
     return prefs ?? [];
   }
 
-  getConfig(pluginName: string): Record<string, unknown> {
+  /**
+   * Resolved config for internal hub use — passed to the running plugin process.
+   * Password values and __secret_* keys are read from the OS keychain.
+   */
+  async getConfig(pluginName: string): Promise<Record<string, unknown>> {
     const schema = this.getSchema(pluginName);
     const userConfig = this.#configLoader.getPluginConfig(pluginName) ?? {};
-
     const merged: Record<string, unknown> = {};
 
-    // Include schema-declared preferences (with defaults)
     for (const pref of schema) {
       if (pref.type === 'link') {
         continue;
       }
-      merged[pref.name] = pref.name in userConfig ? userConfig[pref.name] : pref.default;
+      merged[pref.name] = await this.#readPrefValue(pluginName, pref, userConfig);
     }
 
-    // Preserve internal SDK keys (e.g. __oauth_*_token) — not in schema but persisted
     for (const key of Object.keys(userConfig)) {
-      if (key.startsWith('__')) {
-        merged[key] = userConfig[key];
+      if (!key.startsWith('__')) {
+        continue;
+      }
+      const value = await this.#readInternalKey(pluginName, key, userConfig);
+      if (value !== undefined) {
+        merged[key] = value;
       }
     }
 
     return merged;
+  }
+
+  /**
+   * Config for API responses — masks password values and omits __secret_* keys.
+   */
+  async getConfigForApi(pluginName: string): Promise<Record<string, unknown>> {
+    const schema = this.getSchema(pluginName);
+    const userConfig = this.#configLoader.getPluginConfig(pluginName) ?? {};
+    const masked: Record<string, unknown> = {};
+
+    for (const pref of schema) {
+      if (pref.type === 'link') {
+        continue;
+      }
+      masked[pref.name] = await this.#readMaskedPrefValue(pluginName, pref, userConfig);
+    }
+
+    for (const key of Object.keys(userConfig)) {
+      if (key.startsWith('__') && !key.startsWith(SECRET_PREFIX)) {
+        masked[key] = userConfig[key];
+      }
+    }
+
+    return masked;
   }
 
   validate(pluginName: string, config: Record<string, unknown>) {
@@ -48,19 +89,113 @@ export class PluginConfigService {
     return this.#buildZodSchema(schema).safeParse(config);
   }
 
+  /**
+   * Persist incoming config. Password values and __secret_* keys are routed
+   * to the keychain; remaining keys are written to brika.yml. The placeholder
+   * "***" for a password field is treated as "no change".
+   */
   async setConfig(pluginName: string, config: Record<string, unknown>) {
     const result = this.validate(pluginName, config);
-    if (result.success) {
-      await this.#configLoader.setPluginConfig(pluginName, config);
+    if (!result.success) {
+      return result;
     }
+
+    const schema = this.getSchema(pluginName);
+    const passwordPrefs = new Set(schema.filter((p) => p.type === 'password').map((p) => p.name));
+    const yamlBody: Record<string, unknown> = {};
+
+    for (const [key, value] of Object.entries(config)) {
+      if (passwordPrefs.has(key)) {
+        await this.#writePassword(pluginName, key, value);
+        continue;
+      }
+      if (key.startsWith(SECRET_PREFIX)) {
+        await this.#writeInternalSecret(pluginName, key, value, yamlBody);
+        continue;
+      }
+      yamlBody[key] = value;
+    }
+
+    await this.#configLoader.setPluginConfig(pluginName, yamlBody);
     return result;
+  }
+
+  /**
+   * Keys to delete from the keychain when a plugin is uninstalled.
+   * Combines password prefs from the schema and __secret_* keys present in YAML.
+   */
+  getSecretKeysForPlugin(pluginName: string): string[] {
+    const schema = this.getSchema(pluginName);
+    const userConfig = this.#configLoader.getPluginConfig(pluginName) ?? {};
+    const passwordKeys = schema.filter((p) => p.type === 'password').map((p) => p.name);
+    const internalSecretKeys = Object.keys(userConfig).filter((k) => k.startsWith(SECRET_PREFIX));
+    return [...passwordKeys, ...internalSecretKeys];
+  }
+
+  async #readPrefValue(
+    pluginName: string,
+    pref: ValuedPreference,
+    userConfig: Record<string, unknown>
+  ): Promise<unknown> {
+    if (pref.type === 'password') {
+      return (await this.#secrets.get(pluginName, pref.name)) ?? pref.default ?? '';
+    }
+    return pref.name in userConfig ? userConfig[pref.name] : pref.default;
+  }
+
+  async #readMaskedPrefValue(
+    pluginName: string,
+    pref: ValuedPreference,
+    userConfig: Record<string, unknown>
+  ): Promise<unknown> {
+    if (pref.type === 'password') {
+      return (await this.#secrets.get(pluginName, pref.name)) ? SECRET_PLACEHOLDER : '';
+    }
+    return pref.name in userConfig ? userConfig[pref.name] : pref.default;
+  }
+
+  async #readInternalKey(
+    pluginName: string,
+    key: string,
+    userConfig: Record<string, unknown>
+  ): Promise<unknown> {
+    if (!key.startsWith(SECRET_PREFIX)) {
+      return userConfig[key];
+    }
+    return (await this.#secrets.getJSON(pluginName, key)) ?? undefined;
+  }
+
+  async #writePassword(pluginName: string, key: string, value: unknown): Promise<void> {
+    if (value === SECRET_PLACEHOLDER) {
+      return;
+    }
+    if (value === '') {
+      await this.#secrets.delete(pluginName, key);
+      return;
+    }
+    if (typeof value === 'string') {
+      await this.#secrets.set(pluginName, key, value);
+    }
+  }
+
+  async #writeInternalSecret(
+    pluginName: string,
+    key: string,
+    value: unknown,
+    yamlBody: Record<string, unknown>
+  ): Promise<void> {
+    if (value === null || value === undefined) {
+      await this.#secrets.delete(pluginName, key);
+      return;
+    }
+    await this.#secrets.setJSON(pluginName, key, value);
+    yamlBody[key] = null;
   }
 
   #buildZodSchema(prefs: PreferenceDefinition[]) {
     const shape: Record<string, z.ZodTypeAny> = {};
 
     for (const p of prefs) {
-      // Link preferences are UI-only (buttons/links) — no value to validate
       if (p.type === 'link') {
         continue;
       }
@@ -75,7 +210,6 @@ export class PluginConfigService {
     switch (p.type) {
       case 'text':
       case 'password':
-        // Required strings must be non-empty
         return p.required ? z.string().min(1) : z.string();
       case 'number': {
         let num = z.number();

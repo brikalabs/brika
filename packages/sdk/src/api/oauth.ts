@@ -164,7 +164,9 @@ function isOAuthToken(value: unknown): value is OAuthToken {
  */
 export function defineOAuth(config: OAuthProviderConfig): OAuthClient {
   const ctx = getContext();
-  const tokenPrefKey = `__oauth_${config.id}_token`;
+  // `__secret_*` prefix tells the hub to route this value through the OS keychain
+  // instead of brika.yml — see SecretStore + PluginConfigService.
+  const tokenPrefKey = `__secret_oauth_${config.id}_token`;
   const usePkce = config.pkce !== false;
 
   // In-flight PKCE verifiers keyed by state parameter

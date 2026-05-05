@@ -551,7 +551,7 @@ describe('OAuth coverage: callback route error cases', () => {
     expect(result.body).toContain('Connected!');
     // Token should be stored in preferences
     expect(mockUpdatePreference).toHaveBeenCalled();
-    const storedToken = getStoredToken(`__oauth_${id}_token`);
+    const storedToken = getStoredToken(`__secret_oauth_${id}_token`);
     expect(storedToken.access_token).toBe('new-access-token');
     expect(storedToken.refresh_token).toBe('new-refresh-token');
     expect(storedToken.token_type).toBe('Bearer');
@@ -730,7 +730,7 @@ describe('OAuth coverage: PKCE full authorize + callback flow', () => {
     expect(capturedBody?.get('client_id')).toBe('test-client-id');
 
     // Verify token was stored
-    const storedToken = getStoredToken(`__oauth_${id}_token`);
+    const storedToken = getStoredToken(`__secret_oauth_${id}_token`);
     expect(storedToken.access_token).toBe('pkce-token');
   });
 
@@ -847,7 +847,7 @@ describe('OAuth coverage: parseTokenResponse edge cases (via callback)', () => {
       })
     );
 
-    const storedToken = getStoredToken(`__oauth_${id}_token`);
+    const storedToken = getStoredToken(`__secret_oauth_${id}_token`);
     const expiresAt = Number(storedToken.expires_at);
     // Default 3600s = 3_600_000ms from now
     expect(expiresAt).toBeGreaterThanOrEqual(before + 3_600_000 - 100);
@@ -891,7 +891,7 @@ describe('OAuth coverage: parseTokenResponse edge cases (via callback)', () => {
       })
     );
 
-    const storedToken = getStoredToken(`__oauth_${id}_token`);
+    const storedToken = getStoredToken(`__secret_oauth_${id}_token`);
     expect(storedToken.token_type).toBe('Bearer');
   });
 
@@ -933,7 +933,7 @@ describe('OAuth coverage: parseTokenResponse edge cases (via callback)', () => {
       })
     );
 
-    const storedToken = getStoredToken(`__oauth_${id}_token`);
+    const storedToken = getStoredToken(`__secret_oauth_${id}_token`);
     expect(storedToken.refresh_token).toBeUndefined();
   });
 
@@ -1027,7 +1027,7 @@ describe('OAuth coverage: isOAuthToken via getToken', () => {
         id,
       })
     );
-    preferences[`__oauth_${id}_token`] = null;
+    preferences[`__secret_oauth_${id}_token`] = null;
     expect(client.getToken()).toBeNull();
   });
 
@@ -1038,7 +1038,7 @@ describe('OAuth coverage: isOAuthToken via getToken', () => {
         id,
       })
     );
-    preferences[`__oauth_${id}_token`] = 'not-an-object';
+    preferences[`__secret_oauth_${id}_token`] = 'not-an-object';
     expect(client.getToken()).toBeNull();
   });
 
@@ -1049,7 +1049,7 @@ describe('OAuth coverage: isOAuthToken via getToken', () => {
         id,
       })
     );
-    preferences[`__oauth_${id}_token`] = 42;
+    preferences[`__secret_oauth_${id}_token`] = 42;
     expect(client.getToken()).toBeNull();
   });
 
@@ -1060,7 +1060,7 @@ describe('OAuth coverage: isOAuthToken via getToken', () => {
         id,
       })
     );
-    preferences[`__oauth_${id}_token`] = {
+    preferences[`__secret_oauth_${id}_token`] = {
       expires_at: Date.now() + 3600000,
     };
     expect(client.getToken()).toBeNull();
@@ -1073,7 +1073,7 @@ describe('OAuth coverage: isOAuthToken via getToken', () => {
         id,
       })
     );
-    preferences[`__oauth_${id}_token`] = {
+    preferences[`__secret_oauth_${id}_token`] = {
       access_token: 'tok',
     };
     expect(client.getToken()).toBeNull();
@@ -1086,7 +1086,7 @@ describe('OAuth coverage: isOAuthToken via getToken', () => {
         id,
       })
     );
-    preferences[`__oauth_${id}_token`] = {
+    preferences[`__secret_oauth_${id}_token`] = {
       access_token: 'tok',
       expires_at: 'not-a-number',
     };
@@ -1101,7 +1101,7 @@ describe('OAuth coverage: isOAuthToken via getToken', () => {
       })
     );
     const expiresAt = Date.now() + 3600000;
-    preferences[`__oauth_${id}_token`] = {
+    preferences[`__secret_oauth_${id}_token`] = {
       access_token: 'my-token',
       refresh_token: 'my-refresh',
       expires_at: expiresAt,
@@ -1287,7 +1287,7 @@ describe('OAuth coverage: authenticated fetch', () => {
       })
     );
 
-    preferences[`__oauth_${id}_token`] = {
+    preferences[`__secret_oauth_${id}_token`] = {
       access_token: 'my-access-token',
       expires_at: Date.now() + 3600000,
       token_type: 'Bearer',
@@ -1313,7 +1313,7 @@ describe('OAuth coverage: authenticated fetch', () => {
       })
     );
 
-    preferences[`__oauth_${id}_token`] = {
+    preferences[`__secret_oauth_${id}_token`] = {
       access_token: 'mac-token',
       expires_at: Date.now() + 3600000,
       token_type: 'MAC',
@@ -1337,7 +1337,7 @@ describe('OAuth coverage: authenticated fetch', () => {
       })
     );
 
-    preferences[`__oauth_${id}_token`] = {
+    preferences[`__secret_oauth_${id}_token`] = {
       access_token: 'tok',
       expires_at: Date.now() + 3600000,
       token_type: 'Bearer',
@@ -1381,7 +1381,7 @@ describe('OAuth coverage: authenticated fetch', () => {
     );
 
     // Token expires in 30s — within the 60s buffer
-    preferences[`__oauth_${id}_token`] = {
+    preferences[`__secret_oauth_${id}_token`] = {
       access_token: 'old-token',
       refresh_token: 'my-refresh-token',
       expires_at: Date.now() + 30_000,
@@ -1419,7 +1419,7 @@ describe('OAuth coverage: authenticated fetch', () => {
     expect(fetchCallCount).toBe(2);
 
     // The refreshed token should be stored
-    const storedToken = getStoredToken(`__oauth_${id}_token`);
+    const storedToken = getStoredToken(`__secret_oauth_${id}_token`);
     expect(storedToken.access_token).toBe('refreshed-token');
   });
 
@@ -1432,7 +1432,7 @@ describe('OAuth coverage: authenticated fetch', () => {
     );
 
     // Token expired 10 minutes ago
-    preferences[`__oauth_${id}_token`] = {
+    preferences[`__secret_oauth_${id}_token`] = {
       access_token: 'expired-token',
       refresh_token: 'my-refresh-token',
       expires_at: Date.now() - 600_000,
@@ -1475,7 +1475,7 @@ describe('OAuth coverage: authenticated fetch', () => {
       })
     );
 
-    preferences[`__oauth_${id}_token`] = {
+    preferences[`__secret_oauth_${id}_token`] = {
       access_token: 'expired-token',
       expires_at: Date.now() - 600_000,
       token_type: 'Bearer',
@@ -1494,7 +1494,7 @@ describe('OAuth coverage: authenticated fetch', () => {
       })
     );
 
-    preferences[`__oauth_${id}_token`] = {
+    preferences[`__secret_oauth_${id}_token`] = {
       access_token: 'expired-token',
       refresh_token: 'bad-refresh',
       expires_at: Date.now() - 600_000,
@@ -1522,7 +1522,7 @@ describe('OAuth coverage: authenticated fetch', () => {
       })
     );
 
-    preferences[`__oauth_${id}_token`] = {
+    preferences[`__secret_oauth_${id}_token`] = {
       access_token: 'expired-token',
       refresh_token: 'some-refresh',
       expires_at: Date.now() - 600_000,
@@ -1558,7 +1558,7 @@ describe('OAuth coverage: authenticated fetch', () => {
       })
     );
 
-    preferences[`__oauth_${id}_token`] = {
+    preferences[`__secret_oauth_${id}_token`] = {
       access_token: 'expired-token',
       refresh_token: 'some-refresh',
       expires_at: Date.now() - 600_000,
@@ -1580,7 +1580,7 @@ describe('OAuth coverage: authenticated fetch', () => {
       })
     );
 
-    preferences[`__oauth_${id}_token`] = {
+    preferences[`__secret_oauth_${id}_token`] = {
       access_token: 'valid-token',
       refresh_token: 'some-refresh',
       expires_at: Date.now() + 300_000, // 5 minutes remaining
@@ -1606,7 +1606,7 @@ describe('OAuth coverage: authenticated fetch', () => {
       })
     );
 
-    preferences[`__oauth_${id}_token`] = {
+    preferences[`__secret_oauth_${id}_token`] = {
       access_token: 'old-token',
       refresh_token: 'original-refresh-token',
       expires_at: Date.now() + 30_000, // within 60s buffer
@@ -1640,7 +1640,7 @@ describe('OAuth coverage: authenticated fetch', () => {
     await client.fetch('https://api.example.com/data');
 
     // The stored token should keep the original refresh_token
-    const storedToken = getStoredToken(`__oauth_${id}_token`);
+    const storedToken = getStoredToken(`__secret_oauth_${id}_token`);
     expect(storedToken.access_token).toBe('new-token');
     expect(storedToken.refresh_token).toBe('original-refresh-token');
   });
@@ -1653,7 +1653,7 @@ describe('OAuth coverage: authenticated fetch', () => {
       })
     );
 
-    preferences[`__oauth_${id}_token`] = {
+    preferences[`__secret_oauth_${id}_token`] = {
       access_token: 'old-token',
       refresh_token: 'old-refresh',
       expires_at: Date.now() + 30_000,
@@ -1686,7 +1686,7 @@ describe('OAuth coverage: authenticated fetch', () => {
 
     await client.fetch('https://api.example.com/data');
 
-    const storedToken = getStoredToken(`__oauth_${id}_token`);
+    const storedToken = getStoredToken(`__secret_oauth_${id}_token`);
     expect(storedToken.refresh_token).toBe('new-refresh');
   });
 });
@@ -1714,7 +1714,7 @@ describe('OAuth coverage: refresh sends correct body params', () => {
       })
     );
 
-    preferences[`__oauth_${id}_token`] = {
+    preferences[`__secret_oauth_${id}_token`] = {
       access_token: 'old',
       refresh_token: 'rt',
       expires_at: Date.now() - 1000,
@@ -1764,7 +1764,7 @@ describe('OAuth coverage: refresh sends correct body params', () => {
       })
     );
 
-    preferences[`__oauth_${id}_token`] = {
+    preferences[`__secret_oauth_${id}_token`] = {
       access_token: 'old',
       refresh_token: 'rt',
       expires_at: Date.now() - 1000,

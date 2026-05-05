@@ -8,6 +8,7 @@ import { PluginLifecycle } from '@/runtime/plugins/plugin-lifecycle';
 import { PluginManager } from '@/runtime/plugins/plugin-manager';
 import { PluginPermissionService } from '@/runtime/plugins/plugin-permissions';
 import { PluginRegistry } from '@/runtime/registry';
+import { SecretStore } from '@/runtime/secrets/secret-store';
 import { StateStore } from '@/runtime/state/state-store';
 import { getOrThrow } from '../utils/resource-helpers';
 import { safePath } from '../utils/safe-path';
@@ -226,7 +227,7 @@ export const pluginsRoutes = group({
 
         return {
           schema: resolved,
-          values: configService.getConfig(plugin.name),
+          values: await configService.getConfigForApi(plugin.name),
         };
       },
     }),
@@ -274,11 +275,11 @@ export const pluginsRoutes = group({
         // Send updated preferences to running plugin
         const process = inject(PluginLifecycle).getProcess(plugin.name);
         if (process) {
-          process.sendPreferences(configService.getConfig(plugin.name));
+          process.sendPreferences(await configService.getConfig(plugin.name));
         }
 
         return {
-          values: configService.getConfig(plugin.name),
+          values: await configService.getConfigForApi(plugin.name),
         };
       },
     }),
@@ -344,8 +345,13 @@ export const pluginsRoutes = group({
         const manager = inject(PluginManager);
         const registry = inject(PluginRegistry);
         const state = inject(StateStore);
+        const configService = inject(PluginConfigService);
+        const secrets = inject(SecretStore);
 
         const plugin = getOrThrow(manager.get(params.uid), 'Plugin not found');
+
+        // Capture secret keys while the plugin is still registered (schema is reachable)
+        const secretKeys = configService.getSecretKeysForPlugin(plugin.name);
 
         // Disable and unload the plugin
         try {
@@ -357,6 +363,9 @@ export const pluginsRoutes = group({
 
         // Remove from state store
         await state.remove(plugin.name);
+
+        // Remove credentials from the OS keychain
+        await secrets.deleteAllForPlugin(plugin.name, secretKeys);
 
         // Only remove npm package if it's a registry package (not local)
         // Workspace packages and local file references are not removed from npm

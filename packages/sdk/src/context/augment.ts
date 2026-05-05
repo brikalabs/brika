@@ -18,6 +18,7 @@ import type { setupLifecycle } from './lifecycle';
 import type { setupLocation } from './location';
 import type { MethodsOf } from './register';
 import type { setupRoutes } from './routes';
+import type { setupSecrets } from './secrets';
 import type { setupSparks } from './sparks';
 
 declare module '../context' {
@@ -29,5 +30,6 @@ declare module '../context' {
       MethodsOf<typeof setupLifecycle>,
       MethodsOf<typeof setupLocation>,
       MethodsOf<typeof setupRoutes>,
+      MethodsOf<typeof setupSecrets>,
       MethodsOf<typeof setupSparks> {}
 }

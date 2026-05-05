@@ -39,6 +39,7 @@ import { setupLifecycle } from './lifecycle';
 import { setupLocation } from './location';
 import { loadManifest } from './manifest';
 import { setupRoutes } from './routes';
+import { setupSecrets } from './secrets';
 import { setupSparks } from './sparks';
 
 // ---- Manifest ----
@@ -108,6 +109,7 @@ const sparks = setupSparks(channel, log, declaredSparks);
 const blocks = setupBlocks(channel, log, declaredBlocks);
 const bricks = setupBricks(channel, log, declaredBricks);
 const location = setupLocation(channel);
+const secrets = setupSecrets(channel);
 
 // ---- System handlers ----
 
@@ -188,6 +190,9 @@ const bridge = {
 
   // Location
   ...location,
+
+  // Secrets
+  ...secrets,
 };
 
 globalThis.__brika_ipc = bridge satisfies PreludeBridge;

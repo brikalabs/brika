@@ -157,7 +157,7 @@ describe('defineOAuth', () => {
       })
     );
 
-    preferences['__oauth_stored_token'] = {
+    preferences['__secret_oauth_stored_token'] = {
       access_token: 'valid-token',
       expires_at: Date.now() + 3600000,
       token_type: 'Bearer',
@@ -177,7 +177,7 @@ describe('defineOAuth', () => {
     );
 
     // Not a valid token shape (missing access_token)
-    preferences['__oauth_invalid_token'] = {
+    preferences['__secret_oauth_invalid_token'] = {
       foo: 'bar',
     };
 
@@ -200,7 +200,7 @@ describe('defineOAuth', () => {
       })
     );
 
-    preferences['__oauth_authed_token'] = {
+    preferences['__secret_oauth_authed_token'] = {
       access_token: 'valid-token',
       expires_at: Date.now() + 3600000,
       token_type: 'Bearer',
@@ -258,7 +258,7 @@ describe('defineOAuth', () => {
     expect(client.getToken()).toBeNull();
 
     // Store under the correct key
-    preferences['__oauth_keyed_token'] = {
+    preferences['__secret_oauth_keyed_token'] = {
       access_token: 'found',
       expires_at: Date.now() + 3600000,
       token_type: 'Bearer',
@@ -266,7 +266,7 @@ describe('defineOAuth', () => {
     expect(client.getToken()?.access_token).toBe('found');
 
     // Wrong key should not affect it
-    preferences['__oauth_other_token'] = {
+    preferences['__secret_oauth_other_token'] = {
       access_token: 'wrong',
       expires_at: Date.now() + 3600000,
       token_type: 'Bearer',
@@ -282,7 +282,7 @@ describe('defineOAuth', () => {
     );
 
     // Stored value has expires_at but no access_token — isOAuthToken returns false
-    preferences['__oauth_partial_token'] = {
+    preferences['__secret_oauth_partial_token'] = {
       expires_at: Date.now() + 3600000,
       token_type: 'Bearer',
     };
@@ -297,7 +297,7 @@ describe('defineOAuth', () => {
       })
     );
 
-    preferences['__oauth_refresh_token'] = {
+    preferences['__secret_oauth_refresh_token'] = {
       access_token: 'at',
       refresh_token: 'rt',
       expires_at: Date.now() + 3600000,

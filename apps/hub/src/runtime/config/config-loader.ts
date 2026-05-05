@@ -70,6 +70,21 @@ const DEFAULT_CONFIG: BrikaConfig = {
   schedules: [],
 };
 
+const SECRET_PREFIX = '__secret_';
+
+function sanitizeSecretSentinels(
+  config: Record<string, unknown> | undefined
+): Record<string, unknown> | undefined {
+  if (!config) {
+    return config;
+  }
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(config)) {
+    out[key] = key.startsWith(SECRET_PREFIX) ? null : value;
+  }
+  return out;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Config Loader
 // ─────────────────────────────────────────────────────────────────────────────
@@ -174,12 +189,17 @@ export class ConfigLoader {
       throw new Error('No config to save. Call load() first or provide a config.');
     }
 
-    // Convert plugin entries to object format for YAML
+    // Convert plugin entries to object format for YAML.
+    // Defensive: __secret_* keys are presence indices only — never let a real
+    // value leak into YAML if a future caller forgets to route through SecretStore.
     const pluginsObj: Record<string, { version: string; config?: Record<string, unknown> }> = {};
     for (const entry of configToSave.plugins) {
+      const sanitizedConfig = sanitizeSecretSentinels(entry.config);
       pluginsObj[entry.name] = {
         version: entry.version,
-        ...(entry.config && Object.keys(entry.config).length > 0 ? { config: entry.config } : {}),
+        ...(sanitizedConfig && Object.keys(sanitizedConfig).length > 0
+          ? { config: sanitizedConfig }
+          : {}),
       };
     }
 
