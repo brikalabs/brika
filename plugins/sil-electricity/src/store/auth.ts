@@ -36,9 +36,7 @@ export function updateCredentials(email: string, password: string): boolean {
   const next = email && password ? { email, password } : null;
   const changed = credentials?.email !== next?.email || credentials?.password !== next?.password;
   credentials = next;
-  if (!credentials) {
-    sessionCookie = '';
-  } else if (changed) {
+  if (!credentials || changed) {
     sessionCookie = '';
   }
   return changed;

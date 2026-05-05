@@ -8,11 +8,11 @@
  */
 
 import { updateCredentials } from './auth';
-import { acquirePeriod, activePeriods, pollPeriod, stopAllPolling } from './polling';
-import { resetState, setCredentialsKnown, setPrices } from './store';
+import { activePeriods, pollPeriod, stopAllPolling } from './polling';
+import { resetState, setCredentialsKnown } from './store';
 
-export { useElectricityStore } from './store';
-export { acquirePeriod, setPrices };
+export { acquirePeriod } from './polling';
+export { setPrices, useElectricityStore } from './store';
 
 export function setCredentials(email: string, password: string): void {
   const changed = updateCredentials(email, password);
