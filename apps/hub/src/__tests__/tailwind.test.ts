@@ -71,5 +71,33 @@ describe('TailwindCompiler', () => {
         expect(css).not.toContain('{');
       }
     });
+
+    test('rescopes color tokens onto :scope when a scopeId is provided', async () => {
+      // Regression: bricks using colors the host app never uses (e.g.
+      // `bg-slate-900`) had `var(--color-slate-900)` reference an undefined
+      // variable because we were stripping the `:root` token block. Now we
+      // pin those tokens to the brick's scope so the utilities resolve.
+      const tw = new TailwindCompiler();
+      const css = await tw.compileCss('const a = "bg-slate-900"', 'plugin:brick');
+
+      expect(css).toBeDefined();
+      expect(css).toContain('--color-slate-900');
+      expect(css).toContain(':scope');
+      expect(css).toContain('@scope');
+      // The unscoped `:root, :host` selector must not survive — it would
+      // leak the variable globally and conflict with the host theme.
+      expect(css).not.toMatch(/:root\s*,\s*:host/);
+    });
+
+    test('falls back to :root scoping when no scopeId is provided', async () => {
+      const tw = new TailwindCompiler();
+      const css = await tw.compileCss('const a = "bg-slate-900"');
+
+      expect(css).toBeDefined();
+      // Without a scope, the tokens have to live somewhere — :root is the
+      // only sensible fallback so the utilities don't reference dangling vars.
+      expect(css).toContain('--color-slate-900');
+      expect(css).toContain(':root');
+    });
   });
 });

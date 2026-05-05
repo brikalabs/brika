@@ -1,6 +1,7 @@
 import type { BunPlugin } from 'bun';
 import { brikaActionsPlugin } from './plugins/actions-client';
 import { brikaExternalsPlugin } from './plugins/externals';
+import { brikaForceSideEffectsPlugin } from './plugins/force-side-effects';
 
 export interface ClientCompileOptions {
   /** Absolute path to .tsx entrypoint */
@@ -26,7 +27,11 @@ export type ClientCompileResult =
 export async function compileClientModule(
   opts: ClientCompileOptions
 ): Promise<ClientCompileResult> {
-  const plugins: BunPlugin[] = [brikaExternalsPlugin(), brikaActionsPlugin(opts.pluginRoot)];
+  const plugins: BunPlugin[] = [
+    brikaExternalsPlugin(),
+    brikaActionsPlugin(opts.pluginRoot),
+    brikaForceSideEffectsPlugin(),
+  ];
   if (opts.extraPlugins) {
     plugins.push(...opts.extraPlugins);
   }
