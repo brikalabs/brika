@@ -445,8 +445,19 @@ describe('PluginEventHandler', () => {
   });
 
   describe('onPluginDisconnected', () => {
-    test('clears brick data for disconnected plugin', () => {
+    test('preserves brick data so the UI keeps showing last values during reload/crash', () => {
       handler.onPluginDisconnected('@test/plugin');
+
+      // Disconnect is transient (hot reload, crash + auto-restart). Clearing
+      // here would force every brick into <Loader/> until the new poll lands;
+      // brick data lives until the plugin is fully uninstalled instead.
+      expect(mockBrickDataStore.removeByPlugin).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('onPluginRemoved', () => {
+    test('clears cached brick data when the plugin is uninstalled', () => {
+      handler.onPluginRemoved('@test/plugin');
 
       expect(mockBrickDataStore.removeByPlugin).toHaveBeenCalledWith('@test/plugin');
     });

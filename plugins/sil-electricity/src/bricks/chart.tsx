@@ -38,15 +38,19 @@ export default function ConsumptionChart() {
   const props: RenderProps = { rows, hasInjection, gradId };
 
   return (
-    <div className="flex h-full flex-col rounded-lg bg-slate-900 p-2">
+    <div className="flex h-full flex-col">
       <div className="flex shrink-0 items-center justify-between px-1 pb-1">
-        <span className="text-xs font-semibold text-white/80">
+        <span className="text-xs font-semibold text-foreground/80">
           {t(`ui.${granularity}Consumption`)}
         </span>
-        <span className="text-[10px] text-white/40">kWh</span>
+        <span className="text-[10px] text-muted-foreground">kWh</span>
       </div>
       <div className="min-h-0 flex-1">
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer
+          width="100%"
+          height="100%"
+          initialDimension={{ width: 1, height: 1 }}
+        >
           {style === 'bar' && <BarVariant {...props} />}
           {style === 'area' && <AreaVariant {...props} />}
           {style === 'line' && <LineVariant {...props} />}

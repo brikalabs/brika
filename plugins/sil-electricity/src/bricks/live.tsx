@@ -6,7 +6,7 @@ import { Area, AreaChart, ResponsiveContainer, Tooltip, type TooltipContentProps
 import type { ConsumptionPoint, ElectricityState } from '../types';
 import { formatKwh, formatPower, kwhToWatts, Loader } from '../ui/states';
 
-const ACCENT = '#10b981';
+const ACCENT = 'var(--color-data-3)';
 
 function formatTime(timestamp: string, locale: string): string {
   return new Date(timestamp).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
@@ -38,9 +38,9 @@ function LiveTooltip({ active, payload, label }: TooltipContentProps<number, str
   if (!active || !payload?.length) return null;
   const watts = payload[0]?.value ?? 0;
   return (
-    <div className="rounded-md border border-white/10 bg-slate-900/95 px-2 py-1 text-xs shadow-md backdrop-blur">
-      <div className="text-white/60">{new Date(Number(label)).toLocaleTimeString()}</div>
-      <div className="font-medium text-emerald-300">{formatPower(Number(watts))}</div>
+    <div className="rounded-md border border-border bg-popover px-2 py-1 text-xs text-popover-foreground shadow-md">
+      <div className="text-muted-foreground">{new Date(Number(label)).toLocaleTimeString()}</div>
+      <div className="font-medium text-data-3">{formatPower(Number(watts))}</div>
     </div>
   );
 }
@@ -49,8 +49,8 @@ function NoCredentials() {
   const { t } = useLocale();
   return (
     <div className="flex h-full flex-col items-center justify-center gap-1 p-3 text-center">
-      <Zap className="size-6 text-emerald-400/50" />
-      <p className="text-[10px] text-white/50">{t('ui.noCookie')}</p>
+      <Zap className="size-6 text-data-3/60" />
+      <p className="text-[10px] text-muted-foreground">{t('ui.noCookie')}</p>
     </div>
   );
 }
@@ -73,28 +73,34 @@ export default function LiveConsumption() {
   const todayKwh = data.points.filter((p) => isToday(p.timestamp)).reduce((s, p) => s + p.total, 0);
 
   return (
-    <div className="flex h-full flex-col rounded-lg bg-gradient-to-br from-slate-900 to-emerald-950/40 p-3">
+    <div className="flex h-full flex-col p-1">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-[10px] uppercase tracking-wide text-white/50">{t('ui.live')}</p>
-          <p className="text-[10px] text-white/40">
+          <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+            {t('ui.live')}
+          </p>
+          <p className="text-[10px] text-muted-foreground/70">
             {t('ui.lastReading')} {formatTime(last.timestamp, locale)}
           </p>
         </div>
-        <Activity className="size-4 text-emerald-400" />
+        <Activity className="size-4 text-data-3" />
       </div>
 
       <div className="flex flex-col gap-0.5 py-2">
-        <span className="text-2xl font-bold leading-none text-white tabular-nums">
+        <span className="text-2xl font-bold leading-none text-foreground tabular-nums">
           {formatPower(liveWatts)}
         </span>
-        <span className="text-[10px] text-white/50">
+        <span className="text-[10px] text-muted-foreground">
           {t('ui.todayTotal')}: {formatKwh(todayKwh)}
         </span>
       </div>
 
       <div className="min-h-0 flex-1">
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer
+          width="100%"
+          height="100%"
+          initialDimension={{ width: 1, height: 1 }}
+        >
           <AreaChart data={rows} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id="live-grad" x1="0" y1="0" x2="0" y2="1">

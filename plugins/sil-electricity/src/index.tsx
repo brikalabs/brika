@@ -13,7 +13,7 @@ import {
   stopAll,
   useElectricityStore,
 } from './store';
-import type { Period } from './types';
+import type { ElectricityState, Period } from './types';
 
 interface SilPrefs {
   email?: string;
@@ -40,8 +40,25 @@ function isPeriod(value: unknown): value is Period {
 
 // ─── Push store updates to all brick types ──────────────────────────────────
 
+/**
+ * A push is "informative" if the bricks would render something concrete
+ * from it — actual data, an explicit error, or a credentials-missing
+ * banner. Loading-only states (`{loading:true, data:null, error:null}`)
+ * carry no display value, and pushing them after a hot reload would
+ * overwrite the UI's last-known-good cache and force every brick back
+ * into its `<Loader/>` fallback for the duration of the next poll.
+ */
+function isInformative(state: ElectricityState): boolean {
+  if (!state.credentialsSet) return true;
+  for (const period of Object.values(state.periods)) {
+    if (period?.data != null || period?.error != null) return true;
+  }
+  return false;
+}
+
 function pushState(): void {
   const state = useElectricityStore.get();
+  if (!isInformative(state)) return;
   setBrickData('chart', state);
   setBrickData('summary', state);
   setBrickData('live', state);

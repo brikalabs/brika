@@ -4,7 +4,7 @@
 
 import type { ConsumptionPoint, Granularity, Period } from '../types';
 import { dateRangeForPeriod, granularityForPeriod } from './dates';
-import { BASE, DIAMOND, GOTO } from './internals';
+import { BASE, DIAMOND, GOTO, timedFetch } from './internals';
 
 interface CubeQuery {
   measures: string[];
@@ -95,7 +95,7 @@ export async function fetchConsumption(
   url.searchParams.set('query', JSON.stringify(query));
   url.searchParams.set('queryType', 'multi');
 
-  const res = await fetch(url.toString(), {
+  const res = await timedFetch(url.toString(), {
     headers: { Cookie: cookie, Referer: `${BASE}${GOTO}` },
   });
 

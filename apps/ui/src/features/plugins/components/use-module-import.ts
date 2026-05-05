@@ -17,11 +17,25 @@ export function useModuleImport(url: string) {
       setError(Boolean(url));
       return;
     }
-    setModule(null);
     setError(false);
+    // Keep the previous Module rendered while the new bundle downloads —
+    // a hot-reload swap shouldn't flash the loading spinner. We only blank
+    // the Module on initial mount or on hard error.
+    let cancelled = false;
     import(/* @vite-ignore */ url)
-      .then((mod) => setModule(() => mod.default))
-      .catch(() => setError(true));
+      .then((mod) => {
+        if (!cancelled) {
+          setModule(() => mod.default);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setError(true);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [url]);
 
   return { Module, error };

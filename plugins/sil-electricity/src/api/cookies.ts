@@ -7,6 +7,8 @@
  * the jar captures every hop.
  */
 
+import { timedFetch } from './internals';
+
 export class CookieJar {
   private readonly map = new Map<string, string>();
 
@@ -87,7 +89,7 @@ export async function fetchAndIngest(
   for (let i = 0; i <= max; i++) {
     const headers: Record<string, string> = { ...baseHeaders };
     headers['Cookie'] = jar.toString();
-    const res = await fetch(current, { ...init, method, body, headers, redirect: 'manual' });
+    const res = await timedFetch(current, { ...init, method, body, headers, redirect: 'manual' });
     jar.ingest(res);
 
     if (!followRedirects) return res;

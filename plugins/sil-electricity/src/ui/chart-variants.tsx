@@ -18,8 +18,13 @@ import {
 import type { ChartRow } from './chart-helpers';
 import { formatChf, formatKwh } from './states';
 
-const TOTAL_COLOR = '#3b82f6';
-const INJECTION_COLOR = '#22c55e';
+// Pull from clay's data-viz palette so charts retint with the active theme.
+// SVG attributes accept CSS variables in modern browsers; recharts forwards
+// `fill` / `stroke` / `stopColor` straight onto the underlying elements.
+const TOTAL_COLOR = 'var(--color-data-1)';
+const INJECTION_COLOR = 'var(--color-data-3)';
+const TICK_COLOR = 'var(--color-muted-foreground)';
+const CURSOR_COLOR = 'var(--color-foreground)';
 const MARGIN = { top: 4, right: 4, left: 0, bottom: 0 };
 
 export interface RenderProps {
@@ -33,13 +38,13 @@ function ChartTooltip({ active, payload, label }: TooltipContentProps<number, st
   const row = payload[0]?.payload as ChartRow | undefined;
   if (!row) return null;
   return (
-    <div className="rounded-md border border-white/10 bg-slate-900/95 px-2 py-1.5 text-xs shadow-md backdrop-blur">
-      <div className="font-medium text-white">{label}</div>
-      <div className="text-blue-300">{formatKwh(row.total)}</div>
+    <div className="rounded-md border border-border bg-popover px-2 py-1.5 text-xs text-popover-foreground shadow-md">
+      <div className="font-medium">{label}</div>
+      <div className="text-data-1">{formatKwh(row.total)}</div>
       {row.injection > 0 && (
-        <div className="text-green-300">+{formatKwh(row.injection)} inj.</div>
+        <div className="text-data-3">+{formatKwh(row.injection)} inj.</div>
       )}
-      <div className="text-violet-300">{formatChf(row.cost)}</div>
+      <div className="text-data-5">{formatChf(row.cost)}</div>
     </div>
   );
 }
@@ -47,22 +52,30 @@ function ChartTooltip({ active, payload, label }: TooltipContentProps<number, st
 function ChartAxes() {
   return (
     <>
-      <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.08} vertical={false} />
+      <CartesianGrid
+        strokeDasharray="3 3"
+        stroke={CURSOR_COLOR}
+        strokeOpacity={0.1}
+        vertical={false}
+      />
       <XAxis
         dataKey="label"
-        tick={{ fontSize: 9, fill: 'rgba(255,255,255,0.45)' }}
+        tick={{ fontSize: 9, fill: TICK_COLOR }}
         tickLine={false}
         axisLine={false}
         interval="preserveStartEnd"
         minTickGap={20}
       />
       <YAxis
-        tick={{ fontSize: 9, fill: 'rgba(255,255,255,0.45)' }}
+        tick={{ fontSize: 9, fill: TICK_COLOR }}
         tickLine={false}
         axisLine={false}
         width={32}
       />
-      <Tooltip content={ChartTooltip} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
+      <Tooltip
+        content={ChartTooltip}
+        cursor={{ fill: CURSOR_COLOR, fillOpacity: 0.06 }}
+      />
     </>
   );
 }

@@ -19,8 +19,8 @@ function NoCredentials() {
   const { t } = useLocale();
   return (
     <div className="flex h-full flex-col items-center justify-center gap-1 p-3 text-center">
-      <Zap className="size-6 text-yellow-400/50" />
-      <p className="text-[10px] text-white/50">{t('ui.noCookie')}</p>
+      <Zap className="size-6 text-data-6/60" />
+      <p className="text-[10px] text-muted-foreground">{t('ui.noCookie')}</p>
     </div>
   );
 }
@@ -36,7 +36,7 @@ function Sparkline({ points }: Readonly<{ points: ConsumptionPoint[] }>) {
         return (
           <div key={p.timestamp} className="flex flex-1 flex-col items-center gap-0.5">
             <div className="flex flex-col justify-end" style={{ height: 24 }}>
-              <div className="w-full rounded-sm bg-yellow-400/70" style={{ height: h }} />
+              <div className="w-full rounded-sm bg-data-6/70" style={{ height: h }} />
             </div>
           </div>
         );
@@ -68,30 +68,34 @@ export default function ElectricitySummary() {
   );
 
   return (
-    <div className="flex h-full flex-col justify-between rounded-lg bg-gradient-to-br from-slate-900 to-slate-800 p-3">
+    <div className="flex h-full flex-col justify-between p-1">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-[10px] uppercase tracking-wide text-white/50">{t('ui.consumption')}</p>
-          <p className="text-[10px] text-white/40">{periodLabel}</p>
+          <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+            {t('ui.consumption')}
+          </p>
+          <p className="text-[10px] text-muted-foreground/70">{periodLabel}</p>
         </div>
-        <Zap className="size-4 text-yellow-400/70" />
+        <Zap className="size-4 text-data-6" />
       </div>
 
       <div className="flex flex-col gap-0.5">
-        <span className="text-2xl font-bold leading-none text-white tabular-nums">
+        <span className="text-2xl font-bold leading-none text-foreground tabular-nums">
           {formatKwh(current)}
         </span>
-        <span className="text-[10px] text-white/50">
+        <span className="text-[10px] text-muted-foreground">
           ≈ {formatChf(pointCost(last, state.prices))}
         </span>
         {trend !== null && (
           <div className="flex items-center gap-1">
             {trend > 0 ? (
-              <TrendingUp className="size-3 text-red-400" />
+              <TrendingUp className="size-3 text-destructive" />
             ) : (
-              <TrendingDown className="size-3 text-green-400" />
+              <TrendingDown className="size-3 text-success" />
             )}
-            <span className={`text-[10px] font-medium ${trend > 0 ? 'text-red-400' : 'text-green-400'}`}>
+            <span
+              className={`text-[10px] font-medium ${trend > 0 ? 'text-destructive' : 'text-success'}`}
+            >
               {trend > 0 ? '+' : ''}
               {trend}% {t('ui.vsPrevious')}
             </span>
