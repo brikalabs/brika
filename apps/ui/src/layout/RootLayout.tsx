@@ -45,7 +45,7 @@ import {
 import { UserAvatar } from '@/components/user-avatar';
 import { LoginPage } from '@/features/auth';
 import { useHealth } from '@/features/dashboard/hooks';
-import { useUpdateCheck } from '@/features/updates';
+import { UpdateRail, UpdateUiProvider, useUpdateCheck, useUpdateUi } from '@/features/updates';
 import { useAuthInterceptor } from '@/hooks/use-auth-interceptor';
 import { ThemeProvider } from '@/lib/theme-provider';
 import { useLocale } from '@/lib/use-locale';
@@ -271,15 +271,31 @@ function UserMenu() {
   );
 }
 
+function SidebarUpdateRail() {
+  const { hasUpdate, openUpdateDialog, openHistory, dismissUpdate } = useUpdateUi();
+  const { data: updateInfo } = useUpdateCheck();
+
+  if (!hasUpdate || !updateInfo) {
+    return null;
+  }
+
+  return (
+    <UpdateRail
+      info={updateInfo}
+      onUpdate={openUpdateDialog}
+      onViewNotes={openHistory}
+      onDismiss={dismissUpdate}
+    />
+  );
+}
+
 function AppSidebar() {
   const { data: health } = useHealth();
-  const { data: updateInfo } = useUpdateCheck();
-  const hasUpdate = updateInfo?.updateAvailable;
   const isAdmin = useCanAccess(Scope.ADMIN_ALL);
 
   const versionSuffix = health ? (
-    <span className="ml-auto flex items-center gap-1 text-[10px] text-muted-foreground group-data-[collapsible=icon]:hidden">
-      {hasUpdate && <span className="size-1.5 rounded-full bg-primary" />}v{health.version}
+    <span className="ml-auto font-mono text-[10px] text-muted-foreground group-data-[collapsible=icon]:hidden">
+      v{health.version}
     </span>
   ) : undefined;
 
@@ -306,6 +322,7 @@ function AppSidebar() {
         ))}
       </SidebarContent>
       <SidebarFooter>
+        <SidebarUpdateRail />
         <UserMenu />
       </SidebarFooter>
       <SidebarRail />
@@ -359,16 +376,21 @@ export function RootLayout() {
 
   return (
     <ThemeProvider>
-      <SidebarProvider className="h-svh max-h-svh">
-        <AppSidebar />
-        <SidebarInset className="min-w-0 overflow-hidden">
-          <main
-            className={cn('min-w-0 flex-1', isFullBleed ? 'overflow-hidden' : 'overflow-auto p-8')}
-          >
-            <Outlet />
-          </main>
-        </SidebarInset>
-      </SidebarProvider>
+      <UpdateUiProvider>
+        <SidebarProvider className="h-svh max-h-svh">
+          <AppSidebar />
+          <SidebarInset className="min-w-0 overflow-hidden">
+            <main
+              className={cn(
+                'min-w-0 flex-1',
+                isFullBleed ? 'overflow-hidden' : 'overflow-auto p-8'
+              )}
+            >
+              <Outlet />
+            </main>
+          </SidebarInset>
+        </SidebarProvider>
+      </UpdateUiProvider>
     </ThemeProvider>
   );
 }

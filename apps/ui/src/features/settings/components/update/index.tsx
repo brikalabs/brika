@@ -7,9 +7,9 @@ import {
   SectionInfo,
   SectionTitle,
 } from '@brika/clay';
-import { ArrowDownToLine, Download, RefreshCw } from 'lucide-react';
+import { ArrowDownToLine, Download, History, RefreshCw } from 'lucide-react';
 import { useCallback, useState } from 'react';
-import { UpdateDialog, useUpdateCheck } from '@/features/updates';
+import { ReleaseHistoryDialog, UpdateDialog, useUpdateCheck } from '@/features/updates';
 import { useDelayedLoading } from '@/hooks/use-delayed-loading';
 import { useLocale } from '@/lib/use-locale';
 import { ChannelSelector } from './ChannelSelector';
@@ -24,6 +24,7 @@ export function UpdateSection() {
     minDuration: 600,
   });
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [forceReinstall, setForceReinstall] = useState(false);
   const [checkedAt, setCheckedAt] = useState<number | undefined>(undefined);
   const lastChecked = useLastCheckedLabel(checkedAt ?? data?.lastCheckedAt);
@@ -85,6 +86,11 @@ export function UpdateSection() {
             </Button>
           )}
 
+          <Button variant="ghost" size="sm" onClick={() => setHistoryOpen(true)}>
+            <History />
+            {t('common:updates.viewHistory')}
+          </Button>
+
           {data && <span className="ml-auto text-muted-foreground text-xs">{lastChecked}</span>}
         </div>
 
@@ -94,6 +100,14 @@ export function UpdateSection() {
             onOpenChange={setDialogOpen}
             updateInfo={data}
             force={forceReinstall}
+          />
+        )}
+
+        {data && (
+          <ReleaseHistoryDialog
+            open={historyOpen}
+            onOpenChange={setHistoryOpen}
+            currentVersion={data.currentVersion}
           />
         )}
       </SectionContent>

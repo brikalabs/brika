@@ -3,6 +3,15 @@ import { useEffect } from 'react';
 import { getStreamUrl } from '@/lib/query';
 import { updateApi, updateKeys } from './api';
 
+/** Fetch the recent release list for the history browser. */
+export function useReleases(limit?: number) {
+  return useQuery({
+    queryKey: updateKeys.releases(limit),
+    queryFn: () => updateApi.listReleases(limit),
+    staleTime: 30 * 60 * 1000,
+  });
+}
+
 /**
  * Subscribe to hub update notifications via SSE push.
  * Fetches current status on mount, then listens to the global event stream

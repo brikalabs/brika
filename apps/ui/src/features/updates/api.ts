@@ -49,6 +49,15 @@ export interface UpdateProgress {
   error?: string;
 }
 
+export interface ReleaseSummary {
+  version: string;
+  prerelease: boolean;
+  publishedAt: string;
+  releaseUrl: string;
+  releaseNotes: string;
+  releaseCommit: string;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // API
 // ─────────────────────────────────────────────────────────────────────────────
@@ -64,10 +73,19 @@ export const updateApi = {
         force: options?.force,
       },
     }),
+
+  /** List recent releases for the release-history UI. */
+  listReleases: (limit?: number) => {
+    const path = '/api/system/update/releases';
+    return fetcher<{ releases: ReleaseSummary[] }>(
+      limit === undefined ? path : `${path}?limit=${limit}`
+    );
+  },
 };
 
 export const updateKeys = {
   check: ['system', 'update'] as const,
+  releases: (limit?: number) => ['system', 'update', 'releases', limit ?? 'default'] as const,
 };
 
 export const channelKeys = {

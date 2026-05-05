@@ -163,6 +163,24 @@
     "currentVersion": "Version actuelle",
     "latestVersion": "Dernière version",
     "neverChecked": "Jamais vérifié",
-    "devBuild": "Build dev"
+    "devBuild": "Build dev",
+    "remindLater": "Plus tard",
+    "whatsNew": "Nouveautés",
+    "fromVersion": "depuis v{{version}}",
+    "viewPastReleases": "Voir les versions précédentes",
+    "viewHistory": "Historique des versions",
+    "gotIt": "Compris",
+    "releaseHistory": "Historique des versions",
+    "releaseHistoryDescription": "Toutes les versions de Brika. Version actuelle : v{{version}}.",
+    "releaseHistoryError": "Impossible de charger les versions. Vérifiez votre connexion et réessayez.",
+    "loadingReleases": "Chargement des versions...",
+    "noReleases": "Aucune version ne correspond à ce filtre.",
+    "noReleaseNotes": "Aucune note publiée pour cette version.",
+    "installed": "Installée",
+    "filter": {
+      "all": "Toutes",
+      "stable": "Stable",
+      "canary": "Canary"
+    }
   }
 }

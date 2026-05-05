@@ -10,10 +10,18 @@ import { UpdateActions } from '@/runtime/events/actions';
 import { EventSystem } from '@/runtime/events/event-system';
 import { Logger } from '@/runtime/logs/log-router';
 import { StateStore } from '@/runtime/state/state-store';
-import { checkForUpdate, noUpdateInfo, type UpdateInfo } from '@/updater';
+import {
+  checkForUpdate,
+  listReleases,
+  noUpdateInfo,
+  type ReleaseSummary,
+  type UpdateInfo,
+} from '@/updater';
 
 /** Check every 6 hours */
 const CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
+/** Cache release-history fetches for 30 minutes — list endpoint is purely cosmetic */
+const RELEASES_CACHE_MS = 30 * 60 * 1000;
 
 @singleton()
 export class UpdateService {
@@ -24,6 +32,7 @@ export class UpdateService {
   #lastCheckedAt: number = 0;
   #checking = false;
   #timer: Timer | null = null;
+  #releasesCache: { readonly fetchedAt: number; readonly releases: ReleaseSummary[] } | null = null;
 
   /** Cached update info from last check (null if never checked) */
   get cachedInfo(): UpdateInfo | null {
@@ -99,6 +108,26 @@ export class UpdateService {
       return noUpdateInfo(this.#state.getUpdateChannel());
     } finally {
       this.#checking = false;
+    }
+  }
+
+  /**
+   * Fetch a list of recent releases, cached for 30 minutes.
+   * Returns the cached list (possibly stale) on fetch failure.
+   */
+  async listReleases(limit = 20): Promise<ReleaseSummary[]> {
+    const now = Date.now();
+    if (this.#releasesCache && now - this.#releasesCache.fetchedAt < RELEASES_CACHE_MS) {
+      return this.#releasesCache.releases;
+    }
+
+    try {
+      const releases = await listReleases(limit);
+      this.#releasesCache = { fetchedAt: now, releases };
+      return releases;
+    } catch (error) {
+      this.#logs.debug('Release list fetch failed', {}, { error });
+      return this.#releasesCache?.releases ?? [];
     }
   }
 }

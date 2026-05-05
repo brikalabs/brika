@@ -163,6 +163,24 @@
     "currentVersion": "Current version",
     "latestVersion": "Latest version",
     "neverChecked": "Never checked",
-    "devBuild": "Dev build"
+    "devBuild": "Dev build",
+    "remindLater": "Remind me later",
+    "whatsNew": "What's new",
+    "fromVersion": "from v{{version}}",
+    "viewPastReleases": "View past releases",
+    "viewHistory": "Release history",
+    "gotIt": "Got it",
+    "releaseHistory": "Release history",
+    "releaseHistoryDescription": "All Brika releases. Currently running v{{version}}.",
+    "releaseHistoryError": "Couldn't load releases. Check your connection and try again.",
+    "loadingReleases": "Loading releases...",
+    "noReleases": "No releases match this filter.",
+    "noReleaseNotes": "No notes published for this release.",
+    "installed": "Installed",
+    "filter": {
+      "all": "All",
+      "stable": "Stable",
+      "canary": "Canary"
+    }
   }
 }

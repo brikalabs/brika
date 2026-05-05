@@ -72,6 +72,15 @@ export interface UpdateInfo {
   channel: UpdateChannelId;
 }
 
+export interface ReleaseSummary {
+  version: string;
+  prerelease: boolean;
+  publishedAt: string;
+  releaseUrl: string;
+  releaseNotes: string;
+  releaseCommit: string;
+}
+
 export type UpdatePhase =
   | 'checking'
   | 'downloading'
@@ -247,6 +256,35 @@ export async function checkForUpdate(
     assetSize: cmp.asset?.size ?? null,
     channel,
   };
+}
+
+/**
+ * Fetch a list of recent releases from GitHub. Used by the release-history UI.
+ * Returns up to `limit` releases, newest first. Each release's commit SHA is
+ * fetched lazily from the per-release `release-meta.json` asset.
+ */
+export async function listReleases(limit = 20): Promise<ReleaseSummary[]> {
+  const response = await fetch(`${HUB_GITHUB_RELEASES_LIST_API}?per_page=${limit}`, {
+    headers: { Accept: 'application/vnd.github+json' },
+  });
+  if (!response.ok) {
+    throw new Error(`GitHub API returned ${response.status}: ${response.statusText}`);
+  }
+  const releases = (await response.json()) as GitHubRelease[];
+
+  return Promise.all(
+    releases.map(async (release) => {
+      const meta = await fetchReleaseMeta(release);
+      return {
+        version: release.tag_name.replace(/^v/, ''),
+        prerelease: release.prerelease,
+        publishedAt: release.published_at,
+        releaseUrl: release.html_url,
+        releaseNotes: release.body ?? '',
+        releaseCommit: meta?.commit ?? '',
+      };
+    })
+  );
 }
 
 export interface ApplyUpdateOptions {

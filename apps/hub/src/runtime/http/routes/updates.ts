@@ -57,6 +57,22 @@ export const updateRoutes = group({
     }),
 
     /**
+     * GET /api/system/update/releases
+     * List recent releases for the release-history UI. Cached server-side for 30 min.
+     */
+    route.get({
+      path: '/releases',
+      query: z.object({
+        limit: z.coerce.number().int().positive().max(50).optional(),
+      }),
+      handler: async ({ inject, query }) => {
+        const updates = inject(UpdateService);
+        const releases = await updates.listReleases(query.limit);
+        return { releases };
+      },
+    }),
+
+    /**
      * POST /api/system/update/apply
      * Apply the latest update. Streams progress via SSE.
      * After a successful update, the hub process exits so the process manager can restart it.

@@ -1,2 +1,6 @@
+export type { ReleaseSummary } from './api';
+export { ReleaseHistoryDialog } from './ReleaseHistoryDialog';
 export { UpdateDialog } from './UpdateDialog';
-export { useUpdateCheck } from './use-update';
+export { UpdateRail } from './UpdateNotification';
+export { UpdateUiProvider, useUpdateUi } from './UpdateUiProvider';
+export { useReleases, useUpdateCheck } from './use-update';
