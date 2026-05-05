@@ -1,0 +1,75 @@
+{
+  "name": "SIL Électricité",
+  "description": "Suivez votre consommation électrique auprès des Services Industriels de Lausanne",
+  "preferences": {
+    "email": {
+      "title": "Email",
+      "description": "Votre adresse email du compte lausanne.ch"
+    },
+    "password": {
+      "title": "Mot de passe",
+      "description": "Votre mot de passe du compte lausanne.ch"
+    },
+    "pricePerKwh": {
+      "title": "Prix au kWh (CHF)",
+      "description": "Votre tarif SIL. Vous le trouvez sur votre dernière facture (typique : 0.25–0.35)."
+    },
+    "injectionPricePerKwh": {
+      "title": "Prix d'injection au kWh (CHF)",
+      "description": "Crédit reçu pour la production solaire injectée dans le réseau."
+    }
+  },
+  "bricks": {
+    "chart": {
+      "name": "Graphique de consommation",
+      "description": "Graphique de consommation configurable par période et style",
+      "config": {
+        "period": {
+          "label": "Période",
+          "options": {
+            "24h": "Dernières 24 heures (15 min)",
+            "7d": "7 derniers jours",
+            "30d": "30 derniers jours",
+            "12m": "12 derniers mois",
+            "24m": "24 derniers mois"
+          }
+        },
+        "style": {
+          "label": "Style du graphique",
+          "options": {
+            "bar": "Barres",
+            "area": "Aire",
+            "line": "Ligne"
+          }
+        }
+      }
+    },
+    "live": {
+      "name": "Consommation en direct",
+      "description": "Dernière mesure 15 min avec un mini graphique de l'activité récente"
+    },
+    "summary": {
+      "name": "Résumé mensuel",
+      "description": "Consommation du mois en cours avec tendance vs mois précédent"
+    },
+    "cost": {
+      "name": "Coût mensuel",
+      "description": "Coût estimé de l'électricité du mois en cours basé sur votre tarif au kWh"
+    }
+  },
+  "ui": {
+    "consumption": "Consommation",
+    "estimatedCost": "Coût estimé",
+    "live": "En direct",
+    "lastReading": "Dernière mesure",
+    "todayTotal": "Aujourd'hui",
+    "minuteConsumption": "Consommation 15 min",
+    "hourConsumption": "Consommation horaire",
+    "dayConsumption": "Consommation quotidienne",
+    "monthConsumption": "Consommation mensuelle",
+    "vsPrevious": "vs précédent",
+    "noCookie": "Ajoutez votre email et mot de passe lausanne.ch dans les paramètres",
+    "authError": "Connexion échouée — vérifiez votre email et mot de passe",
+    "networkError": "Impossible de joindre SIL — vérifiez votre connexion"
+  }
+}

@@ -494,6 +494,16 @@
         "clsx": "^2.1.1",
       },
     },
+    "plugins/sil-electricity": {
+      "name": "@brika/plugin-sil-electricity",
+      "version": "0.1.0",
+      "dependencies": {
+        "@brika/sdk": "workspace:*",
+      },
+      "devDependencies": {
+        "recharts": "^3.7.0",
+      },
+    },
     "plugins/spotify": {
       "name": "@brika/plugin-spotify",
       "version": "0.3.1",
@@ -629,6 +639,8 @@
     "@brika/plugin-example-echo": ["@brika/plugin-example-echo@workspace:plugins/example-echo"],
 
     "@brika/plugin-matter": ["@brika/plugin-matter@workspace:plugins/matter"],
+
+    "@brika/plugin-sil-electricity": ["@brika/plugin-sil-electricity@workspace:plugins/sil-electricity"],
 
     "@brika/plugin-spotify": ["@brika/plugin-spotify@workspace:plugins/spotify"],
 
@@ -1694,7 +1706,7 @@
 
     "@brika/ipc/@types/bun": ["@types/bun@1.3.12", "", { "dependencies": { "bun-types": "1.3.12" } }, "sha512-DBv81elK+/VSwXHDlnH3Qduw+KxkTIWi7TXkAeh24zpi5l0B2kUg9Ga3tb4nJaPcOFswflgi/yAvMVBPrxMB+A=="],
 
-    "@brika/sdk/@types/bun": ["@types/bun@1.3.12", "", { "dependencies": { "bun-types": "1.3.12" } }, "sha512-DBv81elK+/VSwXHDlnH3Qduw+KxkTIWi7TXkAeh24zpi5l0B2kUg9Ga3tb4nJaPcOFswflgi/yAvMVBPrxMB+A=="],
+    "@brika/schema/bun-types": ["bun-types@1.3.13", "", { "dependencies": { "@types/node": "*" } }, "sha512-QXKeHLlOLqQX9LgYaHJfzdBaV21T63HhFJnvuRCcjZiaUDpbs5ED1MgxbMra71CsryN/1dAoXuJJJwIv/2drVA=="],
 
     "@brika/workflow/@types/bun": ["@types/bun@1.3.12", "", { "dependencies": { "bun-types": "1.3.12" } }, "sha512-DBv81elK+/VSwXHDlnH3Qduw+KxkTIWi7TXkAeh24zpi5l0B2kUg9Ga3tb4nJaPcOFswflgi/yAvMVBPrxMB+A=="],
 

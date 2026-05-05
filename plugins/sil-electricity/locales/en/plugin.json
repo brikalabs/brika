@@ -1,0 +1,75 @@
+{
+  "name": "SIL Electricity",
+  "description": "Monitor your electricity consumption from Services Industriels de Lausanne",
+  "preferences": {
+    "email": {
+      "title": "Email",
+      "description": "Your lausanne.ch account email address"
+    },
+    "password": {
+      "title": "Password",
+      "description": "Your lausanne.ch account password"
+    },
+    "pricePerKwh": {
+      "title": "Price per kWh (CHF)",
+      "description": "Your SIL electricity rate. Find it on your latest bill (typical: 0.25–0.35)."
+    },
+    "injectionPricePerKwh": {
+      "title": "Injection price per kWh (CHF)",
+      "description": "Credit you receive for solar production injected into the grid."
+    }
+  },
+  "bricks": {
+    "chart": {
+      "name": "Consumption Chart",
+      "description": "Configurable consumption chart by period and style",
+      "config": {
+        "period": {
+          "label": "Period",
+          "options": {
+            "24h": "Last 24 hours (15-min)",
+            "7d": "Last 7 days",
+            "30d": "Last 30 days",
+            "12m": "Last 12 months",
+            "24m": "Last 24 months"
+          }
+        },
+        "style": {
+          "label": "Chart Style",
+          "options": {
+            "bar": "Bars",
+            "area": "Area",
+            "line": "Line"
+          }
+        }
+      }
+    },
+    "live": {
+      "name": "Live Consumption",
+      "description": "Latest 15-minute reading with a mini area chart of recent activity"
+    },
+    "summary": {
+      "name": "Monthly Summary",
+      "description": "Current month consumption with trend vs previous month"
+    },
+    "cost": {
+      "name": "Monthly Cost",
+      "description": "Estimated electricity cost for the current month based on your kWh price"
+    }
+  },
+  "ui": {
+    "consumption": "Consumption",
+    "estimatedCost": "Estimated cost",
+    "live": "Live",
+    "lastReading": "Last reading",
+    "todayTotal": "Today",
+    "minuteConsumption": "15-minute consumption",
+    "hourConsumption": "Hourly consumption",
+    "dayConsumption": "Daily consumption",
+    "monthConsumption": "Monthly consumption",
+    "vsPrevious": "vs previous",
+    "noCookie": "Add your lausanne.ch email and password in plugin settings",
+    "authError": "Login failed — check your email and password in plugin settings",
+    "networkError": "Could not reach SIL — check your connection"
+  }
+}
