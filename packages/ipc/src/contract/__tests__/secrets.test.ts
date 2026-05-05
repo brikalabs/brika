@@ -50,13 +50,12 @@ describe('SecretKey schema', () => {
   });
 
   test('rejects unicode whitespace and homoglyphs that look like ASCII letters', () => {
-    // Cyrillic small letter 'а' (U+0430) — visually identical to Latin 'a'
-    expect(SecretKey.safeParse('аpiKey').success).toBe(false);
-    // Zero-width space at start
-    expect(SecretKey.safeParse('​apiKey').success).toBe(false);
-    // RTL override
-    expect(SecretKey.safeParse('‮apiKey').success).toBe(false);
-    // Tab and newline
+    // Use explicit \u escapes so the source file stays plain ASCII —
+    // an audit-friendly way to test rejection of these chars without
+    // embedding them in the file (avoids SonarQube text:S6389 etc).
+    expect(SecretKey.safeParse('\u0430apiKey').success).toBe(false); // Cyrillic 'a' (U+0430) homoglyph for Latin 'a'
+    expect(SecretKey.safeParse('\u200BapiKey').success).toBe(false); // zero-width space (U+200B)
+    expect(SecretKey.safeParse('\u202EapiKey').success).toBe(false); // RTL override / bidi (U+202E)
     expect(SecretKey.safeParse('a\tb').success).toBe(false);
     expect(SecretKey.safeParse('a\rb').success).toBe(false);
   });
