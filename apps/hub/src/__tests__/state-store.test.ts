@@ -5,9 +5,59 @@ import { mkdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { configureDatabases } from '@brika/db';
 import { get, provide, reset, stub, useTestBed } from '@brika/di/testing';
+import type { ThemeConfig } from '@brika/ipc/contract';
 import { HubConfig } from '@/runtime/config';
 import { Logger } from '@/runtime/logs/log-router';
 import { StateStore } from '@/runtime/state/state-store';
+
+function makeTheme(id: string, overrides: Partial<ThemeConfig> = {}): ThemeConfig {
+  const colors = {
+    background: '#fff',
+    foreground: '#000',
+    card: '#fff',
+    'card-foreground': '#000',
+    popover: '#fff',
+    'popover-foreground': '#000',
+    primary: '#000',
+    'primary-foreground': '#fff',
+    secondary: '#eee',
+    'secondary-foreground': '#000',
+    accent: '#ddd',
+    'accent-foreground': '#000',
+    muted: '#eee',
+    'muted-foreground': '#666',
+    border: '#ddd',
+    input: '#ddd',
+    ring: '#000',
+    success: '#0a0',
+    'success-foreground': '#fff',
+    warning: '#f80',
+    'warning-foreground': '#000',
+    info: '#08f',
+    'info-foreground': '#fff',
+    destructive: '#f00',
+    'destructive-foreground': '#fff',
+    'data-1': '#001',
+    'data-2': '#002',
+    'data-3': '#003',
+    'data-4': '#004',
+    'data-5': '#005',
+    'data-6': '#006',
+    'data-7': '#007',
+    'data-8': '#008',
+  };
+  return {
+    version: 1,
+    id,
+    name: id,
+    createdAt: 1,
+    updatedAt: 2,
+    radius: 0.5,
+    fonts: { sans: 'Inter', mono: 'Mono' },
+    colors: { light: colors, dark: colors },
+    ...overrides,
+  };
+}
 
 useTestBed({
   autoStub: false,
@@ -635,6 +685,112 @@ describe('StateStore', () => {
       store.init();
 
       expect(store.isSetupCompleted()).toBe(true);
+    });
+  });
+
+  describe('custom themes', () => {
+    test('listCustomThemes returns an empty array when none are stored', () => {
+      store.init();
+      expect(store.listCustomThemes()).toEqual([]);
+    });
+
+    test('upsertCustomTheme inserts and updates by id', () => {
+      store.init();
+      const a = makeTheme('alpha', { name: 'Alpha v1', updatedAt: 100 });
+      store.upsertCustomTheme(a);
+
+      const listed = store.listCustomThemes();
+      expect(listed).toHaveLength(1);
+      expect(listed[0]?.name).toBe('Alpha v1');
+
+      // Same id with new content overwrites the previous row.
+      const a2 = makeTheme('alpha', { name: 'Alpha v2', updatedAt: 200 });
+      store.upsertCustomTheme(a2);
+      const updated = store.listCustomThemes();
+      expect(updated).toHaveLength(1);
+      expect(updated[0]?.name).toBe('Alpha v2');
+    });
+
+    test('deleteCustomTheme removes a single theme by id', () => {
+      store.init();
+      store.upsertCustomTheme(makeTheme('alpha'));
+      store.upsertCustomTheme(makeTheme('beta'));
+      expect(store.listCustomThemes()).toHaveLength(2);
+
+      store.deleteCustomTheme('alpha');
+      const remaining = store.listCustomThemes();
+      expect(remaining).toHaveLength(1);
+      expect(remaining[0]?.id).toBe('beta');
+    });
+
+    test('listCustomThemes skips rows that fail Zod validation instead of throwing', () => {
+      store.init();
+      // Inject a row that's valid JSON but doesn't match ThemeConfig.
+      // This simulates a downgrade or a manual DB edit landing bad data.
+      // biome-ignore lint/suspicious/noExplicitAny: deliberate bypass for the test
+      const db = (store as any).db as {
+        insert: (t: unknown) => {
+          values: (v: unknown) => { run: () => void };
+        };
+      };
+      // biome-ignore lint/suspicious/noExplicitAny: import the table for direct insert
+      const { customThemes } = require('@/runtime/state/schema') as any;
+      db.insert(customThemes)
+        .values({ id: 'broken', config: '{"not":"a theme"}', updatedAt: 1 })
+        .run();
+      db.insert(customThemes)
+        .values({ id: 'corrupt', config: '{ this is not json', updatedAt: 1 })
+        .run();
+      store.upsertCustomTheme(makeTheme('good'));
+
+      const listed = store.listCustomThemes();
+      expect(listed).toHaveLength(1);
+      expect(listed[0]?.id).toBe('good');
+    });
+
+    test('persists themes across re-init', () => {
+      store.init();
+      store.upsertCustomTheme(makeTheme('persisted'));
+
+      reset();
+      configureDatabases(TEST_DIR);
+      provide(HubConfig, { homeDir: TEST_DIR });
+      stub(Logger);
+      store = get(StateStore);
+      store.init();
+
+      expect(store.listCustomThemes().map((t) => t.id)).toEqual(['persisted']);
+    });
+  });
+
+  describe('active theme', () => {
+    test('returns the default active theme when nothing has been set', () => {
+      store.init();
+      expect(store.getActiveTheme()).toEqual({ theme: null, mode: 'system' });
+    });
+
+    test('setActiveTheme merges patches and returns the new full state', () => {
+      store.init();
+      const next = store.setActiveTheme({ theme: 'mocha' });
+      expect(next).toEqual({ theme: 'mocha', mode: 'system' });
+      expect(store.getActiveTheme()).toEqual({ theme: 'mocha', mode: 'system' });
+
+      const dark = store.setActiveTheme({ mode: 'dark' });
+      expect(dark).toEqual({ theme: 'mocha', mode: 'dark' });
+    });
+
+    test('persists active theme across re-init', () => {
+      store.init();
+      store.setActiveTheme({ theme: 'mocha', mode: 'dark' });
+
+      reset();
+      configureDatabases(TEST_DIR);
+      provide(HubConfig, { homeDir: TEST_DIR });
+      stub(Logger);
+      store = get(StateStore);
+      store.init();
+
+      expect(store.getActiveTheme()).toEqual({ theme: 'mocha', mode: 'dark' });
     });
   });
 });

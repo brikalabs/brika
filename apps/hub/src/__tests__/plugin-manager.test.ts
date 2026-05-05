@@ -57,6 +57,7 @@ describe('PluginManager', () => {
     clearBlockEmitHandler: ReturnType<typeof mock>;
     setBlockLogHandler: ReturnType<typeof mock>;
     clearBlockLogHandler: ReturnType<typeof mock>;
+    onPluginRemoved: ReturnType<typeof mock>;
   };
 
   const createMockProcess = (name: string, uid: string): Partial<PluginProcess> => ({

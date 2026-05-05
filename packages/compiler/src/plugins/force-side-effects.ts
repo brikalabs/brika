@@ -45,26 +45,61 @@ export function brikaForceSideEffectsPlugin(): BunPlugin {
   };
 }
 
-const REEXPORT_RE = /^(\s*)export\s+\{([^}]+)\}\s+from\s+(['"][^'"]+['"]);?\s*$/gm;
+/**
+ * Per-line regex (no `m`/`g` flags). Bounded by `\n`-free character
+ * classes so the engine can never backtrack across line boundaries.
+ * Both `[^}\n]` and `[^'"\n]` are negated single-character classes,
+ * which keeps the quantifiers linear.
+ */
+const REEXPORT_LINE_RE = /^(\s*)export\s+\{([^}\n]+)\}\s+from\s+(['"][^'"\n]+['"]);?\s*$/;
 
 function rewriteBarrelReexports(text: string): string {
-  return text.replaceAll(REEXPORT_RE, (_full, indent: string, names: string, source: string) => {
-    const parts = names
-      .split(',')
-      .map((n) => n.trim())
-      .filter(Boolean)
-      .map((n) => {
-        const [orig, alias] = n.split(/\s+as\s+/).map((s) => s.trim());
-        return { orig, alias: alias ?? orig };
-      });
-    // Skip `default` re-exports — the bundler-friendly rewrite for those
-    // varies across runtimes, and barrel files rarely re-export default
-    // through this pattern.
-    if (parts.some((p) => p.orig === 'default')) {
-      return _full;
+  // Operating per-line keeps every regex match bounded by line length,
+  // sidestepping the catastrophic-backtracking concern that file-wide
+  // regexes raise (Sonar S5852). Most node_modules barrel files are
+  // small (<200 lines), so the overhead is trivial.
+  const lines = text.split('\n');
+  let changed = false;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (!line?.includes('export ')) {
+      continue;
     }
-    const importPart = parts.map((p) => `${p.orig} as __re_${p.alias}`).join(', ');
-    const exportPart = parts.map((p) => `export const ${p.alias} = __re_${p.alias};`).join(' ');
-    return `${indent}import { ${importPart} } from ${source}; ${exportPart}`;
-  });
+    const match = REEXPORT_LINE_RE.exec(line);
+    if (!match) {
+      continue;
+    }
+    const [, indent, names, source] = match;
+    const rewritten = rewriteOne(indent ?? '', names ?? '', source ?? '');
+    if (rewritten !== line) {
+      lines[i] = rewritten;
+      changed = true;
+    }
+  }
+  return changed ? lines.join('\n') : text;
+}
+
+function rewriteOne(indent: string, names: string, source: string): string {
+  const parts: { orig: string; alias: string }[] = [];
+  for (const raw of names.split(',')) {
+    const trimmed = raw.trim();
+    if (!trimmed) {
+      continue;
+    }
+    // `Foo as Bar` → ['Foo', 'Bar']; `Foo` → ['Foo']. Splitting on the
+    // literal ` as ` is safe because identifiers can't contain spaces.
+    const aliasIdx = trimmed.indexOf(' as ');
+    const orig = aliasIdx === -1 ? trimmed : trimmed.slice(0, aliasIdx).trim();
+    const alias = aliasIdx === -1 ? orig : trimmed.slice(aliasIdx + 4).trim();
+    parts.push({ orig, alias });
+  }
+  // Skip `default` re-exports — the bundler-friendly rewrite for those
+  // varies across runtimes, and barrel files rarely re-export default
+  // through this pattern.
+  if (parts.some((p) => p.orig === 'default')) {
+    return `${indent}export { ${names} } from ${source};`;
+  }
+  const importPart = parts.map((p) => `${p.orig} as __re_${p.alias}`).join(', ');
+  const exportPart = parts.map((p) => `export const ${p.alias} = __re_${p.alias};`).join(' ');
+  return `${indent}import { ${importPart} } from ${source}; ${exportPart}`;
 }
