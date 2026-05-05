@@ -1,7 +1,6 @@
 import { inject, singleton } from '@brika/di';
 import type { BrikaConfig } from '@/runtime/config';
 import { Logger } from '@/runtime/logs/log-router';
-import { PluginConfigService } from '@/runtime/plugins/plugin-config';
 import { PluginManager } from '@/runtime/plugins/plugin-manager';
 import { PluginRegistry } from '@/runtime/registry';
 import { StateStore } from '@/runtime/state/state-store';
@@ -15,7 +14,6 @@ export class PluginLoader implements Loader {
   private readonly pm = inject(PluginManager);
   private readonly registry = inject(PluginRegistry);
   private readonly state = inject(StateStore);
-  private readonly pluginConfig = inject(PluginConfigService);
 
   async init(): Promise<void> {
     await this.state.init();
@@ -51,18 +49,6 @@ export class PluginLoader implements Loader {
           }
         );
       }
-    }
-
-    // Strip plaintext secrets that predate the keychain migration.
-    // Affected plugins will need to be re-authenticated by the user.
-    const scrubbed = await this.pluginConfig.scrubLegacySecrets(config);
-    if (scrubbed > 0) {
-      this.logs.warn(
-        'Cleared legacy plaintext secrets from brika.yml — re-authenticate affected plugins',
-        {
-          pluginsScrubbed: scrubbed,
-        }
-      );
     }
   }
 
