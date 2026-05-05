@@ -34,41 +34,13 @@ export class PluginConfigService {
    * Password values and __secret_* keys are read from the OS keychain.
    */
   async getConfig(pluginName: string): Promise<Record<string, unknown>> {
-    const schema = this.getSchema(pluginName);
-    const userConfig = this.#configLoader.getPluginConfig(pluginName) ?? {};
-
-    const merged: Record<string, unknown> = {};
-
-    for (const pref of schema) {
-      if (pref.type === 'link') {
-        continue;
+    return await this.#buildConfig(pluginName, async (pref) => {
+      if (pref.type !== 'password') {
+        return undefined;
       }
-      if (pref.type === 'password') {
-        const stored = await this.#secrets.get(pluginName, pref.name);
-        merged[pref.name] = stored ?? pref.default ?? '';
-      } else {
-        merged[pref.name] = pref.name in userConfig ? userConfig[pref.name] : pref.default;
-      }
-    }
-
-    // SDK-internal keys persisted via updatePreference. __secret_* keys live
-    // in the keychain (YAML holds a null sentinel as the presence index);
-    // other __* keys keep their YAML value.
-    for (const key of Object.keys(userConfig)) {
-      if (!key.startsWith('__')) {
-        continue;
-      }
-      if (key.startsWith(SECRET_PREFIX)) {
-        const stored = await this.#secrets.getJSON(pluginName, key);
-        if (stored !== null) {
-          merged[key] = stored;
-        }
-      } else {
-        merged[key] = userConfig[key];
-      }
-    }
-
-    return merged;
+      const stored = await this.#secrets.get(pluginName, pref.name);
+      return stored ?? pref.default ?? '';
+    });
   }
 
   /**
@@ -87,9 +59,9 @@ export class PluginConfigService {
       if (pref.type === 'password') {
         const stored = await this.#secrets.get(pluginName, pref.name);
         masked[pref.name] = stored ? SECRET_PLACEHOLDER : '';
-      } else {
-        masked[pref.name] = pref.name in userConfig ? userConfig[pref.name] : pref.default;
+        continue;
       }
+      masked[pref.name] = pref.name in userConfig ? userConfig[pref.name] : pref.default;
     }
 
     // Non-secret __* keys remain visible to the UI; __secret_* are hidden.
@@ -100,6 +72,59 @@ export class PluginConfigService {
     }
 
     return masked;
+  }
+
+  /**
+   * Walk schema + userConfig once, letting the caller resolve password values
+   * (the only branch that differs between internal and API-shaped reads).
+   */
+  async #buildConfig(
+    pluginName: string,
+    resolvePassword: (pref: PreferenceDefinition) => Promise<unknown> | undefined
+  ): Promise<Record<string, unknown>> {
+    const schema = this.getSchema(pluginName);
+    const userConfig = this.#configLoader.getPluginConfig(pluginName) ?? {};
+    const merged: Record<string, unknown> = {};
+
+    for (const pref of schema) {
+      if (pref.type === 'link') {
+        continue;
+      }
+      const resolved = await resolvePassword(pref);
+      if (resolved !== undefined) {
+        merged[pref.name] = resolved;
+        continue;
+      }
+      merged[pref.name] = pref.name in userConfig ? userConfig[pref.name] : pref.default;
+    }
+
+    await this.#mergeInternalKeys(pluginName, userConfig, merged);
+    return merged;
+  }
+
+  /**
+   * SDK-internal keys persisted via updatePreference. __secret_* keys live in
+   * the keychain (YAML holds a null sentinel); other __* keys keep their
+   * YAML value as-is.
+   */
+  async #mergeInternalKeys(
+    pluginName: string,
+    userConfig: Record<string, unknown>,
+    target: Record<string, unknown>
+  ): Promise<void> {
+    for (const key of Object.keys(userConfig)) {
+      if (!key.startsWith('__')) {
+        continue;
+      }
+      if (!key.startsWith(SECRET_PREFIX)) {
+        target[key] = userConfig[key];
+        continue;
+      }
+      const stored = await this.#secrets.getJSON(pluginName, key);
+      if (stored !== null) {
+        target[key] = stored;
+      }
+    }
   }
 
   validate(pluginName: string, config: Record<string, unknown>) {
@@ -172,11 +197,7 @@ export class PluginConfigService {
 
       let changed = false;
       for (const key of Object.keys(entry.config)) {
-        const value = entry.config[key];
-        if (passwordPrefs.has(key) && typeof value === 'string' && value !== '') {
-          delete entry.config[key];
-          changed = true;
-        } else if (key.startsWith('__oauth_') && key.endsWith('_token')) {
+        if (this.#isLegacyPlaintextSecret(key, entry.config[key], passwordPrefs)) {
           delete entry.config[key];
           changed = true;
         }
@@ -192,6 +213,16 @@ export class PluginConfigService {
     }
 
     return pluginsScrubbed;
+  }
+
+  #isLegacyPlaintextSecret(
+    key: string,
+    value: unknown,
+    passwordPrefs: ReadonlySet<string>
+  ): boolean {
+    const isPasswordPref = passwordPrefs.has(key) && typeof value === 'string' && value !== '';
+    const isLegacyOAuthToken = key.startsWith('__oauth_') && key.endsWith('_token');
+    return isPasswordPref || isLegacyOAuthToken;
   }
 
   async #applyPasswordChange(pluginName: string, key: string, value: unknown): Promise<void> {
