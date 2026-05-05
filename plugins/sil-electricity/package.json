@@ -1,0 +1,134 @@
+{
+  "$schema": "https://schema.brika.dev/plugin.schema.json",
+  "name": "@brika/plugin-sil-electricity",
+  "displayName": "SIL Electricity",
+  "version": "0.1.0",
+  "description": "Monitor your electricity consumption from Services Industriels de Lausanne",
+  "author": "Maxime Scharwath",
+  "license": "MIT",
+  "icon": "./icon.svg",
+  "keywords": [
+    "brika",
+    "brika-plugin",
+    "electricity",
+    "energy",
+    "sil",
+    "lausanne"
+  ],
+  "type": "module",
+  "main": "./src/index.tsx",
+  "exports": {
+    ".": "./src/index.tsx"
+  },
+  "engines": {
+    "brika": "^0.3.0"
+  },
+  "scripts": {
+    "link": "bun link",
+    "typecheck": "tsgo --noEmit"
+  },
+  "preferences": [
+    {
+      "name": "email",
+      "type": "text",
+      "label": "Email",
+      "description": "Your lausanne.ch account email address"
+    },
+    {
+      "name": "password",
+      "type": "password",
+      "label": "Password",
+      "description": "Your lausanne.ch account password"
+    },
+    {
+      "name": "pricePerKwh",
+      "type": "number",
+      "label": "Price per kWh (CHF)",
+      "description": "Your SIL electricity rate. Find it on your latest bill (typical: 0.25–0.35).",
+      "default": 0.30,
+      "min": 0,
+      "max": 1
+    },
+    {
+      "name": "injectionPricePerKwh",
+      "type": "number",
+      "label": "Injection price per kWh (CHF)",
+      "description": "Credit you receive for solar production injected into the grid.",
+      "default": 0.10,
+      "min": 0,
+      "max": 1
+    }
+  ],
+  "bricks": [
+    {
+      "id": "chart",
+      "name": "Consumption Chart",
+      "description": "Configurable consumption chart by period and style",
+      "category": "info",
+      "icon": "bar-chart-2",
+      "color": "#3b82f6",
+      "config": [
+        {
+          "type": "dropdown",
+          "name": "period",
+          "label": "Period",
+          "options": [
+            { "value": "24h" },
+            { "value": "7d" },
+            { "value": "30d" },
+            { "value": "12m" },
+            { "value": "24m" }
+          ],
+          "default": "12m"
+        },
+        {
+          "type": "dropdown",
+          "name": "style",
+          "label": "Chart Style",
+          "options": [
+            { "value": "bar" },
+            { "value": "area" },
+            { "value": "line" }
+          ],
+          "default": "bar"
+        }
+      ]
+    },
+    {
+      "id": "live",
+      "name": "Live Consumption",
+      "description": "Latest 15-minute reading with a mini area chart of recent activity",
+      "category": "info",
+      "icon": "activity",
+      "color": "#10b981"
+    },
+    {
+      "id": "summary",
+      "name": "Monthly Summary",
+      "description": "Current month consumption with trend vs previous month",
+      "category": "info",
+      "icon": "zap",
+      "color": "#f59e0b"
+    },
+    {
+      "id": "cost",
+      "name": "Monthly Cost",
+      "description": "Estimated electricity cost for the current month based on your kWh price",
+      "category": "info",
+      "icon": "banknote",
+      "color": "#8b5cf6"
+    }
+  ],
+  "dependencies": {
+    "@brika/sdk": "workspace:*"
+  },
+  "devDependencies": {
+    "recharts": "^3.7.0"
+  },
+  "files": [
+    "src",
+    "locales",
+    "icon.svg",
+    "README.md"
+  ]
+}

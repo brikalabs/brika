@@ -1,0 +1,7 @@
+{
+  "extends": "@brika/sdk/tsconfig.plugin.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "react"
+  }
+}
