@@ -3,7 +3,10 @@
  * Works for both runtime (bun run) and bundler (Bun.build)
  *
  * Usage: import archive from "@/templates.tar"
- * Bun resolves paths (respects tsconfig), we just handle loading.
+ * Usage: import archive from "./migrations.tar"
+ *
+ * The .tar file must exist on disk (even as an empty stub) so Bun's resolver finds it.
+ * The plugin ignores file content and always packs the corresponding folder instead.
  */
 
 import { stat } from 'node:fs/promises';
