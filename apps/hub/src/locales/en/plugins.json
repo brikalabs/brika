@@ -135,6 +135,8 @@
     "title": "Permissions",
     "description": "Control what this plugin can access",
     "location": "Location",
-    "locationDesc": "Access the hub's physical location (address, coordinates, timezone)"
+    "locationDesc": "Access the hub's physical location (address, coordinates, timezone)",
+    "secrets": "Secret storage",
+    "secretsDesc": "Read and write per-plugin credentials in the OS keychain"
   }
 }

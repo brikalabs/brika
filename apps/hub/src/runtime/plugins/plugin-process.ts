@@ -4,9 +4,11 @@ import {
   blockLog,
   brickInstanceAction,
   callAction,
+  deletePluginSecret,
   emitSpark,
   getHubLocation,
   getHubTimezone,
+  getPluginSecret,
   hello,
   log,
   preferenceOptions,
@@ -22,6 +24,7 @@ import {
   registerSpark,
   routeRequest,
   type SparkEvent as SparkEventType,
+  setPluginSecret,
   setTimezone,
   sparkEvent,
   startBlock,
@@ -73,6 +76,9 @@ export interface PluginProcessCallbacks {
   onGetHubLocation: () => HubLocation | null;
   onGetHubTimezone: () => string | null;
   onGetGrantedPermissions: (name: string) => string[];
+  onGetPluginSecret: (pluginName: string, key: string) => Promise<string | null>;
+  onSetPluginSecret: (pluginName: string, key: string, value: string) => Promise<void>;
+  onDeletePluginSecret: (pluginName: string, key: string) => Promise<boolean>;
   onHeartbeatFailed: (process: PluginProcess, silentMs: number) => void;
   onDisconnect: (process: PluginProcess, error?: Error) => void;
   onMetrics?: (process: PluginProcess, cpu: number, memory: number) => void;
@@ -567,6 +573,24 @@ export class PluginProcess {
       return {
         timezone: this.callbacks.onGetHubTimezone(),
       };
+    });
+
+    this.#channel.implement(getPluginSecret, async ({ key }) => {
+      this.#requirePermission('secrets');
+      const value = await this.callbacks.onGetPluginSecret(this.name, key);
+      return { value };
+    });
+
+    this.#channel.implement(setPluginSecret, async ({ key, value }) => {
+      this.#requirePermission('secrets');
+      await this.callbacks.onSetPluginSecret(this.name, key, value);
+      return {};
+    });
+
+    this.#channel.implement(deletePluginSecret, async ({ key }) => {
+      this.#requirePermission('secrets');
+      const deleted = await this.callbacks.onDeletePluginSecret(this.name, key);
+      return { deleted };
     });
   }
 

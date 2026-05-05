@@ -81,6 +81,11 @@ export interface MockBridge {
   // Location
   getLocation: ReturnType<typeof mock>;
   getTimezone: ReturnType<typeof mock>;
+
+  // Secrets
+  getSecret: ReturnType<typeof mock>;
+  setSecret: ReturnType<typeof mock>;
+  deleteSecret: ReturnType<typeof mock>;
 }
 
 function createMockBridge(manifest: Partial<Manifest>): MockBridge {
@@ -140,6 +145,11 @@ function createMockBridge(manifest: Partial<Manifest>): MockBridge {
     // Location
     getLocation: mock(async () => null),
     getTimezone: mock(async () => null),
+
+    // Secrets
+    getSecret: mock(async (_key: unknown) => null),
+    setSecret: mock(async (_key: unknown, _value: unknown) => undefined),
+    deleteSecret: mock(async (_key: unknown) => false),
   };
 }
 
@@ -200,6 +210,9 @@ export function createTestHarness(manifest?: Partial<Manifest>): TestHarness {
     });
     bridge.getLocation.mockImplementation(async () => null);
     bridge.getTimezone.mockImplementation(async () => null);
+    bridge.getSecret.mockImplementation(async (_key: unknown) => null);
+    bridge.setSecret.mockImplementation(async (_key: unknown, _value: unknown) => undefined);
+    bridge.deleteSecret.mockImplementation(async (_key: unknown) => false);
 
     globalThis.__brika_ipc = bridge as unknown as PreludeBridge;
     logMessages.length = 0;

@@ -135,6 +135,8 @@
     "title": "Permissions",
     "description": "Contrôlez les accès de ce plugin",
     "location": "Localisation",
-    "locationDesc": "Accéder à la localisation physique du hub (adresse, coordonnées, fuseau horaire)"
+    "locationDesc": "Accéder à la localisation physique du hub (adresse, coordonnées, fuseau horaire)",
+    "secrets": "Stockage sécurisé",
+    "secretsDesc": "Lire et écrire les identifiants du plugin dans le trousseau du système"
   }
 }

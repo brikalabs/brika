@@ -122,6 +122,11 @@ export interface PreludeBridge {
   // -- Location --
   getLocation(): Promise<HubLocation | null>;
   getTimezone(): Promise<string | null>;
+
+  // -- Secrets (programmatic per-plugin keychain storage) --
+  getSecret(key: string): Promise<string | null>;
+  setSecret(key: string, value: string): Promise<void>;
+  deleteSecret(key: string): Promise<boolean>;
 }
 
 // ---- Global declaration ----

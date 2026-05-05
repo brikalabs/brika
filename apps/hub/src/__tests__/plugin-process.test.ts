@@ -7,9 +7,11 @@ import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 import {
   blockEmit,
   blockLog,
+  deletePluginSecret,
   emitSpark,
   getHubLocation,
   getHubTimezone,
+  getPluginSecret,
   hello,
   log,
   ready,
@@ -18,6 +20,7 @@ import {
   registerBrickType,
   registerRoute,
   registerSpark,
+  setPluginSecret,
   subscribeSpark,
   unsubscribeSpark,
   updatePreference,
@@ -122,6 +125,9 @@ describe('PluginProcess', () => {
       onMetrics: mock(),
       onRoute: mock(),
       onUpdatePreference: mock(),
+      onGetPluginSecret: mock().mockResolvedValue(null),
+      onSetPluginSecret: mock().mockResolvedValue(undefined),
+      onDeletePluginSecret: mock().mockResolvedValue(false),
     };
 
     config = {
@@ -1213,6 +1219,273 @@ describe('PluginProcess', () => {
         expect(result).toEqual({
           timezone: null,
         });
+      });
+    });
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Plugin secrets — security boundary tests
+    //
+    // Each test exercises an actual RPC handler registered on the channel,
+    // not a callback in isolation. The point is to verify the *security
+    // contract* of the IPC layer:
+    //   - permission is checked on every call (not cached, not skippable)
+    //   - the plugin name passed to callbacks is always `process.name` (the
+    //     trusted identity from spawn time) — plugins cannot influence it
+    //   - the IPC schema rejects values that haven't passed validation
+    //   - errors carry the correct typed code so SDKs can map them
+    // ─────────────────────────────────────────────────────────────────────
+
+    describe('plugin secrets (security boundary)', () => {
+      async function expectPermissionDenied(fn: () => unknown): Promise<void> {
+        try {
+          await fn();
+        } catch (e: unknown) {
+          const err = e as { code?: string; message?: string; data?: Record<string, unknown> };
+          expect(err.code).toBe('PERMISSION_DENIED');
+          expect(err.data).toEqual({ permission: 'secrets' });
+          return;
+        }
+        throw new Error('Expected handler to throw a PERMISSION_DENIED error');
+      }
+
+      describe('getPluginSecret (implement)', () => {
+        test('throws PERMISSION_DENIED when the plugin lacks the secrets grant', async () => {
+          (callbacks.onGetGrantedPermissions as ReturnType<typeof mock>).mockReturnValue([]);
+
+          await expectPermissionDenied(() =>
+            triggerImplement(getPluginSecret, {
+              key: 'api-key',
+            })
+          );
+          // Importantly, the callback is NEVER reached when permission is denied
+          expect(callbacks.onGetPluginSecret).not.toHaveBeenCalled();
+        });
+
+        test('still throws when only an unrelated permission is granted', async () => {
+          (callbacks.onGetGrantedPermissions as ReturnType<typeof mock>).mockReturnValue([
+            'location',
+          ]);
+
+          await expectPermissionDenied(() =>
+            triggerImplement(getPluginSecret, {
+              key: 'api-key',
+            })
+          );
+          expect(callbacks.onGetPluginSecret).not.toHaveBeenCalled();
+        });
+
+        test('checks permission on every call (not cached)', async () => {
+          (callbacks.onGetGrantedPermissions as ReturnType<typeof mock>).mockReturnValue([
+            'secrets',
+          ]);
+          (callbacks.onGetPluginSecret as ReturnType<typeof mock>).mockResolvedValue('value-1');
+
+          await triggerImplement(getPluginSecret, {
+            key: 'api-key',
+          });
+
+          // Revoke between calls — the next call must observe the revocation
+          (callbacks.onGetGrantedPermissions as ReturnType<typeof mock>).mockReturnValue([]);
+
+          await expectPermissionDenied(() =>
+            triggerImplement(getPluginSecret, {
+              key: 'api-key',
+            })
+          );
+        });
+
+        test('forwards the trusted plugin name to the callback', async () => {
+          (callbacks.onGetGrantedPermissions as ReturnType<typeof mock>).mockReturnValue([
+            'secrets',
+          ]);
+          (callbacks.onGetPluginSecret as ReturnType<typeof mock>).mockResolvedValue('sk-real');
+
+          const result = await triggerImplement(getPluginSecret, {
+            key: 'api-key',
+          });
+
+          expect(callbacks.onGetPluginSecret).toHaveBeenCalledWith('@test/plugin', 'api-key');
+          expect(result).toEqual({ value: 'sk-real' });
+        });
+
+        test('plugin cannot influence the pluginName argument', async () => {
+          (callbacks.onGetGrantedPermissions as ReturnType<typeof mock>).mockReturnValue([
+            'secrets',
+          ]);
+          (callbacks.onGetPluginSecret as ReturnType<typeof mock>).mockResolvedValue(null);
+
+          // Even if a malicious/buggy plugin tries to smuggle a different name,
+          // the IPC schema strips unknown fields and the handler always uses
+          // this.name (= '@test/plugin') from the constructor.
+          await triggerImplement(getPluginSecret, {
+            key: 'api-key',
+            pluginName: '@victim/plugin',
+            __proto__: { spoof: true },
+          } as unknown as { key: string });
+
+          expect(callbacks.onGetPluginSecret).toHaveBeenCalledWith('@test/plugin', 'api-key');
+          expect(callbacks.onGetPluginSecret).not.toHaveBeenCalledWith(
+            '@victim/plugin',
+            expect.anything()
+          );
+        });
+
+        test('returns null when callback resolves to null', async () => {
+          (callbacks.onGetGrantedPermissions as ReturnType<typeof mock>).mockReturnValue([
+            'secrets',
+          ]);
+          (callbacks.onGetPluginSecret as ReturnType<typeof mock>).mockResolvedValue(null);
+
+          const result = await triggerImplement(getPluginSecret, {
+            key: 'unset-key',
+          });
+
+          expect(result).toEqual({ value: null });
+        });
+      });
+
+      describe('setPluginSecret (implement)', () => {
+        test('throws PERMISSION_DENIED when permission is not granted', async () => {
+          (callbacks.onGetGrantedPermissions as ReturnType<typeof mock>).mockReturnValue([]);
+
+          await expectPermissionDenied(() =>
+            triggerImplement(setPluginSecret, {
+              key: 'api-key',
+              value: 'leak-attempt',
+            })
+          );
+          expect(callbacks.onSetPluginSecret).not.toHaveBeenCalled();
+        });
+
+        test('forwards the trusted plugin name and the validated payload', async () => {
+          (callbacks.onGetGrantedPermissions as ReturnType<typeof mock>).mockReturnValue([
+            'secrets',
+          ]);
+
+          await triggerImplement(setPluginSecret, {
+            key: 'api-key',
+            value: 'sk-real',
+          });
+
+          expect(callbacks.onSetPluginSecret).toHaveBeenCalledWith(
+            '@test/plugin',
+            'api-key',
+            'sk-real'
+          );
+        });
+
+        test('returns an empty object on success', async () => {
+          (callbacks.onGetGrantedPermissions as ReturnType<typeof mock>).mockReturnValue([
+            'secrets',
+          ]);
+
+          const result = await triggerImplement(setPluginSecret, {
+            key: 'api-key',
+            value: 'sk-real',
+          });
+
+          expect(result).toEqual({});
+        });
+
+        test('propagates errors from the callback (e.g. keychain failure)', async () => {
+          (callbacks.onGetGrantedPermissions as ReturnType<typeof mock>).mockReturnValue([
+            'secrets',
+          ]);
+          (callbacks.onSetPluginSecret as ReturnType<typeof mock>).mockRejectedValue(
+            new Error('keychain locked')
+          );
+
+          await expect(
+            triggerImplement(setPluginSecret, {
+              key: 'api-key',
+              value: 'sk-real',
+            }) as Promise<unknown>
+          ).rejects.toThrow('keychain locked');
+        });
+      });
+
+      describe('deletePluginSecret (implement)', () => {
+        test('throws PERMISSION_DENIED when permission is not granted', async () => {
+          (callbacks.onGetGrantedPermissions as ReturnType<typeof mock>).mockReturnValue([]);
+
+          await expectPermissionDenied(() =>
+            triggerImplement(deletePluginSecret, {
+              key: 'api-key',
+            })
+          );
+          expect(callbacks.onDeletePluginSecret).not.toHaveBeenCalled();
+        });
+
+        test('forwards the trusted plugin name and reports deletion result', async () => {
+          (callbacks.onGetGrantedPermissions as ReturnType<typeof mock>).mockReturnValue([
+            'secrets',
+          ]);
+          (callbacks.onDeletePluginSecret as ReturnType<typeof mock>).mockResolvedValue(true);
+
+          const result = await triggerImplement(deletePluginSecret, {
+            key: 'api-key',
+          });
+
+          expect(callbacks.onDeletePluginSecret).toHaveBeenCalledWith('@test/plugin', 'api-key');
+          expect(result).toEqual({ deleted: true });
+        });
+
+        test('returns deleted: false when the secret did not exist', async () => {
+          (callbacks.onGetGrantedPermissions as ReturnType<typeof mock>).mockReturnValue([
+            'secrets',
+          ]);
+          (callbacks.onDeletePluginSecret as ReturnType<typeof mock>).mockResolvedValue(false);
+
+          const result = await triggerImplement(deletePluginSecret, {
+            key: 'missing',
+          });
+
+          expect(result).toEqual({ deleted: false });
+        });
+      });
+
+      test('the callbacks see process.name (not a wire-supplied name)', async () => {
+        // Re-construct PluginProcess with a different name to confirm the
+        // identity comes from the spawn-time `info.name`, not from anything
+        // the plugin can send over IPC.
+        const otherCallbacks = {
+          ...callbacks,
+          onGetPluginSecret: mock().mockResolvedValue(null),
+        } as PluginProcessCallbacks;
+        const otherImplement = new Map<unknown, (...args: unknown[]) => unknown>();
+        const otherChannel = {
+          ...mockChannel,
+          implement: mock((contract: unknown, handler: (...args: unknown[]) => unknown) => {
+            otherImplement.set(contract, handler);
+          }),
+          on: mock(),
+        };
+        (otherCallbacks.onGetGrantedPermissions as ReturnType<typeof mock>).mockReturnValue([
+          'secrets',
+        ]);
+
+        new PluginProcess(
+          otherChannel as never,
+          {
+            name: '@another/plugin',
+            rootDirectory: '/path',
+            entryPoint: '/path/index.js',
+            uid: 'uid-other',
+            version: '1.0.0',
+            metadata: createMockMetadata(),
+            locales: [],
+          },
+          config,
+          otherCallbacks
+        );
+
+        const handler = otherImplement.get(getPluginSecret);
+        if (!handler) {
+          throw new Error('expected getPluginSecret handler to be registered');
+        }
+        await handler({ key: 'api-key' });
+
+        expect(otherCallbacks.onGetPluginSecret).toHaveBeenCalledWith('@another/plugin', 'api-key');
       });
     });
   });

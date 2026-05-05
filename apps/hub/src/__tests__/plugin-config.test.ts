@@ -3,12 +3,14 @@
  */
 
 import 'reflect-metadata';
-import { beforeEach, describe, expect, mock, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 import { get, provide, useTestBed } from '@brika/di/testing';
 import type { PreferenceDefinition } from '@brika/plugin';
 import { ConfigLoader } from '@/runtime/config';
 import { PluginConfigService } from '@/runtime/plugins/plugin-config';
+import { SecretStore } from '@/runtime/secrets/secret-store';
 import { StateStore } from '@/runtime/state/state-store';
+import { type BunSecretsMock, installBunSecretsMock } from './_bun-secrets-mock';
 
 useTestBed({
   autoStub: false,
@@ -65,6 +67,8 @@ describe('PluginConfigService', () => {
     ],
   };
 
+  let secretsMock: BunSecretsMock;
+
   beforeEach(() => {
     mockConfigLoader = {
       getPluginConfig: mock(),
@@ -75,10 +79,17 @@ describe('PluginConfigService', () => {
       getMetadata: mock(),
     };
 
+    secretsMock = installBunSecretsMock();
+
     provide(ConfigLoader, mockConfigLoader);
     provide(StateStore, mockStateStore);
+    provide(SecretStore, new SecretStore());
 
     service = get(PluginConfigService);
+  });
+
+  afterEach(() => {
+    secretsMock.restore();
   });
 
   describe('getSchema', () => {
@@ -110,7 +121,7 @@ describe('PluginConfigService', () => {
   });
 
   describe('getConfig', () => {
-    test('merges user config with defaults', () => {
+    test('merges user config with defaults', async () => {
       mockStateStore.getMetadata.mockReturnValue({
         preferences: [textPreference, numberPreference],
       });
@@ -118,19 +129,19 @@ describe('PluginConfigService', () => {
         apiKey: 'user-key',
       });
 
-      const config = service.getConfig('@test/plugin');
+      const config = await service.getConfig('@test/plugin');
 
       expect(config.apiKey).toBe('user-key');
       expect(config.timeout).toBe(5000); // Default
     });
 
-    test('uses all defaults when no user config', () => {
+    test('uses all defaults when no user config', async () => {
       mockStateStore.getMetadata.mockReturnValue({
         preferences: [numberPreference, checkboxPreference],
       });
       mockConfigLoader.getPluginConfig.mockReturnValue(undefined);
 
-      const config = service.getConfig('@test/plugin');
+      const config = await service.getConfig('@test/plugin');
 
       expect(config.timeout).toBe(5000);
       expect(config.enabled).toBe(true);

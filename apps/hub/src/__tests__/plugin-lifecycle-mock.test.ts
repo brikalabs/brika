@@ -19,7 +19,9 @@ import { PluginConfigService } from '@/runtime/plugins/plugin-config';
 import { PluginEventHandler } from '@/runtime/plugins/plugin-events';
 import type { PluginProcess, PluginProcessCallbacks } from '@/runtime/plugins/plugin-process';
 import { PluginResolver } from '@/runtime/plugins/plugin-resolver';
+import { SecretStore } from '@/runtime/secrets/secret-store';
 import { StateStore } from '@/runtime/state/state-store';
+import { type BunSecretsMock, installBunSecretsMock } from './_bun-secrets-mock';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Capture variables for mock.module callbacks
@@ -150,6 +152,7 @@ describe('PluginLifecycle (with mocked spawn)', () => {
   let mockEventHandler: Record<string, ReturnType<typeof mock>>;
   let mockPluginConfig: Record<string, ReturnType<typeof mock>>;
   let mockMetrics: Record<string, ReturnType<typeof mock>>;
+  let secretsMock: BunSecretsMock;
   let resolverSpy: ReturnType<typeof spyOn>;
 
   useTestBed({
@@ -208,7 +211,7 @@ describe('PluginLifecycle (with mocked spawn)', () => {
       onPluginDisconnected: mock(),
     };
     mockPluginConfig = {
-      getConfig: mock().mockReturnValue({}),
+      getConfig: mock().mockResolvedValue({}),
       validate: mock().mockReturnValue({
         success: true,
       }),
@@ -231,10 +234,14 @@ describe('PluginLifecycle (with mocked spawn)', () => {
     provide(PluginConfigService, mockPluginConfig);
     provide(MetricsStore, mockMetrics);
 
+    secretsMock = installBunSecretsMock();
+    provide(SecretStore, new SecretStore());
+
     lifecycle = get(PluginLifecycleMocked);
   });
 
   afterEach(() => {
+    secretsMock.restore();
     resolverSpy.mockRestore();
   });
 
@@ -292,7 +299,7 @@ describe('PluginLifecycle (with mocked spawn)', () => {
       const callbacks = await loadPlugin();
       const process = mockProcessInstance as unknown as PluginProcess;
 
-      callbacks.onReady(process);
+      await callbacks.onReady(process);
 
       expect(mockPluginConfig.getConfig).toHaveBeenCalledWith('@test/plugin');
       expect(mockPluginConfig.validate).toHaveBeenCalled();
@@ -315,7 +322,7 @@ describe('PluginLifecycle (with mocked spawn)', () => {
       const callbacks = await loadPlugin();
       const process = mockProcessInstance as unknown as PluginProcess;
 
-      callbacks.onReady(process);
+      await callbacks.onReady(process);
 
       expect(mockEvents.dispatch).toHaveBeenCalled();
       expect(mockEventHandler.onPluginReady).not.toHaveBeenCalled();
@@ -433,11 +440,11 @@ describe('PluginLifecycle (with mocked spawn)', () => {
     });
 
     test('onUpdatePreference callback updates plugin config', async () => {
-      mockPluginConfig.getConfig.mockReturnValue({
+      mockPluginConfig.getConfig.mockResolvedValue({
         existingKey: 'value',
       });
       const callbacks = await loadPlugin();
-      callbacks.onUpdatePreference('newKey', 'newValue');
+      await callbacks.onUpdatePreference('newKey', 'newValue');
       expect(mockPluginConfig.setConfig).toHaveBeenCalledWith('@test/plugin', {
         existingKey: 'value',
         newKey: 'newValue',
@@ -453,6 +460,73 @@ describe('PluginLifecycle (with mocked spawn)', () => {
         cpu: 15.5,
         memory: 1024000,
       });
+    });
+
+    test('onSetPluginSecret writes under the user.* keychain namespace', async () => {
+      const callbacks = await loadPlugin();
+      await callbacks.onSetPluginSecret('@test/plugin', 'session-token', 'tok-123');
+
+      // The hub hardcodes the `user.` prefix; plugin-supplied keys can never
+      // collide with declared password prefs or __secret_* SDK keys.
+      expect(secretsMock.store.get('com.brika.hub::@test/plugin::user.session-token')).toBe(
+        'tok-123'
+      );
+      expect(secretsMock.store.get('com.brika.hub::@test/plugin::session-token')).toBeUndefined();
+    });
+
+    test('onGetPluginSecret reads from the user.* namespace', async () => {
+      const callbacks = await loadPlugin();
+      secretsMock.store.set('com.brika.hub::@test/plugin::user.api-key', 'sk-real');
+
+      expect(await callbacks.onGetPluginSecret('@test/plugin', 'api-key')).toBe('sk-real');
+    });
+
+    test('onGetPluginSecret returns null when the secret is missing', async () => {
+      const callbacks = await loadPlugin();
+      expect(await callbacks.onGetPluginSecret('@test/plugin', 'missing')).toBeNull();
+    });
+
+    test('onSetPluginSecret with empty value deletes the secret', async () => {
+      const callbacks = await loadPlugin();
+      await callbacks.onSetPluginSecret('@test/plugin', 'token', 'value');
+      await callbacks.onSetPluginSecret('@test/plugin', 'token', '');
+
+      expect(await callbacks.onGetPluginSecret('@test/plugin', 'token')).toBeNull();
+    });
+
+    test('onDeletePluginSecret removes the secret and reports whether it existed', async () => {
+      const callbacks = await loadPlugin();
+      await callbacks.onSetPluginSecret('@test/plugin', 'token', 'value');
+
+      expect(await callbacks.onDeletePluginSecret('@test/plugin', 'token')).toBe(true);
+      expect(await callbacks.onDeletePluginSecret('@test/plugin', 'token')).toBe(false);
+    });
+
+    test('plugin-supplied keys cannot reach declared password prefs or __secret_* namespace', async () => {
+      const callbacks = await loadPlugin();
+
+      // Pretend the plugin had set `apiKey` (a declared password pref). It lives
+      // at `@test/plugin::apiKey`.
+      secretsMock.store.set('com.brika.hub::@test/plugin::apiKey', 'pref-secret');
+      // And a hub-managed OAuth token at the SDK __secret_* namespace.
+      secretsMock.store.set(
+        'com.brika.hub::@test/plugin::__secret_oauth_test_token',
+        '"oauth-blob"'
+      );
+
+      // Plugin tries to read those names directly — must not find them.
+      expect(await callbacks.onGetPluginSecret('@test/plugin', 'apiKey')).toBeNull();
+      expect(
+        await callbacks.onGetPluginSecret('@test/plugin', '__secret_oauth_test_token')
+      ).toBeNull();
+    });
+
+    test('plugin secrets are isolated per plugin name (channel identity)', async () => {
+      const callbacks = await loadPlugin();
+      await callbacks.onSetPluginSecret('@test/plugin', 'shared-key', 'a-value');
+
+      // A different plugin asking for the same key must not see it.
+      expect(await callbacks.onGetPluginSecret('@other/plugin', 'shared-key')).toBeNull();
     });
   });
 

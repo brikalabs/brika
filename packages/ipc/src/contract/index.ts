@@ -68,6 +68,13 @@ export {
   registerRoute,
   routeRequest,
 } from './routes';
+// ─── Plugin secrets (programmatic SDK API) ───
+export {
+  deletePluginSecret,
+  getPluginSecret,
+  SecretKey,
+  setPluginSecret,
+} from './secrets';
 export type {
   SparkDefinition as SparkDefinitionType,
   SparkEvent as SparkEventType,

@@ -10,6 +10,7 @@ import { I18nService } from '@/runtime/i18n';
 import { Logger } from '@/runtime/logs/log-router';
 import { MetricsStore } from '@/runtime/metrics';
 import { ModuleCompiler } from '@/runtime/modules';
+import { SecretStore } from '@/runtime/secrets/secret-store';
 import { type PluginStateWithMetadata, StateStore } from '@/runtime/state/state-store';
 import { compileServerEntry, PluginProcess, spawnPlugin } from './lifecycle-deps';
 import { PluginConfigService } from './plugin-config';
@@ -40,6 +41,7 @@ export class PluginLifecycle {
   readonly #pluginConfig = inject(PluginConfigService);
   readonly #metrics = inject(MetricsStore);
   readonly #moduleCompiler = inject(ModuleCompiler);
+  readonly #secrets = inject(SecretStore);
   readonly #resolver = new PluginResolver();
 
   readonly #processes = new Map<string, PluginProcessInstance>();
@@ -265,9 +267,9 @@ export class PluginLifecycle {
         heartbeatTimeoutMs: this.#config.heartbeatTimeoutMs,
       },
       {
-        onReady: (p) => {
+        onReady: async (p) => {
           // Validate preferences before sending
-          const prefs = this.#pluginConfig.getConfig(p.name);
+          const prefs = await this.#pluginConfig.getConfig(p.name);
           const validation = this.#pluginConfig.validate(p.name, prefs);
           if (!validation.success) {
             const errors = validation.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`);
@@ -317,9 +319,9 @@ export class PluginLifecycle {
         onBrickDataPush: (brickTypeId, data) =>
           this.#eventHandler.pushBrickData(metadata.name, brickTypeId, data),
         onRoute: (method, path) => this.#eventHandler.registerRoute(metadata.name, method, path),
-        onUpdatePreference: (key, value) => {
-          const current = this.#pluginConfig.getConfig(metadata.name);
-          this.#pluginConfig.setConfig(metadata.name, {
+        onUpdatePreference: async (key, value) => {
+          const current = await this.#pluginConfig.getConfig(metadata.name);
+          await this.#pluginConfig.setConfig(metadata.name, {
             ...current,
             [key]: value,
           });
@@ -327,6 +329,16 @@ export class PluginLifecycle {
         onGetHubLocation: () => this.#state.getHubLocation(),
         onGetHubTimezone: () => this.#state.getHubTimezone(),
         onGetGrantedPermissions: (name) => this.#state.getGrantedPermissions(name),
+        onGetPluginSecret: (name, key) => this.#secrets.get(name, this.#userSecretKey(key)),
+        onSetPluginSecret: async (name, key, value) => {
+          const ns = this.#userSecretKey(key);
+          if (value === '') {
+            await this.#secrets.delete(name, ns);
+            return;
+          }
+          await this.#secrets.set(name, ns, value);
+        },
+        onDeletePluginSecret: (name, key) => this.#secrets.delete(name, this.#userSecretKey(key)),
         onHeartbeatFailed: (p, silentMs) => this.#handleHeartbeatFailed(p, silentMs),
         onDisconnect: (p, error) => this.#handleDisconnect(p.name, error),
         onMetrics: (p, cpu, memory) => {
@@ -424,6 +436,16 @@ export class PluginLifecycle {
   }
 
   /** Dispatch moduleRecompiled events for bricks of a plugin. */
+  /**
+   * Namespaces SDK programmatic secrets under `user.*` so they cannot collide
+   * with declared password preferences or `__secret_*` SDK-internal keys
+   * (e.g. OAuth tokens). The prefix is enforced hub-side; plugins cannot
+   * escape it because they never see this method.
+   */
+  #userSecretKey(key: string): string {
+    return `user.${key}`;
+  }
+
   #emitModuleRecompiled(pluginName: string): void {
     const process = this.#processes.get(pluginName);
     if (!process) {

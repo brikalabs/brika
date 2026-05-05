@@ -192,6 +192,12 @@ export { getDeviceLocation } from './api/location';
 export type { HubLocation as HubLocationData } from './types';
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Secrets (per-plugin OS keychain storage — requires "secrets" permission)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export { deleteSecret, getSecret, setSecret } from './api/secrets';
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Bridge (prelude contract)
 // ─────────────────────────────────────────────────────────────────────────────
 
