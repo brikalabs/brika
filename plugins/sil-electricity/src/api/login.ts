@@ -14,7 +14,7 @@
  */
 
 import { CookieJar, fetchAndIngest } from './cookies';
-import { BASE, GOTO, IAM } from './internals';
+import { BASE, GOTO, IAM, timedFetch } from './internals';
 
 /** Headers that exactly match Chrome's working HAR for the auth chain. */
 const NAV_HEADERS = {
@@ -77,7 +77,7 @@ async function openSecurityDeviceSession(jar: CookieJar): Promise<void> {
 
 /** Step 3: validate credentials. The browser does this as an XHR. */
 async function postCredentials(jar: CookieJar, email: string, password: string): Promise<void> {
-  const r = await fetch(`${IAM}/frag/login/confirm`, {
+  const r = await timedFetch(`${IAM}/frag/login/confirm`, {
     method: 'POST',
     headers: {
       'User-Agent': NAV_HEADERS['User-Agent'],
@@ -103,7 +103,7 @@ async function postCredentials(jar: CookieJar, email: string, password: string):
 
 /** Step 4: fetch cgu/check and extract the SSO token from its HTML form. */
 async function fetchSsoToken(jar: CookieJar): Promise<string> {
-  const r = await fetch(`${IAM}/cgu/check?goto=${GOTO_ENC}`, {
+  const r = await timedFetch(`${IAM}/cgu/check?goto=${GOTO_ENC}`, {
     headers: {
       ...NAV_HEADERS,
       'Sec-Fetch-User': '?1',
@@ -130,7 +130,7 @@ async function submitSsoToken(jar: CookieJar, ssoToken: string): Promise<void> {
   // Field name is literally 'password  value=' (spaces + =); URLSearchParams encodes correctly.
   body.append('password  value=', '');
 
-  const r = await fetch(`${BASE}/my.policy`, {
+  const r = await timedFetch(`${BASE}/my.policy`, {
     method: 'POST',
     headers: {
       ...NAV_HEADERS,

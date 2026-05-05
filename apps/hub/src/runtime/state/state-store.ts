@@ -1,5 +1,6 @@
 import { type BrikaDatabase, eq, notInArray } from '@brika/db';
 import { inject, singleton } from '@brika/di';
+import { ThemeConfig } from '@brika/ipc/contract';
 import type { PluginError, PluginHealth } from '@brika/plugin';
 import { PluginPackageSchema } from '@brika/schema';
 import { Logger } from '@/runtime/logs/log-router';
@@ -9,7 +10,11 @@ import {
   type UpdateChannelId,
 } from '@/runtime/updates/channels';
 import { stateDb } from './database';
-import { plugins as pluginsTable, settings as settingsTable } from './schema';
+import {
+  customThemes as customThemesTable,
+  plugins as pluginsTable,
+  settings as settingsTable,
+} from './schema';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -44,7 +49,18 @@ export interface HubLocation {
   formattedAddress: string;
 }
 
-type StateSchema = { plugins: typeof pluginsTable; settings: typeof settingsTable };
+type StateSchema = {
+  plugins: typeof pluginsTable;
+  settings: typeof settingsTable;
+  customThemes: typeof customThemesTable;
+};
+
+export interface ActiveTheme {
+  theme: string | null;
+  mode: 'light' | 'dark' | 'system';
+}
+
+const DEFAULT_ACTIVE_THEME: ActiveTheme = { theme: null, mode: 'system' };
 
 @singleton()
 export class StateStore {
@@ -272,6 +288,69 @@ export class StateStore {
 
   setSetupCompleted(completed: boolean): void {
     this.#setSetting('setupCompleted', completed);
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Custom themes
+  // ─────────────────────────────────────────────────────────────────────────
+
+  listCustomThemes(): ThemeConfig[] {
+    return this.db
+      .select()
+      .from(customThemesTable)
+      .all()
+      .flatMap((row) => {
+        let raw: unknown;
+        try {
+          raw = JSON.parse(row.config);
+        } catch (error) {
+          this.logs.warn('Skipping unreadable custom_themes row', {
+            id: row.id,
+            error: error instanceof Error ? error.message : String(error),
+          });
+          return [];
+        }
+        const parsed = ThemeConfig.safeParse(raw);
+        if (!parsed.success) {
+          this.logs.warn('Skipping malformed custom_themes row', {
+            id: row.id,
+            error: parsed.error.message,
+          });
+          return [];
+        }
+        return [parsed.data];
+      });
+  }
+
+  upsertCustomTheme(theme: ThemeConfig): void {
+    const row = {
+      id: theme.id,
+      config: JSON.stringify(theme),
+      updatedAt: theme.updatedAt,
+    };
+    this.db
+      .insert(customThemesTable)
+      .values(row)
+      .onConflictDoUpdate({ target: customThemesTable.id, set: row })
+      .run();
+  }
+
+  deleteCustomTheme(id: string): void {
+    this.db.delete(customThemesTable).where(eq(customThemesTable.id, id)).run();
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Active theme (per-hub)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  getActiveTheme(): ActiveTheme {
+    return this.#getSetting<ActiveTheme>('activeTheme', DEFAULT_ACTIVE_THEME);
+  }
+
+  setActiveTheme(patch: Partial<ActiveTheme>): ActiveTheme {
+    const next = { ...this.getActiveTheme(), ...patch };
+    this.#setSetting('activeTheme', next);
+    return next;
   }
 
   // ─────────────────────────────────────────────────────────────────────────

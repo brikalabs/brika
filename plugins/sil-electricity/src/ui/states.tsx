@@ -38,11 +38,13 @@ export function totalCost(points: readonly ConsumptionPoint[], prices: Prices): 
 
 type Tone = 'blue' | 'yellow' | 'emerald' | 'violet';
 
+// Map each brick's accent tone to a clay data-viz slot so the spinner
+// retints with the theme. data-1=blue, data-3=green, data-5=purple, data-6=yellow.
 const TONE_BORDER: Record<Tone, string> = {
-  blue: 'border-blue-400',
-  yellow: 'border-yellow-400',
-  emerald: 'border-emerald-400',
-  violet: 'border-violet-400',
+  blue: 'border-data-1',
+  yellow: 'border-data-6',
+  emerald: 'border-data-3',
+  violet: 'border-data-5',
 };
 
 export function Loader({ tone = 'blue' }: Readonly<{ tone?: Tone }>) {
@@ -59,7 +61,7 @@ export function Message({ icon, text }: Readonly<{ icon: string; text: string }>
   return (
     <div className="flex h-full flex-col items-center justify-center gap-2 p-4 text-center">
       <span className="text-2xl">{icon}</span>
-      <p className="text-xs text-white/60">{text}</p>
+      <p className="text-xs text-muted-foreground">{text}</p>
     </div>
   );
 }

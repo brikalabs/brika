@@ -57,6 +57,7 @@ describe('PluginManager', () => {
     clearBlockEmitHandler: ReturnType<typeof mock>;
     setBlockLogHandler: ReturnType<typeof mock>;
     clearBlockLogHandler: ReturnType<typeof mock>;
+    onPluginRemoved: ReturnType<typeof mock>;
   };
 
   const createMockProcess = (name: string, uid: string): Partial<PluginProcess> => ({
@@ -126,6 +127,7 @@ describe('PluginManager', () => {
       clearBlockEmitHandler: mock(),
       setBlockLogHandler: mock(),
       clearBlockLogHandler: mock(),
+      onPluginRemoved: mock(),
     };
 
     stub(Logger);
@@ -499,6 +501,7 @@ describe('PluginManager', () => {
         expect(mockLifecycle.unload).toHaveBeenCalledWith('@test/plugin');
         expect(mockLifecycle.removeModules).toHaveBeenCalledWith('@test/plugin', '/mock/path');
         expect(mockState.remove).toHaveBeenCalledWith('@test/plugin');
+        expect(mockEventHandler.onPluginRemoved).toHaveBeenCalledWith('@test/plugin');
       });
 
       test('skips unload when plugin is not running', async () => {

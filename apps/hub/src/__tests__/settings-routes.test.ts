@@ -1,10 +1,96 @@
 import 'reflect-metadata';
 import { describe, expect, mock, test } from 'bun:test';
 import { stub, useTestBed } from '@brika/di/testing';
+import type { ThemeConfig } from '@brika/ipc/contract';
 import { TestApp } from '@brika/router/testing';
+import { EventSystem } from '@/runtime/events/event-system';
 import { settingsRoutes } from '@/runtime/http/routes/settings';
 import { PluginManager } from '@/runtime/plugins/plugin-manager';
 import { StateStore } from '@/runtime/state/state-store';
+
+function makeTheme(id: string): ThemeConfig {
+  return {
+    version: 1,
+    id,
+    name: id,
+    createdAt: 1,
+    updatedAt: 2,
+    radius: 0.5,
+    fonts: { sans: 'Inter', mono: 'Mono' },
+    colors: {
+      light: {
+        background: '#fff',
+        foreground: '#000',
+        card: '#fff',
+        'card-foreground': '#000',
+        popover: '#fff',
+        'popover-foreground': '#000',
+        primary: '#000',
+        'primary-foreground': '#fff',
+        secondary: '#eee',
+        'secondary-foreground': '#000',
+        accent: '#ddd',
+        'accent-foreground': '#000',
+        muted: '#eee',
+        'muted-foreground': '#666',
+        border: '#ddd',
+        input: '#ddd',
+        ring: '#000',
+        success: '#0a0',
+        'success-foreground': '#fff',
+        warning: '#f80',
+        'warning-foreground': '#000',
+        info: '#08f',
+        'info-foreground': '#fff',
+        destructive: '#f00',
+        'destructive-foreground': '#fff',
+        'data-1': '#001',
+        'data-2': '#002',
+        'data-3': '#003',
+        'data-4': '#004',
+        'data-5': '#005',
+        'data-6': '#006',
+        'data-7': '#007',
+        'data-8': '#008',
+      },
+      dark: {
+        background: '#000',
+        foreground: '#fff',
+        card: '#111',
+        'card-foreground': '#fff',
+        popover: '#111',
+        'popover-foreground': '#fff',
+        primary: '#fff',
+        'primary-foreground': '#000',
+        secondary: '#222',
+        'secondary-foreground': '#fff',
+        accent: '#333',
+        'accent-foreground': '#fff',
+        muted: '#222',
+        'muted-foreground': '#999',
+        border: '#333',
+        input: '#333',
+        ring: '#fff',
+        success: '#0f0',
+        'success-foreground': '#000',
+        warning: '#fa0',
+        'warning-foreground': '#000',
+        info: '#0af',
+        'info-foreground': '#000',
+        destructive: '#f33',
+        'destructive-foreground': '#000',
+        'data-1': '#101',
+        'data-2': '#202',
+        'data-3': '#303',
+        'data-4': '#404',
+        'data-5': '#505',
+        'data-6': '#606',
+        'data-7': '#707',
+        'data-8': '#808',
+      },
+    },
+  };
+}
 
 describe('settings routes', () => {
   let app: ReturnType<typeof TestApp.create>;
@@ -14,9 +100,17 @@ describe('settings routes', () => {
     getHubTimezone: ReturnType<typeof mock>;
     setHubTimezone: ReturnType<typeof mock>;
     applyTimezone: ReturnType<typeof mock>;
+    listCustomThemes: ReturnType<typeof mock>;
+    upsertCustomTheme: ReturnType<typeof mock>;
+    deleteCustomTheme: ReturnType<typeof mock>;
+    getActiveTheme: ReturnType<typeof mock>;
+    setActiveTheme: ReturnType<typeof mock>;
   };
   let mockPm: {
     broadcastTimezone: ReturnType<typeof mock>;
+  };
+  let mockEvents: {
+    dispatch: ReturnType<typeof mock>;
   };
 
   useTestBed(() => {
@@ -36,12 +130,25 @@ describe('settings routes', () => {
       getHubTimezone: mock().mockReturnValue('America/Montreal'),
       setHubTimezone: mock().mockResolvedValue(undefined),
       applyTimezone: mock(),
+      listCustomThemes: mock().mockReturnValue([]),
+      upsertCustomTheme: mock(),
+      deleteCustomTheme: mock(),
+      getActiveTheme: mock().mockReturnValue({ theme: null, mode: 'system' }),
+      setActiveTheme: mock().mockImplementation((patch: Record<string, unknown>) => ({
+        theme: null,
+        mode: 'system',
+        ...patch,
+      })),
     };
     mockPm = {
       broadcastTimezone: mock(),
     };
+    mockEvents = {
+      dispatch: mock(),
+    };
     stub(StateStore, mockState);
     stub(PluginManager, mockPm);
+    stub(EventSystem, mockEvents);
     app = TestApp.create(settingsRoutes);
   });
 
@@ -117,5 +224,79 @@ describe('settings routes', () => {
     expect(res.status).toBe(200);
     expect(mockState.setHubTimezone).not.toHaveBeenCalled();
     expect(mockPm.broadcastTimezone).not.toHaveBeenCalled();
+  });
+
+  // ─── Custom themes ─────────────────────────────────────────────────────
+
+  test('GET /api/settings/custom-themes returns the list', async () => {
+    const theme = makeTheme('one');
+    mockState.listCustomThemes.mockReturnValue([theme]);
+
+    const res = await app.get('/api/settings/custom-themes');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ themes: [theme] });
+  });
+
+  test('PUT /api/settings/custom-themes/:id upserts and dispatches invalidation', async () => {
+    const theme = makeTheme('one');
+
+    const res = await app.put(`/api/settings/custom-themes/${theme.id}`, theme);
+
+    expect(res.status).toBe(200);
+    expect(mockState.upsertCustomTheme).toHaveBeenCalledWith(theme);
+    expect(mockEvents.dispatch).toHaveBeenCalledTimes(1);
+    expect(mockEvents.dispatch.mock.calls[0]?.[0].type).toBe('theme.customThemesChanged');
+  });
+
+  test('PUT /api/settings/custom-themes/:id rejects mismatched ids', async () => {
+    const theme = makeTheme('one');
+
+    const res = await app.put('/api/settings/custom-themes/two', theme);
+
+    expect(res.status).toBe(400);
+    expect(mockState.upsertCustomTheme).not.toHaveBeenCalled();
+    expect(mockEvents.dispatch).not.toHaveBeenCalled();
+  });
+
+  test('DELETE /api/settings/custom-themes/:id removes and dispatches invalidation', async () => {
+    const res = await app.delete('/api/settings/custom-themes/one');
+
+    expect(res.status).toBe(200);
+    expect(mockState.deleteCustomTheme).toHaveBeenCalledWith('one');
+    expect(mockEvents.dispatch).toHaveBeenCalledTimes(1);
+    expect(mockEvents.dispatch.mock.calls[0]?.[0].type).toBe('theme.customThemesChanged');
+  });
+
+  // ─── Active theme ──────────────────────────────────────────────────────
+
+  test('GET /api/settings/theme returns the active theme', async () => {
+    mockState.getActiveTheme.mockReturnValue({ theme: 'mocha', mode: 'dark' });
+
+    const res = await app.get('/api/settings/theme');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ theme: 'mocha', mode: 'dark' });
+  });
+
+  test('PUT /api/settings/theme patches selection and dispatches activeChanged', async () => {
+    mockState.setActiveTheme.mockReturnValue({ theme: 'mocha', mode: 'dark' });
+
+    const res = await app.put('/api/settings/theme', { theme: 'mocha', mode: 'dark' });
+
+    expect(res.status).toBe(200);
+    expect(mockState.setActiveTheme).toHaveBeenCalledWith({ theme: 'mocha', mode: 'dark' });
+    expect(mockEvents.dispatch).toHaveBeenCalledTimes(1);
+    const dispatched = mockEvents.dispatch.mock.calls[0]?.[0];
+    expect(dispatched.type).toBe('theme.activeChanged');
+    expect(dispatched.payload).toEqual({ theme: 'mocha', mode: 'dark' });
+  });
+
+  test('PUT /api/settings/theme rejects empty patches', async () => {
+    const res = await app.put('/api/settings/theme', {});
+
+    expect(res.status).toBe(400);
+    expect(mockState.setActiveTheme).not.toHaveBeenCalled();
+    expect(mockEvents.dispatch).not.toHaveBeenCalled();
   });
 });

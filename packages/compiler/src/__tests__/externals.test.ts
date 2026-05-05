@@ -141,6 +141,30 @@ describe('brikaExternalsPlugin', () => {
     expect(output).not.toContain('globalThis.__brika');
   });
 
+  test('unbridged package is bundled, not silently dropped', async () => {
+    // Regression: the previous filter `^[^./]/` matched every bare specifier,
+    // and Bun treats an `onResolve` match returning `undefined` as "drop the
+    // import" rather than "fall through to default resolution". That dropped
+    // packages like `recharts` from the bundle, leaving JSX referencing
+    // undefined identifiers (ReferenceError at runtime).
+    const pkgDir = join(tmpDir, 'node_modules', 'fake-pkg');
+    await mkdir(pkgDir, { recursive: true });
+    await writeFile(
+      join(pkgDir, 'package.json'),
+      JSON.stringify({ name: 'fake-pkg', main: 'index.js' })
+    );
+    await writeFile(
+      join(pkgDir, 'index.js'),
+      'export const FAKE_MARKER = "fake-pkg-bundled-ok";\n'
+    );
+
+    const output = await buildEntry(
+      ["import { FAKE_MARKER } from 'fake-pkg';", 'export { FAKE_MARKER };'].join('\n')
+    );
+
+    expect(output).toContain('fake-pkg-bundled-ok');
+  });
+
   // ── 3. Relative imports are not intercepted ────────────────────────
 
   test('relative imports are not intercepted', async () => {

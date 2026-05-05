@@ -1,12 +1,18 @@
 /**
  * Settings Routes
  *
- * Hub-level configuration endpoints (location, etc.).
+ * Hub-level configuration endpoints (location, themes, etc.).
  */
 
-import { HubLocation as HubLocationSchema } from '@brika/ipc/contract';
-import { group, route } from '@brika/router';
+import {
+  ActiveThemeUpdate as ActiveThemeUpdateSchema,
+  HubLocation as HubLocationSchema,
+  ThemeConfig as ThemeConfigSchema,
+} from '@brika/ipc/contract';
+import { BadRequest, group, route } from '@brika/router';
 import { z } from 'zod';
+import { ThemeActions } from '@/runtime/events/actions';
+import { EventSystem } from '@/runtime/events/event-system';
 import { PluginManager } from '@/runtime/plugins/plugin-manager';
 import { StateStore } from '@/runtime/state/state-store';
 import { UPDATE_CHANNEL_IDS } from '@/runtime/updates/channels';
@@ -111,6 +117,59 @@ export const settingsRoutes = group({
       handler: async ({ body, inject }) => {
         await inject(StateStore).setUpdateChannel(body.channel);
         return { channel: body.channel };
+      },
+    }),
+
+    /** List all custom themes */
+    route.get({
+      path: '/custom-themes',
+      handler: ({ inject }) => ({
+        themes: inject(StateStore).listCustomThemes(),
+      }),
+    }),
+
+    /** Upsert a custom theme by id */
+    route.put({
+      path: '/custom-themes/:id',
+      params: z.object({ id: z.string() }),
+      body: ThemeConfigSchema,
+      handler: ({ params, body, inject }) => {
+        if (body.id !== params.id) {
+          throw new BadRequest('Theme id in body does not match path');
+        }
+        inject(StateStore).upsertCustomTheme(body);
+        inject(EventSystem).dispatch(ThemeActions.customThemesChanged.create({}, 'hub'));
+        return { theme: body };
+      },
+    }),
+
+    /** Delete a custom theme by id */
+    route.delete({
+      path: '/custom-themes/:id',
+      params: z.object({ id: z.string() }),
+      handler: ({ params, inject }) => {
+        inject(StateStore).deleteCustomTheme(params.id);
+        inject(EventSystem).dispatch(ThemeActions.customThemesChanged.create({}, 'hub'));
+        return { ok: true };
+      },
+    }),
+
+    /** Get the active theme + color mode */
+    route.get({
+      path: '/theme',
+      handler: ({ inject }) => inject(StateStore).getActiveTheme(),
+    }),
+
+    /** Patch the active theme + color mode (either field is optional) */
+    route.put({
+      path: '/theme',
+      body: ActiveThemeUpdateSchema,
+      handler: ({ body, inject }) => {
+        const next = inject(StateStore).setActiveTheme(body);
+        inject(EventSystem).dispatch(
+          ThemeActions.activeChanged.create({ theme: next.theme, mode: next.mode }, 'hub')
+        );
+        return next;
       },
     }),
   ],

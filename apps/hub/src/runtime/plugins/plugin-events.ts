@@ -274,7 +274,25 @@ export class PluginEventHandler {
     });
   }
 
-  onPluginDisconnected(pluginName: string): void {
+  /**
+   * Called when a plugin process detaches (graceful unload, crash, or
+   * heartbeat timeout). Brick data is intentionally **not** cleared here:
+   * the brick UI should keep showing the last-known-good values while the
+   * plugin reloads or restarts, otherwise every hot-reload flips bricks
+   * back into a loading state for the duration of the next poll. Brick
+   * data is only cleared when the plugin is fully uninstalled — see
+   * `onPluginRemoved`.
+   */
+  onPluginDisconnected(_pluginName: string): void {
+    // no-op — see method docstring
+  }
+
+  /**
+   * Called when a plugin is uninstalled (`PluginManager.remove`). Drops
+   * cached brick data so a fresh install of the same plugin doesn't
+   * inherit stale state.
+   */
+  onPluginRemoved(pluginName: string): void {
     this.#brickDataStore.removeByPlugin(pluginName);
   }
 

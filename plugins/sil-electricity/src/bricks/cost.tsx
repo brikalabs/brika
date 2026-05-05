@@ -8,8 +8,8 @@ function NoCredentials() {
   const { t } = useLocale();
   return (
     <div className="flex h-full flex-col items-center justify-center gap-1 p-3 text-center">
-      <Banknote className="size-6 text-violet-400/50" />
-      <p className="text-[10px] text-white/50">{t('ui.noCookie')}</p>
+      <Banknote className="size-6 text-data-5/60" />
+      <p className="text-[10px] text-muted-foreground">{t('ui.noCookie')}</p>
     </div>
   );
 }
@@ -49,29 +49,31 @@ export default function ElectricityCost() {
   });
 
   return (
-    <div className="flex h-full flex-col justify-between rounded-lg bg-gradient-to-br from-slate-900 to-violet-950/40 p-3">
+    <div className="flex h-full flex-col justify-between p-1">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-[10px] uppercase tracking-wide text-white/50">
+          <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
             {t('ui.estimatedCost')}
           </p>
-          <p className="text-[10px] text-white/40">{periodLabel}</p>
+          <p className="text-[10px] text-muted-foreground/70">{periodLabel}</p>
         </div>
-        <Banknote className="size-4 text-violet-400" />
+        <Banknote className="size-4 text-data-5" />
       </div>
 
       <div className="flex flex-col gap-0.5">
-        <span className="text-2xl font-bold leading-none text-white tabular-nums">
+        <span className="text-2xl font-bold leading-none text-foreground tabular-nums">
           {formatChf(current)}
         </span>
         {trend !== null && (
           <div className="flex items-center gap-1">
             {trend > 0 ? (
-              <TrendingUp className="size-3 text-red-400" />
+              <TrendingUp className="size-3 text-destructive" />
             ) : (
-              <TrendingDown className="size-3 text-green-400" />
+              <TrendingDown className="size-3 text-success" />
             )}
-            <span className={`text-[10px] font-medium ${trend > 0 ? 'text-red-400' : 'text-green-400'}`}>
+            <span
+              className={`text-[10px] font-medium ${trend > 0 ? 'text-destructive' : 'text-success'}`}
+            >
               {trend > 0 ? '+' : ''}
               {trend}% {t('ui.vsPrevious')}
             </span>
@@ -79,7 +81,7 @@ export default function ElectricityCost() {
         )}
       </div>
 
-      <p className="text-[10px] text-white/40">
+      <p className="text-[10px] text-muted-foreground/70">
         @ {formatChf(state.prices.perKwh)}/kWh
       </p>
     </div>

@@ -51,12 +51,18 @@ export type ComponentRadiusKey = z.infer<typeof ComponentRadiusKey>;
 
 // ─── Schemas ─────────────────────────────────────────────────────────────────
 
+/**
+ * Per-component token overrides — `radius` and `corners` are first-class,
+ * everything else is a free-form clay token (e.g. `padding-x`, `hover-bg`,
+ * `shadow`). The catchall keeps the UI builder forward-compatible: a new
+ * component-scoped token can land in clay without bumping the schema.
+ */
 export const ComponentTokens = z
   .object({
     radius: z.number().optional(),
     corners: CornerStyle.optional(),
   })
-  .strict();
+  .catchall(z.union([z.string(), z.number()]));
 export type ComponentTokens = z.infer<typeof ComponentTokens>;
 
 /**
@@ -132,9 +138,13 @@ export const ThemeConfig = z.object({
   motion: MotionStyle.optional(),
   textBase: z.number().optional(),
   stateOpacity: StateOpacity.optional(),
-  componentTokens: z.record(ComponentRadiusKey, ComponentTokens).optional(),
+  // Keys are clay component names — kept as `z.string()` (not the
+  // `ComponentRadiusKey` enum) because Zod v4's `z.record(enum, value)`
+  // requires every enum key to be present, but the builder only stores
+  // the components the user actually overrode.
+  componentTokens: z.record(z.string(), ComponentTokens).optional(),
   /** @deprecated retained so older exports still load */
-  componentRadii: z.record(ComponentRadiusKey, z.number()).optional(),
+  componentRadii: z.record(z.string(), z.number()).optional(),
   fonts: z.object({
     sans: z.string(),
     mono: z.string(),

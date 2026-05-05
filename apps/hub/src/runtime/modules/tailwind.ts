@@ -24,23 +24,31 @@ function extractCandidates(js: string): string[] {
 }
 
 /**
- * Strip theme declarations that the host app already provides.
- * Removes `:root, :host { ... }`, `@layer properties` (both the bare
- * declaration and the @supports fallback block), and the Tailwind banner.
- * Keeps utility class rules, @property, @keyframes.
+ * Strip declarations the host app already provides AND extract the
+ * `:root, :host { ... }` token block so the caller can rescope it.
+ *
+ * The host's Tailwind only emits CSS variables for utilities the host's
+ * own source uses — a brick that uses `bg-slate-900` while the host
+ * doesn't would resolve `var(--color-slate-900)` against nothing and
+ * fall through to whatever the parent paints (white, in light mode).
+ * So we keep the brick's tokens, but pin them to the brick's scope
+ * element instead of leaking them onto `:root` globally.
  */
-function stripThemeDeclarations(css: string): string {
-  return (
-    css
-      // Tailwind banner comment
-      .replace(/\/\*![\s\S]*?\*\/\n?/, '')
-      // Bare `@layer properties;` declaration
-      .replace(/@layer\s+properties\s*;\n?/, '')
-      // `:root, :host { ... }` block (theme variables — host provides these)
-      .replace(/:root\s*,\s*:host\s*\{[^}]*\}\n?/, '')
-      // `@layer properties { @supports ... { ... } }` fallback block
-      .replace(/@layer\s+properties\s*\{[\s\S]*?\}\s*\}\n?/, '')
-  );
+function stripThemeDeclarations(css: string): { css: string; tokens: string } {
+  let tokens = '';
+  const stripped = css
+    // Tailwind banner comment
+    .replace(/\/\*![\s\S]*?\*\/\n?/, '')
+    // Bare `@layer properties;` declaration
+    .replace(/@layer\s+properties\s*;\n?/, '')
+    // `:root, :host { ... }` — capture the token body, drop the selector
+    .replace(/:root\s*,\s*:host\s*\{([^}]*)\}\n?/, (_full, body: string) => {
+      tokens = body.trim();
+      return '';
+    })
+    // `@layer properties { @supports ... { ... } }` fallback block
+    .replace(/@layer\s+properties\s*\{[\s\S]*?\}\s*\}\n?/, '');
+  return { css: stripped, tokens };
 }
 
 /** Minify CSS — strips comments, collapses whitespace. */
@@ -58,9 +66,11 @@ function minifyCss(css: string): string {
  * Extracts candidates from JS string literals, then lets
  * Tailwind's `build()` resolve them against the theme.
  *
- * Theme variables (`:root`) and `@layer properties` fallbacks are stripped —
- * the host app already provides them. Only utility rules, `@property`, and
- * `@keyframes` are emitted, keeping the output small and conflict-free.
+ * `@layer properties` fallbacks are stripped (the host app already
+ * registers them). The token block from `:root, :host` is rescoped
+ * onto the brick's scope element so brick-only colors (e.g.
+ * `--color-slate-900` for a brick the host never uses) resolve
+ * correctly inside the brick without leaking onto `:root`.
  */
 export class TailwindCompiler {
   #build: Promise<Build> | null = null;
@@ -79,18 +89,27 @@ export class TailwindCompiler {
       return undefined;
     }
 
-    const stripped = stripThemeDeclarations(css);
-    if (stripped.trim().length === 0) {
+    const { css: stripped, tokens } = stripThemeDeclarations(css);
+    if (stripped.trim().length === 0 && tokens.length === 0) {
       return undefined;
     }
 
     // Wrap in @layer utilities so specificity matches the host app's Tailwind.
     // When a scopeId is provided, also wrap in @scope so rules only apply
-    // inside the matching [data-brika-scope="<scopeId>"] container.
-    const scopeRule = scopeId
-      ? `@scope ([data-brika-scope="${scopeId}"]) { ${stripped} }`
-      : stripped;
-    return minifyCss(`@layer utilities { ${scopeRule} }`);
+    // inside the matching [data-brika-scope="<scopeId>"] container, and
+    // pin the token block to `:scope` (the scope root) so the variables
+    // cascade only into the brick's subtree.
+    if (scopeId) {
+      const scopedTokens = tokens ? `:scope { ${tokens} }` : '';
+      const scopeBody = `${scopedTokens} ${stripped}`.trim();
+      return minifyCss(
+        `@layer utilities { @scope ([data-brika-scope="${scopeId}"]) { ${scopeBody} } }`
+      );
+    }
+    // Unscoped fallback: re-attach the token block to `:root` so the
+    // utilities still resolve their variables.
+    const rootTokens = tokens ? `:root, :host { ${tokens} }` : '';
+    return minifyCss(`@layer utilities { ${rootTokens} ${stripped} }`);
   }
 
   async #init(): Promise<Build> {

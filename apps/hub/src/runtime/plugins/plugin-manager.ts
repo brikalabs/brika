@@ -230,6 +230,7 @@ export class PluginManager {
     }
     this.#lifecycle.removeModules(name, rootDirectory);
     await this.#state.remove(name);
+    this.#eventHandler.onPluginRemoved(name);
   }
 
   stopAll(): Promise<void> {
