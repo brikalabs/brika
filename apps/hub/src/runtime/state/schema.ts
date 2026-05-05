@@ -20,3 +20,9 @@ export const settings = sqliteTable('settings', {
   key: text('key').primaryKey(),
   value: text('value').notNull(),
 });
+
+export const customThemes = sqliteTable('custom_themes', {
+  id: text('id').primaryKey(),
+  config: text('config').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+});

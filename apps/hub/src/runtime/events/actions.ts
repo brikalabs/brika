@@ -121,3 +121,16 @@ export const UpdateActions = defineActions('update', {
 });
 
 export type UpdateAction = ActionsUnion<typeof UpdateActions>;
+
+// Theme actions — fan-out signal so other tabs/devices refetch theme state
+export const ThemeActions = defineActions('theme', {
+  /** Custom theme list changed (added, updated, or removed). */
+  customThemesChanged: z.object({}),
+  /** Active theme or color mode preference changed. */
+  activeChanged: z.object({
+    theme: z.string().nullable(),
+    mode: z.enum(['light', 'dark', 'system']),
+  }),
+});
+
+export type ThemeAction = ActionsUnion<typeof ThemeActions>;
