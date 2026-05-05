@@ -8,6 +8,8 @@
   "displayed_other": "{{count}} journaux affichés",
   "new_one": "{{count}} nouveau",
   "new_other": "{{count}} nouveaux",
+  "newMessages_one": "{{count}} nouveau message",
+  "newMessages_other": "{{count}} nouveaux messages",
   "paused": "En pause",
   "streaming": "En direct",
   "confirmClear": "Êtes-vous sûr de vouloir effacer tous les journaux ? Cette action est irréversible.",

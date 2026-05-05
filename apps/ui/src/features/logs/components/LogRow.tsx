@@ -1,12 +1,13 @@
 import { ChevronDown, ChevronRight } from "lucide-react";
 import type React from "react";
-import { useState } from "react";
 import type { StoredLogEvent } from "../api";
 import { LogRowExpandedSection } from "./LogRowExpandedSection";
 import { LEVEL_CONFIG } from "./log-level-config";
 
 interface LogRowProps {
   log: StoredLogEvent;
+  isExpanded: boolean;
+  onToggle: (id: number) => void;
 }
 
 const SOURCE_LOCATION_KEYS = new Set(["sourceFile", "sourceLine"]);
@@ -53,8 +54,7 @@ function MetadataFieldCount({ generalMeta }: Readonly<{ generalMeta: Record<stri
   );
 }
 
-export function LogRow({ log }: Readonly<LogRowProps>) {
-  const [isExpanded, setIsExpanded] = useState(false);
+export function LogRow({ log, isExpanded, onToggle }: Readonly<LogRowProps>) {
   const timestamp = new Date(log.ts).toISOString().slice(11, 23);
   const source = log.pluginName ? `${log.source}:${log.pluginName}` : log.source;
   const isNew = log.id < 0;
@@ -82,7 +82,7 @@ export function LogRow({ log }: Readonly<LogRowProps>) {
         <button
           type="button"
           className="flex w-full cursor-pointer items-start gap-3 border-none bg-transparent p-0 text-left font-inherit text-inherit"
-          onClick={() => setIsExpanded(!isExpanded)}
+          onClick={() => onToggle(log.id)}
         >
           <div className="flex w-4 shrink-0 items-center justify-center">
             <ExpandIcon className="h-3.5 w-3.5 text-muted-foreground" />

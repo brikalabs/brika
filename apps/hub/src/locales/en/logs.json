@@ -8,6 +8,8 @@
   "displayed_other": "{{count}} logs displayed",
   "new_one": "{{count}} new",
   "new_other": "{{count}} new",
+  "newMessages_one": "{{count}} new message",
+  "newMessages_other": "{{count}} new messages",
   "paused": "Paused",
   "streaming": "Streaming",
   "confirmClear": "Are you sure you want to clear all logs? This cannot be undone.",
