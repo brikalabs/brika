@@ -3,7 +3,6 @@
  */
 import { join } from 'node:path';
 import pc from 'picocolors';
-import { folderTarPlugin } from '@/plugins';
 import { done, elapsed, fileSize, log, step } from './log';
 
 export async function bundle(): Promise<void> {
@@ -19,7 +18,6 @@ export async function bundle(): Promise<void> {
     naming: 'server.[hash].[ext]',
     target: 'bun',
     minify: true,
-    plugins: [folderTarPlugin()],
   });
 
   if (!result.success) {

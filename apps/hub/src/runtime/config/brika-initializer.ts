@@ -2,10 +2,11 @@
  * BRIKA Directory Initializer
  *
  * Ensures the .brika directory structure exists with default files.
- * Templates are packed via the folder-tar plugin (works at both runtime and bundle-time).
+ * Templates are packed via a Bun macro (inlined into the compiled binary).
  */
 
 import { dirname, join } from "node:path";
+import { loadTarBytes } from "@brika/db/macros" with { type: "macro" };
 import { inject, singleton } from "@brika/di";
 import { installDir } from "@/cli/utils/runtime";
 import { Logger } from "../logs/log-router";
@@ -42,7 +43,7 @@ export class BrikaInitializer {
     this.#logger.info("Initializing Brika workspace directory", {
       brikaDir: this.#brikaDir,
     });
-    const { default: archive } = await import("@/templates.tar");
+    const archive = new Uint8Array(await loadTarBytes('apps/hub/src/templates'));
     await unpackTemplates(archive, this.#rootDir, this.#logger);
     this.#logger.info("Brika workspace directory initialized successfully");
   }

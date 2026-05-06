@@ -10,6 +10,7 @@
  */
 
 import { watch } from 'node:fs';
+import { loadTarBytes } from '@brika/db/macros' with { type: 'macro' };
 import { inject, singleton } from '@brika/di';
 import { ConfigLoader } from '@/runtime/config/config-loader';
 import { Logger } from '@/runtime/logs/log-router';
@@ -372,7 +373,7 @@ export class I18nService {
    */
   async #loadEmbeddedLocales(): Promise<void> {
     try {
-      const { default: compressed } = await import('@/locales.tar');
+      const compressed = new Uint8Array(await loadTarBytes('apps/hub/src/locales'));
       const tarData = Bun.gunzipSync(compressed);
       const archive = new Bun.Archive(tarData);
       const files = await archive.files();
