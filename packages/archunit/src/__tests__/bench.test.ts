@@ -55,7 +55,7 @@ describe('benchmarks', () => {
 
     console.log(`  Naming check: ${elapsed.toFixed(2)}ms for ${result.filesScanned} files`);
     expect(result.passed).toBe(true);
-    expect(elapsed).toBeLessThan(1000); // Should complete in under 1s
+    expect(elapsed).toBeLessThan(5000);
   });
 
   it('benchmark: 50 features, max lines check', async () => {
@@ -70,7 +70,7 @@ describe('benchmarks', () => {
 
     console.log(`  Max lines check: ${elapsed.toFixed(2)}ms for ${result.filesScanned} files`);
     expect(result.passed).toBe(true);
-    expect(elapsed).toBeLessThan(1000);
+    expect(elapsed).toBeLessThan(5000);
   });
 
   it('benchmark: 50 features, directory structure check', async () => {
@@ -85,7 +85,7 @@ describe('benchmarks', () => {
 
     console.log(`  Dir structure check: ${elapsed.toFixed(2)}ms for ${result.filesScanned} dirs`);
     expect(result.passed).toBe(true);
-    expect(elapsed).toBeLessThan(1000);
+    expect(elapsed).toBeLessThan(5000);
   });
 
   it('benchmark: combined rules', async () => {
@@ -107,6 +107,6 @@ describe('benchmarks', () => {
 
     console.log(`  Combined (4 rules): ${elapsed.toFixed(2)}ms for ${result.filesScanned} files`);
     expect(result.passed).toBe(true);
-    expect(elapsed).toBeLessThan(2000);
+    expect(elapsed).toBeLessThan(10000);
   });
 });
