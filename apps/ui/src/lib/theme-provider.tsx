@@ -80,14 +80,17 @@ function readShadowString(key: string, legacyKey: string): string | null {
   return localStorage.getItem(key) ?? localStorage.getItem(legacyKey);
 }
 
+/** Brika's signature theme — applied when the user hasn't picked one yet. */
+const DEFAULT_THEME: ThemeName = 'brika';
+
 function resolveInitialTheme(): ThemeName {
   const stored = readShadowString(THEME_CACHE_KEY, LEGACY_THEME_KEY);
   if (!stored) {
-    return 'default';
+    return DEFAULT_THEME;
   }
   if (stored.startsWith('custom-')) {
     const id = stored.slice('custom-'.length);
-    return customThemeStorage.get(id) ? stored : 'default';
+    return customThemeStorage.get(id) ? stored : DEFAULT_THEME;
   }
   return stored;
 }

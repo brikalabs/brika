@@ -1,6 +1,26 @@
 {
   "title": "Paramètres",
   "subtitle": "Préférences de l'application",
+  "nav": {
+    "groups": {
+      "preferences": "Préférences",
+      "workspace": "Espace de travail"
+    },
+    "appearance": "Apparence",
+    "language": "Langue",
+    "time": "Date et heure",
+    "location": "Localisation",
+    "hub": "Hub",
+    "system": "Système"
+  },
+  "time": {
+    "title": "Date et heure",
+    "description": "Définissez le fuseau horaire que Brika utilise pour la planification, et choisissez le format d'affichage des horloges."
+  },
+  "hub": {
+    "title": "Maintenance du hub",
+    "description": "Vérifiez les mises à jour et contrôlez le processus du hub."
+  },
   "sections": {
     "general": "Général",
     "appearance": "Apparence",
@@ -9,7 +29,27 @@
   },
   "appearance": {
     "title": "Apparence",
-    "description": "Choisissez votre thème de couleur et mode préférés"
+    "description": "Choisissez votre thème de couleur et mode préférés",
+    "theme": {
+      "title": "Thème de couleurs",
+      "description": "Cliquez sur un thème pour l'appliquer dans toute l'application."
+    },
+    "mode": {
+      "title": "Mode d'affichage",
+      "description": "Mode clair, sombre, ou suivre votre système d'exploitation.",
+      "lightDescription": "Toujours clair.",
+      "darkDescription": "Toujours sombre.",
+      "systemDescription": "Suivre l'OS."
+    },
+    "custom": {
+      "title": "Thèmes personnalisés",
+      "description": "Les thèmes que vous avez créés avec l'éditeur de thèmes.",
+      "empty": "Aucun thème personnalisé pour le moment. Créez-en un pour personnaliser Brika.",
+      "openBuilder": "Ouvrir l'éditeur de thèmes",
+      "createCta": "Créer un thème personnalisé",
+      "edit": "Modifier",
+      "use": "Utiliser"
+    }
   },
   "language": {
     "title": "Langue",
@@ -42,6 +82,14 @@
     "title": "Fuseau horaire",
     "description": "Définissez le fuseau horaire de votre instance Brika. Cela affecte toutes les opérations liées au temps.",
     "select": "Sélectionnez un fuseau horaire"
+  },
+  "timeFormat": {
+    "title": "Format de l'heure",
+    "description": "Comment les horloges et horodatages s'affichent dans l'application.",
+    "auto": "Auto",
+    "h12": "12 h",
+    "h24": "24 h",
+    "autoHint": "Suit votre langue · {{example}}"
   },
   "location": {
     "title": "Emplacement du hub",
@@ -79,7 +127,7 @@
     "builtIn": "Intégrés",
     "custom": "Personnalisés",
     "customize": "Personnaliser",
-    "default": "Par défaut",
+    "default": "Clay",
     "brika": "Brika",
     "ocean": "Océan",
     "forest": "Forêt",

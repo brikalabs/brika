@@ -161,7 +161,7 @@
       },
       "preview": {
         "title": "Title",
-        "body": "Body copy preview — adjust the base size to see every text scale ripple together.",
+        "body": "Body copy preview. Adjust the base size to see every text scale ripple together.",
         "label": "Label"
       }
     },
@@ -253,7 +253,7 @@
     "library": {
       "typography": "Typography",
       "display": "Display",
-      "body": "Body copy preview — every text scale derives from the base size.",
+      "body": "Body copy preview. Every text scale derives from the base size.",
       "buttons": "Buttons",
       "primary": "Primary",
       "secondary": "Secondary",

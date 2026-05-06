@@ -5,12 +5,6 @@ import {
   CollapsibleTrigger,
   Input,
   Label,
-  SectionContent,
-  SectionDescription,
-  SectionHeader,
-  SectionIcon,
-  SectionInfo,
-  SectionTitle,
 } from '@brika/clay';
 import { Check, ChevronDown, MapPin, Navigation } from 'lucide-react';
 import { useState } from 'react';
@@ -37,100 +31,100 @@ export function LocationSettings() {
   const saveLabel = isSaving ? t('common:actions.saving') : t('common:actions.save');
 
   return (
-    <>
-      <SectionHeader>
-        <SectionInfo>
-          <SectionIcon>
-            <MapPin className="size-4" />
-          </SectionIcon>
-          <div>
-            <SectionTitle>{t('settings:location.title')}</SectionTitle>
-            <SectionDescription>{t('settings:location.description')}</SectionDescription>
-          </div>
-        </SectionInfo>
+    <div className="space-y-4">
+      <div className="flex items-center gap-3">
+        <div className="flex-1">
+          <AddressSearch onSelect={handleAddressSelect} />
+        </div>
         <Button variant="outline" size="sm" onClick={handleDetect} disabled={detecting}>
           <Navigation className="mr-2 size-4" />
           {detecting ? t('settings:location.detecting') : t('settings:location.detect')}
         </Button>
-      </SectionHeader>
+      </div>
 
-      <SectionContent className="space-y-4">
-        <AddressSearch onSelect={handleAddressSelect} />
+      {!hasLocation && (
+        <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed p-8 text-center">
+          <MapPin className="size-8 text-muted-foreground/50" />
+          <p className="text-muted-foreground text-sm">{t('settings:location.emptyHint')}</p>
+        </div>
+      )}
 
-        {!hasLocation && (
-          <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed p-8 text-center">
-            <MapPin className="size-8 text-muted-foreground/50" />
-            <p className="text-muted-foreground text-sm">{t('settings:location.emptyHint')}</p>
-          </div>
-        )}
-
-        {hasLocation && draft && (
-          <div className="space-y-3 rounded-lg border p-4">
-            <div className="flex items-center gap-2">
-              <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/10">
-                <MapPin className="size-4 text-primary" />
-              </div>
-              <p className="font-medium text-sm">
-                {draft.formattedAddress || t('settings:location.notConfigured')}
-              </p>
+      {hasLocation && draft && (
+        <div className="space-y-3 rounded-lg border border-border/60 p-4">
+          <div className="flex items-center gap-2">
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/10">
+              <MapPin className="size-4 text-primary" />
             </div>
-
-            {draft.latitude !== 0 && draft.longitude !== 0 && (
-              <StaticMap latitude={draft.latitude} longitude={draft.longitude} />
-            )}
-
-            <Collapsible open={showDetails} onOpenChange={setShowDetails}>
-              <CollapsibleTrigger asChild>
-                <Button variant="ghost" size="sm" className="w-full justify-between">
-                  {t('settings:location.editDetails')}
-                  <ChevronDown
-                    className={`size-4 transition-transform ${showDetails ? 'rotate-180' : ''}`}
-                  />
-                </Button>
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <div className="grid grid-cols-2 gap-3 pt-3">
-                  {(['street', 'city', 'postalCode', 'state', 'country'] as const).map((field) => (
-                    <div key={field}>
-                      <Label className="text-xs">{t(`settings:location.${field}`)}</Label>
-                      <Input
-                        value={draft[field]}
-                        onChange={(e) => handleFieldChange(field, e.target.value)}
-                        className="mt-1 h-8 text-sm"
-                      />
-                    </div>
-                  ))}
-                  {(['latitude', 'longitude'] as const).map((field) => (
-                    <div key={field}>
-                      <Label className="text-xs">{t(`settings:location.${field}`)}</Label>
-                      <Input
-                        value={draft[field]}
-                        onChange={(e) => handleFieldChange(field, e.target.value)}
-                        type="number"
-                        step="any"
-                        className="mt-1 h-8 text-sm"
-                      />
-                    </div>
-                  ))}
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
+            <p className="font-medium text-sm">
+              {draft.formattedAddress || t('settings:location.notConfigured')}
+            </p>
           </div>
-        )}
 
-        {isDirty && draft && (
-          <Button onClick={handleSave} disabled={isSaving} size="sm">
-            {showSaved ? (
-              <>
-                <Check className="mr-2 size-4" />
-                {t('settings:location.saved')}
-              </>
-            ) : (
-              saveLabel
-            )}
-          </Button>
-        )}
-      </SectionContent>
-    </>
+          {draft.latitude !== 0 && draft.longitude !== 0 && (
+            <div className="overflow-hidden rounded-lg ring-1 ring-border/60">
+              <StaticMap latitude={draft.latitude} longitude={draft.longitude} />
+            </div>
+          )}
+
+          <Collapsible open={showDetails} onOpenChange={setShowDetails}>
+            <CollapsibleTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-between text-muted-foreground"
+              >
+                {t('settings:location.editDetails')}
+                <ChevronDown
+                  className={`size-4 transition-transform ${showDetails ? 'rotate-180' : ''}`}
+                />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="grid grid-cols-1 gap-3 pt-3 sm:grid-cols-2 lg:grid-cols-3">
+                {(['street', 'city', 'postalCode', 'state', 'country'] as const).map((field) => (
+                  <div key={field}>
+                    <Label className="text-[11px] text-muted-foreground">
+                      {t(`settings:location.${field}`)}
+                    </Label>
+                    <Input
+                      value={draft[field]}
+                      onChange={(e) => handleFieldChange(field, e.target.value)}
+                      className="mt-1 h-8 text-sm"
+                    />
+                  </div>
+                ))}
+                {(['latitude', 'longitude'] as const).map((field) => (
+                  <div key={field}>
+                    <Label className="text-[11px] text-muted-foreground">
+                      {t(`settings:location.${field}`)}
+                    </Label>
+                    <Input
+                      value={draft[field]}
+                      onChange={(e) => handleFieldChange(field, e.target.value)}
+                      type="number"
+                      step="any"
+                      className="mt-1 h-8 text-sm"
+                    />
+                  </div>
+                ))}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        </div>
+      )}
+
+      {isDirty && draft && (
+        <Button onClick={handleSave} disabled={isSaving} size="sm">
+          {showSaved ? (
+            <>
+              <Check className="mr-2 size-4" />
+              {t('settings:location.saved')}
+            </>
+          ) : (
+            saveLabel
+          )}
+        </Button>
+      )}
+    </div>
   );
 }

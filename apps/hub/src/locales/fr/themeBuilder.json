@@ -161,7 +161,7 @@
       },
       "preview": {
         "title": "Titre",
-        "body": "Aperçu du corps de texte — ajustez la taille de base pour faire bouger toutes les échelles à la fois.",
+        "body": "Aperçu du corps de texte. Ajustez la taille de base pour faire bouger toutes les échelles à la fois.",
         "label": "Étiquette"
       }
     },
@@ -253,7 +253,7 @@
     "library": {
       "typography": "Typographie",
       "display": "Display",
-      "body": "Aperçu du corps de texte — toutes les échelles dérivent de la taille de base.",
+      "body": "Aperçu du corps de texte. Toutes les échelles dérivent de la taille de base.",
       "buttons": "Boutons",
       "primary": "Primaire",
       "secondary": "Secondaire",
