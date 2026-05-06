@@ -7,6 +7,7 @@ import { authRoutes } from './auth';
 import { blockRoutes } from './blocks';
 import { boardRoutes } from './boards';
 import { dashboardRoutes } from './dashboard';
+import { helpRoutes } from './help';
 import { logRoutes } from './logs';
 import { pluginRoutes } from './plugins';
 import { settingRoutes } from './settings';
@@ -28,6 +29,7 @@ export const { routes, routeTree } = createProtectedRoutes(
     workflows: workflowRoutes,
     boards: boardRoutes,
     sparks: sparkRoutes,
+    help: helpRoutes,
     logs: logRoutes,
     store: storeRoutes,
     settings: settingRoutes,

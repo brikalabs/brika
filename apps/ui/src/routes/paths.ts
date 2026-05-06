@@ -56,6 +56,15 @@ export const paths = {
   },
   settings: {
     index: route('/settings'),
+    appearance: route('/settings/appearance'),
+    language: route('/settings/language'),
+    time: route('/settings/time'),
+    location: route('/settings/location'),
+    hub: route('/settings/hub'),
+    system: route('/settings/system'),
     themes: route('/settings/themes'),
+  },
+  help: {
+    concepts: route('/help/concepts'),
   },
 };
