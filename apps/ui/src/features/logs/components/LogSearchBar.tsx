@@ -1,16 +1,9 @@
-import {
-  Button,
-  Input,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@brika/clay";
+import { Button, Input } from "@brika/clay";
 import { Search, X } from "lucide-react";
 import { useState } from "react";
 import { useLocale } from "@/lib/use-locale";
 import type { PluginInfo } from "../api";
+import { LogPluginFilter } from "./LogPluginFilter";
 
 interface LogSearchBarProps {
   search: string;
@@ -52,20 +45,11 @@ export function LogSearchBar({
       </form>
 
       {pluginOptions.length > 0 && (
-        <Select value={pluginName ?? "all"} onValueChange={(v) => onPluginChange(v === "all" ? null : v)}>
-          <SelectTrigger className="w-56">
-            <SelectValue placeholder={t("logs:allPlugins")} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t("logs:allPlugins")}</SelectItem>
-            {pluginOptions.map((plugin) => (
-              <SelectItem key={plugin.name} value={plugin.name}>
-                {plugin.name}
-                {plugin.version && <span className="ml-1 text-muted-foreground">v{plugin.version}</span>}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <LogPluginFilter
+          pluginName={pluginName}
+          pluginOptions={pluginOptions}
+          onPluginChange={onPluginChange}
+        />
       )}
 
       {hasActiveFilters && (

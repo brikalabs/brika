@@ -32,9 +32,8 @@ export interface LogStats {
 }
 
 export interface PluginInfo {
-  ref: string;
-  id: string;
   name: string;
+  uid?: string;
   version?: string;
 }
 

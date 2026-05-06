@@ -19,6 +19,7 @@
   "filters": {
     "level": "Level",
     "source": "Source",
+    "plugin": "Plugin",
     "to": "to"
   },
   "table": {
