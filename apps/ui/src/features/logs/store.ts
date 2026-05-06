@@ -16,8 +16,10 @@ export interface LogFilters {
 }
 
 interface LogsStore {
-  // Live logs that arrived via SSE (prepended to historical)
+  // Logs ready for display (prepended to historical)
   newLogs: StoredLogEvent[];
+  // Logs buffered from SSE, waiting to be revealed
+  pendingLogs: StoredLogEvent[];
   paused: boolean;
 
   // Filters
@@ -25,6 +27,7 @@ interface LogsStore {
 
   // Actions
   addNew: (log: StoredLogEvent) => void;
+  revealPending: () => void;
   clearNew: () => void;
   togglePaused: () => void;
 
@@ -52,18 +55,29 @@ const defaultFilters: LogFilters = {
 
 export const useLogsStore = create<LogsStore>((set) => ({
   newLogs: [],
+  pendingLogs: [],
   paused: false,
   filters: defaultFilters,
 
+  // New SSE logs always go to pendingLogs (unless manually paused).
+  // The UI decides when to promote them to newLogs via revealPending.
   addNew: (log) =>
     set((s) => {
       if (s.paused) { return s; }
-      // Prepend new logs (newest first), keep max 500 in memory
-      const logs = [log, ...s.newLogs].slice(0, 500);
-      return { newLogs: logs };
+      return { pendingLogs: [log, ...s.pendingLogs].slice(0, 500) };
     }),
 
-  clearNew: () => set({ newLogs: [] }),
+  // Promote all pending logs into the displayed list.
+  revealPending: () =>
+    set((s) => {
+      if (s.pendingLogs.length === 0) { return s; }
+      return {
+        newLogs: [...s.pendingLogs, ...s.newLogs].slice(0, 500),
+        pendingLogs: [],
+      };
+    }),
+
+  clearNew: () => set({ newLogs: [], pendingLogs: [] }),
   togglePaused: () => set((s) => ({ paused: !s.paused })),
 
   setLevels: (levels) => set((s) => ({ filters: { ...s.filters, levels } })),
@@ -76,4 +90,3 @@ export const useLogsStore = create<LogsStore>((set) => ({
     })),
   resetFilters: () => set({ filters: defaultFilters }),
 }));
-

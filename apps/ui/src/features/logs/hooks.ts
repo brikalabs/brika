@@ -153,6 +153,10 @@ export function useLogs() {
     logs: mergedLogs,
     newLogsCount: store.newLogs.length,
 
+    // Pending logs buffered from SSE, not yet shown
+    pendingCount: store.pendingLogs.length,
+    revealPending: store.revealPending,
+
     // Streaming control
     paused: store.paused,
     togglePaused: store.togglePaused,

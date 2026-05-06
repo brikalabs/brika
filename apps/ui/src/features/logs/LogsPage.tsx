@@ -11,6 +11,8 @@ export function LogsPage() {
   const {
     logs,
     newLogsCount,
+    pendingCount,
+    revealPending,
     paused,
     togglePaused,
     isLoading,
@@ -128,6 +130,8 @@ export function LogsPage() {
             isFetchingMore={isFetchingNextPage}
             hasMore={hasNextPage}
             onLoadMore={fetchNextPage}
+            pendingCount={pendingCount}
+            onRevealPending={revealPending}
           />
         </CardContent>
       </Card>
