@@ -138,5 +138,24 @@
     "locationDesc": "Accéder à la localisation physique du hub (adresse, coordonnées, fuseau horaire)",
     "secrets": "Stockage sécurisé",
     "secretsDesc": "Lire et écrire les identifiants du plugin dans le trousseau du système"
+  },
+  "starter": {
+    "eyebrow": "Premier plugin",
+    "title": "Installez votre premier plugin",
+    "description": "Les plugins ajoutent des blocs (la logique), des briques (les widgets) et des sparks (les événements) à Brika. Essayez l'un de ceux-ci pour commencer.",
+    "install": "Installer",
+    "browseAll": "Parcourir tous les plugins",
+    "timer": {
+      "name": "Minuteur",
+      "description": "Blocs minuteur et compte à rebours, plus une brique de tableau de bord. Fonctionne sans configuration."
+    },
+    "weather": {
+      "name": "Météo",
+      "description": "Une brique météo avec conditions actuelles et prévisions. Utilise la localisation que vous avez définie."
+    },
+    "echo": {
+      "name": "Exemple Écho",
+      "description": "Un petit plugin d'exemple. Utile pour voir comment les plugins sont construits."
+    }
   }
 }

@@ -1,10 +1,15 @@
-import { Card, CardContent } from '@brika/clay';
 import type { Plugin } from '@brika/plugin';
-import { AlertTriangle, Plug } from 'lucide-react';
-import { useMemo } from 'react';
+import { AlertTriangle } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import { useDataView } from '@/components/DataView';
 import { useLocale } from '@/lib/use-locale';
-import { PluginCard, PluginCardSkeleton, PluginsPageHeader } from './components';
+import {
+  InstallPluginDialog,
+  PluginCard,
+  PluginCardSkeleton,
+  PluginsEmptyStarter,
+  PluginsPageHeader,
+} from './components';
 import { usePluginMutations, usePlugins, usePluginUpdates } from './hooks';
 
 const UNHEALTHY_STATUSES = new Set([
@@ -24,6 +29,14 @@ export function PluginsPage() {
   const { data: plugins, isLoading, refetch } = usePlugins();
   const { disable, reload, kill } = usePluginMutations();
   const { available: availableUpdates, getUpdate } = usePluginUpdates();
+
+  const [installDialogOpen, setInstallDialogOpen] = useState(false);
+  const [installDefaultName, setInstallDefaultName] = useState('');
+
+  const openInstallDialog = (defaultName = '') => {
+    setInstallDefaultName(defaultName);
+    setInstallDialogOpen(true);
+  };
 
   const isBusy = disable.isPending || reload.isPending || kill.isPending;
 
@@ -74,6 +87,7 @@ export function PluginsPage() {
         plugins={plugins ?? []}
         availableUpdates={availableUpdates}
         onRefresh={() => refetch()}
+        onInstallClick={() => openInstallDialog()}
       />
 
       <View.Root>
@@ -88,13 +102,7 @@ export function PluginsPage() {
         </View.Skeleton>
 
         <View.Empty>
-          <Card>
-            <CardContent className="py-12 text-center">
-              <Plug className="mx-auto mb-4 size-12 text-muted-foreground" />
-              <h3 className="font-semibold text-lg">{t('plugins:empty')}</h3>
-              <p className="mt-1 text-muted-foreground">{t('plugins:emptyHint')}</p>
-            </CardContent>
-          </Card>
+          <PluginsEmptyStarter onInstall={openInstallDialog} />
         </View.Empty>
 
         <View.Content>
@@ -119,6 +127,12 @@ export function PluginsPage() {
           )}
         </View.Content>
       </View.Root>
+
+      <InstallPluginDialog
+        open={installDialogOpen}
+        onOpenChange={setInstallDialogOpen}
+        defaultName={installDefaultName}
+      />
     </div>
   );
 }

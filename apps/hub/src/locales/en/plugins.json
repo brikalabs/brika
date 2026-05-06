@@ -138,5 +138,24 @@
     "locationDesc": "Access the hub's physical location (address, coordinates, timezone)",
     "secrets": "Secret storage",
     "secretsDesc": "Read and write per-plugin credentials in the OS keychain"
+  },
+  "starter": {
+    "eyebrow": "First plugin",
+    "title": "Install your first plugin",
+    "description": "Plugins add blocks (the logic), bricks (the widgets), and sparks (the events) to Brika. Try one of these to start.",
+    "install": "Install",
+    "browseAll": "Browse all plugins",
+    "timer": {
+      "name": "Timer",
+      "description": "Timer and countdown blocks plus a dashboard brick. Works out of the box."
+    },
+    "weather": {
+      "name": "Weather",
+      "description": "A weather brick with current conditions and forecast. Uses the location you set."
+    },
+    "echo": {
+      "name": "Echo Example",
+      "description": "A tiny example plugin. Useful for seeing how plugins are built."
+    }
   }
 }

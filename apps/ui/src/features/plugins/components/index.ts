@@ -15,6 +15,7 @@ export { PluginPageTab } from './PluginPageTab';
 export { PluginPermissions } from './PluginPermissions';
 export { PluginSparksList } from './PluginSparksList';
 export { PluginStats } from './PluginStats';
+export { PluginsEmptyStarter } from './PluginsEmptyStarter';
 export { PluginsPageHeader } from './PluginsPageHeader';
 export { PluginUpdateBadge } from './PluginUpdateBadge';
 export { PreferenceField } from './PreferenceField';
