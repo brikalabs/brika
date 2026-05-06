@@ -1,16 +1,30 @@
 {
+  "shell": {
+    "step": "Step {{current}} of {{total}}",
+    "progressLabels": {
+      "language": "Language",
+      "account": "Account",
+      "avatar": "Avatar",
+      "timezone": "Timezone",
+      "location": "Location"
+    }
+  },
   "welcome": {
-    "title": "Welcome to Brika",
-    "description": "Let's get your Brika instance ready in just a few steps.",
+    "eyebrow": "Welcome",
+    "title": "Set up your hub",
+    "subtitle": "Brika is a self-hosted automation hub. The next steps create your admin account and capture a bit of context about your environment so workflows know where and when to run.",
+    "duration": "About 90 seconds.",
     "getStarted": "Get started"
   },
   "language": {
-    "title": "Choose your language",
-    "description": "Select your preferred language for Brika."
+    "eyebrow": "Language",
+    "title": "Pick your language",
+    "subtitle": "Sets the language for the dashboard, plugin notifications, and emails. You can change it any time in Settings."
   },
   "account": {
-    "title": "Create admin account",
-    "description": "This will be the primary administrator for your Brika instance.",
+    "eyebrow": "Account",
+    "title": "Create your admin account",
+    "subtitle": "The first account on a Brika hub is the administrator. You can invite more users later from Settings.",
     "name": "Full name",
     "namePlaceholder": "John Doe",
     "email": "Email",
@@ -21,9 +35,9 @@
     "confirmPlaceholder": "Re-enter your password",
     "mismatch": "Passwords do not match",
     "create": "Create account",
-    "creating": "Creating account...",
+    "creating": "Creating account…",
     "editTitle": "Edit your account",
-    "editDescription": "Update your name or password before continuing.",
+    "editSubtitle": "Update your name or password before continuing.",
     "currentPassword": "Current password",
     "currentPasswordPlaceholder": "Enter your current password",
     "newPassword": "New password",
@@ -32,44 +46,47 @@
     "saved": "Saved"
   },
   "avatar": {
-    "title": "Add a profile picture",
-    "description": "Upload a photo for your admin account.",
-    "hint": "Click to upload a photo",
-    "uploadFailed": "Failed to upload photo. Please try again."
+    "eyebrow": "Avatar",
+    "title": "Add a profile photo",
+    "subtitle": "Optional. Useful when several people share admin access to the same hub. You can change it any time.",
+    "hint": "Click the avatar to upload",
+    "uploadFailed": "Couldn't upload. Please try a different image."
   },
   "timezone": {
+    "eyebrow": "Timezone",
     "title": "Set your timezone",
-    "description": "Choose the timezone for your Brika instance.",
+    "subtitle": "Brika uses this to schedule automations and stamp events. Pre-filled from your browser, but you can change it.",
     "select": "Select a timezone",
-    "detected": "Auto-detected from your browser"
+    "detected": "Detected from your browser",
+    "formatLabel": "Display format"
   },
   "location": {
-    "title": "Set your hub location",
-    "description": "Search for an address or detect your location automatically.",
-    "detect": "Detect my location",
-    "detecting": "Detecting...",
+    "eyebrow": "Location",
+    "title": "Where is your hub?",
+    "subtitle": "Plugins like Weather and Sun Position need to know where the hub physically is. The address stays on this machine. It is never shared.",
+    "detect": "Use my location",
+    "detecting": "Detecting…",
     "or": "or",
     "unknownCity": "Location detected",
-    "emptyHint": "Search for an address or detect your location to get started.",
+    "emptyHint": "Search for an address above, or detect your position from the browser.",
     "editDetails": "Edit details",
     "street": "Street",
     "city": "City",
     "state": "State / Region",
-    "postalCode": "Postal Code",
+    "postalCode": "Postal code",
     "country": "Country",
     "latitude": "Latitude",
-    "longitude": "Longitude",
-    "saved": "Saved",
-    "save": "Save location"
+    "longitude": "Longitude"
   },
   "complete": {
-    "title": "You're all set!",
-    "description": "Your instance is ready. Redirecting to the dashboard..."
+    "eyebrow": "All set",
+    "title": "You're ready",
+    "titleNamed": "You're ready, {{name}}",
+    "subtitle": "Configuration saved. Next stop: install your first plugin from the dashboard."
   },
   "nav": {
     "back": "Back",
-    "continue": "Continue",
-    "skip": "Skip"
+    "continue": "Continue"
   },
   "errors": {
     "failed": "Setup failed. Please try again."

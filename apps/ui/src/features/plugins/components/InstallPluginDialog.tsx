@@ -10,7 +10,7 @@ import {
 } from '@brika/clay';
 import { useQueryClient } from '@tanstack/react-query';
 import { Download, Loader2, Package } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { getProgressValue, useProgressStream } from '@/hooks/use-progress-stream';
 import { useLocale } from '@/lib/use-locale';
 import { pluginsKeys } from '../api';
@@ -21,13 +21,26 @@ import { getPhaseLabel } from './install-progress-utils';
 interface InstallPluginDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  defaultName?: string;
 }
 
-export function InstallPluginDialog({ open, onOpenChange }: Readonly<InstallPluginDialogProps>) {
+export function InstallPluginDialog({
+  open,
+  onOpenChange,
+  defaultName = '',
+}: Readonly<InstallPluginDialogProps>) {
   const queryClient = useQueryClient();
   const { t } = useLocale();
-  const [packageName, setPackageName] = useState('');
+  const [packageName, setPackageName] = useState(defaultName);
   const [version, setVersion] = useState('');
+
+  // Sync packageName with defaultName whenever the dialog is (re)opened
+  // for a different starter recommendation.
+  useEffect(() => {
+    if (open) {
+      setPackageName(defaultName);
+    }
+  }, [open, defaultName]);
 
   const {
     isProcessing,

@@ -1,2 +1,10 @@
 export { useAvailableLocales } from './components/language/hooks';
-export { SettingsPage } from './SettingsPage';
+export {
+  AppearancePage,
+  HubPage,
+  LanguagePage,
+  LocationPage,
+  SystemPage,
+  TimePage,
+} from './pages';
+export { SettingsLayout } from './SettingsLayout';

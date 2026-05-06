@@ -1,10 +1,8 @@
 import { Button, cn } from '@brika/clay';
 import type { Plugin } from '@brika/plugin';
 import { Plus, RefreshCw } from 'lucide-react';
-import React from 'react';
 import { useLocale } from '@/lib/use-locale';
 import type { UpdateInfo } from '../registry-api';
-import { InstallPluginDialog } from './InstallPluginDialog';
 import { UpdateAllButton } from './UpdateAllButton';
 
 interface PluginsPageHeaderProps {
@@ -13,6 +11,7 @@ interface PluginsPageHeaderProps {
   plugins: Plugin[];
   availableUpdates: UpdateInfo[];
   onRefresh: () => void;
+  onInstallClick: () => void;
 }
 
 export function PluginsPageHeader({
@@ -21,9 +20,9 @@ export function PluginsPageHeader({
   plugins,
   availableUpdates,
   onRefresh,
+  onInstallClick,
 }: Readonly<PluginsPageHeaderProps>) {
   const { t } = useLocale();
-  const [installDialogOpen, setInstallDialogOpen] = React.useState(false);
 
   return (
     <div className="flex items-center justify-between">
@@ -47,11 +46,10 @@ export function PluginsPageHeader({
           <RefreshCw className={cn('size-4', isLoading && 'animate-spin')} />
         </Button>
         <UpdateAllButton updates={availableUpdates} plugins={plugins} />
-        <Button size="sm" className="gap-1.5" onClick={() => setInstallDialogOpen(true)}>
+        <Button size="sm" className="gap-1.5" onClick={onInstallClick}>
           <Plus className="size-4" />
           {t('plugins:actions.load')}
         </Button>
-        <InstallPluginDialog open={installDialogOpen} onOpenChange={setInstallDialogOpen} />
       </div>
     </div>
   );

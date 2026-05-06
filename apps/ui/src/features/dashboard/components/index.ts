@@ -1,5 +1,6 @@
 export type { DashboardHeaderProps } from './DashboardHeader';
 export { DashboardHeader } from './DashboardHeader';
+export { GettingStartedCard } from './GettingStartedCard';
 export type { QuickActionProps } from './QuickAction';
 export { QuickAction } from './QuickAction';
 

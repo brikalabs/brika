@@ -1,6 +1,26 @@
 {
   "title": "Settings",
   "subtitle": "Application preferences",
+  "nav": {
+    "groups": {
+      "preferences": "Preferences",
+      "workspace": "Workspace"
+    },
+    "appearance": "Appearance",
+    "language": "Language",
+    "time": "Date & time",
+    "location": "Location",
+    "hub": "Hub",
+    "system": "System"
+  },
+  "time": {
+    "title": "Date & time",
+    "description": "Set the timezone Brika uses for scheduling, and pick how clocks are formatted throughout the app."
+  },
+  "hub": {
+    "title": "Hub maintenance",
+    "description": "Check for updates and control the running hub process."
+  },
   "sections": {
     "general": "General",
     "appearance": "Appearance",
@@ -9,7 +29,27 @@
   },
   "appearance": {
     "title": "Appearance",
-    "description": "Choose your preferred color theme and mode"
+    "description": "Choose your preferred color theme and mode",
+    "theme": {
+      "title": "Color theme",
+      "description": "Tap a theme to apply it across the app."
+    },
+    "mode": {
+      "title": "Color mode",
+      "description": "Use light, dark, or follow your operating system.",
+      "lightDescription": "Always bright.",
+      "darkDescription": "Always dark.",
+      "systemDescription": "Follow your OS."
+    },
+    "custom": {
+      "title": "Custom themes",
+      "description": "Themes you've crafted with the theme builder.",
+      "empty": "No custom themes yet. Create one to make Brika your own.",
+      "openBuilder": "Open theme builder",
+      "createCta": "Create a custom theme",
+      "edit": "Edit",
+      "use": "Use"
+    }
   },
   "language": {
     "title": "Language",
@@ -42,6 +82,14 @@
     "title": "Timezone",
     "description": "Set the timezone for your Brika instance. This affects all time-related operations.",
     "select": "Select a timezone"
+  },
+  "timeFormat": {
+    "title": "Time format",
+    "description": "How clocks and timestamps are displayed across the app.",
+    "auto": "Auto",
+    "h12": "12-hour",
+    "h24": "24-hour",
+    "autoHint": "Follows your language · {{example}}"
   },
   "location": {
     "title": "Hub Location",
@@ -79,7 +127,7 @@
     "builtIn": "Built-in",
     "custom": "Custom",
     "customize": "Customize",
-    "default": "Default",
+    "default": "Clay",
     "brika": "Brika",
     "ocean": "Ocean",
     "forest": "Forest",

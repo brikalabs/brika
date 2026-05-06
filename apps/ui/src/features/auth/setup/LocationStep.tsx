@@ -5,16 +5,18 @@ import {
   CollapsibleTrigger,
   Input,
   Label,
-  Separator,
 } from '@brika/clay';
-import { Check, ChevronDown, Loader2, MapPin, Navigation } from 'lucide-react';
+import { ChevronDown, Loader2, MapPin, Navigation } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AddressSearch } from '@/features/settings/components/location/AddressSearch';
 import type { HubLocation } from '@/features/settings/components/location/hooks';
-import { useLocationSettings } from '@/features/settings/components/location/hooks';
+import {
+  useLocationSettings,
+  useUpdateHubLocation,
+} from '@/features/settings/components/location/hooks';
 import { StaticMap } from '@/features/settings/components/location/StaticMap';
-import { StepBody, StepHeader, StepNav } from './shared';
+import { type SetupPath, StepBody, StepHeader, StepNav } from './shared';
 
 const TEXT_FIELDS = ['street', 'city', 'postalCode', 'state', 'country'] as const;
 const NUM_FIELDS = ['latitude', 'longitude'] as const;
@@ -25,58 +27,62 @@ export function LocationStep() {
     draft,
     isDirty,
     detecting,
-    showSaved,
-    isSaving,
     hasLocation,
     handleAddressSelect,
     handleFieldChange,
     handleDetect,
-    handleSave,
   } = useLocationSettings();
 
   const [showDetails, setShowDetails] = useState(false);
+  const updateMutation = useUpdateHubLocation();
+
+  // Save on Continue if there is a draft and changes are pending. Otherwise
+  // just navigate forward — location is optional.
+  const handleContinue = async (): Promise<SetupPath> => {
+    if (draft && isDirty) {
+      await updateMutation.mutateAsync(draft);
+    }
+    return '/setup/complete';
+  };
 
   return (
     <>
       <StepHeader
-        icon={MapPin}
+        eyebrow={t('location.eyebrow')}
         title={t('location.title')}
-        description={t('location.description')}
+        subtitle={t('location.subtitle')}
       />
 
       <StepBody>
         <AddressSearch onSelect={handleAddressSelect} />
 
-        {!hasLocation && <EmptyState detecting={detecting} onDetect={handleDetect} t={t} />}
-
-        {hasLocation && draft && (
-          <div className="space-y-3">
-            <LocationCard
-              draft={draft}
-              showDetails={showDetails}
-              onShowDetailsChange={setShowDetails}
-              onFieldChange={handleFieldChange}
-              t={t}
-            />
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleDetect}
-              disabled={detecting}
-              className="gap-2"
-            >
-              <Navigation className="size-3.5" />
-              {detecting ? t('location.detecting') : t('location.detect')}
-            </Button>
-
-            {isDirty && (
-              <SaveButton onSave={handleSave} isSaving={isSaving} showSaved={showSaved} t={t} />
-            )}
-          </div>
+        {!hasLocation && (
+          <EmptyState
+            detecting={detecting}
+            onDetect={handleDetect}
+            emptyHint={t('location.emptyHint')}
+            detectLabel={t('location.detect')}
+            detectingLabel={t('location.detecting')}
+          />
         )}
 
-        <StepNav back="/setup/timezone" next="/setup/complete" showSkip={!hasLocation} />
+        {hasLocation && draft && (
+          <LocationCard
+            draft={draft}
+            showDetails={showDetails}
+            onShowDetailsChange={setShowDetails}
+            onFieldChange={handleFieldChange}
+            onRedetect={handleDetect}
+            redetecting={detecting}
+            t={t}
+          />
+        )}
+
+        <StepNav
+          back="/setup/timezone"
+          onContinue={handleContinue}
+          loading={updateMutation.isPending}
+        />
       </StepBody>
     </>
   );
@@ -84,38 +90,39 @@ export function LocationStep() {
 
 // ─── Sub-components ────────────────────────────────────────────────────────
 
+interface EmptyStateProps {
+  detecting: boolean;
+  onDetect: () => void;
+  emptyHint: string;
+  detectLabel: string;
+  detectingLabel: string;
+}
+
 function EmptyState({
   detecting,
   onDetect,
-  t,
-}: Readonly<{
-  detecting: boolean;
-  onDetect: () => void;
-  t: (key: string) => string;
-}>) {
+  emptyHint,
+  detectLabel,
+  detectingLabel,
+}: Readonly<EmptyStateProps>) {
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed p-8 text-center">
-        <MapPin className="size-8 text-muted-foreground/50" />
-        <p className="text-muted-foreground text-sm">{t('location.emptyHint')}</p>
+    <div className="flex flex-col items-center gap-4 rounded-xl border border-border/60 border-dashed bg-foreground/[0.015] px-6 py-8 text-center">
+      <div className="flex size-11 items-center justify-center rounded-full bg-foreground/5">
+        <MapPin className="size-5 text-muted-foreground/70" />
       </div>
-
-      <div className="flex items-center gap-3">
-        <Separator className="flex-1" />
-        <span className="text-muted-foreground text-xs">{t('location.or')}</span>
-        <Separator className="flex-1" />
-      </div>
-
-      <Button variant="outline" onClick={onDetect} disabled={detecting} className="w-full gap-2">
+      <p className="max-w-[300px] text-[12.5px] text-muted-foreground leading-relaxed">
+        {emptyHint}
+      </p>
+      <Button variant="outline" size="sm" onClick={onDetect} disabled={detecting} className="gap-2">
         {detecting ? (
           <>
-            <Loader2 className="size-4 animate-spin" />
-            {t('location.detecting')}
+            <Loader2 className="size-3.5 animate-spin" />
+            {detectingLabel}
           </>
         ) : (
           <>
-            <Navigation className="size-4" />
-            {t('location.detect')}
+            <Navigation className="size-3.5" />
+            {detectLabel}
           </>
         )}
       </Button>
@@ -123,35 +130,62 @@ function EmptyState({
   );
 }
 
+interface LocationCardProps {
+  draft: HubLocation;
+  showDetails: boolean;
+  onShowDetailsChange: (open: boolean) => void;
+  onFieldChange: (field: keyof HubLocation, value: string) => void;
+  onRedetect: () => void;
+  redetecting: boolean;
+  t: (key: string) => string;
+}
+
 function LocationCard({
   draft,
   showDetails,
   onShowDetailsChange,
   onFieldChange,
+  onRedetect,
+  redetecting,
   t,
-}: Readonly<{
-  draft: HubLocation;
-  showDetails: boolean;
-  onShowDetailsChange: (open: boolean) => void;
-  onFieldChange: (field: keyof HubLocation, value: string) => void;
-  t: (key: string) => string;
-}>) {
+}: Readonly<LocationCardProps>) {
   return (
-    <div className="space-y-3 rounded-lg border p-4">
-      <div className="flex items-center gap-2">
-        <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary/10">
-          <MapPin className="size-4 text-primary" />
+    <div className="space-y-3 rounded-xl border border-border/60 bg-foreground/[0.015] p-4">
+      <div className="flex items-center gap-3">
+        <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+          <MapPin className="size-4" />
         </div>
-        <p className="font-medium text-sm">{draft.formattedAddress || t('location.unknownCity')}</p>
+        <p className="min-w-0 flex-1 truncate font-medium text-[13.5px]">
+          {draft.formattedAddress || t('location.unknownCity')}
+        </p>
+        <button
+          type="button"
+          onClick={onRedetect}
+          disabled={redetecting}
+          className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-foreground/[0.04] hover:text-foreground disabled:opacity-50"
+          aria-label={t('location.detect')}
+        >
+          {redetecting ? (
+            <Loader2 className="size-3.5 animate-spin" />
+          ) : (
+            <Navigation className="size-3.5" />
+          )}
+        </button>
       </div>
 
       {draft.latitude !== 0 && draft.longitude !== 0 && (
-        <StaticMap latitude={draft.latitude} longitude={draft.longitude} />
+        <div className="overflow-hidden rounded-lg ring-1 ring-border/60">
+          <StaticMap latitude={draft.latitude} longitude={draft.longitude} />
+        </div>
       )}
 
       <Collapsible open={showDetails} onOpenChange={onShowDetailsChange}>
         <CollapsibleTrigger asChild>
-          <Button variant="ghost" size="sm" className="w-full justify-between">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full justify-between text-muted-foreground"
+          >
             {t('location.editDetails')}
             <ChevronDown
               className={`size-4 transition-transform ${showDetails ? 'rotate-180' : ''}`}
@@ -162,7 +196,9 @@ function LocationCard({
           <div className="grid grid-cols-2 gap-3 pt-3">
             {TEXT_FIELDS.map((field) => (
               <div key={field}>
-                <Label className="text-xs">{t(`location.${field}`)}</Label>
+                <Label className="text-[11px] text-muted-foreground">
+                  {t(`location.${field}`)}
+                </Label>
                 <Input
                   value={draft[field]}
                   onChange={(e) => onFieldChange(field, e.target.value)}
@@ -172,7 +208,9 @@ function LocationCard({
             ))}
             {NUM_FIELDS.map((field) => (
               <div key={field}>
-                <Label className="text-xs">{t(`location.${field}`)}</Label>
+                <Label className="text-[11px] text-muted-foreground">
+                  {t(`location.${field}`)}
+                </Label>
                 <Input
                   value={draft[field]}
                   onChange={(e) => onFieldChange(field, e.target.value)}
@@ -186,37 +224,5 @@ function LocationCard({
         </CollapsibleContent>
       </Collapsible>
     </div>
-  );
-}
-
-function SaveButton({
-  onSave,
-  isSaving,
-  showSaved,
-  t,
-}: Readonly<{
-  onSave: () => void;
-  isSaving: boolean;
-  showSaved: boolean;
-  t: (key: string) => string;
-}>) {
-  const label = showSaved ? t('location.saved') : t('location.save');
-  const icon = isSaving ? (
-    <Loader2 className="size-3.5 animate-spin" />
-  ) : (
-    <Check className="size-3.5" />
-  );
-
-  return (
-    <Button
-      onClick={onSave}
-      disabled={isSaving}
-      size="sm"
-      variant="secondary"
-      className="w-full gap-2"
-    >
-      {icon}
-      {label}
-    </Button>
   );
 }

@@ -1,6 +1,6 @@
 import { useAuth } from '@brika/auth/react';
 import { Avatar, AvatarFallback, AvatarImage } from '@brika/clay';
-import { AlertCircle, Camera, Loader2, UserCircle } from 'lucide-react';
+import { AlertCircle, Camera, Loader2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StepBody, StepHeader, StepNav } from './shared';
@@ -57,9 +57,9 @@ export function AvatarStep() {
   return (
     <>
       <StepHeader
-        icon={UserCircle}
+        eyebrow={t('avatar.eyebrow')}
         title={t('avatar.title')}
-        description={t('avatar.description')}
+        subtitle={t('avatar.subtitle')}
       />
 
       <StepBody>
@@ -67,22 +67,24 @@ export function AvatarStep() {
           <button
             type="button"
             aria-label={t('avatar.hint')}
-            className="group relative cursor-pointer overflow-hidden rounded-full ring-4 ring-border transition-shadow hover:ring-primary/30 focus-visible:outline-none focus-visible:ring-primary/50"
+            className="group relative cursor-pointer overflow-hidden rounded-full ring-2 ring-border/60 transition-all hover:ring-primary/40 hover:ring-offset-2 hover:ring-offset-background focus-visible:outline-none focus-visible:ring-primary/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading}
           >
-            <Avatar className="size-32 text-4xl">
+            <Avatar className="size-28 text-3xl">
               <AvatarImage
                 src={previewUrl ?? (user ? client.avatarUrl(user, { size: 256 }) : undefined)}
                 alt={user?.name ?? 'Preview'}
               />
-              <AvatarFallback className="text-4xl">{initials}</AvatarFallback>
+              <AvatarFallback className="bg-gradient-to-br from-foreground/[0.06] to-foreground/[0.02] text-3xl">
+                {initials}
+              </AvatarFallback>
             </Avatar>
-            <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100 group-disabled:opacity-100">
+            <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 backdrop-blur-[2px] transition-opacity group-hover:opacity-100 group-disabled:opacity-100">
               {uploading ? (
-                <Loader2 className="size-7 animate-spin text-white" />
+                <Loader2 className="size-6 animate-spin text-white" />
               ) : (
-                <Camera className="size-7 text-white" />
+                <Camera className="size-6 text-white" />
               )}
             </div>
           </button>
@@ -93,7 +95,7 @@ export function AvatarStep() {
             className="hidden"
             onChange={handleUpload}
           />
-          <p className="text-muted-foreground text-xs">{t('avatar.hint')}</p>
+          <p className="text-[11.5px] text-muted-foreground/80">{t('avatar.hint')}</p>
         </div>
 
         {error && (
@@ -103,7 +105,7 @@ export function AvatarStep() {
           </div>
         )}
 
-        <StepNav back="/setup/account" next="/setup/timezone" showSkip={!previewUrl} />
+        <StepNav back="/setup/account" next="/setup/timezone" />
       </StepBody>
     </>
   );

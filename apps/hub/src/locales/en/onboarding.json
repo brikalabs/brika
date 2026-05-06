@@ -1,0 +1,22 @@
+{
+  "gettingStarted": {
+    "title": "Welcome to Brika",
+    "subtitle": "A self-hosted automation hub. Install plugins to get blocks, bricks, and sparks. Then chain them together as workflows.",
+    "learnMore": "What are plugins, blocks, bricks, sparks, and workflows?",
+    "steps": {
+      "installPlugin": {
+        "title": "Install plugins",
+        "description": "Each plugin adds blocks, bricks, and sparks for one integration.",
+        "action": "Install your first plugin"
+      },
+      "composeBoard": {
+        "title": "Compose dashboards",
+        "description": "Drop bricks onto a board to see what's happening at a glance."
+      },
+      "buildWorkflow": {
+        "title": "Build workflows",
+        "description": "Connect blocks to react to sparks and automate the boring stuff."
+      }
+    }
+  }
+}

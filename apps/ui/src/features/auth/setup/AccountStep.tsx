@@ -1,10 +1,6 @@
 import { useAuth } from '@brika/auth/react';
 import {
   Button,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
   Input,
   InputGroup,
   InputGroupAddon,
@@ -13,21 +9,12 @@ import {
   PasswordInput,
   Separator,
 } from '@brika/clay';
-import { BrikaLogo } from '@brika/clay/components/brika-logo';
 import { useNavigate } from '@tanstack/react-router';
-import {
-  AlertCircle,
-  ArrowLeft,
-  ArrowRight,
-  Check,
-  Loader2,
-  Mail,
-  ShieldCheck,
-  User,
-} from 'lucide-react';
-import { type FormEvent, useState } from 'react';
+import { AlertCircle, Check, Loader2, Mail, ShieldCheck, User } from 'lucide-react';
+import { type SyntheticEvent, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PasswordStrength } from '../password/PasswordStrength';
+import { StepBody, StepHeader, StepNav } from './shared';
 
 export function AccountStep() {
   const { user } = useAuth();
@@ -43,7 +30,6 @@ export function AccountStep() {
 function AccountEdit() {
   const { client, user, updateSession } = useAuth();
   const { t } = useTranslation('setup');
-  const navigate = useNavigate();
 
   const [name, setName] = useState(user?.name ?? '');
   const [currentPassword, setCurrentPassword] = useState('');
@@ -88,15 +74,13 @@ function AccountEdit() {
 
   return (
     <>
-      <CardHeader className="items-center text-center">
-        <div className="mb-2 flex size-12 items-center justify-center rounded-lg bg-primary">
-          <BrikaLogo className="size-8 text-white" />
-        </div>
-        <CardTitle>{t('account.editTitle')}</CardTitle>
-        <CardDescription>{t('account.editDescription')}</CardDescription>
-      </CardHeader>
+      <StepHeader
+        eyebrow={t('account.eyebrow')}
+        title={t('account.editTitle')}
+        subtitle={t('account.editSubtitle')}
+      />
 
-      <CardContent className="space-y-5">
+      <StepBody>
         {feedback && (
           <div
             className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm ${
@@ -172,7 +156,6 @@ function AccountEdit() {
           {newPassword && <PasswordStrength password={newPassword} />}
         </div>
 
-        {/* Save + Nav */}
         {isDirty && (
           <Button
             onClick={handleSave}
@@ -190,21 +173,8 @@ function AccountEdit() {
           </Button>
         )}
 
-        <div className="flex gap-3">
-          <Button
-            variant="outline"
-            className="gap-2"
-            onClick={() => navigate({ to: '/setup/language' })}
-          >
-            <ArrowLeft className="size-4" />
-            {t('nav.back')}
-          </Button>
-          <Button className="flex-1 gap-2" onClick={() => navigate({ to: '/setup/avatar' })}>
-            {t('nav.continue')}
-            <ArrowRight className="size-4" />
-          </Button>
-        </div>
-      </CardContent>
+        <StepNav back="/setup/language" next="/setup/avatar" />
+      </StepBody>
     </>
   );
 }
@@ -232,7 +202,7 @@ function AccountForm() {
     !mismatch &&
     !loading;
 
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!canSubmit) {
       return;
@@ -253,15 +223,13 @@ function AccountForm() {
 
   return (
     <>
-      <CardHeader className="items-center text-center">
-        <div className="mb-2 flex size-12 items-center justify-center rounded-lg bg-primary">
-          <BrikaLogo className="size-8 text-white" />
-        </div>
-        <CardTitle>{t('account.title')}</CardTitle>
-        <CardDescription>{t('account.description')}</CardDescription>
-      </CardHeader>
+      <StepHeader
+        eyebrow={t('account.eyebrow')}
+        title={t('account.title')}
+        subtitle={t('account.subtitle')}
+      />
 
-      <CardContent>
+      <StepBody>
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
             <div className="flex items-center gap-2 rounded-md bg-destructive/10 px-3 py-2 text-destructive text-sm">
@@ -340,17 +308,22 @@ function AccountForm() {
             )}
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex items-center gap-3 pt-2">
             <Button
               type="button"
-              variant="outline"
-              className="gap-2"
+              variant="ghost"
+              size="sm"
+              className="-ml-2 gap-1.5 text-muted-foreground hover:text-foreground"
               onClick={() => navigate({ to: '/setup/language' })}
             >
-              <ArrowLeft className="size-4" />
               {t('nav.back')}
             </Button>
-            <Button type="submit" className="flex-1 gap-2" disabled={!canSubmit}>
+            <Button
+              type="submit"
+              size="lg"
+              className="ml-auto min-w-[180px] gap-2"
+              disabled={!canSubmit}
+            >
               {loading ? (
                 <>
                   <Loader2 className="size-4 animate-spin" />
@@ -365,7 +338,7 @@ function AccountForm() {
             </Button>
           </div>
         </form>
-      </CardContent>
+      </StepBody>
     </>
   );
 }

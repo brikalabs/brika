@@ -28,6 +28,7 @@ import {
 import { Link, Navigate, Outlet, useMatchRoute, useRouterState } from '@tanstack/react-router';
 import {
   Blocks,
+  BookOpen,
   ChevronsUpDown,
   CircleUserRound,
   FileText,
@@ -257,6 +258,12 @@ function UserMenu() {
               <Link to="/profile">
                 <CircleUserRound />
                 {t('auth:profile')}
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link to="/help/concepts">
+                <BookOpen />
+                {t('nav:help')}
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />

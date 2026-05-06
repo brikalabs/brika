@@ -2,6 +2,7 @@
   "title": "$t(common:items.workflow_other)",
   "subtitle": "Automatisations par blocs basées sur des événements",
   "empty": "Aucun workflow pour le moment. Créez-en un avec le bouton ci-dessus ou ajoutez un fichier YAML dans le dossier automations/.",
+  "emptyDescription": "Les workflows enchaînent des blocs pour réagir à des événements. Par exemple : allumer les lumières au coucher du soleil.",
   "notFound": "$t(common:items.workflow_one) introuvable",
   "triggersOn": "Se déclenche sur",
   "blocks": "$t(common:items.block_other)",

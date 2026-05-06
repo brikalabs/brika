@@ -1,5 +1,6 @@
 import {
   Button,
+  cn,
   Input,
   Popover,
   PopoverContent,
@@ -55,9 +56,15 @@ interface TimezonePickerProps {
   value: string | null;
   onChange: (timezone: string) => void;
   placeholder?: string;
+  className?: string;
 }
 
-export function TimezonePicker({ value, onChange, placeholder }: Readonly<TimezonePickerProps>) {
+export function TimezonePicker({
+  value,
+  onChange,
+  placeholder,
+  className,
+}: Readonly<TimezonePickerProps>) {
   const { t } = useLocale();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -79,18 +86,20 @@ export function TimezonePicker({ value, onChange, placeholder }: Readonly<Timezo
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="outline" className="w-64 justify-between font-normal">
-          <span className={value ? '' : 'text-muted-foreground'}>{value ?? placeholder}</span>
+        <Button variant="outline" className={cn('w-full justify-between font-normal', className)}>
+          <span className={value ? '' : 'text-muted-foreground'}>
+            {value ? value.replaceAll('_', ' ') : placeholder}
+          </span>
           <Clock className="ml-2 size-4 shrink-0 text-muted-foreground" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-64 p-2" align="start">
+      <PopoverContent className="w-[--radix-popover-trigger-width] p-2" align="start">
         <div className="relative mb-2">
           <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search..."
+            placeholder="Search…"
             className="h-8 pl-8 text-sm"
             autoFocus
           />

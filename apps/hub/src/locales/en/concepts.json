@@ -1,0 +1,44 @@
+{
+  "title": "How Brika works",
+  "subtitle": "The six pieces that make up everything in Brika: plugins, blocks, bricks, sparks, workflows, and boards.",
+  "exampleLabel": "Example",
+  "items": {
+    "plugin": {
+      "title": "Plugin",
+      "definition": "A self-contained process that extends Brika. Plugins bring everything else: the blocks, sparks, bricks, and pages you'll use to build automations. Each one is a regular package.json plus code.",
+      "example": "Install @brika/plugin-timer and you immediately get timer and countdown blocks plus a dashboard brick."
+    },
+    "block": {
+      "title": "Block",
+      "definition": "A piece of compute that runs inside a plugin. Each block has typed inputs, outputs, and a config. Blocks are the parts you wire together when you build a workflow.",
+      "example": "The timer plugin's Countdown block has a 'duration' config and emits a 'completed' output when it finishes."
+    },
+    "brick": {
+      "title": "Brick",
+      "definition": "A widget that lives on a board. Plugins push live data into their bricks, and you configure each one to your liking.",
+      "example": "The timer plugin's Timers Dashboard brick shows all your active timers as a widget on a board."
+    },
+    "spark": {
+      "title": "Spark",
+      "definition": "An event with a schema. Plugins fire sparks when something interesting happens. Workflows and other plugins listen for them and react.",
+      "example": "When a countdown begins, the timer plugin fires a 'timerStarted' spark carrying the name, duration, and start time."
+    },
+    "workflow": {
+      "title": "Workflow",
+      "definition": "A pipeline of blocks defined in YAML. Brika runs through it, routing data from one block to the next and firing sparks along the way.",
+      "example": "When the sun sets, turn on the lights. Wait thirty minutes. Then turn off the TV."
+    },
+    "board": {
+      "title": "Board",
+      "definition": "A page of bricks. You drop them in, configure them, and arrange the layout however you like.",
+      "example": "A 'Living Room' board with weather, timer, and electricity-consumption bricks all in one view."
+    }
+  },
+  "learnMore": {
+    "plugins": "View installed plugins",
+    "blocks": "Browse blocks",
+    "boards": "Open boards",
+    "sparks": "View sparks",
+    "workflows": "View workflows"
+  }
+}

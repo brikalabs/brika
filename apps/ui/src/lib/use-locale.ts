@@ -1,6 +1,7 @@
 import i18next, { type TFunction, type TOptions } from 'i18next';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useTimeFormat } from './time-format';
 
 export interface DurationFormatOptions {
   style?: 'long' | 'short' | 'narrow' | 'digital';
@@ -21,10 +22,22 @@ export function useLocale() {
   const { t: baseT, i18n } = useTranslation(undefined, {
     useSuspense: true,
   });
+  const { hour12 } = useTimeFormat();
   const locale = i18n.language;
   // For Intl formatters, use "en" as fallback when locale is "cimode"
   const intlLocale = locale === 'cimode' ? 'en' : locale;
   const nsSeparator = i18next.options.nsSeparator || ':';
+
+  /** Apply the user's hour12 preference unless explicit opts override it. */
+  const withHour12 = useCallback(
+    (opts: Intl.DateTimeFormatOptions = {}): Intl.DateTimeFormatOptions => {
+      if (hour12 === undefined || 'hour12' in opts) {
+        return opts;
+      }
+      return { ...opts, hour12 };
+    },
+    [hour12]
+  );
 
   const t = useCallback(
     ((rawKey: string, options?: TOptions) => {
@@ -53,13 +66,11 @@ export function useLocale() {
       date: new Intl.DateTimeFormat(intlLocale, {
         dateStyle: 'medium',
       }),
-      time: new Intl.DateTimeFormat(intlLocale, {
-        timeStyle: 'short',
-      }),
-      dateTime: new Intl.DateTimeFormat(intlLocale, {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-      }),
+      time: new Intl.DateTimeFormat(intlLocale, withHour12({ timeStyle: 'short' })),
+      dateTime: new Intl.DateTimeFormat(
+        intlLocale,
+        withHour12({ dateStyle: 'medium', timeStyle: 'short' })
+      ),
       relativeTime: new Intl.RelativeTimeFormat(intlLocale, {
         numeric: 'auto',
       }),
@@ -78,7 +89,7 @@ export function useLocale() {
         type: 'region',
       }),
     }),
-    [intlLocale]
+    [intlLocale, withHour12]
   );
 
   return useMemo(
@@ -98,27 +109,17 @@ export function useLocale() {
 
       formatDate: (date: Date | number, opts?: Intl.DateTimeFormatOptions) =>
         opts
-          ? new Intl.DateTimeFormat(intlLocale, {
-              dateStyle: 'medium',
-              ...opts,
-            }).format(date)
+          ? new Intl.DateTimeFormat(intlLocale, mergeDateOpts(opts)).format(date)
           : formatters.date.format(date),
 
       formatTime: (date: Date | number, opts?: Intl.DateTimeFormatOptions) =>
         opts
-          ? new Intl.DateTimeFormat(intlLocale, {
-              timeStyle: 'short',
-              ...opts,
-            }).format(date)
+          ? new Intl.DateTimeFormat(intlLocale, mergeTimeOpts(withHour12(opts))).format(date)
           : formatters.time.format(date),
 
       formatDateTime: (date: Date | number, opts?: Intl.DateTimeFormatOptions) =>
         opts
-          ? new Intl.DateTimeFormat(intlLocale, {
-              dateStyle: 'medium',
-              timeStyle: 'short',
-              ...opts,
-            }).format(date)
+          ? new Intl.DateTimeFormat(intlLocale, mergeDateTimeOpts(withHour12(opts))).format(date)
           : formatters.dateTime.format(date),
 
       formatRelativeTime: (value: number, unit: Intl.RelativeTimeFormatUnit) =>
@@ -171,13 +172,42 @@ export function useLocale() {
         }
       },
     }),
-    [t, locale, intlLocale, i18n, formatters]
+    [t, locale, intlLocale, i18n, formatters, withHour12]
   );
 }
 
 function extractNamespace(key: string, separator: string): string | undefined {
   const idx = key.lastIndexOf(separator);
   return idx > 0 ? key.slice(0, idx) : undefined;
+}
+
+// `dateStyle` / `timeStyle` cannot be combined with individual component props
+// (year/month/day/hour/minute/second). These helpers apply our default style
+// only when the caller hasn't asked for fine-grained control.
+
+const TIME_COMPONENT_KEYS = ['timeStyle', 'hour', 'minute', 'second'] as const;
+const DATE_COMPONENT_KEYS = ['dateStyle', 'year', 'month', 'day', 'weekday'] as const;
+
+function hasAny(opts: Intl.DateTimeFormatOptions, keys: readonly string[]): boolean {
+  return keys.some((k) => k in opts);
+}
+
+function mergeDateOpts(opts: Intl.DateTimeFormatOptions): Intl.DateTimeFormatOptions {
+  return hasAny(opts, DATE_COMPONENT_KEYS) ? opts : { dateStyle: 'medium', ...opts };
+}
+
+function mergeTimeOpts(opts: Intl.DateTimeFormatOptions): Intl.DateTimeFormatOptions {
+  return hasAny(opts, TIME_COMPONENT_KEYS) ? opts : { timeStyle: 'short', ...opts };
+}
+
+function mergeDateTimeOpts(opts: Intl.DateTimeFormatOptions): Intl.DateTimeFormatOptions {
+  const hasDate = hasAny(opts, DATE_COMPONENT_KEYS);
+  const hasTime = hasAny(opts, TIME_COMPONENT_KEYS);
+  return {
+    ...(hasDate ? {} : { dateStyle: 'medium' }),
+    ...(hasTime ? {} : { timeStyle: 'short' }),
+    ...opts,
+  };
 }
 
 export type LocaleUtils = ReturnType<typeof useLocale>;
