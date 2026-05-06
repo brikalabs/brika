@@ -22,10 +22,10 @@ function isTimeFormat(value: unknown): value is TimeFormat {
 }
 
 function read(): TimeFormat {
-  if (typeof window === 'undefined') {
+  if (globalThis.window === undefined) {
     return DEFAULT;
   }
-  const stored = window.localStorage.getItem(STORAGE_KEY);
+  const stored = globalThis.localStorage.getItem(STORAGE_KEY);
   return isTimeFormat(stored) ? stored : DEFAULT;
 }
 
@@ -35,11 +35,11 @@ function subscribe(callback: () => void): () => void {
       callback();
     }
   };
-  window.addEventListener('storage', onStorage);
-  window.addEventListener(CHANGE_EVENT, callback);
+  globalThis.addEventListener('storage', onStorage);
+  globalThis.addEventListener(CHANGE_EVENT, callback);
   return () => {
-    window.removeEventListener('storage', onStorage);
-    window.removeEventListener(CHANGE_EVENT, callback);
+    globalThis.removeEventListener('storage', onStorage);
+    globalThis.removeEventListener(CHANGE_EVENT, callback);
   };
 }
 
@@ -47,8 +47,8 @@ export function useTimeFormat() {
   const preference = useSyncExternalStore(subscribe, read, () => DEFAULT);
 
   const setPreference = useCallback((value: TimeFormat) => {
-    window.localStorage.setItem(STORAGE_KEY, value);
-    window.dispatchEvent(new Event(CHANGE_EVENT));
+    globalThis.localStorage.setItem(STORAGE_KEY, value);
+    globalThis.dispatchEvent(new Event(CHANGE_EVENT));
   }, []);
 
   const hour12: boolean | undefined = preference === 'auto' ? undefined : preference === 'h12';
