@@ -3,6 +3,7 @@ import { useSparkStream } from '@/features/events';
 import { usePlugins } from '@/features/plugins';
 import {
   DashboardHeader,
+  GettingStartedCard,
   QuickActionsCard,
   RecentSparks,
   type Stats,
@@ -56,7 +57,7 @@ export function DashboardPage() {
 
         {/* Quick Actions & System Status */}
         <div className="flex flex-col gap-6">
-          <QuickActionsCard />
+          {plugins.length === 0 ? <GettingStartedCard /> : <QuickActionsCard />}
           <SystemStatusCard
             health={health}
             runningPlugins={runningPlugins}

@@ -2,6 +2,7 @@
   "title": "$t(common:items.workflow_other)",
   "subtitle": "Block-based automations triggered by events",
   "empty": "No workflows yet. Create one using the button above or add a YAML file in the automations/ folder.",
+  "emptyDescription": "Workflows chain blocks together to react to events. For example, turning the lights on at sunset.",
   "notFound": "$t(common:items.workflow_one) not found",
   "triggersOn": "Triggers on",
   "blocks": "$t(common:items.block_other)",

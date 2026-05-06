@@ -1,0 +1,44 @@
+{
+  "title": "Comment fonctionne Brika",
+  "subtitle": "Les six pièces qui composent Brika : plugins, blocs, briques, sparks, workflows et tableaux.",
+  "exampleLabel": "Exemple",
+  "items": {
+    "plugin": {
+      "title": "Plugin",
+      "definition": "Un processus autonome qui étend Brika. Les plugins apportent tout le reste : les blocs, sparks, briques et pages que vous utilisez pour construire vos automatisations. Chacun est juste un package.json avec du code.",
+      "example": "Installez @brika/plugin-timer et vous obtenez immédiatement des blocs minuteur et compte à rebours plus une brique de tableau de bord."
+    },
+    "block": {
+      "title": "Bloc",
+      "definition": "Une unité de calcul qui s'exécute dans un plugin. Chaque bloc a des entrées et sorties typées, et une configuration. Les blocs sont les pièces que vous reliez pour construire un workflow.",
+      "example": "Le bloc Compte à rebours du plugin timer a une configuration « durée » et émet une sortie « completed » à la fin."
+    },
+    "brick": {
+      "title": "Brique",
+      "definition": "Un widget qui vit sur un tableau. Les plugins poussent des données en direct vers leurs briques, et vous configurez chacune comme bon vous semble.",
+      "example": "La brique Timers Dashboard du plugin timer affiche tous vos minuteurs actifs sous forme de widget sur un tableau."
+    },
+    "spark": {
+      "title": "Spark",
+      "definition": "Un événement avec un schéma. Les plugins déclenchent des sparks quand quelque chose d'intéressant se passe. Les workflows et autres plugins les écoutent et réagissent.",
+      "example": "Quand un compte à rebours démarre, le plugin timer déclenche un spark « timerStarted » avec le nom, la durée et l'horodatage."
+    },
+    "workflow": {
+      "title": "Workflow",
+      "definition": "Un pipeline de blocs défini en YAML. Brika l'exécute, fait transiter les données d'un bloc à l'autre et déclenche des sparks au passage.",
+      "example": "Quand le soleil se couche, allumer les lumières. Attendre trente minutes. Puis éteindre la TV."
+    },
+    "board": {
+      "title": "Tableau",
+      "definition": "Une page de briques. Vous les déposez, les configurez et arrangez la mise en page comme vous voulez.",
+      "example": "Un tableau « Salon » avec côte à côte les briques météo, minuteur et consommation électrique."
+    }
+  },
+  "learnMore": {
+    "plugins": "Voir les plugins installés",
+    "blocks": "Parcourir les blocs",
+    "boards": "Ouvrir les tableaux",
+    "sparks": "Voir les sparks",
+    "workflows": "Voir les workflows"
+  }
+}

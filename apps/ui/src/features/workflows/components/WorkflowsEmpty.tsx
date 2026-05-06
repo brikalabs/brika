@@ -23,12 +23,17 @@ export function WorkflowsEmpty({ hasSearch }: Readonly<WorkflowsEmptyProps>) {
         {hasSearch ? t('workflows:noResults') : t('workflows:empty')}
       </h3>
       {!hasSearch && (
-        <div className="mt-4">
-          <Button onClick={() => navigate({ to: paths.workflows.new.path })}>
-            <Plus className="mr-2 size-4" />
-            {t('workflows:actions.create')}
-          </Button>
-        </div>
+        <>
+          <p className="mx-auto mt-2 max-w-md text-muted-foreground text-sm leading-relaxed">
+            {t('workflows:emptyDescription')}
+          </p>
+          <div className="mt-4">
+            <Button onClick={() => navigate({ to: paths.workflows.new.path })}>
+              <Plus className="mr-2 size-4" />
+              {t('workflows:actions.create')}
+            </Button>
+          </div>
+        </>
       )}
     </Card>
   );

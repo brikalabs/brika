@@ -5,6 +5,8 @@
   "noResults": "No $t(common:items.block_other) match your search",
   "noResultsHint": "Try searching with different keywords",
   "empty": "No $t(common:items.block_other) available. Install a $t(common:items.plugin_one) to add blocks.",
+  "emptyDescription": "Blocks come from plugins. Install one to start building workflows.",
+  "installPlugin": "Install a plugin",
   "count_one": "{{count}} block",
   "count_other": "{{count}} blocks",
   "filters": {
