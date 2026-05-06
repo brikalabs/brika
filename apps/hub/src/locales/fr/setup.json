@@ -1,16 +1,30 @@
 {
+  "shell": {
+    "step": "Étape {{current}} sur {{total}}",
+    "progressLabels": {
+      "language": "Langue",
+      "account": "Compte",
+      "avatar": "Avatar",
+      "timezone": "Fuseau",
+      "location": "Localisation"
+    }
+  },
   "welcome": {
-    "title": "Bienvenue sur Brika",
-    "description": "Configurons votre instance Brika en quelques étapes.",
+    "eyebrow": "Bienvenue",
+    "title": "Configurez votre hub",
+    "subtitle": "Brika est un hub d'automatisation auto-hébergé. Les prochaines étapes créent votre compte administrateur et précisent un peu votre environnement, pour que vos workflows sachent où et quand s'exécuter.",
+    "duration": "Environ 90 secondes.",
     "getStarted": "Commencer"
   },
   "language": {
+    "eyebrow": "Langue",
     "title": "Choisissez votre langue",
-    "description": "Sélectionnez votre langue préférée pour Brika."
+    "subtitle": "Définit la langue du tableau de bord, des notifications de plugins et des emails. Modifiable à tout moment dans les Paramètres."
   },
   "account": {
-    "title": "Créer le compte administrateur",
-    "description": "Ce sera l'administrateur principal de votre instance Brika.",
+    "eyebrow": "Compte",
+    "title": "Créez votre compte administrateur",
+    "subtitle": "Le premier compte d'un hub Brika est l'administrateur. Vous pourrez inviter d'autres utilisateurs plus tard depuis les Paramètres.",
     "name": "Nom complet",
     "namePlaceholder": "Jean Dupont",
     "email": "Email",
@@ -21,9 +35,9 @@
     "confirmPlaceholder": "Saisissez à nouveau votre mot de passe",
     "mismatch": "Les mots de passe ne correspondent pas",
     "create": "Créer le compte",
-    "creating": "Création du compte...",
+    "creating": "Création du compte…",
     "editTitle": "Modifier votre compte",
-    "editDescription": "Modifiez votre nom ou mot de passe avant de continuer.",
+    "editSubtitle": "Modifiez votre nom ou mot de passe avant de continuer.",
     "currentPassword": "Mot de passe actuel",
     "currentPasswordPlaceholder": "Saisissez votre mot de passe actuel",
     "newPassword": "Nouveau mot de passe",
@@ -32,25 +46,29 @@
     "saved": "Enregistré"
   },
   "avatar": {
+    "eyebrow": "Avatar",
     "title": "Ajoutez une photo de profil",
-    "description": "Choisissez une photo pour votre compte administrateur.",
-    "hint": "Cliquez pour ajouter une photo",
-    "uploadFailed": "Échec du téléchargement de la photo. Veuillez réessayer."
+    "subtitle": "Optionnel. Pratique quand plusieurs personnes partagent l'accès administrateur au même hub. Modifiable à tout moment.",
+    "hint": "Cliquez sur l'avatar pour téléverser",
+    "uploadFailed": "Impossible d'uploader. Essayez une autre image."
   },
   "timezone": {
-    "title": "Définissez votre fuseau horaire",
-    "description": "Choisissez le fuseau horaire de votre instance Brika.",
+    "eyebrow": "Fuseau horaire",
+    "title": "Définissez votre fuseau",
+    "subtitle": "Brika l'utilise pour planifier vos automatisations et horodater les événements. Pré-rempli depuis votre navigateur, mais modifiable.",
     "select": "Sélectionnez un fuseau horaire",
-    "detected": "Détecté automatiquement depuis votre navigateur"
+    "detected": "Détecté depuis votre navigateur",
+    "formatLabel": "Format d'affichage"
   },
   "location": {
-    "title": "Définissez l'emplacement du hub",
-    "description": "Recherchez une adresse ou détectez votre position automatiquement.",
-    "detect": "Détecter ma position",
-    "detecting": "Détection...",
+    "eyebrow": "Localisation",
+    "title": "Où est votre hub ?",
+    "subtitle": "Les plugins comme Météo et Position du soleil ont besoin de savoir où votre hub se trouve physiquement. L'adresse reste sur cette machine. Elle n'est jamais partagée.",
+    "detect": "Utiliser ma position",
+    "detecting": "Détection…",
     "or": "ou",
     "unknownCity": "Position détectée",
-    "emptyHint": "Recherchez une adresse ou détectez votre position pour commencer.",
+    "emptyHint": "Recherchez une adresse ci-dessus, ou détectez votre position depuis le navigateur.",
     "editDetails": "Modifier les détails",
     "street": "Rue",
     "city": "Ville",
@@ -58,18 +76,17 @@
     "postalCode": "Code postal",
     "country": "Pays",
     "latitude": "Latitude",
-    "longitude": "Longitude",
-    "saved": "Enregistré",
-    "save": "Enregistrer la position"
+    "longitude": "Longitude"
   },
   "complete": {
-    "title": "Tout est prêt !",
-    "description": "Votre instance est configurée. Redirection vers le tableau de bord..."
+    "eyebrow": "Terminé",
+    "title": "C'est prêt",
+    "titleNamed": "C'est prêt, {{name}}",
+    "subtitle": "Configuration enregistrée. Prochaine étape : installez votre premier plugin depuis le tableau de bord."
   },
   "nav": {
     "back": "Retour",
-    "continue": "Continuer",
-    "skip": "Passer"
+    "continue": "Continuer"
   },
   "errors": {
     "failed": "La configuration a échoué. Veuillez réessayer."
