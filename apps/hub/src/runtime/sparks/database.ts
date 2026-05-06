@@ -1,4 +1,7 @@
 import { defineDatabase } from '@brika/db';
+import { loadMigrations } from '@brika/db/macros' with { type: 'macro' };
 import { sparks } from './schema';
 
-export const sparksDb = defineDatabase('sparks.db', { sparks }, import.meta);
+const migrations = loadMigrations('apps/hub/src/runtime/sparks/migrations');
+
+export const sparksDb = defineDatabase('sparks.db', { sparks }, migrations);

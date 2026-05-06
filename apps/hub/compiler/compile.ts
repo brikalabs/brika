@@ -3,7 +3,6 @@
  */
 import { join } from 'node:path';
 import pc from 'picocolors';
-import { folderTarPlugin } from '@/plugins';
 import { done, elapsed, fail, fileSize, log, step } from './log';
 
 const TARGETS = [
@@ -37,7 +36,6 @@ export async function compile(target?: string): Promise<void> {
     entrypoints: [join(import.meta.dir, '../src/cli.ts')],
     target: 'bun',
     minify: true,
-    plugins: [folderTarPlugin()],
     compile: {
       outfile: outPath,
       ...(validTarget
