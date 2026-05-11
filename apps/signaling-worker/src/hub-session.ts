@@ -68,19 +68,30 @@ export class HubSession {
       return new Response('Expected WebSocket', { status: 426 });
     }
 
+    // Negotiate the subprotocol. Browsers (and our hub-side WS client) send
+    // `Sec-WebSocket-Protocol: brika.v1[, bearer.<token>]`. RFC 6455 requires
+    // the server to echo back exactly one of the offered protocols (or none),
+    // and the browser fails the handshake if we omit it. We just pick the
+    // first `brika.v*` offer.
+    const offered = request.headers.get('sec-websocket-protocol') ?? '';
+    const acceptedProtocol = offered
+      .split(',')
+      .map((s) => s.trim())
+      .find((s) => s.startsWith('brika.v'));
+
     const url = new URL(request.url);
     if (url.pathname === '/v1/hub') {
-      return this.#acceptHub(this.#nameFromBearer(request) ?? '');
+      return this.#acceptHub(this.#nameFromBearer(request) ?? '', acceptedProtocol);
     }
     if (url.pathname === '/v1/client') {
-      return this.#acceptClient(url.searchParams.get('hub') ?? '');
+      return this.#acceptClient(url.searchParams.get('hub') ?? '', acceptedProtocol);
     }
     return new Response('Unknown upgrade endpoint', { status: 404 });
   }
 
   // ─── Accept paths ──────────────────────────────────────────────────────
 
-  #acceptHub(hubName: string): Response {
+  #acceptHub(hubName: string, protocol: string | undefined): Response {
     if (!hubName) {
       return new Response('name required', { status: 400 });
     }
@@ -96,10 +107,10 @@ export class HubSession {
     }
     this.#state.acceptWebSocket(server, ['hub']);
     server.serializeAttachment({ role: 'hub', name: hubName } satisfies Attachment);
-    return new Response(null, { status: 101, webSocket: client });
+    return this.#upgradeResponse(client, protocol);
   }
 
-  #acceptClient(hubName: string): Response {
+  #acceptClient(hubName: string, protocol: string | undefined): Response {
     if (!hubName) {
       return new Response('name required', { status: 400 });
     }
@@ -116,7 +127,7 @@ export class HubSession {
         message: `Hub "${hubName}" is not connected to the coordinator`,
       });
       server.close(4003, 'hub offline');
-      return new Response(null, { status: 101, webSocket: client });
+      return this.#upgradeResponse(client, protocol);
     }
 
     const sessionId = crypto.randomUUID();
@@ -131,7 +142,15 @@ export class HubSession {
       kind: 'session.iceServers',
       iceServers: ICE_SERVERS,
     });
-    return new Response(null, { status: 101, webSocket: client });
+    return this.#upgradeResponse(client, protocol);
+  }
+
+  #upgradeResponse(client: WebSocket, protocol: string | undefined): Response {
+    const headers = new Headers();
+    if (protocol) {
+      headers.set('Sec-WebSocket-Protocol', protocol);
+    }
+    return new Response(null, { status: 101, webSocket: client, headers });
   }
 
   #newPair(): { client: WebSocket; server: WebSocket } {
