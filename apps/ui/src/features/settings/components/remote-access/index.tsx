@@ -1,12 +1,12 @@
 import { Badge, Button, Input } from '@brika/clay';
-import { ExternalLink, KeyRound, Trash2 } from 'lucide-react';
+import { ExternalLink, Globe, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { useLocale } from '@/lib/use-locale';
 import {
   type RemoteAccessStatus,
+  useClaimRemoteAccessName,
   useRemoteAccessStatus,
   useRevokeRemoteAccessToken,
-  useSetRemoteAccessToken,
 } from './hooks';
 
 function StatusBadge({ status }: Readonly<{ status: RemoteAccessStatus }>) {
@@ -23,12 +23,54 @@ function StatusBadge({ status }: Readonly<{ status: RemoteAccessStatus }>) {
   return <Badge variant="outline">{t('settings:remoteAccess.status.idle')}</Badge>;
 }
 
+function ClaimForm() {
+  const { t } = useLocale();
+  const claim = useClaimRemoteAccessName();
+  const [name, setName] = useState('');
+
+  const submit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const trimmed = name.trim().toLowerCase();
+    if (trimmed.length < 4) {
+      return;
+    }
+    claim.mutate(trimmed);
+  };
+
+  // Pull the error message out of the rejection so the user can see it.
+  const errorMessage = claim.error instanceof Error ? claim.error.message : null;
+
+  return (
+    <div className="space-y-3">
+      <p className="text-muted-foreground text-sm">{t('settings:remoteAccess.claim.help')}</p>
+      <form onSubmit={submit} className="flex flex-wrap items-center gap-2">
+        <Input
+          type="text"
+          placeholder={t('settings:remoteAccess.claim.placeholder')}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className="min-w-[240px] flex-1 font-mono text-[12.5px]"
+          autoComplete="off"
+          pattern="[a-z][a-z0-9-]{2,30}[a-z0-9]"
+          maxLength={32}
+        />
+        <span className="font-mono text-[12.5px] text-muted-foreground">.brika.dev</span>
+        <Button type="submit" size="sm" disabled={claim.isPending || name.trim().length < 4}>
+          <Globe />
+          {t('settings:remoteAccess.claim.submit')}
+        </Button>
+      </form>
+      {errorMessage && (
+        <p className="text-[12.5px] text-destructive">{errorMessage}</p>
+      )}
+    </div>
+  );
+}
+
 export function RemoteAccessSection() {
   const { t } = useLocale();
   const { data: status, isLoading } = useRemoteAccessStatus();
-  const setToken = useSetRemoteAccessToken();
   const revokeToken = useRevokeRemoteAccessToken();
-  const [tokenInput, setTokenInput] = useState('');
 
   if (isLoading || !status) {
     return <p className="text-muted-foreground text-sm">{t('common:loading')}</p>;
@@ -41,26 +83,19 @@ export function RemoteAccessSection() {
           {t('settings:remoteAccess.disabledHelp')}
         </p>
         <pre className="rounded-md bg-foreground/[0.04] px-3 py-2 font-mono text-[12px]">
-          BRIKA_REMOTE_ACCESS=1 BRIKA_REMOTE_NAME=myhub
+          BRIKA_REMOTE_ACCESS=1
         </pre>
       </div>
     );
   }
 
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmed = tokenInput.trim();
-    if (trimmed.length < 16) {
-      return;
-    }
-    setToken.mutate(trimmed, {
-      onSuccess: () => setTokenInput(''),
-    });
-  };
+  // Enabled but no name claimed yet — show the claim form.
+  if (!status.tokenPresent) {
+    return <ClaimForm />;
+  }
 
   return (
     <div className="space-y-5">
-      {/* Identity & status */}
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1">
           <p className="font-mono text-[10px] text-muted-foreground/70 uppercase tracking-[0.16em]">
@@ -98,46 +133,23 @@ export function RemoteAccessSection() {
         </div>
       </div>
 
-      {/* Token management */}
       <div className="space-y-3 border-border/50 border-t pt-5">
         <div>
-          <h3 className="font-medium text-sm">{t('settings:remoteAccess.token.title')}</h3>
+          <h3 className="font-medium text-sm">{t('settings:remoteAccess.forget.title')}</h3>
           <p className="mt-0.5 text-[12.5px] text-muted-foreground">
-            {t('settings:remoteAccess.token.description')}
+            {t('settings:remoteAccess.forget.description')}
           </p>
         </div>
-        <form onSubmit={submit} className="flex flex-wrap gap-2">
-          <Input
-            type="password"
-            placeholder={t('settings:remoteAccess.token.placeholder')}
-            value={tokenInput}
-            onChange={(e) => setTokenInput(e.target.value)}
-            className="min-w-[280px] flex-1 font-mono text-[12.5px]"
-            autoComplete="off"
-          />
-          <Button
-            type="submit"
-            size="sm"
-            disabled={setToken.isPending || tokenInput.trim().length < 16}
-          >
-            <KeyRound />
-            {status.tokenPresent
-              ? t('settings:remoteAccess.token.rotate')
-              : t('settings:remoteAccess.token.set')}
-          </Button>
-          {status.tokenPresent && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => revokeToken.mutate()}
-              disabled={revokeToken.isPending}
-            >
-              <Trash2 />
-              {t('settings:remoteAccess.token.revoke')}
-            </Button>
-          )}
-        </form>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => revokeToken.mutate()}
+          disabled={revokeToken.isPending}
+        >
+          <Trash2 />
+          {t('settings:remoteAccess.forget.action')}
+        </Button>
       </div>
     </div>
   );

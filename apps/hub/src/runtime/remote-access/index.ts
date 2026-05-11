@@ -1,5 +1,11 @@
 export { PeerSession } from './peer-session';
-export { RemoteAccessService, SIGNALING_TOKEN_SECRET_KEY } from './remote-access-service';
+export {
+  RemoteAccessClaimError,
+  RemoteAccessService,
+  type RemoteAccessStatus,
+  SIGNALING_NAME_SECRET_KEY,
+  SIGNALING_TOKEN_SECRET_KEY,
+} from './remote-access-service';
 export { RpcServer } from './rpc-server';
 export {
   SignalingClient,

@@ -21,7 +21,7 @@
       "title": "Connexion",
       "description": "État du tunnel pair à pair et sessions navigateur actives."
     },
-    "disabledHelp": "L'accès distant est désactivé. Pour l'activer, définissez ces variables d'environnement et redémarrez le hub :",
+    "disabledHelp": "L'accès distant est désactivé. Définissez BRIKA_REMOTE_ACCESS=1 sur le hub, redémarrez-le, puis choisissez un nom ici.",
     "status": {
       "disabled": "Désactivé",
       "idle": "Inactif",
@@ -36,13 +36,15 @@
       "publicOrigin": "Adresse publique",
       "activeSessions": "Sessions actives"
     },
-    "token": {
-      "title": "Jeton de signalisation",
-      "description": "Jeton porteur utilisé pour s'authentifier auprès du coordinateur. Stocké dans le trousseau du système.",
-      "placeholder": "Coller un nouveau jeton…",
-      "set": "Enregistrer",
-      "rotate": "Renouveler",
-      "revoke": "Révoquer"
+    "claim": {
+      "help": "Choisissez un nom unique. Premier arrivé, premier servi — une fois revendiqué, personne d'autre ne peut l'utiliser.",
+      "placeholder": "monhub",
+      "submit": "Revendiquer"
+    },
+    "forget": {
+      "title": "Déconnecter",
+      "description": "Supprime le nom et le jeton stockés et arrête le client de signalisation. Le nom pourra être revendiqué à nouveau plus tard.",
+      "action": "Oublier ce hub"
     }
   },
   "time": {

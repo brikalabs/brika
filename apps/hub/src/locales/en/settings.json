@@ -21,7 +21,7 @@
       "title": "Connection",
       "description": "Status of the peer-to-peer tunnel and active browser sessions."
     },
-    "disabledHelp": "Remote access is disabled. To enable it, set these environment variables on the hub and restart:",
+    "disabledHelp": "Remote access is disabled. Set BRIKA_REMOTE_ACCESS=1 on the hub, restart it, then pick a name here.",
     "status": {
       "disabled": "Disabled",
       "idle": "Idle",
@@ -36,13 +36,15 @@
       "publicOrigin": "Public address",
       "activeSessions": "Active sessions"
     },
-    "token": {
-      "title": "Signaling token",
-      "description": "Bearer token used to authenticate to the coordinator. Stored in the OS keychain.",
-      "placeholder": "Paste a new token…",
-      "set": "Set token",
-      "rotate": "Rotate",
-      "revoke": "Revoke"
+    "claim": {
+      "help": "Pick a unique name. First-come, first-served — once claimed, no one else can use it on this coordinator.",
+      "placeholder": "yourhub",
+      "submit": "Claim name"
+    },
+    "forget": {
+      "title": "Disconnect",
+      "description": "Removes the stored name + bearer token and stops the signaling client. You can claim the same name again later.",
+      "action": "Forget this hub"
     }
   },
   "time": {

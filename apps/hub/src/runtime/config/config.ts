@@ -2,7 +2,8 @@ import { inject, singleton } from '@brika/di';
 import { dataDir } from '@/cli/utils/runtime';
 import { ConfigLoader } from './config-loader';
 
-const DEFAULT_SIGNALING_URL = 'wss://api.brika.dev/v1';
+const DEFAULT_COORDINATOR_ORIGIN = 'https://api.brika.dev';
+const PUBLIC_DOMAIN = 'brika.dev';
 
 function parseBool(value: string | undefined): boolean {
   if (!value) {
@@ -12,16 +13,38 @@ function parseBool(value: string | undefined): boolean {
   return v === '1' || v === 'true' || v === 'yes' || v === 'on';
 }
 
+/**
+ * Derive the WebSocket signaling URL from the coordinator HTTP origin.
+ * `https://api.brika.dev` → `wss://api.brika.dev/v1/hub`.
+ */
+export function deriveSignalingUrl(coordinatorOrigin: string): string {
+  const url = new URL('/v1/hub', coordinatorOrigin);
+  url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+  return url.toString();
+}
+
+/** Public-facing URL for a hub registered as `<name>` (used as Host header). */
+export function derivePublicOrigin(name: string): string {
+  return name ? `https://${name}.${PUBLIC_DOMAIN}` : '';
+}
+
 export interface RemoteAccessConfig {
-  /** Whether remote-access P2P is enabled on this hub. */
+  /** Whether remote-access P2P is enabled on this hub (env flag). */
   readonly enabled: boolean;
-  /** Hub name registered on the coordinator (e.g. "maxime"). */
-  readonly name: string;
-  /** Signaling WebSocket URL (defaults to wss://api.brika.dev/v1). */
+  /**
+   * Bootstrap name from `BRIKA_REMOTE_NAME` (dev override). The runtime
+   * service may overlay a name persisted in the OS keychain.
+   */
+  readonly bootstrapName: string;
+  /** Coordinator HTTP origin (e.g. `https://api.brika.dev`). */
+  readonly coordinatorOrigin: string;
+  /** Signaling WebSocket URL — derived from {@link coordinatorOrigin}. */
   readonly signalingUrl: string;
   /**
    * Canonical public origin used when the hub is reached remotely
-   * (e.g. https://maxime.brika.dev). Empty string when remote access is disabled.
+   * (e.g. `https://maxime.brika.dev`). Computed from the bootstrap name when
+   * present; the service may compute a different one once a persisted name
+   * is loaded from secrets.
    */
   readonly publicOrigin: string;
 }
@@ -54,15 +77,19 @@ export class HubConfig {
     // Static file serving directory (empty = disabled, used in production Docker)
     this.staticDir = process.env.BRIKA_STATIC_DIR ?? '';
 
-    const name = process.env.BRIKA_REMOTE_NAME?.trim() ?? '';
-    const enabled = parseBool(process.env.BRIKA_REMOTE_ACCESS) && name.length > 0;
-    const signalingUrl = process.env.BRIKA_SIGNALING_URL?.trim() || DEFAULT_SIGNALING_URL;
+    const bootstrapName = process.env.BRIKA_REMOTE_NAME?.trim() ?? '';
+    const enabled = parseBool(process.env.BRIKA_REMOTE_ACCESS);
+    const coordinatorOrigin =
+      process.env.BRIKA_COORDINATOR_URL?.trim() || DEFAULT_COORDINATOR_ORIGIN;
+    // Backwards-compat: older env var BRIKA_SIGNALING_URL still wins if set.
+    const signalingUrl =
+      process.env.BRIKA_SIGNALING_URL?.trim() || deriveSignalingUrl(coordinatorOrigin);
     const publicOrigin =
-      process.env.BRIKA_PUBLIC_ORIGIN?.trim() ||
-      (enabled ? `https://${name}.brika.dev` : '');
+      process.env.BRIKA_PUBLIC_ORIGIN?.trim() || derivePublicOrigin(bootstrapName);
     this.remoteAccess = {
       enabled,
-      name,
+      bootstrapName,
+      coordinatorOrigin,
       signalingUrl,
       publicOrigin,
     };

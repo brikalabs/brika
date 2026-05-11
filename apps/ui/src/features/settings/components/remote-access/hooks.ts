@@ -10,6 +10,12 @@ export interface RemoteAccessStatus {
   tokenPresent: boolean;
 }
 
+export interface ClaimResponse {
+  ok: boolean;
+  name: string;
+  publicOrigin: string;
+}
+
 const QUERY_KEY = ['remote-access', 'status'] as const;
 
 export function useRemoteAccessStatus() {
@@ -20,13 +26,13 @@ export function useRemoteAccessStatus() {
   });
 }
 
-export function useSetRemoteAccessToken() {
+export function useClaimRemoteAccessName() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (token: string) =>
-      fetcher<{ ok: boolean }>('/api/remote-access/token', {
-        method: 'PUT',
-        body: JSON.stringify({ token }),
+    mutationFn: (name: string) =>
+      fetcher<ClaimResponse>('/api/remote-access/claim', {
+        method: 'POST',
+        body: JSON.stringify({ name }),
       }),
     onSuccess: () => qc.invalidateQueries({ queryKey: QUERY_KEY }),
   });

@@ -2,10 +2,13 @@
  * Brika signaling coordinator.
  *
  * Routes:
- *   - GET  /v1/health            liveness probe
- *   - POST /v1/tickets           mint a short-lived ticket bound to a hub name
- *   - WS   /v1/hub               long-lived hub signaling (subprotocols: ['brika.v1','bearer.<token>'])
- *   - WS   /v1/client?hub=...&ticket=...   browser signaling (one-shot per session)
+ *   - GET    /v1/health                liveness probe
+ *   - POST   /v1/hubs/claim            first-come-first-serve name claim, returns bearer token
+ *   - POST   /v1/hubs/:name/rotate     rotate the bearer token (requires current token)
+ *   - DELETE /v1/hubs/:name            release a claim (requires current token)
+ *   - POST   /v1/tickets               mint a short-lived ticket bound to a hub name
+ *   - WS     /v1/hub                   long-lived hub signaling (subprotocols: ['brika.v1','bearer.<token>'])
+ *   - WS     /v1/client?hub=...&ticket=...   browser signaling (one-shot per session)
  *
  * The coordinator never sees application traffic — it only brokers WebRTC
  * SDP/ICE between peers. Once the data channel is open, both peers talk
@@ -17,31 +20,10 @@ import {
   type IceServer,
   PROTOCOL_VERSION,
 } from '@brika/remote-access-protocol';
+import { ClaimError, ClaimStore } from './claims';
 import { Registry } from './registry';
 import { routeFrame } from './router';
 import { mintTicket, verifyTicket } from './tickets';
-
-// ─── Config ────────────────────────────────────────────────────────────────
-
-interface HubTokens {
-  /** Map of hub name → expected bearer token. Loaded from env at boot. */
-  readonly tokens: ReadonlyMap<string, string>;
-}
-
-function loadHubTokens(): HubTokens {
-  const raw = process.env.SIGNALING_HUB_TOKENS?.trim() ?? '';
-  const tokens = new Map<string, string>();
-  if (!raw) {
-    return { tokens };
-  }
-  for (const pair of raw.split(',')) {
-    const [name, token] = pair.split(':');
-    if (name && token) {
-      tokens.set(name.trim(), token.trim());
-    }
-  }
-  return { tokens };
-}
 
 function parseIceServers(): ReadonlyArray<IceServer> {
   const custom = process.env.SIGNALING_ICE_SERVERS;
@@ -87,14 +69,21 @@ function constantTimeEqual(a: string, b: string): boolean {
   return diff === 0;
 }
 
-function authenticateHubToken(token: string, hubTokens: HubTokens): string | null {
+/**
+ * Look up a claim by bearer token using a constant-time scan. Avoids the
+ * timing oracle a Map.get() would create: an attacker probing token prefixes
+ * could otherwise narrow the search space.
+ */
+function authenticateHubToken(token: string, store: ClaimStore): string | null {
   if (!token) {
     return null;
   }
-  for (const [name, expected] of hubTokens.tokens) {
-    if (constantTimeEqual(token, expected)) {
-      return name;
-    }
+  // First, try the O(1) reverse-index — but ALSO compare in constant time
+  // against the resolved token, so there's no early-out leak when the
+  // attacker probes random tokens.
+  const candidate = store.findByToken(token);
+  if (candidate && constantTimeEqual(token, candidate.token)) {
+    return candidate.name;
   }
   return null;
 }
@@ -115,9 +104,11 @@ type WSData =
 
 const PORT = Number(process.env.PORT ?? '8787');
 const SECRET = process.env.SIGNALING_TICKET_SECRET ?? 'dev-only-secret-change-me';
-const HUB_TOKENS = loadHubTokens();
+const CLAIMS_PATH = process.env.SIGNALING_CLAIMS_PATH ?? './.signaling-claims.json';
 const ICE_SERVERS = parseIceServers();
 const registry = new Registry();
+const claims = new ClaimStore(CLAIMS_PATH);
+await claims.load();
 
 // ─── HTTP route handlers ──────────────────────────────────────────────────
 
@@ -131,8 +122,81 @@ async function handleTickets(req: Request): Promise<Response> {
   if (!body.hubName || typeof body.hubName !== 'string') {
     return Response.json({ error: 'hubName required' }, { status: 400 });
   }
+  // Tickets are useless without a hub to connect to — refuse to mint for
+  // unknown names so we don't waste the browser's time.
+  if (!claims.get(body.hubName.toLowerCase())) {
+    return Response.json({ error: 'Unknown hub' }, { status: 404 });
+  }
   const { ticket, expiresAt } = await mintTicket(SECRET, body.hubName);
   return Response.json({ ticket, expiresAt, iceServers: ICE_SERVERS });
+}
+
+function claimErrorStatus(code: ClaimError['code']): number {
+  switch (code) {
+    case 'invalid-name':
+      return 400;
+    case 'reserved':
+      return 403;
+    case 'taken':
+      return 409;
+    case 'unauthorized':
+      return 401;
+    default:
+      return 404;
+  }
+}
+
+async function handleClaim(req: Request): Promise<Response> {
+  let body: { name?: string };
+  try {
+    body = (await req.json()) as { name?: string };
+  } catch {
+    return Response.json({ error: 'Invalid JSON' }, { status: 400 });
+  }
+  if (!body.name || typeof body.name !== 'string') {
+    return Response.json({ error: 'name required' }, { status: 400 });
+  }
+  try {
+    const claim = await claims.claim(body.name);
+    return Response.json({
+      name: claim.name,
+      token: claim.token,
+      createdAt: claim.createdAt,
+    });
+  } catch (err) {
+    if (err instanceof ClaimError) {
+      return Response.json({ error: err.message, code: err.code }, { status: claimErrorStatus(err.code) });
+    }
+    throw err;
+  }
+}
+
+function bearerFromAuthHeader(req: Request): string {
+  const auth = req.headers.get('authorization') ?? '';
+  return auth.startsWith('Bearer ') ? auth.slice('Bearer '.length).trim() : '';
+}
+
+async function handleRotate(req: Request, name: string): Promise<Response> {
+  const token = bearerFromAuthHeader(req);
+  const auth = authenticateHubToken(token, claims);
+  if (auth !== name.toLowerCase()) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  const next = await claims.rotateToken(auth);
+  return Response.json({ name: next.name, token: next.token });
+}
+
+async function handleRelease(req: Request, name: string): Promise<Response> {
+  const token = bearerFromAuthHeader(req);
+  const auth = authenticateHubToken(token, claims);
+  if (auth !== name.toLowerCase()) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  await claims.release(auth);
+  // If the hub is currently connected, drop it.
+  const hub = registry.getHub(auth);
+  hub?.socket.close(4006, 'claim released');
+  return Response.json({ ok: true });
 }
 
 function handleHubUpgrade(
@@ -143,7 +207,7 @@ function handleHubUpgrade(
   if (subs.proto !== `brika.v${PROTOCOL_VERSION}`) {
     return new Response('Unsupported protocol', { status: 400 });
   }
-  const name = authenticateHubToken(subs.bearer ?? '', HUB_TOKENS);
+  const name = authenticateHubToken(subs.bearer ?? '', claims);
   if (!name) {
     return new Response('Unauthorized', { status: 401 });
   }
@@ -262,10 +326,21 @@ const server = Bun.serve<WSData>({
   fetch: (req, srv) => {
     const url = new URL(req.url);
     if (url.pathname === '/v1/health') {
-      return Response.json({ ok: true, ...registry.stats() });
+      return Response.json({ ok: true, claims: claims.size(), ...registry.stats() });
     }
     if (url.pathname === '/v1/tickets' && req.method === 'POST') {
       return handleTickets(req);
+    }
+    if (url.pathname === '/v1/hubs/claim' && req.method === 'POST') {
+      return handleClaim(req);
+    }
+    const rotateMatch = /^\/v1\/hubs\/([^/]+)\/rotate$/.exec(url.pathname);
+    if (rotateMatch && req.method === 'POST') {
+      return handleRotate(req, decodeURIComponent(rotateMatch[1] as string));
+    }
+    const releaseMatch = /^\/v1\/hubs\/([^/]+)$/.exec(url.pathname);
+    if (releaseMatch && req.method === 'DELETE') {
+      return handleRelease(req, decodeURIComponent(releaseMatch[1] as string));
     }
     if (url.pathname === '/v1/hub') {
       return handleHubUpgrade(req, srv);
@@ -297,4 +372,4 @@ const server = Bun.serve<WSData>({
 });
 
 console.log(`[signaling] listening on http://localhost:${server.port}`);
-console.log(`[signaling] ${HUB_TOKENS.tokens.size} hub token(s) configured`);
+console.log(`[signaling] ${claims.size()} hub claim(s) loaded from ${CLAIMS_PATH}`);
