@@ -1,0 +1,244 @@
+/**
+ * Brika signaling Worker.
+ *
+ * Routes:
+ *   - GET    /v1/health                liveness probe
+ *   - POST   /v1/hubs/claim            first-come-first-serve name claim
+ *   - POST   /v1/hubs/:name/rotate     rotate the bearer token (bearer-auth)
+ *   - DELETE /v1/hubs/:name            release a claim (bearer-auth)
+ *   - POST   /v1/tickets               mint a short-lived signed ticket
+ *   - WS     /v1/hub                   long-lived hub signaling
+ *   - WS     /v1/client?hub=&ticket=   per-session browser signaling
+ *
+ * The Worker handles HTTP itself but proxies every WebSocket upgrade into the
+ * `HubSession` Durable Object that owns the named hub. Claim persistence
+ * lives in D1.
+ */
+
+import { ClaimError, D1ClaimStore } from './claims-d1';
+import { HubSession } from './hub-session';
+import { mintTicket, verifyTicket } from './tickets';
+
+export { HubSession };
+
+export interface Env {
+  HUB_SESSION: DurableObjectNamespace;
+  DB: D1Database;
+  /** HMAC key for ticket signing. Set with `wrangler secret put TICKET_SECRET`. */
+  TICKET_SECRET: string;
+}
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+function constantTimeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) {
+    return false;
+  }
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) {
+    diff |= (a.codePointAt(i) ?? 0) ^ (b.codePointAt(i) ?? 0);
+  }
+  return diff === 0;
+}
+
+function parseSubprotocols(header: string | null): { proto?: string; bearer?: string } {
+  if (!header) {
+    return {};
+  }
+  const out: { proto?: string; bearer?: string } = {};
+  for (const part of header.split(',')) {
+    const trimmed = part.trim();
+    if (trimmed.startsWith('brika.v')) {
+      out.proto = trimmed;
+    } else if (trimmed.startsWith('bearer.')) {
+      out.bearer = trimmed.slice('bearer.'.length);
+    }
+  }
+  return out;
+}
+
+function bearerFromAuthHeader(req: Request): string {
+  const auth = req.headers.get('authorization') ?? '';
+  return auth.startsWith('Bearer ') ? auth.slice('Bearer '.length).trim() : '';
+}
+
+function claimErrorStatus(code: ClaimError['code']): number {
+  switch (code) {
+    case 'invalid-name':
+      return 400;
+    case 'reserved':
+      return 403;
+    case 'taken':
+      return 409;
+    case 'unauthorized':
+      return 401;
+    default:
+      return 404;
+  }
+}
+
+function jsonError(status: number, error: string, code?: string): Response {
+  return new Response(JSON.stringify(code ? { error, code } : { error }), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
+async function readJson<T>(req: Request): Promise<T | null> {
+  try {
+    return (await req.json()) as T;
+  } catch {
+    return null;
+  }
+}
+
+function doStubFor(env: Env, hubName: string): DurableObjectStub {
+  // `idFromName` deterministically maps the hub name to a stable DO id.
+  const id = env.HUB_SESSION.idFromName(hubName.toLowerCase());
+  return env.HUB_SESSION.get(id);
+}
+
+// ─── HTTP route handlers ────────────────────────────────────────────────────
+
+async function handleHealth(env: Env): Promise<Response> {
+  const claims = new D1ClaimStore(env.DB);
+  return Response.json({ ok: true, claims: await claims.size() });
+}
+
+async function handleClaim(req: Request, env: Env): Promise<Response> {
+  const body = await readJson<{ name?: string }>(req);
+  if (!body?.name || typeof body.name !== 'string') {
+    return jsonError(400, 'name required');
+  }
+  const claims = new D1ClaimStore(env.DB);
+  try {
+    const claim = await claims.claim(body.name);
+    return Response.json({
+      name: claim.name,
+      token: claim.token,
+      createdAt: claim.createdAt,
+    });
+  } catch (err) {
+    if (err instanceof ClaimError) {
+      return jsonError(claimErrorStatus(err.code), err.message, err.code);
+    }
+    throw err;
+  }
+}
+
+async function handleRotate(req: Request, env: Env, name: string): Promise<Response> {
+  const claims = new D1ClaimStore(env.DB);
+  const token = bearerFromAuthHeader(req);
+  const owner = await claims.findByToken(token);
+  if (!owner || !constantTimeEqual(owner.name, name.toLowerCase())) {
+    return jsonError(401, 'Unauthorized');
+  }
+  const next = await claims.rotateToken(owner.name);
+  return Response.json({ name: next.name, token: next.token });
+}
+
+async function handleRelease(req: Request, env: Env, name: string): Promise<Response> {
+  const claims = new D1ClaimStore(env.DB);
+  const token = bearerFromAuthHeader(req);
+  const owner = await claims.findByToken(token);
+  if (!owner || !constantTimeEqual(owner.name, name.toLowerCase())) {
+    return jsonError(401, 'Unauthorized');
+  }
+  await claims.release(owner.name);
+  return Response.json({ ok: true });
+}
+
+async function handleTickets(req: Request, env: Env): Promise<Response> {
+  const body = await readJson<{ hubName?: string }>(req);
+  if (!body?.hubName || typeof body.hubName !== 'string') {
+    return jsonError(400, 'hubName required');
+  }
+  const claims = new D1ClaimStore(env.DB);
+  if (!(await claims.get(body.hubName))) {
+    return jsonError(404, 'Unknown hub');
+  }
+  const { ticket, expiresAt } = await mintTicket(env.TICKET_SECRET, body.hubName);
+  return Response.json({ ticket, expiresAt });
+}
+
+// ─── WebSocket upgrade handlers ─────────────────────────────────────────────
+
+async function handleHubUpgrade(req: Request, env: Env): Promise<Response> {
+  const subs = parseSubprotocols(req.headers.get('sec-websocket-protocol'));
+  if (!subs.proto?.startsWith('brika.v')) {
+    return new Response('Unsupported protocol', { status: 400 });
+  }
+  const token = subs.bearer ?? '';
+  if (!token) {
+    return new Response('Unauthorized', { status: 401 });
+  }
+  const claims = new D1ClaimStore(env.DB);
+  const owner = await claims.findByToken(token);
+  if (!owner || !constantTimeEqual(owner.token, token)) {
+    return new Response('Unauthorized', { status: 401 });
+  }
+  // Forward to the DO with a synthetic URL carrying the role + name.
+  const url = new URL(req.url);
+  url.pathname = '/internal/upgrade';
+  url.search = `?role=hub&name=${encodeURIComponent(owner.name)}`;
+  const stub = doStubFor(env, owner.name);
+  return stub.fetch(new Request(url.toString(), req));
+}
+
+async function handleClientUpgrade(req: Request, env: Env): Promise<Response> {
+  const url = new URL(req.url);
+  const hubName = url.searchParams.get('hub');
+  const ticket = url.searchParams.get('ticket');
+  if (!hubName || !ticket) {
+    return new Response('hub and ticket required', { status: 400 });
+  }
+  const claims = await verifyTicket(env.TICKET_SECRET, ticket);
+  if (!claims || claims.hub !== hubName) {
+    return new Response('Invalid ticket', { status: 401 });
+  }
+  const store = new D1ClaimStore(env.DB);
+  if (!(await store.get(hubName))) {
+    return new Response('Unknown hub', { status: 404 });
+  }
+  const sessionId = crypto.randomUUID();
+  const fwd = new URL(req.url);
+  fwd.pathname = '/internal/upgrade';
+  fwd.search = `?role=client&name=${encodeURIComponent(hubName)}&sessionId=${encodeURIComponent(sessionId)}`;
+  const stub = doStubFor(env, hubName);
+  return stub.fetch(new Request(fwd.toString(), req));
+}
+
+// ─── Router ─────────────────────────────────────────────────────────────────
+
+export default {
+  async fetch(req: Request, env: Env): Promise<Response> {
+    const url = new URL(req.url);
+    const path = url.pathname;
+    const method = req.method;
+
+    if (path === '/v1/health') {
+      return handleHealth(env);
+    }
+    if (path === '/v1/hubs/claim' && method === 'POST') {
+      return handleClaim(req, env);
+    }
+    const rotateMatch = /^\/v1\/hubs\/([^/]+)\/rotate$/.exec(path);
+    if (rotateMatch && method === 'POST') {
+      return handleRotate(req, env, decodeURIComponent(rotateMatch[1] as string));
+    }
+    const releaseMatch = /^\/v1\/hubs\/([^/]+)$/.exec(path);
+    if (releaseMatch && method === 'DELETE') {
+      return handleRelease(req, env, decodeURIComponent(releaseMatch[1] as string));
+    }
+    if (path === '/v1/tickets' && method === 'POST') {
+      return handleTickets(req, env);
+    }
+    if (path === '/v1/hub') {
+      return handleHubUpgrade(req, env);
+    }
+    if (path === '/v1/client') {
+      return handleClientUpgrade(req, env);
+    }
+    return new Response('Not found', { status: 404 });
+  },
+} satisfies ExportedHandler<Env>;

@@ -107,8 +107,20 @@ export class RemoteAccessService {
   }
 
   async start(): Promise<void> {
-    const name = await this.#secrets.getHubSecret(SIGNALING_NAME_SECRET_KEY);
-    const token = await this.#secrets.getHubSecret(SIGNALING_TOKEN_SECRET_KEY);
+    // Identity comes from the OS keychain after a UI-driven claim.
+    // BRIKA_REMOTE_NAME + BRIKA_REMOTE_TOKEN remain as a dev/CI escape hatch
+    // for booting a hub against a known coordinator without the keychain
+    // round-trip — both must be set together.
+    const envName = process.env.BRIKA_REMOTE_NAME?.trim();
+    const envToken = process.env.BRIKA_REMOTE_TOKEN?.trim();
+    const name =
+      envName && envToken
+        ? envName
+        : (await this.#secrets.getHubSecret(SIGNALING_NAME_SECRET_KEY)) ?? '';
+    const token =
+      envName && envToken
+        ? envToken
+        : await this.#secrets.getHubSecret(SIGNALING_TOKEN_SECRET_KEY);
     if (!name || !token) {
       this.#log.info('remote access not claimed — visit Settings → Remote access to enable');
       return;

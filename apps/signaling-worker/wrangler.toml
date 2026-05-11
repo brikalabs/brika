@@ -1,0 +1,41 @@
+# Brika signaling coordinator on Cloudflare Workers.
+#
+# Two Cloudflare primitives:
+#   - HubSession Durable Object holds one hub's live WebSocket + per-session
+#     client WebSockets. WebSocket Hibernation keeps idle cost near zero.
+#   - D1 SQLite database holds the persistent claims table (name → token).
+#
+# Production custom hostname (api.brika.dev) is intentionally NOT configured
+# here in the first iteration — deploy lands on <worker>.workers.dev,
+# verified live, then a route can be added with `wrangler routes add` or in
+# the dashboard.
+
+name = "brika-signaling"
+main = "src/worker.ts"
+compatibility_date = "2025-10-01"
+# `nodejs_compat` is needed for `crypto.subtle` in some configurations and is
+# the modern default; harmless when unused.
+compatibility_flags = ["nodejs_compat"]
+
+# Durable Object that owns a single hub's signaling state.
+[[durable_objects.bindings]]
+name = "HUB_SESSION"
+class_name = "HubSession"
+
+# Migration block — required by Workers to track DO class lifecycle.
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["HubSession"]
+
+# D1 database for the claims table. The database itself is created out-of-band
+# via `wrangler d1 create brika-signaling`; the resulting database_id is
+# substituted here.
+[[d1_databases]]
+binding = "DB"
+database_name = "brika-signaling"
+database_id = "5778b6af-da1b-4b0e-8a69-9ee7d5fb5512"
+migrations_dir = "migrations"
+
+# Secret bindings — set with `wrangler secret put TICKET_SECRET`.
+# Listed here so it's discoverable; values live in Cloudflare's secret store.
+#   TICKET_SECRET: HMAC key for browser tickets (32+ random bytes recommended)
