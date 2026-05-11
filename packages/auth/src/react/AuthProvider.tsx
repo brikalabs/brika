@@ -34,15 +34,18 @@ export const AuthContext = createContext<AuthContextType | null>(null);
 export interface AuthProviderProps {
   children: ReactNode;
   apiUrl?: string;
+  /** Optional fetch implementation — pass the WebRTC transport for remote access. */
+  fetch?: typeof fetch;
 }
 
-export function AuthProvider({ children, apiUrl }: Readonly<AuthProviderProps>) {
+export function AuthProvider({ children, apiUrl, fetch }: Readonly<AuthProviderProps>) {
   const client = useMemo(
     () =>
       createAuthClient({
         apiUrl,
+        fetch,
       }),
-    []
+    [apiUrl, fetch]
   );
 
   const [session, setSession] = useState<Session | null>(null);
