@@ -1,21 +1,20 @@
 /**
  * Hub API transport.
  *
- * The transport is selected once at app boot:
+ * The transport is selected once at app boot. We detect "this UI is talking
+ * to a remote hub" three ways, in order of preference:
  *
- *   - If `window.location.hostname` ends with `.hubs.brika.dev`, the UI was
- *     loaded from the remote shell — use {@link DataChannelTransport} and
- *     tunnel via WebRTC to the hub at `<subdomain>.hubs.brika.dev`.
+ *   1. `?hub=<name>` query parameter (preferred). Works on any hostname
+ *      including the coordinator's own (`signaling.brika.dev/?hub=maxime`).
+ *      No DNS gymnastics required.
  *
- *   - Otherwise (LAN access, Vite dev), use {@link FetchTransport} which is
- *     just `window.fetch`.
+ *   2. `<name>.hubs.brika.dev` subdomain. Nicer URL, but needs a wildcard
+ *      DNS record on the brika.dev zone.
  *
- * The selection respects two env overrides — useful for local testing:
+ *   3. `VITE_BRIKA_REMOTE_FORCE=1` env override (dev shortcut).
  *
- *   VITE_BRIKA_REMOTE_FORCE=1
- *       Force `DataChannelTransport` regardless of hostname.
- *   VITE_BRIKA_COORDINATOR_ORIGIN=https://api.brika.dev
- *       Override the coordinator URL.
+ * If none of the above match, we use {@link FetchTransport} — the LAN/dev
+ * default that just hits `window.fetch`.
  */
 
 import { DataChannelTransport } from './data-channel-transport';
@@ -30,8 +29,9 @@ export {
 } from './data-channel-transport';
 export type { Transport } from './transport';
 
-const REMOTE_SUFFIX = '.hubs.brika.dev';
-const DEFAULT_COORDINATOR_ORIGIN = 'https://brika-signaling.maxscharwath.workers.dev';
+const SUBDOMAIN_SUFFIX = '.hubs.brika.dev';
+const DEFAULT_COORDINATOR_ORIGIN = 'https://signaling.brika.dev';
+const HUB_QUERY_PARAM = 'hub';
 
 let cachedTransport: Transport | null = null;
 
@@ -42,35 +42,49 @@ interface RemoteHints {
 }
 
 function detectRemote(): RemoteHints | null {
-  if (typeof window === 'undefined') {
+  if (typeof globalThis.location === 'undefined') {
     return null;
   }
-  const hostname = window.location.hostname.toLowerCase();
+  const loc = globalThis.location;
   const env = (import.meta as unknown as { env?: Record<string, string | undefined> }).env ?? {};
-  const forced = env.VITE_BRIKA_REMOTE_FORCE === '1';
   const coordinatorOrigin = env.VITE_BRIKA_COORDINATOR_ORIGIN || DEFAULT_COORDINATOR_ORIGIN;
 
-  if (forced) {
-    const forcedName = env.VITE_BRIKA_REMOTE_NAME ?? 'devtest';
+  // 1. ?hub=<name> wins — it's explicit, works on any hostname, and is the
+  //    canonical URL we publish from the hub settings page.
+  const queryHub = new URL(loc.href).searchParams.get(HUB_QUERY_PARAM);
+  if (queryHub && queryHub.length > 0) {
     return {
-      hubName: forcedName,
-      hubOrigin: `https://${forcedName}${REMOTE_SUFFIX}`,
+      hubName: queryHub,
+      hubOrigin: `${loc.protocol}//${queryHub}${SUBDOMAIN_SUFFIX}`,
       coordinatorOrigin,
     };
   }
 
-  if (!hostname.endsWith(REMOTE_SUFFIX)) {
-    return null;
+  // 2. <name>.hubs.brika.dev subdomain — the prettier URL when wildcard DNS
+  //    is set up.
+  const hostname = loc.hostname.toLowerCase();
+  if (hostname.endsWith(SUBDOMAIN_SUFFIX)) {
+    const hubName = hostname.slice(0, -SUBDOMAIN_SUFFIX.length);
+    if (hubName) {
+      return {
+        hubName,
+        hubOrigin: `${loc.protocol}//${loc.host}`,
+        coordinatorOrigin,
+      };
+    }
   }
-  const hubName = hostname.slice(0, -REMOTE_SUFFIX.length);
-  if (!hubName) {
-    return null;
+
+  // 3. Dev override.
+  if (env.VITE_BRIKA_REMOTE_FORCE === '1') {
+    const forcedName = env.VITE_BRIKA_REMOTE_NAME ?? 'devtest';
+    return {
+      hubName: forcedName,
+      hubOrigin: `https://${forcedName}${SUBDOMAIN_SUFFIX}`,
+      coordinatorOrigin,
+    };
   }
-  return {
-    hubName,
-    hubOrigin: `${window.location.protocol}//${window.location.host}`,
-    coordinatorOrigin,
-  };
+
+  return null;
 }
 
 export function getTransport(): Transport {

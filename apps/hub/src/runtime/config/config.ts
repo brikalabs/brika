@@ -3,22 +3,15 @@ import { dataDir } from '@/cli/utils/runtime';
 import { ConfigLoader } from './config-loader';
 
 /**
- * Default coordinator URL. Points at the live Cloudflare Worker deploy until
- * a custom domain (e.g. api.brika.dev) is wired up. Operators can override
- * via the Settings UI (persisted in the OS keychain) or the
- * `BRIKA_COORDINATOR_URL` env var.
+ * Default coordinator URL. The Cloudflare Worker also serves the static UI
+ * shell, so this same hostname is what users open in their browser.
+ * Operators can override via the Settings UI or `BRIKA_COORDINATOR_URL`.
  */
-const DEFAULT_COORDINATOR_ORIGIN = 'https://brika-signaling.maxscharwath.workers.dev';
-/**
- * DNS namespace for claimed hub names. The product domain `brika.dev` already
- * hosts `clay.`, `doc.`, etc., so hub names live under a dedicated subdomain
- * to keep the public namespace clean.
- */
-const PUBLIC_DOMAIN = 'hubs.brika.dev';
+const DEFAULT_COORDINATOR_ORIGIN = 'https://signaling.brika.dev';
 
 /**
  * Derive the WebSocket signaling URL from the coordinator HTTP origin.
- * `https://api.brika.dev` → `wss://api.brika.dev/v1/hub`.
+ * `https://signaling.brika.dev` → `wss://signaling.brika.dev/v1/hub`.
  */
 export function deriveSignalingUrl(coordinatorOrigin: string): string {
   const url = new URL('/v1/hub', coordinatorOrigin);
@@ -26,9 +19,20 @@ export function deriveSignalingUrl(coordinatorOrigin: string): string {
   return url.toString();
 }
 
-/** Public-facing URL for a hub registered as `<name>` (used as Host header). */
-export function derivePublicOrigin(name: string): string {
-  return name ? `https://${name}.${PUBLIC_DOMAIN}` : '';
+/**
+ * Public-facing URL a user opens in a browser to reach this hub remotely.
+ *
+ * The Worker serves the same static UI shell from any path — the FE reads
+ * `?hub=<name>` to know which hub to peer with via WebRTC. This avoids the
+ * wildcard-DNS dance that a `<name>.hubs.brika.dev` scheme would need.
+ */
+export function derivePublicOrigin(name: string, coordinatorOrigin: string): string {
+  if (!name) {
+    return '';
+  }
+  const url = new URL('/', coordinatorOrigin);
+  url.searchParams.set('hub', name);
+  return url.toString();
 }
 
 /**

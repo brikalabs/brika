@@ -192,7 +192,7 @@ export class DataChannelTransport implements Transport {
   }
 
   async #fetchTicket(): Promise<{ ticket: string; iceServers: ReadonlyArray<IceServer> }> {
-    const res = await window.fetch(`${this.#options.coordinatorOrigin}/v1/tickets`, {
+    const res = await globalThis.fetch(`${this.#options.coordinatorOrigin}/v1/tickets`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ hubName: this.#options.hubName }),

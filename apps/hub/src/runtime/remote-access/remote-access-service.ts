@@ -152,13 +152,14 @@ export class RemoteAccessService {
     const storedName = await this.#secrets.getHubSecret(SIGNALING_NAME_SECRET_KEY);
     const token = await this.#secrets.getHubSecret(SIGNALING_TOKEN_SECRET_KEY);
     const name = storedName ?? '';
+    const coordinatorOrigin = await this.coordinatorOrigin();
     return {
       claimed: Boolean(name && token),
       name,
-      publicOrigin: derivePublicOrigin(name),
+      publicOrigin: derivePublicOrigin(name, coordinatorOrigin),
       state: this.#state,
       activeSessions: this.#sessions.size,
-      coordinatorOrigin: await this.coordinatorOrigin(),
+      coordinatorOrigin,
     };
   }
 
@@ -220,7 +221,8 @@ export class RemoteAccessService {
     this.stop();
     await this.start();
 
-    return { name: body.name, publicOrigin: derivePublicOrigin(body.name) };
+    const coordinatorOrigin = await this.coordinatorOrigin();
+    return { name: body.name, publicOrigin: derivePublicOrigin(body.name, coordinatorOrigin) };
   }
 
   /**
@@ -368,8 +370,12 @@ export class RemoteAccessService {
       return;
     }
     const servers = iceServers.length > 0 ? iceServers : DEFAULT_ICE_SERVERS;
-    const baseOrigin =
-      derivePublicOrigin(this.#activeName) || `http://localhost:${this.#config.port}`;
+    // Synthesize a stable, allowlisted Host for the in-process Request. This
+    // is never exposed to users — the public URL surfaced in /api/remote-access
+    // is composed separately by `derivePublicOrigin(name, coordinatorOrigin)`.
+    const baseOrigin = this.#activeName
+      ? `https://${this.#activeName}.hubs.brika.dev`
+      : `http://localhost:${this.#config.port}`;
     const rpc = new RpcServer({
       sessionId,
       baseOrigin,
