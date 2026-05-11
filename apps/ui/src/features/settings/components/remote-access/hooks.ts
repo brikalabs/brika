@@ -2,12 +2,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetcher } from '@/lib/query';
 
 export interface RemoteAccessStatus {
-  enabled: boolean;
+  claimed: boolean;
   name: string;
   publicOrigin: string;
   state: 'idle' | 'connecting' | 'connected' | 'reconnecting' | 'closed';
   activeSessions: number;
-  tokenPresent: boolean;
+  coordinatorOrigin: string;
 }
 
 export interface ClaimResponse {
@@ -38,13 +38,14 @@ export function useClaimRemoteAccessName() {
   });
 }
 
-export function useRevokeRemoteAccessToken() {
+export function useForgetRemoteAccess() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: () =>
-      fetcher<{ ok: boolean; removed: boolean }>('/api/remote-access/token', {
-        method: 'DELETE',
-      }),
+      fetcher<{ ok: boolean; removed: boolean; coordinatorReleased: boolean }>(
+        '/api/remote-access/',
+        { method: 'DELETE' }
+      ),
     onSuccess: () => qc.invalidateQueries({ queryKey: QUERY_KEY }),
   });
 }

@@ -54,6 +54,14 @@ function isPrivateNetwork(host: string): boolean {
   return false;
 }
 
+function isBrikaPublicHost(host: string): boolean {
+  const bare = stripPort(host).toLowerCase();
+  // Hub names live at `*.hubs.brika.dev`. We don't accept the product
+  // domain itself (`brika.dev`, `clay.brika.dev`, etc.) since hubs never
+  // legitimately receive requests under those Host values.
+  return bare === 'hubs.brika.dev' || bare.endsWith('.hubs.brika.dev');
+}
+
 export function hostAllowlist(options: HostAllowlistOptions): Middleware {
   const { allowed, allowPrivateNetworks = true } = options;
   // Normalize allowlist to lowercase exact matches on `host[:port]` AND bare host.
@@ -82,6 +90,13 @@ export function hostAllowlist(options: HostAllowlistOptions): Middleware {
       return;
     }
     if (allowPrivateNetworks && isPrivateNetwork(host)) {
+      await next();
+      return;
+    }
+    // Any `*.brika.dev` Host is acceptable — the data-channel transport
+    // synthesizes that Host based on the hub's claimed name and the underlying
+    // RPC frames carry their own auth.
+    if (isBrikaPublicHost(host)) {
       await next();
       return;
     }

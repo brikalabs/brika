@@ -6,16 +6,18 @@
  * SDP/ICE from each session back through signaling.
  *
  * Identity model:
- *   - `BRIKA_REMOTE_ACCESS=1` is the env-level gate.
- *   - The hub's *claimed name* and *bearer token* are stored in the OS
- *     keychain (SecretStore) after the user picks a name via the settings UI.
- *     Env vars `BRIKA_REMOTE_NAME` and `BRIKA_REMOTE_TOKEN` override the
- *     keychain values — useful for dev and CI.
- *   - {@link claim} runs the coordinator handshake (POST /v1/hubs/claim),
- *     persists name + token, and bounces the signaling client.
+ *   - The hub's *claimed name* and *bearer token* live in the OS keychain
+ *     (SecretStore). They are written by {@link claim}, which calls the
+ *     coordinator's `POST /v1/hubs/claim` and persists the response.
+ *   - There is no separate enable/disable flag — the service is "active"
+ *     whenever a claim is present, "idle" otherwise. Users opt in by
+ *     claiming a name; they opt out by calling {@link forget}.
+ *   - The only relevant env var is `BRIKA_COORDINATOR_URL` (config), which
+ *     defaults to the production coordinator.
  *
  * Lifecycle:
- *   - `start()` is called from the bootstrap plugin if `config.remoteAccess.enabled`.
+ *   - `start()` is called from the bootstrap plugin and is always safe to
+ *     invoke. When there's no claim, it logs once and does nothing.
  *   - `stop()` tears everything down on shutdown.
  *
  * The service is intentionally tolerant of a missing coordinator: if the
@@ -50,12 +52,18 @@ const DEFAULT_ICE_SERVERS: ReadonlyArray<IceServer> = [
 ];
 
 export interface RemoteAccessStatus {
-  enabled: boolean;
+  /** A claim (name + token) is persisted; the service is or wants to be online. */
+  claimed: boolean;
+  /** The claimed hub name (empty when not claimed). */
   name: string;
+  /** Canonical public URL derived from {@link name}. */
   publicOrigin: string;
+  /** Live signaling-client state. */
   state: SignalingState;
+  /** Active peer sessions (browsers currently connected). */
   activeSessions: number;
-  tokenPresent: boolean;
+  /** Coordinator HTTP origin in use (for diagnostics). */
+  coordinatorOrigin: string;
 }
 
 export class RemoteAccessClaimError extends Error {
@@ -77,37 +85,32 @@ export class RemoteAccessService {
   readonly #secrets = inject(SecretStore);
   readonly #sessions = new Map<string, { session: PeerSession; rpc: RpcServer }>();
 
-  /** Currently-active name (from keychain or env), populated on start/claim. */
+  /** Currently-active claimed name (loaded from SecretStore on start/claim). */
   #activeName = '';
   #client: SignalingClient | null = null;
   #state: SignalingState = 'idle';
 
-  get status(): RemoteAccessStatus {
-    return {
-      enabled: this.#config.remoteAccess.enabled,
-      name: this.#activeName || this.#config.remoteAccess.bootstrapName,
-      publicOrigin: derivePublicOrigin(this.#activeName || this.#config.remoteAccess.bootstrapName),
-      state: this.#state,
-      activeSessions: this.#sessions.size,
-      // Status is read-only / not async; the routes layer queries SecretStore separately.
-      tokenPresent: false,
-    };
+  status(): Promise<RemoteAccessStatus> {
+    return this.#secrets.getHubSecret(SIGNALING_NAME_SECRET_KEY).then(async (storedName) => {
+      const token = await this.#secrets.getHubSecret(SIGNALING_TOKEN_SECRET_KEY);
+      const name = storedName ?? '';
+      const claimed = Boolean(name && token);
+      return {
+        claimed,
+        name,
+        publicOrigin: derivePublicOrigin(name),
+        state: this.#state,
+        activeSessions: this.#sessions.size,
+        coordinatorOrigin: this.#config.remoteAccess.coordinatorOrigin,
+      };
+    });
   }
 
   async start(): Promise<void> {
-    if (!this.#config.remoteAccess.enabled) {
-      this.#log.info('remote access disabled');
-      return;
-    }
-    const { name, token } = await this.#resolveIdentity();
-    if (!name) {
-      this.#log.info(
-        'remote access enabled but no name claimed — claim one via the Remote Access settings page'
-      );
-      return;
-    }
-    if (!token) {
-      this.#log.warn('remote access has a claimed name but no token — re-claim from the settings page', { name });
+    const name = await this.#secrets.getHubSecret(SIGNALING_NAME_SECRET_KEY);
+    const token = await this.#secrets.getHubSecret(SIGNALING_TOKEN_SECRET_KEY);
+    if (!name || !token) {
+      this.#log.info('remote access not claimed — visit Settings → Remote access to enable');
       return;
     }
     this.#activeName = name;
@@ -126,27 +129,93 @@ export class RemoteAccessService {
   }
 
   /**
-   * Claim a name with the coordinator, persist the returned token, and
-   * bounce the signaling client so it reconnects with fresh credentials.
+   * Claim a name with the coordinator, persist the returned token, and start
+   * (or restart) the signaling client.
    *
    * Throws {@link RemoteAccessClaimError} on failure — the caller (HTTP
    * route) maps it to an appropriate response status.
    */
   async claim(name: string): Promise<{ name: string; publicOrigin: string }> {
-    if (!this.#config.remoteAccess.enabled) {
-      throw new RemoteAccessClaimError(409, 'disabled', 'Remote access is disabled');
-    }
     const trimmed = name.trim();
     if (!trimmed) {
       throw new RemoteAccessClaimError(400, 'invalid-name', 'Name is required');
     }
-    const claimUrl = new URL('/v1/hubs/claim', this.#config.remoteAccess.coordinatorOrigin);
+    const body = await this.#coordinatorRequest<{ name: string; token: string }>(
+      'POST',
+      '/v1/hubs/claim',
+      { name: trimmed }
+    );
+    await this.#secrets.setHubSecret(SIGNALING_NAME_SECRET_KEY, body.name);
+    await this.#secrets.setHubSecret(SIGNALING_TOKEN_SECRET_KEY, body.token);
+
+    this.stop();
+    await this.start();
+
+    return { name: body.name, publicOrigin: derivePublicOrigin(body.name) };
+  }
+
+  /**
+   * Forget the claim entirely: release the name on the coordinator (so it
+   * becomes available to other hubs), wipe the OS keychain entries, and
+   * disconnect.
+   *
+   * If the coordinator is unreachable, the local state is still wiped — a
+   * stale entry on the coordinator is harmless and can be cleaned up later.
+   */
+  async forget(): Promise<{ removed: boolean; coordinatorReleased: boolean }> {
+    const name = await this.#secrets.getHubSecret(SIGNALING_NAME_SECRET_KEY);
+    const token = await this.#secrets.getHubSecret(SIGNALING_TOKEN_SECRET_KEY);
+
+    let coordinatorReleased = false;
+    if (name && token) {
+      try {
+        await this.#coordinatorRequest(
+          'DELETE',
+          `/v1/hubs/${encodeURIComponent(name)}`,
+          undefined,
+          token
+        );
+        coordinatorReleased = true;
+      } catch (err) {
+        this.#log.warn('coordinator release failed; clearing local state anyway', {
+          name,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
+
+    this.stop();
+    const a = await this.#secrets.deleteHubSecret(SIGNALING_TOKEN_SECRET_KEY);
+    const b = await this.#secrets.deleteHubSecret(SIGNALING_NAME_SECRET_KEY);
+    this.#activeName = '';
+
+    return { removed: a || b, coordinatorReleased };
+  }
+
+  /**
+   * Talk to the coordinator's HTTP API. Centralized for consistent error
+   * mapping into {@link RemoteAccessClaimError}.
+   */
+  async #coordinatorRequest<T = unknown>(
+    method: string,
+    path: string,
+    body?: unknown,
+    bearer?: string
+  ): Promise<T> {
+    const url = new URL(path, this.#config.remoteAccess.coordinatorOrigin);
+    const headers: Record<string, string> = {};
+    if (body !== undefined) {
+      headers['Content-Type'] = 'application/json';
+    }
+    if (bearer) {
+      headers.Authorization = `Bearer ${bearer}`;
+    }
     let res: Response;
     try {
-      res = await fetch(claimUrl.toString(), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: trimmed }),
+      res = await fetch(url.toString(), {
+        method,
+        headers,
+        body: body === undefined ? undefined : JSON.stringify(body),
       });
     } catch (err) {
       throw new RemoteAccessClaimError(
@@ -169,48 +238,7 @@ export class RemoteAccessService {
         parsed.error ?? (text || res.statusText)
       );
     }
-    const body = (await res.json()) as { name: string; token: string };
-    await this.#secrets.setHubSecret(SIGNALING_NAME_SECRET_KEY, body.name);
-    await this.#secrets.setHubSecret(SIGNALING_TOKEN_SECRET_KEY, body.token);
-
-    this.stop();
-    await this.start();
-
-    return { name: body.name, publicOrigin: derivePublicOrigin(body.name) };
-  }
-
-  /** Persist a fresh bearer token (e.g. after a coordinator-side rotation). */
-  async setToken(token: string): Promise<void> {
-    await this.#secrets.setHubSecret(SIGNALING_TOKEN_SECRET_KEY, token);
-    this.stop();
-    await this.start();
-  }
-
-  /** Forget the claimed name and bearer token, and disconnect. */
-  async forget(): Promise<{ removed: boolean }> {
-    this.stop();
-    const a = await this.#secrets.deleteHubSecret(SIGNALING_TOKEN_SECRET_KEY);
-    const b = await this.#secrets.deleteHubSecret(SIGNALING_NAME_SECRET_KEY);
-    this.#activeName = '';
-    return { removed: a || b };
-  }
-
-  /**
-   * Resolution order for the runtime identity:
-   *   1. `BRIKA_REMOTE_NAME` / `BRIKA_REMOTE_TOKEN` env vars (dev shortcuts).
-   *   2. SecretStore (set by {@link claim}).
-   */
-  async #resolveIdentity(): Promise<{ name: string; token: string | null }> {
-    const envName = process.env.BRIKA_REMOTE_NAME?.trim();
-    const envToken = process.env.BRIKA_REMOTE_TOKEN?.trim();
-    if (envName && envToken) {
-      return { name: envName, token: envToken };
-    }
-    const storedName =
-      envName || ((await this.#secrets.getHubSecret(SIGNALING_NAME_SECRET_KEY)) ?? '');
-    const storedToken =
-      envToken || (await this.#secrets.getHubSecret(SIGNALING_TOKEN_SECRET_KEY));
-    return { name: storedName, token: storedToken ?? null };
+    return (await res.json()) as T;
   }
 
   #startClient(name: string, token: string): void {
@@ -270,7 +298,8 @@ export class RemoteAccessService {
       return;
     }
     const servers = iceServers.length > 0 ? iceServers : DEFAULT_ICE_SERVERS;
-    const baseOrigin = derivePublicOrigin(this.#activeName) || `http://localhost:${this.#config.port}`;
+    const baseOrigin =
+      derivePublicOrigin(this.#activeName) || `http://localhost:${this.#config.port}`;
     const rpc = new RpcServer({
       sessionId,
       baseOrigin,

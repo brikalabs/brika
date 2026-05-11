@@ -125,40 +125,42 @@ export class ApiServer {
 
   /**
    * Hostnames accepted in the `Host` request header. Loopback and private
-   * network ranges are always allowed by the middleware; we additionally list
-   * the configured bind host (when it's a real DNS name) and the remote-access
-   * public hostname (e.g. `maxime.brika.dev`).
+   * network ranges are always allowed by the middleware; we additionally
+   * accept the configured bind host (when it's a real DNS name) and any
+   * `*.brika.dev` subdomain — the data-channel transport always sets the
+   * canonical hub host and the underlying RPC carries its own auth.
    */
   #allowedHosts(): string[] {
     const hosts: string[] = [];
     if (this.#config.host && this.#config.host !== '0.0.0.0' && this.#config.host !== '::') {
       hosts.push(`${this.#config.host}:${this.#config.port}`, this.#config.host);
     }
-    const { publicOrigin } = this.#config.remoteAccess;
-    if (publicOrigin) {
-      try {
-        const url = new URL(publicOrigin);
-        hosts.push(url.host);
-      } catch {
-        // Invalid URL — ignore, host allowlist will fall back to loopback/private only.
-      }
-    }
     return hosts;
   }
 
   /**
-   * CORS origin allowlist. Always allows the configured public remote origin
-   * (so the static `*.brika.dev` UI shell can call the hub during signaling
-   * bootstrap), the LAN HTTP origin, and any loopback/private-network origin
-   * (covering Vite dev, mDNS, and other LAN access). External origins are
-   * blocked to prevent cross-site credential theft.
+   * CORS origin allowlist. Allows: any `*.brika.dev` subdomain (the static
+   * UI shell when accessed remotely), the LAN HTTP origin, and any
+   * loopback/private-network origin (covering Vite dev, mDNS, and other LAN
+   * access). External origins are blocked to prevent cross-site credential
+   * theft.
    */
   #corsAllowlist(): CorsOriginMatcher {
     const matchers: Array<string | RegExp | ((origin: string) => boolean)> = [];
-    const { publicOrigin } = this.#config.remoteAccess;
-    if (publicOrigin) {
-      matchers.push(publicOrigin);
-    }
+    matchers.push((origin: string) => {
+      try {
+        const url = new URL(origin);
+        const host = url.hostname.toLowerCase();
+        // The static UI shell lives at `<name>.hubs.brika.dev`. Active hub-name
+        // validation happens at the RPC/auth layer, not at CORS time.
+        if (host === 'hubs.brika.dev' || host.endsWith('.hubs.brika.dev')) {
+          return url.protocol === 'https:';
+        }
+        return false;
+      } catch {
+        return false;
+      }
+    });
     matchers.push((origin: string) => {
       try {
         const url = new URL(origin);

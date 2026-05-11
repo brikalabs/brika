@@ -3,9 +3,9 @@
  *
  * The transport is selected once at app boot:
  *
- *   - If `window.location.hostname` ends with `.brika.dev`, the UI was loaded
- *     from the remote shell — use {@link DataChannelTransport} and tunnel via
- *     WebRTC to the hub at `<subdomain>.brika.dev`.
+ *   - If `window.location.hostname` ends with `.hubs.brika.dev`, the UI was
+ *     loaded from the remote shell — use {@link DataChannelTransport} and
+ *     tunnel via WebRTC to the hub at `<subdomain>.hubs.brika.dev`.
  *
  *   - Otherwise (LAN access, Vite dev), use {@link FetchTransport} which is
  *     just `window.fetch`.
@@ -30,7 +30,7 @@ export {
 } from './data-channel-transport';
 export type { Transport } from './transport';
 
-const REMOTE_SUFFIX = '.brika.dev';
+const REMOTE_SUFFIX = '.hubs.brika.dev';
 const DEFAULT_COORDINATOR_ORIGIN = 'https://api.brika.dev';
 
 let cachedTransport: Transport | null = null;

@@ -5,15 +5,12 @@ import { useLocale } from '@/lib/use-locale';
 import {
   type RemoteAccessStatus,
   useClaimRemoteAccessName,
+  useForgetRemoteAccess,
   useRemoteAccessStatus,
-  useRevokeRemoteAccessToken,
 } from './hooks';
 
 function StatusBadge({ status }: Readonly<{ status: RemoteAccessStatus }>) {
   const { t } = useLocale();
-  if (!status.enabled) {
-    return <Badge variant="outline">{t('settings:remoteAccess.status.disabled')}</Badge>;
-  }
   if (status.state === 'connected') {
     return <Badge variant="default">{t('settings:remoteAccess.status.connected')}</Badge>;
   }
@@ -70,27 +67,14 @@ function ClaimForm() {
 export function RemoteAccessSection() {
   const { t } = useLocale();
   const { data: status, isLoading } = useRemoteAccessStatus();
-  const revokeToken = useRevokeRemoteAccessToken();
+  const forget = useForgetRemoteAccess();
 
   if (isLoading || !status) {
     return <p className="text-muted-foreground text-sm">{t('common:loading')}</p>;
   }
 
-  if (!status.enabled) {
-    return (
-      <div className="space-y-3">
-        <p className="text-muted-foreground text-sm">
-          {t('settings:remoteAccess.disabledHelp')}
-        </p>
-        <pre className="rounded-md bg-foreground/[0.04] px-3 py-2 font-mono text-[12px]">
-          BRIKA_REMOTE_ACCESS=1
-        </pre>
-      </div>
-    );
-  }
-
-  // Enabled but no name claimed yet — show the claim form.
-  if (!status.tokenPresent) {
+  // No claim yet — show the claim form.
+  if (!status.claimed) {
     return <ClaimForm />;
   }
 
@@ -144,8 +128,8 @@ export function RemoteAccessSection() {
           type="button"
           variant="ghost"
           size="sm"
-          onClick={() => revokeToken.mutate()}
-          disabled={revokeToken.isPending}
+          onClick={() => forget.mutate()}
+          disabled={forget.isPending}
         >
           <Trash2 />
           {t('settings:remoteAccess.forget.action')}

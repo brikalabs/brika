@@ -2,32 +2,17 @@
  * Remote-access settings routes.
  *
  * Surface area:
- *   - GET    /api/remote-access            current status (enabled, name, signaling state, active sessions, tokenPresent)
- *   - POST   /api/remote-access/claim      claim a name with the coordinator and persist the returned token
- *   - PUT    /api/remote-access/token      manually store a bearer token (advanced — use /claim instead)
- *   - DELETE /api/remote-access/token      revoke the stored token + name (also stops any active sessions)
- *
- * The actual enable/disable lives behind an env flag in v0/v1 — flipping it on
- * is a deliberate operator action, not something the UI can do via a session.
- * Once enabled, name claiming and token rotation become available to admins.
+ *   - GET    /api/remote-access       current status (claimed, name, signaling state, active sessions, coordinator)
+ *   - POST   /api/remote-access/claim claim a name with the coordinator and persist the returned token
+ *   - DELETE /api/remote-access       forget the claim: release with the coordinator + wipe local state
  */
 
 import { group, route } from '@brika/router';
 import { z } from 'zod';
-import {
-  RemoteAccessClaimError,
-  RemoteAccessService,
-  SIGNALING_NAME_SECRET_KEY,
-  SIGNALING_TOKEN_SECRET_KEY,
-} from '@/runtime/remote-access';
-import { SecretStore } from '@/runtime/secrets/secret-store';
+import { RemoteAccessClaimError, RemoteAccessService } from '@/runtime/remote-access';
 
 const ClaimSchema = z.object({
   name: z.string().min(4).max(32),
-});
-
-const SetTokenSchema = z.object({
-  token: z.string().min(16).max(2048),
 });
 
 export const remoteAccessRoutes = group({
@@ -36,15 +21,7 @@ export const remoteAccessRoutes = group({
     /** Current status — UI polls this to render the settings page. */
     route.get({
       path: '/',
-      handler: async ({ inject }) => {
-        const service = inject(RemoteAccessService);
-        const secrets = inject(SecretStore);
-        const tokenPresent = (await secrets.getHubSecret(SIGNALING_TOKEN_SECRET_KEY)) !== null;
-        return {
-          ...service.status,
-          tokenPresent,
-        };
-      },
+      handler: ({ inject }) => inject(RemoteAccessService).status(),
     }),
 
     /** Claim a name with the coordinator and persist the returned token. */
@@ -71,26 +48,12 @@ export const remoteAccessRoutes = group({
       },
     }),
 
-    /** Store a fresh signaling bearer token manually. Hot-reconnects the client. */
-    route.put({
-      path: '/token',
-      body: SetTokenSchema,
-      handler: async ({ body, inject }) => {
-        await inject(RemoteAccessService).setToken(body.token);
-        return { ok: true };
-      },
-    }),
-
-    /** Revoke the stored token + name and stop the signaling client. */
+    /** Forget the claim: release with the coordinator and wipe local state. */
     route.delete({
-      path: '/token',
+      path: '/',
       handler: async ({ inject }) => {
         const result = await inject(RemoteAccessService).forget();
-        // Defensive cleanup in case forget() was called before SecretStore init.
-        const secrets = inject(SecretStore);
-        await secrets.deleteHubSecret(SIGNALING_TOKEN_SECRET_KEY);
-        await secrets.deleteHubSecret(SIGNALING_NAME_SECRET_KEY);
-        return { ok: true, removed: result.removed };
+        return { ok: true, ...result };
       },
     }),
   ],
