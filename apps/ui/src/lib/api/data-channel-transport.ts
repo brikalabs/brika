@@ -102,6 +102,13 @@ export class DataChannelTransport implements Transport {
   #nextRequestId = 1;
   readonly #inflight = new Map<number, Inflight>();
   readonly #cookies = new CookieJar();
+  /**
+   * ICE candidates that arrive from the hub before its answer SDP has been
+   * applied. Queued here, then flushed once `setRemoteDescription` completes
+   * — `addIceCandidate` throws InvalidStateError if called earlier.
+   */
+  #pendingRemoteIce: RTCIceCandidateInit[] = [];
+  #remoteDescriptionApplied = false;
 
   constructor(options: DataChannelTransportOptions) {
     this.#options = options;
@@ -354,11 +361,11 @@ export class DataChannelTransport implements Transport {
     switch (msg.kind) {
       case 'session.answer':
         this.#sessionId = msg.sessionId;
-        void this.#pc?.setRemoteDescription({ type: 'answer', sdp: msg.sdp });
+        void this.#applyAnswer(msg.sdp);
         return;
       case 'session.ice':
         if (msg.from === 'hub') {
-          void this.#pc?.addIceCandidate({
+          this.#handleRemoteIce({
             candidate: msg.candidate.candidate,
             sdpMid: msg.candidate.sdpMid ?? undefined,
             sdpMLineIndex: msg.candidate.sdpMLineIndex ?? undefined,
@@ -371,6 +378,50 @@ export class DataChannelTransport implements Transport {
       default:
         return;
     }
+  }
+
+  /**
+   * Apply the hub's answer SDP and flush any ICE candidates that arrived
+   * before the remote description was ready.
+   */
+  async #applyAnswer(sdp: string): Promise<void> {
+    if (!this.#pc) {
+      return;
+    }
+    try {
+      await this.#pc.setRemoteDescription({ type: 'answer', sdp });
+    } catch {
+      // The peer connection may have been closed mid-flight — drop silently.
+      return;
+    }
+    this.#remoteDescriptionApplied = true;
+    const queued = this.#pendingRemoteIce;
+    this.#pendingRemoteIce = [];
+    for (const candidate of queued) {
+      try {
+        await this.#pc.addIceCandidate(candidate);
+      } catch {
+        // Stale candidate; ignore.
+      }
+    }
+  }
+
+  /**
+   * Queue ICE candidates that arrive before the answer has been applied;
+   * `addIceCandidate` throws InvalidStateError if called with a null remote
+   * description. Once the answer lands, {@link applyAnswer} flushes the queue.
+   */
+  #handleRemoteIce(candidate: RTCIceCandidateInit): void {
+    if (!this.#pc) {
+      return;
+    }
+    if (!this.#remoteDescriptionApplied) {
+      this.#pendingRemoteIce.push(candidate);
+      return;
+    }
+    void this.#pc.addIceCandidate(candidate).catch(() => {
+      // Drop stale candidates silently.
+    });
   }
 
   #onRpcMessage(raw: string): void {
@@ -506,6 +557,8 @@ export class DataChannelTransport implements Transport {
     this.#ws?.close();
     this.#ws = null;
     this.#sessionId = null;
+    this.#pendingRemoteIce = [];
+    this.#remoteDescriptionApplied = false;
     this.#connectPromise = null;
   }
 
