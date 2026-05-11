@@ -2,6 +2,7 @@
  * Query Client singleton
  */
 import { QueryClient } from '@tanstack/react-query';
+import { apiFetch } from './api';
 
 /**
  * Get SSE stream URL — uses relative paths so requests go through the Vite
@@ -42,7 +43,7 @@ export function setOnUnauthorized(cb: (() => void) | null) {
 }
 
 export async function fetcher<T>(url: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(url, {
+  const res = await apiFetch(url, {
     ...options,
     credentials: 'include',
     headers: {

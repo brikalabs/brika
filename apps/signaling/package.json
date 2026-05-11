@@ -1,0 +1,25 @@
+{
+  "name": "@brika/signaling",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "homepage": "https://github.com/brikalabs/brika",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/brikalabs/brika.git",
+    "directory": "apps/signaling"
+  },
+  "scripts": {
+    "dev": "bun --watch src/main.ts",
+    "start": "bun src/main.ts",
+    "test": "bun test",
+    "typecheck": "tsgo --noEmit"
+  },
+  "dependencies": {
+    "@brika/remote-access-protocol": "workspace:*",
+    "hono": "^4.12.2"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.3.5"
+  }
+}

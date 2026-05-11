@@ -1,0 +1,489 @@
+/**
+ * Transport that tunnels HTTP requests over a single WebRTC data channel to
+ * a Brika hub. Application data never transits the coordinator: after the
+ * SDP/ICE handshake completes, traffic flows peer-to-peer.
+ *
+ * Lifecycle:
+ *   1. `connect()` opens a WebSocket to the coordinator (`/v1/client`).
+ *      Authenticated via a short-lived ticket fetched from `/v1/tickets`.
+ *   2. The coordinator pushes ICE servers and forwards a `session.offer`
+ *      placeholder — but in our flow the *client* creates the offer first.
+ *      Specifically: we wait for the `session.iceServers` push, build a
+ *      `RTCPeerConnection`, open a data channel labeled `brika.rpc`, and
+ *      emit our offer.
+ *   3. The hub answers, ICE candidates trickle through the WS, and the data
+ *      channel opens.
+ *   4. `fetch()` encodes the request as a {@link RequestMessage}, sends it
+ *      over the channel, and assembles the streamed response back via
+ *      {@link ResponseAssembler}.
+ *
+ * Reconnect: on any unrecoverable failure (channel closed, ICE failed, WS
+ * closed), the transport tears down and reconnects with backoff. In-flight
+ * requests fail with a typed `TransportError`.
+ */
+
+import {
+  type AbortMessage,
+  type IceServer,
+  PROTOCOL_VERSION,
+  type RequestMessage,
+  ResponseAssembler,
+  type SignalingMessage,
+  decodeRpc,
+  encodeRpc,
+  encodeSignaling,
+  requestToFrames,
+} from '@brika/remote-access-protocol';
+import type { Transport } from './transport';
+
+export interface DataChannelTransportOptions {
+  /** Hub name to connect to (the `<name>` in `<name>.brika.dev`). */
+  readonly hubName: string;
+  /** Coordinator HTTP origin, e.g. `https://api.brika.dev`. */
+  readonly coordinatorOrigin: string;
+  /** Canonical public origin for the hub (used as Request base URL). */
+  readonly hubOrigin: string;
+  /** Optional callback for state-change notifications (idle/connecting/...). */
+  readonly onStateChange?: (state: DataChannelTransportState) => void;
+}
+
+export type DataChannelTransportState =
+  | 'idle'
+  | 'connecting'
+  | 'connected'
+  | 'reconnecting'
+  | 'closed';
+
+export class TransportError extends Error {
+  readonly code: string;
+  constructor(code: string, message: string) {
+    super(message);
+    this.name = 'TransportError';
+    this.code = code;
+  }
+}
+
+interface Inflight {
+  readonly assembler: ResponseAssembler;
+  readonly resolve: (res: Response) => void;
+  readonly reject: (err: Error) => void;
+  /** Whether response.head has already been observed. */
+  headSeen: boolean;
+}
+
+const RECONNECT_BASE_MS = 1_000;
+const RECONNECT_MAX_MS = 30_000;
+const CONNECT_TIMEOUT_MS = 15_000;
+
+export class DataChannelTransport implements Transport {
+  readonly kind = 'data-channel' as const;
+  readonly #options: DataChannelTransportOptions;
+
+  #state: DataChannelTransportState = 'idle';
+  #closed = false;
+  #reconnectAttempt = 0;
+  #connectPromise: Promise<void> | null = null;
+
+  #ws: WebSocket | null = null;
+  #pc: RTCPeerConnection | null = null;
+  #channel: RTCDataChannel | null = null;
+  #sessionId: string | null = null;
+  #nextRequestId = 1;
+  readonly #inflight = new Map<number, Inflight>();
+
+  constructor(options: DataChannelTransportOptions) {
+    this.#options = options;
+  }
+
+  get state(): DataChannelTransportState {
+    return this.#state;
+  }
+
+  close(): void {
+    this.#closed = true;
+    this.#teardown('transport-closed', 'Transport closed by caller');
+    this.#setState('closed');
+  }
+
+  async fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+    if (this.#closed) {
+      throw new TransportError('closed', 'Transport is closed');
+    }
+    await this.#ensureConnected();
+    if (!this.#channel || this.#channel.readyState !== 'open') {
+      throw new TransportError('not-ready', 'Data channel is not open');
+    }
+
+    const request = await this.#buildRequest(input, init);
+    const id = this.#nextRequestId++;
+    const frame: RequestMessage = await requestToFrames(id, request);
+
+    const assembler = new ResponseAssembler();
+    const responsePromise = new Promise<Response>((resolve, reject) => {
+      const inflight: Inflight = {
+        assembler,
+        resolve,
+        reject,
+        headSeen: false,
+      };
+      this.#inflight.set(id, inflight);
+
+      // Plumb the assembler's head/error into the outer promise.
+      void assembler.response().then(
+        (res) => {
+          inflight.headSeen = true;
+          resolve(res);
+        },
+        (err: unknown) => {
+          inflight.headSeen = true;
+          reject(err instanceof Error ? err : new Error(String(err)));
+        }
+      );
+    });
+
+    // Hook AbortSignal so the caller can cancel an in-flight request.
+    const signal = init?.signal;
+    if (signal) {
+      if (signal.aborted) {
+        this.#abort(id);
+        throw new DOMException('Aborted', 'AbortError');
+      }
+      signal.addEventListener(
+        'abort',
+        () => {
+          this.#abort(id);
+        },
+        { once: true }
+      );
+    }
+
+    this.#channel.send(encodeRpc(frame));
+    return responsePromise;
+  }
+
+  // ─── Connection lifecycle ──────────────────────────────────────────────
+
+  #ensureConnected(): Promise<void> {
+    if (this.#state === 'connected') {
+      return Promise.resolve();
+    }
+    if (!this.#connectPromise) {
+      this.#connectPromise = this.#connect();
+    }
+    return this.#connectPromise;
+  }
+
+  async #connect(): Promise<void> {
+    this.#setState(this.#reconnectAttempt === 0 ? 'connecting' : 'reconnecting');
+    try {
+      const { ticket, iceServers } = await this.#fetchTicket();
+      const wsUrl = this.#buildWsUrl(ticket);
+      await this.#openSession(wsUrl, iceServers);
+      this.#reconnectAttempt = 0;
+      this.#setState('connected');
+    } catch (err) {
+      this.#connectPromise = null;
+      this.#scheduleReconnect();
+      throw err instanceof Error ? err : new Error(String(err));
+    }
+  }
+
+  async #fetchTicket(): Promise<{ ticket: string; iceServers: ReadonlyArray<IceServer> }> {
+    const res = await window.fetch(`${this.#options.coordinatorOrigin}/v1/tickets`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ hubName: this.#options.hubName }),
+    });
+    if (!res.ok) {
+      throw new TransportError('ticket-failed', `Ticket fetch failed: ${res.status}`);
+    }
+    const body = (await res.json()) as {
+      ticket: string;
+      iceServers: ReadonlyArray<IceServer>;
+    };
+    return body;
+  }
+
+  #buildWsUrl(ticket: string): string {
+    const u = new URL('/v1/client', this.#options.coordinatorOrigin);
+    u.protocol = u.protocol === 'https:' ? 'wss:' : 'ws:';
+    u.searchParams.set('hub', this.#options.hubName);
+    u.searchParams.set('ticket', ticket);
+    return u.toString();
+  }
+
+  #openSession(wsUrl: string, iceServers: ReadonlyArray<IceServer>): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        reject(new TransportError('connect-timeout', 'Connection timed out'));
+        this.#teardown('connect-timeout', 'Connection timed out');
+      }, CONNECT_TIMEOUT_MS);
+
+      const ws = new WebSocket(wsUrl, [`brika.v${PROTOCOL_VERSION}`]);
+      this.#ws = ws;
+
+      ws.addEventListener('open', () => {
+        this.#bootstrapPeer(iceServers, resolve, reject, () => clearTimeout(timer));
+      });
+      ws.addEventListener('message', (ev) => {
+        if (typeof ev.data === 'string') {
+          this.#onSignalingMessage(ev.data);
+        }
+      });
+      ws.addEventListener('close', () => {
+        clearTimeout(timer);
+        this.#onUnexpectedClose('ws-closed', 'Signaling socket closed');
+      });
+      ws.addEventListener('error', () => {
+        clearTimeout(timer);
+        reject(new TransportError('ws-error', 'Signaling socket error'));
+      });
+    });
+  }
+
+  #bootstrapPeer(
+    iceServers: ReadonlyArray<IceServer>,
+    resolve: () => void,
+    reject: (err: Error) => void,
+    clearTimer: () => void
+  ): void {
+    const pc = new RTCPeerConnection({
+      iceServers: iceServers.map((s) => ({
+        urls: s.urls as string | string[],
+        ...(s.username && { username: s.username }),
+        ...(s.credential && { credential: s.credential }),
+      })),
+    });
+    this.#pc = pc;
+
+    const channel = pc.createDataChannel('brika.rpc', { ordered: true });
+    this.#channel = channel;
+
+    channel.addEventListener('open', () => {
+      clearTimer();
+      resolve();
+    });
+    channel.addEventListener('message', (ev) => {
+      if (typeof ev.data === 'string') {
+        this.#onRpcMessage(ev.data);
+      }
+    });
+    channel.addEventListener('close', () => {
+      this.#onUnexpectedClose('channel-closed', 'Data channel closed');
+    });
+
+    pc.addEventListener('icecandidate', (ev) => {
+      if (!ev.candidate || !this.#ws || !this.#sessionId) {
+        return;
+      }
+      const msg: SignalingMessage = {
+        v: PROTOCOL_VERSION,
+        kind: 'client.ice',
+        sessionId: this.#sessionId,
+        candidate: {
+          candidate: ev.candidate.candidate,
+          sdpMid: ev.candidate.sdpMid,
+          sdpMLineIndex: ev.candidate.sdpMLineIndex,
+          usernameFragment: ev.candidate.usernameFragment,
+        },
+      };
+      try {
+        this.#ws.send(encodeSignaling(msg));
+      } catch {
+        /* socket may be closing — handled by close handler */
+      }
+    });
+
+    pc.addEventListener('connectionstatechange', () => {
+      if (pc.connectionState === 'failed') {
+        reject(new TransportError('peer-failed', 'Peer connection failed'));
+        this.#onUnexpectedClose('peer-failed', 'Peer connection failed');
+      }
+    });
+
+    // Create the offer and send it through signaling. The session id is
+    // assigned by the coordinator on its first response; we keep it null
+    // until then and only emit ICE candidates once it's known.
+    void pc
+      .createOffer()
+      .then((offer) => pc.setLocalDescription(offer))
+      .then(() => {
+        const local = pc.localDescription;
+        if (!local || !this.#ws) {
+          return;
+        }
+        const msg: SignalingMessage = {
+          v: PROTOCOL_VERSION,
+          kind: 'client.offer',
+          hubName: this.#options.hubName,
+          sdp: local.sdp,
+          ticket: '', // ticket already consumed in WS query string
+        };
+        this.#ws.send(encodeSignaling(msg));
+      })
+      .catch((err) => {
+        reject(err instanceof Error ? err : new Error(String(err)));
+      });
+  }
+
+  #onSignalingMessage(raw: string): void {
+    let msg: SignalingMessage;
+    try {
+      const parsed = JSON.parse(raw) as SignalingMessage;
+      if (parsed.v !== PROTOCOL_VERSION) {
+        return;
+      }
+      msg = parsed;
+    } catch {
+      return;
+    }
+    switch (msg.kind) {
+      case 'session.answer':
+        this.#sessionId = msg.sessionId;
+        void this.#pc?.setRemoteDescription({ type: 'answer', sdp: msg.sdp });
+        return;
+      case 'session.ice':
+        if (msg.from === 'hub') {
+          void this.#pc?.addIceCandidate({
+            candidate: msg.candidate.candidate,
+            sdpMid: msg.candidate.sdpMid ?? undefined,
+            sdpMLineIndex: msg.candidate.sdpMLineIndex ?? undefined,
+          });
+        }
+        return;
+      case 'session.error':
+        this.#onUnexpectedClose(msg.code, msg.message);
+        return;
+      default:
+        return;
+    }
+  }
+
+  #onRpcMessage(raw: string): void {
+    const msg = decodeRpc(raw);
+    if (!msg) {
+      return;
+    }
+    switch (msg.kind) {
+      case 'hello':
+        // Capability exchange — currently a no-op.
+        return;
+      case 'response.head': {
+        const inflight = this.#inflight.get(msg.id);
+        inflight?.assembler.onHead(msg);
+        return;
+      }
+      case 'response.chunk': {
+        const inflight = this.#inflight.get(msg.id);
+        inflight?.assembler.onChunk(msg);
+        return;
+      }
+      case 'response.end': {
+        const inflight = this.#inflight.get(msg.id);
+        inflight?.assembler.onEnd(msg);
+        this.#inflight.delete(msg.id);
+        return;
+      }
+      case 'response.error': {
+        const inflight = this.#inflight.get(msg.id);
+        inflight?.assembler.onError(msg);
+        this.#inflight.delete(msg.id);
+        return;
+      }
+      default:
+        return;
+    }
+  }
+
+  #abort(id: number): void {
+    const inflight = this.#inflight.get(id);
+    if (!inflight) {
+      return;
+    }
+    if (this.#channel?.readyState === 'open') {
+      const abortFrame: AbortMessage = { v: PROTOCOL_VERSION, kind: 'abort', id };
+      try {
+        this.#channel.send(encodeRpc(abortFrame));
+      } catch {
+        /* ignore */
+      }
+    }
+    inflight.assembler.onError({
+      v: PROTOCOL_VERSION,
+      kind: 'response.error',
+      id,
+      code: 'aborted',
+      message: 'Aborted by client',
+    });
+    this.#inflight.delete(id);
+  }
+
+  // ─── URL / request helpers ─────────────────────────────────────────────
+
+  #buildRequest(input: RequestInfo | URL, init?: RequestInit): Promise<Request> {
+    // Resolve relative URLs against the hub origin so the request constructor
+    // accepts them and downstream middleware sees the canonical Host.
+    if (typeof input === 'string') {
+      return Promise.resolve(new Request(new URL(input, this.#options.hubOrigin), init));
+    }
+    if (input instanceof URL) {
+      return Promise.resolve(new Request(input, init));
+    }
+    return Promise.resolve(new Request(input, init));
+  }
+
+  // ─── Failure / teardown / reconnect ────────────────────────────────────
+
+  #onUnexpectedClose(code: string, message: string): void {
+    this.#teardown(code, message);
+    if (!this.#closed) {
+      this.#scheduleReconnect();
+    }
+  }
+
+  #teardown(code: string, message: string): void {
+    for (const inflight of this.#inflight.values()) {
+      inflight.assembler.onError({
+        v: PROTOCOL_VERSION,
+        kind: 'response.error',
+        id: -1,
+        code,
+        message,
+      });
+    }
+    this.#inflight.clear();
+    this.#channel?.close();
+    this.#channel = null;
+    this.#pc?.close();
+    this.#pc = null;
+    this.#ws?.close();
+    this.#ws = null;
+    this.#sessionId = null;
+    this.#connectPromise = null;
+  }
+
+  #scheduleReconnect(): void {
+    if (this.#closed) {
+      return;
+    }
+    this.#reconnectAttempt += 1;
+    const delay = Math.min(
+      RECONNECT_MAX_MS,
+      RECONNECT_BASE_MS * 2 ** (this.#reconnectAttempt - 1)
+    );
+    setTimeout(() => {
+      if (this.#closed) {
+        return;
+      }
+      this.#connectPromise = this.#connect();
+    }, delay);
+  }
+
+  #setState(state: DataChannelTransportState): void {
+    if (state === this.#state) {
+      return;
+    }
+    this.#state = state;
+    this.#options.onStateChange?.(state);
+  }
+}
