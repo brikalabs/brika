@@ -33,7 +33,7 @@ import {
   type SignalingMessage,
 } from '@brika/remote-access-protocol';
 import { hub } from '@/hub';
-import { derivePublicOrigin, HubConfig } from '@/runtime/config';
+import { derivePublicOrigin, deriveSignalingUrl, HubConfig } from '@/runtime/config';
 import { ApiServer } from '@/runtime/http/api-server';
 import { Logger } from '@/runtime/logs/log-router';
 import { SecretStore } from '@/runtime/secrets/secret-store';
@@ -45,6 +45,12 @@ import { SignalingClient, type SignalingState } from './signaling-client';
 export const SIGNALING_TOKEN_SECRET_KEY = 'remote_access.signaling_token';
 /** Secret key used to persist the claimed hub name. */
 export const SIGNALING_NAME_SECRET_KEY = 'remote_access.hub_name';
+/**
+ * Secret-store key for the coordinator HTTP origin. Persisted here (rather
+ * than in HubConfig) so the operator can change it from the UI without
+ * editing env vars or restarting the hub.
+ */
+export const COORDINATOR_ORIGIN_SECRET_KEY = 'remote_access.coordinator_origin';
 
 const DEFAULT_ICE_SERVERS: ReadonlyArray<IceServer> = [
   { urls: 'stun:stun.l.google.com:19302' },
@@ -90,20 +96,70 @@ export class RemoteAccessService {
   #client: SignalingClient | null = null;
   #state: SignalingState = 'idle';
 
-  status(): Promise<RemoteAccessStatus> {
-    return this.#secrets.getHubSecret(SIGNALING_NAME_SECRET_KEY).then(async (storedName) => {
-      const token = await this.#secrets.getHubSecret(SIGNALING_TOKEN_SECRET_KEY);
-      const name = storedName ?? '';
-      const claimed = Boolean(name && token);
+  /**
+   * Resolve the active coordinator URL with precedence:
+   *   1. SecretStore (set from the UI).
+   *   2. `BRIKA_COORDINATOR_URL` env var (config default).
+   *
+   * Both are validated as URLs at write time, so we trust the stored value.
+   */
+  async coordinatorOrigin(): Promise<string> {
+    const stored = await this.#secrets.getHubSecret(COORDINATOR_ORIGIN_SECRET_KEY);
+    return stored?.trim() || this.#config.remoteAccess.coordinatorOrigin;
+  }
+
+  /**
+   * Persist a new coordinator URL. Caller is responsible for validating the
+   * URL parses; we re-validate here as a safety net.
+   */
+  async setCoordinatorOrigin(origin: string): Promise<{ coordinatorOrigin: string }> {
+    let normalized: string;
+    try {
+      normalized = new URL(origin).origin;
+    } catch {
+      throw new RemoteAccessClaimError(400, 'invalid-url', `"${origin}" is not a valid URL`);
+    }
+    await this.#secrets.setHubSecret(COORDINATOR_ORIGIN_SECRET_KEY, normalized);
+    // Bounce so any active signaling client picks up the new URL.
+    this.stop();
+    await this.start();
+    return { coordinatorOrigin: normalized };
+  }
+
+  /**
+   * Probe the configured coordinator's `/v1/health` endpoint. Useful as a
+   * "Test connection" affordance in the UI before the user commits to a
+   * name claim.
+   */
+  async testCoordinator(): Promise<{ ok: boolean; status: number; coordinatorOrigin: string; error?: string }> {
+    const coordinatorOrigin = await this.coordinatorOrigin();
+    try {
+      const res = await fetch(new URL('/v1/health', coordinatorOrigin).toString(), {
+        signal: AbortSignal.timeout(5_000),
+      });
+      return { ok: res.ok, status: res.status, coordinatorOrigin };
+    } catch (err) {
       return {
-        claimed,
-        name,
-        publicOrigin: derivePublicOrigin(name),
-        state: this.#state,
-        activeSessions: this.#sessions.size,
-        coordinatorOrigin: this.#config.remoteAccess.coordinatorOrigin,
+        ok: false,
+        status: 0,
+        coordinatorOrigin,
+        error: err instanceof Error ? err.message : String(err),
       };
-    });
+    }
+  }
+
+  async status(): Promise<RemoteAccessStatus> {
+    const storedName = await this.#secrets.getHubSecret(SIGNALING_NAME_SECRET_KEY);
+    const token = await this.#secrets.getHubSecret(SIGNALING_TOKEN_SECRET_KEY);
+    const name = storedName ?? '';
+    return {
+      claimed: Boolean(name && token),
+      name,
+      publicOrigin: derivePublicOrigin(name),
+      state: this.#state,
+      activeSessions: this.#sessions.size,
+      coordinatorOrigin: await this.coordinatorOrigin(),
+    };
   }
 
   async start(): Promise<void> {
@@ -126,7 +182,8 @@ export class RemoteAccessService {
       return;
     }
     this.#activeName = name;
-    this.#startClient(name, token);
+    const origin = await this.coordinatorOrigin();
+    this.#startClient(name, token, deriveSignalingUrl(origin));
   }
 
   stop(): void {
@@ -214,7 +271,8 @@ export class RemoteAccessService {
     body?: unknown,
     bearer?: string
   ): Promise<T> {
-    const url = new URL(path, this.#config.remoteAccess.coordinatorOrigin);
+    const origin = await this.coordinatorOrigin();
+    const url = new URL(path, origin);
     const headers: Record<string, string> = {};
     if (body !== undefined) {
       headers['Content-Type'] = 'application/json';
@@ -253,9 +311,9 @@ export class RemoteAccessService {
     return (await res.json()) as T;
   }
 
-  #startClient(name: string, token: string): void {
+  #startClient(name: string, token: string, signalingUrl: string): void {
     this.#client = new SignalingClient({
-      url: this.#config.remoteAccess.signalingUrl,
+      url: signalingUrl,
       token,
       hubName: name,
       hubVersion: hub.version,
@@ -268,7 +326,7 @@ export class RemoteAccessService {
     this.#client.start();
     this.#log.info('remote access starting', {
       name,
-      signalingUrl: this.#config.remoteAccess.signalingUrl,
+      signalingUrl,
     });
   }
 

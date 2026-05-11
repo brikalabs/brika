@@ -21,20 +21,33 @@
       "title": "Connexion",
       "description": "État du tunnel pair à pair et sessions navigateur actives."
     },
-    "disabledHelp": "L'accès distant est désactivé. Définissez BRIKA_REMOTE_ACCESS=1 sur le hub, redémarrez-le, puis choisissez un nom ici.",
     "status": {
-      "disabled": "Désactivé",
       "idle": "Inactif",
       "connecting": "Connexion…",
       "reconnecting": "Reconnexion…",
       "connected": "Connecté",
       "closed": "Fermé"
     },
+    "stateDescription": {
+      "idle": "En attente d'une revendication de nom avant de contacter le coordinateur.",
+      "connecting": "Ouverture de la connexion de signalisation…",
+      "reconnecting": "Connexion au coordinateur perdue — nouvelle tentative.",
+      "connected": "En ligne et prêt à accepter des sessions navigateur.",
+      "closed": "Déconnecté. Cliquez sur « Oublier » ou redémarrez le hub pour vous reconnecter."
+    },
     "fields": {
       "name": "Nom du hub",
       "status": "Signalisation",
       "publicOrigin": "Adresse publique",
-      "activeSessions": "Sessions actives"
+      "activeSessions": "Sessions actives",
+      "coordinator": "URL du coordinateur"
+    },
+    "coordinator": {
+      "test": "Tester la connexion",
+      "edit": "Modifier",
+      "testing": "Test en cours…",
+      "testOk": "Coordinateur joignable.",
+      "testFailed": "Le coordinateur a renvoyé le statut {{status}}."
     },
     "claim": {
       "help": "Choisissez un nom unique. Premier arrivé, premier servi — une fois revendiqué, personne d'autre ne peut l'utiliser.",
@@ -43,7 +56,7 @@
     },
     "forget": {
       "title": "Déconnecter",
-      "description": "Supprime le nom et le jeton stockés et arrête le client de signalisation. Le nom pourra être revendiqué à nouveau plus tard.",
+      "description": "Libère le nom sur le coordinateur et supprime le jeton local. Le nom pourra être revendiqué à nouveau plus tard.",
       "action": "Oublier ce hub"
     }
   },

@@ -1,5 +1,6 @@
 export { PeerSession } from './peer-session';
 export {
+  COORDINATOR_ORIGIN_SECRET_KEY,
   RemoteAccessClaimError,
   RemoteAccessService,
   type RemoteAccessStatus,

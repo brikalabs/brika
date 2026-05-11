@@ -21,20 +21,33 @@
       "title": "Connection",
       "description": "Status of the peer-to-peer tunnel and active browser sessions."
     },
-    "disabledHelp": "Remote access is disabled. Set BRIKA_REMOTE_ACCESS=1 on the hub, restart it, then pick a name here.",
     "status": {
-      "disabled": "Disabled",
       "idle": "Idle",
       "connecting": "Connecting…",
       "reconnecting": "Reconnecting…",
       "connected": "Connected",
       "closed": "Closed"
     },
+    "stateDescription": {
+      "idle": "Waiting for a name claim before connecting to the coordinator.",
+      "connecting": "Opening the signaling connection…",
+      "reconnecting": "Lost connection to the coordinator — retrying with backoff.",
+      "connected": "Online and accepting browser sessions.",
+      "closed": "Disconnected. Click \"Forget\" or restart the hub to reconnect."
+    },
     "fields": {
       "name": "Hub name",
       "status": "Signaling",
       "publicOrigin": "Public address",
-      "activeSessions": "Active sessions"
+      "activeSessions": "Active sessions",
+      "coordinator": "Coordinator URL"
+    },
+    "coordinator": {
+      "test": "Test connection",
+      "edit": "Change",
+      "testing": "Testing…",
+      "testOk": "Coordinator reachable.",
+      "testFailed": "Coordinator returned status {{status}}."
     },
     "claim": {
       "help": "Pick a unique name. First-come, first-served — once claimed, no one else can use it on this coordinator.",
@@ -43,7 +56,7 @@
     },
     "forget": {
       "title": "Disconnect",
-      "description": "Removes the stored name + bearer token and stops the signaling client. You can claim the same name again later.",
+      "description": "Releases the name on the coordinator and removes the local bearer token. You can claim the same name again later.",
       "action": "Forget this hub"
     }
   },
