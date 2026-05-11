@@ -28,12 +28,14 @@ import {
   PROTOCOL_VERSION,
   type RequestMessage,
   ResponseAssembler,
+  type ResponseHeadMessage,
   type SignalingMessage,
   decodeRpc,
   encodeRpc,
   encodeSignaling,
   requestToFrames,
 } from '@brika/remote-access-protocol';
+import { CookieJar } from './cookie-jar';
 import type { Transport } from './transport';
 
 export interface DataChannelTransportOptions {
@@ -90,6 +92,7 @@ export class DataChannelTransport implements Transport {
   #sessionId: string | null = null;
   #nextRequestId = 1;
   readonly #inflight = new Map<number, Inflight>();
+  readonly #cookies = new CookieJar();
 
   constructor(options: DataChannelTransportOptions) {
     this.#options = options;
@@ -114,7 +117,7 @@ export class DataChannelTransport implements Transport {
       throw new TransportError('not-ready', 'Data channel is not open');
     }
 
-    const request = await this.#buildRequest(input, init);
+    const request = this.#attachCookies(await this.#buildRequest(input, init));
     const id = this.#nextRequestId++;
     const frame: RequestMessage = await requestToFrames(id, request);
 
@@ -369,6 +372,7 @@ export class DataChannelTransport implements Transport {
         // Capability exchange — currently a no-op.
         return;
       case 'response.head': {
+        this.#extractSetCookies(msg);
         const inflight = this.#inflight.get(msg.id);
         inflight?.assembler.onHead(msg);
         return;
@@ -430,6 +434,38 @@ export class DataChannelTransport implements Transport {
       return Promise.resolve(new Request(input, init));
     }
     return Promise.resolve(new Request(input, init));
+  }
+
+  /**
+   * Attach matching cookies as the `Cookie` request header. The browser would
+   * normally do this from its real jar, but our `Request` was constructed in
+   * JS against the hub origin — no automatic cookies. We rebuild the Request
+   * with the cookie header inlined so {@link requestToFrames} sees it.
+   */
+  #attachCookies(req: Request): Request {
+    const path = new URL(req.url).pathname;
+    const header = this.#cookies.cookieHeader(path);
+    if (!header) {
+      return req;
+    }
+    const headers = new Headers(req.headers);
+    // Append rather than set so an explicit caller-provided Cookie survives.
+    const existing = headers.get('Cookie');
+    headers.set('Cookie', existing ? `${existing}; ${header}` : header);
+    return new Request(req, { headers });
+  }
+
+  /**
+   * Pull `Set-Cookie` values out of a response head and feed them into the
+   * jar. The wire shape preserves repeated header names as separate pairs,
+   * so multiple cookies in one response are handled correctly.
+   */
+  #extractSetCookies(head: ResponseHeadMessage): void {
+    for (const [name, value] of head.headers) {
+      if (name.toLowerCase() === 'set-cookie') {
+        this.#cookies.store(value);
+      }
+    }
   }
 
   // ─── Failure / teardown / reconnect ────────────────────────────────────

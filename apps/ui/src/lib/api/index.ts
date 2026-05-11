@@ -31,7 +31,7 @@ export {
 export type { Transport } from './transport';
 
 const REMOTE_SUFFIX = '.hubs.brika.dev';
-const DEFAULT_COORDINATOR_ORIGIN = 'https://api.brika.dev';
+const DEFAULT_COORDINATOR_ORIGIN = 'https://brika-signaling.maxscharwath.workers.dev';
 
 let cachedTransport: Transport | null = null;
 

@@ -2,7 +2,13 @@ import { inject, singleton } from '@brika/di';
 import { dataDir } from '@/cli/utils/runtime';
 import { ConfigLoader } from './config-loader';
 
-const DEFAULT_COORDINATOR_ORIGIN = 'https://api.brika.dev';
+/**
+ * Default coordinator URL. Points at the live Cloudflare Worker deploy until
+ * a custom domain (e.g. api.brika.dev) is wired up. Operators can override
+ * via the Settings UI (persisted in the OS keychain) or the
+ * `BRIKA_COORDINATOR_URL` env var.
+ */
+const DEFAULT_COORDINATOR_ORIGIN = 'https://brika-signaling.maxscharwath.workers.dev';
 /**
  * DNS namespace for claimed hub names. The product domain `brika.dev` already
  * hosts `clay.`, `doc.`, etc., so hub names live under a dedicated subdomain
