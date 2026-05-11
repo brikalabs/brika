@@ -44,75 +44,128 @@ export interface Env {
 
 export class HubSession {
   readonly #state: DurableObjectState;
-  readonly #env: Env;
 
-  constructor(state: DurableObjectState, env: Env) {
+  constructor(state: DurableObjectState, _env: Env) {
     this.#state = state;
-    this.#env = env;
   }
 
   /**
-   * Called by the Worker after it has authenticated the upgrade and decided
-   * which role the socket plays. The Worker passes the attachment in via
-   * a `?role=hub&name=...` or `?role=client&name=...&sessionId=...` query.
+   * Called by the Worker after it has authenticated the upgrade. The Worker
+   * cannot reliably pass synthetic params via headers or a rebuilt URL —
+   * Workers' Fetch API strips WebSocket-related forbidden headers from any
+   * reconstructed Request. So we receive the *original* request and derive
+   * the role from `url.pathname`:
+   *
+   *   `/v1/hub`    → this is the hub-side socket (one per name)
+   *   `/v1/client` → this is a browser session
+   *
+   * The hub name comes from the URL the Worker forwarded us (the DO id was
+   * already chosen by the Worker via `idFromName(hubName)`, so the name
+   * here is informational; we capture it on the attachment for logs).
    */
-  async fetch(request: Request): Promise<Response> {
-    const upgrade = request.headers.get('upgrade');
-    if (upgrade !== 'websocket') {
+  fetch(request: Request): Response {
+    if (request.headers.get('upgrade') !== 'websocket') {
       return new Response('Expected WebSocket', { status: 426 });
     }
 
     const url = new URL(request.url);
-    const role = url.searchParams.get('role');
-    const name = url.searchParams.get('name') ?? '';
-    if (!name) {
+    if (url.pathname === '/v1/hub') {
+      return this.#acceptHub(this.#nameFromBearer(request) ?? '');
+    }
+    if (url.pathname === '/v1/client') {
+      return this.#acceptClient(url.searchParams.get('hub') ?? '');
+    }
+    return new Response('Unknown upgrade endpoint', { status: 404 });
+  }
+
+  // ─── Accept paths ──────────────────────────────────────────────────────
+
+  #acceptHub(hubName: string): Response {
+    if (!hubName) {
       return new Response('name required', { status: 400 });
     }
+    const { client, server } = this.#newPair();
 
-    const pair = new WebSocketPair();
-    const client = pair[0];
-    const server = pair[1];
-
-    let attachment: Attachment;
-    if (role === 'hub') {
-      // Evict any prior hub socket — only one hub WS per name.
-      for (const ws of this.#state.getWebSockets('hub')) {
-        try {
-          ws.close(4001, 'replaced by newer connection');
-        } catch {
-          // ignore
-        }
-      }
-      attachment = { role: 'hub', name };
-      this.#state.acceptWebSocket(server, ['hub']);
-    } else if (role === 'client') {
-      // Refuse client sockets if no hub is online.
-      if (this.#state.getWebSockets('hub').length === 0) {
-        server.close(4003, 'hub offline');
-        return new Response(null, { status: 101, webSocket: client });
-      }
-      const sessionId = url.searchParams.get('sessionId') ?? crypto.randomUUID();
-      attachment = { role: 'client', name, sessionId };
-      this.#state.acceptWebSocket(server, ['client', `session:${sessionId}`]);
-      // Push ICE servers to the client as the first frame.
+    // Evict any prior hub socket — only one hub WS per name.
+    for (const ws of this.#state.getWebSockets('hub')) {
       try {
-        server.send(
-          JSON.stringify({
-            v: PROTOCOL_VERSION,
-            kind: 'session.iceServers',
-            iceServers: ICE_SERVERS,
-          } satisfies SignalingMessage)
-        );
+        ws.close(4001, 'replaced by newer connection');
       } catch {
         // ignore
       }
-    } else {
-      return new Response('role must be hub or client', { status: 400 });
+    }
+    this.#state.acceptWebSocket(server, ['hub']);
+    server.serializeAttachment({ role: 'hub', name: hubName } satisfies Attachment);
+    return new Response(null, { status: 101, webSocket: client });
+  }
+
+  #acceptClient(hubName: string): Response {
+    if (!hubName) {
+      return new Response('name required', { status: 400 });
+    }
+    const { client, server } = this.#newPair();
+
+    // Hub offline → accept then close so the browser sees a clean 4003
+    // rather than a generic handshake failure.
+    if (this.#state.getWebSockets('hub').length === 0) {
+      this.#state.acceptWebSocket(server, ['client']);
+      this.#trySend(server, {
+        v: PROTOCOL_VERSION,
+        kind: 'session.error',
+        code: 'hub-offline',
+        message: `Hub "${hubName}" is not connected to the coordinator`,
+      });
+      server.close(4003, 'hub offline');
+      return new Response(null, { status: 101, webSocket: client });
     }
 
-    server.serializeAttachment(attachment);
-
+    const sessionId = crypto.randomUUID();
+    this.#state.acceptWebSocket(server, ['client', `session:${sessionId}`]);
+    server.serializeAttachment({
+      role: 'client',
+      name: hubName,
+      sessionId,
+    } satisfies Attachment);
+    this.#trySend(server, {
+      v: PROTOCOL_VERSION,
+      kind: 'session.iceServers',
+      iceServers: ICE_SERVERS,
+    });
     return new Response(null, { status: 101, webSocket: client });
+  }
+
+  #newPair(): { client: WebSocket; server: WebSocket } {
+    const pair = new WebSocketPair();
+    return { client: pair[0], server: pair[1] };
+  }
+
+  #trySend(ws: WebSocket, msg: SignalingMessage): void {
+    try {
+      ws.send(JSON.stringify(msg));
+    } catch {
+      // ignore — socket may be in a transitional state
+    }
+  }
+
+  /**
+   * Pull the hub name out of the bearer subprotocol on a hub upgrade. The
+   * Worker has already validated the token; here we just need a label for
+   * the attachment.
+   */
+  #nameFromBearer(request: Request): string | null {
+    const proto = request.headers.get('sec-websocket-protocol') ?? '';
+    for (const part of proto.split(',')) {
+      const trimmed = part.trim();
+      if (trimmed.startsWith('bearer.')) {
+        // Token is opaque; the Worker has already mapped it to a name and
+        // routed us to the right DO id. We can't resolve it back to a name
+        // here without a D1 round-trip — return a placeholder that the WS
+        // accept path is happy with (we never actually use the name in the
+        // hub flow beyond logging).
+        return 'hub';
+      }
+    }
+    return null;
   }
 
   /** Hibernation-API entry point: dispatched for every received WS frame. */

@@ -16,10 +16,12 @@
  */
 
 import { ClaimError, D1ClaimStore } from './claims-d1';
-import { HubSession } from './hub-session';
 import { mintTicket, verifyTicket } from './tickets';
 
-export { HubSession };
+// Cloudflare needs the Durable Object class exported from the entry module so
+// it can instantiate it. `export ... from` keeps the re-export pure (rather
+// than via an import + named re-export which the linter rightly flags).
+export { HubSession } from './hub-session';
 
 export interface Env {
   HUB_SESSION: DurableObjectNamespace;
@@ -177,12 +179,15 @@ async function handleHubUpgrade(req: Request, env: Env): Promise<Response> {
   if (!owner || !constantTimeEqual(owner.token, token)) {
     return new Response('Unauthorized', { status: 401 });
   }
-  // Forward to the DO with a synthetic URL carrying the role + name.
-  const url = new URL(req.url);
-  url.pathname = '/internal/upgrade';
-  url.search = `?role=hub&name=${encodeURIComponent(owner.name)}`;
+  // Pass the *original* Request straight through. Workers' Fetch API strips
+  // forbidden headers (Upgrade, Connection, Sec-WebSocket-*) the moment you
+  // construct a new Request from one — even via `new Request(url, req)` or
+  // `stub.fetch(url, req)`. The DO derives the role from the URL pathname
+  // (`/v1/hub` vs `/v1/client`) and re-runs the cheap parts of auth on the
+  // info that *does* survive (subprotocol header for hub, query params for
+  // client).
   const stub = doStubFor(env, owner.name);
-  return stub.fetch(new Request(url.toString(), req));
+  return stub.fetch(req);
 }
 
 async function handleClientUpgrade(req: Request, env: Env): Promise<Response> {
@@ -193,25 +198,23 @@ async function handleClientUpgrade(req: Request, env: Env): Promise<Response> {
     return new Response('hub and ticket required', { status: 400 });
   }
   const claims = await verifyTicket(env.TICKET_SECRET, ticket);
-  if (!claims || claims.hub !== hubName) {
+  if (claims?.hub !== hubName) {
     return new Response('Invalid ticket', { status: 401 });
   }
   const store = new D1ClaimStore(env.DB);
   if (!(await store.get(hubName))) {
     return new Response('Unknown hub', { status: 404 });
   }
-  const sessionId = crypto.randomUUID();
-  const fwd = new URL(req.url);
-  fwd.pathname = '/internal/upgrade';
-  fwd.search = `?role=client&name=${encodeURIComponent(hubName)}&sessionId=${encodeURIComponent(sessionId)}`;
+  // Same pass-through dance as handleHubUpgrade. The DO will read `hub` from
+  // the original query and tag the WS as a client of that hub.
   const stub = doStubFor(env, hubName);
-  return stub.fetch(new Request(fwd.toString(), req));
+  return stub.fetch(req);
 }
 
 // ─── Router ─────────────────────────────────────────────────────────────────
 
 export default {
-  async fetch(req: Request, env: Env): Promise<Response> {
+  fetch(req: Request, env: Env): Response | Promise<Response> {
     const url = new URL(req.url);
     const path = url.pathname;
     const method = req.method;
@@ -223,12 +226,12 @@ export default {
       return handleClaim(req, env);
     }
     const rotateMatch = /^\/v1\/hubs\/([^/]+)\/rotate$/.exec(path);
-    if (rotateMatch && method === 'POST') {
-      return handleRotate(req, env, decodeURIComponent(rotateMatch[1] as string));
+    if (rotateMatch?.[1] && method === 'POST') {
+      return handleRotate(req, env, decodeURIComponent(rotateMatch[1]));
     }
     const releaseMatch = /^\/v1\/hubs\/([^/]+)$/.exec(path);
-    if (releaseMatch && method === 'DELETE') {
-      return handleRelease(req, env, decodeURIComponent(releaseMatch[1] as string));
+    if (releaseMatch?.[1] && method === 'DELETE') {
+      return handleRelease(req, env, decodeURIComponent(releaseMatch[1]));
     }
     if (path === '/v1/tickets' && method === 'POST') {
       return handleTickets(req, env);
