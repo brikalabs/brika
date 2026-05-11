@@ -92,13 +92,16 @@ export function getTransport(): Transport {
     return cachedTransport;
   }
   const remote = detectRemote();
-  cachedTransport = remote
-    ? new DataChannelTransport({
-        hubName: remote.hubName,
-        hubOrigin: remote.hubOrigin,
-        coordinatorOrigin: remote.coordinatorOrigin,
-      })
-    : new FetchTransport();
+  if (remote) {
+    cachedTransport = new DataChannelTransport({
+      hubName: remote.hubName,
+      hubOrigin: remote.hubOrigin,
+      coordinatorOrigin: remote.coordinatorOrigin,
+    });
+    installFetchInterceptor(cachedTransport, remote.coordinatorOrigin);
+  } else {
+    cachedTransport = new FetchTransport();
+  }
   return cachedTransport;
 }
 
@@ -108,4 +111,77 @@ export function getTransport(): Transport {
  */
 export function apiFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
   return getTransport().fetch(input, init);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Global fetch interceptor (remote mode only)
+//
+// Many code paths reach for `fetch()` directly: the i18n bulk loader, third-
+// party libs, ad-hoc REST calls inside features, etc. Migrating each one to
+// `apiFetch` would be a long whack-a-mole. Instead, when remote mode is
+// active we wrap `globalThis.fetch` once at boot:
+//
+//   - Requests whose URL is `/api/*` (relative or absolute against the
+//     current origin) are routed through the WebRTC transport.
+//   - Everything else — including the data-channel transport's own internal
+//     calls to the coordinator — flows through the original `fetch`.
+//
+// The interceptor is installed exactly once and is idempotent on hot-reloads.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const INTERCEPTOR_INSTALLED = Symbol.for('brika.api.fetchInterceptor');
+
+function installFetchInterceptor(transport: Transport, coordinatorOrigin: string): void {
+  const g = globalThis as unknown as Record<symbol, boolean | undefined>;
+  if (g[INTERCEPTOR_INSTALLED]) {
+    return;
+  }
+  g[INTERCEPTOR_INSTALLED] = true;
+
+  const original = globalThis.fetch.bind(globalThis);
+  let coordinatorHost = '';
+  try {
+    coordinatorHost = new URL(coordinatorOrigin).host;
+  } catch {
+    // ignore — interceptor will treat coordinator as unmatched and pass through
+  }
+
+  globalThis.fetch = (input, init) => {
+    const url = resolveUrl(input);
+    if (!url) {
+      return original(input as RequestInfo, init);
+    }
+    // Coordinator calls (signaling, tickets) MUST bypass the transport — they
+    // are how the transport itself comes online.
+    if (url.host === coordinatorHost && url.pathname.startsWith('/v1/')) {
+      return original(input as RequestInfo, init);
+    }
+    // Hub API surface — route through the transport.
+    if (url.pathname.startsWith('/api/')) {
+      return transport.fetch(input as RequestInfo, init);
+    }
+    return original(input as RequestInfo, init);
+  };
+}
+
+function resolveUrl(input: RequestInfo | URL): URL | null {
+  try {
+    if (typeof input === 'string') {
+      return new URL(input, globalThis.location.href);
+    }
+    if (input instanceof URL) {
+      return input;
+    }
+    return new URL(input.url, globalThis.location.href);
+  } catch {
+    return null;
+  }
+}
+
+// Eagerly construct the transport at module-load time when remote mode is
+// active. This installs the global fetch interceptor before any module that
+// imports `@/lib/api` indirectly (i18n, query, etc.) has a chance to issue
+// its first request.
+if (typeof globalThis.location !== 'undefined' && detectRemote()) {
+  getTransport();
 }
