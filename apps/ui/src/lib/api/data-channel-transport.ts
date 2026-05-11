@@ -77,6 +77,15 @@ const RECONNECT_BASE_MS = 1_000;
 const RECONNECT_MAX_MS = 30_000;
 const CONNECT_TIMEOUT_MS = 15_000;
 
+/**
+ * Used when the coordinator's `/v1/tickets` response omits `iceServers`.
+ * STUN-only — works for ~85% of NATs without TURN.
+ */
+const FALLBACK_ICE_SERVERS: ReadonlyArray<IceServer> = [
+  { urls: 'stun:stun.l.google.com:19302' },
+  { urls: 'stun:stun.cloudflare.com:3478' },
+];
+
 export class DataChannelTransport implements Transport {
   readonly kind = 'data-channel' as const;
   readonly #options: DataChannelTransportOptions;
@@ -202,9 +211,11 @@ export class DataChannelTransport implements Transport {
     }
     const body = (await res.json()) as {
       ticket: string;
-      iceServers: ReadonlyArray<IceServer>;
+      iceServers?: ReadonlyArray<IceServer>;
     };
-    return body;
+    // Older coordinators may not include `iceServers` — fall back to a
+    // sane default so the peer connection still gets candidates.
+    return { ticket: body.ticket, iceServers: body.iceServers ?? FALLBACK_ICE_SERVERS };
   }
 
   #buildWsUrl(ticket: string): string {

@@ -150,6 +150,12 @@ async function handleRelease(req: Request, env: Env, name: string): Promise<Resp
   return Response.json({ ok: true });
 }
 
+/** ICE servers handed to the browser at ticket time. STUN-only — no TURN yet. */
+const TICKET_ICE_SERVERS = [
+  { urls: 'stun:stun.l.google.com:19302' },
+  { urls: 'stun:stun.cloudflare.com:3478' },
+];
+
 async function handleTickets(req: Request, env: Env): Promise<Response> {
   const body = await readJson<{ hubName?: string }>(req);
   if (!body?.hubName || typeof body.hubName !== 'string') {
@@ -160,7 +166,7 @@ async function handleTickets(req: Request, env: Env): Promise<Response> {
     return jsonError(404, 'Unknown hub');
   }
   const { ticket, expiresAt } = await mintTicket(env.TICKET_SECRET, body.hubName);
-  return Response.json({ ticket, expiresAt });
+  return Response.json({ ticket, expiresAt, iceServers: TICKET_ICE_SERVERS });
 }
 
 // ─── WebSocket upgrade handlers ─────────────────────────────────────────────
