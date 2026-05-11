@@ -2,7 +2,16 @@ import { Scope } from '@brika/auth';
 import { useCanAccess } from '@brika/auth/react';
 import { cn } from '@brika/clay';
 import { Link, Navigate, Outlet, useMatchRoute, useRouterState } from '@tanstack/react-router';
-import { Clock, Info, Languages, type LucideIcon, MapPin, Palette, Server } from 'lucide-react';
+import {
+  Clock,
+  Globe,
+  Info,
+  Languages,
+  type LucideIcon,
+  MapPin,
+  Palette,
+  Server,
+} from 'lucide-react';
 import { useLocale } from '@/lib/use-locale';
 import { paths } from '@/routes/paths';
 
@@ -40,6 +49,12 @@ const NAV_GROUPS: NavGroup[] = [
         to: paths.settings.hub.path,
         labelKey: 'settings:nav.hub',
         icon: Server,
+        adminOnly: true,
+      },
+      {
+        to: paths.settings.remoteAccess.path,
+        labelKey: 'settings:nav.remoteAccess',
+        icon: Globe,
         adminOnly: true,
       },
       {

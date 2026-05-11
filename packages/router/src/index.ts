@@ -1,6 +1,11 @@
 // Route builders
 
-export { createApp, type HonoContext } from './create-app';
+export {
+  type CorsOriginMatcher,
+  createApp,
+  type CreateAppOptions,
+  type HonoContext,
+} from './create-app';
 
 // Exceptions
 export {
@@ -16,7 +21,7 @@ export {
 
 export { combineRoutes, type GroupConfig, group } from './group';
 // Middleware
-export { type RateLimitOptions, rateLimit } from './middleware/rate-limit';
+export { type RateLimitOptions, RateLimitStore, rateLimit } from './middleware/rate-limit';
 export { route } from './route';
 
 // SSE helpers

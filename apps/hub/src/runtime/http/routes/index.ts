@@ -11,6 +11,7 @@ import { pageRoutes } from './pages';
 import { pluginRoutesHandler } from './plugin-routes';
 import { pluginsRoutes } from './plugins';
 import { registryRoutes } from './registry';
+import { remoteAccessRoutes } from './remote-access';
 import { settingsRoutes } from './settings';
 import { hubSetupProtectedRoutes, hubSetupPublicRoutes } from './setup';
 import { sparksRoutes } from './sparks';
@@ -40,6 +41,7 @@ export const allRoutes = combineRoutes(
       pageRoutes,
       pluginRoutesHandler,
       pluginsRoutes,
+      remoteAccessRoutes,
       sparksRoutes,
       workflowsRoutes,
       logsRoutes,

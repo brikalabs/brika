@@ -2,6 +2,30 @@ import { inject, singleton } from '@brika/di';
 import { dataDir } from '@/cli/utils/runtime';
 import { ConfigLoader } from './config-loader';
 
+const DEFAULT_SIGNALING_URL = 'wss://api.brika.dev/v1';
+
+function parseBool(value: string | undefined): boolean {
+  if (!value) {
+    return false;
+  }
+  const v = value.trim().toLowerCase();
+  return v === '1' || v === 'true' || v === 'yes' || v === 'on';
+}
+
+export interface RemoteAccessConfig {
+  /** Whether remote-access P2P is enabled on this hub. */
+  readonly enabled: boolean;
+  /** Hub name registered on the coordinator (e.g. "maxime"). */
+  readonly name: string;
+  /** Signaling WebSocket URL (defaults to wss://api.brika.dev/v1). */
+  readonly signalingUrl: string;
+  /**
+   * Canonical public origin used when the hub is reached remotely
+   * (e.g. https://maxime.brika.dev). Empty string when remote access is disabled.
+   */
+  readonly publicOrigin: string;
+}
+
 @singleton()
 export class HubConfig {
   readonly host: string;
@@ -9,6 +33,8 @@ export class HubConfig {
   readonly homeDir: string;
   /** Directory for static UI files (empty = disabled) */
   readonly staticDir: string;
+  /** Remote-access (P2P) configuration. */
+  readonly remoteAccess: RemoteAccessConfig;
 
   constructor() {
     // Try to get values from ConfigLoader if already loaded, else use env/defaults
@@ -27,6 +53,19 @@ export class HubConfig {
     }
     // Static file serving directory (empty = disabled, used in production Docker)
     this.staticDir = process.env.BRIKA_STATIC_DIR ?? '';
+
+    const name = process.env.BRIKA_REMOTE_NAME?.trim() ?? '';
+    const enabled = parseBool(process.env.BRIKA_REMOTE_ACCESS) && name.length > 0;
+    const signalingUrl = process.env.BRIKA_SIGNALING_URL?.trim() || DEFAULT_SIGNALING_URL;
+    const publicOrigin =
+      process.env.BRIKA_PUBLIC_ORIGIN?.trim() ||
+      (enabled ? `https://${name}.brika.dev` : '');
+    this.remoteAccess = {
+      enabled,
+      name,
+      signalingUrl,
+      publicOrigin,
+    };
   }
 }
 

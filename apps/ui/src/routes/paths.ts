@@ -61,6 +61,7 @@ export const paths = {
     time: route('/settings/time'),
     location: route('/settings/location'),
     hub: route('/settings/hub'),
+    remoteAccess: route('/settings/remote-access'),
     system: route('/settings/system'),
     themes: route('/settings/themes'),
   },

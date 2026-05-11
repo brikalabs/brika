@@ -4,6 +4,7 @@ export {
   HubPage,
   LanguagePage,
   LocationPage,
+  RemoteAccessPage,
   SystemPage,
   TimePage,
 } from './pages';

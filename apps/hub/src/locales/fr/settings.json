@@ -11,7 +11,39 @@
     "time": "Date et heure",
     "location": "Localisation",
     "hub": "Hub",
+    "remoteAccess": "Accès distant",
     "system": "Système"
+  },
+  "remoteAccess": {
+    "title": "Accès distant",
+    "description": "Accédez à ce hub depuis l'extérieur de votre réseau local — sans ouvrir de port, chiffré de bout en bout via WebRTC.",
+    "section": {
+      "title": "Connexion",
+      "description": "État du tunnel pair à pair et sessions navigateur actives."
+    },
+    "disabledHelp": "L'accès distant est désactivé. Pour l'activer, définissez ces variables d'environnement et redémarrez le hub :",
+    "status": {
+      "disabled": "Désactivé",
+      "idle": "Inactif",
+      "connecting": "Connexion…",
+      "reconnecting": "Reconnexion…",
+      "connected": "Connecté",
+      "closed": "Fermé"
+    },
+    "fields": {
+      "name": "Nom du hub",
+      "status": "Signalisation",
+      "publicOrigin": "Adresse publique",
+      "activeSessions": "Sessions actives"
+    },
+    "token": {
+      "title": "Jeton de signalisation",
+      "description": "Jeton porteur utilisé pour s'authentifier auprès du coordinateur. Stocké dans le trousseau du système.",
+      "placeholder": "Coller un nouveau jeton…",
+      "set": "Enregistrer",
+      "rotate": "Renouveler",
+      "revoke": "Révoquer"
+    }
   },
   "time": {
     "title": "Date et heure",

@@ -34,6 +34,12 @@ export const settingRoutes = {
         select: (m) => m.HubPage,
         scopes: Scope.ADMIN_ALL,
       }),
+      remoteAccess: page({
+        path: 'remote-access',
+        load: () => import('@/features/settings'),
+        select: (m) => m.RemoteAccessPage,
+        scopes: Scope.ADMIN_ALL,
+      }),
       system: page({
         path: 'system',
         load: () => import('@/features/settings'),

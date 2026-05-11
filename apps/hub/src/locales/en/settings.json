@@ -11,7 +11,39 @@
     "time": "Date & time",
     "location": "Location",
     "hub": "Hub",
+    "remoteAccess": "Remote access",
     "system": "System"
+  },
+  "remoteAccess": {
+    "title": "Remote access",
+    "description": "Reach this hub from outside your local network — no port forwarding, end-to-end encrypted via WebRTC.",
+    "section": {
+      "title": "Connection",
+      "description": "Status of the peer-to-peer tunnel and active browser sessions."
+    },
+    "disabledHelp": "Remote access is disabled. To enable it, set these environment variables on the hub and restart:",
+    "status": {
+      "disabled": "Disabled",
+      "idle": "Idle",
+      "connecting": "Connecting…",
+      "reconnecting": "Reconnecting…",
+      "connected": "Connected",
+      "closed": "Closed"
+    },
+    "fields": {
+      "name": "Hub name",
+      "status": "Signaling",
+      "publicOrigin": "Public address",
+      "activeSessions": "Active sessions"
+    },
+    "token": {
+      "title": "Signaling token",
+      "description": "Bearer token used to authenticate to the coordinator. Stored in the OS keychain.",
+      "placeholder": "Paste a new token…",
+      "set": "Set token",
+      "rotate": "Rotate",
+      "revoke": "Revoke"
+    }
   },
   "time": {
     "title": "Date & time",

@@ -11,6 +11,12 @@ import { singleton } from '@brika/di';
 
 const SERVICE = 'com.brika.hub';
 const SEPARATOR = '::';
+/**
+ * Reserved namespace for hub-internal secrets (signaling token, etc.).
+ * The double-underscore prefix is invalid in npm package names, so no real
+ * plugin can ever collide with it.
+ */
+const HUB_NAMESPACE = '__hub__';
 
 @singleton()
 export class SecretStore {
@@ -59,5 +65,22 @@ export class SecretStore {
 
   async deleteAllForPlugin(pluginName: string, keys: readonly string[]): Promise<void> {
     await Promise.all(keys.map((key) => this.delete(pluginName, key)));
+  }
+
+  // ─── Hub-internal secrets ──────────────────────────────────────────────
+  // These keys live under a reserved namespace plugins cannot reach. Used
+  // for credentials owned by the hub itself (e.g. the remote-access
+  // signaling bearer token).
+
+  async getHubSecret(key: string): Promise<string | null> {
+    return await this.get(HUB_NAMESPACE, key);
+  }
+
+  async setHubSecret(key: string, value: string): Promise<void> {
+    await this.set(HUB_NAMESPACE, key, value);
+  }
+
+  async deleteHubSecret(key: string): Promise<boolean> {
+    return await this.delete(HUB_NAMESPACE, key);
   }
 }

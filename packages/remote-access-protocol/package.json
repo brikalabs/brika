@@ -1,0 +1,20 @@
+{
+  "name": "@brika/remote-access-protocol",
+  "version": "0.1.0",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/brikalabs/brika.git",
+    "directory": "packages/remote-access-protocol"
+  },
+  "keywords": ["brika", "remote-access", "webrtc", "protocol"],
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsgo --noEmit"
+  },
+  "dependencies": {}
+}
