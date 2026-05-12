@@ -4,13 +4,14 @@
  * Two views: a grouped list of every clay component (`ComponentsList`)
  * and a detail panel for the selected component (`ComponentDetail`).
  * This file owns the selection state and the three mutation callbacks
- * (component-token override, color override, full reset). The actual
- * rendering and override-counting live in the extracted modules.
+ * (component-token override, color override, full reset). Token reads
+ * use the v2 nested shape (`draft.components`, `draft.colors.{light,dark}`).
  */
 
 import { useCallback, useState } from 'react';
 import { COMPONENT_TOKEN_INDEX } from '../clay-tokens';
-import type { ComponentTokens, ThemeColors, ThemeConfig } from '../types';
+import { kebabToCamel } from '../naming';
+import type { ThemeConfig, TokenMap } from '../types';
 import { ComponentDetail } from './ComponentDetail';
 import { ComponentsList } from './ComponentsList';
 import type { ColorSetter, ComponentTokenSetter } from './TokenRow';
@@ -25,12 +26,13 @@ export function ComponentsSection({ draft, onChange }: Readonly<ComponentsSectio
 
   const setComponentToken = useCallback<ComponentTokenSetter>(
     (component, suffix, value) => {
-      const nextTokens: Record<string, ComponentTokens> = { ...draft.componentTokens };
-      const current: ComponentTokens = { ...nextTokens[component] };
+      const camel = kebabToCamel(suffix);
+      const nextTokens: Record<string, Record<string, string>> = { ...draft.components };
+      const current: Record<string, string> = { ...nextTokens[component] };
       if (value === undefined) {
-        delete current[suffix];
+        delete current[camel];
       } else {
-        current[suffix] = value;
+        current[camel] = value;
       }
       if (Object.keys(current).length === 0) {
         delete nextTokens[component];
@@ -39,7 +41,7 @@ export function ComponentsSection({ draft, onChange }: Readonly<ComponentsSectio
       }
       onChange({
         ...draft,
-        componentTokens: Object.keys(nextTokens).length === 0 ? undefined : nextTokens,
+        components: Object.keys(nextTokens).length === 0 ? undefined : nextTokens,
       });
     },
     [draft, onChange]
@@ -47,23 +49,23 @@ export function ComponentsSection({ draft, onChange }: Readonly<ComponentsSectio
 
   const setColor = useCallback<ColorSetter>(
     (token, slot, value) => {
-      const light = { ...draft.colors.light };
-      const dark = { ...draft.colors.dark };
+      const light: TokenMap = { ...(draft.colors?.light ?? {}) };
+      const dark: TokenMap = { ...(draft.colors?.dark ?? {}) };
       if (slot === 'light' || slot === 'both') {
         if (value === undefined) {
           delete light[token];
         } else {
-          (light as Record<string, string>)[token] = value;
+          light[token] = value;
         }
       }
       if (slot === 'dark' || slot === 'both') {
         if (value === undefined) {
           delete dark[token];
         } else {
-          (dark as Record<string, string>)[token] = value;
+          dark[token] = value;
         }
       }
-      onChange({ ...draft, colors: { light: light as ThemeColors, dark: dark as ThemeColors } });
+      onChange({ ...draft, colors: { light, dark } });
     },
     [draft, onChange]
   );
@@ -71,10 +73,10 @@ export function ComponentsSection({ draft, onChange }: Readonly<ComponentsSectio
   const resetComponent = useCallback(
     (component: string) => {
       const tokens = COMPONENT_TOKEN_INDEX[component] ?? [];
-      const nextTokens = { ...draft.componentTokens };
+      const nextTokens = { ...draft.components };
       delete nextTokens[component];
-      const light = { ...draft.colors.light };
-      const dark = { ...draft.colors.dark };
+      const light: TokenMap = { ...(draft.colors?.light ?? {}) };
+      const dark: TokenMap = { ...(draft.colors?.dark ?? {}) };
       for (const spec of tokens) {
         if (spec.type === 'color') {
           delete light[spec.name];
@@ -83,8 +85,8 @@ export function ComponentsSection({ draft, onChange }: Readonly<ComponentsSectio
       }
       onChange({
         ...draft,
-        componentTokens: Object.keys(nextTokens).length === 0 ? undefined : nextTokens,
-        colors: { light: light as ThemeColors, dark: dark as ThemeColors },
+        components: Object.keys(nextTokens).length === 0 ? undefined : nextTokens,
+        colors: { light, dark },
       });
     },
     [draft, onChange]

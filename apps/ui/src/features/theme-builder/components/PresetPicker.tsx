@@ -30,7 +30,8 @@ interface PresetCardProps {
 
 function PresetCard({ preset, onPick }: Readonly<PresetCardProps>) {
   const { t } = useTranslation('themeBuilder');
-  const { light, dark } = preset.colors;
+  const light = preset.colors?.light ?? {};
+  const dark = preset.colors?.dark ?? {};
   const description = t(`presets.items.${preset.id}.description`, {
     defaultValue: preset.description,
   });

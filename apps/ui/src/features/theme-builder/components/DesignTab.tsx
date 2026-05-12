@@ -1,16 +1,37 @@
 /**
- * DesignTab — icon rail + focused section.
- *
- * Instead of stacking six collapsibles, the panel shows an icon rail
- * at the top and renders one section at a time in the body below. The
- * active section persists in sessionStorage so the panel feels stable
- * across tab switches.
+ * DesignTab — icon rail + focused section. Reads/writes every flat UX
+ * field through the `accessors` module so the underlying nested v2 shape
+ * (geometry/borders/focus/brika) is invisible to the field components.
  */
 
 import { cn, Tooltip, TooltipContent, TooltipTrigger } from '@brika/clay';
 import { Blocks, Layers, type LucideIcon, Ruler, Shapes, Type, Wind } from 'lucide-react';
 import { type ReactNode, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import {
+  getBackdropBlur,
+  getBorderWidth,
+  getCorners,
+  getElevation,
+  getElevationTint,
+  getMotion,
+  getRadius,
+  getRingOffset,
+  getRingWidth,
+  getSpacing,
+  getTextBase,
+  setBackdropBlur,
+  setBorderWidth,
+  setCorners,
+  setElevation,
+  setElevationTint,
+  setMotion,
+  setRadius,
+  setRingOffset,
+  setRingWidth,
+  setSpacing,
+  setTextBase,
+} from '../accessors';
 import { MONO_FONT_CHOICES, SANS_FONT_CHOICES } from '../tokens';
 import type { CornerStyle, ElevationStyle, MotionStyle, ThemeConfig } from '../types';
 import { ComponentsSection } from './ComponentsSection';
@@ -25,7 +46,6 @@ import { TextSizeField } from './TextSizeField';
 
 interface DesignTabProps {
   draft: ThemeConfig;
-  patch: <K extends keyof ThemeConfig>(key: K, value: ThemeConfig[K]) => void;
   onChange: (next: ThemeConfig) => void;
   onFontSansChange: (next: string) => void;
   onFontMonoChange: (next: string) => void;
@@ -77,7 +97,6 @@ function writeActiveSection(id: SectionId): void {
 
 export function DesignTab({
   draft,
-  patch,
   onChange,
   onFontSansChange,
   onFontMonoChange,
@@ -123,7 +142,6 @@ export function DesignTab({
         <SectionBody
           id={active}
           draft={draft}
-          patch={patch}
           onChange={onChange}
           onFontSansChange={onFontSansChange}
           onFontMonoChange={onFontMonoChange}
@@ -172,7 +190,6 @@ function SectionTab({ section, active, onSelect }: Readonly<SectionTabProps>) {
 interface SectionBodyProps {
   id: SectionId;
   draft: ThemeConfig;
-  patch: <K extends keyof ThemeConfig>(key: K, value: ThemeConfig[K]) => void;
   onChange: (next: ThemeConfig) => void;
   onFontSansChange: (next: string) => void;
   onFontMonoChange: (next: string) => void;
@@ -181,33 +198,37 @@ interface SectionBodyProps {
 function SectionBody({
   id,
   draft,
-  patch,
   onChange,
   onFontSansChange,
   onFontMonoChange,
 }: Readonly<SectionBodyProps>): ReactNode {
   const { t } = useTranslation('themeBuilder');
+  const update =
+    <T,>(setter: (t: ThemeConfig, v: T) => ThemeConfig) =>
+    (value: T) =>
+      onChange(setter(draft, value));
+
   switch (id) {
     case 'typography':
       return (
         <>
           <FontField
             label={t('design.fonts.sans')}
-            value={draft.fonts.sans}
+            value={draft.geometry?.fontSans ?? ''}
             onChange={onFontSansChange}
             choices={SANS_FONT_CHOICES}
             sample={t('design.fonts.sampleSans')}
           />
           <FontField
             label={t('design.fonts.mono')}
-            value={draft.fonts.mono}
+            value={draft.geometry?.fontMono ?? ''}
             onChange={onFontMonoChange}
             choices={MONO_FONT_CHOICES}
             sample={t('design.fonts.sampleMono')}
           />
           <div className="space-y-2 pt-1">
             <TokenLabel cssVar="--text-base">{t('design.baseSize')}</TokenLabel>
-            <TextSizeField value={draft.textBase ?? 1} onChange={(v) => patch('textBase', v)} />
+            <TextSizeField value={getTextBase(draft) ?? 1} onChange={update(setTextBase)} />
           </div>
         </>
       );
@@ -216,12 +237,12 @@ function SectionBody({
         <>
           <div className="space-y-2">
             <TokenLabel cssVar="--radius">{t('design.radius')}</TokenLabel>
-            <RadiusField value={draft.radius} onChange={(v) => patch('radius', v)} />
+            <RadiusField value={getRadius(draft)} onChange={update(setRadius)} />
           </div>
           <CornerField
-            value={draft.corners ?? 'round'}
-            onChange={(v: CornerStyle) => patch('corners', v)}
-            radius={draft.radius}
+            value={getCorners(draft) ?? 'round'}
+            onChange={(v: CornerStyle) => onChange(setCorners(draft, v))}
+            radius={getRadius(draft)}
           />
         </>
       );
@@ -231,7 +252,7 @@ function SectionBody({
       return (
         <>
           <TokenLabel cssVar="--spacing">{t('design.baseUnit')}</TokenLabel>
-          <SpacingField value={draft.spacing ?? 0.25} onChange={(v) => patch('spacing', v)} />
+          <SpacingField value={getSpacing(draft) ?? 0.25} onChange={update(setSpacing)} />
         </>
       );
     case 'effects':
@@ -239,42 +260,39 @@ function SectionBody({
         <>
           <TokenLabel cssVar="--shadow-*">{t('design.elevation')}</TokenLabel>
           <ElevationField
-            value={draft.elevation ?? 'soft'}
-            onChange={(v: ElevationStyle) => patch('elevation', v)}
-            tint={draft.elevationTint ?? false}
-            onTintChange={(v) => patch('elevationTint', v)}
+            value={getElevation(draft) ?? 'soft'}
+            onChange={(v: ElevationStyle) => onChange(setElevation(draft, v))}
+            tint={getElevationTint(draft)}
+            onTintChange={update(setElevationTint)}
           />
           <div className="pt-1">
             <TokenLabel cssVar="--border-width">{t('design.borderWidth')}</TokenLabel>
           </div>
-          <BorderWidthField
-            value={draft.borderWidth ?? 1}
-            onChange={(v) => patch('borderWidth', v)}
-          />
+          <BorderWidthField value={getBorderWidth(draft) ?? 1} onChange={update(setBorderWidth)} />
         </>
       );
     case 'atmosphere':
       return (
         <>
           <TokenLabel cssVar="--backdrop-blur">{t('design.backdropBlur')}</TokenLabel>
-          <BlurField value={draft.backdropBlur ?? 8} onChange={(v) => patch('backdropBlur', v)} />
+          <BlurField value={getBackdropBlur(draft) ?? 8} onChange={update(setBackdropBlur)} />
 
           <div className="pt-1">
             <TokenLabel cssVar="--ring-*">{t('design.focusRing')}</TokenLabel>
           </div>
           <FocusRingField
-            width={draft.ringWidth ?? 2}
-            offset={draft.ringOffset ?? 2}
-            onWidthChange={(v) => patch('ringWidth', v)}
-            onOffsetChange={(v) => patch('ringOffset', v)}
+            width={getRingWidth(draft) ?? 2}
+            offset={getRingOffset(draft) ?? 2}
+            onWidthChange={update(setRingWidth)}
+            onOffsetChange={update(setRingOffset)}
           />
 
           <div className="pt-1">
             <TokenLabel hint={t('design.motionHint')}>{t('design.motion')}</TokenLabel>
           </div>
           <MotionField
-            value={draft.motion ?? 'smooth'}
-            onChange={(v: MotionStyle) => patch('motion', v)}
+            value={getMotion(draft) ?? 'smooth'}
+            onChange={(v: MotionStyle) => onChange(setMotion(draft, v))}
           />
         </>
       );

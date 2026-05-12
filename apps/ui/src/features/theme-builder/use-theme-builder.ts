@@ -162,7 +162,7 @@ export function useThemeBuilder() {
     }
     customThemeStorage.remove(savedId);
     if (activeThemeName === customThemeSelector(savedId)) {
-      setTheme('default');
+      setTheme('brika');
     }
     handleNew();
   }, [activeThemeName, draft.name, handleNew, savedId, setTheme, t]);

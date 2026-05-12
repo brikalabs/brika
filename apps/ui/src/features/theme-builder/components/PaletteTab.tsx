@@ -22,7 +22,7 @@ import { useTranslation } from 'react-i18next';
 import { invertLightness, mix, parseHex, shiftLightness } from '../color-utils';
 import { TOKEN_GROUPS } from '../tokens';
 import { metaFor } from '../tokens-meta';
-import type { ThemeColors, ThemeConfig } from '../types';
+import type { ThemeConfig, TokenMap } from '../types';
 import { ColorField } from './ColorField';
 
 const FOREGROUND_PAIRS: Readonly<Record<string, { token: string; labelKey: string }>> = {
@@ -44,22 +44,24 @@ interface PaletteTabProps {
   onChange: (next: ThemeConfig) => void;
 }
 
-function generateFromPrimary(colors: ThemeColors, mode: 'light' | 'dark'): ThemeColors {
+function generateFromPrimary(colors: TokenMap, mode: 'light' | 'dark'): TokenMap {
   const primary = colors.primary;
-  if (!parseHex(primary)) {
+  const background = colors.background;
+  const foreground = colors.foreground;
+  if (!primary || !background || !foreground || !parseHex(primary)) {
     return colors;
   }
   const isDark = mode === 'dark';
   return {
     ...colors,
-    accent: mix(colors.background, primary, isDark ? 0.15 : 0.12),
-    'accent-foreground': colors.foreground,
-    secondary: mix(colors.background, primary, isDark ? 0.08 : 0.06),
-    'secondary-foreground': colors.foreground,
-    muted: mix(colors.background, primary, isDark ? 0.05 : 0.04),
+    accent: mix(background, primary, isDark ? 0.15 : 0.12),
+    'accent-foreground': foreground,
+    secondary: mix(background, primary, isDark ? 0.08 : 0.06),
+    'secondary-foreground': foreground,
+    muted: mix(background, primary, isDark ? 0.05 : 0.04),
     'muted-foreground': isDark
-      ? shiftLightness(colors.foreground, -0.15)
-      : shiftLightness(colors.foreground, 0.3),
+      ? shiftLightness(foreground, -0.15)
+      : shiftLightness(foreground, 0.3),
     ring: primary,
   };
 }
@@ -69,10 +71,10 @@ export function PaletteTab({ draft, onChange }: Readonly<PaletteTabProps>) {
   const [editingMode, setEditingMode] = useState<'light' | 'dark'>('light');
   const [query, setQuery] = useState('');
 
-  const palette = draft.colors[editingMode];
+  const palette: TokenMap = draft.colors?.[editingMode] ?? {};
 
   const updateColor = (token: string, value: string) => {
-    const next: ThemeColors = { ...palette, [token]: value };
+    const next: TokenMap = { ...palette, [token]: value };
     onChange({
       ...draft,
       colors: { ...draft.colors, [editingMode]: next },
@@ -83,19 +85,17 @@ export function PaletteTab({ draft, onChange }: Readonly<PaletteTabProps>) {
     const target = from === 'light' ? 'dark' : 'light';
     onChange({
       ...draft,
-      colors: { ...draft.colors, [target]: { ...draft.colors[from] } },
+      colors: { ...draft.colors, [target]: { ...(draft.colors?.[from] ?? {}) } },
     });
     setEditingMode(target);
   };
 
   const autoInvertTo = (target: 'light' | 'dark') => {
     const source = target === 'light' ? 'dark' : 'light';
-    const src = draft.colors[source];
-    const inverted: ThemeColors = { ...src };
+    const src: TokenMap = draft.colors?.[source] ?? {};
+    const inverted: TokenMap = { ...src };
     for (const [key, value] of Object.entries(src)) {
-      if (typeof value === 'string') {
-        Reflect.set(inverted, key, invertLightness(value));
-      }
+      inverted[key] = invertLightness(value);
     }
     onChange({
       ...draft,

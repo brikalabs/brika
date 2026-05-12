@@ -14,8 +14,7 @@
  */
 
 import { fetcher } from '@/lib/query';
-import type { ThemeConfig } from './types';
-import { THEME_CONFIG_VERSION } from './types';
+import { ThemeConfig } from './types';
 
 const SHADOW_KEY = 'brika-custom-themes-cache';
 /** Legacy key kept for the one-time migration to hub storage. */
@@ -49,16 +48,14 @@ function readShadow(): ThemeConfig[] {
     if (!Array.isArray(parsed)) {
       return [];
     }
-    return parsed.filter(
-      (t): t is ThemeConfig =>
-        typeof t === 'object' &&
-        t !== null &&
-        'id' in t &&
-        'name' in t &&
-        'colors' in t &&
-        'version' in t &&
-        (t as { version: unknown }).version === THEME_CONFIG_VERSION
-    );
+    const out: ThemeConfig[] = [];
+    for (const entry of parsed) {
+      const result = ThemeConfig.safeParse(entry);
+      if (result.success) {
+        out.push(result.data);
+      }
+    }
+    return out;
   } catch {
     return [];
   }

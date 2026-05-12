@@ -83,7 +83,7 @@ export function ThemeList({
                     <span
                       key={k}
                       className="size-3 rounded-full border-2 border-card"
-                      style={{ backgroundColor: t.colors.light[k] }}
+                      style={{ backgroundColor: t.colors?.light?.[k] }}
                     />
                   ))}
                 </span>
@@ -170,7 +170,7 @@ export function ThemeList({
                         <div
                           key={k}
                           className="size-2.5 rounded-full border-2 border-card"
-                          style={{ backgroundColor: t.colors.light[k] }}
+                          style={{ backgroundColor: t.colors?.light?.[k] }}
                         />
                       ))}
                     </div>

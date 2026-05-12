@@ -1,11 +1,11 @@
 /**
- * Token metadata — labels, groups, and default palettes for the
- * theme builder UI. The builder renders controls from TOKEN_GROUPS;
- * the defaults seed a new theme.
+ * Token metadata — labels, groups, and default seed for the theme builder.
+ * Controls render from `TOKEN_GROUPS`; `createDefaultThemeConfig` seeds a
+ * fresh draft from Clay's `brika` preset (the in-house first-party theme).
  */
 
 import { findPreset } from './load-presets';
-import type { ThemeColors, ThemeConfig } from './types';
+import type { ThemeConfig, TokenMap } from './types';
 import { THEME_CONFIG_VERSION } from './types';
 
 export interface TokenGroup {
@@ -14,9 +14,7 @@ export interface TokenGroup {
   tokens: readonly string[];
 }
 
-/** Rendering order of color groups in the editor panel.
- *  Groups marked `optional` render their tokens dimmed with a hint that
- *  leaving them blank falls back to a CSS-derived default. */
+/** Rendering order of color groups in the editor panel. */
 export const TOKEN_GROUPS: readonly TokenGroup[] = [
   {
     key: 'surface',
@@ -103,57 +101,61 @@ export const TOKEN_GROUPS: readonly TokenGroup[] = [
   },
 ] as const;
 
-const DEFAULT_PRESET_ID = 'default';
+const DEFAULT_PRESET_ID = 'brika';
 
-function defaultPalette(mode: 'light' | 'dark'): ThemeColors {
+function paletteFromPreset(mode: 'light' | 'dark'): TokenMap {
   const preset = findPreset(DEFAULT_PRESET_ID);
   if (!preset) {
     throw new Error(
-      `Missing required preset '${DEFAULT_PRESET_ID}.json' - see apps/ui/src/features/theme-builder/presets/`
+      `Missing required preset '${DEFAULT_PRESET_ID}' — check @brika/clay/themes/registry`
     );
   }
-  return { ...preset.colors[mode] };
+  return { ...(preset.colors?.[mode] ?? {}) };
 }
 
-/** Default light palette - mirrors the built-in `default` theme. */
-export const DEFAULT_LIGHT: ThemeColors = defaultPalette('light');
+/** Default light palette — pulled from Clay's `brika` preset. */
+export const DEFAULT_LIGHT: TokenMap = paletteFromPreset('light');
 
-/** Default dark palette - mirrors the built-in `default` theme dark mode. */
-export const DEFAULT_DARK: ThemeColors = defaultPalette('dark');
+/** Default dark palette — pulled from Clay's `brika` preset. */
+export const DEFAULT_DARK: TokenMap = paletteFromPreset('dark');
 
-/** Factory: a fresh ThemeConfig seeded from the default palette. */
+/** Factory: fresh v2 ThemeConfig seeded from the `brika` preset. */
 export function createDefaultThemeConfig(overrides?: Partial<ThemeConfig>): ThemeConfig {
   const now = Date.now();
   return {
     version: THEME_CONFIG_VERSION,
     id: overrides?.id ?? `custom-${now.toString(36)}`,
     name: overrides?.name ?? 'Untitled theme',
+    description: overrides?.description ?? '',
+    accentSwatches: overrides?.accentSwatches ?? [DEFAULT_LIGHT.primary ?? '#4a63d1'],
     author: overrides?.author,
-    description: overrides?.description,
     createdAt: overrides?.createdAt ?? now,
     updatedAt: now,
-    radius: overrides?.radius ?? 0.75,
-    corners: overrides?.corners ?? 'round',
-    spacing: overrides?.spacing ?? 0.25,
-    borderWidth: overrides?.borderWidth ?? 1,
-    elevation: overrides?.elevation ?? 'soft',
-    elevationTint: overrides?.elevationTint ?? false,
-    backdropBlur: overrides?.backdropBlur ?? 8,
-    ringWidth: overrides?.ringWidth ?? 2,
-    ringOffset: overrides?.ringOffset ?? 2,
-    motion: overrides?.motion ?? 'smooth',
-    fonts: overrides?.fonts ?? {
-      sans: 'Inter, ui-sans-serif, system-ui, sans-serif',
-      mono: '"JetBrains Mono", ui-monospace, SFMono-Regular, monospace',
-    },
     colors: overrides?.colors ?? {
       light: { ...DEFAULT_LIGHT },
       dark: { ...DEFAULT_DARK },
     },
+    geometry: overrides?.geometry ?? {
+      radius: '0.75rem',
+      spacing: '0.25rem',
+      backdropBlur: '8px',
+      fontSans: 'Inter, ui-sans-serif, system-ui, sans-serif',
+      fontMono: '"JetBrains Mono", ui-monospace, SFMono-Regular, monospace',
+    },
+    borders: overrides?.borders ?? { width: '1px' },
+    motion: overrides?.motion,
+    focus: overrides?.focus ?? { width: '2px', offset: '2px' },
+    components: overrides?.components,
+    effects: overrides?.effects,
+    brika: overrides?.brika ?? {
+      elevation: 'soft',
+      elevationTint: false,
+      motion: 'smooth',
+      corners: 'round',
+    },
   };
 }
 
-/** Curated font-family choices surfaced in the font picker. */
 export interface FontChoice {
   label: string;
   stack: string;

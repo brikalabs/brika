@@ -1,33 +1,52 @@
 /**
- * Runtime theme injection.
+ * Runtime injection of the Brika-extension fragments that Clay's
+ * `applyTheme` doesn't emit (shadow scale `--shadow-xs..xl`, state-layer
+ * opacities, primary-tinted `--shadow-rgb`).
  *
- * Emits the custom theme as a scoped <style> block keyed by
- * `[data-theme="custom-{id}"]`. Body comes straight from `themeToVars` —
- * no grouping or formatting logic lives in this hot path.
+ * Clay owns `<style id="clay-theme">` — base theme + dark overrides.
+ * We own `<style id="brika-recipe-extras">` — a single `:root { ... }`
+ * block containing only the Brika-side var extras. Both tags coexist on
+ * `:root`; the cascade resolves them deterministically.
+ *
+ * For custom themes the active draft's recipes are applied; for built-in
+ * presets the extras tag is emptied (Clay handles the rest).
  */
 
-import { customThemeStorage } from './storage';
-import { darkOverrideVars, themeToVars, varsToCssText } from './theme-css';
+import { recipesToFragments } from './recipes';
 import type { ThemeConfig } from './types';
 
-const STYLE_ID_PREFIX = 'brika-theme-';
+const STYLE_ID = 'brika-recipe-extras';
 
+/** Compose the `custom-{id}` external theme name from a stored theme's id. */
 export function customThemeSelector(id: string): string {
   return `custom-${id}`;
 }
 
-function buildStylesheet(theme: ThemeConfig): string {
-  const selector = customThemeSelector(theme.id);
-  const light = varsToCssText(themeToVars(theme, 'light'));
-  const dark = varsToCssText(darkOverrideVars(theme));
-  return `[data-theme="${selector}"] {\n${light}\n}\n\n.dark[data-theme="${selector}"] {\n${dark}\n}`;
+function buildCss(theme: ThemeConfig | null): string {
+  if (!theme) {
+    return '';
+  }
+  const { extras } = recipesToFragments(theme.brika, theme.colors?.light?.primary);
+  const entries = Object.entries(extras);
+  if (entries.length === 0) {
+    return '';
+  }
+  const body = entries.map(([k, v]) => `  ${k}: ${v};`).join('\n');
+  return `:root {\n${body}\n}`;
 }
 
-/** Inject or replace the <style> element for a theme. */
-export function injectCustomTheme(theme: ThemeConfig): void {
-  const id = `${STYLE_ID_PREFIX}${theme.id}`;
-  const existing = document.getElementById(id);
-  const css = buildStylesheet(theme);
+/**
+ * Apply (or clear) the Brika-extension extras for the currently-active theme.
+ * Pass `null` when the active theme is a built-in preset without recipes.
+ * Idempotent: rewrites the existing `<style>` content rather than re-creating
+ * the tag.
+ */
+export function applyBrikaExtras(theme: ThemeConfig | null): void {
+  if (typeof document === 'undefined') {
+    return;
+  }
+  const css = buildCss(theme);
+  const existing = document.getElementById(STYLE_ID);
 
   if (existing instanceof HTMLStyleElement) {
     if (existing.textContent !== css) {
@@ -37,27 +56,15 @@ export function injectCustomTheme(theme: ThemeConfig): void {
   }
 
   const el = document.createElement('style');
-  el.id = id;
+  el.id = STYLE_ID;
   el.textContent = css;
   document.head.appendChild(el);
 }
 
-/** Remove the injected <style> for a theme. */
-export function removeCustomTheme(id: string): void {
-  document.getElementById(`${STYLE_ID_PREFIX}${id}`)?.remove();
-}
-
-/** Inject every theme in the list. Idempotent. */
-export function injectAllCustomThemes(themes: readonly ThemeConfig[]): void {
-  for (const theme of themes) {
-    injectCustomTheme(theme);
+/** Remove the extras tag entirely. */
+export function resetBrikaExtras(): void {
+  if (typeof document === 'undefined') {
+    return;
   }
-}
-
-/** Inject only the custom theme currently selected. No-op when id is unknown. */
-export function injectActiveCustomTheme(id: string): void {
-  const theme = customThemeStorage.get(id);
-  if (theme) {
-    injectCustomTheme(theme);
-  }
+  document.getElementById(STYLE_ID)?.remove();
 }

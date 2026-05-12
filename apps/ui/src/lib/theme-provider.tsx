@@ -10,24 +10,22 @@ import {
   useState,
   useSyncExternalStore,
 } from 'react';
-import { injectActiveCustomTheme, injectAllCustomThemes } from '@/features/theme-builder/runtime';
+import { applyBrikaExtras, resetBrikaExtras } from '@/features/theme-builder/runtime';
 import {
   customThemeStorage,
   hydrateCustomThemes,
   migrateLegacyThemes,
 } from '@/features/theme-builder/storage';
+import type { ThemeConfig } from '@/features/theme-builder/types';
 import { fetcher } from '@/lib/query';
 import { ThemeContext, type ThemeMode, type ThemeName } from './theme-context';
 import { withCircleWipe } from './view-transition';
 
 export { customThemeSelector } from '@/features/theme-builder/runtime';
 
-// Shadow cache keys — persist the last-known-good selection so the first
-// render after a reload paints the correct theme before the hub responds.
 const THEME_CACHE_KEY = 'brika-theme-cache';
 const MODE_CACHE_KEY = 'brika-mode-cache';
 
-// Legacy keys, only read during a one-time migration to the shadow.
 const LEGACY_THEME_KEY = 'brika-theme';
 const LEGACY_MODE_KEY = 'brika-mode';
 
@@ -36,26 +34,37 @@ interface ApiTheme {
   mode: ThemeMode;
 }
 
-function applyThemeToDOM(theme: ThemeName, resolvedMode: 'light' | 'dark') {
-  const html = document.documentElement;
-  // Custom themes inject their own `[data-theme="custom-{id}"]` block via
-  // the theme-builder runtime; built-in themes route through clay's
-  // `<style id="clay-theme">` tag.
-  if (theme.startsWith('custom-')) {
-    resetThemeVars();
-  } else {
-    const preset = builtInThemesById[theme];
-    if (preset) {
-      applyTheme(preset);
-    } else {
-      resetThemeVars();
-    }
+function resolveActiveTheme(name: ThemeName): ThemeConfig | null {
+  if (name.startsWith('custom-')) {
+    return customThemeStorage.get(name.slice('custom-'.length)) ?? null;
   }
-  // The `data-theme` attribute is still required for custom themes (their
-  // CSS is scoped by `[data-theme="custom-{id}"]`). Built-in themes don't
-  // key off it but harmless to keep, and useful for any debugging that
-  // reads `documentElement.dataset.theme`.
-  html.dataset.theme = theme;
+  const clay = builtInThemesById[name];
+  if (!clay) {
+    return null;
+  }
+  // Wrap Clay's preset with the v2 metadata so downstream code can treat
+  // built-in + custom themes uniformly. Clay ignores unknown top-level keys,
+  // and `applyBrikaExtras` no-ops when `brika` is undefined.
+  return {
+    ...clay,
+    version: 1 as const,
+    createdAt: 0,
+    updatedAt: 0,
+  };
+}
+
+function applyThemeToDOM(name: ThemeName, resolvedMode: 'light' | 'dark') {
+  const html = document.documentElement;
+  const theme = resolveActiveTheme(name);
+  if (theme) {
+    applyTheme(theme);
+    applyBrikaExtras(theme);
+  } else {
+    resetThemeVars();
+    resetBrikaExtras();
+  }
+  // `data-theme` is harmless to keep for any debugging that reads it.
+  html.dataset.theme = name;
   html.classList.remove('light', 'dark');
   html.classList.add(resolvedMode);
   html.style.colorScheme = resolvedMode;
@@ -143,28 +152,15 @@ export function ThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
 
   const resolvedMode = mode === 'system' ? systemTheme : mode;
 
-  // Inject only the active custom theme at boot — a user who isn't
-  // currently using one shouldn't pay for every theme they've ever saved.
-  // The builder page owns `injectAllCustomThemes` for its thumbnail row.
+  // Re-apply when the active custom theme is hydrated from the hub or edited
+  // in the builder. Built-in themes don't subscribe — their content is static.
   useEffect(() => {
-    if (theme.startsWith('custom-')) {
-      injectActiveCustomTheme(theme.slice('custom-'.length));
+    if (!theme.startsWith('custom-')) {
+      return;
     }
-  }, [theme]);
-
-  // Keep the active theme's <style> tag in sync with external edits
-  // (e.g., another tab). The builder refreshes all tags itself; here we
-  // only need to refresh the one that's currently applied.
-  useEffect(() => {
-    const sync = () => {
-      if (theme.startsWith('custom-')) {
-        injectActiveCustomTheme(theme.slice('custom-'.length));
-      } else {
-        injectAllCustomThemes(customThemeStorage.list());
-      }
-    };
+    const sync = () => applyThemeToDOM(theme, resolvedMode);
     return customThemeStorage.subscribe(sync);
-  }, [theme]);
+  }, [theme, resolvedMode]);
 
   useEffect(() => {
     applyThemeToDOM(theme, resolvedMode);
@@ -196,8 +192,6 @@ export function ThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
           cacheMode(remote.mode);
           setModeState(remote.mode);
         }
-        // If the hub has no preference yet, push the current shadow as the
-        // seed. Covers the "fresh login, existing localStorage" case.
         if (!remote.theme) {
           void pushThemeToHub({ theme, mode });
         }
@@ -213,9 +207,6 @@ export function ThemeProvider({ children }: Readonly<{ children: ReactNode }>) {
     };
   }, [mode, theme]);
 
-  // Listen for custom-theme invalidations broadcast by other tabs /
-  // devices. Reusing `/api/stream/events` avoids spinning up a dedicated
-  // channel for a single event type.
   useEffect(() => {
     const source = new EventSource('/api/stream/events', { withCredentials: true });
     const handler = (event: MessageEvent<string>) => {

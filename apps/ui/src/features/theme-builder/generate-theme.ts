@@ -9,7 +9,11 @@
 
 import { TOKEN_REGISTRY } from '@brika/clay/tokens';
 import { bestForeground, type HSL, hslToRgb, parseHex, rgbToHex, rgbToHsl } from './color-utils';
-import { THEME_CONFIG_VERSION, type ThemeColors, type ThemeConfig } from './types';
+import { THEME_CONFIG_VERSION, type ThemeConfig, type TokenMap } from './types';
+
+/** Local alias: a flat color palette (one mode). Distinct from v2's
+ *  `Palette` which is the `{ light?, dark? }` wrapper. */
+type Palette = TokenMap;
 
 export type GenerateStyle = 'balanced' | 'vibrant' | 'tinted';
 
@@ -192,7 +196,7 @@ const DARK: ModeConfig = {
 
 // ─── Core derivation ──────────────────────────────────────────────────────────
 
-function derivePalette(p: HSL, style: GenerateStyle, cfg: ModeConfig): ThemeColors {
+function derivePalette(p: HSL, style: GenerateStyle, cfg: ModeConfig): Palette {
   const { h, s } = p;
   const t = TINT[style];
 
@@ -309,8 +313,8 @@ function derivePalette(p: HSL, style: GenerateStyle, cfg: ModeConfig): ThemeColo
  * Fill any role color token not explicitly produced by `deriveLight/Dark`
  * with its TOKEN_REGISTRY default, so the output is always complete.
  */
-function fillRegistryDefaults(colors: ThemeColors, mode: 'light' | 'dark'): ThemeColors {
-  const out: ThemeColors = { ...colors };
+function fillRegistryDefaults(colors: Palette, mode: 'light' | 'dark'): Palette {
+  const out: Palette = { ...colors };
   for (const token of TOKEN_REGISTRY) {
     if (token.type !== 'color' || token.layer !== 'role') {
       continue;
@@ -345,15 +349,17 @@ export function generateTheme(options: GenerateOptions): ThemeConfig {
     version: THEME_CONFIG_VERSION,
     id: `custom-${now.toString(36)}`,
     name,
+    description: '',
+    accentSwatches: [primary],
     createdAt: now,
     updatedAt: now,
-    radius,
-    corners: 'round',
-    fonts: {
-      sans: 'Inter, ui-sans-serif, system-ui, sans-serif',
-      mono: '"JetBrains Mono", ui-monospace, SFMono-Regular, monospace',
-    },
     colors: { light, dark },
+    geometry: {
+      radius: `${radius}rem`,
+      fontSans: 'Inter, ui-sans-serif, system-ui, sans-serif',
+      fontMono: '"JetBrains Mono", ui-monospace, SFMono-Regular, monospace',
+    },
+    brika: { corners: 'round', motion: 'smooth', elevation: 'soft' },
   };
 }
 

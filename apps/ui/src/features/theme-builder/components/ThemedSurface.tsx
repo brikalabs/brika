@@ -1,36 +1,28 @@
 /**
- * ThemedSurface — shared wrapper that renders children inside a scoped
- * container styled with the draft theme's CSS variables.
- *
- * Used by:
+ * ThemedSurface — wraps children in a scoped container styled with the
+ * draft theme's CSS variables. Used by:
  *   • PreviewCanvas — the main right-hand scene preview
  *   • ComponentsSection.PreviewStage — the per-component detail preview
  *
- * Before this existed, each call site re-derived `themeToVars` + the dark
- * class + the `fontFamily` var by hand. Centralising that here keeps the
- * three preview surfaces visually consistent and makes future additions
- * (e.g. viewport sizing, split-mode) a single-file change.
+ * Delegates token emission to Clay's `themeToCssVars` (produces a complete
+ * vars map including registry defaults), then merges Brika-extension
+ * fragments (shadow scale, state opacities, ...) the builder still owns.
  */
 
 import { cn } from '@brika/clay';
-import { getRegistryDefaults } from '@brika/clay/themes';
+import { themeToCssVars } from '@brika/clay/themes';
 import type { CSSProperties, ReactNode } from 'react';
 import { useMemo } from 'react';
-import { type ThemeVars, themeToVars } from '../theme-css';
+import { recipesToFragments } from '../recipes';
 import type { ThemeConfig } from '../types';
 
-const REGISTRY_DEFAULTS = getRegistryDefaults();
-
-// React's CSSProperties doesn't declare CSS custom properties (`--foo`),
-// but they're valid in the `style` prop. Intersect so extra vars pass the
-// type check without any assertion.
-type StyleWithVars = CSSProperties & ThemeVars;
+type CssVar = `--${string}`;
+type StyleWithVars = CSSProperties & Record<CssVar, string>;
 
 interface ThemedSurfaceProps {
   theme: ThemeConfig;
   mode: 'light' | 'dark';
   className?: string;
-  /** Forwarded to the container for sizing/layout. */
   style?: CSSProperties;
   /** Stable value on `data-preview` — helps test selectors disambiguate surfaces. */
   variant?: string;
@@ -45,15 +37,15 @@ export function ThemedSurface({
   variant = 'true',
   children,
 }: Readonly<ThemedSurfaceProps>) {
-  const themedStyle = useMemo<StyleWithVars>(
-    () => ({
-      ...REGISTRY_DEFAULTS.light,
-      ...(mode === 'dark' ? REGISTRY_DEFAULTS.dark : {}),
-      ...themeToVars(theme, mode),
+  const themedStyle = useMemo<StyleWithVars>(() => {
+    const base = themeToCssVars(theme, mode) as Record<CssVar, string>;
+    const extras = recipesToFragments(theme.brika, theme.colors?.light?.primary).extras;
+    return {
+      ...base,
+      ...extras,
       fontFamily: 'var(--font-sans)',
-    }),
-    [theme, mode]
-  );
+    };
+  }, [theme, mode]);
 
   return (
     <div
