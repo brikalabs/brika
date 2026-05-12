@@ -152,9 +152,14 @@ export class DataChannelTransport implements Transport {
       throw new TransportError('not-ready', 'Data channel is not open');
     }
 
-    const request = this.#attachCookies(await this.#buildRequest(input, init));
+    const request = await this.#buildRequest(input, init);
     const id = this.#nextRequestId++;
     const frame: RequestMessage = await requestToFrames(id, request);
+    // Cookie is a forbidden request header in browsers — `new Request(url, { headers })`
+    // silently drops any `Cookie` we try to set, even when the request is bound for
+    // our data-channel transport. We bypass that by injecting the Cookie pair
+    // directly into the wire frame *after* serialization, so the hub still sees it.
+    this.#injectCookieIntoFrame(frame, request);
     debug('→ request', { id, method: frame.method, url: frame.url });
 
     const assembler = new ResponseAssembler();
@@ -540,18 +545,32 @@ export class DataChannelTransport implements Transport {
    * JS against the hub origin — no automatic cookies. We rebuild the Request
    * with the cookie header inlined so {@link requestToFrames} sees it.
    */
-  #attachCookies(req: Request): Request {
-    const path = new URL(req.url).pathname;
+  /**
+   * Inject the matching Cookie header directly into the RPC frame's headers
+   * array. We can't go through `new Request(url, { headers })` because the
+   * browser's Request constructor enforces Fetch's forbidden-header list and
+   * silently drops Cookie. The wire frame is plain JSON pairs, so it survives.
+   */
+  #injectCookieIntoFrame(frame: RequestMessage, request: Request): void {
+    const path = new URL(request.url).pathname;
     const header = this.#cookies.cookieHeader(path);
     debug('cookie jar lookup', { path, attached: header || '(none)' });
     if (!header) {
-      return req;
+      return;
     }
-    const headers = new Headers(req.headers);
-    // Append rather than set so an explicit caller-provided Cookie survives.
-    const existing = headers.get('Cookie');
-    headers.set('Cookie', existing ? `${existing}; ${header}` : header);
-    return new Request(req, { headers });
+    // `frame.headers` is declared `ReadonlyArray<readonly [string, string]>`
+    // for safety, but at the moment of injection we own the array and the
+    // hub-side parser doesn't care about repeated entries. Cast through
+    // `unknown` to mutate it cleanly.
+    const headers = frame.headers as unknown as Array<[string, string]>;
+    // Merge with any caller-supplied Cookie that may have been propagated
+    // through the Request constructor (very rare — most callers don't set it).
+    const existing = headers.find(([n]) => n.toLowerCase() === 'cookie');
+    if (existing) {
+      existing[1] = `${existing[1]}; ${header}`;
+    } else {
+      headers.push(['Cookie', header]);
+    }
   }
 
   /**
