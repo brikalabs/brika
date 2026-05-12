@@ -136,7 +136,12 @@ function makeDataChannelReady(channel: RTCDataChannel, pc: RTCPeerConnection): D
   return { promise, fail: (err) => fail(err) };
 }
 
-function dispatchRpcFrame(msg: RpcMessage, inflight: Map<number, ResponseAssembler>): void {
+interface InflightSlot {
+  readonly assembler: ResponseAssembler;
+  readonly timer: ReturnType<typeof setTimeout>;
+}
+
+function dispatchRpcFrame(msg: RpcMessage, inflight: Map<number, InflightSlot>): void {
   if (
     msg.kind !== 'response.head' &&
     msg.kind !== 'response.chunk' &&
@@ -145,23 +150,25 @@ function dispatchRpcFrame(msg: RpcMessage, inflight: Map<number, ResponseAssembl
   ) {
     return;
   }
-  const assembler = inflight.get(msg.id);
-  if (!assembler) {
+  const slot = inflight.get(msg.id);
+  if (!slot) {
     return;
   }
   switch (msg.kind) {
     case 'response.head':
-      assembler.onHead(msg);
+      slot.assembler.onHead(msg);
       return;
     case 'response.chunk':
-      assembler.onChunk(msg);
+      slot.assembler.onChunk(msg);
       return;
     case 'response.end':
-      assembler.onEnd(msg);
+      slot.assembler.onEnd(msg);
+      clearTimeout(slot.timer);
       inflight.delete(msg.id);
       return;
     case 'response.error':
-      assembler.onError(msg);
+      slot.assembler.onError(msg);
+      clearTimeout(slot.timer);
       inflight.delete(msg.id);
       return;
   }
@@ -206,7 +213,7 @@ export async function openPeer(
   const channel = pc.createDataChannel('rpc', { ordered: true });
   channel.binaryType = 'arraybuffer';
 
-  const inflight = new Map<number, ResponseAssembler>();
+  const inflight = new Map<number, InflightSlot>();
   let nextId = 1;
   let dataChannel: RTCDataChannel | null = null;
 
@@ -301,11 +308,36 @@ export async function openPeer(
     request: (method, url, signal): Promise<Response> => {
       const id = nextId++;
       const assembler = new ResponseAssembler();
-      inflight.set(id, assembler);
+
+      // Bound every in-flight request so a hub that goes silent (sends
+      // `response.head` but never `response.end`) can't pin the slot
+      // forever. The asset graph BFS opens many requests; without this
+      // a stuck hub would slowly leak entries.
+      const timer = setTimeout(() => {
+        if (!inflight.has(id)) {
+          return;
+        }
+        sendRpc({ v: PROTOCOL_VERSION, kind: 'abort', id });
+        assembler.onError({
+          v: PROTOCOL_VERSION,
+          kind: 'response.error',
+          id,
+          code: 'timeout',
+          message: 'RPC request timed out',
+        });
+        inflight.delete(id);
+      }, REQUEST_TIMEOUT_MS);
+
+      inflight.set(id, { assembler, timer });
+
       if (signal) {
         signal.addEventListener(
           'abort',
           () => {
+            if (!inflight.has(id)) {
+              return;
+            }
+            clearTimeout(timer);
             sendRpc({ v: PROTOCOL_VERSION, kind: 'abort', id });
             assembler.onError({
               v: PROTOCOL_VERSION,
@@ -336,3 +368,5 @@ export async function openPeer(
     },
   };
 }
+
+const REQUEST_TIMEOUT_MS = 30_000;

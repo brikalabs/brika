@@ -17,6 +17,7 @@ interface LogListProps {
 }
 
 const AT_TOP_THRESHOLD = 40;
+const LOAD_MORE_THRESHOLD = 240;
 
 export function LogList({
   logs,
@@ -93,15 +94,17 @@ export function LogList({
       onRevealPending?.();
     }
     isAtTopRef.current = atTop;
-  }, [onRevealPending]);
 
-  // Trigger infinite scroll when the last visible row reaches the end of the list.
-  const lastVirtualIndex = virtualizer.getVirtualItems().at(-1)?.index ?? -1;
-  useEffect(() => {
-    if (lastVirtualIndex >= logs.length - 1 && hasMore && !isFetchingMore) {
-      onLoadMore?.();
+    // Infinite scroll: fire once the user is near the bottom. Driven by the
+    // scroll event itself rather than a virtualizer-keyed effect, so it
+    // doesn't re-run for every row that scrolls past the viewport.
+    if (hasMore && !isFetchingMore && onLoadMore) {
+      const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+      if (distanceFromBottom < LOAD_MORE_THRESHOLD) {
+        onLoadMore();
+      }
     }
-  }, [lastVirtualIndex, logs.length, hasMore, isFetchingMore, onLoadMore]);
+  }, [onRevealPending, hasMore, isFetchingMore, onLoadMore]);
 
   const scrollToTopAndReveal = useCallback(() => {
     const el = scrollRef.current;

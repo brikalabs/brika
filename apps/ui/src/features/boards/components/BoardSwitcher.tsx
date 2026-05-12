@@ -42,6 +42,16 @@ import type { BoardSummary } from '../api';
 import { useBoards, useReorderBoards } from '../hooks';
 import { useBoardStore } from '../store';
 
+// ─── Board icon helper ───────────────────────────────────────────────────────
+
+function BoardIcon({ icon }: { icon?: string }) {
+  return icon ? (
+    <DynamicIcon name={icon as IconName} className="size-3.5" />
+  ) : (
+    <LayoutDashboard className="size-3.5" />
+  );
+}
+
 // ─── Tab content (shared between sortable tab & drag overlay) ────────────────
 
 interface TabContentProps {
@@ -57,11 +67,7 @@ function TabContent({ board, isDragging }: Readonly<TabContentProps>) {
         isDragging && 'bg-background shadow-sm'
       )}
     >
-      {board.icon ? (
-        <DynamicIcon name={board.icon as IconName} className="size-3.5" />
-      ) : (
-        <LayoutDashboard className="size-3.5" />
-      )}
+      <BoardIcon icon={board.icon} />
       {board.name}
     </div>
   );
@@ -110,11 +116,7 @@ function SortableTab({ board, onEdit, activeId }: Readonly<SortableTabProps>) {
             className: 'text-muted-foreground hover:text-foreground',
           }}
         >
-          {board.icon ? (
-            <DynamicIcon name={board.icon as IconName} className="size-3.5" />
-          ) : (
-            <LayoutDashboard className="size-3.5" />
-          )}
+          <BoardIcon icon={board.icon} />
           {board.name}
         </Link>
       )}
@@ -128,16 +130,6 @@ function SortableTab({ board, onEdit, activeId }: Readonly<SortableTabProps>) {
         </button>
       )}
     </div>
-  );
-}
-
-// ─── Board icon helper ───────────────────────────────────────────────────────
-
-function BoardIcon({ icon }: { icon?: string }) {
-  return icon ? (
-    <DynamicIcon name={icon as IconName} className="size-3.5" />
-  ) : (
-    <LayoutDashboard className="size-3.5" />
   );
 }
 

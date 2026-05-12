@@ -1,5 +1,6 @@
 import { ChevronDown, ChevronRight } from "lucide-react";
 import type React from "react";
+import { useMemo } from "react";
 import type { StoredLogEvent } from "../api";
 import { LogRowExpandedSection } from "./LogRowExpandedSection";
 import { LEVEL_CONFIG } from "./log-level-config";
@@ -68,7 +69,10 @@ export function LogRow({ log, isExpanded, onToggle }: Readonly<LogRowProps>) {
     log.meta?.sourceFile === null || log.meta?.sourceFile === undefined ? null : String(log.meta.sourceFile);
   const sourceLine =
     log.meta?.sourceLine === null || log.meta?.sourceLine === undefined ? null : Number(log.meta.sourceLine);
-  const generalMeta = extractGeneralMeta(log.meta);
+  // Allocates two objects + an array per call. Logs poll every ~1s and the
+  // virtualized list re-renders rows on each tick, so memoize per log.meta
+  // reference (which only changes when the row's data actually changes).
+  const generalMeta = useMemo(() => extractGeneralMeta(log.meta), [log.meta]);
   const hasGeneralMeta = generalMeta && Object.keys(generalMeta).length > 0;
 
   const columnProps: LogRowColumnsProps = { timestamp, source, config, level: log.level, message: log.message };

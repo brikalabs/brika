@@ -66,7 +66,7 @@ export default function IconPickerGrid({ value, onChange }: Readonly<IconPickerG
       return [];
     }
 
-    return order.map((i) => iconNames[info.idx[i]]) as IconName[];
+    return order.map((i) => iconNames[info.idx[i]]).filter((n): n is IconName => n !== undefined);
   }, [deferredSearch, indexed]);
 
   // +1 for the default icon in the first row
