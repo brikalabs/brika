@@ -46,6 +46,17 @@ export function verifyToken(): Middleware {
     const ip = context.req.header('x-forwarded-for') ?? context.req.header('x-real-ip');
     const session = sessionService.validateSession(token, ip ?? undefined);
 
+    if (!session) {
+      console.warn(
+        '[auth.verifyToken] token rejected — token prefix:',
+        token.slice(0, 12),
+        'ip:',
+        ip,
+        'path:',
+        new URL(context.req.url).pathname
+      );
+    }
+
     context.set('session', session);
     await next();
   };
