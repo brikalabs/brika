@@ -15,11 +15,11 @@ import { ArrowRight, BookOpen, Code2, ExternalLink } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import { isValidHubName } from '@/lib/hub-name';
 import { storeHubName, suggestHubName } from '@/lib/hub-storage';
-import { Mark } from './Mark';
 
 /**
- * Shown at the bare `hub.brika.dev/` URL. A single self-contained card:
- * mark + heading + description + name picker + footer.
+ * Shown at the bare `hub.brika.dev/` URL. `LoaderScreen` already
+ * renders the `<Mark>` above every phase, so this card is just
+ * heading + description + name picker + footer.
  */
 export function LandingCard(): React.ReactElement {
   const [name, setName] = useState('');
@@ -54,7 +54,6 @@ export function LandingCard(): React.ReactElement {
     <Card className="w-full max-w-[420px] overflow-hidden border-border/60 shadow-foreground/5 shadow-xl">
       <CardContent className="space-y-6 px-7 pt-9 pb-7">
         <div className="flex flex-col items-center text-center">
-          <Mark phase="landing" />
           <CardTitle className="text-[17px] tracking-tight">Open a hub remotely</CardTitle>
           <CardDescription className="mt-1.5 max-w-[300px] text-[13px] leading-relaxed">
             Type the name your hub claimed and we'll connect over a direct, end-to-end-encrypted
