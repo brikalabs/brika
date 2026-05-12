@@ -160,6 +160,11 @@ export async function requestToFrames(id: number, request: Request): Promise<Req
 export function rpcRequestToFetch(msg: RequestMessage, baseOrigin: string): Request {
   const url = new URL(msg.url, baseOrigin);
   const headers = pairsToHeaders(msg.headers);
+  // The Host header was stripped on the FE side (hop-by-hop) and the wire
+  // shape never carries it. Set it explicitly from `baseOrigin` so any
+  // host-allowlist middleware on the hub sees the canonical hub host
+  // rather than `null`.
+  headers.set('host', url.host);
 
   // `BodyInit` is part of lib.dom but our hub tsconfig is stricter; use
   // `string | ArrayBuffer | null` directly since those are the only shapes we produce.
