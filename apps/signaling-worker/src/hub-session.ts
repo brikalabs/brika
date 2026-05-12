@@ -16,19 +16,14 @@
  */
 
 import {
+  DEFAULT_ICE_SERVERS,
   decodeSignaling,
   encodeSignaling,
-  type IceServer,
   PROTOCOL_VERSION,
   type SignalingMessage,
   translateFromClient,
   translateFromHub,
 } from '@brika/remote-access-protocol';
-
-const ICE_SERVERS: ReadonlyArray<IceServer> = [
-  { urls: 'stun:stun.l.google.com:19302' },
-  { urls: 'stun:stun.cloudflare.com:3478' },
-];
 
 /**
  * Per-WebSocket attachment so the DO knows what role each socket plays after
@@ -154,7 +149,7 @@ export class HubSession {
     this.#trySend(server, {
       v: PROTOCOL_VERSION,
       kind: 'session.iceServers',
-      iceServers: ICE_SERVERS,
+      iceServers: DEFAULT_ICE_SERVERS,
     });
     return this.#upgradeResponse(client, protocol);
   }
@@ -296,7 +291,7 @@ export class HubSession {
       // hub left between accept and the frame — drop silently
       return;
     }
-    hub.send(encodeSignaling(translateFromClient(msg, att.sessionId, ICE_SERVERS)));
+    hub.send(encodeSignaling(translateFromClient(msg, att.sessionId, DEFAULT_ICE_SERVERS)));
   }
 
   #findClient(sessionId: string): WebSocket | undefined {

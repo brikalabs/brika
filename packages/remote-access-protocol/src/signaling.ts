@@ -164,6 +164,22 @@ export interface IceServer {
 }
 
 /**
+ * Default STUN-only ICE servers. Returned by the coordinator on
+ * `/v1/tickets`, used as a fallback by the data-channel client when a
+ * ticket omits its own list, and consumed directly by the hub when no
+ * other source is configured. Single source of truth — was previously
+ * duplicated in 6 different files across the stack.
+ *
+ * STUN-only is intentional. TURN credentials would need per-user rotation
+ * and burn coordinator bandwidth; symmetric-NAT users (~10-15%) fall
+ * through to the "couldn't reach" error card until TURN lands.
+ */
+export const DEFAULT_ICE_SERVERS: ReadonlyArray<IceServer> = [
+  { urls: 'stun:stun.l.google.com:19302' },
+  { urls: 'stun:stun.cloudflare.com:3478' },
+];
+
+/**
  * Discriminated union of every signaling frame.
  */
 export type SignalingMessage =

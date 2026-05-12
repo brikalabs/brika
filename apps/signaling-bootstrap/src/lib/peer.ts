@@ -8,6 +8,7 @@
  */
 
 import {
+  DEFAULT_ICE_SERVERS,
   decodeRpc,
   decodeSignaling,
   encodeRpc,
@@ -31,11 +32,6 @@ export interface PeerHandle {
   request(method: string, url: string, signal?: AbortSignal): Promise<Response>;
   close(): void;
 }
-
-const FALLBACK_ICE_SERVERS: IceServer[] = [
-  { urls: 'stun:stun.l.google.com:19302' },
-  { urls: 'stun:stun.cloudflare.com:3478' },
-];
 
 const TEXT_DECODER = new TextDecoder();
 
@@ -78,7 +74,8 @@ function closeQuietly(c: { close(): void }): void {
 }
 
 function pickIceServers(servers: TicketResponse['iceServers']): RTCIceServer[] {
-  const chosen = servers && servers.length > 0 ? servers : FALLBACK_ICE_SERVERS;
+  const chosen: ReadonlyArray<IceServer> =
+    servers && servers.length > 0 ? servers : DEFAULT_ICE_SERVERS;
   return chosen.map((s) => ({
     urls: typeof s.urls === 'string' ? s.urls : [...s.urls],
     username: s.username,

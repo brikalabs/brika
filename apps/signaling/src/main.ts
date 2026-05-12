@@ -17,6 +17,7 @@
 
 import {
   constantTimeEqual,
+  DEFAULT_ICE_SERVERS,
   decodeSignaling,
   type IceServer,
   PROTOCOL_VERSION,
@@ -36,7 +37,7 @@ function parseIceServers(): ReadonlyArray<IceServer> {
       // fall through to defaults
     }
   }
-  return [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun.cloudflare.com:3478' }];
+  return DEFAULT_ICE_SERVERS;
 }
 
 /**

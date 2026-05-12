@@ -27,6 +27,7 @@
 
 import { inject, singleton } from '@brika/di';
 import {
+  DEFAULT_ICE_SERVERS,
   type IceServer,
   PROTOCOL_VERSION,
   type RpcMessage,
@@ -51,11 +52,6 @@ export const SIGNALING_NAME_SECRET_KEY = 'remote_access.hub_name';
  * editing env vars or restarting the hub.
  */
 export const COORDINATOR_ORIGIN_SECRET_KEY = 'remote_access.coordinator_origin';
-
-const DEFAULT_ICE_SERVERS: ReadonlyArray<IceServer> = [
-  { urls: 'stun:stun.l.google.com:19302' },
-  { urls: 'stun:stun.cloudflare.com:3478' },
-];
 
 export interface RemoteAccessStatus {
   /** A claim (name + token) is persisted; the service is or wants to be online. */

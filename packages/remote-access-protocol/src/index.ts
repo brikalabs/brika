@@ -38,6 +38,7 @@ export {
   type ClientAbortMessage,
   type ClientIceMessage,
   type ClientOfferMessage,
+  DEFAULT_ICE_SERVERS,
   type HubAbortMessage,
   type HubAnswerMessage,
   type HubIceMessage,
