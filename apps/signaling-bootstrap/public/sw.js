@@ -22,6 +22,19 @@ globalThis.addEventListener('install', () => {
   globalThis.skipWaiting();
 });
 
+// Backstop for skipWaiting: the bootstrap can post SKIP_WAITING if it
+// detects a waiting SW. Some browsers don't propagate the install-time
+// skipWaiting() call reliably across page navigations. Only accept the
+// message when the sender's origin matches our own scope.
+globalThis.addEventListener('message', (event) => {
+  if (event.origin !== globalThis.location.origin) {
+    return;
+  }
+  if (event.data?.type === 'SKIP_WAITING') {
+    globalThis.skipWaiting();
+  }
+});
+
 globalThis.addEventListener('activate', (event) => {
   event.waitUntil(
     (async () => {

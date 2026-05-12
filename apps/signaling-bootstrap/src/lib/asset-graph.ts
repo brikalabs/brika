@@ -431,6 +431,23 @@ export async function ensureServiceWorker(): Promise<boolean> {
       /* network failure on update check shouldn't abort the bootstrap */
     });
 
+    // If a new SW is parked in "waiting" because skipWaiting() didn't
+    // propagate at install time, nudge it via postMessage.
+    if (reg.waiting) {
+      reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+    }
+    reg.addEventListener('updatefound', () => {
+      const installing = reg.installing;
+      if (!installing) {
+        return;
+      }
+      installing.addEventListener('statechange', () => {
+        if (installing.state === 'installed' && reg.waiting) {
+          reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+        }
+      });
+    });
+
     if ((await arriving) || !navigator.serviceWorker.controller) {
       // Be generous — on slow networks the install can take 10+s.
       await waitForControllerChange(15_000).catch(() => {
@@ -440,36 +457,65 @@ export async function ensureServiceWorker(): Promise<boolean> {
 
     if (!navigator.serviceWorker.controller) {
       // No controller after our wait. DevTools "Bypass for network",
-      // private mode, or a policy-restricted environment. The caller
-      // surfaces a specific error to the user.
+      // private mode, or a policy-restricted environment.
       return false;
     }
 
     // Verify we have an up-to-date SW. If the controller is stale (old
-    // version that doesn't know our sentinel) and we haven't already
-    // reloaded this session, swap it out via unregister + reload.
+    // version that doesn't know our sentinel), unregister + reload to
+    // pick up the fresh worker. Use a counter so we try up to 2 reloads
+    // before giving up — first reload covers most cases, second covers
+    // edge cases where the browser cached the SW more aggressively.
     if (await isStaleController()) {
-      if (sessionStorage.getItem(RELOAD_FLAG)) {
-        // Already tried reloading. Don't loop — clear the flag and
-        // proceed. The bootstrap may still fail downstream but at
-        // least the user can retry on a fresh tab.
-        sessionStorage.removeItem(RELOAD_FLAG);
-      } else {
-        sessionStorage.setItem(RELOAD_FLAG, '1');
-        const regs = await navigator.serviceWorker.getRegistrations();
-        await Promise.all(regs.map((r) => r.unregister()));
-        globalThis.location.reload();
-        // Block this attempt until the navigation happens.
-        await new Promise<void>(() => {
-          /* the page is about to navigate; never resolve */
-        });
+      const attempts = Number(sessionStorage.getItem(RELOAD_FLAG) ?? '0');
+      if (attempts >= 2) {
+        // Tried twice already, still stale. Stop reloading and let the
+        // caller surface a specific error (with a manual "Reset" CTA).
+        return false;
       }
+      sessionStorage.setItem(RELOAD_FLAG, String(attempts + 1));
+      await clearBootstrapState();
+      globalThis.location.reload();
+      // Page is about to navigate; never resolve.
+      await new Promise<void>(() => {
+        /* unreachable */
+      });
     } else {
       sessionStorage.removeItem(RELOAD_FLAG);
     }
     return true;
   } catch {
     return false;
+  }
+}
+
+/**
+ * Hard reset: unregister every SW on this origin and delete every
+ * cache the bootstrap might have populated. Used both by the soft
+ * auto-recovery path and by the manual "Reset" button on the error
+ * card when auto-recovery has exhausted its retries.
+ */
+export async function clearBootstrapState(): Promise<void> {
+  try {
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map((r) => r.unregister()));
+    }
+  } catch {
+    /* best effort */
+  }
+  try {
+    if ('caches' in globalThis) {
+      const names = await caches.keys();
+      await Promise.all(names.filter((n) => n.startsWith('brika-')).map((n) => caches.delete(n)));
+    }
+  } catch {
+    /* best effort */
+  }
+  try {
+    sessionStorage.removeItem(RELOAD_FLAG);
+  } catch {
+    /* private mode storage block */
   }
 }
 

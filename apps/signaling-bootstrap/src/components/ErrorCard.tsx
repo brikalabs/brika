@@ -8,8 +8,9 @@ import {
   EmptyStateTitle,
 } from '@brika/clay';
 import { Link } from '@tanstack/react-router';
-import { ExternalLink, RotateCw, SearchX } from 'lucide-react';
+import { Eraser, ExternalLink, RotateCw, SearchX } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
+import { clearBootstrapState } from '@/lib/asset-graph';
 import type { ErrorClassification } from '@/lib/classify-error';
 
 interface ErrorCardProps {
@@ -60,6 +61,11 @@ export function ErrorCard({ error, onRetry }: ErrorCardProps): React.ReactElemen
     );
   }
 
+  const handleReset = async (): Promise<void> => {
+    await clearBootstrapState();
+    globalThis.location.reload();
+  };
+
   return (
     <Card role="alert" data-error-kind={error.kind} className="w-full max-w-110">
       <div className="space-y-4 px-6 py-5 text-center">
@@ -94,6 +100,17 @@ export function ErrorCard({ error, onRetry }: ErrorCardProps): React.ReactElemen
           <Button asChild variant="outline">
             <Link to="/">Different hub</Link>
           </Button>
+        </div>
+        <div className="border-border/40 border-t pt-3">
+          <button
+            type="button"
+            onClick={() => void handleReset()}
+            className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground transition-colors hover:text-foreground"
+            title="Unregister the service worker, clear the asset cache, and reload"
+          >
+            <Eraser className="size-3" />
+            Reset and reload
+          </button>
         </div>
       </div>
     </Card>
