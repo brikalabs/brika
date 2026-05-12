@@ -73,12 +73,16 @@ const NO_INJECT_PATHS = new Set(['/@vite/client', '/@vite/env']);
 /**
  * Stub body served in place of Vite's HMR client at cache time. Real
  * `/@vite/client` opens a WebSocket back to the dev server and, on
- * failure, falls through to a `EventSource` retry loop — both noisy
- * and useless when the page is served from `hub.brika.dev` rather than
- * `localhost:5173`. The transformed source files Vite emits import
- * `createHotContext` from this module and call `.accept()` / `.dispose()`
- * etc., so the stub has to expose a callable shape; everything is a
- * no-op so HMR is effectively turned off without crashing the imports.
+ * failure, falls through to an `EventSource` retry loop — both noisy
+ * and useless when the page is served from `hub.brika.dev` rather
+ * than `localhost:5173`.
+ *
+ * BUT — and this is critical — Vite's CSS modules in dev mode call
+ * `updateStyle(id, content)` from `/@vite/client` to inject every
+ * `.css` import as a `<style>` element. So `updateStyle` /
+ * `removeStyle` MUST be real implementations (one `<style>` element
+ * per id, idempotent on hot replacement); everything else stays a
+ * no-op so HMR is effectively turned off without crashing imports.
  */
 const VITE_CLIENT_STUB = `
 const noop = () => {};
@@ -88,10 +92,27 @@ const noopCtx = {
   data: {},
 };
 export const createHotContext = () => noopCtx;
-export const updateStyle = noop;
-export const removeStyle = noop;
+const sheets = new Map();
+export function updateStyle(id, content) {
+  let el = sheets.get(id);
+  if (!el) {
+    el = document.createElement('style');
+    el.setAttribute('data-vite-dev-id', id);
+    el.setAttribute('type', 'text/css');
+    document.head.appendChild(el);
+    sheets.set(id, el);
+  }
+  el.textContent = content;
+}
+export function removeStyle(id) {
+  const el = sheets.get(id);
+  if (el) {
+    el.remove();
+    sheets.delete(id);
+  }
+}
 export const injectQuery = (url) => url;
-export const ErrorOverlay = class extends HTMLElement {};
+export class ErrorOverlay extends HTMLElement {}
 export const overlayId = 'brika-vite-overlay-disabled';
 `;
 
