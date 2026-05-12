@@ -200,5 +200,10 @@ function resolveUrl(input: RequestInfo | URL): URL | null {
 // imports `@/lib/api` indirectly (i18n, query, etc.) has a chance to issue
 // its first request.
 if (globalThis.location !== undefined && detectRemote()) {
-  getTransport();
+  const transport = getTransport();
+  // Wire up the bootstrap SW → page bridge so dynamic `import()` of
+  // plugin/brick modules under `/api/bricks/modules/...` round-trip
+  // through the WebRTC data channel instead of falling through to the
+  // CF Worker (which returns SPA-fallback HTML).
+  import('./sw-proxy').then(({ installSwProxyListener }) => installSwProxyListener(transport));
 }

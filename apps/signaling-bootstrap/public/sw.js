@@ -74,6 +74,16 @@ globalThis.addEventListener('fetch', (event) => {
     );
     return;
   }
+  // Live `/api/*` requests can't be pre-cached (brick modules are loaded
+  // on-demand, REST endpoints have request-specific bodies). Forward them
+  // to the controlling page over postMessage so it can re-issue the call
+  // through the WebRTC bridge. Anything not under `/api/` falls back to
+  // the static cache.
+  if (url.pathname.startsWith('/api/')) {
+    event.respondWith(proxyThroughClient(req));
+    return;
+  }
+
   event.respondWith(
     (async () => {
       const cache = await caches.open(ASSET_CACHE);
@@ -95,3 +105,62 @@ globalThis.addEventListener('fetch', (event) => {
     })()
   );
 });
+
+/**
+ * Ask a controlling page to re-issue this request through its WebRTC
+ * bridge and stream the result back. The page wires up the listener
+ * in `apps/ui/src/lib/api/sw-proxy.ts`. Returns 503 when no client is
+ * available (e.g. during a hard refresh before the page reconnects).
+ */
+async function proxyThroughClient(req) {
+  const allClients = await globalThis.clients.matchAll({
+    type: 'window',
+    includeUncontrolled: true,
+  });
+  const client = allClients[0];
+  if (!client) {
+    return new Response('No controlling page available to proxy /api', {
+      status: 503,
+      headers: { 'content-type': 'text/plain' },
+    });
+  }
+  const headers = [];
+  for (const [k, v] of req.headers) {
+    headers.push([k, v]);
+  }
+  let body = null;
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
+    body = await req.arrayBuffer();
+  }
+  const channel = new MessageChannel();
+  client.postMessage(
+    {
+      type: 'brika:sw-proxy',
+      url: req.url,
+      method: req.method,
+      headers,
+      body,
+    },
+    [channel.port2]
+  );
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => {
+      resolve(
+        new Response('Bridge proxy timed out', {
+          status: 504,
+          headers: { 'content-type': 'text/plain' },
+        })
+      );
+    }, 30_000);
+    channel.port1.onmessage = (event) => {
+      clearTimeout(timer);
+      const { status, headers: respHeaders, body: respBody } = event.data ?? {};
+      resolve(
+        new Response(respBody ?? null, {
+          status: status ?? 502,
+          headers: respHeaders ?? [],
+        })
+      );
+    };
+  });
+}
