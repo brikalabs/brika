@@ -48,6 +48,10 @@ interface BoardIconProps {
   icon?: string;
 }
 
+// Module-scoped fallback so `DynamicIcon`'s `fallback` prop doesn't get a
+// freshly-defined component on every render (Sonar S6478 + React perf).
+const DefaultBoardIcon = () => <LayoutDashboard className="size-3.5" />;
+
 function BoardIcon({ icon }: Readonly<BoardIconProps>) {
   if (!icon) {
     return <LayoutDashboard className="size-3.5" />;
@@ -56,13 +60,7 @@ function BoardIcon({ icon }: Readonly<BoardIconProps>) {
   // (lucide types it as IconName but the runtime tolerates unknowns).
   // The cast confined inside this single render path is unavoidable
   // without a runtime IconName whitelist.
-  return (
-    <DynamicIcon
-      name={icon as IconName}
-      className="size-3.5"
-      fallback={() => <LayoutDashboard className="size-3.5" />}
-    />
-  );
+  return <DynamicIcon name={icon as IconName} className="size-3.5" fallback={DefaultBoardIcon} />;
 }
 
 // ─── Tab content (shared between sortable tab & drag overlay) ────────────────

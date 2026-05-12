@@ -161,7 +161,7 @@ async function runAttempt(
 }
 
 function stripHubPrefixFromUrl(hubName: string): void {
-  if (typeof globalThis.location === 'undefined' || typeof globalThis.history === 'undefined') {
+  if (globalThis.location === undefined || globalThis.history === undefined) {
     return;
   }
   const { pathname, search, hash } = globalThis.location;

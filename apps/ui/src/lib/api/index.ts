@@ -208,5 +208,6 @@ if (detectRemote()) {
   // plugin/brick modules under `/api/bricks/modules/...` round-trip
   // through the WebRTC data channel instead of falling through to the
   // CF Worker (which returns SPA-fallback HTML).
-  import('./sw-proxy').then(({ installSwProxyListener }) => installSwProxyListener(transport));
+  const { installSwProxyListener } = await import('./sw-proxy');
+  installSwProxyListener(transport);
 }

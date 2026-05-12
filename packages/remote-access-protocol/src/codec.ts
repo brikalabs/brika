@@ -76,19 +76,19 @@ const rpcSchema = z.discriminatedUnion('kind', [
     .object({
       v: V,
       kind: z.literal('request'),
-      id: z.number().finite(),
+      id: z.int(),
       method: z.string(),
       url: z.string(),
       headers: z.array(z.unknown()),
     })
     .loose(),
-  z.object({ v: V, kind: z.literal('abort'), id: z.number().finite() }).loose(),
+  z.object({ v: V, kind: z.literal('abort'), id: z.int() }).loose(),
   z
     .object({
       v: V,
       kind: z.literal('response.head'),
-      id: z.number().finite(),
-      status: z.number().finite(),
+      id: z.int(),
+      status: z.int(),
       headers: z.array(z.unknown()),
     })
     .loose(),
@@ -96,16 +96,14 @@ const rpcSchema = z.discriminatedUnion('kind', [
     .object({
       v: V,
       kind: z.literal('response.chunk'),
-      id: z.number().finite(),
+      id: z.int(),
     })
     .loose()
     .refine((m) => typeof m.dataText === 'string' || typeof m.dataB64 === 'string', {
       message: 'response.chunk requires dataText or dataB64',
     }),
-  z.object({ v: V, kind: z.literal('response.end'), id: z.number().finite() }).loose(),
-  z
-    .object({ v: V, kind: z.literal('response.error'), id: z.number().finite(), code: z.string() })
-    .loose(),
+  z.object({ v: V, kind: z.literal('response.end'), id: z.int() }).loose(),
+  z.object({ v: V, kind: z.literal('response.error'), id: z.int(), code: z.string() }).loose(),
 ]);
 
 // ─── Public decode + encode API ────────────────────────────────────────────

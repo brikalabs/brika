@@ -88,7 +88,7 @@ export function suggestHubName(): string | null {
   if (fromQuery) {
     return fromQuery;
   }
-  if (typeof globalThis.location === 'undefined') {
+  if (globalThis.location === undefined) {
     return null;
   }
   const first = globalThis.location.pathname.split('/').find((s) => s.length > 0);
@@ -135,7 +135,7 @@ async function purgeAssetCaches(): Promise<void> {
 }
 
 function readQueryHub(): string | null {
-  if (typeof globalThis.location === 'undefined') {
+  if (globalThis.location === undefined) {
     return null;
   }
   try {
