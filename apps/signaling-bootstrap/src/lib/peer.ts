@@ -115,28 +115,25 @@ interface DataChannelReady {
 }
 
 function makeDataChannelReady(channel: RTCDataChannel, pc: RTCPeerConnection): DataChannelReady {
-  let fail = (_err: Error): void => {
-    /* replaced below */
+  const { promise, resolve, reject } = Promise.withResolvers<void>();
+  const timer = setTimeout(() => reject(new Error('Data channel open timed out')), 30_000);
+  const settle = (cb: () => void): void => {
+    clearTimeout(timer);
+    cb();
   };
-  const promise = new Promise<void>((resolve, reject) => {
-    const t = setTimeout(() => reject(new Error('Data channel open timed out')), 30_000);
-    const settle = (cb: () => void): void => {
-      clearTimeout(t);
-      cb();
-    };
-    fail = (err) => settle(() => reject(err));
-    if (channel.readyState === 'open') {
-      settle(resolve);
-      return;
-    }
-    channel.addEventListener('open', () => settle(resolve));
+
+  if (channel.readyState === 'open') {
+    settle(resolve);
+  } else {
+    channel.addEventListener('open', () => settle(resolve), { once: true });
     pc.addEventListener('connectionstatechange', () => {
       if (pc.connectionState === 'failed' || pc.connectionState === 'closed') {
         settle(() => reject(new Error(`WebRTC connection ${pc.connectionState}`)));
       }
     });
-  });
-  return { promise, fail: (err) => fail(err) };
+  }
+
+  return { promise, fail: (err) => settle(() => reject(err)) };
 }
 
 interface InflightSlot {

@@ -374,6 +374,9 @@
     "packages/remote-access-protocol": {
       "name": "@brika/remote-access-protocol",
       "version": "0.1.0",
+      "dependencies": {
+        "zod": "^4.3.4",
+      },
     },
     "packages/router": {
       "name": "@brika/router",

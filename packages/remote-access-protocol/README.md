@@ -2,7 +2,7 @@
 
 Wire-format definitions and pure helpers for Brika's WebRTC remote-access stack — the signed glue between a hub running on someone's home network and a browser sitting outside it.
 
-This package is intentionally **runtime-agnostic** and **dependency-free**: it ships only types, encoders/decoders, validators, and crypto wrappers around the Web Crypto API. It is consumed identically by:
+This package is intentionally **runtime-agnostic**: types, encoders/decoders, validators, and crypto wrappers around the Web Crypto API. Its only runtime dependency is [`zod`](https://zod.dev/) — used for hostile-wire shape validation in `codec.ts` — which works unchanged in workerd, Bun, and the browser. It is consumed identically by:
 
 - `apps/hub` (Bun) — the home hub that publishes itself
 - `apps/signaling` (Bun, self-host) — the local-dev signaling coordinator
