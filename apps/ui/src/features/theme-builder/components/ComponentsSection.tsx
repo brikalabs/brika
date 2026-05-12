@@ -49,8 +49,8 @@ export function ComponentsSection({ draft, onChange }: Readonly<ComponentsSectio
 
   const setColor = useCallback<ColorSetter>(
     (token, slot, value) => {
-      const light: TokenMap = { ...(draft.colors?.light ?? {}) };
-      const dark: TokenMap = { ...(draft.colors?.dark ?? {}) };
+      const light: TokenMap = { ...draft.colors?.light };
+      const dark: TokenMap = { ...draft.colors?.dark };
       if (slot === 'light' || slot === 'both') {
         if (value === undefined) {
           delete light[token];
@@ -75,8 +75,8 @@ export function ComponentsSection({ draft, onChange }: Readonly<ComponentsSectio
       const tokens = COMPONENT_TOKEN_INDEX[component] ?? [];
       const nextTokens = { ...draft.components };
       delete nextTokens[component];
-      const light: TokenMap = { ...(draft.colors?.light ?? {}) };
-      const dark: TokenMap = { ...(draft.colors?.dark ?? {}) };
+      const light: TokenMap = { ...draft.colors?.light };
+      const dark: TokenMap = { ...draft.colors?.dark };
       for (const spec of tokens) {
         if (spec.type === 'color') {
           delete light[spec.name];

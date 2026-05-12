@@ -110,7 +110,7 @@ function paletteFromPreset(mode: 'light' | 'dark'): TokenMap {
       `Missing required preset '${DEFAULT_PRESET_ID}' — check @brika/clay/themes/registry`
     );
   }
-  return { ...(preset.colors?.[mode] ?? {}) };
+  return { ...preset.colors?.[mode] };
 }
 
 /** Default light palette — pulled from Clay's `brika` preset. */

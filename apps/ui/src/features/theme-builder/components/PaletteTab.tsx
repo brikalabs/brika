@@ -85,7 +85,7 @@ export function PaletteTab({ draft, onChange }: Readonly<PaletteTabProps>) {
     const target = from === 'light' ? 'dark' : 'light';
     onChange({
       ...draft,
-      colors: { ...draft.colors, [target]: { ...(draft.colors?.[from] ?? {}) } },
+      colors: { ...draft.colors, [target]: { ...draft.colors?.[from] } },
     });
     setEditingMode(target);
   };

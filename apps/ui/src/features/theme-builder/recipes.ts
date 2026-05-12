@@ -137,6 +137,45 @@ export interface RecipeFragments {
 
 const DEFAULT_SHADOW_RGB = '0 0 0';
 
+function elevationExtras(elevation: ElevationStyle): Record<`--${string}`, string> {
+  const scale = shadowScaleFor(elevation);
+  return {
+    '--shadow-xs': scale.xs,
+    '--shadow-sm': scale.sm,
+    '--shadow-md': scale.md,
+    '--shadow-lg': scale.lg,
+    '--shadow-xl': scale.xl,
+  };
+}
+
+function shadowRgb(tint: boolean, primaryHex: string | undefined): string {
+  if (!tint || !primaryHex) {
+    return DEFAULT_SHADOW_RGB;
+  }
+  return shadowTintRgb(primaryHex) ?? DEFAULT_SHADOW_RGB;
+}
+
+const STATE_OPACITY_KEYS = [
+  ['hover', '--state-hover-opacity'],
+  ['focus', '--state-focus-opacity'],
+  ['pressed', '--state-pressed-opacity'],
+  ['selected', '--state-selected-opacity'],
+  ['disabled', '--state-disabled-opacity'],
+] as const;
+
+function stateOpacityExtras(
+  s: NonNullable<BrikaThemeMeta['stateOpacity']>
+): Record<`--${string}`, string> {
+  const out: Record<`--${string}`, string> = {};
+  for (const [key, cssVar] of STATE_OPACITY_KEYS) {
+    const value = s[key];
+    if (value !== undefined) {
+      out[cssVar] = String(value);
+    }
+  }
+  return out;
+}
+
 export function recipesToFragments(
   brika: BrikaThemeMeta | undefined,
   primaryHex: string | undefined
@@ -149,39 +188,12 @@ export function recipesToFragments(
   if (brika.motion) {
     out.motion = { ...motionRecipeFor(brika.motion) };
   }
-
   if (brika.elevation) {
-    const scale = shadowScaleFor(brika.elevation);
-    out.extras['--shadow-xs'] = scale.xs;
-    out.extras['--shadow-sm'] = scale.sm;
-    out.extras['--shadow-md'] = scale.md;
-    out.extras['--shadow-lg'] = scale.lg;
-    out.extras['--shadow-xl'] = scale.xl;
+    Object.assign(out.extras, elevationExtras(brika.elevation));
   }
-
-  if (brika.elevationTint && primaryHex) {
-    out.extras['--shadow-rgb'] = shadowTintRgb(primaryHex) ?? DEFAULT_SHADOW_RGB;
-  } else {
-    out.extras['--shadow-rgb'] = DEFAULT_SHADOW_RGB;
-  }
-
+  out.extras['--shadow-rgb'] = shadowRgb(brika.elevationTint ?? false, primaryHex);
   if (brika.stateOpacity) {
-    const s = brika.stateOpacity;
-    if (s.hover !== undefined) {
-      out.extras['--state-hover-opacity'] = String(s.hover);
-    }
-    if (s.focus !== undefined) {
-      out.extras['--state-focus-opacity'] = String(s.focus);
-    }
-    if (s.pressed !== undefined) {
-      out.extras['--state-pressed-opacity'] = String(s.pressed);
-    }
-    if (s.selected !== undefined) {
-      out.extras['--state-selected-opacity'] = String(s.selected);
-    }
-    if (s.disabled !== undefined) {
-      out.extras['--state-disabled-opacity'] = String(s.disabled);
-    }
+    Object.assign(out.extras, stateOpacityExtras(brika.stateOpacity));
   }
 
   return out;
