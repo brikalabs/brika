@@ -2,16 +2,20 @@ import { inject, singleton } from '@brika/di';
 import { dataDir } from '@/cli/utils/runtime';
 import { ConfigLoader } from './config-loader';
 
+/** Canonical host. One Worker serves both /v1/* (API) and /<name>/... (UI). */
+const CANONICAL_HOST = 'hub.brika.dev';
+
 /**
- * Default coordinator URL. The Cloudflare Worker also serves the static UI
- * shell, so this same hostname is what users open in their browser.
+ * Default coordinator URL. The Cloudflare Worker serves both the signaling
+ * API and the static UI shell on the same host, so this is also what users
+ * open in their browser.
  * Operators can override via the Settings UI or `BRIKA_COORDINATOR_URL`.
  */
-const DEFAULT_COORDINATOR_ORIGIN = 'https://signaling.brika.dev';
+const DEFAULT_COORDINATOR_ORIGIN = `https://${CANONICAL_HOST}`;
 
 /**
  * Derive the WebSocket signaling URL from the coordinator HTTP origin.
- * `https://signaling.brika.dev` → `wss://signaling.brika.dev/v1/hub`.
+ * `https://hub.brika.dev` → `wss://hub.brika.dev/v1/hub`.
  */
 export function deriveSignalingUrl(coordinatorOrigin: string): string {
   const url = new URL('/v1/hub', coordinatorOrigin);
@@ -19,15 +23,9 @@ export function deriveSignalingUrl(coordinatorOrigin: string): string {
   return url.toString();
 }
 
-/** Short host the coordinator exposes for `hub.brika.dev/<name>` path links. */
-const SHORT_HOST = 'hub.brika.dev';
-/** Legacy wildcard subdomain form: `<name>.hubs.brika.dev`. */
-const SUBDOMAIN_SUFFIX = '.hubs.brika.dev';
-
 /**
  * Public-facing URL a user opens in a browser to reach this hub remotely.
- * Returns the short `https://hub.brika.dev/<name>` form by default — the
- * worker resolves either this or the legacy subdomain to the same UI shell.
+ * Returns `https://hub.brika.dev/<name>` in production.
  *
  * `coordinatorOrigin` is honoured for development setups that point at a
  * non-production coordinator; in that case the URL falls back to a query
@@ -40,44 +38,16 @@ export function derivePublicOrigin(name: string, coordinatorOrigin: string): str
   try {
     const cord = new URL(coordinatorOrigin);
     // Production: hub.brika.dev/<name> — pretty, short, no wildcard DNS.
-    if (cord.hostname === 'signaling.brika.dev') {
-      return `https://${SHORT_HOST}/${name}`;
+    if (cord.hostname === CANONICAL_HOST) {
+      return `https://${CANONICAL_HOST}/${name}`;
     }
-    // Development / self-hosted coordinator: query-param form on the
-    // coordinator origin itself, since hub.brika.dev only exists in prod.
-    const url = new URL('/', coordinatorOrigin);
-    url.searchParams.set('hub', name);
+    // Dev / self-hosted coordinator: path-based on whatever host the
+    // operator pointed the hub at. The local worker resolves it identically.
+    const url = new URL(`/${name}`, coordinatorOrigin);
     return url.toString();
   } catch {
-    return `https://${SHORT_HOST}/${name}`;
+    return `https://${CANONICAL_HOST}/${name}`;
   }
-}
-
-/**
- * Every URL form that resolves to this hub. The settings UI renders all of
- * them so the operator can copy whichever they prefer to share.
- */
-export function derivePublicUrls(
-  name: string,
-  coordinatorOrigin: string
-): { short: string; subdomain: string; legacy: string } {
-  if (!name) {
-    return { short: '', subdomain: '', legacy: '' };
-  }
-  const legacy = (() => {
-    try {
-      const url = new URL('/', coordinatorOrigin);
-      url.searchParams.set('hub', name);
-      return url.toString();
-    } catch {
-      return `https://signaling.brika.dev/?hub=${name}`;
-    }
-  })();
-  return {
-    short: `https://${SHORT_HOST}/${name}`,
-    subdomain: `https://${name}${SUBDOMAIN_SUFFIX}/`,
-    legacy,
-  };
 }
 
 /**

@@ -38,14 +38,11 @@
     "fields": {
       "name": "Hub name",
       "status": "Signaling",
-      "publicOrigin": "Share links",
+      "publicOrigin": "Share link",
       "activeSessions": "Active sessions",
       "coordinator": "Coordinator URL"
     },
-    "shareUrls": {
-      "short": "Short",
-      "subdomain": "Subdomain",
-      "legacy": "Legacy",
+    "shareUrl": {
       "copy": "Copy link",
       "open": "Open in a new tab"
     },

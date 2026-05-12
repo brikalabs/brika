@@ -4,12 +4,6 @@
  * (the rest of `worker.ts` pulls in Cloudflare-only globals).
  */
 
-/** Path-based pretty host: `hub.brika.dev/<name>[/rest]`. */
-export const PATH_HOST = 'hub.brika.dev';
-
-/** Legacy subdomain form: `<name>.hubs.brika.dev`. */
-export const SUBDOMAIN_SUFFIX = '.hubs.brika.dev';
-
 /**
  * Hub name shape. Mirrors `validateName` in `@brika/remote-access-protocol`
  * but as a single anchored regex — at this layer we just need a syntactic
@@ -22,36 +16,32 @@ export interface ResolvedHub {
   /** The hub-name segment as it appeared in the URL. Lowercase, validated. */
   readonly hubName: string;
   /**
-   * The path portion to forward to the asset binding. For the subdomain form
-   * this is the original `url.pathname`; for the path form it's everything
-   * after the `/<name>` prefix (with a leading slash kept so SPA fallback
-   * still maps to `/index.html`).
+   * The path portion to forward to the asset binding — everything after the
+   * `/<name>` prefix, with a leading slash kept so the SPA fallback still
+   * maps to `/index.html`.
    */
   readonly restPath: string;
 }
 
 /**
- * Resolve the hub name a request is targeting. Returns `null` when the host
- * + path combination doesn't identify any hub — the caller falls back to
- * regular asset serving (or 404).
+ * Resolve the hub name a request is targeting from a URL of the form
+ * `<anything>/<name>[/rest]`. Returns `null` when the first path segment
+ * doesn't look like a hub name — caller falls back to regular asset
+ * serving or a 404.
+ *
+ * Hostname is intentionally ignored: a single Worker now serves every host
+ * the deployment cares about, so the path-based form is the only one. The
+ * caller is responsible for excluding the API prefix (`/v1/*`) before
+ * invoking this — otherwise `v1` would still be rejected (too short to be
+ * a valid hub name) but the response shape would not be the API one.
  */
 export function resolveHubFromUrl(url: URL): ResolvedHub | null {
-  if (url.hostname === PATH_HOST) {
-    const match = /^\/([^/]+)(\/.*)?$/.exec(url.pathname);
-    const candidate = match?.[1];
-    if (!candidate || !HUB_NAME_PATTERN.test(candidate)) {
-      return null;
-    }
-    return { hubName: candidate, restPath: match?.[2] ?? '/' };
+  const match = /^\/([^/]+)(\/.*)?$/.exec(url.pathname);
+  const candidate = match?.[1];
+  if (!candidate || !HUB_NAME_PATTERN.test(candidate)) {
+    return null;
   }
-  const host = url.hostname.toLowerCase();
-  if (host.endsWith(SUBDOMAIN_SUFFIX)) {
-    const candidate = host.slice(0, -SUBDOMAIN_SUFFIX.length);
-    if (candidate && HUB_NAME_PATTERN.test(candidate)) {
-      return { hubName: candidate, restPath: url.pathname };
-    }
-  }
-  return null;
+  return { hubName: candidate, restPath: match?.[2] ?? '/' };
 }
 
 /**

@@ -187,6 +187,7 @@ function ClaimForm({ coordinatorOrigin }: Readonly<{ coordinatorOrigin: string }
       <div className="space-y-3 border-border/50 border-t pt-5">
         <p className="text-muted-foreground text-sm">{t('settings:remoteAccess.claim.help')}</p>
         <form onSubmit={submit} className="flex flex-wrap items-center gap-2">
+          <span className="font-mono text-[12.5px] text-muted-foreground">hub.brika.dev/</span>
           <Input
             type="text"
             placeholder={t('settings:remoteAccess.claim.placeholder')}
@@ -197,7 +198,6 @@ function ClaimForm({ coordinatorOrigin }: Readonly<{ coordinatorOrigin: string }
             pattern="[a-z][a-z0-9-]{2,30}[a-z0-9]"
             maxLength={32}
           />
-          <span className="font-mono text-[12.5px] text-muted-foreground">.hubs.brika.dev</span>
           <Button type="submit" size="sm" disabled={claim.isPending || name.trim().length < 4}>
             <Globe />
             {t('settings:remoteAccess.claim.submit')}
@@ -209,75 +209,52 @@ function ClaimForm({ coordinatorOrigin }: Readonly<{ coordinatorOrigin: string }
   );
 }
 
-// ─── Share-URL list ─────────────────────────────────────────────────────────
+// ─── Share-URL chip ─────────────────────────────────────────────────────────
 
-const URL_KINDS = ['short', 'subdomain', 'legacy'] as const;
-type UrlKind = (typeof URL_KINDS)[number];
-
-function ShareUrls({ urls }: Readonly<{ urls: RemoteAccessStatus['publicUrls'] }>) {
+function ShareUrl({ url }: Readonly<{ url: string }>) {
   const { t } = useLocale();
-  const [copied, setCopied] = useState<UrlKind | null>(null);
+  const [copied, setCopied] = useState(false);
 
-  const copy = async (kind: UrlKind, value: string) => {
+  const copy = async () => {
     try {
-      await navigator.clipboard.writeText(value);
-      setCopied(kind);
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
       setTimeout(() => {
-        setCopied((current) => (current === kind ? null : current));
+        setCopied(false);
       }, 1500);
     } catch {
-      // Older browsers / insecure contexts — just no-op; the link is still
-      // visible and the user can select-and-copy by hand.
+      // Older browsers / insecure contexts — no-op; the link is still
+      // visible and selectable.
     }
   };
 
   return (
-    <div className="space-y-1.5">
-      {URL_KINDS.map((kind) => {
-        const value = urls[kind];
-        if (!value) {
-          return null;
-        }
-        const isCopied = copied === kind;
-        const isPrimary = kind === 'short';
-        return (
-          <div
-            key={kind}
-            className="group flex items-center gap-2 rounded-md border border-border/40 bg-muted/30 px-2.5 py-1.5"
-          >
-            <span className="font-mono text-[10px] text-muted-foreground/70 uppercase tracking-[0.16em]">
-              {t(`settings:remoteAccess.shareUrls.${kind}`)}
-            </span>
-            <a
-              href={value}
-              target="_blank"
-              rel="noreferrer"
-              className={`flex-1 truncate font-mono text-[12.5px] hover:underline ${
-                isPrimary ? 'text-primary' : 'text-foreground/80'
-              }`}
-            >
-              {value}
-            </a>
-            <button
-              type="button"
-              onClick={() => copy(kind, value)}
-              className="inline-flex size-7 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
-              aria-label={t('settings:remoteAccess.shareUrls.copy')}
-            >
-              {isCopied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
-            </button>
-            <a
-              href={value}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex size-7 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
-              aria-label={t('settings:remoteAccess.shareUrls.open')}
-            >
-              <ExternalLink className="size-3.5" />
-            </a>
-          </div>
-        );
-      })}
+    <div className="group flex items-center gap-2 rounded-md border border-border/40 bg-muted/30 px-2.5 py-1.5">
+      <a
+        href={url}
+        target="_blank"
+        rel="noreferrer"
+        className="flex-1 truncate font-mono text-[12.5px] text-primary hover:underline"
+      >
+        {url}
+      </a>
+      <button
+        type="button"
+        onClick={copy}
+        className="inline-flex size-7 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
+        aria-label={t('settings:remoteAccess.shareUrl.copy')}
+      >
+        {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+      </button>
+      <a
+        href={url}
+        target="_blank"
+        rel="noreferrer"
+        className="inline-flex size-7 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
+        aria-label={t('settings:remoteAccess.shareUrl.open')}
+      >
+        <ExternalLink className="size-3.5" />
+      </a>
     </div>
   );
 }
@@ -344,7 +321,7 @@ function ConnectedView({ status }: Readonly<{ status: RemoteAccessStatus }>) {
           <p className="font-mono text-[10px] text-muted-foreground/70 uppercase tracking-[0.16em]">
             {t('settings:remoteAccess.fields.publicOrigin')}
           </p>
-          <ShareUrls urls={status.publicUrls} />
+          <ShareUrl url={status.publicOrigin} />
         </div>
         <div className="space-y-1">
           <p className="font-mono text-[10px] text-muted-foreground/70 uppercase tracking-[0.16em]">

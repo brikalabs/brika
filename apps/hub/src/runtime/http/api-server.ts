@@ -15,14 +15,15 @@ function formatDuration(ms: number): string {
 }
 
 /**
- * CORS check for `*.brika.dev` and `hubs.brika.dev` over HTTPS — the public
- * UI shell used when accessing the hub remotely.
+ * CORS check for the canonical Brika coordinator host over HTTPS — the
+ * public UI shell used when accessing the hub remotely is served from
+ * `hub.brika.dev` and proxies requests back via the WebRTC data channel.
  */
 export function isBrikaSubdomainOrigin(origin: string): boolean {
   try {
     const url = new URL(origin);
     const host = url.hostname.toLowerCase();
-    if (host === 'hubs.brika.dev' || host.endsWith('.hubs.brika.dev')) {
+    if (host === 'hub.brika.dev') {
       return url.protocol === 'https:';
     }
     return false;

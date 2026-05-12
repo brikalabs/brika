@@ -33,12 +33,7 @@ import {
   type SignalingMessage,
 } from '@brika/remote-access-protocol';
 import { hub } from '@/hub';
-import {
-  derivePublicOrigin,
-  derivePublicUrls,
-  deriveSignalingUrl,
-  HubConfig,
-} from '@/runtime/config';
+import { derivePublicOrigin, deriveSignalingUrl, HubConfig } from '@/runtime/config';
 import { ApiServer } from '@/runtime/http/api-server';
 import { Logger } from '@/runtime/logs/log-router';
 import { SecretStore } from '@/runtime/secrets/secret-store';
@@ -67,10 +62,8 @@ export interface RemoteAccessStatus {
   claimed: boolean;
   /** The claimed hub name (empty when not claimed). */
   name: string;
-  /** Canonical public URL — short `hub.brika.dev/<name>` form in production. */
+  /** Canonical share URL: `https://hub.brika.dev/<name>` in production. */
   publicOrigin: string;
-  /** Every URL form that resolves to this hub. UI renders these as copy chips. */
-  publicUrls: { short: string; subdomain: string; legacy: string };
   /** Live signaling-client state. */
   state: SignalingState;
   /** Active peer sessions (browsers currently connected). */
@@ -165,12 +158,10 @@ export class RemoteAccessService {
     const token = await this.#secrets.getHubSecret(SIGNALING_TOKEN_SECRET_KEY);
     const name = storedName ?? '';
     const coordinatorOrigin = await this.coordinatorOrigin();
-    const publicUrls = derivePublicUrls(name, coordinatorOrigin);
     return {
       claimed: Boolean(name && token),
       name,
       publicOrigin: derivePublicOrigin(name, coordinatorOrigin),
-      publicUrls,
       state: this.#state,
       activeSessions: this.#sessions.size,
       coordinatorOrigin,
@@ -383,10 +374,12 @@ export class RemoteAccessService {
     }
     const servers = iceServers.length > 0 ? iceServers : DEFAULT_ICE_SERVERS;
     // Synthesize a stable, allowlisted Host for the in-process Request. This
-    // is never exposed to users — the public URL surfaced in /api/remote-access
-    // is composed separately by `derivePublicOrigin(name, coordinatorOrigin)`.
+    // is never exposed to users — the public share URL surfaced in
+    // /api/remote-access is composed separately by `derivePublicOrigin`.
+    // hub.brika.dev is the canonical coordinator host and matches the CORS
+    // + host allowlist on `ApiServer`.
     const baseOrigin = this.#activeName
-      ? `https://${this.#activeName}.hubs.brika.dev`
+      ? 'https://hub.brika.dev'
       : `http://localhost:${this.#config.port}`;
     const rpc = new RpcServer({
       sessionId,

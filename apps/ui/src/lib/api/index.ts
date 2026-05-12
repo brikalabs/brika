@@ -4,14 +4,17 @@
  * The transport is selected once at app boot. We detect "this UI is talking
  * to a remote hub" three ways, in order of preference:
  *
- *   1. `?hub=<name>` query parameter (preferred). Works on any hostname
- *      including the coordinator's own (`signaling.brika.dev/?hub=maxime`).
- *      No DNS gymnastics required.
+ *   1. `<meta name="brika:hub" content="<name>">` — the worker stamps this
+ *      into every UI shell it serves. Most reliable; the worker has D1 +
+ *      the request URL to work with.
  *
- *   2. `<name>.hubs.brika.dev` subdomain. Nicer URL, but needs a wildcard
- *      DNS record on the brika.dev zone.
+ *   2. `?hub=<name>` query parameter — explicit override on any hostname.
  *
- *   3. `VITE_BRIKA_REMOTE_FORCE=1` env override (dev shortcut).
+ *   3. `hub.brika.dev/<name>/...` — path-based fallback for self-hosted
+ *      coordinators where the worker shell wasn't able to inject the meta
+ *      tag.
+ *
+ *   4. `VITE_BRIKA_REMOTE_FORCE=1` env override (dev shortcut).
  *
  * If none of the above match, we use {@link FetchTransport} — the LAN/dev
  * default that just hits `window.fetch`.
@@ -29,17 +32,15 @@ export {
 export { FetchTransport } from './fetch-transport';
 export type { Transport } from './transport';
 
-const SUBDOMAIN_SUFFIX = '.hubs.brika.dev';
-const PATH_HOST = 'hub.brika.dev';
-const DEFAULT_COORDINATOR_ORIGIN = 'https://signaling.brika.dev';
+const CANONICAL_HOST = 'hub.brika.dev';
+const DEFAULT_COORDINATOR_ORIGIN = `https://${CANONICAL_HOST}`;
 const HUB_QUERY_PARAM = 'hub';
 const HUB_META_NAME = 'brika:hub';
 
 /**
  * Read the hub name the worker stamped into the document head. The worker
  * injects `<meta name="brika:hub" content="<name>">` whenever it can resolve
- * the request to a hub — works for both `<name>.hubs.brika.dev` and
- * `hub.brika.dev/<name>` forms.
+ * the request to a hub — works for any URL the worker accepts.
  */
 function hubFromMetaTag(): string | null {
   if (typeof document === 'undefined') {
@@ -57,6 +58,14 @@ interface RemoteHints {
   readonly coordinatorOrigin: string;
 }
 
+function hubOriginFor(name: string, coordinatorOrigin: string): string {
+  try {
+    return new URL(`/${name}`, coordinatorOrigin).toString();
+  } catch {
+    return `https://${CANONICAL_HOST}/${name}`;
+  }
+}
+
 function detectRemote(): RemoteHints | null {
   if (globalThis.location === undefined) {
     return null;
@@ -66,14 +75,13 @@ function detectRemote(): RemoteHints | null {
   const coordinatorOrigin = env.VITE_BRIKA_COORDINATOR_ORIGIN || DEFAULT_COORDINATOR_ORIGIN;
 
   // 1. <meta name="brika:hub"> — the worker stamps this into every UI shell
-  //    it serves, regardless of which URL form the user typed. This is the
-  //    most reliable source because the worker has D1 + the request URL to
-  //    work with; the browser only has the URL.
+  //    it serves. Most reliable source: the worker has D1 + the request URL
+  //    to work with; the browser only has the URL.
   const metaHub = hubFromMetaTag();
   if (metaHub) {
     return {
       hubName: metaHub,
-      hubOrigin: `${loc.protocol}//${metaHub}${SUBDOMAIN_SUFFIX}`,
+      hubOrigin: hubOriginFor(metaHub, coordinatorOrigin),
       coordinatorOrigin,
     };
   }
@@ -83,44 +91,25 @@ function detectRemote(): RemoteHints | null {
   if (queryHub && queryHub.length > 0) {
     return {
       hubName: queryHub,
-      hubOrigin: `${loc.protocol}//${queryHub}${SUBDOMAIN_SUFFIX}`,
+      hubOrigin: hubOriginFor(queryHub, coordinatorOrigin),
       coordinatorOrigin,
     };
   }
 
-  // 3. <name>.hubs.brika.dev subdomain — the legacy URL form. Kept for
-  //    backwards compatibility with links already shared in the wild.
-  const hostname = loc.hostname.toLowerCase();
-  if (hostname.endsWith(SUBDOMAIN_SUFFIX)) {
-    const hubName = hostname.slice(0, -SUBDOMAIN_SUFFIX.length);
-    if (hubName) {
-      return {
-        hubName,
-        hubOrigin: `${loc.protocol}//${loc.host}`,
-        coordinatorOrigin,
-      };
-    }
+  // 3. Path-based fallback: /<name>/... on the canonical host. Only kicks in
+  //    when the worker's meta-tag injector didn't fire (degraded responses,
+  //    self-hosted coordinators, etc.).
+  const first = loc.pathname.split('/').find((segment) => segment.length > 0);
+  if (loc.hostname.toLowerCase() === CANONICAL_HOST && first) {
+    return { hubName: first, hubOrigin: hubOriginFor(first, coordinatorOrigin), coordinatorOrigin };
   }
 
-  // 4. hub.brika.dev/<name>/... — fallback in case the meta tag is missing
-  //    (e.g. someone is running the UI shell from an unexpected origin).
-  if (hostname === PATH_HOST) {
-    const first = loc.pathname.split('/').filter(Boolean)[0];
-    if (first) {
-      return {
-        hubName: first,
-        hubOrigin: `${loc.protocol}//${first}${SUBDOMAIN_SUFFIX}`,
-        coordinatorOrigin,
-      };
-    }
-  }
-
-  // 5. Dev override.
+  // 4. Dev override.
   if (env.VITE_BRIKA_REMOTE_FORCE === '1') {
     const forcedName = env.VITE_BRIKA_REMOTE_NAME ?? 'devtest';
     return {
       hubName: forcedName,
-      hubOrigin: `https://${forcedName}${SUBDOMAIN_SUFFIX}`,
+      hubOrigin: hubOriginFor(forcedName, coordinatorOrigin),
       coordinatorOrigin,
     };
   }

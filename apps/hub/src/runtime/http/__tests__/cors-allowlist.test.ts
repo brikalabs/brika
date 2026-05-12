@@ -2,20 +2,23 @@ import { describe, expect, it } from 'bun:test';
 import { isBrikaSubdomainOrigin, isPrivateNetworkOrigin } from '../api-server';
 
 describe('isBrikaSubdomainOrigin', () => {
-  it('accepts the canonical https://hubs.brika.dev shell', () => {
-    expect(isBrikaSubdomainOrigin('https://hubs.brika.dev')).toBe(true);
-    expect(isBrikaSubdomainOrigin('https://my-hub.hubs.brika.dev')).toBe(true);
+  it('accepts the canonical https://hub.brika.dev shell', () => {
+    expect(isBrikaSubdomainOrigin('https://hub.brika.dev')).toBe(true);
   });
 
   it('rejects http (only https is trusted for the remote shell)', () => {
-    expect(isBrikaSubdomainOrigin('http://hubs.brika.dev')).toBe(false);
-    expect(isBrikaSubdomainOrigin('http://abc.hubs.brika.dev')).toBe(false);
+    expect(isBrikaSubdomainOrigin('http://hub.brika.dev')).toBe(false);
+  });
+
+  it('rejects the legacy wildcard subdomain form (intentionally removed)', () => {
+    expect(isBrikaSubdomainOrigin('https://maxime.hubs.brika.dev')).toBe(false);
+    expect(isBrikaSubdomainOrigin('https://hubs.brika.dev')).toBe(false);
   });
 
   it('rejects unrelated domains and look-alikes', () => {
     expect(isBrikaSubdomainOrigin('https://attacker.example.com')).toBe(false);
-    expect(isBrikaSubdomainOrigin('https://hubs.brika.dev.evil.com')).toBe(false);
-    expect(isBrikaSubdomainOrigin('https://nothubs.brika.dev')).toBe(false);
+    expect(isBrikaSubdomainOrigin('https://hub.brika.dev.evil.com')).toBe(false);
+    expect(isBrikaSubdomainOrigin('https://nothub.brika.dev')).toBe(false);
   });
 
   it('rejects malformed origin strings without throwing', () => {

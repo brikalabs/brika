@@ -38,14 +38,11 @@
     "fields": {
       "name": "Nom du hub",
       "status": "Signalisation",
-      "publicOrigin": "Liens de partage",
+      "publicOrigin": "Lien de partage",
       "activeSessions": "Sessions actives",
       "coordinator": "URL du coordinateur"
     },
-    "shareUrls": {
-      "short": "Court",
-      "subdomain": "Sous-domaine",
-      "legacy": "Historique",
+    "shareUrl": {
       "copy": "Copier le lien",
       "open": "Ouvrir dans un nouvel onglet"
     },

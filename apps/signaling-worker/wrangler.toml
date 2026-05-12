@@ -36,30 +36,28 @@ not_found_handling = "single-page-application"
 run_worker_first = true
 
 # ─── Custom domains ─────────────────────────────────────────────────────────
-# Each entry below maps a hostname to this Worker. For non-wildcard hostnames
-# Cloudflare auto-provisions the DNS record. Wildcards require a pre-existing
-# proxied DNS record on the zone — wrangler will error clearly if it's missing.
+# One Worker, one host. `hub.brika.dev` serves:
+#   - GET/POST/WS  /v1/*              — coordinator API (health, claim,
+#                                       rotate, release, tickets, status,
+#                                       and the /v1/hub + /v1/client
+#                                       WebSocket upgrades)
+#   - GET          /<name>/...        — per-hub UI shell (the worker stamps
+#                                       <meta name="brika:hub" content=…>
+#                                       into the index.html before serving)
+# Single-host Custom Domain — Cloudflare auto-creates the proxied DNS record.
 
 [[routes]]
-# Apex of the per-hub namespace. Loaded by browsers as the static UI shell
-# (e.g. `maxime.hubs.brika.dev` for hub `maxime`). Requires a wildcard DNS
-# record on the brika.dev zone — see the README for the one-click setup.
-pattern = "*.hubs.brika.dev/*"
-zone_name = "brika.dev"
-
-[[routes]]
-# Dedicated coordinator host. Serves both the UI shell and the /v1/* API.
-# Single-host Custom Domain — Cloudflare auto-creates a proxied DNS record.
-pattern = "signaling.brika.dev"
-custom_domain = true
-
-[[routes]]
-# Short "pretty" host. `hub.brika.dev/<name>` is the recommended form to share
-# with users — the worker resolves the hub name from the first path segment
-# and serves the same UI shell as the legacy subdomain form. Single-host
-# Custom Domain; Cloudflare auto-creates a proxied DNS record.
 pattern = "hub.brika.dev"
 custom_domain = true
+
+# Note: earlier iterations used two separate hostnames:
+#   - signaling.brika.dev for /v1/*
+#   - *.hubs.brika.dev    as a wildcard for per-hub UI shells
+# Both are intentionally removed. The wildcard had fragile TLS provisioning,
+# and there is no functional reason to split the API and UI surfaces across
+# two hostnames when the Worker handles both. The corresponding DNS records
+# on the brika.dev zone (`signaling A …` and `*.hubs CNAME …`) should be
+# deleted alongside this change.
 
 # Durable Object that owns a single hub's signaling state.
 [[durable_objects.bindings]]

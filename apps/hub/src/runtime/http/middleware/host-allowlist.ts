@@ -56,10 +56,11 @@ function isPrivateNetwork(host: string): boolean {
 
 function isBrikaPublicHost(host: string): boolean {
   const bare = stripPort(host).toLowerCase();
-  // Hub names live at `*.hubs.brika.dev`. We don't accept the product
+  // Every remote request reaches the hub through the WebRTC bridge with
+  // `hub.brika.dev` as the synthesized Host. We don't accept the product
   // domain itself (`brika.dev`, `clay.brika.dev`, etc.) since hubs never
   // legitimately receive requests under those Host values.
-  return bare === 'hubs.brika.dev' || bare.endsWith('.hubs.brika.dev');
+  return bare === 'hub.brika.dev';
 }
 
 export function hostAllowlist(options: HostAllowlistOptions): Middleware {
