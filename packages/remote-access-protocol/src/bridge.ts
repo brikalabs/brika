@@ -220,26 +220,60 @@ export type EmitFrame = (
  * Streaming bodies are forwarded as multiple `response.chunk` frames; the
  * function awaits each `emit` so the peer manager can apply backpressure.
  */
-function emitChunk(
+
+/**
+ * Max payload bytes per `response.chunk` frame before we fragment.
+ *
+ * WebRTC SCTP data channels cap a single `send()` at the negotiated
+ * `maxMessageSize` — commonly 64 KiB, but unreliable channels with
+ * partial-reliability can be smaller, and the JSON envelope + UTF-8
+ * + JSON-escape blow-up for control chars can multiply the payload
+ * size 2–6x on the wire. 16 KiB raw keeps every frame comfortably
+ * under any realistic limit even after worst-case escaping.
+ *
+ * The cost of small frames is the JSON parse/encode overhead — but
+ * that's the same overhead the FE handles for naturally-streamed
+ * responses, and avoiding the silent send-fail (which truncates the
+ * body and corrupts the next response on the wire) is worth far more
+ * than a few hundred extra frame round-trips per MB.
+ */
+const MAX_CHUNK_PAYLOAD_BYTES = 16 * 1024;
+
+async function emitChunk(
   id: number,
   bytes: Uint8Array,
   decoder: TextDecoder | null,
   emit: EmitFrame
-): void | Promise<void> {
-  if (decoder) {
-    return emit({
-      v: PROTOCOL_VERSION,
-      kind: 'response.chunk',
-      id,
-      dataText: decoder.decode(bytes, { stream: true }),
-    });
+): Promise<void> {
+  // Vite can hand back a multi-megabyte body in a single `read()`. If
+  // we forwarded that as one frame, `channel.send()` would throw with
+  // "Message too large" and the peer-session's catch would silently
+  // drop the frame, leaving the FE waiting for chunks that never come.
+  for (let offset = 0; offset < bytes.byteLength; offset += MAX_CHUNK_PAYLOAD_BYTES) {
+    const slice = bytes.subarray(
+      offset,
+      Math.min(offset + MAX_CHUNK_PAYLOAD_BYTES, bytes.byteLength)
+    );
+    if (decoder) {
+      await emit({
+        v: PROTOCOL_VERSION,
+        kind: 'response.chunk',
+        id,
+        // `stream: true` keeps incomplete UTF-8 sequences buffered in
+        // the decoder until the next call, so splitting on byte
+        // boundaries never corrupts multi-byte characters. The tail
+        // flush in `streamBodyToFrames` empties the buffer at EOF.
+        dataText: decoder.decode(slice, { stream: true }),
+      });
+    } else {
+      await emit({
+        v: PROTOCOL_VERSION,
+        kind: 'response.chunk',
+        id,
+        dataB64: bytesToBase64(slice),
+      });
+    }
   }
-  return emit({
-    v: PROTOCOL_VERSION,
-    kind: 'response.chunk',
-    id,
-    dataB64: bytesToBase64(bytes),
-  });
 }
 
 async function streamBodyToFrames(

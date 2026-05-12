@@ -186,8 +186,15 @@ export class PeerSession {
     try {
       this.#channel.send(encodeRpc(frame));
     } catch (err) {
-      this.#options.log.warn('data channel send failed', {
+      // A throw here silently truncates the bridged response — the FE
+      // never sees `response.end`, the stream just stops mid-body, and
+      // the next frame on the wire is interpreted as a continuation
+      // (which is how clay's bundle ended up with menubar CSS spliced
+      // mid-`import` statement). Log at error level so this surfaces
+      // immediately in the hub logs.
+      this.#options.log.error('data channel send failed — frame dropped', {
         sessionId: this.#options.sessionId,
+        kind: frame.kind,
         error: err instanceof Error ? err.message : String(err),
       });
     }
