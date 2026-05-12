@@ -36,6 +36,9 @@ const FALLBACK_ICE_SERVERS: IceServer[] = [
   { urls: 'stun:stun.cloudflare.com:3478' },
 ];
 
+const TEXT_ENCODER = new TextEncoder();
+const TEXT_DECODER = new TextDecoder();
+
 export async function mintTicket(hubName: string, coordinator: string): Promise<TicketResponse> {
   if (!isValidHubName(hubName)) {
     throw new Error(`Refusing to mint ticket for invalid hub name "${hubName}"`);
@@ -64,7 +67,7 @@ function chunkToBytes(msg: { dataB64?: string; dataText?: string }): Uint8Array 
   if (msg.dataB64) {
     return Uint8Array.from(atob(msg.dataB64), (c) => c.codePointAt(0) ?? 0);
   }
-  return new TextEncoder().encode(msg.dataText ?? '');
+  return TEXT_ENCODER.encode(msg.dataText ?? '');
 }
 
 function buildSignalingUrl(coordinator: string, hubName: string, ticket: string): string {
@@ -250,7 +253,7 @@ export async function openPeer(
   });
 
   channel.addEventListener('message', (ev) => {
-    const raw = typeof ev.data === 'string' ? ev.data : new TextDecoder().decode(ev.data);
+    const raw = typeof ev.data === 'string' ? ev.data : TEXT_DECODER.decode(ev.data);
     const msg = decodeRpc(raw);
     if (msg) {
       dispatchRpcFrame(msg, inflight);
@@ -276,7 +279,7 @@ export async function openPeer(
   const dcReady = makeDataChannelReady(channel, pc);
 
   ws.addEventListener('message', (ev) => {
-    const raw = typeof ev.data === 'string' ? ev.data : new TextDecoder().decode(ev.data);
+    const raw = typeof ev.data === 'string' ? ev.data : TEXT_DECODER.decode(ev.data);
     const msg = decodeSignaling(raw);
     if (!msg) {
       return;

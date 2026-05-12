@@ -9,7 +9,7 @@ import {
   Separator,
 } from '@brika/clay';
 import { useNavigate } from '@tanstack/react-router';
-import { useState } from 'react';
+import { type FormEvent, useState } from 'react';
 import { useLocale } from '@/lib/use-locale';
 import { paths } from '@/routes/paths';
 import { useCreateBoard } from '../hooks';
@@ -29,27 +29,26 @@ export function CreateBoardDialog() {
 
   const handleOpenChange = (next: boolean) => {
     setOpen(next);
-    if (next) {
+    if (!next) {
       setName('');
       setIcon('');
     }
   };
 
-  const handleCreate = () => {
-    if (!name.trim()) {
+  const trimmedName = name.trim();
+  const canSubmit = trimmedName.length > 0 && !creating;
+
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    if (!canSubmit) {
       return;
     }
     createBoard(
-      {
-        name: name.trim(),
-        icon: icon.trim(),
-      },
+      { name: trimmedName, icon: icon.trim() },
       {
         onSuccess: (board) => {
           setOpen(false);
-          navigate({
-            to: paths.boards.detail.to({ boardId: board.id }),
-          });
+          navigate({ to: paths.boards.detail.to({ boardId: board.id }) });
         },
       }
     );
@@ -63,28 +62,28 @@ export function CreateBoardDialog() {
           <DialogDescription>{t('boards:board.newDescription')}</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <BoardFormFields
             name={name}
             icon={icon}
             onNameChange={setName}
-            onSubmit={handleCreate}
             inputId="create-board-name"
+            autoFocus
           />
 
           <Separator />
 
           <IconPicker value={icon} onChange={setIcon} />
-        </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => handleOpenChange(false)}>
-            {t('common:actions.cancel')}
-          </Button>
-          <Button onClick={handleCreate} disabled={creating || !name.trim()}>
-            {creating ? t('common:messages.loading') : t('common:actions.create')}
-          </Button>
-        </DialogFooter>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
+              {t('common:actions.cancel')}
+            </Button>
+            <Button type="submit" disabled={!canSubmit} aria-busy={creating}>
+              {creating ? t('common:messages.loading') : t('common:actions.create')}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );

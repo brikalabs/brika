@@ -21,6 +21,8 @@ interface AttemptCallbacks {
   setDetail: (detail: string | null) => void;
 }
 
+const OVERALL_TIMEOUT_MS = 45_000;
+
 /**
  * Open a peer to {@link hubName}, prime the asset graph, inject the entry.
  * Pass `null` to render the landing state instead.
@@ -54,8 +56,22 @@ export function useBootstrap(hubName: string | null): BootstrapState {
     setDetail(null);
     setError(null);
 
-    void runAttempt(hubName, ac.signal, peerRef, { setPhase, setStatus, setDetail }).catch(
-      (err) => {
+    // Wall-clock watchdog: WebRTC can sit in "checking" forever on bad NATs.
+    // After OVERALL_TIMEOUT_MS without reaching `done`, abort + surface error.
+    const watchdog = setTimeout(() => {
+      ac.abort();
+      if (peerRef.current) {
+        peerRef.current.close();
+        peerRef.current = null;
+      }
+      setError(classifyError(new Error('open timed out'), hubName));
+      setPhase('error');
+    }, OVERALL_TIMEOUT_MS);
+
+    void runAttempt(hubName, ac.signal, peerRef, { setPhase, setStatus, setDetail })
+      .then(() => clearTimeout(watchdog))
+      .catch((err) => {
+        clearTimeout(watchdog);
         if (peerRef.current) {
           peerRef.current.close();
           peerRef.current = null;
@@ -65,10 +81,10 @@ export function useBootstrap(hubName: string | null): BootstrapState {
         }
         setError(classifyError(err, hubName));
         setPhase('error');
-      }
-    );
+      });
 
     return () => {
+      clearTimeout(watchdog);
       ac.abort();
       if (peerRef.current) {
         peerRef.current.close();

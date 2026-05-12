@@ -25,7 +25,7 @@ export function LandingCard(): React.ReactElement {
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const trimmed = name.trim().toLowerCase();
-  const canSubmit = trimmed.length >= 4;
+  const canSubmit = isValidHubName(trimmed);
 
   // Pre-fill from `?hub=` query or the legacy `/<name>` path so users
   // arriving on an old URL just hit Enter.

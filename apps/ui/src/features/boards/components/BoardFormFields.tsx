@@ -9,6 +9,7 @@ interface BoardFormFieldsProps {
   onNameChange: (name: string) => void;
   onSubmit?: () => void;
   inputId?: string;
+  autoFocus?: boolean;
 }
 
 export function BoardFormFields({
@@ -17,6 +18,7 @@ export function BoardFormFields({
   onNameChange,
   onSubmit,
   inputId = 'board-name',
+  autoFocus,
 }: Readonly<BoardFormFieldsProps>) {
   const { t } = useLocale();
 
@@ -39,9 +41,15 @@ export function BoardFormFields({
           id={inputId}
           value={name}
           onChange={(e) => onNameChange(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && onSubmit?.()}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && onSubmit) {
+              e.preventDefault();
+              onSubmit();
+            }
+          }}
           placeholder={t('common:labels.name')}
           className="font-medium text-base"
+          autoFocus={autoFocus}
         />
       </div>
     </div>

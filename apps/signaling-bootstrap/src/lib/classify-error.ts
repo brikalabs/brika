@@ -41,19 +41,19 @@ export function classifyError(err: unknown, hubName: string): ErrorClassificatio
       autoRetry: 30,
     };
   }
-  if (/Signaling WS|open timed out|errored before open/.test(message)) {
+  if (/Data channel|WebRTC connection (failed|closed)|^open timed out$/.test(message)) {
     return {
-      title: "Can't reach the signaling service",
-      detail:
-        "The Brika coordinator might be temporarily down. This usually clears up on its own — we'll retry automatically.",
+      title: 'Your hub looks offline',
+      detail: `"${hubName}" isn't reachable right now. Make sure the device is powered on and connected to the internet, then try again.`,
       kind: 'retry',
       autoRetry: 30,
     };
   }
-  if (/Data channel|WebRTC connection (failed|closed)/.test(message)) {
+  if (/Signaling WS|errored before open/.test(message)) {
     return {
-      title: 'Your hub looks offline',
-      detail: `"${hubName}" isn't reachable right now. Make sure the device is powered on and connected to the internet, then try again.`,
+      title: "Can't reach the signaling service",
+      detail:
+        "The Brika coordinator might be temporarily down. This usually clears up on its own — we'll retry automatically.",
       kind: 'retry',
       autoRetry: 30,
     };
