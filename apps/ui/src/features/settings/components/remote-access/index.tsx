@@ -1,6 +1,8 @@
 import { Badge, Button, Input } from '@brika/clay';
 import {
+  Check,
   CheckCircle2,
+  Copy,
   ExternalLink,
   Globe,
   Loader2,
@@ -207,6 +209,79 @@ function ClaimForm({ coordinatorOrigin }: Readonly<{ coordinatorOrigin: string }
   );
 }
 
+// ─── Share-URL list ─────────────────────────────────────────────────────────
+
+const URL_KINDS = ['short', 'subdomain', 'legacy'] as const;
+type UrlKind = (typeof URL_KINDS)[number];
+
+function ShareUrls({ urls }: Readonly<{ urls: RemoteAccessStatus['publicUrls'] }>) {
+  const { t } = useLocale();
+  const [copied, setCopied] = useState<UrlKind | null>(null);
+
+  const copy = async (kind: UrlKind, value: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(kind);
+      setTimeout(() => {
+        setCopied((current) => (current === kind ? null : current));
+      }, 1500);
+    } catch {
+      // Older browsers / insecure contexts — just no-op; the link is still
+      // visible and the user can select-and-copy by hand.
+    }
+  };
+
+  return (
+    <div className="space-y-1.5">
+      {URL_KINDS.map((kind) => {
+        const value = urls[kind];
+        if (!value) {
+          return null;
+        }
+        const isCopied = copied === kind;
+        const isPrimary = kind === 'short';
+        return (
+          <div
+            key={kind}
+            className="group flex items-center gap-2 rounded-md border border-border/40 bg-muted/30 px-2.5 py-1.5"
+          >
+            <span className="font-mono text-[10px] text-muted-foreground/70 uppercase tracking-[0.16em]">
+              {t(`settings:remoteAccess.shareUrls.${kind}`)}
+            </span>
+            <a
+              href={value}
+              target="_blank"
+              rel="noreferrer"
+              className={`flex-1 truncate font-mono text-[12.5px] hover:underline ${
+                isPrimary ? 'text-primary' : 'text-foreground/80'
+              }`}
+            >
+              {value}
+            </a>
+            <button
+              type="button"
+              onClick={() => copy(kind, value)}
+              className="inline-flex size-7 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
+              aria-label={t('settings:remoteAccess.shareUrls.copy')}
+            >
+              {isCopied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+            </button>
+            <a
+              href={value}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex size-7 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground"
+              aria-label={t('settings:remoteAccess.shareUrls.open')}
+            >
+              <ExternalLink className="size-3.5" />
+            </a>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ─── Connected view ─────────────────────────────────────────────────────────
 
 function StateDescription({ state }: Readonly<{ state: SignalingState }>) {
@@ -265,19 +340,11 @@ function ConnectedView({ status }: Readonly<{ status: RemoteAccessStatus }>) {
             <StateDescription state={status.state} />
           </div>
         </div>
-        <div className="space-y-1 sm:col-span-2">
+        <div className="space-y-2 sm:col-span-2">
           <p className="font-mono text-[10px] text-muted-foreground/70 uppercase tracking-[0.16em]">
             {t('settings:remoteAccess.fields.publicOrigin')}
           </p>
-          <a
-            href={status.publicOrigin}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-1.5 font-mono text-[12.5px] text-primary hover:underline"
-          >
-            {status.publicOrigin}
-            <ExternalLink className="size-3" />
-          </a>
+          <ShareUrls urls={status.publicUrls} />
         </div>
         <div className="space-y-1">
           <p className="font-mono text-[10px] text-muted-foreground/70 uppercase tracking-[0.16em]">

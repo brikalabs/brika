@@ -30,8 +30,24 @@ export { FetchTransport } from './fetch-transport';
 export type { Transport } from './transport';
 
 const SUBDOMAIN_SUFFIX = '.hubs.brika.dev';
+const PATH_HOST = 'hub.brika.dev';
 const DEFAULT_COORDINATOR_ORIGIN = 'https://signaling.brika.dev';
 const HUB_QUERY_PARAM = 'hub';
+const HUB_META_NAME = 'brika:hub';
+
+/**
+ * Read the hub name the worker stamped into the document head. The worker
+ * injects `<meta name="brika:hub" content="<name>">` whenever it can resolve
+ * the request to a hub — works for both `<name>.hubs.brika.dev` and
+ * `hub.brika.dev/<name>` forms.
+ */
+function hubFromMetaTag(): string | null {
+  if (typeof document === 'undefined') {
+    return null;
+  }
+  const tag = document.querySelector(`meta[name="${HUB_META_NAME}"]`);
+  return tag?.getAttribute('content') || null;
+}
 
 let cachedTransport: Transport | null = null;
 
@@ -49,8 +65,20 @@ function detectRemote(): RemoteHints | null {
   const env = (import.meta as unknown as { env?: Record<string, string | undefined> }).env ?? {};
   const coordinatorOrigin = env.VITE_BRIKA_COORDINATOR_ORIGIN || DEFAULT_COORDINATOR_ORIGIN;
 
-  // 1. ?hub=<name> wins — it's explicit, works on any hostname, and is the
-  //    canonical URL we publish from the hub settings page.
+  // 1. <meta name="brika:hub"> — the worker stamps this into every UI shell
+  //    it serves, regardless of which URL form the user typed. This is the
+  //    most reliable source because the worker has D1 + the request URL to
+  //    work with; the browser only has the URL.
+  const metaHub = hubFromMetaTag();
+  if (metaHub) {
+    return {
+      hubName: metaHub,
+      hubOrigin: `${loc.protocol}//${metaHub}${SUBDOMAIN_SUFFIX}`,
+      coordinatorOrigin,
+    };
+  }
+
+  // 2. ?hub=<name> — explicit override, works on any hostname.
   const queryHub = new URL(loc.href).searchParams.get(HUB_QUERY_PARAM);
   if (queryHub && queryHub.length > 0) {
     return {
@@ -60,8 +88,8 @@ function detectRemote(): RemoteHints | null {
     };
   }
 
-  // 2. <name>.hubs.brika.dev subdomain — the prettier URL when wildcard DNS
-  //    is set up.
+  // 3. <name>.hubs.brika.dev subdomain — the legacy URL form. Kept for
+  //    backwards compatibility with links already shared in the wild.
   const hostname = loc.hostname.toLowerCase();
   if (hostname.endsWith(SUBDOMAIN_SUFFIX)) {
     const hubName = hostname.slice(0, -SUBDOMAIN_SUFFIX.length);
@@ -74,7 +102,20 @@ function detectRemote(): RemoteHints | null {
     }
   }
 
-  // 3. Dev override.
+  // 4. hub.brika.dev/<name>/... — fallback in case the meta tag is missing
+  //    (e.g. someone is running the UI shell from an unexpected origin).
+  if (hostname === PATH_HOST) {
+    const first = loc.pathname.split('/').filter(Boolean)[0];
+    if (first) {
+      return {
+        hubName: first,
+        hubOrigin: `${loc.protocol}//${first}${SUBDOMAIN_SUFFIX}`,
+        coordinatorOrigin,
+      };
+    }
+  }
+
+  // 5. Dev override.
   if (env.VITE_BRIKA_REMOTE_FORCE === '1') {
     const forcedName = env.VITE_BRIKA_REMOTE_NAME ?? 'devtest';
     return {

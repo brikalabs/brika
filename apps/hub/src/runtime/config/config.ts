@@ -19,20 +19,65 @@ export function deriveSignalingUrl(coordinatorOrigin: string): string {
   return url.toString();
 }
 
+/** Short host the coordinator exposes for `hub.brika.dev/<name>` path links. */
+const SHORT_HOST = 'hub.brika.dev';
+/** Legacy wildcard subdomain form: `<name>.hubs.brika.dev`. */
+const SUBDOMAIN_SUFFIX = '.hubs.brika.dev';
+
 /**
  * Public-facing URL a user opens in a browser to reach this hub remotely.
+ * Returns the short `https://hub.brika.dev/<name>` form by default — the
+ * worker resolves either this or the legacy subdomain to the same UI shell.
  *
- * The Worker serves the same static UI shell from any path — the FE reads
- * `?hub=<name>` to know which hub to peer with via WebRTC. This avoids the
- * wildcard-DNS dance that a `<name>.hubs.brika.dev` scheme would need.
+ * `coordinatorOrigin` is honoured for development setups that point at a
+ * non-production coordinator; in that case the URL falls back to a query
+ * parameter so a single coordinator host can serve any hub name.
  */
 export function derivePublicOrigin(name: string, coordinatorOrigin: string): string {
   if (!name) {
     return '';
   }
-  const url = new URL('/', coordinatorOrigin);
-  url.searchParams.set('hub', name);
-  return url.toString();
+  try {
+    const cord = new URL(coordinatorOrigin);
+    // Production: hub.brika.dev/<name> — pretty, short, no wildcard DNS.
+    if (cord.hostname === 'signaling.brika.dev') {
+      return `https://${SHORT_HOST}/${name}`;
+    }
+    // Development / self-hosted coordinator: query-param form on the
+    // coordinator origin itself, since hub.brika.dev only exists in prod.
+    const url = new URL('/', coordinatorOrigin);
+    url.searchParams.set('hub', name);
+    return url.toString();
+  } catch {
+    return `https://${SHORT_HOST}/${name}`;
+  }
+}
+
+/**
+ * Every URL form that resolves to this hub. The settings UI renders all of
+ * them so the operator can copy whichever they prefer to share.
+ */
+export function derivePublicUrls(
+  name: string,
+  coordinatorOrigin: string
+): { short: string; subdomain: string; legacy: string } {
+  if (!name) {
+    return { short: '', subdomain: '', legacy: '' };
+  }
+  const legacy = (() => {
+    try {
+      const url = new URL('/', coordinatorOrigin);
+      url.searchParams.set('hub', name);
+      return url.toString();
+    } catch {
+      return `https://signaling.brika.dev/?hub=${name}`;
+    }
+  })();
+  return {
+    short: `https://${SHORT_HOST}/${name}`,
+    subdomain: `https://${name}${SUBDOMAIN_SUFFIX}/`,
+    legacy,
+  };
 }
 
 /**

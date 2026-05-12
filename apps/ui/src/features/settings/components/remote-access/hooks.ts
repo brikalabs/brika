@@ -7,6 +7,7 @@ export interface RemoteAccessStatus {
   claimed: boolean;
   name: string;
   publicOrigin: string;
+  publicUrls: { short: string; subdomain: string; legacy: string };
   state: SignalingState;
   activeSessions: number;
   coordinatorOrigin: string;

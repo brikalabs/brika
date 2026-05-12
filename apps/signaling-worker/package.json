@@ -8,6 +8,7 @@
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "tail": "wrangler tail",
+    "test": "bun test",
     "typecheck": "tsgo --noEmit",
     "d1:migrate:local": "wrangler d1 migrations apply brika-signaling --local",
     "d1:migrate:prod": "wrangler d1 migrations apply brika-signaling --remote"

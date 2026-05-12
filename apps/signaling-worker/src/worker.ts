@@ -17,6 +17,7 @@
 
 import { constantTimeEqual, parseSubprotocols } from '@brika/remote-access-protocol';
 import { ClaimError, D1ClaimStore } from './claims-d1';
+import { injectHubMeta, resolveHubFromUrl } from './hub-resolution';
 import { mintTicket, verifyTicket } from './tickets';
 
 // Cloudflare needs the Durable Object class exported from the entry module so
@@ -29,6 +30,8 @@ export interface Env {
   DB: D1Database;
   /** HMAC key for ticket signing. Set with `wrangler secret put TICKET_SECRET`. */
   TICKET_SECRET: string;
+  /** Static asset binding (the bundled UI shell). Configured in wrangler.toml. */
+  ASSETS: Fetcher;
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -211,6 +214,23 @@ async function handleClientUpgrade(req: Request, env: Env): Promise<Response> {
   return stub.fetch(req);
 }
 
+async function serveUiShell(req: Request, env: Env, url: URL): Promise<Response> {
+  const resolved = resolveHubFromUrl(url);
+  if (!resolved) {
+    // Unknown host/path shape — let the asset binding handle it as normal
+    // (404, the marketing page on bare `hub.brika.dev`, etc.).
+    return env.ASSETS.fetch(req);
+  }
+
+  // Normalise to the asset-binding's view of the world: a request for
+  // `<restPath>` on the same origin. The asset binding has a single SPA
+  // fallback (`/index.html`) so this works for any sub-path.
+  const normalisedUrl = new URL(resolved.restPath + url.search, url.origin);
+  const assetReq = new Request(normalisedUrl.toString(), req);
+  const assetRes = await env.ASSETS.fetch(assetReq);
+  return injectHubMeta(assetRes, resolved.hubName);
+}
+
 // ─── Router ─────────────────────────────────────────────────────────────────
 
 export default {
@@ -246,6 +266,13 @@ export default {
     if (path === '/v1/client') {
       return handleClientUpgrade(req, env);
     }
-    return new Response('Not found', { status: 404 });
+    if (path.startsWith('/v1/')) {
+      // Unrecognised /v1/* must not fall through to the static-asset binding.
+      return new Response('Not found', { status: 404 });
+    }
+    // Anything else is a UI request — let the asset binding serve it, but
+    // first see whether the (host, path) identifies a hub so we can stamp
+    // its name into the document for the bootstrap script.
+    return serveUiShell(req, env, url);
   },
 } satisfies ExportedHandler<Env>;

@@ -29,9 +29,11 @@ binding = "ASSETS"
 # SPA fallback: any unknown path returns `/index.html` so the client-side
 # router can take over.
 not_found_handling = "single-page-application"
-# Worker handles /v1/* (signaling API). Everything else falls through to the
-# asset bundle.
-run_worker_first = ["/v1/*"]
+# Worker runs first for every request. It owns /v1/* (signaling API) plus
+# the hub-name resolution that lets `hub.brika.dev/<name>` serve the same
+# UI shell as `<name>.hubs.brika.dev`. After name resolution the worker
+# hands off to the asset binding.
+run_worker_first = true
 
 # ─── Custom domains ─────────────────────────────────────────────────────────
 # Each entry below maps a hostname to this Worker. For non-wildcard hostnames
@@ -49,6 +51,14 @@ zone_name = "brika.dev"
 # Dedicated coordinator host. Serves both the UI shell and the /v1/* API.
 # Single-host Custom Domain — Cloudflare auto-creates a proxied DNS record.
 pattern = "signaling.brika.dev"
+custom_domain = true
+
+[[routes]]
+# Short "pretty" host. `hub.brika.dev/<name>` is the recommended form to share
+# with users — the worker resolves the hub name from the first path segment
+# and serves the same UI shell as the legacy subdomain form. Single-host
+# Custom Domain; Cloudflare auto-creates a proxied DNS record.
+pattern = "hub.brika.dev"
 custom_domain = true
 
 # Durable Object that owns a single hub's signaling state.

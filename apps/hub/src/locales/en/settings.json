@@ -38,9 +38,16 @@
     "fields": {
       "name": "Hub name",
       "status": "Signaling",
-      "publicOrigin": "Public address",
+      "publicOrigin": "Share links",
       "activeSessions": "Active sessions",
       "coordinator": "Coordinator URL"
+    },
+    "shareUrls": {
+      "short": "Short",
+      "subdomain": "Subdomain",
+      "legacy": "Legacy",
+      "copy": "Copy link",
+      "open": "Open in a new tab"
     },
     "coordinator": {
       "test": "Test connection",
