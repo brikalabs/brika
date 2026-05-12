@@ -434,40 +434,186 @@ async function openPeer(
   return handle;
 }
 
-// ─── Asset graph pre-fetch + import map ────────────────────────────────────
+// ─── Service Worker + Cache API ────────────────────────────────────────────
+
+const ASSET_CACHE = 'brika-assets-v1';
+
+/**
+ * Register the asset-cache Service Worker and wait until it controls this
+ * page. After that point every `<script src=/assets/…>` / `<link href=…>` /
+ * CSS `url(/assets/…)` / dynamic `import('/assets/…')` is intercepted and
+ * served from the cache the bootstrap is about to prime.
+ *
+ * Returns `false` if SW isn't available (private mode, ancient browser) so
+ * the caller can fall back to the Blob-URL + import-map path.
+ */
+async function ensureServiceWorker(): Promise<boolean> {
+  if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) {
+    dlog('SW not available — falling back to Blob URLs');
+    return false;
+  }
+  try {
+    await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+    if (navigator.serviceWorker.controller) {
+      // SW from a previous visit is already in charge.
+      dlog('SW already controlling page');
+      return true;
+    }
+    // First registration — wait for the SW to activate and claim() this client.
+    await new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error('SW activation timed out')), 5_000);
+      navigator.serviceWorker.addEventListener(
+        'controllerchange',
+        () => {
+          clearTimeout(timer);
+          resolve();
+        },
+        { once: true }
+      );
+    });
+    dlog('SW newly active');
+    return true;
+  } catch (err) {
+    dlog('SW register failed', err);
+    return false;
+  }
+}
+
+// ─── Asset graph ───────────────────────────────────────────────────────────
 
 interface AssetGraph {
-  /** Entry HTML, with original asset URLs (un-rewritten). */
-  htmlBody: string;
-  /** Map of original URL → Blob URL, for ALL chunks reachable from entry. */
-  blobs: Map<string, string>;
-  /** CSS hrefs (in order) extracted from the HTML. */
+  /** Original entry script URL (e.g. `/assets/index-abc.js`). */
+  entryUrl: string;
+  /** CSS hrefs in document order. */
   cssUrls: string[];
-  /** Entry module URL (after rewrite to Blob). */
-  entryBlob: string;
-  /** Optional title from the original HTML. */
+  /** Original title from the hub's index.html. */
   title: string;
+  /**
+   * Optional: when SW isn't available we fall back to Blob URLs and build
+   * an import map. Populated only on the no-SW path.
+   */
+  blobs?: Map<string, string>;
+}
+
+const ASSET_RE = /\/assets\/[A-Za-z0-9._-]+\.(?:js|css|woff2?|png|svg|jpg|jpeg|webp|json)/g;
+
+interface FetchedAsset {
+  bytes: ArrayBuffer;
+  text: string | null;
+  contentType: string;
+}
+
+async function fetchAssetThroughPeer(
+  peer: PeerHandle,
+  url: string,
+  mime: string | undefined
+): Promise<FetchedAsset> {
+  const res = await peer.request('GET', url);
+  if (!res.ok) throw new Error(`Hub ${url} → ${res.status}`);
+  const bytes = await res.arrayBuffer();
+  const contentType = mime ?? res.headers.get('content-type') ?? 'application/octet-stream';
+  const isText = /\b(javascript|json|css|text)\b/i.test(contentType);
+  const text = isText ? new TextDecoder().decode(bytes) : null;
+  return { bytes, text, contentType };
+}
+
+/**
+ * Prime the cache the SW will serve from. For each URL in the graph: check
+ * the cache first, fall back to the hub via WebRTC on miss, then `put` the
+ * fresh response so subsequent visits don't pay the cost.
+ */
+async function primeAssetCache(
+  peer: PeerHandle,
+  initial: ReadonlyArray<string>
+): Promise<ReadonlyArray<string>> {
+  const cache = await caches.open(ASSET_CACHE);
+  const visited = new Set<string>();
+  const queue: string[] = [...initial];
+
+  while (queue.length > 0) {
+    const url = queue.shift();
+    if (!url || visited.has(url)) continue;
+    visited.add(url);
+
+    let textForScan: string | null = null;
+
+    const cached = await cache.match(url);
+    if (cached) {
+      // Only need to scan JS for transitive references; load text lazily.
+      if (url.endsWith('.js')) {
+        textForScan = await cached.clone().text();
+      }
+    } else {
+      const mime = url.endsWith('.css')
+        ? 'text/css'
+        : url.endsWith('.js')
+          ? 'text/javascript'
+          : undefined;
+      const { bytes, text, contentType } = await fetchAssetThroughPeer(peer, url, mime);
+      textForScan = text;
+      const response = new Response(bytes, { headers: { 'content-type': contentType } });
+      // `cache.put` swallows quota errors — if the user's disk is full, we
+      // still want to serve from memory this session.
+      cache.put(url, response).catch((err) => dlog('cache.put failed', url, err));
+    }
+
+    if (textForScan && url.endsWith('.js')) {
+      for (const match of textForScan.matchAll(ASSET_RE)) {
+        if (!visited.has(match[0])) queue.push(match[0]);
+      }
+    }
+  }
+
+  return [...visited];
 }
 
 async function fetchAsBlobUrl(
   peer: PeerHandle,
   url: string,
-  mime?: string
+  mime: string | undefined
 ): Promise<{ blobUrl: string; text: string | null }> {
-  const res = await peer.request('GET', url);
-  if (!res.ok) throw new Error(`Hub ${url} → ${res.status}`);
-  const buf = await res.arrayBuffer();
-  const blob = new Blob([buf], { type: mime ?? res.headers.get('content-type') ?? '' });
-  const blobUrl = URL.createObjectURL(blob);
-  // For JS we keep a text copy so we can scan for transitive chunk URLs.
-  const isText = /\b(javascript|json|css|text)\b/i.test(blob.type);
-  const text = isText ? new TextDecoder().decode(buf) : null;
-  return { blobUrl, text };
+  const { bytes, text, contentType } = await fetchAssetThroughPeer(peer, url, mime);
+  const blob = new Blob([bytes], { type: contentType });
+  return { blobUrl: URL.createObjectURL(blob), text };
 }
 
-const ASSET_RE = /\/assets\/[A-Za-z0-9._-]+\.(?:js|css|woff2?|png|svg|jpg|jpeg|webp|json)/g;
+/**
+ * Fallback for browsers without Service Worker support: build Blob URLs and
+ * an import map. Same outcome (no network for assets) at the cost of more
+ * code and no cross-load cache.
+ */
+async function buildBlobGraph(
+  peer: PeerHandle,
+  initial: ReadonlyArray<string>
+): Promise<Map<string, string>> {
+  const blobs = new Map<string, string>();
+  const visited = new Set<string>();
+  const queue: string[] = [...initial];
+  while (queue.length > 0) {
+    const url = queue.shift();
+    if (!url || visited.has(url)) continue;
+    visited.add(url);
+    const mime = url.endsWith('.css')
+      ? 'text/css'
+      : url.endsWith('.js')
+        ? 'text/javascript'
+        : undefined;
+    const { blobUrl, text } = await fetchAsBlobUrl(peer, url, mime);
+    blobs.set(url, blobUrl);
+    if (text && url.endsWith('.js')) {
+      for (const match of text.matchAll(ASSET_RE)) {
+        if (!visited.has(match[0])) queue.push(match[0]);
+      }
+    }
+  }
+  return blobs;
+}
 
-async function buildAssetGraph(peer: PeerHandle, status: StatusSurface): Promise<AssetGraph> {
+async function buildAssetGraph(
+  peer: PeerHandle,
+  status: StatusSurface,
+  hasServiceWorker: boolean
+): Promise<AssetGraph> {
   status.setPhase('fetching', 'Loading app from your hub…');
   dlog('fetching /index.html');
 
@@ -484,73 +630,63 @@ async function buildAssetGraph(peer: PeerHandle, status: StatusSurface): Promise
   );
   const title = doc.title;
 
-  const blobs = new Map<string, string>();
-  const visited = new Set<string>();
-  const queue: string[] = [entryUrl, ...cssUrls];
-
-  while (queue.length > 0) {
-    const url = queue.shift();
-    if (!url || visited.has(url)) continue;
-    visited.add(url);
-    const mime = url.endsWith('.css')
-      ? 'text/css'
-      : url.endsWith('.js')
-        ? 'text/javascript'
-        : undefined;
-    const { blobUrl, text } = await fetchAsBlobUrl(peer, url, mime);
-    blobs.set(url, blobUrl);
-    // Scan JS for further chunk references — Vite emits absolute paths.
-    if (text && url.endsWith('.js')) {
-      for (const match of text.matchAll(ASSET_RE)) {
-        if (!visited.has(match[0])) queue.push(match[0]);
-      }
-    }
+  if (hasServiceWorker) {
+    const primed = await primeAssetCache(peer, [entryUrl, ...cssUrls]);
+    dlog('asset cache primed', { chunks: primed.length, cssUrls });
+    return { entryUrl, cssUrls, title };
   }
 
-  dlog('asset graph built', { chunks: blobs.size, cssUrls });
-
-  const entryBlob = blobs.get(entryUrl);
-  if (!entryBlob) throw new Error('Could not resolve entry to a Blob URL');
-
-  return { htmlBody: html, blobs, cssUrls, entryBlob, title };
+  const blobs = await buildBlobGraph(peer, [entryUrl, ...cssUrls]);
+  dlog('blob graph built (no SW)', { chunks: blobs.size, cssUrls });
+  return { entryUrl, cssUrls, title, blobs };
 }
 
 function injectGraph(graph: AssetGraph): void {
-  // Replace the page title so it doesn't say "Connecting to …" once the app
-  // takes over and before it sets its own title.
   if (graph.title) document.title = graph.title;
 
-  // Import map: every absolute /assets/<chunk> URL → its Blob URL. The
-  // browser's ES loader consults this for every static + dynamic import.
-  const imports: Record<string, string> = {};
-  for (const [original, blob] of graph.blobs) {
-    if (original.endsWith('.js')) {
-      imports[original] = blob;
+  if (graph.blobs) {
+    // Fallback path: ES import map + Blob URLs.
+    const imports: Record<string, string> = {};
+    for (const [original, blob] of graph.blobs) {
+      if (original.endsWith('.js')) imports[original] = blob;
     }
-  }
-  const importMap = document.createElement('script');
-  importMap.type = 'importmap';
-  importMap.textContent = JSON.stringify({ imports });
-  document.head.appendChild(importMap);
+    const importMap = document.createElement('script');
+    importMap.type = 'importmap';
+    importMap.textContent = JSON.stringify({ imports });
+    document.head.appendChild(importMap);
 
-  // CSS — append <link> tags pointing at Blob URLs.
+    for (const css of graph.cssUrls) {
+      const blob = graph.blobs.get(css);
+      if (!blob) continue;
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = blob;
+      document.head.appendChild(link);
+    }
+
+    document.querySelector('#brika-bootstrap')?.remove();
+
+    const entry = document.createElement('script');
+    entry.type = 'module';
+    entry.src = graph.blobs.get(graph.entryUrl) ?? graph.entryUrl;
+    document.body.appendChild(entry);
+    return;
+  }
+
+  // SW path: inject the ORIGINAL URLs. The browser will fetch them, the SW
+  // intercepts, and the priming cache serves the response instantly.
   for (const css of graph.cssUrls) {
-    const blob = graph.blobs.get(css);
-    if (!blob) continue;
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = blob;
+    link.href = css;
     document.head.appendChild(link);
   }
 
-  // Wipe the bootstrap splash and hand the body to the app.
-  const splash = document.querySelector('#brika-bootstrap');
-  splash?.remove();
+  document.querySelector('#brika-bootstrap')?.remove();
 
-  // Entry — kick the ES module loader.
   const entry = document.createElement('script');
   entry.type = 'module';
-  entry.src = graph.entryBlob;
+  entry.src = graph.entryUrl;
   document.body.appendChild(entry);
 }
 
@@ -567,11 +703,16 @@ async function main(): Promise<void> {
   const coordinator = resolveCoordinator();
   dlog('main', { hubName, coordinator, debug: DEBUG });
 
+  // Kick off SW registration AND ticket mint in parallel — both are
+  // pre-requisites and neither depends on the other.
+  const swPromise = ensureServiceWorker();
+
   let peer: PeerHandle | null = null;
   try {
     const ticket = await mintTicket(hubName, coordinator);
     peer = await openPeer(hubName, ticket, coordinator, status);
-    const graph = await buildAssetGraph(peer, status);
+    const hasServiceWorker = await swPromise;
+    const graph = await buildAssetGraph(peer, status, hasServiceWorker);
     status.setPhase('loading', 'Starting app…');
     injectGraph(graph);
     status.setPhase('done');

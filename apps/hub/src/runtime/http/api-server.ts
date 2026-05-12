@@ -8,6 +8,7 @@ import {
 import { serveStatic } from 'hono/bun';
 import { HubConfig } from '@/runtime/config';
 import { Logger } from '@/runtime/logs/log-router';
+import { embeddedUi, embeddedUiAvailable } from './embedded-ui';
 import { hostAllowlist } from './middleware/host-allowlist';
 
 function formatDuration(ms: number): string {
@@ -347,39 +348,44 @@ export class ApiServer {
   }
 
   #setupStaticFiles(): void {
-    // Dev override takes precedence: forward everything that isn't /api/*
-    // to a Vite (or similar) dev server so UI changes show up without a
-    // rebuild cycle. Used by the root `bun run dev` flow.
+    // Precedence:
+    //   1. BRIKA_DEV_UI_PROXY  — dev only, forward to Vite
+    //   2. BRIKA_STATIC_DIR    — serve from a directory on disk
+    //   3. Embedded archive    — bytes baked into the binary at build time
     if (this.#config.devUiProxy) {
       this.#setupDevUiProxy(this.#config.devUiProxy);
       return;
     }
 
     const { staticDir } = this.#config;
-    if (!staticDir) {
+    if (staticDir) {
+      this.#setupStaticDir(staticDir);
       return;
     }
 
-    this.#app?.use(
-      '/*',
-      serveStatic({
-        root: staticDir,
-      })
-    );
-
-    // SPA fallback — only for non-API paths to avoid intercepting API routes
-    const spaFallback = serveStatic({
-      root: staticDir,
-      path: 'index.html',
+    // Fall back to the UI baked into the binary. The handler is lazy: it
+    // doesn't load the archive until the first request, so dev startups
+    // where the bundle wasn't built skip the cost entirely.
+    this.#app?.use('/*', embeddedUi());
+    void embeddedUiAvailable().then((ok) => {
+      if (ok) {
+        this.#logs.info('Static file serving enabled', { source: 'embedded' });
+      }
     });
+  }
+
+  #setupStaticDir(staticDir: string): void {
+    this.#app?.use('/*', serveStatic({ root: staticDir }));
+    // SPA fallback — only for non-API paths to avoid intercepting API routes.
+    const spaFallback = serveStatic({ root: staticDir, path: 'index.html' });
     this.#app?.get('*', (c, next) => {
       if (c.req.path.startsWith('/api/')) {
         return next();
       }
       return spaFallback(c, next);
     });
-
     this.#logs.info('Static file serving enabled', {
+      source: 'disk',
       directory: staticDir,
     });
   }
