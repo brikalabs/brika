@@ -6,24 +6,26 @@
  * Two HTML shapes are supported:
  *
  *  - **Production** — built UI with hashed `/assets/index-XYZ.js` + CSS.
- *    All module references live under `/assets/`, so the SW (which only
- *    intercepts that prefix) can serve everything from cache.
- *
  *  - **Vite dev** — `<script type="module" src="/src/main.tsx">` plus an
- *    optional `/@vite/client` and react-refresh preamble. Modules pull
- *    transitive deps from `/node_modules/.vite/deps/*?v=hash` and
- *    workspace packages from `/@fs/...`. The SW can't intercept those
- *    arbitrary paths, so we fall back to fetching the whole graph through
- *    the bridge, wrapping each response in a Blob URL, and rewriting
- *    every absolute-path module specifier with an importmap.
+ *    inline react-refresh preamble. Modules pull transitive deps from
+ *    `/node_modules/.vite/deps/*?v=hash` and workspace packages from
+ *    `/@fs/...`.
+ *
+ * In both cases the strategy is identical:
+ *
+ *   1. Fetch every reachable absolute-path module through the bridge.
+ *   2. Stash each response in the SW cache keyed by its original URL.
+ *   3. Inject the original `<script src="…">` / `<link href="…">` tags.
+ *      The browser fetches those URLs, the SW serves from cache, and
+ *      every relative + absolute-path import inside resolves naturally
+ *      because the module's URL is a real same-origin path — not a
+ *      blob: URL (whose base isn't hierarchical and breaks `/foo`
+ *      specifier resolution per the HTML spec).
  */
 
 import type { PeerHandle } from './peer';
 
 const ASSET_CACHE = 'brika-assets-v1';
-
-/** Asset references in built `/assets/index-XYZ.js` files. */
-const PROD_ASSET_RE = /\/assets\/[A-Za-z0-9._-]+\.(?:js|css|woff2?|png|svg|jpg|jpeg|webp|json)/g;
 
 /**
  * Absolute-path module specifiers in ES module source. Captures static
@@ -34,13 +36,20 @@ const PROD_ASSET_RE = /\/assets\/[A-Za-z0-9._-]+\.(?:js|css|woff2?|png|svg|jpg|j
  * to fetch" from "specifiers the browser resolves natively (data: blob:
  * etc.)".
  *
- * Split into three narrower patterns to keep each one well under Sonar's
- * regex-complexity bound — the merged single regex tripped S5843.
+ * Split into three narrower patterns to stay well under Sonar's
+ * regex-complexity bound — a merged single regex tripped S5843.
  */
-const DEV_IMPORT_FROM_RE = /\b(?:import|export)\b[^'"`/]*?from\s*['"]([^'"]+)['"]/g;
-const DEV_IMPORT_CALL_RE = /\bimport\s*\(\s*['"]([^'"]+)['"]/g;
-const DEV_IMPORT_SIDE_RE = /\bimport\s+['"]([^'"]+)['"]/g;
-const DEV_IMPORT_PATTERNS = [DEV_IMPORT_FROM_RE, DEV_IMPORT_CALL_RE, DEV_IMPORT_SIDE_RE];
+const IMPORT_FROM_RE = /\b(?:import|export)\b[^'"`/]*?from\s*['"]([^'"]+)['"]/g;
+const IMPORT_CALL_RE = /\bimport\s*\(\s*['"]([^'"]+)['"]/g;
+const IMPORT_SIDE_RE = /\bimport\s+['"]([^'"]+)['"]/g;
+const IMPORT_PATTERNS = [IMPORT_FROM_RE, IMPORT_CALL_RE, IMPORT_SIDE_RE];
+
+/**
+ * Asset URLs referenced from CSS (background-image, @font-face, etc).
+ * Vite serves these from `/assets/` in prod and `/@fs/` (or `/src/`) in
+ * dev — both are absolute paths so the same scan works.
+ */
+const CSS_URL_RE = /url\(\s*['"]?([^)'"]+)['"]?\s*\)/g;
 
 /**
  * HMR-only modules. The Vite HMR client opens a WebSocket back to the dev
@@ -61,16 +70,27 @@ export interface ModuleScriptRef {
 export interface AssetGraph {
   /** Module scripts to inject, in document order. */
   scripts: ModuleScriptRef[];
-  /** Absolute-path stylesheets to inject upfront. */
+  /** Absolute-path stylesheets to inject. */
   cssLinks: string[];
   title: string;
-  /** Populated on the Blob path (dev HTML or no-SW prod). */
-  blobs?: Map<string, string>;
 }
+
+export interface AssetGraphProgress {
+  /** Number of resources fetched + cached so far. */
+  fetched: number;
+  /** URL of the most recent fetch (current or just completed). */
+  url: string;
+}
+
+export type ProgressListener = (event: AssetGraphProgress) => void;
 
 function isHmrOnly(url: string): boolean {
   const path = url.split('?')[0] ?? url;
   return HMR_ONLY_PATHS.has(path);
+}
+
+function isAbsolutePath(spec: string): boolean {
+  return spec.startsWith('/') && !spec.startsWith('//');
 }
 
 function guessAssetMime(url: string): string | undefined {
@@ -94,10 +114,14 @@ function isJSContentType(contentType: string): boolean {
   return /\b(javascript|ecmascript)\b/i.test(contentType);
 }
 
+function isCSSContentType(contentType: string): boolean {
+  return /\bcss\b/i.test(contentType);
+}
+
 async function fetchThroughPeer(
   peer: PeerHandle,
   url: string
-): Promise<{ bytes: ArrayBuffer; text: string | null; contentType: string }> {
+): Promise<{ response: Response; text: string | null; contentType: string }> {
   const res = await peer.request('GET', url);
   if (!res.ok) {
     throw new Error(`Hub ${url} → ${res.status}`);
@@ -107,31 +131,19 @@ async function fetchThroughPeer(
     res.headers.get('content-type') ?? guessAssetMime(url) ?? 'application/octet-stream';
   const isText = /\b(javascript|ecmascript|json|css|text)\b/i.test(contentType);
   const text = isText ? new TextDecoder().decode(bytes) : null;
-  return { bytes, text, contentType };
+  // Re-wrap as a fresh Response so the SW cache always sees a `text/...`
+  // header even when the bridge passed `application/octet-stream`.
+  // `cache.put` consumes the body; we hand back a clone for that path.
+  const response = new Response(bytes, { headers: { 'content-type': contentType } });
+  return { response, text, contentType };
 }
 
-function scanProdChunkRefs(text: string | null, url: string, seen: Set<string>): string[] {
-  if (!text || !url.endsWith('.js')) {
-    return [];
-  }
+function scanJSImports(text: string, seen: ReadonlySet<string>): string[] {
   const out: string[] = [];
-  for (const match of text.matchAll(PROD_ASSET_RE)) {
-    if (!seen.has(match[0])) {
-      out.push(match[0]);
-    }
-  }
-  return out;
-}
-
-function scanDevImports(text: string | null, contentType: string, seen: Set<string>): string[] {
-  if (!text || !isJSContentType(contentType)) {
-    return [];
-  }
-  const out: string[] = [];
-  for (const re of DEV_IMPORT_PATTERNS) {
+  for (const re of IMPORT_PATTERNS) {
     for (const m of text.matchAll(re)) {
       const spec = m[1];
-      if (spec?.startsWith('/') && !seen.has(spec) && !isHmrOnly(spec)) {
+      if (spec && isAbsolutePath(spec) && !seen.has(spec) && !isHmrOnly(spec)) {
         out.push(spec);
       }
     }
@@ -139,69 +151,88 @@ function scanDevImports(text: string | null, contentType: string, seen: Set<stri
   return out;
 }
 
-async function primeProdAssetCache(peer: PeerHandle, initial: readonly string[]): Promise<void> {
-  const cache = await caches.open(ASSET_CACHE);
-  const visited = new Set<string>();
-  const queue: string[] = [...initial];
-  while (queue.length > 0) {
-    const url = queue.shift();
-    if (!url || visited.has(url)) {
+function scanCSSUrls(text: string, baseUrl: string, seen: ReadonlySet<string>): string[] {
+  const out: string[] = [];
+  for (const m of text.matchAll(CSS_URL_RE)) {
+    const raw = m[1];
+    if (!raw || raw.startsWith('data:') || raw.startsWith('http:') || raw.startsWith('https:')) {
       continue;
     }
-    visited.add(url);
-    const cached = await cache.match(url);
-    if (cached) {
-      if (url.endsWith('.js')) {
-        const text = await cached.clone().text();
-        queue.push(...scanProdChunkRefs(text, url, visited));
-      }
-      continue;
-    }
-    const { bytes, text, contentType } = await fetchThroughPeer(peer, url);
-    cache.put(url, new Response(bytes, { headers: { 'content-type': contentType } })).catch(() => {
-      /* quota exceeded — still works for this session */
-    });
-    queue.push(...scanProdChunkRefs(text, url, visited));
-  }
-}
-
-/**
- * Fetch every reachable module from {@link initial}, recursively following
- * absolute-path imports in JS responses. Each response is wrapped in a
- * Blob URL keyed by its original URL. The caller turns the resulting map
- * into an importmap so the browser resolves every dev path to the
- * pre-fetched blob.
- *
- * Resilient to 404s: a missing optional module (e.g. an experimental
- * `?import` annotation Vite emits but the bridge can't serve) doesn't
- * abort the graph build. The injected script just won't have that piece.
- */
-async function buildBlobGraph(
-  peer: PeerHandle,
-  initial: readonly string[]
-): Promise<Map<string, string>> {
-  const blobs = new Map<string, string>();
-  const visited = new Set<string>();
-  const queue: string[] = initial.filter((u) => !isHmrOnly(u));
-  while (queue.length > 0) {
-    const url = queue.shift();
-    if (!url || visited.has(url)) {
-      continue;
-    }
-    visited.add(url);
-    let result: { bytes: ArrayBuffer; text: string | null; contentType: string };
+    // Resolve relative to the CSS file's URL so e.g. `url(./foo.png)`
+    // becomes `/assets/foo.png` and gets pre-cached too.
+    let resolved: string;
     try {
-      result = await fetchThroughPeer(peer, url);
+      resolved = new URL(raw, `https://placeholder${baseUrl}`).pathname;
     } catch {
       continue;
     }
-    const { bytes, text, contentType } = result;
-    blobs.set(url, URL.createObjectURL(new Blob([bytes], { type: contentType })));
-    for (const next of scanDevImports(text, contentType, visited)) {
-      queue.push(next);
+    if (isAbsolutePath(resolved) && !seen.has(resolved)) {
+      out.push(resolved);
     }
   }
-  return blobs;
+  return out;
+}
+
+function nextRefs(
+  text: string | null,
+  contentType: string,
+  url: string,
+  seen: Set<string>
+): string[] {
+  if (!text) {
+    return [];
+  }
+  if (isJSContentType(contentType)) {
+    return scanJSImports(text, seen);
+  }
+  if (isCSSContentType(contentType)) {
+    return scanCSSUrls(text, url, seen);
+  }
+  return [];
+}
+
+/**
+ * Walk the module graph reachable from `initial`, fetching each entry
+ * through the bridge and storing the response in the SW cache. The
+ * browser will then resolve module imports to the original URLs and the
+ * SW intercepts each request, serving from cache.
+ */
+async function primeCache(
+  peer: PeerHandle,
+  initial: readonly string[],
+  onProgress?: ProgressListener
+): Promise<number> {
+  const cache = await caches.open(ASSET_CACHE);
+  const visited = new Set<string>();
+  const queue: string[] = initial.filter((u) => !isHmrOnly(u));
+  let fetched = 0;
+  while (queue.length > 0) {
+    const url = queue.shift();
+    if (!url || visited.has(url) || isHmrOnly(url)) {
+      continue;
+    }
+    visited.add(url);
+    if (await cache.match(url)) {
+      // Already primed from a previous attempt — still want to follow
+      // its transitive refs in case the graph grew.
+      continue;
+    }
+    let fetchResult: { response: Response; text: string | null; contentType: string };
+    try {
+      fetchResult = await fetchThroughPeer(peer, url);
+    } catch {
+      // 404s on optional resources (some `?import` queries Vite emits)
+      // shouldn't abort the whole graph — the injected script just
+      // won't have that piece.
+      continue;
+    }
+    const { response, text, contentType } = fetchResult;
+    await cache.put(url, response);
+    fetched += 1;
+    onProgress?.({ fetched, url });
+    queue.push(...nextRefs(text, contentType, url, visited));
+  }
+  return fetched;
 }
 
 function collectScripts(doc: Document): ModuleScriptRef[] {
@@ -220,27 +251,19 @@ function collectScripts(doc: Document): ModuleScriptRef[] {
   return out;
 }
 
-function isDevHtml(scripts: readonly ModuleScriptRef[]): boolean {
-  // Anything with an absolute-path script that isn't under `/assets/` is
-  // Vite dev (`/src/`, `/@vite/`, `/@fs/`, `/@react-refresh`, …) or an
-  // inline preamble. Built UIs only ever reference `/assets/`.
-  return scripts.some((s) => {
-    if (s.src?.startsWith('/') && !s.src.startsWith('/assets/')) {
-      return true;
-    }
-    return s.inline !== undefined;
-  });
-}
-
 /**
  * Fetch the hub's `/index.html`, extract the module entries + CSS links,
- * then either prime the SW cache (prod build, fast path) or build a Blob
- * graph + importmap (Vite dev or fallback when no SW).
+ * then prime the SW cache with the entire reachable graph.
  */
 export async function buildAssetGraph(
   peer: PeerHandle,
-  hasServiceWorker: boolean
+  hasServiceWorker: boolean,
+  onProgress?: ProgressListener
 ): Promise<AssetGraph> {
+  if (!hasServiceWorker) {
+    throw new Error('Service worker required — browser does not support SW or it was blocked');
+  }
+
   const res = await peer.request('GET', '/');
   if (!res.ok) {
     throw new Error(`Hub /index.html → ${res.status}`);
@@ -258,30 +281,27 @@ export async function buildAssetGraph(
   );
   const title = doc.title;
 
-  const dev = isDevHtml(scripts);
-
-  if (!dev && hasServiceWorker) {
-    const initial = scripts.filter((s) => s.src).map((s) => s.src as string);
-    await primeProdAssetCache(peer, [...initial, ...cssLinks]);
-    return { scripts, cssLinks, title };
-  }
-
+  // Initial fetch set: every absolute-path script src, every inline-block
+  // import specifier, every CSS link.
   const initial = new Set<string>();
   for (const s of scripts) {
-    if (s.src?.startsWith('/')) {
+    if (s.src && isAbsolutePath(s.src)) {
       initial.add(s.src);
     }
     if (s.inline) {
-      for (const spec of scanDevImports(s.inline, 'text/javascript', initial)) {
+      for (const spec of scanJSImports(s.inline, initial)) {
         initial.add(spec);
       }
     }
   }
   for (const css of cssLinks) {
-    initial.add(css);
+    if (isAbsolutePath(css)) {
+      initial.add(css);
+    }
   }
-  const blobs = await buildBlobGraph(peer, Array.from(initial));
-  return { scripts, cssLinks, title, blobs };
+
+  await primeCache(peer, Array.from(initial), onProgress);
+  return { scripts, cssLinks, title };
 }
 
 /**
@@ -294,51 +314,10 @@ export function injectGraph(graph: AssetGraph, rootId: string): void {
     document.title = graph.title;
   }
 
-  if (graph.blobs) {
-    injectViaBlobs(graph, graph.blobs, rootId);
-    return;
-  }
-
   for (const css of graph.cssLinks) {
     const link = document.createElement('link');
     link.rel = 'stylesheet';
     link.href = css;
-    document.head.appendChild(link);
-  }
-  swapRoot(rootId);
-  for (const s of graph.scripts) {
-    if (!s.src || isHmrOnly(s.src)) {
-      continue;
-    }
-    const script = document.createElement('script');
-    script.type = 'module';
-    script.src = s.src;
-    document.body.appendChild(script);
-  }
-}
-
-function injectViaBlobs(
-  graph: AssetGraph,
-  blobs: ReadonlyMap<string, string>,
-  rootId: string
-): void {
-  const imports: Record<string, string> = {};
-  for (const [url, blob] of blobs) {
-    imports[url] = blob;
-  }
-  const importMap = document.createElement('script');
-  importMap.type = 'importmap';
-  importMap.textContent = JSON.stringify({ imports });
-  document.head.appendChild(importMap);
-
-  for (const css of graph.cssLinks) {
-    const blob = blobs.get(css);
-    if (!blob) {
-      continue;
-    }
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = blob;
     document.head.appendChild(link);
   }
 
@@ -351,7 +330,7 @@ function injectViaBlobs(
     const script = document.createElement('script');
     script.type = 'module';
     if (s.src) {
-      script.src = blobs.get(s.src) ?? s.src;
+      script.src = s.src;
     } else if (s.inline) {
       script.textContent = s.inline;
     }
@@ -372,9 +351,9 @@ function swapRoot(rootId: string): void {
 }
 
 /**
- * Register the SW that intercepts `/assets/*` and serves from cache.
- * Returns true once the SW is controlling this page (or false if not
- * available — old browsers / private mode).
+ * Register the SW that intercepts every cached same-origin GET. Returns
+ * true once the SW is controlling this page (or false if not available —
+ * old browsers / private mode).
  */
 export async function ensureServiceWorker(): Promise<boolean> {
   if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) {

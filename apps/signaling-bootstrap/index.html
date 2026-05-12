@@ -17,18 +17,18 @@
     />
     <script>
       // Apply persisted theme synchronously to avoid FOUC.
-      (function () {
-        var m = localStorage.getItem('brika-mode') || 'system';
-        var r = m;
-        if (m === 'system') {
-          r = matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light';
-        }
-        var h = document.documentElement;
-        h.className = r;
-        h.dataset.mode = r;
-        h.dataset.theme = localStorage.getItem('brika-theme') || 'default';
-        h.style.colorScheme = r;
-      })();
+            (function () {
+              var m = localStorage.getItem('brika-mode') || 'system';
+              var r = m;
+              if (m === 'system') {
+                r = matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light';
+              }
+              var h = document.documentElement;
+              h.className = r;
+              h.dataset.mode = r;
+              h.dataset.theme = localStorage.getItem('brika-theme') || 'default';
+              h.style.colorScheme = r;
+            })();
     </script>
   </head>
   <body>

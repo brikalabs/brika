@@ -9,6 +9,8 @@ export type BootstrapPhase = 'landing' | 'connecting' | 'fetching' | 'loading' |
 export interface BootstrapState {
   phase: BootstrapPhase;
   status: string;
+  /** Free-form technical detail (last fetched URL, count, …). */
+  detail: string | null;
   error: ErrorClassification | null;
   retry: () => void;
 }
@@ -20,15 +22,18 @@ export interface BootstrapState {
 export function useBootstrap(hubName: string | null): BootstrapState {
   const [phase, setPhase] = useState<BootstrapPhase>(hubName ? 'connecting' : 'landing');
   const [status, setStatus] = useState(hubName ? `Connecting to ${hubName}…` : 'Choose a hub');
+  const [detail, setDetail] = useState<string | null>(null);
   const [error, setError] = useState<ErrorClassification | null>(null);
 
   const attempt = useCallback(async () => {
     if (!hubName) {
       setPhase('landing');
+      setDetail(null);
       return;
     }
     setPhase('connecting');
     setStatus(`Connecting to ${hubName}…`);
+    setDetail(null);
     setError(null);
 
     const coordinator = resolveCoordinator();
@@ -40,9 +45,12 @@ export function useBootstrap(hubName: string | null): BootstrapState {
       setPhase('fetching');
       setStatus('Loading app from your hub…');
       const hasServiceWorker = await swPromise;
-      const graph = await buildAssetGraph(peer, hasServiceWorker);
+      const graph = await buildAssetGraph(peer, hasServiceWorker, (event) => {
+        setDetail(`${event.fetched} modules · ${shortenUrl(event.url)}`);
+      });
       setPhase('loading');
       setStatus('Starting app…');
+      setDetail(`${graph.scripts.length} scripts · ${graph.cssLinks.length} stylesheets`);
       injectGraph(graph, 'root');
       setPhase('done');
     } catch (err) {
@@ -61,7 +69,22 @@ export function useBootstrap(hubName: string | null): BootstrapState {
   return {
     phase,
     status,
+    detail,
     error,
     retry: () => void attempt(),
   };
+}
+
+/**
+ * Trim long URLs to fit a single line. Keeps the rightmost path segment
+ * (which is the part a human cares about — file name + query) and elides
+ * the middle if the whole thing wouldn't fit.
+ */
+const MAX_URL_LENGTH = 56;
+function shortenUrl(url: string): string {
+  if (url.length <= MAX_URL_LENGTH) {
+    return url;
+  }
+  const tailLen = MAX_URL_LENGTH - 4;
+  return `…${url.slice(-tailLen)}`;
 }
