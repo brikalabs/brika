@@ -1,9 +1,6 @@
 import {
-  Alert,
-  AlertDescription,
-  AlertIcon,
-  AlertTitle,
   Button,
+  Card,
   EmptyState,
   EmptyStateActions,
   EmptyStateDescription,
@@ -11,7 +8,7 @@ import {
   EmptyStateTitle,
 } from '@brika/clay';
 import { Link } from '@tanstack/react-router';
-import { AlertCircle, ExternalLink, RotateCw, SearchX } from 'lucide-react';
+import { ExternalLink, RotateCw, SearchX } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 import type { ErrorClassification } from '@/lib/classify-error';
 
@@ -26,9 +23,8 @@ export function ErrorCard({ error, onRetry }: ErrorCardProps): React.ReactElemen
   // `change-name` doesn't auto-retry; the user has to pick a different name.
   // For 'retry' kinds we run a visible countdown that the user can cancel
   // by clicking the primary action.
-  const [remaining, setRemaining] = useState<number | null>(
-    error.kind === 'retry' && error.autoRetry ? error.autoRetry : null
-  );
+  const initialRemaining = error.kind === 'retry' && error.autoRetry ? error.autoRetry : null;
+  const [remaining, setRemaining] = useState<number | null>(initialRemaining);
   const onRetryRef = useRef(onRetry);
   onRetryRef.current = onRetry;
 
@@ -49,7 +45,7 @@ export function ErrorCard({ error, onRetry }: ErrorCardProps): React.ReactElemen
   // rather than "something broke".
   if (error.kind === 'change-name') {
     return (
-      <EmptyState className="w-full max-w-[440px]">
+      <EmptyState className="w-full max-w-110">
         <EmptyStateIcon>
           <SearchX />
         </EmptyStateIcon>
@@ -65,42 +61,41 @@ export function ErrorCard({ error, onRetry }: ErrorCardProps): React.ReactElemen
   }
 
   return (
-    <div className="w-full max-w-[440px] space-y-3">
-      <Alert variant="destructive">
-        <AlertIcon>
-          <AlertCircle />
-        </AlertIcon>
-        <AlertTitle>{error.title}</AlertTitle>
-        <AlertDescription>{error.detail}</AlertDescription>
-      </Alert>
-      <div className="flex flex-wrap items-center justify-center gap-2">
-        {error.kind === 'retry' ? (
-          <Button
-            onClick={() => {
-              setRemaining(null);
-              onRetry();
-            }}
-          >
-            <RotateCw />
-            Try again
+    <Card role="alert" data-error-kind={error.kind} className="w-full max-w-110">
+      <div className="space-y-4 px-6 py-5 text-center">
+        <div className="space-y-1.5">
+          <h3 className="font-semibold text-base text-foreground tracking-tight">{error.title}</h3>
+          <p className="text-[13px] text-muted-foreground leading-relaxed">{error.detail}</p>
+        </div>
+        <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+          {error.kind === 'retry' ? (
+            <Button
+              onClick={() => {
+                setRemaining(null);
+                onRetry();
+              }}
+            >
+              <RotateCw />
+              <span>
+                Try again
+                {remaining !== null && remaining > 0 && (
+                  <span className="ml-1.5 tabular-nums opacity-70">· {remaining}s</span>
+                )}
+              </span>
+            </Button>
+          ) : (
+            <Button asChild>
+              <a href={HELP_HREF} target="_blank" rel="noopener">
+                <ExternalLink />
+                Get help
+              </a>
+            </Button>
+          )}
+          <Button asChild variant="outline">
+            <Link to="/">Different hub</Link>
           </Button>
-        ) : (
-          <Button asChild>
-            <a href={HELP_HREF} target="_blank" rel="noopener">
-              <ExternalLink />
-              Get help
-            </a>
-          </Button>
-        )}
-        <Button asChild variant="outline">
-          <Link to="/">Different hub</Link>
-        </Button>
+        </div>
       </div>
-      {remaining !== null && remaining > 0 && (
-        <p className="text-center text-[12px] text-muted-foreground tabular-nums">
-          Auto-retrying in {remaining}s…
-        </p>
-      )}
-    </div>
+    </Card>
   );
 }
