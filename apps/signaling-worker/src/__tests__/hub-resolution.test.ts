@@ -52,9 +52,7 @@ describe('resolveHubFromUrl', () => {
     // "hub: assets, restPath: /index-XYZ.js", the asset binding 404s,
     // and the SPA fallback serves index.html — breaking the bootstrap's
     // own JS + CSS.
-    expect(
-      resolveHubFromUrl(new URL('https://hub.brika.dev/assets/index-XYZ.js'))
-    ).toBeNull();
+    expect(resolveHubFromUrl(new URL('https://hub.brika.dev/assets/index-XYZ.js'))).toBeNull();
     expect(resolveHubFromUrl(new URL('https://hub.brika.dev/assets/style.css'))).toBeNull();
     expect(resolveHubFromUrl(new URL('https://hub.brika.dev/favicon.ico'))).toBeNull();
     expect(resolveHubFromUrl(new URL('https://hub.brika.dev/robots.txt'))).toBeNull();

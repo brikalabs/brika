@@ -5,15 +5,15 @@
 // network — keeps the failure mode visible instead of an infinite spinner.
 const ASSET_CACHE = 'brika-assets-v1';
 
-self.addEventListener('install', () => {
-  self.skipWaiting();
+globalThis.addEventListener('install', () => {
+  globalThis.skipWaiting();
 });
 
-self.addEventListener('activate', (event) => {
-  event.waitUntil(self.clients.claim());
+globalThis.addEventListener('activate', (event) => {
+  event.waitUntil(globalThis.clients.claim());
 });
 
-self.addEventListener('fetch', (event) => {
+globalThis.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
