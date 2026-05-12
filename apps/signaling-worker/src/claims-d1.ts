@@ -108,9 +108,7 @@ export class D1ClaimStore {
   }
 
   async size(): Promise<number> {
-    const row = await this.#db
-      .prepare('SELECT COUNT(*) AS n FROM claims')
-      .first<{ n: number }>();
+    const row = await this.#db.prepare('SELECT COUNT(*) AS n FROM claims').first<{ n: number }>();
     return row?.n ?? 0;
   }
 
@@ -141,10 +139,7 @@ export class D1ClaimStore {
       throw new ClaimError('unknown', `"${lower}" is not claimed`);
     }
     const next = generateToken();
-    await this.#db
-      .prepare('UPDATE claims SET token = ? WHERE name = ?')
-      .bind(next, lower)
-      .run();
+    await this.#db.prepare('UPDATE claims SET token = ? WHERE name = ?').bind(next, lower).run();
     return { ...existing, token: next };
   }
 

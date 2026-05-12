@@ -97,7 +97,8 @@ function CoordinatorEditor({
       return (
         <span className="inline-flex items-center gap-1.5 text-[12.5px] text-destructive">
           <XCircle className="size-3.5" />
-          {test.data.error ?? t('settings:remoteAccess.coordinator.testFailed', { status: test.data.status })}
+          {test.data.error ??
+            t('settings:remoteAccess.coordinator.testFailed', { status: test.data.status })}
         </span>
       );
     }

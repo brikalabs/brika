@@ -24,16 +24,16 @@
 
 import {
   type AbortMessage,
+  decodeRpc,
+  encodeRpc,
+  encodeSignaling,
   type IceServer,
   PROTOCOL_VERSION,
   type RequestMessage,
   ResponseAssembler,
   type ResponseHeadMessage,
-  type SignalingMessage,
-  decodeRpc,
-  encodeRpc,
-  encodeSignaling,
   requestToFrames,
+  type SignalingMessage,
 } from '@brika/remote-access-protocol';
 import { CookieJar } from './cookie-jar';
 import type { Transport } from './transport';
@@ -567,10 +567,7 @@ export class DataChannelTransport implements Transport {
       return;
     }
     this.#reconnectAttempt += 1;
-    const delay = Math.min(
-      RECONNECT_MAX_MS,
-      RECONNECT_BASE_MS * 2 ** (this.#reconnectAttempt - 1)
-    );
+    const delay = Math.min(RECONNECT_MAX_MS, RECONNECT_BASE_MS * 2 ** (this.#reconnectAttempt - 1));
     setTimeout(() => {
       if (this.#closed) {
         return;

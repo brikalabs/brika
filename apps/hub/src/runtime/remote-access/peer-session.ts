@@ -20,14 +20,18 @@ import {
   PROTOCOL_VERSION,
   type RpcMessage,
 } from '@brika/remote-access-protocol';
-import { RTCPeerConnection, type RTCDataChannel } from 'werift';
+import { type RTCDataChannel, RTCPeerConnection } from 'werift';
 import type { SignalingLogger } from './signaling-client';
 
 export type RpcHandler = (msg: RpcMessage, send: (frame: RpcMessage) => void) => void;
 
 export interface PeerSessionOptions {
   readonly sessionId: string;
-  readonly iceServers: ReadonlyArray<{ urls: string | ReadonlyArray<string>; username?: string; credential?: string }>;
+  readonly iceServers: ReadonlyArray<{
+    urls: string | ReadonlyArray<string>;
+    username?: string;
+    credential?: string;
+  }>;
   readonly onAnswer: (sdp: string) => void;
   readonly onIceCandidate: (candidate: IceCandidate) => void;
   readonly onClosed: () => void;

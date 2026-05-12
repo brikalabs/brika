@@ -21,12 +21,12 @@ import { DataChannelTransport } from './data-channel-transport';
 import { FetchTransport } from './fetch-transport';
 import type { Transport } from './transport';
 
-export { FetchTransport } from './fetch-transport';
 export {
   DataChannelTransport,
   type DataChannelTransportState,
   TransportError,
 } from './data-channel-transport';
+export { FetchTransport } from './fetch-transport';
 export type { Transport } from './transport';
 
 const SUBDOMAIN_SUFFIX = '.hubs.brika.dev';

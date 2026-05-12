@@ -27,7 +27,10 @@ interface StoredCookie {
   readonly expiresAt?: number;
 }
 
-function parseExpiresAt(maxAge: string | undefined, expires: string | undefined): number | undefined {
+function parseExpiresAt(
+  maxAge: string | undefined,
+  expires: string | undefined
+): number | undefined {
   if (maxAge !== undefined) {
     const seconds = Number.parseInt(maxAge, 10);
     if (Number.isFinite(seconds)) {

@@ -17,9 +17,9 @@ import {
   type AbortMessage,
   PROTOCOL_VERSION,
   type RequestMessage,
+  type RpcMessage,
   responseToFrames,
   rpcRequestToFetch,
-  type RpcMessage,
 } from '@brika/remote-access-protocol';
 import type { ApiServer } from '@/runtime/http/api-server';
 import type { SignalingLogger } from './signaling-client';

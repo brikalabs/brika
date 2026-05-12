@@ -2,8 +2,8 @@
 
 export {
   type CorsOriginMatcher,
-  createApp,
   type CreateAppOptions,
+  createApp,
   type HonoContext,
 } from './create-app';
 

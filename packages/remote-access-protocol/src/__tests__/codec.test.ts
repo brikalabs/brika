@@ -19,7 +19,13 @@ describe('codec', () => {
     });
 
     it('rejects wrong protocol version', () => {
-      const raw = JSON.stringify({ v: 99, kind: 'client.offer', hubName: 'x', sdp: '', ticket: '' });
+      const raw = JSON.stringify({
+        v: 99,
+        kind: 'client.offer',
+        hubName: 'x',
+        sdp: '',
+        ticket: '',
+      });
       expect(decodeSignaling(raw)).toBeNull();
     });
 

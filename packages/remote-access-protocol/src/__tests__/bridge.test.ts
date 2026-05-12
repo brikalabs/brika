@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import {
-  requestToFrames,
-  ResponseAssembler,
-  responseToFrames,
-  rpcRequestToFetch,
-} from '../bridge';
+import { ResponseAssembler, requestToFrames, responseToFrames, rpcRequestToFetch } from '../bridge';
 import type {
   ResponseChunkMessage,
   ResponseEndMessage,
@@ -80,10 +75,7 @@ describe('bridge', () => {
         headers: { 'Content-Type': 'text/plain' },
       });
       const frames: Array<
-        | ResponseHeadMessage
-        | ResponseChunkMessage
-        | ResponseEndMessage
-        | ResponseErrorMessage
+        ResponseHeadMessage | ResponseChunkMessage | ResponseEndMessage | ResponseErrorMessage
       > = [];
       await responseToFrames(9, upstream, (f) => {
         frames.push(f);
@@ -96,10 +88,15 @@ describe('bridge', () => {
       // Re-assemble on the client side.
       const assembler = new ResponseAssembler();
       for (const f of frames) {
-        if (f.kind === 'response.head') assembler.onHead(f);
-        else if (f.kind === 'response.chunk') assembler.onChunk(f);
-        else if (f.kind === 'response.end') assembler.onEnd(f);
-        else if (f.kind === 'response.error') assembler.onError(f);
+        if (f.kind === 'response.head') {
+          assembler.onHead(f);
+        } else if (f.kind === 'response.chunk') {
+          assembler.onChunk(f);
+        } else if (f.kind === 'response.end') {
+          assembler.onEnd(f);
+        } else if (f.kind === 'response.error') {
+          assembler.onError(f);
+        }
       }
       const res = await assembler.response();
       expect(res.status).toBe(200);

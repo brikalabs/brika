@@ -1,7 +1,7 @@
 export {
   type EmitFrame,
-  requestToFrames,
   ResponseAssembler,
+  requestToFrames,
   responseToFrames,
   rpcRequestToFetch,
 } from './bridge';
@@ -9,12 +9,12 @@ export { decodeRpc, decodeSignaling, encodeRpc, encodeSignaling } from './codec'
 export {
   type AbortMessage,
   type HelloMessage,
-  RPC_CAPABILITIES,
   type RequestMessage,
   type ResponseChunkMessage,
   type ResponseEndMessage,
   type ResponseErrorMessage,
   type ResponseHeadMessage,
+  RPC_CAPABILITIES,
   type RpcCapability,
   type RpcEnvelope,
   type RpcMessage,

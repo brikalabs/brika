@@ -15,11 +15,7 @@
  * directly and this process drops out.
  */
 
-import {
-  decodeSignaling,
-  type IceServer,
-  PROTOCOL_VERSION,
-} from '@brika/remote-access-protocol';
+import { decodeSignaling, type IceServer, PROTOCOL_VERSION } from '@brika/remote-access-protocol';
 import { ClaimError, ClaimStore } from './claims';
 import { Registry } from './registry';
 import { routeFrame } from './router';
@@ -34,10 +30,7 @@ function parseIceServers(): ReadonlyArray<IceServer> {
       // fall through to defaults
     }
   }
-  return [
-    { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:stun.cloudflare.com:3478' },
-  ];
+  return [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun.cloudflare.com:3478' }];
 }
 
 function parseSubprotocols(header: string | null): { proto?: string; bearer?: string } {
@@ -165,7 +158,10 @@ async function handleClaim(req: Request): Promise<Response> {
     });
   } catch (err) {
     if (err instanceof ClaimError) {
-      return Response.json({ error: err.message, code: err.code }, { status: claimErrorStatus(err.code) });
+      return Response.json(
+        { error: err.message, code: err.code },
+        { status: claimErrorStatus(err.code) }
+      );
     }
     throw err;
   }
@@ -199,10 +195,7 @@ async function handleRelease(req: Request, name: string): Promise<Response> {
   return Response.json({ ok: true });
 }
 
-function handleHubUpgrade(
-  req: Request,
-  server: Bun.Server<WSData>
-): Response | undefined {
+function handleHubUpgrade(req: Request, server: Bun.Server<WSData>): Response | undefined {
   const subs = parseSubprotocols(req.headers.get('sec-websocket-protocol'));
   if (subs.proto !== `brika.v${PROTOCOL_VERSION}`) {
     return new Response('Unsupported protocol', { status: 400 });
@@ -274,7 +267,11 @@ function onClientOpen(ws: Bun.ServerWebSocket<WSData>): void {
   );
 }
 
-function onHubFirstMessage(ws: Bun.ServerWebSocket<WSData>, raw: string, expectedName: string): void {
+function onHubFirstMessage(
+  ws: Bun.ServerWebSocket<WSData>,
+  raw: string,
+  expectedName: string
+): void {
   const msg = decodeSignaling(raw);
   if (msg?.kind !== 'hub.register') {
     ws.close(4001, 'expected hub.register');

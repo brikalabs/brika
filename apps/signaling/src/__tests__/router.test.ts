@@ -39,6 +39,14 @@ function parseLast(socket: SpySocket): SignalingMessage {
   return JSON.parse(last) as SignalingMessage;
 }
 
+/** Test helper that asserts a value isn't null/undefined and narrows the type. */
+function ensure<T>(value: T | null | undefined, label = 'value'): T {
+  if (value === null || value === undefined) {
+    throw new Error(`${label} was unexpectedly nullish`);
+  }
+  return value;
+}
+
 describe('routeFrame', () => {
   it('relays client.offer to the matching hub as session.offer', () => {
     const registry = new Registry();
@@ -56,12 +64,13 @@ describe('routeFrame', () => {
       ticket: 'tkt',
     });
 
-    routeFrame({ registry, iceServers: ICE }, { kind: 'client', conn: client! }, offer);
+    const c = ensure(client, 'client');
+    routeFrame({ registry, iceServers: ICE }, { kind: 'client', conn: c }, offer);
 
     const forwarded = parseLast(hubSocket);
     expect(forwarded.kind).toBe('session.offer');
     if (forwarded.kind === 'session.offer') {
-      expect(forwarded.sessionId).toBe(client!.sessionId);
+      expect(forwarded.sessionId).toBe(c.sessionId);
       expect(forwarded.sdp).toBe('fake-offer-sdp');
       expect(forwarded.iceServers).toEqual(ICE);
     }
@@ -77,10 +86,11 @@ describe('routeFrame', () => {
     const client = registry.openSession('maxime', clientSocket);
     expect(client).not.toBeNull();
 
+    const c = ensure(client, 'client');
     const answer = encodeSignaling({
       v: PROTOCOL_VERSION,
       kind: 'hub.answer',
-      sessionId: client!.sessionId,
+      sessionId: c.sessionId,
       sdp: 'fake-answer-sdp',
     });
 
@@ -100,13 +110,14 @@ describe('routeFrame', () => {
     const clientSocket = makeSocket();
     const client = registry.openSession('maxime', clientSocket);
 
+    const c = ensure(client, 'client');
     routeFrame(
       { registry, iceServers: ICE },
-      { kind: 'client', conn: client! },
+      { kind: 'client', conn: c },
       encodeSignaling({
         v: PROTOCOL_VERSION,
         kind: 'client.ice',
-        sessionId: client!.sessionId,
+        sessionId: c.sessionId,
         candidate: { candidate: 'candidate-from-client' },
       })
     );
@@ -122,7 +133,7 @@ describe('routeFrame', () => {
       encodeSignaling({
         v: PROTOCOL_VERSION,
         kind: 'hub.ice',
-        sessionId: client!.sessionId,
+        sessionId: c.sessionId,
         candidate: { candidate: 'candidate-from-hub' },
       })
     );
@@ -146,7 +157,7 @@ describe('routeFrame', () => {
 
     routeFrame(
       { registry, iceServers: ICE },
-      { kind: 'client', conn: client! },
+      { kind: 'client', conn: ensure(client, 'client') },
       encodeSignaling({
         v: PROTOCOL_VERSION,
         kind: 'client.offer',
@@ -187,7 +198,7 @@ describe('routeFrame', () => {
     // Alice tries to send ICE for a fake session id.
     routeFrame(
       { registry, iceServers: ICE },
-      { kind: 'client', conn: alice! },
+      { kind: 'client', conn: ensure(alice, 'alice') },
       encodeSignaling({
         v: PROTOCOL_VERSION,
         kind: 'client.ice',
@@ -229,7 +240,7 @@ describe('Registry', () => {
     const clientSocket = makeSocket();
     const session = registry.openSession('maxime', clientSocket);
     registry.unregisterHub('maxime', hubSocket);
-    expect(registry.getSession(session!.sessionId)).toBeUndefined();
+    expect(registry.getSession(ensure(session, 'session').sessionId)).toBeUndefined();
     const err = parseLast(clientSocket);
     expect(err.kind).toBe('session.error');
   });

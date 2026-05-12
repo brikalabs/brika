@@ -1,7 +1,7 @@
+import { afterAll, beforeEach, describe, expect, it } from 'bun:test';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterAll, beforeEach, describe, expect, it } from 'bun:test';
 import { ClaimError, ClaimStore, RESERVED_NAMES, validateName } from '../claims';
 
 const tmpDirs: string[] = [];

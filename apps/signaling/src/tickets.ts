@@ -55,7 +55,10 @@ async function importHmacKey(secret: string): Promise<CryptoKey> {
 }
 
 /** Mint a fresh ticket bound to a given hub name. */
-export async function mintTicket(secret: string, hubName: string): Promise<{
+export async function mintTicket(
+  secret: string,
+  hubName: string
+): Promise<{
   ticket: string;
   expiresAt: number;
   claims: TicketClaims;

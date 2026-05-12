@@ -131,7 +131,12 @@ export class RemoteAccessService {
    * "Test connection" affordance in the UI before the user commits to a
    * name claim.
    */
-  async testCoordinator(): Promise<{ ok: boolean; status: number; coordinatorOrigin: string; error?: string }> {
+  async testCoordinator(): Promise<{
+    ok: boolean;
+    status: number;
+    coordinatorOrigin: string;
+    error?: string;
+  }> {
     const coordinatorOrigin = await this.coordinatorOrigin();
     try {
       const res = await fetch(new URL('/v1/health', coordinatorOrigin).toString(), {
@@ -173,11 +178,9 @@ export class RemoteAccessService {
     const name =
       envName && envToken
         ? envName
-        : (await this.#secrets.getHubSecret(SIGNALING_NAME_SECRET_KEY)) ?? '';
+        : ((await this.#secrets.getHubSecret(SIGNALING_NAME_SECRET_KEY)) ?? '');
     const token =
-      envName && envToken
-        ? envToken
-        : await this.#secrets.getHubSecret(SIGNALING_TOKEN_SECRET_KEY);
+      envName && envToken ? envToken : await this.#secrets.getHubSecret(SIGNALING_TOKEN_SECRET_KEY);
     if (!name || !token) {
       this.#log.info('remote access not claimed — visit Settings → Remote access to enable');
       return;
