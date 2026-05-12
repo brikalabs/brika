@@ -16,9 +16,6 @@ import { useMemo } from 'react';
 import { recipesToFragments } from '../recipes';
 import type { ThemeConfig } from '../types';
 
-type CssVar = `--${string}`;
-type StyleWithVars = CSSProperties & Record<CssVar, string>;
-
 interface ThemedSurfaceProps {
   theme: ThemeConfig;
   mode: 'light' | 'dark';
@@ -37,8 +34,10 @@ export function ThemedSurface({
   variant = 'true',
   children,
 }: Readonly<ThemedSurfaceProps>) {
-  const themedStyle = useMemo<StyleWithVars>(() => {
-    const base = themeToCssVars(theme, mode) as Record<CssVar, string>;
+  // React's CSSProperties already permits `--*` keys via its index signature,
+  // so the merged result satisfies CSSProperties directly — no cast needed.
+  const themedStyle = useMemo<CSSProperties>(() => {
+    const base = themeToCssVars(theme, mode);
     const extras = recipesToFragments(theme.brika, theme.colors?.light?.primary).extras;
     return {
       ...base,

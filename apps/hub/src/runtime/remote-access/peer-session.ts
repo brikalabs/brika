@@ -82,7 +82,10 @@ export class PeerSession {
         sessionId: options.sessionId,
         state,
       });
-      if (state === 'closed' || state === 'failed' || state === 'disconnected') {
+      // `disconnected` is recoverable per WebRTC spec — ICE may re-establish
+      // without a new SDP exchange. Let werift's ICE agent decide whether
+      // connectivity is truly lost (escalates `disconnected` → `failed`).
+      if (state === 'closed' || state === 'failed') {
         this.close();
       }
     });
