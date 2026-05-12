@@ -44,11 +44,24 @@ import { useBoardStore } from '../store';
 
 // ─── Board icon helper ───────────────────────────────────────────────────────
 
-function BoardIcon({ icon }: { icon?: string }) {
-  return icon ? (
-    <DynamicIcon name={icon as IconName} className="size-3.5" />
-  ) : (
-    <LayoutDashboard className="size-3.5" />
+interface BoardIconProps {
+  icon?: string;
+}
+
+function BoardIcon({ icon }: Readonly<BoardIconProps>) {
+  if (!icon) {
+    return <LayoutDashboard className="size-3.5" />;
+  }
+  // `DynamicIcon` accepts any string via `fallback` — pass the icon as-is
+  // (lucide types it as IconName but the runtime tolerates unknowns).
+  // The cast confined inside this single render path is unavoidable
+  // without a runtime IconName whitelist.
+  return (
+    <DynamicIcon
+      name={icon as IconName}
+      className="size-3.5"
+      fallback={() => <LayoutDashboard className="size-3.5" />}
+    />
   );
 }
 

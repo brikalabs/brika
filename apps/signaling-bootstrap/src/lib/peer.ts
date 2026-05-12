@@ -39,6 +39,9 @@ const FALLBACK_ICE_SERVERS: IceServer[] = [
 
 const TEXT_DECODER = new TextDecoder();
 
+/** Per-request inflight timeout. Bounds slot lifetime even if a hub goes silent. */
+const REQUEST_TIMEOUT_MS = 30_000;
+
 export async function mintTicket(hubName: string, coordinator: string): Promise<TicketResponse> {
   if (!isValidHubName(hubName)) {
     throw new Error(`Refusing to mint ticket for invalid hub name "${hubName}"`);
@@ -362,11 +365,22 @@ export async function openPeer(
       return assembler.response();
     },
     close: () => {
+      // Drain inflight before tearing down the transport so we don't leak
+      // 30s timers + assembler closures per pending request.
+      for (const [id, slot] of inflight) {
+        clearTimeout(slot.timer);
+        slot.assembler.onError({
+          v: PROTOCOL_VERSION,
+          kind: 'response.error',
+          id,
+          code: 'closed',
+          message: 'Peer closed',
+        });
+      }
+      inflight.clear();
       closeQuietly(channel);
       closeQuietly(pc);
       closeQuietly(ws);
     },
   };
 }
-
-const REQUEST_TIMEOUT_MS = 30_000;

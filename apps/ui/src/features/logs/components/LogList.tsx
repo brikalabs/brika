@@ -85,6 +85,17 @@ export function LogList({
     }
   }, [pendingCount, onRevealPending]);
 
+  const maybeLoadMore = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el || !hasMore || isFetchingMore || !onLoadMore) {
+      return;
+    }
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    if (distanceFromBottom < LOAD_MORE_THRESHOLD) {
+      onLoadMore();
+    }
+  }, [hasMore, isFetchingMore, onLoadMore]);
+
   const handleScroll = useCallback(() => {
     const el = scrollRef.current;
     if (!el) { return; }
@@ -95,16 +106,17 @@ export function LogList({
     }
     isAtTopRef.current = atTop;
 
-    // Infinite scroll: fire once the user is near the bottom. Driven by the
-    // scroll event itself rather than a virtualizer-keyed effect, so it
-    // doesn't re-run for every row that scrolls past the viewport.
-    if (hasMore && !isFetchingMore && onLoadMore) {
-      const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-      if (distanceFromBottom < LOAD_MORE_THRESHOLD) {
-        onLoadMore();
-      }
-    }
-  }, [onRevealPending, hasMore, isFetchingMore, onLoadMore]);
+    // Infinite scroll: scroll event drives it (not a virtualizer-keyed
+    // effect that would fire every tick).
+    maybeLoadMore();
+  }, [onRevealPending, maybeLoadMore]);
+
+  // Cover the case where the list underfills the viewport: the user CAN'T
+  // scroll, so `handleScroll` never fires, but we still have more rows.
+  // Re-check whenever the data set or capacity changes.
+  useEffect(() => {
+    maybeLoadMore();
+  }, [maybeLoadMore, logs.length]);
 
   const scrollToTopAndReveal = useCallback(() => {
     const el = scrollRef.current;
