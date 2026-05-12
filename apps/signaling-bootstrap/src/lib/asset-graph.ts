@@ -358,27 +358,37 @@ function swapRoot(rootId: string): void {
 }
 
 /**
+ * Keep in sync with the `SW_VERSION` constant in `public/sw.js`. The
+ * bootstrap pings `/__brika_sw_ping__` after registering; if the SW
+ * doesn't respond with this exact string the SW is stale and we force
+ * a one-time auto-reload to pick up the fresh worker.
+ */
+const EXPECTED_SW_VERSION = '2';
+const SW_PING_PATH = '/__brika_sw_ping__';
+const RELOAD_FLAG = 'brika-bootstrap-sw-reloaded';
+
+/**
  * Register the SW that intercepts every cached same-origin GET. Returns
  * true once an up-to-date SW is controlling this page (or false if SWs
  * aren't available — old browsers / private mode).
  *
  * Auto-recovers from a stale SW carried over from a previous bootstrap
- * deploy:
+ * deploy. Strategy in order of preference:
  *
- *  - `updateViaCache: 'none'` forces the browser to refetch `/sw.js`
- *    on every register call instead of trusting an HTTP cache that
- *    can hold the old version for up to 24h.
- *  - `reg.update()` nudges browsers that still debounce the check.
- *  - If a new SW shows up installing or waiting, we wait for the
- *    `controllerchange` event (the new SW's install handler calls
- *    `skipWaiting()` + the activate handler calls `clients.claim()`
- *    so the swap happens without a user reload).
- *
- * The net effect: a user with the previous /assets/-only SW visits the
- * page, the bootstrap notices the new SW is installing, waits ~1s for
- * it to take over, then primes the cache and injects scripts — all the
- * subsequent module fetches go through the new SW. No manual unregister
- * or hard refresh needed.
+ *   1. `updateViaCache: 'none'` so the browser refetches `/sw.js` on
+ *      every register instead of trusting the HTTP cache (default
+ *      keeps the old SW alive for up to 24h).
+ *   2. Listen for `updatefound` BEFORE calling `reg.update()` so we
+ *      reliably catch the case where a new SW is in the process of
+ *      installing — the race-free way per the SW spec.
+ *   3. When a new SW is detected, wait for `controllerchange` (the new
+ *      SW's install handler calls `skipWaiting()` + activate calls
+ *      `clients.claim()`).
+ *   4. As a final safety net, ping the SW's sentinel endpoint after
+ *      it's controlling. If the version doesn't match, unregister and
+ *      reload once — handles the edge case where update detection
+ *      missed the swap (e.g. browser HTTP cache fooled the version
+ *      check despite `updateViaCache: 'none'`).
  */
 export async function ensureServiceWorker(): Promise<boolean> {
   if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) {
@@ -389,20 +399,44 @@ export async function ensureServiceWorker(): Promise<boolean> {
       scope: '/',
       updateViaCache: 'none',
     });
-    await reg.update().catch(() => {
+
+    const arriving = detectArrivingSw(reg);
+    reg.update().catch(() => {
       /* network failure on update check shouldn't abort the bootstrap */
     });
 
-    const needsControllerChange =
-      !navigator.serviceWorker.controller || Boolean(reg.installing) || Boolean(reg.waiting);
-    if (!needsControllerChange) {
-      return true;
+    if ((await arriving) || !navigator.serviceWorker.controller) {
+      await waitForControllerChange();
     }
-    await waitForControllerChange();
+
+    await verifyOrReload();
     return true;
   } catch {
     return false;
   }
+}
+
+/**
+ * Resolve `true` if a new SW is (or starts) installing within the
+ * detection window, `false` otherwise. Race-free: the `updatefound`
+ * listener is attached BEFORE we trigger `reg.update()`.
+ */
+function detectArrivingSw(reg: ServiceWorkerRegistration, windowMs = 2_000): Promise<boolean> {
+  if (reg.installing || reg.waiting) {
+    return Promise.resolve(true);
+  }
+  return new Promise<boolean>((resolve) => {
+    const onUpdate = (): void => {
+      reg.removeEventListener('updatefound', onUpdate);
+      clearTimeout(timer);
+      resolve(true);
+    };
+    const timer = setTimeout(() => {
+      reg.removeEventListener('updatefound', onUpdate);
+      resolve(false);
+    }, windowMs);
+    reg.addEventListener('updatefound', onUpdate);
+  });
 }
 
 function waitForControllerChange(timeoutMs = 8_000): Promise<void> {
@@ -415,4 +449,44 @@ function waitForControllerChange(timeoutMs = 8_000): Promise<void> {
     };
     navigator.serviceWorker.addEventListener('controllerchange', handler);
   });
+}
+
+/**
+ * Ping the SW sentinel. If we don't get the expected version back,
+ * unregister every SW on this origin and reload — once. A sessionStorage
+ * flag prevents an infinite reload loop if something is fundamentally
+ * broken (e.g. SW disabled by user policy).
+ */
+async function verifyOrReload(): Promise<void> {
+  if (!navigator.serviceWorker.controller) {
+    return;
+  }
+  let version: string | null = null;
+  try {
+    const res = await fetch(SW_PING_PATH, { cache: 'no-store' });
+    if (res.ok) {
+      version = (await res.text()).trim();
+    }
+  } catch {
+    /* ping failed — fall through to the version check below */
+  }
+  if (version === EXPECTED_SW_VERSION) {
+    sessionStorage.removeItem(RELOAD_FLAG);
+    return;
+  }
+  if (sessionStorage.getItem(RELOAD_FLAG)) {
+    // Already tried reloading once this session; don't loop. Surface
+    // the failure in the regular error path instead.
+    throw new Error(
+      `Stuck on stale service worker (got version "${version ?? 'no response'}", expected "${EXPECTED_SW_VERSION}"). Try clearing site data manually.`
+    );
+  }
+  sessionStorage.setItem(RELOAD_FLAG, '1');
+  const regs = await navigator.serviceWorker.getRegistrations();
+  await Promise.all(regs.map((r) => r.unregister()));
+  globalThis.location.reload();
+  // The reload makes the rest of this function unreachable; throwing
+  // here is just a defensive paper-cut to stop the bootstrap from
+  // doing more work in the dying tab.
+  throw new Error('Reloading to pick up the fresh service worker…');
 }

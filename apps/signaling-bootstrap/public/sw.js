@@ -39,6 +39,11 @@ globalThis.addEventListener('activate', (event) => {
   );
 });
 
+// Sentinel URL the bootstrap pings to verify it's talking to a fresh
+// SW. Bump alongside ASSET_CACHE whenever the SW contract changes.
+const SW_VERSION = '2';
+const SW_PING_PATH = '/__brika_sw_ping__';
+
 globalThis.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') {
@@ -46,6 +51,14 @@ globalThis.addEventListener('fetch', (event) => {
   }
   const url = new URL(req.url);
   if (url.origin !== globalThis.location.origin) {
+    return;
+  }
+  if (url.pathname === SW_PING_PATH) {
+    event.respondWith(
+      new Response(SW_VERSION, {
+        headers: { 'content-type': 'text/plain', 'cache-control': 'no-store' },
+      })
+    );
     return;
   }
   event.respondWith(
