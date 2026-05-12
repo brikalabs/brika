@@ -83,11 +83,35 @@ export function storeHubName(name: string): void {
   if (!isValidHubName(name)) {
     return;
   }
+  const prior = readStorage();
   writeStorage(name);
+  if (prior && prior !== name) {
+    // Hub identity changed in this browser. Wipe any cached assets keyed
+    // to the prior hub so the next page load fetches a fresh graph from
+    // the new hub — prevents a hostile rebind from continuing to serve
+    // the prior hub's cached modules.
+    void purgeAssetCaches();
+  }
 }
 
 export function clearHubName(): void {
+  const prior = readStorage();
   writeStorage(null);
+  if (prior) {
+    void purgeAssetCaches();
+  }
+}
+
+async function purgeAssetCaches(): Promise<void> {
+  if (typeof caches === 'undefined') {
+    return;
+  }
+  try {
+    const names = await caches.keys();
+    await Promise.all(names.filter((n) => n.startsWith('brika-')).map((n) => caches.delete(n)));
+  } catch {
+    /* cache API unavailable (private mode, policy) — best effort */
+  }
 }
 
 function readQueryHub(): string | null {

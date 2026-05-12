@@ -80,7 +80,12 @@ globalThis.addEventListener('fetch', (event) => {
   // through the WebRTC bridge. Anything not under `/api/` falls back to
   // the static cache.
   if (url.pathname.startsWith('/api/')) {
-    event.respondWith(proxyThroughClient(req));
+    // Route to the *originating* client (the page that made this `/api/*`
+    // request). Falling back to `allClients[0]` would let a request emitted
+    // from tab A be answered by tab B's transport — across hub bindings if
+    // the two tabs target different hubs. Same-tab proxying preserves the
+    // hub identity end-to-end.
+    event.respondWith(proxyThroughClient(req, event.clientId));
     return;
   }
 
@@ -107,17 +112,21 @@ globalThis.addEventListener('fetch', (event) => {
 });
 
 /**
- * Ask a controlling page to re-issue this request through its WebRTC
+ * Ask the originating page to re-issue this request through its WebRTC
  * bridge and stream the result back. The page wires up the listener
- * in `apps/ui/src/lib/api/sw-proxy.ts`. Returns 503 when no client is
- * available (e.g. during a hard refresh before the page reconnects).
+ * in `apps/ui/src/lib/api/sw-proxy.ts`. Returns 503 when the originating
+ * client can't be resolved (e.g. during a hard refresh before the page
+ * reconnects, or for navigation requests with no clientId).
  */
-async function proxyThroughClient(req) {
-  const allClients = await globalThis.clients.matchAll({
-    type: 'window',
-    includeUncontrolled: true,
-  });
-  const client = allClients[0];
+async function proxyThroughClient(req, clientId) {
+  // Prefer the FetchEvent's `clientId` — the page that actually emitted
+  // the request. Only fall back to "any window client" when clientId is
+  // empty (top-level navigation, no controlling client yet).
+  let client = clientId ? await globalThis.clients.get(clientId) : null;
+  if (!client) {
+    const windowClients = await globalThis.clients.matchAll({ type: 'window' });
+    client = windowClients[0] ?? null;
+  }
   if (!client) {
     return new Response('No controlling page available to proxy /api', {
       status: 503,
