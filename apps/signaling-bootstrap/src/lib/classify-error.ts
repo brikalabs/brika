@@ -30,6 +30,17 @@ export function classifyError(err: unknown, hubName: string): ErrorClassificatio
       kind: 'help',
     };
   }
+  if (/Hub returned HTML for|Vite running/i.test(message)) {
+    return {
+      title: "Your hub's dev UI proxy isn't serving",
+      detail:
+        '"' +
+        hubName +
+        '" is in dev mode but the upstream Vite server isn\'t reachable. Start the UI dev server (or unset BRIKA_DEV_UI_PROXY), then retry.',
+      kind: 'retry',
+      autoRetry: 30,
+    };
+  }
   if (/Signaling WS|open timed out|errored before open/.test(message)) {
     return {
       title: "Can't reach the signaling service",

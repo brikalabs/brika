@@ -125,6 +125,22 @@ function isCSSContentType(contentType: string): boolean {
   return /\bcss\b/i.test(contentType);
 }
 
+/**
+ * Thrown by {@link fetchThroughPeer} when the hub returns HTML for a URL
+ * that should have produced a JS module. Almost always means the dev
+ * UI proxy lost its upstream Vite server and every unknown path is
+ * getting the SPA-fallback `index.html`. Distinct class so primeCache
+ * can tell it apart from normal 404s (which it tolerates).
+ */
+class HtmlForModuleError extends Error {
+  readonly url: string;
+  constructor(url: string) {
+    super(`Hub returned HTML for ${url} — is the dev UI proxy reachable (Vite running)?`);
+    this.name = 'HtmlForModuleError';
+    this.url = url;
+  }
+}
+
 async function fetchThroughPeer(
   peer: PeerHandle,
   url: string
@@ -134,13 +150,16 @@ async function fetchThroughPeer(
     throw new Error(`Hub ${url} → ${res.status}`);
   }
   const bytes = await res.arrayBuffer();
-  const contentType =
-    res.headers.get('content-type') ?? guessAssetMime(url) ?? 'application/octet-stream';
+  const headerType = res.headers.get('content-type');
+  const guessed = guessAssetMime(url);
+  if (headerType?.includes('text/html') && guessed === 'text/javascript') {
+    throw new HtmlForModuleError(url);
+  }
+  const contentType = headerType ?? guessed ?? 'application/octet-stream';
   const isText = /\b(javascript|ecmascript|json|css|text)\b/i.test(contentType);
   const text = isText ? new TextDecoder().decode(bytes) : null;
   // Re-wrap as a fresh Response so the SW cache always sees a `text/...`
   // header even when the bridge passed `application/octet-stream`.
-  // `cache.put` consumes the body; we hand back a clone for that path.
   const response = new Response(bytes, { headers: { 'content-type': contentType } });
   return { response, text, contentType };
 }
@@ -227,7 +246,13 @@ async function primeCache(
     let fetchResult: { response: Response; text: string | null; contentType: string };
     try {
       fetchResult = await fetchThroughPeer(peer, url);
-    } catch {
+    } catch (err) {
+      // A misconfigured dev hub (Vite down, dev-ui-proxy misrouting)
+      // returns HTML for every module URL; that's a user-actionable
+      // setup error, not a transient 404, so let it propagate.
+      if (err instanceof HtmlForModuleError) {
+        throw err;
+      }
       // 404s on optional resources (some `?import` queries Vite emits)
       // shouldn't abort the whole graph — the injected script just
       // won't have that piece.
@@ -369,26 +394,27 @@ const RELOAD_FLAG = 'brika-bootstrap-sw-reloaded';
 
 /**
  * Register the SW that intercepts every cached same-origin GET. Returns
- * true once an up-to-date SW is controlling this page (or false if SWs
- * aren't available — old browsers / private mode).
+ * true once a service worker is controlling this page (or false if SWs
+ * aren't available, were blocked, or simply didn't take over in time —
+ * old browsers, private mode, DevTools "Bypass for network", policy).
  *
  * Auto-recovers from a stale SW carried over from a previous bootstrap
- * deploy. Strategy in order of preference:
+ * deploy:
  *
- *   1. `updateViaCache: 'none'` so the browser refetches `/sw.js` on
- *      every register instead of trusting the HTTP cache (default
- *      keeps the old SW alive for up to 24h).
+ *   1. `updateViaCache: 'none'` refetches `/sw.js` every register call
+ *      instead of trusting HTTP cache (defaults can keep the old SW
+ *      alive for up to 24h).
  *   2. Listen for `updatefound` BEFORE calling `reg.update()` so we
- *      reliably catch the case where a new SW is in the process of
- *      installing — the race-free way per the SW spec.
- *   3. When a new SW is detected, wait for `controllerchange` (the new
- *      SW's install handler calls `skipWaiting()` + activate calls
- *      `clients.claim()`).
- *   4. As a final safety net, ping the SW's sentinel endpoint after
- *      it's controlling. If the version doesn't match, unregister and
- *      reload once — handles the edge case where update detection
- *      missed the swap (e.g. browser HTTP cache fooled the version
- *      check despite `updateViaCache: 'none'`).
+ *      reliably detect a new SW being installed.
+ *   3. On detection, wait for `controllerchange` (the new SW's install
+ *      handler calls `skipWaiting()`; activate calls `clients.claim()`).
+ *   4. Finally ping the SW's sentinel endpoint to verify we're talking
+ *      to the version the bootstrap expects. On mismatch, reload once
+ *      (sessionStorage flag prevents a loop).
+ *
+ * Soft-failure throughout: this never throws to its caller. If anything
+ * goes wrong we return whatever state we can — the bootstrap downstream
+ * will fail more diagnostically when it tries to load a real module.
  */
 export async function ensureServiceWorker(): Promise<boolean> {
   if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) {
@@ -406,10 +432,41 @@ export async function ensureServiceWorker(): Promise<boolean> {
     });
 
     if ((await arriving) || !navigator.serviceWorker.controller) {
-      await waitForControllerChange();
+      // Be generous — on slow networks the install can take 10+s.
+      await waitForControllerChange(15_000).catch(() => {
+        /* SW activation timed out: fall through to controller check */
+      });
     }
 
-    await verifyOrReload();
+    if (!navigator.serviceWorker.controller) {
+      // No controller after our wait. DevTools "Bypass for network",
+      // private mode, or a policy-restricted environment. The caller
+      // surfaces a specific error to the user.
+      return false;
+    }
+
+    // Verify we have an up-to-date SW. If the controller is stale (old
+    // version that doesn't know our sentinel) and we haven't already
+    // reloaded this session, swap it out via unregister + reload.
+    if (await isStaleController()) {
+      if (sessionStorage.getItem(RELOAD_FLAG)) {
+        // Already tried reloading. Don't loop — clear the flag and
+        // proceed. The bootstrap may still fail downstream but at
+        // least the user can retry on a fresh tab.
+        sessionStorage.removeItem(RELOAD_FLAG);
+      } else {
+        sessionStorage.setItem(RELOAD_FLAG, '1');
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map((r) => r.unregister()));
+        globalThis.location.reload();
+        // Block this attempt until the navigation happens.
+        await new Promise<void>(() => {
+          /* the page is about to navigate; never resolve */
+        });
+      }
+    } else {
+      sessionStorage.removeItem(RELOAD_FLAG);
+    }
     return true;
   } catch {
     return false;
@@ -452,41 +509,20 @@ function waitForControllerChange(timeoutMs = 8_000): Promise<void> {
 }
 
 /**
- * Ping the SW sentinel. If we don't get the expected version back,
- * unregister every SW on this origin and reload — once. A sessionStorage
- * flag prevents an infinite reload loop if something is fundamentally
- * broken (e.g. SW disabled by user policy).
+ * Returns true if the current SW controller doesn't respond with our
+ * expected version on the sentinel path. Old SWs that only intercepted
+ * `/assets/*` fall through to the network here, which returns the CF
+ * Worker SPA-fallback HTML — never matches the version string.
  */
-async function verifyOrReload(): Promise<void> {
-  if (!navigator.serviceWorker.controller) {
-    return;
-  }
-  let version: string | null = null;
+async function isStaleController(): Promise<boolean> {
   try {
     const res = await fetch(SW_PING_PATH, { cache: 'no-store' });
-    if (res.ok) {
-      version = (await res.text()).trim();
+    if (!res.ok) {
+      return true;
     }
+    const version = (await res.text()).trim();
+    return version !== EXPECTED_SW_VERSION;
   } catch {
-    /* ping failed — fall through to the version check below */
+    return true;
   }
-  if (version === EXPECTED_SW_VERSION) {
-    sessionStorage.removeItem(RELOAD_FLAG);
-    return;
-  }
-  if (sessionStorage.getItem(RELOAD_FLAG)) {
-    // Already tried reloading once this session; don't loop. Surface
-    // the failure in the regular error path instead.
-    throw new Error(
-      `Stuck on stale service worker (got version "${version ?? 'no response'}", expected "${EXPECTED_SW_VERSION}"). Try clearing site data manually.`
-    );
-  }
-  sessionStorage.setItem(RELOAD_FLAG, '1');
-  const regs = await navigator.serviceWorker.getRegistrations();
-  await Promise.all(regs.map((r) => r.unregister()));
-  globalThis.location.reload();
-  // The reload makes the rest of this function unreachable; throwing
-  // here is just a defensive paper-cut to stop the bootstrap from
-  // doing more work in the dying tab.
-  throw new Error('Reloading to pick up the fresh service worker…');
 }
