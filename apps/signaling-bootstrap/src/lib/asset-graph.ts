@@ -67,6 +67,31 @@ const CSS_URL_RE = /url\(\s*['"]?([^)'"]+)['"]?\s*\)/g;
  */
 const NO_INJECT_PATHS = new Set(['/@vite/client', '/@vite/env']);
 
+/**
+ * Stub body served in place of Vite's HMR client at cache time. Real
+ * `/@vite/client` opens a WebSocket back to the dev server and, on
+ * failure, falls through to a `EventSource` retry loop — both noisy
+ * and useless when the page is served from `hub.brika.dev` rather than
+ * `localhost:5173`. The transformed source files Vite emits import
+ * `createHotContext` from this module and call `.accept()` / `.dispose()`
+ * etc., so the stub has to expose a callable shape; everything is a
+ * no-op so HMR is effectively turned off without crashing the imports.
+ */
+const VITE_CLIENT_STUB = `
+const noop = () => {};
+const noopCtx = {
+  accept: noop, acceptExports: noop, dispose: noop, prune: noop,
+  decline: noop, invalidate: noop, on: noop, off: noop, send: noop,
+  data: {},
+};
+export const createHotContext = () => noopCtx;
+export const updateStyle = noop;
+export const removeStyle = noop;
+export const injectQuery = (url) => url;
+export const ErrorOverlay = class extends HTMLElement {};
+export const overlayId = 'brika-vite-overlay-disabled';
+`;
+
 export interface ModuleScriptRef {
   /** Absolute hub-origin path; mutually exclusive with `inline`. */
   src?: string;
@@ -241,6 +266,18 @@ async function primeCache(
     if (await cache.match(url)) {
       // Already primed from a previous attempt — still want to follow
       // its transitive refs in case the graph grew.
+      continue;
+    }
+    // Neutralize Vite's HMR runtime so the imports resolve to a no-op
+    // module instead of attempting (and failing) a WS/SSE back-channel
+    // from the bootstrap origin to localhost:5173.
+    if (shouldNotInject(url)) {
+      await cache.put(
+        url,
+        new Response(VITE_CLIENT_STUB, { headers: { 'content-type': 'text/javascript' } })
+      );
+      fetched += 1;
+      onProgress?.({ fetched, url });
       continue;
     }
     let fetchResult: { response: Response; text: string | null; contentType: string };

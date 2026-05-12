@@ -81,7 +81,17 @@ globalThis.addEventListener('fetch', (event) => {
       if (cached) {
         return cached;
       }
-      return fetch(req);
+      try {
+        return await fetch(req);
+      } catch (err) {
+        // Surface network failures as a 502 instead of an unhandled
+        // promise rejection in the SW (which the browser logs as an
+        // ugly "FetchEvent resulted in a network error response").
+        return new Response(`SW network fallback failed: ${err}`, {
+          status: 502,
+          headers: { 'content-type': 'text/plain' },
+        });
+      }
     })()
   );
 });
