@@ -14,10 +14,30 @@ The Brika home hub — a Bun runtime that hosts plugins, runs workflows, and ser
 ## Quick start
 
 ```bash
-bun --filter @brika/hub dev      # watch mode
+bun run dev                      # hub + Vite UI, with the dev proxy wired
+                                 # → open http://localhost:7878 (hub-proxied UI)
+                                 # → or http://localhost:5173 (Vite direct, with HMR)
+bun --filter @brika/hub dev      # hub only (UI served only if BRIKA_STATIC_DIR set)
 brika start                      # production binary (after `bun run compile`)
 brika logs --follow
 ```
+
+### Dev UI proxy
+
+When `BRIKA_DEV_UI_PROXY` is set, the hub forwards every non-`/api/*` request
+to that URL. Use it to serve the live Vite UI through the hub without a build
+cycle:
+
+```bash
+bun --filter @brika/ui dev &                                   # Vite on :5173
+BRIKA_DEV_UI_PROXY=http://localhost:5173 bun --filter @brika/hub dev
+```
+
+The root `bun run dev` script does this automatically.
+
+Limitations: only HTTP is proxied — Vite's HMR WebSocket isn't. So loading
+through the hub gets you the latest build but full-page reload, not HMR. For
+HMR, open Vite directly (it proxies `/api/*` back to the hub).
 
 ## Layout
 

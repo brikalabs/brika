@@ -200,6 +200,14 @@ export class ApiServer {
   }
 
   #setupStaticFiles(): void {
+    // Dev override takes precedence: forward everything that isn't /api/*
+    // to a Vite (or similar) dev server so UI changes show up without a
+    // rebuild cycle. Used by the root `bun run dev` flow.
+    if (this.#config.devUiProxy) {
+      this.#setupDevUiProxy(this.#config.devUiProxy);
+      return;
+    }
+
     const { staticDir } = this.#config;
     if (!staticDir) {
       return;
@@ -227,5 +235,56 @@ export class ApiServer {
     this.#logs.info('Static file serving enabled', {
       directory: staticDir,
     });
+  }
+
+  /**
+   * Forward every non-`/api/*` request to {@link target}. Used in dev so the
+   * hub serves the live Vite UI without a build step. Hop-by-hop headers
+   * (`host`, `connection`) are stripped on outbound; the response body is
+   * streamed back as-is, so HMR updates and source maps work unchanged.
+   */
+  #setupDevUiProxy(target: string): void {
+    const app = this.#app;
+    if (!app) {
+      return;
+    }
+
+    app.all('*', async (c, next) => {
+      if (c.req.path.startsWith('/api/')) {
+        return next();
+      }
+      const upstreamUrl = `${target}${c.req.path}${c.req.url.includes('?') ? c.req.url.slice(c.req.url.indexOf('?')) : ''}`;
+      const outHeaders = new Headers(c.req.raw.headers);
+      outHeaders.delete('host');
+      outHeaders.delete('connection');
+      try {
+        const upstream = await fetch(upstreamUrl, {
+          method: c.req.method,
+          headers: outHeaders,
+          body:
+            c.req.method === 'GET' || c.req.method === 'HEAD'
+              ? undefined
+              : await c.req.raw.arrayBuffer(),
+          redirect: 'manual',
+        });
+        return new Response(upstream.body, {
+          status: upstream.status,
+          statusText: upstream.statusText,
+          headers: upstream.headers,
+        });
+      } catch (err) {
+        this.#logs.warn('Dev UI proxy failed', {
+          target,
+          path: c.req.path,
+          error: err instanceof Error ? err.message : String(err),
+        });
+        return c.text(
+          `Dev UI proxy could not reach ${target}. Is your UI dev server running?\n\n${err instanceof Error ? err.message : String(err)}`,
+          502
+        );
+      }
+    });
+
+    this.#logs.info('Dev UI proxy enabled', { target });
   }
 }

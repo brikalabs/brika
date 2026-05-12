@@ -37,6 +37,27 @@ import {
   type SignalingMessage,
 } from '@brika/remote-access-protocol';
 
+// ─── Dev affordances ───────────────────────────────────────────────────────
+
+/**
+ * `?debug=1` (or `localStorage.brikaBootstrapDebug = '1'`) prints every step
+ * of the bootstrap to the console — useful when iterating on the loader or
+ * when the splash hangs and you want to know which RPC frame got lost.
+ */
+const DEBUG = (() => {
+  if (typeof location === 'undefined') return false;
+  if (new URLSearchParams(location.search).get('debug') === '1') return true;
+  try {
+    return localStorage.getItem('brikaBootstrapDebug') === '1';
+  } catch {
+    return false;
+  }
+})();
+
+function dlog(...args: unknown[]): void {
+  if (DEBUG) console.log('[brika.bootstrap]', ...args);
+}
+
 // ─── Status surface ────────────────────────────────────────────────────────
 
 type Phase = 'connecting' | 'fetching' | 'loading' | 'error' | 'done';
@@ -94,8 +115,27 @@ interface TicketResponse {
   iceServers?: IceServer[];
 }
 
-async function mintTicket(hubName: string): Promise<TicketResponse> {
-  const res = await fetch('/v1/tickets', {
+/**
+ * Resolve the coordinator origin. Defaults to the page's origin (production:
+ * `hub.brika.dev` serves both the bootstrap AND the API). A `?coordinator=`
+ * override lets you point the bootstrap at a locally-running wrangler dev
+ * coordinator without rebuilding — useful when iterating on the worker code.
+ */
+function resolveCoordinator(): string {
+  const override = new URLSearchParams(location.search).get('coordinator');
+  if (override) {
+    try {
+      return new URL(override).origin;
+    } catch {
+      // fall through to default
+    }
+  }
+  return location.origin;
+}
+
+async function mintTicket(hubName: string, coordinator: string): Promise<TicketResponse> {
+  dlog('mintTicket', { hubName, coordinator });
+  const res = await fetch(`${coordinator}/v1/tickets`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ hubName }),
@@ -122,12 +162,14 @@ interface PeerHandle {
 async function openPeer(
   hubName: string,
   ticket: TicketResponse,
+  coordinator: string,
   status: StatusSurface
 ): Promise<PeerHandle> {
   status.setPhase('connecting', `Connecting to ${hubName}…`);
+  dlog('openPeer', { hubName, coordinator });
 
   const wsUrl = (() => {
-    const u = new URL('/v1/client', location.origin);
+    const u = new URL('/v1/client', coordinator);
     u.protocol = u.protocol === 'https:' ? 'wss:' : 'ws:';
     u.searchParams.set('hub', hubName);
     u.searchParams.set('ticket', ticket.ticket);
@@ -188,6 +230,7 @@ async function openPeer(
 
   channel.addEventListener('open', () => {
     dataChannel = channel;
+    dlog('data channel open');
     sendRpc({
       v: PROTOCOL_VERSION,
       kind: 'hello',
@@ -426,6 +469,7 @@ const ASSET_RE = /\/assets\/[A-Za-z0-9._-]+\.(?:js|css|woff2?|png|svg|jpg|jpeg|w
 
 async function buildAssetGraph(peer: PeerHandle, status: StatusSurface): Promise<AssetGraph> {
   status.setPhase('fetching', 'Loading app from your hub…');
+  dlog('fetching /index.html');
 
   const indexRes = await peer.request('GET', '/');
   if (!indexRes.ok) throw new Error(`Hub /index.html → ${indexRes.status}`);
@@ -462,6 +506,8 @@ async function buildAssetGraph(peer: PeerHandle, status: StatusSurface): Promise
       }
     }
   }
+
+  dlog('asset graph built', { chunks: blobs.size, cssUrls });
 
   const entryBlob = blobs.get(entryUrl);
   if (!entryBlob) throw new Error('Could not resolve entry to a Blob URL');
@@ -518,10 +564,13 @@ async function main(): Promise<void> {
     return;
   }
 
+  const coordinator = resolveCoordinator();
+  dlog('main', { hubName, coordinator, debug: DEBUG });
+
   let peer: PeerHandle | null = null;
   try {
-    const ticket = await mintTicket(hubName);
-    peer = await openPeer(hubName, ticket, status);
+    const ticket = await mintTicket(hubName, coordinator);
+    peer = await openPeer(hubName, ticket, coordinator, status);
     const graph = await buildAssetGraph(peer, status);
     status.setPhase('loading', 'Starting app…');
     injectGraph(graph);
@@ -529,6 +578,7 @@ async function main(): Promise<void> {
   } catch (err) {
     if (peer) peer.close();
     const message = err instanceof Error ? err.message : String(err);
+    dlog('failed', err);
     status.showError(`Couldn't reach hub "${hubName}"`, message);
   }
 }

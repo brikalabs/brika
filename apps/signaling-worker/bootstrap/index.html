@@ -11,104 +11,104 @@
     />
     <style>
       /* Apply persisted theme synchronously so the splash doesn't flash. */
-            :root {
-              color-scheme: light dark;
-            }
-            html,
-            body {
-              margin: 0;
-              padding: 0;
-              min-height: 100%;
-              background: #fafaf9;
-              color: #18181b;
-              font-family:
-                ui-sans-serif,
-                system-ui,
-                -apple-system,
-                'Segoe UI',
-                Roboto,
-                sans-serif;
-            }
-            @media (prefers-color-scheme: dark) {
-              html,
-              body {
-                background: #0a0a0a;
-                color: #fafafa;
-              }
-            }
-            #brika-bootstrap {
-              position: fixed;
-              inset: 0;
-              display: grid;
-              place-items: center;
-              padding: 24px;
-            }
-            .brika-card {
-              max-width: 380px;
-              text-align: center;
-            }
-            .brika-mark {
-              width: 64px;
-              height: 64px;
-              margin: 0 auto 20px;
-              border-radius: 18px;
-              background: #18181b;
-              display: grid;
-              place-items: center;
-            }
-            @media (prefers-color-scheme: dark) {
-              .brika-mark {
-                background: #fafafa;
-              }
-            }
-            .brika-mark svg {
-              width: 36px;
-              height: 36px;
-              color: #fafafa;
-            }
-            @media (prefers-color-scheme: dark) {
-              .brika-mark svg {
-                color: #18181b;
-              }
-            }
-            .brika-status {
-              font-size: 14px;
-              font-weight: 500;
-              margin: 0 0 6px;
-            }
-            .brika-detail {
-              font-size: 12.5px;
-              opacity: 0.6;
-              margin: 0;
-              font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
-              word-break: break-all;
-            }
-            .brika-spinner {
-              width: 18px;
-              height: 18px;
-              margin: 0 auto 14px;
-              border: 2px solid currentColor;
-              border-right-color: transparent;
-              border-radius: 50%;
-              animation: brika-spin 0.7s linear infinite;
-              opacity: 0.45;
-            }
-            @keyframes brika-spin {
-              to {
-                transform: rotate(360deg);
-              }
-            }
-            #brika-bootstrap[data-brika-phase='error'] .brika-spinner {
-              display: none;
-            }
-            #brika-bootstrap[data-brika-phase='error'] .brika-status {
-              color: #b91c1c;
-            }
-            @media (prefers-color-scheme: dark) {
-              #brika-bootstrap[data-brika-phase='error'] .brika-status {
-                color: #fca5a5;
-              }
-            }
+                  :root {
+                    color-scheme: light dark;
+                  }
+                  html,
+                  body {
+                    margin: 0;
+                    padding: 0;
+                    min-height: 100%;
+                    background: #fafaf9;
+                    color: #18181b;
+                    font-family:
+                      ui-sans-serif,
+                      system-ui,
+                      -apple-system,
+                      'Segoe UI',
+                      Roboto,
+                      sans-serif;
+                  }
+                  @media (prefers-color-scheme: dark) {
+                    html,
+                    body {
+                      background: #0a0a0a;
+                      color: #fafafa;
+                    }
+                  }
+                  #brika-bootstrap {
+                    position: fixed;
+                    inset: 0;
+                    display: grid;
+                    place-items: center;
+                    padding: 24px;
+                  }
+                  .brika-card {
+                    max-width: 380px;
+                    text-align: center;
+                  }
+                  .brika-mark {
+                    width: 64px;
+                    height: 64px;
+                    margin: 0 auto 20px;
+                    border-radius: 18px;
+                    background: #18181b;
+                    display: grid;
+                    place-items: center;
+                  }
+                  @media (prefers-color-scheme: dark) {
+                    .brika-mark {
+                      background: #fafafa;
+                    }
+                  }
+                  .brika-mark svg {
+                    width: 36px;
+                    height: 36px;
+                    color: #fafafa;
+                  }
+                  @media (prefers-color-scheme: dark) {
+                    .brika-mark svg {
+                      color: #18181b;
+                    }
+                  }
+                  .brika-status {
+                    font-size: 14px;
+                    font-weight: 500;
+                    margin: 0 0 6px;
+                  }
+                  .brika-detail {
+                    font-size: 12.5px;
+                    opacity: 0.6;
+                    margin: 0;
+                    font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+                    word-break: break-all;
+                  }
+                  .brika-spinner {
+                    width: 18px;
+                    height: 18px;
+                    margin: 0 auto 14px;
+                    border: 2px solid currentColor;
+                    border-right-color: transparent;
+                    border-radius: 50%;
+                    animation: brika-spin 0.7s linear infinite;
+                    opacity: 0.45;
+                  }
+                  @keyframes brika-spin {
+                    to {
+                      transform: rotate(360deg);
+                    }
+                  }
+                  #brika-bootstrap[data-brika-phase='error'] .brika-spinner {
+                    display: none;
+                  }
+                  #brika-bootstrap[data-brika-phase='error'] .brika-status {
+                    color: #b91c1c;
+                  }
+                  @media (prefers-color-scheme: dark) {
+                    #brika-bootstrap[data-brika-phase='error'] .brika-status {
+                      color: #fca5a5;
+                    }
+                  }
     </style>
   </head>
   <body>

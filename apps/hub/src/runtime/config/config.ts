@@ -73,6 +73,14 @@ export class HubConfig {
   readonly homeDir: string;
   /** Directory for static UI files (empty = disabled) */
   readonly staticDir: string;
+  /**
+   * Dev-only: if set, every non-`/api/*` request is forwarded to this origin
+   * instead of being served from {@link staticDir}. Typically points at the
+   * Vite dev server (`http://localhost:5173`) so the hub serves the latest
+   * UI without a rebuild cycle. Wins over {@link staticDir} when both are
+   * set. Never honoured in production — environment variable only.
+   */
+  readonly devUiProxy: string;
   /** Remote-access (P2P) configuration. */
   readonly remoteAccess: RemoteAccessConfig;
 
@@ -93,6 +101,10 @@ export class HubConfig {
     }
     // Static file serving directory (empty = disabled, used in production Docker)
     this.staticDir = process.env.BRIKA_STATIC_DIR ?? '';
+    // Dev-only UI proxy. Set to Vite's dev server (typically
+    // `http://localhost:5173`) and the hub will serve the live UI without
+    // a build step. Stripped of trailing slash so URL concatenation is clean.
+    this.devUiProxy = (process.env.BRIKA_DEV_UI_PROXY ?? '').replace(/\/+$/, '');
 
     const coordinatorOrigin =
       process.env.BRIKA_COORDINATOR_URL?.trim() || DEFAULT_COORDINATOR_ORIGIN;
