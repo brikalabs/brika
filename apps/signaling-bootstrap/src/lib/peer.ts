@@ -15,6 +15,7 @@ import {
   type IceCandidate,
   type IceServer,
   PROTOCOL_VERSION,
+  ResponseAssembler,
   type RpcMessage,
   type SignalingMessage,
 } from '@brika/remote-access-protocol';
@@ -36,7 +37,6 @@ const FALLBACK_ICE_SERVERS: IceServer[] = [
   { urls: 'stun:stun.cloudflare.com:3478' },
 ];
 
-const TEXT_ENCODER = new TextEncoder();
 const TEXT_DECODER = new TextDecoder();
 
 export async function mintTicket(hubName: string, coordinator: string): Promise<TicketResponse> {
@@ -53,21 +53,6 @@ export async function mintTicket(hubName: string, coordinator: string): Promise<
   }
   const data: TicketResponse = await res.json();
   return data;
-}
-
-interface InflightEntry {
-  resolve: (res: Response) => void;
-  reject: (err: Error) => void;
-  headEmitted: boolean;
-  writer: WritableStreamDefaultWriter<Uint8Array>;
-  stream: ReadableStream<Uint8Array>;
-}
-
-function chunkToBytes(msg: { dataB64?: string; dataText?: string }): Uint8Array {
-  if (msg.dataB64) {
-    return Uint8Array.from(atob(msg.dataB64), (c) => c.codePointAt(0) ?? 0);
-  }
-  return TEXT_ENCODER.encode(msg.dataText ?? '');
 }
 
 function buildSignalingUrl(coordinator: string, hubName: string, ticket: string): string {
@@ -151,7 +136,7 @@ function makeDataChannelReady(channel: RTCDataChannel, pc: RTCPeerConnection): D
   return { promise, fail: (err) => fail(err) };
 }
 
-function dispatchRpcFrame(msg: RpcMessage, inflight: Map<number, InflightEntry>): void {
+function dispatchRpcFrame(msg: RpcMessage, inflight: Map<number, ResponseAssembler>): void {
   if (
     msg.kind !== 'response.head' &&
     msg.kind !== 'response.chunk' &&
@@ -160,33 +145,23 @@ function dispatchRpcFrame(msg: RpcMessage, inflight: Map<number, InflightEntry>)
   ) {
     return;
   }
-  const entry = inflight.get(msg.id);
-  if (!entry) {
+  const assembler = inflight.get(msg.id);
+  if (!assembler) {
     return;
   }
   switch (msg.kind) {
-    case 'response.head': {
-      entry.headEmitted = true;
-      const headers = new Headers();
-      for (const [k, v] of msg.headers) {
-        headers.append(k, v);
-      }
-      entry.resolve(new Response(entry.stream, { status: msg.status, headers }));
+    case 'response.head':
+      assembler.onHead(msg);
       return;
-    }
     case 'response.chunk':
-      void entry.writer.write(chunkToBytes(msg));
+      assembler.onChunk(msg);
       return;
     case 'response.end':
-      void entry.writer.close();
+      assembler.onEnd(msg);
       inflight.delete(msg.id);
       return;
     case 'response.error':
-      if (entry.headEmitted) {
-        void entry.writer.abort(new Error(`RPC ${msg.id}: ${msg.code}`));
-      } else {
-        entry.reject(new Error(`RPC ${msg.id}: ${msg.code} ${msg.message ?? ''}`));
-      }
+      assembler.onError(msg);
       inflight.delete(msg.id);
       return;
   }
@@ -231,7 +206,7 @@ export async function openPeer(
   const channel = pc.createDataChannel('rpc', { ordered: true });
   channel.binaryType = 'arraybuffer';
 
-  const inflight = new Map<number, InflightEntry>();
+  const inflight = new Map<number, ResponseAssembler>();
   let nextId = 1;
   let dataChannel: RTCDataChannel | null = null;
 
@@ -324,29 +299,35 @@ export async function openPeer(
 
   return {
     request: (method, url, signal): Promise<Response> => {
-      return new Promise<Response>((resolve, reject) => {
-        const id = nextId++;
-        const { writable, readable } = new TransformStream<Uint8Array, Uint8Array>();
-        const writer = writable.getWriter();
-        const ctrl = new AbortController();
-        if (signal) {
-          signal.addEventListener('abort', () => ctrl.abort());
-        }
-        ctrl.signal.addEventListener('abort', () => {
-          sendRpc({ v: PROTOCOL_VERSION, kind: 'abort', id });
-          inflight.delete(id);
-          reject(new DOMException('Aborted', 'AbortError'));
-        });
-        inflight.set(id, { resolve, reject, headEmitted: false, writer, stream: readable });
-        sendRpc({
-          v: PROTOCOL_VERSION,
-          kind: 'request',
-          id,
-          method,
-          url,
-          headers: [],
-        });
+      const id = nextId++;
+      const assembler = new ResponseAssembler();
+      inflight.set(id, assembler);
+      if (signal) {
+        signal.addEventListener(
+          'abort',
+          () => {
+            sendRpc({ v: PROTOCOL_VERSION, kind: 'abort', id });
+            assembler.onError({
+              v: PROTOCOL_VERSION,
+              kind: 'response.error',
+              id,
+              code: 'aborted',
+              message: 'Aborted',
+            });
+            inflight.delete(id);
+          },
+          { once: true }
+        );
+      }
+      sendRpc({
+        v: PROTOCOL_VERSION,
+        kind: 'request',
+        id,
+        method,
+        url,
+        headers: [],
       });
+      return assembler.response();
     },
     close: () => {
       closeQuietly(channel);
