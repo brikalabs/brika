@@ -19,6 +19,7 @@ import {
   constantTimeEqual,
   DEFAULT_ICE_SERVERS,
   decodeSignaling,
+  fetchCloudflareIceServers,
   type IceServer,
   PROTOCOL_VERSION,
   parseSubprotocols,
@@ -149,7 +150,21 @@ async function handleTickets(req: Request): Promise<Response> {
     return Response.json({ error: 'Unknown hub' }, { status: 404 });
   }
   const { ticket, expiresAt } = await mintTicket(SECRET, body.hubName);
-  return Response.json({ ticket, expiresAt, iceServers: ICE_SERVERS });
+  const iceServers = await mergedIceServers();
+  return Response.json({ ticket, expiresAt, iceServers });
+}
+
+/**
+ * STUN + a fresh Cloudflare Realtime TURN credential pair (when configured
+ * via `CF_REALTIME_APP_ID` / `CF_REALTIME_APP_TOKEN`). Soft-fails to the
+ * static `ICE_SERVERS` list when CF is unset or unreachable.
+ */
+async function mergedIceServers(): Promise<ReadonlyArray<IceServer>> {
+  const turn = await fetchCloudflareIceServers({
+    appId: process.env.CF_REALTIME_APP_ID ?? '',
+    token: process.env.CF_REALTIME_APP_TOKEN ?? '',
+  });
+  return turn.length > 0 ? [...ICE_SERVERS, ...turn] : ICE_SERVERS;
 }
 
 function claimErrorStatus(code: ClaimError['code']): number {

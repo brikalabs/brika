@@ -60,4 +60,5 @@ export {
   parseSubprotocols,
 } from './subprotocols';
 export { mintTicket, type TicketClaims, verifyTicket } from './tickets';
+export { type CloudflareTurnConfig, fetchCloudflareIceServers } from './turn';
 export { PROTOCOL_VERSION, type ProtocolVersion } from './version';

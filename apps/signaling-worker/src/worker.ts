@@ -18,6 +18,7 @@
 import {
   constantTimeEqual,
   DEFAULT_ICE_SERVERS,
+  fetchCloudflareIceServers,
   parseSubprotocols,
 } from '@brika/remote-access-protocol';
 import { ClaimError, D1ClaimStore } from './claims-d1';
@@ -44,6 +45,14 @@ export interface Env {
    * Unset → defaults to `https://hub.brika.dev`.
    */
   ALLOWED_ORIGINS?: string;
+  /**
+   * Cloudflare Realtime app ID for minting short-lived TURN credentials.
+   * Unset → the coordinator returns STUN-only; symmetric/CGNAT users
+   * (most mobile/5G) will fail to connect.
+   */
+  CF_REALTIME_APP_ID?: string;
+  /** Cloudflare Realtime app token (Bearer). Set via `wrangler secret put`. */
+  CF_REALTIME_APP_TOKEN?: string;
 }
 
 const DEFAULT_ALLOWED_ORIGINS: readonly string[] = ['https://hub.brika.dev'];
@@ -191,7 +200,22 @@ async function handleTickets(req: Request, env: Env): Promise<Response> {
     return jsonError(404, 'Unknown hub');
   }
   const { ticket, expiresAt } = await mintTicket(env.TICKET_SECRET, body.hubName);
-  return Response.json({ ticket, expiresAt, iceServers: DEFAULT_ICE_SERVERS });
+  const iceServers = await resolveIceServers(env);
+  return Response.json({ ticket, expiresAt, iceServers });
+}
+
+/**
+ * Merge the default STUN list with a fresh Cloudflare TURN credential pair.
+ * STUN-first lets ICE pick the cheapest path (host → srflx → relay); TURN
+ * is the fallback when NAT traversal fails. Soft-fails to STUN-only when
+ * Cloudflare creds are unset or the API call fails.
+ */
+async function resolveIceServers(env: Env): Promise<ReadonlyArray<unknown>> {
+  const turn = await fetchCloudflareIceServers({
+    appId: env.CF_REALTIME_APP_ID ?? '',
+    token: env.CF_REALTIME_APP_TOKEN ?? '',
+  });
+  return turn.length > 0 ? [...DEFAULT_ICE_SERVERS, ...turn] : DEFAULT_ICE_SERVERS;
 }
 
 // ─── WebSocket upgrade handlers ─────────────────────────────────────────────

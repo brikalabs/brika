@@ -82,6 +82,10 @@ database_name = "brika-signaling"
 database_id = "5778b6af-da1b-4b0e-8a69-9ee7d5fb5512"
 migrations_dir = "migrations"
 
-# Secret bindings — set with `wrangler secret put TICKET_SECRET`.
-# Listed here so it's discoverable; values live in Cloudflare's secret store.
-#   TICKET_SECRET: HMAC key for browser tickets (32+ random bytes recommended)
+# Secret bindings — set with `wrangler secret put <NAME>`.
+# Listed here so they're discoverable; values live in Cloudflare's secret store.
+#   TICKET_SECRET:         HMAC key for browser tickets (32+ random bytes recommended)
+#   CF_REALTIME_APP_ID:    Cloudflare Realtime App ID for TURN credentials
+#   CF_REALTIME_APP_TOKEN: Cloudflare Realtime App Token (Bearer)
+# Unset CF_REALTIME_* → coordinator returns STUN-only; symmetric/CGNAT users
+# (most mobile/5G) will fail to connect. Free tier: 1TB/month relayed traffic.

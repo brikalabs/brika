@@ -19,6 +19,8 @@ import {
   DEFAULT_ICE_SERVERS,
   decodeSignaling,
   encodeSignaling,
+  fetchCloudflareIceServers,
+  type IceServer,
   PROTOCOL_VERSION,
   type SignalingMessage,
   translateFromClient,
@@ -37,13 +39,17 @@ export interface Env {
   HUB_SESSION: DurableObjectNamespace;
   DB: D1Database;
   TICKET_SECRET?: string;
+  CF_REALTIME_APP_ID?: string;
+  CF_REALTIME_APP_TOKEN?: string;
 }
 
 export class HubSession {
   readonly #state: DurableObjectState;
+  readonly #env: Env;
 
-  constructor(state: DurableObjectState, _env: Env) {
+  constructor(state: DurableObjectState, env: Env) {
     this.#state = state;
+    this.#env = env;
   }
 
   /**
@@ -60,7 +66,7 @@ export class HubSession {
    * already chosen by the Worker via `idFromName(hubName)`, so the name
    * here is informational; we capture it on the attachment for logs).
    */
-  fetch(request: Request): Response {
+  async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
 
     // Operator-facing introspection — non-WebSocket, returns whether this DO
@@ -93,7 +99,7 @@ export class HubSession {
       return this.#acceptHub(this.#nameFromBearer(request) ?? '', acceptedProtocol);
     }
     if (url.pathname === '/v1/client') {
-      return this.#acceptClient(url.searchParams.get('hub') ?? '', acceptedProtocol);
+      return await this.#acceptClient(url.searchParams.get('hub') ?? '', acceptedProtocol);
     }
     return new Response('Unknown upgrade endpoint', { status: 404 });
   }
@@ -119,7 +125,7 @@ export class HubSession {
     return this.#upgradeResponse(client, protocol);
   }
 
-  #acceptClient(hubName: string, protocol: string | undefined): Response {
+  async #acceptClient(hubName: string, protocol: string | undefined): Promise<Response> {
     if (!hubName) {
       return new Response('name required', { status: 400 });
     }
@@ -149,9 +155,22 @@ export class HubSession {
     this.#trySend(server, {
       v: PROTOCOL_VERSION,
       kind: 'session.iceServers',
-      iceServers: DEFAULT_ICE_SERVERS,
+      iceServers: await this.#mergedIceServers(),
     });
     return this.#upgradeResponse(client, protocol);
+  }
+
+  /**
+   * STUN defaults + a fresh short-lived TURN credential pair from Cloudflare
+   * Realtime (when configured). Soft-fails to STUN-only when CF creds are
+   * unset or the API call errors.
+   */
+  async #mergedIceServers(): Promise<ReadonlyArray<IceServer>> {
+    const turn = await fetchCloudflareIceServers({
+      appId: this.#env.CF_REALTIME_APP_ID ?? '',
+      token: this.#env.CF_REALTIME_APP_TOKEN ?? '',
+    });
+    return turn.length > 0 ? [...DEFAULT_ICE_SERVERS, ...turn] : DEFAULT_ICE_SERVERS;
   }
 
   #upgradeResponse(client: WebSocket, protocol: string | undefined): Response {
@@ -197,7 +216,7 @@ export class HubSession {
   }
 
   /** Hibernation-API entry point: dispatched for every received WS frame. */
-  webSocketMessage(ws: WebSocket, message: string | ArrayBuffer): void {
+  async webSocketMessage(ws: WebSocket, message: string | ArrayBuffer): Promise<void> {
     const attachment = ws.deserializeAttachment() as Attachment | null;
     if (!attachment) {
       ws.close(1011, 'lost attachment');
@@ -214,7 +233,7 @@ export class HubSession {
     if (attachment.role === 'hub') {
       this.#routeFromHub(attachment.name, msg);
     } else {
-      this.#routeFromClient(attachment, msg);
+      await this.#routeFromClient(attachment, msg);
     }
   }
 
@@ -278,7 +297,10 @@ export class HubSession {
     }
   }
 
-  #routeFromClient(att: Attachment & { role: 'client' }, msg: SignalingMessage): void {
+  async #routeFromClient(
+    att: Attachment & { role: 'client' },
+    msg: SignalingMessage
+  ): Promise<void> {
     if (msg.kind !== 'client.offer' && msg.kind !== 'client.ice' && msg.kind !== 'client.abort') {
       return;
     }
@@ -291,7 +313,11 @@ export class HubSession {
       // hub left between accept and the frame — drop silently
       return;
     }
-    hub.send(encodeSignaling(translateFromClient(msg, att.sessionId, DEFAULT_ICE_SERVERS)));
+    // Only `client.offer` needs fresh TURN creds — it's the frame the hub
+    // uses to construct its RTCPeerConnection. ICE / abort don't carry
+    // iceServers, so STUN defaults are fine (and pass-through is sync).
+    const ice = msg.kind === 'client.offer' ? await this.#mergedIceServers() : DEFAULT_ICE_SERVERS;
+    hub.send(encodeSignaling(translateFromClient(msg, att.sessionId, ice)));
   }
 
   #findClient(sessionId: string): WebSocket | undefined {
