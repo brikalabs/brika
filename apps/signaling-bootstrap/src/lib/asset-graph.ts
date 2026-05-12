@@ -55,7 +55,10 @@ const IMPORT_PATTERNS = [IMPORT_FROM_RE, IMPORT_CALL_RE, IMPORT_SIDE_RE];
  * Quantifiers are bounded so the regex is provably linear and can't be
  * tripped into super-linear matching by adversarial CSS (Sonar S5852).
  */
-const CSS_URL_RE = /url\(\s{0,8}['"]?([^)'"]{1,2048})['"]?\s{0,8}\)/g;
+// Control characters (newline, CR, tab, etc.) inside a `url(...)` would let a
+// hostile CSS body embed CRLF into the resulting request line. Use \S to
+// require non-whitespace + exclude quotes/paren — same as before, but tighter.
+const CSS_URL_RE = /url\(\s{0,8}['"]?([^\s)'"]{1,2048})['"]?\s{0,8}\)/g;
 
 /**
  * Module paths we don't want to *inject* as top-level scripts because
@@ -590,13 +593,9 @@ export async function ensureServiceWorker(): Promise<boolean> {
       await softResetForRecovery();
       sessionStorage.setItem(RELOAD_FLAG, String(attempts + 1));
       globalThis.location.reload();
-      // Page is about to navigate; never resolve.
-      await new Promise<void>(() => {
-        /* unreachable */
-      });
-    } else {
-      sessionStorage.removeItem(RELOAD_FLAG);
+      return false;
     }
+    sessionStorage.removeItem(RELOAD_FLAG);
     return true;
   } catch {
     return false;

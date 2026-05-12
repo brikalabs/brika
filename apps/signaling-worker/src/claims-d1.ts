@@ -67,9 +67,7 @@ export class D1ClaimStore {
         .bind(name, token, createdAt)
         .run();
     } catch (err) {
-      // D1 surfaces UNIQUE constraint failures as a generic error containing
-      // "UNIQUE" in the message — pattern-match instead of relying on codes.
-      if (err instanceof Error && /UNIQUE/.test(err.message)) {
+      if (isUniqueConstraintError(err)) {
         throw new ClaimError('taken', `"${name}" is already claimed`);
       }
       throw err;
@@ -100,4 +98,18 @@ export class D1ClaimStore {
   #toClaim(row: ClaimRow): Claim {
     return { name: row.name, token: row.token, createdAt: row.created_at };
   }
+}
+
+// D1 surfaces SQLite errors with `cause.code` set when available, and the
+// message format has shifted between runtime versions. Prefer the code; fall
+// back to a tight message match for older runtimes.
+function isUniqueConstraintError(err: unknown): boolean {
+  if (!(err instanceof Error)) {
+    return false;
+  }
+  const cause = (err as Error & { cause?: { code?: unknown } }).cause;
+  if (cause && typeof cause === 'object' && cause.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+    return true;
+  }
+  return /\bUNIQUE constraint failed\b/i.test(err.message);
 }

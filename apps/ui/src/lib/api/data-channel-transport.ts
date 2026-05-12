@@ -40,7 +40,7 @@ import { CookieJar } from './cookie-jar';
 import type { Transport } from './transport';
 
 export interface DataChannelTransportOptions {
-  /** Hub name to connect to (the `<name>` in `<name>.brika.dev`). */
+  /** Hub name to connect to (resolved by the bootstrap from localStorage / meta / `?hub=`). */
   readonly hubName: string;
   /** Coordinator HTTP origin, e.g. `https://api.brika.dev`. */
   readonly coordinatorOrigin: string;
@@ -139,7 +139,7 @@ export class DataChannelTransport implements Transport {
   #sessionId: string | null = null;
   #nextRequestId = 1;
   readonly #inflight = new Map<number, Inflight>();
-  readonly #cookies = new CookieJar();
+  readonly #cookies: CookieJar;
   /**
    * ICE candidates that arrive from the hub before its answer SDP has been
    * applied. Queued here, then flushed once `setRemoteDescription` completes
@@ -150,6 +150,10 @@ export class DataChannelTransport implements Transport {
 
   constructor(options: DataChannelTransportOptions) {
     this.#options = options;
+    // Scope the jar to the hub name so switching hubs cannot reuse another
+    // hub's cookies. The `clearStaleHubJars` sweep drops anything not bound
+    // to the current hub from sessionStorage.
+    this.#cookies = new CookieJar({ hubName: options.hubName });
   }
 
   get state(): DataChannelTransportState {

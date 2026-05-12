@@ -32,6 +32,30 @@ export interface Env {
   TICKET_SECRET: string;
   /** Static asset binding (the bundled UI shell). Configured in wrangler.toml. */
   ASSETS: Fetcher;
+  /**
+   * Comma-separated list of origins allowed to call the state-changing browser
+   * endpoints (`/v1/hubs/claim`, `/v1/tickets`). Cross-origin POSTs from any
+   * other host are rejected with 403 — CSRF defense for cookie-bearing UIs that
+   * might be tricked into minting a ticket against an attacker's hub.
+   * Unset → defaults to `https://hub.brika.dev`.
+   */
+  ALLOWED_ORIGINS?: string;
+}
+
+const DEFAULT_ALLOWED_ORIGINS: readonly string[] = ['https://hub.brika.dev'];
+
+function originAllowed(req: Request, env: Env): boolean {
+  const origin = req.headers.get('origin');
+  if (!origin) {
+    // CLI, server-to-server, or same-origin GET → no Origin header. Allow.
+    return true;
+  }
+  const list = env.ALLOWED_ORIGINS
+    ? env.ALLOWED_ORIGINS.split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+    : DEFAULT_ALLOWED_ORIGINS;
+  return list.includes(origin);
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -105,6 +129,9 @@ async function handleHubStatus(env: Env, name: string): Promise<Response> {
 }
 
 async function handleClaim(req: Request, env: Env): Promise<Response> {
+  if (!originAllowed(req, env)) {
+    return jsonError(403, 'forbidden origin');
+  }
   const body = await readJson<{ name?: string }>(req);
   if (!body?.name || typeof body.name !== 'string') {
     return jsonError(400, 'name required');
@@ -154,6 +181,9 @@ const TICKET_ICE_SERVERS = [
 ];
 
 async function handleTickets(req: Request, env: Env): Promise<Response> {
+  if (!originAllowed(req, env)) {
+    return jsonError(403, 'forbidden origin');
+  }
   const body = await readJson<{ hubName?: string }>(req);
   if (!body?.hubName || typeof body.hubName !== 'string') {
     return jsonError(400, 'hubName required');

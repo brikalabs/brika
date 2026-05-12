@@ -40,17 +40,17 @@ function parseIceServers(): ReadonlyArray<IceServer> {
 }
 
 /**
- * Look up a claim by bearer token using a constant-time scan. Avoids the
- * timing oracle a Map.get() would create: an attacker probing token prefixes
- * could otherwise narrow the search space.
+ * Look up a claim by bearer token.
+ *
+ * The indexed lookup itself is not constant-time (Map.get is). We rely on
+ * token entropy (256-bit random base64url) for resistance against probing;
+ * `constantTimeEqual` only guards against second-preimage timing once a
+ * candidate is found.
  */
 function authenticateHubToken(token: string, store: ClaimStore): string | null {
   if (!token) {
     return null;
   }
-  // First, try the O(1) reverse-index — but ALSO compare in constant time
-  // against the resolved token, so there's no early-out leak when the
-  // attacker probes random tokens.
   const candidate = store.findByToken(token);
   if (candidate && constantTimeEqual(token, candidate.token)) {
     return candidate.name;
@@ -73,9 +73,56 @@ type WSData =
 // ─── Boot ─────────────────────────────────────────────────────────────────
 
 const PORT = Number(process.env.PORT ?? '8787');
-const SECRET = process.env.SIGNALING_TICKET_SECRET ?? 'dev-only-secret-change-me';
+const DEV_DEFAULT_SECRET = 'dev-only-secret-change-me';
+const SECRET = resolveTicketSecret();
 const CLAIMS_PATH = process.env.SIGNALING_CLAIMS_PATH ?? './.signaling-claims.json';
 const ICE_SERVERS = parseIceServers();
+const ALLOWED_ORIGINS = parseAllowedOrigins();
+
+function resolveTicketSecret(): string {
+  const fromEnv = process.env.SIGNALING_TICKET_SECRET;
+  if (fromEnv) {
+    return fromEnv;
+  }
+  // Refuse to start with the default secret unless explicitly opted into dev
+  // mode. The default is well-known; any production deployment that forgot to
+  // set the secret would mint forgeable tickets for every claimed hub.
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(
+      'SIGNALING_TICKET_SECRET is required in production (set it to a 32+ byte secret)'
+    );
+  }
+  return DEV_DEFAULT_SECRET;
+}
+
+function parseAllowedOrigins(): readonly string[] | null {
+  const raw = process.env.SIGNALING_ALLOWED_ORIGINS;
+  if (!raw) {
+    return null; // null = accept any Origin (dev default)
+  }
+  return raw
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+/**
+ * CSRF defense for state-changing browser endpoints. Returns true when the
+ * request is allowed:
+ *   - Origin header absent → CLI / server-to-server caller; allowed.
+ *   - Origin header set    → must appear in SIGNALING_ALLOWED_ORIGINS (or any
+ *                            when unset, for dev).
+ */
+function originAllowed(req: Request): boolean {
+  const origin = req.headers.get('origin');
+  if (!origin) {
+    return true;
+  }
+  if (ALLOWED_ORIGINS === null) {
+    return true;
+  }
+  return ALLOWED_ORIGINS.includes(origin);
+}
 const registry = new Registry();
 const claims = new ClaimStore(CLAIMS_PATH);
 await claims.load();
@@ -83,6 +130,9 @@ await claims.load();
 // ─── HTTP route handlers ──────────────────────────────────────────────────
 
 async function handleTickets(req: Request): Promise<Response> {
+  if (!originAllowed(req)) {
+    return Response.json({ error: 'forbidden origin' }, { status: 403 });
+  }
   let body: { hubName?: string };
   try {
     body = (await req.json()) as { hubName?: string };
@@ -117,6 +167,9 @@ function claimErrorStatus(code: ClaimError['code']): number {
 }
 
 async function handleClaim(req: Request): Promise<Response> {
+  if (!originAllowed(req)) {
+    return Response.json({ error: 'forbidden origin' }, { status: 403 });
+  }
   let body: { name?: string };
   try {
     body = (await req.json()) as { name?: string };

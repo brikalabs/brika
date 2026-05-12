@@ -170,11 +170,17 @@ export async function requestToFrames(id: number, request: Request): Promise<Req
 
 /**
  * Turn an incoming `RequestMessage` into a standard `Request` to feed into
- * `app.fetch()`. The hub must supply `baseOrigin` (e.g. `https://maxime.brika.dev`)
+ * `app.fetch()`. The hub must supply `baseOrigin` (e.g. `https://hub.brika.dev`)
  * so the produced request has an absolute URL and downstream middleware can
  * inspect the canonical origin.
  */
 export function rpcRequestToFetch(msg: RequestMessage, baseOrigin: string): Request {
+  // Refuse absolute URLs and protocol-relative URLs — they would discard
+  // baseOrigin and let a malicious peer set an attacker-controlled host on
+  // the synthesized Request, bypassing any host-allowlist middleware.
+  if (!msg.url.startsWith('/') || msg.url.startsWith('//')) {
+    throw new Error(`rpc: refusing non-absolute path "${msg.url}"`);
+  }
   const url = new URL(msg.url, baseOrigin);
   const headers = pairsToHeaders(msg.headers);
   // The Host header was stripped on the FE side (hop-by-hop) and the wire

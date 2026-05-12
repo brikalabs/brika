@@ -9,15 +9,24 @@
  * `verifyToken` middleware accepts both cookies and `Authorization: Bearer`,
  * so this is the cheapest end-to-end fix.
  *
+ * Scope: jars are namespaced by hub name in storage. Switching hubs gets a
+ * fresh jar — credentials never bleed across identities. Stale jars from
+ * previously-visited hubs are swept on construction.
+ *
  * Persistence: `sessionStorage`. Tab-scoped, so closing the tab logs the user
  * out — a reasonable XSS blast-radius reduction vs `localStorage` and a fair
  * match for the HttpOnly intent that the LAN setup relied on. The Path
  * attribute is honored; Domain and HttpOnly are ignored (irrelevant once
  * we're in JS); Secure is treated as always-true (the channel itself is
- * DTLS-encrypted end-to-end).
+ * DTLS-encrypted end-to-end). `Set-Cookie` values whose Path falls outside
+ * the API surface are rejected — the jar is only ever consulted for `/api/*`
+ * requests, so anything else would be dead weight that an attacker hub could
+ * use to bloat sessionStorage or interfere with future scope changes.
  */
 
-const STORAGE_KEY = 'brika.remote.cookies';
+const STORAGE_PREFIX = 'brika.remote.cookies::';
+/** Cookies whose Path falls outside this prefix are rejected. */
+const ALLOWED_PATH_PREFIX = '/api';
 
 interface StoredCookie {
   readonly name: string;
@@ -25,6 +34,11 @@ interface StoredCookie {
   readonly path: string;
   /** Unix epoch ms. Undefined = session cookie (kept for the tab lifetime). */
   readonly expiresAt?: number;
+}
+
+export interface CookieJarOptions {
+  /** Hub name binding — jars from other hubs are dropped on construction. */
+  readonly hubName: string;
 }
 
 function parseExpiresAt(
@@ -82,17 +96,30 @@ export function parseSetCookie(raw: string): StoredCookie | null {
   return { name, value, path, expiresAt };
 }
 
+/**
+ * `Set-Cookie` Path falls outside the surface this jar is allowed to vend.
+ * A hub-controlled cookie targeting `/admin/...` is meaningless here — the
+ * jar is only consulted for `/api/*` requests — and a stored junk cookie is
+ * pure attack surface with no benefit.
+ */
+function isPathAllowed(path: string): boolean {
+  return path === '/' || path === ALLOWED_PATH_PREFIX || path.startsWith(`${ALLOWED_PATH_PREFIX}/`);
+}
+
 export class CookieJar {
   readonly #cookies = new Map<string, StoredCookie>();
+  readonly #storageKey: string;
 
-  constructor() {
+  constructor(options: CookieJarOptions) {
+    this.#storageKey = `${STORAGE_PREFIX}${options.hubName}`;
+    clearStaleHubJars(this.#storageKey);
     this.#load();
   }
 
   /** Apply a `Set-Cookie` header value. Multiple values come as multiple calls. */
   store(setCookieValue: string): void {
     const parsed = parseSetCookie(setCookieValue);
-    if (!parsed) {
+    if (!parsed || !isPathAllowed(parsed.path)) {
       return;
     }
     if (parsed.expiresAt !== undefined && parsed.expiresAt <= Date.now()) {
@@ -149,7 +176,7 @@ export class CookieJar {
       return;
     }
     try {
-      const raw = sessionStorage.getItem(STORAGE_KEY);
+      const raw = sessionStorage.getItem(this.#storageKey);
       if (!raw) {
         return;
       }
@@ -170,9 +197,34 @@ export class CookieJar {
       return;
     }
     try {
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify([...this.#cookies.values()]));
+      sessionStorage.setItem(this.#storageKey, JSON.stringify([...this.#cookies.values()]));
     } catch {
       // Quota or disabled storage — ignore. Cookies still work in-memory.
     }
+  }
+}
+
+/**
+ * Drop any prior-hub jars from sessionStorage. Called once per CookieJar
+ * construction so an old session's cookies cannot persist into a new hub
+ * binding within the same tab.
+ */
+function clearStaleHubJars(activeKey: string): void {
+  if (typeof sessionStorage === 'undefined') {
+    return;
+  }
+  try {
+    const toDelete: string[] = [];
+    for (let i = 0; i < sessionStorage.length; i++) {
+      const k = sessionStorage.key(i);
+      if (k && k.startsWith(STORAGE_PREFIX) && k !== activeKey) {
+        toDelete.push(k);
+      }
+    }
+    for (const k of toDelete) {
+      sessionStorage.removeItem(k);
+    }
+  } catch {
+    /* sessionStorage disabled — nothing to clean */
   }
 }
