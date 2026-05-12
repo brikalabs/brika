@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { buildAssetGraph, ensureServiceWorker, injectGraph } from '@/lib/asset-graph';
 import { classifyError, type ErrorClassification } from '@/lib/classify-error';
 import { resolveCoordinator } from '@/lib/hub-name';
+import { commitQueryHub } from '@/lib/hub-storage';
 import { mintTicket, openPeer, type PeerHandle } from '@/lib/peer';
 
 export type BootstrapPhase = 'landing' | 'connecting' | 'fetching' | 'loading' | 'error' | 'done';
@@ -108,6 +109,15 @@ async function runAttempt(
   peerRef: { current: PeerHandle | null },
   cb: AttemptCallbacks
 ): Promise<void> {
+  // If we got here via `?hub=<name>`, persist the override AND purge any
+  // stale `brika-*` caches BEFORE issuing the first request. Doing this in
+  // the pure `loadHubName` read would drop the purge promise on the floor
+  // and let the SW continue serving the prior hub's modules.
+  await commitQueryHub();
+  if (signal.aborted) {
+    return;
+  }
+
   const coordinator = resolveCoordinator();
   const swPromise = ensureServiceWorker();
 

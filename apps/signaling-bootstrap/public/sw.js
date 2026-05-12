@@ -59,11 +59,28 @@ const SW_PING_PATH = '/__brika_sw_ping__';
 
 globalThis.addEventListener('fetch', (event) => {
   const req = event.request;
-  if (req.method !== 'GET') {
-    return;
-  }
   const url = new URL(req.url);
   if (url.origin !== globalThis.location.origin) {
+    return;
+  }
+  // Live `/api/*` requests can't be pre-cached (brick modules are loaded
+  // on-demand, REST endpoints have request-specific bodies). Forward them
+  // to the controlling page over postMessage so it can re-issue the call
+  // through the WebRTC bridge — for EVERY method, not just GET. A mutating
+  // verb like POST /api/auth/login would otherwise fall through to the
+  // network and hit `hub.brika.dev` (which has no app surface).
+  //
+  // Route to the *originating* client (the page that made this request).
+  // Falling back to `allClients[0]` would let a request emitted from tab A
+  // be answered by tab B's transport — across hub bindings if the two tabs
+  // target different hubs. Same-tab proxying preserves the hub identity
+  // end-to-end.
+  if (url.pathname.startsWith('/api/')) {
+    event.respondWith(proxyThroughClient(req, event.clientId));
+    return;
+  }
+  // Everything below this point is the static-asset cache path — GET-only.
+  if (req.method !== 'GET') {
     return;
   }
   if (url.pathname === SW_PING_PATH) {
@@ -72,20 +89,6 @@ globalThis.addEventListener('fetch', (event) => {
         headers: { 'content-type': 'text/plain', 'cache-control': 'no-store' },
       })
     );
-    return;
-  }
-  // Live `/api/*` requests can't be pre-cached (brick modules are loaded
-  // on-demand, REST endpoints have request-specific bodies). Forward them
-  // to the controlling page over postMessage so it can re-issue the call
-  // through the WebRTC bridge. Anything not under `/api/` falls back to
-  // the static cache.
-  if (url.pathname.startsWith('/api/')) {
-    // Route to the *originating* client (the page that made this `/api/*`
-    // request). Falling back to `allClients[0]` would let a request emitted
-    // from tab A be answered by tab B's transport — across hub bindings if
-    // the two tabs target different hubs. Same-tab proxying preserves the
-    // hub identity end-to-end.
-    event.respondWith(proxyThroughClient(req, event.clientId));
     return;
   }
 

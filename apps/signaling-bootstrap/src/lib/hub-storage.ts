@@ -49,15 +49,31 @@ function writeStorage(value: string | null): void {
  *      reloads on the same browser stick).
  *   2. localStorage value.
  *   3. `null` — the bootstrap shows the landing screen.
+ *
+ * Pure read — does NOT persist. Use {@link commitQueryHub} to persist
+ * a `?hub=` override after the page has mounted; doing it inside the
+ * pure read would silently drop the cache-purge promise on rebind.
  */
 export function loadHubName(): string | null {
   const fromQuery = readQueryHub();
   if (fromQuery) {
-    storeHubName(fromQuery);
     return fromQuery;
   }
   const stored = readStorage();
   return stored && isValidHubName(stored) ? stored : null;
+}
+
+/**
+ * Persist a `?hub=` override into localStorage and (when the prior bound
+ * hub differs) purge `brika-*` caches. Call once at mount from an effect;
+ * await the returned promise before the bootstrap connects so a hostile
+ * rebind cannot continue serving the prior hub's cached modules.
+ */
+export async function commitQueryHub(): Promise<void> {
+  const fromQuery = readQueryHub();
+  if (fromQuery) {
+    await storeHubName(fromQuery);
+  }
 }
 
 /**
@@ -79,26 +95,30 @@ export function suggestHubName(): string | null {
   return first && isValidHubName(first) ? first : null;
 }
 
-export function storeHubName(name: string): void {
+/**
+ * Store the bound hub name. If the prior name differs, wipe every
+ * `brika-*` cache so the next page load fetches a fresh asset graph
+ * from the new hub. Returns a promise that resolves when the purge
+ * (if any) has actually completed — callers MUST await before
+ * navigating, otherwise the cache may still serve the prior hub's
+ * bytes on the next request.
+ */
+export async function storeHubName(name: string): Promise<void> {
   if (!isValidHubName(name)) {
     return;
   }
   const prior = readStorage();
   writeStorage(name);
   if (prior && prior !== name) {
-    // Hub identity changed in this browser. Wipe any cached assets keyed
-    // to the prior hub so the next page load fetches a fresh graph from
-    // the new hub — prevents a hostile rebind from continuing to serve
-    // the prior hub's cached modules.
-    void purgeAssetCaches();
+    await purgeAssetCaches();
   }
 }
 
-export function clearHubName(): void {
+export async function clearHubName(): Promise<void> {
   const prior = readStorage();
   writeStorage(null);
   if (prior) {
-    void purgeAssetCaches();
+    await purgeAssetCaches();
   }
 }
 

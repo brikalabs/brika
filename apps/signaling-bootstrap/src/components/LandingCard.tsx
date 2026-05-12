@@ -36,7 +36,7 @@ export function LandingCard(): React.ReactElement {
     }
   }, []);
 
-  const onSubmit = (e: React.SyntheticEvent<HTMLFormElement>): void => {
+  const onSubmit = async (e: React.SyntheticEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
     if (!isValidHubName(trimmed)) {
       setError(
@@ -44,7 +44,10 @@ export function LandingCard(): React.ReactElement {
       );
       return;
     }
-    storeHubName(trimmed);
+    // Await the store — it purges stale `brika-*` caches when the prior
+    // hub differs, and we MUST let that finish before the page reload or
+    // the new SW will keep serving the prior hub's cached modules.
+    await storeHubName(trimmed);
     // Clean the URL: drop any legacy `/<name>` path and `?hub=` query
     // so subsequent navigation is the hub UI's responsibility.
     globalThis.location.replace('/');

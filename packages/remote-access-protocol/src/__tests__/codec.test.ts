@@ -77,4 +77,79 @@ describe('codec', () => {
       expect(decodeRpc(raw)).toBeNull();
     });
   });
+
+  describe('per-kind shape validation', () => {
+    it('rejects session.answer missing sessionId', () => {
+      const raw = JSON.stringify({ v: PROTOCOL_VERSION, kind: 'session.answer', sdp: 'x' });
+      expect(decodeSignaling(raw)).toBeNull();
+    });
+
+    it('rejects session.answer with non-string sdp', () => {
+      const raw = JSON.stringify({
+        v: PROTOCOL_VERSION,
+        kind: 'session.answer',
+        sessionId: 's',
+        sdp: 42,
+      });
+      expect(decodeSignaling(raw)).toBeNull();
+    });
+
+    it('rejects session.ice missing candidate', () => {
+      const raw = JSON.stringify({
+        v: PROTOCOL_VERSION,
+        kind: 'session.ice',
+        sessionId: 's',
+        from: 'hub',
+      });
+      expect(decodeSignaling(raw)).toBeNull();
+    });
+
+    it('rejects session.ice with invalid `from`', () => {
+      const raw = JSON.stringify({
+        v: PROTOCOL_VERSION,
+        kind: 'session.ice',
+        sessionId: 's',
+        candidate: { candidate: 'c' },
+        from: 'attacker',
+      });
+      expect(decodeSignaling(raw)).toBeNull();
+    });
+
+    it('rejects response.head missing status', () => {
+      const raw = JSON.stringify({
+        v: PROTOCOL_VERSION,
+        kind: 'response.head',
+        id: 1,
+        headers: [],
+      });
+      expect(decodeRpc(raw)).toBeNull();
+    });
+
+    it('rejects response.chunk with neither dataText nor dataB64', () => {
+      const raw = JSON.stringify({ v: PROTOCOL_VERSION, kind: 'response.chunk', id: 1 });
+      expect(decodeRpc(raw)).toBeNull();
+    });
+
+    it('rejects request with non-finite id', () => {
+      const raw = JSON.stringify({
+        v: PROTOCOL_VERSION,
+        kind: 'request',
+        id: 'abc',
+        method: 'GET',
+        url: '/x',
+        headers: [],
+      });
+      expect(decodeRpc(raw)).toBeNull();
+    });
+
+    it('rejects hello with invalid role', () => {
+      const raw = JSON.stringify({
+        v: PROTOCOL_VERSION,
+        kind: 'hello',
+        role: 'admin',
+        softwareVersion: '1.0',
+      });
+      expect(decodeRpc(raw)).toBeNull();
+    });
+  });
 });

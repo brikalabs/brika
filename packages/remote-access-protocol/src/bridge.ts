@@ -48,6 +48,17 @@ const HOP_BY_HOP_HEADERS = new Set([
   // Browsers manage these; passing them through breaks the FE's fetch.
   'host',
   'content-length',
+  // Forwarding headers — the hub-side bridge stamps a trusted `x-real-ip`
+  // on its synthesized Request; any client-side `x-forwarded-for` /
+  // `forwarded` / `x-real-ip` arriving in the frame would otherwise be
+  // preferred by downstream middleware (auth, rate-limit) and let a peer
+  // spoof the remote IP. Strip them at the protocol boundary so no consumer
+  // has to remember to.
+  'x-forwarded-for',
+  'x-forwarded-host',
+  'x-forwarded-proto',
+  'x-real-ip',
+  'forwarded',
 ]);
 
 function headersToPairs(headers: Headers): Array<[string, string]> {
