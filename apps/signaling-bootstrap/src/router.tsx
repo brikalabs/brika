@@ -6,42 +6,37 @@ import {
   RouterProvider,
 } from '@tanstack/react-router';
 import type React from 'react';
-import { LandingScreen } from '@/screens/LandingScreen';
 import { LoaderScreen } from '@/screens/LoaderScreen';
 
 const rootRoute = createRootRoute({
   component: () => <Outlet />,
 });
 
-const landingRoute = createRoute({
+/**
+ * Single catch-all route. The hub name lives in `localStorage` (via
+ * `@/lib/hub-storage`), so the URL doesn't carry it anymore — the
+ * loader screen reads storage and either connects to that hub or
+ * shows the landing card. The splat keeps deep links (`/plugins`,
+ * `/boards/abc`) intact so the loaded hub UI can route them after
+ * the handoff.
+ */
+const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
-  component: LandingScreen,
-});
-
-/**
- * Anything that LOOKS like `/<hub-name>[/...]` lands on the loader screen.
- * The route param is the first path segment; nested paths are ignored at
- * this layer (the hub's app router will handle them after the handoff).
- */
-const hubRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '$hubName',
   component: LoaderScreen,
 });
 
 const splatRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '$hubName/$',
+  path: '$',
   component: LoaderScreen,
 });
 
-const routeTree = rootRoute.addChildren([landingRoute, hubRoute, splatRoute]);
+const routeTree = rootRoute.addChildren([indexRoute, splatRoute]);
 
 const router = createRouter({
   routeTree,
   defaultPreload: false,
-  // We rewrite history in-place after a successful claim; never trap.
   basepath: '/',
 });
 

@@ -108,6 +108,12 @@ export interface AssetGraph {
   /** Absolute-path stylesheets to inject. */
   cssLinks: string[];
   title: string;
+  /**
+   * Hub name to stamp into `<meta name="brika:hub">` before scripts
+   * run, so the loaded UI's `detectRemote()` picks it up without
+   * touching the URL.
+   */
+  hubName: string;
 }
 
 export interface AssetGraphProgress {
@@ -329,6 +335,7 @@ function collectScripts(doc: Document): ModuleScriptRef[] {
  */
 export async function buildAssetGraph(
   peer: PeerHandle,
+  hubName: string,
   hasServiceWorker: boolean,
   onProgress?: ProgressListener
 ): Promise<AssetGraph> {
@@ -373,7 +380,7 @@ export async function buildAssetGraph(
   }
 
   await primeCache(peer, Array.from(initial), onProgress);
-  return { scripts, cssLinks, title };
+  return { scripts, cssLinks, title, hubName };
 }
 
 /**
@@ -397,6 +404,15 @@ export async function injectGraph(graph: AssetGraph, rootId: string): Promise<vo
   if (graph.title) {
     document.title = graph.title;
   }
+
+  // Stamp the hub name into the document head so the loaded UI's
+  // `detectRemote()` reads it from there instead of having to parse
+  // the URL — keeps URLs clean (no `/maxime/` prefix needed) and
+  // means a hub-UI router page reload via F5 stays on the right hub.
+  const metaHub = document.createElement('meta');
+  metaHub.setAttribute('name', 'brika:hub');
+  metaHub.setAttribute('content', graph.hubName);
+  document.head.appendChild(metaHub);
 
   const bootstrapStyleNodes: Element[] = [
     ...document.head.querySelectorAll('link[rel="stylesheet"]'),

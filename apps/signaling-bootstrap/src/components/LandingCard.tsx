@@ -11,10 +11,10 @@ import {
   InputGroupInput,
   InputGroupText,
 } from '@brika/clay';
-import { useNavigate } from '@tanstack/react-router';
 import { ArrowRight, BookOpen, Code2, ExternalLink } from 'lucide-react';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { isValidHubName } from '@/lib/hub-name';
+import { storeHubName, suggestHubName } from '@/lib/hub-storage';
 import { Mark } from './Mark';
 
 /**
@@ -22,11 +22,19 @@ import { Mark } from './Mark';
  * mark + heading + description + name picker + footer.
  */
 export function LandingCard(): React.ReactElement {
-  const navigate = useNavigate();
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const trimmed = name.trim().toLowerCase();
   const canSubmit = trimmed.length >= 4;
+
+  // Pre-fill from `?hub=` query or the legacy `/<name>` path so users
+  // arriving on an old URL just hit Enter.
+  useEffect(() => {
+    const hint = suggestHubName();
+    if (hint) {
+      setName(hint);
+    }
+  }, []);
 
   const onSubmit = (e: React.SyntheticEvent<HTMLFormElement>): void => {
     e.preventDefault();
@@ -36,9 +44,10 @@ export function LandingCard(): React.ReactElement {
       );
       return;
     }
-    navigate({ to: '/$hubName', params: { hubName: trimmed } }).catch(() => {
-      // Navigation cancelled — user can retype.
-    });
+    storeHubName(trimmed);
+    // Clean the URL: drop any legacy `/<name>` path and `?hub=` query
+    // so subsequent navigation is the hub UI's responsibility.
+    globalThis.location.replace('/');
   };
 
   return (

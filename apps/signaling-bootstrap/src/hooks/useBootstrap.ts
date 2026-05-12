@@ -45,7 +45,7 @@ export function useBootstrap(hubName: string | null): BootstrapState {
       setPhase('fetching');
       setStatus('Loading app from your hub…');
       const hasServiceWorker = await swPromise;
-      const graph = await buildAssetGraph(peer, hasServiceWorker, (event) => {
+      const graph = await buildAssetGraph(peer, hubName, hasServiceWorker, (event) => {
         setDetail(`${event.fetched} modules · ${shortenUrl(event.url)}`);
       });
       setPhase('loading');
