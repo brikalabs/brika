@@ -102,18 +102,28 @@ export function embeddedUi(): MiddlewareHandler {
     }
 
     const requested = c.req.path === '/' ? 'index.html' : c.req.path.replace(/^\/+/, '');
-    // SPA fallback for client-side routes (`null` so `??=` works).
-    const bytes = files.get(requested) ?? files.get('index.html') ?? null;
+    // SPA fallback for client-side routes. When `direct` is undefined we're
+    // serving `index.html` bytes for whatever URL the user typed — in that
+    // case the response Content-Type MUST reflect the bytes (HTML), not the
+    // requested path (which yields `application/octet-stream` for
+    // extensionless SPA routes like `/dashboard` and surfaces as a download
+    // prompt). The immutable cache header is also wrong on fallback: a hashed
+    // asset 404 falling back to HTML would otherwise be cached as JS-for-a-year.
+    const direct = files.get(requested);
+    const bytes = direct ?? files.get('index.html') ?? null;
     if (!bytes) {
       await next();
       return undefined;
     }
+    const isFallback = direct === undefined;
+    const contentType = isFallback ? 'text/html; charset=utf-8' : mimeFor(requested);
+    const cacheControl =
+      !isFallback && requested.startsWith('assets/')
+        ? 'public, max-age=31536000, immutable'
+        : 'no-cache';
     return c.body(bytes as unknown as ArrayBuffer, 200, {
-      'content-type': mimeFor(requested),
-      // Vite hashes its assets — long-lived caching is safe for /assets/*.
-      ...(requested.startsWith('assets/')
-        ? { 'cache-control': 'public, max-age=31536000, immutable' }
-        : { 'cache-control': 'no-cache' }),
+      'content-type': contentType,
+      'cache-control': cacheControl,
     });
   };
 }

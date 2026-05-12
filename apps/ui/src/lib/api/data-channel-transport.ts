@@ -147,6 +147,13 @@ export class DataChannelTransport implements Transport {
    */
   #pendingRemoteIce: RTCIceCandidateInit[] = [];
   #remoteDescriptionApplied = false;
+  /**
+   * Local ICE candidates emitted by the gathering ICE agent before the
+   * coordinator's `session.answer` arrives. `#sessionId` is null until then,
+   * so we can't build a `client.ice` frame yet; queue and flush once the
+   * sessionId lands. Symmetric to `#pendingRemoteIce` for the inbound side.
+   */
+  #pendingLocalIce: RTCIceCandidateInit[] = [];
 
   constructor(options: DataChannelTransportOptions) {
     this.#options = options;
@@ -342,25 +349,24 @@ export class DataChannelTransport implements Transport {
     });
 
     pc.addEventListener('icecandidate', (ev) => {
-      if (!ev.candidate || !this.#ws || !this.#sessionId) {
+      if (!ev.candidate) {
         return;
       }
-      const msg: SignalingMessage = {
-        v: PROTOCOL_VERSION,
-        kind: 'client.ice',
-        sessionId: this.#sessionId,
-        candidate: {
-          candidate: ev.candidate.candidate,
-          sdpMid: ev.candidate.sdpMid,
-          sdpMLineIndex: ev.candidate.sdpMLineIndex,
-          usernameFragment: ev.candidate.usernameFragment,
-        },
+      const init: RTCIceCandidateInit = {
+        candidate: ev.candidate.candidate,
+        sdpMid: ev.candidate.sdpMid,
+        sdpMLineIndex: ev.candidate.sdpMLineIndex,
+        usernameFragment: ev.candidate.usernameFragment,
       };
-      try {
-        this.#ws.send(encodeSignaling(msg));
-      } catch {
-        /* socket may be closing — handled by close handler */
+      // ICE gathering starts as soon as `setLocalDescription(offer)` resolves
+      // — well before the coordinator round-trip returns `session.answer`.
+      // Queue candidates until `#sessionId` lands; they're flushed in
+      // `#onSignalingMessage` on the `session.answer` branch.
+      if (!this.#ws || !this.#sessionId) {
+        this.#pendingLocalIce.push(init);
+        return;
       }
+      this.#sendClientIce(init);
     });
 
     pc.addEventListener('connectionstatechange', () => {
@@ -401,10 +407,17 @@ export class DataChannelTransport implements Transport {
       return;
     }
     switch (msg.kind) {
-      case 'session.answer':
+      case 'session.answer': {
         this.#sessionId = msg.sessionId;
+        // Flush local candidates queued before `#sessionId` was assigned.
+        const localToFlush = this.#pendingLocalIce;
+        this.#pendingLocalIce = [];
+        for (const cand of localToFlush) {
+          this.#sendClientIce(cand);
+        }
         void this.#applyAnswer(msg.sdp);
         return;
+      }
       case 'session.ice':
         if (msg.from === 'hub') {
           this.#handleRemoteIce({
@@ -445,6 +458,32 @@ export class DataChannelTransport implements Transport {
       } catch {
         // Stale candidate; ignore.
       }
+    }
+  }
+
+  /**
+   * Send a single locally-gathered ICE candidate to the coordinator as a
+   * `client.ice` frame. Caller must have a non-null `#ws` and `#sessionId`.
+   */
+  #sendClientIce(init: RTCIceCandidateInit): void {
+    if (!this.#ws || !this.#sessionId) {
+      return;
+    }
+    const msg: SignalingMessage = {
+      v: PROTOCOL_VERSION,
+      kind: 'client.ice',
+      sessionId: this.#sessionId,
+      candidate: {
+        candidate: init.candidate ?? '',
+        sdpMid: init.sdpMid ?? undefined,
+        sdpMLineIndex: init.sdpMLineIndex ?? undefined,
+        usernameFragment: init.usernameFragment ?? undefined,
+      },
+    };
+    try {
+      this.#ws.send(encodeSignaling(msg));
+    } catch {
+      /* socket may be closing — handled by close handler */
     }
   }
 
@@ -620,6 +659,7 @@ export class DataChannelTransport implements Transport {
     this.#ws = null;
     this.#sessionId = null;
     this.#pendingRemoteIce = [];
+    this.#pendingLocalIce = [];
     this.#remoteDescriptionApplied = false;
     this.#connectPromise = null;
   }

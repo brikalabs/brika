@@ -263,6 +263,12 @@ export async function openPeer(
 
   const dcReady = makeDataChannelReady(channel, pc);
 
+  // Remote ICE candidates that arrive before `setRemoteDescription` resolves
+  // would otherwise reject (`InvalidStateError`) and be silently dropped by
+  // the .catch — buffer them and flush once SRD lands.
+  const pendingRemoteIce: RTCIceCandidateInit[] = [];
+  let remoteDescriptionApplied = false;
+
   ws.addEventListener('message', (ev) => {
     const raw = typeof ev.data === 'string' ? ev.data : TEXT_DECODER.decode(ev.data);
     const msg = decodeSignaling(raw);
@@ -274,24 +280,38 @@ export async function openPeer(
     }
     if (msg.kind === 'session.answer') {
       sessionId = msg.sessionId;
-      // Flush queued local candidates synchronously so the live `icecandidate`
-      // handler and the flush can't interleave. setRemoteDescription doesn't
-      // need to complete before we forward our own ICE to the coordinator.
+      // Flush queued LOCAL candidates synchronously so the live `icecandidate`
+      // handler and the flush can't interleave.
       const toFlush = pendingIce.splice(0);
       for (const cand of toFlush) {
         sendSignaling({ v: PROTOCOL_VERSION, kind: 'client.ice', sessionId, candidate: cand });
       }
-      pc.setRemoteDescription({ type: 'answer', sdp: msg.sdp }).catch((err: unknown) => {
-        dcReady.fail(err instanceof Error ? err : new Error(String(err)));
-      });
+      pc.setRemoteDescription({ type: 'answer', sdp: msg.sdp })
+        .then(() => {
+          remoteDescriptionApplied = true;
+          const remoteToFlush = pendingRemoteIce.splice(0);
+          for (const cand of remoteToFlush) {
+            pc.addIceCandidate(cand).catch(() => {
+              /* late or malformed — drop */
+            });
+          }
+        })
+        .catch((err: unknown) => {
+          dcReady.fail(err instanceof Error ? err : new Error(String(err)));
+        });
       return;
     }
     if (msg.kind === 'session.ice') {
-      pc.addIceCandidate({
+      const init: RTCIceCandidateInit = {
         candidate: msg.candidate.candidate,
         sdpMid: msg.candidate.sdpMid,
         sdpMLineIndex: msg.candidate.sdpMLineIndex,
-      }).catch(() => {
+      };
+      if (!remoteDescriptionApplied) {
+        pendingRemoteIce.push(init);
+        return;
+      }
+      pc.addIceCandidate(init).catch(() => {
         /* late or malformed — drop */
       });
       return;

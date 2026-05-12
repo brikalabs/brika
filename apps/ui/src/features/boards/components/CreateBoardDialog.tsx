@@ -47,7 +47,13 @@ export function CreateBoardDialog() {
       { name: trimmedName, icon: icon.trim() },
       {
         onSuccess: (board) => {
-          setOpen(false);
+          // Route through `handleOpenChange` so the form-reset side-effect
+          // fires — Radix's `onOpenChange` only triggers on user-driven
+          // closes, not when we flip the open prop programmatically. Going
+          // through `setOpen(false)` directly would leave `name`/`icon` set
+          // on the next open (component is mounted permanently in
+          // BoardsLayout).
+          handleOpenChange(false);
           navigate({ to: paths.boards.detail.to({ boardId: board.id }) });
         },
       }
