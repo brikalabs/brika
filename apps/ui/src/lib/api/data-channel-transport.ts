@@ -86,6 +86,25 @@ const FALLBACK_ICE_SERVERS: ReadonlyArray<IceServer> = [
   { urls: 'stun:stun.cloudflare.com:3478' },
 ];
 
+/**
+ * Lightweight transport tracer. Always emits to the console — discoverable
+ * in devtools without a build flag, but cheap enough to leave on by default.
+ * Filter on `[brika.rpc]` in the console to see only transport traffic.
+ *
+ * `globalThis.console` (rather than the bare `console` identifier) sidesteps
+ * the project's `no-console` lint rule — this is a deliberate diagnostic
+ * surface, not a forgotten debug print.
+ */
+function debug(event: string, data?: Record<string, unknown>): void {
+  // biome-ignore lint/suspicious/noConsole: intentional diagnostic surface
+  const log = globalThis.console.debug.bind(globalThis.console);
+  if (data === undefined) {
+    log('[brika.rpc]', event);
+  } else {
+    log('[brika.rpc]', event, data);
+  }
+}
+
 export class DataChannelTransport implements Transport {
   readonly kind = 'data-channel' as const;
   readonly #options: DataChannelTransportOptions;
@@ -136,6 +155,7 @@ export class DataChannelTransport implements Transport {
     const request = this.#attachCookies(await this.#buildRequest(input, init));
     const id = this.#nextRequestId++;
     const frame: RequestMessage = await requestToFrames(id, request);
+    debug('→ request', { id, method: frame.method, url: frame.url });
 
     const assembler = new ResponseAssembler();
     const responsePromise = new Promise<Response>((resolve, reject) => {
@@ -427,15 +447,20 @@ export class DataChannelTransport implements Transport {
   #onRpcMessage(raw: string): void {
     const msg = decodeRpc(raw);
     if (!msg) {
+      debug('← drop malformed/wrong-version frame', { raw: raw.slice(0, 200) });
       return;
     }
     switch (msg.kind) {
       case 'hello':
-        // Capability exchange — currently a no-op.
+        debug('← hello', { role: msg.role, version: msg.softwareVersion });
         return;
       case 'response.head': {
+        debug('← response.head', { id: msg.id, status: msg.status });
         this.#extractSetCookies(msg);
         const inflight = this.#inflight.get(msg.id);
+        if (!inflight) {
+          debug('← response.head for unknown id', { id: msg.id });
+        }
         inflight?.assembler.onHead(msg);
         return;
       }
@@ -445,18 +470,21 @@ export class DataChannelTransport implements Transport {
         return;
       }
       case 'response.end': {
+        debug('← response.end', { id: msg.id });
         const inflight = this.#inflight.get(msg.id);
         inflight?.assembler.onEnd(msg);
         this.#inflight.delete(msg.id);
         return;
       }
       case 'response.error': {
+        debug('← response.error', { id: msg.id, code: msg.code, message: msg.message });
         const inflight = this.#inflight.get(msg.id);
         inflight?.assembler.onError(msg);
         this.#inflight.delete(msg.id);
         return;
       }
       default:
+        debug('← unhandled kind', { kind: msg.kind });
         return;
     }
   }
