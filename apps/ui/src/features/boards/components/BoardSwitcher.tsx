@@ -1,12 +1,6 @@
 import {
   Button,
   cn,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -45,9 +39,8 @@ import { useState } from 'react';
 import { useLocale } from '@/lib/use-locale';
 import { paths } from '@/routes/paths';
 import type { BoardSummary } from '../api';
-import { useBoards, useCreateBoard, useReorderBoards } from '../hooks';
-import { BoardFormFields } from './BoardFormFields';
-import { IconPicker } from './IconPicker';
+import { useBoards, useReorderBoards } from '../hooks';
+import { useBoardStore } from '../store';
 
 // ─── Tab content (shared between sortable tab & drag overlay) ────────────────
 
@@ -164,11 +157,8 @@ export function BoardSwitcher({ onEdit }: Readonly<BoardSwitcherProps>) {
   });
   const { data: boards = [] } = useBoards();
   const { mutate: reorderBoards } = useReorderBoards();
+  const setCreateBoardOpen = useBoardStore((s) => s.setCreateBoardOpen);
 
-  const [createOpen, setCreateOpen] = useState(false);
-  const [newName, setNewName] = useState('');
-  const [newIcon, setNewIcon] = useState('');
-  const { mutate: createBoard, isPending: creating } = useCreateBoard();
   const [activeId, setActiveId] = useState<string | null>(null);
 
   // ─── Overflow detection (via reusable hook) ────────────────────────────
@@ -217,170 +207,99 @@ export function BoardSwitcher({ onEdit }: Readonly<BoardSwitcherProps>) {
     setActiveId(null);
   };
 
-  // ─── Create dialog ────────────────────────────────────────────────────
-
-  const handleCreate = () => {
-    if (!newName.trim()) {
-      return;
-    }
-    createBoard(
-      {
-        name: newName.trim(),
-        icon: newIcon.trim(),
-      },
-      {
-        onSuccess: (board) => {
-          setCreateOpen(false);
-          setNewName('');
-          setNewIcon('');
-          navigate({
-            to: paths.boards.detail.to({
-              boardId: board.id,
-            }),
-          });
-        },
-      }
-    );
-  };
-
-  const handleCreateOpenChange = (open: boolean) => {
-    setCreateOpen(open);
-    if (open) {
-      setNewName('');
-      setNewIcon('');
-    }
-  };
-
   // ─── Render ────────────────────────────────────────────────────────────
 
   return (
-    <>
-      <OverflowList className="rounded-lg bg-muted/50 p-1">
-        <OverflowListContent ref={containerRef}>
-          <DndContext
-            sensors={tabSensors}
-            collisionDetection={closestCenter}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-            onDragCancel={handleDragCancel}
+    <OverflowList className="rounded-lg bg-muted/50 p-1">
+      <OverflowListContent ref={containerRef}>
+        <DndContext
+          sensors={tabSensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+          onDragCancel={handleDragCancel}
+        >
+          <SortableContext
+            items={visible.map((d) => d.id)}
+            strategy={horizontalListSortingStrategy}
           >
-            <SortableContext
-              items={visible.map((d) => d.id)}
-              strategy={horizontalListSortingStrategy}
-            >
-              {visible.map((d) => (
-                <OverflowListItem key={d.id} itemId={d.id}>
-                  <SortableTab board={d} onEdit={onEdit} activeId={activeId} />
-                </OverflowListItem>
-              ))}
-            </SortableContext>
+            {visible.map((d) => (
+              <OverflowListItem key={d.id} itemId={d.id}>
+                <SortableTab board={d} onEdit={onEdit} activeId={activeId} />
+              </OverflowListItem>
+            ))}
+          </SortableContext>
 
-            <DragOverlay dropAnimation={null}>
-              {activeDrag ? <TabContent board={activeDrag} isDragging /> : null}
-            </DragOverlay>
-          </DndContext>
-        </OverflowListContent>
+          <DragOverlay dropAnimation={null}>
+            {activeDrag ? <TabContent board={activeDrag} isDragging /> : null}
+          </DragOverlay>
+        </DndContext>
+      </OverflowListContent>
 
-        {/* Indicator always occupies space for stable layout */}
-        <OverflowListIndicator active={hasOverflow}>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 shrink-0 gap-0.5 px-1.5 text-muted-foreground"
-              >
-                <span className="font-medium text-[10px]">
-                  +{hasOverflow ? overflow.length : 1}
-                </span>
-                <ChevronDown className="size-3" />
-              </Button>
-            </DropdownMenuTrigger>
-            {hasOverflow && (
-              <DropdownMenuContent align="start">
-                {overflow.map((d) => (
-                  <DropdownMenuItem
-                    key={`overflow-${d.id}`}
-                    className="group/item flex items-center justify-between gap-3"
-                    onClick={() =>
-                      navigate({
-                        to: paths.boards.detail.to({
-                          boardId: d.id,
-                        }),
-                      })
-                    }
-                  >
-                    <span className="flex items-center gap-1.5">
-                      <BoardIcon icon={d.icon} />
-                      <span className={cn(d.id === boardId && 'font-medium')}>{d.name}</span>
-                    </span>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onEdit(d);
-                      }}
-                      className="flex size-5 items-center justify-center rounded opacity-0 hover:bg-accent group-hover/item:opacity-100"
-                    >
-                      <Pencil className="size-2.5" />
-                    </button>
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            )}
-          </DropdownMenu>
-        </OverflowListIndicator>
-
-        <Separator orientation="vertical" className="mx-0.5 h-5" />
-
-        {/* Create new board */}
-        <Tooltip>
-          <TooltipTrigger asChild>
+      {/* Indicator always occupies space for stable layout */}
+      <OverflowListIndicator active={hasOverflow}>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
-              size="icon"
-              className="size-7 shrink-0"
-              onClick={() => handleCreateOpenChange(true)}
+              size="sm"
+              className="h-7 shrink-0 gap-0.5 px-1.5 text-muted-foreground"
             >
-              <Plus className="size-3.5" />
+              <span className="font-medium text-[10px]">+{hasOverflow ? overflow.length : 1}</span>
+              <ChevronDown className="size-3" />
             </Button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom">{t('boards:board.new')}</TooltipContent>
-        </Tooltip>
-      </OverflowList>
+          </DropdownMenuTrigger>
+          {hasOverflow && (
+            <DropdownMenuContent align="start">
+              {overflow.map((d) => (
+                <DropdownMenuItem
+                  key={`overflow-${d.id}`}
+                  className="group/item flex items-center justify-between gap-3"
+                  onClick={() =>
+                    navigate({
+                      to: paths.boards.detail.to({
+                        boardId: d.id,
+                      }),
+                    })
+                  }
+                >
+                  <span className="flex items-center gap-1.5">
+                    <BoardIcon icon={d.icon} />
+                    <span className={cn(d.id === boardId && 'font-medium')}>{d.name}</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEdit(d);
+                    }}
+                    className="flex size-5 items-center justify-center rounded opacity-0 hover:bg-accent group-hover/item:opacity-100"
+                  >
+                    <Pencil className="size-2.5" />
+                  </button>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          )}
+        </DropdownMenu>
+      </OverflowListIndicator>
 
-      {/* ─── Create dialog ─────────────────────────────────────────────────── */}
-      <Dialog open={createOpen} onOpenChange={handleCreateOpenChange}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{t('boards:board.new')}</DialogTitle>
-            <DialogDescription>{t('boards:board.newDescription')}</DialogDescription>
-          </DialogHeader>
+      <Separator orientation="vertical" className="mx-0.5 h-5" />
 
-          <div className="space-y-4">
-            <BoardFormFields
-              name={newName}
-              icon={newIcon}
-              onNameChange={setNewName}
-              onSubmit={handleCreate}
-              inputId="create-board-name"
-            />
-
-            <Separator />
-
-            <IconPicker value={newIcon} onChange={setNewIcon} />
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => handleCreateOpenChange(false)}>
-              {t('common:actions.cancel')}
-            </Button>
-            <Button onClick={handleCreate} disabled={creating || !newName.trim()}>
-              {creating ? t('common:messages.loading') : t('common:actions.create')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
+      {/* Create new board */}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-7 shrink-0"
+            onClick={() => setCreateBoardOpen(true)}
+          >
+            <Plus className="size-3.5" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">{t('boards:board.new')}</TooltipContent>
+      </Tooltip>
+    </OverflowList>
   );
 }

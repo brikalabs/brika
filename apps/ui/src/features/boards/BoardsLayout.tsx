@@ -8,6 +8,7 @@ import type { BoardSummary } from './api';
 import { AddBrickSheet } from './components/AddBrickSheet';
 import { BoardSwitcher } from './components/BoardSwitcher';
 import { ConfigSheet } from './components/ConfigSheet';
+import { CreateBoardDialog } from './components/CreateBoardDialog';
 import { EditBoardDialog } from './components/EditBoardDialog';
 import { useBoards, useBrickTypesList } from './hooks';
 import { useActiveBoard, useBoardStore } from './store';
@@ -95,9 +96,10 @@ export function BoardsLayout() {
       {/* Child route renders here */}
       <Outlet />
 
-      {/* Sheets (driven by store state, shared across boards) */}
+      {/* Store-driven overlays (shared across boards) */}
       <AddBrickSheet />
       <ConfigSheet />
+      <CreateBoardDialog />
 
       {/* Edit board dialog */}
       {editBoard && (

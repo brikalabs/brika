@@ -27,6 +27,7 @@ interface BoardStore {
   // ─── Sheet state ───────────────────────────────────────────────────────────
   addBrickOpen: boolean;
   configBrickId: string | null;
+  createBoardOpen: boolean;
 
   // ─── Actions ───────────────────────────────────────────────────────────────
   setBoards(list: BoardSummary[]): void;
@@ -34,6 +35,7 @@ interface BoardStore {
   setBrickTypes(types: BrickType[]): void;
   setAddBrickOpen(open: boolean): void;
   setConfigBrickId(id: string | null): void;
+  setCreateBoardOpen(open: boolean): void;
 
   // Brick type updates (hot reload)
   updateBrickTypeModuleUrl(brickTypeId: string, moduleUrl: string): void;
@@ -66,6 +68,7 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
   brickData: new Map(),
   addBrickOpen: false,
   configBrickId: null,
+  createBoardOpen: false,
 
   setBoards(list) {
     set({
@@ -112,6 +115,12 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
   setConfigBrickId(id) {
     set({
       configBrickId: id,
+    });
+  },
+
+  setCreateBoardOpen(open) {
+    set({
+      createBoardOpen: open,
     });
   },
 
