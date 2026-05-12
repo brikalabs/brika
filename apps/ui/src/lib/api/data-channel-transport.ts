@@ -87,16 +87,34 @@ const FALLBACK_ICE_SERVERS: ReadonlyArray<IceServer> = [
 ];
 
 /**
- * Lightweight transport tracer. Always emits to the console — discoverable
- * in devtools without a build flag, but cheap enough to leave on by default.
- * Filter on `[brika.rpc]` in the console to see only transport traffic.
+ * Lightweight transport tracer.
  *
- * `globalThis.console` (rather than the bare `console` identifier) sidesteps
- * the project's `no-console` lint rule — this is a deliberate diagnostic
- * surface, not a forgotten debug print.
+ * Off by default. Enable in devtools with:
+ *   localStorage.setItem('brika.debug.rpc', '1')   // then reload
+ *
+ * When enabled, every outbound RPC request and inbound response frame logs
+ * to the console under the `[brika.rpc]` tag — filterable in devtools.
+ * Useful for diagnosing remote-access issues without redeploying.
+ *
+ * The check is cached at module load (single `localStorage.getItem` call)
+ * to keep production paths to a single boolean read per call.
  */
+const RPC_DEBUG_KEY = 'brika.debug.rpc';
+const RPC_DEBUG_ENABLED = readDebugFlag();
+
+function readDebugFlag(): boolean {
+  try {
+    return globalThis.localStorage?.getItem(RPC_DEBUG_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
 function debug(event: string, data?: Record<string, unknown>): void {
-  // biome-ignore lint/suspicious/noConsole: intentional diagnostic surface
+  if (!RPC_DEBUG_ENABLED) {
+    return;
+  }
+  // biome-ignore lint/suspicious/noConsole: opt-in diagnostic surface
   const log = globalThis.console.debug.bind(globalThis.console);
   if (data === undefined) {
     log('[brika.rpc]', event);
