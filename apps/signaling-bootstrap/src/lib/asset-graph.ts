@@ -25,7 +25,10 @@
 
 import type { PeerHandle } from './peer';
 
-const ASSET_CACHE = 'brika-assets-v1';
+// Keep in sync with `public/sw.js` — they must agree on the cache name
+// for the bootstrap's `cache.put()` to be visible to the SW's
+// `cache.match()`.
+const ASSET_CACHE = 'brika-assets-v2';
 
 /**
  * Absolute-path module specifiers in ES module source. Captures static
@@ -356,31 +359,60 @@ function swapRoot(rootId: string): void {
 
 /**
  * Register the SW that intercepts every cached same-origin GET. Returns
- * true once the SW is controlling this page (or false if not available —
- * old browsers / private mode).
+ * true once an up-to-date SW is controlling this page (or false if SWs
+ * aren't available — old browsers / private mode).
+ *
+ * Auto-recovers from a stale SW carried over from a previous bootstrap
+ * deploy:
+ *
+ *  - `updateViaCache: 'none'` forces the browser to refetch `/sw.js`
+ *    on every register call instead of trusting an HTTP cache that
+ *    can hold the old version for up to 24h.
+ *  - `reg.update()` nudges browsers that still debounce the check.
+ *  - If a new SW shows up installing or waiting, we wait for the
+ *    `controllerchange` event (the new SW's install handler calls
+ *    `skipWaiting()` + the activate handler calls `clients.claim()`
+ *    so the swap happens without a user reload).
+ *
+ * The net effect: a user with the previous /assets/-only SW visits the
+ * page, the bootstrap notices the new SW is installing, waits ~1s for
+ * it to take over, then primes the cache and injects scripts — all the
+ * subsequent module fetches go through the new SW. No manual unregister
+ * or hard refresh needed.
  */
 export async function ensureServiceWorker(): Promise<boolean> {
   if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) {
     return false;
   }
   try {
-    await navigator.serviceWorker.register('/sw.js', { scope: '/' });
-    if (navigator.serviceWorker.controller) {
+    const reg = await navigator.serviceWorker.register('/sw.js', {
+      scope: '/',
+      updateViaCache: 'none',
+    });
+    await reg.update().catch(() => {
+      /* network failure on update check shouldn't abort the bootstrap */
+    });
+
+    const needsControllerChange =
+      !navigator.serviceWorker.controller || Boolean(reg.installing) || Boolean(reg.waiting);
+    if (!needsControllerChange) {
       return true;
     }
-    await new Promise<void>((resolve, reject) => {
-      const t = setTimeout(() => reject(new Error('SW activation timed out')), 5_000);
-      navigator.serviceWorker.addEventListener(
-        'controllerchange',
-        () => {
-          clearTimeout(t);
-          resolve();
-        },
-        { once: true }
-      );
-    });
+    await waitForControllerChange();
     return true;
   } catch {
     return false;
   }
+}
+
+function waitForControllerChange(timeoutMs = 8_000): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('SW activation timed out')), timeoutMs);
+    const handler = (): void => {
+      clearTimeout(timer);
+      navigator.serviceWorker.removeEventListener('controllerchange', handler);
+      resolve();
+    };
+    navigator.serviceWorker.addEventListener('controllerchange', handler);
+  });
 }
