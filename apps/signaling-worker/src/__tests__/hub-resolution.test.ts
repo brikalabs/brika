@@ -46,6 +46,23 @@ describe('resolveHubFromUrl', () => {
     expect(resolveHubFromUrl(new URL('https://hub.brika.dev/v1/health'))).toBeNull();
   });
 
+  it('returns null for asset-binding prefixes (assets, sw.js, etc.)', () => {
+    // Production regression: `assets` happens to match the hub-name regex,
+    // so without this check `/assets/index-XYZ.js` would be resolved as
+    // "hub: assets, restPath: /index-XYZ.js", the asset binding 404s,
+    // and the SPA fallback serves index.html — breaking the bootstrap's
+    // own JS + CSS.
+    expect(
+      resolveHubFromUrl(new URL('https://hub.brika.dev/assets/index-XYZ.js'))
+    ).toBeNull();
+    expect(resolveHubFromUrl(new URL('https://hub.brika.dev/assets/style.css'))).toBeNull();
+    expect(resolveHubFromUrl(new URL('https://hub.brika.dev/favicon.ico'))).toBeNull();
+    expect(resolveHubFromUrl(new URL('https://hub.brika.dev/robots.txt'))).toBeNull();
+    // `sw.js` doesn't even match the regex (contains a dot, length 5) but
+    // listing it in the set is defence in depth.
+    expect(resolveHubFromUrl(new URL('https://hub.brika.dev/sw.js'))).toBeNull();
+  });
+
   it('is hostname-agnostic — works on workers.dev preview URLs too', () => {
     expect(
       resolveHubFromUrl(new URL('https://brika-signaling.maxscharwath.workers.dev/maxime'))

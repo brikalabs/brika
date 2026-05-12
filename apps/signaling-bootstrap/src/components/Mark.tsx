@@ -17,7 +17,7 @@ export function Mark({ phase }: MarkProps): React.ReactElement {
   const isStatic = STATIC_PHASES.has(phase);
   return (
     <div
-      className="relative mx-auto mb-6 grid size-[92px] place-items-center rounded-[26px] bg-foreground"
+      className="relative mx-auto mb-6 grid size-24 place-items-center rounded-[26px] bg-foreground shadow-foreground/15 shadow-lg"
       data-brika-static={isStatic ? '' : undefined}
       data-brika-error={phase === 'error' ? '' : undefined}
       aria-hidden="true"
@@ -25,7 +25,7 @@ export function Mark({ phase }: MarkProps): React.ReactElement {
       <span className="brika-status-dot" />
       <span className="brika-mark-halo" />
       <svg
-        className="size-14 overflow-visible text-background"
+        className="size-20 overflow-visible text-background"
         viewBox="0 0 240 240"
         fill="currentColor"
       >
