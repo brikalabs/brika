@@ -24,6 +24,7 @@ import {
   PROTOCOL_VERSION,
   parseSubprotocols,
 } from '@brika/remote-access-protocol';
+import { Hono } from 'hono';
 import { ClaimError, ClaimStore } from './claims';
 import { Registry } from './registry';
 import { routeFrame } from './router';
@@ -131,29 +132,6 @@ await claims.load();
 
 // ─── HTTP route handlers ──────────────────────────────────────────────────
 
-async function handleTickets(req: Request): Promise<Response> {
-  if (!originAllowed(req)) {
-    return Response.json({ error: 'forbidden origin' }, { status: 403 });
-  }
-  let body: { hubName?: string };
-  try {
-    body = (await req.json()) as { hubName?: string };
-  } catch {
-    return Response.json({ error: 'Invalid JSON' }, { status: 400 });
-  }
-  if (!body.hubName || typeof body.hubName !== 'string') {
-    return Response.json({ error: 'hubName required' }, { status: 400 });
-  }
-  // Tickets are useless without a hub to connect to — refuse to mint for
-  // unknown names so we don't waste the browser's time.
-  if (!claims.get(body.hubName.toLowerCase())) {
-    return Response.json({ error: 'Unknown hub' }, { status: 404 });
-  }
-  const { ticket, expiresAt } = await mintTicket(SECRET, body.hubName);
-  const iceServers = await mergedIceServers();
-  return Response.json({ ticket, expiresAt, iceServers });
-}
-
 /**
  * STUN + a fresh Cloudflare Realtime TURN credential pair (when configured
  * via `CF_REALTIME_APP_ID` / `CF_REALTIME_APP_TOKEN`). Soft-fails to the
@@ -167,7 +145,7 @@ async function mergedIceServers(): Promise<ReadonlyArray<IceServer>> {
   return turn.length > 0 ? [...ICE_SERVERS, ...turn] : ICE_SERVERS;
 }
 
-function claimErrorStatus(code: ClaimError['code']): number {
+function claimErrorStatus(code: ClaimError['code']): 400 | 401 | 403 | 404 | 409 {
   switch (code) {
     case 'invalid-name':
       return 400;
@@ -182,102 +160,116 @@ function claimErrorStatus(code: ClaimError['code']): number {
   }
 }
 
-async function handleClaim(req: Request): Promise<Response> {
-  if (!originAllowed(req)) {
-    return Response.json({ error: 'forbidden origin' }, { status: 403 });
-  }
-  let body: { name?: string };
-  try {
-    body = (await req.json()) as { name?: string };
-  } catch {
-    return Response.json({ error: 'Invalid JSON' }, { status: 400 });
-  }
-  if (!body.name || typeof body.name !== 'string') {
-    return Response.json({ error: 'name required' }, { status: 400 });
-  }
-  try {
-    const claim = await claims.claim(body.name);
-    return Response.json({
-      name: claim.name,
-      token: claim.token,
-      createdAt: claim.createdAt,
-    });
-  } catch (err) {
-    if (err instanceof ClaimError) {
-      return Response.json(
-        { error: err.message, code: err.code },
-        { status: claimErrorStatus(err.code) }
-      );
-    }
-    throw err;
-  }
-}
-
 function bearerFromAuthHeader(req: Request): string {
   const auth = req.headers.get('authorization') ?? '';
   return auth.startsWith('Bearer ') ? auth.slice('Bearer '.length).trim() : '';
 }
 
-async function handleRotate(req: Request, name: string): Promise<Response> {
-  const token = bearerFromAuthHeader(req);
+// ─── App ──────────────────────────────────────────────────────────────────
+//
+// Hono is the router. The second arg of `app.fetch` is the Bindings env;
+// we pass the Bun server through so WS-upgrade routes can call
+// `c.env.upgrade(c.req.raw, { data })`. Same router family as the CF Worker
+// coordinator and the in-process hub API — uniform across the stack.
+
+const app = new Hono<{ Bindings: Bun.Server<WSData> }>();
+
+app.get('/v1/health', (c) => c.json({ ok: true, claims: claims.size(), ...registry.stats() }));
+
+app.post('/v1/tickets', async (c) => {
+  if (!originAllowed(c.req.raw)) {
+    return c.json({ error: 'forbidden origin' }, 403);
+  }
+  const body = await c.req.json<{ hubName?: string }>().catch(() => null);
+  if (!body?.hubName || typeof body.hubName !== 'string') {
+    return c.json({ error: 'hubName required' }, 400);
+  }
+  if (!claims.get(body.hubName.toLowerCase())) {
+    return c.json({ error: 'Unknown hub' }, 404);
+  }
+  const { ticket, expiresAt } = await mintTicket(SECRET, body.hubName);
+  const iceServers = await mergedIceServers();
+  return c.json({ ticket, expiresAt, iceServers });
+});
+
+app.post('/v1/hubs/claim', async (c) => {
+  if (!originAllowed(c.req.raw)) {
+    return c.json({ error: 'forbidden origin' }, 403);
+  }
+  const body = await c.req.json<{ name?: string }>().catch(() => null);
+  if (!body?.name || typeof body.name !== 'string') {
+    return c.json({ error: 'name required' }, 400);
+  }
+  try {
+    const claim = await claims.claim(body.name);
+    return c.json({ name: claim.name, token: claim.token, createdAt: claim.createdAt });
+  } catch (err) {
+    if (err instanceof ClaimError) {
+      return c.json({ error: err.message, code: err.code }, claimErrorStatus(err.code));
+    }
+    throw err;
+  }
+});
+
+app.post('/v1/hubs/:name/rotate', async (c) => {
+  const token = bearerFromAuthHeader(c.req.raw);
   const auth = authenticateHubToken(token, claims);
-  if (auth !== name.toLowerCase()) {
-    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  if (auth !== c.req.param('name').toLowerCase()) {
+    return c.json({ error: 'Unauthorized' }, 401);
   }
   const next = await claims.rotateToken(auth);
-  return Response.json({ name: next.name, token: next.token });
-}
+  return c.json({ name: next.name, token: next.token });
+});
 
-async function handleRelease(req: Request, name: string): Promise<Response> {
-  const token = bearerFromAuthHeader(req);
+app.delete('/v1/hubs/:name', async (c) => {
+  const token = bearerFromAuthHeader(c.req.raw);
   const auth = authenticateHubToken(token, claims);
-  if (auth !== name.toLowerCase()) {
-    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  if (auth !== c.req.param('name').toLowerCase()) {
+    return c.json({ error: 'Unauthorized' }, 401);
   }
   await claims.release(auth);
   // If the hub is currently connected, drop it.
-  const hub = registry.getHub(auth);
-  hub?.socket.close(4006, 'claim released');
-  return Response.json({ ok: true });
-}
+  registry.getHub(auth)?.socket.close(4006, 'claim released');
+  return c.json({ ok: true });
+});
 
-function handleHubUpgrade(req: Request, server: Bun.Server<WSData>): Response | undefined {
-  const subs = parseSubprotocols(req.headers.get('sec-websocket-protocol'));
+// ─── WebSocket upgrade routes ──────────────────────────────────────────────
+
+app.all('/v1/hub', (c) => {
+  const subs = parseSubprotocols(c.req.header('sec-websocket-protocol') ?? null);
   if (subs.proto !== `brika.v${PROTOCOL_VERSION}`) {
-    return new Response('Unsupported protocol', { status: 400 });
+    return c.text('Unsupported protocol', 400);
   }
   const name = authenticateHubToken(subs.bearer ?? '', claims);
   if (!name) {
-    return new Response('Unauthorized', { status: 401 });
+    return c.text('Unauthorized', 401);
   }
-  const ok = server.upgrade(req, {
+  const ok = c.env.upgrade(c.req.raw, {
     data: { role: 'hub.pending', expectedName: name } satisfies WSData,
   });
-  return ok ? undefined : new Response('Upgrade failed', { status: 426 });
-}
+  return ok ? c.body(null) : c.text('Upgrade failed', 426);
+});
 
-async function handleClientUpgrade(
-  req: Request,
-  server: Bun.Server<WSData>
-): Promise<Response | undefined> {
-  const url = new URL(req.url);
-  const hubName = url.searchParams.get('hub');
-  const ticket = url.searchParams.get('ticket');
+app.all('/v1/client', async (c) => {
+  const hubName = c.req.query('hub');
+  const ticket = c.req.query('ticket');
   if (!hubName || !ticket) {
-    return new Response('hub and ticket required', { status: 400 });
+    return c.text('hub and ticket required', 400);
   }
-  const claims = await verifyTicket(SECRET, ticket);
-  if (claims?.hub !== hubName) {
-    return new Response('Invalid ticket', { status: 401 });
+  const verified = await verifyTicket(SECRET, ticket);
+  if (verified?.hub !== hubName) {
+    return c.text('Invalid ticket', 401);
   }
   if (!registry.getHub(hubName)) {
-    return new Response('Hub offline', { status: 503 });
+    return c.text('Hub offline', 503);
   }
-  const ok = server.upgrade(req, {
+  const ok = c.env.upgrade(c.req.raw, {
     data: { role: 'client', sessionId: '', hubName, socket: null } satisfies WSData,
   });
-  return ok ? undefined : new Response('Upgrade failed', { status: 426 });
-}
+  return ok ? c.body(null) : c.text('Upgrade failed', 426);
+});
+
+app.all('*', (c) => c.text('Not found', 404));
 
 // ─── WebSocket message handlers ───────────────────────────────────────────
 
@@ -366,33 +358,7 @@ function onClose(ws: Bun.ServerWebSocket<WSData>): void {
 
 const server = Bun.serve<WSData>({
   port: PORT,
-  fetch: (req, srv) => {
-    const url = new URL(req.url);
-    if (url.pathname === '/v1/health') {
-      return Response.json({ ok: true, claims: claims.size(), ...registry.stats() });
-    }
-    if (url.pathname === '/v1/tickets' && req.method === 'POST') {
-      return handleTickets(req);
-    }
-    if (url.pathname === '/v1/hubs/claim' && req.method === 'POST') {
-      return handleClaim(req);
-    }
-    const rotateMatch = /^\/v1\/hubs\/([^/]+)\/rotate$/.exec(url.pathname);
-    if (rotateMatch && req.method === 'POST') {
-      return handleRotate(req, decodeURIComponent(rotateMatch[1] as string));
-    }
-    const releaseMatch = /^\/v1\/hubs\/([^/]+)$/.exec(url.pathname);
-    if (releaseMatch && req.method === 'DELETE') {
-      return handleRelease(req, decodeURIComponent(releaseMatch[1] as string));
-    }
-    if (url.pathname === '/v1/hub') {
-      return handleHubUpgrade(req, srv);
-    }
-    if (url.pathname === '/v1/client') {
-      return handleClientUpgrade(req, srv);
-    }
-    return new Response('Not found', { status: 404 });
-  },
+  fetch: (req, srv) => app.fetch(req, srv),
   websocket: {
     open(ws) {
       onClientOpen(ws);
