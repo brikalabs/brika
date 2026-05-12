@@ -61,6 +61,23 @@ describe('isPrivateNetworkOrigin', () => {
     expect(isPrivateNetworkOrigin('https://example.com')).toBe(false);
   });
 
+  it('rejects attacker-controlled names that prefix a private IP', () => {
+    // The unanchored `startsWith('10.')` regression — nip.io and sslip.io
+    // make these names trivially resolvable to attacker-controlled IPs.
+    expect(isPrivateNetworkOrigin('http://10.0.0.1.evil.com')).toBe(false);
+    expect(isPrivateNetworkOrigin('http://192.168.1.1.attacker.example')).toBe(false);
+    expect(isPrivateNetworkOrigin('http://172.16.0.1.nip.io')).toBe(false);
+    expect(isPrivateNetworkOrigin('http://172.31.255.255.evil.com')).toBe(false);
+    expect(isPrivateNetworkOrigin('http://169.254.1.1.evil.com')).toBe(false);
+  });
+
+  it('accepts IPv6 unique-local (fc00::/7) and link-local (fe80::/10)', () => {
+    expect(isPrivateNetworkOrigin('http://[fd00::1234]')).toBe(true);
+    expect(isPrivateNetworkOrigin('http://[fc00::1]:8080')).toBe(true);
+    expect(isPrivateNetworkOrigin('http://[fe80::1]')).toBe(true);
+    expect(isPrivateNetworkOrigin('http://[febf::1]')).toBe(true);
+  });
+
   it('rejects malformed origin strings without throwing', () => {
     expect(isPrivateNetworkOrigin('not a url')).toBe(false);
     expect(isPrivateNetworkOrigin('')).toBe(false);

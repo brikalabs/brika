@@ -56,13 +56,28 @@ export function isPrivateNetworkOrigin(origin: string): boolean {
     if (host.endsWith('.local')) {
       return true;
     }
-    if (host.startsWith('10.') || host.startsWith('192.168.')) {
+    // Anchored IPv4 patterns — `host.startsWith('10.')` would otherwise let
+    // attacker-controlled names like `10.0.0.1.evil.com` pass and defeat the
+    // LAN CORS allowlist (nip.io / sslip.io make this free public infra).
+    if (/^10(?:\.\d{1,3}){3}$/.test(host)) {
       return true;
     }
-    if (/^172\.(1[6-9]|2\d|3[01])\./.test(host)) {
+    if (/^192\.168(?:\.\d{1,3}){2}$/.test(host)) {
       return true;
     }
-    if (host.startsWith('169.254.')) {
+    if (/^172\.(1[6-9]|2\d|3[01])(?:\.\d{1,3}){2}$/.test(host)) {
+      return true;
+    }
+    if (/^169\.254(?:\.\d{1,3}){2}$/.test(host)) {
+      return true;
+    }
+    // IPv6 unique-local (fc00::/7) and link-local (fe80::/10). URL().hostname
+    // keeps the surrounding brackets on IPv6 literals, matching the existing
+    // `[::1]` shape above.
+    if (host.startsWith('[fc') || host.startsWith('[fd')) {
+      return true;
+    }
+    if (/^\[fe[89ab]/.test(host)) {
       return true;
     }
     return false;

@@ -33,11 +33,18 @@ function stripPort(host: string): string {
 
 function isPrivateNetwork(host: string): boolean {
   const bare = stripPort(host).toLowerCase();
-  // IPv4 private ranges
-  if (bare.startsWith('10.') || bare.startsWith('192.168.') || bare.startsWith('169.254.')) {
+  // Anchored IPv4 patterns — `bare.startsWith('10.')` would otherwise match
+  // attacker-controlled `10.0.0.1.evil.com` and enable a DNS-rebinding bypass.
+  if (/^10(?:\.\d{1,3}){3}$/.test(bare)) {
     return true;
   }
-  if (/^172\.(1[6-9]|2\d|3[01])\./.test(bare)) {
+  if (/^192\.168(?:\.\d{1,3}){2}$/.test(bare)) {
+    return true;
+  }
+  if (/^169\.254(?:\.\d{1,3}){2}$/.test(bare)) {
+    return true;
+  }
+  if (/^172\.(1[6-9]|2\d|3[01])(?:\.\d{1,3}){2}$/.test(bare)) {
     return true;
   }
   // IPv6 unique-local fc00::/7 and link-local fe80::/10

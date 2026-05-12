@@ -41,6 +41,13 @@ describe('hostAllowlist', () => {
     expect((await call('attacker.brika.dev')).status).toBe(421);
   });
 
+  it('rejects attacker-controlled names prefixing a private IP (DNS rebinding)', async () => {
+    expect((await call('10.0.0.1.evil.com')).status).toBe(421);
+    expect((await call('192.168.evil.com')).status).toBe(421);
+    expect((await call('172.16.0.1.nip.io')).status).toBe(421);
+    expect((await call('169.254.1.1.attacker.example')).status).toBe(421);
+  });
+
   it('accepts explicitly-allowlisted hosts', async () => {
     expect((await call('maxime.brika.dev', ['maxime.brika.dev'])).status).toBe(200);
     expect((await call('maxime.brika.dev:443', ['maxime.brika.dev'])).status).toBe(200);

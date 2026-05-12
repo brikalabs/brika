@@ -471,7 +471,11 @@ export class RemoteAccessService {
       sessionId,
       baseOrigin,
       apiServer: this.#apiServer,
-      remoteIp: 'rtc:peer',
+      // Per-session identifier so each remote browser gets its own rate-limit
+      // bucket. A literal `'rtc:peer'` shared across all sessions collapses
+      // the per-IP throttle into a single global bucket — one bad-password
+      // streak from any remote user would 429 every other remote user.
+      remoteIp: `rtc:${sessionId}`,
       log: this.#log,
     });
 

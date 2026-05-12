@@ -229,6 +229,18 @@ export class HubSession {
       return;
     }
     if (attachment.role === 'hub') {
+      // Gate the client teardown on "no replacement hub WS is attached".
+      // `#acceptHub` evicts the prior hub socket with `close(4001)` and
+      // synchronously accepts the new one — Cloudflare then dispatches this
+      // `webSocketClose` for the OLD ws after the NEW one is already tagged
+      // 'hub'. Per the Hibernation API, the closing ws is excluded from
+      // `getWebSockets()` results inside `webSocketClose`, so `length === 0`
+      // means "no replacement". The Bun coordinator's `unregisterHub`
+      // (apps/signaling/src/registry.ts) has the equivalent socket-identity
+      // guard.
+      if (this.#state.getWebSockets('hub').length > 0) {
+        return;
+      }
       // Tear down every client session attached to this hub.
       for (const client of this.#state.getWebSockets('client')) {
         try {
