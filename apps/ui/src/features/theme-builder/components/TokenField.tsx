@@ -1,6 +1,7 @@
 import type { ResolvedTokenSpec, TokenType } from '@brika/clay/tokens';
 import { useCallback } from 'react';
 import { tokenSuffix } from '../clay-tokens';
+import { kebabToCamel } from '../naming';
 import type { ThemeConfig } from '../types';
 import { ColorField } from './ColorField';
 import {
@@ -49,7 +50,7 @@ export function TokenField({
   onTokenChange,
 }: Readonly<TokenFieldProps>) {
   if (spec.type === 'color') {
-    const palette = mode === 'light' ? draft.colors.light : draft.colors.dark;
+    const palette = (mode === 'light' ? draft.colors?.light : draft.colors?.dark) ?? {};
     const fallback = mode === 'dark' && spec.defaultDark ? spec.defaultDark : spec.defaultLight;
     return (
       <ColorField
@@ -86,8 +87,8 @@ function NonColorWidget({ spec, component, draft, onTokenChange }: Readonly<NonC
     [component, suffix, onTokenChange]
   );
 
-  const stored = draft.componentTokens?.[component]?.[suffix];
-  const effective = (stored !== undefined ? String(stored) : undefined) ?? spec.defaultLight;
+  const stored = draft.components?.[component]?.[kebabToCamel(suffix)];
+  const effective = stored ?? spec.defaultLight;
 
   if (spec.type === 'corner-shape') {
     return <CornerShapeWidget value={effective} onChange={setValue} />;

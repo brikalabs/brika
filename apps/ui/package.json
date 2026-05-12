@@ -17,7 +17,8 @@
   },
   "dependencies": {
     "@brika/auth": "workspace:*",
-    "@brika/clay": "workspace:*",
+    "@brika/clay": "^0.1.0",
+    "@brika/ipc": "workspace:*",
     "@brika/permissions": "workspace:*",
     "@brika/plugin": "workspace:*",
     "@brika/type-system": "workspace:*",

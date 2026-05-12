@@ -7,7 +7,7 @@
 import { Button, Card, cn, Slider, SliderValue } from '@brika/clay';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { motionRecipeFor } from '../theme-css';
+import { motionRecipeFor } from '../recipes';
 import { MOTION_STYLES, type MotionStyle } from '../types';
 import { FieldPreview } from './FieldPreview';
 import { cssVars, type Preset, PresetChips } from './primitives';

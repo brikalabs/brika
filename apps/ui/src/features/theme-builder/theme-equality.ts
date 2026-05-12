@@ -1,22 +1,18 @@
 /**
- * Field-by-field equality for ThemeConfig. Cheaper than JSON.stringify
+ * Field-by-field equality for ThemeConfig (v2). Cheaper than JSON.stringify
  * and avoids allocating two multi-KB strings on every render.
  */
 
-import type { ComponentTokens, ThemeConfig } from './types';
+import type { ComponentTokens, ThemeConfig, TokenMap } from './types';
 
-function isEqualPalette(
-  a: ThemeConfig['colors']['light'],
-  b: ThemeConfig['colors']['light']
-): boolean {
-  const entriesA = Object.entries(a);
-  const entriesB = Object.entries(b);
-  if (entriesA.length !== entriesB.length) {
+function isEqualPalette(a: TokenMap | undefined, b: TokenMap | undefined): boolean {
+  const ak = a ? Object.keys(a) : [];
+  const bk = b ? Object.keys(b) : [];
+  if (ak.length !== bk.length) {
     return false;
   }
-  const bMap = new Map(entriesB);
-  for (const [key, value] of entriesA) {
-    if (bMap.get(key) !== value) {
+  for (const k of ak) {
+    if (a?.[k] !== b?.[k]) {
       return false;
     }
   }
@@ -24,7 +20,7 @@ function isEqualPalette(
 }
 
 function isEqualColors(a: ThemeConfig['colors'], b: ThemeConfig['colors']): boolean {
-  return isEqualPalette(a.light, b.light) && isEqualPalette(a.dark, b.dark);
+  return isEqualPalette(a?.light, b?.light) && isEqualPalette(a?.dark, b?.dark);
 }
 
 /** Shallow equality for an optional flat record: `undefined`/empty are equal. */
@@ -45,19 +41,16 @@ function isEqualOptionalRecord(
   return true;
 }
 
-/** Per-component tokens compared field-by-field. Uses `isEqualOptionalRecord`
- *  on each entry so any clay token suffix (radius, shadow, corner-shape, …)
- *  is detected without listing them here. */
-function isEqualComponentTokens(
-  a: ThemeConfig['componentTokens'],
-  b: ThemeConfig['componentTokens']
+function isEqualComponents(
+  a: ComponentTokens | undefined,
+  b: ComponentTokens | undefined
 ): boolean {
   const aEntries = Object.entries(a ?? {});
   const bEntries = Object.entries(b ?? {});
   if (aEntries.length !== bEntries.length) {
     return false;
   }
-  const bMap = new Map<string, ComponentTokens | undefined>(bEntries);
+  const bMap = new Map(bEntries);
   for (const [key, av] of aEntries) {
     if (!isEqualOptionalRecord(av, bMap.get(key))) {
       return false;
@@ -66,32 +59,53 @@ function isEqualComponentTokens(
   return true;
 }
 
+function isEqualSection<T extends Record<string, unknown>>(
+  a: T | undefined,
+  b: T | undefined
+): boolean {
+  return isEqualOptionalRecord(a, b);
+}
+
+function isEqualBrika(a: ThemeConfig['brika'], b: ThemeConfig['brika']): boolean {
+  if (!a && !b) {
+    return true;
+  }
+  if (!a || !b) {
+    return false;
+  }
+  if (
+    a.elevation !== b.elevation ||
+    a.elevationTint !== b.elevationTint ||
+    a.motion !== b.motion ||
+    a.corners !== b.corners
+  ) {
+    return false;
+  }
+  return isEqualOptionalRecord(a.stateOpacity, b.stateOpacity);
+}
+
 export function isEqualTheme(a: ThemeConfig, b: ThemeConfig): boolean {
   if (
     a.id !== b.id ||
     a.name !== b.name ||
     a.author !== b.author ||
     a.description !== b.description ||
-    a.radius !== b.radius ||
-    a.corners !== b.corners ||
-    a.spacing !== b.spacing ||
-    a.borderWidth !== b.borderWidth ||
-    a.elevation !== b.elevation ||
-    a.elevationTint !== b.elevationTint ||
-    a.backdropBlur !== b.backdropBlur ||
-    a.ringWidth !== b.ringWidth ||
-    a.ringOffset !== b.ringOffset ||
-    a.motion !== b.motion ||
-    a.textBase !== b.textBase ||
-    a.fonts.sans !== b.fonts.sans ||
-    a.fonts.mono !== b.fonts.mono
+    a.version !== b.version
   ) {
     return false;
   }
-  if (!isEqualOptionalRecord(a.stateOpacity, b.stateOpacity)) {
+  if (
+    !isEqualSection(a.geometry, b.geometry) ||
+    !isEqualSection(a.borders, b.borders) ||
+    !isEqualSection(a.motion, b.motion) ||
+    !isEqualSection(a.focus, b.focus)
+  ) {
     return false;
   }
-  if (!isEqualComponentTokens(a.componentTokens, b.componentTokens)) {
+  if (!isEqualBrika(a.brika, b.brika)) {
+    return false;
+  }
+  if (!isEqualComponents(a.components, b.components)) {
     return false;
   }
   return isEqualColors(a.colors, b.colors);

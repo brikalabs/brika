@@ -8,6 +8,7 @@ import { Button, cn } from '@brika/clay';
 import type { ResolvedTokenSpec } from '@brika/clay/tokens';
 import { RotateCcw } from 'lucide-react';
 import { useCallback } from 'react';
+import { kebabToCamel } from '../naming';
 import type { ThemeConfig } from '../types';
 import type { PreviewMode } from './PreviewStage';
 import { TokenField } from './TokenField';
@@ -81,12 +82,13 @@ export function TokenRow({
 function isOverridden(spec: ResolvedTokenSpec, draft: ThemeConfig): boolean {
   if (spec.type === 'color') {
     return (
-      draft.colors.light[spec.name] !== undefined || draft.colors.dark[spec.name] !== undefined
+      draft.colors?.light?.[spec.name] !== undefined ||
+      draft.colors?.dark?.[spec.name] !== undefined
     );
   }
   if (!spec.appliesTo) {
     return false;
   }
   const suffix = spec.name.replace(`${spec.appliesTo}-`, '');
-  return draft.componentTokens?.[spec.appliesTo]?.[suffix] !== undefined;
+  return draft.components?.[spec.appliesTo]?.[kebabToCamel(suffix)] !== undefined;
 }

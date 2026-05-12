@@ -1,13 +1,7 @@
 /**
- * Palette presets — quick-start themes the user can seed from.
- *
- * Presets live as JSON in `./presets/` and are loaded via Vite's
- * `import.meta.glob` in [load-presets.ts](./load-presets.ts). This file
- * keeps the `ThemePreset` type and the `createThemeFromPreset()` helper
- * so existing consumers (PresetPicker, builder page) don't need to move.
- *
- * Adding a theme is a file change, not a code change: drop a new JSON
- * file into `./presets/` and it appears in the UI after reload.
+ * Quick-start themes a user can seed from. Presets come from Clay's
+ * `builtInThemes` (v2 ThemeConfig shape) and wear a Brika metadata jacket
+ * (`version`, `createdAt`, `updatedAt`, `id`) when persisted as a custom theme.
  */
 
 import type { ThemePreset } from './load-presets';
@@ -17,7 +11,7 @@ import { THEME_CONFIG_VERSION } from './types';
 export type { ThemePreset } from './load-presets';
 export { findPreset, THEME_PRESETS } from './load-presets';
 
-/** Build a fresh ThemeConfig from a preset. Generates new id + timestamps. */
+/** Build a fresh ThemeConfig from a Clay preset. Generates new id + timestamps. */
 export function createThemeFromPreset(
   preset: ThemePreset,
   name?: string,
@@ -25,34 +19,33 @@ export function createThemeFromPreset(
   monoFont?: string
 ): ThemeConfig {
   const now = Date.now();
+  const fontSans =
+    preset.geometry?.fontSans ?? sansFont ?? 'Inter, ui-sans-serif, system-ui, sans-serif';
+  const fontMono =
+    preset.geometry?.fontMono ??
+    monoFont ??
+    '"JetBrains Mono", ui-monospace, SFMono-Regular, monospace';
   return {
     version: THEME_CONFIG_VERSION,
     id: `custom-${now.toString(36)}`,
     name: name ?? preset.name,
+    description: preset.description ?? '',
+    accentSwatches: preset.accentSwatches ?? [],
     createdAt: now,
     updatedAt: now,
-    radius: preset.radius ?? 0.75,
-    corners: preset.corners ?? 'round',
-    spacing: preset.spacing,
-    textBase: preset.textBase,
-    borderWidth: preset.borderWidth,
-    backdropBlur: preset.backdropBlur,
-    ringWidth: preset.ringWidth,
-    ringOffset: preset.ringOffset,
-    motion: preset.motion,
-    fonts: {
-      sans: preset.fonts?.sans ?? sansFont ?? 'Inter, ui-sans-serif, system-ui, sans-serif',
-      mono:
-        preset.fonts?.mono ??
-        monoFont ??
-        '"JetBrains Mono", ui-monospace, SFMono-Regular, monospace',
-    },
-    colors: {
-      light: { ...preset.colors.light },
-      dark: { ...preset.colors.dark },
-    },
-    componentTokens: preset.componentTokens
-      ? Object.fromEntries(Object.entries(preset.componentTokens).map(([k, v]) => [k, { ...v }]))
+    colors: preset.colors
+      ? {
+          light: preset.colors.light ? { ...preset.colors.light } : undefined,
+          dark: preset.colors.dark ? { ...preset.colors.dark } : undefined,
+        }
       : undefined,
+    geometry: { ...preset.geometry, fontSans, fontMono },
+    borders: preset.borders ? { ...preset.borders } : undefined,
+    motion: preset.motion ? { ...preset.motion } : undefined,
+    focus: preset.focus ? { ...preset.focus } : undefined,
+    components: preset.components
+      ? Object.fromEntries(Object.entries(preset.components).map(([k, v]) => [k, { ...v }]))
+      : undefined,
+    effects: preset.effects ? [...preset.effects] : undefined,
   };
 }

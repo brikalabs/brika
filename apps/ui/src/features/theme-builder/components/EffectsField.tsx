@@ -9,7 +9,7 @@
 import { cn, Switch } from '@brika/clay';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { shadowScaleFor } from '../theme-css';
+import { shadowScaleFor } from '../recipes';
 import { ELEVATION_STYLES, type ElevationStyle } from '../types';
 import { FieldPreview } from './FieldPreview';
 import { nearlyEquals, type Preset, PresetChips, SemanticTile } from './primitives';

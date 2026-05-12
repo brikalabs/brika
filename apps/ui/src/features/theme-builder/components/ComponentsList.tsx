@@ -9,6 +9,7 @@ import { ChevronRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { type ComponentIdentity, GROUPS } from '../clay-component-identity';
 import { COMPONENT_TOKEN_INDEX } from '../clay-tokens';
+import { kebabToCamel } from '../naming';
 import type { ThemeConfig } from '../types';
 
 /** Number of explicitly-overridden tokens for a component on the draft. */
@@ -18,14 +19,14 @@ export function countOverrides(draft: ThemeConfig, component: string): number {
   for (const spec of tokens) {
     if (spec.type === 'color') {
       if (
-        draft.colors.light[spec.name] !== undefined ||
-        draft.colors.dark[spec.name] !== undefined
+        draft.colors?.light?.[spec.name] !== undefined ||
+        draft.colors?.dark?.[spec.name] !== undefined
       ) {
         count += 1;
       }
     } else {
       const suffix = spec.name.replace(`${component}-`, '');
-      if (draft.componentTokens?.[component]?.[suffix] !== undefined) {
+      if (draft.components?.[component]?.[kebabToCamel(suffix)] !== undefined) {
         count += 1;
       }
     }

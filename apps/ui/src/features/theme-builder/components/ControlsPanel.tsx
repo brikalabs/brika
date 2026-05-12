@@ -24,11 +24,10 @@ export function ControlsPanel({ draft, onChange }: Readonly<ControlsPanelProps>)
   const { t } = useTranslation('themeBuilder');
   const [tab, setTab] = useState<'design' | 'palette'>('design');
 
-  const patch = <K extends keyof ThemeConfig>(key: K, value: ThemeConfig[K]) =>
-    onChange({ ...draft, [key]: value });
-
-  const updateFontSans = (sans: string) => onChange({ ...draft, fonts: { ...draft.fonts, sans } });
-  const updateFontMono = (mono: string) => onChange({ ...draft, fonts: { ...draft.fonts, mono } });
+  const updateFontSans = (sans: string) =>
+    onChange({ ...draft, geometry: { ...draft.geometry, fontSans: sans } });
+  const updateFontMono = (mono: string) =>
+    onChange({ ...draft, geometry: { ...draft.geometry, fontMono: mono } });
   const updateMeta = (key: 'name' | 'description' | 'author', value: string) =>
     onChange({ ...draft, [key]: value });
 
@@ -58,7 +57,6 @@ export function ControlsPanel({ draft, onChange }: Readonly<ControlsPanelProps>)
         >
           <DesignTab
             draft={draft}
-            patch={patch}
             onChange={onChange}
             onFontSansChange={updateFontSans}
             onFontMonoChange={updateFontMono}
