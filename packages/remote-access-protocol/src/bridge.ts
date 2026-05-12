@@ -53,11 +53,28 @@ const HOP_BY_HOP_HEADERS = new Set([
 function headersToPairs(headers: Headers): Array<[string, string]> {
   const pairs: Array<[string, string]> = [];
   headers.forEach((value, name) => {
-    if (HOP_BY_HOP_HEADERS.has(name.toLowerCase())) {
+    const lower = name.toLowerCase();
+    if (HOP_BY_HOP_HEADERS.has(lower)) {
+      return;
+    }
+    // `Headers.forEach` callers see `set-cookie` as a single comma-joined
+    // string per the Fetch spec — that mangles real cookies whose Expires
+    // date contains commas. We handle Set-Cookie separately via
+    // `getSetCookie()` below, so skip it here.
+    if (lower === 'set-cookie') {
       return;
     }
     pairs.push([name, value]);
   });
+  // `getSetCookie()` (web standard since 2023, supported by Bun + modern
+  // browsers + Node) returns each Set-Cookie value as its own array entry
+  // — preserving multiple cookies and any commas in Expires.
+  const getSetCookie = (headers as Headers & { getSetCookie?: () => string[] }).getSetCookie;
+  if (typeof getSetCookie === 'function') {
+    for (const cookie of getSetCookie.call(headers)) {
+      pairs.push(['set-cookie', cookie]);
+    }
+  }
   return pairs;
 }
 

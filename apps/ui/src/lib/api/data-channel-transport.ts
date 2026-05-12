@@ -455,7 +455,15 @@ export class DataChannelTransport implements Transport {
         debug('← hello', { role: msg.role, version: msg.softwareVersion });
         return;
       case 'response.head': {
-        debug('← response.head', { id: msg.id, status: msg.status });
+        const setCookies = msg.headers
+          .filter(([n]) => n.toLowerCase() === 'set-cookie')
+          .map(([, v]) => v);
+        debug('← response.head', {
+          id: msg.id,
+          status: msg.status,
+          headerNames: msg.headers.map(([n]) => n),
+          setCookies,
+        });
         this.#extractSetCookies(msg);
         const inflight = this.#inflight.get(msg.id);
         if (!inflight) {
@@ -535,6 +543,7 @@ export class DataChannelTransport implements Transport {
   #attachCookies(req: Request): Request {
     const path = new URL(req.url).pathname;
     const header = this.#cookies.cookieHeader(path);
+    debug('cookie jar lookup', { path, attached: header || '(none)' });
     if (!header) {
       return req;
     }
