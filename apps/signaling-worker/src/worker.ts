@@ -4,6 +4,7 @@
  * Routes:
  *   - GET    /v1/health                liveness probe
  *   - POST   /v1/hubs/claim            first-come-first-serve name claim
+ *   - GET    /v1/hubs/:name/status     per-hub liveness probe
  *   - POST   /v1/hubs/:name/rotate     rotate the bearer token (bearer-auth)
  *   - DELETE /v1/hubs/:name            release a claim (bearer-auth)
  *   - POST   /v1/tickets               mint a short-lived signed ticket
@@ -13,6 +14,12 @@
  * The Worker handles HTTP itself but proxies every WebSocket upgrade into the
  * `HubSession` Durable Object that owns the named hub. Claim persistence
  * lives in D1.
+ *
+ * Routing uses Hono — same router family the in-process `apps/hub` uses, so
+ * the shape (param extraction, middleware composition) is consistent across
+ * the codebase. WebSocket upgrades are handled by returning the raw
+ * `WebSocketPair`-bound `Response` from a handler; Hono passes those through
+ * unchanged.
  */
 
 import {
@@ -21,6 +28,7 @@ import {
   fetchCloudflareIceServers,
   parseSubprotocols,
 } from '@brika/remote-access-protocol';
+import { Hono } from 'hono';
 import { ClaimError, D1ClaimStore } from './claims-d1';
 import { injectHubMeta, resolveHubFromUrl } from './hub-resolution';
 import { mintTicket, verifyTicket } from './tickets';
@@ -57,6 +65,8 @@ export interface Env {
 
 const DEFAULT_ALLOWED_ORIGINS: readonly string[] = ['https://hub.brika.dev'];
 
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
 function originAllowed(req: Request, env: Env): boolean {
   const origin = req.headers.get('origin');
   if (!origin) {
@@ -70,8 +80,6 @@ function originAllowed(req: Request, env: Env): boolean {
     : DEFAULT_ALLOWED_ORIGINS;
   return list.includes(origin);
 }
-
-// ─── Helpers ────────────────────────────────────────────────────────────────
 
 function bearerFromAuthHeader(req: Request): string {
   const auth = req.headers.get('authorization') ?? '';
@@ -93,122 +101,15 @@ function claimErrorStatus(code: ClaimError['code']): number {
   }
 }
 
-function jsonError(status: number, error: string, code?: string): Response {
-  return new Response(JSON.stringify(code ? { error, code } : { error }), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
-
-async function readJson<T>(req: Request): Promise<T | null> {
-  try {
-    return await req.json<T>();
-  } catch {
-    return null;
-  }
-}
-
 function doStubFor(env: Env, hubName: string): DurableObjectStub {
   // `idFromName` deterministically maps the hub name to a stable DO id.
   const id = env.HUB_SESSION.idFromName(hubName.toLowerCase());
   return env.HUB_SESSION.get(id);
 }
 
-// ─── HTTP route handlers ────────────────────────────────────────────────────
-
-async function handleHealth(env: Env): Promise<Response> {
-  const claims = new D1ClaimStore(env.DB);
-  return Response.json({ ok: true, claims: await claims.size() });
-}
-
 /**
- * Per-hub liveness probe. Used by operators to verify that their hub is
- * actually connected to the coordinator. The Worker itself doesn't track
- * which hubs are online — that's per-Durable-Object state — so we forward
- * a small synthetic GET to the named DO and have it answer.
- */
-async function handleHubStatus(env: Env, name: string): Promise<Response> {
-  const lower = name.toLowerCase();
-  const claims = new D1ClaimStore(env.DB);
-  if (!(await claims.get(lower))) {
-    return jsonError(404, 'Unknown hub');
-  }
-  const stub = doStubFor(env, lower);
-  // The DO recognizes `/internal/status` as a non-WS introspection endpoint.
-  const probeUrl = new URL(
-    `https://internal.brika.dev/internal/status?name=${encodeURIComponent(lower)}`
-  );
-  return stub.fetch(probeUrl.toString());
-}
-
-async function handleClaim(req: Request, env: Env): Promise<Response> {
-  if (!originAllowed(req, env)) {
-    return jsonError(403, 'forbidden origin');
-  }
-  const body = await readJson<{ name?: string }>(req);
-  if (!body?.name || typeof body.name !== 'string') {
-    return jsonError(400, 'name required');
-  }
-  const claims = new D1ClaimStore(env.DB);
-  try {
-    const claim = await claims.claim(body.name);
-    return Response.json({
-      name: claim.name,
-      token: claim.token,
-      createdAt: claim.createdAt,
-    });
-  } catch (err) {
-    if (err instanceof ClaimError) {
-      return jsonError(claimErrorStatus(err.code), err.message, err.code);
-    }
-    throw err;
-  }
-}
-
-async function handleRotate(req: Request, env: Env, name: string): Promise<Response> {
-  const claims = new D1ClaimStore(env.DB);
-  const token = bearerFromAuthHeader(req);
-  const owner = await claims.findByToken(token);
-  if (!owner || !constantTimeEqual(owner.name, name.toLowerCase())) {
-    return jsonError(401, 'Unauthorized');
-  }
-  const next = await claims.rotateToken(owner.name);
-  return Response.json({ name: next.name, token: next.token });
-}
-
-async function handleRelease(req: Request, env: Env, name: string): Promise<Response> {
-  const claims = new D1ClaimStore(env.DB);
-  const token = bearerFromAuthHeader(req);
-  const owner = await claims.findByToken(token);
-  if (!owner || !constantTimeEqual(owner.name, name.toLowerCase())) {
-    return jsonError(401, 'Unauthorized');
-  }
-  await claims.release(owner.name);
-  return Response.json({ ok: true });
-}
-
-async function handleTickets(req: Request, env: Env): Promise<Response> {
-  if (!originAllowed(req, env)) {
-    return jsonError(403, 'forbidden origin');
-  }
-  const body = await readJson<{ hubName?: string }>(req);
-  if (!body?.hubName || typeof body.hubName !== 'string') {
-    return jsonError(400, 'hubName required');
-  }
-  const claims = new D1ClaimStore(env.DB);
-  if (!(await claims.get(body.hubName))) {
-    return jsonError(404, 'Unknown hub');
-  }
-  const { ticket, expiresAt } = await mintTicket(env.TICKET_SECRET, body.hubName);
-  const iceServers = await resolveIceServers(env);
-  return Response.json({ ticket, expiresAt, iceServers });
-}
-
-/**
- * Merge the default STUN list with a fresh Cloudflare TURN credential pair.
- * STUN-first lets ICE pick the cheapest path (host → srflx → relay); TURN
- * is the fallback when NAT traversal fails. Soft-fails to STUN-only when
- * Cloudflare creds are unset or the API call fails.
+ * STUN defaults merged with a fresh Cloudflare TURN credential pair (when
+ * configured). Soft-fails to STUN-only on missing creds or API error.
  */
 async function resolveIceServers(env: Env): Promise<ReadonlyArray<unknown>> {
   const turn = await fetchCloudflareIceServers({
@@ -218,10 +119,97 @@ async function resolveIceServers(env: Env): Promise<ReadonlyArray<unknown>> {
   return turn.length > 0 ? [...DEFAULT_ICE_SERVERS, ...turn] : DEFAULT_ICE_SERVERS;
 }
 
-// ─── WebSocket upgrade handlers ─────────────────────────────────────────────
+// ─── App ────────────────────────────────────────────────────────────────────
 
-async function handleHubUpgrade(req: Request, env: Env): Promise<Response> {
-  const subs = parseSubprotocols(req.headers.get('sec-websocket-protocol'));
+const app = new Hono<{ Bindings: Env }>();
+
+app.get('/v1/health', async (c) => {
+  const claims = new D1ClaimStore(c.env.DB);
+  return c.json({ ok: true, claims: await claims.size() });
+});
+
+app.post('/v1/hubs/claim', async (c) => {
+  if (!originAllowed(c.req.raw, c.env)) {
+    return c.json({ error: 'forbidden origin' }, 403);
+  }
+  const body = await c.req.json<{ name?: string }>().catch(() => null);
+  if (!body?.name || typeof body.name !== 'string') {
+    return c.json({ error: 'name required' }, 400);
+  }
+  const claims = new D1ClaimStore(c.env.DB);
+  try {
+    const claim = await claims.claim(body.name);
+    return c.json({ name: claim.name, token: claim.token, createdAt: claim.createdAt });
+  } catch (err) {
+    if (err instanceof ClaimError) {
+      const status = claimErrorStatus(err.code);
+      return c.json({ error: err.message, code: err.code }, status as 400 | 401 | 403 | 404 | 409);
+    }
+    throw err;
+  }
+});
+
+app.get('/v1/hubs/:name/status', async (c) => {
+  const lower = c.req.param('name').toLowerCase();
+  const claims = new D1ClaimStore(c.env.DB);
+  if (!(await claims.get(lower))) {
+    return c.json({ error: 'Unknown hub' }, 404);
+  }
+  // The DO recognizes `/internal/status` as a non-WS introspection endpoint.
+  const stub = doStubFor(c.env, lower);
+  const probeUrl = `https://internal.brika.dev/internal/status?name=${encodeURIComponent(lower)}`;
+  return stub.fetch(probeUrl);
+});
+
+app.post('/v1/hubs/:name/rotate', async (c) => {
+  const claims = new D1ClaimStore(c.env.DB);
+  const token = bearerFromAuthHeader(c.req.raw);
+  const owner = await claims.findByToken(token);
+  if (!owner || !constantTimeEqual(owner.name, c.req.param('name').toLowerCase())) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+  const next = await claims.rotateToken(owner.name);
+  return c.json({ name: next.name, token: next.token });
+});
+
+app.delete('/v1/hubs/:name', async (c) => {
+  const claims = new D1ClaimStore(c.env.DB);
+  const token = bearerFromAuthHeader(c.req.raw);
+  const owner = await claims.findByToken(token);
+  if (!owner || !constantTimeEqual(owner.name, c.req.param('name').toLowerCase())) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+  await claims.release(owner.name);
+  return c.json({ ok: true });
+});
+
+app.post('/v1/tickets', async (c) => {
+  if (!originAllowed(c.req.raw, c.env)) {
+    return c.json({ error: 'forbidden origin' }, 403);
+  }
+  const body = await c.req.json<{ hubName?: string }>().catch(() => null);
+  if (!body?.hubName || typeof body.hubName !== 'string') {
+    return c.json({ error: 'hubName required' }, 400);
+  }
+  const claims = new D1ClaimStore(c.env.DB);
+  if (!(await claims.get(body.hubName))) {
+    return c.json({ error: 'Unknown hub' }, 404);
+  }
+  const { ticket, expiresAt } = await mintTicket(c.env.TICKET_SECRET, body.hubName);
+  const iceServers = await resolveIceServers(c.env);
+  return c.json({ ticket, expiresAt, iceServers });
+});
+
+// ─── WebSocket upgrade routes ───────────────────────────────────────────────
+//
+// The DO is authoritative for the actual upgrade — the Worker only authn's
+// the request (bearer for hub, ticket for client), maps to the correct DO,
+// and proxies the *original* Request through. CF's Fetch API strips
+// `Upgrade` / `Sec-WebSocket-*` when reconstructing a Request, so the DO
+// derives role from `url.pathname` and re-validates from surviving fields.
+
+app.all('/v1/hub', async (c) => {
+  const subs = parseSubprotocols(c.req.header('sec-websocket-protocol') ?? null);
   if (!subs.proto?.startsWith('brika.v')) {
     return new Response('Unsupported protocol', { status: 400 });
   }
@@ -229,102 +217,50 @@ async function handleHubUpgrade(req: Request, env: Env): Promise<Response> {
   if (!token) {
     return new Response('Unauthorized', { status: 401 });
   }
-  const claims = new D1ClaimStore(env.DB);
+  const claims = new D1ClaimStore(c.env.DB);
   const owner = await claims.findByToken(token);
   if (!owner || !constantTimeEqual(owner.token, token)) {
     return new Response('Unauthorized', { status: 401 });
   }
-  // Pass the *original* Request straight through. Workers' Fetch API strips
-  // forbidden headers (Upgrade, Connection, Sec-WebSocket-*) the moment you
-  // construct a new Request from one — even via `new Request(url, req)` or
-  // `stub.fetch(url, req)`. The DO derives the role from the URL pathname
-  // (`/v1/hub` vs `/v1/client`) and re-runs the cheap parts of auth on the
-  // info that *does* survive (subprotocol header for hub, query params for
-  // client).
-  const stub = doStubFor(env, owner.name);
-  return stub.fetch(req);
-}
+  return doStubFor(c.env, owner.name).fetch(c.req.raw);
+});
 
-async function handleClientUpgrade(req: Request, env: Env): Promise<Response> {
-  const url = new URL(req.url);
-  const hubName = url.searchParams.get('hub');
-  const ticket = url.searchParams.get('ticket');
+app.all('/v1/client', async (c) => {
+  const hubName = c.req.query('hub');
+  const ticket = c.req.query('ticket');
   if (!hubName || !ticket) {
     return new Response('hub and ticket required', { status: 400 });
   }
-  const claims = await verifyTicket(env.TICKET_SECRET, ticket);
+  const claims = await verifyTicket(c.env.TICKET_SECRET, ticket);
   if (claims?.hub !== hubName) {
     return new Response('Invalid ticket', { status: 401 });
   }
-  const store = new D1ClaimStore(env.DB);
+  const store = new D1ClaimStore(c.env.DB);
   if (!(await store.get(hubName))) {
     return new Response('Unknown hub', { status: 404 });
   }
-  // Same pass-through dance as handleHubUpgrade. The DO will read `hub` from
-  // the original query and tag the WS as a client of that hub.
-  const stub = doStubFor(env, hubName);
-  return stub.fetch(req);
-}
+  return doStubFor(c.env, hubName).fetch(c.req.raw);
+});
 
-async function serveUiShell(req: Request, env: Env, url: URL): Promise<Response> {
+// Unrecognised `/v1/*` must not fall through to the static-asset binding.
+app.all('/v1/*', (c) => c.json({ error: 'Not found' }, 404));
+
+// Anything else is a UI request — let the asset binding serve it, but first
+// see whether the (host, path) identifies a hub so we can stamp its name
+// into the document for the bootstrap script.
+app.all('*', async (c) => {
+  const url = new URL(c.req.url);
   const resolved = resolveHubFromUrl(url);
   if (!resolved) {
-    // Unknown host/path shape — let the asset binding handle it as normal
-    // (404, the marketing page on bare `hub.brika.dev`, etc.).
-    return env.ASSETS.fetch(req);
+    return c.env.ASSETS.fetch(c.req.raw);
   }
-
   // Normalise to the asset-binding's view of the world: a request for
   // `<restPath>` on the same origin. The asset binding has a single SPA
   // fallback (`/index.html`) so this works for any sub-path.
   const normalisedUrl = new URL(resolved.restPath + url.search, url.origin);
-  const assetReq = new Request(normalisedUrl.toString(), req);
-  const assetRes = await env.ASSETS.fetch(assetReq);
+  const assetReq = new Request(normalisedUrl.toString(), c.req.raw);
+  const assetRes = await c.env.ASSETS.fetch(assetReq);
   return injectHubMeta(assetRes, resolved.hubName);
-}
+});
 
-// ─── Router ─────────────────────────────────────────────────────────────────
-
-export default {
-  fetch(req: Request, env: Env): Response | Promise<Response> {
-    const url = new URL(req.url);
-    const path = url.pathname;
-    const method = req.method;
-
-    if (path === '/v1/health') {
-      return handleHealth(env);
-    }
-    if (path === '/v1/hubs/claim' && method === 'POST') {
-      return handleClaim(req, env);
-    }
-    const rotateMatch = /^\/v1\/hubs\/([^/]+)\/rotate$/.exec(path);
-    if (rotateMatch?.[1] && method === 'POST') {
-      return handleRotate(req, env, decodeURIComponent(rotateMatch[1]));
-    }
-    const statusMatch = /^\/v1\/hubs\/([^/]+)\/status$/.exec(path);
-    if (statusMatch?.[1] && method === 'GET') {
-      return handleHubStatus(env, decodeURIComponent(statusMatch[1]));
-    }
-    const releaseMatch = /^\/v1\/hubs\/([^/]+)$/.exec(path);
-    if (releaseMatch?.[1] && method === 'DELETE') {
-      return handleRelease(req, env, decodeURIComponent(releaseMatch[1]));
-    }
-    if (path === '/v1/tickets' && method === 'POST') {
-      return handleTickets(req, env);
-    }
-    if (path === '/v1/hub') {
-      return handleHubUpgrade(req, env);
-    }
-    if (path === '/v1/client') {
-      return handleClientUpgrade(req, env);
-    }
-    if (path.startsWith('/v1/')) {
-      // Unrecognised /v1/* must not fall through to the static-asset binding.
-      return new Response('Not found', { status: 404 });
-    }
-    // Anything else is a UI request — let the asset binding serve it, but
-    // first see whether the (host, path) identifies a hub so we can stamp
-    // its name into the document for the bootstrap script.
-    return serveUiShell(req, env, url);
-  },
-} satisfies ExportedHandler<Env>;
+export default app satisfies ExportedHandler<Env>;
