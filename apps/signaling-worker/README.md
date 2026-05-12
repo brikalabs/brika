@@ -1,6 +1,6 @@
 # @brika/signaling-worker
 
-Production signaling coordinator for Brika remote access, running on Cloudflare Workers with Durable Objects (per-hub session state) and D1 (claim persistence). Deployed to `signaling.brika.dev` and serving `*.hubs.brika.dev` from the same Worker (the browser-facing static UI shell is embedded for cold-path friendliness).
+Production signaling coordinator for Brika remote access, running on Cloudflare Workers with Durable Objects (per-hub session state) and D1 (claim persistence). Deployed at `hub.brika.dev` — both the `/v1/*` API and the browser-facing static UI shell (embedded for cold-path friendliness) live on the same Worker. The hub name lives in `localStorage` after the bootstrap reads it; the URL no longer carries it.
 
 > Need to run a coordinator without Cloudflare? See [`@brika/signaling`](../signaling/) — same protocol, Bun + JSON file, single process.
 

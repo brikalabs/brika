@@ -10,7 +10,7 @@ import type {
 describe('bridge', () => {
   describe('requestToFrames / rpcRequestToFetch', () => {
     it('roundtrips a GET request preserving headers', async () => {
-      const req = new Request('https://maxime.brika.dev/api/health?x=1', {
+      const req = new Request('https://hub.brika.dev/api/health?x=1', {
         method: 'GET',
         headers: { 'X-Custom': 'v1', Accept: 'application/json' },
       });
@@ -21,7 +21,7 @@ describe('bridge', () => {
       expect(msg.bodyB64).toBeUndefined();
       expect(msg.headers.find(([n]) => n.toLowerCase() === 'x-custom')?.[1]).toBe('v1');
 
-      const reconstructed = rpcRequestToFetch(msg, 'https://maxime.brika.dev');
+      const reconstructed = rpcRequestToFetch(msg, 'https://hub.brika.dev');
       expect(reconstructed.method).toBe('GET');
       expect(new URL(reconstructed.url).pathname).toBe('/api/health');
     });

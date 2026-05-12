@@ -5,9 +5,9 @@ The Brika dashboard — a React + Vite single-page app. Runs in two modes:
 | Mode    | When                                          | API surface                                   |
 | ------- | --------------------------------------------- | --------------------------------------------- |
 | LAN     | Served by the hub at `https://<hub>:7878`     | Direct HTTPS to the hub                       |
-| Remote  | Served at `<name>.hubs.brika.dev`             | WebRTC data-channel via the signaling worker  |
+| Remote  | Served from `hub.brika.dev` by the bootstrap  | WebRTC data-channel via the signaling worker  |
 
-`apps/ui/src/lib/api/` picks the mode at boot from the URL — `?hub=<name>` or a `*.hubs.brika.dev` subdomain — and rewrites global `fetch` to route `/api/*` through the appropriate transport.
+`apps/ui/src/lib/api/` picks the mode at boot — the worker stamps `<meta name="brika:hub" content="<name>">` into the shell, `?hub=<name>` is an override — and rewrites global `fetch` to route `/api/*` through the appropriate transport. See `docs/remote-access.md` for the full handshake.
 
 ## Development
 

@@ -6,8 +6,8 @@ This package is intentionally **runtime-agnostic** and **dependency-free**: it s
 
 - `apps/hub` (Bun) — the home hub that publishes itself
 - `apps/signaling` (Bun, self-host) — the local-dev signaling coordinator
-- `apps/signaling-worker` (Cloudflare Workers + D1 + Durable Objects) — the production coordinator at `signaling.brika.dev`
-- `apps/ui` (browser) — the remote shell at `<name>.hubs.brika.dev`
+- `apps/signaling-worker` (Cloudflare Workers + D1 + Durable Objects) — the production coordinator at `hub.brika.dev`
+- `apps/ui` (browser) — the remote shell served from the same `hub.brika.dev` origin; the hub name lives in `localStorage` (see `apps/signaling-bootstrap`)
 
 ## What's in the box
 
